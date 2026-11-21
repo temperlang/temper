@@ -571,7 +571,9 @@ pub fn init(config: Option<temper_core::Config>) -> temper_core::Result<temper_c
     });
     support.push_str(SUPPORT_CONFIG);
     if translator.runs_async {
-        support.push_str(SUPPORT_ASYNC);
+        support.push_str(&SUPPORT_ASYNC.replace("{cfg}", ""));
+    } else if translator.runs_async_in_tests {
+        support.push_str(&SUPPORT_ASYNC.replace("{cfg}", "#[cfg(test)]\n"));
     }
     if let Some(cfg) = cfg {
         support.push_str(&SUPPORT_FIRST.replace("{cfg}", cfg));
@@ -641,9 +643,10 @@ pub(crate) fn config() -> &'static temper_core::Config {
 /// Runs an `async` block's generator on the library's runner, the
 /// configuration's (`temper_core::Config::runner`), as Kotlin's, and
 /// queues each step after an `await` there too, once its promise is
-/// resolved (`AsyncRunner::awake_upon`).
+/// resolved (`AsyncRunner::awake_upon`). `{cfg}` is `#[cfg(test)]` where
+/// only tests run `async` blocks.
 const SUPPORT_ASYNC: &str = "
-pub(crate) fn run_async<T>(
+{cfg}pub(crate) fn run_async<T>(
     generator: std::sync::Arc<dyn Fn() -> temper_core::SafeGenerator<T> + Send + Sync>,
 ) where
     T: Clone + Send + Sync + 'static,
@@ -651,7 +654,7 @@ pub(crate) fn run_async<T>(
     config().runner().run_async(generator);
 }
 
-pub(crate) fn awake_upon<T, U>(
+{cfg}pub(crate) fn awake_upon<T, U>(
     promise: temper_core::Promise<T>,
     generator: temper_core::SafeGenerator<U>,
 ) where

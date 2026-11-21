@@ -62,6 +62,7 @@ public class ReachTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }

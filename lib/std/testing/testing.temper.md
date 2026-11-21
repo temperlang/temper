@@ -161,9 +161,11 @@ implementation of testing within the interpreter.
       testCases.map { (testCase): TestResult =>
         let { key, value as fun } = testCase;
         let test = new Test();
-        // Actually call the test.
+        // Actually call the test, then run the async work it started, so
+        // what fails there fails it.
         var hadBubble = false;
         fun(test) orelse do { hadBubble = true };
+        finishAsyncWork();
         // Now get the messages.
         let messages = test.messages();
         let failures: List<TestFailureMessage> = if (test.passing && !hadBubble) {
@@ -224,6 +226,17 @@ implementation of testing within the interpreter.
       }
       report.toString()
     }
+
+A test ends only once the async work it started has run as far as it can:
+no block is ready to run and no I/O is in flight. So a soft `assert` in an
+`async` block counts, and what ends a block abruptly (`fail`, a hard
+assertion, a panic) fails the test that started it. Blocks still waiting
+for a promise that nothing settles stay waiting. Each backend's harness
+does this with its runtime after a test's body; the interpreter
+implements this function, which does nothing elsewhere.
+
+    @connected
+    let finishAsyncWork(): Void {}
 
 TODO Is this a better idea than inlining each case? We'd need to generate
 `fn testFunction() { runTest(originalFunctionAsCallback) }` or some such.

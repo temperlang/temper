@@ -43,7 +43,7 @@
 47:5 -> ../../reach.temper.md:29:28  return Math.imul(this.#side, <- side * side }
 51:1 -> ../../reach.temper.md:25:5  const testFactor = Math.imul <- let testFactor = base * 2;
 52:1 -> ../../reach.temper.md:26:5  let testCount = 0; <- var testCount = 0;
-54:1 -> ../../reach.temper.md:43:5  it("test parts", function () <- test("test parts") {
+54:1 -> ../../reach.temper.md:43:5  it("test parts", async funct <- test("test parts") {
 57:5 -> ../../reach.temper.md:44:7  const shape = new TestSquare <- let shape: TestShape = new T
 58:5 -> ../../reach.temper.md:45:7  addArea(shape); <- addArea(shape);
 59:5 -> ../../reach.temper.md:46:7  testCount = (testCount + sha <- testCount = testCount + shap

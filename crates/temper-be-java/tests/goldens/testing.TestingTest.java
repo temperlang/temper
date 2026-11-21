@@ -1,5 +1,6 @@
 package testing;
 
+import temper.core.Core;
 import temper.std.testing.Test;
 
 public final class TestingTest {
@@ -19,6 +20,7 @@ public final class TestingTest {
             int x = TestingGlobal.twice(2);
             runs = runs + x + base;
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -29,6 +31,7 @@ public final class TestingTest {
         try {
             TestingGlobal.twice(runs);
         } finally {
+            Core.finishAsyncWork();
             t.softFailToHard();
         }
     }
@@ -47,6 +50,7 @@ public final class TestingTest {
             }
             runs = n;
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }

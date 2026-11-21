@@ -1880,6 +1880,8 @@ public final class Core {
     private static long stepsScheduled = 0;
     /** Guarded by STEPS_LOCK. */
     private static long stepsFinished = 0;
+    /** The first failure that escaped a step since finishAsyncWork. Guarded by STEPS_LOCK. */
+    private static @Nullable Throwable escaped = null;
     /**
      * One worker at most, so steps run in order and never overlap.  The worker
      * exits when idle, so that a host which joins the threads a program
@@ -1920,7 +1922,13 @@ public final class Core {
                     step.run();
                 } catch (Throwable e) {
                     // Report it, as an uncaught exception on a pool thread
-                    // would be, but keep the scheduler thread for the others.
+                    // would be, but keep the scheduler thread for the others,
+                    // and keep it for finishAsyncWork.
+                    synchronized (STEPS_LOCK) {
+                        if (escaped == null) {
+                            escaped = e;
+                        }
+                    }
                     Thread thread = Thread.currentThread();
                     thread.getUncaughtExceptionHandler().uncaughtException(thread, e);
                 } finally {
@@ -2009,6 +2017,29 @@ public final class Core {
                     return;
                 }
             }
+        }
+    }
+
+    /**
+     * Called from generated tests after each test's body: waits, as
+     * {@link #waitUntilTasksComplete} does, for the async work it started,
+     * then throws the first failure that escaped a step meanwhile, so the
+     * test fails with it. Blocks still awaiting a promise that nothing
+     * completes stay waiting.
+     */
+    public static void finishAsyncWork() {
+        waitUntilTasksComplete();
+        Throwable failure;
+        synchronized (STEPS_LOCK) {
+            failure = escaped;
+            escaped = null;
+        }
+        if (failure instanceof RuntimeException) {
+            throw (RuntimeException) failure;
+        } else if (failure instanceof Error) {
+            throw (Error) failure;
+        } else if (failure != null) {
+            throw new RuntimeException(failure);
         }
     }
 }

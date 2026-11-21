@@ -45,9 +45,11 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
         let x = super::twice(2);
         *super::RUNS.write().unwrap() =
             Some(super::runs().wrapping_add(x).wrapping_add(super::base()));
+        work.finish(crate::support::config().runner());
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -57,7 +59,9 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let t = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
         super::twice(super::runs());
+        work.finish(crate::support::config().runner());
         t.soft_fail_to_hard();
         Ok(())
     }
@@ -67,6 +71,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
         let mut n: i32 = 0;
         {
             let mut i: i32 = 0;
@@ -76,6 +81,7 @@ mod tests {
             }
         }
         *super::RUNS.write().unwrap() = Some(n);
+        work.finish(crate::support::config().runner());
         test.soft_fail_to_hard();
         Ok(())
     }

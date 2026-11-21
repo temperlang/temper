@@ -151,9 +151,17 @@ impl Translator<'_> {
         if stmts.last() == Some(&Stmt::YieldBreak) {
             stmts.pop();
         }
-        // An iterator yields somewhere, if only at its end.
+        // An iterator yields somewhere, if only at its end, which a body
+        // that never ends, as one ending in a panic, never reaches.
         if !yields(&stmts) {
+            let ends = stmts.iter().all(super::completes);
+            if !ends {
+                stmts.push(Stmt::Raw("#pragma warning disable CS0162".into()));
+            }
             stmts.push(Stmt::YieldBreak);
+            if !ends {
+                stmts.push(Stmt::Raw("#pragma warning restore CS0162".into()));
+            }
         }
         let yielded = match p.signature(decl).map(|s| p.types.get(s.result)) {
             Some(TypeData::Nominal { args, .. }) => match p.types.list(args) {

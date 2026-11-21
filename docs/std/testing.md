@@ -44,6 +44,24 @@ test. It's for tests alone: what the block changed before it panicked
 stays changed, maybe half done. Every backend and the interpreter catch
 the panic in the test's own process.
 
+A test ends only once the async work it started has run as far as it
+can: no `async` block is ready to run and no I/O is in flight. So an
+`assert` in an `async` block counts, even one after an `await`, and a
+`fail` or a panic there fails the test that started the block, not the
+next one. A block still awaiting a promise that nothing settles is left
+waiting, as at a program's end:
+
+```temper
+test("later") {
+  let pb = new PromiseBuilder<Int>();
+  async { (): GeneratorResult<Empty> extends GeneratorFn =>
+    let n = await pb.promise orelse -1;
+    assert(n == 2);                           // checked before the test ends
+  }
+  pb.complete(2);
+}
+```
+
 A test that panics (a list read past the end, `panic()`) fails alone,
 with the panic's message, and the other tests still run: the runner
 catches it, test by test, though no `orelse` does, nor `runTest` and

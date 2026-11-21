@@ -2,6 +2,7 @@ package test_fails;
 
 import java.util.Objects;
 import temper.core.Bubble;
+import temper.core.Core;
 import temper.core.Nullable;
 import temper.std.testing.Test;
 
@@ -37,6 +38,7 @@ public final class TestFailsTest {
             };
             test.assert_(tries(fn), () -> "expected tries { assert(find(\"one\") == 1); }");
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -53,6 +55,7 @@ public final class TestFailsTest {
             test.fail("swallowed");
             throw new AssertionError("panic");
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -72,6 +75,7 @@ public final class TestFailsTest {
                 test.assert_(actual == expected, () -> "expected n + 1 == (" + expected + ") not (" + actual + ")");
             }
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -87,6 +91,7 @@ public final class TestFailsTest {
             }
             test.assert_(n + 1 == 3, () -> "went on");
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -99,6 +104,7 @@ public final class TestFailsTest {
             test.assert_(true, () -> "not shown");
             test.assert_(2 + 2 == 5, () -> "second");
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -111,6 +117,7 @@ public final class TestFailsTest {
             test.fail("then hard");
             throw new AssertionError("panic");
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -123,6 +130,7 @@ public final class TestFailsTest {
             test.fail("swallowed");
             throw new AssertionError("panic");
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -136,6 +144,7 @@ public final class TestFailsTest {
             test.fail("swallowed");
             throw new AssertionError("panic");
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -150,6 +159,7 @@ public final class TestFailsTest {
                 test.assert_(Objects.equals(actual, expected), () -> "expected find(\"one\") == (" + expected + ") not (" + (actual == null ? "null" : Integer.toString(actual)) + ")");
             }
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }

@@ -338,9 +338,10 @@ pub enum Stmt {
         members: Vec<Member>,
     },
     /// A test, as Node's test runner runs it, with no time limit:
-    /// `it(name, function () { … })`, making
+    /// `it(name, async function () { … })`, making
     /// `test`, a new `class`, and running `body`, then, even if it threw,
-    /// `test.softFailToHard()`.
+    /// awaiting the async work it started (`finishAsyncWork()`), which
+    /// throws what failed there, and `test.softFailToHard()`.
     Test {
         name: String,
         test: String,
@@ -928,13 +929,15 @@ fn stmt_at(out: &mut MappedText, s: &Stmt, depth: usize, span: Option<Span>) {
             class,
             body,
         } => {
-            let _ = writeln!(out, "it({}, function () {{", string_literal(name));
+            let _ = writeln!(out, "it({}, async function () {{", string_literal(name));
             indent(out, depth + 1);
             let _ = writeln!(out, "const {test} = new {class}();");
             indent(out, depth + 1);
             out.push_str("try ");
             block(out, body, depth + 1);
             out.push_str(" finally {\n");
+            indent(out, depth + 2);
+            out.push_str("await finishAsyncWork();\n");
             indent(out, depth + 2);
             let _ = writeln!(out, "{test}.softFailToHard();");
             indent(out, depth + 1);

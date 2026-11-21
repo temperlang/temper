@@ -23,6 +23,7 @@ public final class TestPanicsTest {
                 test.assert_(actual == expected, () -> "expected 1 + 1 == (" + expected + ") not (" + actual + ")");
             }
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -43,6 +44,7 @@ public final class TestPanicsTest {
                 test.assert_(actual == expected, () -> "expected n == (" + expected + ") not (" + actual + ")");
             }
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -53,6 +55,7 @@ public final class TestPanicsTest {
         try {
             throw new AssertionError("panic");
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -63,6 +66,7 @@ public final class TestPanicsTest {
         try {
             test.assert_(1 + 1 == 3, () -> "wrong on purpose");
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -77,6 +81,7 @@ public final class TestPanicsTest {
                 test.assert_(actual == expected, () -> "expected at([1, 2], 1) == (" + expected + ") not (" + actual + ")");
             }
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }

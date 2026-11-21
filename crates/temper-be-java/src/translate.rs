@@ -1332,8 +1332,9 @@ impl<'a> Translator<'a> {
     /// class's first, then continues it, and its tests, as JUnit 5 tests:
     /// each a method named for it in camel case (`twice10` for "twice
     /// ${base}" made "twice 10"), which makes std's `Test`, runs the body,
-    /// and then, even if the body threw, fails if the `Test` has failures
-    /// (`softFailToHard`), as Kotlin's do. Being in the module's package,
+    /// and then, even if the body threw, waits for the async work it
+    /// started (`Core.finishAsyncWork`), throwing what failed there, and
+    /// fails if the `Test` has failures (`softFailToHard`), as Kotlin's do. Being in the module's package,
     /// they see its classes and statics that aren't exported. `None`
     /// without test parts or tests.
     pub fn tests(&mut self, module: &Module) -> R<Option<tree::TestClass>> {
@@ -1384,6 +1385,8 @@ impl<'a> Translator<'a> {
             self.begin(test);
             let stmts = self.stmts(body)?;
             let soft_fail = Expr::name(var.clone()).method("softFailToHard", Vec::new());
+            self.import("temper.core.Core");
+            let finish = Expr::name("Core").method("finishAsyncWork", Vec::new());
             methods.push((
                 test_method_name(p.strings.get(name), &mut used),
                 vec![
@@ -1394,7 +1397,7 @@ impl<'a> Translator<'a> {
                     },
                     Stmt::Try {
                         body: stmts,
-                        finally: vec![Stmt::Expr(soft_fail)],
+                        finally: vec![Stmt::Expr(finish), Stmt::Expr(soft_fail)],
                     },
                 ],
             ));

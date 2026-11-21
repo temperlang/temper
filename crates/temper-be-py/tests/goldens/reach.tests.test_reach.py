@@ -1,7 +1,7 @@
 import reach.reach as _m_reach_reach
 from abc import ABCMeta, abstractmethod
 from reach.reach import _base, _checked, shown
-from temper_core import int_add, int_mul
+from temper_core import finish_async_work, int_add, int_mul
 from temper_std.testing import Test
 from unittest import TestCase
 
@@ -66,4 +66,5 @@ class TestReach(TestCase):
             expected4 = 1
             test.assert_(actual4 == expected4, lambda: f'expected shownCount == ({expected4}) not ({actual4})')
         finally:
+            finish_async_work()
             test.soft_fail_to_hard()

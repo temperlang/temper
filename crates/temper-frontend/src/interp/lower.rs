@@ -843,12 +843,15 @@ impl Lowering {
             NodeKind::Let => {
                 let (name, _, init) = core::let_parts(tree, node);
                 let connected = tree.data(node) & MEMBER_CONNECTED != 0;
+                // A `@connected` function's Temper body is a fallback,
+                // unless the interpreter implements it.
+                let own = super::implements(s, node);
                 match init {
-                    Some(init) => self.store(s, name, false, |me| me.expr(s, init, true)),
-                    None if connected => self.store(s, name, false, |me| {
+                    Some(init) if !own => self.store(s, name, false, |me| me.expr(s, init, true)),
+                    _ if connected || own => self.store(s, name, false, |me| {
                         _ = me.emit(Op::Const(Val::Connected(node)))
                     }),
-                    None => self.store(s, name, false, |me| _ = me.emit(Op::Const(Val::Uninit))),
+                    _ => self.store(s, name, false, |me| _ = me.emit(Op::Const(Val::Uninit))),
                 }
                 if keep {
                     self.emit(Op::Const(Val::Void));
@@ -1037,7 +1040,8 @@ impl Lowering {
                 }),
                 NodeKind::Let if tree.data(statement) & LET_VAR == 0 => {
                     let (name, _, init) = core::let_parts(tree, statement);
-                    if let Some(init) = init.filter(|&i| tree.kind(i) == NodeKind::Fn) {
+                    let own = super::implements(s, statement);
+                    if let Some(init) = init.filter(|&i| tree.kind(i) == NodeKind::Fn && !own) {
                         self.store(s, name, false, |me| me.make_fn(s, init));
                     }
                 }

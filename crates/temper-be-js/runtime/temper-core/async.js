@@ -1,12 +1,76 @@
 import { Bubble, isBubble } from "./core.js";
 
 
+// Launches waiting for their first step, and I/O in flight
+// (`trackAsyncIo`), which `finishAsyncWork` waits for.
+let busy = 0;
+// How many `finishAsyncWork` calls are waiting: while any is, a failure
+// that escapes a step is kept for them, else thrown as before.
+let finishing = 0;
+/** @type {{ failure: unknown } | null} */
+let escaped = null;
+
+/**
+ * Runs one step of an async block.
+ * @param {() => unknown} run
+ */
+const step = (run) => {
+  try {
+    run();
+  } catch (e) {
+    if (finishing === 0) throw e;
+    if (escaped === null) escaped = { failure: e };
+  }
+};
+
 /**
  * @param generatorFactory {() => Generator<unknown>}
  */
 export const runAsync = (generatorFactory) => {
   let generator = generatorFactory();
-  setTimeout(() => { generator.next() });
+  busy += 1;
+  setTimeout(() => {
+    busy -= 1;
+    step(() => generator.next());
+  });
+}
+
+/**
+ * Counts `promise` as I/O in flight, as std/net's requests, until it
+ * settles, so `finishAsyncWork` waits for it.
+ * @template T
+ * @param {Promise<T>} promise
+ * @returns {Promise<T>}
+ */
+export const trackAsyncIo = (promise) => {
+  busy += 1;
+  const settled = () => { busy -= 1; };
+  promise.then(settled, settled);
+  return promise;
+}
+
+/**
+ * Resolves once no async block is waiting for its first step and no I/O
+ * is in flight, as generated tests await after each test's body, or
+ * rejects with the first failure that escaped a step meanwhile, so the
+ * test fails with it. Blocks still awaiting a promise that nothing
+ * settles stay waiting.
+ * @returns {Promise<void>}
+ */
+export const finishAsyncWork = async () => {
+  finishing += 1;
+  try {
+    // Each round lets the timers queued so far, and what they queue as
+    // microtasks, run first.
+    do {
+      await new Promise((resolve) => setTimeout(resolve));
+    } while (busy > 0);
+  } finally {
+    finishing -= 1;
+  }
+  const kept = escaped;
+  escaped = null;
+  if (kept !== null) throw kept.failure;
 }
 
 /**
@@ -29,9 +93,9 @@ export const adaptAwaiter = (generatorFactory) => {
       // rejected with (`breakPromise()` gives no reason, host code may
       // give any).
       p.then(
-        (result) => { generator.next(result) },
+        (result) => { step(() => generator.next(result)) },
         (error) => {
-          generator.throw(isBubble(error) ? error : new Bubble("broken promise"));
+          step(() => generator.throw(isBubble(error) ? error : new Bubble("broken promise")));
         },
       );
     };

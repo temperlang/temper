@@ -126,7 +126,7 @@ pub struct Translator<'a> {
     /// Whether translating what only tests build: a test, or what only
     /// tests reach ([`Translator::for_tests`]), and the `use`s that
     /// needs.
-    for_tests: bool,
+    pub(crate) for_tests: bool,
     test_uses: BTreeSet<&'static str>,
     /// Module `let`s of an erased type, which aren't declared.
     erased: HashSet<DeclId>,
@@ -186,6 +186,8 @@ pub struct Translator<'a> {
     /// Whether it runs `async` blocks, whose runner the crate's support
     /// module gives (`run_async`).
     pub(crate) runs_async: bool,
+    /// Whether only tests, and what only they reach, run `async` blocks.
+    pub(crate) runs_async_in_tests: bool,
     /// The paths of the modules whose items take host code ([`host`]),
     /// so the crate declares their `_connected` modules.
     pub host_dirs: BTreeSet<String>,
@@ -237,6 +239,7 @@ impl<'a> Translator<'a> {
             subst: HashMap::new(),
             cells: temper_tmpl::analysis::assigned_captures(p),
             runs_async: false,
+            runs_async_in_tests: false,
             host_dirs: BTreeSet::new(),
             group: None,
         }
@@ -766,10 +769,12 @@ impl<'a> Translator<'a> {
     }
 
     /// A module's tests, as Kotlin's: each a `#[test]` function that
-    /// initializes the library and std, makes std's `Test`, runs the
-    /// test's body, which may bubble, and ends with `soft_fail_to_hard`,
-    /// which fails it if the `Test` has failures, then `Ok(())`, unless
-    /// the body never finishes. Named for the test, in
+    /// initializes the library and std, makes std's `Test`, starts the
+    /// test's async work (`TestWork::begin`), runs the test's body, which
+    /// may bubble, finishes the async work it started, panicking with what
+    /// failed there, and ends with `soft_fail_to_hard`, which fails it if
+    /// the `Test` has failures, then `Ok(())`, unless the body never
+    /// finishes. Named for the test, in
     /// snake case, ASCII letters, digits, and `_` only.
     fn tests(&mut self, module: &Module) -> R<Option<Item>> {
         if module.tests.is_empty() {
@@ -827,8 +832,19 @@ impl<'a> Translator<'a> {
                 ty: None,
                 value: Some(Expr::path(format!("{class}::new")).call(Vec::new())),
             });
+            let work = if finishes { "work" } else { "_work" };
+            stmts.push(Stmt::Let {
+                name: work.into(),
+                mutable: false,
+                ty: None,
+                value: Some(Expr::path("temper_core::TestWork::begin").call(Vec::new())),
+            });
             stmts.extend(run);
             if finishes {
+                let runner = Expr::path("crate::support::config").call(Vec::new());
+                let runner = runner.method("runner", Vec::new());
+                let finish = Expr::path(work).method("finish", vec![runner]);
+                stmts.push(Stmt::Expr(finish));
                 let soft_fail = Expr::path(var).method("soft_fail_to_hard", Vec::new());
                 stmts.push(Stmt::Expr(soft_fail));
             }
@@ -2651,7 +2667,8 @@ fn float(value: f64) -> Expr {
 
 /// Whether a `return` continues in a function's last statement, so it
 /// may end the function as its value instead: a `return` with a value,
-/// or an `if` … `else` whose branches each end so.
+/// or an `if` … `else` whose branches each end so, or panic, one at least
+/// ending so.
 fn tail_of(stmts: &mut Vec<Stmt>) -> Option<Expr> {
     match stmts.last() {
         Some(Stmt::Return(Some(_))) => match stmts.pop() {
@@ -2663,14 +2680,22 @@ fn tail_of(stmts: &mut Vec<Stmt>) -> Option<Expr> {
             then,
             ..
         }) => {
+            // A branch's value, or none for one ending in a panic.
+            let branch = |stmts: &mut Vec<Stmt>| match tail_of(stmts) {
+                Some(tail) => Some(Some(Box::new(tail))),
+                None => matches!(stmts.last(), Some(Stmt::Expr(e)) if panics(e)).then_some(None),
+            };
             let (mut then, mut els) = (then.clone(), els.clone());
-            let then_tail = tail_of(&mut then.stmts)?;
-            let els_tail = tail_of(&mut els.stmts)?;
+            let then_tail = branch(&mut then.stmts)?;
+            let els_tail = branch(&mut els.stmts)?;
+            if then_tail.is_none() && els_tail.is_none() {
+                return None;
+            }
             let Some(Stmt::If { cond, .. }) = stmts.pop() else {
                 return None;
             };
-            then.tail = Some(Box::new(then_tail));
-            els.tail = Some(Box::new(els_tail));
+            then.tail = then_tail;
+            els.tail = els_tail;
             Some(nullables::unwrap_or(Expr::If(Box::new(cond), then, els)))
         }
         _ => None,

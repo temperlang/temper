@@ -23,6 +23,7 @@ public final class TestAssertPanicsTest {
                 test.assert_(actual == expected, () -> "expected at([1, 2], 1) == (" + expected + ") not (" + actual + ")");
             }
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -34,6 +35,7 @@ public final class TestAssertPanicsTest {
             test.assertPanics(() -> at(List.of(1, 2), 5));
             test.assertPanics(() -> Core.throwAssertionError("panic"));
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -53,6 +55,7 @@ public final class TestAssertPanicsTest {
             };
             test.assertPanics(fn);
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -63,6 +66,7 @@ public final class TestAssertPanicsTest {
         try {
             test.assertPanics(() -> at(List.of(1, 2), 0));
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -73,6 +77,7 @@ public final class TestAssertPanicsTest {
         try {
             test.assertPanics(() -> at(List.of(1, 2), 1), "reading index 1 panics");
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -83,6 +88,7 @@ public final class TestAssertPanicsTest {
         try {
             test.assertPanics(() -> at(List.of(1, 2), 99));
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -93,6 +99,7 @@ public final class TestAssertPanicsTest {
         try {
             test.assertPanics(() -> at(List.of(1, 2), 99), "reading index 99 panics");
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -104,6 +111,7 @@ public final class TestAssertPanicsTest {
             test.assertPanics(() -> at(List.of(1, 2), 0));
             test.assert_(false, () -> "went on");
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -119,6 +127,7 @@ public final class TestAssertPanicsTest {
             };
             test.assertPanics(fn);
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -139,6 +148,7 @@ public final class TestAssertPanicsTest {
             test.assertPanics(fn);
             test.assert_(n.value == 1, () -> "lost the change");
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -150,6 +160,7 @@ public final class TestAssertPanicsTest {
             test.assertPanics(() -> Core.throwAssertionError("panic"));
             at(List.of(1, 2), 7);
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -166,6 +177,7 @@ public final class TestAssertPanicsTest {
             test.fail("swallowed");
             throw new AssertionError("panic");
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -180,6 +192,7 @@ public final class TestAssertPanicsTest {
                 test.assert_(actual == expected, () -> "expected at([1, 2], 0) == (" + expected + ") not (" + actual + ")");
             }
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }

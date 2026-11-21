@@ -1605,11 +1605,15 @@ impl Interp<'_> {
 
     /// A bodiless `@connected` function that the interpreter implements:
     /// std `net`'s `sendRequest`, and what its host does, as the REPL's
-    /// own functions.
+    /// own functions; or one whose Temper body it replaces ([`implements`]).
     fn connected_function(&mut self, s: &Settled, decl: NodeId, args: Vec<Val>) -> R {
         let name = core::let_parts(&s.library.tree, decl).0;
         match s.library.name(name).map(|n| s.library.names.get(n)) {
             Some("sendRequest") if in_std(s, decl, "net") => self.send_request(args),
+            // Runs the async work a test started, failing as it does.
+            Some("finishAsyncWork") if in_std(s, decl, "testing") => {
+                self.run_tasks(s).map(|()| Val::Void)
+            }
             name => match self.host.clone().and_then(|host| host(s, decl, &args)) {
                 // Stopped as Ctrl-C stops code, not failed.
                 Some(Err(why)) if why == INTERRUPTED => Err(Abrupt::Panic(why)),
@@ -1927,6 +1931,17 @@ fn check_access(
 
 /// A `Class` node's name.
 /// Whether a node is in a std module, as `temporal` for `std/temporal`.
+/// Whether the interpreter implements a `@connected` function that has a
+/// Temper body, which backends without their own use: std `testing`'s
+/// `finishAsyncWork`, which runs the async work a test started.
+fn implements(s: &Settled, decl: NodeId) -> bool {
+    let name = core::let_parts(&s.library.tree, decl).0;
+    let name = s.library.name(name).map(|n| s.library.names.get(n));
+    name == Some("finishAsyncWork")
+        && s.library.connected.contains_key(&decl)
+        && in_std(s, decl, "testing")
+}
+
 fn in_std(s: &Settled, node: NodeId, module: &str) -> bool {
     let file = s.library.locate(s.library.tree.span(node).start).0;
     let path = &s.library.files[file.0 as usize].path;

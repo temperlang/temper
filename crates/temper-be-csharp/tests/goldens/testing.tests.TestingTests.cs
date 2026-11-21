@@ -28,6 +28,7 @@ public class TestingTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -42,6 +43,7 @@ public class TestingTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             t.SoftFailToHard();
         }
     }
@@ -65,6 +67,7 @@ public class TestingTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }

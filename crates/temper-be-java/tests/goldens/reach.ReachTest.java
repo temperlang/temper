@@ -1,5 +1,6 @@
 package reach;
 
+import temper.core.Core;
 import temper.std.testing.Test;
 
 public final class ReachTest {
@@ -50,6 +51,7 @@ public final class ReachTest {
                 test.assert_(actual == expected, () -> "expected shownCount == (" + expected + ") not (" + actual + ")");
             }
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }

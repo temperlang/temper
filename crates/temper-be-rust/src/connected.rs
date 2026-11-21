@@ -666,7 +666,10 @@ fn run_async(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, N
     let [f] = args else {
         return Err(NotYet::new("async's arguments"));
     };
-    t.runs_async = true;
+    match t.in_tests || t.for_tests {
+        true => t.runs_async_in_tests = true,
+        false => t.runs_async = true,
+    }
     let f = t.expr(*f, Want::Owned)?;
     Ok(Expr::path("crate::support::run_async").call(vec![f]))
 }

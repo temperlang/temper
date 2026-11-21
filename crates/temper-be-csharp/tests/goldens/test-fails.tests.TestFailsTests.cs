@@ -53,6 +53,7 @@ public class TestFailsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -74,6 +75,7 @@ public class TestFailsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -98,6 +100,7 @@ public class TestFailsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -118,6 +121,7 @@ public class TestFailsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -134,6 +138,7 @@ public class TestFailsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -150,6 +155,7 @@ public class TestFailsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -166,6 +172,7 @@ public class TestFailsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -183,6 +190,7 @@ public class TestFailsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -201,6 +209,7 @@ public class TestFailsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }

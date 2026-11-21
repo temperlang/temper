@@ -46,7 +46,15 @@ namespace TemperLang.Std.Net
         }
 
         private static readonly HttpClient _httpClient = new HttpClient();
-        public static async Task<INetResponse> StdNetSend(
+        public static Task<INetResponse> StdNetSend(
+            string url, string method,
+            string? requestBody, string? mimeType
+        )
+        {
+            return TemperLang.Core.Async.TrackIo(Send(url, method, requestBody, mimeType));
+        }
+
+        private static async Task<INetResponse> Send(
             string url, string method,
             string? requestBody, string? mimeType
         )
@@ -93,7 +101,7 @@ namespace TemperLang.Std.Net
                     headers[header.Key] = header.Value;
                 }
 
-                var bodyTask = LoadBodyAsync(response);
+                var bodyTask = TemperLang.Core.Async.TrackIo(LoadBodyAsync(response));
                 return new NetResponseImpl(statusCode, headers, bodyTask);
             }
         }

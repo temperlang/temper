@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -122,16 +123,24 @@ namespace TemperLang.Core
 
         private static void Schedule(Action step)
         {
+            AddBusy(1);
             var custom = runner;
             if (custom != null)
             {
                 custom(() =>
                 {
-                    lock (Turn)
+                    try
                     {
-                        step();
+                        lock (Turn)
+                        {
+                            step();
+                        }
+                        SettleDeferred();
                     }
-                    SettleDeferred();
+                    finally
+                    {
+                        AddBusy(-1);
+                    }
                 });
                 return;
             }
@@ -162,11 +171,110 @@ namespace TemperLang.Core
                     }
                     step = Ready.Dequeue();
                 }
-                lock (Turn)
+                try
                 {
-                    step();
+                    lock (Turn)
+                    {
+                        step();
+                    }
+                    SettleDeferred();
                 }
-                SettleDeferred();
+                finally
+                {
+                    // After settling, which queued what it woke.
+                    AddBusy(-1);
+                }
+            }
+        }
+
+        // Steps queued or running and I/O in flight, which FinishAsyncWork
+        // waits for, and the first failure that escaped a step since.
+        private static readonly object Busy = new object();
+        private static int busyCount = 0;
+#if NET6_0_OR_GREATER
+        private static Exception? escaped;
+#else
+        private static Exception escaped;
+#endif
+
+        private static void AddBusy(int n)
+        {
+            lock (Busy)
+            {
+                busyCount += n;
+                if (busyCount == 0)
+                {
+                    Monitor.PulseAll(Busy);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Counts <paramref name="task"/> as I/O in flight, as std/net's
+        /// requests, until it settles, so <see cref="FinishAsyncWork"/>
+        /// waits for it.  The task returned settles with it, its waiters
+        /// queued before the count drops.
+        /// </summary>
+        public static Task<T> TrackIo<T>(Task<T> task)
+        {
+            AddBusy(1);
+            var tracked = new TaskCompletionSource<T>();
+            task.ContinueWith(t =>
+            {
+                try
+                {
+                    if (t.IsCanceled)
+                    {
+                        tracked.TrySetCanceled();
+                    }
+                    else if (t.Exception != null)
+                    {
+                        tracked.TrySetException(t.Exception.InnerExceptions);
+                    }
+                    else
+                    {
+                        tracked.TrySetResult(t.Result);
+                    }
+                }
+                finally
+                {
+                    AddBusy(-1);
+                }
+            }, TaskContinuationOptions.ExecuteSynchronously);
+            return tracked.Task;
+        }
+
+        /// <summary>
+        /// Called from generated tests after each test's body: waits until
+        /// no async step is queued or running and no I/O is in flight, then
+        /// throws the first failure that escaped a step meanwhile, so the
+        /// test fails with it.  Blocks still awaiting a task that nothing
+        /// settles stay waiting.
+        /// </summary>
+        public static void FinishAsyncWork()
+        {
+            if (MustNotBlock)
+            {
+                throw new InvalidOperationException(
+                    "FinishAsyncWork inside an async turn would deadlock");
+            }
+#if NET6_0_OR_GREATER
+            Exception? failure;
+#else
+            Exception failure;
+#endif
+            lock (Busy)
+            {
+                while (busyCount != 0)
+                {
+                    Monitor.Wait(Busy);
+                }
+                failure = escaped;
+                escaped = null;
+            }
+            if (failure != null)
+            {
+                ExceptionDispatchInfo.Capture(failure).Throw();
             }
         }
 
@@ -300,9 +408,18 @@ namespace TemperLang.Core
                     }
                 }
             }
-            catch (Exception ex) when (!(ex is Panic))
+            catch (Exception ex)
             {
-                // A panic passes, ending the process, as it does elsewhere.
+                // One failing block doesn't stop the others.  The failure
+                // is kept for FinishAsyncWork, or for WaitUntilSafeToExit,
+                // which ends a program with a panic.
+                lock (Busy)
+                {
+                    if (escaped == null)
+                    {
+                        escaped = ex;
+                    }
+                }
                 Console.WriteLine(ex.ToString());
                 Console.WriteLine(new System.Diagnostics.StackTrace().ToString());
             }
@@ -347,6 +464,21 @@ namespace TemperLang.Core
                     "WaitUntilSafeToExit inside an async turn would deadlock");
             }
             allPromisesResolved.WaitOne();
+            // A panic that escaped a block ends the program with it.
+#if NET6_0_OR_GREATER
+            Exception? failure;
+#else
+            Exception failure;
+#endif
+            lock (Busy)
+            {
+                failure = escaped;
+                escaped = null;
+            }
+            if (failure is Panic)
+            {
+                ExceptionDispatchInfo.Capture(failure).Throw();
+            }
         }
     }
 }

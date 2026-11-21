@@ -45,6 +45,7 @@ public final class AssertsTest {
         try {
             test.assert_(Double.compare(AssertsGlobal.normSquared(new Vec2(0.0, 0.0)), 0.0) == 0, () -> "Oh noes");
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -57,6 +58,7 @@ public final class AssertsTest {
             TestHelper helper = new TestHelper(3, 2);
             assertMoreThings(test, helper, List.of(List.of("bye")));
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -72,6 +74,7 @@ public final class AssertsTest {
                 test.assert_(actual.equals(expected), () -> "expected vec.toString() == (" + expected + ") not (" + actual + ")");
             }
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }
@@ -94,6 +97,7 @@ public final class AssertsTest {
                 }
             }
         } finally {
+            Core.finishAsyncWork();
             test.softFailToHard();
         }
     }

@@ -1214,15 +1214,56 @@ def _turn_held() -> Iterator[None]:
             _turn_local.depth -= 1
 
 
+# Steps queued or running and I/O in flight, which `finish_async_work`
+# waits for, and the first failure that escaped a step since it last ran.
+_busy = 0
+_busy_cv = threading.Condition()
+_escaped: Optional[BaseException] = None
+
+
+def _add_busy(n: int) -> None:
+    global _busy
+    with _busy_cv:
+        _busy += n
+        if _busy == 0:
+            _busy_cv.notify_all()
+
+
 def _run_step(step: Callable[[], None]) -> None:
     "Runs one step in its turn.  Runners call this, on any thread."
-    with _turn_held():
-        try:
-            step()
-        except Exception:
-            # _step_async_coro already printed it.  One failing block
-            # must not stop the others.
-            pass
+    global _escaped
+    try:
+        with _turn_held():
+            try:
+                step()
+            except BaseException as e:
+                # One failing block must not stop the others, so a panic
+                # doesn't end the runner's thread.  _step_async_coro
+                # already printed anything else.
+                if not isinstance(e, Exception):
+                    print_exception(type(e), value=e, tb=e.__traceback__)
+                with _busy_cv:
+                    if _escaped is None:
+                        _escaped = e
+    finally:
+        _add_busy(-1)
+
+
+def finish_async_work() -> None:
+    """
+    Waits until no async step is queued or running and no I/O is in flight,
+    as generated tests do after each test's body, then raises the first
+    failure that escaped a step meanwhile, so the test fails with it.
+    Blocks still awaiting a promise that nothing settles stay waiting.
+    """
+    global _escaped
+    if _in_turn():
+        raise RuntimeError("finish_async_work inside an async turn would deadlock")
+    with _busy_cv:
+        _busy_cv.wait_for(lambda: _busy == 0)
+        escaped, _escaped = _escaped, None
+    if escaped is not None:
+        raise escaped
 
 
 def _run_scheduler() -> None:
@@ -1277,6 +1318,7 @@ def asyncio_runner(loop: "Optional[asyncio.AbstractEventLoop]" = None) -> AsyncR
 
 def _schedule(step: Callable[[], None]) -> None:
     "Queues a step on the runner.  Safe from any thread."
+    _add_busy(1)
     _runner(lambda: _run_step(step))
 
 
@@ -1559,6 +1601,13 @@ def std_net_send(
     # the futures there queues their waiters on the runner.
     def do_fetch() -> None:
         try:
+            fetch()
+        finally:
+            # After settling, which queued the waiters' steps.
+            _add_busy(-1)
+
+    def fetch() -> None:
+        try:
             response = urllib.request.urlopen(request)
         except urllib.error.HTTPError as e:
             # urlopen raises for a 4xx or 5xx status, but the error is
@@ -1586,6 +1635,7 @@ def std_net_send(
                 )
             )
 
+    _add_busy(1)
     _io_executor.submit(do_fetch)
     return net_response_future
 

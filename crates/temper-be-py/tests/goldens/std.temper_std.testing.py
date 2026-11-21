@@ -97,6 +97,10 @@ class Test:
             return _list_join(self._messages, ', ', lambda it: it)
 
 
+def _finish_async_work() -> None:
+    pass
+
+
 def process_test_cases(test_cases: _Sequence[_Pair[str, _Callable[[Test], None]]], /) -> _Sequence[_Pair[str, _Sequence[str]]]:
     def fn(test_case: _Pair[str, _Callable[[Test], None]], /) -> _Pair[str, _Sequence[str]]:
         key = test_case.key
@@ -107,6 +111,7 @@ def process_test_cases(test_cases: _Sequence[_Pair[str, _Callable[[Test], None]]
             fun(test)
         except _Bubble:
             had_bubble = True
+        _finish_async_work()
         messages = test.messages()
         t_1: _Sequence[str]
         if test.passing and not had_bubble:

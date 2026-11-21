@@ -165,6 +165,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
         let shape = super::TestShape::new(super::TestSquare::new(super::for_tests(2)));
         super::add_area(shape.clone());
         *super::TEST_COUNT.write().unwrap() =
@@ -215,6 +216,7 @@ mod tests {
                 }),
             );
         }
+        work.finish(crate::support::config().runner());
         test.soft_fail_to_hard();
         Ok(())
     }

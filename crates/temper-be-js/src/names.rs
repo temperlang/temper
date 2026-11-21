@@ -120,6 +120,7 @@ pub const PRINTED: &[&str] = &[
     "divIntInt",
     "empty",
     "eqFloat64",
+    "finishAsyncWork",
     "float64Near",
     "float64ToInt32",
     "float64ToInt32Unsafe",

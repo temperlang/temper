@@ -844,6 +844,8 @@ impl<'a> Translator<'a> {
             if stmts.last().map(Stmt::bare) == Some(&Stmt::Return(None)) {
                 stmts.pop();
             }
+            // Each test awaits the async work it started.
+            self.imports.insert("finishAsyncWork");
             body.push(
                 Stmt::Test {
                     name: p.strings.get(name).to_string(),

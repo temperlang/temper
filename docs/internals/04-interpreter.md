@@ -78,6 +78,10 @@ triple(14) = 42
 [`run_tests`](../../crates/temper-frontend/src/interp.rs) runs a
 library's top level, then each module's tests, and reports them as
 JUnit XML, the same report std's test runner gives in every language.
+Each test ends only after the async work it started has run: std's
+`processTestCases` calls `finishAsyncWork()`, a `@connected` function
+whose Temper body does nothing, which the interpreter replaces: it runs
+the queue, failing as a block there fails.
 `temper test` reads those results into one summary
 ([the CLI page](07-cli.md) says more). What tests pin the interpreter
 itself: [its tests, in detail](detail/04-interpreter.md#tests).

@@ -1344,8 +1344,9 @@ impl<'a> Translator<'a> {
     /// here), then one `TestCase` class, named for the module, with a
     /// method per test, as `test_adds` for "adds", whose docstring is the
     /// test's name. Each makes std's `Test`, runs the test's body, and
-    /// then, even if the body raised, fails if the `Test` has failures
-    /// (`softFailToHard`), as Kotlin's do. What they use of the module,
+    /// then, even if the body raised, waits for the async work it started
+    /// (the runtime's `finish_async_work`), raising what failed there, and
+    /// fails if the `Test` has failures (`softFailToHard`), as Kotlin's do. What they use of the module,
     /// its private names too, is imported from it, as Kotlin's do. `None`
     /// if the module has no tests.
     pub fn tests(&mut self, module: &Module, class: &str) -> R<Option<tree::Module>> {
@@ -1400,6 +1401,7 @@ impl<'a> Translator<'a> {
             translated?;
             let test_var = self.name(param);
             let soft_fail = Expr::name(&test_var).attr("soft_fail_to_hard").call(vec![]);
+            let finish = Expr::name(self.import("temper_core", "finish_async_work")).call(vec![]);
             let method = test_method_name(&text, &mut used);
             let mut method_body = vec![Stmt::Expr(Expr::Str(text))];
             // The file's own `var`s it assigns, as what only tests reach.
@@ -1415,7 +1417,7 @@ impl<'a> Translator<'a> {
             method_body.push(Stmt::Try {
                 body: stmts,
                 except: None,
-                finally: vec![Stmt::Expr(soft_fail)],
+                finally: vec![Stmt::Expr(finish), Stmt::Expr(soft_fail)],
             });
             methods.push(Stmt::Def {
                 decorators: Vec::new(),

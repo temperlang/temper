@@ -8,18 +8,18 @@
 9:1 -> ../testing.temper.md:29:5  console.log(`init ${twice(1) <- console.log("init ${twice(1)
 # testing/test/testing.test.js
 # generated line:column -> source:line:column, and the text at each
-5:1 -> ../../testing.temper.md:11:5  let runs = 0; <- var runs = 0;
-6:1 -> ../../testing.temper.md:12:5  const base = 10; <- let base = 10;
-8:1 -> ../../testing.temper.md:14:5  it("twice works", function ( <- test("twice works") {
-11:5 -> ../../testing.temper.md:15:7  const x = twice(2); <- let x = twice(2);
-12:5 -> ../../testing.temper.md:16:7  runs = (((runs + x) | 0) + b <- runs = runs + x + base;
-18:1 -> ../../testing.temper.md:19:5  it("names: punctuation, 'quo <- test("names: punctuation, 'q
-21:5 -> ../../testing.temper.md:20:7  twice(runs); <- twice(runs);
-27:1 -> ../../testing.temper.md:23:5  it("locals a test assigns", <- test("locals a test assigns"
-30:5 -> ../../testing.temper.md:24:7  let n = 0; <- var n = 0;
-31:5 -> ../../testing.temper.md:25:7  { <- for (var i = 0; i < 3; i +=
-32:7 -> ../../testing.temper.md:25:12  let i = 0; <- var i = 0; i < 3; i += 1) {
-33:7 -> ../../testing.temper.md:25:7  while (i < 3) { <- for (var i = 0; i < 3; i +=
-34:9 -> ../../testing.temper.md:25:40  n = (n + twice(i)) | 0; <- n += twice(i); }
-35:9 -> ../../testing.temper.md:25:30  i = (i + 1) | 0; <- i += 1) { n += twice(i); }
-38:5 -> ../../testing.temper.md:26:7  runs = n; <- runs = n;
+6:1 -> ../../testing.temper.md:11:5  let runs = 0; <- var runs = 0;
+7:1 -> ../../testing.temper.md:12:5  const base = 10; <- let base = 10;
+9:1 -> ../../testing.temper.md:14:5  it("twice works", async func <- test("twice works") {
+12:5 -> ../../testing.temper.md:15:7  const x = twice(2); <- let x = twice(2);
+13:5 -> ../../testing.temper.md:16:7  runs = (((runs + x) | 0) + b <- runs = runs + x + base;
+20:1 -> ../../testing.temper.md:19:5  it("names: punctuation, 'quo <- test("names: punctuation, 'q
+23:5 -> ../../testing.temper.md:20:7  twice(runs); <- twice(runs);
+30:1 -> ../../testing.temper.md:23:5  it("locals a test assigns", <- test("locals a test assigns"
+33:5 -> ../../testing.temper.md:24:7  let n = 0; <- var n = 0;
+34:5 -> ../../testing.temper.md:25:7  { <- for (var i = 0; i < 3; i +=
+35:7 -> ../../testing.temper.md:25:12  let i = 0; <- var i = 0; i < 3; i += 1) {
+36:7 -> ../../testing.temper.md:25:7  while (i < 3) { <- for (var i = 0; i < 3; i +=
+37:9 -> ../../testing.temper.md:25:40  n = (n + twice(i)) | 0; <- n += twice(i); }
+38:9 -> ../../testing.temper.md:25:30  i = (i + 1) | 0; <- i += 1) { n += twice(i); }
+41:5 -> ../../testing.temper.md:26:7  runs = n; <- runs = n;

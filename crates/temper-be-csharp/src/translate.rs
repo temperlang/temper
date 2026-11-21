@@ -1818,8 +1818,9 @@ impl<'a> Translator<'a> {
     /// interfaces ([`Self::take_types`]), and its tests: each a method
     /// named for it in Pascal case (`Twice10` for "twice 10"), which makes
     /// std's `Test`, runs the body, and then, even if the body threw,
-    /// fails if the `Test` has failures (`SoftFailToHard`), as Kotlin's
-    /// do. They see the library's `internal` members (`InternalsVisibleTo`
+    /// waits for the async work it started (`Async.FinishAsyncWork`),
+    /// throwing what failed there, and fails if the `Test` has failures
+    /// (`SoftFailToHard`), as Kotlin's do. They see the library's `internal` members (`InternalsVisibleTo`
     /// in its project). A test's update of the library's module `var`
     /// doesn't take its lock, which is private to its class. `None`
     /// without test parts or tests.
@@ -1867,6 +1868,7 @@ impl<'a> Translator<'a> {
             self.begin(test);
             let stmts = self.stmts(body)?;
             let soft_fail = Expr::name(var.clone()).method("SoftFailToHard", Vec::new());
+            let finish = self.class("Async").method("FinishAsyncWork", Vec::new());
             methods.push((
                 test_method_name(p.strings.get(name), &mut used),
                 vec![
@@ -1877,7 +1879,7 @@ impl<'a> Translator<'a> {
                     },
                     Stmt::Try {
                         body: stmts,
-                        finally: vec![Stmt::Expr(soft_fail)],
+                        finally: vec![Stmt::Expr(finish), Stmt::Expr(soft_fail)],
                     },
                 ],
             ));
@@ -3578,7 +3580,7 @@ fn single_value(p: &Program, body: NodeId) -> bool {
 }
 
 /// Whether a statement can complete normally, by C#'s rules.
-fn completes(s: &Stmt) -> bool {
+pub(crate) fn completes(s: &Stmt) -> bool {
     match s {
         Stmt::Break
         | Stmt::Continue

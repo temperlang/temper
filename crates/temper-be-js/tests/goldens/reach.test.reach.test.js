@@ -1,4 +1,4 @@
-import { type } from "@temperlang/core";
+import { finishAsyncWork, type } from "@temperlang/core";
 import { it } from "node:test";
 import {
   base,
@@ -51,7 +51,7 @@ class TestSquare extends type(TestShape) {
 const testFactor = Math.imul(base, 2);
 let testCount = 0;
 
-it("test parts", function () {
+it("test parts", async function () {
   const test = new Test();
   try {
     const shape = new TestSquare(forTests(2));
@@ -80,6 +80,7 @@ it("test parts", function () {
       test.assert(actual === expected, () => `expected shownCount == (${expected}) not (${actual})`);
     }
   } finally {
+    await finishAsyncWork();
     test.softFailToHard();
   }
 });

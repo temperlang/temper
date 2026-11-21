@@ -45,6 +45,82 @@ pub fn in_turn() -> bool {
     IN_TURN.with(|t| t.get())
 }
 
+/// Where a test keeps the first panic that escaped a step of the async
+/// work it started ([`TestWork`]).
+type Kept = Arc<Mutex<Option<Box<dyn std::any::Any + Send>>>>;
+
+thread_local! {
+    /// The test whose work this thread is running: its body, or a step
+    /// of a block it started, which blocks started here belong to too.
+    static KEEPER: std::cell::RefCell<Option<Kept>> = const { std::cell::RefCell::new(None) };
+}
+
+/// The test that what's running now belongs to, if any.
+fn keeper() -> Option<Kept> {
+    KEEPER.with(|k| k.borrow().clone())
+}
+
+/// Runs `step` as a turn ([`turn`]) of a block that `kept`'s test
+/// started, keeping its panic there, or of no test's, letting it pass.
+fn step_of(kept: &Option<Kept>, step: impl FnOnce()) {
+    let Some(kept) = kept else {
+        return turn(step);
+    };
+    let outer = KEEPER.with(|k| k.replace(Some(kept.clone())));
+    let result = crate::catch_quietly(|| turn(step));
+    KEEPER.with(|k| *k.borrow_mut() = outer);
+    if let Err(payload) = result {
+        let mut kept = kept.lock().unwrap_or_else(|e| e.into_inner());
+        kept.get_or_insert(payload);
+    }
+}
+
+/// The async work of a test, from its start ([`TestWork::begin`]), which
+/// generated tests call before a test's body, to
+/// [`finish`](TestWork::finish), after it. Tests run on several threads
+/// at once, any of which may run another's steps, so each block belongs
+/// to the test that started it, as do the blocks it starts.
+pub struct TestWork {
+    kept: Kept,
+    outer: Option<Kept>,
+}
+
+impl TestWork {
+    /// Starts the work of the test running on this thread.
+    pub fn begin() -> TestWork {
+        let kept = Kept::default();
+        let outer = KEEPER.with(|k| k.replace(Some(kept.clone())));
+        TestWork { kept, outer }
+    }
+
+    /// Runs the async work queued on `runner`, the test's and any other,
+    /// until none is left, then panics with the first panic that escaped
+    /// a step of the test's, so the test fails with it. Blocks still
+    /// awaiting a promise that nothing resolves stay waiting.
+    pub fn finish(self, runner: &AsyncRunner) {
+        runner.run_all_blocking();
+        let payload = self.kept.lock().unwrap_or_else(|e| e.into_inner()).take();
+        drop(self);
+        if let Some(payload) = payload {
+            // Panicking anew here, so the hook reports it in this test.
+            match payload.downcast::<String>() {
+                Ok(message) => panic!("{message}"),
+                Err(payload) => match payload.downcast::<&'static str>() {
+                    Ok(message) => panic!("{message}"),
+                    Err(payload) => std::panic::resume_unwind(payload),
+                },
+            }
+        }
+    }
+}
+
+impl Drop for TestWork {
+    fn drop(&mut self) {
+        let outer = self.outer.take();
+        KEEPER.with(|k| *k.borrow_mut() = outer);
+    }
+}
+
 /// Runs `step` as a turn, marked so for [`in_turn`].
 fn turn(step: impl FnOnce()) {
     struct Unmark(bool);
@@ -70,9 +146,10 @@ impl AsyncRunner {
         T: Clone + Send + Sync + 'static,
     {
         let gen = gen();
+        let kept = keeper();
         // TODO Any way to avoid the extra Arc wrapping?
         let gen_ignoring_result = Arc::new(move || {
-            turn(|| {
+            step_of(&kept, || {
                 let _ = gen.next_safe();
             })
         });
@@ -97,10 +174,12 @@ impl AsyncRunner {
         U: Clone + Send + Sync + 'static,
     {
         let runner = self.clone();
+        let kept = keeper();
         promise.on_ready(Arc::new(move || {
             let generator = generator.clone();
+            let kept = kept.clone();
             runner.0.run_async(Arc::new(move || {
-                turn(|| {
+                step_of(&kept, || {
                     let _ = generator.next_safe();
                 })
             }));

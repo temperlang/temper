@@ -1,3 +1,5 @@
+import { trackAsyncIo } from "./async.js";
+
 /**
  * @param {string} url
  * @param {string} method
@@ -13,7 +15,7 @@ export function sendRequest(url, method, bodyContent, bodyMimeType) {
       details.headers = { 'Content-Type': bodyMimeType };
     }
   }
-  return fetch(url, details);
+  return trackAsyncIo(fetch(url, details));
 }
 
 /**
@@ -37,5 +39,5 @@ export function netResponseGetContentType(r) {
  * @return {Promise<string | null>} the body content.
  */
 export function netResponseGetBodyContent(r) {
-  return r.text();
+  return trackAsyncIo(r.text());
 }

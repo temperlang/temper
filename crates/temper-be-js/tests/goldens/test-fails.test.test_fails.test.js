@@ -1,4 +1,4 @@
-import { isBubble } from "@temperlang/core";
+import { finishAsyncWork, isBubble } from "@temperlang/core";
 import { it } from "node:test";
 import { Test } from "@temperlang/std/testing";
 
@@ -29,7 +29,7 @@ function find(key) {
   }
 }
 
-it("passes before", function () {
+it("passes before", async function () {
   const test = new Test();
   try {
     function fn() {
@@ -41,11 +41,12 @@ it("passes before", function () {
     }
     test.assert(tries(fn), () => 'expected tries { assert(find("one") == 1); }');
   } finally {
+    await finishAsyncWork();
     test.softFailToHard();
   }
 });
 
-it("fails past an orelse", function () {
+it("fails past an orelse", async function () {
   const test = new Test();
   try {
     function fn() {
@@ -54,11 +55,12 @@ it("fails past an orelse", function () {
     tries(fn);
     test.fail("swallowed");
   } finally {
+    await finishAsyncWork();
     test.softFailToHard();
   }
 });
 
-it("narrows after fail", function () {
+it("narrows after fail", async function () {
   const test = new Test();
   try {
     const n = find("one");
@@ -71,11 +73,12 @@ it("narrows after fail", function () {
       test.assert(actual === expected, () => `expected n + 1 == (${expected}) not (${actual})`);
     }
   } finally {
+    await finishAsyncWork();
     test.softFailToHard();
   }
 });
 
-it("fails before narrowing", function () {
+it("fails before narrowing", async function () {
   const test = new Test();
   try {
     const n = find("two");
@@ -84,32 +87,35 @@ it("fails before narrowing", function () {
     }
     test.assert(((n + 1) | 0) === 3, () => "went on");
   } finally {
+    await finishAsyncWork();
     test.softFailToHard();
   }
 });
 
-it("collects soft failures", function () {
+it("collects soft failures", async function () {
   const test = new Test();
   try {
     test.assert(((1 + 1) | 0) === 3, () => "first");
     test.assert(true, () => "not shown");
     test.assert(((2 + 2) | 0) === 5, () => "second");
   } finally {
+    await finishAsyncWork();
     test.softFailToHard();
   }
 });
 
-it("fails hard after soft failures", function () {
+it("fails hard after soft failures", async function () {
   const test = new Test();
   try {
     test.assert(false, () => "soft before");
     test.fail("then hard");
   } finally {
+    await finishAsyncWork();
     test.softFailToHard();
   }
 });
 
-it("fails a hard assertion past an orelse", function () {
+it("fails a hard assertion past an orelse", async function () {
   const test = new Test();
   try {
     function fn() {
@@ -118,11 +124,12 @@ it("fails a hard assertion past an orelse", function () {
     tries(fn);
     test.fail("swallowed");
   } finally {
+    await finishAsyncWork();
     test.softFailToHard();
   }
 });
 
-it("hardens soft failures past an orelse", function () {
+it("hardens soft failures past an orelse", async function () {
   const test = new Test();
   try {
     test.assert(false, () => "soft only");
@@ -132,11 +139,12 @@ it("hardens soft failures past an orelse", function () {
     tries(fn2);
     test.fail("swallowed");
   } finally {
+    await finishAsyncWork();
     test.softFailToHard();
   }
 });
 
-it("passes after", function () {
+it("passes after", async function () {
   const test = new Test();
   try {
     {
@@ -145,6 +153,7 @@ it("passes after", function () {
       test.assert(actual === expected, () => `expected find("one") == (${expected}) not (${actual == null ? "null" : actual.toString()})`);
     }
   } finally {
+    await finishAsyncWork();
     test.softFailToHard();
   }
 });

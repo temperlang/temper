@@ -1,0 +1,101 @@
+tmpl 1 model 1 library `test-async` 0.0.0
+
+uses std#1 0.0.0-alpha.0.0 {
+  module testing#2 {
+    class Test#3 {
+      connected method assert#32(success: Boolean, message: fn (): String): Void;
+      connected method fail#60(message: String): Never<Void>;
+    }
+  }
+}
+
+uses `temper-core`#6 0.0.0-alpha.0.0 {
+  connected fn async#7(generatorFactory: fn (): SafeGenerator#8<Empty#12>): Void;
+  interface SafeGenerator#8<YIELD#9> extends Generator#10<YIELD#9> {}
+  interface Generator#10<YIELD#11> {}
+  class Empty#12 {}
+  class ValueResult#13<YIELD#14> extends GeneratorResult#15<YIELD#14> {
+    connected constructor constructor#17(value: YIELD#14): ValueResult#13<YIELD#14>;
+  }
+  interface GeneratorResult#15<YIELD#16> {}
+  connected fn doneResult#18<YIELD#19>(): DoneResult#20<YIELD#19>;
+  class DoneResult#20<YIELD#21> extends GeneratorResult#15<YIELD#21> {}
+  connected fn empty#22(): Empty#12;
+  connected fn safeAdaptGeneratorFn#23<YIELD#24>(step: fn (SafeGenerator#8<YIELD#24>): GeneratorResult#15<YIELD#24>): SafeGenerator#8<YIELD#24>;
+  connected fn awakeUpon#25<T#26>(promise: Promise#27<T#26>, generator: SafeGenerator#8<Empty#12>): Void;
+  class Promise#27<R#28> {}
+  connected fn getPromiseResultSync#29<T#30>(promise: Promise#27<T#30>): T#30 throws Bubble;
+  class PromiseBuilder#40<R#41> {
+    connected constructor constructor#43(): PromiseBuilder#40<R#41>;
+    connected get promise#46(): Promise#27<R#41>;
+    connected method complete#51(completion: R#41): Void;
+  }
+  class Int32#48 {
+    connected method toString#49(radix?: Int32): String;
+  }
+}
+
+module `test-async`#0 {
+  init {}
+
+  test "fails in an async block" ~test#4(test#5: Test#3): Void throws Bubble {
+    async#7((fn generator ~fn#31(): SafeGenerator#8<Empty#12> [test#5] {
+      test#5.assert#32(%Int32.eq(%Int32.add(1, 1), 3), (fn ~fn#33(): String {
+        return "failed in async";
+      }): fn (): String);
+    }): fn (): SafeGenerator#8<Empty#12>);
+  }
+
+  test "passes in an async block" ~test#34(test#35: Test#3): Void throws Bubble {
+    async#7((fn generator ~fn#36(): SafeGenerator#8<Empty#12> [test#35] {
+      test#35.assert#32(%Int32.eq(%Int32.add(1, 1), 2), (fn ~fn#37(): String {
+        return "not shown";
+      }): fn (): String);
+    }): fn (): SafeGenerator#8<Empty#12>);
+  }
+
+  test "fails in a later turn" ~test#38(test#39: Test#3): Void throws Bubble {
+    let pb#42: PromiseBuilder#40<Int32> = new constructor#43<Int32>();
+    async#7((fn generator ~fn#44(): SafeGenerator#8<Empty#12> [test#39, pb#42] {
+      let n#45: Int32 = (orelse((await(pb#42.promise#46())^): Int32, %Int32.neg(1))): Int32;
+      test#39.assert#32(%Int32.eq(n#45, 2), (fn ~fn#47(): String [n#45] {
+        return %String.cat("later turn got ", n#45.toString#49(omitted));
+      }): fn (): String);
+    }): fn (): SafeGenerator#8<Empty#12>);
+    async#7((fn generator ~fn#50(): SafeGenerator#8<Empty#12> [pb#42] {
+      pb#42.complete#51(1);
+    }): fn (): SafeGenerator#8<Empty#12>);
+  }
+
+  test "passes after a later turn" ~test#52(test#53: Test#3): Void throws Bubble {
+    {
+      let actual#54: Int32 = %Int32.add(1, 1);
+      let expected#55: Int32 = 2;
+      test#53.assert#32(%Int32.eq(actual#54, expected#55), (fn ~fn#56(): String [actual#54, expected#55] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected 1 + 1 == (", expected#55.toString#49(omitted)), ") not ("), actual#54.toString#49(omitted)), ")");
+      }): fn (): String);
+    }
+  }
+
+  test "fails hard in an async block" ~test#57(test#58: Test#3): Void throws Bubble {
+    async#7((fn generator ~fn#59(): SafeGenerator#8<Empty#12> [test#58] {
+      test#58.fail#60("failed hard in async");
+    }): fn (): SafeGenerator#8<Empty#12>);
+  }
+
+  test "panics in an async block" ~test#61(test#62: Test#3): Void throws Bubble {
+    async#7((fn generator ~fn#63(): SafeGenerator#8<Empty#12> {
+      (panic()): Void;
+    }): fn (): SafeGenerator#8<Empty#12>);
+  }
+
+  test "passes after" ~test#64(test#65: Test#3): Void throws Bubble {
+    {
+      let actual#66: Int32 = %Int32.add(1, 1);
+      let expected#67: Int32 = 2;
+      test#65.assert#32(%Int32.eq(actual#66, expected#67), (fn ~fn#68(): String [actual#66, expected#67] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected 1 + 1 == (", expected#67.toString#49(omitted)), ") not ("), actual#66.toString#49(omitted)), ")");
+      }): fn (): String);
+    }
+  }
+}

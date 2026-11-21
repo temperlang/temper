@@ -1,4 +1,10 @@
-import { eqFloat64, float64ToString, listedGet, type } from "@temperlang/core";
+import {
+  eqFloat64,
+  finishAsyncWork,
+  float64ToString,
+  listedGet,
+  type,
+} from "@temperlang/core";
 import { it } from "node:test";
 import { Vec2, normSquared, unitVecs } from "../asserts.internal.js";
 import { Test } from "@temperlang/std/testing";
@@ -85,27 +91,29 @@ class TestHelper extends type() {
   }
 }
 
-it("a test case", function () {
+it("a test case", async function () {
   const test = new Test();
   try {
     test.assert(eqFloat64(normSquared(new Vec2(0.0, 0.0)), 0.0), () => "Oh noes");
   } finally {
+    await finishAsyncWork();
     test.softFailToHard();
   }
 });
 
-it("a failing test", function () {
+it("a failing test", async function () {
   const test = new Test();
   try {
     test.assert(false, () => "because it's wrong");
     const helper = new TestHelper(3, 2);
     assertMoreThings(test, helper, Object.freeze([Object.freeze(["bye"])]));
   } finally {
+    await finishAsyncWork();
     test.softFailToHard();
   }
 });
 
-it("exported", function () {
+it("exported", async function () {
   const test = new Test();
   try {
     const vec = new Vec2(1.5, 2.5);
@@ -115,11 +123,12 @@ it("exported", function () {
       test.assert(actual === expected, () => `expected vec.toString() == (${expected}) not (${actual})`);
     }
   } finally {
+    await finishAsyncWork();
     test.softFailToHard();
   }
 });
 
-it("module values", function () {
+it("module values", async function () {
   const test = new Test();
   try {
     {
@@ -136,6 +145,7 @@ it("module values", function () {
       }
     }
   } finally {
+    await finishAsyncWork();
     test.softFailToHard();
   }
 });

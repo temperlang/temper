@@ -1,6 +1,12 @@
 from asserts.asserts import Vec2, _norm_squared, _unit_vecs
 from collections.abc import Callable, Sequence
-from temper_core import float64_to_string, float_eq, int_add, list_get
+from temper_core import (
+    finish_async_work,
+    float64_to_string,
+    float_eq,
+    int_add,
+    list_get,
+)
 from temper_std.testing import Test
 from unittest import TestCase
 
@@ -60,6 +66,7 @@ class TestAsserts(TestCase):
         try:
             test.assert_(float_eq(_norm_squared(Vec2(0.0, 0.0)), 0.0), lambda: 'Oh noes')
         finally:
+            finish_async_work()
             test.soft_fail_to_hard()
 
     def test_a_failing_test(self, /) -> None:
@@ -70,6 +77,7 @@ class TestAsserts(TestCase):
             helper = _TestHelper(3, 2)
             _assert_more_things(test, helper, (('bye',),))
         finally:
+            finish_async_work()
             test.soft_fail_to_hard()
 
     def test_exported(self, /) -> None:
@@ -81,6 +89,7 @@ class TestAsserts(TestCase):
             expected = '(1.5, 2.5) size squared 8.5'
             test.assert_(actual == expected, lambda: f'expected vec.toString() == ({expected}) not ({actual})')
         finally:
+            finish_async_work()
             test.soft_fail_to_hard()
 
     def test_module_values(self, /) -> None:
@@ -99,4 +108,5 @@ class TestAsserts(TestCase):
                     return lambda: f'expected normSquared(vec) == ({float64_to_string(expected)}) not ({float64_to_string(actual)})'
                 test.assert_(t_0, make_fn(actual, expected))
         finally:
+            finish_async_work()
             test.soft_fail_to_hard()

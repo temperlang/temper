@@ -14,7 +14,7 @@ pub use mapped::{mapped_to_list_with, Map, MapBuilder, Mapped, MappedTrait, Pair
 pub mod promise;
 pub use promise::{
     in_turn, AsyncRunner, AsyncRunnerTrait, Hold, Promise, PromiseBuilder, SingleThreadAsyncRunner,
-    Task,
+    Task, TestWork,
 };
 pub mod string;
 pub use string::AsStr;
@@ -536,10 +536,16 @@ pub fn ignore<T>(_: T) {}
 /// docs say; a value it was writing when it panicked is poisoned, so
 /// reading it later panics too.
 pub fn block_panics(block: Arc<dyn Fn() + Send + Sync>) -> bool {
+    catch_quietly(|| block()).is_err()
+}
+
+/// Runs `block`, catching its panic, which the panic hook says nothing
+/// of: for `block_panics`, and a test's async work ([`TestWork`]).
+pub(crate) fn catch_quietly(block: impl FnOnce()) -> std::thread::Result<()> {
     use std::cell::Cell;
     use std::panic::{self, AssertUnwindSafe};
     thread_local! {
-        // How many `block_panics` calls this thread is in.
+        // How many `catch_quietly` calls this thread is in.
         static CATCHING: Cell<u32> = const { Cell::new(0) };
     }
     static QUIET: std::sync::Once = std::sync::Once::new();
@@ -552,9 +558,9 @@ pub fn block_panics(block: Arc<dyn Fn() + Send + Sync>) -> bool {
         }));
     });
     CATCHING.with(|c| c.set(c.get() + 1));
-    let result = panic::catch_unwind(AssertUnwindSafe(|| block()));
+    let result = panic::catch_unwind(AssertUnwindSafe(block));
     CATCHING.with(|c| c.set(c.get() - 1));
-    result.is_err()
+    result
 }
 
 // Int

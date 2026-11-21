@@ -1,4 +1,10 @@
-import { bubble, isBubble, listedGet, panic } from "@temperlang/core";
+import {
+  bubble,
+  finishAsyncWork,
+  isBubble,
+  listedGet,
+  panic,
+} from "@temperlang/core";
 import { it } from "node:test";
 import { Test } from "@temperlang/std/testing";
 
@@ -14,7 +20,7 @@ function at(ls, i) {
   return listedGet(/** @type {number[]} */ (ls), i);
 }
 
-it("passes before", function () {
+it("passes before", async function () {
   const test = new Test();
   try {
     {
@@ -23,11 +29,12 @@ it("passes before", function () {
       test.assert(actual === expected, () => `expected 1 + 1 == (${expected}) not (${actual})`);
     }
   } finally {
+    await finishAsyncWork();
     test.softFailToHard();
   }
 });
 
-it("panics reading past the end", function () {
+it("panics reading past the end", async function () {
   const test = new Test();
   try {
     /** @type {number} */
@@ -44,29 +51,32 @@ it("panics reading past the end", function () {
       test.assert(actual === expected, () => `expected n == (${expected}) not (${actual})`);
     }
   } finally {
+    await finishAsyncWork();
     test.softFailToHard();
   }
 });
 
-it("panics outright", function () {
+it("panics outright", async function () {
   const test = new Test();
   try {
     panic();
   } finally {
+    await finishAsyncWork();
     test.softFailToHard();
   }
 });
 
-it("fails an assertion", function () {
+it("fails an assertion", async function () {
   const test = new Test();
   try {
     test.assert(((1 + 1) | 0) === 3, () => "wrong on purpose");
   } finally {
+    await finishAsyncWork();
     test.softFailToHard();
   }
 });
 
-it("passes after", function () {
+it("passes after", async function () {
   const test = new Test();
   try {
     {
@@ -75,6 +85,7 @@ it("passes after", function () {
       test.assert(actual === expected, () => `expected at([1, 2], 1) == (${expected}) not (${actual})`);
     }
   } finally {
+    await finishAsyncWork();
     test.softFailToHard();
   }
 });

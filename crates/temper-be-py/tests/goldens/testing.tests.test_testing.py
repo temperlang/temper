@@ -1,4 +1,4 @@
-from temper_core import int_add
+from temper_core import finish_async_work, int_add
 from temper_std.testing import Test
 from testing.testing import twice
 from unittest import TestCase
@@ -16,6 +16,7 @@ class TestTesting(TestCase):
             x = twice(2)
             _runs = int_add(int_add(_runs, x), _base)
         finally:
+            finish_async_work()
             test.soft_fail_to_hard()
 
     def test_names_punctuation_quotes_and_ünïcode(self, /) -> None:
@@ -24,6 +25,7 @@ class TestTesting(TestCase):
         try:
             twice(_runs)
         finally:
+            finish_async_work()
             t.soft_fail_to_hard()
 
     def test_locals_a_test_assigns(self, /) -> None:
@@ -38,4 +40,5 @@ class TestTesting(TestCase):
                 i = int_add(i, 1)
             _runs = n
         finally:
+            finish_async_work()
             test.soft_fail_to_hard()

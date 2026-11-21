@@ -40,74 +40,74 @@
 68:1 -> ../asserts.temper.md:100:5  export const unitVecs = Obje <- let unitVecs = [new Vec2(1.0
 # asserts/test/asserts.test.js
 # generated line:column -> source:line:column, and the text at each
-6:1 -> ../../asserts.temper.md:46:5  /** <- let assertMoreThings(
-11:1 -> ../../asserts.temper.md:46:5  function assertMoreThings(t, <- let assertMoreThings(
-11:10 -> ../../asserts.temper.md:46:9 (assertMoreThings)  assertMoreThings(t, helper, <- assertMoreThings(
-11:26 -> ../../asserts.temper.md:46:5  (t, helper, strings) { <- let assertMoreThings(
-12:3 -> ../../asserts.temper.md:49:7  { <- for (var i = 0; i < strings.
-13:5 -> ../../asserts.temper.md:49:12  let i = 0; <- var i = 0; i < strings.lengt
-14:5 -> ../../asserts.temper.md:49:7  while (i < strings.length) { <- for (var i = 0; i < strings.
-15:7 -> ../../asserts.temper.md:50:9  { <- for (var j = 0; j < strings[
-16:9 -> ../../asserts.temper.md:50:14  let j = 0; <- var j = 0; j < strings[i].le
-17:9 -> ../../asserts.temper.md:50:9  while (j < listedGet(/** @ty <- for (var j = 0; j < strings[
-18:11 -> ../../asserts.temper.md:51:11  { <- assert(helper.i == helper.j)
-19:13 -> ../../asserts.temper.md:51:11  const actual = helper.i; <- assert(helper.i == helper.j)
-20:13 -> ../../asserts.temper.md:51:11  const expected = helper.j; <- assert(helper.i == helper.j)
-21:13 -> ../../asserts.temper.md:51:11  t.assert(actual === expected <- assert(helper.i == helper.j)
-23:11 -> ../../asserts.temper.md:56:11  const s = listedGet(/** @typ <- let s = strings[i][j];
-24:11 -> ../../asserts.temper.md:57:11  { <- assert(s == "hi");
-25:13 -> ../../asserts.temper.md:57:11  const actual = s; <- assert(s == "hi");
-26:13 -> ../../asserts.temper.md:57:11  const expected = "hi"; <- assert(s == "hi");
-27:13 -> ../../asserts.temper.md:57:11  t.assert(actual === expected <- assert(s == "hi");
-29:11 -> ../../asserts.temper.md:50:48  j = (j + 1) | 0; <- j += 1) {
-32:7 -> ../../asserts.temper.md:49:43  i = (i + 1) | 0; <- i += 1) {
-37:1 -> ../../asserts.temper.md:121:5  /** <- let sumOf(helper: TestHelper
-41:1 -> ../../asserts.temper.md:121:5  function sumOf(helper) { <- let sumOf(helper: TestHelper
-41:10 -> ../../asserts.temper.md:121:9 (sumOf)  sumOf(helper) { <- sumOf(helper: TestHelper): I
-41:15 -> ../../asserts.temper.md:121:5  (helper) { <- let sumOf(helper: TestHelper
-42:3 -> ../../asserts.temper.md:121:42  return (helper.i + helper.j) <- helper.i + helper.j }
-45:1 -> ../../asserts.temper.md:118:5  /** <- @keepTest
-49:1 -> ../../asserts.temper.md:118:5  function keptForTests(helper <- @keepTest
-49:10 -> ../../asserts.temper.md:119:9 (keptForTests)  keptForTests(helper) { <- keptForTests(helper: TestHel
-49:22 -> ../../asserts.temper.md:118:5  (helper) { <- @keepTest
-50:3 -> ../../asserts.temper.md:119:49  return sumOf(helper); <- sumOf(helper) }
-53:1 -> ../../asserts.temper.md:65:5  class TestHelper extends typ <- class TestHelper(
-53:7 -> ../../asserts.temper.md:65:11 (TestHelper)  TestHelper extends type() { <- TestHelper(
-53:17 -> ../../asserts.temper.md:65:5   extends type() { <- class TestHelper(
-54:3 -> ../../asserts.temper.md:66:14  /** @type {number} */ <- let i: Int,
-55:3 -> ../../asserts.temper.md:66:14  #i; <- let i: Int,
-56:3 -> ../../asserts.temper.md:67:14  /** @type {number} */ <- let j: Int,
-57:3 -> ../../asserts.temper.md:67:14  #j; <- let j: Int,
-67:3 -> ../../asserts.temper.md:65:5  /** <- class TestHelper(
-71:3 -> ../../asserts.temper.md:65:5  constructor(i, j) { <- class TestHelper(
-73:5 -> ../../asserts.temper.md:66:14  this.#i = i; <- let i: Int,
-74:5 -> ../../asserts.temper.md:67:14  this.#j = j; <- let j: Int,
-77:3 -> ../../asserts.temper.md:66:14  /** @returns {number} */ <- let i: Int,
-78:3 -> ../../asserts.temper.md:66:14  get i() { <- let i: Int,
-78:7 -> ../../asserts.temper.md:66:18 (i)  i() { <- i: Int,
-82:3 -> ../../asserts.temper.md:67:14  /** @returns {number} */ <- let j: Int,
-83:3 -> ../../asserts.temper.md:67:14  get j() { <- let j: Int,
-83:7 -> ../../asserts.temper.md:67:18 (j)  j() { <- j: Int,
-88:1 -> ../../asserts.temper.md:19:5  it("a test case", function ( <- test("a test ${name}") {
-91:5 -> ../../asserts.temper.md:21:7  test.assert(eqFloat64(normSq <- assert(normSquared({ x: 0.0,
-97:1 -> ../../asserts.temper.md:37:5  it("a failing test", functio <- test("a failing test") { tes
-100:5 -> ../../asserts.temper.md:38:7  test.assert(false, () => "be <- assert(false) { "because it'
-101:5 -> ../../asserts.temper.md:39:7  const helper = new TestHelpe <- let helper = new TestHelper(
-102:5 -> ../../asserts.temper.md:40:7  assertMoreThings(test, helpe <- assertMoreThings(test, helpe
-108:1 -> ../../asserts.temper.md:90:5  it("exported", function () { <- test("exported") {
-111:5 -> ../../asserts.temper.md:91:7  const vec = new Vec2(1.5, 2. <- let vec = { x: 1.5, y: 2.5 }
-112:5 -> ../../asserts.temper.md:92:7  { <- assert(vec.toString() == "(1
-113:7 -> ../../asserts.temper.md:92:7  const actual = vec.toString( <- assert(vec.toString() == "(1
-114:7 -> ../../asserts.temper.md:92:7  const expected = "(1.5, 2.5) <- assert(vec.toString() == "(1
-115:7 -> ../../asserts.temper.md:92:7  test.assert(actual === expec <- assert(vec.toString() == "(1
-122:1 -> ../../asserts.temper.md:102:5  it("module values", function <- test("module values") {
-125:5 -> ../../asserts.temper.md:103:7  { <- for (let vec of unitVecs) {
-126:7 -> ../../asserts.temper.md:103:7  const length = unitVecs.leng <- for (let vec of unitVecs) {
-127:7 -> ../../asserts.temper.md:103:7  let i = 0; <- for (let vec of unitVecs) {
-128:7 -> ../../asserts.temper.md:103:7  while (i < length) { <- for (let vec of unitVecs) {
-129:9 -> ../../asserts.temper.md:103:7  const vec = listedGet(/** @t <- for (let vec of unitVecs) {
-130:9 -> ../../asserts.temper.md:103:7  i = (i + 1) | 0; <- for (let vec of unitVecs) {
-131:9 -> ../../asserts.temper.md:104:9  { <- assert(normSquared(vec) == 1
-132:11 -> ../../asserts.temper.md:104:9  const actual = normSquared(v <- assert(normSquared(vec) == 1
-133:11 -> ../../asserts.temper.md:104:9  const expected = 1.0; <- assert(normSquared(vec) == 1
-134:11 -> ../../asserts.temper.md:104:9  test.assert(eqFloat64(actual <- assert(normSquared(vec) == 1
+12:1 -> ../../asserts.temper.md:46:5  /** <- let assertMoreThings(
+17:1 -> ../../asserts.temper.md:46:5  function assertMoreThings(t, <- let assertMoreThings(
+17:10 -> ../../asserts.temper.md:46:9 (assertMoreThings)  assertMoreThings(t, helper, <- assertMoreThings(
+17:26 -> ../../asserts.temper.md:46:5  (t, helper, strings) { <- let assertMoreThings(
+18:3 -> ../../asserts.temper.md:49:7  { <- for (var i = 0; i < strings.
+19:5 -> ../../asserts.temper.md:49:12  let i = 0; <- var i = 0; i < strings.lengt
+20:5 -> ../../asserts.temper.md:49:7  while (i < strings.length) { <- for (var i = 0; i < strings.
+21:7 -> ../../asserts.temper.md:50:9  { <- for (var j = 0; j < strings[
+22:9 -> ../../asserts.temper.md:50:14  let j = 0; <- var j = 0; j < strings[i].le
+23:9 -> ../../asserts.temper.md:50:9  while (j < listedGet(/** @ty <- for (var j = 0; j < strings[
+24:11 -> ../../asserts.temper.md:51:11  { <- assert(helper.i == helper.j)
+25:13 -> ../../asserts.temper.md:51:11  const actual = helper.i; <- assert(helper.i == helper.j)
+26:13 -> ../../asserts.temper.md:51:11  const expected = helper.j; <- assert(helper.i == helper.j)
+27:13 -> ../../asserts.temper.md:51:11  t.assert(actual === expected <- assert(helper.i == helper.j)
+29:11 -> ../../asserts.temper.md:56:11  const s = listedGet(/** @typ <- let s = strings[i][j];
+30:11 -> ../../asserts.temper.md:57:11  { <- assert(s == "hi");
+31:13 -> ../../asserts.temper.md:57:11  const actual = s; <- assert(s == "hi");
+32:13 -> ../../asserts.temper.md:57:11  const expected = "hi"; <- assert(s == "hi");
+33:13 -> ../../asserts.temper.md:57:11  t.assert(actual === expected <- assert(s == "hi");
+35:11 -> ../../asserts.temper.md:50:48  j = (j + 1) | 0; <- j += 1) {
+38:7 -> ../../asserts.temper.md:49:43  i = (i + 1) | 0; <- i += 1) {
+43:1 -> ../../asserts.temper.md:121:5  /** <- let sumOf(helper: TestHelper
+47:1 -> ../../asserts.temper.md:121:5  function sumOf(helper) { <- let sumOf(helper: TestHelper
+47:10 -> ../../asserts.temper.md:121:9 (sumOf)  sumOf(helper) { <- sumOf(helper: TestHelper): I
+47:15 -> ../../asserts.temper.md:121:5  (helper) { <- let sumOf(helper: TestHelper
+48:3 -> ../../asserts.temper.md:121:42  return (helper.i + helper.j) <- helper.i + helper.j }
+51:1 -> ../../asserts.temper.md:118:5  /** <- @keepTest
+55:1 -> ../../asserts.temper.md:118:5  function keptForTests(helper <- @keepTest
+55:10 -> ../../asserts.temper.md:119:9 (keptForTests)  keptForTests(helper) { <- keptForTests(helper: TestHel
+55:22 -> ../../asserts.temper.md:118:5  (helper) { <- @keepTest
+56:3 -> ../../asserts.temper.md:119:49  return sumOf(helper); <- sumOf(helper) }
+59:1 -> ../../asserts.temper.md:65:5  class TestHelper extends typ <- class TestHelper(
+59:7 -> ../../asserts.temper.md:65:11 (TestHelper)  TestHelper extends type() { <- TestHelper(
+59:17 -> ../../asserts.temper.md:65:5   extends type() { <- class TestHelper(
+60:3 -> ../../asserts.temper.md:66:14  /** @type {number} */ <- let i: Int,
+61:3 -> ../../asserts.temper.md:66:14  #i; <- let i: Int,
+62:3 -> ../../asserts.temper.md:67:14  /** @type {number} */ <- let j: Int,
+63:3 -> ../../asserts.temper.md:67:14  #j; <- let j: Int,
+73:3 -> ../../asserts.temper.md:65:5  /** <- class TestHelper(
+77:3 -> ../../asserts.temper.md:65:5  constructor(i, j) { <- class TestHelper(
+79:5 -> ../../asserts.temper.md:66:14  this.#i = i; <- let i: Int,
+80:5 -> ../../asserts.temper.md:67:14  this.#j = j; <- let j: Int,
+83:3 -> ../../asserts.temper.md:66:14  /** @returns {number} */ <- let i: Int,
+84:3 -> ../../asserts.temper.md:66:14  get i() { <- let i: Int,
+84:7 -> ../../asserts.temper.md:66:18 (i)  i() { <- i: Int,
+88:3 -> ../../asserts.temper.md:67:14  /** @returns {number} */ <- let j: Int,
+89:3 -> ../../asserts.temper.md:67:14  get j() { <- let j: Int,
+89:7 -> ../../asserts.temper.md:67:18 (j)  j() { <- j: Int,
+94:1 -> ../../asserts.temper.md:19:5  it("a test case", async func <- test("a test ${name}") {
+97:5 -> ../../asserts.temper.md:21:7  test.assert(eqFloat64(normSq <- assert(normSquared({ x: 0.0,
+104:1 -> ../../asserts.temper.md:37:5  it("a failing test", async f <- test("a failing test") { tes
+107:5 -> ../../asserts.temper.md:38:7  test.assert(false, () => "be <- assert(false) { "because it'
+108:5 -> ../../asserts.temper.md:39:7  const helper = new TestHelpe <- let helper = new TestHelper(
+109:5 -> ../../asserts.temper.md:40:7  assertMoreThings(test, helpe <- assertMoreThings(test, helpe
+116:1 -> ../../asserts.temper.md:90:5  it("exported", async functio <- test("exported") {
+119:5 -> ../../asserts.temper.md:91:7  const vec = new Vec2(1.5, 2. <- let vec = { x: 1.5, y: 2.5 }
+120:5 -> ../../asserts.temper.md:92:7  { <- assert(vec.toString() == "(1
+121:7 -> ../../asserts.temper.md:92:7  const actual = vec.toString( <- assert(vec.toString() == "(1
+122:7 -> ../../asserts.temper.md:92:7  const expected = "(1.5, 2.5) <- assert(vec.toString() == "(1
+123:7 -> ../../asserts.temper.md:92:7  test.assert(actual === expec <- assert(vec.toString() == "(1
+131:1 -> ../../asserts.temper.md:102:5  it("module values", async fu <- test("module values") {
+134:5 -> ../../asserts.temper.md:103:7  { <- for (let vec of unitVecs) {
+135:7 -> ../../asserts.temper.md:103:7  const length = unitVecs.leng <- for (let vec of unitVecs) {
+136:7 -> ../../asserts.temper.md:103:7  let i = 0; <- for (let vec of unitVecs) {
+137:7 -> ../../asserts.temper.md:103:7  while (i < length) { <- for (let vec of unitVecs) {
+138:9 -> ../../asserts.temper.md:103:7  const vec = listedGet(/** @t <- for (let vec of unitVecs) {
+139:9 -> ../../asserts.temper.md:103:7  i = (i + 1) | 0; <- for (let vec of unitVecs) {
+140:9 -> ../../asserts.temper.md:104:9  { <- assert(normSquared(vec) == 1
+141:11 -> ../../asserts.temper.md:104:9  const actual = normSquared(v <- assert(normSquared(vec) == 1
+142:11 -> ../../asserts.temper.md:104:9  const expected = 1.0; <- assert(normSquared(vec) == 1
+143:11 -> ../../asserts.temper.md:104:9  test.assert(eqFloat64(actual <- assert(normSquared(vec) == 1

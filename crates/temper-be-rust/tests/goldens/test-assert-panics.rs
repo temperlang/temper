@@ -24,6 +24,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
         {
             let actual = super::at(Arc::new(vec![1, 2]), 1)?;
             let expected: i32 = 2;
@@ -36,6 +37,7 @@ mod tests {
                 }),
             );
         }
+        work.finish(crate::support::config().runner());
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -45,6 +47,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
         test.assert_panics(
             Arc::new(move || {
                 super::at(Arc::new(vec![1, 2]), 5)?;
@@ -58,6 +61,7 @@ mod tests {
             }),
             None::<Arc<String>>,
         );
+        work.finish(crate::support::config().runner());
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -67,6 +71,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
         test.assert_panics(
             {
                 let test = test.clone();
@@ -81,6 +86,7 @@ mod tests {
             },
             None::<Arc<String>>,
         );
+        work.finish(crate::support::config().runner());
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -90,6 +96,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
         test.assert_panics(
             Arc::new(move || {
                 super::at(Arc::new(vec![1, 2]), 0)?;
@@ -97,6 +104,7 @@ mod tests {
             }),
             None::<Arc<String>>,
         );
+        work.finish(crate::support::config().runner());
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -106,6 +114,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
         test.assert_panics(
             Arc::new(move || {
                 super::at(Arc::new(vec![1, 2]), 1)?;
@@ -113,6 +122,7 @@ mod tests {
             }),
             Some("reading index 1 panics"),
         );
+        work.finish(crate::support::config().runner());
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -122,6 +132,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
         test.assert_panics(
             Arc::new(move || {
                 super::at(Arc::new(vec![1, 2]), 99)?;
@@ -129,6 +140,7 @@ mod tests {
             }),
             None::<Arc<String>>,
         );
+        work.finish(crate::support::config().runner());
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -138,6 +150,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
         test.assert_panics(
             Arc::new(move || {
                 super::at(Arc::new(vec![1, 2]), 99)?;
@@ -145,6 +158,7 @@ mod tests {
             }),
             Some("reading index 99 panics"),
         );
+        work.finish(crate::support::config().runner());
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -154,6 +168,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
         test.assert_panics(
             Arc::new(move || {
                 super::at(Arc::new(vec![1, 2]), 0)?;
@@ -162,6 +177,7 @@ mod tests {
             None::<Arc<String>>,
         );
         test.assert(false, Arc::new(move || Arc::new("went on".to_string())));
+        work.finish(crate::support::config().runner());
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -171,6 +187,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
         test.assert_panics(
             {
                 let test = test.clone();
@@ -193,6 +210,7 @@ mod tests {
             },
             None::<Arc<String>>,
         );
+        work.finish(crate::support::config().runner());
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -202,6 +220,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
         let n: Arc<RwLock<i32>> = Arc::new(RwLock::new(0));
         test.assert_panics(
             {
@@ -217,6 +236,7 @@ mod tests {
             temper_core::read_locked(&n) == 1,
             Arc::new(move || Arc::new("lost the change".to_string())),
         );
+        work.finish(crate::support::config().runner());
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -226,6 +246,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
         test.assert_panics(
             Arc::new(move || {
                 panic!();
@@ -233,6 +254,7 @@ mod tests {
             None::<Arc<String>>,
         );
         super::at(Arc::new(vec![1, 2]), 7)?;
+        work.finish(crate::support::config().runner());
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -242,6 +264,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
+        let _work = temper_core::TestWork::begin();
         test.assert_panics(
             {
                 let test = test.clone();
@@ -261,6 +284,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
         {
             let actual = super::at(Arc::new(vec![1, 2]), 0)?;
             let expected: i32 = 1;
@@ -273,6 +297,7 @@ mod tests {
                 }),
             );
         }
+        work.finish(crate::support::config().runner());
         test.soft_fail_to_hard();
         Ok(())
     }

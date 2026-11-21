@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from temper_core import Bubble, int_add
+from temper_core import Bubble, finish_async_work, int_add
 from temper_std.testing import Test
 from unittest import TestCase
 
@@ -31,6 +31,7 @@ class TestTestFails(TestCase):
                 test.assert_(actual == expected, lambda: f"expected find(\"one\") == ({expected}) not ({'null' if actual is None else str(actual)})")
             test.assert_(_tries(fn), lambda: 'expected tries { assert(find("one") == 1); }')
         finally:
+            finish_async_work()
             test.soft_fail_to_hard()
 
     def test_fails_past_an_orelse(self, /) -> None:
@@ -42,6 +43,7 @@ class TestTestFails(TestCase):
             _tries(fn)
             test.fail('swallowed')
         finally:
+            finish_async_work()
             test.soft_fail_to_hard()
 
     def test_narrows_after_fail(self, /) -> None:
@@ -55,6 +57,7 @@ class TestTestFails(TestCase):
             expected = 2
             test.assert_(actual == expected, lambda: f'expected n + 1 == ({expected}) not ({actual})')
         finally:
+            finish_async_work()
             test.soft_fail_to_hard()
 
     def test_fails_before_narrowing(self, /) -> None:
@@ -66,6 +69,7 @@ class TestTestFails(TestCase):
                 test.fail('two not found')
             test.assert_(int_add(n, 1) == 3, lambda: 'went on')
         finally:
+            finish_async_work()
             test.soft_fail_to_hard()
 
     def test_collects_soft_failures(self, /) -> None:
@@ -76,6 +80,7 @@ class TestTestFails(TestCase):
             test.assert_(True, lambda: 'not shown')
             test.assert_(int_add(2, 2) == 5, lambda: 'second')
         finally:
+            finish_async_work()
             test.soft_fail_to_hard()
 
     def test_fails_hard_after_soft_failures(self, /) -> None:
@@ -85,6 +90,7 @@ class TestTestFails(TestCase):
             test.assert_(False, lambda: 'soft before')
             test.fail('then hard')
         finally:
+            finish_async_work()
             test.soft_fail_to_hard()
 
     def test_fails_a_hard_assertion_past_an_orelse(self, /) -> None:
@@ -96,6 +102,7 @@ class TestTestFails(TestCase):
             _tries(fn)
             test.fail('swallowed')
         finally:
+            finish_async_work()
             test.soft_fail_to_hard()
 
     def test_hardens_soft_failures_past_an_orelse(self, /) -> None:
@@ -108,6 +115,7 @@ class TestTestFails(TestCase):
             _tries(fn2)
             test.fail('swallowed')
         finally:
+            finish_async_work()
             test.soft_fail_to_hard()
 
     def test_passes_after(self, /) -> None:
@@ -118,4 +126,5 @@ class TestTestFails(TestCase):
             expected = 1
             test.assert_(actual == expected, lambda: f"expected find(\"one\") == ({expected}) not ({'null' if actual is None else str(actual)})")
         finally:
+            finish_async_work()
             test.soft_fail_to_hard()

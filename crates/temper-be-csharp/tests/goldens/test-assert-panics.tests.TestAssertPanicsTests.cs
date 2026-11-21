@@ -32,6 +32,7 @@ public class TestAssertPanicsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -51,6 +52,7 @@ public class TestAssertPanicsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -78,6 +80,7 @@ public class TestAssertPanicsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -92,6 +95,7 @@ public class TestAssertPanicsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -106,6 +110,7 @@ public class TestAssertPanicsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -120,6 +125,7 @@ public class TestAssertPanicsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -134,6 +140,7 @@ public class TestAssertPanicsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -149,6 +156,7 @@ public class TestAssertPanicsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -173,6 +181,7 @@ public class TestAssertPanicsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -194,6 +203,7 @@ public class TestAssertPanicsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -213,6 +223,7 @@ public class TestAssertPanicsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -234,6 +245,7 @@ public class TestAssertPanicsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }
@@ -252,6 +264,7 @@ public class TestAssertPanicsTests
         }
         finally
         {
+            global::TemperLang.Core.Async.FinishAsyncWork();
             test.SoftFailToHard();
         }
     }

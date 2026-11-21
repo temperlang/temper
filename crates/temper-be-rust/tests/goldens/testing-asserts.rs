@@ -180,10 +180,12 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
         test.assert(
             temper_core::float64::cmp(super::norm_squared(super::Vec2::new(0.0, 0.0)), 0.0) == 0,
             Arc::new(move || Arc::new("Oh noes".to_string())),
         );
+        work.finish(crate::support::config().runner());
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -193,6 +195,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
         test.assert(
             false,
             Arc::new(move || Arc::new("because it's wrong".to_string())),
@@ -203,6 +206,7 @@ mod tests {
             helper.clone(),
             Arc::new(vec![Arc::new(vec![Arc::new("bye".to_string())])]),
         )?;
+        work.finish(crate::support::config().runner());
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -212,6 +216,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
         let vec = super::Vec2::new(1.5, 2.5);
         {
             let actual = vec.to_string();
@@ -226,6 +231,7 @@ mod tests {
                 })
             });
         }
+        work.finish(crate::support::config().runner());
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -235,6 +241,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
         {
             let length = temper_core::ListedTrait::len(&super::unit_vecs());
             let mut i: i32 = 0;
@@ -257,6 +264,7 @@ mod tests {
                 }
             }
         }
+        work.finish(crate::support::config().runner());
         test.soft_fail_to_hard();
         Ok(())
     }

@@ -118,8 +118,9 @@ const UNUSED_KEYS: [&str; 2] = ["functions-connected", "functions-connected-no-c
 /// first line is just 100 wide, which rustfmt breaks inside the call;
 /// and `test-panics`' and `test-fails`' assertion message closures, a
 /// call's last argument left on one line that's 100 wide before the `,`
-/// after the call, which the printer doesn't count there.
-const LAYOUT_GAPS: [&str; 8] = [
+/// after the call, which the printer doesn't count there; and
+/// `test-async`'s `async` blocks in tests.
+const LAYOUT_GAPS: [&str; 9] = [
     "functions",
     "regex-match",
     "regex-zero-advance",
@@ -128,6 +129,7 @@ const LAYOUT_GAPS: [&str; 8] = [
     "json-adapters",
     "test-panics",
     "test-fails",
+    "test-async",
 ];
 
 /// This crate's own programs, in `tests/programs/`, which test what's
