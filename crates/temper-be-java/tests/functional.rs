@@ -605,27 +605,41 @@ fn missing_host_code() {
 /// naming the getter, where it would be a duplicate method in `javac`:
 /// a method `getLimit()` beside a static `limit`, `isStrict()` beside a
 /// `Boolean` static `strict`, and an instance property's getter beside
-/// a static of its name.
+/// a static of its name; and the same inherited from an interface,
+/// where `javac` rejects a static method hiding an instance one.
 #[test]
 fn static_getters_named_as_methods() {
     kit::with_stack(|| {
+        let class = |members: &str| format!("export class Policy {{\n  {members}\n}}");
         let cases = [
             (
-                "public static limit = 3;\n  public getLimit(): Int { 4 }",
+                class("public static limit = 3;\n  public getLimit(): Int { 4 }"),
                 "getLimit()",
             ),
             (
-                "public static strict = true;\n  public isStrict(): Boolean { false }",
+                class("public static strict = true;\n  public isStrict(): Boolean { false }"),
                 "isStrict()",
             ),
             (
-                "public static standard = 1;\n  public get standard(): Int { 2 }",
+                class("public static standard = 1;\n  public get standard(): Int { 2 }"),
                 "getStandard()",
             ),
+            (
+                "export interface Limited {\n  public getLimit(): Int { 1 }\n}\n\
+                 export class Policy extends Limited {\n  public static limit = 3;\n}"
+                    .to_string(),
+                "getLimit()",
+            ),
+            (
+                "export interface Sized {\n  public get size(): Int { 1 }\n}\n\
+                 export interface Measured extends Sized {}\n\
+                 export class Policy extends Measured {\n  public static size = 3;\n}"
+                    .to_string(),
+                "getSize()",
+            ),
         ];
-        for (members, getter) in cases {
-            let text = format!("    export class Policy {{\n  {members}\n}}\n");
-            let text = text.replace("\n  ", "\n      ").replace("\n}", "\n    }");
+        for (text, getter) in cases {
+            let text = format!("    {}\n", text.replace('\n', "\n    "));
             let case = Case::inline("clash", "clash.temper.md", text, Vec::new());
             let program = kit::program_for(&case, &JAVA.rules);
             let said = match translate(&program, &JAVA) {

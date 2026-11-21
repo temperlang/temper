@@ -11,7 +11,9 @@
 
 use std::path::Path;
 use std::process::Command;
-use temper_tmpl::tools::{install_once, junit_file, limit_memory, output, program, step, tool};
+use temper_tmpl::tools::{
+    identity, install_once, junit_file, limit_memory, output, program, step, tool,
+};
 use temper_tmpl::{TestResults, Tested, Tools};
 
 pub const TOOLS: Tools = Tools {
@@ -35,7 +37,8 @@ fn python() -> Command {
 const DEPS: &str = ".deps";
 
 /// Installs the packages that libraries' configs list, with `pip install
-/// --target`, once for each list of them ([`install_once`]).
+/// --target`, once for each list of them and Python ([`install_once`]),
+/// as pip installs compiled packages for the Python it runs under.
 fn install(dir: &Path, all: &[Tested]) -> Result<(), String> {
     let mut packages: Vec<String> = (all.iter())
         .flat_map(|l| crate::pypi_dependencies(&l.metadata))
@@ -43,16 +46,29 @@ fn install(dir: &Path, all: &[Tested]) -> Result<(), String> {
     packages.sort();
     packages.dedup();
     let manifest: String = packages.iter().map(|p| p.clone() + "\n").collect();
-    install_once(&dir.join(DEPS), "requirements.txt", &manifest, |deps| {
-        step(
-            python()
-                .args(["-m", "pip", "install", "--disable-pip-version-check"])
-                .args(["--no-input", "--quiet", "--target", ".", "-r"])
-                .arg("requirements.txt")
-                .current_dir(deps),
-            "pip install",
+    let python_id = || {
+        let python = tool("PYTHON", "python3");
+        identity(
+            &python,
+            &["-c", "import sys; print(sys.executable, sys.version)"],
         )
-    })?;
+    };
+    install_once(
+        &dir.join(DEPS),
+        "requirements.txt",
+        &manifest,
+        python_id,
+        |deps| {
+            step(
+                python()
+                    .args(["-m", "pip", "install", "--disable-pip-version-check"])
+                    .args(["--no-input", "--quiet", "--target", ".", "-r"])
+                    .arg("requirements.txt")
+                    .current_dir(deps),
+                "pip install",
+            )
+        },
+    )?;
     Ok(())
 }
 

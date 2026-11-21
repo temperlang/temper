@@ -69,15 +69,27 @@ impl Registry {
         Registry { backends }
     }
 
+    /// A registry of the backends given, as one that loads them while it
+    /// runs would have.
+    pub fn new(backends: Vec<&'static Backend>) -> Registry {
+        Registry { backends }
+    }
+
     /// Every backend it has.
     pub fn all(&self) -> &[&'static Backend] {
         &self.backends
     }
 
     /// Each backend's config class, which a library's config may use
-    /// whichever backends a build is for ([`temper_tmpl::config`]).
-    pub fn config_types(&self) -> Vec<&'static temper_tmpl::ConfigType> {
-        self.backends.iter().map(|b| b.config).collect()
+    /// whichever backends a build is for ([`temper_tmpl::config`]); and
+    /// the keys of the backends it lacks ([`KNOWN`]), whose config
+    /// classes configs may use too, unchecked here. A backend's key is
+    /// its name.
+    pub fn config_classes(&self) -> temper_frontend::config::Classes {
+        temper_frontend::config::Classes {
+            types: self.backends.iter().map(|b| b.config).collect(),
+            elsewhere: KNOWN.into_iter().filter(|n| self.lacks(n)).collect(),
+        }
     }
 
     /// A backend it has, by name.

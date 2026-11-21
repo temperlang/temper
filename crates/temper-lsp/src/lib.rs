@@ -43,6 +43,7 @@ use std::path::PathBuf;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 use temper_analysis::{Analysis, DeclKind, Position, byte_offset};
+use temper_frontend::config::Classes;
 use temper_frontend::library::{FileId, Level, Library};
 use temper_frontend::project::{
     CONFIG_FILE, Config, find_libraries, library_of, load_imports, load_library, work_root,
@@ -50,7 +51,6 @@ use temper_frontend::project::{
 use temper_frontend::settle::settle;
 use temper_frontend::sources::{Source, Sources};
 use temper_frontend::{corelib, stdlib};
-use temper_tmpl::ConfigType;
 
 /// How long typing must pause before stale documents are analyzed again.
 const DEBOUNCE: Duration = Duration::from_millis(250);
@@ -95,15 +95,15 @@ pub fn write_message(out: &mut impl Write, body: &Value) -> io::Result<()> {
 /// Serves an editor over `input` and `output` until it says `exit`,
 /// returning the exit code: 0 after a `shutdown`, else 1. `std_dir`
 /// reads std from a directory rather than the built-in copy;
-/// `config_types` are the config classes that libraries' configs are
+/// `config_classes` are the config classes that libraries' configs are
 /// checked against, as `temper build` checks them (each backend's).
 pub fn serve(
     input: impl Read + Send + 'static,
     output: impl Write,
     std_dir: Option<String>,
-    config_types: Vec<&'static ConfigType>,
+    config_classes: Classes,
 ) -> u8 {
-    serve_with_hook(input, output, std_dir, config_types, None)
+    serve_with_hook(input, output, std_dir, config_classes, None)
 }
 
 /// [`serve`], for tests, with a hook that makes a panic: an analysis of
@@ -114,7 +114,7 @@ pub fn serve_with_hook(
     input: impl Read + Send + 'static,
     output: impl Write,
     std_dir: Option<String>,
-    config_types: Vec<&'static ConfigType>,
+    config_classes: Classes,
     panic_on: Option<String>,
 ) -> u8 {
     let (send, receive) = mpsc::channel();
@@ -136,7 +136,7 @@ pub fn serve_with_hook(
     let mut server = Server {
         out: output,
         std_dir,
-        config_types,
+        config_classes,
         docs: Vec::new(),
         units: Vec::new(),
         stale: HashSet::new(),
@@ -198,7 +198,7 @@ struct Server<W: Write> {
     out: W,
     std_dir: Option<String>,
     /// The config classes configs are checked against.
-    config_types: Vec<&'static ConfigType>,
+    config_classes: Classes,
     docs: Vec<Doc>,
     units: Vec<Unit>,
     /// Paths of documents changed since their unit was analyzed.
@@ -422,7 +422,7 @@ impl<W: Write> Server<W> {
             let analysis = Analysis::new(settle(load()?));
             let by_file = match config {
                 Some(config) => {
-                    let found = config_diagnostics(config, &self.config_types);
+                    let found = config_diagnostics(config, &self.config_classes);
                     vec![(path.to_string(), found)]
                 }
                 None => diagnostics_by_file(&analysis, &files),
@@ -732,8 +732,8 @@ fn diagnostics_by_file(
 /// A library config's problems, as `temper build` reports them: its
 /// syntax errors, and its exports checked against the config classes.
 /// Not its analysis's, as a config is read, not run as code.
-fn config_diagnostics(config: &Config, types: &[&ConfigType]) -> Vec<lsp::Diagnostic> {
-    (config.check(types).problems.into_iter())
+fn config_diagnostics(config: &Config, classes: &Classes) -> Vec<lsp::Diagnostic> {
+    (config.check(classes).problems.into_iter())
         .map(|problem| lsp::Diagnostic {
             range: range(&config.text, problem.span.start, problem.span.end),
             severity: Some(lsp::DiagnosticSeverity::ERROR),

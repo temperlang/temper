@@ -76,6 +76,9 @@ pub struct Config {
     pub problems: Vec<crate::config::Problem>,
     /// Its text, which problems' spans are in.
     pub text: String,
+    /// What it says, checked against a build's config classes, once all
+    /// its libraries are found ([`check_configs`]); empty until then.
+    pub checked: crate::config::Checked,
 }
 
 impl Config {
@@ -109,15 +112,37 @@ impl Config {
             values,
             problems,
             text: text.to_string(),
+            checked: Default::default(),
         }
     }
 
     /// Its exports checked against the config classes in its scope, one
-    /// for each of a build's backends, with its syntax errors first.
-    pub fn check(&self, types: &[&temper_tmpl::ConfigType]) -> crate::config::Checked {
-        let mut checked = crate::config::check(&self.values, types);
+    /// for each of a build's backends, with its syntax errors first; not
+    /// against other libraries' configs, as [`check_configs`] checks
+    /// them.
+    pub fn check(&self, classes: &crate::config::Classes) -> crate::config::Checked {
+        let mut checked = crate::config::check(&self.values, classes);
         checked.problems.splice(0..0, self.problems.iter().cloned());
         checked
+    }
+
+    /// What it says, for package files: its string exports, and its
+    /// values for each backend's config class, as checked
+    /// ([`Config::checked`]).
+    pub fn metadata(&self) -> temper_tmpl::Metadata {
+        temper_tmpl::Metadata {
+            exports: self.exports.clone(),
+            configs: self.checked.configs.clone(),
+        }
+    }
+
+    /// Where a problem with what it sets for a config class goes: at its
+    /// export of that class, or else of its name, or else at the start.
+    fn span_for(&self, key: &str) -> temper_syntax::tree::Span {
+        (self.values.iter())
+            .find(|e| e.key == key)
+            .or_else(|| self.values.iter().find(|e| e.key == "name"))
+            .map_or(temper_syntax::tree::Span { start: 0, end: 0 }, |e| e.span)
     }
 
     /// A string the config exports, if it does.
@@ -130,6 +155,85 @@ impl Config {
     /// The library's version, or Kotlin's default, `0.0.1`.
     pub fn version_or_default(&self) -> &str {
         self.get("version").unwrap_or("0.0.1")
+    }
+}
+
+/// Checks the configs of a build's libraries against its config classes,
+/// once, keeping what's found in each ([`Config::checked`]): each alone
+/// ([`Config::check`]), then against each other, as their packages meet
+/// in one place (`PYTHONPATH`, `node_modules`, a Cargo workspace). Two
+/// libraries taking one name for a backend ([`temper_tmpl::ConfigType::names`],
+/// case folded), or a `dependencies` item naming a library's package,
+/// std's, or the runtime's (`temper-core`), is a problem in each config
+/// concerned.
+pub fn check_configs<'a>(
+    configs: impl IntoIterator<Item = &'a mut Config>,
+    classes: &crate::config::Classes,
+) {
+    use temper_tmpl::{ConfigKind, ConfigValue};
+    let mut configs: Vec<&mut Config> = configs.into_iter().collect();
+    for config in configs.iter_mut() {
+        config.checked = config.check(classes);
+    }
+    let metadata: Vec<temper_tmpl::Metadata> = configs.iter().map(|c| c.metadata()).collect();
+    for t in &classes.types {
+        let library = |name: &str| format!("library `{name}`");
+        // Each name with what takes it: the runtime, std, then each
+        // library, by its place.
+        let mut taken: Vec<(String, String, Option<usize>)> = (t.runtime.iter())
+            .map(|n| (n.to_string(), "the runtime, `temper-core`".into(), None))
+            .collect();
+        let std = (t.names)("std", &temper_tmpl::Metadata::default());
+        taken.extend(std.into_iter().map(|n| (n, "std".into(), None)));
+        for (i, config) in configs.iter().enumerate() {
+            let names = (t.names)(&config.name, &metadata[i]);
+            taken.extend(
+                names
+                    .into_iter()
+                    .map(|n| (n, library(&config.name), Some(i))),
+            );
+        }
+        let mut found: Vec<(usize, String)> = Vec::new();
+        for (name, _, at) in &taken {
+            let Some(i) = *at else { continue };
+            let other = taken
+                .iter()
+                .find(|(n, _, there)| n == name && *there != Some(i));
+            if let Some((_, who, _)) = other {
+                let message = format!("{} names this library `{name}`, as it names {who}", t.class);
+                found.push((i, message));
+            }
+        }
+        for (i, config) in configs.iter().enumerate() {
+            let lists = (config.checked.configs.iter())
+                .filter(|(key, _)| key == t.key)
+                .flat_map(|(_, values)| values);
+            for (property, value) in lists {
+                let Some(ConfigKind::Strings { package, .. }) = (t.properties.iter())
+                    .find(|p| p.name == property)
+                    .map(|p| p.kind)
+                else {
+                    continue;
+                };
+                let ConfigValue::Strings(items) = value else {
+                    continue;
+                };
+                for p in items.iter().filter_map(|item| package(item)) {
+                    if let Some((_, whose, _)) = taken.iter().find(|(n, _, _)| *n == p) {
+                        let message = format!(
+                            "{}'s `{property}` lists `{p}`, which names {whose}",
+                            t.class
+                        );
+                        found.push((i, message));
+                    }
+                }
+            }
+        }
+        for (i, message) in found {
+            let span = configs[i].span_for(t.key);
+            let problem = crate::config::Problem { span, message };
+            configs[i].checked.problems.push(problem);
+        }
     }
 }
 

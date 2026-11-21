@@ -101,10 +101,13 @@ fn run_interp(
     err: &mut dyn Write,
 ) -> bool {
     let log = options.log;
-    let Some(libraries) = libraries_to_test(sources, root, options.ignore, Some(library), log, err)
+    let Some(mut libraries) =
+        libraries_to_test(sources, root, options.ignore, Some(library), log, err)
     else {
         return false;
     };
+    let classes = crate::Registry::built_in().config_classes();
+    temper_frontend::project::check_configs(libraries.iter_mut().map(|l| &mut l.config), &classes);
     let Some(found) = libraries.iter().find(|l| l.config.name == library) else {
         return false;
     };
@@ -116,8 +119,7 @@ fn run_interp(
         }
     };
     // Each counted under the library it's in, as `build` counts them.
-    let types = crate::Registry::built_in().config_types();
-    let mut reported = Reported::new(options.hints).with_config_types(types);
+    let mut reported = Reported::new(options.hints);
     let diagnostics = reported.new_diagnostics(&settled, found, &libraries, log);
     let _ = err.write_all(diagnostics.as_bytes());
     // Each line as it's logged, so a long run's output isn't kept.

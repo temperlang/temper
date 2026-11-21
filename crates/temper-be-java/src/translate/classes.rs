@@ -780,10 +780,13 @@ impl Translator<'_> {
             });
         }
         members.extend(accessors);
-        members.extend(self.static_getters(decl, &own, &members)?);
+        let mut forwarded = Vec::new();
         for (method, through) in forwards(p, decl) {
-            members.push(self.forward(interface, method, through)?);
+            forwarded.push(self.forward(interface, method, through)?);
         }
+        let getters = self.static_getters(decl, &own, &members, &forwarded)?;
+        members.extend(getters);
+        members.extend(forwarded);
         let mut helpers = Vec::new();
         // Static fields the module's initializer assigns: reading one
         // runs it first, as code elsewhere, another library's tests
@@ -821,16 +824,43 @@ impl Translator<'_> {
     }
 
     /// The getters of a class's static fields ([`Translator::static_getter`]):
-    /// `public static Policy getStandard() { return Policy.standard; }`.
+    /// `public static Policy getStandard() { return Policy.standard; }`;
+    /// `NotYet` for one named as a method that takes nothing, among
+    /// `members`, those `forwarded`, or those it inherits.
     fn static_getters(
         &mut self,
         class: DeclId,
         own: &[(DeclId, NodeId)],
         members: &[Member],
+        forwarded: &[Member],
     ) -> R<Vec<Member>> {
         let p = self.p;
         let class_name = self.name(class);
         let mut out = Vec::new();
+        // What takes nothing among its own members, and those it
+        // inherits, whose names a static may not hide.
+        let mut taken: HashSet<String> = (members.iter().chain(forwarded))
+            .filter(|m| m.params.is_empty())
+            .map(|m| m.name.clone())
+            .collect();
+        for up in ancestors(p, class) {
+            for (d, node) in self::members(p, up) {
+                let nullary = match p.nodes.get(node) {
+                    Node::Method { params, .. } | Node::AbstractMethod { params, .. } => {
+                        param_decls(p, params).is_empty()
+                    }
+                    _ => false,
+                };
+                let decl = p.decls.get(d);
+                if decl.facts.contains(Facts::PRIVATE) {
+                    continue;
+                } else if matches!(decl.kind, DeclKind::Field) {
+                    taken.insert(getter_name(p.name(d), decl.ty == TypeId::BOOLEAN));
+                } else if nullary {
+                    taken.insert(self.method_name(d));
+                }
+            }
+        }
         for &(field, node) in own {
             let Node::StaticField { .. } = p.nodes.get(node) else {
                 continue;
@@ -838,10 +868,7 @@ impl Translator<'_> {
             let Some(name) = self.static_getter(field) else {
                 continue;
             };
-            if members
-                .iter()
-                .any(|m| m.name == name && m.params.is_empty())
-            {
+            if taken.contains(&name) {
                 return not_yet(format!(
                     "a static getter, {name}(), that a method's name takes"
                 ));

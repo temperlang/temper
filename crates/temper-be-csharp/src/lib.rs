@@ -123,11 +123,15 @@ pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
             doc: "NuGet packages that the library's host code uses, each `\"Name:version\"`.",
             kind: temper_tmpl::ConfigKind::Strings {
                 form: "Name:version",
-                valid: |d| nuget_dependency(d).is_some(),
+                package: |d| nuget_dependency(d).map(|(name, _)| name.to_lowercase()),
             },
         },
     ],
     std: &[("rootNamespace", "TemperLang.Std")],
+    // The root namespace is also the NuGet package's ID, which NuGet
+    // compares ignoring case.
+    names: |library, metadata| vec![translate::root_namespace_of(library, metadata).to_lowercase()],
+    runtime: &["temperlang.core"],
 };
 
 /// This backend, as tools list it ([`temper_tmpl::Backend`]).

@@ -2207,7 +2207,11 @@ fn jumps(body: &[Stmt], label: Option<&str>, innermost: bool, brk: bool) -> bool
 /// [`crate::names::package`] gives it, or else its Java name or its own
 /// name, as that gives it.
 pub fn library_package(p: &Program, library: &str) -> String {
-    let meta = p.metadata_of(library);
+    package_of(library, p.metadata_of(library))
+}
+
+/// [`library_package`], given what the library's config says.
+pub fn package_of(library: &str, meta: &temper_tmpl::Metadata) -> String {
     let config = |property| crate::CONFIG.get(library, meta, property);
     match config("package") {
         Some(package) => (package.split('.'))

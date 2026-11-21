@@ -181,12 +181,20 @@ pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
             doc: "Crates that the library's host code uses, each `\"name@version\"`, for exactly that version.",
             kind: temper_tmpl::ConfigKind::Strings {
                 form: "name@version",
-                valid: |d| crate_dependency(d).is_some(),
+                package: |d| crate_dependency(d).map(|(name, _)| crate_key(name)),
             },
         },
     ],
     std: &[("name", "temper-std")],
+    names: |library, metadata| vec![crate_key(&translate::rust_name(library, metadata))],
+    runtime: &["temper_core"],
 };
+
+/// A crate's name as crates.io compares names: lowercase, with `_` for
+/// `-`.
+fn crate_key(name: &str) -> String {
+    name.to_lowercase().replace('-', "_")
+}
 
 /// A crate that a config's `dependencies` lists, as `"name@version"`:
 /// its name ([`crate_name`]) and its version, an exact one, as

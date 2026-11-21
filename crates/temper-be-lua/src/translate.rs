@@ -179,6 +179,19 @@ struct Labels {
     checks: Vec<DeclId>,
 }
 
+/// How many `break`s a jump to `target` from inside the loops `inner`
+/// (those it encloses, outermost first) takes: one for each loop it
+/// leaves, and each one's `repeat`, and then its own `repeat`, or for a
+/// `break` (`brk`), the loop itself and its `repeat`.
+fn hops(labels: &HashMap<DeclId, Labels>, inner: &[DeclId], target: DeclId, brk: bool) -> usize {
+    let wrapped = |l: &DeclId| usize::from(labels.get(l).is_some_and(|l| l.wrap));
+    let own = match brk {
+        true => 1 + wrapped(&target),
+        false => 1,
+    };
+    inner.iter().map(|m| 1 + wrapped(m)).sum::<usize>() + own
+}
+
 /// What a chunk declares and runs ([`Translator::part`]), in the order
 /// it writes them, after its imports: the tables it keeps declarations
 /// in, module `let`s and `var`s declared before the functions, functions
@@ -1640,8 +1653,6 @@ impl<'a> Translator<'a> {
                 self.labels.entry(l).or_default().wrap = true;
             }
         }
-        let wrapped =
-            |labels: &HashMap<DeclId, Labels>, l: DeclId| labels.get(&l).is_some_and(|l| l.wrap);
         // A name for a loop: its source name, or `outer`.
         let base = |l: DeclId| {
             let d = p.decls.get(l);
@@ -1665,17 +1676,7 @@ impl<'a> Translator<'a> {
         };
         let mut flags: HashSet<String> = self.taken.clone();
         for (l, brk, inner, _) in &jumps {
-            // How many `break`s it takes: one for each loop it leaves, and
-            // each one's `repeat`, and then its own `repeat`, or the loop
-            // itself and its `repeat`.
-            let hops: usize = (inner.iter())
-                .map(|&m| 1 + usize::from(wrapped(&self.labels, m)))
-                .sum::<usize>()
-                + match brk {
-                    true => 1 + usize::from(wrapped(&self.labels, *l)),
-                    false => 1,
-                };
-            if hops == 1 {
+            if hops(&self.labels, inner, *l, *brk) == 1 {
                 continue;
             }
             for &m in inner {
@@ -2137,15 +2138,7 @@ impl<'a> Translator<'a> {
         let Some(i) = self.loops.iter().rposition(|&l| l == label) else {
             return not_yet("a jump to a loop that doesn't enclose it");
         };
-        let wrapped = |l: &DeclId| self.labels.get(l).is_some_and(|l| l.wrap);
-        let hops: usize = (self.loops[i + 1..].iter())
-            .map(|m| 1 + usize::from(wrapped(m)))
-            .sum::<usize>()
-            + match brk {
-                true => 1 + usize::from(wrapped(&label)),
-                false => 1,
-            };
-        if hops == 1 {
+        if hops(&self.labels, &self.loops[i + 1..], label, brk) == 1 {
             return Ok(vec![Stmt::Break]);
         }
         match self.labels.get(&label).and_then(|l| l.flag.clone()) {

@@ -29,9 +29,20 @@ namespace temper {
                 list->insert(list->begin() + index, elem);
             }
 
+            // `other`, or a copy of it if it's `list` itself: inserting a
+            // vector's own range into it is undefined.
+            template<class Elem>
+            std::shared_ptr<std::vector<Elem>> apart(
+                const std::shared_ptr<std::vector<Elem>>& list,
+                const std::shared_ptr<std::vector<Elem>>& other
+            ) {
+                return other.get() == list.get() ? std::make_shared<std::vector<Elem>>(*other) : other;
+            }
+
             template<class Elem>
             void addAll(const std::shared_ptr<std::vector<Elem>>& list, const std::shared_ptr<std::vector<Elem>>& other) {
-                list->insert(list->end(), other->begin(), other->end());
+                std::shared_ptr<std::vector<Elem>> values = apart(list, other);
+                list->insert(list->end(), values->begin(), values->end());
             }
 
             template<class Elem>
@@ -39,7 +50,8 @@ namespace temper {
                 if (index < 0 || index > static_cast<int32_t>(list->size())) {
                     bubble("list addall index out of bounds");
                 }
-                list->insert(list->begin() + index, other->begin(), other->end());
+                std::shared_ptr<std::vector<Elem>> values = apart(list, other);
+                list->insert(list->begin() + index, values->begin(), values->end());
             }
 
             template<class Elem>
@@ -85,9 +97,7 @@ namespace temper {
                     list->begin() + start + deleteCount
                 );
                 // Copied first if it's the list itself, which erasing changes.
-                std::shared_ptr<std::vector<Elem>> values = items.get() == list.get()
-                    ? std::make_shared<std::vector<Elem>>(*items)
-                    : items;
+                std::shared_ptr<std::vector<Elem>> values = apart(list, items);
                 typename std::vector<Elem>::iterator it = list->erase(
                     list->begin() + start,
                     list->begin() + start + deleteCount

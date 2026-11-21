@@ -11,7 +11,9 @@
 
 use std::path::Path;
 use std::process::Command;
-use temper_tmpl::tools::{install_once, junit_file, output, program, remove_within, step, tool};
+use temper_tmpl::tools::{
+    identity, install_once, junit_file, output, program, remove_within, step, tool,
+};
 use temper_tmpl::{TestResults, Tested, Tools};
 
 pub const TOOLS: Tools = Tools {
@@ -35,7 +37,8 @@ fn run(dir: &Path, library: &Tested, _: &[Tested]) -> Result<bool, String> {
 }
 
 /// Installs the packages that libraries' configs list with `npm
-/// install`, once for each list of them ([`install_once`]), giving
+/// install`, once for each list of them, npm, and Node, whose native
+/// addons differ by version ([`install_once`]), giving
 /// each one's name and where it is.
 fn install(dir: &Path, all: &[Tested]) -> Result<Vec<(String, std::path::PathBuf)>, String> {
     let mut packages: Vec<(&str, &str)> = (all.iter())
@@ -58,7 +61,11 @@ fn install(dir: &Path, all: &[Tested]) -> Result<Vec<(String, std::path::PathBuf
             )
         }
     };
-    install_once(&deps, "package.json", &manifest, |deps| {
+    let tools_id = || {
+        let node = identity(&tool("NODE", "node"), &["--version"]);
+        format!("{} {node}", tool("NPM", "npm"))
+    };
+    install_once(&deps, "package.json", &manifest, tools_id, |deps| {
         step(
             Command::new(tool("NPM", "npm"))
                 .args(["install", "--no-audit", "--no-fund", "--loglevel=error"])

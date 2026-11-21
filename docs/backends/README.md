@@ -63,7 +63,8 @@ export let java: JavaConfig = {
 `{ class: JavaConfig, … }` names the class too. Each setting is unset by
 default. A setting the class doesn't have, a value of another type, a
 class that disagrees with the declared type, or a class set twice is a
-config error.
+config error. A build of `temper` without some backend skips that
+backend's config, unchecked.
 
 Names are spelled as each language's tools allow, ASCII only: C#
 namespaces and Java packages are identifiers joined by `.`; Maven IDs
@@ -83,6 +84,13 @@ brackets, extras, or tool options. They go in the package files, and
 `temper test` and `temper run` fetch them with the language's tools:
 pip and npm into `temper.out/py/.deps` and `temper.out/js/.deps`, and
 Cargo, Maven, and NuGet into their usual caches in your home directory.
+They come from the public registries (PyPI, npm, crates.io, Maven
+Central, and NuGet) with the tools' defaults, so pip and npm may run a
+package's install scripts. A package listed twice, or one that a
+library of the build, std, or `temper-core` is, is a config error, as
+are two libraries whose packages share a name, ignoring case (a Python
+project, an npm package, a crate, a Java package or Maven artifact, or
+a C# namespace).
 [Library configuration](../guide/tutorial/04-modules-and-libraries.md#library-configuration)
 has a whole config file.
 

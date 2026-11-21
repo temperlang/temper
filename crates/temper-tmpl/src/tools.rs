@@ -8,9 +8,54 @@ use crate::TestResults;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-/// A tool named by an environment variable, or else by its usual name.
+/// A tool named by an environment variable, or else by its usual name,
+/// which on Windows is found on `PATH` as [`find_on_path`] finds it:
+/// there `Command` looks only for `NAME.exe`, and npm and Maven are
+/// `npm.cmd` and `mvn.cmd`.
 pub fn tool(var: &str, name: &str) -> String {
-    std::env::var(var).unwrap_or_else(|_| name.to_string())
+    if let Ok(named) = std::env::var(var) {
+        return named;
+    }
+    if cfg!(windows) {
+        let path = std::env::var_os("PATH").unwrap_or_default();
+        let dirs: Vec<PathBuf> = std::env::split_paths(&path).collect();
+        let pathext = std::env::var("PATHEXT").unwrap_or_default();
+        if let Some(found) = find_on_path(name, &dirs, &pathext, |p| p.is_file()) {
+            return found.to_string_lossy().into_owned();
+        }
+    }
+    name.to_string()
+}
+
+/// Where Windows would find a program named `name` without its
+/// extension: the first of `dirs` holding `NAME.exe`, `NAME.cmd`, or
+/// `NAME.bat`, or else another of `pathext`'s extensions (`;`-separated,
+/// as `PATHEXT` is), as `exists` says. A `name` with an extension or a
+/// directory is left to `Command`.
+pub fn find_on_path(
+    name: &str,
+    dirs: &[PathBuf],
+    pathext: &str,
+    exists: impl Fn(&Path) -> bool,
+) -> Option<PathBuf> {
+    if Path::new(name).extension().is_some() || name.contains(['/', '\\']) {
+        return None;
+    }
+    let mut exts: Vec<String> = [".exe", ".cmd", ".bat"].map(String::from).into();
+    for ext in pathext
+        .split(';')
+        .map(str::trim)
+        .filter(|e| e.starts_with('.'))
+    {
+        if !exts.iter().any(|known| known.eq_ignore_ascii_case(ext)) {
+            exts.push(ext.to_ascii_lowercase());
+        }
+    }
+    dirs.iter().find_map(|dir| {
+        exts.iter()
+            .map(|ext| dir.join(format!("{name}{ext}")))
+            .find(|candidate| exists(candidate))
+    })
 }
 
 /// Whether compiler warnings on generated code fail a library's tests
@@ -51,16 +96,20 @@ pub fn program(command: &mut Command, what: &str) -> Result<bool, String> {
 
 /// Installs the packages that libraries' configs list (`dependencies`)
 /// into `dir`, as `temper.out/py/.deps`, which no library's name can
-/// be, with `install`, once for each list of them: `manifest` says what
-/// to install, as the language's tools spell it, and is written as the
-/// file `manifest_name` there; `install` runs there unless the last
-/// install was of the same manifest, recorded as `.installed` once it
-/// succeeds. Nothing is installed, and `dir` is removed, for an empty
+/// be, with `install`, once for each list of them and tool: `manifest`
+/// says what to install, as the language's tools spell it, and is
+/// written as the file `manifest_name` there; `install` runs there,
+/// saying so on stderr at a terminal, unless the last install was of the same manifest
+/// by the same tool, as `tool` names it (its path and version, which
+/// [`identity`] gives), recorded as `.installed` once it succeeds, so
+/// another Python or Node, whose compiled packages differ, installs
+/// again. Nothing is installed, and `dir` is removed, for an empty
 /// manifest. Whether there are packages.
 pub fn install_once(
     dir: &Path,
     manifest_name: &str,
     manifest: &str,
+    tool: impl FnOnce() -> String,
     install: impl FnOnce(&Path) -> Result<(), String>,
 ) -> Result<bool, String> {
     let done = dir.join(".installed");
@@ -68,30 +117,61 @@ pub fn install_once(
         let _ = std::fs::remove_dir_all(dir);
         return Ok(false);
     }
-    if std::fs::read_to_string(&done).is_ok_and(|d| d == manifest) {
+    let record = format!("{}\n{manifest}", tool());
+    if std::fs::read_to_string(&done).is_ok_and(|d| d == record) {
         return Ok(true);
     }
     let _ = std::fs::remove_dir_all(dir);
     let at = |e: std::io::Error| format!("{}: {e}", dir.display());
     std::fs::create_dir_all(dir).map_err(at)?;
     std::fs::write(dir.join(manifest_name), manifest).map_err(at)?;
+    // For people waiting at a terminal; not in output that tools read.
+    if std::io::IsTerminal::is_terminal(&std::io::stderr()) {
+        eprintln!(
+            "Installing the packages that configs list into {}",
+            dir.display()
+        );
+    }
     install(dir)?;
-    std::fs::write(&done, manifest).map_err(at)?;
+    std::fs::write(&done, record).map_err(at)?;
     Ok(true)
+}
+
+/// A tool's identity for [`install_once`]: the program, and what it
+/// prints, run with `args`, as its version; or why it didn't run.
+pub fn identity(program: &str, args: &[&str]) -> String {
+    let ran = output(Command::new(program).args(args), program);
+    let said = match ran {
+        Ok(out) => String::from_utf8_lossy(&[out.stdout, out.stderr].concat()).into_owned(),
+        Err(why) => why,
+    };
+    format!("{program} {}", said.trim())
 }
 
 /// Removes `path`, a file, a link, or a directory and all it holds, if
 /// it's there, but only where it's under `root` by plain names (no `..`,
 /// no root of its own, which `Path::join` would take instead of `root`'s),
-/// as names from configs make paths; an error otherwise.
+/// as names from configs make paths, and not through a link, which would
+/// lead elsewhere; an error otherwise.
 pub fn remove_within(root: &Path, path: &Path) -> Result<(), String> {
     use std::path::Component;
-    let inside = (path.strip_prefix(root)).is_ok_and(|rest| {
+    let rest = path.strip_prefix(root).ok().filter(|rest| {
         rest.components().next().is_some()
             && rest.components().all(|c| matches!(c, Component::Normal(_)))
     });
-    if !inside {
+    let Some(rest) = rest else {
         return Err(format!("{} isn't in {}", path.display(), root.display()));
+    };
+    let mut at = root.to_path_buf();
+    for part in rest.parent().into_iter().flat_map(Path::components) {
+        at.push(part);
+        if std::fs::symlink_metadata(&at).is_ok_and(|m| m.file_type().is_symlink()) {
+            return Err(format!(
+                "{} is a link, which may lead out of {}",
+                at.display(),
+                root.display()
+            ));
+        }
     }
     let _ = std::fs::remove_file(path);
     let _ = std::fs::remove_dir_all(path);
@@ -306,9 +386,37 @@ pub fn unescape_xml(s: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{install_once, junit, remove_within};
+    use super::{find_on_path, install_once, junit, remove_within};
     use std::cell::Cell;
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
+
+    /// Finds a tool as Windows would: the first directory on the path
+    /// with the name and `.exe`, `.cmd`, or `.bat`, in that order in each
+    /// directory, or another of `PATHEXT`'s extensions; not a name with
+    /// an extension or a directory.
+    #[test]
+    fn finds_tools_as_windows_does() {
+        let dirs = [PathBuf::from("a"), PathBuf::from("b"), PathBuf::from("c")];
+        let present = [
+            "b/npm.cmd",
+            "c/npm.exe",
+            "b/mvn.bat",
+            "b/mvn.cmd",
+            "a/run.ps1",
+        ];
+        let exists = |p: &Path| present.iter().any(|f| Path::new(f) == p);
+        let find = |name: &str, pathext: &str| find_on_path(name, &dirs, pathext, exists);
+        assert_eq!(find("npm", ""), Some(PathBuf::from("b/npm.cmd")));
+        assert_eq!(find("mvn", ".COM;.EXE"), Some(PathBuf::from("b/mvn.cmd")));
+        assert_eq!(find("run", ""), None);
+        assert_eq!(
+            find("run", ".COM;.EXE;.PS1"),
+            Some(PathBuf::from("a/run.ps1"))
+        );
+        assert_eq!(find("node", ".EXE;.CMD"), None);
+        assert_eq!(find("npm.cmd", ""), None);
+        assert_eq!(find("b/npm", ""), None);
+    }
 
     /// A fresh scratch directory for a test.
     fn scratch(test: &str) -> std::path::PathBuf {
@@ -318,9 +426,10 @@ mod tests {
         dir
     }
 
-    /// Installs once per manifest: not for an empty one, which removes
-    /// the directory; again for a changed one; and again after a failed
-    /// install, which leaves no record that it succeeded.
+    /// Installs once per manifest and tool: not for an empty manifest,
+    /// which removes the directory; again for a changed one, or another
+    /// tool; and again after a failed install, which leaves no record
+    /// that it succeeded.
     #[test]
     fn installs_once_per_manifest() {
         let root = scratch("install-once");
@@ -338,22 +447,53 @@ mod tests {
                 }
             }
         };
-        assert_eq!(install_once(&deps, "m.txt", "", install(true)), Ok(false));
+        let tool = || "tool 1".to_string();
+        assert_eq!(
+            install_once(&deps, "m.txt", "", tool, install(true)),
+            Ok(false)
+        );
         assert_eq!((runs.get(), deps.exists()), (0, false));
-        assert_eq!(install_once(&deps, "m.txt", "a\n", install(true)), Ok(true));
+        assert_eq!(
+            install_once(&deps, "m.txt", "a\n", tool, install(true)),
+            Ok(true)
+        );
         assert_eq!(runs.get(), 1);
         assert_eq!(std::fs::read_to_string(deps.join("m.txt")).unwrap(), "a\n");
-        assert_eq!(install_once(&deps, "m.txt", "a\n", install(true)), Ok(true));
+        assert_eq!(
+            install_once(&deps, "m.txt", "a\n", tool, install(true)),
+            Ok(true)
+        );
         assert_eq!(runs.get(), 1);
-        assert_eq!(install_once(&deps, "m.txt", "b\n", install(true)), Ok(true));
+        assert_eq!(
+            install_once(&deps, "m.txt", "b\n", tool, install(true)),
+            Ok(true)
+        );
         assert_eq!(runs.get(), 2);
-        let failed = install_once(&deps, "m.txt", "c\n", install(false));
+        let failed = install_once(&deps, "m.txt", "c\n", tool, install(false));
         assert_eq!((failed, runs.get()), (Err("failed".to_string()), 3));
         assert!(!deps.join(".installed").exists());
-        assert_eq!(install_once(&deps, "m.txt", "c\n", install(true)), Ok(true));
+        assert_eq!(
+            install_once(&deps, "m.txt", "c\n", tool, install(true)),
+            Ok(true)
+        );
         assert_eq!(runs.get(), 4);
-        assert_eq!(install_once(&deps, "m.txt", "", install(true)), Ok(false));
-        assert_eq!((runs.get(), deps.exists()), (4, false));
+        // Another tool, as another Python, installs again.
+        let other = || "tool 2".to_string();
+        assert_eq!(
+            install_once(&deps, "m.txt", "c\n", other, install(true)),
+            Ok(true)
+        );
+        assert_eq!(runs.get(), 5);
+        assert_eq!(
+            install_once(&deps, "m.txt", "c\n", other, install(true)),
+            Ok(true)
+        );
+        assert_eq!(runs.get(), 5);
+        assert_eq!(
+            install_once(&deps, "m.txt", "", tool, install(true)),
+            Ok(false)
+        );
+        assert_eq!((runs.get(), deps.exists()), (5, false));
         let _ = std::fs::remove_dir_all(&root);
     }
 
@@ -368,6 +508,16 @@ mod tests {
         assert_eq!(remove_within(&modules, &modules.join("@s/x")), Ok(()));
         assert!(!modules.join("@s/x").exists() && modules.join("@s").exists());
         assert_eq!(remove_within(&modules, &modules.join("absent")), Ok(()));
+        // Not through a link, but a link itself.
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(&kept, modules.join("@l")).unwrap();
+            std::fs::create_dir_all(kept.join("x")).unwrap();
+            assert!(remove_within(&modules, &modules.join("@l/x")).is_err());
+            assert!(kept.join("x").exists());
+            assert_eq!(remove_within(&modules, &modules.join("@l")), Ok(()));
+            assert!(kept.join("x").exists() && !modules.join("@l").exists());
+        }
         for outside in [
             modules.join("../kept"),
             modules.join("@s/../../kept"),

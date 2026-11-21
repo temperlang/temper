@@ -155,6 +155,8 @@ pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
     class: "CppConfig",
     properties: &[],
     std: &[],
+    names: temper_tmpl::no_names,
+    runtime: &[],
 };
 
 /// This backend, as tools list it ([`temper_tmpl::Backend`]).

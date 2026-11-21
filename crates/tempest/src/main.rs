@@ -477,7 +477,7 @@ fn test_command(args: &[String]) -> u8 {
         ignore: ignore.as_ref(),
         log: flags.log,
         fuel,
-        config_types: Some(registry().config_types()),
+        config_classes: registry().config_classes(),
     };
     let build_options = build::Options {
         verbose: false,
@@ -685,12 +685,11 @@ fn serve(name: &str, args: &[String]) -> u8 {
         return NOT_YET_CODE;
     }
     // Configs may use every backend's config class, as `temper build`'s.
-    let config_types = temper_driver::Registry::built_in().config_types();
     temper_lsp::serve(
         io::stdin(),
         io::stdout().lock(),
         flags.std_dir,
-        config_types,
+        registry().config_classes(),
     )
 }
 

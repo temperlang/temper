@@ -215,16 +215,35 @@ fn value(ast: &Ast, id: NodeId) -> Value {
     }
 }
 
+/// The config classes in a build's scope: those its backends inject, and
+/// the keys of backends that configs may set but this build doesn't have
+/// (a build with fewer backends, or one that hasn't loaded them yet),
+/// whose exports are skipped, unchecked, so a library's config holds
+/// whichever binary builds it. Empty, configs aren't checked.
+#[derive(Clone, Debug, Default)]
+pub struct Classes {
+    pub types: Vec<&'static ConfigType>,
+    pub elsewhere: Vec<&'static str>,
+}
+
+impl Classes {
+    /// Whether there are none, so configs aren't checked.
+    pub fn is_empty(&self) -> bool {
+        self.types.is_empty() && self.elsewhere.is_empty()
+    }
+}
+
 /// A config's exports, checked against the config classes in its scope:
 /// each class's key with the properties set, in order, and the problems.
-#[derive(Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Checked {
     pub configs: Vec<(String, Vec<(String, ConfigValue)>)>,
     pub problems: Vec<Problem>,
 }
 
 /// Checks a config's exports against the config classes in its scope.
-pub fn check(exports: &[Export], types: &[&ConfigType]) -> Checked {
+pub fn check(exports: &[Export], classes: &Classes) -> Checked {
+    let types = &classes.types;
     let mut checked = Checked::default();
     let mut problem = |span: Span, message: String| {
         checked.problems.push(Problem { span, message });
@@ -233,6 +252,9 @@ pub fn check(exports: &[Export], types: &[&ConfigType]) -> Checked {
     for export in exports {
         let key = export.key.as_str();
         let by_key = types.iter().find(|t| t.key == key);
+        if by_key.is_none() && classes.elsewhere.contains(&key) {
+            continue;
+        }
         let declared = export.declared.as_ref();
         let Value::Instance { class, args } = &export.value else {
             // A string or the like, which is fine but where a config
@@ -341,18 +363,26 @@ pub fn check(exports: &[Export], types: &[&ConfigType]) -> Checked {
                 (ConfigKind::String { .. }, value) => {
                     problem(*at, wrong(&whose, value, "a String"))
                 }
-                (ConfigKind::Strings { form, valid }, Value::List(items)) => {
+                (ConfigKind::Strings { form, package }, Value::List(items)) => {
                     let mut strings = Vec::new();
+                    let mut packages = Vec::new();
                     for (span, item) in items {
                         match item {
-                            Value::String(s) if valid(s.trim()) => {
-                                strings.push(s.trim().to_string())
-                            }
-                            Value::String(s) => {
-                                let message =
-                                    format!("{whose} are each `{form}`, not `{}`", s.trim());
-                                problem(*span, message);
-                            }
+                            Value::String(s) => match package(s.trim()) {
+                                Some(p) if packages.contains(&p) => {
+                                    let message = format!("{whose} lists `{p}` twice");
+                                    problem(*span, message);
+                                }
+                                Some(p) => {
+                                    packages.push(p);
+                                    strings.push(s.trim().to_string());
+                                }
+                                None => {
+                                    let message =
+                                        format!("{whose} are each `{form}`, not `{}`", s.trim());
+                                    problem(*span, message);
+                                }
+                            },
                             Value::Computed => problem(*span, wrong(&whose, item, "a String")),
                             _ => {
                                 let message = format!("{whose} holds Strings, not {}", what(item));
@@ -484,11 +514,13 @@ mod tests {
                 doc: "",
                 kind: ConfigKind::Strings {
                     form: "name@version",
-                    valid: |s| s.split_once('@').is_some(),
+                    package: |s| s.split_once('@').map(|(name, _)| name.to_lowercase()),
                 },
             },
         ],
         std: &[],
+        names: temper_tmpl::no_names,
+        runtime: &[],
     };
 
     const EMPTY: ConfigType = ConfigType {
@@ -496,15 +528,29 @@ mod tests {
         class: "EmptyConfig",
         properties: &[],
         std: &[],
+        names: temper_tmpl::no_names,
+        runtime: &[],
     };
+
+    /// [`TOY`] and [`EMPTY`].
+    fn both() -> Classes {
+        Classes {
+            types: vec![&TOY, &EMPTY],
+            elsewhere: Vec::new(),
+        }
+    }
 
     /// Each class's key and the properties set.
     type Configs = Vec<(String, Vec<(String, ConfigValue)>)>;
 
     fn checked(text: &str) -> (Configs, Vec<String>) {
+        checked_with(text, &both())
+    }
+
+    fn checked_with(text: &str, classes: &Classes) -> (Configs, Vec<String>) {
         let (exports, problems) = read(text);
         assert_eq!(problems, []);
-        let checked = check(&exports, &[&TOY, &EMPTY]);
+        let checked = check(&exports, classes);
         let problems = (checked.problems.iter())
             .map(|p| {
                 format!(
@@ -648,6 +694,45 @@ mod tests {
                 "toy: `toy` is set twice; set each config class once",
             ]
         );
+    }
+
+    /// A package listed twice, as the class compares packages (here,
+    /// ignoring case), is a problem; the list keeps the first.
+    #[test]
+    fn packages_listed_twice() {
+        let text = "    export let toy: ToyConfig = { parts: [\"a@1\", \"b@1\", \"A@2\"] };\n";
+        let (configs, problems) = checked(text);
+        assert_eq!(problems, ["\"A@2\": ToyConfig's `parts` lists `a` twice"]);
+        let parts = vec!["a@1".to_string(), "b@1".to_string()];
+        let toy = vec![("parts".to_string(), ConfigValue::Strings(parts))];
+        assert_eq!(configs, [("toy".to_string(), toy)]);
+    }
+
+    /// A build without a backend skips what configs set for it, whatever
+    /// its class, as another build checks it; other mistakes are still
+    /// problems, suggesting the classes it has.
+    #[test]
+    fn classes_of_backends_elsewhere() {
+        let classes = Classes {
+            types: vec![&TOY],
+            elsewhere: vec!["empty"],
+        };
+        let text = "    export let empty: EmptyConfig = { x: \"\" };
+    export let empty = { class: Whatever };
+    export let toy: ToyConfig = { name: \"t\" };
+    export let other = { class: EmptyConfig };
+    export let t = { class: ToyConfg };
+";
+        let (configs, problems) = checked_with(text, &classes);
+        assert_eq!(
+            problems,
+            [
+                "EmptyConfig: No config class `EmptyConfig`; those here are `ToyConfig`",
+                "ToyConfg: No config class `ToyConfg`; did you mean `ToyConfig`?",
+            ]
+        );
+        let toy = vec![("name".to_string(), string("t"))];
+        assert_eq!(configs, [("toy".to_string(), toy)]);
     }
 
     #[test]

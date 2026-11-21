@@ -79,6 +79,9 @@
 //!   failed step leaves done, and `host/interop.cpp` does the same with
 //!   the `async-turns` program's generated library; skipped where `g++`
 //!   has no coroutines.
+//! - `list_builder_self`: `host/list_builder.cpp` adds a list to itself
+//!   with the runtime's `addAll` and `splice`, under libstdc++'s checked
+//!   debug mode.
 
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
@@ -1849,6 +1852,37 @@ fn statics_private() {
             .arg(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/statics.cpp"));
         check("g++, host/statics.cpp", command);
     });
+}
+
+/// `tests/host/list_builder.cpp`: the runtime's `addAll` and `splice`
+/// of a list into itself, under libstdc++'s debug mode
+/// (`-D_GLIBCXX_DEBUG`), which aborts on an insert from the vector's own
+/// range, as the standard leaves that undefined.
+#[test]
+fn list_builder_self() {
+    let Some((gxx, _)) = find_gxx() else {
+        kit::missing("no g++ (on PATH, or named by CXX)");
+        return;
+    };
+    let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("be-cpp-list-builder");
+    fs::create_dir_all(&out).unwrap();
+    let exe = out.join("list_builder");
+    let mut command = Command::new(&gxx);
+    command
+        .args(STRICT)
+        .args(["-O1", "-D_GLIBCXX_DEBUG"])
+        .arg("-isystem")
+        .arg(runtime_dir())
+        .arg(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/list_builder.cpp"))
+        .arg("-o")
+        .arg(&exe);
+    check("g++, host/list_builder.cpp", command);
+    let mut failures = Vec::new();
+    // [1, 2], then [1, 2, 1, 2], then [1, 1, 2, 1, 2, 2, 1, 2], then
+    // its items 1 and 2 replaced by the whole list as it was.
+    let expected = vec!["1 1 1 2 1 2 2 1 2 1 2 2 1 2 ".to_string()];
+    run(&mut failures, "list builder (debug)", &exe, &[], &expected);
+    kit::assert_none(&failures);
 }
 
 /// `tests/host/net.cpp` plugs a client of its own into std `net` from

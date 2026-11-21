@@ -12,20 +12,20 @@
 //! file, and JSON records, leaving the summary to the caller, which may
 //! sum several backends' tallies.
 
+use crate::config::Classes;
 use crate::ignore::IgnoreFile;
 use crate::interp::{TEST_FUEL, run_tests};
 use crate::library::Diagnostic;
 use crate::library::Level;
 use crate::log::{LogFormat, Pos, Value, record, write_json_diagnostic, write_json_diagnostics};
 use crate::project::{
-    CONFIG_FILE, LibrarySources, duplicate_names, find_libraries_ignoring, library_of,
-    load_library, work_root,
+    CONFIG_FILE, LibrarySources, check_configs, duplicate_names, find_libraries_ignoring,
+    library_of, load_library, work_root,
 };
 use crate::settle::{Settled, settle};
 use crate::sources::Sources;
 use std::collections::HashSet;
 use std::io::Write;
-use temper_tmpl::ConfigType;
 
 /// Tests the libraries under `dir`'s work root, writing the failures (or
 /// with `verbose`, each library's output and every test's result) and the
@@ -67,10 +67,10 @@ pub struct TestOptions<'a> {
     /// its top-level code before them; `None` for no limit. The CLI's
     /// default is [`TEST_FUEL`].
     pub fuel: Option<u64>,
-    /// The config classes that the backends inject, which configs are
-    /// checked against ([`crate::config`]); `None` to leave them
-    /// unchecked.
-    pub config_types: Option<Vec<&'static ConfigType>>,
+    /// The config classes in the build's scope, which configs are
+    /// checked against ([`crate::project::check_configs`]); none to leave
+    /// them unchecked.
+    pub config_classes: Classes,
 }
 
 /// Tests the libraries under a work root on the interpreter, as
@@ -88,7 +88,7 @@ pub fn test_libraries(
 ) -> Option<(bool, Tally)> {
     let json = options.log == LogFormat::Json;
     let mut tally = Tally::default();
-    let libraries = libraries_to_test(
+    let mut libraries = libraries_to_test(
         sources,
         root,
         options.ignore,
@@ -97,10 +97,13 @@ pub fn test_libraries(
         err,
     )?;
     let mut ok = true;
-    let mut reported = Reported::new(options.verbose);
-    if let Some(types) = &options.config_types {
-        reported = reported.with_config_types(types.clone());
+    if !options.config_classes.is_empty() {
+        check_configs(
+            libraries.iter_mut().map(|l| &mut l.config),
+            &options.config_classes,
+        );
     }
+    let mut reported = Reported::new(options.verbose);
     for library in &libraries {
         if options
             .library
@@ -414,10 +417,6 @@ pub struct Reported {
     /// Each library with errors, by name, and how many, in the order
     /// first reported.
     pub errors: Vec<(String, usize)>,
-    /// The config classes that a build's backends inject, which each
-    /// library's config is checked against when its diagnostics are
-    /// reported; `None` to leave configs unchecked.
-    config_types: Option<Vec<&'static ConfigType>>,
 }
 
 impl Reported {
@@ -427,13 +426,6 @@ impl Reported {
             hints,
             ..Reported::default()
         }
-    }
-
-    /// The same, checking configs against the config classes that a
-    /// build's backends inject ([`crate::config`]).
-    pub fn with_config_types(mut self, types: Vec<&'static ConfigType>) -> Self {
-        self.config_types = Some(types);
-        self
     }
 
     /// `settled`'s diagnostics that aren't reported yet, as text or JSON
@@ -480,15 +472,13 @@ impl Reported {
 
     /// A library's config problems that aren't reported yet, as
     /// [`Reported::new_diagnostics`] reports diagnostics, as
-    /// `ConfigError`s.
+    /// `ConfigError`s: those [`crate::project::check_configs`] found, if
+    /// it checked the configs.
     fn config_problems(&mut self, library: &LibrarySources, log: LogFormat) -> String {
-        let Some(types) = &self.config_types else {
-            return String::new();
-        };
         let config = &library.config;
         let path = format!("{}/{CONFIG_FILE}", library.root);
         let mut out = String::new();
-        for problem in config.check(types).problems {
+        for problem in &config.checked.problems {
             let span = problem.span;
             let key = (path.clone(), span.start, span.end, problem.message.clone());
             if !self.seen.insert(key) {

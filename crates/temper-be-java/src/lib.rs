@@ -140,7 +140,9 @@ pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
             doc: "Maven packages that the library's host code uses, each `\"group:artifact:version\"`.",
             kind: temper_tmpl::ConfigKind::Strings {
                 form: "group:artifact:version",
-                valid: |d| maven_dependency(d).is_some(),
+                package: |d| {
+                    maven_dependency(d).map(|(group, artifact, _)| maven_key(group, artifact))
+                },
             },
         },
     ],
@@ -149,6 +151,8 @@ pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
         ("artifact", "temper-std"),
         ("package", "temper.std"),
     ],
+    names: java_names,
+    runtime: &["package temper.core", "dev.temperlang:temper-core"],
 };
 
 /// This backend, as tools list it ([`temper_tmpl::Backend`]).
@@ -414,14 +418,37 @@ public final class {main} {{
 /// artifact, or else its Java name. std's Java configuration sets them
 /// (`dev.temperlang` and `temper-std`).
 fn coordinates(p: &Program, library: &str) -> (String, String) {
-    let meta = p.metadata_of(library);
+    let (group, artifact) = coordinates_of(library, p.metadata_of(library));
+    (
+        temper_tmpl::xml_text(&group),
+        temper_tmpl::xml_text(&artifact),
+    )
+}
+
+/// [`coordinates`], given what the library's config says, unescaped.
+fn coordinates_of(library: &str, meta: &temper_tmpl::Metadata) -> (String, String) {
     let config = |property| CONFIG.get(library, meta, property);
     let name = config("name").unwrap_or(library);
     (
-        (config("group").or(config("package")))
-            .map_or_else(|| names::package(name), temper_tmpl::xml_text),
-        temper_tmpl::xml_text(config("artifact").unwrap_or(name)),
+        (config("group").or(config("package"))).map_or_else(|| names::package(name), String::from),
+        config("artifact").unwrap_or(name).to_string(),
     )
+}
+
+/// What a library takes among Java's packages and Maven's
+/// ([`temper_tmpl::ConfigType::names`]): its package, and its Maven
+/// coordinates, each lowercase.
+fn java_names(library: &str, meta: &temper_tmpl::Metadata) -> Vec<String> {
+    let (group, artifact) = coordinates_of(library, meta);
+    vec![
+        format!("package {}", translate::package_of(library, meta)).to_lowercase(),
+        maven_key(&group, &artifact),
+    ]
+}
+
+/// A Maven group and artifact as [`java_names`] gives them.
+fn maven_key(group: &str, artifact: &str) -> String {
+    format!("{group}:{artifact}").to_lowercase()
 }
 
 /// A package that a config's `dependencies` lists, as

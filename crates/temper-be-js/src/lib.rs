@@ -122,11 +122,13 @@ pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
             doc: "npm packages that the library's host code uses, each `\"name@version\"`, as `\"@scope/name@^1.0.0\"`.",
             kind: temper_tmpl::ConfigKind::Strings {
                 form: "name@version",
-                valid: |d| npm_dependency(d).is_some(),
+                package: |d| npm_dependency(d).map(|(name, _)| name.to_lowercase()),
             },
         },
     ],
     std: &[("name", "@temperlang/std")],
+    names: |library, metadata| vec![translate::js_name(library, metadata).to_lowercase()],
+    runtime: &["@temperlang/core"],
 };
 
 /// A package that a config's `dependencies` lists, as `"name@version"`:

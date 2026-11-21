@@ -135,10 +135,12 @@ pub fn clashing_paths(files: &[OutFile], reserved: &[&str]) -> Option<String> {
 /// Why a part of a generated file's path, between `/`s, isn't a plain
 /// name that stays where it is on every file system, if it isn't: empty
 /// (a leading `/` or `//`), `.` or `..`, with `\\` or `:` (Windows's
-/// separator and drive), ending in `.` or a space (which Windows drops),
-/// or a name Windows reserves for a device, as `CON` or `Aux.cs`.
+/// separator and drive), with another character Windows doesn't allow
+/// in a name (`< > " | ? *` or a control character), ending in `.` or a
+/// space (which Windows drops), or a name Windows reserves for a device,
+/// as `CON` or `Aux.cs`.
 pub fn unsafe_part(part: &str) -> Option<&'static str> {
-    const DEVICES: &[&str] = &["CON", "PRN", "AUX", "NUL"];
+    const DEVICES: &[&str] = &["CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"];
     let stem = part
         .split('.')
         .next()
@@ -152,6 +154,8 @@ pub fn unsafe_part(part: &str) -> Option<&'static str> {
         Some("leaves its directory")
     } else if part.contains(['\\', ':']) {
         Some("has `\\` or `:`, which Windows takes as a separator or drive")
+    } else if part.contains(['<', '>', '"', '|', '?', '*']) || part.contains(char::is_control) {
+        Some("has a character Windows doesn't allow in a name")
     } else if part.ends_with(['.', ' ']) {
         Some("ends in `.` or a space, which Windows drops")
     } else if DEVICES.contains(&stem.as_str()) || numbered("COM") || numbered("LPT") {
@@ -238,6 +242,14 @@ mod tests {
             (&["a/./x"], "leaves its directory"),
             (&["C:/x"], "Windows takes as a separator or drive"),
             (&["a\\..\\x"], "Windows takes as a separator or drive"),
+            (&["a/x<y.cs"], "Windows doesn't allow"),
+            (&["a/x|y"], "Windows doesn't allow"),
+            (&["a/x?.py"], "Windows doesn't allow"),
+            (&["a/x*"], "Windows doesn't allow"),
+            (&["a/\"x\""], "Windows doesn't allow"),
+            (&["a/x\ty"], "Windows doesn't allow"),
+            (&["a/CONIN$.cs"], "is named like a Windows device"),
+            (&["a/conout$"], "is named like a Windows device"),
             (&["a/x."], "ends in `.` or a space"),
             (&["a/x "], "ends in `.` or a space"),
             (&["a/Con.java"], "is named like a Windows device"),

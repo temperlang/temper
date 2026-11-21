@@ -3649,7 +3649,12 @@ fn jumps(body: &[Stmt], brk: bool) -> bool {
 /// `rootNamespace` ([`crate::CONFIG`]; std's is `TemperLang.Std`, as
 /// Kotlin's), or else [`crate::names::root_namespace`]'s.
 pub fn library_namespace(p: &Program, library: &str) -> String {
-    match crate::CONFIG.get(library, p.metadata_of(library), "rootNamespace") {
+    root_namespace_of(library, p.metadata_of(library))
+}
+
+/// [`library_namespace`], given what the library's config says.
+pub fn root_namespace_of(library: &str, metadata: &temper_tmpl::Metadata) -> String {
+    match crate::CONFIG.get(library, metadata, "rootNamespace") {
         Some(namespace) => namespace.into(),
         None => crate::names::root_namespace(library),
     }

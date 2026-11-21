@@ -1302,6 +1302,7 @@ fn test_a_library_on_each_backend() {
 /// `connecteds` job sets it, not on every push; there, a backend whose
 /// tools are missing is skipped, with a message, unless
 /// `TEMPER_REQUIRE_CHECKERS` is set.
+#[allow(dead_code)] // Unless every backend is left out.
 fn connecteds(backend: &str, defines: &str, uses: &str) {
     let files = connecteds_files();
     let files: Vec<(&str, &str)> = (files.iter())
@@ -1359,6 +1360,7 @@ fn connecteds_files() -> Vec<(String, String)> {
 
 /// The files under a backend's output for the `connecteds` library, but
 /// not its packages and builds (`node_modules`, `target`, `bin`, `obj`).
+#[allow(dead_code)] // Unless every backend is left out.
 fn sources(dir: &Path) -> Vec<(PathBuf, String)> {
     let mut found = Vec::new();
     for entry in fs::read_dir(dir).unwrap() {

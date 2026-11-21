@@ -25,6 +25,22 @@ pub struct ConfigType {
     /// What std's config sets, as each of Kotlin's backends injects std's
     /// (be-java's `temper-std/config.temper.md`), by property.
     pub std: &'static [(&'static str, &'static str)],
+    /// The names a library takes among its language's packages, given
+    /// its name and what its config says (std's too, by [`Self::get`]),
+    /// each folded as the language's tools compare them (case and the
+    /// like), so names that would collide give the same text: Python's
+    /// project, npm's package, the crate, the Java package and Maven
+    /// coordinates, the C# namespace. Two libraries of a build sharing
+    /// one, or a `dependencies` item naming one, is a config error.
+    pub names: fn(library: &str, metadata: &Metadata) -> Vec<String>,
+    /// The names its runtime, `temper-core`, takes, as `names` gives them.
+    pub runtime: &'static [&'static str],
+}
+
+/// [`ConfigType::names`] for a backend whose libraries take no names
+/// that might clash.
+pub fn no_names(_: &str, _: &Metadata) -> Vec<String> {
+    Vec::new()
 }
 
 /// A property of a [`ConfigType`]: its name, what it sets, a sentence
@@ -48,11 +64,14 @@ pub enum Kind {
         form: &'static str,
         valid: fn(&str) -> bool,
     },
-    /// A `List<String>?`, each item in a form that `valid` checks, and
-    /// that `form` shows, as `"name==version"`.
+    /// A `List<String>?` of packages, each item in a form that `form`
+    /// shows, as `"name==version"`, and that `package` reads, giving
+    /// the package it names as [`ConfigType::names`] gives names, or
+    /// `None` for an item not in that form. A package listed twice is a
+    /// config error.
     Strings {
         form: &'static str,
-        valid: fn(&str) -> bool,
+        package: fn(&str) -> Option<String>,
     },
 }
 
@@ -174,11 +193,13 @@ mod tests {
                 doc: "",
                 kind: Kind::Strings {
                     form: "any",
-                    valid: |_| true,
+                    package: |s| Some(s.into()),
                 },
             },
         ],
         std: &[("name", "toy-std")],
+        names: no_names,
+        runtime: &[],
     };
 
     #[test]

@@ -37,7 +37,11 @@ impl Client {
         let server = std::thread::Builder::new()
             .stack_size(64 << 20)
             .spawn(move || {
-                temper_lsp::serve_with_hook(reader, stream, None, vec![&TOY_CONFIG], panic_on)
+                let classes = temper_frontend::config::Classes {
+                    types: vec![&TOY_CONFIG],
+                    elsewhere: Vec::new(),
+                };
+                temper_lsp::serve_with_hook(reader, stream, None, classes, panic_on)
             })
             .unwrap();
         let output = BufReader::new(input.try_clone().unwrap());
@@ -201,6 +205,8 @@ const TOY_CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
         },
     }],
     std: &[],
+    names: temper_tmpl::no_names,
+    runtime: &[],
 };
 
 const SHAPES: &str = "/** A square's area. */

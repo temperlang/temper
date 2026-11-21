@@ -8,7 +8,7 @@
 //! library's `…Main` class under `java`, as Kotlin runs it by exec.
 //! Packages that libraries' configs list are found with Maven (`mvn`,
 //! or `MVN`), which fetches them, with what they need, into its local
-//! repository, and their jars join the class path ([`dependency_jars`]).
+//! repository, and their jars join the class path ([`resolve`]).
 //!
 //! javac's warnings are hidden, as in Kotlin, unless
 //! `TEMPER_STRICT_WARNINGS` is set ([`strict_warnings`]): then the
@@ -24,7 +24,7 @@ use temper_tmpl::tools::{
 use temper_tmpl::{TestResults, Tested, Tools};
 
 pub const TOOLS: Tools = Tools {
-    prepare: None,
+    prepare: Some(resolve),
     test,
     run,
     dirs: &[".deps"],
@@ -133,11 +133,12 @@ pub fn argfile(path: &Path, args: &[PathBuf]) -> std::io::Result<std::ffi::OsStr
 /// earlier ones by the system's code page.
 pub const ARGFILE_ENCODING: &str = "-J-Dfile.encoding=UTF-8";
 
-/// The jars of the packages that libraries' configs list, and of what
-/// they need, as Maven's dependency plugin resolves them from a POM of
-/// just them in `temper.out/java/.deps`, once for each list of them
-/// ([`install_once`]); none without such packages.
-fn dependency_jars(dir: &Path, all: &[Tested]) -> Result<Vec<PathBuf>, String> {
+/// Finds the jars of the packages that libraries' configs list, and of
+/// what they need, as Maven's dependency plugin resolves them from a POM
+/// of just them in `temper.out/java/.deps`, into `classpath.txt` there,
+/// once for each list of them and Maven ([`install_once`]);
+/// [`dependency_jars`] reads it.
+fn resolve(dir: &Path, all: &[Tested]) -> Result<(), String> {
     let mut packages: Vec<(&str, &str, &str)> = (all.iter())
         .flat_map(|l| crate::CONFIG.strings(&l.metadata, "dependencies"))
         .filter_map(|d| crate::maven_dependency(d))
@@ -146,23 +147,33 @@ fn dependency_jars(dir: &Path, all: &[Tested]) -> Result<Vec<PathBuf>, String> {
     packages.dedup();
     let pom = deps_pom(&packages);
     let deps = dir.join(".deps");
-    let any = install_once(&deps, "pom.xml", &pom, |deps| {
-        step(
-            Command::new(tool("MVN", "mvn"))
-                .args(["-q", "-B", "-f", "pom.xml"])
-                .arg("org.apache.maven.plugins:maven-dependency-plugin:3.8.1:build-classpath")
-                .arg("-Dmdep.outputFile=classpath.txt")
-                .current_dir(deps),
-            "mvn",
-        )
-    })?;
-    if !any {
-        return Ok(Vec::new());
+    install_once(
+        &deps,
+        "pom.xml",
+        &pom,
+        || tool("MVN", "mvn"),
+        |deps| {
+            step(
+                Command::new(tool("MVN", "mvn"))
+                    .args(["-q", "-B", "-f", "pom.xml"])
+                    .arg("org.apache.maven.plugins:maven-dependency-plugin:3.8.1:build-classpath")
+                    .arg("-Dmdep.outputFile=classpath.txt")
+                    .current_dir(deps),
+                "mvn",
+            )
+        },
+    )?;
+    Ok(())
+}
+
+/// The jars that [`resolve`] found; none without packages to find.
+fn dependency_jars(dir: &Path) -> Vec<PathBuf> {
+    let listed = dir.join(".deps/classpath.txt");
+    let text = std::fs::read_to_string(listed).unwrap_or_default();
+    match text.trim() {
+        "" => Vec::new(),
+        paths => std::env::split_paths(paths).collect(),
     }
-    let listed = deps.join("classpath.txt");
-    let text =
-        std::fs::read_to_string(&listed).map_err(|e| format!("{}: {e}", listed.display()))?;
-    Ok(std::env::split_paths(text.trim()).collect())
 }
 
 /// A POM of just the packages that configs list, for Maven's dependency
@@ -213,7 +224,7 @@ fn run(dir: &Path, library: &Tested, all: &[Tested]) -> Result<bool, String> {
         .ok_or_else(|| format!("no main class in {}", here.display()))?;
     let classes = here.join("target/temper/classes");
     let _ = std::fs::remove_dir_all(&classes);
-    let jars = dependency_jars(dir, all)?;
+    let jars = dependency_jars(dir);
     let classpath = std::env::join_paths(&jars).map_err(|e| e.to_string())?;
     compile_main(dir, all, &classes, &[], &classpath, false)?;
     let everything =
@@ -307,7 +318,7 @@ fn test(dir: &Path, library: &Tested, all: &[Tested]) -> TestResults {
             missing.display()
         )
     })?;
-    jars.extend(dependency_jars(dir, all)?);
+    jars.extend(dependency_jars(dir));
     let out = dir.join(&library.name).join("target/temper");
     let _ = std::fs::remove_dir_all(&out);
     let (main, tests) = (out.join("classes"), out.join("test-classes"));

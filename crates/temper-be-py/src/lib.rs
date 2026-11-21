@@ -119,11 +119,13 @@ pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
             doc: "PyPI packages that the library's host code uses, each `\"name==version\"`.",
             kind: temper_tmpl::ConfigKind::Strings {
                 form: "name==version",
-                valid: |d| pypi_dependency(d).is_some(),
+                package: |d| pypi_dependency(d).map(|(name, _)| names::project_name(name)),
             },
         },
     ],
     std: &[("name", "temper-std")],
+    names: |library, metadata| vec![names::project_name(&translate::py_name(library, metadata))],
+    runtime: &["temper-core"],
 };
 
 /// A package that a config's `dependencies` lists, as `"name==version"`:

@@ -123,7 +123,39 @@ pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
     class: "LuaConfig",
     properties: &[],
     std: &[],
+    names: temper_tmpl::no_names,
+    runtime: &[],
 };
+
+/// Each Lua file of a library's rock, by its path in the library's
+/// directory, with the name `require` takes for it (`LIBRARY.a.b` for
+/// `a/b.lua` and `a/b/init.lua`, `LIBRARY` for `init.lua`); `NotYet`
+/// where two files take one name, or a name's `.` would be read as a
+/// directory (`a.b.lua`).
+fn rock_modules<'a>(
+    library: &str,
+    paths: impl Iterator<Item = &'a str>,
+) -> Result<Vec<(String, &'a str)>, NotYet> {
+    let mut out: Vec<(String, &str)> = Vec::new();
+    for path in paths {
+        let stem = path.strip_suffix(".lua").unwrap_or(path);
+        if stem.contains('.') {
+            let what =
+                format!("a Lua module with `.` in its path, {path}, which `require` reads as `/`");
+            return Err(NotYet { what });
+        }
+        let name = match stem.strip_suffix("/init").unwrap_or(stem) {
+            "init" => library.to_string(),
+            stem => format!("{library}.{}", stem.replace('/', ".")),
+        };
+        if let Some((_, other)) = out.iter().find(|(n, _)| *n == name) {
+            let what = format!("Lua modules {other} and {path}, which `require` both names {name}");
+            return Err(NotYet { what });
+        }
+        out.push((name, path));
+    }
+    Ok(out)
+}
 
 /// This backend, as tools list it ([`temper_tmpl::Backend`]).
 pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
@@ -279,13 +311,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     let paths = (files.iter())
         .filter_map(|f| f.path.strip_prefix(&format!("{library}/")))
         .filter(|path| !path.starts_with("tests/"));
-    for path in paths {
-        let name = path.strip_suffix(".lua").unwrap_or(path);
-        let name = name.strip_suffix("/init").unwrap_or(name);
-        let name = match name {
-            "init" => library.clone(),
-            name => format!("{library}.{}", name.replace('/', ".")),
-        };
+    for (name, path) in rock_modules(library, paths)? {
         modules.push_str(&format!(
             "        [{}] = {},\n",
             quoted(&name),
@@ -346,4 +372,35 @@ dependencies = {{
         text: rockspec,
     });
     Ok(files)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::rock_modules;
+
+    /// Each file's name for `require`, and the files that would share
+    /// one, or whose `.` `require` would read as a directory.
+    #[test]
+    fn rock_module_names() {
+        let names = |paths: &[&'static str]| match rock_modules("lib", paths.iter().copied()) {
+            Ok(found) => found
+                .into_iter()
+                .map(|(n, _)| n)
+                .collect::<Vec<_>>()
+                .join(" "),
+            Err(e) => e.what,
+        };
+        assert_eq!(
+            names(&["init.lua", "a.lua", "a/b/init.lua", "_support.lua"]),
+            "lib lib.a lib.a.b lib._support"
+        );
+        assert_eq!(
+            names(&["a.lua", "a/init.lua"]),
+            "Lua modules a.lua and a/init.lua, which `require` both names lib.a"
+        );
+        assert_eq!(
+            names(&["a.b/c.lua"]),
+            "a Lua module with `.` in its path, a.b/c.lua, which `require` reads as `/`"
+        );
+    }
 }
