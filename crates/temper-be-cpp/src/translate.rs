@@ -1909,13 +1909,23 @@ impl<'a> Translator<'a> {
         Ok(out)
     }
 
+    /// [`deliver`](Self::deliver), after where `id` comes from
+    /// ([`mark`](Self::mark)).
+    fn deliver_marked(&mut self, id: NodeId, sink: &Sink) -> R<Vec<Stmt>> {
+        let mut out = Vec::new();
+        self.mark(id, &mut out);
+        out.extend(self.deliver(id, sink)?);
+        Ok(out)
+    }
+
     fn deliver_in(&mut self, id: NodeId, sink: &Sink) -> R<Vec<Stmt>> {
         let p = self.p;
         let mut out = Vec::new();
         match p.nodes.get(id) {
+            // Each side where it comes from, as the `try` spans lines.
             Node::OrElse { body, fallback } => {
-                let body = self.deliver(body, sink)?;
-                let fallback = self.deliver(fallback, sink)?;
+                let body = self.deliver_marked(body, sink)?;
+                let fallback = self.deliver_marked(fallback, sink)?;
                 out.push(Stmt::Try { body, fallback });
             }
             Node::BlockValue { stmts, value } => {

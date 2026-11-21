@@ -1,0 +1,33 @@
+tmpl 1 model 1 library `panic-causes-panic-in-orelse-whose-body-returns` 0.0.0
+
+uses `temper-core`#4 0.0.0-alpha.0.0 {
+  interface Console#5 {
+    connected method log#6(message: String): Void;
+  }
+  class Int32#9 {
+    connected method toString#10(radix?: Int32): String;
+  }
+  connected fn getConsole#11(name?: String): Console#5;
+}
+
+module `panic-causes-panic-in-orelse-whose-body-returns`#0 {
+  let ~console#7: Console#5;
+
+  fn positive#1(n#3: Int32): Int32 throws Bubble {
+    if (%Int32.le(n#3, 0)) {
+      (bubble()^): Void;
+    }
+    return n#3;
+  }
+
+  fn checked#2(n#8: Int32): Int32 {
+    (orelse((value { if (%Int32.eq(n#8, 0)) { return 0; } positive#1(n#8)^; void }): Void, (panic()): Void)): Void;
+    return n#8;
+  }
+
+  init {
+    init ~console#7 = getConsole#11(omitted);
+    ~console#7.log#6("before");
+    ~console#7.log#6(%String.cat("after ", checked#2(%Int32.neg(1)).toString#10(omitted)));
+  }
+}

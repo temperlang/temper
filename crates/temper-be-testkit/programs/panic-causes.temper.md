@@ -85,6 +85,63 @@ before
 index 5 out of bounds for length 2
 ```
 
+## Panic in orelse whose body returns
+
+A body that may `return` runs in place, where it can, and its bubble
+stays the panic's cause there too:
+
+    let checked(n: Int): Int {
+      do {
+        if (n == 0) { return 0 }
+        positive(n);
+      } orelse panic();
+      n
+    }
+    console.log("after ${checked(-1)}");
+
+```log
+before
+```
+
+```stderr interp
+Panicked: panic(), caused by a bubble
+```
+
+```stderr cpp
+panic
+caused by: bubble
+```
+
+```stderr csharp
+TemperLang.Core.Panic: panic
+---> TemperLang.Core.Bubble
+```
+
+```stderr java
+java.lang.AssertionError: panic
+Caused by: temper.core.Bubble
+```
+
+```stderr js
+Error: panic
+[cause]: Bubble
+```
+
+```stderr lua
+panic
+caused by: Bubble
+```
+
+```stderr py
+The above exception was the direct cause of the following exception:
+BaseException: panic
+```
+
+```stderr rust
+panic
+caused by: bubble
+```
+
 ## Uncaught bubble
 
 A bubble nothing handles ends the run, saying it bubbled:
@@ -102,7 +159,6 @@ Failed
 
 ```stderr cpp
 uncaught bubble
-at positive (
 ```
 
 ```stderr csharp
@@ -152,7 +208,6 @@ Panicked: panic()
 
 ```stderr cpp
 panic
-at boom (
 ```
 
 ```stderr csharp

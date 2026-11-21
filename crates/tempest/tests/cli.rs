@@ -1541,6 +1541,8 @@ fn cpp_stack_traces() {
             "export let g(n: Int): Int {\n  if (n > 1) { panic() }\n  n\n}\n\
              console.log(\"c\");\ng(5);\n",
         ),
+        ("d/config.temper.md", "    export let name = \"d\";\n"),
+        ("d/d.temper", ORELSE_PANICS),
     ];
     with_library("cpp-traces", &files, |dir| {
         // The frames, as `  at NAME (WHERE)`, in order.
@@ -1616,9 +1618,22 @@ fn cpp_stack_traces() {
                 );
             }
         }
+        // An `orelse` is several lines of C++, each pointing at the
+        // Temper line it comes from: the panic in a function's `let`,
+        // the call in an init `let`'s.
+        let (code, out, err) = tempest(&["run", "-w", dir, "--library", "d", "-b", "cpp"]);
+        assert_eq!((code, out.trim_end()), (1, "d"), "{err}");
+        let frames = frames(&err);
+        assert!(frames.len() >= 3, "{err}");
+        assert!(frames[0].starts_with("checked"), "{err}");
+        if lines {
+            let file = fs::canonicalize(Path::new(dir).join("d/d.temper")).unwrap();
+            assert_eq!(source("d", &frames[0]), (file.clone(), "6".into()), "{err}");
+            assert_eq!(source("d", &frames[1]), (file, "10".into()), "{err}");
+        }
         // The programs install the handler, the libraries and what
         // they include (the runtime but its tests' runner) don't.
-        for library in ["a", "b", "c"] {
+        for library in ["a", "b", "c", "d"] {
             let main = fs::read_to_string(cpp.join(library).join("main.cpp")).unwrap();
             assert!(main.contains("install_stack_traces()"), "{main}");
             for entry in fs::read_dir(cpp.join(library)).unwrap() {
@@ -1657,7 +1672,7 @@ fn cpp_stack_traces() {
         assert!(!init.contains(&format!("\"{dir}")), "{init}");
         let (code, _, err) = tempest(&["build", "-w", dir, "-b", "cpp"]);
         assert_eq!(code, 0, "{err}");
-        for library in ["a", "b", "c"] {
+        for library in ["a", "b", "c", "d"] {
             for entry in fs::read_dir(cpp.join(library)).unwrap() {
                 let path = entry.unwrap().path();
                 if path.is_file() {
@@ -1668,6 +1683,13 @@ fn cpp_stack_traces() {
         }
     });
 }
+
+/// A program whose `orelse`s panic, in a function's `let` (line 6) and
+/// in an init `let`'s value (line 10), for the stack-trace tests.
+#[cfg(any(feature = "cpp", feature = "csharp"))]
+const ORELSE_PANICS: &str = "let positive(n: Int): Int throws Bubble {\n  if (n <= 0) { bubble() }\n  n\n}\n\
+    let checked(n: Int): Int {\n  let q = positive(n) orelse panic();\n  q + 1\n}\n\
+    console.log(\"d\");\nlet p = positive(checked(-1)) orelse panic();\nconsole.log(\"after ${p}\");\n";
 
 /// On Lua, `run`'s uncaught bubble, an error that isn't a string, shows
 /// a stack trace, as an uncaught panic's does, which `lua`'s own handler
@@ -1705,6 +1727,62 @@ fn lua_stack_traces() {
     });
 }
 
+/// On Rust, `run`'s uncaught bubble panics saying so, and, as any panic
+/// does, shows a stack trace with `RUST_BACKTRACE` set: the bubble's
+/// own, captured where it was made, from the function that bubbled up
+/// to `main`. Without it, there's none, and Rust's note says how to get
+/// one. Skipped without cargo, unless `TEMPER_REQUIRE_CHECKERS` is set.
+#[test]
+#[cfg(feature = "rust")]
+fn rust_stack_traces() {
+    let files = [
+        ("b/config.temper.md", "    export let name = \"b\";\n"),
+        (
+            "b/b.temper",
+            "let f(n: Int): Int throws Bubble {\n  if (n > 1) { bubble() }\n  n\n}\n\
+             console.log(\"b\");\nf(5);\n",
+        ),
+    ];
+    with_library("rust-traces", &files, |dir| {
+        let run = |trace: bool| {
+            let mut command = Command::new(env!("CARGO_BIN_EXE_temper"));
+            command.args(["run", "-w", dir, "--library", "b", "-b", "rust"]);
+            command.env_remove("RUST_LIB_BACKTRACE");
+            match trace {
+                true => command.env("RUST_BACKTRACE", "1"),
+                false => command.env_remove("RUST_BACKTRACE"),
+            };
+            let output = command.output().unwrap();
+            let text = |b: Vec<u8>| String::from_utf8(b).unwrap();
+            (
+                output.status.code().unwrap(),
+                text(output.stdout),
+                text(output.stderr),
+            )
+        };
+        let (code, out, err) = run(false);
+        if tools_missing("rust", &format!("{out}{err}")) {
+            return;
+        }
+        assert_eq!((code, out.trim_end()), (1, "b"), "{err}");
+        assert!(err.contains("uncaught bubble: bubble"), "{err}");
+        assert!(!err.contains("bubbled at"), "{err}");
+        assert!(err.contains("RUST_BACKTRACE=1"), "{err}");
+        let (code, out, err) = run(true);
+        assert_eq!((code, out.trim_end()), (1, "b"), "{err}");
+        // The bubble's trace, from `f` (`b::mod::f`, in `mod.rs`) to
+        // `main`, before the panic's own.
+        let (_, bubbled) = err.split_once("bubbled at:\n").expect(&err);
+        let frames: Vec<&str> = (bubbled.lines())
+            .take_while(|l| !l.starts_with("stack backtrace:"))
+            .collect();
+        let f = frames.iter().position(|l| l.ends_with("::mod::f"));
+        let main = frames.iter().position(|l| l.ends_with(" b::main"));
+        assert!(f.is_some() && main.is_some() && f < main, "{err}");
+        assert!(frames[f.unwrap() + 1].contains("/b/src/mod.rs:"), "{err}");
+    });
+}
+
 /// On C#, `run` and `test` give the generated code `#line` directives,
 /// so an exception's stack trace (a debug build, with its pdb) names
 /// the Temper file and line: a test's panic in its JUnit results, and
@@ -1726,6 +1804,8 @@ fn csharp_stack_traces() {
             "export let g(n: Int): Int {\n  if (n > 1) { panic() }\n  n\n}\n\
              console.log(\"c\");\ng(5);\n",
         ),
+        ("d/config.temper.md", "    export let name = \"d\";\n"),
+        ("d/d.temper", ORELSE_PANICS),
     ];
     with_library("csharp-traces", &files, |dir| {
         let (code, out, err) = tempest(&["test", "-w", dir, "--library", "a", "-b", "csharp"]);
@@ -1747,6 +1827,14 @@ fn csharp_stack_traces() {
         let c = c.display();
         assert!(err.contains(&format!(" in {c}:line 2")), "{err}");
         assert!(err.contains(&format!(" in {c}:line 6")), "{err}");
+        // An `orelse`'s lines too: the panic in a function's `let`, the
+        // call in an init `let`'s.
+        let (code, out, err) = tempest(&["run", "-w", dir, "--library", "d", "-b", "csharp"]);
+        assert_eq!((code, out.trim_end()), (1, "d"), "{err}");
+        let d = Path::new(dir).join("d/d.temper");
+        let d = d.display();
+        assert!(err.contains(&format!(" in {d}:line 6")), "{err}");
+        assert!(err.contains(&format!(" in {d}:line 10")), "{err}");
         // Relative paths only, and none from `build`.
         let mut directives = 0;
         let each = |library: &str, f: &mut dyn FnMut(&Path, &str)| {
@@ -1775,7 +1863,7 @@ fn csharp_stack_traces() {
         assert!(directives > 0);
         let (code, _, err) = tempest(&["build", "-w", dir, "-b", "csharp"]);
         assert_eq!(code, 0, "{err}");
-        for library in ["a", "c"] {
+        for library in ["a", "c", "d"] {
             each(library, &mut |path, text| {
                 assert!(!text.contains("#line"), "{}", path.display());
             });

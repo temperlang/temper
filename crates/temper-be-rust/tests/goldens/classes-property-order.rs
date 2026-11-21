@@ -28,10 +28,8 @@ impl C {
         let backed = if let Some(backed) = backed {
             backed
         } else {
-            {
-                println!("initializing backed");
-                1
-            }
+            println!("initializing backed");
+            1
         };
         C(Arc::new(CStruct { backed }))
     }

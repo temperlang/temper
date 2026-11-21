@@ -1101,7 +1101,8 @@ fn first_use_expected(cases: &[Case], run: &FirstUse) -> Vec<String> {
 /// The runner: runs the init of the library named on its command line;
 /// a [`FIRST_USE`] run; or, for `threads`, `module-state`'s `tick` and
 /// `report` from 8 threads, 1,000 times each, the first calls of which
-/// run its init, once.
+/// run its init, once. It installs stack traces, as a generated
+/// `main.cpp` does, so an uncaught failure says what it was.
 fn runner(cases: &[Case], first_use: &[FirstUse]) -> String {
     let mut includes = String::new();
     let mut branches = String::new();
@@ -1121,7 +1122,8 @@ fn runner(cases: &[Case], first_use: &[FirstUse]) -> String {
         branches.push_str("  }\n");
     }
     format!(
-        r#"{includes}
+        r#"{includes}#include "temper-core/stack_trace.hpp"
+
 #include <iostream>
 #include <string>
 #include <thread>
@@ -1148,6 +1150,7 @@ void threads() {{
 }}  // namespace
 
 int main(int argc, char **argv) {{
+  temper::core::install_stack_traces();
   if (argc < 2) {{
     return 2;
   }}
@@ -1383,7 +1386,7 @@ fn runs() {
                 let exe = bin.join("program");
                 link(&gxx, mode, &objects, &exe);
                 let name = format!("{} ({})", case.key, mode.name);
-                run(&mut failures, &name, &exe, &[], &case.expected);
+                run_case(&mut failures, &name, &exe, &[], case);
             }
         }
 

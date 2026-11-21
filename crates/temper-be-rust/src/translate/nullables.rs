@@ -24,7 +24,7 @@
 
 use super::{R, Translator, Want, not_yet};
 use crate::ops::{self, Spelling};
-use crate::tree::{Bin, Block, Expr, Stmt, Unary};
+use crate::tree::{Bin, Block, Expr, Fail, Stmt, Unary, panic_caused_by};
 use temper_tmpl::analysis::walk;
 use temper_tmpl::{DeclId, Flags, Node, NodeId, TypeId};
 
@@ -303,7 +303,8 @@ impl Translator<'_> {
     /// fallback, and that a body run to its end skips the fallback from:
     /// `'ok: { 'orelse: { …; break 'ok; } fallback; }`. A `?` in the body
     /// (outside its closures) is `if let Ok(v) = e { v } else { break
-    /// 'orelse; }`.
+    /// 'orelse; }`. With `orelse panic()`, the body alone, whose failures
+    /// panic in place, saying their bubble ([`Fail::Panic`]).
     fn or_else_in_place(&mut self, body: NodeId, fallback: NodeId, out: &mut Vec<Stmt>) -> R<()> {
         let (orelse, ok) = match self.orelse.len() {
             0 => ("'orelse".to_string(), "'ok".to_string()),
@@ -319,7 +320,14 @@ impl Translator<'_> {
         let result = self.body_stmts(body, &mut stmts);
         self.orelse.pop();
         result?;
-        if !crate::tree::retarget_tries(&mut stmts, &orelse) {
+        // `orelse panic()` panics where the body fails, its bubble the
+        // cause, so the body needs no block to break out of.
+        if matches!(self.p.nodes.get(fallback), Node::Panic {}) {
+            crate::tree::retarget_tries(&mut stmts, Fail::Panic(&orelse));
+            out.append(&mut stmts);
+            return Ok(());
+        }
+        if !crate::tree::retarget_tries(&mut stmts, Fail::Break(&orelse)) {
             return not_yet("a bubble too long for a line in an orelse's body that jumps");
         }
         // A body that ends in a `return` on every path (std's
@@ -411,6 +419,10 @@ impl Translator<'_> {
         ) {
             return self.expr(fallback, Want::Owned);
         }
+        // A fallback that never runs, as `(a orelse 2) orelse 3`'s `3`.
+        if !self.may_fail(body) {
+            return self.expr(body, Want::Owned);
+        }
         let attempt = self.attempt(body)?;
         let f = self.expr(fallback, Want::Owned)?;
         if self.escapes(fallback) {
@@ -447,7 +459,7 @@ impl Translator<'_> {
         Ok(if simple(&f) {
             attempt.method("unwrap_or", vec![f])
         } else if matches!(self.p.nodes.get(fallback), Node::Panic {}) {
-            let f = Expr::Closure(vec!["e".into()], Block::of(panic_caused_by_e()));
+            let f = Expr::Closure(vec!["e".into()], Block::of(panic_caused_by("{e}")));
             attempt.method("unwrap_or_else", vec![f])
         } else {
             let f = Expr::Closure(vec!["_".into()], Block::of(f));
@@ -506,7 +518,7 @@ impl Translator<'_> {
             Node::Panic {} => {
                 out.push(Stmt::If {
                     cond: Expr::Let("Err(e)".into(), Box::new(attempt)),
-                    then: Block::new(vec![Stmt::Expr(panic_caused_by_e())], None),
+                    then: Block::new(vec![Stmt::Expr(panic_caused_by("{e}"))], None),
                     els: None,
                 });
                 return Ok(());
@@ -709,13 +721,4 @@ fn simple(e: &Expr) -> bool {
         }
         _ => false,
     }
-}
-
-/// `orelse panic()`'s panic, given the bubble as `e`: Rust's panics have
-/// no cause, so the message says it, as C++'s and Lua's do.
-fn panic_caused_by_e() -> Expr {
-    Expr::Macro(
-        "panic".into(),
-        vec![Expr::Str("panic\ncaused by: {e}".into())],
-    )
 }

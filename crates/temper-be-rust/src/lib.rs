@@ -554,19 +554,13 @@ pub fn init(config: Option<temper_core::Config>) -> temper_core::Result<temper_c
 }}
 {first_use}"#
     );
-    // A bubble out of init panics, saying so.
-    let uncaught = tree::Expr::Macro(
-        "panic".into(),
-        vec![tree::Expr::Str("uncaught bubble: {e}".into())],
-    );
+    // A bubble out of init panics, saying so, and where it was made,
+    // where that's known.
     let run = tree::Expr::path(format!("{krate}::init"))
         .call(vec![tree::Expr::path("None")])
         .method(
             "unwrap_or_else",
-            vec![tree::Expr::Closure(
-                vec!["e".into()],
-                tree::Block::of(uncaught),
-            )],
+            vec![tree::Expr::path("temper_core::uncaught")],
         )
         .method("run_all_blocking", Vec::new());
     let main = tree::file(&[tree::Item::Fn {

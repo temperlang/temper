@@ -2161,10 +2161,14 @@ impl<'a> Translator<'a> {
     fn sink(&mut self, id: NodeId, place: &Sink, out: &mut Vec<Stmt>) -> R<()> {
         let p = self.p;
         match p.nodes.get(id) {
+            // Each side after where it comes from, as the `try` spans
+            // lines.
             Node::OrElse { body, fallback } => {
                 let mut tried = Vec::new();
+                self.mark(body, &mut tried);
                 self.sink(body, place, &mut tried)?;
                 let mut caught = Vec::new();
+                self.mark(fallback, &mut caught);
                 self.sink(fallback, place, &mut caught)?;
                 if yields(&tried) || yields(&caught) {
                     out.push(self.try_around_yields(tried, caught)?);
@@ -2179,7 +2183,9 @@ impl<'a> Translator<'a> {
                     let panic = self
                         .class("Core")
                         .method("Panic", vec![message, Expr::name(&bubble)]);
-                    caught = vec![Stmt::Throw(panic)];
+                    // Its mark kept, its plain panic replaced.
+                    caught.retain(|s| matches!(s, Stmt::Line(_)));
+                    caught.push(Stmt::Throw(panic));
                     var = Some(bubble);
                 }
                 let class = self.class("Bubble");

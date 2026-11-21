@@ -1,4 +1,5 @@
 use std::any::{Any, TypeId};
+use std::backtrace::{Backtrace, BacktraceStatus};
 use std::collections::VecDeque;
 use std::fmt;
 use std::mem::forget;
@@ -466,41 +467,85 @@ pub mod deque {
 
 // Error
 
-#[derive(Clone, Debug)]
-pub struct Error(Option<Arc<dyn std::error::Error + Send + Sync>>);
+/// A bubble: what failed, where it says (a message or a host's error),
+/// and, as `std::backtrace` captures one (with `RUST_BACKTRACE` or
+/// `RUST_LIB_BACKTRACE` set), the stack where it was made, which a
+/// program's uncaught bubble shows ([`uncaught`]). A plain bubble without
+/// a trace is no allocation.
+#[derive(Clone)]
+pub struct Error(Option<Arc<Failure>>);
+
+struct Failure {
+    source: Option<Arc<dyn std::error::Error + Send + Sync>>,
+    trace: Backtrace,
+}
 
 impl Error {
     pub fn new() -> Self {
-        Error(None)
+        Error::of(None)
     }
 
     pub fn with_optional_message(message: Option<Arc<String>>) -> Self {
-        Error(message.map(|message| {
-            Arc::new(MessageError(message.clone())) as Arc<dyn std::error::Error + Send + Sync>
+        Error::of(message.map(|message| {
+            Arc::new(MessageError(message)) as Arc<dyn std::error::Error + Send + Sync>
         }))
     }
 
     pub fn with_source(source: Arc<dyn std::error::Error + Send + Sync>) -> Self {
-        Error(Some(source))
+        Error::of(Some(source))
+    }
+
+    fn of(source: Option<Arc<dyn std::error::Error + Send + Sync>>) -> Self {
+        let trace = Backtrace::capture();
+        if source.is_none() && trace.status() != BacktraceStatus::Captured {
+            return Error(None);
+        }
+        Error(Some(Arc::new(Failure { source, trace })))
+    }
+
+    fn cause(&self) -> Option<&Arc<dyn std::error::Error + Send + Sync>> {
+        self.0.as_ref()?.source.as_ref()
+    }
+
+    /// The stack where the bubble was made, where one was captured.
+    pub fn backtrace(&self) -> Option<&Backtrace> {
+        let trace = &self.0.as_ref()?.trace;
+        (trace.status() == BacktraceStatus::Captured).then_some(trace)
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // Show the cause's message where there is one. Debug stays derived,
-        // since test reports parse its `MessageError("...")` form.
-        match &self.0 {
+        // Show the cause's message where there is one.
+        match self.cause() {
             Some(source) => fmt::Display::fmt(source, f),
             None => f.write_str("bubble"),
         }
     }
 }
 
+impl fmt::Debug for Error {
+    /// `Error(Some(MessageError("…")))` or `Error(None)`, as when it was
+    /// derived, since test reports parse it; no trace.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Error").field(&self.cause()).finish()
+    }
+}
+
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        self.0
-            .as_ref()
+        self.cause()
             .map(|e| e.as_ref() as &(dyn std::error::Error + 'static))
+    }
+}
+
+/// A program's bubble that nothing handled, from its `main`: a panic,
+/// saying so, and where the bubble was made, where that's known
+/// ([`Error::backtrace`]).
+pub fn uncaught<T>(error: Error) -> T {
+    match error.backtrace() {
+        Some(trace) => panic!("uncaught bubble: {error}\nbubbled at:\n{trace}"),
+        None => panic!("uncaught bubble: {error}"),
     }
 }
 

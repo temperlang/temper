@@ -370,15 +370,13 @@ pub(crate) fn do_return(y: Option<i32>, z: i32) -> Arc<String> {
     let v = if let Some(y) = y {
         y
     } else {
-        {
-            if z > 0 {
-                if z > 5 {
-                    return Arc::new("big".to_string());
-                }
-                return Arc::new("pos".to_string());
+        if z > 0 {
+            if z > 5 {
+                return Arc::new("big".to_string());
             }
-            0
+            return Arc::new("pos".to_string());
         }
+        0
     };
     Arc::new(format!("v{v}"))
 }
@@ -507,35 +505,33 @@ pub(crate) fn first_big(
                     if let Some(subject) = subject {
                         subject
                     } else {
+                        let row: temper_core::List<Option<i32>> =
+                            temper_core::ListedTrait::get(&rows, i);
+                        let mut first: i32 = -1;
                         {
-                            let row: temper_core::List<Option<i32>> =
-                                temper_core::ListedTrait::get(&rows, i);
-                            let mut first: i32 = -1;
-                            {
-                                let mut j: i32 = 0;
-                                while j < temper_core::ListedTrait::len(&row) {
-                                    let v: i32;
-                                    let subject2 = temper_core::ListedTrait::get(&row, j);
-                                    if let Some(subject2) = subject2 {
-                                        v = subject2;
-                                    } else {
-                                        {
-                                            i = i.wrapping_add(1);
-                                            continue 'outer;
-                                        }
+                            let mut j: i32 = 0;
+                            while j < temper_core::ListedTrait::len(&row) {
+                                let v: i32;
+                                let subject2 = temper_core::ListedTrait::get(&row, j);
+                                if let Some(subject2) = subject2 {
+                                    v = subject2;
+                                } else {
+                                    {
+                                        i = i.wrapping_add(1);
+                                        continue 'outer;
                                     }
-                                    if v > 5 {
-                                        break 'outer;
-                                    }
-                                    if v > 2 {
-                                        first = v;
-                                        break;
-                                    }
-                                    j = j.wrapping_add(1);
                                 }
+                                if v > 5 {
+                                    break 'outer;
+                                }
+                                if v > 2 {
+                                    first = v;
+                                    break;
+                                }
+                                j = j.wrapping_add(1);
                             }
-                            first
                         }
+                        first
                     }
                 };
                 seen = Arc::new(format!("{seen}{k},"));
@@ -581,12 +577,10 @@ pub(crate) fn via_if(n: i32) -> Arc<String> {
     let s = if n > 0 {
         Arc::new("pos".to_string())
     } else {
-        {
-            if n < -5 {
-                return Arc::new("low".to_string());
-            }
-            Arc::new("neg".to_string())
+        if n < -5 {
+            return Arc::new("low".to_string());
         }
+        Arc::new("neg".to_string())
     };
     Arc::new(format!("s={s}"))
 }

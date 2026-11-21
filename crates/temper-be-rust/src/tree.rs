@@ -233,9 +233,13 @@ impl Block {
         }
     }
 
-    /// Just a value.
+    /// Just a value: a block's own statements and value, for a block,
+    /// as rustfmt leaves no block alone in another.
     pub fn of(value: Expr) -> Block {
-        Block::new(Vec::new(), Some(value))
+        match value {
+            Expr::Block(b) => b,
+            value => Block::new(Vec::new(), Some(value)),
+        }
     }
 
     fn is_empty(&self) -> bool {
@@ -1249,10 +1253,11 @@ fn bracketed(
             last,
             Expr::Closure(..) | Expr::Move(_) | Expr::Struct(..) | Expr::Block(_)
         ) || (init.is_empty() && matches!(last, Expr::Call(..) | Expr::Macro(..)))
-            // `Some(if b {`, as rustfmt overflows a lone `if`, but not an
-            // `if let`, whose condition may break.
+            // `Some(if b {`, as rustfmt overflows a lone `if`, and an `if
+            // let` whose condition stays on the line.
             || (init.is_empty()
-                && matches!(last, Expr::If(c, ..) if !matches!(**c, Expr::Let(..))))
+                && matches!(last, Expr::If(c, ..) if !matches!(**c, Expr::Let(..))
+                    || flat(c).is_some_and(|c| after + width(&c) + 5 <= MAX)))
             || (init.is_empty() && unary_call(last))
             || unary_block(last);
         if overflows {
@@ -1876,77 +1881,124 @@ pub fn if_ok(e: &Expr, els: Block) -> Option<Expr> {
     ))
 }
 
-/// Each `?` in `stmts`, outside their closures, as a break out of the
-/// labeled block `label` where it fails: `if let Ok(v) = e { v } else {
-/// break 'orelse; }`, for an `orelse`'s body run in place. False if an
-/// `e` doesn't fit on a line, which the `let` needs.
-pub fn retarget_tries(stmts: &mut [Stmt], label: &str) -> bool {
-    stmts.iter_mut().all(|s| retarget_stmt(s, label))
+/// What a failure in an `orelse`'s body run in place does: break out of
+/// the labeled block `label` to the fallback, or, where the fallback is
+/// `panic()`, panic at once, the bubble its cause, in place of that
+/// block's `break`s ([`retarget_tries`]).
+#[derive(Clone, Copy)]
+pub enum Fail<'a> {
+    Break(&'a str),
+    Panic(&'a str),
 }
 
-fn retarget_stmt(s: &mut Stmt, label: &str) -> bool {
+/// `panic!("panic\ncaused by: …")`, `orelse panic()`'s panic, `cause`
+/// the bubble's message in a format string (`{e}`): Rust's panics have
+/// no cause, so the message says it, as C++'s and Lua's do.
+pub fn panic_caused_by(cause: &str) -> Expr {
+    Expr::Macro(
+        "panic".into(),
+        vec![Expr::Str(format!("panic\ncaused by: {cause}"))],
+    )
+}
+
+/// Each `?` in `stmts`, outside their closures, as a failure `fail`
+/// says: a break out of the labeled block where it fails, `if let Ok(v)
+/// = e { v } else { break 'orelse; }`, for an `orelse`'s body run in
+/// place, or a panic, `e.unwrap_or_else(|e| panic!(…))`, which a
+/// `break` to the block becomes too. False if an `e` doesn't fit on a
+/// line, which the `let` needs.
+pub fn retarget_tries(stmts: &mut [Stmt], fail: Fail) -> bool {
+    stmts.iter_mut().all(|s| retarget_stmt(s, fail))
+}
+
+fn retarget_stmt(s: &mut Stmt, fail: Fail) -> bool {
     match s {
-        Stmt::Let { value, .. } => value.as_mut().is_none_or(|v| retarget_expr(v, label)),
-        Stmt::Assign(a, b) => retarget_expr(a, label) && retarget_expr(b, label),
-        Stmt::Expr(e) => retarget_expr(e, label),
-        Stmt::Return(e) => e.as_mut().is_none_or(|e| retarget_expr(e, label)),
+        Stmt::Let { value, .. } => value.as_mut().is_none_or(|v| retarget_expr(v, fail)),
+        Stmt::Assign(a, b) => retarget_expr(a, fail) && retarget_expr(b, fail),
+        Stmt::Expr(e) => retarget_expr(e, fail),
+        Stmt::Return(e) => e.as_mut().is_none_or(|e| retarget_expr(e, fail)),
         Stmt::If { cond, then, els } => {
-            retarget_expr(cond, label)
-                && retarget_block(then, label)
-                && els.as_mut().is_none_or(|b| retarget_block(b, label))
+            retarget_expr(cond, fail)
+                && retarget_block(then, fail)
+                && els.as_mut().is_none_or(|b| retarget_block(b, fail))
         }
-        Stmt::While { cond, body, .. } => retarget_expr(cond, label) && retarget_block(body, label),
+        Stmt::While { cond, body, .. } => retarget_expr(cond, fail) && retarget_block(body, fail),
         Stmt::Match { scrutinee, arms } => {
-            retarget_expr(scrutinee, label)
-                && arms.iter_mut().all(|(_, b)| retarget_block(b, label))
+            retarget_expr(scrutinee, fail) && arms.iter_mut().all(|(_, b)| retarget_block(b, fail))
         }
         Stmt::Loop { body, .. }
         | Stmt::Labeled { body, .. }
         | Stmt::Block(body)
-        | Stmt::TestsOnly(body) => retarget_block(body, label),
-        Stmt::Static { value, .. } => retarget_expr(value, label),
-        Stmt::Break(_) | Stmt::Continue(_) | Stmt::Item(_) => true,
+        | Stmt::TestsOnly(body) => retarget_block(body, fail),
+        Stmt::Static { value, .. } => retarget_expr(value, fail),
+        Stmt::Break(Some(l)) => {
+            if let Fail::Panic(label) = fail {
+                if l == label {
+                    *s = Stmt::Expr(panic_caused_by("bubble"));
+                }
+            }
+            true
+        }
+        Stmt::Break(None) | Stmt::Continue(_) | Stmt::Item(_) => true,
     }
 }
 
-fn retarget_block(b: &mut Block, label: &str) -> bool {
-    retarget_tries(&mut b.stmts, label) && b.tail.as_mut().is_none_or(|t| retarget_expr(t, label))
+fn retarget_block(b: &mut Block, fail: Fail) -> bool {
+    retarget_tries(&mut b.stmts, fail) && b.tail.as_mut().is_none_or(|t| retarget_expr(t, fail))
 }
 
-fn retarget_expr(e: &mut Expr, label: &str) -> bool {
+fn retarget_expr(e: &mut Expr, fail: Fail) -> bool {
     match e {
         Expr::Try(x) => {
-            if !retarget_expr(x, label) {
+            if !retarget_expr(x, fail) {
                 return false;
             }
-            let els = Block::new(vec![Stmt::Break(Some(label.to_string()))], None);
-            let Some(made) = if_ok(x, els) else {
-                return false;
+            let made = match fail {
+                Fail::Break(label) => {
+                    let els = Block::new(vec![Stmt::Break(Some(label.to_string()))], None);
+                    let Some(made) = if_ok(x, els) else {
+                        return false;
+                    };
+                    made
+                }
+                Fail::Panic(_) => {
+                    let panic = Expr::Closure(vec!["e".into()], Block::of(panic_caused_by("{e}")));
+                    (**x).clone().method("unwrap_or_else", vec![panic])
+                }
             };
             *e = made;
             true
         }
+        // `break 'orelse` as a value, where a bubble is one.
+        Expr::Path(p) => {
+            if let Fail::Panic(label) = fail {
+                if p.strip_prefix("break ") == Some(label) {
+                    *e = panic_caused_by("bubble");
+                }
+            }
+            true
+        }
         Expr::Call(f, args) => {
-            retarget_expr(f, label) && args.iter_mut().all(|a| retarget_expr(a, label))
+            retarget_expr(f, fail) && args.iter_mut().all(|a| retarget_expr(a, fail))
         }
         Expr::Method(r, _, args) => {
-            retarget_expr(r, label) && args.iter_mut().all(|a| retarget_expr(a, label))
+            retarget_expr(r, fail) && args.iter_mut().all(|a| retarget_expr(a, fail))
         }
-        Expr::Macro(_, args) => args.iter_mut().all(|a| retarget_expr(a, label)),
-        Expr::Bin(_, a, b) => retarget_expr(a, label) && retarget_expr(b, label),
-        Expr::Unary(_, x) | Expr::Cast(x, _) | Expr::Field(x, _) => retarget_expr(x, label),
+        Expr::Macro(_, args) => args.iter_mut().all(|a| retarget_expr(a, fail)),
+        Expr::Bin(_, a, b) => retarget_expr(a, fail) && retarget_expr(b, fail),
+        Expr::Unary(_, x) | Expr::Cast(x, _) | Expr::Field(x, _) => retarget_expr(x, fail),
         Expr::If(c, t, f) => {
-            retarget_expr(c, label) && retarget_block(t, label) && retarget_block(f, label)
+            retarget_expr(c, fail) && retarget_block(t, fail) && retarget_block(f, fail)
         }
-        Expr::Block(b) => retarget_block(b, label),
-        Expr::Let(_, x) => retarget_expr(x, label),
-        Expr::Return(x) => x.as_mut().is_none_or(|x| retarget_expr(x, label)),
+        Expr::Block(b) => retarget_block(b, fail),
+        Expr::Let(_, x) => retarget_expr(x, fail),
+        Expr::Return(x) => x.as_mut().is_none_or(|x| retarget_expr(x, fail)),
         Expr::Struct(_, fields) => {
-            (fields.iter_mut()).all(|(_, v)| v.as_mut().is_none_or(|v| retarget_expr(v, label)))
+            (fields.iter_mut()).all(|(_, v)| v.as_mut().is_none_or(|v| retarget_expr(v, fail)))
         }
         // A closure's `?`s are its own.
         Expr::Closure(..) | Expr::Move(_) => true,
-        Expr::Path(_) | Expr::Lit(_) | Expr::Str(_) => true,
+        Expr::Lit(_) | Expr::Str(_) => true,
     }
 }
 

@@ -235,6 +235,7 @@ patches that made them (other docs cite these numbers):
 | Rust | 0010 | Queue resumes on the runner (`AsyncRunner::awake_upon`), guard turns, and make `SafeGenerator` an `Iterator` |
 | Rust | 0017 | Let work outside any turn hold the runner (`AsyncRunner::hold`), so `run_all_blocking` waits for the tasks it will queue |
 | Rust | 0027 | Index errors panic with core's messages (`index 5 out of bounds for length 2`), where they unwrapped or panicked bare; `list_builder::splice` clamps its index, where it panicked past the end |
+| Rust | 0031 | A bubble keeps the stack where it was made when `std::backtrace` captures one (`RUST_BACKTRACE` or `RUST_LIB_BACKTRACE` set; `Error::backtrace`), and `uncaught`, which a program's generated `main` calls, panics with it; a bubble without a cause or trace allocates nothing |
 
 ### Versions: one version, spelled for each ecosystem
 
