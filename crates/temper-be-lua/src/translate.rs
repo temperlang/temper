@@ -2382,17 +2382,17 @@ impl<'a> Translator<'a> {
                 if items.len() <= self.limits.list_part || names.len() > MAX_PART_NAMES {
                     Expr::Array(items)
                 } else {
-                    let mut rest = items.into_iter();
-                    let mut parts = Vec::new();
-                    while rest.len() > 0 {
-                        let part = Expr::Array(rest.by_ref().take(self.limits.list_part).collect());
+                    let parts = (temper_tmpl::chunks::parts(items, self.limits.list_part)
+                        .into_iter())
+                    .map(|part| {
                         let made = Expr::Function {
                             params: Vec::new(),
-                            body: Box::new(part),
+                            body: Box::new(Expr::Array(part)),
                             returns: true,
                         };
-                        parts.push(made.call(Vec::new()));
-                    }
+                        made.call(Vec::new())
+                    })
+                    .collect();
                     Expr::name("temper").member("list_of_parts").call(parts)
                 }
             }

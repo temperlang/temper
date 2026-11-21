@@ -22,7 +22,7 @@
 //! `temper.out/BACKEND` starts afresh.
 
 use std::collections::{BTreeMap, HashSet};
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use temper_tmpl::files::{fnv64, write_if_changed};
 
 /// The manifest's name in `temper.out/BACKEND`.
@@ -73,6 +73,14 @@ impl Writer {
     /// written afresh, not removed as the old name. It writes and removes
     /// nothing through a symbolic link ([`Writer::inside`]).
     pub fn library(&mut self, library: &str, files: &[(String, String)]) -> Result<(), String> {
+        // Its files written so far replace the old manifest's, even where
+        // one fails, so they're not said to be edited next time.
+        let written = self.write_library(library, files);
+        self.libraries.push(library.to_string());
+        written
+    }
+
+    fn write_library(&mut self, library: &str, files: &[(String, String)]) -> Result<(), String> {
         let prefix = format!("{library}/");
         let now: HashSet<&str> = files.iter().map(|(f, _)| f.as_str()).collect();
         let gone: Vec<(String, u64)> = (self.old.iter().flatten())
@@ -115,7 +123,6 @@ impl Writer {
             }
             self.new.insert(file.clone(), hash);
         }
-        self.libraries.push(library.to_string());
         Ok(())
     }
 
@@ -124,7 +131,12 @@ impl Writer {
     /// symbolic link, which a build mustn't follow: a link checked in
     /// as `temper.out/py/a/a.py`, or as a directory there, could
     /// otherwise have a build overwrite or remove a file anywhere.
+    /// A `file` that isn't [`plain`] is an error too, so nothing is
+    /// written outside, whatever a library is named.
     fn inside(&self, file: &str) -> Result<PathBuf, String> {
+        if !plain(file) {
+            return Err(format!("{file}: not a plain relative path; not written"));
+        }
         let mut path = self.dir.clone();
         let check = |path: &Path| match std::fs::symlink_metadata(path) {
             Ok(meta) if meta.file_type().is_symlink() => Err(format!(
@@ -164,21 +176,27 @@ impl Writer {
 }
 
 /// A manifest's files and hashes, or `None` where any line isn't one:
-/// a hash in hex, a space, and a relative path, `/` between its names,
-/// none of them `..`, so a manifest can't name a file outside.
+/// a hash in hex, a space, and a [`plain`] path, so a manifest can't
+/// name a file outside.
 fn parse(text: &str) -> Option<BTreeMap<String, u64>> {
     let mut files = BTreeMap::new();
     for line in text.lines().filter(|l| !l.starts_with('#')) {
         let (hash, file) = line.split_once(' ')?;
         let hash = u64::from_str_radix(hash, 16).ok()?;
-        let path = Path::new(file);
-        let plain = (path.components()).all(|c| matches!(c, Component::Normal(_)));
-        if file.is_empty() || !plain || file.contains('\\') || file.ends_with('/') {
+        if !plain(file) {
             return None;
         }
         files.insert(file.to_string(), hash);
     }
     Some(files)
+}
+
+/// Whether a path is relative and plain, so it stays inside wherever
+/// it's joined: names with `/` between, none of them empty, `.`, or
+/// `..`, nor holding `\` or `:`, which Windows reads as separators or a
+/// drive.
+fn plain(file: &str) -> bool {
+    (file.split('/')).all(|name| !matches!(name, "" | "." | "..") && !name.contains(['\\', ':']))
 }
 
 #[cfg(test)]
@@ -228,6 +246,64 @@ mod tests {
         ] {
             assert_eq!(parse(bad), None, "{bad}");
         }
+    }
+
+    /// Nothing is written outside the backend's directory: a library
+    /// or file named with `..`, an absolute path, or an empty name is an
+    /// error, and a manifest naming one is ignored, removing nothing.
+    #[test]
+    fn writes_stay_inside() {
+        let (root, py) = scratch("inside");
+        for library in [
+            "../../escaped",
+            "..",
+            "/abs",
+            "a//b",
+            "",
+            ".",
+            "a\\b",
+            "c:x",
+        ] {
+            let file = format!("{library}/x.py");
+            let mut writer = Writer::open(&py);
+            assert!(
+                writer.library(library, &[(file, "x".into())]).is_err(),
+                "{library}"
+            );
+        }
+        let mut writer = Writer::open(&py);
+        let files = [("a/../../escaped.py".to_string(), "x".to_string())];
+        assert!(writer.library("a", &files).is_err());
+        assert!(!root.join("escaped").exists() && !root.join("escaped.py").exists());
+        let entries = |dir: &Path| fs::read_dir(dir).unwrap().count();
+        assert_eq!(entries(&root), 1);
+        assert_eq!(entries(&root.join("temper.out")), 1);
+        // A manifest naming a file outside is ignored: nothing's removed.
+        write(&root.join("victim.py"), "old");
+        manifest(&py, &[("a/../../victim.py", "old")]);
+        let mut writer = Writer::open(&py);
+        writer.library("a", &[]).unwrap();
+        assert!(root.join("victim.py").is_file());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    /// A library that fails partway still records the files it wrote,
+    /// so the next build doesn't say they were edited.
+    #[test]
+    fn partial_writes_are_recorded() {
+        let (root, py) = scratch("partial");
+        manifest(&py, &[("a/x.py", "old")]);
+        write(&py.join("a/x.py"), "old");
+        let mut writer = Writer::open(&py);
+        let files = [("a/x.py", "new"), ("a/../bad.py", "x")].map(|(f, t)| (f.into(), t.into()));
+        assert!(writer.library("a", &files).is_err());
+        writer.finish();
+        let mut writer = Writer::open(&py);
+        writer
+            .library("a", &[("a/x.py".into(), "newer".into())])
+            .unwrap();
+        assert!(writer.edited.is_empty(), "{:?}", writer.edited);
+        let _ = fs::remove_dir_all(root);
     }
 
     /// A file no longer generated goes, but not one edited since, which

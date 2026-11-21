@@ -447,8 +447,12 @@ pub fn expr(e: &Expr, min: u8) -> String {
             }
             // Each piece's bytes escaped take at most four times as many.
             let pieces = temper_tmpl::chunks::split_text(s, LONG_LINE / 4, char::len_utf8);
-            let pieces: Vec<String> = pieces.into_iter().map(string_literal).collect();
-            format!("({})", pieces.join(" ..\n"))
+            // Joined by a call, as `..` between hundreds of pieces would
+            // nest past what Lua's parser takes (200 levels).
+            let pieces: Vec<String> = (pieces.into_iter())
+                .map(|p| format!("{},\n", string_literal(p)))
+                .collect();
+            format!("table.concat({{\n{}}})", pieces.concat())
         }
         Expr::Str(s) => string_literal(s),
         Expr::Bool(b) => b.to_string(),
@@ -891,8 +895,11 @@ mod tests {
             "a".repeat(q),
             "aa".into(),
         ];
-        let pieces: Vec<String> = pieces.iter().map(|p| string_literal(p)).collect();
-        let joined = format!("({})", pieces.join(" ..\n"));
+        let pieces: Vec<String> = pieces
+            .iter()
+            .map(|p| format!("{},\n", string_literal(p)))
+            .collect();
+        let joined = format!("table.concat({{\n{}}})", pieces.concat());
         assert_eq!(expr(&Expr::Str(text), 0), joined);
         let item = Expr::Str("b".repeat(LONG_LINE / 4));
         assert_eq!(
@@ -904,6 +911,33 @@ mod tests {
             lines,
             format!("{{\n{}}}", format!("  {},\n", expr(&item, 0)).repeat(4))
         );
+    }
+
+    /// A string of half a megabyte loads, as `..` between its 250
+    /// pieces wouldn't: Lua's parser nests a level for each, and stops
+    /// at 200. Run by `LUA` (or `lua`), where it's there.
+    #[test]
+    fn huge_strings_load() {
+        let lua = temper_tmpl::tools::tool("LUA", "lua");
+        if temper_tmpl::tools::tool_file(&lua).is_none() {
+            eprintln!("skipped: no {lua}");
+            return;
+        }
+        let text = "abcd\u{e9}\n".repeat(500_000 / 6);
+        let source = format!(
+            "local s = {}\nassert(#s == {}, #s)\nprint(\"ok\")\n",
+            expr(&Expr::Str(text.clone()), 0),
+            text.len()
+        );
+        let file = std::env::temp_dir().join(format!("temper-lua-huge-{}.lua", std::process::id()));
+        std::fs::write(&file, source).unwrap();
+        let out = std::process::Command::new(&lua)
+            .arg(&file)
+            .output()
+            .unwrap();
+        let _ = std::fs::remove_file(&file);
+        let err = String::from_utf8_lossy(&out.stderr);
+        assert_eq!(String::from_utf8_lossy(&out.stdout), "ok\n", "{err}");
     }
 
     #[test]

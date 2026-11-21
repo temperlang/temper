@@ -451,8 +451,11 @@ alike (each backend crate's `src/tools.rs`, run by
   compiled the same 226 files ten times). Since 2026-11-19 they compile
   once per run into `temper.out/java/.build`, then every tested
   library's tests at once; each library's tests still run in a JVM of
-  their own, picked by class. Where the tests don't compile together,
-  each library's compile alone, as before.
+  their own, picked by class. Each library's classes are kept between
+  runs, keyed by a hash of its sources, javac, `JAVA_HOME`, and what it
+  uses. A library that doesn't compile fails alone, with those using
+  it. Where the tests don't compile together, each library's compile
+  alone, as before.
 - **C#:** `dotnet test --logger:junit`, as Kotlin's `RunCSharp`.
   MSBuild already built a shared project once (later libraries found
   it up to date), but each library paid for its own MSBuild, restore,
@@ -467,13 +470,14 @@ alike (each backend crate's `src/tools.rs`, run by
   Since 2026-11-19 one Cargo workspace in `temper.out/rust/.build`
   links every crate there, unchanged, and builds every tested
   library's tests at once (`cargo build --tests --keep-going`), then
-  runs each library's test programs. Alone, a library was built again
+  each library's `cargo test -p`, which finds them fresh (Argmas's and
+  Ordable's second runs about as fast as running the test programs
+  directly, 1–2 s). Alone, a library was built again
   for each library using it (as a dependency it's built with other
   flags, so another hash); now each crate is built once, and the
   libraries build side by side. Where the workspace doesn't load (no
-  links, as on Windows without the right to make them), or a
-  library's tests don't build there, it's `cargo test` in the crate,
-  as before.
+  links, as on Windows without the right to make them), it's `cargo
+  test` in the crate, as before.
 - **C++:** CMake on the `CMakeLists.txt` tempest writes, building the
   library's `LIBRARY-test` target (its tests, std, and the libraries it
   imports), then running it in the

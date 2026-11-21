@@ -3,12 +3,11 @@
 //! `temper.out/rust` ([`workspace`]), with one target directory,
 //! `temper.out/rust/target`, so a crate that several libraries use (a
 //! library, std, temper-core) is built once for them all, and all of
-//! them at once. Each library's tests build with the others'
-//! (`cargo build --tests`), then its test programs run alone, as
-//! `cargo test` would run them, and what they print is read. Where that
-//! workspace doesn't load, or a library's tests don't build there, it's
-//! `cargo test` in the library's own crate, as before, which says what's
-//! wrong. `temper run -b rust` builds the library's program
+//! them at once. Every tested library's tests build together first
+//! (`cargo build --tests`), then each library's run with `cargo test`
+//! there, which only checks they're fresh. Where that workspace doesn't
+//! load, it's `cargo test` in the library's own crate, as before.
+//! `temper run -b rust` builds the library's program
 //! (`src/main.rs`) the same way, quietly, then runs it, as Kotlin's
 //! `cargo run` does.
 
@@ -46,8 +45,6 @@ const WORKSPACE: &str = ".build";
 /// an error here, as each library's own build says what's wrong.
 fn workspace(dir: &Path, all: &[Tested]) -> Result<(), String> {
     let root = dir.join(WORKSPACE);
-    // What the last run built, which this one builds again.
-    let _ = std::fs::remove_file(root.join(BUILT));
     let members: Vec<String> = (all.iter())
         .filter(|l| dir.join(&l.name).join("Cargo.toml").is_file())
         .map(|l| temper_tmpl::json_string(&l.name))
@@ -74,6 +71,23 @@ members = [{}]
         .is_ok_and(|o| o.status.success());
     if !loaded {
         let _ = std::fs::remove_dir_all(&root);
+        return Ok(());
+    }
+    // Every tested library's tests at once, so they share one set of
+    // features and build together; one that doesn't build says why as
+    // its own `cargo test` runs.
+    let tested: Vec<String> = (all.iter().filter(|l| l.tests > 0)).map(package).collect();
+    if !tested.is_empty() {
+        let target = std::path::absolute(dir.join("target")).map_err(|e| e.to_string())?;
+        let mut build = Command::new(tool("CARGO", "cargo"));
+        build.args(["build", "--offline", "--tests", "--keep-going", "--quiet"]);
+        for package in &tested {
+            build.args(["-p", package]);
+        }
+        output(
+            build.env("CARGO_TARGET_DIR", target).current_dir(&root),
+            "cargo build",
+        )?;
     }
     Ok(())
 }
@@ -147,137 +161,16 @@ fn run(dir: &Path, library: &Tested, _: &[Tested]) -> Result<bool, String> {
     program(&mut Command::new(exe), &library.name)
 }
 
-fn test(dir: &Path, library: &Tested, all: &[Tested]) -> TestResults {
+fn test(dir: &Path, library: &Tested, _: &[Tested]) -> TestResults {
     let target = std::path::absolute(dir.join("target")).map_err(|e| e.to_string())?;
-    let cargo = tool("CARGO", "cargo");
-    let Some(root) = workspace_root(dir) else {
-        let run = output(
-            Command::new(&cargo)
-                .args(["test", "--offline"])
-                .env("CARGO_TARGET_DIR", target)
-                .current_dir(dir.join(&library.name)),
-            "cargo",
-        )?;
-        return results(&run);
+    let mut test = Command::new(tool("CARGO", "cargo"));
+    test.args(["test", "--offline"])
+        .env("CARGO_TARGET_DIR", target);
+    match workspace_root(dir) {
+        Some(root) => test.args(["-p", &package(library)]).current_dir(root),
+        None => test.current_dir(dir.join(&library.name)),
     };
-    let programs = test_programs(&built_tests(&cargo, &root, &target, all)?, &library.name);
-    if programs.is_empty() {
-        // Its tests didn't build: `cargo test` says why.
-        let run = output(
-            Command::new(&cargo)
-                .args(["test", "--offline", "-p", &package(library)])
-                .env("CARGO_TARGET_DIR", target)
-                .current_dir(&root),
-            "cargo",
-        )?;
-        return results(&run);
-    }
-    // Each in its package's directory, as `cargo test` runs it.
-    let mut ran = Output {
-        status: std::process::ExitStatus::default(),
-        stdout: Vec::new(),
-        stderr: Vec::new(),
-    };
-    for exe in programs {
-        let run = output(
-            Command::new(exe).current_dir(root.join(&library.name)),
-            "the tests",
-        )?;
-        ran.stdout.extend(run.stdout);
-        ran.stderr.extend(run.stderr);
-    }
-    results(&ran)
-}
-
-/// Builds every tested library's tests in the workspace `root` at once,
-/// so they share one set of features, and all build together; what Cargo
-/// said it built, as JSON, kept in [`BUILT`] for the libraries after the
-/// first, which a build again would only say again (or fail again, for
-/// a library that doesn't build).
-fn built_tests(cargo: &str, root: &Path, target: &Path, all: &[Tested]) -> Result<String, String> {
-    let kept = root.join(BUILT);
-    if let Ok(json) = std::fs::read_to_string(&kept) {
-        return Ok(json);
-    }
-    let mut build = Command::new(cargo);
-    build.args([
-        "build",
-        "--offline",
-        "--tests",
-        "--keep-going",
-        "--message-format=json-render-diagnostics",
-    ]);
-    for library in all.iter().filter(|l| l.tests > 0) {
-        build.args(["-p", &package(library)]);
-    }
-    let built = output(
-        build.env("CARGO_TARGET_DIR", target).current_dir(root),
-        "cargo build",
-    )?;
-    let json = String::from_utf8_lossy(&built.stdout).into_owned();
-    let _ = std::fs::write(&kept, &json);
-    Ok(json)
-}
-
-/// Where [`built_tests`] keeps what Cargo built, in the workspace, for
-/// one run: [`workspace`] removes it.
-const BUILT: &str = "tests-built.json";
-
-/// The test programs Cargo built, from its JSON messages, for the library
-/// in the workspace's directory `name`: its library's and its program's.
-fn test_programs(json: &str, name: &str) -> Vec<PathBuf> {
-    let mut programs = Vec::new();
-    for line in json.lines() {
-        if !line.starts_with("{\"reason\":\"compiler-artifact\"") {
-            continue;
-        }
-        let (Some(manifest), Some(exe)) = (
-            json_field(line, "manifest_path"),
-            json_field(line, "executable"),
-        ) else {
-            continue;
-        };
-        // A test build's profile says so; the target's own `test` doesn't.
-        let profile = line.split_once("\"profile\":{").map(|(_, p)| p);
-        let profile = profile.and_then(|p| p.split_once('}')).map(|(p, _)| p);
-        let manifest = Path::new(&manifest);
-        let dir = manifest
-            .parent()
-            .filter(|d| d.file_name() == Some(name.as_ref()));
-        let in_workspace = dir.and_then(Path::parent).and_then(Path::file_name);
-        if in_workspace == Some(WORKSPACE.as_ref())
-            && profile.is_some_and(|p| p.contains("\"test\":true"))
-        {
-            programs.push(PathBuf::from(exe));
-        }
-    }
-    programs
-}
-
-/// A string field's value in a line of Cargo's JSON, by its key, wherever
-/// it is; `None` where it isn't a string (`"executable":null`).
-fn json_field(line: &str, key: &str) -> Option<String> {
-    let (_, rest) = line.split_once(&format!("\"{key}\":\""))?;
-    let mut value = String::new();
-    let mut chars = rest.chars();
-    loop {
-        match chars.next()? {
-            '"' => return Some(value),
-            '\\' => match chars.next()? {
-                'n' => value.push('\n'),
-                't' => value.push('\t'),
-                'r' => value.push('\r'),
-                'b' => value.push('\u{8}'),
-                'f' => value.push('\u{c}'),
-                'u' => {
-                    let hex: String = chars.by_ref().take(4).collect();
-                    value.push(char::from_u32(u32::from_str_radix(&hex, 16).ok()?)?);
-                }
-                c => value.push(c),
-            },
-            c => value.push(c),
-        }
-    }
+    results(&output(&mut test, "cargo")?)
 }
 
 /// Each test's result, from what Rust's test programs printed.
@@ -333,8 +226,7 @@ fn failure(stdout: &str, name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{failure, test_programs};
-    use std::path::PathBuf;
+    use super::failure;
 
     /// A Rust test's failure, from what `cargo test` prints.
     #[test]
@@ -347,39 +239,5 @@ mod tests {
             "expected 1 + 1 == (3) not (2)"
         );
         assert_eq!(failure(out, "r#mod::tests::c"), "failed");
-    }
-
-    /// A library's test programs, from what `cargo build --tests
-    /// --message-format=json` prints: not another crate's, nor a
-    /// program built to run, nor a library, which has no program.
-    #[test]
-    fn finds_test_programs() {
-        let artifact = |manifest: &str, test: bool, exe: &str| {
-            format!(
-                "{{\"reason\":\"compiler-artifact\",\"package_id\":\"x\",\
-                 \"manifest_path\":\"{manifest}\",\"target\":{{\"kind\":[\"lib\"],\
-                 \"test\":true}},\"profile\":{{\"opt_level\":\"0\",\"test\":{test}}},\
-                 \"executable\":{exe},\"fresh\":true}}\n"
-            )
-        };
-        let json = [
-            artifact("/o/rust/.build/a/Cargo.toml", true, "\"/o/t/deps/a-1\""),
-            artifact("/o/rust/.build/a/Cargo.toml", false, "null"),
-            artifact("/o/rust/.build/a/Cargo.toml", false, "\"/o/t/a\""),
-            artifact("/o/rust/.build/b/Cargo.toml", true, "\"/o/t/deps/b-2\""),
-            artifact("/o/rust/a/Cargo.toml", true, "\"/o/t/deps/a-3\""),
-            artifact(
-                "C:\\\\o\\\\.build\\\\a\\\\Cargo.toml",
-                true,
-                "\"C:\\\\t\\\\a-4.exe\"",
-            ),
-            "{\"reason\":\"build-finished\",\"success\":true}\n".to_string(),
-        ]
-        .concat();
-        let mut expected = vec![PathBuf::from("/o/t/deps/a-1")];
-        if cfg!(windows) {
-            expected.push(PathBuf::from("C:\\t\\a-4.exe"));
-        }
-        assert_eq!(test_programs(&json, "a"), expected);
     }
 }

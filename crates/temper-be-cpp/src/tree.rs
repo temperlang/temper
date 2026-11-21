@@ -483,13 +483,13 @@ pub fn str_literal(text: &str) -> String {
         return "core::Str()".into();
     }
     let groups = pieces(text);
-    if let [group] = &groups[..] {
+    if let [(group, _)] = &groups[..] {
         if text.contains('\0') {
             return format!("TEMPER_STR({group}, {})", text.len());
         }
         return format!("TEMPER_STR({group})");
     }
-    format!("TEMPER_STR({})", joined(text, &groups))
+    format!("TEMPER_STR({})", joined(&groups))
 }
 
 /// Prints a string literal as a bare `"…"` (a `const char*`), as a
@@ -499,9 +499,9 @@ pub fn str_literal(text: &str) -> String {
 pub fn string_literal(text: &str) -> String {
     let groups = pieces(text);
     match &groups[..] {
-        [group] if text.contains('\0') => format!("std::string({group}, {})", text.len()),
-        [group] => group.clone(),
-        _ => joined(text, &groups),
+        [(group, _)] if text.contains('\0') => format!("std::string({group}, {})", text.len()),
+        [(group, _)] => group.clone(),
+        _ => joined(&groups),
     }
 }
 
@@ -514,12 +514,17 @@ const PIECES: usize = 4;
 /// A string's text as quoted literals: pieces of at most [`PIECE`]
 /// bytes as written, escapes and all ([`written_size`]), so as many or
 /// fewer in the string, never splitting a character, side by side (`"…" "…"`) in groups
-/// of at most [`PIECES`], which C++ joins into one literal each; one
-/// group for nearly every string, one piece.
-fn pieces(text: &str) -> Vec<String> {
+/// of at most [`PIECES`], which C++ joins into one literal each, each
+/// with its size in the string; one group for nearly every string, one
+/// piece.
+fn pieces(text: &str) -> Vec<(String, usize)> {
     let pieces = temper_tmpl::chunks::split_text(text, PIECE, written_size);
-    let quoted: Vec<String> = pieces.iter().map(|p| quoted(p)).collect();
-    quoted.chunks(PIECES).map(|g| g.join(" ")).collect()
+    (pieces.chunks(PIECES))
+        .map(|group| {
+            let quoted: Vec<String> = group.iter().map(|p| quoted(p)).collect();
+            (quoted.join(" "), group.iter().map(|p| p.len()).sum())
+        })
+        .collect()
 }
 
 /// How many bytes a character takes in a quoted literal ([`quoted`]),
@@ -537,13 +542,9 @@ fn written_size(c: char) -> usize {
 /// Groups of quoted pieces ([`pieces`]) made one `std::string` at run
 /// time, each group with its size, so a NUL in it stays:
 /// `std::string("…" "…", 64000).append("…", 12)`.
-fn joined(text: &str, groups: &[String]) -> String {
-    let sizes = temper_tmpl::chunks::split_text(text, PIECE, written_size);
-    let sizes: Vec<usize> = (sizes.chunks(PIECES))
-        .map(|g| g.iter().map(|p| p.len()).sum())
-        .collect();
-    let mut out = format!("std::string({}, {})", groups[0], sizes[0]);
-    for (group, size) in groups.iter().zip(&sizes).skip(1) {
+fn joined(groups: &[(String, usize)]) -> String {
+    let mut out = format!("std::string({}, {})", groups[0].0, groups[0].1);
+    for (group, size) in &groups[1..] {
         let _ = write!(out, ".append({group}, {size})");
     }
     out
@@ -744,38 +745,16 @@ pub const LIMITS: Limits = Limits {
 /// lock's declaration, whose scope would end with it, a jump out, and
 /// what's only for tests.
 pub fn group_runs(stmts: Vec<Stmt>, limits: &Limits) -> Vec<Stmt> {
-    if stmts.len() <= limits.run {
-        return stmts;
-    }
-    let mut out = Vec::new();
-    let mut run: Vec<Stmt> = Vec::new();
-    let flush = |run: &mut Vec<Stmt>, out: &mut Vec<Stmt>| {
-        if run.len() <= limits.group {
-            out.append(run);
-            return;
-        }
-        let mut rest = std::mem::take(run).into_iter();
-        while rest.len() > 0 {
-            let group: Vec<Stmt> = rest.by_ref().take(limits.group).collect();
-            let lambda = Expr::Lambda {
-                captures: "&".into(),
-                params: Vec::new(),
-                result: "void".into(),
-                body: group,
-            };
-            out.push(Stmt::Expr(lambda.call(Vec::new())));
-        }
+    let wrap = |group| {
+        let lambda = Expr::Lambda {
+            captures: "&".into(),
+            params: Vec::new(),
+            result: "void".into(),
+            body: group,
+        };
+        Stmt::Expr(lambda.call(Vec::new()))
     };
-    for s in stmts {
-        if groupable(&s) {
-            run.push(s);
-        } else {
-            flush(&mut run, &mut out);
-            out.push(s);
-        }
-    }
-    flush(&mut run, &mut out);
-    out
+    temper_tmpl::chunks::group_runs(stmts, limits.run, limits.group, groupable, wrap)
 }
 
 /// Whether a statement runs the same in a lambda of its own: it declares

@@ -20,9 +20,9 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use temper_tmpl::files::write_if_changed;
+use temper_tmpl::files::{fnv64, write_if_changed};
 use temper_tmpl::tools::{
-    files_with, output, program, stamp_matches, strict_warnings, tool, tool_identity, tool_output,
+    files_with, output, program, reuse_or_clear, strict_warnings, tool, tool_identity, tool_output,
     write_stamp,
 };
 use temper_tmpl::{TestResults, Tested, Tools};
@@ -47,7 +47,9 @@ const BUILD: &str = ".build";
 /// library's tests at once into `.build/test-classes` ([`BUILD`]). Each
 /// is kept from run to run, and compiled again, afresh, only where a
 /// source, what it's compiled against, or how changed ([`stale`]), as
-/// javac doesn't tell itself. Where the tests don't compile together
+/// javac doesn't tell itself. A library whose main sources don't
+/// compile, or that uses one that doesn't, is left out, failing alone
+/// as its tests run ([`test`]). Where the tests don't compile together
 /// (one doesn't compile, or two libraries' tests clash),
 /// `test-classes` is removed, and each library's tests compile alone,
 /// saying what's wrong. With nothing to test, as for `temper run`, it
@@ -65,23 +67,23 @@ fn build(dir: &Path, all: &[Tested]) -> Result<(), String> {
     written.map_err(|e| format!("{}: {e}", source.display()))?;
     let classpath = std::env::join_paths(&jars).map_err(|e| e.to_string())?;
     let runner = root.join("runner");
-    let runner_key = compile_key(&classpath, std::slice::from_ref(&source), strict);
+    let runner_key = compile_key(&classpath, std::slice::from_ref(&source), strict, &[]);
     if stale(&runner, &runner_key) {
         javac(&runner, &classpath, &[source], strict)?;
         write_stamp(&stamp(&runner), &runner_key);
     }
     let mut units = Vec::new();
-    for library in all {
-        compile_main(dir, all, &library.name, strict, &mut units, 0)?;
-    }
     let mut sources = Vec::new();
-    for library in tested {
-        files_with(&test_sources(dir, library), "java", &mut sources);
+    for library in all {
+        let compiled = compile_main(dir, all, &library.name, strict, &mut units, 0);
+        if compiled.is_ok() && library.tests > 0 {
+            files_with(&test_sources(dir, library), "java", &mut sources);
+        }
     }
     let with_main = with_main(dir, all, &jars)?;
     // Compiled again wherever the main classes were.
-    let main_keys: String = units.iter().map(|u| u.key.as_str()).collect();
-    let key = format!("{main_keys}{}", compile_key(&with_main, &sources, strict));
+    let main_keys: Vec<&str> = units.iter().map(|u| u.key.as_str()).collect();
+    let key = compile_key(&with_main, &sources, strict, &main_keys);
     let tests = root.join("test-classes");
     if stale(&tests, &key) {
         match javac(&tests, &with_main, &sources, strict) {
@@ -94,25 +96,31 @@ fn build(dir: &Path, all: &[Tested]) -> Result<(), String> {
     Ok(())
 }
 
-/// What a javac build depends on: javac, the class path, the lints, and
-/// each source's path, size, and time, as `temper build` rewrites only
-/// sources that changed.
-fn compile_key(classpath: &std::ffi::OsStr, files: &[PathBuf], strict: bool) -> String {
+/// What a javac build depends on, as a digest ([`fnv64`], in hex): javac
+/// and `JAVA_HOME`, which shims such as macOS's `/usr/bin/javac` follow,
+/// the class path, the lints, each source's path and text, and the keys
+/// of what it uses. Hashing the sources is quick beside javac, and sees
+/// an edit that keeps a file's size and time. A javac that changes
+/// behind a shim without `JAVA_HOME` changing isn't seen, as asking it
+/// its version would take a second each run; `--clean` builds afresh.
+fn compile_key(
+    classpath: &std::ffi::OsStr,
+    files: &[PathBuf],
+    strict: bool,
+    uses: &[&str],
+) -> String {
     let mut key = format!(
-        "javac {}\nclasspath {}\nstrict {strict}\n",
+        "javac {}\nJAVA_HOME {}\nclasspath {}\nstrict {strict}\nuses {}\n",
         tool_identity(&tool("JAVAC", "javac")),
-        classpath.to_string_lossy()
+        std::env::var("JAVA_HOME").unwrap_or_default(),
+        classpath.to_string_lossy(),
+        uses.join(" "),
     );
     for file in files {
-        let meta = std::fs::metadata(file).ok();
-        let time = (meta.as_ref())
-            .and_then(|m| m.modified().ok())
-            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-            .map_or(0, |d| d.as_nanos());
-        let size = meta.map_or(0, |m| m.len());
-        key.push_str(&format!("{} {size} {time}\n", file.display()));
+        let text = std::fs::read(file).unwrap_or_default();
+        key.push_str(&format!("{:016x} {}\n", fnv64(&text), file.display()));
     }
-    key
+    format!("{:016x}", fnv64(key.as_bytes()))
 }
 
 /// A directory of classes' stamp, the [`compile_key`] it was built by.
@@ -123,12 +131,7 @@ fn stamp(classes: &Path) -> PathBuf {
 /// Whether a directory of classes wasn't built by `key`, in which case
 /// it's removed, so no class of a source that's gone stays.
 fn stale(classes: &Path, key: &str) -> bool {
-    if classes.is_dir() && stamp_matches(&stamp(classes), key) {
-        return false;
-    }
-    let _ = std::fs::remove_dir_all(classes);
-    let _ = std::fs::remove_file(stamp(classes));
-    true
+    !reuse_or_clear(classes, &stamp(classes), key)
 }
 
 /// A library's test sources' directory.
@@ -162,13 +165,19 @@ fn classes(dir: &Path, unit: &str) -> PathBuf {
 }
 
 /// A compiled unit of main classes ([`compile_main`]): its name, the
-/// key it was built by, with those of what it uses, and its class path,
-/// its own directory and theirs.
+/// key it was built by, with those of what it uses, its class path, its
+/// own directory and theirs, and why it doesn't compile, if it doesn't.
 struct Unit {
     name: String,
     key: String,
     path: Vec<PathBuf>,
+    error: Option<String>,
 }
+
+/// Where a unit that didn't compile keeps javac's errors, in its
+/// directory of classes, so a run that changes nothing says them again
+/// without compiling again.
+const ERRORS: &str = "temper-javac-errors.txt";
 
 /// Compiles a unit's main sources with `javac` (`JAVAC`) into its own
 /// directory ([`classes`]), after those it uses: the runtime alone, std
@@ -177,8 +186,9 @@ struct Unit {
 /// theirs, so a change in one library compiles it and those that use it
 /// again, not std. The runtime compiles quietly; the rest with every
 /// lint an error with `strict`. `done` holds the units compiled so far,
-/// so each compiles once; the unit's is last. `depth` is how many units
-/// it's compiled for.
+/// so each compiles once, or fails once; the unit's is last. `depth` is
+/// how many units it's compiled for. The error is why the unit doesn't
+/// compile: javac's, or that it uses a unit that doesn't.
 fn compile_main(
     dir: &Path,
     all: &[Tested],
@@ -187,8 +197,8 @@ fn compile_main(
     done: &mut Vec<Unit>,
     depth: usize,
 ) -> Result<(), String> {
-    if done.iter().any(|u| u.name == unit) {
-        return Ok(());
+    if let Some(done) = done.iter().find(|u| u.name == unit) {
+        return done.error.clone().map_or(Ok(()), Err);
     }
     // Deeper than every unit, only in a cycle, which imports rule out.
     if depth > all.len() + 2 {
@@ -212,30 +222,44 @@ fn compile_main(
         }
     };
     let mut path: Vec<PathBuf> = Vec::new();
-    let mut used_keys = String::new();
+    let mut used_keys = Vec::new();
+    let mut error = None;
     for used in &uses {
-        compile_main(dir, all, used, strict, done, depth + 1)?;
+        let compiled = compile_main(dir, all, used, strict, done, depth + 1);
+        if compiled.is_err() && error.is_none() {
+            error = Some(format!("{unit} uses {used}, which doesn't compile"));
+        }
         let Some(used) = done.iter().find(|u| u.name == *used) else {
             continue;
         };
-        used_keys.push_str(&used.key);
+        used_keys.push(used.key.clone());
         for p in &used.path {
             if !path.contains(p) {
                 path.push(p.clone());
             }
         }
     }
-    if done.iter().any(|u| u.name == unit) {
-        return Ok(());
+    if let Some(done) = done.iter().find(|u| u.name == unit) {
+        return done.error.clone().map_or(Ok(()), Err);
     }
     let mut sources = Vec::new();
     files_with(&dir.join(unit).join("src/main/java"), "java", &mut sources);
     let classpath = std::env::join_paths(&path).map_err(|e| e.to_string())?;
     let strict = strict && unit != "temper-core";
-    let key = compile_key(&classpath, &sources, strict) + &used_keys;
+    let used_keys: Vec<&str> = used_keys.iter().map(String::as_str).collect();
+    let key = compile_key(&classpath, &sources, strict, &used_keys);
     let into = classes(dir, unit);
-    if !sources.is_empty() && stale(&into, &key) {
-        javac(&into, &classpath, &sources, strict)?;
+    if error.is_none() && !sources.is_empty() {
+        error = match stale(&into, &key) {
+            true => javac(&into, &classpath, &sources, strict)
+                .err()
+                .inspect(|e| {
+                    // Kept with the stamp, so it's said again, not compiled again.
+                    let _ = std::fs::create_dir_all(&into);
+                    let _ = std::fs::write(into.join(ERRORS), e);
+                }),
+            false => std::fs::read_to_string(into.join(ERRORS)).ok(),
+        };
         write_stamp(&stamp(&into), &key);
     }
     path.insert(0, into);
@@ -243,8 +267,9 @@ fn compile_main(
         name: unit.to_string(),
         key,
         path,
+        error: error.clone(),
     });
-    Ok(())
+    error.map_or(Ok(()), Err)
 }
 
 /// javac's options with `strict`: every lint and Javadoc check but for
@@ -432,11 +457,21 @@ public final class RunTests {
 "#;
 
 /// Runs a library's tests with `java` (`JAVA`) through JUnit's launcher
-/// ([`RUN_TESTS`]): those [`build`] compiled with the others', selected
+/// ([`RUN_TESTS`]), unless its main classes don't compile, or those of a
+/// library it uses: those [`build`] compiled with the others', selected
 /// by their classes, or, where they didn't compile together, its own,
 /// compiled alone into `temper.out/java/LIBRARY/target/temper`.
 fn test(dir: &Path, library: &Tested, all: &[Tested]) -> TestResults {
     let jars = junit()?;
+    // Its main classes, or why they don't compile, as [`build`] left them.
+    compile_main(
+        dir,
+        all,
+        &library.name,
+        strict_warnings(),
+        &mut Vec::new(),
+        0,
+    )?;
     let root = dir.join(BUILD);
     let main = with_main(dir, all, &jars)?;
     let shared = root.join("test-classes");
@@ -510,8 +545,9 @@ mod tests {
     use std::fs;
 
     /// Classes compile again when a source changes, even keeping its
-    /// time, or how they compile does: strict warnings, or the
-    /// classpath (javac itself is `tool_identity`'s).
+    /// size and time, or how they compile does: strict warnings, the
+    /// classpath, or what they use (javac itself is `tool_identity`'s).
+    /// A key is a short digest, however many sources and uses.
     #[test]
     fn keys_change_with_what_compiles() {
         let dir = std::env::temp_dir().join(format!("temper-java-key-{}", std::process::id()));
@@ -519,19 +555,23 @@ mod tests {
         let source = dir.join("A.java");
         fs::write(&source, "class A {}").unwrap();
         let files = std::slice::from_ref(&source);
-        let key = compile_key(OsStr::new("x.jar"), files, false);
-        assert_eq!(compile_key(OsStr::new("x.jar"), files, false), key);
-        assert_ne!(compile_key(OsStr::new("x.jar"), files, true), key);
-        assert_ne!(compile_key(OsStr::new("y.jar"), files, false), key);
+        let key = compile_key(OsStr::new("x.jar"), files, false, &[]);
+        assert_eq!(key.len(), 16, "{key}");
+        assert_eq!(compile_key(OsStr::new("x.jar"), files, false, &[]), key);
+        assert_ne!(compile_key(OsStr::new("x.jar"), files, true, &[]), key);
+        assert_ne!(compile_key(OsStr::new("y.jar"), files, false, &[]), key);
+        let used = compile_key(OsStr::new("x.jar"), files, false, &[&key]);
+        assert_eq!(used.len(), 16, "{used}");
+        assert_ne!(used, key);
         let time = fs::metadata(&source).unwrap().modified().unwrap();
-        fs::write(&source, "class A { }").unwrap();
+        fs::write(&source, "class B {}").unwrap();
         fs::File::options()
             .write(true)
             .open(&source)
             .unwrap()
             .set_modified(time)
             .unwrap();
-        assert_ne!(compile_key(OsStr::new("x.jar"), files, false), key);
+        assert_ne!(compile_key(OsStr::new("x.jar"), files, false, &[]), key);
         let _ = fs::remove_dir_all(dir);
     }
 }

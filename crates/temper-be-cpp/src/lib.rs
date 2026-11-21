@@ -785,16 +785,20 @@ fn main(p: &Program, namespace: &str) -> String {
     out
 }
 
-/// Text as a quoted CMake argument: `\\`, `"`, and `$` escaped, so it's
-/// taken as it is.
+/// Text as a quoted CMake argument, taken as it is ([`cmake_escaped`]).
 fn cmake_string(text: &str) -> String {
-    let mut out = String::from('"');
+    format!("\"{}\"", cmake_escaped(text))
+}
+
+/// Text for a quoted CMake argument: `\\`, `"`, and `$` escaped, so it's
+/// taken as it is.
+pub(crate) fn cmake_escaped(text: &str) -> String {
+    let mut out = String::new();
     for c in text.chars() {
         if matches!(c, '\\' | '"' | '$') {
             out.push('\\');
         }
         out.push(c);
     }
-    out.push('"');
     out
 }

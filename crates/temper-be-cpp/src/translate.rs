@@ -2750,15 +2750,13 @@ impl<'a> Translator<'a> {
                     make.call(items)
                 } else {
                     let result = self.ty(p.nodes.ty(id))?;
-                    let mut rest = items.into_iter();
-                    let mut parts = Vec::new();
-                    while rest.len() > 0 {
-                        let part: Vec<Expr> = rest.by_ref().take(self.limits.list_part).collect();
-                        parts.push(Expr::Run {
-                            result: result.clone(),
-                            body: vec![Stmt::Return(Some(make.clone().call(part)))],
-                        });
-                    }
+                    let parts = (temper_tmpl::chunks::parts(items, self.limits.list_part)
+                        .into_iter())
+                    .map(|part| Expr::Run {
+                        result: result.clone(),
+                        body: vec![Stmt::Return(Some(make.clone().call(part)))],
+                    })
+                    .collect();
                     self.core(&format!("List::make_parts{targs}")).call(parts)
                 }
             }

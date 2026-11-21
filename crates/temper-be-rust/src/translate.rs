@@ -2299,16 +2299,13 @@ impl<'a> Translator<'a> {
                 if xs.len() <= self.limits.list_part || !xs.iter().all(Expr::is_plain) {
                     return Ok(self.arc(Expr::Macro("vec".into(), xs)));
                 }
-                let mut rest = xs.into_iter();
-                let mut parts = Vec::new();
-                while rest.len() > 0 {
-                    let part = Expr::Macro(
-                        "vec".into(),
-                        rest.by_ref().take(self.limits.list_part).collect(),
-                    );
-                    let made = Expr::Closure(Vec::new(), Block::new(Vec::new(), Some(part)));
-                    parts.push(Expr::path("temper_core::part").call(vec![made]));
-                }
+                let parts = (temper_tmpl::chunks::parts(xs, self.limits.list_part).into_iter())
+                    .map(|part| {
+                        let part = Expr::Macro("vec".into(), part);
+                        let made = Expr::Closure(Vec::new(), Block::new(Vec::new(), Some(part)));
+                        Expr::path("temper_core::part").call(vec![made])
+                    })
+                    .collect();
                 let all = Expr::Macro("vec".into(), parts)
                     .method("into_iter", Vec::new())
                     .method("flatten", Vec::new())

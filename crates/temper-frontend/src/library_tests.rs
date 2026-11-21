@@ -18,7 +18,8 @@ use crate::library::Diagnostic;
 use crate::library::Level;
 use crate::log::{LogFormat, Value, record, write_json_diagnostic, write_json_diagnostics};
 use crate::project::{
-    LibrarySources, duplicate_names, find_libraries_ignoring, library_of, load_library, work_root,
+    CONFIG_FILE, LibrarySources, bad_names, duplicate_names, find_libraries_ignoring, library_of,
+    load_library, work_root,
 };
 use crate::settle::{Settled, settle};
 use crate::sources::Sources;
@@ -187,6 +188,24 @@ pub fn libraries_to_test(
     if libraries.is_empty() {
         let message = format!("No Temper library (config.temper.md) under {root}");
         problem(log, err, "NoLibraries", &message, &[root.into()]);
+        return None;
+    }
+    let bad = bad_names(&libraries);
+    for library in &bad {
+        let (config, name) = (
+            format!("{}/{CONFIG_FILE}", library.root),
+            &library.config.name,
+        );
+        let message = format!("{config}: library name isn't a dashed identifier: {name}");
+        problem(
+            log,
+            err,
+            "BadLibraryName",
+            &message,
+            &[name.as_str().into(), config.as_str().into()],
+        );
+    }
+    if !bad.is_empty() {
         return None;
     }
     let duplicates = duplicate_names(&libraries);

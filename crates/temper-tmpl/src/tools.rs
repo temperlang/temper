@@ -72,6 +72,18 @@ pub fn write_stamp(stamp: &Path, key: &str) {
     let _ = crate::files::write_if_changed(stamp, key.as_bytes());
 }
 
+/// Whether a build directory `dir` can be reused, as it was built as
+/// `key` says ([`stamp_matches`]); where it can't, it's removed, with
+/// `stamp`, so it's built afresh, and nothing of an old build stays.
+pub fn reuse_or_clear(dir: &Path, stamp: &Path, key: &str) -> bool {
+    if dir.is_dir() && stamp_matches(stamp, key) {
+        return true;
+    }
+    let _ = std::fs::remove_dir_all(dir);
+    let _ = std::fs::remove_file(stamp);
+    false
+}
+
 /// A tool's file, as [`tool`] names it: itself where it's a path, else
 /// the first of that name on `PATH`.
 pub fn tool_file(name: &str) -> Option<PathBuf> {

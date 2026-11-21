@@ -15,7 +15,8 @@
 //!   (`# Hi There!` gives `hi-there`), or else its root's path under the
 //!   work root, with `-` between directories, or else `unnamed`, as
 //!   Kotlin's `libraryNameFor` decides ([`Config`]). Two libraries of one
-//!   name are an error, as in Kotlin.
+//!   name are an error, as in Kotlin, as is a configured name that isn't
+//!   a dashed identifier ([`bad_names`]), since it names directories.
 //! - An import's path may start with a library's name, as
 //!   `import("other-lib/sub")`, naming that library's `sub` directory,
 //!   as Kotlin resolves it; the library's modules then build with the
@@ -273,6 +274,14 @@ pub fn library_of<'a>(libraries: &'a [LibrarySources], dir: &str) -> Option<&'a 
     (libraries.iter())
         .filter(|l| holds(&l.root))
         .max_by_key(|l| l.root.len())
+}
+
+/// The libraries whose configured names aren't dashed identifiers,
+/// which name directories and go into build files, so must be plain.
+pub fn bad_names(libraries: &[LibrarySources]) -> Vec<&LibrarySources> {
+    (libraries.iter())
+        .filter(|l| dashed(&l.config.name).is_none())
+        .collect()
 }
 
 /// The names that more than one library has, each once, in path order.

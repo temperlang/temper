@@ -143,7 +143,8 @@ fn build(dir: &Path, all: &[Tested]) -> Result<(), String> {
 /// path from `.build` (`../LIBRARY/tests/FILE`), in its `Debug`
 /// configuration, as `dotnet new sln` and `dotnet sln add` would write
 /// it, without their runs of `dotnet`. Each project is named for its
-/// library, which is unique.
+/// library, which is unique. Solutions have no escapes, so a name must
+/// hold no `"`, which a library's name, a dashed identifier, never does.
 fn solution(projects: &[(&str, String)]) -> String {
     // C#'s project type, and an ID for each project, by its place.
     const CSHARP: &str = "{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}";

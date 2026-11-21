@@ -12,6 +12,7 @@ import temper.core.Core.Console;
 public final class JavaSplitGlobal {
     private JavaSplitGlobal() {}
 
+    public static final int count;
     static Console console;
     static List<String> words;
     static Map<String, Integer> pairs;
@@ -106,7 +107,7 @@ public final class JavaSplitGlobal {
 
     private static final class Init9 {
         static void run() {
-            console.log(words.size() + " " + Core.listGet(words, 5) + " " + pairs.size());
+            console.log(count + " " + Core.listGet(words, 5) + " " + pairs.size());
         }
     }
 
@@ -125,6 +126,7 @@ public final class JavaSplitGlobal {
     static {
         Init1.run();
         Init2.run();
+        count = words.size();
         Init3.run();
         Init4.run();
         Init5.run();

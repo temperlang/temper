@@ -19,8 +19,11 @@
 //! - **A big static initializer:** still past them, a module's static
 //!   initializer runs its statements in groups, each the `run()` of a
 //!   nested class, `Init1.run();`, its top-level locals then static
-//!   fields, and its fields no longer `final`, as the nested classes
-//!   assign them.
+//!   fields, and its private fields no longer `final`, as the nested
+//!   classes assign them. A statement setting a public field, an
+//!   exported value, stays in the initializer, between groups, so the
+//!   field stays `final`, and the library's API is the same whatever its
+//!   size.
 //!
 //! Sizes are estimates of bytecode from the tree ([`cost`]), generous so
 //! the real code is smaller. A function body that's too big by its own
@@ -76,8 +79,12 @@ pub fn class(c: &mut Class, limits: &Limits) {
     drop(bodies);
     if over {
         let methods: Vec<String> = c.methods.iter().map(|m| m.name.clone()).collect();
-        if let Some(new_fields) = s.split_init(&mut c.init, &fields, &methods) {
-            for f in &mut c.fields {
+        let public: HashSet<String> = (c.fields.iter())
+            .filter(|f| f.public && f.is_final)
+            .map(|f| f.name.clone())
+            .collect();
+        if let Some(new_fields) = s.split_init(&mut c.init, &fields, &methods, &public) {
+            for f in c.fields.iter_mut().filter(|f| !public.contains(&f.name)) {
                 f.is_final = false;
             }
             c.fields.extend(new_fields);
@@ -355,10 +362,9 @@ impl<'a> Splitter<'a> {
             return;
         };
         let costs: Vec<usize> = items.iter().map(expr_cost).collect();
-        let mut rest = std::mem::take(items).into_iter();
+        let sizes = chunks::groups(&costs, self.limits.part);
         let mut parts = Vec::new();
-        for n in chunks::groups(&costs, self.limits.part) {
-            let part: Vec<Expr> = rest.by_ref().take(n).collect();
+        for part in chunks::in_groups(std::mem::take(items), &sizes) {
             let name = self.fresh("Part");
             let value = Expr::Call(f.clone(), part);
             let body = vec![Stmt::Return(Some(value))];
@@ -376,12 +382,14 @@ impl<'a> Splitter<'a> {
     /// The static initializer `init` in groups, each a nested class's
     /// `run()`, with its top-level locals as private static fields, which
     /// it gives; `None` where it can't: where it declares a local class
-    /// or lambda, or a local of a field's or method's name.
+    /// or lambda, or a local of a field's or method's name. A statement
+    /// setting any of the `kept` fields, which stay `final`, stays.
     fn split_init(
         &mut self,
         init: &mut Vec<Stmt>,
         fields: &[String],
         methods: &[String],
+        kept: &HashSet<String>,
     ) -> Option<Vec<Field>> {
         let mut new_fields = Vec::new();
         for s in init.iter() {
@@ -414,20 +422,48 @@ impl<'a> Splitter<'a> {
                 s => Some(s),
             })
             .collect();
+        let mut run = Vec::new();
+        for s in stmts {
+            if !sets(&s, kept) {
+                run.push(s);
+                continue;
+            }
+            self.init_groups(std::mem::take(&mut run), init);
+            init.push(s);
+        }
+        self.init_groups(run, init);
+        Some(new_fields)
+    }
+
+    /// `stmts` in groups, each a nested class's `run()`, called from
+    /// `init`.
+    fn init_groups(&mut self, stmts: Vec<Stmt>, init: &mut Vec<Stmt>) {
         let costs: Vec<usize> = stmts.iter().map(stmt_cost).collect();
-        let mut rest = stmts.into_iter();
-        for n in chunks::groups(&costs, self.limits.part) {
-            let body: Vec<Stmt> = rest.by_ref().take(n).collect();
+        let sizes = chunks::groups(&costs, self.limits.part);
+        for body in chunks::in_groups(stmts, &sizes) {
             let name = self.fresh("Init");
             self.helpers.push(nested(&name, "void", "run", &body));
             init.push(Stmt::Expr(Expr::name(name).method("run", Vec::new())));
         }
-        Some(new_fields)
     }
 
     fn finish(self, helpers: &mut Vec<String>) {
         helpers.extend(self.helpers);
     }
+}
+
+/// Whether `s` assigns any of `names`, at any depth.
+fn sets(s: &Stmt, names: &HashSet<String>) -> bool {
+    if let Stmt::Assign {
+        target: Expr::Name(n),
+        ..
+    } = s
+    {
+        return names.contains(n);
+    }
+    let mut found = false;
+    for_stmts(s, &mut |body| found |= body.iter().any(|s| sets(s, names)));
+    found
 }
 
 /// A nested class of one static method, `name`'s `method`, as a member's

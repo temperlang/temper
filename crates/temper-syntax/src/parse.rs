@@ -389,8 +389,10 @@ impl Parser {
             let s = self.tree.span(child);
             span = Some(span.map_or(s, |span| span.cover(s)));
         }
+        // Adopted children are operands, never tokens, so `below.tokens`
+        // still counts its own.
+        debug_assert!(children.iter().all(|&c| !self.is_token(c)));
         children.push(node);
-        // Adopted children are operands, never tokens.
         self.stack.push(Element {
             op,
             children,

@@ -179,36 +179,14 @@ pub const LIMITS: Limits = Limits {
 /// change: a `let`, whose scope would end with it, an assignment, and
 /// what returns, bubbles, or jumps out.
 pub fn group_runs(stmts: Vec<Stmt>, limits: &Limits) -> Vec<Stmt> {
-    if stmts.len() <= limits.run {
-        return stmts;
-    }
-    let mut out = Vec::new();
-    let mut run: Vec<Stmt> = Vec::new();
-    let flush = |run: &mut Vec<Stmt>, out: &mut Vec<Stmt>| {
-        if run.len() <= limits.group {
-            out.append(run);
-            return;
-        }
-        let mut rest = std::mem::take(run).into_iter();
-        while rest.len() > 0 {
-            let group: Vec<Stmt> = rest.by_ref().take(limits.group).collect();
-            let made = Expr::Closure(Vec::new(), Block::new(group, None));
-            out.push(Stmt::Expr(Expr::path("temper_core::part").call(vec![made])));
-        }
+    // Not an assignment, which may initialize a `let` declared without a
+    // value, which a closure can't.
+    let plain = |s: &Stmt| matches!(s, Stmt::Expr(e) if e.is_plain());
+    let wrap = |group| {
+        let made = Expr::Closure(Vec::new(), Block::new(group, None));
+        Stmt::Expr(Expr::path("temper_core::part").call(vec![made]))
     };
-    for s in stmts {
-        // Not an assignment, which may initialize a `let` declared
-        // without a value, which a closure can't.
-        let plain = matches!(&s, Stmt::Expr(e) if e.is_plain());
-        if plain {
-            run.push(s);
-        } else {
-            flush(&mut run, &mut out);
-            out.push(s);
-        }
-    }
-    flush(&mut run, &mut out);
-    out
+    temper_tmpl::chunks::group_runs(stmts, limits.run, limits.group, plain, wrap)
 }
 
 impl Expr {

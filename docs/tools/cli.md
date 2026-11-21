@@ -149,13 +149,16 @@ interpreter with `-b interp`. It prints the tests that failed, or with
 - **Builds are incremental.** C++, Rust, Java, and C# keep their
   builds in `temper.out/BACKEND` from run to run, so a second run
   rebuilds only what changed: CMake, Cargo, and MSBuild go by files'
-  times, and javac compiles again, all at once, when a source or
-  how it's compiled changes. A change of compiler or its settings
-  (`CXX`, `CXXFLAGS`, CMake, ccache, `TEMPER_STRICT_WARNINGS`) builds
-  afresh. **`--clean`** builds everything afresh: it removes the
+  times, and javac compiles a library again when its sources, what
+  it uses, or how it's compiled changes. A change of compiler or its
+  settings (`CXX`, `CXXFLAGS`, `CMAKE_GENERATOR` and other CMake
+  variables, `DEVELOPER_DIR`, `JAVA_HOME`, ccache,
+  `TEMPER_STRICT_WARNINGS`) builds afresh. **`--clean`** builds everything afresh: it removes the
   backend's build directories before writing any code (C++'s `.build` and
   `LIBRARY/build`, Rust's `target`, Java's `.build` and
-  `LIBRARY/target/temper`, C#'s `bin` and `obj`). Earlier releases
+  `LIBRARY/target/temper`, C#'s `bin` and `obj`), not generated files
+  that a missing manifest left behind; removing `temper.out/BACKEND`
+  drops those too. Earlier releases
   build afresh each run.
 
 ## `run`

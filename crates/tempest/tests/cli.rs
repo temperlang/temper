@@ -848,6 +848,36 @@ fn build_writes_only_what_changed() {
     });
 }
 
+/// Python runs what was built, even after an edit that keeps each
+/// file's size and time, which bytecode cached by an earlier run would
+/// hide, as Python checks only those.
+#[test]
+#[cfg(feature = "py")]
+fn python_runs_what_was_built() {
+    let files = [(
+        "a.temper",
+        "export let x = 1;\ntest(\"x\") { assert(x == 1) }\n",
+    )];
+    with_library("py-bytecode", &files, |dir| {
+        let (code, out, err) = tempest(&["test", "-b", "py", dir]);
+        assert_eq!(code, 0, "{out}{err}");
+        let py = Path::new(dir).join("temper.out/py");
+        let before = stamps(&py, ".py");
+        let source = "export let x = 2;\ntest(\"x\") { assert(x == 2) }\n";
+        fs::write(Path::new(dir).join("a.temper"), source).unwrap();
+        let (code, out, err) = tempest(&["build", "-w", dir, "-b", "py"]);
+        assert_eq!(code, 0, "{out}{err}");
+        let after = stamps(&py, ".py");
+        assert_ne!(after, before);
+        for (path, time) in &before {
+            let file = fs::File::options().write(true).open(path).unwrap();
+            file.set_modified(*time).unwrap();
+        }
+        let (code, out, err) = tempest(&["test", "-b", "py", dir]);
+        assert_eq!(code, 0, "{out}{err}");
+    });
+}
+
 /// A library's host code goes with it: Python takes `__connected__.py`
 /// for a connected function, or its Temper body under `--no-connected`.
 #[test]
@@ -892,6 +922,38 @@ fn build_needs_libraries_with_names_of_their_own() {
     assert_eq!(code, 1);
     assert!(err.starts_with("No Temper library"), "{err}");
     let _ = fs::remove_dir_all(&empty);
+}
+
+/// A configured name that isn't a dashed identifier fails the build,
+/// which writes nothing, inside `temper.out` or out of it.
+#[test]
+#[cfg(feature = "py")]
+fn build_needs_plain_library_names() {
+    for (i, name) in ["../../escaped", "a/b", "/tmp/x", "a)b", "${x}", "a b", ".."]
+        .into_iter()
+        .enumerate()
+    {
+        let config = format!("    export let name = \"{name}\";\n");
+        let files = [
+            ("config.temper.md", config.as_str()),
+            ("a.temper", "export let x = 1;\n"),
+        ];
+        with_library(&format!("build-bad-name-{i}"), &files, |dir| {
+            let (code, _, err) = tempest(&["build", "-w", dir, "-b", "py"]);
+            assert_eq!(code, 1, "{name}: {err}");
+            let expected = format!("isn't a dashed identifier: {name}");
+            assert!(err.contains(&expected), "{name}: {err}");
+            let entries: Vec<_> = fs::read_dir(dir)
+                .unwrap()
+                .flatten()
+                .map(|e| e.file_name())
+                .collect();
+            assert!(
+                !entries.iter().any(|e| e == "temper.out" || e == "escaped"),
+                "{name}: {entries:?}"
+            );
+        });
+    }
 }
 
 /// A C++ library's generated CMake project builds and runs, with g++,
@@ -1258,6 +1320,21 @@ fn test_a_library_in_java() {
             true,
             true,
         );
+        // A library whose classes don't compile fails alone: here `b`,
+        // which `a` doesn't use; then `a`, which `b` uses.
+        let java = Path::new(dir).join("temper.out/java");
+        for (library, passed) in [("b", 3), ("a", 0)] {
+            let broken = java.join(library).join("src/main/java/Broken.java");
+            fs::write(&broken, "class Broken { nope }\n").unwrap();
+            let (code, out, err) = tempest(&["test", "-b", "java", dir]);
+            let summary = format!("Tests passed: {passed} of 5 (");
+            assert!(out.contains(&summary), "{library}: {out}{err}");
+            assert!(format!("{out}{err}").contains("Broken.java"), "{out}{err}");
+            assert_eq!(code, 1);
+            fs::remove_file(&broken).unwrap();
+        }
+        let (_, out, err) = tempest(&["test", "-b", "java", dir]);
+        assert!(out.ends_with("Tests passed: 3 of 5\n"), "{out}{err}");
     });
 }
 
