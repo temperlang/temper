@@ -77,11 +77,16 @@ impl Settle {
         let formals = self.own_formals(class);
         let supers = class_parts(&self.lib.tree, class).1.to_vec();
         let supers = supers.into_iter().map(|s| self.eval_type(s)).collect();
+        let tree = &self.lib.tree;
+        let variant = (core::type_params(tree, class).iter())
+            .map(|&p| tree.data(p) & core::TYPE_PARAM_VARIANT != 0)
+            .collect();
         let info = ClassInfo {
             ancestors,
             formals,
             supers,
             fun_sig: None,
+            variant,
         };
         self.typing.types.set_class(symbol, info.clone());
         // Once the rest is known, as `apply`'s signature may name the
@@ -637,31 +642,7 @@ impl Settle {
         let class = core_class(type_name);
         let constructor =
             (class.members.iter()).find(|m| m.name == "constructor" && !m.is_static)?;
-        if class.type_params == 0 {
-            return None;
-        }
-        let key = (type_name, usize::MAX);
-        let formals = match self.typing.core_formals.get(&key) {
-            Some(formals) => formals.clone(),
-            None => {
-                let formals: Vec<SymbolId> = (class.type_param_names.iter())
-                    .map(|p| {
-                        let name = self.lib.names.intern(p);
-                        self.scopes.unnamed_type_param(name)
-                    })
-                    .collect();
-                // A bound may name the type's own type parameters, as
-                // `MapKey<K>` does.
-                let types = &mut self.typing.types;
-                let own: Vec<TypeId> = formals.iter().map(|&f| types.param(f)).collect();
-                for (&formal, bound) in formals.iter().zip(&class.type_param_bounds) {
-                    let bound = core_type(types, bound, &own, &[]);
-                    types.set_bound(formal, bound);
-                }
-                self.typing.core_formals.insert(key, formals.clone());
-                formals
-            }
-        };
+        let formals = self.core_type_formals(type_name)?;
         let types = &mut self.typing.types;
         let own: Vec<TypeId> = formals.iter().map(|&f| types.param(f)).collect();
         let sig = core_signature(types, &constructor.kind, &own, &[]);
@@ -681,6 +662,36 @@ impl Settle {
             this: None,
         };
         Some((method, type_args))
+    }
+
+    /// A builtin generic type's own type parameters, made once, with
+    /// their bounds as core declares them, as `MapKey<K>` for `Map`'s `K`,
+    /// and unknown where it declares none. `None` for a type without.
+    pub(super) fn core_type_formals(&mut self, type_name: &'static str) -> Option<Vec<SymbolId>> {
+        let class = core_class(type_name);
+        if class.type_params == 0 {
+            return None;
+        }
+        let key = (type_name, usize::MAX);
+        if let Some(formals) = self.typing.core_formals.get(&key) {
+            return Some(formals.clone());
+        }
+        let formals: Vec<SymbolId> = (class.type_param_names.iter())
+            .map(|p| {
+                let name = self.lib.names.intern(p);
+                self.scopes.unnamed_type_param(name)
+            })
+            .collect();
+        // A bound may name the type's own type parameters, as `MapKey<K>`
+        // does.
+        let types = &mut self.typing.types;
+        let own: Vec<TypeId> = formals.iter().map(|&f| types.param(f)).collect();
+        for (&formal, bound) in formals.iter().zip(&class.type_param_bounds) {
+            let bound = core_type(types, bound, &own, &[]);
+            types.set_bound(formal, bound);
+        }
+        self.typing.core_formals.insert(key, formals.clone());
+        Some(formals)
     }
 
     /// The type of the member a callee names, if it names one.

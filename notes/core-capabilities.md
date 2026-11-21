@@ -26,7 +26,9 @@ would enable nothing; every one has a declaration, which a test checks
   core's docs say nothing can match: `Bubble` and `Void` aren't
   `AnyValue`s ("Unrelated types"), and `Never<T>` has no values ("can
   never succeed").
-- **Type arguments**: any type. A map key must be a `MapKey`.
+- **Type arguments**: any type but `Void`, within its parameter's
+  bound, wherever written (annotations too). A map key must be a
+  `MapKey` of itself.
 - **Statics**: public ones, as `String.fromCodePoint` or `Float64.pi`;
   another, as `Int32.zzz` or `Empty.constructor`, is "No member zzz in
   Int32", as for a user's class.
@@ -47,7 +49,7 @@ core, so a type core adds needs a row.
 
 | Type | `new` | Extend | `is`, `as` from `AnyValue` | Map key |
 | --- | --- | --- | --- | --- |
-| `AnyValue` | no, interface | yes | yes | gap |
+| `AnyValue` | no, interface | yes | yes | no |
 | `Boolean` | no, private | no, class | no, `@mayDowncastTo(false)` | no |
 | `Bubble` | no, private | no | no, not an `AnyValue` | no |
 | `DenseBitVector` | `(capacity)` | no | yes | no |
@@ -65,9 +67,9 @@ core, so a type core adds needs a row.
 | `Listed<T>` | no, interface | no, sealed | no, type arguments | no |
 | `Map<K, V>` | `(entries)` | no | no | no |
 | `MapBuilder<K, V>` | `()` | no | no | no |
-| `MapKey<T>` | no, interface | yes (open question) | no, type arguments | gap |
+| `MapKey<T>` | no, interface | yes (open question) | no, type arguments | no |
 | `Mapped<K, V>` | no, interface | no, sealed | no, type arguments | no |
-| `Never<T>` | no, interface | no, sealed | no, it has no values | gap |
+| `Never<T>` | no, interface | no, sealed | no, it has no values | no |
 | `NoStringIndex` | no, private (`StringIndex.none`) | no | gap (connected) | no |
 | `Pair<K, V>` | `(key, value)` | no | yes | no |
 | `Promise<T>` | no, private (`PromiseBuilder`) | no | gap (connected) | no |
@@ -104,15 +106,13 @@ output: user code names builtins, not core's classes, and the connected
   DoneResult<T>` for `r: GeneratorResult<T>` allowed. Temper doesn't
   check this yet (notes/kotlin-differences.md, "A user's `@connected`
   type").
-- **Map key bounds.** `new MapBuilder<AnyValue, Int>()` passes, as do
-  `MapKey<String>` and `Never<Int>`. Typing doesn't reject a value of
-  `AnyValue` where another type is wanted, as it may hold one ("AnyValue
-  may hold an Int32", `types.rs`), and compares type arguments under any
-  variance (notes/typing.md, "Generic types"), so `MapKey<String>` may
-  be a `MapKey<MapKey<String>>`, and `Never<Int>` stands for `Int`.
-  Closing these means a decision on those rules, not map keys. And a
-  type annotation, as `let m: Map<Boolean, Int>`, isn't checked against
-  bounds at all.
+- **Map key bounds** (closed by t853). A type argument is checked
+  against its bound as a type, not a value: `AnyValue` fits only
+  `AnyValue`, though a value of it may hold any other, and a parameter
+  without `@out` or `@in` compares its arguments invariantly, so
+  `MapKey<String>` isn't a `MapKey<MapKey<String>>` and `Never<Int>`
+  isn't a `MapKey<Never<Int>>`. Annotations, as `let m: Map<Boolean,
+  Int>`, are checked as calls are (notes/typing.md, "Generic types").
 - **`Type`** values stand for types, as macros' inputs. It's a class
   with a private constructor, so it can't be made or extended, and it
   isn't a `MapKey`; `x is Type` is allowed, as in Kotlin, which has no

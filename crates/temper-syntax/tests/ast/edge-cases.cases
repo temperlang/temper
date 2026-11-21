@@ -564,3 +564,31 @@ or(a< 2, a > 0); f(let x y);
 (Block (Error) (Call f (Error)) #void)
 error 0..15: Expected a TopLevel here
 error 19..26: Expected a Argument here
+
+=== qualified new: the dots name the type
+new a.b(c); new ns.Box<Int>().m(); new ns.C(1) { x => x }; new (a.b)(c);
+--- ast
+(Block
+  (Call new (Call %. a \b) c)
+  (Call (Call %. (Call new (Call #<> (Call %. ns \Box) Int)) \m))
+  (Call (Call new (Call %. ns \C) 1) (Fun (Block \_complexArg_ x) (Block x)))
+  (Call new (Call %. a \b) c)
+  #void)
+
+=== new of an object literal is an error
+x = new { k: v };
+--- ast
+(Block (Call #desugarOperation = x (Error)) #void)
+error 4..16: `new` takes a class then arguments, as `new C(x)`
+
+=== new with a trailing block
+new C(1) { x => x };
+--- ast
+(Block (Call (Call new C 1) (Fun (Block \_complexArg_ x) (Block x))) #void)
+
+=== new without arguments is an error
+let c = new C; let d = new ns.C;
+--- ast
+(Block (Decl ^c \init (Error)) (Decl ^d \init (Error)) #void)
+error 8..13: `new` takes a class then arguments, as `new C(x)`
+error 23..31: `new` takes a class then arguments, as `new C(x)`

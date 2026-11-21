@@ -111,6 +111,8 @@ pub enum Message {
     /// Ours: a module namespace, `rx` after `let rx = import("std/regex")`,
     /// used other than as `rx.member`, by its name.
     NamespaceNotValue(String),
+    /// Ours: `new a.C()` where `a` isn't a module namespace, by `a`'s text.
+    NewQualifierNotNamespace(String),
     /// An object literal whose property names no visible constructor takes.
     NoSignatureMatches,
     /// An object literal that several classes' constructors match: their names.
@@ -206,6 +208,9 @@ pub enum Message {
     ExpectedValueOfType(String, String),
     /// A `Void` value stored or passed. Kotlin's `ExpectedNonVoid`.
     VoidAsValue,
+    /// Ours: `Void` named where a value's type goes, as `x: Void` or
+    /// `List<Void>`, rather than as what a function returns.
+    VoidTypeNotValue,
     /// `Never` without the type it stands for, which Kotlin Temper
     /// rejects only where it's used, with odd messages ("Cannot translate
     /// Never").
@@ -348,6 +353,7 @@ impl Message {
             self,
             Message::CannotAssign(..)
                 | Message::BareNever
+                | Message::VoidTypeNotValue
                 | Message::ExportNeedsNonExported(..)
                 | Message::ExpectedSubType(..)
                 | Message::ExpectedValueOfType(..)
@@ -396,6 +402,10 @@ impl Message {
                     "{name} names a module, not a value; use {name}.name for one of its exports"
                 )
             }
+            Message::NewQualifierNotNamespace(qualifier) => format!(
+                "new takes a class, or a module namespace's, as `new ns.C()`; \
+                 {qualifier} is not a module namespace"
+            ),
             Message::NoSignatureMatches => "No signature matches".into(),
             Message::MultipleConstructorsMatch(names) => {
                 format!("Multiple types have matching constructors: {names}")
@@ -501,6 +511,9 @@ impl Message {
                 format!("Expected value of type {expected} not {got}")
             }
             Message::VoidAsValue => "Void expressions cannot be used as values".into(),
+            Message::VoidTypeNotValue => "Void is only what a function returns, \
+                 as f(): Void or fn (): Void; it is never a value's type"
+                .into(),
             Message::BareNever => {
                 "Never needs the type it stands for, as Never<Int> or Never<Void>".into()
             }

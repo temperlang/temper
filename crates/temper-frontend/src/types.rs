@@ -95,6 +95,9 @@ pub struct ClassInfo {
     /// naming its type parameters, as `fn (A): B` for `@fun interface
     /// Mapper<A, B>(a: A): B;`.
     pub fun_sig: Option<TypeId>,
+    /// Which of its type parameters are marked `@out` or `@in`
+    /// ([`Types::is_variant`]).
+    pub variant: Vec<bool>,
 }
 
 /// The interner.
@@ -527,6 +530,40 @@ impl Types {
         (self.builtin_name(base)).is_some_and(|n| BUILTIN_VARIANT_PARAMS.contains(&(n, index)))
     }
 
+    /// Whether a generic type's `index`th type parameter is marked `@out`
+    /// or `@in`, by core for a builtin type, or where that isn't known.
+    /// Kotlin Temper honors those; one without is invariant there, as
+    /// all are in tempest.
+    fn is_variant(&self, base: TypeId, index: usize) -> bool {
+        match self.get(base) {
+            TypeData::Builtin(_) => self.is_builtin_variant(base, index),
+            TypeData::Class(symbol) => (self.classes.get(symbol))
+                .and_then(|c| c.variant.get(index).copied())
+                .unwrap_or(true),
+            _ => true,
+        }
+    }
+
+    /// Whether a type argument `x` sets one generic type apart from
+    /// another whose argument there is `y`: for a parameter marked `@out`
+    /// or `@in` ([`Types::is_variant`]), where neither is a subtype of the
+    /// other, which no variance accepts; for another, which is invariant,
+    /// where they aren't the same type, as far as that's known, so
+    /// `MapKey<String>` isn't a `MapKey<MapKey<String>>`.
+    fn args_apart(&mut self, base: TypeId, index: usize, x: TypeId, y: TypeId, depth: u32) -> bool {
+        if x == y {
+            return false;
+        }
+        if self.is_variant(base, index) {
+            return self.subtype(x, y, depth) == Some(false)
+                && self.subtype(y, x, depth) == Some(false);
+        }
+        let (down, up) = (self.subtype(x, y, depth), self.subtype(y, x, depth));
+        down == Some(false)
+            || up == Some(false)
+            || (self.is_known(x) && self.is_known(y) && (down, up) != (Some(true), Some(true)))
+    }
+
     /// A generic type's base, as `List` for `List<Int>`, or `t` itself.
     pub fn base(&self, t: TypeId) -> TypeId {
         match self.get(t) {
@@ -705,6 +742,26 @@ impl Types {
         }
     }
 
+    /// Whether a type argument `actual` fits a type parameter's bound
+    /// `wanted`, a bound naming type parameters given theirs: as a type,
+    /// not a value, so `AnyValue`, though a value of it may hold any
+    /// other, fits `AnyValue` alone, and `MapKey<String>` doesn't fit
+    /// `MapKey<MapKey<String>>`; but, as Kotlin Temper's check does, a
+    /// nullable type fits `AnyValue`. What isn't known fits.
+    pub fn fits_bound(&mut self, actual: TypeId, wanted: TypeId) -> bool {
+        let actual = match *self.get(actual) {
+            TypeData::Nullable(inner) if wanted == ANY_VALUE => inner,
+            _ => actual,
+        };
+        if !self.is_known(wanted) {
+            return true;
+        }
+        if actual == ANY_VALUE {
+            return wanted == ANY_VALUE;
+        }
+        self.is_subtype(actual, wanted) != Some(false)
+    }
+
     /// Whether a value of type `s` may be used as a `t`, if that's known.
     /// One generic type given arguments is another's only if, as its
     /// supertype with the other's base sees it, they're the same, but
@@ -734,6 +791,9 @@ impl Types {
             _ if s == t => Some(true),
             (Unknown, _) | (_, Unknown) => None,
             (Never, _) => Some(true),
+            // No value is a `Void`, so it's no other type, not even an
+            // `AnyValue` (t854).
+            _ if s == VOID => Some(false),
             (Null, Nullable(_)) => Some(true),
             (Nullable(a), Nullable(b)) => self.subtype(a, b, depth),
             (_, Nullable(b)) => self.subtype(s, b, depth),
@@ -929,10 +989,8 @@ impl Types {
             }
             let (x, y) = (self.args(seen).to_vec(), self.args(t).to_vec());
             let apart = x.len() == y.len()
-                && (x.iter().zip(&y)).any(|(&x, &y)| {
-                    self.subtype(x, y, depth) == Some(false)
-                        && self.subtype(y, x, depth) == Some(false)
-                });
+                && (x.iter().zip(&y).enumerate())
+                    .any(|(i, (&x, &y))| self.args_apart(t_base, i, x, y, depth));
             return apart.then_some(false);
         }
         let is_applied = |x: TypeId| matches!(self.get(x), TypeData::Applied { .. });
@@ -1364,6 +1422,7 @@ mod tests {
                 formals,
                 supers,
                 fun_sig: None,
+                variant: Vec::new(),
             };
             types.set_class(SymbolId(symbol), info);
         };

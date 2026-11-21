@@ -12,8 +12,8 @@ interactive#3: void
 
 === std modules as namespaces, across inputs
 let t = import("std/temporal");
-new (t.Date)(2024, 2, 29).toString()
-let t2: t.Date = new (t.Date)(2000, 1, 1);
+new t.Date(2024, 2, 29).toString()
+let t2: t.Date = new t.Date(2000, 1, 1);
 t2.toString()
 t
 --- transcript

@@ -328,15 +328,10 @@ impl Settle {
             // extends MapKey<K>` does, so it's checked with what they're
             // bound to put in; the message shows it as declared.
             let wanted = types.substitute(bound, &solved.formals, &solved.actuals);
-            // Kotlin's check takes a nullable type as fitting `AnyValue`,
-            // so `new PromiseBuilder<String?>()` and `f<Int?>(null)` for
-            // `<T extends AnyValue>` (or `<T>`) pass.
-            let seen = match *types.get(actual) {
-                TypeData::Nullable(inner) if wanted == ANY_VALUE => inner,
-                _ => actual,
-            };
-            let fits = types.is_subtype(seen, wanted) != Some(false);
-            if fits || !types.is_known(wanted) {
+            // As Kotlin's check, a nullable type fits `AnyValue`, so `new
+            // PromiseBuilder<String?>()` and `f<Int?>(null)` for `<T
+            // extends AnyValue>` (or `<T>`) pass.
+            if types.fits_bound(actual, wanted) {
                 continue;
             }
             let message = Message::TypeFormalBound(
@@ -555,8 +550,13 @@ impl Settle {
                 types.substitute(p.ty, &solved.formals, &checked)
             })
             .collect();
+        // A `Void` argument is "Void expressions cannot be used as values"
+        // ([`Settle::check_not_void`]), not a mismatch too.
         let unfit: Vec<usize> = (0..wanted.len())
-            .filter(|&i| self.misfits(arg_types[i], wanted[i], solved.args[i]))
+            .filter(|&i| {
+                !self.typing.types.is_void_like(arg_types[i])
+                    && self.misfits(arg_types[i], wanted[i], solved.args[i])
+            })
             .collect();
         let (Some(&first), Some(&last)) = (unfit.first(), unfit.last()) else {
             return false;
@@ -752,7 +752,7 @@ impl Settle {
 
     /// A type parameter with its bound, as Kotlin Temper writes it: `T
     /// extends AnyValue`.
-    fn show_formal(&mut self, formal: SymbolId) -> String {
+    pub(super) fn show_formal(&mut self, formal: SymbolId) -> String {
         let types = &mut self.typing.types;
         let param = types.param(formal);
         let bound = types.upper(param);

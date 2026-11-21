@@ -2078,6 +2078,7 @@ impl Grammar {
             Grammar::symbol_literal,
             Grammar::list,
             Grammar::new_expr,
+            Grammar::new_without_arguments,
             Grammar::prefix,
             Grammar::special_dot,
             Grammar::regular_dot,
@@ -2480,6 +2481,22 @@ impl Grammar {
             let p = g.tok(p, ")")?;
             g.close(p)
         })
+    }
+
+    /// `new` without its call, as `new C` or `new { k: v }`, as an error.
+    /// Ours: Kotlin reports the enclosing statement as unparsable. A `new`
+    /// that a call applies to, as in `new C(x) { block }`, is left for
+    /// [`new_expr`](Self::new_expr) at the call.
+    fn new_without_arguments(&mut self, p: usize) -> R {
+        self.check(p, self.is(p, O::New))?;
+        self.check(p, p == 0 || !self.is(p - 1, O::Paren))?;
+        let next = self.next_sibling(p);
+        self.events.push(Event::Error(
+            Message::NewWithoutArguments,
+            p as u32,
+            next as u32 - 1,
+        ));
+        Some(next)
     }
 
     /// Member := Square y callTree(( y Expr y "[".rename([]) y shiftLeft y RawCommaOp y "]" y ))

@@ -11,6 +11,7 @@
 - [🚨Breaking change: Python parameters keep builtins' names](#breaking-change-python-parameters-keep-builtins-names)
 - [🆕 Module namespaces](#-module-namespaces)
 - [🚨Breaking change: `builtins.X` removed](#breaking-change-builtinsx-removed)
+- [🚨Breaking change: `Void` is never a value; type arguments fit their bounds](#breaking-change-void-is-never-a-value-type-arguments-fit-their-bounds)
 - [Rust crates depend on `temper-std` only when they use it](#rust-crates-depend-on-temper-std-only-when-they-use-it)
 - [`++ls[i]` gives the new value](#lsi-gives-the-new-value)
 - [Unassigned locals in `for … of` bodies are errors](#unassigned-locals-in-for--of-bodies-are-errors)
@@ -33,8 +34,12 @@ translates just as a destructuring import of it would.
 
 ```temper inert
 let rx = import("std/regex");
-let pattern: rx.Regex = new (rx.Regex)(rx.oneOrMore(new (rx.CodePoints)("ab")));
+let pattern: rx.Regex = new rx.Regex(rx.oneOrMore(new rx.CodePoints("ab")));
 ```
+
+In `new ns.C(x)`, the dots belong to the class, as `new (ns.C)(x)`.
+Only a namespace may qualify the class there, and `new` without
+arguments, as `new C` or `new { k: v }`, is an error.
 
 ## 🚨Breaking change: `builtins.X` removed
 
@@ -42,6 +47,18 @@ let pattern: rx.Regex = new (rx.Regex)(rx.oneOrMore(new (rx.CodePoints)("ab")));
 `core` works on every backend. Where a module declares a name core has,
 as `class String`, it reaches core's through a namespace:
 `let core = import("core");` then `core.String`.
+
+## 🚨Breaking change: `Void` is never a value; type arguments fit their bounds
+
+`Void` is only what a function returns, as `f(): Void` or `fn (): Void`.
+A parameter, local, or field of type `Void`, a type argument like
+`List<Void>`, `Void?`, and a `Void` result where a value is wanted, as
+in `let f(): AnyValue { g() }` for `g(): Void`, are errors.
+
+A type argument must fit its parameter's bound wherever it's written,
+annotations included, so `let m: Map<Boolean, Int>` is an error: a map
+key must be a `MapKey` of itself. `AnyValue`, `MapKey<String>`, and
+`Never<Int>` aren't map keys.
 
 ## 🚨Breaking change: Rest parameter syntax removed.
 

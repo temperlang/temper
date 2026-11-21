@@ -1083,6 +1083,7 @@ error 308..315: Runtime type check from C to D can never succeed
 error 343..354: Runtime type check from Int32 to String can never succeed
 error 384..392: Runtime type check from Float64 to Int32 can never succeed
 error 431..441: Runtime type check from Int32 to Int64 can never succeed
+error 454..458: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
 error 471..472: Expected subtype of AnyValue?, but got Void
 error 471..479: Runtime type check from Void to Int32 can never succeed
 error 520..526: Unrelated types cannot be targeted with is or as runtime type checks: <[J]> from I

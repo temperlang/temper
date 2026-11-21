@@ -248,11 +248,22 @@ milestone 4's generics slice; status in [milestone-4.md](history/milestone-4.md)
 - **Arguments:** one generic type given arguments is another only if
   they're the same type. Since Kotlin Temper honors `@out` and `@in`
   (`List<@out T>`), where tempest's parameters are invariant ("Type
-  parameters are invariant", above), a mismatch is reported only where
-  the bases are the same and some pair of arguments is unrelated, neither
-  a subtype of the other, which no variance accepts: `List<Int32>` isn't
-  a `List<String>`, nor `List<T>` a `List<Int32>`, but `List<Dog>` as a
+  parameters are invariant", above), a mismatch at a parameter so marked
+  is reported only where some pair of arguments is unrelated, neither a
+  subtype of the other, which no variance accepts: `List<Int32>` isn't a
+  `List<String>`, nor `List<T>` a `List<Int32>`, but `List<Dog>` as a
   `List<Animal>`, or `List<Int32?>` as a `List<Int32>`, isn't reported.
+  At a parameter without either, invariant in Kotlin too, arguments that
+  aren't the same known type are reported: `MapKey<String>` isn't a
+  `MapKey<MapKey<String>>`, nor `ListBuilder<Int32>` a
+  `ListBuilder<AnyValue>`.
+- **Bounds:** a type argument must fit its parameter's bound, with the
+  arguments put in for a bound naming them (`K extends MapKey<K>`),
+  wherever the type is written: a call's type arguments or bindings
+  (below), an annotation (`let m: Map<Boolean, Int>`), a type argument,
+  or a supertype. It's judged as a type, not a value (`Types::fits_bound`):
+  `AnyValue` fits only `AnyValue`, though a value of it may hold any
+  other; as Kotlin's check, a nullable type fits `AnyValue`.
 - **Builtin supertypes,** as core declares them: `List<T>` and
   `ListBuilder<T>` are `Listed<T>`s, `Map<K, V>` and `MapBuilder<K, V>`
   are `Mapped<K, V>`s, `SafeGenerator<T>` is a `Generator<T>`,
@@ -1382,6 +1393,16 @@ value, as `b()` for `b(): Void`, `void`, a `Void` parameter, a loop
 - an argument of any call, builtin operators', `console.log`'s and
   setters' included (`c(void)`, `b() == b()`, `"${b()}"`), at the
   argument.
+
+Decided (t854, Tom): `Void` is never a value. So a non-`Void` function's
+`Void` result (`let h(): AnyValue { b() }`) is reported likewise, `Void`
+is no other type's subtype, not even `AnyValue`'s, and naming `Void`
+where a value's type goes is "Void is only what a function returns":
+a parameter, local, or field (`x: Void`), a type argument (`List<Void>`,
+`r<Void>(…)`), `Void?`, a function type's parameter, or a bound. It may
+be a function's result type, a function type's, or `Never<Void>`'s
+argument, each maybe with `throws`; where it names a class (`new
+Void()`, `extends Void`, `is Void`) those report their own errors.
 
 Not where an error is reported at the same span already, as "Expected
 subtype of Int32, but got Void" for `g(b())`, since Kotlin reports one

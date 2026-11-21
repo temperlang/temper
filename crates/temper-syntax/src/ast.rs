@@ -201,6 +201,8 @@ pub enum Message {
     /// `cents 100`; the text of the first one that's stray, and what else
     /// could have gone before it, `;` or `,`.
     MissingOperator(String, &'static str),
+    /// Ours: `new` without arguments, as in `new C` or `new { k: v }`.
+    NewWithoutArguments,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -227,6 +229,7 @@ impl Message {
             Message::UnmatchedCloseBracket => "UnmatchedCloseBracket",
             Message::UnclosedAngle(_) => "UnclosedAngle",
             Message::MissingOperator(..) => "MissingOperator",
+            Message::NewWithoutArguments => "NewWithoutArguments",
         }
     }
 
@@ -274,6 +277,9 @@ impl Message {
             }
             Message::MissingOperator(stray, separator) => {
                 format!("Expected an operator or `{separator}` before `{stray}`")
+            }
+            Message::NewWithoutArguments => {
+                "`new` takes a class then arguments, as `new C(x)`".into()
             }
         }
     }

@@ -631,15 +631,19 @@ let q2(x: Int): Void { let v = when (x) { 1 -> b(); else -> b() }; }
         (Let ^v:37 (Block (If (Call == x:36 1) (Call b:1) (Call b:1))))
         #void))))
 error 9..12: Void expressions cannot be used as values
+error 61..65: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
 error 89..96: Void expressions cannot be used as values
 error 100..104: Void expressions cannot be used as values
 error 133..136: Void expressions cannot be used as values
 error 166..193: Void expressions cannot be used as values
 error 226..229: Expected subtype of Int32, but got Void
+error 243..247: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
 error 260..261: Expected subtype of AnyValue?, but got Void
 error 260..268: Runtime type check from Void to Int32 can never succeed
+error 345..349: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
 error 352..355: Void expressions cannot be used as values
 error 441..471: Void expressions cannot be used as values
+error 521..525: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
 error 528..532: Void expressions cannot be used as values
 error 536..543: Void expressions cannot be used as values
 error 559..562: Expected subtype of String, but got Void
@@ -648,6 +652,7 @@ error 583..586: Void expressions cannot be used as values
 error 602..605: Void expressions cannot be used as values
 error 624..627: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Void]
 error 647..657: Cannot assign to Int32 from Void
+error 685..689: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
 error 692..696: Void expressions cannot be used as values
 error 784..812: Void expressions cannot be used as values
 error 847..881: Void expressions cannot be used as values
@@ -3553,3 +3558,168 @@ error 903..924: Type GPlain has method fail with signature fail(): T, but it sho
 error 939..944: Never needs the type it stands for, as Never<Int> or Never<Void>
 error 974..979: Never needs the type it stands for, as Never<Int> or Never<Void>
 log 1
+
+=== type arguments fit their bounds, in calls and in annotations
+// A map key is a `MapKey` of itself: `AnyValue` isn't one, though a value
+// of it may hold one; `MapKey<String>` isn't a `MapKey<MapKey<String>>`,
+// as `MapKey`'s parameter has no variance; and `Never<Int>` isn't one.
+// Annotations and type arguments anywhere are checked as calls are.
+class Key(public k: Int) extends MapKey<Key> {}
+class Box<T extends MapKey<T>>(public t: T) {}
+let f(): Void {
+  let a = new MapBuilder<AnyValue, Int>();
+  let b = new MapBuilder<MapKey<String>, Int>();
+  let c = new MapBuilder<Never<Int>, Int>();
+  let d = new MapBuilder<String, Int>();
+  let e = new MapBuilder<Int, Int>();
+  let g = new MapBuilder<Key, Int>();
+  let m: Map<Boolean, Int> = new Map<String, Int>([]);
+  let n: Map<String, Int> = new Map<String, Int>([]);
+  let o: List<Map<Float64, Int>> = [];
+  let p: Box<Boolean>? = null;
+  let q: Box<Key>? = null;
+  let r: MapBuilder<AnyValue, Int>? = null;
+}
+let keys(m: Mapped<Boolean, Int>): Void {}
+let maker(): fn (): Map<Int64, Int> { fn (): Map<Int64, Int> { new Map<Int64, Int>([]) } }
+--- settled
+(Block
+  (Class ^Key:0 (Call <> MapKey Key:0) (Param ^k:6 Int))
+  (Class ^Box:1 (TypeParam ^T:7 (Call <> MapKey T:7)) (Param ^t:9 T:7))
+  (Let
+    ^f:2
+    (Fn
+      Void
+      (Block
+        (Let ^a:10 (Call new (Call <> MapBuilder AnyValue Int)))
+        (Let ^b:11 (Call new (Call <> MapBuilder (Call <> MapKey String) Int)))
+        (Let ^c:12 (Call new (Call <> MapBuilder (Call <> Never Int) Int)))
+        (Let ^d:13 (Call new (Call <> MapBuilder String Int)))
+        (Let ^e:14 (Call new (Call <> MapBuilder Int Int)))
+        (Let ^g:15 (Call new (Call <> MapBuilder Key:0 Int)))
+        (Let
+          ^m:16
+          (Call <> Map Boolean Int)
+          (Call new (Call <> Map String Int) (Call list)))
+        (Let
+          ^n:17
+          (Call <> Map String Int)
+          (Call new (Call <> Map String Int) (Call list)))
+        (Let ^o:18 (Call <> List (Call <> Map Float64 Int)) (Call list))
+        (Let ^p:19 (Call ? (Call <> Box:1 Boolean)) null)
+        (Let ^q:20 (Call ? (Call <> Box:1 Key:0)) null)
+        (Let ^r:21 (Call ? (Call <> MapBuilder AnyValue Int)) null)
+        #void)))
+  (Let ^keys:3 (Fn (Let ^m:22 (Call <> Mapped Boolean Int)) Void (Block)))
+  (Let
+    ^maker:4
+    (Fn
+      (Call FnType (Call <> Map Int64 Int))
+      (Block
+        (Fn
+          (Call <> Map Int64 Int)
+          (Block (Call new (Call <> Map Int64 Int) (Call list))))))))
+error 411..442: Type formal <K extends MapKey<K>> cannot bind to AnyValue which does not fit upper bounds [MapKey<K>]
+error 454..491: Type formal <K extends MapKey<K>> cannot bind to MapKey<String> which does not fit upper bounds [MapKey<K>]
+error 503..536: Type formal <K extends MapKey<K>> cannot bind to Never<Int32> which does not fit upper bounds [MapKey<K>]
+error 664..681: Type formal <K extends MapKey<K>> cannot bind to Boolean which does not fit upper bounds [MapKey<K>]
+error 684..708: Cannot assign to Map<Boolean, Int32> from Map<String, Int32>
+error 778..795: Type formal <K extends MapKey<K>> cannot bind to Float64 which does not fit upper bounds [MapKey<K>]
+error 812..824: Type formal <T extends MapKey<T>> cannot bind to Boolean which does not fit upper bounds [MapKey<T>]
+error 870..895: Type formal <K extends MapKey<K>> cannot bind to AnyValue which does not fit upper bounds [MapKey<K>]
+error 919..939: Type formal <K extends MapKey<K>> cannot bind to Boolean which does not fit upper bounds [MapKey<K>]
+error 970..985: Type formal <K extends MapKey<K>> cannot bind to Int64 which does not fit upper bounds [MapKey<K>]
+error 995..1010: Type formal <K extends MapKey<K>> cannot bind to Int64 which does not fit upper bounds [MapKey<K>]
+error 1013..1036: Type formal <K extends MapKey<K>> cannot bind to Int64 which does not fit upper bounds [MapKey<K>]
+
+=== Void is never a value
+// Tom decided (t854): wherever a value goes, `Void` isn't one. A function
+// may return `Void`, and a function type may, as statements produce it.
+let f(x: Void): AnyValue { x }
+let g(): Void {}
+let h(): AnyValue { g() }
+let i(): Void { let v: Void = g(); let w = g(); }
+class C(public v: Void) {}
+let j(): List<Void> { [] }
+let k(): Boolean { g() == g() }
+let l(): List<AnyValue> { [g()] }
+let m(xs: ListBuilder<Int>): Void { xs.add(1); }
+let n(): fn (): Void { fn (): Void { g() } }
+let o(): Void { g(); return g(); }
+let p(b: Boolean): Void { if (b) { g() } else { g() } }
+let q(): String { "${g()}" }
+let r<T>(x: T): T { x }
+let s(): Void { r(g()); r<Void>(g()); }
+let t(f: fn (Void): Int, u: Void?): Void {}
+let w<T extends Void>(): Void {}
+let bail(): Never<Void> throws Bubble { bubble() }
+let v(): Void throws Bubble {}
+let y(f: fn (): Void throws Bubble, z: fn (Int, String): Void): Void { f() orelse void; }
+--- settled
+(Block
+  (Let ^f:0 (Fn (Let ^x:20 Void) AnyValue (Block x:20)))
+  (Let ^g:1 (Fn Void (Block)))
+  (Let ^h:2 (Fn AnyValue (Block (Call g:1))))
+  (Let
+    ^i:3
+    (Fn Void (Block (Let ^v:21 Void (Call g:1)) (Let ^w:22 (Call g:1)) #void)))
+  (Class ^C:4 (Param ^v:24 Void))
+  (Let ^j:5 (Fn (Call <> List Void) (Block (Call list))))
+  (Let ^k:6 (Fn Boolean (Block (Call == (Call g:1) (Call g:1)))))
+  (Let ^l:7 (Fn (Call <> List AnyValue) (Block (Call list (Call g:1)))))
+  (Let
+    ^m:8
+    (Fn
+      (Let ^xs:25 (Call <> ListBuilder Int))
+      Void
+      (Block (Call (Call . xs:25 \add) 1) #void)))
+  (Let ^n:9 (Fn (Call FnType Void) (Block (Fn Void (Block (Call g:1))))))
+  (Let ^o:10 (Fn Void (Block (Call g:1) (Return @486 (Call g:1)) #void)))
+  (Let
+    ^p:11
+    (Fn
+      (Let ^b:26 Boolean)
+      Void
+      (Block (If b:26 (Block (Call g:1)) (Block (Call g:1))))))
+  (Let ^q:12 (Fn String (Block (Call cat (Call g:1)))))
+  (Let ^r:13 (Fn (TypeParam ^T:27) (Let ^x:28 T:27) T:27 (Block x:28)))
+  (Let
+    ^s:14
+    (Fn
+      Void
+      (Block (Call r:13 (Call g:1)) (Call r:13 \typeArg Void (Call g:1)) #void)))
+  (Let
+    ^t:15
+    (Fn
+      (Let ^f:29 (Call FnType Void Int))
+      (Let ^u:30 (Call ? Void))
+      Void
+      (Block)))
+  (Let ^w:16 (Fn (TypeParam ^T:31 Void) Void (Block)))
+  (Let ^bail:17 (Fn (Call throws (Call <> Never Void) Bubble) (Block (Fail))))
+  (Let ^v:18 (Fn (Call throws Void Bubble) (Block)))
+  (Let
+    ^y:19
+    (Fn
+      (Let ^f:32 (Call FnType (Call throws Void Bubble)))
+      (Let ^z:33 (Call FnType Int String Void))
+      Void
+      (Block (Orelse (Call f:32) void) #void))))
+error 157..161: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
+error 175..176: Void expressions cannot be used as values
+error 216..219: Void expressions cannot be used as values
+error 245..249: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
+error 252..255: Void expressions cannot be used as values
+error 265..268: Void expressions cannot be used as values
+error 290..294: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
+error 313..317: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
+error 345..348: Void expressions cannot be used as values
+error 352..355: Void expressions cannot be used as values
+error 385..388: Void expressions cannot be used as values
+error 598..601: Void expressions cannot be used as values
+error 648..651: Void expressions cannot be used as values
+error 656..660: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
+error 662..665: Void expressions cannot be used as values
+error 683..687: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
+error 698..702: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
+error 730..734: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type

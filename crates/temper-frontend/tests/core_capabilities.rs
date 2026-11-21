@@ -65,16 +65,13 @@ enum Key {
     Yes,
     /// No: "cannot bind to T which does not fit upper bounds".
     No,
-    /// Not meant to, but typing doesn't know it isn't a `MapKey` yet, so
-    /// it passes (notes/core-capabilities.md, "Map key bounds").
-    Gap,
 }
 
 /// Each type user code can name, as written with type arguments, and
 /// what it may do with it (notes/core-capabilities.md).
 #[rustfmt::skip]
 const ROWS: &[(&str, New, Ext, Cast, Key)] = &[
-    ("AnyValue", New::Abstract, Ext::Yes, Cast::Yes, Key::Gap),
+    ("AnyValue", New::Abstract, Ext::Yes, Cast::Yes, Key::No),
     ("Boolean", New::Private, Ext::Concrete, Cast::No, Key::No),
     ("Bubble", New::Private, Ext::Concrete, Cast::Unrelated, Key::No),
     ("DenseBitVector", New::Args("8"), Ext::Concrete, Cast::Yes, Key::No),
@@ -93,9 +90,9 @@ const ROWS: &[(&str, New, Ext, Cast, Key)] = &[
     ("Listed<Int>", New::Abstract, Ext::Sealed, Cast::TypeArgs, Key::No),
     ("Map<String, Int>", New::Args("[]"), Ext::Concrete, Cast::No, Key::No),
     ("MapBuilder<String, Int>", New::Args(""), Ext::Concrete, Cast::No, Key::No),
-    ("MapKey<String>", New::Abstract, Ext::Yes, Cast::TypeArgs, Key::Gap),
+    ("MapKey<String>", New::Abstract, Ext::Yes, Cast::TypeArgs, Key::No),
     ("Mapped<String, Int>", New::Abstract, Ext::Sealed, Cast::TypeArgs, Key::No),
-    ("Never<Int>", New::Abstract, Ext::Sealed, Cast::Impossible, Key::Gap),
+    ("Never<Int>", New::Abstract, Ext::Sealed, Cast::Impossible, Key::No),
     ("NoStringIndex", New::Private, Ext::Concrete, Cast::ConnectedGap, Key::No),
     ("Pair<Int, Int>", New::Args("1, 2"), Ext::Concrete, Cast::Yes, Key::No),
     ("Promise<Int>", New::Private, Ext::Concrete, Cast::ConnectedGap, Key::No),
@@ -275,12 +272,18 @@ fn cases() -> Vec<Case> {
         out.push((check, wanted.clone(), None));
         let cast = format!("let f(x: AnyValue): Void throws Bubble {{ x as {ty}; }}");
         out.push((cast, wanted, None));
-        // Any type may be a type argument, and only a `MapKey` a map key.
-        out.push((format!("let v: List<{ty}>? = null;"), vec![], None));
-        let wanted = match key {
-            Key::Yes | Key::Gap => vec![],
+        // Any type but `Void` may be a type argument, and only a `MapKey`
+        // a map key.
+        let void = vec![String::from("Void is only what a function returns")];
+        let wanted = if ty == "Void" { void.clone() } else { vec![] };
+        out.push((format!("let v: List<{ty}>? = null;"), wanted, None));
+        let mut wanted = match key {
+            Key::Yes => vec![],
             Key::No => vec!["Type formal <K extends MapKey<K>> cannot bind to".into()],
         };
+        if ty == "Void" {
+            wanted.splice(0..0, void);
+        }
         out.push((
             format!("let v = new MapBuilder<{ty}, Int>();"),
             wanted,

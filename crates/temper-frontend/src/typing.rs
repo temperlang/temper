@@ -1227,7 +1227,10 @@ impl Settle {
         let first = self.lib.tree.children(node).first().copied();
         let last = self.lib.tree.children(node).last().copied();
         match (self.lib.tree.kind(node), first, last) {
-            (NodeKind::RightName, ..) => self.check_bare_never(node),
+            (NodeKind::RightName, ..) => {
+                self.check_bare_never(node);
+                self.check_void_type(node);
+            }
             (NodeKind::Let, ..) => self.check_let(node),
             (NodeKind::Assign, Some(target), Some(value)) if count == 2 => {
                 if let Some(decl) = self.local_target(target) {
@@ -1261,11 +1264,16 @@ impl Settle {
                     // may never end.
                     let never = matches!(self.typing.types.get(t), TypeData::NeverOf(_));
                     for result in results {
-                        // Kotlin Temper reports a Void result where one is
-                        // wanted at odd positions; not yet here.
+                        // A `Void` result where a value is wanted is one used
+                        // as a value (t854); Kotlin Temper reports it at odd
+                        // positions. Not a loop, which may end only by
+                        // returning, nor the `void` after a jump.
                         let void = self.known_type(result) == VOID;
-                        if !void || (never && self.lib.tree.kind(result) != NodeKind::Loop) {
+                        let is_loop = self.lib.tree.kind(result) == NodeKind::Loop;
+                        if !void || (never && !is_loop) {
                             self.check_value(t, result, Site::Result);
+                        } else if !never && t != VOID && !is_loop && !self.is_void_value(result) {
+                            self.check_not_void(result, result);
                         }
                     }
                 }
@@ -1276,6 +1284,7 @@ impl Settle {
             }
             (NodeKind::Call, ..) => {
                 self.check_call(node);
+                self.check_type_args(node);
                 self.record_trailing_block(node);
                 let args = self
                     .lib
@@ -1715,6 +1724,112 @@ impl Settle {
         if self.typing.types.builtin(i) == NEVER && !applied {
             let span = self.lib.tree.span(node);
             self.lib.report(Level::Error, Message::BareNever, span);
+        }
+    }
+
+    /// Reports a generic type's argument that doesn't fit its type
+    /// parameter's bound, as `Boolean` in `Map<Boolean, Int>`, wherever the
+    /// type is written: an annotation, a type argument, a supertype. Not
+    /// the class `new` makes, which its call reports as any generic call's
+    /// type arguments ([`Settle::check_generic_call`]).
+    fn check_type_args(&mut self, node: NodeId) {
+        let tree = &self.lib.tree;
+        let [angle, base, ref args @ ..] = *tree.children(node) else {
+            return;
+        };
+        if self.scopes.resolved_builtin(angle) != Some(Builtin::Function(Function::Angle)) {
+            return;
+        }
+        let made = (self.typing.parent(node)).is_some_and(|p| {
+            let children = tree.children(p);
+            tree.kind(p) == NodeKind::Call
+                && children.get(1) == Some(&node)
+                && self.scopes.resolved_builtin(children[0])
+                    == Some(Builtin::Function(Function::New))
+        });
+        if made {
+            return;
+        }
+        let args = args.to_vec();
+        let formals = match self.scopes.resolved_builtin(base) {
+            Some(Builtin::Type(i)) => self.core_type_formals(crate::builtins::TYPES[i as usize]),
+            Some(_) => None,
+            None => (self.scopes.resolved(base))
+                .and_then(|b| self.type_decl(b))
+                .map(|class| self.own_formals(class)),
+        };
+        let Some(formals) = formals.filter(|f| f.len() == args.len()) else {
+            return;
+        };
+        let actuals: Vec<TypeId> = args.iter().map(|&a| self.eval_type(a)).collect();
+        for (&formal, &actual) in formals.iter().zip(&actuals) {
+            let bound = self.declared_bound(formal);
+            let types = &mut self.typing.types;
+            let wanted = types.substitute(bound, &formals, &actuals);
+            if !types.is_known(actual) || types.fits_bound(actual, wanted) {
+                continue;
+            }
+            let message = Message::TypeFormalBound(
+                self.show_formal(formal),
+                self.show(actual),
+                self.show(bound),
+            );
+            let span = self.lib.tree.span(node);
+            self.lib.report(Level::Error, message, span);
+            return;
+        }
+    }
+
+    /// Whether `node` is the `void` a block without a result ends with,
+    /// unreachable after a jump or reported as falling off its end.
+    fn is_void_value(&self, node: NodeId) -> bool {
+        self.lib.value(node) == Some(&Value::Void)
+    }
+
+    /// Reports `Void` named as a value's type: a declaration's (a
+    /// parameter, local, field, or a type parameter's bound, `x: Void`), a
+    /// type argument (`List<Void>`), `Void?`, or a function type's
+    /// parameter (`fn (Void): Int`), as no value is ever a `Void` (t854).
+    /// It may be what a function or function type returns, and
+    /// `Never<Void>`'s argument; where it names a class, as `new Void()`
+    /// or `x is Void`, or is a type value, other rules apply.
+    fn check_void_type(&mut self, node: NodeId) {
+        let Some(Builtin::Type(i)) = self.scopes.resolved_builtin(node) else {
+            return;
+        };
+        if self.typing.types.builtin(i) != VOID {
+            return;
+        }
+        let tree = &self.lib.tree;
+        let Some(parent) = self.typing.parent(node) else {
+            return;
+        };
+        let value_type = match tree.kind(parent) {
+            NodeKind::Let => core::let_parts(tree, parent).1 == Some(node),
+            NodeKind::Call => {
+                let children = tree.children(parent);
+                match (self.scopes.resolved_builtin(children[0]), children) {
+                    (Some(Builtin::Function(Function::FnType)), [.., ret]) => *ret != node,
+                    (Some(Builtin::Function(Function::Nullable)), _) => true,
+                    (Some(Builtin::Function(Function::Angle)), [_, base, ..]) => {
+                        *base != node
+                            && !matches!(self.scopes.resolved_builtin(*base),
+                                Some(Builtin::Type(b)) if self.typing.types.builtin(b) == NEVER)
+                    }
+                    // A call's type argument, as `\typeArg Void` in `r<Void>(x)`.
+                    _ => (children.windows(2)).any(|pair| {
+                        pair[1] == node
+                            && (self.lib.symbol(pair[0]))
+                                .is_some_and(|k| self.lib.names.get(k) == "typeArg")
+                    }),
+                }
+            }
+            _ => false,
+        };
+        if value_type {
+            let span = self.lib.tree.span(node);
+            self.lib
+                .report(Level::Error, Message::VoidTypeNotValue, span);
         }
     }
 

@@ -4,11 +4,11 @@
 === a std module as a namespace: types, values, functions, constructors
 let rx = import("std/regex");
 let t = import("std/temporal");
-let r: rx.Regex = new (rx.Regex)(rx.oneOrMore(new (rx.CodePoints)("ab")));
+let r: rx.Regex = new rx.Regex(rx.oneOrMore(new rx.CodePoints("ab")));
 let m: rx.Match = r.find("xababy") orelse panic();
 console.log(m.full.value);
 let groups: Map<String, rx.Group> = m.groups;
-let d: t.Date = new (t.Date)(2024, 2, 29) orelse panic();
+let d: t.Date = new t.Date(2024, 2, 29) orelse panic();
 console.log(d.toString());
 let f(rx: String): String { "${rx}!" }
 console.log(f("shadowed"));
@@ -98,3 +98,33 @@ let f(core: Int, builtins: Int): Int { core + builtins }
 console.log(f(core, builtins).toString());
 --- settled
 log 3
+
+=== new through a namespace: generics, chained calls, the parenthesized form
+let rx = import("std/regex");
+let json = import("std/json");
+let found = new rx.CodePoints("ab").compiled().found("xaby");
+console.log(found.toString());
+let adapter: json.JsonAdapter<Int?> = new json.OrNullJsonAdapter<Int>(json.int32JsonAdapter());
+let n: json.JsonInt32 = new json.JsonInt32(7);
+console.log(n.content.toString());
+let older = new (rx.CodePoints)("c").compiled().found("c");
+console.log(older.toString());
+--- settled
+log true
+log 7
+log true
+
+=== new qualified by anything but a namespace
+class Box(public b: Int) {}
+class Outer(public box: Box) {}
+let outer = new Outer(new Box(1));
+let a = new outer.Box(2);
+let f(o: Outer): Void { let c = new o.Box(3); }
+let d = new Outer.Box(4);
+let e = new (outer.box)(5);
+--- settled
+error 107..116: new takes a class, or a module namespace's, as `new ns.C()`; outer is not a module namespace
+error 157..162: new takes a class, or a module namespace's, as `new ns.C()`; o is not a module namespace
+error 181..190: new takes a class, or a module namespace's, as `new ns.C()`; Outer is not a module namespace
+error 208..217: new takes a class, or a module namespace's, as `new ns.C()`; outer is not a module namespace
+Failed: new takes a class, or a module namespace's, as `new ns.C()`; outer is not a module namespace

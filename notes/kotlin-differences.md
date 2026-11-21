@@ -79,12 +79,25 @@ Language and frontend:
   code that must qualify one (where its module declares the same name)
   imports core as a namespace, `let core = import("core")`, under any
   name. A user's own `core` or `builtins`, as a module or a variable, is
-  an ordinary name.
-  Test: settle-std/namespaces.cases; funtest imports/namespaces in
+  an ordinary name. `new ns.C(x)` parses as `new (ns.C)(x)` (Kotlin's
+  parser takes `(new ns).C(x)`, an error), and only a namespace may qualify the class;
+  `new` without arguments, as `new { k: v }`, is its own error.
+  Test: settle-std/namespaces.cases; temper-syntax parse and ast
+  edge-cases.cases, "qualified new"; funtest imports/namespaces in
   kit::GENERICS; to_tmpl.rs, `namespaces_translate_as_destructured_imports`;
   funtests names/core-named and names/core-shadows in kit::NAMES;
   temper-syntax/tests/ast/kotlin-build-tree-tests.cases,
   "builtins".
+- **`Void` is never a value, and bounds are checked as types** (t854,
+  t853, 2026-11-21): `x: Void`, `List<Void>`, `Void?`, and a `Void`
+  result where a value is wanted are errors, where Kotlin lets some pass
+  or reports them at odd positions. A type argument's bound is checked
+  wherever the type is written (Kotlin: calls), `AnyValue` fits only
+  `AnyValue` there, and a parameter without `@out` or `@in` compares
+  arguments invariantly, as Kotlin does ([typing.md](typing.md), "Generic
+  types").
+  Test: settle/types.cases, "Void is never a value" and "type arguments
+  fit their bounds, in calls and in annotations"; core_capabilities.rs.
 - **Named `@fun` interfaces are nominal** (decided 2026-10-29, done;
   [typing.md](typing.md), "Fun interfaces"): a `Pred` isn't a `Check`,
   even where their `apply`s' signatures match, and the error suggests

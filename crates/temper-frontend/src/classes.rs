@@ -1477,6 +1477,28 @@ impl Settle {
         let Some(&target) = self.lib.tree.children(call).get(1) else {
             return Ok(());
         };
+        // `new ns.C()` names a namespace's class: by now `ns.C` is the
+        // export's name. Any other `a.C`, `a` a value, class, or local,
+        // is an error, `new C<T>()` or not.
+        let tree = &self.lib.tree;
+        let class = match *tree.children(target) {
+            [angle, class, ..]
+                if self.lib.value(angle) == Some(&Value::Builtin(SyntaxBuiltin::Angle)) =>
+            {
+                class
+            }
+            _ => target,
+        };
+        if let [dot, object, _] = *tree.children(class) {
+            let is_dot = tree.kind(dot) == NodeKind::BuiltinName
+                && (self.lib.name(dot)).is_some_and(|n| self.lib.names.get(n) == ".");
+            if is_dot {
+                let span = tree.span(object);
+                let text = self.lib.source_text(span).to_string();
+                self.error(class, Message::NewQualifierNotNamespace(text));
+                return Ok(());
+            }
+        }
         self.resolve_name(target, scope, forced)?;
         let decl = self.scopes.resolved(target).and_then(|b| self.type_decl(b));
         if let Some(decl) = decl.filter(|&d| self.lib.tree.data(d) & CLASS_INTERFACE != 0) {

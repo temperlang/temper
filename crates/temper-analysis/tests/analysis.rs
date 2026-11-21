@@ -387,7 +387,7 @@ fn core_namespace() {
 }
 
 const SPACES: &str = r#"let rx = import("std/regex");
-let pattern: rx.Regex = new (rx.Regex)(rx.Dot);
+let pattern: rx.Regex = new rx.Regex(rx.Dot);
 let found = pattern.found("a");
 "#;
 

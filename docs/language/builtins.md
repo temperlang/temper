@@ -1795,9 +1795,9 @@ exactly as code that destructures the same names. So it's an error to use
 `NAME` other than before `.member` (as a value, an argument, or a type),
 to name a member the module doesn't export, or to export, type, or
 `var` a namespace. A namespace is declared at a module's top level, and
-a local of the same name shadows it, as any name. To construct a class
-through one, put the qualified name in parentheses: `new (temporal.Date)(2024,
-2, 29)`.
+a local of the same name shadows it, as any name. A class is constructed
+through one as `new temporal.Date(2024, 2, 29)`; only a namespace may
+qualify the class after `new`.
 
 A bare `import("./tests");` statement, with nothing destructured, only
 makes that module part of the library, as for a module of tests that

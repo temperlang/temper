@@ -62,6 +62,7 @@ error 267..272: Actual arguments do not match signature: (Int32, Int32) -> Int32
 error 299..302: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, String]
 error 326..329: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, String]
 error 333..336: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]
+error 357..361: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
 error 374..375: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Void]
 error 409..410: Actual arguments do not match signature: (Int32, Int32) -> Int32 throws Bubble expected [Int32, Int32], but got [Int32?, Int32]
 error 409..414: Cannot bubble from a function without Bubble in its return type
