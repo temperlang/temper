@@ -73,6 +73,25 @@ pub enum SymbolKind {
     /// A type parameter. The interpreter ignores types, so no frame holds
     /// it.
     TypeParam,
+    /// A module namespace, `let rx = import("std/regex")`
+    /// ([`Namespace`]): a name only for `rx.member`, which settling
+    /// replaces with the export it names, so nothing after settling
+    /// reads it.
+    Namespace,
+}
+
+/// A module namespace, `let rx = import("std/regex")`, as
+/// [`Scopes::namespace`] gives it for its symbol.
+#[derive(Clone, Debug)]
+pub struct Namespace {
+    /// The path imported, as `std/regex`.
+    pub path: String,
+    /// The module's scope, whose exports `rx.member` names; for core,
+    /// the builtins' ([`BUILTINS`]).
+    pub scope: ScopeId,
+    /// The declaration's name, `rx` in `let rx = …`, left out of the
+    /// settled tree with its declaration.
+    pub name: NodeId,
 }
 
 /// A declared name.
@@ -118,6 +137,12 @@ pub struct Scopes {
     node_scopes: HashMap<NodeId, ScopeId>,
     builtins: HashMap<NameId, SymbolId>,
     hidden: HashMap<Builtin, SymbolId>,
+    /// Each module namespace, by its symbol.
+    namespaces: HashMap<SymbolId, Namespace>,
+    /// Each `rx.member` settled into the export it names: the node it
+    /// became, a name, and `rx`'s, which the settled tree leaves out, for
+    /// editors.
+    qualified: HashMap<NodeId, NodeId>,
 }
 
 pub const BUILTINS: ScopeId = ScopeId(0);
@@ -339,6 +364,71 @@ impl Scopes {
             at = scope.parent;
         }
         Lookup::Missing
+    }
+
+    /// Declares a module namespace in `scope`.
+    pub fn declare_namespace(&mut self, scope: ScopeId, name: NameId, ns: Namespace) -> SymbolId {
+        let id = self.declare(scope, name, SymbolKind::Namespace, None, false);
+        self.resolve(ns.name, id);
+        self.namespaces.insert(id, ns);
+        id
+    }
+
+    /// The module namespace a symbol is, if it is one.
+    pub fn namespace(&self, symbol: SymbolId) -> Option<&Namespace> {
+        self.namespaces.get(&symbol)
+    }
+
+    /// The module namespaces, by their symbols, in no order.
+    pub fn namespaces(&self) -> impl Iterator<Item = (SymbolId, &Namespace)> {
+        self.namespaces.iter().map(|(&s, ns)| (s, ns))
+    }
+
+    /// Records that `node`, a name now, was `rx.member`, with `rx` the
+    /// name node `qualifier`, resolved to its namespace.
+    pub fn qualify(&mut self, node: NodeId, qualifier: NodeId) {
+        self.qualified.insert(node, qualifier);
+    }
+
+    /// The name nodes of namespaces that qualified names, `rx` in each
+    /// `rx.member`, in no order.
+    pub fn qualifiers(&self) -> impl Iterator<Item = NodeId> + '_ {
+        self.qualified.values().copied()
+    }
+
+    /// The namespace's name node a name was qualified by, `rx` in
+    /// `rx.member`, if it was.
+    pub fn qualifier(&self, node: NodeId) -> Option<NodeId> {
+        self.qualified.get(&node).copied()
+    }
+
+    /// What the module whose scope is `scope` exports as `name`: its
+    /// exported declaration of it; or, for core's ([`BUILTINS`]), its
+    /// builtin of that name, but for macros and operators.
+    pub fn exported(&self, scope: ScopeId, name: NameId, names: &Names) -> Option<SymbolId> {
+        self.exports(scope, names)
+            .find(|&(n, _)| n == name)
+            .map(|(_, s)| s)
+    }
+
+    /// What the module whose scope is `scope` exports, as
+    /// [`Scopes::exported`] reads them, latest first.
+    pub fn exports<'a>(
+        &'a self,
+        scope: ScopeId,
+        names: &'a Names,
+    ) -> impl Iterator<Item = (NameId, SymbolId)> + 'a {
+        let core = scope == BUILTINS;
+        (self.get(scope).names.iter().rev().copied()).filter(move |&(n, b)| {
+            let symbol = self.symbol(b);
+            match symbol.kind {
+                SymbolKind::Builtin(Builtin::Macro(_)) => false,
+                SymbolKind::Builtin(_) if core => {
+                    (names.get(n)).starts_with(|c: char| c.is_alphabetic() || c == '_')
+                }
+                _ => symbol.exported,
+            }
+        })
     }
 
     /// The builtin with a name, as for builtin names like `.`.

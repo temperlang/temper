@@ -84,6 +84,13 @@ pub const CLASSES: [&str; 14] = [
     "interfaces/pure-virtual",
 ];
 
+/// The functional tests of names: a module's own declarations of names
+/// core has too (`String`, `List`), and `core` and `builtins` as
+/// ordinary names, of a module and of variables, beside `import("core")`.
+/// Each backend runs them with [`cases_with`]; Kotlin Temper has no
+/// record of them, as it reserves `builtins`.
+pub const NAMES: [&str; 2] = ["names/core-named", "names/core-shadows"];
+
 /// The functional tests with nullable types, `orelse`, and `bubble()`
 /// that tmpl's translation covers (subset B's third step): each backend
 /// runs them as it covers nullables, with [`cases_with`].
@@ -95,10 +102,15 @@ pub const NULLABLES: [&str; 4] = [
 ];
 
 /// The functional tests with generic types and core's lists that tmpl's
-/// translation covers (subset B's third step, generics), and one with a
-/// cast from a nullable type: each backend runs them as it covers
-/// generics, with [`cases_with`].
-pub const GENERICS: [&str; 3] = ["casts/specific", "imports/values", "types/list/empty"];
+/// translation covers (subset B's third step, generics), one with a
+/// cast from a nullable type, and one importing a module as a namespace:
+/// each backend runs them as it covers generics, with [`cases_with`].
+pub const GENERICS: [&str; 4] = [
+    "casts/specific",
+    "imports/namespaces",
+    "imports/values",
+    "types/list/empty",
+];
 
 /// The functional tests with function values that tmpl's translation
 /// covers: function literals with their captures, references to

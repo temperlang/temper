@@ -1,0 +1,12 @@
+{
+    "name": "namespaces",
+    "type": "module",
+    "exports": {
+        "./shapes": "./shapes.js",
+        "./namespaces": "./namespaces.js",
+        ".": "./index.js"
+    },
+    "dependencies": {
+        "@temperlang/core": "0.0.0-alpha.0.0"
+    }
+}

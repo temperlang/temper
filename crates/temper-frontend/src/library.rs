@@ -105,8 +105,12 @@ pub enum Message {
     WildcardWithoutImport,
     /// `import` of a module that isn't there, or isn't supported yet.
     ImportFailed(String),
-    /// Importing a name the module doesn't export: the module, the name.
-    NotExported(String, String),
+    /// Importing a name the module doesn't export: the module, the name,
+    /// and an export of a similar name, if there's one.
+    NotExported(String, String, Option<String>),
+    /// Ours: a module namespace, `rx` after `let rx = import("std/regex")`,
+    /// used other than as `rx.member`, by its name.
+    NamespaceNotValue(String),
     /// An object literal whose property names no visible constructor takes.
     NoSignatureMatches,
     /// An object literal that several classes' constructors match: their names.
@@ -381,7 +385,17 @@ impl Message {
             Message::MultipleRenames => "Extra rename not allowed".into(),
             Message::WildcardWithoutImport => "Wildcard destructure allowed only for import".into(),
             Message::ImportFailed(path) => format!("Import of {path} failed"),
-            Message::NotExported(module, name) => format!("{module} does not export symbol {name}"),
+            Message::NotExported(module, name, similar) => match similar {
+                Some(similar) => {
+                    format!("{module} does not export symbol {name}; did you mean {similar}?")
+                }
+                None => format!("{module} does not export symbol {name}"),
+            },
+            Message::NamespaceNotValue(name) => {
+                format!(
+                    "{name} names a module, not a value; use {name}.name for one of its exports"
+                )
+            }
             Message::NoSignatureMatches => "No signature matches".into(),
             Message::MultipleConstructorsMatch(names) => {
                 format!("Multiple types have matching constructors: {names}")

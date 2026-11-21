@@ -181,28 +181,4 @@ mod tests {
         let line = format!("export let name = \"{}\";", super::NAME);
         assert!(config.lines().any(|l| l.trim() == line), "{config}");
     }
-
-    /// Core's and std's code names builtin types as any library's does,
-    /// `Int`, not `builtins.Int`: core's declarations of them are the
-    /// builtins. Their prose may name either.
-    #[test]
-    fn core_and_std_use_no_builtins_qualifiers() {
-        let files = (super::FILES.iter()).chain(crate::stdlib::FILES);
-        let mut found = Vec::new();
-        for (path, text) in files {
-            let code = match path.ends_with(".md") {
-                true => super::blank_prose(text),
-                false => text.to_string(),
-            };
-            for (i, line) in code.lines().enumerate() {
-                let qualified = (line.match_indices("builtins.")).any(|(at, _)| {
-                    line[at + 9..].starts_with(|c: char| c.is_alphanumeric() || c == '_')
-                });
-                if qualified {
-                    found.push(format!("{path}:{}: {}", i + 1, line.trim()));
-                }
-            }
-        }
-        assert_eq!(found, Vec::<String>::new());
-    }
 }

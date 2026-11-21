@@ -865,7 +865,7 @@ impl Settle {
             }
             None => {
                 let text = self.lib.names.get(name).to_string();
-                self.error(node, Message::NotExported(path.into(), text));
+                self.error(node, Message::NotExported(path.into(), text, None));
             }
         }
         Ok(())

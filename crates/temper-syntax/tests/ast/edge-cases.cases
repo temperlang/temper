@@ -342,8 +342,8 @@ let b = \{ f(${ x }); g; };
 builtins.console; builtins.nym`+`; this.x; super.y; this;
 --- ast
 (Block
-  %console
-  %+
+  (Call %. builtins \console)
+  (Call %. builtins \+)
   (Call %. (Call #this) \x)
   (Call %. (Error) \y)
   (Call #this)

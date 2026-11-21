@@ -1020,13 +1020,13 @@ RegularDot := Expr ("." | "?.") SymbolValue?
 #### Syntax for *ReservedWord*
 
 ```ebnf
-ReservedWord := "nym" | "builtins" | "this" | "super"
+ReservedWord := "nym" | "this" | "super"
 ```
 
 #### Syntax for *SpecialDot*
 
 ```ebnf
-SpecialDot := "builtins" "." BuiltinName | "this" | (Lookahead: "super") Garbage
+SpecialDot := "this" | (Lookahead: "super") Garbage
 ```
 
 #### Syntax for *Specialize*

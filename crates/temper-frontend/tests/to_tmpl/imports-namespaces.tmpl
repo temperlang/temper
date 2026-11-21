@@ -1,0 +1,113 @@
+tmpl 1 model 1 library namespaces 0.0.0
+
+uses `temper-core`#25 0.0.0-alpha.0.0 {
+  class List#26<T#27> extends Listed#28<T#27> {
+    connected get length#38(): Int32;
+    connected method get#39(index: Int32): T#27;
+  }
+  interface Listed#28<T#29> {}
+  interface Console#33 {
+    connected method log#34(message: String): Void;
+  }
+  class Int32#36 {
+    connected method toString#37(radix?: Int32): String;
+  }
+  connected fn getConsole#50(name?: String): Console#33;
+}
+
+module shapes#0 in "shapes" {
+  export let unit#17: Int32;
+
+  export fn twice#18(x#20: Int32): Int32 {
+    return %Int32.mul(x#20, 2);
+  }
+
+  export class Box#2<T#5> {
+    let value#7: T#5;
+    constructor constructor#8(value#21: T#5): Box#2<T#5> {
+      this.value#7 = value#21;
+    }
+  }
+
+  export interface Shape#3 {
+    abstract method area#9(): Int32;
+  }
+
+  export class Square#4 extends Shape#3 {
+    let side#10: Int32;
+    constructor constructor#13(side#23: Int32): Square#4 {
+      this.side#10 = side#23;
+    }
+    method area#11(): Int32 {
+      return %Int32.mul(this.side#10, this.side#10);
+    }
+    static fn sized#12(side#22: Int32): Square#4 {
+      return new constructor#13(side#22);
+    }
+  }
+
+  let hidden#19: Int32;
+
+  init {
+    init unit#17 = 1;
+    init hidden#19 = 2;
+  }
+}
+
+module namespaces#1 {
+  let ~console#35: Console#33;
+
+  let box#24: Box#2<Int32>;
+
+  let squares#30: List#26<Shape#3>;
+
+  class Circle#6 extends Shape#3 {
+    let r#14: Int32;
+    constructor constructor#16(r#44: Int32): Circle#6 {
+      this.r#14 = r#44;
+    }
+    method area#15(): Int32 {
+      return %Int32.mul(%Int32.mul(3, this.r#14), this.r#14);
+    }
+  }
+
+  let mixed#31: List#26<Shape#3>;
+
+  fn bump#32(shapes#49: Int32): Int32 {
+    return %Int32.add(shapes#49, 1);
+  }
+
+  init {
+    init ~console#35 = getConsole#50(omitted);
+    ~console#35.log#34(unit#17.toString#37(omitted));
+    ~console#35.log#34(twice#18(21).toString#37(omitted));
+    init box#24 = new constructor#8<Int32>(3);
+    init squares#30 = (list((upcast(new constructor#13(4))): Shape#3, (upcast(new constructor#13(unit#17))): Shape#3, (upcast(sized#12(5))): Shape#3)): List#26<Shape#3>;
+    {
+      let ~length#40: Int32 = squares#30.length#38();
+      var ~i#41: Int32 = 0;
+      ~loop#42: while (%Int32.lt(~i#41, ~length#40)) {
+        let s#43: Shape#3 = squares#30.get#39(~i#41);
+        ~i#41 = %Int32.add(~i#41, 1);
+        ~console#35.log#34(%String.cat("area ", s#43.area#9().toString#37(omitted)));
+      }
+    }
+    init mixed#31 = (list((upcast(new constructor#16(2))): Shape#3, (upcast(new constructor#13(2))): Shape#3)): List#26<Shape#3>;
+    {
+      let ~length#45: Int32 = mixed#31.length#38();
+      var ~i#46: Int32 = 0;
+      ~loop#47: while (%Int32.lt(~i#46, ~length#45)) {
+        let s#48: Shape#3 = mixed#31.get#39(~i#46);
+        ~i#46 = %Int32.add(~i#46, 1);
+        {
+          if (is(s#48, Square#4)) {
+            ~console#35.log#34(%String.cat("a square of ", ((downcast(s#48)): Square#4).area#11().toString#37(omitted)));
+          } else {
+            ~console#35.log#34(%String.cat("something else of ", s#48.area#9().toString#37(omitted)));
+          }
+        }
+      }
+    }
+    ~console#35.log#34(bump#32(box#24.value#7).toString#37(omitted));
+  }
+}

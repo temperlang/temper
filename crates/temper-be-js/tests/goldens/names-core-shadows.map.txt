@@ -1,0 +1,55 @@
+# core-shadows/mine.internal.js
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../mine/mine.temper:7:1  /** <- export let ignore(x: Int): I
+7:1 -> ../mine/mine.temper:7:1  export function ignore(x) { <- export let ignore(x: Int): I
+7:17 -> ../mine/mine.temper:7:12 (ignore)  ignore(x) { <- ignore(x: Int): Int { x + 1
+7:23 -> ../mine/mine.temper:7:1  (x) { <- export let ignore(x: Int): I
+8:3 -> ../mine/mine.temper:7:34  return (x + 1) | 0; <- x + 1 }
+11:1 -> ../mine/mine.temper:11:1  /** @returns {number} */ <- export let summary(): Int {
+12:1 -> ../mine/mine.temper:11:1  export function summary() { <- export let summary(): Int {
+12:17 -> ../mine/mine.temper:11:12 (summary)  summary() { <- summary(): Int {
+12:24 -> ../mine/mine.temper:11:1  () { <- export let summary(): Int {
+13:3 -> ../mine/mine.temper:12:3  const s = new String_(3); <- let s = new String(3);
+14:3 -> ../mine/mine.temper:13:3  const l = new List(4); <- let l = new List(4);
+15:3 -> ../mine/mine.temper:14:3  return (((((((s.text + s.dou <- s.text + s.doubled + l.n + i
+18:1 -> ../mine/mine.temper:1:1  export class String_ extends <- export class String(public t
+18:14 -> ../mine/mine.temper:1:14 (String)  String_ extends type() { <- String(public text: Int) {
+18:21 -> ../mine/mine.temper:1:1   extends type() { <- export class String(public t
+19:3 -> ../mine/mine.temper:1:28  /** @type {number} */ <- text: Int) {
+20:3 -> ../mine/mine.temper:1:28  #text; <- text: Int) {
+22:3 -> ../mine/mine.temper:1:1  /** @param {number} text */ <- export class String(public t
+23:3 -> ../mine/mine.temper:1:1  constructor(text) { <- export class String(public t
+25:5 -> ../mine/mine.temper:1:28  this.#text = text; <- text: Int) {
+28:3 -> ../mine/mine.temper:1:28  /** @returns {number} */ <- text: Int) {
+29:3 -> ../mine/mine.temper:1:28  get text() { <- text: Int) {
+29:7 -> ../mine/mine.temper:1:28 (text)  text() { <- text: Int) {
+33:3 -> ../mine/mine.temper:2:10  /** @returns {number} */ <- get doubled(): Int { text *
+34:3 -> ../mine/mine.temper:2:10  get doubled() { <- get doubled(): Int { text *
+34:7 -> ../mine/mine.temper:2:14 (doubled)  doubled() { <- doubled(): Int { text * 2 }
+35:5 -> ../mine/mine.temper:2:31  return Math.imul(this.#text, <- text * 2 }
+39:1 -> ../mine/mine.temper:5:1  export class List extends ty <- export class List(public n:
+39:14 -> ../mine/mine.temper:5:14 (List)  List extends type() { <- List(public n: Int) {}
+39:18 -> ../mine/mine.temper:5:1   extends type() { <- export class List(public n:
+40:3 -> ../mine/mine.temper:5:26  /** @type {number} */ <- n: Int) {}
+41:3 -> ../mine/mine.temper:5:26  #n; <- n: Int) {}
+43:3 -> ../mine/mine.temper:5:1  /** @param {number} n */ <- export class List(public n:
+44:3 -> ../mine/mine.temper:5:1  constructor(n) { <- export class List(public n:
+46:5 -> ../mine/mine.temper:5:26  this.#n = n; <- n: Int) {}
+49:3 -> ../mine/mine.temper:5:26  /** @returns {number} */ <- n: Int) {}
+50:3 -> ../mine/mine.temper:5:26  get n() { <- n: Int) {}
+50:7 -> ../mine/mine.temper:5:26 (n)  n() { <- n: Int) {}
+55:1 -> ../mine/mine.temper:9:1  const Boolean = 7; <- let Boolean = 7;
+# core-shadows/core_shadows.internal.js
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../core-shadows.temper.md:18:5  /** <- let bump(console: Int): Int
+7:1 -> ../core-shadows.temper.md:18:5  function bump(console_) { <- let bump(console: Int): Int
+7:10 -> ../core-shadows.temper.md:18:9 (bump)  bump(console_) { <- bump(console: Int): Int { co
+7:14 -> ../core-shadows.temper.md:18:5  (console_) { <- let bump(console: Int): Int
+8:3 -> ../core-shadows.temper.md:18:35  return (console_ + 1) | 0; <- console + 1 }
+11:1 -> ../core-shadows.temper.md:7:5  console.log(summary().toStri <- console.log(summary().toStri
+12:1 -> ../core-shadows.temper.md:11:5  const s = "core's string"; <- let s: String = "core's stri
+13:1 -> ../core-shadows.temper.md:12:5  console.log(s); <- console.log(s);
+14:1 -> ../core-shadows.temper.md:13:5  /** @type {readonly number[] <- let xs: List<Int> = [1, 2];
+15:1 -> ../core-shadows.temper.md:13:5  const xs = Object.freeze([1, <- let xs: List<Int> = [1, 2];
+16:1 -> ../core-shadows.temper.md:14:5  console.log(xs.length.toStri <- console.log(xs.length.toStri
+17:1 -> ../core-shadows.temper.md:19:5  console.log(bump(5).toString <- console.log(bump(5).toString

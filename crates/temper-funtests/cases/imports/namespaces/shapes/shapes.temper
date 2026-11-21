@@ -1,0 +1,16 @@
+export let unit = 1;
+
+export let twice(x: Int): Int { x * 2 }
+
+export class Box<T>(public value: T) {}
+
+export interface Shape {
+  public area(): Int;
+}
+
+export class Square(public side: Int) extends Shape {
+  public area(): Int { side * side }
+  public static sized(side: Int): Square { new Square(side) }
+}
+
+let hidden = 2;

@@ -331,6 +331,103 @@ fn definition_into_std() {
     assert!(path.starts_with("-std-/regex/"), "{path}");
 }
 
+const SHADOWS: &str = "class String(public text: Int) {}
+let s = new String(3);
+let t = s.text;
+";
+
+/// A module's own declaration of a name core declares too, as `String`,
+/// is what the name means there, to editors as to typing.
+#[test]
+fn own_names_shadow_cores() {
+    let a = analyze(SHADOWS);
+    assert!(a.diagnostics().is_empty(), "{:?}", a.diagnostics());
+    let d = a.definition(MAIN, at(SHADOWS, "String(3", 0, 1)).unwrap();
+    assert_eq!(
+        (d.file, d.span.start),
+        (MAIN, at(SHADOWS, "String(public", 0, 0))
+    );
+    let d = a.definition(MAIN, at(SHADOWS, "s.text", 0, 3)).unwrap();
+    assert_eq!(d.span.start, at(SHADOWS, "text: Int", 0, 0));
+    let h = a.hover(MAIN, at(SHADOWS, "String(3", 0, 1)).unwrap();
+    assert_eq!(h.kind, Some(DeclKind::Class));
+    let h = a.hover(MAIN, at(SHADOWS, "t =", 0, 0)).unwrap();
+    assert_eq!(h.headline(), "let t: Int32");
+}
+
+const CORE_NS: &str = "let core = import(\"core\");
+class String(public n: Int) {}
+let s: core.String = \"a\";
+let m: String = new String(1);
+";
+
+/// Core imported as a namespace: `core.String` is core's, which go to
+/// definition finds in core, where the module's own `String` is its
+/// class; and the namespace goes nowhere, as core is no module.
+#[test]
+fn core_namespace() {
+    let a = analyze(CORE_NS);
+    assert!(a.diagnostics().is_empty(), "{:?}", a.diagnostics());
+    let d = a
+        .core_definition(MAIN, at(CORE_NS, "core.String", 0, 6))
+        .unwrap();
+    assert_eq!(
+        &d.source[d.span.start as usize..d.span.end as usize],
+        "String"
+    );
+    assert_eq!(a.definition(MAIN, at(CORE_NS, "core.String", 0, 6)), None);
+    let h = a.hover(MAIN, at(CORE_NS, "core.String", 0, 6)).unwrap();
+    assert_eq!(h.kind, Some(DeclKind::Builtin));
+    let h = a.hover(MAIN, at(CORE_NS, "core.String", 0, 1)).unwrap();
+    assert_eq!(h.headline(), "let core = import(\"core\")");
+    assert_eq!(a.definition(MAIN, at(CORE_NS, "core.String", 0, 1)), None);
+    let d = a.definition(MAIN, at(CORE_NS, "String(1", 0, 1)).unwrap();
+    assert_eq!(d.span.start, at(CORE_NS, "String(public", 0, 0));
+    assert_eq!(a.core_definition(MAIN, at(CORE_NS, "String(1", 0, 1)), None);
+}
+
+const SPACES: &str = r#"let rx = import("std/regex");
+let pattern: rx.Regex = new (rx.Regex)(rx.Dot);
+let found = pattern.found("a");
+"#;
+
+/// A module namespace: hover shows its import, at its declaration and
+/// its uses; its members are their exports; go to definition opens its
+/// module, or a member's declaration; and completion after `rx.` lists
+/// its exports.
+#[test]
+fn namespaces() {
+    let a = analyze(SPACES);
+    let text = |span: Span| &SPACES[span.start as usize..span.end as usize];
+    for offset in [at(SPACES, "rx =", 0, 0), at(SPACES, "rx.Regex", 0, 1)] {
+        let h = a.hover(MAIN, offset).unwrap();
+        assert_eq!(h.headline(), "let rx = import(\"std/regex\")");
+        assert_eq!(h.kind, Some(DeclKind::Namespace));
+        assert_eq!(text(h.span), "rx");
+    }
+    let h = a.hover(MAIN, at(SPACES, "rx.Regex", 0, 4)).unwrap();
+    assert_eq!(h.headline(), "class Regex");
+    assert_eq!(text(h.span), "Regex");
+    let file_path =
+        |d: &temper_analysis::Location| a.settled.library.files[d.file.0 as usize].path.clone();
+    let d = a.definition(MAIN, at(SPACES, "rx.Dot", 0, 0)).unwrap();
+    assert!(file_path(&d).starts_with("-std-/regex/"), "{d:?}");
+    assert_eq!(d.span.start, 0);
+    let d = a.definition(MAIN, at(SPACES, "rx.Dot", 0, 4)).unwrap();
+    assert!(file_path(&d).starts_with("-std-/regex/"), "{d:?}");
+    let std_text = a.settled.library.files[d.file.0 as usize].parsed.source();
+    assert_eq!(&std_text[d.span.start as usize..d.span.end as usize], "Dot");
+
+    let source = format!("{SPACES}rx.");
+    let a = analyze(&source);
+    let found = a.completions(MAIN, source.len() as u32);
+    let names: Vec<&str> = found.iter().map(|c| c.name.as_str()).collect();
+    for name in ["Regex", "Dot", "oneOrMore", "CodePoints"] {
+        assert!(names.contains(&name), "{name} in {names:?}");
+    }
+    assert!(!names.contains(&"regexRefs"), "{names:?}");
+}
+
 #[test]
 fn references_across_uses() {
     let a = analyze(STACK);

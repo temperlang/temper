@@ -68,6 +68,23 @@ Language and frontend:
   Test: settle/types.cases, "list literals typed from the type wanted",
   "function literals typed from the type wanted", and "object literals
   take their class from the type wanted".
+- **Module namespaces, and no `builtins`** (2026-11-20, RFC #671):
+  `let rx = import("std/regex")` binds a compile-time namespace, so
+  `rx.Regex` names that module's export, in code and types; Kotlin has
+  destructuring imports only. Using `rx` as a value, an unknown or
+  private member (with a suggestion for a near miss, as destructuring
+  now gives too), and exporting, typing, or `var` on a namespace are
+  errors. Tempest also drops Kotlin's `builtins.X` syntax and its
+  reserved word `builtins`: core's names stay in scope unqualified, and
+  code that must qualify one (where its module declares the same name)
+  imports core as a namespace, `let core = import("core")`, under any
+  name. A user's own `core` or `builtins`, as a module or a variable, is
+  an ordinary name.
+  Test: settle-std/namespaces.cases; funtest imports/namespaces in
+  kit::GENERICS; to_tmpl.rs, `namespaces_translate_as_destructured_imports`;
+  funtests names/core-named and names/core-shadows in kit::NAMES;
+  temper-syntax/tests/ast/kotlin-build-tree-tests.cases,
+  "builtins".
 - **Named `@fun` interfaces are nominal** (decided 2026-10-29, done;
   [typing.md](typing.md), "Fun interfaces"): a `Pred` isn't a `Check`,
   even where their `apply`s' signatures match, and the error suggests

@@ -1529,7 +1529,11 @@ impl Settle {
     }
 
     /// Reads `\type T` and `\init V` (or `default_key`) pairs.
-    fn pairs(&self, pairs: &[NodeId], init_key: &str) -> Option<(Option<NodeId>, Option<NodeId>)> {
+    pub(crate) fn pairs(
+        &self,
+        pairs: &[NodeId],
+        init_key: &str,
+    ) -> Option<(Option<NodeId>, Option<NodeId>)> {
         let (mut ty, mut init) = (None, None);
         for pair in pairs.chunks(2) {
             let [key, value] = *pair else { return None };
@@ -1682,7 +1686,7 @@ impl Settle {
 
     /// The decorator calls around a statement, `@a @b decl`, outermost
     /// first, and what they decorate.
-    fn decorators(&self, statement: NodeId) -> (Vec<NodeId>, NodeId) {
+    pub(crate) fn decorators(&self, statement: NodeId) -> (Vec<NodeId>, NodeId) {
         let tree = &self.lib.tree;
         let mut path = Vec::new();
         let mut decorated = statement;

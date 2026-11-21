@@ -558,7 +558,7 @@ error 321..322: Property a not initialized in constructor
 // Kotlin exempts core's `content` fields, which backends' own code
 // sets, but not a library's, however it's typed.
 class Wrapper {
-  private let content: builtins.Int;
+  private let content: Int;
 }
 --- settled
 (Block (Class ^Wrapper:0 (Let private ^content:2 Int)))

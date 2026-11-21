@@ -1,0 +1,12 @@
+{
+    "name": "core-named",
+    "type": "module",
+    "exports": {
+        "./core": "./core.js",
+        "./core_named": "./core_named.js",
+        ".": "./index.js"
+    },
+    "dependencies": {
+        "@temperlang/core": "0.0.0-alpha.0.0"
+    }
+}

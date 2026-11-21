@@ -1,6 +1,9 @@
 # Builtin Functions and Constants
 
 You can use builtins in your Temper code without `import`ing anything.
+They're core's names, which a module may declare too, as its own `class
+String`; to reach core's there, import core as a [namespace](#import),
+under any name: `let core = import("core");` then `core.String`.
 
 Some definitions are marked *Infix*, *Prefix*, or *Postfix*.  These
 are operators: they are used like mathematical symbols:
@@ -1775,6 +1778,26 @@ As shown above, when importing from files under the same *work root*,
 use a relative file path: `"."`, `".."`, or one starting with `"./"` or
 `"../"`.
 This allows multiple co-compiled libraries to link to one another.
+
+A module may also be imported whole, as a namespace: `let NAME =
+import(PATH);` binds `NAME`, and `NAME.member` is the module's export
+`member`, in code and in types, just as destructuring would import it:
+
+```temper
+let temporal = import("std/temporal");
+let d: temporal.Date = { year: 2024, month: 2, day: 29 };
+console.log(d.toString()); //!outputs "2024-02-29"
+// ✅
+```
+
+A namespace exists only while compiling: code that uses one translates
+exactly as code that destructures the same names. So it's an error to use
+`NAME` other than before `.member` (as a value, an argument, or a type),
+to name a member the module doesn't export, or to export, type, or
+`var` a namespace. A namespace is declared at a module's top level, and
+a local of the same name shadows it, as any name. To construct a class
+through one, put the qualified name in parentheses: `new (temporal.Date)(2024,
+2, 29)`.
 
 A bare `import("./tests");` statement, with nothing destructured, only
 makes that module part of the library, as for a module of tests that

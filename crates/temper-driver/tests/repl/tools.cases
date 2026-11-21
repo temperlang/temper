@@ -51,7 +51,7 @@ class Point
 interactive#4: void
 class Point
 interactive#5: void
-builtin console: ?
+builtin console: Console
 
 `console` is the global default `Console` instance. It is designed to integrate with
 standard backend logging services. Frontend processing replaces references to

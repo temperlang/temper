@@ -495,6 +495,22 @@ impl Settle {
                 self.set_children(node, &children);
                 continue;
             }
+            // `let rx = import(…)` declares a namespace, and stands for
+            // nothing.
+            match self.namespace_import(statement, scope, forced) {
+                Ok(Some(statements)) => {
+                    forced = false;
+                    let mut children = self.lib.tree.children(node).to_vec();
+                    children.splice(next as usize..=next as usize, statements);
+                    self.set_children(node, &children);
+                    continue;
+                }
+                Ok(None) => {}
+                Err(fact) => {
+                    self.work[id.0 as usize] = Work::Block { node, scope, next };
+                    return Outcome::Wait(fact);
+                }
+            }
             // `let { a, b } = x` stands for several statements.
             if self.lib.tree.kind(statement) == NodeKind::Decl {
                 let imported = match self.import(statement, scope, forced) {
@@ -830,6 +846,11 @@ impl Settle {
                         let name = Builtin::Macro(m).name().to_string();
                         self.error(node, Message::MalformedSpecial(name));
                     }
+                    let symbol = self.scopes.resolved(node);
+                    if symbol.is_some_and(|b| self.scopes.namespace(b).is_some()) {
+                        let name = self.lib.names.get(self.lib.name(node).unwrap());
+                        self.error(node, Message::NamespaceNotValue(name.to_string()));
+                    }
                 }
                 NodeKind::BuiltinName => {
                     let name = self.lib.name(node).unwrap();
@@ -867,6 +888,12 @@ impl Settle {
                 }
                 NodeKind::Assign => {
                     let target = self.lib.tree.children(node)[0];
+                    // `rx.member = …` assigns the export, which may not be.
+                    match self.namespace_member(target, scope, forced) {
+                        Ok(true) => continue,
+                        Ok(false) => {}
+                        Err(fact) => return Outcome::Wait(fact),
+                    }
                     if self.lib.tree.kind(target) != NodeKind::RightName {
                         // `obj.name = value`, a field or setter; for `this`,
                         // checked as a bare member name is.
@@ -989,6 +1016,21 @@ impl Settle {
             self.error(node, Message::Unsupported("a call without a callee".into()));
             return Ok(false);
         };
+        // `rx.member` is the export it names, and so is a callee or an
+        // argument that is, or a callee's object, before anything reads
+        // them as types or classes: `rx.f()`, `new (rx.C)()`,
+        // `rx.C.make()`.
+        if self.namespace_member(node, scope, forced)? {
+            return Ok(true);
+        }
+        for &child in &children {
+            if !self.namespace_member(child, scope, forced)? {
+                let tree = &self.lib.tree;
+                if let [_, object, _] = *tree.children(child) {
+                    self.namespace_member(object, scope, forced)?;
+                }
+            }
+        }
         // A sealed `@json` interface's decoder, once its module is read.
         if self.json_sealed_body(node, forced)? {
             return Ok(true);

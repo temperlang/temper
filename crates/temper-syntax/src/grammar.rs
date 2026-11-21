@@ -145,7 +145,7 @@ const MAX_DEPTH: u32 = 1000;
 const CLOSE_BRACKETS: &[&str] = &[")", "}", "]", ">"];
 const CLOSE_OR_COMMA: &[&str] = &[")", "}", "]", ">", ","];
 const CLOSE_OR_SEMI: &[&str] = &[")", "}", "]", ">", ";"];
-const RESERVED: &[&str] = &["nym", "builtins", "this", "super"];
+const RESERVED: &[&str] = &["nym", "this", "super"];
 
 use Operator as O;
 const EXTENDS_LIKE: &[Operator] = &[
@@ -2496,35 +2496,16 @@ impl Grammar {
         })
     }
 
-    /// SpecialDot := (Dot y ( y ( y "builtins" y ) y "." y ( y name(builtinName) y ) y ))
-    ///   / (Leaf y ( y callTree("this".revalue(this)) y ))
+    /// SpecialDot := (Leaf y ( y callTree("this".revalue(this)) y ))
     ///   / (Leaf y ( y lookahead "super" y Garbage("Word (not \"super\")") y ))
+    ///
+    /// Kotlin's `builtins.name` alternative is gone: `builtins` is an
+    /// ordinary name, and code qualifies core's names through a module
+    /// namespace, `let core = import("core")`.
     fn special_dot(&mut self, p: usize) -> R {
         first!(
             self,
             p,
-            |g, p| {
-                let p = g.open_op(p, O::Dot)?;
-                let p = g.open(p)?;
-                let p = g.tok(p, "builtins")?;
-                let p = g.close(p)?;
-                let p = g.tok(p, ".")?;
-                let p = g.open(p)?;
-                let p = g.tree(p, Fin::RightName, |g, p| {
-                    let (part, text) = g.token(p)?;
-                    if part.token != TokenKind::Word {
-                        return None;
-                    }
-                    let name = crate::unpack::decode_name(text)?;
-                    let span = part.span;
-                    let name = g.names.intern(&name);
-                    g.events
-                        .push(Event::Leaf(Leaf::Name(name, true), span, p as u32));
-                    Some(p + 1)
-                })?;
-                let p = g.close(p)?;
-                g.close(p)
-            },
             |g, p| {
                 let p = g.open_op(p, O::Leaf)?;
                 let p = g.tree(p, Fin::Call, |g, p| {

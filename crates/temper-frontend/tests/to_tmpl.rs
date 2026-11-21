@@ -63,6 +63,10 @@ const CLASSES: [&str; 14] = [
     "interfaces/pure-virtual",
 ];
 
+/// The functional tests of names like core's, and `core` and `builtins`
+/// as ordinary names, as the backends' testkit lists them.
+const NAMES: [&str; 2] = ["names/core-named", "names/core-shadows"];
+
 /// The functional tests with nullable types, `orelse`, `bubble()`, and
 /// `panic()` that translate, as the backends' testkit lists them.
 const NULLABLES: [&str; 4] = [
@@ -74,7 +78,12 @@ const NULLABLES: [&str; 4] = [
 
 /// The functional tests with generic types and core's lists that
 /// translate, as the backends' testkit lists them.
-const GENERICS: [&str; 3] = ["casts/specific", "imports/values", "types/list/empty"];
+const GENERICS: [&str; 4] = [
+    "casts/specific",
+    "imports/namespaces",
+    "imports/values",
+    "types/list/empty",
+];
 
 /// The functional tests with function values (literals, references,
 /// calls of values, and core's members that take functions) that
@@ -229,6 +238,7 @@ fn subset_a_goldens() {
             .chain(&CLASSES)
             .chain(&NULLABLES)
             .chain(&GENERICS)
+            .chain(&NAMES)
             .chain(&FUNCTIONS)
             .chain(&DEFAULTS)
             .chain(&CORE_TYPES)
@@ -323,6 +333,7 @@ fn every_functional_test_translates_or_says_why() {
             .chain(&CLASSES)
             .chain(&NULLABLES)
             .chain(&GENERICS)
+            .chain(&NAMES)
             .chain(&FUNCTIONS)
             .chain(&DEFAULTS)
             .chain(&CORE_TYPES)
@@ -630,6 +641,76 @@ fn joins_and_sealed_whens() {
         assert!(written.contains(": E#"), "{written}");
         // `next` held first, then called.
         assert!(written.contains("let subject#"), "{written}");
+    });
+}
+
+/// A module imported as a namespace, `let s = import("./shapes")`,
+/// translates exactly as it does imported by destructuring: each
+/// `s.member` is the export itself, and the namespace reaches no tmpl.
+/// So too std's modules, and in types, constructors, and statics.
+#[test]
+fn namespaces_translate_as_destructured_imports() {
+    with_stack(|| {
+        let shapes = "export let unit = 1;
+export let twice(x: Int): Int { x * 2 }
+export class Box<T>(public value: T) {}
+export interface Shape { public area(): Int; }
+export class Square(public side: Int) extends Shape {
+  public area(): Int { side * side }
+  public static sized(side: Int): Square { new Square(side) }
+}
+";
+        let uses = |prefix: &str, ns: &str, rx: &str, t: &str| {
+            format!(
+                "{prefix}
+export let f(n: Int): {ns}Box<Int> {{ new ({ns}Box<Int>)({ns}twice(n) + {ns}unit) }}
+export let area(x: {ns}Shape): Int {{ x.area() }}
+export let sq: {ns}Square = {ns}Square.sized(2);
+export class Circle(public r: Int) extends {ns}Shape {{ public area(): Int {{ r }} }}
+export let isSquare(x: {ns}Shape): Boolean {{ x is {ns}Square }}
+export let r: {rx}Regex = new ({rx}Regex)({rx}oneOrMore(new ({rx}CodePoints)(\"ab\")));
+export let day(): {t}Date throws Bubble {{ new ({t}Date)(2024, 2, 29) }}
+"
+            )
+        };
+        let namespaced = uses(
+            "let s = import(\"./shapes\");
+let rx = import(\"std/regex\");
+let t = import(\"std/temporal\");",
+            "s.",
+            "rx.",
+            "t.",
+        );
+        let destructured = uses(
+            "let { unit, twice, Box, Shape, Square } = import(\"./shapes\");
+let { Regex, oneOrMore, CodePoints } = import(\"std/regex\");
+let { Date } = import(\"std/temporal\");",
+            "",
+            "",
+            "",
+        );
+        let tmpl = |main: &str| {
+            let mut library = Library::new();
+            library.add_file("lib/main.temper", main, SourceKind::Standalone);
+            library.add_file("lib/shapes/shapes.temper", shapes, SourceKind::Standalone);
+            load_imports(&Sources::standard(), &mut library);
+            let settled = settle(library);
+            let errors: Vec<String> = (settled.library.diagnostics.iter())
+                .filter(|d| d.level == temper_frontend::library::Level::Error)
+                .map(|d| d.message.text())
+                .collect();
+            assert!(errors.is_empty(), "{errors:?}\n{main}");
+            let program = to_tmpl(&settled, "lib").unwrap_or_else(|e| panic!("{e}"));
+            let problems = validate(&program, &Profile::full());
+            assert!(problems.is_empty(), "{problems:#?}");
+            let written = text::write(&program);
+            match written.find("\nspans {") {
+                Some(at) => written[..at].to_string(),
+                None => written,
+            }
+        };
+        let (a, b) = (tmpl(&namespaced), tmpl(&destructured));
+        assert!(a == b, "namespaced:\n{a}\ndestructured:\n{b}");
     });
 }
 

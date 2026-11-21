@@ -10,6 +10,22 @@ interactive#1: "2024-02-29"
 interactive#2: void
 interactive#3: void
 
+=== std modules as namespaces, across inputs
+let t = import("std/temporal");
+new (t.Date)(2024, 2, 29).toString()
+let t2: t.Date = new (t.Date)(2000, 1, 1);
+t2.toString()
+t
+--- transcript
+interactive#0: void
+interactive#1: "2024-02-29"
+interactive#2: void
+interactive#3: "2000-01-01"
+interactive#4:1:1: error: t names a module, not a value; use t.name for one of its exports
+    t
+    ^
+interactive#4: fail
+
 === regex literals
 let r = /a(?thing=.)c/;
 r.find("abc").groups["thing"].value

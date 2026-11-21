@@ -85,6 +85,7 @@ fn cases() -> Vec<Case> {
         &kit::CLASSES[..],
         &kit::NULLABLES[..],
         &kit::GENERICS[..],
+        &kit::NAMES[..],
         &kit::FUNCTIONS[..],
         &kit::DEFAULTS[..],
         &kit::CORE_TYPES[..],

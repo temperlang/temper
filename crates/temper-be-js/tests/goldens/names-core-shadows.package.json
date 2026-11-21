@@ -1,0 +1,12 @@
+{
+    "name": "core-shadows",
+    "type": "module",
+    "exports": {
+        "./mine": "./mine.js",
+        "./core_shadows": "./core_shadows.js",
+        ".": "./index.js"
+    },
+    "dependencies": {
+        "@temperlang/core": "0.0.0-alpha.0.0"
+    }
+}

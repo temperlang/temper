@@ -9,6 +9,8 @@
 - [🆕 Bitwise operators](#-bitwise-operators)
 - [🚨Breaking change: Details of rules for `<` ambiguity have changed](#breaking-change-details-of-rules-for--ambiguity-have-changed)
 - [🚨Breaking change: Python parameters keep builtins' names](#breaking-change-python-parameters-keep-builtins-names)
+- [🆕 Module namespaces](#-module-namespaces)
+- [🚨Breaking change: `builtins.X` removed](#breaking-change-builtinsx-removed)
 - [Rust crates depend on `temper-std` only when they use it](#rust-crates-depend-on-temper-std-only-when-they-use-it)
 - [`++ls[i]` gives the new value](#lsi-gives-the-new-value)
 - [Unassigned locals in `for … of` bodies are errors](#unassigned-locals-in-for--of-bodies-are-errors)
@@ -22,6 +24,24 @@
 - [C++: `Float64.toString` as on the JVM](#c-float64tostring-as-on-the-jvm)
 - [`temper` and its `TEMPER_*` settings](#temper-and-its-temper_-settings)
 - [Fixes on Windows](#fixes-on-windows)
+
+## 🆕 Module namespaces
+
+`let NAME = import(PATH);` imports a whole module as a namespace:
+`NAME.member` is its export `member`, in code and in types, and
+translates just as a destructuring import of it would.
+
+```temper inert
+let rx = import("std/regex");
+let pattern: rx.Regex = new (rx.Regex)(rx.oneOrMore(new (rx.CodePoints)("ab")));
+```
+
+## 🚨Breaking change: `builtins.X` removed
+
+`builtins` is an ordinary name now, so a library's own `builtins` or
+`core` works on every backend. Where a module declares a name core has,
+as `class String`, it reaches core's through a namespace:
+`let core = import("core");` then `core.String`.
 
 ## 🚨Breaking change: Rest parameter syntax removed.
 

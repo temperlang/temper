@@ -62,6 +62,8 @@ pub enum DeclKind {
     Constructor,
     /// One of Temper's builtins, as `console` or `Int`.
     Builtin,
+    /// A module namespace, `let rx = import("std/regex")`.
+    Namespace,
 }
 
 impl DeclKind {
@@ -81,6 +83,7 @@ impl DeclKind {
             DeclKind::Setter => "setter",
             DeclKind::Constructor => "constructor",
             DeclKind::Builtin => "builtin",
+            DeclKind::Namespace => "namespace",
         }
     }
 }
@@ -127,6 +130,8 @@ impl Hover {
             {
                 format!("{} {ty}", kind.label())
             }
+            // A namespace, as it's declared: `let rx = import("std/regex")`.
+            (Some(name), Some(DeclKind::Namespace)) => format!("let {name} = {ty}"),
             // A builtin with neither type nor signature, as `if`.
             (Some(name), Some(DeclKind::Builtin)) if self.ty.is_none() => {
                 format!("{} {name}", DeclKind::Builtin.label())
@@ -333,6 +338,11 @@ impl Analysis<'_> {
                 doc: None,
             });
         };
+        if let Target::Symbol(symbol) = target {
+            if let Some(h) = self.namespace_hover(symbol) {
+                return Some(Hover { span, ..h });
+            }
+        }
         let (name, kind, ty, decl) = match target {
             Target::Symbol(symbol) => {
                 let s = self.settled.scopes.symbol(symbol);
@@ -436,6 +446,9 @@ impl Analysis<'_> {
             return None;
         }
         let decl = match self.target(file, offset)?.1? {
+            Target::Symbol(symbol) if self.settled.scopes.namespace(symbol).is_some() => {
+                return self.namespace_definition(symbol);
+            }
             Target::Symbol(symbol) => self.imported(self.settled.scopes.symbol(symbol).decl?),
             Target::Member { call, .. } => match self.member(call)? {
                 Resolved::Decl(decl) => *decl,
@@ -557,6 +570,9 @@ impl Analysis<'_> {
         let before = before.trim_end_matches(|c: char| c.is_alphanumeric() || c == '_');
         let before = before.trim_end().strip_suffix('.')?;
         let object_end = before.trim_end().len() as u32;
+        if let Some(exports) = self.namespace_completions(file, before, object_end) {
+            return Some(exports);
+        }
         if let Some(node) = self.receiver_node(file, object_end) {
             if let Some(members) = self.members_after(node) {
                 return Some(members);
@@ -656,6 +672,9 @@ impl Analysis<'_> {
         let tree = &library.tree;
         let root = library.files.get(file.0 as usize)?.root;
         let pos = self.global(file, offset);
+        if let Some(found) = self.namespace_name_at(pos) {
+            return Some(found);
+        }
         let mut best: Option<(Rank, NodeId, Option<Target>)> = None;
         let mut stack = vec![root];
         let mut seen = std::collections::HashSet::new();
@@ -728,6 +747,85 @@ impl Analysis<'_> {
             }
             _ => None,
         }
+    }
+
+    /// A module namespace's name at a library-wide position, which the
+    /// settled tree leaves out: its declaration's, `rx` in `let rx =
+    /// import(…)`, or a use's, `rx` in `rx.member`.
+    fn namespace_name_at(&self, pos: u32) -> Option<(NodeId, Option<Target>)> {
+        let scopes = &self.settled.scopes;
+        let tree = &self.settled.library.tree;
+        let names = (scopes.namespaces()).map(|(symbol, ns)| (ns.name, symbol));
+        let uses = (scopes.qualifiers()).filter_map(|q| Some((q, scopes.resolved(q)?)));
+        names.chain(uses).find_map(|(node, symbol)| {
+            let span = tree.span(node);
+            (span.start <= pos && pos <= span.end).then_some((node, Some(Target::Symbol(symbol))))
+        })
+    }
+
+    /// What hover shows of a module namespace: its import, as `let rx =
+    /// import("std/regex")`. `None` for any other symbol.
+    pub(crate) fn namespace_hover(&self, symbol: SymbolId) -> Option<Hover> {
+        let scopes = &self.settled.scopes;
+        let ns = scopes.namespace(symbol)?;
+        let name = self.settled.library.names.get(scopes.symbol(symbol).name);
+        Some(Hover {
+            span: self.name_span(ns.name),
+            name: Some(name.to_string()),
+            kind: Some(DeclKind::Namespace),
+            ty: Some(format!("import({:?})", ns.path)),
+            doc: None,
+        })
+    }
+
+    /// Where a module namespace's module starts: its first file. `None`
+    /// for core's, which [`Analysis::core_definition`] finds.
+    fn namespace_definition(&self, symbol: SymbolId) -> Option<Location> {
+        let ns = self.settled.scopes.namespace(symbol)?;
+        let module = (self.settled.modules.iter()).find(|m| m.scope == ns.scope)?;
+        let library = &self.settled.library;
+        let file = *library.modules.get(module.id.0 as usize)?.files.first()?;
+        Some(Location {
+            file,
+            span: Span { start: 0, end: 0 },
+        })
+    }
+
+    /// A module namespace's exports, for `rx.` with `before` the text
+    /// before the `.`, its object ending at `object_end`. `None` if
+    /// that's no namespace.
+    fn namespace_completions(
+        &self,
+        file: FileId,
+        before: &str,
+        object_end: u32,
+    ) -> Option<Vec<Completion>> {
+        let object = before
+            .rsplit(|c: char| !(c.is_alphanumeric() || c == '_'))
+            .next()
+            .filter(|o| !o.is_empty())?;
+        let symbol = self.lookup(file, object_end, object)?;
+        let scopes = &self.settled.scopes;
+        let ns = scopes.namespace(symbol)?;
+        let names = &self.settled.library.names;
+        let mut out: Vec<Completion> = (scopes.exports(ns.scope, names))
+            .map(|(n, export)| {
+                let name = names.get(n).to_string();
+                let s = scopes.symbol(export);
+                let detail = match s.decl {
+                    Some(decl) => self.decl_type(decl, &name, decl),
+                    None => None,
+                };
+                Completion {
+                    name,
+                    kind: self.kind(export),
+                    detail,
+                }
+            })
+            .collect();
+        out.sort_by(|a, b| a.name.cmp(&b.name));
+        out.dedup_by(|a, b| a.name == b.name);
+        Some(out)
     }
 
     /// What a `.` call reads: its own resolution, or for a method call,
