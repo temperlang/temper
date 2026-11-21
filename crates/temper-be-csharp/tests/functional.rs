@@ -1027,7 +1027,8 @@ fn runs() {
             for dll in dotnet.packages.iter().chain([&runtime]) {
                 fs::copy(dll, bin.join(dll.file_name().unwrap())).unwrap();
             }
-            run(&case.key, &exe, &[], &case.expected);
+            let out = dotnet_run(&exe, &[]);
+            kit::check_case(&mut failures, &case.key, &out, case);
         }
         for case in &tested {
             run_tests(&mut failures, &dotnet, &runtime, &strict, &out, case);

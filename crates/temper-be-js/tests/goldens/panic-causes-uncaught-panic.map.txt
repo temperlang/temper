@@ -1,0 +1,11 @@
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../panic-causes.temper.md:139:5  /** <- let boom(n: Int): Int {
+7:1 -> ../panic-causes.temper.md:139:5  function boom(n) { <- let boom(n: Int): Int {
+7:10 -> ../panic-causes.temper.md:139:9 (boom)  boom(n) { <- boom(n: Int): Int {
+7:14 -> ../panic-causes.temper.md:139:5  (n) { <- let boom(n: Int): Int {
+8:3 -> ../panic-causes.temper.md:140:7  if (n > 0) { <- if (n > 0) { panic() }
+9:5 -> ../panic-causes.temper.md:140:20  panic(); <- panic() }
+11:3 -> ../panic-causes.temper.md:141:7  return n; <- n
+14:1 -> ../panic-causes.temper.md:16:5  console.log("before"); <- console.log("before");
+15:1 -> ../panic-causes.temper.md:143:5  boom(1); <- boom(1);
+16:1 -> ../panic-causes.temper.md:144:5  console.log("after"); <- console.log("after");

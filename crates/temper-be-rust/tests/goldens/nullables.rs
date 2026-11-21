@@ -136,7 +136,7 @@ pub(crate) fn positive(n: i32) -> temper_core::Result<i32> {
 }
 
 pub(crate) fn checked(n: i32) -> i32 {
-    positive(n).unwrap_or_else(|_| panic!())
+    positive(n).unwrap_or_else(|e| panic!("panic\ncaused by: {e}"))
 }
 
 pub fn stops() -> i32 {

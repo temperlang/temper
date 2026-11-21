@@ -46,9 +46,9 @@ public static class DroppedGlobal
         {
             Go(l, true, 1);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (global::TemperLang.Core.Bubble bubble1)
         {
-            throw Core.Panic("panic");
+            throw Core.Panic("panic", bubble1);
         }
         console.Log(l.N.ToString(CultureInfo.InvariantCulture));
         int t1;

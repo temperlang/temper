@@ -1,5 +1,6 @@
 package generics;
 
+import temper.core.Bubble;
 import temper.core.Core;
 
 public final class GenericsMain {
@@ -7,6 +8,7 @@ public final class GenericsMain {
 
     public static void main(String[] args) throws ClassNotFoundException {
         Core.initSimpleLogging();
+        Bubble.keepStackTraces();
         Core.beginTopLevel();
         try {
             Class.forName("generics.GenericsGlobal");

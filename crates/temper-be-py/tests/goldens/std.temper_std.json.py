@@ -604,21 +604,21 @@ class JsonSyntaxTreeProducer(JsonProducer, JsonParseErrorReceiver):
                 mb: dict[str, _MutableSequence[JsonSyntaxTree]]
                 try:
                     mb = _cast_none(multis)
-                except _Bubble:
-                    raise BaseException('panic')
+                except _Bubble as t_0:
+                    raise BaseException('panic') from t_0
                 if not _mapped_has(mb, key):
-                    t_0: _Sequence[JsonSyntaxTree]
+                    t_1: _Sequence[JsonSyntaxTree]
                     try:
-                        t_0 = _mapped_get(m, key)
-                    except _Bubble:
-                        raise BaseException('panic')
-                    _map_builder_set(mb, key, list(t_0))
-                t_1: _MutableSequence[JsonSyntaxTree]
+                        t_1 = _mapped_get(m, key)
+                    except _Bubble as t_2:
+                        raise BaseException('panic') from t_2
+                    _map_builder_set(mb, key, list(t_1))
+                t_3: _MutableSequence[JsonSyntaxTree]
                 try:
-                    t_1 = _mapped_get(mb, key)
-                except _Bubble:
-                    raise BaseException('panic')
-                t_1.append(value)
+                    t_3 = _mapped_get(mb, key)
+                except _Bubble as t_4:
+                    raise BaseException('panic') from t_4
+                t_3.append(value)
             else:
                 _map_builder_set(m, key, (value,))
         multis = multis
@@ -796,16 +796,16 @@ def _parse_json_string_to(source_text: str, i: int, sb: list[str], err_out: Json
             if lead_surrogate >= 0:
                 try:
                     sb.append(_string_from_code_point(lead_surrogate))
-                except _Bubble:
-                    raise BaseException('panic')
+                except _Bubble as t_1:
+                    raise BaseException('panic') from t_1
             if 55296 <= decoded_cp and decoded_cp <= 56319:
                 lead_surrogate = decoded_cp
             else:
                 lead_surrogate = -1
                 try:
                     sb.append(_string_from_code_point(decoded_cp))
-                except _Bubble:
-                    raise BaseException('panic')
+                except _Bubble as t_2:
+                    raise BaseException('panic') from t_2
             consumed = i_next
         i = i_next
     if not len(source_text) > i or _string_get(source_text, i) != 34:
@@ -815,8 +815,8 @@ def _parse_json_string_to(source_text: str, i: int, sb: list[str], err_out: Json
         if lead_surrogate >= 0:
             try:
                 sb.append(_string_from_code_point(lead_surrogate))
-            except _Bubble:
-                raise BaseException('panic')
+            except _Bubble as t_3:
+                raise BaseException('panic') from t_3
         else:
             sb.append(source_text[consumed : i])
         i = _string_next(source_text, i)
@@ -840,8 +840,8 @@ def _parse_json_object(source_text: str, i: int, out: JsonProducer, /) -> int:
                 t_0: int
                 try:
                     t_0 = _require_string_index(after_key)
-                except _Bubble:
-                    raise BaseException('panic')
+                except _Bubble as t_1:
+                    raise BaseException('panic') from t_1
                 i = _skip_json_spaces(source_text, t_0)
                 if len(source_text) > i and _string_get(source_text, i) == 58:
                     i = _string_next(source_text, i)
@@ -864,8 +864,8 @@ def _parse_json_object(source_text: str, i: int, out: JsonProducer, /) -> int:
         else:
             _expected_token_error(source_text, i, out, "'}'")
             return -1
-    except _Bubble:
-        raise BaseException('panic')
+    except _Bubble as t_2:
+        raise BaseException('panic') from t_2
 
 
 def _parse_json_array(source_text: str, i: int, out: JsonProducer, /) -> int:
@@ -893,8 +893,8 @@ def _parse_json_array(source_text: str, i: int, out: JsonProducer, /) -> int:
         else:
             _expected_token_error(source_text, i, out, "']'")
             return -1
-    except _Bubble:
-        raise BaseException('panic')
+    except _Bubble as t_0:
+        raise BaseException('panic') from t_0
 
 
 def _parse_json_string(source_text: str, i: int, out: JsonProducer, /) -> int:
@@ -1040,8 +1040,8 @@ def _parse_json_number(source_text: str, i: int, out: JsonProducer, /) -> int:
         else:
             out.numeric_token_value(numeric_token_string)
         return i
-    except _Bubble:
-        raise BaseException('panic')
+    except _Bubble as t_0:
+        raise BaseException('panic') from t_0
 
 
 def _parse_json_value(source_text: str, i: int, out: JsonProducer, /) -> int:

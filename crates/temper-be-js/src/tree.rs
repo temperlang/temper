@@ -301,13 +301,10 @@ pub enum Stmt {
     Continue(Option<String>),
     /// `try { … } catch (e$) { if (!isBubble(e$)) throw e$; … }`:
     /// Temper's `orelse`, whose catch takes only a bubble and rethrows
-    /// anything else (a panic, a host error). Where the fallback only
-    /// panics, `try { … } catch { … }` (`checked` false), since
-    /// whatever was thrown fails there either way.
+    /// anything else (a panic, a host error), which keeps what it said.
     Try {
         body: Vec<Stmt>,
         catch: Vec<Stmt>,
-        checked: bool,
     },
     Return(Option<Expr>),
     /// A function declaration, with JSDoc for its parameters' types and
@@ -803,27 +800,17 @@ fn stmt_at(out: &mut MappedText, s: &Stmt, depth: usize, span: Option<Span>) {
             block(out, body, depth);
             let _ = writeln!(out, " while ({});", expr(cond, TOP));
         }
-        Stmt::Try {
-            body,
-            catch,
-            checked,
-        } => {
+        Stmt::Try { body, catch } => {
             out.push_str("try ");
             block(out, body, depth);
-            if *checked {
-                out.push_str(" catch (e$) {\n");
-                indent(out, depth + 1);
-                out.push_str("if (!isBubble(e$)) throw e$;\n");
-                for s in catch {
-                    stmt(out, s, depth + 1);
-                }
-                indent(out, depth);
-                out.push('}');
-            } else {
-                out.push_str(" catch ");
-                block(out, catch, depth);
+            out.push_str(" catch (e$) {\n");
+            indent(out, depth + 1);
+            out.push_str("if (!isBubble(e$)) throw e$;\n");
+            for s in catch {
+                stmt(out, s, depth + 1);
             }
-            out.push('\n');
+            indent(out, depth);
+            out.push_str("}\n");
         }
         Stmt::Break(l) | Stmt::Continue(l) => {
             out.push_str(if matches!(s, Stmt::Break(_)) {

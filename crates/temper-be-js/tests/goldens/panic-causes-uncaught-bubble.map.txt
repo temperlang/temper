@@ -1,0 +1,11 @@
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../panic-causes.temper.md:12:5  /** <- let positive(n: Int): Int th
+7:1 -> ../panic-causes.temper.md:12:5  function positive(n) { <- let positive(n: Int): Int th
+7:10 -> ../panic-causes.temper.md:12:9 (positive)  positive(n) { <- positive(n: Int): Int throws
+7:18 -> ../panic-causes.temper.md:12:5  (n) { <- let positive(n: Int): Int th
+8:3 -> ../panic-causes.temper.md:13:7  if (n <= 0) { <- if (n <= 0) { bubble() }
+9:5 -> ../panic-causes.temper.md:13:21  bubble(); <- bubble() }
+11:3 -> ../panic-causes.temper.md:14:7  return n; <- n
+14:1 -> ../panic-causes.temper.md:16:5  console.log("before"); <- console.log("before");
+15:1 -> ../panic-causes.temper.md:92:5  positive(-1); <- positive(-1);
+16:1 -> ../panic-causes.temper.md:93:5  console.log("after"); <- console.log("after");

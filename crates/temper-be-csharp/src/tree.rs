@@ -317,10 +317,12 @@ pub enum Stmt {
     /// Lines of code as written, each indented in place: a helper's body.
     Raw(String),
     /// `try { … } catch (Bubble) { … }`: Temper's `orelse`, catching
-    /// only the runtime's `Bubble` (`class`, as the translator names it).
+    /// only the runtime's `Bubble` (`class`, as the translator names it),
+    /// `catch (Bubble name)` where `var` names it.
     TryCatch {
         body: Vec<Stmt>,
         class: Expr,
+        var: Option<String>,
         catch: Vec<Stmt>,
     },
     /// `yield return value;`, in an iterator: a generator's.
@@ -752,11 +754,19 @@ fn stmt(out: &mut String, s: &Stmt, depth: usize) {
         Stmt::Throw(e) => {
             let _ = writeln!(out, "throw {};", expr(e, TOP));
         }
-        Stmt::TryCatch { body, class, catch } => {
+        Stmt::TryCatch {
+            body,
+            class,
+            var,
+            catch,
+        } => {
             out.push_str("try\n");
             block(out, body, depth);
             indent(out, depth);
-            let _ = writeln!(out, "catch ({})", expr(class, TOP));
+            let _ = match var {
+                Some(var) => writeln!(out, "catch ({} {var})", expr(class, TOP)),
+                None => writeln!(out, "catch ({})", expr(class, TOP)),
+            };
             block(out, catch, depth);
         }
         Stmt::YieldReturn(e) => {

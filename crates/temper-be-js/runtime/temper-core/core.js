@@ -304,13 +304,15 @@ export const bubble = (message) => {
 };
 
 /**
- * Throws a plain `Error`, which no `orelse` catches.
+ * Throws a plain `Error`, which no `orelse` catches, with `cause` as its
+ * cause if given: the bubble an `orelse panic()` replaces.
  *
  * @param {string} [message]
+ * @param {unknown} [cause]
  * @returns {never}
  */
-export const panic = (message = "panic") => {
-  throw new Error(message);
+export const panic = (message = "panic", cause = undefined) => {
+  throw cause === undefined ? new Error(message) : new Error(message, { cause });
 };
 
 /**

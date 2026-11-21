@@ -36,9 +36,9 @@ public static class JsonAdaptersGlobal
         {
             back = Decode(adapter, text);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (global::TemperLang.Core.Bubble bubble1)
         {
-            throw Core.Panic("panic");
+            throw Core.Panic("panic", bubble1);
         }
         string again = Encode(adapter, back);
         console.Log(again == text ? text : text + " became " + again);
@@ -59,9 +59,9 @@ public static class JsonAdaptersGlobal
         {
             shape = Decode(IShape.JsonAdapter(), "{\"height\": 6, \"width\": 5}");
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (global::TemperLang.Core.Bubble bubble2)
         {
-            throw Core.Panic("panic");
+            throw Core.Panic("panic", bubble2);
         }
         {
             if (shape is Rect)
@@ -78,9 +78,9 @@ public static class JsonAdaptersGlobal
         {
             record = Decode(Record.JsonAdapter(), "{\"name\": \"Bo\", \"is-active\": false, \"score\": 2, \"big\": 7, \"nickname\": \"B\", \"points\": []}");
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (global::TemperLang.Core.Bubble bubble3)
         {
-            throw Core.Panic("panic");
+            throw Core.Panic("panic", bubble3);
         }
         string @string = record.Name + " " + (record.Active ? "true" : "false") + " ";
         string? subject1 = record.Nickname;

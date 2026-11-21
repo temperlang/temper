@@ -3,11 +3,12 @@
 //! module's `init-test.lua`), in turn under `lua` (or `LUA`), with LuaUnit
 //! beside the libraries, as Kotlin copies it, and `LUA_PATH` of
 //! `?.lua;?/init.lua`, writing JUnit XML. `temper run -b lua` runs the
-//! library's `init.lua` the same way, as Kotlin's `Lua51Specifics` does.
+//! library's `init.lua` the same way, as Kotlin's `Lua51Specifics` does,
+//! under `xpcall`, so an uncaught bubble shows a stack trace too.
 //! Each file runs with a time and a memory limit (`limit_memory`), so a
 //! runaway file fails alone.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 use temper_tmpl::tools::{files_with, junit_file, limit_memory, output, program, tool};
 use temper_tmpl::{TestResults, Tested, Tools};
@@ -19,10 +20,17 @@ pub const TOOLS: Tools = Tools {
 };
 
 fn run(dir: &Path, library: &Tested, _: &[Tested]) -> Result<bool, String> {
+    // Under `xpcall`, so an error that isn't a string, as a bubble, gets
+    // a stack trace too, which `lua`'s own handler gives only strings.
+    let init = format!("{}/init.lua", library.name);
+    let main = format!(
+        "local ok, e = xpcall(function() return dofile([==[{init}]==]) end, \
+         function(e) return debug.traceback(tostring(e), 2) end) \
+         if not ok then io.stderr:write(\"lua: \", e, \"\\n\") os.exit(1) end"
+    );
     program(
         limit_memory(&mut Command::new(tool("LUA", "lua")))
-            .args(["-e", "TEMPER_LUA_DEBUG_FUNCS=false"])
-            .arg(PathBuf::from(&library.name).join("init.lua"))
+            .args(["-e", "TEMPER_LUA_DEBUG_FUNCS=false", "-e", &main])
             .env("LUA_PATH", "?.lua;?/init.lua")
             .current_dir(dir),
         "lua",

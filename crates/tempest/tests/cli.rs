@@ -1669,6 +1669,42 @@ fn cpp_stack_traces() {
     });
 }
 
+/// On Lua, `run`'s uncaught bubble, an error that isn't a string, shows
+/// a stack trace, as an uncaught panic's does, which `lua`'s own handler
+/// gives only strings. Skipped without Lua, unless
+/// `TEMPER_REQUIRE_CHECKERS` is set.
+#[test]
+#[cfg(feature = "lua")]
+fn lua_stack_traces() {
+    let files = [
+        ("b/config.temper.md", "    export let name = \"b\";\n"),
+        (
+            "b/b.temper",
+            "let f(n: Int): Int throws Bubble {\n  if (n > 1) { bubble() }\n  n\n}\n\
+             console.log(\"b\");\nf(5);\n",
+        ),
+        ("c/config.temper.md", "    export let name = \"c\";\n"),
+        (
+            "c/c.temper",
+            "let g(n: Int): Int {\n  if (n > 1) { panic() }\n  n\n}\n\
+             console.log(\"c\");\ng(5);\n",
+        ),
+    ];
+    with_library("lua-traces", &files, |dir| {
+        for (library, raised) in [("b", "lua: Bubble"), ("c", "panic")] {
+            let (code, out, err) = tempest(&["run", "-w", dir, "--library", library, "-b", "lua"]);
+            if tools_missing("lua", &format!("{out}{err}")) {
+                return;
+            }
+            assert_eq!((code, out.trim_end()), (1, library), "{err}");
+            assert!(err.contains(raised), "{library}: {err}");
+            let trace = err.split_once("stack traceback:").map(|(_, t)| t);
+            let at = format!("{library}/init.lua:");
+            assert!(trace.is_some_and(|t| t.contains(&at)), "{library}: {err}");
+        }
+    });
+}
+
 /// On C#, `run` and `test` give the generated code `#line` directives,
 /// so an exception's stack trace (a debug build, with its pdb) names
 /// the Temper file and line: a test's panic in its JUnit results, and

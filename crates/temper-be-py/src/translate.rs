@@ -1532,11 +1532,22 @@ impl<'a> Translator<'a> {
                     Sink::Discard => Sink::Discard,
                 };
                 self.value_into(body, sink, &mut tried)?;
-                self.value_into(fallback, again, &mut caught)?;
+                // `orelse panic()` panics with the bubble as its cause.
+                let cause = match self.p.nodes.get(fallback) {
+                    Node::Panic {} => {
+                        let cause = self.temp();
+                        caught.push(Stmt::RaiseFrom(panic_value(), cause.clone()));
+                        Some(cause)
+                    }
+                    _ => {
+                        self.value_into(fallback, again, &mut caught)?;
+                        None
+                    }
+                };
                 let bubble = self.import("temper_core", "Bubble");
                 out.push(Stmt::Try {
                     body: tried,
-                    except: Some((bubble, caught)),
+                    except: Some((bubble, cause, caught)),
                     finally: Vec::new(),
                 });
             }
@@ -2667,7 +2678,12 @@ fn not(e: Expr) -> Expr {
 /// Kotlin's raises `RuntimeError`, as `bubble()` does, so an `orelse`
 /// caught it (notes/kotlin-differences.md).
 fn panic() -> Stmt {
-    Stmt::Raise(Expr::builtin("BaseException").call(vec![Expr::Str("panic".into())]))
+    Stmt::Raise(panic_value())
+}
+
+/// What `panic()` raises.
+fn panic_value() -> Expr {
+    Expr::builtin("BaseException").call(vec![Expr::Str("panic".into())])
 }
 
 /// `t = value` after `stmts`, unless they end by raising.

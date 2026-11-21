@@ -1,5 +1,6 @@
 package modules;
 
+import temper.core.Bubble;
 import temper.core.Core;
 
 public final class ModulesMain {
@@ -7,6 +8,7 @@ public final class ModulesMain {
 
     public static void main(String[] args) throws ClassNotFoundException {
         Core.initSimpleLogging();
+        Bubble.keepStackTraces();
         Core.beginTopLevel();
         try {
             Class.forName("temper.std.regex.RegexGlobal");

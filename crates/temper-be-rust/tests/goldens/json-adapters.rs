@@ -35,7 +35,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
             );
             round_trip(Celsius::json_adapter(), Celsius::new(21));
             let shape = decode(Shape::json_adapter(), "{\"height\": 6, \"width\": 5}")
-                .unwrap_or_else(|_| panic!());
+                .unwrap_or_else(|e| panic!("panic\ncaused by: {e}"));
             {
                 if temper_core::is::<Rect>(shape.clone()) {
                     println!(
@@ -51,7 +51,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 Record::json_adapter(),
                 "{\"name\": \"Bo\", \"is-active\": false, \"score\": 2, \"big\": 7, \"nickname\": \"B\", \"points\": []}",
             )
-            .unwrap_or_else(|_| panic!());
+            .unwrap_or_else(|e| panic!("panic\ncaused by: {e}"));
             println!(
                 "{} {} {} {}",
                 record.0.name,
@@ -1048,7 +1048,8 @@ pub(crate) fn round_trip<T: Clone + Send + Sync + 'static>(
     value: T,
 ) {
     let text = encode(adapter.clone(), value.clone());
-    let back = decode(adapter.clone(), text.clone()).unwrap_or_else(|_| panic!());
+    let back =
+        decode(adapter.clone(), text.clone()).unwrap_or_else(|e| panic!("panic\ncaused by: {e}"));
     let again = encode(adapter.clone(), back.clone());
     println!(
         "{}",

@@ -901,16 +901,11 @@ enum Link<'a> {
 }
 
 impl Link<'_> {
-    /// Whether rustfmt keeps it on the line of the link before, `after`:
-    /// `?`, and a tuple's field (`.0`) unless after a `?`.
-    fn joins(self, after: Option<Link<'_>>) -> bool {
-        match self {
-            Link::Try => true,
-            Link::Field(name) => {
-                name.chars().all(|c| c.is_ascii_digit()) && !matches!(after, Some(Link::Try))
-            }
-            Link::Call(..) => false,
-        }
+    /// Whether rustfmt keeps it on the line of the link before: only
+    /// `?`. A field, a tuple's (`.0`) too, gets a line of its own, after
+    /// a call (`.unwrap_or_else(…)\n.0`) or a `?` alike.
+    fn joins(self) -> bool {
+        matches!(self, Link::Try)
     }
 
     fn flat(self) -> Option<String> {
@@ -960,7 +955,7 @@ fn chain_groups<'a>(root_width: usize, links: &[Link<'a>]) -> (Vec<Link<'a>>, Ve
     if root_width <= 4 && head.is_empty() {
         if let Some(l) = rest.next() {
             head.push(l);
-            while let Some(l) = rest.next_if(|l| l.joins(head.last().copied())) {
+            while let Some(l) = rest.next_if(|l| l.joins()) {
                 head.push(l);
             }
         }
@@ -968,7 +963,7 @@ fn chain_groups<'a>(root_width: usize, links: &[Link<'a>]) -> (Vec<Link<'a>>, Ve
     let mut groups: Vec<Vec<Link>> = Vec::new();
     for l in rest {
         match groups.last_mut() {
-            Some(g) if l.joins(g.last().copied()) => g.push(l),
+            Some(g) if l.joins() => g.push(l),
             _ => groups.push(vec![l]),
         }
     }
@@ -1528,10 +1523,14 @@ fn condition(e: &Expr, indent: usize, col: usize) -> (String, bool) {
             Some(value) if indent + 4 + width(&value) <= MAX => {
                 (format!("let {pattern} =\n{}{value}", pad(indent + 4)), true)
             }
+            // As rustfmt, the `{` then stays on the last line if that
+            // only closes brackets: `if let Err(e) = (|| {\n…\n})() {`.
             _ => {
                 let head = format!("let {pattern} = ");
                 let value = layout(x, indent, col + width(&head));
-                (format!("{head}{value}"), true)
+                let closes = (value.lines().last().unwrap_or("").chars())
+                    .all(|c| matches!(c, '(' | ')' | ']' | '}' | '?' | '>') || c.is_whitespace());
+                (format!("{head}{value}"), !closes)
             }
         },
         // One operator, its left operand broken over lines and its right

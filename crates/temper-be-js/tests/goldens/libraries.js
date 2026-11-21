@@ -80,8 +80,9 @@ function sizes(s) {
 function rows(values, ncols) {
   try {
     return divIntInt(values.length, ncols);
-  } catch {
-    return panic();
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
+    return panic("panic", e$);
   }
 }
 
@@ -105,8 +106,9 @@ function cubes(grid) {
     /** @type {readonly number[]} */
     const more = listedMap(/** @type {number[]} */ (scaled(grid).values), (x) => x * x * x);
     return more;
-  } catch {
-    return panic();
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
+    return panic("panic", e$);
   }
 }
 
@@ -135,8 +137,9 @@ function total(values) {
     try {
       const part = x / 2.0;
       sum = sum + part;
-    } catch {
-      panic();
+    } catch (e$) {
+      if (!isBubble(e$)) throw e$;
+      panic("panic", e$);
     }
   }
   each(values, fn);
@@ -150,8 +153,9 @@ function total(values) {
 function half(x) {
   try {
     return x / 2.0;
-  } catch {
-    return panic();
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
+    return panic("panic", e$);
   }
 }
 
@@ -197,8 +201,9 @@ function mapped(grid) {
   let t$0;
   try {
     t$0 = scaled(grid);
-  } catch {
-    t$0 = panic();
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
+    t$0 = panic("panic", e$);
   }
   /**
    * @param {number} x

@@ -19,6 +19,31 @@ namespace temper {
             }
         };
 
+        // Whether the process is ending by a panic, which has said what
+        // it was, so the terminate handler (`stack_trace.hpp`) doesn't
+        // report the failure it replaced as uncaught.
+        inline bool& panicking() {
+            static bool ending = false;
+            return ending;
+        }
+
+        // What a panic replaces, if it panics while a failure is being
+        // handled, as `orelse panic()` does: `caused by: WHAT`, else
+        // empty. C++ exceptions have no cause, so the message says it.
+        inline std::string panic_cause() {
+            std::exception_ptr handling = std::current_exception();
+            if (!handling) {
+                return "";
+            }
+            try {
+                std::rethrow_exception(handling);
+            } catch (const std::exception& e) {
+                return std::string("caused by: ") + e.what();
+            } catch (...) {
+                return "caused by: an exception";
+            }
+        }
+
         // A panic, where a test build's runner (`run_tests`) has it throw
         // rather than end the process (`panic_hook`), so a test that panics
         // fails alone. It's no `TemperBubble`, so no `orelse` catches it.

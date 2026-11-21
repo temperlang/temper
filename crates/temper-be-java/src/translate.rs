@@ -40,7 +40,8 @@
 //! `String converted; try { converted = …; } catch (Bubble ignored) {
 //! converted = "failed"; }`. A bubble is the runtime's `Bubble`;
 //! `panic()` throws an `AssertionError`, which no `orelse` catches, where
-//! Kotlin's throws a bubble.
+//! Kotlin's throws a bubble; `orelse panic()`'s has the bubble as its
+//! cause.
 
 mod classes;
 mod functions;
@@ -1131,8 +1132,24 @@ impl<'a> Translator<'a> {
             }
             (_, Node::OrElse { body, fallback }) => {
                 let body = self.sub(|t, o| t.into(into, body, o))?;
-                let var = self.fresh("ignored");
-                let handler = self.sub(|t, o| t.into(into, fallback, o))?;
+                // `orelse panic()` panics with the bubble as its cause.
+                let (var, handler) = match p.nodes.get(fallback) {
+                    Node::Panic {} => {
+                        let var = self.fresh("bubble");
+                        let cause = Expr::name(var.clone());
+                        (
+                            var,
+                            vec![Stmt::Throw(Expr::New(
+                                "AssertionError".into(),
+                                vec![Expr::Str("panic".into()), cause],
+                            ))],
+                        )
+                    }
+                    _ => (
+                        self.fresh("ignored"),
+                        self.sub(|t, o| t.into(into, fallback, o))?,
+                    ),
+                };
                 self.import("temper.core.Bubble");
                 self.emit(out, Stmt::TryCatch { body, var, handler });
                 Ok(())

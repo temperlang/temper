@@ -1,0 +1,33 @@
+tmpl 1 model 1 library `panic-causes-uncaught-panic` 0.0.0
+
+uses `temper-core`#4 0.0.0-alpha.0.0 {
+  interface Console#5 {
+    connected method log#6(message: String): Void;
+  }
+  connected fn getConsole#9(name?: String): Console#5;
+}
+
+module `panic-causes-uncaught-panic`#0 {
+  let ~console#7: Console#5;
+
+  fn positive#1(n#3: Int32): Int32 throws Bubble {
+    if (%Int32.le(n#3, 0)) {
+      (bubble()^): Void;
+    }
+    return n#3;
+  }
+
+  fn boom#2(n#8: Int32): Int32 {
+    if (%Int32.gt(n#8, 0)) {
+      (panic()): Void;
+    }
+    return n#8;
+  }
+
+  init {
+    init ~console#7 = getConsole#9(omitted);
+    ~console#7.log#6("before");
+    boom#2(1);
+    ~console#7.log#6("after");
+  }
+}

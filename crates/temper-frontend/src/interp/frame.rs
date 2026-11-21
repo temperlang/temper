@@ -338,6 +338,13 @@ fn land(frame: &mut Frame, at: u32, abrupt: Abrupt) -> Result<Option<Val>, Abrup
     match abrupt {
         Abrupt::Fail(_) => {
             if let Some(h) = code.handlers.iter().find(|h| within(h.start, h.end)) {
+                if h.panics {
+                    let why = match abrupt {
+                        Abrupt::Fail(Some(message)) => format!("a bubble: {message}"),
+                        _ => "a bubble".to_string(),
+                    };
+                    return Err(Abrupt::Panic(format!("panic(), caused by {why}")));
+                }
                 frame.truncate(h.depth);
                 frame.pc = h.to;
                 return Ok(None);

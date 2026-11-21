@@ -35,8 +35,8 @@ public final class JsonAdaptersGlobal {
         T back;
         try {
             back = decode(adapter, text);
-        } catch (Bubble ignored) {
-            throw new AssertionError("panic");
+        } catch (Bubble bubble) {
+            throw new AssertionError("panic", bubble);
         }
         String again = encode(adapter, back);
         console.log(again.equals(text) ? text : text + " became " + again);
@@ -54,8 +54,8 @@ public final class JsonAdaptersGlobal {
         Shape shape;
         try {
             shape = decode(Shape.jsonAdapter(), "{\"height\": 6, \"width\": 5}");
-        } catch (Bubble ignored) {
-            throw new AssertionError("panic");
+        } catch (Bubble bubble) {
+            throw new AssertionError("panic", bubble);
         }
         if (shape instanceof Rect) {
             console.log("rect " + ((Rect) shape).width + "x" + ((Rect) shape).height);
@@ -65,8 +65,8 @@ public final class JsonAdaptersGlobal {
         Record record_;
         try {
             record_ = decode(Record.jsonAdapter(), "{\"name\": \"Bo\", \"is-active\": false, \"score\": 2, \"big\": 7, \"nickname\": \"B\", \"points\": []}");
-        } catch (Bubble ignored2) {
-            throw new AssertionError("panic");
+        } catch (Bubble bubble2) {
+            throw new AssertionError("panic", bubble2);
         }
         String t = record_.name + " " + record_.active + " ";
         @Nullable String subject = record_.nickname;
@@ -75,7 +75,7 @@ public final class JsonAdaptersGlobal {
         try {
             decode(Point.jsonAdapter(), "{\"x\": 1}");
             t2 = "decoded";
-        } catch (Bubble ignored3) {
+        } catch (Bubble ignored) {
             t2 = "no y";
         }
         console.log(t2);
@@ -83,7 +83,7 @@ public final class JsonAdaptersGlobal {
         try {
             decode(Message.jsonAdapter(), "{\"kind\": \"what\", \"text\": \"?\"}");
             t3 = "decoded";
-        } catch (Bubble ignored4) {
+        } catch (Bubble ignored2) {
             t3 = "no such kind";
         }
         console.log(t3);

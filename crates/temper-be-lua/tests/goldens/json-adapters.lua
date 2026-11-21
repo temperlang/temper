@@ -661,10 +661,11 @@ local function roundTrip(adapter, value)
   local text = encode(adapter, value)
   ---@type any
   local back
-  if not temper.pcall(function()
+  local t_1, t_2 = temper.pcall(function()
     back = decode(adapter, text)
-  end) then
-    error("panic")
+  end)
+  if not t_1 then
+    error("panic\ncaused by: " .. tostring(t_2))
   end
   local again = encode(adapter, back)
   print(again == text and text or text .. " became " .. again)
@@ -679,10 +680,11 @@ roundTrip(listJsonAdapter(Message.jsonAdapter()), messages)
 roundTrip(Celsius.jsonAdapter(), Celsius(21))
 ---@type json-adapters.Shape
 local shape
-if not temper.pcall(function()
+local t_1, t_2 = temper.pcall(function()
   shape = decode(Shape.jsonAdapter(), '{"height": 6, "width": 5}')
-end) then
-  error("panic")
+end)
+if not t_1 then
+  error("panic\ncaused by: " .. tostring(t_2))
 end
 if temper.instance_of(shape, Rect) then
   print("rect " .. (shape --[[@as json-adapters.Rect]]).width .. "x" .. (shape --[[@as json-adapters.Rect]]).height)
@@ -691,31 +693,32 @@ else
 end
 ---@type json-adapters.Record
 local record
-if not temper.pcall(function()
+local t_3, t_4 = temper.pcall(function()
   record = decode(Record.jsonAdapter(), '{"name": "Bo", "is-active": false, "score": 2, "big": 7, "nickname": "B", "points": []}')
-end) then
-  error("panic")
+end)
+if not t_3 then
+  error("panic\ncaused by: " .. tostring(t_4))
 end
 local string_ = record.name .. " " .. tostring(record.active) .. " "
 local subject = record.nickname
 print(string_ .. (temper.is_null(subject) and "none" or (subject --[[@as string]])) .. " " .. temper.list_length(record.points))
 ---@type string
-local t_1
+local t_5
 if not temper.pcall(function()
   decode(Point.jsonAdapter(), '{"x": 1}')
-  t_1 = "decoded"
+  t_5 = "decoded"
 end) then
-  t_1 = "no y"
+  t_5 = "no y"
 end
-print(t_1)
+print(t_5)
 ---@type string
-local t_2
+local t_6
 if not temper.pcall(function()
   decode(Message.jsonAdapter(), '{"kind": "what", "text": "?"}')
-  t_2 = "decoded"
+  t_6 = "decoded"
 end) then
-  t_2 = "no such kind"
+  t_6 = "no such kind"
 end
-print(t_2)
+print(t_6)
 
 return {}

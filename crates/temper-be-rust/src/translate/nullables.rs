@@ -446,6 +446,9 @@ impl Translator<'_> {
         }
         Ok(if simple(&f) {
             attempt.method("unwrap_or", vec![f])
+        } else if matches!(self.p.nodes.get(fallback), Node::Panic {}) {
+            let f = Expr::Closure(vec!["e".into()], Block::of(panic_caused_by_e()));
+            attempt.method("unwrap_or_else", vec![f])
         } else {
             let f = Expr::Closure(vec!["_".into()], Block::of(f));
             attempt.method("unwrap_or_else", vec![f])
@@ -497,6 +500,14 @@ impl Translator<'_> {
                     mutable: false,
                     ty: None,
                     value: Some(attempt),
+                });
+                return Ok(());
+            }
+            Node::Panic {} => {
+                out.push(Stmt::If {
+                    cond: Expr::Let("Err(e)".into(), Box::new(attempt)),
+                    then: Block::new(vec![Stmt::Expr(panic_caused_by_e())], None),
+                    els: None,
                 });
                 return Ok(());
             }
@@ -698,4 +709,13 @@ fn simple(e: &Expr) -> bool {
         }
         _ => false,
     }
+}
+
+/// `orelse panic()`'s panic, given the bubble as `e`: Rust's panics have
+/// no cause, so the message says it, as C++'s and Lua's do.
+fn panic_caused_by_e() -> Expr {
+    Expr::Macro(
+        "panic".into(),
+        vec![Expr::Str("panic\ncaused by: {e}".into())],
+    )
 }

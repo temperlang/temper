@@ -77,7 +77,8 @@
 //! and a loop's condition hoists nothing; otherwise it's not yet. An
 //! `orelse`'s body is a function of its own, so a `return`, `break`, or
 //! `continue` out of it returns a signal that an `if` after the
-//! `temper.pcall` redoes, as Kotlin's ([`TryBody`]).
+//! `temper.pcall` redoes, as Kotlin's ([`TryBody`]). `orelse panic()`
+//! keeps `pcall`'s error, the bubble, and panics saying `caused by:` it.
 //!
 //! **Order of evaluation:** Lua evaluates operands and arguments left to
 //! right (its reference implementation and LuaJIT; the manual leaves only
@@ -2686,16 +2687,44 @@ impl<'a> Translator<'a> {
         let jumps = self.tries.pop().map(|t| t.jumps).unwrap_or_default();
         self.returns = returns;
         let body = body?;
+        // `orelse panic()` panics saying what it replaces, the bubble,
+        // `pcall`'s second result, as Lua's errors have no cause.
+        let caused = matches!(self.p.nodes.get(fallback), Node::Panic {});
         let fallback = match target {
             Some(target) => self.assigning(target, fallback)?,
             None => self.dropping(fallback)?,
         };
         self.uses_temper = true;
-        if jumps.is_empty() {
+        if jumps.is_empty() && !caused {
             return Ok(vec![Stmt::Try { body, fallback }]);
         }
-        let names = [self.temp(), self.temp(), self.temp()];
-        let [ok, value, kind] = names.clone().map(Expr::name);
+        let names = match jumps.is_empty() {
+            true => vec![self.temp(), self.temp()],
+            false => vec![self.temp(), self.temp(), self.temp()],
+        };
+        let ok = Expr::name(&names[0]);
+        let value = Expr::name(&names[1]);
+        let fallback = match caused {
+            true => {
+                let why = Expr::Concat(vec![
+                    Expr::Str("panic\ncaused by: ".into()),
+                    Expr::name("tostring").call(vec![value.clone()]),
+                ]);
+                vec![Stmt::Expr(Expr::name("error").call(vec![why]))]
+            }
+            false => fallback,
+        };
+        if jumps.is_empty() {
+            return Ok(vec![
+                Stmt::PCall { names, body },
+                Stmt::If {
+                    cond: ok.negate(),
+                    then: fallback,
+                    els: Vec::new(),
+                },
+            ]);
+        }
+        let kind = Expr::name(&names[2]);
         // The `if` chain, built from its end; a return's value may be a
         // jump's name, so `return` comes first.
         let mut jumps = jumps;
@@ -2720,10 +2749,7 @@ impl<'a> Translator<'a> {
             }];
         }
         Ok(vec![
-            Stmt::PCall {
-                names: names.to_vec(),
-                body,
-            },
+            Stmt::PCall { names, body },
             Stmt::If {
                 cond: ok.negate(),
                 then: fallback,

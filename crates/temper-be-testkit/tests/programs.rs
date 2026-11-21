@@ -26,14 +26,16 @@ fn programs_log_as_the_interpreter_does() {
                 continue;
             }
             let (failure, output) = kit::interpret(&case);
-            // A run that fails (`panics`) panics, as nothing catches it,
-            // saying what its `stderr` blocks for the interpreter say.
-            let says = temper_funtests::fenced_lines(text, "stderr", &["interp"]);
+            // A run that fails (`panics`) panics, or bubbles, as nothing
+            // catches it, saying what its `stderr` blocks for the
+            // interpreter say, else that it panicked.
+            let mut says = temper_funtests::fenced_lines(text, "stderr", &["interp"]);
+            if says.is_empty() {
+                says.push("Panicked".into());
+            }
             match &failure {
                 Some(why) => assert!(
-                    case.fails
-                        && why.starts_with("Panicked")
-                        && says.iter().all(|s| why.contains(s.trim())),
+                    case.fails && says.iter().all(|s| why.contains(s.trim())),
                     "{}: {why}",
                     case.key
                 ),

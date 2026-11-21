@@ -54,8 +54,8 @@ public final class LibrariesGlobal {
     static int rows(List<Double> values, int ncols) {
         try {
             return Core.divIntInt(values.size(), ncols);
-        } catch (Bubble ignored) {
-            throw new AssertionError("panic");
+        } catch (Bubble bubble) {
+            throw new AssertionError("panic", bubble);
         }
     }
 
@@ -70,8 +70,8 @@ public final class LibrariesGlobal {
         try {
             List<Double> more = Core.listMapDoubleToDouble(scaled(grid).values, x -> x * x * x);
             return more;
-        } catch (Bubble ignored) {
-            throw new AssertionError("panic");
+        } catch (Bubble bubble) {
+            throw new AssertionError("panic", bubble);
         }
     }
 
@@ -95,8 +95,8 @@ public final class LibrariesGlobal {
             try {
                 double part = x / 2.0;
                 sum.value = sum.value + part;
-            } catch (Bubble ignored) {
-                throw new AssertionError("panic");
+            } catch (Bubble bubble) {
+                throw new AssertionError("panic", bubble);
             }
         };
         each(values, fn);
@@ -106,8 +106,8 @@ public final class LibrariesGlobal {
     static double half(double x) {
         try {
             return x / 2.0;
-        } catch (Bubble ignored) {
-            throw new AssertionError("panic");
+        } catch (Bubble bubble) {
+            throw new AssertionError("panic", bubble);
         }
     }
 
@@ -135,8 +135,8 @@ public final class LibrariesGlobal {
         Grid t;
         try {
             t = scaled(grid);
-        } catch (Bubble ignored) {
-            throw new AssertionError("panic");
+        } catch (Bubble bubble) {
+            throw new AssertionError("panic", bubble);
         }
         DoubleUnaryOperator fn = x -> {
             if (Double.compare(x, 1.5) > 0) {

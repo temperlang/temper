@@ -36,7 +36,8 @@
 //! `catch (e$) { if (!isBubble(e$)) throw e$; … }` rethrows anything
 //! else (a panic, a plain `Error`; a host error), as host code
 //! (`_connected.js`) does unless it throws a `Bubble` or calls
-//! `bubble()`; and generics, with JSDoc's `@template`
+//! `bubble()`, and `orelse panic()` panics with the bubble as its
+//! `cause`; and generics, with JSDoc's `@template`
 //! (`{Named} T` for a bound), and core's lists as arrays (a `List` or
 //! `Listed` frozen and `readonly T[]` for TypeScript, cast to `T[]` for
 //! the runtime's helpers, where Kotlin's types don't check), maps as

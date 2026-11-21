@@ -136,13 +136,19 @@ namespace temper {
 
         template<class T = void>
         [[noreturn]] T panic(std::string message) {
-            // Keep what was logged before, and surface the panic message
-            // before aborting; otherwise both are lost.
+            // Keep what was logged before, and surface the panic message,
+            // with what it replaces, before aborting; otherwise all are
+            // lost.
             std::cout.flush();
+            std::string cause = panic_cause();
+            if (!cause.empty()) {
+                message += "\n" + cause;
+            }
             if (PanicHook hook = panic_hook()) {
                 hook(message);
             }
             std::cerr << message << std::endl;
+            panicking() = true;
             std::terminate();
         }
 

@@ -12,5 +12,11 @@ namespace TemperLang.Core
     public sealed class Panic : Exception
     {
         public Panic(string message) : base(message) { }
+
+        /// <summary>
+        /// A panic in place of <paramref name="cause"/>, its inner
+        /// exception: the bubble an <c>orelse panic()</c> replaces.
+        /// </summary>
+        public Panic(string message, Exception cause) : base(message, cause) { }
     }
 }

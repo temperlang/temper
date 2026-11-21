@@ -24,10 +24,11 @@ end
 local function select_(error_, table_)
   ---@type integer
   local string_
-  if not temper.pcall(function()
+  local t, t_1 = temper.pcall(function()
     string_ = half(error_)
-  end) then
-    error("panic")
+  end)
+  if not t then
+    error("panic\ncaused by: " .. tostring(t_1))
   end
   local select_ = 0
   do

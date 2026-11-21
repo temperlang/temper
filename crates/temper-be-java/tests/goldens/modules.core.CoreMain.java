@@ -1,5 +1,6 @@
 package modules.core;
 
+import temper.core.Bubble;
 import temper.core.Core;
 
 public final class CoreMain {
@@ -7,6 +8,7 @@ public final class CoreMain {
 
     public static void main(String[] args) throws ClassNotFoundException {
         Core.initSimpleLogging();
+        Bubble.keepStackTraces();
         Core.beginTopLevel();
         try {
             Class.forName("modules.core.CoreGlobal");

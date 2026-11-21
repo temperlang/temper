@@ -60,8 +60,9 @@ function roundTrip(adapter, value) {
   let back;
   try {
     back = decode(adapter, text);
-  } catch {
-    back = panic();
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
+    back = panic("panic", e$);
   }
   const again = encode(adapter, back);
   console.log(again === text ? text : `${text} became ${again}`);
@@ -720,8 +721,9 @@ roundTrip(Celsius.jsonAdapter(), new Celsius(21));
 let shape;
 try {
   shape = decode(Shape.jsonAdapter(), '{"height": 6, "width": 5}');
-} catch {
-  shape = panic();
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
+  shape = panic("panic", e$);
 }
 {
   if (shape instanceof Rect) {
@@ -734,8 +736,9 @@ try {
 let record;
 try {
   record = decode(Record.jsonAdapter(), '{"name": "Bo", "is-active": false, "score": 2, "big": 7, "nickname": "B", "points": []}');
-} catch {
-  record = panic();
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
+  record = panic("panic", e$);
 }
 console.log(`${record.name} ${record.active} ${record.nickname ?? "none"} ${record.points.length}`);
 /** @type {string} */

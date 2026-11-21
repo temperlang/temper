@@ -61,8 +61,8 @@ public final class NullablesGlobal {
     static int checked(int n) {
         try {
             return positive(n);
-        } catch (Bubble ignored) {
-            throw new AssertionError("panic");
+        } catch (Bubble bubble) {
+            throw new AssertionError("panic", bubble);
         }
     }
 

@@ -1,0 +1,31 @@
+tmpl 1 model 1 library `host-error-causes` 0.0.0
+
+uses `temper-core`#4 0.0.0-alpha.0.0 {
+  interface Console#5 {
+    connected method log#6(message: String): Void;
+  }
+  class Int32#8 {
+    connected method toString#9(radix?: Int32): String;
+  }
+  connected fn getConsole#10(name?: String): Console#5;
+}
+
+module `host-error-causes`#0 {
+  let ~console#7: Console#5;
+
+  connected export fn hostFails#1(n#3: Int32): Int32 throws Bubble {
+    if (%Int32.gt(n#3, 0)) {
+      (panic()): Void;
+    }
+    (bubble()^): Void;
+  }
+
+  let h#2: Int32;
+
+  init {
+    init ~console#7 = getConsole#10(omitted);
+    ~console#7.log#6("before");
+    init h#2 = (orelse(hostFails#1(1)^, (panic()): Int32)): Int32;
+    ~console#7.log#6(%String.cat("after ", h#2.toString#9(omitted)));
+  }
+}

@@ -260,10 +260,11 @@ end
 local function rows(values, ncols)
   ---@type integer
   local t_1
-  if not temper.pcall(function()
+  local t_2, t_3 = temper.pcall(function()
     t_1 = temper.int32_div(temper.list_length(values), ncols)
-  end) then
-    error("panic")
+  end)
+  if not t_2 then
+    error("panic\ncaused by: " .. tostring(t_3))
   end
   return t_1
 end
@@ -282,11 +283,12 @@ end
 local function cubes(grid)
   ---@type number[]
   local t_1
-  if not temper.pcall(function()
+  local t_2, t_3 = temper.pcall(function()
     local more = temper.listed_map(scaled(grid).values, function(x) return x * x * x end)
     t_1 = more
-  end) then
-    error("panic")
+  end)
+  if not t_2 then
+    error("panic\ncaused by: " .. tostring(t_3))
   end
   return t_1
 end
@@ -309,11 +311,12 @@ local function total(values)
   local sum = 0.0
   ---@param x number
   local function fn(x)
-    if not temper.pcall(function()
+    local t_1, t_2 = temper.pcall(function()
       local part = x / 2.0
       sum = sum + part
-    end) then
-      error("panic")
+    end)
+    if not t_1 then
+      error("panic\ncaused by: " .. tostring(t_2))
     end
   end
   each(values, fn)
@@ -325,10 +328,11 @@ end
 local function half(x)
   ---@type number
   local t_1
-  if not temper.pcall(function()
+  local t_2, t_3 = temper.pcall(function()
     t_1 = x / 2.0
-  end) then
-    error("panic")
+  end)
+  if not t_2 then
+    error("panic\ncaused by: " .. tostring(t_3))
   end
   return t_1
 end
@@ -367,10 +371,11 @@ end
 local function mapped(grid)
   ---@type libraries.Grid
   local t_1
-  if not temper.pcall(function()
+  local t_2, t_3 = temper.pcall(function()
     t_1 = scaled(grid)
-  end) then
-    error("panic")
+  end)
+  if not t_2 then
+    error("panic\ncaused by: " .. tostring(t_3))
   end
   ---@param x number
   ---@return number

@@ -102,10 +102,11 @@ end
 local function checked(n)
   ---@type integer
   local t
-  if not temper.pcall(function()
+  local t_1, t_2 = temper.pcall(function()
     t = positive(n)
-  end) then
-    error("panic")
+  end)
+  if not t_1 then
+    error("panic\ncaused by: " .. tostring(t_2))
   end
   return t
 end

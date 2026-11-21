@@ -584,8 +584,8 @@ class _RegexFormatter:
                 self._out.append(_string_from_code_point(code))
             else:
                 _regex_formatter_push_code_to(self, self._out, code, inside_code_set)
-        except _Bubble:
-            raise BaseException('panic')
+        except _Bubble as t_0:
+            raise BaseException('panic') from t_0
 
     def _push_code_points(self, code_points: CodePoints, inside_code_set: bool, /) -> None:
         value = code_points.value

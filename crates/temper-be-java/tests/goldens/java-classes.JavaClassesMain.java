@@ -1,5 +1,6 @@
 package java_classes;
 
+import temper.core.Bubble;
 import temper.core.Core;
 
 public final class JavaClassesMain {
@@ -7,6 +8,7 @@ public final class JavaClassesMain {
 
     public static void main(String[] args) throws ClassNotFoundException {
         Core.initSimpleLogging();
+        Bubble.keepStackTraces();
         Core.beginTopLevel();
         try {
             Class.forName("java_classes.JavaClassesGlobal");

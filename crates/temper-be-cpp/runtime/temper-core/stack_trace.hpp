@@ -223,14 +223,15 @@ namespace temper {
         }
 
         // The handler `install_stack_traces` sets: what was uncaught, if
-        // anything (a panic has said what it was already), then the
+        // anything (a panic has said what it was already, and what it
+        // replaced, which is still being handled), then the
         // stack, which is still where it went wrong, since nothing caught
         // it, then abort, as the default handler does.
         [[noreturn]] inline void print_stack_trace_and_abort() {
             std::string trace = stack_trace();
             std::cout.flush();
             std::exception_ptr uncaught = std::current_exception();
-            if (uncaught) {
+            if (uncaught && !panicking()) {
                 try {
                     std::rethrow_exception(uncaught);
                 } catch (const TemperBubble& bubble) {

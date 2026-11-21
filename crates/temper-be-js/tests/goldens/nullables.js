@@ -93,8 +93,9 @@ function positive(n) {
 function checked(n) {
   try {
     return positive(n);
-  } catch {
-    return panic();
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
+    return panic("panic", e$);
   }
 }
 

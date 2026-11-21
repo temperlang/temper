@@ -85,6 +85,13 @@ namespace TemperLang.Core
         /// </summary>
         public static Exception Panic(string message) => new Panic(message);
 
+        /// <summary>
+        /// A panic with <paramref name="cause"/> as its inner exception,
+        /// as <c>orelse panic()</c> throws in place of the bubble.
+        /// </summary>
+        public static Exception Panic(string message, Exception cause) =>
+            new Panic(message, cause);
+
         internal static Exception OutOfBounds(int index, int length) =>
             Panic(FormattableString.Invariant(
                 $"index {index} out of bounds for length {length}"

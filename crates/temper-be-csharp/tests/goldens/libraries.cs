@@ -78,9 +78,9 @@ public static class LibrariesGlobal
         {
             return Core.Div(values.Count, ncols);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (global::TemperLang.Core.Bubble bubble1)
         {
-            throw Core.Panic("panic");
+            throw Core.Panic("panic", bubble1);
         }
     }
 
@@ -100,9 +100,9 @@ public static class LibrariesGlobal
             IReadOnlyList<double> more = Listed.ToReadOnlyList(Enumerable.Select(Scaled(grid).Values, (double x) => x * x * x));
             return more;
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (global::TemperLang.Core.Bubble bubble2)
         {
-            throw Core.Panic("panic");
+            throw Core.Panic("panic", bubble2);
         }
     }
 
@@ -128,9 +128,9 @@ public static class LibrariesGlobal
                 double part = x / 2.0;
                 sum = sum + part;
             }
-            catch (global::TemperLang.Core.Bubble)
+            catch (global::TemperLang.Core.Bubble bubble3)
             {
-                throw Core.Panic("panic");
+                throw Core.Panic("panic", bubble3);
             }
         }
         Each(values, fn);
@@ -143,9 +143,9 @@ public static class LibrariesGlobal
         {
             return x / 2.0;
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (global::TemperLang.Core.Bubble bubble4)
         {
-            throw Core.Panic("panic");
+            throw Core.Panic("panic", bubble4);
         }
     }
 
@@ -185,9 +185,9 @@ public static class LibrariesGlobal
         {
             t1 = Scaled(grid);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (global::TemperLang.Core.Bubble bubble5)
         {
-            throw Core.Panic("panic");
+            throw Core.Panic("panic", bubble5);
         }
         double fn(double x)
         {

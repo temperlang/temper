@@ -8,10 +8,23 @@ package temper.core;
  * throwing one, as {@code throw Core.bubble()} does.
  *
  * <p>Unchecked, as Temper's failures needn't be declared in Java, and
- * without a stack trace, which bubbles that are handled don't need.
+ * without a stack trace, which bubbles that are handled don't need,
+ * unless {@link #keepStackTraces} was called, as a program's generated
+ * main method does, so one that escapes says where it came from.
  */
 public class Bubble extends RuntimeException {
     private static final long serialVersionUID = 1L;
+
+    private static volatile boolean stackTraces = false;
+
+    /**
+     * Gives bubbles made from now on stack traces, at a cost to each: a
+     * program's main method calls it, and so may code that wants to see
+     * where an uncaught bubble came from.
+     */
+    public static void keepStackTraces() {
+        stackTraces = true;
+    }
 
     /** A bubble without a message. */
     public Bubble() {
@@ -32,6 +45,6 @@ public class Bubble extends RuntimeException {
      * @param cause the host's exception
      */
     public Bubble(String message, Throwable cause) {
-        super(message, cause, false, false);
+        super(message, cause, false, stackTraces);
     }
 }

@@ -77,9 +77,9 @@ public static class NullablesGlobal
         {
             return Positive(n);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (global::TemperLang.Core.Bubble bubble1)
         {
-            throw Core.Panic("panic");
+            throw Core.Panic("panic", bubble1);
         }
     }
 

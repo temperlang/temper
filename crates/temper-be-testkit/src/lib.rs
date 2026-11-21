@@ -282,9 +282,13 @@ pub fn without_net(cases: &mut [Case]) {
 /// `panics` `orelse` handling bubbles from everywhere but never a
 /// panic, whose run fails ([`FAILING`]); `host-errors` builtins whose docs say
 /// they panic (index errors) panicking on every backend, past `orelse`,
-/// one run per section, each saying why on stderr; and `jump-values`
-/// `return`, `break`, and `continue` as values of type `Never`.
-pub const PROGRAMS: [&str; 27] = [
+/// one run per section, each saying why on stderr; `jump-values`
+/// `return`, `break`, and `continue` as values of type `Never`;
+/// `panic-causes` a panic keeping the bubble it replaces as its cause,
+/// and what an uncaught bubble or panic says, a run per section; and
+/// `host-error-causes` a host's error passing `orelse panic()`, with
+/// host code ([`HOST_CODE`]).
+pub const PROGRAMS: [&str; 29] = [
     "classes",
     "nullables",
     "generics",
@@ -312,13 +316,21 @@ pub const PROGRAMS: [&str; 27] = [
     "test-assert-panics",
     "test-async",
     "jump-values",
+    "panic-causes",
+    "host-error-causes",
 ];
 
 /// The shared programs whose run fails, after logging what's expected
-/// ([`Case::fails`]): `panics`, whose panic no `orelse` stops, and
-/// `host-errors`, whose panics none does. A failing program with
+/// ([`Case::fails`]): `panics`, whose panic no `orelse` stops,
+/// `host-errors`, whose panics none does, and `panic-causes` and
+/// `host-error-causes`, whose failures nothing handles. A failing program with
 /// sections runs each on its own (`runs`), as a run fails only once.
-pub const FAILING: [&str; 2] = ["panics", "host-errors"];
+pub const FAILING: [&str; 4] = ["panics", "host-errors", "panic-causes", "host-error-causes"];
+
+/// The shared programs with host code, in a directory of their own
+/// beside their host files, each backend's as a functional test's
+/// ([`CONNECTED`]), which name their library as the program.
+pub const HOST_CODE: [&str; 1] = ["host-error-causes"];
 
 /// The shared programs that run as tests, as a functional test with
 /// `runAsTest = true` does: their tests check what a log can't, as the
@@ -588,7 +600,7 @@ fn cases_of(backend: &str, programs: &[&str]) -> Vec<Case> {
     let dir = programs_dir();
     for &file in programs {
         assert!(PROGRAMS.contains(&file), "no shared program {file}");
-        let in_dir = LIBRARIES.contains(&file);
+        let in_dir = LIBRARIES.contains(&file) || HOST_CODE.contains(&file);
         let (name, path) = match file.strip_suffix(".tmpl") {
             Some(name) => (name, dir.join(file)),
             None if in_dir => (file, dir.join(file).join(format!("{file}.temper.md"))),
@@ -624,7 +636,7 @@ fn cases_of(backend: &str, programs: &[&str]) -> Vec<Case> {
                 stderr: temper_funtests::fenced_lines(&text, "stderr", &[backend]),
                 sources: vec![(path.to_string_lossy().into_owned(), text)],
                 dir: if in_dir { dir.join(file) } else { dir.clone() },
-                libraries: if in_dir {
+                libraries: if LIBRARIES.contains(&file) {
                     (LIBRARIES.iter())
                         .filter(|&&l| l != file)
                         .map(|&l| (l.to_string(), dir.join(l)))
@@ -632,7 +644,12 @@ fn cases_of(backend: &str, programs: &[&str]) -> Vec<Case> {
                 } else {
                     Vec::new()
                 },
-                host_files: Vec::new(),
+                host_files: match HOST_CODE.contains(&file) {
+                    true => (temper_funtests::host_files(&dir.join(file)).into_iter())
+                        .map(|s| (s.path, s.text))
+                        .collect(),
+                    false => Vec::new(),
+                },
                 no_connected: false,
                 tests,
                 absent,

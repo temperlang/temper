@@ -594,7 +594,8 @@ pub(crate) fn sizes(s: Shape) -> temper_core::List<i32> {
 
 pub(crate) fn rows(values: impl temper_core::ToList<f64>, ncols: i32) -> i32 {
     let values = values.to_list();
-    temper_core::int_div(temper_core::ListedTrait::len(&values), ncols).unwrap_or_else(|_| panic!())
+    temper_core::int_div(temper_core::ListedTrait::len(&values), ncols)
+        .unwrap_or_else(|e| panic!("panic\ncaused by: {e}"))
 }
 
 pub(crate) fn scaled(grid: Grid) -> temper_core::Result<Grid> {
@@ -610,7 +611,7 @@ pub(crate) fn cubes(grid: Grid) -> temper_core::List<f64> {
             temper_core::listed::map(&scaled(grid.clone())?.0.values, &(|x: f64| x * x * x));
         Ok::<_, temper_core::Error>(more.clone())
     })()
-    .unwrap_or_else(|_| panic!())
+    .unwrap_or_else(|e| panic!("panic\ncaused by: {e}"))
 }
 
 pub(crate) fn each(values: impl temper_core::ToList<f64>, f: Arc<dyn Fn(f64) + Send + Sync>) {
@@ -628,14 +629,12 @@ pub(crate) fn total(values: impl temper_core::ToList<f64>) -> f64 {
     each(values.clone(), {
         let sum = sum.clone();
         Arc::new(move |x: f64| {
-            if (|| {
+            if let Err(e) = (|| {
                 let part = temper_core::float64::div(x, 2.0)?;
                 *sum.write().unwrap() = temper_core::read_locked(&sum) + part;
                 Ok::<_, temper_core::Error>(())
-            })()
-            .is_err()
-            {
-                panic!();
+            })() {
+                panic!("panic\ncaused by: {e}");
             }
         })
     });
@@ -643,7 +642,7 @@ pub(crate) fn total(values: impl temper_core::ToList<f64>) -> f64 {
 }
 
 pub(crate) fn half(x: f64) -> f64 {
-    temper_core::float64::div(x, 2.0).unwrap_or_else(|_| panic!())
+    temper_core::float64::div(x, 2.0).unwrap_or_else(|e| panic!("panic\ncaused by: {e}"))
 }
 
 pub(crate) fn cube(x: f64) -> f64 {
@@ -664,7 +663,10 @@ pub(crate) fn maybe(n: i32) -> Option<Grid> {
 
 pub(crate) fn mapped(grid: Grid) -> temper_core::List<f64> {
     temper_core::listed::map(
-        &scaled(grid.clone()).unwrap_or_else(|_| panic!()).0.values,
+        &scaled(grid.clone())
+            .unwrap_or_else(|e| panic!("panic\ncaused by: {e}"))
+            .0
+            .values,
         &(|x: f64| {
             if temper_core::float64::cmp(x, 1.5) > 0 {
                 x * 2.0

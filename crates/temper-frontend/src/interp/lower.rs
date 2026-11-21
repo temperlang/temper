@@ -146,13 +146,16 @@ pub(super) enum Source {
     Capture(u32),
 }
 
-/// A failure in ops `start..end` goes to `to`, with the stack at `depth`.
+/// A failure in ops `start..end` goes to `to`, with the stack at `depth`;
+/// or, where the fallback is just `panic()` (`panics`), panics there,
+/// saying the failure caused it, as backends chain it as the cause.
 #[derive(Debug)]
 pub(super) struct Handler {
     pub start: u32,
     pub end: u32,
     pub to: u32,
     pub depth: u32,
+    pub panics: bool,
 }
 
 /// A `break` (or with `continue_`, a `continue`) of `target` coming back
@@ -944,11 +947,17 @@ impl Lowering {
                 self.b.depth = base;
                 self.expr(s, children[1], keep);
                 self.patch(to_end);
+                let fallback = children[1];
+                let panics = tree.kind(fallback) == NodeKind::Call
+                    && tree.children(fallback).len() == 1
+                    && s.scopes.resolved_builtin(tree.children(fallback)[0])
+                        == Some(Builtin::Function(Function::Panic));
                 self.b.handlers.push(Handler {
                     start,
                     end,
                     to,
                     depth: base,
+                    panics,
                 });
                 return;
             }

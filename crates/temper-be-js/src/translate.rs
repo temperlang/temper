@@ -1506,18 +1506,25 @@ impl<'a> Translator<'a> {
         Ok(self.try_catch(pre, catch, fallback))
     }
 
-    /// An `orelse`'s `try`, catching only a bubble ([`Stmt::Try`]), or
-    /// anything where `fallback` only panics.
-    fn try_catch(&mut self, body: Vec<Stmt>, catch: Vec<Stmt>, fallback: NodeId) -> Stmt {
-        let checked = !matches!(self.p.nodes.get(fallback), Node::Panic {});
-        if checked {
-            self.imports.insert("isBubble");
+    /// An `orelse`'s `try`, catching only a bubble ([`Stmt::Try`]):
+    /// anything else, a panic or a host's error, passes it, even where
+    /// `fallback` only panics, whose panic then has the bubble as its
+    /// `cause`, `panic("panic", e$)`.
+    fn try_catch(&mut self, body: Vec<Stmt>, mut catch: Vec<Stmt>, fallback: NodeId) -> Stmt {
+        self.imports.insert("isBubble");
+        if matches!(self.p.nodes.get(fallback), Node::Panic {}) {
+            let caused =
+                Expr::name("panic").call(vec![Expr::Str("panic".into()), Expr::name("e$")]);
+            match catch.last_mut() {
+                Some(
+                    Stmt::Assign { value, .. } | Stmt::Return(Some(value)) | Stmt::Expr(value),
+                ) => {
+                    *value = caused;
+                }
+                _ => catch.push(Stmt::Expr(caused)),
+            }
         }
-        Stmt::Try {
-            body,
-            catch,
-            checked,
-        }
+        Stmt::Try { body, catch }
     }
 
     /// A fresh temporary's name.

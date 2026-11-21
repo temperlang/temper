@@ -2170,10 +2170,23 @@ impl<'a> Translator<'a> {
                     out.push(self.try_around_yields(tried, caught)?);
                     return Ok(());
                 }
+                // `orelse panic()` panics with the bubble as its inner
+                // exception.
+                let mut var = None;
+                if matches!(p.nodes.get(fallback), Node::Panic {}) {
+                    let bubble = self.temporary("bubble");
+                    let message = Expr::Str("panic".into());
+                    let panic = self
+                        .class("Core")
+                        .method("Panic", vec![message, Expr::name(&bubble)]);
+                    caught = vec![Stmt::Throw(panic)];
+                    var = Some(bubble);
+                }
                 let class = self.class("Bubble");
                 out.push(Stmt::TryCatch {
                     body: tried,
                     class,
+                    var,
                     catch: caught,
                 });
                 return Ok(());
@@ -3833,6 +3846,7 @@ impl Split {
             self.out.push(Stmt::TryCatch {
                 body: std::mem::take(&mut self.run),
                 class: self.class.clone(),
+                var: None,
                 catch: vec![Stmt::Goto(self.catch.clone())],
             });
         }

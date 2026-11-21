@@ -250,8 +250,8 @@ def _sizes(s: Shape, /) -> _Sequence[int]:
 def _rows(values: _Sequence[float], ncols: int, /) -> int:
     try:
         return _int_div(len(values), ncols)
-    except _Bubble:
-        raise BaseException('panic')
+    except _Bubble as t_0:
+        raise BaseException('panic') from t_0
 
 
 def _scaled(grid: Grid, /) -> Grid:
@@ -264,8 +264,8 @@ def _cubes(grid: Grid, /) -> _Sequence[float]:
     try:
         more = _list_map(_scaled(grid).values, lambda x: x * x * x)
         return more
-    except _Bubble:
-        raise BaseException('panic')
+    except _Bubble as t_0:
+        raise BaseException('panic') from t_0
 
 
 def _each(values: _Sequence[float], f: _Callable[[float], None], /) -> None:
@@ -282,8 +282,8 @@ def _total(values: _Sequence[float], /) -> float:
         try:
             part = x / 2.0
             sum = sum + part
-        except _Bubble:
-            raise BaseException('panic')
+        except _Bubble as t_0:
+            raise BaseException('panic') from t_0
     _each(values, fn)
     return sum
 
@@ -291,8 +291,8 @@ def _total(values: _Sequence[float], /) -> float:
 def _half(x: float, /) -> float:
     try:
         return x / 2.0
-    except _Bubble:
-        raise BaseException('panic')
+    except _Bubble as t_0:
+        raise BaseException('panic') from t_0
 
 
 def _cube(x: float, /) -> float:
@@ -317,15 +317,15 @@ def _mapped(grid: Grid, /) -> _Sequence[float]:
     t_0: Grid
     try:
         t_0 = _scaled(grid)
-    except _Bubble:
-        raise BaseException('panic')
-    t_1 = t_0.values
+    except _Bubble as t_1:
+        raise BaseException('panic') from t_1
+    t_2 = t_0.values
     def fn(x: float, /) -> float:
         if _float_cmp(x, 1.5) > 0:
             return x * 2.0
         else:
             return x
-    return _list_map(t_1, fn)
+    return _list_map(t_2, fn)
 
 
 def _byte_at(digits: _Sequence[int], short: bool, c: int, /) -> int:

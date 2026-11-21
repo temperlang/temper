@@ -335,7 +335,8 @@ fn loads(p: &Program, module: &temper_tmpl::Module) -> Vec<String> {
     external.into_iter().chain(order).map(class).collect()
 }
 
-/// The entry point, as Kotlin's: logging to stdout, then the module's
+/// The entry point, as Kotlin's: logging to stdout, bubbles with stack
+/// traces (so one that escapes says where), then the module's
 /// class loaded, after those of the modules it imports
 /// ([`loads`]), which runs their static initializers, in a top-level turn,
 /// so async blocks start after them (as Temper PR #532 has Kotlin's), then
@@ -348,6 +349,7 @@ fn main_class(package: &str, main: &str, loads: &[String]) -> String {
     format!(
         "package {package};
 
+import temper.core.Bubble;
 import temper.core.Core;
 
 public final class {main} {{
@@ -355,6 +357,7 @@ public final class {main} {{
 
     public static void main(String[] args) throws ClassNotFoundException {{
         Core.initSimpleLogging();
+        Bubble.keepStackTraces();
         Core.beginTopLevel();
         try {{
 {loads}        }} finally {{

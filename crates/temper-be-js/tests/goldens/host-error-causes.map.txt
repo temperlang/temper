@@ -1,0 +1,10 @@
+# generated line:column -> source:line:column, and the text at each
+4:1 -> ../host-error-causes.temper.md:9:5  /** <- @connected
+8:1 -> ../host-error-causes.temper.md:9:5  export function hostFails(n) <- @connected
+8:17 -> ../host-error-causes.temper.md:10:16 (hostFails)  hostFails(n) { <- hostFails(n: Int): Int throw
+8:26 -> ../host-error-causes.temper.md:9:5  (n) { <- @connected
+12:1 -> ../host-error-causes.temper.md:15:5  console.log("before"); <- console.log("before");
+13:1 -> ../host-error-causes.temper.md:16:5  /** @type {number} */ <- let h = hostFails(1) orelse
+14:1 -> ../host-error-causes.temper.md:16:5  export let h; <- let h = hostFails(1) orelse
+15:1 -> ../host-error-causes.temper.md:16:5  try { <- let h = hostFails(1) orelse
+21:1 -> ../host-error-causes.temper.md:17:5  console.log(`after ${h}`); <- console.log("after ${h}");

@@ -79,8 +79,8 @@ def _positive(n: int, /) -> int:
 def _checked(n: int, /) -> int:
     try:
         return _positive(n)
-    except _Bubble:
-        raise BaseException('panic')
+    except _Bubble as t_0:
+        raise BaseException('panic') from t_0
 
 
 def stops() -> int:

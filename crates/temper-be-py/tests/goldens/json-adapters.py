@@ -451,8 +451,8 @@ def _round_trip(adapter: _JsonAdapter[_T], value: _T, /) -> None:
     text = _encode(adapter, value)
     try:
         back = _decode(adapter, text)
-    except _Bubble:
-        raise BaseException('panic')
+    except _Bubble as t_0:
+        raise BaseException('panic') from t_0
     again = _encode(adapter, back)
     _console.log(text if again == text else f'{text} became {again}')
 
@@ -468,8 +468,8 @@ _round_trip(_Celsius.json_adapter(), _Celsius(21))
 _shape: _Shape
 try:
     _shape = _decode(_Shape.json_adapter(), '{"height": 6, "width": 5}')
-except _Bubble:
-    raise BaseException('panic')
+except _Bubble as _t_0:
+    raise BaseException('panic') from _t_0
 if isinstance(_shape, _Rect):
     _console.log(f'rect {_shape.width}x{_shape.height}')
 else:
@@ -477,20 +477,20 @@ else:
 _record: _Record
 try:
     _record = _decode(_Record.json_adapter(), '{"name": "Bo", "is-active": false, "score": 2, "big": 7, "nickname": "B", "points": []}')
-except _Bubble:
-    raise BaseException('panic')
+except _Bubble as _t_1:
+    raise BaseException('panic') from _t_1
 _console.log(f"{_record.name} {_boolean_to_string(_record.active)} {'none' if (_subject := _record.nickname) is None else _subject} {len(_record.points)}")
-_t_0: str
+_t_2: str
 try:
     _decode(_Point.json_adapter(), '{"x": 1}')
-    _t_0 = 'decoded'
+    _t_2 = 'decoded'
 except _Bubble:
-    _t_0 = 'no y'
-_console.log(_t_0)
-_t_1: str
+    _t_2 = 'no y'
+_console.log(_t_2)
+_t_3: str
 try:
     _decode(_Message.json_adapter(), '{"kind": "what", "text": "?"}')
-    _t_1 = 'decoded'
+    _t_3 = 'decoded'
 except _Bubble:
-    _t_1 = 'no such kind'
-_console.log(_t_1)
+    _t_3 = 'no such kind'
+_console.log(_t_3)
