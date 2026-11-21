@@ -200,6 +200,8 @@ pub fn build(
     for &backend in backends {
         let dir = temper_out.join(backend.name);
         // Before any code's written, so no generated file goes with them.
+        // Not in wasm, which runs no tools and so has no build dirs.
+        #[cfg(any(unix, windows))]
         if let (true, Some(tools)) = (options.clean, backend.tools) {
             temper_tmpl::tools::remove_build_dirs(&dir, tools.build_dirs);
         }

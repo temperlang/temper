@@ -739,6 +739,7 @@ fn build_writes_temper_out() {
 
 /// Each file's modification time under `dir`, by its path there, for
 /// files whose paths end with `suffix`.
+#[allow(dead_code)] // Unless every backend is left out.
 fn stamps(dir: &Path, suffix: &str) -> std::collections::BTreeMap<String, std::time::SystemTime> {
     fn walk(
         dir: &Path,
