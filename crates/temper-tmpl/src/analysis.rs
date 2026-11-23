@@ -864,6 +864,54 @@ pub fn bindings(
     (from, to)
 }
 
+/// Whether `declared`, a type in the signature of what `call` calls (a
+/// parameter's or its result), is `T?` of a type parameter `T` that the
+/// call binds to a nullable type, as `firstOrNull<String?>`'s `T?`.
+/// tmpl's types never nest (`String??` is `String?`), but a target
+/// whose `T?` wraps a `T` (Rust's `Option<T>`) nests there, so its calls
+/// flatten at such places (notes/tmpl/nodes.md, "Nullable type
+/// parameters"). False for what isn't a call of a declaration.
+pub fn binds_nullable(p: &Program, call: NodeId, declared: TypeId) -> bool {
+    let TypeData::Nullable(inner) = p.types.get(declared) else {
+        return false;
+    };
+    if !matches!(p.types.get(inner), TypeData::TypeParam { .. }) {
+        return false;
+    }
+    let (callee, receiver, type_args) = match p.nodes.get(call) {
+        Node::CallFunction {
+            callee, type_args, ..
+        } => (callee, None, type_args),
+        Node::CallMethod {
+            method,
+            receiver,
+            type_args,
+            ..
+        } => (method, Some(p.nodes.ty(receiver)), type_args),
+        Node::New {
+            ctor, type_args, ..
+        } => (ctor, None, type_args),
+        _ => return false,
+    };
+    let (from, to) = bindings(p, callee, receiver, p.types.args_of(type_args));
+    (from.iter().position(|&f| f == inner))
+        .and_then(|i| to.get(i))
+        .is_some_and(|&t| p.types.is_nullable(t))
+}
+
+/// Whether `value`, an operand of a null check (`IsNull`, `Coalesce`'s
+/// left, or `EqNullable`'s), is a value of a bare type parameter made
+/// nullable, as `x` in `x == null` for `x: T`: whether it's null depends
+/// on what `T` is bound to, which a target that erases bindings, and
+/// whose `T?` wraps a `T` (Rust's `Option<T>`), can't tell.
+pub fn checks_type_param(p: &Program, value: NodeId) -> bool {
+    let Node::AsNullable { value } = p.nodes.get(value) else {
+        return false;
+    };
+    let ty = p.types.fallback(p.nodes.ty(value));
+    matches!(p.types.get(ty), TypeData::TypeParam { .. })
+}
+
 /// Whether a call of `callee`, a generic function or method, could leave
 /// out its own type arguments in a target that infers them only from
 /// the arguments (Rust, C#, C++): whether each of its type parameters
@@ -879,6 +927,24 @@ pub fn infers_type_args(p: &Program, callee: DeclId) -> bool {
     }
     let params = p.signature(callee).map_or(&[][..], |s| s.params);
     (formals.iter()).all(|&f| params.iter().any(|&t| p.types.mentions(t, f)))
+}
+
+/// [`infers_type_args`] for a call with these arguments (aligned with
+/// the callee's last parameters, as a method's receiver isn't one): not
+/// where a `null` is given for a parameter whose type mentions a type
+/// parameter, which tells nothing of it, as `isNull<String?>(null)`, or
+/// worse, where another argument does, as `orElse<Int?>(null, 2)`, which
+/// C# would take for an `int`.
+pub fn infers_type_args_at(p: &Program, callee: DeclId, args: &[NodeId]) -> bool {
+    if !infers_type_args(p, callee) {
+        return false;
+    }
+    let formals = type_param_types(p, callee);
+    let params = p.signature(callee).map_or(&[][..], |s| s.params);
+    let skip = params.len().saturating_sub(args.len());
+    !(params.iter().skip(skip).zip(args)).any(|(&t, &a)| {
+        matches!(p.nodes.get(a), Node::Null {}) && formals.iter().any(|&f| p.types.mentions(t, f))
+    })
 }
 
 /// The class or interface a type names, if it's one.

@@ -398,10 +398,16 @@ impl<'a> Translator<'a> {
 
     /// `::<A, B>`, a generic call's type arguments, all of them, where
     /// Rust can't infer them from the arguments, as when a type parameter
-    /// appears in no parameter's type (`analysis::infers_type_args`);
-    /// otherwise nothing, leaving them to Rust.
-    fn turbofish(&mut self, callee: DeclId, type_args: temper_tmpl::TypeArgs) -> R<String> {
-        if temper_tmpl::analysis::infers_type_args(self.p, callee) {
+    /// appears in no parameter's type, or only in those given `null`
+    /// (`analysis::infers_type_args_at`); otherwise nothing, leaving them
+    /// to Rust.
+    fn turbofish(
+        &mut self,
+        callee: DeclId,
+        type_args: temper_tmpl::TypeArgs,
+        args: &[NodeId],
+    ) -> R<String> {
+        if temper_tmpl::analysis::infers_type_args_at(self.p, callee, args) {
             return Ok(String::new());
         }
         let mut texts = Vec::new();
@@ -1743,8 +1749,8 @@ impl<'a> Translator<'a> {
         ))
     }
 
-    /// Arguments of a call of the program's own function.
-    fn args(&mut self, callee: DeclId, args: &[NodeId]) -> R<Vec<Expr>> {
+    /// Arguments of a call of the program's own function, `call`.
+    pub(crate) fn args(&mut self, call: NodeId, callee: DeclId, args: &[NodeId]) -> R<Vec<Expr>> {
         let params: Vec<TypeId> = self
             .p
             .signature(callee)
@@ -1761,7 +1767,8 @@ impl<'a> Translator<'a> {
                 continue;
             }
             if concrete {
-                out.push(self.expr(a, Want::Owned)?);
+                let e = self.expr(a, Want::Owned)?;
+                out.push(self.nested_arg(call, params.get(i).copied(), a, e));
                 continue;
             }
             if params.get(i).is_some_and(|&t| self.is_nullable_string(t)) {
@@ -1780,7 +1787,8 @@ impl<'a> Translator<'a> {
                     continue;
                 }
             }
-            out.push(self.expr(a, want)?);
+            let e = self.expr(a, want)?;
+            out.push(self.nested_arg(call, params.get(i).copied(), a, e));
         }
         Ok(out)
     }
@@ -2068,15 +2076,16 @@ impl<'a> Translator<'a> {
                     {
                         self.connected(callee, args, want)?
                     } else {
-                        let args = self.args(callee, args)?;
+                        let fish = self.turbofish(callee, type_args, args)?;
+                        let args = self.args(id, callee, args)?;
                         let path = match self.static_fn_path(callee)? {
                             Some(path) => path,
                             None => self.top_path(callee)?,
                         };
-                        let fish = self.turbofish(callee, type_args)?;
                         Expr::path(format!("{path}{fish}")).call(args)
                     };
-                if may_bubble { call.try_() } else { call }
+                let call = if may_bubble { call.try_() } else { call };
+                self.flattened(id, callee, call)
             }
             Node::CallMethod {
                 method,
@@ -2088,9 +2097,11 @@ impl<'a> Translator<'a> {
                 // Core's by the connection table; other libraries' as the
                 // library's own.
                 if !temper_tmpl::qname::by_connection(p, method, crate::connected::connects_std) {
-                    let fish = self.turbofish(method, type_args)?;
-                    let call = self.call_method(method, &fish, receiver, p.nodes.list(args))?;
-                    return Ok(if may_bubble { call.try_() } else { call });
+                    let args = p.nodes.list(args);
+                    let fish = self.turbofish(method, type_args, args)?;
+                    let call = self.call_method(id, method, &fish, receiver, args)?;
+                    let call = if may_bubble { call.try_() } else { call };
+                    return Ok(self.flattened(id, method, call));
                 }
                 let mut all = vec![receiver];
                 all.extend_from_slice(p.nodes.list(args));
@@ -2214,7 +2225,7 @@ impl<'a> Translator<'a> {
                 let call = if is_external(p, ctor) && library_of(p, ctor) == "core" {
                     self.connected(ctor, p.nodes.list(args), want)?
                 } else {
-                    let args = self.args(ctor, p.nodes.list(args))?;
+                    let args = self.args(id, ctor, p.nodes.list(args))?;
                     Expr::path(format!("{}::new", self.top_path(class)?)).call(args)
                 };
                 if may_bubble { call.try_() } else { call }
@@ -2267,9 +2278,11 @@ impl<'a> Translator<'a> {
             Node::Is { ty, value } => self.is(ty, value)?,
             Node::Identical { left, right } => self.identical(left, right)?,
             Node::Null {} => Expr::path("None"),
-            Node::IsNull { value } => self
-                .expr(value, Want::Borrowed)?
-                .method("is_none", Vec::new()),
+            Node::IsNull { value } => {
+                self.checkable(value)?;
+                self.expr(value, Want::Borrowed)?
+                    .method("is_none", Vec::new())
+            }
             Node::NonNull { value } => self.non_null(id, value, want)?,
             Node::AsNullable { value } => {
                 Expr::path("Some").call(vec![self.expr(value, Want::Owned)?])

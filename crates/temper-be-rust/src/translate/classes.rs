@@ -1796,6 +1796,7 @@ impl<'a> Translator<'a> {
     /// value as it is, since its class implements the trait.
     pub(crate) fn call_method(
         &mut self,
+        call: NodeId,
         method: DeclId,
         fish: &str,
         receiver: NodeId,
@@ -1819,7 +1820,7 @@ impl<'a> Translator<'a> {
                 }
             }
             let recv = self.expr(receiver, Want::Borrowed)?;
-            let args = self.args(method, args)?;
+            let args = self.args(call, method, args)?;
             return Ok(recv.method(rust, args));
         }
         let iface = p.decls.get(method).owner;
@@ -1837,7 +1838,8 @@ impl<'a> Translator<'a> {
             }
             // A trait method's `String?` is an `Option<Arc<String>>`
             // (`Params::Trait`), which a `&str` won't do for.
-            xs.push(self.expr(a, Want::Owned)?);
+            let e = self.expr(a, Want::Owned)?;
+            xs.push(self.nested_arg(call, params.get(i).copied(), a, e));
         }
         let recv = self.expr(recv_node, Want::Borrowed)?;
         let ty = nominal_decl(p, p.nodes.ty(recv_node));

@@ -169,7 +169,7 @@ static T calc(int32_t n, std::function<T(int32_t)> const & transform, std::share
 
 template <class T>
 static T calc(int32_t n, std::function<T(int32_t)> const & transform) {
-  return calc(n, transform, nullptr);
+  return calc<T>(n, transform, nullptr);
 }
 
 void global_init_init() {

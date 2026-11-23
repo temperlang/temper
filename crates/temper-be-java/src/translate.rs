@@ -1628,10 +1628,17 @@ impl<'a> Translator<'a> {
                 Expr::New(class, args)
             }
             // `List.of(…)`, or where an item may be null, which `List.of`
-            // rejects, `Core.listOf(…)`.
+            // rejects, `Core.listOf(…)`, with a lone `null` cast to the
+            // item's type, as it would be the varargs array itself.
             Node::ListLit { items } => {
-                let items = self.member_args(p.nodes.list(items))?;
+                let lone_null =
+                    matches!(p.nodes.list(items), [n] if matches!(p.nodes.get(*n), Node::Null {}));
+                let mut items = self.member_args(p.nodes.list(items))?;
                 let item = p.types.args(p.nodes.ty(id)).first().copied();
+                if let (true, Some(t)) = (lone_null, item) {
+                    let ty = self.type_arg(p.types.non_null(t))?;
+                    items = vec![Expr::Cast(ty, Box::new(Expr::name("null")))];
+                }
                 if item.is_some_and(|t| may_be_null(p, t)) {
                     self.import("temper.core.Core");
                     Expr::name("Core").method("listOf", items)

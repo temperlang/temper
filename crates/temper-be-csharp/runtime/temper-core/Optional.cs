@@ -158,8 +158,16 @@ namespace TemperLang.Core
             where T : struct
             => o.HasValue ? (T?)o.Value : null;
 
+        // An optional of a nullable value type, as a `T?` bound to `int?`
+        // gives, holds no null, as converting one gives none.
+        public static Nullable<T> ToNullable<T>(in Optional<Nullable<T>> o)
+            where T : struct
+            => o.HasValue ? o.Value : null;
+
 #if NET6_0_OR_GREATER
-        public static T? OrNull<T>(this in Optional<T> o) where T : class
+        // `class?`, so an `Optional<string?>`, which a `T?` bound to
+        // `string?` gives, is `OrNull<string?>`'s.
+        public static T? OrNull<T>(this in Optional<T> o) where T : class?
 #else
         public static T OrNull<T>(this in Optional<T> o) where T : class
 #endif

@@ -150,6 +150,9 @@ fn cases() -> Vec<Case> {
     ]
     .concat();
     let mut cases = kit::cases_with("rust", &kit::PROGRAMS, &tests);
+    // Null checks on a bare type parameter's value, which Rust refuses
+    // (`refuses_type_param_null_checks`).
+    cases.retain(|c| c.key != "generic-null-checks");
     // A library named a Rust keyword (`regex/match`'s `match`), which
     // cargo refuses as a package's name, by its key (`regex-match`).
     for case in &mut cases {
@@ -294,6 +297,38 @@ fn goldens() {
             }
         }
         goldens.finish();
+    });
+}
+
+/// A null check of a bare type parameter's value, `x == null` for `x:
+/// T`, which Rust can't make, as `T` may be bound to an `Option` or not,
+/// fails to translate, saying where, where it was always false; the
+/// shared `generic-null-checks` program has such checks.
+#[test]
+fn refuses_type_param_null_checks() {
+    let texts = [
+        "export let isNull<T>(x: T): Boolean { x == null }\n",
+        "export let isSome<T>(x: T): Boolean { x != null }\n",
+        "export let orElse<T>(x: T, y: T): T { x ?? y }\n",
+    ];
+    kit::with_stack(move || {
+        for text in texts {
+            let case = Case::inline("checks", "checks.temper", text, Vec::new());
+            let error = translate(&kit::program_for(&case, &RUST.rules), &RUST).unwrap_err();
+            assert!(
+                error
+                    .what
+                    .contains("null check of a value of a type parameter"),
+                "{error}"
+            );
+            assert!(
+                error
+                    .at
+                    .as_ref()
+                    .is_some_and(|at| at.contains("checks.temper:1")),
+                "{error}"
+            );
+        }
     });
 }
 

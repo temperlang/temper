@@ -2789,6 +2789,21 @@ copied Kotlin's:
   - **Lua** bounds `---@generic IT: lib.I`, and types a local of a
     function's type parameter `any`, since LuaLS knows the `---@generic`
     name only in the function's own annotations.
+- **Type parameters bound to nullable types** (2026-11-23):
+  `firstOrNull<T>(ls: List<T>): T?` on a `List<String?>` holding
+  `null` gives null everywhere, where Rust's and C++'s `T?` nested
+  (`Some(None)`, which isn't null, and a `NullableParam` of one, which
+  threw when read): Rust flattens at the call, C++'s runtime flattens
+  the type (notes/tmpl/nodes.md, "Nullable type parameters"). A
+  parameter of type `T` with a default compiles on Rust, C#
+  (`Optional<T> y = default`), and C++ (its overload names `<T>`). A
+  null check on a bare `T` compiles on C# (`x == null`) and C++
+  (`core::is_null`); Rust refuses it, as it can't make it, where it was
+  always false. A lone `null` in a list literal no longer passes a null
+  `params`/varargs array (C#, Java). Not yet: inside a generic function,
+  Rust's `T?` of a nullable `T` still nests (RFC 684 would rule it out).
+  Test: programs/nullable-generics.temper.md and
+  generic-null-checks.temper.md.
 - **Parameters' defaults in the backends** (2026-11-01):
   Kotlin's surface for optional parameters (nullable, defaulting to null
   where the language can say so, overloads in Java and C++), with

@@ -124,8 +124,8 @@ use crate::tree::{self, Bin, Expr, Item, Labels, Stmt, Unary};
 use crate::{NAMES, NotYet};
 use std::collections::{HashMap, HashSet};
 use temper_tmpl::analysis::{
-    self, Effect, Import, calls_nothing, module_imports, module_refs, module_state, module_writes,
-    test_imports,
+    self, Effect, Import, calls_nothing, checks_type_param, module_imports, module_refs,
+    module_state, module_writes, test_imports,
 };
 use temper_tmpl::host::uses_host;
 use temper_tmpl::naming::{self, NameMap};
@@ -398,6 +398,17 @@ impl<'a> Translator<'a> {
             call: NodeId(0),
             cells: temper_tmpl::analysis::assigned_captures(p),
         }
+    }
+
+    /// A generic declaration's own type parameters as arguments, `<T,
+    /// U>`, or nothing.
+    pub(crate) fn own_type_args(&self, decl: DeclId) -> String {
+        let params = self.p.decls.type_params(decl);
+        if params.is_empty() {
+            return String::new();
+        }
+        let names: Vec<&str> = params.iter().map(|&t| self.p.name(t)).collect();
+        format!("<{}>", names.join(", "))
     }
 
     /// A generic declaration's `template <class T>` line, or nothing.
@@ -903,7 +914,7 @@ impl<'a> Translator<'a> {
                     let any = arities.contains(&(decl, usize::MAX));
                     let live_any = live_arities.contains(&(decl, usize::MAX));
                     made.extend(
-                        (overloads(&f, k).into_iter())
+                        (overloads(&f, k, &self.own_type_args(decl)).into_iter())
                             .filter(|o| {
                                 f.exported || any || arities.contains(&(decl, o.params.len()))
                             })
@@ -3022,6 +3033,14 @@ impl<'a> Translator<'a> {
                 self.core(&format!("panic<{ty}>")).call(Vec::new())
             }
             Node::Null {} => Expr::name("nullptr"),
+            // A bare `T`'s, which may be bound to a type that `nullptr`
+            // doesn't compare with (`int32_t`): `core::is_null(x)`.
+            Node::IsNull { value } if checks_type_param(p, value) => {
+                let Node::AsNullable { value: v } = p.nodes.get(value) else {
+                    return not_yet("a type parameter's null check");
+                };
+                Expr::name(format!("{CORE}::is_null")).call(vec![self.expr(v)?])
+            }
             Node::IsNull { value } => Expr::bin(Bin::Eq, self.expr(value)?, Expr::name("nullptr")),
             Node::NonNull { value } => {
                 let pointer = self.ty(p.nodes.ty(id))?.starts_with("std::shared_ptr<");
@@ -3487,9 +3506,12 @@ pub(crate) fn trailing_optional(p: &Program, params: temper_tmpl::Kids) -> usize
 
 /// Overloads of a function whose last `k` parameters are optional, as
 /// Kotlin's: each leaves out one more, passing null for it, which gives
-/// its default. A member's calls the member by its own name.
-pub(crate) fn overloads(f: &tree::Function, k: usize) -> Vec<tree::Function> {
-    let callee = f.name.rsplit("::").next().unwrap_or(&f.name).to_string();
+/// its default. A member's calls the member by its own name, and a
+/// generic one's with its type parameters, `type_args` (`<T>`), which
+/// C++ can't deduce from a `nullptr` for a `NullableParam<T>`.
+pub(crate) fn overloads(f: &tree::Function, k: usize, type_args: &str) -> Vec<tree::Function> {
+    let callee = f.name.rsplit("::").next().unwrap_or(&f.name);
+    let callee = format!("{callee}{type_args}");
     (1..=k)
         .map(|j| {
             let n = f.params.len() - j;

@@ -568,7 +568,7 @@ impl Translator<'_> {
                     let f = f?;
                     let bare = bare(p, self.names, d);
                     let k = super::trailing_optional(p, params);
-                    let more = super::overloads(&f, k);
+                    let more = super::overloads(&f, k, &self.own_type_args(d));
                     // A generic method's own template line.
                     let template = match self.template_line(d) {
                         t if t.is_empty() => t,
@@ -627,7 +627,7 @@ impl Translator<'_> {
                 } => {
                     let f = self.function(m)?;
                     let k = super::trailing_optional(p, params);
-                    let more = super::overloads(&f, k);
+                    let more = super::overloads(&f, k, &self.own_type_args(d));
                     let template = match self.template_line(d) {
                         t if t.is_empty() => t,
                         t => format!("  {t}\n"),
