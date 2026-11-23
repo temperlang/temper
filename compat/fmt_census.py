@@ -26,7 +26,7 @@ import bisect
 import re
 import subprocess
 from collections import Counter, defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -59,8 +59,6 @@ class Source:
     text: str
     path: Path | None = None
     suffix: str = ".temper"
-    # Indentation each virtual line had in its file (for .temper.md blocks).
-    bases: list[int] = field(default_factory=list)
 
 
 def temper_files(root: Path) -> list[Path]:
@@ -72,7 +70,7 @@ def temper_files(root: Path) -> list[Path]:
     return found
 
 
-def literate_sources(blocks_bin: str, paths: list[Path]) -> dict[Path, tuple[str, list[int]]]:
+def literate_sources(blocks_bin: str, paths: list[Path]) -> dict[Path, str]:
     """Each .temper.md file's Temper code blocks, dedented and joined."""
     out = subprocess.run([blocks_bin, *map(str, paths)], capture_output=True, text=True, check=True).stdout
     result = {}
@@ -90,7 +88,7 @@ def literate_sources(blocks_bin: str, paths: list[Path]) -> dict[Path, tuple[str
         spans[current].append((int(bs), int(be), int(es)))
     for path, ranges in spans.items():
         data = path.read_bytes()
-        lines, bases = [], []
+        lines = []
         for fence, begin, end in ranges:
             body = data[begin:end].decode("utf-8")
             if begin > fence:
@@ -106,8 +104,7 @@ def literate_sources(blocks_bin: str, paths: list[Path]) -> dict[Path, tuple[str
             for b in block:
                 cut = min(indent, len(b) - len(b.lstrip(" ")))
                 lines.append(b[cut:])
-                bases.append(cut)
-        result[path] = ("\n".join(lines) + "\n", bases)
+        result[path] = "\n".join(lines) + "\n"
     return result
 
 
@@ -122,8 +119,7 @@ def collect(libraries: list[Path], blocks_bin: str) -> list[Source]:
         for p in files:
             name = f"{group}:{p.relative_to(root)}"
             if p in lit:
-                text, bases = lit[p]
-                sources.append(Source(group, name, text, path=p, suffix=".temper.md", bases=bases))
+                sources.append(Source(group, name, lit[p], path=p, suffix=".temper.md"))
             else:
                 sources.append(Source(group, name, p.read_text("utf-8"), path=p))
     for page in sorted((ROOT / "docs").rglob("*.md")):
@@ -244,7 +240,6 @@ class Stats:
         self.changed: Counter = Counter()  # rule -> lines it would change
         self.samples: dict[str, list[str]] = defaultdict(list)
         self.lines = 0
-        self.widths: list[int] = []
 
     def add(self, item, choice, n=1):
         self.c[item][choice] += n
@@ -307,10 +302,8 @@ def analyze(s: Source, st: Stats, samples: int) -> None:
     stmt: dict[int, int] = {}
     for li, ln in enumerate(lines):
         raw = btext[ln.start : ln.end].decode()
-        width = len(raw) + (s.bases[li] if li < len(s.bases) else 0)
         if raw.strip():
             st.lines += 1
-            st.widths.append(width)
             if raw != raw.rstrip():
                 st.changed["no trailing space"] += 1
                 st.sample("trailing space", f"{s.name}:{li + 1}: {raw!r}", samples)
@@ -663,18 +656,9 @@ def report(stats: dict[str, Stats]) -> None:
             total.c[k].update(c)
         total.changed.update(st.changed)
         total.lines += st.lines
-        total.widths += st.widths
         for k, v in st.samples.items():
             total.samples[k] += v
     print(f"code lines: {total.lines}; by group: " + ", ".join(f"{g} {st.lines}" for g, st in stats.items()))
-    w = sorted(total.widths)
-    if w:
-        q = lambda p: w[min(len(w) - 1, int(p * len(w)))]
-        print(f"line width: p50 {q(0.5)}, p90 {q(0.9)}, p99 {q(0.99)}, max {w[-1]}; "
-              + ", ".join(f">{n}: {sum(x > n for x in w)}" for n in (80, 100, 120)))
-        for g, st in stats.items():
-            ws = st.widths
-            print(f"  {g}: " + ", ".join(f">{n}: {sum(x > n for x in ws)}" for n in (80, 100, 120)) + f", max {max(ws, default=0)}")
     print()
     for item in sorted(total.c):
         c = total.c[item]

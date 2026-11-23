@@ -38,20 +38,103 @@ class C {
   }
 }
 
-=== continuation lines keep their offset from the statement
+=== continuation lines indent twice from the statement's first line
   let x = a &&
       b;
     let y = foo
     .bar()
-    .baz();
+      .baz();
+let z = first
++ second
+        + third;
+let w =
+  if (c) {
+  a
+  } else {
+  b
+  };
 --- formatted
 let x = a &&
     b;
 let y = foo
-.bar()
-.baz();
+    .bar()
+    .baz();
+let z = first
+    + second
+    + third;
+let w =
+    if (c) {
+      a
+    } else {
+      b
+    };
 
-=== contents indent from the statement's first line
+=== comment lines indent as the code after them
+let x = a &&
+// why b
+b;
+let y = foo
+// then bar
+.bar();
+let f(): Int {
+  g()
+      // before the end of a block
+}
+1 + 2 == 3
+// ✅
+--- formatted
+let x = a &&
+    // why b
+    b;
+let y = foo
+    // then bar
+    .bar();
+let f(): Int {
+  g()
+  // before the end of a block
+}
+1 + 2 == 3
+// ✅
+
+=== statements without a `;` between them don't continue each other
+let format(regex: Int): String {
+  pushRegex(regex)
+      out.toString()
+}
+--- formatted
+let format(regex: Int): String {
+  pushRegex(regex)
+  out.toString()
+}
+
+=== in parentheses, `;` ends a statement if their contents start on a line of their own
+for (
+    var index = String.begin;
+        value.hasIndex(index);
+  index = value.next(index)
+) {
+  f(index);
+}
+for (var i = 0;
+  i < n;
+  i += 1) {
+  f(i);
+}
+--- formatted
+for (
+  var index = String.begin;
+  value.hasIndex(index);
+  index = value.next(index)
+) {
+  f(index);
+}
+for (var i = 0;
+    i < n;
+    i += 1) {
+  f(i);
+}
+
+=== contents indent from the statement's first line, also after a header's continuation
 for (var i = 0;
     i < n;
     i += 1) {
@@ -61,6 +144,10 @@ class GeneratorFnWrapper<YIELD>
 extends Generator<YIELD> {
       let x: Int;
 }
+let f(): Int
+  throws Bubble {
+    1
+  }
 --- formatted
 for (var i = 0;
     i < n;
@@ -68,8 +155,12 @@ for (var i = 0;
   f(i);
 }
 class GeneratorFnWrapper<YIELD>
-extends Generator<YIELD> {
+    extends Generator<YIELD> {
   let x: Int;
+}
+let f(): Int
+    throws Bubble {
+  1
 }
 
 === hugged block argument
@@ -259,7 +350,7 @@ The second property:
       public b: Int,
     ) {}
 
-=== brackets on continuation lines indent from that line
+=== brackets on expression continuation lines indent from that line
 let x = foo
   .map { (s: String): String =>
       s + "!"
@@ -272,10 +363,10 @@ if (a &&
 }
 --- formatted
 let x = foo
-  .map { (s: String): String =>
-    s + "!"
-  }
-  .join(", ");
+    .map { (s: String): String =>
+      s + "!"
+    }
+    .join(", ");
 if (a &&
     b && (
       c || d)) {

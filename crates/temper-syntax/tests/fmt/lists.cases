@@ -1,0 +1,283 @@
+# `temper fmt` cases for bracketed lists (arguments, parameters, list and
+# object literals, type arguments): input, then `--- formatted` and the
+# expected output. The author's line breaks decide, with no line width:
+# no line break after the open bracket joins the list onto one line; a
+# line break there and no trailing comma puts its items together on one
+# line between the brackets' lines; a trailing comma puts one item per
+# line. Format and updating: see tests/fmt.rs.
+
+=== no line break after the open bracket: one line, however long
+f(a,
+  b);
+f(a,
+  b
+);
+let xs = [first,
+    second, third];
+let o = { a: 1,
+  b: 2 };
+let m: Map<String,
+  Int> = make();
+let combine(first: Int,
+    second: Int): Int { first }
+let resultOfTheComputation = someRatherLongFunctionName(argumentNumberOne, argumentNumberTwo,
+  argumentNumberThreeAndSomeMore, andTheFourthOne);
+--- formatted
+f(a, b);
+f(a, b);
+let xs = [first, second, third];
+let o = { a: 1, b: 2 };
+let m: Map<String, Int> = make();
+let combine(first: Int, second: Int): Int { first }
+let resultOfTheComputation = someRatherLongFunctionName(argumentNumberOne, argumentNumberTwo, argumentNumberThreeAndSomeMore, andTheFourthOne);
+
+=== a line break after the open bracket, no trailing comma: the items on one line
+f(
+  a,
+  b
+);
+let resultOfTheComputation = someRatherLongFunctionName(
+    argumentNumberOne, argumentNumberTwo,
+    argumentNumberThreeAndSomeMore);
+let xs = [
+  first, second];
+let o = {
+  a: 1,
+  b: 2 };
+let combine(
+  first: Int,
+  second: Int
+): Int {
+  first
+}
+let m: Map<
+  String, Int> = make();
+--- formatted
+f(
+  a, b
+);
+let resultOfTheComputation = someRatherLongFunctionName(
+  argumentNumberOne, argumentNumberTwo, argumentNumberThreeAndSomeMore
+);
+let xs = [
+  first, second
+];
+let o = {
+  a: 1, b: 2
+};
+let combine(
+  first: Int, second: Int
+): Int {
+  first
+}
+let m: Map<
+  String, Int
+> = make();
+
+=== a trailing comma: one item per line
+f(a, b,);
+let xs = [first, second,
+  third,];
+let o = { a: 1, b: 2, };
+let combine(
+  first: Int, second: Int,
+): Int {
+  first
+}
+g(a,);
+--- formatted
+f(
+  a,
+  b,
+);
+let xs = [
+  first,
+  second,
+  third,
+];
+let o = {
+  a: 1,
+  b: 2,
+};
+let combine(
+  first: Int,
+  second: Int,
+): Int {
+  first
+}
+g(
+  a,
+);
+
+=== adding a line break after the open bracket, or removing it
+f(
+a, b, c);
+g(a,
+  b, c
+);
+--- formatted
+f(
+  a, b, c
+);
+g(a, b, c);
+
+=== adding a trailing comma, or removing it
+f(
+  a, b, c,
+);
+g(
+  a,
+  b,
+  c
+);
+h(a,
+  b,
+  c
+);
+k(a, b, c,
+);
+--- formatted
+f(
+  a,
+  b,
+  c,
+);
+g(
+  a, b, c
+);
+h(a, b, c);
+k(
+  a,
+  b,
+  c,
+);
+
+=== each list follows its own line breaks
+let table = build(
+  headings(first, second), rows(source,
+    filter),
+  options,
+);
+let nested = outer(short, inner(
+    first,
+    second
+));
+--- formatted
+let table = build(
+  headings(first, second),
+  rows(source, filter),
+  options,
+);
+let nested = outer(short, inner(
+  first, second
+));
+
+=== a single item isn't a list: its line breaks stay
+f(
+  a
+);
+g(h(a,
+  b));
+--- formatted
+f(
+  a
+);
+g(h(a, b));
+
+=== lists with comments, or items over several lines, keep their line breaks
+foo(a,
+  b, fn {
+  body();
+});
+let nested = outer(short,
+  inner(
+    first, second
+  ));
+let xs = [
+  a, // the first
+  b
+];
+let s = "${f(a,
+  b)}";
+--- formatted
+foo(a,
+  b, fn {
+    body();
+  });
+let nested = outer(short,
+  inner(
+    first, second
+  ));
+let xs = [
+  a, // the first
+  b
+];
+let s = "${f(a,
+  b)}";
+
+=== data lists, all literals, keep their line breaks
+let rows = [
+  ["a", "b"], ["c", "d"],
+  [-1, 2.5], [true, null],
+];
+let codes = [0x41, 0x42,
+  0x43, 0x44];
+let pairs = [
+    new Pair("a", 1), new Pair("b", 2),
+    new Pair("c", 3)
+];
+check("a long expected string for this test",
+  "and another string to compare it with");
+--- formatted
+let rows = [
+  ["a", "b"], ["c", "d"],
+  [-1, 2.5], [true, null],
+];
+let codes = [0x41, 0x42,
+  0x43, 0x44];
+let pairs = [
+  new Pair("a", 1), new Pair("b", 2),
+  new Pair("c", 3)
+];
+check("a long expected string for this test",
+  "and another string to compare it with");
+
+=== lists in literate code blocks keep their margins (markdown)
+Prose stays exactly as written, (f(a,
+b, c)).
+
+1. A list item:
+
+   ```temper
+   let r = someFunction(
+       argumentNumberOne,
+       argumentNumberTwo);
+   f(a,
+     b
+   );
+   ```
+
+More prose.
+
+    let built = makeSomething(first,
+      second,);
+
+--- formatted
+Prose stays exactly as written, (f(a,
+b, c)).
+
+1. A list item:
+
+   ```temper
+   let r = someFunction(
+     argumentNumberOne, argumentNumberTwo
+   );
+   f(a, b);
+   ```
+
+More prose.
+
+    let built = makeSomething(
+      first,
+      second,
+    );

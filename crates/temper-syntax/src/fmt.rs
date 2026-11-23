@@ -6,7 +6,9 @@
 //! and blank lines. Line breaks matter in Temper (a `}` ending a line or a
 //! `{` starting one can end a statement), and keeping them makes the
 //! result predictable. Inside a list's brackets, after its commas, a line
-//! break can't end a statement, so lists are wrapped (notes/fmt.md).
+//! break can't end a statement, so lists are laid out as their author's
+//! line breaks and trailing commas ask (notes/fmt.md). There's no line
+//! width.
 //!
 //! The rules are the style the compiler's libraries and Temper's own
 //! libraries already use, measured by `compat/fmt_census.py`:
@@ -18,10 +20,15 @@
 //!   header over several lines each indent their contents one level. A
 //!   line starting with a close bracket lines up with that line. A line
 //!   continuing a statement (the one before didn't end with `;`, `{`,
-//!   `}`, `,` or `=>`, or `,` inside `( )` and `[ ]`; or it starts with
-//!   `.` or `?.`) keeps its offset from the statement's first line, as
-//!   there's no settled style for those yet. Lines after a decorator line
-//!   like `@connected` start statements.
+//!   `}`, `,` or `=>`, or inside `( )` and `[ ]` with `,`, or `;` if their
+//!   contents start on a line of their own; or it starts with `.` or `?.`)
+//!   is indented twice from the statement's first line. A bracket opened
+//!   on such a line indents its contents from that line, but on a line
+//!   continuing a declaration's header (starting with a word, like
+//!   `extends` or `throws`, not after an operator) from the declaration's
+//!   first line. Lines starting a node right after another (statements
+//!   with no `;` between them) or after a decorator line like `@connected`
+//!   start statements, and comment lines go with the code after them.
 //! - **Spacing on a line:** one space around infix operators (not `.`,
 //!   `?.`, `..`, `::`, `<`/`>` of type arguments or label colons), after
 //!   `,` and `;` and type colons, around `{ }` contents, and between a
@@ -34,15 +41,14 @@
 //!   after a line ending with `{` or before a line starting with a close
 //!   bracket, none at the start of a file, and one line break at its end.
 //! - **Lists** (arguments, parameters, list and object literals, type
-//!   arguments: two or more items, or a trailing comma) wrap as Python's
-//!   Black does, at [`WIDTH`]: on one line if it fits, with the rest of
-//!   the line up to where it may break next; else the items together on
-//!   one line between the brackets' lines ("hugged"); else one per line,
-//!   with a trailing comma, added. A trailing comma as written keeps one
-//!   item per line. Lists are decided outermost first, as the formatter
-//!   reaches them; one with a comment or a line break inside an item (a
-//!   block, a list kept tall), a list of literals (a data table), or one
-//!   in a string keeps its line breaks as written.
+//!   arguments: two or more items, or a trailing comma) are laid out as
+//!   their author asks: with a trailing comma, one item per line; else,
+//!   with a line break after the open bracket, the items together on one
+//!   line between the brackets' lines ("hugged"); else on one line,
+//!   however long. Commas are never added or removed. A list with a
+//!   comment or a line break inside an item (a block, a list on several
+//!   lines), a list of literals (a data table), or one in a string keeps
+//!   its line breaks as written.
 //!
 //! Multi-line block comments and the lines of multi-quoted strings move
 //! with the line they start on; their text is otherwise kept.
@@ -54,8 +60,7 @@
 //!
 //! **Safety:** code that doesn't parse is left alone, with an error. After
 //! formatting, the result is parsed again and must have the same tokens,
-//! comments (apart from indentation), parse tree and, in markdown, prose,
-//! apart from trailing commas;
+//! comments (apart from indentation), parse tree and, in markdown, prose;
 //! if not, the formatter refuses rather than change meaning. Formatting is
 //! idempotent: formatted code formats to itself (tested over every Temper
 //! file in the repository).
@@ -65,33 +70,33 @@ use crate::literate::{self, Kind};
 use crate::operator::{OpType, Operator};
 use crate::parse::{Parsed, parse};
 use crate::tree::{NodeId, NodeKind};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 
 /// Spaces per indentation level.
 const UNIT: i32 = 2;
 
-/// How wide a line of code may be before the bracketed lists on it wrap,
-/// counted from its code block's margin in markdown.
-pub const WIDTH: usize = 100;
-
 /// Choices `temper fmt` makes, for measuring alternatives
-/// (`wrap_census` in tests/fmt.rs); [`format`] uses the defaults.
+/// (`rules_census` in tests/fmt.rs); [`format`] uses the defaults.
 #[doc(hidden)]
 #[derive(Clone, Copy, Debug)]
 pub struct Options {
-    /// The line width bracketed lists wrap at, or `None` to keep their line
+    /// Whether lists are laid out by their rules, or keep their line
     /// breaks as written.
-    pub width: Option<usize>,
+    pub lists: bool,
     /// Whether lists of literals (data tables) keep their line breaks.
     pub keep_data: bool,
+    /// Whether continuation lines are indented twice from their
+    /// statement's first line, or keep their offset from it as written.
+    pub continuations: bool,
 }
 
 impl Default for Options {
     fn default() -> Self {
         Options {
-            width: Some(WIDTH),
+            lists: true,
             keep_data: true,
+            continuations: true,
         }
     }
 }
@@ -333,6 +338,33 @@ fn roles(parsed: &Parsed) -> HashMap<u32, (Role, Operator)> {
     roles
 }
 
+/// Where nodes start that follow another node directly, as statements
+/// without a `;` between them do (`f()` and `g()` on lines of their own).
+fn juxtaposed(parsed: &Parsed) -> HashSet<u32> {
+    let tree = parsed.tree();
+    let mut starts = HashSet::new();
+    let mut stack = vec![parsed.root()];
+    while let Some(id) = stack.pop() {
+        let children = tree.children(id);
+        let is_node = |c: NodeId| tree.kind(c) != NodeKind::Token;
+        for w in children.windows(2) {
+            if is_node(w[0]) && is_node(w[1]) {
+                starts.extend(first_token(parsed, w[1]));
+            }
+        }
+        stack.extend(children.iter().copied().filter(|&c| is_node(c)));
+    }
+    starts
+}
+
+/// Where a node's first token as written starts.
+fn first_token(parsed: &Parsed, id: NodeId) -> Option<u32> {
+    if let Some(t) = parsed.token(id) {
+        return (!t.synthetic).then_some(t.start);
+    }
+    (parsed.tree().children(id).iter()).find_map(|&c| first_token(parsed, c))
+}
+
 /// A bracketed list of two or more items, or with a trailing comma:
 /// arguments, parameters, a list or object literal, or type arguments.
 /// Its fields are indices in [`Formatter`]'s tokens.
@@ -341,8 +373,8 @@ struct List {
     open: usize,
     close: usize,
     commas: Vec<usize>,
-    /// Whether a comma ends it, which keeps one item per line.
-    magic: bool,
+    /// Whether a comma ends it, which puts one item per line.
+    trailing_comma: bool,
     /// Whether its items are all literals, like a row of a table.
     data: bool,
 }
@@ -359,18 +391,29 @@ enum Place {
 /// How a list is laid out.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Layout {
-    /// Not yet decided: lists are decided outermost first, as the
-    /// formatter reaches their open brackets.
-    Undecided,
     /// Its line breaks as written: it has comments, or line breaks inside
     /// its items, or is data, or is in a string.
     Kept,
-    /// On one line.
+    /// On one line: no line break after its open bracket.
     Flat,
-    /// Its items together on one line between the brackets' lines.
+    /// Its items together on one line between the brackets' lines: a line
+    /// break after its open bracket, and no trailing comma.
     Hug,
-    /// One item per line, with a trailing comma.
+    /// One item per line: a trailing comma.
     Tall,
+}
+
+impl Layout {
+    /// Whether the list breaks the line at a place, given whether it's
+    /// broken there as written.
+    fn breaks(self, place: Place, written: bool) -> bool {
+        match self {
+            Layout::Kept => written,
+            Layout::Flat => false,
+            Layout::Hug => place != Place::AfterComma,
+            Layout::Tall => true,
+        }
+    }
 }
 
 /// The source's lists, given each token's index by its start.
@@ -412,7 +455,7 @@ fn find_lists(parsed: &Parsed, index: &HashMap<u32, usize>) -> Vec<List> {
             lists.push(List {
                 open,
                 close,
-                magic: commas.last() == Some(&(close - 1)),
+                trailing_comma: commas.last() == Some(&(close - 1)),
                 commas,
                 data: is_data(parsed, w[1]),
             });
@@ -528,6 +571,8 @@ struct Open {
     start: u32,
     base: Indent,
     round: bool,
+    /// Whether its contents start on a line of their own.
+    contents_own_line: bool,
 }
 
 struct Formatter<'a> {
@@ -539,6 +584,8 @@ struct Formatter<'a> {
     /// Whether a string's closer was inserted at the end.
     open_at_end: bool,
     roles: HashMap<u32, (Role, Operator)>,
+    /// Where statements without a `;` before them start.
+    juxtaposed: HashSet<u32>,
     ranges: &'a [CodeRange],
     standalone: bool,
     out: String,
@@ -565,7 +612,10 @@ struct Formatter<'a> {
     newline: &'static str,
     /// The current token's index in `tokens`.
     index: usize,
-    // Wrapping lists, planned by `plan`.
+    /// Whether the current line continues a declaration's header, as
+    /// `extends` does a class's.
+    line_continues_header: bool,
+    // Lists and their layouts, planned by `plan`.
     lists: Vec<List>,
     layouts: Vec<Layout>,
     /// For each token, the list it opens or closes, if any.
@@ -573,18 +623,6 @@ struct Formatter<'a> {
     closes: Vec<Option<usize>>,
     /// For the gap before each token, the list that may break there.
     places: Vec<Option<(usize, Place)>>,
-    /// For the gap before each token, whether it has a line break as
-    /// written, and whether it, or the token, keeps a list around it from
-    /// being on one line: a line break not a list's to change, a comment,
-    /// a token over several lines.
-    newlines: Vec<bool>,
-    blocked: Vec<bool>,
-    /// The width of each gap on one line, and of the tokens with their
-    /// gaps before each token, summed.
-    gap_widths: Vec<usize>,
-    widths: Vec<usize>,
-    /// How many lists around the current token are on one line.
-    flat_depth: usize,
 }
 
 impl<'a> Formatter<'a> {
@@ -605,6 +643,7 @@ impl<'a> Formatter<'a> {
                     && t.start as usize == parsed.source().len()
             }),
             roles: roles(parsed),
+            juxtaposed: juxtaposed(parsed),
             ranges,
             standalone: kind == SourceKind::Standalone,
             out: String::with_capacity(parsed.source().len() + 64),
@@ -625,25 +664,21 @@ impl<'a> Formatter<'a> {
                 "\n"
             },
             index: 0,
+            line_continues_header: false,
             lists: Vec::new(),
             layouts: Vec::new(),
             opens: Vec::new(),
             closes: Vec::new(),
             places: Vec::new(),
-            newlines: Vec::new(),
-            blocked: Vec::new(),
-            gap_widths: Vec::new(),
-            widths: Vec::new(),
-            flat_depth: 0,
         };
-        if options.width.is_some() {
+        if options.lists {
             formatter.plan(parsed, &in_string);
         }
         formatter
     }
 
-    /// Finds the lists the formatter may wrap, and measures each gap and
-    /// token's width on one line, for deciding their layouts.
+    /// Finds the lists and decides their layouts, inner lists first, as a
+    /// list whose items span lines keeps its line breaks.
     fn plan(&mut self, parsed: &Parsed, in_string: &[bool]) {
         let n = self.tokens.len();
         let index: HashMap<u32, usize> = (self.tokens.iter().enumerate())
@@ -663,143 +698,61 @@ impl<'a> Formatter<'a> {
             }
             self.places[list.close] = Some((id, Place::BeforeClose));
         }
-        self.newlines = vec![false; n + 1];
-        self.blocked = vec![true; n + 1];
-        self.gap_widths = vec![0; n + 1];
-        self.widths = vec![0; n + 1];
+        // For the gap before each token, whether it has a line break as
+        // written, and whether it, or the token, spans lines in the
+        // output: a line break not a list's to change, a comment (which
+        // keeps the lists around it as written), a token over several
+        // lines, prose between code blocks.
+        let mut newlines = vec![false; n + 1];
+        let mut spans = vec![false; n + 1];
         for j in 0..n {
             let t = self.tokens[j];
             let text = self.text(t);
-            let mut width = text.chars().count();
-            let mut blocked = t.kind == TokenKind::Comment || text.contains(['\n', '\r']);
+            spans[j] = matches!(t.kind, TokenKind::Comment | TokenKind::Margin)
+                || text.contains(['\n', '\r']);
             if let Some(p) = j.checked_sub(1).map(|p| self.tokens[p]) {
                 let gap = &self.source[p.end as usize..t.start as usize];
-                let range = self.range_of(t.start);
-                let same_range = range.is_some_and(|r| r.start <= p.start);
-                self.newlines[j] = gap.contains('\n');
-                let gap_width = if !same_range || t.kind == TokenKind::Margin {
-                    None
-                } else if !self.code_gaps[j] {
-                    (!self.newlines[j]).then(|| gap.chars().count())
-                } else if self.newlines[j] {
-                    // Only a list's line breaks may join.
-                    let joined = self.places[j].map(|_| self.space(p, t, " ").unwrap_or(" "));
-                    joined.map(str::len)
-                } else {
-                    Some(self.space(p, t, gap).unwrap_or(gap).chars().count())
-                };
-                blocked |= gap_width.is_none();
-                self.gap_widths[j] = gap_width.unwrap_or(0);
-                width += self.gap_widths[j];
+                let same_range = self.range_of(t.start).is_some_and(|r| r.start <= p.start);
+                newlines[j] = gap.contains('\n');
+                let ours = self.places[j].is_some() && self.code_gaps[j];
+                spans[j] |= !same_range || (newlines[j] && !ours);
             }
-            self.blocked[j] = blocked;
-            self.widths[j + 1] = self.widths[j] + width;
         }
-        // Inner lists first: a list may be wrapped if nothing inside it
-        // must break but its own line breaks and its inner lists'.
         let mut order: Vec<usize> = (0..self.lists.len()).collect();
         order.sort_by_key(|&i| self.lists[i].close - self.lists[i].open);
-        self.layouts = vec![Layout::Undecided; self.lists.len()];
+        self.layouts = vec![Layout::Kept; self.lists.len()];
         for id in order {
             let list = &self.lists[id];
             let kept = (self.options.keep_data && list.data)
                 || in_string[list.open]
-                || (list.open + 1..=list.close).any(|j| self.blocked[j]);
-            if kept {
-                self.layouts[id] = Layout::Kept;
-            }
-            // Its line breaks, as lists around it see them: as written if
-            // it's kept, and every one if a trailing comma keeps it tall.
+                || (list.open + 1..=list.close).any(|j| spans[j]);
+            let layout = if kept {
+                Layout::Kept
+            } else if list.trailing_comma {
+                Layout::Tall
+            } else if newlines[list.open + 1] {
+                Layout::Hug
+            } else {
+                Layout::Flat
+            };
+            self.layouts[id] = layout;
+            // Its line breaks, for the lists around it.
             let places = [list.open + 1, list.close].into_iter();
             for j in places.chain(list.commas.iter().map(|c| c + 1)) {
-                if (kept && self.newlines[j]) || (!kept && list.magic) {
-                    self.blocked[j] = true;
+                if let Some((_, place)) = self.places[j] {
+                    spans[j] |= layout.breaks(place, newlines[j]);
                 }
             }
         }
     }
 
-    /// Decides a list's layout as the formatter reaches its open bracket,
-    /// at its place on the line, with the lists around it decided: on one
-    /// line if it fits there, with the rest of the line up to the next
-    /// place a line may break; else its items together on a line of their
-    /// own if they fit; else one per line. A trailing comma keeps one per
-    /// line, as Black's magic trailing comma does.
-    fn decide(&mut self, id: usize, margin: i32) {
-        if self.layouts[id] != Layout::Undecided {
-            return;
-        }
-        let width = self.options.width.unwrap_or(usize::MAX);
-        let list = &self.lists[id];
-        let layout = if self.flat_depth > 0 {
-            Layout::Flat
-        } else if list.magic {
-            Layout::Tall
-        } else {
-            let line = &self.out[self.out.rfind('\n').map_or(0, |i| i + 1)..];
-            let column = line.chars().count().saturating_sub(margin as usize);
-            let flat = self.widths[list.close + 1] - self.widths[list.open + 1];
-            let indent = self.stack.last().map_or(0, |o| o.base.formatted) as usize;
-            let items = self.widths[list.close]
-                - self.widths[list.open + 1]
-                - self.gap_widths[list.open + 1];
-            if column + flat + self.rest(list.close + 1, width) <= width {
-                Layout::Flat
-            } else if indent + UNIT as usize + items <= width {
-                Layout::Hug
-            } else {
-                Layout::Tall
-            }
-        };
-        self.layouts[id] = layout;
-        if matches!(layout, Layout::Flat | Layout::Hug) {
-            self.flat_depth += 1;
-        }
-    }
-
-    /// The width of the tokens from `from` up to where the line may break
-    /// next (a comment ends it too), counted up to `limit`.
-    fn rest(&self, from: usize, limit: usize) -> usize {
-        let mut total = 0;
-        for k in from..self.tokens.len() {
-            if self.breaks_before(k) || self.tokens[k].kind == TokenKind::Comment {
-                break;
-            }
-            total += self.widths[k + 1] - self.widths[k];
-            // A list yet to be decided may break after its open bracket.
-            let next_open = self.places[k + 1].is_some_and(|(id, place)| {
-                place == Place::AfterOpen && self.layouts[id] == Layout::Undecided
-            });
-            if total > limit || next_open {
-                break;
-            }
-        }
-        total
-    }
-
-    /// Whether the gap before a token breaks the line, as far as the lists
-    /// decided so far say.
-    fn breaks_before(&self, k: usize) -> bool {
-        match self.places[k] {
-            Some((id, place)) => match self.layouts[id] {
-                Layout::Flat => false,
-                Layout::Hug => place != Place::AfterComma,
-                Layout::Tall | Layout::Undecided => true,
-                Layout::Kept => self.newlines[k],
-            },
-            None => self.blocked[k],
-        }
-    }
-
-    /// Whether a list's line breaks the gap before the current token,
-    /// joins it, or leaves it as written (`None`).
-    fn wanted_break(&self) -> Option<(usize, bool)> {
+    /// Whether a list's layout breaks the gap before the current token
+    /// or joins it, or leaves it as written (`None`).
+    fn wanted_break(&self) -> Option<bool> {
         let (id, place) = self.places.get(self.index).copied().flatten()?;
         match self.layouts[id] {
-            Layout::Flat => Some((id, false)),
-            Layout::Hug => Some((id, place != Place::AfterComma)),
-            Layout::Tall => Some((id, true)),
-            Layout::Undecided | Layout::Kept => None,
+            Layout::Kept => None,
+            layout => Some(layout.breaks(place, false)),
         }
     }
 
@@ -808,35 +761,20 @@ impl<'a> Formatter<'a> {
         if self.tokens.is_empty() {
             return source.to_string();
         }
-        // A copy, as `rest` looks ahead in `self.tokens`.
+        // A copy, as other methods read `self.tokens` too.
         let tokens = self.tokens.clone();
         let mut end = 0;
         for (i, &token) in tokens.iter().enumerate() {
             self.index = i;
             let previous = i.checked_sub(1).map(|p| tokens[p]);
             let wanted = self.wanted_break();
-            if let Some((id, true)) = wanted {
-                let list = &self.lists[id];
-                if i == list.close && self.layouts[id] == Layout::Tall && !list.magic {
-                    self.out.push(',');
-                }
-            }
             if self.code_gaps[i] || token.kind == TokenKind::Margin {
-                self.gap(previous, end, token, wanted.map(|w| w.1));
+                self.gap(previous, end, token, wanted);
             } else {
                 self.out
                     .push_str(&source[end as usize..token.start as usize]);
             }
             self.token(token);
-            if let Some(id) = self.opens.get(i).copied().flatten() {
-                let margin = self.range_of(token.start).map_or(0, |r| r.margin);
-                self.decide(id, margin);
-            }
-            if let Some(id) = self.closes.get(i).copied().flatten() {
-                if matches!(self.layouts[id], Layout::Flat | Layout::Hug) {
-                    self.flat_depth -= 1;
-                }
-            }
             end = token.end;
         }
         let rest = &source[end as usize..];
@@ -979,6 +917,7 @@ impl<'a> Formatter<'a> {
         self.line_depth = self.stack.len();
         let text = self.text(first);
         let mut starts_statement = false;
+        self.line_continues_header = false;
         let formatted = if keep {
             actual
         } else if matches!(first.kind, TokenKind::Margin | TokenKind::QuotedString) {
@@ -986,9 +925,20 @@ impl<'a> Formatter<'a> {
         } else if first.kind == TokenKind::Punctuation && matches!(text, ")" | "]" | "}")
             || self.wrapped_angle(self.closes.get(self.index))
         {
+            // Its line continues the bracket's, as `} else {` does.
+            self.line_depth = self.line_depth.saturating_sub(1);
             self.stack.last().map_or(0, |o| o.base.formatted)
-        } else if let Some(statement) = self.continued_statement(text) {
-            (statement.formatted + actual - statement.actual).max(0)
+        } else if let Some(statement) = self.continued_statement(first) {
+            // A word, not after an operator: `extends`, `throws`.
+            let after_operator = self.previous.is_some_and(|p| {
+                p.kind == TokenKind::Punctuation && self.role(p).is_some_and(|r| r.0 == Role::Infix)
+            });
+            self.line_continues_header = first.kind == TokenKind::Word && !after_operator;
+            if self.options.continuations {
+                statement.formatted + 2 * UNIT
+            } else {
+                (statement.formatted + actual - statement.actual).max(0)
+            }
         } else {
             starts_statement = true;
             self.stack.last().map_or(0, |o| o.base.formatted + UNIT)
@@ -1016,24 +966,39 @@ impl<'a> Formatter<'a> {
     }
 
     /// The statement a line starting with `first` continues, if the code
-    /// before it didn't end one, or it starts with `.` or `?.`.
-    fn continued_statement(&self, first: &str) -> Option<Indent> {
+    /// before it didn't end one, or it starts with `.` or `?.`. A `;` ends
+    /// one in parentheses too if their contents start on a line of their
+    /// own (`for (\n  a;\n  b;`), not in `for (a;\n    b;`.
+    fn continued_statement(&mut self, first: Token) -> Option<Indent> {
         let previous = self.previous?;
-        if matches!(first, "." | "?.") {
+        // A comment line goes with the code after it: it continues the
+        // statement if that does, but not before a close bracket or the
+        // end.
+        let first = if first.kind == TokenKind::Comment {
+            let next = (self.tokens[self.index..].iter()).find(|t| t.kind != TokenKind::Comment);
+            match next {
+                Some(&t) if !matches!(self.text(t), ")" | "]" | "}") => t,
+                _ => return None,
+            }
+        } else {
+            first
+        };
+        if matches!(self.text(first), "." | "?.") {
             return *self.statements.last().unwrap();
         }
-        if self.after_decorator {
+        if self.after_decorator || self.juxtaposed.contains(&first.start) {
             return None;
         }
-        let top = self.stack.last();
-        if top.is_some_and(|o| o.start == previous.start) {
-            return None;
+        if let Some(top) = self.stack.last_mut() {
+            if top.start == previous.start {
+                top.contents_own_line = true;
+                return None;
+            }
         }
         let text = self.text(previous);
-        let ends = if top.is_some_and(|o| o.round) {
-            text == ","
-        } else {
-            matches!(text, ";" | "{" | "}" | "," | "=>")
+        let ends = match self.stack.last() {
+            Some(o) if o.round => text == "," || (text == ";" && o.contents_own_line),
+            _ => matches!(text, ";" | "{" | "}" | "," | "=>"),
         };
         if ends {
             return None;
@@ -1081,9 +1046,10 @@ impl<'a> Formatter<'a> {
                 if text.ends_with(['(', '[', '{'])
                     || self.wrapped_angle(self.opens.get(self.index)) =>
             {
-                // From its own line if that started at this depth, else
-                // from the line that started its statement here.
-                let base = if self.line_depth == self.stack.len() {
+                // From its own line if that started at this depth (but
+                // continued a header), else from the line that started
+                // its statement here.
+                let base = if self.line_depth == self.stack.len() && !self.line_continues_header {
                     self.line
                 } else {
                     self.statements.last().unwrap().unwrap_or(self.line)
@@ -1092,6 +1058,7 @@ impl<'a> Formatter<'a> {
                     start: token.start,
                     base,
                     round: !text.ends_with('{'),
+                    contents_own_line: false,
                 });
                 self.statements.push(Some(self.line));
             }
@@ -1238,7 +1205,7 @@ fn lexes_alone(a: &str, space: &str, b: &str) -> bool {
 
 /// Checks that `text`, the formatted `original`, has the same tokens,
 /// comments (but for each line's indentation), parse tree and markdown
-/// prose, apart from trailing commas.
+/// prose.
 fn check_same(original: &Parsed, text: &str, kind: SourceKind) -> Result<(), FmtError> {
     let unsafe_ = |why: &str| Err(FmtError::Unsafe(why.to_string()));
     let again = parse(text, kind);
@@ -1246,8 +1213,7 @@ fn check_same(original: &Parsed, text: &str, kind: SourceKind) -> Result<(), Fmt
         return unsafe_("the result doesn't parse");
     }
     let tokens = |p: &Parsed| -> Vec<(TokenKind, Option<Synthetic>, String)> {
-        let tokens: Vec<_> = p
-            .lexed()
+        p.lexed()
             .iter()
             .filter(|t| t.kind != TokenKind::Space)
             .map(|t| {
@@ -1262,19 +1228,7 @@ fn check_same(original: &Parsed, text: &str, kind: SourceKind) -> Result<(), Fmt
                 };
                 (t.kind, t.synthetic, text)
             })
-            .collect();
-        // Without trailing commas.
-        let closes = |t: &(TokenKind, Option<Synthetic>, String)| {
-            matches!(&*t.2, ")" | "]" | "}" | ">") && t.0 == TokenKind::Punctuation
-        };
-        let mut kept = Vec::with_capacity(tokens.len());
-        for (i, t) in tokens.iter().enumerate() {
-            let next = tokens[i + 1..].iter().find(|t| t.0 != TokenKind::Comment);
-            if !(t.2 == "," && t.0 == TokenKind::Punctuation && next.is_some_and(closes)) {
-                kept.push(t.clone());
-            }
-        }
-        kept
+            .collect()
     };
     let (before, after) = (tokens(original), tokens(&again));
     if before != after {
@@ -1313,26 +1267,8 @@ fn check_same(original: &Parsed, text: &str, kind: SourceKind) -> Result<(), Fmt
     Ok(())
 }
 
-/// A node's children, but a comma ending a list.
-fn trailing_comma(parsed: &Parsed, id: NodeId) -> &[NodeId] {
-    let children = parsed.tree().children(id);
-    let comma = |c: &NodeId| {
-        parsed
-            .token(*c)
-            .is_some_and(|t| parsed.token_text(t) == ",")
-    };
-    match children.split_last() {
-        Some((last, rest))
-            if parsed.tree().kind(id) == NodeKind::Op(Operator::Comma) && comma(last) =>
-        {
-            rest
-        }
-        _ => children,
-    }
-}
-
 /// Whether two trees have the same nodes and tokens, ignoring where they
-/// are, and trailing commas.
+/// are.
 fn same_tree(a: &Parsed, x: NodeId, b: &Parsed, y: NodeId) -> bool {
     let (ta, tb) = (a.tree(), b.tree());
     let mut stack = vec![(x, y)];
@@ -1350,7 +1286,7 @@ fn same_tree(a: &Parsed, x: NodeId, b: &Parsed, y: NodeId) -> bool {
                 }
             }
             (None, None) => {
-                let (cx, cy) = (trailing_comma(a, x), trailing_comma(b, y));
+                let (cx, cy) = (ta.children(x), tb.children(y));
                 if cx.len() != cy.len() {
                     return false;
                 }

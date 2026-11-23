@@ -4,18 +4,15 @@
 //!   (format: `tests/common/mod.rs`, separator `--- formatted`): the
 //!   formatted text, or `error: ` and the message when the input is left
 //!   alone. `UPDATE_SNAPSHOTS=1` accepts new output for review.
-//!   `wrap_cases_hold_at_nearby_widths` checks `wrap.cases` at widths 90
-//!   and 110 too, so they test the rules rather than one width.
 //! - `repo_files_format_safely` formats every Temper file in the repository
 //!   in memory, and checks that formatting is idempotent and keeps the parse
 //!   tree, comments and markdown prose (the formatter checks those itself
-//!   and refuses otherwise, so a refusal fails the test), at the line width
-//!   and at a narrow one, so that most lists wrap.
+//!   and refuses otherwise, so a refusal fails the test).
 //! - `mutated_inputs_format_safely` does the same for randomly edited
 //!   copies of the formatter, parser and lexer cases (`FMT_FUZZ_SEED`,
 //!   `FMT_FUZZ_ROUNDS`), which also exercises the refusal for code that
 //!   doesn't parse.
-//! - `wrap_census` (ignored) counts the lines wrapping changes over the
+//! - `rules_census` (ignored) counts the lines each rule changes over the
 //!   repository and libraries, for notes/fmt.md.
 
 mod common;
@@ -26,28 +23,13 @@ use temper_syntax::fmt::{FmtError, Options, format, format_with};
 use temper_syntax::lex::SourceKind;
 use temper_syntax::parse::parse;
 
-/// A narrow line width, at which most lists wrap.
-const NARROW: usize = 30;
-
-/// Formats with the defaults but the line width.
-fn format_at(text: &str, kind: SourceKind, width: usize) -> Result<String, FmtError> {
-    let options = Options {
-        width: Some(width),
-        ..Options::default()
-    };
-    format_with(&parse(text, kind), kind, options)
-}
-
 /// Formats twice, checking the second run changes nothing.
-fn format_twice(text: &str, kind: SourceKind, width: usize) -> Result<String, String> {
-    let once = format_at(text, kind, width).map_err(|e| e.to_string())?;
-    match format_at(&once, kind, width) {
+fn format_twice(text: &str, kind: SourceKind) -> Result<String, String> {
+    let once = format(text, kind).map_err(|e| e.to_string())?;
+    match format(&once, kind) {
         Ok(twice) if twice == once => Ok(once),
-        Ok(twice) => Err(format!(
-            "not idempotent at width {width}:\n{}",
-            first_change(&once, &twice)
-        )),
-        Err(e) => Err(format!("second run at width {width}: {e}")),
+        Ok(twice) => Err(format!("not idempotent:\n{}", first_change(&once, &twice))),
+        Err(e) => Err(format!("second run: {e}")),
     }
 }
 
@@ -70,21 +52,6 @@ fn cases_format_as_expected() {
             Err(error) => format!("error: {error}\n"),
         }
     });
-}
-
-#[test]
-fn wrap_cases_hold_at_nearby_widths() {
-    let cases = common::read_cases(
-        &fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fmt/wrap.cases"))
-            .unwrap(),
-        "formatted",
-    );
-    for width in [90, 110] {
-        for case in &cases {
-            let text = format_at(&case.input, case.kind, width).unwrap();
-            assert_eq!(text, case.expected, "case {:?} at width {width}", case.name);
-        }
-    }
 }
 
 #[test]
@@ -118,16 +85,11 @@ fn repo_files_format_safely() {
         } else {
             SourceKind::Standalone
         };
-        match format(&text, kind) {
+        match format_twice(&text, kind) {
             Ok(_) => formatted += 1,
             // Some test inputs are deliberately malformed.
-            Err(FmtError::Unparseable(_)) => continue,
+            Err(_) if matches!(format(&text, kind), Err(FmtError::Unparseable(_))) => {}
             Err(e) => failures.push(format!("{}: {e}", path.display())),
-        }
-        for width in [temper_syntax::fmt::WIDTH, NARROW] {
-            if let Err(e) = format_twice(&text, kind, width) {
-                failures.push(format!("{}: {e}", path.display()));
-            }
         }
     }
     assert!(failures.is_empty(), "{}", failures.join("\n"));
@@ -156,6 +118,12 @@ fn mutated_inputs_format_safely() {
             " = ",
             "// c\n",
             "/* c\n */",
+            // Lists' line breaks and trailing commas.
+            "(\n",
+            "[\n",
+            ",\n",
+            ",)",
+            ",\n]",
         ])
         .copied()
         .collect();
@@ -183,10 +151,8 @@ fn mutated_inputs_format_safely() {
                         if let Err(FmtError::Unparseable(_)) = format(&text, kind) {
                             continue;
                         }
-                        for width in [temper_syntax::fmt::WIDTH, NARROW] {
-                            if let Err(e) = format_twice(&text, kind, width) {
-                                panic!("{} as {kind:?}: {e}\ninput: {text:?}", context());
-                            }
+                        if let Err(e) = format_twice(&text, kind) {
+                            panic!("{} as {kind:?}: {e}\ninput: {text:?}", context());
                         }
                     }
                 }
@@ -241,30 +207,32 @@ fn format_speed() {
             }
             start.elapsed().as_secs_f64() * 1000.0 / rounds as f64
         };
-        let unwrapped = time(Options {
-            width: None,
+        let unlisted = time(Options {
+            lists: false,
             ..Options::default()
         });
         let ms = time(Options::default());
         let name = path.strip_prefix(&root).unwrap().display();
         println!(
-            "{name}: {} KiB, {} lines, {ms:.1} ms ({unwrapped:.1} ms without wrapping)",
+            "{name}: {} KiB, {} lines, {ms:.1} ms ({unlisted:.1} ms without list rules)",
             text.len() / 1024,
             text.lines().count()
         );
     }
 }
 
-/// Counts the lines wrapping lists changes, by group of files, at several
-/// widths, with data lists kept as written or not, over the repository's
+/// Counts the lines `temper fmt` changes, by group of files, and those
+/// each of its rules for line breaks changes: the list rules (with data
+/// lists kept as written, and with them too), and indenting continuation
+/// lines twice (against keeping their offset). Over the repository's
 /// Temper files (core and std in lib/, tests in crates/, docs' examples)
 /// and the libraries in `FMT_CENSUS_LIBS` (paths separated by `:`). A line
 /// changed is one of the input's that the output doesn't have (as a
 /// multiset). Run with
-/// `cargo test --release --test fmt wrap_census -- --ignored --nocapture`.
+/// `cargo test --release --test fmt rules_census -- --ignored --nocapture`.
 #[test]
 #[ignore]
-fn wrap_census() {
+fn rules_census() {
     use std::collections::HashMap;
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let mut groups: Vec<(String, Vec<std::path::PathBuf>)> = Vec::new();
@@ -312,15 +280,14 @@ fn wrap_census() {
         }
         n
     };
-    let widths = [80, 88, 100, 120];
     println!(
-        "group: files formatted (of all), code lines; then for each width, lines over it \
-         before wrapping, and lines wrapping changes keeping data lists / wrapping them too"
+        "group: files formatted (of all), code lines; lines fmt changes; of its output's, \
+         lines the list rules change (data lists kept / not), and continuation indent"
     );
+    let all = Options::default();
     for (name, files) in &groups {
         let (mut done, mut lines) = (0, 0);
-        let mut over = [0; 4];
-        let mut wrapped = [[0; 2]; 4];
+        let [mut total, mut lists, mut data, mut continuations] = [0; 4];
         for path in files {
             let text = fs::read_to_string(path).unwrap();
             let kind = if path.extension().is_some_and(|e| e == "md") {
@@ -329,30 +296,33 @@ fn wrap_census() {
                 SourceKind::Standalone
             };
             let parsed = parse(&text, kind);
-            let options = |width, keep_data| Options { width, keep_data };
-            let Ok(base) = format_with(&parsed, kind, options(None, true)) else {
+            let run = |options: Options| format_with(&parsed, kind, options).unwrap();
+            let Ok(out) = format_with(&parsed, kind, all) else {
                 continue;
             };
             done += 1;
-            lines += base.lines().count();
-            for (w, &width) in widths.iter().enumerate() {
-                over[w] += base.lines().filter(|l| l.chars().count() > width).count();
-                for (d, keep_data) in [true, false].into_iter().enumerate() {
-                    let out = format_with(&parsed, kind, options(Some(width), keep_data)).unwrap();
-                    wrapped[w][d] += changed(&base, &out);
-                }
-            }
+            lines += text.lines().count();
+            total += changed(&text, &out);
+            let no_lists = run(Options {
+                lists: false,
+                ..all
+            });
+            lists += changed(&no_lists, &out);
+            let with_data = run(Options {
+                keep_data: false,
+                ..all
+            });
+            data += changed(&no_lists, &with_data);
+            let kept = run(Options {
+                continuations: false,
+                ..all
+            });
+            continuations += changed(&kept, &out);
         }
-        let cells: Vec<String> = (0..widths.len())
-            .map(|w| {
-                let [kept, all] = wrapped[w];
-                format!("{}: {} over, {kept}/{all}", widths[w], over[w])
-            })
-            .collect();
         println!(
-            "{name}: {done} files (of {}), {lines} lines; {}",
-            files.len(),
-            cells.join("; ")
+            "{name}: {done} files (of {}), {lines} lines; {total} changed; \
+             lists {lists}/{data}, continuations {continuations}",
+            files.len()
         );
     }
 }

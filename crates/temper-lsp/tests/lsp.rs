@@ -572,11 +572,13 @@ fn apply_edits(text: &str, edits: &Json) -> String {
 }
 
 /// Formatting answers with edits of just the changed lines, for the whole
-/// document or a range's lines; a document that doesn't parse gets none,
-/// and no error, as formatting on save shouldn't nag while typing.
+/// document or a range's lines, laying lists out by their line breaks and
+/// trailing commas; a document that doesn't parse gets none, and no error,
+/// as formatting on save shouldn't nag while typing.
 #[test]
 fn formatting() {
-    let text = "let  x=1;\nlet y = 2;\nf( a ,\n  b );\n";
+    let text =
+        "let  x=1;\nlet y = 2;\nf( a ,\n  b );\ng(\n  a,\n  b);\nh(a,\n  b,);\nlet z = x\n+ y;\n";
     let dir = library("formatting", &[("f.temper", text)]);
     let file = uri(&dir, "f.temper");
     let mut client = Client::start();
@@ -585,10 +587,10 @@ fn formatting() {
     let options = json!({"tabSize": 2, "insertSpaces": true});
     let params = json!({"textDocument": doc(&file), "options": options});
     let edits = client.request("textDocument/formatting", params.clone());
-    assert_eq!(edits.as_array().unwrap().len(), 2, "{edits}");
+    assert_eq!(edits.as_array().unwrap().len(), 5, "{edits}");
     assert_eq!(
         apply_edits(text, &edits),
-        "let x = 1;\nlet y = 2;\nf(a, b);\n"
+        "let x = 1;\nlet y = 2;\nf(a, b);\ng(\n  a, b\n);\nh(\n  a,\n  b,\n);\nlet z = x\n    + y;\n"
     );
     // A range on the call's lines: only its edit.
     let range = json!({"start": {"line": 2, "character": 0}, "end": {"line": 3, "character": 0}});
@@ -598,7 +600,7 @@ fn formatting() {
     );
     assert_eq!(
         apply_edits(text, &ranged),
-        "let  x=1;\nlet y = 2;\nf(a, b);\n"
+        "let  x=1;\nlet y = 2;\nf(a, b);\ng(\n  a,\n  b);\nh(a,\n  b,);\nlet z = x\n+ y;\n"
     );
     // Formatted, or not parsing: no edits, and no error.
     change(&mut client, &file, 2, "let x = 1;\n");
