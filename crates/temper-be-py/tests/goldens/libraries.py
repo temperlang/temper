@@ -565,8 +565,8 @@ def _join_effects(into: _MutableSequence[Effect[_T]], more: _Sequence[Effect[_T]
 def effects_of(text: str, event: _T, other: _T, /) -> str:
     into: _MutableSequence[Effect[_T]] = []
     _join_effects(into, ())
-    _join_effects(into, (Plain(text),))
-    _join_effects(into, (Happened(event), Plain('!'), Happened(other)))
+    _join_effects(into, (Plain[_T](text),))
+    _join_effects(into, (Happened(event), Plain[_T]('!'), Happened(other)))
     shown = ''
     list_ = tuple(into)
     length = len(list_)

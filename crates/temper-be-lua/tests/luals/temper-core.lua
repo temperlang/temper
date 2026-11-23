@@ -215,13 +215,13 @@ function temper.float64_tostring(n) end
 ---@return number
 function temper.float64_sign(x) end
 
----@param n integer
----@return number
 ---An `Int32`'s sign: -1, 0, or 1.
 ---@param n integer
 ---@return integer
 function temper.int32_signum(n) end
 
+---@param n integer
+---@return number
 function temper.int32_tofloat64(n) end
 
 ---An `Int64`, from its value, or from its high (signed) and low 32 bits.

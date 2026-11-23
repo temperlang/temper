@@ -967,6 +967,45 @@ impl<'a> Translator<'a> {
         }
     }
 
+    /// A generic class's construction, `made`, naming its type arguments
+    /// (`deque[int]()`) where its constructor's parameters don't mention
+    /// them all, as an empty `Queue`'s: checkers would otherwise take
+    /// them from where the value goes, and see them as unknown where
+    /// that doesn't name them, as an `object` parameter or a generic
+    /// function's (`deque[Unknown]`). Only a call of the class itself;
+    /// a literal or a function (`[]`, `new_unbound_promise()`) stays.
+    fn with_type_args(&mut self, new: NodeId, ctor: DeclId, made: Expr) -> R<Expr> {
+        let p = self.p;
+        let TypeData::Nominal { args, .. } = p.types.get(p.nodes.ty(new)) else {
+            return Ok(made);
+        };
+        let class = p.decls.get(ctor).owner;
+        let params = p.signature(ctor).map_or(&[][..], |s| s.params);
+        let unmentioned = (p.decls.type_params(class).iter()).any(|&tp| {
+            let t = p.decls.get(tp).ty;
+            !params.iter().any(|&ty| p.types.mentions(ty, t))
+        });
+        let args = p.types.list(args).to_vec();
+        if args.is_empty() || !unmentioned {
+            return Ok(made);
+        }
+        let Expr::Call(callee, call_args) = made else {
+            return Ok(made);
+        };
+        // Only where the callee is the class its annotation names.
+        let (ann, _) = self.ann_raw(p.nodes.ty(new))?;
+        let name = match &*callee {
+            Expr::Name(name) if ann.starts_with(&format!("{name}[")) => name.clone(),
+            _ => return Ok(Expr::Call(callee, call_args)),
+        };
+        // Each argument quoted as an annotation would be, where needed.
+        let mut texts = Vec::new();
+        for a in args {
+            texts.push(self.ann(a)?);
+        }
+        Ok(Expr::Type(format!("{name}[{}]", texts.join(", "))).call(call_args))
+    }
+
     /// Whether checkers may infer a value of a type, unannotated, as a
     /// narrower type than its annotation: a nullable one's as never null;
     /// an interface's, or `AnyValue`'s, as the class of the value; a
@@ -1677,9 +1716,10 @@ impl<'a> Translator<'a> {
                     Some(init) => {
                         // Nullable ones are annotated, so a later value
                         // fits, and those made empty by core's `ListBuilder`,
-                        // `MapBuilder`, std's `Queue`, or `PromiseBuilder`, `[]`,
-                        // `{}`, `deque()`, or `new_unbound_promise()`,
-                        // whose element types checkers can't infer, and
+                        // `MapBuilder`, or `PromiseBuilder`, `[]`, `{}`, or
+                        // `new_unbound_promise()`, whose element types
+                        // checkers can't infer (a class's, as std's `Queue`,
+                        // names them: `with_type_args`), and
                         // casts, as `cast_by_type` gives its argument's type
                         // where that's a supertype, also under `orelse`.
                         let ty = p.decls.get(local).ty;
@@ -1692,7 +1732,6 @@ impl<'a> Translator<'a> {
                                 self.qname(ctor).as_str(),
                                 "core.type ListBuilder.constructor()"
                                     | "core.type MapBuilder.constructor()"
-                                    | "std/collections.type Queue.constructor()"
                                     | "core.type PromiseBuilder.constructor()"
                             ),
                             Node::As { .. } => true,
@@ -2379,15 +2418,15 @@ impl<'a> Translator<'a> {
             }
             Node::New { ctor, args, .. } => {
                 let args = self.args(p.nodes.list(args))?;
-                if is_external(p, ctor) && library_of(p, ctor) == "core"
+                let made = if is_external(p, ctor) && library_of(p, ctor) == "core"
                     || self.connected_call(ctor)
                 {
-                    return self.connected(ctor, args);
-                }
-                let args = present(args)?;
-
-                let class = self.p.decls.get(ctor).owner;
-                self.class_ref(class).call(args)
+                    self.connected(ctor, args)?
+                } else {
+                    let class = self.p.decls.get(ctor).owner;
+                    self.class_ref(class).call(present(args)?)
+                };
+                self.with_type_args(id, ctor, made)?
             }
             // Python's checkers narrow by `isinstance` as Temper does.
             Node::Upcast { value } | Node::Downcast { value } => self.expr(value)?,

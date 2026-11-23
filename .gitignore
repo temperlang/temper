@@ -27,3 +27,14 @@ javac.*.args
 /crates/temper-be-*/runtime/**/__pycache__/
 /crates/temper-be-*/runtime/**/node_modules/
 /crates/temper-be-*/runtime/**/target/
+
+# Crash dumps and profiles that test runs can leave behind: the JVM's
+# crash and compiler-replay logs, numbered core dumps (a bare `core` is
+# left out, as directories here have that name), Valgrind's, MSYS bash's
+# on Windows, and LLVM's coverage profiles
+hs_err_pid*.log
+replay_pid*.log
+core.[0-9]*
+vgcore.*
+*.stackdump
+*.profraw
