@@ -2217,15 +2217,30 @@ copied Kotlin's:
 - **`tempest build` and `temper.out` (2026-10-30):** the same layout,
   `temper.out/BACKEND/LIBRARY/…`, package files, and runtime copy
   (`temper-core`, without its dotfiles and own tests, Lua's rockspec named
-  for the version), checked against Kotlin's for the functional tests
-  (`crates/tempest/tests/kotlin_layout.rs`). Intended differences: source
-  maps only for JS's modules so far; no zip for LuaRocks; a
-  `CMakeLists.txt` per C++ library (decided 2026-10-30); a library's
-  directory emptied before it's written, so no stale file survives (the
-  bug above); and no `data` backend, so the default backends are
-  Kotlin's but that one. A library's config is read for its `export let
-  KEY = "VALUE";` lines only, where Kotlin runs it as Temper.
-  Test: tempest/tests/kotlin_layout.rs.
+  for the version). Until 2026-11-23 a test compared it with Kotlin's
+  record for the functional tests; matching Kotlin is no longer a goal,
+  so now a snapshot of tempest's own layout pins it
+  (`crates/tempest/tests/layout.txt`). Where it differed from Kotlin's,
+  and why:
+  - Source maps only for JS's modules so far (`.internal.js.map`), not
+    its re-exports or other backends'.
+  - No zip for LuaRocks, whose rockspec names it relative (above).
+  - A `CMakeLists.txt` per C++ library (decided 2026-10-30).
+  - Runtime files of tempest's own: C#'s `Bubble.cs` and Java's
+    `Bubble.java`, a bubble type that handlers catch alone (patch 0026);
+    C#'s `Panic.cs`, a panic no orelse catches, where Kotlin fails fast;
+    C++'s `net.hpp`, std net's pluggable client (patch 0019); and C++'s
+    `stack_trace.{hpp,cpp,cmake}`, for stack traces.
+  - Types Kotlin leaves out and tempest keeps: an interface nothing uses
+    (C#'s `IB3_Deep.cs`, Java's `B3Deep.java`), and a class whose
+    statics Kotlin inlines (static-properties-scope's `Simple`).
+  - A Python package named like a standard module gets a `_` (`types_`).
+  - A library's directory emptied before it's written, so no stale file
+    survives (the bug above); and no `data` backend, so the default
+    backends are Kotlin's but that one. A library's config is read for
+    its `export let KEY = "VALUE";` lines only, where Kotlin runs it as
+    Temper.
+  Test: tempest/tests/layout.rs.
 - **An imported `var` that its module writes later** (2026-10-30):
   Kotlin's backends disagree on what the importer reads, Python a copy
   made at import (as the interpreter's `let` gives), JS the current
@@ -2649,8 +2664,6 @@ copied Kotlin's:
     2026-11-10.
     Test: programs/generics.temper.md (`tagged`, `countOf`, `tally`)
     on every backend.
-  - **Not compared:** the Kotlin layout test (`kotlin_layout.rs`)
-    doesn't cover the generics tests yet.
 - **Core's other types in the backends** (2026-11-02):
   Kotlin's surface for string indices, `StringBuilder`, `Empty`,
   `Deque`, `DenseBitVector`, and more of `String`'s and `Float64`'s
@@ -3052,5 +3065,5 @@ copied Kotlin's:
     Test: programs/functions.temper.md (`let k = i * 10`).
   - **Not yet:** a local function that calls itself; `@fun` interfaces as named Java
     or C# interfaces (the Kotlin-compatible variant uses Kotlin's
-    types); the Kotlin layout test for these tests.
+    types).
 

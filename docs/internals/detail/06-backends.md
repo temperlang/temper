@@ -516,7 +516,7 @@ tests: [`temper-be-testkit`](../../../crates/temper-be-testkit/src/lib.rs).
 | Tables | Every operator spelled; every connection keyed by a real connected declaration | each crate's `tests/tables.rs` |
 | Host code | A library's own connected functions and classes, with host files, as is and under `--no-connected` | each crate's `tests/host/` and `CONNECTED` cases |
 | Against the interpreter | The shared programs log on the interpreter what each backend must log | [`programs_log_as_the_interpreter_does`](../../../crates/temper-be-testkit/tests/programs.rs) |
-| Kotlin's layout | `temper build`'s `temper.out` matches Kotlin's: every path, each runtime's files, package names and versions, with differences listed and justified | [`temper_out_is_kotlins`](../../../crates/tempest/tests/kotlin_layout.rs) |
+| Layout | `temper build`'s `temper.out`: every file each backend writes, the libraries' and the runtime's, against a snapshot; `UPDATE_SNAPSHOTS=1` rewrites it | [`temper_out_layout`](../../../crates/tempest/tests/layout.rs) |
 | Real libraries | Hrefine, Chromarite, Ordable, Kelpto, and Wherewith pass their tests on all seven locally; in CI, Chromarite and Ordable on C#, Java, JS, Lua, and Python | CI's `temper test -b` steps |
 
 A missing tool skips its test with a message, unless

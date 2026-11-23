@@ -443,9 +443,10 @@ runtimes and std name the build's own version
 ([Versions](06-backends.md#versions-one-version-spelled-for-each-ecosystem)),
 which isn't published yet.
 
-**Status:** Kotlin's layout is part of the public API this compiler keeps
+**Status:** the layout is part of the public API
 ([notes/api-compat.md](../../../notes/api-compat.md), each backend's
-"Layout").
+"Layout"); a snapshot pins it (`tests/layout.rs`), and matching Kotlin's
+is no longer a goal (2026-11-23).
 
 ### Errors never stop a command
 
@@ -789,10 +790,10 @@ What has to change first, found while writing this:
 - **Unsafe code**, [`unsafe_inventory.rs`](../../../crates/temper-os/tests/unsafe_inventory.rs):
   where it is, and how much, against its list; every crate but two on
   the workspace's lints.
-- **Kotlin's layout**, [`kotlin_layout.rs`](../../../crates/tempest/tests/kotlin_layout.rs):
-  `temper.out` for the functional tests against a record of Kotlin's
-  (`kotlin-out.txt`), with every allowed difference listed with its
-  reason, and a check that each allowance is still used.
+- **The layout**, [`layout.rs`](../../../crates/tempest/tests/layout.rs):
+  `temper.out`'s files per backend for the functional tests, against a
+  snapshot (`layout.txt`), so layout changes show in the diff;
+  `UPDATE_SNAPSHOTS=1` rewrites it.
 - **The driver**, [`dependencies.rs`](../../../crates/temper-driver/tests/dependencies.rs):
   a dependency on another library in each backend's package files;
   [`runtimes.rs`](../../../crates/temper-driver/tests/runtimes.rs): each

@@ -208,7 +208,7 @@ jobs:
 
   # `temper`'s own tests with every backend built in, and so every
   # backend's toolchain: `temper test -b`, `build`, and `run` on small
-  # libraries, CMake's build of generated C++, and Kotlin's layout of
+  # libraries, CMake's build of generated C++, and the layout of
   # `temper.out`.
   cli:
     needs: changes

@@ -103,15 +103,11 @@ Part of the [rewrite plan](README.md).
   backend's runtime beside them, as `temper-core`, as Kotlin copies it
   (built into the backend crates' `runtime::FILES`, checked against the
   crates' `runtime/temper-core`), and a `CMakeLists.txt` per C++ library, which a test
-  builds with CMake and runs. `crates/tempest/tests/kotlin_layout.rs`
-  compares the tree (every path, and the package files' names and
-  versions) with Kotlin's for the functional tests tmpl translated after
-  nullable types (24; the 3 that generics added aren't recorded yet), as
-  `crates/tempest/tests/kotlin-out.txt` records it (last with Kotlin's
-  CLI built from main 0db80cc8, 2026-10-31, which added the C++
-  runtime's `module_init.hpp`)
-  (`compat/kotlin_out.py` writes it from Kotlin's own output), with the
-  intended differences allowed, each with its reason. Dependencies
+  builds with CMake and runs. `crates/tempest/tests/layout.rs`
+  checks the tree (every file per backend) for the functional tests
+  against a snapshot of tempest's own layout (`layout.txt`); until
+  2026-11-23 it was compared with Kotlin's, and the differences are in
+  [kotlin-differences.md](kotlin-differences.md). Dependencies
   between libraries go in every package file as Kotlin writes them, from
   tmpl's `uses` sections (`tests/dependencies.rs`, on hand-written
   tmpl, and, since 2026-10-30, from the frontend's imports too, with
