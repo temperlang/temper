@@ -74,8 +74,6 @@ const ROWS: &[(&str, New, Ext, Cast, Key)] = &[
     ("Boolean", New::Private, Ext::Concrete, Cast::No, Key::No),
     ("Bubble", New::Private, Ext::Concrete, Cast::Unrelated, Key::No),
     ("Console", New::Abstract, Ext::Yes, Cast::Connected, Key::No),
-    ("DenseBitVector", New::Args("8"), Ext::Concrete, Cast::Connected, Key::No),
-    ("Deque<Int>", New::Args(""), Ext::Concrete, Cast::TypeArgs, Key::No),
     ("DoneResult<Int>", New::Private, Ext::Concrete, Cast::Connected, Key::No),
     ("Empty", New::Private, Ext::Concrete, Cast::Connected, Key::No),
     ("Equatable<Int>", New::Abstract, Ext::Sealed, Cast::TypeArgs, Key::No),

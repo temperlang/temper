@@ -162,17 +162,6 @@ uses `temper-core`#0 0.1.0 {
   class Empty#153 {}
   connected fn empty#154(): Empty#153;
   connected fn mappedToListWith#156<K#204 extends MapKey#90<K#204>, V#205, T#157>(mapped: Mapped#92<K#204, V#205>, func: fn (K#204, V#205): T#157): List#64<T#157>;
-  class Deque#158<T#159> {
-    connected constructor constructor#160(): Deque#158<T#159>;
-    connected method add#161(element: T#159): Void;
-    connected get isEmpty#162(): Boolean;
-    connected method removeFirst#163(): T#159;
-  }
-  class DenseBitVector#164 {
-    connected constructor constructor#165(capacity: Int32): DenseBitVector#164;
-    connected method get#166(index: Int32): Boolean;
-    connected method set#167(index: Int32, newValue: Boolean): Void;
-  }
   interface GeneratorResult#172<YIELD#173> {}
   class ValueResult#174<YIELD#175> extends GeneratorResult#172<YIELD#175> {
     let value#176: YIELD#175;

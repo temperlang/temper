@@ -56,28 +56,6 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Translate(boolean_to_string),
     ),
     ("core.type Console.log()", Connection::Method("Log")),
-    (
-        "core.type DenseBitVector.constructor()",
-        Connection::Translate(new_of_type),
-    ),
-    (
-        "core.type DenseBitVector.get()",
-        Connection::Static("Core", "BitGet"),
-    ),
-    (
-        "core.type DenseBitVector.set()",
-        Connection::Static("Core", "BitSet"),
-    ),
-    ("core.type Deque.add()", Connection::Method("Enqueue")),
-    (
-        "core.type Deque.constructor()",
-        Connection::Translate(new_of_type),
-    ),
-    ("core.type Deque.get isEmpty()", Connection::Translate(none)),
-    (
-        "core.type Deque.removeFirst()",
-        Connection::Method("Dequeue"),
-    ),
     ("core.type Float64.abs()", Connection::Static("Math", "Abs")),
     (
         "core.type Float64.acos()",
@@ -488,6 +466,34 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Method("Equals"),
     ),
     (
+        "std/collections.type BitVector.constructor()",
+        Connection::Translate(new_bit_array),
+    ),
+    (
+        "std/collections.type BitVector.get()",
+        Connection::Static("Core", "BitGet"),
+    ),
+    (
+        "std/collections.type BitVector.set()",
+        Connection::Static("Core", "BitSet"),
+    ),
+    (
+        "std/collections.type Queue.add()",
+        Connection::Method("Enqueue"),
+    ),
+    (
+        "std/collections.type Queue.constructor()",
+        Connection::Translate(new_of_type),
+    ),
+    (
+        "std/collections.type Queue.get isEmpty()",
+        Connection::Translate(none),
+    ),
+    (
+        "std/collections.type Queue.removeFirst()",
+        Connection::Method("Dequeue"),
+    ),
+    (
         "std/net.sendRequest()",
         Connection::Static("NetSupport", "StdNetSend"),
     ),
@@ -648,20 +654,6 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
         },
     ),
     (
-        "core.type DenseBitVector",
-        TypeConnection {
-            name: "BitArray",
-            namespace: "System.Collections",
-        },
-    ),
-    (
-        "core.type Deque",
-        TypeConnection {
-            name: "Queue",
-            namespace: "System.Collections.Generic",
-        },
-    ),
-    (
         "core.type DoneResult",
         TypeConnection {
             name: "DoneResult",
@@ -792,6 +784,20 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
         TypeConnection {
             name: "ValueResult",
             namespace: "TemperLang.Core",
+        },
+    ),
+    (
+        "std/collections.type BitVector",
+        TypeConnection {
+            name: "BitArray",
+            namespace: "System.Collections",
+        },
+    ),
+    (
+        "std/collections.type Queue",
+        TypeConnection {
+            name: "Queue",
+            namespace: "System.Collections.Generic",
         },
     ),
     (
@@ -1140,12 +1146,28 @@ fn listed_reduce(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet
     Ok(t.class("Enumerable").method("Aggregate", exprs))
 }
 
-/// `new T()`, or `new T(n)`, its type the call's: a `StringBuilder`, a
-/// `Queue<T>` for a `Deque`, or a `BitArray` for a `DenseBitVector`, as
-/// Kotlin's.
+/// `new T()`, or `new T(n)`, its type the call's: a `StringBuilder`, or
+/// a `Queue<T>` for std's `Queue`, as Kotlin's.
 fn new_of_type(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let ty = t.call_type()?;
     let args = t.connected_args(args)?;
+    Ok(Expr::name(format!("new {ty}")).call(args))
+}
+
+/// `new BitArray(capacity)` for std's `BitVector`, as Kotlin's;
+/// `Math.Max(capacity, 0)` but for a literal, since a negative capacity
+/// is none, which `BitArray` rejects.
+fn new_bit_array(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let literal =
+        matches!(args, [x] if matches!(t.node(*x), Node::Int32Lit { value } if value >= 0));
+    let ty = t.call_type()?;
+    let mut args = t.connected_args(args)?;
+    if !literal {
+        args = vec![
+            t.class("Math")
+                .method("Max", vec![args.remove(0), Expr::Int(0)]),
+        ];
+    }
     Ok(Expr::name(format!("new {ty}")).call(args))
 }
 
@@ -1209,6 +1231,15 @@ fn append(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
 /// `@connected` members use their Temper bodies. Which std keys a backend
 /// connects is its own (notes/tmpl/open-questions.md, 48).
 pub const STD: &[&str] = &[
+    "std/collections.type BitVector",
+    "std/collections.type BitVector.constructor()",
+    "std/collections.type BitVector.get()",
+    "std/collections.type BitVector.set()",
+    "std/collections.type Queue",
+    "std/collections.type Queue.add()",
+    "std/collections.type Queue.constructor()",
+    "std/collections.type Queue.get isEmpty()",
+    "std/collections.type Queue.removeFirst()",
     "std/net.sendRequest()",
     "std/net.type NetResponse",
     "std/net.type NetResponse.get bodyContent()",

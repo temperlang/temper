@@ -36,7 +36,6 @@ named. "All" means all seven backends connect it.
 | `mappedToListWith` | `maps::map_method` | all |
 | `mappedToListBuilderWith` | `maps::map_method` | none: not yet in tmpl |
 | `Boolean.toString` | `method` | all |
-| `DenseBitVector`: constructor, `get`, `set` | `apply`'s `new`, `method` | all |
 | `Int32.min`, `.max`; `Int64.min`, `.max` | `method` | all |
 | `Int32.succ`, `.pred`; `Int64.succ`, `.pred` | `method` | all: tmpl writes them as `n + 1` and `n - 1` |
 | `Int32.signum` | `property` | all |
@@ -62,10 +61,12 @@ representation (2026-11-21, t850): the builtins' `content` fields,
 `Deque`'s, `Problem`'s, and `PromiseBuilder`'s `_promise` are gone, and
 bodies that read `content` read `this`, as `Int32.min`'s `if (this <=
 other) { this } else { other }`. What's left is state core's own Temper
-sets and its bodies read: `StringBuilder`'s `substrings`,
-`DenseBitVector`'s `bits` (the interpreter runs both as ordinary
-classes under `run_tests_with_core_bodies`), the generator wrappers'
-fields, and `ValueResult`'s and `Pair`'s public fields.
+sets and its bodies read: `StringBuilder`'s `substrings` (the
+interpreter runs it as an ordinary class under
+`run_tests_with_core_bodies`), the generator wrappers' fields, and
+`ValueResult`'s and `Pair`'s public fields. (`DenseBitVector`, with its
+`bits`, is std's `BitVector` now, whose body is the interpreter's only
+implementation.)
 `fields_are_cores_own_state` checks that each instance field has an
 initializer or an assignment in its class.
 
@@ -136,6 +137,8 @@ Backends against the bodies (all else agrees):
   Rust panics; the others clamp, as the body does.
 - `String.step` by `Int32.min`: Rust panics negating it.
 - `DenseBitVector` with a negative index or capacity: the body reads
-  false or makes it empty; Rust, Java and C# throw.
+  false or makes it empty; Rust, Java and C# threw. Fixed on every
+  backend when it moved to std as `BitVector` (2026-11-23; funtest
+  types/bit-vector).
 - Rust also can't compile `new ListBuilder<Int>().isEmpty` or
   `new Map<String, Int>([]).length`: the type arguments are lost.

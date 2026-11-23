@@ -1,0 +1,23 @@
+# generated line:column -> source:line:column, and the text at each
+7:1 -> ../bit-vector.temper.md:11:5  const v = denseBitVectorCons <- let v = new BitVector(16);
+8:1 -> ../bit-vector.temper.md:15:5  console.log(`v[2]=${denseBit <- console.log("v[2]=${v.get(2)
+9:1 -> ../bit-vector.temper.md:16:5  console.log(`v[3]=${denseBit <- console.log("v[3]=${v.get(3)
+10:1 -> ../bit-vector.temper.md:17:5  console.log("v[3] <- true"); <- console.log("v[3] <- true");
+11:1 -> ../bit-vector.temper.md:18:5  denseBitVectorSet(v, 3, true <- v.set(3, true);
+12:1 -> ../bit-vector.temper.md:19:5  console.log(`v[2]=${denseBit <- console.log("v[2]=${v.get(2)
+13:1 -> ../bit-vector.temper.md:20:5  console.log(`v[3]=${denseBit <- console.log("v[3]=${v.get(3)
+14:1 -> ../bit-vector.temper.md:21:5  console.log("v[3] <- false") <- console.log("v[3] <- false")
+15:1 -> ../bit-vector.temper.md:22:5  denseBitVectorSet(v, 3, fals <- v.set(3, false);
+16:1 -> ../bit-vector.temper.md:23:5  console.log(`v[2]=${denseBit <- console.log("v[2]=${v.get(2)
+17:1 -> ../bit-vector.temper.md:24:5  console.log(`v[3]=${denseBit <- console.log("v[3]=${v.get(3)
+18:1 -> ../bit-vector.temper.md:41:5  denseBitVectorSet(v, 100, tr <- v[100] = true;
+19:1 -> ../bit-vector.temper.md:42:5  denseBitVectorSet(v, 200, fa <- v.set(200, false);
+20:1 -> ../bit-vector.temper.md:43:5  console.log(`v[99]=${denseBi <- console.log("v[99]=${v[99]}
+21:1 -> ../bit-vector.temper.md:44:5  denseBitVectorSet(v, 1000, t <- v[1000] = true;
+22:1 -> ../bit-vector.temper.md:45:5  console.log(`v[999]=${denseB <- console.log("v[999]=${v[999]
+23:1 -> ../bit-vector.temper.md:54:5  const w = denseBitVectorCons <- let w = new BitVector(-9);
+24:1 -> ../bit-vector.temper.md:55:5  denseBitVectorSet(w, 1, true <- w.set(1, true);
+25:1 -> ../bit-vector.temper.md:56:5  console.log(`w[0]=${denseBit <- console.log("w[0]=${w[0]} w[
+26:1 -> ../bit-vector.temper.md:65:5  console.log("before"); <- console.log("before");
+27:1 -> ../bit-vector.temper.md:66:5  denseBitVectorSet(v, -1, tru <- v.set(-1, true);
+28:1 -> ../bit-vector.temper.md:67:5  console.log("not reached"); <- console.log("not reached");

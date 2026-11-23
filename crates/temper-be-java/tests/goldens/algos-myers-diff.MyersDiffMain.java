@@ -9,6 +9,7 @@ public final class MyersDiffMain {
         Core.initSimpleLogging();
         Core.beginTopLevel();
         try {
+            Class.forName("temper.std.collections.CollectionsGlobal");
             Class.forName("myers_diff.MyersDiffGlobal");
         } finally {
             Core.endTopLevel();

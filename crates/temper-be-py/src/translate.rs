@@ -955,13 +955,13 @@ impl<'a> Translator<'a> {
         self.bindings.rebound.get(&self.name(local)).copied()
     }
 
-    /// Whether a type is core's `ListBuilder`'s, `MapBuilder`'s, or
-    /// `Deque`'s, whose element types are invariant.
+    /// Whether a type is core's `ListBuilder`'s or `MapBuilder`'s, or
+    /// std's `Queue`'s, whose element types are invariant.
     fn mutable_collection(&self, ty: TypeId) -> bool {
         match self.p.types.get(ty) {
             TypeData::Nominal { decl, .. } => matches!(
                 self.qname(decl).as_str(),
-                "core.type ListBuilder" | "core.type MapBuilder" | "core.type Deque"
+                "core.type ListBuilder" | "core.type MapBuilder" | "std/collections.type Queue"
             ),
             _ => false,
         }
@@ -1677,7 +1677,7 @@ impl<'a> Translator<'a> {
                     Some(init) => {
                         // Nullable ones are annotated, so a later value
                         // fits, and those made empty by core's `ListBuilder`,
-                        // `MapBuilder`, `Deque`, or `PromiseBuilder`, `[]`,
+                        // `MapBuilder`, std's `Queue`, or `PromiseBuilder`, `[]`,
                         // `{}`, `deque()`, or `new_unbound_promise()`,
                         // whose element types checkers can't infer, and
                         // casts, as `cast_by_type` gives its argument's type
@@ -1692,7 +1692,7 @@ impl<'a> Translator<'a> {
                                 self.qname(ctor).as_str(),
                                 "core.type ListBuilder.constructor()"
                                     | "core.type MapBuilder.constructor()"
-                                    | "core.type Deque.constructor()"
+                                    | "std/collections.type Queue.constructor()"
                                     | "core.type PromiseBuilder.constructor()"
                             ),
                             Node::As { .. } => true,
@@ -2766,8 +2766,6 @@ pub(crate) fn core_type(qname: &str) -> Option<(&'static str, &'static str)> {
             ("builtins", "int")
         }
         "core.type StringBuilder" => ("builtins", "list[str]"),
-        "core.type Deque" => ("collections", "deque"),
-        "core.type DenseBitVector" => ("temper_core", "DenseBitVector"),
         // `()`, its one value. Kotlin's `_empty` is undefined.
         "core.type Empty" => ("builtins", "tuple[()]"),
         // `temper_core`'s `concurrent.futures.Future`, which asyncio can

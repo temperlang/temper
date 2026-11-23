@@ -192,7 +192,7 @@ patches that made them (other docs cite these numbers):
 | C++ | 0019 | std/net through a pluggable client (`temper::core::net::set_client`), by default libcurl's multi interface on a `temper-io` thread where the build defines `TEMPER_NET_CURL`; other threads post work back to the async queue, which waits while any hold is out |
 | C++ | 0021 | `to_base`, an upcast of a never-null `shared_ptr`, so g++'s `-Wnull-dereference` has no null path to follow |
 | C++ | 0022 | Skip `List::make`'s `reserve` for Booleans, so g++'s false `-Warray-bounds` at -O3 in `vector<bool>` doesn't fail `-Werror` builds |
-| C++ | 0023 | `DenseBitVector`, as core's Temper body: `get` past the end is false, and `set` past it grows the vector for a true bit, where both bubbled (the regex engine's `ctype`) |
+| C++ | 0023 | `DenseBitVector` (std's `BitVector` now), as core's Temper body: `get` past the end is false, and `set` past it grows the vector for a true bit, where both bubbled (the regex engine's `ctype`) |
 | C# | 0009 | Run async steps one at a time on one thread, and hold top-level code in a turn |
 | C# | 0014 | Let host code swap the runner, block on a promise only where that can't deadlock, and resume after an await outside any turn |
 | Java | 0008 | Run async steps one at a time on one runner; add `Core.awakeUpon` and the top-level turn; make `Generator` `Iterable` |

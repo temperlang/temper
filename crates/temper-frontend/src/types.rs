@@ -148,8 +148,7 @@ pub fn builtin_supertype(name: &str) -> Option<&'static str> {
 /// `StringIndex` and `NoStringIndex` extend the sealed `StringIndexOption`,
 /// and nothing else extends any of them, so each is a subtype of only
 /// itself and what core says it extends ([`Types::is_subtype`]).
-const CORE_NOMINAL: [&str; 5] = [
-    "DenseBitVector",
+const CORE_NOMINAL: [&str; 4] = [
     "NoStringIndex",
     "StringBuilder",
     "StringIndex",
@@ -158,12 +157,11 @@ const CORE_NOMINAL: [&str; 5] = [
 
 /// Builtin generic types that core declares as classes, which no class
 /// extends.
-const BUILTIN_GENERIC_CLASSES: [&str; 10] = [
+const BUILTIN_GENERIC_CLASSES: [&str; 9] = [
     "List",
     "ListBuilder",
     "Map",
     "MapBuilder",
-    "Deque",
     "DoneResult",
     "Pair",
     "Promise",

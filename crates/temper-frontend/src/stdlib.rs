@@ -14,6 +14,10 @@ pub const DIR: &str = "-std-";
 /// Each std source, by path from std's root, with its text.
 pub const FILES: &[(&str, &str)] = &[
     (
+        "collections/collections.temper.md",
+        include_str!("../../../lib/std/collections/collections.temper.md"),
+    ),
+    (
         "config.temper.md",
         include_str!("../../../lib/std/config.temper.md"),
     ),
@@ -42,9 +46,34 @@ pub const FILES: &[(&str, &str)] = &[
 /// std's modules that build as a library of its own, in the order they
 /// run (notes/tmpl/modules.md, "std as a library"); `temporal`'s `Date` is
 /// a connected class, which backends may connect to a type of their own,
-/// as `net`'s `NetResponse` is a connected interface; its `sendRequest`, a
-/// connected function with no Temper body, is each backend's own.
-pub const MODULES: [&str; 5] = ["testing", "regex", "json", "temporal", "net"];
+/// as `collections`' `Queue` and `BitVector` are, and `net`'s
+/// `NetResponse` is a connected interface; its `sendRequest`, a connected
+/// function with no Temper body, is each backend's own.
+pub const MODULES: [&str; 6] = ["testing", "regex", "json", "temporal", "net", "collections"];
+
+/// Names that were core's and are std's now, or are std's and may be
+/// written without their import: each with the name std exports and the
+/// module that does, for an undeclared name's error to say the import
+/// to add. Keyed on the undeclared name, so none is reserved: a library
+/// may declare its own `Deque`.
+const MOVED: [(&str, &str, &str); 4] = [
+    ("BitVector", "BitVector", "collections"),
+    ("DenseBitVector", "BitVector", "collections"),
+    ("Deque", "Queue", "collections"),
+    ("Queue", "Queue", "collections"),
+];
+
+/// What to add for an undeclared name that std exports, or core did
+/// before std did, as `Deque`: the hint after "has not been declared".
+pub fn import_hint(name: &str) -> Option<String> {
+    let &(_, export, module) = MOVED.iter().find(|&&(n, _, _)| n == name)?;
+    let import = format!("add `let {{ {export} }} = import(\"std/{module}\");`");
+    Some(if export == name {
+        format!("it's in std: {import}")
+    } else {
+        format!("it's std's {export} now: {import}")
+    })
+}
 
 /// std as a library of its own, its modules named in `modules` (as
 /// [`MODULES`] names them) loaded from `sources`, with what they import,

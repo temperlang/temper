@@ -187,15 +187,6 @@ Pair.constructor let p = new Pair("k", 7); "${p.key}=${p.value.toString()}"
 # Boolean
 Boolean.toString true.toString()
 Boolean.toString false.toString()
-# DenseBitVector
-DenseBitVector let v = new DenseBitVector(4); "${showBool(v.get(0))} ${showBool(v.get(3))} ${showBool(v.get(4))} ${showBool(v.get(-1))}"
-DenseBitVector let v = new DenseBitVector(-1); showBool(v.get(0))
-DenseBitVector.set let v = new DenseBitVector(2); v.set(1, true); v.set(9, true); "${showBool(v.get(1))} ${showBool(v.get(8))} ${showBool(v.get(9))} ${showBool(v.get(10))}"
-DenseBitVector.set let v = new DenseBitVector(0); v.set(5, false); showBool(v.get(5))
-DenseBitVector.set let v = new DenseBitVector(0); v.set(3, true); v.set(3, false); showBool(v.get(3))
-DenseBitVector.set let v = new DenseBitVector(2); v.set(-1, true); "set"
-DenseBitVector.set let v = new DenseBitVector(2); v.set(-1, false); "set"
-DenseBitVector.get let v = new DenseBitVector(2); v.set(1, true); showBool(v[1])
 # Int32
 Int32.min 3.min(-4).toString()
 Int32.min (-2147483647 - 1).min(2147483647).toString()

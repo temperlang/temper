@@ -46,7 +46,7 @@ public static class MyersDiffGlobal
         int rightLength = right.Count;
         int reachedRowLength = leftLength + 1;
         int reachedColLength = rightLength + 1;
-        BitArray reached = new BitArray(reachedRowLength * reachedColLength);
+        BitArray reached = new BitArray(Math.Max(reachedRowLength * reachedColLength, 0));
         Queue<DiffPath?> costZeroEdges = new Queue<DiffPath?>();
         costZeroEdges.Enqueue(null);
         Queue<DiffPath> costOneEdges = new Queue<DiffPath>();

@@ -1,8 +1,8 @@
 # Numbers
 
-Booleans and numbers: `Boolean`, a `DenseBitVector` of them, the integer
-types `Int32`, aliased as `Int`, and `Int64`, and the floating point
-`Float64`.
+Booleans and numbers: `Boolean`, the integer types `Int32`, aliased as
+`Int`, and `Int64`, and the floating point `Float64`. std's
+`std/collections` has `BitVector`, a growable vector of bits.
 
 ## Boolean
 
@@ -28,69 +28,6 @@ types `Int32`, aliased as `Int`, and `Int64`, and the floating point
       @connected
       @operator("==")
       public eq(other: Boolean): Boolean;
-    }
-
-## DenseBitVector
-
-*DenseBitVector* is a bit vector where the probability of any bit with index in \[0, capacity\]
-is high.  This does not assume that the probability of a bit being set
-depends on the probability of an adjacent bit being set.
-
-    @connected
-    export class DenseBitVector {
-      private let bits: ListBuilder<Boolean>;
-
-      @connected
-      public constructor(capacity: Int) {
-        bits = new ListBuilder<Boolean>();
-        for (var i = 0; i < capacity; i += 1) {
-          bits.add(false);
-        }
-      }
-
-      /**
-       * The bit at the given [index].  If a bit has not previously been set then
-       * it is assumed to be [snippet/builtin/false].
-       */
-      @connected
-      public get(index: Int): Boolean {
-        if (0 <= index && index < bits.length) {
-          bits[index]
-        } else {
-          false
-        }
-      }
-
-      /**
-       * Sets the bit at [index] to [newValue].
-       * After this, [get],  given [index], will return [newValue].
-       *
-       * ```temper
-       * let bitVector = new DenseBitVector(16);
-       * console.log(bitVector.get(3).toString()); //!outputs "false"
-       * bitVector.set(3, true);
-       * console.log(bitVector.get(3).toString()); //!outputs "true"
-       * bitVector.set(3, false);
-       * console.log(bitVector.get(3).toString()); //!outputs "false"
-       * // ✅
-       * ```
-       */
-      @connected
-      public set(index: Int, newValue: Boolean): Void {
-        let bits = this.bits;
-        var limit = bits.length;
-        if (limit <= index) {
-          if (!newValue) {
-            // Outside storage is already considered false.
-            return;
-          }
-          while (limit <= index) {
-            bits.add(false);
-            limit += 1;
-          }
-        }
-        bits.set(index, newValue);
-      }
     }
 
     export let Int = Int32;

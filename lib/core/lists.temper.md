@@ -1,7 +1,7 @@
 # Lists
 
-Sequences of values: the read-only view `Listed`, the immutable `List`, the
-growable `ListBuilder`, and the double-ended queue `Deque`.
+Sequences of values: the read-only view `Listed`, the immutable `List`, and
+the growable `ListBuilder`. std's `std/collections` has `Queue`.
 
 ## Listed
 
@@ -273,50 +273,4 @@ values.
 
       @connected
       public toListBuilder(): ListBuilder<T>;
-    }
-
-## Deque
-
-*Deque* is a double-ended queue that allows for breadth-first processing via
-efficient adds at the end and efficient removal from the front.
-
-```temper inert
-let deque = new Deque<String>();
-deque.add("a");
-deque.add("b");
-
-console.log(deque.removeFirst()); //!outputs "a"
-
-deque.add("c");
-deque.add("d");
-
-while (!deque.isEmpty) {
-  console.log(deque.removeFirst()); //!outputs ["b", "c", "d"]
-}
-// ✅
-```
-
-    @connected
-    export class Deque<T> {
-
-      @connected
-      public constructor();
-
-      /**
-       * Add an element at the end.
-       */
-      @connected
-      public add(element: T): Void;
-
-      /**
-       * True if this contains no elements.
-       */
-      @connected
-      public get isEmpty(): Boolean;
-
-      /**
-       * Removes and returns the first element. Panics if empty.
-       */
-      @connected
-      public removeFirst(): T;
     }

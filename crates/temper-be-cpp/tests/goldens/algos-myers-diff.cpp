@@ -2,6 +2,7 @@
 #pragma once
 
 #include <temper-core/core.hpp>
+#include <std/collections.hpp>
 
 namespace myers_diff {
 
@@ -113,12 +114,12 @@ std::shared_ptr<Patch<T>> diff(std::shared_ptr<std::vector<T>> const & left, std
   int32_t rightLength = temper::core::List::length<T>(right);
   int32_t reachedRowLength = temper::core::Int::add(leftLength, 1);
   int32_t reachedColLength = temper::core::Int::add(rightLength, 1);
-  std::shared_ptr<std::vector<bool>> reached = temper::core::DenseBitVector::make(temper::core::Int::mul(reachedRowLength, reachedColLength));
-  std::shared_ptr<std::deque<std::shared_ptr<DiffPath>>> costZeroEdges = temper::core::Deque::make<std::shared_ptr<DiffPath>>();
-  temper::core::Deque::add<std::shared_ptr<DiffPath>>(costZeroEdges, nullptr);
-  std::shared_ptr<std::deque<std::shared_ptr<DiffPath>>> costOneEdges = temper::core::Deque::make<std::shared_ptr<DiffPath>>();
+  std::shared_ptr<std::vector<bool>> reached = temper::core::BitVector::make(temper::core::Int::mul(reachedRowLength, reachedColLength));
+  std::shared_ptr<std::deque<std::shared_ptr<DiffPath>>> costZeroEdges = temper::core::Queue::make<std::shared_ptr<DiffPath>>();
+  temper::core::Queue::add<std::shared_ptr<DiffPath>>(costZeroEdges, nullptr);
+  std::shared_ptr<std::deque<std::shared_ptr<DiffPath>>> costOneEdges = temper::core::Queue::make<std::shared_ptr<DiffPath>>();
   while (true) {
-    std::shared_ptr<DiffPath> diffPath = !temper::core::Deque::isEmpty<std::shared_ptr<DiffPath>>(costZeroEdges) ? temper::core::Deque::removeFirst<std::shared_ptr<DiffPath>>(costZeroEdges) : !temper::core::Deque::isEmpty<std::shared_ptr<DiffPath>>(costOneEdges) ? temper::core::Deque::removeFirst<std::shared_ptr<DiffPath>>(costOneEdges) : nullptr;
+    std::shared_ptr<DiffPath> diffPath = !temper::core::Queue::isEmpty<std::shared_ptr<DiffPath>>(costZeroEdges) ? temper::core::Queue::removeFirst<std::shared_ptr<DiffPath>>(costZeroEdges) : !temper::core::Queue::isEmpty<std::shared_ptr<DiffPath>>(costOneEdges) ? temper::core::Queue::removeFirst<std::shared_ptr<DiffPath>>(costOneEdges) : nullptr;
     temper::core::NullableParam<int32_t> subject = diffPath == nullptr ? nullptr : temper::core::NullableParam<int32_t>(diffPath->leftIndex);
     int32_t leftIndex = subject == nullptr ? 0 : subject.value;
     temper::core::NullableParam<int32_t> subject2 = diffPath == nullptr ? nullptr : temper::core::NullableParam<int32_t>(diffPath->rightIndex);
@@ -172,22 +173,22 @@ std::shared_ptr<Patch<T>> diff(std::shared_ptr<std::vector<T>> const & left, std
     if (leftIndex < leftLength) {
       if (rightIndex < rightLength) {
         int32_t sameReachedIndex = temper::core::Int::add(temper::core::Int::add(leftIndex, 1), temper::core::Int::mul(temper::core::Int::add(rightIndex, 1), reachedRowLength));
-        if (!temper::core::DenseBitVector::get(reached, sameReachedIndex) && eq(temper::core::List::get<T>(left, leftIndex), temper::core::List::get<T>(right, rightIndex))) {
-          temper::core::DenseBitVector::set(reached, sameReachedIndex, true);
-          temper::core::Deque::add<std::shared_ptr<DiffPath>>(costZeroEdges, DiffPath::make(temper::core::Int::add(leftIndex, 1), temper::core::Int::add(rightIndex, 1), temper_globals::ChangeTypeUnchanged.value, diffPath));
+        if (!temper::core::BitVector::get(reached, sameReachedIndex) && eq(temper::core::List::get<T>(left, leftIndex), temper::core::List::get<T>(right, rightIndex))) {
+          temper::core::BitVector::set(reached, sameReachedIndex, true);
+          temper::core::Queue::add<std::shared_ptr<DiffPath>>(costZeroEdges, DiffPath::make(temper::core::Int::add(leftIndex, 1), temper::core::Int::add(rightIndex, 1), temper_globals::ChangeTypeUnchanged.value, diffPath));
         }
       }
       int32_t delReachedIndex = temper::core::Int::add(temper::core::Int::add(leftIndex, 1), temper::core::Int::mul(rightIndex, reachedRowLength));
-      if (!temper::core::DenseBitVector::get(reached, delReachedIndex)) {
-        temper::core::DenseBitVector::set(reached, delReachedIndex, true);
-        temper::core::Deque::add<std::shared_ptr<DiffPath>>(costOneEdges, DiffPath::make(temper::core::Int::add(leftIndex, 1), rightIndex, temper_globals::ChangeTypeDeletion.value, diffPath));
+      if (!temper::core::BitVector::get(reached, delReachedIndex)) {
+        temper::core::BitVector::set(reached, delReachedIndex, true);
+        temper::core::Queue::add<std::shared_ptr<DiffPath>>(costOneEdges, DiffPath::make(temper::core::Int::add(leftIndex, 1), rightIndex, temper_globals::ChangeTypeDeletion.value, diffPath));
       }
     }
     if (rightIndex < rightLength) {
       int32_t addReachedIndex = temper::core::Int::add(leftIndex, temper::core::Int::mul(temper::core::Int::add(rightIndex, 1), reachedRowLength));
-      if (!temper::core::DenseBitVector::get(reached, addReachedIndex)) {
-        temper::core::DenseBitVector::set(reached, addReachedIndex, true);
-        temper::core::Deque::add<std::shared_ptr<DiffPath>>(costOneEdges, DiffPath::make(leftIndex, temper::core::Int::add(rightIndex, 1), temper_globals::ChangeTypeAddition.value, diffPath));
+      if (!temper::core::BitVector::get(reached, addReachedIndex)) {
+        temper::core::BitVector::set(reached, addReachedIndex, true);
+        temper::core::Queue::add<std::shared_ptr<DiffPath>>(costOneEdges, DiffPath::make(leftIndex, temper::core::Int::add(rightIndex, 1), temper_globals::ChangeTypeAddition.value, diffPath));
       }
     }
   }
@@ -282,6 +283,7 @@ void global_init_init() {
     temper_globals::ChangeTypeAddition.construct();
     temper_globals::ChangeTypeDeletion.construct();
     temper_globals::ChangeTypeUnchanged.construct();
+    temper_std::global_init_collections();
     std::shared_ptr<core::Console::Type> console = core::Console::get_console();
     temper_globals::ChangeTypeAddition.value = TEMPER_STR("Addition");
     temper_globals::ChangeTypeDeletion.value = TEMPER_STR("Deletion");

@@ -136,16 +136,14 @@ pub const DEFAULTS: [&str; 1] = ["classes/property-order"];
 
 /// The functional tests with core's other types and members that tmpl's
 /// translation covers: string indices and `StringIndexOption`,
-/// `StringBuilder`, `Empty`, `Deque`, `DenseBitVector`, and more of
+/// `StringBuilder`, `Empty`, and more of
 /// `String`'s and `Float64`'s members, as `split`, `countBetween`,
 /// `near`, and `pi`. Each backend runs them as it covers them, with
 /// [`cases_with`].
-pub const CORE_TYPES: [&str; 9] = [
+pub const CORE_TYPES: [&str; 7] = [
     "functions/defaulting",
     "functions/named-args",
     "regression/minimal-repro",
-    "types/dense-bit-vector",
-    "types/deque",
     "types/float/ops",
     "types/string/build",
     "types/string/indices",
@@ -192,7 +190,7 @@ pub const TYPING: [&str; 1] = ["semantics/constness"];
 pub const ANY_VALUES: [&str; 2] = ["casts/as-expr", "types/list/operations"];
 
 /// The functional tests with `is` and `as` checks from `AnyValue` for a
-/// class, given core's values, as `Pair`s and `DenseBitVector`s, and a
+/// class, given core's values, as `Pair`s, and std's, as `BitVector`s, and a
 /// class's without interfaces as `AnyValue`s. Each backend runs them with
 /// [`cases_with`] but C++ and Rust, which can't make those values
 /// `AnyValue`s yet.
@@ -228,14 +226,16 @@ pub const ASYNC: [&str; 5] = [
 pub const TESTS: [&str; 1] = ["testing/asserts"];
 
 /// The functional tests that import std's modules (`std/regex`,
-/// `std/json`, `std/temporal`), which translate as part of std: each
-/// backend builds std's output beside them ([`Case::needs_std`]), with
-/// [`cases_with`].
-pub const WITH_STD: [&str; 4] = [
+/// `std/json`, `std/temporal`, `std/collections`), which translate as
+/// part of std: each backend builds std's output beside them
+/// ([`Case::needs_std`]), with [`cases_with`].
+pub const WITH_STD: [&str; 6] = [
     "regex/match",
     "regex/zero-advance",
+    "types/bit-vector",
     "types/date",
     "types/json-syntax-tree",
+    "types/queue",
 ];
 
 /// The functional tests of std's `net`, which send requests to the test

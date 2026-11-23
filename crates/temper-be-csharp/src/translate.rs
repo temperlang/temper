@@ -251,9 +251,12 @@ enum Part {
 impl<'a> Translator<'a> {
     pub fn new(p: &'a Program, names: &'a NameMap, namespace: &str, class: &str) -> Translator<'a> {
         // The root namespace hides a class of its name too (a library
-        // `math` is namespace `Math`).
+        // `math` is namespace `Math`). A std class connected to a .NET
+        // type (`Queue`, as `Queue<T>`) is never declared, so hides none.
+        let connected =
+            |d| temper_tmpl::qname::connected_type(p, d, crate::connected::connects_std);
         let mut taken: HashSet<String> = (p.decls.ids())
-            .filter(|&d| p.decls.contains(d))
+            .filter(|&d| p.decls.contains(d) && !connected(d))
             .map(|d| names.get(d).trim_start_matches('@').to_string())
             .filter(|n| !n.is_empty())
             .collect();

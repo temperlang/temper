@@ -673,7 +673,7 @@ let g2(a: List<Int>): Listed<String> { a }
 let g3(a: Listed<Int>): List<Int> { a }
 let g4(a: Map<String, Int>): Mapped<String, String> { a }
 let g5(a: Generator<Int>): SafeGenerator<Int> { a }
-let g6(a: List<Int>): Deque<Int> { a }
+let g6(a: List<Int>): Promise<Int> { a }
 let k1(a: String): MapKey<String> { a }
 let k2(a: Int): MapKey<Int> { a }
 let k3(a: String): MapKey<Int> { a }
@@ -758,7 +758,7 @@ console.log(new Box<String>("a").get());
       (Block a:53)))
   (Let
     ^g6:14
-    (Fn (Let ^a:54 (Call <> List Int)) (Call <> Deque Int) (Block a:54)))
+    (Fn (Let ^a:54 (Call <> List Int)) (Call <> Promise Int) (Block a:54)))
   (Let ^k1:15 (Fn (Let ^a:55 String) (Call <> MapKey String) (Block a:55)))
   (Let ^k2:16 (Fn (Let ^a:56 Int) (Call <> MapKey Int) (Block a:56)))
   (Let ^k3:17 (Fn (Let ^a:57 String) (Call <> MapKey Int) (Block a:57)))
@@ -853,21 +853,21 @@ error 456..457: Cannot assign to Listed<String> from List<Int32>
 error 496..497: Cannot assign to List<Int32> from Listed<Int32>
 error 554..555: Cannot assign to Mapped<String, String> from Map<String, Int32>
 error 606..607: Cannot assign to SafeGenerator<Int32> from Generator<Int32>
-error 645..646: Cannot assign to Deque<Int32> from List<Int32>
-error 756..757: Cannot assign to MapKey<Int32> from String
-error 840..844: Cannot assign to Int32 from T
-error 875..876: Cannot assign to T from U
-error 916..917: Cannot assign to Box<String> from Box<Int32>
-error 980..981: Cannot assign to Int32 from T
-error 1007..1008: Cannot assign to T from Int32
-error 1060..1064: Expected subtype of T, but got T?
-error 1089..1090: Cannot assign to T from T?
-error 1149..1150: Cannot assign to U from T
-error 1188..1189: Cannot assign to List<Int32> from List<T>
-error 1216..1217: Cannot assign to Void from T
-error 1351..1352: Cannot assign to Dog from T
-error 1393..1394: Cannot assign to T from Dog
-error 1735..1740: Cannot assign to String from Int32
+error 647..648: Cannot assign to Promise<Int32> from List<Int32>
+error 758..759: Cannot assign to MapKey<Int32> from String
+error 842..846: Cannot assign to Int32 from T
+error 877..878: Cannot assign to T from U
+error 918..919: Cannot assign to Box<String> from Box<Int32>
+error 982..983: Cannot assign to Int32 from T
+error 1009..1010: Cannot assign to T from Int32
+error 1062..1066: Expected subtype of T, but got T?
+error 1091..1092: Cannot assign to T from T?
+error 1151..1152: Cannot assign to U from T
+error 1190..1191: Cannot assign to List<Int32> from List<T>
+error 1218..1219: Cannot assign to Void from T
+error 1353..1354: Cannot assign to Dog from T
+error 1395..1396: Cannot assign to T from Dog
+error 1737..1742: Cannot assign to String from Int32
 log a
 
 === generic calls solved per call, as Kotlin Temper reports them
@@ -3214,7 +3214,6 @@ Failed: Can't apply / to these arguments
 let a: StringBuilder = 5;
 let b: StringBuilder = null;
 let i: StringIndex = "x";
-let d: DenseBitVector = 1;
 let e: StringIndexOption = "x";
 let g: NoStringIndex = String.begin;
 let f(n: Int): String {
@@ -3239,52 +3238,50 @@ console.log(f(4));
   (Let ^a:0 StringBuilder 5)
   (Let ^b:1 StringBuilder null)
   (Let ^i:2 StringIndex "x")
-  (Let ^d:3 DenseBitVector 1)
-  (Let ^e:4 StringIndexOption "x")
-  (Let ^g:5 NoStringIndex (Call . String \begin))
+  (Let ^e:3 StringIndexOption "x")
+  (Let ^g:4 NoStringIndex (Call . String \begin))
   (Let
-    ^f:6
+    ^f:5
     (Fn
-      (Let ^n:12 Int)
+      (Let ^n:11 Int)
       String
       (Block
-        (Var ^sbOrNull:13 StringBuilder null)
+        (Var ^sbOrNull:12 StringBuilder null)
         (If
-          (Call == (Call % n:12 2) 0)
+          (Call == (Call % n:11 2) 0)
           (Block
             (Let
-              ^sb:15
+              ^sb:14
               (Block
                 (If
-                  (Call == sbOrNull:13 #null)
+                  (Call == sbOrNull:12 #null)
                   (Call new StringBuilder)
-                  sbOrNull:13)))
-            (Call (Call . sb:15 \append) (Call cat n:12))
-            (Assign sbOrNull:13 sb:15)
+                  sbOrNull:12)))
+            (Call (Call . sb:14 \append) (Call cat n:11))
+            (Assign sbOrNull:12 sb:14)
             #void)
           (Block))
-        (Let ^finalSb:14 sbOrNull:13)
+        (Let ^finalSb:13 sbOrNull:12)
         (If
-          (Call == finalSb:14 null)
+          (Call == finalSb:13 null)
           (Block "")
-          (Block (Call (Call . finalSb:14 \toString)))))))
-  (Let ^s:7 "ab")
-  (Let ^o:8 StringIndexOption (Call (Call . s:7 \next) (Call . String \begin)))
-  (Let ^n:9 (Call ? StringIndexOption) null)
+          (Block (Call (Call . finalSb:13 \toString)))))))
+  (Let ^s:6 "ab")
+  (Let ^o:7 StringIndexOption (Call (Call . s:6 \next) (Call . String \begin)))
+  (Let ^n:8 (Call ? StringIndexOption) null)
   (Let
-    ^j:10
+    ^j:9
     StringIndex
-    (If (Call is o:8 StringIndex) (Block o:8) (Block (Call . String \begin))))
-  (Let ^k:11 AnyValue (Call new StringBuilder))
-  (Call (Call . console \log) (Call f:6 4))
+    (If (Call is o:7 StringIndex) (Block o:7) (Block (Call . String \begin))))
+  (Let ^k:10 AnyValue (Call new StringBuilder))
+  (Call (Call . console \log) (Call f:5 4))
   #void)
 error 23..24: Cannot assign to StringBuilder from Int32
 error 49..53: Expected subtype of StringBuilder, but got StringBuilder?
 error 76..79: Cannot assign to StringIndex from String
-error 105..106: Cannot assign to DenseBitVector from Int32
-error 135..138: Cannot assign to StringIndexOption from String
-error 163..175: Cannot assign to NoStringIndex from StringIndex
-error 233..237: Expected subtype of StringBuilder, but got StringBuilder?
+error 108..111: Cannot assign to StringIndexOption from String
+error 136..148: Cannot assign to NoStringIndex from StringIndex
+error 206..210: Expected subtype of StringBuilder, but got StringBuilder?
 log 4
 
 === calling a function value that may be null, as Kotlin Temper reports it

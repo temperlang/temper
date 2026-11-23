@@ -1,4 +1,6 @@
 local temper = require("temper-core")
+local BitVector = require("std/collections").BitVector
+local Queue = require("std/collections").Queue
 
 ---@type string
 local ChangeTypeAddition
@@ -102,12 +104,12 @@ local function diff(left, right, eq)
   local rightLength = temper.list_length(right)
   local reachedRowLength = temper.int32_add(leftLength, 1)
   local reachedColLength = temper.int32_add(rightLength, 1)
-  local reached = temper.densebitvector_constructor(temper.int32_mul(reachedRowLength, reachedColLength))
-  local costZeroEdges = temper.deque_constructor()
-  temper.deque_add(costZeroEdges, temper.null)
-  local costOneEdges = temper.deque_constructor()
+  local reached = temper.bitvector_constructor(temper.int32_mul(reachedRowLength, reachedColLength))
+  local costZeroEdges = temper.queue_constructor()
+  temper.queue_add(costZeroEdges, temper.null)
+  local costOneEdges = temper.queue_constructor()
   while true do
-    local diffPath = not temper.deque_isempty(costZeroEdges) and temper.deque_removefirst(costZeroEdges) or (not temper.deque_isempty(costOneEdges) and temper.deque_removefirst(costOneEdges) or temper.null)
+    local diffPath = not temper.queue_isempty(costZeroEdges) and temper.queue_removefirst(costZeroEdges) or (not temper.queue_isempty(costOneEdges) and temper.queue_removefirst(costOneEdges) or temper.null)
     local subject = temper.is_null(diffPath) and temper.null or (diffPath --[[@as myers-diff.DiffPath]]).leftIndex
     local leftIndex = temper.is_null(subject) and 0 or (subject --[[@as integer]])
     local subject2 = temper.is_null(diffPath) and temper.null or (diffPath --[[@as myers-diff.DiffPath]]).rightIndex
@@ -164,22 +166,22 @@ local function diff(left, right, eq)
     if leftIndex < leftLength then
       if rightIndex < rightLength then
         local sameReachedIndex = temper.int32_add(temper.int32_add(leftIndex, 1), temper.int32_mul(temper.int32_add(rightIndex, 1), reachedRowLength))
-        if not temper.densebitvector_get(reached, sameReachedIndex) and eq(temper.list_get(left, leftIndex), temper.list_get(right, rightIndex)) then
-          temper.densebitvector_set(reached, sameReachedIndex, true)
-          temper.deque_add(costZeroEdges, DiffPath(temper.int32_add(leftIndex, 1), temper.int32_add(rightIndex, 1), ChangeTypeUnchanged, diffPath))
+        if not temper.bitvector_get(reached, sameReachedIndex) and eq(temper.list_get(left, leftIndex), temper.list_get(right, rightIndex)) then
+          temper.bitvector_set(reached, sameReachedIndex, true)
+          temper.queue_add(costZeroEdges, DiffPath(temper.int32_add(leftIndex, 1), temper.int32_add(rightIndex, 1), ChangeTypeUnchanged, diffPath))
         end
       end
       local delReachedIndex = temper.int32_add(temper.int32_add(leftIndex, 1), temper.int32_mul(rightIndex, reachedRowLength))
-      if not temper.densebitvector_get(reached, delReachedIndex) then
-        temper.densebitvector_set(reached, delReachedIndex, true)
-        temper.deque_add(costOneEdges, DiffPath(temper.int32_add(leftIndex, 1), rightIndex, ChangeTypeDeletion, diffPath))
+      if not temper.bitvector_get(reached, delReachedIndex) then
+        temper.bitvector_set(reached, delReachedIndex, true)
+        temper.queue_add(costOneEdges, DiffPath(temper.int32_add(leftIndex, 1), rightIndex, ChangeTypeDeletion, diffPath))
       end
     end
     if rightIndex < rightLength then
       local addReachedIndex = temper.int32_add(leftIndex, temper.int32_mul(temper.int32_add(rightIndex, 1), reachedRowLength))
-      if not temper.densebitvector_get(reached, addReachedIndex) then
-        temper.densebitvector_set(reached, addReachedIndex, true)
-        temper.deque_add(costOneEdges, DiffPath(leftIndex, temper.int32_add(rightIndex, 1), ChangeTypeAddition, diffPath))
+      if not temper.bitvector_get(reached, addReachedIndex) then
+        temper.bitvector_set(reached, addReachedIndex, true)
+        temper.queue_add(costOneEdges, DiffPath(leftIndex, temper.int32_add(rightIndex, 1), ChangeTypeAddition, diffPath))
       end
     end
   end

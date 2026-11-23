@@ -1,4 +1,6 @@
 local temper = require("temper-core")
+local BitVector = require("std/collections").BitVector
+local Queue = require("std/collections").Queue
 
 ---@class core-classes.Thing
 
@@ -33,7 +35,7 @@ local function isThing(x)
   return temper.instance_of(x, Thing)
 end
 
-local bits = temper.densebitvector_constructor(8)
+local bits = temper.bitvector_constructor(8)
 local ints = { 1, 2 }
 print(describe(Thing()))
 print(describe(temper.pair_constructor("a", 1)))
@@ -43,7 +45,7 @@ print(describe(1))
 print(describe(ints))
 print(describe(temper.map_constructor({ temper.pair_constructor("m", 2) })))
 print(describe(temper.listbuilder_constructor()))
-print(describe(temper.deque_constructor()))
+print(describe(temper.queue_constructor()))
 print(tostring(isThing(Thing())))
 print(tostring(isThing(bits)))
 

@@ -74,9 +74,6 @@ pub enum Val {
     /// An immutable `List`.
     List(Rc<[Val]>),
     ListBuilder(Rc<RefCell<Vec<Val>>>),
-    Deque(Rc<RefCell<VecDeque<Val>>>),
-    /// A `DenseBitVector`; bits past the end are false.
-    Bits(Rc<RefCell<Vec<bool>>>),
     Map(Rc<maps::Entries>),
     MapBuilder(Rc<RefCell<maps::Entries>>),
     /// A `Pair`'s key and value.
@@ -155,7 +152,6 @@ impl Val {
             self,
             Val::List(_)
                 | Val::ListBuilder(_)
-                | Val::Deque(_)
                 | Val::Map(_)
                 | Val::MapBuilder(_)
                 | Val::Pair(_)
@@ -181,8 +177,6 @@ fn take_containers(value: &mut Val, work: &mut Vec<Val>) {
     match value {
         Val::List(items) => Rc::get_mut(items).into_iter().flatten().for_each(take),
         Val::ListBuilder(items) => (Rc::get_mut(items).into_iter())
-            .for_each(|items| items.get_mut().iter_mut().for_each(&mut take)),
-        Val::Deque(items) => (Rc::get_mut(items).into_iter())
             .for_each(|items| items.get_mut().iter_mut().for_each(&mut take)),
         Val::Map(entries) => (Rc::get_mut(entries).into_iter())
             .flat_map(|e| e.pairs_mut().iter_mut())
@@ -834,18 +828,6 @@ impl Interp<'_> {
                 Some((Val::BuiltinType(t), [])) if TYPES[*t as usize] == "StringBuilder" => {
                     Ok(Val::StringBuilder(Rc::new(RefCell::new(String::new()))))
                 }
-                Some((Val::BuiltinType(t), [])) if TYPES[*t as usize] == "Deque" => {
-                    Ok(Val::Deque(Rc::new(RefCell::new(VecDeque::new()))))
-                }
-                Some((Val::BuiltinType(t), [Val::Int(capacity)]))
-                    if TYPES[*t as usize] == "DenseBitVector" =>
-                {
-                    Ok(Val::Bits(Rc::new(RefCell::new(vec![
-                        false;
-                        (*capacity).max(0)
-                            as usize
-                    ]))))
-                }
                 Some((Val::BuiltinType(t), [Val::List(pairs)])) if TYPES[*t as usize] == "Map" => {
                     Ok(Val::Map(Rc::new(maps::Entries::from_pairs(pairs)?)))
                 }
@@ -1014,9 +996,6 @@ impl Interp<'_> {
             (Index, [Val::List(items), Val::Int(i)]) => list_get(items, *i),
             (Index, [Val::ListBuilder(items), Val::Int(i)]) => list_get(&items.borrow(), *i),
             (Index, [Val::Str(text), Val::StringIndex(i)]) => strings::get(text, *i),
-            (Index, [bits @ Val::Bits(_), i @ Val::Int(_)]) => {
-                self.method(bits, "get", vec![i.clone()])
-            }
             (Index, [map @ (Val::Map(_) | Val::MapBuilder(_)), key]) => maps::get(map, key),
             (Char, parts) => strings::char_tag(parts),
             (Raw, [Val::List(parts), Val::List(values)]) => {
@@ -1108,38 +1087,6 @@ impl Interp<'_> {
             }
             (Val::StringBuilder(builder), _, _) => strings::builder_method(builder, name, &args)
                 .unwrap_or_else(|| no_method(object, name)),
-            (Val::Deque(deque), "add", [value]) => {
-                deque.borrow_mut().push_back(value.clone());
-                Ok(Val::Void)
-            }
-            (Val::Deque(deque), "removeFirst", []) => deque
-                .borrow_mut()
-                .pop_front()
-                .ok_or_else(|| Abrupt::Panic("removeFirst on an empty Deque".into())),
-            // As core's `DenseBitVector`, which grows when a bit
-            // past the end is set.
-            (Val::Bits(bits), "get", [Val::Int(i)]) => Ok(Val::Bool(
-                usize::try_from(*i)
-                    .ok()
-                    .and_then(|i| bits.borrow().get(i).copied())
-                    .unwrap_or(false),
-            )),
-            (Val::Bits(bits), "set", [Val::Int(i), Val::Bool(value)]) => {
-                let mut bits = bits.borrow_mut();
-                let Ok(i) = usize::try_from(*i) else {
-                    return Err(Abrupt::Panic(format!(
-                        "index {i} out of bounds for length {}",
-                        bits.len()
-                    )));
-                };
-                if i >= bits.len() && *value {
-                    bits.resize(i + 1, false);
-                }
-                if let Some(bit) = bits.get_mut(i) {
-                    *bit = *value;
-                }
-                Ok(Val::Void)
-            }
             (_, "toString", []) => Ok(Val::Str(to_string(object).into())),
             (Val::Int(n), "toString", [radix]) => {
                 strings::int_to_string(*n as i64, radix_or_10(radix)?)
@@ -1281,9 +1228,7 @@ fn is_builtin_type(value: &Val, ty: &str) -> bool {
         "NoStringIndex" => matches!(value, Val::NoStringIndex),
         "StringIndexOption" => matches!(value, Val::StringIndex(_) | Val::NoStringIndex),
         "StringBuilder" => matches!(value, Val::StringBuilder(_)),
-        "Deque" => matches!(value, Val::Deque(_)),
         "Empty" => matches!(value, Val::Empty),
-        "DenseBitVector" => matches!(value, Val::Bits(_)),
         "Map" => matches!(value, Val::Map(_)),
         "MapBuilder" => matches!(value, Val::MapBuilder(_)),
         "Mapped" => matches!(value, Val::Map(_) | Val::MapBuilder(_)),
@@ -2087,7 +2032,6 @@ fn property(object: Val, name: NameId, text: &str) -> R {
         (Val::List(items), "length") => Ok(Val::Int(items.len() as i32)),
         (Val::ListBuilder(items), "isEmpty") => Ok(Val::Bool(items.borrow().is_empty())),
         (Val::ListBuilder(items), "length") => Ok(Val::Int(items.borrow().len() as i32)),
-        (Val::Deque(items), "isEmpty") => Ok(Val::Bool(items.borrow().is_empty())),
         (Val::Map(entries), "length") => Ok(Val::Int(entries.len() as i32)),
         (Val::MapBuilder(entries), "length") => Ok(Val::Int(entries.borrow().len() as i32)),
         (Val::Pair(pair), "key") => Ok(pair.0.clone()),
@@ -2183,8 +2127,6 @@ fn equal(a: &Val, b: &Val) -> bool {
         (Val::Fn(a), Val::Fn(b)) => Rc::ptr_eq(a, b),
         (Val::Object(a), Val::Object(b)) => Rc::ptr_eq(a, b),
         (Val::ListBuilder(a), Val::ListBuilder(b)) => Rc::ptr_eq(a, b),
-        (Val::Deque(a), Val::Deque(b)) => Rc::ptr_eq(a, b),
-        (Val::Bits(a), Val::Bits(b)) => Rc::ptr_eq(a, b),
         (Val::Map(a), Val::Map(b)) => Rc::ptr_eq(a, b),
         (Val::MapBuilder(a), Val::MapBuilder(b)) => Rc::ptr_eq(a, b),
         (Val::Pair(a), Val::Pair(b)) => Rc::ptr_eq(a, b),
@@ -2237,8 +2179,6 @@ fn type_name(value: &Val) -> &'static str {
         Val::StringBuilder(_) => "StringBuilder",
         Val::List(_) => "List",
         Val::ListBuilder(_) => "ListBuilder",
-        Val::Deque(_) => "Deque",
-        Val::Bits(_) => "DenseBitVector",
         Val::Map(_) => "Map",
         Val::MapBuilder(_) => "MapBuilder",
         Val::Pair(_) => "Pair",

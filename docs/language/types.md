@@ -1721,98 +1721,10 @@ user-implementable in the future.
 
 `extends` [*AnyValue*](#interface-anyvalue)
 
-## *class Deque*
+## Queues and bit vectors
 
-A *Deque* or double-ended queue allows for breadth-first processing via
-efficient adds at the end and efficient removal from the front.
-
-```temper
-let deque = new Deque<String>();
-deque.add("a");
-deque.add("b");
-
-console.log(deque.removeFirst()); //!outputs "a"
-
-deque.add("c");
-deque.add("d");
-
-while (!deque.isEmpty) {
-  console.log(deque.removeFirst()); //!outputs ["b", "c", "d"]
-}
-// ✅
-```
-
-*Deque* `<`[*T*](#dequet)`>` `extends` [*AnyValue*](#interface-anyvalue)
-
-### typeFormals
-
-#### `Deque.<T>`
-
-`extends` [*AnyValue*](#interface-anyvalue)
-
-### properties
-
-#### `Deque.isEmpty`
-
-`:` [*Boolean*](#class-boolean)
-
-True if this contains no elements.
-
-### methods
-
-#### `Deque.constructor`
-
-`:` `fn(`[*Deque*](#class-deque)&lt;[*T*](#dequet)&gt;`):` [*Void*](#class-void)
-
-#### `Deque.add`
-
-`:` `fn(`[*Deque*](#class-deque)&lt;[*T*](#dequet)&gt;, [*T*](#dequet)`):` [*Void*](#class-void)
-
-Add an element at the end.
-
-#### `Deque.removeFirst`
-
-`:` `fn(`[*Deque*](#class-deque)&lt;[*T*](#dequet)&gt;`):` [*T*](#dequet)
-
-Removes and returns the first element. Panics if empty.
-
-## *class DenseBitVector*
-
-A bit vector where the probability of any bit with index in \[0, capacity\]
-is high.  This does not assume that the probability of a bit being set
-depends on the probability of an adjacent bit being set.
-
-*DenseBitVector* `extends` [*AnyValue*](#interface-anyvalue)
-
-### methods
-
-#### `DenseBitVector.constructor`
-
-`:` `fn(`[*DenseBitVector*](#class-densebitvector), [*Int32*](#class-int32)`):` [*Void*](#class-void)
-
-#### `DenseBitVector.get`
-
-`:` `fn(`[*DenseBitVector*](#class-densebitvector), [*Int32*](#class-int32)`):` [*Boolean*](#class-boolean)
-
-The bit at the given [index].  If a bit has not previously been set then
-it is assumed to be [*false*](builtins.md#false).
-
-#### `DenseBitVector.set`
-
-`:` `fn(`[*DenseBitVector*](#class-densebitvector), [*Int32*](#class-int32), [*Boolean*](#class-boolean)`):` [*Void*](#class-void)
-
-Sets the bit at [index] to [newValue].
-After this, [get],  given [index], will return [newValue].
-
-```temper
-let bitVector = new DenseBitVector(16);
-console.log(bitVector.get(3).toString()); //!outputs "false"
-bitVector.set(3, true);
-console.log(bitVector.get(3).toString()); //!outputs "true"
-bitVector.set(3, false);
-console.log(bitVector.get(3).toString()); //!outputs "false"
-// ✅
-```
+`Queue` and `BitVector`, once core's `Deque` and `DenseBitVector`, are
+in std: see [`std/collections`](../std/collections.md).
 
 ## Function Types
 

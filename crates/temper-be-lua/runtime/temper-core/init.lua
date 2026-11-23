@@ -968,32 +968,32 @@ function temper.list_length(list)
     return #list
 end
 
-function temper.deque_constructor()
+function temper.queue_constructor()
     return {
         head = 1,
         tail = 1,
-        [temper.type_tag] = 'Deque'
+        [temper.type_tag] = 'Queue'
     }
 end
 
-function temper.deque_add(deque, obj)
-    local tail = deque.tail
-    deque[tail] = obj
-    deque.tail = tail + 1
+function temper.queue_add(queue, obj)
+    local tail = queue.tail
+    queue[tail] = obj
+    queue.tail = tail + 1
 end
 
-function temper.deque_isempty(deque)
-    return deque.head == deque.tail
+function temper.queue_isempty(queue)
+    return queue.head == queue.tail
 end
 
-function temper.deque_removefirst(deque)
-    local head = deque.head
-    if head == deque.tail then
-        return temper.bubble("core.type Deque.removeFirst() on empty deque")
+function temper.queue_removefirst(queue)
+    local head = queue.head
+    if head == queue.tail then
+        return temper.bubble("std/collections.type Queue.removeFirst() on an empty queue")
     end
-    local first = deque[head]
-    deque.head = head + 1
-    deque[head] = nil
+    local first = queue[head]
+    queue.head = head + 1
+    queue[head] = nil
     return first
 end
 
@@ -2284,20 +2284,29 @@ function temper.date_yearsbetween(start, end_)
     return yearDelta + adj
 end
 
-function temper.densebitvector_constructor(size)
+function temper.bitvector_constructor(size)
     local vec = {
-        [temper.type_tag] = 'DenseBitVector'
+        [temper.type_tag] = 'BitVector'
     }
     return vec
 end
 
-function temper.densebitvector_get(vec, key)
-    return not not vec[key]
+function temper.bitvector_get(vec, key)
+    return vec[key] == true
 end
 
-function temper.densebitvector_set(vec, key, setto)
+function temper.bitvector_set(vec, key, setto)
+    if key < 0 then
+        return temper.bubble("std/collections.type BitVector.set(" .. tostring(key) .. ") index out of bounds")
+    end
     vec[key] = setto
 end
+
+-- Core's old names, which the regex engine's compiled runtime
+-- (`regex/runtime.lua`) calls.
+temper.densebitvector_constructor = temper.bitvector_constructor
+temper.densebitvector_get = temper.bitvector_get
+temper.densebitvector_set = temper.bitvector_set
 
 function temper.cast_to_boolean(thing)
     if type(thing) ~= 'boolean' then

@@ -3,7 +3,10 @@
 `is` and `as` may check for a class from `AnyValue`, and each backend
 tells its values from core's, whatever the host makes those. (Core's
 own types the host supplies are `@connected`, so they can't be checked
-for from `AnyValue`.)
+for from `AnyValue`, and so are std's `Queue` and `BitVector`, which
+are here too.)
+
+    let { BitVector, Queue } = import("std/collections");
 
     class Thing {}
 
@@ -17,7 +20,7 @@ for from `AnyValue`.)
       } orelse "other"
     }
 
-    let bits = new DenseBitVector(8);
+    let bits = new BitVector(8);
     let ints: List<Int> = [1, 2];
     console.log(describe(new Thing()));
     console.log(describe(new Pair<String, Int>("a", 1)));
@@ -27,7 +30,7 @@ for from `AnyValue`.)
     console.log(describe(ints));
     console.log(describe(new Map<String, Int>([new Pair<String, Int>("m", 2)])));
     console.log(describe(new ListBuilder<Int>()));
-    console.log(describe(new Deque<Int>()));
+    console.log(describe(new Queue<Int>()));
 
 prints
 

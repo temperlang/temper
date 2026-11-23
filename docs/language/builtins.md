@@ -1977,6 +1977,23 @@ console.log(f()); //!outputs "function-declaration"
 
 > **Note:** Temper doesn't support named function expressions yet ("Use of builtin fn is malformed") ([inconsistencies](../inconsistencies.md#i10-examples-that-dont-run-as-marked)).
 
+#### Optional parameters
+
+A parameter may have a default, as `greeting: String? = "Hello"`, which a
+call that leaves it out gets. A call that passes `null` for it gets the
+default too, even where its type is nullable, so such a parameter is
+never `null` inside the function:
+
+```temper
+let greet(name: String, greeting: String? = "Hello"): String {
+  "${greeting ?? "Hi"}, ${name}!"
+}
+console.log(greet("Ada")); //!outputs "Hello, Ada!"
+console.log(greet("Ada", "Howdy")); //!outputs "Howdy, Ada!"
+console.log(greet("Ada", null)); //!outputs "Hello, Ada!"
+// ✅
+```
+
 ### `orelse`
 The `orelse` infix operator allows recovering from
 [failure to produce a result](#bubble).

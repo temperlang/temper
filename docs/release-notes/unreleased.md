@@ -9,6 +9,8 @@
 - [🆕 Bitwise operators](#-bitwise-operators)
 - [🚨Breaking change: Details of rules for `<` ambiguity have changed](#breaking-change-details-of-rules-for--ambiguity-have-changed)
 - [🚨Breaking change: Python parameters keep builtins' names](#breaking-change-python-parameters-keep-builtins-names)
+- [🚨Breaking change: `Deque` and `DenseBitVector` are std's `Queue` and `BitVector`](#breaking-change-deque-and-densebitvector-are-stds-queue-and-bitvector)
+- [Explicit `null` for a parameter with a default gives the default](#explicit-null-for-a-parameter-with-a-default-gives-the-default)
 - [🚨Breaking change: private constructors, connected types, and member names](#breaking-change-private-constructors-connected-types-and-member-names)
 - [`Console`, `getConsole`, `Equatable`, and `Null` are nameable again](#console-getconsole-equatable-and-null-are-nameable-again)
 - [🆕 Module namespaces](#-module-namespaces)
@@ -28,6 +30,33 @@
 - [`temper` and its `TEMPER_*` settings](#temper-and-its-temper_-settings)
 - [Fixes on Windows](#fixes-on-windows)
 
+## 🚨Breaking change: `Deque` and `DenseBitVector` are std's `Queue` and `BitVector`
+
+Core's `Deque` and `DenseBitVector` moved to a new std module,
+`std/collections`, as `Queue` (it's first-in, first-out) and
+`BitVector`. Code that used them adds one import:
+
+```temper inert
+let { Queue, BitVector } = import("std/collections");
+```
+
+Without it, `Deque` or `Queue` is an error that names that import. Both
+are `@connected` to the same host types as before (`java.util.Deque`
+and `java.util.BitSet` in Java, `collections.deque` in Python, and so
+on); the runtimes' own types are renamed to match (`temper_core.BitVector`
+in Python, `temper_core::Queue` in Rust, `temper.Queue` in Lua). Every
+backend now agrees on the edges, as std's Temper body has them: `get` at
+a negative index is `false`, `set` at one panics, and a negative
+capacity is none, where each backend differed somewhere before; and
+JavaScript's `set` far past the end no longer drops the bit. See [`std/collections`](../std/collections.md).
+
+## Explicit `null` for a parameter with a default gives the default
+
+As it always has, passing `null` for a parameter with a default, as
+`f(null)` for `let f(x: Int? = 0)`, gives the default, `0`, even where
+the parameter's type is nullable. It's now documented, under
+[optional parameters](../language/builtins.md#optional-parameters).
+
 ## 🚨Breaking change: private constructors, connected types, and member names
 
 - A class's private constructor is its own, as private methods are:
@@ -41,10 +70,9 @@
   DoneResult<T>` for `r: GeneratorResult<T>`. `x is StringIndex` or `x is
   StringBuilder` for `x: AnyValue` is an error, as in Kotlin Temper; JS
   translated it wrongly.
-- `Pair`, `Deque`, `DenseBitVector`, `Listed`, `Mapped`,
-  `SafeGenerator`, and `Console` are `@connected`, as the host supplies
-  them, so `x is Pair<K, V>` or `x is DenseBitVector` from `AnyValue` is
-  an error too.
+- `Pair`, `Listed`, `Mapped`, `SafeGenerator`, and `Console` (and std's
+  `Queue` and `BitVector`, above) are `@connected`, as the host supplies
+  them, so `x is Pair<K, V>` from `AnyValue` is an error too.
 - A class or interface may not have a static and an instance member
   of the same name.
 - A local alias of a type, as `let D = C;` in a function, is the type:

@@ -67,7 +67,9 @@ fn type_connections_name_core_types() {
         })
         .filter_map(|d| qnames.get(d).map(|q| q.to_string()))
         .collect();
-    for key in keys {
+    // std's (`std/collections.type BitVector`), which temper-driver's
+    // `host_types` test checks against std.
+    for key in keys.into_iter().filter(|k| !k.starts_with("std/")) {
         assert!(types.iter().any(|q| q == key), "{key} isn't a type of core");
     }
 }

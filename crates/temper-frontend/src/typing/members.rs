@@ -599,7 +599,7 @@ impl Settle {
     /// Pair<K, V>`, with the call's type arguments. Their bounds are as
     /// core declares them, as `MapKey<K>` for `Map`'s `K`, so a call is
     /// checked against them, and unknown where it declares none: `T` in
-    /// `Deque<T>` may be nullable, as in `new Deque<D?>()`.
+    /// `ListBuilder<T>` may be nullable, as in `new ListBuilder<D?>()`.
     pub(super) fn core_generic_new(
         &mut self,
         args: &[NodeId],

@@ -12,6 +12,7 @@ console.log(new Date(2000, 12, 31).toString()); //!outputs "2000-12-31"
 
 | Module | What it's for |
 |---|---|
+| [`std/collections`](collections.md) | A first-in, first-out `Queue` and a growable `BitVector` |
 | [`std/json`](json.md) | Converting values to and from JSON, with `@json` |
 | [`std/regex`](regex.md) | Regular expressions, from literals or built as data |
 | [`std/temporal`](temporal.md) | Calendar dates |

@@ -1,3 +1,5 @@
+import {panic} from "./core.js";
+
 
 /**
  * @param {number} byte
@@ -20,7 +22,7 @@ const byteToBitArray = (byte) => {
   return ret;
 };
 
-export class DenseBitVector {
+export class BitVector {
   /**
    * @type {Uint8Array}
    */
@@ -44,18 +46,23 @@ export class DenseBitVector {
    * @param {boolean} newBitValue
    */
   set(index, newBitValue) {
+    if (index < 0) {
+      panic();
+    }
     let values = this.values;
     const len = values.byteLength;
     const key = index >> 3;
     const shift = index & 7;
     if (len <= key) {
-      const next = new Uint8Array(len << 1);
+      if (!newBitValue) {
+        // Past the end is false already.
+        return;
+      }
+      const next = new Uint8Array(Math.max(len << 1, key + 1));
       next.set(values);
-      next[key] = next[key] & ~(1 << shift) | (newBitValue << shift);
-      this.values = next;
-    } else {
-      values[key] = values[key] & ~(1 << shift) | (newBitValue << shift);
+      this.values = values = next;
     }
+    values[key] = values[key] & ~(1 << shift) | (newBitValue << shift);
   }
 
   /**
@@ -74,17 +81,17 @@ export class DenseBitVector {
 };
 
 /**
- * Implements extension method core.type DenseBitVector.constructor()
+ * Implements extension method std/collections.type BitVector.constructor()
  * @param {number} capacity
- * @returns {DenseBitVector}
+ * @returns {BitVector}
  */
 export const denseBitVectorConstructor = (capacity) => {
-  return new DenseBitVector();
+  return new BitVector();
 };
 
 /**
- * Implements extension method core.type DenseBitVector.get()
- * @param {DenseBitVector} denseBitVector
+ * Implements extension method std/collections.type BitVector.get()
+ * @param {BitVector} denseBitVector
  * @param {number} index
  * @returns {boolean}
  */
@@ -93,8 +100,8 @@ export const denseBitVectorGet = (denseBitVector, index) => {
 };
 
 /**
- * Implements extension method core.type DenseBitVector.set()
- * @param {DenseBitVector} denseBitVector
+ * Implements extension method std/collections.type BitVector.set()
+ * @param {BitVector} denseBitVector
  * @param {number} index
  * @param {boolean} newBitValue
  */

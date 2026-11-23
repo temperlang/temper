@@ -8,7 +8,7 @@
 
 namespace temper {
     namespace core {
-        namespace DenseBitVector {
+        namespace BitVector {
 
             // Grows a vector to `size` bits, opaque to g++'s optimizer: inlined
             // where it knows the vector's size, g++ 12 to 14 at -O3 report a false
@@ -22,22 +22,23 @@ namespace temper {
                 bv.resize(size, false);
             }
 
+            // A negative size is none.
             inline std::shared_ptr<std::vector<bool>> make(int32_t size) {
-                return std::make_shared<std::vector<bool>>(size, false);
+                return std::make_shared<std::vector<bool>>(static_cast<std::size_t>(size < 0 ? 0 : size), false);
             }
 
             inline bool get(std::shared_ptr<std::vector<bool>> bv, int32_t index) {
-                // A bit never set is false, as core's Temper body has it.
+                // A bit never set is false, as std's Temper body has it.
                 int32_t sz = static_cast<int32_t>(bv->size());
                 return 0 <= index && index < sz && (*bv)[index];
             }
 
             inline void set(std::shared_ptr<std::vector<bool>> bv, int32_t index, bool value) {
-                // As core's Temper body: past the end, a false bit is
+                // As std's Temper body: past the end, a false bit is
                 // already false, and a true one grows the vector.
                 int32_t sz = static_cast<int32_t>(bv->size());
                 if (index < 0) {
-                    bubble("DenseBitVector set index out of bounds");
+                    bubble("BitVector set index out of bounds");
                 }
                 if (index >= sz) {
                     if (!value) {

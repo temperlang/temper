@@ -60,31 +60,6 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Console.log()",
         Connection::Translate(console_log),
     ),
-    (
-        "core.type DenseBitVector.constructor()",
-        Connection::Helper("densebitvector_constructor"),
-    ),
-    (
-        "core.type DenseBitVector.get()",
-        Connection::Helper("densebitvector_get"),
-    ),
-    (
-        "core.type DenseBitVector.set()",
-        Connection::Helper("densebitvector_set"),
-    ),
-    ("core.type Deque.add()", Connection::Helper("deque_add")),
-    (
-        "core.type Deque.constructor()",
-        Connection::Helper("deque_constructor"),
-    ),
-    (
-        "core.type Deque.get isEmpty()",
-        Connection::Helper("deque_isempty"),
-    ),
-    (
-        "core.type Deque.removeFirst()",
-        Connection::Helper("deque_removefirst"),
-    ),
     ("core.type Float64.abs()", Connection::Math("abs")),
     ("core.type Float64.acos()", Connection::Math("acos")),
     ("core.type Float64.asin()", Connection::Math("asin")),

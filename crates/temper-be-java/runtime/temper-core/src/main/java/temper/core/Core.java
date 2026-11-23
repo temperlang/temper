@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.LinkedHashMap;
@@ -1560,6 +1561,17 @@ public final class Core {
         } else {
             return value;
         }
+    }
+
+    /**
+     * std's {@code BitVector.get}: false for a negative index, which
+     * {@link BitSet#get} rejects.
+     * @param bits the bits
+     * @param index the bit's index
+     * @return whether the bit is set
+     */
+    public static boolean bitVectorGet(BitSet bits, int index) {
+        return index >= 0 && bits.get(index);
     }
 
     /**

@@ -35,7 +35,7 @@ namespace TemperLang.Core
         }
 
         public static bool BitGet(this BitArray bits, int index) =>
-            index >= bits.Length ? false : bits[index];
+            index >= 0 && index < bits.Length && bits[index];
 
         public static void BitSet(this BitArray bits, int index, bool value)
         {

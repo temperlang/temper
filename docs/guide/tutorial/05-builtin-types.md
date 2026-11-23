@@ -364,12 +364,13 @@ user-defined key types in the future (see [issue#29](https://github.com/temperla
 ## Other types
 
 Temper has additional built-in types, but above discussion highlights some of the
-most important ones. Also, some types currently in [*lib/core*](../../../lib/core/),
-such as `Deque<T>` and `DenseBitVector` might move to support libraries in the
-future (see [issue#30](https://github.com/temperlang/temper/issues/30)).
+most important ones. Collections beyond lists and maps, a first-in, first-out
+`Queue<T>` and a growable `BitVector`, are in the standard library's
+[`std/collections`](../../std/collections.md) (see
+[issue#30](https://github.com/temperlang/temper/issues/30)).
 
 There's also currently a standard library called `"std"` with modules
-`"std/regex"` and `"std/testing"`. These also are likely to see some
+such as `"std/regex"` and `"std/testing"`. These also are likely to see some
 reorgnization before 1.0 (see [issue#26](https://github.com/temperlang/temper/issues/26)). We already saw a bit of testing
 earlier. And we'll take a look at regular expressions soon, but first let's
 understand how Temper handles memory management.

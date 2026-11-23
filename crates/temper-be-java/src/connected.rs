@@ -65,25 +65,6 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Static("Boolean", "toString"),
     ),
     ("core.type Console.log()", Connection::Method("log")),
-    (
-        "core.type DenseBitVector.constructor()",
-        Connection::Translate(new_bit_set),
-    ),
-    ("core.type DenseBitVector.get()", Connection::Method("get")),
-    ("core.type DenseBitVector.set()", Connection::Method("set")),
-    ("core.type Deque.add()", Connection::Method("addLast")),
-    (
-        "core.type Deque.constructor()",
-        Connection::Translate(new_deque),
-    ),
-    (
-        "core.type Deque.get isEmpty()",
-        Connection::Method("isEmpty"),
-    ),
-    (
-        "core.type Deque.removeFirst()",
-        Connection::Static("Core", "dequeRemoveFirst"),
-    ),
     ("core.type Float64.abs()", Connection::Static("Math", "abs")),
     (
         "core.type Float64.acos()",
@@ -468,6 +449,34 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Translate(new_value_result),
     ),
     (
+        "std/collections.type BitVector.constructor()",
+        Connection::Translate(new_bit_set),
+    ),
+    (
+        "std/collections.type BitVector.get()",
+        Connection::Static("Core", "bitVectorGet"),
+    ),
+    (
+        "std/collections.type BitVector.set()",
+        Connection::Method("set"),
+    ),
+    (
+        "std/collections.type Queue.add()",
+        Connection::Method("addLast"),
+    ),
+    (
+        "std/collections.type Queue.constructor()",
+        Connection::Translate(new_deque),
+    ),
+    (
+        "std/collections.type Queue.get isEmpty()",
+        Connection::Method("isEmpty"),
+    ),
+    (
+        "std/collections.type Queue.removeFirst()",
+        Connection::Static("Core", "dequeRemoveFirst"),
+    ),
+    (
         "std/net.sendRequest()",
         Connection::StdStatic("temper.core.net.Core", "stdNetSend"),
     ),
@@ -561,20 +570,6 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
         TypeConnection {
             name: "Console",
             import: "temper.core.Core.Console",
-        },
-    ),
-    (
-        "core.type DenseBitVector",
-        TypeConnection {
-            name: "BitSet",
-            import: "java.util.BitSet",
-        },
-    ),
-    (
-        "core.type Deque",
-        TypeConnection {
-            name: "Deque",
-            import: "java.util.Deque",
         },
     ),
     (
@@ -708,6 +703,20 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
         TypeConnection {
             name: "ValueResult",
             import: "temper.core.Generator.ValueResult",
+        },
+    ),
+    (
+        "std/collections.type BitVector",
+        TypeConnection {
+            name: "BitSet",
+            import: "java.util.BitSet",
+        },
+    ),
+    (
+        "std/collections.type Queue",
+        TypeConnection {
+            name: "Deque",
+            import: "java.util.Deque",
         },
     ),
     (
@@ -1173,9 +1182,15 @@ fn empty(t: &mut Translator<'_>, _: &[NodeId]) -> Result<Expr, NotYet> {
     Ok(Expr::name("Optional").method("empty", Vec::new()))
 }
 
-/// `new BitSet(capacity)`, as Kotlin's.
+/// `new BitSet(capacity)`, as Kotlin's; `Math.max(capacity, 0)` but for
+/// a literal, since a negative capacity is none, which `BitSet` rejects.
 fn new_bit_set(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
-    let capacity = one(t, args, "DenseBitVector")?;
+    let literal =
+        matches!(args, [x] if matches!(t.node(*x), Node::Int32Lit { value } if value >= 0));
+    let mut capacity = one(t, args, "BitVector")?;
+    if !literal {
+        capacity = Expr::name("Math").method("max", vec![capacity, Expr::Int(0)]);
+    }
     t.import("java.util.BitSet");
     Ok(Expr::New("BitSet".into(), vec![capacity]))
 }
@@ -1276,6 +1291,15 @@ fn string_builder_clear(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr,
 /// `@connected` members use their Temper bodies. Which std keys a backend
 /// connects is its own (notes/tmpl/open-questions.md, 48).
 pub const STD: &[&str] = &[
+    "std/collections.type BitVector",
+    "std/collections.type BitVector.constructor()",
+    "std/collections.type BitVector.get()",
+    "std/collections.type BitVector.set()",
+    "std/collections.type Queue",
+    "std/collections.type Queue.add()",
+    "std/collections.type Queue.constructor()",
+    "std/collections.type Queue.get isEmpty()",
+    "std/collections.type Queue.removeFirst()",
     "std/net.sendRequest()",
     "std/net.type NetResponse",
     "std/net.type NetResponse.get bodyContent()",

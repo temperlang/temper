@@ -20,12 +20,10 @@ Core is one module, a file per topic, as std is a module per topic:
 - `language.temper.md`: `ignore`, and the bodiless `@connected` declarations
   that document what the compiler supplies, as `true`, `panic`, or `if`,
   with `Void` and `Type`
-- `lists.temper.md`: `Listed`, `List`, `ListBuilder`, their extensions, and
-  `Deque`
+- `lists.temper.md`: `Listed`, `List`, `ListBuilder`, and their extensions
 - `maps.temper.md`: `Pair`, `Mapped`, `Map`, `MapBuilder`, and their
   extensions
-- `numbers.temper.md`: `Boolean`, `Int`, `Int32`, `Int64`, `Float64`, and
-  `DenseBitVector`
+- `numbers.temper.md`: `Boolean`, `Int`, `Int32`, `Int64`, and `Float64`
 - `strings.temper.md`: `String`, string indices, and `StringBuilder`
 
 Top-level declarations may come in any order, in any of these files.

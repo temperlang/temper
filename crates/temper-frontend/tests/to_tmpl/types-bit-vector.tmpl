@@ -1,0 +1,55 @@
+tmpl 1 model 1 library `bit-vector` 0.0.0
+
+uses std#1 0.0.0-alpha.0.0 {
+  module collections#2 {
+    connected class BitVector#3 {
+      connected constructor constructor#6(capacity: Int32): BitVector#3;
+      connected method get#11(index: Int32): Boolean;
+      connected method set#14(index: Int32, newValue: Boolean): Void;
+    }
+  }
+}
+
+uses `temper-core`#7 0.0.0-alpha.0.0 {
+  interface Console#8 {
+    connected method log#9(message: String): Void;
+  }
+  class Boolean#12 {
+    connected method toString#13(): String;
+  }
+  connected fn getConsole#15(name?: String): Console#8;
+}
+
+module `bit-vector`#0 {
+  let ~console#10: Console#8;
+
+  let v#4: BitVector#3;
+
+  let w#5: BitVector#3;
+
+  init {
+    init ~console#10 = getConsole#15(omitted);
+    init v#4 = new constructor#6(16);
+    ~console#10.log#9(%String.cat("v[2]=", v#4.get#11(2).toString#13()));
+    ~console#10.log#9(%String.cat("v[3]=", v#4.get#11(3).toString#13()));
+    ~console#10.log#9("v[3] <- true");
+    v#4.set#14(3, true);
+    ~console#10.log#9(%String.cat("v[2]=", v#4.get#11(2).toString#13()));
+    ~console#10.log#9(%String.cat("v[3]=", v#4.get#11(3).toString#13()));
+    ~console#10.log#9("v[3] <- false");
+    v#4.set#14(3, false);
+    ~console#10.log#9(%String.cat("v[2]=", v#4.get#11(2).toString#13()));
+    ~console#10.log#9(%String.cat("v[3]=", v#4.get#11(3).toString#13()));
+    v#4.set#14(100, true);
+    v#4.set#14(200, false);
+    ~console#10.log#9(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("v[99]=", v#4.get#11(99).toString#13()), " v[100]="), v#4.get#11(100).toString#13()), " v[101]="), v#4.get#11(101).toString#13()), " v[200]="), v#4.get#11(200).toString#13()), " v[-1]="), v#4.get#11(%Int32.neg(1)).toString#13()));
+    v#4.set#14(1000, true);
+    ~console#10.log#9(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("v[999]=", v#4.get#11(999).toString#13()), " v[1000]="), v#4.get#11(1000).toString#13()), " v[100]="), v#4.get#11(100).toString#13()));
+    init w#5 = new constructor#6(%Int32.neg(9));
+    w#5.set#14(1, true);
+    ~console#10.log#9(%String.cat(%String.cat(%String.cat("w[0]=", w#5.get#11(0).toString#13()), " w[1]="), w#5.get#11(1).toString#13()));
+    ~console#10.log#9("before");
+    v#4.set#14(%Int32.neg(1), true);
+    ~console#10.log#9("not reached");
+  }
+}

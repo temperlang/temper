@@ -702,13 +702,13 @@ fn std_is_reserved() {
         "{err}"
     );
     assert!(!passed);
-    // Std's files under `root`, the first edited if `edit`, with more.
+    // Std's files under `root`, `json`'s edited if `edit`, with more.
     let std_at = |root: &str, edit: bool, more: &[(&str, &'static str)]| {
         let mut files: Vec<(String, String)> = (more.iter())
             .map(|(p, t)| (p.to_string(), t.to_string()))
             .collect();
-        for (i, (path, text)) in stdlib::FILES.iter().enumerate() {
-            let text = match edit && i == 1 {
+        for (path, text) in stdlib::FILES {
+            let text = match edit && path.starts_with("json/") {
                 true => format!("{text}\n    export let edited = 1;\n"),
                 false => text.to_string(),
             };

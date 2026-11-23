@@ -115,8 +115,8 @@ pub struct Translator<'a> {
     class_statics: HashMap<DeclId, Vec<(DeclId, NodeId)>>,
     /// Every member's node, by its declaration.
     member_nodes: HashMap<DeclId, NodeId>,
-    /// The type a core constructor being translated makes, for its
-    /// connection: a `Deque`'s items.
+    /// The type a core or std constructor being translated makes, for its
+    /// connection: a `Queue`'s items.
     made: TypeId,
     /// Statements that an expression being translated needs first, as
     /// an `orelse`'s `try` or a block's statements: the statement around

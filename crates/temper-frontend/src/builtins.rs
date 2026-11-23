@@ -150,8 +150,6 @@ pub const TYPES: &[&str] = &[
     "Boolean",
     "Bubble",
     "Console",
-    "DenseBitVector",
-    "Deque",
     "DoneResult",
     "Empty",
     "Equatable",

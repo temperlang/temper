@@ -103,15 +103,13 @@ const FUNCTIONS: [&str; 7] = [
 const DEFAULTS: [&str; 1] = ["classes/property-order"];
 
 /// The functional tests with core's other types and members (string
-/// indices, `StringBuilder`, `Empty`, `Deque`, `DenseBitVector`, and more
-/// of `String`'s and `Float64`'s members) that translate, as the
-/// backends' testkit lists them.
-const CORE_TYPES: [&str; 9] = [
+/// indices, `StringBuilder`, `Empty`, and more of `String`'s and
+/// `Float64`'s members) that translate, as the backends' testkit lists
+/// them.
+const CORE_TYPES: [&str; 7] = [
     "functions/defaulting",
     "functions/named-args",
     "regression/minimal-repro",
-    "types/dense-bit-vector",
-    "types/deque",
     "types/float/ops",
     "types/string/build",
     "types/string/indices",
@@ -176,12 +174,14 @@ const ASYNC: [&str; 5] = [
 /// The functional tests that use std's classes' members and
 /// constructors, declared in tmpl as another library's, that translate;
 /// the backends run them once std translates as a library of its own.
-const STD_MEMBERS: [&str; 5] = [
+const STD_MEMBERS: [&str; 7] = [
     "regex/match",
     "regex/zero-advance",
     "testing/asserts",
+    "types/bit-vector",
     "types/date",
     "types/json-syntax-tree",
+    "types/queue",
 ];
 
 /// The functional tests new in the 2026-11-09 sync with Kotlin's `main`

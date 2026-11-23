@@ -1284,7 +1284,10 @@ fn compile_time_allowlist() {
     };
     println!("std modules allowed: {ALLOWED_STD_MODULES:?}");
     println!("members denied: {DENIED_MEMBERS:?}");
-    assert_eq!(ALLOWED_STD_MODULES, ["regex", "json", "temporal"]);
+    assert_eq!(
+        ALLOWED_STD_MODULES,
+        ["regex", "json", "temporal", "collections"]
+    );
     assert_eq!(DENIED_MEMBERS, [("temporal", "Date", "today")]);
     let builtins: Vec<&str> = temper_frontend::builtins::BUILTINS
         .iter()

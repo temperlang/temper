@@ -375,14 +375,14 @@ class Symbol(object):
         return self._text
 
 
-class DenseBitVector(object):
+class BitVector(object):
     "An expandable bitvector backed by a bytearray."
 
     __slots__ = ("_bytearray",)
 
     def __init__(self, capacity: int):
-        "Capacity is in bits."
-        self._bytearray = bytearray((capacity + 7) >> 3)
+        "Capacity is in bits; a negative one is none."
+        self._bytearray = bytearray(max(capacity + 7, 0) >> 3)
 
     def __bool__(self) -> bool:
         "Test if any bit is set."
@@ -993,7 +993,7 @@ def deque_remove_first(deq: Deque[T]) -> T:
     return deq.popleft()
 
 
-def dense_bit_vector_set(instance: DenseBitVector, idx: int, bit: bool) -> None:
+def dense_bit_vector_set(instance: BitVector, idx: int, bit: bool) -> None:
     "sets a bit within a dense bit vector."
     instance.set(idx, bit)
 

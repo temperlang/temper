@@ -1,7 +1,7 @@
 from collections import deque as _deque
 from collections.abc import Sequence as _Sequence
 from temper_core import (
-    DenseBitVector as _DenseBitVector,
+    BitVector as _BitVector,
     LoggingConsole as _LoggingConsole,
     Pair as _Pair,
     boolean_to_string as _boolean_to_string,
@@ -31,7 +31,7 @@ def _is_thing(x: object, /) -> bool:
 
 
 _console: _LoggingConsole = _LoggingConsole(__name__)
-_bits: _DenseBitVector = _DenseBitVector(8)
+_bits: _BitVector = _BitVector(8)
 _ints: _Sequence[int] = (1, 2)
 _console.log(_describe(_Thing()))
 _console.log(_describe(_Pair('a', 1)))

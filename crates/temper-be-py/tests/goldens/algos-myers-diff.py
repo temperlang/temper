@@ -5,7 +5,7 @@ from collections.abc import (
     Sequence as _Sequence,
 )
 from temper_core import (
-    DenseBitVector as _DenseBitVector,
+    BitVector as _BitVector,
     LoggingConsole as _LoggingConsole,
     cast_none as _cast_none,
     dense_bit_vector_set as _dense_bit_vector_set,
@@ -129,7 +129,7 @@ def diff(left: _Sequence[_T], right: _Sequence[_T], eq: _Callable[[_T, _T], bool
     right_length = len(right)
     reached_row_length = _int_add(left_length, 1)
     reached_col_length = _int_add(right_length, 1)
-    reached = _DenseBitVector(_int_mul(reached_row_length, reached_col_length))
+    reached = _BitVector(_int_mul(reached_row_length, reached_col_length))
     cost_zero_edges: _deque[_DiffPath | None] = _deque()
     cost_zero_edges.append(None)
     cost_one_edges: _deque[_DiffPath] = _deque()

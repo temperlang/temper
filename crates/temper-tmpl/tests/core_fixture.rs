@@ -2,8 +2,8 @@
 //! members that subset A's old key table had (48, plus `getConsole`), the
 //! generic types' (`Listed`, `List`, `ListBuilder`, `Pair`, `Mapped`,
 //! `Map`, and `MapBuilder`), those that take functions, and the string
-//! indices', `StringBuilder`'s, `Empty`'s, `Deque`'s, and
-//! `DenseBitVector`'s, checked against core's `lib/core/*.temper.md`: each
+//! indices', `StringBuilder`'s, and `Empty`'s, checked against core's
+//! `lib/core/*.temper.md`: each
 //! member's name, kind, parameters (names, types, and which are optional),
 //! result, bubbling, and `@connected` mark. Like the frontend's
 //! `builtin_supertypes_are_cores`, it reads core's files as text, so this
@@ -321,7 +321,7 @@ fn the_fixture_matches_core_temper() {
     // functional tests use next (core's fixture gaps), coroutines', and
     // `Int32.signum` and `listedReduceFromIndex`, which core writes in
     // Temper.
-    assert_eq!(fixture.len(), 130);
+    assert_eq!(fixture.len(), 125);
     let core = core_members();
     let mut names: Vec<&String> = fixture.keys().collect();
     names.sort();

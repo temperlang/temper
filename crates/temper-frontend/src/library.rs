@@ -383,7 +383,10 @@ impl Message {
     pub fn text(&self) -> String {
         match self {
             Message::Syntax(m) => m.text(),
-            Message::UndeclaredName(n) => format!("{n} has not been declared"),
+            Message::UndeclaredName(n) => match crate::stdlib::import_hint(n) {
+                Some(hint) => format!("{n} has not been declared; {hint}"),
+                None => format!("{n} has not been declared"),
+            },
             Message::MalformedSpecial(n) => format!("Use of builtin {n} is malformed"),
             Message::MalformedDeclaration => "Declaration is malformed".into(),
             Message::MalformedFunction => "Function is malformed".into(),

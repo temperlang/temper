@@ -176,12 +176,13 @@ const FLOAT_FORMAT: &str = "# Float format
 /// replaces it, a nullable string field read then replaced, and a
 /// nullable object a call returns, used after `??` and a null check.
 /// ASan checks it with the rest.
-/// `DenseBitVector` past its end, as core's Temper body has it: `get`
+/// std's `BitVector` past its end, as its Temper body has it: `get`
 /// gives false, and `set` grows it for a true bit (the runtime bubbled,
 /// as Kotlin's does, failing the regex engine's `ctype`).
 const BIT_VECTOR: &str = "# Bit vector
 
-    let v = new DenseBitVector(0);
+    let { BitVector } = import(\"std/collections\");
+    let v = new BitVector(0);
     v.set(5, false);
     let before = v.get(5);
     v.set(9, true);
@@ -399,8 +400,8 @@ fn cases() -> Vec<Case> {
         .to_vec(),
     ));
     cases.push(Case::inline(
-        "bit-vector",
-        "bit-vector.temper.md",
+        "bit-growth",
+        "bit-growth.temper.md",
         BIT_VECTOR,
         vec!["false true false false".into()],
     ));

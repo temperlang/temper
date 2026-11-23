@@ -542,8 +542,8 @@ impl<'a> Translator<'a> {
                     ) => "integer".to_string(),
                     // The runtime's tables, typed in its LuaCATS view.
                     ("core.type StringBuilder", []) => "temper.StringBuilder".to_string(),
-                    ("core.type Deque", [_]) => "temper.Deque".to_string(),
-                    ("core.type DenseBitVector", []) => "temper.DenseBitVector".to_string(),
+                    ("std/collections.type Queue", [_]) => "temper.Queue".to_string(),
+                    ("std/collections.type BitVector", []) => "temper.BitVector".to_string(),
                     ("core.type Promise", [_]) => "temper.Promise".to_string(),
                     ("core.type PromiseBuilder", [_]) => "temper.PromiseBuilder".to_string(),
                     ("core.type SafeGenerator" | "core.type Generator", [_]) => {

@@ -130,7 +130,8 @@ pub struct Module {
   (`temper_frontend::stdlib::program`, which `stdlib::MODULES` lists:
   `testing`, `regex`, `json`, and `temporal`, whose `Date` is a
   connected class that some backends connect to a type of their own,
-  `qname::connected_type`; `net` is left; `stdlib::program_of` takes
+  `qname::connected_type`, then `net`, and `collections`, whose `Queue`
+  and `BitVector` every backend connects (2026-11-23); `stdlib::program_of` takes
   fewer, which a backend's tests used until it translated all of std,
   as every one does since 2026-11-04). Its naming
   gives its interface, which builds, the testkit, and the wasm build

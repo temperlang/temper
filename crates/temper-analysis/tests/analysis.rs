@@ -1108,7 +1108,8 @@ fn core_prose_docs() {
 #[test]
 fn hover_core_prose_blocks() {
     let source = r#"let e: Empty? = null;
-let d = new Deque<String>();
+let { Queue } = import("std/collections");
+let d = new Queue<String>();
 let b = new StringBuilder();
 let f: Float64 = 1.0;
 let n: Never<String>? = null;
@@ -1124,8 +1125,8 @@ let i: StringIndex = String.begin;
     for (needle, example) in [
         ("Empty?", "```temper inert\nlet e: Empty? = empty();"),
         (
-            "Deque<",
-            "```temper inert\nlet deque = new Deque<String>();",
+            "Queue<",
+            "```temper inert\nlet { Queue } = import(\"std/collections\");",
         ),
         (
             "StringBuilder(",

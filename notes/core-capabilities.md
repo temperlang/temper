@@ -71,8 +71,6 @@ core, so a type core adds needs a row.
 | `Boolean` | no, private | no, class | no, `@mayDowncastTo(false)` | no |
 | `Bubble` | no, private | no | no, not an `AnyValue` | no |
 | `Console` | no, interface (`getConsole(name)`, `console`) | yes | no, connected | no |
-| `DenseBitVector` | `(capacity)` | no | no, connected | no |
-| `Deque<T>` | `()` | no | no, type arguments | no |
 | `DoneResult<T>` | no, private (`doneResult()`) | no | no, connected | no |
 | `Empty` | no, private (`empty()`) | no | no, connected | no |
 | `Equatable<T>` | no, interface | no, sealed | no, type arguments | no |
@@ -117,7 +115,7 @@ Statics: `String.fromCodePoint`, `.fromCodePoints` and `.begin`,
 
 The host supplies `Boolean`, `Int32`, `Int64`, `Float64`, `String`,
 `List`, `ListBuilder`, `Listed`, `Map`, `MapBuilder`, `Mapped`, `Pair`,
-`Deque`, `DenseBitVector`, `StringBuilder`, the string indices, `Empty`,
+`StringBuilder`, the string indices, `Empty`,
 the generators and their results, `Promise`, `PromiseBuilder`, and
 `Console`, each `@connected` in core. That refuses `is` and `as` for
 them by the connected rule, unless `@mayDowncastTo` or type arguments
@@ -125,7 +123,10 @@ decide first. temper-driver's `host_types` test finds the core types
 each backend translates as host or runtime types by scanning its
 sources for `"core.type X"`, adds tmpl's value scalars, and checks each
 is `@connected`, naming the type and backend otherwise, so a host type
-can't be left unmarked, and no list is kept by hand.
+can't be left unmarked, and no list is kept by hand. It checks the std
+types backends name (`"std/collections.type Queue"`) the same way:
+std's `Queue` and `BitVector`, once core's `Deque` and `DenseBitVector`
+(2026-11-23), are `@connected` there.
 
 ## Gaps and open questions
 
@@ -136,8 +137,9 @@ constructor is private; users' private constructors are enforced per
 class; `Console`, `getConsole`, `Equatable` and `Null` are nameable.
 
 - **`Pair`, `Deque`, `DenseBitVector`** are `@connected` (2026-11-23),
-  without `@mayDowncastTo`, so `is` and `as` can't target them; Tom may
-  move `Deque` and `DenseBitVector` to std. Before that, the interpreter,
+  without `@mayDowncastTo`, so `is` and `as` can't target them; `Deque`
+  and `DenseBitVector` are std's `Queue` and `BitVector` now, in
+  `std/collections`. Before that, the interpreter,
   JS (once its `instanceof` named the runtime's classes, a fix dropped
   with the checks), Lua (once its tag check took core's tables, a fix
   kept, since `x is C` crashed on them), Python, Java, and C# told a `Pair` and a `DenseBitVector`

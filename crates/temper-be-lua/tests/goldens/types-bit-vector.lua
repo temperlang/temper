@@ -1,0 +1,27 @@
+local temper = require("temper-core")
+local BitVector = require("std/collections").BitVector
+
+local v = temper.bitvector_constructor(16)
+print("v[2]=" .. tostring(temper.bitvector_get(v, 2)))
+print("v[3]=" .. tostring(temper.bitvector_get(v, 3)))
+print("v[3] <- true")
+temper.bitvector_set(v, 3, true)
+print("v[2]=" .. tostring(temper.bitvector_get(v, 2)))
+print("v[3]=" .. tostring(temper.bitvector_get(v, 3)))
+print("v[3] <- false")
+temper.bitvector_set(v, 3, false)
+print("v[2]=" .. tostring(temper.bitvector_get(v, 2)))
+print("v[3]=" .. tostring(temper.bitvector_get(v, 3)))
+temper.bitvector_set(v, 100, true)
+temper.bitvector_set(v, 200, false)
+print("v[99]=" .. tostring(temper.bitvector_get(v, 99)) .. " v[100]=" .. tostring(temper.bitvector_get(v, 100)) .. " v[101]=" .. tostring(temper.bitvector_get(v, 101)) .. " v[200]=" .. tostring(temper.bitvector_get(v, 200)) .. " v[-1]=" .. tostring(temper.bitvector_get(v, -1)))
+temper.bitvector_set(v, 1000, true)
+print("v[999]=" .. tostring(temper.bitvector_get(v, 999)) .. " v[1000]=" .. tostring(temper.bitvector_get(v, 1000)) .. " v[100]=" .. tostring(temper.bitvector_get(v, 100)))
+local w = temper.bitvector_constructor(-9)
+temper.bitvector_set(w, 1, true)
+print("w[0]=" .. tostring(temper.bitvector_get(w, 0)) .. " w[1]=" .. tostring(temper.bitvector_get(w, 1)))
+print("before")
+temper.bitvector_set(v, -1, true)
+print("not reached")
+
+return {}

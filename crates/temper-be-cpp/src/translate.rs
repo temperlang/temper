@@ -572,7 +572,7 @@ impl<'a> Translator<'a> {
                     {
                         format!("std::shared_ptr<{CORE}::Mapped::Ordered{args}>")
                     }
-                    None if qname == "core.type Deque" => {
+                    None if qname == "std/collections.type Queue" => {
                         let item = (args.strip_prefix('<'))
                             .and_then(|a| a.strip_suffix('>'))
                             .unwrap_or_default();
@@ -690,8 +690,17 @@ impl<'a> Translator<'a> {
         let mut accessors = Vec::new();
         let mut exported_variables = Vec::new();
         let mut init_locals = Vec::new();
+        // Not std's classes connected to a type of the runtime's (`Queue`,
+        // a `std::deque`), which aren't declared.
+        let connected = |i: NodeId| match p.nodes.get(i) {
+            Node::Class { decl, .. } => {
+                temper_tmpl::qname::connected_type(p, decl, crate::connected::connects_std)
+            }
+            _ => false,
+        };
         let parts: Vec<(NodeId, bool)> = (module.items.iter().map(|&i| (i, false)))
             .chain(module.test_items.iter().map(|&i| (i, true)))
+            .filter(|&(i, _)| !connected(i))
             .collect();
         for &(item, tests) in &parts {
             if let Node::ModuleLet { decl } = p.nodes.get(item) {

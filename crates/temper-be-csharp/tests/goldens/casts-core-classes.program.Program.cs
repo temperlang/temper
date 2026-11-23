@@ -10,6 +10,7 @@ static class Program
         global::TemperLang.Core.Async.BeginTopLevel();
         try
         {
+            RuntimeHelpers.RunClassConstructor(typeof(TemperLang.Std.Collections.CollectionsGlobal).TypeHandle);
             RuntimeHelpers.RunClassConstructor(typeof(CoreClasses.CoreClassesGlobal).TypeHandle);
         }
         finally

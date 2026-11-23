@@ -9,6 +9,7 @@ public final class CoreClassesMain {
         Core.initSimpleLogging();
         Core.beginTopLevel();
         try {
+            Class.forName("temper.std.collections.CollectionsGlobal");
             Class.forName("core_classes.CoreClassesGlobal");
         } finally {
             Core.endTopLevel();

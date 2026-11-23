@@ -425,9 +425,11 @@ impl<'a> Translator<'a> {
                     // `[""]`, its one string growing, as Kotlin's.
                     "core.type StringBuilder" => "string[]".to_string(),
                     // An array, as the runtime's helpers take it.
-                    "core.type Deque" => format!("{}[]", item_in_array(&texts.join(", "))),
-                    "core.type DenseBitVector" => {
-                        format!("import(\"{RUNTIME}/bitvector.js\").DenseBitVector")
+                    "std/collections.type Queue" => {
+                        format!("{}[]", item_in_array(&texts.join(", ")))
+                    }
+                    "std/collections.type BitVector" => {
+                        format!("import(\"{RUNTIME}/bitvector.js\").BitVector")
                     }
                     // `empty()`'s, as the runtime declares it.
                     "core.type Empty" => "{}".to_string(),

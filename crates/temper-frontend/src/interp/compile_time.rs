@@ -29,7 +29,7 @@ use temper_syntax::tree::NodeId;
 /// needs one is left to run time and nothing outside the interpreter
 /// happens. Add to these deliberately; `compile_time_allowlist` in
 /// this crate's tests prints them.
-pub const ALLOWED_STD_MODULES: &[&str] = &["regex", "json", "temporal"];
+pub const ALLOWED_STD_MODULES: &[&str] = &["regex", "json", "temporal", "collections"];
 
 /// Members of allowed std modules refused anyway, as (module, class,
 /// member): they read the clock or the like.

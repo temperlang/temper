@@ -555,7 +555,7 @@ class Grid(public w: Int) {
   public get(i: Int): String { "" }
 }
 let isLong(s: String): Boolean { true }
-let f(ls: List<Int>, lb: ListBuilder<String>, ld: Listed<Int>, s: String, n: Int?, g: Grid, p: Pair<String, Int>, q: Deque<Int>): Void {
+let f(ls: List<Int>, lb: ListBuilder<String>, ld: Listed<Int>, s: String, n: Int?, g: Grid, p: Pair<String, Int>, q: ListBuilder<Int>): Void {
   let a1: String = ls.length;
   let a2: String = ls[0];
   let a3: String = ls.get(0);
@@ -573,7 +573,7 @@ let f(ls: List<Int>, lb: ListBuilder<String>, ld: Listed<Int>, s: String, n: Int
   let c2: Int = ls.getOr(0, n);
   let c3: Int = g[0];
   let c4: Int = p.key;
-  let c5: String = q.removeFirst();
+  let c5: String = q.removeLast();
   let b1: List<Int> = ls.map(fn (x: Int): String { x.toString() });
   let b2 = ls.filter(isLong);
 }
@@ -613,7 +613,7 @@ let h(xs: List<Int>?): Int { xs.length }
       (Let ^n:15 (Call ? Int))
       (Let ^g:16 Grid:0)
       (Let ^p:17 (Call <> Pair String Int))
-      (Let ^q:18 (Call <> Deque Int))
+      (Let ^q:18 (Call <> ListBuilder Int))
       Void
       (Block
         (Let ^a1:19 String (Call . ls:11 \length))
@@ -636,7 +636,7 @@ let h(xs: List<Int>?): Int { xs.length }
         (Let ^c2:29 Int (Call (Call . ls:11 \getOr) 0 n:15))
         (Let ^c3:30 Int (Call [] g:16 0))
         (Let ^c4:31 Int (Call . p:17 \key))
-        (Let ^c5:32 String (Call (Call . q:18 \removeFirst)))
+        (Let ^c5:32 String (Call (Call . q:18 \removeLast)))
         (Let
           ^b1:33
           (Call <> List Int)
@@ -680,38 +680,38 @@ let h(xs: List<Int>?): Int { xs.length }
       (Let ^xs:52 (Call ? (Call <> List Int)))
       Int
       (Block (Call . xs:52 \length)))))
-error 593..602: Cannot assign to String from Int32
-error 623..628: Cannot assign to String from Int32
-error 649..658: Cannot assign to String from Int32
-error 676..681: Cannot assign to Int32 from String
-error 692..693: Expected subtype of String, but got Int32
-error 710..713: Expected subtype of Int32?, but got String
-error 726..727: Expected subtype of String, but got Int32
-error 748..757: Cannot assign to String from Int32
-error 775..789: Cannot assign to Int32 from List<Int32>
-error 810..820: Cannot assign to String from Boolean
-error 853..856: Expected subtype of Int32, but got String
-error 841..857: Cannot assign to String from Int32
-error 881..893: Cannot assign to List<Int32> from List<String>
-error 904..907: Expected subtype of Int32, but got String
-error 987..988: Expected subtype of Int32, but got Int32?
-error 1007..1011: Cannot assign to Int32 from String
-error 1029..1034: Cannot assign to Int32 from String
-error 1055..1070: Cannot assign to String from Int32
-error 1101..1137: Actual arguments do not match signature: <O extends AnyValue>(Listed<Int32>, fn (Int32): O) -> List<O> expected [Listed<Int32>, fn (Int32): Int32], but got [List<Int32>, fn (Int32): String]
-error 1161..1167: Expected subtype of fn (Int32): Boolean, but got fn (String): Boolean
-error 1293..1299: Cannot assign to String from Int32
-error 1320..1330: Cannot assign to String from Int32
-error 1350..1351: Expected subtype of String, but got Int32
-error 1366..1369: Expected subtype of Int32, but got String
-error 1390..1399: Cannot assign to String from Int32
-error 1427..1428: Expected subtype of String, but got Int32
-error 1455..1463: Cannot assign to Listed<Int32> from Listed<String>
-error 1484..1498: Cannot assign to String from Int32
-error 1526..1536: Cannot assign to Map<Int32, Int32> from Map<String, Int32>
-error 1604..1610: Cannot bubble from a function without Bubble in its return type
-error 1623..1633: Cannot bubble from a function without Bubble in its return type
-error 1702..1711: No member length in List<Int32>?
+error 599..608: Cannot assign to String from Int32
+error 629..634: Cannot assign to String from Int32
+error 655..664: Cannot assign to String from Int32
+error 682..687: Cannot assign to Int32 from String
+error 698..699: Expected subtype of String, but got Int32
+error 716..719: Expected subtype of Int32?, but got String
+error 732..733: Expected subtype of String, but got Int32
+error 754..763: Cannot assign to String from Int32
+error 781..795: Cannot assign to Int32 from List<Int32>
+error 816..826: Cannot assign to String from Boolean
+error 859..862: Expected subtype of Int32, but got String
+error 847..863: Cannot assign to String from Int32
+error 887..899: Cannot assign to List<Int32> from List<String>
+error 910..913: Expected subtype of Int32, but got String
+error 993..994: Expected subtype of Int32, but got Int32?
+error 1013..1017: Cannot assign to Int32 from String
+error 1035..1040: Cannot assign to Int32 from String
+error 1061..1075: Cannot assign to String from Int32
+error 1106..1142: Actual arguments do not match signature: <O extends AnyValue>(Listed<Int32>, fn (Int32): O) -> List<O> expected [Listed<Int32>, fn (Int32): Int32], but got [List<Int32>, fn (Int32): String]
+error 1166..1172: Expected subtype of fn (Int32): Boolean, but got fn (String): Boolean
+error 1298..1304: Cannot assign to String from Int32
+error 1325..1335: Cannot assign to String from Int32
+error 1355..1356: Expected subtype of String, but got Int32
+error 1371..1374: Expected subtype of Int32, but got String
+error 1395..1404: Cannot assign to String from Int32
+error 1432..1433: Expected subtype of String, but got Int32
+error 1460..1468: Cannot assign to Listed<Int32> from Listed<String>
+error 1489..1503: Cannot assign to String from Int32
+error 1531..1541: Cannot assign to Map<Int32, Int32> from Map<String, Int32>
+error 1609..1615: Cannot bubble from a function without Bubble in its return type
+error 1628..1638: Cannot bubble from a function without Bubble in its return type
+error 1707..1716: No member length in List<Int32>?
 
 === builtin generic methods' own type parameters are solved per call
 // `map<O>`, `reduceFrom<O>`, `reduceFromIndex<O>` and `Mapped`'s

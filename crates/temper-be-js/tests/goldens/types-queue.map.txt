@@ -1,0 +1,41 @@
+# generated line:column -> source:line:column, and the text at each
+9:1 -> ../queue.temper.md:13:5  function checkEmpty() { <- let checkEmpty(): Void {
+9:10 -> ../queue.temper.md:13:9 (checkEmpty)  checkEmpty() { <- checkEmpty(): Void {
+9:20 -> ../queue.temper.md:13:5  () { <- let checkEmpty(): Void {
+10:3 -> ../queue.temper.md:14:7  console.log(dequeGetIsEmpty( <- console.log(if (queue.isEmpt
+13:1 -> ../queue.temper.md:9:5  /** @type {string[]} */ <- let queue = new Queue<String
+14:1 -> ../queue.temper.md:9:5  const queue = dequeConstruct <- let queue = new Queue<String
+15:1 -> ../queue.temper.md:16:5  checkEmpty(); <- checkEmpty();
+16:1 -> ../queue.temper.md:25:5  if (!dequeGetIsEmpty(queue)) <- if (!queue.isEmpty) {
+17:3 -> ../queue.temper.md:26:7  console.log(dequeRemoveFirst <- console.log(queue.removeFirs
+19:1 -> ../queue.temper.md:31:5  dequeAdd(queue, "foo"); <- queue.add("foo");
+20:1 -> ../queue.temper.md:32:5  dequeAdd(queue, "bar"); <- queue.add("bar");
+21:1 -> ../queue.temper.md:33:5  console.log(dequeRemoveFirst <- console.log(queue.removeFirs
+22:1 -> ../queue.temper.md:34:5  dequeAdd(queue, "baz"); <- queue.add("baz");
+23:1 -> ../queue.temper.md:35:5  console.log(dequeRemoveFirst <- console.log(queue.removeFirs
+24:1 -> ../queue.temper.md:36:5  dequeAdd(queue, "boo"); <- queue.add("boo");
+25:1 -> ../queue.temper.md:48:5  checkEmpty(); <- checkEmpty();
+26:1 -> ../queue.temper.md:56:5  while (!dequeGetIsEmpty(queu <- while (!queue.isEmpty) {
+27:3 -> ../queue.temper.md:57:7  console.log(dequeRemoveFirst <- console.log(queue.removeFirs
+29:1 -> ../queue.temper.md:60:5  checkEmpty(); <- checkEmpty();
+30:1 -> ../queue.temper.md:71:5  /** @type {(number | null)[] <- let numbers = new Queue<Int?
+31:1 -> ../queue.temper.md:71:5  const numbers = dequeConstru <- let numbers = new Queue<Int?
+32:1 -> ../queue.temper.md:72:5  let sum = 0; <- var sum = 0;
+33:1 -> ../queue.temper.md:73:5  { <- for (var i = 0; i < 100; i +
+34:3 -> ../queue.temper.md:73:10  let i = 0; <- var i = 0; i < 100; i += 1)
+35:3 -> ../queue.temper.md:73:5  while (i < 100) { <- for (var i = 0; i < 100; i +
+36:5 -> ../queue.temper.md:74:7  dequeAdd(numbers, i); <- numbers.add(i);
+37:5 -> ../queue.temper.md:75:7  dequeAdd(numbers, null); <- numbers.add(null);
+38:5 -> ../queue.temper.md:76:7  if (modIntInt(i, 3) === 0) { <- if (i % 3 == 0) {
+39:7 -> ../queue.temper.md:77:9  sum = (sum + (dequeRemoveFir <- sum += (numbers.removeFirst(
+40:7 -> ../queue.temper.md:78:9  sum = (sum + (dequeRemoveFir <- sum += (numbers.removeFirst(
+42:5 -> ../queue.temper.md:73:30  i = (i + 1) | 0; <- i += 1) {
+45:1 -> ../queue.temper.md:81:5  let order = true; <- var order = true;
+46:1 -> ../queue.temper.md:82:5  let expected = 34; <- var expected = 34;
+47:1 -> ../queue.temper.md:83:5  while (!dequeGetIsEmpty(numb <- while (!numbers.isEmpty) {
+48:3 -> ../queue.temper.md:84:7  const n = dequeRemoveFirst(n <- let n = numbers.removeFirst(
+49:3 -> ../queue.temper.md:85:7  if (n != null) { <- if (n != null) {
+50:5 -> ../queue.temper.md:86:9  if (n !== expected) { <- if (n != expected) { order =
+51:7 -> ../queue.temper.md:86:30  order = false; <- order = false; }
+53:5 -> ../queue.temper.md:87:9  expected = (expected + 1) | <- expected += 1;
+56:1 -> ../queue.temper.md:90:5  console.log(`sum ${sum}, in <- console.log("sum ${sum}, in

@@ -891,55 +891,6 @@ log 10 233 -1 -1
 log a||b\n 2
 log xé𐆊b
 
-=== Deque and DenseBitVector
-let q = new Deque<String>();
-q.add("a"); q.add("b");
-console.log("${q.removeFirst()} ${q.isEmpty} ${q.removeFirst()} ${q.isEmpty}");
-let v = new DenseBitVector(2);
-v.set(5, true); v[1] = true; v.set(9, false);
-console.log("${v[5]} ${v.get(1)} ${v[0]} ${v[-1]} ${v.get(9)}");
-q.removeFirst() orelse console.log("not caught");
---- settled
-(Block
-  (Let ^q:0 (Call new (Call <> Deque String)))
-  (Call (Call . q:0 \add) "a")
-  (Call (Call . q:0 \add) "b")
-  (Call
-    (Call . console \log)
-    (Call
-      cat
-      (Call (Call . q:0 \removeFirst))
-      " "
-      (Call . q:0 \isEmpty)
-      " "
-      (Call (Call . q:0 \removeFirst))
-      " "
-      (Call . q:0 \isEmpty)))
-  (Let ^v:1 (Call new DenseBitVector 2))
-  (Call (Call . v:1 \set) 5 true)
-  (Call (Call . v:1 \set) 1 true)
-  (Call (Call . v:1 \set) 9 false)
-  (Call
-    (Call . console \log)
-    (Call
-      cat
-      (Call [] v:1 5)
-      " "
-      (Call (Call . v:1 \get) 1)
-      " "
-      (Call [] v:1 0)
-      " "
-      (Call [] v:1 (Call - 1))
-      " "
-      (Call (Call . v:1 \get) 9)))
-  (Orelse
-    (Call (Call . q:0 \removeFirst))
-    (Call (Call . console \log) "not caught"))
-  #void)
-log a false b true
-log true true false false false
-Panicked: removeFirst on an empty Deque
-
 === a local's initializer reads the outer name it shadows
 let f(v: Int): Int { var v = v; v += 1; v }
 console.log(f(3).toString());

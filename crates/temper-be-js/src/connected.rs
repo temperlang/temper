@@ -62,31 +62,6 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Console.log()",
         Connection::Translate(console_log),
     ),
-    (
-        "core.type DenseBitVector.constructor()",
-        Connection::Helper("denseBitVectorConstructor"),
-    ),
-    (
-        "core.type DenseBitVector.get()",
-        Connection::Helper("denseBitVectorGet"),
-    ),
-    (
-        "core.type DenseBitVector.set()",
-        Connection::Helper("denseBitVectorSet"),
-    ),
-    ("core.type Deque.add()", Connection::Helper("dequeAdd")),
-    (
-        "core.type Deque.constructor()",
-        Connection::Helper("dequeConstructor"),
-    ),
-    (
-        "core.type Deque.get isEmpty()",
-        Connection::Helper("dequeGetIsEmpty"),
-    ),
-    (
-        "core.type Deque.removeFirst()",
-        Connection::Helper("dequeRemoveFirst"),
-    ),
     ("core.type Float64.abs()", Connection::Math("abs")),
     ("core.type Float64.acos()", Connection::Math("acos")),
     ("core.type Float64.asin()", Connection::Math("asin")),
@@ -420,6 +395,34 @@ pub const TABLE: &[(&str, Connection)] = &[
     (
         "core.type StringIndexOption.eq()",
         Connection::Translate(index_eq),
+    ),
+    (
+        "std/collections.type BitVector.constructor()",
+        Connection::Helper("denseBitVectorConstructor"),
+    ),
+    (
+        "std/collections.type BitVector.get()",
+        Connection::Helper("denseBitVectorGet"),
+    ),
+    (
+        "std/collections.type BitVector.set()",
+        Connection::Helper("denseBitVectorSet"),
+    ),
+    (
+        "std/collections.type Queue.add()",
+        Connection::Helper("dequeAdd"),
+    ),
+    (
+        "std/collections.type Queue.constructor()",
+        Connection::Helper("dequeConstructor"),
+    ),
+    (
+        "std/collections.type Queue.get isEmpty()",
+        Connection::Helper("dequeGetIsEmpty"),
+    ),
+    (
+        "std/collections.type Queue.removeFirst()",
+        Connection::Helper("dequeRemoveFirst"),
     ),
     ("std/net.sendRequest()", Connection::Helper("sendRequest")),
     (
@@ -1035,6 +1038,15 @@ pub fn helpers() -> Vec<&'static str> {
 /// `@connected` members use their Temper bodies. Which std keys a backend
 /// connects is its own (notes/tmpl/open-questions.md, 48).
 pub const STD: &[&str] = &[
+    "std/collections.type BitVector",
+    "std/collections.type BitVector.constructor()",
+    "std/collections.type BitVector.get()",
+    "std/collections.type BitVector.set()",
+    "std/collections.type Queue",
+    "std/collections.type Queue.add()",
+    "std/collections.type Queue.constructor()",
+    "std/collections.type Queue.get isEmpty()",
+    "std/collections.type Queue.removeFirst()",
     "std/net.sendRequest()",
     "std/net.type NetResponse",
     "std/net.type NetResponse.get bodyContent()",

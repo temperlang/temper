@@ -68,6 +68,30 @@ Language and frontend:
   Test: settle/types.cases, "list literals typed from the type wanted",
   "function literals typed from the type wanted", and "object literals
   take their class from the type wanted".
+- **`Deque` and `DenseBitVector` are std's `Queue` and `BitVector`**
+  (2026-11-23, RFC #671): both moved from core to a new std module,
+  `std/collections`, renamed, still `@connected` to the host types
+  Kotlin's backends use, which `is` and `as` can't target. Kotlin-era
+  code adds `let { Queue, BitVector } = import("std/collections");`
+  once (Kotlin Temper has no such module, so one source can't build on
+  both); without it, the undeclared name's error says the import to
+  add. Their Temper bodies run in the interpreter, which had them
+  built in. Backends' connection keys are
+  `std/collections.type Queue…` and `…BitVector…`, and the runtimes'
+  types named for them are renamed (Python's `temper_core.BitVector`,
+  Rust's `temper_core::Queue` and `BitVector`, Lua's `temper.Queue`
+  and `temper.BitVector` with `queue_*` and `bitvector_*` helpers, as
+  Lua spells std keys; C++'s `Queue::` and `BitVector::` helpers);
+  helpers named otherwise keep their names. Every backend agrees with
+  the body at the edges, where Kotlin's differed: `get` at a negative
+  index is `false` (Java, C#, and Rust threw; Lua could read a stored
+  one), `set` at one panics (JS ignored it, Lua stored it), a negative
+  capacity is none (Python, Java, C#, C++, and Rust threw or failed to
+  allocate), and JS's `set` far past the end grows enough (it grew by
+  doubling once, dropping the bit).
+  Test: funtests types/queue and types/bit-vector (ending on a
+  negative `set`) and algos/myers-diff on every backend;
+  settle/names.cases and settle-std/collections.cases.
 - **Module namespaces, and no `builtins`** (2026-11-20, RFC #671):
   `let rx = import("std/regex")` binds a compile-time namespace, so
   `rx.Regex` names that module's export, in code and types; Kotlin has
@@ -482,9 +506,10 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   connected types as well, whose `is` JS wrote wrongly (`x >= 0` for `x
   is StringIndex` of any value); test: settle/class-types.cases,
   "connected types are targeted only through sealed supertypes". Core
-  marks every type a backend supplies `@connected`, `Pair`, `Deque`,
-  `DenseBitVector`, `Listed`, `Mapped`, `SafeGenerator`, and `Console`
-  too, which Kotlin's core didn't (temper-driver's `host_types` test).
+  marks every type a backend supplies `@connected`, `Pair`, `Listed`,
+  `Mapped`, `SafeGenerator`, and `Console` too, which Kotlin's core
+  didn't, as std does `Queue` and `BitVector` (temper-driver's
+  `host_types` test, which checks std's types the backends name too).
   Tempest doesn't report a user connecting an interface yet. Since Kotlin's #642 (connected fallback types), a
   connected class may have a complete Temper implementation, a body for
   every method, which the interpreter, backends not in its

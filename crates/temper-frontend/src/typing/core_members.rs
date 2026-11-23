@@ -28,13 +28,12 @@ use crate::corelib::code;
 /// The builtin types whose members are read: first the final ones, which
 /// no other type extends, then the generic ones, then the rest whose
 /// members are used.
-const READ_TYPES: [&str; 26] = [
+const READ_TYPES: [&str; 24] = [
     "Boolean",
     "Int32",
     "Int64",
     "Float64",
     "String",
-    "Deque",
     "DoneResult",
     "Generator",
     "GeneratorResult",
@@ -53,7 +52,6 @@ const READ_TYPES: [&str; 26] = [
     "StringIndex",
     "StringIndexOption",
     "NoStringIndex",
-    "DenseBitVector",
     "Console",
 ];
 
@@ -118,7 +116,7 @@ pub(super) struct CoreClass {
     pub type_param_names: Vec<String>,
     /// Its type parameters' bounds, as `MapKey<K>` for `K` and unknown for
     /// `V` in `Map<K extends MapKey<K>, V>`: unknown where none is
-    /// written, as `T` in `Deque<T>` may be nullable.
+    /// written, as `T` in `ListBuilder<T>` may be nullable.
     pub type_param_bounds: Vec<CoreType>,
     pub members: Vec<CoreMember>,
 }
@@ -1141,7 +1139,7 @@ mod tests {
         for (i, ty) in READ_TYPES.into_iter().enumerate() {
             let class = core_class(ty);
             assert_eq!(class.members.is_empty(), empty.contains(&ty), "{ty}");
-            assert_eq!(class.type_params > 0, (5..20).contains(&i), "{ty}");
+            assert_eq!(class.type_params > 0, (5..19).contains(&i), "{ty}");
         }
     }
 
@@ -1167,7 +1165,10 @@ mod tests {
             core_class("PromiseBuilder").type_param_bounds,
             [builtin("AnyValue")]
         );
-        assert_eq!(core_class("Deque").type_param_bounds, [CoreType::Unknown]);
+        assert_eq!(
+            core_class("ListBuilder").type_param_bounds,
+            [CoreType::Unknown]
+        );
         assert_eq!(
             find("Listed", "length").kind,
             CoreMemberKind::Value(int.clone())

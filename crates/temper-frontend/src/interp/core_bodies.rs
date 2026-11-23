@@ -11,7 +11,7 @@
 //!
 //! Where core's classes are named, as `new ListBuilder<T>()` in a body,
 //! they're the builtin types, but for those whose bodies keep their own
-//! private state (`StringBuilder`, `DenseBitVector`), which run as
+//! private state (`StringBuilder`), which runs as
 //! ordinary Temper classes, from core's `new` too. A builtin value's
 //! bodies read it as `this`.
 //!
@@ -310,8 +310,6 @@ fn builtin_type(value: &Val) -> Option<&'static str> {
         Val::StringBuilder(_) => "StringBuilder",
         Val::List(_) => "List",
         Val::ListBuilder(_) => "ListBuilder",
-        Val::Deque(_) => "Deque",
-        Val::Bits(_) => "DenseBitVector",
         Val::Map(_) => "Map",
         Val::MapBuilder(_) => "MapBuilder",
         Val::Pair(_) => "Pair",

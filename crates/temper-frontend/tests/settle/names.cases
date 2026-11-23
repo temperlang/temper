@@ -63,6 +63,40 @@ error 35..42: missing has not been declared
 log before
 Failed: missing has not been declared
 
+=== std's collections, and core's old names for them, say the import to add
+let q: Deque<Int> = new Deque<Int>();
+let v = new DenseBitVector(8);
+let r = new Queue<Int>();
+let b: BitVector = new BitVector(1);
+--- settled
+(Block
+  (Let ^q:0 (Call <> (Error) Int) (Call new (Call <> (Error) Int)))
+  (Let ^v:1 (Call new (Error) 8))
+  (Let ^r:2 (Call new (Call <> (Error) Int)))
+  (Let ^b:3 (Error) (Call new (Error) 1))
+  #void)
+error 7..12: Deque has not been declared; it's std's Queue now: add `let { Queue } = import("std/collections");`
+error 24..29: Deque has not been declared; it's std's Queue now: add `let { Queue } = import("std/collections");`
+error 50..64: DenseBitVector has not been declared; it's std's BitVector now: add `let { BitVector } = import("std/collections");`
+error 81..86: Queue has not been declared; it's in std: add `let { Queue } = import("std/collections");`
+error 102..111: BitVector has not been declared; it's in std: add `let { BitVector } = import("std/collections");`
+error 118..127: BitVector has not been declared; it's in std: add `let { BitVector } = import("std/collections");`
+Failed: Deque has not been declared; it's std's Queue now: add `let { Queue } = import("std/collections");`
+
+=== a class of one's own may be named Deque, which no builtin shadows
+class Deque { public n: Int = 1; }
+let BitVector = "bits";
+console.log("${new Deque().n} ${BitVector}");
+--- settled
+(Block
+  (Class ^Deque:0 (Let ^n:3 Int 1))
+  (Let ^BitVector:1 "bits")
+  (Call
+    (Call . console \log)
+    (Call cat (Call . (Call new Deque:0) \n) " " BitVector:1))
+  #void)
+log 1 bits
+
 === an error caught by orelse
 do { console.log(missing) } orelse console.log("caught");
 --- settled
