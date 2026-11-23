@@ -3693,3 +3693,409 @@ error 903..924: Type GPlain has method fail with signature fail(): T, but it sho
 error 939..944: Never needs the type it stands for, as Never<Int> or Never<Void>
 error 974..979: Never needs the type it stands for, as Never<Int> or Never<Void>
 log 1
+
+=== failure parameters solved per call
+// RFC 164's generic failure parameters: a function generic over its
+// callback's failure type, `throws E`, fails as the callback does. `E`
+// is solved per call from what the arguments declare, as other type
+// parameters are; one they leave unsolved is `Never<…>`, so the call
+// can't fail. A function literal without a declared result can't fail
+// then (a4, a8's inner literal, m2, b1), as one passed to a `fn (T): R`
+// can't. Core's `Listed.map` is one; `filter` isn't yet.
+let apply<T, R, E>(x: T, f: fn (T): R throws E): R throws E { f(x) }
+@fun interface Mapper<T, R, E>(x: T): R throws E;
+let mapAll<T, R, E>(xs: List<T>, f: Mapper<T, R, E>): List<R> throws E {
+  let out = new ListBuilder<R>();
+  for (let x of xs) { out.add(f(x)); }
+  out.toList()
+}
+let both<E>(a: fn (Int): Int throws E, b: fn (Int): Int throws E, n: Int): Int throws E {
+  a(n) + b(n)
+}
+let a1(n: Int): Int { apply(n, fn (x: Int): Int { x + 1 }) }
+let a2(n: Int): Int { apply(n) { x => x + 1 } }
+let a3(n: Int): Int { apply(n, fn (x: Int): Int throws Bubble { x / n }) }
+let a4(n: Int): Int { apply(n) { x => 10 / x } }
+let a5(n: Int): Int { apply(n) { (x): Int throws Bubble => 10 / x } orelse -1 }
+let a6(n: Int): Int throws Bubble { apply(n) { (x): Int throws Bubble => 10 / x } }
+let a7(n: Int): Int { apply<Int, Int, Never<Bubble>>(n, fn (x: Int): Int { x }) }
+let a8(n: Int): Int { apply(n) { x => apply(x) { (y): Int throws Bubble => 10 / y } } }
+let a9(n: Int): Int { apply(n) { x => apply(x) { (y): Int throws Bubble => 10 / y } orelse 0 } }
+let m1(ls: List<Int>): List<Int> { ls.map { x => x + 1 } }
+let m2(ls: List<Int>): List<Int> { ls.map { x => 10 / x } }
+let m3(ls: List<Int>): List<Int> throws Bubble { ls.map { (x): Int throws Bubble => 10 / (x - 1) } }
+let m4(ls: List<Int>): List<Int> { ls.map(fn (x: Int): Int throws Bubble { bubble() }) orelse [] }
+let m5(ls: List<Int>): List<Int> { ls.map(fn (x: Int): Int { x * 2 }) }
+let m6(ls: List<Int>): Int { ls.map { (x): Int throws Bubble => 10 / x }.length }
+let f1(ls: List<Int>): List<Int> { mapAll(ls, fn (x: Int): Int { x * 3 }) }
+let f2(ls: List<Int>): List<Int> { mapAll(ls, fn (x: Int): Int throws Bubble { 10 / x }) orelse [] }
+let f3(ls: List<Int>): List<Int> { mapAll(ls, fn (x: Int): Int throws Bubble { 10 / x }) }
+let k1(n: Int): Int { both(fn (x: Int): Int { x }, fn (x: Int): Int { x }, n) }
+let k2(n: Int): Int { both(fn (x: Int): Int { x }, fn (x: Int): Int throws Bubble { 10 / x }, n) orelse -1 }
+let k3(n: Int): Int { both(fn (x: Int): Int { x }, fn (x: Int): Int throws Bubble { 10 / x }, n) }
+let b1(ls: List<Int>): List<Int> { ls.filter { x => 10 / x > 1 } }
+let show(ls: List<Int>): String { ls.join(",") { x => x.toString() } }
+console.log("${a1(1)} ${a2(2)} ${a5(0)} ${a5(5)} ${a6(0) orelse -2} ${a7(7)} ${a9(0)}");
+console.log("${show(m1([1, 2]))} ${show(m3([2, 3]))} ${show(m3([1]) orelse [-1])} ${show(m4([1]))} ${show(m5([1, 2]))}");
+console.log("${show(f1([1, 2]))} ${show(f2([0]))} ${show(f2([5]))} ${k1(2)} ${k2(0)} ${k2(5)}");
+--- settled
+(Block
+  (Let
+    ^apply:0
+    (Fn
+      (TypeParam ^T:27)
+      (TypeParam ^R:28)
+      (TypeParam ^E:29)
+      (Let ^x:30 T:27)
+      (Let ^f:31 (Call FnType T:27 (Call throws R:28 E:29)))
+      (Call throws R:28 E:29)
+      (Block (Call f:31 x:30))))
+  (Interface
+    ^Mapper:1
+    (TypeParam ^T:32)
+    (TypeParam ^R:33)
+    (TypeParam ^E:34)
+    (Method ^apply:36 (Signature (Let ^x:37 T:32) (Call throws R:33 E:34))))
+  (Let
+    ^mapAll:2
+    (Fn
+      (TypeParam ^T:38)
+      (TypeParam ^R:39)
+      (TypeParam ^E:40)
+      (Let ^xs:41 (Call <> List T:38))
+      (Let ^f:42 (Call <> Mapper:1 T:38 R:39 E:40))
+      (Call throws (Call <> List R:39) E:40)
+      (Block
+        (Let ^out:43 (Call new (Call <> ListBuilder R:39)))
+        (Loop
+          (Block
+            (Call
+              (Call . xs:41 \forEach)
+              (Fn
+                (Let ^x:44)
+                (Block (Call (Call . out:43 \add) (Call f:42 x:44)) #void)))
+            (Break @712)))
+        (Call (Call . out:43 \toList)))))
+  (Let
+    ^both:3
+    (Fn
+      (TypeParam ^E:45)
+      (Let ^a:46 (Call FnType Int (Call throws Int E:45)))
+      (Let ^b:47 (Call FnType Int (Call throws Int E:45)))
+      (Let ^n:48 Int)
+      (Call throws Int E:45)
+      (Block (Call + (Call a:46 n:48) (Call b:47 n:48)))))
+  (Let
+    ^a1:4
+    (Fn
+      (Let ^n:49 Int)
+      Int
+      (Block
+        (Call apply:0 n:49 (Fn (Let ^x:50 Int) Int (Block (Call + x:50 1)))))))
+  (Let
+    ^a2:5
+    (Fn
+      (Let ^n:51 Int)
+      Int
+      (Block (Call apply:0 n:51 (Fn (Let ^x:52) (Block (Call + x:52 1)))))))
+  (Let
+    ^a3:6
+    (Fn
+      (Let ^n:53 Int)
+      Int
+      (Block
+        (Call
+          apply:0
+          n:53
+          (Fn
+            (Let ^x:54 Int)
+            (Call throws Int Bubble)
+            (Block (Call / x:54 n:53)))))))
+  (Let
+    ^a4:7
+    (Fn
+      (Let ^n:55 Int)
+      Int
+      (Block (Call apply:0 n:55 (Fn (Let ^x:56) (Block (Call / 10 x:56)))))))
+  (Let
+    ^a5:8
+    (Fn
+      (Let ^n:57 Int)
+      Int
+      (Block
+        (Orelse
+          (Call
+            apply:0
+            n:57
+            (Fn (Let ^x:58) (Call throws Int Bubble) (Block (Call / 10 x:58))))
+          (Call - 1)))))
+  (Let
+    ^a6:9
+    (Fn
+      (Let ^n:59 Int)
+      (Call throws Int Bubble)
+      (Block
+        (Call
+          apply:0
+          n:59
+          (Fn (Let ^x:60) (Call throws Int Bubble) (Block (Call / 10 x:60)))))))
+  (Let
+    ^a7:10
+    (Fn
+      (Let ^n:61 Int)
+      Int
+      (Block
+        (Call
+          apply:0
+          \typeArg
+          Int
+          \typeArg
+          Int
+          \typeArg
+          (Call <> Never Bubble)
+          n:61
+          (Fn (Let ^x:62 Int) Int (Block x:62))))))
+  (Let
+    ^a8:11
+    (Fn
+      (Let ^n:63 Int)
+      Int
+      (Block
+        (Call
+          apply:0
+          n:63
+          (Fn
+            (Let ^x:64)
+            (Block
+              (Call
+                apply:0
+                x:64
+                (Fn
+                  (Let ^y:65)
+                  (Call throws Int Bubble)
+                  (Block (Call / 10 y:65))))))))))
+  (Let
+    ^a9:12
+    (Fn
+      (Let ^n:66 Int)
+      Int
+      (Block
+        (Call
+          apply:0
+          n:66
+          (Fn
+            (Let ^x:67)
+            (Block
+              (Orelse
+                (Call
+                  apply:0
+                  x:67
+                  (Fn
+                    (Let ^y:68)
+                    (Call throws Int Bubble)
+                    (Block (Call / 10 y:68))))
+                0)))))))
+  (Let
+    ^m1:13
+    (Fn
+      (Let ^ls:69 (Call <> List Int))
+      (Call <> List Int)
+      (Block
+        (Call (Call . ls:69 \map) (Fn (Let ^x:70) (Block (Call + x:70 1)))))))
+  (Let
+    ^m2:14
+    (Fn
+      (Let ^ls:71 (Call <> List Int))
+      (Call <> List Int)
+      (Block
+        (Call (Call . ls:71 \map) (Fn (Let ^x:72) (Block (Call / 10 x:72)))))))
+  (Let
+    ^m3:15
+    (Fn
+      (Let ^ls:73 (Call <> List Int))
+      (Call throws (Call <> List Int) Bubble)
+      (Block
+        (Call
+          (Call . ls:73 \map)
+          (Fn
+            (Let ^x:74)
+            (Call throws Int Bubble)
+            (Block (Call / 10 (Call - x:74 1))))))))
+  (Let
+    ^m4:16
+    (Fn
+      (Let ^ls:75 (Call <> List Int))
+      (Call <> List Int)
+      (Block
+        (Orelse
+          (Call
+            (Call . ls:75 \map)
+            (Fn (Let ^x:76 Int) (Call throws Int Bubble) (Block (Fail))))
+          (Call list)))))
+  (Let
+    ^m5:17
+    (Fn
+      (Let ^ls:77 (Call <> List Int))
+      (Call <> List Int)
+      (Block
+        (Call
+          (Call . ls:77 \map)
+          (Fn (Let ^x:78 Int) Int (Block (Call * x:78 2)))))))
+  (Let
+    ^m6:18
+    (Fn
+      (Let ^ls:79 (Call <> List Int))
+      Int
+      (Block
+        (Call
+          .
+          (Call
+            (Call . ls:79 \map)
+            (Fn (Let ^x:80) (Call throws Int Bubble) (Block (Call / 10 x:80))))
+          \length))))
+  (Let
+    ^f1:19
+    (Fn
+      (Let ^ls:81 (Call <> List Int))
+      (Call <> List Int)
+      (Block
+        (Call mapAll:2 ls:81 (Fn (Let ^x:82 Int) Int (Block (Call * x:82 3)))))))
+  (Let
+    ^f2:20
+    (Fn
+      (Let ^ls:83 (Call <> List Int))
+      (Call <> List Int)
+      (Block
+        (Orelse
+          (Call
+            mapAll:2
+            ls:83
+            (Fn
+              (Let ^x:84 Int)
+              (Call throws Int Bubble)
+              (Block (Call / 10 x:84))))
+          (Call list)))))
+  (Let
+    ^f3:21
+    (Fn
+      (Let ^ls:85 (Call <> List Int))
+      (Call <> List Int)
+      (Block
+        (Call
+          mapAll:2
+          ls:85
+          (Fn (Let ^x:86 Int) (Call throws Int Bubble) (Block (Call / 10 x:86)))))))
+  (Let
+    ^k1:22
+    (Fn
+      (Let ^n:87 Int)
+      Int
+      (Block
+        (Call
+          both:3
+          (Fn (Let ^x:88 Int) Int (Block x:88))
+          (Fn (Let ^x:89 Int) Int (Block x:89))
+          n:87))))
+  (Let
+    ^k2:23
+    (Fn
+      (Let ^n:90 Int)
+      Int
+      (Block
+        (Orelse
+          (Call
+            both:3
+            (Fn (Let ^x:91 Int) Int (Block x:91))
+            (Fn
+              (Let ^x:92 Int)
+              (Call throws Int Bubble)
+              (Block (Call / 10 x:92)))
+            n:90)
+          (Call - 1)))))
+  (Let
+    ^k3:24
+    (Fn
+      (Let ^n:93 Int)
+      Int
+      (Block
+        (Call
+          both:3
+          (Fn (Let ^x:94 Int) Int (Block x:94))
+          (Fn (Let ^x:95 Int) (Call throws Int Bubble) (Block (Call / 10 x:95)))
+          n:93))))
+  (Let
+    ^b1:25
+    (Fn
+      (Let ^ls:96 (Call <> List Int))
+      (Call <> List Int)
+      (Block
+        (Call
+          (Call . ls:96 \filter)
+          (Fn (Let ^x:97) (Block (Call > (Call / 10 x:97) 1)))))))
+  (Let
+    ^show:26
+    (Fn
+      (Let ^ls:98 (Call <> List Int))
+      String
+      (Block
+        (Call
+          (Call . ls:98 \join)
+          ","
+          (Fn (Let ^x:99) (Block (Call (Call . x:99 \toString))))))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call a1:4 1)
+      " "
+      (Call a2:5 2)
+      " "
+      (Call a5:8 0)
+      " "
+      (Call a5:8 5)
+      " "
+      (Orelse (Call a6:9 0) (Call - 2))
+      " "
+      (Call a7:10 7)
+      " "
+      (Call a9:12 0)))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call show:26 (Call m1:13 (Call list 1 2)))
+      " "
+      (Call show:26 (Call m3:15 (Call list 2 3)))
+      " "
+      (Call show:26 (Orelse (Call m3:15 (Call list 1)) (Call list (Call - 1))))
+      " "
+      (Call show:26 (Call m4:16 (Call list 1)))
+      " "
+      (Call show:26 (Call m5:17 (Call list 1 2)))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call show:26 (Call f1:19 (Call list 1 2)))
+      " "
+      (Call show:26 (Call f2:20 (Call list 0)))
+      " "
+      (Call show:26 (Call f2:20 (Call list 5)))
+      " "
+      (Call k1:22 2)
+      " "
+      (Call k2:23 0)
+      " "
+      (Call k2:23 5)))
+  #void)
+error 1003..1053: Cannot bubble from a function without Bubble in its return type
+error 1094..1100: Cannot bubble from a function without Bubble in its return type
+error 1389..1434: Cannot bubble from a function without Bubble in its return type
+error 1644..1650: Cannot bubble from a function without Bubble in its return type
+error 1956..1999: Cannot bubble from a function without Bubble in its return type
+error 2221..2274: Cannot bubble from a function without Bubble in its return type
+error 2488..2562: Cannot bubble from a function without Bubble in its return type
+error 2617..2623: Cannot bubble from a function without Bubble in its return type
+log 2 3 -1 2 -2 7 0
+log 2,3 10,5 -1  2,4
+log 3,6  2 4 -1 7

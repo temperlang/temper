@@ -972,9 +972,12 @@ export sealed interface Listed<T> {
   @connected
   public toListBuilder(): ListBuilder<T>;
 
-  /** Maps elements using [transform]. */
+  /**
+   * Maps elements using [transform]. Fails as [transform] does, if it
+   * may: `E` is what it may fail with.
+   */
   @connected
-  public map<O>(transform: fn (T): O): List<O>;
+  public map<O, E>(transform: fn (T): O throws E): List<O> throws E;
 
   @connected
   public filter(predicate: fn (T): builtins.Boolean): List<T>;

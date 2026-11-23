@@ -632,6 +632,34 @@ impl Types {
         }
     }
 
+    /// What a failure parameter is where nothing it's solved from may
+    /// fail: `Never<Bubble>`, standing in for RFC 164's `Never<Error>`
+    /// until core has `Error`, which [`Types::result`] drops.
+    pub fn no_failure(&mut self) -> TypeId {
+        self.never_of(BUBBLE)
+    }
+
+    /// Whether one of the type parameters `formals` is what something in
+    /// `t` may fail with, a failure parameter, as `E` in `fn (T): R throws
+    /// E`, or in a `@fun` interface's type that stands for one.
+    pub fn fails_with(&mut self, t: TypeId, formals: &[SymbolId]) -> bool {
+        match self.get(t).clone() {
+            TypeData::Result { pass, fail } => {
+                self.mentions(fail, formals) || self.fails_with(pass, formals)
+            }
+            TypeData::Nullable(inner) | TypeData::NeverOf(inner) => self.fails_with(inner, formals),
+            TypeData::Fn { params, result } => {
+                params.iter().any(|p| self.fails_with(p.ty, formals))
+                    || self.fails_with(result, formals)
+            }
+            TypeData::Applied { args, .. } => match self.as_fn(t) {
+                Some(f) if f != t => self.fails_with(f, formals),
+                _ => args.iter().any(|&a| self.fails_with(a, formals)),
+            },
+            _ => false,
+        }
+    }
+
     /// What a function whose result is `t` may fail with, if anything.
     pub fn fail(&self, t: TypeId) -> Option<TypeId> {
         match *self.get(t) {

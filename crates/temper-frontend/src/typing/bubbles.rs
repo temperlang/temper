@@ -289,8 +289,13 @@ impl Settle {
                 self.fn_call_bubbles(call, t, &args[1..])
             }
             Some(_) => false,
+            // A generic function's as the call solves it, so it fails as
+            // its failure parameters' solutions do.
             None => {
-                let t = self.known_callee_type(callee);
+                let t = match self.solve_call(call, false) {
+                    Ok(Some(solved)) => self.solved_sig(&solved),
+                    _ => self.known_callee_type(callee),
+                };
                 self.fn_call_bubbles(call, t, args)
             }
         }

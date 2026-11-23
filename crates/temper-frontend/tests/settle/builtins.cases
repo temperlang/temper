@@ -693,7 +693,7 @@ error 987..988: Expected subtype of Int32, but got Int32?
 error 1007..1011: Cannot assign to Int32 from String
 error 1029..1034: Cannot assign to Int32 from String
 error 1055..1070: Cannot assign to String from Int32
-error 1101..1137: Actual arguments do not match signature: <O extends AnyValue>(Listed<Int32>, fn (Int32): O) -> List<O> expected [Listed<Int32>, fn (Int32): Int32], but got [List<Int32>, fn (Int32): String]
+error 1101..1137: Actual arguments do not match signature: <O extends AnyValue, E extends AnyValue>(Listed<Int32>, fn (Int32): O throws E) -> List<O> throws E expected [Listed<Int32>, fn (Int32): Int32], but got [List<Int32>, fn (Int32): String]
 error 1161..1167: Expected subtype of fn (Int32): Boolean, but got fn (String): Boolean
 error 1293..1299: Cannot assign to String from Int32
 error 1320..1330: Cannot assign to String from Int32
@@ -800,19 +800,19 @@ let f(ls: List<Int>, lb: ListBuilder<Int>, ld: Listed<Int>, m: Map<String, Int>,
           (Call (Call . ls:18 \map) \typeArg String toStr:2))
         #void))))
 error 639..645: Cannot extend concrete type(s) Animal
-error 999..1004: Actual arguments do not match signature: <O extends AnyValue>(Listed<Int32>, fn (Int32): O) -> List<O> expected [Listed<Int32>, fn (Int32): Int32], but got [List<Int32>, fn (Int32): String]
+error 999..1004: Actual arguments do not match signature: <O extends AnyValue, E extends AnyValue>(Listed<Int32>, fn (Int32): O throws E) -> List<O> throws E expected [Listed<Int32>, fn (Int32): Int32], but got [List<Int32>, fn (Int32): String]
 error 1023..1036: Cannot assign to Int32 from List<String>
 error 1086..1088: Cannot assign to List<Int32> from List<String>
 error 1106..1119: Cannot assign to Int32 from List<String>
-error 1152..1157: Actual arguments do not match signature: <O extends AnyValue>(Listed<Int32>, fn (Int32): O) -> List<O> expected [Listed<Int32>, fn (Int32): Int32], but got [Listed<Int32>, fn (Int32): String]
+error 1152..1157: Actual arguments do not match signature: <O extends AnyValue, E extends AnyValue>(Listed<Int32>, fn (Int32): O throws E) -> List<O> throws E expected [Listed<Int32>, fn (Int32): Int32], but got [Listed<Int32>, fn (Int32): String]
 error 1179..1201: Cannot assign to String from Int32
 error 1219..1242: Cannot assign to Int32 from String
 error 1300..1331: Cannot assign to Int32 from String
 error 1368..1370: Actual arguments do not match signature: <T extends AnyValue>(Mapped<String, Int32>, fn (String, Int32): T) -> List<T> expected [Mapped<String, Int32>, fn (String, Int32): Int32], but got [Map<String, Int32>, fn (String, Int32): String]
 error 1389..1413: Cannot assign to Int32 from ListBuilder<String>
-error 1460..1461: Actual arguments do not match signature: <O extends AnyValue>(Listed<Int32>, fn (Int32): O) -> List<O> expected [Listed<Int32>, fn (Int32): AnyValue], but got [List<Int32>, Int32]
-error 1466..1482: No callee matches inputs [List<Int32>, fn (Int32): String, Int32] among [<O extends AnyValue>(Listed<Int32>, fn (Int32): O) -> List<O>]
-error 1516..1520: Actual arguments do not match signature: <O extends AnyValue>(Listed<Int32>, fn (Int32): O) -> List<O> expected [Listed<Int32>, fn (Int32): AnyValue], but got [List<Int32>, fn (String, Int32): String]
+error 1460..1461: Actual arguments do not match signature: <O extends AnyValue, E extends AnyValue>(Listed<Int32>, fn (Int32): O throws E) -> List<O> throws E expected [Listed<Int32>, fn (Int32): AnyValue], but got [List<Int32>, Int32]
+error 1466..1482: No callee matches inputs [List<Int32>, fn (Int32): String, Int32] among [<O extends AnyValue, E extends AnyValue>(Listed<Int32>, fn (Int32): O throws E) -> List<O> throws E]
+error 1516..1520: Actual arguments do not match signature: <O extends AnyValue, E extends AnyValue>(Listed<Int32>, fn (Int32): O throws E) -> List<O> throws E expected [Listed<Int32>, fn (Int32): AnyValue], but got [List<Int32>, fn (String, Int32): String]
 error 1542..1590: Cannot assign to String from Int32
 error 1608..1642: Cannot assign to Int32 from List<String>
 

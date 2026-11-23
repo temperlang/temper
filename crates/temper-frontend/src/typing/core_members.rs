@@ -619,7 +619,7 @@ impl<'a> Reader<'a> {
     }
 
     /// What follows `\outType`: the result type, [`CoreType::Throws`]
-    /// for `T throws Bubble`.
+    /// for `T throws Bubble` ([`Reader::type_of`]).
     fn out_type(&self, parts: &[NodeId]) -> CoreType {
         let Some(i) = parts
             .iter()
@@ -630,17 +630,13 @@ impl<'a> Reader<'a> {
         let Some(&ty) = parts.get(i + 1) else {
             return CoreType::Unknown;
         };
-        match self.call_parts(ty) {
-            Some((Some("throws"), [pass, fail, ..])) => {
-                CoreType::Throws(Box::new(self.type_of(*pass)), Box::new(self.type_of(*fail)))
-            }
-            _ => self.type_of(ty),
-        }
+        self.type_of(ty)
     }
 
     /// A type: a builtin type named as `String` or `builtins.String`
     /// (`%String`), maybe given arguments, as `List<T>`; the method's own
-    /// type parameter, or else the type's; `T?`; or `fn (A): R`.
+    /// type parameter, or else the type's; `T?`; `fn (A): R`; or a
+    /// result, `R throws E`.
     fn type_of(&self, node: NodeId) -> CoreType {
         let tree = self.ast.tree();
         match tree.kind(node) {
@@ -669,6 +665,11 @@ impl<'a> Reader<'a> {
                     (false, Some((Some("?"), [inner]))) => {
                         CoreType::Nullable(Box::new(self.type_of(*inner)))
                     }
+                    // A result, a method's or a function type's.
+                    (false, Some((Some("throws"), [pass, fail, ..]))) => CoreType::Throws(
+                        Box::new(self.type_of(*pass)),
+                        Box::new(self.type_of(*fail)),
+                    ),
                     (false, Some((Some("fn"), parts))) => {
                         let out = parts
                             .iter()
@@ -820,18 +821,23 @@ mod tests {
                 ret: t.clone(),
             }
         );
-        // A method's own type parameter, which may shadow the type's.
-        let o = CoreType::Own(0);
+        // A method's own type parameters, which may shadow the type's,
+        // one a failure parameter (`E`, RFC 164).
+        let (o, e) = (CoreType::Own(0), CoreType::Own(1));
         let list = |x: &CoreType| match builtin("List") {
             CoreType::Builtin(b) => CoreType::Applied(b, vec![x.clone()]),
             _ => panic!("List"),
         };
+        let throws_e = |x: CoreType| CoreType::Throws(Box::new(x), Box::new(e.clone()));
         assert_eq!(
             find("Listed", "map").kind,
             CoreMemberKind::Method {
-                type_params: vec!["O".to_string()],
-                params: vec![(CoreType::Fn(vec![t.clone()], Box::new(o.clone())), false)],
-                ret: list(&o),
+                type_params: vec!["O".to_string(), "E".to_string()],
+                params: vec![(
+                    CoreType::Fn(vec![t.clone()], Box::new(throws_e(o.clone()))),
+                    false
+                )],
+                ret: throws_e(list(&o)),
             }
         );
         let CoreMemberKind::Method {

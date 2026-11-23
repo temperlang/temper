@@ -159,8 +159,16 @@ fn core_members() -> HashMap<String, Member> {
             continue;
         };
         // A generic method's name, without its type parameters.
-        let name = name.split('<').next().unwrap_or(name);
-        let Some((params, rest)) = split_parens(rest) else {
+        let (name, own) = name.split_once('<').unwrap_or((name, ""));
+        // tmpl's core has no failure parameters yet (RFC 164's later
+        // chunks), so `throws E` for a method's own `E` isn't compared.
+        let mut rest = rest.to_string();
+        for own in own.trim_end_matches('>').split(',').map(str::trim) {
+            if !own.is_empty() {
+                rest = rest.replace(&format!(" throws {own}"), "");
+            }
+        }
+        let Some((params, rest)) = split_parens(&rest) else {
             connected = false;
             continue;
         };

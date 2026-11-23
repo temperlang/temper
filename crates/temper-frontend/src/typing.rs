@@ -760,16 +760,26 @@ impl Settle {
         t != NEVER && t != ANY_VALUE && !self.typing.types.is_final(t)
     }
 
-    /// A function's result, from its declared return type: `T throws X`
-    /// is the result `T throws Bubble` ([`Types::result`]) whatever `X`
-    /// is, as `Bubble` is the only failure type for now; any other type
-    /// as [`Settle::eval_type`] gives it.
+    /// A function's result, from its declared return type: `T throws E`
+    /// for a type parameter `E` is the result `T throws E`
+    /// ([`Types::result`]), with a failure parameter (RFC 164), and `T
+    /// throws X` for any other `X` is `T throws Bubble`, as `Bubble` is
+    /// the only failure type for now; any other type as
+    /// [`Settle::eval_type`] gives it.
     fn eval_result(&mut self, node: NodeId) -> TypeId {
         let pass = self.eval_type(node);
-        match self.is_throws(node) {
-            true => self.typing.types.result(pass, BUBBLE),
-            false => pass,
+        if !self.is_throws(node) {
+            return pass;
         }
+        let fail = match self.lib.tree.children(node).get(2) {
+            Some(&fail) => self.eval_type(fail),
+            None => UNKNOWN,
+        };
+        let fail = match self.typing.types.get(fail) {
+            TypeData::Param(_) => fail,
+            _ => BUBBLE,
+        };
+        self.typing.types.result(pass, fail)
     }
 
     /// The type a type expression names, as `Int`, `String?` or `fn

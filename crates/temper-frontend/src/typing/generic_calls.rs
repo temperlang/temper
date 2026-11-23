@@ -165,6 +165,15 @@ impl Settle {
                     *actual = UNKNOWN;
                 }
             }
+            // A failure parameter the arguments leave unsolved is
+            // `Never<…>`: nothing passed may fail, as a function literal
+            // without a declared result can't (RFC 164).
+            let types = &mut self.typing.types;
+            for (k, actual) in actuals.iter_mut().enumerate() {
+                if *actual == UNKNOWN && !ambiguous[k] && types.fails_with(sig, &formals[k..=k]) {
+                    *actual = types.no_failure();
+                }
+            }
         }
         Ok(Some(Solved {
             sig,
@@ -580,7 +589,7 @@ impl Settle {
     /// call can bind it (`CONTEXT` in `combine<CONTEXT extends Context,
     /// T>(x: T): T`), its bound, or `AnyValue` if it has none, as Kotlin
     /// Temper's solver binds it, with the other type parameters put in.
-    /// Others still unknown stay so.
+    /// Others still unknown stay so. Failure parameters are left out.
     pub(super) fn settled_type_args(&mut self, solved: &Solved) -> Vec<TypeId> {
         let TypeData::Fn { params, result } = self.typing.types.get(solved.sig).clone() else {
             return solved.actuals.clone();
@@ -601,7 +610,19 @@ impl Settle {
                 settled[k] = bound;
             }
         }
-        settled
+        // tmpl has no failure parameters yet (RFC 164's later chunks), so
+        // a call's type arguments leave them out.
+        let types = &mut self.typing.types;
+        (settled.into_iter().enumerate())
+            .filter(|&(k, _)| !types.fails_with(solved.sig, &solved.formals[k..=k]))
+            .map(|(_, t)| t)
+            .collect()
+    }
+
+    /// A solved call's function type, with the solution put in.
+    pub(super) fn solved_sig(&mut self, solved: &Solved) -> TypeId {
+        let types = &mut self.typing.types;
+        types.substitute(solved.sig, &solved.formals, &solved.actuals)
     }
 
     /// Whether a value of type `s` can't be passed where a `t` is wanted,
