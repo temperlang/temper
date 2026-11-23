@@ -846,6 +846,14 @@ The group and artifact, for Maven:
 
 /// A typo or a wrong type in a backend's config class is an error, at
 /// its place in the config file, for `build` and `test` alike.
+// Config classes come from the backends, so these need them built in.
+#[cfg(all(
+    feature = "csharp",
+    feature = "java",
+    feature = "js",
+    feature = "py",
+    feature = "rust"
+))]
 #[test]
 fn typed_config_errors() {
     let config = "    export let name = \"a\";
@@ -928,6 +936,14 @@ fn typed_config_errors() {
 /// file's markup, are config errors, and nothing is written or removed:
 /// names reach paths (`ROOT.csproj`, `node_modules/NAME`) and package
 /// files, so each backend allows only its tools' spellings.
+// Config classes come from the backends, so these need them built in.
+#[cfg(all(
+    feature = "csharp",
+    feature = "java",
+    feature = "js",
+    feature = "py",
+    feature = "rust"
+))]
 #[test]
 fn hostile_config_names_are_errors() {
     let config = "    export let name = \"a\";
@@ -994,6 +1010,7 @@ fn hostile_config_names_are_errors() {
 }
 
 /// Every file's path under a directory, if it's there.
+#[allow(dead_code)] // Unless every backend is left out.
 fn files_under(dir: &Path, out: &mut Vec<String>) {
     for entry in fs::read_dir(dir).into_iter().flatten().flatten() {
         let path = entry.path();
