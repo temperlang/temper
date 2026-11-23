@@ -12,6 +12,9 @@
 //! - `net_tests_on_the_interpreter`: std `net`'s functional tests
 //!   (`NET`) log what they expect on the interpreter, against the shared
 //!   test server.
+//! - `specs_are_pending`: the specifications (`SPECS`), written ahead
+//!   of what they specify, each say what they should log and still have
+//!   errors, so the change that makes one settle moves it to `PROGRAMS`.
 
 use temper_be_testkit::{self as kit};
 
@@ -105,5 +108,25 @@ fn programs_translate_to_tmpl() {
             );
         }
         goldens.finish();
+    });
+}
+
+#[test]
+fn specs_are_pending() {
+    kit::with_stack(|| {
+        for name in kit::SPECS {
+            assert!(
+                !kit::PROGRAMS.contains(&name),
+                "{name} runs, so isn't pending"
+            );
+            let (_, text) = kit::spec_source(name);
+            let log = temper_funtests::expected_log(&text, "interp");
+            assert!(!log.is_empty(), "{name}: no log");
+            let errors = kit::spec_errors(name);
+            assert!(
+                !errors.is_empty(),
+                "{name} settles without errors: move it to PROGRAMS, which checks its log"
+            );
+        }
     });
 }

@@ -1461,11 +1461,16 @@ impl Settle {
 
     /// Whether a body can reach its end without a value, as Kotlin Temper
     /// sees it: where its result would be an empty block, as an `if`'s
-    /// missing `else`.
-    fn falls_off(&self, node: NodeId) -> bool {
-        let children = self.lib.tree.children(node);
+    /// missing `else`, unless that `else` is never reached, as a `when`'s
+    /// whose `is` checks cover a sealed type ([`sealed`]), however deep in
+    /// the result it is.
+    fn falls_off(&mut self, node: NodeId) -> bool {
+        let children = self.lib.tree.children(node).to_vec();
         match self.lib.tree.kind(node) {
-            NodeKind::Block => children.last().is_none_or(|&last| self.falls_off(last)),
+            NodeKind::Block => match children.last() {
+                Some(&last) => self.falls_off(last),
+                None => !self.unreachable_else(node, false).unwrap_or(false),
+            },
             NodeKind::If if children.len() == 3 => {
                 children[1..].iter().any(|&branch| self.falls_off(branch))
             }

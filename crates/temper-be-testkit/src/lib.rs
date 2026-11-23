@@ -289,8 +289,10 @@ pub fn without_net(cases: &mut [Case]) {
 /// and what an uncaught bubble or panic says, a run per section; and
 /// `host-error-causes` a host's error passing `orelse panic()`, with
 /// host code ([`HOST_CODE`]), as has `host-error-tests`, whose host
-/// error passes `assertPanics` too, run as tests.
-pub const PROGRAMS: [&str; 30] = [
+/// error passes `assertPanics` too, run as tests; and `sealed-whens`
+/// `when`s that cover a sealed interface without `else`, as values
+/// wherever one is wanted.
+pub const PROGRAMS: [&str; 31] = [
     "classes",
     "nullables",
     "generics",
@@ -321,6 +323,7 @@ pub const PROGRAMS: [&str; 30] = [
     "panic-causes",
     "host-error-causes",
     "host-error-tests",
+    "sealed-whens",
 ];
 
 /// The shared programs whose run fails, after logging what's expected
@@ -334,6 +337,50 @@ pub const FAILING: [&str; 3] = ["panics", "panic-causes", "host-error-causes"];
 /// beside their host files, each backend's as a functional test's
 /// ([`CONNECTED`]), which name their library as the program.
 pub const HOST_CODE: [&str; 2] = ["host-error-causes", "host-error-tests"];
+
+/// The specifications in `programs/`: shared programs of behavior not
+/// built yet, written ahead with the logs they should give, which no run
+/// list has. `failures` has declared failures thrown, caught, propagated,
+/// grouped by a sealed type, kept as values, and converted;
+/// `failure-params` functions generic over their callbacks' failure
+/// types; `failure-async` promises broken with failures; and
+/// `host-failures` host code's failures and errors, and what a report
+/// says of a failure nothing handles, a run per section, with host code
+/// laid out as [`HOST_CODE`]'s. Each says what it assumes of what's still
+/// open. Once one settles without errors ([`spec_errors`]), it joins
+/// [`PROGRAMS`], and [`FAILING`] or [`HOST_CODE`] as it needs.
+pub const SPECS: [&str; 4] = [
+    "failures",
+    "failure-params",
+    "failure-async",
+    "host-failures",
+];
+
+/// A specification's path and text: `NAME.temper.md`, or in a directory
+/// of its own beside its host code.
+pub fn spec_source(name: &str) -> (PathBuf, String) {
+    assert!(SPECS.contains(&name), "no specification {name}");
+    let dir = programs_dir();
+    let path = match dir.join(name).is_dir() {
+        true => dir.join(name).join(format!("{name}.temper.md")),
+        false => dir.join(format!("{name}.temper.md")),
+    };
+    let text = fs::read_to_string(&path).unwrap();
+    (path, text)
+}
+
+/// The errors the frontend reports for a specification, settling it as
+/// a shared program's case.
+pub fn spec_errors(name: &str) -> Vec<String> {
+    let (path, text) = spec_source(name);
+    let mut case = Case::inline(name, &path.to_string_lossy(), text, Vec::new());
+    case.dir = path.parent().unwrap().to_path_buf();
+    let settled = settle(load(&case));
+    (settled.library.diagnostics.iter())
+        .filter(|d| d.level == temper_frontend::library::Level::Error)
+        .map(|d| d.message.text())
+        .collect()
+}
 
 /// The shared programs that run as tests, as a functional test with
 /// `runAsTest = true` does: their tests check what a log can't, as the

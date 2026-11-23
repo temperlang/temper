@@ -549,6 +549,118 @@ console.log("${name(0)} ${name(2)} ${name(9)} ${kind(new A())} ${kind(1)} ${kind
 error 178..181: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from AnyValue
 Failed: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from AnyValue
 
+=== an exhaustive when is a value wherever one is wanted
+// A `when` whose `is` checks cover a sealed interface needs no `else` as
+// a function's result, nested, in an `if`'s branch, and as a method's or
+// function literal's result, as it needs none as a `let`'s value; one
+// that misses a subtype still falls off its function's end.
+sealed interface S {}
+class A extends S {}
+class B extends S {}
+class C { public who(s: S): String { when (s) { is A -> "ca"; is B -> "cb"; } } }
+let last(s: S): String { when (s) { is A -> "a"; is B -> "b"; } }
+let nested(s: S, t: S): String {
+  when (s) { is A -> when (t) { is A -> "aa"; is B -> "ab"; }; is B -> "b"; }
+}
+let branch(s: S, c: Boolean): Int { if (c) { when (s) { is A -> 1; is B -> 2; } } else { 0 } }
+let mapped(ss: List<S>): String {
+  ss.map(fn (s: S): String { when (s) { is A -> "x"; is B -> "y"; } }).join("") { it => it }
+}
+let partial(s: S): String { when (s) { is A -> "a"; } }
+console.log("${last(new B())} ${nested(new A(), new B())} ${branch(new B(), true)} ${mapped([new A(), new B()])} ${new C().who(new A())}");
+--- settled
+(Block
+  (Interface ^S:0)
+  (Class ^A:1 S:0)
+  (Class ^B:2 S:0)
+  (Class
+    ^C:3
+    (Method
+      ^who:13
+      (Fn
+        (Let ^s:14 S:0)
+        String
+        (Block
+          (Block
+            (If (Call is s:14 A:1) "ca" (If (Call is s:14 B:2) "cb" (Block))))))))
+  (Let
+    ^last:4
+    (Fn
+      (Let ^s:15 S:0)
+      String
+      (Block
+        (Block (If (Call is s:15 A:1) "a" (If (Call is s:15 B:2) "b" (Block)))))))
+  (Let
+    ^nested:5
+    (Fn
+      (Let ^s:16 S:0)
+      (Let ^t:17 S:0)
+      String
+      (Block
+        (Block
+          (If
+            (Call is s:16 A:1)
+            (Block
+              (If (Call is t:17 A:1) "aa" (If (Call is t:17 B:2) "ab" (Block))))
+            (If (Call is s:16 B:2) "b" (Block)))))))
+  (Let
+    ^branch:6
+    (Fn
+      (Let ^s:18 S:0)
+      (Let ^c:19 Boolean)
+      Int
+      (Block
+        (If
+          c:19
+          (Block
+            (Block (If (Call is s:18 A:1) 1 (If (Call is s:18 B:2) 2 (Block)))))
+          (Block 0)))))
+  (Let
+    ^mapped:7
+    (Fn
+      (Let ^ss:20 (Call <> List S:0))
+      String
+      (Block
+        (Call
+          (Call
+            .
+            (Call
+              (Call . ss:20 \map)
+              (Fn
+                (Let ^s:21 S:0)
+                String
+                (Block
+                  (Block
+                    (If
+                      (Call is s:21 A:1)
+                      "x"
+                      (If (Call is s:21 B:2) "y" (Block)))))))
+            \join)
+          ""
+          (Fn (Let ^it:22) (Block it:22))))))
+  (Let
+    ^partial:8
+    (Fn
+      (Let ^s:23 S:0)
+      String
+      (Block (Block (If (Call is s:23 A:1) "a" (Block))))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call last:4 (Call new B:2))
+      " "
+      (Call nested:5 (Call new A:1) (Call new B:2))
+      " "
+      (Call branch:6 (Call new B:2) true)
+      " "
+      (Call mapped:7 (Call list (Call new A:1) (Call new B:2)))
+      " "
+      (Call (Call . (Call new C:3) \who) (Call new A:1))))
+  #void)
+error 883..884: Cannot assign to String from Void
+log b ab 2 xy ca
+
 === ?? and ?. evaluate their subject once
 var calls = 0;
 let maybe(n: Int?): Int? { calls += 1; n }

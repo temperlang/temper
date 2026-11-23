@@ -896,8 +896,9 @@ library that extend it directly. An `if` chain without a final `else`,
 as `when` makes, whose `is` checks of one name cover every subtype of a
 sealed interface that the name's type is, never reaches its missing
 `else` (`typing/sealed.rs`): its value is the join of its branches',
-and in tmpl the `else` is a `panic()`, even where the chain is a
-statement, as Kotlin's `anyExhaustiveSealedType` and
+wherever it's a value, a function's result too, which doesn't fall off
+its end there (2026-11-23), and in tmpl the `else` is a `panic()`, even
+where the chain is a statement, as Kotlin's `anyExhaustiveSealedType` and
 `replaceVoidishPanics` make it. Checks of another name end the chain's
 scan; other checks, of `==`, don't count. Otherwise a missing `else` is
 `void`, and a value that needs one is unknown.

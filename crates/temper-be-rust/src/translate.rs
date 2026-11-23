@@ -1167,15 +1167,6 @@ impl<'a> Translator<'a> {
         mut result: Option<String>,
         void: bool,
     ) -> (Option<String>, Block) {
-        // A block that ends the function needn't end before it does.
-        if let Some(Stmt::Block(b)) = stmts.last() {
-            if b.tail.is_none() {
-                let Some(Stmt::Block(b)) = stmts.pop() else {
-                    unreachable!()
-                };
-                stmts.extend(b.stmts);
-            }
-        }
         let mut tail = tail_of(&mut stmts);
         if let Some(Stmt::Return(None)) = stmts.last() {
             stmts.pop();
@@ -2675,8 +2666,15 @@ fn float(value: f64) -> Expr {
 /// Whether a `return` continues in a function's last statement, so it
 /// may end the function as its value instead: a `return` with a value,
 /// or an `if` … `else` whose branches each end so, or panic, one at least
-/// ending so.
+/// ending so. A block that ends the statements, as a `when`'s in an `if`'s
+/// branch, needn't end before they do, so its statements join them
+/// first, at any depth.
 fn tail_of(stmts: &mut Vec<Stmt>) -> Option<Expr> {
+    if matches!(stmts.last(), Some(Stmt::Block(b)) if b.tail.is_none()) {
+        if let Some(Stmt::Block(b)) = stmts.pop() {
+            stmts.extend(b.stmts);
+        }
+    }
     match stmts.last() {
         Some(Stmt::Return(Some(_))) => match stmts.pop() {
             Some(Stmt::Return(value)) => value,

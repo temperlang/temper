@@ -1,0 +1,114 @@
+tmpl 1 model 1 library `sealed-whens` 0.0.0
+
+uses `temper-core`#30 0.0.0-alpha.0.0 {
+  interface Console#31 {
+    connected method log#32(message: String): Void;
+  }
+  class Int32#34 {
+    connected method toString#35(radix?: Int32): String;
+  }
+  connected fn getConsole#36(name?: String): Console#31;
+}
+
+module `sealed-whens`#0 {
+  let ~console#33: Console#31;
+
+  interface Shape#1 {
+    abstract get size#5(): Int32;
+  }
+
+  class Dot#2 extends Shape#1 {
+    let size#6: Int32;
+    constructor constructor#7(size#19: Int32): Dot#2 {
+      this.size#6 = size#19;
+    }
+  }
+
+  class Line#3 extends Shape#1 {
+    let size#8: Int32;
+    constructor constructor#9(size#20: Int32): Line#3 {
+      this.size#8 = size#20;
+    }
+  }
+
+  fn shapeOf#12(n#21: Int32): Shape#1 {
+    if (%Int32.gt(n#21, 1)) {
+      return (upcast(new constructor#9(n#21))): Shape#1;
+    } else {
+      return (upcast(new constructor#7(n#21))): Shape#1;
+    }
+  }
+
+  fn named#13(s#22: Shape#1): String {
+    let name#23: String = (if (is(s#22, Dot#2)) "dot" else (if (is(s#22, Line#3)) "line" else (panic()): String): String): String;
+    return name#23;
+  }
+
+  fn pair#14(s#24: Shape#1, t#25: Shape#1): String {
+    {
+      if (is(s#24, Dot#2)) {
+        if (is(t#25, Dot#2)) {
+          return "dd";
+        } else if (is(t#25, Line#3)) {
+          return "dl";
+        } else {
+          (panic()): Void;
+        }
+      } else if (is(s#24, Line#3)) {
+        return "l";
+      } else {
+        (panic()): Void;
+      }
+    }
+  }
+
+  fn doubled#15(n#26: Int32): Int32 {
+    return %Int32.mul(n#26, 2);
+  }
+
+  fn code#16(s#27: Shape#1, early#28: Boolean): Int32 {
+    if (early#28) {
+      return (if (is(s#27, Dot#2)) 1 else (if (is(s#27, Line#3)) 2 else (panic()): Int32): Int32): Int32;
+    }
+    if (%Int32.gt(s#27.size#5(), 1)) {
+      {
+        if (is(s#27, Dot#2)) {
+          return 10;
+        } else if (is(s#27, Line#3)) {
+          return 20;
+        } else {
+          (panic()): Void;
+        }
+      }
+    } else {
+      return doubled#15((if (is(s#27, Dot#2)) 3 else (if (is(s#27, Line#3)) 4 else (panic()): Int32): Int32): Int32);
+    }
+  }
+
+  class Namer#4 {
+    constructor constructor#11(): Namer#4 {}
+    method name#10(s#29: Shape#1): String {
+      {
+        if (is(s#29, Dot#2)) {
+          return "a dot";
+        } else if (is(s#29, Line#3)) {
+          return "a line";
+        } else {
+          (panic()): Void;
+        }
+      }
+    }
+  }
+
+  let dot#17: Shape#1;
+
+  let line#18: Shape#1;
+
+  init {
+    init ~console#33 = getConsole#36(omitted);
+    init dot#17 = shapeOf#12(1);
+    init line#18 = shapeOf#12(2);
+    ~console#33.log#32(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(named#13(dot#17), " "), named#13(line#18)), " "), pair#14(dot#17, line#18)), " "), pair#14(line#18, dot#17)));
+    ~console#33.log#32(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(code#16(line#18, true).toString#35(omitted), " "), code#16(dot#17, false).toString#35(omitted)), " "), code#16(line#18, false).toString#35(omitted)), " "), new constructor#11().name#10(line#18)));
+  }
+}
