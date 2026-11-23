@@ -227,19 +227,20 @@ f(
   b
 );         // a line break after `(`: a, b on one line between f( and )
 f(a, b,);  // a trailing comma: one item per line, each with its comma
-foo(a,
-  b, fn {
-    body();
-  });      // the last item over several lines: foo(a, b, fn {
-           // and the block's lines, as the rules say for the rest
+foo(fn {
+  body();
+},
+  b);      // an item over several lines: the next starts on its last
+           // line, as the rules say: foo(fn {, its lines, then }, b);
 ```
 
 It never adds or removes commas: to go from one item per line back to
-one line, delete the trailing comma. The last item may span lines if it
-ends with a close bracket (a block, a list, a call), and with a trailing
-comma any item may; otherwise lists with line breaks inside their items,
-lists with comments, and lists of literals (tables of data) keep their
-line breaks.
+one line, delete the trailing comma. Any item may span lines, its own
+lists and blocks laid out by the same rules; each item starts where the
+one before ends, or with a trailing comma on a line of its own. Lists
+with comments between items, an item that must end its line (a
+multi-quoted string), or only literals (tables of data) keep their line
+breaks.
 
 Code that doesn't parse is left as written, with an error and exit
 status 1, and it checks its own work: if formatting would change a

@@ -45,11 +45,12 @@
 //!   as their author asks: with a trailing comma, one item per line; else,
 //!   with a line break after the open bracket, the items together on one
 //!   line between the brackets' lines ("hugged"); else on one line,
-//!   however long. Commas are never added or removed. The last item may
-//!   span lines if it ends with a close bracket (`foo(a, b, fn {`), and
-//!   with a trailing comma any item may; a list with another line break
-//!   inside an item, a comment between items, a list of literals (a data
-//!   table), or one in a string keeps its line breaks as written.
+//!   however long. Commas are never added or removed. Any item may span
+//!   lines, laid out by its own rules: each item starts on the line the
+//!   one before ends (`}, b`), or with a trailing comma on its own. A list
+//!   with a comment between items, an item that must end its line (a
+//!   multi-quoted string), a line break before a comma, only literals (a
+//!   data table), or in a string keeps its line breaks as written.
 //!
 //! Multi-line block comments and the lines of multi-quoted strings move
 //! with the line they start on; their text is otherwise kept.
@@ -390,19 +391,6 @@ struct List {
     data: bool,
 }
 
-impl List {
-    /// Its last item's first and last tokens.
-    fn last_item(&self) -> (usize, usize) {
-        let mut separators = self.commas.as_slice();
-        let mut end = self.close;
-        if self.trailing_comma {
-            end -= 1;
-            separators = &separators[..separators.len() - 1];
-        }
-        (separators.last().map_or(self.open + 1, |c| c + 1), end - 1)
-    }
-}
-
 /// Where a list may break: the gap after its open bracket, after one of
 /// its commas, or before its close bracket.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -415,8 +403,9 @@ enum Place {
 /// How a list is laid out.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Layout {
-    /// Its line breaks as written: it has comments, or line breaks inside
-    /// its items, or is data, or is in a string.
+    /// Its line breaks as written: it has comments between items, a line
+    /// break before a comma, an item that must end its line, or is data,
+    /// or is in a string.
     Kept,
     /// On one line: no line break after its open bracket.
     Flat,
@@ -705,10 +694,8 @@ impl<'a> Formatter<'a> {
         formatter
     }
 
-    /// Finds the lists and decides their layouts, inner lists first, as a
-    /// list whose items span lines keeps its line breaks (but for a last
-    /// item ending with a close bracket, or any item with a trailing
-    /// comma).
+    /// Finds the lists and decides their layouts, inner lists first, so
+    /// an outer list sees its items' line breaks as formatted.
     fn plan(&mut self, parsed: &Parsed, in_string: &[bool]) {
         let n = self.tokens.len();
         let index: HashMap<u32, usize> = (self.tokens.iter().enumerate())
@@ -728,50 +715,49 @@ impl<'a> Formatter<'a> {
             }
             self.places[list.close] = Some((id, Place::BeforeClose));
         }
-        // For the gap before each token, whether it has a line break as
-        // written, and whether it, or the token, spans lines in the
-        // output: a line break not a list's to change, a comment (which
-        // keeps the lists around it as written), a token over several
-        // lines, prose between code blocks.
+        // For the gap before each token: whether it has a line break as
+        // written; whether the output has one there that isn't a list's to
+        // change, or an inner list's; and whether prose comes before it.
         let mut newlines = vec![false; n + 1];
-        let mut spans = vec![false; n + 1];
-        for j in 0..n {
-            let t = self.tokens[j];
-            let text = self.text(t);
-            spans[j] = matches!(t.kind, TokenKind::Comment | TokenKind::Margin)
-                || text.contains(['\n', '\r']);
-            if let Some(p) = j.checked_sub(1).map(|p| self.tokens[p]) {
-                let gap = &self.source[p.end as usize..t.start as usize];
-                let same_range = self.range_of(t.start).is_some_and(|r| r.start <= p.start);
-                newlines[j] = gap.contains('\n');
-                let ours = self.places[j].is_some() && self.code_gaps[j];
-                spans[j] |= !same_range || (newlines[j] && !ours);
-            }
+        let mut breaks = vec![false; n + 1];
+        let mut prose = vec![false; n + 1];
+        for j in 1..n {
+            let (p, t) = (self.tokens[j - 1], self.tokens[j]);
+            let gap = &self.source[p.end as usize..t.start as usize];
+            newlines[j] = gap.contains('\n');
+            prose[j] = self.range_of(t.start).is_none_or(|r| r.start > p.start);
+            let ours = self.places[j].is_some() && self.code_gaps[j];
+            breaks[j] = newlines[j] && !ours;
         }
+        // An item may span lines, its own interior following its own
+        // rules, unless a comment comes before or after it, or its last
+        // token must end its line (a multi-quoted string's): then what
+        // follows can't join its last line.
+        let item_fits = |first: usize, end: usize| {
+            let Some(last) = end.checked_sub(1).filter(|&last| first <= last) else {
+                return true;
+            };
+            let (a, z) = (self.tokens[first], self.tokens[last]);
+            a.kind != TokenKind::Comment
+                && z.kind != TokenKind::Comment
+                && !(in_string[last] && z.kind != TokenKind::RightDelimiter)
+        };
         let mut order: Vec<usize> = (0..self.lists.len()).collect();
         order.sort_by_key(|&i| self.lists[i].close - self.lists[i].open);
         self.layouts = vec![Layout::Kept; self.lists.len()];
         for id in order {
             let list = &self.lists[id];
-            // Its last item may span lines if it ends with a close bracket
-            // (a block, a list, a call): what's before it joins its first
-            // line, and the list's close bracket its last.
-            let (first, last) = list.last_item();
-            let tail = first < last
-                && matches!(self.text(self.tokens[last]), ")" | "]" | "}")
-                && self.tokens[last].kind == TokenKind::Punctuation;
-            // With a trailing comma, any item may: each starts a line.
-            let place = |j: usize| self.places[j].is_some_and(|(of, _)| of == id);
-            let free = |j: usize| {
-                if list.trailing_comma {
-                    !place(j)
-                } else {
-                    tail && first < j && j <= last
-                }
-            };
+            // Each item runs from after the open bracket or a comma to the
+            // next comma or the close bracket; the line breaks between
+            // them are the list's.
+            let ends = list.commas.iter().copied().chain([list.close]);
+            let starts = [list.open].into_iter().chain(list.commas.iter().copied());
             let kept = (self.options.keep_data && list.data)
                 || in_string[list.open]
-                || (list.open + 1..=list.close).any(|j| spans[j] && !free(j));
+                || (list.open + 1..=list.close).any(|j| prose[j])
+                || starts.zip(ends).any(|(start, end)| {
+                    breaks[start + 1] || breaks[end] || !item_fits(start + 1, end)
+                });
             let layout = if kept {
                 Layout::Kept
             } else if list.trailing_comma {
@@ -786,7 +772,7 @@ impl<'a> Formatter<'a> {
             let places = [list.open + 1, list.close].into_iter();
             for j in places.chain(list.commas.iter().map(|c| c + 1)) {
                 if let Some((_, place)) = self.places[j] {
-                    spans[j] |= layout.breaks(place, newlines[j]);
+                    breaks[j] |= layout.breaks(place, newlines[j]);
                 }
             }
         }

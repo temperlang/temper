@@ -108,7 +108,8 @@ two or more items, or one with a trailing comma, and a single item in
 width:
 
 1. **No line break right after the open bracket:** the list goes on one
-   line, however long (`f(a,\n  b)` becomes `f(a, b)`).
+   line, however long (`f(a,\n  b)` becomes `f(a, b)`; items over
+   several lines: [below](#lists-the-author-decides)).
 2. **A line break right after the open bracket, and no trailing
    comma:** the items go together on one indented line, and the close
    bracket on a line of its own (`f(\n  a, b\n)`).
@@ -129,44 +130,49 @@ A single item follows the same rules: `f(\n  x\n)` stays hugged,
 `f(x,)` goes one per line. Single items in `{ }` don't count: they may
 be a block's one statement.
 
-**Items over several lines.** The rules speak of items on one line,
-with two exceptions:
+**Items over several lines.** An item may span lines (a block, an
+inner list, an object, a `+` continued on the next line); the rules
+lay out the items in sequence, the same way whatever lines each takes:
 
-- **The last item may span lines if it ends with a close bracket** (a
-  block argument, an inner list, an object literal, a call): rule 1 or
-  2 applies to everything before it, and the last item keeps its own
-  layout (its own lists following their own rules), with the list's
-  close bracket after its last line:
+1. Each item starts right after the previous one's last line, after
+   `, `; the close bracket follows the last item's last line.
+2. The same, starting on the indented line after the open bracket, with
+   the close bracket on a line of its own.
+3. Each item starts a line of its own (`}, {` between two objects
+   becomes `},\n  {`).
 
-  ```temper inert
-  foo(a,                          foo(a, b, fn {
-    b, fn {                         body();
-      body();          becomes    });
-    });                           let nested = outer(short, inner(
-  let nested = outer(short,         first, second
-    inner(                        ));
-      first, second
-    ));
-  ```
+An item's interior follows its own rules, recursively: its lists their
+own line breaks, its blocks and continuation lines as anywhere. Its
+contents indent one step from the line its bracket opens on (or the line
+starting that statement), and its close bracket returns to that line,
+as everywhere; so in rule 1 an item's lines indent from the list's first
+line, and in rule 2 from the line the item starts on:
 
-  Contents indent one step from the line their statement starts on, and
-  the close brackets return to it, as everywhere. An item not ending
-  with a bracket (`a +\n    b`, a multi-quoted string, which must end
-  its line) keeps the list as written.
-- **With a trailing comma, any item may span lines** (rule 3): each
-  item starts a line of its own, whatever its own layout, so `}, {`
-  between two objects becomes `},\n  {`.
+```temper inert
+foo(fn {                        foo(fn {
+  body();                         body();
+},                     becomes  }, b, [
+  b, [                            first,
+    first,                        second,
+    second,                     ]);
+  ]);                           let nested = outer(short, inner(
+let nested = outer(short,         first, second
+  inner(                        ));
+    first, second
+  ));
+```
 
-Otherwise these keep their line breaks as written:
+Some places keep a list's line breaks as written:
 
-- **Comments between items**: a line comment can't be joined, and a
-  comment's place among the items is the author's. (Comments inside a
-  last item, or inside any item of a list with a trailing comma, are the
-  item's.)
-- **Another item over several lines**: a block or a list that isn't
-  last, as in `foo(fn {\n  ...\n}, b)`. Joining what follows its last
-  line, or breaking before its first, has no layout everyone writes,
-  so when in doubt, it's left out.
+- **Comments between items** (before an item's first token or after its
+  last): a line comment can't be joined, and a comment's place among
+  the items is the author's. Comments inside an item are the item's.
+- **An item that must end its line**: a multi-quoted string ends at its
+  line's end, so what follows can't join its last line. Moving the next
+  item (and its comma) to a line of its own would follow no rule people
+  write, so when in doubt, it's left out.
+- **A line break before a comma**, and code split between literate
+  code blocks.
 - **A list in a string's `${ }`**.
 - **Data**: a list whose items (two or more) are all literals (numbers, `true`,
   `false`, `null`, strings without holes, `char'a'`, negated numbers) or
@@ -203,7 +209,7 @@ rule that the output with it doesn't have):
 |---|---|---|---|---|
 | core+std | 4,594 | 69 | 6 (8) | 42 |
 | tests | 10,478 | 132 | 14 (86) | 22 |
-| docs (54 of 69 files whole) | 14,010 | 48 | 0 (0) | 33 |
+| docs (54 of 69 files whole) | 14,018 | 48 | 0 (0) | 33 |
 | Argmas | 7,225 | 18 | 16 (23) | 2 |
 | Chromarite | 3,807 | 20 | 18 (188) | 0 |
 | Hrefine | 12,902 | 123 | 63 (590) | 58 |
@@ -218,8 +224,12 @@ comma go one per line (Kelpto's and Hrefine's long signatures and
 `tree.add(...)` calls); lists with no break after the bracket join.
 Continuation lines move most in Wherewith and Kelpto, whose `if (`
 conditions over several lines indented their later lines by 0 or 2.
-Multi-line last items and single items change almost nothing: authors
-already write `foo(a, b, fn {` and `outer(x, inner(`. The changes are
+Items over several lines and single items change almost nothing:
+authors already write `foo(a, b, fn {` and `outer(x, inner(`, and
+nowhere write a list (without a trailing comma) with a multi-line item
+before its last; formatting with the general rule for multi-line items
+gives byte for byte the output of the earlier rule allowing only a last
+one ending with a bracket. The changes are
 std's `temporal` (`&& (\n  if ... }))` gets its `)` on a line of its
 own, rule 2 for the single item) and Hrefine's `serializeUrl(` call,
 whose trailing comma now puts its items one per line around a
@@ -315,8 +325,8 @@ census shows authors already agree on almost everything else.
   which its two parses are 3.5 to 5 ms, so the formatter's own pass,
   tree walks included, is 2 to 3 ms; `json.temper.md` (43 KiB) 9 to 10
   ms (parses 5 to 6). The list rules cost about a millisecond at most
-  (timed with and without them), and the rules for multi-line last
-  items and single items nothing measurable (the CLI with and without,
+  (timed with and without them), and the rules for multi-line items
+  and single items nothing measurable (the CLI with and without,
   back to back, `--check`, process start included: core 16 to 25 ms
   and json 30 to 38 ms either way). The machine is noisy;
   `format_speed` in `tests/fmt.rs` (ignored by default) measures them.
@@ -345,9 +355,9 @@ census shows authors already agree on almost everything else.
 
 Done: `temper fmt [PATH]...` and `--check`; the rules above marked as
 proposed; lists, single items too, laid out by the author's line
-breaks and trailing commas, with multi-line last items (and any item
-with a trailing comma) following the rules, and comments between
-items, other multi-line items and data lists kept; `for` headers and
+breaks and trailing commas, items over several lines in any position
+following the same rules (recursively), and comments between items,
+items that must end their line, and data lists kept; `for` headers and
 aligned docs examples by the normal rules;
 continuation lines indented twice; golden cases (`tests/fmt/*.cases`),
 idempotence and tree-preservation tests over the repository's Temper

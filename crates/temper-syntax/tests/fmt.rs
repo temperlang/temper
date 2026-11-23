@@ -124,10 +124,18 @@ fn mutated_inputs_format_safely() {
             ",\n",
             ",)",
             ",\n]",
-            // Multi-line last items.
+            // Items over several lines, in any position.
             ", fn {\n",
             "\n})",
             "(\n  x\n)",
+            "fn {\n  x();\n}, ",
+            ", fn {\n  x();\n}",
+            "[\n  a,\n], ",
+            "g(\n  a\n), ",
+            "}, ",
+            "\n},",
+            " +\n  ",
+            "\"\"\"\n  \"s\n",
         ])
         .copied()
         .collect();
