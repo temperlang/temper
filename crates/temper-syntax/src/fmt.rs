@@ -41,14 +41,15 @@
 //!   after a line ending with `{` or before a line starting with a close
 //!   bracket, none at the start of a file, and one line break at its end.
 //! - **Lists** (arguments, parameters, list and object literals, type
-//!   arguments: two or more items, or a trailing comma) are laid out as
-//!   their author asks: with a trailing comma, one item per line; else,
+//!   arguments, and single items in `( )`, `[ ]` and `< >`) are laid out
+//!   as their author asks: with a trailing comma, one item per line; else,
 //!   with a line break after the open bracket, the items together on one
 //!   line between the brackets' lines ("hugged"); else on one line,
-//!   however long. Commas are never added or removed. A list with a
-//!   comment or a line break inside an item (a block, a list on several
-//!   lines), a list of literals (a data table), or one in a string keeps
-//!   its line breaks as written.
+//!   however long. Commas are never added or removed. The last item may
+//!   span lines if it ends with a close bracket (`foo(a, b, fn {`), and
+//!   with a trailing comma any item may; a list with another line break
+//!   inside an item, a comment between items, a list of literals (a data
+//!   table), or one in a string keeps its line breaks as written.
 //!
 //! Multi-line block comments and the lines of multi-quoted strings move
 //! with the line they start on; their text is otherwise kept.
@@ -254,14 +255,15 @@ fn code_ranges(source: &str, kind: SourceKind) -> Vec<CodeRange> {
             // Fenced: the code starts on the line after the fence, and is
             // indented as the fence is.
             let fence = &source[block.begin.clone()];
-            let margin = fence.len() - fence.trim_start_matches(' ').len();
+            let indent = &fence[..fence.len() - fence.trim_start_matches([' ', '\t']).len()];
+            let margin = columns(indent);
             let next = source[block.begin.end..]
                 .find('\n')
                 .map_or(source.len(), |i| block.begin.end + i + 1);
             (next, margin)
         } else {
             // Indented: four columns past its containers' (list items').
-            (block.begin.start, block.begin.len() + 4)
+            (block.begin.start, columns(&source[block.begin.clone()]) + 4)
         };
         ranges.push(CodeRange {
             start: start as u32,
@@ -270,6 +272,13 @@ fn code_ranges(source: &str, kind: SourceKind) -> Vec<CodeRange> {
         });
     }
     ranges
+}
+
+/// How many columns text takes, with markdown's tabs to the next multiple
+/// of four.
+fn columns(text: &str) -> usize {
+    text.chars()
+        .fold(0, |n, c| if c == '\t' { n / 4 * 4 + 4 } else { n + 1 })
 }
 
 /// An operator token's place in its node.
@@ -365,9 +374,10 @@ fn first_token(parsed: &Parsed, id: NodeId) -> Option<u32> {
     (parsed.tree().children(id).iter()).find_map(|&c| first_token(parsed, c))
 }
 
-/// A bracketed list of two or more items, or with a trailing comma:
-/// arguments, parameters, a list or object literal, or type arguments.
-/// Its fields are indices in [`Formatter`]'s tokens.
+/// A bracketed list: arguments, parameters, a list or object literal, or
+/// type arguments, of two or more items or with a trailing comma; or a
+/// single item in `( )`, `[ ]` or `< >` (in `{ }`, it may be a block's
+/// statement). Its fields are indices in [`Formatter`]'s tokens.
 #[derive(Debug)]
 struct List {
     open: usize,
@@ -375,8 +385,22 @@ struct List {
     commas: Vec<usize>,
     /// Whether a comma ends it, which puts one item per line.
     trailing_comma: bool,
-    /// Whether its items are all literals, like a row of a table.
+    /// Whether its items, two or more, are all literals, like a row of a
+    /// table.
     data: bool,
+}
+
+impl List {
+    /// Its last item's first and last tokens.
+    fn last_item(&self) -> (usize, usize) {
+        let mut separators = self.commas.as_slice();
+        let mut end = self.close;
+        if self.trailing_comma {
+            end -= 1;
+            separators = &separators[..separators.len() - 1];
+        }
+        (separators.last().map_or(self.open + 1, |c| c + 1), end - 1)
+    }
 }
 
 /// Where a list may break: the gap after its open bracket, after one of
@@ -435,18 +459,22 @@ fn find_lists(parsed: &Parsed, index: &HashMap<u32, usize>) -> Vec<List> {
                 continue;
             };
             let brackets = (parsed.token_text(open), parsed.token_text(close));
-            if tree.kind(w[1]) != NodeKind::Op(Comma)
-                || open.synthetic
-                || close.synthetic
-                || !matches!(brackets, ("(", ")") | ("[", "]") | ("{", "}") | ("<", ">"))
-            {
+            let list = match tree.kind(w[1]) {
+                NodeKind::Op(Comma) => {
+                    matches!(brackets, ("(", ")") | ("[", "]") | ("{", "}") | ("<", ">"))
+                }
+                NodeKind::Token => false,
+                _ => matches!(brackets, ("(", ")") | ("[", "]") | ("<", ">")),
+            };
+            if !list || open.synthetic || close.synthetic {
                 continue;
             }
             let (Some(&open), Some(&close)) = (index.get(&open.start), index.get(&close.start))
             else {
                 continue;
             };
-            let items = tree.children(w[1]);
+            let single = tree.kind(w[1]) != NodeKind::Op(Comma);
+            let items = if single { &[][..] } else { tree.children(w[1]) };
             let commas: Vec<usize> = (items.iter())
                 .filter_map(|&c| parsed.token(c))
                 .filter(|t| !t.synthetic && parsed.token_text(*t) == ",")
@@ -457,7 +485,7 @@ fn find_lists(parsed: &Parsed, index: &HashMap<u32, usize>) -> Vec<List> {
                 close,
                 trailing_comma: commas.last() == Some(&(close - 1)),
                 commas,
-                data: is_data(parsed, w[1]),
+                data: !single && is_data(parsed, w[1]),
             });
         }
     }
@@ -678,7 +706,9 @@ impl<'a> Formatter<'a> {
     }
 
     /// Finds the lists and decides their layouts, inner lists first, as a
-    /// list whose items span lines keeps its line breaks.
+    /// list whose items span lines keeps its line breaks (but for a last
+    /// item ending with a close bracket, or any item with a trailing
+    /// comma).
     fn plan(&mut self, parsed: &Parsed, in_string: &[bool]) {
         let n = self.tokens.len();
         let index: HashMap<u32, usize> = (self.tokens.iter().enumerate())
@@ -723,9 +753,25 @@ impl<'a> Formatter<'a> {
         self.layouts = vec![Layout::Kept; self.lists.len()];
         for id in order {
             let list = &self.lists[id];
+            // Its last item may span lines if it ends with a close bracket
+            // (a block, a list, a call): what's before it joins its first
+            // line, and the list's close bracket its last.
+            let (first, last) = list.last_item();
+            let tail = first < last
+                && matches!(self.text(self.tokens[last]), ")" | "]" | "}")
+                && self.tokens[last].kind == TokenKind::Punctuation;
+            // With a trailing comma, any item may: each starts a line.
+            let place = |j: usize| self.places[j].is_some_and(|(of, _)| of == id);
+            let free = |j: usize| {
+                if list.trailing_comma {
+                    !place(j)
+                } else {
+                    tail && first < j && j <= last
+                }
+            };
             let kept = (self.options.keep_data && list.data)
                 || in_string[list.open]
-                || (list.open + 1..=list.close).any(|j| spans[j]);
+                || (list.open + 1..=list.close).any(|j| spans[j] && !free(j));
             let layout = if kept {
                 Layout::Kept
             } else if list.trailing_comma {
@@ -943,6 +989,8 @@ impl<'a> Formatter<'a> {
             starts_statement = true;
             self.stack.last().map_or(0, |o| o.base.formatted + UNIT)
         };
+        // Never left of the margin, under a line kept there (markdown).
+        let formatted = if keep { formatted } else { formatted.max(0) };
         // A multi-line block comment moves only if all its lines can.
         let formatted = if first.kind == TokenKind::Comment && text.contains('\n') {
             let shift = formatted - actual;

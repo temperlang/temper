@@ -172,34 +172,57 @@ let nested = outer(short, inner(
   first, second
 ));
 
-=== a single item isn't a list: its line breaks stay
+=== a single item follows the same rules
 f(
   a
 );
+f(a
+);
+f(
+  a);
+g(a,);
 g(h(a,
   b));
+let total = (
+  first + second);
+let item = items[
+  index];
+let block = run(fn {
+  body();
+});
+if (
+  ready
+) {
+  go();
+}
 --- formatted
 f(
   a
 );
+f(a);
+f(
+  a
+);
+g(
+  a,
+);
 g(h(a, b));
-
-=== lists with comments, or items over several lines, keep their line breaks
-foo(a,
-  b, fn {
+let total = (
+  first + second
+);
+let item = items[
+  index
+];
+let block = run(fn {
   body();
 });
-let nested = outer(short,
-  inner(
-    first, second
-  ));
-let xs = [
-  a, // the first
-  b
-];
-let s = "${f(a,
-  b)}";
---- formatted
+if (
+  ready
+) {
+  go();
+}
+
+=== a multi-line last item: the rules still apply, and it keeps its own lines
 foo(a,
   b, fn {
     body();
@@ -208,6 +231,154 @@ let nested = outer(short,
   inner(
     first, second
   ));
+--- formatted
+foo(a, b, fn {
+  body();
+});
+let nested = outer(short, inner(
+  first, second
+));
+
+=== last items over several lines: a list, an object, a block, in each layout
+let xs = combine(a,
+  b, [
+    first,
+    second,
+  ]);
+let o = make(name,
+  {
+    a: 1,
+    b: 2,
+  });
+run(
+  first, second,
+  fn {
+    // why
+    body();
+  }
+);
+run(first,
+  fn {
+    body();
+  },);
+let r = a(x, b(y,
+  c(z, fn {
+    body();
+  })));
+let table = build(
+  first,
+  rows(source,
+    fn {
+      body();
+    }),
+);
+--- formatted
+let xs = combine(a, b, [
+  first,
+  second,
+]);
+let o = make(name, {
+  a: 1,
+  b: 2,
+});
+run(
+  first, second, fn {
+    // why
+    body();
+  }
+);
+run(
+  first,
+  fn {
+    body();
+  },
+);
+let r = a(x, b(y, c(z, fn {
+  body();
+})));
+let table = build(
+  first,
+  rows(source, fn {
+    body();
+  }),
+);
+
+=== with a trailing comma, any item may span lines: each starts its own
+serialize(scheme, if (h == null) {
+    null
+  } else {
+    h
+  }, port,
+  fn {
+    body();
+  },);
+let rows = [
+  {
+    name: first,
+  }, {
+    name: second,
+  },
+];
+--- formatted
+serialize(
+  scheme,
+  if (h == null) {
+    null
+  } else {
+    h
+  },
+  port,
+  fn {
+    body();
+  },
+);
+let rows = [
+  {
+    name: first,
+  },
+  {
+    name: second,
+  },
+];
+
+=== lists with comments, or items over several lines but the last (no trailing comma), keep their line breaks
+foo(fn {
+  body();
+},
+  b);
+f(x, a +
+  b);
+f(x,
+  // the last
+  g(fn {
+    body();
+  }));
+let s = f(a,
+  """
+    "text
+);
+let xs = [
+  a, // the first
+  b
+];
+let s = "${f(a,
+  b)}";
+--- formatted
+foo(fn {
+  body();
+},
+  b);
+f(x, a +
+    b);
+f(x,
+  // the last
+  g(fn {
+    body();
+  }));
+let s = f(a,
+  """
+    "text
+);
 let xs = [
   a, // the first
   b

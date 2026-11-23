@@ -215,8 +215,9 @@ author's choice. It keeps comments as written, and sets indentation
 the space between tokens on a line (`a + b`, `f(x, y)`, `x: Int`,
 `if (c) { d }`), and blank lines (at most one in a row, none just
 inside braces). It keeps line breaks as written, but in bracketed lists
-of two or more items (arguments, parameters, list and object literals,
-type arguments), which it lays out by how they're written:
+(arguments, parameters, list and object literals, type arguments, and
+a single item in `( )` or `[ ]`), which it lays out by how they're
+written:
 
 ```temper inert
 f(a,
@@ -226,11 +227,18 @@ f(
   b
 );         // a line break after `(`: a, b on one line between f( and )
 f(a, b,);  // a trailing comma: one item per line, each with its comma
+foo(a,
+  b, fn {
+    body();
+  });      // the last item over several lines: foo(a, b, fn {
+           // and the block's lines, as the rules say for the rest
 ```
 
 It never adds or removes commas: to go from one item per line back to
-one line, delete the trailing comma. Lists with comments or line breaks
-inside their items, and lists of literals (tables of data), keep their
+one line, delete the trailing comma. The last item may span lines if it
+ends with a close bracket (a block, a list, a call), and with a trailing
+comma any item may; otherwise lists with line breaks inside their items,
+lists with comments, and lists of literals (tables of data) keep their
 line breaks.
 
 Code that doesn't parse is left as written, with an error and exit

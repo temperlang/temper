@@ -59,10 +59,10 @@ the dominant style; "lines changed" is what applying it changes.
 | Multi-line `[ ]` lists | tall 99.8% | the same | (below) |
 | Block arguments | trailing block 97%, `fn` in `( )` 3% | not changed (that's meaning) | - |
 
-**`temper fmt` itself** (`--temper`, over copies) changes 891 of 81,110
-lines (1.1%, prose included): 68 in core and std (4 files), 132 in test
+**`temper fmt` itself** (`--temper`, over copies) changes 895 of 81,110
+lines (1.1%, prose included): 69 in core and std (4 files), 132 in test
 programs, 148 in docs examples, and 6 to 214 in each library (Ordable
-6, Argmas 18, Chromarite 20, Hrefine 121, Kelpto 164, Wherewith 214).
+6, Argmas 18, Chromarite 20, Hrefine 123, Kelpto 165, Wherewith 214).
 With Black-style wrapping at 100 columns instead (the previous commit),
 it changed 758 (51, 131, 63; Ordable 3, Chromarite 46, Argmas 64,
 Hrefine 73, Kelpto 142, Wherewith 185); with neither list rules nor
@@ -85,6 +85,17 @@ Notes on the numbers:
   the block inside it (`if (a &&\n  b) {\n  c`), so they're indented
   twice, four spaces, as in Java and Kotlin; the [numbers](#the-numbers)
   say what that changes.
+- **`for` headers** written `for (var i = 0;\n    i < n;\n    i += 1) {`,
+  with the first clause on the `for (` line, are continuation lines
+  too: a `;` in `( )` ends a statement only if the contents start on a
+  line of their own (`for (\n  a;\n  b;\n) {`, each clause then indented
+  one level), so here the later clauses are indented four spaces from
+  the `for` line, and the loop's body two. That tells the header from
+  the body, as in `if (a &&\n    b) {`; their line breaks stay.
+- **Docs examples aligned in columns** (`builtins.md`'s `""       ==
+  cat()             &&` chains) get the normal rules: one space around
+  operators and continuation lines indented four. Space before `<` stays
+  as written (it decides angle brackets). There's no `// fmt: off`.
 - The literate line numbers the script's `--samples N` prints count
   lines of the joined code blocks, not of the file.
 
@@ -92,8 +103,9 @@ Notes on the numbers:
 
 Bracketed lists (arguments, parameters, list and object literals, and
 type arguments: `( )`, `[ ]`, `{ }` and `< >` around a comma list of
-two or more items, or one with a trailing comma) are laid out as their
-author asks, with no line width:
+two or more items, or one with a trailing comma, and a single item in
+`( )`, `[ ]` or `< >`) are laid out as their author asks, with no line
+width:
 
 1. **No line break right after the open bracket:** the list goes on one
    line, however long (`f(a,\n  b)` becomes `f(a, b)`).
@@ -109,27 +121,62 @@ line, is the author's to ask for by deleting it. So the layout always
 says what was asked for, and formatting is idempotent by construction.
 Each list follows its own line breaks, inner lists too: in
 `build(\n  rows(a,\n    b),\n  c,\n)` the outer list goes one item per
-line and `rows(a, b)` joins.
+line and `rows(a, b)` joins. Lists are laid out inner ones first, so an
+outer list sees whether its items span lines as formatted.
 
-A single item isn't a list (`f(\n  x\n)` keeps its line breaks), and
-these keep their line breaks as written:
+A single item follows the same rules: `f(\n  x\n)` stays hugged,
+`f(\n  x)` gets its `)` on a line of its own, `f(x\n)` joins, and
+`f(x,)` goes one per line. Single items in `{ }` don't count: they may
+be a block's one statement.
 
-- **Comments inside the list**: a line comment can't be joined, and a
-  comment's place among the items is the author's.
-- **An item over several lines**: a block argument (`foo(a, fn {`), a
-  multi-line string, or a list inside it on several lines (rules 2 and
-  3). The rules speak of items on one line, so such a list is left as
-  its author wrote it.
+**Items over several lines.** The rules speak of items on one line,
+with two exceptions:
+
+- **The last item may span lines if it ends with a close bracket** (a
+  block argument, an inner list, an object literal, a call): rule 1 or
+  2 applies to everything before it, and the last item keeps its own
+  layout (its own lists following their own rules), with the list's
+  close bracket after its last line:
+
+  ```temper inert
+  foo(a,                          foo(a, b, fn {
+    b, fn {                         body();
+      body();          becomes    });
+    });                           let nested = outer(short, inner(
+  let nested = outer(short,         first, second
+    inner(                        ));
+      first, second
+    ));
+  ```
+
+  Contents indent one step from the line their statement starts on, and
+  the close brackets return to it, as everywhere. An item not ending
+  with a bracket (`a +\n    b`, a multi-quoted string, which must end
+  its line) keeps the list as written.
+- **With a trailing comma, any item may span lines** (rule 3): each
+  item starts a line of its own, whatever its own layout, so `}, {`
+  between two objects becomes `},\n  {`.
+
+Otherwise these keep their line breaks as written:
+
+- **Comments between items**: a line comment can't be joined, and a
+  comment's place among the items is the author's. (Comments inside a
+  last item, or inside any item of a list with a trailing comma, are the
+  item's.)
+- **Another item over several lines**: a block or a list that isn't
+  last, as in `foo(fn {\n  ...\n}, b)`. Joining what follows its last
+  line, or breaking before its first, has no layout everyone writes,
+  so when in doubt, it's left out.
 - **A list in a string's `${ }`**.
-- **Data**: a list whose items are all literals (numbers, `true`,
+- **Data**: a list whose items (two or more) are all literals (numbers, `true`,
   `false`, `null`, strings without holes, `char'a'`, negated numbers) or
   lists or calls of them (`new Pair("a", 1)`). Tables are written a few
   values per line: `[\n  0x41, 0x42,\n  0x43, 0x44\n]` would join onto
   one line by rule 2 (or by rule 1, without the first break), and
   explode to one value per line by rule 3. So data lists keep their
-  rows. Without this exception the list rules change 588 lines in
-  Hrefine, 415 in Ordable, 188 in Chromarite, 183 in Kelpto and 86 in
-  tests (against 61, 0, 18, 46 and 14); see below.
+  rows. Without this exception the list rules change 590 lines in
+  Hrefine, 415 in Ordable, 188 in Chromarite, 184 in Kelpto and 86 in
+  tests (against 63, 0, 18, 47 and 14); see below.
 
 **Only lists and continuation lines:** other line breaks stay. A line
 break inside a list's brackets, after its commas, can't end a
@@ -154,13 +201,13 @@ rule that the output with it doesn't have):
 
 | Group | Lines | `fmt` changes | List rules (data lists too) | Continuation indent |
 |---|---|---|---|---|
-| core+std | 4,594 | 68 | 5 (7) | 42 |
+| core+std | 4,594 | 69 | 6 (8) | 42 |
 | tests | 10,478 | 132 | 14 (86) | 22 |
 | docs (54 of 69 files whole) | 14,010 | 48 | 0 (0) | 33 |
 | Argmas | 7,225 | 18 | 16 (23) | 2 |
 | Chromarite | 3,807 | 20 | 18 (188) | 0 |
-| Hrefine | 12,902 | 121 | 61 (588) | 58 |
-| Kelpto | 24,934 | 164 | 46 (183) | 117 |
+| Hrefine | 12,902 | 123 | 63 (590) | 58 |
+| Kelpto | 24,934 | 165 | 47 (184) | 117 |
 | Ordable | 3,169 | 6 | 0 (415) | 6 |
 | Wherewith | 11,841 | 212 | 54 (78) | 157 |
 
@@ -171,6 +218,12 @@ comma go one per line (Kelpto's and Hrefine's long signatures and
 `tree.add(...)` calls); lists with no break after the bracket join.
 Continuation lines move most in Wherewith and Kelpto, whose `if (`
 conditions over several lines indented their later lines by 0 or 2.
+Multi-line last items and single items change almost nothing: authors
+already write `foo(a, b, fn {` and `outer(x, inner(`. The changes are
+std's `temporal` (`&& (\n  if ... }))` gets its `)` on a line of its
+own, rule 2 for the single item) and Hrefine's `serializeUrl(` call,
+whose trailing comma now puts its items one per line around a
+multi-line `if` item.
 
 ## Design
 
@@ -197,8 +250,8 @@ census shows authors already agree on almost everything else.
   angle bracket) is copied, and any change is checked by lexing the two
   tokens with the new space, so `- -x`, `a b` or `1 .x` never join.
 - **Lists** are the exception (above): the formatter finds them in the
-  tree and decides each one's layout, inner lists first (an inner list
-  on several lines keeps its outer list as written), from its trailing
+  tree and decides each one's layout, inner lists first (so an outer
+  list knows which items span lines), from its trailing
   comma and the line break after its open bracket. Then, in the same
   pass that sets the space between tokens, it adds or removes line
   breaks only at each list's own places (after the open bracket, after
@@ -241,7 +294,8 @@ census shows authors already agree on almost everything else.
   brackets, as the compiler reads them, so a class split over several
   blocks indents consistently. Prose, including trailing space, is never
   touched, nor are lines indented with tabs (markdown counts tabs to the
-  next multiple of four).
+  next multiple of four, as the margins do). No line is indented left
+  of its margin, even under a line kept there.
 - **Safety:** input with lexing, bracket or parse errors, an unclosed
   block comment, string or `${` is left alone, with the first error.
   After formatting, the result is parsed again and must have the same
@@ -255,13 +309,19 @@ census shows authors already agree on almost everything else.
   repository and randomly edited inputs (with lists' line breaks and
   trailing commas added and removed).
 - **Speed:** one lex and parse, a linear pass, and one more parse for
-  the check. In release, the largest files take 4 to 9 ms (`core.temper`,
-  50 KiB) and 7 to 13 ms (`json.temper.md`, 43 KiB), measured with the
-  earlier Black-style wrapping, which did more than the list rules do
-  now (the machine is noisy); `format_speed` in `tests/fmt.rs` (ignored
-  by default) measures them. Through the language server, a
-  formatting request for them answers in 6 to 30 ms (`format_speed` in
-  `crates/temper-lsp/tests/lsp.rs`).
+  the check. Finding statements, lists and operators' roles in the tree
+  isn't slow: each is one walk over the tree, no searching. In release,
+  with the machine quiet, `core.temper` (50 KiB) takes 6 to 8 ms, of
+  which its two parses are 3.5 to 5 ms, so the formatter's own pass,
+  tree walks included, is 2 to 3 ms; `json.temper.md` (43 KiB) 9 to 10
+  ms (parses 5 to 6). The list rules cost about a millisecond at most
+  (timed with and without them), and the rules for multi-line last
+  items and single items nothing measurable (the CLI with and without,
+  back to back, `--check`, process start included: core 16 to 25 ms
+  and json 30 to 38 ms either way). The machine is noisy;
+  `format_speed` in `tests/fmt.rs` (ignored by default) measures them.
+  Through the language server, a formatting request for them answers in
+  6 to 30 ms (`format_speed` in `crates/temper-lsp/tests/lsp.rs`).
 - **Language server:** `textDocument/formatting` and `rangeFormatting`
   format the open text, reusing its unit's parse when that's current,
   and answer with the runs of changed lines (Myers' diff), all of them
@@ -284,8 +344,11 @@ census shows authors already agree on almost everything else.
 ## Status and next steps
 
 Done: `temper fmt [PATH]...` and `--check`; the rules above marked as
-proposed; lists laid out by the author's line breaks and trailing
-commas, with comments, multi-line items and data lists kept;
+proposed; lists, single items too, laid out by the author's line
+breaks and trailing commas, with multi-line last items (and any item
+with a trailing comma) following the rules, and comments between
+items, other multi-line items and data lists kept; `for` headers and
+aligned docs examples by the normal rules;
 continuation lines indented twice; golden cases (`tests/fmt/*.cases`),
 idempotence and tree-preservation tests over the repository's Temper
 files and randomly edited inputs; refusal for code that doesn't parse;
@@ -296,11 +359,8 @@ Next:
 
 1. Format lib/ and docs in one commit of its own, listed in
    `.git-blame-ignore-revs`; then `temper fmt --check` in CI.
-2. Open questions: whether a single item should follow the list rules
-   too (`f(\n  x\n)`); `for (a;\n    b;` headers, now indented as
-   continuations; whether docs examples aligned in columns
-   (`builtins.md`) should be kept.
-3. Doc comments' framing (`/** … */`), if wanted.
+2. Doc comments' framing (`/** … */`), if wanted.
+3. A `// fmt: off` region, if hand-aligned code ever needs one.
 4. Markdown prose in `.temper.md`: left exactly as written. Formatting
    it (rewrapping paragraphs, normalizing lists and emphasis) is a
    Markdown formatter's job; should `fmt` call one, or leave prose to

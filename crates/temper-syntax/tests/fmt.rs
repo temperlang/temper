@@ -124,6 +124,10 @@ fn mutated_inputs_format_safely() {
             ",\n",
             ",)",
             ",\n]",
+            // Multi-line last items.
+            ", fn {\n",
+            "\n})",
+            "(\n  x\n)",
         ])
         .copied()
         .collect();
@@ -183,7 +187,9 @@ fn temper_files(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
 }
 
 /// Times formatting the largest files in core and std, which the language
-/// server will do on save (budget: tens of milliseconds each, in release).
+/// server will do on save (budget: tens of milliseconds each, in release),
+/// and parsing them alone: formatting parses twice (the second time to
+/// check the result), and the rest is the formatter's own pass.
 /// Run with `cargo test --release --test fmt -- --ignored --nocapture`.
 #[test]
 #[ignore]
@@ -212,9 +218,15 @@ fn format_speed() {
             ..Options::default()
         });
         let ms = time(Options::default());
+        let start = std::time::Instant::now();
+        for _ in 0..rounds {
+            parse(&text, kind);
+        }
+        let parsing = start.elapsed().as_secs_f64() * 1000.0 / rounds as f64;
         let name = path.strip_prefix(&root).unwrap().display();
         println!(
-            "{name}: {} KiB, {} lines, {ms:.1} ms ({unlisted:.1} ms without list rules)",
+            "{name}: {} KiB, {} lines, {ms:.1} ms ({unlisted:.1} ms without list rules; \
+             parsing once {parsing:.1} ms)",
             text.len() / 1024,
             text.lines().count()
         );
