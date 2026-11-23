@@ -666,7 +666,7 @@ fn runs_and_lints() {
         for case in cases.iter().filter(|c| c.tests.is_none()) {
             let name = temper_be_rust::bin_name(&case.library);
             let out = Command::new(bin(&name)).output().unwrap();
-            kit::check_case(&mut failures, &name, &out, case);
+            kit::check_case(&mut failures, "rust", &name, &out, case);
         }
         let mut run = |name: &str, expected: &[String]| {
             let out = Command::new(bin(name)).output().unwrap();

@@ -1,6 +1,7 @@
 import {
   listBuilderAddAll,
   listBuilderRemoveLast,
+  listBuilderSet,
   listBuilderSort,
   listBuilderSplice,
   listedFilter,
@@ -322,7 +323,37 @@ try {
 }
 /** @type {readonly number[]} */
 const walked = Object.freeze([t$29, t$30, t$31, t$32, t$33, t$34, t$35, t$28]);
-console.log(`walks ${walked.length}`);
+console.log(`walks ${show(walked)}`);
+/** @type {number[]} */
+const t = Object.freeze([3, 1, 2]).slice();
+
+/**
+ * @param {number} a
+ * @param {number} z
+ * @returns {number}
+ */
+function fn3(a, z) {
+  listBuilderSet(t, 0, 99);
+  return (a - z) | 0;
+}
+
+listBuilderSort(t, fn3);
+/** @type {number[]} */
+const u = Object.freeze([3, 1, 2]).slice();
+
+/**
+ * @param {number} a
+ * @param {number} z
+ * @returns {number}
+ */
+function fn4(a, z) {
+  const last = listBuilderRemoveLast(u);
+  u.push((last + 10) | 0);
+  return (a - z) | 0;
+}
+
+listBuilderSort(u, fn4);
+console.log(`same length ${show(t)} ${show(u)}`);
 /** @type {number[]} */
 const s = Object.freeze([3, 1, 2]).slice();
 
@@ -331,12 +362,12 @@ const s = Object.freeze([3, 1, 2]).slice();
  * @param {number} z
  * @returns {number}
  */
-function fn3(a, z) {
+function fn5(a, z) {
   if (s.length < 40) {
     s.push(0);
   }
   return (a - z) | 0;
 }
 
-listBuilderSort(s, fn3);
+listBuilderSort(s, fn5);
 console.log(`sorted ${s.length}`);

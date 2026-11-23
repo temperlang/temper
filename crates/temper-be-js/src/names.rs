@@ -145,6 +145,7 @@ pub const PRINTED: &[&str] = &[
     "listedJoin",
     "listedMap",
     "listedReduceFrom",
+    "listedReduceFromIndex",
     "listedSlice",
     "listedSorted",
     "listedToList",

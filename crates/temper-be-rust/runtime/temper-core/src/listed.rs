@@ -165,7 +165,8 @@ mod listed {
         reduce_from_index(listed, initial, 0, accumulate)
     }
 
-    fn reduce_from_index<T, O>(
+    /// `reduceFromIndex`, from `index`, none past the end.
+    pub fn reduce_from_index<T, O>(
         listed: &dyn ListedTrait<T>,
         initial: O,
         index: i32,

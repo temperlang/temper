@@ -65,6 +65,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Ufcs("temper_core::listed::reduce_from"),
     ),
     (
+        "core.listedReduceFromIndex()",
+        Connection::Ufcs("temper_core::listed::reduce_from_index"),
+    ),
+    (
         "core.mappedToListWith()",
         Connection::Ufcs("temper_core::mapped_to_list_with"),
     ),
@@ -154,6 +158,7 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Float64.toString()",
         Connection::Function("temper_core::float64::to_string"),
     ),
+    ("core.type Int32.get signum()", Connection::Method("signum")),
     ("core.type Int32.max()", Connection::Method("max")),
     ("core.type Int32.min()", Connection::Method("min")),
     ("core.type Int32.toFloat64()", Connection::Cast("f64")),

@@ -214,6 +214,37 @@ fn imports_across_modules() {
     });
 }
 
+/// Namespaces of user modules: a module's top level that it doesn't
+/// export isn't a member, and two modules can't each be the other's
+/// namespace: a cycle of imports fails, as one of destructurings does
+/// (`imports.rs`).
+#[test]
+fn namespaces_across_modules() {
+    with_stack(|| {
+        let mut library = Library::new();
+        let a = "let b = import(\"../b\");\nlet hidden = 3;\n\
+                 export let fa(): Int { 1 }\nexport let ga(): Int { b.fb() + hidden }";
+        library.add_file("app/a/a.temper", a, SourceKind::Standalone);
+        let b = "let a = import(\"../a\");\nexport let fb(): Int { a.fa() + 10 }";
+        library.add_file("app/b/b.temper", b, SourceKind::Standalone);
+        let main = "let a = import(\"./a\");\nlet h = a.hidden;\nlet g = a.fa();";
+        library.add_file("app/main.temper", main, SourceKind::Standalone);
+        let settled = settle(library);
+        let messages: Vec<String> = (settled.library.diagnostics.iter())
+            .filter(|d| d.level == temper_frontend::library::Level::Error)
+            .map(|d| d.message.text())
+            .collect();
+        assert_eq!(
+            messages,
+            [
+                "Import of ../b failed",
+                "b has not been declared",
+                "./a does not export symbol hidden"
+            ]
+        );
+    });
+}
+
 /// An `@extension("isPal")` imported from another module, under its own
 /// name or another, answers to `s.isPal()` there, which becomes a call of
 /// the import; a module that doesn't import it gets "No member" (the
@@ -1463,4 +1494,25 @@ export class Shape() {
         let at = (source.find(&format!("{before}{name}(")).unwrap() + before.len()) as u32;
         assert_eq!(docs.doc_string(at, name), Some(settled_doc));
     }
+    // A thematic break ends a doc as a heading does, settled too.
+    let source = "`f` is old.\n\n---\n\n`f` is new.\n\n    export let f(): Int { 1 }\n";
+    let mut library = Library::new();
+    library.add_file("test.temper.md", source, SourceKind::Markdown);
+    let settled = settle(library);
+    let lib = &settled.library;
+    let decl = (0..lib.tree.len() as u32)
+        .map(NodeId)
+        .find(|&n| {
+            lib.tree.kind(n) == NodeKind::Let
+                && lib
+                    .name(lib.tree.children(n)[0])
+                    .map(|id| lib.names.get(id))
+                    == Some("f")
+        })
+        .unwrap();
+    let settled_doc = lib.doc_string(decl).unwrap();
+    assert_eq!(settled_doc.long, "`f` is new.");
+    let docs = DocsByPlace::parse(&[("test.temper.md", source)]);
+    let at = source.find("f(").unwrap() as u32;
+    assert_eq!(docs.doc_string(at, "f"), Some(settled_doc));
 }

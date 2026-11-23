@@ -28,7 +28,7 @@ named. "All" means all seven backends connect it.
 | `StringBuilder`: constructor, `append`, `appendCodePoint`, `appendBetween`, `clear`, `end`, `toString` | `strings::builder_method`, `property` | all |
 | `Listed.isEmpty`, `.toListBuilder`, `.reduce` | `property`, `list_method` | all |
 | `listedMap`, `listedReduceFrom` | `list_method` | all |
-| `listedReduceFromIndex` | `list_method` | none: not yet in tmpl |
+| `listedReduceFromIndex` | `list_method` | all |
 | `List.toList` | `list_method` | all |
 | `List.forEach` | `list_method` | none: tmpl inlines a loop |
 | `Mapped.length`, `.get`, `.getOr`, `.has`, `.keys`, `.values`, `.toMap`, `.toMapBuilder`, `.toList` | `maps::map_method`, `property` | all |
@@ -39,7 +39,7 @@ named. "All" means all seven backends connect it.
 | `DenseBitVector`: constructor, `get`, `set` | `apply`'s `new`, `method` | all |
 | `Int32.min`, `.max`; `Int64.min`, `.max` | `method` | all |
 | `Int32.succ`, `.pred`; `Int64.succ`, `.pred` | `method` | all: tmpl writes them as `n + 1` and `n - 1` |
-| `Int32.signum` | `property` | none: not yet in tmpl |
+| `Int32.signum` | `property` | all |
 | `Float64.near` | `numbers::float_method` | all |
 | `Float64.succ`, `.pred` | `numbers::float_method` | none: not yet in tmpl |
 | `Empty.eq`, `empty`, `ignore`, `doneResult` | `equal`, `builtin` | `empty` all; `doneResult` C++, Java, Rust, past tmpl's "not yet"; `ignore` is tmpl's own; `==` on `Empty` not yet in tmpl |
@@ -75,10 +75,11 @@ Natives for `@connected` members, as host code is on backends, and for
 bodiless ones (2026-11-21, t744). Core's bodies that aren't
 `@connected` are few, and `unconnected_bodies_are_listed` lists each
 with what runs for it: private constructors of builtin values, the
-unused generator wrappers, `GlobalConsole.log` (the console is the
-host's), and `listedReduceFromIndex`, which keeps its native because
-it's measurably faster. Running a body needs core settled beside the
-program, as `bodies_agree_with_natives` settles it, and runs slower:
+unused generator wrappers, and `GlobalConsole.log` (the console is the
+host's). (`listedReduceFromIndex` was one, keeping its native for
+speed, until backends connected it, 2026-11-23.) Running a body needs
+core settled beside the program, as `bodies_agree_with_natives`
+settles it, and runs slower:
 
 | Program (release, 5 runs back to back) | Natives | Bodies |
 | --- | --- | --- |
@@ -107,6 +108,11 @@ is true whenever `==` is, so NaN is near NaN and an infinity near
 itself only, as `math.isclose`'s is, and otherwise compares finite
 values within the margin as IEEE does, never within a NaN margin, in
 the body, the interpreter, and every runtime.
+
+`Int32.signum` and `listedReduceFromIndex` run on every backend too
+(2026-11-23; testkit's `core-numbers` checks `signum` at the extremes and
+an index inside, at, and past the end). Backends don't agree on a
+negative index, which only the body and the interpreter panic on.
 
 Backends against the bodies (all else agrees):
 

@@ -751,8 +751,81 @@ impl Settle {
     /// getter, or setter) of one class or interface can't share a name
     /// (t922), which Kotlin Temper doesn't check, and Java's output
     /// renames the static to allow. Reported at the later one, naming
-    /// both.
+    /// both. Inherited instance members count too
+    /// ([`Settle::check_inherited_static_names`]).
     fn check_static_instance_names(&mut self, name: NodeId, members: &[NodeId]) {
+        let tree = &self.lib.tree;
+        let mut problems = Vec::new();
+        for (i, &later) in members
+            .iter()
+            .enumerate()
+            .filter(|&(_, &m)| is_named(tree, m))
+        {
+            let text = self.member_text(later);
+            let earlier = (members[..i].iter().copied()).find(|&m| {
+                is_named(tree, m)
+                    && is_static(tree, m) != is_static(tree, later)
+                    && self.member_text(m) == text
+            });
+            if let Some(earlier) = earlier {
+                let (st, inst) = match is_static(tree, earlier) {
+                    true => (earlier, later),
+                    false => (later, earlier),
+                };
+                problems.push((st, inst, later));
+            }
+        }
+        let class = (self.lib.name(name))
+            .map_or("", |n| self.lib.names.get(n))
+            .to_string();
+        for (st, inst, at) in problems {
+            self.report_static_instance(&class, st, &class, inst, at);
+        }
+    }
+
+    /// A class's or interface's static member can't share a name with an
+    /// instance member it inherits, as Java's static can't hide one
+    /// (t922). An interface's static member isn't inherited, so a class's
+    /// instance member may share its name, as Java allows; nor is a
+    /// private member.
+    fn check_inherited_static_names(&mut self, class: NodeId, ancestors: &[NodeId]) {
+        let tree = &self.lib.tree;
+        let mut problems = Vec::new();
+        for &st in class_parts(tree, class).2 {
+            if !is_named(tree, st) || !is_static(tree, st) {
+                continue;
+            }
+            let text = self.member_text(st);
+            let inherited = ancestors.iter().find_map(|&a| {
+                let found = class_parts(tree, a).2.iter().copied().find(|&m| {
+                    is_named(tree, m)
+                        && !is_static(tree, m)
+                        && tree.data(m) & MEMBER_PRIVATE == 0
+                        && self.member_text(m) == text
+                });
+                found.map(|m| (a, m))
+            });
+            if let Some((ancestor, inst)) = inherited {
+                problems.push((ancestor, inst, st));
+            }
+        }
+        let class_text = self.member_text(class).to_string();
+        for (ancestor, inst, st) in problems {
+            let from = self.member_text(ancestor).to_string();
+            self.report_static_instance(&class_text, st, &from, inst, st);
+        }
+    }
+
+    /// Reports a static member `st` of `class` sharing its name with an
+    /// instance member `inst` of `from`, at member `at`'s name.
+    fn report_static_instance(
+        &mut self,
+        class: &str,
+        st: NodeId,
+        from: &str,
+        inst: NodeId,
+        at: NodeId,
+    ) {
         let tree = &self.lib.tree;
         let kind = |m: NodeId| match tree.data(m) & ROLE_MASK {
             ROLE_METHOD => "method",
@@ -760,35 +833,16 @@ impl Settle {
             ROLE_SETTER => "setter",
             _ => "property",
         };
-        let named = |m: NodeId| tree.data(m) & ROLE_MASK != ROLE_CONSTRUCTOR;
-        let is_static = |m: NodeId| tree.data(m) & MEMBER_STATIC != 0;
-        let mut problems = Vec::new();
-        for (i, &later) in members.iter().enumerate().filter(|&(_, &m)| named(m)) {
-            let text = self.member_text(later);
-            let earlier = (members[..i].iter().copied()).find(|&m| {
-                named(m) && is_static(m) != is_static(later) && self.member_text(m) == text
-            });
-            if let Some(earlier) = earlier {
-                let (st, inst) = match is_static(earlier) {
-                    true => (earlier, later),
-                    false => (later, earlier),
-                };
-                // Its name, without a field's type.
-                let start = tree.span(tree.children(later)[0]).start;
-                let span = Span {
-                    start,
-                    end: start + text.len() as u32,
-                };
-                problems.push((kind(st), kind(inst), text.to_string(), span));
-            }
-        }
-        let class = (self.lib.name(name))
-            .map_or("", |n| self.lib.names.get(n))
-            .to_string();
-        for (st, inst, text, span) in problems {
-            let message = Message::StaticAndInstanceMember(class.clone(), st, inst, text);
-            self.lib.report(Level::Error, message, span);
-        }
+        let text = self.member_text(at).to_string();
+        // Its name, without a field's type.
+        let start = tree.span(tree.children(at)[0]).start;
+        let span = Span {
+            start,
+            end: start + text.len() as u32,
+        };
+        let message =
+            Message::StaticAndInstanceMember(class.into(), kind(st), from.into(), kind(inst), text);
+        self.lib.report(Level::Error, message, span);
     }
 
     /// Whether a member is a `static get` or `static set`.
@@ -918,6 +972,9 @@ impl Settle {
         let outer = self.scopes.get(scope).parent.unwrap();
         let supers = class_parts(&self.lib.tree, class).1.to_vec();
         for sup in supers {
+            // `extends ns.I`, or `ns.I<T>`, names the namespace's `I`,
+            // checked as `I` is, before its visit would get to it.
+            self.namespace_member(self.super_head(sup), outer, forced)?;
             let Some(name) = self.super_name(sup) else {
                 continue;
             };
@@ -970,27 +1027,31 @@ impl Settle {
         self.publish(Fact::ScopeComplete(scope));
         self.publish(Fact::ClassScope(class));
         self.check_supertypes(class, &ancestors);
+        self.check_inherited_static_names(class, &ancestors);
         Ok(())
     }
 
     /// The name a supertype's expression names: `I` in `I` or `I<T>`.
     fn super_name(&self, sup: NodeId) -> Option<NodeId> {
+        let name = self.super_head(sup);
+        (self.lib.tree.kind(name) == NodeKind::RightName).then_some(name)
+    }
+
+    /// What names a supertype's type: `I` in `I<T>`, else the whole
+    /// expression, as `I` or `ns.I`.
+    fn super_head(&self, sup: NodeId) -> NodeId {
         let tree = &self.lib.tree;
-        let name = match tree.kind(sup) {
-            NodeKind::Call => {
-                let &[callee, generic, ..] = tree.children(sup) else {
-                    return None;
-                };
+        match *tree.children(sup) {
+            [callee, generic, ..] if tree.kind(sup) == NodeKind::Call => {
                 // Before or after its visit expands it.
                 let is_angle = self.lib.value(callee)
                     == Some(&Value::Builtin(SyntaxBuiltin::Angle))
                     || self.scopes.resolved_builtin(callee)
                         == Some(Builtin::Function(Function::Angle));
-                is_angle.then_some(generic)?
+                if is_angle { generic } else { sup }
             }
             _ => sup,
-        };
-        (tree.kind(name) == NodeKind::RightName).then_some(name)
+        }
     }
 
     /// A class's supertypes that are classes or interfaces in this
@@ -1534,6 +1595,9 @@ impl Settle {
             }
             _ => target,
         };
+        // `new ns.C<T>()`'s class, before its visit would get to it.
+        self.namespace_member(class, scope, forced)?;
+        let tree = &self.lib.tree;
         if let [dot, object, _] = *tree.children(class) {
             let is_dot = tree.kind(dot) == NodeKind::BuiltinName
                 && (self.lib.name(dot)).is_some_and(|n| self.lib.names.get(n) == ".");
@@ -1621,54 +1685,34 @@ impl Settle {
     }
 
     /// The class or interface a symbol names: one declared there, or one
-    /// an import names, through its `let C = C'`.
+    /// an alias, an import, or a namespace names ([`Scopes::type_symbol`]).
     pub(crate) fn type_decl(&self, symbol: SymbolId) -> Option<NodeId> {
         let tree = &self.lib.tree;
-        let mut symbol = symbol;
-        for _ in 0..8 {
-            let decl = self.scopes.symbol(symbol).decl?;
-            if tree.kind(decl) == NodeKind::Class {
-                return Some(decl);
-            }
-            let init = self.alias_init(symbol)?;
-            if tree.kind(init) != NodeKind::RightName {
-                return None;
-            }
-            symbol = self.scopes.resolved(init)?;
-        }
-        None
+        let decl = self
+            .scopes
+            .symbol(self.scopes.type_symbol(tree, symbol))
+            .decl?;
+        (tree.kind(decl) == NodeKind::Class).then_some(decl)
     }
 
-    /// The type expression an alias names, as `C<Int>` for `let Alias =
-    /// C<Int>;`, if `symbol` is one: a `let`, top-level or local, not a
-    /// `var` and without a declared type, whose initializer is a name, a
-    /// type given arguments, a nullable type, or a function type. An
+    /// The type expression an alias names ([`Scopes::alias_init`]). An
     /// alias is the type it names wherever a type is wanted, so `new`,
     /// `extends`, `is` and `as`, annotations, and bounds check it as that
     /// type ([`Settle::type_decl`], `typing`'s `eval_type`;
     /// notes/typing.md, "Type aliases").
     pub(crate) fn alias_init(&self, symbol: SymbolId) -> Option<NodeId> {
-        let tree = &self.lib.tree;
-        let s = self.scopes.symbol(symbol);
-        let decl = s.decl.filter(|&d| {
-            matches!(s.kind, SymbolKind::TopLevel | SymbolKind::Local)
-                && !s.mutable
-                && tree.kind(d) == NodeKind::Let
-                && tree.data(d) & ROLE_MASK == 0
-        })?;
-        let (_, None, Some(init)) = crate::core::let_parts(tree, decl) else {
-            return None;
-        };
-        let is_type = tree.kind(init) == NodeKind::RightName
-            || tree.kind(init) == NodeKind::Call
-                && matches!(
-                    (tree.children(init).first()).and_then(|&c| self.scopes.resolved_builtin(c)),
-                    Some(Builtin::Function(
-                        Function::Angle | Function::Nullable | Function::FnType
-                    ))
-                );
-        is_type.then_some(init)
+        self.scopes.alias_init(&self.lib.tree, symbol)
     }
+}
+
+/// Whether a member has a name of its own: not a constructor.
+fn is_named(tree: &temper_syntax::tree::Tree, member: NodeId) -> bool {
+    tree.data(member) & ROLE_MASK != ROLE_CONSTRUCTOR
+}
+
+/// Whether a member is static.
+fn is_static(tree: &temper_syntax::tree::Tree, member: NodeId) -> bool {
+    tree.data(member) & MEMBER_STATIC != 0
 }
 
 /// How widely a member is visible: private, protected, then public, the

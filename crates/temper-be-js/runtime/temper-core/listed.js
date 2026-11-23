@@ -29,6 +29,20 @@ export const listedReduceFrom = (ls, initial, accumulate) => {
 }
 
 /**
+ * Implements extension method core.type Listed.reduceFromIndex(), from
+ * `index`, none past the end.
+ * @template T, R
+ * @param {readonly T[]} ls
+ * @param {R} initial
+ * @param {number} index
+ * @param {(prev: R, cur: T) => R} accumulate
+ * @returns {R}
+ */
+export const listedReduceFromIndex = (ls, initial, index, accumulate) => {
+  return ls.slice(index).reduce(accumulate, initial);
+}
+
+/**
  * Implements extension method core.type Listed.sort()
  * @template T
  * @param {T[]} ls

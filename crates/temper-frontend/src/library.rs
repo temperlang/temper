@@ -156,10 +156,11 @@ pub enum Message {
     SealedSubtypeTypeParam(String),
     /// `static get p` or `static set p`: `get` or `set`, and the name.
     StaticAccessor(String, String),
-    /// A static member and an instance member of one name: the class, the
-    /// static's kind and the instance member's (`property`, `method`,
-    /// `getter`, or `setter`), and the name (t922).
-    StaticAndInstanceMember(String, &'static str, &'static str, String),
+    /// A static member and an instance member of one name: the class or
+    /// interface declaring the static and its kind, the one declaring the
+    /// instance member, which it may inherit, and its kind (`property`,
+    /// `method`, `getter`, or `setter`), and the name (t922).
+    StaticAndInstanceMember(String, &'static str, String, &'static str, String),
     /// A class's constructor after its first, as a class has one.
     SeveralConstructors,
     /// A header parameter, `class C(x: Int)`, beside an explicit
@@ -465,10 +466,15 @@ impl Message {
             Message::StaticAccessor(kind, name) => {
                 format!("`static {kind} {name}` is not supported; use a static method instead")
             }
-            Message::StaticAndInstanceMember(class, st, inst, name) => format!(
-                "Static {st} {name} and {inst} {name} of {class} share a name; a static and an \
-                 instance member need different names"
-            ),
+            Message::StaticAndInstanceMember(class, st, from, inst, name) => {
+                let owners = match class == from {
+                    true => format!("Static {st} {name} and {inst} {name} of {class}"),
+                    false => format!("Static {st} {name} of {class} and {inst} {name} of {from}"),
+                };
+                format!(
+                    "{owners} share a name; a static and an instance member need different names"
+                )
+            }
             Message::SeveralConstructors => "A class can have only one constructor; \
                 for other ways to make instances, use a static method or an object literal"
                 .to_string(),
@@ -923,7 +929,10 @@ impl Library {
     /// [`corelib::SOURCES`], or if it's one of their paths in
     /// [`Library::core_root`], a Temper checkout's `lib/core`, whose text
     /// an editor may have changed, or a build of another version may not
-    /// hold. No other library is core, whatever its name.
+    /// hold. No other library is core, whatever its name. A file with
+    /// exactly core's text is core's in any library, as tests and editors
+    /// settle core's files from other paths: it can do only what core's
+    /// own text does, so this grants nothing to code a user writes.
     pub fn in_core(&self, pos: u32) -> bool {
         let file = &self.files[self.locate(pos).0.0 as usize];
         let at_root = |root: &String| {

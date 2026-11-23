@@ -10,6 +10,8 @@ public static class CallbackChangesGlobal
 {
     internal static readonly IList<int> f;
     internal static int peeks;
+    internal static readonly IList<int> t;
+    internal static readonly IList<int> u;
     internal static readonly IList<int> s;
 
     internal static string Show(IReadOnlyList<int> ls)
@@ -280,9 +282,25 @@ public static class CallbackChangesGlobal
             t8 = -1;
         }
         IReadOnlyList<int> walked = Listed.CreateReadOnlyList<int>(t1, t2, t3, t4, t5, t6, t7, t8);
-        console.Log("walks " + walked.Count.ToString(CultureInfo.InvariantCulture));
-        s = new List<int>(Listed.CreateReadOnlyList<int>(3, 1, 2));
+        console.Log("walks " + Show(walked));
+        t = new List<int>(Listed.CreateReadOnlyList<int>(3, 1, 2));
         int fn3(int a, int z)
+        {
+            t[0] = 99;
+            return a - z;
+        }
+        Listed.Sort(t, (Func<int, int, int>)fn3);
+        u = new List<int>(Listed.CreateReadOnlyList<int>(3, 1, 2));
+        int fn4(int a, int z)
+        {
+            int last = Listed.RemoveLast(u);
+            u.Add(last + 10);
+            return a - z;
+        }
+        Listed.Sort(u, (Func<int, int, int>)fn4);
+        console.Log("same length " + Show(Listed.AsReadOnly(t)) + " " + Show(Listed.AsReadOnly(u)));
+        s = new List<int>(Listed.CreateReadOnlyList<int>(3, 1, 2));
+        int fn5(int a, int z)
         {
             if (s.Count < 40)
             {
@@ -290,7 +308,7 @@ public static class CallbackChangesGlobal
             }
             return a - z;
         }
-        Listed.Sort(s, (Func<int, int, int>)fn3);
+        Listed.Sort(s, (Func<int, int, int>)fn5);
         console.Log("sorted " + s.Count.ToString(CultureInfo.InvariantCulture));
     }
 }

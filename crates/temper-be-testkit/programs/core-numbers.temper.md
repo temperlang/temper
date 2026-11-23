@@ -2,9 +2,11 @@
 
 Core's number members where backends' hosts differ: `Int32`'s and
 `Int64`'s `succ` and `pred`, which tmpl writes as `+ 1` and `- 1`, so
-they wrap, and `Float64.near` on NaN, infinities, and signed zeros,
-which is true whenever `==` is, so NaN is near NaN, and else never
-for an infinity or within a NaN margin. The log is what the
+they wrap; `Int32.signum`, at the extremes too, where `-this` wraps;
+and `Float64.near` on NaN, infinities, and signed zeros, which is true
+whenever `==` is, so NaN is near NaN, and else never for an infinity or
+within a NaN margin. And `reduceFromIndex`, which core writes in
+Temper, from an index inside, at, and past the end. The log is what the
 interpreter gives.
 
     let one = 1;
@@ -15,6 +17,14 @@ interpreter gives.
     let big64 = 9223372036854775807i64 * one64;
     let small64 = -big64 - one64;
     console.log("${big64.succ().toString()} ${small64.pred().toString()} ${one64.pred().toString()}");
+    let zero = one - one;
+    console.log("${big.signum} ${small.signum} ${zero.signum} ${one.signum} ${(zero - one).signum} ${small.succ().signum}");
+
+    let digits = [1, 2, 3];
+    let from(index: Int): Int {
+      digits.reduceFromIndex(100, index) { (s: Int, n: Int): Int => s * 10 + n }
+    }
+    console.log("${from(0)} ${from(1)} ${from(3)} ${from(7)}");
 
     let inf = 1.0e308 * 10.0;
     let nan = inf - inf;
@@ -27,6 +37,8 @@ interpreter gives.
 ```log
 -2147483648 2147483647 2 0 -2147483647 2147483646
 -9223372036854775808 9223372036854775807 0
+1 -1 0 1 -1 -1
+100123 10023 100 100
 true true true false false
 false false false true false false
 false false true true

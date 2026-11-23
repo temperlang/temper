@@ -868,7 +868,7 @@ fn runs() {
                 });
             } else {
                 let run = run_alone(&python, &root, &projects, &package);
-                kit::check_case(&mut failures, path, &run, &case);
+                kit::check_case(&mut failures, "py", path, &run, &case);
             }
             // Host code is the library's own, which its module's file
             // starts with, and the functional tests' isn't written for

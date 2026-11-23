@@ -93,25 +93,16 @@ impl Translator<'_> {
         Ok(())
     }
 
-    /// The class or interface a symbol names, following imports: a `let C =
-    /// C'` an import makes.
+    /// The class or interface a symbol names, through aliases, as imports
+    /// make ([`crate::scope::Scopes::type_symbol`]).
     pub(super) fn class_node(&self, symbol: SymbolId) -> Option<FNode> {
-        let mut symbol = symbol;
-        for _ in 0..8 {
-            let decl = self.s.scopes.symbol(symbol).decl?;
-            match self.kind(decl) {
-                NodeKind::Class => return Some(decl),
-                NodeKind::Let if self.data(decl) & ROLE_MASK == 0 => {
-                    let init = core::let_parts(&self.s.library.tree, decl).2?;
-                    if self.kind(init) != NodeKind::RightName {
-                        return None;
-                    }
-                    symbol = self.s.scopes.resolved(init)?;
-                }
-                _ => return None,
-            }
-        }
-        None
+        let tree = &self.s.library.tree;
+        let decl = self
+            .s
+            .scopes
+            .symbol(self.s.scopes.type_symbol(tree, symbol))
+            .decl?;
+        (self.kind(decl) == NodeKind::Class).then_some(decl)
     }
 
     /// A class's or interface's type, by its node: the library's own, or
@@ -1492,7 +1483,7 @@ impl Translator<'_> {
             .flatten();
         let Some(class) = class.filter(|_| base.is_none() || applied.is_some()) else {
             // `x is T` for `x: T?`, where `T` is builtin: a null check.
-            if let Some(crate::builtins::Builtin::Type(i)) = self.s.scopes.resolved_builtin(ty) {
+            if let Some(i) = self.s.scopes.type_builtin(&self.s.library.tree, ty) {
                 let name = match crate::builtins::TYPES[i as usize] {
                     "Int" => "Int32",
                     name => name,
@@ -1596,9 +1587,9 @@ impl Translator<'_> {
             }
             _ => ty,
         };
-        let name = match self.s.scopes.resolved_builtin(base) {
-            Some(crate::builtins::Builtin::Type(i)) => crate::builtins::TYPES[i as usize],
-            _ => "",
+        let name = match self.s.scopes.type_builtin(tree, base) {
+            Some(i) => crate::builtins::TYPES[i as usize],
+            None => "",
         };
         if !matches!(name, "ValueResult" | "DoneResult") {
             return self.not_yet(node, "an is check of another type");

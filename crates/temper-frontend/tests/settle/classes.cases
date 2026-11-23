@@ -1182,3 +1182,65 @@ error 99..100: Static method f and method f of C share a name; a static and an i
 error 158..159: Static property g and getter g of C share a name; a static and an instance member need different names
 error 210..211: Static method h and property h of C share a name; a static and an instance member need different names
 error 329..330: Static method i and method i of I share a name; a static and an instance member need different names
+
+=== a static member can't share a name with an inherited instance member, as Java can't hide one (t922); an interface's static beside a class's instance member is fine, as Java allows
+interface I {
+  public x(): Int { 1 }
+  public get g(): Int { 2 }
+  public static y(): Int { 3 }
+  private p(): Int { 4 }
+}
+interface J extends I {}
+class C extends J {
+  public static x(): Int { 5 }
+  public static g: Int = 6;
+  public y(): Int { 7 }
+  public static p(): Int { 8 }
+}
+--- settled
+(Block
+  (Interface
+    ^I:0
+    (Method ^x:4 (Fn Int (Block 1)))
+    (Get ^g:5 (Fn Int (Block 2)))
+    (Method static ^y:6 (Fn Int (Block 3)))
+    (Method private ^p:7 (Fn Int (Block 4))))
+  (Interface ^J:1 I:0)
+  (Class
+    ^C:2
+    J:1
+    (Method static ^x:12 (Fn Int (Block 5)))
+    (Let static ^g:13 Int 6)
+    (Method ^y:14 (Fn Int (Block 7)))
+    (Method static ^p:15 (Fn Int (Block 8)))))
+error 185..186: Static method x of C and method x of I share a name; a static and an instance member need different names
+error 216..217: Static property g of C and getter g of I share a name; a static and an instance member need different names
+
+=== a private constructor is its class's own: a static field's initializer may call it, and another class in its module may not
+class Token {
+  public text: String;
+  private constructor(text: String) { this.text = text; }
+  public static empty: Token = new Token("");
+}
+class Other {
+  public mk(): Token { new Token("x") }
+  public static made: Token = new Token("y");
+}
+--- settled
+(Block
+  (Class
+    ^Token:0
+    (Let ^text:3 String)
+    (Constructor private
+      ^constructor:4
+      (Fn
+        (Let ^text:6 String)
+        (Block (Assign (Call . this#2 \text) text:6) #void)))
+    (Let static ^empty:5 Token:0 (Call new Token:0 "")))
+  (Class
+    ^Other:1
+    (Method ^mk:8 (Fn Token:0 (Block (Call new Token:0 "x"))))
+    (Let static ^made:9 Token:0 (Call new Token:0 "y"))))
+error 184..189: Token is not a concrete type with a public constructor
+error 231..236: Token is not a concrete type with a public constructor
+Failed: Token is not a concrete type with a public constructor

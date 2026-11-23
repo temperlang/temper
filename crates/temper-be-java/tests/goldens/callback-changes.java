@@ -20,6 +20,8 @@ public final class CallbackChangesGlobal {
 
     static final List<Integer> f;
     static int peeks;
+    static final List<Integer> t;
+    static final List<Integer> u;
     static final List<Integer> s;
 
     static String show(List<Integer> ls) {
@@ -183,71 +185,85 @@ public final class CallbackChangesGlobal {
         };
         Core.listSortInt(f, fn2);
         console.log("peeking " + show(f));
-        int t;
+        int t2;
         try {
-            t = reduceFromGrowing();
+            t2 = reduceFromGrowing();
         } catch (RuntimeException ignored) {
-            t = -1;
+            t2 = -1;
         }
-        int t2 = t;
-        int t3;
+        int t3 = t2;
+        int t4;
         try {
-            t3 = mapShrinking();
+            t4 = mapShrinking();
         } catch (RuntimeException ignored2) {
-            t3 = -1;
+            t4 = -1;
         }
-        int t4 = t3;
-        int t5;
+        int t5 = t4;
+        int t6;
         try {
-            t5 = reduceShrinking();
+            t6 = reduceShrinking();
         } catch (RuntimeException ignored3) {
-            t5 = -1;
+            t6 = -1;
         }
-        int t6 = t5;
-        int t7;
+        int t7 = t6;
+        int t8;
         try {
-            t7 = filterGrowing();
+            t8 = filterGrowing();
         } catch (RuntimeException ignored4) {
-            t7 = -1;
+            t8 = -1;
         }
-        int t8 = t7;
-        int t9;
+        int t9 = t8;
+        int t10;
         try {
-            t9 = joinGrowing();
+            t10 = joinGrowing();
         } catch (RuntimeException ignored5) {
-            t9 = -1;
+            t10 = -1;
         }
-        int t10 = t9;
-        int t11;
+        int t11 = t10;
+        int t12;
         try {
-            t11 = forEachRemoving();
+            t12 = forEachRemoving();
         } catch (RuntimeException ignored6) {
-            t11 = -1;
+            t12 = -1;
         }
-        int t12 = t11;
-        int t13;
+        int t13 = t12;
+        int t14;
         try {
-            t13 = forEachAdding();
+            t14 = forEachAdding();
         } catch (RuntimeException ignored7) {
-            t13 = -1;
+            t14 = -1;
         }
-        int t14 = t13;
-        int t15;
+        int t15 = t14;
+        int t16;
         try {
-            t15 = toListWithRemoving();
+            t16 = toListWithRemoving();
         } catch (RuntimeException ignored8) {
-            t15 = -1;
+            t16 = -1;
         }
-        List<Integer> walked = List.of(t2, t4, t6, t8, t10, t12, t14, t15);
-        console.log("walks " + walked.size());
-        s = new ArrayList<>(List.of(3, 1, 2));
+        List<Integer> walked = List.of(t3, t5, t7, t9, t11, t13, t15, t16);
+        console.log("walks " + show(walked));
+        t = new ArrayList<>(List.of(3, 1, 2));
         IntBinaryOperator fn3 = (a, z) -> {
+            t.set(0, 99);
+            return a - z;
+        };
+        Core.listSortInt(t, fn3);
+        u = new ArrayList<>(List.of(3, 1, 2));
+        IntBinaryOperator fn4 = (a, z) -> {
+            int last = Core.listRemoveLast(u);
+            u.add(last + 10);
+            return a - z;
+        };
+        Core.listSortInt(u, fn4);
+        console.log("same length " + show(t) + " " + show(u));
+        s = new ArrayList<>(List.of(3, 1, 2));
+        IntBinaryOperator fn5 = (a, z) -> {
             if (s.size() < 40) {
                 s.add(0);
             }
             return a - z;
         };
-        Core.listSortInt(s, fn3);
+        Core.listSortInt(s, fn5);
         console.log("sorted " + s.size());
     }
 }

@@ -2,6 +2,15 @@ local temper = require("temper-core")
 local int64_9223372036854775807 = temper.int64_constructor(2147483647, 4294967295)
 local int64_1 = temper.int64_constructor(1)
 
+---@type integer[]
+local digits
+
+---@param index integer
+---@return integer
+local function from(index)
+  return temper.listed_reducefromindex(digits, 100, index, function(s, n) return temper.int32_add(temper.int32_mul(s, 10), n) end)
+end
+
 local one = 1
 local big = temper.int32_mul(2147483647, one)
 local small = temper.int32_mul(-2147483648, one)
@@ -10,6 +19,10 @@ local one64 = temper.int32_toint64(one)
 local big64 = int64_9223372036854775807 * one64
 local small64 = temper.int64_unm(big64) - one64
 print(temper.int64_tostring(big64 + int64_1) .. " " .. temper.int64_tostring(small64 - int64_1) .. " " .. temper.int64_tostring(one64 - int64_1))
+local zero = temper.int32_sub(one, one)
+print(temper.int32_signum(big) .. " " .. temper.int32_signum(small) .. " " .. temper.int32_signum(zero) .. " " .. temper.int32_signum(one) .. " " .. temper.int32_signum(temper.int32_sub(zero, one)) .. " " .. temper.int32_signum(temper.int32_add(small, 1)))
+digits = { 1, 2, 3 }
+print(from(0) .. " " .. from(1) .. " " .. from(3) .. " " .. from(7))
 local inf = 1e308 * 10.0
 local nan = inf - inf
 local ninf = 0.0 - inf

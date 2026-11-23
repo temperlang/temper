@@ -19,8 +19,19 @@ namespace core_numbers {
 
 namespace core = temper::core;
 
+namespace temper_globals {
+
+static core::GlobalSlot<std::shared_ptr<std::vector<int32_t>>> digits;
+
+}  // namespace temper_globals
+
+static int32_t from(int32_t index) {
+  return core::List::reduceFromIndex(temper_globals::digits.value, 100, index, [](int32_t s, int32_t n) -> int32_t { return core::Int::add(core::Int::mul(s, 10), n); });
+}
+
 void global_init_init() {
   core::init_once([] {
+    temper_globals::digits.construct();
     std::shared_ptr<core::Console::Type> console = core::Console::get_console();
     int32_t one = 1;
     int32_t big = core::Int::mul(2147483647, one);
@@ -30,6 +41,18 @@ void global_init_init() {
     int64_t big64 = core::Int64::mul(int64_t{9223372036854775807}, one64);
     int64_t small64 = core::Int64::sub(core::Int64::neg(big64), one64);
     core::Console::log(console, std::to_string(core::Int64::add(big64, int64_t{1})) + " " + std::to_string(core::Int64::sub(small64, int64_t{1})) + " " + std::to_string(core::Int64::sub(one64, int64_t{1})));
+    int32_t zero = core::Int::sub(one, one);
+    int32_t signum = core::Int::signum(big);
+    int32_t int32 = core::Int::signum(small);
+    int32_t value = core::Int::signum(zero);
+    int32_t value2 = core::Int::signum(one);
+    int32_t value3 = core::Int::signum(core::Int::sub(zero, one));
+    core::Console::log(console, std::to_string(signum) + " " + std::to_string(int32) + " " + std::to_string(value) + " " + std::to_string(value2) + " " + std::to_string(value3) + " " + std::to_string(core::Int::signum(core::Int::add(small, 1))));
+    temper_globals::digits.value = core::List::make<int32_t>(1, 2, 3);
+    int32_t value4 = from(0);
+    int32_t value5 = from(1);
+    int32_t value6 = from(3);
+    core::Console::log(console, std::to_string(value4) + " " + std::to_string(value5) + " " + std::to_string(value6) + " " + std::to_string(from(7)));
     double inf = 1e308 * 10.0;
     double nan = inf - inf;
     double ninf = 0.0 - inf;

@@ -54,7 +54,31 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 for_each_adding().unwrap_or(-1),
                 to_list_with_removing().unwrap_or(-1),
             ]);
-            println!("walks {}", temper_core::ListedTrait::len(&walked));
+            println!("walks {}", show(walked.clone()));
+            T.set(temper_core::ListedTrait::to_list_builder(
+                &Arc::new(vec![3, 1, 2]),
+            ))
+            .unwrap_or_else(|_| panic!());
+            temper_core::listed::sort(
+                &t(),
+                &(|a: i32, z: i32| {
+                    temper_core::listed::set(&t(), 0, 99);
+                    a.wrapping_sub(z)
+                }),
+            );
+            U.set(temper_core::ListedTrait::to_list_builder(
+                &Arc::new(vec![3, 1, 2]),
+            ))
+            .unwrap_or_else(|_| panic!());
+            temper_core::listed::sort(
+                &u(),
+                &(|a: i32, z: i32| {
+                    let last = temper_core::listed::remove_last(&u());
+                    temper_core::listed::add(&u(), last.wrapping_add(10), None);
+                    a.wrapping_sub(z)
+                }),
+            );
+            println!("same length {} {}", show(t()), show(u()));
             S.set(temper_core::ListedTrait::to_list_builder(
                 &Arc::new(vec![3, 1, 2]),
             ))
@@ -240,6 +264,18 @@ pub(crate) fn to_list_with_removing() -> temper_core::Result<i32> {
             v
         }),
     )))
+}
+
+static T: OnceLock<temper_core::ListBuilder<i32>> = OnceLock::new();
+
+pub(crate) fn t() -> temper_core::ListBuilder<i32> {
+    crate::support::initialized(|| T.get()).clone()
+}
+
+static U: OnceLock<temper_core::ListBuilder<i32>> = OnceLock::new();
+
+pub(crate) fn u() -> temper_core::ListBuilder<i32> {
+    crate::support::initialized(|| U.get()).clone()
 }
 
 static S: OnceLock<temper_core::ListBuilder<i32>> = OnceLock::new();

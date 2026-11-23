@@ -10,6 +10,7 @@ uses `temper-core`#0 0.1.0 {
     connected method toString#6(radix?: Int32): String;
     connected method min#7(other: Int32): Int32;
     connected method max#8(other: Int32): Int32;
+    connected get signum#206(): Int32;
   }
   class Int64#9 {
     connected method toFloat64#10(): Float64 throws Bubble;
@@ -194,6 +195,7 @@ uses `temper-core`#0 0.1.0 {
   connected fn safeAdaptGeneratorFn#196<YIELD#197>(step: fn (SafeGenerator#184<YIELD#197>): GeneratorResult#172<YIELD#197>): SafeGenerator#184<YIELD#197>;
   connected fn awakeUpon#198<T#199>(promise: Promise#187<T#199>, generator: SafeGenerator#184<Empty#153>): Void;
   connected fn getPromiseResultSync#200<T#201>(promise: Promise#187<T#201>): T#201 throws Bubble;
+  connected fn listedReduceFromIndex#207<T#208, O#209>(listed: Listed#57<T#208>, initial: O#209, index: Int32, accumulate: fn (O#209, T#208): O#209): O#209;
 }
 
 module fixture#116 {

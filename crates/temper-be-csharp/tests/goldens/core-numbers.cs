@@ -1,10 +1,20 @@
+using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using TemperLang.Core;
 
 namespace CoreNumbers;
 
 public static class CoreNumbersGlobal
 {
+    internal static readonly IReadOnlyList<int> digits;
+
+    internal static int From(int index)
+    {
+        return Enumerable.Aggregate(Enumerable.Skip(digits, index), 100, (int s, int n) => s * 10 + n);
+    }
+
     static CoreNumbersGlobal()
     {
         ILoggingConsole console = Support.Logging.LoggingConsoleFactory.CreateConsole("CoreNumbers");
@@ -16,6 +26,10 @@ public static class CoreNumbersGlobal
         long big64 = 9223372036854775807L * one64;
         long small64 = -big64 - one64;
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{big64 + 1L} {small64 - 1L} {one64 - 1L}"));
+        int zero = one - one;
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{Math.Sign(big)} {Math.Sign(small)} {Math.Sign(zero)} {Math.Sign(one)} {Math.Sign(zero - one)} {Math.Sign(small + 1)}"));
+        digits = Listed.CreateReadOnlyList<int>(1, 2, 3);
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{From(0)} {From(1)} {From(3)} {From(7)}"));
         double inf = 1e308 * 10.0;
         double nan = inf - inf;
         double ninf = 0.0 - inf;

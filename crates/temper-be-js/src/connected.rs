@@ -47,6 +47,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::ListHelper("listedReduceFrom"),
     ),
     (
+        "core.listedReduceFromIndex()",
+        Connection::ListHelper("listedReduceFromIndex"),
+    ),
+    (
         "core.mappedToListWith()",
         Connection::Helper("mappedToListWith"),
     ),
@@ -129,6 +133,7 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Float64.toString()",
         Connection::Helper("float64ToString"),
     ),
+    ("core.type Int32.get signum()", Connection::Math("sign")),
     ("core.type Int32.max()", Connection::Math("max")),
     ("core.type Int32.min()", Connection::Math("min")),
     ("core.type Int32.toFloat64()", Connection::Translate(same)),

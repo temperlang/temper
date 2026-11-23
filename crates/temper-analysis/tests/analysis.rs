@@ -426,6 +426,19 @@ fn namespaces() {
         assert!(names.contains(&name), "{name} in {names:?}");
     }
     assert!(!names.contains(&"regexRefs"), "{names:?}");
+
+    // After `core.`, core's names, as `core.` reads them: its types and
+    // values, not its macros or internals.
+    let source = "let core = import(\"core\");\ncore.";
+    let a = analyze(source);
+    let found = a.completions(MAIN, source.len() as u32);
+    let names: Vec<&str> = found.iter().map(|c| c.name.as_str()).collect();
+    for name in ["String", "List", "console", "Int"] {
+        assert!(names.contains(&name), "{name} in {names:?}");
+    }
+    for name in ["if", "_listify", "class", "."] {
+        assert!(!names.contains(&name), "{name} in {names:?}");
+    }
 }
 
 #[test]

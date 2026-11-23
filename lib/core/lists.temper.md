@@ -143,6 +143,7 @@ Usually, don't return type `Listed`. It's usually best to return type `List`.
 the item at [index].
 
     @extension("reduceFromIndex")
+    @connected
     export let listedReduceFromIndex<T, O>(listed: Listed<T>, initial: O, index: Int, accumulate: fn (O, T): O): O {
       var result = initial;
       for (var i = index; i < listed.length; i += 1) {

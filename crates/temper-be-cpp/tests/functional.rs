@@ -1199,13 +1199,13 @@ fn run(failures: &mut Vec<String>, name: &str, exe: &Path, args: &[&str], expect
 }
 
 /// [`run`] for a case: one expected to fail ([`Case::fails`]) must fail,
-/// after logging what's expected, whatever it says on stderr.
+/// after logging what's expected, as [`kit::check_case`] checks.
 fn run_case(failures: &mut Vec<String>, name: &str, exe: &Path, args: &[&str], case: &Case) {
     if !case.fails {
         return run(failures, name, exe, args, &case.expected);
     }
     let out = Command::new(exe).args(args).output().unwrap();
-    kit::check_case(failures, name, &out, case);
+    kit::check_case(failures, "cpp", name, &out, case);
 }
 
 #[test]

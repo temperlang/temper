@@ -547,11 +547,6 @@ const UNCONNECTED: &[(&str, &str)] = &[
         "GlobalConsole.log",
         "the console is the host's, as getConsole() is connected",
     ),
-    (
-        "listedReduceFromIndex",
-        "a native, measurably faster: its body takes core settled beside each program, \
-         and runs 4 to 5 times slower; bodies_agree_with_natives keeps the two in step",
-    ),
 ];
 
 /// Each of core's bodies is `@connected`, so the interpreter's native

@@ -292,7 +292,7 @@ impl Settle {
             },
             _ => return UNKNOWN,
         };
-        let Some(Builtin::Type(i)) = self.scopes.resolved_builtin(base) else {
+        let Some(i) = self.scopes.type_builtin(tree, base) else {
             return UNKNOWN;
         };
         let class = core_class(TYPES[i as usize]);
@@ -399,10 +399,9 @@ impl Settle {
 
     /// The builtin type a name names, as `String`.
     pub(super) fn builtin_type_named(&self, node: NodeId) -> Option<u8> {
-        match self.scopes.resolved_builtin(node) {
-            Some(Builtin::Type(i)) if self.lib.tree.kind(node) == NodeKind::RightName => Some(i),
-            _ => None,
-        }
+        (self.lib.tree.kind(node) == NodeKind::RightName)
+            .then(|| self.scopes.type_builtin(&self.lib.tree, node))
+            .flatten()
     }
 
     /// Whether a node is `T.key` for a builtin type `T`, a static member.
@@ -608,15 +607,11 @@ impl Settle {
         let &(mut made) = args.first()?;
         let tree = &self.lib.tree;
         // Through an alias, as `TestResult` in `let TestResult = Pair<…>`.
-        for _ in 0..8 {
-            let alias = (self.scopes.resolved(made).map(|b| self.scopes.symbol(b)))
-                .filter(|s| s.kind == SymbolKind::TopLevel && !s.mutable)
-                .and_then(|s| s.decl)
-                .filter(|&d| {
-                    tree.kind(made) == NodeKind::RightName && tree.kind(d) == NodeKind::Let
-                })
-                .and_then(|d| core::let_parts(tree, d).2)
-                .filter(|&i| matches!(tree.kind(i), NodeKind::RightName | NodeKind::Call));
+        for _ in 0..self.scopes.symbols.len() {
+            let alias = (tree.kind(made) == NodeKind::RightName)
+                .then(|| self.scopes.resolved(made))
+                .flatten()
+                .and_then(|b| self.scopes.alias_init(tree, b));
             match alias {
                 Some(init) => made = init,
                 None => break,
@@ -635,9 +630,7 @@ impl Settle {
             },
             _ => return None,
         };
-        let Some(Builtin::Type(i)) = self.scopes.resolved_builtin(base) else {
-            return None;
-        };
+        let i = self.scopes.type_builtin(tree, base)?;
         let type_name = TYPES[i as usize];
         let class = core_class(type_name);
         let constructor =

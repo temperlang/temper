@@ -44,6 +44,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Translate(listed_reduce),
     ),
     (
+        "core.listedReduceFromIndex()",
+        Connection::Translate(listed_reduce_from_index),
+    ),
+    (
         "core.mappedToListWith()",
         Connection::Static("Mapped", "ToListWith"),
     ),
@@ -167,6 +171,10 @@ pub const TABLE: &[(&str, Connection)] = &[
     (
         "core.type Float64.toString()",
         Connection::Translate(float_to_string),
+    ),
+    (
+        "core.type Int32.get signum()",
+        Connection::Static("Math", "Sign"),
     ),
     ("core.type Int32.max()", Connection::Static("Math", "Max")),
     ("core.type Int32.min()", Connection::Static("Math", "Min")),
@@ -1130,6 +1138,19 @@ fn linq(t: &mut Translator<'_>, args: &[NodeId], method: &str) -> Result<Expr, N
 fn listed_reduce(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let exprs = t.connected_args(args)?;
     Ok(t.class("Enumerable").method("Aggregate", exprs))
+}
+
+/// `Enumerable.Aggregate(Enumerable.Skip(ls, index), initial, f)`:
+/// `reduceFromIndex`, from `index`, none past the end.
+fn listed_reduce_from_index(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let [list, initial, index, f] =
+        <[Expr; 4]>::try_from(t.connected_args(args)?).map_err(|_| NotYet {
+            what: "`reduceFromIndex` with other than a list, a value, an index, and a function"
+                .into(),
+        })?;
+    let from = t.class("Enumerable").method("Skip", vec![list, index]);
+    Ok(t.class("Enumerable")
+        .method("Aggregate", vec![from, initial, f]))
 }
 
 /// `new T()`, or `new T(n)`, its type the call's: a `StringBuilder`, a

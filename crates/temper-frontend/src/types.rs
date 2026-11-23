@@ -114,8 +114,9 @@ pub struct Types {
 /// same type arguments, as `class List<T> extends Listed<T>` in core; the
 /// types that are `MapKey`s or `Equatable`s of themselves, as `class
 /// String extends MapKey<String>`; and `StringIndex` and `NoStringIndex`,
-/// which extend `StringIndexOption`. Each extends one, as core declares.
-const BUILTIN_SUPERTYPES: [(&str, &str); 17] = [
+/// which extend `StringIndexOption`. Each extends one, as core declares
+/// (`core_capabilities.rs`'s `builtin_supertypes_are_cores` checks).
+pub const BUILTIN_SUPERTYPES: [(&str, &str); 17] = [
     ("Boolean", "Equatable"),
     ("Int64", "Equatable"),
     ("Float64", "Equatable"),

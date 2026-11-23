@@ -570,29 +570,66 @@ fn temper_core_is_reserved() {
     assert!(copy(&[], 0));
     assert!(!copy(&[("more.temper", "export let more = 1;\n")], 0));
     assert!(!copy(&[], 1));
-    // A checkout's core, edited, each file of it.
+    // A checkout's core, edited, each file of it: in `dir` under a
+    // repository with the compiler's marker if `marker`, named `name`.
     let (first, text) = temper_frontend::corelib::SOURCES[0];
     let edited = format!("{text}\nexport let edited = 1;\n");
-    let mut files: Vec<(String, &str)> = vec![
-        ("repo/Cargo.toml".into(), "[workspace]\n"),
-        (
-            "repo/crates/temper-frontend/src/corelib.rs".into(),
-            "//! Core.\n",
-        ),
-        ("repo/lib/core/config.temper.md".into(), CORE_CONFIG),
-    ];
-    for &(path, text) in temper_frontend::corelib::SOURCES {
-        let text = if path == first { edited.as_str() } else { text };
-        files.push((format!("repo/lib/core/{path}"), text));
-    }
-    let files: Vec<(&str, &str)> = files.iter().map(|(p, t)| (p.as_str(), *t)).collect();
-    let sources = Sources::memory(&files);
-    let libraries = find_libraries(&sources, "repo/lib/core");
-    let library = load_library(&sources, &libraries[0], &libraries).unwrap();
+    let checkout = |dir: &str, marker: bool, name: &str| {
+        let config = format!("# Core\n\n    export let name = \"{name}\";\n");
+        let mut files: Vec<(String, String)> = vec![
+            ("repo/Cargo.toml".into(), "[workspace]\n".into()),
+            (format!("repo/{dir}/config.temper.md"), config),
+        ];
+        if marker {
+            let marker = "repo/crates/temper-frontend/src/corelib.rs";
+            files.push((marker.into(), "//! Core.\n".into()));
+        }
+        for &(path, text) in temper_frontend::corelib::SOURCES {
+            let text = if path == first { edited.as_str() } else { text };
+            files.push((format!("repo/{dir}/{path}"), text.to_string()));
+        }
+        let files: Vec<(&str, &str)> = files
+            .iter()
+            .map(|(p, t)| (p.as_str(), t.as_str()))
+            .collect();
+        let sources = Sources::memory(&files);
+        let libraries = find_libraries(&sources, &format!("repo/{dir}"));
+        load_library(&sources, &libraries[0], &libraries)
+    };
+    let library = checkout("lib/core", true, "temper-core").unwrap();
     assert_eq!(library.files.len(), temper_frontend::corelib::SOURCES.len());
     for file in &library.files {
         assert!(library.in_core(file.base), "{}", file.path);
     }
+    // Not without the compiler's marker, nor anywhere but `lib/core`.
+    let reserved = "temper-core is reserved for Temper's core library";
+    for (dir, marker) in [
+        ("lib/core", false),
+        ("lib/core2", true),
+        ("libs/core", true),
+    ] {
+        let err = checkout(dir, marker, "temper-core").err();
+        assert!(err.is_some_and(|e| e.contains(reserved)), "{dir}");
+    }
+    // Another library there isn't core: its edited file has no powers.
+    let library = checkout("lib/core", true, "other").unwrap();
+    let edited_file = (library.files.iter())
+        .find(|f| f.path.ends_with(first))
+        .unwrap();
+    assert!(!library.in_core(edited_file.base));
+    // A file whose text is exactly one of core's is core's in any
+    // library, as tests and editors settle core's files from other
+    // paths: it can do only what core's own text does. The library's
+    // other files have no powers.
+    let mut library = temper_frontend::library::Library::new();
+    library.add_file("other/copy.temper.md", text, SourceKind::Markdown);
+    library.add_file(
+        "other/mine.temper",
+        "export let xs = 1;\n",
+        SourceKind::Standalone,
+    );
+    assert!(library.in_core(library.files[0].base));
+    assert!(!library.in_core(library.files[1].base));
 }
 
 /// `std` is std's name, as `temper-core` is core's: another library of

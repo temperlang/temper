@@ -39,6 +39,9 @@ docs/inconsistencies.md. It's counted as known, not fatal, and the
 known blocks are listed by id; once it agrees, remove the comment and
 update the entry.
 
+First it judges a few examples whose judgments are known (`SELF_TEST`),
+so that a change to these rules can't pass every block, or none.
+
 Exits with 1 if a marked block disagrees with its marker, a known block
 agrees, or a known comment is unattached or names a missing entry.
 PATH, files or folders, defaults to docs/, without docs/internals/ and
@@ -131,6 +134,91 @@ def build(temper: Path, body: str) -> tuple[bool, str]:
         return r.returncode == 0 and " error" not in out and not ABRUPT.search(out), out
 
 
+def judge(temper: Path, marker: str, body: str, value: str) -> tuple[bool, str]:
+    """Whether a block builds and runs as its marker says, and its output,
+    or why not."""
+    want_value = expected_value(value)
+    ok, out = build(temper, body if want_value is None else with_value(body))
+    agrees = ok == (marker != "error")
+    want_logs = expected_logs(body) + ([want_value] if want_value is not None else [])
+    if agrees and ok and marker == "ok" and want_logs and logged(out) != want_logs:
+        agrees = False
+        got = logged(out)
+        out = f"logs {got!r}, not {want_logs!r}" if want_value is None or got[:-1] != want_logs[:-1] \
+            else f"logs {got[-1]!r} as its value, not {want_value!r}"
+    warned = [ln for ln in out.splitlines() if ": warn: " in ln and DIAGNOSTIC.search(ln)]
+    if agrees and marker == "ok" and warned:
+        agrees = False
+        out = f"warns: {warned[0].replace(tmp_prefix(out), '')}"
+    return agrees, out
+
+
+# Examples whose judgment is known, each with whether it agrees with its
+# marker, which `self_test` checks before any page, so that a change here
+# can't pass every block, or none.
+SELF_TEST = """
+```temper
+let x = 1 + 1;
+x
+// ✅ 2
+```
+
+```temper
+console.log("hi"); //!outputs "hi"
+// ✅
+```
+
+```temper
+let x: Int = "s";
+// ❌
+```
+
+```temper
+let x: Int = "s";
+// ✅
+```
+
+```temper
+let x = 1;
+// ❌
+```
+
+```temper
+1 + 1
+// ✅ 3
+```
+
+```temper
+console.log("hi"); //!outputs "bye"
+// ✅
+```
+
+```temper
+let f(): Int { panic() }
+f();
+// ❌
+```
+"""
+SELF_TEST_AGREES = [True, True, True, False, False, False, False, True]
+
+
+def self_test(temper: Path) -> list[str]:
+    """Problems judging [`SELF_TEST`]'s examples, which mean this script's
+    rules have broken."""
+    with tempfile.TemporaryDirectory() as tmp:
+        page = Path(tmp) / "self-test.md"
+        page.write_text(SELF_TEST)
+        found = list(blocks(page))
+    if len(found) != len(SELF_TEST_AGREES):
+        return [f"self-test: {len(found)} examples found, not {len(SELF_TEST_AGREES)}"]
+    wrong = []
+    for (line, marker, body, _, value), want in zip(found, SELF_TEST_AGREES):
+        agrees, out = judge(temper, marker, body, value)
+        if agrees != want:
+            wrong.append(f"self-test:{line}: judged {'as' if agrees else 'not as'} marked ({marker}): {out[:200]}")
+    return wrong
+
+
 def tmp_prefix(out: str) -> str:
     m = re.search(r"(/\S*/)example\.temper", out)
     return m.group(1) if m else "\0"
@@ -168,7 +256,7 @@ def main() -> int:
         pages += [p for p in found if args.paths or not {"internals", "release-notes"} & set(rel(p).parts[:2])]
     entries = set(re.findall(r"^### (I\d+):", (ROOT / "docs/inconsistencies.md").read_text(), re.M))
     counts: dict[str, int] = {}
-    wrong = []
+    wrong = self_test(temper)
     known_at: dict[str, list[str]] = {}
     for page in pages:
         found = list(blocks(page))
@@ -184,20 +272,7 @@ def main() -> int:
             if marker == "skip":
                 counts["skipped"] = counts.get("skipped", 0) + 1
                 continue
-            want_value = expected_value(value)
-            ok, out = build(temper, body if want_value is None else with_value(body))
-            want_ok = marker != "error"
-            agrees = ok == want_ok
-            want_logs = expected_logs(body) + ([want_value] if want_value is not None else [])
-            if agrees and ok and marker == "ok" and want_logs and logged(out) != want_logs:
-                agrees = False
-                got = logged(out)
-                out = f"logs {got!r}, not {want_logs!r}" if want_value is None or got[:-1] != want_logs[:-1] \
-                    else f"logs {got[-1]!r} as its value, not {want_value!r}"
-            warned = [ln for ln in out.splitlines() if ": warn: " in ln and DIAGNOSTIC.search(ln)]
-            if agrees and marker == "ok" and warned:
-                agrees = False
-                out = f"warns: {warned[0].replace(tmp_prefix(out), '')}"
+            agrees, out = judge(temper, marker, body, value)
             if ids:
                 tag = " ".join(ids)
                 if agrees:

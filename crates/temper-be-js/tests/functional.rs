@@ -103,6 +103,7 @@ fn cases() -> Vec<Case> {
             no_connected: false,
             tests: None,
             fails: false,
+            panic: None,
         });
     }
     cases
@@ -914,7 +915,7 @@ fn runs() {
                 .current_dir(&out)
                 .output()
                 .unwrap();
-            kit::check_case(&mut failures, &case.key, &run, &case);
+            kit::check_case(&mut failures, "js", &case.key, &run, &case);
             // Ill-typed code runs as written, which tsc would reject.
             if kit::ill_typed(&case) {
                 continue;

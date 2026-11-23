@@ -8,6 +8,7 @@ from temper_core import (
     int_mul as _int_mul,
     int_sub as _int_sub,
     list_builder_add_all as _list_builder_add_all,
+    list_builder_set as _list_builder_set,
     list_builder_sort as _list_builder_sort,
     list_builder_splice as _list_builder_splice,
     list_filter as _list_filter,
@@ -203,15 +204,35 @@ try:
 except Exception:
     _t_7 = -1
 _walked: _Sequence[int] = (_t_0, _t_1, _t_2, _t_3, _t_4, _t_5, _t_6, _t_7)
-_console.log(f'walks {len(_walked)}')
-_s: _MutableSequence[int] = list((3, 1, 2))
+_console.log(f'walks {_show(_walked)}')
+_t: _MutableSequence[int] = list((3, 1, 2))
 
 
 def _fn3(a: int, z: int, /) -> int:
+    _list_builder_set(_t, 0, 99)
+    return _int_sub(a, z)
+
+
+_list_builder_sort(_cast('list[_Any]', _t), _fn3)
+_u: _MutableSequence[int] = list((3, 1, 2))
+
+
+def _fn4(a: int, z: int, /) -> int:
+    last = _u.pop()
+    _u.append(_int_add(last, 10))
+    return _int_sub(a, z)
+
+
+_list_builder_sort(_cast('list[_Any]', _u), _fn4)
+_console.log(f'same length {_show(_t)} {_show(_u)}')
+_s: _MutableSequence[int] = list((3, 1, 2))
+
+
+def _fn5(a: int, z: int, /) -> int:
     if len(_s) < 40:
         _s.append(0)
     return _int_sub(a, z)
 
 
-_list_builder_sort(_cast('list[_Any]', _s), _fn3)
+_list_builder_sort(_cast('list[_Any]', _s), _fn5)
 _console.log(f'sorted {len(_s)}')

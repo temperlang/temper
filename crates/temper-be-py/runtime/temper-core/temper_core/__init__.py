@@ -17,6 +17,7 @@ from collections import deque
 from contextlib import contextmanager
 from concurrent.futures import Future, ThreadPoolExecutor
 from functools import cmp_to_key, reduce
+from itertools import islice
 from logging import getLogger, INFO
 from math import copysign, inf, isinf, isnan, nan
 import threading
@@ -446,6 +447,11 @@ def int_negate(a: int) -> int:
     if a <= -0x8000_0000:
         return int_clamp(-a)
     return -a
+
+
+def int_signum(a: int) -> int:
+    "Implements connected getter core.type Int32.signum: -1, 0, or 1."
+    return (a > 0) - (a < 0)
 
 
 def int_sub(a: int, b: int) -> int:
@@ -899,15 +905,14 @@ _lbsoT = TypeVar("_lbsoT")
 def list_builder_sort(
     lst: List[_lbsoT], compare: Callable[[_lbsoT, _lbsoT], int]
 ) -> None:
-    """Sorts in place. A comparison that changes the builder panics, as
-    `panic()` raises, past any `orelse`, rather than raising the
-    `ValueError` that Python's sort does, which an `orelse` would catch."""
-    try:
-        lst.sort(key=cmp_to_key(compare))
-    except ValueError as error:
-        if str(error) != "list modified during sort":
-            raise
-        raise BaseException("ListBuilder changed during sort") from error
+    """Sorts a copy, as other backends do, so a comparison may read the
+    builder and change it: the sorted copy replaces a change that keeps
+    its length, and one that changes its length panics, as `panic()`
+    raises, past any `orelse`."""
+    items = sorted(lst, key=cmp_to_key(compare))
+    if len(lst) != len(items):
+        raise BaseException("ListBuilder changed length during sort")
+    lst[:] = items
 
 
 _lbmdT = TypeVar("_lbmdT")
@@ -955,6 +960,16 @@ def listed_reduce_from(
     lst: Sequence[_lrfT], initial: _lrfU, accumulate: Callable[[_lrfU, _lrfT], _lrfU]
 ) -> _lrfU:
     return reduce(accumulate, lst, initial)
+
+
+def listed_reduce_from_index(
+    lst: Sequence[_lrfT],
+    initial: _lrfU,
+    index: int,
+    accumulate: Callable[[_lrfU, _lrfT], _lrfU],
+) -> _lrfU:
+    "Implements core.listedReduceFromIndex: from `index`, none past the end."
+    return reduce(accumulate, islice(lst, index, None), initial)
 
 
 def listed_sorted(lst: Sequence[T], compare: Callable[[T, T], int]) -> Sequence[T]:

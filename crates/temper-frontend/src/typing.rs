@@ -731,8 +731,8 @@ impl Settle {
     /// Whether a type expression is a builtin type's bare name that may
     /// be generic, as `List`: not final, `AnyValue`, or `Never`.
     fn bare_builtin(&mut self, node: NodeId) -> bool {
-        let Some(Builtin::Type(i)) = (self.lib.tree.kind(node) == NodeKind::RightName)
-            .then(|| self.scopes.resolved_builtin(node))
+        let Some(i) = (self.lib.tree.kind(node) == NodeKind::RightName)
+            .then(|| self.scopes.type_builtin(&self.lib.tree, node))
             .flatten()
         else {
             return false;
@@ -750,6 +750,7 @@ impl Settle {
                 let Some(b) = self.scopes.resolved(node) else {
                     return UNKNOWN;
                 };
+                let b = self.scopes.type_symbol(&self.lib.tree, b);
                 let symbol = self.scopes.symbol(b);
                 match symbol.kind {
                     // A bare `Never`, an error ([`Settle::check_bare_never`]),
@@ -867,6 +868,7 @@ impl Settle {
         let Some(b) = self.scopes.resolved(base) else {
             return UNKNOWN;
         };
+        let b = self.scopes.type_symbol(&self.lib.tree, b);
         let base = match self.scopes.symbol(b).kind {
             SymbolKind::Builtin(Builtin::Type(i)) => {
                 let base = self.typing.types.builtin(i);
@@ -875,14 +877,7 @@ impl Settle {
             }
             _ => {
                 let Some(class) = self.type_decl(b) else {
-                    // An alias of a builtin generic type, as `let LL =
-                    // Listed;`, given arguments.
-                    let base = self.alias_type(b);
-                    if !matches!(self.typing.types.get(base), TypeData::Builtin(_)) {
-                        return UNKNOWN;
-                    }
-                    let args = args.iter().map(|&a| self.eval_type(a)).collect();
-                    return self.typing.types.apply_builtin(base, args);
+                    return UNKNOWN;
                 };
                 if core::type_params(&self.lib.tree, class).len() != args.len() {
                     return UNKNOWN;
@@ -1750,15 +1745,21 @@ impl Settle {
     /// Never`: only `Never<T>` is a type ([`Types::never_of`]), which
     /// says what its uses translate to.
     fn check_bare_never(&mut self, node: NodeId) {
-        let Some(Builtin::Type(i)) = self.scopes.resolved_builtin(node) else {
+        let tree = &self.lib.tree;
+        let Some(i) = self.scopes.type_builtin(tree, node) else {
             return;
         };
-        let tree = &self.lib.tree;
+        // An alias of it, as `let N = Never` or `let { Never } =
+        // import("core")` make, is checked where it's used.
         let applied = (self.typing.parent(node)).is_some_and(|p| {
             tree.kind(p) == NodeKind::Call
                 && tree.children(p).get(1) == Some(&node)
                 && (self.scopes.resolved_builtin(tree.children(p)[0]))
                     == Some(Builtin::Function(Function::Angle))
+                || tree.kind(p) == NodeKind::Let
+                    && (self.scopes.resolved(core::let_parts(tree, p).0))
+                        .and_then(|b| self.scopes.alias_init(tree, b))
+                        == Some(node)
         });
         if self.typing.types.builtin(i) == NEVER && !applied {
             let span = self.lib.tree.span(node);
@@ -1790,9 +1791,8 @@ impl Settle {
             return;
         }
         let args = args.to_vec();
-        let formals = match self.scopes.resolved_builtin(base) {
-            Some(Builtin::Type(i)) => self.core_type_formals(crate::builtins::TYPES[i as usize]),
-            Some(_) => None,
+        let formals = match self.scopes.type_builtin(tree, base) {
+            Some(i) => self.core_type_formals(crate::builtins::TYPES[i as usize]),
             None => (self.scopes.resolved(base))
                 .and_then(|b| self.type_decl(b))
                 .map(|class| self.own_formals(class)),
@@ -1835,8 +1835,8 @@ impl Settle {
     /// or `x is Void`, or is a type value, other rules apply.
     fn check_void_type(&mut self, node: NodeId) {
         // `Void`, or an alias of it.
-        let void = match self.scopes.resolved_builtin(node) {
-            Some(Builtin::Type(i)) => self.typing.types.builtin(i) == VOID,
+        let void = match self.scopes.type_builtin(&self.lib.tree, node) {
+            Some(i) => self.typing.types.builtin(i) == VOID,
             _ => {
                 (self.lib.tree.kind(node) == NodeKind::RightName)
                     && (self.scopes.resolved(node)).is_some_and(|b| self.alias_init(b).is_some())
@@ -1859,8 +1859,8 @@ impl Settle {
                     (Some(Builtin::Function(Function::Nullable)), _) => true,
                     (Some(Builtin::Function(Function::Angle)), [_, base, ..]) => {
                         *base != node
-                            && !matches!(self.scopes.resolved_builtin(*base),
-                                Some(Builtin::Type(b)) if self.typing.types.builtin(b) == NEVER)
+                            && !matches!(self.scopes.type_builtin(tree, *base),
+                                Some(b) if self.typing.types.builtin(b) == NEVER)
                     }
                     // A call's type argument, as `\typeArg Void` in `r<Void>(x)`.
                     _ => (children.windows(2)).any(|pair| {
@@ -2153,7 +2153,7 @@ pub(crate) fn never_returns(
     }
     is(out, Function::Angle)
         && matches!(
-            scopes.resolved_builtin(tree.children(out)[1]),
-            Some(Builtin::Type(i)) if crate::builtins::TYPES[i as usize] == "Never"
+            scopes.type_builtin(tree, tree.children(out)[1]),
+            Some(i) if crate::builtins::TYPES[i as usize] == "Never"
         )
 }

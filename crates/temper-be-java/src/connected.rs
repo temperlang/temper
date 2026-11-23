@@ -49,6 +49,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Translate(listed_reduce_from),
     ),
     (
+        "core.listedReduceFromIndex()",
+        Connection::Translate(listed_reduce_from_index),
+    ),
+    (
         "core.mappedToListWith()",
         Connection::Translate(mapped_to_list_with),
     ),
@@ -170,6 +174,10 @@ pub const TABLE: &[(&str, Connection)] = &[
     (
         "core.type Float64.toString()",
         Connection::Static("Core", "float64ToString"),
+    ),
+    (
+        "core.type Int32.get signum()",
+        Connection::Static("Integer", "signum"),
     ),
     ("core.type Int32.max()", Connection::Static("Math", "max")),
     ("core.type Int32.min()", Connection::Static("Math", "min")),
@@ -1017,6 +1025,30 @@ fn listed_reduce_from(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, N
             what: "`reduceFrom` with other than a list, a value, and a function".into(),
         });
     };
+    reduce_from(t, *ls, None, *initial, *f)
+}
+
+/// `reduceFromIndex` as `reduceFrom` of `Core.listFrom(ls, index)`, the
+/// items from `index`, none past the end.
+fn listed_reduce_from_index(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let [ls, initial, index, f] = args else {
+        return Err(NotYet {
+            what: "`reduceFromIndex` with other than a list, a value, an index, and a function"
+                .into(),
+        });
+    };
+    reduce_from(t, *ls, Some(*index), *initial, *f)
+}
+
+/// [`listed_reduce_from`], of the items from `index` if given.
+fn reduce_from(
+    t: &mut Translator<'_>,
+    ls: NodeId,
+    index: Option<NodeId>,
+    initial: NodeId,
+    f: NodeId,
+) -> Result<Expr, NotYet> {
+    let (ls, initial, f) = (&ls, &initial, &f);
     let item = kind_of(t, item_of(t, *ls));
     let to = kind_of(t, t.node_ty(*initial));
     if item == "Obj" && to == "Obj" && item_of(t, *ls) != t.node_ty(*initial) {
@@ -1031,7 +1063,11 @@ fn listed_reduce_from(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, N
         ("Bool", true) => Some("BooleanBiPredicate"),
         _ => None,
     };
-    let list = t.expr(*ls)?;
+    let mut list = t.expr(*ls)?;
+    if let Some(index) = index {
+        let index = t.expr(index)?;
+        list = core_call(t, "listFrom".into(), vec![list, index]);
+    }
     let initial = t.expr(*initial)?;
     let f = fn_arg(t, *f, want)?;
     Ok(core_call(

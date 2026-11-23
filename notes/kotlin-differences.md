@@ -896,16 +896,22 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   such a class elsewhere in its module (Kelpto's `SafeHtml`, made by a
   top-level `sanitizeTree`) must move that into the class.
   Test: settle/classes.cases, "private constructors are their class's
-  own"; core_capabilities.rs.
+  own", "a private constructor is its class's own"; core_capabilities.rs
+  (from another module, by name, namespace, and alias, and by an object
+  literal).
 
 - **A static and an instance member of one name** (2026-11-23, t922)
   are an error: "Static property x and property x of C share a name;
   a static and an instance member need different names", at the later
   one, for properties, methods, getters, and setters, in classes and
-  interfaces. Kotlin groups members by kind and doesn't check, and its
-  Java output renames the static (`x2`).
+  interfaces. A static can't share an inherited instance member's name
+  either ("Static method x of C and method x of I share a name"), as
+  Java's static can't hide one; an interface's static isn't inherited,
+  so a class's instance member may share its name, as Java allows.
+  Kotlin groups members by kind and doesn't check, and its Java output
+  renames the static (`x2`).
   Test: settle/classes.cases, "a static member and an instance member
-  can't share a name".
+  can't share a name", "… with an inherited instance member".
 
 - **`Console`, `getConsole`, `Equatable` and `Null` are nameable**
   (2026-11-23), as Kotlin's core, the prelude, made them; Temper refused
@@ -1017,7 +1023,10 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   builder. A `sort` whose comparison adds or removes values panics on
   every backend (decided 2026-11-19), where Kotlin's interpreter, C#,
   JS, and Lua drop or keep what it added, and Java and Python throw
-  exceptions that `orelse` catches; Rust and C++ sort a copy. Which
+  exceptions that `orelse` catches. Every backend sorts a copy, so a
+  comparison that changes the builder but not its length, as by setting
+  an item, has its change replaced by the sorted copy (2026-11-23; Python
+  failed with an `IndexError`, and Java and Lua kept the change). Which
   values other callbacks see when they change what they walk is open
   ([#671](https://github.com/temperlang/temper/issues/671)): the
   interpreter, Rust, and C++ walk a snapshot, Python and Java the live

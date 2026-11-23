@@ -5,6 +5,10 @@ local f
 ---@type integer
 local peeks
 ---@type integer[]
+local t
+---@type integer[]
+local u
+---@type integer[]
 local s
 
 ---@param ls integer[]
@@ -195,76 +199,100 @@ end
 temper.listbuilder_sort(f, fn2)
 print("peeking " .. show(f))
 ---@type integer
-local t
-if not temper.pcall(function()
-  t = reduceFromGrowing()
-end) then
-  t = -1
-end
----@type integer
 local t_1
 if not temper.pcall(function()
-  t_1 = mapShrinking()
+  t_1 = reduceFromGrowing()
 end) then
   t_1 = -1
 end
 ---@type integer
 local t_2
 if not temper.pcall(function()
-  t_2 = reduceShrinking()
+  t_2 = mapShrinking()
 end) then
   t_2 = -1
 end
 ---@type integer
 local t_3
 if not temper.pcall(function()
-  t_3 = filterGrowing()
+  t_3 = reduceShrinking()
 end) then
   t_3 = -1
 end
 ---@type integer
 local t_4
 if not temper.pcall(function()
-  t_4 = joinGrowing()
+  t_4 = filterGrowing()
 end) then
   t_4 = -1
 end
 ---@type integer
 local t_5
 if not temper.pcall(function()
-  t_5 = forEachRemoving()
+  t_5 = joinGrowing()
 end) then
   t_5 = -1
 end
 ---@type integer
 local t_6
 if not temper.pcall(function()
-  t_6 = forEachAdding()
+  t_6 = forEachRemoving()
 end) then
   t_6 = -1
 end
 ---@type integer
 local t_7
 if not temper.pcall(function()
-  t_7 = toListWithRemoving()
+  t_7 = forEachAdding()
 end) then
   t_7 = -1
 end
-local walked = { t, t_1, t_2, t_3, t_4, t_5, t_6, t_7 }
-print("walks " .. temper.list_length(walked))
-s = temper.list_tolistbuilder({ 3, 1, 2 })
+---@type integer
+local t_8
+if not temper.pcall(function()
+  t_8 = toListWithRemoving()
+end) then
+  t_8 = -1
+end
+local walked = { t_1, t_2, t_3, t_4, t_5, t_6, t_7, t_8 }
+print("walks " .. show(walked))
+t = temper.list_tolistbuilder({ 3, 1, 2 })
 
 ---@param a integer
 ---@param z integer
 ---@return integer
 local function fn3(a, z)
+  temper.listbuilder_set(t, 0, 99)
+  return temper.int32_sub(a, z)
+end
+
+temper.listbuilder_sort(t, fn3)
+u = temper.list_tolistbuilder({ 3, 1, 2 })
+
+---@param a integer
+---@param z integer
+---@return integer
+local function fn4(a, z)
+  local last = temper.listbuilder_removelast(u)
+  temper.listbuilder_add(u, temper.int32_add(last, 10))
+  return temper.int32_sub(a, z)
+end
+
+temper.listbuilder_sort(u, fn4)
+print("same length " .. show(t) .. " " .. show(u))
+s = temper.list_tolistbuilder({ 3, 1, 2 })
+
+---@param a integer
+---@param z integer
+---@return integer
+local function fn5(a, z)
   if temper.listbuilder_length(s) < 40 then
     temper.listbuilder_add(s, 0)
   end
   return temper.int32_sub(a, z)
 end
 
-temper.listbuilder_sort(s, fn3)
+temper.listbuilder_sort(s, fn5)
 print("sorted " .. temper.listbuilder_length(s))
 
 return {}

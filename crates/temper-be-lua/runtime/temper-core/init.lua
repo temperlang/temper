@@ -1018,6 +1018,11 @@ do
     function temper.listed_reducefrom(list, initial, accumulate)
         return temper_reduce_from_index(list, initial, 1, accumulate)
     end
+
+    -- From the 0-based `index`, none past the end.
+    function temper.listed_reducefromindex(list, initial, index, accumulate)
+        return temper_reduce_from_index(list, initial, index + 1, accumulate)
+    end
 end
 
 function temper.listed_slice(list, start, stop)
@@ -1251,16 +1256,23 @@ end
 
 -- Defer loading powersort, because it also loads temper-core.
 local powersort
--- A comparison that changes the builder's length panics, as Java's and
--- Python's sorts fail, rather than leaving what it added among the items.
+-- Sorts a copy, as other backends do, so a comparison may read the
+-- builder and change it: the sorted copy replaces a change that keeps its
+-- length, and one that changes its length panics.
 function temper.listbuilder_sort(list, compare)
     if powersort == nil then
         powersort = require("temper-core/powersort").powersort
     end
-    local len = #list
-    powersort(list, compare)
-    if #list ~= len then
+    local items = {}
+    for i = 1, #list do
+        items[i] = list[i]
+    end
+    powersort(items, compare)
+    if #list ~= #items then
         error("ListBuilder changed length during sort")
+    end
+    for i = 1, #items do
+        list[i] = items[i]
     end
 end
 
@@ -1348,6 +1360,16 @@ function temper.int64_toint32(n)
         return result
     end
     return temper.bubble("core.type Int64.toInt32() failed")
+end
+
+-- -1, 0, or 1, by `n`'s sign.
+function temper.int32_signum(n)
+    if n > 0 then
+        return 1
+    elseif n < 0 then
+        return -1
+    end
+    return 0
 end
 
 function temper.int32_tofloat64(n)

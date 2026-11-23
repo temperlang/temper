@@ -1,4 +1,4 @@
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 
 pub(crate) fn init() -> temper_core::Result<()> {
     static INIT_ONCE: OnceLock<temper_core::Result<()>> = OnceLock::new();
@@ -25,6 +25,20 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 small64.wrapping_sub(1),
                 one64.wrapping_sub(1)
             );
+            let zero = one.wrapping_sub(one);
+            println!(
+                "{} {} {} {} {} {}",
+                big.signum(),
+                small.signum(),
+                zero.signum(),
+                one.signum(),
+                zero.wrapping_sub(one).signum(),
+                small.wrapping_add(1).signum()
+            );
+            DIGITS
+                .set(Arc::new(vec![1, 2, 3]))
+                .unwrap_or_else(|_| panic!());
+            println!("{} {} {} {}", from(0), from(1), from(3), from(7));
             let inf = 1e308 * 10.0;
             let nan = inf - inf;
             let ninf = 0.0 - inf;
@@ -62,4 +76,19 @@ pub(crate) fn init() -> temper_core::Result<()> {
             Ok(())
         })
         .clone()
+}
+
+static DIGITS: OnceLock<temper_core::List<i32>> = OnceLock::new();
+
+pub(crate) fn digits() -> temper_core::List<i32> {
+    crate::support::initialized(|| DIGITS.get()).clone()
+}
+
+pub(crate) fn from(index: i32) -> i32 {
+    temper_core::listed::reduce_from_index(
+        &digits(),
+        100,
+        index,
+        &(|s: i32, n: i32| s.wrapping_mul(10).wrapping_add(n)),
+    )
 }

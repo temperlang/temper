@@ -318,8 +318,10 @@ fn the_fixture_matches_core_temper() {
     // The old key table's 48 members, `getConsole`, the generic types'
     // members without function types (subset B), those with them
     // (function values), and the core types and members that the
-    // functional tests use next (core's fixture gaps), and coroutines'.
-    assert_eq!(fixture.len(), 128);
+    // functional tests use next (core's fixture gaps), coroutines', and
+    // `Int32.signum` and `listedReduceFromIndex`, which core writes in
+    // Temper.
+    assert_eq!(fixture.len(), 130);
     let core = core_members();
     let mut names: Vec<&String> = fixture.keys().collect();
     names.sort();

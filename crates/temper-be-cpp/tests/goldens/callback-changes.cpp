@@ -23,6 +23,8 @@ namespace temper_globals {
 
 static core::GlobalSlot<std::shared_ptr<std::vector<int32_t>>> f;
 static core::GlobalSlot<int32_t> peeks;
+static core::GlobalSlot<std::shared_ptr<std::vector<int32_t>>> t;
+static core::GlobalSlot<std::shared_ptr<std::vector<int32_t>>> u;
 static core::GlobalSlot<std::shared_ptr<std::vector<int32_t>>> s;
 
 }  // namespace temper_globals
@@ -163,6 +165,8 @@ void global_init_init() {
   core::init_once([] {
     temper_globals::f.construct();
     temper_globals::peeks.construct();
+    temper_globals::t.construct();
+    temper_globals::u.construct();
     temper_globals::s.construct();
     std::shared_ptr<core::Console::Type> console = core::Console::get_console();
     std::shared_ptr<std::vector<int32_t>> b = core::List::toListBuilder<int32_t>(core::List::make<int32_t>(1, 2));
@@ -244,15 +248,30 @@ void global_init_init() {
       value17 = -1;
     }
     std::shared_ptr<std::vector<int32_t>> walked = core::List::make<int32_t>(int32, value6, value8, value10, value12, value14, value16, value17);
-    core::Console::log(console, "walks " + std::to_string(core::List::length<int32_t>(walked)));
-    temper_globals::s.value = core::List::toListBuilder<int32_t>(core::List::make<int32_t>(3, 1, 2));
+    core::Console::log(console, "walks " + callback_changes::show(walked));
+    temper_globals::t.value = core::List::toListBuilder<int32_t>(core::List::make<int32_t>(3, 1, 2));
     auto fn3 = [](int32_t a, int32_t z) -> int32_t {
+      core::ListBuilder::set<int32_t>(temper_globals::t.value, 0, 99);
+      return core::Int::sub(a, z);
+    };
+    core::ListBuilder::sort(temper_globals::t.value, fn3);
+    temper_globals::u.value = core::List::toListBuilder<int32_t>(core::List::make<int32_t>(3, 1, 2));
+    auto fn4 = [](int32_t a, int32_t z) -> int32_t {
+      int32_t last = core::ListBuilder::removeLast<int32_t>(temper_globals::u.value);
+      core::ListBuilder::add<int32_t>(temper_globals::u.value, core::Int::add(last, 10));
+      return core::Int::sub(a, z);
+    };
+    core::ListBuilder::sort(temper_globals::u.value, fn4);
+    core::Str value18 = callback_changes::show(temper_globals::t.value);
+    core::Console::log(console, "same length " + value18 + " " + callback_changes::show(temper_globals::u.value));
+    temper_globals::s.value = core::List::toListBuilder<int32_t>(core::List::make<int32_t>(3, 1, 2));
+    auto fn5 = [](int32_t a, int32_t z) -> int32_t {
       if (core::List::length<int32_t>(temper_globals::s.value) < 40) {
         core::ListBuilder::add<int32_t>(temper_globals::s.value, 0);
       }
       return core::Int::sub(a, z);
     };
-    core::ListBuilder::sort(temper_globals::s.value, fn3);
+    core::ListBuilder::sort(temper_globals::s.value, fn5);
     core::Console::log(console, "sorted " + std::to_string(core::List::length<int32_t>(temper_globals::s.value)));
   });
 }

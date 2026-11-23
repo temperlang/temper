@@ -876,19 +876,26 @@ doesn't report.
 An alias is an immutable `let`, top-level or local, without a declared
 type, whose initializer is a type's name, a type given arguments, a
 nullable type, or a function type: `let D = C`, `let U = T` for a type
-parameter `T`, `let M = Map<String, Int>`. One rule says what a name
-denotes as a type, `Settle::alias_init` (classes.rs): `type_decl`
-follows aliases to a class's declaration, and `eval_type` evaluates an
-alias's initializer (once, against cycles). Every check reads types
-through those two, so an alias is checked exactly as the type it
-names, wherever it's used: `new D()` (a private constructor, an
-interface, a type parameter: "Cannot instantiate type parameter T"),
-`extends`, `is` and `as` (including the type-parameter and connected
-rules), annotations (`Void` as a value's type), type arguments, and
-bounds. `core_capabilities.rs` checks each core type's capabilities
-named directly, by a top-level alias, and by a local one. A `var`, or
-a `let` with a declared type, is a value, not an alias. tmpl leaves
-aliases out, local ones too; typing has read them where they're used.
+parameter `T`, `let M = Map<String, Int>`. Imports make aliases too:
+`let { C } = import(…)` declares one, and a namespace's `ns.C` becomes
+the exporting module's name, resolved before anything reads it as a
+type (in `new` and `extends` too). One path says what a name denotes as
+a type, in `Scopes` (scope.rs): `alias_init` finds an alias's
+initializer, and `type_symbol` follows aliases of names to the symbol
+they end at, a builtin type, a class, or a type parameter; `type_decl`,
+`type_builtin`, and typing's `eval_type` read names through it. So every
+rule sees a type the same however it's named, by name, imported,
+through a namespace, or by an alias, top-level or local: `new D()` (an
+interface, a private constructor, a type parameter: "Cannot instantiate
+type parameter T"), `extends` (concrete and sealed types), `is` and `as`
+(including the type-parameter and connected rules), annotations (`Void`
+as a value's type, a bare `Never`), static members, type arguments, and
+bounds (`let M = Map; M<Boolean, Int>` is refused). `core_capabilities.rs`
+checks each core type's capabilities through all five forms, and a
+library's sealed, private-constructor, and bounded types through the
+four another module has. A `var`, or a `let` with a declared type, is a
+value, not an alias. tmpl leaves aliases out, local ones too; typing has
+read them where they're used.
 
 ## Joins, and sealed types and `when`
 

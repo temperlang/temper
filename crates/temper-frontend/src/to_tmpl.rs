@@ -1224,7 +1224,7 @@ impl Translator<'_> {
         let top_levels: Vec<FNode> = (top_levels.iter().copied())
             .filter(|&n| {
                 self.kind(n) != NodeKind::Let
-                    || !(self.is_import(n) || m.test_cases.contains(&n) || self.is_type_alias(n, 0))
+                    || !(self.is_import(n) || m.test_cases.contains(&n) || self.is_type_alias(n))
             })
             .collect();
         // Declare first, so a body may use what's declared after it.
@@ -1766,7 +1766,7 @@ impl Translator<'_> {
             // A value or a name read alone does nothing, nor does a local
             // type alias, which typing reads where it's used.
             NodeKind::Value | NodeKind::RightName => return Ok(()),
-            NodeKind::Let if self.is_type_alias(node, 0) => return Ok(()),
+            NodeKind::Let if self.is_type_alias(node) => return Ok(()),
             // `ignore(x)` is `x` alone, its value dropped.
             NodeKind::Call
                 if children.len() == 2
@@ -2400,47 +2400,34 @@ impl Translator<'_> {
 
     /// Whether a `let`, top-level or local, is a type alias, as `let
     /// ChangeType = String`, which typing reads where the alias is used
-    /// and which has no value to translate: as typing's `alias_init`, an
-    /// immutable `let` without a written type whose initializer names a
-    /// type, or gives one arguments, or is a nullable or function type.
-    /// `depth` aliases in, against cycles.
-    fn is_type_alias(&self, decl: FNode, depth: u32) -> bool {
-        let (name, ty, init) = core::let_parts(&self.s.library.tree, decl);
-        let (None, Some(init)) = (ty, init) else {
+    /// and which has no value to translate: one `Scopes::alias_init`
+    /// finds, whose name, if it's only a name, ends at a type
+    /// (`Scopes::type_symbol`), not at a value, as `let g = f`.
+    fn is_type_alias(&self, decl: FNode) -> bool {
+        let (scopes, tree) = (&self.s.scopes, &self.s.library.tree);
+        let name = core::let_parts(tree, decl).0;
+        let Some(symbol) = scopes.resolved(name) else {
             return false;
         };
-        let top = (self.s.scopes.resolved(name)).is_some_and(|s| {
-            let s = self.s.scopes.symbol(s);
-            matches!(
-                s.kind,
-                crate::scope::SymbolKind::TopLevel | crate::scope::SymbolKind::Local
-            ) && !s.mutable
-        });
-        if !top || depth > 8 {
+        let Some(init) = scopes.alias_init(tree, symbol) else {
             return false;
+        };
+        if self.kind(init) != NodeKind::RightName {
+            return true;
         }
-        match self.kind(init) {
-            NodeKind::RightName => {
-                let Some(symbol) = self.s.scopes.resolved(init) else {
-                    return false;
-                };
-                let s = self.s.scopes.symbol(symbol);
-                match (s.kind, s.decl) {
-                    (crate::scope::SymbolKind::Builtin(Builtin::Type(_)), _) => true,
-                    (crate::scope::SymbolKind::TypeParam, _) => true,
-                    (_, Some(d)) if self.kind(d) == NodeKind::Class => true,
-                    (_, Some(d)) if self.kind(d) == NodeKind::Let => {
-                        self.is_type_alias(d, depth + 1)
-                    }
-                    _ => false,
-                }
-            }
-            NodeKind::Call => matches!(
-                self.s.scopes.resolved_builtin(self.children(init)[0]),
-                Some(Builtin::Function(
-                    Function::Angle | Function::Nullable | Function::FnType
-                ))
-            ),
+        let end = scopes.symbol(scopes.type_symbol(tree, symbol));
+        match (end.kind, end.decl) {
+            (crate::scope::SymbolKind::Builtin(Builtin::Type(_)), _) => true,
+            (crate::scope::SymbolKind::TypeParam, _) => true,
+            (_, Some(d)) => match self.kind(d) {
+                NodeKind::Class => true,
+                // An alias of something other than a name, as `let M =
+                // Map<String, Int>`.
+                NodeKind::Let => (scopes.resolved(core::let_parts(tree, d).0))
+                    .and_then(|b| scopes.alias_init(tree, b))
+                    .is_some_and(|i| self.kind(i) != NodeKind::RightName),
+                _ => false,
+            },
             _ => false,
         }
     }
@@ -2728,7 +2715,8 @@ impl Translator<'_> {
                     };
                     return Ok(self.own(made, node));
                 }
-                if let Some(Builtin::Type(i)) = self.s.scopes.resolved_builtin(node) {
+                // A builtin type, or an alias of one, which tmpl leaves out.
+                if let Some(i) = (self.s.scopes).type_builtin(&self.s.library.tree, node) {
                     return self.type_value(node, i);
                 }
                 if self.is_this(node) {

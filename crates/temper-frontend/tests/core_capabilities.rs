@@ -235,6 +235,23 @@ const OTHERS: &[(&str, &[&str])] = &[
          let d: Equatable<String> = \"s\";\nlet e: Equatable<Float64> = 1.0;",
         &[],
     ),
+    // Only what core declares `Equatable` fits the bound: not a user's
+    // class, a list, or a function.
+    (
+        "let same<T extends Equatable<T>>(a: T, b: T): Boolean { a == b }\n\
+         class C {}\nlet a = same(new C(), new C());",
+        &["Type formal <T extends Equatable<T>> cannot bind to C"],
+    ),
+    (
+        "let same<T extends Equatable<T>>(a: T, b: T): Boolean { a == b }\n\
+         let a = same([1], [1]);",
+        &["Type formal <T extends Equatable<T>> cannot bind to List<Int32>"],
+    ),
+    (
+        "let same<T extends Equatable<T>>(a: T, b: T): Boolean { a == b }\n\
+         let f(): Int { 1 }\nlet a = same(f, f);",
+        &["Type formal <T extends Equatable<T>> cannot bind to"],
+    ),
     (
         "let k: Equatable<String> = 1;",
         &["Cannot assign to Equatable<String> from Int32"],
@@ -285,14 +302,26 @@ fn declared(ty: &str) -> &str {
 type Case = (String, Vec<String>, Option<&'static str>);
 
 /// A use of a type, `%` standing for it in `template`, written with the
-/// type's name, and with an alias of it, top-level and local, as an
-/// alias is the type it names wherever types are checked
+/// type's name; imported by name from core; through a namespace of
+/// core; and with an alias of it, top-level and local, as an alias or a
+/// namespace's member is the type it names wherever types are checked
 /// (notes/typing.md, "Type aliases").
-fn uses(ty: &str, template: &str) -> [String; 3] {
+fn uses(ty: &str, template: &str) -> [String; 5] {
     let named = template.replace('%', ty);
+    let imported = format!("let {{ {} }} = import(\"core\");\n{named}", base(ty));
+    let spaced = format!(
+        "let core = import(\"core\");\n{}",
+        template.replace('%', &format!("core.{ty}"))
+    );
     let aliased = template.replace('%', "A");
     let local = format!("let g(): Void {{\n  let A = {ty};\n  {aliased}\n}}");
-    [named, format!("let A = {ty};\n{aliased}"), local]
+    [
+        named,
+        imported,
+        spaced,
+        format!("let A = {ty};\n{aliased}"),
+        local,
+    ]
 }
 
 /// Every case.
@@ -360,6 +389,25 @@ fn cases() -> Vec<Case> {
             wanted.splice(0..0, void);
         }
         push(ty, "let v = new MapBuilder<%, Int>();", &wanted, None);
+    }
+    // A generic type's bounds hold however it's named, aliases too:
+    // `let M = Map; M<Boolean, Int>` is no more a map than
+    // `Map<Boolean, Int>` (t-review #2).
+    let bound = "Type formal <K extends MapKey<K>> cannot bind to Boolean";
+    for (ty, template, wanted) in [
+        ("MapBuilder", "let v = new %<Boolean, Int>();", Some(bound)),
+        ("MapBuilder", "let v = new %<String, Int>();", None),
+        ("MapBuilder", "let v: %<Boolean, Int>? = null;", Some(bound)),
+        ("Map", "let c(m: %<Boolean, Int>): Void {}", Some(bound)),
+        ("Map", "let c(m: %<String, Int>): Void {}", None),
+        (
+            "Mapped",
+            "let v: List<%<Boolean, Int>>? = null;",
+            Some(bound),
+        ),
+    ] {
+        let wanted: Vec<String> = wanted.into_iter().map(String::from).collect();
+        push(ty, template, &wanted, None);
     }
     for name in UNNAMED {
         let wanted = vec![format!("{name} has not been declared")];
@@ -520,31 +568,197 @@ fn core_classes_declare_their_constructors() {
     assert_eq!(missing, Vec::<String>::new());
 }
 
-/// A sealed interface is extended only in its own module, from any of
-/// its files, as Kotlin Temper's `checkSealedExtension` allows
-/// (docs/language/builtins.md, "`sealed` type modifier"), not from
-/// another module. Core extends its own sealed interfaces, which
+/// A library's types, for [`module_types_keep_their_rules`]: a sealed
+/// interface, extended from its module's other file too, an open one, a
+/// class with a private constructor, and a generic class with a bound.
+const LIB_A: &str = "export sealed interface S {}\nexport class A extends S {}\n\
+export interface Open {}\n\
+export class Token {\n  public text: String;\n  private constructor(text: String) { this.text = text; }\n  \
+public static make(text: String): Token { new Token(text) }\n  \
+public static empty: Token = new Token(\"\");\n}\n\
+export class Box<K extends MapKey<K>> {}\n";
+const LIB_B: &str = "export class B extends S {}\n";
+
+/// The library's names, `@`-prefixed in a template.
+const LIB_NAMES: &[&str] = &["S", "A", "Open", "Token", "Box"];
+
+/// Uses of the library's types from another module, `@T` standing for
+/// type `T`, each with the errors it should get.
+const MODULE_USES: &[(&str, &[&str])] = &[
+    (
+        "class D extends @S {}\ninterface J extends @S {}",
+        &[
+            "Cannot extend sealed type S from D. D is not declared in the same module.",
+            "Cannot extend sealed type S from J. J is not declared in the same module.",
+        ],
+    ),
+    (
+        "class D extends @Open {}\ninterface J extends @Open {}",
+        &[],
+    ),
+    (
+        "let t = new @Token(\"x\");",
+        &["Token is not a concrete type with a public constructor"],
+    ),
+    (
+        "let t: @Token = @Token.make(\"x\");\nlet e: @Token = @Token.empty;",
+        &[],
+    ),
+    (
+        "let t: @Token = { text: \"lit\" };",
+        &["Token is not a concrete type"],
+    ),
+    (
+        "let v: @Box<Boolean>? = null;",
+        &["Type formal <K extends MapKey<K>> cannot bind to Boolean"],
+    ),
+    (
+        "let v = new @Box<Boolean>();",
+        &["Type formal <K extends MapKey<K>> cannot bind to Boolean"],
+    ),
+    (
+        "let v: @Box<String>? = null;\nlet w = new @Box<String>();",
+        &[],
+    ),
+    ("let f(x: AnyValue): Boolean { x is @A }", &[]),
+];
+
+/// Errors from settling `main` beside the library [`LIB_A`] and
+/// [`LIB_B`] make.
+fn module_errors(main: &str) -> Vec<String> {
+    let mut library = Library::new();
+    library.add_file("app/lib/a.temper", LIB_A, SourceKind::Standalone);
+    library.add_file("app/lib/b.temper", LIB_B, SourceKind::Standalone);
+    library.add_file("app/main.temper", main, SourceKind::Standalone);
+    let settled = settle(library);
+    (settled.library.diagnostics.iter())
+        .filter(|d| d.level == temper_frontend::library::Level::Error)
+        .map(|d| d.message.text())
+        .collect()
+}
+
+/// A library's rules for its types hold however another module names
+/// them: imported by name, through a namespace, or by an alias of
+/// either, top-level or local. A namespace's member and an alias are the
+/// type they name (notes/typing.md, "Type aliases"). Each rule has its
+/// legal neighbor beside it. A sealed interface is extended only in its
+/// own module, from any of its files, as Kotlin Temper's
+/// `checkSealedExtension` allows (docs/language/builtins.md, "`sealed`
+/// type modifier"). Core extends its own sealed interfaces, which
 /// `settle.rs`'s `core_keeps_the_rules_it_sets` shows.
 #[test]
-fn sealed_interfaces_extended_only_in_their_module() {
+fn module_types_keep_their_rules() {
     with_stack(|| {
-        let mut library = Library::new();
-        let a = "export sealed interface S {}\nexport class A extends S {}\n";
-        library.add_file("app/lib/a.temper", a, SourceKind::Standalone);
-        let b = "export class B extends S {}\n";
-        library.add_file("app/lib/b.temper", b, SourceKind::Standalone);
-        let main = "let { S } = import(\"./lib\");\nclass C extends S {}\n";
-        library.add_file("app/main.temper", main, SourceKind::Standalone);
-        let settled = settle(library);
-        let found: Vec<String> = (settled.library.diagnostics.iter())
-            .map(|d| d.message.text())
-            .collect();
-        let wanted = |sub: &str| {
-            format!(
-                "Cannot extend sealed type S from {sub}. {sub} is not declared in the same \
-                 module."
-            )
+        let names = LIB_NAMES.join(", ");
+        let aliases = |from: &str| -> String {
+            (LIB_NAMES.iter())
+                .map(|n| format!("let {n}2 = {from}{n};"))
+                .collect::<Vec<_>>()
+                .join("\n")
+                + "\n"
         };
-        assert_eq!(found, [wanted("C")]);
+        let mut wrong = Vec::new();
+        for &(template, wanted) in MODULE_USES {
+            let by = |prefix: &str, suffix: &str| {
+                (LIB_NAMES.iter().rev()).fold(template.to_string(), |t, n| {
+                    t.replace(&format!("@{n}"), &format!("{prefix}{n}{suffix}"))
+                })
+            };
+            let imported = format!("let {{ {names} }} = import(\"./lib\");\n");
+            let spaced = "let lib = import(\"./lib\");\n";
+            let local = by("", "2").replace('\n', "\n  ");
+            let mains = [
+                format!("{imported}{}", by("", "")),
+                format!("{spaced}{}", by("lib.", "")),
+                format!("{spaced}{}{}", aliases("lib."), by("", "2")),
+                format!(
+                    "{imported}let g(): Void {{\n  {}  {local}\n}}",
+                    aliases("").replace('\n', "\n  ")
+                ),
+            ];
+            for main in mains {
+                let found = module_errors(&main);
+                let fits = found.len() == wanted.len()
+                    && (found.iter().zip(wanted)).all(|(f, w)| f.starts_with(w));
+                if !fits {
+                    wrong.push(format!("{main}\n  wanted {wanted:?}\n  found  {found:?}"));
+                }
+            }
+        }
+        assert!(
+            wrong.is_empty(),
+            "{} cases:\n{}",
+            wrong.len(),
+            wrong.join("\n")
+        );
     });
+}
+
+/// Each builtin type's supertypes among the builtin types, as core's
+/// `extends` clauses give them: `("List", "Listed")` for `export class
+/// List<@out T> extends Listed<T>`.
+fn core_extends() -> BTreeSet<(String, String)> {
+    let builtins: BTreeSet<&str> = temper_frontend::builtins::TYPES.iter().copied().collect();
+    let mut found = BTreeSet::new();
+    for line in temper_frontend::corelib::code().lines() {
+        let line = line.trim();
+        let Some(rest) = line.strip_prefix("export ") else {
+            continue;
+        };
+        let rest = rest.strip_prefix("sealed ").unwrap_or(rest);
+        let Some(rest) = (rest.strip_prefix("class ")).or_else(|| rest.strip_prefix("interface "))
+        else {
+            continue;
+        };
+        let name_end = rest
+            .find(|c: char| !c.is_ascii_alphanumeric())
+            .unwrap_or(rest.len());
+        let (name, mut rest) = rest.split_at(name_end);
+        // Past its type parameters, whose bounds say `extends` too.
+        if rest.starts_with('<') {
+            let mut depth = 0;
+            let end = rest.char_indices().find_map(|(i, c)| {
+                depth += match c {
+                    '<' => 1,
+                    '>' => -1,
+                    _ => 0,
+                };
+                (depth == 0).then_some(i + 1)
+            });
+            rest = &rest[end.unwrap_or(rest.len())..];
+        }
+        let Some(supers) = rest.trim_start().strip_prefix("extends ") else {
+            continue;
+        };
+        let supers = supers.split('{').next().unwrap_or("");
+        let mut depth = 0;
+        for piece in supers.split(|c: char| {
+            depth += match c {
+                '<' => 1,
+                '>' => -1,
+                _ => 0,
+            };
+            c == ',' && depth == 0
+        }) {
+            let sup = piece.trim().split('<').next().unwrap_or("").trim();
+            if builtins.contains(name) && builtins.contains(sup) {
+                found.insert((name.to_string(), sup.to_string()));
+            }
+        }
+    }
+    found
+}
+
+/// The frontend's table of builtin types' supertypes
+/// (`types::BUILTIN_SUPERTYPES`), which typing reads for subtyping, is
+/// what core's declarations say, so that one can't change without the
+/// other.
+#[test]
+fn builtin_supertypes_are_cores() {
+    let table: BTreeSet<(String, String)> = (temper_frontend::types::BUILTIN_SUPERTYPES.iter())
+        .map(|&(sub, sup)| (sub.to_string(), sup.to_string()))
+        .collect();
+    let core = core_extends();
+    assert!(core.len() > 10, "{core:?}");
+    assert_eq!(table, core);
 }

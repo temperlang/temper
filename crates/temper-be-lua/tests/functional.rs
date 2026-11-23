@@ -853,10 +853,15 @@ fn runs() {
             // A run expected to fail (`semantics/broken`) ends with the
             // runner's line for the error.
             let failed = log.last().is_some_and(|l| l.starts_with("!!> "));
+            // One that must panic ends with its panic's message.
+            let panicked = match &case.panic {
+                Some(message) => log.last().is_some_and(|l| l.contains(message.as_str())),
+                None => true,
+            };
             if case.fails && failed {
                 log.pop();
             }
-            if !run.status.success() || log != case.expected || case.fails != failed {
+            if !run.status.success() || log != case.expected || case.fails != failed || !panicked {
                 failures.push(format!(
                     "{}: expected {:?}, got {log:?}\n{}",
                     case.key,

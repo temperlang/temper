@@ -488,7 +488,7 @@ fn runs() {
                 .unwrap()
         };
         for (case, at, main) in &mains {
-            kit::check_case(&mut failures, &case.key, &java_run(*at, main), case);
+            kit::check_case(&mut failures, "java", &case.key, &java_run(*at, main), case);
         }
         let mut run = |name: &str, at: usize, main: &str, expected: &[String]| {
             let out = java_run(at, main);

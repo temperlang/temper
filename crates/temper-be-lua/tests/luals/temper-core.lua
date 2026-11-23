@@ -217,6 +217,11 @@ function temper.float64_sign(x) end
 
 ---@param n integer
 ---@return number
+---An `Int32`'s sign: -1, 0, or 1.
+---@param n integer
+---@return integer
+function temper.int32_signum(n) end
+
 function temper.int32_tofloat64(n) end
 
 ---An `Int64`, from its value, or from its high (signed) and low 32 bits.
@@ -487,6 +492,15 @@ function temper.listed_reduce(list, accumulate) end
 ---@param accumulate fun(arg0: O, arg1: T): O
 ---@return O
 function temper.listed_reducefrom(list, initial, accumulate) end
+
+---Reduces from the 0-based index on, none past the end.
+---@generic T, O
+---@param list T[]
+---@param initial O
+---@param index integer
+---@param accumulate fun(arg0: O, arg1: T): O
+---@return O
+function temper.listed_reducefromindex(list, initial, index, accumulate) end
 
 ---Sorts a list builder in place, by a comparator, stably.
 ---@generic T

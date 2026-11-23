@@ -84,11 +84,13 @@ let a = core.Strin;
 let b = core.if;
 let { ... } = import("core");
 let c = builtins.String;
+let d = core._listify;
 --- settled
 error 64..92: Not supported yet: importing every name of core, which are in scope already
 error 40..45: core does not export symbol Strin; did you mean String?
 error 60..62: core does not export symbol if; did you mean is?
 error 102..110: builtins has not been declared
+error 132..140: core does not export symbol _listify
 Failed: core does not export symbol Strin; did you mean String?
 
 === core and builtins are ordinary names

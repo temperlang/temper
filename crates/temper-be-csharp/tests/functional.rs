@@ -934,7 +934,7 @@ fn runs() {
         };
         for case in &cases {
             let out = dotnet_run(&runner_dll, &[&case.key]);
-            kit::check_case(&mut failures, &case.key, &out, case);
+            kit::check_case(&mut failures, "csharp", &case.key, &out, case);
         }
         let mut run = |name: &str, dll: &Path, args: &[&str], expected: &[String]| {
             let out = dotnet_run(dll, args);

@@ -12,7 +12,6 @@ import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.ConcurrentModificationException;
 import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -782,20 +781,19 @@ public final class Core {
     }
 
     /**
-     * A comparison that adds or removes items panics, as {@code panic()}
-     * does, with an {@code Error} that no {@code orelse} catches, rather
-     * than the {@code ConcurrentModificationException} that
-     * {@code ArrayList.sort} throws, which one would.
+     * Sorts a copy, as other backends do, so a comparison may read the
+     * builder and change it: the sorted copy replaces a change that keeps
+     * its length, and one that changes its length panics, as
+     * {@code panic()} does, with an {@code Error} that no {@code orelse}
+     * catches.
      *
      * @param target a ListBuilder instance
      * @param <E> the element type
      */
     public static <E> void listSort(List<E> target, ToIntBiFunction<E, E> compare) {
-        try {
-            target.sort((a, b) -> compare.applyAsInt(a, b));
-        } catch (ConcurrentModificationException e) {
-            throw sortPanic(e);
-        }
+        List<E> items = new ArrayList<>(target);
+        items.sort((a, b) -> compare.applyAsInt(a, b));
+        replaceSorted(target, items);
     }
 
     /**
@@ -804,15 +802,18 @@ public final class Core {
      * @param target a ListBuilder instance
      */
     public static void listSortInt(List<Integer> target, IntBinaryOperator compare) {
-        try {
-            target.sort((a, b) -> compare.applyAsInt(a, b));
-        } catch (ConcurrentModificationException e) {
-            throw sortPanic(e);
-        }
+        List<Integer> items = new ArrayList<>(target);
+        items.sort((a, b) -> compare.applyAsInt(a, b));
+        replaceSorted(target, items);
     }
 
-    private static AssertionError sortPanic(ConcurrentModificationException e) {
-        return new AssertionError("ListBuilder changed during sort", e);
+    private static <E> void replaceSorted(List<E> target, List<E> sorted) {
+        if (target.size() != sorted.size()) {
+            throw new AssertionError("ListBuilder changed length during sort");
+        }
+        for (int i = 0; i < sorted.size(); i++) {
+            target.set(i, sorted.get(i));
+        }
     }
 
     /**
@@ -1252,6 +1253,19 @@ public final class Core {
 
     public interface BooleanBiPredicate {
         boolean test(boolean left, boolean right);
+    }
+
+    /**
+     * The items from {@code index}, none past the end, for
+     * {@code core.listedReduceFromIndex()}.
+     *
+     * @param list a Listed instance
+     * @param index where to start
+     * @return a view of the items from there
+     * @param <E> the element type
+     */
+    public static <E> List<E> listFrom(List<E> list, int index) {
+        return list.subList(Math.min(index, list.size()), list.size());
     }
 
     /** <p>Implements {@code core.type Listed.reduce()}.</p> */

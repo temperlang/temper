@@ -298,7 +298,8 @@ impl<'a> Exprs<'a> {
     }
 
     /// Whether a name names a type: a builtin one, a type parameter, or a
-    /// class or interface.
+    /// class or interface, directly or through aliases, as `let { Date } =
+    /// import(…)` makes ([`Scopes::type_symbol`]).
     fn names_type(&self, node: NodeId) -> bool {
         if self.kind(node) != NodeKind::RightName {
             return false;
@@ -306,24 +307,14 @@ impl<'a> Exprs<'a> {
         let Some(b) = self.scopes.resolved(node) else {
             return false;
         };
-        let mut symbol = self.scopes.symbol(b);
-        // Through aliases, as `let { Date } = import(…)` makes.
-        for _ in 0..8 {
-            match (symbol.kind, symbol.decl) {
-                (SymbolKind::Builtin(Builtin::Type(_)) | SymbolKind::TypeParam, _) => return true,
-                (_, Some(d)) if self.kind(d) == NodeKind::Class => return true,
-                (_, Some(d)) if self.kind(d) == NodeKind::Let => {
-                    let init = core::let_parts(&self.lib.tree, d).2;
-                    let named = init.filter(|&i| self.kind(i) == NodeKind::RightName);
-                    match named.and_then(|i| self.scopes.resolved(i)) {
-                        Some(b) => symbol = self.scopes.symbol(b),
-                        None => return false,
-                    }
-                }
-                _ => return false,
-            }
+        let symbol = self
+            .scopes
+            .symbol(self.scopes.type_symbol(&self.lib.tree, b));
+        match (symbol.kind, symbol.decl) {
+            (SymbolKind::Builtin(Builtin::Type(_)) | SymbolKind::TypeParam, _) => true,
+            (_, Some(d)) => self.kind(d) == NodeKind::Class,
+            _ => false,
         }
-        false
     }
 
     /// Whether a `Let` declares a class's member.

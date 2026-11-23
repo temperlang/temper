@@ -17,9 +17,10 @@
 //! (see [`Lookup`]).
 
 use crate::builtins::{Builtin, Constant, Function};
+use crate::core::{ROLE_MASK, let_parts};
 use std::collections::HashMap;
 use temper_syntax::names::{NameId, Names};
-use temper_syntax::tree::NodeId;
+use temper_syntax::tree::{NodeId, NodeKind, Tree};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ScopeId(pub u32);
@@ -449,6 +450,69 @@ impl Scopes {
     pub fn resolved_builtin(&self, node: NodeId) -> Option<Builtin> {
         match self.symbol(self.resolved(node)?).kind {
             SymbolKind::Builtin(b) => Some(b),
+            _ => None,
+        }
+    }
+
+    /// The type expression an alias names, as `C<Int>` for `let Alias =
+    /// C<Int>;`, if `symbol` is one: a `let`, top-level or local, not a
+    /// `var` and without a declared type, whose initializer is a name, a
+    /// type given arguments, a nullable type, or a function type. Imports
+    /// make aliases too: `let { C } = import(…)` and a namespace's `ns.C`
+    /// both name the exporting module's `C` (notes/typing.md, "Type
+    /// aliases").
+    pub fn alias_init(&self, tree: &Tree, symbol: SymbolId) -> Option<NodeId> {
+        let s = self.symbol(symbol);
+        let decl = s.decl.filter(|&d| {
+            matches!(s.kind, SymbolKind::TopLevel | SymbolKind::Local)
+                && !s.mutable
+                && tree.kind(d) == NodeKind::Let
+                && tree.data(d) & ROLE_MASK == 0
+        })?;
+        let (_, None, Some(init)) = let_parts(tree, decl) else {
+            return None;
+        };
+        let is_type = tree.kind(init) == NodeKind::RightName
+            || tree.kind(init) == NodeKind::Call
+                && matches!(
+                    (tree.children(init).first()).and_then(|&c| self.resolved_builtin(c)),
+                    Some(Builtin::Function(
+                        Function::Angle | Function::Nullable | Function::FnType
+                    ))
+                );
+        is_type.then_some(init)
+    }
+
+    /// The symbol a type's name ends at, through aliases of names
+    /// ([`Scopes::alias_init`]): a builtin type, a class or interface, a
+    /// type parameter, or an alias of something other than a name, as
+    /// `let M = Map<String, Int>`. Every rule about types reads names
+    /// through this, so that `S`, `let A = S`, `ns.S`, and an imported `S`
+    /// are checked alike. An alias that names itself, even through
+    /// others, ends at itself.
+    pub fn type_symbol(&self, tree: &Tree, symbol: SymbolId) -> SymbolId {
+        let mut at = symbol;
+        // A chain longer than there are symbols is a cycle.
+        for _ in 0..self.symbols.len() {
+            let next = self
+                .alias_init(tree, at)
+                .filter(|&init| tree.kind(init) == NodeKind::RightName)
+                .and_then(|init| self.resolved(init));
+            match next {
+                Some(next) => at = next,
+                None => return at,
+            }
+        }
+        symbol
+    }
+
+    /// The builtin type a name names, directly or through aliases and
+    /// namespaces ([`Scopes::type_symbol`]), as an index into
+    /// [`crate::builtins::TYPES`].
+    pub fn type_builtin(&self, tree: &Tree, node: NodeId) -> Option<u8> {
+        let symbol = self.type_symbol(tree, self.resolved(node)?);
+        match self.symbol(symbol).kind {
+            SymbolKind::Builtin(Builtin::Type(i)) => Some(i),
             _ => None,
         }
     }
