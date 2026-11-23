@@ -44,6 +44,9 @@ pub struct File {
     pub origin_base: u32,
     /// Its module code, a block.
     pub root: NodeId,
+    /// Whether it's core's own ([`Library::in_core`]), decided once, as
+    /// it's added.
+    pub core: bool,
 }
 
 /// A diagnostic's level. An error fails the build; a warning is for
@@ -685,9 +688,10 @@ pub struct Library {
     /// `import("other-lib/sub")`, each a name and its root directory
     /// ([`crate::project`]).
     pub libraries: Vec<(String, String)>,
-    /// The root of core's library in a Temper checkout, as `lib/core`,
-    /// when it's loaded ([`crate::project::load_library`]): its
-    /// core sources are core's ([`Library::in_core`]).
+    /// The root of core's library in the compiler's own Temper checkout,
+    /// as `lib/core`, when it's loaded ([`crate::project::load_library`]):
+    /// its core sources, added after it's set, are core's
+    /// ([`Library::in_core`]).
     pub core_root: Option<String>,
     /// The root of std's library when it's the library loaded, from a
     /// Temper checkout's `lib/std` or a copy of the built-in std
@@ -823,6 +827,7 @@ impl Library {
         // One past the end, so an empty span at a file's end is still its.
         self.next_base = base + source.len() as u32 + 1;
         self.next_origin = origin_base + parsed.tree().len() as u32;
+        let core = self.is_core_file(path, parsed.source());
         self.files.push(File {
             path: path.to_string(),
             module,
@@ -830,6 +835,7 @@ impl Library {
             base,
             origin_base,
             root,
+            core,
         });
         FileId(self.files.len() as u32 - 1)
     }
@@ -925,24 +931,62 @@ impl Library {
 
     /// Whether the source at `pos` is core's own, read as a library, as
     /// editors and core's checks read it: core declares the builtin
-    /// types, as no other library may. It's core's if its text is one of
-    /// [`corelib::SOURCES`], or if it's one of their paths in
-    /// [`Library::core_root`], a Temper checkout's `lib/core`, whose text
-    /// an editor may have changed, or a build of another version may not
-    /// hold. No other library is core, whatever its name. A file with
-    /// exactly core's text is core's in any library, as tests and editors
-    /// settle core's files from other paths: it can do only what core's
-    /// own text does, so this grants nothing to code a user writes.
+    /// types, as no other library may ([`File::core`]).
     pub fn in_core(&self, pos: u32) -> bool {
-        let file = &self.files[self.locate(pos).0.0 as usize];
+        self.files[self.locate(pos).0.0 as usize].core
+    }
+
+    /// Whether a file is core's: if its text is one of
+    /// [`corelib::SOURCES`], or if it's one of their paths in
+    /// [`Library::core_root`], the compiler's own checkout's `lib/core`,
+    /// whose text an editor may have changed. No other library is core,
+    /// whatever its name or layout. A file with exactly core's text is
+    /// core's in any library, as tests and editors settle core's files
+    /// from other paths: it can do only what core's own text does, so
+    /// this grants nothing to code a user writes.
+    fn is_core_file(&self, path: &str, source: &str) -> bool {
         let at_root = |root: &String| {
-            let path = std::path::Path::new(&file.path);
+            let path = std::path::Path::new(path);
             path.parent() == Some(std::path::Path::new(root))
                 && (corelib::SOURCES.iter())
                     .any(|(core, _)| path.file_name().is_some_and(|name| name == *core))
         };
-        (corelib::SOURCES.iter()).any(|(_, text)| file.parsed.source() == *text)
+        (corelib::SOURCES.iter()).any(|(_, text)| source == *text)
             || self.core_root.as_ref().is_some_and(at_root)
+    }
+
+    /// The names declared as `let rx = import(…)` among `nodes`, which
+    /// may be module namespaces, or more: any declaration with an
+    /// `import(…)` call among its parts. A cheap superset, so settling
+    /// looks for `rx.member` only on these names.
+    pub fn namespace_names(
+        &self,
+        nodes: std::ops::Range<u32>,
+    ) -> std::collections::HashSet<NameId> {
+        let mut names = std::collections::HashSet::new();
+        let is_import = |node: NodeId| {
+            let tree = &self.tree;
+            tree.kind(node) == NodeKind::Call
+                && (tree.children(node).first()).is_some_and(|&callee| {
+                    tree.kind(callee) == NodeKind::RightName
+                        && self
+                            .name(callee)
+                            .is_some_and(|n| self.names.get(n) == "import")
+                })
+        };
+        for decl in nodes.map(NodeId) {
+            if self.tree.kind(decl) != NodeKind::Decl {
+                continue;
+            }
+            let children = self.tree.children(decl);
+            let Some((&name, rest)) = children.split_first() else {
+                continue;
+            };
+            if self.tree.kind(name) == NodeKind::LeftName && rest.iter().any(|&c| is_import(c)) {
+                names.extend(self.name(name));
+            }
+        }
+        names
     }
 
     /// The module for a directory, if it's loaded.

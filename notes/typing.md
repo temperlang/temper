@@ -184,8 +184,8 @@ Temper plans to make all type parameters invariant, because C++ and Rust,
 among others, can't express variance well. Tempest doesn't support
 covariant or contravariant type parameters at all: `List<Sub>` is never a
 `List<Super>`. Kotlin Temper's `@out` and `@in` annotations (about a dozen,
-all in `core.temper`, as on `Generator<@out YIELD>`) parse as ordinary
-decorations and are ignored, with no error. When copying `core.temper` and
+all in core, `lib/core/`, as on `Generator<@out YIELD>`) parse as
+ordinary decorations and are ignored, with no error. When copying core and
 the `std` library from Kotlin Temper, keep them as they are, so the files
 stay easy to diff, and rely on this rule. Decided (2026-10-28): tempest
 stays invariant, and Kotlin Temper should change to match

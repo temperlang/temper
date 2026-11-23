@@ -1,6 +1,6 @@
 //! `String`, `StringIndex` and `StringBuilder` methods, matching Kotlin
-//! Temper's (`StringFns.kt`, and `core.temper` for those written in
-//! Temper there).
+//! Temper's (`StringFns.kt`, and core's Temper bodies, `lib/core/`, for
+//! those written in Temper).
 //!
 //! A string index is a UTF-8 byte offset here, where Kotlin's is a UTF-16
 //! one; Temper code can't tell, as indices are opaque. Indices out of

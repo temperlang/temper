@@ -22,9 +22,12 @@
 //! user's `@connected` class with a complete Temper implementation runs
 //! that, as an ordinary class, as Kotlin Temper's interpreter does.
 //! Core's own members are native here; their Temper bodies in
-//! `lib/core/` run only when a test asks ([`core_bodies`]).
+//! `lib/core/` run only when a test asks, with the `core-bodies`
+//! feature, which only this crate's tests turn on, so the hooks are no
+//! part of other builds' hot paths (`core_bodies`).
 
 pub mod compile_time;
+#[cfg(feature = "core-bodies")]
 pub mod core_bodies;
 mod frame;
 mod lower;
@@ -358,6 +361,7 @@ pub fn run_tests(settled: &Settled, fuel: Option<u64>) -> Run {
     run_with(settled, fuel, true, None, None)
 }
 
+#[cfg(feature = "core-bodies")]
 /// Runs a library's tests as [`run_tests`] does, but with core's Temper
 /// bodies in place of the interpreter's natives wherever core has them
 /// ([`core_bodies`]), for testing that the two agree. The library holds
@@ -375,7 +379,9 @@ fn run_with(
     fuel: Option<u64>,
     tests: bool,
     sink: Option<LineSink<'_>>,
-    mut core_bodies: Option<&mut Vec<NodeId>>,
+    #[cfg_attr(not(feature = "core-bodies"), allow(unused_mut))] mut core_bodies: Option<
+        &mut Vec<NodeId>,
+    >,
 ) -> Run {
     // `u64::MAX` steps take centuries, so no fuel needs no check of its own.
     let budget = fuel.unwrap_or(u64::MAX);
@@ -410,15 +416,24 @@ fn run_with(
         host: None,
         inputs_parked: Vec::new(),
         inputs_failed: Vec::new(),
+        #[cfg(feature = "core-bodies")]
         core: None,
     };
     let mut result = Ok(Val::Void);
-    // Core's module, if its bodies run, runs first.
-    let in_core = |m: &crate::settle::SettledModule| core_bodies::is_core(settled, m);
+    #[cfg_attr(not(feature = "core-bodies"), allow(unused_mut))]
     let mut modules: Vec<_> = settled.modules.iter().collect();
+    // Core's module, if its bodies run, runs first.
+    #[cfg(feature = "core-bodies")]
+    let in_core = |m: &crate::settle::SettledModule| core_bodies::is_core(settled, m);
+    #[cfg(feature = "core-bodies")]
     if core_bodies.is_some() {
         modules.sort_by_key(|m| !in_core(m));
     }
+    #[cfg(not(feature = "core-bodies"))]
+    assert!(
+        core_bodies.is_none(),
+        "core's bodies run only with the core-bodies feature"
+    );
     for module in modules {
         let code = interp
             .lowering
@@ -427,6 +442,7 @@ fn run_with(
         if result.is_err() {
             break;
         }
+        #[cfg(feature = "core-bodies")]
         if core_bodies.is_some() && interp.core.is_none() && in_core(module) {
             let first = first_globals[&module.scope];
             match core_bodies::CoreBodies::new(&mut interp, settled, module, first) {
@@ -438,6 +454,7 @@ fn run_with(
             }
         }
     }
+    #[cfg(feature = "core-bodies")]
     if core_bodies.is_some() && result.is_ok() && interp.core.is_none() {
         result = Err(fail("No core module to run the bodies of"));
     }
@@ -461,6 +478,7 @@ fn run_with(
             }
         }
     }
+    #[cfg(feature = "core-bodies")]
     if let (Some(ran), Some(core)) = (core_bodies.as_mut(), &interp.core) {
         ran.extend(core.ran.borrow().iter().copied());
         ran.sort();
@@ -665,7 +683,8 @@ struct Interp<'a> {
     inputs_parked: Vec<(Rc<Generator>, usize)>,
     inputs_failed: Vec<(usize, Abrupt)>,
     /// Core's bodies, run in place of natives where core has them, only
-    /// when asked for ([`run_tests_with_core_bodies`]).
+    /// when asked for (`run_tests_with_core_bodies`).
+    #[cfg(feature = "core-bodies")]
     core: Option<Rc<core_bodies::CoreBodies>>,
 }
 
@@ -696,6 +715,7 @@ impl Interp<'_> {
         if self.depth >= MAX_DEPTH {
             return Err(Abrupt::Panic("calls nested too deeply".into()));
         }
+        #[cfg(feature = "core-bodies")]
         if let Some(core) = &self.core {
             core.ran.borrow_mut().insert(f);
         }
@@ -796,6 +816,7 @@ impl Interp<'_> {
                 _ => {}
             }
         }
+        #[cfg(feature = "core-bodies")]
         let (function, args) = match self.core.clone() {
             Some(core) => match core.apply(self, s, function, args) {
                 Ok(result) => return result,
@@ -1867,6 +1888,7 @@ impl Interp<'_> {
         from: Option<&[NodeId]>,
     ) -> R {
         if !matches!(object, Val::Object(_) | Val::Class(_)) {
+            #[cfg(feature = "core-bodies")]
             if let Some(result) =
                 (self.core.clone()).and_then(|core| core.get(self, s, &object, name))
             {

@@ -34,8 +34,8 @@ pub(super) struct Receiver {
 
 impl Settle {
     /// The type of a class's or interface's values, unless it's generic.
-    /// Core's declaration of a builtin type, as in Kotlin Temper's
-    /// `core.temper`, is that type ([`Settle::declares_builtin`]).
+    /// Core's declaration of a builtin type, in `lib/core/`, is that type
+    /// ([`Settle::declares_builtin`]).
     pub(super) fn class_type(&mut self, class: NodeId) -> TypeId {
         let tree = &self.lib.tree;
         if tree.kind(class) != NodeKind::Class || !core::type_params(tree, class).is_empty() {

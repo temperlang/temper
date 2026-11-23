@@ -262,6 +262,11 @@ pub const BUILTINS: &[(&str, Builtin)] = {
     ]
 };
 
+/// Names only core's own text has, as Kotlin Temper binds them in
+/// core's environment, after its own declarations and the builtins:
+/// `_listify`, the list-making function `List.of` is.
+pub const CORE_ONLY: &[(&str, Builtin)] = &[("_listify", Builtin::Function(Function::List))];
+
 impl Builtin {
     /// The builtin with a name, if any.
     pub fn named(name: &str) -> Option<Builtin> {

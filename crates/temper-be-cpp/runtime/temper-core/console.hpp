@@ -22,9 +22,12 @@ namespace temper {
                 console->logger(std::move(line));
             }
 
+            // Each line flushed, as Rust's `println!` is, so what's logged
+            // before an uncaught bubble ends the run isn't lost with
+            // `std::cout`'s buffer.
             inline std::shared_ptr<Type> get_console() {
                 return object<Type>(std::function<void(std::string)>([](std::string s) {
-                    std::cout << s;
+                    std::cout << s << std::flush;
                 }));
             }
 

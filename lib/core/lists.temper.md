@@ -119,6 +119,9 @@ Usually, don't return type `Listed`. It's usually best to return type `List`.
 
 ## Listed extensions
 
+Code calls each as a method, as `listed.map { … }`: the function names
+are core's own, which no other library can name.
+
 `listedMap` (`listed.map { … }`) maps elements using [transform].
 
     @extension("map")

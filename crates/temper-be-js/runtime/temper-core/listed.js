@@ -30,7 +30,7 @@ export const listedReduceFrom = (ls, initial, accumulate) => {
 
 /**
  * Implements extension method core.type Listed.reduceFromIndex(), from
- * `index`, none past the end.
+ * `index`, none past the end; a negative index fails as `listedGet` does.
  * @template T, R
  * @param {readonly T[]} ls
  * @param {R} initial
@@ -39,6 +39,9 @@ export const listedReduceFrom = (ls, initial, accumulate) => {
  * @returns {R}
  */
 export const listedReduceFromIndex = (ls, initial, index, accumulate) => {
+  if (index < 0) {
+    listedGet(ls, index);
+  }
   return ls.slice(index).reduce(accumulate, initial);
 }
 

@@ -106,6 +106,10 @@ impl Incremental {
         s.round_files = self.files_settled;
         s.round_nodes = self.nodes_settled;
         let new_nodes = s.lib.tree.len() as u64 - self.nodes_settled as u64;
+        let added = s
+            .lib
+            .namespace_names(self.nodes_settled..s.lib.tree.len() as u32);
+        s.namespace_names.extend(added);
         s.engine.grow_budget(1000 + 100 * new_nodes);
         let repl = s.lib.files[input.0 as usize].module;
         let root = s.lib.files[input.0 as usize].root;

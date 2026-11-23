@@ -1257,7 +1257,9 @@ public final class Core {
 
     /**
      * The items from {@code index}, none past the end, for
-     * {@code core.listedReduceFromIndex()}.
+     * {@code core.listedReduceFromIndex()}. A negative index fails as
+     * {@code list.get(index)} does, with an
+     * {@code IndexOutOfBoundsException}.
      *
      * @param list a Listed instance
      * @param index where to start

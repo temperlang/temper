@@ -60,6 +60,7 @@ void global_init_init() {
     core::Console::log(console, core::Boolean::toString(core::Float64::near(inf, 1.0)) + " " + core::Boolean::toString(core::Float64::near(inf, ninf)) + " " + core::Boolean::toString(core::Float64::near(inf, 1.0, 0.0, 0.0)) + " " + core::Boolean::toString(core::Float64::near(inf, inf, 0.0, 0.0)) + " " + core::Boolean::toString(core::Float64::near(inf, 1.0, 1.0, inf)) + " " + core::Boolean::toString(core::Float64::near(1.0, ninf, 1.0, inf)));
     core::Console::log(console, core::Boolean::toString(core::Float64::near(1.0, 1.5, nan, 1.0)) + " " + core::Boolean::toString(core::Float64::near(1.0, 1.5, 1.0, nan)) + " " + core::Boolean::toString(core::Float64::near(1.0, 1.0, nan, nan)) + " " + core::Boolean::toString(core::Float64::near(-0.0, 0.0, 0.0, 0.0)));
     core::Console::log(console, core::Boolean::toString(core::Float64::near(1.0, 1.0 + 1e-10)) + " " + core::Boolean::toString(core::Float64::near(1.0, 1.1)) + " " + core::Boolean::toString(core::Float64::near(1.0, 1.1, 0.2)) + " " + core::Boolean::toString(core::Float64::near(0.0, 1e-300, 1e-9, 1e-12)));
+    core::Console::log(console, std::to_string(core::List::reduceFromIndex(temper_globals::digits.value, 0, -1, [](int32_t s, int32_t) -> int32_t { return core::Int::add(s, 1); })));
   });
 }
 

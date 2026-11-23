@@ -17,8 +17,8 @@
 //!   Kotlin's `libraryNameFor` decides ([`Config`]). Two libraries of one
 //!   name are an error, as in Kotlin, and so is a library named
 //!   `temper-core`, core's name, or `std`, std's, but for that library
-//!   in a Temper checkout ([`is_checkout`]), or the copy of the built-in
-//!   one that editors write, which they open.
+//!   in the compiler's own Temper checkout ([`is_checkout`]), or the copy
+//!   of the built-in one that editors write, which they open.
 //! - An import's path may start with a library's name, as
 //!   `import("other-lib/sub")`, naming that library's `sub` directory,
 //!   as Kotlin resolves it; the library's modules then build with the
@@ -450,8 +450,8 @@ impl Scan<'_> {
 /// from the libraries in `all` (those of its work root), which imports
 /// name by their names. The error names a file that can't be read, or a
 /// library that takes core's name, [`crate::corelib::NAME`], or std's,
-/// `std`, but isn't that library in a Temper checkout ([`is_checkout`])
-/// or a copy of the built-in one, as editors write. Std from either is
+/// `std`, but isn't that library in the compiler's own Temper checkout
+/// ([`is_checkout`]) or a copy of the built-in one, as editors write. Std from either is
 /// std: its root is [`Library::std_root`].
 pub fn load_library(
     sources: &Sources,
@@ -463,7 +463,7 @@ pub fn load_library(
     let reserved =
         |name: &str, what: &str| format!("{root}: {name} is reserved for Temper's {what}");
     if library.config.name == crate::corelib::NAME {
-        if is_checkout(sources, root, "core", "corelib.rs") {
+        if is_checkout(root, "core") {
             loaded.core_root = Some(root.clone());
         } else if !is_copy(sources, library, crate::corelib::SOURCES) {
             return Err(reserved(crate::corelib::NAME, "core library"));
@@ -473,9 +473,7 @@ pub fn load_library(
         let std_sources: Vec<(&str, &str)> = (crate::stdlib::FILES.iter().copied())
             .filter(|&(path, _)| path != "config.temper.md")
             .collect();
-        if !is_checkout(sources, root, "std", "stdlib.rs")
-            && !is_copy(sources, library, &std_sources)
-        {
+        if !is_checkout(root, "std") && !is_copy(sources, library, &std_sources) {
             return Err(reserved(STD_NAME, "std library"));
         }
         loaded.std_dir = Some(root.clone());
@@ -494,29 +492,28 @@ pub fn load_library(
 /// std's name, which only std may take ([`load_library`]).
 const STD_NAME: &str = "std";
 
-/// Whether a library's root is core's or std's in a Temper checkout,
-/// `lib/DIR` in the workspace that holds the compiler's
-/// `crates/temper-frontend/src/MARKER`, which builds it in, as
-/// `corelib.rs` does core: core's sources there are core's whatever
-/// their text ([`Library::in_core`]), as std's are std's.
-pub fn is_checkout(sources: &Sources, root: &str, dir: &str, marker: &str) -> bool {
-    let has = |dir: &Path, name: &str| {
-        let dir = match dir.as_os_str().is_empty() {
-            true => ".".to_string(),
-            false => slashed(&dir.to_string_lossy()),
-        };
-        (sources.list(&dir).unwrap_or_default().iter()).any(|e| e.name == name)
+/// Whether a library's root is `lib/DIR` in this compiler's own Temper
+/// checkout, the one it was built from (by `CARGO_MANIFEST_DIR`): core's
+/// sources there are core's whatever their text ([`Library::in_core`]),
+/// as std's are std's. Only the build's own path counts, so no library
+/// gains core's powers by copying a checkout's layout; a compiler built
+/// from another checkout, or a release, sees none, and its editors use
+/// the copy of the built-in one they write.
+pub fn is_checkout(root: &str, dir: &str) -> bool {
+    let own = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../lib")
+        .join(dir);
+    let root = Path::new(root);
+    // As written, `..` and all, or else through links, as on disk.
+    let lexical = |path: &Path| {
+        let path = std::path::absolute(path).ok()?;
+        Some(normalize(&slashed(&path.to_string_lossy())))
     };
-    // As given, or absolute, as `.` for a work root in `lib/core`.
-    let absolute = std::path::absolute(root).ok();
-    let paths = [Some(Path::new(root).to_path_buf()), absolute];
-    paths.into_iter().flatten().any(|path| {
-        let repo = path.parent().and_then(Path::parent);
-        path.ends_with(format!("lib/{dir}"))
-            && repo.is_some_and(|repo| {
-                has(repo, "Cargo.toml") && has(&repo.join("crates/temper-frontend/src"), marker)
-            })
-    })
+    let canonical = |path: &Path| std::fs::canonicalize(path).ok();
+    let lexical_root = lexical(root);
+    let canonical_root = canonical(root);
+    (lexical_root.is_some() && lexical_root == lexical(&own))
+        || (canonical_root.is_some() && canonical_root == canonical(&own))
 }
 
 /// Whether a library is a copy of built-in core's or std's `files`, as

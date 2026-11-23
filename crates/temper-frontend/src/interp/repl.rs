@@ -106,6 +106,7 @@ impl Runner {
                 host,
                 inputs_parked: Vec::new(),
                 inputs_failed: Vec::new(),
+                #[cfg(feature = "core-bodies")]
                 core: None,
             },
             first_globals: HashMap::new(),

@@ -1019,8 +1019,12 @@ do
         return temper_reduce_from_index(list, initial, 1, accumulate)
     end
 
-    -- From the 0-based `index`, none past the end.
+    -- From the 0-based `index`, none past the end; a negative index fails
+    -- as `listed_get` does.
     function temper.listed_reducefromindex(list, initial, index, accumulate)
+        if index < 0 then
+            temper.listed_get(list, index)
+        end
         return temper_reduce_from_index(list, initial, index + 1, accumulate)
     end
 end

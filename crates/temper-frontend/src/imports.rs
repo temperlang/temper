@@ -291,6 +291,13 @@ impl Settle {
         if !is_dot || tree.kind(object) != NodeKind::RightName || self.is_temporary(object) {
             return Ok(false);
         }
+        // Only a name some `let … = import(…)` declares may be a
+        // namespace: others needn't resolve early.
+        let may_be_namespace =
+            (self.lib.name(object)).is_some_and(|n| self.namespace_names.contains(&n));
+        if !may_be_namespace {
+            return Ok(false);
+        }
         let Some(&Value::Symbol(member)) = self.lib.value(key) else {
             return Ok(false);
         };

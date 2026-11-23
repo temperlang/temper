@@ -16,6 +16,11 @@ default = ["net"]
 # it, as in the wasm build, requests fail with "web client not supported
 # here".
 net = ["dep:ureq"]
+# Core's Temper bodies run in place of the interpreter's natives, for
+# tests that the two agree (`interp::run_tests_with_core_bodies`). Only
+# this crate's tests turn it on (below), so other builds' interpreters
+# carry none of its hooks.
+core-bodies = []
 
 [dependencies]
 # The clock: the page's, on wasm (`host`), for std's `temporal`.
@@ -27,4 +32,5 @@ temper-tmpl = { path = "../temper-tmpl" }
 ureq = { version = "=3.1.2", optional = true, default-features = false, features = ["rustls"] }
 
 [dev-dependencies]
+temper-frontend = { path = ".", default-features = false, features = ["core-bodies"] }
 temper-funtests = { path = "../temper-funtests" }

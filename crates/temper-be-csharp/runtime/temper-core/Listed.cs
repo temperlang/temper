@@ -104,6 +104,24 @@ namespace TemperLang.Core
             Func<T, string> stringify
         ) => string.Join(separator, values.Select(stringify));
 
+        /// <summary>
+        /// Reduces from <paramref name="index"/>, none past the end. A
+        /// negative index fails as <c>list[index]</c> does.
+        /// </summary>
+        public static TOut ReduceFromIndex<T, TOut>(
+            IEnumerable<T> list,
+            TOut initial,
+            int index,
+            Func<TOut, T, TOut> accumulate
+        )
+        {
+            if (index < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index));
+            }
+            return list.Skip(index).Aggregate(initial, accumulate);
+        }
+
         public static T RemoveLast<T>(this IList<T> list)
         {
             // Let appropriate exceptions fly.

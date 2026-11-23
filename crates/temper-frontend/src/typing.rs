@@ -1124,8 +1124,8 @@ impl Settle {
     /// through an alias too: "C is not a concrete type with a public
     /// constructor", as for core's. Stricter than Kotlin Temper, which
     /// doesn't check (kotlin-differences.md). Core's own code makes its
-    /// classes' values, as `new` of a builtin type allows
-    /// ([`Settle::check_builtin_new`]).
+    /// own classes' values, as `new` of a builtin type allows
+    /// ([`Settle::check_builtin_new`]), but not another file's.
     fn check_private_new(&mut self, call: NodeId, classes: &[NodeId]) {
         let tree = &self.lib.tree;
         let (Some(&callee), Some(&target)) =
@@ -1133,9 +1133,7 @@ impl Settle {
         else {
             return;
         };
-        if self.scopes.resolved_builtin(callee) != Some(Builtin::Function(Function::New))
-            || self.lib.in_core(tree.span(call).start)
-        {
+        if self.scopes.resolved_builtin(callee) != Some(Builtin::Function(Function::New)) {
             return;
         }
         let t = self.eval_type(target);
@@ -1146,6 +1144,9 @@ impl Settle {
             return;
         };
         let tree = &self.lib.tree;
+        if self.lib.in_core(tree.span(call).start) && self.lib.in_core(tree.span(class).start) {
+            return;
+        }
         let private = (core::class_parts(tree, class).2.iter()).any(|&m| {
             let data = tree.data(m);
             data & ROLE_MASK == core::ROLE_CONSTRUCTOR

@@ -35,5 +35,6 @@ public final class CoreNumbersGlobal {
         console.log(Core.float64Near(inf, 1.0) + " " + Core.float64Near(inf, ninf) + " " + Core.float64Near(inf, 1.0, 0.0, 0.0) + " " + Core.float64Near(inf, inf, 0.0, 0.0) + " " + Core.float64Near(inf, 1.0, 1.0, inf) + " " + Core.float64Near(1.0, ninf, 1.0, inf));
         console.log(Core.float64Near(1.0, 1.5, nan, 1.0) + " " + Core.float64Near(1.0, 1.5, 1.0, nan) + " " + Core.float64Near(1.0, 1.0, nan, nan) + " " + Core.float64Near(-0.0, 0.0, 0.0, 0.0));
         console.log(Core.float64Near(1.0, 1.0 + 1e-10) + " " + Core.float64Near(1.0, 1.1) + " " + Core.float64Near(1.0, 1.1, 0.2) + " " + Core.float64Near(0.0, 1e-300, 1e-9, 1e-12));
+        console.log(Integer.toString(Core.listedReduceIntToInt(Core.listFrom(digits, -1), 0, (s, n) -> s + 1)));
     }
 }

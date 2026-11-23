@@ -60,12 +60,13 @@ impl Analysis<'_> {
     /// operators, so they're left to the tree's names.
     pub(crate) fn syntax_at(&self, file: FileId, offset: u32) -> Option<Syntax> {
         let parsed = &self.settled.library.files.get(file.0 as usize)?.parsed;
-        let token = (parsed.lexed().iter()).find(|t| {
-            t.synthetic.is_none()
-                && t.kind == TokenKind::Word
-                && t.start <= offset
-                && offset < t.end
-        })?;
+        // Tokens are in source order, and the source's don't overlap, so
+        // the only one that may hold `offset` is the last to start by it.
+        let lexed = parsed.lexed();
+        let started = lexed.partition_point(|t| t.start <= offset);
+        let token = (lexed[..started].iter().rev())
+            .find(|t| t.synthetic.is_none())
+            .filter(|t| t.kind == TokenKind::Word && offset < t.end)?;
         let text = &parsed.source()[token.range()];
         let builtin = Builtin::named(text)?;
         if matches!(builtin, Builtin::Type(_)) {

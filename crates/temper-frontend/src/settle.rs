@@ -151,6 +151,7 @@ impl Settle {
         let scopes = Scopes::new(&mut library.names, library.test_server_port);
         let budget = 1000 + 100 * library.tree.len() as u64;
         Settle {
+            namespace_names: library.namespace_names(0..library.tree.len() as u32),
             lib: library,
             scopes,
             engine: Engine::new(budget),
@@ -297,6 +298,11 @@ impl Settle {
 pub(crate) struct Settle {
     pub lib: Library,
     pub scopes: Scopes,
+    /// The names that `let rx = import(…)` may declare as module
+    /// namespaces ([`Library::namespace_names`]), a REPL input's added
+    /// as it's settled: only these can be `rx` in `rx.member`, so other
+    /// calls skip looking for it.
+    pub(crate) namespace_names: HashSet<NameId>,
     engine: Engine<Fact>,
     work: Vec<Work>,
     /// Each module's scope, by [`ModuleId`].
@@ -999,13 +1005,13 @@ impl Settle {
         Ok(())
     }
 
-    /// What a name means in core's own text alone, read as a library, as
-    /// Kotlin Temper binds it in core's environment: `_listify`, the
-    /// list-making function `List.of` is.
+    /// What a name means in core's own text alone, read as a library
+    /// ([`crate::builtins::CORE_ONLY`]).
     fn core_binding(&self, node: NodeId, name: NameId) -> Option<SymbolId> {
-        let start = self.lib.tree.span(node).start;
-        let listify = self.lib.names.get(name) == "_listify" && self.lib.in_core(start);
-        listify.then(|| (self.scopes).hidden(Builtin::Function(crate::builtins::Function::List)))
+        let text = self.lib.names.get(name);
+        let (_, builtin) = (crate::builtins::CORE_ONLY.iter()).find(|(n, _)| *n == text)?;
+        let in_core = self.lib.in_core(self.lib.tree.span(node).start);
+        in_core.then(|| self.scopes.hidden(*builtin))
     }
 
     /// Visits a call: expands it if its callee is a macro, returning true,

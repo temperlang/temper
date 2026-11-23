@@ -18,7 +18,7 @@
 //! Nothing here runs unless asked for ([`super::run_tests_with_core_bodies`]).
 
 use super::{Abrupt, Class, Interp, R, Val, class_name};
-use crate::builtins::{Function, TYPES};
+use crate::builtins::{Builtin, Function, TYPES};
 use crate::core::{
     self, MEMBER_PRIVATE, MEMBER_STATIC, ROLE_CONSTRUCTOR, ROLE_GETTER, ROLE_MASK, ROLE_METHOD,
 };
@@ -39,8 +39,9 @@ pub(super) struct CoreBodies {
     constructed: HashMap<u8, Rc<Class>>,
     /// Core's `@extension("name")` functions, by that name.
     extensions: HashMap<String, Val>,
-    /// Core's functions that builtins name, by name.
-    functions: HashMap<&'static str, Val>,
+    /// Core's functions with Temper bodies that builtin functions name,
+    /// as `empty`, by the builtin.
+    functions: HashMap<Function, Val>,
     /// The `Fn`s that ran, for checking that each body ran.
     pub(super) ran: RefCell<HashSet<NodeId>>,
 }
@@ -70,10 +71,8 @@ impl CoreBodies {
                 }
                 value @ Val::Fn(_) => {
                     by_symbol.insert(text.to_string(), value.clone());
-                    for builtin in ["ignore", "empty", "doneResult", "getConsole"] {
-                        if text == builtin {
-                            functions.insert(builtin, value.clone());
-                        }
+                    if let Some(Builtin::Function(f)) = Builtin::named(text) {
+                        functions.insert(f, value.clone());
                     }
                 }
                 _ => {}
@@ -178,14 +177,7 @@ impl CoreBodies {
                 }
             }
             Val::Builtin(f) => {
-                let name = match f {
-                    Function::Ignore => "ignore",
-                    Function::Empty => "empty",
-                    Function::DoneResult => "doneResult",
-                    Function::GetConsole => "getConsole",
-                    _ => return Err((function, args)),
-                };
-                if let Some(value) = self.functions.get(name) {
+                if let Some(value) = self.functions.get(f) {
                     return Ok(interp.apply(s, value.clone(), args));
                 }
             }

@@ -471,19 +471,20 @@ pub(super) fn has_static(type_name: &str, name: &str) -> bool {
 }
 
 /// A type core declares that typing doesn't read, as `Console`, read the
-/// first time an editor wants one.
+/// first time an editor wants one. A name core doesn't declare is kept
+/// too, so it's looked for once.
 fn other_class(name: &str) -> Option<&'static CoreClass> {
-    static OTHERS: std::sync::Mutex<Vec<(String, &'static CoreClass)>> =
-        std::sync::Mutex::new(Vec::new());
+    type Others = Vec<(String, Option<&'static CoreClass>)>;
+    static OTHERS: std::sync::Mutex<Others> = std::sync::Mutex::new(Vec::new());
     let mut others = OTHERS.lock().unwrap_or_else(|e| e.into_inner());
-    if let Some((_, class)) = others.iter().find(|(n, _)| n == name) {
-        return Some(class);
+    if let Some(&(_, class)) = others.iter().find(|(n, _)| n == name) {
+        return class;
     }
-    declaration(name, false)?;
-    // A handful at most, kept for the process's life.
-    let class: &'static CoreClass = Box::leak(Box::new(read_class(name)));
+    // A handful at most, core's and builtins' names, kept for the
+    // process's life.
+    let class = declaration(name, false).map(|_| &*Box::leak(Box::new(read_class(name))));
     others.push((name.to_string(), class));
-    Some(class)
+    class
 }
 
 /// A builtin type's public member, as editors show it.

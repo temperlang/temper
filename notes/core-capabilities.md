@@ -50,8 +50,11 @@ not the builtin.
 A user's class's private constructor is its own, as private methods
 are: `new C()` outside `C` (and classes inside it) is "C is not a
 concrete type with a public constructor", through an alias or an object
-literal too. Core's own code makes its classes' values, as `doneResult()`
-and `empty()` do.
+literal too. Core's own code makes its own classes' values, as
+`doneResult()` and `empty()` do, but no other file's. Core is only the
+built-in core's text, or the `lib/core` of the checkout the compiler was
+built from (`project::is_checkout`, by build path), never a library
+that copies a checkout's layout.
 
 `crates/temper-frontend/tests/core_capabilities.rs` checks every row
 below, one case per type and capability, each named directly and
@@ -118,10 +121,11 @@ The host supplies `Boolean`, `Int32`, `Int64`, `Float64`, `String`,
 the generators and their results, `Promise`, `PromiseBuilder`, and
 `Console`, each `@connected` in core. That refuses `is` and `as` for
 them by the connected rule, unless `@mayDowncastTo` or type arguments
-decide first. Each backend lists the core types it translates as host
-or runtime types (`Backend::host_types`), and temper-driver's
-`host_types` test checks each is `@connected`, naming the type and
-backend otherwise, so a host type can't be left unmarked.
+decide first. temper-driver's `host_types` test finds the core types
+each backend translates as host or runtime types by scanning its
+sources for `"core.type X"`, adds tmpl's value scalars, and checks each
+is `@connected`, naming the type and backend otherwise, so a host type
+can't be left unmarked, and no list is kept by hand.
 
 ## Gaps and open questions
 

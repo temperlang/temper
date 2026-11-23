@@ -73,6 +73,15 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 temper_core::float64::near(1.0, 1.1, Some(0.2), None),
                 temper_core::float64::near(0.0, 1e-300, Some(1e-9), Some(1e-12))
             );
+            println!(
+                "{}",
+                temper_core::listed::reduce_from_index(
+                    &digits(),
+                    0,
+                    -1,
+                    &(|s: i32, _n: i32| s.wrapping_add(1)),
+                )
+            );
             Ok(())
         })
         .clone()

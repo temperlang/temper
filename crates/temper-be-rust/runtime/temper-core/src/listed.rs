@@ -165,7 +165,8 @@ mod listed {
         reduce_from_index(listed, initial, 0, accumulate)
     }
 
-    /// `reduceFromIndex`, from `index`, none past the end.
+    /// `reduceFromIndex`, from `index`, none past the end; a negative
+    /// index fails as `get` does.
     pub fn reduce_from_index<T, O>(
         listed: &dyn ListedTrait<T>,
         initial: O,
@@ -176,6 +177,9 @@ mod listed {
         T: Clone + Sync + Send,
         O: Clone + Sync + Send,
     {
+        if index < 0 {
+            listed.get(index);
+        }
         let items = listed.to_list();
         let mut result = initial;
         for value in items.iter().skip(index as usize) {

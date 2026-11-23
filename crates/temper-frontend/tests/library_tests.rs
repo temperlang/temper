@@ -570,49 +570,65 @@ fn temper_core_is_reserved() {
     assert!(copy(&[], 0));
     assert!(!copy(&[("more.temper", "export let more = 1;\n")], 0));
     assert!(!copy(&[], 1));
-    // A checkout's core, edited, each file of it: in `dir` under a
-    // repository with the compiler's marker if `marker`, named `name`.
+    // A checkout's core at `root`, named `name`, its first file's text
+    // `first_text`, with `more` files, and the layout of a Temper checkout
+    // around it: a `Cargo.toml` and the compiler's `corelib.rs`.
     let (first, text) = temper_frontend::corelib::SOURCES[0];
     let edited = format!("{text}\nexport let edited = 1;\n");
-    let checkout = |dir: &str, marker: bool, name: &str| {
+    let checkout_with = |root: &str, name: &str, first_text: &str, more: &[(&str, &str)]| {
         let config = format!("# Core\n\n    export let name = \"{name}\";\n");
+        let repo = format!("{root}/../..");
         let mut files: Vec<(String, String)> = vec![
-            ("repo/Cargo.toml".into(), "[workspace]\n".into()),
-            (format!("repo/{dir}/config.temper.md"), config),
+            (format!("{repo}/Cargo.toml"), "[workspace]\n".into()),
+            (
+                format!("{repo}/crates/temper-frontend/src/corelib.rs"),
+                "//! Core.\n".into(),
+            ),
+            (format!("{root}/config.temper.md"), config),
         ];
-        if marker {
-            let marker = "repo/crates/temper-frontend/src/corelib.rs";
-            files.push((marker.into(), "//! Core.\n".into()));
-        }
         for &(path, text) in temper_frontend::corelib::SOURCES {
-            let text = if path == first { edited.as_str() } else { text };
-            files.push((format!("repo/{dir}/{path}"), text.to_string()));
+            let text = if path == first { first_text } else { text };
+            files.push((format!("{root}/{path}"), text.to_string()));
+        }
+        for &(path, text) in more {
+            files.push((format!("{root}/{path}"), text.to_string()));
         }
         let files: Vec<(&str, &str)> = files
             .iter()
             .map(|(p, t)| (p.as_str(), t.as_str()))
             .collect();
         let sources = Sources::memory(&files);
-        let libraries = find_libraries(&sources, &format!("repo/{dir}"));
+        let libraries = find_libraries(&sources, root);
         load_library(&sources, &libraries[0], &libraries)
     };
-    let library = checkout("lib/core", true, "temper-core").unwrap();
+    let checkout = |root: &str, name: &str| checkout_with(root, name, &edited, &[]);
+    // Only this compiler's own checkout, by the path it was built from,
+    // is core whatever its text, not another directory laid out as one.
+    let own = own_checkout("core");
+    let library = checkout(&own, "temper-core").unwrap();
     assert_eq!(library.files.len(), temper_frontend::corelib::SOURCES.len());
     for file in &library.files {
         assert!(library.in_core(file.base), "{}", file.path);
     }
-    // Not without the compiler's marker, nor anywhere but `lib/core`.
     let reserved = "temper-core is reserved for Temper's core library";
-    for (dir, marker) in [
-        ("lib/core", false),
-        ("lib/core2", true),
-        ("libs/core", true),
-    ] {
-        let err = checkout(dir, marker, "temper-core").err();
-        assert!(err.is_some_and(|e| e.contains(reserved)), "{dir}");
+    for root in ["repo/lib/core", "lib/core", "/tmp/fake/lib/core"] {
+        let err = checkout(root, "temper-core").err();
+        assert!(err.is_some_and(|e| e.contains(reserved)), "{root}");
     }
+    // Core's own code may `new` its own classes past their private
+    // constructors, but not another file's, even in its own checkout.
+    // Indented, as code in a literate file.
+    let uses = format!("{text}\n    let secret = new Secret();\n");
+    let secret = [(
+        "secret.temper",
+        "export class Secret { private constructor() {} }\n",
+    )];
+    let library = checkout_with(&own, "temper-core", &uses, &secret).unwrap();
+    let errors = settled_errors(library);
+    let refused = "Secret is not a concrete type with a public constructor";
+    assert!(errors.iter().any(|e| e.contains(refused)), "{errors:?}");
     // Another library there isn't core: its edited file has no powers.
-    let library = checkout("lib/core", true, "other").unwrap();
+    let library = checkout(&own, "other").unwrap();
     let edited_file = (library.files.iter())
         .find(|f| f.path.ends_with(first))
         .unwrap();
@@ -630,6 +646,42 @@ fn temper_core_is_reserved() {
     );
     assert!(library.in_core(library.files[0].base));
     assert!(!library.in_core(library.files[1].base));
+}
+
+/// This compiler's own checkout's `lib/DIR`, by the path it was built
+/// from, as `project::load_library` recognizes it.
+fn own_checkout(dir: &str) -> String {
+    let lib = concat!(env!("CARGO_MANIFEST_DIR"), "/../../lib/");
+    let path = std::path::absolute(format!("{lib}{dir}")).unwrap();
+    let path = temper_frontend::project::slashed(&path.to_string_lossy());
+    let mut parts: Vec<&str> = Vec::new();
+    for part in path.split('/') {
+        match part {
+            ".." => {
+                parts.pop();
+            }
+            "." => {}
+            part => parts.push(part),
+        }
+    }
+    parts.join("/")
+}
+
+/// The error messages from settling `library`, on a thread with room for
+/// core's.
+fn settled_errors(library: temper_frontend::library::Library) -> Vec<String> {
+    std::thread::Builder::new()
+        .stack_size(64 << 20)
+        .spawn(move || {
+            let settled = temper_frontend::settle::settle(library);
+            (settled.library.diagnostics.iter())
+                .filter(|d| d.level == temper_frontend::library::Level::Error)
+                .map(|d| d.message.text())
+                .collect()
+        })
+        .unwrap()
+        .join()
+        .unwrap()
 }
 
 /// `std` is std's name, as `temper-core` is core's: another library of
@@ -697,12 +749,20 @@ fn std_is_reserved() {
     let more = [("copy/more/more.temper", "export let more = 1;\n")];
     assert!(load(std_at("copy", false, &more), "copy").is_err());
     assert!(load(std_at("copy", true, &[]), "copy").is_err());
+    // Only this compiler's own checkout is std whatever its text, not
+    // another directory laid out as one.
     let repo = [
         ("repo/Cargo.toml", "[workspace]\n"),
         ("repo/crates/temper-frontend/src/stdlib.rs", "//! Std.\n"),
     ];
-    let checkout = std_at("repo/lib/std", true, &repo);
-    assert_eq!(load(checkout, "repo/lib/std"), Ok(()));
+    let fake = std_at("repo/lib/std", true, &repo);
+    let err = load(fake, "repo/lib/std").unwrap_err();
+    assert!(
+        err.contains("std is reserved for Temper's std library"),
+        "{err}"
+    );
+    let own: &'static str = own_checkout("std").leak();
+    assert_eq!(load(std_at(own, true, &[]), own), Ok(()));
 }
 
 /// A test that loops forever runs out of its steps and fails alone; the

@@ -939,13 +939,15 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
 
 - **`temper-core` is core's name** (2026-11-19). Kotlin builds core
   from `lib/core` in its own tree. Temper builds core in, and takes a
-  library as core only as a Temper checkout's `lib/core`, beside the
-  compiler's crates, which editors open, whatever its text; building
+  library as core only as the `lib/core` of the checkout the compiler
+  was built from (its build path, not a layout any library could copy),
+  which editors open, whatever its text, or the built-in core's copy
+  editors write, file for file; building
   any other library named `temper-core` is an error, so none gets core's
   powers (as naming `_listify`) or writes over core's output.
   Test: temper-frontend/tests/library_tests.rs,
-  `temper_core_is_reserved`. Likewise `std` (2026-11-21): a Temper
-  checkout's `lib/std`, or the copy of the built-in std that editors
+  `temper_core_is_reserved`. Likewise `std` (2026-11-21): the
+  compiler's own checkout's `lib/std`, or the copy of the built-in std that editors
   write, builds and settles as std, its `@json` code and `@connected`
   members its own, rather than beside the built-in std (whose
   `JsonProducer` it took for another), and any other library named

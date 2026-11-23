@@ -30,12 +30,6 @@ pub struct Backend {
     /// backend that writes source maps (JS) writes them, naming the
     /// sources by their paths after it.
     pub translate: fn(&Program, Option<&str>) -> Result<Vec<OutFile>, String>,
-    /// Core's types it translates as a host type or its runtime's own,
-    /// as `Pair` for Java's `Map.Entry`, by their names in core: each
-    /// must be `@connected` in core, which `temper-driver`'s tests check,
-    /// so `is` and `as` don't target it where several Temper types may
-    /// share the host type. Kept beside its type translation.
-    pub host_types: &'static [&'static str],
     /// Whether `temper build` builds for it without `-b`, as Kotlin's
     /// defaults: all but C++.
     pub default: bool,

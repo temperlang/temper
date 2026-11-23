@@ -111,8 +111,20 @@ the body, the interpreter, and every runtime.
 
 `Int32.signum` and `listedReduceFromIndex` run on every backend too
 (2026-11-23; testkit's `core-numbers` checks `signum` at the extremes and
-an index inside, at, and past the end). Backends don't agree on a
-negative index, which only the body and the interpreter panic on.
+an index inside, at, and past the end). A negative index fails on every
+backend as `listed[i]` does there, each helper calling its runtime's own
+list get, and `core-numbers` ends on one.
+
+### Host helpers that restate core's bodies
+
+Some backends' helpers restate a body core writes in Temper, so each
+runtime is one more copy of the semantics to keep in step: `near` (7
+runtimes, each with its own NaN-margin comment), `reduceFromIndex` (7),
+and `listedSorted`'s copy-and-compare (7). Once tmpl translates core's
+bodies, any without a host speed-up should lose `@connected` and
+translate from core instead. Likely first: `reduceFromIndex` and
+`listedReduceFrom` everywhere (plain loops), and `near` (arithmetic
+only). `sorted` keeps host sorts for speed and stability.
 
 Backends against the bodies (all else agrees):
 

@@ -3430,16 +3430,18 @@ impl Translator<'_> {
     /// as `n - 1`, which wrap. (Not `signum` as `n <=> 0`: `<=>` gives
     /// only a sign, and some backends give `n` itself.)
     fn core_as_op(&mut self, node: FNode, key: &str, object: FNode) -> Tx<Option<NodeId>> {
-        let op = match key {
-            "Int32.succ" | "Int64.succ" => key.replace("succ", "add"),
-            "Int32.pred" | "Int64.pred" => key.replace("pred", "sub"),
+        let (op, wide) = match key {
+            "Int32.succ" => ("Int32.add", false),
+            "Int32.pred" => ("Int32.sub", false),
+            "Int64.succ" => ("Int64.add", true),
+            "Int64.pred" => ("Int64.sub", true),
             _ => return Ok(None),
         };
-        let Some(op) = Op::named(&op) else {
+        let Some(op) = Op::named(op) else {
             return Ok(None);
         };
         let receiver = self.expr(object)?;
-        let operand = if key.starts_with("Int64") {
+        let operand = if wide {
             self.b.int64(1)
         } else {
             self.b.int32(1)

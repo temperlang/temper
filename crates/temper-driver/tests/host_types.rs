@@ -1,38 +1,27 @@
 //! Each core type a backend translates as a host type or its runtime's
-//! own (`Backend::host_types`) is `@connected` in core, as core says
-//! where it reads its declarations (`temper_frontend::typing::core_shape`),
-//! so `is` and `as` can't target one that several Temper types may share
-//! the host type of (notes/core-capabilities.md). Backends are those the
-//! registry has; the frontend lists none. And the other way: each core
-//! type a backend's translation names, as `"core.type Deque"`, is one of
-//! its `host_types`, so a type it starts translating can't be missed.
+//! own is `@connected` in core, as core says where it reads its
+//! declarations (`temper_frontend::typing::core_shape`), so `is` and `as`
+//! can't target one that several Temper types may share the host type
+//! of (notes/core-capabilities.md). Those types are what each backend's
+//! sources name, as `"core.type Deque"`, found by scanning them, so no
+//! list is kept by hand and a type a backend starts translating can't be
+//! missed; and tmpl's value scalars, as `Int32`, which every backend
+//! translates as its host's. Backends are those the registry
+//! has; the frontend lists none.
 
 use std::path::{Path, PathBuf};
 use temper_driver::Registry;
 use temper_frontend::typing::core_shape;
-use temper_tmpl::TypeTable;
-
-#[test]
-fn host_types_are_connected_in_core() {
-    let mut wrong = Vec::new();
-    for backend in Registry::built_in().all() {
-        for &name in backend.host_types {
-            match core_shape(name) {
-                Some(shape) if shape.connected => {}
-                Some(_) => wrong.push(format!("{name} ({}): not @connected", backend.name)),
-                None => wrong.push(format!(
-                    "{name} ({}): not a type core exports",
-                    backend.name
-                )),
-            }
-        }
-    }
-    assert_eq!(wrong, Vec::<String>::new());
-}
+use temper_tmpl::Scalar;
 
 /// Core types a backend's sources name that aren't host types: `MapKey`,
 /// only ever a bound, never a value's type.
 const NOT_HOST_TYPES: [&str; 1] = ["MapKey"];
+
+/// tmpl's scalars that no backend translates as a value's host type:
+/// `Void`, which has no values, `AnyValue`, every value's type, and
+/// `Type`, types as values, none of which `is` and `as` confuse.
+const NOT_HOST_SCALARS: [&str; 3] = ["Void", "AnyValue", "Type"];
 
 /// The core types a crate's sources name as `"core.type X"`, each once.
 fn named_core_types(dir: &Path, found: &mut Vec<String>) {
@@ -59,8 +48,12 @@ fn named_core_types(dir: &Path, found: &mut Vec<String>) {
 }
 
 #[test]
-fn translated_core_types_are_host_types() {
+fn host_types_are_connected_in_core() {
     let crates = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+    let scalars = (Scalar::ALL.iter())
+        .map(|s| s.name())
+        .filter(|name| !NOT_HOST_SCALARS.contains(name));
+    let scalars: Vec<&str> = scalars.collect();
     let mut wrong = Vec::new();
     let mut checked = 0;
     for backend in Registry::built_in().all() {
@@ -71,27 +64,20 @@ fn translated_core_types_are_host_types() {
         checked += 1;
         let mut named = Vec::new();
         named_core_types(&src, &mut named);
-        for name in &named {
-            if !backend.host_types.contains(&name.as_str())
-                && !NOT_HOST_TYPES.contains(&name.as_str())
-            {
-                wrong.push(format!(
-                    "{name} ({}): translated, not in host_types",
+        let named = named.iter().map(String::as_str);
+        let host_types = named.filter(|n| !NOT_HOST_TYPES.contains(n));
+        for name in host_types.chain(scalars.iter().copied()) {
+            match core_shape(name) {
+                Some(shape) if shape.connected => {}
+                Some(_) => wrong.push(format!("{name} ({}): not @connected", backend.name)),
+                None => wrong.push(format!(
+                    "{name} ({}): not a type core exports",
                     backend.name
-                ));
-            }
-        }
-        // And no stale entries: each is translated, or a scalar, which
-        // tmpl's own types cover.
-        for &name in backend.host_types {
-            if !named.iter().any(|n| n == name) && TypeTable::scalar_named(name).is_none() {
-                wrong.push(format!(
-                    "{name} ({}): in host_types, never translated",
-                    backend.name
-                ));
+                )),
             }
         }
     }
     assert!(checked >= 7, "{checked} backends' sources");
+    assert!(!scalars.is_empty());
     assert_eq!(wrong, Vec::<String>::new());
 }

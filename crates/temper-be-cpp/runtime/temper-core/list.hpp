@@ -250,7 +250,8 @@ namespace temper {
                 return acc;
             }
 
-            // From `index`, none past the end.
+            // From `index`, none past the end; a negative index fails as
+            // `get` does.
             template<class Elem, class Acc, class F>
             Acc reduceFromIndex(
                 const std::shared_ptr<std::vector<Elem>>& list,
@@ -258,6 +259,9 @@ namespace temper {
                 int32_t index,
                 F fn
             ) {
+                if (index < 0) {
+                    get(list, index);
+                }
                 const std::vector<Elem> items(*list);
                 Acc acc = init;
                 for (size_t i = static_cast<size_t>(index); i < items.size(); ++i) {

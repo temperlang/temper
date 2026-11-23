@@ -16,8 +16,10 @@ use temper_syntax::literate::blank_prose;
 /// `-core-/strings.temper.md`, as [`crate::stdlib::DIR`] is std's.
 pub const DIR: &str = "-core-";
 
-/// core's library name, as its `config.temper.md` gives it: a library
-/// by this name is core, whatever its text ([`crate::library::Library::in_core`]).
+/// core's library name, as its `config.temper.md` gives it, which no
+/// other library may take: only core's own files, by their text or in
+/// the compiler's own checkout, are core
+/// ([`crate::project::load_library`], [`crate::library::Library::in_core`]).
 pub const NAME: &str = "temper-core";
 
 /// Declares [`TEXT`] and [`SOURCES`] from core's literate Temper files,

@@ -41,12 +41,12 @@ impl Settle {
             self.error(target, Message::CannotInstantiateTypeParam(name));
             return;
         }
-        if self.lib.in_core(self.lib.tree.span(call).start) {
-            return;
-        }
         let Some(name) = self.builtin_of(t) else {
             return;
         };
+        if self.lib.in_core(self.lib.tree.span(call).start) {
+            return;
+        }
         let message = match super::core_shape(name) {
             Some(shape) if shape.interface => {
                 Message::CannotInstantiateAbstractType(shape.name.into())

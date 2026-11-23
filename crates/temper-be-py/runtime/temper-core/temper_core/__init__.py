@@ -968,7 +968,12 @@ def listed_reduce_from_index(
     index: int,
     accumulate: Callable[[_lrfU, _lrfT], _lrfU],
 ) -> _lrfU:
-    "Implements core.listedReduceFromIndex: from `index`, none past the end."
+    """
+    Implements core.listedReduceFromIndex: from `index`, none past the end;
+    a negative index fails as `list_get` does.
+    """
+    if index < 0:
+        list_get(lst, index)
     return reduce(accumulate, islice(lst, index, None), initial)
 
 

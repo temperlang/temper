@@ -491,19 +491,24 @@ impl Scopes {
     /// are checked alike. An alias that names itself, even through
     /// others, ends at itself.
     pub fn type_symbol(&self, tree: &Tree, symbol: SymbolId) -> SymbolId {
+        // Those passed, few, as chains of aliases are short: one seen
+        // again is a cycle.
+        let mut seen = vec![symbol];
         let mut at = symbol;
-        // A chain longer than there are symbols is a cycle.
-        for _ in 0..self.symbols.len() {
+        loop {
             let next = self
                 .alias_init(tree, at)
                 .filter(|&init| tree.kind(init) == NodeKind::RightName)
                 .and_then(|init| self.resolved(init));
             match next {
-                Some(next) => at = next,
+                Some(next) if seen.contains(&next) => return symbol,
+                Some(next) => {
+                    seen.push(next);
+                    at = next;
+                }
                 None => return at,
             }
         }
-        symbol
     }
 
     /// The builtin type a name names, directly or through aliases and
