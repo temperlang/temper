@@ -197,9 +197,10 @@ impl Settle {
         match core::fn_parts(tree, f).1 {
             Some(out_type) => !self.is_throws(out_type),
             None => match self.wanted_fn(f, false) {
-                Ok(Some(t)) => {
-                    matches!(self.typing.types.get(t), TypeData::Fn { throws: false, .. })
-                }
+                Ok(Some(t)) => match *self.typing.types.get(t) {
+                    TypeData::Fn { result, .. } => self.typing.types.fail(result).is_none(),
+                    _ => false,
+                },
                 _ => false,
             },
         }
@@ -297,14 +298,12 @@ impl Settle {
 
     /// Whether a call of a function of type `t` with `args` may bubble.
     fn fn_call_bubbles(&mut self, call: NodeId, t: TypeId, args: &[NodeId]) -> bool {
-        let TypeData::Fn {
-            params,
-            throws: true,
-            ..
-        } = self.typing.types.get(t)
-        else {
+        let TypeData::Fn { params, result } = self.typing.types.get(t) else {
             return false;
         };
+        if self.typing.types.fail(*result).is_none() {
+            return false;
+        }
         // Kotlin can't pick a callee for the wrong number of arguments,
         // nor fold a call with an argument that doesn't fit.
         let params = params.clone();

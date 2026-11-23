@@ -49,13 +49,16 @@ pub enum TypeData {
     Applied { base: TypeId, args: Vec<TypeId> },
     /// `T?`: a type or null. `T` isn't nullable itself.
     Nullable(TypeId),
-    /// `fn (A, B): R`, or `fn (A, B): R throws Bubble` if `throws`. A
-    /// parameter with a default is optional.
-    Fn {
-        params: Vec<Param>,
-        ret: TypeId,
-        throws: bool,
-    },
+    /// `fn (A, B): R`. A parameter with a default is optional. `result`
+    /// is a [`TypeData::Result`] if the function may fail, as `fn (A, B):
+    /// R throws Bubble`.
+    Fn { params: Vec<Param>, result: TypeId },
+    /// `T throws E`, a function's result where it may fail with an `E`
+    /// (notes/typing.md, "Results"): `pass` is what a call gives when it
+    /// doesn't. Only ever a [`TypeData::Fn`]'s result, so no value has
+    /// one, and Temper code can't name one. Made by [`Types::result`], so
+    /// `pass` isn't a result and `E` isn't a `Never`.
+    Result { pass: TypeId, fail: TypeId },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -74,10 +77,12 @@ pub const INT64: TypeId = TypeId(6);
 pub const FLOAT64: TypeId = TypeId(7);
 pub const STRING: TypeId = TypeId(8);
 pub const ANY_VALUE: TypeId = TypeId(9);
+/// `Bubble`, the only failure type for now (notes/typing.md, "Results").
+pub const BUBBLE: TypeId = TypeId(10);
 
-/// The builtin types with fixed ids, from [`VOID`] to [`ANY_VALUE`].
-const WELL_KNOWN: [&str; 7] = [
-    "Void", "Boolean", "Int32", "Int64", "Float64", "String", "AnyValue",
+/// The builtin types with fixed ids, from [`VOID`] to [`BUBBLE`].
+const WELL_KNOWN: [&str; 8] = [
+    "Void", "Boolean", "Int32", "Int64", "Float64", "String", "AnyValue", "Bubble",
 ];
 
 /// What subtyping needs to know of a class or interface.
@@ -208,7 +213,7 @@ impl Types {
             let index = TYPES.iter().position(|&t| t == name).unwrap();
             types.intern(TypeData::Builtin(index as u8));
         }
-        debug_assert_eq!(types.data.len() as u32, ANY_VALUE.0 + 1);
+        debug_assert_eq!(types.data.len() as u32, BUBBLE.0 + 1);
         types
     }
 
@@ -310,23 +315,20 @@ impl Types {
                     .collect();
                 self.intern(TypeData::Applied { base, args })
             }
-            TypeData::Fn {
-                params,
-                ret,
-                throws,
-            } => {
+            TypeData::Fn { params, result } => {
                 let params = (params.iter())
                     .map(|p| Param {
                         ty: self.substitute(p.ty, formals, actuals),
                         optional: p.optional,
                     })
                     .collect();
-                let ret = self.substitute(ret, formals, actuals);
-                self.intern(TypeData::Fn {
-                    params,
-                    ret,
-                    throws,
-                })
+                let result = self.substitute(result, formals, actuals);
+                self.intern(TypeData::Fn { params, result })
+            }
+            TypeData::Result { pass, fail } => {
+                let pass = self.substitute(pass, formals, actuals);
+                let fail = self.substitute(fail, formals, actuals);
+                self.result(pass, fail)
             }
             _ => t,
         }
@@ -338,8 +340,12 @@ impl Types {
             TypeData::Param(symbol) => formals.contains(symbol),
             TypeData::Nullable(inner) | TypeData::NeverOf(inner) => self.mentions(*inner, formals),
             TypeData::Applied { args, .. } => args.iter().any(|&a| self.mentions(a, formals)),
-            TypeData::Fn { params, ret, .. } => {
-                params.iter().any(|p| self.mentions(p.ty, formals)) || self.mentions(*ret, formals)
+            TypeData::Fn { params, result } => {
+                params.iter().any(|p| self.mentions(p.ty, formals))
+                    || self.mentions(*result, formals)
+            }
+            TypeData::Result { pass, fail } => {
+                self.mentions(*pass, formals) || self.mentions(*fail, formals)
             }
             _ => false,
         }
@@ -359,7 +365,8 @@ impl Types {
     /// or `Void`; a nullable type is one for a bare `T`, as for Kotlin
     /// Temper, whose bound check takes it as fitting only `AnyValue`. A
     /// `Never<A>` passed where no `Never` is wanted solves as its `A`, as
-    /// Kotlin's reconciliation unpacks it.
+    /// Kotlin's reconciliation unpacks it. Results solve part by part, and
+    /// a result where no result is wanted as its pass type.
     pub fn unify(
         &mut self,
         pattern: TypeId,
@@ -372,6 +379,15 @@ impl Types {
         match (self.get(pattern).clone(), self.get(actual).clone()) {
             (NeverOf(p), NeverOf(a)) => self.unify(p, a, formals, actuals, conflicts),
             (_, NeverOf(a)) => self.unify(pattern, a, formals, actuals, conflicts),
+            // Results solve part by part; only a result's pass type solves
+            // a pattern that isn't one, so no type parameter but a failure
+            // type's stands for a result or its failure.
+            (Result { pass: p, fail: e }, Result { pass: a, fail: f }) => {
+                self.unify(p, a, formals, actuals, conflicts);
+                self.unify(e, f, formals, actuals, conflicts);
+            }
+            (Result { pass: p, .. }, _) => self.unify(p, actual, formals, actuals, conflicts),
+            (_, Result { pass: a, .. }) => self.unify(pattern, a, formals, actuals, conflicts),
             (Param(symbol), _) => {
                 let Some(i) = formals.iter().position(|&f| f == symbol) else {
                     return;
@@ -411,10 +427,12 @@ impl Types {
             }
             (
                 Fn {
-                    params: x, ret: p, ..
+                    params: x,
+                    result: p,
                 },
                 Fn {
-                    params: y, ret: a, ..
+                    params: y,
+                    result: a,
                 },
             ) if x.len() == y.len() => {
                 for (x, y) in x.iter().zip(&y) {
@@ -485,9 +503,10 @@ impl Types {
         match self.get(t) {
             TypeData::Param(_) | TypeData::Applied { .. } => true,
             TypeData::Nullable(t) | TypeData::NeverOf(t) => self.is_generic(*t),
-            TypeData::Fn { params, ret, .. } => {
-                params.iter().any(|p| self.is_generic(p.ty)) || self.is_generic(*ret)
+            TypeData::Fn { params, result } => {
+                params.iter().any(|p| self.is_generic(p.ty)) || self.is_generic(*result)
             }
+            TypeData::Result { pass, fail } => self.is_generic(*pass) || self.is_generic(*fail),
             _ => false,
         }
     }
@@ -571,6 +590,53 @@ impl Types {
                 self.nullable(never)
             }
             _ => self.intern(TypeData::NeverOf(t)),
+        }
+    }
+
+    /// `pass throws fail` ([`TypeData::Result`]), or just `pass` where
+    /// `fail` is a `Never`, which can't happen: `fn (): T throws
+    /// Never<Error>` is `fn (): T`. `pass` mustn't be a result.
+    pub fn result(&mut self, pass: TypeId, fail: TypeId) -> TypeId {
+        debug_assert!(self.fail(pass).is_none(), "a result of a result");
+        match self.get(fail) {
+            TypeData::Never | TypeData::NeverOf(_) => pass,
+            _ => self.intern(TypeData::Result { pass, fail }),
+        }
+    }
+
+    /// What a call gives, for a function whose result is `t`: a result's
+    /// pass type, or `t` itself. Every reader of a function's result
+    /// unwraps it so, as no value has a result type.
+    pub fn pass(&self, t: TypeId) -> TypeId {
+        match *self.get(t) {
+            TypeData::Result { pass, .. } => pass,
+            _ => t,
+        }
+    }
+
+    /// A result that fails as `result` does, if it does, but passes
+    /// `pass`, as a constructor's call gives its class.
+    pub fn with_pass(&mut self, result: TypeId, pass: TypeId) -> TypeId {
+        match self.fail(result) {
+            Some(fail) => self.result(pass, fail),
+            None => pass,
+        }
+    }
+
+    /// What a call of a function of type `t` gives: its result's pass
+    /// type ([`Types::pass`]); unknown if `t` isn't a function type.
+    pub fn call_pass(&self, t: TypeId) -> TypeId {
+        match *self.get(t) {
+            TypeData::Fn { result, .. } => self.pass(result),
+            _ => UNKNOWN,
+        }
+    }
+
+    /// What a function whose result is `t` may fail with, if anything.
+    pub fn fail(&self, t: TypeId) -> Option<TypeId> {
+        match *self.get(t) {
+            TypeData::Result { fail, .. } => Some(fail),
+            _ => None,
         }
     }
 
@@ -696,9 +762,10 @@ impl Types {
             TypeData::Applied { base, args } => {
                 self.is_known(*base) && args.iter().all(|&a| self.is_known(a))
             }
-            TypeData::Fn { params, ret, .. } => {
-                params.iter().all(|p| self.is_known(p.ty)) && self.is_known(*ret)
+            TypeData::Fn { params, result } => {
+                params.iter().all(|p| self.is_known(p.ty)) && self.is_known(*result)
             }
+            TypeData::Result { pass, fail } => self.is_known(*pass) && self.is_known(*fail),
             _ => true,
         }
     }
@@ -732,6 +799,14 @@ impl Types {
             _ if s == t => Some(true),
             (Unknown, _) | (_, Unknown) => None,
             (Never, _) => Some(true),
+            // The one rule for results: a function that may fail with an
+            // `E` may give whatever its pass type takes, and a result is
+            // only another result with parts that are.
+            (Result { pass: a, fail: e }, Result { pass: b, fail: f }) => {
+                both(self.subtype(a, b, depth), self.subtype(e, f, depth))
+            }
+            (Result { .. }, _) => Some(false),
+            (_, Result { pass: b, .. }) => self.subtype(s, b, depth),
             (Null, Nullable(_)) => Some(true),
             (Nullable(a), Nullable(b)) => self.subtype(a, b, depth),
             (_, Nullable(b)) => self.subtype(s, b, depth),
@@ -796,19 +871,19 @@ impl Types {
         let (
             TypeData::Fn {
                 params: x,
-                ret: r,
-                throws: x_throws,
+                result: r,
             },
             TypeData::Fn {
                 params: y,
-                ret: q,
-                throws: y_throws,
+                result: q,
             },
         ) = (self.get(s).clone(), self.get(t).clone())
         else {
             return None;
         };
-        if (x_throws && !y_throws) || x.len() != y.len() {
+        // Even where `t`'s pass type isn't worked out.
+        let fails = |x: TypeId| self.fail(x).is_some();
+        if (fails(r) && !fails(q)) || x.len() != y.len() {
             return Some(false);
         }
         // Kotlin lets a function with optional parameters be one that
@@ -1006,7 +1081,8 @@ impl Types {
     /// A type as Kotlin Temper writes it in messages: `Int32`, `String?`,
     /// `fn (Int32): Boolean`, and `fn: Int32` with no parameters, but one
     /// that throws as Temper's syntax does, `fn (Int32): Int32 throws
-    /// Bubble` ([`show_result`]). Classes are named by `class_name`.
+    /// Bubble`, where Kotlin Temper writes its internal `Result<Int32,
+    /// Bubble>` or `(Int32 | Bubble)`. Classes are named by `class_name`.
     pub fn display(&self, t: TypeId, class_name: &dyn Fn(SymbolId) -> String) -> String {
         match self.get(t) {
             TypeData::Unknown => "?".into(),
@@ -1023,35 +1099,35 @@ impl Types {
                 TypeData::Fn { .. } => format!("({})?", self.display(*inner, class_name)),
                 _ => format!("{}?", self.display(*inner, class_name)),
             },
-            TypeData::Fn {
-                params,
-                ret,
-                throws,
-            } => {
+            TypeData::Fn { params, result } => {
                 let params: Vec<String> = (params.iter())
                     .map(|p| match p.optional {
                         true => format!("_?: {}", self.display(p.ty, class_name)),
                         false => self.display(p.ty, class_name),
                     })
                     .collect();
-                let ret = show_result(self.display(*ret, class_name), *throws);
+                let ret = self.display(*result, class_name);
                 if params.is_empty() {
                     format!("fn: {ret}")
                 } else {
                     format!("fn ({}): {ret}", params.join(", "))
                 }
             }
+            TypeData::Result { pass, fail } => format!(
+                "{} throws {}",
+                self.display(*pass, class_name),
+                self.display(*fail, class_name)
+            ),
         }
     }
 }
 
-/// A result type, `ret`, as Temper's syntax writes it: `Int32 throws
-/// Bubble` if it may bubble. Every message uses this, where Kotlin Temper
-/// writes its internal `Result<Int32, Bubble>` or `(Int32 | Bubble)`.
-pub fn show_result(ret: String, throws: bool) -> String {
-    match throws {
-        true => format!("{ret} throws Bubble"),
-        false => ret,
+/// Both of two subtyping answers: no if either is, yes if both are.
+fn both(a: Option<bool>, b: Option<bool>) -> Option<bool> {
+    match (a, b) {
+        (Some(false), _) | (_, Some(false)) => Some(false),
+        (Some(true), Some(true)) => Some(true),
+        _ => None,
     }
 }
 
@@ -1099,15 +1175,14 @@ mod tests {
                 ty: INT32,
                 optional: false,
             }],
-            ret: BOOLEAN,
-            throws: false,
+            result: BOOLEAN,
         });
         assert_eq!(types.is_subtype(f, INT32), Some(false));
         assert_eq!(types.display(f, &|_| String::new()), "fn (Int32): Boolean");
+        let result = types.result(INT32, BUBBLE);
         let g = types.intern(TypeData::Fn {
             params: Vec::new(),
-            ret: INT32,
-            throws: true,
+            result,
         });
         assert_eq!(
             types.display(g, &|_| String::new()),
@@ -1136,11 +1211,11 @@ mod tests {
                 ty: param,
                 optional,
             }];
-            types.intern(TypeData::Fn {
-                params,
-                ret,
-                throws,
-            })
+            let result = match throws {
+                true => types.result(ret, BUBBLE),
+                false => ret,
+            };
+            types.intern(TypeData::Fn { params, result })
         }
         let mut types = Types::new();
         let types = &mut types;
@@ -1154,8 +1229,7 @@ mod tests {
         let int_to_bool_throws = fn_throws(types, INT32, false, BOOLEAN, true);
         let no_params = types.intern(TypeData::Fn {
             params: Vec::new(),
-            ret: BOOLEAN,
-            throws: false,
+            result: BOOLEAN,
         });
         assert_eq!(types.is_subtype(string_to_bool, int_to_bool), Some(false));
         assert_eq!(types.is_subtype(int_to_string, int_to_bool), Some(false));
@@ -1177,6 +1251,93 @@ mod tests {
             types.display(maybe_int_to_bool, &|_| String::new()),
             "fn (_?: Int32): Boolean"
         );
+        // Even where a result's pass type isn't worked out, a function
+        // that may bubble isn't one that doesn't.
+        let unknown_throws = fn_throws(types, INT32, false, UNKNOWN, true);
+        let int_to_unknown = fn_type(types, INT32, false, UNKNOWN);
+        assert_eq!(
+            types.is_subtype(unknown_throws, int_to_unknown),
+            Some(false)
+        );
+        assert_eq!(types.is_subtype(int_to_unknown, unknown_throws), None);
+    }
+
+    /// `T throws E` is a result type (notes/typing.md, "Results"): made
+    /// and read through [`Types::result`], [`Types::pass`] and
+    /// [`Types::fail`], never a value's type, and handled part by part by
+    /// substitution, unification, and the one assignability rule.
+    #[test]
+    fn results() {
+        let mut types = Types::new();
+        let types = &mut types;
+        let int_throws = types.result(INT32, BUBBLE);
+        assert_eq!(types.result(INT32, BUBBLE), int_throws);
+        assert_eq!(types.pass(int_throws), INT32);
+        assert_eq!(types.fail(int_throws), Some(BUBBLE));
+        assert_eq!((types.pass(INT32), types.fail(INT32)), (INT32, None));
+        assert_eq!(
+            types.display(int_throws, &|_| String::new()),
+            "Int32 throws Bubble"
+        );
+        // A failure that can't happen goes: `T throws Never<Error>` is `T`.
+        assert_eq!(types.result(INT32, NEVER), INT32);
+        let never_bubble = types.never_of(BUBBLE);
+        assert_eq!(types.result(INT32, never_bubble), INT32);
+
+        // What a result's pass type takes fits it; a result is no value's
+        // type, so it fits nothing but a result.
+        assert_eq!(types.is_subtype(INT32, int_throws), Some(true));
+        assert_eq!(types.is_subtype(NEVER, int_throws), Some(true));
+        assert_eq!(types.is_subtype(STRING, int_throws), Some(false));
+        assert_eq!(types.is_subtype(int_throws, INT32), Some(false));
+        assert_eq!(types.is_subtype(int_throws, ANY_VALUE), Some(false));
+        let int_or_null = types.nullable(INT32);
+        assert_eq!(types.is_subtype(int_throws, int_or_null), Some(false));
+        let maybe_throws = types.result(int_or_null, BUBBLE);
+        assert_eq!(types.is_subtype(NULL, maybe_throws), Some(true));
+        assert_eq!(types.is_subtype(int_throws, maybe_throws), Some(true));
+        assert_eq!(types.is_subtype(maybe_throws, int_throws), Some(false));
+        let string_throws = types.result(STRING, BUBBLE);
+        assert_eq!(types.join(INT32, int_throws), UNKNOWN);
+        assert_eq!(types.is_subtype(string_throws, int_throws), Some(false));
+
+        // A function type with a result is no more generic than its parts.
+        let f = types.intern(TypeData::Fn {
+            params: Vec::new(),
+            result: int_throws,
+        });
+        assert!(!types.is_generic(f) && types.is_known(f));
+        let unknown_throws = types.result(UNKNOWN, BUBBLE);
+        assert!(!types.is_known(unknown_throws));
+
+        // Type parameters inside results: `T throws E`.
+        let (t, e) = (SymbolId(7), SymbolId(8));
+        let (t_type, e_type) = (types.param(t), types.param(e));
+        let t_throws_e = types.result(t_type, e_type);
+        assert!(types.is_generic(t_throws_e));
+        assert!(types.mentions(t_throws_e, &[t]) && types.mentions(t_throws_e, &[e]));
+        assert_eq!(
+            types.substitute(t_throws_e, &[t, e], &[INT32, BUBBLE]),
+            int_throws
+        );
+        // An `E` that can't happen leaves the pass type alone.
+        assert_eq!(types.substitute(t_throws_e, &[e], &[NEVER]), t_type);
+        let solve = |types: &mut Types, pattern: TypeId, actual: TypeId| {
+            let (mut actuals, mut conflicts) = ([UNKNOWN; 2], [false; 2]);
+            types.unify(pattern, actual, &[t, e], &mut actuals, &mut conflicts);
+            assert_eq!(conflicts, [false; 2]);
+            actuals
+        };
+        assert_eq!(solve(types, t_throws_e, int_throws), [INT32, BUBBLE]);
+        assert_eq!(solve(types, t_throws_e, INT32), [INT32, UNKNOWN]);
+        // A result never solves an ordinary type parameter; its pass type
+        // does.
+        assert_eq!(solve(types, t_type, int_throws), [INT32, UNKNOWN]);
+        let g = types.intern(TypeData::Fn {
+            params: Vec::new(),
+            result: t_type,
+        });
+        assert_eq!(solve(types, g, f), [INT32, UNKNOWN]);
     }
 
     #[test]

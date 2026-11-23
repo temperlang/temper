@@ -469,11 +469,10 @@ impl Settle {
                 && self.scopes.resolved_builtin(callee)
                     == Some(Builtin::Function(Function::DoPure));
             if let (true, Some(body)) = (is_pure, core::fn_parts(tree, f).2) {
-                let ret = self.expr_type(body, forced)?;
+                let result = self.expr_type(body, forced)?;
                 return Ok(self.typing.types.intern(TypeData::Fn {
                     params: Vec::new(),
-                    ret,
-                    throws: false,
+                    result,
                 }));
             }
         }
@@ -482,15 +481,10 @@ impl Settle {
         };
         let types = &self.typing.types;
         let (
-            TypeData::Fn {
-                params,
-                ret,
-                throws,
-            },
+            TypeData::Fn { params, result },
             TypeData::Fn {
                 params: wanted_params,
-                ret: wanted_ret,
-                throws: wanted_throws,
+                result: wanted_result,
             },
         ) = (types.get(t).clone(), types.get(wanted).clone())
         else {
@@ -507,15 +501,11 @@ impl Settle {
                 false => param,
             })
             .collect();
-        let (ret, throws) = match out_type {
-            Some(_) => (ret, throws),
-            None => (wanted_ret, wanted_throws),
+        let result = match out_type {
+            Some(_) => result,
+            None => wanted_result,
         };
-        Ok(self.typing.types.intern(TypeData::Fn {
-            params,
-            ret,
-            throws,
-        }))
+        Ok(self.typing.types.intern(TypeData::Fn { params, result }))
     }
 
     /// Whether a function's parameter declares no type.
@@ -560,8 +550,8 @@ impl Settle {
             return Ok(self.declared_result(f));
         }
         let wanted = self.wanted_fn(f, forced)?;
-        Ok(wanted.and_then(|t| match self.typing.types.get(t) {
-            TypeData::Fn { ret, .. } => Some(*ret),
+        Ok(wanted.and_then(|t| match *self.typing.types.get(t) {
+            TypeData::Fn { result, .. } => Some(self.typing.types.pass(result)),
             _ => None,
         }))
     }

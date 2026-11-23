@@ -697,10 +697,8 @@ impl Reader {
             params.push(self.ty()?);
             optional.push(opt);
         }
-        let (result, bubbles) = self.result()?;
-        Ok(self
-            .b
-            .function_type_with(&params, &optional, result, bubbles))
+        let result = self.result()?;
+        Ok(self.b.function_type_with(&params, &optional, result))
     }
 
     /// `<A, B>`, if there: a call's or type's type arguments.
@@ -1034,26 +1032,25 @@ impl Reader {
             self.expect(":")?;
             types.push(self.ty()?);
         }
-        let (result, bubbles) = self.result()?;
+        let result = self.result()?;
         self.expect(";")?;
-        let sig = self
-            .b
-            .function_type_with(&types, &optional, result, bubbles);
+        let sig = self.b.function_type_with(&types, &optional, result);
         self.b.program_mut().decls.get_mut(decl).ty = sig;
         let names: Vec<&str> = names.iter().map(String::as_str).collect();
         self.b.set_param_names(decl, &names);
         Ok(())
     }
 
-    /// `: Result`, and `throws Bubble` if it may bubble.
-    fn result(&mut self) -> Read<(TypeId, bool)> {
+    /// `: Result`, as `: Int32 throws Bubble` if it may bubble: a result
+    /// type ([`TypeTable::result`]).
+    fn result(&mut self) -> Read<TypeId> {
         self.expect(":")?;
-        let result = self.ty()?;
-        let bubbles = self.eat_word("throws");
-        if bubbles {
-            self.expect_word("Bubble")?;
+        let pass = self.ty()?;
+        if !self.eat_word("throws") {
+            return Ok(pass);
         }
-        Ok((result, bubbles))
+        let fail = self.ty()?;
+        Ok(self.b.result(pass, fail))
     }
 
     /// ` extends A#1, B#2`, if there, as a class's or interface's
@@ -1372,10 +1369,8 @@ impl Reader {
             types.push(ty);
             optional.push(opt);
         }
-        let (result, bubbles) = self.result()?;
-        let sig = self
-            .b
-            .function_type_with(&types, &optional, result, bubbles);
+        let result = self.result()?;
+        let sig = self.b.function_type_with(&types, &optional, result);
         self.b.program_mut().decls.get_mut(decl).ty = sig;
         Ok(params)
     }

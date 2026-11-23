@@ -744,15 +744,15 @@ impl Translator<'_> {
                 let Some(sig) = p.types.signature(theirs.ty) else {
                     return false;
                 };
-                let narrower = match (nominal_decl(p, mine.result), nominal_decl(p, sig.result)) {
+                let narrower = match (nominal_decl(p, mine.pass), nominal_decl(p, sig.pass)) {
                     (Some(a), Some(b)) => {
-                        p.types.args(mine.result).is_empty()
-                            && p.types.args(sig.result).is_empty()
+                        p.types.args(mine.pass).is_empty()
+                            && p.types.args(sig.pass).is_empty()
                             && ancestors(p, a).contains(&b)
                     }
                     _ => false,
                 };
-                sig.params != mine.params || (sig.result != mine.result && !narrower)
+                sig.params != mine.params || (sig.pass != mine.pass && !narrower)
             })
         })
     }
@@ -847,8 +847,8 @@ impl Translator<'_> {
             }
             let call = callee.attr(name).call(args);
             let (result_ann, body) = match p.signature(decl) {
-                Some(sig) if sig.result != TypeId::VOID => {
-                    (self.ann(sig.result)?, Stmt::Return(Some(call)))
+                Some(sig) if sig.pass != TypeId::VOID => {
+                    (self.ann(sig.pass)?, Stmt::Return(Some(call)))
                 }
                 _ => ("None".to_string(), Stmt::Expr(call)),
             };

@@ -266,12 +266,12 @@ impl Translator<'_> {
             (0 | ROLE_PARAM, false) => {
                 let ty = self.member_ty(m)?;
                 if interface {
-                    let sig = self.b.function_type(&[], ty, false);
+                    let sig = self.b.function_type(&[], ty);
                     let get = self.b.declare(DeclKind::Getter, &name, decl, sig);
                     self.b.add_facts(get, facts);
                     self.decl_spans(get, m);
                     let set = if data & LET_VAR != 0 {
-                        let sig = self.b.function_type(&[ty], TypeId::VOID, false);
+                        let sig = self.b.function_type(&[ty], TypeId::VOID);
                         let set = self.b.declare(DeclKind::Setter, &name, decl, sig);
                         self.b.add_facts(set, facts);
                         self.decl_spans(set, m);
@@ -388,17 +388,20 @@ impl Translator<'_> {
         let class_ty = self.b.program().decls.get(decl).ty;
         // An explicit constructor may bubble (std's `Date`'s `throws
         // Bubble`), as its function's type says.
-        let mut bubbles = false;
+        let mut result = class_ty;
         let params = match explicit {
             Some(c) => {
                 let Some(f) = core::let_parts(&self.s.library.tree, c).2 else {
                     return self.not_yet(c, "a constructor's form");
                 };
-                if let Some(t) = self.s.typing.expr(f) {
-                    bubbles = matches!(
-                        self.s.typing.types.get(t),
-                        FTypeData::Fn { throws: true, .. }
-                    );
+                let types = &self.s.typing.types;
+                let fail = match self.s.typing.expr(f).map(|t| types.get(t)) {
+                    Some(&FTypeData::Fn { result, .. }) => types.fail(result),
+                    _ => None,
+                };
+                if let Some(fail) = fail {
+                    let fail = self.ty(fail, c)?;
+                    result = self.b.result(class_ty, fail);
                 }
                 core::fn_parts(&self.s.library.tree, f).0
             }
@@ -419,9 +422,7 @@ impl Translator<'_> {
             let name = core::let_parts(&self.s.library.tree, p).0;
             names.push(self.name_of(name).to_string());
         }
-        let sig = self
-            .b
-            .function_type_with(&types, &optional, class_ty, bubbles);
+        let sig = self.b.function_type_with(&types, &optional, result);
         let ctor = self
             .b
             .declare(DeclKind::Constructor, "constructor", decl, sig);
@@ -467,7 +468,7 @@ impl Translator<'_> {
                 }
             }
         };
-        Ok(self.b.function_type(&[t], TypeId::VOID, false))
+        Ok(self.b.function_type(&[t], TypeId::VOID))
     }
 
     /// A field's or property's type.
@@ -522,7 +523,7 @@ impl Translator<'_> {
                     nodes.push(self.own(node, m));
                     if let Some(set) = set {
                         let ty = self.b.program().decls.get(get).ty;
-                        let ty = self.b.program().types.signature(ty).unwrap().result;
+                        let ty = self.b.program().types.signature(ty).unwrap().pass;
                         let value = self.b.declare(DeclKind::Param, "value", set, ty);
                         self.decl_spans(value, m);
                         let param = self.b.param(value);

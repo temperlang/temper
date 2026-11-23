@@ -23,7 +23,7 @@ fn problems(p: &temper_tmpl::Program, profile: &Profile) -> Vec<String> {
 fn with_function(body: impl FnOnce(&mut Builder) -> Vec<NodeId>) -> temper_tmpl::Program {
     let mut b = Builder::new("t", "0.1.0");
     let m = b.module("m");
-    let sig = b.function_type(&[], TypeId::INT32, false);
+    let sig = b.function_type(&[], TypeId::INT32);
     let f = b.declare(DeclKind::Function, "f", m, sig);
     let stmts = body(&mut b);
     let block = b.block(&stmts);
@@ -137,7 +137,7 @@ fn spans_round_trip_and_are_checked() {
     let span = |start, end| Span { file, start, end };
     let m = b.module("t");
     b.set_decl_spans(m, span(0, 40), span(0, 0));
-    let sig = b.function_type(&[], TypeId::VOID, false);
+    let sig = b.function_type(&[], TypeId::VOID);
     let f = b.declare(DeclKind::Function, "f", m, sig);
     b.set_decl_spans(f, span(0, 20), span(4, 5));
     let hello = b.bool_lit(true);
@@ -300,9 +300,9 @@ fn external_declaration_and_method_problems() {
     let misplaced = b.declare_type(DeclKind::Class, "Misplaced", m);
     let int32 = b.declare_type(DeclKind::Class, "Int32", core);
     assert_eq!(b.program().decls.get(int32).ty, TypeId::INT32);
-    let sig = b.function_type(&[TypeId::INT32], TypeId::BOOLEAN, false);
+    let sig = b.function_type(&[TypeId::INT32], TypeId::BOOLEAN);
     let getter = b.declare(DeclKind::Getter, "odd", int32, sig);
-    let sig = b.function_type(&[], TypeId::VOID, false);
+    let sig = b.function_type(&[], TypeId::VOID);
     let f = b.declare(DeclKind::Function, "f", m, sig);
     // A local typed by a function's "nominal type" (T5).
     let bogus = b.nominal(f);
@@ -328,9 +328,9 @@ fn external_declaration_and_method_problems() {
     b.declare(DeclKind::Library, "stray", DeclId::NONE, TypeId::NONE);
     b.declare_type(DeclKind::Class, "Misplaced", m);
     let int32 = b.declare_type(DeclKind::Class, "Int32", core);
-    let sig = b.function_type(&[TypeId::INT32], TypeId::BOOLEAN, false);
+    let sig = b.function_type(&[TypeId::INT32], TypeId::BOOLEAN);
     b.declare(DeclKind::Getter, "odd", int32, sig);
-    let sig = b.function_type(&[], TypeId::VOID, false);
+    let sig = b.function_type(&[], TypeId::VOID);
     let f = b.declare(DeclKind::Function, "f", m, sig);
     let bogus = b.nominal(f);
     b.declare(DeclKind::ModuleLet, "x", m, bogus);
@@ -349,4 +349,51 @@ fn external_declaration_and_method_problems() {
             "T5 #7: #6 isn't a class or interface",
         ]
     );
+}
+
+/// `T throws E` is a result type (notes/tmpl/types.md, "Results"): only a
+/// signature's result, which calls see as its pass type, and handled part
+/// by part by substitution and comparison.
+#[test]
+fn results_are_signatures_results() {
+    use temper_tmpl::TypeTable;
+    let (int, string, bubble) = (TypeId::INT32, TypeId::STRING, TypeId::BUBBLE);
+    let mut t = TypeTable::default();
+    let r = t.result(int, bubble);
+    assert_eq!(t.result(int, bubble), r);
+    assert_eq!((t.pass(r), t.fail(r)), (int, Some(bubble)));
+    assert_eq!((t.pass(int), t.fail(int)), (int, None));
+    assert!(t.signature(r).is_none());
+    // A failure that can't happen goes.
+    let never = t.never(bubble);
+    assert_eq!(t.result(int, never), int);
+
+    let f = t.function(&[string], r);
+    let sig = t.signature(f).unwrap();
+    assert_eq!((sig.pass, sig.fail, sig.returns), (int, Some(bubble), r));
+    assert!(sig.bubbles());
+    assert_eq!(t.show(f), "fn (String): Int32 throws Bubble");
+    let plain = t.function(&[string], int);
+    assert_ne!(plain, f);
+    assert!(!t.signature(plain).unwrap().bubbles());
+
+    // Type parameters in either part.
+    let (tp, ep) = (t.type_param(DeclId(3)), t.type_param(DeclId(4)));
+    let generic = t.result(tp, bubble);
+    let g = t.function(&[], generic);
+    assert!(t.is_generic(g) && t.mentions(g, tp));
+    let solved = t.function(&[], r);
+    assert_eq!(t.substituted(g, &[tp], &[int]), Some(solved));
+    assert_eq!(t.substitute(g, &[tp], &[int]), solved);
+    let fails_e = t.result(int, ep);
+    assert!(t.mentions(fails_e, ep));
+    assert_eq!(t.substitute(fails_e, &[ep], &[bubble]), r);
+    assert_eq!(t.substitute(fails_e, &[ep], &[never]), int);
+
+    // Across tables, by what they are.
+    let mut u = TypeTable::default();
+    let other = u.function(&[string], int);
+    let u_r = u.result(int, bubble);
+    let u_f = u.function(&[string], u_r);
+    assert!(t.same(f, &u, u_f) && !t.same(f, &u, other));
 }

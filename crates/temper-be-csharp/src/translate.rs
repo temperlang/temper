@@ -630,6 +630,8 @@ impl<'a> Translator<'a> {
             // `temper_tmpl::nevers` made each `Never<T>` the `T` it stands
             // for, as this profile has no bottom type.
             TypeData::Never(t) => return self.ty(t),
+            // Only a signature's result, never a value's (tmpl's T5).
+            TypeData::Result { .. } => return not_yet("a result type as a value's"),
             TypeData::Scalar(s) => match s {
                 Scalar::Void => "void",
                 Scalar::Boolean => "bool",
@@ -639,6 +641,7 @@ impl<'a> Translator<'a> {
                 Scalar::String => "string",
                 Scalar::AnyValue => "object",
                 Scalar::Type => return Ok(self.other_class("System", "Type")),
+                Scalar::Bubble => return not_yet("Bubble as a value's type"),
             }
             .to_string(),
             // A `@fun` interface is its function type's delegate.
@@ -1137,7 +1140,7 @@ impl<'a> Translator<'a> {
         }
         let result = match p.signature(decl) {
             Some(_) if p.decls.get(decl).kind == DeclKind::Constructor => TypeId::VOID,
-            Some(sig) => sig.result,
+            Some(sig) => sig.pass,
             None => TypeId::VOID,
         };
         let result_ty = self.ty(result)?;
@@ -1764,7 +1767,7 @@ impl<'a> Translator<'a> {
             let owner = p.decls.get(g).owner;
             let args = self.args_from(class, owner);
             let saved = std::mem::replace(&mut self.type_args, args);
-            let written = self.ty(p.signature(g).map_or(TypeId::VOID, |s| s.result));
+            let written = self.ty(p.signature(g).map_or(TypeId::VOID, |s| s.pass));
             self.type_args = saved;
             ty = written?;
             name = self.member_name(g);
@@ -2836,7 +2839,7 @@ impl<'a> Translator<'a> {
     /// `Optional.OrNull<A>(r)`.
     fn optional_result(&mut self, callee: DeclId, call: NodeId, e: Expr) -> R<Expr> {
         let p = self.p;
-        let declared = p.signature(callee).map(|s| s.result);
+        let declared = p.signature(callee).map(|s| s.pass);
         if !declared.is_some_and(|d| self.is_optional(d)) {
             return Ok(e);
         }

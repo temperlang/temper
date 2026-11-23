@@ -7,10 +7,10 @@ Part of the [tmpl design](README.md).
 Proposed; Level 2, below, has the structure. Nominal types with arguments,
 invariant type parameters (typing.md), nullable types, `Void`,
 `Never<T>`, and function types that carry their `@fun` interface's name
-(Decided, language.md "Function types and fun interfaces"). Bubbling is an
-effect on a function type, not a type; Kotlin's `Result<T, Bubble>` is
-one backend's lowering. Classes are final; only interfaces are
-extended, and they may carry method bodies.
+(Decided, language.md "Function types and fun interfaces"). A function
+that may fail has a result type, `T throws Bubble`, as its signature's
+result only ([Results](#results)); no expression has one. Classes are
+final; only interfaces are extended, and they may carry method bodies.
 
 ## Level 2: The type model
 
@@ -22,12 +22,13 @@ variants:
   qname (`Int32`, `String`, `List`, `Map`, `Generator`, `Promise`, …).
 - `TypeParam(decl)`, with its bounds on the declaration.
 - `Nullable(T)`, never of a nullable `T`.
-- `Function { params, optional, result, bubbles }`: bare function
-  types, kept while tests use them; Decided to go in favor of named
-  `@fun` interfaces.
+- `Function { params, optional, result }`: bare function types, kept
+  while tests use them; Decided to go in favor of named `@fun`
+  interfaces.
 - `Void`, `Never(T)` (bottom with its fallback type), and `AnyValue`
   (the top).
-- `Result(T)`: only in programs lowered to results ([nodes.md](nodes.md)).
+- `Result { pass, fail }`: a signature's result where it may fail
+  ([Results](#results)).
 
 Relationships, all answered by `analysis` helpers rather than stored
 twice: supertypes from each declaration's `extends` with arguments
@@ -185,6 +186,24 @@ as a `Class<?>` in Java, `typeof(void)` as a `Type` in C#,
 C++. JavaScript and Lua have no value for a builtin type, so they write
 its `typeof` or `type()` name, as `"undefined"` and `"nil"`, typed
 `string` (kotlin-differences.md, "Types as values").
+
+## Results
+
+As built (2026-11-23, Proposed): **`Result { pass, fail }`** (text `Int32
+throws Bubble`), interned once per pair (`TypeTable::result`, which gives
+`pass` back for a `Never` failure), is a signature's result where it may
+fail, as the frontend's result types are (typing.md, "Results").
+`Scalar::Bubble` is the only failure type for now.
+
+- **Only a signature's result** (T5): no declaration, parameter, or node
+  has a result type or `Bubble`.
+- **Calls see the pass type:** `Signature` gives `pass` (a call node's
+  type), `fail`, and `returns`, the whole result, so translators read
+  `sig.pass` and `sig.bubbles()` and never spell a result type.
+- **Part by part** in substitution, `mentions`, `same`, and lowering
+  (`nevers`), so a failure type parameter can be an ordinary one later.
+- `MAY_BUBBLE` on calls and an operator's `bubbles` stay flags until a
+  call can fail with more than one type.
 
 ## Never
 

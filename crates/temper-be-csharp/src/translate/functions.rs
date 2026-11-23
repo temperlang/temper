@@ -29,7 +29,7 @@ impl Translator<'_> {
         if s.optional.contains(&true) {
             return not_yet("a function type with optional parameters");
         }
-        let (params, result) = (s.params.to_vec(), s.result);
+        let (params, result) = (s.params.to_vec(), s.pass);
         let mut texts = Vec::new();
         for t in params {
             texts.push(self.ty(t)?);
@@ -68,7 +68,7 @@ impl Translator<'_> {
             Node::Block { stmts } => p.nodes.list(stmts).to_vec(),
             _ => Vec::new(),
         };
-        let void = p.signature(decl).is_some_and(|s| s.result == TypeId::VOID);
+        let void = p.signature(decl).is_some_and(|s| s.pass == TypeId::VOID);
         // The function around it, whose state its own replaces.
         let saved = (
             std::mem::take(&mut self.loops),
@@ -163,7 +163,7 @@ impl Translator<'_> {
                 stmts.push(Stmt::Raw("#pragma warning restore CS0162".into()));
             }
         }
-        let yielded = match p.signature(decl).map(|s| p.types.get(s.result)) {
+        let yielded = match p.signature(decl).map(|s| p.types.get(s.pass)) {
             Some(TypeData::Nominal { args, .. }) => match p.types.list(args) {
                 [t] => self.ty(*t)?,
                 _ => return not_yet("a generator's yield type"),

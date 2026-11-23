@@ -29,7 +29,7 @@ impl Translator<'_> {
         if s.optional.contains(&true) {
             return not_yet("a function type with optional parameters");
         }
-        let (params, result, bubbles) = (s.params.to_vec(), s.result, s.bubbles);
+        let (params, result, bubbles) = (s.params.to_vec(), s.pass, s.bubbles());
         let mut texts = Vec::new();
         for t in params {
             texts.push(self.ty(t)?);
@@ -181,7 +181,7 @@ impl Translator<'_> {
         let Some(sig) = p.signature(decl) else {
             return not_yet("a function literal without a signature");
         };
-        let (bubbles, void, result) = (sig.bubbles, sig.result == TypeId::VOID, sig.result);
+        let (bubbles, void, result) = (sig.bubbles(), sig.pass == TypeId::VOID, sig.pass);
         // The function around it, which its body's own state replaces.
         let saved = (
             self.scope,

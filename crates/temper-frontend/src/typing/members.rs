@@ -652,16 +652,13 @@ impl Settle {
         let types = &mut self.typing.types;
         let own: Vec<TypeId> = formals.iter().map(|&f| types.param(f)).collect();
         let sig = core_signature(types, &constructor.kind, &own, &[]);
-        let TypeData::Fn { params, throws, .. } = types.get(sig).clone() else {
+        let TypeData::Fn { params, result } = types.get(sig).clone() else {
             return None;
         };
         let base = types.builtin(i);
-        let ret = types.intern(TypeData::Applied { base, args: own });
-        let sig = types.intern(TypeData::Fn {
-            params,
-            ret,
-            throws,
-        });
+        let made = types.intern(TypeData::Applied { base, args: own });
+        let result = types.with_pass(result, made);
+        let sig = types.intern(TypeData::Fn { params, result });
         let method = GenericMethod {
             formals,
             sig,
@@ -867,14 +864,12 @@ impl Settle {
         let among: Vec<String> = (tied.iter().zip(&sigs))
             .map(|(&(owner, _), &sig)| {
                 let mut params = vec![self.member_text(owner).to_string()];
-                let TypeData::Fn {
-                    params: ps, ret, ..
-                } = self.typing.types.get(sig)
-                else {
+                let TypeData::Fn { params: ps, result } = self.typing.types.get(sig) else {
                     unreachable!("checked by fits");
                 };
                 params.extend(ps.iter().map(|p| self.show(p.ty)));
-                format!("({}) -> {}", params.join(", "), self.show(*ret))
+                let ret = self.typing.types.pass(*result);
+                format!("({}) -> {}", params.join(", "), self.show(ret))
             })
             .collect();
         let message = Message::NoCalleeMatches(inputs.join(", "), among.join(", "));
@@ -1186,7 +1181,7 @@ impl Settle {
     /// types them, and its own type parameters as written.
     pub(super) fn method_signature(&mut self, f: NodeId) -> TypeId {
         let t = self.fn_signature(f);
-        let TypeData::Fn { ret, throws, .. } = *self.typing.types.get(t) else {
+        let TypeData::Fn { result, .. } = *self.typing.types.get(t) else {
             return t;
         };
         let params = core::fn_parts(&self.lib.tree, f).0;
@@ -1199,11 +1194,7 @@ impl Settle {
                 },
             })
             .collect();
-        self.typing.types.intern(TypeData::Fn {
-            params,
-            ret,
-            throws,
-        })
+        self.typing.types.intern(TypeData::Fn { params, result })
     }
 }
 
@@ -1244,13 +1235,7 @@ fn core_signature(
     args: &[TypeId],
     own: &[TypeId],
 ) -> TypeId {
-    let CoreMemberKind::Method {
-        params,
-        ret,
-        throws,
-        ..
-    } = kind
-    else {
+    let CoreMemberKind::Method { params, ret, .. } = kind else {
         return UNKNOWN;
     };
     let params = (params.iter())
@@ -1263,12 +1248,8 @@ fn core_signature(
             }
         })
         .collect();
-    let ret = core_type(types, ret, args, own);
-    types.intern(TypeData::Fn {
-        params,
-        ret,
-        throws: *throws,
-    })
+    let result = core_type(types, ret, args, own);
+    types.intern(TypeData::Fn { params, result })
 }
 
 /// A type in a builtin type's member's signature, with `args` put in for
@@ -1289,6 +1270,11 @@ fn core_type(types: &mut Types, t: &CoreType, args: &[TypeId], own: &[TypeId]) -
             let inner = core_type(types, inner, args, own);
             types.nullable(inner)
         }
+        CoreType::Throws(pass, fail) => {
+            let pass = core_type(types, pass, args, own);
+            let fail = core_type(types, fail, args, own);
+            types.result(pass, fail)
+        }
         CoreType::Fn(params, ret) => {
             let params = (params.iter())
                 .map(|p| Param {
@@ -1296,12 +1282,8 @@ fn core_type(types: &mut Types, t: &CoreType, args: &[TypeId], own: &[TypeId]) -
                     optional: false,
                 })
                 .collect();
-            let ret = core_type(types, ret, args, own);
-            types.intern(TypeData::Fn {
-                params,
-                ret,
-                throws: false,
-            })
+            let result = core_type(types, ret, args, own);
+            types.intern(TypeData::Fn { params, result })
         }
     }
 }

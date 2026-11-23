@@ -182,7 +182,11 @@ impl Gen {
                       bubbles: bool| {
             let types: Vec<TypeId> = params.iter().map(|p| p.1).collect();
             let optional: Vec<bool> = params.iter().map(|p| p.2).collect();
-            let sig = b.function_type_with(&types, &optional, result, bubbles);
+            let returns = match bubbles {
+                true => b.result(result, TypeId::BUBBLE),
+                false => result,
+            };
+            let sig = b.function_type_with(&types, &optional, returns);
             let decl = b.declare(kind, name, owner, sig);
             b.set_connected(decl, &[]);
             let names: Vec<&str> = params.iter().map(|p| p.0).collect();
@@ -332,7 +336,7 @@ impl Gen {
             let t = self.b.declare_type_param("T", id, &[]);
             self.b.set_type_params(id, &[t]);
             let t = self.b.program().decls.get(t).ty;
-            let sig = self.b.function_type(&[t], t, false);
+            let sig = self.b.function_type(&[t], t);
             self.b.set_decl_type(id, sig);
             let x = self.b.declare(DeclKind::Param, "x", id, t);
             let param = self.b.param(x);
@@ -417,7 +421,8 @@ impl Gen {
                 t
             }
         };
-        let sig = self.b.function_type(&[test_type], TypeId::VOID, true);
+        let result = self.b.result(TypeId::VOID, TypeId::BUBBLE);
+        let sig = self.b.function_type(&[test_type], result);
         let decl = self
             .b
             .declare_made(DeclKind::Function, &["test"], module, sig);
@@ -480,9 +485,11 @@ impl Gen {
             self.rng.pick(&TYPES)
         };
         let bubbles = self.rng.chance(30);
-        let sig = self
-            .b
-            .function_type_with(&params, &optional, result, bubbles);
+        let returns = match bubbles {
+            true => self.b.result(result, TypeId::BUBBLE),
+            false => result,
+        };
+        let sig = self.b.function_type_with(&params, &optional, returns);
         let decl = self.declare(DeclKind::Function, module, sig);
         self.facts(decl);
         self.qname(decl, "()");
@@ -715,7 +722,7 @@ impl Gen {
             let args: Vec<NodeId> = f.params.iter().map(|&t| self.expr(t, depth - 1)).collect();
             return self.b.call_value(callee, &args);
         }
-        let sig = self.b.function_type(&[TypeId::INT32], ty, false);
+        let sig = self.b.function_type(&[TypeId::INT32], ty);
         let decl = self
             .b
             .declare_made(DeclKind::Lambda, &["fn"], self.owner, sig);
@@ -1068,7 +1075,7 @@ impl Gen {
             self.b.set_supers(implementor, &[class.ty]);
             // An abstract getter, and a method with a body.
             let ty = self.rng.pick(&TYPES);
-            let sig = self.b.function_type(&[], ty, false);
+            let sig = self.b.function_type(&[], ty);
             let getter = self.declare(DeclKind::Getter, class.decl, sig);
             doc(self, getter);
             bodies.push(Body::Method(getter, Vec::new(), ty));
@@ -1096,7 +1103,7 @@ impl Gen {
             }
             let fields = self.classes[c].fields.clone();
             let params: Vec<TypeId> = fields.iter().map(|f| f.ty).collect();
-            let sig = self.b.function_type(&params, class.ty, false);
+            let sig = self.b.function_type(&params, class.ty);
             let ctor = self
                 .b
                 .declare(DeclKind::Constructor, "constructor", class.decl, sig);
@@ -1112,7 +1119,7 @@ impl Gen {
             }
             // A getter and a setter for a public var field, if any.
             if let Some(&field) = fields.iter().find(|f| f.var && !f.private) {
-                let sig = self.b.function_type(&[], field.ty, false);
+                let sig = self.b.function_type(&[], field.ty);
                 let getter = self.declare(DeclKind::Getter, class.decl, sig);
                 self.functions.push(Callee {
                     decl: getter,
@@ -1123,7 +1130,7 @@ impl Gen {
                     optional: Vec::new(),
                 });
                 bodies.push(Body::Method(getter, Vec::new(), field.ty));
-                let sig = self.b.function_type(&[field.ty], TypeId::VOID, false);
+                let sig = self.b.function_type(&[field.ty], TypeId::VOID);
                 let setter = self.declare(DeclKind::Setter, class.decl, sig);
                 let value = self.declare(DeclKind::Param, setter, field.ty);
                 bodies.push(Body::Setter(setter, value, field));
@@ -1136,13 +1143,13 @@ impl Gen {
                 });
                 if let Some(abstract_getter) = wanted {
                     let sig = self.b.program().decls.get(abstract_getter).ty;
-                    let ty = self.b.program().signature(abstract_getter).unwrap().result;
+                    let ty = self.b.program().signature(abstract_getter).unwrap().pass;
                     let getter = self.declare(DeclKind::Getter, class.decl, sig);
                     bodies.push(Body::Method(getter, Vec::new(), ty));
                 }
             }
             if self.rng.chance(40) {
-                let sig = self.b.function_type(&[class.ty], TypeId::BOOLEAN, false);
+                let sig = self.b.function_type(&[class.ty], TypeId::BOOLEAN);
                 let eq = self.b.declare(DeclKind::Method, "equals", class.decl, sig);
                 self.b.add_facts(eq, Facts::OPERATOR_EQ);
                 if self.rng.chance(50) {
@@ -1160,7 +1167,7 @@ impl Gen {
                 bodies.push(Body::Equals(eq, other));
             }
             if self.rng.chance(40) {
-                let sig = self.b.function_type(&[], class.ty, false);
+                let sig = self.b.function_type(&[], class.ty);
                 let maker = self.declare(DeclKind::Function, class.decl, sig);
                 self.qname(maker, "()");
                 self.classes[c].makers.push(maker);
@@ -1172,7 +1179,7 @@ impl Gen {
             .map(|_| self.rng.pick(&TYPES))
             .collect();
         let result = self.rng.pick(&TYPES);
-        let sig = self.b.function_type(&params, result, false);
+        let sig = self.b.function_type(&params, result);
         let method = self.declare(DeclKind::Method, class.decl, sig);
         doc(self, method);
         let params = (params.into_iter())

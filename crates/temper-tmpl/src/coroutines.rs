@@ -223,12 +223,12 @@ fn to_state_machine(b: &mut Builder, h: &Helpers, literal: NodeId) -> R<()> {
     let Some(sig) = p.signature(decl) else {
         return Err("a generator without a signature".into());
     };
-    let made = sig.result;
+    let made = sig.pass;
     let Some(&yields) = p.types.args(made).first() else {
         return Err("a generator whose result isn't SafeGenerator<Y>".into());
     };
     let gen_result = b.applied(h.generator_result, &[yields]);
-    let step_ty = b.function_type(&[made], gen_result, false);
+    let step_ty = b.function_type(&[made], gen_result);
     let step = b.declare_made(DeclKind::Lambda, &["convertedCoroutine"], decl, step_ty);
     let generator = b.declare_made(DeclKind::Param, &["generator"], step, made);
     let state = b.declare_made(DeclKind::Local, &["caseIndex"], decl, TypeId::INT32);

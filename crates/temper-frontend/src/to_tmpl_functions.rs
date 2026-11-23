@@ -40,7 +40,7 @@ impl Translator<'_> {
     /// `await` and `yield`.
     pub(super) fn generator_literal(&mut self, f: FNode) -> Tx<NodeId> {
         let ty = self.expr_ty(f)?;
-        let made = self.b.program().types.signature(ty).map(|s| s.result);
+        let made = self.b.program().types.signature(ty).map(|s| s.pass);
         let yields = made.and_then(|m| self.b.program().types.args(m).first().copied());
         if yields.is_none() {
             return self.not_yet(f, "a generator of unknown type");
@@ -85,7 +85,7 @@ impl Translator<'_> {
     pub(super) fn yielded_type(&mut self) -> Option<TypeId> {
         let empty = self.core_decl("Empty");
         let p = self.b.program();
-        let made = p.signature(self.owner)?.result;
+        let made = p.signature(self.owner)?.pass;
         let &y = p.types.args(made).first()?;
         match p.types.get(y) {
             TypeData::Nominal { decl, .. } if Some(decl) == empty => None,

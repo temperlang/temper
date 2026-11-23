@@ -18,7 +18,8 @@
 //!   many as its callee has type parameters (a constructor's class's),
 //!   each within its type parameter's bounds (but a builtin type's),
 //!   with each argument's and the result's type put in;
-//!   **T5** types well formed, `Never<T>` only as a result or a value's
+//!   **T5** types well formed, a result type (`T throws Bubble`) only as
+//!   a signature's result, `Never<T>` only as a result or a value's
 //!   type, and only where the profile has
 //!   [`Features::NEVER`](crate::Features::NEVER). `Error` nodes are
 //!   exempt from T2 and T3, and a `Never<T>` child fits where its `T`
@@ -100,7 +101,7 @@ use crate::profile::Profile;
 use crate::qname::{QNames, core_scalar, is_external, library_of};
 use crate::schema::{Family, Kind, Node, Place, Slot, TypeRule};
 use crate::text::writing_order;
-use crate::types::{Signature, TypeData};
+use crate::types::{Scalar, Signature, TypeData};
 use crate::{Module, Program};
 use std::collections::HashSet;
 use std::fmt;
@@ -204,6 +205,7 @@ pub fn validate(p: &Program, profile: &Profile) -> Vec<Problem> {
     }
     if v.problems.is_empty() {
         v.bottom_types(p, profile);
+        v.results(p);
         v.declarations(p);
         for (i, module) in p.modules.iter().enumerate() {
             v.module = (module.decl, i);
@@ -618,7 +620,7 @@ impl Validator {
                 ) => {}
                 (DeclKind::Constructor, Some(TypeData::Function { .. })) => {
                     let owner_ty = owner_kind.map(|_| p.decls.get(d.owner).ty);
-                    if p.signature(decl).map(|s| s.result) != owner_ty {
+                    if p.signature(decl).map(|s| s.pass) != owner_ty {
                         let message = "a constructor's result is its class".into();
                         self.decl_problem(Rule::C1, decl, message)
                     }
@@ -626,7 +628,7 @@ impl Validator {
                 (DeclKind::Setter, Some(TypeData::Function { .. })) => {
                     let fits = p
                         .signature(decl)
-                        .is_some_and(|s| s.params.len() == 1 && s.result == TypeId::VOID);
+                        .is_some_and(|s| s.params.len() == 1 && s.pass == TypeId::VOID);
                     if !fits {
                         let message = "a setter takes one argument and returns Void".into();
                         self.decl_problem(Rule::C1, decl, message)
@@ -649,6 +651,9 @@ impl Validator {
                 ) => {
                     let message = format!("a {}'s type is its signature", d.kind.name());
                     self.decl_problem(Rule::T1, decl, message)
+                }
+                (_, Some(TypeData::Result { .. } | TypeData::Scalar(Scalar::Bubble))) => {
+                    // Reported by `results`.
                 }
                 (_, Some(TypeData::Scalar(_) | TypeData::Function { .. })) => {}
                 (_, Some(TypeData::TypeParam { decl: of })) => {
@@ -718,7 +723,7 @@ impl Validator {
         }
         let never = |ty: TypeId| {
             let sig = p.types.signature(ty);
-            p.types.is_never(ty) || sig.is_some_and(|s| p.types.is_never(s.result))
+            p.types.is_never(ty) || sig.is_some_and(|s| p.types.is_never(s.pass))
         };
         for decl in p.decls.ids().filter(|&d| p.decls.contains(d)) {
             if never(p.decls.get(decl).ty) {
@@ -729,6 +734,48 @@ impl Validator {
         for id in (0..p.nodes.len()).map(|i| NodeId(i as u32)) {
             if p.types.is_never(p.nodes.ty(id)) {
                 let message = "a value is Never<T>, but the profile has no bottom type".into();
+                self.node_problem(Rule::T5, id, message);
+            }
+        }
+    }
+
+    /// T5: a result type only as a signature's result, and `Bubble` only
+    /// as its failure type, so no value, declaration, or parameter has
+    /// either (notes/tmpl/types.md, "Results").
+    fn results(&mut self, p: &Program) {
+        let failing = |ty: TypeId| {
+            p.types.contains(ty)
+                && matches!(
+                    p.types.get(ty),
+                    TypeData::Result { .. } | TypeData::Scalar(Scalar::Bubble)
+                )
+        };
+        for decl in p.decls.ids().filter(|&d| p.decls.contains(d)) {
+            let ty = p.decls.get(decl).ty;
+            if failing(ty) {
+                let message = format!("{} isn't a value's type", p.show_type(ty));
+                self.decl_problem(Rule::T5, decl, message);
+            }
+            let Some(sig) = p.types.signature(ty) else {
+                continue;
+            };
+            if sig.params.iter().chain([&sig.pass]).any(|&t| failing(t)) {
+                let message = format!("{} has a failure where a value goes", p.show_type(ty));
+                self.decl_problem(Rule::T5, decl, message);
+            }
+            if let Some(fail) = sig.fail.filter(|&f| f != TypeId::BUBBLE) {
+                let message = format!(
+                    "{} fails with {}, not Bubble",
+                    p.show_type(ty),
+                    p.show_type(fail)
+                );
+                self.decl_problem(Rule::T5, decl, message);
+            }
+        }
+        for id in (0..p.nodes.len()).map(|i| NodeId(i as u32)) {
+            let ty = p.nodes.ty(id);
+            if failing(ty) {
+                let message = format!("{} isn't a value's type", p.show_type(ty));
                 self.node_problem(Rule::T5, id, message);
             }
         }
@@ -906,8 +953,8 @@ impl Validator {
             _ => false,
         };
         let fits = matches!(sig.params[..], [t] if p.types.contains(t) && is_test(t))
-            && sig.result == TypeId::VOID
-            && sig.bubbles;
+            && sig.pass == TypeId::VOID
+            && sig.fail == Some(TypeId::BUBBLE);
         if !fits {
             let message =
                 "a test's signature is fn (Test): Void throws Bubble, with std's Test".into();
@@ -1052,12 +1099,14 @@ impl Validator {
         let Some(Signature {
             params: types,
             optional,
-            result,
-            bubbles,
+            pass: result,
+            fail,
+            ..
         }) = p.signature(decl)
         else {
             return;
         };
+        let bubbles = fail.is_some();
         let params = p.nodes.list(params);
         if params.len() != types.len() {
             let message = format!(
@@ -1752,7 +1801,7 @@ impl Validator {
                 if let Some(sig) = p.signature(callee) {
                     let what = show(p, callee);
                     let binds = crate::analysis::bindings(p, callee, None, &type_args);
-                    self.call(p, id, &what, sig, (may_bubble, args), &binds);
+                    self.call(p, id, &what, Callee::of(sig), (may_bubble, args), &binds);
                 }
             }
             Node::CallMethod {
@@ -1780,7 +1829,7 @@ impl Validator {
                     let what = show(p, method);
                     let have = Some(p.nodes.ty(receiver));
                     let binds = crate::analysis::bindings(p, method, have, &type_args);
-                    self.call(p, id, &what, sig, (may_bubble, args), &binds);
+                    self.call(p, id, &what, Callee::of(sig), (may_bubble, args), &binds);
                 }
             }
             Node::Op {
@@ -1797,17 +1846,16 @@ impl Validator {
                     return;
                 };
                 let what = format!("%{}", info.name);
-                let sig = Signature {
+                let callee = Callee {
                     params: info.params,
                     optional: &[],
-                    result: info.result,
                     bubbles: info.bubbles,
                 };
                 self.call(
                     p,
                     id,
                     &what,
-                    sig,
+                    callee,
                     (may_bubble, args),
                     &(Vec::new(), Vec::new()),
                 );
@@ -2028,7 +2076,7 @@ impl Validator {
                 if let Some(sig) = p.signature(ctor) {
                     let what = show(p, ctor);
                     let binds = crate::analysis::bindings(p, ctor, None, &type_args);
-                    self.call(p, id, &what, sig, (may_bubble, args), &binds);
+                    self.call(p, id, &what, Callee::of(sig), (may_bubble, args), &binds);
                 }
             }
             Node::Upcast { value } | Node::Downcast { value } => {
@@ -2114,7 +2162,7 @@ impl Validator {
                     p,
                     id,
                     &what,
-                    sig,
+                    Callee::of(sig),
                     (may_bubble, args),
                     &(Vec::new(), Vec::new()),
                 );
@@ -2200,14 +2248,15 @@ impl Validator {
         let class = if in_static { DeclId::NONE } else { outer.class };
         let Some(Signature {
             params: types,
-            result,
-            bubbles,
+            pass: result,
+            fail,
             ..
         }) = p.signature(decl)
         else {
             self.restore(outer);
             return;
         };
+        let bubbles = fail.is_some();
         let types = types.to_vec();
         // A generator's body returns nothing: its value is the factory.
         let generator = p.decls.get(decl).facts.contains(Facts::GENERATOR);
@@ -2294,7 +2343,7 @@ impl Validator {
                         .then(|| p.nodes.kids(id).first().map(|&r| p.nodes.ty(r)))
                         .flatten();
                     let (from, to) = crate::analysis::bindings(p, DeclId(a), receiver, &args);
-                    (p.types.substituted(sig.result, &from, &to)).unwrap_or(TypeId::NONE)
+                    (p.types.substituted(sig.pass, &from, &to)).unwrap_or(TypeId::NONE)
                 }
                 None => TypeId::NONE,
             }),
@@ -2303,7 +2352,7 @@ impl Validator {
                 let callee = p.nodes.kids(id).first().map(|&c| p.nodes.ty(c));
                 let sig = callee.and_then(|t| crate::analysis::fun_signature(p, t));
                 let sig = sig.and_then(|s| p.types.signature(s));
-                Some(sig.map_or(TypeId::NONE, |s| s.result))
+                Some(sig.map_or(TypeId::NONE, |s| s.pass))
             }
         }
     }
@@ -2416,7 +2465,7 @@ impl Validator {
         p: &Program,
         id: NodeId,
         what: &str,
-        sig: Signature,
+        sig: Callee,
         (marked, args): (bool, Kids),
         (from, to): &(Vec<TypeId>, Vec<TypeId>),
     ) {
@@ -2481,6 +2530,24 @@ impl Validator {
                 let message = "a declaration needs its spans in a known file".into();
                 self.decl_problem(Rule::P1, decl, message);
             }
+        }
+    }
+}
+
+/// What [`Validator::call`] checks a call against: its callee's or
+/// operator's parameters, which are optional, and whether it may bubble.
+struct Callee<'a> {
+    params: &'a [TypeId],
+    optional: &'a [bool],
+    bubbles: bool,
+}
+
+impl<'a> Callee<'a> {
+    fn of(sig: Signature<'a>) -> Callee<'a> {
+        Callee {
+            params: sig.params,
+            optional: sig.optional,
+            bubbles: sig.bubbles(),
         }
     }
 }

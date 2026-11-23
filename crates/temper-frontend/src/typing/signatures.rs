@@ -23,33 +23,35 @@ use crate::library::{Level, Message};
 use crate::scope::SymbolKind;
 use crate::settle::{Fact, Settle};
 use crate::types::{
-    BOOLEAN, FLOAT64, INT32, INT64, NULL, STRING, TypeData, TypeId, UNKNOWN, VOID, show_result,
+    BOOLEAN, BUBBLE, FLOAT64, INT32, INT64, NEVER, NULL, STRING, TypeData, TypeId, UNKNOWN, VOID,
 };
 use temper_syntax::ast::Value;
 use temper_syntax::tree::{NodeId, NodeKind, Span};
 
-/// One variant of a builtin function.
+/// One variant of a builtin function, whose result is `pass throws
+/// fail` ([`Types::result`](crate::types::Types::result)), or `pass` where
+/// `fail` is `Never`, as for most.
 #[derive(Debug)]
 pub(super) struct Sig {
     pub params: &'static [TypeId],
-    pub ret: TypeId,
-    /// Whether it may bubble: its return type is `ret throws Bubble`.
-    pub bubbles: bool,
+    /// What a call gives.
+    pub pass: TypeId,
+    pub fail: TypeId,
 }
 
-const fn sig(params: &'static [TypeId], ret: TypeId) -> Sig {
+const fn sig(params: &'static [TypeId], pass: TypeId) -> Sig {
     Sig {
         params,
-        ret,
-        bubbles: false,
+        pass,
+        fail: NEVER,
     }
 }
 
-const fn bubbly(params: &'static [TypeId], ret: TypeId) -> Sig {
+const fn bubbly(params: &'static [TypeId], pass: TypeId) -> Sig {
     Sig {
         params,
-        ret,
-        bubbles: true,
+        pass,
+        fail: BUBBLE,
     }
 }
 
@@ -209,7 +211,7 @@ impl Settle {
             types.push(self.expr_type(arg, forced)?);
         }
         let found = variants.iter().find(|sig| sig.params == types.as_slice());
-        Ok(found.map_or(UNKNOWN, |sig| sig.ret))
+        Ok(found.map_or(UNKNOWN, |sig| sig.pass))
     }
 
     /// What an operator calls with a first operand of type `t`, if `t` is
@@ -256,8 +258,8 @@ impl Settle {
                     _ => (self.member_type(method), self.class_type(owner)),
                 };
                 match self.typing.types.get(sig) {
-                    TypeData::Fn { params, ret, .. } if params.len() == 1 => {
-                        (owner, params[0].ty, *ret)
+                    TypeData::Fn { params, result } if params.len() == 1 => {
+                        (owner, params[0].ty, self.typing.types.pass(*result))
                     }
                     _ => (owner, UNKNOWN, UNKNOWN),
                 }
@@ -439,7 +441,10 @@ impl Settle {
     /// A signature as Kotlin Temper writes it, `(Int32, Int32) -> Int32`,
     /// but with a result that may bubble as `Int32 throws Bubble`.
     fn show_sig(&self, sig: &Sig) -> String {
-        let ret = show_result(self.show(sig.ret), sig.bubbles);
+        let ret = match sig.fail {
+            NEVER => self.show(sig.pass),
+            fail => format!("{} throws {}", self.show(sig.pass), self.show(fail)),
+        };
         format!("({}) -> {ret}", self.show_list(sig.params))
     }
 }

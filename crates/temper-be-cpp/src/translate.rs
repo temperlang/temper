@@ -541,6 +541,8 @@ impl<'a> Translator<'a> {
             // `temper_tmpl::nevers` made each `Never<T>` the `T` it stands
             // for, as this profile has no bottom type.
             TypeData::Never(t) => return self.ty(t),
+            // Only a signature's result, never a value's (tmpl's T5).
+            TypeData::Result { .. } => return not_yet("a result type as a value's"),
             TypeData::Scalar(s) => match s {
                 Scalar::Void => "void",
                 Scalar::Boolean => "bool",
@@ -550,6 +552,7 @@ impl<'a> Translator<'a> {
                 Scalar::String => "core::Str",
                 Scalar::AnyValue => "std::shared_ptr<core::AnyValueBase>",
                 Scalar::Type => "std::type_index",
+                Scalar::Bubble => return not_yet("Bubble as a value's type"),
             }
             .to_string(),
             // A `@fun` interface is its function type's `std::function`.
@@ -1376,7 +1379,7 @@ impl<'a> Translator<'a> {
             }
         }
         let result = match p.signature(decl) {
-            Some(sig) => sig.result,
+            Some(sig) => sig.pass,
             None => TypeId::VOID,
         };
         let result_ty = self.ty(result)?;
@@ -1529,7 +1532,7 @@ impl<'a> Translator<'a> {
         let Node::BodilessFunction { decl, params } = p.nodes.get(item) else {
             return not_yet("a bodiless function that isn't one");
         };
-        let result = p.signature(decl).map_or(TypeId::VOID, |sig| sig.result);
+        let result = p.signature(decl).map_or(TypeId::VOID, |sig| sig.pass);
         let promised = match (
             temper_tmpl::analysis::nominal_decl(p, result),
             p.types.args(result),
@@ -1632,7 +1635,7 @@ impl<'a> Translator<'a> {
                 args.push(local.map_or(param, |d| d.local));
             }
         }
-        let result = p.signature(decl).map_or(TypeId::VOID, |sig| sig.result);
+        let result = p.signature(decl).map_or(TypeId::VOID, |sig| sig.pass);
         let result_ty = self.ty(result)?;
         self.in_function = true;
         self.begin(&[item]);
@@ -3349,6 +3352,7 @@ fn depends(p: &Program, t: TypeId) -> bool {
             p.types.list(params).iter().any(|&t| depends(p, t)) || depends(p, result)
         }
         TypeData::Nominal { args, .. } => p.types.list(args).iter().any(|&t| depends(p, t)),
+        TypeData::Result { pass, fail } => depends(p, pass) || depends(p, fail),
     }
 }
 
@@ -3368,6 +3372,7 @@ fn mentions_type(p: &Program) -> bool {
             }
             TypeData::Nominal { args, .. } => p.types.list(args).iter().any(|&t| has(p, t)),
             TypeData::TypeParam { .. } => false,
+            TypeData::Result { pass, fail } => has(p, pass) || has(p, fail),
         }
     }
     (p.decls.ids()).any(|d| p.decls.contains(d) && has(p, p.decls.get(d).ty))

@@ -1062,6 +1062,37 @@ arity doesn't count `this`. `Int.m` is `Int32.m`, as core's `Int` is
   with a constructor, as `new StringBuilder()`, a `T` ("Generic calls",
   above, for generic ones).
 
+## Results
+
+As built (2026-11-23): a function that may fail has a result type, `T
+throws E` (`TypeData::Result { pass, fail }` in `types.rs`), as its
+function type's result; for now `E` is always `Bubble`, whatever `throws
+X` says. Results are internal (RFC 164's "results can't be held"):
+
+- **Only a function's result:** a `TypeData::Fn`'s, a builtin type's
+  method's (`CoreType::Throws`), or a builtin's (`Sig`'s `pass` and
+  `fail`). No value has one, and Temper code can't name one: `T throws
+  X` is `T` anywhere but a declared result (`eval_result`).
+- **Readers unwrap it:** a call's type is the result's pass type
+  (`Types::pass`, `Types::call_pass`), so every expression has one type.
+- **Made by `Types::result`,** which drops a failure type that's a
+  `Never`, so `T throws Never<Error>` will be `T`, and a function that
+  can't fail has a plain result.
+- **Generic machinery sees both parts:** substitution, `mentions`,
+  `is_known`, and unification part by part, where a result never solves a
+  type parameter but its pass type does. So a failure type parameter can
+  be an ordinary type parameter, for callbacks, `Promise<T, E>`, and
+  `Generator<Y, E>`.
+- **One assignability rule:** what fits `T` fits `T throws E`; a result
+  fits only a result whose parts fit, never `AnyValue`. Function types
+  compare results so, and one that may fail isn't one that can't, even
+  where its pass type isn't worked out.
+
+It's its own variant rather than a generic type applied to a hidden base,
+as generic types are values' types (`AnyValue`, supertypes, members,
+joins) and results mustn't be. tmpl has the same type
+([tmpl/types.md](tmpl/types.md#results)).
+
 ## What may bubble
 
 A function whose declared return type doesn't `throw Bubble` mustn't

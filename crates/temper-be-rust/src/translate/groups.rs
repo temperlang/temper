@@ -118,7 +118,7 @@ impl Translator<'_> {
                 if sig.is_none_or(|s| {
                     s.params
                         .iter()
-                        .chain([&s.result])
+                        .chain([&s.pass])
                         .any(|&t| self.mentions_type_param(t))
                 }) {
                     return not_yet("a generic group of local functions");
@@ -278,6 +278,9 @@ impl Translator<'_> {
             TypeData::Function { params, result, .. } => (p.types.list(params).iter())
                 .chain([&result])
                 .any(|&t| self.mentions_type_param(t)),
+            TypeData::Result { pass, fail } => {
+                self.mentions_type_param(pass) || self.mentions_type_param(fail)
+            }
             TypeData::Scalar(_) => false,
         }
     }

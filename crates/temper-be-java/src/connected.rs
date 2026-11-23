@@ -916,7 +916,7 @@ fn item_of(t: &Translator<'_>, list: NodeId) -> TypeId {
 fn result_of(t: &Translator<'_>, f: NodeId) -> TypeId {
     let p = t.program();
     (temper_tmpl::analysis::fun_signature(p, p.nodes.ty(f)))
-        .and_then(|s| p.types.signature(s).map(|s| s.result))
+        .and_then(|s| p.types.signature(s).map(|s| s.pass))
         .unwrap_or(TypeId::NONE)
 }
 

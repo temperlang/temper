@@ -36,8 +36,8 @@ use crate::library::{Level, Message};
 use crate::scope::{ScopeId, SymbolId, SymbolKind};
 use crate::settle::{Fact, Settle};
 use crate::types::{
-    ANY_VALUE, BOOLEAN, FLOAT64, INT32, INT64, NEVER, NULL, Param, STRING, TypeData, TypeId, Types,
-    UNKNOWN, VOID,
+    ANY_VALUE, BOOLEAN, BUBBLE, FLOAT64, INT32, INT64, NEVER, NULL, Param, STRING, TypeData,
+    TypeId, Types, UNKNOWN, VOID,
 };
 use std::collections::{HashMap, HashSet};
 use temper_syntax::ast::Value;
@@ -623,10 +623,7 @@ impl Settle {
             return Ok(VOID);
         }
         let callee_type = self.callee_type(callee, forced)?;
-        Ok(match self.typing.types.get(callee_type) {
-            TypeData::Fn { ret, .. } => *ret,
-            _ => UNKNOWN,
-        })
+        Ok(self.typing.types.call_pass(callee_type))
     }
 
     fn builtin_call_type(
@@ -646,10 +643,7 @@ impl Settle {
             DoPure => match args {
                 [f] if self.lib.tree.kind(*f) == NodeKind::Fn => {
                     let t = self.expr_type(*f, forced)?;
-                    match *self.typing.types.get(t) {
-                        TypeData::Fn { ret, .. } => ret,
-                        _ => UNKNOWN,
-                    }
+                    self.typing.types.call_pass(t)
                 }
                 _ => UNKNOWN,
             },
@@ -670,13 +664,10 @@ impl Settle {
             // `a[i]` calls `a.get(i)`.
             Index if !args.is_empty() => {
                 let get = self.index_callee_type(args[0], forced)?;
-                match *self.typing.types.get(get) {
-                    TypeData::Fn { ret, .. } => ret,
-                    _ => UNKNOWN,
-                }
+                self.typing.types.call_pass(get)
             }
             _ => match self.builtin_variant(f, args, forced)? {
-                Some((sig, _)) => sig.ret,
+                Some((sig, _)) => sig.pass,
                 None => self.exact_variant(f, args, forced)?,
             },
         })
@@ -712,17 +703,16 @@ impl Settle {
                 optional: default.is_some(),
             });
         }
-        let (ret, throws) = match out_type {
-            Some(t) if !is_generator => (self.eval_type(t), self.is_throws(t)),
+        let result = match out_type {
+            Some(t) if !is_generator => self.eval_result(t),
             // Kotlin doesn't check one with optional parameters against
             // the function type its place wants, so neither does tempest.
-            Some(t) if !typed.iter().any(|p| p.optional) => (self.generator_made(t), false),
-            _ => (UNKNOWN, false),
+            Some(t) if !typed.iter().any(|p| p.optional) => self.generator_made(t),
+            _ => UNKNOWN,
         };
         self.typing.types.intern(TypeData::Fn {
             params: typed,
-            ret,
-            throws,
+            result,
         })
     }
 
@@ -770,8 +760,21 @@ impl Settle {
         t != NEVER && t != ANY_VALUE && !self.typing.types.is_final(t)
     }
 
+    /// A function's result, from its declared return type: `T throws X`
+    /// is the result `T throws Bubble` ([`Types::result`]) whatever `X`
+    /// is, as `Bubble` is the only failure type for now; any other type
+    /// as [`Settle::eval_type`] gives it.
+    fn eval_result(&mut self, node: NodeId) -> TypeId {
+        let pass = self.eval_type(node);
+        match self.is_throws(node) {
+            true => self.typing.types.result(pass, BUBBLE),
+            false => pass,
+        }
+    }
+
     /// The type a type expression names, as `Int`, `String?` or `fn
-    /// (Int): Boolean`. `T throws Bubble` is `T` for now.
+    /// (Int): Boolean`. `T throws Bubble` is `T` but as a function's
+    /// result ([`Settle::eval_result`]).
     fn eval_type(&mut self, node: NodeId) -> TypeId {
         let tree = &self.lib.tree;
         match tree.kind(node) {
@@ -818,13 +821,8 @@ impl Settle {
                                 optional: false,
                             })
                             .collect();
-                        let throws = self.is_throws(*ret);
-                        let ret = self.eval_type(*ret);
-                        self.typing.types.intern(TypeData::Fn {
-                            params,
-                            ret,
-                            throws,
-                        })
+                        let result = self.eval_result(*ret);
+                        self.typing.types.intern(TypeData::Fn { params, result })
                     }
                     _ => UNKNOWN,
                 }

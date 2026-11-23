@@ -249,7 +249,7 @@ fn fixture_members(p: &Program) -> HashMap<String, Member> {
                 )
             })
             .collect();
-        let result = p.show_type(sig.result);
+        let result = p.show_type(sig.pass);
         let owner = if kind == "fn" {
             String::new()
         } else {
@@ -261,7 +261,7 @@ fn fixture_members(p: &Program) -> HashMap<String, Member> {
                 kind,
                 params,
                 result: unnumbered(&result),
-                bubbles: sig.bubbles,
+                bubbles: sig.bubbles(),
                 connected: d.facts.contains(Facts::CONNECTED),
             },
         );

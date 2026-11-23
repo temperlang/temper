@@ -376,8 +376,11 @@ impl<'a> Translator<'a> {
                 Scalar::AnyValue => "unknown",
                 // A type as a value is its `typeof` name.
                 Scalar::Type => "string",
+                Scalar::Bubble => return not_yet("Bubble as a value's type"),
             }
             .to_string(),
+            // Only a signature's result, never a value's (tmpl's T5).
+            TypeData::Result { .. } => return not_yet("a result type as a value's"),
             TypeData::Nominal { decl, args } => {
                 let mut texts = Vec::new();
                 for &a in self.p.types.list(args) {
@@ -498,7 +501,7 @@ impl<'a> Translator<'a> {
         if s.optional.contains(&true) {
             return not_yet("a function type with optional parameters");
         }
-        let (params, result) = (s.params.to_vec(), s.result);
+        let (params, result) = (s.params.to_vec(), s.pass);
         let mut texts = Vec::new();
         for (i, t) in params.into_iter().enumerate() {
             texts.push(format!("arg{i}: {}", self.ty(t)?));
@@ -724,7 +727,7 @@ impl<'a> Translator<'a> {
             .collect();
         ps.extend(self.params(params)?);
         let result = match p.signature(decl) {
-            Some(sig) if sig.result != TypeId::VOID => Some(self.ty(sig.result)?),
+            Some(sig) if sig.pass != TypeId::VOID => Some(self.ty(sig.pass)?),
             _ => None,
         };
         self.begin(item);
@@ -906,7 +909,7 @@ impl<'a> Translator<'a> {
         ps.extend(self.params(params)?);
         let result = match p.signature(decl) {
             Some(_) if p.decls.get(decl).kind == DeclKind::Constructor => None,
-            Some(sig) if sig.result != TypeId::VOID => Some(self.ty(sig.result)?),
+            Some(sig) if sig.pass != TypeId::VOID => Some(self.ty(sig.pass)?),
             _ => None,
         };
         self.begin(item);

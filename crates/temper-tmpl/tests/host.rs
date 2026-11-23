@@ -10,7 +10,7 @@ use temper_tmpl::{Builder, DeclId, DeclKind, Facts, Program, TypeId};
 fn program(no_connected: bool) -> (Program, Vec<DeclId>) {
     let mut b = Builder::new("t", "0.1.0");
     let m = b.module("");
-    let sig = b.function_type(&[], TypeId::INT32, false);
+    let sig = b.function_type(&[], TypeId::INT32);
     let mut decls = Vec::new();
     for (name, listed) in [
         ("all", Some(&[][..])),

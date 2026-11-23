@@ -264,6 +264,8 @@ impl<'a> Translator<'a> {
             // `temper_tmpl::nevers` made each `Never<T>` the `T` it stands
             // for, as this profile has no bottom type.
             TypeData::Never(t) => return self.ty(t),
+            // Only a signature's result, never a value's (tmpl's T5).
+            TypeData::Result { .. } => return not_yet("a result type as a value's"),
             TypeData::Scalar(s) => match s {
                 Scalar::Void => "void",
                 Scalar::Boolean => "boolean",
@@ -274,6 +276,7 @@ impl<'a> Translator<'a> {
                 Scalar::AnyValue => "Object",
                 // Not raw `Class`, which `-Xlint` warns of.
                 Scalar::Type => "Class<?>",
+                Scalar::Bubble => return not_yet("Bubble as a value's type"),
             }
             .to_string(),
             // A `@fun` interface is its function type's interface.
@@ -637,7 +640,7 @@ impl<'a> Translator<'a> {
             }
         }
         let result = match p.signature(decl) {
-            Some(sig) => sig.result,
+            Some(sig) => sig.pass,
             None => TypeId::VOID,
         };
         let result_ty = format!("{}{}", self.type_params(decl)?, self.ty(result)?);
@@ -2153,7 +2156,7 @@ fn unboxed(p: &Program, id: NodeId) -> Option<(&'static str, &'static str)> {
         let declared = match p.decls.get(decl).kind {
             DeclKind::Field => p.decls.get(decl).ty,
             _ => match p.signature(decl) {
-                Some(sig) => sig.result,
+                Some(sig) => sig.pass,
                 None => return false,
             },
         };

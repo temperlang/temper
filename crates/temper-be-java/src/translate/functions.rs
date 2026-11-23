@@ -91,7 +91,7 @@ impl Translator<'_> {
         if s.optional.contains(&true) {
             return not_yet("a function type with optional parameters");
         }
-        let (params, result) = (s.params.to_vec(), s.result);
+        let (params, result) = (s.params.to_vec(), s.pass);
         let mut code: String = params.iter().map(|&t| self.kind(t, false)).collect();
         code.push(self.kind(result, true));
         if let Some(&(name, _, method)) = STANDARD.iter().find(|(_, c, _)| *c == code) {
@@ -227,6 +227,9 @@ impl Translator<'_> {
             TypeData::Function { params, result, .. } => (p.types.list(params).iter())
                 .chain([&result])
                 .any(|&t| self.mentions_type_param(t)),
+            TypeData::Result { pass, fail } => {
+                self.mentions_type_param(pass) || self.mentions_type_param(fail)
+            }
             TypeData::Scalar(_) => false,
         }
     }
@@ -247,6 +250,7 @@ impl Translator<'_> {
             }
             TypeData::Nominal { decl, .. } | TypeData::TypeParam { decl } => p.name(decl).into(),
             TypeData::Nullable(_) => "Any".into(),
+            TypeData::Result { pass, .. } => self.simple_name(pass),
         }
     }
 
@@ -288,7 +292,7 @@ impl Translator<'_> {
             std::mem::take(&mut self.loops),
             std::mem::take(&mut self.labels),
         );
-        let void = p.signature(decl).is_some_and(|s| s.result == TypeId::VOID);
+        let void = p.signature(decl).is_some_and(|s| s.pass == TypeId::VOID);
         let result = (|| -> R<Expr> {
             if let ([ret], None) = (stmts.as_slice(), &name) {
                 let value = match p.nodes.get(*ret) {

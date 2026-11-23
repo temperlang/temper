@@ -154,14 +154,14 @@ impl Translator<'_> {
             args.push(Expr::name(format!("a{i}")));
         }
         let call = Expr::name(format!("{var}.{}", self.name(member))).call(args);
-        let body = match sig.result == TypeId::VOID {
+        let body = match sig.pass == TypeId::VOID {
             true => Stmt::Expr(call),
             false => Stmt::Return(Some(call)),
         };
         Ok(Expr::Lambda {
             captures: captures.to_string(),
             params,
-            result: self.ty(sig.result)?,
+            result: self.ty(sig.pass)?,
             body: vec![body],
         })
     }

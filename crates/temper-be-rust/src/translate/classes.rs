@@ -366,7 +366,7 @@ impl<'a> Translator<'a> {
             ps.push(format!("{name}: {}", self.ty(p.decls.get(d).ty)?));
             names.push(name);
         }
-        let result = self.result(sig.result, sig.bubbles)?;
+        let result = self.result(sig.pass, sig.bubbles())?;
         Ok((ps, names, result))
     }
 
@@ -672,7 +672,7 @@ impl<'a> Translator<'a> {
     }
 
     fn bubbles_decl(&self, decl: DeclId) -> bool {
-        self.p.signature(decl).is_some_and(|s| s.bubbles)
+        self.p.signature(decl).is_some_and(|s| s.bubbles())
     }
 
     /// Whether a class's method is its `==`, which Rust's `PartialEq`
@@ -684,8 +684,8 @@ impl<'a> Translator<'a> {
             && d.facts.contains(Facts::OPERATOR_EQ)
             && !self.is_private(decl)
             && self.p.signature(decl).is_some_and(|s| {
-                !s.bubbles
-                    && s.result == TypeId::BOOLEAN
+                !s.bubbles()
+                    && s.pass == TypeId::BOOLEAN
                     && s.params.len() == 1
                     && nominal_decl(self.p, s.params[0]) == Some(class)
             })
@@ -886,7 +886,7 @@ impl<'a> Translator<'a> {
                 params.push(format!("{arg}: {}", self.ty(t)?));
                 args.push(Expr::path(&arg));
             }
-            let result = self.result(sig.result, sig.bubbles)?;
+            let result = self.result(sig.pass, sig.bubbles())?;
             let rust = self.member_name(own);
             if rust.is_empty() {
                 return not_yet(format!("{name}'s {}", p.name(d)));
@@ -1104,7 +1104,7 @@ impl<'a> Translator<'a> {
             return not_yet("a constructor without a signature");
         };
         let name = self.name(class);
-        self.begin(item, sig.bubbles);
+        self.begin(item, sig.bubbles());
         let mut stmts = Vec::new();
         let mut ps = Vec::new();
         self.params_into(item, params, Params::Free, &mut ps, &mut stmts)?;
@@ -1195,7 +1195,7 @@ impl<'a> Translator<'a> {
             if fields_only(p, body_stmts) {
                 let tail = self
                     .constructor_in_branches(class, &name, item, &fields, body_stmts, &mut stmts)?;
-                return self.constructor_member(class, decl, sig.result, ps, stmts, tail);
+                return self.constructor_member(class, decl, sig.pass, ps, stmts, tail);
             }
             return not_yet(format!(
                 "a constructor of {name} that doesn't set each field first"
@@ -1293,7 +1293,7 @@ impl<'a> Translator<'a> {
             done?;
             Expr::path(local)
         };
-        self.constructor_member(class, decl, sig.result, ps, stmts, tail)
+        self.constructor_member(class, decl, sig.pass, ps, stmts, tail)
     }
 
     /// A constructor's `new`, from its statements and the instance it
@@ -1960,9 +1960,10 @@ fn mentions(p: &Program, ty: TypeId, part: TypeId) -> bool {
             temper_tmpl::TypeData::Nullable(inner) => mentions(p, inner, part),
             // A function type's parameters and result: Rust's `dyn Fn`
             // uses its type parameters.
-            temper_tmpl::TypeData::Function { .. } => p.types.signature(ty).is_some_and(|s| {
-                (s.params.iter().chain([&s.result])).any(|&t| mentions(p, t, part))
-            }),
+            temper_tmpl::TypeData::Function { .. } => p
+                .types
+                .signature(ty)
+                .is_some_and(|s| (s.params.iter().chain([&s.pass])).any(|&t| mentions(p, t, part))),
             _ => false,
         }
 }

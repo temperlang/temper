@@ -830,7 +830,6 @@ As built (2026-10-29, Proposed), with core's declarations:
   method's owner is an interface (`Program::is_virtual`), so there's no
   `VIRTUAL` flag to keep in step.
 - **Room for failure kinds** ([question 44](open-questions.md)): a
-  signature's `bubbles` and a node's `MAY_BUBBLE` stay booleans, and a
-  failure kind would be an added, optional field beside them (a
-  `Nominal` declaration, by qname); nothing here depends on `Bubble`
-  being the only one.
+  signature's result says what it fails with, a result type
+  ([types.md](types.md#results)), and a node's `MAY_BUBBLE` stays a
+  flag until a call may fail with more than one type.

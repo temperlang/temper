@@ -18,7 +18,7 @@ use crate::core::{self, CLASS_INTERFACE};
 use crate::library::{Level, Message};
 use crate::scope::{SymbolId, SymbolKind};
 use crate::settle::{Fact, Settle};
-use crate::types::{ANY_VALUE, NULL, Param, TypeData, TypeId, UNKNOWN, VOID, show_result};
+use crate::types::{ANY_VALUE, NULL, Param, TypeData, TypeId, UNKNOWN, VOID};
 use temper_syntax::tree::{NodeId, NodeKind, Span};
 
 /// A call of a generic function, solved.
@@ -93,12 +93,8 @@ impl Settle {
                     let formals = self.own_formals(class);
                     let params = self.constructor_type(class);
                     let made = formals.iter().map(|&f| self.type_param_type(f)).collect();
-                    let ret = self.generic_class_type(class, made);
-                    let sig = self.typing.types.intern(TypeData::Fn {
-                        params,
-                        ret,
-                        throws: false,
-                    });
+                    let result = self.generic_class_type(class, made);
+                    let sig = self.typing.types.intern(TypeData::Fn { params, result });
                     (sig, formals, type_args, args[1..].to_vec())
                 }
                 None if self.scopes.resolved_builtin(callee)
@@ -182,14 +178,15 @@ impl Settle {
         }))
     }
 
-    /// A solved call's type: its function's result with the solution
-    /// put in, unknown where it isn't solved.
+    /// A solved call's type: its function's result's pass type with the
+    /// solution put in, unknown where it isn't solved.
     pub(super) fn solved_result(&mut self, solved: &Solved) -> TypeId {
-        let TypeData::Fn { ret, .. } = *self.typing.types.get(solved.sig) else {
+        let TypeData::Fn { result, .. } = *self.typing.types.get(solved.sig) else {
             return UNKNOWN;
         };
         let types = &mut self.typing.types;
-        types.substitute(ret, &solved.formals, &solved.actuals)
+        let result = types.substitute(result, &solved.formals, &solved.actuals);
+        types.pass(result)
     }
 
     /// Whether a function literal declares its result type, and isn't a
@@ -216,9 +213,10 @@ impl Settle {
             self.literal_results_as_bounds(solved);
             return Ok(self.solved_result(solved));
         };
-        let TypeData::Fn { ret, .. } = *self.typing.types.get(solved.sig) else {
+        let TypeData::Fn { result, .. } = *self.typing.types.get(solved.sig) else {
             return Ok(t);
         };
+        let ret = self.typing.types.pass(result);
         let wanted = match (self.typing.types.get(wanted), self.typing.types.get(ret)) {
             (&TypeData::Nullable(inner), ret) if !matches!(ret, TypeData::Nullable(_)) => inner,
             _ => wanted,
@@ -254,11 +252,11 @@ impl Settle {
                 continue;
             };
             let ty = self.non_null(param.ty);
-            let TypeData::Fn { ret, .. } = *self.typing.types.get(ty) else {
+            let TypeData::Fn { result, .. } = *self.typing.types.get(ty) else {
                 continue;
             };
             for (k, &formal) in solved.formals.iter().enumerate() {
-                open[k] |= self.typing.types.mentions(ret, &[formal]);
+                open[k] |= self.typing.types.mentions(result, &[formal]);
             }
         }
         let bounds = self.unsolved_as_bounds(solved);
@@ -327,10 +325,11 @@ impl Settle {
         let Ok(Some(mut solved)) = self.solve_call(call, false) else {
             return false;
         };
-        let TypeData::Fn { ret, .. } = *self.typing.types.get(solved.sig) else {
+        let TypeData::Fn { result, .. } = *self.typing.types.get(solved.sig) else {
             return false;
         };
         let types = &mut self.typing.types;
+        let ret = types.pass(result);
         let bare = match *types.get(ret) {
             TypeData::Nullable(inner) => matches!(types.get(inner), TypeData::Param(_)),
             TypeData::Param(_) => true,
@@ -387,9 +386,10 @@ impl Settle {
         let Some(mut solved) = self.solve_call(call, forced)? else {
             return Ok(None);
         };
-        let TypeData::Fn { params, ret, .. } = self.typing.types.get(solved.sig).clone() else {
+        let TypeData::Fn { params, result } = self.typing.types.get(solved.sig).clone() else {
             return Ok(None);
         };
+        let ret = self.typing.types.pass(result);
         let wanted = match solved.has_type_args {
             true => None,
             false => self.wanted_type(call, forced)?,
@@ -442,7 +442,7 @@ impl Settle {
         let args = self.lib.tree.children(list)[1..].to_vec();
         let types = &mut self.typing.types;
         let param = types.param(formal);
-        let ret = types.list_of(param);
+        let result = types.list_of(param);
         let params = vec![
             Param {
                 ty: param,
@@ -450,11 +450,7 @@ impl Settle {
             };
             args.len()
         ];
-        let sig = types.intern(TypeData::Fn {
-            params,
-            ret,
-            throws: false,
-        });
+        let sig = types.intern(TypeData::Fn { params, result });
         self.check_generic_args(&Solved {
             sig,
             formals: vec![formal],
@@ -586,7 +582,7 @@ impl Settle {
     /// Temper's solver binds it, with the other type parameters put in.
     /// Others still unknown stay so.
     pub(super) fn settled_type_args(&mut self, solved: &Solved) -> Vec<TypeId> {
-        let TypeData::Fn { params, ret, .. } = self.typing.types.get(solved.sig).clone() else {
+        let TypeData::Fn { params, result } = self.typing.types.get(solved.sig).clone() else {
             return solved.actuals.clone();
         };
         let mut settled = solved.actuals.clone();
@@ -594,7 +590,7 @@ impl Settle {
             let only = &solved.formals[k..=k];
             let types = &self.typing.types;
             let used =
-                types.mentions(ret, only) || params.iter().any(|p| types.mentions(p.ty, only));
+                types.mentions(result, only) || params.iter().any(|p| types.mentions(p.ty, only));
             if settled[k] != UNKNOWN || solved.ambiguous[k] || used {
                 continue;
             }
@@ -728,19 +724,14 @@ impl Settle {
         let formals: Vec<String> = (solved.formals.iter())
             .map(|&f| self.show_formal(f))
             .collect();
-        let TypeData::Fn {
-            params,
-            ret,
-            throws,
-        } = self.typing.types.get(solved.sig).clone()
-        else {
+        let TypeData::Fn { params, result } = self.typing.types.get(solved.sig).clone() else {
             return String::new();
         };
         let params: Vec<String> = (solved.this.map(|(declared, _)| declared).into_iter())
             .chain(params.iter().map(|p| p.ty))
             .map(|t| self.show(t))
             .collect();
-        let ret = show_result(self.show(ret), throws);
+        let ret = self.show(result);
         format!("<{}>({}) -> {ret}", formals.join(", "), params.join(", "))
     }
 }

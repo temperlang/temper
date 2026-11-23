@@ -74,6 +74,9 @@ pub(super) enum CoreType {
     Nullable(Box<CoreType>),
     /// `fn (A, B): R`.
     Fn(Vec<CoreType>, Box<CoreType>),
+    /// `T throws E`, a method's result where it may fail (notes/typing.md,
+    /// "Results").
+    Throws(Box<CoreType>, Box<CoreType>),
 }
 
 #[derive(Debug, PartialEq)]
@@ -81,12 +84,12 @@ pub(super) enum CoreMemberKind {
     /// A field's or getter's value.
     Value(CoreType),
     /// A method, with its own type parameters' names, each parameter's
-    /// type and whether it has a default.
+    /// type and whether it has a default, and its result, a
+    /// [`CoreType::Throws`] where it may fail.
     Method {
         type_params: Vec<String>,
         params: Vec<(CoreType, bool)>,
         ret: CoreType,
-        throws: bool,
     },
 }
 
@@ -295,7 +298,6 @@ pub fn builtin_members(type_name: &str, args: &[String]) -> Vec<BuiltinMember> {
                     type_params,
                     params,
                     ret,
-                    throws,
                 } => {
                     let params: Vec<String> = (params.iter().enumerate())
                         .map(|(i, (t, optional))| {
@@ -305,7 +307,6 @@ pub fn builtin_members(type_name: &str, args: &[String]) -> Vec<BuiltinMember> {
                         })
                         .collect();
                     let ret = show_core(ret, &shown_args, type_params);
-                    let ret = crate::types::show_result(ret, *throws);
                     let own = match type_params.is_empty() {
                         true => String::new(),
                         false => format!("<{}>", type_params.join(", ")),
@@ -358,6 +359,10 @@ fn show_core(t: &CoreType, args: &[String], own: &[String]) -> String {
                     format!("fn ({}): {ret}", params.join(", "))
                 }
             }
+        }
+        CoreType::Throws(pass, fail) => {
+            let (pass, fail) = (show_core(pass, args, own), show_core(fail, args, own));
+            format!("{pass} throws {fail}")
         }
     }
 }
@@ -485,7 +490,11 @@ impl<'a> Reader<'a> {
             },
             // `get \word ^name \outType T { … }`
             (Some("get"), [word, name, rest @ ..]) if self.symbol(*word) == Some("word") => {
-                let ty = self.out_type(rest).0;
+                // What a read gives, as no value has a result type.
+                let ty = match self.out_type(rest) {
+                    CoreType::Throws(pass, _) => *pass,
+                    ty => ty,
+                };
                 self.push(*name, is_static, CoreMemberKind::Value(ty), out);
             }
             // `set \word ^name …`, not a method named `set`.
@@ -531,13 +540,12 @@ impl<'a> Reader<'a> {
                         }
                     }
                 }
-                let (ret, throws) = self.out_type(parts);
+                let ret = self.out_type(parts);
                 let own_params = std::mem::take(&mut self.own_params);
                 let kind = CoreMemberKind::Method {
                     type_params: own_params.into_iter().map(|(name, _)| name).collect(),
                     params,
                     ret,
-                    throws,
                 };
                 self.push(tree.children(node)[0], is_static, kind, out);
                 if let Some(m) = out.last_mut() {
@@ -610,20 +618,23 @@ impl<'a> Reader<'a> {
         )
     }
 
-    /// What follows `\outType`: the type, and whether it `throws Bubble`.
-    fn out_type(&self, parts: &[NodeId]) -> (CoreType, bool) {
+    /// What follows `\outType`: the result type, [`CoreType::Throws`]
+    /// for `T throws Bubble`.
+    fn out_type(&self, parts: &[NodeId]) -> CoreType {
         let Some(i) = parts
             .iter()
             .position(|&p| self.symbol(p) == Some("outType"))
         else {
-            return (CoreType::Unknown, false);
+            return CoreType::Unknown;
         };
         let Some(&ty) = parts.get(i + 1) else {
-            return (CoreType::Unknown, false);
+            return CoreType::Unknown;
         };
         match self.call_parts(ty) {
-            Some((Some("throws"), [pass, ..])) => (self.type_of(*pass), true),
-            _ => (self.type_of(ty), false),
+            Some((Some("throws"), [pass, fail, ..])) => {
+                CoreType::Throws(Box::new(self.type_of(*pass)), Box::new(self.type_of(*fail)))
+            }
+            _ => self.type_of(ty),
         }
     }
 
@@ -724,13 +735,14 @@ mod tests {
         let int = builtin("Int");
         let string = builtin("String");
         let to_int = find("String", "toInt32");
+        let throws =
+            |t: &CoreType| CoreType::Throws(Box::new(t.clone()), Box::new(builtin("Bubble")));
         assert_eq!(
             to_int.kind,
             CoreMemberKind::Method {
                 type_params: Vec::new(),
                 params: vec![(int.clone(), true)],
-                ret: int,
-                throws: true,
+                ret: throws(&int),
             }
         );
         assert!(find("String", "fromCodePoint").is_static);
@@ -806,7 +818,6 @@ mod tests {
                 type_params: Vec::new(),
                 params: vec![(int.clone(), false), (t.clone(), false)],
                 ret: t.clone(),
-                throws: false,
             }
         );
         // A method's own type parameter, which may shadow the type's.
@@ -821,7 +832,6 @@ mod tests {
                 type_params: vec!["O".to_string()],
                 params: vec![(CoreType::Fn(vec![t.clone()], Box::new(o.clone())), false)],
                 ret: list(&o),
-                throws: false,
             }
         );
         let CoreMemberKind::Method {
@@ -836,8 +846,7 @@ mod tests {
             CoreMemberKind::Method {
                 type_params: Vec::new(),
                 params: vec![(t.clone(), false)],
-                ret: CoreType::Param(1),
-                throws: true,
+                ret: CoreType::Throws(Box::new(CoreType::Param(1)), Box::new(builtin("Bubble"))),
             }
         );
         assert_eq!(find("Pair", "key").kind, CoreMemberKind::Value(t.clone()));

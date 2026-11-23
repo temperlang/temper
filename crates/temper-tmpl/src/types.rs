@@ -21,10 +21,13 @@ pub enum Scalar {
     /// A type as a value: what `TypeValue` gives (notes/tmpl/types.md,
     /// "Types as values").
     Type,
+    /// What a function that may bubble fails with: only ever a
+    /// [`TypeData::Result`]'s failure type, never a value's type.
+    Bubble,
 }
 
 impl Scalar {
-    pub const ALL: [Scalar; 8] = [
+    pub const ALL: [Scalar; 9] = [
         Scalar::Void,
         Scalar::Boolean,
         Scalar::Int32,
@@ -33,6 +36,7 @@ impl Scalar {
         Scalar::String,
         Scalar::AnyValue,
         Scalar::Type,
+        Scalar::Bubble,
     ];
 
     /// Its name, as text writes it.
@@ -46,6 +50,7 @@ impl Scalar {
             Scalar::String => "String",
             Scalar::AnyValue => "AnyValue",
             Scalar::Type => "Type",
+            Scalar::Bubble => "Bubble",
         }
     }
 }
@@ -59,6 +64,7 @@ impl TypeId {
     pub const STRING: TypeId = TypeId(5);
     pub const ANY_VALUE: TypeId = TypeId(6);
     pub const TYPE: TypeId = TypeId(7);
+    pub const BUBBLE: TypeId = TypeId(8);
 }
 
 /// A run of types in [`TypeTable::list`].
@@ -71,12 +77,21 @@ pub struct TypeList {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum TypeData {
     Scalar(Scalar),
-    /// A signature: parameter types, which are optional, the result, and
-    /// whether it may bubble.
+    /// A signature: parameter types, which are optional, and the result,
+    /// a [`TypeData::Result`] if it may fail.
     Function {
         params: TypeList,
         result: TypeId,
-        bubbles: bool,
+    },
+    /// `T throws E`, a signature's result where it may fail with an `E`
+    /// (notes/tmpl/types.md, "Results"): `pass` is what a call gives, the
+    /// type of the call's node, when it doesn't. Only ever a
+    /// [`TypeData::Function`]'s result, never a value's or a node's type.
+    /// Made by [`TypeTable::result`], so `pass` isn't a result and `fail`
+    /// isn't a `Never`; `Bubble` is the only failure type for now.
+    Result {
+        pass: TypeId,
+        fail: TypeId,
     },
     /// A class or interface, by its declaration, with its type arguments
     /// (none for one without type parameters; a generic one's own type is
@@ -103,7 +118,6 @@ pub enum TypeData {
     /// "Never"). Targets without a bottom type lower it to `T`
     /// ([`crate::nevers`]).
     Never(TypeId),
-    // Subset C: Result.
 }
 
 /// A signature, as [`TypeTable::signature`] gives it.
@@ -112,11 +126,22 @@ pub struct Signature<'a> {
     pub params: &'a [TypeId],
     /// Which parameters are optional, one per parameter.
     pub optional: &'a [bool],
-    pub result: TypeId,
-    pub bubbles: bool,
+    /// What a call gives: the type of its node.
+    pub pass: TypeId,
+    /// What a call may fail with, if anything.
+    pub fail: Option<TypeId>,
+    /// Its whole result: `pass`, or `pass throws fail`.
+    pub returns: TypeId,
 }
 
-type FunctionKey = (Vec<TypeId>, Vec<bool>, TypeId, bool);
+impl Signature<'_> {
+    /// Whether a call may bubble.
+    pub fn bubbles(&self) -> bool {
+        self.fail.is_some()
+    }
+}
+
+type FunctionKey = (Vec<TypeId>, Vec<bool>, TypeId);
 
 #[derive(Clone, Debug)]
 pub struct TypeTable {
@@ -129,6 +154,7 @@ pub struct TypeTable {
     params: HashMap<DeclId, TypeId>,
     nullables: HashMap<TypeId, TypeId>,
     nevers: HashMap<TypeId, TypeId>,
+    results: HashMap<(TypeId, TypeId), TypeId>,
     /// Calls' type arguments, by [`TypeArgs`]; the first is none.
     arg_lists: Vec<TypeList>,
     arg_ids: HashMap<Vec<TypeId>, TypeArgs>,
@@ -154,6 +180,7 @@ impl Default for TypeTable {
             params: HashMap::new(),
             nullables: HashMap::new(),
             nevers: HashMap::new(),
+            results: HashMap::new(),
             arg_lists: vec![TypeList { start: 0, len: 0 }],
             arg_ids: HashMap::new(),
         }
@@ -187,9 +214,10 @@ impl TypeTable {
         Some(TypeId(i as u32))
     }
 
-    /// Interns a signature whose parameters are all required.
-    pub fn function(&mut self, params: &[TypeId], result: TypeId, bubbles: bool) -> TypeId {
-        self.function_with(params, &vec![false; params.len()], result, bubbles)
+    /// Interns a signature whose parameters are all required; `result`
+    /// is a [`TypeData::Result`] if it may fail.
+    pub fn function(&mut self, params: &[TypeId], result: TypeId) -> TypeId {
+        self.function_with(params, &vec![false; params.len()], result)
     }
 
     /// Interns a signature; `optional` says which parameters are, one per
@@ -199,12 +227,11 @@ impl TypeTable {
         params: &[TypeId],
         optional: &[bool],
         result: TypeId,
-        bubbles: bool,
     ) -> TypeId {
         let optional: Vec<bool> = (0..params.len())
             .map(|i| optional.get(i).copied().unwrap_or(false))
             .collect();
-        let key = (params.to_vec(), optional, result, bubbles);
+        let key = (params.to_vec(), optional, result);
         if let Some(&id) = self.functions.get(&key) {
             return id;
         }
@@ -218,10 +245,43 @@ impl TypeTable {
                 len: params.len() as u32,
             },
             result,
-            bubbles,
         });
         self.functions.insert(key, id);
         id
+    }
+
+    /// Interns `pass throws fail` ([`TypeData::Result`]), or gives `pass`
+    /// where `fail` is a `Never`, which can't happen. `pass` mustn't be a
+    /// result.
+    pub fn result(&mut self, pass: TypeId, fail: TypeId) -> TypeId {
+        debug_assert!(self.fail(pass).is_none(), "a result of a result");
+        if self.is_never(fail) {
+            return pass;
+        }
+        if let Some(&id) = self.results.get(&(pass, fail)) {
+            return id;
+        }
+        let id = TypeId(self.data.len() as u32);
+        self.data.push(TypeData::Result { pass, fail });
+        self.results.insert((pass, fail), id);
+        id
+    }
+
+    /// What a call gives, for a signature whose result is `ty`: a
+    /// result's pass type, or `ty` itself.
+    pub fn pass(&self, ty: TypeId) -> TypeId {
+        match self.data.get(ty.index()) {
+            Some(&TypeData::Result { pass, .. }) => pass,
+            _ => ty,
+        }
+    }
+
+    /// What a signature whose result is `ty` may fail with, if anything.
+    pub fn fail(&self, ty: TypeId) -> Option<TypeId> {
+        match self.data.get(ty.index()) {
+            Some(&TypeData::Result { fail, .. }) => Some(fail),
+            _ => None,
+        }
     }
 
     /// Interns a class's or interface's type without type arguments.
@@ -318,9 +378,7 @@ impl TypeTable {
                     args.iter().map(|&a| self.substitute(a, from, to)).collect();
                 self.applied(decl, &args)
             }
-            TypeData::Function {
-                result, bubbles, ..
-            } => {
+            TypeData::Function { result, .. } => {
                 let sig = self.signature(ty).expect("a signature");
                 let (params, optional) = (sig.params.to_vec(), sig.optional.to_vec());
                 let params: Vec<TypeId> = params
@@ -328,7 +386,12 @@ impl TypeTable {
                     .map(|&p| self.substitute(p, from, to))
                     .collect();
                 let result = self.substitute(result, from, to);
-                self.function_with(&params, &optional, result, bubbles)
+                self.function_with(&params, &optional, result)
+            }
+            TypeData::Result { pass, fail } => {
+                let pass = self.substitute(pass, from, to);
+                let fail = self.substitute(fail, from, to);
+                self.result(pass, fail)
             }
         }
     }
@@ -362,9 +425,7 @@ impl TypeTable {
                     .collect();
                 self.nominals.get(&(decl, args?)).copied()
             }
-            TypeData::Function {
-                result, bubbles, ..
-            } => {
+            TypeData::Function { result, .. } => {
                 let sig = self.signature(ty)?;
                 let params: Option<Vec<TypeId>> = (sig.params.iter())
                     .map(|&p| self.substituted(p, from, to))
@@ -373,9 +434,16 @@ impl TypeTable {
                     params?,
                     sig.optional.to_vec(),
                     self.substituted(result, from, to)?,
-                    bubbles,
                 );
                 self.functions.get(&key).copied()
+            }
+            TypeData::Result { pass, fail } => {
+                let pass = self.substituted(pass, from, to)?;
+                let fail = self.substituted(fail, from, to)?;
+                match self.is_never(fail) {
+                    true => Some(pass),
+                    false => self.results.get(&(pass, fail)).copied(),
+                }
             }
         }
     }
@@ -391,8 +459,9 @@ impl TypeTable {
             TypeData::Nullable(inner) | TypeData::Never(inner) => self.is_generic(inner),
             TypeData::Nominal { args, .. } => self.list(args).iter().any(|&a| self.is_generic(a)),
             TypeData::Function { .. } => self.signature(ty).is_some_and(|sig| {
-                sig.params.iter().any(|&p| self.is_generic(p)) || self.is_generic(sig.result)
+                sig.params.iter().any(|&p| self.is_generic(p)) || self.is_generic(sig.returns)
             }),
+            TypeData::Result { pass, fail } => self.is_generic(pass) || self.is_generic(fail),
         }
     }
 
@@ -412,8 +481,11 @@ impl TypeTable {
             }
             TypeData::Function { .. } => self.signature(ty).is_some_and(|sig| {
                 sig.params.iter().any(|&p| self.mentions(p, param))
-                    || self.mentions(sig.result, param)
+                    || self.mentions(sig.returns, param)
             }),
+            TypeData::Result { pass, fail } => {
+                self.mentions(pass, param) || self.mentions(fail, param)
+            }
         }
     }
 
@@ -493,26 +565,24 @@ impl TypeTable {
         }
     }
 
-    /// A signature's parameters, which are optional, its result, and
-    /// whether it may bubble.
+    /// A signature's parameters, which are optional, and its result, as
+    /// what a call gives and what it may fail with.
     pub fn signature(&self, id: TypeId) -> Option<Signature<'_>> {
         match self.data.get(id.index())? {
-            &TypeData::Function {
-                params,
-                result,
-                bubbles,
-            } => Some(Signature {
+            &TypeData::Function { params, result } => Some(Signature {
                 params: self.list(params),
                 optional: &self.optional
                     [params.start as usize..(params.start + params.len) as usize],
-                result,
-                bubbles,
+                pass: self.pass(result),
+                fail: self.fail(result),
+                returns: result,
             }),
             TypeData::Scalar(_)
             | TypeData::Nominal { .. }
             | TypeData::TypeParam { .. }
             | TypeData::Nullable(_)
-            | TypeData::Never(_) => None,
+            | TypeData::Never(_)
+            | TypeData::Result { .. } => None,
         }
     }
 
@@ -536,14 +606,16 @@ impl TypeTable {
                 let (Some(x), Some(y)) = (self.signature(id), others.signature(other)) else {
                     return false;
                 };
-                x.bubbles == y.bubbles
-                    && x.optional == y.optional
+                x.optional == y.optional
                     && x.params.len() == y.params.len()
                     && x.params
                         .iter()
                         .zip(y.params)
                         .all(|(&a, &b)| self.same(a, others, b))
-                    && self.same(x.result, others, y.result)
+                    && self.same(x.returns, others, y.returns)
+            }
+            (TypeData::Result { pass: a, fail: e }, TypeData::Result { pass: b, fail: f }) => {
+                self.same(a, others, b) && self.same(e, others, f)
             }
             _ => false,
         }
@@ -590,9 +662,12 @@ impl TypeTable {
                         if optional { format!("_?: {ty}") } else { ty }
                     })
                     .collect();
-                let throws = if sig.bubbles { " throws Bubble" } else { "" };
-                let result = self.show_with(sig.result, decl);
-                format!("fn ({}): {result}{throws}", params.join(", "))
+                let result = self.show_with(sig.returns, decl);
+                format!("fn ({}): {result}", params.join(", "))
+            }
+            Some(&TypeData::Result { pass, fail }) => {
+                let (pass, fail) = (self.show_with(pass, decl), self.show_with(fail, decl));
+                format!("{pass} throws {fail}")
             }
         }
     }

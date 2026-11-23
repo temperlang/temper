@@ -422,10 +422,13 @@ impl<'a> Translator<'a> {
                     Scalar::String => "str",
                     Scalar::AnyValue => "object",
                     Scalar::Type => "type",
+                    Scalar::Bubble => return not_yet("Bubble as a value's type"),
                 }
                 .to_string(),
                 false,
             ),
+            // Only a signature's result, never a value's (tmpl's T5).
+            TypeData::Result { .. } => return not_yet("a result type as a value's"),
             TypeData::Nominal { decl, args } => {
                 let args = self.p.types.list(args).to_vec();
                 let mut quote = false;
@@ -517,7 +520,7 @@ impl<'a> Translator<'a> {
         if s.optional.contains(&true) {
             return not_yet("a function type with optional parameters");
         }
-        let (params, result) = (s.params.to_vec(), s.result);
+        let (params, result) = (s.params.to_vec(), s.pass);
         let mut quote = false;
         let mut texts = Vec::new();
         for t in params {
@@ -857,7 +860,7 @@ impl<'a> Translator<'a> {
         }
         let result = match self.p.signature(decl) {
             _ if kind == DeclKind::Constructor => "None".into(),
-            Some(sig) => self.ann(sig.result)?,
+            Some(sig) => self.ann(sig.pass)?,
             None => "None".into(),
         };
         // A constructor's parameters may be passed by name, as Kotlin's.
@@ -999,7 +1002,7 @@ impl<'a> Translator<'a> {
         (p.decls.type_params(decl).iter())
             .filter(|&&tp| {
                 let f = p.decls.get(tp).ty;
-                !p.types.mentions(sig.result, f)
+                !p.types.mentions(sig.pass, f)
                     && !sig.params.iter().any(|&t| p.types.mentions(t, f))
             })
             .map(|&tp| {
@@ -2158,7 +2161,7 @@ impl<'a> Translator<'a> {
                             TypeData::TypeParam { decl } => p.decls.get(decl).owner != method,
                             _ => false,
                         };
-                        if want.is_some_and(|f| solved(f.result) && f.params.contains(&f.result)) {
+                        if want.is_some_and(|f| solved(f.pass) && f.params.contains(&f.pass)) {
                             self.widen.insert(arg);
                         }
                     }
@@ -2826,10 +2829,11 @@ fn only_as_a_parameter(p: &Program, decl: DeclId, param: TypeId) -> bool {
                 p.types.list(args).iter().map(|&a| count(p, a, param)).sum()
             }
             TypeData::Function { .. } => p.types.signature(ty).map_or(0, |sig| {
-                (sig.params.iter().chain([&sig.result]))
+                (sig.params.iter().chain([&sig.returns]))
                     .map(|&t| count(p, t, param))
                     .sum()
             }),
+            TypeData::Result { pass, fail } => count(p, pass, param) + count(p, fail, param),
             TypeData::Scalar(_) | TypeData::TypeParam { .. } => 0,
         }
     }

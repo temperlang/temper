@@ -13,7 +13,7 @@
 //!
 //! let mut b = Builder::new("example", "0.1.0");
 //! let module = b.module("example");
-//! let sig = b.function_type(&[TypeId::INT32], TypeId::INT32, false);
+//! let sig = b.function_type(&[TypeId::INT32], TypeId::INT32);
 //! let twice = b.declare(DeclKind::Function, "twice", module, sig);
 //! b.add_facts(twice, Facts::EXPORTED);
 //! let n = b.declare(DeclKind::Param, "n", twice, TypeId::INT32);
@@ -164,9 +164,10 @@ impl Builder {
 
     // Types and declarations.
 
-    /// A function's signature, all its parameters required.
-    pub fn function_type(&mut self, params: &[TypeId], result: TypeId, bubbles: bool) -> TypeId {
-        self.p.types.function(params, result, bubbles)
+    /// A function's signature, all its parameters required; `result` is
+    /// a [`Builder::result`] if it may fail.
+    pub fn function_type(&mut self, params: &[TypeId], result: TypeId) -> TypeId {
+        self.p.types.function(params, result)
     }
 
     /// A function's signature; `optional` says which parameters are.
@@ -175,11 +176,14 @@ impl Builder {
         params: &[TypeId],
         optional: &[bool],
         result: TypeId,
-        bubbles: bool,
     ) -> TypeId {
-        self.p
-            .types
-            .function_with(params, optional, result, bubbles)
+        self.p.types.function_with(params, optional, result)
+    }
+
+    /// A signature's result where it may fail, `pass throws fail`
+    /// ([`TypeTable::result`](crate::TypeTable::result)).
+    pub fn result(&mut self, pass: TypeId, fail: TypeId) -> TypeId {
+        self.p.types.result(pass, fail)
     }
 
     /// A class's or interface's type.
@@ -674,8 +678,8 @@ impl Builder {
         type_args: &[TypeId],
     ) -> (TypeId, Flags) {
         let (result, flags) = match self.p.types.signature(self.decl_type(callee)) {
-            Some(sig) if sig.bubbles => (sig.result, Flags::MAY_BUBBLE),
-            Some(sig) => (sig.result, Flags::NONE),
+            Some(sig) if sig.bubbles() => (sig.pass, Flags::MAY_BUBBLE),
+            Some(sig) => (sig.pass, Flags::NONE),
             None => return (TypeId::NONE, Flags::NONE),
         };
         let receiver = receiver.map(|r| self.p.nodes.ty(r));
@@ -807,8 +811,8 @@ impl Builder {
         let ty = self.p.nodes.ty(callee);
         let (result, flags) = match self.fun_signature(ty) {
             Some(sig) => match self.p.types.signature(sig) {
-                Some(s) if s.bubbles => (s.result, Flags::MAY_BUBBLE),
-                Some(s) => (s.result, Flags::NONE),
+                Some(s) if s.bubbles() => (s.pass, Flags::MAY_BUBBLE),
+                Some(s) => (s.pass, Flags::NONE),
                 None => (TypeId::NONE, Flags::NONE),
             },
             None => (TypeId::NONE, Flags::NONE),

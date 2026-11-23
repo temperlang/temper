@@ -500,6 +500,8 @@ impl<'a> Translator<'a> {
             // `temper_tmpl::nevers` made each `Never<T>` the `T` it stands
             // for, as this profile has no bottom type.
             TypeData::Never(t) => return self.ty(t),
+            // Only a signature's result, never a value's (tmpl's T5).
+            TypeData::Result { .. } => return not_yet("a result type as a value's"),
             TypeData::Scalar(s) => match s {
                 Scalar::Void => "nil",
                 Scalar::Boolean => "boolean",
@@ -509,6 +511,7 @@ impl<'a> Translator<'a> {
                 Scalar::AnyValue => "any",
                 // A type as a value is its `type()` name.
                 Scalar::Type => "string",
+                Scalar::Bubble => return not_yet("Bubble as a value's type"),
             }
             .to_string(),
             // A `@fun` interface is its function type, as Kotlin's.
@@ -1242,7 +1245,7 @@ impl<'a> Translator<'a> {
             e => tree::expr(&e, 0),
         };
         let result = match p.signature(decl) {
-            Some(sig) if sig.result != TypeId::VOID => Some(sig.result),
+            Some(sig) if sig.pass != TypeId::VOID => Some(sig.pass),
             _ => None,
         };
         self.function_def(item, name, local, None, p.nodes.list(params), body, result)
@@ -1303,10 +1306,14 @@ impl<'a> Translator<'a> {
             TypeData::Nullable(t) | TypeData::Never(t) => self.function_type_params(t, out),
             TypeData::Function { .. } => {
                 if let Some(sig) = p.types.signature(ty) {
-                    for &t in sig.params.iter().chain([&sig.result]) {
+                    for &t in sig.params.iter().chain([&sig.returns]) {
                         self.function_type_params(t, out);
                     }
                 }
+            }
+            TypeData::Result { pass, fail } => {
+                self.function_type_params(pass, out);
+                self.function_type_params(fail, out);
             }
             TypeData::Nominal { .. } => {
                 for &t in p.types.args(ty) {
@@ -1402,7 +1409,7 @@ impl<'a> Translator<'a> {
         let params = p.nodes.list(params).to_vec();
         let ps = self.signature_params(item, None, &params)?;
         let result = match p.signature(decl) {
-            Some(sig) if sig.result != TypeId::VOID => Some(self.ty(sig.result)?),
+            Some(sig) if sig.pass != TypeId::VOID => Some(self.ty(sig.pass)?),
             _ => None,
         };
         let defaults = body.map_or_else(Vec::new, |b| analysis::defaults(p, b));
@@ -1459,10 +1466,10 @@ impl<'a> Translator<'a> {
         for (i, &t) in s.params.iter().enumerate() {
             texts.push(format!("arg{i}: {}", self.ty(t)?));
         }
-        Ok(if s.result == TypeId::VOID {
+        Ok(if s.pass == TypeId::VOID {
             format!("fun({})", texts.join(", "))
         } else {
-            format!("fun({}): {}", texts.join(", "), self.ty(s.result)?)
+            format!("fun({}): {}", texts.join(", "), self.ty(s.pass)?)
         })
     }
 
@@ -1484,7 +1491,7 @@ impl<'a> Translator<'a> {
             Node::Block { stmts } => p.nodes.list(stmts).to_vec(),
             _ => Vec::new(),
         };
-        let void = p.signature(decl).is_some_and(|s| s.result == TypeId::VOID);
+        let void = p.signature(decl).is_some_and(|s| s.pass == TypeId::VOID);
         // The function around it, whose state its own replaces.
         let saved = (
             std::mem::take(&mut self.loops),
@@ -1533,7 +1540,7 @@ impl<'a> Translator<'a> {
             let local = name.unwrap_or_else(|| self.name(decl));
             let result = p
                 .signature(decl)
-                .map(|s| s.result)
+                .map(|s| s.pass)
                 .filter(|&r| r != TypeId::VOID);
             let def = self.function_def(
                 id,

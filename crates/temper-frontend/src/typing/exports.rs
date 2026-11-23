@@ -264,8 +264,13 @@ impl Settle {
                 }
             }
             &TypeData::Nullable(x) => self.check_inferred(module, x, span, errors, depth + 1),
-            TypeData::Fn { params, ret, .. } => {
-                for x in params.iter().map(|p| p.ty).chain([*ret]) {
+            TypeData::Fn { params, result } => {
+                for x in params.iter().map(|p| p.ty).chain([*result]) {
+                    self.check_inferred(module, x, span, errors, depth + 1);
+                }
+            }
+            &TypeData::Result { pass, fail } => {
+                for x in [pass, fail] {
                     self.check_inferred(module, x, span, errors, depth + 1);
                 }
             }

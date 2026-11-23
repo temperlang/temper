@@ -428,6 +428,8 @@ impl<'a> Translator<'a> {
             // `temper_tmpl::nevers` made each `Never<T>` the `T` it stands
             // for, as this profile has no bottom type.
             TypeData::Never(t) => return self.ty(t),
+            // Only a signature's result, never a value's (tmpl's T5).
+            TypeData::Result { .. } => return not_yet("a result type as a value's"),
             TypeData::Scalar(s) => match s {
                 Scalar::Void => "()",
                 Scalar::Boolean => "bool",
@@ -440,6 +442,7 @@ impl<'a> Translator<'a> {
                 }
                 Scalar::AnyValue => "temper_core::AnyValue",
                 Scalar::Type => "std::any::TypeId",
+                Scalar::Bubble => return not_yet("Bubble as a value's type"),
             }
             .to_string(),
             TypeData::Nominal { decl, .. } if self.p.decls.get(decl).facts.contains(Facts::FUN) => {
@@ -886,7 +889,7 @@ impl<'a> Translator<'a> {
             return vis;
         };
         let unused = (temper_tmpl::analysis::type_param_types(p, decl).iter()).any(|&f| {
-            !p.types.mentions(sig.result, f) && !sig.params.iter().any(|&t| p.types.mentions(t, f))
+            !p.types.mentions(sig.pass, f) && !sig.params.iter().any(|&t| p.types.mentions(t, f))
         });
         match (unused, vis) {
             (true, "pub") => "#[allow(clippy::extra_unused_type_parameters)]\npub",
@@ -1070,7 +1073,7 @@ impl<'a> Translator<'a> {
         let Some(sig) = p.signature(decl) else {
             return not_yet("a function without a signature");
         };
-        self.begin(item, sig.bubbles);
+        self.begin(item, sig.bubbles());
         let mut ps = Vec::new();
         if style != Params::Free {
             ps.push("&self".to_string());
@@ -1078,12 +1081,8 @@ impl<'a> Translator<'a> {
         let mut stmts = Vec::new();
         self.params_into(item, params, style, &mut ps, &mut stmts)?;
         self.block_into(body, &mut stmts)?;
-        let void = sig.result == TypeId::VOID;
-        let result = if void {
-            None
-        } else {
-            Some(self.ty(sig.result)?)
-        };
+        let void = sig.pass == TypeId::VOID;
+        let result = if void { None } else { Some(self.ty(sig.pass)?) };
         let (result, body) = self.finish_body(stmts, result, void);
         Ok((ps, result, body))
     }

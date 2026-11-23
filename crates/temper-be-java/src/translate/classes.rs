@@ -279,7 +279,7 @@ fn box_adjustments(p: &Program, ty: DeclId, method: DeclId, n: usize) -> (Vec<bo
                     *adjust = true;
                 }
             }
-            if primitive(own.result) && !primitive(theirs.result) && theirs.result != TypeId::VOID {
+            if primitive(own.pass) && !primitive(theirs.pass) && theirs.pass != TypeId::VOID {
                 result = true;
             }
         }
@@ -405,7 +405,7 @@ impl Translator<'_> {
             DeclKind::Getter => {
                 let boolean = p
                     .signature(method)
-                    .is_some_and(|s| s.result == TypeId::BOOLEAN);
+                    .is_some_and(|s| s.pass == TypeId::BOOLEAN);
                 getter_name(name, boolean)
             }
             DeclKind::Setter => setter_name(name),
@@ -444,7 +444,7 @@ impl Translator<'_> {
 
     fn result(&mut self, decl: DeclId) -> R<(TypeId, String)> {
         let result = match self.p.signature(decl) {
-            Some(sig) => sig.result,
+            Some(sig) => sig.pass,
             None => TypeId::VOID,
         };
         Ok((result, self.ty(result)?))

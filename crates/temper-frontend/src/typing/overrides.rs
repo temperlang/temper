@@ -12,19 +12,19 @@ use crate::core::{
 use crate::library::{Level, Message};
 use crate::scope::SymbolId;
 use crate::settle::Settle;
-use crate::types::{TypeId, VOID, show_result};
+use crate::types::{TypeId, VOID};
 use temper_syntax::names::NameId;
 use temper_syntax::tree::{NodeId, NodeKind};
 
 /// What an override must match: its own type parameters, by count; its
 /// parameters' types, with a default making one nullable, as Kotlin
-/// Temper compares them; its result; and whether it may bubble.
+/// Temper compares them; and its result, which says whether it may
+/// bubble.
 #[derive(PartialEq)]
 struct OverrideSig {
     formals: Vec<SymbolId>,
     params: Vec<TypeId>,
-    ret: TypeId,
-    throws: bool,
+    result: TypeId,
 }
 
 impl Settle {
@@ -112,12 +112,11 @@ impl Settle {
             self.typing.types.substitute(t, &from, &to_types)
         };
         let params = sig.params.iter().map(|&t| view(t)).collect();
-        let ret = view(sig.ret);
+        let result = view(sig.result);
         let sig = OverrideSig {
             formals: to,
             params,
-            ret,
-            throws: sig.throws,
+            result,
         };
         self.is_known_sig(&sig).then_some(sig)
     }
@@ -172,8 +171,7 @@ impl Settle {
             0 | ROLE_PARAM => OverrideSig {
                 formals: Vec::new(),
                 params: Vec::new(),
-                ret: self.eval_type(ty?),
-                throws: false,
+                result: self.eval_type(ty?),
             },
             _ => {
                 let f = init?;
@@ -186,17 +184,16 @@ impl Settle {
                 let params = (params.into_iter())
                     .map(|p| self.member_param(p).ty)
                     .collect();
-                let (ret, throws) = match out_type {
-                    Some(t) => (self.eval_type(t), self.is_throws(t)),
+                let result = match out_type {
+                    Some(t) => self.eval_result(t),
                     // A setter returns `Void` without saying so.
-                    None if role == ROLE_SETTER => (VOID, false),
+                    None if role == ROLE_SETTER => VOID,
                     None => return None,
                 };
                 OverrideSig {
                     formals,
                     params,
-                    ret,
-                    throws,
+                    result,
                 }
             }
         };
@@ -206,7 +203,7 @@ impl Settle {
     /// Whether typing knows all of a signature's types.
     fn is_known_sig(&self, sig: &OverrideSig) -> bool {
         let types = &self.typing.types;
-        sig.params.iter().all(|&t| types.is_known(t)) && types.is_known(sig.ret)
+        sig.params.iter().all(|&t| types.is_known(t)) && types.is_known(sig.result)
     }
 
     /// A signature as Kotlin Temper writes it in messages: `f(x: Int32):
@@ -229,7 +226,7 @@ impl Settle {
                 format!("{name}: {}", self.show(t))
             })
             .collect();
-        let ret = show_result(self.show(sig.ret), sig.throws);
+        let ret = self.show(sig.result);
         format!("{}({}): {ret}", self.member_text(member), params.join(", "))
     }
 }

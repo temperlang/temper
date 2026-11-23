@@ -58,7 +58,7 @@ impl Translator<'_> {
                 let Some(sig) = p.signature(decl) else {
                     return not_yet("a local function without a signature");
                 };
-                let result = sig.result;
+                let result = sig.pass;
                 let mut ps = Vec::new();
                 for &param in p.nodes.list(params) {
                     if let Node::Param { decl } = p.nodes.get(param) {

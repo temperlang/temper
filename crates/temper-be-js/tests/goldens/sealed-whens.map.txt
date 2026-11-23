@@ -1,0 +1,89 @@
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../sealed-whens.temper.md:13:5  /** <- let shapeOf(n: Int): Shape {
+7:1 -> ../sealed-whens.temper.md:13:5  function shapeOf(n) { <- let shapeOf(n: Int): Shape {
+7:10 -> ../sealed-whens.temper.md:13:9 (shapeOf)  shapeOf(n) { <- shapeOf(n: Int): Shape { if
+7:17 -> ../sealed-whens.temper.md:13:5  (n) { <- let shapeOf(n: Int): Shape {
+8:3 -> ../sealed-whens.temper.md:13:34  if (n > 1) { <- if (n > 1) { new Line(n) } e
+9:5 -> ../sealed-whens.temper.md:13:47  return new Line(n); <- new Line(n) } else { new Dot
+11:5 -> ../sealed-whens.temper.md:13:68  return new Dot(n); <- new Dot(n) } }
+15:1 -> ../sealed-whens.temper.md:15:5  /** <- let named(s: Shape): String
+19:1 -> ../sealed-whens.temper.md:15:5  function named(s) { <- let named(s: Shape): String
+19:10 -> ../sealed-whens.temper.md:15:9 (named)  named(s) { <- named(s: Shape): String {
+19:15 -> ../sealed-whens.temper.md:15:5  (s) { <- let named(s: Shape): String
+20:3 -> ../sealed-whens.temper.md:16:7  const name = s instanceof Do <- let name = when (s) { is Dot
+21:3 -> ../sealed-whens.temper.md:17:7  return name; <- name
+24:1 -> ../sealed-whens.temper.md:20:5  /** <- let pair(s: Shape, t: Shape)
+29:1 -> ../sealed-whens.temper.md:20:5  function pair(s, t) { <- let pair(s: Shape, t: Shape)
+29:10 -> ../sealed-whens.temper.md:20:9 (pair)  pair(s, t) { <- pair(s: Shape, t: Shape): St
+29:14 -> ../sealed-whens.temper.md:20:5  (s, t) { <- let pair(s: Shape, t: Shape)
+30:3 -> ../sealed-whens.temper.md:21:7  { <- when (s) {
+31:5 -> ../sealed-whens.temper.md:22:19  if (s instanceof Dot) { <- when (t) { is Dot -> "dd"; i
+32:7 -> ../sealed-whens.temper.md:22:40  if (t instanceof Dot) { <- "dd"; is Line -> "dl"; };
+33:9 -> ../sealed-whens.temper.md:22:40  return "dd"; <- "dd"; is Line -> "dl"; };
+34:14 -> ../sealed-whens.temper.md:22:57  if (t instanceof Line) { <- "dl"; };
+35:9 -> ../sealed-whens.temper.md:22:57  return "dl"; <- "dl"; };
+37:9 -> ../sealed-whens.temper.md:22:64  panic(); <- ;
+39:12 -> ../sealed-whens.temper.md:23:20  if (s instanceof Line) { <- "l";
+40:7 -> ../sealed-whens.temper.md:23:20  return "l"; <- "l";
+42:7 -> ../sealed-whens.temper.md:24:8  panic(); <- 
+47:1 -> ../sealed-whens.temper.md:27:5  /** <- let doubled(n: Int): Int { n
+51:1 -> ../sealed-whens.temper.md:27:5  function doubled(n) { <- let doubled(n: Int): Int { n
+51:10 -> ../sealed-whens.temper.md:27:9 (doubled)  doubled(n) { <- doubled(n: Int): Int { n * 2
+51:17 -> ../sealed-whens.temper.md:27:5  (n) { <- let doubled(n: Int): Int { n
+52:3 -> ../sealed-whens.temper.md:27:32  return Math.imul(n, 2); <- n * 2 }
+55:1 -> ../sealed-whens.temper.md:29:5  /** <- let code(s: Shape, early: Bo
+60:1 -> ../sealed-whens.temper.md:29:5  function code(s, early) { <- let code(s: Shape, early: Bo
+60:10 -> ../sealed-whens.temper.md:29:9 (code)  code(s, early) { <- code(s: Shape, early: Boolea
+60:14 -> ../sealed-whens.temper.md:29:5  (s, early) { <- let code(s: Shape, early: Bo
+61:3 -> ../sealed-whens.temper.md:30:7  if (early) { <- if (early) { return when (s)
+62:5 -> ../sealed-whens.temper.md:30:20  return s instanceof Dot ? 1 <- return when (s) { is Dot ->
+64:3 -> ../sealed-whens.temper.md:31:7  if (s.size > 1) { <- if (s.size > 1) {
+65:5 -> ../sealed-whens.temper.md:32:9  { <- when (s) { is Dot -> 10; is
+66:7 -> ../sealed-whens.temper.md:32:30  if (s instanceof Dot) { <- 10; is Line -> 20; }
+67:9 -> ../sealed-whens.temper.md:32:30  return 10; <- 10; is Line -> 20; }
+68:14 -> ../sealed-whens.temper.md:32:45  if (s instanceof Line) { <- 20; }
+69:9 -> ../sealed-whens.temper.md:32:45  return 20; <- 20; }
+71:9 -> ../sealed-whens.temper.md:32:50  panic(); <- 
+75:5 -> ../sealed-whens.temper.md:34:9  return doubled(s instanceof <- doubled(when (s) { is Dot ->
+79:1 -> ../sealed-whens.temper.md:9:5  class Shape extends type() { <- sealed interface Shape { pub
+79:7 -> ../sealed-whens.temper.md:9:22 (Shape)  Shape extends type() { <- Shape { public get size(): I
+79:12 -> ../sealed-whens.temper.md:9:5   extends type() { <- sealed interface Shape { pub
+80:3 -> ../sealed-whens.temper.md:9:37  /** @type {number} */ <- get size(): Int; }
+81:3 -> ../sealed-whens.temper.md:9:37  size = /** @type {any} */ (u <- get size(): Int; }
+84:1 -> ../sealed-whens.temper.md:10:5  class Dot extends type(Shape <- class Dot(public size: Int)
+84:7 -> ../sealed-whens.temper.md:10:11 (Dot)  Dot extends type(Shape) { <- Dot(public size: Int) extend
+84:10 -> ../sealed-whens.temper.md:10:5   extends type(Shape) { <- class Dot(public size: Int)
+85:3 -> ../sealed-whens.temper.md:10:22  /** @type {number} */ <- size: Int) extends Shape {}
+86:3 -> ../sealed-whens.temper.md:10:22  #size; <- size: Int) extends Shape {}
+88:3 -> ../sealed-whens.temper.md:10:5  /** @param {number} size */ <- class Dot(public size: Int)
+89:3 -> ../sealed-whens.temper.md:10:5  constructor(size) { <- class Dot(public size: Int)
+91:5 -> ../sealed-whens.temper.md:10:22  this.#size = size; <- size: Int) extends Shape {}
+94:3 -> ../sealed-whens.temper.md:10:22  /** @returns {number} */ <- size: Int) extends Shape {}
+95:3 -> ../sealed-whens.temper.md:10:22  get size() { <- size: Int) extends Shape {}
+95:7 -> ../sealed-whens.temper.md:10:22 (size)  size() { <- size: Int) extends Shape {}
+100:1 -> ../sealed-whens.temper.md:11:5  class Line extends type(Shap <- class Line(public size: Int)
+100:7 -> ../sealed-whens.temper.md:11:11 (Line)  Line extends type(Shape) { <- Line(public size: Int) exten
+100:11 -> ../sealed-whens.temper.md:11:5   extends type(Shape) { <- class Line(public size: Int)
+101:3 -> ../sealed-whens.temper.md:11:23  /** @type {number} */ <- size: Int) extends Shape {}
+102:3 -> ../sealed-whens.temper.md:11:23  #size; <- size: Int) extends Shape {}
+104:3 -> ../sealed-whens.temper.md:11:5  /** @param {number} size */ <- class Line(public size: Int)
+105:3 -> ../sealed-whens.temper.md:11:5  constructor(size) { <- class Line(public size: Int)
+107:5 -> ../sealed-whens.temper.md:11:23  this.#size = size; <- size: Int) extends Shape {}
+110:3 -> ../sealed-whens.temper.md:11:23  /** @returns {number} */ <- size: Int) extends Shape {}
+111:3 -> ../sealed-whens.temper.md:11:23  get size() { <- size: Int) extends Shape {}
+111:7 -> ../sealed-whens.temper.md:11:23 (size)  size() { <- size: Int) extends Shape {}
+116:1 -> ../sealed-whens.temper.md:38:5  class Namer extends type() { <- class Namer {
+116:7 -> ../sealed-whens.temper.md:38:11 (Namer)  Namer extends type() { <- Namer {
+116:12 -> ../sealed-whens.temper.md:38:5   extends type() { <- class Namer {
+117:3 -> ../sealed-whens.temper.md:39:14  /** <- name(s: Shape): String { whe
+121:3 -> ../sealed-whens.temper.md:39:14 (name)  name(s) { <- name(s: Shape): String { whe
+122:5 -> ../sealed-whens.temper.md:39:39  { <- when (s) { is Dot -> "a dot"
+123:7 -> ../sealed-whens.temper.md:39:60  if (s instanceof Dot) { <- "a dot"; is Line -> "a line"
+124:9 -> ../sealed-whens.temper.md:39:60  return "a dot"; <- "a dot"; is Line -> "a line"
+125:14 -> ../sealed-whens.temper.md:39:80  if (s instanceof Line) { <- "a line"; } }
+126:9 -> ../sealed-whens.temper.md:39:80  return "a line"; <- "a line"; } }
+128:9 -> ../sealed-whens.temper.md:39:91  panic(); <-  }
+134:1 -> ../sealed-whens.temper.md:42:5  const dot = shapeOf(1); <- let dot = shapeOf(1);
+135:1 -> ../sealed-whens.temper.md:43:5  const line = shapeOf(2); <- let line = shapeOf(2);
+136:1 -> ../sealed-whens.temper.md:44:5  console.log(`${named(dot)} $ <- console.log("${named(dot)} $
+137:1 -> ../sealed-whens.temper.md:45:5  console.log(`${code(line, tr <- console.log("${code(line, tr

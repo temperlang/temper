@@ -204,17 +204,11 @@ impl Writer {
         }
     }
 
-    /// `: Result`, and `throws Bubble` if it may bubble.
+    /// `: Result`, as `: Int32 throws Bubble` if it may bubble.
     fn result(&mut self, p: &Program, decl: DeclId) {
-        let (result, bubbles) = match p.signature(decl) {
-            Some(sig) => (sig.result, sig.bubbles),
-            None => (TypeId::NONE, false),
-        };
+        let result = p.signature(decl).map_or(TypeId::NONE, |sig| sig.returns);
         self.out.push_str(": ");
         self.ty(p, result);
-        if bubbles {
-            self.out.push_str(" throws Bubble");
-        }
     }
 
     /// A declaration's doc comment and marks, each line started: `///`

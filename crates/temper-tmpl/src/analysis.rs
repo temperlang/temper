@@ -420,13 +420,17 @@ pub(crate) fn nominals(p: &Program, ty: crate::ids::TypeId, out: &mut Vec<DeclId
         crate::types::TypeData::TypeParam { .. } => {}
         crate::types::TypeData::Function { .. } => {
             if let Some(sig) = p.types.signature(ty) {
-                for &t in sig.params.iter().chain([&sig.result]) {
+                for &t in sig.params.iter().chain([&sig.returns]) {
                     nominals(p, t, out);
                 }
             }
         }
         crate::types::TypeData::Nullable(t) | crate::types::TypeData::Never(t) => {
             nominals(p, t, out)
+        }
+        crate::types::TypeData::Result { pass, fail } => {
+            nominals(p, pass, out);
+            nominals(p, fail, out);
         }
         crate::types::TypeData::Scalar(_) => {}
     }
@@ -870,7 +874,7 @@ pub fn is_plain_to_string(p: &Program, method: DeclId) -> bool {
         && !d.facts.contains(Facts::PRIVATE)
         && !d.facts.contains(Facts::PROTECTED)
         && p.signature(method)
-            .is_some_and(|s| s.params.is_empty() && s.result == TypeId::STRING)
+            .is_some_and(|s| s.params.is_empty() && s.pass == TypeId::STRING)
 }
 
 /// A class's or interface's members' declarations, in order, from its

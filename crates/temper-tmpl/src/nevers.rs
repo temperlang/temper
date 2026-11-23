@@ -134,8 +134,7 @@ pub fn may_keep(p: &Program, decl: DeclId) -> bool {
 
 /// Whether a declaration's signature's result is `Never<T>`.
 fn returns_never(p: &Program, decl: DeclId) -> bool {
-    p.signature(decl)
-        .is_some_and(|s| p.types.is_never(s.result))
+    p.signature(decl).is_some_and(|s| p.types.is_never(s.pass))
 }
 
 /// Whether a type is or has `Never<T>`, as a signature's result.
@@ -151,9 +150,10 @@ fn has_never(p: &Program, ty: TypeId) -> bool {
         TypeData::Function { .. } => p.types.signature(ty).is_some_and(|sig| {
             sig.params
                 .iter()
-                .chain([&sig.result])
+                .chain([&sig.returns])
                 .any(|&t| has_never(p, t))
         }),
+        TypeData::Result { pass, fail } => has_never(p, pass) || has_never(p, fail),
     }
 }
 
@@ -193,10 +193,15 @@ fn fallback(
         TypeData::Function { .. } => {
             let sig = types.signature(ty).expect("a signature");
             let (params, optional) = (sig.params.to_vec(), sig.optional.to_vec());
-            let (result, bubbles) = (sig.result, sig.bubbles);
+            let result = sig.returns;
             let params: Vec<TypeId> = params.iter().map(|&t| fallback(types, t, done)).collect();
             let result = fallback(types, result, done);
-            types.function_with(&params, &optional, result, bubbles)
+            types.function_with(&params, &optional, result)
+        }
+        TypeData::Result { pass, fail } => {
+            let pass = fallback(types, pass, done);
+            let fail = fallback(types, fail, done);
+            types.result(pass, fail)
         }
     };
     done.insert(ty, made);
@@ -218,10 +223,15 @@ fn keep_result(
         TypeData::Function { .. } => {
             let sig = types.signature(ty).expect("a signature");
             let (params, optional) = (sig.params.to_vec(), sig.optional.to_vec());
-            let (result, bubbles) = (sig.result, sig.bubbles);
+            let result = sig.returns;
             let params: Vec<TypeId> = params.iter().map(|&t| fallback(types, t, done)).collect();
             let result = keep_result(types, result, done);
-            types.function_with(&params, &optional, result, bubbles)
+            types.function_with(&params, &optional, result)
+        }
+        TypeData::Result { pass, fail } => {
+            let pass = keep_result(types, pass, done);
+            let fail = fallback(types, fail, done);
+            types.result(pass, fail)
         }
         _ => fallback(types, ty, done),
     }

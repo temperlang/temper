@@ -566,7 +566,8 @@ pub fn hints(p: &Program, expr: NodeId) -> Vec<String> {
         crate::TypeData::TypeParam { .. }
         | crate::TypeData::Function { .. }
         | crate::TypeData::Nullable(_)
-        | crate::TypeData::Never(_) => String::new(),
+        | crate::TypeData::Never(_)
+        | crate::TypeData::Result { .. } => String::new(),
     };
     push(lower_first(&type_name));
     push("value".into());

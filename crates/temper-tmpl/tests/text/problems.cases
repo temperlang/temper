@@ -356,3 +356,25 @@ F7 @18: a case's label isn't a literal Int32
 F7 @21: a switch on Boolean, not Int32 or Int64
 F7 @27: a default that isn't the last case
 R5 @33: s#4 may be read before it's assigned
+
+=== results only as signatures' results (T5)
+tmpl 1 model 1 library results 0.1.0
+
+module results#0 {
+  fn ok#1(f#2: fn (): Int32 throws Bubble): Int32 throws Bubble {
+    return 1;
+  }
+
+  fn odd#3(b#4: Bubble): Int32 throws Int32 {
+    let c#5: Bubble = b#4;
+    return 1;
+  }
+
+  init {}
+}
+--- problems
+T5 #3: fn (Bubble): Int32 throws Int32 has a failure where a value goes
+T5 #3: fn (Bubble): Int32 throws Int32 fails with Int32, not Bubble
+T5 #4: Bubble isn't a value's type
+T5 #5: Bubble isn't a value's type
+T5 @9: Bubble isn't a value's type

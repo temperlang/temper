@@ -35,7 +35,7 @@ impl Translator<'_> {
         }
         Ok(format!(
             "std::function<{}({})>",
-            self.ty(s.result)?,
+            self.ty(s.pass)?,
             texts.join(", ")
         ))
     }
@@ -113,7 +113,7 @@ impl Translator<'_> {
         let Some(sig) = p.signature(decl) else {
             return not_yet("a function literal without a signature");
         };
-        let result = self.ty(sig.result)?;
+        let result = self.ty(sig.pass)?;
         // What the body reads; a parameter it doesn't is unnamed.
         let mut used = std::collections::HashSet::new();
         walk(p, body, &mut |id| {
@@ -150,7 +150,7 @@ impl Translator<'_> {
         self.deferred = deferred;
         self.in_function = in_function;
         let mut stmts = stmts?;
-        if sig.result == TypeId::VOID && stmts.last() == Some(&Stmt::Return(None)) {
+        if sig.pass == TypeId::VOID && stmts.last() == Some(&Stmt::Return(None)) {
             stmts.pop();
         }
         Ok((ps, result, stmts))

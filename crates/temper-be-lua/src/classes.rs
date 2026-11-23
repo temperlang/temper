@@ -278,7 +278,7 @@ impl Translator<'_> {
             }
         }
         let result = match p.signature(decl) {
-            Some(sig) if sig.result != TypeId::VOID => format!(": {}", self.ty(sig.result)?),
+            Some(sig) if sig.pass != TypeId::VOID => format!(": {}", self.ty(sig.pass)?),
             _ => String::new(),
         };
         Ok(format!("fun({}){result}", ps.join(", ")))
@@ -350,7 +350,7 @@ impl Translator<'_> {
                     match kind {
                         DeclKind::Getter | DeclKind::Setter => {
                             let ty = match (kind, p.signature(d)) {
-                                (DeclKind::Getter, Some(sig)) => sig.result,
+                                (DeclKind::Getter, Some(sig)) => sig.pass,
                                 (_, Some(sig)) => sig.params.first().copied().unwrap_or_default(),
                                 _ => TypeId::NONE,
                             };
@@ -413,7 +413,7 @@ impl Translator<'_> {
                     let result = match kind {
                         DeclKind::Constructor | DeclKind::Setter => None,
                         _ => match p.signature(d) {
-                            Some(sig) if sig.result != TypeId::VOID => Some(sig.result),
+                            Some(sig) if sig.pass != TypeId::VOID => Some(sig.pass),
                             _ => None,
                         },
                     };
@@ -434,7 +434,7 @@ impl Translator<'_> {
                 } => {
                     let name = format!("{table}.{}", self.static_key(d));
                     let result = match p.signature(d) {
-                        Some(sig) if sig.result != TypeId::VOID => Some(sig.result),
+                        Some(sig) if sig.pass != TypeId::VOID => Some(sig.pass),
                         _ => None,
                     };
                     out.push(self.function_def(

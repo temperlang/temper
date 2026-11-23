@@ -39,7 +39,7 @@ use temper_frontend::core::{
 use temper_frontend::library::{FileId, Level};
 use temper_frontend::scope::{BUILTINS, ScopeId, Scopes, SymbolId, SymbolKind};
 use temper_frontend::settle::Settled;
-use temper_frontend::types::{self, TypeData, TypeId, show_result};
+use temper_frontend::types::{self, TypeData, TypeId};
 use temper_frontend::typing::Resolved;
 use temper_syntax::adapt::CommentKind;
 use temper_syntax::ast::Value;
@@ -789,7 +789,9 @@ impl Analysis<'_> {
                     // A getter reads as a field of its result type.
                     let t = (typing.decls.get(&decl).copied()).or_else(|| typing.expr(f));
                     return match t.map(|t| (t, typing.types.get(t))) {
-                        Some((_, TypeData::Fn { ret, .. })) => Some(self.show_in(*ret, subst)),
+                        Some((_, &TypeData::Fn { result, .. })) => {
+                            Some(self.show_in(typing.types.pass(result), subst))
+                        }
                         Some((t, _)) => Some(self.show_in(t, subst)),
                         None => typing.expr(use_site).map(|t| self.show(t)),
                     };
@@ -842,9 +844,7 @@ impl Analysis<'_> {
             })
             .collect();
         let ret = match t.or_else(|| typing.expr(f)).map(|t| typing.types.get(t)) {
-            Some(TypeData::Fn { ret, throws, .. }) => {
-                show_result(self.show_in(*ret, subst), *throws)
-            }
+            Some(&TypeData::Fn { result, .. }) => self.show_in(result, subst),
             _ => "?".into(),
         };
         (params, ret)

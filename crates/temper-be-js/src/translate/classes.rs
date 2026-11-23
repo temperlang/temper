@@ -605,13 +605,13 @@ impl Translator<'_> {
                         continue;
                     }
                     let ty = match (p.decls.get(decl).kind, p.signature(decl)) {
-                        (DeclKind::Getter, Some(sig)) => self.ty(sig.result)?,
+                        (DeclKind::Getter, Some(sig)) => self.ty(sig.pass)?,
                         (DeclKind::Setter, Some(sig)) => match sig.params.first() {
                             Some(&t) => self.ty(t)?,
                             None => return not_yet("a setter without a value"),
                         },
                         (_, Some(sig)) => {
-                            let result = self.ty(sig.result)?;
+                            let result = self.ty(sig.pass)?;
                             let ps: Vec<String> = (self.params(params)?.into_iter())
                                 .map(|(n, t)| format!("{n}: {t}"))
                                 .collect();
@@ -794,7 +794,7 @@ impl Translator<'_> {
             .transpose()?
             .unwrap_or_default();
         let result = match p.signature(winner) {
-            Some(sig) if sig.result != TypeId::VOID => Some(self.ty(sig.result)?),
+            Some(sig) if sig.pass != TypeId::VOID => Some(self.ty(sig.pass)?),
             _ => None,
         };
         let prototype = self.class_ref(d.owner).member("prototype");

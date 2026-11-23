@@ -601,7 +601,7 @@ impl Translator<'_> {
                             ps.push((ty, self.name(pd)));
                         }
                     }
-                    let result = p.signature(d).map_or(TypeId::VOID, |s| s.result);
+                    let result = p.signature(d).map_or(TypeId::VOID, |s| s.pass);
                     let f = tree::Function {
                         result: self.ty(result)?,
                         params: ps,
@@ -759,7 +759,7 @@ impl Translator<'_> {
                     ps.push((ty, name));
                 }
             }
-            let result = p.signature(winner).map_or(TypeId::VOID, |s| s.result);
+            let result = p.signature(winner).map_or(TypeId::VOID, |s| s.pass);
             let bare = bare(p, self.names, winner);
             let call = Expr::name(format!("{}::{bare}", self.top_name(owner))).call(args);
             let f = tree::Function {

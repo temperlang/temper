@@ -667,13 +667,8 @@ impl Translator<'_> {
             }
             _ => {}
         }
-        if let FTypeData::Fn {
-            params,
-            ret,
-            throws,
-        } = self.s.typing.types.get(t)
-        {
-            let (params, ret, throws) = (params.clone(), *ret, *throws);
+        if let FTypeData::Fn { params, result } = self.s.typing.types.get(t) {
+            let (params, result) = (params.clone(), *result);
             let mut types = Vec::new();
             let mut optional = Vec::new();
             for p in &params {
@@ -682,8 +677,13 @@ impl Translator<'_> {
                 types.push(if p.optional { self.b.nullable(ty) } else { ty });
                 optional.push(p.optional);
             }
-            let result = self.ty(ret, at)?;
-            return Ok(self.b.function_type_with(&types, &optional, result, throws));
+            let result = self.ty(result, at)?;
+            return Ok(self.b.function_type_with(&types, &optional, result));
+        }
+        if let FTypeData::Result { pass, fail } = *self.s.typing.types.get(t) {
+            let pass = self.ty(pass, at)?;
+            let fail = self.ty(fail, at)?;
+            return Ok(self.b.result(pass, fail));
         }
         if let FTypeData::Class(symbol) = *self.s.typing.types.get(t) {
             let own = self
@@ -711,6 +711,7 @@ impl Translator<'_> {
                 ft::FLOAT64,
                 ft::STRING,
                 ft::ANY_VALUE,
+                ft::BUBBLE,
             ];
             if !scalar.contains(&t) {
                 if let Some(d) = self.core_decl(crate::builtins::TYPES[i as usize]) {
@@ -728,6 +729,8 @@ impl Translator<'_> {
             ft::FLOAT64 => TypeId::FLOAT64,
             ft::STRING => TypeId::STRING,
             ft::ANY_VALUE => TypeId::ANY_VALUE,
+            // Only ever a result's failure type, above.
+            ft::BUBBLE => TypeId::BUBBLE,
             // A type an error left unknown, as an undeclared type's name:
             // any value, so what has it still translates, and the code
             // that has the error fails where it runs.
@@ -755,6 +758,7 @@ impl Translator<'_> {
                     FTypeData::Applied { .. } => "a generic type",
                     FTypeData::Nullable(_) => "a nullable type",
                     FTypeData::Fn { .. } => "a function type",
+                    FTypeData::Result { .. } => "a result type",
                 };
                 return self.not_yet(at, what);
             }
@@ -955,11 +959,15 @@ impl Translator<'_> {
                 let d = self.external(decl);
                 self.b.program().decls.get(d).ty
             }
-            TypeData::Function { .. } => {
+            TypeData::Function { result, .. } => {
                 let sig = cat.types.signature(t).expect("a signature");
                 let params: Vec<TypeId> = sig.params.iter().map(|&p| self.core_type(p)).collect();
-                let result = self.core_type(sig.result);
-                (self.b).function_type_with(&params, sig.optional, result, sig.bubbles)
+                let result = self.core_type(result);
+                (self.b).function_type_with(&params, sig.optional, result)
+            }
+            TypeData::Result { pass, fail } => {
+                let (pass, fail) = (self.core_type(pass), self.core_type(fail));
+                self.b.result(pass, fail)
             }
         }
     }
@@ -1412,7 +1420,8 @@ impl Translator<'_> {
             };
             types.push(ty);
         }
-        let sig = self.b.function_type(&types, TypeId::VOID, true);
+        let result = self.b.result(TypeId::VOID, TypeId::BUBBLE);
+        let sig = self.b.function_type(&types, result);
         let decl = self
             .b
             .declare_made(DeclKind::Function, &["test"], self.module, sig);
@@ -1627,7 +1636,7 @@ impl Translator<'_> {
             .b
             .program()
             .signature(decl)
-            .map_or(TypeId::NONE, |s| s.result);
+            .map_or(TypeId::NONE, |s| s.pass);
         self.function_parts_with(f, decl, result)
     }
 
@@ -3735,7 +3744,7 @@ impl Translator<'_> {
             .b
             .program()
             .signature(self.owner)
-            .is_some_and(|s| s.bubbles);
+            .is_some_and(|s| s.bubbles());
         let caught = self.catching.contains(&self.owner);
         if bubbles && callable && !can_bubble && !caught {
             return self.not_yet(node, "a division that can't fail, where nothing may bubble");
@@ -4048,7 +4057,7 @@ impl Translator<'_> {
                     && decl.kind == DeclKind::Method
                     && p.name(d) == "toString"
                     && p.signature(d)
-                        .is_some_and(|s| s.params.is_empty() && s.result == TypeId::STRING)
+                        .is_some_and(|s| s.params.is_empty() && s.pass == TypeId::STRING)
             })
         });
         let Some(to_string) = found else {
