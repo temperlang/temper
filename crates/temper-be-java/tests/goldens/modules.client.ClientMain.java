@@ -23,6 +23,6 @@ public final class ClientMain {
         } finally {
             Core.endTopLevel();
         }
-        Core.waitUntilTasksComplete();
+        Core.finishProgram();
     }
 }

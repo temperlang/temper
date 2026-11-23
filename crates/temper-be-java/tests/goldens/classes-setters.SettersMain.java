@@ -1,5 +1,6 @@
 package setters;
 
+import temper.core.Bubble;
 import temper.core.Core;
 
 public final class SettersMain {
@@ -7,12 +8,13 @@ public final class SettersMain {
 
     public static void main(String[] args) throws ClassNotFoundException {
         Core.initSimpleLogging();
+        Bubble.keepStackTraces();
         Core.beginTopLevel();
         try {
             Class.forName("setters.SettersGlobal");
         } finally {
             Core.endTopLevel();
         }
-        Core.waitUntilTasksComplete();
+        Core.finishProgram();
     }
 }

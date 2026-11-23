@@ -15,6 +15,6 @@ public final class GenericsMain {
         } finally {
             Core.endTopLevel();
         }
-        Core.waitUntilTasksComplete();
+        Core.finishProgram();
     }
 }

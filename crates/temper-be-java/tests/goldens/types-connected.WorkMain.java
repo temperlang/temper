@@ -15,6 +15,6 @@ public final class WorkMain {
         } finally {
             Core.endTopLevel();
         }
-        Core.waitUntilTasksComplete();
+        Core.finishProgram();
     }
 }

@@ -3001,7 +3001,7 @@ async { (): GeneratorResult<Empty> extends GeneratorFn =>
       GeneratorFn
       (Block (Call (Call . console \log) "still runs") #void))))
 log still runs
-Panicked: panic()
+Panicked: panic(), caused by a bubble
 
 === await only in an async block's own body
 if (false) { await new PromiseBuilder<Int>().promise; }

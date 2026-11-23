@@ -6,14 +6,14 @@
 8:3 -> ../panic-causes.temper.md:13:7  if (n <= 0) { <- if (n <= 0) { bubble() }
 9:5 -> ../panic-causes.temper.md:13:21  bubble(); <- bubble() }
 11:3 -> ../panic-causes.temper.md:14:7  return n; <- n
-14:1 -> ../panic-causes.temper.md:73:5  /** <- let read(ls: List<Int>, i: I
-19:1 -> ../panic-causes.temper.md:73:5  function read(ls, i) { <- let read(ls: List<Int>, i: I
-19:10 -> ../panic-causes.temper.md:73:9 (read)  read(ls, i) { <- read(ls: List<Int>, i: Int):
-19:14 -> ../panic-causes.temper.md:73:5  (ls, i) { <- let read(ls: List<Int>, i: I
-20:3 -> ../panic-causes.temper.md:74:7  positive((i + 1) | 0); <- positive(i + 1);
-21:3 -> ../panic-causes.temper.md:75:7  return listedGet(/** @type { <- ls[i]
+14:1 -> ../panic-causes.temper.md:79:5  /** <- let read(ls: List<Int>, i: I
+19:1 -> ../panic-causes.temper.md:79:5  function read(ls, i) { <- let read(ls: List<Int>, i: I
+19:10 -> ../panic-causes.temper.md:79:9 (read)  read(ls, i) { <- read(ls: List<Int>, i: Int):
+19:14 -> ../panic-causes.temper.md:79:5  (ls, i) { <- let read(ls: List<Int>, i: I
+20:3 -> ../panic-causes.temper.md:80:7  positive((i + 1) | 0); <- positive(i + 1);
+21:3 -> ../panic-causes.temper.md:81:7  return listedGet(/** @type { <- ls[i]
 24:1 -> ../panic-causes.temper.md:16:5  console.log("before"); <- console.log("before");
-25:1 -> ../panic-causes.temper.md:77:5  /** @type {number} */ <- let r = read([1, 2], 5) orel
-26:1 -> ../panic-causes.temper.md:77:5  let r; <- let r = read([1, 2], 5) orel
-27:1 -> ../panic-causes.temper.md:77:5  try { <- let r = read([1, 2], 5) orel
-33:1 -> ../panic-causes.temper.md:78:5  console.log(`after ${r}`); <- console.log("after ${r}");
+25:1 -> ../panic-causes.temper.md:83:5  /** @type {number} */ <- let r = read([1, 2], 5) orel
+26:1 -> ../panic-causes.temper.md:83:5  let r; <- let r = read([1, 2], 5) orel
+27:1 -> ../panic-causes.temper.md:83:5  try { <- let r = read([1, 2], 5) orel
+33:1 -> ../panic-causes.temper.md:84:5  console.log(`after ${r}`); <- console.log("after ${r}");

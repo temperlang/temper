@@ -92,8 +92,8 @@ class TestTestAsync(TestCase):
             finish_async_work()
             test.soft_fail_to_hard()
 
-    def test_panics_in_an_async_block(self, /) -> None:
-        'panics in an async block'
+    def test_dies_in_an_async_block(self, /) -> None:
+        'dies in an async block'
         test: Test = Test()
         try:
             @adapt_generator_factory
@@ -113,6 +113,23 @@ class TestTestAsync(TestCase):
             actual = int_add(1, 1)
             expected = 2
             test.assert_(actual == expected, lambda: f'expected 1 + 1 == ({expected}) not ({actual})')
+        finally:
+            finish_async_work()
+            test.soft_fail_to_hard()
+
+    def test_waits_on_nothing(self, /) -> None:
+        'waits on nothing'
+        test: Test = Test()
+        try:
+            never: TemperFuture[int] = new_unbound_promise()
+            @adapt_generator_factory
+            def fn(do_await: Callable[[Future[Any]], Any], /) -> Generator[Any, Any, None]:
+                try:
+                    n = yield do_await(never)
+                except Bubble:
+                    n = -1
+                test.assert_(False, lambda: f'ran {n}')
+            async_launch(fn)
         finally:
             finish_async_work()
             test.soft_fail_to_hard()

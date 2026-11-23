@@ -48,8 +48,8 @@ def _fn(do_await: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any,
         first = yield do_await(first_done)
         second = yield do_await(second_done)
         _console.log(f'after complete: first got {first}, second got {second}')
-    except _Bubble:
-        raise BaseException('panic')
+    except _Bubble as t_0:
+        raise BaseException('panic') from t_0
     try:
         b2: _TemperFuture[int] = _new_unbound_promise()
         first_done2: _TemperFuture[int] = _new_unbound_promise()
@@ -79,8 +79,8 @@ def _fn(do_await: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any,
         first = yield do_await(first_done2)
         second = yield do_await(second_done2)
         _console.log(f'after breakPromise: first got {first}, second got {second}')
-    except _Bubble:
-        raise BaseException('panic')
+    except _Bubble as t_1:
+        raise BaseException('panic') from t_1
 
 
 _async_launch(_fn)

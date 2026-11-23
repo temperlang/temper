@@ -15,6 +15,6 @@ public final class LibrariesMain {
         } finally {
             Core.endTopLevel();
         }
-        Core.waitUntilTasksComplete();
+        Core.finishProgram();
     }
 }

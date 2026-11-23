@@ -234,6 +234,9 @@ jobs:
         run: cargo test --locked -p tempest
         env:
           TEMPER_REQUIRE_CHECKERS: "1"
+          # g++ 13 has `std::stacktrace`, so C++ traces must name files
+          # and lines (`cpp_stack_traces`).
+          TEMPER_REQUIRE_STD_STACKTRACE: "1"
 
   # Each backend's crate, its functional tests running generated code
   # with only its group's toolchains set up (.github/actions/toolchains

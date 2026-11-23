@@ -19,7 +19,7 @@
 49:7 -> ../../test-panics.temper.md:20:7  const actual = n; <- assert(n == -1);
 50:7 -> ../../test-panics.temper.md:20:7  const expected = -1; <- assert(n == -1);
 51:7 -> ../../test-panics.temper.md:20:7  test.assert(actual === expec <- assert(n == -1);
-59:1 -> ../../test-panics.temper.md:23:5  it("panics outright", async <- test("panics outright") {
+59:1 -> ../../test-panics.temper.md:23:5  it("dies outright", async fu <- test("dies outright") {
 62:5 -> ../../test-panics.temper.md:24:7  panic(); <- panic();
 69:1 -> ../../test-panics.temper.md:27:5  it("fails an assertion", asy <- test("fails an assertion") {
 72:5 -> ../../test-panics.temper.md:28:7  test.assert(((1 + 1) | 0) == <- assert(1 + 1 == 3) { "wrong

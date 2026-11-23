@@ -6,14 +6,14 @@
 8:3 -> ../panic-causes.temper.md:13:7  if (n <= 0) { <- if (n <= 0) { bubble() }
 9:5 -> ../panic-causes.temper.md:13:21  bubble(); <- bubble() }
 11:3 -> ../panic-causes.temper.md:14:7  return n; <- n
-14:1 -> ../panic-causes.temper.md:93:5  /** <- let checked(n: Int): Int {
-18:1 -> ../panic-causes.temper.md:93:5  function checked(n) { <- let checked(n: Int): Int {
-18:10 -> ../panic-causes.temper.md:93:9 (checked)  checked(n) { <- checked(n: Int): Int {
-18:17 -> ../panic-causes.temper.md:93:5  (n) { <- let checked(n: Int): Int {
-19:3 -> ../panic-causes.temper.md:94:7  try { <- do {
-20:5 -> ../panic-causes.temper.md:95:9  if (n === 0) { <- if (n == 0) { return 0 }
-21:7 -> ../panic-causes.temper.md:95:23  return 0; <- return 0 }
-23:5 -> ../panic-causes.temper.md:96:9  positive(n); <- positive(n);
-28:3 -> ../panic-causes.temper.md:98:7  return n; <- n
+14:1 -> ../panic-causes.temper.md:125:5  /** <- let checked(n: Int): Int {
+18:1 -> ../panic-causes.temper.md:125:5  function checked(n) { <- let checked(n: Int): Int {
+18:10 -> ../panic-causes.temper.md:125:9 (checked)  checked(n) { <- checked(n: Int): Int {
+18:17 -> ../panic-causes.temper.md:125:5  (n) { <- let checked(n: Int): Int {
+19:3 -> ../panic-causes.temper.md:126:7  try { <- do {
+20:5 -> ../panic-causes.temper.md:127:9  if (n === 0) { <- if (n == 0) { return 0 }
+21:7 -> ../panic-causes.temper.md:127:23  return 0; <- return 0 }
+23:5 -> ../panic-causes.temper.md:128:9  positive(n); <- positive(n);
+28:3 -> ../panic-causes.temper.md:130:7  return n; <- n
 31:1 -> ../panic-causes.temper.md:16:5  console.log("before"); <- console.log("before");
-32:1 -> ../panic-causes.temper.md:100:5  console.log(`after ${checked <- console.log("after ${checked
+32:1 -> ../panic-causes.temper.md:132:5  console.log(`after ${checked <- console.log("after ${checked

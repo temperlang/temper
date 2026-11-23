@@ -61,8 +61,9 @@ function* fn(doAwait) {
     const first = yield doAwait(firstDone.promise);
     const second = yield doAwait(secondDone.promise);
     console.log(`after complete: first got ${first}, second got ${second}`);
-  } catch {
-    panic();
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
+    panic("panic", e$);
   }
   try {
     /** @type {import("@temperlang/core/async.js").PromiseBuilder<number>} */
@@ -114,8 +115,9 @@ function* fn(doAwait) {
     const first2 = yield doAwait(firstDone2.promise);
     const second2 = yield doAwait(secondDone2.promise);
     console.log(`after breakPromise: first got ${first2}, second got ${second2}`);
-  } catch {
-    panic();
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
+    panic("panic", e$);
   }
 }
 

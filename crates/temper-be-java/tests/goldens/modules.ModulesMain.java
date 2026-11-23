@@ -22,6 +22,6 @@ public final class ModulesMain {
         } finally {
             Core.endTopLevel();
         }
-        Core.waitUntilTasksComplete();
+        Core.finishProgram();
     }
 }

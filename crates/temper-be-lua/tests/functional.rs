@@ -658,21 +658,22 @@ fn luarc(libraries: &[&Path]) -> String {
 /// for NaN, where LuaJIT's `math.max(nan, 2)` gives 2
 /// (`types/float/ops`).
 /// The runtime's regex engine needs Lua 5.3's `utf8` too (`regex/match`
-/// and `regex/zero-advance`, and the shared `panics`, whose bubbles from
-/// integer division are checked on LuaJIT by hand).
-const NEEDS_LUA53: [&str; 5] = [
+/// and `regex/zero-advance`, the shared `panics`, whose bubbles from
+/// integer division are checked on LuaJIT by hand, and `host-errors`).
+const NEEDS_LUA53: [&str; 6] = [
     "types-float-ops",
     "types-string-read",
     "regex-match",
     "regex-zero-advance",
     "panics",
+    "host-errors",
 ];
 
 /// Whether a library imports std's modules, which it then runs beside
-/// ([`kit::Case::needs_std`]; a run as tests needs only the runtime's
-/// `test_*` functions on Lua).
+/// ([`kit::Case::imports_std`]; a run as tests needs only the runtime's
+/// `test_*` functions on Lua, not std's `testing`).
 fn imports_std(case: &Case) -> bool {
-    case.needs_std() && case.tests.is_none()
+    case.imports_std()
 }
 
 /// A Lua run, under `timeout` where there is one: the regex runtime
@@ -815,7 +816,7 @@ fn runs() {
                     .arg(&file)
                     .args(["-o", "junit", "-n", "test-results.xml"])
                     .current_dir(here)
-                    .env("LUA_PATH", LUA_PATH)
+                    .env("LUA_PATH", lua_path(case))
                     .output()
                     .unwrap();
                 let actual = kit::junit_file_results(&results);
@@ -854,19 +855,20 @@ fn runs() {
             // runner's line for the error.
             let failed = log.last().is_some_and(|l| l.starts_with("!!> "));
             // What it should say for its failure, the runner's line says.
-            let mut unsaid = None;
+            let mut wrong = None;
             if case.fails && failed {
-                unsaid = log.pop().and_then(|l| kit::unsaid(case, l));
+                wrong = log.pop().and_then(|l| kit::wrongly_said(case, l));
             }
             if !run.status.success()
                 || log != case.expected
                 || case.fails != failed
-                || unsaid.is_some()
+                || wrong.is_some()
             {
                 failures.push(format!(
-                    "{}: expected {:?}, got {log:?}\n{}",
+                    "{}: expected {:?}, got {log:?}, {}\n{}",
                     case.key,
                     case.expected,
+                    wrong.unwrap_or_default(),
                     String::from_utf8_lossy(&run.stderr)
                 ));
             }

@@ -1,7 +1,7 @@
 local temper = require("temper-core")
 
 local function fn()
-  if not temper.pcall(function()
+  local t, t_1 = temper.pcall(function()
     local b = temper.promisebuilder_constructor()
     local firstDone = temper.promisebuilder_constructor()
     local secondDone = temper.promisebuilder_constructor()
@@ -34,10 +34,11 @@ local function fn()
     local first = temper.promisebuilder_promise(firstDone):await()
     local second = temper.promisebuilder_promise(secondDone):await()
     print("after complete: first got " .. first .. ", second got " .. second)
-  end) then
-    error("panic")
+  end)
+  if not t then
+    error("panic\ncaused by: " .. tostring(t_1))
   end
-  if not temper.pcall(function()
+  local t, t_1 = temper.pcall(function()
     local b2 = temper.promisebuilder_constructor()
     local firstDone2 = temper.promisebuilder_constructor()
     local secondDone2 = temper.promisebuilder_constructor()
@@ -70,8 +71,9 @@ local function fn()
     local first2 = temper.promisebuilder_promise(firstDone2):await()
     local second2 = temper.promisebuilder_promise(secondDone2):await()
     print("after breakPromise: first got " .. first2 .. ", second got " .. second2)
-  end) then
-    error("panic")
+  end)
+  if not t then
+    error("panic\ncaused by: " .. tostring(t_1))
   end
 end
 

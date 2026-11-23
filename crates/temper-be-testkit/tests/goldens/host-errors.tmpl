@@ -1,0 +1,206 @@
+tmpl 1 model 1 library `host-errors` 0.0.0
+
+uses `temper-core`#3 0.0.0-alpha.0.0 {
+  class ListBuilder#4<T#5> extends Listed#6<T#5> {
+    connected constructor constructor#22(): ListBuilder#4<T#5>;
+    connected method add#23(newValue: T#5, at?: Int32): Void;
+    connected method set#29(index: Int32, newValue: T#5): Void;
+    connected get length#30(): Int32;
+    connected method removeLast#35(): T#5;
+  }
+  interface Listed#6<T#7> {
+    connected method get#26(index: Int32): T#7;
+    connected method reduce#41(accumulate: fn (T#7, T#7): T#7): T#7;
+  }
+  class Deque#13<T#14> {
+    connected method removeFirst#38(): T#14;
+    connected constructor constructor#114(): Deque#13<T#14>;
+  }
+  class List#16<T#17> extends Listed#6<T#17> {
+    connected method get#66(index: Int32): T#17;
+    connected get length#78(): Int32;
+  }
+  class String#47 {
+    connected method get#48(index: StringIndex#49): Int32;
+    connected get end#51(): StringIndex#49;
+  }
+  class StringIndex#49 extends StringIndexOption#50 {}
+  interface StringIndexOption#50 {}
+}
+
+uses std#53 0.0.0-alpha.0.0 {
+  module regex#54 {
+    class Regex#55 {
+      method replace#57(text: String, format: fn (Match#56): String): String;
+    }
+    class Match#56 {}
+    interface RegexNode#58 {
+      method compiled#59(): Regex#55;
+    }
+    class CodePoints#60 extends CodePart#61 {
+      let value#62: String;
+      constructor constructor#63(value: String): CodePoints#60;
+    }
+    interface CodePart#61 extends RegexNode#58 {}
+  }
+  module testing#67 {
+    class Test#68 {
+      connected method assert#72(success: Boolean, message: fn (): String): Void;
+    }
+  }
+}
+
+module `host-errors`#0 {
+  fn at#1(i#20: Int32): Int32 throws Bubble {
+    if (%Int32.eq(i#20, 99)) {
+      (bubble()^): Void;
+    }
+    return i#20;
+  }
+
+  fn built#2(): ListBuilder#4<Int32> {
+    let lb#21: ListBuilder#4<Int32> = new constructor#22<Int32>();
+    lb#21.add#23(1, omitted);
+    return lb#21;
+  }
+
+  fn read#8(ls#24: Listed#6<Int32>, i#25: Int32): Int32 throws Bubble {
+    return ls#24.get#26(at#1(i#25)^);
+  }
+
+  fn write#9(lb#27: ListBuilder#4<Int32>, i#28: Int32): Int32 throws Bubble {
+    lb#27.set#29(at#1(i#28)^, 3);
+    return lb#27.length#30();
+  }
+
+  fn insert#10(lb#31: ListBuilder#4<Int32>, i#32: Int32): Int32 throws Bubble {
+    lb#31.add#23(2, at#1(i#32)^);
+    return lb#31.length#30();
+  }
+
+  fn removeLast#11(lb#33: ListBuilder#4<Int32>, i#34: Int32): Int32 throws Bubble {
+    at#1(i#34)^;
+    return lb#33.removeLast#35();
+  }
+
+  fn removeFirst#12(d#36: Deque#13<Int32>, i#37: Int32): Int32 throws Bubble {
+    at#1(i#37)^;
+    return d#36.removeFirst#38();
+  }
+
+  fn sum#15(ls#39: List#16<Int32>, i#40: Int32): Int32 throws Bubble {
+    at#1(i#40)^;
+    return ls#39.reduce#41((fn ~fn#42(a#43: Int32, b#44: Int32): Int32 {
+      return %Int32.add(a#43, b#44);
+    }): fn (Int32, Int32): Int32);
+  }
+
+  fn codeAt#18(s#45: String, i#46: Int32): Int32 throws Bubble {
+    at#1(i#46)^;
+    return s#45.get#48(s#45.end#51());
+  }
+
+  fn replaced#19(i#52: Int32): String throws Bubble {
+    at#1(i#52)^;
+    return ((upcast(new constructor#63("b"))): RegexNode#58).compiled#59().replace#57("abc", (fn ~fn#64(match#65: Match#56): String [i#52] {
+      return ((list("x")): List#16<String>).get#66(i#52);
+    }): fn (Match#56): String);
+  }
+
+  init {}
+
+  test "list read" ~test#69(test#70: Test#68): Void throws Bubble {
+    let r#71: Int32 = (orelse(read#8((upcast((list(1, 2)): List#16<Int32>)): Listed#6<Int32>, 5)^, %Int32.neg(1))): Int32;
+    test#70.assert#72(%Boolean.not(%Int32.eq(r#71, %Int32.neg(1))), (fn ~fn#73(): String {
+      return "caught";
+    }): fn (): String);
+  }
+
+  test "list read at the end" ~test#74(test#75: Test#68): Void throws Bubble {
+    let ls#76: List#16<Int32> = (list(1, 2)): List#16<Int32>;
+    let r#77: Int32 = (orelse(read#8((upcast(ls#76)): Listed#6<Int32>, ls#76.length#78())^, %Int32.neg(1))): Int32;
+    test#75.assert#72(%Boolean.not(%Int32.eq(r#77, %Int32.neg(1))), (fn ~fn#79(): String {
+      return "caught";
+    }): fn (): String);
+  }
+
+  test "negative index" ~test#80(test#81: Test#68): Void throws Bubble {
+    let r#82: Int32 = (orelse(read#8((upcast(built#2())): Listed#6<Int32>, %Int32.neg(1))^, %Int32.neg(1))): Int32;
+    test#81.assert#72(%Boolean.not(%Int32.eq(r#82, %Int32.neg(1))), (fn ~fn#83(): String {
+      return "caught";
+    }): fn (): String);
+  }
+
+  test "set" ~test#84(test#85: Test#68): Void throws Bubble {
+    let r#86: Int32 = (orelse(write#9(built#2(), 5)^, %Int32.neg(1))): Int32;
+    test#85.assert#72(%Boolean.not(%Int32.eq(r#86, %Int32.neg(1))), (fn ~fn#87(): String {
+      return "caught";
+    }): fn (): String);
+  }
+
+  test "set at the end" ~test#88(test#89: Test#68): Void throws Bubble {
+    let lb#90: ListBuilder#4<Int32> = built#2();
+    let r#91: Int32 = (orelse(write#9(lb#90, lb#90.length#30())^, %Int32.neg(1))): Int32;
+    test#89.assert#72(%Boolean.not(%Int32.eq(r#91, %Int32.neg(1))), (fn ~fn#92(): String {
+      return "caught";
+    }): fn (): String);
+  }
+
+  test "insert" ~test#93(test#94: Test#68): Void throws Bubble {
+    let r#95: Int32 = (orelse(insert#10(built#2(), 5)^, %Int32.neg(1))): Int32;
+    test#94.assert#72(%Boolean.not(%Int32.eq(r#95, %Int32.neg(1))), (fn ~fn#96(): String {
+      return "caught";
+    }): fn (): String);
+  }
+
+  test "insert past the end" ~test#97(test#98: Test#68): Void throws Bubble {
+    let lb#99: ListBuilder#4<Int32> = built#2();
+    let r#100: Int32 = (orelse(insert#10(lb#99, %Int32.add(lb#99.length#30(), 1))^, %Int32.neg(1))): Int32;
+    test#98.assert#72(%Boolean.not(%Int32.eq(r#100, %Int32.neg(1))), (fn ~fn#101(): String {
+      return "caught";
+    }): fn (): String);
+  }
+
+  test "insert at the end appends" ~test#102(test#103: Test#68): Void throws Bubble {
+    let lb#104: ListBuilder#4<Int32> = built#2();
+    let n#105: Int32 = (orelse(insert#10(lb#104, lb#104.length#30())^, %Int32.neg(1))): Int32;
+    test#103.assert#72(%Int32.eq(n#105, 2) && %Int32.eq(lb#104.get#26(1), 2), (fn ~fn#106(): String {
+      return "didn't append";
+    }): fn (): String);
+  }
+
+  test "remove last" ~test#107(test#108: Test#68): Void throws Bubble {
+    let r#109: Int32 = (orelse(removeLast#11(new constructor#22<Int32>(), 0)^, %Int32.neg(1))): Int32;
+    test#108.assert#72(%Boolean.not(%Int32.eq(r#109, %Int32.neg(1))), (fn ~fn#110(): String {
+      return "caught";
+    }): fn (): String);
+  }
+
+  test "remove first" ~test#111(test#112: Test#68): Void throws Bubble {
+    let r#113: Int32 = (orelse(removeFirst#12(new constructor#114<Int32>(), 0)^, %Int32.neg(1))): Int32;
+    test#112.assert#72(%Boolean.not(%Int32.eq(r#113, %Int32.neg(1))), (fn ~fn#115(): String {
+      return "caught";
+    }): fn (): String);
+  }
+
+  test "reduce" ~test#116(test#117: Test#68): Void throws Bubble {
+    let r#118: Int32 = (orelse(sum#15((list()): List#16<Int32>, 0)^, %Int32.neg(1))): Int32;
+    test#117.assert#72(%Boolean.not(%Int32.eq(r#118, %Int32.neg(1))), (fn ~fn#119(): String {
+      return "caught";
+    }): fn (): String);
+  }
+
+  test "string read" ~test#120(test#121: Test#68): Void throws Bubble {
+    let r#122: Int32 = (orelse(codeAt#18("ab", 0)^, %Int32.neg(1))): Int32;
+    test#121.assert#72(%Boolean.not(%Int32.eq(r#122, %Int32.neg(1))), (fn ~fn#123(): String {
+      return "caught";
+    }): fn (): String);
+  }
+
+  test "replace callback" ~test#124(test#125: Test#68): Void throws Bubble {
+    let r#126: String = (orelse(replaced#19(3)^, "")): String;
+    test#125.assert#72(%Boolean.not(%String.eq(r#126, "")), (fn ~fn#127(): String {
+      return "caught";
+    }): fn (): String);
+  }
+}

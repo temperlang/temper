@@ -18,7 +18,7 @@ void global_init_init();
 // Tests, which `test.cpp` runs.
 void passesBefore(std::shared_ptr<temper_std::Test> const & test);
 void panicsReadingPastTheEnd(std::shared_ptr<temper_std::Test> const & test);
-void panicsOutright(std::shared_ptr<temper_std::Test> const &);
+void diesOutright(std::shared_ptr<temper_std::Test> const &);
 void failsAnAssertion(std::shared_ptr<temper_std::Test> const & test);
 void passesAfter(std::shared_ptr<temper_std::Test> const & test);
 #endif
@@ -71,7 +71,7 @@ void panicsReadingPastTheEnd(std::shared_ptr<temper_std::Test> const & test) {
   }
 }
 
-void panicsOutright(std::shared_ptr<temper_std::Test> const &) {
+void diesOutright(std::shared_ptr<temper_std::Test> const &) {
   core::panic();
 }
 
@@ -125,9 +125,9 @@ int main() {
             test->get_passing(),
             temper::core::is_null(messages) ? std::string() : temper::core::Str(messages).str()};
       }},
-      {"panics outright", [] {
+      {"dies outright", [] {
         auto test = temper_std::Test::make();
-        test_panics::panicsOutright(test);
+        test_panics::diesOutright(test);
         auto messages = test->messagesCombined();
         return temper::core::TestOutcome{
             test->get_passing(),

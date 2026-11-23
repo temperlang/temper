@@ -1,5 +1,6 @@
 package functions;
 
+import temper.core.Bubble;
 import temper.core.Core;
 
 public final class FunctionsMain {
@@ -7,6 +8,7 @@ public final class FunctionsMain {
 
     public static void main(String[] args) throws ClassNotFoundException {
         Core.initSimpleLogging();
+        Bubble.keepStackTraces();
         Core.beginTopLevel();
         try {
             Class.forName("functions.exporter.ExporterGlobal");
@@ -14,6 +16,6 @@ public final class FunctionsMain {
         } finally {
             Core.endTopLevel();
         }
-        Core.waitUntilTasksComplete();
+        Core.finishProgram();
     }
 }

@@ -412,7 +412,8 @@ namespace TemperLang.Core
             {
                 // One failing block doesn't stop the others.  The failure
                 // is kept for FinishAsyncWork, or for WaitUntilSafeToExit,
-                // which ends a program with a panic.
+                // which ends a program with it, and reported on stderr,
+                // never in what the program logs.
                 lock (Busy)
                 {
                     if (escaped == null)
@@ -420,8 +421,8 @@ namespace TemperLang.Core
                         escaped = ex;
                     }
                 }
-                Console.WriteLine(ex.ToString());
-                Console.WriteLine(new System.Diagnostics.StackTrace().ToString());
+                Console.Error.WriteLine(ex.ToString());
+                Console.Error.WriteLine(new System.Diagnostics.StackTrace().ToString());
             }
             finally
             {
@@ -464,7 +465,8 @@ namespace TemperLang.Core
                     "WaitUntilSafeToExit inside an async turn would deadlock");
             }
             allPromisesResolved.WaitOne();
-            // A panic that escaped a block ends the program with it.
+            // A failure that escaped a block, a panic or a host's error,
+            // ends the program with it.
 #if NET6_0_OR_GREATER
             Exception? failure;
 #else
@@ -475,7 +477,7 @@ namespace TemperLang.Core
                 failure = escaped;
                 escaped = null;
             }
-            if (failure is Panic)
+            if (failure != null)
             {
                 ExceptionDispatchInfo.Capture(failure).Throw();
             }

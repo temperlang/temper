@@ -166,7 +166,7 @@ f(break, 1);
   ;
   (Return return (Curly do { (Comma a , b) }))
   ;
-  (Paren f "(" (Return return) (Comma , 1) ")")
+  (Paren f "(" (Comma (Return return) , 1) ")")
   ;
   (Paren f "(" (Comma break , 1) ")")
   ;)

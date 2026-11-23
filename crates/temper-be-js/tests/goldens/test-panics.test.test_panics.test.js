@@ -56,7 +56,7 @@ it("panics reading past the end", async function () {
   }
 });
 
-it("panics outright", async function () {
+it("dies outright", async function () {
   const test = new Test();
   try {
     panic();

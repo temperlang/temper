@@ -21,8 +21,9 @@ void passesInAnAsyncBlock(std::shared_ptr<temper_std::Test> const & test);
 void failsInALaterTurn(std::shared_ptr<temper_std::Test> const & test);
 void passesAfterALaterTurn(std::shared_ptr<temper_std::Test> const & test);
 void failsHardInAnAsyncBlock(std::shared_ptr<temper_std::Test> const & test);
-void panicsInAnAsyncBlock(std::shared_ptr<temper_std::Test> const &);
+void diesInAnAsyncBlock(std::shared_ptr<temper_std::Test> const &);
 void passesAfter(std::shared_ptr<temper_std::Test> const & test);
+void waitsOnNothing(std::shared_ptr<temper_std::Test> const & test);
 #endif
 
 }  // namespace test_async
@@ -169,7 +170,7 @@ void failsHardInAnAsyncBlock(std::shared_ptr<temper_std::Test> const & test) {
   core::async_run(fn);
 }
 
-void panicsInAnAsyncBlock(std::shared_ptr<temper_std::Test> const &) {
+void diesInAnAsyncBlock(std::shared_ptr<temper_std::Test> const &) {
   auto fn = []() -> std::shared_ptr<core::SafeGenerator<std::shared_ptr<core::Empty>>> {
     std::shared_ptr<int32_t> caseIndex = std::make_shared<int32_t>(0);
     auto convertedCoroutine = [=](std::shared_ptr<core::SafeGenerator<std::shared_ptr<core::Empty>>>) -> std::shared_ptr<core::GeneratorResult<std::shared_ptr<core::Empty>>> {
@@ -193,6 +194,52 @@ void passesAfter(std::shared_ptr<temper_std::Test> const & test) {
     int32_t expected = 2;
     test->assert_(actual == expected, [=]() -> core::Str { return "expected 1 + 1 == (" + std::to_string(expected) + ") not (" + std::to_string(actual) + ")"; });
   }
+}
+
+void waitsOnNothing(std::shared_ptr<temper_std::Test> const & test) {
+  std::shared_ptr<core::PromiseBuilder<int32_t>> never = core::PromiseBuilderNs::make<int32_t>();
+  auto fn = [=]() -> std::shared_ptr<core::SafeGenerator<std::shared_ptr<core::Empty>>> {
+    std::shared_ptr<int32_t> caseIndex = std::make_shared<int32_t>(0);
+    std::shared_ptr<int32_t> n = std::make_shared<int32_t>(0);
+    std::shared_ptr<std::shared_ptr<core::Promise<int32_t>>> awaited = std::make_shared<std::shared_ptr<core::Promise<int32_t>>>(nullptr);
+    auto convertedCoroutine = [=](std::shared_ptr<core::SafeGenerator<std::shared_ptr<core::Empty>>> generator) -> std::shared_ptr<core::GeneratorResult<std::shared_ptr<core::Empty>>> {
+      while (true) {
+        int32_t caseIndexLocal = (*caseIndex);
+        *caseIndex = -1;
+        switch (caseIndexLocal) {
+          case 0:
+            try {
+              *awaited = core::getpromise(never);
+              *caseIndex = 3;
+              core::awake_upon((*awaited), generator);
+              return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
+            } catch (core::TemperBubble const &) {
+              *caseIndex = 1;
+            }
+            break;
+          case 1:
+            *n = -1;
+            *caseIndex = 2;
+            break;
+          case 2:
+            test->assert_(false, [=]() -> core::Str { return "ran " + std::to_string((*n)); });
+            return core::doneResult();
+          case 3:
+            try {
+              *n = core::get_promise_result_sync((*awaited));
+              *caseIndex = 2;
+            } catch (core::TemperBubble const &) {
+              *caseIndex = 1;
+            }
+            break;
+          default:
+            return core::doneResult();
+        }
+      }
+    };
+    return core::safe_adapt_generator_fn<std::shared_ptr<core::Empty>>(convertedCoroutine);
+  };
+  core::async_run(fn);
 }
 
 }  // namespace test_async
@@ -257,9 +304,9 @@ int main() {
             test->get_passing(),
             temper::core::is_null(messages) ? std::string() : temper::core::Str(messages).str()};
       }},
-      {"panics in an async block", [] {
+      {"dies in an async block", [] {
         auto test = temper_std::Test::make();
-        test_async::panicsInAnAsyncBlock(test);
+        test_async::diesInAnAsyncBlock(test);
         auto messages = test->messagesCombined();
         return temper::core::TestOutcome{
             test->get_passing(),
@@ -268,6 +315,14 @@ int main() {
       {"passes after", [] {
         auto test = temper_std::Test::make();
         test_async::passesAfter(test);
+        auto messages = test->messagesCombined();
+        return temper::core::TestOutcome{
+            test->get_passing(),
+            temper::core::is_null(messages) ? std::string() : temper::core::Str(messages).str()};
+      }},
+      {"waits on nothing", [] {
+        auto test = temper_std::Test::make();
+        test_async::waitsOnNothing(test);
         auto messages = test->messagesCombined();
         return temper::core::TestOutcome{
             test->get_passing(),

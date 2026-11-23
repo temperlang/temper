@@ -20,7 +20,7 @@ the others pass:
       assert(n == -1);
     }
 
-    test("panics outright") {
+    test("dies outright") {
       panic();
     }
 
@@ -36,6 +36,27 @@ Each failing test, with what its failure says:
 
 ```failures
 panics reading past the end: index 5 out of bounds for length 2
-panics outright: panic
 fails an assertion: wrong on purpose
+```
+
+What `panic()` says, as each backend's runner reports it:
+
+```failures interp
+dies outright: Panicked: panic()
+```
+
+```failures cpp
+dies outright: Panicked: panic
+```
+
+```failures py
+dies outright: BaseException: panic
+```
+
+```failures rust
+dies outright: explicit panic
+```
+
+```failures csharp java js lua
+dies outright: panic
 ```

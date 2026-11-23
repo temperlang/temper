@@ -17,8 +17,9 @@ function* fn(doAwait) {
     const b = new PromiseBuilder();
     b.complete("Completed synchronously");
     console.log(yield doAwait(b.promise));
-  } catch {
-    panic();
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
+    panic("panic", e$);
   }
   {
     /** @type {import("@temperlang/core/async.js").PromiseBuilder<string>} */
@@ -46,8 +47,9 @@ function* fn(doAwait) {
     }
     runAsync(adaptAwaiter(fn2));
     console.log(yield doAwait(b3.promise));
-  } catch {
-    panic();
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
+    panic("panic", e$);
   }
   try {
     /** @type {import("@temperlang/core/async.js").PromiseBuilder<string>} */
@@ -55,8 +57,9 @@ function* fn(doAwait) {
     b4.complete("Worth doing twice");
     console.log(yield doAwait(b4.promise));
     console.log(yield doAwait(b4.promise));
-  } catch {
-    panic();
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
+    panic("panic", e$);
   }
   try {
     /** @type {import("@temperlang/core/async.js").PromiseBuilder<{}>} */
@@ -70,8 +73,9 @@ function* fn(doAwait) {
     function* fn3(doAwait_1) {
       try {
         yield doAwait_1(b5.promise);
-      } catch {
-        panic();
+      } catch (e$) {
+        if (!isBubble(e$)) throw e$;
+        panic("panic", e$);
       }
       console.log("After");
       a.complete(empty());
@@ -87,8 +91,9 @@ function* fn(doAwait) {
     }
     runAsync(adaptAwaiter(fn4));
     yield doAwait(a.promise);
-  } catch {
-    panic();
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
+    panic("panic", e$);
   }
   try {
     console.log("What is your favourite colour?");

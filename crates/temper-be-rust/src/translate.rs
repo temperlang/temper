@@ -188,6 +188,10 @@ pub struct Translator<'a> {
     pub(crate) runs_async: bool,
     /// Whether only tests, and what only they reach, run `async` blocks.
     pub(crate) runs_async_in_tests: bool,
+    /// Whether it awaits, resuming a step on the runner (`awake_upon`),
+    /// and whether only tests do.
+    pub(crate) awaits: bool,
+    pub(crate) awaits_in_tests: bool,
     /// The paths of the modules whose items take host code ([`host`]),
     /// so the crate declares their `_connected` modules.
     pub host_dirs: BTreeSet<String>,
@@ -240,6 +244,8 @@ impl<'a> Translator<'a> {
             cells: temper_tmpl::analysis::assigned_captures(p),
             runs_async: false,
             runs_async_in_tests: false,
+            awaits: false,
+            awaits_in_tests: false,
             host_dirs: BTreeSet::new(),
             group: None,
         }

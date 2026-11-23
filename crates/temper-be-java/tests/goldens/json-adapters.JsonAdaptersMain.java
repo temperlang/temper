@@ -16,6 +16,6 @@ public final class JsonAdaptersMain {
         } finally {
             Core.endTopLevel();
         }
-        Core.waitUntilTasksComplete();
+        Core.finishProgram();
     }
 }

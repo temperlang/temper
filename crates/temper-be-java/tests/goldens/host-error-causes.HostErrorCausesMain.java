@@ -15,6 +15,6 @@ public final class HostErrorCausesMain {
         } finally {
             Core.endTopLevel();
         }
-        Core.waitUntilTasksComplete();
+        Core.finishProgram();
     }
 }

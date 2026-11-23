@@ -35,6 +35,12 @@ panic
 caused by: bubble
 ```
 
+The bubble it replaced isn't reported as uncaught too:
+
+```stderr-absent cpp
+uncaught
+```
+
 ```stderr csharp
 TemperLang.Core.Panic: panic
 ---> TemperLang.Core.Bubble
@@ -85,6 +91,32 @@ before
 index 5 out of bounds for length 2
 ```
 
+It has no cause, and isn't a panic of `orelse panic()`'s:
+
+```stderr-absent
+caused by
+[cause]
+direct cause
+```
+
+```stderr-absent csharp
+Panic: panic
+---> TemperLang.Core.Bubble
+```
+
+```stderr-absent java
+AssertionError: panic
+Caused by: temper.core.Bubble
+```
+
+```stderr-absent js
+Error: panic
+```
+
+```stderr-absent py
+BaseException: panic
+```
+
 ## Panic in orelse whose body returns
 
 A body that may `return` runs in place, where it can, and its bubble
@@ -110,6 +142,10 @@ Panicked: panic(), caused by a bubble
 ```stderr cpp
 panic
 caused by: bubble
+```
+
+```stderr-absent cpp
+uncaught
 ```
 
 ```stderr csharp
@@ -157,8 +193,12 @@ before
 Failed
 ```
 
+```stderr-absent interp
+Panicked
+```
+
 ```stderr cpp
-uncaught bubble
+uncaught bubble: bubble
 ```
 
 ```stderr csharp
@@ -182,11 +222,12 @@ Bubble
 
 ```stderr py
 Traceback
+in _positive
 temper_core.Bubble
 ```
 
 ```stderr rust
-uncaught bubble
+uncaught bubble: bubble
 ```
 
 ## Uncaught panic
@@ -208,6 +249,10 @@ Panicked: panic()
 
 ```stderr cpp
 panic
+```
+
+```stderr-absent cpp
+uncaught
 ```
 
 ```stderr csharp
@@ -235,5 +280,26 @@ BaseException: panic
 ```
 
 ```stderr rust
-panicked
+panicked at
+explicit panic
+```
+
+## Panic in an async block
+
+A panic in an `async` block ends the run, as anywhere else, after what
+the block logged before it:
+
+    let third(ls: List<Int>): Int { ls[2] }
+    async { (): GeneratorResult<Empty> extends GeneratorFn =>
+      console.log("in async");
+      third([1, 2]);
+    }
+
+```log
+before
+in async
+```
+
+```stderr
+index 2 out of bounds for length 2
 ```

@@ -52,3 +52,14 @@ let viaLocal(test: Test): Int {
 console.log("${viaLocal(new Test())}");
 --- settled
 log 2
+
+=== assertPanics doesn't catch the interpreter's own limits
+// Calls nested too deeply end the run, where a panic of the program's
+// own in the block would pass the check and go on.
+let { Test } = import("std/testing");
+let deep(n: Int): Int { deep(n + 1) + 1 }
+let test = new Test();
+test.assertPanics { deep(0); };
+console.log("went on ${test.passing}");
+--- settled
+Panicked: calls nested too deeply

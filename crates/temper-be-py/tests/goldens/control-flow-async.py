@@ -23,16 +23,16 @@ def _fn(do_await: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any,
         b: _TemperFuture[str] = _new_unbound_promise()
         _complete_promise(b, 'Completed synchronously')
         _console.log((yield do_await(b)))
-    except _Bubble:
-        raise BaseException('panic')
+    except _Bubble as t_0:
+        raise BaseException('panic') from t_0
     b = _new_unbound_promise()
     _break_promise(b)
-    t_0: str
+    t_1: str
     try:
-        t_0 = yield do_await(b)
+        t_1 = yield do_await(b)
     except _Bubble:
-        t_0 = 'Broken synchronously'
-    _console.log(t_0)
+        t_1 = 'Broken synchronously'
+    _console.log(t_1)
     try:
         b = _new_unbound_promise()
         @_adapt_generator_factory
@@ -42,15 +42,15 @@ def _fn(do_await: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any,
             _complete_promise(b, 'Completed asynchronously')
         _async_launch(fn2)
         _console.log((yield do_await(b)))
-    except _Bubble:
-        raise BaseException('panic')
+    except _Bubble as t_2:
+        raise BaseException('panic') from t_2
     try:
         b2: _TemperFuture[str] = _new_unbound_promise()
         _complete_promise(b2, 'Worth doing twice')
         _console.log((yield do_await(b2)))
         _console.log((yield do_await(b2)))
-    except _Bubble:
-        raise BaseException('panic')
+    except _Bubble as t_3:
+        raise BaseException('panic') from t_3
     try:
         a: _TemperFuture[tuple[()]] = _new_unbound_promise()
         b3: _TemperFuture[tuple[()]] = _new_unbound_promise()
@@ -58,8 +58,8 @@ def _fn(do_await: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any,
         def fn3(do_await_1: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any, None]:
             try:
                 yield do_await_1(b3)
-            except _Bubble:
-                raise BaseException('panic')
+            except _Bubble as t_0:
+                raise BaseException('panic') from t_0
             _console.log('After')
             _complete_promise(a, ())
         _async_launch(fn3)
@@ -71,8 +71,8 @@ def _fn(do_await: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any,
             _complete_promise(b3, ())
         _async_launch(fn4)
         yield do_await(a)
-    except _Bubble:
-        raise BaseException('panic')
+    except _Bubble as t_4:
+        raise BaseException('panic') from t_4
     try:
         _console.log('What is your favourite colour?')
         b2 = _new_unbound_promise()

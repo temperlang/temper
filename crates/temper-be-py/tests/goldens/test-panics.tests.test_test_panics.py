@@ -37,8 +37,8 @@ class TestTestPanics(TestCase):
             finish_async_work()
             test.soft_fail_to_hard()
 
-    def test_panics_outright(self, /) -> None:
-        'panics outright'
+    def test_dies_outright(self, /) -> None:
+        'dies outright'
         test: Test = Test()
         try:
             raise BaseException('panic')

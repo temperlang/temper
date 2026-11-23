@@ -1222,9 +1222,12 @@ fn runs() {
         let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("be-cpp");
         let _ = fs::remove_dir_all(&out);
         let src = out.join("src");
-        // Libraries with host code are each `work`, so each builds alone.
+        // Libraries with host code are each `work`, so each builds alone,
+        // but those that run as tests, which are named as themselves and
+        // build with std's `testing` as other tests do (their host code
+        // a header, as the shared `host-error-tests`' is).
         let (connected, cases): (Vec<Case>, Vec<Case>) =
-            cases().into_iter().partition(|c| !c.host_files.is_empty());
+            cases().into_iter().partition(connected_alone);
         // Those that run as tests alone, and the rest also as programs.
         let (as_tests, cases): (Vec<Case>, Vec<Case>) =
             cases.into_iter().partition(|c| c.tests.is_some());
@@ -1495,7 +1498,7 @@ fn strict() {
                 .collect()
         };
         let (connected, cases): (Vec<Case>, Vec<Case>) =
-            cases().into_iter().partition(|c| !c.host_files.is_empty());
+            cases().into_iter().partition(connected_alone);
         let std = translate(&kit::std_program(), &CPP).unwrap_or_else(|e| panic!("std: {e}"));
         let std_sources: Vec<PathBuf> = (write(&src, std).into_iter())
             .filter(|s| !s.ends_with("main.cpp"))
@@ -1665,6 +1668,12 @@ fn test_parts_apart() {
         });
         kit::check_test_parts_apart(lines, &kit::REACH_TESTS_ONLY, &kit::REACH_UNREACHED);
     });
+}
+
+/// Whether a case has host code and builds alone ([`runs`]): all but
+/// those that run as tests.
+fn connected_alone(case: &Case) -> bool {
+    !case.host_files.is_empty() && case.tests.is_none()
 }
 
 /// Host code that a connected function needs, missing: `NotYet`, naming

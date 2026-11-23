@@ -42,8 +42,8 @@ function Test_.test_panics_reading_past_the_end()
   end)
 end
 
-function Test_.test_panics_outright()
-  temper.test("panics outright", function(test)
+function Test_.test_dies_outright()
+  temper.test("dies outright", function(test)
     error("panic")
   end)
 end

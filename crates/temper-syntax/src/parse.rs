@@ -641,8 +641,9 @@ impl Parser {
             let mut right = None;
             let outer = self.candidate(op, None);
             let inner = self.candidate(op, Some(i));
-            // The outermost jump with an operand that would take the comma.
-            let mut jump: Option<(usize, Operator)> = None;
+            // The outermost jump that would take the comma, and whether
+            // it has an operand, which would hold it.
+            let mut jump: Option<(usize, Operator, bool)> = None;
             for j in (0..self.stack.len()).rev() {
                 if self.stack[j].op == op {
                     // Continue the same separator.
@@ -656,13 +657,15 @@ impl Parser {
                         jump_op,
                         Operator::Return | Operator::Throw | Operator::Yield
                     )
-                    // Its operand is above it, or last on the top.
-                    && (j + 1 < self.stack.len() || !self.needs_operand(j))
                 {
                     // Not within it: `(...,...)` is reserved for tuples, so
                     // `return a, b` is an error, and the comma follows the
-                    // jump instead, or what it's an operand of.
-                    jump = Some((j, jump_op));
+                    // jump instead, or what it's an operand of. A bare one,
+                    // as in `f(return, 1)`, is whole, as `break` is, so
+                    // the comma follows it with no error. Its operand is
+                    // above it, or last on the top.
+                    let operand = j + 1 < self.stack.len() || !self.needs_operand(j);
+                    jump = Some((j, jump_op, operand));
                     (left, right) = (None, None);
                     continue;
                 }
@@ -690,7 +693,7 @@ impl Parser {
                 }
             }
             // Past a jump, it's the left operand if nothing holding it can be.
-            if let Some(left) = left.or(jump.map(|(j, _)| j)) {
+            if let Some(left) = left.or(jump.map(|(j, _, _)| j)) {
                 self.commit_to(left + 1);
                 let adopt = self.adoptable(op);
                 self.swap_top_into_new(op, adopt);
@@ -705,10 +708,11 @@ impl Parser {
         false
     }
 
-    /// For a comma, token `i`, kept out of a jump: `jump` with its place
-    /// on the stack before the comma.
-    fn report_jump_before(&mut self, jump: Option<(usize, Operator)>, i: u32) {
-        let Some((_, op)) = jump else { return };
+    /// For a comma, token `i`, kept out of a jump with an operand: `jump`
+    /// with its place on the stack before the comma and whether it has
+    /// one (a bare jump's comma is no error).
+    fn report_jump_before(&mut self, jump: Option<(usize, Operator, bool)>, i: u32) {
+        let Some((_, op, true)) = jump else { return };
         let token = self.token(i);
         self.errors.push(ParseError {
             kind: ParseErrorKind::JumpBeforeComma,

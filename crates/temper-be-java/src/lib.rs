@@ -340,7 +340,8 @@ fn loads(p: &Program, module: &temper_tmpl::Module) -> Vec<String> {
 /// class loaded, after those of the modules it imports
 /// ([`loads`]), which runs their static initializers, in a top-level turn,
 /// so async blocks start after them (as Temper PR #532 has Kotlin's), then
-/// any async tasks waited for.
+/// any async tasks waited for, the run failing if one failed
+/// (`Core.finishProgram`).
 fn main_class(package: &str, main: &str, loads: &[String]) -> String {
     let loads = (loads.iter())
         .map(|class| format!("            Class.forName(\"{class}\");\n"))
@@ -363,7 +364,7 @@ public final class {main} {{
 {loads}        }} finally {{
             Core.endTopLevel();
         }}
-        Core.waitUntilTasksComplete();
+        Core.finishProgram();
     }}
 }}
 "

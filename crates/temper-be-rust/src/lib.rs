@@ -377,12 +377,17 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     // those used only by tests.
     let mut used = Vec::new();
     // std's modules with support code that this crate imports, whose
-    // features it turns on, as Kotlin's.
+    // features it turns on, as Kotlin's, its tests' too, for std as a
+    // dev-dependency.
     let mut std_features: Vec<&str> = Vec::new();
     for module in &p.modules {
-        for import in temper_tmpl::analysis::module_imports(p, module) {
+        let library_imports = temper_tmpl::analysis::module_imports(p, module);
+        let test_imports = temper_tmpl::analysis::test_imports(p, module);
+        let imports = (library_imports.into_iter().map(|i| (i, true)))
+            .chain(test_imports.into_iter().map(|i| (i, false)));
+        for (import, by_library) in imports {
             if let Some(library) = library_decl(p, import.from) {
-                if !used.contains(&library) {
+                if by_library && !used.contains(&library) {
                     used.push(library);
                 }
                 let from = p.decls.get(import.from);
@@ -575,10 +580,26 @@ pub fn init(config: Option<temper_core::Config>) -> temper_core::Result<temper_c
         None => "use std::sync::OnceLock;\n",
     });
     support.push_str(SUPPORT_CONFIG);
-    if translator.runs_async {
-        support.push_str(&SUPPORT_ASYNC.replace("{cfg}", ""));
-    } else if translator.runs_async_in_tests {
-        support.push_str(&SUPPORT_ASYNC.replace("{cfg}", "#[cfg(test)]\n"));
+    // Each of the async support functions it calls, only for tests where
+    // only they call it, as clippy finds any other dead.
+    let async_support = [
+        (
+            SUPPORT_RUN_ASYNC,
+            translator.runs_async,
+            translator.runs_async_in_tests,
+        ),
+        (
+            SUPPORT_AWAKE_UPON,
+            translator.awaits,
+            translator.awaits_in_tests,
+        ),
+    ];
+    for (text, used, in_tests) in async_support {
+        if used {
+            support.push_str(&text.replace("{cfg}", ""));
+        } else if in_tests {
+            support.push_str(&text.replace("{cfg}", "#[cfg(test)]\n"));
+        }
     }
     if let Some(cfg) = cfg {
         support.push_str(&SUPPORT_FIRST.replace("{cfg}", cfg));
@@ -646,11 +667,9 @@ pub(crate) fn config() -> &'static temper_core::Config {
 ";
 
 /// Runs an `async` block's generator on the library's runner, the
-/// configuration's (`temper_core::Config::runner`), as Kotlin's, and
-/// queues each step after an `await` there too, once its promise is
-/// resolved (`AsyncRunner::awake_upon`). `{cfg}` is `#[cfg(test)]` where
-/// only tests run `async` blocks.
-const SUPPORT_ASYNC: &str = "
+/// configuration's (`temper_core::Config::runner`), as Kotlin's. `{cfg}`
+/// is `#[cfg(test)]` where only tests run `async` blocks.
+const SUPPORT_RUN_ASYNC: &str = "
 {cfg}pub(crate) fn run_async<T>(
     generator: std::sync::Arc<dyn Fn() -> temper_core::SafeGenerator<T> + Send + Sync>,
 ) where
@@ -658,7 +677,12 @@ const SUPPORT_ASYNC: &str = "
 {
     config().runner().run_async(generator);
 }
+";
 
+/// Queues each step after an `await` on the runner too, once its
+/// promise is resolved (`AsyncRunner::awake_upon`). `{cfg}` is
+/// `#[cfg(test)]` where only tests await.
+const SUPPORT_AWAKE_UPON: &str = "
 {cfg}pub(crate) fn awake_upon<T, U>(
     promise: temper_core::Promise<T>,
     generator: temper_core::SafeGenerator<U>,

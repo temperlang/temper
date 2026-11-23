@@ -2426,8 +2426,10 @@ copied Kotlin's:
     there fails to compile ("initializer must be able to complete
     normally").
     Test: programs/panics.temper.md and programs/host-errors.temper.md
-    on every backend, and each backend's host interop, which catches
-    `async-turns`'s `halve` as the type api-compat.md promises.
+    (a regex `replace` callback's panic too) on every backend, and each
+    backend's host interop, which catches `async-turns`'s `halve` as the
+    type api-compat.md promises; no Temper API reaches Python's
+    `list_map_dropping`, a Kotlin runtime leftover, so nothing tests it.
   - **Index errors panic everywhere, as core's docs say** (2026-11-18):
     a list read out of bounds (`List.get`, `Listed.get`), a `set` or an
     insert (`add`, `addAll` at) out of bounds, `removeLast` and a
@@ -2456,8 +2458,9 @@ copied Kotlin's:
     where it unwrapped. `splice` clamps its index on Lua and Rust too,
     as the docs say and the other backends do, where Lua bubbled and
     Rust panicked past the end.
-    Test: programs/host-errors.temper.md, one run per case, each
-    checking its message on stderr, on every backend; funtest
+    Test: programs/host-errors.temper.md, a test per case, at the
+    bounds too (a `set` at the end, Lua's old growth), each failing
+    past an `orelse` with its message, on every backend; funtest
     types/list/operations for `splice`.
   - **A test that panics fails alone, saying why** (2026-11-18):
     Kotlin's C++ reports each such test ("uncaught exception: bubble")

@@ -27,3 +27,29 @@ Panicked: panic()
 ```stderr ~interp
 host bug 1
 ```
+
+It has no cause, and isn't a panic of `orelse panic()`'s:
+
+```stderr-absent ~interp
+caused by
+[cause]
+direct cause
+```
+
+```stderr-absent csharp
+Panic: panic
+---> TemperLang.Core.Bubble
+```
+
+```stderr-absent java
+AssertionError: panic
+Caused by: temper.core.Bubble
+```
+
+```stderr-absent js
+Error: panic
+```
+
+```stderr-absent py
+BaseException: panic
+```

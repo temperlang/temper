@@ -42,7 +42,7 @@ it, completes, so its `assert` runs in a later turn:
       }
     }
 
-    test("panics in an async block") {
+    test("dies in an async block") {
       async { (): GeneratorResult<Empty> extends GeneratorFn =>
         panic();
       }
@@ -52,11 +52,49 @@ it, completes, so its `assert` runs in a later turn:
       assert(1 + 1 == 2);
     }
 
+A block that waits for a promise nothing completes stays waiting, and
+its test ends once nothing else can run, passing, as nothing failed:
+
+    test("waits on nothing") {
+      let never = new PromiseBuilder<Int>();
+      async { (): GeneratorResult<Empty> extends GeneratorFn =>
+        let n = await never.promise orelse -1;
+        assert(false) { "ran ${n}" };
+      }
+    }
+
 Each failing test, with what its failure says:
 
 ```failures
 fails in an async block: failed in async
 fails in a later turn: later turn got 1
 fails hard in an async block: failed hard in async
-panics in an async block: panic
+```
+
+What `panic()` says, as each backend's runner reports it:
+
+```failures interp
+dies in an async block: Panicked: panic()
+```
+
+```failures cpp
+dies in an async block: Panicked: panic
+```
+
+```failures py
+dies in an async block: BaseException: panic
+```
+
+```failures rust
+dies in an async block: explicit panic
+```
+
+```failures csharp java js lua
+dies in an async block: panic
+```
+
+What no failure says:
+
+```absent
+waits on nothing: ran
 ```

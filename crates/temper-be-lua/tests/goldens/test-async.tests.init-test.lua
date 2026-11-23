@@ -64,8 +64,8 @@ function Test_.test_fails_hard_in_an_async_block()
   end)
 end
 
-function Test_.test_panics_in_an_async_block()
-  temper.test("panics in an async block", function(test)
+function Test_.test_dies_in_an_async_block()
+  temper.test("dies in an async block", function(test)
     local function fn()
       error("panic")
     end
@@ -80,6 +80,23 @@ function Test_.test_passes_after()
       local expected = 2
       temper.test_assert(test, actual == expected, function() return "expected 1 + 1 == (" .. expected .. ") not (" .. actual .. ")" end)
     end
+  end)
+end
+
+function Test_.test_waits_on_nothing()
+  temper.test("waits on nothing", function(test)
+    local never = temper.promisebuilder_constructor()
+    local function fn()
+      ---@type integer
+      local n
+      if not temper.pcall(function()
+        n = temper.promisebuilder_promise(never):await()
+      end) then
+        n = -1
+      end
+      temper.test_assert(test, false, function() return "ran " .. n end)
+    end
+    temper.async(temper.adapt_generator_fn(fn))
   end)
 end
 

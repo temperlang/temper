@@ -66,7 +66,7 @@ public class TestPanicsTests
     }
 
     [TestMethod]
-    public void PanicsOutright()
+    public void DiesOutright()
     {
         Test test = new Test();
         try

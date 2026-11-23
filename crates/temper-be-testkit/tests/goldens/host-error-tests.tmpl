@@ -1,0 +1,30 @@
+tmpl 1 model 1 library `host-error-tests` 0.0.0
+
+uses std#3 0.0.0-alpha.0.0 {
+  module testing#4 {
+    class Test#5 {
+      connected method assertPanics#8(block: fn (): Void throws Bubble, message?: String?): Void;
+      connected method assert#11(success: Boolean, message: fn (): String): Void;
+    }
+  }
+}
+
+module `host-error-tests`#0 {
+  connected export fn hostFails#1(n#2: Int32): Int32 throws Bubble {
+    if (%Int32.gt(n#2, 0)) {
+      (panic()): Void;
+    }
+    (bubble()^): Void;
+  }
+
+  init {}
+
+  test "host error is no panic" ~test#6(test#7: Test#5): Void throws Bubble {
+    test#7.assertPanics#8((fn ~fn#9(): Void throws Bubble [test#7] {
+      let r#10: Int32 = (orelse(hostFails#1(1)^, %Int32.neg(1))): Int32;
+      test#7.assert#11(%Boolean.not(%Int32.eq(r#10, %Int32.neg(1))), (fn ~fn#12(): String {
+        return "caught";
+      }): fn (): String);
+    }): fn (): Void throws Bubble, omitted);
+  }
+}

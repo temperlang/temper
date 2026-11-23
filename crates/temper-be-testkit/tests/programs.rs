@@ -33,9 +33,13 @@ fn programs_log_as_the_interpreter_does() {
             if says.is_empty() {
                 says.push("Panicked".into());
             }
+            // Nor what its `stderr-absent` blocks say.
+            let unsaid = temper_funtests::fenced_lines(text, "stderr-absent", &["interp"]);
             match &failure {
                 Some(why) => assert!(
-                    case.fails && says.iter().all(|s| why.contains(s.trim())),
+                    case.fails
+                        && says.iter().all(|s| why.contains(s.trim()))
+                        && !unsaid.iter().any(|s| why.contains(s.trim())),
                     "{}: {why}",
                     case.key
                 ),

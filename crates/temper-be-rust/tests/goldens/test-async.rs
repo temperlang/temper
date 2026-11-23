@@ -228,7 +228,7 @@ mod tests {
     }
 
     #[test]
-    fn panics_in_an_async_block() -> temper_core::Result<()> {
+    fn dies_in_an_async_block() -> temper_core::Result<()> {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
@@ -267,6 +267,82 @@ mod tests {
                 Arc::new(move || Arc::new(format!("expected 1 + 1 == ({expected}) not ({actual})"))),
             );
         }
+        work.finish(crate::support::config().runner());
+        test.soft_fail_to_hard();
+        Ok(())
+    }
+
+    #[test]
+    fn waits_on_nothing() -> temper_core::Result<()> {
+        crate::init(None)?;
+        temper_std::init(None)?;
+        let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin();
+        let never: temper_core::PromiseBuilder<i32> = temper_core::PromiseBuilder::new();
+        crate::support::run_async({
+            let test = test.clone();
+            let never = never.clone();
+            Arc::new(move || {
+                let case_index: Arc<RwLock<i32>> = Arc::new(RwLock::new(0));
+                let n: Arc<RwLock<i32>> = Arc::new(RwLock::new(0));
+                let awaited: Arc<RwLock<Option<temper_core::Promise<i32>>>> =
+                    Arc::new(RwLock::new(None));
+                temper_core::SafeGenerator::from_fn({
+                    let test = test.clone();
+                    let never = never.clone();
+                    let n = n.clone();
+                    let case_index = case_index.clone();
+                    let awaited = awaited.clone();
+                    Arc::new(move |generator: temper_core::SafeGenerator<()>| loop {
+                        let case_index_local = temper_core::read_locked(&case_index);
+                        *case_index.write().unwrap() = -1;
+                        match case_index_local {
+                            0 => {
+                                *awaited.write().unwrap() = Some(never.promise());
+                                *case_index.write().unwrap() = 3;
+                                crate::support::awake_upon(
+                                    temper_core::read_locked(&awaited).unwrap(),
+                                    generator.clone(),
+                                );
+                                return Some(());
+                            }
+                            1 => {
+                                *n.write().unwrap() = -1;
+                                *case_index.write().unwrap() = 2;
+                            }
+                            2 => {
+                                test.assert(false, {
+                                    let n = n.clone();
+                                    Arc::new(move || {
+                                        Arc::new(format!("ran {}", temper_core::read_locked(&n)))
+                                    })
+                                });
+                                return None;
+                            }
+                            3 => {
+                                if (|| {
+                                    *n.write().unwrap() = temper_core::read_locked(&awaited)
+                                        .as_ref()
+                                        .unwrap()
+                                        .get()?;
+                                    *case_index.write().unwrap() = 2;
+                                    Ok::<_, temper_core::Error>(())
+                                })()
+                                .is_err()
+                                {
+                                    {
+                                        *case_index.write().unwrap() = 1;
+                                    };
+                                }
+                            }
+                            _ => {
+                                return None;
+                            }
+                        }
+                    })
+                })
+            })
+        });
         work.finish(crate::support::config().runner());
         test.soft_fail_to_hard();
         Ok(())

@@ -1527,11 +1527,24 @@ def async_launch(generator_factory: Callable[[], Generator[None, T, None]]) -> N
 
 def await_safe_to_exit() -> None:
     """
-    Called by generated main methods to allow async tasks to complete.
+    Called by generated main methods to allow async tasks to complete:
+    waits until every promise is settled and no async step is queued or
+    running, then, if a failure escaped a step, which that step already
+    printed, exits with status 1, as an uncaught failure at the top level
+    would.
     """
+    global _escaped
     if _in_turn():
         raise RuntimeError("await_safe_to_exit inside an async turn would deadlock")
-    _all_resolved.wait()
+    while True:
+        _all_resolved.wait()
+        with _busy_cv:
+            _busy_cv.wait_for(lambda: _busy == 0)
+            if _all_resolved.is_set():
+                escaped, _escaped = _escaped, None
+                break
+    if escaped is not None:
+        raise SystemExit(1)
 
 
 def complete_promise(p: Future[T], resolution: T) -> None:

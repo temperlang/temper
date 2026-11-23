@@ -1,5 +1,6 @@
 package object_literals;
 
+import temper.core.Bubble;
 import temper.core.Core;
 
 public final class ObjectLiteralsMain {
@@ -7,6 +8,7 @@ public final class ObjectLiteralsMain {
 
     public static void main(String[] args) throws ClassNotFoundException {
         Core.initSimpleLogging();
+        Bubble.keepStackTraces();
         Core.beginTopLevel();
         try {
             Class.forName("object_literals.extra_class.ExtraClassGlobal");
@@ -14,6 +16,6 @@ public final class ObjectLiteralsMain {
         } finally {
             Core.endTopLevel();
         }
-        Core.waitUntilTasksComplete();
+        Core.finishProgram();
     }
 }

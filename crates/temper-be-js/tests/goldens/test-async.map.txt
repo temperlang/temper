@@ -33,7 +33,7 @@
 102:5 -> ../../test-async.temper.md:40:13  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
 103:7 -> ../../test-async.temper.md:41:9  test.fail("failed hard in as <- test.fail("failed hard in as
 105:5 -> ../../test-async.temper.md:40:7  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
-112:1 -> ../../test-async.temper.md:45:5  it("panics in an async block <- test("panics in an async blo
+112:1 -> ../../test-async.temper.md:45:5  it("dies in an async block", <- test("dies in an async block
 115:5 -> ../../test-async.temper.md:46:13  /** <- { (): GeneratorResult<Empty>
 119:5 -> ../../test-async.temper.md:46:13  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
 120:7 -> ../../test-async.temper.md:47:9  panic(); <- panic();
@@ -43,3 +43,13 @@
 133:7 -> ../../test-async.temper.md:52:7  const actual = (1 + 1) | 0; <- assert(1 + 1 == 2);
 134:7 -> ../../test-async.temper.md:52:7  const expected = 2; <- assert(1 + 1 == 2);
 135:7 -> ../../test-async.temper.md:52:7  test.assert(actual === expec <- assert(1 + 1 == 2);
+143:1 -> ../../test-async.temper.md:58:5  it("waits on nothing", async <- test("waits on nothing") {
+146:5 -> ../../test-async.temper.md:59:7  /** @type {import("@temperla <- let never = new PromiseBuild
+147:5 -> ../../test-async.temper.md:59:7  const never = new PromiseBui <- let never = new PromiseBuild
+148:5 -> ../../test-async.temper.md:60:13  /** <- { (): GeneratorResult<Empty>
+152:5 -> ../../test-async.temper.md:60:13  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
+153:7 -> ../../test-async.temper.md:61:9  /** @type {number} */ <- let n = await never.promise
+154:7 -> ../../test-async.temper.md:61:9  let n; <- let n = await never.promise
+155:7 -> ../../test-async.temper.md:61:9  try { <- let n = await never.promise
+161:7 -> ../../test-async.temper.md:62:9  test.assert(false, () => `ra <- assert(false) { "ran ${n}" }
+163:5 -> ../../test-async.temper.md:60:7  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<

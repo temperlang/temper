@@ -1,51 +1,55 @@
 local temper = require("temper-core")
 
 local function fn()
-  if not temper.pcall(function()
+  local t, t_1 = temper.pcall(function()
     local b = temper.promisebuilder_constructor()
     temper.promisebuilder_complete(b, "Completed synchronously")
     print(temper.promisebuilder_promise(b):await())
-  end) then
-    error("panic")
+  end)
+  if not t then
+    error("panic\ncaused by: " .. tostring(t_1))
   end
   do
     local b2 = temper.promisebuilder_constructor()
     temper.promisebuilder_breakpromise(b2)
     ---@type string
-    local t
+    local t_2
     if not temper.pcall(function()
-      t = temper.promisebuilder_promise(b2):await()
+      t_2 = temper.promisebuilder_promise(b2):await()
     end) then
-      t = "Broken synchronously"
+      t_2 = "Broken synchronously"
     end
-    print(t)
+    print(t_2)
   end
-  if not temper.pcall(function()
+  local t, t_1 = temper.pcall(function()
     local b3 = temper.promisebuilder_constructor()
     local function fn2()
       temper.promisebuilder_complete(b3, "Completed asynchronously")
     end
     temper.async(temper.adapt_generator_fn(fn2))
     print(temper.promisebuilder_promise(b3):await())
-  end) then
-    error("panic")
+  end)
+  if not t then
+    error("panic\ncaused by: " .. tostring(t_1))
   end
-  if not temper.pcall(function()
+  local t_2, t_3 = temper.pcall(function()
     local b4 = temper.promisebuilder_constructor()
     temper.promisebuilder_complete(b4, "Worth doing twice")
     print(temper.promisebuilder_promise(b4):await())
     print(temper.promisebuilder_promise(b4):await())
-  end) then
-    error("panic")
+  end)
+  if not t_2 then
+    error("panic\ncaused by: " .. tostring(t_3))
   end
-  if not temper.pcall(function()
+  local t, t_1 = temper.pcall(function()
     local a = temper.promisebuilder_constructor()
     local b5 = temper.promisebuilder_constructor()
     local function fn3()
-      if not temper.pcall(function()
+      local t, t_1 = temper.pcall(function()
         temper.promisebuilder_promise(b5):await()
-      end) then
-        error("panic")
+      end)
+      if not t then
+        error("panic\ncaused by: " .. tostring(t_1))
       end
       print("After")
       temper.promisebuilder_complete(a, temper.empty())
@@ -57,8 +61,9 @@ local function fn()
     end
     temper.async(temper.adapt_generator_fn(fn4))
     temper.promisebuilder_promise(a):await()
-  end) then
-    error("panic")
+  end)
+  if not t then
+    error("panic\ncaused by: " .. tostring(t_1))
   end
   if not temper.pcall(function()
     print("What is your favourite colour?")

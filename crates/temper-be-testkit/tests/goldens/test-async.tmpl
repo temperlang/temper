@@ -83,7 +83,7 @@ module `test-async`#0 {
     }): fn (): SafeGenerator#8<Empty#12>);
   }
 
-  test "panics in an async block" ~test#61(test#62: Test#3): Void throws Bubble {
+  test "dies in an async block" ~test#61(test#62: Test#3): Void throws Bubble {
     async#7((fn generator ~fn#63(): SafeGenerator#8<Empty#12> {
       (panic()): Void;
     }): fn (): SafeGenerator#8<Empty#12>);
@@ -97,5 +97,15 @@ module `test-async`#0 {
         return %String.cat(%String.cat(%String.cat(%String.cat("expected 1 + 1 == (", expected#67.toString#49(omitted)), ") not ("), actual#66.toString#49(omitted)), ")");
       }): fn (): String);
     }
+  }
+
+  test "waits on nothing" ~test#69(test#70: Test#3): Void throws Bubble {
+    let never#71: PromiseBuilder#40<Int32> = new constructor#43<Int32>();
+    async#7((fn generator ~fn#72(): SafeGenerator#8<Empty#12> [test#70, never#71] {
+      let n#73: Int32 = (orelse((await(never#71.promise#46())^): Int32, %Int32.neg(1))): Int32;
+      test#70.assert#32(false, (fn ~fn#74(): String [n#73] {
+        return %String.cat("ran ", n#73.toString#49(omitted));
+      }): fn (): String);
+    }): fn (): SafeGenerator#8<Empty#12>);
   }
 }

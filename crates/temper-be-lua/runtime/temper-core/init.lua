@@ -216,7 +216,29 @@ do
     end
     temper.is_bubble = is_bubble
 
-    local function caught(ok, ...)
+    local caught
+
+    -- An `orelse`'s handler, run where an error is raised: anything but a
+    -- bubble, raised there first, not again by `caught`, has its stack
+    -- trace kept in `temper.raised` (`{ err = …, trace = … }`), which a
+    -- handler of the program's, as `temper run`'s, shows, as `caught`
+    -- raising it again starts a stack of its own.
+    local function traced(err)
+        if is_bubble(err) then
+            return err
+        end
+        -- `caught` calls `error`, which may be a frame of its own.
+        for level = 2, 3 do
+            local info = debug.getinfo(level, 'f')
+            if info and info.func == caught then
+                return err
+            end
+        end
+        temper.raised = { err = err, trace = debug.traceback(tostring(err), 2) }
+        return err
+    end
+
+    function caught(ok, ...)
         if ok or is_bubble((...)) then
             return ok, ...
         end
@@ -226,7 +248,13 @@ do
     -- `orelse`: `pcall`, but catching only a bubble, raising anything
     -- else (a panic, a host error) again, so it passes every `orelse`.
     function temper.pcall(f, ...)
-        return caught(pcall(f, ...))
+        if select('#', ...) == 0 then
+            return caught(xpcall(f, traced))
+        end
+        local args = { n = select('#', ...), ... }
+        return caught(xpcall(function()
+            return f(table_unpack(args, 1, args.n))
+        end, traced))
     end
 
     -- Bubbles, as every builtin that bubbles does; host code bubbles by

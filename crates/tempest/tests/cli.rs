@@ -886,8 +886,9 @@ fn test_a_library_in_cpp() {
 }
 
 /// `temper test -b BACKEND` on a small library, three tests passing and
-/// two failing, one of them [`CLASS_ASSERTS`]'s, on every backend whose
-/// tools run here: it builds, runs
+/// four failing, one of them [`CLASS_ASSERTS`]'s, one panicking, and one
+/// failing in the async work it starts, on every backend whose tools run
+/// here: it builds, runs
 /// the language's own test tools, and reads their results, so each
 /// backend's runner (its crate's `tools` module) is tested on every push without the
 /// real libraries, which run nightly. A backend whose tools are missing is
@@ -904,8 +905,14 @@ fn test_a_library_on_each_backend() {
         ),
         ("b.temper", "test(\"b\") { assert(1 + 1 == 3) }\n"),
         CLASS_ASSERTS,
+        ("p.temper", "test(\"p\") { [1][5]; }\n"),
+        (
+            "q.temper",
+            "test(\"q\") {\n  async { (): GeneratorResult<Empty> extends GeneratorFn =>\n\
+             \x20   assert(1 + 1 == 3) { \"q failed\" };\n  }\n}\n",
+        ),
     ];
-    for backend in ["js", "lua", "rust", "java", "csharp"] {
+    for backend in ["cpp", "csharp", "java", "js", "lua", "py", "rust"] {
         if !built_in(backend) {
             continue;
         }
@@ -924,8 +931,20 @@ fn test_a_library_on_each_backend() {
             assert!(failed, "{backend}:\n{out}{err}");
             let failed = out.to_lowercase().contains(CLASS_ASSERT_FAILED);
             assert!(failed, "{backend}:\n{out}{err}");
+            // The panic and the async failure, each failing its test alone,
+            // saying why.
+            let lower = out.to_lowercase();
+            let says = |test: &str, why: &str| {
+                (lower.lines())
+                    .any(|l| l.starts_with(&format!("  failed  {test} - ")) && l.contains(why))
+            };
             assert!(
-                out.ends_with("Tests passed: 3 of 5\n"),
+                says("p", "index 5 out of bounds for length 1"),
+                "{backend}:\n{out}{err}"
+            );
+            assert!(says("q", "q failed"), "{backend}:\n{out}{err}");
+            assert!(
+                out.ends_with("Tests passed: 3 of 7\n"),
                 "{backend}:\n{out}{err}"
             );
             assert_eq!(code, 1, "{backend}");
@@ -1017,6 +1036,7 @@ fn library_without_root_module(backend: &str) {
             "java" => (Some("  failed  y - panic"), "1 of 2"),
             // Node's runner names the tests file that failed to load.
             "js" => (Some("  failed  test/y.test.js - panic"), "1 of 2"),
+            // .NET's wrapper, then the panic's message.
             "csharp" => (
                 Some("  failed  Y - System.TypeInitializationException: "),
                 "1 of 2",
@@ -1027,7 +1047,12 @@ fn library_without_root_module(backend: &str) {
             _ => (None, "0 of 2 (2 not run)"),
         };
         if let Some(failed) = failed {
-            assert!(out.contains(failed), "{backend}:\n{out}{err}");
+            let line = out.lines().find(|l| l.starts_with(failed));
+            assert!(line.is_some(), "{backend}:\n{out}{err}");
+            // The panic's own message, not only a wrapper's, but
+            // Python's, whose first line says the import failed.
+            let panic = line.unwrap().ends_with("panic");
+            assert!(panic || backend == "py", "{backend}:\n{out}{err}");
         }
         let summary = format!("Tests passed: {summary}\n");
         assert!(out.ends_with(&summary), "{backend}:\n{out}{err}");
@@ -1518,8 +1543,11 @@ fn js_stack_traces_point_at_temper() {
 /// programs install the handler; the libraries never do. With
 /// `std::stacktrace`, the frames name the Temper files and lines, by
 /// the `#line` directives that `run` and `test` give the generated code
-/// (relative paths), which `build` leaves out. Skipped without CMake,
-/// unless `TEMPER_REQUIRE_CHECKERS` is set.
+/// (relative paths), which `build` leaves out; where frames name static
+/// functions, and with which parameters, varies, so frames are matched by
+/// a function's own name, in order. Skipped without CMake, unless
+/// `TEMPER_REQUIRE_CHECKERS` is set; with `TEMPER_REQUIRE_STD_STACKTRACE`
+/// set, as in CI's `cli` job (g++ 13), the files and lines must be there.
 #[test]
 #[cfg(feature = "cpp")]
 fn cpp_stack_traces() {
@@ -1561,15 +1589,21 @@ fn cpp_stack_traces() {
         let xml =
             fs::read_to_string(Path::new(dir).join("temper.out/cpp/a/test-results.xml")).unwrap();
         let panics = frames(xml.split_once("<![CDATA[").unwrap().1);
-        // `boom`, where it panicked, then the test, and nothing past it.
-        assert_eq!(panics.len(), 2, "{xml}");
-        assert!(panics[0].starts_with("a::boom("), "{xml}");
-        assert!(panics[1].starts_with("a::panics("), "{xml}");
+        // `boom`, where it panicked, then the test.
+        let boom = panics.iter().position(|f| function(f) == "boom");
+        let test = panics.iter().position(|f| function(f) == "panics");
+        let (Some(boom), Some(test)) = (boom, test) else {
+            panic!("{xml}");
+        };
+        assert!(boom < test, "{xml}");
         // Files and lines where `std::stacktrace` gives them, not
         // `backtrace()`'s offsets: the Temper source's.
         // Paths are relative to the library's directory, where the
         // programs run.
-        let lines = !panics[0].contains("+0x");
+        let lines = !panics[boom].contains("+0x");
+        if std::env::var_os("TEMPER_REQUIRE_STD_STACKTRACE").is_some() {
+            assert!(lines, "no std::stacktrace: {xml}");
+        }
         let cpp = Path::new(dir).join("temper.out/cpp");
         let source = |library: &str, frame: &str| -> (PathBuf, String) {
             let (_, at) = frame.rsplit_once(" (").unwrap();
@@ -1579,10 +1613,10 @@ fn cpp_stack_traces() {
         };
         if lines {
             let a = fs::canonicalize(Path::new(dir).join("a.temper.md")).unwrap();
-            assert_eq!(source("a", &panics[0]), (a.clone(), "4".into()), "{xml}");
-            assert_eq!(source("a", &panics[1]), (a, "9".into()), "{xml}");
+            assert_eq!(source("a", &panics[boom]), (a.clone(), "4".into()), "{xml}");
+            assert_eq!(source("a", &panics[test]), (a, "9".into()), "{xml}");
         }
-        for (library, raised, at) in [("b", "uncaught bubble", "b::f("), ("c", "panic", "c::g(")] {
+        for (library, raised, at) in [("b", "uncaught bubble", "f"), ("c", "panic", "g")] {
             let (code, out, err) = tempest(&["run", "-w", dir, "--library", library, "-b", "cpp"]);
             assert_eq!((code, out.trim_end()), (1, library), "{err}");
             assert!(err.contains(raised), "{library}: {err}");
@@ -1590,10 +1624,10 @@ fn cpp_stack_traces() {
             // a lambda of the init function's), and nothing past it.
             let frames = frames(&err);
             assert!(frames.len() >= 2, "{library}: {err}");
-            assert!(frames[0].starts_with(at), "{library}: {err}");
-            let init = format!("{library}::global_init_init()");
-            assert!(
-                frames.last().unwrap().starts_with(&init),
+            assert_eq!(function(&frames[0]), at, "{library}: {err}");
+            assert_eq!(
+                function(frames.last().unwrap()),
+                "global_init_init",
                 "{library}: {err}"
             );
             if lines {
@@ -1625,8 +1659,9 @@ fn cpp_stack_traces() {
         assert_eq!((code, out.trim_end()), (1, "d"), "{err}");
         let frames = frames(&err);
         assert!(frames.len() >= 3, "{err}");
-        assert!(frames[0].starts_with("checked"), "{err}");
+        // `checked` is static, which only `std::stacktrace` names.
         if lines {
+            assert_eq!(function(&frames[0]), "checked", "{err}");
             let file = fs::canonicalize(Path::new(dir).join("d/d.temper")).unwrap();
             assert_eq!(source("d", &frames[0]), (file.clone(), "6".into()), "{err}");
             assert_eq!(source("d", &frames[1]), (file, "10".into()), "{err}");
@@ -1663,13 +1698,21 @@ fn cpp_stack_traces() {
             assert!(!named || allowed.contains(&name.as_str()), "{name}");
         }
         // `#line`s name the sources by relative paths, never absolute
-        // ones; `build` writes none.
+        // ones, in every library's files; `build` writes none.
         let init = fs::read_to_string(cpp.join("a/init.cpp")).unwrap();
         assert!(
             init.contains("#line 4 \"../../../a.temper.md\"\n"),
             "{init}"
         );
-        assert!(!init.contains(&format!("\"{dir}")), "{init}");
+        for library in ["a", "b", "c", "d"] {
+            for entry in fs::read_dir(cpp.join(library)).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_file() {
+                    let text = fs::read_to_string(&path).unwrap();
+                    assert_relative_lines(&path, &text);
+                }
+            }
+        }
         let (code, _, err) = tempest(&["build", "-w", dir, "-b", "cpp"]);
         assert_eq!(code, 0, "{err}");
         for library in ["a", "b", "c", "d"] {
@@ -1684,6 +1727,99 @@ fn cpp_stack_traces() {
     });
 }
 
+/// A C++ stack frame's function, `NAME (WHERE)`, by its own name, without
+/// its namespaces or parameters, as `boom` for `a::boom(int) (…)`.
+#[cfg(feature = "cpp")]
+fn function(frame: &str) -> &str {
+    let name = frame.split(" (").next().unwrap_or(frame);
+    let name = name.split('(').next().unwrap_or(name);
+    name.rsplit("::").next().unwrap_or(name)
+}
+
+/// That each `#line` in a generated file names a relative path, not one
+/// starting with `/`, `\`, or a drive letter.
+#[cfg(any(feature = "cpp", feature = "csharp"))]
+fn assert_relative_lines(path: &Path, text: &str) {
+    for line in text.lines().filter(|l| l.starts_with("#line ")) {
+        let Some((_, quoted)) = line.split_once(" \"") else {
+            continue;
+        };
+        let drive = quoted.as_bytes().get(1) == Some(&b':');
+        let absolute = quoted.starts_with('/') || quoted.starts_with('\\') || drive;
+        assert!(!absolute, "{}: {line}", path.display());
+    }
+}
+
+/// What sets a process-wide handler for failures, which only the
+/// programs and tests Temper generates may, as a library's user's
+/// process is theirs: Java's `Bubble.keepStackTraces`, Rust's panic hook
+/// (`set_hook`, which `catch_quietly`, `block_panics`, and `TestWork`
+/// set), C++'s `set_terminate` (`install_stack_traces`), and C#'s
+/// `UnhandledException`. After `build`, on every backend, no library
+/// file names any of them, but Rust's tests module, under
+/// `#[cfg(test)]`; only the harnesses do (`main`s, tests).
+#[test]
+fn failure_handlers_only_in_harnesses() {
+    let files = [(
+        "a.temper",
+        "export let f(n: Int): Int throws Bubble {\n  if (n < 0) { bubble() }\n  n\n}\n\
+         console.log(\"a ${f(1) orelse 0}\");\n\
+         async { (): GeneratorResult<Empty> extends GeneratorFn => console.log(\"x\"); }\n\
+         test(\"t\") { assert(f(1) == 1) }\n",
+    )];
+    const HANDLERS: [&str; 8] = [
+        "keepStackTraces",
+        "set_hook",
+        "catch_quietly",
+        "block_panics",
+        "TestWork",
+        "set_terminate",
+        "install_stack_traces",
+        "UnhandledException",
+    ];
+    with_library("handlers", &files, |dir| {
+        let backends = ["cpp", "csharp", "java", "js", "lua", "py", "rust"];
+        for backend in backends.into_iter().filter(|b| built_in(b)) {
+            let (code, _, err) = tempest(&["build", "-w", dir, "-b", backend]);
+            assert_eq!(code, 0, "{backend}: {err}");
+            let mut dirs = vec![Path::new(dir).join("temper.out").join(backend).join("a")];
+            let mut checked = 0;
+            while let Some(d) = dirs.pop() {
+                for entry in fs::read_dir(d).unwrap() {
+                    let path = entry.unwrap().path();
+                    let name = path.file_name().unwrap().to_string_lossy().to_lowercase();
+                    // The harnesses: `main`s and tests (Java's `AMain`,
+                    // C++'s `test.cpp`), and their directories (C#'s
+                    // `program/`).
+                    if path.is_dir() {
+                        if !["test", "tests", "program"].contains(&name.as_str()) {
+                            dirs.push(path);
+                        }
+                        continue;
+                    }
+                    if ["main", "test", "program"].iter().any(|h| name.contains(h)) {
+                        continue;
+                    }
+                    let text = fs::read_to_string(&path).unwrap();
+                    let text = match text.split_once("#[cfg(test)]\nmod tests {\n") {
+                        // Rust's tests module ends at the first `}` alone.
+                        Some((before, rest)) => {
+                            let after = rest.split_once("\n}\n").map_or("", |(_, a)| a);
+                            format!("{before}{after}")
+                        }
+                        None => text,
+                    };
+                    for handler in HANDLERS {
+                        assert!(!text.contains(handler), "{}: {handler}", path.display());
+                    }
+                    checked += 1;
+                }
+            }
+            assert!(checked > 0, "{backend}");
+        }
+    });
+}
+
 /// A program whose `orelse`s panic, in a function's `let` (line 6) and
 /// in an init `let`'s value (line 10), for the stack-trace tests.
 #[cfg(any(feature = "cpp", feature = "csharp"))]
@@ -1693,8 +1829,9 @@ const ORELSE_PANICS: &str = "let positive(n: Int): Int throws Bubble {\n  if (n 
 
 /// On Lua, `run`'s uncaught bubble, an error that isn't a string, shows
 /// a stack trace, as an uncaught panic's does, which `lua`'s own handler
-/// gives only strings. Skipped without Lua, unless
-/// `TEMPER_REQUIRE_CHECKERS` is set.
+/// gives only strings. A panic that passed an `orelse`, which raises it
+/// again, shows the trace from where it was first raised. Skipped
+/// without Lua, unless `TEMPER_REQUIRE_CHECKERS` is set.
 #[test]
 #[cfg(feature = "lua")]
 fn lua_stack_traces() {
@@ -1711,18 +1848,35 @@ fn lua_stack_traces() {
             "let g(n: Int): Int {\n  if (n > 1) { panic() }\n  n\n}\n\
              console.log(\"c\");\ng(5);\n",
         ),
+        ("e/config.temper.md", "    export let name = \"e\";\n"),
+        (
+            "e/e.temper",
+            "let g(n: Int): Int throws Bubble {\n  if (n > 1) { panic() }\n  if (n < 0) { bubble() }\n  n\n}\n\
+             console.log(\"e\");\nlet x = g(5) orelse 0;\nconsole.log(\"after ${x}\");\n",
+        ),
     ];
     with_library("lua-traces", &files, |dir| {
-        for (library, raised) in [("b", "lua: Bubble"), ("c", "panic")] {
+        for (library, raised) in [("b", "lua: Bubble"), ("c", "panic"), ("e", "panic")] {
             let (code, out, err) = tempest(&["run", "-w", dir, "--library", library, "-b", "lua"]);
             if tools_missing("lua", &format!("{out}{err}")) {
                 return;
             }
+            // Paths with `/`, whatever the platform's Lua gives.
+            let err = err.replace('\\', "/");
             assert_eq!((code, out.trim_end()), (1, library), "{err}");
             assert!(err.contains(raised), "{library}: {err}");
             let trace = err.split_once("stack traceback:").map(|(_, t)| t);
             let at = format!("{library}/init.lua:");
             assert!(trace.is_some_and(|t| t.contains(&at)), "{library}: {err}");
+            // The trace has the line the message names, where it was
+            // raised, in `g`, even past `e`'s `orelse`.
+            let (_, line) = err.split_once(&at).expect(&err);
+            let line = line.split(':').next().unwrap();
+            let raised_at = format!("{at}{line}:");
+            assert!(
+                trace.is_some_and(|t| t.contains(&raised_at)),
+                "{library}: {err}"
+            );
         }
     });
 }
@@ -1779,7 +1933,8 @@ fn rust_stack_traces() {
         let f = frames.iter().position(|l| l.ends_with("::mod::f"));
         let main = frames.iter().position(|l| l.ends_with(" b::main"));
         assert!(f.is_some() && main.is_some() && f < main, "{err}");
-        assert!(frames[f.unwrap() + 1].contains("/b/src/mod.rs:"), "{err}");
+        let at = frames[f.unwrap() + 1].replace('\\', "/");
+        assert!(at.contains("/b/src/mod.rs:"), "{err}");
     });
 }
 
@@ -1816,25 +1971,25 @@ fn csharp_stack_traces() {
         assert_eq!(code, 1);
         let csharp = Path::new(dir).join("temper.out/csharp");
         let xml = fs::read_to_string(csharp.join("a/tests/TestResults/TestResults.xml")).unwrap();
-        // The sources' own paths, as .NET resolves them.
-        let a = Path::new(dir).join("a.temper.md");
-        let a = a.display();
-        assert!(xml.contains(&format!(" in {a}:line 4")), "{xml}");
-        assert!(xml.contains(&format!(" in {a}:line 9")), "{xml}");
+        // The sources' own paths, as .NET resolves them, which may not be
+        // as the temporary directory spells them (macOS's `/var` is
+        // `/private/var`), so each canonicalized.
+        let source = |file: &str| fs::canonicalize(Path::new(dir).join(file)).unwrap();
+        let a = source("a.temper.md");
+        assert!(at_line(&xml, &a, 4), "{xml}");
+        assert!(at_line(&xml, &a, 9), "{xml}");
         let (code, out, err) = tempest(&["run", "-w", dir, "--library", "c", "-b", "csharp"]);
         assert_eq!((code, out.trim_end()), (1, "c"), "{err}");
-        let c = Path::new(dir).join("c/c.temper");
-        let c = c.display();
-        assert!(err.contains(&format!(" in {c}:line 2")), "{err}");
-        assert!(err.contains(&format!(" in {c}:line 6")), "{err}");
+        let c = source("c/c.temper");
+        assert!(at_line(&err, &c, 2), "{err}");
+        assert!(at_line(&err, &c, 6), "{err}");
         // An `orelse`'s lines too: the panic in a function's `let`, the
         // call in an init `let`'s.
         let (code, out, err) = tempest(&["run", "-w", dir, "--library", "d", "-b", "csharp"]);
         assert_eq!((code, out.trim_end()), (1, "d"), "{err}");
-        let d = Path::new(dir).join("d/d.temper");
-        let d = d.display();
-        assert!(err.contains(&format!(" in {d}:line 6")), "{err}");
-        assert!(err.contains(&format!(" in {d}:line 10")), "{err}");
+        let d = source("d/d.temper");
+        assert!(at_line(&err, &d, 6), "{err}");
+        assert!(at_line(&err, &d, 10), "{err}");
         // Relative paths only, and none from `build`.
         let mut directives = 0;
         let each = |library: &str, f: &mut dyn FnMut(&Path, &str)| {
@@ -1850,16 +2005,12 @@ fn csharp_stack_traces() {
                 }
             }
         };
-        each("a", &mut |path, text| {
-            for line in text.lines().filter(|l| l.starts_with("#line ")) {
-                directives += 1;
-                assert!(
-                    line == "#line default" || line.contains(" \"../"),
-                    "{}: {line}",
-                    path.display()
-                );
-            }
-        });
+        for library in ["a", "c", "d"] {
+            each(library, &mut |path, text| {
+                directives += text.lines().filter(|l| l.starts_with("#line ")).count();
+                assert_relative_lines(path, text);
+            });
+        }
         assert!(directives > 0);
         let (code, _, err) = tempest(&["build", "-w", dir, "-b", "csharp"]);
         assert_eq!(code, 0, "{err}");
@@ -1869,6 +2020,22 @@ fn csharp_stack_traces() {
             });
         }
     });
+}
+
+/// Whether a .NET stack trace has a frame ` in FILE:line LINE` at this
+/// file, canonicalized, and line.
+#[cfg(feature = "csharp")]
+fn at_line(trace: &str, file: &Path, line: u32) -> bool {
+    trace.lines().any(|l| {
+        let Some((_, at)) = l.rsplit_once(" in ") else {
+            return false;
+        };
+        let Some((path, rest)) = at.rsplit_once(":line ") else {
+            return false;
+        };
+        let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
+        digits == line.to_string() && fs::canonicalize(path).is_ok_and(|p| p == file)
+    })
 }
 
 /// `test`'s flags: `-w`, `--library`, several `-b` (each backend's

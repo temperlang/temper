@@ -39,7 +39,9 @@ toolchains its tests use, through one local action,
 [.github/actions/toolchains](../../.github/actions/toolchains/action.yml),
 which also says why each tool is there. The tests run with
 `TEMPER_REQUIRE_CHECKERS`, so a missing tool fails them rather than
-skipping.
+skipping; the `cli` job also sets `TEMPER_REQUIRE_STD_STACKTRACE`, so
+C++ stack traces there must come from `std::stacktrace`, with files and
+lines.
 
 **What a change runs.** A first job, `changes`, lists the files changed
 (`git diff` against the pull request's base, or against the commit

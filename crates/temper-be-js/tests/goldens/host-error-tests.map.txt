@@ -1,0 +1,15 @@
+# host-error-tests/host_error_tests.internal.js
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../host-error-tests.temper.md:10:5  /** <- @connected
+7:1 -> ../host-error-tests.temper.md:10:5  export function hostFails(n) <- @connected
+7:17 -> ../host-error-tests.temper.md:11:16 (hostFails)  hostFails(n) { <- hostFails(n: Int): Int throw
+7:26 -> ../host-error-tests.temper.md:10:5  (n) { <- @connected
+# host-error-tests/test/host_error_tests.test.js
+# generated line:column -> source:line:column, and the text at each
+6:1 -> ../../host-error-tests.temper.md:16:5  it("host error is no panic", <- test("host error is no panic
+9:5 -> ../../host-error-tests.temper.md:17:25  function fn() { <- {
+10:7 -> ../../host-error-tests.temper.md:18:9  /** @type {number} */ <- let r = hostFails(1) orelse
+11:7 -> ../../host-error-tests.temper.md:18:9  let r; <- let r = hostFails(1) orelse
+12:7 -> ../../host-error-tests.temper.md:18:9  try { <- let r = hostFails(1) orelse
+18:7 -> ../../host-error-tests.temper.md:19:9  test.assert(r !== -1, () => <- assert(r != -1) { "caught" }
+20:5 -> ../../host-error-tests.temper.md:17:7  test.assertPanics(fn); <- test.assertPanics {

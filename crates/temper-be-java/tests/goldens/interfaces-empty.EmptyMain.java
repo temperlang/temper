@@ -1,5 +1,6 @@
 package empty;
 
+import temper.core.Bubble;
 import temper.core.Core;
 
 public final class EmptyMain {
@@ -7,12 +8,13 @@ public final class EmptyMain {
 
     public static void main(String[] args) throws ClassNotFoundException {
         Core.initSimpleLogging();
+        Bubble.keepStackTraces();
         Core.beginTopLevel();
         try {
             Class.forName("empty.EmptyGlobal");
         } finally {
             Core.endTopLevel();
         }
-        Core.waitUntilTasksComplete();
+        Core.finishProgram();
     }
 }

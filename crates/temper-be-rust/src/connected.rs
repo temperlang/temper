@@ -682,6 +682,10 @@ fn awake_upon(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, 
     let [promise, generator] = args else {
         return Err(NotYet::new("awakeUpon's arguments"));
     };
+    match t.in_tests || t.for_tests {
+        true => t.awaits_in_tests = true,
+        false => t.awaits = true,
+    }
     let promise = t.expr(*promise, Want::Owned)?;
     let generator = t.expr(*generator, Want::Owned)?;
     Ok(Expr::path("crate::support::awake_upon").call(vec![promise, generator]))

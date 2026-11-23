@@ -1,5 +1,6 @@
 package types;
 
+import temper.core.Bubble;
 import temper.core.Core;
 
 public final class TypesMain {
@@ -7,6 +8,7 @@ public final class TypesMain {
 
     public static void main(String[] args) throws ClassNotFoundException {
         Core.initSimpleLogging();
+        Bubble.keepStackTraces();
         Core.beginTopLevel();
         try {
             Class.forName("types.exporter.ExporterGlobal");
@@ -14,6 +16,6 @@ public final class TypesMain {
         } finally {
             Core.endTopLevel();
         }
-        Core.waitUntilTasksComplete();
+        Core.finishProgram();
     }
 }

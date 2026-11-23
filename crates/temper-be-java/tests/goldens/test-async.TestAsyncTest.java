@@ -205,7 +205,7 @@ public final class TestAsyncTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void panicsInAnAsyncBlock() {
+    public void diesInAnAsyncBlock() {
         Test test = new Test();
         try {
             Supplier<Generator<Optional<? super Object>>> fn = () -> {
@@ -242,6 +242,71 @@ public final class TestAsyncTest {
                 int expected = 2;
                 test.assert_(actual == expected, () -> "expected 1 + 1 == (" + expected + ") not (" + actual + ")");
             }
+        } finally {
+            Core.finishAsyncWork();
+            test.softFailToHard();
+        }
+    }
+
+    @org.junit.jupiter.api.Test
+    public void waitsOnNothing() {
+        Test test = new Test();
+        try {
+            CompletableFuture<Integer> never = new CompletableFuture<>();
+            Supplier<Generator<Optional<? super Object>>> fn = () -> {
+                class CaseIndexCell {
+                    int value;
+                }
+                final CaseIndexCell caseIndex = new CaseIndexCell();
+                caseIndex.value = 0;
+                class NCell {
+                    int value;
+                }
+                final NCell n = new NCell();
+                n.value = 0;
+                class AwaitedCell {
+                    @Nullable CompletableFuture<Integer> value;
+                }
+                final AwaitedCell awaited = new AwaitedCell();
+                awaited.value = null;
+                Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine = generator -> {
+                    while (true) {
+                        int caseIndexLocal = caseIndex.value;
+                        caseIndex.value = -1;
+                        switch (caseIndexLocal) {
+                            case 0:
+                                try {
+                                    awaited.value = never;
+                                    caseIndex.value = 3;
+                                    Core.awakeUpon(awaited.value, generator);
+                                    return new ValueResult<>(Optional.empty());
+                                } catch (Bubble ignored) {
+                                    caseIndex.value = 1;
+                                }
+                                break;
+                            case 1:
+                                n.value = -1;
+                                caseIndex.value = 2;
+                                break;
+                            case 2:
+                                test.assert_(false, () -> "ran " + n.value);
+                                return DoneResult.get();
+                            case 3:
+                                try {
+                                    n.value = Core.getPromiseResult(awaited.value);
+                                    caseIndex.value = 2;
+                                } catch (Bubble ignored2) {
+                                    caseIndex.value = 1;
+                                }
+                                break;
+                            default:
+                                return DoneResult.get();
+                        }
+                    }
+                };
+                return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
+            };
+            Core.runAsync(fn);
         } finally {
             Core.finishAsyncWork();
             test.softFailToHard();

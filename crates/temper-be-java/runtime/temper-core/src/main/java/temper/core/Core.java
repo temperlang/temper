@@ -2021,6 +2021,23 @@ public final class Core {
     }
 
     /**
+     * Called from generated main methods after the top level: waits, as
+     * {@link #waitUntilTasksComplete} does, then, if a failure escaped an
+     * async step, which was reported where it happened, exits with status
+     * 1, as a failure that escapes main would.
+     */
+    public static void finishProgram() {
+        waitUntilTasksComplete();
+        boolean failed;
+        synchronized (STEPS_LOCK) {
+            failed = escaped != null;
+        }
+        if (failed) {
+            System.exit(1);
+        }
+    }
+
+    /**
      * Called from generated tests after each test's body: waits, as
      * {@link #waitUntilTasksComplete} does, for the async work it started,
      * then throws the first failure that escaped a step meanwhile, so the

@@ -6,50 +6,50 @@
 17:5 -> ../async.temper.md:12:9  const b = new PromiseBuilder <- let b = new PromiseBuilder<S
 18:5 -> ../async.temper.md:13:9  b.complete("Completed synchr <- b.complete("Completed synchr
 19:5 -> ../async.temper.md:14:9  console.log(yield doAwait(b. <- console.log(await b.promise)
-23:3 -> ../async.temper.md:23:7  { <- do {
-24:5 -> ../async.temper.md:24:9  /** @type {import("@temperla <- let b = new PromiseBuilder<S
-25:5 -> ../async.temper.md:24:9  const b2 = new PromiseBuilde <- let b = new PromiseBuilder<S
-26:5 -> ../async.temper.md:25:9  b2.breakPromise(); <- b.breakPromise();
-27:5 -> ../async.temper.md:26:9  /** @type {string} */ <- console.log(await b.promise
-28:5 -> ../async.temper.md:26:9  let t$0; <- console.log(await b.promise
-29:5 -> ../async.temper.md:26:9  try { <- console.log(await b.promise
-35:5 -> ../async.temper.md:26:9  console.log(t$0); <- console.log(await b.promise
-37:3 -> ../async.temper.md:35:7  try { <- do {
-38:5 -> ../async.temper.md:36:9  /** @type {import("@temperla <- let b = new PromiseBuilder<S
-39:5 -> ../async.temper.md:36:9  const b3 = new PromiseBuilde <- let b = new PromiseBuilder<S
-40:5 -> ../async.temper.md:37:15  /** <- { (): GeneratorResult<Empty>
-44:5 -> ../async.temper.md:37:15  function* fn2(doAwait_1) { <- { (): GeneratorResult<Empty>
-45:7 -> ../async.temper.md:38:11  b3.complete("Completed async <- b.complete("Completed asynch
-47:5 -> ../async.temper.md:37:9  runAsync(adaptAwaiter(fn2)); <- async { (): GeneratorResult<
-48:5 -> ../async.temper.md:40:9  console.log(yield doAwait(b3 <- console.log(await b.promise)
-52:3 -> ../async.temper.md:49:7  try { <- do {
-53:5 -> ../async.temper.md:50:9  /** @type {import("@temperla <- let b = new PromiseBuilder<S
-54:5 -> ../async.temper.md:50:9  const b4 = new PromiseBuilde <- let b = new PromiseBuilder<S
-55:5 -> ../async.temper.md:51:9  b4.complete("Worth doing twi <- b.complete("Worth doing twic
-56:5 -> ../async.temper.md:52:9  console.log(yield doAwait(b4 <- console.log(await b.promise)
-57:5 -> ../async.temper.md:53:9  console.log(yield doAwait(b4 <- console.log(await b.promise)
-61:3 -> ../async.temper.md:63:7  try { <- do {
-62:5 -> ../async.temper.md:64:9  /** @type {import("@temperla <- let a = new PromiseBuilder<E
-63:5 -> ../async.temper.md:64:9  const a = new PromiseBuilder <- let a = new PromiseBuilder<E
-64:5 -> ../async.temper.md:65:9  /** @type {import("@temperla <- let b = new PromiseBuilder<E
-65:5 -> ../async.temper.md:65:9  const b5 = new PromiseBuilde <- let b = new PromiseBuilder<E
-66:5 -> ../async.temper.md:69:15  /** <- { (): GeneratorResult<Empty>
-70:5 -> ../async.temper.md:69:15  function* fn3(doAwait_1) { <- { (): GeneratorResult<Empty>
-71:7 -> ../async.temper.md:70:11  try { <- await b.promise orelse panic
-76:7 -> ../async.temper.md:71:11  console.log("After"); <- console.log("After");
-77:7 -> ../async.temper.md:72:11  a.complete(empty()); <- a.complete(empty());
-79:5 -> ../async.temper.md:69:9  runAsync(adaptAwaiter(fn3)); <- async { (): GeneratorResult<
-80:5 -> ../async.temper.md:75:15  /** <- { (): GeneratorResult<Empty>
-84:5 -> ../async.temper.md:75:15  function* fn4(doAwait_1) { <- { (): GeneratorResult<Empty>
-85:7 -> ../async.temper.md:76:11  console.log("Before"); <- console.log("Before");
-86:7 -> ../async.temper.md:77:11  b5.complete(empty()); <- b.complete(empty()); // Unbl
-88:5 -> ../async.temper.md:75:9  runAsync(adaptAwaiter(fn4)); <- async { (): GeneratorResult<
-89:5 -> ../async.temper.md:81:9  yield doAwait(a.promise); <- await a.promise;
-93:3 -> ../async.temper.md:91:7  try { <- do {
-94:5 -> ../async.temper.md:92:9  console.log("What is your fa <- console.log("What is your fa
-95:5 -> ../async.temper.md:94:9  /** @type {import("@temperla <- let b = new PromiseBuilder<S
-96:5 -> ../async.temper.md:94:9  const b6 = new PromiseBuilde <- let b = new PromiseBuilder<S
-97:5 -> ../async.temper.md:95:9  b6.complete("Blue"); <- b.complete("Blue");
-98:5 -> ../async.temper.md:96:9  b6.complete("No, yell..."); <- b.complete("No, yell...");
-99:5 -> ../async.temper.md:98:9  console.log(yield doAwait(b6 <- console.log(await b.promise)
-105:1 -> ../async.temper.md:7:5  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
+24:3 -> ../async.temper.md:23:7  { <- do {
+25:5 -> ../async.temper.md:24:9  /** @type {import("@temperla <- let b = new PromiseBuilder<S
+26:5 -> ../async.temper.md:24:9  const b2 = new PromiseBuilde <- let b = new PromiseBuilder<S
+27:5 -> ../async.temper.md:25:9  b2.breakPromise(); <- b.breakPromise();
+28:5 -> ../async.temper.md:26:9  /** @type {string} */ <- console.log(await b.promise
+29:5 -> ../async.temper.md:26:9  let t$0; <- console.log(await b.promise
+30:5 -> ../async.temper.md:26:9  try { <- console.log(await b.promise
+36:5 -> ../async.temper.md:26:9  console.log(t$0); <- console.log(await b.promise
+38:3 -> ../async.temper.md:35:7  try { <- do {
+39:5 -> ../async.temper.md:36:9  /** @type {import("@temperla <- let b = new PromiseBuilder<S
+40:5 -> ../async.temper.md:36:9  const b3 = new PromiseBuilde <- let b = new PromiseBuilder<S
+41:5 -> ../async.temper.md:37:15  /** <- { (): GeneratorResult<Empty>
+45:5 -> ../async.temper.md:37:15  function* fn2(doAwait_1) { <- { (): GeneratorResult<Empty>
+46:7 -> ../async.temper.md:38:11  b3.complete("Completed async <- b.complete("Completed asynch
+48:5 -> ../async.temper.md:37:9  runAsync(adaptAwaiter(fn2)); <- async { (): GeneratorResult<
+49:5 -> ../async.temper.md:40:9  console.log(yield doAwait(b3 <- console.log(await b.promise)
+54:3 -> ../async.temper.md:49:7  try { <- do {
+55:5 -> ../async.temper.md:50:9  /** @type {import("@temperla <- let b = new PromiseBuilder<S
+56:5 -> ../async.temper.md:50:9  const b4 = new PromiseBuilde <- let b = new PromiseBuilder<S
+57:5 -> ../async.temper.md:51:9  b4.complete("Worth doing twi <- b.complete("Worth doing twic
+58:5 -> ../async.temper.md:52:9  console.log(yield doAwait(b4 <- console.log(await b.promise)
+59:5 -> ../async.temper.md:53:9  console.log(yield doAwait(b4 <- console.log(await b.promise)
+64:3 -> ../async.temper.md:63:7  try { <- do {
+65:5 -> ../async.temper.md:64:9  /** @type {import("@temperla <- let a = new PromiseBuilder<E
+66:5 -> ../async.temper.md:64:9  const a = new PromiseBuilder <- let a = new PromiseBuilder<E
+67:5 -> ../async.temper.md:65:9  /** @type {import("@temperla <- let b = new PromiseBuilder<E
+68:5 -> ../async.temper.md:65:9  const b5 = new PromiseBuilde <- let b = new PromiseBuilder<E
+69:5 -> ../async.temper.md:69:15  /** <- { (): GeneratorResult<Empty>
+73:5 -> ../async.temper.md:69:15  function* fn3(doAwait_1) { <- { (): GeneratorResult<Empty>
+74:7 -> ../async.temper.md:70:11  try { <- await b.promise orelse panic
+80:7 -> ../async.temper.md:71:11  console.log("After"); <- console.log("After");
+81:7 -> ../async.temper.md:72:11  a.complete(empty()); <- a.complete(empty());
+83:5 -> ../async.temper.md:69:9  runAsync(adaptAwaiter(fn3)); <- async { (): GeneratorResult<
+84:5 -> ../async.temper.md:75:15  /** <- { (): GeneratorResult<Empty>
+88:5 -> ../async.temper.md:75:15  function* fn4(doAwait_1) { <- { (): GeneratorResult<Empty>
+89:7 -> ../async.temper.md:76:11  console.log("Before"); <- console.log("Before");
+90:7 -> ../async.temper.md:77:11  b5.complete(empty()); <- b.complete(empty()); // Unbl
+92:5 -> ../async.temper.md:75:9  runAsync(adaptAwaiter(fn4)); <- async { (): GeneratorResult<
+93:5 -> ../async.temper.md:81:9  yield doAwait(a.promise); <- await a.promise;
+98:3 -> ../async.temper.md:91:7  try { <- do {
+99:5 -> ../async.temper.md:92:9  console.log("What is your fa <- console.log("What is your fa
+100:5 -> ../async.temper.md:94:9  /** @type {import("@temperla <- let b = new PromiseBuilder<S
+101:5 -> ../async.temper.md:94:9  const b6 = new PromiseBuilde <- let b = new PromiseBuilder<S
+102:5 -> ../async.temper.md:95:9  b6.complete("Blue"); <- b.complete("Blue");
+103:5 -> ../async.temper.md:96:9  b6.complete("No, yell..."); <- b.complete("No, yell...");
+104:5 -> ../async.temper.md:98:9  console.log(yield doAwait(b6 <- console.log(await b.promise)
+110:1 -> ../async.temper.md:7:5  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<

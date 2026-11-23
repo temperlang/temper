@@ -103,6 +103,7 @@ fn cases() -> Vec<Case> {
             absent: Vec::new(),
             fails: false,
             stderr: Vec::new(),
+            stderr_absent: Vec::new(),
         });
     }
     cases
@@ -602,9 +603,10 @@ for (const query of queries) {
         .map(|l| l.split('\t').collect())
         .collect();
     // A tests file's tests run as it loads, and some are meant to fail
-    // (`run_tests` checks them), failing the process.
+    // (`run_tests` checks them), failing the process, as a program whose
+    // run fails does after the lookups, where its async work fails.
     let tests = module.to_string_lossy().ends_with(".test.js");
-    if (!run.status.success() && !tests) || answers.len() != queries.len() {
+    if (!run.status.success() && !tests && !case.fails) || answers.len() != queries.len() {
         return vec![format!(
             "{}: Node's source map lookup failed:\n{stdout}{}",
             case.key,

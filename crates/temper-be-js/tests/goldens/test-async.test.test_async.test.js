@@ -109,7 +109,7 @@ it("fails hard in an async block", async function () {
   }
 });
 
-it("panics in an async block", async function () {
+it("dies in an async block", async function () {
   const test = new Test();
   try {
     /**
@@ -134,6 +134,33 @@ it("passes after", async function () {
       const expected = 2;
       test.assert(actual === expected, () => `expected 1 + 1 == (${expected}) not (${actual})`);
     }
+  } finally {
+    await finishAsyncWork();
+    test.softFailToHard();
+  }
+});
+
+it("waits on nothing", async function () {
+  const test = new Test();
+  try {
+    /** @type {import("@temperlang/core/async.js").PromiseBuilder<number>} */
+    const never = new PromiseBuilder();
+    /**
+     * @param {(p: Promise<unknown>) => void} doAwait
+     * @returns {Generator<any>}
+     */
+    function* fn(doAwait) {
+      /** @type {number} */
+      let n;
+      try {
+        n = yield doAwait(never.promise);
+      } catch (e$) {
+        if (!isBubble(e$)) throw e$;
+        n = -1;
+      }
+      test.assert(false, () => `ran ${n}`);
+    }
+    runAsync(adaptAwaiter(fn));
   } finally {
     await finishAsyncWork();
     test.softFailToHard();

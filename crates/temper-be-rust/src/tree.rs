@@ -1439,6 +1439,14 @@ fn chain(e: &Expr, indent: usize, col: usize, trail: usize) -> String {
                 {
                     format!("{out}\n{}{}", pad(indent + 4), next.unwrap_or_default())
                 }
+                // A call whose line, broken, is still too wide goes on
+                // the next line, its arguments broken there, as rustfmt
+                // lays out a chain that doesn't fit.
+                _ if col + width(first_line(&broken_call)) > MAX => {
+                    let at = indent + 4;
+                    let call = call(&format!(".{name}"), args, at, at, true);
+                    format!("{out}\n{}{call}", pad(at))
+                }
                 _ => broken_call,
             };
             for l in rest {

@@ -4,129 +4,102 @@
 isn't declared to bubble but whose docs say it panics, as reading past
 a list's end or a string's does, panics on every backend, whatever its
 host does there: never a bubble that `orelse` would handle, nor a
-host's own error. Each section here is a run of its own, as each fails
-at its panic, which passes every `orelse`, even inside a function that
-bubbles for other reasons, so the run fails right after `reading`, and
-says why on stderr:
+host's own error. So does a callback a builtin runs, as a regex's
+`replace` does. Each test here panics past an `orelse`, even inside a
+function that bubbles for other reasons, so it fails saying why; were
+the panic handled, it would fail saying "caught".
 
+    let { ... } = import("std/regex");
     let at(i: Int): Int throws Bubble {
       if (i == 99) { bubble() }
       i
     }
-    console.log("reading");
-
-## List read
-
-    let read(ls: List<Int>, i: Int): Int throws Bubble { ls[at(i)] }
-    let r = read([1, 2], 5) orelse -1;
-    console.log("read past the end ${r}");
-
-```log
-reading
-```
-
-```stderr
-index 5 out of bounds for length 2
-```
-
-## Negative index
-
     let built(): ListBuilder<Int> {
       let lb = new ListBuilder<Int>();
       lb.add(1);
       lb
     }
+
+Reads, past the end, at it, and before the start:
+
     let read(ls: Listed<Int>, i: Int): Int throws Bubble { ls[at(i)] }
-    let r = read(built(), -1) orelse -1;
-    console.log("read before the start ${r}");
 
-```log
-reading
-```
-
-```stderr
-index -1 out of bounds for length 1
-```
-
-## Set
-
-    let built(): ListBuilder<Int> {
-      let lb = new ListBuilder<Int>();
-      lb.add(1);
-      lb
+    test("list read") {
+      let r = read([1, 2], 5) orelse -1;
+      assert(r != -1) { "caught" };
     }
+
+    test("list read at the end") {
+      let ls = [1, 2];
+      let r = read(ls, ls.length) orelse -1;
+      assert(r != -1) { "caught" };
+    }
+
+    test("negative index") {
+      let r = read(built(), -1) orelse -1;
+      assert(r != -1) { "caught" };
+    }
+
+A `set` past the end and at it, where one backend's lists grow, and an
+insert past the end; an insert at the end appends:
+
     let write(lb: ListBuilder<Int>, i: Int): Int throws Bubble {
       lb.set(at(i), 3);
       lb.length
-    }
-    let r = write(built(), 5) orelse -1;
-    console.log("set past the end ${r}");
-
-```log
-reading
-```
-
-```stderr
-index 5 out of bounds for length 1
-```
-
-## Insert
-
-    let built(): ListBuilder<Int> {
-      let lb = new ListBuilder<Int>();
-      lb.add(1);
-      lb
     }
     let insert(lb: ListBuilder<Int>, i: Int): Int throws Bubble {
       lb.add(2, at(i));
       lb.length
     }
-    let r = insert(built(), 5) orelse -1;
-    console.log("added past the end ${r}");
 
-```log
-reading
-```
+    test("set") {
+      let r = write(built(), 5) orelse -1;
+      assert(r != -1) { "caught" };
+    }
 
-```stderr
-index 5 out of bounds for length 1
-```
+    test("set at the end") {
+      let lb = built();
+      let r = write(lb, lb.length) orelse -1;
+      assert(r != -1) { "caught" };
+    }
 
-## Remove last
+    test("insert") {
+      let r = insert(built(), 5) orelse -1;
+      assert(r != -1) { "caught" };
+    }
+
+    test("insert past the end") {
+      let lb = built();
+      let r = insert(lb, lb.length + 1) orelse -1;
+      assert(r != -1) { "caught" };
+    }
+
+    test("insert at the end appends") {
+      let lb = built();
+      let n = insert(lb, lb.length) orelse -1;
+      assert(n == 2 && lb[1] == 2) { "didn't append" };
+    }
+
+Removing from an empty list or deque:
 
     let removeLast(lb: ListBuilder<Int>, i: Int): Int throws Bubble {
       at(i);
       lb.removeLast()
     }
-    let r = removeLast(new ListBuilder<Int>(), 0) orelse -1;
-    console.log("removed from empty ${r}");
-
-```log
-reading
-```
-
-```stderr
-removeLast on an empty ListBuilder
-```
-
-## Remove first
-
     let removeFirst(d: Deque<Int>, i: Int): Int throws Bubble {
       at(i);
       d.removeFirst()
     }
-    let r = removeFirst(new Deque<Int>(), 0) orelse -1;
-    console.log("removed from empty ${r}");
 
-```log
-reading
-```
+    test("remove last") {
+      let r = removeLast(new ListBuilder<Int>(), 0) orelse -1;
+      assert(r != -1) { "caught" };
+    }
 
-```stderr
-removeFirst on an empty Deque
-```
-
-## Reduce
+    test("remove first") {
+      let r = removeFirst(new Deque<Int>(), 0) orelse -1;
+      assert(r != -1) { "caught" };
+    }
 
 Core's `reduce` starts from `this[0]`, so an empty list panics as that
 read does:
@@ -135,18 +108,11 @@ read does:
       at(i);
       ls.reduce(fn (a: Int, b: Int): Int { a + b })
     }
-    let r = sum([], 0) orelse -1;
-    console.log("reduced empty ${r}");
 
-```log
-reading
-```
-
-```stderr
-index 0 out of bounds for length 0
-```
-
-## String read
+    test("reduce") {
+      let r = sum([], 0) orelse -1;
+      assert(r != -1) { "caught" };
+    }
 
 A string's end is past its last code point (each backend counts a
 string index in its own units, but ASCII's agree):
@@ -155,13 +121,38 @@ string index in its own units, but ASCII's agree):
       at(i);
       s[s.end]
     }
-    let r = codeAt("ab", 0) orelse -1;
-    console.log("read the end ${r}");
 
-```log
-reading
-```
+    test("string read") {
+      let r = codeAt("ab", 0) orelse -1;
+      assert(r != -1) { "caught" };
+    }
 
-```stderr
-string index 2 out of bounds
+A panic in a regex's `replace` callback passes `replace` and the
+`orelse` around it:
+
+    let replaced(i: Int): String throws Bubble {
+      at(i);
+      /b/.replace("abc") { match => ["x"][i] }
+    }
+
+    test("replace callback") {
+      let r = replaced(3) orelse "";
+      assert(r != "") { "caught" };
+    }
+
+Each failing test, with what its failure says, never "caught":
+
+```failures
+list read: index 5 out of bounds for length 2
+list read at the end: index 2 out of bounds for length 2
+negative index: index -1 out of bounds for length 1
+set: index 5 out of bounds for length 1
+set at the end: index 1 out of bounds for length 1
+insert: index 5 out of bounds for length 1
+insert past the end: index 2 out of bounds for length 1
+remove last: removeLast on an empty ListBuilder
+remove first: removeFirst on an empty Deque
+reduce: index 0 out of bounds for length 0
+string read: string index 2 out of bounds
+replace callback: index 3 out of bounds for length 1
 ```

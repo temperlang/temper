@@ -50,7 +50,7 @@ public final class TestPanicsTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void panicsOutright() {
+    public void diesOutright() {
         Test test = new Test();
         try {
             throw new AssertionError("panic");

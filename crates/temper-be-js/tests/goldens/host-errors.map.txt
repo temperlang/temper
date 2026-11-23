@@ -1,0 +1,136 @@
+# generated line:column -> source:line:column, and the text at each
+18:1 -> ../../host-errors.temper.md:13:5  /** <- let at(i: Int): Int throws B
+22:1 -> ../../host-errors.temper.md:13:5  function at(i) { <- let at(i: Int): Int throws B
+22:10 -> ../../host-errors.temper.md:13:9 (at)  at(i) { <- at(i: Int): Int throws Bubbl
+22:12 -> ../../host-errors.temper.md:13:5  (i) { <- let at(i: Int): Int throws B
+23:3 -> ../../host-errors.temper.md:14:7  if (i === 99) { <- if (i == 99) { bubble() }
+24:5 -> ../../host-errors.temper.md:14:22  bubble(); <- bubble() }
+26:3 -> ../../host-errors.temper.md:15:7  return i; <- i
+29:1 -> ../../host-errors.temper.md:17:5  /** @returns {number[]} */ <- let built(): ListBuilder<Int
+30:1 -> ../../host-errors.temper.md:17:5  function built() { <- let built(): ListBuilder<Int
+30:10 -> ../../host-errors.temper.md:17:9 (built)  built() { <- built(): ListBuilder<Int> {
+30:15 -> ../../host-errors.temper.md:17:5  () { <- let built(): ListBuilder<Int
+31:3 -> ../../host-errors.temper.md:18:7  /** @type {number[]} */ <- let lb = new ListBuilder<Int
+32:3 -> ../../host-errors.temper.md:18:7  const lb = []; <- let lb = new ListBuilder<Int
+33:3 -> ../../host-errors.temper.md:19:7  lb.push(1); <- lb.add(1);
+34:3 -> ../../host-errors.temper.md:20:7  return lb; <- lb
+37:1 -> ../../host-errors.temper.md:25:5  /** <- let read(ls: Listed<Int>, i:
+42:1 -> ../../host-errors.temper.md:25:5  function read(ls, i) { <- let read(ls: Listed<Int>, i:
+42:10 -> ../../host-errors.temper.md:25:9 (read)  read(ls, i) { <- read(ls: Listed<Int>, i: Int
+42:14 -> ../../host-errors.temper.md:25:5  (ls, i) { <- let read(ls: Listed<Int>, i:
+43:3 -> ../../host-errors.temper.md:25:60  return listedGet(/** @type { <- ls[at(i)] }
+46:1 -> ../../host-errors.temper.md:46:5  /** <- let write(lb: ListBuilder<In
+51:1 -> ../../host-errors.temper.md:46:5  function write(lb, i) { <- let write(lb: ListBuilder<In
+51:10 -> ../../host-errors.temper.md:46:9 (write)  write(lb, i) { <- write(lb: ListBuilder<Int>,
+51:15 -> ../../host-errors.temper.md:46:5  (lb, i) { <- let write(lb: ListBuilder<In
+52:3 -> ../../host-errors.temper.md:47:7  listBuilderSet(lb, at(i), 3) <- lb.set(at(i), 3);
+53:3 -> ../../host-errors.temper.md:48:7  return lb.length; <- lb.length
+56:1 -> ../../host-errors.temper.md:50:5  /** <- let insert(lb: ListBuilder<I
+61:1 -> ../../host-errors.temper.md:50:5  function insert(lb, i) { <- let insert(lb: ListBuilder<I
+61:10 -> ../../host-errors.temper.md:50:9 (insert)  insert(lb, i) { <- insert(lb: ListBuilder<Int>,
+61:16 -> ../../host-errors.temper.md:50:5  (lb, i) { <- let insert(lb: ListBuilder<I
+62:3 -> ../../host-errors.temper.md:51:7  listBuilderAdd(lb, 2, at(i)) <- lb.add(2, at(i));
+63:3 -> ../../host-errors.temper.md:52:7  return lb.length; <- lb.length
+66:1 -> ../../host-errors.temper.md:85:5  /** <- let removeLast(lb: ListBuild
+71:1 -> ../../host-errors.temper.md:85:5  function removeLast(lb, i) { <- let removeLast(lb: ListBuild
+71:10 -> ../../host-errors.temper.md:85:9 (removeLast)  removeLast(lb, i) { <- removeLast(lb: ListBuilder<I
+71:20 -> ../../host-errors.temper.md:85:5  (lb, i) { <- let removeLast(lb: ListBuild
+72:3 -> ../../host-errors.temper.md:86:7  at(i); <- at(i);
+73:3 -> ../../host-errors.temper.md:87:7  return listBuilderRemoveLast <- lb.removeLast()
+76:1 -> ../../host-errors.temper.md:89:5  /** <- let removeFirst(d: Deque<Int
+81:1 -> ../../host-errors.temper.md:89:5  function removeFirst(d, i) { <- let removeFirst(d: Deque<Int
+81:10 -> ../../host-errors.temper.md:89:9 (removeFirst)  removeFirst(d, i) { <- removeFirst(d: Deque<Int>, i
+81:21 -> ../../host-errors.temper.md:89:5  (d, i) { <- let removeFirst(d: Deque<Int
+82:3 -> ../../host-errors.temper.md:90:7  at(i); <- at(i);
+83:3 -> ../../host-errors.temper.md:91:7  return dequeRemoveFirst(d); <- d.removeFirst()
+86:1 -> ../../host-errors.temper.md:107:5  /** <- let sum(ls: List<Int>, i: In
+91:1 -> ../../host-errors.temper.md:107:5  function sum(ls, i) { <- let sum(ls: List<Int>, i: In
+91:10 -> ../../host-errors.temper.md:107:9 (sum)  sum(ls, i) { <- sum(ls: List<Int>, i: Int):
+91:13 -> ../../host-errors.temper.md:107:5  (ls, i) { <- let sum(ls: List<Int>, i: In
+92:3 -> ../../host-errors.temper.md:108:7  at(i); <- at(i);
+93:3 -> ../../host-errors.temper.md:109:7  return listedReduce(/** @typ <- ls.reduce(fn (a: Int, b: Int
+96:1 -> ../../host-errors.temper.md:120:5  /** <- let codeAt(s: String, i: Int
+101:1 -> ../../host-errors.temper.md:120:5  function codeAt(s, i) { <- let codeAt(s: String, i: Int
+101:10 -> ../../host-errors.temper.md:120:9 (codeAt)  codeAt(s, i) { <- codeAt(s: String, i: Int): I
+101:16 -> ../../host-errors.temper.md:120:5  (s, i) { <- let codeAt(s: String, i: Int
+102:3 -> ../../host-errors.temper.md:121:7  at(i); <- at(i);
+103:3 -> ../../host-errors.temper.md:122:7  return stringGet(s, s.length <- s[s.end]
+106:1 -> ../../host-errors.temper.md:133:5  /** <- let replaced(i: Int): String
+110:1 -> ../../host-errors.temper.md:133:5  function replaced(i) { <- let replaced(i: Int): String
+110:10 -> ../../host-errors.temper.md:133:9 (replaced)  replaced(i) { <- replaced(i: Int): String thr
+110:18 -> ../../host-errors.temper.md:133:5  (i) { <- let replaced(i: Int): String
+111:3 -> ../../host-errors.temper.md:134:7  at(i); <- at(i);
+112:3 -> ../../host-errors.temper.md:135:7  return /** @type {RegexNode} <- /b/.replace("abc") { match =
+115:1 -> ../../host-errors.temper.md:27:5  it("list read", async functi <- test("list read") {
+118:5 -> ../../host-errors.temper.md:28:7  /** @type {number} */ <- let r = read([1, 2], 5) orel
+119:5 -> ../../host-errors.temper.md:28:7  let r; <- let r = read([1, 2], 5) orel
+120:5 -> ../../host-errors.temper.md:28:7  try { <- let r = read([1, 2], 5) orel
+126:5 -> ../../host-errors.temper.md:29:7  test.assert(r !== -1, () => <- assert(r != -1) { "caught" }
+133:1 -> ../../host-errors.temper.md:32:5  it("list read at the end", a <- test("list read at the end")
+136:5 -> ../../host-errors.temper.md:33:7  /** @type {readonly number[] <- let ls = [1, 2];
+137:5 -> ../../host-errors.temper.md:33:7  const ls = Object.freeze([1, <- let ls = [1, 2];
+138:5 -> ../../host-errors.temper.md:34:7  /** @type {number} */ <- let r = read(ls, ls.length)
+139:5 -> ../../host-errors.temper.md:34:7  let r; <- let r = read(ls, ls.length)
+140:5 -> ../../host-errors.temper.md:34:7  try { <- let r = read(ls, ls.length)
+146:5 -> ../../host-errors.temper.md:35:7  test.assert(r !== -1, () => <- assert(r != -1) { "caught" }
+153:1 -> ../../host-errors.temper.md:38:5  it("negative index", async f <- test("negative index") {
+156:5 -> ../../host-errors.temper.md:39:7  /** @type {number} */ <- let r = read(built(), -1) or
+157:5 -> ../../host-errors.temper.md:39:7  let r; <- let r = read(built(), -1) or
+158:5 -> ../../host-errors.temper.md:39:7  try { <- let r = read(built(), -1) or
+164:5 -> ../../host-errors.temper.md:40:7  test.assert(r !== -1, () => <- assert(r != -1) { "caught" }
+171:1 -> ../../host-errors.temper.md:55:5  it("set", async function () <- test("set") {
+174:5 -> ../../host-errors.temper.md:56:7  /** @type {number} */ <- let r = write(built(), 5) or
+175:5 -> ../../host-errors.temper.md:56:7  let r; <- let r = write(built(), 5) or
+176:5 -> ../../host-errors.temper.md:56:7  try { <- let r = write(built(), 5) or
+182:5 -> ../../host-errors.temper.md:57:7  test.assert(r !== -1, () => <- assert(r != -1) { "caught" }
+189:1 -> ../../host-errors.temper.md:60:5  it("set at the end", async f <- test("set at the end") {
+192:5 -> ../../host-errors.temper.md:61:7  /** @type {number[]} */ <- let lb = built();
+193:5 -> ../../host-errors.temper.md:61:7  const lb = built(); <- let lb = built();
+194:5 -> ../../host-errors.temper.md:62:7  /** @type {number} */ <- let r = write(lb, lb.length)
+195:5 -> ../../host-errors.temper.md:62:7  let r; <- let r = write(lb, lb.length)
+196:5 -> ../../host-errors.temper.md:62:7  try { <- let r = write(lb, lb.length)
+202:5 -> ../../host-errors.temper.md:63:7  test.assert(r !== -1, () => <- assert(r != -1) { "caught" }
+209:1 -> ../../host-errors.temper.md:66:5  it("insert", async function <- test("insert") {
+212:5 -> ../../host-errors.temper.md:67:7  /** @type {number} */ <- let r = insert(built(), 5) o
+213:5 -> ../../host-errors.temper.md:67:7  let r; <- let r = insert(built(), 5) o
+214:5 -> ../../host-errors.temper.md:67:7  try { <- let r = insert(built(), 5) o
+220:5 -> ../../host-errors.temper.md:68:7  test.assert(r !== -1, () => <- assert(r != -1) { "caught" }
+227:1 -> ../../host-errors.temper.md:71:5  it("insert past the end", as <- test("insert past the end")
+230:5 -> ../../host-errors.temper.md:72:7  /** @type {number[]} */ <- let lb = built();
+231:5 -> ../../host-errors.temper.md:72:7  const lb = built(); <- let lb = built();
+232:5 -> ../../host-errors.temper.md:73:7  /** @type {number} */ <- let r = insert(lb, lb.length
+233:5 -> ../../host-errors.temper.md:73:7  let r; <- let r = insert(lb, lb.length
+234:5 -> ../../host-errors.temper.md:73:7  try { <- let r = insert(lb, lb.length
+240:5 -> ../../host-errors.temper.md:74:7  test.assert(r !== -1, () => <- assert(r != -1) { "caught" }
+247:1 -> ../../host-errors.temper.md:77:5  it("insert at the end append <- test("insert at the end appe
+250:5 -> ../../host-errors.temper.md:78:7  /** @type {number[]} */ <- let lb = built();
+251:5 -> ../../host-errors.temper.md:78:7  const lb = built(); <- let lb = built();
+252:5 -> ../../host-errors.temper.md:79:7  /** @type {number} */ <- let n = insert(lb, lb.length
+253:5 -> ../../host-errors.temper.md:79:7  let n; <- let n = insert(lb, lb.length
+254:5 -> ../../host-errors.temper.md:79:7  try { <- let n = insert(lb, lb.length
+260:5 -> ../../host-errors.temper.md:80:7  test.assert(n === 2 && liste <- assert(n == 2 && lb[1] == 2)
+267:1 -> ../../host-errors.temper.md:94:5  it("remove last", async func <- test("remove last") {
+270:5 -> ../../host-errors.temper.md:95:7  /** @type {number} */ <- let r = removeLast(new ListB
+271:5 -> ../../host-errors.temper.md:95:7  let r; <- let r = removeLast(new ListB
+272:5 -> ../../host-errors.temper.md:95:7  try { <- let r = removeLast(new ListB
+278:5 -> ../../host-errors.temper.md:96:7  test.assert(r !== -1, () => <- assert(r != -1) { "caught" }
+285:1 -> ../../host-errors.temper.md:99:5  it("remove first", async fun <- test("remove first") {
+288:5 -> ../../host-errors.temper.md:100:7  /** @type {number} */ <- let r = removeFirst(new Dequ
+289:5 -> ../../host-errors.temper.md:100:7  let r; <- let r = removeFirst(new Dequ
+290:5 -> ../../host-errors.temper.md:100:7  try { <- let r = removeFirst(new Dequ
+296:5 -> ../../host-errors.temper.md:101:7  test.assert(r !== -1, () => <- assert(r != -1) { "caught" }
+303:1 -> ../../host-errors.temper.md:112:5  it("reduce", async function <- test("reduce") {
+306:5 -> ../../host-errors.temper.md:113:7  /** @type {number} */ <- let r = sum([], 0) orelse -1
+307:5 -> ../../host-errors.temper.md:113:7  let r; <- let r = sum([], 0) orelse -1
+308:5 -> ../../host-errors.temper.md:113:7  try { <- let r = sum([], 0) orelse -1
+314:5 -> ../../host-errors.temper.md:114:7  test.assert(r !== -1, () => <- assert(r != -1) { "caught" }
+321:1 -> ../../host-errors.temper.md:125:5  it("string read", async func <- test("string read") {
+324:5 -> ../../host-errors.temper.md:126:7  /** @type {number} */ <- let r = codeAt("ab", 0) orel
+325:5 -> ../../host-errors.temper.md:126:7  let r; <- let r = codeAt("ab", 0) orel
+326:5 -> ../../host-errors.temper.md:126:7  try { <- let r = codeAt("ab", 0) orel
+332:5 -> ../../host-errors.temper.md:127:7  test.assert(r !== -1, () => <- assert(r != -1) { "caught" }
+339:1 -> ../../host-errors.temper.md:138:5  it("replace callback", async <- test("replace callback") {
+342:5 -> ../../host-errors.temper.md:139:7  /** @type {string} */ <- let r = replaced(3) orelse "
+343:5 -> ../../host-errors.temper.md:139:7  let r; <- let r = replaced(3) orelse "
+344:5 -> ../../host-errors.temper.md:139:7  try { <- let r = replaced(3) orelse "
+350:5 -> ../../host-errors.temper.md:140:7  test.assert(r !== "", () => <- assert(r != "") { "caught" }

@@ -32,7 +32,8 @@
 //!   as Kotlin's suite picks; goldens show it as [`TEST_SERVER_PORT`].
 //! - **Runs:** [`check_log`] compares what a program logged with what's
 //!   expected, its line ends as on Linux ([`printed`]), and
-//!   [`check_case`] also that a run expected to fail does, and
+//!   [`check_case`] also that a run expected to fail does, saying what
+//!   its `stderr` blocks say and nothing its `stderr-absent` blocks do, and
 //!   [`threads_expected`] is what `module-state` from 8 threads logs;
 //!   for a test that runs as tests ([`TESTS`]), [`check_tests`] compares
 //!   its failures, as a backend's runner reports them
@@ -276,19 +277,20 @@ pub fn without_net(cases: &mut [Case]) {
 /// and what nothing does, which runs as tests ([`AS_TESTS`]), as does
 /// `test-panics`, whose tests that panic fail alone, `test-fails`,
 /// whose tests' hard failures no `orelse` stops, and
-/// `test-assert-panics`, whose `assertPanics` pass only on a panic, and
+/// `test-assert-panics`, whose `assertPanics` pass only on a panic,
 /// `test-async`, whose tests fail for what fails in the async work they
-/// start;
+/// start, and `host-errors`, builtins whose docs say they panic (index
+/// errors) and a builtin's callback panicking on every backend, past
+/// `orelse`, a test each, failing saying why;
 /// `panics` `orelse` handling bubbles from everywhere but never a
-/// panic, whose run fails ([`FAILING`]); `host-errors` builtins whose docs say
-/// they panic (index errors) panicking on every backend, past `orelse`,
-/// one run per section, each saying why on stderr; `jump-values`
+/// panic, whose run fails ([`FAILING`]); `jump-values`
 /// `return`, `break`, and `continue` as values of type `Never`;
 /// `panic-causes` a panic keeping the bubble it replaces as its cause,
 /// and what an uncaught bubble or panic says, a run per section; and
 /// `host-error-causes` a host's error passing `orelse panic()`, with
-/// host code ([`HOST_CODE`]).
-pub const PROGRAMS: [&str; 29] = [
+/// host code ([`HOST_CODE`]), as has `host-error-tests`, whose host
+/// error passes `assertPanics` too, run as tests.
+pub const PROGRAMS: [&str; 30] = [
     "classes",
     "nullables",
     "generics",
@@ -318,19 +320,20 @@ pub const PROGRAMS: [&str; 29] = [
     "jump-values",
     "panic-causes",
     "host-error-causes",
+    "host-error-tests",
 ];
 
 /// The shared programs whose run fails, after logging what's expected
-/// ([`Case::fails`]): `panics`, whose panic no `orelse` stops,
-/// `host-errors`, whose panics none does, and `panic-causes` and
-/// `host-error-causes`, whose failures nothing handles. A failing program with
-/// sections runs each on its own (`runs`), as a run fails only once.
-pub const FAILING: [&str; 4] = ["panics", "host-errors", "panic-causes", "host-error-causes"];
+/// ([`Case::fails`]): `panics`, whose panic no `orelse` stops, and
+/// `panic-causes` and `host-error-causes`, whose failures nothing
+/// handles. A failing program with sections runs each on its own
+/// (`runs`), as a run fails only once.
+pub const FAILING: [&str; 3] = ["panics", "panic-causes", "host-error-causes"];
 
 /// The shared programs with host code, in a directory of their own
 /// beside their host files, each backend's as a functional test's
 /// ([`CONNECTED`]), which name their library as the program.
-pub const HOST_CODE: [&str; 1] = ["host-error-causes"];
+pub const HOST_CODE: [&str; 2] = ["host-error-causes", "host-error-tests"];
 
 /// The shared programs that run as tests, as a functional test with
 /// `runAsTest = true` does: their tests check what a log can't, as the
@@ -338,12 +341,14 @@ pub const HOST_CODE: [&str; 1] = ["host-error-causes"];
 /// fail. Those expected to fail are in `failures` blocks, a line each,
 /// a test's name and text its failure's cause contains, after `: `;
 /// text a test's failure mustn't contain is in `absent` blocks, alike.
-pub const AS_TESTS: [&str; 5] = [
+pub const AS_TESTS: [&str; 7] = [
     "reach",
     "test-panics",
     "test-fails",
     "test-assert-panics",
     "test-async",
+    "host-errors",
+    "host-error-tests",
 ];
 
 /// What only the shared `reach` program's tests reach, by their Temper
@@ -455,6 +460,10 @@ pub struct Case {
     /// What a run that fails must say on stderr, each line somewhere in
     /// it: a shared program's `stderr` blocks that apply ([`check_case`]).
     pub stderr: Vec<String>,
+    /// What such a run mustn't say on stderr, each line nowhere in it:
+    /// its `stderr-absent` blocks that apply, as a cause that shouldn't
+    /// be there.
+    pub stderr_absent: Vec<String>,
 }
 
 impl Case {
@@ -468,7 +477,7 @@ impl Case {
     /// Whether any of its modules imports a std module: its source's, and
     /// for a library of several, as `modules`, its other modules', and
     /// those of the shared libraries it imports.
-    fn imports_std(&self) -> bool {
+    pub fn imports_std(&self) -> bool {
         let std = |text: &str| text.contains("import(\"std/");
         if self.sources.iter().any(|(_, text)| std(text)) {
             return true;
@@ -500,6 +509,7 @@ impl Case {
             absent: Vec::new(),
             fails: false,
             stderr: Vec::new(),
+            stderr_absent: Vec::new(),
         }
     }
 }
@@ -578,6 +588,7 @@ pub fn functional_cases(backend: &str, tests: &[&str]) -> Vec<Case> {
             absent: Vec::new(),
             fails: test.expects_run_failure(),
             stderr: Vec::new(),
+            stderr_absent: Vec::new(),
         };
         if !case.host_files.is_empty() {
             cases.push(case.clone());
@@ -634,6 +645,7 @@ fn cases_of(backend: &str, programs: &[&str]) -> Vec<Case> {
                 library: key,
                 expected,
                 stderr: temper_funtests::fenced_lines(&text, "stderr", &[backend]),
+                stderr_absent: temper_funtests::fenced_lines(&text, "stderr-absent", &[backend]),
                 sources: vec![(path.to_string_lossy().into_owned(), text)],
                 dir: if in_dir { dir.join(file) } else { dir.clone() },
                 libraries: if LIBRARIES.contains(&file) {
@@ -1218,22 +1230,29 @@ pub fn check_case(failures: &mut Vec<String>, name: &str, out: &Output, case: &C
     let stdout = printed(&out.stdout);
     let actual: Vec<&str> = stdout.lines().collect();
     let stderr = String::from_utf8_lossy(&out.stderr);
-    let unsaid = unsaid(case, &stderr);
-    if out.status.success() || actual != case.expected || unsaid.is_some() {
-        let unsaid = unsaid.map_or(String::new(), |s| format!(", not saying {s:?}"));
+    let wrong = wrongly_said(case, &stderr);
+    if out.status.success() || actual != case.expected || wrong.is_some() {
+        let wrong = wrong.map_or(String::new(), |s| format!(", {s}"));
         failures.push(format!(
-            "{name}: expected {:?} and a failed run, got {actual:?} ({}){unsaid}\n{stderr}",
+            "{name}: expected {:?} and a failed run, got {actual:?} ({}){wrong}\n{stderr}",
             case.expected, out.status,
         ));
     }
 }
 
-/// The first of what a failing case's run should say ([`Case::stderr`])
-/// that `said` lacks, if any.
-pub fn unsaid<'a>(case: &'a Case, said: &str) -> Option<&'a str> {
-    (case.stderr.iter())
+/// What's wrong with what a failing case's run said, `said`, if
+/// anything: the first line it should say that it doesn't
+/// ([`Case::stderr`]), or the first it shouldn't that it does
+/// ([`Case::stderr_absent`]).
+pub fn wrongly_said(case: &Case, said: &str) -> Option<String> {
+    let unsaid = (case.stderr.iter())
         .map(|s| s.trim())
-        .find(|s| !said.contains(s))
+        .find(|s| !said.contains(s));
+    let absent = (case.stderr_absent.iter())
+        .map(|s| s.trim())
+        .find(|s| said.contains(s));
+    (unsaid.map(|s| format!("not saying {s:?}")))
+        .or_else(|| absent.map(|s| format!("saying {s:?}")))
 }
 
 /// A run as tests: each test that ran, its name as its runner gives it,

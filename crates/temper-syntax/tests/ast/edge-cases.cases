@@ -590,3 +590,9 @@ error 69..70: Put this `return` in parentheses: a comma here would be part of wh
 error 81..82: Put this `throw` in parentheses: a comma here would be part of what it throws
 error 99..100: Put this `return` in parentheses: a comma here would be part of what it returns
 error 91..102: `(...,...)` syntax is reserved for tuples.  Use `do {...}` to group statements
+
+=== a bare return or break in arguments returns nothing: the comma after it is the call's
+f(return, 1);
+f(break, 1);
+--- ast
+(Block (Call f (Call return) 1) (Call f (Call break) 1) #void)

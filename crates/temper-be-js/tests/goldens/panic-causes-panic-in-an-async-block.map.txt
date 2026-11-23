@@ -1,0 +1,12 @@
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../panic-causes.temper.md:292:5  /** <- let third(ls: List<Int>): In
+7:1 -> ../panic-causes.temper.md:292:5  function third(ls) { <- let third(ls: List<Int>): In
+7:10 -> ../panic-causes.temper.md:292:9 (third)  third(ls) { <- third(ls: List<Int>): Int {
+7:15 -> ../panic-causes.temper.md:292:5  (ls) { <- let third(ls: List<Int>): In
+8:3 -> ../panic-causes.temper.md:292:37  return listedGet(/** @type { <- ls[2] }
+11:1 -> ../panic-causes.temper.md:16:5  console.log("before"); <- console.log("before");
+13:1 -> ../panic-causes.temper.md:293:11  /** <- { (): GeneratorResult<Empty>
+17:1 -> ../panic-causes.temper.md:293:11  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
+18:3 -> ../panic-causes.temper.md:294:7  console.log("in async"); <- console.log("in async");
+19:3 -> ../panic-causes.temper.md:295:7  third(Object.freeze([1, 2])) <- third([1, 2]);
+22:1 -> ../panic-causes.temper.md:293:5  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<

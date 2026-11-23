@@ -1,0 +1,51 @@
+tmpl 1 model 1 library `panic-causes-panic-in-an-async-block` 0.0.0
+
+uses `temper-core`#3 0.0.0-alpha.0.0 {
+  class List#4<T#5> extends Listed#6<T#5> {
+    connected method get#13(index: Int32): T#5;
+  }
+  interface Listed#6<T#7> {}
+  interface Console#9 {
+    connected method log#10(message: String): Void;
+  }
+  connected fn async#14(generatorFactory: fn (): SafeGenerator#15<Empty#19>): Void;
+  interface SafeGenerator#15<YIELD#16> extends Generator#17<YIELD#16> {}
+  interface Generator#17<YIELD#18> {}
+  class Empty#19 {}
+  class ValueResult#20<YIELD#21> extends GeneratorResult#22<YIELD#21> {
+    connected constructor constructor#24(value: YIELD#21): ValueResult#20<YIELD#21>;
+  }
+  interface GeneratorResult#22<YIELD#23> {}
+  connected fn doneResult#25<YIELD#26>(): DoneResult#27<YIELD#26>;
+  class DoneResult#27<YIELD#28> extends GeneratorResult#22<YIELD#28> {}
+  connected fn empty#29(): Empty#19;
+  connected fn safeAdaptGeneratorFn#30<YIELD#31>(step: fn (SafeGenerator#15<YIELD#31>): GeneratorResult#22<YIELD#31>): SafeGenerator#15<YIELD#31>;
+  connected fn awakeUpon#32<T#33>(promise: Promise#34<T#33>, generator: SafeGenerator#15<Empty#19>): Void;
+  class Promise#34<R#35> {}
+  connected fn getPromiseResultSync#36<T#37>(promise: Promise#34<T#37>): T#37 throws Bubble;
+  connected fn getConsole#39(name?: String): Console#9;
+}
+
+module `panic-causes-panic-in-an-async-block`#0 {
+  let ~console#11: Console#9;
+
+  fn positive#1(n#8: Int32): Int32 throws Bubble {
+    if (%Int32.le(n#8, 0)) {
+      (bubble()^): Void;
+    }
+    return n#8;
+  }
+
+  fn third#2(ls#12: List#4<Int32>): Int32 {
+    return ls#12.get#13(2);
+  }
+
+  init {
+    init ~console#11 = getConsole#39(omitted);
+    ~console#11.log#10("before");
+    async#14((fn generator ~fn#38(): SafeGenerator#15<Empty#19> {
+      ~console#11.log#10("in async");
+      third#2((list(1, 2)): List#4<Int32>);
+    }): fn (): SafeGenerator#15<Empty#19>);
+  }
+}

@@ -58,7 +58,7 @@ mod tests {
     }
 
     #[test]
-    fn panics_outright() -> temper_core::Result<()> {
+    fn dies_outright() -> temper_core::Result<()> {
         crate::init(None)?;
         temper_std::init(None)?;
         let _test = temper_std::testing::Test::new();

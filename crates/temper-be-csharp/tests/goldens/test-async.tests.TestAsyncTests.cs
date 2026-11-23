@@ -167,7 +167,7 @@ public class TestAsyncTests
     }
 
     [TestMethod]
-    public void PanicsInAnAsyncBlock()
+    public void DiesInAnAsyncBlock()
     {
         Test test = new Test();
         try
@@ -203,6 +203,57 @@ public class TestAsyncTests
                 int expected = 2;
                 test.Assert(actual == expected, () => string.Create(CultureInfo.InvariantCulture, $"expected 1 + 1 == ({expected}) not ({actual})"));
             }
+        }
+        finally
+        {
+            global::TemperLang.Core.Async.FinishAsyncWork();
+            test.SoftFailToHard();
+        }
+    }
+
+    [TestMethod]
+    public void WaitsOnNothing()
+    {
+        Test test = new Test();
+        try
+        {
+            TaskCompletionSource<int> never = new TaskCompletionSource<int>();
+            IEnumerable<Tuple<object?>> fnSteps6()
+            {
+                int n;
+                {
+                    Task<int> promise2;
+                    try
+                    {
+                        promise2 = never.Task;
+                    }
+                    catch (global::TemperLang.Core.Bubble)
+                    {
+                        goto CATCH2;
+                    }
+                    yield return global::TemperLang.Core.Async.AwakeUpon(promise2);
+                    try
+                    {
+                        n = global::TemperLang.Core.Async.GetPromiseResult(promise2);
+                    }
+                    catch (global::TemperLang.Core.Bubble)
+                    {
+                        goto CATCH2;
+                    }
+                    goto OK2;
+                    CATCH2: ;
+                    {
+                        n = -1;
+                    }
+                    OK2: ;
+                }
+                test.Assert(false, () => "ran " + n.ToString(CultureInfo.InvariantCulture));
+            }
+            IGenerator<Tuple<object?>> fn()
+            {
+                return Core.AdaptGenerator<Tuple<object?>>(fnSteps6);
+            }
+            global::TemperLang.Core.Async.LaunchGeneratorAsync((Func<IEnumerable<Tuple<object?>>>)fn);
         }
         finally
         {
