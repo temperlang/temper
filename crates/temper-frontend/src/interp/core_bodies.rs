@@ -13,7 +13,7 @@
 //! they're the builtin types, but for those whose bodies keep their own
 //! private state (`StringBuilder`, `DenseBitVector`), which run as
 //! ordinary Temper classes, from core's `new` too. A builtin value's
-//! `content`, which core's bodies read, is the value itself.
+//! bodies read it as `this`.
 //!
 //! Nothing here runs unless asked for ([`super::run_tests_with_core_bodies`]).
 
@@ -194,7 +194,7 @@ impl CoreBodies {
     }
 
     /// `object.name` that core answers for a builtin value: its getter's
-    /// body, its `content`, which is itself, or a static field's value.
+    /// body, or a static field's value.
     pub(super) fn get(
         &self,
         interp: &mut Interp,
@@ -206,14 +206,7 @@ impl CoreBodies {
             let class = self.classes.get(TYPES[*t as usize])?;
             return static_value(s, class, name).map(Ok);
         }
-        let (class, f) = match self.member(interp, s, object, name, ROLE_GETTER) {
-            Some(found) => found,
-            None if s.library.names.get(name) == "content" => {
-                self.class_of(object)?;
-                return Some(Ok(object.clone()));
-            }
-            None => return None,
-        };
+        let (class, f) = self.member(interp, s, object, name, ROLE_GETTER)?;
         Some(interp.invoke(s, object.clone(), &class, f, Vec::new()))
     }
 
@@ -361,8 +354,8 @@ fn static_value(s: &Settled, class: &Rc<Class>, name: NameId) -> Option<Val> {
 }
 
 /// Whether a class's public constructor has a body and it has private
-/// fields of its own other than `content`, which backends' code sets:
-/// then its bodies define its state, and it runs as an ordinary class.
+/// fields of its own: then its bodies define its state, and it runs as
+/// an ordinary class.
 fn keeps_own_state(s: &Settled, class: NodeId) -> bool {
     let tree = &s.library.tree;
     let members = core::class_parts(tree, class).2;
@@ -374,12 +367,7 @@ fn keeps_own_state(s: &Settled, class: NodeId) -> bool {
     });
     let own_state = members.iter().any(|&m| {
         let data = tree.data(m);
-        let name = core::let_parts(tree, m).0;
-        let name = s.library.name(name).map(|n| s.library.names.get(n));
-        data & ROLE_MASK == 0
-            && data & MEMBER_PRIVATE != 0
-            && data & MEMBER_STATIC == 0
-            && name != Some("content")
+        data & ROLE_MASK == 0 && data & MEMBER_PRIVATE != 0 && data & MEMBER_STATIC == 0
     });
     constructor && own_state
 }

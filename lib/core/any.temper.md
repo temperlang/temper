@@ -170,6 +170,4 @@ running some tests, giving developers more flexibility in how
 they investigate what they need to do to get their code
 production-ready.
 
-    export interface Problem {
-      private let content: Problem;
-    }
+    export interface Problem {}

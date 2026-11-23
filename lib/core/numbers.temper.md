@@ -14,7 +14,6 @@ types `Int32`, aliased as `Int`, and `Int64`, and the floating point
     @imu
     @mayDowncastTo(false) // Confusable with numbers and scalars on many backends
     export class Boolean extends Equatable<Boolean> {
-      private let content: Boolean;
       private constructor();
 
       /**
@@ -23,7 +22,7 @@ types `Int32`, aliased as `Int`, and `Int64`, and the floating point
        */
       @connected
       public toString(): String {
-        if (content) { "true" } else { "false" }
+        if (this) { "true" } else { "false" }
       }
 
       @connected
@@ -106,7 +105,6 @@ code.
     @connected
     @mayDowncastTo(false) // Confusable with scalars on many dynlang backends
     export class Int32 extends MapKey<Int32> {
-      private let content: Int;
       private constructor();
 
       @connected
@@ -121,26 +119,26 @@ code.
 
       @connected
       public min(other: Int): Int {
-        if (content <= other) { content } else { other }
+        if (this <= other) { this } else { other }
       }
 
       @connected
       public max(other: Int): Int {
-        if (content >= other) { content } else { other }
+        if (this >= other) { this } else { other }
       }
 
       /** `this + 1`, the successor value used by [snippet/builtin/++]. */
       @connected
-      public succ(): Int32 { content + 1 }
+      public succ(): Int32 { this + 1 }
 
       /** `this - 1`, the predecessor value used by [snippet/builtin/--]. */
       @connected
-      public pred(): Int32 { content - 1 }
+      public pred(): Int32 { this - 1 }
 
       /** `-1` if `this < 0`, `0` if `this == 0`, or otherwise `1`. */
       @connected
       public get signum(): Int32 {
-        (content >> 31) | (-content >>> 31)
+        (this >> 31) | (-this >>> 31)
       }
 
       @connected
@@ -161,7 +159,6 @@ Possible *Int64* values range from -2<sup>63</sup> to (2<sup>63</sup> - 1).
     @mayDowncastTo(false) // Confusable with scalars on some dynlang backends.
     export class Int64 extends Equatable<Int64> {
       // TODO: Whether Int64 should be a MapKey, as Int32 and String are.
-      private let content: Int64;
       private constructor();
 
       /** Bubbles if the result isn't within the exponent error of the original. */
@@ -189,21 +186,21 @@ Possible *Int64* values range from -2<sup>63</sup> to (2<sup>63</sup> - 1).
 
       @connected
       public min(other: Int64): Int64 {
-        if (content <= other) { content } else { other }
+        if (this <= other) { this } else { other }
       }
 
       @connected
       public max(other: Int64): Int64 {
-        if (content >= other) { content } else { other }
+        if (this >= other) { this } else { other }
       }
 
       /** `this + 1i64`, the successor value used by [snippet/builtin/++]. */
       @connected
-      public succ(): Int64 { content + 1i64 }
+      public succ(): Int64 { this + 1i64 }
 
       /** `this - 1i64`, the predecessor value used by [snippet/builtin/--]. */
       @connected
-      public pred(): Int64 { content - 1i64 }
+      public pred(): Int64 { this - 1i64 }
 
       @connected
       @operator("==")
@@ -225,7 +222,6 @@ number][FP64].
     @imu
     @mayDowncastTo(false) // Confusable with scalars on many dynlang backends
     export class Float64 extends Equatable<Float64> {
-      private let content: Float64;
       private constructor();
 
       /**
@@ -323,11 +319,11 @@ number][FP64].
         relTol: Float64 = 1e-9,
         absTol: Float64 = 0.0,
       ): Boolean {
-        let margin = (content.abs().max(other.abs()) * relTol).max(absTol);
+        let margin = (this.abs().max(other.abs()) * relTol).max(absTol);
         // An infinity is near only itself. Temper's `<=` orders NaN above all
         // else, but a NaN margin admits nothing.
-        content == other || content.abs() != Infinity && other.abs() != Infinity &&
-          margin != NaN && (content - other).abs() <= margin
+        this == other || this.abs() != Infinity && other.abs() != Infinity &&
+          margin != NaN && (this - other).abs() <= margin
       }
 
       @connected
@@ -353,11 +349,11 @@ number][FP64].
 
       /** `this + 1.0`, the successor value used by [snippet/builtin/++]. */
       @connected
-      public succ(): Float64 { content + 1.0 }
+      public succ(): Float64 { this + 1.0 }
 
       /** `this - 1.0`, the predecessor value used by [snippet/builtin/--]. */
       @connected
-      public pred(): Float64 { content - 1.0 }
+      public pred(): Float64 { this - 1.0 }
 
       @connected
       @operator("==")

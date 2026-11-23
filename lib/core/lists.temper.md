@@ -162,8 +162,6 @@ See also `Listed` for recommendations on `List` vs `Listed` use.
     @partialImu
     @mayDowncastTo(false) // Just use Listed::toList if immutable wanted.
     export class List<@out T> extends Listed<T> {
-      // The content is used only from connected functions.
-      private let content: AnyValue;
       private constructor();
 
       /** Same as `[...]` syntax but provides an explicit type argument. */
@@ -204,8 +202,6 @@ values.
     @connected
     @mayDowncastTo(false) // Provides a bit of protection at least within Temper.
     export class ListBuilder<T> extends Listed<T> {
-      // The content is used only from extension functions.
-      private let content: AnyValue;
 
       @connected
       public constructor();
@@ -296,7 +292,6 @@ while (!deque.isEmpty) {
 ```
 
     export class Deque<T> {
-      private let content: ListBuilder<T>;
 
       @connected
       public constructor();

@@ -691,7 +691,7 @@ fn definition_into_core() {
     // String's own, and a static after the type's name.
     let (line, _) = found("isEmpty;", 1, 0);
     assert!(
-        line.starts_with("public get isEmpty(): Boolean { content"),
+        line.starts_with("public get isEmpty(): Boolean { this"),
         "{line}"
     );
     let (line, _) = found("fromCodePoint", 0, 0);

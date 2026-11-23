@@ -184,8 +184,6 @@ Calls [func] on each key and value in the [snippet/type/Mapped].
     @partialImu
     @mayDowncastTo(false) // Just use core.type Mapped.toMap() if immutable wanted.
     export class Map<@in K extends MapKey<K>, @out V> extends Mapped<K, V> {
-      // The content is used only from extension functions.
-      private content: AnyValue;
 
       /**
        * Preserves entry order when accessed from Temper code.
@@ -202,8 +200,6 @@ objects. Preserves insertion order when accessed from Temper code.
     @connected
     @mayDowncastTo(false) // Provides a bit of protection at least within Temper.
     export class MapBuilder<K extends MapKey<K>, V> extends Mapped<K, V> {
-      // The content is used only from connected functions.
-      private content: AnyValue;
 
       @connected
       public constructor();

@@ -224,10 +224,8 @@ builder.
 
     @connected
     export class PromiseBuilder<R extends AnyValue> {
-      private let _promise: Promise<R>;
-
       @connected
-      public get promise(): Promise<R> { _promise }
+      public get promise(): Promise<R>;
       @connected
       public constructor(): Void;
 

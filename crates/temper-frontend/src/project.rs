@@ -16,9 +16,9 @@
 //!   work root, with `-` between directories, or else `unnamed`, as
 //!   Kotlin's `libraryNameFor` decides ([`Config`]). Two libraries of one
 //!   name are an error, as in Kotlin, and so is a library named
-//!   `temper-core`, core's name, but for core in a Temper checkout
-//!   ([`is_core_checkout`]), or the copy of the built-in core that
-//!   editors write, which they open.
+//!   `temper-core`, core's name, or `std`, std's, but for that library
+//!   in a Temper checkout ([`is_checkout`]), or the copy of the built-in
+//!   one that editors write, which they open.
 //! - An import's path may start with a library's name, as
 //!   `import("other-lib/sub")`, naming that library's `sub` directory,
 //!   as Kotlin resolves it; the library's modules then build with the
@@ -449,25 +449,36 @@ impl Scan<'_> {
 /// Reads a library's sources and the modules they import, from std, and
 /// from the libraries in `all` (those of its work root), which imports
 /// name by their names. The error names a file that can't be read, or a
-/// library that takes core's name, [`crate::corelib::NAME`], but isn't
-/// core in a Temper checkout ([`is_core_checkout`]) or a copy of the
-/// built-in core, as editors write.
+/// library that takes core's name, [`crate::corelib::NAME`], or std's,
+/// `std`, but isn't that library in a Temper checkout ([`is_checkout`])
+/// or a copy of the built-in one, as editors write. Std from either is
+/// std: its root is [`Library::std_root`].
 pub fn load_library(
     sources: &Sources,
     library: &LibrarySources,
     all: &[LibrarySources],
 ) -> Result<Library, String> {
     let mut loaded = Library::new();
+    let root = &library.root;
+    let reserved =
+        |name: &str, what: &str| format!("{root}: {name} is reserved for Temper's {what}");
     if library.config.name == crate::corelib::NAME {
-        let root = &library.root;
-        if is_core_checkout(sources, root) {
+        if is_checkout(sources, root, "core", "corelib.rs") {
             loaded.core_root = Some(root.clone());
-        } else if !is_core_copy(sources, library) {
-            let name = crate::corelib::NAME;
-            return Err(format!(
-                "{root}: {name} is reserved for Temper's core library"
-            ));
+        } else if !is_copy(sources, library, crate::corelib::SOURCES) {
+            return Err(reserved(crate::corelib::NAME, "core library"));
         }
+    }
+    if library.config.name == STD_NAME {
+        let std_sources: Vec<(&str, &str)> = (crate::stdlib::FILES.iter().copied())
+            .filter(|&(path, _)| path != "config.temper.md")
+            .collect();
+        if !is_checkout(sources, root, "std", "stdlib.rs")
+            && !is_copy(sources, library, &std_sources)
+        {
+            return Err(reserved(STD_NAME, "std library"));
+        }
+        loaded.std_dir = Some(root.clone());
     }
     loaded.libraries = (all.iter())
         .map(|l| (l.config.name.clone(), l.root.clone()))
@@ -480,11 +491,15 @@ pub fn load_library(
     Ok(loaded)
 }
 
-/// Whether a library's root is core's in a Temper checkout, whose
-/// core sources are core's whatever their text ([`Library::in_core`]):
-/// `lib/core` in the workspace that holds the compiler's
-/// `crates/temper-frontend/src/corelib.rs`, which builds core in.
-pub fn is_core_checkout(sources: &Sources, root: &str) -> bool {
+/// std's name, which only std may take ([`load_library`]).
+const STD_NAME: &str = "std";
+
+/// Whether a library's root is core's or std's in a Temper checkout,
+/// `lib/DIR` in the workspace that holds the compiler's
+/// `crates/temper-frontend/src/MARKER`, which builds it in, as
+/// `corelib.rs` does core: core's sources there are core's whatever
+/// their text ([`Library::in_core`]), as std's are std's.
+pub fn is_checkout(sources: &Sources, root: &str, dir: &str, marker: &str) -> bool {
     let has = |dir: &Path, name: &str| {
         let dir = match dir.as_os_str().is_empty() {
             true => ".".to_string(),
@@ -497,30 +512,28 @@ pub fn is_core_checkout(sources: &Sources, root: &str) -> bool {
     let paths = [Some(Path::new(root).to_path_buf()), absolute];
     paths.into_iter().flatten().any(|path| {
         let repo = path.parent().and_then(Path::parent);
-        path.ends_with("lib/core")
+        path.ends_with(format!("lib/{dir}"))
             && repo.is_some_and(|repo| {
-                has(repo, "Cargo.toml")
-                    && has(&repo.join("crates/temper-frontend/src"), "corelib.rs")
+                has(repo, "Cargo.toml") && has(&repo.join("crates/temper-frontend/src"), marker)
             })
     })
 }
 
-/// Whether a library is a copy of the built-in core, as editors write
-/// for going to core's definitions: its source files are
-/// [`crate::corelib::SOURCES`] at its root, each with the built-in text.
-fn is_core_copy(sources: &Sources, library: &LibrarySources) -> bool {
-    let core = crate::corelib::SOURCES;
-    library.files.len() == core.len()
+/// Whether a library is a copy of built-in core's or std's `files`, as
+/// editors write for going to their definitions: its source files are
+/// those, by path from its root, each with the built-in text.
+fn is_copy(sources: &Sources, library: &LibrarySources, files: &[(&str, &str)]) -> bool {
+    library.files.len() == files.len()
         && (library.files.iter()).all(|file| {
-            let path = Path::new(file);
-            let text = |name| {
-                let (_, text) = core.iter().find(|(core, _)| name == *core)?;
-                Some(*text)
+            let rest = match library.root.as_str() {
+                "." => Some(Path::new(file)),
+                root => Path::new(file).strip_prefix(root).ok(),
             };
-            let built_in = (path.file_name()).and_then(|name| text(name.to_str()?));
-            path.parent() == Some(Path::new(&library.root))
-                && built_in
-                    .is_some_and(|built_in| sources.read(file).is_ok_and(|read| read == built_in))
+            let built_in = rest.and_then(|rest| {
+                let rest = slashed(&rest.to_string_lossy());
+                files.iter().find(|(path, _)| *path == rest)
+            });
+            built_in.is_some_and(|(_, text)| sources.read(file).is_ok_and(|read| read == *text))
         })
 }
 

@@ -40,7 +40,7 @@ pub const DENIED_MEMBERS: &[(&str, &str, &str)] = &[("temporal", "Date", "today"
 fn std_module(s: &Settled, node: NodeId) -> Option<String> {
     let file = s.library.locate(s.library.tree.span(node).start).0;
     let path = &s.library.files[file.0 as usize].path;
-    let rest = path.strip_prefix(&format!("{}/", s.library.std_root()))?;
+    let rest = s.library.std_path(path)?;
     Some(rest.split('/').next().unwrap_or("").to_string())
 }
 

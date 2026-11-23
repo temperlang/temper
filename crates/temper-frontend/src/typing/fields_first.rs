@@ -183,7 +183,7 @@ impl Settle {
             }
             let header = role(field) == ROLE_PARAM;
             if init.is_some() || header || ctors.is_empty() {
-                if init.is_none() && !header && !self.core_content(field) {
+                if init.is_none() && !header {
                     let name = self.lib.names.get(cx.fields[i]).to_string();
                     let span = tree.span(tree.children(field)[0]);
                     cx.errors
@@ -225,15 +225,6 @@ impl Settle {
             }
         }
         cx.errors
-    }
-
-    /// Core's `content` fields, which backends' own code sets, as Kotlin
-    /// allows in core.
-    fn core_content(&self, field: NodeId) -> bool {
-        let tree = &self.lib.tree;
-        let name = tree.children(field)[0];
-        let named = (self.lib.name(name)).is_some_and(|n| self.lib.names.get(n) == "content");
-        named && self.lib.in_core(tree.span(field).start)
     }
 
     /// Walks a node, given which fields are set before it, and gives

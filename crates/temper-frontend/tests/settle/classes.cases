@@ -1022,3 +1022,43 @@ console.log(q.k());
   (Call (Call . console \log) (Call (Call . q:1 \k)))
   #void)
 log ok
+
+=== a type parameter can't be made or extended, though generic classes can
+interface I<T> extends T {}
+class C<T> extends I<T>, T {}
+let mk<T>(): T { new T() }
+interface J<T> {}
+class Box<T>(public x: T) extends J<T> {
+  public copy(): Box<T> { new Box<T>(x) }
+}
+let wrap<T>(x: T): Box<T> { new Box<T>(x) }
+console.log("${wrap<Int>(1).copy().x}");
+--- settled
+(Block
+  (Interface ^I:0 (TypeParam ^T:6) T:6)
+  (Class ^C:1 (TypeParam ^T:8) (Call <> I:0 T:8) T:8)
+  (Let ^mk:2 (Fn (TypeParam ^T:10) T:10 (Block (Call new (Error)))))
+  (Interface ^J:3 (TypeParam ^T:11))
+  (Class
+    ^Box:4
+    (TypeParam ^T:13)
+    (Call <> J:3 T:13)
+    (Param ^x:15 T:13)
+    (Method
+      ^copy:16
+      (Fn (Call <> Box:4 T:13) (Block (Call new (Call <> Box:4 T:13) x:15)))))
+  (Let
+    ^wrap:5
+    (Fn
+      (TypeParam ^T:17)
+      (Let ^x:18 T:17)
+      (Call <> Box:4 T:17)
+      (Block (Call new (Call <> Box:4 T:17) x:18))))
+  (Call
+    (Call . console \log)
+    (Call cat (Call . (Call (Call . (Call wrap:5 \typeArg Int 1) \copy)) \x)))
+  #void)
+error 23..24: Cannot extend type parameter T
+error 53..54: Cannot extend type parameter T
+error 79..80: Cannot instantiate type parameter T
+log 1

@@ -1122,10 +1122,10 @@ mod tests {
         assert_eq!(*ret, CoreType::Applied(list, vec![string]));
         // Private fields aren't members to callers.
         assert!(
-            core_class("Boolean")
+            core_class("StringBuilder")
                 .members
                 .iter()
-                .all(|m| m.name != "content")
+                .all(|m| m.name != "substrings")
         );
         // Each type is found, though some declare no members.
         let empty = ["GeneratorResult", "Promise", "NoStringIndex"];

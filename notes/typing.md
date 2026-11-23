@@ -1258,8 +1258,9 @@ backends read the unset field. Tempest checks it after typing
   there; otherwise "Property b not initialized in constructor", at the
   constructor. A class without a constructor reports each field with
   neither an initializer nor a header place, at the field, which is
-  Kotlin's one check of this, with its message. As in Kotlin, core's
-  own `content` fields are exempt.
+  Kotlin's one check of this, with its message. Kotlin exempts core's
+  `content` fields, which describe a host's representation; core has
+  none (notes/core-bodies.md, "Fields").
 - **Messages** say what was done and which fields aren't set yet:
   "Calling this.sum() before b is set", "Reading this.b before b is
   set", "Calling getter this.twice before b is set", "Using this before

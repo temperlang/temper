@@ -301,6 +301,13 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
 
 ### Language and types
 
+- **A type parameter can't be made or extended** (2026-11-21). Kotlin
+  reports `new T()` as "Malformed type reference", and crashes on
+  `interface I<T> extends T {}` (a `ClassCastException` in
+  `checkSealedExtension`). Temper reports "Cannot instantiate type
+  parameter T" and "Cannot extend type parameter T", in core too.
+  Test: temper-frontend/tests/settle/classes.cases.
+
 - **An undeclared name in a branch that never runs,** `if (DEBUG) {
   console.log("${missing}"); }` with `let DEBUG = false;`, isn't
   reported by Kotlin, which folds the `if` away before it looks names
@@ -892,7 +899,18 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   any other library named `temper-core` is an error, so none gets core's
   powers (as naming `_listify`) or writes over core's output.
   Test: temper-frontend/tests/library_tests.rs,
-  `temper_core_is_reserved`.
+  `temper_core_is_reserved`. Likewise `std` (2026-11-21): a Temper
+  checkout's `lib/std`, or the copy of the built-in std that editors
+  write, builds and settles as std, its `@json` code and `@connected`
+  members its own, rather than beside the built-in std (whose
+  `JsonProducer` it took for another), and any other library named
+  `std` is an error. Test: `std_is_reserved`.
+
+- **Core's classes have no representation-only fields** (2026-11-21).
+  Kotlin's core declares a `private let content` on each builtin
+  class, which only backends' code sets, and its fields-initialized
+  check exempts them; Temper's core has none, its bodies read `this`
+  instead, so the exemption is gone (notes/core-bodies.md, "Fields").
 
 - **`Float64.toString` cuts at 16 digits** in the interpreter
   (`FormatDouble.kt`), so `0.30000000000000004` prints as

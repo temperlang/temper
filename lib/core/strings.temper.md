@@ -28,7 +28,6 @@ multi-line strings with interpolation, use triple-quotes: `"""` for multi-line s
     @connected
     @mayDowncastTo(false) // Confusable with scalars on many dynlang backends, and dates in older PLs
     export class String extends MapKey<String> {
-      private let content: String;
       private constructor();
 
       /**
@@ -45,7 +44,7 @@ multi-line strings with interpolation, use triple-quotes: `"""` for multi-line s
 
       /** True iff this string has no code-points. */
       @connected
-      public get isEmpty(): Boolean { content == "" }
+      public get isEmpty(): Boolean { this == "" }
 
       /**
        * A string index that works for the start of any string.
@@ -296,7 +295,7 @@ multi-line strings with interpolation, use triple-quotes: `"""` for multi-line s
       public toInt64(radix: Int = 10): Int64 throws Bubble;
 
       @connected
-      public toString(): String { content }
+      public toString(): String { this }
 
       @connected
       @operator("==")

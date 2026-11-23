@@ -4,7 +4,8 @@
 //! extended outside core. Each is checked on the type that `new`'s class
 //! or a supertype evaluates to, so an alias, as `let I = Int32;`, is
 //! checked as the type it names. A builtin type core doesn't declare
-//! enables nothing: it can't be made or extended.
+//! enables nothing: it can't be made or extended. Nor can a type
+//! parameter, which may stand for any type within its bound.
 
 use super::Settle;
 use crate::core;
@@ -24,17 +25,23 @@ impl Settle {
         }
     }
 
-    /// Reports `new T(…)` for a builtin type `T` that core declares as
-    /// an interface, or as a class without a public constructor, unless
-    /// it's core's own code, which makes its classes' values.
+    /// Reports `new T(…)` for a type parameter `T`, or for a builtin
+    /// type `T` that core declares as an interface, or as a class
+    /// without a public constructor, unless it's core's own code, which
+    /// makes its classes' values.
     pub(super) fn check_builtin_new(&mut self, call: NodeId) {
         let Some(&target) = self.lib.tree.children(call).get(1) else {
             return;
         };
+        let t = self.eval_type(target);
+        if let TypeData::Param(_) = self.typing.types.get(t) {
+            let name = self.show(t);
+            self.error(target, Message::CannotInstantiateTypeParam(name));
+            return;
+        }
         if self.lib.in_core(self.lib.tree.span(call).start) {
             return;
         }
-        let t = self.eval_type(target);
         let Some(name) = self.builtin_of(t) else {
             return;
         };
@@ -49,16 +56,23 @@ impl Settle {
         self.error(target, message);
     }
 
-    /// Reports a class's or interface's supertype that's a builtin type
-    /// core declares as a class, which is final, or as a sealed
-    /// interface, which only core extends.
+    /// Reports a class's or interface's supertype that's a type
+    /// parameter, or a builtin type core declares as a class, which is
+    /// final, or as a sealed interface, which only core extends.
     pub(super) fn check_builtin_supertypes(&mut self, class: NodeId) {
-        if self.lib.in_core(self.lib.tree.span(class).start) {
-            return;
-        }
+        let in_core = self.lib.in_core(self.lib.tree.span(class).start);
         let supers = core::class_parts(&self.lib.tree, class).1.to_vec();
         for sup in supers {
             let t = self.eval_type(sup);
+            if let TypeData::Param(_) = self.typing.types.get(t) {
+                let span = self.lib.tree.span(sup);
+                let message = Message::CannotExtendTypeParam(self.show(t));
+                self.lib.report(Level::Error, message, span);
+                continue;
+            }
+            if in_core {
+                continue;
+            }
             let Some(name) = self.builtin_of(t) else {
                 continue;
             };

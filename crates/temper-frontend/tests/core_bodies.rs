@@ -31,6 +31,7 @@ use temper_frontend::project::{load_imports, source_kind};
 use temper_frontend::settle::settle;
 use temper_frontend::sources::Sources;
 use temper_syntax::lex::SourceKind;
+use temper_syntax::tree::NodeKind;
 
 /// Steps each case may take: enough for every case by far, while a case
 /// that loops forever ends quickly.
@@ -300,10 +301,6 @@ const NOT_RUN: &[(&str, &str)] = &[
     ("SafeGeneratorFnWrapper.done", "as above"),
     ("SafeGeneratorFnWrapper.close", "as above"),
     (
-        "PromiseBuilder.promise",
-        "reads a private field that builtin promise builders lack",
-    ),
-    (
         "NoStringIndex.constructor",
         "private: string indices are builtin values",
     ),
@@ -459,6 +456,154 @@ fn bodies_agree_with_natives() {
             let mut listed: Vec<&str> = NOT_RUN.iter().map(|&(label, _)| label).collect();
             listed.sort();
             assert_eq!(not_run, listed, "core's bodies that no case runs");
+        })
+        .unwrap()
+        .join()
+        .unwrap();
+}
+
+/// Core's classes keep no field that only describes a host's
+/// representation, as each builtin's `content` did: each instance field
+/// is state that core's own Temper sets, by an initializer or an
+/// assignment in its class, for its bodies to read.
+#[test]
+fn fields_are_cores_own_state() {
+    use temper_frontend::core::{
+        CLASS_INTERFACE, MEMBER_STATIC, ROLE_MASK, class_parts, let_parts,
+    };
+    std::thread::Builder::new()
+        .stack_size(64 << 20)
+        .spawn(|| {
+            let mut library = Library::new();
+            for (path, text) in temper_frontend::corelib::SOURCES {
+                library.add_file(&format!("core/{path}"), text, source_kind(path));
+            }
+            let settled = settle(library);
+            let (lib, tree) = (&settled.library, &settled.library.tree);
+            let text_of = |node| lib.name(node).map_or("?", |n| lib.names.get(n));
+            let mut unset = Vec::new();
+            for module in &settled.modules {
+                for &class in &module.top_levels {
+                    if tree.kind(class) != NodeKind::Class
+                        || tree.data(class) & CLASS_INTERFACE != 0
+                    {
+                        continue;
+                    }
+                    let (name, _, members) = class_parts(tree, class);
+                    let text = lib.source_text(tree.span(class));
+                    for &m in members {
+                        let data = tree.data(m);
+                        if tree.kind(m) != NodeKind::Let || data & (ROLE_MASK | MEMBER_STATIC) != 0
+                        {
+                            continue;
+                        }
+                        let (field, _, init) = let_parts(tree, m);
+                        if init.is_none() && !assigns(text, text_of(field)) {
+                            unset.push(format!("{}.{}", text_of(name), text_of(field)));
+                        }
+                    }
+                }
+            }
+            assert_eq!(unset, Vec::<String>::new(), "fields nothing in core sets");
+        })
+        .unwrap()
+        .join()
+        .unwrap();
+}
+
+/// Whether `text` assigns `name`, as `name = …` or `this.name = …`.
+fn assigns(text: &str, name: &str) -> bool {
+    text.match_indices(name).any(|(at, _)| {
+        let before = text[..at].chars().next_back();
+        let after = text[at + name.len()..].trim_start();
+        !before.is_some_and(|c| c.is_alphanumeric() || c == '_')
+            && after.starts_with('=')
+            && !after.starts_with("==")
+    })
+}
+
+/// Core's bodies that aren't `@connected`, which no backend's host code
+/// stands in for, each with what the interpreter runs for it and why
+/// (notes/core-bodies.md, "What the interpreter runs").
+const UNCONNECTED: &[(&str, &str)] = &[
+    ("Null.constructor", "private: null is a builtin value"),
+    ("Empty.constructor", "private: empty() is a builtin value"),
+    (
+        "StringIndex.constructor",
+        "private: string indices are builtin values",
+    ),
+    (
+        "GeneratorFnWrapper.constructor",
+        "a private class nothing uses: generators are native",
+    ),
+    ("GeneratorFnWrapper.next", "as above"),
+    ("GeneratorFnWrapper.done", "as above"),
+    ("GeneratorFnWrapper.close", "as above"),
+    ("SafeGeneratorFnWrapper.constructor", "as above"),
+    ("SafeGeneratorFnWrapper.nextSafe", "as above"),
+    ("SafeGeneratorFnWrapper.done", "as above"),
+    ("SafeGeneratorFnWrapper.close", "as above"),
+    (
+        "GlobalConsole.log",
+        "the console is the host's, as getConsole() is connected",
+    ),
+    (
+        "listedReduceFromIndex",
+        "a native, measurably faster: its body takes core settled beside each program, \
+         and runs 4 to 5 times slower; bodies_agree_with_natives keeps the two in step",
+    ),
+];
+
+/// Each of core's bodies is `@connected`, so the interpreter's native
+/// stands in for it as host code does on backends, or is listed in
+/// [`UNCONNECTED`] with what runs for it.
+#[test]
+fn unconnected_bodies_are_listed() {
+    use temper_frontend::core::{MEMBER_CONNECTED, ROLE_CONSTRUCTOR, ROLE_MASK, class_parts};
+    use temper_frontend::core::{let_parts, member_fn};
+    std::thread::Builder::new()
+        .stack_size(64 << 20)
+        .spawn(|| {
+            let mut library = Library::new();
+            for (path, text) in temper_frontend::corelib::SOURCES {
+                library.add_file(&format!("core/{path}"), text, source_kind(path));
+            }
+            let settled = settle(library);
+            let (lib, tree) = (&settled.library, &settled.library.tree);
+            let text_of = |node| lib.name(node).map_or("?", |n| lib.names.get(n));
+            let connected =
+                |decl| tree.data(decl) & MEMBER_CONNECTED != 0 || lib.connected.contains_key(&decl);
+            let mut found = Vec::new();
+            for module in &settled.modules {
+                for &top in &module.top_levels {
+                    match tree.kind(top) {
+                        NodeKind::Class => {
+                            let (class, _, members) = class_parts(tree, top);
+                            for &m in members {
+                                if member_fn(tree, m).is_none() || connected(m) {
+                                    continue;
+                                }
+                                let member = match tree.data(m) & ROLE_MASK {
+                                    ROLE_CONSTRUCTOR => "constructor",
+                                    _ => text_of(let_parts(tree, m).0),
+                                };
+                                found.push(format!("{}.{member}", text_of(class)));
+                            }
+                        }
+                        NodeKind::Let if member_fn(tree, top).is_some() && !connected(top) => {
+                            found.push(text_of(let_parts(tree, top).0).to_string());
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            found.sort();
+            let mut listed: Vec<String> = UNCONNECTED
+                .iter()
+                .map(|&(label, _)| label.to_string())
+                .collect();
+            listed.sort();
+            assert_eq!(found, listed, "core's bodies that aren't @connected");
         })
         .unwrap()
         .join()

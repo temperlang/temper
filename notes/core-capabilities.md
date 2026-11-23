@@ -20,6 +20,10 @@ would enable nothing; every one has a declaration, which a test checks
   extend concrete type(s) …"), and a sealed interface is extended only
   in its own module ("Cannot extend sealed type … from …"), for users'
   sealed interfaces too, as in Kotlin Temper.
+- **Type parameters** can't be made or extended, in core too: `new T()`
+  is "Cannot instantiate type parameter T", and `extends T` "Cannot
+  extend type parameter T", since `T` may stand for an interface, a
+  final class, or a sealed interface (settle/classes.cases).
 - **`is` and `as`**: refused where core marks a type
   `@mayDowncastTo(false)` (read from core, as the rest), or where a type
   argument would need a run-time check, as before. Refused too where

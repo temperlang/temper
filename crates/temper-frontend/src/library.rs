@@ -174,6 +174,12 @@ pub enum Message {
     ThisOutsideClassBody,
     /// `new I()` for an interface `I`.
     CannotInstantiateAbstractType(String),
+    /// Ours: `new T()` for a type parameter `T`, which may stand for an
+    /// interface or a class without a fitting constructor: its name.
+    CannotInstantiateTypeParam(String),
+    /// Ours: `extends T` for a type parameter `T`, which isn't known to
+    /// be an unsealed interface: its name.
+    CannotExtendTypeParam(String),
     /// Ours: core's bodiless `@connected` declaration of a name that no
     /// builtin has, as a misspelled `export let pancik;`: its name.
     ConnectedNotBuiltin(String),
@@ -474,6 +480,10 @@ impl Message {
             Message::CannotInstantiateAbstractType(name) => {
                 format!("Cannot instantiate abstract type {name}")
             }
+            Message::CannotInstantiateTypeParam(name) => {
+                format!("Cannot instantiate type parameter {name}")
+            }
+            Message::CannotExtendTypeParam(name) => format!("Cannot extend type parameter {name}"),
             Message::ConnectedNotBuiltin(name) => {
                 format!("Core's @connected {name} has no body, but no builtin is named {name}")
             }
@@ -657,6 +667,10 @@ pub struct Library {
     /// when it's loaded ([`crate::project::load_library`]): its
     /// core sources are core's ([`Library::in_core`]).
     pub core_root: Option<String>,
+    /// The root of std's library when it's the library loaded, from a
+    /// Temper checkout's `lib/std` or a copy of the built-in std
+    /// ([`crate::project::load_library`]): [`Library::std_root`].
+    pub std_dir: Option<String>,
     /// A module, by its directory, whose relative imports resolve from
     /// another directory: the REPL's inputs', from the current one.
     pub relative_from: Option<(String, String)>,
@@ -853,11 +867,30 @@ impl Library {
         Some(normalize(&format!("{dir}/{path}")))
     }
 
-    /// The directory std modules' directories are in, [`stdlib::DIR`],
+    /// The directory std modules' directories are in: [`stdlib::DIR`],
     /// whether built in or mounted from elsewhere
-    /// ([`Sources`](crate::sources::Sources)).
+    /// ([`Sources`](crate::sources::Sources)), or std's own root when
+    /// it's the library loaded ([`Library::std_dir`]).
     pub fn std_root(&self) -> &str {
-        stdlib::DIR
+        self.std_dir.as_deref().unwrap_or(stdlib::DIR)
+    }
+
+    /// A file's or directory's path from [`Library::std_root`], as
+    /// `json/json.temper.md` or `json`, `""` for the root itself, if it's
+    /// under it. A root of `.`, std's own as the work root, holds every
+    /// relative path but core's.
+    pub fn std_path<'p>(&self, path: &'p str) -> Option<&'p str> {
+        let root = self.std_root();
+        if path == root {
+            return Some("");
+        }
+        if root == "." {
+            let outside = std::path::Path::new(path).has_root()
+                || path.starts_with("../")
+                || path.starts_with(&format!("{}/", corelib::DIR));
+            return (!outside).then_some(path);
+        }
+        path.strip_prefix(root)?.strip_prefix('/')
     }
 
     /// Whether the source at `pos` is std's, whose `@connected`
@@ -865,7 +898,7 @@ impl Library {
     pub fn in_std(&self, pos: u32) -> bool {
         let file = self.locate(pos).0;
         let path = &self.files[file.0 as usize].path;
-        path.starts_with(&format!("{}/", self.std_root()))
+        self.std_path(path).is_some()
     }
 
     /// Whether the source at `pos` is core's own, read as a library, as

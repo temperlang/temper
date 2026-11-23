@@ -143,13 +143,13 @@ enum Home {
     Other { library: String, path: String },
 }
 
-/// Each module's home, by [`ModuleId`]: std's under [`stdlib::DIR`], other
+/// Each module's home, by [`ModuleId`]: std's under its root
+/// ([`Library::std_root`](crate::library::Library::std_root)), other
 /// libraries' under their roots, and the rest the library's own, whose
 /// root is the directory of its first file's module (or the library root
 /// holding it).
 fn homes(s: &Settled, library: &str) -> Vec<Home> {
     let lib = &s.library;
-    let std_root = lib.std_root();
     let main = lib
         .files
         .first()
@@ -170,7 +170,8 @@ fn homes(s: &Settled, library: &str) -> Vec<Home> {
         .to_string();
     (lib.modules.iter())
         .map(|m| {
-            if let Some(path) = under(&m.dir, std_root) {
+            if let Some(path) = lib.std_path(&m.dir) {
+                let path = path.trim_end_matches('/').to_string();
                 if library == "std" {
                     return Home::Own(path);
                 }
@@ -263,6 +264,7 @@ fn translate(
         class_order: Vec::new(),
         members: HashMap::new(),
         ctors: HashMap::new(),
+        undeclared: HashSet::new(),
         this_class: None,
         type_params: HashMap::new(),
         gaps: gaps.is_some().then(Vec::new),
@@ -304,8 +306,10 @@ fn translate_with(t: &mut Translator) -> Tx<()> {
         t.declare_classes(decl, &classes)?;
     }
     for class in t.class_order.clone() {
-        let declared = t.declare_members(class);
-        t.gap(declared)?;
+        let declared = t.declare_members(class).map(Some);
+        if t.gap(declared)?.is_none() {
+            t.undeclared.insert(class);
+        }
     }
     for (module, decl) in own {
         t.module(module, decl)?;
@@ -403,6 +407,9 @@ struct Translator<'a> {
     /// Each class's constructor, the `Let` of its own if it has one, and
     /// its parameters' `Let`s: its own's, or its header's fields.
     ctors: HashMap<DeclId, (DeclId, Option<FNode>, Vec<FNode>)>,
+    /// Classes whose members couldn't all be declared, when finding every
+    /// gap ([`gaps`]): each a gap already, left out of its module.
+    undeclared: HashSet<FNode>,
     /// The class or interface whose member is being translated.
     this_class: Option<(FNode, DeclId)>,
     /// Type parameters, by their symbols.
@@ -1239,12 +1246,15 @@ impl Translator<'_> {
             self.catching.clear();
             // Classes declared in functions first, at the module's level.
             for &(class, top) in &local_classes {
-                if top == node {
+                if top == node && !self.undeclared.contains(&class) {
                     let item = self.class_item(class, &mut init).map(Some);
                     items.extend(self.gap(item)?);
                 }
             }
             if self.kind(node) == NodeKind::Class {
+                if self.undeclared.contains(&node) {
+                    continue;
+                }
                 let item = self.class_item(node, &mut init).map(Some);
                 items.extend(self.gap(item)?);
                 continue;

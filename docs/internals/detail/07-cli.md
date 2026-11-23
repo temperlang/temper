@@ -275,10 +275,12 @@ setting, or else the first line as a slug, or else the root's path, or
 else `unnamed`, as Kotlin's `libraryNameFor` decides; two libraries of
 one name stop the command
 ([`duplicate_names`](../../../crates/temper-frontend/src/project.rs)).
-`temper-core` is core's name: a library taking it fails to load, but
-for core's own source in a Temper checkout
-([`is_core_checkout`](../../../crates/temper-frontend/src/project.rs)),
-so no library gets core's powers or writes over its runtime's output.
+`temper-core` is core's name, and `std` std's: a library taking one
+fails to load, but for that library's own source in a Temper checkout
+([`is_checkout`](../../../crates/temper-frontend/src/project.rs)), or
+the copy of it that editors write, so no library gets core's or std's
+powers or writes over their output. Std from either builds and settles
+as std, under its own root (`Library::std_root`).
 
 **Alternatives:** Kotlin's way: settle and run the config as Temper.
 

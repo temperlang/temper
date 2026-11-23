@@ -17,7 +17,7 @@ translated only it.
 
 ## Inventory
 
-70 members and functions have bodies; the cases run 53 of them, plus
+69 members and functions have bodies; the cases run 53 of them, plus
 `Float64.e` and `.pi`'s initializers. Natives are in `interp.rs` unless
 named. "All" means all seven backends connect it.
 
@@ -45,7 +45,7 @@ named. "All" means all seven backends connect it.
 | `Empty.eq`, `empty`, `ignore`, `doneResult` | `equal`, `builtin` | `empty` all; `doneResult` C++, Java, Rust, past tmpl's "not yet"; `ignore` is tmpl's own; `==` on `Empty` not yet in tmpl |
 | `SafeGenerator.next` | `generator_method` | none: not yet in tmpl |
 | `ValueResult`, `Pair` constructors | `apply`'s `new` | `Pair` all; `ValueResult` C++, Java, Rust |
-| `PromiseBuilder.promise`, `getConsole` | `property`, the console | all |
+| `getConsole` | the console | all |
 | `Null`, `Empty`, `NoStringIndex`, `StringIndex` constructors | builtin values | none |
 | `GlobalConsole.log` | the console | none |
 | `GeneratorFnWrapper`, `SafeGeneratorFnWrapper` (8 members) | unused: generators are native | none |
@@ -54,6 +54,43 @@ The cases don't run the last four rows' bodies, nor the `ValueResult`
 and `Pair` constructors' (which only set the fields the cases read):
 they build or read a representation that builtin values don't have.
 The generator wrappers are left from Kotlin Temper; nothing uses them.
+
+## Fields
+
+Core's classes declare no field that only describes a host's
+representation (2026-11-21, t850): the builtins' `content` fields,
+`Deque`'s, `Problem`'s, and `PromiseBuilder`'s `_promise` are gone, and
+bodies that read `content` read `this`, as `Int32.min`'s `if (this <=
+other) { this } else { other }`. What's left is state core's own Temper
+sets and its bodies read: `StringBuilder`'s `substrings`,
+`DenseBitVector`'s `bits` (the interpreter runs both as ordinary
+classes under `run_tests_with_core_bodies`), the generator wrappers'
+fields, and `ValueResult`'s and `Pair`'s public fields.
+`fields_are_cores_own_state` checks that each instance field has an
+initializer or an assignment in its class.
+
+## What the interpreter runs
+
+Natives for `@connected` members, as host code is on backends, and for
+bodiless ones (2026-11-21, t744). Core's bodies that aren't
+`@connected` are few, and `unconnected_bodies_are_listed` lists each
+with what runs for it: private constructors of builtin values, the
+unused generator wrappers, `GlobalConsole.log` (the console is the
+host's), and `listedReduceFromIndex`, which keeps its native because
+it's measurably faster. Running a body needs core settled beside the
+program, as `bodies_agree_with_natives` settles it, and runs slower:
+
+| Program (release, 5 runs back to back) | Natives | Bodies |
+| --- | --- | --- |
+| Settling a small program, without and with core | 2.2-3.5 ms | 9.6-14.9 ms |
+| 100 `reduceFromIndex` calls over 2000 items | 38-60 ms | 182-214 ms |
+| A mix of `StringBuilder`, `min`/`max`, `isEmpty`, `DenseBitVector`, map and list members, every body run | 4.2-6.2 ms | 85-99 ms |
+
+Body runs use t743's harness, which looks each member up per call, so
+some of the gap is that lookup, but settling core is the larger cost
+for short programs, as the REPL's and playground's are. So core's text
+is the source of what the interpreter does through the cases, which
+keep each native in step with its body, rather than by running it.
 
 ## Findings (2026-11-19)
 

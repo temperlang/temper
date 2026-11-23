@@ -571,6 +571,34 @@ fn gaps_lists_every_gap() {
     });
 }
 
+/// A class whose members can't all be declared, as one with a user's
+/// `@connected` member, is a gap once: `gaps` leaves the class out and
+/// goes on, rather than translating a class it only half declared.
+#[test]
+fn gaps_go_past_a_class_not_declared() {
+    with_stack(|| {
+        let source = "
+    export class C {
+      public x: Int;
+      public constructor(x: Int) { this.x = x; }
+      @connected public f(): Int;
+    }
+    export let a(): Int { new C(1).x }
+    export let c(): Void { let y = [].get(0) orelse panic(); }
+";
+        let mut library = Library::new();
+        library.add_file("half.temper.md", source, SourceKind::Markdown);
+        load_imports(&Sources::standard(), &mut library);
+        let settled = settle(library);
+        let first = to_tmpl(&settled, "half").unwrap_err();
+        assert_eq!(first.what, "a connected member", "{first}");
+        let found = gaps(&settled, "half");
+        assert_eq!(found[0], first);
+        let lines: Vec<&str> = (found.iter()).filter_map(|g| g.at.as_deref()).collect();
+        assert!(lines.iter().any(|at| at.contains(":8:")), "{found:?}");
+    });
+}
+
 /// Translates one source file, with std, into tmpl, validated.
 fn translate_source(name: &str, source: &str) -> Program {
     let (program, errors) = translate_with_errors(name, source);

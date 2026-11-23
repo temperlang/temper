@@ -535,7 +535,7 @@ fn definition_and_hover_into_core() {
     // `console.log`.
     let (line, _) = core_line(3, 17);
     assert!(
-        line.starts_with("public get isEmpty(): Boolean { content"),
+        line.starts_with("public get isEmpty(): Boolean { this"),
         "{line}"
     );
     let (line, _) = core_line(4, 2);
