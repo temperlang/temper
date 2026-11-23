@@ -155,10 +155,12 @@ pseudo-control-flow instruction.
 ## MapKey
 
 *MapKey* is limited at present to String and Int keys but expected to be
-user-implementable in the future.
+user-implementable in the future. Until backends support other keys, it's
+sealed, so only core's types are keys. A `when` over a `MapKey` can't
+list its cases anyway, since `is Int32` and `is String` aren't allowed.
 
     @imu
-    export /*sealed*/ interface MapKey<EQ extends AnyValue> extends Equatable<EQ> {}
+    export sealed interface MapKey<EQ extends AnyValue> extends Equatable<EQ> {}
 
 ## Problem
 

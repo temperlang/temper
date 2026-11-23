@@ -65,7 +65,7 @@
 //!   constructor, a static field initialized only in its module's init
 //!   block, and conversions only up or down the supertypes (`Upcast`,
 //!   `Downcast`), with `Is` and `Identical` only on classes and
-//!   interfaces.
+//!   interfaces (`Is` also of an `AnyValue`, as `As` is).
 //! - **N1** (nullable types, subset B) `Null` typed nullable; `IsNull`
 //!   and `NonNull` only on nullable values; `NonNull` from `T?` to `T`
 //!   and `AsNullable` from `T` to `T?`, exactly; `EqNullable` an
@@ -2070,7 +2070,10 @@ impl Validator {
             Node::Is { ty: of, value } => {
                 self.expr(p, value, flow);
                 self.nominal(p, id, of, "the type checked");
-                self.nominal(p, value, p.nodes.ty(value), "the value checked");
+                // From a class or interface, or from `AnyValue`.
+                if p.types.fallback(p.nodes.ty(value)) != TypeId::ANY_VALUE {
+                    self.nominal(p, value, p.nodes.ty(value), "the value checked");
+                }
             }
             Node::Identical { left, right } => {
                 for side in [left, right] {

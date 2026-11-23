@@ -2357,23 +2357,28 @@ function temper.cast_to_null(thing)
     return thing
 end
 
+-- Whether a value is of a class's or interface's type. Other values, as
+-- strings and core's tables, whose tags are names, as 'Pair', aren't.
+local function is_of(thing, want)
+    if type(thing) ~= "table" then
+        return false
+    end
+    local tag = thing[temper.type_tag]
+    return type(tag) == "table" and tag.super[want.typename] ~= nil
+end
+
 function temper.cast_to(thing, type)
-    if thing and thing[temper.type_tag].super[type.typename] then
+    if is_of(thing, type) then
         return thing
     else
-        return temper.bubble("cast to " .. tostring(type) .. " type (was a " .. tostring(thing[temper.type_tag]) .. ")")
+        return temper.bubble("cast to " .. tostring(type) .. " type")
     end
 end
 
 function temper.instance_of(thing, ...)
-    if type(thing) ~= "table" then
-        return false
-    end
     local n = select('#', ...)
-    local type_tag = temper.type_tag
     for i=1,n do
-        local tag = select(i, ...)
-        if thing[type_tag].super[tag.typename] then
+        if is_of(thing, select(i, ...)) then
             return true
         end
     end

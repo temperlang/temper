@@ -146,6 +146,10 @@ const TYPING: [&str; 1] = ["semantics/constness"];
 /// that translate, as the backends' testkit lists them.
 const ANY_VALUES: [&str; 2] = ["casts/as-expr", "types/list/operations"];
 
+/// The functional tests with `is` and `as` checks from `AnyValue` among
+/// core's values, that translate, as the backends' testkit lists them.
+const CORE_CHECKS: [&str; 1] = ["casts/core-classes"];
+
 /// The functional tests of a library with errors, each a tmpl `Error`
 /// that fails when run, that translate, as the backends' testkit lists
 /// them.
@@ -247,6 +251,7 @@ fn subset_a_goldens() {
             .chain(&LOOPS_AND_CLASSES)
             .chain(&TYPING)
             .chain(&ANY_VALUES)
+            .chain(&CORE_CHECKS)
             .chain(&ERRORS)
             .chain(&TYPE_VALUES)
             .chain(&NET)
@@ -342,6 +347,7 @@ fn every_functional_test_translates_or_says_why() {
             .chain(&LOOPS_AND_CLASSES)
             .chain(&TYPING)
             .chain(&ANY_VALUES)
+            .chain(&CORE_CHECKS)
             .chain(&ERRORS)
             .chain(&TYPE_VALUES)
             .chain(&NET)

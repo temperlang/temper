@@ -10,6 +10,7 @@ on it being attached to any standard stream.
 
 Use the builtin instance `console` for default logging needs.
 
+    @connected
     export interface Console {
       /**
        * Log a message at default informational level to this console.

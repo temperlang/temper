@@ -1806,3 +1806,78 @@ keyed(1);
 error 321..346: Type formal <K extends MapKey<K>> cannot bind to I? which does not fit upper bounds [MapKey<K>]
 error 434..449: Type formal <T extends MapKey<T>> cannot bind to K which does not fit upper bounds [MapKey<T>]
 Failed: Type formal <K extends MapKey<K>> cannot bind to I? which does not fit upper bounds [MapKey<K>]
+
+=== connected types are targeted only through sealed supertypes, as Kotlin's sealed-connected-casts
+// Several Temper types may connect to one host type, so only a sealed
+// supertype, which tells its subtypes apart, may check for one, through
+// sealed supertypes only: `E` is an `S` only through `NS`, which isn't
+// sealed. Core's connected types as users' (notes/core-capabilities.md).
+@connected
+export sealed interface S {}
+@connected
+class C extends S {}
+@connected
+class D extends S {}
+@connected
+interface NS extends S {}
+@connected
+class E extends NS {}
+export let f(a: AnyValue, s: S): Void throws Bubble {
+  a as C;
+  s as C;
+  s as E;
+}
+let g(a: AnyValue, i: StringIndexOption, r: GeneratorResult<Int>): Void throws Bubble {
+  a is StringIndex;
+  a is StringBuilder;
+  a is Empty;
+  i is StringIndex;
+  i as NoStringIndex;
+  r is DoneResult<Int>;
+  r as ValueResult<Int>;
+  when (i) {
+    is StringIndex -> void;
+    else -> void;
+  }
+  when (a) {
+    is DoneResult<Int> -> void;
+    else -> void;
+  }
+}
+--- settled
+(Block
+  (Interface ^S:0)
+  (Class ^C:1 S:0)
+  (Class ^D:2 S:0)
+  (Interface ^NS:3 S:0)
+  (Class ^E:4 NS:3)
+  (Let
+    ^f:5
+    (Fn
+      (Let ^a:12 AnyValue)
+      (Let ^s:13 S:0)
+      (Call throws Void Bubble)
+      (Block (Call as a:12 C:1) (Call as s:13 C:1) (Call as s:13 E:4) #void)))
+  (Let
+    ^g:6
+    (Fn
+      (Let ^a:14 AnyValue)
+      (Let ^i:15 StringIndexOption)
+      (Let ^r:16 (Call <> GeneratorResult Int))
+      (Call throws Void Bubble)
+      (Block
+        (Call is a:14 StringIndex)
+        (Call is a:14 StringBuilder)
+        (Call is a:14 Empty)
+        (Call is i:15 StringIndex)
+        (Call as i:15 NoStringIndex)
+        (Call is r:16 (Call <> DoneResult Int))
+        (Call as r:16 (Call <> ValueResult Int))
+        (Block (If (Call is i:15 StringIndex) void void))
+        (Block (If (Call is a:14 (Call <> DoneResult Int)) void void))))))
+error 520..526: Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: <[C]> from AnyValue
+error 540..546: Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: <[E]> from S
+error 640..656: Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: <[StringIndex]> from AnyValue
+error 660..678: Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: <[StringBuilder]> from AnyValue
+error 682..692: Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: <[Empty]> from AnyValue
+error 868..883: Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: <[DoneResult<Int32>]> from AnyValue

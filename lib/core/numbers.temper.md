@@ -36,6 +36,7 @@ types `Int32`, aliased as `Int`, and `Int64`, and the floating point
 is high.  This does not assume that the probability of a bit being set
 depends on the probability of an adjacent bit being set.
 
+    @connected
     export class DenseBitVector {
       private let bits: ListBuilder<Boolean>;
 

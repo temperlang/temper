@@ -1011,6 +1011,8 @@ impl Interp<'_> {
             (Ignore, [_]) => Ok(Val::Void),
             (Empty, []) => Ok(Val::Empty),
             (DoneResult, []) => Ok(Val::DoneResult),
+            // Every console logs alike here, whatever its name.
+            (GetConsole, [] | [Val::Str(_)]) => Ok(Val::Console),
             (Cmp, [a, b]) => {
                 let ordering = compare(a, b).ok_or_else(|| fail("Can't compare these"))?;
                 Ok(Val::Int(ordering as i32))

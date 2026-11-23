@@ -156,6 +156,10 @@ pub enum Message {
     SealedSubtypeTypeParam(String),
     /// `static get p` or `static set p`: `get` or `set`, and the name.
     StaticAccessor(String, String),
+    /// A static member and an instance member of one name: the class, the
+    /// static's kind and the instance member's (`property`, `method`,
+    /// `getter`, or `setter`), and the name (t922).
+    StaticAndInstanceMember(String, &'static str, &'static str, String),
     /// A class's constructor after its first, as a class has one.
     SeveralConstructors,
     /// A header parameter, `class C(x: Int)`, beside an explicit
@@ -324,6 +328,9 @@ pub enum RttiProblem {
     /// Ours: `T` is a `@fun` interface, which Kotlin Temper documents as
     /// not allowed but doesn't report.
     FunInterface,
+    /// `T` is a `@connected` type, which only a sealed supertype may check
+    /// for, through sealed supertypes. `IllegalRttiCheckConnected`.
+    Connected,
 }
 
 /// How a `@fun` interface breaks the rules Kotlin Temper documents for
@@ -458,6 +465,10 @@ impl Message {
             Message::StaticAccessor(kind, name) => {
                 format!("`static {kind} {name}` is not supported; use a static method instead")
             }
+            Message::StaticAndInstanceMember(class, st, inst, name) => format!(
+                "Static {st} {name} and {inst} {name} of {class} share a name; a static and an \
+                 instance member need different names"
+            ),
             Message::SeveralConstructors => "A class can have only one constructor; \
                 for other ways to make instances, use a static method or an object literal"
                 .to_string(),
@@ -568,6 +579,11 @@ impl Message {
                     RttiProblem::FunInterface => (
                         "@fun interfaces cannot be targeted",
                         ", because backends may make them plain function types",
+                    ),
+                    RttiProblem::Connected => (
+                        "Connected types cannot be targeted",
+                        " because multiple Temper types are allowed to connect to the same \
+                         backend type",
                     ),
                 };
                 format!("{what} with is or as runtime type checks{why}: <[{target}]> from {from}")

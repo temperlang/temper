@@ -1062,3 +1062,123 @@ error 23..24: Cannot extend type parameter T
 error 53..54: Cannot extend type parameter T
 error 79..80: Cannot instantiate type parameter T
 log 1
+
+=== private constructors are their class's own, as private methods are, which Kotlin doesn't check
+// In the class's methods, static or not, and functions in them, `new`
+// may call it; elsewhere, through an alias too, it's an error.
+class Token {
+  public text: String;
+  private constructor(text: String) { this.text = text; }
+  public static make(text: String): Token { new Token(text) }
+  public again(): Token {
+    let make(): Token { new Token(text) }
+    make()
+  }
+}
+class Box<T> {
+  public t: T;
+  private constructor(t: T) { this.t = t; }
+  public static make<U>(u: U): Box<U> { new Box<U>(u) }
+}
+let T2 = Token;
+let a = new Token("a");
+let b = new T2("b");
+let f(): Token { let T3 = Token; new T3("c") }
+let g(): Box<Int> { new Box<Int>(1) }
+let h(): Token { { text: "d" } }
+console.log(Token.make("x").again().text);
+console.log(Box.make(1).t.toString());
+--- settled
+(Block
+  (Class
+    ^Token:0
+    (Let ^text:9 String)
+    (Constructor private
+      ^constructor:10
+      (Fn
+        (Let ^text:13 String)
+        (Block (Assign (Call . this#8 \text) text:13) #void)))
+    (Method static
+      ^make:11
+      (Fn (Let ^text:14 String) Token:0 (Block (Call new Token:0 text:14))))
+    (Method
+      ^again:12
+      (Fn
+        Token:0
+        (Block
+          (Let ^make:15 (Fn Token:0 (Block (Call new Token:0 text:9))))
+          (Call make:15)))))
+  (Class
+    ^Box:1
+    (TypeParam ^T:16)
+    (Let ^t:18 T:16)
+    (Constructor private
+      ^constructor:19
+      (Fn (Let ^t:21 T:16) (Block (Assign (Call . this#17 \t) t:21) #void)))
+    (Method static
+      ^make:20
+      (Fn
+        (TypeParam ^U:22)
+        (Let ^u:23 U:22)
+        (Call <> Box:1 U:22)
+        (Block (Call new (Call <> Box:1 U:22) u:23)))))
+  (Let ^T2:2 Token:0)
+  (Let ^a:3 (Call new Token:0 "a"))
+  (Let ^b:4 (Call new T2:2 "b"))
+  (Let ^f:5 (Fn Token:0 (Block (Let ^T3:24 Token:0) (Call new T3:24 "c"))))
+  (Let ^g:6 (Fn (Call <> Box:1 Int) (Block (Call new (Call <> Box:1 Int) 1))))
+  (Let ^h:7 (Fn Token:0 (Block (Call new T2:2 "d"))))
+  (Call
+    (Call . console \log)
+    (Call . (Call (Call . (Call (Call . Token:0 \make) "x") \again)) \text))
+  (Call
+    (Call . console \log)
+    (Call (Call . (Call . (Call (Call . Box:1 \make) 1) \t) \toString)))
+  #void)
+error 537..542: Token is not a concrete type with a public constructor
+error 561..563: Token is not a concrete type with a public constructor
+error 607..609: Token is not a concrete type with a public constructor
+error 641..649: Box is not a concrete type with a public constructor
+error 672..685: Token is not a concrete type with a public constructor
+Failed: Token is not a concrete type with a public constructor
+
+=== a static member and an instance member can't share a name, as Java can't (t922)
+class C {
+  public x: Int = 1;
+  public static x: Int = 2;
+  public f(): Int { 1 }
+  public static f(): Int { 2 }
+  public get g(): Int { 3 }
+  public static g: Int = 4;
+  public static h(): Int { 5 }
+  public h: Int = 6;
+  public static ok: Int = 7;
+  public okay(): Int { 8 }
+}
+interface I {
+  public i(): Int;
+  public static i(): Int { 9 }
+}
+--- settled
+(Block
+  (Class
+    ^C:0
+    (Let ^x:3 Int 1)
+    (Let static ^x:4 Int 2)
+    (Method ^f:5 (Fn Int (Block 1)))
+    (Method static ^f:6 (Fn Int (Block 2)))
+    (Get ^g:7 (Fn Int (Block 3)))
+    (Let static ^g:8 Int 4)
+    (Method static ^h:9 (Fn Int (Block 5)))
+    (Let ^h:10 Int 6)
+    (Let static ^ok:11 Int 7)
+    (Method ^okay:12 (Fn Int (Block 8))))
+  (Interface
+    ^I:1
+    (Method ^i:14 (Signature Int))
+    (Method static ^i:15 (Fn Int (Block 9)))))
+error 47..48: Static property x and property x of C share a name; a static and an instance member need different names
+error 99..100: Static method f and method f of C share a name; a static and an instance member need different names
+error 158..159: Static property g and getter g of C share a name; a static and an instance member need different names
+error 210..211: Static method h and property h of C share a name; a static and an instance member need different names
+error 329..330: Static method i and method i of I share a name; a static and an instance member need different names

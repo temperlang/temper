@@ -747,6 +747,50 @@ impl Settle {
         }
     }
 
+    /// A static member and an instance member (a property, method,
+    /// getter, or setter) of one class or interface can't share a name
+    /// (t922), which Kotlin Temper doesn't check, and Java's output
+    /// renames the static to allow. Reported at the later one, naming
+    /// both.
+    fn check_static_instance_names(&mut self, name: NodeId, members: &[NodeId]) {
+        let tree = &self.lib.tree;
+        let kind = |m: NodeId| match tree.data(m) & ROLE_MASK {
+            ROLE_METHOD => "method",
+            ROLE_GETTER => "getter",
+            ROLE_SETTER => "setter",
+            _ => "property",
+        };
+        let named = |m: NodeId| tree.data(m) & ROLE_MASK != ROLE_CONSTRUCTOR;
+        let is_static = |m: NodeId| tree.data(m) & MEMBER_STATIC != 0;
+        let mut problems = Vec::new();
+        for (i, &later) in members.iter().enumerate().filter(|&(_, &m)| named(m)) {
+            let text = self.member_text(later);
+            let earlier = (members[..i].iter().copied()).find(|&m| {
+                named(m) && is_static(m) != is_static(later) && self.member_text(m) == text
+            });
+            if let Some(earlier) = earlier {
+                let (st, inst) = match is_static(earlier) {
+                    true => (earlier, later),
+                    false => (later, earlier),
+                };
+                // Its name, without a field's type.
+                let start = tree.span(tree.children(later)[0]).start;
+                let span = Span {
+                    start,
+                    end: start + text.len() as u32,
+                };
+                problems.push((kind(st), kind(inst), text.to_string(), span));
+            }
+        }
+        let class = (self.lib.name(name))
+            .map_or("", |n| self.lib.names.get(n))
+            .to_string();
+        for (st, inst, text, span) in problems {
+            let message = Message::StaticAndInstanceMember(class.clone(), st, inst, text);
+            self.lib.report(Level::Error, message, span);
+        }
+    }
+
     /// Whether a member is a `static get` or `static set`.
     fn is_static_accessor(&self, member: NodeId) -> bool {
         let data = self.lib.tree.data(member);
@@ -771,6 +815,7 @@ impl Settle {
         if !interface {
             self.check_constructors(members);
         }
+        self.check_static_instance_names(name, members);
         let tree = &self.lib.tree;
         let role = |m: NodeId| tree.data(m) & ROLE_MASK;
         let is_static = |m: NodeId| tree.data(m) & MEMBER_STATIC != 0;
@@ -1582,19 +1627,47 @@ impl Settle {
         let mut symbol = symbol;
         for _ in 0..8 {
             let decl = self.scopes.symbol(symbol).decl?;
-            match tree.kind(decl) {
-                NodeKind::Class => return Some(decl),
-                NodeKind::Let if tree.data(decl) & ROLE_MASK == 0 => {
-                    let init = crate::core::let_parts(tree, decl).2?;
-                    if tree.kind(init) != NodeKind::RightName {
-                        return None;
-                    }
-                    symbol = self.scopes.resolved(init)?;
-                }
-                _ => return None,
+            if tree.kind(decl) == NodeKind::Class {
+                return Some(decl);
             }
+            let init = self.alias_init(symbol)?;
+            if tree.kind(init) != NodeKind::RightName {
+                return None;
+            }
+            symbol = self.scopes.resolved(init)?;
         }
         None
+    }
+
+    /// The type expression an alias names, as `C<Int>` for `let Alias =
+    /// C<Int>;`, if `symbol` is one: a `let`, top-level or local, not a
+    /// `var` and without a declared type, whose initializer is a name, a
+    /// type given arguments, a nullable type, or a function type. An
+    /// alias is the type it names wherever a type is wanted, so `new`,
+    /// `extends`, `is` and `as`, annotations, and bounds check it as that
+    /// type ([`Settle::type_decl`], `typing`'s `eval_type`;
+    /// notes/typing.md, "Type aliases").
+    pub(crate) fn alias_init(&self, symbol: SymbolId) -> Option<NodeId> {
+        let tree = &self.lib.tree;
+        let s = self.scopes.symbol(symbol);
+        let decl = s.decl.filter(|&d| {
+            matches!(s.kind, SymbolKind::TopLevel | SymbolKind::Local)
+                && !s.mutable
+                && tree.kind(d) == NodeKind::Let
+                && tree.data(d) & ROLE_MASK == 0
+        })?;
+        let (_, None, Some(init)) = crate::core::let_parts(tree, decl) else {
+            return None;
+        };
+        let is_type = tree.kind(init) == NodeKind::RightName
+            || tree.kind(init) == NodeKind::Call
+                && matches!(
+                    (tree.children(init).first()).and_then(|&c| self.scopes.resolved_builtin(c)),
+                    Some(Builtin::Function(
+                        Function::Angle | Function::Nullable | Function::FnType
+                    ))
+                );
+        is_type.then_some(init)
     }
 }
 

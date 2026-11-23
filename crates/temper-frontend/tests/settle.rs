@@ -141,7 +141,10 @@ fn core_keeps_the_rules_it_sets() {
             .filter(|name| builtins.iter().any(|(n, _)| n == name))
             .collect();
         declared.sort();
-        assert_eq!(declared, ["console", "doneResult", "empty", "ignore"]);
+        assert_eq!(
+            declared,
+            ["console", "doneResult", "empty", "getConsole", "ignore"]
+        );
     });
 }
 

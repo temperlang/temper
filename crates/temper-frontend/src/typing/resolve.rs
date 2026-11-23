@@ -105,6 +105,7 @@ fn function_key(f: Function) -> Option<&'static str> {
         Empty => "empty",
         DoPure => "doPure",
         DoneResult => "doneResult",
+        GetConsole => "getConsole",
         Async => "async",
         Rgx => "rgx",
         _ => return None,

@@ -75,6 +75,7 @@ narrowly with a kind of parallelism.
 *SafeGenerator* is a variant of [snippet/type/Generator] that does not bubble
 when computing the next result.
 
+    @connected
     export interface SafeGenerator<@out YIELD extends AnyValue> extends Generator<YIELD> {
       /**
        * Starts/resumes the computation and runs until it pauses or completes.
@@ -121,10 +122,11 @@ when computing the next result.
     @imu
     @connected
     export class DoneResult<@out YIELD extends AnyValue> extends GeneratorResult<YIELD> {
-      public constructor();
+      private constructor();
     }
 
-`doneResult` gives a [snippet/type/DoneResult], a generator's result once it is done.
+`doneResult` gives a [snippet/type/DoneResult], a generator's result once it is done,
+the only way to make one.
 
     @connected
     export let doneResult<YIELD extends AnyValue>(): DoneResult<YIELD> { new DoneResult<YIELD>() }

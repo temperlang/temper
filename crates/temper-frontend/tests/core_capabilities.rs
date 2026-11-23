@@ -51,11 +51,10 @@ enum Cast {
     Unrelated,
     /// No: it has no values.
     Impossible,
-    /// Not meant to: a `@connected` type reached from no sealed
-    /// supertype, which Kotlin Temper refuses ("Connected types cannot be
-    /// targeted"), but Temper allows for now (notes/kotlin-differences.md,
-    /// "A user's `@connected` type").
-    ConnectedGap,
+    /// No: a `@connected` type, which only a sealed supertype may check
+    /// for, as in Kotlin Temper, since several types may connect to one
+    /// host type.
+    Connected,
 }
 
 /// Whether it may be a map key, as `new MapBuilder<T, Int>()`.
@@ -74,14 +73,16 @@ const ROWS: &[(&str, New, Ext, Cast, Key)] = &[
     ("AnyValue", New::Abstract, Ext::Yes, Cast::Yes, Key::No),
     ("Boolean", New::Private, Ext::Concrete, Cast::No, Key::No),
     ("Bubble", New::Private, Ext::Concrete, Cast::Unrelated, Key::No),
-    ("DenseBitVector", New::Args("8"), Ext::Concrete, Cast::Yes, Key::No),
+    ("Console", New::Abstract, Ext::Yes, Cast::Connected, Key::No),
+    ("DenseBitVector", New::Args("8"), Ext::Concrete, Cast::Connected, Key::No),
     ("Deque<Int>", New::Args(""), Ext::Concrete, Cast::TypeArgs, Key::No),
-    ("DoneResult<Int>", New::Args(""), Ext::Concrete, Cast::ConnectedGap, Key::No),
-    ("Empty", New::Private, Ext::Concrete, Cast::ConnectedGap, Key::No),
+    ("DoneResult<Int>", New::Private, Ext::Concrete, Cast::Connected, Key::No),
+    ("Empty", New::Private, Ext::Concrete, Cast::Connected, Key::No),
+    ("Equatable<Int>", New::Abstract, Ext::Sealed, Cast::TypeArgs, Key::No),
     ("Float64", New::Private, Ext::Concrete, Cast::No, Key::No),
-    ("Generator<Int>", New::Abstract, Ext::Yes, Cast::ConnectedGap, Key::No),
+    ("Generator<Int>", New::Abstract, Ext::Yes, Cast::Connected, Key::No),
     ("GeneratorFn", New::Abstract, Ext::Yes, Cast::Yes, Key::No),
-    ("GeneratorResult<Int>", New::Abstract, Ext::Sealed, Cast::ConnectedGap, Key::No),
+    ("GeneratorResult<Int>", New::Abstract, Ext::Sealed, Cast::Connected, Key::No),
     ("Int", New::Private, Ext::Concrete, Cast::No, Key::Yes),
     ("Int32", New::Private, Ext::Concrete, Cast::No, Key::Yes),
     ("Int64", New::Private, Ext::Concrete, Cast::No, Key::No),
@@ -90,33 +91,27 @@ const ROWS: &[(&str, New, Ext, Cast, Key)] = &[
     ("Listed<Int>", New::Abstract, Ext::Sealed, Cast::TypeArgs, Key::No),
     ("Map<String, Int>", New::Args("[]"), Ext::Concrete, Cast::No, Key::No),
     ("MapBuilder<String, Int>", New::Args(""), Ext::Concrete, Cast::No, Key::No),
-    ("MapKey<String>", New::Abstract, Ext::Yes, Cast::TypeArgs, Key::No),
+    ("MapKey<String>", New::Abstract, Ext::Sealed, Cast::TypeArgs, Key::No),
     ("Mapped<String, Int>", New::Abstract, Ext::Sealed, Cast::TypeArgs, Key::No),
     ("Never<Int>", New::Abstract, Ext::Sealed, Cast::Impossible, Key::No),
-    ("NoStringIndex", New::Private, Ext::Concrete, Cast::ConnectedGap, Key::No),
-    ("Pair<Int, Int>", New::Args("1, 2"), Ext::Concrete, Cast::Yes, Key::No),
-    ("Promise<Int>", New::Private, Ext::Concrete, Cast::ConnectedGap, Key::No),
+    ("NoStringIndex", New::Private, Ext::Concrete, Cast::Connected, Key::No),
+    ("Null", New::Private, Ext::Concrete, Cast::Yes, Key::No),
+    ("Pair<Int, Int>", New::Args("1, 2"), Ext::Concrete, Cast::Connected, Key::No),
+    ("Promise<Int>", New::Private, Ext::Concrete, Cast::Connected, Key::No),
     ("PromiseBuilder<Int>", New::Args(""), Ext::Concrete, Cast::TypeArgs, Key::No),
-    ("SafeGenerator<Int>", New::Abstract, Ext::Yes, Cast::Yes, Key::No),
+    ("SafeGenerator<Int>", New::Abstract, Ext::Yes, Cast::Connected, Key::No),
     ("String", New::Private, Ext::Concrete, Cast::No, Key::Yes),
-    ("StringBuilder", New::Args(""), Ext::Concrete, Cast::ConnectedGap, Key::No),
-    ("StringIndex", New::Private, Ext::Concrete, Cast::ConnectedGap, Key::No),
-    ("StringIndexOption", New::Abstract, Ext::Sealed, Cast::ConnectedGap, Key::No),
+    ("StringBuilder", New::Args(""), Ext::Concrete, Cast::Connected, Key::No),
+    ("StringIndex", New::Private, Ext::Concrete, Cast::Connected, Key::No),
+    ("StringIndexOption", New::Abstract, Ext::Sealed, Cast::Connected, Key::No),
     ("Type", New::Private, Ext::Concrete, Cast::Yes, Key::No),
-    ("ValueResult<Int>", New::Args("1"), Ext::Concrete, Cast::ConnectedGap, Key::No),
+    ("ValueResult<Int>", New::Args("1"), Ext::Concrete, Cast::Connected, Key::No),
     ("Void", New::Private, Ext::Concrete, Cast::Unrelated, Key::No),
 ];
 
 /// Core's exported types that user code can't name at all, as it can't
 /// in Kotlin Temper either for some (notes/core-capabilities.md).
-const UNNAMED: &[&str] = &[
-    "Console",
-    "Equatable",
-    "Function",
-    "Invalid",
-    "Null",
-    "Problem",
-];
+const UNNAMED: &[&str] = &["Function", "Invalid", "Problem"];
 
 /// Static members user code may read or call, each with its use.
 const STATICS: &[&str] = &[
@@ -160,10 +155,28 @@ const OTHERS: &[(&str, &[&str])] = &[
         "let f(x: Listed<Int>): Boolean { x is List<Int> }",
         &["Types marked @mayDowncastTo(false) cannot be targeted"],
     ),
+    // A connected type from a sealed supertype, which tells its subtypes
+    // apart, as in Kotlin Temper.
     (
         "let f(r: GeneratorResult<Int>): Boolean { r is DoneResult<Int> }",
         &[],
     ),
+    (
+        "let f(r: GeneratorResult<Int>): Boolean { r is ValueResult<Int> }",
+        &[],
+    ),
+    (
+        "let f(i: StringIndexOption): Boolean { i is StringIndex }",
+        &[],
+    ),
+    (
+        "let f(i: StringIndexOption): Void throws Bubble { i as NoStringIndex; }",
+        &[],
+    ),
+    // `doneResult()` makes the `DoneResult` that `new` can't.
+    ("let d: DoneResult<Int> = doneResult<Int>();", &[]),
+    // A sealed `MapKey` is still a bound and a type.
+    ("let f(k: MapKey<String>): MapKey<String> { k }", &[]),
     // A `Bubble` isn't an `AnyValue` (core's `AnyValue` docs).
     (
         "let f(x: Bubble): AnyValue { x }",
@@ -178,6 +191,56 @@ const OTHERS: &[(&str, &[&str])] = &[
         "let LL = List;\nlet v = new LL<Int>();",
         &["List is not a concrete type with a public constructor"],
     ),
+    // A local alias of a type parameter is the type parameter (t924).
+    (
+        "let f<T>(): Void { let U = T; let u = new U(); }",
+        &["Cannot instantiate type parameter T"],
+    ),
+    (
+        "let f<T>(x: AnyValue): Boolean { let U = T; x is U }",
+        &["Type parameters cannot be targeted"],
+    ),
+    ("let f<T>(x: T): Void { let U = T; let y: U = x; }", &[]),
+    (
+        "let f<T>(): Void { let U = T; class C extends U {} }",
+        &["Cannot extend type parameter T"],
+    ),
+    // A user's class's private constructor is its own, through an alias
+    // too.
+    (
+        "class C {\n  private constructor() {}\n}\nlet c = new C();",
+        &["C is not a concrete type with a public constructor"],
+    ),
+    (
+        "class C {\n  private constructor() {}\n}\nlet f(): Void { let D = C; let c = new D(); }",
+        &["C is not a concrete type with a public constructor"],
+    ),
+    // `Console`, `Equatable` and `Null`, which core exports, as Kotlin
+    // Temper's did: a console may be passed around, implemented, and
+    // got by name; the equatable builtin types are `Equatable`s, as a
+    // bound; `Null` is null's type.
+    (
+        "let c: Console = console;\nc.log(\"a\");\nlet d: Console = getConsole(\"mine\");\n\
+         let e: Console = getConsole();",
+        &[],
+    ),
+    (
+        "class Quiet extends Console { public log(message: String): Void {} }\n\
+         let q: Console = new Quiet();",
+        &[],
+    ),
+    (
+        "let same<T extends Equatable<T>>(a: T, b: T): Boolean { a == b }\n\
+         let a = same(1, 2);\nlet b = same(\"a\", \"b\");\nlet c: Equatable<Boolean> = true;\n\
+         let d: Equatable<String> = \"s\";\nlet e: Equatable<Float64> = 1.0;",
+        &[],
+    ),
+    (
+        "let k: Equatable<String> = 1;",
+        &["Cannot assign to Equatable<String> from Int32"],
+    ),
+    ("let n: Null = null;\nlet m: Null? = null;", &[]),
+    ("let n: Null = 1;", &["Cannot assign to Null from Int32"]),
     // A user's class named as a builtin type is the user's.
     (
         "class Int32 { public get big(): Boolean { true } }\nlet b = new Int32().big;",
@@ -221,9 +284,25 @@ fn declared(ty: &str) -> &str {
 /// they share.
 type Case = (String, Vec<String>, Option<&'static str>);
 
+/// A use of a type, `%` standing for it in `template`, written with the
+/// type's name, and with an alias of it, top-level and local, as an
+/// alias is the type it names wherever types are checked
+/// (notes/typing.md, "Type aliases").
+fn uses(ty: &str, template: &str) -> [String; 3] {
+    let named = template.replace('%', ty);
+    let aliased = template.replace('%', "A");
+    let local = format!("let g(): Void {{\n  let A = {ty};\n  {aliased}\n}}");
+    [named, format!("let A = {ty};\n{aliased}"), local]
+}
+
 /// Every case.
 fn cases() -> Vec<Case> {
     let mut out: Vec<Case> = Vec::new();
+    let mut push = |ty: &str, template: &str, wanted: &[String], only: Option<&'static str>| {
+        for source in uses(ty, template) {
+            out.push((source, wanted.to_vec(), only));
+        }
+    };
     for &(ty, new, extend, cast, key) in ROWS {
         let name = declared(ty);
         let (args, wanted) = match new {
@@ -236,10 +315,7 @@ fn cases() -> Vec<Case> {
                 )],
             ),
         };
-        out.push((format!("let v = new {ty}({args});"), wanted.clone(), None));
-        // An alias is the type it names.
-        let alias = format!("let A = {ty};\nlet v = new A({args});");
-        out.push((alias, wanted, None));
+        push(ty, &format!("let v = new %({args});"), &wanted, None);
         let wanted = match extend {
             Ext::Yes => vec![],
             Ext::Concrete => vec![format!("Cannot extend concrete type(s) {name}")],
@@ -248,18 +324,18 @@ fn cases() -> Vec<Case> {
                  same module."
             )],
         };
-        let interface = format!("interface UserType extends {ty} {{}}");
-        out.push((interface, wanted.clone(), None));
-        let alias = format!("let A = {ty};\ninterface UserType extends A {{}}");
-        out.push((alias, wanted.clone(), None));
+        push(ty, "interface UserType extends % {}", &wanted, None);
         // A class must implement what an interface leaves abstract, which
         // isn't checked here.
-        let class = format!("class UserType extends {ty} {{}}");
-        out.push((class, wanted.clone(), Some("Cannot extend")));
-        let alias = format!("let A = {ty};\nclass UserType extends A {{}}");
-        out.push((alias, wanted, Some("Cannot extend")));
+        push(
+            ty,
+            "class UserType extends % {}",
+            &wanted,
+            Some("Cannot extend"),
+        );
         let wanted = match cast {
-            Cast::Yes | Cast::ConnectedGap => vec![],
+            Cast::Yes => vec![],
+            Cast::Connected => vec!["Connected types cannot be targeted".into()],
             Cast::Unrelated => vec!["Unrelated types cannot be targeted".into()],
             Cast::No => vec!["Types marked @mayDowncastTo(false) cannot be targeted".into()],
             Cast::TypeArgs => vec!["Type arguments cannot be introduced".into()],
@@ -268,15 +344,14 @@ fn cases() -> Vec<Case> {
                 ty.replace("<Int>", "<Int32>")
             )],
         };
-        let check = format!("let f(x: AnyValue): Boolean {{ x is {ty} }}");
-        out.push((check, wanted.clone(), None));
-        let cast = format!("let f(x: AnyValue): Void throws Bubble {{ x as {ty}; }}");
-        out.push((cast, wanted, None));
+        push(ty, "let f(x: AnyValue): Boolean { x is % }", &wanted, None);
+        let cast = "let f(x: AnyValue): Void throws Bubble { x as %; }";
+        push(ty, cast, &wanted, None);
         // Any type but `Void` may be a type argument, and only a `MapKey`
         // a map key.
         let void = vec![String::from("Void is only what a function returns")];
         let wanted = if ty == "Void" { void.clone() } else { vec![] };
-        out.push((format!("let v: List<{ty}>? = null;"), wanted, None));
+        push(ty, "let v: List<%>? = null;", &wanted, None);
         let mut wanted = match key {
             Key::Yes => vec![],
             Key::No => vec!["Type formal <K extends MapKey<K>> cannot bind to".into()],
@@ -284,11 +359,7 @@ fn cases() -> Vec<Case> {
         if ty == "Void" {
             wanted.splice(0..0, void);
         }
-        out.push((
-            format!("let v = new MapBuilder<{ty}, Int>();"),
-            wanted,
-            None,
-        ));
+        push(ty, "let v = new MapBuilder<%, Int>();", &wanted, None);
     }
     for name in UNNAMED {
         let wanted = vec![format!("{name} has not been declared")];

@@ -7,6 +7,7 @@ Key-value collections: `Pair`, the read-only view `Mapped`, the read-only
 
 *Pair* holds a *key* and its *value*, as a map's entries do.
 
+    @connected
     export class Pair<@out K, @out V> {
       public key: K;
       public value: V;
@@ -23,6 +24,7 @@ Key-value collections: `Pair`, the read-only view `Mapped`, the read-only
 *Mapped* is a read-only view to key-value mapped data, such as a `Map` or
 `MapBuilder`.
 
+    @connected
     export sealed interface Mapped<@in K extends MapKey<K>, V> {
       /**
        * The number of key value pairs in the [snippet/type/Mapped].

@@ -28,7 +28,7 @@ use crate::corelib::code;
 /// The builtin types whose members are read: first the final ones, which
 /// no other type extends, then the generic ones, then the rest whose
 /// members are used.
-const READ_TYPES: [&str; 25] = [
+const READ_TYPES: [&str; 26] = [
     "Boolean",
     "Int32",
     "Int64",
@@ -54,6 +54,7 @@ const READ_TYPES: [&str; 25] = [
     "StringIndexOption",
     "NoStringIndex",
     "DenseBitVector",
+    "Console",
 ];
 
 /// A type in a member's signature.
@@ -146,9 +147,7 @@ pub(super) fn core_class(type_name: &str) -> &'static CoreClass {
 fn declaration(name: &str, lets: bool) -> Option<(usize, &'static str, usize)> {
     let declared = |line: &'static str| {
         let rest = line.trim_start().strip_prefix("export ")?;
-        let rest = (rest.strip_prefix("sealed "))
-            .or_else(|| rest.strip_prefix("/*sealed*/ "))
-            .unwrap_or(rest);
+        let rest = rest.strip_prefix("sealed ").unwrap_or(rest);
         let rest = (rest.strip_prefix("class "))
             .or_else(|| rest.strip_prefix("interface "))
             .or_else(|| rest.strip_prefix("let ").filter(|_| lets))?;
@@ -314,6 +313,11 @@ pub struct CoreShape {
     /// where `is` and `as` may not target it, as for `Boolean`, whose
     /// values some backends can't tell from numbers.
     pub may_downcast: Option<bool>,
+    /// Marked `@connected`: the host supplies it, and other types may
+    /// connect to the same host type, so only a sealed supertype may
+    /// check for it, unless `@mayDowncastTo` says otherwise
+    /// (`typing/rtti.rs`).
+    pub connected: bool,
 }
 
 /// The shape of a type core declares, by name, following an alias, as
@@ -443,6 +447,7 @@ fn read_shapes() -> Vec<(&'static str, Declared)> {
             sealed: has("sealed"),
             public_constructor,
             may_downcast,
+            connected: has("connected"),
         };
         out.push((name, Declared::Type(shape)));
     }
@@ -1127,8 +1132,9 @@ mod tests {
                 .iter()
                 .all(|m| m.name != "substrings")
         );
-        // Each type is found, though some declare no members.
-        let empty = ["GeneratorResult", "Promise", "NoStringIndex"];
+        // Each type is found, though some declare no members but a
+        // private constructor.
+        let empty = ["GeneratorResult", "Promise", "NoStringIndex", "DoneResult"];
         // The final types come first, the generic ones after, then the
         // rest.
         for (i, ty) in READ_TYPES.into_iter().enumerate() {
@@ -1304,8 +1310,11 @@ mod tests {
         assert_eq!(shape("Null").may_downcast, Some(true));
         let listed = shape("Listed");
         assert!(listed.interface && listed.sealed && !listed.public_constructor);
-        // `/*sealed*/` is a comment.
-        assert!(!shape("MapKey").sealed);
+        assert!(shape("MapKey").sealed);
+        // `@connected` classes and interfaces, not `@connected` members'.
+        assert!(shape("StringIndex").connected && shape("GeneratorResult").connected);
+        assert!(shape("Pair").connected && shape("SafeGenerator").connected);
+        assert!(!shape("AnyValue").connected && !shape("MapKey").connected);
         assert!(shape("StringBuilder").public_constructor);
         assert!(!shape("Empty").public_constructor);
         assert_eq!(core_shape("ignore"), None);

@@ -9,6 +9,8 @@
 - [🆕 Bitwise operators](#-bitwise-operators)
 - [🚨Breaking change: Details of rules for `<` ambiguity have changed](#breaking-change-details-of-rules-for--ambiguity-have-changed)
 - [🚨Breaking change: Python parameters keep builtins' names](#breaking-change-python-parameters-keep-builtins-names)
+- [🚨Breaking change: private constructors, connected types, and member names](#breaking-change-private-constructors-connected-types-and-member-names)
+- [`Console`, `getConsole`, `Equatable`, and `Null` are nameable again](#console-getconsole-equatable-and-null-are-nameable-again)
 - [🆕 Module namespaces](#-module-namespaces)
 - [🚨Breaking change: `builtins.X` removed](#breaking-change-builtinsx-removed)
 - [🚨Breaking change: `Void` is never a value; type arguments fit their bounds](#breaking-change-void-is-never-a-value-type-arguments-fit-their-bounds)
@@ -25,6 +27,34 @@
 - [C++: `Float64.toString` as on the JVM](#c-float64tostring-as-on-the-jvm)
 - [`temper` and its `TEMPER_*` settings](#temper-and-its-temper_-settings)
 - [Fixes on Windows](#fixes-on-windows)
+
+## 🚨Breaking change: private constructors, connected types, and member names
+
+- A class's private constructor is its own, as private methods are:
+  `new C()` outside `C` is an error ("C is not a concrete type with a
+  public constructor"), through an alias or object literal too. Make
+  such values in a static method of the class instead.
+- `DoneResult`'s constructor is private; `doneResult()` makes one.
+- `MapKey` is sealed: only core's `Int32` and `String` are map keys.
+- `is` and `as` may target a `@connected` type, core's or yours, only
+  from a sealed supertype that tells its subtypes apart, as `r is
+  DoneResult<T>` for `r: GeneratorResult<T>`. `x is StringIndex` or `x is
+  StringBuilder` for `x: AnyValue` is an error, as in Kotlin Temper; JS
+  translated it wrongly.
+- `Pair`, `Deque`, `DenseBitVector`, `Listed`, `Mapped`,
+  `SafeGenerator`, and `Console` are `@connected`, as the host supplies
+  them, so `x is Pair<K, V>` or `x is DenseBitVector` from `AnyValue` is
+  an error too.
+- A class or interface may not have a static and an instance member
+  of the same name.
+- A local alias of a type, as `let D = C;` in a function, is the type:
+  checked as it is, and left out of generated code.
+
+## `Console`, `getConsole`, `Equatable`, and `Null` are nameable again
+
+As in Temper 0.6.0, code may name `Console` (and implement it),
+`getConsole(name)`, `Equatable<T>` (as a type or bound, as `T extends
+Equatable<T>`; it's sealed), and `Null`.
 
 ## 🆕 Module namespaces
 

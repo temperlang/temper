@@ -2861,9 +2861,12 @@ impl<'a> Translator<'a> {
             Node::Is { ty, value } => {
                 let class = self.pointee(ty)?;
                 let from = p.nodes.ty(value);
-                let polymorphic = temper_tmpl::analysis::nominal_decl(p, from).is_some_and(|d| {
-                    p.decls.get(d).kind == DeclKind::Interface || !p.decls.supers(d).is_empty()
-                });
+                // From an interface, a class with interfaces, or an
+                // `AnyValue`, which every class's struct is.
+                let polymorphic = p.types.non_null(from) == TypeId::ANY_VALUE
+                    || temper_tmpl::analysis::nominal_decl(p, from).is_some_and(|d| {
+                        p.decls.get(d).kind == DeclKind::Interface || !p.decls.supers(d).is_empty()
+                    });
                 if !polymorphic {
                     return not_yet("`is` on a class without interfaces");
                 }

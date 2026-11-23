@@ -858,8 +858,9 @@ doesn't report.
   ListBuilder<Int> = new ListBuilder()` makes a `ListBuilder<Int32>`.
 - **Fields** without a declared type take their initializer's, as
   locals do, static ones too: `static srgb = new Space(…)`.
-- **Type aliases:** a top-level `let` naming a type, as `let TestCase =
-  Pair<TestName, TestFun>` or `let TestName = String`, is that type.
+- **Type aliases:** a `let` naming a type, as `let TestCase =
+  Pair<TestName, TestFun>` or `let TestName = String`, is that type
+  ("Type aliases", below).
 - **Function signatures** come from annotations, which Temper requires at
   module boundaries, so libraries typecheck independently. A function
   needs a return type unless its context gives it one, as a parameter
@@ -869,6 +870,25 @@ doesn't report.
   declared types need no waiting. Anything not worked out is unknown and
   causes no error, so typing can grow a piece at a time. Status and
   differences from Kotlin are in [milestone-4.md](history/milestone-4.md).
+
+## Type aliases
+
+An alias is an immutable `let`, top-level or local, without a declared
+type, whose initializer is a type's name, a type given arguments, a
+nullable type, or a function type: `let D = C`, `let U = T` for a type
+parameter `T`, `let M = Map<String, Int>`. One rule says what a name
+denotes as a type, `Settle::alias_init` (classes.rs): `type_decl`
+follows aliases to a class's declaration, and `eval_type` evaluates an
+alias's initializer (once, against cycles). Every check reads types
+through those two, so an alias is checked exactly as the type it
+names, wherever it's used: `new D()` (a private constructor, an
+interface, a type parameter: "Cannot instantiate type parameter T"),
+`extends`, `is` and `as` (including the type-parameter and connected
+rules), annotations (`Void` as a value's type), type arguments, and
+bounds. `core_capabilities.rs` checks each core type's capabilities
+named directly, by a top-level alias, and by a local one. A `var`, or
+a `let` with a declared type, is a value, not an alias. tmpl leaves
+aliases out, local ones too; typing has read them where they're used.
 
 ## Joins, and sealed types and `when`
 
@@ -1378,8 +1398,19 @@ better written `c == null`. Backends, once tempest has them, translate
 Kotlin Temper's backends do.
 
 And `x` of type `Void` is also "Expected subtype of AnyValue?, but got
-Void", at `x`. Not yet: `@connected` types (core's, which tempest
-doesn't type yet; Kotlin fails on user code's).
+Void", at `x`.
+
+**Connected types**, as Kotlin's rule: a downcast to a `@connected`
+type, core's or a user's, is "Connected types cannot be targeted with
+is or as runtime type checks because multiple Temper types are allowed
+to connect to the same backend type: <[C]> from AnyValue", unless `S` is
+sealed and `T` reaches it through sealed supertypes only (`DoneResult<T>`
+from `GeneratorResult<T>`; not `E` from `S` where `E` extends a
+non-sealed `NS extends S`). Checked after rule 5's errors, and also
+where typing can't tell whether the check is a downcast (core's
+non-generic classes from `AnyValue`), as Kotlin checks it whenever it
+isn't an upcast. A type core marks `@mayDowncastTo` isn't checked by
+it.
 
 ## `Void` as a value
 

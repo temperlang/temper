@@ -415,14 +415,20 @@ impl Settle {
     }
 
     /// Checks `console.log(message)`, if the callee is that.
-    pub(super) fn check_console_call(&mut self, call: NodeId, callee: NodeId, args: &[NodeId]) {
+    pub(super) fn check_console_call(
+        &mut self,
+        call: NodeId,
+        callee: NodeId,
+        args: &[NodeId],
+    ) -> bool {
         let tree = &self.lib.tree;
-        if !self.is_console_log(callee)
-            || args.iter().any(|&a| {
-                tree.kind(a) == NodeKind::Fn || matches!(self.lib.value(a), Some(Value::Symbol(_)))
-            })
-        {
-            return;
+        if !self.is_console_log(callee) {
+            return false;
+        }
+        if args.iter().any(|&a| {
+            tree.kind(a) == NodeKind::Fn || matches!(self.lib.value(a), Some(Value::Symbol(_)))
+        }) {
+            return true;
         }
         // Kotlin counts `this`, saying "Expected 2".
         if args.len() != LOG.params.len() {
@@ -433,6 +439,7 @@ impl Settle {
         for (&arg, &param) in args.iter().zip(LOG.params) {
             self.check_value(param, arg, Site::Arg);
         }
+        true
     }
 
     fn show_list(&self, types: &[TypeId]) -> String {

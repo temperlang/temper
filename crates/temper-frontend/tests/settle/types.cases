@@ -3619,6 +3619,7 @@ let maker(): fn (): Map<Int64, Int> { fn (): Map<Int64, Int> { new Map<Int64, In
         (Fn
           (Call <> Map Int64 Int)
           (Block (Call new (Call <> Map Int64 Int) (Call list))))))))
+error 323..334: Cannot extend sealed type MapKey from Key. Key is not declared in the same module.
 error 411..442: Type formal <K extends MapKey<K>> cannot bind to AnyValue which does not fit upper bounds [MapKey<K>]
 error 454..491: Type formal <K extends MapKey<K>> cannot bind to MapKey<String> which does not fit upper bounds [MapKey<K>]
 error 503..536: Type formal <K extends MapKey<K>> cannot bind to Never<Int32> which does not fit upper bounds [MapKey<K>]

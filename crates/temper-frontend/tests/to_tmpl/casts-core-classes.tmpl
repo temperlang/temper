@@ -1,0 +1,70 @@
+tmpl 1 model 1 library `core-classes` 0.0.0
+
+uses `temper-core`#4 0.0.0-alpha.0.0 {
+  class DenseBitVector#5 {
+    connected constructor constructor#14(capacity: Int32): DenseBitVector#5;
+  }
+  class List#7<T#8> extends Listed#9<T#8> {}
+  interface Listed#9<T#10> {}
+  interface Console#15 {
+    connected method log#16(message: String): Void;
+  }
+  class Pair#18<K#19, V#20> {
+    connected constructor constructor#21(key: K#19, value: V#20): Pair#18<K#19, V#20>;
+  }
+  class Map#22<K#23 extends MapKey#25<K#23>, V#24> extends Mapped#27<K#23, V#24> {
+    connected constructor constructor#30(entries: List#7<Pair#18<K#23, V#24>>): Map#22<K#23, V#24>;
+  }
+  interface MapKey#25<EQ#26> {}
+  interface Mapped#27<K#28 extends MapKey#25<K#28>, V#29> {}
+  class ListBuilder#31<T#32> extends Listed#9<T#32> {
+    connected constructor constructor#33(): ListBuilder#31<T#32>;
+  }
+  class Deque#34<T#35> {
+    connected constructor constructor#36(): Deque#34<T#35>;
+  }
+  class Boolean#38 {
+    connected method toString#39(): String;
+  }
+  connected fn getConsole#40(name?: String): Console#15;
+}
+
+module `core-classes`#0 {
+  let ~console#17: Console#15;
+
+  class Thing#1 {
+    constructor constructor#2(): Thing#1 {}
+  }
+
+  fn describe#3(x#13: AnyValue): String {
+    if (is(x#13, Thing#1)) {
+      return "thing";
+    }
+    return (orelse((value { (as(x#13)^): Thing#1; "thing, as" }): String, "other")): String;
+  }
+
+  let bits#6: DenseBitVector#5;
+
+  let ints#11: List#7<Int32>;
+
+  fn isThing#12(x#37: AnyValue): Boolean {
+    return is(x#37, Thing#1);
+  }
+
+  init {
+    init ~console#17 = getConsole#40(omitted);
+    init bits#6 = new constructor#14(8);
+    init ints#11 = (list(1, 2)): List#7<Int32>;
+    ~console#17.log#16(describe#3((upcast(new constructor#2())): AnyValue));
+    ~console#17.log#16(describe#3((upcast(new constructor#21<String, Int32>("a", 1))): AnyValue));
+    ~console#17.log#16(describe#3((upcast(bits#6)): AnyValue));
+    ~console#17.log#16(describe#3((upcast("s")): AnyValue));
+    ~console#17.log#16(describe#3((upcast(1)): AnyValue));
+    ~console#17.log#16(describe#3((upcast(ints#11)): AnyValue));
+    ~console#17.log#16(describe#3((upcast(new constructor#30<String, Int32>((list(new constructor#21<String, Int32>("m", 2))): List#7<Pair#18<String, Int32>>))): AnyValue));
+    ~console#17.log#16(describe#3((upcast(new constructor#33<Int32>())): AnyValue));
+    ~console#17.log#16(describe#3((upcast(new constructor#36<Int32>())): AnyValue));
+    ~console#17.log#16(isThing#12((upcast(new constructor#2())): AnyValue).toString#39());
+    ~console#17.log#16(isThing#12((upcast(bits#6)): AnyValue).toString#39());
+  }
+}

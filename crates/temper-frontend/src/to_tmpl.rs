@@ -1763,8 +1763,10 @@ impl Translator<'_> {
         }
         let children = self.children(node).to_vec();
         let stmt = match self.kind(node) {
-            // A value or a name read alone does nothing.
+            // A value or a name read alone does nothing, nor does a local
+            // type alias, which typing reads where it's used.
             NodeKind::Value | NodeKind::RightName => return Ok(()),
+            NodeKind::Let if self.is_type_alias(node, 0) => return Ok(()),
             // `ignore(x)` is `x` alone, its value dropped.
             NodeKind::Call
                 if children.len() == 2
@@ -2396,12 +2398,12 @@ impl Translator<'_> {
         same(x, target) && reads_t
     }
 
-    /// Whether a top-level `let` is a type alias, as `let ChangeType =
-    /// String`, which typing reads where the alias is used and which has
-    /// no value to translate: as typing's `alias_type`, an immutable `let`
-    /// without a written type whose initializer names a type, or gives
-    /// one arguments, or is a nullable or function type. `depth` aliases
-    /// in, against cycles.
+    /// Whether a `let`, top-level or local, is a type alias, as `let
+    /// ChangeType = String`, which typing reads where the alias is used
+    /// and which has no value to translate: as typing's `alias_init`, an
+    /// immutable `let` without a written type whose initializer names a
+    /// type, or gives one arguments, or is a nullable or function type.
+    /// `depth` aliases in, against cycles.
     fn is_type_alias(&self, decl: FNode, depth: u32) -> bool {
         let (name, ty, init) = core::let_parts(&self.s.library.tree, decl);
         let (None, Some(init)) = (ty, init) else {
@@ -2409,7 +2411,10 @@ impl Translator<'_> {
         };
         let top = (self.s.scopes.resolved(name)).is_some_and(|s| {
             let s = self.s.scopes.symbol(s);
-            s.kind == crate::scope::SymbolKind::TopLevel && !s.mutable
+            matches!(
+                s.kind,
+                crate::scope::SymbolKind::TopLevel | crate::scope::SymbolKind::Local
+            ) && !s.mutable
         });
         if !top || depth > 8 {
             return false;
@@ -2422,6 +2427,7 @@ impl Translator<'_> {
                 let s = self.s.scopes.symbol(symbol);
                 match (s.kind, s.decl) {
                     (crate::scope::SymbolKind::Builtin(Builtin::Type(_)), _) => true,
+                    (crate::scope::SymbolKind::TypeParam, _) => true,
                     (_, Some(d)) if self.kind(d) == NodeKind::Class => true,
                     (_, Some(d)) if self.kind(d) == NodeKind::Let => {
                         self.is_type_alias(d, depth + 1)
@@ -2717,7 +2723,8 @@ impl Translator<'_> {
                         Constant::Infinity => self.b.float64(f64::INFINITY),
                         Constant::TestServerPort(port) => self.b.int32(port),
                         Constant::Null => self.b.null(TypeId::NONE),
-                        Constant::Console => return self.not_yet(node, "console as a value"),
+                        // The module's console, as `console.log` reads it.
+                        Constant::Console => return self.console(node, node),
                     };
                     return Ok(self.own(made, node));
                 }
@@ -3264,6 +3271,21 @@ impl Translator<'_> {
                 return self.not_yet(node, "core's empty");
             };
             let made = self.b.call(empty, &[]);
+            return Ok(self.own(made, node));
+        }
+        // `getConsole(name)`, or with no name, as `console` is got.
+        if key == "getConsole" && args.len() <= 1 {
+            let Some(get) = self.core_decl("getConsole") else {
+                return self.not_yet(node, "core's getConsole");
+            };
+            let name = match args.first() {
+                Some(&name) => self.expr(name)?,
+                None => {
+                    let omitted = self.b.omitted(TypeId::STRING);
+                    self.made(omitted, node)
+                }
+            };
+            let made = self.b.call(get, &[name]);
             return Ok(self.own(made, node));
         }
         // `List.of(…)` is a list literal, as Kotlin's unifies them.

@@ -1618,6 +1618,8 @@ console.log("${p.key} ${p.value} ${p is Pair} ${b is Mapped} ${m is MapBuilder}"
       (Call is m:0 MapBuilder)))
   #void)
 error 326..329: Expected subtype of Int32, but got String
+error 543..552: Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: <[Pair]> from Pair<Int32, String>
+error 556..567: Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: <[Mapped]> from MapBuilder<Int32, String>
 error 571..586: Runtime type check from Map<Int32, String> to MapBuilder can never succeed
 log 2 deux false none ?
 log 2,1
@@ -1625,7 +1627,7 @@ log 2=deux 1=one
 log deux gone 2 2
 log 1: uno
 log a: x
-Failed: Runtime type check from Map<Int32, String> to MapBuilder can never succeed
+Failed: Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: <[Pair]> from Pair<Int32, String>
 
 === static extensions where visible
 @staticExtension(Int, "seven")
@@ -2452,11 +2454,9 @@ g.nextSafe();
       (Call is (Call (Call . g:1 \next)) (Call <> DoneResult Int))))
   (Call (Call . g:1 \nextSafe))
   #void)
+error 194..217: Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: <[SafeGenerator<Int32>]> from Generator<Int32>
 error 266..311: Expected subtype of String, but got AnyValue
-log false true
-log bubbled
-log true true
-Failed: No method nextSafe for Generator
+Failed: Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: <[SafeGenerator<Int32>]> from Generator<Int32>
 
 === return ends a generator, and closures keep its locals
 let make(body: fn (): SafeGenerator<Int>): SafeGenerator<Int> { body() }

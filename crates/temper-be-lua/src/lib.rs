@@ -115,6 +115,40 @@ impl std::error::Error for NotYet {}
 
 pub use temper_tmpl::OutFile;
 
+/// Core's types this backend translates as host types or its runtime's
+/// own ([`temper_tmpl::Backend::host_types`]): its type translation's
+/// `core.type` cases, and the builtin scalars. Not `MapKey`, only a
+/// bound.
+pub const HOST_TYPES: &[&str] = &[
+    "Boolean",
+    "Console",
+    "DenseBitVector",
+    "Deque",
+    "DoneResult",
+    "Empty",
+    "Float64",
+    "Generator",
+    "GeneratorResult",
+    "Int32",
+    "Int64",
+    "List",
+    "ListBuilder",
+    "Listed",
+    "Map",
+    "MapBuilder",
+    "Mapped",
+    "NoStringIndex",
+    "Pair",
+    "Promise",
+    "PromiseBuilder",
+    "SafeGenerator",
+    "String",
+    "StringBuilder",
+    "StringIndex",
+    "StringIndexOption",
+    "ValueResult",
+];
+
 /// This backend, as tools list it ([`temper_tmpl::Backend`]).
 pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     name: "lua",
@@ -127,6 +161,7 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     runtime_version: &runtime::VERSION,
     rules: &LUA.rules,
     translate: |p, _| translate(p, &LUA).map_err(|e| e.to_string()),
+    host_types: HOST_TYPES,
     default: true,
     #[cfg(any(unix, windows))]
     tools: Some(&tools::TOOLS),

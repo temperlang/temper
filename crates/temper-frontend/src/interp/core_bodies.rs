@@ -70,7 +70,7 @@ impl CoreBodies {
                 }
                 value @ Val::Fn(_) => {
                     by_symbol.insert(text.to_string(), value.clone());
-                    for builtin in ["ignore", "empty", "doneResult"] {
+                    for builtin in ["ignore", "empty", "doneResult", "getConsole"] {
                         if text == builtin {
                             functions.insert(builtin, value.clone());
                         }
@@ -182,6 +182,7 @@ impl CoreBodies {
                     Function::Ignore => "ignore",
                     Function::Empty => "empty",
                     Function::DoneResult => "doneResult",
+                    Function::GetConsole => "getConsole",
                     _ => return Err((function, args)),
                 };
                 if let Some(value) = self.functions.get(name) {

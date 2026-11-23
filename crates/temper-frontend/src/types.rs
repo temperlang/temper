@@ -111,11 +111,17 @@ pub struct Types {
 }
 
 /// Builtin generic types and the generic types they extend, with the
-/// same type arguments, as `class List<T> extends Listed<T>` in core; and
-/// the final types that are `MapKey`s of themselves, as `class String
-/// extends MapKey<String>`; and `StringIndex` and `NoStringIndex`, which
-/// extend `StringIndexOption`. Core's `Equatable` isn't a builtin type yet.
-const BUILTIN_SUPERTYPES: [(&str, &str); 11] = [
+/// same type arguments, as `class List<T> extends Listed<T>` in core; the
+/// types that are `MapKey`s or `Equatable`s of themselves, as `class
+/// String extends MapKey<String>`; and `StringIndex` and `NoStringIndex`,
+/// which extend `StringIndexOption`. Each extends one, as core declares.
+const BUILTIN_SUPERTYPES: [(&str, &str); 17] = [
+    ("Boolean", "Equatable"),
+    ("Int64", "Equatable"),
+    ("Float64", "Equatable"),
+    ("Empty", "Equatable"),
+    ("MapKey", "Equatable"),
+    ("StringIndexOption", "Equatable"),
     ("List", "Listed"),
     ("ListBuilder", "Listed"),
     ("Map", "Mapped"),
@@ -456,13 +462,30 @@ impl Types {
             return None;
         }
         match *self.get(own) {
-            TypeData::Builtin(_) if self.builtin_extends(own, base) => {
-                // `String` is a `MapKey<String>`; `List<T>`, a `Listed<T>`.
-                let args = match self.is_final(own) {
-                    true => vec![t],
-                    false => self.args(t).to_vec(),
+            TypeData::Builtin(i) => {
+                // `String` is a `MapKey<String>`, and so an
+                // `Equatable<String>`; `List<T>`, a `Listed<T>`; and
+                // `StringIndex`, a `StringIndexOption`.
+                let up = (BUILTIN_SUPERTYPES.iter())
+                    .find(|&&(sub, _)| sub == TYPES[i as usize])
+                    .map(|&(_, up)| up)?;
+                let index = TYPES.iter().position(|&n| n == up)?;
+                let up = self.builtin(index as u8);
+                let sup = match (self.is_core_nominal(up), self.args(t).is_empty()) {
+                    (true, _) => up,
+                    (false, true) => self.intern(TypeData::Applied {
+                        base: up,
+                        args: vec![t],
+                    }),
+                    (false, false) => {
+                        let args = self.args(t).to_vec();
+                        self.intern(TypeData::Applied { base: up, args })
+                    }
                 };
-                Some(self.intern(TypeData::Applied { base, args }))
+                match up == base {
+                    true => Some(sup),
+                    false => self.supertype_at(sup, base, depth + 1),
+                }
             }
             TypeData::Class(symbol) => {
                 let info = self.classes.get(&symbol)?;
@@ -585,6 +608,8 @@ impl Types {
         match TYPES[index as usize] {
             "Int" => INT32,
             "Never" => NEVER,
+            // Core's `Null`, null's type.
+            "Null" => NULL,
             _ => self.intern(TypeData::Builtin(index)),
         }
     }
@@ -803,6 +828,13 @@ impl Types {
             (NeverOf(a), NeverOf(b)) => self.subtype(a, b, depth),
             (NeverOf(a), _) => self.subtype(a, t, depth),
             (_, NeverOf(_)) => Some(false),
+            // Only null is a `Null`, null's type, as core names it.
+            (Nullable(_), Null) => Some(false),
+            (_, Null) if !matches!(self.get(s), Param(_)) => (self.is_definite(s)
+                || self.is_class_like(s)
+                || self.is_core_nominal(s)
+                || s == ANY_VALUE)
+                .then_some(false),
             // Unless its bound is nullable, `T` isn't.
             (Null | Nullable(_), Param(_))
                 if self.subtype(NULL, self.upper(t), depth) != Some(false) =>
@@ -1265,7 +1297,6 @@ mod tests {
         let mut variant = Vec::new();
         for line in core.lines().map(str::trim_start) {
             let decl = line.trim_start_matches("export ");
-            let decl = decl.trim_start_matches("/*sealed*/ ");
             let decl = decl.trim_start_matches("sealed ");
             let (is_class, rest) =
                 match (decl.strip_prefix("class "), decl.strip_prefix("interface ")) {

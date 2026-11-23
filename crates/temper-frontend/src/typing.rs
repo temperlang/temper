@@ -493,7 +493,13 @@ impl Settle {
                 Constant::Void => VOID,
                 Constant::NaN | Constant::Infinity => FLOAT64,
                 Constant::TestServerPort(_) => INT32,
-                Constant::Console => UNKNOWN,
+                // Core's `Console`.
+                Constant::Console => {
+                    match crate::builtins::TYPES.iter().position(|&t| t == "Console") {
+                        Some(i) => self.typing.types.builtin(i as u8),
+                        None => UNKNOWN,
+                    }
+                }
             },
             SymbolKind::TopLevel
             | SymbolKind::Local
@@ -615,10 +621,13 @@ impl Settle {
                 }
                 _ => UNKNOWN,
             },
-            Empty => match crate::builtins::TYPES.iter().position(|&t| t == "Empty") {
-                Some(i) => self.typing.types.builtin(i as u8),
-                None => UNKNOWN,
-            },
+            Empty | GetConsole => {
+                let name = if f == Empty { "Empty" } else { "Console" };
+                match crate::builtins::TYPES.iter().position(|&t| t == name) {
+                    Some(i) => self.typing.types.builtin(i as u8),
+                    None => UNKNOWN,
+                }
+            }
             Pow => FLOAT64,
             As if args.len() == 2 => self.eval_type(args[1]),
             New => match self.new_class(args) {
@@ -796,9 +805,8 @@ impl Settle {
     }
 
     /// The type a type alias names, as `TestCase` in `export let TestCase
-    /// = Pair<TestName, TestFun>`: a top-level `let` whose initializer is
-    /// a type's name, or a type given arguments, nullable, or a function
-    /// type. Not one that names itself, even through others.
+    /// = Pair<TestName, TestFun>` ([`Settle::alias_init`]). Not one that
+    /// names itself, even through others.
     fn alias_type(&mut self, symbol: SymbolId) -> TypeId {
         let Some(init) = self.alias_init(symbol) else {
             return UNKNOWN;
@@ -811,28 +819,6 @@ impl Settle {
         let t = self.eval_type(init);
         self.typing.aliases.pop();
         t
-    }
-
-    /// The type expression a type alias names, as `C<Int>` for `let
-    /// Alias = C<Int>;`, if `symbol` is one.
-    pub(crate) fn alias_init(&self, symbol: SymbolId) -> Option<NodeId> {
-        let tree = &self.lib.tree;
-        let s = self.scopes.symbol(symbol);
-        let decl = s.decl.filter(|&d| {
-            s.kind == SymbolKind::TopLevel && !s.mutable && tree.kind(d) == NodeKind::Let
-        })?;
-        let (_, None, Some(init)) = core::let_parts(tree, decl) else {
-            return None;
-        };
-        let is_type = tree.kind(init) == NodeKind::RightName
-            || tree.kind(init) == NodeKind::Call
-                && matches!(
-                    self.scopes.resolved_builtin(tree.children(init)[0]),
-                    Some(Builtin::Function(
-                        Function::Angle | Function::Nullable | Function::FnType
-                    ))
-                );
-        is_type.then_some(init)
     }
 
     /// A type parameter's type, as `T` names it, with its bound: `AnyValue`
@@ -1035,6 +1021,7 @@ impl Settle {
             NodeKind::Call => {
                 self.check_nullable_member(node);
                 self.check_member_access(node, classes);
+                self.check_private_new(node, classes);
                 self.check_member_exists(node, scope);
             }
             NodeKind::RightName => self.check_bare_static(node),
@@ -1134,6 +1121,54 @@ impl Settle {
         }
         let message = Message::NotPubliclyAccessible(name, owner_text);
         self.lib.report(Level::Error, message, span);
+    }
+
+    /// Reports `new C(…)` outside `C`, and the classes inside it, where
+    /// `C`'s constructor is private, as a private method's use is
+    /// ([`Settle::check_member_access`]), for the class `new`'s type names,
+    /// through an alias too: "C is not a concrete type with a public
+    /// constructor", as for core's. Stricter than Kotlin Temper, which
+    /// doesn't check (kotlin-differences.md). Core's own code makes its
+    /// classes' values, as `new` of a builtin type allows
+    /// ([`Settle::check_builtin_new`]).
+    fn check_private_new(&mut self, call: NodeId, classes: &[NodeId]) {
+        let tree = &self.lib.tree;
+        let (Some(&callee), Some(&target)) =
+            (tree.children(call).first(), tree.children(call).get(1))
+        else {
+            return;
+        };
+        if self.scopes.resolved_builtin(callee) != Some(Builtin::Function(Function::New))
+            || self.lib.in_core(tree.span(call).start)
+        {
+            return;
+        }
+        let t = self.eval_type(target);
+        let TypeData::Class(symbol) = *self.typing.types.get(self.typing.types.base(t)) else {
+            return;
+        };
+        let Some(class) = self.type_decl(symbol).filter(|c| !classes.contains(c)) else {
+            return;
+        };
+        let tree = &self.lib.tree;
+        let private = (core::class_parts(tree, class).2.iter()).any(|&m| {
+            let data = tree.data(m);
+            data & ROLE_MASK == core::ROLE_CONSTRUCTOR
+                && data & core::MEMBER_STATIC == 0
+                && data & core::MEMBER_PRIVATE != 0
+        });
+        if private {
+            let name = self.member_text(class).to_string();
+            // At the class's name, or the whole of an object literal,
+            // whose class isn't written.
+            let tree = &self.lib.tree;
+            let span = match tree.span(target) {
+                span if span.start == span.end => tree.span(call),
+                span => span,
+            };
+            self.lib
+                .report(Level::Error, Message::NotConstructible(name), span);
+        }
     }
 
     /// Reports a static member named bare, as `count` for `C.count` in
@@ -1527,7 +1562,11 @@ impl Settle {
             None if self.check_tie(node, callee, args) => return,
             None if self.check_generic_call(node) => return,
             None => {
-                self.check_console_call(node, callee, args);
+                // `console.log(…)`, checked as Kotlin checks it, not
+                // also as a `Console`'s method.
+                if self.check_console_call(node, callee, args) {
+                    return;
+                }
                 let mut callee_type = self.known_callee_type(callee);
                 // A function that may be null, as `act(i)` for `act: (fn
                 // (Int): Void)?`, as Kotlin Temper reports it; the
@@ -1791,13 +1830,20 @@ impl Settle {
     /// type argument (`List<Void>`), `Void?`, or a function type's
     /// parameter (`fn (Void): Int`), as no value is ever a `Void` (t854).
     /// It may be what a function or function type returns, and
-    /// `Never<Void>`'s argument; where it names a class, as `new Void()`
+    /// `Never<Void>`'s argument. An alias of it, as `let V = Void`, is
+    /// checked as it is. Where it names a class, as `new Void()`
     /// or `x is Void`, or is a type value, other rules apply.
     fn check_void_type(&mut self, node: NodeId) {
-        let Some(Builtin::Type(i)) = self.scopes.resolved_builtin(node) else {
-            return;
+        // `Void`, or an alias of it.
+        let void = match self.scopes.resolved_builtin(node) {
+            Some(Builtin::Type(i)) => self.typing.types.builtin(i) == VOID,
+            _ => {
+                (self.lib.tree.kind(node) == NodeKind::RightName)
+                    && (self.scopes.resolved(node)).is_some_and(|b| self.alias_init(b).is_some())
+                    && self.eval_type(node) == VOID
+            }
         };
-        if self.typing.types.builtin(i) != VOID {
+        if !void {
             return;
         }
         let tree = &self.lib.tree;

@@ -15,12 +15,14 @@ use temper_syntax::tree::NodeId;
 
 impl Settle {
     /// The builtin type `t` is, maybe given type arguments, as `List`
-    /// for `List<Int32>` or `Never` for `Never<Int32>`, by its name in
+    /// for `List<Int32>`, `Never` for `Never<Int32>`, or `Null` for null's
+    /// type, by its name in
     /// [`crate::builtins::TYPES`], if it is one.
     fn builtin_of(&self, t: TypeId) -> Option<&'static str> {
         let types = &self.typing.types;
         match types.get(t) {
             TypeData::NeverOf(_) => Some("Never"),
+            TypeData::Null => Some("Null"),
             _ => types.builtin_name(types.base(t)),
         }
     }

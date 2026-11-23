@@ -21,6 +21,7 @@ call `toList` on it and retain that value instead.
 
 Usually, don't return type `Listed`. It's usually best to return type `List`.
 
+    @connected
     export sealed interface Listed<T> {
       /**
        * The *length* of a listed is the number of items it contains.
@@ -291,6 +292,7 @@ while (!deque.isEmpty) {
 // ✅
 ```
 
+    @connected
     export class Deque<T> {
 
       @connected

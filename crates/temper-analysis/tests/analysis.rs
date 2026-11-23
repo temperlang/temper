@@ -930,6 +930,7 @@ const BUILTIN_USES: &[(&str, &str, &str)] = &[
     ("empty", "let a = empty();", "empty"),
     ("doPure", "let a = doPure { (): Int => 1 };", "doPure"),
     ("doneResult", "let a = doneResult<Int>();", "doneResult"),
+    ("getConsole", "let a = getConsole(\"mine\");", "getConsole"),
     (
         "async",
         "async { (): GeneratorResult<Empty> extends GeneratorFn => ignore(1); }",

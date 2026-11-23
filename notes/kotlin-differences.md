@@ -478,9 +478,14 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   tempest also reports, 2026-11-13, connecting it as without a list); and a
   connected class can be the target of `is` or `as` only from a sealed
   supertype ("Connected types cannot be targeted with is or as runtime
-  type checks …"). Tempest treats them as ordinary classes for now and
-  reports none of these ([milestone-4.md](history/milestone-4.md), "`is` and
-  `as` checks"). Since Kotlin's #642 (connected fallback types), a
+  type checks …"), which tempest checks too (2026-11-23), for core's
+  connected types as well, whose `is` JS wrote wrongly (`x >= 0` for `x
+  is StringIndex` of any value); test: settle/class-types.cases,
+  "connected types are targeted only through sealed supertypes". Core
+  marks every type a backend supplies `@connected`, `Pair`, `Deque`,
+  `DenseBitVector`, `Listed`, `Mapped`, `SafeGenerator`, and `Console`
+  too, which Kotlin's core didn't (temper-driver's `host_types` test).
+  Tempest doesn't report a user connecting an interface yet. Since Kotlin's #642 (connected fallback types), a
   connected class may have a complete Temper implementation, a body for
   every method, which the interpreter, backends not in its
   `@connected([...])` list, and `--no-connected` use. Tempest matches
@@ -872,13 +877,47 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   S from C. C is not declared in the same module.", where Kotlin names
   where `S` is declared in place of the first `S`); Kotlin's check
   compares documents, one per module. The docs said "source file", but
-  Wherewith extends one from another file of its module. Neither
-  enforces a user's private constructor yet. A static member core
+  Wherewith extends one from another file of its module. A static member core
   doesn't declare, as `Int32.zzz`, is "No member zzz in Int32", as for a
   class's, where both let it fail at run time. A user's class named as
   a builtin type, as `class Int32`, is the user's own; typing took it
   for the builtin.
   Test: temper-frontend/tests/core_capabilities.rs.
+
+- **Private constructors are enforced per class** (2026-11-23, t856):
+  `new C()` outside `C` (and classes inside it), where `C`'s constructor
+  is private, is "C is not a concrete type with a public constructor",
+  as for core's classes, through an alias or an object literal too.
+  Stricter than Kotlin, which doesn't check, and consistent with private
+  methods, which both enforce per class. Core's own code still makes
+  its classes' values (`doneResult()`, `empty()`); `DoneResult`'s
+  constructor is now private, as `Promise`'s and `Empty`'s. Host-side
+  visibility (C#'s public constructors) is t838/t911's. Code that made
+  such a class elsewhere in its module (Kelpto's `SafeHtml`, made by a
+  top-level `sanitizeTree`) must move that into the class.
+  Test: settle/classes.cases, "private constructors are their class's
+  own"; core_capabilities.rs.
+
+- **A static and an instance member of one name** (2026-11-23, t922)
+  are an error: "Static property x and property x of C share a name;
+  a static and an instance member need different names", at the later
+  one, for properties, methods, getters, and setters, in classes and
+  interfaces. Kotlin groups members by kind and doesn't check, and its
+  Java output renames the static (`x2`).
+  Test: settle/classes.cases, "a static member and an instance member
+  can't share a name".
+
+- **`Console`, `getConsole`, `Equatable` and `Null` are nameable**
+  (2026-11-23), as Kotlin's core, the prelude, made them; Temper refused
+  them ("Console has not been declared"). `Equatable` stays sealed, so
+  it's a type and a bound (`T extends Equatable<T>`), with `Int32`,
+  `String`, `Boolean`, `Int64`, `Float64`, `Empty`, and
+  `StringIndexOption` its subtypes, as core declares. `console` is a
+  `Console`. tmpl doesn't translate an `Equatable` bound, a `Null` type,
+  or a class extending `Console` yet, nor JS, Lua and Rust a `Console`
+  as a value.
+  Test: core_capabilities.rs; settle/builtins.cases, "Console,
+  getConsole, Equatable, and Null are core's".
 
 - **`Bubble` isn't an `AnyValue`, and `Never<T>` has no values**, as
   core's docs say (2026-11-19). Temper refuses `x is Bubble` and `x as

@@ -191,6 +191,13 @@ pub const TYPING: [&str; 1] = ["semantics/constness"];
 /// [`cases_with`].
 pub const ANY_VALUES: [&str; 2] = ["casts/as-expr", "types/list/operations"];
 
+/// The functional tests with `is` and `as` checks from `AnyValue` for a
+/// class, given core's values, as `Pair`s and `DenseBitVector`s, and a
+/// class's without interfaces as `AnyValue`s. Each backend runs them with
+/// [`cases_with`] but C++ and Rust, which can't make those values
+/// `AnyValue`s yet.
+pub const CORE_CHECKS: [&str; 1] = ["casts/core-classes"];
+
 /// The functional tests of a library with errors, which translate with
 /// tmpl's `Error`s, each failing where it runs: `semantics/broken`, whose
 /// run fails ([`Case::fails`]), and `semantics/type-checked-locals`,
