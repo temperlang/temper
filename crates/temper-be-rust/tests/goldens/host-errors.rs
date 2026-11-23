@@ -96,10 +96,10 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         let r = super::read(Arc::new(vec![1, 2]), 5).unwrap_or(-1);
         test.assert(r != -1, Arc::new(move || Arc::new("caught".to_string())));
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -109,11 +109,11 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         let ls: temper_core::List<i32> = Arc::new(vec![1, 2]);
         let r = super::read(ls.clone(), temper_core::ListedTrait::len(&ls)).unwrap_or(-1);
         test.assert(r != -1, Arc::new(move || Arc::new("caught".to_string())));
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -123,10 +123,10 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         let r = super::read(super::built(), -1).unwrap_or(-1);
         test.assert(r != -1, Arc::new(move || Arc::new("caught".to_string())));
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -136,10 +136,10 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         let r = super::write(super::built(), 5).unwrap_or(-1);
         test.assert(r != -1, Arc::new(move || Arc::new("caught".to_string())));
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -149,11 +149,11 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         let lb: temper_core::ListBuilder<i32> = super::built();
         let r = super::write(lb.clone(), temper_core::ListedTrait::len(&lb)).unwrap_or(-1);
         test.assert(r != -1, Arc::new(move || Arc::new("caught".to_string())));
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -163,10 +163,10 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         let r = super::insert(super::built(), 5).unwrap_or(-1);
         test.assert(r != -1, Arc::new(move || Arc::new("caught".to_string())));
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -176,7 +176,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         let lb: temper_core::ListBuilder<i32> = super::built();
         let r = super::insert(
             lb.clone(),
@@ -184,7 +184,7 @@ mod tests {
         )
         .unwrap_or(-1);
         test.assert(r != -1, Arc::new(move || Arc::new("caught".to_string())));
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -194,14 +194,14 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         let lb: temper_core::ListBuilder<i32> = super::built();
         let n = super::insert(lb.clone(), temper_core::ListedTrait::len(&lb)).unwrap_or(-1);
         test.assert(
             n == 2 && temper_core::ListedTrait::get(&lb, 1) == 2,
             Arc::new(move || Arc::new("didn't append".to_string())),
         );
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -211,10 +211,10 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         let r = super::remove_last(temper_core::listed::new_builder(), 0).unwrap_or(-1);
         test.assert(r != -1, Arc::new(move || Arc::new("caught".to_string())));
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -224,10 +224,10 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         let r = super::remove_first(temper_core::deque::new(), 0).unwrap_or(-1);
         test.assert(r != -1, Arc::new(move || Arc::new("caught".to_string())));
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -237,10 +237,10 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         let r = super::sum(Arc::new(vec![]), 0).unwrap_or(-1);
         test.assert(r != -1, Arc::new(move || Arc::new("caught".to_string())));
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -250,10 +250,10 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         let r = super::code_at("ab", 0).unwrap_or(-1);
         test.assert(r != -1, Arc::new(move || Arc::new("caught".to_string())));
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -263,13 +263,13 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         let r = super::replaced(3).unwrap_or_else(|_| Arc::new(String::new()));
         test.assert(
             r.as_str() != "",
             Arc::new(move || Arc::new("caught".to_string())),
         );
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }

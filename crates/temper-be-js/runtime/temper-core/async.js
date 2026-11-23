@@ -60,10 +60,13 @@ export const trackAsyncIo = (promise) => {
 export const finishAsyncWork = async () => {
   finishing += 1;
   try {
-    // Each round lets the timers queued so far, and what they queue as
-    // microtasks, run first.
+    // Each round lets what's queued so far, and what it queues as
+    // microtasks, run first: `setImmediate`, where there is one, since
+    // Node clamps `setTimeout` to a millisecond, which every test would
+    // pay; a launch's timer holds `busy` until it runs, so rounds go on
+    // until it has.
     do {
-      await new Promise((resolve) => setTimeout(resolve));
+      await new Promise((resolve) => nextRound(resolve));
     } while (busy > 0);
   } finally {
     finishing -= 1;
@@ -71,6 +74,47 @@ export const finishAsyncWork = async () => {
   const kept = escaped;
   escaped = null;
   if (kept !== null) throw kept.failure;
+}
+
+/** @type {(f: () => void) => void} */
+const nextRound = typeof setImmediate === "function"
+  ? (f) => { setImmediate(f); }
+  : (f) => { setTimeout(f); };
+
+/**
+ * Ends a test, as generated tests do after its body, even one that threw
+ * (`failure`, else `undefined`): finishes the async work it started
+ * (`finishAsyncWork`), then fails it if it has failures so far
+ * (`softFailToHard`), each even if the other failed. The body's own
+ * failure wins, and the async work's wins over the soft failures; what
+ * fails besides is added to the failure that wins, as its `suppressed`,
+ * which test reports show, or else written to stderr.
+ * @param {{ softFailToHard: () => void }} test
+ * @param {unknown} failure
+ * @returns {Promise<void>}
+ */
+export const endTest = async (test, failure) => {
+  /** @type {unknown[]} */
+  const failures = failure === undefined ? [] : [failure];
+  try {
+    await finishAsyncWork();
+  } catch (e) {
+    failures.push(e);
+  }
+  try {
+    test.softFailToHard();
+  } catch (e) {
+    failures.push(e);
+  }
+  const [first, ...rest] = failures;
+  if (rest.length !== 0) {
+    try {
+      /** @type {{ suppressed?: unknown }} */ (first).suppressed = rest.length === 1 ? rest[0] : rest;
+    } catch {
+      console.error("The test also failed:", ...rest);
+    }
+  }
+  if (failure === undefined && first !== undefined) throw first;
 }
 
 /**

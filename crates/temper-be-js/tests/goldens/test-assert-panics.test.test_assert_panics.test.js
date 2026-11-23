@@ -1,10 +1,4 @@
-import {
-  bubble,
-  finishAsyncWork,
-  isBubble,
-  listedGet,
-  panic,
-} from "@temperlang/core";
+import { bubble, endTest, isBubble, listedGet, panic } from "@temperlang/core";
 import { it } from "node:test";
 import { Test } from "@temperlang/std/testing";
 
@@ -22,20 +16,24 @@ function at(ls, i) {
 
 it("passes before", async function () {
   const test = new Test();
+  let failure;
   try {
     {
       const actual = at(Object.freeze([1, 2]), 1);
       const expected = 2;
       test.assert(actual === expected, () => `expected at([1, 2], 1) == (${expected}) not (${actual})`);
     }
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("passes when the block panics", async function () {
   const test = new Test();
+  let failure;
   try {
     function fn() {
       at(Object.freeze([1, 2]), 5);
@@ -45,14 +43,17 @@ it("passes when the block panics", async function () {
       panic();
     }
     test.assertPanics(fn2);
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("passes past an orelse", async function () {
   const test = new Test();
+  let failure;
   try {
     function fn() {
       /** @type {number} */
@@ -66,80 +67,98 @@ it("passes past an orelse", async function () {
       test.assert(n === -1, () => "caught by an orelse");
     }
     test.assertPanics(fn);
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("fails when the block returns", async function () {
   const test = new Test();
+  let failure;
   try {
     function fn() {
       at(Object.freeze([1, 2]), 0);
     }
     test.assertPanics(fn);
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("fails with its message", async function () {
   const test = new Test();
+  let failure;
   try {
     function fn() {
       at(Object.freeze([1, 2]), 1);
     }
     test.assertPanics(fn, "reading index 1 panics");
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("fails when the block bubbles", async function () {
   const test = new Test();
+  let failure;
   try {
     function fn() {
       at(Object.freeze([1, 2]), 99);
     }
     test.assertPanics(fn);
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("fails with its message when the block bubbles", async function () {
   const test = new Test();
+  let failure;
   try {
     function fn() {
       at(Object.freeze([1, 2]), 99);
     }
     test.assertPanics(fn, "reading index 99 panics");
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("goes on after failing", async function () {
   const test = new Test();
+  let failure;
   try {
     function fn() {
       at(Object.freeze([1, 2]), 0);
     }
     test.assertPanics(fn);
     test.assert(false, () => "went on");
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("nests", async function () {
   const test = new Test();
+  let failure;
   try {
     function fn() {
       function fn2() {
@@ -153,14 +172,17 @@ it("nests", async function () {
       panic();
     }
     test.assertPanics(fn);
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("keeps what the block changed", async function () {
   const test = new Test();
+  let failure;
   try {
     let n = 0;
     function fn() {
@@ -169,50 +191,61 @@ it("keeps what the block changed", async function () {
     }
     test.assertPanics(fn);
     test.assert(n === 1, () => "lost the change");
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("fails on a panic after the block", async function () {
   const test = new Test();
+  let failure;
   try {
     function fn() {
       panic();
     }
     test.assertPanics(fn);
     at(Object.freeze([1, 2]), 7);
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("ends on a fail in the block", async function () {
   const test = new Test();
+  let failure;
   try {
     function fn() {
       test.fail("failed inside");
     }
     test.assertPanics(fn);
     test.fail("swallowed");
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("passes after", async function () {
   const test = new Test();
+  let failure;
   try {
     {
       const actual = at(Object.freeze([1, 2]), 0);
       const expected = 1;
       test.assert(actual === expected, () => `expected at([1, 2], 0) == (${expected}) not (${actual})`);
     }
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });

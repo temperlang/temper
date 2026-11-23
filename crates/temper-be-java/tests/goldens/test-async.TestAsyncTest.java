@@ -1,5 +1,6 @@
 package test_async;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -14,9 +15,14 @@ import temper.core.Nullable;
 import temper.std.testing.Test;
 
 public final class TestAsyncTest {
+    static {
+        Bubble.keepStackTraces();
+    }
+
     @org.junit.jupiter.api.Test
     public void failsInAnAsyncBlock() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             Supplier<Generator<Optional<? super Object>>> fn = () -> {
                 class CaseIndexCell {
@@ -38,15 +44,18 @@ public final class TestAsyncTest {
                 return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
             };
             Core.runAsync(fn);
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void passesInAnAsyncBlock() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             Supplier<Generator<Optional<? super Object>>> fn = () -> {
                 class CaseIndexCell {
@@ -68,15 +77,18 @@ public final class TestAsyncTest {
                 return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
             };
             Core.runAsync(fn);
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void failsInALaterTurn() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             CompletableFuture<Integer> pb = new CompletableFuture<>();
             Supplier<Generator<Optional<? super Object>>> fn = () -> {
@@ -153,30 +165,36 @@ public final class TestAsyncTest {
                 return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
             };
             Core.runAsync(fn3);
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void passesAfterALaterTurn() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             {
                 int actual = 1 + 1;
                 int expected = 2;
                 test.assert_(actual == expected, () -> "expected 1 + 1 == (" + expected + ") not (" + actual + ")");
             }
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void failsHardInAnAsyncBlock() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             Supplier<Generator<Optional<? super Object>>> fn = () -> {
                 class CaseIndexCell {
@@ -198,15 +216,18 @@ public final class TestAsyncTest {
                 return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
             };
             Core.runAsync(fn);
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void diesInAnAsyncBlock() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             Supplier<Generator<Optional<? super Object>>> fn = () -> {
                 class CaseIndexCell {
@@ -227,30 +248,36 @@ public final class TestAsyncTest {
                 return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
             };
             Core.runAsync(fn);
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void passesAfter() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             {
                 int actual = 1 + 1;
                 int expected = 2;
                 test.assert_(actual == expected, () -> "expected 1 + 1 == (" + expected + ") not (" + actual + ")");
             }
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void waitsOnNothing() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             CompletableFuture<Integer> never = new CompletableFuture<>();
             Supplier<Generator<Optional<? super Object>>> fn = () -> {
@@ -307,9 +334,51 @@ public final class TestAsyncTest {
                 return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
             };
             Core.runAsync(fn);
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
+        }
+    }
+
+    @org.junit.jupiter.api.Test
+    public void ownFailureWins() {
+        Test test = new Test();
+        Throwable failure = null;
+        try {
+            test.assert_(false, () -> "soft failure");
+            Supplier<Generator<Optional<? super Object>>> fn2 = () -> {
+                class CaseIndexCell {
+                    int value;
+                }
+                final CaseIndexCell caseIndex = new CaseIndexCell();
+                caseIndex.value = 0;
+                Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine = generator -> {
+                    int caseIndexLocal = caseIndex.value;
+                    caseIndex.value = -1;
+                    switch (caseIndexLocal) {
+                        case 0:
+                            test.fail("async failure");
+                            throw new AssertionError("panic");
+                        default:
+                            return DoneResult.get();
+                    }
+                };
+                return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
+            };
+            Core.runAsync(fn2);
+            List<Integer> ls = List.of(1);
+            {
+                int actual = Core.listGet(ls, 5);
+                int expected = 1;
+                test.assert_(actual == expected, () -> "expected ls[5] == (" + expected + ") not (" + actual + ")");
+            }
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
+        } finally {
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 }

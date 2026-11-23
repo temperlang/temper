@@ -6,4 +6,9 @@ public static class HostErrorTestsGlobal
     {
         return HostErrorTestsConnected.HostFails(n);
     }
+
+    public static void HostFailsTest()
+    {
+        HostErrorTestsConnected.HostFailsTest();
+    }
 }

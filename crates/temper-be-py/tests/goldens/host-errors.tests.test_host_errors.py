@@ -3,7 +3,7 @@ from collections.abc import MutableSequence, Sequence
 from temper_core import (
     Bubble,
     deque_remove_first,
-    finish_async_work,
+    end_test,
     int_add,
     list_builder_add,
     list_builder_remove_last,
@@ -74,172 +74,133 @@ class TestHostErrors(TestCase):
     def test_list_read(self, /) -> None:
         'list read'
         test: Test = Test()
-        try:
+        with end_test(test):
             try:
                 r = _read((1, 2), 5)
             except Bubble:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
-        finally:
-            finish_async_work()
-            test.soft_fail_to_hard()
 
     def test_list_read_at_the_end(self, /) -> None:
         'list read at the end'
         test: Test = Test()
-        try:
+        with end_test(test):
             ls = (1, 2)
             try:
                 r = _read(ls, len(ls))
             except Bubble:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
-        finally:
-            finish_async_work()
-            test.soft_fail_to_hard()
 
     def test_negative_index(self, /) -> None:
         'negative index'
         test: Test = Test()
-        try:
+        with end_test(test):
             try:
                 r = _read(_built(), -1)
             except Bubble:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
-        finally:
-            finish_async_work()
-            test.soft_fail_to_hard()
 
     def test_set(self, /) -> None:
         'set'
         test: Test = Test()
-        try:
+        with end_test(test):
             try:
                 r = _write(_built(), 5)
             except Bubble:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
-        finally:
-            finish_async_work()
-            test.soft_fail_to_hard()
 
     def test_set_at_the_end(self, /) -> None:
         'set at the end'
         test: Test = Test()
-        try:
+        with end_test(test):
             lb = _built()
             try:
                 r = _write(lb, len(lb))
             except Bubble:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
-        finally:
-            finish_async_work()
-            test.soft_fail_to_hard()
 
     def test_insert(self, /) -> None:
         'insert'
         test: Test = Test()
-        try:
+        with end_test(test):
             try:
                 r = _insert(_built(), 5)
             except Bubble:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
-        finally:
-            finish_async_work()
-            test.soft_fail_to_hard()
 
     def test_insert_past_the_end(self, /) -> None:
         'insert past the end'
         test: Test = Test()
-        try:
+        with end_test(test):
             lb = _built()
             try:
                 r = _insert(lb, int_add(len(lb), 1))
             except Bubble:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
-        finally:
-            finish_async_work()
-            test.soft_fail_to_hard()
 
     def test_insert_at_the_end_appends(self, /) -> None:
         'insert at the end appends'
         test: Test = Test()
-        try:
+        with end_test(test):
             lb = _built()
             try:
                 n = _insert(lb, len(lb))
             except Bubble:
                 n = -1
             test.assert_(n == 2 and list_get(lb, 1) == 2, lambda: "didn't append")
-        finally:
-            finish_async_work()
-            test.soft_fail_to_hard()
 
     def test_remove_last(self, /) -> None:
         'remove last'
         test: Test = Test()
-        try:
+        with end_test(test):
             try:
                 r = _remove_last([], 0)
             except Bubble:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
-        finally:
-            finish_async_work()
-            test.soft_fail_to_hard()
 
     def test_remove_first(self, /) -> None:
         'remove first'
         test: Test = Test()
-        try:
+        with end_test(test):
             try:
                 r = _remove_first(deque(), 0)
             except Bubble:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
-        finally:
-            finish_async_work()
-            test.soft_fail_to_hard()
 
     def test_reduce(self, /) -> None:
         'reduce'
         test: Test = Test()
-        try:
+        with end_test(test):
             try:
                 r = _sum((), 0)
             except Bubble:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
-        finally:
-            finish_async_work()
-            test.soft_fail_to_hard()
 
     def test_string_read(self, /) -> None:
         'string read'
         test: Test = Test()
-        try:
+        with end_test(test):
             try:
                 r = _code_at('ab', 0)
             except Bubble:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
-        finally:
-            finish_async_work()
-            test.soft_fail_to_hard()
 
     def test_replace_callback(self, /) -> None:
         'replace callback'
         test: Test = Test()
-        try:
+        with end_test(test):
             try:
                 r = _replaced(3)
             except Bubble:
                 r = ''
             test.assert_(r != '', lambda: 'caught')
-        finally:
-            finish_async_work()
-            test.soft_fail_to_hard()

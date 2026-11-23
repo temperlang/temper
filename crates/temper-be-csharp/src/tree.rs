@@ -10,7 +10,7 @@
 //! (`"n=" + (a + b)`). It doesn't break long lines.
 
 use std::fmt::Write;
-use temper_tmpl::line_directives::{LineAt, Presumed, directive, presumed};
+use temper_tmpl::line_directives::{LineAt, Presumed, Printed};
 
 /// A binary operator.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -308,8 +308,11 @@ pub enum Stmt {
         body: Vec<Stmt>,
     },
     /// `try { … } finally { … }`.
+    /// `try { … } catch (Exception e) { keep = e; throw; } finally { … }`,
+    /// the catch only where there's a `keep`, and `e` its own name.
     Try {
         body: Vec<Stmt>,
+        keep: Option<(String, String)>,
         finally: Vec<Stmt>,
     },
     /// `throw e;`.
@@ -601,15 +604,15 @@ fn indent(out: &mut String, depth: usize) {
 /// `#line default`, where `#line` directives have pointed elsewhere,
 /// before generated support code (a member without a source position,
 /// a helper's body), so errors there point at the generated file.
-fn restore(out: &mut String) {
-    if let Presumed::At(_) | Presumed::Unknown = presumed(out) {
+fn restore(out: &mut Printed) {
+    if let Presumed::At(_) | Presumed::Unknown = out.presumed() {
         out.push_str("#line default\n");
     }
 }
 
 /// A block, its braces on their own lines, starting where `out` is (at
 /// the end of a line, or indented).
-fn block(out: &mut String, body: &[Stmt], depth: usize) {
+fn block(out: &mut Printed, body: &[Stmt], depth: usize) {
     indent(out, depth);
     out.push_str("{\n");
     for s in body {
@@ -628,7 +631,7 @@ fn label(out: &mut String, label: &Option<String>, depth: usize) {
 }
 
 /// A loop's body, with its label for `continue` at the end.
-fn loop_body(out: &mut String, body: &[Stmt], labels: &Labels, depth: usize) {
+fn loop_body(out: &mut Printed, body: &[Stmt], labels: &Labels, depth: usize) {
     indent(out, depth);
     out.push_str("{\n");
     for s in body {
@@ -639,13 +642,13 @@ fn loop_body(out: &mut String, body: &[Stmt], labels: &Labels, depth: usize) {
     out.push_str("}\n");
 }
 
-fn stmt(out: &mut String, s: &Stmt, depth: usize) {
+fn stmt(out: &mut Printed, s: &Stmt, depth: usize) {
     if let Stmt::Block(body) = s {
         block(out, body, depth);
         return;
     }
     match s {
-        Stmt::Line(at) => return directive(out, at),
+        Stmt::Line(at) => return out.directive(at),
         Stmt::Raw(_) => restore(out),
         _ => {}
     }
@@ -729,9 +732,25 @@ fn stmt(out: &mut String, s: &Stmt, depth: usize) {
             let _ = writeln!(out, "lock ({})", expr(lock, TOP));
             block(out, body, depth);
         }
-        Stmt::Try { body, finally } => {
+        Stmt::Try {
+            body,
+            keep,
+            finally,
+        } => {
             out.push_str("try\n");
             block(out, body, depth);
+            if let Some((keep, e)) = keep {
+                indent(out, depth);
+                let _ = writeln!(out, "catch (global::System.Exception {e})");
+                indent(out, depth);
+                out.push_str("{\n");
+                indent(out, depth + 1);
+                let _ = writeln!(out, "{keep} = {e};");
+                indent(out, depth + 1);
+                out.push_str("throw;\n");
+                indent(out, depth);
+                out.push_str("}\n");
+            }
             indent(out, depth);
             out.push_str("finally\n");
             block(out, finally, depth);
@@ -807,7 +826,7 @@ pub fn test_class(c: &TestClass) -> String {
         block(&mut out, body, 1);
     }
     out.push_str("}\n");
-    out
+    out.text
 }
 
 /// A class or an interface of the program's, in a file of its own, as
@@ -880,7 +899,7 @@ fn params_text(params: &[(String, String)]) -> String {
 
 /// Prints a class's or interface's file.
 pub fn type_decl(t: &TypeDecl) -> String {
-    let mut out = String::new();
+    let mut out = Printed::default();
     for using in &t.usings {
         let _ = writeln!(out, "using {using};");
     }
@@ -992,12 +1011,12 @@ pub fn type_decl(t: &TypeDecl) -> String {
         }
     }
     out.push_str("}\n");
-    out
+    out.text
 }
 
 /// A file's `using`s and namespace.
-fn header(c: &Class) -> String {
-    let mut out = String::new();
+fn header(c: &Class) -> Printed {
+    let mut out = Printed::default();
     for using in &c.usings {
         let _ = writeln!(out, "using {using};");
     }
@@ -1014,14 +1033,14 @@ pub fn class(c: &Class) -> String {
     let _ = writeln!(out, "public static class {}\n{{", c.name);
     statics(&mut out, c);
     out.push_str("}\n");
-    out
+    out.text
 }
 
 /// A class's statics, as members, each kind after a blank line but the
 /// first; whether there were none.
-fn statics(out: &mut String, c: &Class) -> bool {
+fn statics(out: &mut Printed, c: &Class) -> bool {
     let mut first = true;
-    let mut gap = |out: &mut String| {
+    let mut gap = |out: &mut Printed| {
         if !first {
             out.push('\n');
         }

@@ -4,6 +4,17 @@ do
   ---@param n integer
   ---@return integer
   function _connected.hostFails(n)
-    error("host bug " .. n)
+    if n == 1 then
+      error("host bug " .. n)
+    elseif n == 2 then
+      error({ bug = n })
+    end
+    local missing = nil
+    return missing.n
+  end
+
+  -- LuaUnit's own failure, as its assertions raise.
+  function _connected.hostFailsTest()
+    require("luaunit").fail("host test failure")
   end
 end

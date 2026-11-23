@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
+#include <functional>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -43,66 +44,75 @@ namespace temper {
             bool own;
         };
 
+        // A stack, captured where it was, its frames found (named, and
+        // placed in their files) only when called: finding them costs,
+        // and a test's panic that `assertPanics` catches is never shown.
+        using StackCapture = std::function<std::vector<StackFrame>()>;
+
 #if defined(TEMPER_STD_STACKTRACE)
-        // The calling thread's frames, from `std::stacktrace`, in
+        // The calling thread's stack, from `std::stacktrace`, in
         // `stack_trace.cpp`, which C++23 builds.
-        void std_stack_frames(std::vector<StackFrame>& out);
+        StackCapture std_stack_capture();
 #endif
 
-        // The calling thread's frames, innermost first, those that could
-        // be found; none where there's no way to.
-        inline std::vector<StackFrame> stack_frames() {
-            std::vector<StackFrame> out;
+        // The calling thread's stack, its frames innermost first, those
+        // that can be found; none where there's no way to.
+        inline StackCapture capture_stack() {
 #if defined(TEMPER_STD_STACKTRACE)
-            std_stack_frames(out);
+            return std_stack_capture();
 #elif defined(TEMPER_STACK_TRACE_EXECINFO)
-            void* addresses[128];
-            int count = backtrace(addresses, 128);
-            // Frame 0 is here, in the program, which tells its own frames
-            // from a system library's.
-            const void* program = nullptr;
-            for (int i = 0; i < count; i++) {
-                // A caller's address is where the call returns to, past
-                // the call, which may be past the function's end when
-                // the callee never returns (a panic): the byte before is
-                // the call's.
-                std::uintptr_t address = reinterpret_cast<std::uintptr_t>(addresses[i]);
-                if (i > 0) {
-                    address--;
-                }
-                Dl_info info;
-                StackFrame frame{std::string(), std::string(), false};
-                if (dladdr(reinterpret_cast<void*>(address), &info) != 0) {
-                    if (i == 0) {
-                        program = info.dli_fbase;
+            std::vector<void*> addresses(128);
+            addresses.resize(static_cast<std::size_t>(backtrace(addresses.data(), 128)));
+            return [addresses]() {
+                std::vector<StackFrame> out;
+                // Frame 0 is the capture, in the program, which tells its
+                // own frames from a system library's.
+                const void* program = nullptr;
+                for (std::size_t i = 0; i < addresses.size(); i++) {
+                    // A caller's address is where the call returns to, past
+                    // the call, which may be past the function's end when
+                    // the callee never returns (a panic): the byte before is
+                    // the call's.
+                    std::uintptr_t address = reinterpret_cast<std::uintptr_t>(addresses[i]);
+                    if (i > 0) {
+                        address--;
                     }
-                    frame.own = info.dli_fbase == program;
-                    if (info.dli_sname != nullptr) {
-                        int status = 0;
-                        char* demangled = abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, &status);
-                        frame.name = demangled != nullptr ? demangled : info.dli_sname;
-                        std::free(demangled);
-                    }
-                    if (info.dli_fname != nullptr) {
-                        std::string binary = info.dli_fname;
-                        std::string::size_type slash = binary.find_last_of('/');
-                        if (slash != std::string::npos) {
-                            binary = binary.substr(slash + 1);
+                    Dl_info info;
+                    StackFrame frame{std::string(), std::string(), false};
+                    if (dladdr(reinterpret_cast<void*>(address), &info) != 0) {
+                        if (i == 0) {
+                            program = info.dli_fbase;
                         }
-                        std::uintptr_t offset = address - reinterpret_cast<std::uintptr_t>(info.dli_fbase);
-                        static const char digits[] = "0123456789abcdef";
-                        std::string hex;
-                        do {
-                            hex.insert(hex.begin(), digits[offset % 16]);
-                            offset /= 16;
-                        } while (offset != 0);
-                        frame.where = binary + "+0x" + hex;
+                        frame.own = info.dli_fbase == program;
+                        if (info.dli_sname != nullptr) {
+                            int status = 0;
+                            char* demangled = abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, &status);
+                            frame.name = demangled != nullptr ? demangled : info.dli_sname;
+                            std::free(demangled);
+                        }
+                        if (info.dli_fname != nullptr) {
+                            std::string binary = info.dli_fname;
+                            std::string::size_type slash = binary.find_last_of('/');
+                            if (slash != std::string::npos) {
+                                binary = binary.substr(slash + 1);
+                            }
+                            std::uintptr_t offset = address - reinterpret_cast<std::uintptr_t>(info.dli_fbase);
+                            static const char digits[] = "0123456789abcdef";
+                            std::string hex;
+                            do {
+                                hex.insert(hex.begin(), digits[offset % 16]);
+                                offset /= 16;
+                            } while (offset != 0);
+                            frame.where = binary + "+0x" + hex;
+                        }
                     }
+                    out.push_back(frame);
                 }
-                out.push_back(frame);
-            }
+                return out;
+            };
+#else
+            return []() { return std::vector<StackFrame>(); };
 #endif
-            return out;
         }
 
         // A function's qualified name, from a frame's name: no return
@@ -196,13 +206,13 @@ namespace temper {
                 || function == "operator" || function == "_FUN";
         }
 
-        // The calling thread's stack, one `  at NAME (WHERE)` line a
-        // frame, innermost first, without the runtime's frames, C++'s, or
-        // the harness's below the program's code; empty where there's
-        // no way to find it.
-        inline std::string stack_trace() {
+        // A stack's frames, one `  at NAME (WHERE)` line a frame,
+        // innermost first, without the runtime's frames, C++'s, or the
+        // harness's below the program's code; empty where there's no way
+        // to find them.
+        inline std::string stack_trace(const StackCapture& capture) {
             std::vector<StackFrame> frames;
-            for (const StackFrame& frame : stack_frames()) {
+            for (const StackFrame& frame : capture()) {
                 if (!stack_frame_hidden(frame)) {
                     frames.push_back(frame);
                 }
@@ -220,6 +230,11 @@ namespace temper {
                 out += "\n";
             }
             return out;
+        }
+
+        // The calling thread's stack, as above.
+        inline std::string stack_trace() {
+            return stack_trace(capture_stack());
         }
 
         // The handler `install_stack_traces` sets: what was uncaught, if

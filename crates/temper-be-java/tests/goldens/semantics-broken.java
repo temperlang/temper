@@ -6,6 +6,8 @@ public final class BrokenGlobal {
     private BrokenGlobal() {}
 
     static {
-        Core.throwBubble();
+        if (true) {
+            throw Core.bubble();
+        }
     }
 }

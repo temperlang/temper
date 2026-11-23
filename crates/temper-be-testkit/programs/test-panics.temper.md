@@ -32,11 +32,21 @@ the others pass:
       assert(at([1, 2], 1) == 2);
     }
 
+A test that panics after a failed `assert` fails saying it panicked,
+its own failure, which wins over the assertion's, said after it where
+the runner shows more:
+
+    test("dies after failing") {
+      assert(1 + 1 == 3) { "failed before" };
+      panic();
+    }
+
 Each failing test, with what its failure says:
 
 ```failures
 panics reading past the end: index 5 out of bounds for length 2
 fails an assertion: wrong on purpose
+dies after failing: panic
 ```
 
 What `panic()` says, as each backend's runner reports it:
@@ -49,14 +59,10 @@ dies outright: Panicked: panic()
 dies outright: Panicked: panic
 ```
 
-```failures py
-dies outright: BaseException: panic
-```
-
 ```failures rust
 dies outright: explicit panic
 ```
 
-```failures csharp java js lua
+```failures csharp java js lua py
 dies outright: panic
 ```

@@ -291,6 +291,12 @@ console.log(isAFoo(new Bar()).toString());  //!outputs "false"
 A function that immediately panics, which is unrecoverable inside Temper.
 It might be recoverable in backend code.
 
+An `orelse panic()` keeps the bubble it replaces as the panic's cause, so
+the report says what the bubble said. A bubble from a builtin or host code
+may say what it failed on, as a failed number parse does on Java and
+Python (`invalid literal for int() with base 10: 'abc'`), so that text can
+reach a log with the panic.
+
 ### Type operator `throws`
 
 The infix `throws` operator can be used on a return type to indicate that a function

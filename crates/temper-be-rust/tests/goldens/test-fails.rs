@@ -41,7 +41,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         test.assert(
             super::tries({
                 let test = test.clone();
@@ -66,7 +66,7 @@ mod tests {
             }),
             Arc::new(move || Arc::new("expected tries { assert(find(\"one\") == 1); }".to_string())),
         );
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -76,7 +76,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let _work = temper_core::TestWork::begin();
+        let _work = temper_core::TestWork::begin(crate::support::config().runner());
         super::tries({
             let test = test.clone();
             Arc::new(move || {
@@ -93,7 +93,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         let n = super::find("one");
         if n.is_none() {
             test.fail("one not found");
@@ -107,7 +107,7 @@ mod tests {
                 Arc::new(move || Arc::new(format!("expected n + 1 == ({expected}) not ({actual})"))),
             );
         }
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -117,7 +117,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         let n = super::find("two");
         if n.is_none() {
             test.fail("two not found");
@@ -127,7 +127,7 @@ mod tests {
             n.unwrap().wrapping_add(1) == 3,
             Arc::new(move || Arc::new("went on".to_string())),
         );
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -137,7 +137,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         test.assert(
             1i32.wrapping_add(1) == 3,
             Arc::new(move || Arc::new("first".to_string())),
@@ -147,7 +147,7 @@ mod tests {
             2i32.wrapping_add(2) == 5,
             Arc::new(move || Arc::new("second".to_string())),
         );
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -157,7 +157,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let _work = temper_core::TestWork::begin();
+        let _work = temper_core::TestWork::begin(crate::support::config().runner());
         test.assert(false, Arc::new(move || Arc::new("soft before".to_string())));
         test.fail("then hard");
         panic!();
@@ -168,7 +168,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let _work = temper_core::TestWork::begin();
+        let _work = temper_core::TestWork::begin(crate::support::config().runner());
         super::tries({
             let test = test.clone();
             Arc::new(move || {
@@ -188,7 +188,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let _work = temper_core::TestWork::begin();
+        let _work = temper_core::TestWork::begin(crate::support::config().runner());
         test.assert(false, Arc::new(move || Arc::new("soft only".to_string())));
         super::tries({
             let test = test.clone();
@@ -206,7 +206,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         {
             let actual = super::find("one");
             let expected: i32 = 1;
@@ -224,7 +224,7 @@ mod tests {
                 }),
             );
         }
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }

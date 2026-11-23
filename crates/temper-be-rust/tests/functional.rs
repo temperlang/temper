@@ -256,7 +256,9 @@ fn goldens() {
             let krate = library.replace('-', "_");
             let main = &files[2].text;
             assert!(
-                main.starts_with(&format!("fn main() {{\n    {krate}::init(None)")),
+                main.starts_with(&format!(
+                    "fn main() {{\n    temper_core::keep_bubble_traces();\n    {krate}::init(None)"
+                )),
                 "{main}"
             );
             let core = temper_tmpl::version::current();

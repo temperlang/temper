@@ -336,13 +336,15 @@ pub enum Stmt {
     },
     /// A test, as Node's test runner runs it, with no time limit:
     /// `it(name, async function () { … })`, making
-    /// `test`, a new `class`, and running `body`, then, even if it threw,
-    /// awaiting the async work it started (`finishAsyncWork()`), which
-    /// throws what failed there, and `test.softFailToHard()`.
+    /// `test`, a new `class`, and running `body`, keeping what it threw
+    /// in `failure`, then, even if it threw, `await endTest(test,
+    /// failure)`, which finishes the async work it started and
+    /// `test.softFailToHard()`, the body's failure winning.
     Test {
         name: String,
         test: String,
         class: String,
+        failure: String,
         body: Vec<Stmt>,
     },
 }
@@ -914,19 +916,26 @@ fn stmt_at(out: &mut MappedText, s: &Stmt, depth: usize, span: Option<Span>) {
             name,
             test,
             class,
+            failure,
             body,
         } => {
             let _ = writeln!(out, "it({}, async function () {{", string_literal(name));
             indent(out, depth + 1);
             let _ = writeln!(out, "const {test} = new {class}();");
             indent(out, depth + 1);
+            let _ = writeln!(out, "let {failure};");
+            indent(out, depth + 1);
             out.push_str("try ");
             block(out, body, depth + 1);
-            out.push_str(" finally {\n");
+            out.push_str(" catch (e) {\n");
             indent(out, depth + 2);
-            out.push_str("await finishAsyncWork();\n");
+            let _ = writeln!(out, "{failure} = e;");
             indent(out, depth + 2);
-            let _ = writeln!(out, "{test}.softFailToHard();");
+            out.push_str("throw e;\n");
+            indent(out, depth + 1);
+            out.push_str("} finally {\n");
+            indent(out, depth + 2);
+            let _ = writeln!(out, "await endTest({test}, {failure});");
             indent(out, depth + 1);
             out.push_str("}\n");
             indent(out, depth);

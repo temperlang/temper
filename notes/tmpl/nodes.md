@@ -673,6 +673,34 @@ Generators and `async`, as Kotlin's `CoroutineStrategy` has them:
 - **Not yet:** a pause in a conditional part of a value (`a && await
   p`), and a literal with optional or `var` parameters.
 
+### A `for` loop's step on every exit (As built, 2026-11-23)
+
+A `for` loop's step runs after the body whether the body ends or a
+`continue` leaves it. to_tmpl copies it: each `continue` that must run
+it is a block of a fresh translation of the step (its own locals), then
+the jump, and the body's end runs it once more:
+
+```text
+loop: while (c) { …; { step; continue loop; } …; step; }
+```
+
+**Output size.** With `j` such jumps and a step of size `a`, that's
+`O((j + 1)·a)` per loop, additive over nested loops, so linear in the
+source for fixed `a`. It would turn exponential only if the copied
+actions held exits copying their own actions (about `(j + 1)^d` at
+depth `d`), which can't happen: a step holds no loops, and a jump inside
+a step (`i = next(i) ?? continue`) is refused, so copies hold no copies.
+javac does the same for `finally`: nested `try`s with jumps grow about
+115 bytes of bytecode per level (javac 21), but a `finally` holding its
+own `try`/`finally` with a jump grows about 4x per level (371, 562,
+3,383, 52,236 bytes at depths 1, 2, 4, 6; "code too large" at 8).
+Writing the actions once per region instead (a labeled one-shot region
+left by `break`, `goto`, or an exit code dispatched after them) is
+`O(j + a)` whatever the nesting. RFC 661's `finally`, which needs it
+for a `finally` holding jumps, should bring that as a shared helper
+(it was briefly `temper_tmpl::exits`, a copying stub, removed until
+then).
+
 ## Level 3: Ops, and core as declarations
 
 **Decided (2026-10-29):** customization is general, by naming: only

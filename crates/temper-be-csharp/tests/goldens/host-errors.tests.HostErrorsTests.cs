@@ -76,6 +76,7 @@ public class HostErrorsTests
     public void ListRead()
     {
         Test test = new Test();
+        global::System.Exception? failure1 = null;
         try
         {
             int r;
@@ -89,10 +90,14 @@ public class HostErrorsTests
             }
             test.Assert(r != -1, () => "caught");
         }
+        catch (global::System.Exception e1)
+        {
+            failure1 = e1;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure1, test.SoftFailToHard);
         }
     }
 
@@ -100,6 +105,7 @@ public class HostErrorsTests
     public void ListReadAtTheEnd()
     {
         Test test = new Test();
+        global::System.Exception? failure2 = null;
         try
         {
             IReadOnlyList<int> ls = Listed.CreateReadOnlyList<int>(1, 2);
@@ -114,10 +120,14 @@ public class HostErrorsTests
             }
             test.Assert(r != -1, () => "caught");
         }
+        catch (global::System.Exception e2)
+        {
+            failure2 = e2;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure2, test.SoftFailToHard);
         }
     }
 
@@ -125,6 +135,7 @@ public class HostErrorsTests
     public void NegativeIndex()
     {
         Test test = new Test();
+        global::System.Exception? failure3 = null;
         try
         {
             int r;
@@ -138,10 +149,14 @@ public class HostErrorsTests
             }
             test.Assert(r != -1, () => "caught");
         }
+        catch (global::System.Exception e3)
+        {
+            failure3 = e3;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure3, test.SoftFailToHard);
         }
     }
 
@@ -149,6 +164,7 @@ public class HostErrorsTests
     public void Set()
     {
         Test test = new Test();
+        global::System.Exception? failure4 = null;
         try
         {
             int r;
@@ -162,10 +178,14 @@ public class HostErrorsTests
             }
             test.Assert(r != -1, () => "caught");
         }
+        catch (global::System.Exception e4)
+        {
+            failure4 = e4;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure4, test.SoftFailToHard);
         }
     }
 
@@ -173,6 +193,7 @@ public class HostErrorsTests
     public void SetAtTheEnd()
     {
         Test test = new Test();
+        global::System.Exception? failure5 = null;
         try
         {
             IList<int> lb = Built();
@@ -187,10 +208,14 @@ public class HostErrorsTests
             }
             test.Assert(r != -1, () => "caught");
         }
+        catch (global::System.Exception e5)
+        {
+            failure5 = e5;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure5, test.SoftFailToHard);
         }
     }
 
@@ -198,6 +223,7 @@ public class HostErrorsTests
     public void Insert()
     {
         Test test = new Test();
+        global::System.Exception? failure6 = null;
         try
         {
             int r;
@@ -211,10 +237,14 @@ public class HostErrorsTests
             }
             test.Assert(r != -1, () => "caught");
         }
+        catch (global::System.Exception e6)
+        {
+            failure6 = e6;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure6, test.SoftFailToHard);
         }
     }
 
@@ -222,6 +252,7 @@ public class HostErrorsTests
     public void InsertPastTheEnd()
     {
         Test test = new Test();
+        global::System.Exception? failure7 = null;
         try
         {
             IList<int> lb = Built();
@@ -236,10 +267,14 @@ public class HostErrorsTests
             }
             test.Assert(r != -1, () => "caught");
         }
+        catch (global::System.Exception e7)
+        {
+            failure7 = e7;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure7, test.SoftFailToHard);
         }
     }
 
@@ -247,6 +282,7 @@ public class HostErrorsTests
     public void InsertAtTheEndAppends()
     {
         Test test = new Test();
+        global::System.Exception? failure8 = null;
         try
         {
             IList<int> lb = Built();
@@ -261,10 +297,14 @@ public class HostErrorsTests
             }
             test.Assert(n == 2 && Listed.Get(lb, 1) == 2, () => "didn't append");
         }
+        catch (global::System.Exception e8)
+        {
+            failure8 = e8;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure8, test.SoftFailToHard);
         }
     }
 
@@ -272,6 +312,7 @@ public class HostErrorsTests
     public void RemoveLast()
     {
         Test test = new Test();
+        global::System.Exception? failure9 = null;
         try
         {
             int r;
@@ -285,10 +326,14 @@ public class HostErrorsTests
             }
             test.Assert(r != -1, () => "caught");
         }
+        catch (global::System.Exception e9)
+        {
+            failure9 = e9;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure9, test.SoftFailToHard);
         }
     }
 
@@ -296,6 +341,7 @@ public class HostErrorsTests
     public void RemoveFirst()
     {
         Test test = new Test();
+        global::System.Exception? failure10 = null;
         try
         {
             int r;
@@ -309,10 +355,14 @@ public class HostErrorsTests
             }
             test.Assert(r != -1, () => "caught");
         }
+        catch (global::System.Exception e10)
+        {
+            failure10 = e10;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure10, test.SoftFailToHard);
         }
     }
 
@@ -320,6 +370,7 @@ public class HostErrorsTests
     public void Reduce()
     {
         Test test = new Test();
+        global::System.Exception? failure11 = null;
         try
         {
             int r;
@@ -333,10 +384,14 @@ public class HostErrorsTests
             }
             test.Assert(r != -1, () => "caught");
         }
+        catch (global::System.Exception e11)
+        {
+            failure11 = e11;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure11, test.SoftFailToHard);
         }
     }
 
@@ -344,6 +399,7 @@ public class HostErrorsTests
     public void StringRead()
     {
         Test test = new Test();
+        global::System.Exception? failure12 = null;
         try
         {
             int r;
@@ -357,10 +413,14 @@ public class HostErrorsTests
             }
             test.Assert(r != -1, () => "caught");
         }
+        catch (global::System.Exception e12)
+        {
+            failure12 = e12;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure12, test.SoftFailToHard);
         }
     }
 
@@ -368,6 +428,7 @@ public class HostErrorsTests
     public void ReplaceCallback()
     {
         Test test = new Test();
+        global::System.Exception? failure13 = null;
         try
         {
             string r;
@@ -381,10 +442,14 @@ public class HostErrorsTests
             }
             test.Assert(r != "", () => "caught");
         }
+        catch (global::System.Exception e13)
+        {
+            failure13 = e13;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure13, test.SoftFailToHard);
         }
     }
 }

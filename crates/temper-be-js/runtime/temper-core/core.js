@@ -317,8 +317,10 @@ export const panic = (message = "panic", cause = undefined) => {
 
 /**
  * Runs `block`, giving whether it panicked, for std's `Test.assertPanics`:
- * whether it threw a plain `Error`, as `panic` does. Anything else, a
- * bubble or a host error such as a `TypeError`, passes through.
+ * whether it threw anything but a bubble or a test framework's failure
+ * (an `AssertionError`, as Node's `assert` and Chai throw), as on every
+ * backend, so `panic`'s `Error` or a host's error, such as a `TypeError`.
+ * What isn't passes through.
  *
  * @param {() => void} block
  * @returns {boolean}
@@ -327,10 +329,10 @@ export const blockPanics = (block) => {
   try {
     block();
   } catch (e) {
-    if (e instanceof Error && Object.getPrototypeOf(e) === Error.prototype) {
-      return true;
+    if (isBubble(e) || (e instanceof Error && e.name === "AssertionError")) {
+      throw e;
     }
-    throw e;
+    return true;
   }
   return false;
 };

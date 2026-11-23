@@ -1,7 +1,7 @@
 import reach.reach as _m_reach_reach
 from abc import ABCMeta, abstractmethod
 from reach.reach import _base, _checked, shown
-from temper_core import finish_async_work, int_add, int_mul
+from temper_core import end_test, int_add, int_mul
 from temper_std.testing import Test
 from unittest import TestCase
 
@@ -47,7 +47,7 @@ class TestReach(TestCase):
         'test parts'
         global _test_count
         test: Test = Test()
-        try:
+        with end_test(test):
             shape = _TestSquare(_for_tests(2))
             _add_area(shape)
             _test_count = int_add(_test_count, shape.area())
@@ -65,6 +65,3 @@ class TestReach(TestCase):
             actual4 = _m_reach_reach._shown_count
             expected4 = 1
             test.assert_(actual4 == expected4, lambda: f'expected shownCount == ({expected4}) not ({actual4})')
-        finally:
-            finish_async_work()
-            test.soft_fail_to_hard()

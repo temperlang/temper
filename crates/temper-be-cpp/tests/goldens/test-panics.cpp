@@ -21,6 +21,7 @@ void panicsReadingPastTheEnd(std::shared_ptr<temper_std::Test> const & test);
 void diesOutright(std::shared_ptr<temper_std::Test> const &);
 void failsAnAssertion(std::shared_ptr<temper_std::Test> const & test);
 void passesAfter(std::shared_ptr<temper_std::Test> const & test);
+void diesAfterFailing(std::shared_ptr<temper_std::Test> const & test);
 #endif
 
 }  // namespace test_panics
@@ -87,6 +88,11 @@ void passesAfter(std::shared_ptr<temper_std::Test> const & test) {
   }
 }
 
+void diesAfterFailing(std::shared_ptr<temper_std::Test> const & test) {
+  test->assert_(core::Int::add(1, 1) == 3, []() -> core::Str { return TEMPER_STR("failed before"); });
+  core::panic();
+}
+
 }  // namespace test_panics
 
 #endif  // TEMPER_TESTS
@@ -144,6 +150,14 @@ int main() {
       {"passes after", [] {
         auto test = temper_std::Test::make();
         test_panics::passesAfter(test);
+        auto messages = test->messagesCombined();
+        return temper::core::TestOutcome{
+            test->get_passing(),
+            temper::core::is_null(messages) ? std::string() : temper::core::Str(messages).str()};
+      }},
+      {"dies after failing", [] {
+        auto test = temper_std::Test::make();
+        test_panics::diesAfterFailing(test);
         auto messages = test->messagesCombined();
         return temper::core::TestOutcome{
             test->get_passing(),

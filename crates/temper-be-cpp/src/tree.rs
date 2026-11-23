@@ -9,7 +9,7 @@
 //! `%` inside `+` or `-`. It doesn't break long lines.
 
 use std::fmt::Write;
-use temper_tmpl::line_directives::{LineAt, Presumed, directive, presumed};
+use temper_tmpl::line_directives::{LineAt, Presumed, Printed};
 
 /// A binary operator.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -635,7 +635,7 @@ pub fn expr(e: &Expr, min: u8) -> String {
             parts.join(" + ")
         }
         Expr::Run { result, body } => {
-            let mut text = String::new();
+            let mut text = Printed::default();
             for s in body {
                 stmt(&mut text, s, 0);
             }
@@ -647,7 +647,7 @@ pub fn expr(e: &Expr, min: u8) -> String {
             result,
             body,
         } => {
-            let mut text = String::new();
+            let mut text = Printed::default();
             for s in body {
                 stmt(&mut text, s, 0);
             }
@@ -689,7 +689,7 @@ fn indent(out: &mut String, depth: usize) {
 
 /// Statements inside braces, the `{` already written, and the closing
 /// `}` without a newline.
-fn body(out: &mut String, stmts: &[Stmt], depth: usize) {
+fn body(out: &mut Printed, stmts: &[Stmt], depth: usize) {
     out.push_str("{\n");
     for s in stmts {
         stmt(out, s, depth + 1);
@@ -709,7 +709,7 @@ fn label(out: &mut String, label: &Option<String>, depth: usize) {
 /// A loop's body, with its label for `continue` at the end, after the
 /// body's own block, so a `goto` there never skips a local's
 /// initialization in the scope it lands in.
-fn loop_body(out: &mut String, stmts: &[Stmt], labels: &Labels, depth: usize) {
+fn loop_body(out: &mut Printed, stmts: &[Stmt], labels: &Labels, depth: usize) {
     match &labels.next {
         None => body(out, stmts, depth),
         Some(_) => {
@@ -737,9 +737,9 @@ fn lambda_head(captures: &str, params: &[(String, String)], result: &str) -> Str
     format!("[{captures}]({}) -> {result}", params.join(", "))
 }
 
-fn stmt(out: &mut String, s: &Stmt, depth: usize) {
+fn stmt(out: &mut Printed, s: &Stmt, depth: usize) {
     if let Stmt::Line(at) = s {
-        directive(out, at);
+        out.directive(at);
         return;
     }
     if let Stmt::TestsOnly(stmts) = s {
@@ -932,7 +932,7 @@ fn stmt(out: &mut String, s: &Stmt, depth: usize) {
 /// and `temper::core` spelled out; without `#line` directives, which
 /// would last to the header's end.
 pub fn header_definition(f: &Function) -> String {
-    let mut out = String::new();
+    let mut out = Printed::default();
     if !f.template.is_empty() {
         let _ = writeln!(out, "{}", f.template);
     }
@@ -946,11 +946,11 @@ pub fn header_definition(f: &Function) -> String {
 /// directive names it, where `#line` directives have pointed elsewhere,
 /// before generated support code, so errors there point at it; `counted`
 /// is how many of `out`'s bytes and lines were counted already.
-fn restore(out: &mut String, generated: &Option<String>, counted: &mut (usize, usize)) {
+fn restore(out: &mut Printed, generated: &Option<String>, counted: &mut (usize, usize)) {
     let Some(generated) = generated else {
         return;
     };
-    match presumed(out) {
+    match out.presumed() {
         Presumed::Generated => return,
         Presumed::At(at) if at.file == *generated => return,
         _ => {}
@@ -986,7 +986,7 @@ pub fn spell_core(text: &str) -> String {
 }
 
 /// One item of a `.cpp`, as [`source`] writes it.
-fn item_text(out: &mut String, item: &Item) {
+fn item_text(out: &mut Printed, item: &Item) {
     match item {
         Item::Variable { exported, ty, name } => {
             let storage = if *exported { "" } else { "static " };
@@ -1016,7 +1016,7 @@ fn item_text(out: &mut String, item: &Item) {
 }
 
 pub fn source(s: &Source) -> String {
-    let mut out = String::new();
+    let mut out = Printed::default();
     let (header, rest) = s
         .includes
         .split_first()
@@ -1106,7 +1106,7 @@ pub fn source(s: &Source) -> String {
         let _ = writeln!(out, "\n}}  // namespace {}", s.namespace);
         out.push_str("\n#endif  // TEMPER_TESTS\n");
     }
-    out
+    out.text
 }
 
 #[cfg(test)]

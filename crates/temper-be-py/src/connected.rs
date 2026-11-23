@@ -573,8 +573,8 @@ fn boolean_to_string(mut args: Vec<Option<Expr>>, im: Import) -> Translated {
     Expr::name(im("boolean_to_string")).call(vec![b])
 }
 
-/// `block_panics(block)`, the runtime's, which catches a panic, a plain
-/// `BaseException`, alone, for std's `Test.assertPanics` (not named
+/// `block_panics(block)`, the runtime's, which catches a panic, anything
+/// but a bubble or a test's failure, for std's `Test.assertPanics` (not named
 /// `test_…`, which pytest would take for a test).
 fn test_panics(mut args: Vec<Option<Expr>>, im: Import) -> Translated {
     let block = arg(&mut args, 1).unwrap_or(Expr::None);

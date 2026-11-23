@@ -1,7 +1,7 @@
 from asserts.asserts import Vec2, _norm_squared, _unit_vecs
 from collections.abc import Callable, Sequence
 from temper_core import (
-    finish_async_work,
+    end_test,
     float64_to_string,
     float_eq,
     int_add,
@@ -63,39 +63,30 @@ class TestAsserts(TestCase):
     def test_a_test_case(self, /) -> None:
         'a test case'
         test: Test = Test()
-        try:
+        with end_test(test):
             test.assert_(float_eq(_norm_squared(Vec2(0.0, 0.0)), 0.0), lambda: 'Oh noes')
-        finally:
-            finish_async_work()
-            test.soft_fail_to_hard()
 
     def test_a_failing_test(self, /) -> None:
         'a failing test'
         test: Test = Test()
-        try:
+        with end_test(test):
             test.assert_(False, lambda: "because it's wrong")
             helper = _TestHelper(3, 2)
             _assert_more_things(test, helper, (('bye',),))
-        finally:
-            finish_async_work()
-            test.soft_fail_to_hard()
 
     def test_exported(self, /) -> None:
         'exported'
         test: Test = Test()
-        try:
+        with end_test(test):
             vec = Vec2(1.5, 2.5)
             actual = vec.to_string()
             expected = '(1.5, 2.5) size squared 8.5'
             test.assert_(actual == expected, lambda: f'expected vec.toString() == ({expected}) not ({actual})')
-        finally:
-            finish_async_work()
-            test.soft_fail_to_hard()
 
     def test_module_values(self, /) -> None:
         'module values'
         test: Test = Test()
-        try:
+        with end_test(test):
             length = len(_unit_vecs)
             i = 0
             while i < length:
@@ -107,6 +98,3 @@ class TestAsserts(TestCase):
                 def make_fn(actual: float, expected: float, /) -> Callable[[], str]:
                     return lambda: f'expected normSquared(vec) == ({float64_to_string(expected)}) not ({float64_to_string(actual)})'
                 test.assert_(t_0, make_fn(actual, expected))
-        finally:
-            finish_async_work()
-            test.soft_fail_to_hard()

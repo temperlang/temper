@@ -11,15 +11,15 @@
 6:1 -> ../../testing.temper.md:11:5  let runs = 0; <- var runs = 0;
 7:1 -> ../../testing.temper.md:12:5  const base = 10; <- let base = 10;
 9:1 -> ../../testing.temper.md:14:5  it("twice works", async func <- test("twice works") {
-12:5 -> ../../testing.temper.md:15:7  const x = twice(2); <- let x = twice(2);
-13:5 -> ../../testing.temper.md:16:7  runs = (((runs + x) | 0) + b <- runs = runs + x + base;
-20:1 -> ../../testing.temper.md:19:5  it("names: punctuation, 'quo <- test("names: punctuation, 'q
-23:5 -> ../../testing.temper.md:20:7  twice(runs); <- twice(runs);
-30:1 -> ../../testing.temper.md:23:5  it("locals a test assigns", <- test("locals a test assigns"
-33:5 -> ../../testing.temper.md:24:7  let n = 0; <- var n = 0;
-34:5 -> ../../testing.temper.md:25:7  { <- for (var i = 0; i < 3; i +=
-35:7 -> ../../testing.temper.md:25:12  let i = 0; <- var i = 0; i < 3; i += 1) {
-36:7 -> ../../testing.temper.md:25:7  while (i < 3) { <- for (var i = 0; i < 3; i +=
-37:9 -> ../../testing.temper.md:25:40  n = (n + twice(i)) | 0; <- n += twice(i); }
-38:9 -> ../../testing.temper.md:25:30  i = (i + 1) | 0; <- i += 1) { n += twice(i); }
-41:5 -> ../../testing.temper.md:26:7  runs = n; <- runs = n;
+13:5 -> ../../testing.temper.md:15:7  const x = twice(2); <- let x = twice(2);
+14:5 -> ../../testing.temper.md:16:7  runs = (((runs + x) | 0) + b <- runs = runs + x + base;
+23:1 -> ../../testing.temper.md:19:5  it("names: punctuation, 'quo <- test("names: punctuation, 'q
+27:5 -> ../../testing.temper.md:20:7  twice(runs); <- twice(runs);
+36:1 -> ../../testing.temper.md:23:5  it("locals a test assigns", <- test("locals a test assigns"
+40:5 -> ../../testing.temper.md:24:7  let n = 0; <- var n = 0;
+41:5 -> ../../testing.temper.md:25:7  { <- for (var i = 0; i < 3; i +=
+42:7 -> ../../testing.temper.md:25:12  let i = 0; <- var i = 0; i < 3; i += 1) {
+43:7 -> ../../testing.temper.md:25:7  while (i < 3) { <- for (var i = 0; i < 3; i +=
+44:9 -> ../../testing.temper.md:25:40  n = (n + twice(i)) | 0; <- n += twice(i); }
+45:9 -> ../../testing.temper.md:25:30  i = (i + 1) | 0; <- i += 1) { n += twice(i); }
+48:5 -> ../../testing.temper.md:26:7  runs = n; <- runs = n;

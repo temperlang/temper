@@ -6,4 +6,8 @@ public final class HostErrorTestsGlobal {
     public static int hostFails(int n) {
         return HostErrorTestsConnected.hostFails(n);
     }
+
+    public static void hostFailsTest() {
+        HostErrorTestsConnected.hostFailsTest();
+    }
 }

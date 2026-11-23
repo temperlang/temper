@@ -10,18 +10,23 @@
 namespace temper {
     namespace core {
 
-        void std_stack_frames(std::vector<StackFrame>& out) {
-            for (const std::stacktrace_entry& entry : std::stacktrace::current()) {
-                StackFrame frame{entry.description(), entry.source_file(), true};
-                if (!frame.where.empty()) {
-                    frame.where += ":" + std::to_string(entry.source_line());
-                } else if (frame.name.empty()) {
-                    // No name, no file: a system library's, as far as
-                    // can be told.
-                    frame.own = false;
+        StackCapture std_stack_capture() {
+            std::stacktrace trace = std::stacktrace::current();
+            return [trace]() {
+                std::vector<StackFrame> out;
+                for (const std::stacktrace_entry& entry : trace) {
+                    StackFrame frame{entry.description(), entry.source_file(), true};
+                    if (!frame.where.empty()) {
+                        frame.where += ":" + std::to_string(entry.source_line());
+                    } else if (frame.name.empty()) {
+                        // No name, no file: a system library's, as far as
+                        // can be told.
+                        frame.own = false;
+                    }
+                    out.push_back(frame);
                 }
-                out.push_back(frame);
-            }
+                return out;
+            };
         }
 
     }

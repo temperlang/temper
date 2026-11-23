@@ -2485,6 +2485,21 @@ copied Kotlin's:
     Test: programs/test-panics.temper.md on every backend and the
     interpreter (each test's failure and that all five ran);
     repl/specials.cases, "a test that panics fails alone".
+  - **A test's own failure wins** (2026-11-23): Kotlin's generated
+    tests end `finally { softFailToHard() }`, so a test that panicked
+    after a failed soft `assert` reported the assertion, not the panic.
+    Tempest's keep the body's failure and still end the test after it:
+    JS, Java, and C# keep it and call the runtime's `endTest(test,
+    failure)` in `finally`, Python runs the body in `with
+    end_test(test):`, each finishing the test's async work, then
+    `softFailToHard`, each even if the other failed, and attaching what
+    else failed to the failure that wins (Java suppressed, Python
+    notes, JS `suppressed`, else stderr); Lua's `temper.test` says the
+    soft failures after the panic; Rust still runs the work of a body
+    that bubbled. JS tests' rounds use `setImmediate`, not `setTimeout`,
+    which Node clamps to a millisecond a test.
+    Test: programs/test-panics.temper.md (`dies after failing`) and
+    test-async.temper.md (`own failure wins`) on every backend.
   - **`Test.fail(message)`, and hard failures no `orelse` catches**
     (2026-11-19): std's `Test` gains `fail(message): Never<Void>`,
     which Kotlin's lacks: it records the message and ends the test, so
@@ -2520,16 +2535,24 @@ copied Kotlin's:
     block still ends the test (where `bail` panics, its body bails
     again). The trailing block goes to `block`, so
     `test.assertPanics("why") { … }` gives the message. Its body calls
-    a bodiless `panics(block): Boolean`, each backend catching its own
-    panic in-process and nothing else: Java `AssertionError`, C# the
-    runtime's `Panic`, Python a plain `BaseException`, JS a plain
-    `Error`, Rust `catch_unwind` (with the panic hook quiet for caught
-    panics, so a runner reading the first panic message still sees the
-    test's own), C++ test builds' `TemperPanic`, and the interpreter
-    its program's panics but not its limits (steps, depth,
-    interrupts). Lua's `Test` is the runtime's, so
+    a bodiless `panics(block): Boolean`, each backend catching, in
+    process, any failure but a bubble or a test framework's failure
+    (2026-11-23, one rule everywhere, so a host's error counts): Java
+    all but `Bubble`, opentest4j's failures, and
+    `VirtualMachineError`; C# all but `Bubble` and MSTest's, NUnit's,
+    and xUnit's failures; Python all but `Bubble`, `AssertionError`,
+    and the `BaseException`s that are exits (`KeyboardInterrupt`,
+    `SystemExit`, pytest's outcomes); JS all but bubbles and
+    `AssertionError`s; C++ test builds all but `TemperBubble` and
+    `TemperTestFailure`; Rust `catch_unwind` (with the panic hook quiet
+    for caught panics, so a runner reading the first panic message
+    still sees the test's own), where a failed assertion is a panic
+    too; and the interpreter its program's panics but not its limits
+    (steps, depth, interrupts). Lua's `Test` is the runtime's, so
     `temper.test_assertpanics` does it all with `pcall`: any error but
-    a bubble or a test failure counts as a panic. C# also writes a
+    a bubble or a test failure, Temper's or LuaUnit's, counts as a
+    panic. Test: programs/host-error-tests.temper.md (host errors of
+    three kinds and a host test framework's failure per backend). C# also writes a
     function literal whose body is just `panic()` as a local function,
     where it said "not yet: a Panic expression".
     Test: programs/test-assert-panics.temper.md on every backend and

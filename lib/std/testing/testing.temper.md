@@ -53,8 +53,11 @@ trailing block goes to the last function parameter, so the message can be
 last among the parameters, and left out). A bubble is no panic, so if the block bubbles, the test fails too, saying
 so. Like `assert`, a failing `assertPanics` lets the test go on.
 
-Only a panic in the block is caught, never one before or after it, and a
-`test.fail` in the block still ends the test. This is for tests alone: what
+Only a panic in the block is caught, never one before or after it. A panic
+here is any failure but a bubble or a test's failure, on every backend, so a
+host's own error counts too, and a `test.fail` in the block, or a host test
+framework's failed assertion, still ends the test (on Rust, a host's
+`assert!` is a panic). This is for tests alone: what
 the block changed before it panicked stays changed, maybe half done.
 
       @connected
@@ -73,9 +76,9 @@ the block changed before it panicked stays changed, maybe half done.
         }
       }
 
-Run a block, giving whether it panicked. Backends catch their panics, and
-only those: a bubble, a test failure, or another error passes through, except
-where a test failure is a panic, as `bail` ends a test by panicking on some.
+Run a block, giving whether it panicked: whether it failed by anything but a
+bubble or a test's failure, which pass through, except where a test failure
+is a panic, as `bail` ends a test by panicking on some.
 
       @connected
       private panics(block: fn (): Void): Boolean;

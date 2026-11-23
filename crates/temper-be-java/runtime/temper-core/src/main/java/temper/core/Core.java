@@ -332,15 +332,32 @@ public final class Core {
 
     /**
      * Runs {@code block}, giving whether it panicked, for std's
-     * {@code Test.assertPanics}: whether it threw an {@link AssertionError},
-     * as Temper's panics are. Anything else, a bubble or a host
-     * exception, passes through.
+     * {@code Test.assertPanics}: whether it threw anything but a bubble,
+     * a test framework's failure (JUnit's, from {@code org.opentest4j}),
+     * or a {@link VirtualMachineError}, as on every backend. Temper's own
+     * panics are {@link AssertionError}s, and a host's exception is a
+     * panic too. What isn't passes through.
      */
     public static boolean blockPanics(Runnable block) {
         try {
             block.run();
-        } catch (AssertionError e) {
+        } catch (Bubble | VirtualMachineError e) {
+            throw e;
+        } catch (Throwable e) {
+            if (isTestFailure(e)) {
+                throw e;
+            }
             return true;
+        }
+        return false;
+    }
+
+    /** Whether {@code e} is a test framework's failure, by its class's name. */
+    private static boolean isTestFailure(Throwable e) {
+        for (Class<?> c = e.getClass(); c != null; c = c.getSuperclass()) {
+            if (c.getName().startsWith("org.opentest4j.")) {
+                return true;
+            }
         }
         return false;
     }
@@ -2051,13 +2068,53 @@ public final class Core {
             failure = escaped;
             escaped = null;
         }
+        if (failure != null) {
+            throw unchecked(failure);
+        }
+    }
+
+    /**
+     * Ends a test, as generated tests do after its body, even one that
+     * threw ({@code failure}, else null): finishes the async work it
+     * started ({@link #finishAsyncWork}), then fails it if it has failures
+     * so far ({@code softFailToHard}), each even if the other failed. The
+     * body's own failure wins, which its test then rethrows, and the async
+     * work's wins over the soft failures; what fails besides is added to
+     * the failure that wins as suppressed, which JUnit reports, or, where
+     * that keeps no suppressed exceptions (a bubble), written to stderr.
+     *
+     * @param failure what the test's body threw, if anything
+     * @param softFailToHard the test's {@code softFailToHard}
+     */
+    public static void endTest(@Nullable Throwable failure, Runnable softFailToHard) {
+        Throwable first = failure;
+        for (Runnable end : new Runnable[] {Core::finishAsyncWork, softFailToHard}) {
+            try {
+                end.run();
+            } catch (Throwable e) {
+                if (first == null) {
+                    first = e;
+                } else {
+                    first.addSuppressed(e);
+                    if (first.getSuppressed().length == 0) {
+                        System.err.print("The test also failed: ");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+        if (failure == null && first != null) {
+            throw unchecked(first);
+        }
+    }
+
+    private static RuntimeException unchecked(Throwable failure) {
         if (failure instanceof RuntimeException) {
-            throw (RuntimeException) failure;
+            return (RuntimeException) failure;
         } else if (failure instanceof Error) {
             throw (Error) failure;
-        } else if (failure != null) {
-            throw new RuntimeException(failure);
         }
+        return new RuntimeException(failure);
     }
 }
 

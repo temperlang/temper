@@ -5,10 +5,11 @@
 //!
 //! A backend's translator puts a [`LineAt`] before each statement it
 //! translates ([`line_at`]), and its printer writes the directive
-//! ([`directive`]) only where the position isn't already what the
-//! output so far implies ([`presumed`]), which it reads back from the
-//! text itself, so text printed apart and joined later (a lambda in an
-//! expression) stays right. Where generated support code follows, the
+//! ([`Printed::directive`]) only where the position isn't already what
+//! the output so far implies ([`Printed::presumed`]), which it reads from
+//! the text itself, so text printed apart and joined later (a lambda in
+//! an expression) stays right, reading each line once as the output
+//! grows. Where generated support code follows, the
 //! printer restores the generated file's own positions, as its language
 //! does that (C#'s `#line default`, C++'s `#line N "FILE"` naming the
 //! generated file), so errors there point at the generated file.
@@ -45,9 +46,10 @@ pub fn line_at(p: &Program, prefix: &str, span: Span) -> Option<LineAt> {
 }
 
 /// What output so far implies about the position of its next line.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub enum Presumed {
     /// The generated file's own: no directive yet, or `#line default`.
+    #[default]
     Generated,
     /// As the last directive said, counting the lines after it.
     At(LineAt),
@@ -57,15 +59,22 @@ pub enum Presumed {
 }
 
 /// The position output's next line has, from its last directive, the
-/// output ending with a newline.
+/// output ending with a newline (a line it doesn't end counts as ended).
 pub fn presumed(out: &str) -> Presumed {
-    let text = out.strip_suffix('\n').unwrap_or(out);
-    if text.is_empty() {
-        return Presumed::Generated;
-    }
-    for (after, line) in text.rsplit('\n').enumerate() {
+    Printed::default().presumed_of(out)
+}
+
+impl Presumed {
+    /// What the output implies after one more line, `line`.
+    fn after(self, line: &str) -> Presumed {
         let Some(rest) = line.strip_prefix('#') else {
-            continue;
+            return match self {
+                Presumed::At(at) => Presumed::At(LineAt {
+                    line: at.line + 1,
+                    ..at
+                }),
+                other => other,
+            };
         };
         if let Some(rest) = rest.strip_prefix("line ") {
             if rest == "default" {
@@ -76,31 +85,83 @@ pub fn presumed(out: &str) -> Presumed {
                 Some((n.parse::<u32>().ok()?, unescape(file)))
             });
             return match parsed {
-                Some((n, file)) => Presumed::At(LineAt {
-                    file,
-                    line: n + after as u32,
-                }),
+                Some((line, file)) => Presumed::At(LineAt { file, line }),
                 None => Presumed::Unknown,
             };
         }
-        if ["if", "else", "elif", "endif"]
+        match ["if", "else", "elif", "endif"]
             .iter()
             .any(|d| rest.starts_with(d))
         {
-            return Presumed::Unknown;
+            true => Presumed::Unknown,
+            false => self.after(""),
         }
     }
-    Presumed::Generated
 }
 
-/// Writes a directive for `at`, on a line of its own, unless the output
-/// is there already.
-pub fn directive(out: &mut String, at: &LineAt) {
-    if presumed(out) != Presumed::At(at.clone()) {
-        if !out.is_empty() && !out.ends_with('\n') {
-            out.push('\n');
+/// Output that `#line` directives go in, printed by appending, as to a
+/// `String` (it derefs to its text), which keeps what its text so far
+/// implies, reading only what was added since it last looked, so a
+/// check per statement costs only the new lines.
+#[derive(Clone, Debug, Default)]
+pub struct Printed {
+    pub text: String,
+    /// How much of `text` was read: whole lines.
+    read: usize,
+    /// What the lines read imply.
+    state: Presumed,
+}
+
+impl Printed {
+    /// The position the output's next line has ([`presumed`]).
+    pub fn presumed(&mut self) -> Presumed {
+        let text = std::mem::take(&mut self.text);
+        let presumed = self.presumed_of(&text);
+        self.text = text;
+        presumed
+    }
+
+    /// What `text`, the text read so far grown, implies.
+    fn presumed_of(&mut self, text: &str) -> Presumed {
+        // Read again from the start where the text isn't what was read
+        // plus more, as where it was cut.
+        let read = self.read;
+        if text.len() < read || (read > 0 && text.as_bytes()[read - 1] != b'\n') {
+            *self = Printed::default();
         }
-        line(out, at);
+        let whole = text.rfind('\n').map_or(0, |i| i + 1).max(self.read);
+        for line in text[self.read..whole].lines() {
+            self.state = std::mem::take(&mut self.state).after(line);
+        }
+        self.read = whole;
+        match &text[whole..] {
+            "" => self.state.clone(),
+            last => self.state.clone().after(last),
+        }
+    }
+
+    /// Writes a directive for `at`, on a line of its own, unless the
+    /// output is there already.
+    pub fn directive(&mut self, at: &LineAt) {
+        if self.presumed() != Presumed::At(at.clone()) {
+            if !self.text.is_empty() && !self.text.ends_with('\n') {
+                self.text.push('\n');
+            }
+            line(&mut self.text, at);
+        }
+    }
+}
+
+impl std::ops::Deref for Printed {
+    type Target = String;
+    fn deref(&self) -> &String {
+        &self.text
+    }
+}
+
+impl std::ops::DerefMut for Printed {
+    fn deref_mut(&mut self) -> &mut String {
+        &mut self.text
     }
 }
 
@@ -155,23 +216,50 @@ mod tests {
         assert_eq!(presumed(text), Presumed::At(at("say \"hi\"\\", 3)));
     }
 
+    fn printed(text: &str) -> Printed {
+        Printed {
+            text: text.into(),
+            ..Printed::default()
+        }
+    }
+
     #[test]
     fn writes_only_what_changes() {
-        let mut out = String::from("int a;\n");
-        directive(&mut out, &at("a.temper", 3));
+        let mut out = printed("int a;\n");
+        out.directive(&at("a.temper", 3));
         out.push_str("f();\n");
-        directive(&mut out, &at("a.temper", 4));
+        out.directive(&at("a.temper", 4));
         out.push_str("g();\n");
-        directive(&mut out, &at("a.temper", 4));
+        out.directive(&at("a.temper", 4));
         out.push_str("h();\n");
         // The next line is line 4 already; line 4 again needs saying.
         assert_eq!(
-            out,
+            out.text,
             "int a;\n#line 3 \"a.temper\"\nf();\ng();\n#line 4 \"a.temper\"\nh();\n"
         );
         // Another file, though at the line it would be.
-        let mut out = String::from("#line 3 \"a.temper\"\nf();\n");
-        directive(&mut out, &at("b.temper", 4));
-        assert_eq!(out, "#line 3 \"a.temper\"\nf();\n#line 4 \"b.temper\"\n");
+        let mut out = printed("#line 3 \"a.temper\"\nf();\n");
+        out.directive(&at("b.temper", 4));
+        assert_eq!(
+            out.text,
+            "#line 3 \"a.temper\"\nf();\n#line 4 \"b.temper\"\n"
+        );
+    }
+
+    /// Read as it grows, a line at a time, or a part of one, or cut, it
+    /// presumes as reading it whole does.
+    #[test]
+    fn reads_as_it_grows() {
+        let text = "int a;\n#line 4 \"a\"\nint b;\nint c;\n#if X\n#endif\n#line 9 \"b\"\nx\n";
+        let mut out = Printed::default();
+        for c in text.chars() {
+            out.push(c);
+            let whole = presumed(&out.text);
+            assert_eq!(out.presumed(), whole, "{:?}", out.text);
+        }
+        // Cut back, then grown again otherwise.
+        out.text.truncate(text.find("#if").unwrap());
+        out.push_str("y;\n");
+        assert_eq!(out.presumed(), Presumed::At(at("a", 7)));
     }
 }

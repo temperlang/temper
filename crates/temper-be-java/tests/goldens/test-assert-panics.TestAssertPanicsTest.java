@@ -13,36 +13,47 @@ public final class TestAssertPanicsTest {
         return Core.listGet(ls, i);
     }
 
+    static {
+        Bubble.keepStackTraces();
+    }
+
     @org.junit.jupiter.api.Test
     public void passesBefore() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             {
                 int actual = at(List.of(1, 2), 1);
                 int expected = 2;
                 test.assert_(actual == expected, () -> "expected at([1, 2], 1) == (" + expected + ") not (" + actual + ")");
             }
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void passesWhenTheBlockPanics() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             test.assertPanics(() -> at(List.of(1, 2), 5));
             test.assertPanics(() -> Core.throwAssertionError("panic"));
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void passesPastAnOrelse() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             Runnable fn = () -> {
                 int n;
@@ -54,71 +65,89 @@ public final class TestAssertPanicsTest {
                 test.assert_(n == -1, () -> "caught by an orelse");
             };
             test.assertPanics(fn);
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void failsWhenTheBlockReturns() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             test.assertPanics(() -> at(List.of(1, 2), 0));
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void failsWithItsMessage() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             test.assertPanics(() -> at(List.of(1, 2), 1), "reading index 1 panics");
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void failsWhenTheBlockBubbles() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             test.assertPanics(() -> at(List.of(1, 2), 99));
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void failsWithItsMessageWhenTheBlockBubbles() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             test.assertPanics(() -> at(List.of(1, 2), 99), "reading index 99 panics");
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void goesOnAfterFailing() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             test.assertPanics(() -> at(List.of(1, 2), 0));
             test.assert_(false, () -> "went on");
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void nests() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             Runnable fn = () -> {
                 test.assertPanics(() -> Core.throwAssertionError("panic"));
@@ -126,15 +155,18 @@ public final class TestAssertPanicsTest {
                 throw new AssertionError("panic");
             };
             test.assertPanics(fn);
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void keepsWhatTheBlockChanged() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             class NCell {
                 int value;
@@ -147,27 +179,33 @@ public final class TestAssertPanicsTest {
             };
             test.assertPanics(fn);
             test.assert_(n.value == 1, () -> "lost the change");
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void failsOnAPanicAfterTheBlock() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             test.assertPanics(() -> Core.throwAssertionError("panic"));
             at(List.of(1, 2), 7);
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void endsOnAFailInTheBlock() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             Runnable fn = () -> {
                 test.fail("failed inside");
@@ -176,24 +214,29 @@ public final class TestAssertPanicsTest {
             test.assertPanics(fn);
             test.fail("swallowed");
             throw new AssertionError("panic");
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void passesAfter() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             {
                 int actual = at(List.of(1, 2), 0);
                 int expected = 1;
                 test.assert_(actual == expected, () -> "expected at([1, 2], 0) == (" + expected + ") not (" + actual + ")");
             }
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 }

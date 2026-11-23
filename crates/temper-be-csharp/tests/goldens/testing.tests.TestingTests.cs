@@ -21,15 +21,20 @@ public class TestingTests
     public void TwiceWorks()
     {
         Test test = new Test();
+        global::System.Exception? failure1 = null;
         try
         {
             int x = TestingGlobal.Twice(2);
             runs = runs + x + @base;
         }
+        catch (global::System.Exception e1)
+        {
+            failure1 = e1;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure1, test.SoftFailToHard);
         }
     }
 
@@ -37,14 +42,19 @@ public class TestingTests
     public void NamesPunctuationQuotesAndÜnïcode()
     {
         Test t = new Test();
+        global::System.Exception? failure2 = null;
         try
         {
             TestingGlobal.Twice(runs);
         }
+        catch (global::System.Exception e2)
+        {
+            failure2 = e2;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            t.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure2, t.SoftFailToHard);
         }
     }
 
@@ -52,6 +62,7 @@ public class TestingTests
     public void LocalsATestAssigns()
     {
         Test test = new Test();
+        global::System.Exception? failure3 = null;
         try
         {
             int n = 0;
@@ -65,10 +76,14 @@ public class TestingTests
             }
             runs = n;
         }
+        catch (global::System.Exception e3)
+        {
+            failure3 = e3;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure3, test.SoftFailToHard);
         }
     }
 }

@@ -844,13 +844,16 @@ impl<'a> Translator<'a> {
             if stmts.last().map(Stmt::bare) == Some(&Stmt::Return(None)) {
                 stmts.pop();
             }
-            // Each test awaits the async work it started.
-            self.imports.insert("finishAsyncWork");
+            // Each test ends by awaiting the async work it started.
+            self.imports.insert("endTest");
+            // Where the body's failure is kept, a name no local has.
+            let failure = self.fresh("failure");
             body.push(
                 Stmt::Test {
                     name: p.strings.get(name).to_string(),
                     test: self.name(param),
                     class,
+                    failure,
                     body: stmts,
                 }
                 .spanned(p.nodes.span(test)),

@@ -33,6 +33,10 @@ uses `temper-core`#6 0.0.0-alpha.0.0 {
   class Int32#48 {
     connected method toString#49(radix?: Int32): String;
   }
+  class List#79<T#80> extends Listed#81<T#80> {
+    connected method get#85(index: Int32): T#80;
+  }
+  interface Listed#81<T#82> {}
 }
 
 module `test-async`#0 {
@@ -107,5 +111,22 @@ module `test-async`#0 {
         return %String.cat("ran ", n#73.toString#49(omitted));
       }): fn (): String);
     }): fn (): SafeGenerator#8<Empty#12>);
+  }
+
+  test "own failure wins" ~test#75(test#76: Test#3): Void throws Bubble {
+    test#76.assert#32(false, (fn ~fn#77(): String {
+      return "soft failure";
+    }): fn (): String);
+    async#7((fn generator ~fn#78(): SafeGenerator#8<Empty#12> [test#76] {
+      test#76.fail#60("async failure");
+    }): fn (): SafeGenerator#8<Empty#12>);
+    let ls#83: List#79<Int32> = (list(1)): List#79<Int32>;
+    {
+      let actual#84: Int32 = ls#83.get#85(5);
+      let expected#86: Int32 = 1;
+      test#76.assert#32(%Int32.eq(actual#84, expected#86), (fn ~fn#87(): String [actual#84, expected#86] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected ls[5] == (", expected#86.toString#49(omitted)), ") not ("), actual#84.toString#49(omitted)), ")");
+      }): fn (): String);
+    }
   }
 }

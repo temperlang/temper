@@ -1,4 +1,4 @@
-import { finishAsyncWork } from "@temperlang/core";
+import { endTest } from "@temperlang/core";
 import { it } from "node:test";
 import { twice } from "../testing.internal.js";
 import { Test } from "@temperlang/std/testing";
@@ -8,27 +8,34 @@ const base = 10;
 
 it("twice works", async function () {
   const test = new Test();
+  let failure;
   try {
     const x = twice(2);
     runs = (((runs + x) | 0) + base) | 0;
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("names: punctuation, 'quotes', and ünïcode", async function () {
   const t = new Test();
+  let failure;
   try {
     twice(runs);
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    t.softFailToHard();
+    await endTest(t, failure);
   }
 });
 
 it("locals a test assigns", async function () {
   const test = new Test();
+  let failure;
   try {
     let n = 0;
     {
@@ -39,8 +46,10 @@ it("locals a test assigns", async function () {
       }
     }
     runs = n;
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });

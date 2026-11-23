@@ -1818,9 +1818,10 @@ impl<'a> Translator<'a> {
     /// interfaces ([`Self::take_types`]), and its tests: each a method
     /// named for it in Pascal case (`Twice10` for "twice 10"), which makes
     /// std's `Test`, runs the body, and then, even if the body threw,
-    /// waits for the async work it started (`Async.FinishAsyncWork`),
-    /// throwing what failed there, and fails if the `Test` has failures
-    /// (`SoftFailToHard`), as Kotlin's do. They see the library's `internal` members (`InternalsVisibleTo`
+    /// ends the test (`Async.EndTest`): waits for the async work it
+    /// started, throwing what failed there, and fails if the `Test` has
+    /// failures (`SoftFailToHard`), as Kotlin's do, the body's own
+    /// failure winning. They see the library's `internal` members (`InternalsVisibleTo`
     /// in its project). A test's update of the library's module `var`
     /// doesn't take its lock, which is private to its class. `None`
     /// without test parts or tests.
@@ -1867,8 +1868,14 @@ impl<'a> Translator<'a> {
             let var = self.name(param);
             self.begin(test);
             let stmts = self.stmts(body)?;
-            let soft_fail = Expr::name(var.clone()).method("SoftFailToHard", Vec::new());
-            let finish = self.class("Async").method("FinishAsyncWork", Vec::new());
+            // The body's failure, kept for `Async.EndTest`, which then
+            // finishes its async work and `SoftFailToHard`.
+            let failure = self.temporary("failure");
+            let e = self.temporary("e");
+            let soft_fail = Expr::name(var.clone()).member("SoftFailToHard");
+            let end = self
+                .class("Async")
+                .method("EndTest", vec![Expr::name(failure.clone()), soft_fail]);
             methods.push((
                 test_method_name(p.strings.get(name), &mut used),
                 vec![
@@ -1877,9 +1884,15 @@ impl<'a> Translator<'a> {
                         name: var,
                         value: Some(Expr::name(format!("new {ty}")).call(Vec::new())),
                     },
+                    Stmt::Local {
+                        ty: "global::System.Exception?".into(),
+                        name: failure.clone(),
+                        value: Some(Expr::name("null")),
+                    },
                     Stmt::Try {
                         body: stmts,
-                        finally: vec![Stmt::Expr(finish), Stmt::Expr(soft_fail)],
+                        keep: Some((failure, e)),
+                        finally: vec![Stmt::Expr(end)],
                     },
                 ],
             ));
@@ -3615,7 +3628,10 @@ pub(crate) fn completes(s: &Stmt) -> bool {
         // A label is reached by a `goto` from before it.
         Stmt::Block(body) if body.iter().any(|s| matches!(s, Stmt::Label(_))) => true,
         Stmt::Block(body) | Stmt::Lock { body, .. } => body.iter().all(completes),
-        Stmt::Try { body, finally } => body.iter().all(completes) && finally.iter().all(completes),
+        // A catch that keeps the failure rethrows it, never completing.
+        Stmt::Try { body, finally, .. } => {
+            body.iter().all(completes) && finally.iter().all(completes)
+        }
         Stmt::If { then, els, .. } => {
             els.is_empty() || then.iter().all(completes) || els.iter().all(completes)
         }
@@ -3646,7 +3662,7 @@ pub(crate) fn yields(body: &[Stmt]) -> bool {
     body.iter().any(|s| match s {
         Stmt::YieldReturn(_) | Stmt::YieldBreak => true,
         Stmt::Block(b) | Stmt::Lock { body: b, .. } => yields(b),
-        Stmt::Try { body, finally } => yields(body) || yields(finally),
+        Stmt::Try { body, finally, .. } => yields(body) || yields(finally),
         Stmt::TryCatch { body, catch, .. } => yields(body) || yields(catch),
         Stmt::If { then, els, .. } => yields(then) || yields(els),
         Stmt::While { body, .. } | Stmt::DoWhile { body, .. } => yields(body),
@@ -3661,7 +3677,7 @@ pub(crate) fn yield_breaks(body: &mut [Stmt]) {
         match s {
             Stmt::Return(None) => *s = Stmt::YieldBreak,
             Stmt::Block(b) | Stmt::Lock { body: b, .. } => yield_breaks(b),
-            Stmt::Try { body, finally } => {
+            Stmt::Try { body, finally, .. } => {
                 yield_breaks(body);
                 yield_breaks(finally);
             }

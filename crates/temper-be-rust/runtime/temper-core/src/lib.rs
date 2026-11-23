@@ -3,6 +3,7 @@ use std::backtrace::{Backtrace, BacktraceStatus};
 use std::collections::VecDeque;
 use std::fmt;
 use std::mem::forget;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 
 pub mod float64;
@@ -468,10 +469,11 @@ pub mod deque {
 // Error
 
 /// A bubble: what failed, where it says (a message or a host's error),
-/// and, as `std::backtrace` captures one (with `RUST_BACKTRACE` or
-/// `RUST_LIB_BACKTRACE` set), the stack where it was made, which a
-/// program's uncaught bubble shows ([`uncaught`]). A plain bubble without
-/// a trace is no allocation.
+/// and, once a program or a test asked for them ([`keep_bubble_traces`])
+/// and as `std::backtrace` captures one (with `RUST_BACKTRACE` or
+/// `RUST_LIB_BACKTRACE` set), the stack where it was made, which an
+/// uncaught bubble shows ([`uncaught`], and a test's report). A plain
+/// bubble without a trace is no allocation.
 #[derive(Clone)]
 pub struct Error(Option<Arc<Failure>>);
 
@@ -496,7 +498,10 @@ impl Error {
     }
 
     fn of(source: Option<Arc<dyn std::error::Error + Send + Sync>>) -> Self {
-        let trace = Backtrace::capture();
+        let trace = match KEEP_TRACES.load(Ordering::Relaxed) {
+            true => Backtrace::capture(),
+            false => Backtrace::disabled(),
+        };
         if source.is_none() && trace.status() != BacktraceStatus::Captured {
             return Error(None);
         }
@@ -526,9 +531,14 @@ impl fmt::Display for Error {
 
 impl fmt::Debug for Error {
     /// `Error(Some(MessageError("…")))` or `Error(None)`, as when it was
-    /// derived, since test reports parse it; no trace.
+    /// derived, since test reports parse it, then where it was made, where
+    /// that's known, as a test's uncaught bubble shows it.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Error").field(&self.cause()).finish()
+        f.debug_tuple("Error").field(&self.cause()).finish()?;
+        match self.backtrace() {
+            Some(trace) => write!(f, "\nbubbled at:\n{trace}"),
+            None => Ok(()),
+        }
     }
 }
 
@@ -537,6 +547,19 @@ impl std::error::Error for Error {
         self.cause()
             .map(|e| e.as_ref() as &(dyn std::error::Error + 'static))
     }
+}
+
+/// Whether bubbles capture where they're made ([`keep_bubble_traces`]).
+static KEEP_TRACES: AtomicBool = AtomicBool::new(false);
+
+/// Makes later bubbles keep the stack where they're made, where
+/// `std::backtrace` captures one (`RUST_BACKTRACE` or
+/// `RUST_LIB_BACKTRACE`), so an uncaught one can say where it came from.
+/// A generated program's `main` and each generated test call it; a
+/// library in a host's app never does, so its bubbles, often handled at
+/// once, cost no stack walk even with `RUST_BACKTRACE` set.
+pub fn keep_bubble_traces() {
+    KEEP_TRACES.store(true, Ordering::Relaxed);
 }
 
 /// A program's bubble that nothing handled, from its `main`: a panic,
@@ -585,27 +608,41 @@ pub fn block_panics(block: Arc<dyn Fn() + Send + Sync>) -> bool {
 }
 
 /// Runs `block`, catching its panic, which the panic hook says nothing
-/// of: for `block_panics`, and a test's async work ([`TestWork`]).
-pub(crate) fn catch_quietly(block: impl FnOnce()) -> std::thread::Result<()> {
-    use std::cell::Cell;
+/// of: for `block_panics`, and a test's async work ([`TestWork`]). A
+/// caught panic comes with where it happened, as the hook would have
+/// said (`file:line:col`).
+pub(crate) fn catch_quietly(block: impl FnOnce()) -> std::result::Result<(), Caught> {
+    use std::cell::{Cell, RefCell};
     use std::panic::{self, AssertUnwindSafe};
     thread_local! {
         // How many `catch_quietly` calls this thread is in.
         static CATCHING: Cell<u32> = const { Cell::new(0) };
+        // Where this thread's latest quiet panic happened.
+        static AT: RefCell<Option<String>> = const { RefCell::new(None) };
     }
     static QUIET: std::sync::Once = std::sync::Once::new();
     QUIET.call_once(|| {
         let reported = panic::take_hook();
-        panic::set_hook(Box::new(move |info| {
-            if CATCHING.with(Cell::get) == 0 {
-                reported(info);
-            }
+        panic::set_hook(Box::new(move |info| match CATCHING.with(Cell::get) {
+            0 => reported(info),
+            _ => AT.with(|at| *at.borrow_mut() = info.location().map(|l| l.to_string())),
         }));
     });
+    // Nothing stale, as from a `resume_unwind`, which skips the hook.
+    AT.with(|at| at.borrow_mut().take());
     CATCHING.with(|c| c.set(c.get() + 1));
     let result = panic::catch_unwind(AssertUnwindSafe(block));
     CATCHING.with(|c| c.set(c.get() - 1));
-    result
+    result.map_err(|payload| Caught {
+        payload,
+        at: AT.with(|at| at.borrow_mut().take()),
+    })
+}
+
+/// A panic [`catch_quietly`] caught, and where it happened, if known.
+pub(crate) struct Caught {
+    pub(crate) payload: Box<dyn Any + Send>,
+    pub(crate) at: Option<String>,
 }
 
 // Int

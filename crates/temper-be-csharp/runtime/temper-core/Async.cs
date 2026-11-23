@@ -279,6 +279,47 @@ namespace TemperLang.Core
         }
 
         /// <summary>
+        /// Ends a test, as generated tests do after its body, even one that
+        /// threw (<paramref name="failure"/>, else null): finishes the async
+        /// work it started (<see cref="FinishAsyncWork"/>), then fails it if
+        /// it has failures so far (<paramref name="softFailToHard"/>), each
+        /// even if the other failed. The body's own failure wins, which its
+        /// test then rethrows, and the async work's wins over the soft
+        /// failures; what fails besides is written to stderr, which the test
+        /// run keeps with the test's result.
+        /// </summary>
+#if NET6_0_OR_GREATER
+        public static void EndTest(Exception? failure, Action softFailToHard)
+#else
+        public static void EndTest(Exception failure, Action softFailToHard)
+#endif
+        {
+            var first = failure;
+            foreach (var end in new Action[] { FinishAsyncWork, softFailToHard })
+            {
+                try
+                {
+                    end();
+                }
+                catch (Exception e)
+                {
+                    if (first == null)
+                    {
+                        first = e;
+                    }
+                    else
+                    {
+                        Console.Error.WriteLine("The test also failed: " + e);
+                    }
+                }
+            }
+            if (failure == null && first != null)
+            {
+                ExceptionDispatchInfo.Capture(first).Throw();
+            }
+        }
+
+        /// <summary>
         /// Called from a main method before it runs module top-level code.
         /// Async blocks launched by that code wait for <see cref="EndTopLevel"/>.
         /// </summary>
@@ -466,7 +507,8 @@ namespace TemperLang.Core
             }
             allPromisesResolved.WaitOne();
             // A failure that escaped a block, a panic or a host's error,
-            // ends the program with it.
+            // already reported on stderr, ends the program, failing, as on
+            // Java and Python.
 #if NET6_0_OR_GREATER
             Exception? failure;
 #else
@@ -479,7 +521,7 @@ namespace TemperLang.Core
             }
             if (failure != null)
             {
-                ExceptionDispatchInfo.Capture(failure).Throw();
+                Environment.Exit(1);
             }
         }
     }

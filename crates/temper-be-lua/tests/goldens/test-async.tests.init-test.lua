@@ -100,4 +100,21 @@ function Test_.test_waits_on_nothing()
   end)
 end
 
+function Test_.test_own_failure_wins()
+  temper.test("own failure wins", function(test)
+    temper.test_assert(test, false, function() return "soft failure" end)
+    local function fn2()
+      temper.test_fail(test, "async failure")
+      error("panic")
+    end
+    temper.async(temper.adapt_generator_fn(fn2))
+    local ls = { 1 }
+    do
+      local actual = temper.list_get(ls, 5)
+      local expected = 1
+      temper.test_assert(test, actual == expected, function() return "expected ls[5] == (" .. expected .. ") not (" .. actual .. ")" end)
+    end
+  end)
+end
+
 luaunit.LuaUnit.run("--pattern", "^Test_%.", ...)

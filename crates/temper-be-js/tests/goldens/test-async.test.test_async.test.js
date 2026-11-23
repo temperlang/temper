@@ -1,8 +1,9 @@
 import {
   PromiseBuilder,
   adaptAwaiter,
-  finishAsyncWork,
+  endTest,
   isBubble,
+  listedGet,
   panic,
   runAsync,
 } from "@temperlang/core";
@@ -11,6 +12,7 @@ import { Test } from "@temperlang/std/testing";
 
 it("fails in an async block", async function () {
   const test = new Test();
+  let failure;
   try {
     /**
      * @param {(p: Promise<unknown>) => void} doAwait
@@ -20,14 +22,17 @@ it("fails in an async block", async function () {
       test.assert(((1 + 1) | 0) === 3, () => "failed in async");
     }
     runAsync(adaptAwaiter(fn));
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("passes in an async block", async function () {
   const test = new Test();
+  let failure;
   try {
     /**
      * @param {(p: Promise<unknown>) => void} doAwait
@@ -37,14 +42,17 @@ it("passes in an async block", async function () {
       test.assert(((1 + 1) | 0) === 2, () => "not shown");
     }
     runAsync(adaptAwaiter(fn));
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("fails in a later turn", async function () {
   const test = new Test();
+  let failure;
   try {
     /** @type {import("@temperlang/core/async.js").PromiseBuilder<number>} */
     const pb = new PromiseBuilder();
@@ -72,28 +80,34 @@ it("fails in a later turn", async function () {
       pb.complete(1);
     }
     runAsync(adaptAwaiter(fn3));
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("passes after a later turn", async function () {
   const test = new Test();
+  let failure;
   try {
     {
       const actual = (1 + 1) | 0;
       const expected = 2;
       test.assert(actual === expected, () => `expected 1 + 1 == (${expected}) not (${actual})`);
     }
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("fails hard in an async block", async function () {
   const test = new Test();
+  let failure;
   try {
     /**
      * @param {(p: Promise<unknown>) => void} doAwait
@@ -103,14 +117,17 @@ it("fails hard in an async block", async function () {
       test.fail("failed hard in async");
     }
     runAsync(adaptAwaiter(fn));
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("dies in an async block", async function () {
   const test = new Test();
+  let failure;
   try {
     /**
      * @param {(p: Promise<unknown>) => void} doAwait
@@ -120,28 +137,34 @@ it("dies in an async block", async function () {
       panic();
     }
     runAsync(adaptAwaiter(fn));
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("passes after", async function () {
   const test = new Test();
+  let failure;
   try {
     {
       const actual = (1 + 1) | 0;
       const expected = 2;
       test.assert(actual === expected, () => `expected 1 + 1 == (${expected}) not (${actual})`);
     }
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("waits on nothing", async function () {
   const test = new Test();
+  let failure;
   try {
     /** @type {import("@temperlang/core/async.js").PromiseBuilder<number>} */
     const never = new PromiseBuilder();
@@ -161,8 +184,38 @@ it("waits on nothing", async function () {
       test.assert(false, () => `ran ${n}`);
     }
     runAsync(adaptAwaiter(fn));
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
+  }
+});
+
+it("own failure wins", async function () {
+  const test = new Test();
+  let failure;
+  try {
+    test.assert(false, () => "soft failure");
+    /**
+     * @param {(p: Promise<unknown>) => void} doAwait
+     * @returns {Generator<any>}
+     */
+    function* fn2(doAwait) {
+      test.fail("async failure");
+    }
+    runAsync(adaptAwaiter(fn2));
+    /** @type {readonly number[]} */
+    const ls = Object.freeze([1]);
+    {
+      const actual = listedGet(/** @type {number[]} */ (ls), 5);
+      const expected = 1;
+      test.assert(actual === expected, () => `expected ls[5] == (${expected}) not (${actual})`);
+    }
+  } catch (e) {
+    failure = e;
+    throw e;
+  } finally {
+    await endTest(test, failure);
   }
 });

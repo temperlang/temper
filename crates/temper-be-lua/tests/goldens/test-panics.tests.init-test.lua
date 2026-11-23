@@ -64,4 +64,11 @@ function Test_.test_passes_after()
   end)
 end
 
+function Test_.test_dies_after_failing()
+  temper.test("dies after failing", function(test)
+    temper.test_assert(test, temper.int32_add(1, 1) == 3, function() return "failed before" end)
+    error("panic")
+  end)
+end
+
 luaunit.LuaUnit.run("--pattern", "^Test_%.", ...)

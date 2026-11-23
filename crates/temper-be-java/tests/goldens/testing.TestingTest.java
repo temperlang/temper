@@ -1,5 +1,6 @@
 package testing;
 
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.std.testing.Test;
 
@@ -8,6 +9,7 @@ public final class TestingTest {
     static final int base;
 
     static {
+        Bubble.keepStackTraces();
         TestingGlobal.initStatics();
         runs = 0;
         base = 10;
@@ -16,29 +18,36 @@ public final class TestingTest {
     @org.junit.jupiter.api.Test
     public void twiceWorks() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             int x = TestingGlobal.twice(2);
             runs = runs + x + base;
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void namesPunctuationQuotesAndÜnïcode() {
         Test t = new Test();
+        Throwable failure = null;
         try {
             TestingGlobal.twice(runs);
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            t.softFailToHard();
+            Core.endTest(failure, t::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void localsATestAssigns() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             int n = 0;
             {
@@ -49,9 +58,11 @@ public final class TestingTest {
                 }
             }
             runs = n;
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 }

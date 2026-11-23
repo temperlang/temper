@@ -39,8 +39,13 @@ test("reads past the end") { test =>
 }
 ```
 
-Only a panic in the block is caught, and a `fail` in it still ends the
-test. It's for tests alone: what the block changed before it panicked
+Only a failure in the block is caught, and a panic there is any failure
+but a bubble or a test's failure, the same on every backend, so a host's
+own error, as connected code throws, counts too. A test's failure, a
+`fail` in the block or a host test framework's failed assertion (JUnit's,
+unittest's, Node's `assert`, …), still ends the test; on Rust, where a
+failed assertion is a panic, a host's `assert!` counts as a panic. It's
+for tests alone: what the block changed before it panicked
 stays changed, maybe half done. Every backend and the interpreter catch
 the panic in the test's own process.
 
@@ -48,8 +53,10 @@ A test ends only once the async work it started has run as far as it
 can: no `async` block is ready to run and no I/O is in flight. So an
 `assert` in an `async` block counts, even one after an `await`, and a
 `fail` or a panic there fails the test that started the block, not the
-next one. A block still awaiting a promise that nothing settles is left
-waiting, as at a program's end:
+next one. I/O that never ends keeps its test waiting, until `temper
+test`'s `--timeout` (600 seconds by default) ends the run, saying so. A
+block still awaiting a promise that nothing settles is left waiting, as
+at a program's end:
 
 ```temper
 test("later") {
@@ -63,7 +70,9 @@ test("later") {
 ```
 
 A test that panics (a list read past the end, `panic()`) fails alone,
-with the panic's message, and the other tests still run: the runner
+with the panic's message, even after failed `assert`s or failing async
+work, which are said after it where the runner shows more, and the
+other tests still run: the runner
 catches it, test by test, though no `orelse` does, nor `runTest` and
 `processTestCases`. Each backend runs tests with its own framework (see [target languages](../backends/README.md)),
 and `temper test` runs them on any backend or on the interpreter

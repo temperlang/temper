@@ -15,7 +15,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         crate::support::run_async({
             let test = test.clone();
             Arc::new(move || {
@@ -39,7 +39,7 @@ mod tests {
                 })
             })
         });
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -49,7 +49,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         crate::support::run_async({
             let test = test.clone();
             Arc::new(move || {
@@ -73,7 +73,7 @@ mod tests {
                 })
             })
         });
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -83,7 +83,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         let pb: temper_core::PromiseBuilder<i32> = temper_core::PromiseBuilder::new();
         crate::support::run_async({
             let test = test.clone();
@@ -172,7 +172,7 @@ mod tests {
                 })
             })
         });
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -182,7 +182,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         {
             let actual = 1i32.wrapping_add(1);
             let expected: i32 = 2;
@@ -191,7 +191,7 @@ mod tests {
                 Arc::new(move || Arc::new(format!("expected 1 + 1 == ({expected}) not ({actual})"))),
             );
         }
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -201,7 +201,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         crate::support::run_async({
             let test = test.clone();
             Arc::new(move || {
@@ -222,7 +222,7 @@ mod tests {
                 })
             })
         });
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -232,7 +232,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         crate::support::run_async(Arc::new(move || {
             let case_index: Arc<RwLock<i32>> = Arc::new(RwLock::new(0));
             temper_core::SafeGenerator::from_fn({
@@ -248,7 +248,7 @@ mod tests {
                 })
             })
         }));
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -258,7 +258,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         {
             let actual = 1i32.wrapping_add(1);
             let expected: i32 = 2;
@@ -267,7 +267,7 @@ mod tests {
                 Arc::new(move || Arc::new(format!("expected 1 + 1 == ({expected}) not ({actual})"))),
             );
         }
-        work.finish(crate::support::config().runner());
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }
@@ -277,7 +277,7 @@ mod tests {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
-        let work = temper_core::TestWork::begin();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
         let never: temper_core::PromiseBuilder<i32> = temper_core::PromiseBuilder::new();
         crate::support::run_async({
             let test = test.clone();
@@ -343,7 +343,51 @@ mod tests {
                 })
             })
         });
-        work.finish(crate::support::config().runner());
+        work.finish();
+        test.soft_fail_to_hard();
+        Ok(())
+    }
+
+    #[test]
+    fn own_failure_wins() -> temper_core::Result<()> {
+        crate::init(None)?;
+        temper_std::init(None)?;
+        let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
+        test.assert(
+            false,
+            Arc::new(move || Arc::new("soft failure".to_string())),
+        );
+        crate::support::run_async({
+            let test = test.clone();
+            Arc::new(move || {
+                let case_index: Arc<RwLock<i32>> = Arc::new(RwLock::new(0));
+                temper_core::SafeGenerator::from_fn({
+                    let test = test.clone();
+                    let case_index = case_index.clone();
+                    Arc::new(move |_generator: temper_core::SafeGenerator<()>| {
+                        let case_index_local = temper_core::read_locked(&case_index);
+                        *case_index.write().unwrap() = -1;
+                        if case_index_local == 0 {
+                            test.fail("async failure");
+                            panic!();
+                        } else {
+                            None
+                        }
+                    })
+                })
+            })
+        });
+        let ls: temper_core::List<i32> = Arc::new(vec![1]);
+        {
+            let actual = temper_core::ListedTrait::get(&ls, 5);
+            let expected: i32 = 1;
+            test.assert(
+                actual == expected,
+                Arc::new(move || Arc::new(format!("expected ls[5] == ({expected}) not ({actual})"))),
+            );
+        }
+        work.finish();
         test.soft_fail_to_hard();
         Ok(())
     }

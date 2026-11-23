@@ -303,3 +303,21 @@ in async
 ```stderr
 index 2 out of bounds for length 2
 ```
+
+## Panic on every branch
+
+A module whose top-level code panics on every branch it can take still
+builds, as in Java, whose static initializer must look as though it
+could finish:
+
+    let k = positive(1) orelse 0;
+    if (k > 0) { panic() } else { positive(-1) orelse panic(); panic() }
+    console.log("after");
+
+```log
+before
+```
+
+```stderr
+panic
+```

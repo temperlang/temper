@@ -70,14 +70,19 @@ public class AssertsTests
     public void ATestCase()
     {
         Test test = new Test();
+        global::System.Exception? failure1 = null;
         try
         {
             test.Assert(Float64.Compare(AssertsGlobal.NormSquared(new Vec2(0.0, 0.0)), 0.0) == 0, () => "Oh noes");
         }
+        catch (global::System.Exception e1)
+        {
+            failure1 = e1;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure1, test.SoftFailToHard);
         }
     }
 
@@ -85,16 +90,21 @@ public class AssertsTests
     public void AFailingTest()
     {
         Test test = new Test();
+        global::System.Exception? failure2 = null;
         try
         {
             test.Assert(false, () => "because it's wrong");
             TestHelper helper = new TestHelper(3, 2);
             AssertMoreThings(test, helper, Listed.CreateReadOnlyList<IReadOnlyList<string>>(Listed.CreateReadOnlyList<string>("bye")));
         }
+        catch (global::System.Exception e2)
+        {
+            failure2 = e2;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure2, test.SoftFailToHard);
         }
     }
 
@@ -102,6 +112,7 @@ public class AssertsTests
     public void Exported()
     {
         Test test = new Test();
+        global::System.Exception? failure3 = null;
         try
         {
             Vec2 vec = new Vec2(1.5, 2.5);
@@ -111,10 +122,14 @@ public class AssertsTests
                 test.Assert(actual == expected, () => "expected vec.toString() == (" + expected + ") not (" + actual + ")");
             }
         }
+        catch (global::System.Exception e3)
+        {
+            failure3 = e3;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure3, test.SoftFailToHard);
         }
     }
 
@@ -122,6 +137,7 @@ public class AssertsTests
     public void ModuleValues()
     {
         Test test = new Test();
+        global::System.Exception? failure4 = null;
         try
         {
             {
@@ -139,10 +155,14 @@ public class AssertsTests
                 }
             }
         }
+        catch (global::System.Exception e4)
+        {
+            failure4 = e4;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure4, test.SoftFailToHard);
         }
     }
 }

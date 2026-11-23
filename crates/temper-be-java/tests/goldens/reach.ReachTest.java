@@ -1,5 +1,6 @@
 package reach;
 
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.std.testing.Test;
 
@@ -16,6 +17,7 @@ public final class ReachTest {
     }
 
     static {
+        Bubble.keepStackTraces();
         ReachGlobal.initStatics();
         testFactor = ReachGlobal.base * 2;
         testCount = 0;
@@ -24,6 +26,7 @@ public final class ReachTest {
     @org.junit.jupiter.api.Test
     public void testParts() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             TestShape shape = new TestSquare(forTests(2));
             addArea(shape);
@@ -50,9 +53,11 @@ public final class ReachTest {
                 int expected = 1;
                 test.assert_(actual == expected, () -> "expected shownCount == (" + expected + ") not (" + actual + ")");
             }
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 }

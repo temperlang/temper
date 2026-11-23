@@ -215,13 +215,19 @@ namespace temper {
         }
 
         // std's `Test.panics(block)`, for `Test.assertPanics`: whether the
-        // block panicked, which in a test build throws a `TemperPanic`
-        // (`run_tests` sets the hook). Anything else passes through.
+        // block threw anything but a bubble or a test's failure, as on
+        // every backend: a panic, which in a test build throws a
+        // `TemperPanic` (`run_tests` sets the hook), or a host's
+        // exception. What isn't passes through.
         template<class T, class F>
         bool testPanics(const T&, const F& block) {
             try {
                 block();
-            } catch (const TemperPanic&) {
+            } catch (const TemperBubble&) {
+                throw;
+            } catch (const TemperTestFailure&) {
+                throw;
+            } catch (...) {
                 return true;
             }
             return false;

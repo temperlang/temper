@@ -1,6 +1,6 @@
 import {
+  endTest,
   eqFloat64,
-  finishAsyncWork,
   float64ToString,
   listedGet,
   type,
@@ -93,28 +93,35 @@ class TestHelper extends type() {
 
 it("a test case", async function () {
   const test = new Test();
+  let failure;
   try {
     test.assert(eqFloat64(normSquared(new Vec2(0.0, 0.0)), 0.0), () => "Oh noes");
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("a failing test", async function () {
   const test = new Test();
+  let failure;
   try {
     test.assert(false, () => "because it's wrong");
     const helper = new TestHelper(3, 2);
     assertMoreThings(test, helper, Object.freeze([Object.freeze(["bye"])]));
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("exported", async function () {
   const test = new Test();
+  let failure;
   try {
     const vec = new Vec2(1.5, 2.5);
     {
@@ -122,14 +129,17 @@ it("exported", async function () {
       const expected = "(1.5, 2.5) size squared 8.5";
       test.assert(actual === expected, () => `expected vec.toString() == (${expected}) not (${actual})`);
     }
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("module values", async function () {
   const test = new Test();
+  let failure;
   try {
     {
       const length = unitVecs.length;
@@ -144,8 +154,10 @@ it("module values", async function () {
         }
       }
     }
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });

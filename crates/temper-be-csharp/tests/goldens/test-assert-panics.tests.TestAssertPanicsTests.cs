@@ -22,6 +22,7 @@ public class TestAssertPanicsTests
     public void PassesBefore()
     {
         Test test = new Test();
+        global::System.Exception? failure1 = null;
         try
         {
             {
@@ -30,10 +31,14 @@ public class TestAssertPanicsTests
                 test.Assert(actual == expected, () => string.Create(CultureInfo.InvariantCulture, $"expected at([1, 2], 1) == ({expected}) not ({actual})"));
             }
         }
+        catch (global::System.Exception e1)
+        {
+            failure1 = e1;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure1, test.SoftFailToHard);
         }
     }
 
@@ -41,6 +46,7 @@ public class TestAssertPanicsTests
     public void PassesWhenTheBlockPanics()
     {
         Test test = new Test();
+        global::System.Exception? failure2 = null;
         try
         {
             test.AssertPanics(() => At(Listed.CreateReadOnlyList<int>(1, 2), 5));
@@ -50,10 +56,14 @@ public class TestAssertPanicsTests
             }
             test.AssertPanics(fn2);
         }
+        catch (global::System.Exception e2)
+        {
+            failure2 = e2;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure2, test.SoftFailToHard);
         }
     }
 
@@ -61,6 +71,7 @@ public class TestAssertPanicsTests
     public void PassesPastAnOrelse()
     {
         Test test = new Test();
+        global::System.Exception? failure3 = null;
         try
         {
             void fn()
@@ -78,10 +89,14 @@ public class TestAssertPanicsTests
             }
             test.AssertPanics(fn);
         }
+        catch (global::System.Exception e3)
+        {
+            failure3 = e3;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure3, test.SoftFailToHard);
         }
     }
 
@@ -89,14 +104,19 @@ public class TestAssertPanicsTests
     public void FailsWhenTheBlockReturns()
     {
         Test test = new Test();
+        global::System.Exception? failure4 = null;
         try
         {
             test.AssertPanics(() => At(Listed.CreateReadOnlyList<int>(1, 2), 0));
         }
+        catch (global::System.Exception e4)
+        {
+            failure4 = e4;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure4, test.SoftFailToHard);
         }
     }
 
@@ -104,14 +124,19 @@ public class TestAssertPanicsTests
     public void FailsWithItsMessage()
     {
         Test test = new Test();
+        global::System.Exception? failure5 = null;
         try
         {
             test.AssertPanics(() => At(Listed.CreateReadOnlyList<int>(1, 2), 1), "reading index 1 panics");
         }
+        catch (global::System.Exception e5)
+        {
+            failure5 = e5;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure5, test.SoftFailToHard);
         }
     }
 
@@ -119,14 +144,19 @@ public class TestAssertPanicsTests
     public void FailsWhenTheBlockBubbles()
     {
         Test test = new Test();
+        global::System.Exception? failure6 = null;
         try
         {
             test.AssertPanics(() => At(Listed.CreateReadOnlyList<int>(1, 2), 99));
         }
+        catch (global::System.Exception e6)
+        {
+            failure6 = e6;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure6, test.SoftFailToHard);
         }
     }
 
@@ -134,14 +164,19 @@ public class TestAssertPanicsTests
     public void FailsWithItsMessageWhenTheBlockBubbles()
     {
         Test test = new Test();
+        global::System.Exception? failure7 = null;
         try
         {
             test.AssertPanics(() => At(Listed.CreateReadOnlyList<int>(1, 2), 99), "reading index 99 panics");
         }
+        catch (global::System.Exception e7)
+        {
+            failure7 = e7;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure7, test.SoftFailToHard);
         }
     }
 
@@ -149,15 +184,20 @@ public class TestAssertPanicsTests
     public void GoesOnAfterFailing()
     {
         Test test = new Test();
+        global::System.Exception? failure8 = null;
         try
         {
             test.AssertPanics(() => At(Listed.CreateReadOnlyList<int>(1, 2), 0));
             test.Assert(false, () => "went on");
         }
+        catch (global::System.Exception e8)
+        {
+            failure8 = e8;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure8, test.SoftFailToHard);
         }
     }
 
@@ -165,6 +205,7 @@ public class TestAssertPanicsTests
     public void Nests()
     {
         Test test = new Test();
+        global::System.Exception? failure9 = null;
         try
         {
             void fn()
@@ -179,10 +220,14 @@ public class TestAssertPanicsTests
             }
             test.AssertPanics(fn);
         }
+        catch (global::System.Exception e9)
+        {
+            failure9 = e9;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure9, test.SoftFailToHard);
         }
     }
 
@@ -190,6 +235,7 @@ public class TestAssertPanicsTests
     public void KeepsWhatTheBlockChanged()
     {
         Test test = new Test();
+        global::System.Exception? failure10 = null;
         try
         {
             int n = 0;
@@ -201,10 +247,14 @@ public class TestAssertPanicsTests
             test.AssertPanics(fn);
             test.Assert(n == 1, () => "lost the change");
         }
+        catch (global::System.Exception e10)
+        {
+            failure10 = e10;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure10, test.SoftFailToHard);
         }
     }
 
@@ -212,6 +262,7 @@ public class TestAssertPanicsTests
     public void FailsOnAPanicAfterTheBlock()
     {
         Test test = new Test();
+        global::System.Exception? failure11 = null;
         try
         {
             void fn()
@@ -221,10 +272,14 @@ public class TestAssertPanicsTests
             test.AssertPanics(fn);
             At(Listed.CreateReadOnlyList<int>(1, 2), 7);
         }
+        catch (global::System.Exception e11)
+        {
+            failure11 = e11;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure11, test.SoftFailToHard);
         }
     }
 
@@ -232,6 +287,7 @@ public class TestAssertPanicsTests
     public void EndsOnAFailInTheBlock()
     {
         Test test = new Test();
+        global::System.Exception? failure12 = null;
         try
         {
             void fn()
@@ -243,10 +299,14 @@ public class TestAssertPanicsTests
             test.Fail("swallowed");
             throw Core.Panic("panic");
         }
+        catch (global::System.Exception e12)
+        {
+            failure12 = e12;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure12, test.SoftFailToHard);
         }
     }
 
@@ -254,6 +314,7 @@ public class TestAssertPanicsTests
     public void PassesAfter()
     {
         Test test = new Test();
+        global::System.Exception? failure13 = null;
         try
         {
             {
@@ -262,10 +323,14 @@ public class TestAssertPanicsTests
                 test.Assert(actual == expected, () => string.Create(CultureInfo.InvariantCulture, $"expected at([1, 2], 0) == ({expected}) not ({actual})"));
             }
         }
+        catch (global::System.Exception e13)
+        {
+            failure13 = e13;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure13, test.SoftFailToHard);
         }
     }
 }

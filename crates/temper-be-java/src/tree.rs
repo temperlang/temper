@@ -287,9 +287,11 @@ pub enum Stmt {
         lock: Expr,
         body: Vec<Stmt>,
     },
-    /// `try { … } finally { … }`.
+    /// `try { … } catch (Throwable var) { … } finally { … }`, the catch
+    /// only where given.
     Try {
         body: Vec<Stmt>,
+        catch_all: Option<(String, Vec<Stmt>)>,
         finally: Vec<Stmt>,
     },
     /// `try { … } catch (Bubble var) { … }`: Temper's `orelse`, catching
@@ -852,9 +854,17 @@ fn stmt(out: &mut String, s: &Stmt, depth: usize) {
             block(out, body, depth);
             out.push('\n');
         }
-        Stmt::Try { body, finally } => {
+        Stmt::Try {
+            body,
+            catch_all,
+            finally,
+        } => {
             out.push_str("try ");
             block(out, body, depth);
+            if let Some((var, handler)) = catch_all {
+                let _ = write!(out, " catch (Throwable {var}) ");
+                block(out, handler, depth);
+            }
             out.push_str(" finally ");
             block(out, finally, depth);
             out.push('\n');

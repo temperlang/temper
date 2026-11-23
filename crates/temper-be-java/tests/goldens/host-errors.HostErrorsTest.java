@@ -62,9 +62,14 @@ public final class HostErrorsTest {
         return new CodePoints("b").compiled().replace("abc", match -> Core.listGet(List.of("x"), i));
     }
 
+    static {
+        Bubble.keepStackTraces();
+    }
+
     @org.junit.jupiter.api.Test
     public void listRead() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             int r;
             try {
@@ -73,15 +78,18 @@ public final class HostErrorsTest {
                 r = -1;
             }
             test.assert_(r != -1, () -> "caught");
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void listReadAtTheEnd() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             List<Integer> ls = List.of(1, 2);
             int r;
@@ -91,15 +99,18 @@ public final class HostErrorsTest {
                 r = -1;
             }
             test.assert_(r != -1, () -> "caught");
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void negativeIndex() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             int r;
             try {
@@ -108,15 +119,18 @@ public final class HostErrorsTest {
                 r = -1;
             }
             test.assert_(r != -1, () -> "caught");
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void set() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             int r;
             try {
@@ -125,15 +139,18 @@ public final class HostErrorsTest {
                 r = -1;
             }
             test.assert_(r != -1, () -> "caught");
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void setAtTheEnd() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             List<Integer> lb = built();
             int r;
@@ -143,15 +160,18 @@ public final class HostErrorsTest {
                 r = -1;
             }
             test.assert_(r != -1, () -> "caught");
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void insert() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             int r;
             try {
@@ -160,15 +180,18 @@ public final class HostErrorsTest {
                 r = -1;
             }
             test.assert_(r != -1, () -> "caught");
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void insertPastTheEnd() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             List<Integer> lb = built();
             int r;
@@ -178,15 +201,18 @@ public final class HostErrorsTest {
                 r = -1;
             }
             test.assert_(r != -1, () -> "caught");
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void insertAtTheEndAppends() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             List<Integer> lb = built();
             int n;
@@ -196,15 +222,18 @@ public final class HostErrorsTest {
                 n = -1;
             }
             test.assert_(n == 2 && Core.listGet(lb, 1) == 2, () -> "didn't append");
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void removeLast() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             int r;
             try {
@@ -213,15 +242,18 @@ public final class HostErrorsTest {
                 r = -1;
             }
             test.assert_(r != -1, () -> "caught");
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void removeFirst() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             int r;
             try {
@@ -230,15 +262,18 @@ public final class HostErrorsTest {
                 r = -1;
             }
             test.assert_(r != -1, () -> "caught");
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void reduce() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             int r;
             try {
@@ -247,15 +282,18 @@ public final class HostErrorsTest {
                 r = -1;
             }
             test.assert_(r != -1, () -> "caught");
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void stringRead() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             int r;
             try {
@@ -264,15 +302,18 @@ public final class HostErrorsTest {
                 r = -1;
             }
             test.assert_(r != -1, () -> "caught");
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void replaceCallback() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             String r;
             try {
@@ -281,9 +322,11 @@ public final class HostErrorsTest {
                 r = "";
             }
             test.assert_(!r.equals(""), () -> "caught");
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 }

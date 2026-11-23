@@ -44,10 +44,12 @@ namespace temper {
         }
 
         // A panic in a test fails that test alone, saying why and where
-        // (`run_tests`).
+        // (`run_tests`), where is found only if it's reported, not for a
+        // panic `assertPanics` catches.
         [[noreturn]] inline void throw_panic(const std::string& message) {
             TemperPanic panic(message);
-            panic.trace = stack_trace();
+            StackCapture capture = capture_stack();
+            panic.trace = [capture]() { return stack_trace(capture); };
             throw panic;
         }
 
@@ -78,8 +80,9 @@ namespace temper {
                 } catch (const TemperPanic& e) {
                     threw = true;
                     thrown = std::string("Panicked: ") + e.what();
-                    if (!e.trace.empty()) {
-                        thrown += "\n" + e.trace;
+                    std::string trace = e.trace ? e.trace() : std::string();
+                    if (!trace.empty()) {
+                        thrown += "\n" + trace;
                         thrown.pop_back();
                     }
                 } catch (const std::exception& e) {

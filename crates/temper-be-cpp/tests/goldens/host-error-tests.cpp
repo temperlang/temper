@@ -14,11 +14,13 @@ namespace host_error_tests {
 void global_init_init();
 
 int32_t hostFails(int32_t n);
+void hostFailsTest();
 
 
 #ifdef TEMPER_TESTS
 // Tests, which `test.cpp` runs.
-void hostErrorIsNoPanic(std::shared_ptr<temper_std::Test> const & test);
+void hostErrorsArePanics(std::shared_ptr<temper_std::Test> const & test);
+void hostTestFailureIsNoPanic(std::shared_ptr<temper_std::Test> const & test);
 #endif
 
 }  // namespace host_error_tests
@@ -36,6 +38,10 @@ int32_t hostFails(int32_t n) {
   return _connected::hostFails(n);
 }
 
+void hostFailsTest() {
+  _connected::hostFailsTest();
+}
+
 void global_init_init() {}
 
 }  // namespace host_error_tests
@@ -44,7 +50,7 @@ void global_init_init() {}
 
 namespace host_error_tests {
 
-void hostErrorIsNoPanic(std::shared_ptr<temper_std::Test> const & test) {
+void hostErrorsArePanics(std::shared_ptr<temper_std::Test> const & test) {
   auto fn = [=]() -> void {
     int32_t r;
     try {
@@ -52,9 +58,33 @@ void hostErrorIsNoPanic(std::shared_ptr<temper_std::Test> const & test) {
     } catch (core::TemperBubble const &) {
       r = -1;
     }
-    test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("caught"); });
+    test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("expected r != -1"); });
   };
-  test->assertPanics(fn);
+  test->assertPanics(fn, TEMPER_STR("host error 1"));
+  auto fn3 = [=]() -> void {
+    int32_t r;
+    try {
+      r = hostFails(2);
+    } catch (core::TemperBubble const &) {
+      r = -1;
+    }
+    test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("expected r != -1"); });
+  };
+  test->assertPanics(fn3, TEMPER_STR("host error 2"));
+  auto fn4 = [=]() -> void {
+    int32_t r;
+    try {
+      r = hostFails(3);
+    } catch (core::TemperBubble const &) {
+      r = -1;
+    }
+    test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("expected r != -1"); });
+  };
+  test->assertPanics(fn4, TEMPER_STR("host error 3"));
+}
+
+void hostTestFailureIsNoPanic(std::shared_ptr<temper_std::Test> const & test) {
+  test->assertPanics([]() -> void { hostFailsTest(); });
 }
 
 }  // namespace host_error_tests
@@ -80,9 +110,17 @@ int main() {
   host_error_tests::global_init_init();
   temper_std::global_init_testing();
   return temper::core::run_tests({
-      {"host error is no panic", [] {
+      {"host errors are panics", [] {
         auto test = temper_std::Test::make();
-        host_error_tests::hostErrorIsNoPanic(test);
+        host_error_tests::hostErrorsArePanics(test);
+        auto messages = test->messagesCombined();
+        return temper::core::TestOutcome{
+            test->get_passing(),
+            temper::core::is_null(messages) ? std::string() : temper::core::Str(messages).str()};
+      }},
+      {"host test failure is no panic", [] {
+        auto test = temper_std::Test::make();
+        host_error_tests::hostTestFailureIsNoPanic(test);
         auto messages = test->messagesCombined();
         return temper::core::TestOutcome{
             test->get_passing(),

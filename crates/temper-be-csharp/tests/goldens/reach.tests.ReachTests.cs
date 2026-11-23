@@ -32,6 +32,7 @@ public class ReachTests
     public void TestParts()
     {
         Test test = new Test();
+        global::System.Exception? failure1 = null;
         try
         {
             ITestShape shape = new TestSquare(ForTests(2));
@@ -60,10 +61,14 @@ public class ReachTests
                 test.Assert(actual == expected, () => string.Create(CultureInfo.InvariantCulture, $"expected shownCount == ({expected}) not ({actual})"));
             }
         }
+        catch (global::System.Exception e1)
+        {
+            failure1 = e1;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure1, test.SoftFailToHard);
         }
     }
 }

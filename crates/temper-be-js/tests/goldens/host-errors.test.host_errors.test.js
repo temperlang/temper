@@ -2,7 +2,7 @@ import {
   bubble,
   dequeConstructor,
   dequeRemoveFirst,
-  finishAsyncWork,
+  endTest,
   isBubble,
   listBuilderAdd,
   listBuilderRemoveLast,
@@ -114,6 +114,7 @@ function replaced(i) {
 
 it("list read", async function () {
   const test = new Test();
+  let failure;
   try {
     /** @type {number} */
     let r;
@@ -124,14 +125,17 @@ it("list read", async function () {
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("list read at the end", async function () {
   const test = new Test();
+  let failure;
   try {
     /** @type {readonly number[]} */
     const ls = Object.freeze([1, 2]);
@@ -144,14 +148,17 @@ it("list read at the end", async function () {
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("negative index", async function () {
   const test = new Test();
+  let failure;
   try {
     /** @type {number} */
     let r;
@@ -162,14 +169,17 @@ it("negative index", async function () {
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("set", async function () {
   const test = new Test();
+  let failure;
   try {
     /** @type {number} */
     let r;
@@ -180,14 +190,17 @@ it("set", async function () {
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("set at the end", async function () {
   const test = new Test();
+  let failure;
   try {
     /** @type {number[]} */
     const lb = built();
@@ -200,14 +213,17 @@ it("set at the end", async function () {
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("insert", async function () {
   const test = new Test();
+  let failure;
   try {
     /** @type {number} */
     let r;
@@ -218,14 +234,17 @@ it("insert", async function () {
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("insert past the end", async function () {
   const test = new Test();
+  let failure;
   try {
     /** @type {number[]} */
     const lb = built();
@@ -238,14 +257,17 @@ it("insert past the end", async function () {
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("insert at the end appends", async function () {
   const test = new Test();
+  let failure;
   try {
     /** @type {number[]} */
     const lb = built();
@@ -258,14 +280,17 @@ it("insert at the end appends", async function () {
       n = -1;
     }
     test.assert(n === 2 && listedGet(lb, 1) === 2, () => "didn't append");
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("remove last", async function () {
   const test = new Test();
+  let failure;
   try {
     /** @type {number} */
     let r;
@@ -276,14 +301,17 @@ it("remove last", async function () {
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("remove first", async function () {
   const test = new Test();
+  let failure;
   try {
     /** @type {number} */
     let r;
@@ -294,14 +322,17 @@ it("remove first", async function () {
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("reduce", async function () {
   const test = new Test();
+  let failure;
   try {
     /** @type {number} */
     let r;
@@ -312,14 +343,17 @@ it("reduce", async function () {
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("string read", async function () {
   const test = new Test();
+  let failure;
   try {
     /** @type {number} */
     let r;
@@ -330,14 +364,17 @@ it("string read", async function () {
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });
 
 it("replace callback", async function () {
   const test = new Test();
+  let failure;
   try {
     /** @type {string} */
     let r;
@@ -348,8 +385,10 @@ it("replace callback", async function () {
       r = "";
     }
     test.assert(r !== "", () => "caught");
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });

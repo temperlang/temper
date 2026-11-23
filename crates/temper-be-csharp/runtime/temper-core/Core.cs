@@ -36,9 +36,10 @@ namespace TemperLang.Core
 
         /// <summary>
         /// Runs <paramref name="block"/>, giving whether it panicked, for
-        /// std's <c>Test.assertPanics</c>: whether it threw a
-        /// <see cref="Panic"/>. Anything else, a bubble, a test's failure,
-        /// or a host exception, passes through.
+        /// std's <c>Test.assertPanics</c>: whether it threw anything but a
+        /// bubble or a test framework's failure (MSTest's, NUnit's, or
+        /// xUnit's), as on every backend, so a <see cref="Panic"/> or a
+        /// host's exception. What isn't passes through.
         /// </summary>
         public static bool BlockPanics(Action block)
         {
@@ -46,9 +47,31 @@ namespace TemperLang.Core
             {
                 block();
             }
-            catch (Panic)
+            catch (Exception e) when (!(e is TemperLang.Core.Bubble) && !IsTestFailure(e))
             {
                 return true;
+            }
+            return false;
+        }
+
+        static readonly string[] testFrameworks =
+        {
+            "Microsoft.VisualStudio.TestTools.UnitTesting", "NUnit.Framework", "Xunit",
+        };
+
+        /// <summary>Whether <paramref name="e"/> is a test framework's failure, by its type's namespace.</summary>
+        static bool IsTestFailure(Exception e)
+        {
+            for (var type = e.GetType(); type != null; type = type.BaseType)
+            {
+                var ns = type.Namespace ?? "";
+                foreach (var framework in testFrameworks)
+                {
+                    if (ns == framework || ns.StartsWith(framework + "."))
+                    {
+                        return true;
+                    }
+                }
             }
             return false;
         }

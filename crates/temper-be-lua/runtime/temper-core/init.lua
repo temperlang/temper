@@ -216,37 +216,56 @@ do
     end
     temper.is_bubble = is_bubble
 
-    local caught
+    -- Where errors that passed an `orelse` were first raised: a table's
+    -- by the table, forgotten with it, and the latest string's, since
+    -- strings can't be told apart from equal ones (`raised_trace`).
+    local table_traces = setmetatable({}, { __mode = 'k' })
+    local string_trace = nil
+    -- The error `caught` is raising again, for the next `traced`.
+    local again = nil
 
     -- An `orelse`'s handler, run where an error is raised: anything but a
-    -- bubble, raised there first, not again by `caught`, has its stack
-    -- trace kept in `temper.raised` (`{ err = …, trace = … }`), which a
-    -- handler of the program's, as `temper run`'s, shows, as `caught`
-    -- raising it again starts a stack of its own.
+    -- bubble, raised here first, not again by `caught`, has its stack
+    -- trace kept, which a handler of the program's, as `temper run`'s,
+    -- shows (`temper.raised_trace`), as `caught` raising it again starts
+    -- a stack of its own.
     local function traced(err)
-        if is_bubble(err) then
+        local raised_again = again ~= nil and rawequal(again, err)
+        again = nil
+        if raised_again or is_bubble(err) then
             return err
         end
-        -- `caught` calls `error`, which may be a frame of its own.
-        for level = 2, 3 do
-            local info = debug.getinfo(level, 'f')
-            if info and info.func == caught then
-                return err
-            end
+        local trace = debug.traceback(tostring(err), 2)
+        if type(err) == 'table' then
+            table_traces[err] = trace
+        else
+            string_trace = { err = err, trace = trace }
         end
-        temper.raised = { err = err, trace = debug.traceback(tostring(err), 2) }
         return err
     end
 
-    function caught(ok, ...)
+    -- Where `err`, which passed an `orelse`, was first raised, if known.
+    function temper.raised_trace(err)
+        if type(err) == 'table' then
+            return table_traces[err]
+        elseif string_trace ~= nil and rawequal(string_trace.err, err) then
+            return string_trace.trace
+        end
+        return nil
+    end
+
+    local function caught(ok, ...)
         if ok or is_bubble((...)) then
             return ok, ...
         end
+        again = (...)
         error((...), 0)
     end
 
     -- `orelse`: `pcall`, but catching only a bubble, raising anything
     -- else (a panic, a host error) again, so it passes every `orelse`.
+    -- Generated code passes only `f`; arguments after it are passed to
+    -- `f`, as Kotlin's took them, as `pcall` does.
     function temper.pcall(f, ...)
         if select('#', ...) == 0 then
             return caught(xpcall(f, traced))
@@ -2442,9 +2461,10 @@ function temper.test_softfailtohard(test)
     end
 end
 
--- std's `Test.assertPanics`: passes if the block panics, which on Lua is
--- any error but a bubble or a test's failure, which still ends the test;
--- a block that returns or bubbles fails the test, which goes on.
+-- std's `Test.assertPanics`: passes if the block panics, which is any
+-- error but a bubble or a test's failure, Temper's or LuaUnit's, as on
+-- every backend; a test's failure still ends the test, and a block that
+-- returns or bubbles fails the test, which goes on.
 function temper.test_assertpanics(test, block, msg)
     msg = msg or 'expected a panic'
     local ok, err = pcall(block)
@@ -2452,7 +2472,7 @@ function temper.test_assertpanics(test, block, msg)
         test.failures[#test.failures + 1] = msg
     elseif temper.is_bubble(err) then
         test.failures[#test.failures + 1] = msg .. ', but it bubbled'
-    elseif type(err) == 'string' and string_find(err, temper.test_failure_prefix, 1, true) then
+    elseif temper.is_test_failure(err) then
         error(err, 0)
     end
 end
@@ -2482,14 +2502,32 @@ function temper.test(name, cb)
         cb(test)
     end)
 
-    -- Presume any error/bubble was just a hard assertion by default.
-    -- TODO Instead check if failed on assert.
-    if #test.failures ~= 0 then
+    -- The body's own failure wins, but a test's failure, which says the
+    -- test's messages; failures before it are said after it.
+    if not ok and not temper.is_test_failure(err) then
+        if #test.failures ~= 0 then
+            local also = 'the test also failed: ' .. table_concat(test.failures, ", ")
+            if type(err) == 'string' then
+                err = err .. '\n' .. also
+            else
+                io.stderr:write(also, '\n')
+            end
+        end
+        error(err, 0)
+    elseif #test.failures ~= 0 then
         error(temper.test_failure_prefix .. table_concat(test.failures, ", "), 2)
     elseif not ok then
-        -- TODO Does this lose the original stack trace? Sad if so.
-        error(err)
+        error(err, 0)
     end
+end
+
+-- Whether an error is a test's failure, Temper's or LuaUnit's, which
+-- `assertPanics` lets pass.
+function temper.is_test_failure(err)
+    return type(err) == 'string' and (
+        string_find(err, temper.test_failure_prefix, 1, true) ~= nil
+        or string_find(err, 'LuaUnit test ', 1, true) ~= nil
+    )
 end
 
 function temper.test_assert(test, ok, get_msg)

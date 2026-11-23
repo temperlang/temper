@@ -44,24 +44,24 @@
 51:1 -> ../../reach.temper.md:25:5  const testFactor = Math.imul <- let testFactor = base * 2;
 52:1 -> ../../reach.temper.md:26:5  let testCount = 0; <- var testCount = 0;
 54:1 -> ../../reach.temper.md:43:5  it("test parts", async funct <- test("test parts") {
-57:5 -> ../../reach.temper.md:44:7  const shape = new TestSquare <- let shape: TestShape = new T
-58:5 -> ../../reach.temper.md:45:7  addArea(shape); <- addArea(shape);
-59:5 -> ../../reach.temper.md:46:7  testCount = (testCount + sha <- testCount = testCount + shap
-60:5 -> ../../reach.temper.md:47:7  { <- assert(testCount == 32);
-61:7 -> ../../reach.temper.md:47:7  const actual = testCount; <- assert(testCount == 32);
-62:7 -> ../../reach.temper.md:47:7  const expected = 32; <- assert(testCount == 32);
-63:7 -> ../../reach.temper.md:47:7  test.assert(actual === expec <- assert(testCount == 32);
-65:5 -> ../../reach.temper.md:48:7  { <- assert(checked == 3);
-66:7 -> ../../reach.temper.md:48:7  const actual = checked; <- assert(checked == 3);
-67:7 -> ../../reach.temper.md:48:7  const expected = 3; <- assert(checked == 3);
-68:7 -> ../../reach.temper.md:48:7  test.assert(actual === expec <- assert(checked == 3);
-70:5 -> ../../reach.temper.md:49:7  { <- assert(shownCount == 2);
-71:7 -> ../../reach.temper.md:49:7  const actual = shownCount; <- assert(shownCount == 2);
-72:7 -> ../../reach.temper.md:49:7  const expected = 2; <- assert(shownCount == 2);
-73:7 -> ../../reach.temper.md:49:7  test.assert(actual === expec <- assert(shownCount == 2);
-75:5 -> ../../reach.temper.md:50:7  shownCount$set(0); <- shownCount = 0;
-76:5 -> ../../reach.temper.md:51:7  shown(0); <- shown(0);
-77:5 -> ../../reach.temper.md:52:7  { <- assert(shownCount == 1);
-78:7 -> ../../reach.temper.md:52:7  const actual = shownCount; <- assert(shownCount == 1);
-79:7 -> ../../reach.temper.md:52:7  const expected = 1; <- assert(shownCount == 1);
-80:7 -> ../../reach.temper.md:52:7  test.assert(actual === expec <- assert(shownCount == 1);
+58:5 -> ../../reach.temper.md:44:7  const shape = new TestSquare <- let shape: TestShape = new T
+59:5 -> ../../reach.temper.md:45:7  addArea(shape); <- addArea(shape);
+60:5 -> ../../reach.temper.md:46:7  testCount = (testCount + sha <- testCount = testCount + shap
+61:5 -> ../../reach.temper.md:47:7  { <- assert(testCount == 32);
+62:7 -> ../../reach.temper.md:47:7  const actual = testCount; <- assert(testCount == 32);
+63:7 -> ../../reach.temper.md:47:7  const expected = 32; <- assert(testCount == 32);
+64:7 -> ../../reach.temper.md:47:7  test.assert(actual === expec <- assert(testCount == 32);
+66:5 -> ../../reach.temper.md:48:7  { <- assert(checked == 3);
+67:7 -> ../../reach.temper.md:48:7  const actual = checked; <- assert(checked == 3);
+68:7 -> ../../reach.temper.md:48:7  const expected = 3; <- assert(checked == 3);
+69:7 -> ../../reach.temper.md:48:7  test.assert(actual === expec <- assert(checked == 3);
+71:5 -> ../../reach.temper.md:49:7  { <- assert(shownCount == 2);
+72:7 -> ../../reach.temper.md:49:7  const actual = shownCount; <- assert(shownCount == 2);
+73:7 -> ../../reach.temper.md:49:7  const expected = 2; <- assert(shownCount == 2);
+74:7 -> ../../reach.temper.md:49:7  test.assert(actual === expec <- assert(shownCount == 2);
+76:5 -> ../../reach.temper.md:50:7  shownCount$set(0); <- shownCount = 0;
+77:5 -> ../../reach.temper.md:51:7  shown(0); <- shown(0);
+78:5 -> ../../reach.temper.md:52:7  { <- assert(shownCount == 1);
+79:7 -> ../../reach.temper.md:52:7  const actual = shownCount; <- assert(shownCount == 1);
+80:7 -> ../../reach.temper.md:52:7  const expected = 1; <- assert(shownCount == 1);
+81:7 -> ../../reach.temper.md:52:7  test.assert(actual === expec <- assert(shownCount == 1);

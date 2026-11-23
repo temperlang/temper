@@ -24,6 +24,7 @@ void failsHardInAnAsyncBlock(std::shared_ptr<temper_std::Test> const & test);
 void diesInAnAsyncBlock(std::shared_ptr<temper_std::Test> const &);
 void passesAfter(std::shared_ptr<temper_std::Test> const & test);
 void waitsOnNothing(std::shared_ptr<temper_std::Test> const & test);
+void ownFailureWins(std::shared_ptr<temper_std::Test> const & test);
 #endif
 
 }  // namespace test_async
@@ -242,6 +243,32 @@ void waitsOnNothing(std::shared_ptr<temper_std::Test> const & test) {
   core::async_run(fn);
 }
 
+void ownFailureWins(std::shared_ptr<temper_std::Test> const & test) {
+  test->assert_(false, []() -> core::Str { return TEMPER_STR("soft failure"); });
+  auto fn2 = [=]() -> std::shared_ptr<core::SafeGenerator<std::shared_ptr<core::Empty>>> {
+    std::shared_ptr<int32_t> caseIndex = std::make_shared<int32_t>(0);
+    auto convertedCoroutine = [=](std::shared_ptr<core::SafeGenerator<std::shared_ptr<core::Empty>>>) -> std::shared_ptr<core::GeneratorResult<std::shared_ptr<core::Empty>>> {
+      int32_t caseIndexLocal = (*caseIndex);
+      *caseIndex = -1;
+      switch (caseIndexLocal) {
+        case 0:
+          test->fail(TEMPER_STR("async failure"));
+          core::panic();
+        default:
+          return core::doneResult();
+      }
+    };
+    return core::safe_adapt_generator_fn<std::shared_ptr<core::Empty>>(convertedCoroutine);
+  };
+  core::async_run(fn2);
+  std::shared_ptr<std::vector<int32_t>> ls = core::List::make<int32_t>(1);
+  {
+    int32_t actual = core::List::get<int32_t>(ls, 5);
+    int32_t expected = 1;
+    test->assert_(actual == expected, [=]() -> core::Str { return "expected ls[5] == (" + std::to_string(expected) + ") not (" + std::to_string(actual) + ")"; });
+  }
+}
+
 }  // namespace test_async
 
 #endif  // TEMPER_TESTS
@@ -323,6 +350,14 @@ int main() {
       {"waits on nothing", [] {
         auto test = temper_std::Test::make();
         test_async::waitsOnNothing(test);
+        auto messages = test->messagesCombined();
+        return temper::core::TestOutcome{
+            test->get_passing(),
+            temper::core::is_null(messages) ? std::string() : temper::core::Str(messages).str()};
+      }},
+      {"own failure wins", [] {
+        auto test = temper_std::Test::make();
+        test_async::ownFailureWins(test);
         auto messages = test->messagesCombined();
         return temper::core::TestOutcome{
             test->get_passing(),

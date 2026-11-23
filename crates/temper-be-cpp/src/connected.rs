@@ -564,8 +564,8 @@ pub const TABLE: &[(&str, Connection)] = &[
     // The runtime's `testBail(test)`, as Kotlin's, which throws a
     // `TemperTestFailure`, where Kotlin's throws a bubble.
     ("std/testing.type Test.bail()", Connection::Call("testBail")),
-    // The runtime's `testPanics(test, block)`, which catches a test
-    // build's `TemperPanic` alone.
+    // The runtime's `testPanics(test, block)`, which catches a panic,
+    // anything but a bubble or a test's failure.
     (
         "std/testing.type Test.panics()",
         Connection::Call("testPanics"),

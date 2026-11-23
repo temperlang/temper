@@ -7,3 +7,7 @@ import * as _connected from "./_connected.js";
 export function hostFails(n) {
   return _connected.hostFails(n);
 }
+
+export function hostFailsTest() {
+  _connected.hostFailsTest();
+}

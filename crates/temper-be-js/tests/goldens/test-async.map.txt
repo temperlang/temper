@@ -1,55 +1,67 @@
 # generated line:column -> source:line:column, and the text at each
-12:1 -> ../../test-async.temper.md:9:5  it("fails in an async block" <- test("fails in an async bloc
-15:5 -> ../../test-async.temper.md:10:13  /** <- { (): GeneratorResult<Empty>
-19:5 -> ../../test-async.temper.md:10:13  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
-20:7 -> ../../test-async.temper.md:11:9  test.assert(((1 + 1) | 0) == <- assert(1 + 1 == 3) { "failed
-22:5 -> ../../test-async.temper.md:10:7  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
-29:1 -> ../../test-async.temper.md:15:5  it("passes in an async block <- test("passes in an async blo
-32:5 -> ../../test-async.temper.md:16:13  /** <- { (): GeneratorResult<Empty>
-36:5 -> ../../test-async.temper.md:16:13  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
-37:7 -> ../../test-async.temper.md:17:9  test.assert(((1 + 1) | 0) == <- assert(1 + 1 == 2) { "not sh
-39:5 -> ../../test-async.temper.md:16:7  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
-46:1 -> ../../test-async.temper.md:24:5  it("fails in a later turn", <- test("fails in a later turn"
-49:5 -> ../../test-async.temper.md:25:7  /** @type {import("@temperla <- let pb = new PromiseBuilder<
-50:5 -> ../../test-async.temper.md:25:7  const pb = new PromiseBuilde <- let pb = new PromiseBuilder<
-51:5 -> ../../test-async.temper.md:26:13  /** <- { (): GeneratorResult<Empty>
-55:5 -> ../../test-async.temper.md:26:13  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
-56:7 -> ../../test-async.temper.md:27:9  /** @type {number} */ <- let n = await pb.promise ore
-57:7 -> ../../test-async.temper.md:27:9  let n; <- let n = await pb.promise ore
-58:7 -> ../../test-async.temper.md:27:9  try { <- let n = await pb.promise ore
-64:7 -> ../../test-async.temper.md:28:9  test.assert(n === 2, () => ` <- assert(n == 2) { "later turn
-66:5 -> ../../test-async.temper.md:26:7  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
-67:5 -> ../../test-async.temper.md:30:13  /** <- { (): GeneratorResult<Empty>
-71:5 -> ../../test-async.temper.md:30:13  function* fn3(doAwait) { <- { (): GeneratorResult<Empty>
-72:7 -> ../../test-async.temper.md:31:9  pb.complete(1); <- pb.complete(1);
-74:5 -> ../../test-async.temper.md:30:7  runAsync(adaptAwaiter(fn3)); <- async { (): GeneratorResult<
-81:1 -> ../../test-async.temper.md:35:5  it("passes after a later tur <- test("passes after a later t
-84:5 -> ../../test-async.temper.md:36:7  { <- assert(1 + 1 == 2);
-85:7 -> ../../test-async.temper.md:36:7  const actual = (1 + 1) | 0; <- assert(1 + 1 == 2);
-86:7 -> ../../test-async.temper.md:36:7  const expected = 2; <- assert(1 + 1 == 2);
-87:7 -> ../../test-async.temper.md:36:7  test.assert(actual === expec <- assert(1 + 1 == 2);
-95:1 -> ../../test-async.temper.md:39:5  it("fails hard in an async b <- test("fails hard in an async
-98:5 -> ../../test-async.temper.md:40:13  /** <- { (): GeneratorResult<Empty>
-102:5 -> ../../test-async.temper.md:40:13  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
-103:7 -> ../../test-async.temper.md:41:9  test.fail("failed hard in as <- test.fail("failed hard in as
-105:5 -> ../../test-async.temper.md:40:7  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
-112:1 -> ../../test-async.temper.md:45:5  it("dies in an async block", <- test("dies in an async block
-115:5 -> ../../test-async.temper.md:46:13  /** <- { (): GeneratorResult<Empty>
-119:5 -> ../../test-async.temper.md:46:13  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
-120:7 -> ../../test-async.temper.md:47:9  panic(); <- panic();
-122:5 -> ../../test-async.temper.md:46:7  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
-129:1 -> ../../test-async.temper.md:51:5  it("passes after", async fun <- test("passes after") {
-132:5 -> ../../test-async.temper.md:52:7  { <- assert(1 + 1 == 2);
-133:7 -> ../../test-async.temper.md:52:7  const actual = (1 + 1) | 0; <- assert(1 + 1 == 2);
-134:7 -> ../../test-async.temper.md:52:7  const expected = 2; <- assert(1 + 1 == 2);
-135:7 -> ../../test-async.temper.md:52:7  test.assert(actual === expec <- assert(1 + 1 == 2);
-143:1 -> ../../test-async.temper.md:58:5  it("waits on nothing", async <- test("waits on nothing") {
-146:5 -> ../../test-async.temper.md:59:7  /** @type {import("@temperla <- let never = new PromiseBuild
-147:5 -> ../../test-async.temper.md:59:7  const never = new PromiseBui <- let never = new PromiseBuild
-148:5 -> ../../test-async.temper.md:60:13  /** <- { (): GeneratorResult<Empty>
-152:5 -> ../../test-async.temper.md:60:13  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
-153:7 -> ../../test-async.temper.md:61:9  /** @type {number} */ <- let n = await never.promise
-154:7 -> ../../test-async.temper.md:61:9  let n; <- let n = await never.promise
-155:7 -> ../../test-async.temper.md:61:9  try { <- let n = await never.promise
-161:7 -> ../../test-async.temper.md:62:9  test.assert(false, () => `ra <- assert(false) { "ran ${n}" }
-163:5 -> ../../test-async.temper.md:60:7  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
+13:1 -> ../../test-async.temper.md:9:5  it("fails in an async block" <- test("fails in an async bloc
+17:5 -> ../../test-async.temper.md:10:13  /** <- { (): GeneratorResult<Empty>
+21:5 -> ../../test-async.temper.md:10:13  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
+22:7 -> ../../test-async.temper.md:11:9  test.assert(((1 + 1) | 0) == <- assert(1 + 1 == 3) { "failed
+24:5 -> ../../test-async.temper.md:10:7  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
+33:1 -> ../../test-async.temper.md:15:5  it("passes in an async block <- test("passes in an async blo
+37:5 -> ../../test-async.temper.md:16:13  /** <- { (): GeneratorResult<Empty>
+41:5 -> ../../test-async.temper.md:16:13  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
+42:7 -> ../../test-async.temper.md:17:9  test.assert(((1 + 1) | 0) == <- assert(1 + 1 == 2) { "not sh
+44:5 -> ../../test-async.temper.md:16:7  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
+53:1 -> ../../test-async.temper.md:24:5  it("fails in a later turn", <- test("fails in a later turn"
+57:5 -> ../../test-async.temper.md:25:7  /** @type {import("@temperla <- let pb = new PromiseBuilder<
+58:5 -> ../../test-async.temper.md:25:7  const pb = new PromiseBuilde <- let pb = new PromiseBuilder<
+59:5 -> ../../test-async.temper.md:26:13  /** <- { (): GeneratorResult<Empty>
+63:5 -> ../../test-async.temper.md:26:13  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
+64:7 -> ../../test-async.temper.md:27:9  /** @type {number} */ <- let n = await pb.promise ore
+65:7 -> ../../test-async.temper.md:27:9  let n; <- let n = await pb.promise ore
+66:7 -> ../../test-async.temper.md:27:9  try { <- let n = await pb.promise ore
+72:7 -> ../../test-async.temper.md:28:9  test.assert(n === 2, () => ` <- assert(n == 2) { "later turn
+74:5 -> ../../test-async.temper.md:26:7  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
+75:5 -> ../../test-async.temper.md:30:13  /** <- { (): GeneratorResult<Empty>
+79:5 -> ../../test-async.temper.md:30:13  function* fn3(doAwait) { <- { (): GeneratorResult<Empty>
+80:7 -> ../../test-async.temper.md:31:9  pb.complete(1); <- pb.complete(1);
+82:5 -> ../../test-async.temper.md:30:7  runAsync(adaptAwaiter(fn3)); <- async { (): GeneratorResult<
+91:1 -> ../../test-async.temper.md:35:5  it("passes after a later tur <- test("passes after a later t
+95:5 -> ../../test-async.temper.md:36:7  { <- assert(1 + 1 == 2);
+96:7 -> ../../test-async.temper.md:36:7  const actual = (1 + 1) | 0; <- assert(1 + 1 == 2);
+97:7 -> ../../test-async.temper.md:36:7  const expected = 2; <- assert(1 + 1 == 2);
+98:7 -> ../../test-async.temper.md:36:7  test.assert(actual === expec <- assert(1 + 1 == 2);
+108:1 -> ../../test-async.temper.md:39:5  it("fails hard in an async b <- test("fails hard in an async
+112:5 -> ../../test-async.temper.md:40:13  /** <- { (): GeneratorResult<Empty>
+116:5 -> ../../test-async.temper.md:40:13  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
+117:7 -> ../../test-async.temper.md:41:9  test.fail("failed hard in as <- test.fail("failed hard in as
+119:5 -> ../../test-async.temper.md:40:7  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
+128:1 -> ../../test-async.temper.md:45:5  it("dies in an async block", <- test("dies in an async block
+132:5 -> ../../test-async.temper.md:46:13  /** <- { (): GeneratorResult<Empty>
+136:5 -> ../../test-async.temper.md:46:13  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
+137:7 -> ../../test-async.temper.md:47:9  panic(); <- panic();
+139:5 -> ../../test-async.temper.md:46:7  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
+148:1 -> ../../test-async.temper.md:51:5  it("passes after", async fun <- test("passes after") {
+152:5 -> ../../test-async.temper.md:52:7  { <- assert(1 + 1 == 2);
+153:7 -> ../../test-async.temper.md:52:7  const actual = (1 + 1) | 0; <- assert(1 + 1 == 2);
+154:7 -> ../../test-async.temper.md:52:7  const expected = 2; <- assert(1 + 1 == 2);
+155:7 -> ../../test-async.temper.md:52:7  test.assert(actual === expec <- assert(1 + 1 == 2);
+165:1 -> ../../test-async.temper.md:58:5  it("waits on nothing", async <- test("waits on nothing") {
+169:5 -> ../../test-async.temper.md:59:7  /** @type {import("@temperla <- let never = new PromiseBuild
+170:5 -> ../../test-async.temper.md:59:7  const never = new PromiseBui <- let never = new PromiseBuild
+171:5 -> ../../test-async.temper.md:60:13  /** <- { (): GeneratorResult<Empty>
+175:5 -> ../../test-async.temper.md:60:13  function* fn(doAwait) { <- { (): GeneratorResult<Empty>
+176:7 -> ../../test-async.temper.md:61:9  /** @type {number} */ <- let n = await never.promise
+177:7 -> ../../test-async.temper.md:61:9  let n; <- let n = await never.promise
+178:7 -> ../../test-async.temper.md:61:9  try { <- let n = await never.promise
+184:7 -> ../../test-async.temper.md:62:9  test.assert(false, () => `ra <- assert(false) { "ran ${n}" }
+186:5 -> ../../test-async.temper.md:60:7  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<
+195:1 -> ../../test-async.temper.md:70:5  it("own failure wins", async <- test("own failure wins") { t
+199:5 -> ../../test-async.temper.md:71:7  test.assert(false, () => "so <- assert(false) { "soft failur
+200:5 -> ../../test-async.temper.md:72:13  /** <- { (): GeneratorResult<Empty>
+204:5 -> ../../test-async.temper.md:72:13  function* fn2(doAwait) { <- { (): GeneratorResult<Empty>
+205:7 -> ../../test-async.temper.md:73:9  test.fail("async failure"); <- test.fail("async failure");
+207:5 -> ../../test-async.temper.md:72:7  runAsync(adaptAwaiter(fn2)); <- async { (): GeneratorResult<
+208:5 -> ../../test-async.temper.md:75:7  /** @type {readonly number[] <- let ls = [1];
+209:5 -> ../../test-async.temper.md:75:7  const ls = Object.freeze([1] <- let ls = [1];
+210:5 -> ../../test-async.temper.md:76:7  { <- assert(ls[5] == 1);
+211:7 -> ../../test-async.temper.md:76:7  const actual = listedGet(/** <- assert(ls[5] == 1);
+212:7 -> ../../test-async.temper.md:76:7  const expected = 1; <- assert(ls[5] == 1);
+213:7 -> ../../test-async.temper.md:76:7  test.assert(actual === expec <- assert(ls[5] == 1);

@@ -29,8 +29,6 @@
 //! - [`source_map`], Source Map v3 files from spans, for backends;
 //! - shared lowerings that backends pick by their profiles:
 //!   [`coroutines`], [`errors`], [`nevers`], [`spill`], and [`switches`];
-//! - [`exits`], actions that run on every exit from a region, as a `for`
-//!   loop's step, which to_tmpl builds;
 //! - [`version`], Temper's version and its spelling in each ecosystem.
 
 pub mod analysis;
@@ -42,7 +40,6 @@ mod children;
 pub mod coroutines;
 mod decls;
 pub mod errors;
-pub mod exits;
 pub mod host;
 mod ids;
 pub mod line_directives;

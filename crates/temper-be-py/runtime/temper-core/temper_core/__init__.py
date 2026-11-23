@@ -20,7 +20,7 @@ from functools import cmp_to_key, reduce
 from logging import getLogger, INFO
 from math import copysign, fmod, inf, isclose, isinf, isnan, nan
 import threading
-from traceback import print_exception
+from traceback import format_exception_only, print_exception
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -177,12 +177,19 @@ def panic(message: str = "panic") -> NoReturn:
 def block_panics(block: Callable[[], None]) -> bool:
     """
     Runs `block`, giving whether it panicked, for std's
-    `Test.assertPanics`: whether it raised a plain `BaseException`, as
-    `panic` does. Anything else, a bubble, a test's failure, or a host
-    error, passes through.
+    `Test.assertPanics`: whether it raised anything but a bubble or a test
+    framework's failure (an `AssertionError`, as unittest's are), as on
+    every backend, so `panic`'s plain `BaseException` or a host's error.
+    Other `BaseException`s, which aren't `Exception`s, such as
+    `KeyboardInterrupt`, `SystemExit`, and pytest's outcomes, aren't
+    failures but exits, and pass through too.
     """
     try:
         block()
+    except Exception as e:
+        if isinstance(e, (Bubble, AssertionError)):
+            raise
+        return True
     except BaseException as e:
         if type(e) is BaseException:
             return True
@@ -1264,6 +1271,45 @@ def finish_async_work() -> None:
         escaped, _escaped = _escaped, None
     if escaped is not None:
         raise escaped
+
+
+class _Test(Protocol):
+    def soft_fail_to_hard(self) -> None: ...
+
+
+@contextmanager
+def end_test(test: _Test) -> Iterator[None]:
+    """
+    Runs a test's body, as generated tests do, then ends the test, even if
+    the body raised: finishes the async work it started
+    (`finish_async_work`), then fails it if it has failures so far
+    (`soft_fail_to_hard`), each even if the other failed. The body's own
+    failure wins, and the async work's wins over the soft failures; what
+    fails besides is added to the failure that wins as a note, which its
+    traceback shows.
+    """
+    try:
+        yield
+    except BaseException as failure:
+        _end_test(test, failure)
+        raise
+    _end_test(test, None)
+
+
+def _end_test(test: _Test, failure: Optional[BaseException]) -> None:
+    failures: List[BaseException] = [] if failure is None else [failure]
+    for end in (finish_async_work, test.soft_fail_to_hard):
+        try:
+            end()
+        except BaseException as e:
+            failures.append(e)
+    if not failures:
+        return
+    first, *rest = failures
+    for e in rest:
+        first.add_note("The test also failed: " + "".join(format_exception_only(e)).strip())
+    if failure is None:
+        raise first
 
 
 def _run_scheduler() -> None:

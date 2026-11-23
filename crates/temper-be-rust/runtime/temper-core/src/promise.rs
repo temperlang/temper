@@ -47,7 +47,7 @@ pub fn in_turn() -> bool {
 
 /// Where a test keeps the first panic that escaped a step of the async
 /// work it started ([`TestWork`]).
-type Kept = Arc<Mutex<Option<Box<dyn std::any::Any + Send>>>>;
+type Kept = Arc<Mutex<Option<crate::Caught>>>;
 
 thread_local! {
     /// The test whose work this thread is running: its body, or a step
@@ -69,9 +69,9 @@ fn step_of(kept: &Option<Kept>, step: impl FnOnce()) {
     let outer = KEEPER.with(|k| k.replace(Some(kept.clone())));
     let result = crate::catch_quietly(|| turn(step));
     KEEPER.with(|k| *k.borrow_mut() = outer);
-    if let Err(payload) = result {
+    if let Err(caught) = result {
         let mut kept = kept.lock().unwrap_or_else(|e| e.into_inner());
-        kept.get_or_insert(payload);
+        kept.get_or_insert(caught);
     }
 }
 
@@ -79,43 +79,80 @@ fn step_of(kept: &Option<Kept>, step: impl FnOnce()) {
 /// generated tests call before a test's body, to
 /// [`finish`](TestWork::finish), after it. Tests run on several threads
 /// at once, any of which may run another's steps, so each block belongs
-/// to the test that started it, as do the blocks it starts.
+/// to the test that started it, as do the blocks it starts. A body that
+/// bubbles skips `finish`, but its work still runs when this is dropped,
+/// what fails there written to stderr, as the bubble fails the test
+/// (not while a panic unwinds, as a panic then would abort).
 pub struct TestWork {
     kept: Kept,
     outer: Option<Kept>,
+    runner: Option<AsyncRunner>,
 }
 
 impl TestWork {
-    /// Starts the work of the test running on this thread.
-    pub fn begin() -> TestWork {
+    /// Starts the work of the test running on this thread, queued on
+    /// `runner`, whose bubbles keep where they're made
+    /// ([`crate::keep_bubble_traces`]).
+    pub fn begin(runner: &AsyncRunner) -> TestWork {
+        crate::keep_bubble_traces();
         let kept = Kept::default();
         let outer = KEEPER.with(|k| k.replace(Some(kept.clone())));
-        TestWork { kept, outer }
+        TestWork {
+            kept,
+            outer,
+            runner: Some(runner.clone()),
+        }
     }
 
-    /// Runs the async work queued on `runner`, the test's and any other,
-    /// until none is left, then panics with the first panic that escaped
-    /// a step of the test's, so the test fails with it. Blocks still
-    /// awaiting a promise that nothing resolves stay waiting.
-    pub fn finish(self, runner: &AsyncRunner) {
-        runner.run_all_blocking();
-        let payload = self.kept.lock().unwrap_or_else(|e| e.into_inner()).take();
+    /// Runs the async work queued on the runner, the test's and any
+    /// other, until none is left, then panics with the first panic that
+    /// escaped a step of the test's, so the test fails with it, saying
+    /// where the step panicked. Blocks still awaiting a promise that
+    /// nothing resolves stay waiting.
+    pub fn finish(mut self) {
+        let caught = self.run();
         drop(self);
-        if let Some(payload) = payload {
-            // Panicking anew here, so the hook reports it in this test.
-            match payload.downcast::<String>() {
-                Ok(message) => panic!("{message}"),
-                Err(payload) => match payload.downcast::<&'static str>() {
-                    Ok(message) => panic!("{message}"),
-                    Err(payload) => std::panic::resume_unwind(payload),
-                },
-            }
+        let Some(crate::Caught { payload, at }) = caught else {
+            return;
+        };
+        // Panicking anew here, so the hook reports it in this test.
+        let message = match message_of(payload) {
+            Ok(message) => message,
+            Err(payload) => std::panic::resume_unwind(payload),
+        };
+        match at {
+            Some(at) => panic!("{message}\n  at {at}"),
+            None => panic!("{message}"),
         }
+    }
+
+    /// Runs the queued work, once, giving the first panic that escaped
+    /// a step of the test's.
+    fn run(&mut self) -> Option<crate::Caught> {
+        self.runner.take()?.run_all_blocking();
+        self.kept.lock().unwrap_or_else(|e| e.into_inner()).take()
+    }
+}
+
+/// A panic's message, if it has one.
+fn message_of(
+    payload: Box<dyn std::any::Any + Send>,
+) -> std::result::Result<String, Box<dyn std::any::Any + Send>> {
+    match payload.downcast::<String>() {
+        Ok(message) => Ok(*message),
+        Err(payload) => payload.downcast::<&'static str>().map(|m| m.to_string()),
     }
 }
 
 impl Drop for TestWork {
     fn drop(&mut self) {
+        if !std::thread::panicking() {
+            if let Some(crate::Caught { payload, at }) = self.run() {
+                let message = message_of(payload).unwrap_or_else(|_| "a panic".into());
+                let at = at.map(|at| format!("\n  at {at}")).unwrap_or_default();
+                eprintln!("The test's async work also failed: {message}{at}");
+            }
+        }
         let outer = self.outer.take();
         KEEPER.with(|k| *k.borrow_mut() = outer);
     }
@@ -430,6 +467,7 @@ pub type Task = std::sync::Arc<dyn Fn() + Send + Sync>;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::panic::AssertUnwindSafe;
 
     fn log_task(log: &Arc<Mutex<Vec<String>>>, line: &str) -> Task {
         let log = log.clone();
@@ -514,6 +552,40 @@ mod tests {
     }
 
     fn assert_send_static<F: Future + Send + 'static>(_: &F) {}
+
+    /// A test whose body bubbles, so never calls `finish`, still runs
+    /// its async work when its `TestWork` drops, a panic there reported
+    /// but not raised, as the bubble already fails the test.
+    #[test]
+    fn dropped_work_still_runs() {
+        let runner = SingleThreadAsyncRunner::new();
+        let work = TestWork::begin(&runner);
+        let ran = Arc::new(Mutex::new(false));
+        let (kept, seen) = (keeper(), ran.clone());
+        runner.0.run_async(Arc::new(move || {
+            step_of(&kept, || {
+                *seen.lock().unwrap() = true;
+                panic!("later");
+            })
+        }));
+        drop(work);
+        assert!(*ran.lock().unwrap());
+    }
+
+    /// A test's async step that panics fails the test, saying where the
+    /// step panicked, not where `finish` panics again.
+    #[test]
+    fn finish_says_where_a_step_panicked() {
+        let runner = SingleThreadAsyncRunner::new();
+        let work = TestWork::begin(&runner);
+        step_of(&keeper(), || panic!("boom"));
+        let line = line!() - 1;
+        let payload = std::panic::catch_unwind(AssertUnwindSafe(|| work.finish()));
+        let message = *payload.unwrap_err().downcast::<String>().unwrap();
+        let at = format!("promise.rs:{line}:");
+        assert!(message.starts_with("boom\n  at "), "{message}");
+        assert!(message.contains(&at), "{message}");
+    }
 
     #[test]
     fn awake_upon_queues_the_step_after_the_resolving_call() {

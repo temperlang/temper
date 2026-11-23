@@ -15,50 +15,50 @@
 26:5 -> ../../test-fails.temper.md:21:27  return 1; <- 1 } else { null }
 28:5 -> ../../test-fails.temper.md:21:38  return null; <- null }
 32:1 -> ../../test-fails.temper.md:24:5  it("passes before", async fu <- test("passes before") {
-35:5 -> ../../test-fails.temper.md:25:20  function fn() { <- { assert(find("one") == 1);
-36:7 -> ../../test-fails.temper.md:25:22  { <- assert(find("one") == 1); })
-37:9 -> ../../test-fails.temper.md:25:22  const actual = find("one"); <- assert(find("one") == 1); })
-38:9 -> ../../test-fails.temper.md:25:22  const expected = 1; <- assert(find("one") == 1); })
-39:9 -> ../../test-fails.temper.md:25:22  test.assert(actual === expec <- assert(find("one") == 1); })
-42:5 -> ../../test-fails.temper.md:25:7  test.assert(tries(fn), () => <- assert(tries { assert(find("
-49:1 -> ../../test-fails.temper.md:28:5  it("fails past an orelse", a <- test("fails past an orelse")
-52:5 -> ../../test-fails.temper.md:29:13  function fn() { <- { test.fail("failed on purpo
-53:7 -> ../../test-fails.temper.md:29:15  test.fail("failed on purpose <- test.fail("failed on purpose
-55:5 -> ../../test-fails.temper.md:29:7  tries(fn); <- tries { test.fail("failed on
-56:5 -> ../../test-fails.temper.md:30:7  test.fail("swallowed"); <- test.fail("swallowed");
-63:1 -> ../../test-fails.temper.md:33:5  it("narrows after fail", asy <- test("narrows after fail") {
-66:5 -> ../../test-fails.temper.md:34:7  const n = find("one"); <- let n = find("one");
-67:5 -> ../../test-fails.temper.md:35:7  if (n == null) { <- if (n == null) { test.fail("
-68:7 -> ../../test-fails.temper.md:35:24  test.fail("one not found"); <- test.fail("one not found") }
-70:5 -> ../../test-fails.temper.md:36:7  { <- assert(n + 1 == 2);
-71:7 -> ../../test-fails.temper.md:36:7  const actual = (n + 1) | 0; <- assert(n + 1 == 2);
-72:7 -> ../../test-fails.temper.md:36:7  const expected = 2; <- assert(n + 1 == 2);
-73:7 -> ../../test-fails.temper.md:36:7  test.assert(actual === expec <- assert(n + 1 == 2);
-81:1 -> ../../test-fails.temper.md:39:5  it("fails before narrowing", <- test("fails before narrowing
-84:5 -> ../../test-fails.temper.md:40:7  const n = find("two"); <- let n = find("two");
-85:5 -> ../../test-fails.temper.md:41:7  if (n == null) { <- if (n == null) { test.fail("
-86:7 -> ../../test-fails.temper.md:41:24  test.fail("two not found"); <- test.fail("two not found") }
-88:5 -> ../../test-fails.temper.md:42:7  test.assert(((n + 1) | 0) == <- assert(n + 1 == 3) { "went o
-95:1 -> ../../test-fails.temper.md:45:5  it("collects soft failures", <- test("collects soft failures
-98:5 -> ../../test-fails.temper.md:46:7  test.assert(((1 + 1) | 0) == <- assert(1 + 1 == 3) { "first"
-99:5 -> ../../test-fails.temper.md:47:7  test.assert(true, () => "not <- assert(true) { "not shown" }
-100:5 -> ../../test-fails.temper.md:48:7  test.assert(((2 + 2) | 0) == <- assert(2 + 2 == 5) { "second
-107:1 -> ../../test-fails.temper.md:51:5  it("fails hard after soft fa <- test("fails hard after soft
-110:5 -> ../../test-fails.temper.md:52:7  test.assert(false, () => "so <- assert(false) { "soft before
-111:5 -> ../../test-fails.temper.md:53:7  test.fail("then hard"); <- test.fail("then hard");
-118:1 -> ../../test-fails.temper.md:56:5  it("fails a hard assertion p <- test("fails a hard assertion
-121:5 -> ../../test-fails.temper.md:57:13  function fn() { <- { test.assertHard(1 + 1 == 3
-122:7 -> ../../test-fails.temper.md:57:15  test.assertHard(((1 + 1) | 0 <- test.assertHard(1 + 1 == 3)
-124:5 -> ../../test-fails.temper.md:57:7  tries(fn); <- tries { test.assertHard(1 +
-125:5 -> ../../test-fails.temper.md:58:7  test.fail("swallowed"); <- test.fail("swallowed");
-132:1 -> ../../test-fails.temper.md:61:5  it("hardens soft failures pa <- test("hardens soft failures
-135:5 -> ../../test-fails.temper.md:62:7  test.assert(false, () => "so <- assert(false) { "soft only"
-136:5 -> ../../test-fails.temper.md:63:13  function fn2() { <- { test.softFailToHard() };
-137:7 -> ../../test-fails.temper.md:63:15  test.softFailToHard(); <- test.softFailToHard() };
-139:5 -> ../../test-fails.temper.md:63:7  tries(fn2); <- tries { test.softFailToHard(
-140:5 -> ../../test-fails.temper.md:64:7  test.fail("swallowed"); <- test.fail("swallowed");
-147:1 -> ../../test-fails.temper.md:67:5  it("passes after", async fun <- test("passes after") {
-150:5 -> ../../test-fails.temper.md:68:7  { <- assert(find("one") == 1);
-151:7 -> ../../test-fails.temper.md:68:7  const actual = find("one"); <- assert(find("one") == 1);
-152:7 -> ../../test-fails.temper.md:68:7  const expected = 1; <- assert(find("one") == 1);
-153:7 -> ../../test-fails.temper.md:68:7  test.assert(actual === expec <- assert(find("one") == 1);
+36:5 -> ../../test-fails.temper.md:25:20  function fn() { <- { assert(find("one") == 1);
+37:7 -> ../../test-fails.temper.md:25:22  { <- assert(find("one") == 1); })
+38:9 -> ../../test-fails.temper.md:25:22  const actual = find("one"); <- assert(find("one") == 1); })
+39:9 -> ../../test-fails.temper.md:25:22  const expected = 1; <- assert(find("one") == 1); })
+40:9 -> ../../test-fails.temper.md:25:22  test.assert(actual === expec <- assert(find("one") == 1); })
+43:5 -> ../../test-fails.temper.md:25:7  test.assert(tries(fn), () => <- assert(tries { assert(find("
+52:1 -> ../../test-fails.temper.md:28:5  it("fails past an orelse", a <- test("fails past an orelse")
+56:5 -> ../../test-fails.temper.md:29:13  function fn() { <- { test.fail("failed on purpo
+57:7 -> ../../test-fails.temper.md:29:15  test.fail("failed on purpose <- test.fail("failed on purpose
+59:5 -> ../../test-fails.temper.md:29:7  tries(fn); <- tries { test.fail("failed on
+60:5 -> ../../test-fails.temper.md:30:7  test.fail("swallowed"); <- test.fail("swallowed");
+69:1 -> ../../test-fails.temper.md:33:5  it("narrows after fail", asy <- test("narrows after fail") {
+73:5 -> ../../test-fails.temper.md:34:7  const n = find("one"); <- let n = find("one");
+74:5 -> ../../test-fails.temper.md:35:7  if (n == null) { <- if (n == null) { test.fail("
+75:7 -> ../../test-fails.temper.md:35:24  test.fail("one not found"); <- test.fail("one not found") }
+77:5 -> ../../test-fails.temper.md:36:7  { <- assert(n + 1 == 2);
+78:7 -> ../../test-fails.temper.md:36:7  const actual = (n + 1) | 0; <- assert(n + 1 == 2);
+79:7 -> ../../test-fails.temper.md:36:7  const expected = 2; <- assert(n + 1 == 2);
+80:7 -> ../../test-fails.temper.md:36:7  test.assert(actual === expec <- assert(n + 1 == 2);
+90:1 -> ../../test-fails.temper.md:39:5  it("fails before narrowing", <- test("fails before narrowing
+94:5 -> ../../test-fails.temper.md:40:7  const n = find("two"); <- let n = find("two");
+95:5 -> ../../test-fails.temper.md:41:7  if (n == null) { <- if (n == null) { test.fail("
+96:7 -> ../../test-fails.temper.md:41:24  test.fail("two not found"); <- test.fail("two not found") }
+98:5 -> ../../test-fails.temper.md:42:7  test.assert(((n + 1) | 0) == <- assert(n + 1 == 3) { "went o
+107:1 -> ../../test-fails.temper.md:45:5  it("collects soft failures", <- test("collects soft failures
+111:5 -> ../../test-fails.temper.md:46:7  test.assert(((1 + 1) | 0) == <- assert(1 + 1 == 3) { "first"
+112:5 -> ../../test-fails.temper.md:47:7  test.assert(true, () => "not <- assert(true) { "not shown" }
+113:5 -> ../../test-fails.temper.md:48:7  test.assert(((2 + 2) | 0) == <- assert(2 + 2 == 5) { "second
+122:1 -> ../../test-fails.temper.md:51:5  it("fails hard after soft fa <- test("fails hard after soft
+126:5 -> ../../test-fails.temper.md:52:7  test.assert(false, () => "so <- assert(false) { "soft before
+127:5 -> ../../test-fails.temper.md:53:7  test.fail("then hard"); <- test.fail("then hard");
+136:1 -> ../../test-fails.temper.md:56:5  it("fails a hard assertion p <- test("fails a hard assertion
+140:5 -> ../../test-fails.temper.md:57:13  function fn() { <- { test.assertHard(1 + 1 == 3
+141:7 -> ../../test-fails.temper.md:57:15  test.assertHard(((1 + 1) | 0 <- test.assertHard(1 + 1 == 3)
+143:5 -> ../../test-fails.temper.md:57:7  tries(fn); <- tries { test.assertHard(1 +
+144:5 -> ../../test-fails.temper.md:58:7  test.fail("swallowed"); <- test.fail("swallowed");
+153:1 -> ../../test-fails.temper.md:61:5  it("hardens soft failures pa <- test("hardens soft failures
+157:5 -> ../../test-fails.temper.md:62:7  test.assert(false, () => "so <- assert(false) { "soft only"
+158:5 -> ../../test-fails.temper.md:63:13  function fn2() { <- { test.softFailToHard() };
+159:7 -> ../../test-fails.temper.md:63:15  test.softFailToHard(); <- test.softFailToHard() };
+161:5 -> ../../test-fails.temper.md:63:7  tries(fn2); <- tries { test.softFailToHard(
+162:5 -> ../../test-fails.temper.md:64:7  test.fail("swallowed"); <- test.fail("swallowed");
+171:1 -> ../../test-fails.temper.md:67:5  it("passes after", async fun <- test("passes after") {
+175:5 -> ../../test-fails.temper.md:68:7  { <- assert(find("one") == 1);
+176:7 -> ../../test-fails.temper.md:68:7  const actual = find("one"); <- assert(find("one") == 1);
+177:7 -> ../../test-fails.temper.md:68:7  const expected = 1; <- assert(find("one") == 1);
+178:7 -> ../../test-fails.temper.md:68:7  test.assert(actual === expec <- assert(find("one") == 1);

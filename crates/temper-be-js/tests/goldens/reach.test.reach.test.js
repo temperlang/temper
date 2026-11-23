@@ -1,4 +1,4 @@
-import { finishAsyncWork, type } from "@temperlang/core";
+import { endTest, type } from "@temperlang/core";
 import { it } from "node:test";
 import {
   base,
@@ -53,6 +53,7 @@ let testCount = 0;
 
 it("test parts", async function () {
   const test = new Test();
+  let failure;
   try {
     const shape = new TestSquare(forTests(2));
     addArea(shape);
@@ -79,8 +80,10 @@ it("test parts", async function () {
       const expected = 1;
       test.assert(actual === expected, () => `expected shownCount == (${expected}) not (${actual})`);
     }
+  } catch (e) {
+    failure = e;
+    throw e;
   } finally {
-    await finishAsyncWork();
-    test.softFailToHard();
+    await endTest(test, failure);
   }
 });

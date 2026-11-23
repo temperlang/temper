@@ -587,16 +587,18 @@ impl<'a> Translator<'a> {
                 }
             }
             // A static initializer must be able to complete normally, by
-            // javac's rules, so a `throw` that ends it, a failure or a
-            // panic, calls a method that throws (`semantics/broken`).
+            // javac's rules, so what it runs from the first statement that
+            // can't, a failure or a panic, however nested
+            // (`semantics/broken`), goes in `if (true) { … }`, which javac
+            // takes as completing, and its `static final`s as assigned
+            // where they are in the block.
             if let Some(i) = body.iter().position(|s| !completes(s)) {
-                if let Stmt::Throw(thrown) = &body[i] {
-                    let (method, args) = match thrown {
-                        Expr::New(_, args) => ("throwAssertionError", args.clone()),
-                        _ => ("throwBubble", Vec::new()),
-                    };
-                    body[i] = Stmt::Expr(Expr::name("Core").method(method, args));
-                }
+                let rest = reachable(body.split_off(i));
+                body.push(Stmt::If {
+                    cond: Expr::Bool(true),
+                    then: rest,
+                    els: Vec::new(),
+                });
             }
         }
         Ok(tree::Class {
@@ -1346,12 +1348,14 @@ impl<'a> Translator<'a> {
     /// A module's test class, `NAMETest`, in its package, under
     /// `src/test/java`: what only its tests reach, as statics
     /// ([`Translator::statics_class`]) whose initializer runs the module
-    /// class's first, then continues it, and its tests, as JUnit 5 tests:
+    /// class's first, after keeping bubbles' stack traces
+    /// (`Bubble.keepStackTraces()`), then continues it, and its tests, as JUnit 5 tests:
     /// each a method named for it in camel case (`twice10` for "twice
     /// ${base}" made "twice 10"), which makes std's `Test`, runs the body,
-    /// and then, even if the body threw, waits for the async work it
-    /// started (`Core.finishAsyncWork`), throwing what failed there, and
-    /// fails if the `Test` has failures (`softFailToHard`), as Kotlin's do. Being in the module's package,
+    /// and then, even if the body threw, ends the test (`Core.endTest`):
+    /// waits for the async work it started, throwing what failed there,
+    /// and fails if the `Test` has failures (`softFailToHard`), as
+    /// Kotlin's do, the body's own failure winning. Being in the module's package,
     /// they see its classes and statics that aren't exported. `None`
     /// without test parts or tests.
     pub fn tests(&mut self, module: &Module) -> R<Option<tree::TestClass>> {
@@ -1380,7 +1384,15 @@ impl<'a> Translator<'a> {
                 outside.extend(module_refs(p, *item));
             }
         }
-        let statics = self.statics_class(module, &module.test_items, module.test_init, &outside)?;
+        let mut statics =
+            self.statics_class(module, &module.test_items, module.test_init, &outside)?;
+        // Tests' bubbles keep stack traces, as a program's do, so one
+        // that fails a test says where it came from.
+        if !module.tests.is_empty() {
+            self.import("temper.core.Bubble");
+            let keep = Expr::name("Bubble").method("keepStackTraces", Vec::new());
+            statics.init.insert(0, Stmt::Expr(keep));
+        }
         self.in_function = true;
         let mut used = BTreeSet::new();
         let mut methods = Vec::new();
@@ -1401,9 +1413,15 @@ impl<'a> Translator<'a> {
             let var = self.name(param);
             self.begin(test);
             let stmts = self.stmts(body)?;
-            let soft_fail = Expr::name(var.clone()).method("softFailToHard", Vec::new());
+            // The body's failure, kept for `Core.endTest`, which then
+            // finishes its async work and `softFailToHard`.
+            let failure = self.fresh("failure");
+            let e = self.fresh("e");
             self.import("temper.core.Core");
-            let finish = Expr::name("Core").method("finishAsyncWork", Vec::new());
+            let soft_fail =
+                Expr::MethodRef(Box::new(Expr::name(var.clone())), "softFailToHard".into());
+            let end =
+                Expr::name("Core").method("endTest", vec![Expr::name(failure.clone()), soft_fail]);
             methods.push((
                 test_method_name(p.strings.get(name), &mut used),
                 vec![
@@ -1412,9 +1430,24 @@ impl<'a> Translator<'a> {
                         name: var,
                         value: Some(Expr::name(format!("new {ty}")).call(Vec::new())),
                     },
+                    Stmt::Local {
+                        ty: "Throwable".into(),
+                        name: failure.clone(),
+                        value: Some(Expr::name("null")),
+                    },
                     Stmt::Try {
                         body: stmts,
-                        finally: vec![Stmt::Expr(finish), Stmt::Expr(soft_fail)],
+                        catch_all: Some((
+                            e.clone(),
+                            vec![
+                                Stmt::Assign {
+                                    target: Expr::name(failure),
+                                    value: Expr::name(e.clone()),
+                                },
+                                Stmt::Throw(Expr::name(e)),
+                            ],
+                        )),
+                        finally: vec![Stmt::Expr(end)],
                     },
                 ],
             ));
@@ -2186,7 +2219,10 @@ pub(crate) fn completes(s: &Stmt) -> bool {
         }
         Stmt::Break(_) | Stmt::Continue(_) | Stmt::Return(_) | Stmt::Throw(_) => false,
         Stmt::Block(body) | Stmt::Synchronized { body, .. } => body.iter().all(completes),
-        Stmt::Try { body, finally } => body.iter().all(completes) && finally.iter().all(completes),
+        // A catch-all here rethrows, so it never completes.
+        Stmt::Try { body, finally, .. } => {
+            body.iter().all(completes) && finally.iter().all(completes)
+        }
         Stmt::TryCatch { body, handler, .. } => {
             body.iter().all(completes) || handler.iter().all(completes)
         }

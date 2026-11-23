@@ -43,6 +43,7 @@ use crate::scope::{ScopeId, SymbolId};
 use crate::settle::Settled;
 use crate::types::{self as ft, TypeData as FTypeData};
 use crate::typing::Resolved;
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::sync::OnceLock;
 use temper_syntax::ast::Value;
@@ -267,6 +268,7 @@ fn translate(
         type_params: HashMap::new(),
         gaps: gaps.is_some().then(Vec::new),
         catching: Vec::new(),
+        always_jumps: RefCell::new(HashMap::new()),
     };
     let result = translate_with(&mut t);
     if let (Some(out), Some(found)) = (gaps, t.gaps.take()) {
@@ -415,6 +417,10 @@ struct Translator<'a> {
     /// `orelse` bodies the translation is, where what may bubble is
     /// caught, so a division that may fail is fine in one that can't.
     catching: Vec<DeclId>,
+    /// Whether each node asked about always jumps
+    /// ([`Self::always_jumps`]), kept, as it's asked of each statement
+    /// and so again of each part of each.
+    always_jumps: RefCell<HashMap<FNode, bool>>,
 }
 
 impl Translator<'_> {
@@ -1833,13 +1839,14 @@ impl Translator<'_> {
                 } else if let Some(&step) = self.steps.get(&target) {
                     // `{ step; continue loop; }`, a copy of the step with
                     // its own locals; a step has no `continue` of its own
-                    // ([`Self::loop_stmt`]), so copies hold no copies.
+                    // ([`Self::loop_stmt`]), so copies hold no copies
+                    // (notes/tmpl/nodes.md, "A `for` loop's step").
                     let mut copy = Vec::new();
                     self.forget_locals(step);
                     self.stmts(step, &mut copy)?;
                     let jump = self.b.continue_loop(label);
-                    let jump = self.own(jump, node);
-                    temper_tmpl::exits::Region.leave(&mut self.b, &copy, jump)
+                    copy.push(self.own(jump, node));
+                    self.b.block(&copy)
                 } else {
                     self.b.continue_loop(label)
                 }
@@ -2244,6 +2251,16 @@ impl Translator<'_> {
     /// branches do. Not an `orelse`, whose fallback runs if a part before
     /// the jump bubbles.
     fn always_jumps(&self, node: FNode) -> bool {
+        if let Some(&jumps) = self.always_jumps.borrow().get(&node) {
+            return jumps;
+        }
+        let jumps = self.jumps_now(node);
+        self.always_jumps.borrow_mut().insert(node, jumps);
+        jumps
+    }
+
+    /// [`Self::always_jumps`], found anew for `node`.
+    fn jumps_now(&self, node: FNode) -> bool {
         match self.kind(node) {
             NodeKind::Break | NodeKind::Continue | NodeKind::Return => true,
             NodeKind::Block if self.is_postfix_step(node) => false,
@@ -2679,7 +2696,7 @@ impl Translator<'_> {
                 let mut step = Vec::new();
                 self.forget_locals(next);
                 self.stmts(next, &mut step)?;
-                stmts = temper_tmpl::exits::Region.close(&stmts, &step);
+                stmts.extend(step);
             }
             let block = self.b.block(&stmts);
             let block = self.own(block, body);

@@ -89,25 +89,25 @@
 89:3 -> ../../asserts.temper.md:67:14  get j() { <- let j: Int,
 89:7 -> ../../asserts.temper.md:67:18 (j)  j() { <- j: Int,
 94:1 -> ../../asserts.temper.md:19:5  it("a test case", async func <- test("a test ${name}") {
-97:5 -> ../../asserts.temper.md:21:7  test.assert(eqFloat64(normSq <- assert(normSquared({ x: 0.0,
-104:1 -> ../../asserts.temper.md:37:5  it("a failing test", async f <- test("a failing test") { tes
-107:5 -> ../../asserts.temper.md:38:7  test.assert(false, () => "be <- assert(false) { "because it'
-108:5 -> ../../asserts.temper.md:39:7  const helper = new TestHelpe <- let helper = new TestHelper(
-109:5 -> ../../asserts.temper.md:40:7  assertMoreThings(test, helpe <- assertMoreThings(test, helpe
-116:1 -> ../../asserts.temper.md:90:5  it("exported", async functio <- test("exported") {
-119:5 -> ../../asserts.temper.md:91:7  const vec = new Vec2(1.5, 2. <- let vec = { x: 1.5, y: 2.5 }
-120:5 -> ../../asserts.temper.md:92:7  { <- assert(vec.toString() == "(1
-121:7 -> ../../asserts.temper.md:92:7  const actual = vec.toString( <- assert(vec.toString() == "(1
-122:7 -> ../../asserts.temper.md:92:7  const expected = "(1.5, 2.5) <- assert(vec.toString() == "(1
-123:7 -> ../../asserts.temper.md:92:7  test.assert(actual === expec <- assert(vec.toString() == "(1
-131:1 -> ../../asserts.temper.md:102:5  it("module values", async fu <- test("module values") {
-134:5 -> ../../asserts.temper.md:103:7  { <- for (let vec of unitVecs) {
-135:7 -> ../../asserts.temper.md:103:7  const length = unitVecs.leng <- for (let vec of unitVecs) {
-136:7 -> ../../asserts.temper.md:103:7  let i = 0; <- for (let vec of unitVecs) {
-137:7 -> ../../asserts.temper.md:103:7  while (i < length) { <- for (let vec of unitVecs) {
-138:9 -> ../../asserts.temper.md:103:7  const vec = listedGet(/** @t <- for (let vec of unitVecs) {
-139:9 -> ../../asserts.temper.md:103:7  i = (i + 1) | 0; <- for (let vec of unitVecs) {
-140:9 -> ../../asserts.temper.md:104:9  { <- assert(normSquared(vec) == 1
-141:11 -> ../../asserts.temper.md:104:9  const actual = normSquared(v <- assert(normSquared(vec) == 1
-142:11 -> ../../asserts.temper.md:104:9  const expected = 1.0; <- assert(normSquared(vec) == 1
-143:11 -> ../../asserts.temper.md:104:9  test.assert(eqFloat64(actual <- assert(normSquared(vec) == 1
+98:5 -> ../../asserts.temper.md:21:7  test.assert(eqFloat64(normSq <- assert(normSquared({ x: 0.0,
+107:1 -> ../../asserts.temper.md:37:5  it("a failing test", async f <- test("a failing test") { tes
+111:5 -> ../../asserts.temper.md:38:7  test.assert(false, () => "be <- assert(false) { "because it'
+112:5 -> ../../asserts.temper.md:39:7  const helper = new TestHelpe <- let helper = new TestHelper(
+113:5 -> ../../asserts.temper.md:40:7  assertMoreThings(test, helpe <- assertMoreThings(test, helpe
+122:1 -> ../../asserts.temper.md:90:5  it("exported", async functio <- test("exported") {
+126:5 -> ../../asserts.temper.md:91:7  const vec = new Vec2(1.5, 2. <- let vec = { x: 1.5, y: 2.5 }
+127:5 -> ../../asserts.temper.md:92:7  { <- assert(vec.toString() == "(1
+128:7 -> ../../asserts.temper.md:92:7  const actual = vec.toString( <- assert(vec.toString() == "(1
+129:7 -> ../../asserts.temper.md:92:7  const expected = "(1.5, 2.5) <- assert(vec.toString() == "(1
+130:7 -> ../../asserts.temper.md:92:7  test.assert(actual === expec <- assert(vec.toString() == "(1
+140:1 -> ../../asserts.temper.md:102:5  it("module values", async fu <- test("module values") {
+144:5 -> ../../asserts.temper.md:103:7  { <- for (let vec of unitVecs) {
+145:7 -> ../../asserts.temper.md:103:7  const length = unitVecs.leng <- for (let vec of unitVecs) {
+146:7 -> ../../asserts.temper.md:103:7  let i = 0; <- for (let vec of unitVecs) {
+147:7 -> ../../asserts.temper.md:103:7  while (i < length) { <- for (let vec of unitVecs) {
+148:9 -> ../../asserts.temper.md:103:7  const vec = listedGet(/** @t <- for (let vec of unitVecs) {
+149:9 -> ../../asserts.temper.md:103:7  i = (i + 1) | 0; <- for (let vec of unitVecs) {
+150:9 -> ../../asserts.temper.md:104:9  { <- assert(normSquared(vec) == 1
+151:11 -> ../../asserts.temper.md:104:9  const actual = normSquared(v <- assert(normSquared(vec) == 1
+152:11 -> ../../asserts.temper.md:104:9  const expected = 1.0; <- assert(normSquared(vec) == 1
+153:11 -> ../../asserts.temper.md:104:9  test.assert(eqFloat64(actual <- assert(normSquared(vec) == 1

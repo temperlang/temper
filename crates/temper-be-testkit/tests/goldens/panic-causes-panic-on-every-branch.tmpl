@@ -1,0 +1,34 @@
+tmpl 1 model 1 library `panic-causes-panic-on-every-branch` 0.0.0
+
+uses `temper-core`#4 0.0.0-alpha.0.0 {
+  interface Console#5 {
+    connected method log#6(message: String): Void;
+  }
+  connected fn getConsole#8(name?: String): Console#5;
+}
+
+module `panic-causes-panic-on-every-branch`#0 {
+  let ~console#7: Console#5;
+
+  fn positive#1(n#3: Int32): Int32 throws Bubble {
+    if (%Int32.le(n#3, 0)) {
+      (bubble()^): Void;
+    }
+    return n#3;
+  }
+
+  let k#2: Int32;
+
+  init {
+    init ~console#7 = getConsole#8(omitted);
+    ~console#7.log#6("before");
+    init k#2 = (orelse(positive#1(1)^, 0)): Int32;
+    if (%Int32.gt(k#2, 0)) {
+      (panic()): Void;
+    } else {
+      (orelse(positive#1(%Int32.neg(1))^, (panic()): Void)): Void;
+      (panic()): Void;
+    }
+    ~console#7.log#6("after");
+  }
+}

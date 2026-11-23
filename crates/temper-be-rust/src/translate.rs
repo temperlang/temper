@@ -776,8 +776,9 @@ impl<'a> Translator<'a> {
 
     /// A module's tests, as Kotlin's: each a `#[test]` function that
     /// initializes the library and std, makes std's `Test`, starts the
-    /// test's async work (`TestWork::begin`), runs the test's body, which
-    /// may bubble, finishes the async work it started, panicking with what
+    /// test's async work on the library's runner (`TestWork::begin`),
+    /// runs the test's body, which may bubble, its bubble winning while
+    /// its work still runs, finishes the async work it started, panicking with what
     /// failed there, and ends with `soft_fail_to_hard`, which fails it if
     /// the `Test` has failures, then `Ok(())`, unless the body never
     /// finishes. Named for the test, in
@@ -839,17 +840,17 @@ impl<'a> Translator<'a> {
                 value: Some(Expr::path(format!("{class}::new")).call(Vec::new())),
             });
             let work = if finishes { "work" } else { "_work" };
+            let runner = Expr::path("crate::support::config").call(Vec::new());
+            let runner = runner.method("runner", Vec::new());
             stmts.push(Stmt::Let {
                 name: work.into(),
                 mutable: false,
                 ty: None,
-                value: Some(Expr::path("temper_core::TestWork::begin").call(Vec::new())),
+                value: Some(Expr::path("temper_core::TestWork::begin").call(vec![runner])),
             });
             stmts.extend(run);
             if finishes {
-                let runner = Expr::path("crate::support::config").call(Vec::new());
-                let runner = runner.method("runner", Vec::new());
-                let finish = Expr::path(work).method("finish", vec![runner]);
+                let finish = Expr::path(work).method("finish", Vec::new());
                 stmts.push(Stmt::Expr(finish));
                 let soft_fail = Expr::path(var).method("soft_fail_to_hard", Vec::new());
                 stmts.push(Stmt::Expr(soft_fail));

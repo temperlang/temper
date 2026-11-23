@@ -60,6 +60,14 @@ impl SourceLinks<'_> {
     pub fn line_prefix(&self) -> Option<&str> {
         (self.prefix).filter(|prefix| self.dev && !prefix.starts_with("file:"))
     }
+
+    /// The prefix for source maps: a relative path, and a `file:` URL
+    /// (sources on another drive) only in [`dev`](Self::dev) output,
+    /// since `temper build`'s may be published, and mustn't name a
+    /// local directory; it gets no source maps then.
+    pub fn map_prefix(&self) -> Option<&str> {
+        (self.prefix).filter(|prefix| self.dev || !prefix.starts_with("file:"))
+    }
 }
 
 /// How a backend runs the tests of libraries built in
@@ -104,4 +112,27 @@ pub type TestResults = Result<Vec<(String, Option<String>)>, String>;
 pub struct OutFile {
     pub path: String,
     pub text: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SourceLinks;
+
+    /// Source maps name sources on another drive (`file:` URLs) only in
+    /// `temper run` and `temper test`'s output, never `temper build`'s;
+    /// `#line`s never do, and only there.
+    #[test]
+    fn local_directories_only_in_dev() {
+        let links = |prefix, dev| SourceLinks {
+            prefix: Some(prefix),
+            dev,
+        };
+        let (relative, url) = ("../src/", "file:///D:/w/src/");
+        assert_eq!(links(relative, false).map_prefix(), Some(relative));
+        assert_eq!(links(url, false).map_prefix(), None);
+        assert_eq!(links(url, true).map_prefix(), Some(url));
+        assert_eq!(links(relative, false).line_prefix(), None);
+        assert_eq!(links(relative, true).line_prefix(), Some(relative));
+        assert_eq!(links(url, true).line_prefix(), None);
+    }
 }

@@ -1,6 +1,7 @@
 package asserts;
 
 import java.util.List;
+import temper.core.Bubble;
 import temper.core.Core;
 import temper.std.testing.Test;
 
@@ -39,33 +40,44 @@ public final class AssertsTest {
         return sumOf(helper);
     }
 
+    static {
+        Bubble.keepStackTraces();
+    }
+
     @org.junit.jupiter.api.Test
     public void aTestCase() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             test.assert_(Double.compare(AssertsGlobal.normSquared(new Vec2(0.0, 0.0)), 0.0) == 0, () -> "Oh noes");
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void aFailingTest() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             test.assert_(false, () -> "because it's wrong");
             TestHelper helper = new TestHelper(3, 2);
             assertMoreThings(test, helper, List.of(List.of("bye")));
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void exported() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             Vec2 vec = new Vec2(1.5, 2.5);
             {
@@ -73,15 +85,18 @@ public final class AssertsTest {
                 String expected = "(1.5, 2.5) size squared 8.5";
                 test.assert_(actual.equals(expected), () -> "expected vec.toString() == (" + expected + ") not (" + actual + ")");
             }
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 
     @org.junit.jupiter.api.Test
     public void moduleValues() {
         Test test = new Test();
+        Throwable failure = null;
         try {
             {
                 int length = AssertsGlobal.unitVecs.size();
@@ -96,9 +111,11 @@ public final class AssertsTest {
                     }
                 }
             }
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
         } finally {
-            Core.finishAsyncWork();
-            test.softFailToHard();
+            Core.endTest(failure, test::softFailToHard);
         }
     }
 }

@@ -15,6 +15,7 @@ public class TestAsyncTests
     public void FailsInAnAsyncBlock()
     {
         Test test = new Test();
+        global::System.Exception? failure1 = null;
         try
         {
             IEnumerable<Tuple<object?>> fnSteps1()
@@ -28,10 +29,14 @@ public class TestAsyncTests
             }
             global::TemperLang.Core.Async.LaunchGeneratorAsync((Func<IEnumerable<Tuple<object?>>>)fn);
         }
+        catch (global::System.Exception e1)
+        {
+            failure1 = e1;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure1, test.SoftFailToHard);
         }
     }
 
@@ -39,6 +44,7 @@ public class TestAsyncTests
     public void PassesInAnAsyncBlock()
     {
         Test test = new Test();
+        global::System.Exception? failure2 = null;
         try
         {
             IEnumerable<Tuple<object?>> fnSteps2()
@@ -52,10 +58,14 @@ public class TestAsyncTests
             }
             global::TemperLang.Core.Async.LaunchGeneratorAsync((Func<IEnumerable<Tuple<object?>>>)fn);
         }
+        catch (global::System.Exception e2)
+        {
+            failure2 = e2;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure2, test.SoftFailToHard);
         }
     }
 
@@ -63,6 +73,7 @@ public class TestAsyncTests
     public void FailsInALaterTurn()
     {
         Test test = new Test();
+        global::System.Exception? failure3 = null;
         try
         {
             TaskCompletionSource<int> pb = new TaskCompletionSource<int>();
@@ -113,10 +124,14 @@ public class TestAsyncTests
             }
             global::TemperLang.Core.Async.LaunchGeneratorAsync((Func<IEnumerable<Tuple<object?>>>)fn3);
         }
+        catch (global::System.Exception e3)
+        {
+            failure3 = e3;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure3, test.SoftFailToHard);
         }
     }
 
@@ -124,6 +139,7 @@ public class TestAsyncTests
     public void PassesAfterALaterTurn()
     {
         Test test = new Test();
+        global::System.Exception? failure4 = null;
         try
         {
             {
@@ -132,10 +148,14 @@ public class TestAsyncTests
                 test.Assert(actual == expected, () => string.Create(CultureInfo.InvariantCulture, $"expected 1 + 1 == ({expected}) not ({actual})"));
             }
         }
+        catch (global::System.Exception e4)
+        {
+            failure4 = e4;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure4, test.SoftFailToHard);
         }
     }
 
@@ -143,6 +163,7 @@ public class TestAsyncTests
     public void FailsHardInAnAsyncBlock()
     {
         Test test = new Test();
+        global::System.Exception? failure5 = null;
         try
         {
             IEnumerable<Tuple<object?>> fnSteps4()
@@ -159,10 +180,14 @@ public class TestAsyncTests
             }
             global::TemperLang.Core.Async.LaunchGeneratorAsync((Func<IEnumerable<Tuple<object?>>>)fn);
         }
+        catch (global::System.Exception e5)
+        {
+            failure5 = e5;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure5, test.SoftFailToHard);
         }
     }
 
@@ -170,6 +195,7 @@ public class TestAsyncTests
     public void DiesInAnAsyncBlock()
     {
         Test test = new Test();
+        global::System.Exception? failure6 = null;
         try
         {
             IEnumerable<Tuple<object?>> fnSteps5()
@@ -185,10 +211,14 @@ public class TestAsyncTests
             }
             global::TemperLang.Core.Async.LaunchGeneratorAsync((Func<IEnumerable<Tuple<object?>>>)fn);
         }
+        catch (global::System.Exception e6)
+        {
+            failure6 = e6;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure6, test.SoftFailToHard);
         }
     }
 
@@ -196,6 +226,7 @@ public class TestAsyncTests
     public void PassesAfter()
     {
         Test test = new Test();
+        global::System.Exception? failure7 = null;
         try
         {
             {
@@ -204,10 +235,14 @@ public class TestAsyncTests
                 test.Assert(actual == expected, () => string.Create(CultureInfo.InvariantCulture, $"expected 1 + 1 == ({expected}) not ({actual})"));
             }
         }
+        catch (global::System.Exception e7)
+        {
+            failure7 = e7;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure7, test.SoftFailToHard);
         }
     }
 
@@ -215,6 +250,7 @@ public class TestAsyncTests
     public void WaitsOnNothing()
     {
         Test test = new Test();
+        global::System.Exception? failure8 = null;
         try
         {
             TaskCompletionSource<int> never = new TaskCompletionSource<int>();
@@ -255,10 +291,53 @@ public class TestAsyncTests
             }
             global::TemperLang.Core.Async.LaunchGeneratorAsync((Func<IEnumerable<Tuple<object?>>>)fn);
         }
+        catch (global::System.Exception e8)
+        {
+            failure8 = e8;
+            throw;
+        }
         finally
         {
-            global::TemperLang.Core.Async.FinishAsyncWork();
-            test.SoftFailToHard();
+            global::TemperLang.Core.Async.EndTest(failure8, test.SoftFailToHard);
+        }
+    }
+
+    [TestMethod]
+    public void OwnFailureWins()
+    {
+        Test test = new Test();
+        global::System.Exception? failure9 = null;
+        try
+        {
+            test.Assert(false, () => "soft failure");
+            IEnumerable<Tuple<object?>> fn2Steps1()
+            {
+                test.Fail("async failure");
+                throw Core.Panic("panic");
+                #pragma warning disable CS0162
+                yield break;
+                #pragma warning restore CS0162
+            }
+            IGenerator<Tuple<object?>> fn2()
+            {
+                return Core.AdaptGenerator<Tuple<object?>>(fn2Steps1);
+            }
+            global::TemperLang.Core.Async.LaunchGeneratorAsync((Func<IEnumerable<Tuple<object?>>>)fn2);
+            IReadOnlyList<int> ls = Listed.CreateReadOnlyList<int>(1);
+            {
+                int actual = Listed.Get(ls, 5);
+                int expected = 1;
+                test.Assert(actual == expected, () => string.Create(CultureInfo.InvariantCulture, $"expected ls[5] == ({expected}) not ({actual})"));
+            }
+        }
+        catch (global::System.Exception e9)
+        {
+            failure9 = e9;
+            throw;
+        }
+        finally
+        {
+            global::TemperLang.Core.Async.EndTest(failure9, test.SoftFailToHard);
         }
     }
 }
