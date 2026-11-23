@@ -13,6 +13,7 @@ what isn't available yet says so.
 | [`run`](#run) | Builds the work root, then runs a library's top level with a backend's language |
 | [`repl`](repl.md) | An interactive shell for Temper (a backend language's own, with `-b`, isn't available yet) |
 | [`init`](#init) | Creates a new library: a `config.temper.md` and a first source file |
+| [`fmt`](#fmt) | Lays out Temper source in the standard style |
 | [`serve`](#serve-or-lsp) | Starts the language server for an editor, over standard input and output; `lsp` is the same |
 | [`version`](#version-license-and-licenses), `license`, `licenses` | About the tool itself |
 | [`help`](#help) | The commands, or one command's options |
@@ -196,6 +197,27 @@ directory's name, dashed (`MyProj` gives `my-proj`), byte for byte as
 earlier releases write them. It fails, writing nothing, if `DIR`
 already has a `src` directory or a `config.temper.md`.
 
+## `fmt`
+
+    temper fmt [--check] [PATH]...
+
+Lays out each `.temper` and `.temper.md` file named, or under each
+directory named (the current one by default, skipping `temper.out`,
+hidden directories, and what [ignore files](#ignore-files) list), in
+the standard style, rewriting the files that
+change. In `.temper.md` files, only Temper code blocks change; prose is
+left exactly as written. With `--check`, it changes nothing, lists the
+files that need formatting, and exits with 1 if there are any, for CI.
+
+It has no style options. It keeps every line break and comment as
+written, and sets indentation (two spaces a level), the space between
+tokens on a line (`a + b`, `f(x, y)`, `x: Int`, `if (c) { d }`), and
+blank lines (at most one in a row, none just inside braces). Long lines
+aren't broken yet. Code that doesn't parse is left as written, with an
+error and exit status 1, and it checks its own work: if formatting
+would change a file's tokens, comments, or parse tree, it leaves the
+file alone and says so.
+
 ## `serve`, or `lsp`
 
     temper serve --port N [--tokens add|full|none]
@@ -289,7 +311,7 @@ unchanged.
 | Code | Meaning |
 |---|---|
 | 0 | Success |
-| 1 | Failure: errors in the code, a test that failed or didn't run, a library that didn't build, or a backend this build of `temper` was built without |
+| 1 | Failure: errors in the code, a test that failed or didn't run, a library that didn't build, a backend this build of `temper` was built without, or a file `fmt` couldn't format (or, with `--check`, that needs formatting) |
 | 2 | A usage error: an unknown command or option, a missing value, or a backend that doesn't exist |
 | 3 | Not available yet: `watch`, `doc`, `repl -b`, a backend of earlier releases, or `serve --port` |
 | 101 | A bug in Temper: it panicked, saying where on standard error. Please report it with what you ran |

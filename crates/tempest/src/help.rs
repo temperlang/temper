@@ -4,7 +4,7 @@
 
 /// Each command, alphabetically, with its line in `temper help`, and
 /// whether tempest has it yet.
-pub const COMMANDS: [(&str, &str, bool); 13] = [
+pub const COMMANDS: [(&str, &str, bool); 14] = [
     (
         "build",
         "Brings Temper libraries under the work root up to date.",
@@ -14,6 +14,11 @@ pub const COMMANDS: [(&str, &str, bool); 13] = [
         "doc",
         "Generates documentation for Temper libraries (not available yet).",
         false,
+    ),
+    (
+        "fmt",
+        "Lays out Temper source files in the standard style.",
+        true,
     ),
     ("help", "Prints help text for a command and exits.", true),
     (
@@ -203,6 +208,21 @@ pub fn command(name: &str) -> Option<String> {
              \x20           three are as none.\n\
              {STD}"
         ),
+        "fmt" => "usage: temper fmt [--check] [PATH]...\n\
+             \n\
+             Lays out Temper source in the standard style, rewriting each .temper\n\
+             and .temper.md file that needs it; in .temper.md files, only Temper\n\
+             code blocks. A directory means the files under it, skipping\n\
+             temper.out, hidden directories, and what .gitignore and\n\
+             .temperignore files list; no PATH means the current directory.\n\
+             Code that doesn't parse is left as written, with an error.\n\
+             Exits with 1 if a file couldn't be formatted.\n\
+             \n\
+             Options:\n\
+             \x20   --check\n\
+             \x20           Change nothing; list the files that need formatting,\n\
+             \x20           and exit with 1 if there are any.\n"
+            .to_string(),
         "help" => "usage: temper help [COMMAND]\n\
              \n\
              Prints the commands, or a command's options.\n"

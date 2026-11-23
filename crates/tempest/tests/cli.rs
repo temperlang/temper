@@ -69,8 +69,8 @@ fn help() {
             "{out}"
         );
         for command in [
-            "build", "doc", "help", "init", "license", "licenses", "lsp", "repl", "run", "serve",
-            "test", "version", "watch",
+            "build", "doc", "fmt", "help", "init", "license", "licenses", "lsp", "repl", "run",
+            "serve", "test", "version", "watch",
         ] {
             assert!(
                 out.contains(&format!("\n    {command} - ")),
@@ -107,6 +107,7 @@ fn help() {
     assert_eq!(tempest(&["build", "-h", "-b", "cobol"]).1, out);
     for command in [
         "test", "run", "repl", "init", "serve", "lsp", "version", "license", "licenses", "help",
+        "fmt",
     ] {
         let (code, out, _) = tempest(&["help", command]);
         assert_eq!(code, 0, "{command}");
@@ -1733,4 +1734,59 @@ fn killing_tempest_kills_its_children() {
             }
         }
     });
+}
+
+/// `temper fmt` rewrites files that need it, and `--check` lists them and
+/// fails, changing nothing; code that doesn't parse is left alone, with an
+/// error; and what ignore files list is skipped. Formatting itself is tested in temper-syntax's `tests/fmt.rs`.
+#[test]
+fn fmt() {
+    let dir = std::env::temp_dir().join(format!("tempest-cli-{}-fmt", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(dir.join("sub")).unwrap();
+    fs::create_dir_all(dir.join("temper.out")).unwrap();
+    let messy = "let x=1;\n    let y = 2;\n";
+    let tidy = "let x = 1;\nlet y = 2;\n";
+    let literate = "# Doc\n\n    let a = 1;\n";
+    let broken = "let f(x: Int {\n";
+    fs::write(dir.join("a.temper"), messy).unwrap();
+    fs::write(dir.join("b.temper.md"), literate).unwrap();
+    fs::write(dir.join("c.temper"), broken).unwrap();
+    fs::write(dir.join("sub/d.temper"), messy).unwrap();
+    fs::write(dir.join("temper.out/e.temper"), messy).unwrap();
+    fs::create_dir_all(dir.join("sub/build")).unwrap();
+    fs::write(dir.join("sub/.gitignore"), "build/\n").unwrap();
+    fs::write(dir.join("sub/build/f.temper"), messy).unwrap();
+    fs::write(dir.join("notes.txt"), messy).unwrap();
+    let path = |name: &str| dir.join(name).to_string_lossy().to_string();
+    let read = |name: &str| fs::read_to_string(dir.join(name)).unwrap();
+
+    let (code, out, err) = tempest(&["fmt", "--check", &path("")]);
+    assert_eq!(code, 1, "{out}{err}");
+    let listed: Vec<&str> = out.lines().collect();
+    assert_eq!(listed, [path("a.temper"), path("sub/d.temper")], "{out}");
+    assert!(err.contains("c.temper: doesn't parse (line 1"), "{err}");
+    assert_eq!(read("a.temper"), messy);
+
+    let (code, out, err) = tempest(&["fmt", &path("")]);
+    assert_eq!(code, 1, "{out}{err}");
+    assert!(err.contains("c.temper: doesn't parse"), "{err}");
+    assert_eq!(read("a.temper"), tidy);
+    assert_eq!(read("sub/d.temper"), tidy);
+    assert_eq!(read("b.temper.md"), literate);
+    assert_eq!(read("c.temper"), broken);
+    assert_eq!(read("temper.out/e.temper"), messy);
+    assert_eq!(read("sub/build/f.temper"), messy);
+    assert_eq!(read("notes.txt"), messy);
+
+    assert_eq!(
+        tempest(&["fmt", "--check", &path("a.temper"), &path("sub")]),
+        (0, String::new(), String::new())
+    );
+    let (code, _, err) = tempest(&["fmt", &path("missing.temper")]);
+    assert_eq!(code, 1);
+    assert!(err.contains("missing.temper"), "{err}");
+    let (code, _, err) = tempest(&["fmt", &path("notes.txt")]);
+    assert_eq!(code, 2, "{err}");
+    let _ = fs::remove_dir_all(&dir);
 }

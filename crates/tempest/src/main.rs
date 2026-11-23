@@ -14,6 +14,7 @@
 //!     temper repl [-w DIR] [-ign FILE] [-e CODE]... [--separator newline|semisemi|eof]
 //!                  [--prompt normal|hide] [--fuel N|none] [-v] [--std DIR]
 //!     temper init [-o DIR]
+//!     temper fmt [--check] [PATH]...
 //!     temper serve|lsp [--std DIR]
 //!     temper version | license | licenses | help [COMMAND]
 //!
@@ -43,6 +44,9 @@
 //!   [`temper_frontend::repl`]).
 //! - `init` writes a new project's skeleton, as Kotlin's
 //!   ([`temper_driver::init`]).
+//! - `fmt` lays out `.temper` and `.temper.md` files in the standard
+//!   style, in place, or with `--check` lists those that need it
+//!   ([`temper_syntax::fmt`]).
 //! - `serve`, or `lsp`, serves an editor over stdio as a language server
 //!   ([`temper_lsp`]); Kotlin's `--port` says that it's stdio only.
 //! - `version`, `license`, and `licenses` are about tempest itself; the
@@ -77,7 +81,7 @@ use temper_frontend::ignore::IgnoreFile;
 use temper_frontend::interp::TEST_FUEL;
 use temper_frontend::library_tests::{Tally, TestOptions, test_libraries};
 use temper_frontend::log::{LogFormat, task};
-use temper_frontend::project::{ignore_file, work_root};
+use temper_frontend::project::{self, ignore_file, is_source, work_root};
 use temper_frontend::sources::Sources;
 use temper_tmpl::Backend;
 use temper_tmpl::tools;
@@ -134,6 +138,7 @@ fn run_command(args: &[String]) -> u8 {
         "test" => test_command(rest),
         "run" => run_library(rest),
         "init" => init_command(rest),
+        "fmt" => fmt_command(rest),
         "lsp" | "serve" => serve(name, rest),
         "version" | "--version" => version(rest),
         "license" => about(name, rest, &license_text()),
@@ -192,12 +197,13 @@ struct Flags {
     color: Option<String>,
     no_history: bool,
     no_workroot: bool,
+    check: bool,
     positional: Vec<String>,
 }
 
 /// Each option: its long name, its short one if any, and whether it
 /// takes a value.
-const OPTIONS: [(&str, Option<&str>, bool); 19] = [
+const OPTIONS: [(&str, Option<&str>, bool); 20] = [
     ("std", None, true),
     ("workroot", Some("w"), true),
     ("ignorefile", Some("ign"), true),
@@ -217,6 +223,7 @@ const OPTIONS: [(&str, Option<&str>, bool); 19] = [
     ("color", None, true),
     ("no-history", None, false),
     ("no-workroot", None, false),
+    ("check", None, false),
 ];
 
 /// Parses a command's arguments, allowing the options in `allowed` (by
@@ -287,6 +294,7 @@ fn parse(command: &str, args: &[String], allowed: &[&str], positional: usize) ->
             "no-connected" => flags.no_connected = true,
             "no-history" => flags.no_history = true,
             "no-workroot" => flags.no_workroot = true,
+            "check" => flags.check = true,
             "verbose" => flags.verbose = true,
             "logformat" => match LogFormat::named(&value) {
                 Some(format) => flags.log = format,
@@ -660,6 +668,123 @@ fn init_command(args: &[String]) -> u8 {
             FAILED
         }
     }
+}
+
+/// `temper fmt [--check] [PATH]...`: formats each `.temper` and
+/// `.temper.md` file named or under a directory named (the current one by
+/// default), in place, or with `--check` lists the ones that would change.
+/// Exits with 1 when a file couldn't be read, parsed or written, or with
+/// `--check`, when one needs formatting.
+fn fmt_command(args: &[String]) -> u8 {
+    let flags = match parse("fmt", args, &["check"], usize::MAX) {
+        Ok(flags) => flags,
+        Err(code) => return code,
+    };
+    let paths = if flags.positional.is_empty() {
+        vec![".".to_string()]
+    } else {
+        flags.positional.clone()
+    };
+    let mut files = Vec::new();
+    let mut failed = false;
+    for path in &paths {
+        let path = Path::new(path);
+        if path.is_dir() {
+            failed |= !temper_files(path, "", &mut Vec::new(), &mut files);
+        } else if source_kind(path).is_some() || !path.exists() {
+            files.push(path.to_path_buf());
+        } else {
+            eprintln!(
+                "temper fmt: {} isn't a .temper or .temper.md file",
+                path.display()
+            );
+            return USAGE;
+        }
+    }
+    for file in files {
+        let kind = source_kind(&file).unwrap_or(temper_syntax::lex::SourceKind::Standalone);
+        let text = match std::fs::read_to_string(&file) {
+            Ok(text) => text,
+            Err(why) => {
+                eprintln!("temper fmt: {}: {why}", file.display());
+                failed = true;
+                continue;
+            }
+        };
+        match temper_syntax::fmt::format(&text, kind) {
+            Ok(formatted) if formatted == text => {}
+            Ok(_) if flags.check => {
+                println!("{}", file.display());
+                failed = true;
+            }
+            Ok(formatted) => {
+                if let Err(why) = std::fs::write(&file, formatted) {
+                    eprintln!("temper fmt: {}: {why}", file.display());
+                    failed = true;
+                }
+            }
+            Err(why) => {
+                eprintln!("temper fmt: {}: {why}", file.display());
+                failed = true;
+            }
+        }
+    }
+    if failed { FAILED } else { 0 }
+}
+
+/// A Temper source file's kind, by its name.
+fn source_kind(path: &Path) -> Option<temper_syntax::lex::SourceKind> {
+    let name = path.file_name()?.to_string_lossy();
+    is_source(&name).then(|| project::source_kind(&name))
+}
+
+/// The Temper source files under `dir`, in order, skipping `temper.out`,
+/// `temper.keep`, hidden directories, and what `.gitignore` and
+/// `.temperignore` files under `dir` list, as finding libraries does;
+/// false if a directory couldn't be read. `scanned` is `dir` relative to
+/// where the walk started, or empty there.
+fn temper_files(
+    dir: &Path,
+    scanned: &str,
+    ignores: &mut Vec<IgnoreFile>,
+    out: &mut Vec<std::path::PathBuf>,
+) -> bool {
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(why) => {
+            eprintln!("temper fmt: {}: {why}", dir.display());
+            return false;
+        }
+    };
+    let mut paths: Vec<_> = entries.filter_map(|e| e.ok().map(|e| e.path())).collect();
+    paths.sort();
+    let own = ignores.len();
+    for name in project::IGNORE_FILES {
+        if let Ok(text) = std::fs::read_to_string(dir.join(name)) {
+            ignores.push(IgnoreFile::parse(&text, scanned, ""));
+        }
+    }
+    let mut ok = true;
+    for path in paths {
+        let name = path.file_name().unwrap_or_default().to_string_lossy();
+        let relative = match scanned {
+            "" => name.to_string(),
+            _ => format!("{scanned}/{name}"),
+        };
+        let is_dir = path.is_dir();
+        if temper_frontend::ignore::ignored(ignores, &relative, is_dir) {
+            continue;
+        }
+        if is_dir {
+            if !(name.starts_with('.') || name == "temper.out" || name == "temper.keep") {
+                ok &= temper_files(&path, &relative, ignores, out);
+            }
+        } else if source_kind(&path).is_some() {
+            out.push(path);
+        }
+    }
+    ignores.truncate(own);
+    ok
 }
 
 /// `temper serve` or `temper lsp`: a language server on stdin and

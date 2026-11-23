@@ -289,7 +289,7 @@ pub fn duplicate_names(libraries: &[LibrarySources]) -> Vec<&str> {
 
 /// The ignore files' names, in the order a directory's are read, so a
 /// `.temperignore` has the last word over a `.gitignore` beside it.
-const IGNORE_FILES: [&str; 2] = [".gitignore", ".temperignore"];
+pub const IGNORE_FILES: [&str; 2] = [".gitignore", ".temperignore"];
 
 /// An ignore file named on the command line, as Kotlin's `--ignorefile`
 /// takes one: its patterns apply relative to its own directory, as in
