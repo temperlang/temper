@@ -1,7 +1,7 @@
 {
   "name": "temper",
   "displayName": "Temper",
-  "description": "Temper in VS Code: highlighting for .temper and literate .temper.md files, a rendered preview of .temper.md, and Temper's language server for errors as you type, hover, go to definition, completion, references, rename, outlines, and signature help",
+  "description": "Temper in VS Code: highlighting for .temper and literate .temper.md files, a rendered preview of .temper.md, and Temper's language server for errors as you type, hover, go to definition, completion, references, rename, outlines, signature help, and formatting (on save by default)",
   "version": "0.0.1",
   "publisher": "temperlang",
   "license": "Apache-2.0 OR MIT",
@@ -79,6 +79,16 @@
         }
       }
     ],
+    "configurationDefaults": {
+      "[temper]": {
+        "editor.defaultFormatter": "temperlang.temper",
+        "editor.formatOnSave": true
+      },
+      "[temper-markdown]": {
+        "editor.defaultFormatter": "temperlang.temper",
+        "editor.formatOnSave": true
+      }
+    },
     "configuration": {
       "title": "Temper",
       "properties": {

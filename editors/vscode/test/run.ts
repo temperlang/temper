@@ -57,6 +57,8 @@ async function main(extensionDir: string, cachePath: string, suite: string, vers
     "config.temper.md": "# Shapes\n",
     "shapes.temper": "/** A square's area. */\nexport let area(side: Int): Int { side * side }\n",
     "use.temper": "let a = area(3);\nlet b: String = a;\n",
+    // For formatting on save.
+    "tidy.temper": "let  c=f( a,\n  b );\n",
     // For the preview: a heading, Temper fenced and indented, an image
     // beside it, and enough after to scroll.
     "notes.temper.md": [

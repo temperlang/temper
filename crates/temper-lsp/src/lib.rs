@@ -22,6 +22,12 @@
 //! - **std:** going to a definition in std writes std's sources, once,
 //!   to a directory in the system's temporary directory, for the editor
 //!   to open, as built-in std has no files of its own.
+//! - **Formatting** (`temper fmt`'s, for the whole document or the lines
+//!   of a range) answers from the open text alone, without analysis,
+//!   reusing its unit's parse when that's current. Its edits are the runs
+//!   of changed lines ([`line_edits`]). A document that doesn't parse gets
+//!   no edits and no error, so formatting on save stays quiet while code
+//!   is half written.
 //! - **Panics,** bugs in tempest, don't end the server: each request and
 //!   each analysis runs under `catch_unwind`. A request that panics gets
 //!   an error response, an analysis that panics an "internal error"
@@ -45,6 +51,7 @@ use temper_frontend::project::{find_libraries, library_of, load_imports, load_li
 use temper_frontend::settle::settle;
 use temper_frontend::sources::{Source, Sources};
 use temper_frontend::{corelib, stdlib};
+use temper_syntax::fmt::{FmtError, format, format_parsed};
 
 /// How long typing must pause before stale documents are analyzed again.
 const DEBOUNCE: Duration = Duration::from_millis(250);
@@ -629,9 +636,62 @@ impl<W: Write> Server<W> {
                 });
                 answer(found.flatten())
             }
+            "textDocument/formatting" => {
+                let p: lsp::DocumentFormattingParams = params(p)?;
+                answer(self.format(&uri_to_path(p.text_document.uri.as_str()), None))
+            }
+            "textDocument/rangeFormatting" => {
+                let p: lsp::DocumentRangeFormattingParams = params(p)?;
+                let path = uri_to_path(p.text_document.uri.as_str());
+                answer(self.format(&path, Some(p.range)))
+            }
             "tempest/testPanic" if self.panic_on.is_some() => panic!("test hook: {method}"),
             _ => Err((-32601, format!("no method {method}"))),
         }
+    }
+
+    /// The edits formatting an open document, or those of its lines in
+    /// `range`: none if it doesn't parse.
+    fn format(&self, path: &str, range: Option<lsp::Range>) -> Vec<lsp::TextEdit> {
+        let Some(doc) = self.docs.iter().find(|d| d.path == path) else {
+            return Vec::new();
+        };
+        let kind = temper_frontend::project::source_kind(path);
+        // Its unit's parse, if that's of this text.
+        let parsed = (self.units.iter())
+            .filter(|_| !self.stale.contains(path))
+            .flat_map(|u| &u.analysis.settled.library.files)
+            .find(|f| f.path == path && f.parsed.source() == doc.text)
+            .map(|f| &f.parsed);
+        let formatted = match parsed {
+            Some(parsed) => format_parsed(parsed, kind),
+            None => format(&doc.text, kind),
+        };
+        let text = match formatted {
+            Ok(text) => text,
+            Err(FmtError::Unparseable(_)) => return Vec::new(),
+            Err(why) => {
+                eprintln!("temper lsp: formatting {path}: {why}");
+                return Vec::new();
+            }
+        };
+        let old = &doc.text;
+        let line_starts: Vec<usize> = std::iter::once(0)
+            .chain(old.match_indices('\n').map(|(i, _)| i + 1))
+            .collect();
+        let offset = |line: usize| line_starts.get(line).copied().unwrap_or(old.len()) as u32;
+        (line_edits(old, &text).into_iter())
+            .filter(|e| {
+                range.is_none_or(|r| {
+                    let (start, end) = (r.start.line as usize, r.end.line as usize);
+                    e.old.start <= end && e.old.end.max(e.old.start + 1) > start
+                })
+            })
+            .map(|e| lsp::TextEdit {
+                range: self::range(old, offset(e.old.start), offset(e.old.end)),
+                new_text: e.new_text,
+            })
+            .collect()
     }
 
     /// Runs a query at a position in a document, against its unit's
@@ -829,6 +889,8 @@ fn initialize_result() -> lsp::InitializeResult {
                 work_done_progress_options: Default::default(),
             })),
             document_symbol_provider: Some(lsp::OneOf::Left(true)),
+            document_formatting_provider: Some(lsp::OneOf::Left(true)),
+            document_range_formatting_provider: Some(lsp::OneOf::Left(true)),
             signature_help_provider: Some(lsp::SignatureHelpOptions {
                 trigger_characters: Some(vec!["(".to_string(), ",".to_string()]),
                 ..Default::default()
@@ -886,6 +948,138 @@ fn completion_kind(kind: DeclKind) -> lsp::CompletionItemKind {
         DeclKind::Builtin => K::VALUE,
         DeclKind::TypeParameter => K::TYPE_PARAMETER,
     }
+}
+
+/// A run of changed lines: the old text's lines `old` (from 0, the end
+/// excluded) become `new_text`.
+#[derive(Debug, PartialEq, Eq)]
+pub struct LineEdit {
+    pub old: std::ops::Range<usize>,
+    pub new_text: String,
+}
+
+/// Diffs that differ in more lines than this are one edit.
+const MAX_DIFF: usize = 500;
+
+/// The runs of lines that differ between `old` and `new`, by Myers'
+/// diff, so an editor's cursor and folds stay where nothing changed. A
+/// line's break counts as part of it.
+pub fn line_edits(old: &str, new: &str) -> Vec<LineEdit> {
+    if old == new {
+        return Vec::new();
+    }
+    let a: Vec<&str> = old.split_inclusive('\n').collect();
+    let b: Vec<&str> = new.split_inclusive('\n').collect();
+    // Common lines at the ends need no search.
+    let prefix = a.iter().zip(&b).take_while(|(x, y)| x == y).count();
+    let suffix = (a[prefix..].iter().rev())
+        .zip(b[prefix..].iter().rev())
+        .take_while(|(x, y)| x == y)
+        .count();
+    let (a_mid, b_mid) = (&a[prefix..a.len() - suffix], &b[prefix..b.len() - suffix]);
+    let whole = || {
+        vec![LineEdit {
+            old: prefix..a.len() - suffix,
+            new_text: b_mid.concat(),
+        }]
+    };
+    let Some(script) = myers(a_mid, b_mid) else {
+        return whole();
+    };
+    // Each run of deletions and insertions between equal lines is an edit.
+    let mut edits: Vec<LineEdit> = Vec::new();
+    let (mut i, mut j) = (0, 0);
+    let mut run: Option<(usize, usize)> = None;
+    let mut flush = |run: &mut Option<(usize, usize)>, i: usize, j: usize| {
+        if let Some((i0, j0)) = run.take() {
+            edits.push(LineEdit {
+                old: prefix + i0..prefix + i,
+                new_text: b_mid[j0..j].concat(),
+            });
+        }
+    };
+    for step in script {
+        match step {
+            Step::Same => {
+                flush(&mut run, i, j);
+                i += 1;
+                j += 1;
+            }
+            Step::Delete => {
+                run.get_or_insert((i, j));
+                i += 1;
+            }
+            Step::Insert => {
+                run.get_or_insert((i, j));
+                j += 1;
+            }
+        }
+    }
+    flush(&mut run, i, j);
+    edits
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Step {
+    Same,
+    Delete,
+    Insert,
+}
+
+/// The shortest edit script from `a` to `b`, or `None` past [`MAX_DIFF`]
+/// changes. It keeps each round's frontier, so memory grows with the
+/// square of the changes, not with the text.
+fn myers(a: &[&str], b: &[&str]) -> Option<Vec<Step>> {
+    let (n, m) = (a.len() as isize, b.len() as isize);
+    let max = (a.len() + b.len()).min(MAX_DIFF) as isize;
+    let offset = max + 1;
+    let mut v = vec![0isize; 2 * offset as usize + 1];
+    let mut trace: Vec<Vec<isize>> = Vec::new();
+    let at = |k: isize| (offset + k) as usize;
+    let mut found = None;
+    'search: for d in 0..=max {
+        for k in (-d..=d).step_by(2) {
+            let mut x = if k == -d || (k != d && v[at(k - 1)] < v[at(k + 1)]) {
+                v[at(k + 1)]
+            } else {
+                v[at(k - 1)] + 1
+            };
+            let mut y = x - k;
+            while x < n && y < m && a[x as usize] == b[y as usize] {
+                x += 1;
+                y += 1;
+            }
+            v[at(k)] = x;
+            if x >= n && y >= m {
+                trace.push(v[at(-d)..=at(d)].to_vec());
+                found = Some(d);
+                break 'search;
+            }
+        }
+        trace.push(v[at(-d)..=at(d)].to_vec());
+    }
+    // Back from the end, each round's one step and the equal lines after it.
+    let mut steps = Vec::new();
+    let (mut x, mut y) = (n, m);
+    for d in (1..=found?).rev() {
+        let k = x - y;
+        let previous = &trace[d as usize - 1];
+        let get = |k: isize| previous[(k + d - 1) as usize];
+        let down = k == -d || (k != d && get(k - 1) < get(k + 1));
+        let k0 = if down { k + 1 } else { k - 1 };
+        let x0 = get(k0);
+        let y0 = x0 - k0;
+        // The step goes to `x0 + 1` across, or down, then equal lines.
+        while x > x0 + isize::from(!down) {
+            steps.push(Step::Same);
+            x -= 1;
+        }
+        steps.push(if down { Step::Insert } else { Step::Delete });
+        (x, y) = (x0, y0);
+    }
+    steps.extend(std::iter::repeat_n(Step::Same, x as usize));
+    steps.reverse();
+    Some(steps)
 }
 
 /// An LSP position: a line from 0 and a UTF-16 character in it.
@@ -1062,6 +1256,66 @@ mod tests {
         // Without a range, the whole text.
         apply_change(&mut text, change(None, "x"));
         assert_eq!(text, "x");
+    }
+
+    #[test]
+    fn line_edits_are_runs_of_changed_lines() {
+        let apply = |old: &str, edits: &[LineEdit]| {
+            let mut lines: Vec<String> = old.split_inclusive('\n').map(String::from).collect();
+            for e in edits.iter().rev() {
+                lines.splice(e.old.clone(), [e.new_text.clone()]);
+            }
+            lines.concat()
+        };
+        let old = "a\nb\nc\nd\ne\nf\n";
+        let new = "a\nB\nc\nd\nx\ny\nf\n";
+        let edits = line_edits(old, new);
+        assert_eq!(
+            edits,
+            [
+                LineEdit {
+                    old: 1..2,
+                    new_text: "B\n".to_string()
+                },
+                LineEdit {
+                    old: 4..5,
+                    new_text: "x\ny\n".to_string()
+                },
+            ]
+        );
+        assert_eq!(apply(old, &edits), new);
+        // Insertions, deletions, a last line without a break, and nothing.
+        for (old, new) in [
+            ("a\nb\n", "a\nx\nb\n"),
+            ("a\nx\nb\n", "a\nb\n"),
+            ("a\nb", "a\nc"),
+            ("", "a\n"),
+            ("a\n", ""),
+            ("x\ny\nz\n", "z\ny\nx\n"),
+            ("same\n", "same\n"),
+        ] {
+            assert_eq!(apply(old, &line_edits(old, new)), new, "{old:?} to {new:?}");
+        }
+        // Random texts of a few distinct lines.
+        let mut seed: u64 = 1;
+        let mut text = || {
+            let mut out = String::new();
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            for i in 0..(seed >> 60) {
+                out.push_str(["a\n", "b\n", "c"][((seed >> (i * 2 + 20)) % 3) as usize]);
+            }
+            out
+        };
+        for _ in 0..500 {
+            let (old, new) = (text(), text());
+            assert_eq!(
+                apply(&old, &line_edits(&old, &new)),
+                new,
+                "{old:?} to {new:?}"
+            );
+        }
     }
 
     #[test]

@@ -51,28 +51,31 @@ the dominant style; "lines changed" is what applying it changes.
 | Blank line before a line starting a close bracket | none 100% | none | 4 |
 | Blank line after a multi-line statement | none 75%, one 25% | keep as written | 0 |
 | Blank lines in a row | at most one, but for a handful | at most one | few |
-| Trailing comma, multi-line `[ ]` | yes 99.6% | yes (later) | 2 |
-| Trailing comma, multi-line `( )` | yes 63% | open | - |
-| Trailing comma, multi-line `{ }` with commas | no 72% | open | - |
-| Multi-line `( )` lists | tall 49%, hugged 50% | open | - |
-| Multi-line `[ ]` lists | tall 99.8% | tall (later) | - |
+| Trailing comma, multi-line `[ ]` | yes 99.6% | when one per line ([wrapping](#wrapping-lists)) | (below) |
+| Trailing comma, multi-line `( )` | yes 63% | when one per line | (below) |
+| Trailing comma, multi-line `{ }` with commas | no 72% | when one per line | (below) |
+| Multi-line `( )` lists | tall 49%, hugged 50% | Black's: one line, else hugged, else tall | (below) |
+| Multi-line `[ ]` lists | tall 99.8% | the same | (below) |
 | Block arguments | trailing block 97%, `fn` in `( )` 3% | not changed (that's meaning) | - |
-| Line width | p50 40, p90 103, p99 955 | no width rule yet | - |
+| Line width | p50 40, p90 103, p99 955 | 100, for lists only | (below) |
 
-**`temper fmt` itself** (`--temper`, over copies) changes 189 of 81,019
-lines (0.2%, prose included): 23 in core and std (4 files), 105 in test
-programs, 55 in docs examples, and 0 to 2 in each library (Argmas and
-Ordable none). It formats every library file; it leaves alone one
-deliberately broken test program and 22 docs blocks that aren't whole
-programs (REPL transcripts, fragments).
+**`temper fmt` itself** (`--temper`, over copies) changes 758 of 81,019
+lines (0.9%, prose included): 51 in core and std (4 files), 131 in test
+programs, 63 in docs examples, and 3 to 185 in each library (Ordable 3,
+Chromarite 46, Argmas 64, Hrefine 73, Kelpto 142, Wherewith 185).
+Without wrapping lists, the first slice changed 189 lines (23 in core
+and std, 105 in tests, 55 in docs, 0 to 2 in each library). It formats
+every library file; it leaves alone one deliberately broken test
+program and 22 docs blocks that aren't whole programs (REPL
+transcripts, fragments).
 
 Notes on the numbers:
 
 - **Line width** is dominated by data: Hrefine and Kelpto keep Unicode
   and entity tables on very long lines (up to 4,780 columns). In
-  core and std only 8 lines are over 100 columns, and 108 over 80. A
-  width rule would need a way to leave tables alone (as rustfmt's
-  `#[rustfmt::skip]`), so the first rules don't break lines at all.
+  core and std only 8 lines are over 100 columns, and 108 over 80. So
+  only lists wrap, and lists of literals keep their lines
+  ([wrapping lists](#wrapping-lists)).
 - **The indentation model** (below) matches 99.8% of lines. The 104
   that differ are mostly hand-aligned expressions in std's `temporal`
   and `json`, a 3-space slip in `core.temper`, and some test inputs.
@@ -84,6 +87,82 @@ Notes on the numbers:
   still fixes them when the statement itself moves.
 - The literate line numbers the script's `--samples N` prints count
   lines of the joined code blocks, not of the file.
+
+## Wrapping lists
+
+Bracketed lists wrap as Python's [Black](https://black.readthedocs.io/en/stable/the_black_code_style/current_style.html#line-length)
+does, at a width of 100 columns (from the code block's margin in
+markdown):
+
+- **Which lists:** arguments, parameters, list and object literals, and
+  type arguments (`( )`, `[ ]`, `{ }` and `< >` around a comma list):
+  two or more items, or one with a trailing comma. A single item never
+  wraps (`f(g(...))` keeps `f(g(` together, and `g`'s list wraps).
+- **Layouts:** on one line if the list fits, with the rest of its line
+  up to where the line may break next (the end of the line, or just
+  after the next list's open bracket); else its items together on one
+  line of their own between the brackets' lines ("hugged"); else one
+  item per line, with a trailing comma added. Lists are decided
+  outermost first, as the formatter reaches them, so inner lists decide
+  on the lines their outer list gives them.
+- **Magic trailing comma:** a trailing comma as written keeps one item
+  per line (and keeps the lists around it as written), so an author can
+  ask for a tall list, and wrapping is idempotent: a list made tall gets
+  the comma that keeps it so. As in Black, a list made tall stays so
+  when it later shrinks, until the comma is deleted.
+- **Kept as written:** a list with a comment inside, or a line break
+  inside an item (a block argument like `foo(a, fn {`, a multi-line
+  string, a list kept tall inside it), a list in a string's `${ }`, and
+  **data**: a list whose items are all literals (numbers, `true`,
+  `false`, `null`, strings without holes, `char'a'`, negated numbers) or
+  lists or calls of them (`new Pair("a", 1)`). That keeps tables of
+  test cases and Unicode data as their authors wrote them, one row per
+  line however long, with no opt-out comment needed.
+- **Only lists:** other long lines stay long. A line break inside a
+  list's brackets, after its commas, can't end a statement, so wrapping
+  there never changes meaning; elsewhere it could.
+- **Safety:** the check after formatting allows only trailing commas
+  added or removed (tokens, and the tree's comma lists); `fmt` only adds
+  them.
+
+**The numbers** (`wrap_census` in `crates/temper-syntax/tests/fmt.rs`,
+over the repository and the six libraries; a line changed is one of the
+first slice's output the wrapped output doesn't have):
+
+| Width | Lines over it now: core+std | Lines wrapping changes: core+std, tests, Argmas, Chromarite, Hrefine, Kelpto, Ordable, Wherewith |
+|---|---|---|
+| 80 | 115 | 20, 38, 200, 91, 151, 470, 11, 379 |
+| 88 (Black's) | 63 | 18, 26, 130, 65, 113, 294, 7, 288 |
+| **100** | 9 | 28, 26, 62, 44, 71, 141, 3, 184 |
+| 120 | 4 | 40, 28, 27, 23, 61, 60, 1, 75 |
+
+Of 4,591 code lines in core and std, 10,477 in tests and 63,782 in the
+libraries; docs' examples change 0 to 1 lines (54 of 69 docs files
+parse whole). **100** is proposed: core and std have only 9 lines over
+it, and most of their 28 changed lines join parameter lists that
+`json` wraps by hand at 80 (`let parseJsonValue(\n  sourceText: ...,\n):`)
+but fit in 100; at 88 the libraries change about twice as many lines
+and core and std still have 63 lines over the width; 120 joins more of
+core's hand-wrapped lists. A narrow width gains little when only lists
+wrap.
+
+**Data lists** are what makes any width workable: wrapping them too
+changes 2,069 lines in Hrefine, 1,593 in Kelpto, 418 in Ordable and 98
+in tests at width 100 (against 71, 141, 3 and 26), exploding table rows
+one value per line. Other choices considered: keeping lists already
+written one item per line (the magic comma does that for 99.6% of tall
+`[ ]` lists, and it doesn't help one-line tables); filling lines with
+as many items as fit, as Prettier does for number arrays (rewraps
+tables' rows; maybe later, for data lists over the width only); an
+opt-out comment like `// temper fmt: off` (more to learn; not needed
+yet).
+
+What changes, in the libraries: long calls and signatures wrap
+(Argmas's 17-argument `addParam` calls go one per line, Kelpto's long
+`renderSafe(...)` calls hug), and lists written hugged *with* a trailing
+comma go one per line (a few in Kelpto). A list inside a one-line block
+wraps where it is (`do { editAll(\n  ...\n); "accepted" }`), as Black
+would.
 
 ## Design
 
@@ -109,6 +188,15 @@ census shows authors already agree on almost everything else.
   before `<` (whether `<` follows space decides whether it may be an
   angle bracket) is copied, and any change is checked by lexing the two
   tokens with the new space, so `- -x`, `a b` or `1 .x` never join.
+- **Lists** are the exception (above): the formatter finds them in the
+  tree, measures each gap and token's width on one line, decides
+  which lists may wrap (inner first), and then, in the same pass that
+  sets the space between tokens, decides each list's layout as it
+  reaches the open bracket, adding or removing line breaks only at the
+  list's own places (after the open bracket, after a comma, before the
+  close bracket). The lines it adds indent as any line there would. A
+  wrapped list's `< >` count as brackets for indentation; other `<`s
+  don't, as they may be less-than.
 - **Indentation** is computed in one pass with a stack of open brackets,
   each remembering the line its contents indent from: the bracket's own
   line if that line started at the bracket's depth, or else the line
@@ -140,46 +228,62 @@ census shows authors already agree on almost everything else.
 - **Safety:** input with lexing, bracket or parse errors, an unclosed
   block comment, string or `${` is left alone, with the first error. After formatting, the result is parsed again and must have the
   same tokens, comments (ignoring each line's indentation), parse tree
-  and markdown outside code; otherwise `fmt` refuses, as a bug.
+  and markdown outside code, apart from trailing commas; otherwise
+  `fmt` refuses, as a bug.
 - **Idempotence:** every rule depends on the tokens and on indentation
   the formatter computed itself, not on the input's (except the kept
-  continuation offsets, which are relative), so formatted code formats
-  to itself. Tests check it over every Temper file in the repository and
-  randomly edited inputs.
+  continuation offsets, which are relative, and line breaks inside
+  lists, which a trailing comma or the width decides the same way
+  again), so formatted code formats to itself. Tests check it over every
+  Temper file in the repository and randomly edited inputs, at width
+  100 and at 30, where most lists wrap; the wrapping cases hold at
+  widths 90 and 110 too.
 - **Speed:** one lex and parse, a linear pass, and one more parse for
-  the check. In release, the largest files take 4 ms (`core.temper`,
-  50 KiB) to 7 ms (`json.temper.md`, 43 KiB); `format_speed` in
-  `tests/fmt.rs` (ignored by default) measures them.
+  the check. In release, the largest files take 4 to 9 ms (`core.temper`,
+  50 KiB) and 7 to 13 ms (`json.temper.md`, 43 KiB), wrapping adding
+  about a tenth (the machine is noisy); `format_speed` in `tests/fmt.rs`
+  (ignored by default) measures them. Through the language server, a
+  formatting request for them answers in 6 to 30 ms (`format_speed` in
+  `crates/temper-lsp/tests/lsp.rs`).
+- **Language server:** `textDocument/formatting` and `rangeFormatting`
+  format the open text, reusing its unit's parse when that's current,
+  and answer with the runs of changed lines (Myers' diff), all of them
+  or those on a range's lines. A document that doesn't parse gets no
+  edits and no error. The VS Code extension formats on save by default
+  (`editor.formatOnSave` for `[temper]` and `[temper-markdown]`).
 
 ### Alternatives
 
 - **A layout engine** (Wadler/Prettier documents with groups and
-  indentation, picking breaks to fit a width). Needed for long-line
-  breaking and for normalizing multi-line lists (tall vs hugged,
-  trailing commas); it can be added later for just those constructs,
-  inside the same token-gap frame, once the census questions above are
-  decided. Doing everything through it from the start would rewrite far
-  more lines than the census says is needed, and would have to respect
-  semicolon insertion at every break.
+  indentation, picking breaks to fit a width) for everything. Lists
+  wrap with the same idea (groups decided outermost first, a group flat
+  if it fits up to the next possible break) inside the token-gap frame;
+  doing everything through it would rewrite far more lines than the
+  census says is needed, and would have to respect semicolon insertion
+  at every break.
 - **Reprinting from the AST** loses comments and layout the tree
   doesn't keep; the parse result's tokens make that unnecessary.
 
 ## Status and next steps
 
-Done (first slice): `temper fmt [PATH]...` and `--check`; the rules
-above marked as proposed, except trailing commas and the multi-line
-list shapes; golden cases, idempotence and tree-preservation tests
-over the repository's Temper files and randomly edited inputs; refusal
-for code that doesn't parse. The repository's own files aren't
-reformatted yet.
+Done: `temper fmt [PATH]...` and `--check`; the rules above marked as
+proposed; wrapping lists at 100 columns, with the magic trailing comma
+and data lists kept; golden cases (`tests/fmt/*.cases`), idempotence
+and tree-preservation tests over the repository's Temper files and
+randomly edited inputs; refusal for code that doesn't parse; language
+server formatting, on save by default in VS Code. The repository's own
+files aren't reformatted yet.
 
 Next:
 
-1. Language server document formatting, on by default on save in the
-   VS Code extension, reusing the open document's parse.
-2. Format lib/ and docs in one commit of its own, listed in
+1. Format lib/ and docs in one commit of its own, listed in
    `.git-blame-ignore-revs`; then `temper fmt --check` in CI.
-3. Decide the open questions: continuation indent (0 or 2, maybe by
-   kind: 2 after a binary operator, 0 for `extends`), multi-line list
-   shape and trailing commas, a line width and how tables opt out.
-4. Doc comments' framing (`/** … */`), if wanted.
+2. Open questions: continuation indent (0 or 2, maybe by kind: 2 after
+   a binary operator, 0 for `extends`); whether data lists over the
+   width should fill lines; whether lists inside one-line blocks
+   should wrap.
+3. Doc comments' framing (`/** … */`), if wanted.
+4. Markdown prose in `.temper.md`: left exactly as written. Formatting
+   it (rewrapping paragraphs, normalizing lists and emphasis) is a
+   Markdown formatter's job; should `fmt` call one, or leave prose to
+   editors?

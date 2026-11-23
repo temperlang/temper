@@ -17,7 +17,8 @@ the language server for:
 - hover, with a name's type or signature and its doc comment;
 - go to definition, into the standard library too;
 - completion of names, members, and object literals' properties;
-- find references, rename, the outline, and signature help.
+- find references, rename, the outline, and signature help;
+- formatting, as [`temper fmt`](cli.md#fmt) does, on save by default.
 
 Blocks tagged `temper inert`, Temper shown for reading but not compiled,
 are highlighted too, tinted and labeled "inert" in the editor, the

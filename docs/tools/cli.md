@@ -209,14 +209,23 @@ change. In `.temper.md` files, only Temper code blocks change; prose is
 left exactly as written. With `--check`, it changes nothing, lists the
 files that need formatting, and exits with 1 if there are any, for CI.
 
-It has no style options. It keeps every line break and comment as
-written, and sets indentation (two spaces a level), the space between
-tokens on a line (`a + b`, `f(x, y)`, `x: Int`, `if (c) { d }`), and
-blank lines (at most one in a row, none just inside braces). Long lines
-aren't broken yet. Code that doesn't parse is left as written, with an
-error and exit status 1, and it checks its own work: if formatting
-would change a file's tokens, comments, or parse tree, it leaves the
-file alone and says so.
+It has no style options. It keeps comments as written, and sets
+indentation (two spaces a level), the space between tokens on a line
+(`a + b`, `f(x, y)`, `x: Int`, `if (c) { d }`), and blank lines (at
+most one in a row, none just inside braces). It keeps line breaks as
+written, but in bracketed lists of two or more items (arguments,
+parameters, list and object literals, type arguments), which it lays
+out as Python's Black does, for lines up to 100 columns: on one line if
+the list fits; else its items together on a line of their own between
+the brackets; else one item per line, with a trailing comma. A
+trailing comma in the source keeps one item per line. Lists with
+comments or line breaks inside their items, and lists of literals
+(tables of data), keep their line breaks.
+
+Code that doesn't parse is left as written, with an error and exit
+status 1, and it checks its own work: if formatting would change a
+file's tokens (but trailing commas), comments, or parse tree, it leaves
+the file alone and says so.
 
 ## `serve`, or `lsp`
 

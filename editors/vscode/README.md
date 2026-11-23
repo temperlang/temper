@@ -13,7 +13,11 @@ and Temper's language server, `temper lsp`, for:
 - completion of names in scope, members after `.` (builtin types' too),
   and an object literal's property names;
 - find references and rename, across the library's files;
-- the outline (document symbols), and signature help in calls.
+- the outline (document symbols), and signature help in calls;
+- formatting, `temper fmt`'s, on save by default ("Format Document"
+  and "Format Selection" too). To turn it off, set
+  `"[temper]": {"editor.formatOnSave": false}` (and likewise
+  `[temper-markdown]`) in your settings.
 
 Blocks tagged `temper inert`, Temper shown but not compiled, are
 highlighted too, with their lines tinted and an "inert" label after the

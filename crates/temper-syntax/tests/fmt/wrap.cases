@@ -1,0 +1,196 @@
+# `temper fmt` cases for wrapping bracketed lists: input, then
+# `--- formatted` and the expected output. Long lines here are well over
+# the line width and short ones well under it, so the cases hold for any
+# width from 90 to 110. Format and updating: see tests/fmt.rs.
+
+=== short lists join onto one line
+f(
+  a,
+  b
+);
+let xs = [
+  first, second
+];
+let o = {
+  a: 1, b: 2 };
+--- formatted
+f(a, b);
+let xs = [first, second];
+let o = { a: 1, b: 2 };
+
+=== long lists hug: all items on one indented line
+let resultOfTheComputation = someRatherLongFunctionName(argumentNumberOne, argumentNumberTwo, argumentNumberThreeAndSomeMore);
+let againAndAgainAndAgainAndAgain = someRatherLongFunctionName(argumentNumberOne,
+    argumentNumberTwo, argumentNumberThreeAndSomeMore);
+--- formatted
+let resultOfTheComputation = someRatherLongFunctionName(
+  argumentNumberOne, argumentNumberTwo, argumentNumberThreeAndSomeMore
+);
+let againAndAgainAndAgainAndAgain = someRatherLongFunctionName(
+  argumentNumberOne, argumentNumberTwo, argumentNumberThreeAndSomeMore
+);
+
+=== lists too long to hug go one item per line, with a trailing comma
+let built = makeSomething(theFirstArgumentWithALongName, theSecondArgumentWithALongName, theThirdArgumentWithALongName, andTheFourthOne, andTheFifthOne);
+--- formatted
+let built = makeSomething(
+  theFirstArgumentWithALongName,
+  theSecondArgumentWithALongName,
+  theThirdArgumentWithALongName,
+  andTheFourthOne,
+  andTheFifthOne,
+);
+
+=== a trailing comma keeps one item per line
+f(a, b,);
+let xs = [first, second,
+  third,];
+let o = { a: 1, b: 2, };
+--- formatted
+f(
+  a,
+  b,
+);
+let xs = [
+  first,
+  second,
+  third,
+];
+let o = {
+  a: 1,
+  b: 2,
+};
+
+=== inner lists decide on their own lines
+let table = buildTheTable(columnHeadings(theFirstHeading, theSecondHeading), rowsFrom(theSourceOfAllTheRows, filteredBy, sortedBy), someOptions, andMore);
+let nested = outerFunction(shortArgument, innerFunctionWithALongName(theFirstArgumentWithALongName, theSecondArgumentWithALongName, theThirdArgumentHere));
+--- formatted
+let table = buildTheTable(
+  columnHeadings(theFirstHeading, theSecondHeading),
+  rowsFrom(theSourceOfAllTheRows, filteredBy, sortedBy),
+  someOptions,
+  andMore,
+);
+let nested = outerFunction(
+  shortArgument,
+  innerFunctionWithALongName(
+    theFirstArgumentWithALongName, theSecondArgumentWithALongName, theThirdArgumentHere
+  ),
+);
+
+=== parameters, objects and type arguments wrap too
+let combineThreeValuesIntoOne(firstValueToCombine: Int, secondValueToCombine: Int, thirdValueToCombine: Int): Int {
+  firstValueToCombine
+}
+let theOptionsForThisCall = { firstOption: someValue, secondOption: anotherValue, thirdOption: yetAnotherValue };
+let m: SomeGenericTypeName<TheFirstTypeArgument, TheSecondTypeArgument, TheThirdTypeArgumentHere, More> = make();
+--- formatted
+let combineThreeValuesIntoOne(
+  firstValueToCombine: Int, secondValueToCombine: Int, thirdValueToCombine: Int
+): Int {
+  firstValueToCombine
+}
+let theOptionsForThisCall = {
+  firstOption: someValue, secondOption: anotherValue, thirdOption: yetAnotherValue
+};
+let m: SomeGenericTypeName<
+  TheFirstTypeArgument, TheSecondTypeArgument, TheThirdTypeArgumentHere, More
+> = make();
+
+=== a single item never wraps, but lists inside it do
+let x = outerCallWithLongName(innerCallWithLongName(theFirstArgumentWithALongName, theSecondArgumentWithALongName, theThirdOneHere));
+--- formatted
+let x = outerCallWithLongName(innerCallWithLongName(
+  theFirstArgumentWithALongName, theSecondArgumentWithALongName, theThirdOneHere
+));
+
+=== a list fits if the rest of its line does, up to the next list
+let r = someObject.firstMethod(alpha, beta).secondMethod(theFirstArgumentWithALongName, theSecondArgumentWithALongName);
+--- formatted
+let r = someObject.firstMethod(alpha, beta).secondMethod(
+  theFirstArgumentWithALongName, theSecondArgumentWithALongName
+);
+
+=== lists with line breaks inside their items, or comments, stay as written
+foo(theFirstArgumentWithALongName, theSecondArgumentWithALongName, theThirdArgumentWithALongName, fn {
+  body();
+});
+foo(a, [
+  b,
+  c,
+]);
+let xs = [
+  a, // the first
+  b
+];
+let s = "${f(theFirstArgumentWithALongName, theSecondArgumentWithALongName, theThirdArgumentWithALongName, four)}";
+--- formatted
+foo(theFirstArgumentWithALongName, theSecondArgumentWithALongName, theThirdArgumentWithALongName, fn {
+  body();
+});
+foo(a, [
+  b,
+  c,
+]);
+let xs = [
+  a, // the first
+  b
+];
+let s = "${f(theFirstArgumentWithALongName, theSecondArgumentWithALongName, theThirdArgumentWithALongName, four)}";
+
+=== data lists, all literals, stay as written
+let numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30];
+let rows = [
+  ["a", "b"], ["c", "d"],
+  [-1, 2.5], [true, null],
+];
+check("a long expected string for this test, well over the line width", "and another string to compare it with");
+--- formatted
+let numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30];
+let rows = [
+  ["a", "b"], ["c", "d"],
+  [-1, 2.5], [true, null],
+];
+check("a long expected string for this test, well over the line width", "and another string to compare it with");
+
+=== wrapping in literate code blocks keeps their margins (markdown)
+Prose stays exactly as written, however long its lines are, even well past the line width (f(a, b, c)).
+
+1. A list item:
+
+   ```temper
+   let resultOfTheComputation = someRatherLongFunctionName(argumentNumberOne, argumentNumberTwo, argumentNumberThreeAndSomeMore);
+   f(
+     a,
+     b
+   );
+   ```
+
+More prose.
+
+    let built = makeSomething(theFirstArgumentWithALongName, theSecondArgumentWithALongName, theThirdArgumentWithALongName, andTheFourthOne, andTheFifthOne);
+    let short = g(a,
+      b);
+
+--- formatted
+Prose stays exactly as written, however long its lines are, even well past the line width (f(a, b, c)).
+
+1. A list item:
+
+   ```temper
+   let resultOfTheComputation = someRatherLongFunctionName(
+     argumentNumberOne, argumentNumberTwo, argumentNumberThreeAndSomeMore
+   );
+   f(a, b);
+   ```
+
+More prose.
+
+    let built = makeSomething(
+      theFirstArgumentWithALongName,
+      theSecondArgumentWithALongName,
+      theThirdArgumentWithALongName,
+      andTheFourthOne,
+      andTheFifthOne,
+    );
+    let short = g(a, b);
