@@ -15,7 +15,7 @@ def _check_empty() -> None:
 
 
 _console: _LoggingConsole = _LoggingConsole(__name__)
-_queue: _deque[str] = _deque[str]()
+_queue: _deque[str] = _deque()
 _check_empty()
 if not not _queue:
     _console.log(_deque_remove_first(_queue))
@@ -29,7 +29,7 @@ _check_empty()
 while not not _queue:
     _console.log(_deque_remove_first(_queue))
 _check_empty()
-_numbers: _deque[int | None] = _deque[int | None]()
+_numbers: _deque[int | None] = _deque()
 _sum: int = 0
 _i = 0
 while _i < 100:

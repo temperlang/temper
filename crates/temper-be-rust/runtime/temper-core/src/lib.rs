@@ -414,7 +414,8 @@ impl BitVector {
     /// Panics for a negative index, as a list's set out of bounds does.
     fn split_index(index: i32) -> (usize, u32) {
         let Ok(index) = usize::try_from(index) else {
-            panic!("index {index} out of bounds");
+            // For length 0: a bit vector has none.
+            index_out_of_bounds(index, 0);
         };
         (index / BIT_CHUNK_SIZE, 1 << (index % BIT_CHUNK_SIZE))
     }
@@ -534,7 +535,8 @@ pub fn usize_to_i32(u: usize) -> Result<i32> {
 }
 
 /// Panics for an index out of bounds of a list or string of `length`, as
-/// core's docs say reading or writing there does.
+/// core's docs say reading or writing there does, with the message every
+/// backend gives for a list; for a string, in its own units (UTF-8 bytes).
 #[track_caller]
 pub(crate) fn index_out_of_bounds(index: impl fmt::Display, length: usize) -> ! {
     panic!("index {index} out of bounds for length {length}")

@@ -28,7 +28,7 @@ namespace temper {
             Elem removeFirst(const std::shared_ptr<std::deque<Elem>>& dq) {
                 if (dq->empty()) {
                     // Panics, as reading a list out of bounds does.
-                    panic<Elem>("index 0 out of bounds for length 0");
+                    index_out_of_bounds<Elem>(0, 0);
                 }
                 Elem front = dq->front();
                 dq->pop_front();

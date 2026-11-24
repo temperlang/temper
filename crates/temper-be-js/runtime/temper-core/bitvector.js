@@ -1,3 +1,5 @@
+import {indexOutOfBounds} from "./core.js";
+
 /**
  * @param {number} byte
  * @returns {string}
@@ -44,8 +46,9 @@ export class BitVector {
    */
   set(index, newBitValue) {
     if (index < 0) {
-      // Panics, even to set false, as a list's set out of bounds does.
-      throw new Error(`index ${index} out of bounds`);
+      // Panics, even to set false, as a list's set out of bounds does,
+      // for length 0: a bit vector has none.
+      indexOutOfBounds(index, 0);
     }
     let values = this.values;
     const len = values.byteLength;
@@ -89,20 +92,20 @@ export const denseBitVectorConstructor = (capacity) => {
 
 /**
  * Implements extension method std/collections.type BitVector.get()
- * @param {BitVector} denseBitVector
+ * @param {BitVector} bitVector
  * @param {number} index
  * @returns {boolean}
  */
-export const denseBitVectorGet = (denseBitVector, index) => {
-  return denseBitVector.get(index);
+export const denseBitVectorGet = (bitVector, index) => {
+  return bitVector.get(index);
 };
 
 /**
  * Implements extension method std/collections.type BitVector.set()
- * @param {BitVector} denseBitVector
+ * @param {BitVector} bitVector
  * @param {number} index
  * @param {boolean} newBitValue
  */
-export const denseBitVectorSet = (denseBitVector, index, newBitValue) => {
-  denseBitVector.set(index, newBitValue);
+export const denseBitVectorSet = (bitVector, index, newBitValue) => {
+  bitVector.set(index, newBitValue);
 };

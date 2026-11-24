@@ -22,8 +22,9 @@ before
 ```
 
 The run ends in each backend's panic, with this message, not in a host
-exception:
+exception. A bit vector has no length, every index from 0 on being in
+bounds, so its message gives 0, whatever it stores:
 
 ```panic
-index -1 out of bounds
+index -1 out of bounds for length 0
 ```

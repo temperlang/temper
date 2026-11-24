@@ -1181,10 +1181,10 @@ pub fn check_case(
 pub fn panicked(backend: &str, out: &Output, message: &str) -> bool {
     let stderr = String::from_utf8_lossy(&out.stderr);
     let code = out.status.code();
-    let line = |prefix: &str| (stderr.lines()).any(|l| l.contains(prefix) && l.contains(message));
+    let line = |prefix: &str| ends_line(&stderr, prefix, message);
     let ends = match backend {
         // `panic!`, which exits with 101.
-        "rust" => code == Some(101) && stderr.contains("panicked at") && stderr.contains(message),
+        "rust" => code == Some(101) && stderr.contains("panicked at") && line(""),
         // `raise BaseException(…)`, which no `except Exception` catches.
         "py" => code == Some(1) && line("BaseException: "),
         // `throw Error(…)`, the same as a bubble's.
@@ -1193,11 +1193,24 @@ pub fn panicked(backend: &str, out: &Output, message: &str) -> bool {
         "java" => code == Some(1) && line("java.lang.AssertionError: "),
         // `std::terminate()` after the message, and
         // `Environment.FailFast(…)`, which abort.
-        "cpp" => aborted(&out.status) && stderr.contains(message),
+        "cpp" => aborted(&out.status) && line(""),
         "csharp" => aborted(&out.status) && line("Process terminated. "),
         _ => false,
     };
     ends && !stderr.contains("Sanitizer")
+}
+
+/// Whether a line of `text` ends with all of `message`, after `prefix`
+/// (`BaseException: `), or, with none, at the line's start or after a
+/// space (Lua's `file:line: `), so neither a longer message nor a
+/// shorter one (one missing `for length N`) passes for it.
+pub fn ends_line(text: &str, prefix: &str, message: &str) -> bool {
+    text.lines().any(|l| {
+        l.strip_suffix(message).is_some_and(|rest| match prefix {
+            "" => rest.is_empty() || rest.ends_with(' '),
+            _ => rest.ends_with(prefix),
+        })
+    })
 }
 
 /// Whether a run was ended by a signal other than `SIGABRT`, which C++'s

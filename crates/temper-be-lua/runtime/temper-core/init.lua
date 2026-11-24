@@ -57,8 +57,10 @@ local table_remove = table.remove
 local table_unpack = unpack or table.unpack
 
 -- Panics for a 0-based index out of bounds of a list or string of
--- `length`, as core's docs say reading or writing there does: an error no
--- `orelse` catches, as a bubble is, with the message every backend gives.
+-- `length`, as core's docs say reading or writing there does, with the
+-- message every backend gives for a list; for a string, in its own units
+-- (here UTF-8 bytes). Unlike other backends', `orelse` still catches it,
+-- as it does `panic()` (notes/kotlin-differences.md).
 local function index_out_of_bounds(index, length)
     error("index " .. tostring(index) .. " out of bounds for length " .. tostring(length), 2)
 end
@@ -996,7 +998,7 @@ function temper.queue_removefirst(queue)
     local head = queue.head
     if head == queue.tail then
         -- Panics, as reading a list out of bounds does.
-        error("index 0 out of bounds for length 0")
+        index_out_of_bounds(0, 0)
     end
     local first = queue[head]
     queue.head = head + 1
@@ -2309,8 +2311,9 @@ end
 
 function temper.bitvector_set(vec, key, setto)
     if key < 0 then
-        -- Panics, even to set false, as a list's set out of bounds does.
-        error("index " .. tostring(key) .. " out of bounds")
+        -- Panics, even to set false, as a list's set out of bounds does,
+        -- for length 0: a bit vector has none.
+        index_out_of_bounds(key, 0)
     end
     vec[key] = setto
 end

@@ -1406,7 +1406,7 @@ impl Interp<'_> {
             usize::try_from(at)
                 .ok()
                 .filter(|&at| at <= len)
-                .ok_or_else(|| Abrupt::Panic(format!("index {at} out of bounds for length {len}")))
+                .ok_or_else(|| out_of_bounds(at, len))
         };
         match (name, args) {
             ("add", [value, ..]) => {
@@ -1427,15 +1427,13 @@ impl Interp<'_> {
                         .map(|slot| *slot = value.clone())
                 }) {
                     Some(()) => Ok(Val::Void),
-                    None => Err(Abrupt::Panic(format!(
-                        "index {i} out of bounds for length {len}"
-                    ))),
+                    None => Err(out_of_bounds(i, len)),
                 }
             }
             ("removeLast", []) => builder
                 .borrow_mut()
                 .pop()
-                .ok_or_else(|| Abrupt::Panic("index -1 out of bounds for length 0".into())),
+                .ok_or_else(|| out_of_bounds(-1, 0)),
             ("reverse", []) => {
                 builder.borrow_mut().reverse();
                 Ok(Val::Void)
@@ -2053,11 +2051,14 @@ fn property(object: Val, name: NameId, text: &str) -> R {
 fn list_get(items: &[Val], i: i32) -> R {
     match usize::try_from(i).ok().and_then(|i| items.get(i)) {
         Some(item) => Ok(item.clone()),
-        None => Err(Abrupt::Panic(format!(
-            "index {i} out of bounds for length {}",
-            items.len()
-        ))),
+        None => Err(out_of_bounds(i, items.len())),
     }
+}
+
+/// The panic for an index out of bounds of a list or string of `length`,
+/// with the message each backend's runtime gives (`index_out_of_bounds`).
+fn out_of_bounds(index: impl std::fmt::Display, length: usize) -> Abrupt {
+    Abrupt::Panic(format!("index {index} out of bounds for length {length}"))
 }
 
 fn literal(value: &Value) -> Option<Val> {

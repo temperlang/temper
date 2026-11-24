@@ -405,7 +405,8 @@ class BitVector(object):
         """Sets a bit in the bit vector, expanding the vector as needed; a
         negative index panics, as `panic()` raises, past any `orelse`."""
         if idx < 0:
-            raise BaseException(f"index {idx} out of bounds")
+            # For length 0: a bit vector has none.
+            index_out_of_bounds(idx, 0)
         byte_array = self._bytearray
         byte_size = len(byte_array)
         byte_index = idx >> 3
@@ -677,7 +678,8 @@ def years_between(start: Date, end: Date) -> int:
 def index_out_of_bounds(index: int, length: int) -> NoReturn:
     """Panics for an index out of bounds of a list or string of `length`, as
     core's docs say reading or writing there does, as `panic()` raises, past
-    any `orelse`."""
+    any `orelse`, with the message every backend gives for a list; for a
+    string, in its own units (code points)."""
     raise BaseException(f"index {index} out of bounds for length {length}")
 
 
@@ -812,9 +814,14 @@ def list_for_each(lst: Sequence[T], action: Callable[[T], None]) -> None:
 
 
 def list_get(lst: Sequence[T], index: int) -> T:
-    "Get an item from a list by index, panicking out of bounds."
-    if 0 <= index < len(lst):  # Not Python's negative indices
-        return lst[index]
+    """Get an item from a list by index, panicking out of bounds. Tries the
+    subscript, which is free on success from Python 3.11, rather than
+    calling `len()` first; not Python's negative indices."""
+    if index >= 0:
+        try:
+            return lst[index]
+        except IndexError:
+            pass
     index_out_of_bounds(index, len(lst))
 
 
@@ -908,11 +915,14 @@ _lbsT = TypeVar("_lbsT")
 
 
 def list_builder_set(lst: MutableSequence[_lbsT], idx: int, val: _lbsT) -> None:
-    "Sets a list element, panicking out of bounds."
-    if 0 <= idx < len(lst):
-        lst[idx] = val
-    else:
-        index_out_of_bounds(idx, len(lst))
+    "Sets a list element, panicking out of bounds, as `list_get` reads one."
+    if idx >= 0:
+        try:
+            lst[idx] = val
+            return
+        except IndexError:
+            pass
+    index_out_of_bounds(idx, len(lst))
 
 
 _lbsoT = TypeVar("_lbsoT")
@@ -1011,12 +1021,12 @@ def deque_remove_first(deq: Deque[T]) -> T:
     """Defer to deque.popleft, except panicking when the deque is empty, as
     reading a list out of bounds does."""
     if not deq:
-        raise BaseException("index 0 out of bounds for length 0")
+        index_out_of_bounds(0, 0)
     return deq.popleft()
 
 
 def dense_bit_vector_set(instance: BitVector, idx: int, bit: bool) -> None:
-    "sets a bit within a dense bit vector."
+    "Sets a bit within a BitVector."
     instance.set(idx, bit)
 
 

@@ -577,7 +577,8 @@ pub const TABLE: &[(&str, Connection)] = &[
 ];
 
 /// How a connected type is written, relative to `temper::core` where it
-/// starts with `core::`, which the header spells out.
+/// starts with `core::`, which the header spells out, and with its one
+/// type argument for `{item}`.
 /// Sorted by qname. String indices are `int32_t`, and the others the
 /// runtime's, as Kotlin's.
 pub const TYPES: &[(&str, &str)] = &[
@@ -593,6 +594,10 @@ pub const TYPES: &[(&str, &str)] = &[
     (
         "std/collections.type BitVector",
         "std::shared_ptr<std::vector<bool>>",
+    ),
+    (
+        "std/collections.type Queue",
+        "std::shared_ptr<std::deque<{item}>>",
     ),
 ];
 

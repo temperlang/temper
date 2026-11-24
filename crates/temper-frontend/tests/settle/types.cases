@@ -3941,3 +3941,18 @@ error 662..665: Void expressions cannot be used as values
 error 683..687: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
 error 698..702: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
 error 730..734: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
+
+=== an operator's operand that's only null fits none of its variants, with Kotlin Temper's message for `null + 1`
+let d = null + 1;
+let e: Int = 2 * null;
+let f = -null;
+--- settled
+(Block
+  (Let ^d:0 (Call + null 1))
+  (Let ^e:1 Int (Call * 2 null))
+  (Let ^f:2 (Call - null))
+  #void)
+error 8..12: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32?, Int32]
+error 35..39: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Int32?]
+error 50..54: Actual arguments do not match signature: (Int32) -> Int32 expected [Int32], but got [Int32?]
+Failed: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32?, Int32]

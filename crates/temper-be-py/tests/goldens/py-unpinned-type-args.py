@@ -46,7 +46,7 @@ def _same(x: _T, /) -> _T:
 
 
 def _mk(first: _T, /) -> _deque[_T]:
-    q = _deque[_T]()
+    q: _deque[_T] = _deque()
     q.append(first)
     return q
 
@@ -55,10 +55,10 @@ class _Maker(_Generic[_T]):
     __slots__ = ()
 
     def make(self, /) -> _Holder[_T]:
-        return _Holder[_T]()
+        return _cast('_Holder[_T]', _Holder())
 
     def describe(self, /) -> str:
-        return _kind(_Holder[_T]())
+        return _kind(_cast('_Holder[_T]', _Holder()))
 
 
 class _Later:
@@ -66,18 +66,18 @@ class _Later:
 
 
 def _early() -> str:
-    return _kind(_Holder[_Later]())
+    return _kind(_cast('_Holder[_Later]', _Holder()))
 
 
 def _empty() -> _deque[_T]:  # pyright: ignore[reportInvalidTypeVarUse]
-    return _deque[_T]()
+    return _cast('_deque[_T]', _deque())
 
 
 class _Factory:
     __slots__ = ()
     @staticmethod
     def fresh() -> _Holder[_U]:  # pyright: ignore[reportInvalidTypeVarUse]
-        return _Holder[_U]()
+        return _cast('_Holder[_U]', _Holder())
     def made(self, /) -> _Sequence[_V]:  # pyright: ignore[reportInvalidTypeVarUse]
         return ()
 
@@ -94,12 +94,12 @@ _console.log(_kind(_cast('_Holder[str]', _Factory.fresh())))
 _console.log(str(len(_cast('_Sequence[int]', _Factory().made()))))
 _console.log(_kind(_cast('_deque[bool]', _relayed())))
 _console.log(str(_deque_remove_first(_filled)))
-_console.log(_kind(_Holder[int]()))
-_console.log(_kind(_deque[str]()))
+_console.log(_kind(_cast('_Holder[int]', _Holder())))
+_console.log(_kind(_cast('_deque[str]', _deque())))
 _console.log(_kind({}))
-_console.log(_kind(_same(_deque[int]())))
-_console.log(str(len(_same(_Holder[str]()).items)))
+_console.log(_kind(_same(_cast('_deque[int]', _deque()))))
+_console.log(str(len(_same(_cast('_Holder[str]', _Holder())).items)))
 _console.log(_kind(_mk(1)))
-_console.log(_kind(_Maker[str]().make()))
-_console.log(_Maker[int]().describe())
+_console.log(_kind(_cast('_Maker[str]', _Maker()).make()))
+_console.log(_cast('_Maker[int]', _Maker()).describe())
 _console.log(_early())

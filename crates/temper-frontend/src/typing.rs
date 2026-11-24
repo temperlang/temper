@@ -154,6 +154,8 @@ pub struct Typing {
     /// The nullable type each place wants of a null there, by the null
     /// (or other expression typed [`NULL`]), as `String?` for `f(null)`
     /// with `f(s: String?)`, where checks find one ([`Typing::in_place`]).
+    /// For analysis (hover) only: filled only where a check happens to
+    /// run, so code generation mustn't rely on it.
     null_places: HashMap<NodeId, TypeId>,
 }
 

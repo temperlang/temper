@@ -424,7 +424,7 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   parameters' bounds as core declares them, so `new Map<P, String>([])`
   for a class `P` is "Type formal <K extends MapKey<K>> cannot bind to P
   which does not fit upper bounds [MapKey<K>]", as in Kotlin; one core
-  doesn't declare, as `T` in `Deque<T>`, is unchecked: `new Pair(1,
+  doesn't declare, as `T` in `ListBuilder<T>`, is unchecked: `new Pair(1,
   "a")`, `new Map(pairs)`, `new ListBuilder<Int>()`, and through an
   alias, as std's `new TestResult(…)`. Bounds aren't checked in type
   expressions, as `let m: Map<P, String>`, as Kotlin doesn't either.

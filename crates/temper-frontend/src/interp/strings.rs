@@ -8,7 +8,7 @@
 //! inside a character here; such an index counts as the start of that
 //! character (Kotlin's would point at a trailing surrogate instead).
 
-use super::{Abrupt, R, Val};
+use super::{Abrupt, R, Val, out_of_bounds};
 use std::cell::RefCell;
 use std::rc::Rc;
 use temper_syntax::lex::is_kotlin_whitespace;
@@ -68,10 +68,7 @@ fn prev(text: &str, i: u32) -> usize {
 pub(super) fn get(text: &str, i: u32) -> R {
     match text[at(text, i)..].chars().next() {
         Some(c) if (i as usize) < text.len() => Ok(Val::Int(c as i32)),
-        _ => Err(Abrupt::Panic(format!(
-            "index {i} out of bounds for length {}",
-            text.len()
-        ))),
+        _ => Err(out_of_bounds(i, text.len())),
     }
 }
 

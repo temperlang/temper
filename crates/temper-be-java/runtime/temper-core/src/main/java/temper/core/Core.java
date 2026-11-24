@@ -821,7 +821,8 @@ public final class Core {
      * A panic for an index out of bounds of a list or string of
      * {@code length}, as core's docs say reading or writing there does: an
      * {@code Error} that no {@code orelse} catches, as {@code panic()}
-     * throws, with the message every backend gives.
+     * throws, with the message every backend gives for a list; for a
+     * string, in its own units (UTF-16).
      * @param index the index
      * @param length the list's or string's length
      * @return the error to throw
@@ -1635,7 +1636,8 @@ public final class Core {
      */
     public static void bitVectorSet(BitSet bits, int index, boolean value) {
         if (index < 0) {
-            throw new AssertionError("index " + index + " out of bounds");
+            // For length 0: a bit vector has none.
+            throw indexOutOfBounds(index, 0);
         }
         bits.set(index, value);
     }

@@ -7,7 +7,7 @@ from temper_core import (
 __all__ = ()
 
 _console: _LoggingConsole = _LoggingConsole(__name__)
-_queue: _deque[str] = _deque[str]()
+_queue: _deque[str] = _deque()
 _queue.append('a')
 _console.log(_deque_remove_first(_queue))
 _console.log('before')

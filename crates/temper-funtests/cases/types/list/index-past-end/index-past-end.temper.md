@@ -1,8 +1,8 @@
 # List Index Past the End
 
 Reading a list past its end panics on every backend, ending the run,
-rather than bubbling or raising a host exception that `orelse` might
-catch.
+rather than bubbling or raising a host exception. On JavaScript and
+Lua, though, `orelse` still catches it, as it does `panic()`.
 
 ```text
 @meta:arg expectRunFailure = true,

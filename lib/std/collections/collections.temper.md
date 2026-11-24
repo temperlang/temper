@@ -139,6 +139,11 @@ likelier set when its neighbors are.
        */
       @connected
       public set(index: Int, newValue: Boolean): Void {
+        if (index < 0) {
+          // Panics as a list's set out of bounds does, for length 0:
+          // a bit vector has no length, all from 0 on being in bounds.
+          new ListBuilder<Boolean>().set(index, newValue);
+        }
         let bits = this.bits;
         var limit = bits.length;
         if (limit <= index) {
@@ -151,7 +156,6 @@ likelier set when its neighbors are.
             limit += 1;
           }
         }
-        // Panics for a negative index.
         bits.set(index, newValue);
       }
     }

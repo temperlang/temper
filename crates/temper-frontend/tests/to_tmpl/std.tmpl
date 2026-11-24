@@ -2018,6 +2018,9 @@ module collections#5 in "collections" {
       }
     }
     connected method set#394(index#1014: Int32, newValue#1015: Boolean): Void {
+      if (%Int32.lt(index#1014, 0)) {
+        new constructor#414<Boolean>().set#745(index#1014, newValue#1015);
+      }
       let bits#1016: ListBuilder#81<Boolean> = this.bits#392;
       var limit#1017: Int32 = bits#1016.length#743();
       if (%Int32.le(limit#1017, index#1014)) {

@@ -555,7 +555,12 @@ impl<'a> Translator<'a> {
                 let qname = self.qname(decl);
                 let args = self.template_args(self.p.types.list(args))?;
                 match connected::lookup_type(&qname) {
-                    Some(c) => c.to_string(),
+                    Some(c) => {
+                        let item = (args.strip_prefix('<'))
+                            .and_then(|a| a.strip_suffix('>'))
+                            .unwrap_or_default();
+                        c.replace("{item}", item)
+                    }
                     // Core's lists and maps, as Kotlin's.
                     None if qname == "core.type List"
                         || qname == "core.type Listed"
@@ -571,12 +576,6 @@ impl<'a> Translator<'a> {
                         || qname == "core.type MapBuilder" =>
                     {
                         format!("std::shared_ptr<{CORE}::Mapped::Ordered{args}>")
-                    }
-                    None if qname == "std/collections.type Queue" => {
-                        let item = (args.strip_prefix('<'))
-                            .and_then(|a| a.strip_suffix('>'))
-                            .unwrap_or_default();
-                        format!("std::shared_ptr<std::deque<{item}>>")
                     }
                     None if qname == "core.type Pair" => {
                         format!("std::shared_ptr<{CORE}::Pair{args}>")

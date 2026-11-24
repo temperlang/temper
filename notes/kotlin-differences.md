@@ -1038,10 +1038,20 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   (2026-11-24). Kotlin's runtimes raised host exceptions or bubbled,
   which `orelse` could catch (Python's `IndexError`, C++'s and Lua's
   bubbles, JS's `ReferenceError` for an unimported `bubble`), and JS
-  and Lua let `set` at a negative index pass.
+  and Lua let `set` at a negative index pass. A string's index and
+  length are in the backend's own units (UTF-8 bytes on Rust, C++, Lua,
+  and the interpreter; UTF-16 on JS, Java, and C#; code points on
+  Python), so only an ASCII string's message is the same everywhere.
+  JS's and Lua's `orelse` still catches these panics, as it does
+  `panic()` (see "Nullables in the backends"). Python's `removeLast` is
+  a runtime call rather than `.pop()`, about 60 ns more, the price of a
+  panic `orelse` can't catch. std's `Queue.removeFirst` when empty and
+  `BitVector.set` at a negative index panic the same way, a bit vector
+  giving length 0, since it has none.
   Test: funtests types/list/index-past-end, builder-set-negative,
-  remove-last-empty, reduce-empty, and types/string/index-at-end, whose
-  ```panic blocks each backend's run must end in.
+  remove-last-empty, reduce-empty, types/string/index-at-end,
+  types/queue-empty, and types/bit-vector, whose ```panic blocks give the
+  whole message each backend's run must end in.
 - **`Int.toString(radix)`** fails outside 2 to 36, but core declares no
   `throws Bubble`. Tempest fails the same way; decide with builtin
   types' methods' signatures (history/milestone-4.md, slice 3).
@@ -2562,7 +2572,13 @@ copied Kotlin's:
     `BaseException`, Java an `AssertionError`, C# `Environment.FailFast`,
     C++ the runtime's `panic()`, and Rust `panic!()`, none of which
     `orelse` catches. Not yet in JS and Lua, which still match Kotlin's
-    (their runtimes' panic is their bubble).
+    (their runtimes' panic is their bubble), and whose `orelse` also
+    catches a list's or string's index out of bounds, which panics
+    everywhere else. To fix (to-do t607): Lua's `temper.pcall` rethrows
+    what isn't a bubble (`error(err, 0)`, after checking no runtime path
+    uses a raw `error()` as a bubble); JS throws a `Panic` subclass,
+    which `orelse`'s `catch` rethrows; and `programs/nullables` gains an
+    `orelse` around an index out of bounds.
     Test: each backend's nullables golden (`checked`).
   - **`(do { panic(); 1 }) orelse 2`** fails Kotlin's build ("does not
     export symbol return__3"); tempest translates it, Rust leaving out

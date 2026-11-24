@@ -76,7 +76,7 @@ v.set(-1, false);
 console.log("not reached");
 --- settled
 log before
-Panicked: index -1 out of bounds for length 2
+Panicked: index -1 out of bounds for length 0
 
 === neither may be the target of is or as
 let { Queue, BitVector } = import("std/collections");

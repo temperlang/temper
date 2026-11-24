@@ -855,7 +855,7 @@ fn runs() {
             let failed = log.last().is_some_and(|l| l.starts_with("!!> "));
             // One that must panic ends with its panic's message.
             let panicked = match &case.panic {
-                Some(message) => log.last().is_some_and(|l| l.contains(message.as_str())),
+                Some(message) => log.last().is_some_and(|l| kit::ends_line(l, "", message)),
                 None => true,
             };
             if case.fails && failed {

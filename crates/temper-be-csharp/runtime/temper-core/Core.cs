@@ -2,8 +2,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using C = System.Collections;
@@ -42,8 +44,9 @@ namespace TemperLang.Core
         {
             if (index < 0)
             {
-                // Panics, even to set false, as a list's set out of bounds does.
-                Environment.FailFast($"index {index.ToString(CultureInfo.InvariantCulture)} out of bounds");
+                // Panics, even to set false, as a list's set out of bounds
+                // does, for length 0: a bit vector has none.
+                IndexOutOfBounds(index, 0);
             }
             if (index >= bits.Length)
             {
@@ -67,7 +70,7 @@ namespace TemperLang.Core
         /// std's <c>Queue.removeFirst</c>: panics if empty, as reading a
         /// list out of bounds does, where <c>Dequeue</c> throws.
         /// </summary>
-        public static T QueueRemoveFirst<T>(this Queue<T> queue)
+        public static T QueueRemoveFirst<T>(Queue<T> queue)
         {
             if (queue.Count == 0)
             {
@@ -79,8 +82,14 @@ namespace TemperLang.Core
         /// <summary>
         /// Panics for an index out of bounds of a list or string of
         /// <paramref name="length"/>, as core's docs say reading or writing
-        /// there does, with the message every backend gives.
+        /// there does, with the message every backend gives for a list; for a
+        /// string, in its own units (UTF-16). Never inlined, so callers'
+        /// checks stay small.
         /// </summary>
+#if NET
+        [DoesNotReturn]
+#endif
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static void IndexOutOfBounds(int index, int length) =>
             Environment.FailFast(
                 "index " + index.ToString(CultureInfo.InvariantCulture)

@@ -5,7 +5,10 @@ class of a library's own, gets its type arguments from where it goes:
 an annotated local, a parameter, or a return. Where it goes to a type
 that doesn't name them, as `AnyValue` or a generic function's type
 parameter, checkers would see them as unknown (`deque[Unknown]`), so
-the call names them: `deque[int]()`.
+a local it initializes is annotated (`q: deque[int] = deque()`), and
+elsewhere it is cast (`cast('deque[int]', deque())`), as subscripting
+the class at run time (`deque[int]()`) costs several times the
+construction.
 
     let { Queue } = import("std/collections");
 

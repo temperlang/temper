@@ -30,8 +30,10 @@ fn programs_log_as_the_interpreter_does() {
             // panic.
             if case.fails {
                 let failure = failure.unwrap_or_else(|| panic!("{}: no failure", case.key));
-                let message = case.panic.as_deref().unwrap_or_default();
-                let panicked = failure.starts_with("Panicked") && failure.contains(message);
+                let panicked = match &case.panic {
+                    Some(message) => kit::ends_line(&failure, "Panicked: ", message),
+                    None => failure.starts_with("Panicked"),
+                };
                 assert!(panicked, "{}: {failure}", case.key);
             } else {
                 assert_eq!(failure, None, "{}", case.key);
@@ -57,7 +59,7 @@ fn panics_on_the_interpreter() {
             panics += 1;
             let (failure, output) = kit::interpret(&case);
             let failure = failure.unwrap_or_else(|| panic!("{}: no failure", case.key));
-            let panicked = failure.starts_with("Panicked: ") && failure.contains(message);
+            let panicked = kit::ends_line(&failure, "Panicked: ", message);
             assert!(panicked, "{}: {failure}", case.key);
             assert_eq!(output, case.expected, "{}", case.key);
         }

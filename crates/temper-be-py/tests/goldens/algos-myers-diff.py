@@ -130,9 +130,9 @@ def diff(left: _Sequence[_T], right: _Sequence[_T], eq: _Callable[[_T, _T], bool
     reached_row_length = _int_add(left_length, 1)
     reached_col_length = _int_add(right_length, 1)
     reached = _BitVector(_int_mul(reached_row_length, reached_col_length))
-    cost_zero_edges = _deque[_DiffPath | None]()
+    cost_zero_edges: _deque[_DiffPath | None] = _deque()
     cost_zero_edges.append(None)
-    cost_one_edges = _deque[_DiffPath]()
+    cost_one_edges: _deque[_DiffPath] = _deque()
     while True:
         diff_path: _DiffPath | None = _deque_remove_first(cost_zero_edges) if not not cost_zero_edges else _deque_remove_first(cost_one_edges) if not not cost_one_edges else None
         left_index = 0 if (subject := None if diff_path is None else diff_path.left_index) is None else subject

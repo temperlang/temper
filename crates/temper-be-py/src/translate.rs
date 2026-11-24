@@ -94,6 +94,9 @@ pub struct Translator<'a> {
     /// Nullable locals that a default set in place, which pyright then
     /// takes to be never null.
     defaulted: BTreeSet<DeclId>,
+    /// Constructions whose type arguments an annotated local gives
+    /// checkers, so [`Translator::with_type_args`] leaves them be.
+    annotated_news: BTreeSet<NodeId>,
     /// The `do_await` parameters of the generators being translated,
     /// innermost last, which an `await` yields a call of.
     awaiters: Vec<String>,
@@ -181,6 +184,7 @@ impl<'a> Translator<'a> {
             awaiters: Vec::new(),
             bindings: Bindings::default(),
             defaulted: BTreeSet::new(),
+            annotated_news: BTreeSet::new(),
         }
     }
 
@@ -967,43 +971,53 @@ impl<'a> Translator<'a> {
         }
     }
 
-    /// A generic class's construction, `made`, naming its type arguments
-    /// (`deque[int]()`) where its constructor's parameters don't mention
-    /// them all, as an empty `Queue`'s: checkers would otherwise take
-    /// them from where the value goes, and see them as unknown where
-    /// that doesn't name them, as an `object` parameter or a generic
-    /// function's (`deque[Unknown]`). Only a call of the class itself;
-    /// a literal or a function (`[]`, `new_unbound_promise()`) stays.
-    fn with_type_args(&mut self, new: NodeId, ctor: DeclId, made: Expr) -> R<Expr> {
+    /// Whether a generic class's construction leaves checkers to take
+    /// its type arguments from where the value goes, as an empty
+    /// `Queue`'s: its constructor's parameters don't mention them all.
+    fn unmentioned_type_args(&self, new: NodeId) -> bool {
         let p = self.p;
+        let Node::New { ctor, .. } = p.nodes.get(new) else {
+            return false;
+        };
         let TypeData::Nominal { args, .. } = p.types.get(p.nodes.ty(new)) else {
-            return Ok(made);
+            return false;
         };
         let class = p.decls.get(ctor).owner;
         let params = p.signature(ctor).map_or(&[][..], |s| s.params);
-        let unmentioned = (p.decls.type_params(class).iter()).any(|&tp| {
-            let t = p.decls.get(tp).ty;
-            !params.iter().any(|&ty| p.types.mentions(ty, t))
-        });
-        let args = p.types.list(args).to_vec();
-        if args.is_empty() || !unmentioned {
-            return Ok(made);
-        }
-        let Expr::Call(callee, call_args) = made else {
+        !p.types.list(args).is_empty()
+            && (p.decls.type_params(class).iter()).any(|&tp| {
+                let t = p.decls.get(tp).ty;
+                !params.iter().any(|&ty| p.types.mentions(ty, t))
+            })
+    }
+
+    /// A generic class's construction, `made`, whose type arguments
+    /// checkers can't take from its arguments
+    /// ([`Translator::unmentioned_type_args`]), as a cast to its type,
+    /// `cast('deque[int]', deque())`, as [`Translator::result_only_call`]
+    /// gives a call's: checkers would otherwise take them from where the
+    /// value goes, and see them as unknown where that doesn't name them,
+    /// as an `object` parameter or a generic function's. Not where an
+    /// annotated local gives them, and not at run time (`deque[int]()`),
+    /// which costs several times the construction. Only a call; a
+    /// literal (`[]`) stays.
+    fn with_type_args(&mut self, new: NodeId, made: Expr) -> R<Expr> {
+        let p = self.p;
+        let Node::New { ctor, .. } = p.nodes.get(new) else {
             return Ok(made);
         };
-        // Only where the callee is the class its annotation names.
+        // Core's `PromiseBuilder` is made by a generic function
+        // (`new_unbound_promise()`), which checkers type as its context.
+        if !matches!(made, Expr::Call(..))
+            || self.qname(ctor) == "core.type PromiseBuilder.constructor()"
+            || self.annotated_news.contains(&new)
+            || !self.unmentioned_type_args(new)
+        {
+            return Ok(made);
+        }
         let (ann, _) = self.ann_raw(p.nodes.ty(new))?;
-        let name = match &*callee {
-            Expr::Name(name) if ann.starts_with(&format!("{name}[")) => name.clone(),
-            _ => return Ok(Expr::Call(callee, call_args)),
-        };
-        // Each argument quoted as an annotation would be, where needed.
-        let mut texts = Vec::new();
-        for a in args {
-            texts.push(self.ann(a)?);
-        }
-        Ok(Expr::Type(format!("{name}[{}]", texts.join(", "))).call(call_args))
+        let cast = self.import("typing", "cast");
+        Ok(Expr::name(cast).call(vec![Expr::Str(ann), made]))
     }
 
     /// Whether checkers may infer a value of a type, unannotated, as a
@@ -1358,8 +1372,8 @@ impl<'a> Translator<'a> {
     /// type parameter ([`result_only`]), as a cast to the call's type,
     /// `cast('deque[int]', _empty())`, which checkers would otherwise
     /// take from where the value goes, unknown where that doesn't name it
-    /// (an `object` parameter), as [`Translator::with_type_args`] names a
-    /// class's.
+    /// (an `object` parameter), as [`Translator::with_type_args`] gives a
+    /// class's construction.
     pub(crate) fn result_only_call(&mut self, id: NodeId, callee: DeclId, call: Expr) -> R<Expr> {
         if result_only(self.p, callee).is_empty() {
             return Ok(call);
@@ -1747,8 +1761,9 @@ impl<'a> Translator<'a> {
                         // fits, and those made empty by core's `ListBuilder`,
                         // `MapBuilder`, or `PromiseBuilder`, `[]`, `{}`, or
                         // `new_unbound_promise()`, whose element types
-                        // checkers can't infer (a class's, as std's `Queue`,
-                        // names them: `with_type_args`), and
+                        // checkers can't infer, or a class's construction
+                        // that leaves them to where it goes, as std's
+                        // `Queue`'s (else `with_type_args` casts it), and
                         // casts, as `cast_by_type` gives its argument's type
                         // where that's a supertype, also under `orelse`.
                         let ty = p.decls.get(local).ty;
@@ -1757,12 +1772,15 @@ impl<'a> Translator<'a> {
                             value = body;
                         }
                         let empty = match p.nodes.get(value) {
-                            Node::New { ctor, .. } => matches!(
-                                self.qname(ctor).as_str(),
-                                "core.type ListBuilder.constructor()"
-                                    | "core.type MapBuilder.constructor()"
-                                    | "core.type PromiseBuilder.constructor()"
-                            ),
+                            Node::New { ctor, .. } => {
+                                self.unmentioned_type_args(value)
+                                    || matches!(
+                                        self.qname(ctor).as_str(),
+                                        "core.type ListBuilder.constructor()"
+                                            | "core.type MapBuilder.constructor()"
+                                            | "core.type PromiseBuilder.constructor()"
+                                    )
+                            }
                             Node::As { .. } => true,
                             // Or a builder made from a list literal, which
                             // pyright may take for a list of its items'
@@ -1773,6 +1791,7 @@ impl<'a> Translator<'a> {
                                         .any(|&k| matches!(p.nodes.get(k), Node::ListLit { .. }))
                             }
                         };
+                        let mut declared = false;
                         let ann = match self.rebound(local) {
                             // A name bound more than once: annotated only
                             // where first bound, and there only where its
@@ -1793,6 +1812,7 @@ impl<'a> Translator<'a> {
                                             target: target.clone(),
                                             ann,
                                         });
+                                        declared = true;
                                         None
                                     }
                                     true => Some(self.ann(wide)?),
@@ -1803,6 +1823,10 @@ impl<'a> Translator<'a> {
                             None if p.types.is_nullable(ty) || empty => Some(self.ann(ty)?),
                             None => None,
                         };
+                        // A construction its annotation types.
+                        if ann.is_some() || declared {
+                            self.annotated_news.insert(value);
+                        }
                         self.value_into(init, Sink::Assign(Expr::name(target.clone()), ann), out)?;
                         // A local nothing reads, as `whatIAm` in
                         // `classes/object-literals`, which pyright's strict
@@ -1849,6 +1873,11 @@ impl<'a> Translator<'a> {
             }
             Node::InitLet { target, value } => {
                 let ann = Some(self.ann(p.decls.get(target).ty)?);
+                let mut made = value;
+                while let Node::OrElse { body, .. } = p.nodes.get(made) {
+                    made = body;
+                }
+                self.annotated_news.insert(made);
                 let target = Expr::name(self.name(target));
                 self.value_into(value, Sink::Assign(target, ann), out)?;
             }
@@ -2457,7 +2486,7 @@ impl<'a> Translator<'a> {
                     let class = self.p.decls.get(ctor).owner;
                     self.class_ref(class).call(present(args)?)
                 };
-                self.with_type_args(id, ctor, made)?
+                self.with_type_args(id, made)?
             }
             // Python's checkers narrow by `isinstance` as Temper does.
             Node::Upcast { value } | Node::Downcast { value } => self.expr(value)?,

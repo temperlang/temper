@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace TemperLang.Core
 {
@@ -94,37 +95,60 @@ namespace TemperLang.Core
 
         /// <summary>
         /// The value at <paramref name="index"/>, panicking out of bounds,
-        /// where the indexer throws.
+        /// where the indexer throws. Not an extension, as generated code
+        /// calls it statically, so consumers' lists gain no members. One
+        /// unsigned compare covers a negative index too.
         /// </summary>
-        public static T Get<T>(this IReadOnlyList<T> list, int index)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static T Get<T>(IReadOnlyList<T> list, int index)
         {
-            if (index < 0 || index >= list.Count)
+            if ((uint)index >= (uint)list.Count)
             {
                 Core.IndexOutOfBounds(index, list.Count);
             }
             return list[index];
         }
 
-        public static T Get<T>(this IList<T> list, int index)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static T Get<T>(IList<T> list, int index)
         {
-            if (index < 0 || index >= list.Count)
+            if ((uint)index >= (uint)list.Count)
             {
                 Core.IndexOutOfBounds(index, list.Count);
             }
             return list[index];
         }
 
-        // Both of the others apply to a List, so neither would be chosen.
-        public static T Get<T>(this List<T> list, int index) =>
-            Get((IList<T>)list, index);
+        // Both of the others apply to a List, so neither would be chosen;
+        // this one calls it directly, not through an interface.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static T Get<T>(List<T> list, int index)
+        {
+            if ((uint)index >= (uint)list.Count)
+            {
+                Core.IndexOutOfBounds(index, list.Count);
+            }
+            return list[index];
+        }
 
         /// <summary>
         /// Sets the value at <paramref name="index"/>, panicking out of
-        /// bounds, where the indexer throws.
+        /// bounds, where the indexer throws, as <see cref="Get{T}(IList{T}, int)"/>.
         /// </summary>
-        public static void Set<T>(this IList<T> list, int index, T value)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Set<T>(IList<T> list, int index, T value)
         {
-            if (index < 0 || index >= list.Count)
+            if ((uint)index >= (uint)list.Count)
+            {
+                Core.IndexOutOfBounds(index, list.Count);
+            }
+            list[index] = value;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Set<T>(List<T> list, int index, T value)
+        {
+            if ((uint)index >= (uint)list.Count)
             {
                 Core.IndexOutOfBounds(index, list.Count);
             }

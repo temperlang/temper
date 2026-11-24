@@ -792,6 +792,16 @@ pub const STD: &[&str] = &[
     "std/testing.type Test.bail()",
 ];
 
+/// The runtime's type for a std class this backend connects, by its key
+/// (`temper_tmpl::qname::std_key`), as Python's `std_type`.
+pub fn std_type(key: &str) -> Option<&'static str> {
+    match key {
+        "std/collections.type BitVector" => Some("temper_core::BitVector"),
+        "std/collections.type Queue" => Some("temper_core::Queue"),
+        _ => None,
+    }
+}
+
 /// Whether this backend connects a std declaration, by its key
 /// (`temper_tmpl::qname::std_key`).
 pub fn connects_std(key: &str) -> bool {

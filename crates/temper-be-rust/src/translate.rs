@@ -447,10 +447,10 @@ impl<'a> Translator<'a> {
                 }
                 let path = if self.connected_type(decl) {
                     // std's, connected to the runtime's own type.
-                    match temper_tmpl::qname::std_key(self.p, decl).as_deref() {
-                        Some("std/collections.type Queue") => "temper_core::Queue".into(),
-                        Some("std/collections.type BitVector") => "temper_core::BitVector".into(),
-                        q => return not_yet(format!("a type for {q:?}")),
+                    let key = temper_tmpl::qname::std_key(self.p, decl);
+                    match key.as_deref().and_then(connected::std_type) {
+                        Some(path) => path.into(),
+                        None => return not_yet(format!("a type for {key:?}")),
                     }
                 } else if self.elsewhere(decl) || self.own(decl) {
                     self.top_path(decl)?

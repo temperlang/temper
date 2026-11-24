@@ -8,6 +8,7 @@ from temper_core import (
     cast_by_type as _cast_by_type,
     map_constructor as _map_constructor,
 )
+from typing import cast as _cast
 
 __all__ = ()
 
@@ -41,6 +42,6 @@ _console.log(_describe(1))
 _console.log(_describe(_ints))
 _console.log(_describe(_map_constructor((_Pair('m', 2),))))
 _console.log(_describe([]))
-_console.log(_describe(_deque[int]()))
+_console.log(_describe(_cast('_deque[int]', _deque())))
 _console.log(_boolean_to_string(_is_thing(_Thing())))
 _console.log(_boolean_to_string(_is_thing(_bits)))

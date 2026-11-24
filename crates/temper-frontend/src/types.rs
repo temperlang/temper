@@ -832,7 +832,8 @@ impl Types {
                     || s == ANY_VALUE)
                     .then_some(false),
             },
-            (Nullable(a), Nullable(_)) if a == NEVER => Some(true),
+            // Null is every nullable type's value.
+            (_, Nullable(_)) if s == NULL => Some(true),
             (Nullable(a), Nullable(b)) => self.subtype(a, b, depth),
             (_, Nullable(b)) => self.subtype(s, b, depth),
             // `Never<A>` is what an `A` is, and is a `Never<B>` if `A` is a

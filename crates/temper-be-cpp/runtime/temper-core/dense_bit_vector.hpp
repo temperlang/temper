@@ -40,8 +40,8 @@ namespace temper {
                 int32_t sz = static_cast<int32_t>(bv->size());
                 if (index < 0) {
                     // Panics, even to set false, as a list's set out of
-                    // bounds does.
-                    panic("index " + std::to_string(index) + " out of bounds");
+                    // bounds does, for length 0: a bit vector has none.
+                    index_out_of_bounds(index, 0);
                 }
                 if (index >= sz) {
                     if (!value) {

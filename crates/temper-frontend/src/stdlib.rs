@@ -55,7 +55,9 @@ pub const MODULES: [&str; 6] = ["testing", "regex", "json", "temporal", "net", "
 /// written without their import: each with the name std exports and the
 /// module that does, for an undeclared name's error to say the import
 /// to add. Keyed on the undeclared name, so none is reserved: a library
-/// may declare its own `Deque`.
+/// may declare its own `Deque`. The old names (`Deque`, `DenseBitVector`)
+/// are a migration aid: drop them after the release that follows the
+/// switch from Kotlin Temper.
 const MOVED: [(&str, &str, &str); 4] = [
     ("BitVector", "BitVector", "collections"),
     ("DenseBitVector", "BitVector", "collections"),
