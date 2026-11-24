@@ -97,7 +97,7 @@ jobs:
       # Only .github/ and the top level checked out; the base commit's
       # trees are fetched alone, without history or file contents, which
       # `git diff --name-only` doesn't need.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           sparse-checkout: .github
       - id: diff
@@ -143,7 +143,7 @@ jobs:
         --exclude temper-be-lua --exclude temper-be-py
         --exclude temper-be-rust
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dtolnay/rust-toolchain@cfcaf53ba4c621917ec7f78a66bff7a8848ddad4 # 1.85.0 branch, 2026-10-16
         with:
           components: rustfmt, clippy
@@ -242,7 +242,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         # The whole history and the tags, for the version.
         with:
           fetch-depth: 0
@@ -288,7 +288,7 @@ jobs:
     env:
       TEMPER_REQUIRE_CHECKERS: "1"
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dtolnay/rust-toolchain@cfcaf53ba4c621917ec7f78a66bff7a8848ddad4 # 1.85.0 branch, 2026-10-16
         # The Rust backend's tests lay out generated crates with
         # rustfmt and lint them with clippy.
@@ -386,7 +386,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         # The whole history and the tags, for the version; and the blog,
         # a submodule, for the docs site.
         with:
@@ -447,7 +447,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: echo "ref=$(tr -d '[:space:]' < site/docs/kelpto-ref)" >> "$GITHUB_OUTPUT"
       - if: ${{ !cancelled() }}
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: temperlang/kelpto
           ref: ${{ steps.kelpto.outputs.ref }}
