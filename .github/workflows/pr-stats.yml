@@ -102,24 +102,26 @@ jobs:
           repository: temperlang/argmas
           path: libs/argmas
       - uses: dtolnay/rust-toolchain@cfcaf53ba4c621917ec7f78a66bff7a8848ddad4 # 1.85.0 branch, 2026-10-16
-      # One target directory for both builds, so head's build reuses the
-      # third-party crates base's built. The cache keeps only those, under
-      # one key for every job and push (shared-key), saved by the first
-      # job only, so this adds one cache entry, not one per branch, beside
-      # main's.
+      # Separate target directories for base and head: cargo identifies a
+      # workspace's own crates by their path within the workspace, so in a
+      # shared directory head's build can reuse base's compiled crates of
+      # the same name (seen as head failing against base's temper-frontend).
+      # The cache keeps only third-party crates, under one key for every job
+      # and push (shared-key), saved by the first job only.
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          workspaces: base -> ../target
+          workspaces: |
+            base -> ../target-base
+            head -> ../target-head
           shared-key: pr-stats
           save-if: ${{ strategy.job-index == 0 }}
       - name: Build base and head
-        env:
-          CARGO_TARGET_DIR: ${{ github.workspace }}/target
         run: |
           mkdir bin
           for side in base head; do
-            (cd "$side" && cargo build --locked --profile "$PROFILE" -p tempest)
-            cp "target/$PROFILE/temper" "bin/temper-$side"
+            (cd "$side" && CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target-$side" \
+              cargo build --locked --profile "$PROFILE" -p tempest)
+            cp "target-$side/$PROFILE/temper" "bin/temper-$side"
             "bin/temper-$side" --version
           done
       - name: Measure
