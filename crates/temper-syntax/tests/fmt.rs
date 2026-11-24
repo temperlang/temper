@@ -136,6 +136,18 @@ fn mutated_inputs_format_safely() {
             "\n},",
             " +\n  ",
             "\"\"\"\n  \"s\n",
+            // Breaks at operators and before words, lines starting with a
+            // separator, blank lines, and comments that look like code.
+            " &&\n",
+            "\n  .",
+            "\n    extends ",
+            "\n;",
+            "\n, ",
+            "\n\n\n",
+            "{\n\n",
+            "\n\n}",
+            " // x {\n",
+            " // =\n",
         ])
         .copied()
         .collect();

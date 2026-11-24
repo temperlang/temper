@@ -324,8 +324,16 @@ def analyze(s: Source, st: Stats, samples: int) -> None:
                 first = stmt[level]
                 offset = ln.indent - lines[first].indent
                 st.add("continuation offset", offset)
-                prev_kind = "starts with an operator" if t.role[0] == "infix" or t.text == "." else "after an operator" if prev_code.role[0] == "infix" else "other"
-                st.add(f"continuation offset, line {prev_kind}", offset)
+                # Where it breaks, as `temper fmt` tells: at an operator or
+                # punctuation (before or after the break), else before a
+                # word or operand; and lines starting with `;` or `,`.
+                if t.text in (";", ",") and t.role[0] == "sep":
+                    brk = "starting with a separator"
+                elif operator(prev_code) or operator(t) and t.role[0] == "infix":
+                    brk = "at an operator"
+                else:
+                    brk = "before a word or operand"
+                st.add(f"continuation offset, {brk}", offset)
                 st.sample(f"continuation offset {offset}", f"{s.name}:{li + 1}: {raw.strip()[:60]}", samples)
                 want = max(0, predicted[first] + offset)
                 kind = "continuation"
@@ -369,10 +377,21 @@ def analyze(s: Source, st: Stats, samples: int) -> None:
             decorator_line = False
 
 
+def operator(t: Tok) -> bool:
+    """Whether a token is an operator or punctuation other than a bracket."""
+    return (
+        t.kind == "Punctuation"
+        and bool(t.text)
+        and t.text[-1] not in OPENERS
+        and t.text not in CLOSERS
+        and not (t.role[1] == "Angle" and t.role[0] in ("open", "close"))
+    )
+
+
 def continuation(prev: Tok | None, top, decorator_line: bool, first: Tok) -> bool:
     if prev is None:
         return False
-    if first.text in (".", "?."):
+    if operator(first) and first.role[0] == "infix":
         return True
     if decorator_line:
         return False
@@ -512,13 +531,10 @@ def blank_lines(s: Source, st: Stats) -> None:
         last = [t for t in lines[prev].toks if t.kind != "Comment"]
         first = lines[cur].first
         if last and last[-1].text == "{" and last[-1].kind == "Punctuation":
+            # Measured only: blank lines are the author's.
             st.add("blank line after {", "yes" if has_blank else "no")
-            if has_blank:
-                st.changed["blank lines: none after {"] += gap
         elif first.text in CLOSERS and first.kind == "Punctuation":
             st.add("blank line before }", "yes" if has_blank else "no")
-            if has_blank:
-                st.changed["blank lines: none before }"] += gap
         elif last and last[-1].text == "}" and lines[prev].first is not None and lines[prev].first.text == "}":
             st.add("blank line after a multi-line statement", "yes" if has_blank else "no")
     # Trailing newline.

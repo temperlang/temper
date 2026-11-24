@@ -1,0 +1,219 @@
+# `temper fmt` cases for line rules: blank lines, continuation indent by
+# where the line breaks, and lines starting with `;` or `,`.
+# Format and updating: see tests/fmt.rs.
+
+=== blank lines are the author's, but runs collapse to one
+class A {
+
+  let x: Int;
+
+
+
+  let y: Int;
+
+}
+let f(): Void {
+  g(
+
+    a,
+
+  );
+}
+--- formatted
+class A {
+
+  let x: Int;
+
+  let y: Int;
+
+}
+let f(): Void {
+  g(
+
+    a,
+
+  );
+}
+
+=== a trailing comment ending in `{` doesn't open a block
+class A {} // x {
+
+class B {}
+let c = 1; // (
+
+let d = 2;
+--- formatted
+class A {} // x {
+
+class B {}
+let c = 1; // (
+
+let d = 2;
+
+=== a break before a word indents twice
+class GeneratorFnWrapper<@out YIELD extends AnyValue>
+extends Generator<YIELD> {
+  private let generatorFn: Int;
+}
+let f(): Int
+  throws Bubble {
+  1
+}
+console.log(
+  do { f() }
+  orelse 0
+);
+--- formatted
+class GeneratorFnWrapper<@out YIELD extends AnyValue>
+    extends Generator<YIELD> {
+  private let generatorFn: Int;
+}
+let f(): Int
+    throws Bubble {
+  1
+}
+console.log(
+  do { f() }
+      orelse 0
+);
+
+=== a break at an operator indents once
+let a =
+      first;
+let b = foo
+        .bar()
+  ?.baz();
+let c = x +
+    y -
+z;
+let d = x
+    + y
+        * z;
+let e = p &&
+q ||
+  r;
+when (s) {
+  1 ->
+      f();
+  else ->
+      g();
+}
+--- formatted
+let a =
+  first;
+let b = foo
+  .bar()
+  ?.baz();
+let c = x +
+  y -
+  z;
+let d = x
+  + y
+  * z;
+let e = p &&
+  q ||
+  r;
+when (s) {
+  1 ->
+    f();
+  else ->
+    g();
+}
+
+=== comments don't decide the break's kind
+let x = a && // why
+b;
+let f(): Int // =
+throws Bubble {
+  1
+}
+let y = a // and
+    && b;
+--- formatted
+let x = a && // why
+  b;
+let f(): Int // =
+    throws Bubble {
+  1
+}
+let y = a // and
+  && b;
+
+=== a condition with a line break after `if (`
+if (
+  1 <= month && month <= 12 &&
+  1 <= day && (
+  if (month != 2 || day != 29) {
+  day <= daysInMonth[month]
+  } else {
+  isLeapYear(year)
+  })
+) {
+  ok();
+}
+--- formatted
+if (
+  1 <= month && month <= 12 &&
+    1 <= day && (
+      if (month != 2 || day != 29) {
+        day <= daysInMonth[month]
+      } else {
+        isLeapYear(year)
+      }
+    )
+) {
+  ok();
+}
+
+=== the same condition without the line break after `if (`
+if (1 <= month && month <= 12 &&
+    1 <= day && (
+      if (month != 2 || day != 29) {
+        day <= daysInMonth[month]
+      } else {
+        isLeapYear(year)
+      })) {
+  ok();
+}
+--- formatted
+if (1 <= month && month <= 12 &&
+  1 <= day && (
+    if (month != 2 || day != 29) {
+      day <= daysInMonth[month]
+    } else {
+      isLeapYear(year)
+    }
+  )) {
+  ok();
+}
+
+=== a line starting with `;` or `,` lines up with what it ends
+let s = """
+    "abc
+      ;
+let f(): Void {
+  let t = """
+      "def
+      ; // done
+  g(
+    """
+      "ghi
+        ,
+    b,
+  );
+}
+--- formatted
+let s = """
+    "abc
+;
+let f(): Void {
+  let t = """
+      "def
+  ; // done
+  g(
+    """
+      "ghi
+    ,
+    b,
+  );
+}

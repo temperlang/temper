@@ -379,7 +379,7 @@ let r = combine(a, [
   second,
 ], b);
 f(x, a +
-    b, c);
+  b, c);
 f(fn {
   // the item's own comment
   body();
@@ -470,7 +470,7 @@ let s = f(a,
 );
 let t = f("""
     "text
-    , b);
+, b);
 f(x,
   // the last
   g(fn {
@@ -553,3 +553,8 @@ More prose.
       first,
       second,
     );
+
+=== an item starting with `<` keeps its line breaks, as space before `<` decides angle brackets
+f(a (< b || c > d,)| c > d)
+--- formatted
+f(a(< b || c > d,) | c > d)

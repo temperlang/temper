@@ -590,7 +590,7 @@ fn formatting() {
     assert_eq!(edits.as_array().unwrap().len(), 5, "{edits}");
     assert_eq!(
         apply_edits(text, &edits),
-        "let x = 1;\nlet y = 2;\nf(a, b);\ng(\n  a, b\n);\nh(\n  a,\n  b,\n);\nlet z = x\n    + y;\n"
+        "let x = 1;\nlet y = 2;\nf(a, b);\ng(\n  a, b\n);\nh(\n  a,\n  b,\n);\nlet z = x\n  + y;\n"
     );
     // A range on the call's lines: only its edit.
     let range = json!({"start": {"line": 2, "character": 0}, "end": {"line": 3, "character": 0}});

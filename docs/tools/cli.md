@@ -211,10 +211,11 @@ files that need formatting, and exits with 1 if there are any, for CI.
 
 It has no style options and no line width: where lines break is the
 author's choice. It keeps comments as written, and sets indentation
-(two spaces a level, and twice that for a line continuing a statement),
-the space between tokens on a line (`a + b`, `f(x, y)`, `x: Int`,
-`if (c) { d }`), and blank lines (at most one in a row, none just
-inside braces). It keeps line breaks as written, but in bracketed lists
+(two spaces a level; a line continuing a statement two more if it
+breaks at an operator, as in `a &&` or `.b`, else four, as before
+`extends`), the space between tokens on a line (`a + b`, `f(x, y)`,
+`x: Int`, `if (c) { d }`), and blank lines (as written, but at most one
+in a row). It keeps line breaks as written, but in bracketed lists
 (arguments, parameters, list and object literals, type arguments, and
 a single item in `( )` or `[ ]`), which it lays out by how they're
 written:

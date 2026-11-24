@@ -38,7 +38,7 @@ class C {
   }
 }
 
-=== continuation lines indent twice from the statement's first line
+=== continuation lines indent from the statement's first line, once after an operator
   let x = a &&
       b;
     let y = foo
@@ -55,19 +55,19 @@ let w =
   };
 --- formatted
 let x = a &&
-    b;
+  b;
 let y = foo
-    .bar()
-    .baz();
+  .bar()
+  .baz();
 let z = first
-    + second
-    + third;
+  + second
+  + third;
 let w =
-    if (c) {
-      a
-    } else {
-      b
-    };
+  if (c) {
+    a
+  } else {
+    b
+  };
 
 === comment lines indent as the code after them
 let x = a &&
@@ -84,11 +84,11 @@ let f(): Int {
 // ✅
 --- formatted
 let x = a &&
-    // why b
-    b;
+  // why b
+  b;
 let y = foo
-    // then bar
-    .bar();
+  // then bar
+  .bar();
 let f(): Int {
   g()
   // before the end of a block
@@ -129,8 +129,8 @@ for (
   f(index);
 }
 for (var i = 0;
-    i < n;
-    i += 1) {
+  i < n;
+  i += 1) {
   f(i);
 }
 
@@ -150,8 +150,8 @@ let f(): Int
   }
 --- formatted
 for (var i = 0;
-    i < n;
-    i += 1) {
+  i < n;
+  i += 1) {
   f(i);
 }
 class GeneratorFnWrapper<YIELD>
@@ -215,7 +215,7 @@ let y = -x - -z;
 let z = {};
 let w = f({ a: 1 });
 
-=== blank lines collapse, none at block edges or file start
+=== blank lines collapse, but stay at block edges; none at file start
 
 
 let a = 1;
@@ -235,9 +235,11 @@ let a = 1;
 
 let b = 2;
 let f(): Void {
+
   g();
 
   h();
+
 }
 
 === trailing space and final newline
@@ -363,13 +365,13 @@ if (a &&
 }
 --- formatted
 let x = foo
-    .map { (s: String): String =>
-      s + "!"
-    }
-    .join(", ");
+  .map { (s: String): String =>
+    s + "!"
+  }
+  .join(", ");
 if (a &&
-    b && (
-      c || d
-    )) {
+  b && (
+    c || d
+  )) {
   e();
 }

@@ -21,14 +21,19 @@
 //!   line starting with a close bracket lines up with that line. A line
 //!   continuing a statement (the one before didn't end with `;`, `{`,
 //!   `}`, `,` or `=>`, or inside `( )` and `[ ]` with `,`, or `;` if their
-//!   contents start on a line of their own; or it starts with `.` or `?.`)
-//!   is indented twice from the statement's first line. A bracket opened
-//!   on such a line indents its contents from that line, but on a line
-//!   continuing a declaration's header (starting with a word, like
-//!   `extends` or `throws`, not after an operator) from the declaration's
-//!   first line. Lines starting a node right after another (statements
-//!   with no `;` between them) or after a decorator line like `@connected`
-//!   start statements, and comment lines go with the code after them.
+//!   contents start on a line of their own; or it starts with an infix
+//!   operator like `.` or `&&`) is indented from the statement's first
+//!   line: once if it breaks at an operator or punctuation (the line
+//!   before ends with one, or it starts with one), else twice (before a
+//!   word like `extends`, or an operand). One starting with `;` or `,`
+//!   lines up with the statement, as a close bracket does. Comments never
+//!   count. A bracket opened on such a line indents its contents from that
+//!   line, but on a line continuing a declaration's header (starting with
+//!   a word, like `extends` or `throws`, not at an operator) from the
+//!   declaration's first line. Lines starting a node right after another
+//!   (statements with no `;` between them) or after a decorator line like
+//!   `@connected` start statements, and comment lines go with the code
+//!   after them.
 //! - **Spacing on a line:** one space around infix operators (not `.`,
 //!   `?.`, `..`, `::`, `<`/`>` of type arguments or label colons), after
 //!   `,` and `;` and type colons, around `{ }` contents, and between a
@@ -37,9 +42,8 @@
 //!   after prefix operators and `@`. Runs of spaces become one. Space next
 //!   to comments, inside strings, and before `<` (which decides whether
 //!   it may be an angle bracket) is left as written.
-//! - **Lines:** no trailing space, at most one blank line in a row, none
-//!   after a line ending with `{` or before a line starting with a close
-//!   bracket, none at the start of a file, and one line break at its end.
+//! - **Lines:** no trailing space, blank lines as written but at most one
+//!   in a row, none at the start of a file, and one line break at its end.
 //! - **Lists** (arguments, parameters, list and object literals, type
 //!   arguments, and single items in `( )`, `[ ]` and `< >`) are laid out
 //!   as their author asks: with a trailing comma, one item per line; else,
@@ -732,13 +736,15 @@ impl<'a> Formatter<'a> {
         // An item may span lines, its own interior following its own
         // rules, unless a comment comes before or after it, or its last
         // token must end its line (a multi-quoted string's): then what
-        // follows can't join its last line.
+        // follows can't join its last line. Nor may one starting with `<`
+        // move, as space before `<` decides whether it's a bracket.
         let item_fits = |first: usize, end: usize| {
             let Some(last) = end.checked_sub(1).filter(|&last| first <= last) else {
                 return true;
             };
             let (a, z) = (self.tokens[first], self.tokens[last]);
             a.kind != TokenKind::Comment
+                && &self.source[a.range()] != "<"
                 && z.kind != TokenKind::Comment
                 && !(in_string[last] && z.kind != TokenKind::RightDelimiter)
         };
@@ -904,12 +910,8 @@ impl<'a> Formatter<'a> {
         let breaks_end = line_start.max(start) as usize;
         if both_code && previous.is_some() {
             let breaks = gap[..breaks_end - start as usize].matches('\n').count();
-            let mut blank = breaks.saturating_sub(1).min(1);
-            let opens = previous.is_some_and(|p| self.text(p).ends_with('{'));
-            let closes = matches!(self.text(next), ")" | "]" | "}");
-            if opens || closes {
-                blank = 0;
-            }
+            // Blank lines are the author's; a run counts as one.
+            let blank = breaks.saturating_sub(1).min(1);
             let newline = if gap.contains("\r\n") { "\r\n" } else { "\n" };
             // No break here when the previous token, a string's content,
             // ends with the line's.
@@ -960,16 +962,25 @@ impl<'a> Formatter<'a> {
             // Its line continues the bracket's, as `} else {` does.
             self.line_depth = self.line_depth.saturating_sub(1);
             self.stack.last().map_or(0, |o| o.base.formatted)
-        } else if let Some(statement) = self.continued_statement(first) {
-            // A word, not after an operator: `extends`, `throws`.
-            let after_operator = self.previous.is_some_and(|p| {
-                p.kind == TokenKind::Punctuation && self.role(p).is_some_and(|r| r.0 == Role::Infix)
-            });
-            self.line_continues_header = first.kind == TokenKind::Word && !after_operator;
-            if self.options.continuations {
-                statement.formatted + 2 * UNIT
-            } else {
+        } else if let Some((statement, code)) = self.continued_statement(first) {
+            // Broken at an operator (`a &&` or `.b`), or before a word or
+            // operand: `extends`, `throws`, `orelse`.
+            let at_operator =
+                self.previous.is_some_and(|p| self.is_operator(p)) || self.is_operator(code);
+            self.line_continues_header = code.kind == TokenKind::Word && !at_operator;
+            if !self.options.continuations {
                 (statement.formatted + actual - statement.actual).max(0)
+            } else if matches!(self.text(code), ";" | ",")
+                && self.role(code).is_some_and(|r| r.0 == Role::Separator)
+            {
+                // A separator on a line of its own, as after a multi-quoted
+                // string, lines up with what it ends, as a close bracket
+                // does.
+                statement.formatted
+            } else if at_operator {
+                statement.formatted + UNIT
+            } else {
+                statement.formatted + 2 * UNIT
             }
         } else {
             starts_statement = true;
@@ -1000,10 +1011,11 @@ impl<'a> Formatter<'a> {
     }
 
     /// The statement a line starting with `first` continues, if the code
-    /// before it didn't end one, or it starts with `.` or `?.`. A `;` ends
-    /// one in parentheses too if their contents start on a line of their
-    /// own (`for (\n  a;\n  b;`), not in `for (a;\n    b;`.
-    fn continued_statement(&mut self, first: Token) -> Option<Indent> {
+    /// before it didn't end one, or it starts with an infix operator like
+    /// `.` or `&&`; and the line's first code token (after comments). A `;`
+    /// ends one in parentheses too if their contents start on a line of
+    /// their own (`for (\n  a;\n  b;`), not in `for (a;\n  b;`.
+    fn continued_statement(&mut self, first: Token) -> Option<(Indent, Token)> {
         let previous = self.previous?;
         // A comment line goes with the code after it: it continues the
         // statement if that does, but not before a close bracket or the
@@ -1017,8 +1029,9 @@ impl<'a> Formatter<'a> {
         } else {
             first
         };
-        if matches!(self.text(first), "." | "?.") {
-            return *self.statements.last().unwrap();
+        let statement = (*self.statements.last().unwrap()).map(|s| (s, first));
+        if self.is_operator(first) && self.role(first).is_some_and(|r| r.0 == Role::Infix) {
+            return statement;
         }
         if self.after_decorator || self.juxtaposed.contains(&first.start) {
             return None;
@@ -1037,7 +1050,21 @@ impl<'a> Formatter<'a> {
         if ends {
             return None;
         }
-        *self.statements.last().unwrap()
+        statement
+    }
+
+    /// Whether a code token is an operator or punctuation other than a
+    /// bracket, like `=`, `&&`, `.`, `->` or `,`: a line broken there
+    /// continues with one indentation step, against two before a word or
+    /// operand. Comments never count.
+    fn is_operator(&self, token: Token) -> bool {
+        let text = self.text(token);
+        token.kind == TokenKind::Punctuation
+            && !text.ends_with(['(', '[', '{'])
+            && !matches!(text, ")" | "]" | "}")
+            && !self
+                .role(token)
+                .is_some_and(|r| r.1 == Operator::Angle && matches!(r.0, Role::Open | Role::Close))
     }
 
     /// Writes a token, moving a multi-line block comment's later lines with

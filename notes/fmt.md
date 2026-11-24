@@ -27,7 +27,8 @@ the dominant style; "lines changed" is what applying it changes.
 | Indent characters | spaces 100% | spaces | 0 |
 | Indent step after an open bracket | 2: 99.6%, 4: 0.2% | 2 | (in the next row) |
 | Indentation, whole model (below) | matches 99.8% | the model | 104 (0.2%) |
-| Continuation lines, offset from the statement's first line | 0: 53%, 2: 41%, other 6% | 4 (twice the indent step) | (below) |
+| Continuation lines broken at an operator, offset from the statement's first line | 2: 55%, 0: 37%, 4: 2% | 2 | (below) |
+| Continuation lines broken before a word or operand (`extends`) | 0: 93%, 2: 3%, 4: 2% | 4 | (below) |
 | `{` on the line of what it follows | 100% | same line (kept: line breaks stay) | 0 |
 | `} else` on one line | 99.5% | one line (kept: line breaks stay) | 0 |
 | Space around infix operators | one 99.8% | one | 62 |
@@ -48,10 +49,10 @@ the dominant style; "lines changed" is what applying it changes.
 | Before a trailing comment | one 84%, aligned 15% | keep as written | 0 |
 | `//` then a space | 99.9% | keep (comment text) | 0 |
 | Trailing space | 1 line | none | 1 |
-| Blank line after a line ending `{` | none 99.9% | none | 5 |
-| Blank line before a line starting a close bracket | none 100% | none | 4 |
+| Blank line after a line ending `{` | none 99.9% | keep as written | 0 |
+| Blank line before a line starting a close bracket | none 100% | keep as written | 0 |
 | Blank line after a multi-line statement | none 75%, one 25% | keep as written | 0 |
-| Blank lines in a row | at most one, but for a handful | at most one | few |
+| Blank lines in a row | at most one | at most one | 0 |
 | Trailing comma, multi-line `[ ]` | yes 99.6% | as written: it asks for one item per line ([lists](#lists-the-author-decides)) | (below) |
 | Trailing comma, multi-line `( )` | yes 63% | as written | (below) |
 | Trailing comma, multi-line `{ }` with commas | no 72% | as written | (below) |
@@ -59,13 +60,13 @@ the dominant style; "lines changed" is what applying it changes.
 | Multi-line `[ ]` lists | tall 99.8% | the same | (below) |
 | Block arguments | trailing block 97%, `fn` in `( )` 3% | not changed (that's meaning) | - |
 
-**`temper fmt` itself** (`--temper`, over copies) changes 895 of 81,110
-lines (1.1%, prose included): 69 in core and std (4 files), 132 in test
-programs, 148 in docs examples, and 6 to 214 in each library (Ordable
-6, Argmas 18, Chromarite 20, Hrefine 123, Kelpto 165, Wherewith 214).
-With Black-style wrapping at 100 columns instead (the previous commit),
-it changed 758 (51, 131, 63; Ordable 3, Chromarite 46, Argmas 64,
-Hrefine 73, Kelpto 142, Wherewith 185); with neither list rules nor
+**`temper fmt` itself** (`--temper`, over copies) changes 605 of 81,110
+lines (0.7%, prose included): 67 in core and std (4 files), 115 in test
+programs, 139 in docs examples, and 1 to 120 in each library (Ordable
+1, Argmas 16, Chromarite 19, Wherewith 55, Hrefine 73, Kelpto 120).
+Indenting every continuation line four spaces, and removing blank lines
+after `{` and before `}`, changed 895; Black-style wrapping at 100
+columns (an earlier commit) 758; with neither list rules nor
 continuation indent, the first slice changed 189. It formats every
 library file; it leaves alone one deliberately broken test program and
 22 docs blocks that aren't whole programs (REPL transcripts, fragments).
@@ -78,20 +79,38 @@ Notes on the numbers:
 - **The indentation model** (below) matches 99.8% of lines. The 104
   that differ are mostly hand-aligned expressions in std's `temporal`
   and `json`, a 3-space slip in `core.temper`, and some test inputs.
-- **Continuation lines** split between no extra indent (class headers
-  like `class C\nextends D {`, chained `&&` in conditions, `for`
-  headers) and two spaces (57% of lines after a binary operator, 67%
-  of lines starting with one). Neither tells a continuation line from
-  the block inside it (`if (a &&\n  b) {\n  c`), so they're indented
-  twice, four spaces, as in Java and Kotlin; the [numbers](#the-numbers)
-  say what that changes.
-- **`for` headers** written `for (var i = 0;\n    i < n;\n    i += 1) {`,
+- **Continuation lines** are indented by where they break. Broken at an
+  operator or punctuation (the line before ends with `=`, `&&`, `+`,
+  `->`, `,` and so on, or the line starts with `.`, `?.`, `&&`, `+`),
+  one step, two spaces, as 55% are today (37% have none: chained `&&`
+  in conditions). Broken anywhere else (before a word like `extends` or
+  `throws`, or between operands), two steps, four spaces, which tells a
+  class's `extends` line from its body; today 93% of these have none
+  (`class C\nextends D {`). A word operator like `orelse` counts as a
+  word. Comments never count: after `a && // why`, the line breaks at
+  `&&`. Four spaces for all of them, as in Java and Kotlin, changed far
+  more (157 lines in Wherewith, 117 in Kelpto, against 1 and 70; see
+  [the numbers](#the-numbers)).
+- **A line starting with `;` or `,`**, as after a multi-quoted string
+  (`let s = """\n  "text\n;`), lines up with the start of what it ends
+  (the statement, or the list's item), as a close bracket lines up with
+  the line it opened on: it ends the statement rather than continuing
+  it.
+- **A condition over several lines** follows its line break after
+  `if (`. With one, the first operand starts a line of its own and the
+  rest continue it (`if (\n  a &&\n    b\n) {`); without, the rest
+  continue the `if` line (`if (a &&\n  b) {\n  c`), indented as the body
+  is: to tell them apart, break after `if (`.
+- **`for` headers** written `for (var i = 0;\n  i < n;\n  i += 1) {`,
   with the first clause on the `for (` line, are continuation lines
   too: a `;` in `( )` ends a statement only if the contents start on a
   line of their own (`for (\n  a;\n  b;\n) {`, each clause then indented
-  one level), so here the later clauses are indented four spaces from
-  the `for` line, and the loop's body two. That tells the header from
-  the body, as in `if (a &&\n    b) {`; their line breaks stay.
+  one level). Broken after `;`, the later clauses are indented two
+  spaces, as `if (a &&\n  b) {` is; their line breaks stay.
+- **Blank lines** are the author's, after `{` and before `}` too (std
+  json's `) extends JsonSyntaxTree {` then a blank line); only runs of
+  them become one, and there are none at a file's start. A comment is
+  never code: `class A {} // x {` doesn't end with `{`.
 - **Docs examples aligned in columns** (`builtins.md`'s `""       ==
   cat()             &&` chains) get the normal rules: one space around
   operators and continuation lines indented four. Space before `<` stays
@@ -207,23 +226,25 @@ rule that the output with it doesn't have):
 
 | Group | Lines | `fmt` changes | List rules (data lists too) | Continuation indent |
 |---|---|---|---|---|
-| core+std | 4,594 | 69 | 6 (8) | 42 |
-| tests | 10,478 | 132 | 14 (86) | 22 |
-| docs (54 of 69 files whole) | 14,018 | 48 | 0 (0) | 33 |
-| Argmas | 7,225 | 18 | 16 (23) | 2 |
-| Chromarite | 3,807 | 20 | 18 (188) | 0 |
-| Hrefine | 12,902 | 123 | 63 (590) | 58 |
-| Kelpto | 24,934 | 165 | 47 (184) | 117 |
-| Ordable | 3,169 | 6 | 0 (415) | 6 |
-| Wherewith | 11,841 | 212 | 54 (78) | 157 |
+| core+std | 4,594 | 66 | 6 (8) | 45 |
+| tests | 10,478 | 115 | 14 (86) | 1 |
+| docs (54 of 69 files whole) | 14,019 | 47 | 0 (0) | 32 |
+| Argmas | 7,225 | 16 | 16 (23) | 0 |
+| Chromarite | 3,807 | 19 | 18 (188) | 0 |
+| Hrefine | 12,902 | 73 | 63 (590) | 8 |
+| Kelpto | 24,934 | 117 | 47 (184) | 70 |
+| Ordable | 3,169 | 1 | 0 (415) | 1 |
+| Wherewith | 11,841 | 55 | 54 (78) | 1 |
 
 What changes: lists written one item per line without a trailing comma
 hug (std's `json` signatures, `afterSubstring(\n  string, inString,
 substring\n)`); lists written a few items per line with a trailing
 comma go one per line (Kelpto's and Hrefine's long signatures and
 `tree.add(...)` calls); lists with no break after the bracket join.
-Continuation lines move most in Wherewith and Kelpto, whose `if (`
-conditions over several lines indented their later lines by 0 or 2.
+Continuation lines move most in Kelpto and core and std: lines after
+an operator written with no extra indent (`if (\n  a ||\n  b\n)`, which
+becomes `a ||\n    b`) or four spaces (`if (a ||\n    b) {`, two), and
+class headers' `extends` lines (four).
 Items over several lines and single items change almost nothing:
 authors already write `foo(a, b, fn {` and `outer(x, inner(`, and
 nowhere write a list (without a trailing comma) with a multi-line item
@@ -277,10 +298,14 @@ census shows authors already agree on almost everything else.
   chain's continuation line, `class C\nextends D {`, and the `{` ending
   a `for (` header split over lines each indent their contents one
   level, as the libraries do. A line continuing a statement is indented
-  four spaces from the statement's first line: the code before didn't
-  end with `;`, `{`, `}`, `,` or `=>` (in `( )` and `[ ]`, `,`, or `;`
-  if their contents start on a line of their own, as in
-  `for (\n  a;\n  b;`), or it starts with `.` or `?.`. But a line
+  from the statement's first line, two spaces if it breaks at an
+  operator or punctuation and four otherwise (above): the code before
+  didn't end with `;`, `{`, `}`, `,` or `=>` (in `( )` and `[ ]`, `,`,
+  or `;` if their contents start on a line of their own, as in
+  `for (\n  a;\n  b;`), or it starts with an infix operator, as `.`,
+  `?.` or `&&` (the tree tells). One starting with `;` or `,` lines up
+  with the statement's first line. Which token is before a line, or
+  first on it, is always code: comments are skipped. But a line
   starting a node right after another (statements without a `;`
   between them, `f()\ng()`) or after a decorator line (`@connected`)
   starts a statement, and a comment line goes with the code after it.
@@ -359,7 +384,10 @@ breaks and trailing commas, items over several lines in any position
 following the same rules (recursively), and comments between items,
 items that must end their line, and data lists kept; `for` headers and
 aligned docs examples by the normal rules;
-continuation lines indented twice; golden cases (`tests/fmt/*.cases`),
+continuation lines indented by where they break, lines starting with
+`;` or `,` lined up with their statement, blank lines kept (runs
+collapsed; Tom's review of a trial reformat, 2026-11-24);
+golden cases (`tests/fmt/*.cases`),
 idempotence and tree-preservation tests over the repository's Temper
 files and randomly edited inputs; refusal for code that doesn't parse;
 language server formatting, on save by default in VS Code. The
