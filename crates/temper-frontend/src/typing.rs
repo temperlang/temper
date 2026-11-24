@@ -1309,9 +1309,8 @@ impl Settle {
                 }
                 self.check_literal_result(node);
                 if self.may_not_bubble(node) {
-                    match self.uninferred_failure(node) {
-                        Some(e) if !self.failures_in(node).is_empty() => {
-                            let message = Message::FailureNotInferred(e);
+                    match self.unfailing_place(node) {
+                        Some(message) if !self.failures_in(node).is_empty() => {
                             let span = self.lib.tree.span(node);
                             self.lib.report(Level::Error, message, span);
                         }

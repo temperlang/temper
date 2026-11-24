@@ -170,14 +170,15 @@ print(calc(2, function(n) return tostring(n) end))
 print(calc(2, function(n) return tostring(n) end, CalcOptions(3, 4)))
 print(calc(2, function(n) return tostring(n) end, CalcOptions(3)))
 print(calc(2, function(n) return tostring(n) end, CalcOptions(temper.null, 4)))
+print(calc(2, function(n) return "<" .. n .. ">" end, CalcOptions(5)))
 
 ---@param n integer
 ---@return table
-local function fn5(n)
+local function fn6(n)
   print(tostring(n))
   return temper.empty()
 end
 
-calc(2, fn5, CalcOptions(-2))
+calc(2, fn6, CalcOptions(-2))
 
 return { Greet = Greet }

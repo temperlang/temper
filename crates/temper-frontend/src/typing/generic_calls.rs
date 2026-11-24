@@ -338,13 +338,17 @@ impl Settle {
         Ok(())
     }
 
-    /// The failure parameter, as written, that a function literal's place
-    /// fails with but that its body can't give, as the literal's
-    /// parameters' types need it too ([`Settle::literal_formals`]), as `E`
-    /// for `retry { again => … }` and `retry<E>(f: fn (Thunk<E>): Int
-    /// throws E)`, so it's `Never<…>`, unless the call's other arguments
-    /// or type arguments give it.
-    pub(super) fn uninferred_failure(&mut self, f: NodeId) -> Option<String> {
+    /// Why a function literal's place, a generic call's failure
+    /// parameter, can't fail, so a literal whose body may fail is an
+    /// error there, at the literal: the call's type arguments give it as
+    /// a `Never` ([`Message::FailureGivenNever`]), as `E` in
+    /// `apply<Int, Int, Never<Bubble>>(n) { x => 10 / x }`; or else its body
+    /// can't give it, as the literal's parameters' types need it too
+    /// ([`Settle::literal_formals`]), as `E` for `retry { again => … }`
+    /// and `retry<E>(f: fn (Thunk<E>): Int throws E)`, so it's `Never<…>`
+    /// unless the call's other arguments give it
+    /// ([`Message::FailureNotInferred`]).
+    pub(super) fn unfailing_place(&mut self, f: NodeId) -> Option<Message> {
         let call = self.typing.parent(f)?;
         if !self.infers_result(f) || self.lib.tree.kind(call) != NodeKind::Call {
             return None;
@@ -359,12 +363,21 @@ impl Settle {
         let no_failure = self.typing.types.no_failure();
         let k = (0..solved.formals.len()).find(|&k| {
             let types = &self.typing.types;
-            !inferred[k]
-                && solved.actuals[k] == no_failure
-                && types.mentions(fail, &solved.formals[k..=k])
+            let never = match solved.has_type_args {
+                true => matches!(
+                    types.get(solved.actuals[k]),
+                    TypeData::Never | TypeData::NeverOf(_)
+                ),
+                false => !inferred[k] && solved.actuals[k] == no_failure,
+            };
+            never && types.mentions(fail, &solved.formals[k..=k])
         })?;
         let param = self.typing.types.param(solved.formals[k]);
-        Some(self.show(param))
+        let param = self.show(param);
+        Some(match solved.has_type_args {
+            true => Message::FailureGivenNever(param, self.show(solved.actuals[k])),
+            false => Message::FailureNotInferred(param),
+        })
     }
 
     /// Whether `actual` fits the bound of a solved call's `k`th type

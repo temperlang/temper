@@ -4581,3 +4581,379 @@ error 2977..3006: Cannot infer E from this function literal, as its parameters' 
 log 10,5 -1  2 1 <1><2>
 log -1,2 2 -1 0
 log 5 -1 2,4 4,4 -1 7 3 2 2
+
+=== explicit type arguments type a call's function literals
+// A call with type arguments types its function literal arguments from
+// them: their parameters, and their results and failures checked against
+// what's given (t993). Expected errors: x1 at the literal (E is given as
+// Never<Bubble>, but its body may fail); x4 at the literal's result
+// (an Int32 where a String is given); x5 at `t - 1` (t is a String); x8
+// at the second literal only; x9 at the outer literal (the inner call,
+// inferred, fails); x13 at the "a" returned; x14 at the literal. x2, x3,
+// x6, x7, x10, x11, x12, x15, and x16 (its block placed first) are
+// fine.
+@fun interface Thunk<E>(): Int throws E;
+class Holder<T>(public f: fn (T): T) {}
+let apply<T, R, E>(x: T, f: fn (T): R throws E): R throws E { f(x) }
+let both<E>(a: fn (Int): Int throws E, b: fn (Int): Int throws E, n: Int): Int throws E {
+  a(n) + b(n)
+}
+let retry<E>(f: fn (Thunk<E>): Int throws E): Int throws E { f { 1 } }
+let maybe<T>(f: fn (T): T, n: T): T { f(n) }
+let x1(n: Int): Int { apply<Int, Int, Never<Bubble>>(n) { x => 10 / x } }
+let x2(n: Int): Int throws Bubble { apply<Int, Int, Bubble>(n) { x => 10 / x } }
+let x3(n: Int): Int { apply<Int, Int, Never<Bubble>>(n) { x => x + 1 } }
+let x4(n: Int): String { apply<Int, String, Never<Bubble>>(n) { x => x + 1 } }
+let x5(s: String): Int { apply<String, Int, Never<Bubble>>(s) { t => t - 1 } }
+let x6(n: Int): Int { apply<Int, Int, Never<Bubble>>(n) { (x: Int) => x * 2 } }
+let x7(n: Int): Int throws Bubble { apply<Int, Int, Bubble>(n) { x => apply(x) { y => 10 / y } } }
+let x8(n: Int): Int { both<Never<Bubble>>(fn (x) { x }, fn (x) { 10 / x }, n) }
+let x9(n: Int): Int { apply<Int, Int, Never<Bubble>>(n) { x => apply(x) { y => 10 / y } } }
+let x10(n: Int): Int { retry<Never<Bubble>> { again => again() + n } }
+let x11(n: Int): Int { retry<Bubble> { again => again() + 10 / n } orelse -1 }
+let x12(n: Int): Int { apply(n) { x => apply<Int, Int, Never<Bubble>>(x) { y => y + 1 } } }
+let x13(n: Int): Int { apply<Int, Int, Never<Bubble>>(n, fn (x) { return "a"; }) }
+let x14(ls: List<Int>): List<Int> { ls.map<Int, Never<Bubble>> { x => 10 / x } }
+let x15(ls: List<Int>): List<String> { ls.map<String, Never<Bubble>> { x => x.toString() } }
+let x16(n: Int): Int { maybe<Int>(n) { x => x * 3 } }
+let h = new Holder<Int>(fn (x) { x + 1 });
+console.log("${x2(5) orelse -1} ${x2(0) orelse -1} ${x3(1)} ${x6(3)} ${x7(5) orelse -1} ${x7(0) orelse -1}");
+console.log("${x10(1)} ${x11(0)} ${x11(5)} ${x12(1)} ${x15([1, 2]).join(",") { s => s }} ${h.f(2)} ${x16(2)}");
+--- settled
+(Block
+  (Interface
+    ^Thunk:0
+    (TypeParam ^E:23)
+    (Method ^apply:25 (Signature (Call throws Int E:23))))
+  (Class ^Holder:1 (TypeParam ^T:26) (Param ^f:28 (Call FnType T:26 T:26)))
+  (Let
+    ^apply:2
+    (Fn
+      (TypeParam ^T:29)
+      (TypeParam ^R:30)
+      (TypeParam ^E:31)
+      (Let ^x:32 T:29)
+      (Let ^f:33 (Call FnType T:29 (Call throws R:30 E:31)))
+      (Call throws R:30 E:31)
+      (Block (Call f:33 x:32))))
+  (Let
+    ^both:3
+    (Fn
+      (TypeParam ^E:34)
+      (Let ^a:35 (Call FnType Int (Call throws Int E:34)))
+      (Let ^b:36 (Call FnType Int (Call throws Int E:34)))
+      (Let ^n:37 Int)
+      (Call throws Int E:34)
+      (Block (Call + (Call a:35 n:37) (Call b:36 n:37)))))
+  (Let
+    ^retry:4
+    (Fn
+      (TypeParam ^E:38)
+      (Let ^f:39 (Call FnType (Call <> Thunk:0 E:38) (Call throws Int E:38)))
+      (Call throws Int E:38)
+      (Block (Call f:39 (Fn (Block 1))))))
+  (Let
+    ^maybe:5
+    (Fn
+      (TypeParam ^T:40)
+      (Let ^f:41 (Call FnType T:40 T:40))
+      (Let ^n:42 T:40)
+      T:40
+      (Block (Call f:41 n:42))))
+  (Let
+    ^x1:6
+    (Fn
+      (Let ^n:43 Int)
+      Int
+      (Block
+        (Call
+          apply:2
+          \typeArg
+          Int
+          \typeArg
+          Int
+          \typeArg
+          (Call <> Never Bubble)
+          n:43
+          (Fn (Let ^x:44) (Block (Call / 10 x:44)))))))
+  (Let
+    ^x2:7
+    (Fn
+      (Let ^n:45 Int)
+      (Call throws Int Bubble)
+      (Block
+        (Call
+          apply:2
+          \typeArg
+          Int
+          \typeArg
+          Int
+          \typeArg
+          Bubble
+          n:45
+          (Fn (Let ^x:46) (Block (Call / 10 x:46)))))))
+  (Let
+    ^x3:8
+    (Fn
+      (Let ^n:47 Int)
+      Int
+      (Block
+        (Call
+          apply:2
+          \typeArg
+          Int
+          \typeArg
+          Int
+          \typeArg
+          (Call <> Never Bubble)
+          n:47
+          (Fn (Let ^x:48) (Block (Call + x:48 1)))))))
+  (Let
+    ^x4:9
+    (Fn
+      (Let ^n:49 Int)
+      String
+      (Block
+        (Call
+          apply:2
+          \typeArg
+          Int
+          \typeArg
+          String
+          \typeArg
+          (Call <> Never Bubble)
+          n:49
+          (Fn (Let ^x:50) (Block (Call + x:50 1)))))))
+  (Let
+    ^x5:10
+    (Fn
+      (Let ^s:51 String)
+      Int
+      (Block
+        (Call
+          apply:2
+          \typeArg
+          String
+          \typeArg
+          Int
+          \typeArg
+          (Call <> Never Bubble)
+          s:51
+          (Fn (Let ^t:52) (Block (Call - t:52 1)))))))
+  (Let
+    ^x6:11
+    (Fn
+      (Let ^n:53 Int)
+      Int
+      (Block
+        (Call
+          apply:2
+          \typeArg
+          Int
+          \typeArg
+          Int
+          \typeArg
+          (Call <> Never Bubble)
+          n:53
+          (Fn (Let ^x:54 Int) (Block (Call * x:54 2)))))))
+  (Let
+    ^x7:12
+    (Fn
+      (Let ^n:55 Int)
+      (Call throws Int Bubble)
+      (Block
+        (Call
+          apply:2
+          \typeArg
+          Int
+          \typeArg
+          Int
+          \typeArg
+          Bubble
+          n:55
+          (Fn
+            (Let ^x:56)
+            (Block
+              (Call apply:2 x:56 (Fn (Let ^y:57) (Block (Call / 10 y:57))))))))))
+  (Let
+    ^x8:13
+    (Fn
+      (Let ^n:58 Int)
+      Int
+      (Block
+        (Call
+          both:3
+          \typeArg
+          (Call <> Never Bubble)
+          (Fn (Let ^x:59) (Block x:59))
+          (Fn (Let ^x:60) (Block (Call / 10 x:60)))
+          n:58))))
+  (Let
+    ^x9:14
+    (Fn
+      (Let ^n:61 Int)
+      Int
+      (Block
+        (Call
+          apply:2
+          \typeArg
+          Int
+          \typeArg
+          Int
+          \typeArg
+          (Call <> Never Bubble)
+          n:61
+          (Fn
+            (Let ^x:62)
+            (Block
+              (Call apply:2 x:62 (Fn (Let ^y:63) (Block (Call / 10 y:63))))))))))
+  (Let
+    ^x10:15
+    (Fn
+      (Let ^n:64 Int)
+      Int
+      (Block
+        (Call
+          retry:4
+          \typeArg
+          (Call <> Never Bubble)
+          (Fn (Let ^again:65) (Block (Call + (Call again:65) n:64)))))))
+  (Let
+    ^x11:16
+    (Fn
+      (Let ^n:66 Int)
+      Int
+      (Block
+        (Orelse
+          (Call
+            retry:4
+            \typeArg
+            Bubble
+            (Fn
+              (Let ^again:67)
+              (Block (Call + (Call again:67) (Call / 10 n:66)))))
+          (Call - 1)))))
+  (Let
+    ^x12:17
+    (Fn
+      (Let ^n:68 Int)
+      Int
+      (Block
+        (Call
+          apply:2
+          n:68
+          (Fn
+            (Let ^x:69)
+            (Block
+              (Call
+                apply:2
+                \typeArg
+                Int
+                \typeArg
+                Int
+                \typeArg
+                (Call <> Never Bubble)
+                x:69
+                (Fn (Let ^y:70) (Block (Call + y:70 1))))))))))
+  (Let
+    ^x13:18
+    (Fn
+      (Let ^n:71 Int)
+      Int
+      (Block
+        (Call
+          apply:2
+          \typeArg
+          Int
+          \typeArg
+          Int
+          \typeArg
+          (Call <> Never Bubble)
+          n:71
+          (Fn (Let ^x:72) (Block (Return @1993 "a") #void))))))
+  (Let
+    ^x14:19
+    (Fn
+      (Let ^ls:73 (Call <> List Int))
+      (Call <> List Int)
+      (Block
+        (Call
+          (Call . ls:73 \map)
+          \typeArg
+          Int
+          \typeArg
+          (Call <> Never Bubble)
+          (Fn (Let ^x:74) (Block (Call / 10 x:74)))))))
+  (Let
+    ^x15:20
+    (Fn
+      (Let ^ls:75 (Call <> List Int))
+      (Call <> List String)
+      (Block
+        (Call
+          (Call . ls:75 \map)
+          \typeArg
+          String
+          \typeArg
+          (Call <> Never Bubble)
+          (Fn (Let ^x:76) (Block (Call (Call . x:76 \toString))))))))
+  (Let
+    ^x16:21
+    (Fn
+      (Let ^n:77 Int)
+      Int
+      (Block
+        (Call
+          maybe:5
+          \typeArg
+          Int
+          n:77
+          (Fn (Let ^x:78) (Block (Call * x:78 3)))))))
+  (Let
+    ^h:22
+    (Call new (Call <> Holder:1 Int) (Fn (Let ^x:79) (Block (Call + x:79 1)))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Orelse (Call x2:7 5) (Call - 1))
+      " "
+      (Orelse (Call x2:7 0) (Call - 1))
+      " "
+      (Call x3:8 1)
+      " "
+      (Call x6:11 3)
+      " "
+      (Orelse (Call x7:12 5) (Call - 1))
+      " "
+      (Orelse (Call x7:12 0) (Call - 1))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call x10:15 1)
+      " "
+      (Call x11:16 0)
+      " "
+      (Call x11:16 5)
+      " "
+      (Call x12:17 1)
+      " "
+      (Call
+        (Call . (Call x15:20 (Call list 1 2)) \join)
+        ","
+        (Fn (Let ^s:80) (Block s:80)))
+      " "
+      (Call (Call . h:22 \f) 2)
+      " "
+      (Call x16:21 2)))
+  #void)
+error 1013..1028: This function literal may fail, but its call gives E as Never<Bubble>; give E a failure type, or handle the failure in the literal
+error 1254..1259: Expected subtype of String, but got Int32
+error 1333..1334: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [String, Int32]
+error 1578..1595: This function literal may fail, but its call gives E as Never<Bubble>; give E a failure type, or handle the failure in the literal
+error 1658..1691: This function literal may fail, but its call gives E as Never<Bubble>; give E a failure type, or handle the failure in the literal
+error 2009..2012: Expected subtype of Int32, but got String
+error 2082..2097: This function literal may fail, but its call gives E as Never<Bubble>; give E a failure type, or handle the failure in the literal
+log 2 -1 2 6 2 -1
+log 2 -1 3 2 1,2 3 6

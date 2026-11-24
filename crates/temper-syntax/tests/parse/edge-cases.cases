@@ -170,3 +170,65 @@ f(break, 1);
   ;
   (Paren f "(" (Comma break , 1) ")")
   ;)
+
+=== a line-ending } ends its statement unless the next token can only continue one
+// docs/language/syntax.md, "Automatic Semicolon Insertion": no `;` goes
+// in before an infix or postfix operator that isn't also prefix, as
+// `orelse`, `.`, `?.`, `&&`; one does before anything else, as
+// `else`, `-`, `!`, `is`, or a word (t992).
+let a = do {
+  f()
+}
+orelse 7;
+let b = g {
+}
+.h()
+?.i;
+let c = d {
+}
+&& e;
+if (c) {
+}
+else {
+}
+let k = m {
+}
+- 1;
+let n = p {
+}
+!q;
+let r = s {
+}
+is U;
+let v = w {
+}
+x;
+--- tree
+(Semi
+  (Eq [let a] = (OrElse (Curly do { (Paren f "(" ")") }) orelse 7))
+  ;
+  (Eq [let b] = (ChainNull (Paren (Dot (Curly g { }) . h) "(" ")") ?. i))
+  ;
+  (Eq [let c] = (AmpAmp (Curly d { }) && e))
+  ;
+  (Curly (Paren if "(" c ")") { })
+  ;
+  (Curly else { })
+  ;
+  (Eq [let k] = (Curly m { }))
+  ;
+  (PreDash - 1)
+  ;
+  (Eq [let n] = (Curly p { }))
+  ;
+  (Bang ! q)
+  ;
+  (Eq [let r] = (Curly s { }))
+  ;
+  (PreIs is U)
+  ;
+  (Eq [let v] = (Curly w { }))
+  ;
+  x
+  ;)
+comment Line 0..251

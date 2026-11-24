@@ -54,6 +54,14 @@ pub(crate) fn init() -> temper_core::Result<()> {
                     Some(CalcOptions::new(None, Some(4))),
                 )
             );
+            println!(
+                "{}",
+                calc(
+                    2,
+                    Arc::new(move |n: i32| Arc::new(format!("<{n}>"))),
+                    Some(CalcOptions::new(Some(5), None)),
+                )
+            );
             calc(
                 2,
                 Arc::new(move |n: i32| {

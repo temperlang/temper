@@ -7,9 +7,9 @@ uses `temper-core`#23 0.0.0-alpha.0.0 {
   class Int32#30 {
     connected method toString#31(radix?: Int32): String;
   }
-  class Empty#56 {}
-  connected fn empty#59(): Empty#56;
-  connected fn getConsole#60(name?: String): Console#24;
+  class Empty#58 {}
+  connected fn empty#61(): Empty#58;
+  connected fn getConsole#62(name?: String): Console#24;
 }
 
 module `named-args`#0 {
@@ -77,7 +77,7 @@ module `named-args`#0 {
   }
 
   init {
-    init ~console#26 = getConsole#60(omitted);
+    init ~console#26 = getConsole#62(omitted);
     new constructor#4(omitted, omitted);
     new constructor#4((asNullable("Bye!")): String?, omitted);
     new constructor#4((asNullable("Hola!")): String?, (asNullable(true)): Boolean?);
@@ -111,9 +111,12 @@ module `named-args`#0 {
     ~console#26.log#25(calc#17<String>(2, (fn ~fn#54(n#55: Int32): String {
       return n#55.toString#31(omitted);
     }): fn (Int32): String, (asNullable(new constructor#12((null): Int32?, (asNullable(4)): Int32?))): CalcOptions#3?));
-    calc#17<Empty#56>(2, (fn ~fn#57(n#58: Int32): Empty#56 {
-      ~console#26.log#25(n#58.toString#31(omitted));
-      return empty#59();
-    }): fn (Int32): Empty#56, (asNullable(new constructor#12((asNullable(%Int32.neg(2))): Int32?, omitted))): CalcOptions#3?);
+    ~console#26.log#25(calc#17<String>(2, (fn ~fn#56(n#57: Int32): String {
+      return %String.cat(%String.cat("<", n#57.toString#31(omitted)), ">");
+    }): fn (Int32): String, (asNullable(new constructor#12((asNullable(5)): Int32?, omitted))): CalcOptions#3?));
+    calc#17<Empty#58>(2, (fn ~fn#59(n#60: Int32): Empty#58 {
+      ~console#26.log#25(n#60.toString#31(omitted));
+      return empty#61();
+    }): fn (Int32): Empty#58, (asNullable(new constructor#12((asNullable(%Int32.neg(2))): Int32?, omitted))): CalcOptions#3?);
   }
 }

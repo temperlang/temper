@@ -3253,13 +3253,21 @@ impl Translator<'_> {
     fn call(&mut self, node: FNode) -> Tx<NodeId> {
         let mut children = self.children(node).to_vec();
         // A trailing block goes where typing placed it: before arguments
-        // for parameters after it, which are optional.
+        // for parameters after it, which are optional. `at` counts values
+        // only, not type arguments (`typeArg` and a type each).
         if let Some(&at) = self.s.typing.trailing_blocks.get(&node) {
-            if at + 2 > children.len() {
+            let mut slots = (1..children.len()).filter(|&i| {
+                let is_type_arg = |j: usize| {
+                    let name = self.s.library.symbol(children[j]);
+                    name.is_some_and(|n| self.s.library.names.get(n) == "typeArg")
+                };
+                !is_type_arg(i) && !is_type_arg(i - 1)
+            });
+            let Some(slot) = slots.nth(at) else {
                 return self.not_yet(node, "a trailing block after parameters left out");
-            }
+            };
             let block = children.pop().unwrap();
-            children.insert(1 + at, block);
+            children.insert(slot, block);
         }
         let (callee, args) = (children[0], &children[1..]);
         let f = self.function_of(callee);

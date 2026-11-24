@@ -151,6 +151,15 @@ classes still allow expandable named options.
 -2
 ```
 
+Type arguments don't change where a trailing block goes, and one without
+types takes them from the type arguments.
+
+    console.log(calc<String>(2, { scale: 5 }) { n => "<${n.toString()}>" });
+
+```log
+<10>
+```
+
 We can move the logging call into the block by using the Empty type.
 
     calc(2, { scale: -2 }) { (n): Empty =>

@@ -531,8 +531,9 @@ milestone 4's target typing slice; status in
   [kotlin-differences.md](kotlin-differences.md#bugs-in-kotlin-temper)).
   Any function literal last counts, in parentheses too, as in Kotlin.
   Typing places the arguments of every call it checks so: functions',
-  methods', and constructors', and generic ones, but not a call with
-  named or type arguments. The interpreter passes them as typing placed
+  methods', and constructors', and generic ones, with type arguments
+  too (which don't count as places), but not a call with named
+  arguments. The interpreter and tmpl pass them as typing placed
   them (`Typing::trailing_blocks`), null for those skipped; a call
   typing can't place, as of a callee whose type it doesn't know, passes
   them as written.
@@ -547,8 +548,8 @@ milestone 4's target typing slice; status in
 - **The type wanted** by a function literal is its place's, as for other
   values ("List literals and target typing", above), but where it's an
   argument of a generic call, it's the parameter it's placed at, with
-  what the call solves put in: from its other arguments and type
-  arguments ("Generic calls", above), then, where the call has no type
+  what the call solves put in: from its type arguments, which settle
+  it, or else its other arguments ("Generic calls", above), then, where the call has no type
   arguments, from the type its place wants, which binds first unless
   the call's result is a bare `T` or `T?`; a type parameter that none
   of these binds stays unknown. So in `ls.map { x => … }`, for `ls:
@@ -682,9 +683,20 @@ gives the callee's type parameters what its body gives:
   "Cannot infer E from this function literal, as its parameters' types
   need it; declare its result type, with throws if it may fail", at the
   literal.
-- **Not yet:** a call with type arguments doesn't type its literal
-  arguments at all (as before), and literals given to non-generic
-  functions, or not passed, still take their place's type or none.
+- **Type arguments:** a call with them gives its literals everything
+  from them, as a non-generic call does from its parameters (t993,
+  2026-11-24): `apply<Int, String, Never<Bubble>>(n) { x => x + 1 }`
+  types `x` as an `Int32` and wants a `String` result ("Expected subtype
+  of String, but got Int32"). Where it gives a failure parameter as a
+  `Never`, a literal whose body may fail is an error at the literal:
+  `apply<Int, Int, Never<Bubble>>(n) { x => 10 / x }` is "This function
+  literal may fail, but its call gives E as Never<Bubble>; give E a
+  failure type, or handle the failure in the literal". Its list and
+  object literal arguments take their types from them too, so
+  `count<Int>([])` passes a `List<Int32>`. The wrong number of type
+  arguments solves nothing, so its literals' types are unknown.
+- **Not yet:** literals given to non-generic functions, or not passed,
+  still take their place's type or none.
 
 ## Object literals and target typing
 

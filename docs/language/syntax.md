@@ -142,6 +142,25 @@ Semicolons are inserted in the following places:
 
 Except that, semicolons are never inserted after the close curly bracket in a `${` and `}` pair.
 
+So a `}` that ends a line ends its statement, unless the next line
+starts with a token that can only continue an expression: an infix or
+postfix operator that isn't also a prefix one, as `.`, `?.`, `orelse`,
+`&&`, or `==`. No statement can start with one of those, so the
+statement goes on:
+
+```temper
+let x = do {
+  f()
+}
+orelse 7; // one statement: `do { f() } orelse 7`
+// ⏸️
+```
+
+Anything else starts a new statement: a word, as `else`, so `else` on
+its own line after an `if`'s `}` is an error; or a token that may be
+prefix, as `-`, `!`, or `is`, so `}` then `- 1` on the next line is two
+statements.
+
 This is more conservative than semicolon insertion in JavaScript,
 but still simplifies several things.
 

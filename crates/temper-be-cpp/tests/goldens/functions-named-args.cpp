@@ -203,11 +203,12 @@ void global_init_init() {
     core::Console::log(temper_globals::console.value, named_args::calc<core::Str>(2, [](int32_t n) -> core::Str { return std::to_string(n); }, CalcOptions::make(3, 4)));
     core::Console::log(temper_globals::console.value, named_args::calc<core::Str>(2, [](int32_t n) -> core::Str { return std::to_string(n); }, CalcOptions::make(3)));
     core::Console::log(temper_globals::console.value, named_args::calc<core::Str>(2, [](int32_t n) -> core::Str { return std::to_string(n); }, CalcOptions::make(nullptr, 4)));
-    auto fn5 = [](int32_t n) -> std::shared_ptr<core::Empty> {
+    core::Console::log(temper_globals::console.value, named_args::calc<core::Str>(2, [](int32_t n) -> core::Str { return "<" + std::to_string(n) + ">"; }, CalcOptions::make(5)));
+    auto fn6 = [](int32_t n) -> std::shared_ptr<core::Empty> {
       core::Console::log(temper_globals::console.value, std::to_string(n));
       return core::empty();
     };
-    named_args::calc<std::shared_ptr<core::Empty>>(2, fn5, CalcOptions::make(-2));
+    named_args::calc<std::shared_ptr<core::Empty>>(2, fn6, CalcOptions::make(-2));
   });
 }
 

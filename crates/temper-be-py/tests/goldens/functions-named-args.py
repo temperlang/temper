@@ -121,11 +121,12 @@ _console.log(_calc(2, lambda n: str(n)))
 _console.log(_calc(2, lambda n: str(n), _CalcOptions(3, 4)))
 _console.log(_calc(2, lambda n: str(n), _CalcOptions(3)))
 _console.log(_calc(2, lambda n: str(n), _CalcOptions(None, 4)))
+_console.log(_calc(2, lambda n: f'<{n}>', _CalcOptions(5)))
 
 
-def _fn5(n: int, /) -> tuple[()]:
+def _fn6(n: int, /) -> tuple[()]:
     _console.log(str(n))
     return ()
 
 
-_calc(2, _fn5, _CalcOptions(-2))
+_calc(2, _fn6, _CalcOptions(-2))

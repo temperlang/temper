@@ -235,6 +235,10 @@ pub enum Message {
     /// call's failure parameter, named, that its body can't give, as its
     /// parameters' types need it too.
     FailureNotInferred(String),
+    /// What may fail, in a function literal whose place is a generic
+    /// call's failure parameter that the call's type arguments give as a
+    /// `Never`: the parameter and what's given.
+    FailureGivenNever(String, String),
     /// `x is T` or `x as T` that can never succeed: `x`'s type, not
     /// null, and `T`. Kotlin's `ImpossibleRttiCheck`.
     ImpossibleRttiCheck(String, String),
@@ -499,6 +503,10 @@ impl Message {
             Message::FailureNotInferred(e) => format!(
                 "Cannot infer {e} from this function literal, as its parameters' types need \
                  it; declare its result type, with throws if it may fail"
+            ),
+            Message::FailureGivenNever(e, given) => format!(
+                "This function literal may fail, but its call gives {e} as {given}; give {e} a \
+                 failure type, or handle the failure in the literal"
             ),
             Message::ImpossibleRttiCheck(from, to) => {
                 format!("Runtime type check from {from} to {to} can never succeed")

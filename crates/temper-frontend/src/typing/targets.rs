@@ -18,7 +18,6 @@ use crate::builtins::{Builtin, Function};
 use crate::core::{self, ROLE_MASK, ROLE_TYPE_PARAM};
 use crate::settle::{Fact, Settle};
 use crate::types::{ANY_VALUE, NEVER, NULL, Param, TypeData, TypeId, UNKNOWN, VOID};
-use temper_syntax::ast::Value;
 use temper_syntax::tree::{NodeId, NodeKind};
 
 impl Settle {
@@ -302,11 +301,19 @@ impl Settle {
             let wanted = self.wanted_type(call, forced)?;
             return Ok(wanted.and_then(|t| self.wanted_element(t)));
         }
-        let is_literal = self.lib.tree.kind(args[index]) == NodeKind::Fn;
+        // Type arguments, as `Int` in `f<Int>(x)`, aren't values, and the
+        // values' places don't count them.
+        let Some((_, values)) = self.split_type_args(args) else {
+            return Ok(None);
+        };
+        let Some(index) = values.iter().position(|&v| v == args[index]) else {
+            return Ok(None);
+        };
+        let is_literal = self.lib.tree.kind(values[index]) == NodeKind::Fn;
         // A list literal, as `[]` or `[new Sub()]` where a `List<Super<T>>`
         // is wanted, takes a generic function's type parameters as solved
         // from all the arguments, as a function literal does.
-        let list = self.is_list_literal(args[index]);
+        let list = self.is_list_literal(values[index]);
         if list && !is_literal && self.typing.solving_for_lists.contains(&call) {
             return Ok(None);
         }
@@ -324,7 +331,7 @@ impl Settle {
         let Some(index) = index.checked_sub(skip) else {
             return Ok(None);
         };
-        let placed = self.placed_params(&params, &args[skip..]);
+        let placed = self.placed_params(&params, &values[skip..]);
         let t = params.get(placed[index]).map(|p| p.ty);
         Ok(t.filter(|&t| is_literal || self.typing.types.is_known(t)))
     }
@@ -334,9 +341,9 @@ impl Settle {
     /// one for a constructor's class, else none. With `literal`, for a
     /// function literal argument, a generic function's are solved from
     /// the call's other arguments and its place
-    /// ([`Settle::wanted_literal_arg`]). `None` for a builtin's call, other
-    /// than a constructor's, and for a call with named arguments or type
-    /// arguments.
+    /// ([`Settle::wanted_literal_arg`]), with its type arguments, if it
+    /// has them. `None` for a builtin's call, other than a constructor's,
+    /// and for a call with named arguments.
     fn arg_params(
         &mut self,
         call: NodeId,
@@ -345,7 +352,7 @@ impl Settle {
     ) -> Result<Option<(Vec<Param>, usize)>, Fact> {
         let children = self.lib.tree.children(call).to_vec();
         let (callee, args) = (children[0], &children[1..]);
-        if (args.iter()).any(|&a| matches!(self.lib.value(a), Some(Value::Symbol(_)))) {
+        if self.split_type_args(args).is_none() {
             return Ok(None);
         }
         Ok(match self.scopes.resolved_builtin(callee) {
@@ -383,7 +390,12 @@ impl Settle {
         let Ok(Some((params, skip))) = self.arg_params(call, true, false) else {
             return;
         };
-        let args = &self.lib.tree.children(call)[1 + skip..];
+        // Places among the values, without type arguments, as the
+        // interpreter and tmpl count them.
+        let Some((_, values)) = self.split_type_args(&self.lib.tree.children(call)[1..]) else {
+            return;
+        };
+        let args = &values[skip..];
         let at = self.placed_params(&params, args).last().copied();
         if let Some(at) = at.filter(|&at| at + 1 != args.len()) {
             self.typing.trailing_blocks.insert(call, skip + at);
