@@ -53,7 +53,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         # The whole history and the tags, so the playground's About
         # names the version (`0.7.0-alpha.0.123`); and the blog, a submodule.
         with:
@@ -75,14 +75,14 @@ jobs:
       - id: kelpto
         run: echo "ref=$(tr -d '[:space:]' < site/docs/kelpto-ref)" >> "$GITHUB_OUTPUT"
       # Public; built for Python by `temper` below.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: temperlang/kelpto
           ref: ${{ steps.kelpto.outputs.ref }}
           path: .kelpto
       # The size and speed charts, which build.py copies onto the site
       # for the pages that show them.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: stats
           path: stats

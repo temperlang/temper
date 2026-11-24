@@ -67,7 +67,7 @@ jobs:
     outputs:
       measured: ${{ steps.last.outputs.measured }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: stats
           persist-credentials: false
@@ -99,7 +99,7 @@ jobs:
       # C++ backend's time is its functional tests'.
       TEMPER_STRICT_CXX: ""
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@cfcaf53ba4c621917ec7f78a66bff7a8848ddad4 # 1.85.0 branch, 2026-10-16
@@ -142,7 +142,7 @@ jobs:
           fi
           echo "$rows rows"
           echo "rows=$rows" >> "$GITHUB_OUTPUT"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() && steps.rows.outputs.rows > 0 }}
         with:
           name: stats-rows
@@ -162,13 +162,13 @@ jobs:
       contents: write
     steps:
       # The chart script and commit_stats.py, at the commit measured.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           sparse-checkout: |
             compat
             .github/ci-tools
           persist-credentials: false
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: stats
           path: stats
@@ -178,7 +178,7 @@ jobs:
         with:
           version: "0.13.5"
           checksum: f68d291c75783122dad58ab77def0e13f3233f358731db5d6d7e8715603b928f
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: stats-rows
           path: ${{ runner.temp }}/rows
