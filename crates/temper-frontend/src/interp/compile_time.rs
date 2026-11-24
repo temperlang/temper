@@ -8,7 +8,7 @@
 //! What a pass learns comes back as owned data, never as live values: a
 //! value to be rebuilt in code is a [`Construction`].
 
-use super::{Abrupt, Interp, Lowering, Object, Output, R, Val, describe};
+use super::{Abrupt, Interp, Lowering, Object, Output, R, Val};
 use crate::builtins::Function;
 use crate::core::{self, CLASS_INTERFACE, MEMBER_STATIC, ROLE_CONSTRUCTOR, ROLE_MASK, ROLE_PARAM};
 use crate::scope::{ScopeId, SymbolId};
@@ -271,7 +271,7 @@ impl Session {
     /// Calls a function value.
     pub(crate) fn call(&mut self, s: &Settled, f: Val, args: Vec<Val>) -> Result<Val, String> {
         let result = self.interp.apply(s, f, args);
-        self.finish(result)
+        self.finish(s, result)
     }
 
     /// Calls an object's method, or a class's static one.
@@ -286,7 +286,7 @@ impl Session {
             return Err("Not an object".into());
         }
         let result = self.interp.call_method(s, this, name, args, None);
-        self.finish(result)
+        self.finish(s, result)
     }
 
     /// A class's static member, if it has one, as [`Session::get`], but
@@ -304,15 +304,16 @@ impl Session {
     /// class's static one.
     pub(crate) fn get(&mut self, s: &Settled, this: &Val, name: NameId) -> Result<Val, String> {
         let result = self.interp.get_property(s, this.clone(), name, None);
-        self.finish(result)
+        self.finish(s, result)
     }
 
-    fn finish(&mut self, result: R) -> Result<Val, String> {
+    fn finish(&mut self, s: &Settled, result: R) -> Result<Val, String> {
         self.interp.depth = 0;
+        let result = result.map_err(|abrupt| self.interp.describe(s, abrupt));
         self.interp.output.lines.clear();
         self.interp.ready.clear();
         self.failed |= result.is_err();
-        result.map_err(describe)
+        result
     }
 }
 
@@ -342,10 +343,10 @@ pub(super) fn call_callout(callouts: &Callouts, args: Vec<Val>) -> R {
 /// per path to them, as Kotlin's are.
 pub(crate) fn deep_copy(value: &Val) -> Val {
     match value {
-        Val::Object(object) => Val::Object(Rc::new(Object {
-            class: object.class.clone(),
-            fields: RefCell::new(object.fields.borrow().iter().map(deep_copy).collect()),
-        })),
+        Val::Object(object) => Val::Object(Rc::new(Object::new(
+            object.class.clone(),
+            object.fields.borrow().iter().map(deep_copy).collect(),
+        ))),
         Val::List(items) => Val::List(items.iter().map(deep_copy).collect()),
         Val::ListBuilder(items) => Val::ListBuilder(Rc::new(RefCell::new(
             items.borrow().iter().map(deep_copy).collect(),

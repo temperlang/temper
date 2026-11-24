@@ -16,44 +16,51 @@
 //!   of what they specify, each say what they should log and still have
 //!   errors, or settle but don't run yet on the interpreter ("Not
 //!   supported yet"), so the change that makes one run moves it to
-//!   `PROGRAMS`.
+//!   `INTERP_SPECS`; and those don't translate to tmpl yet, so the
+//!   change that makes one translate moves it to `PROGRAMS`.
+//! - `specs_run_on_the_interpreter`: the specifications the interpreter
+//!   runs (`INTERP_SPECS`) log what they should there, as programs do.
 
 use temper_be_testkit::{self as kit};
 
 #[test]
 fn programs_log_as_the_interpreter_does() {
-    kit::with_stack(|| {
-        for case in kit::cases("rust", &kit::PROGRAMS) {
-            let [(path, text)] = &case.sources[..] else {
-                continue;
-            };
-            if !path.ends_with(".temper.md") || path.contains("temper-funtests/cases/") {
-                continue;
-            }
-            let (failure, output) = kit::interpret(&case);
-            // A run that fails (`panics`) panics, or bubbles, as nothing
-            // catches it, saying what its `stderr` blocks for the
-            // interpreter say, else that it panicked.
-            let mut says = temper_funtests::fenced_lines(text, "stderr", &["interp"]);
-            if says.is_empty() {
-                says.push("Panicked".into());
-            }
-            // Nor what its `stderr-absent` blocks say.
-            let unsaid = temper_funtests::fenced_lines(text, "stderr-absent", &["interp"]);
-            match &failure {
-                Some(why) => assert!(
-                    case.fails
-                        && says.iter().all(|s| why.contains(s.trim()))
-                        && !unsaid.iter().any(|s| why.contains(s.trim())),
-                    "{}: {why}",
-                    case.key
-                ),
-                None => assert!(!case.fails, "{}: didn't fail", case.key),
-            }
-            let expected = temper_funtests::expected_log(text, "interp");
-            assert_eq!(output, expected, "{}", case.key);
+    kit::with_stack(|| logs_as_expected(kit::cases("rust", &kit::PROGRAMS)));
+}
+
+/// Each case of a Temper program logs, on the interpreter, what its log
+/// block says, and a run that should fail does, saying what it should.
+fn logs_as_expected(cases: Vec<kit::Case>) {
+    for case in cases {
+        let [(path, text)] = &case.sources[..] else {
+            continue;
+        };
+        if !path.ends_with(".temper.md") || path.contains("temper-funtests/cases/") {
+            continue;
         }
-    });
+        let (failure, output) = kit::interpret(&case);
+        // A run that fails (`panics`) panics, or bubbles, as nothing
+        // catches it, saying what its `stderr` blocks for the
+        // interpreter say, else that it panicked.
+        let mut says = temper_funtests::fenced_lines(text, "stderr", &["interp"]);
+        if says.is_empty() {
+            says.push("Panicked".into());
+        }
+        // Nor what its `stderr-absent` blocks say.
+        let unsaid = temper_funtests::fenced_lines(text, "stderr-absent", &["interp"]);
+        match &failure {
+            Some(why) => assert!(
+                case.fails
+                    && says.iter().all(|s| why.contains(s.trim()))
+                    && !unsaid.iter().any(|s| why.contains(s.trim())),
+                "{}: {why}",
+                case.key
+            ),
+            None => assert!(!case.fails, "{}: didn't fail", case.key),
+        }
+        let expected = temper_funtests::expected_log(text, "interp");
+        assert_eq!(output, expected, "{}", case.key);
+    }
 }
 
 #[test]
@@ -124,15 +131,38 @@ fn specs_are_pending() {
             let (_, text) = kit::spec_source(name);
             let log = temper_funtests::expected_log(&text, "interp");
             assert!(!log.is_empty(), "{name}: no log");
+            let errors = kit::spec_errors(name);
+            if kit::INTERP_SPECS.contains(&name) {
+                // Run on the interpreter (`specs_run_on_the_interpreter`),
+                // but pending while tmpl doesn't translate them.
+                assert_eq!(errors, Vec::<String>::new(), "{name}");
+                let translated = std::panic::catch_unwind(|| kit::program(&kit::spec_case(name)));
+                assert!(
+                    translated.is_err(),
+                    "{name} translates: move it to PROGRAMS, which backends run"
+                );
+                continue;
+            }
             // Pending while the frontend reports errors, or once typed,
             // while the interpreter doesn't run it yet.
-            if kit::spec_errors(name).is_empty() {
+            if errors.is_empty() {
                 let (failure, _) = kit::interpret(&kit::spec_case(name));
                 assert!(
                     failure.is_some_and(|f| f.contains("Not supported yet")),
-                    "{name} runs: move it to PROGRAMS, which checks its log"
+                    "{name} runs: move it to INTERP_SPECS, which checks its log"
                 );
             }
+        }
+    });
+}
+
+/// The specifications the interpreter runs already log what they
+/// should there, as shared programs do.
+#[test]
+fn specs_run_on_the_interpreter() {
+    kit::with_stack(|| {
+        for name in kit::INTERP_SPECS {
+            logs_as_expected(kit::spec_cases("rust", name));
         }
     });
 }

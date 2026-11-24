@@ -17,7 +17,11 @@
 //! `for … of` body: then they end its call as an [`Abrupt`], and the frame
 //! they reach jumps to a landing. A failure jumps to the handler of the
 //! innermost `orelse` around the op that failed, found in a table by
-//! position, so the ordinary path pays nothing for it.
+//! position, so the ordinary path pays nothing for it. A handler whose
+//! fallback needs the failure it handles, for a `catch (e)` binding or
+//! as the cause of a failure thrown there (RFC 164), keeps it in a slot
+//! of its own; a `for … of` body made there captures it after its
+//! variables, as it may throw too.
 //!
 //! A generator's body, a `Fn` that `extends GeneratorFn`, pauses at each
 //! `yield`, and once before its body, so that making a generator checks
@@ -40,11 +44,6 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use temper_syntax::names::NameId;
 use temper_syntax::tree::{NodeId, NodeKind};
-
-/// What running a declared failure's `throw`, or a `catch` that binds
-/// one, fails with, until the interpreter runs them (RFC 164).
-const DECLARED_FAILURES_NOT_YET: &str =
-    "Not supported yet: declared failures (`throw` and `catch (e)`) in the interpreter";
 
 /// How deeply expressions may nest; deeper ones panic when run, so that
 /// lowering's recursion stays within the stack.
@@ -94,6 +93,9 @@ pub(super) enum Op {
     MakeFn {
         node: NodeId,
         sources: Box<[Source]>,
+        /// A `for … of` body, which also captures the failure being
+        /// handled where it's made, if any, for what it throws.
+        loop_body: bool,
     },
     MakeClass {
         node: NodeId,
@@ -124,6 +126,8 @@ pub(super) enum Op {
     /// value) for a frame further out.
     Exit(Exit),
     Fail(Option<Rc<str>>),
+    /// `throw x`: pops the failure, `x`, and fails with it.
+    Throw,
     Panic(Rc<str>),
     /// A parameter without a default, whose argument must be there.
     Required(u32),
@@ -153,14 +157,19 @@ pub(super) enum Source {
 
 /// A failure in ops `start..end` goes to `to`, with the stack at `depth`;
 /// or, where the fallback is just `panic()` (`panics`), panics there,
-/// saying the failure caused it, as backends chain it as the cause.
+/// saying the failure caused it, as backends chain it as the cause. The
+/// fallback is ops `to..fallback_end`; if it needs the failure, for a
+/// `catch (e)` binding or as a cause, it's kept in `slot`, a declared
+/// failure as its object and a bubble as null.
 #[derive(Debug)]
 pub(super) struct Handler {
     pub start: u32,
     pub end: u32,
     pub to: u32,
+    pub fallback_end: u32,
     pub depth: u32,
     pub panics: bool,
+    pub slot: Option<u32>,
 }
 
 /// A `break` (or with `continue_`, a `continue`) of `target` coming back
@@ -443,6 +452,37 @@ fn is_method(s: &Settled, member: NodeId) -> bool {
         )
 }
 
+/// Whether an `orelse`'s or `catch`'s fallback needs the failure it
+/// handles: for a `catch (e)` binding, `caught()`, or as the cause of a
+/// `throw` in it, or in a `for … of` body in it, but not in another
+/// function, which may be called anywhere.
+fn needs_failure(s: &Settled, fallback: NodeId) -> bool {
+    let tree = &s.library.tree;
+    let mut stack = vec![fallback];
+    while let Some(node) = stack.pop() {
+        let children = tree.children(node);
+        match tree.kind(node) {
+            NodeKind::Fail if !children.is_empty() => return true,
+            NodeKind::Call
+                if (children.first()).is_some_and(|&c| {
+                    s.scopes.resolved_builtin(c) == Some(Builtin::Function(Function::Caught))
+                }) =>
+            {
+                return true;
+            }
+            NodeKind::Fn | NodeKind::Class
+                if !(s.scopes.of_node(node))
+                    .is_some_and(|home| s.scopes.get(home).kind == ScopeKind::LoopBody) =>
+            {
+                continue;
+            }
+            _ => {}
+        }
+        stack.extend_from_slice(children);
+    }
+    false
+}
+
 fn cached(codes: &[Option<Rc<Code>>], node: NodeId) -> Option<Rc<Code>> {
     codes.get(node.0 as usize).and_then(Option::clone)
 }
@@ -511,6 +551,11 @@ struct Builder {
     nesting: u32,
     /// The node ops come from.
     at: NodeId,
+    /// Slots past the layout's, for handlers' failures.
+    extra_slots: u32,
+    /// The handlers whose fallbacks are being lowered, innermost last,
+    /// each with the slot keeping its failure, if it needs one.
+    handling: Vec<Option<u32>>,
 }
 
 impl Default for Builder {
@@ -528,6 +573,8 @@ impl Default for Builder {
             targets: Vec::new(),
             nesting: 0,
             at: NodeId(0),
+            extra_slots: 0,
+            handling: Vec::new(),
         }
     }
 }
@@ -697,7 +744,7 @@ impl Lowering {
             ops: b.ops,
             nodes: b.nodes,
             params,
-            slots: layout.slots,
+            slots: layout.slots + b.extra_slots,
             cells: layout.cells,
             stack: b.max,
             free: layout.free.clone(),
@@ -725,9 +772,12 @@ impl Lowering {
             Op::SetLocal(_) | Op::SetCell(_) | Op::SetCapture(_) | Op::SetGlobal(_) | Op::Pop => {
                 b.depth -= 1
             }
-            Op::JumpIfFalse(_) | Op::InitStatics | Op::SetProp(_) | Op::Return | Op::Yield => {
-                b.depth -= 1
-            }
+            Op::JumpIfFalse(_)
+            | Op::InitStatics
+            | Op::SetProp(_)
+            | Op::Return
+            | Op::Yield
+            | Op::Throw => b.depth -= 1,
             Op::Exit(Exit::Return(_)) => b.depth -= 1,
             Op::Call { args, .. } | Op::CallMethod { args, .. } => b.depth -= args,
             Op::Truncate(depth) => b.depth = *depth,
@@ -944,15 +994,22 @@ impl Lowering {
                 self.emit(Op::Await);
             }
             NodeKind::Orelse => {
+                let fallback = children[1];
+                let slot = needs_failure(s, fallback).then(|| {
+                    self.b.extra_slots += 1;
+                    self.layout_here().slots + self.b.extra_slots - 1
+                });
                 let start = self.pc();
                 self.expr(s, children[0], keep);
                 let end = self.pc();
                 let to_end = self.emit(Op::Jump(0));
                 let to = self.pc();
                 self.b.depth = base;
-                self.expr(s, children[1], keep);
+                self.b.handling.push(slot);
+                self.expr(s, fallback, keep);
+                self.b.handling.pop();
+                let fallback_end = self.pc();
                 self.patch(to_end);
-                let fallback = children[1];
                 let panics = tree.kind(fallback) == NodeKind::Call
                     && tree.children(fallback).len() == 1
                     && s.scopes.resolved_builtin(tree.children(fallback)[0])
@@ -961,14 +1018,17 @@ impl Lowering {
                     start,
                     end,
                     to,
+                    fallback_end,
                     depth: base,
                     panics,
+                    slot,
                 });
                 return;
             }
-            // `throw x`, a declared failure, isn't run yet.
+            // `throw x`, a declared failure.
             NodeKind::Fail if !children.is_empty() => {
-                self.fail(DECLARED_FAILURES_NOT_YET);
+                self.expr(s, children[0], true);
+                self.emit(Op::Throw);
                 return self.dead(base, keep);
             }
             NodeKind::Fail => {
@@ -1166,8 +1226,15 @@ impl Lowering {
         };
         // A `catch (e)` binding, the failure being handled.
         if s.scopes.resolved_builtin(callee) == Some(Builtin::Function(Function::Caught)) {
-            self.fail(DECLARED_FAILURES_NOT_YET);
-            return self.dead(base, keep);
+            match self.b.handling.last() {
+                Some(&Some(slot)) if keep => _ = self.emit(Op::Local(slot)),
+                Some(&Some(_)) => {}
+                _ => {
+                    self.fail("Nothing is being handled here");
+                    self.dead(base, keep);
+                }
+            }
+            return;
         }
         if is_dot(s, callee) {
             // `obj.name` read as a property.
@@ -1411,8 +1478,16 @@ impl Lowering {
             Some(home) => self.layout(s, home).free.clone(),
             None => Rc::from([]),
         };
+        let loop_body = (s.scopes.of_node(node))
+            .is_some_and(|home| s.scopes.get(home).kind == ScopeKind::LoopBody);
         match self.sources(&free) {
-            Some(sources) => _ = self.emit(Op::MakeFn { node, sources }),
+            Some(sources) => {
+                _ = self.emit(Op::MakeFn {
+                    node,
+                    sources,
+                    loop_body,
+                })
+            }
             None => self.unreachable_capture(s, &free),
         }
     }

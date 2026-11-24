@@ -20,7 +20,7 @@ use crate::library::{Level, Message};
 use crate::scope::{ScopeKind, SymbolId, SymbolKind};
 use crate::settle::{Fact, Settle};
 use crate::types::{
-    ANY_VALUE, ClassInfo, Param, TypeData, TypeId, Types, UNKNOWN, builtin_supertype,
+    ANY_VALUE, ClassInfo, ERROR, Param, TypeData, TypeId, Types, UNKNOWN, builtin_supertype,
 };
 use temper_syntax::names::NameId;
 use temper_syntax::tree::{NodeId, NodeKind};
@@ -472,8 +472,15 @@ impl Settle {
             None => {
                 let t = self.expr_type(object, forced)?;
                 let types = &self.typing.types;
-                match types.get(types.base(t)) {
-                    &TypeData::Builtin(i) => (i, types.args(t).to_vec(), Some(t)),
+                match (types.get(types.base(t)), types.get(ERROR)) {
+                    (&TypeData::Builtin(i), _) => (i, types.args(t).to_vec(), Some(t)),
+                    // What a failure type doesn't declare is the root's,
+                    // `message` and `cause`.
+                    (&TypeData::Class(symbol), &TypeData::Builtin(i))
+                        if types.is_failure_class(symbol) =>
+                    {
+                        (i, Vec::new(), Some(ERROR))
+                    }
                     _ => return Ok(None),
                 }
             }

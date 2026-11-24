@@ -16,7 +16,7 @@
 //! parameters' bounds are read the same way, as `MapKey<K>` for `K` in
 //! `Map<K extends MapKey<K>, V>`.
 
-use crate::builtins::TYPES;
+use crate::builtins::{FAILURE_ROOT, TYPES};
 use std::sync::OnceLock;
 use temper_syntax::ast::{Ast, Builtin as AstBuiltin, Value, build};
 use temper_syntax::lex::SourceKind;
@@ -28,7 +28,7 @@ use crate::corelib::TEXT as CORE;
 /// The builtin types whose members are read: first the final ones, which
 /// no other type extends, then the generic ones, then the rest whose
 /// members are used.
-const READ_TYPES: [&str; 25] = [
+const READ_TYPES: [&str; 26] = [
     "Boolean",
     "Int32",
     "Int64",
@@ -54,6 +54,7 @@ const READ_TYPES: [&str; 25] = [
     "StringIndexOption",
     "NoStringIndex",
     "DenseBitVector",
+    FAILURE_ROOT,
 ];
 
 /// A type in a member's signature.

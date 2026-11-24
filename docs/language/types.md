@@ -2188,6 +2188,28 @@ itself isn't one a function may throw.
 
 *Error* `extends` [*AnyValue*](#interface-anyvalue)
 
+#### properties
+
+##### `Error.message`
+
+`:` [*String*](#class-string)
+
+What went wrong, for people, as a report of a failure nothing handles
+shows it. A failure type may declare its own getter; otherwise it's the
+type's name in lowercase words, then its public fields' names and
+values, as `not found (key: y)` for `class NotFound(public key: String)
+extends Error {}`.
+
+##### `Error.cause`
+
+`:` [*Error*](#interface-error)?
+
+The failure that was being handled where this one was thrown, by a
+`throw` in a `catch` block or an [*orelse*](builtins.md#orelse) fallback,
+or [*null*](builtins.md#null): none, or a [*Bubble*](#class-bubble),
+which has no value. A failure thrown again keeps the cause it was first
+thrown with.
+
 ### *Top*
 *Top* is a super-type of every type, including [*AnyValue*](#interface-anyvalue) and
 [*Bubble*](#class-bubble).

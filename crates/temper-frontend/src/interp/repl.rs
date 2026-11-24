@@ -6,7 +6,7 @@
 
 use super::frame::Frame;
 use super::lower::GeneratorKind;
-use super::{Abrupt, Generator, INTERRUPTED, Interp, Lowering, Output, SLICE, Val, describe};
+use super::{Abrupt, Generator, INTERRUPTED, Interp, Lowering, Output, SLICE, Val};
 use crate::builtins::TYPES;
 use crate::core::{self, MEMBER_STATIC, ROLE_MASK, ROLE_PARAM};
 use crate::scope::ScopeId;
@@ -141,7 +141,7 @@ impl Runner {
         self.start();
         let code = (self.interp.lowering).module(s, module.scope, &module.top_levels);
         let result = self.interp.run_top(s, code);
-        outcome(result)
+        self.outcome(s, result)
     }
 
     /// Runs an input's top level, giving its last statement's value with
@@ -178,7 +178,7 @@ impl Runner {
                         self.interp.inputs_parked.push((generator.clone(), number));
                         promise.park(generator);
                         return match failure {
-                            Some(abrupt) => outcome(Err(abrupt)),
+                            Some(abrupt) => self.outcome(s, Err(abrupt)),
                             None => Outcome::Unresolved,
                         };
                     }
@@ -191,7 +191,7 @@ impl Runner {
             Some(abrupt) => Err(abrupt),
             None => result.and_then(|value| tasks.map(|()| value)),
         };
-        outcome(result)
+        self.outcome(s, result)
     }
 
     /// Runs an input's tests, `run` ([`SettledModule::tests`]), each with
@@ -207,7 +207,7 @@ impl Runner {
         self.start();
         let budget = self.fuel.unwrap_or(u64::MAX);
         let cases = self.interp.run_test_cases(s, scope, run, budget);
-        let cases = cases.map_err(|abrupt| outcome(Err(abrupt)))?;
+        let cases = cases.map_err(|abrupt| self.outcome(s, Err(abrupt)))?;
         let report: Vec<String> = cases.into_iter().flat_map(|c| c.report).collect();
         Ok(crate::library_tests::parse_junit(&report))
     }
@@ -231,9 +231,10 @@ impl Runner {
     /// The inputs parked at a top-level `await` that failed when a later
     /// run resumed them, each by its number, with why, as [`describe`]
     /// says it.
-    pub(crate) fn resumed_failures(&mut self) -> Vec<(usize, String)> {
-        (self.interp.inputs_failed.drain(..))
-            .map(|(input, abrupt)| (input, describe(abrupt)))
+    pub(crate) fn resumed_failures(&mut self, s: &Settled) -> Vec<(usize, String)> {
+        let failed: Vec<_> = self.interp.inputs_failed.drain(..).collect();
+        (failed.into_iter())
+            .map(|(input, abrupt)| (input, self.interp.describe(s, abrupt)))
             .collect()
     }
 
@@ -243,11 +244,13 @@ impl Runner {
     }
 }
 
-fn outcome(result: Result<Val, Abrupt>) -> Outcome {
-    match result {
-        Ok(value) => Outcome::Value(value),
-        Err(Abrupt::Panic(why)) if why == INTERRUPTED => Outcome::Interrupted,
-        Err(abrupt) => Outcome::Failed(describe(abrupt)),
+impl Runner {
+    fn outcome(&mut self, s: &Settled, result: Result<Val, Abrupt>) -> Outcome {
+        match result {
+            Ok(value) => Outcome::Value(value),
+            Err(Abrupt::Panic(why)) if why == INTERRUPTED => Outcome::Interrupted,
+            Err(abrupt) => Outcome::Failed(self.interp.describe(s, abrupt)),
+        }
     }
 }
 

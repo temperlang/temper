@@ -965,6 +965,21 @@ impl Library {
             .unwrap_or("")
     }
 
+    /// Where a library-wide position is, for people: its file's path,
+    /// and its line and column, counting from 1, a column in characters.
+    pub fn position(&self, pos: u32) -> (&str, usize, usize) {
+        let (file, start) = self.locate(pos);
+        let Some(file) = self.files.get(file.0 as usize) else {
+            return ("", 0, 0);
+        };
+        let source = file.parsed.source();
+        let start = (start as usize).min(source.len());
+        let before = source.get(..start).unwrap_or_default();
+        let line = before.matches('\n').count() + 1;
+        let column = before.rsplit('\n').next().map_or(0, |l| l.chars().count()) + 1;
+        (&file.path, line, column)
+    }
+
     /// The file a library-wide position is in, and the offset in it.
     pub fn locate(&self, pos: u32) -> (FileId, u32) {
         let i = self

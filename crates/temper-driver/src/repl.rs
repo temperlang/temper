@@ -58,19 +58,10 @@ fn errors(settled: &Settled) -> Result<(), String> {
     let mut out = String::new();
     let mut awaits = false;
     for d in (library.diagnostics.iter()).filter(|d| d.level == Level::Error) {
-        let (file, start) = library.locate(d.span.start);
-        let file = &library.files[file.0 as usize];
-        let source = file.parsed.source();
-        let start = (start as usize).min(source.len());
-        let before = source.get(..start).unwrap_or_default();
-        let line = before.matches('\n').count() + 1;
-        let column = before.rsplit('\n').next().map_or(0, |l| l.chars().count()) + 1;
+        let (path, line, column) = library.position(d.span.start);
         let message = d.message.text();
         awaits |= matches!(d.message, Message::YieldingOutsideGeneratorFn("await"));
-        out.push_str(&format!(
-            "\n{}:{line}:{column}: error: {message}",
-            file.path
-        ));
+        out.push_str(&format!("\n{path}:{line}:{column}: error: {message}"));
     }
     if out.is_empty() {
         return Ok(());

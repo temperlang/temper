@@ -46,7 +46,26 @@ export sealed interface Equatable<EQ extends AnyValue> {
  * Unlike [snippet/type/Bubble], a failure is a value, whose fields
  * say what went wrong.
  */
-export interface Error {}
+export interface Error {
+  /**
+   * What went wrong, for people, as a report of a failure nothing
+   * handles shows it. A failure type may declare its own getter;
+   * otherwise it's the type's name in lowercase words, then its public
+   * fields' names and values, as `not found (key: y)` for
+   * `class NotFound(public key: String) extends Error {}`.
+   */
+  @connected
+  public get message(): String;
+  /**
+   * The failure that was being handled where this one was thrown, by a
+   * `throw` in a `catch` block or an [snippet/builtin/orelse] fallback,
+   * or [snippet/builtin/null]: none, or a [snippet/type/Bubble], which
+   * has no value. A failure thrown again keeps the cause it was first
+   * thrown with.
+   */
+  @connected
+  public get cause(): Error?;
+}
 
 /**
  * *Invalid* is an untranslatable type that represents a failure to properly type an

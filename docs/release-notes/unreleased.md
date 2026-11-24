@@ -520,9 +520,14 @@ them need the new ones.
 `try` and `catch` are now operators, as `throw` already was, for the
 declared failures RFC 164 proposes, so they can't name a variable,
 function, parameter, or member, though a name after a `.`, as in
-`promise.catch`, still reads as one. The syntax parses and is type
-checked, but doesn't run or translate yet, and `error case` is reported
-as not supported yet.
+`promise.catch`, still reads as one. The syntax parses, is type
+checked, and runs on the interpreter (`temper run -b interp`), but
+doesn't translate yet, and `error case` is reported as not supported
+yet. A failure's `message` is its type's own getter's, or else its
+type's name and public fields, as `not found (key: y)`; a failure thrown
+while handling another has that one as its `cause`; and one nothing
+handles ends the run saying its message, where it was thrown, and its
+causes.
 
 Core gains an `Error` interface, the root of declared failure types. A
 library's own type named `Error` still takes its place there.

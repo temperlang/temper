@@ -207,6 +207,13 @@ by position; a jump from a `for … of` body goes to a
 [`Landing`](../../../crates/temper-frontend/src/interp/lower.rs).
 Anything else returns to the caller.
 
+A declared failure (RFC 164) is an `Abrupt::Throw` with its object,
+handled as a bubble is. A handler whose fallback needs the failure, for
+a `catch (e)` binding or as the cause of a `throw` there, keeps it in a
+slot of its own; a `for … of` body made there captures it after its
+variables. A failure keeps where it was first thrown and its cause, for
+reports ([`failures.rs`](../../../crates/temper-frontend/src/interp/failures.rs)).
+
 ```mermaid
 flowchart TD
   op["An op fails"] --> handler{"A handler covers this op?"}

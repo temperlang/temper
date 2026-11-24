@@ -329,14 +329,21 @@ pub const PROGRAMS: [&str; 31] = [
 /// The shared programs whose run fails, after logging what's expected
 /// ([`Case::fails`]): `panics`, whose panic no `orelse` stops, and
 /// `panic-causes` and `host-error-causes`, whose failures nothing
-/// handles. A failing program with sections runs each on its own
-/// (`runs`), as a run fails only once.
-pub const FAILING: [&str; 3] = ["panics", "panic-causes", "host-error-causes"];
+/// handles; and the specification `host-failures` ([`SPECS`]), alike. A
+/// failing program with sections runs each on its own (`runs`), as a
+/// run fails only once.
+pub const FAILING: [&str; 4] = [
+    "panics",
+    "panic-causes",
+    "host-error-causes",
+    "host-failures",
+];
 
 /// The shared programs with host code, in a directory of their own
 /// beside their host files, each backend's as a functional test's
-/// ([`CONNECTED`]), which name their library as the program.
-pub const HOST_CODE: [&str; 2] = ["host-error-causes", "host-error-tests"];
+/// ([`CONNECTED`]), which name their library as the program; and the
+/// specification `host-failures`, alike.
+pub const HOST_CODE: [&str; 3] = ["host-error-causes", "host-error-tests", "host-failures"];
 
 /// The specifications in `programs/`: shared programs of behavior not
 /// built yet, written ahead with the logs they should give, which no run
@@ -347,14 +354,20 @@ pub const HOST_CODE: [&str; 2] = ["host-error-causes", "host-error-tests"];
 /// `host-failures` host code's failures and errors, and what a report
 /// says of a failure nothing handles, a run per section, with host code
 /// laid out as [`HOST_CODE`]'s. Each says what it assumes of what's still
-/// open. Once one settles without errors ([`spec_errors`]), it joins
-/// [`PROGRAMS`], and [`FAILING`] or [`HOST_CODE`] as it needs.
+/// open. Once the interpreter runs one, it joins [`INTERP_SPECS`]; once
+/// tmpl and backends do, it joins [`PROGRAMS`], each backend's run list
+/// in turn.
 pub const SPECS: [&str; 4] = [
     "failures",
     "failure-params",
     "failure-async",
     "host-failures",
 ];
+
+/// The specifications ([`SPECS`]) the interpreter runs already, whose
+/// logs are checked there, as [`PROGRAMS`]' are, while tmpl doesn't
+/// translate them yet ([`spec_cases`]).
+pub const INTERP_SPECS: [&str; 3] = ["failures", "failure-params", "host-failures"];
 
 /// A specification's path and text: `NAME.temper.md`, or in a directory
 /// of its own beside its host code.
@@ -375,6 +388,14 @@ pub fn spec_case(name: &str) -> Case {
     let mut case = Case::inline(name, &path.to_string_lossy(), text, Vec::new());
     case.dir = path.parent().unwrap().to_path_buf();
     case
+}
+
+/// A specification's cases, as [`cases`] gives a shared program's: a run
+/// per section where it fails ([`FAILING`]), with host code where it has
+/// some ([`HOST_CODE`]).
+pub fn spec_cases(backend: &str, name: &str) -> Vec<Case> {
+    assert!(SPECS.contains(&name), "no specification {name}");
+    cases_of(backend, &[name])
 }
 
 /// The errors the frontend reports for a specification, settling it as
@@ -663,7 +684,10 @@ fn cases_of(backend: &str, programs: &[&str]) -> Vec<Case> {
     let mut cases = Vec::new();
     let dir = programs_dir();
     for &file in programs {
-        assert!(PROGRAMS.contains(&file), "no shared program {file}");
+        assert!(
+            PROGRAMS.contains(&file) || SPECS.contains(&file),
+            "no shared program {file}"
+        );
         let in_dir = LIBRARIES.contains(&file) || HOST_CODE.contains(&file);
         let (name, path) = match file.strip_suffix(".tmpl") {
             Some(name) => (name, dir.join(file)),

@@ -1224,12 +1224,14 @@ don't take a failing callback to `map` yet (chunk 15).
 
 ## Declared failures
 
-In progress (RFC 164, chunk 4 of notes/error-custom-kinds-plan.md,
-2026-11-24): typed in the frontend; the interpreter and tmpl report
-"Not supported yet" (`throw`, a `catch (e)` binding, failure types),
-and `error case` is still an error. The user-visible names, the root's
-(`FAILURE_ROOT` in `builtins.rs`, and core's `interface Error`) and the
-messages' wording, are kept in one place each, as they may change.
+In progress (RFC 164, chunks 4 and 5 of
+notes/error-custom-kinds-plan.md, 2026-11-24): typed in the frontend and
+run on the interpreter; tmpl reports "Not supported yet" (`throw`, a
+`catch (e)` binding, failure types), and `error case` is still an
+error. The user-visible names, the root's (`FAILURE_ROOT` in
+`builtins.rs`, and core's `interface Error`), the messages' wording,
+and the default message and reports (`interp/failures.rs`), are kept in
+one place each, as they may change.
 
 - **Failure types** (`Types::is_failure`): a class, or sealed
   interface, that extends core's root `Error` (`types::ERROR`), directly or
@@ -1275,10 +1277,23 @@ messages' wording, are kept in one place each, as they may change.
 - **Calls Kotlin might fold** count only for `Bubble`: a call that may
   fail with a declared type is always a failing place, as Kotlin has
   none.
-- **Not yet:** messages and causes (core's `Error` declares no
-  `message` getter yet; a class may declare its own, an ordinary
-  getter), `error case`, promises and generators with `E`, and a failure
-  parameter's implied `extends Error` bound.
+- **Messages and causes:** core's `Error` has two getters, which a
+  failure type's values have unless it declares its own
+  (`core_member_found` looks there for a failure class's): `message:
+  String`, by default its type's name in lowercase words, then its
+  public fields, `not found (key: y)`; and `cause: Error?`, the failure
+  being handled where it was first thrown, by a `throw` in a `catch`
+  block or `orelse` fallback (or a `for … of` body in one, but not
+  another function), or null: none, or a bubble, which reports still
+  say. A failure thrown again keeps its first cause and place, so causes
+  never loop. A report of one nothing handles says its type, message,
+  and place, then each cause's: `Failed with LookupFailed: lookup failed
+  (name: port), at a.temper:5:24`, `caused by NotFound: …`. A panic of
+  `orelse panic()` names it as its cause the same way. Panics pass every
+  handler, as before.
+- **Not yet:** `error case`, promises and generators with `E`, a
+  failure parameter's implied `extends Error` bound, and checks that a
+  failure type's own `message` or `cause` fits the root's.
 
 ## What may bubble
 

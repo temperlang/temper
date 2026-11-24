@@ -3,7 +3,8 @@
 # `try`, optional for now; `catch`, its binding typed as what its operand
 # may fail with; and `Bubble`, which never mixes with declared failures
 # implicitly. Each rule has a legal case beside its error. The
-# interpreter doesn't run `throw` or a `catch` binding yet.
+# interpreter runs them: messages, causes, and what an uncaught failure
+# says (notes/typing.md, "Declared failures").
 === a failure class, thrown, propagated, and handled
 class NotFound(public key: String) extends Error {}
 let lookup(key: String): Int throws NotFound {
@@ -68,7 +69,8 @@ let k: Int = lookup("q") catch (e) { e };
     (Orelse (Call lookup:1 "q") (Block (Let ^e:17 (Call caught)) e:17)))
   #void)
 error 527..532: Cannot assign to Int32 from NotFound
-Failed: Not supported yet: declared failures (`throw` and `catch (e)`) in the interpreter
+log q
+log 1 2
 
 === throw takes a failure
 class NotFound(public key: String) extends Error {}
@@ -254,7 +256,6 @@ let narrow(text: String): Int throws BadSign { parseSign(text) }
       (Call throws Int BadSign:2)
       (Block (Call parseSign:4 text:16)))))
 error 648..663: Cannot throw SignError from a function that throws BadSign; catch it, and throw a BadSign there if need be
-Failed: Not supported yet: declared failures (`throw` and `catch (e)`) in the interpreter
 
 === a catch binding has its operand's failure type, the join of several
 class NotFound(public key: String) extends Error {}
@@ -321,7 +322,7 @@ let d = lookup("a") catch (e) { do { sign(e.key) } catch (f) { console.log(f.tex
             0)))))
   #void)
 error 482..533: Cannot assign to SignError? from Error?
-Failed: Not supported yet: declared failures (`throw` and `catch (e)`) in the interpreter
+log a
 
 === Bubble and declared failures don't mix
 class NotFound(public key: String) extends Error {}
@@ -515,7 +516,7 @@ console.log(problems.join(",") { p => p.key });
       ","
       (Fn (Let ^p:11) (Block (Call . p:11 \key)))))
   #void)
-Failed: Not supported yet: declared failures (`throw` and `catch (e)`) in the interpreter
+log x,k
 
 === catch needs something to handle
 catch (e) { 1 };
@@ -523,3 +524,341 @@ catch (e) { 1 };
 (Block (Error) #void)
 error 0..15: Use of builtin catch is malformed
 Failed: Use of builtin catch is malformed
+
+=== a failure's message: its type's words and public fields, or its own
+class NotFound(public key: String) extends Error {}
+class EmptyText extends Error {}
+class HTTPFailure(public code: Int, public retry: Boolean) extends Error {}
+class Range(public low: Int, public high: Float64, private secret: String) extends Error {
+  public note: String? = null;
+}
+class Expired(public days: Int) extends Error {
+  public get message(): String { "expired ${days} days ago" }
+}
+class Wrapped(public inner: NotFound, public all: List<Int>) extends Error {}
+sealed interface SignError extends Error {}
+class BadSign(public text: String) extends SignError {}
+console.log(new NotFound("y").message);
+console.log(new EmptyText().message);
+console.log(new HTTPFailure(503, true).message);
+console.log(new Range(1, 2.5, "s").message);
+console.log(new Expired(3).message);
+console.log(new Wrapped(new NotFound("z"), [1]).message);
+let s: SignError = new BadSign("?");
+let e: Error = new Expired(1);
+console.log("${s.message}; ${e.message}");
+--- settled
+(Block
+  (Class ^NotFound:0 Error (Param ^key:11 String))
+  (Class ^EmptyText:1 Error)
+  (Class ^HTTPFailure:2 Error (Param ^code:14 Int) (Param ^retry:15 Boolean))
+  (Class
+    ^Range:3
+    Error
+    (Param ^low:17 Int)
+    (Param ^high:18 Float64)
+    (Param private ^secret:19 String)
+    (Let ^note:20 (Call ? String) null))
+  (Class
+    ^Expired:4
+    Error
+    (Param ^days:22 Int)
+    (Get
+      ^message:23
+      (Fn String (Block (Call cat "expired " days:22 " days ago")))))
+  (Class
+    ^Wrapped:5
+    Error
+    (Param ^inner:25 NotFound:0)
+    (Param ^all:26 (Call <> List Int)))
+  (Interface ^SignError:6 Error)
+  (Class ^BadSign:7 SignError:6 (Param ^text:29 String))
+  (Call (Call . console \log) (Call . (Call new NotFound:0 "y") \message))
+  (Call (Call . console \log) (Call . (Call new EmptyText:1) \message))
+  (Call
+    (Call . console \log)
+    (Call . (Call new HTTPFailure:2 503 true) \message))
+  (Call (Call . console \log) (Call . (Call new Range:3 1 2.5 "s") \message))
+  (Call (Call . console \log) (Call . (Call new Expired:4 3) \message))
+  (Call
+    (Call . console \log)
+    (Call
+      .
+      (Call new Wrapped:5 (Call new NotFound:0 "z") (Call list 1))
+      \message))
+  (Let ^s:8 SignError:6 (Call new BadSign:7 "?"))
+  (Let ^e:9 Error (Call new Expired:4 1))
+  (Call
+    (Call . console \log)
+    (Call cat (Call . s:8 \message) "; " (Call . e:9 \message)))
+  #void)
+log not found (key: y)
+log empty text
+log http failure (code: 503, retry: true)
+log range (low: 1, high: 2.5, note: null)
+log expired 3 days ago
+log wrapped (inner: NotFound, all: List)
+log bad sign (text: ?); expired 1 days ago
+
+=== a throw in a handler takes the failure it handles as its cause
+class NotFound(public key: String) extends Error {}
+class LookupFailed(public name: String) extends Error {}
+let lookup(key: String): Int throws NotFound { throw new NotFound(key) }
+let setting(name: String): Int throws LookupFailed {
+  lookup(name) catch { throw new LookupFailed(name) }
+}
+let parsed(text: String): Int throws LookupFailed {
+  text.toInt32() orelse throw new LookupFailed(text)
+}
+let looped(names: List<String>): Int throws LookupFailed {
+  lookup("x") catch {
+    for (let n of names) { throw new LookupFailed(n); }
+    -1
+  }
+}
+let called(): Int throws LookupFailed {
+  let thrower(): Int throws LookupFailed { throw new LookupFailed("f") }
+  lookup("c") catch { thrower() }
+}
+let again(): Int throws NotFound { lookup("k") catch (e) { throw e } }
+let show(e: Error): String { "${e.message} <- ${e.cause?.message ?? "nothing"}" }
+setting("port") catch (e) { console.log(show(e)); 0 };
+parsed("x") catch (e) { console.log(show(e)); 0 };
+looped(["a"]) catch (e) { console.log(show(e)); 0 };
+called() catch (e) { console.log(show(e)); 0 };
+again() catch (e) { console.log(show(e)); 0 };
+console.log(show(new NotFound("new")));
+--- settled
+(Block
+  (Class ^NotFound:0 Error (Param ^key:10 String))
+  (Class ^LookupFailed:1 Error (Param ^name:12 String))
+  (Let
+    ^lookup:2
+    (Fn
+      (Let ^key:13 String)
+      (Call throws Int NotFound:0)
+      (Block (Fail (Call new NotFound:0 key:13)))))
+  (Let
+    ^setting:3
+    (Fn
+      (Let ^name:14 String)
+      (Call throws Int LookupFailed:1)
+      (Block
+        (Orelse
+          (Call lookup:2 name:14)
+          (Block (Fail (Call new LookupFailed:1 name:14)))))))
+  (Let
+    ^parsed:4
+    (Fn
+      (Let ^text:15 String)
+      (Call throws Int LookupFailed:1)
+      (Block
+        (Orelse
+          (Call (Call . text:15 \toInt32))
+          (Fail (Call new LookupFailed:1 text:15))))))
+  (Let
+    ^looped:5
+    (Fn
+      (Let ^names:16 (Call <> List String))
+      (Call throws Int LookupFailed:1)
+      (Block
+        (Orelse
+          (Call lookup:2 "x")
+          (Block
+            (Loop
+              (Block
+                (Call
+                  (Call . names:16 \forEach)
+                  (Fn
+                    (Let ^n:17)
+                    (Block (Fail (Call new LookupFailed:1 n:17)) #void)))
+                (Break @483)))
+            (Call - 1))))))
+  (Let
+    ^called:6
+    (Fn
+      (Call throws Int LookupFailed:1)
+      (Block
+        (Let
+          ^thrower:18
+          (Fn
+            (Call throws Int LookupFailed:1)
+            (Block (Fail (Call new LookupFailed:1 "f")))))
+        (Orelse (Call lookup:2 "c") (Block (Call thrower:18))))))
+  (Let
+    ^again:7
+    (Fn
+      (Call throws Int NotFound:0)
+      (Block
+        (Orelse
+          (Call lookup:2 "k")
+          (Block (Let ^e:19 (Call caught)) (Fail e:19))))))
+  (Let
+    ^show:8
+    (Fn
+      (Let ^e:20 Error)
+      String
+      (Block
+        (Call
+          cat
+          (Call . e:20 \message)
+          " <- "
+          (Block
+            (Let
+              ^subject#21
+              (Block
+                (Let ^subject#22 (Call . e:20 \cause))
+                (If
+                  (Call == subject#22 #null)
+                  #null
+                  (Call . subject#22 \message))))
+            (If (Call == subject#21 #null) "nothing" subject#21))))))
+  (Orelse
+    (Call setting:3 "port")
+    (Block
+      (Let ^e:23 (Call caught))
+      (Call (Call . console \log) (Call show:8 e:23))
+      0))
+  (Orelse
+    (Call parsed:4 "x")
+    (Block
+      (Let ^e:24 (Call caught))
+      (Call (Call . console \log) (Call show:8 e:24))
+      0))
+  (Orelse
+    (Call looped:5 (Call list "a"))
+    (Block
+      (Let ^e:25 (Call caught))
+      (Call (Call . console \log) (Call show:8 e:25))
+      0))
+  (Orelse
+    (Call called:6)
+    (Block
+      (Let ^e:26 (Call caught))
+      (Call (Call . console \log) (Call show:8 e:26))
+      0))
+  (Orelse
+    (Call again:7)
+    (Block
+      (Let ^e:27 (Call caught))
+      (Call (Call . console \log) (Call show:8 e:27))
+      0))
+  (Call (Call . console \log) (Call show:8 (Call new NotFound:0 "new")))
+  #void)
+log lookup failed (name: port) <- not found (key: port)
+log lookup failed (name: x) <- nothing
+log lookup failed (name: a) <- not found (key: x)
+log lookup failed (name: f) <- nothing
+log not found (key: k) <- nothing
+log not found (key: new) <- nothing
+
+=== an uncaught failure says its message, where it was thrown, and its causes
+class NotFound(public key: String) extends Error {}
+class LookupFailed(public name: String) extends Error {}
+let lookup(key: String): Int throws NotFound { throw new NotFound(key) }
+let setting(name: String): Int throws LookupFailed {
+  lookup(name) catch { throw new LookupFailed(name) }
+}
+console.log("before");
+setting("port");
+console.log("after");
+--- settled
+(Block
+  (Class ^NotFound:0 Error (Param ^key:5 String))
+  (Class ^LookupFailed:1 Error (Param ^name:7 String))
+  (Let
+    ^lookup:2
+    (Fn
+      (Let ^key:8 String)
+      (Call throws Int NotFound:0)
+      (Block (Fail (Call new NotFound:0 key:8)))))
+  (Let
+    ^setting:3
+    (Fn
+      (Let ^name:9 String)
+      (Call throws Int LookupFailed:1)
+      (Block
+        (Orelse
+          (Call lookup:2 name:9)
+          (Block (Fail (Call new LookupFailed:1 name:9)))))))
+  (Call (Call . console \log) "before")
+  (Call setting:3 "port")
+  (Call (Call . console \log) "after")
+  #void)
+log before
+Failed with LookupFailed: lookup failed (name: port), at test.temper:5:24
+caused by NotFound: not found (key: port), at test.temper:3:48
+
+=== an uncaught failure caused by a bubble says so
+class ParseFailed(public text: String) extends Error {}
+let parsed(text: String): Int throws ParseFailed {
+  text.toInt32() orelse throw new ParseFailed(text)
+}
+parsed("x");
+--- settled
+(Block
+  (Class ^ParseFailed:0 Error (Param ^text:3 String))
+  (Let
+    ^parsed:1
+    (Fn
+      (Let ^text:4 String)
+      (Call throws Int ParseFailed:0)
+      (Block
+        (Orelse
+          (Call (Call . text:4 \toInt32))
+          (Fail (Call new ParseFailed:0 text:4))))))
+  (Call parsed:1 "x")
+  #void)
+Failed with ParseFailed: parse failed (text: x), at test.temper:3:25
+caused by a bubble
+
+=== a panic passes catch
+class NotFound(public key: String) extends Error {}
+let risky(n: Int): Int throws NotFound {
+  if (n > 1) { panic() }
+  if (n > 0) { throw new NotFound("n"); }
+  n
+}
+console.log("${risky(1) catch { -1 }}");
+let r = risky(2) catch { -1 };
+console.log("after ${r}");
+--- settled
+(Block
+  (Class ^NotFound:0 Error (Param ^key:4 String))
+  (Let
+    ^risky:1
+    (Fn
+      (Let ^n:5 Int)
+      (Call throws Int NotFound:0)
+      (Block
+        (If (Call > n:5 1) (Block (Call panic)) (Block))
+        (If
+          (Call > n:5 0)
+          (Block (Fail (Call new NotFound:0 "n")) #void)
+          (Block))
+        n:5)))
+  (Call
+    (Call . console \log)
+    (Call cat (Orelse (Call risky:1 1) (Block (Call - 1)))))
+  (Let ^r:2 (Orelse (Call risky:1 2) (Block (Call - 1))))
+  (Call (Call . console \log) (Call cat "after " r:2))
+  #void)
+log -1
+Panicked: panic()
+
+=== orelse panic() keeps the failure as its cause
+class NotFound(public key: String) extends Error {}
+let lookup(key: String): Int throws NotFound { throw new NotFound(key) }
+lookup("q") orelse panic();
+--- settled
+(Block
+  (Class ^NotFound:0 Error (Param ^key:3 String))
+  (Let
+    ^lookup:1
+    (Fn
+      (Let ^key:4 String)
+      (Call throws Int NotFound:0)
+      (Block (Fail (Call new NotFound:0 key:4)))))
+  (Orelse (Call lookup:1 "q") (Call panic))
+  #void)
+Panicked: panic(), caused by NotFound: not found (key: q), at test.temper:2:48

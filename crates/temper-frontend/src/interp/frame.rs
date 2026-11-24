@@ -6,7 +6,7 @@
 //! where it left off.
 
 use super::lower::{Code, Exit, Op, Source};
-use super::{Abrupt, Class, Closure, Interp, R, Val, fail};
+use super::{Abrupt, Cause, Class, Closure, Interp, R, Thrown, Val, fail};
 use crate::settle::Settled;
 use std::cell::{OnceCell, RefCell};
 use std::rc::Rc;
@@ -205,8 +205,18 @@ impl Interp<'_> {
                     };
                     result.map(|value| frame.push(value))
                 }
-                Op::MakeFn { node, sources } => {
-                    let captures = capture(frame, sources);
+                Op::MakeFn {
+                    node,
+                    sources,
+                    loop_body,
+                } => {
+                    let mut captures = capture(frame, sources);
+                    // A `for … of` body made in a handler may throw a
+                    // failure caused by the one handled.
+                    if let Some(handled) = loop_body.then(|| handled(frame, at)).flatten() {
+                        let cell = Rc::new(RefCell::new(handled));
+                        captures = captures.iter().cloned().chain([cell]).collect();
+                    }
                     frame.push(Val::Fn(Rc::new(Closure {
                         node: *node,
                         captures,
@@ -262,6 +272,25 @@ impl Interp<'_> {
                 Op::Exit(Exit::Continue(target)) => Err(Abrupt::Continue(*target)),
                 Op::Exit(Exit::Return(target)) => Err(Abrupt::Return(*target, frame.pop())),
                 Op::Fail(message) => Err(Abrupt::Fail(message.as_ref().map(|m| m.to_string()))),
+                Op::Throw => match frame.pop() {
+                    Val::Object(ref failure) => {
+                        // Where it's first thrown, and what's handled there.
+                        if failure.thrown.get().is_none() {
+                            let cause = match handled(frame, at) {
+                                Some(handled @ Val::Object(_)) => Some(Cause::Failure(handled)),
+                                Some(Val::Null) => Some(Cause::Bubble),
+                                _ => None,
+                            };
+                            let at = s.library.tree.span(code.nodes[at as usize]).start;
+                            _ = failure.thrown.set(Box::new(Thrown { at, cause }));
+                        }
+                        Err(Abrupt::Throw(failure.clone()))
+                    }
+                    other => Err(fail(format!(
+                        "Expected a failure, not {}",
+                        super::type_name(&other)
+                    ))),
+                },
                 Op::Panic(message) => Err(Abrupt::Panic(message.to_string())),
                 Op::Required(slot) => match frame.values[*slot as usize] {
                     Val::Uninit => Err(fail("Too few arguments")),
@@ -275,7 +304,7 @@ impl Interp<'_> {
                 }
             };
             if let Err(abrupt) = result {
-                if let Some(value) = land(frame, at, abrupt)? {
+                if let Some(value) = self.land(s, frame, at, abrupt)? {
                     return Ok(value);
                 }
             }
@@ -328,44 +357,77 @@ fn capture(frame: &Frame, sources: &[Source]) -> Rc<[Cell]> {
     sources.iter().map(source).collect()
 }
 
-/// Where an abrupt end of an op at `at` goes: an `orelse`'s handler for a
-/// failure, a landing for a jump from a `for … of` body's call, or this
-/// frame's end (`Some`) for its own `return` or `continue`. Anything else
-/// goes on to the caller.
-fn land(frame: &mut Frame, at: u32, abrupt: Abrupt) -> Result<Option<Val>, Abrupt> {
-    let code = frame.code.clone();
-    let within = |start: u32, end: u32| start <= at && at < end;
-    match abrupt {
-        Abrupt::Fail(_) => {
-            if let Some(h) = code.handlers.iter().find(|h| within(h.start, h.end)) {
-                if h.panics {
-                    let why = match abrupt {
-                        Abrupt::Fail(Some(message)) => format!("a bubble: {message}"),
-                        _ => "a bubble".to_string(),
-                    };
-                    return Err(Abrupt::Panic(format!("panic(), caused by {why}")));
-                }
-                frame.truncate(h.depth);
-                frame.pc = h.to;
-                return Ok(None);
-            }
+/// The failure being handled where the op at `at` runs, if the code
+/// there needs it ([`super::lower::Handler`]): the innermost handler's
+/// whose fallback it's in, or, in a `for … of` body made in one, the
+/// one it captured after its variables.
+fn handled(frame: &Frame, at: u32) -> Option<Val> {
+    let code = &frame.code;
+    match (code.handlers.iter()).find(|h| h.to <= at && at < h.fallback_end) {
+        Some(h) => h.slot.map(|slot| frame.values[slot as usize].clone()),
+        None if frame.captures.len() > code.free.len() => {
+            frame.captures.last().map(|cell| cell.borrow().clone())
         }
-        Abrupt::Break(target) | Abrupt::Continue(target) => {
-            let is_continue = matches!(abrupt, Abrupt::Continue(_));
-            let landing = code.landings.iter().find(|l| {
-                l.target == target && l.continue_ == is_continue && within(l.start, l.end)
-            });
-            if let Some(l) = landing {
-                frame.truncate(l.depth);
-                frame.pc = l.to;
-                return Ok(None);
-            }
-            if is_continue && code.function == Some(target) {
-                return Ok(Some(Val::Void));
-            }
-        }
-        Abrupt::Return(target, value) if code.function == Some(target) => return Ok(Some(value)),
-        _ => {}
+        None => None,
     }
-    Err(abrupt)
+}
+
+impl Interp<'_> {
+    /// Where an abrupt end of an op at `at` goes: an `orelse`'s handler
+    /// for a failure, which keeps it if its fallback needs it, a landing
+    /// for a jump from a `for … of` body's call, or this frame's end
+    /// (`Some`) for its own `return` or `continue`. Anything else goes on
+    /// to the caller.
+    fn land(
+        &mut self,
+        s: &Settled,
+        frame: &mut Frame,
+        at: u32,
+        abrupt: Abrupt,
+    ) -> Result<Option<Val>, Abrupt> {
+        let code = frame.code.clone();
+        let within = |start: u32, end: u32| start <= at && at < end;
+        match abrupt {
+            Abrupt::Fail(_) | Abrupt::Throw(_) => {
+                if let Some(h) = code.handlers.iter().find(|h| within(h.start, h.end)) {
+                    if h.panics {
+                        let why = match abrupt {
+                            Abrupt::Fail(Some(message)) => format!("a bubble: {message}"),
+                            Abrupt::Throw(failure) => self.failure_report(s, &failure),
+                            _ => "a bubble".to_string(),
+                        };
+                        return Err(Abrupt::Panic(format!("panic(), caused by {why}")));
+                    }
+                    frame.truncate(h.depth);
+                    if let Some(slot) = h.slot {
+                        frame.values[slot as usize] = match abrupt {
+                            Abrupt::Throw(failure) => Val::Object(failure),
+                            _ => Val::Null,
+                        };
+                    }
+                    frame.pc = h.to;
+                    return Ok(None);
+                }
+            }
+            Abrupt::Break(target) | Abrupt::Continue(target) => {
+                let is_continue = matches!(abrupt, Abrupt::Continue(_));
+                let landing = code.landings.iter().find(|l| {
+                    l.target == target && l.continue_ == is_continue && within(l.start, l.end)
+                });
+                if let Some(l) = landing {
+                    frame.truncate(l.depth);
+                    frame.pc = l.to;
+                    return Ok(None);
+                }
+                if is_continue && code.function == Some(target) {
+                    return Ok(Some(Val::Void));
+                }
+            }
+            Abrupt::Return(target, value) if code.function == Some(target) => {
+                return Ok(Some(value));
+            }
+            _ => {}
+        }
+        Err(abrupt)
+    }
 }

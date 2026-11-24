@@ -23,6 +23,7 @@
 //! that, as an ordinary class, as Kotlin Temper's interpreter does.
 
 pub mod compile_time;
+mod failures;
 mod frame;
 mod lower;
 mod maps;
@@ -200,8 +201,17 @@ fn take_containers(value: &mut Val, work: &mut Vec<Val>) {
         Val::NullableType(inner) | Val::ValueResult(inner) => {
             Rc::get_mut(inner).into_iter().for_each(take)
         }
-        Val::Object(object) => (Rc::get_mut(object).into_iter())
-            .for_each(|o| o.fields.get_mut().iter_mut().for_each(&mut take)),
+        Val::Object(object) => {
+            if let Some(object) = Rc::get_mut(object) {
+                object.fields.get_mut().iter_mut().for_each(&mut take);
+                // A failure's cause, as a long chain of them may be.
+                if let Some(Cause::Failure(cause)) =
+                    object.thrown.get_mut().and_then(|t| t.cause.as_mut())
+                {
+                    take(cause);
+                }
+            }
+        }
         Val::Fn(closure) => (Rc::get_mut(closure).into_iter())
             .filter_map(|c| Rc::get_mut(&mut c.captures))
             .flat_map(|cells| cells.iter_mut())
@@ -249,6 +259,38 @@ pub struct Class {
 pub struct Object {
     class: Rc<Class>,
     fields: RefCell<Vec<Val>>,
+    /// A failure's, once thrown ([`Thrown`]).
+    thrown: OnceCell<Box<Thrown>>,
+}
+
+impl Object {
+    fn new(class: Rc<Class>, fields: Vec<Val>) -> Object {
+        Object {
+            class,
+            fields: RefCell::new(fields),
+            thrown: OnceCell::new(),
+        }
+    }
+}
+
+/// What a declared failure keeps from the first time it's thrown (RFC
+/// 164), which a report of it says: where, as a library-wide position,
+/// and its cause, the failure being handled there, if any. Thrown again,
+/// it keeps these, so no failure's causes loop back to it.
+#[derive(Debug)]
+struct Thrown {
+    at: u32,
+    cause: Option<Cause>,
+}
+
+/// A failure's cause: a declared failure, its object, a value so that a
+/// long chain of causes drops without recursing, as values do; or a
+/// bubble, which has no value, so the `cause` getter gives null for it,
+/// though reports say it.
+#[derive(Debug)]
+enum Cause {
+    Failure(Val),
+    Bubble,
 }
 
 /// A generator, a `Generator` or `SafeGenerator`, with its body's frame.
@@ -276,6 +318,9 @@ enum Abrupt {
     Await(Rc<Promise>),
     /// A failure, as from `bubble()`, with a message for error nodes.
     Fail(Option<String>),
+    /// A declared failure, an object of a failure type, from `throw`
+    /// (RFC 164), which handlers handle as they do a `Fail`.
+    Throw(Rc<Object>),
     /// Something `orelse` can't catch: a panic, or the interpreter's limits.
     Panic(String),
     /// A test's failure, with its messages, from std's `Test.bail`, which
@@ -428,10 +473,12 @@ fn run_with(settled: &Settled, fuel: Option<u64>, tests: bool, sink: Option<Line
             }
         }
     }
-    let failure = result.err().map(|abrupt| match describe(abrupt) {
-        why if why == OUT_OF_STEPS => format!("{why} (the top-level code may take {budget})"),
-        why => why,
-    });
+    let failure = result
+        .err()
+        .map(|abrupt| match interp.describe(settled, abrupt) {
+            why if why == OUT_OF_STEPS => format!("{why} (the top-level code may take {budget})"),
+            why => why,
+        });
     Run {
         output: interp.output.finish(),
         failure,
@@ -493,7 +540,7 @@ impl Interp<'_> {
                     return Err(Abrupt::Panic(why));
                 }
                 Err(abrupt) => {
-                    let mut why = describe(abrupt);
+                    let mut why = self.describe(settled, abrupt);
                     if why == OUT_OF_STEPS {
                         why = format!("{why} (each test may take {budget})");
                     }
@@ -510,11 +557,13 @@ impl Interp<'_> {
     }
 }
 
-/// How a run that ended abruptly failed, for people.
+/// How a run that ended abruptly failed, for people, but a declared
+/// failure, which only [`Interp::describe`] can report.
 fn describe(abrupt: Abrupt) -> String {
     match abrupt {
         Abrupt::Fail(None) => "Failed".to_string(),
         Abrupt::Fail(Some(message)) => format!("Failed: {message}"),
+        Abrupt::Throw(_) => "Failed with a declared failure".to_string(),
         Abrupt::Panic(message) => format!("Panicked: {message}"),
         Abrupt::TestFailed(messages) => messages,
         Abrupt::Return(..)
@@ -1504,10 +1553,7 @@ impl Interp<'_> {
             .of_node(class.node)
             .ok_or_else(|| fail("Class not settled"))?;
         let size = s.scopes.get(scope).names.len();
-        let object = Rc::new(Object {
-            class: class.clone(),
-            fields: RefCell::new(vec![Val::Uninit; size]),
-        });
+        let object = Rc::new(Object::new(class.clone(), vec![Val::Uninit; size]));
         let this = Val::Object(object.clone());
         let (_, _, members) = core::class_parts(tree, class.node);
         let constructor = members
@@ -1834,6 +1880,9 @@ impl Interp<'_> {
             !matches!(data & ROLE_MASK, ROLE_SETTER | ROLE_CONSTRUCTOR) && member_of(&object, data)
         };
         let Some((class, decl, slot)) = self.find_member(s, &class, name, &readable)? else {
+            if let Some(value) = self.root_member(s, &object, name)? {
+                return Ok(value);
+            }
             return Err(fail(format!("No member {}", s.library.names.get(name))));
         };
         check_access(s, from, &class, decl, name)?;
