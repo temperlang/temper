@@ -704,8 +704,8 @@ then).
 ### Declared failures (As built, 2026-11-24, Proposed)
 
 RFC 164's failure types, beside `Bubble`, which stays as it was
-([types.md](types.md#results); typing.md, "Declared failures"). Python
-and Java have them (below); each other backend says "not yet in the … backend:
+([types.md](types.md#results); typing.md, "Declared failures"). Python,
+Java, and Rust have them (below); each other backend says "not yet in the … backend:
 declared failures: …" for a program that uses them
 (`temper_tmpl::failures::not_yet`), and a program that uses only
 `Bubble` is unchanged, node for node.
@@ -781,6 +781,30 @@ multi-catch where both, so panics (`AssertionError`) and host
 exceptions pass. A function failing with a failure type lists it in
 a `throws` clause. Stack traces are kept (made where the failure is
 constructed), unlike `Bubble`'s.
+
+**In Rust** (chunk 9): values, not unwinding. A signature failing with
+a failure type returns `Result<T, F>` (`Bubble`'s stays
+`temper_core::Result<T>`); a failure class is a class handle with a
+`temper_core::Cause` field and `impl_failure!` (`Display` its message,
+`Debug`, `std::error::Error` with `source()` its cause, and
+`temper_core::Failure`, which core's `Error` is, `Arc<dyn Failure>`); a
+sealed failure interface, the base among them, is an `enum` of the
+types right under it, `From` each below (`impl_failure_enum!`,
+`impl_failure_from!`), the base named `Error`
+(`NamingRules::failure_base`) and `#[non_exhaustive]`; `is` and `as`
+see through it (`AnyValueTrait` by the variant). `Throw` is `return
+Err(x)`, `.into()` where the code fails with a type above, through
+`temper_core::with_cause(x, cause)` in a handler. `OrElse` and `Catch`
+run the body as a `Result` of exactly what it may fail with (the join,
+or `temper_core::Error` with a bubble, which failures convert into);
+`Catch` is `unwrap_or_else(|e| …)`, `map_err(|e| thrown)?` for a
+throwing fallback, `or_else(|e| …)?` for another failing one, and as a
+statement `if let Err(e) = …`. `?` converts by `From`; `Ok(e?)` is `e`
+only where the types match. A module's init takes any failure as a
+bubble; `uncaught` names it a failure and lists causes. No
+`catch_unwind`: a panic passes every handler. Not yet: a `catch` whose
+body jumps, or binding a failure beside a bubble; failure interfaces
+with members; a failure join of several libraries.
 
 Validator rules: T5 lets a signature fail with a failure type or a type
 parameter; F3 marks every `Throw`; F4 checks the failure's type where it

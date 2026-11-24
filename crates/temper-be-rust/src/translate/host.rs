@@ -72,7 +72,7 @@ impl Translator<'_> {
         let Some(sig) = p.signature(decl) else {
             return not_yet("a function without a signature");
         };
-        self.begin(item, sig.bubbles());
+        self.begin(item, sig.fail);
         let mut ps = Vec::new();
         let mut conversions = Vec::new();
         self.params_into(item, params, Params::Free, &mut ps, &mut conversions)?;
@@ -114,16 +114,13 @@ impl Translator<'_> {
             .collect();
         let host = format!("{}::{}", self.host_module(module), snake_case(p.name(decl)));
         let call = Expr::path(host).call(args);
-        let result = match (sig.pass == TypeId::VOID, sig.bubbles()) {
-            (true, false) => None,
-            (true, true) => Some("temper_core::Result<()>".to_string()),
-            (false, bubbles) => {
-                let ty = self.ty(sig.pass)?;
-                Some(match bubbles {
-                    true => format!("temper_core::Result<{ty}>"),
-                    false => ty,
-                })
-            }
+        let pass = match sig.pass == TypeId::VOID {
+            true => None,
+            false => Some(self.ty(sig.pass)?),
+        };
+        let result = match sig.fail {
+            Some(fail) => Some(self.result_of(pass, fail)?),
+            None => pass,
         };
         let (generics, _) = self.type_params(decl)?;
         Ok(Item::Fn {

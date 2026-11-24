@@ -366,25 +366,21 @@ impl<'a> Translator<'a> {
             ps.push(format!("{name}: {}", self.ty(p.decls.get(d).ty)?));
             names.push(name);
         }
-        let result = self.result(sig.pass, sig.bubbles())?;
+        let result = self.result(sig.pass, sig.fail)?;
         Ok((ps, names, result))
     }
 
-    /// A result type, a `Result` if it bubbles.
-    fn result(&mut self, ty: TypeId, bubbles: bool) -> R<Option<String>> {
+    /// A result type, a `Result` if it may fail ([`Self::result_of`]).
+    fn result(&mut self, ty: TypeId, fail: Option<TypeId>) -> R<Option<String>> {
         let result = if ty == TypeId::VOID {
             None
         } else {
             Some(self.ty(ty)?)
         };
-        Ok(if bubbles {
-            Some(format!(
-                "temper_core::Result<{}>",
-                result.unwrap_or_else(|| "()".into())
-            ))
-        } else {
-            result
-        })
+        match fail {
+            Some(fail) => Ok(Some(self.result_of(result, fail)?)),
+            None => Ok(result),
+        }
     }
 
     /// A member's trait signature, from its node.
@@ -480,6 +476,7 @@ impl<'a> Translator<'a> {
         let mut accessors = Vec::new();
         let mut eq_hook = None;
         let mut display = false;
+        let failure = self.is_failure(class);
         for &m in self.member_nodes(class) {
             // A std member this backend connects isn't declared, as
             // Kotlin's: its uses are the connection's.
@@ -567,7 +564,8 @@ impl<'a> Translator<'a> {
                     self.builder(class, decl)?;
                 }
                 Node::Method { decl, .. } => {
-                    if is_plain_to_string(p, decl) && !self.bubbles_decl(decl) {
+                    // A failure's `Display` is its message.
+                    if is_plain_to_string(p, decl) && !self.bubbles_decl(decl) && !failure {
                         display = true;
                     }
                     let mut member = self.method_member(m, This::Class, Params::Method)?;
@@ -651,15 +649,26 @@ impl<'a> Translator<'a> {
                 }],
             });
         }
+        // Failure types above it are enums, which take it by `From`, and
+        // core's `Error`, which it is by `impl_failure!`, not traits.
         let ups = ancestors(p, class);
-        for &iface in &ups {
+        let traits: Vec<DeclId> = ups
+            .iter()
+            .copied()
+            .filter(|&i| !self.is_failure(i))
+            .collect();
+        for iface in traits {
             items.push(self.class_trait_impl(class, iface)?);
         }
+        let root = self.failure_root;
         let mut targets = Vec::new();
-        for &iface in &ups {
+        for iface in ups.into_iter().filter(|&i| Some(i) != root) {
             let (t, _, saved) = self.super_type(class, iface)?;
             self.subst = saved;
             targets.push(t);
+        }
+        if failure {
+            items.push(self.impl_failure(class)?);
         }
         items.push(Item::Macro(Expr::Macro(
             "temper_core::impl_any_value_trait".into(),
@@ -668,6 +677,138 @@ impl<'a> Translator<'a> {
                 Expr::path(format!("[{}]{where_}", targets.join(", "))),
             ],
         )));
+        Ok(items)
+    }
+
+    /// Whether a class or interface is a declared failure type (RFC 164),
+    /// core's `Error` among them.
+    pub(crate) fn is_failure(&self, decl: DeclId) -> bool {
+        temper_tmpl::failures::is_failure_decl(self.p, self.failure_root, decl)
+    }
+
+    /// A failure class's field holding its cause, a `temper_core::Cause`:
+    /// `cause`, or with a `_` after it where a field of its own has that
+    /// name; `None` for another class.
+    fn cause_field(&self, class: DeclId) -> Option<String> {
+        if !self.is_failure(class) {
+            return None;
+        }
+        let fields: Vec<String> = (self.member_nodes(class).iter())
+            .filter_map(|&m| match self.p.nodes.get(m) {
+                Node::Field { decl } => Some(self.name(decl)),
+                _ => None,
+            })
+            .collect();
+        let mut name = "cause".to_string();
+        while fields.contains(&name) {
+            name.push('_');
+        }
+        Some(name)
+    }
+
+    /// `temper_core::impl_failure!(NotFound, message, cause);`: a failure
+    /// class's `Display` (its `message` getter, its own or the one
+    /// `to_tmpl` makes), `Debug`, `std::error::Error` (its cause as
+    /// `source()`), and `temper_core::Failure`.
+    fn impl_failure(&mut self, class: DeclId) -> R<Item> {
+        let message = (self.member_nodes(class).iter()).find_map(|&m| match self.p.nodes.get(m) {
+            Node::Method { decl, .. }
+                if self.kind(decl) == DeclKind::Getter && self.p.name(decl) == "message" =>
+            {
+                Some(decl)
+            }
+            _ => None,
+        });
+        let Some(message) = message else {
+            return not_yet("a failure class without a message getter");
+        };
+        if self.bubbles_decl(message) {
+            return not_yet("a failure's message that bubbles");
+        }
+        let cause = self.cause_field(class).unwrap_or_default();
+        Ok(Item::Macro(Expr::Macro(
+            "temper_core::impl_failure".into(),
+            vec![
+                Expr::path(self.name(class)),
+                Expr::path(self.member_name(message)),
+                Expr::path(cause),
+            ],
+        )))
+    }
+
+    /// A sealed failure interface, the library's base among them: an enum
+    /// of the failure types right under it, each a variant of its name,
+    /// `From` each type below it, with `impl_failure_enum!`'s traits, each
+    /// the variant's; the base's `#[non_exhaustive]`, as a library may add
+    /// failure types.
+    fn failure_enum(&mut self, iface: DeclId) -> R<Vec<Item>> {
+        let p = self.p;
+        if !self.member_nodes(iface).is_empty() {
+            return not_yet("a failure interface with members");
+        }
+        let mut variants = Vec::new();
+        let mut private = false;
+        // Those further below, by the variant they're under.
+        let mut deep: Vec<(String, Vec<Expr>)> = Vec::new();
+        for d in p.decls.ids().filter(|&d| p.decls.contains(d) && d != iface) {
+            if !matches!(self.kind(d), DeclKind::Class | DeclKind::Interface)
+                || !ancestors(p, d).contains(&iface)
+            {
+                continue;
+            }
+            // The type right under `iface` that it's below, or itself,
+            // through the one failure type above each.
+            let failure_up = |t: &Self, d: DeclId| {
+                (p.decls.supers(d).iter())
+                    .filter_map(|&s| nominal_decl(p, s))
+                    .find(|&s| t.is_failure(s))
+            };
+            let mut via = d;
+            let mut above = failure_up(self, d);
+            while let Some(a) = above.filter(|&a| a != iface) {
+                via = a;
+                above = failure_up(self, a);
+            }
+            let path = self.top_path(d)?;
+            if via == d {
+                private |= !self.facts(d).contains(Facts::EXPORTED);
+                variants.push((self.name(d), path));
+                continue;
+            }
+            let via = self.name(via);
+            match deep.iter_mut().find(|(v, _)| *v == via) {
+                Some((_, below)) => below.push(Expr::path(path)),
+                None => deep.push((via, vec![Expr::path(path)])),
+            }
+        }
+        let name = self.name(iface);
+        let mut attrs = vec!["#[derive(Clone, Debug)]".to_string()];
+        if self.facts(iface).contains(Facts::FAILURE_BASE) {
+            attrs.push("#[non_exhaustive]".into());
+        }
+        // A failure type the library doesn't export, which host code
+        // sees only as the variant's value (`Display`, `source()`), not
+        // by its type's name.
+        if private && self.facts(iface).contains(Facts::EXPORTED) {
+            attrs.push("#[allow(private_interfaces)]".into());
+        }
+        let mut args = vec![Expr::path(&name)];
+        args.extend((variants.iter()).map(|(v, t)| Expr::path(v).call(vec![Expr::path(t)])));
+        let mut items = vec![
+            Item::Enum {
+                attrs,
+                vis: self.vis(iface),
+                name: name.clone(),
+                variants,
+            },
+            Item::Macro(Expr::Macro("temper_core::impl_failure_enum".into(), args)),
+        ];
+        for (via, below) in deep {
+            let mut args = vec![Expr::path(&name), Expr::path(via)];
+            args.extend(below);
+            let from = Expr::Macro("temper_core::impl_failure_from".into(), args);
+            items.push(Item::Macro(from));
+        }
         Ok(items)
     }
 
@@ -757,7 +898,8 @@ impl<'a> Translator<'a> {
 
     /// A generic class's type parameters that no field's type has, each
     /// a `PhantomData` field's name and type, as Kotlin's, since Rust
-    /// needs each in a field.
+    /// needs each in a field; and a failure class's cause, a
+    /// `temper_core::Cause` ([`Self::cause_field`]).
     fn phantoms(&mut self, class: DeclId) -> R<Vec<(String, String)>> {
         let p = self.p;
         let mut out = Vec::new();
@@ -776,13 +918,25 @@ impl<'a> Translator<'a> {
                 out.push((field, format!("std::marker::PhantomData<{t}>")));
             }
         }
+        // A failure's cause, set where it's first thrown in a handler.
+        if let Some(cause) = self.cause_field(class) {
+            out.push((cause, "temper_core::Cause".into()));
+        }
         Ok(out)
     }
 
-    /// The struct literal's fields that [`Self::phantoms`] adds.
+    /// The struct literal's fields that [`Self::phantoms`] adds, a
+    /// failure's cause among them.
     fn phantom_lits(&mut self, class: DeclId) -> R<Vec<(String, Option<Expr>)>> {
+        let cause = self.cause_field(class);
         Ok((self.phantoms(class)?.into_iter())
-            .map(|(f, _)| (f, Some(Expr::path("std::marker::PhantomData"))))
+            .map(|(f, _)| {
+                let value = match Some(&f) == cause.as_ref() {
+                    true => Expr::path("temper_core::Cause::new").call(Vec::new()),
+                    false => Expr::path("std::marker::PhantomData"),
+                };
+                (f, Some(value))
+            })
             .collect())
     }
 
@@ -886,7 +1040,7 @@ impl<'a> Translator<'a> {
                 params.push(format!("{arg}: {}", self.ty(t)?));
                 args.push(Expr::path(&arg));
             }
-            let result = self.result(sig.pass, sig.bubbles())?;
+            let result = self.result(sig.pass, sig.fail)?;
             let rust = self.member_name(own);
             if rust.is_empty() {
                 return not_yet(format!("{name}'s {}", p.name(d)));
@@ -909,6 +1063,9 @@ impl<'a> Translator<'a> {
         let Node::Interface { decl: iface, .. } = p.nodes.get(node) else {
             return not_yet("an interface that isn't one");
         };
+        if self.is_failure(iface) {
+            return self.failure_enum(iface);
+        }
         let bare = self.name(iface);
         let vis = self.vis(iface);
         let (gdecl, guse) = self.type_params(iface)?;
@@ -1104,7 +1261,7 @@ impl<'a> Translator<'a> {
             return not_yet("a constructor without a signature");
         };
         let name = self.name(class);
-        self.begin(item, sig.bubbles());
+        self.begin(item, sig.fail);
         let mut stmts = Vec::new();
         let mut ps = Vec::new();
         self.params_into(item, params, Params::Free, &mut ps, &mut stmts)?;
@@ -1307,21 +1464,17 @@ impl<'a> Translator<'a> {
         stmts: Vec<Stmt>,
         tail: Expr,
     ) -> R<Member> {
-        let tail = if self.bubbles {
+        let tail = if self.fails.is_some() {
             Expr::path("Ok").call(vec![tail])
         } else {
             tail
         };
-        let result = self.result(result, false)?;
-        let result = if self.bubbles {
-            result.map(|r| format!("temper_core::Result<{r}>"))
-        } else {
-            result
-        };
+        let fails = self.fails;
+        let result = self.result(result, fails)?;
         let exported = self.facts(class).contains(Facts::EXPORTED);
         let vis = match self.member_vis(decl) {
             // Kotlin's API has `new()` without `Default`.
-            "pub" if exported && ps.is_empty() && !self.bubbles => {
+            "pub" if exported && ps.is_empty() && self.fails.is_none() => {
                 "#[allow(clippy::new_without_default)]\npub"
             }
             vis if exported || self.constructed.contains(&class) => vis,
@@ -1460,9 +1613,9 @@ impl<'a> Translator<'a> {
                 args.push(selfish.field(pname));
             }
         }
-        let result = self.result(TypeId::VOID, self.bubbles_decl(ctor))?;
-        let result = match result {
-            Some(_) => format!("temper_core::Result<{name}{guse}>"),
+        let made = Some(format!("{name}{guse}"));
+        let result = match self.p.signature(ctor).and_then(|s| s.fail) {
+            Some(fail) => self.result_of(made, fail)?,
             None => format!("{name}{guse}"),
         };
         let required = !fields.is_empty();
@@ -1854,6 +2007,11 @@ impl<'a> Translator<'a> {
             let ty = self.ty(to)?;
             let v = self.expr(value, Want::Owned)?;
             return Ok(Expr::path(format!("Into::<{ty}>::into")).call(vec![v]));
+        }
+        // Core's `Error`, any library's failure: `Arc<dyn Failure>`.
+        if self.is_failure_root(to) {
+            let v = self.expr(value, Want::Owned)?;
+            return Ok(Expr::path("temper_core::failure::failure").call(vec![v]));
         }
         let Some(iface) = nominal_decl(p, to).filter(|&d| self.kind(d) == DeclKind::Interface)
         else {

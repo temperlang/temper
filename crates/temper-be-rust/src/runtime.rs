@@ -21,6 +21,10 @@ pub const FILES: &[(&str, &str)] = &[
         include_str!("../runtime/temper-core/Cargo.toml"),
     ),
     (
+        "src/failure.rs",
+        include_str!("../runtime/temper-core/src/failure.rs"),
+    ),
+    (
         "src/float64.rs",
         include_str!("../runtime/temper-core/src/float64.rs"),
     ),

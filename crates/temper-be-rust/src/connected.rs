@@ -90,6 +90,15 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Deque.removeFirst()",
         Connection::Ufcs("temper_core::deque::remove_first"),
     ),
+    // A declared failure's cause and message, `temper_core::Failure`'s.
+    (
+        "core.type Error.get cause()",
+        Connection::Translate(failure_cause),
+    ),
+    (
+        "core.type Error.get message()",
+        Connection::Translate(failure_message),
+    ),
     ("core.type Float64.abs()", Connection::Method("abs")),
     ("core.type Float64.acos()", Connection::Method("acos")),
     ("core.type Float64.asin()", Connection::Method("asin")),
@@ -590,6 +599,39 @@ fn to_string(t: &mut Translator<'_>, args: &[NodeId], want: Want) -> Result<Expr
             Expr::path(helper).call(vec![n, Expr::path("Some").call(vec![radix])])
         }
     })
+}
+
+/// A declared failure's receiver, as its own type, not upcast to core's
+/// `Error`, which it implements as `temper_core::Failure`, and whether
+/// it's core's `Error` itself, an `Arc<dyn Failure>`.
+fn failure_receiver(t: &mut Translator<'_>, args: &[NodeId]) -> Result<(Expr, bool), NotYet> {
+    let &[mut receiver] = args else {
+        return Err(NotYet::new("a failure's getter without its receiver"));
+    };
+    while let Node::Upcast { value } = t.node(receiver) {
+        receiver = value;
+    }
+    let ty = t.p_ty(receiver);
+    let core = t.is_failure_root(ty);
+    Ok((t.expr(receiver, Want::Borrowed)?, core))
+}
+
+/// `e.message()`: a failure class's own getter, a failure enum's, or the
+/// trait's on core's `Error`.
+fn failure_message(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, NotYet> {
+    let (receiver, _) = failure_receiver(t, args)?;
+    Ok(receiver.method("message", Vec::new()))
+}
+
+/// `temper_core::Failure::cause(&e)`, by the trait, as `std::error::Error`
+/// has a `cause` of its own, deprecated: `&*c` for core's `Error`.
+fn failure_cause(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, NotYet> {
+    let (receiver, core) = failure_receiver(t, args)?;
+    let receiver = match core {
+        true => Expr::unary(Unary::Ref, Expr::unary(Unary::Deref, receiver)),
+        false => Expr::unary(Unary::Ref, receiver),
+    };
+    Ok(Expr::path("temper_core::Failure::cause").call(vec![receiver]))
 }
 
 /// The receiver itself, owned: `List.toList()`.

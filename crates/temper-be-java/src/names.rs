@@ -130,6 +130,7 @@ pub const RULES: NamingRules = NamingRules {
     modules_share_names: false,
     // Failure types say `Exception` for `Error` (RFC 164).
     failure_suffix: Some(("Error", "Exception")),
+    failure_base: None,
 };
 
 /// A library's package, as Kotlin's `safeIdentifier` makes it from the

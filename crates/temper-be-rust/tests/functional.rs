@@ -21,7 +21,8 @@
 //! jumps, string order, modules and imports (`modules`, and
 //! `imports-library`, which imports it), and tests (`testing`), and on
 //! this crate's own (`tests/programs/`), which cover what's particular
-//! to Rust ([`OWN`]).
+//! to Rust ([`OWN`]), and the testkit's specifications of declared
+//! failures ([`SPECS`]), whose host code returns its failures in `Err`s.
 //! - `goldens`: each program's generated crate, laid out as Kotlin's,
 //!   with its `src/mod.rs` matching the golden in `tests/goldens/`, named
 //!   for the test's path (`algos-fibonacci.rs`), its other modules'
@@ -102,9 +103,17 @@ const UNUSED: [&str; 5] = [
 
 /// Tests, by key, that store what they never read: `functions/connected`'s
 /// `Hider(@noProperty i: Int)`, which tempest's frontend makes a private
-/// field, read only by the constructor, where Kotlin's makes none. Their
-/// packages are linted as [`UNUSED`]'s are.
-const UNUSED_KEYS: [&str; 2] = ["functions-connected", "functions-connected-no-connected"];
+/// field, read only by the constructor, where Kotlin's makes none; and
+/// `host-failures`' runs with failure classes it doesn't export, whose
+/// fields get getters for host code, as any class's do where a library
+/// has host code, which no code calls. Their packages are linted as
+/// [`UNUSED`]'s are.
+const UNUSED_KEYS: [&str; 4] = [
+    "functions-connected",
+    "functions-connected-no-connected",
+    "host-failures-cause",
+    "host-failures-own-message",
+];
 
 /// Tests, by key, whose root module's layout differs from rustfmt's, and
 /// isn't checked against it yet: std's regex built structurally, calls
@@ -133,8 +142,13 @@ const LAYOUT_GAPS: [&str; 9] = [
 ];
 
 /// This crate's own programs, in `tests/programs/`, which test what's
-/// particular to Rust.
-const OWN: [&str; 2] = ["class-edges", "nullable-edges"];
+/// particular to Rust: `rust-failures`, declared failures as Rust callers
+/// match them, with host code that does (`tests/host/failures.rs`).
+const OWN: [&str; 3] = ["class-edges", "nullable-edges", "rust-failures"];
+
+/// The testkit's specifications (`kit::SPECS`) Rust runs, as Python and
+/// Java do; the other backends don't yet.
+const SPECS: [&str; 2] = ["failures", "host-failures"];
 
 fn cases() -> Vec<Case> {
     let tests = [
@@ -157,7 +171,8 @@ fn cases() -> Vec<Case> {
         &kit::NET[..],
     ]
     .concat();
-    let mut cases = kit::cases_with("rust", &kit::PROGRAMS, &tests);
+    let programs = [&kit::PROGRAMS[..], &SPECS[..]].concat();
+    let mut cases = kit::cases_with("rust", &programs, &tests);
     // A library named a Rust keyword (`regex/match`'s `match`), which
     // cargo refuses as a package's name, by its key (`regex-match`).
     for case in &mut cases {
@@ -484,6 +499,17 @@ class-edges = { path = \"../class-edges\" }
 temper-core = { path = \"../temper-core\" }
 ";
 
+/// The crate of `tests/host/failures.rs`, host code that uses
+/// `rust-failures`' declared failures.
+const FAILURES_INTEROP: &str = "[package]
+name = \"failures-interop\"
+version = \"0.0.0\"
+edition = \"2021\"
+
+[dependencies]
+rust-failures = { path = \"../rust-failures\" }
+";
+
 const FIRST_USE_MAIN: &str = "fn main() {
     println!(\"{}\", modules::helpers::twice(2));
     println!(\"{}\", modules::sum(3));
@@ -569,6 +595,12 @@ fn runs_and_lints() {
             include_str!("host/interop.rs"),
         );
         members.push("host-interop".into());
+        kit::write_if_changed(&root.join("failures-interop/Cargo.toml"), FAILURES_INTEROP);
+        kit::write_if_changed(
+            &root.join("failures-interop/src/main.rs"),
+            include_str!("host/failures.rs"),
+        );
+        members.push("failures-interop".into());
         let list: Vec<String> = members.iter().map(|m| format!("\"{m}\"")).collect();
         kit::write_if_changed(
             &root.join("Cargo.toml"),
@@ -657,6 +689,32 @@ fn runs_and_lints() {
                 )
                 .collect();
             run("host-interop", &expected);
+        }
+        // `tests/host/failures.rs`, host code that matches
+        // `rust-failures`' declared failures by their own types, a sealed
+        // interface's enum, and the crate's `Error`, `?`s them, reads
+        // their messages and `source()` chains, and sees a panic stay one.
+        if let Some(case) = cases.iter().find(|c| c.key == "rust-failures") {
+            let expected: Vec<String> = (case.expected.iter().cloned())
+                .chain(
+                    [
+                        "NotFound z: not found (key: z)",
+                        "base NotFound y",
+                        "base BadSign ?",
+                        "both 0",
+                        "boxed not found (key: w), a NotFound true",
+                        "sign BadSign x: bad sign (text: x)",
+                        "sign EmptyText: no text",
+                        "LookupFailed lookup failed (name: port), caused by not found (key: port), a NotFound cause true",
+                        "made before lookup failed (name: early), caused by not found (key: early)",
+                        "thrown again lookup failed (name: first), caused by not found (key: first)",
+                        "debug NotFound { message: \"not found (key: d)\" }",
+                        "panic passes true",
+                    ]
+                    .map(String::from),
+                )
+                .collect();
+            run("failures-interop", &expected);
         }
         // The test form builds and runs, against std's crate.
         let tests = cargo(&root, &["test", "--quiet", "-p", "testing"]);

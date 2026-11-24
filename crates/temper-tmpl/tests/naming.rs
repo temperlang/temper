@@ -78,6 +78,7 @@ const RULES: NamingRules = NamingRules {
     types_apart: false,
     modules_share_names: false,
     failure_suffix: None,
+    failure_base: None,
 };
 
 const PROGRAM: &str = "tmpl 1 model 1 library t 0.0.0
@@ -529,5 +530,57 @@ module t#0 {
     assert_eq!(
         (plain.get(DeclId(1)), plain.get(DeclId(2))),
         ("TError", "ConfigError")
+    );
+}
+
+/// Under `failure_base`, as Rust's rules have it, the library's base
+/// failure type takes that name, its crate's `Error`, where nothing else
+/// has it, and its own otherwise; other failure types keep theirs.
+#[test]
+fn the_failure_base_takes_its_name() {
+    let rules = NamingRules {
+        case: |_, _| Case::Keep,
+        failure_base: Some("Error"),
+        ..RULES
+    };
+    let program = |other: &str| {
+        text::read(&format!(
+            "tmpl 1 model 1 library t 0.0.0
+
+uses `temper-core`#10 0.1.0 {{
+  interface Error#11 {{
+    connected get message#12(): String;
+    connected get cause#13(): Error#11?;
+  }}
+}}
+
+module t#0 {{
+  export failureBase interface ~TError#1 extends Error#11 {{}}
+
+  export class NotFound#2 extends ~TError#1 {{
+    constructor constructor#4(): NotFound#2 {{}}
+  }}
+
+  export class {other}#3 {{
+    constructor constructor#5(): {other}#3 {{}}
+  }}
+
+  init {{}}
+}}
+"
+        ))
+        .unwrap_or_else(|e| panic!("{e}"))
+    };
+    let p = program("Other");
+    assert_eq!(validate(&p, &Profile::full()), []);
+    let names = assign(&p, &rules);
+    let name = |d: u32| names.get(DeclId(d)).to_string();
+    assert_eq!((name(1), name(2)), ("Error".into(), "NotFound".into()));
+    // An exported `Error` of the library's own keeps its name.
+    let p = program("Error");
+    let names = assign(&p, &rules);
+    assert_eq!(
+        (names.get(DeclId(1)), names.get(DeclId(3))),
+        ("TError", "Error")
     );
 }

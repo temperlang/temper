@@ -276,6 +276,19 @@ before anything else: statics are `OnceLock`s read with `unwrap()`.
 - Types: `i32`, `i64`, `f64`, `Arc<String>` (params `impl ToArcString`),
   `List<T> = Arc<Vec<T>>` (params `impl ToList<T>`), `Option<T>`,
   `Arc<dyn Fn>`, `temper_core::Result<T>`, `Promise<T>`.
+- Declared failures (RFC 164, in progress): a function failing with one
+  returns `Result<T, F>`. A failure class is a class as above, with a
+  `temper_core::Cause` field, implementing `Display` (its message),
+  `Debug` (`NotFound { message: "…" }`), `std::error::Error` (its cause
+  as `source()`), and `temper_core::Failure` (core's `Error`, also
+  `Arc<dyn Failure>`), by `temper_core::impl_failure!`. A sealed failure
+  interface is an `enum` of the types right under it, the library's base
+  the crate's `#[non_exhaustive] pub enum Error`, each `From` every type
+  below it (`impl_failure_enum!`, `impl_failure_from!`), so host `?`
+  converts; a failure the library doesn't export is a variant whose type
+  host code can't name. A failure in a module's init is a
+  `temper_core::Error` with it as source; `uncaught` says "uncaught
+  failure" and each cause. Panics stay panics.
 
 **Naming.** Types keep their case; functions, methods and properties snake;
 statics `LOUD_SNAKE`; keywords `r#`. Public names are never numbered.

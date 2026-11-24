@@ -137,8 +137,10 @@ pub struct Translator<'a> {
     /// so the crate needs `init_on_first_use`.
     pub first_use: bool,
     pub first_use_in_tests: bool,
-    /// Whether the code being translated returns a `Result`.
-    bubbles: bool,
+    /// What the code being translated returns a `Result` failing with:
+    /// `Bubble`, a `temper_core::Result`, or a declared failure type,
+    /// `Result<T, F>`; `None` where it returns no `Result`.
+    fails: Option<TypeId>,
     /// The labels of the `orelse`s whose bodies run in place, in labeled
     /// blocks, innermost last, which a bubble breaks out of
     /// (`or_else_in_place`).
@@ -164,6 +166,9 @@ pub struct Translator<'a> {
     ctor_fields: HashMap<DeclId, String>,
     /// Every class and interface, by declaration.
     classes: HashMap<DeclId, NodeId>,
+    /// Core's `Error`, the root of declared failure types, where the
+    /// program has it (`temper_tmpl::failures::root`).
+    pub(crate) failure_root: Option<DeclId>,
     /// The fields whose getters and setters the module defines.
     getters: HashSet<DeclId>,
     setters: HashSet<DeclId>,
@@ -221,7 +226,7 @@ impl<'a> Translator<'a> {
             uses: BTreeSet::new(),
             first_use: false,
             first_use_in_tests: false,
-            bubbles: false,
+            fails: None,
             orelse: Vec::new(),
             loops: Vec::new(),
             labels: HashMap::new(),
@@ -233,6 +238,7 @@ impl<'a> Translator<'a> {
             this: This::None,
             ctor_fields: HashMap::new(),
             classes: classes::index(p),
+            failure_root: temper_tmpl::failures::root(p),
             getters: HashSet::new(),
             setters: HashSet::new(),
             builders: Vec::new(),
@@ -313,6 +319,12 @@ impl<'a> Translator<'a> {
     }
 
     /// A node's type.
+    /// Whether a type is core's `Error`, the root of failure types.
+    pub(crate) fn is_failure_root(&self, ty: TypeId) -> bool {
+        let decl = temper_tmpl::analysis::nominal_decl(self.p, ty);
+        decl.is_some() && decl == self.failure_root
+    }
+
     pub(crate) fn p_ty(&self, id: NodeId) -> TypeId {
         self.p.nodes.ty(id)
     }
@@ -492,6 +504,12 @@ impl<'a> Translator<'a> {
                         "core.type ValueResult" => return Ok(texts.join(", ")),
                         "core.type DoneResult" => return Ok("()".into()),
                         "core.type DenseBitVector" => "temper_core::DenseBitVector".into(),
+                        // Core's root of declared failures, any library's
+                        // failure, as a failure's cause is.
+                        "core.type Error" => {
+                            self.uses.insert("std::sync::Arc");
+                            return Ok("Arc<dyn temper_core::Failure>".into());
+                        }
                         q => return not_yet(format!("a type for {q}")),
                     }
                 };
@@ -813,7 +831,7 @@ impl<'a> Translator<'a> {
                 _ => return not_yet("a test's parameter that isn't std's Test"),
             };
             let std = class.split("::").next().unwrap_or_default().to_string();
-            self.begin(test, true);
+            self.begin(test, Some(TypeId::BUBBLE));
             let mut stmts = vec![
                 Stmt::Expr(
                     Expr::path("crate::init")
@@ -992,7 +1010,7 @@ impl<'a> Translator<'a> {
     /// its scope (`temper_tmpl::reach`), unless the init never finishes.
     fn init(&mut self, block: NodeId, test_init: Option<NodeId>) -> R<Item> {
         self.uses.insert("std::sync::OnceLock");
-        self.begin(block, true);
+        self.begin(block, Some(TypeId::BUBBLE));
         let mut stmts = Vec::new();
         self.block_into(block, &mut stmts)?;
         if let Some(test_init) = test_init.filter(|_| !crate::tree::diverges(&stmts)) {
@@ -1034,9 +1052,9 @@ impl<'a> Translator<'a> {
     }
 
     /// Starts translating a function or the init block.
-    fn begin(&mut self, scope: NodeId, bubbles: bool) {
+    fn begin(&mut self, scope: NodeId, fails: Option<TypeId>) {
         self.scope = scope;
-        self.bubbles = bubbles;
+        self.fails = fails;
         self.orelse.clear();
         self.loops.clear();
         self.labels.clear();
@@ -1073,7 +1091,7 @@ impl<'a> Translator<'a> {
         let Some(sig) = p.signature(decl) else {
             return not_yet("a function without a signature");
         };
-        self.begin(item, sig.bubbles());
+        self.begin(item, sig.fail);
         let mut ps = Vec::new();
         if style != Params::Free {
             ps.push("&self".to_string());
@@ -1083,8 +1101,35 @@ impl<'a> Translator<'a> {
         self.block_into(body, &mut stmts)?;
         let void = sig.pass == TypeId::VOID;
         let result = if void { None } else { Some(self.ty(sig.pass)?) };
-        let (result, body) = self.finish_body(stmts, result, void);
+        let (result, body) = self.finish_body(stmts, result, void)?;
         Ok((ps, result, body))
+    }
+
+    /// A `Result` of `pass` (`()` for none) failing with `fail`: a
+    /// `temper_core::Result` for `Bubble`, else `Result<T, F>`, with the
+    /// declared failure type's own type (RFC 164).
+    pub(crate) fn result_of(&mut self, pass: Option<String>, fail: TypeId) -> R<String> {
+        let pass = pass.unwrap_or_else(|| "()".into());
+        if fail == TypeId::BUBBLE {
+            return Ok(format!("temper_core::Result<{pass}>"));
+        }
+        Ok(format!("Result<{pass}, {}>", self.failure_ty(fail)?))
+    }
+
+    /// A declared failure type, as a `Result`'s error: a failure class's
+    /// struct or a sealed failure interface's enum, the library's base
+    /// its crate's `Error` enum. Not yet a failure parameter, nor core's
+    /// `Error`, the join of several libraries' failures.
+    pub(crate) fn failure_ty(&mut self, fail: TypeId) -> R<String> {
+        let p = self.p;
+        let root = temper_tmpl::failures::root(p);
+        if !temper_tmpl::failures::is_failure_type(p, root, fail) {
+            return not_yet("a failure parameter");
+        }
+        if temper_tmpl::analysis::nominal_decl(p, fail) == root {
+            return not_yet("failures of several libraries");
+        }
+        self.ty(fail)
     }
 
     /// Parameters written out, and the statements that make a string's
@@ -1165,7 +1210,7 @@ impl<'a> Translator<'a> {
         mut stmts: Vec<Stmt>,
         mut result: Option<String>,
         void: bool,
-    ) -> (Option<String>, Block) {
+    ) -> R<(Option<String>, Block)> {
         let mut tail = tail_of(&mut stmts);
         if let Some(Stmt::Return(None)) = stmts.last() {
             stmts.pop();
@@ -1186,11 +1231,8 @@ impl<'a> Translator<'a> {
                 }
             }
         }
-        if self.bubbles {
-            result = Some(format!(
-                "temper_core::Result<{}>",
-                result.unwrap_or_else(|| "()".into())
-            ));
+        if let Some(fail) = self.fails {
+            result = Some(self.result_of(result, fail)?);
             // No `Ok(())` after statements that never finish, as a call
             // of a `Never<Void>` method, then `panic!()` (rustc's
             // `unreachable_code`).
@@ -1198,7 +1240,7 @@ impl<'a> Translator<'a> {
                 tail = Some(Expr::path("()").ok());
             }
         }
-        (result, Block::new(stmts, tail))
+        Ok((result, Block::new(stmts, tail)))
     }
 
     /// How many times `decl` may be assigned on one path through `id`: 0,
@@ -1506,17 +1548,80 @@ impl<'a> Translator<'a> {
         b
     }
 
-    /// A `return` with its value, `Ok` if the code returns a `Result`.
-    fn ret(&mut self, value: Option<Expr>) -> Stmt {
+    /// `Err(temper_core::Error::new())`, a bubble, where the code
+    /// returns a `temper_core::Result`.
+    fn bubble(&self) -> R<Expr> {
+        if self.fails != Some(TypeId::BUBBLE) {
+            return not_yet("a bubble where a declared failure is wanted");
+        }
+        Ok(Expr::path("Err").call(vec![Expr::path("temper_core::Error::new").call(Vec::new())]))
+    }
+
+    /// The failure a `throw` throws: `value`, with `cause`, the failure
+    /// being handled, where it's thrown in a handler, as its cause unless
+    /// it has one (`temper_core::with_cause`).
+    pub(crate) fn thrown(&mut self, value: NodeId, cause: Option<NodeId>) -> R<Expr> {
+        let v = self.expr(value, Want::Owned)?;
+        let Some(cause) = cause else {
+            return Ok(v);
+        };
+        let c = self.expr(cause, Want::Owned)?;
+        Ok(Expr::path("temper_core::with_cause").call(vec![v, c]))
+    }
+
+    /// `throw value` as what the code returns: `Err(value)`, converted
+    /// `into` the code's failure type where it's another, one above it
+    /// (an enum's variant) or a bubble.
+    fn throw(&mut self, value: NodeId, cause: Option<NodeId>) -> R<Expr> {
+        let Some(fail) = self.fails else {
+            return not_yet("a throw where nothing handles it");
+        };
+        let mut v = self.thrown(value, cause)?;
+        if self.p.nodes.ty(value) != fail {
+            v = v.method("into", Vec::new());
+        }
+        Ok(Expr::path("Err").call(vec![v]))
+    }
+
+    /// What `id`'s Rust value's last `?` fails with, where it ends in
+    /// one: a failing call's callee's failure, a `throw`'s, or for a
+    /// `catch`, its fallback's (`map_err(…)?`, `or_else(…)?`).
+    fn top_failure(&self, id: NodeId) -> Option<TypeId> {
+        let p = self.p;
+        match p.nodes.get(id) {
+            Node::Catch { fallback, .. } => {
+                let fails: Vec<TypeId> = (temper_tmpl::failures::failures_under(p, fallback))
+                    .into_iter()
+                    .map(|(_, f)| f)
+                    .collect();
+                temper_tmpl::failures::join(p, self.failure_root, &fails)
+            }
+            _ => temper_tmpl::failures::node_failure(p, id),
+        }
+    }
+
+    /// Whether `Ok(e?)`, for `id`'s value `e?`, may be just `e`: what
+    /// its `?` fails with is what the code does, as a bubble always is
+    /// where the code bubbles; not where `?` converts it (`From`).
+    pub(crate) fn try_strips(&self, id: NodeId) -> bool {
+        match self.top_failure(id) {
+            Some(fail) => self.fails == Some(fail),
+            None => self.fails == Some(TypeId::BUBBLE),
+        }
+    }
+
+    /// A `return` with its value, `Ok` if the code returns a `Result`, and
+    /// `Ok(e?)` as `e` where `strips` says it may be.
+    fn ret(&mut self, value: Option<Expr>, strips: bool) -> Stmt {
         // `return (return e)` is `return e`, as for `bubble()`.
         let value = match value {
             Some(Expr::Return(e)) => return Stmt::Return(e.map(|e| *e)),
             value => value,
         };
-        if self.bubbles {
+        if self.fails.is_some() {
             Stmt::Return(Some(match value {
                 // `Ok(e?)` is `e`.
-                Some(Expr::Try(e)) => *e,
+                Some(Expr::Try(e)) if strips => *e,
                 Some(e) => e.ok(),
                 None => Expr::path("()").ok(),
             }))
@@ -1760,19 +1865,31 @@ impl<'a> Translator<'a> {
                 }
             }
             Node::Return { value } => {
+                let strips = value.is_none_or(|v| self.try_strips(v));
                 let value = value.map(|v| self.expr(v, Want::Owned)).transpose()?;
-                let r = self.ret(value);
+                let r = self.ret(value, strips);
                 out.push(r);
             }
             Node::ExprStatement { expr } => {
-                if let Node::OrElse { body, fallback } = p.nodes.get(expr) {
-                    if p.nodes.ty(expr) == TypeId::VOID {
+                let void = p.nodes.ty(expr) == TypeId::VOID;
+                match p.nodes.get(expr) {
+                    Node::OrElse { body, fallback } if void => {
                         return self.or_else_stmt(body, fallback, out);
                     }
+                    Node::Catch {
+                        local,
+                        body,
+                        fallback,
+                    } if void => return self.catch_stmt(local, body, fallback, out),
+                    _ => {}
                 }
-                // `bubble();` is `return Err(…);`, which may end a function
-                // as its value, or `break 'orelse;` in an `orelse`'s body.
-                if matches!(p.nodes.get(expr), Node::Bubble { .. } | Node::Error { .. }) {
+                // `bubble();` and `throw x;` are `return Err(…);`, which may
+                // end a function as its value, or `break 'orelse;` in an
+                // `orelse`'s body.
+                if matches!(
+                    p.nodes.get(expr),
+                    Node::Bubble { .. } | Node::Error { .. } | Node::Throw { .. }
+                ) {
                     if let Some(label) = self.orelse.last() {
                         out.push(Stmt::Break(Some(label.clone())));
                         return Ok(());
@@ -2279,12 +2396,20 @@ impl<'a> Translator<'a> {
                 };
                 Expr::Block(Block::new(out, tail))
             }
-            Node::Error { .. } | Node::Bubble { .. } if !self.orelse.is_empty() => Expr::path(
-                format!("break {}", self.orelse.last().cloned().unwrap_or_default()),
-            ),
+            Node::Error { .. } | Node::Bubble { .. } | Node::Throw { .. }
+                if !self.orelse.is_empty() =>
+            {
+                Expr::path(format!(
+                    "break {}",
+                    self.orelse.last().cloned().unwrap_or_default()
+                ))
+            }
+            Node::Throw { value, cause, .. } => {
+                Expr::Return(Some(Box::new(self.throw(value, cause)?)))
+            }
             Node::Error { .. } => {
-                if self.bubbles {
-                    Expr::Return(Some(Box::new(fail())))
+                if self.fails.is_some() {
+                    Expr::Return(Some(Box::new(self.bubble()?)))
                 } else {
                     Expr::Macro("panic".into(), Vec::new())
                 }
@@ -2365,11 +2490,16 @@ impl<'a> Translator<'a> {
             Node::EqNullable { op, left, right } => self.eq_nullable(op, left, right)?,
             Node::Coalesce { left, right } => self.coalesce(left, right)?,
             Node::OrElse { body, fallback } => self.or_else(ty, body, fallback)?,
+            Node::Catch {
+                local,
+                body,
+                fallback,
+            } => self.catch(ty, local, body, fallback)?,
             Node::Bubble { .. } => {
-                if !self.bubbles {
+                if self.fails.is_none() {
                     return not_yet("bubble() where nothing handles it");
                 }
-                Expr::Return(Some(Box::new(fail())))
+                Expr::Return(Some(Box::new(self.bubble()?)))
             }
             Node::Panic {} => Expr::Macro("panic".into(), Vec::new()),
             // `Arc::new(vec![…])`, as Kotlin's.
@@ -2567,7 +2697,6 @@ impl<'a> Translator<'a> {
     }
 }
 
-/// `Err(temper_core::Error::new())`.
 /// The parts of a comma-separated list, split at commas outside `<…>`.
 fn split_top(text: &str) -> Vec<&str> {
     let mut out = Vec::new();
@@ -2587,10 +2716,6 @@ fn split_top(text: &str) -> Vec<&str> {
         out.push(text[start..].trim());
     }
     out
-}
-
-fn fail() -> Expr {
-    Expr::path("Err").call(vec![Expr::path("temper_core::Error::new").call(Vec::new())])
 }
 
 /// Whether a name may go in a format string as `{name}`: a plain

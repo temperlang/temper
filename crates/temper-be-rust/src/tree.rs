@@ -359,6 +359,14 @@ pub enum Item {
         name: String,
         types: Vec<String>,
     },
+    /// An enum of tuple variants of one type each, after its attributes:
+    /// `pub enum SignError { BadSign(BadSign), … }`.
+    Enum {
+        attrs: Vec<String>,
+        vis: &'static str,
+        name: String,
+        variants: Vec<(String, String)>,
+    },
     /// `impl Head { … }`, its head as written: `Rect`, `ShapeTrait for Rect`.
     Impl {
         head: String,
@@ -605,6 +613,20 @@ fn item_at(item: &Item, indent: usize) -> String {
                 out.push_str(&format!("{pad}    {ty},\n"));
             }
             out.push_str(&format!("{pad});\n"));
+            out
+        }
+        Item::Enum {
+            attrs,
+            vis,
+            name,
+            variants,
+        } => {
+            let mut out = attrs_text(attrs, &pad);
+            out.push_str(&format!("{pad}{}enum {name} {{\n", vis_text(vis)));
+            for (variant, ty) in variants {
+                out.push_str(&format!("{pad}    {variant}({ty}),\n"));
+            }
+            out.push_str(&format!("{pad}}}\n"));
             out
         }
         Item::Impl { head, items } => {
@@ -875,7 +897,9 @@ fn bin_parts(op: Bin, a: &Expr, b: &Expr) -> (bool, bool) {
 fn flat_args(args: &[Expr]) -> Option<String> {
     let parts: Option<Vec<String>> = args.iter().map(flat_arg).collect();
     let text = parts?.join(", ");
-    let overflows = matches!(args, [Expr::Method(..)]);
+    // A lone method call or closure may take the line, as rustfmt
+    // overflows the last argument.
+    let overflows = matches!(args, [Expr::Method(..) | Expr::Closure(..)]);
     (overflows || width(&text) <= CALL_WIDTH).then_some(text)
 }
 
@@ -1134,8 +1158,12 @@ fn broken(e: &Expr, indent: usize, col: usize) -> String {
 fn broken_made(e: &Expr, indent: usize, col: usize) -> String {
     match e {
         Expr::Call(f, args) => {
-            let head = layout(f, indent, col);
-            let head = paren(head, f.prec() < POSTFIX || matches!(**f, Expr::Field(..)));
+            // Parenthesized, as `(|| …)()`, counting the parentheses and
+            // what opens the arguments, or is all of them.
+            let wrap = f.prec() < POSTFIX || matches!(**f, Expr::Field(..));
+            let after = usize::from(wrap) + if args.is_empty() { 2 } else { 1 };
+            let head = layout_t(f, indent, col + usize::from(wrap), after);
+            let head = paren(head, wrap);
             call(&head, args, indent, col, true)
         }
         Expr::Macro(name, args) if name == "vec" => {

@@ -522,7 +522,7 @@ declared failures RFC 164 proposes, so they can't name a variable,
 function, parameter, or member, though a name after a `.`, as in
 `promise.catch`, still reads as one. The syntax parses, is type
 checked, and runs on the interpreter (`temper run -b interp`) and in
-Python and Java, where no other backend translates it yet (each says
+Python, Java, and Rust, where no other backend translates it yet (each says
 "not yet … declared failures"), and `error case` is reported as not
 supported yet. In Python, a library's failure types are exception
 classes under its own base, as `WherewithError(Failure, Exception)`
@@ -533,7 +533,12 @@ library's own base, as `WherewithException extends RuntimeException`
 (a type named `…Error` is `…Exception`), implementing the
 `temper.core.Failure` marker; `getMessage()` is the message,
 `getCause()` the cause, and functions list what they may throw in a
-`throws` clause. A failure's `message` is its type's own getter's, or else its
+`throws` clause. In Rust, a function that fails returns `Result<T, F>`;
+each failure class is a struct implementing `Display` (the message) and
+`std::error::Error` (the cause as `source()`), each sealed failure
+interface an `enum` of the types under it, and the library's base its
+crate's `Error` enum, which `?` converts any of them into; a panic stays
+a panic. A failure's `message` is its type's own getter's, or else its
 type's name and public fields, as `not found (key: y)`; a failure thrown
 while handling another has that one as its `cause`; and one nothing
 handles ends the run saying its message, where it was thrown, and its

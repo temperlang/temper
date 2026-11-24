@@ -6,6 +6,8 @@ use std::mem::forget;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 
+pub mod failure;
+pub use failure::{with_cause, Cause, Failure};
 pub mod float64;
 pub mod generator;
 pub use generator::{SafeGenerator, SafeGeneratorTrait};
@@ -474,12 +476,18 @@ pub mod deque {
 /// `RUST_LIB_BACKTRACE` set), the stack where it was made, which an
 /// uncaught bubble shows ([`uncaught`], and a test's report). A plain
 /// bubble without a trace is no allocation.
+///
+/// A library's declared failure (RFC 164; [`Failure`]) converts into
+/// one, `From` it, as its source, where it may also bubble: a module's
+/// init, and an `orelse` handling both.
 #[derive(Clone)]
-pub struct Error(Option<Arc<Failure>>);
+pub struct Error(Option<Arc<Bubbled>>);
 
-struct Failure {
+struct Bubbled {
     source: Option<Arc<dyn std::error::Error + Send + Sync>>,
     trace: Backtrace,
+    /// Whether the source is a declared failure.
+    declared: bool,
 }
 
 impl Error {
@@ -498,6 +506,10 @@ impl Error {
     }
 
     fn of(source: Option<Arc<dyn std::error::Error + Send + Sync>>) -> Self {
+        Error::made(source, false)
+    }
+
+    fn made(source: Option<Arc<dyn std::error::Error + Send + Sync>>, declared: bool) -> Self {
         let trace = match KEEP_TRACES.load(Ordering::Relaxed) {
             true => Backtrace::capture(),
             false => Backtrace::disabled(),
@@ -505,7 +517,16 @@ impl Error {
         if source.is_none() && trace.status() != BacktraceStatus::Captured {
             return Error(None);
         }
-        Error(Some(Arc::new(Failure { source, trace })))
+        Error(Some(Arc::new(Bubbled {
+            source,
+            trace,
+            declared,
+        })))
+    }
+
+    /// Whether its source is a declared failure.
+    fn declared(&self) -> bool {
+        self.0.as_ref().is_some_and(|b| b.declared)
     }
 
     fn cause(&self) -> Option<&Arc<dyn std::error::Error + Send + Sync>> {
@@ -549,6 +570,12 @@ impl std::error::Error for Error {
     }
 }
 
+impl<F: Failure> From<F> for Error {
+    fn from(failure: F) -> Error {
+        Error::made(Some(Arc::new(failure)), true)
+    }
+}
+
 /// Whether bubbles capture where they're made ([`keep_bubble_traces`]).
 static KEEP_TRACES: AtomicBool = AtomicBool::new(false);
 
@@ -564,11 +591,24 @@ pub fn keep_bubble_traces() {
 
 /// A program's bubble that nothing handled, from its `main`: a panic,
 /// saying so, and where the bubble was made, where that's known
-/// ([`Error::backtrace`]).
+/// ([`Error::backtrace`]); for a declared failure, its message, then each
+/// cause's on a line of its own, `caused by: …`.
 pub fn uncaught<T>(error: Error) -> T {
+    let mut said = error.to_string();
+    let what = match error.declared() {
+        true => "failure",
+        false => "bubble",
+    };
+    if error.declared() {
+        let mut cause = std::error::Error::source(&error).and_then(|f| f.source());
+        while let Some(c) = cause {
+            said.push_str(&format!("\ncaused by: {c}"));
+            cause = c.source();
+        }
+    }
     match error.backtrace() {
-        Some(trace) => panic!("uncaught bubble: {error}\nbubbled at:\n{trace}"),
-        None => panic!("uncaught bubble: {error}"),
+        Some(trace) => panic!("uncaught {what}: {said}\nbubbled at:\n{trace}"),
+        None => panic!("uncaught {what}: {said}"),
     }
 }
 

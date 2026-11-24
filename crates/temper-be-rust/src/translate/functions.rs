@@ -29,16 +29,19 @@ impl Translator<'_> {
         if s.optional.contains(&true) {
             return not_yet("a function type with optional parameters");
         }
-        let (params, result, bubbles) = (s.params.to_vec(), s.pass, s.bubbles());
+        let (params, result, fail) = (s.params.to_vec(), s.pass, s.fail);
         let mut texts = Vec::new();
         for t in params {
             texts.push(self.ty(t)?);
         }
-        let result = match (result == TypeId::VOID, bubbles) {
-            (true, false) => String::new(),
-            (true, true) => " -> temper_core::Result<()>".to_string(),
-            (false, false) => format!(" -> {}", self.ty(result)?),
-            (false, true) => format!(" -> temper_core::Result<{}>", self.ty(result)?),
+        let pass = match result == TypeId::VOID {
+            true => None,
+            false => Some(self.ty(result)?),
+        };
+        let result = match (pass, fail) {
+            (None, None) => String::new(),
+            (Some(pass), None) => format!(" -> {pass}"),
+            (pass, Some(fail)) => format!(" -> {}", self.result_of(pass, fail)?),
         };
         self.uses.insert("std::sync::Arc");
         Ok(format!(
@@ -181,11 +184,11 @@ impl Translator<'_> {
         let Some(sig) = p.signature(decl) else {
             return not_yet("a function literal without a signature");
         };
-        let (bubbles, void, result) = (sig.bubbles(), sig.pass == TypeId::VOID, sig.pass);
+        let (fails, void, result) = (sig.fail, sig.pass == TypeId::VOID, sig.pass);
         // The function around it, which its body's own state replaces.
         let saved = (
             self.scope,
-            self.bubbles,
+            self.fails,
             std::mem::take(&mut self.loops),
             std::mem::take(&mut self.labels),
             std::mem::take(&mut self.body_labels),
@@ -193,20 +196,20 @@ impl Translator<'_> {
             std::mem::take(&mut self.orelse),
         );
         let scope = id;
-        self.begin(scope, bubbles);
+        self.begin(scope, fails);
         let result = (|| -> R<(Vec<String>, Option<String>, Block)> {
             let mut ps = Vec::new();
             let mut stmts = Vec::new();
             self.params_into(scope, params, super::Params::Trait, &mut ps, &mut stmts)?;
             self.block_into(body, &mut stmts)?;
             let ty = if void { None } else { Some(self.ty(result)?) };
-            let (result, body) = self.finish_body(stmts, ty, void);
+            let (result, body) = self.finish_body(stmts, ty, void)?;
             Ok((ps, result, body))
         })();
-        let (scope, bubbles, loops, labels, body_labels, guard, orelse) = saved;
+        let (scope, fails, loops, labels, body_labels, guard, orelse) = saved;
         self.orelse = orelse;
         self.scope = scope;
-        self.bubbles = bubbles;
+        self.fails = fails;
         self.loops = loops;
         self.labels = labels;
         self.body_labels = body_labels;

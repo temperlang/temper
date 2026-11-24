@@ -1,4 +1,4 @@
-//! Nullable values, `orelse`, and `bubble()`.
+//! Nullable values, `orelse`, `catch`, and `bubble()`.
 //!
 //! `T?` is `Option<T>`, as Kotlin's (`String?` parameters are
 //! `Option<impl ToArcString>`, mapped to `Option<Arc<String>>`, as
@@ -21,11 +21,16 @@
 //! that bubbles or jumps, which can't run in a closure, follows `if let
 //! Ok(v) = attempt { v } else`, the attempt held in a local first where
 //! it takes lines.
+//!
+//! A `catch` (RFC 164) runs its body so too, as a `Result` of exactly
+//! what it may fail with ([`Translator::handled`]), then handles its
+//! `Err` ([`Translator::catch`]), never a panic: no `catch_unwind`.
 
 use super::{R, Translator, Want, not_yet};
 use crate::ops::{self, Spelling};
 use crate::tree::{Bin, Block, Expr, Fail, Stmt, Unary, panic_caused_by};
 use temper_tmpl::analysis::walk;
+use temper_tmpl::failures::{failures_under, join};
 use temper_tmpl::{DeclId, Flags, Node, NodeId, TypeId};
 
 impl Translator<'_> {
@@ -203,7 +208,7 @@ impl Translator<'_> {
             return true;
         }
         match p.nodes.get(id) {
-            Node::OrElse { fallback, .. } => self.may_fail(fallback),
+            Node::OrElse { fallback, .. } | Node::Catch { fallback, .. } => self.may_fail(fallback),
             Node::FunctionLiteral { .. } => false,
             _ => p.nodes.kids(id).iter().any(|&k| self.may_fail(k)),
         }
@@ -227,12 +232,35 @@ impl Translator<'_> {
         found
     }
 
-    /// An `orelse`'s body as a `Result`.
+    /// What a handler around `body` handles, its body's `Result`'s
+    /// failure: `Bubble`, a `temper_core::Error`, which declared failures
+    /// convert into too, if anything in it may bubble, else the failure
+    /// type nearest above all its declared failures
+    /// (`temper_tmpl::failures::join`), so a handler catches exactly
+    /// those, never a panic.
+    pub(crate) fn handled(&self, body: NodeId) -> TypeId {
+        let p = self.p;
+        let fails: Vec<TypeId> = (failures_under(p, body).into_iter())
+            .map(|(_, f)| f)
+            .collect();
+        join(p, self.failure_root, &fails).unwrap_or(TypeId::BUBBLE)
+    }
+
+    /// A `Result`'s error type, as Rust writes it, for what may fail.
+    pub(crate) fn error_ty(&mut self, fail: TypeId) -> R<String> {
+        match fail {
+            TypeId::BUBBLE => Ok("temper_core::Error".into()),
+            fail => self.failure_ty(fail),
+        }
+    }
+
+    /// An `orelse`'s or a `catch`'s body as a `Result`.
     fn attempt(&mut self, body: NodeId) -> R<Expr> {
-        let outer = std::mem::replace(&mut self.bubbles, true);
+        let fail = self.handled(body);
+        let outer = std::mem::replace(&mut self.fails, Some(fail));
         let orelse = std::mem::take(&mut self.orelse);
         let result = self.attempt_inner(body);
-        self.bubbles = outer;
+        self.fails = outer;
         self.orelse = orelse;
         result
     }
@@ -356,7 +384,10 @@ impl Translator<'_> {
 
     fn attempt_inner(&mut self, body: NodeId) -> R<Expr> {
         let p = self.p;
-        if p.nodes.flags(body).contains(Flags::MAY_BUBBLE) && !self.bubbles_below(body) {
+        if p.nodes.flags(body).contains(Flags::MAY_BUBBLE)
+            && !self.bubbles_below(body)
+            && self.try_strips(body)
+        {
             if let Expr::Try(inner) = self.expr(body, Want::Owned)? {
                 return Ok(*inner);
             }
@@ -396,13 +427,19 @@ impl Translator<'_> {
         // A `?` inside `e` itself, as `div(to_int(x)? as f64, 100.0)`,
         // needs the closure too, or it would be the function's.
         let inner_bubble = self.bubbles_below(value);
+        // Only where what `e` fails with is the closure's, which `?`
+        // converts it into otherwise.
+        let strips = self.try_strips(value);
         let tail = match v {
-            Expr::Try(e) if stmts.is_empty() && !inner_bubble => return Ok(*e),
-            Expr::Try(e) if !stmts_bubble && !inner_bubble => {
+            Expr::Try(e) if strips && stmts.is_empty() && !inner_bubble => return Ok(*e),
+            Expr::Try(e) if strips && !stmts_bubble && !inner_bubble => {
                 return Ok(Expr::Block(Block::new(stmts, Some(*e))));
             }
-            Expr::Try(e) => *e,
-            v => Expr::path("Ok::<_, temper_core::Error>").call(vec![v]),
+            Expr::Try(e) if strips => *e,
+            v => {
+                let fail = self.fails.unwrap_or(TypeId::BUBBLE);
+                Expr::path(format!("Ok::<_, {}>", self.error_ty(fail)?)).call(vec![v])
+            }
         };
         let closure = Expr::Closure(Vec::new(), Block::new(stmts, Some(tail)));
         Ok(closure.call(Vec::new()))
@@ -494,7 +531,8 @@ impl Translator<'_> {
         // `redundant_closure_call`).
         if let Expr::Call(f, args) = &attempt {
             if let (Expr::Closure(params, block), true) = (&**f, args.is_empty()) {
-                let unit = Expr::path("Ok::<_, temper_core::Error>").call(vec![Expr::path("()")]);
+                let error = self.error_ty(self.handled(body))?;
+                let unit = Expr::path(format!("Ok::<_, {error}>")).call(vec![Expr::path("()")]);
                 if params.is_empty()
                     && block.tail.as_deref() == Some(&unit)
                     && !crate::tree::leave_early(&block.stmts)
@@ -530,6 +568,87 @@ impl Translator<'_> {
         }
         out.push(Stmt::If {
             cond: attempt.method("is_err", Vec::new()),
+            then: Block::new(then, None),
+            els: None,
+        });
+        Ok(())
+    }
+
+    /// A `catch` whose body can't run as a `Result`'s closure, or binds
+    /// a bubble beside a failure, which it can't type, says not yet.
+    fn catchable(&self, body: NodeId) -> R<()> {
+        if self.jumps(body) || self.has_error(body) {
+            return not_yet("a catch whose body jumps");
+        }
+        if self.handled(body) == TypeId::BUBBLE {
+            return not_yet("a catch that binds a failure and a bubble");
+        }
+        Ok(())
+    }
+
+    /// `body catch (local) { fallback }` as a value: `attempt
+    /// .unwrap_or_else(|e| fallback)`; where the fallback throws,
+    /// `attempt.map_err(|e| thrown)?`; and where it may fail otherwise,
+    /// `attempt.or_else(|e| fallback's attempt)?`, its failures the code's
+    /// own. A fallback that jumps (`return`, `break`, `continue`) is
+    /// never a value: `to_tmpl` makes it a statement ([`Self::catch_stmt`]).
+    pub(crate) fn catch(
+        &mut self,
+        ty: TypeId,
+        local: DeclId,
+        body: NodeId,
+        fallback: NodeId,
+    ) -> R<Expr> {
+        if ty == TypeId::VOID {
+            return not_yet("a catch of type Void as a value");
+        }
+        if self.jumps(fallback) {
+            return not_yet("a catch's fallback that jumps, as a value");
+        }
+        self.catchable(body)?;
+        let attempt = self.attempt(body)?;
+        let e = vec![self.name(local)];
+        if let Node::Throw { value, cause, .. } = self.p.nodes.get(fallback) {
+            let thrown = self.thrown(value, cause)?;
+            let f = Expr::Closure(e, Block::of(thrown));
+            return Ok(attempt.method("map_err", vec![f]).try_());
+        }
+        if self.escapes(fallback) {
+            // A closure called in place for one value is that value.
+            let mut handler = self.attempt(fallback)?;
+            if let Expr::Call(f, args) = &handler {
+                if let (Expr::Closure(params, block), true) = (&**f, args.is_empty()) {
+                    if params.is_empty() && block.stmts.is_empty() {
+                        if let Some(tail) = &block.tail {
+                            handler = (**tail).clone();
+                        }
+                    }
+                }
+            }
+            let f = Expr::Closure(e, Block::of(handler));
+            return Ok(attempt.method("or_else", vec![f]).try_());
+        }
+        let f = Expr::Closure(e, Block::of(self.expr(fallback, Want::Owned)?));
+        Ok(attempt.method("unwrap_or_else", vec![f]))
+    }
+
+    /// `body catch (local) { fallback }` standing alone: `if let Err(e) =
+    /// body { fallback }`, where the fallback may jump too, as `to_tmpl`
+    /// makes one whose fallback keeps the failure for code after it.
+    pub(crate) fn catch_stmt(
+        &mut self,
+        local: DeclId,
+        body: NodeId,
+        fallback: NodeId,
+        out: &mut Vec<Stmt>,
+    ) -> R<()> {
+        self.catchable(body)?;
+        let attempt = self.attempt(body)?;
+        let mut then = Vec::new();
+        self.body_stmts(fallback, &mut then)?;
+        let bound = format!("Err({})", self.name(local));
+        out.push(Stmt::If {
+            cond: Expr::Let(bound, Box::new(attempt)),
             then: Block::new(then, None),
             els: None,
         });

@@ -22,7 +22,9 @@
 //!
 //! It covers functions, modules, classes and interfaces
 //! (`translate::classes` says how they're written), nullable types,
-//! `orelse`, `bubble()`, and `panic()` (`translate::nullables`), and
+//! `orelse`, `bubble()`, and `panic()` (`translate::nullables`),
+//! declared failures (RFC 164) as Rust errors returned in `Result`s
+//! (`translate::classes` and `temper_core::failure` say how), and
 //! generics: type parameters bounded `Clone + Send + Sync + 'static` as
 //! Kotlin's, an interface bound as its trait, a class bound as `Into`
 //! the class (where Kotlin names a trait that doesn't exist), and core's
@@ -259,8 +261,6 @@ fn bin_section(package: &str) -> String {
 }
 
 pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet> {
-    // Declared failures, not yet (RFC 164).
-    temper_tmpl::failures::not_yet(p).map_err(NotYet::new)?;
     // Type-only errors run as written, or fail where they are
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);
