@@ -498,8 +498,12 @@ Types gain type arguments and type parameters ([types.md](types.md)).
   `Some(None)`, not null. Rust also refuses a null check on a bare `T`
   (`x == null` for `x: T`, `analysis::checks_type_param`), which it
   can't make, where it was always false. C#'s `Optional<T>` is flat
-  already: converting a `T` that's null gives none. RFC 684 ("Flat
-  options") would keep nested options out of the language.
+  already: converting a `T` that's null gives none. Python's checkers
+  infer `T` only from the arguments, so where no argument shows the
+  binding's null (`withDefault<String?>("a")`), Python casts one,
+  `cast('str | None', 'a')`, or pyright calls a null check of the
+  result always false. RFC 684 ("Flat options") would keep nested
+  options out of the language.
 - **Text:** `(list(a, b)): List#64<Int32>`.
 
 Validator rule T4: a call has as many type arguments as its callee has

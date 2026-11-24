@@ -1970,6 +1970,83 @@ impl<'a> Translator<'a> {
         self.ordered(args)
     }
 
+    /// Arguments `out` of `call`, a call of the program's own generic
+    /// function, constructor, or method, with one cast where pyright would
+    /// infer a type parameter narrower than the call binds it: for each
+    /// of the callee's own `T` bound to a nullable type, as by
+    /// `withDefault<String?>("a")`, whose result (or instance) shows it,
+    /// where no argument for a parameter of type `T` is nullable, the
+    /// first such argument is cast to the binding, `cast('str | None',
+    /// 'a')`, so a null check of the result isn't "always false" to
+    /// pyright, which infers `T` only from the arguments.
+    pub(crate) fn widen_args(&mut self, call: NodeId, out: &mut [Option<Expr>]) -> R<()> {
+        let p = self.p;
+        let (callee, args, type_args) = match p.nodes.get(call) {
+            Node::CallFunction {
+                callee,
+                args,
+                type_args,
+                ..
+            }
+            | Node::CallMethod {
+                method: callee,
+                args,
+                type_args,
+                ..
+            }
+            | Node::New {
+                ctor: callee,
+                args,
+                type_args,
+                ..
+            } => (callee, p.nodes.list(args), type_args),
+            _ => return Ok(()),
+        };
+        let (from, to) = analysis::bindings(p, callee, None, p.types.args_of(type_args));
+        let Some(sig) = p.signature(callee) else {
+            return Ok(());
+        };
+        let (params, result) = (sig.params, sig.result);
+        let ctor = p.decls.get(callee).kind == DeclKind::Constructor;
+        let skip = params.len().saturating_sub(args.len());
+        for (f, to) in from.into_iter().zip(to) {
+            if to == TypeId::NONE || !p.types.is_nullable(to) {
+                continue;
+            }
+            // Only where the result shows the binding: an instance's
+            // type, or a result mentioning `T` other than as `T?`, which
+            // is nullable anyway.
+            let shown = ctor
+                || p.types.mentions(result, f)
+                    && !matches!(p.types.get(result), TypeData::Nullable(t) if t == f);
+            if !shown {
+                continue;
+            }
+            // Arguments for parameters of type `T`, by index.
+            let at: Vec<usize> = (params.iter().skip(skip).enumerate())
+                .filter(|&(i, &t)| t == f && i < out.len() && out[i].is_some())
+                .map(|(i, _)| i)
+                .collect();
+            // What's nullable as Python sees it: an `AsNullable`'s value
+            // is as it is.
+            let nullable = |a: NodeId| match p.nodes.get(a) {
+                Node::AsNullable { value } => p.types.is_nullable(p.nodes.ty(value)),
+                _ => p.types.is_nullable(p.nodes.ty(a)),
+            };
+            if at.iter().any(|&i| nullable(args[i])) {
+                continue;
+            }
+            let Some(&first) = at.first() else {
+                continue;
+            };
+            let (ann, _) = self.ann_raw(to)?;
+            let cast = self.import("typing", "cast");
+            let arg = out[first].take().unwrap();
+            out[first] = Some(Expr::name(cast).call(vec![Expr::Str(ann), arg]));
+        }
+        Ok(())
+    }
+
     /// Expressions in evaluation order, none `Omitted`.
     pub(crate) fn exprs<const N: usize>(&mut self, ids: &[NodeId; N]) -> R<[Expr; N]> {
         let out = present(self.ordered(ids)?)?;
@@ -2109,6 +2186,8 @@ impl<'a> Translator<'a> {
                 {
                     return self.connected(callee, args);
                 }
+                let mut args = args;
+                self.widen_args(id, &mut args)?;
                 let present = present(args)?;
                 if self.is_member(callee) {
                     let class = self.p.decls.get(callee).owner;
@@ -2384,6 +2463,8 @@ impl<'a> Translator<'a> {
                 {
                     return self.connected(ctor, args);
                 }
+                let mut args = args;
+                self.widen_args(id, &mut args)?;
                 let args = present(args)?;
 
                 let class = self.p.decls.get(ctor).owner;

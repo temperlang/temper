@@ -5,7 +5,7 @@ from temper_core import (
     list_get as _list_get,
     list_slice as _list_slice,
 )
-from typing import Generic as _Generic, TypeVar as _TypeVar
+from typing import Generic as _Generic, TypeVar as _TypeVar, cast as _cast
 
 __all__ = ('first_or_null', 'Slot', 'Named', 'with_default')
 
@@ -67,15 +67,15 @@ _console.log('none' if (_subject := first_or_null(('x',))) is None else _subject
 _console.log(f'{-1 if (_subject2 := first_or_null(_list_slice(_ints, 1, 2))) is None else _subject2} {-1 if (_subject3 := first_or_null((3,))) is None else _subject3}')
 _slot: Slot[str | None] = Slot(None)
 _console.log(f'{_boolean_to_string(_slot.kept(True) is None)} {_boolean_to_string(_slot.kept(False) is None)}')
-_console.log('none' if (_subject4 := Slot('s').kept(True)) is None else _subject4)
+_console.log('none' if (_subject4 := Slot(_cast('str | None', 's')).kept(True)) is None else _subject4)
 _nameds: _Sequence[Named | None] = (None,)
 _no_nameds: _Sequence[Named] = ()
 _n: Named | None = first_or_null((Named('n'),))
 _console.log(f"{_boolean_to_string(first_or_null(_nameds) is None)} {_boolean_to_string(first_or_null(_no_nameds) is None)} {'none' if (_subject5 := None if _n is None else _n.name) is None else _subject5}")
 _console.log('none' if (_subject6 := None if (_subject7 := first_or_null(_no_nameds)) is None else _subject7.name) is None else _subject6)
 _none: str | None = None
-_console.log('null' if (_subject8 := with_default('a', _none)) is None else _subject8)
-_console.log('null' if (_subject9 := with_default('a', 'b')) is None else _subject9)
-_console.log('null' if (_subject10 := with_default('a')) is None else _subject10)
-_console.log(str(-1 if (_subject11 := with_default(1, None)) is None else _subject11))
+_console.log('null' if (_subject8 := with_default(_cast('str | None', 'a'), _none)) is None else _subject8)
+_console.log('null' if (_subject9 := with_default(_cast('str | None', 'a'), 'b')) is None else _subject9)
+_console.log('null' if (_subject10 := with_default(_cast('str | None', 'a'))) is None else _subject10)
+_console.log(str(-1 if (_subject11 := with_default(_cast('int | None', 1), None)) is None else _subject11))
 _console.log(f"{with_default('c')} {with_default(4, 5)}")

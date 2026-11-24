@@ -626,9 +626,10 @@ impl<'a> Translator<'a> {
         })
     }
 
-    /// A local's type, in its `---@type`: as [`ty`](Self::ty), but any for
-    /// a function's type parameter, whose `---@generic` name LuaLS knows
-    /// only in the function's own annotations.
+    /// A local's type, in its `---@type`, or a cast's, `---@cast` or
+    /// `--[[@as T]]`: as [`ty`](Self::ty), but any for a function's type
+    /// parameter, whose `---@generic` name LuaLS knows only in the
+    /// function's own annotations.
     fn local_ty(&self, ty: TypeId) -> R<String> {
         let saved = self.local_types.replace(true);
         let out = self.ty(ty);
@@ -1873,11 +1874,20 @@ impl<'a> Translator<'a> {
                         then,
                         els: Vec::new(),
                     });
+                    // Not null from here on: its type, or where that names
+                    // a function's type parameter, which a body's
+                    // annotations can't, its parameter's type less
+                    // `temper.Null`, so `T|temper.Null` is still a `T`.
                     let ty = p.decls.get(local).ty;
                     if !p.types.is_nullable(ty) {
+                        let full = self.ty(ty)?;
+                        let ty = match self.local_ty(ty)? {
+                            local if local == full => full,
+                            _ => "-temper.Null".to_string(),
+                        };
                         out.push(Stmt::Cast {
                             name: self.name(param),
-                            ty: self.ty(ty)?,
+                            ty,
                         });
                     }
                 }
@@ -2492,7 +2502,7 @@ impl<'a> Translator<'a> {
             Node::Upcast { value } => self.expr(value)?,
             // Lua doesn't check it; LuaLS takes it as the type.
             Node::Downcast { value } => {
-                Expr::Cast(Box::new(self.expr(value)?), self.ty(p.nodes.ty(id))?)
+                Expr::Cast(Box::new(self.expr(value)?), self.local_ty(p.nodes.ty(id))?)
             }
             Node::As { value, .. } => self.cast(id, value)?,
             Node::Is { ty, value } => self.is_type(ty, value)?,
@@ -2510,7 +2520,7 @@ impl<'a> Translator<'a> {
             }
             // Lua doesn't check it; LuaLS takes it as the type.
             Node::NonNull { value } => {
-                Expr::Cast(Box::new(self.expr(value)?), self.ty(p.nodes.ty(id))?)
+                Expr::Cast(Box::new(self.expr(value)?), self.local_ty(p.nodes.ty(id))?)
             }
             Node::AsNullable { value } => self.expr(value)?,
             // Null is always `temper.null`, which the type's own equality

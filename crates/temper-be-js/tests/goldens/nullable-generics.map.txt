@@ -1,0 +1,74 @@
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../nullable-generics.temper.md:11:5  /** <- export let firstOrNull<T>(ls
+8:1 -> ../nullable-generics.temper.md:11:5  export function firstOrNull( <- export let firstOrNull<T>(ls
+8:17 -> ../nullable-generics.temper.md:11:16 (firstOrNull)  firstOrNull(ls) { <- firstOrNull<T>(ls: List<T>):
+8:28 -> ../nullable-generics.temper.md:11:5  (ls) { <- export let firstOrNull<T>(ls
+9:3 -> ../nullable-generics.temper.md:12:7  if (!ls.length) { <- if (ls.isEmpty) { null } els
+10:5 -> ../nullable-generics.temper.md:12:25  return null; <- null } else { ls[0] }
+12:5 -> ../nullable-generics.temper.md:12:39  return listedGet(/** @type { <- ls[0] }
+16:1 -> ../nullable-generics.temper.md:54:5  /** <- export let withDefault<T>(x:
+22:1 -> ../nullable-generics.temper.md:54:5  export function withDefault( <- export let withDefault<T>(x:
+22:17 -> ../nullable-generics.temper.md:54:16 (withDefault)  withDefault(x, y) { <- withDefault<T>(x: T, y: T =
+22:28 -> ../nullable-generics.temper.md:54:5  (x, y) { <- export let withDefault<T>(x:
+23:3 -> ../nullable-generics.temper.md:54:37  y ??= x; <- y: T = x): T { y }
+24:3 -> ../nullable-generics.temper.md:54:52  return y; <- y }
+27:1 -> ../nullable-generics.temper.md:15:5  /** @template T */ <- export class Slot<T>(public
+28:14 -> ../nullable-generics.temper.md:15:18 (Slot)  Slot extends type() { <- Slot<T>(public value: T) {
+28:18 -> ../nullable-generics.temper.md:15:5   extends type() { <- export class Slot<T>(public
+29:3 -> ../nullable-generics.temper.md:15:33  /** @type {T} */ <- value: T) {
+30:3 -> ../nullable-generics.temper.md:15:33  #value; <- value: T) {
+32:3 -> ../nullable-generics.temper.md:15:5  /** @param {T} value */ <- export class Slot<T>(public
+33:3 -> ../nullable-generics.temper.md:15:5  constructor(value) { <- export class Slot<T>(public
+35:5 -> ../nullable-generics.temper.md:15:33  this.#value = value; <- value: T) {
+38:3 -> ../nullable-generics.temper.md:15:33  /** @returns {T} */ <- value: T) {
+39:3 -> ../nullable-generics.temper.md:15:33  get value() { <- value: T) {
+39:7 -> ../nullable-generics.temper.md:15:33 (value)  value() { <- value: T) {
+43:3 -> ../nullable-generics.temper.md:16:14  /** <- kept(keep: Boolean): T? {
+47:3 -> ../nullable-generics.temper.md:16:14 (kept)  kept(keep) { <- kept(keep: Boolean): T? {
+48:5 -> ../nullable-generics.temper.md:17:9  if (keep) { <- if (keep) { value } else { n
+49:7 -> ../nullable-generics.temper.md:17:21  return this.#value; <- value } else { null }
+51:7 -> ../nullable-generics.temper.md:17:36  return null; <- null }
+56:1 -> ../nullable-generics.temper.md:21:5  export class Named extends t <- export class Named(public na
+56:14 -> ../nullable-generics.temper.md:21:18 (Named)  Named extends type() { <- Named(public name: String) {
+56:19 -> ../nullable-generics.temper.md:21:5   extends type() { <- export class Named(public na
+57:3 -> ../nullable-generics.temper.md:21:31  /** @type {string} */ <- name: String) {}
+58:3 -> ../nullable-generics.temper.md:21:31  #name; <- name: String) {}
+60:3 -> ../nullable-generics.temper.md:21:5  /** @param {string} name */ <- export class Named(public na
+61:3 -> ../nullable-generics.temper.md:21:5  constructor(name) { <- export class Named(public na
+63:5 -> ../nullable-generics.temper.md:21:31  this.#name = name; <- name: String) {}
+66:3 -> ../nullable-generics.temper.md:21:31  /** @returns {string} */ <- name: String) {}
+67:3 -> ../nullable-generics.temper.md:21:31  get name() { <- name: String) {}
+67:7 -> ../nullable-generics.temper.md:21:31 (name)  name() { <- name: String) {}
+72:1 -> ../nullable-generics.temper.md:23:5  /** @type {readonly (string <- let strings: List<String?> =
+73:1 -> ../nullable-generics.temper.md:23:5  const strings = Object.freez <- let strings: List<String?> =
+74:1 -> ../nullable-generics.temper.md:24:5  /** @type {readonly (string <- let noStrings: List<String?>
+75:1 -> ../nullable-generics.temper.md:24:5  const noStrings = Object.fre <- let noStrings: List<String?>
+76:1 -> ../nullable-generics.temper.md:25:5  /** @type {readonly (number <- let ints: List<Int?> = [null
+77:1 -> ../nullable-generics.temper.md:25:5  const ints = Object.freeze([ <- let ints: List<Int?> = [null
+78:1 -> ../nullable-generics.temper.md:26:5  const a = firstOrNull(string <- let a = firstOrNull(strings)
+79:1 -> ../nullable-generics.temper.md:27:5  const b = firstOrNull(noStri <- let b = firstOrNull(noString
+80:1 -> ../nullable-generics.temper.md:28:5  const c = firstOrNull(ints); <- let c = firstOrNull(ints);
+81:1 -> ../nullable-generics.temper.md:29:5  console.log(`${a == null} ${ <- console.log("${a == null} ${
+82:1 -> ../nullable-generics.temper.md:30:5  console.log(firstOrNull(Obje <- console.log(firstOrNull(["x"
+83:1 -> ../nullable-generics.temper.md:31:5  console.log(`${firstOrNull(l <- console.log("${firstOrNull(i
+84:1 -> ../nullable-generics.temper.md:32:5  /** @type {Slot<string | nul <- let slot = new Slot<String?>
+85:1 -> ../nullable-generics.temper.md:32:5  const slot = new Slot(null); <- let slot = new Slot<String?>
+86:1 -> ../nullable-generics.temper.md:33:5  console.log(`${slot.kept(tru <- console.log("${slot.kept(tru
+87:1 -> ../nullable-generics.temper.md:34:5  console.log(new Slot("s").ke <- console.log(new Slot<String?
+88:1 -> ../nullable-generics.temper.md:35:5  /** @type {readonly (Named | <- let nameds: List<Named?> = [
+89:1 -> ../nullable-generics.temper.md:35:5  const nameds = Object.freeze <- let nameds: List<Named?> = [
+90:1 -> ../nullable-generics.temper.md:36:5  /** @type {readonly Named[]} <- let noNameds: List<Named> =
+91:1 -> ../nullable-generics.temper.md:36:5  const noNameds = Object.free <- let noNameds: List<Named> =
+92:1 -> ../nullable-generics.temper.md:37:5  const n = firstOrNull(Object <- let n = firstOrNull([new Nam
+93:1 -> ../nullable-generics.temper.md:38:5  console.log(`${firstOrNull(n <- console.log("${firstOrNull(n
+94:1 -> ../nullable-generics.temper.md:39:5  /** @type {string | null} */ <- console.log(firstOrNull(noNa
+95:1 -> ../nullable-generics.temper.md:39:5  let t$0; <- console.log(firstOrNull(noNa
+96:1 -> ../nullable-generics.temper.md:39:5  { <- console.log(firstOrNull(noNa
+97:3 -> ../nullable-generics.temper.md:39:17  const subject7 = firstOrNull <- firstOrNull(noNameds)?.name
+100:1 -> ../nullable-generics.temper.md:39:5  console.log(t$0 ?? "none"); <- console.log(firstOrNull(noNa
+101:1 -> ../nullable-generics.temper.md:56:5  const none = null; <- let none: String? = null;
+102:1 -> ../nullable-generics.temper.md:57:5  console.log(withDefault("a", <- console.log(withDefault<Stri
+103:1 -> ../nullable-generics.temper.md:58:5  console.log(withDefault("a", <- console.log(withDefault<Stri
+104:1 -> ../nullable-generics.temper.md:59:5  console.log(withDefault("a") <- console.log(withDefault<Stri
+105:1 -> ../nullable-generics.temper.md:60:5  console.log((withDefault(1, <- console.log("${withDefault<I
+106:1 -> ../nullable-generics.temper.md:61:5  console.log(`${withDefault(" <- console.log("${withDefault("

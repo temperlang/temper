@@ -35,7 +35,8 @@
 //! and pairs the runtime's, as Kotlin's, with `---@generic` for a
 //! generic function, `T[]`, `table<K, V>`, and `{ key: K, value: V }` for
 //! LuaLS, and `any` for a generic class's type parameters, which LuaLS's
-//! classes don't take.
+//! classes don't take, and for a function's in its body's `---@type`s
+//! and casts, which can't name them.
 //!
 //! Where Kotlin's isn't right, it differs ([`translate`], [`classes`]):
 //! exported `var`s that functions or methods write stay current in the

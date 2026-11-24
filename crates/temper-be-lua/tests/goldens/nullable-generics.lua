@@ -57,7 +57,7 @@ local function withDefault(x, y)
   if temper.is_null(y) then
     y = x
   end
-  ---@cast y T
+  ---@cast y -temper.Null
   return y
 end
 

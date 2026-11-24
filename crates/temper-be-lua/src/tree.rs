@@ -240,7 +240,7 @@ pub enum Stmt {
     /// `local a, b`: names declared before what refers to them.
     Locals(Vec<String>),
     /// `---@cast name type`: what LuaLS takes a local to be from here on,
-    /// as after a parameter's default.
+    /// as after a parameter's default; `-type` takes `type` out of it.
     Cast {
         name: String,
         ty: String,

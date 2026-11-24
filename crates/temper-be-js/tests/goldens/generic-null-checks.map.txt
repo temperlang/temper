@@ -1,0 +1,30 @@
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../generic-null-checks.temper.md:13:5  /** <- export let isNull<T>(x: T):
+8:1 -> ../generic-null-checks.temper.md:13:5  export function isNull(x) { <- export let isNull<T>(x: T):
+8:17 -> ../generic-null-checks.temper.md:13:16 (isNull)  isNull(x) { <- isNull<T>(x: T): Boolean { x
+8:23 -> ../generic-null-checks.temper.md:13:5  (x) { <- export let isNull<T>(x: T):
+9:3 -> ../generic-null-checks.temper.md:13:43  return x == null; <- x == null }
+12:1 -> ../generic-null-checks.temper.md:19:5  /** <- export let orElse<T>(x: T, y
+18:1 -> ../generic-null-checks.temper.md:19:5  export function orElse(x, y) <- export let orElse<T>(x: T, y
+18:17 -> ../generic-null-checks.temper.md:19:16 (orElse)  orElse(x, y) { <- orElse<T>(x: T, y: T): T { x
+18:23 -> ../generic-null-checks.temper.md:19:5  (x, y) { <- export let orElse<T>(x: T, y
+19:3 -> ../generic-null-checks.temper.md:19:43  { <- x ?? y }
+20:5 -> ../generic-null-checks.temper.md:19:43  if (x == null) { <- x ?? y }
+21:7 -> ../generic-null-checks.temper.md:19:48  return y; <- y }
+23:7 -> ../generic-null-checks.temper.md:19:43  return x; <- x ?? y }
+28:1 -> ../generic-null-checks.temper.md:11:5  export class Named extends t <- export class Named(public na
+28:14 -> ../generic-null-checks.temper.md:11:18 (Named)  Named extends type() { <- Named(public name: String) {
+28:19 -> ../generic-null-checks.temper.md:11:5   extends type() { <- export class Named(public na
+29:3 -> ../generic-null-checks.temper.md:11:31  /** @type {string} */ <- name: String) {}
+30:3 -> ../generic-null-checks.temper.md:11:31  #name; <- name: String) {}
+32:3 -> ../generic-null-checks.temper.md:11:5  /** @param {string} name */ <- export class Named(public na
+33:3 -> ../generic-null-checks.temper.md:11:5  constructor(name) { <- export class Named(public na
+35:5 -> ../generic-null-checks.temper.md:11:31  this.#name = name; <- name: String) {}
+38:3 -> ../generic-null-checks.temper.md:11:31  /** @returns {string} */ <- name: String) {}
+39:3 -> ../generic-null-checks.temper.md:11:31  get name() { <- name: String) {}
+39:7 -> ../generic-null-checks.temper.md:11:31 (name)  name() { <- name: String) {}
+44:1 -> ../generic-null-checks.temper.md:15:5  console.log(`${isNull(null)} <- console.log("${isNull<String
+45:1 -> ../generic-null-checks.temper.md:16:5  console.log(`${isNull(null)} <- console.log("${isNull<Int?>(
+46:1 -> ../generic-null-checks.temper.md:17:5  console.log(`${isNull(null)} <- console.log("${isNull<Named?
+47:1 -> ../generic-null-checks.temper.md:21:5  console.log(orElse(null, "y" <- console.log(orElse<String?>(
+48:1 -> ../generic-null-checks.temper.md:22:5  console.log(`${orElse("x", " <- console.log("${orElse("x", "
