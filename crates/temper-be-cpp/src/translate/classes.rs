@@ -373,8 +373,13 @@ impl Translator<'_> {
             }
         }
         let key = |d: DeclId| (self.names.get(d).to_string(), p.decls.get(d).kind);
+        // A failure type's `message` getter overrides `core::Failure`'s,
+        // whether or not core's `Error` keeps its own, which goes where
+        // nothing reads it.
+        let failure = lineage.iter().any(|&a| self.is_failure_root(a));
         let overrides = |name: &str, kind: DeclKind| {
             (inherited.iter()).any(|&(_, d, _)| key(d) == (name.to_string(), kind))
+                || (failure && kind == DeclKind::Getter && name == "message")
         };
         // What its members take, and its supertypes'.
         let mut data = HashSet::new();
@@ -431,10 +436,12 @@ impl Translator<'_> {
                     true => String::new(),
                     false => format!("<{}>", texts.join(", ")),
                 };
-                supers.push(spelled(&format!(
-                    "public virtual {}{args}",
-                    self.top_name(d)
-                )));
+                // Core's `Error`, the runtime's `Failure`.
+                let name = match self.is_failure_root(d) {
+                    true => "temper::core::Failure".to_string(),
+                    false => self.top_name(d),
+                };
+                supers.push(spelled(&format!("public virtual {name}{args}")));
             }
         }
         let bases = match (supers.is_empty(), interface) {
@@ -601,9 +608,8 @@ impl Translator<'_> {
                             ps.push((ty, self.name(pd)));
                         }
                     }
-                    let result = p.signature(d).map_or(TypeId::VOID, |s| s.pass);
                     let f = tree::Function {
-                        result: self.ty(result)?,
+                        result: self.decl_result(d)?,
                         params: ps,
                         constant: !self.mutating.contains(&name),
                         ..tree::Function::default()
@@ -759,19 +765,19 @@ impl Translator<'_> {
                     ps.push((ty, name));
                 }
             }
-            let result = p.signature(winner).map_or(TypeId::VOID, |s| s.pass);
+            let result = self.decl_result(winner)?;
             let bare = bare(p, self.names, winner);
             let call = Expr::name(format!("{}::{bare}", self.top_name(owner))).call(args);
             let f = tree::Function {
                 exported: true,
-                result: self.ty(result)?,
                 name: format!("{class_name}::{bare}"),
                 params: ps,
                 constant: !self.mutating.contains(&k.0),
-                body: vec![match result == TypeId::VOID {
+                body: vec![match result == "void" {
                     true => Stmt::Expr(call),
                     false => Stmt::Return(Some(call)),
                 }],
+                result,
                 ..tree::Function::default()
             };
             lines.push((bare.clone(), member_line(&f, &bare, false, true, false)));

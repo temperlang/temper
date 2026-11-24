@@ -48,7 +48,9 @@
 //! fields, constructors (`make`), methods, getters and setters, statics,
 //! conversions, `is`, and identity; nullable types (`NullableParam`, or a
 //! null `shared_ptr`), null checks, `??`, and `orelse`, `bubble()`, and
-//! `panic()` (`try`/`catch` of the runtime's `TemperBubble`); and
+//! `panic()` (`try`/`catch` of the runtime's `TemperBubble`); declared
+//! failures (RFC 164) as values in `core::Expected` results, never thrown
+//! (`translate`'s failures); and
 //! generics, as templates, defined in the header where others may
 //! instantiate them, called with their type arguments, which C++ can't
 //! always deduce (`first<core::Str>(…, TEMPER_STR("z"))`), and core's lists, maps,
@@ -84,7 +86,7 @@ use temper_tmpl::analysis;
 use temper_tmpl::coroutines::CoroutineStrategy;
 use temper_tmpl::naming::{NameMap, NamingRules, assign, assign_checked};
 use temper_tmpl::version::Spelling;
-use temper_tmpl::{DeclId, Facts, Features, Node, Profile, Program};
+use temper_tmpl::{DeclId, Facts, Features, Node, NodeId, Profile, Program, TypeId};
 
 /// A named set of translation choices for C++.
 pub struct Variant {
@@ -224,8 +226,6 @@ pub fn translate_with_lines(
     variant: &Variant,
     lines: Option<&str>,
 ) -> Result<Vec<OutFile>, NotYet> {
-    // Declared failures, not yet (RFC 164).
-    temper_tmpl::failures::not_yet(p).map_err(|what| NotYet { what })?;
     // Type-only errors run as written, or fail where they are
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);
@@ -249,7 +249,12 @@ pub fn translate_with_lines(
         let names = assign(p, &variant.rules);
         let effects = effects::Effects::of(p, &names);
         let marked = effects::needing_temporaries(p, &effects, &names);
-        temper_tmpl::spill::spill_with(p, &|n| marked.contains(&n))
+        // A call that may fail with a declared failure type, or a `throw`,
+        // puts its check before the statement it's in.
+        let failing = |n: NodeId| {
+            temper_tmpl::failures::node_failure(p, n).is_some_and(|f| f != TypeId::BUBBLE)
+        };
+        temper_tmpl::spill::spill_with(p, &|n| marked.contains(&n) || failing(n))
     };
     let p = spilled.as_ref().unwrap_or(p);
     // What only tests reach apart, under `TEMPER_TESTS`, and what

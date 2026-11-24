@@ -30,7 +30,7 @@ fn spec_goldens() -> Vec<(String, String)> {
 
 /// The backends that translate declared failures already, each running
 /// the specifications in its own functional tests.
-const HAVE_FAILURES: [&str; 3] = ["java", "py", "rust"];
+const HAVE_FAILURES: [&str; 4] = ["cpp", "java", "py", "rust"];
 
 #[test]
 fn every_other_backend_says_declared_failures_are_not_yet() {

@@ -109,6 +109,8 @@ pub enum Unary {
     Not,
     Neg,
     BitNot,
+    /// `*result`: an `Expected`'s value.
+    Deref,
 }
 
 impl Unary {
@@ -117,6 +119,7 @@ impl Unary {
             Unary::Not => "!",
             Unary::Neg => "-",
             Unary::BitNot => "~",
+            Unary::Deref => "*",
         }
     }
 }
@@ -268,13 +271,15 @@ pub struct GroupMethod {
 pub enum Stmt {
     Expr(Expr),
     /// `auto name = [=](int32_t x) -> int32_t { … };`: a lambda with
-    /// statements, declared before what uses it.
+    /// statements, declared before what uses it; or, `called`, its value
+    /// where it's called at once, `auto name = [&]() -> T { … }();`.
     LambdaLocal {
         name: String,
         captures: String,
         params: Vec<(String, String)>,
         result: String,
         body: Vec<Stmt>,
+        called: bool,
     },
     /// A call that always throws, `core::bubble();`, after which nothing
     /// runs.
@@ -758,6 +763,7 @@ fn stmt(out: &mut Printed, s: &Stmt, depth: usize) {
             params,
             result,
             body: stmts,
+            called,
         } => {
             let _ = write!(
                 out,
@@ -765,7 +771,7 @@ fn stmt(out: &mut Printed, s: &Stmt, depth: usize) {
                 lambda_head(captures, params, result)
             );
             body(out, stmts, depth);
-            out.push_str(";\n");
+            out.push_str(if *called { "();\n" } else { ";\n" });
         }
         Stmt::GroupStruct {
             name,

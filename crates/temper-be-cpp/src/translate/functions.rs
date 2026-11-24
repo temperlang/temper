@@ -35,7 +35,7 @@ impl Translator<'_> {
         }
         Ok(format!(
             "std::function<{}({})>",
-            self.ty(s.pass)?,
+            self.result_type(s.pass, s.fail)?,
             texts.join(", ")
         ))
     }
@@ -96,6 +96,7 @@ impl Translator<'_> {
             params: ps,
             result,
             body: stmts,
+            called: false,
         });
         Ok(Expr::name(name))
     }
@@ -113,7 +114,8 @@ impl Translator<'_> {
         let Some(sig) = p.signature(decl) else {
             return not_yet("a function literal without a signature");
         };
-        let result = self.ty(sig.pass)?;
+        let result = self.result_type(sig.pass, sig.fail)?;
+        let fail_to = self.fail_to_of(sig.pass, sig.fail)?;
         // What the body reads; a parameter it doesn't is unnamed.
         let mut used = std::collections::HashSet::new();
         walk(p, body, &mut |id| {
@@ -138,19 +140,23 @@ impl Translator<'_> {
             std::mem::take(&mut self.pending),
             self.deferred,
             self.in_function,
+            std::mem::replace(&mut self.fail_to, fail_to),
         );
         self.deferred = 0;
         self.in_function = true;
         self.begin(&[body]);
         let stmts = self.stmts(body).map(reachable);
-        let (loops, labels, pending, deferred, in_function) = saved;
+        let (loops, labels, pending, deferred, in_function, outer) = saved;
         self.loops = loops;
         self.labels = labels;
         self.pending = pending;
         self.deferred = deferred;
         self.in_function = in_function;
+        self.fail_to = outer;
         let mut stmts = stmts?;
-        if sig.pass == TypeId::VOID && stmts.last() == Some(&Stmt::Return(None)) {
+        if sig.pass == TypeId::VOID && fail_to != FailTo::Nowhere {
+            super::failures::expected_void(&mut stmts);
+        } else if sig.pass == TypeId::VOID && stmts.last() == Some(&Stmt::Return(None)) {
             stmts.pop();
         }
         Ok((ps, result, stmts))

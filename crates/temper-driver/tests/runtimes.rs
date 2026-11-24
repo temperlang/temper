@@ -12,11 +12,15 @@ use temper_tmpl::version::{RuntimeVersion, Stage, Version, fill_runtime, workspa
 
 /// What Kotlin leaves out of a runtime it copies.
 fn left_out(backend: &str, path: &str) -> bool {
-    // Dotfiles, and what's in dot folders, as a checker's `.mypy_cache`.
-    path.split('/').any(|part| part.starts_with('.'))
+    // Dotfiles, and what's in dot folders, as a checker's `.mypy_cache`;
+    // build output a local run leaves behind (ignored by git).
+    path.split('/')
+        .any(|part| part.starts_with('.') || part == "__pycache__")
         || (backend, path) == ("js", "package-lock.json")
         || (backend == "py" && path.starts_with("mypyc/"))
         || (backend == "java" && path.starts_with("src/test/"))
+        // The runtime's own tests, which libraries don't get.
+        || (backend == "rust" && (path.starts_with("tests/") || path.starts_with("target/")))
 }
 
 fn source_files(backend: &str, dir: &Path, root: &Path, out: &mut Vec<(String, String)>) {

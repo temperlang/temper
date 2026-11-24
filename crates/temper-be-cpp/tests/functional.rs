@@ -15,7 +15,10 @@
 //! those tests, and on programs of C++'s own: names C++ takes
 //! ([`HIDING`]), a nullable result discarded ([`DISCARDED`]),
 //! `Float64.toString` across its range ([`FLOAT_FORMAT`]), and objects
-//! a call frees while it runs ([`LIFETIMES`]).
+//! a call frees while it runs ([`LIFETIMES`]); this crate's own programs,
+//! in `tests/programs/` ([`OWN`]); and the testkit's specifications of
+//! declared failures ([`SPECS`]), whose host code returns its failures
+//! in `Expected`s.
 //!
 //! - `goldens`: each program's generated library, laid out as Kotlin's,
 //!   with its `init.cpp` matching the golden in `tests/goldens/`, named
@@ -79,6 +82,13 @@
 //!   failed step leaves done, and `host/interop.cpp` does the same with
 //!   the `async-turns` program's generated library; skipped where `g++`
 //!   has no coroutines.
+//! - `expected_shim`: `expected.cpp`, the runtime's `Expected` and
+//!   `Failure`, built as C++14 (the shim) and as C++23 (`std::expected`,
+//!   and the shim again), strictly and under the sanitizers, each
+//!   printing the same lines.
+//! - `failures_interop`: `host/failures.cpp`, host code using the
+//!   `cpp-failures` program's declared failures, built with its generated
+//!   library as C++14 and as C++23, under the sanitizers.
 
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
@@ -272,6 +282,15 @@ const LIFETIMES: &str = "# Lifetimes
     console.log(made().length.toString());
 ";
 
+/// This crate's own programs, in `tests/programs/`, which test what's
+/// particular to C++: `cpp-failures`, declared failures as C++ callers
+/// branch on them, with host code that does (`tests/host/failures.cpp`).
+const OWN: [&str; 1] = ["cpp-failures"];
+
+/// The testkit's specifications (`kit::SPECS`) C++ runs, as Python, Java,
+/// and Rust do; the other backends don't yet.
+const SPECS: [&str; 2] = ["failures", "host-failures"];
+
 /// Building tests: plain, with the tests defined.
 const TESTS: Mode = Mode {
     name: "tests",
@@ -355,8 +374,10 @@ fn cases() -> Vec<Case> {
         &kit::NET[..],
     ]
     .concat();
-    let mut cases = kit::cases_with("cpp", &kit::PROGRAMS, &tests);
-    let all = kit::all_libraries(&kit::PROGRAMS, &tests);
+    let programs = [&kit::PROGRAMS[..], &SPECS[..]].concat();
+    let mut cases = kit::cases_with("cpp", &programs, &tests);
+    cases.iter_mut().for_each(rename_host_code);
+    let all = kit::all_libraries(&programs, &tests);
     // Kotlin's suite expects std `net`'s tests to fail on C++, which has
     // no `net`; here they pass where libcurl's headers are.
     if !curl() {
@@ -403,6 +424,18 @@ fn cases() -> Vec<Case> {
         BIT_VECTOR,
         vec!["false true false false".into()],
     ));
+    for name in OWN {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/programs")
+            .join(format!("{name}.temper.md"));
+        let text = fs::read_to_string(&path).unwrap();
+        // Its one log block.
+        let log = text.split("```log\n").nth(1).unwrap_or_default();
+        let expected = log.split("```").next().unwrap_or_default();
+        let expected = expected.lines().map(str::to_string).collect();
+        let file = format!("{name}.temper.md");
+        cases.push(Case::inline(name, &file, text, expected));
+    }
     cases.push(Case::inline(
         "lifetimes",
         "lifetimes.temper.md",
@@ -448,6 +481,23 @@ fn cases() -> Vec<Case> {
         }
     }
     cases
+}
+
+/// A run of a program in sections (`host-failures-cause`, of
+/// `host-failures`), a library of its own, with the program's host code
+/// in its namespace (`host_failures_cause`).
+fn rename_host_code(case: &mut Case) {
+    let Some(program) = case.dir.file_name().and_then(|f| f.to_str()) else {
+        return;
+    };
+    if case.host_files.is_empty() || program == case.library {
+        return;
+    }
+    let from = format!("namespace {} {{", names::namespace(program));
+    let to = format!("namespace {} {{", names::namespace(&case.library));
+    for (_, text) in &mut case.host_files {
+        *text = text.replace(&from, &to);
+    }
 }
 
 /// A case's generated files.
@@ -1874,5 +1924,174 @@ fn net_client_from_host() {
             run(&mut failures, &name, &exe, &[], &expected);
         }
         kit::assert_none(&failures);
+    });
+}
+
+/// The lines `tests/expected.cpp` prints, the same with the shim and with
+/// `std::expected`.
+const EXPECTED_LINES: &[&str] = &[
+    "value 1 1 1 1 1",
+    "error 0 z 7",
+    "value() threw for z",
+    "wider 0 missing (key: q) 1",
+    "arrow 2 hi",
+    "void 1 0 check",
+    "void assigned 0",
+    "void value() threw for check",
+    "live 2",
+    "assigned an error 1 0",
+    "assigned a value 2 1",
+    "moved 1 1",
+    "self 1",
+    "all gone 0",
+    "what missing (key: first)",
+    "cause 1 missing (key: first)",
+    "kept missing (key: first)",
+    "no loop 1",
+    "report missing (key: third)",
+    "caused by: missing (key: second)",
+    "caused by: missing (key: first)",
+    "uncaught missing (key: third)",
+    "caused by: missing (key: second)",
+    "caused by: missing (key: first) 1",
+    "cast 1",
+];
+
+/// The standards [`expected_shim`] and [`failures_interop`] build with,
+/// each with what it adds to [`STRICT`], and whether it's the shim: C++14,
+/// and C++23 where `g++` has `std::expected`, alone and with the shim
+/// forced (`TEMPER_EXPECTED_SHIM`).
+fn expected_standards(gxx: &str, out: &Path) -> Vec<(&'static str, Vec<&'static str>)> {
+    let mut standards = vec![("c++14", vec!["-std=c++14"])];
+    let probe = out.join("expected-probe.cpp");
+    fs::write(
+        &probe,
+        "#include <version>\n#if !defined(__cpp_lib_expected)\n#error no std::expected\n#endif\n",
+    )
+    .unwrap();
+    let probed = (Command::new(gxx)
+        .args(["-std=c++23", "-fsyntax-only"])
+        .arg(&probe))
+    .output()
+    .is_ok_and(|o| o.status.success());
+    if probed {
+        standards.push(("c++23", vec!["-std=c++23"]));
+        standards.push(("c++23 shim", vec!["-std=c++23", "-DTEMPER_EXPECTED_SHIM"]));
+    } else {
+        eprintln!("{gxx} has no std::expected: the shim alone");
+    }
+    standards
+}
+
+/// `tests/expected.cpp`, the runtime's `Expected` and `Failure` on their
+/// own: strictly and under the sanitizers, as C++14 (the shim) and C++23
+/// (`std::expected`, and the shim again), each printing
+/// [`EXPECTED_LINES`], so the shim behaves as `std::expected` does for
+/// what it has.
+#[test]
+fn expected_shim() {
+    let Some((gxx, _)) = find_gxx() else {
+        kit::missing("no g++ (on PATH, or named by CXX)");
+        return;
+    };
+    let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("be-cpp-expected");
+    let _ = fs::remove_dir_all(&out);
+    fs::create_dir_all(&out).unwrap();
+    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/expected.cpp");
+    let expected: Vec<String> = EXPECTED_LINES.iter().map(|l| l.to_string()).collect();
+    let mut failures = Vec::new();
+    for (name, flags) in expected_standards(&gxx, &out) {
+        let exe = out.join(name.replace(' ', "-"));
+        let mut command = Command::new(&gxx);
+        command
+            .args(STRICT)
+            .args(&flags)
+            .args(ASAN.flags())
+            .arg("-isystem")
+            .arg(runtime_dir())
+            .arg(&source)
+            .arg("-o")
+            .arg(&exe);
+        check(&format!("g++ ({name}), expected.cpp"), command);
+        run(
+            &mut failures,
+            &format!("expected ({name})"),
+            &exe,
+            &[],
+            &expected,
+        );
+    }
+    kit::assert_none(&failures);
+    let _ = fs::remove_dir_all(&out);
+}
+
+/// `tests/host/failures.cpp`, host code using the `cpp-failures`
+/// program's declared failures, built with its generated library, all
+/// strictly, under the sanitizers, as C++14 (the runtime's shim) and
+/// C++23 (`std::expected`): it logs what the library's top level does,
+/// then a line per check.
+#[test]
+fn failures_interop() {
+    let Some((gxx, _)) = find_gxx() else {
+        kit::missing("no g++ (on PATH, or named by CXX)");
+        return;
+    };
+    kit::with_stack(move || {
+        let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("be-cpp-failures");
+        let _ = fs::remove_dir_all(&out);
+        let case = (cases().into_iter())
+            .find(|c| c.key == "cpp-failures")
+            .unwrap();
+        let src = out.join("src");
+        let mut sources = Vec::new();
+        for file in generate(&case) {
+            let path = src.join(&file.path);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(&path, &file.text).unwrap();
+            if file.path.ends_with(".cpp") && !file.path.ends_with("/main.cpp") {
+                sources.push(path);
+            }
+        }
+        sources.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/failures.cpp"));
+        let expected: Vec<String> = (case.expected.iter().cloned())
+            .chain(
+                [
+                    "NotFound z: not found (key: z)",
+                    "found 1 -1",
+                    "base NotFound y",
+                    "base BadSign ?",
+                    "both 0",
+                    "sign BadSign x: bad sign (text: x)",
+                    "sign EmptyText: no text",
+                    "LookupFailed lookup failed (name: port), caused by not found (key: port), \
+                     a NotFound cause 1, what lookup failed (name: port)",
+                    "made before lookup failed (name: early), caused by not found (key: early)",
+                    "thrown again lookup failed (name: first), caused by not found (key: first)",
+                    "panic passes panic",
+                ]
+                .map(String::from),
+            )
+            .collect();
+        let mut failures = Vec::new();
+        for (name, flags) in expected_standards(&gxx, &out) {
+            let exe = out.join(name.replace(' ', "-"));
+            let mut command = Command::new(&gxx);
+            command
+                .args(STRICT)
+                .args(&flags)
+                .args(ASAN.flags())
+                .arg("-isystem")
+                .arg(runtime_dir())
+                .arg("-I")
+                .arg(&src)
+                .args(&sources)
+                .arg("-o")
+                .arg(&exe);
+            check(&format!("g++ ({name}), host/failures.cpp"), command);
+            let label = format!("failures interop ({name}, asan, ubsan)");
+            run(&mut failures, &label, &exe, &[], &expected);
+        }
+        kit::assert_none(&failures);
+        let _ = fs::remove_dir_all(&out);
     });
 }

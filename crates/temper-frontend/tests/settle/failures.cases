@@ -482,6 +482,67 @@ error 380..401: Cannot throw NotFound from a function without NotFound in its re
 error 461..472: Cannot throw NotFound from a function without NotFound in its return type
 error 682..690: Cannot bubble from a function that throws NotFound; handle it with orelse or catch, and throw a NotFound there if need be
 
+=== an export's failure type must be exported too
+// As any type in an exported signature (classes.cases, "exports that
+// depend on non-exported types"): a public signature failing with an
+// unexported type gives host code a failure it can't name.
+class Hidden extends Error {}
+sealed interface Secret extends Error {}
+class Told extends Secret {}
+export class Shown extends Error {}
+export let find(): Int throws Hidden { throw new Hidden() }
+export let seek(): Int throws Secret { throw new Told() }
+export let fine(): Int throws Shown { throw new Shown() }
+export let apply(f: fn (): Int throws Hidden): Int { f() orelse 0 }
+export class Finder {
+  public find(): Int throws Hidden { throw new Hidden() }
+  private quiet(): Int throws Hidden { throw new Hidden() }
+}
+// Not exports: private functions may fail with private types.
+let local(): Int throws Hidden { throw new Hidden() }
+console.log("${find() orelse -1} ${local() orelse -2}");
+--- settled
+(Block
+  (Class ^Hidden:0 Error)
+  (Interface ^Secret:1 Error)
+  (Class ^Told:2 Secret:1)
+  (Class ^Shown:3 Error)
+  (Let
+    ^find:4
+    (Fn (Call throws Int Hidden:0) (Block (Fail (Call new Hidden:0)))))
+  (Let ^seek:5 (Fn (Call throws Int Secret:1) (Block (Fail (Call new Told:2)))))
+  (Let ^fine:6 (Fn (Call throws Int Shown:3) (Block (Fail (Call new Shown:3)))))
+  (Let
+    ^apply:7
+    (Fn
+      (Let ^f:14 (Call FnType (Call throws Int Hidden:0)))
+      Int
+      (Block (Orelse (Call f:14) 0))))
+  (Class
+    ^Finder:8
+    (Method
+      ^find:16
+      (Fn (Call throws Int Hidden:0) (Block (Fail (Call new Hidden:0)))))
+    (Method private
+      ^quiet:17
+      (Fn (Call throws Int Hidden:0) (Block (Fail (Call new Hidden:0))))))
+  (Let
+    ^local:9
+    (Fn (Call throws Int Hidden:0) (Block (Fail (Call new Hidden:0)))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Orelse (Call find:4) (Call - 1))
+      " "
+      (Orelse (Call local:9) (Call - 2))))
+  #void)
+error 366..372: Export depends publicly on non-exported symbol Hidden
+error 426..432: Export depends publicly on non-exported symbol Secret
+error 550..556: Export depends publicly on non-exported symbol Hidden
+error 630..636: Export depends publicly on non-exported symbol Hidden
+log -1 -2
+
 === failures are values
 class NotFound(public key: String) extends Error {}
 let lookup(key: String): Int throws NotFound { throw new NotFound(key) }

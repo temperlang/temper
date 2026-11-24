@@ -705,7 +705,7 @@ then).
 
 RFC 164's failure types, beside `Bubble`, which stays as it was
 ([types.md](types.md#results); typing.md, "Declared failures"). Python,
-Java, and Rust have them (below); each other backend says "not yet in the … backend:
+Java, Rust, and C++ have them (below); each other backend says "not yet in the … backend:
 declared failures: …" for a program that uses them
 (`temper_tmpl::failures::not_yet`), and a program that uses only
 `Bubble` is unchanged, node for node.
@@ -805,6 +805,37 @@ bubble; `uncaught` names it a failure and lists causes. No
 `catch_unwind`: a panic passes every handler. Not yet: a `catch` whose
 body jumps, or binding a failure beside a bubble; failure interfaces
 with members; a failure join of several libraries.
+
+**In C++** (chunk 10): values, never thrown. A signature failing with a
+failure type returns `core::Expected<T, F>`, `F` the failure's
+`shared_ptr`: C++23's `std::expected` where `__cpp_lib_expected` says
+it's there, else the runtime's C++14 shim with the same API for what it
+has (`expected.hpp`, with its own tests on both); `Bubble`'s signatures
+are unchanged. Core's `Error` is the runtime's `core::Failure`, a
+`std::exception` (`what()` its message, made once when first asked)
+with `get_message()`, pure virtual, and a cause set once
+(`get_cause()`, `set_cause`, never itself or a loop); the base is
+`struct FailuresError : virtual core::Failure`, sealed failure
+interfaces abstract structs under it, failure classes structs under
+those, their `message` getters `override`. A failing call is computed
+first, `auto lookupResult = lookup(key); if
+(!lookupResult.has_value()) { return core::unexpected(lookupResult.error()); }`,
+then `*lookupResult` where it was; one whose value and failure types
+are the function's is returned as it is; `spill` makes choices' parts
+and loops' conditions holding one statements. `Throw` is `return
+core::unexpected(x)`, `core::with_cause(x, cause)` in a handler; in a
+module's init, an unhandled failure is `core::uncaught_failure(x)`,
+which throws `core::UncaughtFailure` out of the init. `OrElse` and
+`Catch` branch on the result: where the body's one failing call runs
+first in it, `if (r.has_value()) { …body with *r… } else { …fallback… }`;
+else the body is a lambda called at once giving `core::Expected` of the
+join. A body that also bubbles is in a `try`, its failure bubbled to
+the `catch` (an exception on that path only). Panics and host
+exceptions pass every handler. Not yet: a `catch` binding a failure
+beside a bubble, a lambda body that jumps out, a failing call where
+nothing can go before it, local function groups that fail, `orelse
+panic()` naming a declared failure as the panic's cause, and failure
+parameters.
 
 Validator rules: T5 lets a signature fail with a failure type or a type
 parameter; F3 marks every `Throw`; F4 checks the failure's type where it

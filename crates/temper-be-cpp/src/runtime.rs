@@ -47,6 +47,14 @@ pub const FILES: &[(&str, &str)] = &[
         include_str!("../runtime/temper-core/deque.hpp"),
     ),
     (
+        "expected.hpp",
+        include_str!("../runtime/temper-core/expected.hpp"),
+    ),
+    (
+        "failure.hpp",
+        include_str!("../runtime/temper-core/failure.hpp"),
+    ),
+    (
         "float64.hpp",
         include_str!("../runtime/temper-core/float64.hpp"),
     ),

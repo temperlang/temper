@@ -310,6 +310,21 @@ interfaces are structs with pure virtual methods and virtual bases; templates
 for generics; optional parameters as overloads plus `NullableParam<T>`;
 failure throws `TemperBubble`; lists are `shared_ptr<vector<T>>`.
 
+- Declared failures (RFC 164, in progress): a function failing with one
+  returns `temper::core::Expected<T, std::shared_ptr<F>>`, `std::expected`
+  where the standard library has it (C++23), else the runtime's C++14 shim
+  with the same API for what it has (`expected.hpp`); host code branches
+  on `has_value()` and reads `error()`, and returns failures as
+  `temper::core::unexpected(NotFound::make(key))`. A failure class is a
+  class as above, below the library's base, `struct <Lib>Error : virtual
+  temper::core::Failure` (core's `Error`, a `std::exception`: `what()` is
+  its message, `get_message()` too, and `get_cause()` the failure it was
+  thrown while handling); a sealed failure interface is an abstract struct
+  between. Failures are never thrown, but one a module's top level
+  doesn't handle leaves its init as a `temper::core::UncaughtFailure`
+  exception, which the stack-trace handler reports as "uncaught failure".
+  Panics and host exceptions pass every handler.
+
 **Naming.** Temper names unchanged; keywords get a trailing `_`; collisions get
 `_<n>`. Header declarations omit parameter names, but template bodies in
 headers show numbered names.

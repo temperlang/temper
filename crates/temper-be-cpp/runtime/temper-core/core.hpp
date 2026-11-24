@@ -26,6 +26,8 @@
 #include "regex.hpp"
 #include "generator.hpp"
 #include "promise.hpp"
+#include "expected.hpp"
+#include "failure.hpp"
 #include "module_init.hpp"
 
 namespace temper {

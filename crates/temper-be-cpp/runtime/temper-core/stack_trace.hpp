@@ -1,7 +1,7 @@
 #pragma once
 // Stack traces for the programs Temper generates: `temper run`'s `main.cpp`
 // and `temper test`'s `test.cpp` call `install_stack_traces()`, so a panic
-// or an uncaught bubble prints where it happened, and a test that panics
+// or an uncaught bubble or failure prints where it happened, and a test that panics
 // has the trace in its failure. Libraries never call it: a terminate
 // handler is the whole process's, so it's the application's to set. An
 // application may call it too.
@@ -20,6 +20,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include "failure.hpp"
 #include "temper_bubble.hpp"
 
 #if !defined(TEMPER_STD_STACKTRACE) && defined(__has_include)
@@ -251,6 +252,8 @@ namespace temper {
                     std::rethrow_exception(uncaught);
                 } catch (const TemperBubble& bubble) {
                     std::cerr << "uncaught bubble: " << bubble.what() << "\n";
+                } catch (const UncaughtFailure& failure) {
+                    std::cerr << "uncaught failure: " << failure.what() << "\n";
                 } catch (const std::exception& error) {
                     std::cerr << "uncaught exception: " << error.what() << "\n";
                 } catch (...) {

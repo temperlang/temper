@@ -5,9 +5,11 @@
 //! module's types, type parameters, and builtin types are fine.
 //!
 //! What's checked, as Kotlin does: an exported function's type
-//! parameters' bounds, parameters' types, and result type; an exported
-//! value's type, as declared or inferred (`export let more = new
-//! Map<String, Hidden>([])`); and of an exported class or interface, its
+//! parameters' bounds, parameters' types, and result type, its failure
+//! type (`throws Hidden`) included, so a public signature never fails
+//! with a type host code can't name; an exported value's type, as
+//! declared or inferred (`export let more = new Map<String,
+//! Hidden>([])`); and of an exported class or interface, its
 //! type parameters' bounds, its supertypes, and each member that isn't
 //! private: a property's type (a header's `public hi: Hidden`, a field,
 //! a getter's result or a setter's parameter), a method's signature, a

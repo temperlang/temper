@@ -113,6 +113,7 @@
 //! it does nothing.
 
 mod classes;
+mod failures;
 mod functions;
 mod groups;
 
@@ -314,6 +315,27 @@ pub struct Translator<'a> {
     /// Locals that lambdas capture and that are assigned, which are
     /// cells ([`functions`]).
     cells: HashSet<DeclId>,
+    /// Where a declared failure goes from the code being translated
+    /// ([`failures`]).
+    fail_to: FailTo,
+    /// A failing call already computed, and its value, `*lookupResult`,
+    /// which a handler's body reads in its place ([`failures`]).
+    substitute: Option<(NodeId, Expr)>,
+    /// The failing call being translated as it is, not propagated.
+    raw_call: Option<NodeId>,
+}
+
+/// Where a declared failure goes from the code being translated, as
+/// [`failures`] says.
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) enum FailTo {
+    /// Nowhere: the code fails with `Bubble`, if at all.
+    Nowhere,
+    /// Returned, `return core::unexpected(e);`, from a function or lambda
+    /// giving a `core::Expected` of these, its value and failure types.
+    Return(TypeId, TypeId),
+    /// Out of the module's init, `core::uncaught_failure(e);`.
+    Init,
 }
 
 /// Where an `orelse`'s value, or any value given to
@@ -399,6 +421,9 @@ impl<'a> Translator<'a> {
             in_hoist: false,
             call: NodeId(0),
             cells: temper_tmpl::analysis::assigned_captures(p),
+            fail_to: FailTo::Nowhere,
+            substitute: None,
+            raw_call: None,
         }
     }
 
@@ -1004,6 +1029,8 @@ impl<'a> Translator<'a> {
         for import in &imports {
             init.push(init_call(p, import.from));
         }
+        // A failure nothing handles there ends the init.
+        self.fail_to = FailTo::Init;
         self.init_stmts(module.init, &mut init)?;
         // Then, where the tests are, what only they reach: the modules
         // only it imports, and the test init.
@@ -1015,6 +1042,7 @@ impl<'a> Translator<'a> {
             }
             self.init_stmts(block, &mut test_init)?;
         }
+        self.fail_to = FailTo::Nowhere;
         let library_init = !init.is_empty();
         if !test_init.is_empty() {
             init.push(Stmt::TestsOnly(test_init));
@@ -1224,16 +1252,24 @@ impl<'a> Translator<'a> {
             match p.nodes.get(s) {
                 Node::InitLet { target, value }
                     if !self.statics.contains(&target)
-                        && matches!(p.nodes.get(value), Node::OrElse { .. }) =>
+                        && matches!(
+                            p.nodes.get(value),
+                            Node::OrElse { .. } | Node::Catch { .. }
+                        ) =>
                 {
                     let ty = self.ty(p.decls.get(target).ty)?;
                     let name = self.name(target);
+                    let unused = unused_warns(&ty) && !self.is_read(target);
                     init.push(Stmt::Local {
                         ty,
                         name: name.clone(),
                         value: None,
                     });
-                    init.extend(self.deliver(value, &Sink::Assign(name))?);
+                    init.extend(self.deliver(value, &Sink::Assign(name.clone()))?);
+                    if unused {
+                        let cast = format!("static_cast<void>({name})");
+                        init.push(Stmt::Expr(Expr::name(cast)));
+                    }
                 }
                 Node::InitLet { target, value } if !self.statics.contains(&target) => {
                     let ty = self.ty(p.decls.get(target).ty)?;
@@ -1378,11 +1414,12 @@ impl<'a> Translator<'a> {
                 ps.push((ty, name));
             }
         }
-        let result = match p.signature(decl) {
-            Some(sig) => sig.pass,
-            None => TypeId::VOID,
+        let (result, fail) = match p.signature(decl) {
+            Some(sig) => (sig.pass, sig.fail),
+            None => (TypeId::VOID, None),
         };
-        let result_ty = self.ty(result)?;
+        let result_ty = self.result_type(result, fail)?;
+        self.fail_to = self.fail_to_of(result, fail)?;
         self.in_function = true;
         self.begin(&[item]);
         // What `this` is: in a constructor, the object it makes; in a
@@ -1435,8 +1472,13 @@ impl<'a> Translator<'a> {
             }
         }
         let mut stmts = reachable(self.stmts(body)?);
-        // A `return` without a value that ends a function says nothing.
-        if result == TypeId::VOID && stmts.last() == Some(&Stmt::Return(None)) {
+        let expected = self.fail_to != FailTo::Nowhere;
+        self.fail_to = FailTo::Nowhere;
+        // A `return` without a value that ends a function says nothing,
+        // but where it gives a `core::Expected<void, F>`.
+        if result == TypeId::VOID && expected {
+            failures::expected_void(&mut stmts);
+        } else if result == TypeId::VOID && stmts.last() == Some(&Stmt::Return(None)) {
             stmts.pop();
         }
         if ctor && stmts.last().is_none_or(completes) {
@@ -1566,7 +1608,7 @@ impl<'a> Translator<'a> {
             return Ok(tree::Function {
                 template: String::new(),
                 exported,
-                result: self.ty(result)?,
+                result: self.decl_result(decl)?,
                 name: self.name(decl),
                 unused: Vec::new(),
                 params: ps,
@@ -1593,7 +1635,7 @@ impl<'a> Translator<'a> {
         Ok(tree::Function {
             template: String::new(),
             exported,
-            result: self.ty(result)?,
+            result: self.decl_result(decl)?,
             name: self.name(decl),
             unused: (0..ps.len()).collect(),
             params: ps,
@@ -1636,7 +1678,8 @@ impl<'a> Translator<'a> {
             }
         }
         let result = p.signature(decl).map_or(TypeId::VOID, |sig| sig.pass);
-        let result_ty = self.ty(result)?;
+        let result_ty = self.decl_result(decl)?;
+        let expected = result_ty != self.ty(result)?;
         self.in_function = true;
         self.begin(&[item]);
         let mut body = Vec::new();
@@ -1645,7 +1688,7 @@ impl<'a> Translator<'a> {
         }
         let args = args.into_iter().map(|a| Expr::name(self.name(a))).collect();
         let call = Expr::name(format!("_connected::{}", self.name(decl))).call(args);
-        body.push(match result == TypeId::VOID {
+        body.push(match result == TypeId::VOID && !expected {
             true => Stmt::Expr(call),
             false => Stmt::Return(Some(call)),
         });
@@ -1925,6 +1968,14 @@ impl<'a> Translator<'a> {
         let p = self.p;
         let mut out = Vec::new();
         match p.nodes.get(id) {
+            // A handler of declared failures, as a branch on the result.
+            Node::OrElse { body, .. } | Node::Catch { body, .. } if self.handles_declared(body) => {
+                out.extend(self.handled(id, sink)?);
+            }
+            Node::Throw { value, cause, .. } => out.extend(self.thrown(value, cause)?),
+            _ if matches!(sink, Sink::Return) && self.returned_as_is(id) => {
+                out.extend(self.returned_call(id)?);
+            }
             // Each side where it comes from, as the `try` spans lines.
             Node::OrElse { body, fallback } => {
                 let body = self.deliver_marked(body, sink)?;
@@ -1946,27 +1997,41 @@ impl<'a> Translator<'a> {
             _ => {
                 let e = self.expr(id)?;
                 out.append(&mut self.pending);
-                match sink {
-                    Sink::Return if p.nodes.ty(id) == TypeId::VOID => {
-                        if e.is_statement() {
-                            out.push(Stmt::Expr(e));
-                        }
-                        out.push(Stmt::Return(None));
-                    }
-                    Sink::Return => out.push(Stmt::Return(Some(e))),
-                    Sink::Discard => {
-                        if e.is_statement() {
-                            out.push(Stmt::Expr(e));
-                        }
-                    }
-                    Sink::Assign(target) => out.push(Stmt::Assign {
-                        target: target.clone(),
-                        value: e,
-                    }),
-                }
+                out.extend(self.give(e, p.nodes.ty(id) == TypeId::VOID, sink));
             }
         }
         Ok(out)
+    }
+
+    /// Statements that give a value, `void` or not, to a sink.
+    fn give(&self, e: Expr, void: bool, sink: &Sink) -> Vec<Stmt> {
+        let mut out = Vec::new();
+        match sink {
+            Sink::Return if void => {
+                if e.is_statement() {
+                    out.push(Stmt::Expr(e));
+                }
+                out.push(Stmt::Return(None));
+            }
+            Sink::Return => out.push(Stmt::Return(Some(e))),
+            Sink::Discard => {
+                if e.is_statement() {
+                    out.push(Stmt::Expr(e));
+                }
+            }
+            Sink::Assign(target) => out.push(Stmt::Assign {
+                target: target.clone(),
+                value: e,
+            }),
+        }
+        out
+    }
+
+    /// Whether a handler's body may fail with a declared failure type,
+    /// which [`handled`](Self::handled) branches on.
+    fn handles_declared(&self, body: NodeId) -> bool {
+        (temper_tmpl::failures::failures_under(self.p, body).iter())
+            .any(|&(_, f)| f != TypeId::BUBBLE)
     }
 
     /// A value that needs statements, an `orelse` or a `BlockValue`, as an
@@ -2019,8 +2084,11 @@ impl<'a> Translator<'a> {
         temper_tmpl::analysis::walk(p, id, &mut |n| {
             found |= matches!(
                 p.nodes.get(n),
-                Node::OrElse { .. } | Node::BlockValue { .. }
-            );
+                Node::OrElse { .. }
+                    | Node::Catch { .. }
+                    | Node::BlockValue { .. }
+                    | Node::Throw { .. }
+            ) || self.declared(n).is_some();
         });
         found
     }
@@ -2087,15 +2155,19 @@ impl<'a> Translator<'a> {
             Node::Let {
                 local,
                 init: Some(init),
-            } if matches!(p.nodes.get(init), Node::OrElse { .. }) => {
+            } if matches!(p.nodes.get(init), Node::OrElse { .. } | Node::Catch { .. }) => {
                 let ty = self.ty(p.decls.get(local).ty)?;
                 let name = self.local_name(local);
+                let unused = unused_warns(&ty) && !self.is_read(local);
                 out.push(Stmt::Local {
                     ty,
                     name: name.clone(),
                     value: None,
                 });
-                out.extend(self.deliver(init, &Sink::Assign(name))?);
+                out.extend(self.deliver(init, &Sink::Assign(name.clone()))?);
+                if unused {
+                    out.push(Stmt::Expr(Expr::name(format!("static_cast<void>({name})"))));
+                }
                 return Ok(());
             }
             // A parameter's null default: the parameter itself.
@@ -2176,7 +2248,7 @@ impl<'a> Translator<'a> {
                 value,
             }
             | Node::InitLet { target, value }
-                if matches!(p.nodes.get(value), Node::OrElse { .. }) =>
+                if matches!(p.nodes.get(value), Node::OrElse { .. } | Node::Catch { .. }) =>
             {
                 let target = match p.decls.get(target).kind {
                     DeclKind::ModuleLet => self.top_name(target),
@@ -2283,7 +2355,11 @@ impl<'a> Translator<'a> {
                     Stmt::Bubble(self.core("bubble").call(Vec::new()))
                 }
                 Some((_, Node::Panic {})) => Stmt::Bubble(self.core("panic").call(Vec::new())),
-                Some((v, Node::OrElse { .. })) => {
+                Some((v, Node::OrElse { .. } | Node::Catch { .. } | Node::Throw { .. })) => {
+                    out.extend(self.deliver(v, &Sink::Return)?);
+                    return Ok(());
+                }
+                Some((v, _)) if self.returned_as_is(v) => {
                     out.extend(self.deliver(v, &Sink::Return)?);
                     return Ok(());
                 }
@@ -2311,9 +2387,18 @@ impl<'a> Translator<'a> {
                     Stmt::Bubble(self.core("bubble").call(Vec::new()))
                 } else if let Node::Panic {} = p.nodes.get(expr) {
                     Stmt::Bubble(self.core("panic").call(Vec::new()))
-                } else if let Node::OrElse { .. } | Node::BlockValue { .. } = p.nodes.get(expr) {
+                } else if let Node::OrElse { .. }
+                | Node::Catch { .. }
+                | Node::BlockValue { .. }
+                | Node::Throw { .. } = p.nodes.get(expr)
+                {
                     out.append(&mut self.pending);
                     out.extend(self.deliver(expr, &Sink::Discard)?);
+                    return Ok(());
+                } else if self.declared(expr).is_some() {
+                    // A failing call, its value dropped: its result checked.
+                    self.expr(expr)?;
+                    out.append(&mut self.pending);
                     return Ok(());
                 } else {
                     // A value known not to be null, discarded, is the
@@ -2725,6 +2810,19 @@ impl<'a> Translator<'a> {
 
     pub(crate) fn expr(&mut self, id: NodeId) -> R<Expr> {
         let p = self.p;
+        // A failing call computed already, or to compute first.
+        if let Some((call, value)) = &self.substitute {
+            if *call == id {
+                return Ok(value.clone());
+            }
+        }
+        if self.declared(id).is_some() {
+            if self.raw_call == Some(id) {
+                self.raw_call = None;
+            } else {
+                return self.propagated(id);
+            }
+        }
         Ok(match p.nodes.get(id) {
             Node::BoolLit { value } => Expr::Bool(value),
             Node::Int32Lit { value } => Expr::Int(value),
@@ -3071,7 +3169,10 @@ impl<'a> Translator<'a> {
                     els: Box::new(self.coalesced(left, p.nodes.ty(id))?),
                 }
             }
-            Node::OrElse { .. } | Node::BlockValue { .. } => self.statement_value(id)?,
+            Node::OrElse { .. } | Node::Catch { .. } | Node::BlockValue { .. } => {
+                self.statement_value(id)?
+            }
+            Node::Throw { .. } => return not_yet("a throw inside an expression"),
             Node::FunctionLiteral { decl, params, body } => self.literal(decl, params, body)?,
             Node::FunctionRef { target } => self.function_ref(target)?,
             Node::CallValue { callee, args, .. } => {

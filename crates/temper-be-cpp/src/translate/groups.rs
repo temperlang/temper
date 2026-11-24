@@ -46,6 +46,13 @@ impl Translator<'_> {
         out: &mut Vec<Stmt>,
     ) -> R<()> {
         let p = self.p;
+        for &m in &group.members {
+            let sig = temper_tmpl::analysis::fun_signature(p, p.decls.get(m).ty);
+            let fail = sig.and_then(|s| p.types.signature(s)).and_then(|s| s.fail);
+            if fail.is_some_and(|f| f != TypeId::BUBBLE) {
+                return not_yet("local functions that use each other and declare failures");
+            }
+        }
         let first = self.name(group.members[0]);
         let mut chars = first.chars();
         let pascal: String = (chars.next().map(|c| c.to_ascii_uppercase()))

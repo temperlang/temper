@@ -267,7 +267,7 @@ impl Effects {
                     ..
                 } => self.called(p, d, names).and(bubbles(may_bubble)),
                 Node::Op { may_bubble, .. } | Node::As { may_bubble, .. } => bubbles(may_bubble),
-                Node::Error { .. } | Node::Bubble { .. } => bubbles(true),
+                Node::Error { .. } | Node::Bubble { .. } | Node::Throw { .. } => bubbles(true),
                 // Stopping the program shows before or after anything
                 // else that shows.
                 Node::Panic {} => Effect {
@@ -316,6 +316,7 @@ fn needs_temporaries(p: &Program, effects: &Effects, names: &NameMap, n: NodeId)
         | Node::IfValue { .. }
         | Node::Coalesce { .. }
         | Node::OrElse { .. }
+        | Node::Catch { .. }
         | Node::BlockValue { .. }
         | Node::FunctionLiteral { .. } => return false,
         Node::EqNullable { left, right, .. } => {

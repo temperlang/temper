@@ -88,6 +88,15 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Deque.removeFirst()",
         Connection::Templated("Deque::removeFirst"),
     ),
+    // A declared failure's cause and message, `core::Failure`'s.
+    (
+        "core.type Error.get cause()",
+        Connection::Translate(failure_cause),
+    ),
+    (
+        "core.type Error.get message()",
+        Connection::Translate(failure_message),
+    ),
     ("core.type Float64.abs()", Connection::Call("Float64::abs")),
     (
         "core.type Float64.acos()",
@@ -583,6 +592,7 @@ pub const TYPES: &[(&str, &str)] = &[
         "std::shared_ptr<std::vector<bool>>",
     ),
     ("core.type Empty", "std::shared_ptr<core::Empty>"),
+    ("core.type Error", "std::shared_ptr<core::Failure>"),
     ("core.type NoStringIndex", "int32_t"),
     (
         "core.type StringBuilder",
@@ -621,6 +631,35 @@ fn get_console(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> 
         }
     }
     Ok(t.core("Console::get_console").call(Vec::new()))
+}
+
+/// A failure's receiver, as its own type, not upcast to core's `Error`:
+/// `e->get_message()` calls its own getter, which overrides
+/// `core::Failure`'s.
+fn failure_receiver(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let &[mut receiver] = args else {
+        return Err(NotYet {
+            what: "a failure's getter without its receiver".into(),
+        });
+    };
+    while let Node::Upcast { value } = t.node(receiver) {
+        receiver = value;
+    }
+    t.expr(receiver)
+}
+
+/// `e->get_message()`.
+fn failure_message(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    Ok(failure_receiver(t, args)?
+        .arrow("get_message")
+        .call(Vec::new()))
+}
+
+/// `e->get_cause()`, a `std::shared_ptr<core::Failure>`, null for none.
+fn failure_cause(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    Ok(failure_receiver(t, args)?
+        .arrow("get_cause")
+        .call(Vec::new()))
 }
 
 /// `s.empty()`, where Kotlin's is `core::String::isEmpty(s)`.
