@@ -3663,6 +3663,16 @@ impl Translator<'_> {
             }
             (DeclKind::Getter, false) => {
                 let receiver = self.expr(object)?;
+                // As its owner, where that's a supertype, as core's
+                // `Error` is a failure type's; not a generic one's.
+                let owner = self.b.program().decls.get(member).owner;
+                let receiver = match self.b.program().decls.type_params(owner).is_empty() {
+                    true => {
+                        let owner = self.b.nominal(owner);
+                        self.fit(receiver, owner)
+                    }
+                    false => receiver,
+                };
                 let made = self.b.call_method(member, receiver, &[]);
                 Ok(self.own(made, node))
             }

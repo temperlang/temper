@@ -11,7 +11,7 @@ Implementation of many of the connected methods in temper.
 
 import sys
 import logging
-from abc import abstractmethod
+from abc import ABCMeta, abstractmethod
 from array import array
 from collections import deque
 from contextlib import contextmanager
@@ -157,6 +157,52 @@ class Bubble(RuntimeError):
     __slots__ = ()
 
 
+class Failure(metaclass=ABCMeta):
+    """
+    Marks a Temper library's declared failures (RFC 164): each library's
+    base failure class, as `WherewithError`, extends it beside
+    `Exception` (`class WherewithError(Failure, Exception)`), and its
+    failure types extend that. Host code catches those, never this: it
+    isn't an exception itself. It gives each failure `str(e)`, its
+    `message`; its cause is Python's own `__cause__`.
+    """
+
+    __slots__ = ()
+
+    @property
+    @abstractmethod
+    def message(self, /) -> str:
+        """What went wrong, for people."""
+        ...
+
+    def __str__(self, /) -> str:
+        return self.message
+
+
+_Raised = TypeVar("_Raised", bound=BaseException)
+
+
+def failure_cause(failure: Failure, /) -> Failure | None:
+    """
+    A declared failure's cause, as Temper's `Error.cause` gives it: the
+    failure that was being handled where it was thrown, or `None`, also
+    where that was something else, as a bubble.
+    """
+    cause = getattr(failure, "__cause__", None)
+    return cause if isinstance(cause, Failure) else None
+
+
+def with_cause(failure: _Raised, cause: BaseException, /) -> _Raised:
+    """
+    `failure`, with `cause` as its `__cause__`, for a Temper `throw` of a
+    failure made before, in a handler, unless it has a cause already: a
+    failure thrown again keeps the cause it was first thrown with.
+    """
+    if failure.__cause__ is None and failure is not cause:
+        failure.__cause__ = cause
+    return failure
+
+
 def make_bubble_exception() -> Exception:
     return Bubble()
 
@@ -179,7 +225,8 @@ def block_panics(block: Callable[[], None]) -> bool:
     Runs `block`, giving whether it panicked, for std's
     `Test.assertPanics`: whether it raised anything but a bubble or a test
     framework's failure (an `AssertionError`, as unittest's are), as on
-    every backend, so `panic`'s plain `BaseException` or a host's error.
+    every backend, so `panic`'s plain `BaseException` or a host's error;
+    a declared failure (a `Failure`) is a failure too, not a panic.
     Other `BaseException`s, which aren't `Exception`s, such as
     `KeyboardInterrupt`, `SystemExit`, and pytest's outcomes, aren't
     failures but exits, and pass through too.
@@ -187,7 +234,7 @@ def block_panics(block: Callable[[], None]) -> bool:
     try:
         block()
     except Exception as e:
-        if isinstance(e, (Bubble, AssertionError)):
+        if isinstance(e, (Bubble, Failure, AssertionError)):
             raise
         return True
     except BaseException as e:

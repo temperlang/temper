@@ -1,8 +1,8 @@
-//! Declared failures (RFC 164) reach tmpl before any backend has them:
-//! each backend says so, by name, for every specification tmpl has
-//! (the testkit's `TMPL_SPECS`, by their tmpl goldens), rather than
-//! failing some other way; a program with only `Bubble` isn't one that
-//! uses them.
+//! Declared failures (RFC 164) reach tmpl before every backend has them:
+//! each backend without them says so, by name, for every specification
+//! tmpl has (the testkit's `TMPL_SPECS`, by their tmpl goldens), rather
+//! than failing some other way, and those with them ([`HAVE_FAILURES`])
+//! translate them (but for host code they're given elsewhere); a program with only `Bubble` isn't one that uses them.
 
 use std::fs;
 use std::path::Path;
@@ -28,14 +28,26 @@ fn spec_goldens() -> Vec<(String, String)> {
     found
 }
 
+/// The backends that translate declared failures already, each running
+/// the specifications in its own functional tests.
+const HAVE_FAILURES: [&str; 1] = ["py"];
+
 #[test]
-fn every_backend_says_declared_failures_are_not_yet() {
+fn every_other_backend_says_declared_failures_are_not_yet() {
     let goldens = spec_goldens();
     assert_eq!(goldens.len(), 6, "failures, and host-failures' five runs");
     for (name, golden) in goldens {
         let p = text::read(&golden).unwrap_or_else(|e| panic!("{name}: {e}"));
         assert_eq!(validate(&p, &Profile::full()), [], "{name}");
         for backend in Registry::built_in().all() {
+            if HAVE_FAILURES.contains(&backend.name) {
+                // Translated, or not for want of host code, which the
+                // testkit's runs give it.
+                if let Err(why) = (backend.translate)(&p, SourceLinks::default()) {
+                    assert!(why.contains("host code"), "{name}: {}: {why}", backend.name);
+                }
+                continue;
+            }
             let Err(why) = (backend.translate)(&p, SourceLinks::default()) else {
                 panic!("{name}: {} translated declared failures", backend.name);
             };

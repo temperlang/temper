@@ -355,8 +355,10 @@ pub const HOST_CODE: [&str; 3] = ["host-error-causes", "host-error-tests", "host
 /// says of a failure nothing handles, a run per section, with host code
 /// laid out as [`HOST_CODE`]'s. Each says what it assumes of what's still
 /// open. Once the interpreter runs one, it joins [`INTERP_SPECS`]; once
-/// tmpl does, [`TMPL_SPECS`]; and once backends do, it joins
-/// [`PROGRAMS`], each backend's run list in turn.
+/// tmpl does, [`TMPL_SPECS`]; a backend that runs one lists it with its
+/// shared programs, as Python lists `failures` and `host-failures`
+/// ([`cases`] takes either), the others still pending; and once every
+/// backend does, it joins [`PROGRAMS`].
 pub const SPECS: [&str; 4] = [
     "failures",
     "failure-params",

@@ -162,6 +162,10 @@ package `__init__.py` does `from .<root> import *` and imports every module.
   its subclass that asyncio can `await`
   (Kotlin's annotate `Future`; a host passing its own plain `Future` as
   a promise argument now needs a cast for strict checkers).
+- Declared failures (RFC 164, in progress): each failure type is an
+  exception class under the library's own base, `<Lib>Error(Failure,
+  Exception)`, with `temper_core.Failure` only as a marker (not an
+  exception); `str(e)` is its message, its cause `__cause__`.
 
 **Naming.** Values, functions, methods and properties are snake_case; types
 keep their case. Reserved words get `_` (`from_`; `to` stays `to`). Internal

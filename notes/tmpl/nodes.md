@@ -704,9 +704,9 @@ then).
 ### Declared failures (As built, 2026-11-24, Proposed)
 
 RFC 164's failure types, beside `Bubble`, which stays as it was
-([types.md](types.md#results); typing.md, "Declared failures"). No
-backend has them yet: each says "not yet in the … backend: declared
-failures: …" for a program that uses them
+([types.md](types.md#results); typing.md, "Declared failures"). Python
+has them (below); each other backend says "not yet in the … backend:
+declared failures: …" for a program that uses them
 (`temper_tmpl::failures::not_yet`), and a program that uses only
 `Bubble` is unchanged, node for node.
 
@@ -749,6 +749,20 @@ failures: …" for a program that uses them
 - **Text:** `(throw(new NotFound#1(k#2))^): Void`, `(throw(x#3,
   e#4)^): Int32`, `(catch(f#5()^, e#6: NotFound#1, 0)): Int32`, and
   `export failureBase interface ~FailuresError#7 extends Error#8 {}`.
+
+**In Python** (chunk 7): core's `Error` is `temper_core.Failure`, a
+marker that isn't an exception, giving `__str__` from `message`; the
+base is `class FailuresError(Failure, Exception)`, the failure types
+classes under it (a sealed interface abstract, by `Failure`'s
+`ABCMeta`). `Throw` is `raise`, `raise X(…) from cause` where it makes
+the failure, else `raise with_cause(x, cause)`, which keeps a cause it
+has. `OrElse` and `Catch` are `try`/`except` of exactly what the body
+may fail with: `Bubble` and the join of its declared failures
+(`failures::failures_under`, `join`), so panics and hosts' errors pass;
+a join of only core's `Error` (several libraries' failures) is "not
+yet". `cause` is `failure_cause(e)`, `__cause__` where it's a
+`Failure`; `~caught` read after a jumping fallback is asserted not
+null for checkers.
 
 Validator rules: T5 lets a signature fail with a failure type or a type
 parameter; F3 marks every `Throw`; F4 checks the failure's type where it

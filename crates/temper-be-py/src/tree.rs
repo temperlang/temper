@@ -304,19 +304,19 @@ pub enum Stmt {
     /// ignore[…]`, where a checker's rule doesn't fit the code.
     Commented(Box<Stmt>, String),
     /// `try: …`, then `except Name: …` if `except` gives the class to
-    /// catch (the runtime's `Bubble`, as imported, for `orelse`), with
-    /// `as name` if it names what's caught, then `finally: …` if it
-    /// isn't empty.
+    /// catch (the runtime's `Bubble`, as imported, for `orelse`; a failure
+    /// class; or a tuple of them), with `as name` if it names what's
+    /// caught, then `finally: …` if it isn't empty.
     Try {
         body: Vec<Stmt>,
-        except: Option<(String, Option<String>, Vec<Stmt>)>,
+        except: Option<(Expr, Option<String>, Vec<Stmt>)>,
         finally: Vec<Stmt>,
     },
     /// `raise value`.
     Raise(Expr),
-    /// `raise value from name`: an exception with what it replaces as
-    /// its cause.
-    RaiseFrom(Expr, String),
+    /// `raise value from cause`: an exception with what it replaces, or
+    /// the failure being handled, as its cause.
+    RaiseFrom(Expr, Expr),
     /// `assert cond, message`, or without the message.
     Assert(Expr, Option<Expr>),
     /// `with context as name: …`, or without `as`: how a jump leaves or
@@ -728,8 +728,10 @@ impl Qualify<'_> {
 
     fn stmt(&mut self, s: &mut Stmt, hidden: &BTreeSet<String>) {
         match s {
-            Stmt::Expr(e) | Stmt::Raise(e) | Stmt::RaiseFrom(e, _) | Stmt::Return(Some(e)) => {
-                self.expr(e, hidden)
+            Stmt::Expr(e) | Stmt::Raise(e) | Stmt::Return(Some(e)) => self.expr(e, hidden),
+            Stmt::RaiseFrom(e, cause) => {
+                self.expr(e, hidden);
+                self.expr(cause, hidden);
             }
             Stmt::Assign { target, ann, value } => {
                 self.expr(target, hidden);
@@ -771,7 +773,8 @@ impl Qualify<'_> {
                 finally,
             } => {
                 self.stmts(body, hidden);
-                if let Some((_, _, except)) = except {
+                if let Some((class, _, except)) = except {
+                    self.expr(class, hidden);
                     self.stmts(except, hidden);
                 }
                 self.stmts(finally, hidden);
@@ -928,8 +931,10 @@ impl Qualify<'_> {
 /// and a nested `def`'s or class's own name.
 fn bound_by_stmt(s: &Stmt, bound: &mut Vec<String>) {
     match s {
-        Stmt::Expr(e) | Stmt::Raise(e) | Stmt::RaiseFrom(e, _) | Stmt::Return(Some(e)) => {
-            bound_by_expr(e, bound)
+        Stmt::Expr(e) | Stmt::Raise(e) | Stmt::Return(Some(e)) => bound_by_expr(e, bound),
+        Stmt::RaiseFrom(e, cause) => {
+            bound_by_expr(e, bound);
+            bound_by_expr(cause, bound);
         }
         Stmt::Assign { target, value, .. } => {
             if let Expr::Name(n) = target {
@@ -958,6 +963,10 @@ fn bound_by_stmt(s: &Stmt, bound: &mut Vec<String>) {
             except,
             finally,
         } => {
+            // What's caught, by its name, too.
+            if let Some((_, Some(name), _)) = except {
+                bound.push(name.clone());
+            }
             let except = except.iter().flat_map(|(_, _, e)| e);
             for s in body.iter().chain(except).chain(finally) {
                 bound_by_stmt(s, bound);
@@ -1189,6 +1198,7 @@ fn stmt(out: &mut String, s: &Stmt, depth: usize) {
             block(out, body, depth + 1);
             if let Some((class, name, except)) = except {
                 indent(out, depth);
+                let class = expr(class, TOP);
                 match name {
                     Some(name) => writeln!(out, "except {class} as {name}:"),
                     None => writeln!(out, "except {class}:"),
@@ -1206,7 +1216,7 @@ fn stmt(out: &mut String, s: &Stmt, depth: usize) {
             let _ = writeln!(out, "raise {}", expr(e, TOP));
         }
         Stmt::RaiseFrom(e, cause) => {
-            let _ = writeln!(out, "raise {} from {cause}", expr(e, TOP));
+            let _ = writeln!(out, "raise {} from {}", expr(e, TOP), expr(cause, TOP));
         }
         Stmt::Assert(cond, message) => {
             let _ = match message {

@@ -20,7 +20,9 @@
 //! tests run with std's `testing`, the testkit's `TESTS`; and for std's
 //! other modules, the testkit's `WITH_STD`, and `net`'s, `NET`, against
 //! the testkit's test server; and for generators, `async`,
-//! and `await`, as Python's generators, the testkit's `ASYNC`.
+//! and `await`, as Python's generators, the testkit's `ASYNC`; and for
+//! declared failures, the testkit's specifications `failures` and
+//! `host-failures`, which other backends don't run yet.
 //!
 //! - `goldens`: each test's generated Python, laid out as Kotlin's, with
 //!   its root module matching the golden in `tests/goldens/`, named for
@@ -61,7 +63,7 @@ use temper_be_py::{OutFile, PY, translate};
 use temper_be_testkit::{self as kit, Case, Goldens};
 
 /// The shared programs that Python's translation covers so far.
-const PROGRAMS: [&str; 27] = [
+const PROGRAMS: [&str; 29] = [
     "classes",
     "nullables",
     "generics",
@@ -89,6 +91,9 @@ const PROGRAMS: [&str; 27] = [
     "host-error-causes",
     "host-error-tests",
     "sealed-whens",
+    // Specifications (`kit::SPECS`) Python runs, other backends not yet.
+    "failures",
+    "host-failures",
 ];
 
 fn cases() -> Vec<Case> {
@@ -132,8 +137,9 @@ fn cases() -> Vec<Case> {
 /// This crate's own programs, in `tests/programs/`: `py-builtin-params`,
 /// parameters named like Python's builtins, which keep their names
 /// (`host_interop` passes one by name), and names a function binds more
-/// than once, annotated once.
-const PY_PROGRAMS: [&str; 1] = ["py-builtin-params"];
+/// than once, annotated once; and `py-failures`, declared failures as
+/// Python callers catch them (`host_interop`).
+const PY_PROGRAMS: [&str; 2] = ["py-builtin-params", "py-failures"];
 
 /// The lines of a program's log blocks, in order.
 fn log_blocks(text: &str) -> Vec<String> {
@@ -799,10 +805,10 @@ fn runs() {
         let mut modules = Vec::new();
         // The cases to type-check, for `check_types`.
         let mut checked = Vec::new();
-        // `async-turns`'s import path, and `py-builtin-params`'s project,
-        // for `host_interop`.
+        // `async-turns`'s import path, and this crate's own programs'
+        // projects and logs, in order, for `host_interop`.
         let mut interop = None;
-        let mut builtin_params = None;
+        let mut own = Vec::new();
         for case in cases() {
             let path = &case.key;
             let root = out.join(path);
@@ -835,8 +841,8 @@ fn runs() {
             if case.key == "async-turns" {
                 interop = Some((projects.clone(), case.expected.clone()));
             }
-            if case.key == "py-builtin-params" {
-                builtin_params = Some((project.clone(), case.expected.clone()));
+            if PY_PROGRAMS.contains(&case.key.as_str()) {
+                own.push((project.clone(), case.expected.clone()));
             }
             let tests = project.join("tests");
             if tests.exists() {
@@ -893,10 +899,13 @@ fn runs() {
             }
         }
         run_batch(&python, &batch, &mut failures);
-        if let (Some((mut projects, logged)), Some((project, then))) = (interop, builtin_params) {
-            projects.push(project);
+        if let Some((mut projects, logged)) = interop.filter(|_| own.len() == PY_PROGRAMS.len()) {
+            projects.extend(own.iter().map(|(project, _)| project.clone()));
             let checkers = (mypy.as_deref(), pyright.as_deref());
-            let logs = [&logged[..], &then[..]];
+            let [(_, params), (_, failing)] = &own[..] else {
+                unreachable!()
+            };
+            let logs = [&logged[..], &params[..], &failing[..]];
             host_interop(&python, checkers, &out, &projects, logs, &mut failures);
         }
         check_types(
@@ -927,7 +936,10 @@ fn runs() {
 /// which fails clearly; loops over a generated generator, which a
 /// failed step leaves done; catches a failure as `RuntimeError`; and,
 /// once `py-builtin-params`'s import has logged `then`, passes its constructor its parameters by name
-/// (`help=`), as they keep their names. mypy and pyright check it,
+/// (`help=`), as they keep their names; and once `py-failures`' import
+/// has logged `failing`, catches its declared failures by their own
+/// types, its base, and a sealed interface's, with their messages and
+/// causes, while a panic passes `except Exception`. mypy and pyright check it,
 /// strict, as they do generated code, so a bare `await` of a generated
 /// promise must type-check.
 fn host_interop(
@@ -935,7 +947,7 @@ fn host_interop(
     (mypy, pyright): (Option<&str>, Option<&str>),
     out: &Path,
     projects: &[PathBuf],
-    [logged, then]: [&[String]; 2],
+    [logged, then, failing]: [&[String]; 3],
     failures: &mut Vec<String>,
 ) {
     let script = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/interop.py");
@@ -990,6 +1002,20 @@ fn host_interop(
         // `py_builtin_params`'s own log, as it's imported.
         .chain(then.iter().cloned())
         .chain(["by name flag: how 9".to_string()])
+        .chain(failing.iter().cloned())
+        .chain(
+            [
+                "NotFound z: not found (key: z)",
+                "base True, Exception True",
+                "sign BadSign: bad sign (text: x)",
+                "sign EmptyText: no text",
+                "LookupFailed lookup failed (name: port), caused by NotFound not found (key: port)",
+                "made before lookup failed (name: early), caused by not found (key: early)",
+                "thrown again lookup failed (name: first), caused by not found (key: first)",
+                "panic passes",
+            ]
+            .map(String::from),
+        )
         .collect();
     kit::check_log(failures, "host interop", &run, &expected);
 }

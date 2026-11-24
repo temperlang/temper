@@ -97,8 +97,9 @@
 160:1 -> ../named-args.temper.md:133:5  console.log(calc(2, (n) => n <- console.log(calc(2, { scale:
 161:1 -> ../named-args.temper.md:146:5  console.log(calc(2, (n) => n <- console.log(calc(2, { scale:
 162:1 -> ../named-args.temper.md:147:5  console.log(calc(2, (n) => n <- console.log(calc(2, { origin
-164:1 -> ../named-args.temper.md:156:28  /** <- { (n): Empty =>
-168:1 -> ../named-args.temper.md:156:28  function fn5(n) { <- { (n): Empty =>
-169:3 -> ../named-args.temper.md:157:7  console.log(n.toString()); <- console.log(n.toString());
-170:3 -> ../named-args.temper.md:158:7  return empty(); <- empty()
-173:1 -> ../named-args.temper.md:156:5  calc(2, fn5, new CalcOptions <- calc(2, { scale: -2 }) { (n)
+163:1 -> ../named-args.temper.md:157:5  console.log(calc(2, (n) => ` <- console.log(calc<String>(2,
+165:1 -> ../named-args.temper.md:165:28  /** <- { (n): Empty =>
+169:1 -> ../named-args.temper.md:165:28  function fn6(n) { <- { (n): Empty =>
+170:3 -> ../named-args.temper.md:166:7  console.log(n.toString()); <- console.log(n.toString());
+171:3 -> ../named-args.temper.md:167:7  return empty(); <- empty()
+174:1 -> ../named-args.temper.md:165:5  calc(2, fn6, new CalcOptions <- calc(2, { scale: -2 }) { (n)

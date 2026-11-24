@@ -103,3 +103,69 @@ from py_builtin_params import Option  # noqa: E402
 
 option = Option(help="how", min=1, max=9, type="flag")
 print("by name", option.describe(), option.clamp(12))
+
+# Declared failures are exceptions under the library's own base, caught
+# by their own types, the base, or a sealed interface's.
+from py_failures import (  # noqa: E402
+    BadSign,
+    LookupFailed,
+    NotFound,
+    PyFailuresError,
+    SignError,
+    lookup,
+    made_before,
+    risky,
+    setting,
+    sign,
+    thrown_again,
+)
+
+try:
+    lookup("z")
+except NotFound as e:
+    print(f"NotFound {e.key}: {e}")
+
+
+def raised(call: Callable[[], object]) -> BaseException | None:
+    try:
+        call()
+    except BaseException as e:
+        return e
+    return None
+
+
+failed = raised(lambda: lookup("y"))
+print(f"base {isinstance(failed, PyFailuresError)}, Exception {isinstance(failed, Exception)}")
+
+for text in ["x", ""]:
+    try:
+        sign(text)
+    except SignError as e:
+        print(f"sign {type(e).__name__}: {e}")
+        if isinstance(e, BadSign):
+            assert e.text == "x"
+
+try:
+    setting("port")
+except LookupFailed as e:
+    cause = e.__cause__
+    assert isinstance(cause, NotFound)
+    print(f"LookupFailed {e}, caused by {type(cause).__name__} {cause}")
+
+try:
+    made_before("early")
+except LookupFailed as e:
+    print(f"made before {e}, caused by {e.__cause__}")
+
+try:
+    thrown_again("first")
+except LookupFailed as e:
+    print(f"thrown again {e}, caused by {e.__cause__}")
+
+try:
+    try:
+        risky(2)
+    except Exception:
+        print("panic caught")
+except BaseException:
+    print("panic passes")

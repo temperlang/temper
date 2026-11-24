@@ -1,5 +1,5 @@
 # A specification: `NotFound` is the library's own failure class, in the
-# module this code joins, as the Python backend will name it.
+# module this code joins, as the Python backend names it.
 class _connected:
     def host_lookup(key: str) -> int:
         if key == "bug":

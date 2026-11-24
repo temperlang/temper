@@ -69,6 +69,17 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Deque.removeFirst()",
         Connection::Runtime("deque_remove_first"),
     ),
+    // A declared failure's cause is Python's own `__cause__`, as a
+    // `temper_core.Failure`; its message, the property every failure
+    // class has, which `str()` gives too.
+    (
+        "core.type Error.get cause()",
+        Connection::Runtime("failure_cause"),
+    ),
+    (
+        "core.type Error.get message()",
+        Connection::Attribute("message"),
+    ),
     ("core.type Float64.abs()", Connection::Builtin("abs")),
     (
         "core.type Float64.acos()",

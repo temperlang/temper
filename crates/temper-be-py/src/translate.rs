@@ -97,6 +97,10 @@ pub struct Translator<'a> {
     /// The `do_await` parameters of the generators being translated,
     /// innermost last, which an `await` yields a call of.
     awaiters: Vec<String>,
+    /// Nullable locals a `catch` keeps its failure in, for a fallback that
+    /// jumps (notes/tmpl/nodes.md, "Declared failures"), which checkers
+    /// can't tell are set where they're read as not null.
+    carriers: BTreeSet<DeclId>,
     /// How the function being translated, or the module's init, binds
     /// its locals' names ([`Bindings`]).
     bindings: Bindings,
@@ -179,6 +183,7 @@ impl<'a> Translator<'a> {
             loop_lets: BTreeSet::new(),
             widen: BTreeSet::new(),
             awaiters: Vec::new(),
+            carriers: BTreeSet::new(),
             bindings: Bindings::default(),
             defaulted: BTreeSet::new(),
         }
@@ -1503,9 +1508,80 @@ impl<'a> Translator<'a> {
         }
     }
 
-    /// A value put where `sink` says, as statements: an `orelse` as
-    /// `try`, `bubble()` and `panic()` as `raise`, else the value's
-    /// statements and then the value.
+    /// What a handler around `body` catches, the `except` clause's
+    /// classes: `Bubble`, imported from the runtime, if `body` may bubble,
+    /// and the failure class nearest above all its declared failures,
+    /// never what else Python raises, so panics and hosts' errors pass.
+    /// Not yet where that's core's `Error`, for failures of several
+    /// libraries.
+    fn handled(&mut self, body: NodeId) -> R<Expr> {
+        let p = self.p;
+        let fails: Vec<TypeId> = (temper_tmpl::failures::failures_under(p, body).into_iter())
+            .map(|(_, f)| f)
+            .collect();
+        let mut classes = Vec::new();
+        if fails.contains(&TypeId::BUBBLE) {
+            classes.push(Expr::name(self.import("temper_core", "Bubble")));
+        }
+        let declared: Vec<TypeId> = fails.into_iter().filter(|&f| f != TypeId::BUBBLE).collect();
+        let root = temper_tmpl::failures::root(p);
+        if let Some(ty) = temper_tmpl::failures::join(p, root, &declared) {
+            if nominal_decl(p, ty) == root {
+                return not_yet("a handler of failures of several libraries");
+            }
+            classes.push(self.type_ref(ty)?);
+        }
+        Ok(match classes.len() {
+            // A body that can't fail, as one `to_tmpl` kept: `Bubble`'s.
+            0 => Expr::name(self.import("temper_core", "Bubble")),
+            1 => classes.pop().unwrap(),
+            _ => Expr::Tuple(classes),
+        })
+    }
+
+    /// Notes the locals a `catch`'s fallback keeps its failure, `local`,
+    /// in ([`Translator::carriers`]).
+    fn find_carriers(&mut self, local: DeclId, fallback: NodeId) {
+        let p = self.p;
+        temper_tmpl::analysis::walk(p, fallback, &mut |n| {
+            if let Node::Assign { local: kept, value } = p.nodes.get(n) {
+                let mut value = value;
+                while let Node::AsNullable { value: v } = p.nodes.get(value) {
+                    value = v;
+                }
+                if matches!(p.nodes.get(value), Node::Local { local: l } if l == local) {
+                    self.carriers.insert(kept);
+                }
+            }
+        });
+    }
+
+    fn is_carrier(&self, value: NodeId) -> bool {
+        matches!(self.p.nodes.get(value), Node::Local { local } if self.carriers.contains(&local))
+    }
+
+    /// `throw value`, as `raise`: with its cause, the failure a handler
+    /// handles, `from` it, where it's made there; else through the
+    /// runtime's `with_cause`, which keeps a cause it has already.
+    fn throw(&mut self, value: NodeId, cause: Option<NodeId>) -> R<Stmt> {
+        let fresh = matches!(self.p.nodes.get(value), Node::New { .. });
+        let raised = self.expr(value)?;
+        let Some(cause) = cause else {
+            return Ok(Stmt::Raise(raised));
+        };
+        let cause = self.expr(cause)?;
+        Ok(match fresh {
+            true => Stmt::RaiseFrom(raised, cause),
+            false => {
+                let with_cause = self.import("temper_core", "with_cause");
+                Stmt::Raise(Expr::name(with_cause).call(vec![raised, cause]))
+            }
+        })
+    }
+
+    /// A value put where `sink` says, as statements: an `orelse` or a
+    /// `catch` as `try`, `bubble()`, `throw`, and `panic()` as `raise`,
+    /// else the value's statements and then the value.
     fn value_into(&mut self, id: NodeId, sink: Sink, out: &mut Vec<Stmt>) -> R<()> {
         let saved = std::mem::take(&mut self.pre);
         let done = self.value_into_apart(id, sink, out);
@@ -1515,7 +1591,14 @@ impl<'a> Translator<'a> {
 
     fn value_into_apart(&mut self, id: NodeId, sink: Sink, out: &mut Vec<Stmt>) -> R<()> {
         match self.p.nodes.get(id) {
-            Node::OrElse { body, fallback } => {
+            Node::OrElse { body, fallback } | Node::Catch { body, fallback, .. } => {
+                let local = match self.p.nodes.get(id) {
+                    Node::Catch { local, .. } => Some(local),
+                    _ => None,
+                };
+                if let Some(local) = local {
+                    self.find_carriers(local, fallback);
+                }
                 let sink = match sink {
                     Sink::Assign(target, Some(ann)) => {
                         if let Expr::Name(name) = &target {
@@ -1536,24 +1619,26 @@ impl<'a> Translator<'a> {
                     Sink::Discard => Sink::Discard,
                 };
                 self.value_into(body, sink, &mut tried)?;
-                // `orelse panic()` panics with the bubble as its cause.
-                let cause = match self.p.nodes.get(fallback) {
+                let class = self.handled(body)?;
+                let mut bound = local.map(|l| self.name(l));
+                // `orelse panic()` panics with the failure as its cause.
+                match self.p.nodes.get(fallback) {
                     Node::Panic {} => {
-                        let cause = self.temp();
-                        caught.push(Stmt::RaiseFrom(panic_value(), cause.clone()));
-                        Some(cause)
+                        let cause = bound.get_or_insert_with(|| self.temp()).clone();
+                        caught.push(Stmt::RaiseFrom(panic_value(), Expr::name(cause)));
                     }
-                    _ => {
-                        self.value_into(fallback, again, &mut caught)?;
-                        None
-                    }
-                };
-                let bubble = self.import("temper_core", "Bubble");
+                    _ => self.value_into(fallback, again, &mut caught)?,
+                }
                 out.push(Stmt::Try {
                     body: tried,
-                    except: Some((bubble, cause, caught)),
+                    except: Some((class, bound, caught)),
                     finally: Vec::new(),
                 });
+            }
+            Node::Throw { value, cause, .. } => {
+                let raised = self.throw(value, cause)?;
+                self.flush(out);
+                out.push(raised);
             }
             Node::Bubble { .. } | Node::Error { .. } => {
                 let bubble = self.import("temper_core", "Bubble");
@@ -1703,7 +1788,9 @@ impl<'a> Translator<'a> {
                         // where that's a supertype, also under `orelse`.
                         let ty = p.decls.get(local).ty;
                         let mut value = init;
-                        while let Node::OrElse { body, .. } = p.nodes.get(value) {
+                        while let Node::OrElse { body, .. } | Node::Catch { body, .. } =
+                            p.nodes.get(value)
+                        {
                             value = body;
                         }
                         let empty = match p.nodes.get(value) {
@@ -2337,6 +2424,14 @@ impl<'a> Translator<'a> {
                 }
                 Expr::bin(Bin::Is, self.expr(value)?, Expr::None)
             }
+            // A failure a `catch` kept, not null where it's read, asserted
+            // so for checkers, as they can't tell.
+            Node::NonNull { value } if self.is_carrier(value) => {
+                let kept = self.expr(value)?;
+                let none = Expr::bin(Bin::IsNot, kept.clone(), Expr::None);
+                self.pre.push(Stmt::Assert(none, None));
+                kept
+            }
             Node::NonNull { value } | Node::AsNullable { value } => self.expr(value)?,
             Node::EqNullable { op, left, right } => {
                 let [left, right] = self.exprs(&[left, right])?;
@@ -2361,7 +2456,7 @@ impl<'a> Translator<'a> {
                     _ => return not_yet("a nullable equality without a spelling"),
                 }
             }
-            Node::OrElse { .. } => {
+            Node::OrElse { .. } | Node::Catch { .. } => {
                 let ty = p.nodes.ty(id);
                 if ty == TypeId::VOID {
                     let mut stmts = Vec::new();
@@ -2380,6 +2475,11 @@ impl<'a> Translator<'a> {
             }
             Node::Panic {} => {
                 self.pre.push(panic());
+                Expr::None
+            }
+            Node::Throw { value, cause, .. } => {
+                let raised = self.throw(value, cause)?;
+                self.pre.push(raised);
                 Expr::None
             }
             Node::Await { promise, .. } => {
@@ -2802,6 +2902,9 @@ pub(crate) fn core_type(qname: &str) -> Option<(&'static str, &'static str)> {
         "core.type StringBuilder" => ("builtins", "list[str]"),
         "core.type Deque" => ("collections", "deque"),
         "core.type DenseBitVector" => ("temper_core", "DenseBitVector"),
+        // Core's root of declared failures, the runtime's marker, which
+        // each library's base failure class extends beside `Exception`.
+        "core.type Error" => ("temper_core", "Failure"),
         // `()`, its one value. Kotlin's `_empty` is undefined.
         "core.type Empty" => ("builtins", "tuple[()]"),
         // `temper_core`'s `concurrent.futures.Future`, which asyncio can
