@@ -1,0 +1,11 @@
+# Branches of temperlang/temper to measure, one per line, each against
+# its merge-base with main. For a stacked branch, name its base branch
+# after it, and it's measured against its merge-base with that instead:
+#
+#     error-custom-kinds error-common-ground
+backend-build-speed
+host-quick-fixes
+core-extension-methods
+error-common-ground
+error-custom-kinds error-common-ground
+temper-fmt

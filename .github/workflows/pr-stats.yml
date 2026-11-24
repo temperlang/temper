@@ -1,0 +1,137 @@
+# Size and speed of each branch in branches.txt against its merge-base
+# with main (or with the base branch its line names, for a stacked
+# branch), so each table shows only that branch's own changes; measured
+# by measure.py, one job per branch, in parallel. Each job checks out
+# the branch of temperlang/temper and its merge-base, builds `temper` from each
+# (the `small` profile, which is what's released; set PROFILE to
+# `release` for the plain release profile), and measures the two back to
+# back on the same runner. Results go to each job's summary only.
+#
+# This workflow lives on the orphan `pr-stats` branch, so it runs on a
+# push to that branch (workflow_dispatch only works for workflows on the
+# default branch). Nothing is merged or pushed anywhere.
+name: PR stats
+
+on:
+  push:
+    branches: [pr-stats]
+
+# Read-only token: nothing here writes to the repository.
+permissions:
+  contents: read
+
+# A newer push cancels the older run.
+concurrency:
+  group: pr-stats
+  cancel-in-progress: true
+
+env:
+  PROFILE: small
+
+jobs:
+  # branches.txt as a JSON list of {branch, base} for the matrix: each
+  # line is a branch, optionally followed by its base branch (default
+  # main); blank lines and lines starting with # are skipped.
+  branches:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      list: ${{ steps.list.outputs.list }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: branches.txt
+          sparse-checkout-cone-mode: false
+      - id: list
+        shell: python3 {0}
+        run: |
+          import json, os, re
+          jobs = []
+          for number, line in enumerate(open("branches.txt"), 1):
+              words = line.split()
+              if not words or words[0].startswith("#"):
+                  continue
+              if len(words) > 2 or not all(re.fullmatch(r"[A-Za-z0-9._/-]+", w) for w in words):
+                  raise SystemExit(f"branches.txt:{number}: expected BRANCH [BASE], got {line.strip()!r}")
+              jobs.append({"branch": words[0], "base": words[1] if len(words) > 1 else "main"})
+          if not jobs:
+              raise SystemExit("branches.txt lists no branches")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+              out.write(f"list={json.dumps(jobs)}\n")
+
+  measure:
+    name: ${{ matrix.branch }}
+    needs: branches
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.branches.outputs.list) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          path: stats
+      # The whole history, every branch included, for the merge-base and
+      # for how far behind main the branch is.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ matrix.branch }}
+          path: head
+          fetch-depth: 0
+      # The base: the branch's merge-base with its base branch, checked
+      # out beside it as a worktree of the same clone.
+      - name: Merge-base
+        env:
+          BASE: ${{ matrix.base }}
+        run: |
+          if ! sha=$(git -C head merge-base HEAD "origin/$BASE"); then
+            echo "::error::no merge-base with origin/$BASE (no such branch?)"
+            exit 1
+          fi
+          echo "merge-base with $BASE: $sha"
+          git -C head worktree add --detach ../base "$sha"
+      # The showcase libraries, at their default branches, the same
+      # checkout for both binaries.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: temperlang/kelpto
+          path: libs/kelpto
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: temperlang/argmas
+          path: libs/argmas
+      - uses: dtolnay/rust-toolchain@cfcaf53ba4c621917ec7f78a66bff7a8848ddad4 # 1.85.0 branch, 2026-10-16
+      # One target directory for both builds, so head's build reuses the
+      # third-party crates base's built. The cache keeps only those, under
+      # one key for every job and push (shared-key), saved by the first
+      # job only, so this adds one cache entry, not one per branch, beside
+      # main's.
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: base -> ../target
+          shared-key: pr-stats
+          save-if: ${{ strategy.job-index == 0 }}
+      - name: Build base and head
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/target
+        run: |
+          mkdir bin
+          for side in base head; do
+            (cd "$side" && cargo build --locked --profile "$PROFILE" -p tempest)
+            cp "target/$PROFILE/temper" "bin/temper-$side"
+            "bin/temper-$side" --version
+          done
+      - name: Measure
+        env:
+          BRANCH: ${{ matrix.branch }}
+          BASE: ${{ matrix.base }}
+        run: >
+          python3 stats/measure.py
+          --base bin/temper-base --head bin/temper-head
+          --base-name "merge-base" --head-name "$BRANCH"
+          --title "\`$BRANCH\` against its merge-base with \`$BASE\`"
+          --base-src base --head-src head --main-ref origin/main
+          --lib kelpto=libs/kelpto --lib argmas=libs/argmas
+          --test-lib argmas
+          --repeats 5
