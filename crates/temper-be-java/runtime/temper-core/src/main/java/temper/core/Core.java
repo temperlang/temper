@@ -327,6 +327,50 @@ public final class Core {
         throw bubble();
     }
 
+    /**
+     * Throws a declared failure, as an expression: Temper's {@code throw}
+     * where Java needs a value.
+     * @param <T> an arbitrary type; allows this expression to effectively return bottom
+     * @param failure the failure, which has its stack trace from where it was made
+     * @return never
+     */
+    public static <T> T throwFailure(RuntimeException failure) {
+        throw failure;
+    }
+
+    /**
+     * {@code failure}, with {@code cause} as its cause, for a Temper
+     * {@code throw} in a handler, unless it has a cause already: a failure
+     * thrown again keeps the cause it was first thrown with, and never
+     * becomes its own.
+     * @param <T> the failure's type
+     * @param failure the failure thrown
+     * @param cause the failure (or bubble) being handled
+     * @return {@code failure}
+     */
+    public static <T extends Throwable> T withCause(T failure, Throwable cause) {
+        if (failure.getCause() == null && failure != cause) {
+            try {
+                failure.initCause(cause);
+            } catch (IllegalStateException e) {
+                // Its cause was set to null on purpose: it stays so.
+            }
+        }
+        return failure;
+    }
+
+    /**
+     * A declared failure's cause, as Temper's {@code Error.cause} gives it:
+     * the failure that was being handled where it was thrown, or null,
+     * also where that was something else, as a bubble.
+     * @param failure the failure
+     * @return its cause, if a declared failure, else null
+     */
+    public static @Nullable Failure failureCause(Failure failure) {
+        Throwable cause = failure.getCause();
+        return cause instanceof Failure ? (Failure) cause : null;
+    }
+
     /** Convenience for throwing assertion errors as an expression.  */
     public static <T> T throwAssertionError(String message) { throw new AssertionError(message); }
 
@@ -336,7 +380,8 @@ public final class Core {
      * a test framework's failure (JUnit's, from {@code org.opentest4j}),
      * or a {@link VirtualMachineError}, as on every backend. Temper's own
      * panics are {@link AssertionError}s, and a host's exception is a
-     * panic too. What isn't passes through.
+     * panic too; a declared failure (a {@link Failure}) is a failure, not
+     * a panic. What isn't passes through.
      */
     public static boolean blockPanics(Runnable block) {
         try {
@@ -344,7 +389,7 @@ public final class Core {
         } catch (Bubble | VirtualMachineError e) {
             throw e;
         } catch (Throwable e) {
-            if (isTestFailure(e)) {
+            if (e instanceof Failure || isTestFailure(e)) {
                 throw e;
             }
             return true;

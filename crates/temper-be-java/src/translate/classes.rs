@@ -39,12 +39,21 @@
 //! - A class's plain `toString()` overrides `Object`'s, by its name
 //!   alone; an `@operator` method is a method; `<=>`'s calls compare
 //!   with 0 as tmpl has them.
+//! - A declared failure type (RFC 164) is an unchecked exception: the
+//!   library's base, `public abstract class <Library>Exception extends
+//!   RuntimeException implements Failure` (the runtime's marker, for
+//!   core's `Error`), a sealed failure interface an abstract class under
+//!   it, and a failure class a final class under the one failure type
+//!   above it (not `sealed`: a library's modules are packages of their
+//!   own), each `@SuppressWarnings("serial")`. Its `message` getter is
+//!   `getMessage()`, overriding `Throwable`'s, and its cause is
+//!   `Throwable`'s own ([`failure_class`]).
 //! - A user's connected class that host code defines (per
 //!   `temper_tmpl::host::uses_host`) isn't generated: the library's own
 //!   `NAME.java` beside the module is copied in its place.
 
 use super::{R, Translator, not_yet};
-use crate::tree::{self, Expr, Member, MemberField, MemberKind, Stmt, Vis};
+use crate::tree::{self, Expr, Member, MemberField, MemberKind, Stmt, TypeKind, Vis};
 use std::collections::HashSet;
 use temper_tmpl::analysis::{ancestors, nominal_decl, walk};
 use temper_tmpl::host::uses_host;
@@ -232,6 +241,33 @@ fn reaching(p: &Program, ty: DeclId, method: DeclId, key: Key<'_>) -> Option<Dec
 }
 
 const PRIMITIVES: &[&str] = &["boolean", "int", "long", "double"];
+
+/// `Throwable`'s methods that a failure type's own members mustn't
+/// override, as they'd change what Java's exceptions do (`getCause()`,
+/// stack traces) or their types clash: all but `getMessage()` and
+/// `toString()`.
+const THROWABLE_METHODS: &[&str] = &[
+    "addSuppressed",
+    "fillInStackTrace",
+    "getCause",
+    "getLocalizedMessage",
+    "getStackTrace",
+    "getSuppressed",
+    "initCause",
+    "printStackTrace",
+    "setStackTrace",
+];
+
+/// Whether a declaration is a declared failure type of the program's own
+/// (`temper_tmpl::failures`): a class, under `RuntimeException`, or an
+/// interface (the library's base, or a sealed one), as an abstract class,
+/// since Java's exceptions are classes. Each has one failure type above
+/// it (the frontend's rule), which it extends.
+pub(super) fn failure_class(p: &Program, decl: DeclId) -> bool {
+    is_type(p, decl)
+        && !is_external(p, decl)
+        && temper_tmpl::failures::is_failure_decl(p, temper_tmpl::failures::root(p), decl)
+}
 
 /// A method's parameters' declarations.
 fn param_decls(p: &Program, params: temper_tmpl::Kids) -> Vec<DeclId> {
@@ -514,7 +550,15 @@ impl Translator<'_> {
 
     fn type_decl(&mut self, decl: DeclId) -> R<tree::TypeDecl> {
         let p = self.p;
-        let interface = p.decls.get(decl).kind == DeclKind::Interface;
+        // A declared failure type is a class under `RuntimeException`, a
+        // sealed interface of them an abstract one ([`failure_class`]).
+        let failure = failure_class(p, decl);
+        let kind = match (p.decls.get(decl).kind, failure) {
+            (DeclKind::Interface, false) => TypeKind::Interface,
+            (DeclKind::Interface, true) => TypeKind::AbstractClass,
+            _ => TypeKind::FinalClass,
+        };
+        let interface = kind == TypeKind::Interface;
         let name = self.name(decl);
         self.in_global = false;
         self.this_class = decl;
@@ -530,9 +574,7 @@ impl Translator<'_> {
             })
             .find(|n| !taken.contains(n))
             .unwrap_or_default();
-        let supers = (p.decls.supers(decl).iter())
-            .map(|&s| self.ty(s))
-            .collect::<R<Vec<_>>>()?;
+        let (extends, supers) = self.supers(decl, failure)?;
         let mut fields = Vec::new();
         let mut members = Vec::new();
         let mut accessors = Vec::new();
@@ -641,6 +683,7 @@ impl Translator<'_> {
                                 result: format!("{}{primitive_ty}", self.type_params(m)?),
                                 name: helper.clone(),
                                 params: std::mem::take(&mut ps),
+                                throws: Vec::new(),
                                 body: std::mem::take(&mut body),
                             });
                             let call = Expr::name(helper).call(args);
@@ -652,6 +695,7 @@ impl Translator<'_> {
                             ps = public_ps;
                         }
                     }
+                    let throws = self.throws_of(m)?;
                     members.push(Member {
                         vis: match vis {
                             Vis::Private if constructor => Vis::Package,
@@ -667,6 +711,7 @@ impl Translator<'_> {
                         result: result_ty,
                         name: name_in_java,
                         params: ps,
+                        throws,
                         body,
                     });
                     let made = members.last().unwrap().clone();
@@ -682,6 +727,7 @@ impl Translator<'_> {
                         result: result_ty,
                         name: self.method_name(m),
                         params: ps,
+                        throws: self.throws_of(m)?,
                         body: Vec::new(),
                     });
                     let k = self.trailing_optional(params);
@@ -705,6 +751,7 @@ impl Translator<'_> {
                         result: result_ty,
                         name: self.name(m),
                         params: ps,
+                        throws: self.throws_of(m)?,
                         body,
                     });
                     let k = self.trailing_optional(params);
@@ -754,18 +801,89 @@ impl Translator<'_> {
             helpers.push(crate::ops::compare_code_points(&self.compare_helper));
         }
         let generics = self.type_params(decl)?.trim_end().to_string();
+        let mut annotations = Vec::new();
+        if failure {
+            self.failure_members(kind, &name, &mut members)?;
+            // Not meant for Java's serialization, whose lints would ask for
+            // a `serialVersionUID` and fields of serializable types.
+            annotations.push("@SuppressWarnings(\"serial\")".to_string());
+        }
         Ok(tree::TypeDecl {
             package: self.package.clone(),
             imports: self.imports.iter().cloned().collect(),
             public: self.exported(decl),
-            interface,
+            kind,
+            annotations,
             name,
             generics,
+            extends,
             supers,
             fields,
             members,
             helpers,
         })
+    }
+
+    /// The class a type extends, if any, and what else it implements (or
+    /// for an interface, extends): a declared failure type
+    /// ([`failure_class`]) extends the one failure type above it, the
+    /// library's base `RuntimeException`, implementing the runtime's
+    /// marker, `Failure`, core's `Error`.
+    fn supers(&mut self, decl: DeclId, failure: bool) -> R<(Option<String>, Vec<String>)> {
+        let p = self.p;
+        let root = temper_tmpl::failures::root(p);
+        let mut extends = None;
+        let mut supers = Vec::new();
+        for &s in p.decls.supers(decl) {
+            let up = nominal_decl(p, s);
+            let parent = failure
+                && up.is_some_and(|u| u == root.unwrap_or(DeclId::NONE) || failure_class(p, u));
+            if !parent {
+                supers.push(self.ty(s)?);
+                continue;
+            }
+            if extends.is_some() {
+                return not_yet("a failure type with two failure types above it");
+            }
+            if up == root {
+                extends = Some("RuntimeException".to_string());
+                supers.push(self.ty(s)?);
+            } else {
+                extends = Some(self.ty(s)?);
+            }
+        }
+        Ok((extends, supers))
+    }
+
+    /// A failure type's members as Java has them: an abstract one's
+    /// constructor, `protected` for its subclasses in the library's other
+    /// packages, and its methods with bodies a class's; and none named as
+    /// `Throwable`'s methods but `getMessage()`, which a failure's
+    /// `message` overrides.
+    fn failure_members(&self, kind: TypeKind, name: &str, members: &mut Vec<Member>) -> R<()> {
+        for m in members.iter_mut() {
+            if THROWABLE_METHODS.contains(&m.name.as_str()) {
+                return not_yet(format!("a failure type's member named {}", m.name));
+            }
+            if m.kind == MemberKind::Default {
+                m.kind = MemberKind::Instance;
+            }
+        }
+        if kind == TypeKind::AbstractClass {
+            members.insert(
+                0,
+                Member {
+                    vis: Vis::Protected,
+                    kind: MemberKind::Constructor,
+                    result: String::new(),
+                    name: name.to_string(),
+                    params: Vec::new(),
+                    throws: Vec::new(),
+                    body: Vec::new(),
+                },
+            );
+        }
+        Ok(())
     }
 
     /// A public field's getter, and for a `var`, setter, but those the
@@ -794,6 +912,7 @@ impl Translator<'_> {
                 result: ty.to_string(),
                 name: getter_name(source, ty == "boolean"),
                 params: Vec::new(),
+                throws: Vec::new(),
                 body: vec![Stmt::Return(Some(this_field.clone()))],
             });
         }
@@ -805,6 +924,7 @@ impl Translator<'_> {
                 result: "void".into(),
                 name: setter_name(source),
                 params: vec![(ty.to_string(), param.clone())],
+                throws: Vec::new(),
                 body: vec![Stmt::Assign {
                     target: this_field,
                     value: Expr::name(param),
@@ -834,9 +954,14 @@ impl Translator<'_> {
             },
         };
         let (result, result_ty) = self.result(method)?;
-        let through = self.class_name(through);
+        // A failure class's, which is a class, its own `super`.
+        let through = match failure_class(p, through) {
+            true => "super".to_string(),
+            false => format!("{}.super", self.class_name(through)),
+        };
         let args = params.iter().map(|(_, n)| Expr::name(n.clone())).collect();
-        let call = Expr::name(format!("{through}.super")).method(self.method_name(method), args);
+        let call = Expr::name(through).method(self.method_name(method), args);
+        let throws = self.throws_of(method)?;
         Ok(Member {
             vis: Vis::Public,
             kind: if interface {
@@ -847,6 +972,7 @@ impl Translator<'_> {
             result: result_ty,
             name: self.method_name(method),
             params,
+            throws,
             body: vec![if result == TypeId::VOID {
                 Stmt::Expr(call)
             } else {
@@ -942,6 +1068,7 @@ fn member_overloads(m: &Member, k: usize) -> Vec<Member> {
                 result: m.result.clone(),
                 name: m.name.clone(),
                 params: m.params[..n].to_vec(),
+                throws: m.throws.clone(),
                 body: vec![
                     if m.result.ends_with("void") || m.kind == MemberKind::Constructor {
                         Stmt::Expr(call)

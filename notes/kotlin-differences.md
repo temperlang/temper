@@ -1076,8 +1076,8 @@ to report those inputs as expected.
   …`, which Kotlin can't parse. The frontend types them (chunk 4,
   `tests/settle/failures.cases`), with core's `Error` root, which
   Kotlin's core lacks, and reports `throws X` for a non-failure `X`,
-  which Kotlin takes as `throws Bubble`; running and translating them
-  is "Not supported yet". `deviations.py` excuses fuzzed inputs whose
+  which Kotlin takes as `throws Bubble`; the interpreter runs them, and
+  Python and Java translate them (other backends say "not yet"). `deviations.py` excuses fuzzed inputs whose
   differences start at one of these words.
 - **Operands nested over 1000 deep are an error** (`NestedTooDeeply`),
   where Kotlin overflows its stack, already at about 300 nested calls or

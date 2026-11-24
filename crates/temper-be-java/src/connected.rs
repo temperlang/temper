@@ -71,6 +71,17 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Deque.removeFirst()",
         Connection::Static("Core", "dequeRemoveFirst"),
     ),
+    // A declared failure's cause is Java's own `getCause()`, where that's
+    // a declared failure (`temper.core.Failure`); its message,
+    // `getMessage()`, which every failure class overrides.
+    (
+        "core.type Error.get cause()",
+        Connection::Static("Core", "failureCause"),
+    ),
+    (
+        "core.type Error.get message()",
+        Connection::Method("getMessage"),
+    ),
     ("core.type Float64.abs()", Connection::Static("Math", "abs")),
     (
         "core.type Float64.acos()",
@@ -591,6 +602,15 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
         TypeConnection {
             name: "Optional<?>",
             import: "java.util.Optional",
+        },
+    ),
+    // Core's root of declared failures, the runtime's marker, which each
+    // library's base failure class implements.
+    (
+        "core.type Error",
+        TypeConnection {
+            name: "Failure",
+            import: "temper.core.Failure",
         },
     ),
     (

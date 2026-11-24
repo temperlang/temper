@@ -200,6 +200,14 @@ initializer), one file per type, synthetic functional interfaces in
   function types use `java.util.function` where possible, else synthetic
   interfaces; failure is `temper.core.Bubble`, an unchecked
   `RuntimeException`; promises are `CompletableFuture`.
+- Declared failures (RFC 164, in progress): unchecked too. Each failure
+  type is a class under the library's own base, `public abstract class
+  <Lib>Exception extends RuntimeException implements
+  temper.core.Failure` (`Failure` only a marker); a sealed failure
+  interface is an abstract class between, with a `protected`
+  constructor; a type named `…Error` is `…Exception`. `getMessage()` is
+  its message, `getCause()` its cause; stack traces kept. Functions list
+  the failure they may throw in a `throws` clause, as documentation.
 
 **Naming.** camelCase kept, types PascalCase. Reserved words *and* contextual
 keywords get `_` (that's why Prismora, now Chromarite, had `to_`). Invalid characters become

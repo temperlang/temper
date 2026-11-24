@@ -22,6 +22,10 @@ pub const FILES: &[(&str, &str)] = &[
         include_str!("../runtime/temper-core/src/main/java/temper/core/Core.java"),
     ),
     (
+        "src/main/java/temper/core/Failure.java",
+        include_str!("../runtime/temper-core/src/main/java/temper/core/Failure.java"),
+    ),
+    (
         "src/main/java/temper/core/Generator.java",
         include_str!("../runtime/temper-core/src/main/java/temper/core/Generator.java"),
     ),

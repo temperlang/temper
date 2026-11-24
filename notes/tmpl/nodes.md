@@ -705,7 +705,7 @@ then).
 
 RFC 164's failure types, beside `Bubble`, which stays as it was
 ([types.md](types.md#results); typing.md, "Declared failures"). Python
-has them (below); each other backend says "not yet in the … backend:
+and Java have them (below); each other backend says "not yet in the … backend:
 declared failures: …" for a program that uses them
 (`temper_tmpl::failures::not_yet`), and a program that uses only
 `Bubble` is unchanged, node for node.
@@ -763,6 +763,24 @@ a join of only core's `Error` (several libraries' failures) is "not
 yet". `cause` is `failure_cause(e)`, `__cause__` where it's a
 `Failure`; `~caught` read after a jumping fallback is asserted not
 null for checkers.
+
+**In Java** (chunk 8): unchecked exceptions. Core's `Error` is
+`temper.core.Failure`, a marker interface (`getMessage()`,
+`getCause()`); the base is `public abstract class FailuresException
+extends RuntimeException implements Failure`, a sealed failure
+interface an abstract class under it (Java 8's runtime has no
+`sealed`, and a library's modules are packages of their own), each with
+a `protected` constructor, and failure classes `final` under those;
+all `@SuppressWarnings("serial")`. `message` is `getMessage()`; `cause`
+`Core.failureCause(e)`, `getCause()` where it's a `Failure`; a member
+named as another of `Throwable`'s methods is "not yet". `Throw` is
+`throw`, `throw Core.withCause(x, cause)` in a handler (keeps a cause
+it has), `Core.throwFailure(x)` where Java needs a value. `OrElse` and
+`Catch` are `try`/`catch` of exactly `Bubble` and/or the join, a
+multi-catch where both, so panics (`AssertionError`) and host
+exceptions pass. A function failing with a failure type lists it in
+a `throws` clause. Stack traces are kept (made where the failure is
+constructed), unlike `Bubble`'s.
 
 Validator rules: T5 lets a signature fail with a failure type or a type
 parameter; F3 marks every `Throw`; F4 checks the failure's type where it

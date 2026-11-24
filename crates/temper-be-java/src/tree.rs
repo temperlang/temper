@@ -294,10 +294,13 @@ pub enum Stmt {
         catch_all: Option<(String, Vec<Stmt>)>,
         finally: Vec<Stmt>,
     },
-    /// `try { … } catch (Bubble var) { … }`: Temper's `orelse`, catching
-    /// only the runtime's `Bubble`.
+    /// `try { … } catch (Bubble var) { … }`: Temper's `orelse` or
+    /// `catch`, catching only what its body may fail with, the runtime's
+    /// `Bubble` and declared failures' classes (`classes`, a multi-catch
+    /// `catch (Bubble | NotFound var)` where several).
     TryCatch {
         body: Vec<Stmt>,
+        classes: Vec<String>,
         var: String,
         handler: Vec<Stmt>,
     },
@@ -322,7 +325,8 @@ pub struct Method {
     pub name: String,
     /// Each parameter's type and name.
     pub params: Vec<(String, String)>,
-    /// Checked exceptions it may throw, after `throws`.
+    /// Checked exceptions it may throw, after `throws`, and the
+    /// unchecked declared failures it may.
     pub throws: Vec<String>,
     pub body: Vec<Stmt>,
 }
@@ -347,6 +351,9 @@ pub struct Class {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Vis {
     Public,
+    /// An abstract failure class's constructor's, for its subclasses in
+    /// the library's other packages.
+    Protected,
     Package,
     Private,
 }
@@ -355,6 +362,7 @@ impl Vis {
     fn text(self) -> &'static str {
         match self {
             Vis::Public => "public ",
+            Vis::Protected => "protected ",
             Vis::Package => "",
             Vis::Private => "private ",
         }
@@ -396,21 +404,28 @@ pub struct Member {
     pub result: String,
     pub name: String,
     pub params: Vec<(String, String)>,
+    /// The declared failures it may throw, after `throws`, unchecked.
+    pub throws: Vec<String>,
     pub body: Vec<Stmt>,
 }
 
 /// One `.java` file of a class or interface: a final class (classes are
-/// final in Temper) or an interface, `public` if exported, else its
+/// final in Temper), an interface, or an abstract class (a declared
+/// failure's base or sealed interface), `public` if exported, else its
 /// package's.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeDecl {
     pub package: String,
     pub imports: Vec<String>,
     pub public: bool,
-    pub interface: bool,
+    pub kind: TypeKind,
+    /// Annotations before it, as `@SuppressWarnings("serial")`.
+    pub annotations: Vec<String>,
     pub name: String,
     /// Its type parameters, as `<T extends Named>`, or empty.
     pub generics: String,
+    /// The class it extends, for a class that extends one.
+    pub extends: Option<String>,
     /// What it implements, or for an interface, extends.
     pub supers: Vec<String>,
     pub fields: Vec<MemberField>,
@@ -418,6 +433,16 @@ pub struct TypeDecl {
     /// Nested classes and helpers, as their text, each indented as a
     /// member.
     pub helpers: Vec<String>,
+}
+
+/// What a [`TypeDecl`] is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TypeKind {
+    Interface,
+    FinalClass,
+    /// A declared failure's base, or sealed failure interface, which
+    /// classes extend.
+    AbstractClass,
 }
 
 /// Prints a class's or interface's file.
@@ -431,15 +456,22 @@ pub fn type_decl(t: &TypeDecl) -> String {
         }
     }
     out.push('\n');
+    for a in &t.annotations {
+        let _ = writeln!(out, "{a}");
+    }
     if t.public {
         out.push_str("public ");
     }
-    let (keyword, supers) = if t.interface {
-        ("interface", "extends")
-    } else {
-        ("final class", "implements")
+    let interface = t.kind == TypeKind::Interface;
+    let (keyword, supers) = match t.kind {
+        TypeKind::Interface => ("interface", "extends"),
+        TypeKind::FinalClass => ("final class", "implements"),
+        TypeKind::AbstractClass => ("abstract class", "implements"),
     };
     let _ = write!(out, "{keyword} {}{}", t.name, t.generics);
+    if let Some(class) = &t.extends {
+        let _ = write!(out, " extends {class}");
+    }
     if !t.supers.is_empty() {
         let _ = write!(out, " {supers} {}", t.supers.join(", "));
     }
@@ -456,7 +488,7 @@ pub fn type_decl(t: &TypeDecl) -> String {
     }
     for f in &t.fields {
         out.push_str("    ");
-        if !t.interface {
+        if !interface {
             out.push_str(f.vis.text());
             if f.is_static {
                 out.push_str("static ");
@@ -475,17 +507,23 @@ pub fn type_decl(t: &TypeDecl) -> String {
         gap(&mut out);
         out.push_str("    ");
         // An interface's members are public without saying so.
-        if !t.interface || m.vis == Vis::Private {
+        if !interface || m.vis == Vis::Private {
             out.push_str(m.vis.text());
         }
         let params: Vec<String> = m.params.iter().map(|(t, n)| format!("{t} {n}")).collect();
         let params = params.join(", ");
+        let throws = match m.throws.as_slice() {
+            [] => String::new(),
+            throws => format!(" throws {}", throws.join(", ")),
+        };
         match m.kind {
             MemberKind::Constructor => {
                 let _ = write!(out, "{}({params}) ", t.name);
             }
             MemberKind::Abstract => {
-                let _ = writeln!(out, "{} {}({params});", m.result, m.name);
+                // An abstract class's, unlike an interface's, says so.
+                let modifier = if interface { "" } else { "abstract " };
+                let _ = writeln!(out, "{modifier}{} {}({params}){throws};", m.result, m.name);
                 continue;
             }
             kind => {
@@ -494,7 +532,7 @@ pub fn type_decl(t: &TypeDecl) -> String {
                     MemberKind::Default => "default ",
                     _ => "",
                 };
-                let _ = write!(out, "{modifier}{} {}({params}) ", m.result, m.name);
+                let _ = write!(out, "{modifier}{} {}({params}){throws} ", m.result, m.name);
             }
         }
         if m.body.is_empty() {
@@ -869,10 +907,15 @@ fn stmt(out: &mut String, s: &Stmt, depth: usize) {
             block(out, finally, depth);
             out.push('\n');
         }
-        Stmt::TryCatch { body, var, handler } => {
+        Stmt::TryCatch {
+            body,
+            classes,
+            var,
+            handler,
+        } => {
             out.push_str("try ");
             block(out, body, depth);
-            let _ = write!(out, " catch (Bubble {var}) ");
+            let _ = write!(out, " catch ({} {var}) ", classes.join(" | "));
             block(out, handler, depth);
             out.push('\n');
         }

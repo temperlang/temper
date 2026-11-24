@@ -42,6 +42,20 @@
 //! `panic()` throws an `AssertionError`, which no `orelse` catches, where
 //! Kotlin's throws a bubble; `orelse panic()`'s has the bubble as its
 //! cause.
+//!
+//! Declared failures (RFC 164; notes/tmpl/nodes.md, "Declared failures")
+//! are unchecked exceptions, each library's failure types classes under
+//! its base, `<Library>Exception extends RuntimeException implements
+//! Failure` ([`classes`] says how), so callbacks and generic code need
+//! nothing of them. `throw` is Java's, its cause, in a handler, set by
+//! `Core.withCause`; an `orelse` or `catch` catches exactly what its body
+//! may fail with, `Bubble` and the failure class above its declared
+//! failures, a multi-catch where both ([`Translator::handled`]); and a
+//! function that fails with a failure type says so in a `throws` clause,
+//! which Java doesn't check, for its readers. Failures keep their stack
+//! traces, which Java fills where one is constructed: a cost on the
+//! failure path only, which `Bubble` avoids, being thrown and handled
+//! within generated code.
 
 mod classes;
 mod functions;
@@ -665,9 +679,66 @@ impl<'a> Translator<'a> {
             result: result_ty,
             name: self.name(decl),
             params: ps,
-            throws: Vec::new(),
+            throws: self.throws_of(decl)?,
             body: stmts,
         })
+    }
+
+    /// What a function or method says it throws: the declared failure
+    /// type its signature fails with, unchecked, so a `throws` clause that
+    /// documents it, as Java's own APIs list `IllegalArgumentException`;
+    /// nothing for one that bubbles, or fails with a type parameter.
+    pub(crate) fn throws_of(&mut self, decl: DeclId) -> R<Vec<String>> {
+        let p = self.p;
+        let root = temper_tmpl::failures::root(p);
+        match p.signature(decl).and_then(|s| s.fail) {
+            Some(fail) if temper_tmpl::failures::is_failure_type(p, root, fail) => {
+                Ok(vec![self.ty(fail)?])
+            }
+            _ => Ok(Vec::new()),
+        }
+    }
+
+    /// What a handler around `body` catches, its `catch` clause's
+    /// classes: `Bubble`, imported from the runtime, if `body` may bubble,
+    /// and the failure class nearest above all its declared failures,
+    /// never what else Java throws, so panics (`AssertionError`s) and
+    /// hosts' exceptions pass. Not yet where that's core's `Error`, for
+    /// failures of several libraries.
+    fn handled(&mut self, body: NodeId) -> R<Vec<String>> {
+        let p = self.p;
+        let fails: Vec<TypeId> = (temper_tmpl::failures::failures_under(p, body).into_iter())
+            .map(|(_, f)| f)
+            .collect();
+        let mut classes = Vec::new();
+        let bubbles = fails.contains(&TypeId::BUBBLE);
+        // A body that can't fail, as one `to_tmpl` kept: `Bubble`'s.
+        if bubbles || fails.is_empty() {
+            self.import("temper.core.Bubble");
+            classes.push("Bubble".to_string());
+        }
+        let declared: Vec<TypeId> = fails.into_iter().filter(|&f| f != TypeId::BUBBLE).collect();
+        let root = temper_tmpl::failures::root(p);
+        if let Some(ty) = temper_tmpl::failures::join(p, root, &declared) {
+            if analysis::nominal_decl(p, ty) == root {
+                return not_yet("a handler of failures of several libraries");
+            }
+            classes.push(self.ty(ty)?);
+        }
+        Ok(classes)
+    }
+
+    /// `throw value`, as Java's, with its cause, the failure a handler
+    /// handles, where it's thrown there: `Core.withCause(value, cause)`,
+    /// which keeps a cause it has already.
+    fn thrown(&mut self, value: NodeId, cause: Option<NodeId>) -> R<Expr> {
+        let value = self.expr(value)?;
+        let Some(cause) = cause else {
+            return Ok(value);
+        };
+        let cause = self.expr(cause)?;
+        self.import("temper.core.Core");
+        Ok(Expr::name("Core").method("withCause", vec![value, cause]))
     }
 
     /// The body of a function whose host code runs instead of its Temper
@@ -934,7 +1005,7 @@ impl<'a> Translator<'a> {
                 local,
                 init: Some(init),
             } if self.captured.contains(&local)
-                && matches!(p.nodes.get(init), Node::OrElse { .. }) =>
+                && matches!(p.nodes.get(init), Node::OrElse { .. } | Node::Catch { .. }) =>
             {
                 let ty = self.ty(p.decls.get(local).ty)?;
                 let name = self.name(local);
@@ -1135,12 +1206,25 @@ impl<'a> Translator<'a> {
                 self.emit(out, local);
                 self.into(&Place::Assign(Expr::name(name.clone())), value, out)
             }
-            (_, Node::OrElse { body, fallback }) => {
+            (_, Node::OrElse { body, fallback } | Node::Catch { body, fallback, .. }) => {
+                let classes = self.handled(body)?;
+                let local = match p.nodes.get(value) {
+                    Node::Catch { local, .. } => Some(local),
+                    _ => None,
+                };
+                // A multi-catch's variable is the classes' join, which
+                // Java can't read a failure's members from.
+                if local.is_some() && classes.len() > 1 {
+                    return not_yet("a catch that binds a failure and a bubble");
+                }
                 let body = self.sub(|t, o| t.into(into, body, o))?;
-                // `orelse panic()` panics with the bubble as its cause.
+                // `orelse panic()` panics with the failure as its cause.
                 let (var, handler) = match p.nodes.get(fallback) {
                     Node::Panic {} => {
-                        let var = self.fresh("bubble");
+                        let var = match local {
+                            Some(local) => self.name(local),
+                            None => self.fresh("bubble"),
+                        };
                         let cause = Expr::name(var.clone());
                         (
                             var,
@@ -1151,12 +1235,32 @@ impl<'a> Translator<'a> {
                         )
                     }
                     _ => (
-                        self.fresh("ignored"),
+                        match local {
+                            Some(local) => self.name(local),
+                            None => self.fresh("ignored"),
+                        },
                         self.sub(|t, o| t.into(into, fallback, o))?,
                     ),
                 };
-                self.import("temper.core.Bubble");
-                self.emit(out, Stmt::TryCatch { body, var, handler });
+                let stmt = Stmt::TryCatch {
+                    body,
+                    classes,
+                    var,
+                    handler,
+                };
+                self.emit(out, stmt);
+                Ok(())
+            }
+            (
+                _,
+                Node::Throw {
+                    value: thrown,
+                    cause,
+                    ..
+                },
+            ) => {
+                let thrown = self.thrown(thrown, cause)?;
+                self.emit(out, Stmt::Throw(thrown));
                 Ok(())
             }
             (_, Node::BlockValue { stmts, value: last }) => {
@@ -1265,7 +1369,7 @@ impl<'a> Translator<'a> {
     fn compound(&self, value: NodeId) -> bool {
         let p = self.p;
         match p.nodes.get(value) {
-            Node::OrElse { .. } => true,
+            Node::OrElse { .. } | Node::Catch { .. } => true,
             Node::IfValue { then, els, .. } => needs_stmts(p, then) || needs_stmts(p, els),
             Node::Coalesce { right, .. } => needs_stmts(p, right),
             Node::BlockValue { .. } => !self.flattens(value),
@@ -1578,6 +1682,7 @@ impl<'a> Translator<'a> {
             | Node::Or { .. }
             | Node::IfValue { .. }
             | Node::OrElse { .. }
+            | Node::Catch { .. }
             | Node::BlockValue { .. }
             // Its parameters and body aren't operands: the body runs
             // later, as its own function.
@@ -1780,7 +1885,13 @@ impl<'a> Translator<'a> {
                 self.import("temper.core.Core");
                 Expr::name("Core").method("throwAssertionError", vec![Expr::Str("panic".into())])
             }
-            Node::OrElse { .. } => {
+            // A `throw` where Java needs a value.
+            Node::Throw { value, cause, .. } => {
+                let thrown = self.thrown(value, cause)?;
+                self.import("temper.core.Core");
+                Expr::name("Core").method("throwFailure", vec![thrown])
+            }
+            Node::OrElse { .. } | Node::Catch { .. } => {
                 let name = self.temp_for(id)?;
                 let mut stmts = Vec::new();
                 self.into(&Place::Assign(Expr::name(name.clone())), id, &mut stmts)?;
@@ -2058,7 +2169,7 @@ fn needs_stmts(p: &Program, id: NodeId) -> bool {
     walk(p, id, &mut |n| {
         found |= matches!(
             p.nodes.get(n),
-            Node::OrElse { .. } | Node::BlockValue { .. }
+            Node::OrElse { .. } | Node::Catch { .. } | Node::BlockValue { .. }
         );
     });
     found
@@ -2068,7 +2179,7 @@ fn needs_stmts(p: &Program, id: NodeId) -> bool {
 /// its `catch`, which a `final` field can't have.
 fn multi_assign(p: &Program, id: NodeId) -> bool {
     match p.nodes.get(id) {
-        Node::OrElse { .. } => true,
+        Node::OrElse { .. } | Node::Catch { .. } => true,
         Node::BlockValue { value, .. } => multi_assign(p, value),
         Node::IfValue { then, els, .. } => multi_assign(p, then) || multi_assign(p, els),
         _ => false,

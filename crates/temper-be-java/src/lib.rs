@@ -35,7 +35,11 @@
 //! exception from a builtin not declared to bubble or from a callback,
 //! passes every `orelse`, and a library's host code (its `.java` files)
 //! bubbles only by throwing a `Bubble` (`throw Core.bubble()`); and
-//! generics, with boxed type arguments (`List<Integer>`) and explicit
+//! declared failures (RFC 164) as unchecked exceptions, each library's
+//! failure types under its own base, `<Library>Exception extends
+//! RuntimeException implements temper.core.Failure`, `throw` as Java's,
+//! and handlers that catch exactly what their bodies may fail with
+//! (`translate` says how); and generics, with boxed type arguments (`List<Integer>`) and explicit
 //! ones on `new`, core's lists as `java.util.List`s, maps as
 //! `LinkedHashMap`s, and pairs as `Map.Entry`s, as Kotlin's, but with two
 //! boxes compared by value; lists that may hold null are made by
@@ -178,8 +182,6 @@ pub const STD_SUPPORT: &[(&str, &str, &str)] = &[
 ];
 
 pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet> {
-    // Declared failures, not yet (RFC 164).
-    temper_tmpl::failures::not_yet(p).map_err(|what| NotYet { what })?;
     // Type-only errors run as written, or fail where they are
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);

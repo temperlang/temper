@@ -1,7 +1,7 @@
 package host_failures;
 
 // A specification: `NotFound` is the library's own failure class, in its
-// package, as the Java backend will name it.
+// package, as the Java backend names it.
 class HostFailuresConnected {
     static int hostLookup(String key) {
         if (key.equals("bug")) {

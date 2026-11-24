@@ -17,6 +17,8 @@
 //! classes declared in functions (`temper_be_testkit::LOOPS_AND_CLASSES`),
 //! generators, `async`, and `await`, as state machines
 //! (`temper_be_testkit::ASYNC`), and tests run as tests with std (`temper_be_testkit::TESTS`);
+//! and declared failures, the testkit's specifications `failures` and
+//! `host-failures` ([`SPECS`]);
 //! and on this crate's own programs, in `tests/programs/` ([`OWN`]).
 //!
 //! - `goldens`: each program's generated package, laid out as Kotlin's,
@@ -101,7 +103,11 @@ fn cases() -> Vec<Case> {
         &kit::NET[..],
     ]
     .concat();
-    let mut cases = kit::cases_with("java", &kit::PROGRAMS, &tests);
+    let programs = [&kit::PROGRAMS[..], &SPECS[..]].concat();
+    let mut cases = kit::cases_with("java", &programs, &tests);
+    for case in &mut cases {
+        rename_host_code(case);
+    }
     for name in OWN {
         let file = format!("{name}.temper.md");
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -114,9 +120,48 @@ fn cases() -> Vec<Case> {
     cases
 }
 
+/// A run of a program in sections (`host-failures-cause`, of
+/// `host-failures`), a library of its own, with the program's host code
+/// renamed for it: its class (`HostFailuresCauseConnected`) and package.
+fn rename_host_code(case: &mut Case) {
+    let Some(program) = case.dir.file_name().and_then(|f| f.to_str()) else {
+        return;
+    };
+    if case.host_files.is_empty() || program == case.library {
+        return;
+    }
+    let (from_package, from_class) = names(program);
+    let (package, class) = names(&case.library);
+    for (path, text) in &mut case.host_files {
+        *path = path.replace(
+            &format!("{from_class}Connected"),
+            &format!("{class}Connected"),
+        );
+        *text = (text.replace(
+            &format!("package {from_package};"),
+            &format!("package {package};"),
+        ))
+        .replace(
+            &format!("class {from_class}Connected"),
+            &format!("class {class}Connected"),
+        );
+    }
+}
+
+/// The testkit's specifications (`kit::SPECS`) Java runs, as Python
+/// does; the other backends don't yet.
+const SPECS: [&str; 2] = ["failures", "host-failures"];
+
 /// This crate's own programs, in `tests/programs/`: Temper, with what
-/// each logs in a log block.
-const OWN: &[&str] = &["java-classes", "java-nullables", "java-generics"];
+/// each logs in a log block; `java-failures`, declared failures as Java
+/// callers catch them, with host code that does
+/// (`tests/host/FailuresInterop.java`).
+const OWN: &[&str] = &[
+    "java-classes",
+    "java-nullables",
+    "java-generics",
+    "java-failures",
+];
 
 /// The lines of a program's log block.
 fn log_block(text: &str) -> Vec<String> {
@@ -404,6 +449,7 @@ fn runs() {
         let mut batches: Vec<(Vec<String>, Vec<PathBuf>)> = Vec::new();
         let mut mains = Vec::new();
         let mut interop = None;
+        let mut failures_interop = None;
         // std's main sources, for each batch with a case that imports
         // std's modules.
         let mut std_sources = Vec::new();
@@ -446,6 +492,16 @@ fn runs() {
                 fs::copy(source, &host).unwrap();
                 batches[at].1.push(host);
                 interop = Some((case, at));
+            }
+            // Host code that catches `java-failures`' failures.
+            if case.key == "java-failures" {
+                let host = out.join("src/interop/FailuresInterop.java");
+                fs::create_dir_all(host.parent().unwrap()).unwrap();
+                let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/host/FailuresInterop.java");
+                fs::copy(source, &host).unwrap();
+                batches[at].1.push(host);
+                failures_interop = Some((case, at));
             }
         }
         let threads = out.join("src/threads/ModuleStateThreads.java");
@@ -506,6 +562,30 @@ fn runs() {
                 )
                 .collect();
             run("host interop", at, "interop.Interop", &expected);
+        }
+        // `tests/host/FailuresInterop.java`, host code that catches
+        // `java-failures`' declared failures by their own types, the
+        // library's base, and a sealed interface's, reads their messages,
+        // causes, and stack traces, and lets a panic pass `catch
+        // (RuntimeException e)`.
+        if let Some((case, at)) = failures_interop {
+            let expected: Vec<String> = (case.expected.iter().cloned())
+                .chain(
+                    [
+                        "NotFound z: not found (key: z)",
+                        "base true, RuntimeException true",
+                        "sign BadSign: bad sign (text: x)",
+                        "sign EmptyText: no text",
+                        "LookupFailed lookup failed (name: port), caused by NotFound not found (key: port)",
+                        "made before lookup failed (name: early), caused by not found (key: early)",
+                        "thrown again lookup failed (name: first), caused by not found (key: first)",
+                        "trace java_failures.JavaFailuresGlobal.lookup",
+                        "panic passes",
+                    ]
+                    .map(String::from),
+                )
+                .collect();
+            run("failures interop", at, "interop.FailuresInterop", &expected);
         }
         // Init logs as `module-state` does, then the threads tick.
         run(
