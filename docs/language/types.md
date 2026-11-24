@@ -2179,6 +2179,15 @@ Temper *Never* types can translate to bottom types in languages that support tha
 
 *Bubble* `extends` [*AnyValue*](#interface-anyvalue)
 
+### *interface Error*
+
+*Error* is the root of declared failure types (RFC 164, in progress):
+classes that extend it, or sealed interfaces that do, are what `throws`
+declares and `throw` throws ([failures](syntax.md#failures)). *Error*
+itself isn't one a function may throw.
+
+*Error* `extends` [*AnyValue*](#interface-anyvalue)
+
 ### *Top*
 *Top* is a super-type of every type, including [*AnyValue*](#interface-anyvalue) and
 [*Bubble*](#class-bubble).

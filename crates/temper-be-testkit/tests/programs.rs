@@ -14,7 +14,9 @@
 //!   test server.
 //! - `specs_are_pending`: the specifications (`SPECS`), written ahead
 //!   of what they specify, each say what they should log and still have
-//!   errors, so the change that makes one settle moves it to `PROGRAMS`.
+//!   errors, or settle but don't run yet on the interpreter ("Not
+//!   supported yet"), so the change that makes one run moves it to
+//!   `PROGRAMS`.
 
 use temper_be_testkit::{self as kit};
 
@@ -122,11 +124,15 @@ fn specs_are_pending() {
             let (_, text) = kit::spec_source(name);
             let log = temper_funtests::expected_log(&text, "interp");
             assert!(!log.is_empty(), "{name}: no log");
-            let errors = kit::spec_errors(name);
-            assert!(
-                !errors.is_empty(),
-                "{name} settles without errors: move it to PROGRAMS, which checks its log"
-            );
+            // Pending while the frontend reports errors, or once typed,
+            // while the interpreter doesn't run it yet.
+            if kit::spec_errors(name).is_empty() {
+                let (failure, _) = kit::interpret(&kit::spec_case(name));
+                assert!(
+                    failure.is_some_and(|f| f.contains("Not supported yet")),
+                    "{name} runs: move it to PROGRAMS, which checks its log"
+                );
+            }
         }
     });
 }

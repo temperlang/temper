@@ -851,15 +851,12 @@ let g(): Int { throw 1 }
 (Block
   (Call (Call . console \log) "runs")
   (Let ^f:0 (Fn Int (Block 1)))
-  (Let ^a:1 (Error))
-  (Let ^b:2 (Error))
-  (Let ^c:3 (Error))
+  (Let ^a:1 (Call f:0))
+  (Let ^b:2 (Orelse (Call f:0) (Block (Let ^e:5 (Call caught)) 0)))
+  (Let ^c:3 (Orelse (Block (Call f:0)) (Block 0)))
   (Error)
-  (Let ^g:4 (Fn Int (Block (Error)))))
-error 48..55: Not supported yet: `try`, part of declared failures
-error 65..84: Not supported yet: `catch`, part of declared failures
-error 94..116: Not supported yet: `catch`, part of declared failures
+  (Let ^g:4 (Fn Int (Block (Fail 1)))))
 error 118..137: Not supported yet: `error case`, part of declared failures
-error 154..161: Not supported yet: `throw`, part of declared failures
+error 160..161: Expected subtype of Error, but got Int32
 log runs
-Failed: Not supported yet: `try`, part of declared failures
+Failed: Not supported yet: `error case`, part of declared failures

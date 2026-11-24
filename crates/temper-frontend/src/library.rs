@@ -8,6 +8,7 @@
 //! it came from, also shifted, so the files' parse results stay usable for
 //! formatting and the language server.
 
+use crate::builtins::FAILURE_ROOT;
 use crate::stdlib;
 use temper_syntax::ast::{self, Value};
 use temper_syntax::lex::SourceKind;
@@ -239,6 +240,34 @@ pub enum Message {
     /// call's failure parameter that the call's type arguments give as a
     /// `Never`: the parameter and what's given.
     FailureGivenNever(String, String),
+    /// `throws T` for a `T` that isn't a failure type, `Bubble`, or a
+    /// failure parameter.
+    NotAFailureType(String),
+    /// `throws Error`, the failure root, which isn't one a function may
+    /// throw.
+    ThrowsRoot,
+    /// A declared failure, of the type named, in a function that can't
+    /// fail.
+    UndeclaredFailure(String),
+    /// A declared failure, of the first type, in a function that throws
+    /// the second, which it isn't one of.
+    FailureMismatch(String, String),
+    /// A declared failure, of the type named, in a function that throws
+    /// `Bubble`.
+    FailureIntoBubble(String),
+    /// What may bubble, in a function that throws the declared failure
+    /// type named.
+    BubbleIntoFailure(String),
+    /// `catch (e)` where what it handles may bubble: the binding's name.
+    CatchBindsBubble(String),
+    /// A failure class or interface, named, with type parameters.
+    GenericFailureType(String),
+    /// An interface, named, that extends the failure root but isn't
+    /// sealed.
+    UnsealedFailureInterface(String),
+    /// A class or interface, named, that extends two failure types, the
+    /// two named.
+    TwoFailureParents(String, String, String),
     /// `x is T` or `x as T` that can never succeed: `x`'s type, not
     /// null, and `T`. Kotlin's `ImpossibleRttiCheck`.
     ImpossibleRttiCheck(String, String),
@@ -508,6 +537,43 @@ impl Message {
                 "This function literal may fail, but its call gives {e} as {given}; give {e} a \
                  failure type, or handle the failure in the literal"
             ),
+            Message::NotAFailureType(t) => format!(
+                "{t} isn't a failure type; throws takes a class or sealed interface that \
+                 extends {FAILURE_ROOT}, or Bubble"
+            ),
+            Message::ThrowsRoot => format!(
+                "{FAILURE_ROOT} is the root of failure types; throws takes a class or sealed \
+                 interface that extends it"
+            ),
+            Message::UndeclaredFailure(t) => {
+                format!("Cannot throw {t} from a function without {t} in its return type")
+            }
+            Message::FailureMismatch(t, allowed) => format!(
+                "Cannot throw {t} from a function that throws {allowed}; catch it, and throw {} \
+                 there if need be",
+                with_article(allowed)
+            ),
+            Message::FailureIntoBubble(t) => format!(
+                "Cannot throw {t} from a function that throws Bubble; catch it, and bubble() \
+                 there if need be"
+            ),
+            Message::BubbleIntoFailure(allowed) => format!(
+                "Cannot bubble from a function that throws {allowed}; handle it with orelse or \
+                 catch, and throw {} there if need be",
+                with_article(allowed)
+            ),
+            Message::CatchBindsBubble(name) => {
+                format!("A Bubble has no value to bind; catch it without ({name}), or with orelse")
+            }
+            Message::GenericFailureType(name) => {
+                format!("Failure type {name} can't have type parameters")
+            }
+            Message::UnsealedFailureInterface(name) => {
+                format!("Interface {name} extends {FAILURE_ROOT}, so it must be sealed")
+            }
+            Message::TwoFailureParents(name, a, b) => {
+                format!("{name} extends two failure types, {a} and {b}; a failure type extends one")
+            }
             Message::ImpossibleRttiCheck(from, to) => {
                 format!("Runtime type check from {from} to {to} can never succeed")
             }
@@ -1084,4 +1150,10 @@ pub(crate) fn normalize(path: &str) -> String {
         (false, true) => ".".to_string(),
         (false, false) => parts.join("/"),
     }
+}
+
+/// A type's name after "a" or "an", as its first letter sounds, roughly.
+fn with_article(name: &str) -> String {
+    let vowel = name.starts_with(['A', 'E', 'I', 'O', 'U']);
+    format!("{} {name}", if vowel { "an" } else { "a" })
 }

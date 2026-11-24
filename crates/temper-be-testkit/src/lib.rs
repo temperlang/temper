@@ -369,12 +369,18 @@ pub fn spec_source(name: &str) -> (PathBuf, String) {
     (path, text)
 }
 
-/// The errors the frontend reports for a specification, settling it as
-/// a shared program's case.
-pub fn spec_errors(name: &str) -> Vec<String> {
+/// A specification as a shared program's case.
+pub fn spec_case(name: &str) -> Case {
     let (path, text) = spec_source(name);
     let mut case = Case::inline(name, &path.to_string_lossy(), text, Vec::new());
     case.dir = path.parent().unwrap().to_path_buf();
+    case
+}
+
+/// The errors the frontend reports for a specification, settling it as
+/// a shared program's case.
+pub fn spec_errors(name: &str) -> Vec<String> {
+    let case = spec_case(name);
     let settled = settle(load(&case));
     (settled.library.diagnostics.iter())
         .filter(|d| d.level == temper_frontend::library::Level::Error)

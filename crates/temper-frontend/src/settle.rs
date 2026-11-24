@@ -780,11 +780,7 @@ impl Settle {
         loop {
             let tree = &self.lib.tree;
             match tree.kind(node) {
-                NodeKind::Value
-                | NodeKind::Error
-                | NodeKind::Break
-                | NodeKind::Continue
-                | NodeKind::Fail => {}
+                NodeKind::Value | NodeKind::Error | NodeKind::Break | NodeKind::Continue => {}
                 NodeKind::LeftName => {}
                 NodeKind::RightName => {
                     if let Err(fact) = self.resolve_name(node, scope, forced) {
@@ -888,6 +884,7 @@ impl Settle {
                 }
                 NodeKind::If
                 | NodeKind::Orelse
+                | NodeKind::Fail
                 | NodeKind::Return
                 | NodeKind::Yield
                 | NodeKind::Await => {

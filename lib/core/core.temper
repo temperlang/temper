@@ -33,6 +33,22 @@ export sealed interface Equatable<EQ extends AnyValue> {
 // }
 
 /**
+ * *Error* is the root of declared failure types: a function that declares
+ * [*throws*][snippet/builtin/throws] a failure type may `throw` a value of
+ * it, and its callers handle it with `catch` or [snippet/builtin/orelse],
+ * or pass it on.
+ *
+ * A failure type is a class that extends *Error*, or a sealed interface
+ * that does, whose classes are its variants. It has no type parameters,
+ * and extends no more than one failure type. *Error* itself isn't one a
+ * function may throw.
+ *
+ * Unlike [snippet/type/Bubble], a failure is a value, whose fields
+ * say what went wrong.
+ */
+export interface Error {}
+
+/**
  * *Invalid* is an untranslatable type that represents a failure to properly type an
  * expression.  Some backends, notably dynamic language backends, might be able
  * to produce a partially working translation and run tests even in the presence of type

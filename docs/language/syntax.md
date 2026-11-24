@@ -373,9 +373,9 @@ error at the comma. The same goes for `throw` and `yield`.
 
 ### Failures
 
-Declared failures (RFC 164, still a proposal) are parsed, but not
-typed or run yet: each construct below is an error, "Not supported
-yet".
+Declared failures (RFC 164, still a proposal) are in progress: they're
+parsed and type checked, but don't run or translate yet ("Not supported
+yet"), and `error case` is still an error.
 
 - `throw x` throws a failure, and is a value like `return x`.
 - `try` marks failures propagating from all of the expression to its
@@ -413,6 +413,24 @@ ErrorCase := "error" "case" LeftName CallArgs?
 `try`, `throw`, and `catch` are operators, so none of them can be a
 name, though one after a `.`, as in `promise.catch`, still reads as a
 member's.
+
+How they're typed, for now:
+
+- A failure type is a class that extends core's
+  [*Error*](types.md#interface-error), or a sealed interface that does,
+  whose classes are its variants. It has no type parameters and extends
+  one failure type at most. `throws E` takes one, `Bubble`, or a type
+  parameter; `throw` takes a value of one.
+- A function passes on a failure of its own failure type, or of one of
+  its variants, with `try` or, for now, without it. Any other failure
+  must be handled there, and converting one is explicit: `f() catch (e)
+  { throw new Mine(e.key) }`.
+- `catch (e)` binds what its left side may fail with, the closest type
+  of all of it, so a `when (e)` over a sealed failure type needs no
+  `else`. `orelse` and `catch` without a binding handle any failure.
+- `Bubble` and declared failures never mix: a `throws Bubble` function
+  can't pass a declared failure on, nor one that throws a declared type
+  bubble, and a bubble has no value for `catch (e)` to bind.
 
 ### Syntax for *StmtBlock*
 

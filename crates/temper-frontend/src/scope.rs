@@ -153,6 +153,7 @@ impl Scopes {
             Function::FnType,
             Function::Angle,
             Function::List,
+            Function::Caught,
         ] {
             let builtin = Builtin::Function(function);
             let name = names.intern(builtin.name());

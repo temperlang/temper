@@ -520,5 +520,11 @@ them need the new ones.
 `try` and `catch` are now operators, as `throw` already was, for the
 declared failures RFC 164 proposes, so they can't name a variable,
 function, parameter, or member, though a name after a `.`, as in
-`promise.catch`, still reads as one. The syntax parses, but `throw`, `try`, `catch`, and
-`error case` are each reported as not supported yet.
+`promise.catch`, still reads as one. The syntax parses and is type
+checked, but doesn't run or translate yet, and `error case` is reported
+as not supported yet.
+
+Core gains an `Error` interface, the root of declared failure types. A
+library's own type named `Error` still takes its place there.
+`throws X` for an `X` that isn't `Bubble`, a type parameter, or a
+failure type, which until now meant `throws Bubble`, is an error.

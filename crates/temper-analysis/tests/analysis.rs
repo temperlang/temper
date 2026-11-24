@@ -84,6 +84,27 @@ fn hover_on_a_parameter() {
     assert_eq!(h.ty.as_deref(), Some("T"));
 }
 
+/// A `catch (e)` binding, as declared and as used, has the type of
+/// what its operand may fail with.
+#[test]
+fn hover_on_a_catch_binding() {
+    const SOURCE: &str = r#"
+class NotFound(public key: String) extends Error {}
+let lookup(key: String): Int throws NotFound { throw new NotFound(key) }
+let n = lookup("a") catch (e) { console.log(e.key); 0 };
+"#;
+    let a = analyze(SOURCE);
+    for offset in [at(SOURCE, "(e)", 0, 1), at(SOURCE, "e.key", 0, 0)] {
+        let h = a.hover(MAIN, offset).unwrap();
+        assert_eq!(h.name.as_deref(), Some("e"));
+        assert_eq!(h.kind, Some(DeclKind::Let));
+        assert_eq!(h.ty.as_deref(), Some("NotFound"));
+        let start = at(SOURCE, "(e)", 0, 1);
+        let d = a.definition(MAIN, offset).unwrap();
+        assert_eq!((d.span.start, d.span.end), (start, start + 1));
+    }
+}
+
 #[test]
 fn hover_on_members() {
     let a = analyze(STACK);

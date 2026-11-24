@@ -51,7 +51,7 @@ pub enum Macro {
     /// `await(p)` or `await p`, in an `async` block's body.
     Await,
     /// `throw x`, `try x`, and `x catch (e) { … }`: declared failures'
-    /// syntax (RFC 164), parsed but not supported yet.
+    /// syntax (RFC 164).
     Throw,
     Try,
     Catch,
@@ -129,6 +129,9 @@ pub enum Function {
     /// `rgx(list(parts), list(values))`, a regex literal, `/a+/` or
     /// `rgx"a${b}"`, which settling rewrites (`regex`).
     Rgx,
+    /// `caught()`, the failure a `catch (e)` binds: the one the `Orelse`
+    /// whose fallback starts `let e = caught();` handles. Hidden.
+    Caught,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -146,6 +149,11 @@ pub enum Constant {
     TestServerPort(i32),
 }
 
+/// The root of declared failure types (RFC 164), which every failure
+/// class and sealed failure interface extends: its one spelling, so a
+/// later rename (`Exception`?) is one line here and core's declaration.
+pub const FAILURE_ROOT: &str = "Error";
+
 /// Type names, resolved but not checked yet.
 pub const TYPES: &[&str] = &[
     "AnyValue",
@@ -155,6 +163,7 @@ pub const TYPES: &[&str] = &[
     "Deque",
     "DoneResult",
     "Empty",
+    FAILURE_ROOT,
     "Float64",
     "Generator",
     "GeneratorFn",
@@ -284,6 +293,7 @@ impl Builtin {
             Builtin::Function(Function::FnType) => "FnType",
             Builtin::Function(Function::Angle) => "<>",
             Builtin::Function(Function::List) => "list",
+            Builtin::Function(Function::Caught) => "caught",
             Builtin::Value(Constant::TestServerPort(_)) => "testServerPort",
             b => BUILTINS
                 .iter()

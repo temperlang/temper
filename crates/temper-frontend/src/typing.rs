@@ -36,7 +36,7 @@ use crate::library::{Level, Message};
 use crate::scope::{ScopeId, SymbolId, SymbolKind};
 use crate::settle::{Fact, Settle};
 use crate::types::{
-    ANY_VALUE, BOOLEAN, BUBBLE, FLOAT64, INT32, INT64, NEVER, NULL, Param, STRING, TypeData,
+    ANY_VALUE, BOOLEAN, BUBBLE, ERROR, FLOAT64, INT32, INT64, NEVER, NULL, Param, STRING, TypeData,
     TypeId, Types, UNKNOWN, VOID,
 };
 use std::collections::{HashMap, HashSet};
@@ -610,6 +610,9 @@ impl Settle {
         if self.is_list_literal(node) {
             return self.list_type(node, forced);
         }
+        if self.is_builtin(callee, Function::Caught) {
+            return self.caught_type(node, forced);
+        }
         self.resolve_overload(node, forced)?;
         if self.resolve_extension(node, forced, false)? {
             return self.call_type(node, forced);
@@ -784,11 +787,38 @@ impl Settle {
             Some(&fail) => self.eval_type(fail),
             None => UNKNOWN,
         };
-        let fail = match self.typing.types.get(fail) {
-            TypeData::Param(_) => fail,
+        // What isn't a failure type is reported ([`Settle::check_throws`])
+        // and stands for `Bubble`, as it did before declared failures.
+        let types = &self.typing.types;
+        let fail = match types.get(fail) {
+            TypeData::Param(_) | TypeData::NeverOf(_) => fail,
+            _ if fail == ERROR || types.is_failure(fail) => fail,
             _ => BUBBLE,
         };
         self.typing.types.result(pass, fail)
+    }
+
+    /// Reports `T throws E` where `E` isn't `Bubble`, a declared failure
+    /// type, a failure parameter, or a `Never`, or is the root itself.
+    fn check_throws(&mut self, node: NodeId) {
+        let Some(&fail) = self.lib.tree.children(node).get(2) else {
+            return;
+        };
+        let t = self.eval_type(fail);
+        let types = &self.typing.types;
+        let message = match types.get(t) {
+            TypeData::Unknown | TypeData::Param(_) | TypeData::NeverOf(_) => return,
+            _ if t == BUBBLE || types.is_failure(t) => return,
+            _ if t == ERROR => Message::ThrowsRoot,
+            _ => Message::NotAFailureType(self.show(t)),
+        };
+        let span = self.lib.tree.span(fail);
+        self.lib.report(Level::Error, message, span);
+    }
+
+    /// Whether `node` names builtin function `f`.
+    fn is_builtin(&self, node: NodeId, f: Function) -> bool {
+        self.scopes.resolved_builtin(node) == Some(Builtin::Function(f))
     }
 
     /// The type a type expression names, as `Int`, `String?` or `fn
@@ -1308,16 +1338,14 @@ impl Settle {
                     }
                 }
                 self.check_literal_result(node);
-                if self.may_not_bubble(node) {
-                    match self.unfailing_place(node) {
-                        Some(message) if !self.failures_in(node).is_empty() => {
-                            let span = self.lib.tree.span(node);
-                            self.lib.report(Level::Error, message, span);
-                        }
-                        Some(_) => {}
-                        None => self.check_bubbles(node),
-                    }
-                }
+                self.check_failures(node);
+            }
+            (NodeKind::Fail, Some(value), _) => self.check_value(ERROR, value, Site::Arg),
+            (NodeKind::Call, Some(callee), _) if self.is_builtin(callee, Function::Caught) => {
+                self.check_caught(node)
+            }
+            (NodeKind::Call, Some(callee), _) if self.is_builtin(callee, Function::Throws) => {
+                self.check_throws(node)
             }
             (NodeKind::Call, ..) => {
                 self.check_call(node);
@@ -1335,6 +1363,7 @@ impl Settle {
             }
             (NodeKind::Class, ..) => {
                 self.check_overrides(node);
+                self.check_failure_class(node);
                 self.check_fun_interface(node);
                 self.check_connected_class(node);
             }

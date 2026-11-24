@@ -84,6 +84,10 @@ mod functions;
 use classes::{Assigned, Member};
 
 /// Core's members that tmpl knows, as external declarations.
+/// What's not yet in tmpl of declared failures (RFC 164): failure types,
+/// `throw`, and a `catch (e)` binding.
+pub(crate) const DECLARED_FAILURES: &str = "declared failures (RFC 164)";
+
 const CORE_FIXTURE: &str = include_str!("../../temper-tmpl/tests/fixtures/core.tmpl");
 
 /// Core's declarations that tmpl knows, and each by its key: `Type.member`
@@ -681,6 +685,9 @@ impl Translator<'_> {
             return Ok(self.b.function_type_with(&types, &optional, result));
         }
         if let FTypeData::Result { pass, fail } = *self.s.typing.types.get(t) {
+            if !matches!(self.s.typing.types.get(fail), FTypeData::Param(_)) && fail != ft::BUBBLE {
+                return self.not_yet(at, DECLARED_FAILURES);
+            }
             let pass = self.ty(pass, at)?;
             let fail = self.ty(fail, at)?;
             return Ok(self.b.result(pass, fail));
@@ -1897,6 +1904,7 @@ impl Translator<'_> {
                 let value = self.or_else_typed(node, Some(TypeId::VOID))?;
                 self.b.expr_statement(value)
             }
+            NodeKind::Fail if !children.is_empty() => return self.not_yet(node, DECLARED_FAILURES),
             NodeKind::Fail => {
                 let value = self.expr(node)?;
                 let value = self.fit(value, TypeId::VOID);
@@ -2951,6 +2959,9 @@ impl Translator<'_> {
             NodeKind::Fn => self.literal(node),
             NodeKind::Await => self.await_expr(node),
             NodeKind::Orelse => self.or_else(node),
+            NodeKind::Fail if !self.children(node).is_empty() => {
+                self.not_yet(node, DECLARED_FAILURES)
+            }
             NodeKind::Fail => {
                 let made = self.b.bubble(TypeId::NONE);
                 Ok(self.own(made, node))
@@ -3271,6 +3282,9 @@ impl Translator<'_> {
         }
         let (callee, args) = (children[0], &children[1..]);
         let f = self.function_of(callee);
+        if f == Some(Function::Caught) {
+            return self.not_yet(node, DECLARED_FAILURES);
+        }
         if f == Some(Function::Is) {
             return self.is_check(node, args);
         }

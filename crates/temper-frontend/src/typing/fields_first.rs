@@ -296,7 +296,15 @@ impl Settle {
                 cx.breaks.insert(target, merge(before, set));
                 None
             }
-            NodeKind::Continue | NodeKind::Fail => None,
+            NodeKind::Continue => None,
+            // `throw x` evaluates `x` first.
+            NodeKind::Fail => {
+                let mut set = set;
+                for &child in children {
+                    set = self.fields_flow(cx, child, set);
+                }
+                None
+            }
             NodeKind::Return => {
                 let mut set = set;
                 for &child in children {

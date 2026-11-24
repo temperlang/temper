@@ -124,7 +124,7 @@ impl<'a> Exprs<'a> {
                     self.stmt(child, out);
                 }
             }
-            NodeKind::Return | NodeKind::Yield | NodeKind::Await => {
+            NodeKind::Return | NodeKind::Yield | NodeKind::Await | NodeKind::Fail => {
                 if self.kind(node) == NodeKind::Await && used {
                     out.push(Expr {
                         node,

@@ -13,7 +13,7 @@
 //! [`UNKNOWN`] stands for a type not worked out, and never causes an error
 //! either.
 
-use crate::builtins::TYPES;
+use crate::builtins::{FAILURE_ROOT, TYPES};
 use crate::scope::SymbolId;
 use std::collections::HashMap;
 
@@ -77,12 +77,24 @@ pub const INT64: TypeId = TypeId(6);
 pub const FLOAT64: TypeId = TypeId(7);
 pub const STRING: TypeId = TypeId(8);
 pub const ANY_VALUE: TypeId = TypeId(9);
-/// `Bubble`, the only failure type for now (notes/typing.md, "Results").
+/// `Bubble`, the failure without detail (notes/typing.md, "Results").
 pub const BUBBLE: TypeId = TypeId(10);
+/// Core's root of declared failure types ([`FAILURE_ROOT`], `Error`),
+/// which failure classes and sealed failure interfaces extend
+/// (notes/typing.md, "Declared failures").
+pub const ERROR: TypeId = TypeId(11);
 
-/// The builtin types with fixed ids, from [`VOID`] to [`BUBBLE`].
-const WELL_KNOWN: [&str; 8] = [
-    "Void", "Boolean", "Int32", "Int64", "Float64", "String", "AnyValue", "Bubble",
+/// The builtin types with fixed ids, from [`VOID`] to [`ERROR`].
+const WELL_KNOWN: [&str; 9] = [
+    "Void",
+    "Boolean",
+    "Int32",
+    "Int64",
+    "Float64",
+    "String",
+    "AnyValue",
+    "Bubble",
+    FAILURE_ROOT,
 ];
 
 /// What subtyping needs to know of a class or interface.
@@ -213,7 +225,7 @@ impl Types {
             let index = TYPES.iter().position(|&t| t == name).unwrap();
             types.intern(TypeData::Builtin(index as u8));
         }
-        debug_assert_eq!(types.data.len() as u32, BUBBLE.0 + 1);
+        debug_assert_eq!(types.data.len() as u32, ERROR.0 + 1);
         types
     }
 
@@ -633,10 +645,26 @@ impl Types {
     }
 
     /// What a failure parameter is where nothing it's solved from may
-    /// fail: `Never<Bubble>`, standing in for RFC 164's `Never<Error>`
-    /// until core has `Error`, which [`Types::result`] drops.
+    /// fail: `Never<Error>`, which [`Types::result`] drops.
     pub fn no_failure(&mut self) -> TypeId {
-        self.never_of(BUBBLE)
+        self.never_of(ERROR)
+    }
+
+    /// Whether class or interface `symbol` extends the failure root
+    /// ([`ERROR`]), itself or through what it extends: a failure class or
+    /// failure interface (notes/typing.md, "Declared failures").
+    pub fn is_failure_class(&self, symbol: SymbolId) -> bool {
+        let extends_root =
+            |s: &SymbolId| (self.classes.get(s)).is_some_and(|i| i.supers.contains(&ERROR));
+        extends_root(&symbol)
+            || (self.classes.get(&symbol)).is_some_and(|i| i.ancestors.iter().any(extends_root))
+    }
+
+    /// Whether `t` is a declared failure type, one a function may throw:
+    /// a non-generic class's or interface's that extends the root, not
+    /// the root itself.
+    pub fn is_failure(&self, t: TypeId) -> bool {
+        matches!(*self.get(t), TypeData::Class(symbol) if self.is_failure_class(symbol))
     }
 
     /// Whether one of the type parameters `formals` is what something in
@@ -760,6 +788,9 @@ impl Types {
                         out.push(id);
                     }
                 }
+                if self.is_failure_class(*symbol) {
+                    out.push(ERROR);
+                }
             }
             TypeData::Builtin(i) => {
                 let sup = BUILTIN_SUPERTYPES
@@ -853,7 +884,8 @@ impl Types {
             (Null | Nullable(_), _) => (self.is_definite(t)
                 || self.is_class_like(t)
                 || self.is_core_nominal(t)
-                || t == ANY_VALUE)
+                || t == ANY_VALUE
+                || t == ERROR)
                 .then_some(false),
             // A type parameter is a subtype of its bound only, and nothing
             // but itself and `Never` is a subtype of it.
@@ -866,9 +898,21 @@ impl Types {
                 }
             }
             (_, Param(_)) => Some(false),
-            _ if t == ANY_VALUE => {
-                (s != VOID && (self.is_definite(s) || self.is_class_like(s))).then_some(true)
-            }
+            _ if t == ANY_VALUE => (s != VOID
+                && (self.is_definite(s) || self.is_class_like(s) || s == ERROR))
+                .then_some(true),
+            // The failure root is what extends it, and no builtin type,
+            // nor anything but `AnyValue` the root itself.
+            _ if t == ERROR => match (self.supertype_as(s, ERROR), self.get(s).clone()) {
+                (Some(_), _) => Some(true),
+                (None, Class(a)) => self.supers_known(a, 0).then_some(false),
+                (None, Applied { base, .. }) => match *self.get(base) {
+                    Class(a) => self.supers_known(a, 0).then_some(false),
+                    _ => Some(false),
+                },
+                (None, _) => Some(false),
+            },
+            _ if s == ERROR => Some(false),
             _ if self.is_fun_pair(s, t) => self.fun_subtype(s, t, depth),
             // Core's non-generic classes, as `StringBuilder`, are only what
             // core says they extend, and no other type is one of them.
@@ -1171,6 +1215,47 @@ mod tests {
         };
         types.set_class(SymbolId(symbol), info);
         types.intern(TypeData::Class(SymbolId(symbol)))
+    }
+
+    /// Declared failure types: what extends the root is a failure, a
+    /// subtype of it, and joins under it; nothing else is.
+    #[test]
+    fn failure_root() {
+        let mut types = Types::new();
+        let sealed = |types: &mut Types, symbol: u32, supers: Vec<TypeId>| {
+            let info = ClassInfo {
+                supers,
+                ..ClassInfo::default()
+            };
+            types.set_class(SymbolId(symbol), info);
+            types.intern(TypeData::Class(SymbolId(symbol)))
+        };
+        let sign = sealed(&mut types, 1, vec![ERROR]);
+        let bad = sealed(&mut types, 2, vec![sign]);
+        types.set_class(
+            SymbolId(2),
+            ClassInfo {
+                ancestors: vec![SymbolId(1)],
+                supers: vec![sign],
+                ..ClassInfo::default()
+            },
+        );
+        let found = sealed(&mut types, 3, vec![ERROR]);
+        let plain = sealed(&mut types, 4, vec![]);
+        for t in [sign, bad, found] {
+            assert!(types.is_failure(t));
+            assert_eq!(types.is_subtype(t, ERROR), Some(true));
+        }
+        assert!(!types.is_failure(plain) && !types.is_failure(ERROR));
+        assert_eq!(types.is_subtype(plain, ERROR), Some(false));
+        assert_eq!(types.is_subtype(STRING, ERROR), Some(false));
+        assert_eq!(types.is_subtype(NULL, ERROR), Some(false));
+        assert_eq!(types.is_subtype(ERROR, found), Some(false));
+        assert_eq!(types.is_subtype(ERROR, ANY_VALUE), Some(true));
+        assert_eq!(types.join(bad, sign), sign);
+        assert_eq!(types.join(bad, found), ERROR);
+        let none = types.no_failure();
+        assert_eq!(types.result(INT32, none), INT32);
     }
 
     #[test]

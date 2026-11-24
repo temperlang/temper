@@ -642,10 +642,10 @@ declared result type, in a generic call (`typing/generic_calls.rs`),
 gives the callee's type parameters what its body gives:
 
 - **What it gives:** its result type, its body's value joined with what
-  each `return` from it gives (`literal_pass`), and whether anything in
-  it may fail, as "What may bubble" finds it (`literal_failure`):
-  `Bubble`, the only failure type for now; declared failure types will
-  join what each failing place fails with. So `ls.map { x => 10 / x }`
+  each `return` from it gives (`literal_pass`), and what it may fail
+  with, as "What may bubble" finds it (`literal_failure`): `Bubble` if
+  anything in it may bubble, else the join of its declared failures
+  ("Declared failures", below). So `ls.map { x => 10 / x }`
   solves `O` to `Int32` and `E` to `Bubble`, and the call fails, so it
   must be handled where it's called; `ls.map { x => x + 1 }` leaves `E`
   unsolved, `Never<…>`, and can't fail.
@@ -1134,8 +1134,9 @@ arity doesn't count `this`. `Int.m` is `Int32.m`, as core's `Int` is
 
 As built (2026-11-23): a function that may fail has a result type, `T
 throws E` (`TypeData::Result { pass, fail }` in `types.rs`), as its
-function type's result; for now `E` is a type parameter (a failure
-parameter, below) or else `Bubble`, whatever `throws X` says. Results
+function type's result; `E` is `Bubble`, a declared failure type
+("Declared failures", below), or a type parameter (a failure parameter,
+below). Results
 are internal (RFC 164's "results can't be held"):
 
 - **Only a function's result:** a `TypeData::Fn`'s, a builtin type's
@@ -1214,19 +1215,79 @@ parameter is, from what the arguments declare: a callback `fn (Int): Int
 throws Bubble` makes it `Bubble`, so the call may fail; a function
 literal without a declared result, from its body, so `ls.map { x => 10
 / x }` fails at the call ("Function literals' results from their
-bodies", above). One that nothing solves is `Never<Bubble>`
-(`Types::no_failure`, `Never<Error>` once core has `Error`), which
-`Types::result` drops, so the call can't fail. Whether a call fails
+bodies", above). One that nothing solves is `Never<Error>`
+(`Types::no_failure`), which `Types::result` drops, so the call can't
+fail. Whether a call fails
 comes from its solved signature (`bubbles.rs`). tmpl has no failure
 parameters yet, so calls' type arguments leave them out, and backends
 don't take a failing callback to `map` yet (chunk 15).
 
+## Declared failures
+
+In progress (RFC 164, chunk 4 of notes/error-custom-kinds-plan.md,
+2026-11-24): typed in the frontend; the interpreter and tmpl report
+"Not supported yet" (`throw`, a `catch (e)` binding, failure types),
+and `error case` is still an error. The user-visible names, the root's
+(`FAILURE_ROOT` in `builtins.rs`, and core's `interface Error`) and the
+messages' wording, are kept in one place each, as they may change.
+
+- **Failure types** (`Types::is_failure`): a class, or sealed
+  interface, that extends core's root `Error` (`types::ERROR`), directly or
+  through another failure type. Each is checked
+  (`check_failure_class`): no type parameters ("Failure type Box can't
+  have type parameters"), an interface is sealed ("Interface Loose
+  extends Error, so it must be sealed"), and at most one failure type
+  among what it extends, beside the root ("Both extends two failure
+  types, A1 and A2; a failure type extends one"). The root is an
+  `AnyValue`, and what extends it is an `Error`; joins of two failure
+  types with no closer common type are `Error`.
+- **`throws E`** (`eval_result`, `check_throws`): `E` is a failure type,
+  `Bubble`, a type parameter, or a `Never`. Anything else is "String
+  isn't a failure type; …", and the root, "Error is the root of failure
+  types; …"; both stand for what they did before, `Bubble` and the root.
+- **`throw x`** is a `Fail` node with `x` (`bubble()`'s has none), of
+  type `Never`; `x` must be an `Error` ("Expected subtype of Error, but
+  got Int32").
+- **`try x`** is `x` for now (RFC 164's option B): failures propagate
+  with or without it. Requiring it is a later chunk.
+- **`x catch { b }`** is `Orelse(x, b)`, and **`x catch (e) { b }`**
+  binds the failure first, `Orelse(x, { let e = caught(); b })`, where
+  the hidden builtin `caught()` has the type of what `x` may fail with
+  (`caught_type`), the join of its failures (`join_failures`), so a
+  `when (e)` over a sealed type needs no `else`. Where `x` may bubble,
+  that's "A Bubble has no value to bind; catch it without (e), or with
+  orelse". `catch (e) { … }` with nothing before it is malformed.
+- **What a function may fail with** (`allowed_failure`) is its declared
+  result's failure type, or a function literal's, as before. Each
+  failing place in it ("What may bubble", below) has a failure type:
+  `Bubble` for `bubble()`, `await`, `as`, `/`, and `%`; the value's
+  type for `throw`; and a call's callee's result's, solved
+  (`call_failure`). A place passes if its type is the function's or a
+  subtype (`check_failures`). Otherwise, where the function can't fail,
+  "Cannot bubble …" as before, or "Cannot throw NotFound from a
+  function without NotFound in its return type"; and where it may, but
+  not with that: "Cannot throw NotFound from a function that throws
+  Other; catch it, and throw an Other there if need be", and for
+  `Bubble`, never mixed either way, "Cannot throw NotFound from a
+  function that throws Bubble; …" and "Cannot bubble from a function
+  that throws NotFound; …". Conversion is only explicit, by `throw` in
+  a handler.
+- **Calls Kotlin might fold** count only for `Bubble`: a call that may
+  fail with a declared type is always a failing place, as Kotlin has
+  none.
+- **Not yet:** messages and causes (core's `Error` declares no
+  `message` getter yet; a class may declare its own, an ordinary
+  getter), `error case`, promises and generators with `E`, and a failure
+  parameter's implied `extends Error` bound.
+
 ## What may bubble
 
 A function whose declared return type doesn't `throw Bubble` mustn't
-bubble (`typing/bubbles.rs`, Kotlin's `BubblesAreNotFree`). In its body
-and parameters' defaults, each of these is "Cannot bubble from a
-function without Bubble in its return type", at the call:
+bubble (`typing/bubbles.rs`, Kotlin's `BubblesAreNotFree`); one that
+throws a declared failure type mustn't either ("Declared failures",
+above). In its body and parameters' defaults, each of these is "Cannot
+bubble from a function without Bubble in its return type", at the
+call:
 
 - `bubble()`.
 - `await p`, as a broken promise bubbles, at the `await`; it fails

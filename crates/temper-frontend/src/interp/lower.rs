@@ -41,6 +41,11 @@ use std::rc::Rc;
 use temper_syntax::names::NameId;
 use temper_syntax::tree::{NodeId, NodeKind};
 
+/// What running a declared failure's `throw`, or a `catch` that binds
+/// one, fails with, until the interpreter runs them (RFC 164).
+const DECLARED_FAILURES_NOT_YET: &str =
+    "Not supported yet: declared failures (`throw` and `catch (e)`) in the interpreter";
+
 /// How deeply expressions may nest; deeper ones panic when run, so that
 /// lowering's recursion stays within the stack.
 const MAX_NESTING: u32 = 3000;
@@ -961,6 +966,11 @@ impl Lowering {
                 });
                 return;
             }
+            // `throw x`, a declared failure, isn't run yet.
+            NodeKind::Fail if !children.is_empty() => {
+                self.fail(DECLARED_FAILURES_NOT_YET);
+                return self.dead(base, keep);
+            }
             NodeKind::Fail => {
                 self.emit(Op::Fail(None));
                 return self.dead(base, keep);
@@ -1154,6 +1164,11 @@ impl Lowering {
             self.fail("Malformed call");
             return self.dead(base, keep);
         };
+        // A `catch (e)` binding, the failure being handled.
+        if s.scopes.resolved_builtin(callee) == Some(Builtin::Function(Function::Caught)) {
+            self.fail(DECLARED_FAILURES_NOT_YET);
+            return self.dead(base, keep);
+        }
         if is_dot(s, callee) {
             // `obj.name` read as a property.
             if let Some(name) = self.member(s, node) {

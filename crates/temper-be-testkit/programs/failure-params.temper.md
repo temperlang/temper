@@ -12,6 +12,8 @@ assumes what `failures` does, and, of what's still open:
 - A `@fun interface` takes `E` as any other type parameter.
 - Two callbacks of one function share one `E`.
 
+What every section uses:
+
     class Missing(public key: String) extends Error {}
 
     let find(key: String): Int throws Missing {
