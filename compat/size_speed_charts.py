@@ -6,7 +6,9 @@
 Reads size-and-speed.csv in a checkout of the `stats` branch (stats/,
 beside this repository's files, or `--stats DIR`) and writes its
 charts/*.svg: binary sizes (tempest as released, and run-temper without
-the network code), settle time, peak memory, Ordable's test times by
+the network code), settle time and peak memory, raw and per 1,000 lines
+of the files measured (only rows that say how many, `lines=N`, since
+those files change from commit to commit), Ordable's test times by
 runner, each backend's functional-test time, and build times. Each point
 is one commit's measurement (clean or with the chunk's changes,
 `tree=dirty`), at the middle of its range, with the range as a whisker;
@@ -70,11 +72,20 @@ class Chart:
     smooth: bool = False
     # Conditions every series here has too.
     conditions: tuple[str, ...] = ()
+    # Each value per 1,000 lines of the files measured (`lines=N`), and
+    # only rows that say how many.
+    per_lines: bool = False
+
+    @property
+    def shown(self) -> str:
+        """The unit as charted."""
+        return f"{self.unit} per 1,000 lines" if self.per_lines else self.unit
 
 
 # GitHub's runners (the nightly stats workflow) and a local machine.
 CI, LOCAL = "ci=github", "!ci=github"
 TREND = "GitHub's shared runners, nightly: a trend, not a benchmark"
+PER_LINES = "over the files at each commit; runs that recorded no line count are only on the raw chart"
 # measure_size.BACKENDS's, as named on the charts; a backend added there
 # needs a line here too.
 BACKENDS = [("C++", "cpp"), ("C#", "csharp"), ("Java", "java"), ("JavaScript", "js"),
@@ -98,6 +109,16 @@ CHARTS = [
         Series("local", "peak-memory-settle-all", (LOCAL,)),
         Series("GitHub", "peak-memory-settle-all", (CI,)),
     ], note="local: about 850 files of three repositories; GitHub: this repository's own"),
+    # The two above per 1,000 lines, as the files measured on GitHub
+    # change from commit to commit.
+    Chart("settle-time-per-1k-lines", "Settling every Temper file, per 1,000 lines", "ms", [
+        Series("local", "lex-parse-module-settle-ms", (LOCAL,)),
+        Series("GitHub", "lex-parse-module-settle-ms", (CI,)),
+    ], note=PER_LINES, per_lines=True),
+    Chart("peak-memory-per-1k-lines", "Peak memory, settling every Temper file, per 1,000 lines", "MiB", [
+        Series("local", "peak-memory-settle-all", (LOCAL,)),
+        Series("GitHub", "peak-memory-settle-all", (CI,)),
+    ], note=PER_LINES, per_lines=True),
     Chart("ordable-tests", "Ordable's tests", "s", [
         Series("tempest (release)", "ordable-tests", ("runner=tempest", "build=release")),
         Series("Python (Kotlin Temper)", "ordable-tests", ("runner=py",)),
@@ -149,6 +170,14 @@ def matches(row: dict[str, str], series: Series, chart: Chart) -> bool:
     return True
 
 
+def lines(row: dict[str, str]) -> int | None:
+    """How many lines the row's measurement read (`lines=N`), if it says."""
+    for condition in row["conditions"].split(";"):
+        if condition.startswith("lines="):
+            return int(condition.removeprefix("lines=")) or None
+    return None
+
+
 def to_unit(value: float, unit: str, wanted: str) -> float:
     if unit == "bytes" and wanted == "KiB":
         return value / 1024
@@ -179,8 +208,13 @@ def gather(rows: list[dict[str, str]], chart: Chart) -> Data:
         for order, row in enumerate(rows):
             if not matches(row, series, chart):
                 continue
-            low = to_unit(float(row["value"]), row["unit"], chart.unit)
-            high = to_unit(float(row["value_max"]), row["unit"], chart.unit) if row["value_max"] else low
+            scale = 1.0
+            if chart.per_lines:
+                if not (count := lines(row)):
+                    continue
+                scale = 1000 / count
+            low = to_unit(float(row["value"]), row["unit"], chart.unit) * scale
+            high = to_unit(float(row["value_max"]), row["unit"], chart.unit) * scale if row["value_max"] else low
             key = (row["date"], row["commit"], "tree=dirty" in row["conditions"], run_of[order] if chart.smooth else -1)
             if key in points:
                 point = points[key]
@@ -268,7 +302,7 @@ def draw(chart: Chart, data: Data) -> str:
 
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {WIDTH} {HEIGHT}" '
            f'width="{WIDTH}" height="{HEIGHT}" role="img" aria-labelledby="t d">',
-           f'<title id="t">{chart.title} ({chart.unit})</title>',
+           f'<title id="t">{chart.title} ({chart.shown})</title>',
            f'<desc id="d">{describe(chart, data)}</desc>',
            f"<style>{STYLE}</style>",
            f'<rect width="{WIDTH}" height="{HEIGHT}" rx="8" fill="var(--surface)"/>',
@@ -277,7 +311,7 @@ def draw(chart: Chart, data: Data) -> str:
     if chart.note:
         out.append(f'<text x="{LEFT}" y="58">{chart.note}</text>')
     if not n:
-        out.append(f'<text x="{LEFT + plot_w / 2}" y="{TOP + plot_h / 2}" text-anchor="middle">No runs recorded yet</text>')
+        out.append(f'<text x="{LEFT + plot_w / 2}" y="{TOP + plot_h / 2}" text-anchor="middle">{empty(chart)}</text>')
         return "\n".join(out + ["</svg>"]) + "\n"
     # Grid and y ticks.
     tick = 0.0
@@ -316,7 +350,7 @@ def draw(chart: Chart, data: Data) -> str:
         for i, p in placed:
             out.append(f'<circle cx="{x(i):.1f}" cy="{y(p.mid):.1f}" r="4" fill="{color}" '
                        f'stroke="var(--surface)" stroke-width="2"><title>{series.label}, {p.key[1]}'
-                       f'{" with changes" if p.key[2] else ""} ({p.key[0]}): {range_text(p, chart.unit)}</title></circle>')
+                       f'{" with changes" if p.key[2] else ""} ({p.key[0]}): {range_text(p, chart.shown)}</title></circle>')
         if placed:
             labels.append((y(placed[-1][1].mid), f"{series.label}: {number(placed[-1][1].mid)}"))
     # Direct labels beside each series' last point, spaced apart so they never overlap.
@@ -336,11 +370,15 @@ def draw(chart: Chart, data: Data) -> str:
     return "\n".join(out) + "\n"
 
 
+def empty(chart: Chart) -> str:
+    return "No runs with a line count recorded yet" if chart.per_lines else "No runs recorded yet"
+
+
 def subtitle(chart: Chart) -> str:
     if chart.smooth:
-        return (f"{chart.unit}, by run; line: rolling median of {2 * SMOOTH_REACH + 1} runs, "
+        return (f"{chart.shown}, by run; line: rolling median of {2 * SMOOTH_REACH + 1} runs, "
                 "band: the spread around it")
-    return f"{chart.unit}, by commit measured; whiskers show each range"
+    return f"{chart.shown}, by commit measured; whiskers show each range"
 
 
 def range_text(p: Point, unit: str) -> str:
@@ -350,12 +388,12 @@ def range_text(p: Point, unit: str) -> str:
 def describe(chart: Chart, data: Data) -> str:
     parts = []
     if not data.keys:
-        return "No runs recorded yet."
+        return f"{empty(chart)}."
     for series, points in zip(chart.series, data.points):
         if points:
             ordered = sorted(points.values(), key=lambda p: data.keys.index(p.key))
-            parts.append(f"{series.label}: {range_text(ordered[0], chart.unit)} at first, "
-                         f"{range_text(ordered[-1], chart.unit)} latest ({ordered[-1].key[1]})")
+            parts.append(f"{series.label}: {range_text(ordered[0], chart.shown)} at first, "
+                         f"{range_text(ordered[-1], chart.shown)} latest ({ordered[-1].key[1]})")
     return "; ".join(parts) + "."
 
 

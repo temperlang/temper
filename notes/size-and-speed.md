@@ -216,11 +216,14 @@ notes say how many), and its property tests shrank on 2026-10-28, so
 later rows aren't comparable with earlier ones. Settle time and peak
 memory on GitHub are over this repository's own Temper files, fewer
 than the local runs' three repositories, so they start a line of their
-own.
+own; those files change with each commit, so they're also charted per
+1,000 lines, from the rows that record a line count.
 
 ![Binary sizes](https://raw.githubusercontent.com/temperlang/temper/stats/charts/sizes.svg)
 ![Settle time](https://raw.githubusercontent.com/temperlang/temper/stats/charts/settle-time.svg)
 ![Peak memory](https://raw.githubusercontent.com/temperlang/temper/stats/charts/peak-memory.svg)
+![Settle time per 1,000 lines](https://raw.githubusercontent.com/temperlang/temper/stats/charts/settle-time-per-1k-lines.svg)
+![Peak memory per 1,000 lines](https://raw.githubusercontent.com/temperlang/temper/stats/charts/peak-memory-per-1k-lines.svg)
 ![Ordable's tests](https://raw.githubusercontent.com/temperlang/temper/stats/charts/ordable-tests.svg)
 
 The timing charts plot every run as its own point, with a centered

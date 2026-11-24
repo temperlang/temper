@@ -52,7 +52,8 @@ Conditions: `--load TEXT` adds `load=TEXT` (`load=busy`, or
 (`GITHUB_ACTIONS=true`), `ci=github` with the runner's CPU model and
 core count (`cpu=...;cores=N`), so the charts keep the runners' noisy
 trend apart from a quiet machine's runs. measure_size.py and
-bench_settle.py write their rows through this module too.
+bench_settle.py write their rows through this module too, saying what
+they measured over with `files=N;lines=N;tokens=N` (`corpus`).
 """
 
 import argparse
@@ -143,6 +144,28 @@ def conditions(*given: str, dirty: bool | None = None, load: str | None = None) 
     if dirty:
         parts.append("tree=dirty")
     return ";".join(parts + ci_conditions())
+
+
+# The token printer `corpus` counts tokens with, built by
+# `cargo build --release -p temper-syntax`.
+LEX_TOKENS = ROOT / "target/release/lex-tokens"
+# Token kinds the lexer finds that aren't counted as tokens.
+IGNORABLE = {"Comment", "Margin", "Space"}
+
+
+def corpus(files: list[str], lexer: list[str] | None = None) -> list[str]:
+    """Conditions saying what was measured: `files=N` and `lines=N`, and
+    with a token printer (`lex-tokens`), `tokens=N`, leaving out
+    comments, spaces, and margins. Rows over a moving set of files (this
+    repository's, at each commit) can then be compared per line."""
+    lines = sum(len(Path(f).read_text("utf-8").splitlines()) for f in files)
+    out = [f"files={len(files)}", f"lines={lines}"]
+    if lexer:
+        printed = subprocess.run(lexer + files, capture_output=True, text=True, check=True).stdout
+        tokens = sum(1 for line in printed.splitlines()
+                     if line and not line.startswith("# ") and line.split("\t", 1)[0] not in IGNORABLE)
+        out.append(f"tokens={tokens}")
+    return out
 
 
 def row(what: str, value: str, unit: str, cond: str, note: str, date: str = "", rev: str = "") -> dict[str, str]:

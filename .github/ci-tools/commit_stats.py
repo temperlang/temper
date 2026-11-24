@@ -17,7 +17,8 @@ exits with 3, so the workflow can check out the new head, add its rows
 again, and retry. With nothing changed, it commits nothing.
 
 `--dry-run FILE` writes the request to FILE (`-` for stdout) instead of
-sending it, so the payload can be checked locally. Outside a git
+sending it, so the payload can be checked locally; an empty FILE is a
+usage error. Outside a git
 checkout (a local dry run on a plain directory), every file in DIR is
 an addition.
 
@@ -100,6 +101,9 @@ def main() -> int:
     args = parser.parse_args()
     if not args.repo:
         parser.error("no --repo, and GITHUB_REPOSITORY isn't set")
+    # An empty FILE is a mistake, not a request to send it for real.
+    if args.dry_run == "":
+        parser.error("--dry-run needs a FILE, or - for stdout")
     head = args.head or (git(args.dir, "rev-parse", "HEAD").strip() if checkout(args.dir) else "0" * 40)
     payload = request(args.dir, args.repo, args.branch, head, args.headline, args.body)
     if payload is None:
@@ -107,7 +111,7 @@ def main() -> int:
         return 0
     files = payload["variables"]["input"]["fileChanges"]
     summary = f"{len(files['additions'])} files added or updated, {len(files['deletions'])} deleted"
-    if args.dry_run:
+    if args.dry_run is not None:
         text = json.dumps(payload, indent=2) + "\n"
         if args.dry_run == "-":
             sys.stdout.write(text)

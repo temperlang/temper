@@ -5,8 +5,9 @@
 
 Reads size-and-speed.csv in a checkout of the `stats` branch (stats/,
 beside this repository's files), or `--csv FILE`. For each metric
-(`what`) and its conditions, leaving out `tree=`, `load=`, `files=`, and
-the runner's `cpu=` and `cores=`, it shows the rows
+(`what`) and its conditions, leaving out `tree=`, `load=`, the files'
+`files=`, `lines=`, and `tokens=`, and the runner's `cpu=` and `cores=`,
+it shows the rows
 from the latest date and commit, as a range if there are several, and
 skips conditions not measured on the metric's latest date. Sizes in bytes
 show as KiB. Give metric ids to show only those, in that order.
@@ -20,7 +21,7 @@ import sys
 from pathlib import Path
 
 from size_speed_charts import CSV, missing
-IGNORED = ("tree=", "load=", "files=", "cpu=", "cores=")
+IGNORED = ("tree=", "load=", "files=", "lines=", "tokens=", "cpu=", "cores=")
 
 
 def main() -> int:

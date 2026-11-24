@@ -15,7 +15,8 @@ DIR defaults to the Temper, Chromarite, and Ordable checkouts beside this
 repository. `--record` appends two rows to the CSV (record_times.py's;
 the nightly stats workflow passes this repository's own Temper files):
 the median of the runs' medians for each side, `lex-parse-module-ms` and
-`lex-parse-module-settle-ms`, with the runs' range in `notes`.
+`lex-parse-module-settle-ms`, with the runs' range in `notes`, and
+the files' count, lines, and tokens in `conditions`.
 """
 
 import argparse
@@ -59,7 +60,8 @@ def main() -> int:
     settle = [s - m for s, m in zip(medians["settled"], medians["module step"])]
     print(f"settling alone: {spread(settle)} ms")
     if args.record:
-        cond = record_times.conditions("run=rust", f"files={len(files)}", "features=net", "build=release")
+        counts = record_times.corpus(files, [str(record_times.LEX_TOKENS)])
+        cond = record_times.conditions("run=rust", *counts, "features=net", "build=release")
         note = f"bench_settle.py, median of {args.runs} runs' medians of {args.rounds} rounds"
         record_times.write([
             record_times.row(what, f"{statistics.median(medians[side]):.1f}", "ms", cond,

@@ -7,7 +7,8 @@
 commit_stats.py's request from a temporary git checkout (changed,
 untracked, deleted, and renamed files, and nothing changed), and its
 exit codes with a fake `gh` on PATH: 3 when the branch moved, 1 for
-other errors, 0 on success. Then stats.yml, read as YAML: a read-only
+other errors, 0 on success, and 2 (usage) for an empty `--dry-run`,
+which mustn't send anything. Then stats.yml, read as YAML: a read-only
 token but for the `commit` job, which runs only on `main` in
 temperlang/temper; no `${{ }}` expression expanded into a shell
 script; and no step or job hands every command the token as GH_TOKEN.
@@ -101,24 +102,42 @@ print(json.dumps({"data": {"createCommitOnBranch": {"commit": {"oid": "1234", "u
 """
 
 
+def fake_gh(tmp: Path, mode: str, sent: Path) -> dict[str, str]:
+    """An environment with the fake `gh` first on PATH."""
+    bin_dir = tmp / "bin"
+    gh = bin_dir / "gh"
+    if not gh.exists():
+        bin_dir.mkdir()
+        gh.write_text(f"#!{sys.executable}\n{FAKE_GH}")
+        gh.chmod(0o755)
+    return os.environ | {"PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}", "FAKE_GH": mode,
+                         "FAKE_GH_SENT": str(sent)}
+
+
 def test_exit_codes(tmp: Path) -> None:
     d = repo(tmp / "send", {"a.csv": "1\n"})
     (d / "a.csv").write_text("1\n2\n")
-    bin_dir = tmp / "bin"
-    bin_dir.mkdir()
-    gh = bin_dir / "gh"
-    gh.write_text(f"#!{sys.executable}\n{FAKE_GH}")
-    gh.chmod(0o755)
     sent = tmp / "sent.json"
     for mode, code in (("moved", 3), ("other", 1), ("errors", 1), ("ok", 0)):
-        env = os.environ | {"PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}", "FAKE_GH": mode,
-                            "FAKE_GH_SENT": str(sent)}
         run = subprocess.run([sys.executable, str(SCRIPT), str(d), "--branch", "stats", "--headline", "h",
-                              "--repo", "o/r"], env=env, capture_output=True, text=True)
+                              "--repo", "o/r"], env=fake_gh(tmp, mode, sent), capture_output=True, text=True)
         assert run.returncode == code, (mode, run.returncode, run.stdout, run.stderr)
         added, _ = files(json.loads(sent.read_text()))
         assert added == {"a.csv": "1\n2\n"}, (mode, added)
         sent.unlink()
+
+
+def test_empty_dry_run(tmp: Path) -> None:
+    # `--dry-run ""` is a usage error, not a real commit.
+    d = repo(tmp / "empty-dry-run", {"a.csv": "1\n"})
+    (d / "a.csv").write_text("1\n2\n")
+    sent = tmp / "sent-empty.json"
+    run = subprocess.run([sys.executable, str(SCRIPT), str(d), "--branch", "stats", "--headline", "h",
+                          "--repo", "o/r", "--dry-run", ""], env=fake_gh(tmp, "ok", sent),
+                         capture_output=True, text=True)
+    assert run.returncode == 2, (run.returncode, run.stdout, run.stderr)
+    assert "--dry-run" in run.stderr, run.stderr
+    assert not sent.exists(), "gh was called"
 
 
 def test_stats_yml() -> None:
@@ -146,6 +165,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         test_request(Path(tmp))
         test_exit_codes(Path(tmp))
+        test_empty_dry_run(Path(tmp))
     test_stats_yml()
     print("test_commit_stats.py: ok")
     return 0

@@ -4,7 +4,8 @@
 """Tests the size and speed scripts' rows, from writing to the charts.
 
 record_times.py's pure parts (metric ids, a times log's runs, the
-conditions, with GitHub's runner's and its CPU model); a round trip:
+conditions, with GitHub's runner's and its CPU model, and the measured
+files' counts); the charts per 1,000 lines; a round trip:
 rows written twice to a new CSV through record_times.write, then drawn
 by size_speed_charts.render; and the stop before starting a new default
 CSV, however its path is spelled; each in a temporary directory. Fast,
@@ -117,6 +118,49 @@ def test_from_log(tmp: Path) -> None:
     ], last
 
 
+def test_corpus(tmp: Path) -> None:
+    # Files, lines, and tokens of the measured files; the lexer's
+    # ignorable tokens (comments, spaces, margins) aren't counted.
+    a, b = tmp / "a.temper", tmp / "b.temper.md"
+    a.write_text("let x = 1;\n// one\n")
+    b.write_text("# Doc\n\n    f();\nno newline at the end")
+    lexer = tmp / "lexer.py"
+    lexer.write_text("import sys\n"
+                     "for path in sys.argv[1:]:\n"
+                     "    print('# ' + path)\n"
+                     "    for kind in ('Word', 'Space', 'Comment', 'Margin', 'Punctuation'):\n"
+                     "        print(kind + '\\t0\\t1\\t-\\t-\\tx')\n")
+    files = [str(a), str(b)]
+    assert record_times.corpus(files) == ["files=2", "lines=6"], record_times.corpus(files)
+    got = record_times.corpus(files, [sys.executable, str(lexer)])
+    assert got == ["files=2", "lines=6", "tokens=4"], got
+
+
+def test_per_lines() -> None:
+    # The per-1,000-lines charts take only rows with a line count; the
+    # raw charts take every row.
+    rows = [
+        record_times.row("lex-parse-module-settle-ms", "20.0", "ms", "run=rust;files=9;ci=github", "old",
+                         "2026-11-20", "aaaaaaa"),
+        record_times.row("lex-parse-module-settle-ms", "10.0", "ms",
+                         "run=rust;files=2;lines=500;tokens=900;ci=github", "new", "2026-11-21", "bbbbbbb"),
+        record_times.row("peak-memory-settle-all", "30.0", "MiB", "run=rust;files=2;lines=2000;ci=github", "new",
+                         "2026-11-21", "bbbbbbb"),
+    ]
+    charts = {c.name: c for c in size_speed_charts.CHARTS}
+
+    def mids(name: str) -> list[tuple[str, float]]:
+        data = size_speed_charts.gather(rows, charts[name])
+        return [(p.key[1], p.mid) for points in data.points for p in points.values()]
+
+    assert mids("settle-time") == [("aaaaaaa", 20.0), ("bbbbbbb", 10.0)], mids("settle-time")
+    assert mids("settle-time-per-1k-lines") == [("bbbbbbb", 20.0)], mids("settle-time-per-1k-lines")
+    assert mids("peak-memory-per-1k-lines") == [("bbbbbbb", 15.0)], mids("peak-memory-per-1k-lines")
+    drawn = size_speed_charts.draw(charts["settle-time-per-1k-lines"],
+                                   size_speed_charts.gather(rows, charts["settle-time-per-1k-lines"]))
+    assert "ms per 1,000 lines" in drawn and "aaaaaaa" not in drawn, drawn
+
+
 def test_round_trip(tmp: Path) -> None:
     stats = tmp / "stats"
     path = stats / "size-and-speed.csv"
@@ -137,6 +181,9 @@ def test_round_trip(tmp: Path) -> None:
     for name in ("funtest-times-local", "settle-time", "build-times"):
         text = (charts / f"{name}.svg").read_text()
         assert "No runs recorded yet" in text and "12.3" not in text, (name, text)
+    for name in ("settle-time-per-1k-lines", "peak-memory-per-1k-lines"):
+        text = (charts / f"{name}.svg").read_text()
+        assert "No runs with a line count recorded yet" in text and "12.3" not in text, (name, text)
 
 
 def test_check_csv(tmp: Path) -> None:
@@ -168,8 +215,11 @@ def main() -> int:
     test_conditions()
     test_cpu_model()
     test_rows_for()
+    test_per_lines()
     with tempfile.TemporaryDirectory() as tmp:
         test_from_log(Path(tmp))
+    with tempfile.TemporaryDirectory() as tmp:
+        test_corpus(Path(tmp))
     with tempfile.TemporaryDirectory() as tmp:
         test_round_trip(Path(tmp))
     with tempfile.TemporaryDirectory() as tmp:

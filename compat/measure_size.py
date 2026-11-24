@@ -9,6 +9,7 @@ same but aborting on panic), raw and gzipped. Peak memory is the maximum residen
 `--bench 1` run over all Temper files (read everything, then lex and parse it
 all once, and also build grammar trees for it all, and also settle each
 file as a library), for our binaries and for Kotlin's oracles on the JVM.
+Its rows say what they read: `files=N;lines=N;tokens=N`.
 
     uv run compat/measure_size.py [--record] [--csv FILE] [--shares] [--no-kotlin] [DIR ...]
 
@@ -102,7 +103,8 @@ def main() -> int:
     files = temper_files(args.dirs)
     total = sum(os.path.getsize(f) for f in files)
     print(f"{len(files)} files, {kib(total)}")
-    count = f"files={len(files)}"
+    count = ";".join(record_times.corpus(files, [str(record_times.LEX_TOKENS)]))
+    print(count.replace(";", ", "))
     for what, metric, printer, oracle in (
         ("lex and parse", "peak-memory-parse-all", "parse-tree", kotlin),
         ("lex, parse and build trees for", "peak-memory-ast-all", "ast-tree", kotlin_ast),

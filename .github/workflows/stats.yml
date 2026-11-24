@@ -19,7 +19,9 @@
 #   and gzipped, and peak memory over this repository's Temper files;
 #   on Sundays and by hand, each backend's share too (`--shares`);
 # - settle time over the same files (compat/bench_settle.py), the
-#   median of five runs.
+#   median of five runs. Those files change from commit to commit, so
+#   these rows record their lines and tokens, and the charts show them
+#   per 1,000 lines too.
 #
 # Every row says the runner's CPU and core count (`conditions`). Sizes
 # are exact; times on GitHub's shared runners vary from night to night,

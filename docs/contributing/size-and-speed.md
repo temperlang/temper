@@ -30,6 +30,16 @@ On one runner, one step after another, with no build cache:
   [bench_settle.py](../../compat/bench_settle.py), the median of five
   runs).
 
+The files measured move with each commit: peak memory and settle time
+are over this repository's Temper files at that commit, so the nightly
+trend mixes compiler changes with code added or removed. Those rows
+record the files' count, lines, and tokens (`files=N;lines=N;tokens=N`),
+and the charts show them per 1,000 lines beside the raw numbers (older
+rows, without line counts, only raw). For a controlled before and
+after, on the same inputs, use the PR stats job, which compares a
+branch with its merge base. A pinned, versioned set of files can come
+once old Temper code keeps compiling.
+
 Each row names the runner's CPU and core count. Sizes are exact; times
 on shared runners vary by tens of percent from night to night, so read
 the timing charts as a trend, and measure a change's speed by
@@ -42,6 +52,8 @@ workflow commits through GitHub's API, so GitHub signs each commit
 ![Binary sizes](https://raw.githubusercontent.com/temperlang/temper/stats/charts/sizes.svg)
 ![Settle time](https://raw.githubusercontent.com/temperlang/temper/stats/charts/settle-time.svg)
 ![Peak memory](https://raw.githubusercontent.com/temperlang/temper/stats/charts/peak-memory.svg)
+![Settle time per 1,000 lines](https://raw.githubusercontent.com/temperlang/temper/stats/charts/settle-time-per-1k-lines.svg)
+![Peak memory per 1,000 lines](https://raw.githubusercontent.com/temperlang/temper/stats/charts/peak-memory-per-1k-lines.svg)
 ![Functional tests by backend](https://raw.githubusercontent.com/temperlang/temper/stats/charts/funtest-times.svg)
 ![Build and lint times](https://raw.githubusercontent.com/temperlang/temper/stats/charts/build-times.svg)
 
