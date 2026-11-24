@@ -3699,9 +3699,9 @@ log 1
 // callback's failure type, `throws E`, fails as the callback does. `E`
 // is solved per call from what the arguments declare, as other type
 // parameters are; one they leave unsolved is `Never<…>`, so the call
-// can't fail. A function literal without a declared result can't fail
-// then (a4, a8's inner literal, m2, b1), as one passed to a `fn (T): R`
-// can't. Core's `Listed.map` is one; `filter` isn't yet.
+// can't fail. A function literal without a declared result gives it from
+// its body, so a4, a8, and m2 fail at the call (inferring is tested
+// below). Core's `Listed.map` is one; `filter` isn't yet (b1).
 let apply<T, R, E>(x: T, f: fn (T): R throws E): R throws E { f(x) }
 @fun interface Mapper<T, R, E>(x: T): R throws E;
 let mapAll<T, R, E>(xs: List<T>, f: Mapper<T, R, E>): List<R> throws E {
@@ -3774,7 +3774,7 @@ console.log("${show(f1([1, 2]))} ${show(f2([0]))} ${show(f2([5]))} ${k1(2)} ${k2
               (Fn
                 (Let ^x:44)
                 (Block (Call (Call . out:43 \add) (Call f:42 x:44)) #void)))
-            (Break @712)))
+            (Break @717)))
         (Call (Call . out:43 \toList)))))
   (Let
     ^both:3
@@ -4088,14 +4088,496 @@ console.log("${show(f1([1, 2]))} ${show(f2([0]))} ${show(f2([5]))} ${k1(2)} ${k2
       " "
       (Call k2:23 5)))
   #void)
-error 1003..1053: Cannot bubble from a function without Bubble in its return type
-error 1094..1100: Cannot bubble from a function without Bubble in its return type
-error 1389..1434: Cannot bubble from a function without Bubble in its return type
-error 1644..1650: Cannot bubble from a function without Bubble in its return type
-error 1956..1999: Cannot bubble from a function without Bubble in its return type
-error 2221..2274: Cannot bubble from a function without Bubble in its return type
-error 2488..2562: Cannot bubble from a function without Bubble in its return type
-error 2617..2623: Cannot bubble from a function without Bubble in its return type
+error 1008..1058: Cannot bubble from a function without Bubble in its return type
+error 1083..1107: Cannot bubble from a function without Bubble in its return type
+error 1378..1441: Cannot bubble from a function without Bubble in its return type
+error 1635..1657: Cannot bubble from a function without Bubble in its return type
+error 1961..2004: Cannot bubble from a function without Bubble in its return type
+error 2226..2279: Cannot bubble from a function without Bubble in its return type
+error 2493..2567: Cannot bubble from a function without Bubble in its return type
+error 2622..2628: Cannot bubble from a function without Bubble in its return type
 log 2 3 -1 2 -2 7 0
 log 2,3 10,5 -1  2,4
 log 3,6  2 4 -1 7
+
+=== function literals' results and failures inferred from their bodies
+// A function literal argument without a declared result gives a generic
+// callee's type parameters what its body gives: its result type (O in
+// `map`) and whether it fails (E). Expected errors: i2, n3, g4, k2 at the
+// call (it fails and isn't handled); e1 at the literal's result (the type
+// wanted wins); e2, e3 inside the literals (explicit annotations win);
+// b1 at the literal's result (a result outside the bound isn't taken);
+// t2 at the assignment (m is a List<Int32>);
+// u1 at the literal (E can't be inferred, as its parameter's type needs
+// it); u2's literal can't fail, so nothing.
+@fun interface Thunk<E>(): Int throws E;
+let apply<T, R, E>(x: T, f: fn (T): R throws E): R throws E { f(x) }
+let both<E>(a: fn (Int): Int throws E, b: fn (Int): Int throws E, n: Int): Int throws E {
+  a(n) + b(n)
+}
+let retry<E>(f: fn (Thunk<E>): Int throws E): Int throws E { f { 1 } }
+let size<L extends Listed<Int>>(f: fn (Int): L): Int { f(1).length }
+let show(ls: List<Int>): String { ls.join(",") { x => x.toString() } }
+let i1(ls: List<Int>): List<Int> throws Bubble { ls.map { x => 10 / x } }
+let i2(ls: List<Int>): List<Int> { ls.map { x => 10 / x } }
+let i3(ls: List<Int>): List<Int> { ls.map { x => 10 / x } orelse [] }
+let i4(ls: List<Int>): List<Int> { ls.map { x => x + 1 } }
+let i5(ls: List<Int>): Int { let m = ls.map { x => x * 2 }; m.filter { n => n > 2 }.length }
+let i6(ls: List<Int>): String { ls.map { x => "<${x.toString()}>" }.join("") { s => s } }
+let i7(ls: List<Int>): List<Int> { ls.map(fn (x) { if (x > 1) { return x; } 0 - x }) }
+let n1(ls: List<Int>): List<List<Int>> { ls.map { x => ls.map { y => x + y } } }
+let n2(ls: List<Int>): List<List<Int>> throws Bubble { ls.map { x => ls.map { y => x / y } } }
+let n3(ls: List<Int>): List<List<Int>> { ls.map { x => ls.map { y => x / y } } }
+let n4(ls: List<Int>): List<List<Int>> { ls.map { x => ls.map { y => x / y } orelse [] } }
+let g1(n: Int): Int throws Bubble { apply(n) { x => apply(x) { y => 10 / y } } }
+let g2(ls: List<Int>): List<Int> { ls.map { x => apply(x) { y => y * 2 } } }
+let g3(n: Int): String { apply(n) { x => show([x, x].map { y => y + 1 }) } }
+let g4(n: Int): Int { apply(n) { x => apply(x) { y => 10 / y } } }
+let k1(n: Int): Int { both(fn (x) { x }, fn (x) { 10 / x }, n) orelse -1 }
+let k2(n: Int): Int { both(fn (x) { x }, fn (x) { 10 / x }, n) }
+let k3(n: Int): Int { both(fn (x) { x }, fn (x) { x + 1 }, n) }
+let e1(ls: List<Int>): List<String> { ls.map { x => x + 1 } }
+let e2(n: Int): Int { apply<Int, Int, Never<Bubble>>(n, fn (x: Int): Int { 10 / x }) }
+let e3(ls: List<Int>): List<Int> { ls.map { (x): Int => 10 / x } }
+let e4(ls: List<Int>): List<AnyValue> { ls.map { x => x + 1 } }
+let b1(n: Int): Int { size { x => "a" } }
+let b2(n: Int): Int { size { x => [x, n] } }
+let t1(ls: List<Int>): List<Int> { let m = ls.map { x => x * 2 }; m }
+let t2(ls: List<Int>): Int { let m = ls.map { x => x * 2 }; let s: List<String> = m; s.length }
+let u1(n: Int): Int { retry { again => again() + 10 / n } orelse -1 }
+let u2(n: Int): Int { retry { again => again() + n } }
+console.log("${show(i1([1, 2]) orelse [])} ${show(i1([0]) orelse [-1])} ${show(i3([0]))} ${show(i4([1]))} ${i5([1, 2])} ${i6([1, 2])}");
+console.log("${show(i7([1, 2]))} ${n1([1, 2]).length} ${(n2([1, 0]) orelse [[-1]])[0][0]} ${n4([1, 0])[0].length}");
+console.log("${g1(2) orelse -1} ${g1(0) orelse -1} ${show(g2([1, 2]))} ${g3(3)} ${k1(0)} ${k1(5)} ${k3(1)} ${b2(3)} ${u2(1)}");
+--- settled
+(Block
+  (Interface
+    ^Thunk:0
+    (TypeParam ^E:34)
+    (Method ^apply:36 (Signature (Call throws Int E:34))))
+  (Let
+    ^apply:1
+    (Fn
+      (TypeParam ^T:37)
+      (TypeParam ^R:38)
+      (TypeParam ^E:39)
+      (Let ^x:40 T:37)
+      (Let ^f:41 (Call FnType T:37 (Call throws R:38 E:39)))
+      (Call throws R:38 E:39)
+      (Block (Call f:41 x:40))))
+  (Let
+    ^both:2
+    (Fn
+      (TypeParam ^E:42)
+      (Let ^a:43 (Call FnType Int (Call throws Int E:42)))
+      (Let ^b:44 (Call FnType Int (Call throws Int E:42)))
+      (Let ^n:45 Int)
+      (Call throws Int E:42)
+      (Block (Call + (Call a:43 n:45) (Call b:44 n:45)))))
+  (Let
+    ^retry:3
+    (Fn
+      (TypeParam ^E:46)
+      (Let ^f:47 (Call FnType (Call <> Thunk:0 E:46) (Call throws Int E:46)))
+      (Call throws Int E:46)
+      (Block (Call f:47 (Fn (Block 1))))))
+  (Let
+    ^size:4
+    (Fn
+      (TypeParam ^L:48 (Call <> Listed Int))
+      (Let ^f:49 (Call FnType Int L:48))
+      Int
+      (Block (Call . (Call f:49 1) \length))))
+  (Let
+    ^show:5
+    (Fn
+      (Let ^ls:50 (Call <> List Int))
+      String
+      (Block
+        (Call
+          (Call . ls:50 \join)
+          ","
+          (Fn (Let ^x:51) (Block (Call (Call . x:51 \toString))))))))
+  (Let
+    ^i1:6
+    (Fn
+      (Let ^ls:52 (Call <> List Int))
+      (Call throws (Call <> List Int) Bubble)
+      (Block
+        (Call (Call . ls:52 \map) (Fn (Let ^x:53) (Block (Call / 10 x:53)))))))
+  (Let
+    ^i2:7
+    (Fn
+      (Let ^ls:54 (Call <> List Int))
+      (Call <> List Int)
+      (Block
+        (Call (Call . ls:54 \map) (Fn (Let ^x:55) (Block (Call / 10 x:55)))))))
+  (Let
+    ^i3:8
+    (Fn
+      (Let ^ls:56 (Call <> List Int))
+      (Call <> List Int)
+      (Block
+        (Orelse
+          (Call (Call . ls:56 \map) (Fn (Let ^x:57) (Block (Call / 10 x:57))))
+          (Call list)))))
+  (Let
+    ^i4:9
+    (Fn
+      (Let ^ls:58 (Call <> List Int))
+      (Call <> List Int)
+      (Block
+        (Call (Call . ls:58 \map) (Fn (Let ^x:59) (Block (Call + x:59 1)))))))
+  (Let
+    ^i5:10
+    (Fn
+      (Let ^ls:60 (Call <> List Int))
+      Int
+      (Block
+        (Let
+          ^m:61
+          (Call (Call . ls:60 \map) (Fn (Let ^x:62) (Block (Call * x:62 2)))))
+        (Call
+          .
+          (Call (Call . m:61 \filter) (Fn (Let ^n:63) (Block (Call > n:63 2))))
+          \length))))
+  (Let
+    ^i6:11
+    (Fn
+      (Let ^ls:64 (Call <> List Int))
+      String
+      (Block
+        (Call
+          (Call
+            .
+            (Call
+              (Call . ls:64 \map)
+              (Fn
+                (Let ^x:65)
+                (Block (Call cat "<" (Call (Call . x:65 \toString)) ">"))))
+            \join)
+          ""
+          (Fn (Let ^s:66) (Block s:66))))))
+  (Let
+    ^i7:12
+    (Fn
+      (Let ^ls:67 (Call <> List Int))
+      (Call <> List Int)
+      (Block
+        (Call
+          (Call . ls:67 \map)
+          (Fn
+            (Let ^x:68)
+            (Block
+              (If (Call > x:68 1) (Block (Return @1517 x:68) #void) (Block))
+              (Call - 0 x:68)))))))
+  (Let
+    ^n1:13
+    (Fn
+      (Let ^ls:69 (Call <> List Int))
+      (Call <> List (Call <> List Int))
+      (Block
+        (Call
+          (Call . ls:69 \map)
+          (Fn
+            (Let ^x:70)
+            (Block
+              (Call
+                (Call . ls:69 \map)
+                (Fn (Let ^y:71) (Block (Call + x:70 y:71))))))))))
+  (Let
+    ^n2:14
+    (Fn
+      (Let ^ls:72 (Call <> List Int))
+      (Call throws (Call <> List (Call <> List Int)) Bubble)
+      (Block
+        (Call
+          (Call . ls:72 \map)
+          (Fn
+            (Let ^x:73)
+            (Block
+              (Call
+                (Call . ls:72 \map)
+                (Fn (Let ^y:74) (Block (Call / x:73 y:74))))))))))
+  (Let
+    ^n3:15
+    (Fn
+      (Let ^ls:75 (Call <> List Int))
+      (Call <> List (Call <> List Int))
+      (Block
+        (Call
+          (Call . ls:75 \map)
+          (Fn
+            (Let ^x:76)
+            (Block
+              (Call
+                (Call . ls:75 \map)
+                (Fn (Let ^y:77) (Block (Call / x:76 y:77))))))))))
+  (Let
+    ^n4:16
+    (Fn
+      (Let ^ls:78 (Call <> List Int))
+      (Call <> List (Call <> List Int))
+      (Block
+        (Call
+          (Call . ls:78 \map)
+          (Fn
+            (Let ^x:79)
+            (Block
+              (Orelse
+                (Call
+                  (Call . ls:78 \map)
+                  (Fn (Let ^y:80) (Block (Call / x:79 y:80))))
+                (Call list))))))))
+  (Let
+    ^g1:17
+    (Fn
+      (Let ^n:81 Int)
+      (Call throws Int Bubble)
+      (Block
+        (Call
+          apply:1
+          n:81
+          (Fn
+            (Let ^x:82)
+            (Block
+              (Call apply:1 x:82 (Fn (Let ^y:83) (Block (Call / 10 y:83))))))))))
+  (Let
+    ^g2:18
+    (Fn
+      (Let ^ls:84 (Call <> List Int))
+      (Call <> List Int)
+      (Block
+        (Call
+          (Call . ls:84 \map)
+          (Fn
+            (Let ^x:85)
+            (Block (Call apply:1 x:85 (Fn (Let ^y:86) (Block (Call * y:86 2))))))))))
+  (Let
+    ^g3:19
+    (Fn
+      (Let ^n:87 Int)
+      String
+      (Block
+        (Call
+          apply:1
+          n:87
+          (Fn
+            (Let ^x:88)
+            (Block
+              (Call
+                show:5
+                (Call
+                  (Call . (Call list x:88 x:88) \map)
+                  (Fn (Let ^y:89) (Block (Call + y:89 1)))))))))))
+  (Let
+    ^g4:20
+    (Fn
+      (Let ^n:90 Int)
+      Int
+      (Block
+        (Call
+          apply:1
+          n:90
+          (Fn
+            (Let ^x:91)
+            (Block
+              (Call apply:1 x:91 (Fn (Let ^y:92) (Block (Call / 10 y:92))))))))))
+  (Let
+    ^k1:21
+    (Fn
+      (Let ^n:93 Int)
+      Int
+      (Block
+        (Orelse
+          (Call
+            both:2
+            (Fn (Let ^x:94) (Block x:94))
+            (Fn (Let ^x:95) (Block (Call / 10 x:95)))
+            n:93)
+          (Call - 1)))))
+  (Let
+    ^k2:22
+    (Fn
+      (Let ^n:96 Int)
+      Int
+      (Block
+        (Call
+          both:2
+          (Fn (Let ^x:97) (Block x:97))
+          (Fn (Let ^x:98) (Block (Call / 10 x:98)))
+          n:96))))
+  (Let
+    ^k3:23
+    (Fn
+      (Let ^n:99 Int)
+      Int
+      (Block
+        (Call
+          both:2
+          (Fn (Let ^x:100) (Block x:100))
+          (Fn (Let ^x:101) (Block (Call + x:101 1)))
+          n:99))))
+  (Let
+    ^e1:24
+    (Fn
+      (Let ^ls:102 (Call <> List Int))
+      (Call <> List String)
+      (Block
+        (Call (Call . ls:102 \map) (Fn (Let ^x:103) (Block (Call + x:103 1)))))))
+  (Let
+    ^e2:25
+    (Fn
+      (Let ^n:104 Int)
+      Int
+      (Block
+        (Call
+          apply:1
+          \typeArg
+          Int
+          \typeArg
+          Int
+          \typeArg
+          (Call <> Never Bubble)
+          n:104
+          (Fn (Let ^x:105 Int) Int (Block (Call / 10 x:105)))))))
+  (Let
+    ^e3:26
+    (Fn
+      (Let ^ls:106 (Call <> List Int))
+      (Call <> List Int)
+      (Block
+        (Call
+          (Call . ls:106 \map)
+          (Fn (Let ^x:107) Int (Block (Call / 10 x:107)))))))
+  (Let
+    ^e4:27
+    (Fn
+      (Let ^ls:108 (Call <> List Int))
+      (Call <> List AnyValue)
+      (Block
+        (Call (Call . ls:108 \map) (Fn (Let ^x:109) (Block (Call + x:109 1)))))))
+  (Let
+    ^b1:28
+    (Fn
+      (Let ^n:110 Int)
+      Int
+      (Block (Call size:4 (Fn (Let ^x:111) (Block "a"))))))
+  (Let
+    ^b2:29
+    (Fn
+      (Let ^n:112 Int)
+      Int
+      (Block (Call size:4 (Fn (Let ^x:113) (Block (Call list x:113 n:112)))))))
+  (Let
+    ^t1:30
+    (Fn
+      (Let ^ls:114 (Call <> List Int))
+      (Call <> List Int)
+      (Block
+        (Let
+          ^m:115
+          (Call (Call . ls:114 \map) (Fn (Let ^x:116) (Block (Call * x:116 2)))))
+        m:115)))
+  (Let
+    ^t2:31
+    (Fn
+      (Let ^ls:117 (Call <> List Int))
+      Int
+      (Block
+        (Let
+          ^m:118
+          (Call (Call . ls:117 \map) (Fn (Let ^x:120) (Block (Call * x:120 2)))))
+        (Let ^s:119 (Call <> List String) m:118)
+        (Call . s:119 \length))))
+  (Let
+    ^u1:32
+    (Fn
+      (Let ^n:121 Int)
+      Int
+      (Block
+        (Orelse
+          (Call
+            retry:3
+            (Fn
+              (Let ^again:122)
+              (Block (Call + (Call again:122) (Call / 10 n:121)))))
+          (Call - 1)))))
+  (Let
+    ^u2:33
+    (Fn
+      (Let ^n:123 Int)
+      Int
+      (Block
+        (Call
+          retry:3
+          (Fn (Let ^again:124) (Block (Call + (Call again:124) n:123)))))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call show:5 (Orelse (Call i1:6 (Call list 1 2)) (Call list)))
+      " "
+      (Call show:5 (Orelse (Call i1:6 (Call list 0)) (Call list (Call - 1))))
+      " "
+      (Call show:5 (Call i3:8 (Call list 0)))
+      " "
+      (Call show:5 (Call i4:9 (Call list 1)))
+      " "
+      (Call i5:10 (Call list 1 2))
+      " "
+      (Call i6:11 (Call list 1 2))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call show:5 (Call i7:12 (Call list 1 2)))
+      " "
+      (Call . (Call n1:13 (Call list 1 2)) \length)
+      " "
+      (Call
+        []
+        (Call
+          []
+          (Orelse
+            (Call n2:14 (Call list 1 0))
+            (Call list (Call list (Call - 1))))
+          0)
+        0)
+      " "
+      (Call . (Call [] (Call n4:16 (Call list 1 0)) 0) \length)))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Orelse (Call g1:17 2) (Call - 1))
+      " "
+      (Orelse (Call g1:17 0) (Call - 1))
+      " "
+      (Call show:5 (Call g2:18 (Call list 1 2)))
+      " "
+      (Call g3:19 3)
+      " "
+      (Call k1:21 0)
+      " "
+      (Call k1:21 5)
+      " "
+      (Call k3:23 1)
+      " "
+      (Call b2:29 3)
+      " "
+      (Call u2:33 1)))
+  #void)
+error 1138..1160: Cannot bubble from a function without Bubble in its return type
+error 1779..1816: Cannot bubble from a function without Bubble in its return type
+error 2167..2209: Cannot bubble from a function without Bubble in its return type
+error 2309..2349: Cannot bubble from a function without Bubble in its return type
+error 2468..2473: Expected subtype of String, but got Int32
+error 2553..2559: Cannot bubble from a function without Bubble in its return type
+error 2621..2627: Cannot bubble from a function without Bubble in its return type
+error 2730..2733: Expected subtype of Listed<Int32>, but got String
+error 2935..2936: Cannot assign to List<String> from List<Int32>
+error 2977..3006: Cannot infer E from this function literal, as its parameters' types need it; declare its result type, with throws if it may fail
+log 10,5 -1  2 1 <1><2>
+log -1,2 2 -1 0
+log 5 -1 2,4 4,4 -1 7 3 2 2

@@ -20,8 +20,8 @@ use crate::builtins::{Builtin, Constant, Function};
 use crate::core;
 use crate::library::{Level, Library, Message};
 use crate::scope::{Scopes, SymbolKind};
-use crate::settle::Settle;
-use crate::types::{FLOAT64, TypeData, TypeId};
+use crate::settle::{Fact, Settle};
+use crate::types::{BUBBLE, FLOAT64, TypeData, TypeId};
 use temper_syntax::ast::Value;
 use temper_syntax::tree::{NodeId, NodeKind};
 
@@ -169,24 +169,74 @@ impl Settle {
     /// Reports what may bubble in a function that declares it doesn't,
     /// in its parameters' defaults and its body.
     pub(super) fn check_bubbles(&mut self, f: NodeId) {
+        for node in self.failures_in(f) {
+            let span = self.lib.tree.span(node);
+            self.lib
+                .report(Level::Error, Message::ExpectedNoBubble, span);
+        }
+    }
+
+    /// What may bubble in a function's parameters' defaults and body, as
+    /// [`Settle::check_bubbles`] finds it.
+    pub(super) fn failures_in(&mut self, f: NodeId) -> Vec<NodeId> {
         let (params, _, body) = core::fn_parts(&self.lib.tree, f);
+        let mut found = Vec::new();
         for param in params {
             if self.lib.tree.kind(param) == NodeKind::Let {
                 if let Some(default) = core::let_parts(&self.lib.tree, param).2 {
-                    self.find_bubbles(default);
+                    self.find_bubbles(default, &mut found);
                 }
             }
         }
         if let Some(body) = body {
-            self.find_bubbles(body);
+            self.find_bubbles(body, &mut found);
         }
+        found
+    }
+
+    /// What a function literal without a declared result may fail with,
+    /// from its body ([`Settle::failures_in`]): `Bubble` if anything in it
+    /// may, the only failure type for now (declared ones will join what
+    /// each place fails with), else nothing. Before checking, it waits
+    /// for the types of its body's expressions and callees, which the
+    /// search reads.
+    pub(super) fn literal_failure(
+        &mut self,
+        f: NodeId,
+        forced: bool,
+    ) -> Result<Option<TypeId>, Fact> {
+        if let Some(&fail) = self.typing.literal_failures.get(&f) {
+            return Ok(fail);
+        }
+        if !self.typing.checking {
+            if let Some(body) = core::fn_parts(&self.lib.tree, f).2 {
+                let exprs = super::exprs::Exprs::new(&self.lib, &self.scopes).under(body);
+                for expr in exprs {
+                    self.expr_type(expr.node, forced)?;
+                    let tree = &self.lib.tree;
+                    if tree.kind(expr.node) == NodeKind::Call {
+                        let callee = tree.children(expr.node)[0];
+                        if self.scopes.resolved_builtin(callee).is_none() {
+                            self.callee_type(callee, forced)?;
+                        }
+                    }
+                }
+            }
+        }
+        let fail = (!self.failures_in(f).is_empty()).then_some(BUBBLE);
+        if !forced {
+            self.typing.literal_failures.insert(f, fail);
+        }
+        Ok(fail)
     }
 
     /// Whether a function's return type rules out bubbling, so
     /// [`Settle::check_bubbles`] applies: its declared one, unless it
-    /// `throws Bubble`, or for a function literal without one, the
-    /// function type its place wants, unless that may bubble, as Kotlin
-    /// Temper types the literal. A generator, as an `async` block, too,
+    /// `throws Bubble`, or for a function literal without one, its type
+    /// ([`Settle::literal_type`]), from the function type its place wants,
+    /// unless that may bubble, as Kotlin Temper types the literal, or
+    /// where its place is a generic call's failure parameter, from its
+    /// body. A generator, as an `async` block, too,
     /// as `GeneratorResult<Y>` doesn't say `throws Bubble`; not a `for …
     /// of` body.
     pub(super) fn may_not_bubble(&mut self, f: NodeId) -> bool {
@@ -197,9 +247,12 @@ impl Settle {
         match core::fn_parts(tree, f).1 {
             Some(out_type) => !self.is_throws(out_type),
             None => match self.wanted_fn(f, false) {
-                Ok(Some(t)) => match *self.typing.types.get(t) {
-                    TypeData::Fn { result, .. } => self.typing.types.fail(result).is_none(),
-                    _ => false,
+                Ok(Some(_)) => match self.literal_type(f, false) {
+                    Ok(t) => match *self.typing.types.get(t) {
+                        TypeData::Fn { result, .. } => self.typing.types.fail(result).is_none(),
+                        _ => false,
+                    },
+                    Err(_) => false,
                 },
                 _ => false,
             },
@@ -214,61 +267,55 @@ impl Settle {
             })
     }
 
-    fn find_bubbles(&mut self, node: NodeId) {
+    fn find_bubbles(&mut self, node: NodeId, found: &mut Vec<NodeId>) {
         let tree = &self.lib.tree;
         let children = tree.children(node).to_vec();
         match (tree.kind(node), children.as_slice()) {
             (NodeKind::Fn, _) if tree.data(node) & core::FN_LOOP_BODY != 0 => {
                 if let Some(body) = core::fn_parts(tree, node).2 {
-                    self.find_bubbles(body);
+                    self.find_bubbles(body, found);
                 }
             }
             (NodeKind::Fn, _) => {}
             // What fails in the body goes to the fallback.
-            (NodeKind::Orelse, [_, fallback]) => self.find_bubbles(*fallback),
+            (NodeKind::Orelse, [_, fallback]) => self.find_bubbles(*fallback, found),
             // Kotlin drops a branch that a constant condition rules out.
             (NodeKind::If, [condition, then, otherwise]) => {
-                self.find_bubbles(*condition);
+                self.find_bubbles(*condition, found);
                 match self.constant_bool(*condition) {
-                    Some(true) => self.find_bubbles(*then),
-                    Some(false) => self.find_bubbles(*otherwise),
+                    Some(true) => self.find_bubbles(*then, found),
+                    Some(false) => self.find_bubbles(*otherwise, found),
                     None if self.may_fold(*condition, 0) => {}
                     None => {
-                        self.find_bubbles(*then);
-                        self.find_bubbles(*otherwise);
+                        self.find_bubbles(*then, found);
+                        self.find_bubbles(*otherwise, found);
                     }
                 }
             }
-            (NodeKind::Fail, _) => self.report_bubble(node),
+            (NodeKind::Fail, _) => found.push(node),
             (NodeKind::Await, _) => {
                 for child in children {
-                    self.find_bubbles(child);
+                    self.find_bubbles(child, found);
                 }
-                self.report_bubble(node);
+                found.push(node);
             }
-            (NodeKind::Call, _) if self.call_bubbles(node) => self.report_bubble(node),
+            (NodeKind::Call, _) if self.call_bubbles(node) => found.push(node),
             // Kotlin doesn't look into the arguments of an operator that
             // don't fit it.
             (NodeKind::Call, [callee, args @ ..]) => {
                 let unfit = self.unfit_operator_args(*callee, args);
                 for &child in &children {
                     if !unfit.contains(&child) {
-                        self.find_bubbles(child);
+                        self.find_bubbles(child, found);
                     }
                 }
             }
             _ => {
                 for child in children {
-                    self.find_bubbles(child);
+                    self.find_bubbles(child, found);
                 }
             }
         }
-    }
-
-    fn report_bubble(&mut self, node: NodeId) {
-        let span = self.lib.tree.span(node);
-        self.lib
-            .report(Level::Error, Message::ExpectedNoBubble, span);
     }
 
     /// Whether a call may bubble, other than through its arguments.
@@ -290,9 +337,10 @@ impl Settle {
             }
             Some(_) => false,
             // A generic function's as the call solves it, so it fails as
-            // its failure parameters' solutions do.
+            // its failure parameters' solutions do, its function literals'
+            // from their bodies.
             None => {
-                let t = match self.solve_call(call, false) {
+                let t = match self.solve_fully(call, false) {
                     Ok(Some(solved)) => self.solved_sig(&solved),
                     _ => self.known_callee_type(callee),
                 };

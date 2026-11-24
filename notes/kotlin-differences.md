@@ -52,10 +52,12 @@ Language and frontend:
   literals and target typing"). Function literals' parameters and
   results are typed from the type wanted as Kotlin types them, with
   trailing blocks placed while typing ([typing.md](typing.md),
-  "Function literals and target typing"); a literal's result should
-  also bind a generic callee's type parameter, which Kotlin binds to its
-  bound, so `ls.map { x => x * 2 }` is a `List<AnyValue>` there. Not yet
-  in tempest either, which leaves it unknown. Object literals take their
+  "Function literals and target typing"); a literal's result also binds
+  a generic callee's type parameter, which Kotlin binds to its bound, so
+  `ls.map { x => x * 2 }` is a `List<Int32>`, where Kotlin's is a
+  `List<AnyValue>` (2026-11-24; typing.md, "Function literals' results
+  from their bodies"), and a literal that may fail makes the call fail,
+  where Kotlin reports it in the literal. Object literals take their
   class from the type wanted (2026-10-29; [typing.md](typing.md),
   "Object literals and target typing"): `let a: A = { x: 1 }` makes an
   `A` where Kotlin says "Multiple types have matching constructors: A,
@@ -66,7 +68,8 @@ Language and frontend:
   values" after "No signature matches" for an object literal no class
   fits, a follow-on error tempest doesn't report.
   Test: settle/types.cases, "list literals typed from the type wanted",
-  "function literals typed from the type wanted", and "object literals
+  "function literals typed from the type wanted", "function literals'
+  results and failures inferred from their bodies", and "object literals
   take their class from the type wanted".
 - **Named `@fun` interfaces are nominal** (decided 2026-10-29, done;
   [typing.md](typing.md), "Fun interfaces"): a `Pred` isn't a `Check`,

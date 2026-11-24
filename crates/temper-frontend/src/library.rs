@@ -231,6 +231,10 @@ pub enum Message {
     /// What may bubble, in a function whose return type doesn't say it
     /// may. Kotlin's `ExpectedNoBubble`.
     ExpectedNoBubble,
+    /// What may fail, in a function literal whose place is a generic
+    /// call's failure parameter, named, that its body can't give, as its
+    /// parameters' types need it too.
+    FailureNotInferred(String),
     /// `x is T` or `x as T` that can never succeed: `x`'s type, not
     /// null, and `T`. Kotlin's `ImpossibleRttiCheck`.
     ImpossibleRttiCheck(String, String),
@@ -492,6 +496,10 @@ impl Message {
             Message::ExpectedNoBubble => {
                 "Cannot bubble from a function without Bubble in its return type".into()
             }
+            Message::FailureNotInferred(e) => format!(
+                "Cannot infer {e} from this function literal, as its parameters' types need \
+                 it; declare its result type, with throws if it may fail"
+            ),
             Message::ImpossibleRttiCheck(from, to) => {
                 format!("Runtime type check from {from} to {to} can never succeed")
             }

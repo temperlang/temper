@@ -145,6 +145,14 @@ pub struct Typing {
     unreachable: HashSet<NodeId>,
     /// Each sealed interface's subtypes, by its symbol, once one's needed.
     sealed_subtypes: Option<HashMap<SymbolId, Vec<SymbolId>>>,
+    /// Whether typing's round is done and checking has begun, so what
+    /// isn't known by now never will be.
+    checking: bool,
+    /// What function literals without a declared result give, from their
+    /// bodies, by the literal, once worked out ([`generic_calls`]).
+    literal_passes: HashMap<NodeId, TypeId>,
+    /// What such literals' bodies may fail with, if anything.
+    literal_failures: HashMap<NodeId, Option<TypeId>>,
 }
 
 const UNSET: TypeId = TypeId(u32::MAX);
@@ -237,6 +245,7 @@ impl Settle {
     /// initializer's, under the files' roots, and notes each node's parent,
     /// for the type its place wants ([`targets`]).
     pub(crate) fn queue_typing(&mut self) {
+        self.typing.checking = false;
         self.find_flow_facts();
         self.typing.parents.resize(self.lib.tree.len(), NO_PARENT);
         // A session's later rounds may declare new subtypes.
@@ -955,6 +964,7 @@ impl Settle {
     /// Reports type errors in each file, once declarations' types are
     /// known.
     pub(crate) fn check_types(&mut self) {
+        self.typing.checking = true;
         for root in self.round_roots() {
             self.check(root);
         }
@@ -1299,7 +1309,15 @@ impl Settle {
                 }
                 self.check_literal_result(node);
                 if self.may_not_bubble(node) {
-                    self.check_bubbles(node);
+                    match self.uninferred_failure(node) {
+                        Some(e) if !self.failures_in(node).is_empty() => {
+                            let message = Message::FailureNotInferred(e);
+                            let span = self.lib.tree.span(node);
+                            self.lib.report(Level::Error, message, span);
+                        }
+                        Some(_) => {}
+                        None => self.check_bubbles(node),
+                    }
                 }
             }
             (NodeKind::Call, ..) => {
@@ -1405,6 +1423,19 @@ impl Settle {
         Some(self.eval_type(out_type))
     }
 
+    /// What a function literal without a return type gives, as its type
+    /// says ([`Settle::literal_type`]), where its place wants a function
+    /// type: what that gives, or where a generic call leaves it open, the
+    /// call's solution, from the literal's body.
+    fn literal_result(&mut self, f: NodeId) -> Option<TypeId> {
+        self.fn_result(f, false).ok()??;
+        let t = self.literal_type(f, false).ok()?;
+        match *self.typing.types.get(t) {
+            TypeData::Fn { result, .. } => Some(self.typing.types.pass(result)),
+            _ => None,
+        }
+    }
+
     /// Reports a function literal without a return type whose result
     /// isn't what the function type its place wants gives, as Kotlin
     /// Temper does: "Expected subtype of Int32, but got String", for `{ x
@@ -1420,7 +1451,7 @@ impl Settle {
         let (None, Some(body)) = (out_type, body) else {
             return;
         };
-        let Some(t) = self.fn_result(f, false).unwrap_or(None) else {
+        let Some(t) = self.literal_result(f) else {
             return;
         };
         let mut result = body;
@@ -1451,7 +1482,7 @@ impl Settle {
         if core::fn_parts(&self.lib.tree, f).1.is_some() {
             return;
         }
-        let Some(t) = self.fn_result(f, false).unwrap_or(None) else {
+        let Some(t) = self.literal_result(f) else {
             return;
         };
         let s = self.known_type(value);

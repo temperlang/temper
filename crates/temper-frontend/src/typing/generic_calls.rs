@@ -165,17 +165,8 @@ impl Settle {
                     *actual = UNKNOWN;
                 }
             }
-            // A failure parameter the arguments leave unsolved is
-            // `Never<…>`: nothing passed may fail, as a function literal
-            // without a declared result can't (RFC 164).
-            let types = &mut self.typing.types;
-            for (k, actual) in actuals.iter_mut().enumerate() {
-                if *actual == UNKNOWN && !ambiguous[k] && types.fails_with(sig, &formals[k..=k]) {
-                    *actual = types.no_failure();
-                }
-            }
         }
-        Ok(Some(Solved {
+        let mut solved = Solved {
             sig,
             formals,
             actuals,
@@ -184,7 +175,275 @@ impl Settle {
             args,
             this,
             has_type_args: !type_args.is_empty(),
-        }))
+        };
+        // A failure parameter the arguments leave unsolved is `Never<…>`,
+        // so nothing passed may fail (RFC 164), unless a function literal's
+        // body may solve it ([`Settle::solve_fully`]).
+        if !solved.has_type_args {
+            let inferred = self.literal_formals(&solved);
+            self.no_failure_where(&mut solved, &inferred, false);
+        }
+        Ok(Some(solved))
+    }
+
+    /// Makes each failure parameter of a solved call that's still unknown
+    /// `Never<…>` ([`crate::types::Types::no_failure`]), so the call can't
+    /// fail by it; with `inferred` (by index) only where it's `inferred`.
+    fn no_failure_where(&mut self, solved: &mut Solved, inferred: &[bool], only: bool) {
+        let types = &mut self.typing.types;
+        for (k, actual) in solved.actuals.iter_mut().enumerate() {
+            let unsolved = *actual == UNKNOWN && !solved.ambiguous[k] && inferred[k] == only;
+            if unsolved && types.fails_with(solved.sig, &solved.formals[k..=k]) {
+                *actual = types.no_failure();
+            }
+        }
+    }
+
+    /// A call solved in full, for what its function literals are and
+    /// whether it fails: as for its type ([`Settle::solved_type`]), then
+    /// each failure parameter from what its function literals' bodies may
+    /// fail with ([`Settle::infer_literals`]), or `Never<…>`, so a call
+    /// can't fail where none of them may.
+    pub(super) fn solve_fully(
+        &mut self,
+        call: NodeId,
+        forced: bool,
+    ) -> Result<Option<Solved>, Fact> {
+        let Some(mut solved) = self.solve_call(call, forced)? else {
+            return Ok(None);
+        };
+        self.solved_type(&mut solved, forced)?;
+        if !solved.has_type_args {
+            // Where the call's type was known without them, too.
+            self.infer_literals(&mut solved, forced, true)?;
+            self.literal_results_as_bounds(&mut solved, false);
+            let inferred = self.literal_formals(&solved);
+            self.no_failure_where(&mut solved, &inferred, true);
+        }
+        Ok(Some(solved))
+    }
+
+    /// A solved call's function literal arguments that don't declare
+    /// their result (nor are generators'), each with the function type of
+    /// the parameter it's placed at, as the function declares it.
+    fn literal_params(&mut self, solved: &Solved) -> Vec<(NodeId, TypeId)> {
+        let TypeData::Fn { params, .. } = self.typing.types.get(solved.sig).clone() else {
+            return Vec::new();
+        };
+        let placed = self.placed_params(&params, &solved.args);
+        let mut found = Vec::new();
+        for (&arg, &i) in solved.args.iter().zip(&placed) {
+            let Some(param) = params.get(i).filter(|_| self.infers_result(arg)) else {
+                continue;
+            };
+            let ty = self.non_null(param.ty);
+            if let Some(f) = self.typing.types.as_fn(ty) {
+                found.push((arg, f));
+            }
+        }
+        found
+    }
+
+    /// Whether a node is a function literal whose result comes from its
+    /// body where its place doesn't say it: one without a declared result
+    /// type that isn't a generator's.
+    pub(super) fn infers_result(&self, f: NodeId) -> bool {
+        let tree = &self.lib.tree;
+        tree.kind(f) == NodeKind::Fn
+            && core::fn_parts(tree, f).1.is_none()
+            && core::fn_supers(tree, f).is_empty()
+    }
+
+    /// Which of a solved call's type parameters (by index) its function
+    /// literals without a declared result give from their bodies: those
+    /// in the result of the function type such a literal is placed at,
+    /// as `O` and `E` in `map`'s `fn (T): O throws E`, but in none of
+    /// those function types' parameters, so a literal's parameters never
+    /// wait for a literal's body (notes/typing.md, "Function literals'
+    /// results from their bodies"). None for a call with type arguments.
+    pub(super) fn literal_formals(&mut self, solved: &Solved) -> Vec<bool> {
+        let n = solved.formals.len();
+        let (mut in_result, mut in_params) = (vec![false; n], vec![false; n]);
+        if solved.has_type_args {
+            return in_result;
+        }
+        for (_, f) in self.literal_params(solved) {
+            let types = &self.typing.types;
+            let TypeData::Fn { params, result } = types.get(f) else {
+                continue;
+            };
+            for (k, formal) in solved.formals.iter().enumerate() {
+                let only = std::slice::from_ref(formal);
+                in_result[k] |= types.mentions(*result, only);
+                in_params[k] |= params.iter().any(|p| types.mentions(p.ty, only));
+            }
+        }
+        (in_result.into_iter().zip(in_params))
+            .map(|(result, params)| result && !params)
+            .collect()
+    }
+
+    /// Solves what's still unknown of a call's type parameters that its
+    /// function literals give ([`Settle::literal_formals`]) from their
+    /// bodies, one literal at a time, in order: what each gives as its
+    /// result ([`Settle::literal_pass`]) and, with `failures`, what it may
+    /// fail with ([`Settle::literal_failure`]). A solution outside its
+    /// type parameter's bound isn't taken, so the literal is checked
+    /// against the bound, as before.
+    fn infer_literals(
+        &mut self,
+        solved: &mut Solved,
+        forced: bool,
+        failures: bool,
+    ) -> Result<(), Fact> {
+        let inferred = self.literal_formals(solved);
+        let n = solved.formals.len();
+        for (arg, f) in self.literal_params(solved) {
+            let TypeData::Fn { result, .. } = *self.typing.types.get(f) else {
+                continue;
+            };
+            let types = &self.typing.types;
+            let open: Vec<usize> = (0..n)
+                .filter(|&k| inferred[k] && solved.actuals[k] == UNKNOWN && !solved.ambiguous[k])
+                .collect();
+            let mentioned = |t: TypeId| {
+                open.iter()
+                    .any(|&k| types.mentions(t, &solved.formals[k..=k]))
+            };
+            let wants_pass = mentioned(types.pass(result));
+            let wants_fail = failures && types.fail(result).is_some_and(mentioned);
+            if !wants_pass && !wants_fail {
+                continue;
+            }
+            let pass = match wants_pass {
+                true => self.literal_pass(arg, forced)?,
+                false => UNKNOWN,
+            };
+            let given = match wants_fail {
+                true => match self.literal_failure(arg, forced)? {
+                    Some(fail) => self.typing.types.result(pass, fail),
+                    None => pass,
+                },
+                false => pass,
+            };
+            let (mut found, mut conflicts) = (vec![UNKNOWN; n], vec![false; n]);
+            let types = &mut self.typing.types;
+            types.unify(result, given, &solved.formals, &mut found, &mut conflicts);
+            for k in open {
+                if found[k] != UNKNOWN && !conflicts[k] && self.fits_bound(solved, k, found[k]) {
+                    solved.actuals[k] = found[k];
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// The failure parameter, as written, that a function literal's place
+    /// fails with but that its body can't give, as the literal's
+    /// parameters' types need it too ([`Settle::literal_formals`]), as `E`
+    /// for `retry { again => … }` and `retry<E>(f: fn (Thunk<E>): Int
+    /// throws E)`, so it's `Never<…>`, unless the call's other arguments
+    /// or type arguments give it.
+    pub(super) fn uninferred_failure(&mut self, f: NodeId) -> Option<String> {
+        let call = self.typing.parent(f)?;
+        if !self.infers_result(f) || self.lib.tree.kind(call) != NodeKind::Call {
+            return None;
+        }
+        let solved = self.solve_call(call, false).ok()??;
+        let inferred = self.literal_formals(&solved);
+        let (_, t) = (self.literal_params(&solved).into_iter()).find(|&(arg, _)| arg == f)?;
+        let TypeData::Fn { result, .. } = *self.typing.types.get(t) else {
+            return None;
+        };
+        let fail = self.typing.types.fail(result)?;
+        let no_failure = self.typing.types.no_failure();
+        let k = (0..solved.formals.len()).find(|&k| {
+            let types = &self.typing.types;
+            !inferred[k]
+                && solved.actuals[k] == no_failure
+                && types.mentions(fail, &solved.formals[k..=k])
+        })?;
+        let param = self.typing.types.param(solved.formals[k]);
+        Some(self.show(param))
+    }
+
+    /// Whether `actual` fits the bound of a solved call's `k`th type
+    /// parameter, with what's solved put in, as
+    /// [`Settle::check_generic_call`] checks it.
+    fn fits_bound(&mut self, solved: &Solved, k: usize, actual: TypeId) -> bool {
+        let types = &mut self.typing.types;
+        let param = types.param(solved.formals[k]);
+        let bound = types.upper(param);
+        let wanted = types.substitute(bound, &solved.formals, &solved.actuals);
+        let seen = match *types.get(actual) {
+            TypeData::Nullable(inner) if wanted == ANY_VALUE => inner,
+            _ => actual,
+        };
+        types.is_subtype(seen, wanted) != Some(false)
+    }
+
+    /// What a function literal's body gives as its result, without what
+    /// its place wants: its last expression's type, joined with what each
+    /// `return` from it gives (`Void` for a bare one); unknown where they
+    /// have no type in common.
+    pub(super) fn literal_pass(&mut self, f: NodeId, forced: bool) -> Result<TypeId, Fact> {
+        if let Some(&t) = self.typing.literal_passes.get(&f) {
+            return Ok(t);
+        }
+        let Some(body) = core::fn_parts(&self.lib.tree, f).2 else {
+            return Ok(UNKNOWN);
+        };
+        let mut t = self.expr_type(body, forced)?;
+        let mut stack = vec![body];
+        while let Some(node) = stack.pop() {
+            let tree = &self.lib.tree;
+            stack.extend(tree.children(node));
+            if tree.kind(node) != NodeKind::Return || NodeId(tree.data(node)) != f {
+                continue;
+            }
+            let given = match tree.children(node).first() {
+                Some(&value) => self.expr_type(value, forced)?,
+                None => VOID,
+            };
+            t = self.typing.types.join(t, given);
+        }
+        if !forced {
+            self.typing.literal_passes.insert(f, t);
+        }
+        Ok(t)
+    }
+
+    /// The function type a function literal argument of a generic call
+    /// has once the call is solved in full ([`Settle::solve_fully`]), as
+    /// the parameter it's placed at gives it: with what its body gives
+    /// put in. `None` if it isn't such an argument.
+    pub(super) fn solved_literal_fn(
+        &mut self,
+        f: NodeId,
+        forced: bool,
+    ) -> Result<Option<TypeId>, Fact> {
+        let Some(call) =
+            (self.typing.parent(f)).filter(|&c| self.lib.tree.kind(c) == NodeKind::Call)
+        else {
+            return Ok(None);
+        };
+        let Some(solved) = self.solve_fully(call, forced)? else {
+            return Ok(None);
+        };
+        let Some(index) = solved.args.iter().position(|&a| a == f) else {
+            return Ok(None);
+        };
+        let TypeData::Fn { params, .. } = self.typing.types.get(solved.sig).clone() else {
+            return Ok(None);
+        };
+        let placed = self.placed_params(&params, &solved.args);
+        let Some(param) = params.get(placed[index]) else {
+            return Ok(None);
+        };
+        let types = &mut self.typing.types;
+        let ty = types.substitute(param.ty, &solved.formals, &solved.actuals);
+        let ty = self.non_null(ty);
+        Ok(self.typing.types.as_fn(ty))
     }
 
     /// A solved call's type: its function's result's pass type with the
@@ -218,43 +477,49 @@ impl Settle {
         if self.typing.types.is_known(t) || solved.has_type_args {
             return Ok(t);
         }
-        let Some(wanted) = self.wanted_type(solved.call, forced)? else {
-            self.literal_results_as_bounds(solved);
-            return Ok(self.solved_result(solved));
-        };
-        let TypeData::Fn { result, .. } = *self.typing.types.get(solved.sig) else {
-            return Ok(t);
-        };
-        let ret = self.typing.types.pass(result);
-        let wanted = match (self.typing.types.get(wanted), self.typing.types.get(ret)) {
-            (&TypeData::Nullable(inner), ret) if !matches!(ret, TypeData::Nullable(_)) => inner,
-            _ => wanted,
-        };
-        let bindings = self.wanted_bindings(ret, wanted, &solved.formals);
-        for (actual, b) in solved.actuals.iter_mut().zip(bindings) {
-            if *actual == UNKNOWN {
-                *actual = b;
+        if let Some(wanted) = self.wanted_type(solved.call, forced)? {
+            let TypeData::Fn { result, .. } = *self.typing.types.get(solved.sig) else {
+                return Ok(t);
+            };
+            let ret = self.typing.types.pass(result);
+            let wanted = match (self.typing.types.get(wanted), self.typing.types.get(ret)) {
+                (&TypeData::Nullable(inner), ret) if !matches!(ret, TypeData::Nullable(_)) => inner,
+                _ => wanted,
+            };
+            let bindings = self.wanted_bindings(ret, wanted, &solved.formals);
+            for (actual, b) in solved.actuals.iter_mut().zip(bindings) {
+                if *actual == UNKNOWN {
+                    *actual = b;
+                }
             }
         }
-        self.literal_results_as_bounds(solved);
+        self.infer_literals(solved, forced, false)?;
+        self.literal_results_as_bounds(solved, false);
         Ok(self.solved_result(solved))
     }
 
     /// Binds each type parameter still unknown that a function literal
     /// argument without a declared result would give, its parameter's
-    /// result, to its bound, as Kotlin Temper does: `ls.map { x => x * x
-    /// }`, with nothing wanted, is a `List<AnyValue>`, and the literal a
-    /// `fn (Int32): AnyValue` (notes/typing.md, "Function literals and
-    /// target typing").
-    fn literal_results_as_bounds(&mut self, solved: &mut Solved) {
+    /// result, to its bound, as Kotlin Temper does where the literal's
+    /// body doesn't give it ([`Settle::infer_literals`]): `ls.map { x => if
+    /// (x > 0) { 1 } else { "a" } }`, with nothing wanted, is a
+    /// `List<AnyValue>`, and the literal a `fn (Int32): AnyValue`
+    /// (notes/typing.md, "Function literals and target typing"). Not a
+    /// failure parameter, and with `open`, not one the literal's body may
+    /// still give ([`Settle::literal_formals`]).
+    fn literal_results_as_bounds(&mut self, solved: &mut Solved, open: bool) {
         if solved.has_type_args {
             return;
         }
+        let inferred = match open {
+            true => self.literal_formals(solved),
+            false => vec![false; solved.formals.len()],
+        };
         let TypeData::Fn { params, .. } = self.typing.types.get(solved.sig).clone() else {
             return;
         };
         let placed = self.placed_params(&params, &solved.args);
-        let mut open = vec![false; solved.formals.len()];
+        let mut results = vec![false; solved.formals.len()];
         for (&arg, &i) in solved.args.iter().zip(&placed) {
             let literal = self.lib.tree.kind(arg) == NodeKind::Fn && !self.declares_result(arg);
             let Some(param) = params.get(i).filter(|_| literal) else {
@@ -265,12 +530,14 @@ impl Settle {
                 continue;
             };
             for (k, &formal) in solved.formals.iter().enumerate() {
-                open[k] |= self.typing.types.mentions(result, &[formal]);
+                results[k] |= self.typing.types.mentions(result, &[formal]);
             }
         }
         let bounds = self.unsolved_as_bounds(solved);
         for (k, bound) in bounds.into_iter().enumerate() {
-            if open[k] && solved.actuals[k] == UNKNOWN && !solved.ambiguous[k] {
+            let fails = (self.typing.types).fails_with(solved.sig, &solved.formals[k..=k]);
+            let unsolved = solved.actuals[k] == UNKNOWN && !solved.ambiguous[k];
+            if results[k] && unsolved && !fails && !inferred[k] {
                 solved.actuals[k] = bound;
             }
         }
@@ -415,7 +682,7 @@ impl Settle {
                 }
             }
         }
-        self.literal_results_as_bounds(&mut solved);
+        self.literal_results_as_bounds(&mut solved, true);
         let types = &mut self.typing.types;
         Ok(Some(
             (params.iter())

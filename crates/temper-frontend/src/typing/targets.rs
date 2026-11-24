@@ -456,7 +456,8 @@ impl Settle {
     /// without a type takes the wanted function type's parameter in its
     /// place, or `AnyValue` past its last, and a function without a
     /// return type takes the wanted one's result, and whether it may
-    /// bubble.
+    /// bubble, where a generic call leaves them to the literal's body, as
+    /// the call's solution has them ([`Settle::solved_literal_fn`]).
     pub(super) fn literal_type(&mut self, f: NodeId, forced: bool) -> Result<TypeId, Fact> {
         let t = self.fn_type(f);
         // `doPure { … }`'s block, without a result type, gives its result.
@@ -503,6 +504,17 @@ impl Settle {
             .collect();
         let result = match out_type {
             Some(_) => result,
+            // What a generic call's solution gives where its place leaves
+            // it open, from the literal's body.
+            None if !self.typing.types.is_known(wanted_result) => {
+                match self.solved_literal_fn(f, forced)? {
+                    Some(solved) => match *self.typing.types.get(solved) {
+                        TypeData::Fn { result, .. } => result,
+                        _ => wanted_result,
+                    },
+                    None => wanted_result,
+                }
+            }
             None => wanted_result,
         };
         Ok(self.typing.types.intern(TypeData::Fn { params, result }))

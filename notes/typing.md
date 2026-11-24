@@ -421,8 +421,10 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   ([kotlin-differences.md](kotlin-differences.md#bugs-in-kotlin-temper)).
 - **A function literal binds by its declared types,** where it declares
   its result type, as Kotlin does, so `ls.map { (x): String => … }` is
-  a `List<String>`; one that doesn't isn't used. A type parameter that
-  nothing binds takes what the type wanted binds ("Inference", below).
+  a `List<String>`; one that doesn't binds by what its body gives, after
+  the rest ("Function literals' results from their bodies", below). A
+  type parameter that nothing binds takes what the type wanted binds
+  ("Inference", below).
 - **Builtin types' constructors** are solved the same way, from core's
   `constructor`, as `<K, V>(K, V) -> Pair<K, V>`, with their type
   parameters' bounds as core declares them, so `new Map<P, String>([])`
@@ -564,15 +566,13 @@ milestone 4's target typing slice; status in
   (Int32): Int32` is wanted is "Actual arguments do not match signature:
   (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32,
   String]", as for any `+`.
-- **A literal's result never binds** a generic callee's type parameter:
-  as Kotlin, one that nothing else binds (other arguments, type
-  arguments, or the type the call's place wants) binds to its bound, so
-  `let m = ls.map { x => x * 2 }` is a `List<AnyValue>`, the literal a
-  `fn (Int32): AnyValue`, and `.filter { n => n > 2 }` after it an
-  error (2026-11-06; before, tempest left it unknown). Binding it from
-  the literal's result, as Kotlin's comments plan, would reject
-  programs Kotlin accepts, as type parameters are invariant (`let ys:
-  List<AnyValue> = m`), so it waits for Kotlin.
+- **A literal's result binds** a generic callee's type parameter that
+  nothing else binds (other arguments, type arguments, or the type the
+  call's place wants), from its body, so `let m = ls.map { x => x * 2
+  }` is a `List<Int32>` (2026-11-24; "Function literals' results from
+  their bodies", below). Kotlin binds it to its bound, a `List<AnyValue>`,
+  as tempest did from 2026-11-06; so `let ys: List<AnyValue> = m` now
+  fails, as type parameters are invariant.
 - **Errors,** in Kotlin's words and at its positions: a literal without
   a declared return type whose result isn't the one wanted is "Expected
   subtype of Int32, but got String", at the result, where Kotlin's
@@ -615,7 +615,10 @@ milestone 4's target typing slice; status in
   `@inlineUnrealizedGoal` parameter, as `forEach`'s, and is "Expected
   function type, but got Function" elsewhere
   ([kotlin-differences.md](kotlin-differences.md#language-and-types)).
-- **Bubbling in a literal** without a declared return type: where the
+- **Bubbling in a literal** without a declared return type: where its
+  place is a generic call's failure parameter, the literal fails as its
+  body does, and so does the call ("Function literals' results from
+  their bodies", below). Elsewhere, where the
   function type wanted doesn't `throw Bubble`, what may bubble in its
   body is "Cannot bubble from a function without Bubble in its return
   type", as for a function that declares its return type ("What may
@@ -629,6 +632,59 @@ milestone 4's target typing slice; status in
   }` isn't reported yet, as `forEach` wants a `Void` result; Kotlin
   inlines it, so it's reported where the function around it doesn't
   `throw Bubble`, as in a `for … of` body.
+
+## Function literals' results from their bodies
+
+Decided 2026-11-24 (RFC 164 chunk 2d), for function literals passed as
+arguments only, not yet for functions in general. A literal without a
+declared result type, in a generic call (`typing/generic_calls.rs`),
+gives the callee's type parameters what its body gives:
+
+- **What it gives:** its result type, its body's value joined with what
+  each `return` from it gives (`literal_pass`), and whether anything in
+  it may fail, as "What may bubble" finds it (`literal_failure`):
+  `Bubble`, the only failure type for now; declared failure types will
+  join what each failing place fails with. So `ls.map { x => 10 / x }`
+  solves `O` to `Int32` and `E` to `Bubble`, and the call fails, so it
+  must be handled where it's called; `ls.map { x => x + 1 }` leaves `E`
+  unsolved, `Never<…>`, and can't fail.
+- **Which type parameters:** those in the result of the function type
+  the literal is placed at, `O` and `E` in `fn (T): O throws E`, but in
+  no such literal's parameters' types (`literal_formals`). So types
+  flow from the other arguments into literals' parameters and from
+  literals' bodies out to the call, never from one literal's body into
+  a literal's parameters.
+- **When, the cycle:** a literal's body needs its parameters' types,
+  which come from the call, and the call's solution needs the body.
+  The call is solved in order: type arguments, which win, else the
+  other arguments, then the type its place wants (as before), then each
+  literal's body, one at a time, in order, for what's still open; what
+  stays open takes its bound, as before. A literal's place, the type its
+  parameters and body see, comes from the first steps alone
+  (`wanted_literal_arg`), so typing a body never waits for itself. Its
+  own type is the full solution's (`literal_type`, `solve_fully`).
+  Whether a body may fail is worked out only once its expressions'
+  types are known: in typing's round it waits for them, as other types
+  do.
+- **What's declared wins:** type arguments, a declared result, and the
+  type the call's place wants. A literal whose result the place wants
+  is checked against that, as before: `let ys: List<String> = ls.map {
+  x => x + 1 }` is "Expected subtype of String, but got Int32". A result
+  outside its type parameter's bound isn't taken, so the literal is
+  checked against the bound: "Expected subtype of Listed<Int32>, but got
+  String". Kotlin Temper binds such a type parameter to its bound
+  ([kotlin-differences.md](kotlin-differences.md#changes-we-recommend-to-temper)).
+- **When it can't decide:** a result whose type can't be named, as an
+  `if` with an `Int32` and a `String`, or null, takes the bound, as
+  Kotlin does. A failure parameter the literal's parameters need too, as
+  `E` for `retry { again => … }` and `retry<E>(f: fn (Thunk<E>): Int
+  throws E)`, is `Never<…>`, and a literal that may fail there is
+  "Cannot infer E from this function literal, as its parameters' types
+  need it; declare its result type, with throws if it may fail", at the
+  literal.
+- **Not yet:** a call with type arguments doesn't type its literal
+  arguments at all (as before), and literals given to non-generic
+  functions, or not passed, still take their place's type or none.
 
 ## Object literals and target typing
 
@@ -1066,8 +1122,9 @@ arity doesn't count `this`. `Int.m` is `Int32.m`, as core's `Int` is
 
 As built (2026-11-23): a function that may fail has a result type, `T
 throws E` (`TypeData::Result { pass, fail }` in `types.rs`), as its
-function type's result; for now `E` is always `Bubble`, whatever `throws
-X` says. Results are internal (RFC 164's "results can't be held"):
+function type's result; for now `E` is a type parameter (a failure
+parameter, below) or else `Bubble`, whatever `throws X` says. Results
+are internal (RFC 164's "results can't be held"):
 
 - **Only a function's result:** a `TypeData::Fn`'s, a builtin type's
   method's (`CoreType::Throws`), or a builtin's (`Sig`'s `pass` and
@@ -1092,6 +1149,65 @@ It's its own variant rather than a generic type applied to a hidden base,
 as generic types are values' types (`AnyValue`, supertypes, members,
 joins) and results mustn't be. tmpl has the same type
 ([tmpl/types.md](tmpl/types.md#results)).
+
+**Why not a hidden `Result<T, E>` class (tried 2026-11-23).** The
+frontend was converted on a scratch basis: `Applied { base: RESULT, args:
+[pass, fail] }` on a builtin type no source can name. It passed the
+frontend tests and the Python and JS goldens, but it saved nothing:
+
+- **Lines:** 50 added, 52 removed. Five structural arms went (`mentions`,
+  `is_known`, `is_generic`, part of `substitute`, exports'
+  `check_inferred`). Four special cases came in: a hidden name in `TYPES`
+  and a filter for it in scope, a normalizing hook in `substitute`'s
+  generic arm (`Result<T, Never>` is `T`), and an `is_result` check.
+- **Generic machinery doesn't cover the rules.** The semantic rules stay
+  as they are: what fits `T` fits `T throws E`, a result fits no value's
+  type, unification through the pass type, and display as `T throws E`.
+  Generic subtyping ignores variance here, so `@out` buys nothing, and
+  the result-to-result rule had to stay too. `is_generic` started calling
+  every failing signature generic.
+- **Less robust.** The first test run leaked a result into `to_tmpl`'s
+  generic-type arm ("a builtin generic type"), so the check has to come
+  first. Each of the ~40 places outside `types.rs` that match `Applied`
+  would need the same audit by hand. Today, exhaustive matching makes the
+  compiler find every one.
+- **tmpl would cost more.** A `Nominal` needs a declaration: a hidden
+  class in core's fixture, which then shows up as an external in nearly
+  every program's `uses` (tests fail with `Bubble`). Backends' imports,
+  dependency walks (C++, Rust groups), and type naming would all see it
+  as a class. The ~16 structural arms it would remove (types.rs, nevers,
+  analysis, naming, backends' walks) are one line each. The seven
+  backends' "a result type as a value's" arms would become decl checks
+  that must come before their class handling.
+
+So the own variant stays: its special cases are the semantic rules, which
+either design needs.
+
+**Generic failure parameters on both (spike 2026-11-23).** `List.map`
+made generic on `E` worked the same on both, with the same code (8 settle
+expectations and 3 interpreter runs, identical). Only one function's
+arm differs (`fails_with`), and on the hidden class it must come before
+the generic-type arm, by hand. Generic `E` didn't decide between them:
+substitution, unification, and normalizing `Never` were already there
+in both. Nor did inferring literals' results and failures (2026-11-24):
+the same code passed the same tests on both, as it reads results only
+through `Types::result`, `pass`, `fail`, and unification.
+
+### Failure parameters
+
+A type parameter used after `throws` is a failure parameter, `E` in
+core's `Listed.map<O, E>(transform: fn (T): O throws E): List<O> throws
+E` (RFC 164; `Types::fails_with`). It's solved per call as any type
+parameter is, from what the arguments declare: a callback `fn (Int): Int
+throws Bubble` makes it `Bubble`, so the call may fail; a function
+literal without a declared result, from its body, so `ls.map { x => 10
+/ x }` fails at the call ("Function literals' results from their
+bodies", above). One that nothing solves is `Never<Bubble>`
+(`Types::no_failure`, `Never<Error>` once core has `Error`), which
+`Types::result` drops, so the call can't fail. Whether a call fails
+comes from its solved signature (`bubbles.rs`). tmpl has no failure
+parameters yet, so calls' type arguments leave them out, and backends
+don't take a failing callback to `map` yet (chunk 15).
 
 ## What may bubble
 
