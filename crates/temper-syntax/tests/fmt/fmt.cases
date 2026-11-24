@@ -279,10 +279,54 @@ let s = """
 
 === strings are never changed
 let s = "a  +  b";
-let t = "${ x }";
+let t = "${x}  ${y} ";
 --- formatted
 let s = "a  +  b";
-let t = "${ x }";
+let t = "${x}  ${y} ";
+
+=== interpolations on one line are tight, inside their own `{ }` too
+let a = "hi, ${name}";
+let b = "hi, ${ name }!";
+let c = "${   f( x )   }";
+let d = "${ "inner ${ x } and ${y}" } ${ z }";
+let e = "${ f({ a: 1 }) }";
+let g = "${ xs.map { x => x + 1 } }";
+let h = """
+    "Hello, ${ name }!
+;
+--- formatted
+let a = "hi, ${name}";
+let b = "hi, ${name}!";
+let c = "${f(x)}";
+let d = "${"inner ${x} and ${y}"} ${z}";
+let e = "${f({ a: 1 })}";
+let g = "${xs.map { x => x + 1 }}";
+let h = """
+    "Hello, ${name}!
+;
+
+=== interpolations over several lines keep their line breaks, tight at the ends
+let a = "${
+      name
+    }";
+let b = "${ f(
+  a, b
+) } and ${ g({
+  a: 1,
+}) }";
+let c = "sum: ${ x +
+y }";
+--- formatted
+let a = "${
+  name
+}";
+let b = "${f(
+  a, b
+)} and ${g({
+  a: 1,
+})}";
+let c = "sum: ${x +
+  y}";
 
 === code that doesn't parse is left alone
 let f(x: Int {

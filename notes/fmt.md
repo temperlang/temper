@@ -46,6 +46,7 @@ the dominant style; "lines changed" is what applying it changes.
 | `fn (` | one 92% | one | 8 |
 | Before `{` (but `({`, `${`) | one 100% | one | 0 |
 | Inside `{ }` on one line | one 97% (the rest: `{}`, `{Date}`) | one; `{}` as written | 34 |
+| Inside a string's `${ }` | of 2,931: none 97.1%, one 1.7%, over several lines 1.2% | none (Tom, 2026-11-24) | 48 |
 | After prefix operators and `@` | none 100% | none | 0 |
 | Runs of spaces elsewhere | 1 case | one space | 1 |
 | Before a trailing comment | one 84%, aligned 15% | keep as written | 0 |
@@ -62,9 +63,9 @@ the dominant style; "lines changed" is what applying it changes.
 | Multi-line `[ ]` lists | tall 99.8% | the same | (below) |
 | Block arguments | trailing block 97%, `fn` in `( )` 3% | not changed (that's meaning) | - |
 
-**`temper fmt` itself** (`--temper`, over copies) changes 602 of 81,110
-lines (0.7%, prose included): 67 in core and std (4 files), 114 in test
-programs, 136 in docs examples, and 1 to 119 in each library (Ordable
+**`temper fmt` itself** (`--temper`, over copies) changes 645 of 81,110
+lines (0.8%, prose included): 68 in core and std (4 files), 149 in test
+programs, 143 in docs examples, and 1 to 119 in each library (Ordable
 1, Argmas 16, Chromarite 19, Wherewith 57, Hrefine 73, Kelpto 119).
 Indenting every continuation line four spaces, and removing blank lines
 after `{` and before `}`, changed 895; Black-style wrapping at 100
@@ -75,6 +76,19 @@ library file; it leaves alone one deliberately broken test program and
 
 Notes on the numbers:
 
+- **Interpolations** are tight, `"hi, ${name}"`, as in Prettier's
+  template literals, Kotlin, and Python's f-strings, unlike `{ a: 1 }`
+  (Tom, 2026-11-24). By group: core+std 14 tight, 1 padded; tests 936,
+  42, and 30 over several lines; docs 77, 8 and 1; and the libraries
+  all tight but Wherewith's 3 over several lines (Argmas 189,
+  Chromarite 44, Hrefine 221, Kelpto 447, Ordable 29, Wherewith 889).
+  Tightening adds 43 changed lines (1 in core and std, 35 in tests, 7
+  in docs), none in the libraries. One over several lines
+  (`"${\n  a +\n    b\n}"`, almost always a line break right after
+  `${`) keeps its line breaks, its lines laid out by the usual rules
+  as in any bracket; only space on the `${` or `}` line, next to them,
+  goes (`${ f(\n  a\n) }` becomes `${f(\n  a\n)}`), so one rule
+  covers both.
 - **Line width:** there's none. It was dominated by data: Hrefine and
   Kelpto keep Unicode and entity tables on very long lines (up to 4,780
   columns), and in core and std only 8 lines were over 100 columns.
@@ -241,9 +255,9 @@ rule that the output with it doesn't have):
 
 | Group | Lines | `fmt` changes | List rules (data lists too) | Continuation indent |
 |---|---|---|---|---|
-| core+std | 4,594 | 66 | 6 (8) | 45 |
-| tests | 10,478 | 114 | 14 (86) | 0 |
-| docs (54 of 69 files whole) | 14,020 | 47 | 0 (0) | 32 |
+| core+std | 4,594 | 67 | 6 (8) | 45 |
+| tests | 10,478 | 149 | 14 (86) | 0 |
+| docs (55 of 70 files whole) | 14,133 | 47 | 0 (0) | 32 |
 | Argmas | 7,225 | 16 | 16 (23) | 0 |
 | Chromarite | 3,807 | 19 | 18 (188) | 0 |
 | Hrefine | 12,902 | 73 | 63 (590) | 8 |
@@ -404,7 +418,7 @@ items that must end their line, and data lists kept; `for` headers and
 aligned docs examples by the normal rules;
 continuation lines indented two spaces, four in any header, lines starting with `;` or `,` lined up with their statement,
 blank lines kept (runs collapsed; Tom's reviews of trial reformats,
-2026-11-24);
+2026-11-24); interpolations tight (`${x}`);
 golden cases (`tests/fmt/*.cases`),
 idempotence and tree-preservation tests over the repository's Temper
 files and randomly edited inputs; refusal for code that doesn't parse;

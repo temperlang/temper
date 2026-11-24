@@ -288,6 +288,7 @@ class Stats:
         self.changed: Counter = Counter()  # rule -> lines it would change
         self.samples: dict[str, list[str]] = defaultdict(list)
         self.lines = 0
+        self.hole_lines: dict[str, set] = {}  # lines with padded `${ }`, by file
 
     def add(self, item, choice, n=1):
         self.c[item][choice] += n
@@ -559,6 +560,31 @@ def spacing(s: Source, st: Stats, samples: int) -> None:
         st.changed[f"spacing: {k}"] += len(v)
 
 
+def holes(s: Source, st: Stats) -> None:
+    """Strings' `${ }` interpolations: tight (`${x}`), padded (`${ x }`),
+    one end padded, or over several lines."""
+    toks = [t for t in s.tokens if t.kind != "Space"]
+    btext = s.text.encode()
+    opens = []
+    for i, t in enumerate(toks):
+        if t.text == "${" and t.role == ("open", "DollarCurly"):
+            opens.append(i)
+        elif t.text == "}" and t.role == ("close", "DollarCurly") and opens:
+            j = opens.pop()
+            inner = btext[toks[j].end : toks[i - 1].end].decode() if i > j + 1 else ""
+            first = btext[toks[j].end : toks[j + 1].start].decode()
+            last = btext[toks[i - 1].end : t.start].decode()
+            if "\n" in inner or "\n" in last:
+                kind = "over several lines"
+            else:
+                kind = {(0, 0): "tight", (1, 1): "padded"}.get((len(first) > 0, len(last) > 0), "one end padded")
+            st.add("interpolations ${ }", kind)
+            if kind in ("padded", "one end padded"):
+                line = bisect.bisect_right(s.line_starts, t.start) - 1
+                st.changed["spacing: inside ${ } (tight)"] += 1 if line not in st.hole_lines.setdefault(s.name, set()) else 0
+                st.hole_lines[s.name].add(line)
+
+
 def blank_lines(s: Source, st: Stats) -> None:
     lines = lines_of(s)
     btext = s.text.encode()
@@ -743,6 +769,11 @@ def report(stats: dict[str, Stats]) -> None:
         n = sum(c.values())
         print(f"{item} ({n}): " + ", ".join(f"{k} {pct(v, n)}" for k, v in c.most_common(6)))
     print()
+    print("interpolations by group:")
+    for g, st in stats.items():
+        c = st.c["interpolations ${ }"]
+        print(f"  {g}: " + ", ".join(f"{k} {v}" for k, v in c.most_common()))
+    print()
     print("lines each rule would change:")
     for rule, n in sorted(total.changed.items()):
         print(f"  {rule}: {n} ({pct(n, total.lines)})")
@@ -773,6 +804,7 @@ def main() -> None:
         st = stats.setdefault(s.group, Stats())
         analyze(s, st, args.samples)
         spacing(s, st, args.samples)
+        holes(s, st)
         blank_lines(s, st)
         braces(s, st)
         calls(s, st, args.samples)

@@ -17,6 +17,15 @@ if(ok){go()}                    // before
 if (ok) { go() }                // after
 ```
 
+No space goes just inside a string's `${ }`, as in Kotlin, Python's
+f-strings, and JavaScript's template literals; one over several lines
+keeps its line breaks.
+
+```temper inert
+"hi, ${ name }, ${ f({ a: 1 }) }"   // before
+"hi, ${name}, ${f({ a: 1 })}"       // after
+```
+
 ## Indentation and continuations
 
 Each bracket level indents two spaces.

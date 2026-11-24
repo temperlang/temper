@@ -148,6 +148,13 @@ fn mutated_inputs_format_safely() {
             "\n\n}",
             " // x {\n",
             " // =\n",
+            // Interpolations, padded, over several lines, and nested.
+            "\"a ${ b } c\"",
+            "\"${\n  x\n}\"",
+            "\"${ f({ a: 1 }) }\"",
+            "\"${ \"${ x }\" }\"",
+            "${ ",
+            " }",
         ])
         .copied()
         .collect();

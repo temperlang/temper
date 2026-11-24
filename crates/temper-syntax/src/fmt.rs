@@ -39,10 +39,11 @@
 //!   `?.`, `..`, `::`, `<`/`>` of type arguments or label colons), after
 //!   `,` and `;` and type colons, around `{ }` contents, and between a
 //!   keyword like `if` or `fn` and `(`; none before `,`, `;` and type
-//!   colons, inside `( )` and `[ ]`, between a called name and `(`, or
-//!   after prefix operators and `@`. Runs of spaces become one. Space next
-//!   to comments, inside strings, and before `<` (which decides whether
-//!   it may be an angle bracket) is left as written.
+//!   colons, inside `( )` and `[ ]` and a string's `${x}`, between a
+//!   called name and `(`, or after prefix operators and `@`. Runs of
+//!   spaces become one. Space next to comments, inside strings, and
+//!   before `<` (which decides whether it may be an angle bracket) is
+//!   left as written.
 //! - **Lines:** no trailing space, blank lines as written but at most one
 //!   in a row, none at the start of a file, and one line break at its end.
 //! - **Lists** (arguments, parameters, list and object literals, type
@@ -1280,8 +1281,12 @@ impl<'a> Formatter<'a> {
         let prefix = is(ra, Role::Prefix)
             && a.kind == Punctuation
             && op(ra).is_some_and(|o| o.op_type() == OpType::Prefix);
+        let hole =
+            |r: Option<(Role, Operator)>, role: Role| is(r, role) && op(r) == Some(DollarCurly);
         // The first rule that applies decides; `None` keeps the space.
         let rules = [
+            // A string's `${x}`: none inside, unlike `{ a }`.
+            (hole(ra, Role::Open) || hole(rb, Role::Close), Some("")),
             // `,` and `;`: none before, one after, but before a closer.
             (is(rb, Role::Separator) && matches!(tb, "," | ";"), Some("")),
             (
@@ -1298,7 +1303,7 @@ impl<'a> Formatter<'a> {
                 is(rb, Role::Open) && tb == "(" && op(rb) == Some(Paren),
                 (a.kind == Word).then_some(if keyword { " " } else { "" }),
             ),
-            // `{ a }`, `f {`, but `({`, `{}` and `${x}` as written.
+            // `{ a }`, `f {`, but `({` and `{}` as written.
             (
                 is(rb, Role::Open) && tb == "{" && curly(rb),
                 (!opens(ta)).then_some(" "),
