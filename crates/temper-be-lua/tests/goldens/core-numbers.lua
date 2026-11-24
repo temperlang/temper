@@ -30,6 +30,7 @@ print(tostring(temper.float64_near(nan, nan)) .. " " .. tostring(temper.float64_
 print(tostring(temper.float64_near(inf, 1.0)) .. " " .. tostring(temper.float64_near(inf, ninf)) .. " " .. tostring(temper.float64_near(inf, 1.0, 0.0, 0.0)) .. " " .. tostring(temper.float64_near(inf, inf, 0.0, 0.0)) .. " " .. tostring(temper.float64_near(inf, 1.0, 1.0, inf)) .. " " .. tostring(temper.float64_near(1.0, ninf, 1.0, inf)))
 print(tostring(temper.float64_near(1.0, 1.5, nan, 1.0)) .. " " .. tostring(temper.float64_near(1.0, 1.5, 1.0, nan)) .. " " .. tostring(temper.float64_near(1.0, 1.0, nan, nan)) .. " " .. tostring(temper.float64_near(-0.0, 0.0, 0.0, 0.0)))
 print(tostring(temper.float64_near(1.0, 1.0 + 1e-10)) .. " " .. tostring(temper.float64_near(1.0, 1.1)) .. " " .. tostring(temper.float64_near(1.0, 1.1, 0.2)) .. " " .. tostring(temper.float64_near(0.0, 1e-300, 1e-9, 1e-12)))
+print(tostring(temper.float_eq(temper.float64_max(nan, 1.0), nan)) .. " " .. tostring(temper.float_eq(temper.float64_max(1.0, nan), nan)) .. " " .. tostring(temper.float_eq(temper.float64_min(nan, 1.0), nan)) .. " " .. tostring(temper.float_eq(temper.float64_min(1.0, nan), nan)))
 print(tostring(temper.listed_reducefromindex(digits, 0, -1, function(s, n) return temper.int32_add(s, 1) end)))
 
 return {}

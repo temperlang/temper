@@ -1,5 +1,6 @@
 import {
   clampInt64,
+  eqFloat64,
   float64Near,
   listedReduceFromIndex,
 } from "@temperlang/core";
@@ -32,4 +33,5 @@ console.log(`${float64Near(nan, nan)} ${float64Near(inf, inf)} ${float64Near(nin
 console.log(`${float64Near(inf, 1.0)} ${float64Near(inf, ninf)} ${float64Near(inf, 1.0, 0.0, 0.0)} ${float64Near(inf, inf, 0.0, 0.0)} ${float64Near(inf, 1.0, 1.0, inf)} ${float64Near(1.0, ninf, 1.0, inf)}`);
 console.log(`${float64Near(1.0, 1.5, nan, 1.0)} ${float64Near(1.0, 1.5, 1.0, nan)} ${float64Near(1.0, 1.0, nan, nan)} ${float64Near(-0.0, 0.0, 0.0, 0.0)}`);
 console.log(`${float64Near(1.0, 1.0 + 1e-10)} ${float64Near(1.0, 1.1)} ${float64Near(1.0, 1.1, 0.2)} ${float64Near(0.0, 1e-300, 1e-9, 1e-12)}`);
+console.log(`${eqFloat64(Math.max(nan, 1.0), nan)} ${eqFloat64(Math.max(1.0, nan), nan)} ${eqFloat64(Math.min(nan, 1.0), nan)} ${eqFloat64(Math.min(1.0, nan), nan)}`);
 console.log(listedReduceFromIndex(/** @type {number[]} */ (digits), 0, -1, (s, n) => (s + 1) | 0).toString());

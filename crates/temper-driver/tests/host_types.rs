@@ -9,7 +9,7 @@
 //! backend translates as its host's. The same holds for std's types that
 //! backends name, as `"std/collections.type Queue"`: each is a class or
 //! interface std declares `@connected`. Backends are those the registry
-//! has; the frontend lists none.
+//! has (none without default features); the frontend lists none.
 
 use std::path::{Path, PathBuf};
 use temper_driver::Registry;
@@ -132,8 +132,11 @@ fn host_types_are_connected_in_core() {
             }
         }
     }
-    assert!(checked >= 7, "{checked} backends' sources");
-    assert!(std_named >= 7, "{std_named} std types named");
+    // Without default features no backends are built in, and there's
+    // nothing to scan.
+    let backends = Registry::built_in().all().len();
+    assert_eq!(checked, backends, "{checked} backends' sources");
+    assert!(std_named >= backends, "{std_named} std types named");
     assert!(!scalars.is_empty());
     assert_eq!(wrong, Vec::<String>::new());
 }

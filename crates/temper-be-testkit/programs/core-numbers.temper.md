@@ -5,7 +5,9 @@ Core's number members where backends' hosts differ: `Int32`'s and
 they wrap; `Int32.signum`, at the extremes too, where `-this` wraps;
 and `Float64.near` on NaN, infinities, and signed zeros, which is true
 whenever `==` is, so NaN is near NaN, and else never for an infinity or
-within a NaN margin. And `reduceFromIndex`, which core writes in
+within a NaN margin; and `Float64.max` and `min`, NaN if either is,
+whichever side (LuaJIT's `math.max` and `min` drop a NaN first
+argument). And `reduceFromIndex`, which core writes in
 Temper, from an index inside, at, and past the end, which gives the
 initial value; and from a negative index, which fails as `digits[-1]`
 does, through each runtime's own list-get failure. The log is what the
@@ -39,6 +41,7 @@ interpreter gives.
     console.log("${inf.near(1.0)} ${inf.near(ninf)} ${inf.near(1.0, 0.0, 0.0)} ${inf.near(inf, 0.0, 0.0)} ${inf.near(1.0, 1.0, inf)} ${1.0.near(ninf, 1.0, inf)}");
     console.log("${1.0.near(1.5, nan, 1.0)} ${1.0.near(1.5, 1.0, nan)} ${1.0.near(1.0, nan, nan)} ${(-0.0).near(0.0, 0.0, 0.0)}");
     console.log("${1.0.near(1.0 + 1e-10)} ${1.0.near(1.1)} ${1.0.near(1.1, 0.2)} ${0.0.near(1e-300, 1e-9, 1e-12)}");
+    console.log("${nan.max(1.0) == nan} ${1.0.max(nan) == nan} ${nan.min(1.0) == nan} ${1.0.min(nan) == nan}");
 
 A negative index fails, ending the run, so it goes last. Its
 accumulator only counts, so a helper that wrongly starts at `-1`, at the
@@ -55,4 +58,5 @@ true true true false false
 false false false true false false
 false false true true
 true false true true
+true true true true
 ```

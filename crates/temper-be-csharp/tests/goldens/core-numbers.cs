@@ -36,6 +36,7 @@ public static class CoreNumbersGlobal
         console.Log((Float64.Near(inf, 1.0) ? "true" : "false") + " " + (Float64.Near(inf, ninf) ? "true" : "false") + " " + (Float64.Near(inf, 1.0, 0.0, 0.0) ? "true" : "false") + " " + (Float64.Near(inf, inf, 0.0, 0.0) ? "true" : "false") + " " + (Float64.Near(inf, 1.0, 1.0, inf) ? "true" : "false") + " " + (Float64.Near(1.0, ninf, 1.0, inf) ? "true" : "false"));
         console.Log((Float64.Near(1.0, 1.5, nan, 1.0) ? "true" : "false") + " " + (Float64.Near(1.0, 1.5, 1.0, nan) ? "true" : "false") + " " + (Float64.Near(1.0, 1.0, nan, nan) ? "true" : "false") + " " + (Float64.Near(-0.0, 0.0, 0.0, 0.0) ? "true" : "false"));
         console.Log((Float64.Near(1.0, 1.0 + 1e-10) ? "true" : "false") + " " + (Float64.Near(1.0, 1.1) ? "true" : "false") + " " + (Float64.Near(1.0, 1.1, 0.2) ? "true" : "false") + " " + (Float64.Near(0.0, 1e-300, 1e-9, 1e-12) ? "true" : "false"));
+        console.Log((Float64.Compare(Math.Max(nan, 1.0), nan) == 0 ? "true" : "false") + " " + (Float64.Compare(Math.Max(1.0, nan), nan) == 0 ? "true" : "false") + " " + (Float64.Compare(Math.Min(nan, 1.0), nan) == 0 ? "true" : "false") + " " + (Float64.Compare(Math.Min(1.0, nan), nan) == 0 ? "true" : "false"));
         console.Log(Listed.ReduceFromIndex(digits, 0, -1, (int s, int n) => s + 1).ToString(CultureInfo.InvariantCulture));
     }
 }

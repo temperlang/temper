@@ -206,6 +206,7 @@ patches that made them (other docs cite these numbers):
 | Lua | 0018 | std/net through a pluggable client (`temper.set_net_client`), by default LuaSocket's `socket.http`, on sockets that never block a turn |
 | Lua | 0020 | Let generators yield values and take their factory's arguments |
 | Lua | 0024 | `Int64`s on LuaJIT and 5.1: bitwise operators and shifts on the tables of halves; `int64_toint32` on every Lua; `toInt32Unsafe` signed; `toFloat64`, saturating `toInt64Unsafe`, and integer division by zero fixed; `countBetween` counting only its range without `utf8`; a 5.1 bit library that takes negatives |
+| Lua | 0025 | `float64_max` and `float64_min` NaN if either argument is, where LuaJIT's `math.max` and `math.min` drop a NaN first argument (so `Float64.near` with a NaN tolerance, too) |
 | Python | 0007 | Run async steps one at a time on one runner, settle promises by queueing waiters, and make promises awaitable from asyncio |
 | Python | 0013 | Annotate promises and std/net's futures as `TemperFuture`, so strict checkers take a bare `await` of them |
 | Rust | 0003 | Make `Promise` a std `Future`, so Rust code can `.await` Temper promises on any executor |

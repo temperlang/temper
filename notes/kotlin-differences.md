@@ -2708,7 +2708,9 @@ copied Kotlin's:
     makes NaN 0, and Python's rounds half to even; on LuaJIT and Lua
     5.1, Kotlin's Lua runtime misparses (`tonumber(s, 10)` takes
     `"2.0"`) and lets `float64_max` miss a NaN, so `types/string/read`
-    and `types/float/ops` run only on Lua 5.3 or later. (Its miscount
+    and `types/float/ops` run only on Lua 5.3 or later (`float64_max`
+    and `min` fixed since, runtime change 0025, so `types/float/ops`
+    runs everywhere). (Its miscount
     there, `countBetween` of the whole string without `utf8`, tempest's
     runtime fixes.)
 - **Divisions that can't fail, and maps, in the backends** (2026-11-03):

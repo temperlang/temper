@@ -809,8 +809,11 @@ function temper.float64_log1p(x)
 end
 
 function temper.float64_max(x, y)
-    if y ~= y then
-        -- Nan if either is nan
+    -- NaN if either is NaN. Lua 5.x's `math.max` keeps a NaN first
+    -- argument, but LuaJIT's drops it, so check both.
+    if x ~= x then
+        return x
+    elseif y ~= y then
         return y
     else
         return math_max(x, y)
@@ -818,8 +821,11 @@ function temper.float64_max(x, y)
 end
 
 function temper.float64_min(x, y)
-    if y ~= y then
-        -- Nan if either is nan
+    -- NaN if either is NaN. Lua 5.x's `math.min` keeps a NaN first
+    -- argument, but LuaJIT's drops it, so check both.
+    if x ~= x then
+        return x
+    elseif y ~= y then
         return y
     else
         return math_min(x, y)

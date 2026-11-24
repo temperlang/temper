@@ -74,6 +74,13 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 temper_core::float64::near(0.0, 1e-300, Some(1e-9), Some(1e-12))
             );
             println!(
+                "{} {} {} {}",
+                temper_core::float64::cmp(temper_core::float64::max(nan, 1.0), nan) == 0,
+                temper_core::float64::cmp(temper_core::float64::max(1.0, nan), nan) == 0,
+                temper_core::float64::cmp(temper_core::float64::min(nan, 1.0), nan) == 0,
+                temper_core::float64::cmp(temper_core::float64::min(1.0, nan), nan) == 0
+            );
+            println!(
                 "{}",
                 temper_core::listed::reduce_from_index(
                     &digits(),

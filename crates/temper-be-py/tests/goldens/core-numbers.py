@@ -2,7 +2,10 @@ from collections.abc import Sequence as _Sequence
 from temper_core import (
     LoggingConsole as _LoggingConsole,
     boolean_to_string as _boolean_to_string,
+    float64_max as _float64_max,
+    float64_min as _float64_min,
     float64_near as _float64_near,
+    float_eq as _float_eq,
     int64_add as _int64_add,
     int64_mul as _int64_mul,
     int64_negate as _int64_negate,
@@ -42,4 +45,5 @@ _console.log(f'{_boolean_to_string(_float64_near(_nan, _nan))} {_boolean_to_stri
 _console.log(f'{_boolean_to_string(_float64_near(_inf, 1.0))} {_boolean_to_string(_float64_near(_inf, _ninf))} {_boolean_to_string(_float64_near(_inf, 1.0, 0.0, 0.0))} {_boolean_to_string(_float64_near(_inf, _inf, 0.0, 0.0))} {_boolean_to_string(_float64_near(_inf, 1.0, 1.0, _inf))} {_boolean_to_string(_float64_near(1.0, _ninf, 1.0, _inf))}')
 _console.log(f'{_boolean_to_string(_float64_near(1.0, 1.5, _nan, 1.0))} {_boolean_to_string(_float64_near(1.0, 1.5, 1.0, _nan))} {_boolean_to_string(_float64_near(1.0, 1.0, _nan, _nan))} {_boolean_to_string(_float64_near(-0.0, 0.0, 0.0, 0.0))}')
 _console.log(f'{_boolean_to_string(_float64_near(1.0, 1.0 + 1e-10))} {_boolean_to_string(_float64_near(1.0, 1.1))} {_boolean_to_string(_float64_near(1.0, 1.1, 0.2))} {_boolean_to_string(_float64_near(0.0, 1e-300, 1e-9, 1e-12))}')
+_console.log(f'{_boolean_to_string(_float_eq(_float64_max(_nan, 1.0), _nan))} {_boolean_to_string(_float_eq(_float64_max(1.0, _nan), _nan))} {_boolean_to_string(_float_eq(_float64_min(_nan, 1.0), _nan))} {_boolean_to_string(_float_eq(_float64_min(1.0, _nan), _nan))}')
 _console.log(str(_listed_reduce_from_index(_digits, 0, -1, lambda s, n: _int_add(s, 1))))

@@ -655,18 +655,10 @@ fn luarc(libraries: &[&Path]) -> String {
 
 /// Tests that the runtime gets wrong on LuaJIT (and Lua 5.1), Kotlin's
 /// bugs, which these run on Lua 5.4 to show: LuaJIT's `tonumber(s, 10)`
-/// takes `"2.0"` and `"0x10"` (`String.toInt32()`, `types/string/read`);
-/// and `float64_max` and `float64_min` check only their second argument
-/// for NaN, where LuaJIT's `math.max(nan, 2)` gives 2
-/// (`types/float/ops`).
+/// takes `"2.0"` and `"0x10"` (`String.toInt32()`, `types/string/read`).
 /// The runtime's regex engine needs Lua 5.3's `utf8` too (`regex/match`
 /// and `regex/zero-advance`).
-const NEEDS_LUA53: [&str; 4] = [
-    "types-float-ops",
-    "types-string-read",
-    "regex-match",
-    "regex-zero-advance",
-];
+const NEEDS_LUA53: [&str; 3] = ["types-string-read", "regex-match", "regex-zero-advance"];
 
 /// Whether a library imports std's modules, which it then runs beside
 /// ([`kit::Case::needs_std`]; a run as tests needs only the runtime's

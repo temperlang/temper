@@ -537,6 +537,7 @@ fn built_in_std() {
 
 /// The checkout's `lib/std` builds as std, as a work root of its own,
 /// with every gap listed (`-v`), rather than beside the built-in std.
+#[cfg(feature = "py")]
 #[test]
 fn checkout_std_builds_as_std() {
     let std = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../lib/std");
