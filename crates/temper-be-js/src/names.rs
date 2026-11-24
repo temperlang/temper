@@ -84,6 +84,7 @@ pub const SPECIAL: &[&str] = &[
 pub const PRINTED: &[&str] = &[
     "Array",
     "BigInt",
+    "Error",
     "Infinity",
     "Map",
     "Math",
@@ -121,6 +122,8 @@ pub const PRINTED: &[&str] = &[
     "empty",
     "endTest",
     "eqFloat64",
+    "failureBase",
+    "failureCause",
     "float64Near",
     "float64ToInt32",
     "float64ToInt32Unsafe",
@@ -194,6 +197,7 @@ pub const PRINTED: &[&str] = &[
     "stringToInt32",
     "stringToInt64",
     "undefined",
+    "withCause",
 ];
 
 fn case(_: DeclKind, _exported: bool) -> Case {
@@ -231,6 +235,9 @@ pub const RULES: NamingRules = NamingRules {
     modules_share_names: false,
     failure_suffix: None,
     failure_base: None,
+    // `Error`'s own properties, which mean something else there: a
+    // failure's field `name` is `name_`, as `name` is its type's name.
+    failure_member_reserved: &["cause", "name", "stack"],
 };
 
 /// A module's file name, without `.js`: the library's name with `_` for

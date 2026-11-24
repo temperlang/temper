@@ -1,0 +1,11 @@
+{
+    "name": "host-failures-cause",
+    "type": "module",
+    "exports": {
+        "./host_failures_cause": "./host_failures_cause.js",
+        ".": "./index.js"
+    },
+    "dependencies": {
+        "@temperlang/core": "0.0.0-alpha.0.0"
+    }
+}

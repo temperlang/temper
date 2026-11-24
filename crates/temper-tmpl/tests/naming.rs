@@ -79,6 +79,7 @@ const RULES: NamingRules = NamingRules {
     modules_share_names: false,
     failure_suffix: None,
     failure_base: None,
+    failure_member_reserved: &[],
 };
 
 const PROGRAM: &str = "tmpl 1 model 1 library t 0.0.0
@@ -582,5 +583,55 @@ module t#0 {{
     assert_eq!(
         (names.get(DeclId(1)), names.get(DeclId(3))),
         ("TError", "Error")
+    );
+}
+
+/// Under `failure_member_reserved`, as JS's rules have it, a failure
+/// type's member named as one of the target's exception's own properties
+/// is escaped, as `name_`, and another class's member of that name isn't.
+#[test]
+fn failure_members_avoid_the_exceptions_own() {
+    let rules = NamingRules {
+        case: |_, _| Case::Keep,
+        failure_member_reserved: &["name"],
+        ..RULES
+    };
+    let p = text::read(
+        "tmpl 1 model 1 library t 0.0.0
+
+uses `temper-core`#10 0.1.0 {
+  interface Error#11 {
+    connected get message#12(): String;
+    connected get cause#13(): Error#11?;
+  }
+}
+
+module t#0 {
+  export failureBase interface ~TError#1 extends Error#11 {}
+
+  export class NotFound#2 extends ~TError#1 {
+    let name#4: String;
+    constructor constructor#5(): NotFound#2 {
+      this.name#4 = \"x\";
+    }
+  }
+
+  export class Other#3 {
+    let name#6: String;
+    constructor constructor#7(): Other#3 {
+      this.name#6 = \"y\";
+    }
+  }
+
+  init {}
+}
+",
+    )
+    .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(validate(&p, &Profile::full()), []);
+    let names = assign(&p, &rules);
+    assert_eq!(
+        (names.get(DeclId(4)), names.get(DeclId(6))),
+        ("name_", "name")
     );
 }

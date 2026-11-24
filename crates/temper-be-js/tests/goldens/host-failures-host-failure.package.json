@@ -1,0 +1,11 @@
+{
+    "name": "host-failures-host-failure",
+    "type": "module",
+    "exports": {
+        "./host_failures_host_failure": "./host_failures_host_failure.js",
+        ".": "./index.js"
+    },
+    "dependencies": {
+        "@temperlang/core": "0.0.0-alpha.0.0"
+    }
+}

@@ -1,8 +1,8 @@
 // @ts-check
 
 // A specification: `NotFound` is the library's own failure class, from
-// its main module, as the JS backend will name it.
-import { NotFound } from "./host-failures.js";
+// its main module, as the JS backend names it.
+import { NotFound } from "./host_failures.js";
 
 /**
  * @param {string} key

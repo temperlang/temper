@@ -37,7 +37,11 @@
 //! else (a panic, a plain `Error`; a host error), as host code
 //! (`_connected.js`) does unless it throws a `Bubble` or calls
 //! `bubble()`, and `orelse panic()` panics with the bubble as its
-//! `cause`; and generics, with JSDoc's `@template`
+//! `cause`; declared failures (RFC 164) as classes extending JS's `Error`
+//! under each library's base, `throw` as JS's, with the standard `cause`
+//! in a handler, and handlers that rethrow all but what their bodies may
+//! fail with, by `instanceof` (`translate::classes` and
+//! notes/tmpl/nodes.md, "Declared failures", say how); and generics, with JSDoc's `@template`
 //! (`{Named} T` for a bound), and core's lists as arrays (a `List` or
 //! `Listed` frozen and `readonly T[]` for TypeScript, cast to `T[]` for
 //! the runtime's helpers, where Kotlin's types don't check), maps as
@@ -187,8 +191,6 @@ pub fn translate_with_source_maps(
 }
 
 fn generate(p: &Program, variant: &Variant, maps: Option<&str>) -> Result<Vec<OutFile>, NotYet> {
-    // Declared failures, not yet (RFC 164).
-    temper_tmpl::failures::not_yet(p).map_err(|what| NotYet { what })?;
     // Type-only errors run as written, or fail where they are
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);

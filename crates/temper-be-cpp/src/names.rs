@@ -200,6 +200,7 @@ pub const RULES: NamingRules = NamingRules {
     modules_share_names: true,
     failure_suffix: None,
     failure_base: None,
+    failure_member_reserved: &[],
 };
 
 /// Whether C++ reserves a name for its implementation: one with `__`, or

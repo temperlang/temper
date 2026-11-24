@@ -705,7 +705,7 @@ then).
 
 RFC 164's failure types, beside `Bubble`, which stays as it was
 ([types.md](types.md#results); typing.md, "Declared failures"). Python,
-Java, Rust, and C++ have them (below); each other backend says "not yet in the … backend:
+Java, Rust, C++, and JS have them (below); each other backend says "not yet in the … backend:
 declared failures: …" for a program that uses them
 (`temper_tmpl::failures::not_yet`), and a program that uses only
 `Bubble` is unchanged, node for node.
@@ -836,6 +836,29 @@ beside a bubble, a lambda body that jumps out, a failing call where
 nothing can go before it, local function groups that fail, `orelse
 panic()` naming a declared failure as the panic's cause, and failure
 parameters.
+
+**In JS** (chunk 11): classes extending JS's `Error`, natively rather
+than through the runtime's `type()` mixin, so `instanceof`, `stack`,
+`name`, and `message` work for hosts: the base is `class FailuresError
+extends Error {}` followed by `failureBase(FailuresError)`, which gives
+its instances the runtime's marker symbol (`isFailure`) and `name`, the
+class's own; a sealed failure interface is a class under it, never made
+itself, and failure classes extend the one failure type above them
+(other supertypes, and a failure interface's abstract members, are not
+yet). `message` is a getter, the class's own or the generated one,
+over `Error`'s, so it's read when asked, after the fields are set; a
+failure type's members named `name`, `stack`, or `cause` are escaped
+(`name_`, by `NamingRules::failure_member_reserved`). `cause` is
+`failureCause(e)`, the standard `cause` where it's a failure. `Throw`
+is `throw`, `throw withCause(x, cause)` in a handler (keeps a cause it
+has, never itself or a loop; the `{ cause }` option can't go through a
+generated constructor), and where JS needs a value, `(() => { throw x;
+})()`. `OrElse` and `Catch` are `try`/`catch` rethrowing all but what
+the body may fail with: `if (!(isBubble(e$) || e$ instanceof NotFound))
+throw e$;`, a `catch`'s binding the variable, so TypeScript narrows it
+(not yet beside a bubble, which it can't). A `~caught` read after a
+jumping fallback is cast to its failure type. A function failing with
+a failure type says so with JSDoc's `@throws`.
 
 Validator rules: T5 lets a signature fail with a failure type or a type
 parameter; F3 marks every `Throw`; F4 checks the failure's type where it

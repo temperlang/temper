@@ -14,9 +14,10 @@
 //! of divisions that can't fail and maps (`temper_be_testkit::DIVISIONS`),
 //! of labeled loops' jumps and classes declared in functions
 //! (`temper_be_testkit::LOOPS_AND_CLASSES`), and of generators, `async`,
-//! and `await`, as `function*`s (`temper_be_testkit::ASYNC`),
-//! and this crate's own programs (`tests/programs/`): `hoisting`, for what JS
-//! writes as statements before the expression they're in.
+//! and `await`, as `function*`s (`temper_be_testkit::ASYNC`), and
+//! declared failures, the testkit's specifications `failures` and
+//! `host-failures` ([`SPECS`]), and this crate's own programs
+//! (`tests/programs/`, [`OWN`]).
 //!
 //! - `goldens`: each program's generated package, laid out as Kotlin's,
 //!   with its root module's `.internal.js` matching the golden in
@@ -57,7 +58,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs};
-use temper_be_js::{JS, OutFile, translate, translate_with_source_maps};
+use temper_be_js::{JS, OutFile, names, translate, translate_with_source_maps};
 use temper_be_testkit::{self as kit, Case, Goldens};
 use temper_tmpl::source_map::{Segment, decode_mappings};
 
@@ -82,12 +83,14 @@ fn cases() -> Vec<Case> {
         &kit::NET[..],
     ]
     .concat();
-    let mut cases = kit::cases_with("js", &kit::PROGRAMS, &tests);
+    let programs = [&kit::PROGRAMS[..], &SPECS[..]].concat();
+    let mut cases = kit::cases_with("js", &programs, &tests);
+    for case in &mut cases {
+        rename_host_code(case);
+    }
     // This crate's own programs, in `tests/programs/`.
     let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/programs");
-    // A list, so more may follow.
-    #[allow(clippy::single_element_loop)]
-    for name in ["hoisting"] {
+    for name in OWN {
         let path = dir.join(format!("{name}.temper.md"));
         let text = fs::read_to_string(&path).unwrap();
         cases.push(Case {
@@ -107,6 +110,33 @@ fn cases() -> Vec<Case> {
         });
     }
     cases
+}
+
+/// The testkit's specifications (`kit::SPECS`) JS runs, as Python, Java,
+/// Rust, and C++ do; the other backends don't yet.
+const SPECS: [&str; 2] = ["failures", "host-failures"];
+
+/// This crate's own programs, in `tests/programs/`: `hoisting`, for what
+/// JS writes as statements before the expression they're in, and
+/// `js-failures`, declared failures as JS callers catch them, with host
+/// code that does (`tests/host/failures.mjs`).
+const OWN: [&str; 2] = ["hoisting", "js-failures"];
+
+/// A run of a program in sections (`host-failures-cause`, of
+/// `host-failures`), a library of its own, with the program's host code
+/// importing from that library's module (`./host_failures_cause.js`).
+fn rename_host_code(case: &mut Case) {
+    let Some(program) = case.dir.file_name().and_then(|f| f.to_str()) else {
+        return;
+    };
+    if case.host_files.is_empty() || program == case.library {
+        return;
+    }
+    let from = format!("\"./{}.js\"", names::module_file(program));
+    let to = format!("\"./{}.js\"", names::module_file(&case.library));
+    for (_, text) in &mut case.host_files {
+        *text = text.replace(&from, &to);
+    }
 }
 
 /// The lines of a program's one log block.
@@ -416,6 +446,11 @@ fn describe<'a>(case: &'a Case, module: &'a str, map: &Map) -> (String, Vec<Stri
                     let auto_eq = (temper.split(['(', ' ', '<']).next()).is_some_and(|c| {
                         !c.is_empty() && js.starts_with(&format!("if (other instanceof {c})"))
                     });
+                    // A `catch`'s binding, declared where the fallback
+                    // reads it, at its name: `const e = …` on `e)`.
+                    let binding = (js.strip_prefix("const "))
+                        .and_then(|rest| rest.split(' ').next())
+                        .is_some_and(|name| temper.starts_with(&format!("{name})")));
                     // A compiler-made local's type.
                     let local_doc = js.starts_with("/**") && compiler_local(documented, temper);
                     // A `when`'s arm, `??`, `?.`, an `if` value, an
@@ -446,6 +481,7 @@ fn describe<'a>(case: &'a Case, module: &'a str, map: &Map) -> (String, Vec<Stri
                         || class_doc
                         || auto_eq
                         || local_doc
+                        || binding
                         || arm
                         || default
                         || for_each
@@ -791,6 +827,41 @@ fn host_interop(node: &str, root: &Path, logged: &[String], failures: &mut Vec<S
     script
 }
 
+/// `tests/host/failures.mjs`, host code that catches `js-failures`'
+/// declared failures by their own types, the library's base, a sealed
+/// interface's, and `Error`, reads their fields, messages, names, stacks,
+/// and causes, and lets a panic pass a `catch` that checks the type,
+/// beside its package in `root`. Gives its path, for tsc to check.
+fn failures_interop(
+    node: &str,
+    root: &Path,
+    logged: &[String],
+    failures: &mut Vec<String>,
+) -> PathBuf {
+    let script = root.join("failures.mjs");
+    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/failures.mjs");
+    fs::copy(source, &script).unwrap();
+    let run = Command::new(node).arg(&script).output().unwrap();
+    let expected: Vec<String> = (logged.iter().cloned())
+        .chain(
+            [
+                "NotFound z: not found (key: z)",
+                "base true, Error true, name NotFound, NotFound: not found (key: y)",
+                "sign BadSign: bad sign (text: x)",
+                "sign EmptyText: no text",
+                "LookupFailed port lookup failed (name: port), caused by NotFound not found (key: port)",
+                "made before lookup failed (name: early), caused by not found (key: early)",
+                "thrown again lookup failed (name: first), caused by not found (key: first)",
+                "stack NotFound: not found (key: w), at lookup",
+                "panic passes, false",
+            ]
+            .map(String::from),
+        )
+        .collect();
+    kit::check_log(failures, "failures interop", &run, &expected);
+    script
+}
+
 /// Runs a package's tests, as Kotlin's `RunJs` does with Mocha, with
 /// Node's test runner, as `temper test -b js` runs it (`tools.rs`), its
 /// failures, from its JUnit reporter, compared with its
@@ -921,6 +992,14 @@ fn runs() {
             );
             if case.key == "async-turns" {
                 checked.push(host_interop(&node, &root, &case.expected, &mut failures));
+            }
+            if case.key == "js-failures" {
+                checked.push(failures_interop(
+                    &node,
+                    &root,
+                    &case.expected,
+                    &mut failures,
+                ));
             }
         }
         failures.extend(stack_trace(&node, &out));

@@ -141,6 +141,12 @@ pub struct NamingRules {
     /// type is its `Error` (`wherewith::Error`, as `serde_json::Error`).
     /// `None` elsewhere.
     pub failure_base: Option<&'static str>,
+    /// Names a failure type's members may not take, beside
+    /// [`member_reserved`](Self::member_reserved)'s: the target's own
+    /// exception's properties that mean something else there, as JS's
+    /// `Error` has `name` (the type's name), `stack`, and `cause`, so a
+    /// failure's field `name` is `name_` in JS. Empty elsewhere.
+    pub failure_member_reserved: &'static [&'static str],
 }
 
 /// Output names, by [`DeclId`].
@@ -1003,7 +1009,19 @@ fn name_module(
                 let reserved = [reserved, local_reserved];
                 name_function(p, rules, reserved, item, &HashSet::new(), map)
             }
-            Node::Class { members, .. } | Node::Interface { members, .. } => {
+            Node::Class { decl, members } | Node::Interface { decl, members } => {
+                // A failure type's, also not as its target's exception's.
+                let failure = !rules.failure_member_reserved.is_empty()
+                    && crate::failures::is_below_root(p, decl);
+                let mut failure_reserved;
+                let member_reserved = match failure {
+                    true => {
+                        failure_reserved = member_reserved.clone();
+                        failure_reserved.extend(rules.failure_member_reserved.iter().copied());
+                        &failure_reserved
+                    }
+                    false => member_reserved,
+                };
                 name_members(p, rules, member_reserved, p.nodes.list(members), map);
                 for &member in p.nodes.list(members) {
                     if let Node::Method { .. }

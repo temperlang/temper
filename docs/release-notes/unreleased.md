@@ -522,7 +522,7 @@ declared failures RFC 164 proposes, so they can't name a variable,
 function, parameter, or member, though a name after a `.`, as in
 `promise.catch`, still reads as one. The syntax parses, is type
 checked, and runs on the interpreter (`temper run -b interp`) and in
-Python, Java, Rust, and C++, where no other backend translates it yet (each says
+Python, Java, Rust, C++, and JS, where no other backend translates it yet (each says
 "not yet … declared failures"), and `error case` is reported as not
 supported yet. In Python, a library's failure types are exception
 classes under its own base, as `WherewithError(Failure, Exception)`
@@ -543,7 +543,13 @@ a panic. In C++, a function that fails returns
 C++23, the runtime's C++14 shim before), and each failure class is a
 struct below the library's base, as `WherewithError`, which is the
 runtime's `temper::core::Failure`, a `std::exception` whose `what()` is
-the message, with `get_cause()`; failures are values, never thrown. A failure's `message` is its type's own getter's, or else its
+the message, with `get_cause()`; failures are values, never thrown. In
+JS, they're classes under the library's own base, as `WherewithError
+extends Error`, so host code catches them with `instanceof`, by their
+own types or as any `Error`; `message` is the message, `name` the
+type's name (a failure's own member named `name`, `stack`, or `cause`
+is `name_`, and so on, in JS), the cause the standard `cause`, and
+functions say what they may throw with JSDoc's `@throws`. A failure's `message` is its type's own getter's, or else its
 type's name and public fields, as `not found (key: y)`; a failure thrown
 while handling another has that one as its `cause`; and one nothing
 handles ends the run saying its message, where it was thrown, and its

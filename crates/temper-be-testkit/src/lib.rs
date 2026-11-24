@@ -356,7 +356,7 @@ pub const HOST_CODE: [&str; 3] = ["host-error-causes", "host-error-tests", "host
 /// laid out as [`HOST_CODE`]'s. Each says what it assumes of what's still
 /// open. Once the interpreter runs one, it joins [`INTERP_SPECS`]; once
 /// tmpl does, [`TMPL_SPECS`]; a backend that runs one lists it with its
-/// shared programs, as C++, Java, Python, and Rust list `failures` and
+/// shared programs, as C++, Java, JS, Python, and Rust list `failures` and
 /// `host-failures` ([`cases`] takes either), the others still pending;
 /// and once every backend does, it joins [`PROGRAMS`].
 pub const SPECS: [&str; 4] = [

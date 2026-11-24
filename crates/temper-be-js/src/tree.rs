@@ -195,6 +195,12 @@ pub enum Expr {
     Assign(&'static str, Box<Expr>, Box<Expr>),
     /// `yield value`, or a bare `yield`: in a `function*`.
     Yield(Option<Box<Expr>>),
+    /// `throw value`, a declared failure's: a `throw` statement as an
+    /// expression statement's, an assignment's value, or a `return`'s
+    /// (code after it, which JS never reaches, left out), and elsewhere,
+    /// where JS has no `throw` expression, an arrow function called at
+    /// once, `(() => { throw value; })()`.
+    Throw(Box<Expr>),
 }
 
 impl Expr {
@@ -238,7 +244,7 @@ impl Expr {
             | Expr::This
             | Expr::Cast(..)
             | Expr::Array(_) => ATOM,
-            Expr::New(..) => CALL,
+            Expr::New(..) | Expr::Throw(..) => CALL,
             Expr::Call(..) | Expr::Member(..) | Expr::Index(..) => CALL,
             Expr::Assign(..) | Expr::Yield(..) => ARROW,
             Expr::Bin(op, ..) => op.prec(),
@@ -299,11 +305,16 @@ pub enum Stmt {
     },
     Break(Option<String>),
     Continue(Option<String>),
-    /// `try { … } catch (e$) { if (!isBubble(e$)) throw e$; … }`:
-    /// Temper's `orelse`, whose catch takes only a bubble and rethrows
-    /// anything else (a panic, a host error), which keeps what it said.
+    /// `try { … } catch (var) { if (!caught) throw var; … }`, where
+    /// `caught` says whether `var` is what a handler catches, as
+    /// `isBubble(e$)` for `orelse`'s bubble or `e instanceof NotFound` for
+    /// a declared failure: Temper's `orelse` and `catch`, which take only
+    /// what their bodies may fail with and rethrow anything else (a panic,
+    /// a host error), which keeps what it said.
     Try {
         body: Vec<Stmt>,
+        var: String,
+        caught: Expr,
         catch: Vec<Stmt>,
     },
     Return(Option<Expr>),
@@ -546,6 +557,7 @@ pub fn expr(e: &Expr, min: u8) -> String {
         Expr::Assign(op, target, value) => {
             format!("{} {op} {}", expr(target, CALL), expr(value, ARROW))
         }
+        Expr::Throw(e) => format!("(() => {{ throw {}; }})()", expr(e, TOP)),
         Expr::Yield(None) => "yield".into(),
         Expr::Yield(Some(value)) => format!("yield {}", expr(value, ARROW)),
         Expr::Member(obj, name) => {
@@ -709,6 +721,15 @@ fn stmt_at(out: &mut MappedText, s: &Stmt, depth: usize, span: Option<Span>) {
             out.mark(*span);
             stmt_at(out, s, depth, Some(*span));
         }
+        // A declared failure's `throw`, where code after it is never run.
+        Stmt::Expr(Expr::Throw(e))
+        | Stmt::Assign {
+            value: Expr::Throw(e),
+            ..
+        }
+        | Stmt::Return(Some(Expr::Throw(e))) => {
+            let _ = writeln!(out, "throw {};", expr(e, TOP));
+        }
         Stmt::Expr(e) => {
             // An expression statement can't start with `{` or `function`;
             // none of these do.
@@ -802,12 +823,18 @@ fn stmt_at(out: &mut MappedText, s: &Stmt, depth: usize, span: Option<Span>) {
             block(out, body, depth);
             let _ = writeln!(out, " while ({});", expr(cond, TOP));
         }
-        Stmt::Try { body, catch } => {
+        Stmt::Try {
+            body,
+            var,
+            caught,
+            catch,
+        } => {
             out.push_str("try ");
             block(out, body, depth);
-            out.push_str(" catch (e$) {\n");
+            let _ = writeln!(out, " catch ({var}) {{");
             indent(out, depth + 1);
-            out.push_str("if (!isBubble(e$)) throw e$;\n");
+            let caught = expr(&Expr::unary(Unary::Not, caught.clone()), TOP);
+            let _ = writeln!(out, "if ({caught}) throw {var};");
             for s in catch {
                 stmt(out, s, depth + 1);
             }
@@ -853,7 +880,7 @@ fn stmt_at(out: &mut MappedText, s: &Stmt, depth: usize, span: Option<Span>) {
             remark(out);
             let names: Vec<&str> = (params.iter())
                 .map(|(n, _)| param_name(n))
-                .filter(|n| *n != "@template")
+                .filter(|n| !matches!(*n, "@template" | "@throws"))
                 .collect();
             let _ = write!(out, "({}) ", names.join(", "));
             block(out, body, depth);
@@ -961,9 +988,11 @@ fn jsdoc(
     result: &Option<String>,
     span: Option<Span>,
 ) {
-    // A type parameter is a parameter named `@template`, first.
+    // A type parameter is a parameter named `@template`, first, and the
+    // declared failure it throws one named `@throws`, last.
     let mut tags: Vec<String> = params
         .iter()
+        .filter(|(n, _)| n != "@throws")
         .map(|(n, t)| match n.as_str() {
             "@template" => format!("@template {t}"),
             _ => format!("@param {{{t}}} {n}"),
@@ -971,6 +1000,9 @@ fn jsdoc(
         .collect();
     if let Some(r) = result {
         tags.push(format!("@returns {{{r}}}"));
+    }
+    for (_, t) in params.iter().filter(|(n, _)| n == "@throws") {
+        tags.push(format!("@throws {{{t}}}"));
     }
     match tags.as_slice() {
         [] => return,
@@ -1042,7 +1074,7 @@ fn member(out: &mut MappedText, m: &Member, depth: usize) {
             out.push_str(name);
             let names: Vec<&str> = (params.iter())
                 .map(|(n, _)| param_name(n))
-                .filter(|n| *n != "@template")
+                .filter(|n| !matches!(*n, "@template" | "@throws"))
                 .collect();
             let _ = write!(out, "({}) ", names.join(", "));
             block(out, body, depth);

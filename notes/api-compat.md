@@ -128,6 +128,14 @@ effects. File names keep Temper's directory names.
   module `let`, `Class$name`, which the init block outside the class sets.)
 - Generics only in JSDoc; nullable is `T | null`; failure throws `Bubble`,
   an `Error`; promises are native; async uses the runtime's adapter.
+- Declared failures (RFC 164, in progress): each failure type is a class
+  under the library's own base, `<Lib>Error extends Error` (natively, not
+  through `type()`), a sealed one abstract between, so host code catches
+  them with `instanceof`; `message` is a getter, `name` the class's name
+  (set by the runtime's `failureBase`, beside an invisible marker
+  symbol), the cause the standard `cause`, and a function failing with
+  one says so with JSDoc's `@throws`. A failure type's own member named
+  `name`, `stack`, or `cause` takes a `_` (`name_`).
 
 **Naming.** Public names unchanged (camelCase). Reserved words get `_`,
 including on members (`else_`, `if_`, `class catch_`), and names ending in `_`

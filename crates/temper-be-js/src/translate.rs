@@ -440,6 +440,9 @@ impl<'a> Translator<'a> {
                     }
                     // `empty()`'s, as the runtime declares it.
                     "core.type Empty" => "{}".to_string(),
+                    // Core's root of declared failures, which each
+                    // library's base failure class extends.
+                    "core.type Error" => "Error".to_string(),
                     _ if matches!(
                         self.p.decls.get(decl).kind,
                         DeclKind::Class | DeclKind::Interface
@@ -655,7 +658,7 @@ impl<'a> Translator<'a> {
                             let name = self.name(target);
                             let export = self.exported(target);
                             let span = p.nodes.span(s);
-                            if let Node::OrElse { body: b, fallback } = p.nodes.get(value) {
+                            if is_handler(p, value) {
                                 // Declared, then assigned in a `try`, as Kotlin's.
                                 let decl = Stmt::Decl {
                                     export,
@@ -666,7 +669,7 @@ impl<'a> Translator<'a> {
                                 };
                                 body.push(decl.spanned(span));
                                 let target = Expr::name(name);
-                                let made = self.try_assign(target, b, fallback)?;
+                                let made = self.try_assign(target, value)?;
                                 body.push(made.spanned(span));
                                 continue;
                             }
@@ -730,6 +733,7 @@ impl<'a> Translator<'a> {
             Some(sig) if sig.pass != TypeId::VOID => Some(self.ty(sig.pass)?),
             _ => None,
         };
+        ps.extend(self.throws(decl)?);
         self.begin(item);
         let mut body = Vec::new();
         let defaults = match p.nodes.get(item) {
@@ -892,6 +896,21 @@ impl<'a> Translator<'a> {
         .spanned(p.nodes.span(item)))
     }
 
+    /// The declared failure type a function or method fails with, for
+    /// JSDoc's `@throws`, as a parameter named `@throws` the printer takes
+    /// for one; nothing for one that bubbles, or fails with a type
+    /// parameter.
+    fn throws(&mut self, decl: DeclId) -> R<Option<(String, String)>> {
+        let p = self.p;
+        let root = temper_tmpl::failures::root(p);
+        match p.signature(decl).and_then(|s| s.fail) {
+            Some(fail) if temper_tmpl::failures::is_failure_type(p, root, fail) => {
+                Ok(Some(("@throws".to_string(), self.ty(fail)?)))
+            }
+            _ => Ok(None),
+        }
+    }
+
     /// A function's or method's parameters with their types, its result's
     /// type, if not `Void` (or a constructor's), and its body.
     #[allow(clippy::type_complexity)]
@@ -912,6 +931,7 @@ impl<'a> Translator<'a> {
             Some(sig) if sig.pass != TypeId::VOID => Some(self.ty(sig.pass)?),
             _ => None,
         };
+        ps.extend(self.throws(decl)?);
         self.begin(item);
         let mut stmts = self.stmts(body)?;
         // A `return` without a value that ends a function says nothing.
@@ -1201,10 +1221,7 @@ impl<'a> Translator<'a> {
             Node::Let {
                 local,
                 init: Some(init),
-            } if matches!(p.nodes.get(init), Node::OrElse { .. }) => {
-                let Node::OrElse { body, fallback } = p.nodes.get(init) else {
-                    unreachable!()
-                };
+            } if is_handler(p, init) => {
                 let name = self.name(local);
                 out.push(Stmt::Decl {
                     export: false,
@@ -1213,7 +1230,7 @@ impl<'a> Translator<'a> {
                     ty: Some(self.ty(p.decls.get(local).ty)?),
                     value: None,
                 });
-                out.push(self.try_assign(Expr::name(name), body, fallback)?);
+                out.push(self.try_assign(Expr::name(name), init)?);
             }
             // A local function: a `function` of the local's name.
             Node::Let {
@@ -1301,8 +1318,8 @@ impl<'a> Translator<'a> {
                     return Ok(());
                 }
                 let target = Expr::name(self.name(target));
-                if let Node::OrElse { body, fallback } = p.nodes.get(value) {
-                    out.push(self.try_assign(target, body, fallback)?);
+                if is_handler(p, value) {
+                    out.push(self.try_assign(target, value)?);
                     return Ok(());
                 }
                 let value = self.expr(value)?;
@@ -1366,17 +1383,13 @@ impl<'a> Translator<'a> {
                     Stmt::Continue(target)
                 });
             }
-            Node::Return { value: Some(value) }
-                if matches!(p.nodes.get(value), Node::OrElse { .. }) =>
-            {
-                let Node::OrElse { body, fallback } = p.nodes.get(value) else {
-                    unreachable!()
-                };
+            Node::Return { value: Some(value) } if is_handler(p, value) => {
+                let (body, fallback, _) = handler_parts(p, value);
                 let (mut pre, body) = self.part(body)?;
                 pre.push(Stmt::Return(Some(body)));
-                let (mut catch, value) = self.part(fallback)?;
-                catch.push(Stmt::Return(Some(value)));
-                out.push(self.try_catch(pre, catch, fallback));
+                let (mut catch, fallback) = self.part(fallback)?;
+                catch.push(Stmt::Return(Some(fallback)));
+                out.push(self.try_catch(pre, catch, value)?);
             }
             Node::Return { value } => {
                 let value = match value {
@@ -1385,13 +1398,11 @@ impl<'a> Translator<'a> {
                 };
                 out.push(Stmt::Return(value));
             }
-            Node::ExprStatement { expr } if matches!(p.nodes.get(expr), Node::OrElse { .. }) => {
-                let Node::OrElse { body, fallback } = p.nodes.get(expr) else {
-                    unreachable!()
-                };
+            Node::ExprStatement { expr } if is_handler(p, expr) => {
+                let (body, fallback, _) = handler_parts(p, expr);
                 let body = self.effects(body)?;
                 let catch = self.effects(fallback)?;
-                out.push(self.try_catch(body, catch, fallback));
+                out.push(self.try_catch(body, catch, expr)?);
             }
             Node::ExprStatement { expr } => match self.setter_call(expr)? {
                 Some(assign) => out.push(assign),
@@ -1500,8 +1511,10 @@ impl<'a> Translator<'a> {
         Ok(pre)
     }
 
-    /// `try { target = body; } catch { target = fallback; }`.
-    fn try_assign(&mut self, target: Expr, body: NodeId, fallback: NodeId) -> R<Stmt> {
+    /// `try { target = body; } catch { target = fallback; }`, for a
+    /// handler, an `orelse` or a `catch`.
+    fn try_assign(&mut self, target: Expr, handler: NodeId) -> R<Stmt> {
+        let (body, fallback, _) = handler_parts(self.p, handler);
         let (mut pre, body) = self.part(body)?;
         pre.push(Stmt::Assign {
             target: target.clone(),
@@ -1509,18 +1522,57 @@ impl<'a> Translator<'a> {
         });
         let (mut catch, value) = self.part(fallback)?;
         catch.push(Stmt::Assign { target, value });
-        Ok(self.try_catch(pre, catch, fallback))
+        self.try_catch(pre, catch, handler)
     }
 
-    /// An `orelse`'s `try`, catching only a bubble ([`Stmt::Try`]):
-    /// anything else, a panic or a host's error, passes it, even where
-    /// `fallback` only panics, whose panic then has the bubble as its
-    /// `cause`, `panic("panic", e$)`.
-    fn try_catch(&mut self, body: Vec<Stmt>, mut catch: Vec<Stmt>, fallback: NodeId) -> Stmt {
-        self.imports.insert("isBubble");
-        if matches!(self.p.nodes.get(fallback), Node::Panic {}) {
+    /// A handler's `try` ([`Stmt::Try`]), an `orelse`'s or a `catch`'s,
+    /// catching exactly what its body may fail with: a bubble, by
+    /// `isBubble(e$)`, and the failure class nearest above its declared
+    /// failures, by `instanceof` (a `catch`'s binding, narrowed so for
+    /// TypeScript). Anything else, a panic or a host's error, passes it,
+    /// even where the fallback only panics, whose panic then has what it
+    /// caught as its `cause`, `panic("panic", e$)`. Not yet where the
+    /// failure class is core's `Error`, for failures of several
+    /// libraries, nor for a `catch` binding a failure beside a bubble,
+    /// which TypeScript can't narrow to the failure's type.
+    fn try_catch(&mut self, body: Vec<Stmt>, mut catch: Vec<Stmt>, handler: NodeId) -> R<Stmt> {
+        let p = self.p;
+        let (body_node, fallback, local) = handler_parts(p, handler);
+        let var = match local {
+            Some(local) => self.name(local),
+            None => "e$".to_string(),
+        };
+        let fails: Vec<TypeId> = (temper_tmpl::failures::failures_under(p, body_node).into_iter())
+            .map(|(_, f)| f)
+            .collect();
+        let mut tests = Vec::new();
+        // A body that can't fail, as one `to_tmpl` kept: `Bubble`'s.
+        if fails.is_empty() || fails.contains(&TypeId::BUBBLE) {
+            self.imports.insert("isBubble");
+            tests.push(Expr::name("isBubble").call(vec![Expr::name(var.clone())]));
+        }
+        let declared: Vec<TypeId> = fails.into_iter().filter(|&f| f != TypeId::BUBBLE).collect();
+        let root = temper_tmpl::failures::root(p);
+        if let Some(ty) = temper_tmpl::failures::join(p, root, &declared) {
+            let class = nominal_decl(p, ty);
+            if class == root {
+                return not_yet("a handler of failures of several libraries");
+            }
+            let Some(class) = class else {
+                return not_yet("a handler of a failure that isn't a class's");
+            };
+            let class = self.class_ref(class);
+            tests.push(Expr::bin(Bin::InstanceOf, Expr::name(var.clone()), class));
+        }
+        if local.is_some() && tests.len() > 1 {
+            return not_yet("a catch that binds a failure beside a bubble");
+        }
+        let caught = (tests.into_iter())
+            .reduce(|a, b| Expr::bin(Bin::Or, a, b))
+            .unwrap();
+        if matches!(p.nodes.get(fallback), Node::Panic {}) {
             let caused =
-                Expr::name("panic").call(vec![Expr::Str("panic".into()), Expr::name("e$")]);
+                Expr::name("panic").call(vec![Expr::Str("panic".into()), Expr::name(var.clone())]);
             match catch.last_mut() {
                 Some(
                     Stmt::Assign { value, .. } | Stmt::Return(Some(value)) | Stmt::Expr(value),
@@ -1530,7 +1582,12 @@ impl<'a> Translator<'a> {
                 _ => catch.push(Stmt::Expr(caused)),
             }
         }
-        Stmt::Try { body, catch }
+        Ok(Stmt::Try {
+            body,
+            var,
+            caught,
+            catch,
+        })
     }
 
     /// A fresh temporary's name.
@@ -1842,7 +1899,7 @@ impl<'a> Translator<'a> {
             }
             Node::IfValue { cond, then, els } => {
                 let cond = self.expr(cond)?;
-                let is_or_else = |id: NodeId| matches!(p.nodes.get(id), Node::OrElse { .. });
+                let is_or_else = |id: NodeId| is_handler(p, id);
                 let (mut then_pre, mut then_e) = (Vec::new(), Expr::Undefined);
                 let (mut els_pre, mut els_e) = (Vec::new(), Expr::Undefined);
                 if !is_or_else(then) && !is_or_else(els) {
@@ -1861,8 +1918,8 @@ impl<'a> Translator<'a> {
                 // `orelse` does so in its own `try`.
                 let branch = |this: &mut Self, id: NodeId, pre: Vec<Stmt>, value: Expr| {
                     let target = Expr::name(t.clone());
-                    if let Node::OrElse { body, fallback } = p.nodes.get(id) {
-                        return Ok(vec![this.try_assign(target, body, fallback)?]);
+                    if is_handler(p, id) {
+                        return Ok(vec![this.try_assign(target, id)?]);
                     }
                     let (mut pre, value) = if pre.is_empty() && value == Expr::Undefined {
                         this.hoisted(id)?
@@ -1898,14 +1955,33 @@ impl<'a> Translator<'a> {
                 self.pre.push(Stmt::Block(inner));
                 Expr::name(t)
             }
-            Node::OrElse { body, fallback } => {
+            Node::OrElse { .. } | Node::Catch { .. } => {
                 let t = self.hoist_for(id)?;
-                let made = self.try_assign(Expr::name(t.clone()), body, fallback)?;
+                let made = self.try_assign(Expr::name(t.clone()), id)?;
                 self.pre.push(made);
                 Expr::name(t)
             }
+            // A declared failure's `throw`, with its cause, the failure a
+            // handler around it handles, where it's thrown there: through
+            // the runtime's `withCause`, which keeps a cause it has.
+            Node::Throw { value, cause, .. } => {
+                let mut thrown = self.expr(value)?;
+                if let Some(cause) = cause {
+                    let cause = self.expr(cause)?;
+                    self.imports.insert("withCause");
+                    thrown = Expr::name("withCause").call(vec![thrown, cause]);
+                }
+                Expr::Throw(Box::new(thrown))
+            }
             Node::Null {} => Expr::Null,
             Node::IsNull { value } => Expr::bin(Bin::LooseEq, self.expr(value)?, Expr::Null),
+            // The failure a `catch` whose fallback jumps keeps, read where
+            // it's set, which TypeScript can't tell (notes/tmpl/nodes.md,
+            // "Declared failures"): cast to its type.
+            Node::NonNull { value } if self.is_kept_failure(value) => {
+                let ty = self.type_of(id)?;
+                Expr::Cast(ty, Box::new(self.expr(value)?))
+            }
             Node::NonNull { value } | Node::AsNullable { value } => self.expr(value)?,
             Node::Coalesce { left, right } => {
                 let left = self.expr(left)?;
@@ -2158,6 +2234,39 @@ impl<'a> Translator<'a> {
 
 /// Whether an expression is a literal, which may be evaluated at any time.
 /// An array's item type as `T[]` takes it: parenthesized if a union.
+impl Translator<'_> {
+    /// Whether a node reads a compiler-made local holding a failure or
+    /// null: a `catch`'s `~caught`.
+    fn is_kept_failure(&self, id: NodeId) -> bool {
+        let p = self.p;
+        let Node::Local { local } = p.nodes.get(id) else {
+            return false;
+        };
+        let d = p.decls.get(local);
+        d.facts.contains(Facts::COMPILER_MADE)
+            && nominal_decl(p, p.types.non_null(d.ty)).is_some_and(|c| self.is_failure_type(c))
+    }
+}
+
+/// Whether a node is a handler: an `orelse`, or a `catch`, which binds
+/// what it catches.
+fn is_handler(p: &Program, id: NodeId) -> bool {
+    matches!(p.nodes.get(id), Node::OrElse { .. } | Node::Catch { .. })
+}
+
+/// A handler's body, fallback, and a `catch`'s local.
+fn handler_parts(p: &Program, id: NodeId) -> (NodeId, NodeId, Option<DeclId>) {
+    match p.nodes.get(id) {
+        Node::OrElse { body, fallback } => (body, fallback, None),
+        Node::Catch {
+            local,
+            body,
+            fallback,
+        } => (body, fallback, Some(local)),
+        _ => unreachable!("not a handler"),
+    }
+}
+
 fn item_in_array(item: &str) -> String {
     if item.contains(' ') && !item.starts_with("import(") {
         format!("({item})")

@@ -1,0 +1,45 @@
+# generated line:column -> source:line:column, and the text at each
+4:1 -> ../host-failures.temper.md:29:5  /** <- @connected
+9:1 -> ../host-failures.temper.md:29:5  export function hostLookup(k <- @connected
+9:17 -> ../host-failures.temper.md:30:16 (hostLookup)  hostLookup(key) { <- hostLookup(key: String): Int
+9:27 -> ../host-failures.temper.md:29:5  (key) { <- @connected
+13:1 -> ../host-failures.temper.md:109:5  /** <- let check(days: Int): Void t
+17:1 -> ../host-failures.temper.md:109:5  export function check(days) <- let check(days: Int): Void t
+17:17 -> ../host-failures.temper.md:109:9 (check)  check(days) { <- check(days: Int): Void throw
+17:22 -> ../host-failures.temper.md:109:5  (days) { <- let check(days: Int): Void t
+18:3 -> ../host-failures.temper.md:110:7  if (days > 0) { <- if (days > 0) { throw new Ex
+19:5 -> ../host-failures.temper.md:110:23  throw new Expired(days); <- throw new Expired(days); }
+23:1 -> ../host-failures.temper.md:27:55  export class HostFailuresOwn <- Error {}
+27:1 -> ../host-failures.temper.md:27:5  export class NotFound extend <- export class NotFound(public
+27:14 -> ../host-failures.temper.md:27:18 (NotFound)  NotFound extends HostFailure <- NotFound(public key: String)
+27:22 -> ../host-failures.temper.md:27:5   extends HostFailuresOwnMess <- export class NotFound(public
+28:3 -> ../host-failures.temper.md:27:34  /** @type {string} */ <- key: String) extends Error {
+29:3 -> ../host-failures.temper.md:27:34  #key; <- key: String) extends Error {
+31:3 -> ../host-failures.temper.md:27:5  /** @param {string} key */ <- export class NotFound(public
+32:3 -> ../host-failures.temper.md:27:5  constructor(key) { <- export class NotFound(public
+34:5 -> ../host-failures.temper.md:27:34  this.#key = key; <- key: String) extends Error {
+37:3 -> ../host-failures.temper.md:27:34  /** @returns {string} */ <- key: String) extends Error {
+38:3 -> ../host-failures.temper.md:27:34  get key() { <- key: String) extends Error {
+38:7 -> ../host-failures.temper.md:27:34 (key)  key() { <- key: String) extends Error {
+42:3 -> ../host-failures.temper.md:27:5  /** @returns {string} */ <- export class NotFound(public
+43:3 -> ../host-failures.temper.md:27:5  get message() { <- export class NotFound(public
+44:5 -> ../host-failures.temper.md:27:5  return `not found (key: ${th <- export class NotFound(public
+48:1 -> ../host-failures.temper.md:105:5  export class Expired extends <- class Expired(public days: I
+48:14 -> ../host-failures.temper.md:105:11 (Expired)  Expired extends HostFailures <- Expired(public days: Int) ex
+48:21 -> ../host-failures.temper.md:105:5   extends HostFailuresOwnMess <- class Expired(public days: I
+49:3 -> ../host-failures.temper.md:105:26  /** @type {number} */ <- days: Int) extends Error {
+50:3 -> ../host-failures.temper.md:105:26  #days; <- days: Int) extends Error {
+52:3 -> ../host-failures.temper.md:105:5  /** @param {number} days */ <- class Expired(public days: I
+53:3 -> ../host-failures.temper.md:105:5  constructor(days) { <- class Expired(public days: I
+55:5 -> ../host-failures.temper.md:105:26  this.#days = days; <- days: Int) extends Error {
+58:3 -> ../host-failures.temper.md:105:26  /** @returns {number} */ <- days: Int) extends Error {
+59:3 -> ../host-failures.temper.md:105:26  get days() { <- days: Int) extends Error {
+59:7 -> ../host-failures.temper.md:105:26 (days)  days() { <- days: Int) extends Error {
+63:3 -> ../host-failures.temper.md:106:14  /** @returns {string} */ <- get message(): String { "exp
+64:3 -> ../host-failures.temper.md:106:14  get message() { <- get message(): String { "exp
+64:7 -> ../host-failures.temper.md:106:18 (message)  message() { <- message(): String { "expired
+65:5 -> ../host-failures.temper.md:106:38  return `expired ${this.#days <- "expired ${days} days ago" }
+69:1 -> ../host-failures.temper.md:36:5  console.log("before"); <- console.log("before");
+70:1 -> ../host-failures.temper.md:113:5  check(0); <- try check(0);
+71:1 -> ../host-failures.temper.md:114:5  check(3); <- try check(3);
+72:1 -> ../host-failures.temper.md:115:5  console.log("after"); <- console.log("after");

@@ -320,6 +320,7 @@ pub const RULES: NamingRules = NamingRules {
     modules_share_names: false,
     failure_suffix: None,
     failure_base: None,
+    failure_member_reserved: &[],
 };
 
 /// The standard library's top-level modules (`sys.stdlib_module_names`,

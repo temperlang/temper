@@ -295,6 +295,84 @@ Object.defineProperty(Bubble.prototype, bubbleMark, { value: true });
 export const isBubble = (e) =>
   typeof e === "object" && e !== null && bubbleMark in e;
 
+/** What marks a declared failure, the same in every copy of this runtime. */
+const failureMark = Symbol.for("@temperlang/core.Failure");
+
+/**
+ * Makes `base` a library's base failure class (RFC 164's declared
+ * failures): generated code declares it as `class WherewithError extends
+ * Error {}`, with its failure types below it, and calls this once. Its
+ * instances get the marker `isFailure` reads, which host code never
+ * needs, and `name`, the class's own name, as `Error`'s says what it is
+ * (`NotFound: not found (key: y)`). A failure type's own member named
+ * `name` is `name_` in JS, so it doesn't hide this one.
+ *
+ * @param {Function} base
+ */
+export const failureBase = (base) => {
+  Object.defineProperty(base.prototype, failureMark, { value: true });
+  Object.defineProperty(base.prototype, "name", {
+    configurable: true,
+    get() {
+      return this.constructor.name;
+    },
+  });
+};
+
+/**
+ * Whether `e` is a declared failure, made by any copy of this runtime.
+ *
+ * @param {unknown} e
+ * @returns {boolean}
+ */
+export const isFailure = (e) =>
+  typeof e === "object" && e !== null && failureMark in e;
+
+/**
+ * A declared failure's cause, as Temper's `Error.cause` gives it: the
+ * failure that was being handled where it was thrown, or `null`, also
+ * where that was something else, such as a bubble.
+ *
+ * @param {Error} failure
+ * @returns {Error | null}
+ */
+export const failureCause = (failure) => {
+  const cause = failure.cause;
+  return isFailure(cause) ? /** @type {Error} */ (cause) : null;
+};
+
+/**
+ * `failure`, with `cause` as its standard `cause`, for a Temper `throw`
+ * in a handler, unless it has a cause already: a failure thrown again
+ * keeps the cause it was first thrown with. Never itself, nor a loop of
+ * causes. The property is as `new Error(message, { cause })` makes it,
+ * which a generated constructor, taking its type's own parameters,
+ * can't be given.
+ *
+ * @template {Error} T
+ * @param {T} failure
+ * @param {unknown} cause
+ * @returns {T}
+ */
+export const withCause = (failure, cause) => {
+  if (Object.hasOwn(failure, "cause")) {
+    return failure;
+  }
+  const seen = new Set();
+  for (let c = cause; c instanceof Error && !seen.has(c); c = c.cause) {
+    if (c === failure) {
+      return failure;
+    }
+    seen.add(c);
+  }
+  Object.defineProperty(failure, "cause", {
+    configurable: true,
+    writable: true,
+    value: cause,
+  });
+  return failure;
+};
+
 /**
  * @param {string} [message]
  * @returns {never}
@@ -317,10 +395,10 @@ export const panic = (message = "panic", cause = undefined) => {
 
 /**
  * Runs `block`, giving whether it panicked, for std's `Test.assertPanics`:
- * whether it threw anything but a bubble or a test framework's failure
- * (an `AssertionError`, as Node's `assert` and Chai throw), as on every
- * backend, so `panic`'s `Error` or a host's error, such as a `TypeError`.
- * What isn't passes through.
+ * whether it threw anything but a bubble, a declared failure, or a test
+ * framework's failure (an `AssertionError`, as Node's `assert` and Chai
+ * throw), as on every backend, so `panic`'s `Error` or a host's error,
+ * such as a `TypeError`. What isn't passes through.
  *
  * @param {() => void} block
  * @returns {boolean}
@@ -329,7 +407,7 @@ export const blockPanics = (block) => {
   try {
     block();
   } catch (e) {
-    if (isBubble(e) || (e instanceof Error && e.name === "AssertionError")) {
+    if (isBubble(e) || isFailure(e) || (e instanceof Error && e.name === "AssertionError")) {
       throw e;
     }
     return true;

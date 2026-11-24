@@ -374,9 +374,9 @@ error at the comma. The same goes for `throw` and `yield`.
 ### Failures
 
 Declared failures (RFC 164, still a proposal) are in progress: they're
-parsed, type checked, and run on the interpreter and in Python and
-Java, while other backends say "not yet", and `error case` is still an
-error.
+parsed, type checked, and run on the interpreter and in C++, Java,
+JavaScript, Python, and Rust, while other backends say "not yet", and
+`error case` is still an error.
 
 - `throw x` throws a failure, and is a value like `return x`.
 - `try` marks failures propagating from all of the expression to its

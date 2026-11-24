@@ -74,6 +74,17 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Deque.removeFirst()",
         Connection::Helper("dequeRemoveFirst"),
     ),
+    // A declared failure's cause is the standard `cause`, where that's a
+    // declared failure; its message, the `message` every failure class
+    // has, as a getter over `Error`'s.
+    (
+        "core.type Error.get cause()",
+        Connection::Helper("failureCause"),
+    ),
+    (
+        "core.type Error.get message()",
+        Connection::Translate(failure_message),
+    ),
     ("core.type Float64.abs()", Connection::Math("abs")),
     ("core.type Float64.acos()", Connection::Math("acos")),
     ("core.type Float64.asin()", Connection::Math("asin")),
@@ -648,6 +659,16 @@ fn console_log(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> 
     }
     let message = t.expr(*message)?;
     Ok(Expr::name("console").method("log", vec![message]))
+}
+
+/// `Error.message`: the failure's `message`, its class's getter.
+fn failure_message(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let [failure] = args else {
+        return Err(NotYet {
+            what: "`Error.message` without its receiver".into(),
+        });
+    };
+    Ok(t.expr(*failure)?.member("message"))
 }
 
 /// `Boolean.toString()` and `Int32.toString()`: `n.toString()`, with the
