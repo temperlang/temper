@@ -208,13 +208,15 @@ pub fn command(name: &str) -> Option<String> {
              \x20           three are as none.\n\
              {STD}"
         ),
-        "fmt" => "usage: temper fmt [--check] [PATH]...\n\
+        "fmt" => format!(
+            "usage: temper fmt [--check] [-ign FILE] [PATH]...\n\
              \n\
              Lays out Temper source in the standard style, rewriting each .temper\n\
              and .temper.md file that needs it; in .temper.md files, only Temper\n\
              code blocks. A directory means the files under it, skipping\n\
              temper.out, hidden directories, and what .gitignore and\n\
-             .temperignore files list; no PATH means the current directory.\n\
+             .temperignore files, and --ignorefile's, list; no PATH means the\n\
+             current directory.\n\
              \n\
              It sets spacing, indentation, and blank lines, and keeps line breaks\n\
              as written except in bracketed lists, which its trailing commas and\n\
@@ -226,8 +228,9 @@ pub fn command(name: &str) -> Option<String> {
              Options:\n\
              \x20   --check\n\
              \x20           Change nothing; list the files that need formatting,\n\
-             \x20           and exit with 1 if there are any.\n"
-            .to_string(),
+             \x20           and exit with 1 if there are any.\n\
+             {IGNOREFILE}"
+        ),
         "help" => "usage: temper help [COMMAND]\n\
              \n\
              Prints the commands, or a command's options.\n"

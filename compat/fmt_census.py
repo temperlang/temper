@@ -32,7 +32,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WORK = ROOT / "target/fmt-census"
 SKIP_PARTS = {"build", "node_modules", "temper.out", ".git", "target"}
-FENCE = re.compile(r"^(\s*)```temper\s*$\n(.*?)^\1```\s*$", re.M | re.S)
+FENCE = re.compile(r"^([ \t]*)```temper[ \t]*$\n(.*?)^\1```[ \t]*$", re.M | re.S)
 OPENERS = set("({[")
 CLOSERS = set(")}]")
 # Words that take `(` as part of a construct, not a call.
@@ -382,7 +382,7 @@ def analyze(s: Source, st: Stats, samples: int) -> None:
                 # starting with `;` or `,`.
                 code = t if t.kind != "Comment" else next((c for c in code_toks if c.start > t.start), t)
                 header = s.headers.get(code.start)
-                if t.text in (";", ",") and t.role[0] == "sep":
+                if t.text in (";", ";;", ",") and t.role[0] == "sep":
                     brk = "starting with a separator"
                 elif header is not None and depth_at.get(header) == level:
                     brk = "in a header"
@@ -463,9 +463,9 @@ def continuation(prev: Tok | None, top, decorator_line: bool, first: Tok) -> boo
         return False
     if top is not None and prev.start == top[2]:
         return False
-    ends = (",",) if top is not None and top[0] in "([" else (";", "{", "}", ",", "=>")
-    if prev.text in ends:
-        return False
+    ends = (",",) if top is not None and top[0] in "([" else (";", ";;", "{", "}", ",", "=>")
+    if prev.text in ends or (prev.role[1] == "LowColon" and ends != (",",)):
+        return False  # a label's `:` ends its line's statement too
     return True
 
 

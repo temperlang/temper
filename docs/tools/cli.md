@@ -32,7 +32,7 @@ the same wherever they're taken:
 | Option | Taken by | Meaning |
 |---|---|---|
 | `-w DIR`, `--workroot DIR` | `build`, `test`, `run`, `repl` | The [work root](#the-work-root) |
-| `-ign FILE`, `--ignorefile FILE` | `build`, `test`, `run`, `repl` | An [ignore file](#ignore-files) with the last word |
+| `-ign FILE`, `--ignorefile FILE` | `build`, `test`, `run`, `repl`, `fmt` | An [ignore file](#ignore-files) with the last word |
 | `-b BACKEND`, `--backend BACKEND` | `build`, `test`, `run` | A backend: `cpp`, `csharp`, `java`, `js`, `lua`, `py`, or `rust` ([target languages](../backends/README.md)), or `interp`, the interpreter, for `test` and `run`. `build` and `test` take it more than once |
 | `--no-connected` | `build`, `test`, `run` | Use the Temper bodies of `@connected` functions, where they have them, instead of each language's own code |
 | `-v`, `--verbose` | `build`, `test`, `run` | Say more: what was written, every test's result, what the code logs, and [hints](#diagnostics) |
@@ -199,7 +199,7 @@ already has a `src` directory or a `config.temper.md`.
 
 ## `fmt`
 
-    temper fmt [--check] [PATH]...
+    temper fmt [--check] [-ign FILE] [PATH]...
 
 Lays out each `.temper` and `.temper.md` file named, or under each
 directory named (the current one by default, skipping `temper.out`,
@@ -219,6 +219,11 @@ Code that doesn't parse is left as written, with an error and exit
 status 1, and it checks its own work: if formatting would change a
 file's tokens, comments, or parse tree, it leaves the file alone and
 says so.
+
+`--ignorefile FILE` skips more under the directories named, as for
+`build`, with each directory named in place of the work root; files
+named are formatted all the same.
+[Formatting rules](fmt.md#what-it-leaves-out) has an example.
 
 ## `serve`, or `lsp`
 

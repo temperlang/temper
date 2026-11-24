@@ -89,6 +89,20 @@ the checker lists the known examples by entry. Once one agrees, the
 checker fails until you remove the comment and update the entry. Today, 14 are known
 ([I10](../inconsistencies.md#i10-examples-that-dont-run-as-marked)).
 
+### Examples' layout
+
+The same blocks are laid out by [`temper fmt`](../tools/fmt.md), as
+the repository's Temper files are; CI checks both:
+
+    uv run compat/fmt_doc_examples.py [--check] [--verbose] [PATH...]
+
+Without `--check`, it formats the blocks in place. A block laid out by
+hand on purpose, as a table aligned in columns or an example of where
+spaces matter, gets `<!-- fmt: off -->` among the HTML comments right
+before its fence (above any `<!-- known: … -->`, which must come right
+before it). Blocks that don't parse, as REPL transcripts, are left as
+written.
+
 ## Where they came from
 
 Most of the guide, reference, and release notes were Temper's mkdocs

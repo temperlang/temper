@@ -158,3 +158,25 @@ a multi-quoted string as an item keeps its line breaks.
 Code that doesn't parse is left as written, with an error. `fmt` also
 checks its own work: if formatting would change a file's tokens,
 comments, or parse tree, it leaves the file alone and says so.
+
+## What it leaves out
+
+Under a directory, `fmt` skips `temper.out`, hidden directories, and
+what `.gitignore` and `.temperignore` files list, as `build` does. To
+keep more as written, such as a golden test's input or code that
+doesn't parse on purpose, list it in a file of gitignore patterns,
+relative to that file's directory, and name it with `--ignorefile`
+([ignore files](cli.md#ignore-files)); a file named on the command
+line is formatted all the same. For a check in CI, with this
+`.fmtignore`:
+
+```gitignore
+# Golden inputs, kept as written
+tests/inputs/
+# Code that doesn't parse, on purpose
+/examples/errors.temper.md
+```
+
+```sh
+temper fmt --check --ignorefile .fmtignore
+```

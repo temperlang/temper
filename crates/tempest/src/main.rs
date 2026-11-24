@@ -670,16 +670,19 @@ fn init_command(args: &[String]) -> u8 {
     }
 }
 
-/// `temper fmt [--check] [PATH]...`: formats each `.temper` and
-/// `.temper.md` file named or under a directory named (the current one by
-/// default), in place, or with `--check` lists the ones that would change.
-/// Exits with 1 when a file couldn't be read, parsed or written, or with
-/// `--check`, when one needs formatting.
+/// `temper fmt [--check] [--ignorefile FILE] [PATH]...`: formats each
+/// `.temper` and `.temper.md` file named or under a directory named (the
+/// current one by default), in place, or with `--check` lists the ones
+/// that would change. Under a directory, what `--ignorefile`'s file lists
+/// is skipped too, with the last word, as for `build`. Exits with 1 when
+/// a file couldn't be read, parsed or written, or with `--check`, when
+/// one needs formatting.
 fn fmt_command(args: &[String]) -> u8 {
-    let flags = match parse("fmt", args, &["check"], usize::MAX) {
+    let flags = match parse("fmt", args, &["check", "ignorefile"], usize::MAX) {
         Ok(flags) => flags,
         Err(code) => return code,
     };
+    let sources = Sources::standard();
     let paths = if flags.positional.is_empty() {
         vec![".".to_string()]
     } else {
@@ -690,7 +693,17 @@ fn fmt_command(args: &[String]) -> u8 {
     for path in &paths {
         let path = Path::new(path);
         if path.is_dir() {
-            failed |= !temper_files(path, "", &mut Vec::new(), &mut files);
+            let root = path.to_string_lossy();
+            let extra = match flags.ignore(&sources, &root) {
+                Ok(extra) => extra,
+                Err(code) => return code,
+            };
+            let mut walk = Walk {
+                ignores: Vec::new(),
+                extra: extra.as_ref(),
+                files: &mut files,
+            };
+            failed |= !walk.temper_files(path, &project::scan_start(&root));
         } else if source_kind(path).is_some() || !path.exists() {
             files.push(path.to_path_buf());
         } else {
@@ -738,53 +751,63 @@ fn source_kind(path: &Path) -> Option<temper_syntax::lex::SourceKind> {
     is_source(&name).then(|| project::source_kind(&name))
 }
 
-/// The Temper source files under `dir`, in order, skipping `temper.out`,
-/// `temper.keep`, hidden directories, and what `.gitignore` and
-/// `.temperignore` files under `dir` list, as finding libraries does;
-/// false if a directory couldn't be read. `scanned` is `dir` relative to
-/// where the walk started, or empty there.
-fn temper_files(
-    dir: &Path,
-    scanned: &str,
-    ignores: &mut Vec<IgnoreFile>,
-    out: &mut Vec<std::path::PathBuf>,
-) -> bool {
-    let entries = match std::fs::read_dir(dir) {
-        Ok(entries) => entries,
-        Err(why) => {
-            eprintln!("temper fmt: {}: {why}", dir.display());
-            return false;
-        }
-    };
-    let mut paths: Vec<_> = entries.filter_map(|e| e.ok().map(|e| e.path())).collect();
-    paths.sort();
-    let own = ignores.len();
-    for name in project::IGNORE_FILES {
-        if let Ok(text) = std::fs::read_to_string(dir.join(name)) {
-            ignores.push(IgnoreFile::parse(&text, scanned, ""));
-        }
-    }
-    let mut ok = true;
-    for path in paths {
-        let name = path.file_name().unwrap_or_default().to_string_lossy();
-        let relative = match scanned {
-            "" => name.to_string(),
-            _ => format!("{scanned}/{name}"),
-        };
-        let is_dir = path.is_dir();
-        if temper_frontend::ignore::ignored(ignores, &relative, is_dir) {
-            continue;
-        }
-        if is_dir {
-            if !(name.starts_with('.') || name == "temper.out" || name == "temper.keep") {
-                ok &= temper_files(&path, &relative, ignores, out);
+/// A walk for `temper fmt`'s files: the ignore files that apply where it
+/// is, outermost first, then `extra`, `--ignorefile`'s, which has the
+/// last word; and the files found.
+struct Walk<'a> {
+    ignores: Vec<IgnoreFile>,
+    extra: Option<&'a IgnoreFile>,
+    files: &'a mut Vec<std::path::PathBuf>,
+}
+
+impl Walk<'_> {
+    /// Adds the Temper source files under `dir`, in order, skipping
+    /// `temper.out`, `temper.keep`, hidden directories, and what the
+    /// ignore files list, as finding libraries does; false if a directory
+    /// couldn't be read. `scanned` names `dir` as the ignore files see it
+    /// ([`project::scan_start`]).
+    fn temper_files(&mut self, dir: &Path, scanned: &str) -> bool {
+        let entries = match std::fs::read_dir(dir) {
+            Ok(entries) => entries,
+            Err(why) => {
+                eprintln!("temper fmt: {}: {why}", dir.display());
+                return false;
             }
-        } else if source_kind(&path).is_some() {
-            out.push(path);
+        };
+        let mut paths: Vec<_> = entries.filter_map(|e| e.ok().map(|e| e.path())).collect();
+        paths.sort();
+        let own = self.ignores.len();
+        for name in project::IGNORE_FILES {
+            if let Ok(text) = std::fs::read_to_string(dir.join(name)) {
+                self.ignores.push(IgnoreFile::parse(&text, scanned, ""));
+            }
         }
+        let mut ok = true;
+        for path in paths {
+            let name = path.file_name().unwrap_or_default().to_string_lossy();
+            let relative = match scanned {
+                "" => name.to_string(),
+                _ => format!("{scanned}/{name}"),
+            };
+            let is_dir = path.is_dir();
+            let skip =
+                (self.extra.and_then(|f| f.decides(&relative, is_dir))).unwrap_or_else(|| {
+                    temper_frontend::ignore::ignored(&self.ignores, &relative, is_dir)
+                });
+            if skip {
+                continue;
+            }
+            if is_dir {
+                if !(name.starts_with('.') || name == "temper.out" || name == "temper.keep") {
+                    ok &= self.temper_files(&path, &relative);
+                }
+            } else if source_kind(&path).is_some() {
+                self.files.push(path);
+            }
+        }
+        self.ignores.truncate(own);
+        ok
     }
-    ignores.truncate(own);
-    ok
 }
 
 /// `temper serve` or `temper lsp`: a language server on stdin and

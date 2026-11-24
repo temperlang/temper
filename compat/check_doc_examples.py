@@ -45,7 +45,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-FENCE = re.compile(r"^(\s*)```temper\s*$\n(.*?)^\1```\s*$", re.M | re.S)
+FENCE = re.compile(r"^([ \t]*)```temper[ \t]*$\n(.*?)^\1```[ \t]*$", re.M | re.S)
 # A diagnostic line, `path:line:column: level: message`, at temper's levels.
 DIAGNOSTIC = re.compile(r":\d+:\d+: (error|warn|hint): ")
 KNOWN = re.compile(r"^\s*<!-- known:((?:\s+I\d+)+) -->\s*$", re.M)

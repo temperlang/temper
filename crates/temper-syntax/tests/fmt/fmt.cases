@@ -204,6 +204,32 @@ let h = fn (a: Int): Int { a };
 let s = a.b?.c;
 let t: List<Int> = [1, 2];
 
+=== a comma after `extends` separates super types, as any comma does
+class C extends A , B {}
+interface I<T> extends A,B<T> {}
+--- formatted
+class C extends A, B {}
+interface I<T> extends A, B<T> {}
+
+=== angle brackets with a comment keep their line breaks, and indent as brackets do
+let h<
+// Type parameters go here.
+  T,
+    >(x: T): T { x }
+let j: Map<
+  // Keys, then values.
+  String, Int
+  > = m;
+--- formatted
+let h<
+  // Type parameters go here.
+  T,
+>(x: T): T { x }
+let j: Map<
+  // Keys, then values.
+  String, Int
+> = m;
+
 === spacing leaves words, unary minus and empty braces
 let  x = - 1;
 let y = -x - -z;

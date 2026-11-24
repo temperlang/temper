@@ -423,6 +423,38 @@ let f(): Void {
   );
 }
 
+=== a label on its own line doesn't continue: its statement is next
+outer:
+for (;;) {
+  inner:
+    while (true) { break outer; }
+}
+--- formatted
+outer:
+for (;;) {
+  inner:
+  while (true) { break outer; }
+}
+
+=== `;;` ends a block's signature as `;` ends a statement
+f {
+  (x: Int): Int
+  ;;
+    x + 1
+}
+g { (x: Int): Int;;
+    x + 1
+}
+--- formatted
+f {
+  (x: Int): Int
+  ;;
+  x + 1
+}
+g { (x: Int): Int;;
+  x + 1
+}
+
 === a condition continued in its parentheses indents twice
 class C {
   let f(): Void {

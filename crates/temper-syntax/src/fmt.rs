@@ -19,22 +19,22 @@
 //!   `.map { x =>` on a continuation line, and the `{` closing a `for (`
 //!   header over several lines each indent their contents one level. A
 //!   line starting with a close bracket lines up with that line. A line
-//!   continuing a statement (the one before didn't end with `;`, `{`,
-//!   `}`, `,` or `=>`, or inside `( )` and `[ ]` with `,`, or `;` if their
-//!   contents start on a line of their own; or it starts with an infix
-//!   operator like `.` or `&&`) is indented from the statement's first
-//!   line, once, wherever it breaks; but twice, to tell it from what
-//!   follows, in a header (a class's, interface's, function's or function
-//!   literal's, from its first token to the `{` of its body, as `extends`
-//!   or `throws` lines, not in the header's own brackets), from the
-//!   header's first line, and in `( )` whose contents start on the `(`
-//!   line (`if (a ||\n    b) {`), from that line. One starting with `;`
-//!   or `,` lines up with the statement, as a close bracket does.
-//!   Comments never count. A bracket opened on a continuation line
-//!   indents its contents from that line, but a header's body from the
-//!   header's first line. Lines starting a node right after another
-//!   (statements with no `;` between them) or after a decorator line like
-//!   `@connected` start statements, and comment lines go with the code
+//!   continuing a statement (the one before didn't end with `;`, `;;` (a
+//!   block's signature), `{`, `}`, `,`, `=>` or a label's `:`, or inside
+//!   `( )` and `[ ]` with `,`, or `;` if their contents start on a line of
+//!   their own; or it starts with an infix operator like `.` or `&&`) is
+//!   indented from the statement's first line, once, wherever it breaks; but
+//!   twice, to tell it from what follows, in a header (a class's,
+//!   interface's, function's or function literal's, from its first token to
+//!   the `{` of its body, as `extends` or `throws` lines, not in the
+//!   header's own brackets), from the header's first line, and in `( )`
+//!   whose contents start on the `(` line (`if (a ||\n    b) {`), from that
+//!   line. One starting with `;`, `;;` or `,` lines up with the statement,
+//!   as a close bracket does. Comments never count. A bracket opened on a
+//!   continuation line indents its contents from that line, but a header's
+//!   body from the header's first line. Lines starting a node right after
+//!   another (statements with no `;` between them) or after a decorator line
+//!   like `@connected` start statements, and comment lines go with the code
 //!   after them.
 //! - **Spacing on a line:** one space around infix operators (not `.`,
 //!   `?.`, `..`, `::`, `<`/`>` of type arguments or label colons), after
@@ -340,10 +340,13 @@ fn roles(parsed: &Parsed) -> HashMap<u32, (Role, Operator)> {
                 Role::Open
             } else if matches!(text, ")" | "]" | "}") || (text == ">" && op == Operator::Angle) {
                 Role::Close
-            } else if matches!(
-                op,
-                Operator::Comma | Operator::Semi | Operator::SemiSemi | Operator::SemiSemiSemi
-            ) {
+            } else if text == ","
+                || matches!(
+                    op,
+                    Operator::Comma | Operator::Semi | Operator::SemiSemi | Operator::SemiSemiSemi
+                )
+            {
+                // A comma always separates, as after `extends`.
                 Role::Separator
             } else if before && after {
                 Role::Infix
@@ -1059,7 +1062,7 @@ impl<'a> Formatter<'a> {
                 .is_some_and(|o| o.paren && o.line == statement);
             if !self.options.continuations {
                 (statement.formatted + actual - statement.actual).max(0)
-            } else if matches!(self.text(code), ";" | ",")
+            } else if matches!(self.text(code), ";" | ";;" | ",")
                 && self.role(code).is_some_and(|r| r.0 == Role::Separator)
             {
                 // A separator on a line of its own, as after a multi-quoted
@@ -1116,9 +1119,15 @@ impl<'a> Formatter<'a> {
         // statement if that does, but not before a close bracket or the
         // end.
         let first = if first.kind == TokenKind::Comment {
-            let next = (self.tokens[self.index..].iter()).find(|t| t.kind != TokenKind::Comment);
+            let next = (self.index..self.tokens.len())
+                .find(|&i| self.tokens[i].kind != TokenKind::Comment);
             match next {
-                Some(&t) if !matches!(self.text(t), ")" | "]" | "}") => t,
+                Some(i)
+                    if !matches!(self.text(self.tokens[i]), ")" | "]" | "}")
+                        && !self.wrapped_angle(self.closes.get(i)) =>
+                {
+                    self.tokens[i]
+                }
                 _ => return None,
             }
         } else {
@@ -1138,9 +1147,13 @@ impl<'a> Formatter<'a> {
             }
         }
         let text = self.text(previous);
+        // A label's `:` too: the statement it labels is next.
+        let label = self
+            .role(previous)
+            .is_some_and(|r| r.1 == Operator::LowColon);
         let ends = match self.stack.last() {
             Some(o) if o.round => text == "," || (text == ";" && o.contents_own_line),
-            _ => matches!(text, ";" | "{" | "}" | "," | "=>"),
+            _ => label || matches!(text, ";" | ";;" | "{" | "}" | "," | "=>"),
         };
         if ends {
             return None;
@@ -1252,12 +1265,12 @@ impl<'a> Formatter<'a> {
     }
 
     /// Whether a list, the current token's if any, is type arguments or
-    /// parameters the formatter may wrap; their `<` and `>` count as
-    /// brackets for indentation (others don't, as `<` may be less-than).
+    /// parameters, whose `<` and `>` count as brackets for indentation
+    /// (others don't, as `<` may be less-than).
     fn wrapped_angle(&self, list: Option<&Option<usize>>) -> bool {
-        list.copied().flatten().is_some_and(|id| {
-            self.layouts[id] != Layout::Kept && self.text(self.tokens[self.lists[id].open]) == "<"
-        })
+        list.copied()
+            .flatten()
+            .is_some_and(|id| self.text(self.tokens[self.lists[id].open]) == "<")
     }
 
     fn text(&self, token: Token) -> &'a str {

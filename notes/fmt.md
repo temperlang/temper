@@ -354,10 +354,11 @@ census shows authors already agree on almost everything else.
   literal's first token, to its body's `{`), or four from a `(`'s line
   when it continues the statement starting there (each line and open
   bracket remembers the line it's on): the code before
-  didn't end with `;`, `{`, `}`, `,` or `=>` (in `( )` and `[ ]`, `,`,
+  didn't end with `;`, `;;` (a block's signature), `{`, `}`, `,`,
+  `=>` or a label's `:` (in `( )` and `[ ]`, `,`,
   or `;` if their contents start on a line of their own, as in
   `for (\n  a;\n  b;`), or it starts with an infix operator, as `.`,
-  `?.` or `&&` (the tree tells). One starting with `;` or `,` lines up
+  `?.` or `&&` (the tree tells). One starting with `;`, `;;` or `,` lines up
   with the statement's first line. Which token is before a line, or
   first on it, is always code: comments are skipped. But a line
   starting a node right after another (statements without a `;`
@@ -449,12 +450,19 @@ golden cases (`tests/fmt/*.cases`),
 idempotence and tree-preservation tests over the repository's Temper
 files and randomly edited inputs; refusal for code that doesn't parse;
 language server formatting, on save by default in VS Code; lib/ and
-test programs formatted.
+test programs formatted; `--ignorefile` (the repository's
+`.fmtignore`: code that doesn't parse on purpose); the docs' examples
+by `compat/fmt_doc_examples.py` (plain Markdown isn't `fmt`'s:
+`<!-- fmt: off -->` keeps hand-aligned tables and spacing examples);
+both checked in CI's lint job.
 
 Next:
 
-1. Format the docs' examples (no `.git-blame-ignore-revs`: not
-   needed, Tom); then `temper fmt --check` in CI.
+1. Apply the trial reformat of the remaining funtests, a testkit
+   program, and the docs' examples (a trial patch, in review), which
+   CI's check needs. Empty `< >` holding
+   only a comment (a docs sketch, kept by `fmt: off`) isn't a bracket
+   for indentation yet.
 2. Doc comments' framing (`/** … */`), if wanted.
 3. A `// fmt: off` region, if hand-aligned code ever needs one.
 4. Markdown prose in `.temper.md`: left exactly as written. Formatting

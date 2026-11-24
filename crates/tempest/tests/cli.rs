@@ -1790,3 +1790,93 @@ fn fmt() {
     assert_eq!(code, 2, "{err}");
     let _ = fs::remove_dir_all(&dir);
 }
+
+/// `temper fmt --ignorefile FILE` skips what FILE lists, gitignore-style,
+/// under the directories named, files that don't parse included; paths
+/// named are formatted regardless, and a file whose directory isn't at or
+/// above the one named matches nothing there.
+#[test]
+fn fmt_ignorefile() {
+    let dir = std::env::temp_dir().join(format!("tempest-cli-{}-fmt-ignore", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    for sub in ["golden/deep", "sub", "conf"] {
+        fs::create_dir_all(dir.join(sub)).unwrap();
+    }
+    let messy = "let x=1;\n";
+    let broken = "let f(x: Int {\n";
+    let ignore = "# Golden inputs, kept as written\n\
+                  golden/\n\
+                  \n\
+                  # Don't parse, by design\n\
+                  /broken.temper\n\
+                  *.odd.temper\n\
+                  !keep.odd.temper\n";
+    fs::write(dir.join(".fmtignore"), ignore).unwrap();
+    fs::write(dir.join("conf/fmtignore"), "a.temper\n").unwrap();
+    for (name, text) in [
+        ("a.temper", messy),
+        ("golden/g.temper", messy),
+        ("golden/deep/h.temper", broken),
+        ("broken.temper", broken),
+        ("sub/broken.temper", broken),
+        ("sub/x.odd.temper", messy),
+        ("sub/keep.odd.temper", messy),
+    ] {
+        fs::write(dir.join(name), text).unwrap();
+    }
+    let path = |name: &str| dir.join(name).to_string_lossy().to_string();
+    let ignorefile = path(".fmtignore");
+
+    let (code, out, err) = tempest(&["fmt", "--check", "--ignorefile", &ignorefile, &path("")]);
+    assert_eq!(code, 1, "{out}{err}");
+    let listed: Vec<&str> = out.lines().collect();
+    assert_eq!(
+        listed,
+        [path("a.temper"), path("sub/keep.odd.temper")],
+        "{out}"
+    );
+    // Only the file that doesn't parse and isn't listed is reported.
+    assert_eq!(err.lines().count(), 1, "{err}");
+    assert!(err.contains("sub/broken.temper: doesn't parse"), "{err}");
+
+    // A directory below the ignore file's: its patterns apply from the
+    // ignore file's directory.
+    let (code, out, err) = tempest(&["fmt", "--check", "--ignorefile", &ignorefile, &path("sub")]);
+    assert_eq!(code, 1);
+    let listed: Vec<&str> = out.lines().collect();
+    assert_eq!(listed, [path("sub/keep.odd.temper")], "{out}");
+    assert_eq!(err.lines().count(), 1, "{err}");
+
+    // An ignore file in a directory below the one named matches nothing.
+    let (code, out, _) = tempest(&[
+        "fmt",
+        "--check",
+        "--ignorefile",
+        &path("conf/fmtignore"),
+        &path(""),
+    ]);
+    assert_eq!(code, 1);
+    assert!(out.lines().any(|l| l == path("a.temper")), "{out}");
+
+    // A file named is formatted even if listed.
+    let (code, out, _) = tempest(&[
+        "fmt",
+        "--check",
+        "--ignorefile",
+        &ignorefile,
+        &path("sub/x.odd.temper"),
+    ]);
+    assert_eq!((code, out.trim()), (1, path("sub/x.odd.temper").as_str()));
+
+    // An ignore file that can't be read is an error.
+    let (code, _, err) = tempest(&[
+        "fmt",
+        "--check",
+        "--ignorefile",
+        &path("missing"),
+        &path(""),
+    ]);
+    assert_eq!(code, 1);
+    assert!(err.contains("missing"), "{err}");
+    let _ = fs::remove_dir_all(&dir);
+}

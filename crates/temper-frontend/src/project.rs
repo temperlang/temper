@@ -367,6 +367,12 @@ fn ignores_above(sources: &Sources, root: &str) -> Vec<IgnoreFile> {
     Vec::new()
 }
 
+/// A directory as a scan from it names what's under it, and as
+/// [`ignore_file`] sees it: `a/./b/` is `a/b`, and `.` is nothing.
+pub fn scan_start(dir: &str) -> String {
+    scanned(&normalize(&slashed(dir))).to_string()
+}
+
 /// A directory as the scan's paths start with it: nothing for `.`.
 fn scanned(dir: &str) -> &str {
     if dir == "." { "" } else { dir }

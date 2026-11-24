@@ -10,7 +10,8 @@
 #   size and speed charts, and release tags' rules (release.yml); then
 #   `core`'s tests: every crate's but the backends' and `tempest`'s, and
 #   again without default features (no backends, no `net`), `tempest`'s
-#   included;
+#   included; and, by that build, Temper code's and the docs' examples'
+#   layout (`temper fmt --check`);
 # - `cli`: `temper`'s tests with every backend, so with every
 #   toolchain: `temper test`, `build`, and `run` on small libraries;
 # - `backends`, two jobs, each with only its backends' toolchains
@@ -206,6 +207,18 @@ jobs:
       - name: Tests without default features
         if: ${{ !cancelled() && env.CORE == 'true' }}
         run: cargo test --locked --workspace --no-default-features $BACKENDS
+      # Temper code laid out by `temper fmt` (docs/tools/fmt.md): the
+      # repository's .temper and .temper.md files, but what .fmtignore
+      # lists, and the docs' examples (compat/fmt_doc_examples.py), by
+      # the build the step before tested.
+      - name: Temper formatting
+        if: ${{ !cancelled() && env.CORE == 'true' }}
+        run: |
+          cargo build --locked -q --workspace --no-default-features $BACKENDS --bin temper
+          target/debug/temper fmt --check --ignorefile .fmtignore
+      - name: Docs' examples formatting
+        if: ${{ !cancelled() && env.CORE == 'true' }}
+        run: uv run compat/fmt_doc_examples.py --check --temper target/debug/temper
 
   # `temper`'s own tests with every backend built in, and so every
   # backend's toolchain: `temper test -b`, `build`, and `run` on small
