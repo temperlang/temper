@@ -41,7 +41,7 @@ const PARSE_PIECES: &[&str] = &[
     "\n{", "}\n", "} else {", ";", ",", ":", "=", "@", "var ", "const ", "public ", "let ",
     "extends ", "case ", "->", "=>", "new ", "++", "-", "!", "?", "<", ">", "</", "${", "\\{",
     "\\(", "mixin(", "of ", "in ", "given ", "return ", ".", "?.", "...", "\n  :", "\n  \"",
-    "\n  ~", "\"\"\"\n",
+    "\n  ~", "\"\"\"\n", "try ", " catch ", "}\ncatch (e) {",
 ];
 
 #[test]

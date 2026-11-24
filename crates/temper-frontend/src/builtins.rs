@@ -50,6 +50,11 @@ pub enum Macro {
     Yield,
     /// `await(p)` or `await p`, in an `async` block's body.
     Await,
+    /// `throw x`, `try x`, and `x catch (e) { … }`: declared failures'
+    /// syntax (RFC 164), parsed but not supported yet.
+    Throw,
+    Try,
+    Catch,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -209,6 +214,9 @@ pub const BUILTINS: &[(&str, Builtin)] = {
         ("assert", M(Macro::Assert)),
         ("yield", M(Macro::Yield)),
         ("await", M(Macro::Await)),
+        ("throw", M(Macro::Throw)),
+        ("try", M(Macro::Try)),
+        ("catch", M(Macro::Catch)),
         ("+", F(Function::Add)),
         ("-", F(Function::Sub)),
         ("*", F(Function::Mul)),

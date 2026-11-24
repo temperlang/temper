@@ -636,7 +636,7 @@ impl Grammar {
             return true;
         };
         match self.part_text(previous) {
-            "orelse" | "let" | "new" | "await" | "return" | "throw" | "yield" => true,
+            "orelse" | "let" | "new" | "await" | "return" | "throw" | "try" | "yield" => true,
             "=>" => false,
             ">" => !previous.may_bracket,
             text if CLOSE_BRACKETS.contains(&text) || text == "!" || text == "?" => false,
@@ -1078,6 +1078,7 @@ impl Grammar {
         first!(
             self,
             p,
+            Grammar::error_case_callee,
             |g, p| {
                 let p = g.open_op(p, O::Leaf)?;
                 let p = g.id(p)?;
@@ -1093,6 +1094,106 @@ impl Grammar {
             },
             Grammar::expr,
         )
+    }
+
+    /// ErrorCaseCallee := Leaf y ( y "error".revalue(errorCase) y "case" y wordSymbol y
+    ///   leftName(unreservedWordMatcher) y )
+    ///
+    /// Ours (RFC 164): `error case Name`, a failure class declaration, as
+    /// `class Name` is a class's. `error` and `case` stay words elsewhere.
+    fn error_case_callee(&mut self, p: usize) -> R {
+        let p = self.open_op(p, O::Leaf)?;
+        let p = self.revalue(p, "error", Value::Builtin(Builtin::ErrorCase))?;
+        let p = self.tok(p, "case")?;
+        let p = self.implied_symbol(p, self.sym.word)?;
+        let p = self.unreserved(p, Fin::LeftName)?;
+        self.close(p)
+    }
+
+    /// ErrorCase := callTree(ErrorCaseCallee), for `error case Name;`
+    /// without parentheses, which a class needs.
+    fn error_case(&mut self, p: usize) -> R {
+        self.tree(p, Fin::Call, Grammar::error_case_callee)
+    }
+
+    /// Catch := Catch y callTree(( y Expr y "catch".rename(catch) y shiftLeft y
+    ///     ((Curly y ( y (ParenGroup y ( y "(" y (Leaf y ( y leftName(unreservedWordMatcher) y ))
+    ///       y ")" y )) y
+    ///       funTree(RawBlock) y ))
+    ///     / (CurlyGroup y ( y funTree(RawBlock) y ))) y ))
+    ///
+    /// Ours (RFC 164): `f() catch (e) { … }` or `f() catch { … }`, as
+    /// `catch(f(), ^e, fn { … })`. The block is a function's only as an
+    /// `if`'s is: jumps in it leave the enclosing function or loop. Anything
+    /// else after `catch` is an error over the whole expression.
+    fn catch(&mut self, p: usize) -> R {
+        let p = self.check(p, self.is(p, O::Catch))?;
+        first!(
+            self,
+            p,
+            |g, p| {
+                g.tree(p, Fin::Call, |g, p| {
+                    let p = g.open(p)?;
+                    let p = g.expr(p)?;
+                    let p = g.rename(p, "catch", "catch", false)?;
+                    let p = g.shift_left(p)?;
+                    let p = first!(
+                        g,
+                        p,
+                        |g, p| {
+                            let p = g.open_op(p, O::Curly)?;
+                            let p = g.open_op(p, O::ParenGroup)?;
+                            let p = g.tok(p, "(")?;
+                            let p = g.open_op(p, O::Leaf)?;
+                            let p = g.unreserved(p, Fin::LeftName)?;
+                            let p = g.close(p)?;
+                            let p = g.tok(p, ")")?;
+                            let p = g.close(p)?;
+                            let p = g.tree(p, Fin::Fun, Grammar::raw_block)?;
+                            g.close(p)
+                        },
+                        |g, p| {
+                            let p = g.open_op(p, O::CurlyGroup)?;
+                            let p = g.tree(p, Fin::Fun, Grammar::raw_block)?;
+                            g.close(p)
+                        },
+                    )?;
+                    g.close(p)
+                })
+            },
+            |g, p| {
+                // Only for what's after `catch`: a left operand that
+                // doesn't parse, or none, is left to other productions.
+                let mark = g.events.len();
+                let q = g.expr(p + 1);
+                g.events.truncate(mark);
+                let q = g.tok(q?, "catch")?;
+                let close = g.parts[p].close as usize;
+                let message = match g.block_before_operator(q) {
+                    true => Message::CatchBlockNotLast,
+                    false => Message::CatchWithoutBlock,
+                };
+                g.events.push(Event::Error(message, p as u32, close as u32));
+                Some(close + 1)
+            },
+        )
+    }
+
+    /// Whether the node at `p` is an infix or postfix operator whose
+    /// leftmost operand, however deep, is a block or a call ending in one:
+    /// what follows a `catch` block, wrongly in its handler.
+    fn block_before_operator(&self, p: usize) -> bool {
+        let mut q = p;
+        while let Some(part) = self.part(q).filter(|part| part.kind == PartKind::Open) {
+            if matches!(part.op, O::Curly | O::CurlyGroup) {
+                return q != p;
+            }
+            if !matches!(part.op.op_type(), OpType::Infix | OpType::Postfix) {
+                return false;
+            }
+            q += 1;
+        }
+        false
     }
 
     /// CallArgs := "(" y !QuotedGroup y (ForArgs / opt(Args)) y ")"
@@ -1242,15 +1343,16 @@ impl Grammar {
         self.comma_expr(p)
     }
 
-    /// AwaitReturnThrowYield := {Await, Return, Throw, Yield} y callTree(( y
-    ///   (name("await") / name("return") / name("throw") / name("yield")) y
+    /// AwaitReturnThrowYield := {Await, Return, Throw, Try, Yield} y callTree(( y
+    ///   (name("await") / name("return") / name("throw") / name("try") / name("yield")) y
     ///   opt(Expr / Garbage("Argument", stopBefore closeBrackets + ";")) y ))
     ///
     /// The Expr recovers from a missing operator ([`operand`](Self::operand)).
+    /// `try` is ours (RFC 164).
     fn await_return_throw_yield(&mut self, p: usize) -> R {
         let p = self.check(
             p,
-            self.is_any(p, &[O::Await, O::Return, O::Throw, O::Yield]),
+            self.is_any(p, &[O::Await, O::Return, O::Throw, O::Try, O::Yield]),
         )?;
         self.tree(p, Fin::Call, |g, p| {
             let p = g.open(p)?;
@@ -1260,6 +1362,7 @@ impl Grammar {
                 |g, p| g.name_text(p, "await"),
                 |g, p| g.name_text(p, "return"),
                 |g, p| g.name_text(p, "throw"),
+                |g, p| g.name_text(p, "try"),
                 |g, p| g.name_text(p, "yield"),
             )?;
             let p = g.opt(p, |g, p| {
@@ -2035,7 +2138,8 @@ impl Grammar {
         })
     }
 
-    /// Expr := QuasiTree / QuasiAst / QuasiHole / Jump / AwaitReturnThrowYield / Id /
+    /// Expr := QuasiTree / QuasiAst / QuasiHole / Jump / AwaitReturnThrowYield / ErrorCase /
+    ///   Catch / Id /
     ///   SymbolLiteral / List / New / Prefix / SpecialDot / RegularDot / StringExpr /
     ///   TaggedString / Call / DecoratedExpr / Parenthesized / OfExpr / Throws / Infix /
     ///   Postfix / Member / Specialize / Literal / RegExp / (CurlyGroup y ( y (Obj / RawBlock) y ))
@@ -2074,6 +2178,8 @@ impl Grammar {
             Grammar::quasi_hole,
             Grammar::jump,
             Grammar::await_return_throw_yield,
+            Grammar::error_case,
+            Grammar::catch,
             Grammar::id,
             Grammar::symbol_literal,
             Grammar::list,

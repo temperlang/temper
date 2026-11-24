@@ -1064,6 +1064,18 @@ to report those inputs as expected.
   `continue` as values type as `Never`, fitting any type; Kotlin has no
   type for them, weaving them into its control flow before typing, which
   comes to the same where it translates them.
+- **Declared failures' syntax** (`failures`, RFC 164, ours,
+  2026-11-24; `tests/parse/failures.cases`, `tests/ast/failures.cases`):
+  `try` is a prefix operator (just above `orelse`) and `catch` an infix
+  one (`orelse`'s neighbor, left-associative), so neither is a call
+  joining word any more: Kotlin's own cases `tryWithValue`,
+  `tryWithCatchAndFinally`, `colonsAroundTry`, and `minimalTryCatch`
+  parse differently, and `try`, `throw`, and `catch` can't be names
+  (`throw` couldn't in Kotlin either). `x catch (e) { … }` becomes
+  `catch(x, ^e, fn { … })` and `error case N(…)` `#errorCase \word ^N
+  …`, which Kotlin can't parse. The frontend reports each as "Not
+  supported yet" until they're typed. `deviations.py` excuses fuzzed
+  inputs whose differences start at one of these words.
 - **Operands nested over 1000 deep are an error** (`NestedTooDeeply`),
   where Kotlin overflows its stack, already at about 300 nested calls or
   a 1000-term `a+a+...`.

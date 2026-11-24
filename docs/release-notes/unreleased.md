@@ -23,6 +23,7 @@
 - [C++: `Float64.toString` as on the JVM](#c-float64tostring-as-on-the-jvm)
 - [`temper` and its `TEMPER_*` settings](#temper-and-its-temper_-settings)
 - [Fixes on Windows](#fixes-on-windows)
+- [🚨Breaking change: `try` and `catch` are reserved](#breaking-change-try-and-catch-are-reserved)
 
 ## 🚨Breaking change: Rest parameter syntax removed.
 
@@ -513,3 +514,11 @@ them need the new ones.
   code page.
 - `temper build`'s JavaScript source maps name sources on another drive
   than `temper.out` by `file:` URL.
+
+## 🚨Breaking change: `try` and `catch` are reserved
+
+`try` and `catch` are now operators, as `throw` already was, for the
+declared failures RFC 164 proposes, so they can't name a variable,
+function, parameter, or member, though a name after a `.`, as in
+`promise.catch`, still reads as one. The syntax parses, but `throw`, `try`, `catch`, and
+`error case` are each reported as not supported yet.

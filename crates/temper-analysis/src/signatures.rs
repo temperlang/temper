@@ -259,7 +259,7 @@ fn holds_properties(before: &str) -> bool {
         let word = &before[word_start..];
         return matches!(
             word,
-            "orelse" | "let" | "new" | "await" | "return" | "throw" | "yield"
+            "orelse" | "let" | "new" | "await" | "return" | "throw" | "try" | "yield"
         );
     }
     !(before.ends_with("=>") || ")]}!?>".contains(last))

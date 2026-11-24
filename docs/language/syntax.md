@@ -145,7 +145,7 @@ Except that, semicolons are never inserted after the close curly bracket in a `$
 So a `}` that ends a line ends its statement, unless the next line
 starts with a token that can only continue an expression: an infix or
 postfix operator that isn't also a prefix one, as `.`, `?.`, `orelse`,
-`&&`, or `==`. No statement can start with one of those, so the
+`catch`, `&&`, or `==`. No statement can start with one of those, so the
 statement goes on:
 
 ```temper
@@ -155,6 +155,9 @@ let x = do {
 orelse 7; // one statement: `do { f() } orelse 7`
 // ⏸️
 ```
+
+So a `catch` on the line after a `do` block's `}` handles that block's
+failures, as `do { … } catch (e) { … }` on one line does.
 
 Anything else starts a new statement: a word, as `else`, so `else` on
 its own line after an `if`'s `}` is an error; or a token that may be
@@ -335,10 +338,10 @@ A label that can be jumped to as by `break` and `continue`.
 ### Syntax for *AwaitReturnThrowYield*
 
 ```ebnf
-AwaitReturnThrowYield := ("await" | "return" | "throw" | "yield") (Expr | Garbage | ())
+AwaitReturnThrowYield := ("await" | "return" | "throw" | "try" | "yield") (Expr | Garbage | ())
 ```
 
-`await`, `return`, `throw`, and `yield` are operators which affect
+`await`, `return`, `throw`, `try`, and `yield` are operators which affect
 control flow and operate on expressions.
 
 `return(42);` for example, looks like a function call but the parentheses
@@ -368,6 +371,49 @@ in an argument list a `return` that isn't last needs parentheses:
 `f((y ?? return 0), 1)`. Without them, `f(y ?? return 0, 1)` is an
 error at the comma. The same goes for `throw` and `yield`.
 
+### Failures
+
+Declared failures (RFC 164, still a proposal) are parsed, but not
+typed or run yet: each construct below is an error, "Not supported
+yet".
+
+- `throw x` throws a failure, and is a value like `return x`.
+- `try` marks failures propagating from all of the expression to its
+  right, as Swift's does: `let c = try lookup(s).column();`. It binds
+  looser than any binary operator but `orelse`, `catch`, and assignment,
+  so a comma, `orelse`, or `catch` ends it: `f(try a(), try b())`, and
+  `try f() orelse 0` is `(try f()) orelse 0`.
+- `catch` handles failures of the expression on its left with a block,
+  which may bind the failure first. `do { … } catch` is `catch` after a
+  `do` block.
+- `error case Name(…)` declares a failure type. `error` and `case` stay
+  names everywhere else.
+
+```temper
+let n = parse(s) catch (e) { log(e); 0 };
+let m = parse(s) catch { 0 };
+let v = do { try a(); try b() } catch (e) { fallback };
+error case NotFound;
+error case BadWord(public text: String);
+// ⏸️
+```
+
+The handler is always a block, as an `if`'s is, so `break`, `continue`,
+and `return` in it leave the loop or function around it. `catch` binds a
+little tighter than `orelse` and chains to the left, so
+`f() catch { a } orelse b` is `(f() catch { a }) orelse b`. A `catch`
+block ends its expression: `f() catch { 0 } + 1` is an error, and needs
+parentheses, `(f() catch { 0 }) + 1`.
+
+```ebnf
+Catch := Expr "catch" ("(" LeftName ")")? StmtBlock
+ErrorCase := "error" "case" LeftName CallArgs?
+```
+
+`try`, `throw`, and `catch` are operators, so none of them can be a
+name, though one after a `.`, as in `promise.catch`, still reads as a
+member's.
+
 ### Syntax for *StmtBlock*
 
 ```ebnf
@@ -381,7 +427,7 @@ A `{` ... `}` delimited block of statements.
 ### Syntax for *Expr*
 
 ```ebnf
-Expr := Jump | AwaitReturnThrowYield | Id | SymbolLiteral | List | New | Prefix | SpecialDot | RegularDot | StringExpr | TaggedString | Call | DecoratedExpr | "(" ((Disallowed: ()) TopLevelNoGarbageNoComment | Garbage) ")" | OfExpr | Throws | Infix | Postfix | Member | Specialize | Literal | RegExp | Obj | RawBlock | "(" Garbage
+Expr := Jump | AwaitReturnThrowYield | ErrorCase | Catch | Id | SymbolLiteral | List | New | Prefix | SpecialDot | RegularDot | StringExpr | TaggedString | Call | DecoratedExpr | "(" ((Disallowed: ()) TopLevelNoGarbageNoComment | Garbage) ")" | OfExpr | Throws | Infix | Postfix | Member | Specialize | Literal | RegExp | Obj | RawBlock | "(" Garbage
 ```
 
 An expression is evaluated to produce a result and/or a side effect.

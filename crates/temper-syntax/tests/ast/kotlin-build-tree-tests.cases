@@ -554,7 +554,7 @@ do { x }
 === minimalTryCatch
 try { } catch (e) {}
 --- ast
-(Call try (Fun (Block)) \callJoin: \catch e (Fun (Block)))
+(Call catch (Call try (Call new #void)) ^e (Fun (Block)))
 
 === threeBlocksInARow
 {} {} {}

@@ -164,6 +164,12 @@ operators! {
     OrElse = op(4, "orelse", Infix).right(),
     // Between a call ending in a block and a word continuing it: `} else {`.
     CallJoin = op(5, "callJoin:", Infix).right(),
+    // `try f()` marks failures propagating from all of `f()` to the end of
+    // the expression; a comma or `orelse` ends it.
+    Try = op(5, "try", Prefix),
+    // `f() catch (e) { … }`: a little above `orelse`, and left-associative,
+    // so a handler's block ends it and `catch` chains like `else`.
+    Catch = op(5, "catch", Infix),
     ExtendsComma = op(6, "extends", Infix).follower(","),
     ImplementsComma = op(6, "implements", Infix).follower(","),
     ForbidsComma = op(6, "forbids", Infix).follower(","),

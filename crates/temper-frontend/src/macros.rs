@@ -164,6 +164,10 @@ impl Settle {
                 }
                 _ => false,
             },
+            Macro::Throw | Macro::Try | Macro::Catch => {
+                self.failures_not_yet(call, Builtin::Macro(m).name());
+                true
+            }
         };
         if !ok && self.lib.tree.kind(call) == NodeKind::Call {
             self.error(
@@ -171,6 +175,13 @@ impl Settle {
                 Message::MalformedSpecial(Builtin::Macro(m).name().to_string()),
             );
         }
+    }
+
+    /// Declared failures' syntax (RFC 164), which parses but isn't typed or
+    /// run yet: an error in place of the construct.
+    fn failures_not_yet(&mut self, call: NodeId, what: &str) {
+        let message = format!("`{what}`, part of declared failures");
+        self.error(call, Message::Unsupported(message));
     }
 
     /// Expands a call to a builtin the grammar step refers to directly.
@@ -213,6 +224,7 @@ impl Settle {
                 self.become_node(call, void);
             }
             (SyntaxBuiltin::DocComment, [target, ..]) => self.become_node(call, *target),
+            (SyntaxBuiltin::ErrorCase, _) => self.failures_not_yet(call, "error case"),
             _ => self.error(
                 call,
                 Message::Unsupported(format!("builtin {}", builtin.name())),

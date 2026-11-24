@@ -283,16 +283,16 @@ for (t e in e) { stmt }
 === tryWithValue
 try (decl) { stuff }
 --- tree
-(Curly (Paren try "(" decl ")") { stuff })
+(Try try (Curly (ParenGroup "(" decl ")") { stuff }))
 
 === tryWithCatchAndFinally
 try (decl) { stuff } catch (e) { stuff } finally { stuff }
 --- tree
-(CallJoin
-  (Curly (Paren try "(" decl ")") { stuff })
-  callJoin:
+(Catch
+  (Try try (Curly (ParenGroup "(" decl ")") { stuff }))
+  catch
   (CallJoin
-    (Curly (Paren catch "(" e ")") { stuff })
+    (Curly (ParenGroup "(" e ")") { stuff })
     callJoin:
     (Curly finally { stuff })))
 
@@ -559,10 +559,10 @@ x: try (c) {} catch (e) {} finally {}
 (LowColon
   x
   :
-  (CallJoin
-    (Curly (Paren try "(" c ")") { })
-    callJoin:
-    (CallJoin (Curly (Paren catch "(" e ")") { }) callJoin: (Curly finally { }))))
+  (Catch
+    (Try try (Curly (ParenGroup "(" c ")") { }))
+    catch
+    (CallJoin (Curly (ParenGroup "(" e ")") { }) callJoin: (Curly finally { }))))
 
 === stuffAfterLabeledStmt
 x: while (c) {}

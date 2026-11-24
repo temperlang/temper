@@ -298,7 +298,7 @@
       "patterns": [
         {
           "name": "keyword.control.temper",
-          "match": "\\b(?:assert|async|await|break|bubble|case|continue|do|else|for|if|orelse|panic|return|throws|when|while|yield)\\b(?![$])"
+          "match": "\\b(?:assert|async|await|break|bubble|case|catch|continue|do|else|for|if|orelse|panic|return|throw|throws|try|when|while|yield)\\b(?![$])"
         },
         {
           "name": "storage.type.temper",

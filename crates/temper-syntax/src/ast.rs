@@ -143,6 +143,9 @@ pub enum Builtin {
     DocComment,
     /// A comment between statements.
     EmbeddedComment,
+    /// Ours: `error case Name(…)`, a failure class (RFC 164), as
+    /// `#errorCase \word ^Name …`.
+    ErrorCase,
 }
 
 impl Builtin {
@@ -159,6 +162,7 @@ impl Builtin {
             Builtin::PostponedCase => "postponedCase",
             Builtin::DocComment => "@docComment",
             Builtin::EmbeddedComment => "REM",
+            Builtin::ErrorCase => "errorCase",
         }
     }
 }
@@ -204,6 +208,12 @@ pub enum Message {
     /// Ours: a comma after the operand of a `return`, `throw`, or `yield`,
     /// that jump, which ends before it, where Kotlin finds no argument.
     JumpBeforeComma(Operator),
+    /// Ours: what follows `catch` isn't a block, or a name in parentheses
+    /// and a block.
+    CatchWithoutBlock,
+    /// Ours: an operator after a `catch` block, which would be in the
+    /// handler, as in `f() catch { 0 } + 1`.
+    CatchBlockNotLast,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -231,6 +241,8 @@ impl Message {
             Message::UnclosedAngle(_) => "UnclosedAngle",
             Message::MissingOperator(..) => "MissingOperator",
             Message::JumpBeforeComma(_) => "JumpBeforeComma",
+            Message::CatchWithoutBlock => "CatchWithoutBlock",
+            Message::CatchBlockNotLast => "CatchBlockNotLast",
         }
     }
 
@@ -280,6 +292,12 @@ impl Message {
                 format!("Expected an operator or `{separator}` before `{stray}`")
             }
             Message::JumpBeforeComma(op) => jump_before_comma(*op),
+            Message::CatchWithoutBlock => {
+                "Expected a block after `catch`, or a name in parentheses and a block, as in `catch (e) { … }`".into()
+            }
+            Message::CatchBlockNotLast => {
+                "A `catch` block ends its expression; put the `catch` in parentheses to use its value".into()
+            }
         }
     }
 }

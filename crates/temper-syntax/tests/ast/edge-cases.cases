@@ -171,7 +171,7 @@ const k = 2;
 === calls joined
 if (a) { b } else if (c) { d } else { e }
 do { x } while (y);
-try { f() } catch (e) { g() } finally { h }
+attempt { f() } rescue (e) { g() } finally { h }
 --- ast
 (Block
   (Call
@@ -187,10 +187,10 @@ try { f() } catch (e) { g() } finally { h }
     (Fun (Block e)))
   (Call do (Fun (Block x)) \callJoin: \while y)
   (Call
-    try
+    attempt
     (Fun (Block (Call f)))
     \callJoin:
-    \catch
+    \rescue
     e
     (Fun (Block (Call g)))
     \callJoin:

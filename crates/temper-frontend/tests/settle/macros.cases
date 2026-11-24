@@ -838,3 +838,28 @@ log safe F\our:
 log 10
 log a|b
 Failed: Not supported yet: statements in strings with a function tag
+
+=== declared failures' syntax isn't supported yet, each an error where it is
+console.log("runs");
+let f(): Int { 1 }
+let a = try f();
+let b = f() catch (e) { 0 };
+let c = do { f() } catch { 0 };
+error case NotFound;
+let g(): Int { throw 1 }
+--- settled
+(Block
+  (Call (Call . console \log) "runs")
+  (Let ^f:0 (Fn Int (Block 1)))
+  (Let ^a:1 (Error))
+  (Let ^b:2 (Error))
+  (Let ^c:3 (Error))
+  (Error)
+  (Let ^g:4 (Fn Int (Block (Error)))))
+error 48..55: Not supported yet: `try`, part of declared failures
+error 65..84: Not supported yet: `catch`, part of declared failures
+error 94..116: Not supported yet: `catch`, part of declared failures
+error 118..137: Not supported yet: `error case`, part of declared failures
+error 154..161: Not supported yet: `throw`, part of declared failures
+log runs
+Failed: Not supported yet: `try`, part of declared failures

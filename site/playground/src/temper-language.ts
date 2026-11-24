@@ -5,11 +5,11 @@
 import { StreamLanguage, type StreamParser, type StringStream } from "@codemirror/language";
 
 const KEYWORDS = new Set([
-  "as", "assert", "async", "await", "break", "bubble", "case", "class", "const",
+  "as", "assert", "async", "await", "break", "bubble", "case", "catch", "class", "const",
   "continue", "do", "else", "export", "extends", "fn", "for", "get", "if", "import",
   "in", "interface", "is", "let", "new", "of", "orelse", "panic", "private",
   "protected", "public", "return", "sealed", "set", "static", "super", "test",
-  "this", "throws", "var", "when", "while", "yield",
+  "this", "throw", "throws", "try", "var", "when", "while", "yield",
 ]);
 
 const ATOMS = new Set(["true", "false", "null", "void"]);

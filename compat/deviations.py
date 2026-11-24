@@ -16,6 +16,7 @@ REASONS = {
     "missing-operator": "operands side by side with no operator keep their statement",
     "jump-operand": "`return`, `throw`, or `yield` is the operand an operator lacks",
     "jump-comma": "a comma after a jump's operand ends the jump, an error",
+    "failures": "`try` and `catch` are operators, and `error case` a declaration (RFC 164)",
 }
 
 # What our parse and grammar step outputs show for bracket recovery.
@@ -82,6 +83,11 @@ KNOWN = {
     "edge-cases.cases: a comma after a return, throw, or yield's operand ends it, an error": "jump-comma",
     "edge-cases.cases: a comma after a return or throw's operand: an error, and the rest still parses": "jump-comma",
     "edge-cases.cases: return's operand runs to the end of its statement or bracket, or to a comma, as before": "jump-operand",
+    "failures.cases: *": "failures",
+    "kotlin-parse-tests.cases: tryWithValue": "failures",
+    "kotlin-parse-tests.cases: tryWithCatchAndFinally": "failures",
+    "kotlin-parse-tests.cases: colonsAroundTry": "failures",
+    "kotlin-build-tree-tests.cases: minimalTryCatch": "failures",
 }
 
 
@@ -134,6 +140,8 @@ def classify(text: str, markdown: bool, kotlin: list[str], rust: list[str]) -> s
         return "spans"
     first, last = first_difference(text, kotlin, rust)
     overlaps = lambda regions: any(start <= last and first <= end for start, end in regions)
+    if overlaps(failure_words(text)):
+        return "failures"
     for a, b in zip(kotlin, kotlin[1:]):
         if re.match(r"(T\t\d+\t)?Error\t", a) and a.endswith("\t$") and "{" in b.split("\t")[-1]:
             span = offsets(a)
@@ -144,6 +152,13 @@ def classify(text: str, markdown: bool, kotlin: list[str], rust: list[str]) -> s
     if overlaps(multi_quoted_regions(text)):
         return "multi-quoted"
     return None
+
+
+def failure_words(text: str) -> list[tuple[int, int]]:
+    """Byte ranges of the words RFC 164's syntax adds: `try`, `catch`, and
+    `error case`."""
+    data = text.encode("utf-8")
+    return [m.span() for m in re.finditer(rb"\b(try|catch|error\s+case)\b", data)]
 
 
 def offsets(line: str) -> tuple[int, int] | None:

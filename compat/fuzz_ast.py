@@ -40,7 +40,8 @@ AST_PIECES = [
     "@", "@A ", "let ", "var ", "fn ", "class ", "if (x) ", "} else {", "(", ")", "{", "}", "[",
     "]", ",", ";", ";;", ";;;", ":", "=", "=>", "->", "...", "case ", "is ", "of ", "extends ",
     "supports ", "\\(", "\\{", "${", "\\u{", "/** doc */", "// c\n", "builtins.", "this", "super",
-    "new ", "<", ">", "0x", "1e", "i64", '"', "'", "/x/", 'rgx"',
+    "new ", "<", ">", "0x", "1e", "i64", '"', "'", "/x/", 'rgx"', "try ", " catch (e) ",
+    " catch ", "error case ",
 ]
 
 # Pieces for call joins and metadata, with --module.
