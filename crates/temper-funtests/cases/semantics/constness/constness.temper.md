@@ -27,7 +27,7 @@ Tests:
       let ci = 1;
       console.log("ci = ${ci}");
       // (ci = 2) orelse  // TODO: statically reject.  MagicSecurityDust not required to check.
-        console.log("failed to set ci");
+      console.log("failed to set ci");
       console.log("ci = ${ci}");
 
       // const without initializer
@@ -35,7 +35,7 @@ Tests:
       c = 1;
       console.log("c = ${c}");
       // (c = 2) orelse   // TODO: statically reject.  MagicSecurityDust not required to check.
-        console.log("failed to set c");
+      console.log("failed to set c");
       console.log("c = ${c}");
 
       // const declared inside a loop

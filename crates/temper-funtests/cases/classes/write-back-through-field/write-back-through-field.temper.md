@@ -26,10 +26,10 @@ see the object free to change, and the caller has to see the new value.
     }
 
     let p = new Ping(new Pong());
-    console.log("ping=${ p.ping() }");
-    console.log("pass=${ p.pass() }");
-    console.log("record=${ p.record() } most=${ p.most }");
-    console.log("around=${ p.around() } n=${ p.n }");
+    console.log("ping=${p.ping()}");
+    console.log("pass=${p.pass()}");
+    console.log("record=${p.record()} most=${p.most}");
+    console.log("around=${p.around()} n=${p.n}");
 
 Expected output:
 

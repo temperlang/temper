@@ -24,9 +24,9 @@ but we don't auto-run those on all backends as of this writing: 2024-8)
     for (let s of ['[]', ' [] ', ' [ ] ', '[1]', 'null']) {
       let jsonValue: JsonSyntaxTree? = parseJson(s) orelse null;
       console.log(
-          "`${s}` is empty array: ${
-            (jsonValue is JsonArray && jsonValue.elements.isEmpty).toString()
-          }"
+        "`${s}` is empty array: ${
+          (jsonValue is JsonArray && jsonValue.elements.isEmpty).toString()
+        }"
       );
     }
 
@@ -66,7 +66,7 @@ Encoding a string mirrors the behaviour of JavaScript's *JSON.stringify*
 so that our output can exactly match that of a platform where code-size
 is so important that shipping a JSON encoder/decoder is a bad idea.
 
-     let selectCodePoints = "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x20-\u{10000}-\ue000-\ud7ff\u2028\u2029\u0085";
+    let selectCodePoints = "\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x20-\u{10000}-\ue000-\ud7ff\u2028\u2029\u0085";
 
 That string contains all ASCII control characters, a number of code-points
 that often trigger boundary conditions, non-ASCII line terminators, and a
@@ -157,21 +157,21 @@ z ?? -1 -> 123456789012
 
 If we just parse JSON straight to a JSON text producer, we get the original JSON but normalized.
 
-     let normalJson = new JsonTextProducer();
-     parseJsonToProducer(
-       """
-       "{
-       "  "foo": "bar",
-       "  "baz": [
-       "    "boo",
-       "    { "f": 1, "a": null, "r": 123.0 }
-       "  ]
-       "}
-       ,
-       normalJson,
-     );
-     console.log("Normalized:");
-     console.log(normalJson.toJsonString());
+    let normalJson = new JsonTextProducer();
+    parseJsonToProducer(
+      """
+      "{
+      "  "foo": "bar",
+      "  "baz": [
+      "    "boo",
+      "    { "f": 1, "a": null, "r": 123.0 }
+      "  ]
+      "}
+      ,
+      normalJson,
+    );
+    console.log("Normalized:");
+    console.log(normalJson.toJsonString());
 
 ```log
 Normalized:

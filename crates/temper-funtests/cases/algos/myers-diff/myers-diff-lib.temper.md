@@ -14,8 +14,8 @@ Also, once we support enums, we should use them here.
 ```
 
     export let ChangeType = String;
-    export let ChangeTypeDeletion:  ChangeType = "Deletion";
-    export let ChangeTypeAddition:  ChangeType = "Addition";
+    export let ChangeTypeDeletion: ChangeType = "Deletion";
+    export let ChangeTypeAddition: ChangeType = "Addition";
     export let ChangeTypeUnchanged: ChangeType = "Unchanged";
 
 Each change consists of a non-empty run of adjacent lines (or diff items, `<T>`s).
@@ -161,10 +161,7 @@ Find run with same changeType.
             }
             changes.add(
               new Change<T>(
-                changeType,
-                leftPatchIndex,
-                rightPatchIndex,
-                items
+                changeType, leftPatchIndex, rightPatchIndex, items
               )
             );
             leftPatchIndex += nLeftItems;
@@ -184,8 +181,7 @@ or unchanged transition where possible.
               reached[sameReachedIndex] = true;
               costZeroEdges.add(
                 new DiffPath(
-                  leftIndex + 1, rightIndex + 1,
-                  ChangeTypeUnchanged, diffPath
+                  leftIndex + 1, rightIndex + 1, ChangeTypeUnchanged, diffPath
                 )
               );
             }
@@ -194,8 +190,7 @@ or unchanged transition where possible.
           if (!reached[delReachedIndex]) {
             reached[delReachedIndex] = true;
             costOneEdges.add(new DiffPath(
-              leftIndex + 1, rightIndex,
-              ChangeTypeDeletion, diffPath
+              leftIndex + 1, rightIndex, ChangeTypeDeletion, diffPath
             ));
           }
         }

@@ -17,16 +17,16 @@ Some utility functions for later use.
       return s.join("") { v => v };
     }
 
-    let nestBlock<T>(b: fn ():T): T { b() }
+    let nestBlock<T>(b: fn (): T): T { b() }
     // TODO need to handle Void as a possible <T>
-    let nestBlockVoid(b: fn ():Void): Void { b() }
+    let nestBlockVoid(b: fn (): Void): Void { b() }
 
 The easy case has a free constant.
 
     let constantCapture(x: Listed<Int>, a: Int): Void {
       // ensure free value isn't inlined
       let b: Int = a * 1;
-      let out = x.map { (n: Int): Int  => n + b };
+      let out = x.map { (n: Int): Int => n + b };
       console.log("constantCapture = ${show(out)}");
     }
     constantCapture([1, 2, 3], 1);
@@ -39,8 +39,8 @@ The slightly less easy case has a free constant in a nested block.
 
     let constantCaptureNested(x: Listed<Int>, a: Int): Void {
       let b: Int = a * 1;
-      let out = nestBlock { (): List<Int>  =>
-        x.map { (n: Int): Int  => n + b }
+      let out = nestBlock { (): List<Int> =>
+        x.map { (n: Int): Int => n + b }
       };
       console.log("constantCaptureNested = ${show(out)}");
     }
@@ -55,7 +55,7 @@ Mutable captures may need special handling.
     let mutableCapture(x: Listed<Int>): Void {
       var sum = 0;  // free variable
       let out = x.map {
-        (n: Int): Int  =>
+        (n: Int): Int =>
         sum += n;
         sum
       };
@@ -71,9 +71,9 @@ Make sure we can capture mutables through nested functions.
 
     let mutableCaptureNested(x: Listed<Int>): Void {
       var sum = 0;  // free variable
-      let out = nestBlock { () : List<Int>  =>
+      let out = nestBlock { (): List<Int> =>
         x.map {
-          (n: Int): Int  =>
+          (n: Int): Int =>
           sum += n;
           sum
         }
@@ -131,7 +131,7 @@ Self recursive functions may need hoisting or a similar mechanism.
 
     let selfRecursionNested(x: List<Int>): Void {
       let mapper(i: Int, out: ListBuilder<Int>): Void {
-        nestBlockVoid { () : Void =>
+        nestBlockVoid { (): Void =>
           if (i < x.length) {
             out.add(x[i] * 2);
             mapper(i + 1, out);

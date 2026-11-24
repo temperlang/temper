@@ -83,6 +83,7 @@ TODO: document me
 ### `cat`
 Short for "con**cat**enate", combines multiple strings into one string.
 
+<!-- fmt: off -->
 <!-- known: I10 -->
 ```temper
 ""       == cat()             &&
@@ -102,7 +103,7 @@ to compose strings.
 let a = "foo";
 let b = "bar";
 
-"foo-bar" == "${ a }-${ b }"
+"foo-bar" == "${a}-${b}"
 // ✅
 ```
 
@@ -309,9 +310,9 @@ let parseZero(s: String): Int throws Bubble {
 }
 
 //!outputs  "parseZero(\"0\")            = 0"
-console.log("parseZero(\"0\")            = ${ parseZero("0") }");
+console.log("parseZero(\"0\")            = ${parseZero("0")}");
 //!outputs  "parseZero(\"hi\") orelse -1 = -1"
-console.log("parseZero(\"hi\") orelse -1 = ${ parseZero("hi") orelse -1 }");
+console.log("parseZero(\"hi\") orelse -1 = ${parseZero("hi") orelse -1}");
 // ✅
 ```
 
@@ -369,6 +370,7 @@ Given two [*Int32*](types.md#class-int32)s it produces an *Int*,
 given two [*Int64*](types.md#class-int64)s it produces an *Int64*,
 and given two [*Float64*](types.md#class-float64)s it produces a *Float64*.
 
+<!-- fmt: off -->
 ```temper
 13   % 3   == 1    &&
 13.0 % 3.0 == 1.0
@@ -400,6 +402,7 @@ The `&` operator can be applied in two ways:
 Takes two [*Int32*](types.md#class-int32)s or two [*Int64*](types.md#class-int64)s and returns the
 integer that has any bit set that is set in both inputs.
 
+<!-- fmt: off -->
 ```temper
 // Using binary number syntax
 (0b0010101 &
@@ -447,6 +450,7 @@ Infix `*` allows multiplying numbers.
 Given two [*Int32*](types.md#class-int32)s it produces an *Int*, given two [*Int64*](types.md#class-int64)s it
 produces an *Int64*, and given two [*Float64*](types.md#class-float64)s it produces a *Float64*.
 
+<!-- fmt: off -->
 ```temper
 3   * 4   == 12   &&
 3.0 * 4.0 == 12.0
@@ -458,6 +462,7 @@ Infix `**` allows raising one number to the power of another.
 
 Given two [*Float64*](types.md#class-float64)s it produces a *Float64*.
 
+<!-- fmt: off -->
 ```temper
 3.0 **  2.0 == 9.0 &&
 4.0 ** -0.5 == 0.5
@@ -473,6 +478,7 @@ The builtin `+` operator has six variants:
 - *Infix* with two [*Float64*](types.md#class-float64)s: signed addition
 - *Prefix* with one [*Float64*](types.md#class-float64): numeric identity
 
+<!-- fmt: off -->
 ```temper
 1    + 2    == 3    &&
 1.0  + 2.0  == 3.0  &&
@@ -529,6 +535,7 @@ only happens once.
 ### `-`
 The builtin `-` operator has six variants like [`+`](#-2).
 
+<!-- fmt: off -->
 ```temper
 3   - 1   == 2   &&
 3.0 - 1.0 == 2.0 &&
@@ -548,7 +555,7 @@ The `-` operator is left-associative:
 
 ```temper
 1 - 1 - 1 == (1 - 1) - 1 &&
-1 - 1 - 1 == -1
+  1 - 1 - 1 == -1
 // ✅
 ```
 
@@ -557,7 +564,7 @@ Since there is a [`--` operator: decrement](#---operator-decrement) operator, `-
 ```temper
 var x = 1;
 +x == -(-x) &&  // double negation is identity
---x == 0        // but two adjacent `-` means pre-decrement
+  --x == 0        // but two adjacent `-` means pre-decrement
 // ✅
 ```
 
@@ -594,6 +601,7 @@ Infix `/` allows dividing numbers.
 Given two [*Int32*](types.md#class-int32)s it produces an *Int*, given two [*Int64*](types.md#class-int64)s it
 produces an *Int64*, and given two [*Float64*](types.md#class-float64)s it produces a *Float64*.
 
+<!-- fmt: off -->
 ```temper
 12   / 3   == 4    &&
 12.0 / 3.0 == 4.0
@@ -602,6 +610,7 @@ produces an *Int64*, and given two [*Float64*](types.md#class-float64)s it produ
 
 Integer division [rounds towards zero].
 
+<!-- fmt: off -->
 ```temper
  7   / 2   ==  3   &&
 -7   / 2   == -3   &&
@@ -621,9 +630,9 @@ Division by zero has [*Bubble*](types.md#class-bubble).
 Float64 division by zero is a *Bubble* too.
 
 ```temper
-console.log("${ (0.0 /  0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
-console.log("${ (1.0 /  0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
-console.log("${ (1.0 / -0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
+console.log("${(0.0 /  0.0).toString() orelse "Bubble"}"); //!outputs "Bubble"
+console.log("${(1.0 /  0.0).toString() orelse "Bubble"}"); //!outputs "Bubble"
+console.log("${(1.0 / -0.0).toString() orelse "Bubble"}"); //!outputs "Bubble"
 // ✅
 ```
 
@@ -647,6 +656,7 @@ Tldr: always put spaces around infix operators like `<`.
 
 The `<` operator means comparison, but in a type expression, it can also be a bracket.
 
+<!-- fmt: off -->
 ```temper
 console.log(c < d);  // Compare c to d
 
@@ -670,6 +680,7 @@ writing systems.)
 
 For example:
 
+<!-- fmt: off -->
 ```temper
 // ┏━━━━ This space makes the difference
 f(a < b, c > d);  // pass two booleans to f
@@ -716,6 +727,7 @@ the number of bits to shift by.
 All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
 operand are ignored.
 
+<!-- fmt: off -->
 ```temper
 // Using binary number syntax
 (0b0000_0001_0101 << 3) ==
@@ -745,6 +757,7 @@ with *b*, and is a compile-time error if the two are not mutually comparable.
 - `a <=> b` is `0` if *a* orders **with** *b*
 - `a <=> b` is `1` if *a* orders **after** *b*
 
+<!-- fmt: off -->
 ```temper
 (   42 <=>   123) == -1 &&  //    42 orders before   123
 (  1.0 <=>   1.0) == 0  &&  //   1.0 orders with     1.0
@@ -828,6 +841,7 @@ Unicode [scalar value]s, which exclude surrogate codes appearing by themselves.
 `-0.0` precedes `+0.0` and all `NaN` values sort above +&infin;.
 This differs from the [IEEE-754 comparison predicate] which treats `NaN` as incomparable.
 
+<!-- fmt: off -->
 ```temper
 -Infinity < -1.0     &&
      -1.0 <  0.0     &&
@@ -994,6 +1008,7 @@ the number of bits to shift by.
 All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
 operand are ignored.
 
+<!-- fmt: off -->
 ```temper
 // Using binary number syntax
 (0b0000_1010_1010 >> 3) ==
@@ -1008,6 +1023,7 @@ Unlike the [`>>>`](#operator--shift-right-zero-extending) operator, this operato
 When shifting right by *n* bits, the *n* highest bits in the output are copied
 from the most-significant bit in the input.
 
+<!-- fmt: off -->
 <!-- known: I23 -->
 ```temper
 (0x8000_0000_0000_0000 >> 2) ==
@@ -1025,6 +1041,7 @@ the number of bits to shift by.
 All but the 5 (for *Int32*) or 6 (for *Int64*) least significant bits of the right
 operand are ignored.
 
+<!-- fmt: off -->
 ```temper
 // Using binary number syntax
 (0b0000_1010_1010 >>> 3) ==
@@ -1039,6 +1056,7 @@ Unlike the [`>>`](#operator--shift-right) operator, this operator is zero extend
 When shifting right by *n* bits, the *n* highest bits in the output are copied
 from the most-significant bit in the input.
 
+<!-- fmt: off -->
 <!-- known: I23 -->
 ```temper
 (0x8000_0000_0000_0000 >>> 2) ==
@@ -1052,6 +1070,7 @@ two [*Int64*](types.md#class-int64)s and returns an integer of the same size
 that has each bit set when the corresponding bits in the inputs
 are different.
 
+<!-- fmt: off -->
 <!-- known: I23 -->
 ```temper
 // Using binary number syntax
@@ -1067,6 +1086,7 @@ The `|` operator performs bitwise union.
 It takes two [*Int32*](types.md#class-int32)s or two [*Int64*](types.md#class-int64)s and returns
 the integer of the same size that has any bit set that is set in either input.
 
+<!-- fmt: off -->
 ```temper
 // Using binary number syntax
 (0b0010101 |
@@ -1081,6 +1101,7 @@ The `~` operator negates the bits in an integer.
 Given an [*Int32*](types.md#class-int32) or [*Int64*](types.md#class-int64) it returns the integer
 of the same size with the opposite bits.
 
+<!-- fmt: off -->
 <!-- known: I23 -->
 ```temper
 // Using binary number syntax
@@ -1567,6 +1588,7 @@ for (var i = 0; i < 3; ++i) {
 
 Unlike in some other languages, curly brackets (`{...}`) are **required** around the body.
 
+<!-- fmt: off -->
 ```temper
 for (var i = 0; i < 3; ++i)
   console.log(i.toString()) // Curly brackets missing
@@ -1758,7 +1780,7 @@ and another may import it
 
 ```temper
 let { world } = import("./earth");
-console.log("Hello, ${ world }!"); //!outputs "Hello, Earth!"
+console.log("Hello, ${world}!"); //!outputs "Hello, Earth!"
 // ⏸️
 ```
 
@@ -2112,6 +2134,7 @@ while (i < 3) {
 
 Unlike in some other languages, curly brackets (`{...}`) are **required** around the body.
 
+<!-- fmt: off -->
 ```temper
 var i = 0;
 while (i < 3)
@@ -2157,6 +2180,7 @@ TODO: Does it need more testing?  Issue #1549
 ### Null-coalescing `??`
 Infix `??` allows choosing a default value when the subject is null.
 
+<!-- fmt: off -->
 ```temper
 let prod(i: Int, j: Int?): Int { i * (j ?? 1) }
 prod(2, 3)    == 6 &&
@@ -2311,7 +2335,7 @@ let stringIsPalindrome(s: String): Boolean {
 
 // Equivalent calls
 "step on no pets".isPalindrome() &&
-stringIsPalindrome("step on no pets")
+  stringIsPalindrome("step on no pets")
 // ✅
 ```
 
@@ -2459,8 +2483,7 @@ let {
 let jsonTextProducer = new JsonTextProducer();
 // Encode a point
 IntPoint.jsonAdapter().encodeToJson(
-  new IntPoint(1, 2),
-  jsonTextProducer
+  new IntPoint(1, 2), jsonTextProducer
 );
 //!outputs "{\"x\":1,\"y\":2}"
 console.log(jsonTextProducer.toJsonString());
@@ -2468,7 +2491,7 @@ console.log(jsonTextProducer.toJsonString());
 // Decode a point
 let jsonSyntaxTree = parseJson("{\"x\":3,\"y\":4}");
 let p = IntPoint.jsonAdapter()
-    .decodeFromJson(jsonSyntaxTree, NullInterchangeContext.instance);
+  .decodeFromJson(jsonSyntaxTree, NullInterchangeContext.instance);
 
 console.log("x is ${p.x.toString()}, y is ${p.y.toString()}");
 //!outputs "x is 3, y is 4"
@@ -2554,7 +2577,7 @@ let {
 } = import("std/json");
 
 let intListAdapter: JsonAdapter<List<Int>> =
-    List.jsonAdapter(Int.jsonAdapter());
+  List.jsonAdapter(Int.jsonAdapter());
 
 let p = new JsonTextProducer();
 intListAdapter.encodeToJson([123], p);
@@ -2620,8 +2643,8 @@ let jsonSyntaxTreeV2 = parseJson(
 FooRequest.jsonAdapter()
   .decodeFromJson(jsonSyntaxTreeV1, NullInterchangeContext.instance)
   is FooRequestVersion1
-&&
-FooRequest.jsonAdapter()
+  &&
+  FooRequest.jsonAdapter()
   .decodeFromJson(jsonSyntaxTreeV2, NullInterchangeContext.instance)
   is FooRequestVersion2
 // ✅
@@ -2759,17 +2782,17 @@ for details.
 
 ```temper
 class ConvertingStringBuilder {
-    public content: StringBuilder = new StringBuilder();
+  public content: StringBuilder = new StringBuilder();
 
-    @overload("append")
-    public appendInt32(int: Int32): Void {
-        content.append(int.toString());
-    }
+  @overload("append")
+  public appendInt32(int: Int32): Void {
+    content.append(int.toString());
+  }
 
-    @overload("append")
-    public appendString(string: String): Void {
-        content.append(string);
-    }
+  @overload("append")
+  public appendString(string: String): Void {
+    content.append(string);
+  }
 }
 
 let builder = new ConvertingStringBuilder();
@@ -3001,7 +3024,7 @@ let maybeLength(a: String?): Int? {
   a?.countBetween(String.begin, a.end)
 }
 maybeLength("ab") == 2 &&
-maybeLength(null) == null
+  maybeLength(null) == null
 // ✅
 ```
 

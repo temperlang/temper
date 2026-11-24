@@ -61,7 +61,7 @@ Adding zero and negative zero is always zero, and subtraction gets conceptually 
       console.log("zeroes not equal");
     }
     if (lt(negativeZero, zero)) {
-    console.log("negZero < zero")
+      console.log("negZero < zero")
     }
     if (zero - zero == zero) {
       console.log("zero subtraction");

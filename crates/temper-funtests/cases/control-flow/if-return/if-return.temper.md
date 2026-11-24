@@ -50,14 +50,14 @@ inner `if`.
     t = t;
     var f = !t;
 
-    console.log("explicit    true  -> ${ explicit(t) }");
-    console.log("explicit    false -> ${ explicit(f) }");
-    console.log("halfAndHalf true  -> ${ halfAndHalf(t) }");
-    console.log("halfAndHalf false -> ${ halfAndHalf(f) }");
-    console.log("implicit    true  -> ${ implicit(t) }");
-    console.log("implicit    false -> ${ implicit(f) }");
-    console.log("nested      true  false -> ${ nested(t, f) }");
-    console.log("nested      false true  -> ${ nested(f, t) }")
+    console.log("explicit    true  -> ${explicit(t)}");
+    console.log("explicit    false -> ${explicit(f)}");
+    console.log("halfAndHalf true  -> ${halfAndHalf(t)}");
+    console.log("halfAndHalf false -> ${halfAndHalf(f)}");
+    console.log("implicit    true  -> ${implicit(t)}");
+    console.log("implicit    false -> ${implicit(f)}");
+    console.log("nested      true  false -> ${nested(t, f)}");
+    console.log("nested      false true  -> ${nested(f, t)}")
 
 Expected results:
 

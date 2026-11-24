@@ -188,7 +188,7 @@ earlier:
 do(fn () {
   var i = 0;
   // Without parameters, `()` after `fn` is optional.
-  while(i < shapes.length, fn {
+  while (i < shapes.length, fn {
     console.log(shapes[i].toString());
     i += 1;
   });

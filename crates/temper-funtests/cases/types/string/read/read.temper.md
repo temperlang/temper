@@ -230,12 +230,12 @@ And we shouldn't go past bounds.
       let wayBefore = s.step(before3, -100);
       let wayAfter = s.step(before3, 100);
 
-      console.log("s[3:]  -> ${ s.slice(after3, s.end) }");
-      console.log("s[:3]  -> ${ s.slice(String.begin, after3) }");
-      console.log("s[1:4] -> ${ s.slice(after1, after4) }");
-      console.log("s[:4]  -> ${ s.slice(String.begin, after4) }");
-      console.log("s[1:4] -> ${ s.slice(before3b, after4b) }");
-      console.log("s[-many:many] -> ${ s.slice(wayBefore, wayAfter) }");
+      console.log("s[3:]  -> ${s.slice(after3, s.end)}");
+      console.log("s[:3]  -> ${s.slice(String.begin, after3)}");
+      console.log("s[1:4] -> ${s.slice(after1, after4)}");
+      console.log("s[:4]  -> ${s.slice(String.begin, after4)}");
+      console.log("s[1:4] -> ${s.slice(before3b, after4b)}");
+      console.log("s[-many:many] -> ${s.slice(wayBefore, wayAfter)}");
     }
 
 ```log

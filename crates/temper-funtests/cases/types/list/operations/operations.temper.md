@@ -41,7 +41,7 @@ Let's start with a list of integers, proving out sorting as well.
 
 Then we can map them to strings and print them out.
 
-    console.log("All  ${ (ls.join(", ") { x => x.toString()}) }");
+    console.log("All  ${(ls.join(", ") { x => x.toString() })}");
 
 which outputs
 
@@ -54,7 +54,7 @@ We can filter before calling map:
     console.log(
       "Even ${
         (ls.filter { x => (x & 1) == 0 }
-          .join(", ") { x => x.toString()})
+            .join(", ") { x => x.toString() })
       }"
     );
 
@@ -69,7 +69,7 @@ We'll try the opposite filter:
     console.log(
       "Odd  ${
         (ls.filter { x => (x & 1) != 0 }
-          .join(", ") { x => x.toString()})
+            .join(", ") { x => x.toString() })
       }"
     );
 
@@ -83,8 +83,8 @@ And we can transform them.
 
     console.log(
       "Neg  ${
-        (ls.map {(x): Int => -x }
-          .join(", ") { x => x.toString()})
+        (ls.map { (x): Int => -x }
+            .join(", ") { x => x.toString() })
       }"
     );
 
@@ -99,8 +99,8 @@ Also prove this works from the abstract `Listed`` interface.
     let listed: Listed<Int> = ls;
     console.log(
       "Neg  ${
-        (listed.map {(x): Int => -x }
-          .join(", ") { x => x.toString()})
+        (listed.map { (x): Int => -x }
+            .join(", ") { x => x.toString() })
       }"
     );
 
@@ -180,16 +180,16 @@ Split 🌍 - 1
 We can reverse a list builder in-place using `.reverse`:
 
     let triangleOfFooBar = [
-      [ ],
-      [ "bar" ],
-      [ "bar", "baz" ],
-      [ "bar", "baz", "boo" ],
-      [ "bar", "baz", "boo", "far" ],
-      [ "bar", "baz", "boo", "far", "faz" ],
+      [],
+      ["bar"],
+      ["bar", "baz"],
+      ["bar", "baz", "boo"],
+      ["bar", "baz", "boo", "far"],
+      ["bar", "baz", "boo", "far", "faz"],
 
 Start with at least one unsorted.
 
-      [ "far", "faz", "foo", "bar", "baz", "boo" ],
+      ["far", "faz", "foo", "bar", "baz", "boo"],
     ].map { (list): ListBuilder<String> =>
       let builder = list.toListBuilder();
 
@@ -202,7 +202,7 @@ And verify in-place sorting.
     for (var j = 0; j < triangleOfFooBar.length; ++j) {
       let row = triangleOfFooBar[j];
       console.log("Fwd  [${
-        (row.join(" ") { x => x})
+        (row.join(" ") { x => x })
       }]");
       // Reversing the inner-list in place affects the next loop.
       row.reverse();
@@ -213,7 +213,7 @@ And verify in-place sorting.
     for (var j = 0; j < triangleOfFooBar.length; ++j) {
       let row = triangleOfFooBar[j];
       console.log("Back [${
-        (row.join(" ") { x => x})
+        (row.join(" ") { x => x })
       }]");
     }
 
@@ -262,13 +262,13 @@ Modify the original after the copy.
 
 Verify our contents, both the original and the doubled one.
 
-    console.log(messageBuilder.join(" ") { x => x});
+    console.log(messageBuilder.join(" ") { x => x });
 
 Also verify that `sorted` doesn't modify the list builder and also that the
 compare function doesn't just have to be default order.
 
     console.log(copyThat.sorted { a, b => b <=> a }.join(" ") { x => x });
-    console.log(copyThat.join(" ") { x => x});
+    console.log(copyThat.join(" ") { x => x });
 
 ```log
 say more than hi there y'all
@@ -322,8 +322,8 @@ Bye
 Slice allows selecting a sub-list, non-destructively.
 
     for (var i = -2; i <= 10; ++i) {
-      console.log("Slice(${i}, ${i+2}): [${
-        (ls.slice(i, i + 2).join(", ") { x => x.toString()})
+      console.log("Slice(${i}, ${i + 2}): [${
+        (ls.slice(i, i + 2).join(", ") { x => x.toString() })
       }]");
     }
 
@@ -367,10 +367,10 @@ This shows lists of booleans being operated on
       }
       var ls = [true, false];
       var joined = ls.join(", ", booleanToString);
-      var inverted = ls.map(fn(b: Boolean): Boolean {
+      var inverted = ls.map(fn (b: Boolean): Boolean {
         return !b;
       });
-      var joinedAndInverted = inverted.join(", ", fn(b: Boolean): String {
+      var joinedAndInverted = inverted.join(", ", fn (b: Boolean): String {
         if (b) {
           return "not false";
         } else {
@@ -379,10 +379,10 @@ This shows lists of booleans being operated on
       });
       console.log("list = [${joined}]");
       console.log("list (each inverted) = [${joinedAndInverted}]");
-      var onlyTrue = ls.filter(fn(b: Boolean): Boolean {
+      var onlyTrue = ls.filter(fn (b: Boolean): Boolean {
         return b;
       });
-      var onlyFalse = ls.filter(fn(b: Boolean): Boolean {
+      var onlyFalse = ls.filter(fn (b: Boolean): Boolean {
         return !b;
       });
       console.log("list (== true only) = [${onlyTrue.join(", ", booleanToString)}]");
