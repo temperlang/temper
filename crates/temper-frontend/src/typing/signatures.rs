@@ -154,7 +154,7 @@ impl Settle {
         let is_eq = matches!(f, Function::Eq | Function::Ne);
         for (i, (&arg, &t)) in args.iter().zip(&types).enumerate() {
             let base = match *self.typing.types.get(t) {
-                TypeData::Nullable(inner) => inner,
+                TypeData::Nullable(inner) if t != NULL => inner,
                 _ => t,
             };
             // A class's value fits no variant, unless it's the first
@@ -275,7 +275,7 @@ impl Settle {
         let that = self.known_type(b);
         // Kotlin expands `==` with a nullable side to a null check first,
         // and folds a nullable constant to its value's type.
-        let nullable = matches!(self.typing.types.get(that), TypeData::Nullable(_));
+        let nullable = that != NULL && matches!(self.typing.types.get(that), TypeData::Nullable(_));
         let is_eq = matches!(f, Function::Eq | Function::Ne);
         let unfit = !((is_eq && (nullable || that == NULL))
             || (nullable && self.may_fold(b, 0))

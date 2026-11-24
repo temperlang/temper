@@ -271,7 +271,6 @@ const KNOWN: &[(&str, &str, &str)] = &[
 
 /// Core's bodies that no case runs, each with why.
 const NOT_RUN: &[(&str, &str)] = &[
-    ("Null.constructor", "private: null is a builtin value"),
     (
         "Empty.constructor",
         "runs in core's top level, for `emptySingleton`, before bodies are watched",
@@ -517,7 +516,6 @@ fn assigns(text: &str, name: &str) -> bool {
 /// stands in for, each with what the interpreter runs for it and why
 /// (notes/core-bodies.md, "What the interpreter runs").
 const UNCONNECTED: &[(&str, &str)] = &[
-    ("Null.constructor", "private: null is a builtin value"),
     ("Empty.constructor", "private: empty() is a builtin value"),
     (
         "StringIndex.constructor",

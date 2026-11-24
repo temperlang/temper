@@ -48,6 +48,16 @@ The singleton value `null` which is admitted by any [Postfix `?`](#postfix-) typ
 - A temporary, not computed *yet*, intermediate value
 
 `null` is distinguishable, in translated Temper code, from any other value.
+
+`null` has no type of its own: it takes the nullable type its place
+wants, as `Int?` in `let n: Int? = null;`. So a declaration whose only
+value is `null` needs a type.
+
+```temper
+let a = null;
+// ❌
+```
+
 For example, in the context of the *Int32?* type, *0* is not equal to `null`.
 
 Backends may translate `null` and the concept of nullable types in various ways:

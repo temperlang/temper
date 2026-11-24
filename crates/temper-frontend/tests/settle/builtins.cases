@@ -1107,7 +1107,7 @@ error 881..886: Expected subtype of Boolean, but got Int32
 error 915..920: Expected subtype of Float64, but got Int32
 error 924..929: Cannot bubble from a function without Bubble in its return type
 
-=== Console, getConsole, Equatable, and Null are core's, named as in Kotlin Temper
+=== Console, getConsole, and Equatable are core's, named as in Kotlin Temper
 class Quiet extends Console {
   public log(message: String): Void {}
 }
@@ -1119,14 +1119,12 @@ let q: Console = new Quiet();
 q.log("unheard");
 let same<T extends Equatable<T>>(a: T, b: T): Boolean { a == b }
 console.log("${same(1, 1)} ${same("a", "b")}");
-let n: Null = null;
-console.log((n == null).toString());
 --- settled
 (Block
   (Class
     ^Quiet:0
     Console
-    (Method ^log:7 (Fn (Let ^message:8 String) Void (Block))))
+    (Method ^log:6 (Fn (Let ^message:7 String) Void (Block))))
   (Let ^c:1 Console (Call getConsole "mine"))
   (Call (Call . c:1 \log) "hi")
   (Let ^k:2 console)
@@ -1136,18 +1134,15 @@ console.log((n == null).toString());
   (Let
     ^same:4
     (Fn
-      (TypeParam ^T:9 (Call <> Equatable T:9))
-      (Let ^a:10 T:9)
-      (Let ^b:11 T:9)
+      (TypeParam ^T:8 (Call <> Equatable T:8))
+      (Let ^a:9 T:8)
+      (Let ^b:10 T:8)
       Boolean
-      (Block (Call == a:10 b:11))))
+      (Block (Call == a:9 b:10))))
   (Call
     (Call . console \log)
     (Call cat (Call same:4 1 1) " " (Call same:4 "a" "b")))
-  (Let ^n:5 Null null)
-  (Call (Call . console \log) (Call (Call . (Call == n:5 null) \toString)))
   #void)
 log hi
 log there
 log true false
-log true

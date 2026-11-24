@@ -291,6 +291,12 @@ impl Settle {
     fn resolve_eq(&mut self, call: NodeId, args: &[NodeId]) -> Option<Resolved> {
         let (a, b) = (self.known_type(args[0]), self.known_type(args[1]));
         if a == NULL || b == NULL {
+            // Null there is of the other side's type.
+            let [x, y] = [args[0], args[1]];
+            match a == NULL {
+                true => self.null_in_place(x, b),
+                false => self.null_in_place(y, a),
+            }
             return Some(Resolved::NullCheck);
         }
         let (a, b) = (self.operand(args[0]), self.operand(args[1]));

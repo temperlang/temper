@@ -34,8 +34,6 @@ pub enum TypeData {
     /// `U` (core's docs), and translates to `T`. Made by
     /// [`Types::never_of`], so `T` is neither nullable nor a `Never`.
     NeverOf(TypeId),
-    /// The type of `null`.
-    Null,
     /// A builtin type, by its index in [`TYPES`]. `Int` is `Int32`.
     Builtin(u8),
     /// A class or interface without type parameters, by the symbol its
@@ -47,7 +45,10 @@ pub enum TypeData {
     /// A generic type given arguments, as `List<Int>` or `Box<String>`:
     /// `base` is a [`TypeData::Builtin`] or [`TypeData::Class`].
     Applied { base: TypeId, args: Vec<TypeId> },
-    /// `T?`: a type or null. `T` isn't nullable itself.
+    /// `T?`: a type or null. `T` isn't nullable itself. `Never?` is
+    /// [`NULL`], null's type where one is needed: null has no type of its
+    /// own, but takes the nullable type its place wants (notes/typing.md,
+    /// "Null").
     Nullable(TypeId),
     /// `fn (A, B): R`, or `fn (A, B): R throws Bubble` if `throws`. A
     /// parameter with a default is optional.
@@ -66,6 +67,8 @@ pub struct Param {
 
 pub const UNKNOWN: TypeId = TypeId(0);
 pub const NEVER: TypeId = TypeId(1);
+/// `Never?`, the nullable bottom: a subtype of every `T?`, and the type
+/// typing gives a bare `null`, which has none of its own.
 pub const NULL: TypeId = TypeId(2);
 pub const VOID: TypeId = TypeId(3);
 pub const BOOLEAN: TypeId = TypeId(4);
@@ -206,7 +209,11 @@ impl Types {
             classes: HashMap::new(),
             bounds: HashMap::new(),
         };
-        for data in [TypeData::Unknown, TypeData::Never, TypeData::Null] {
+        for data in [
+            TypeData::Unknown,
+            TypeData::Never,
+            TypeData::Nullable(NEVER),
+        ] {
             types.intern(data);
         }
         for name in WELL_KNOWN {
@@ -381,7 +388,8 @@ impl Types {
                 let Some(i) = formals.iter().position(|&f| f == symbol) else {
                     return;
                 };
-                if matches!(self.get(actual), Never | Null)
+                if matches!(self.get(actual), Never)
+                    || actual == NULL
                     || actual == VOID
                     || !self.is_known(actual)
                 {
@@ -607,8 +615,6 @@ impl Types {
         match TYPES[index as usize] {
             "Int" => INT32,
             "Never" => NEVER,
-            // Core's `Null`, null's type.
-            "Null" => NULL,
             _ => self.intern(TypeData::Builtin(index)),
         }
     }
@@ -658,8 +664,7 @@ impl Types {
     /// `t?`.
     pub fn nullable(&mut self, t: TypeId) -> TypeId {
         match self.get(t) {
-            TypeData::Unknown | TypeData::Null | TypeData::Nullable(_) => t,
-            TypeData::Never => NULL,
+            TypeData::Unknown | TypeData::Nullable(_) => t,
             _ => self.intern(TypeData::Nullable(t)),
         }
     }
@@ -683,8 +688,6 @@ impl Types {
             },
             (TypeData::NeverOf(x), _) => self.join(x, b),
             (_, TypeData::NeverOf(y)) => self.join(a, y),
-            (TypeData::Null, _) => self.nullable(b),
-            (_, TypeData::Null) => self.nullable(a),
             (TypeData::Nullable(x), _) if x == b => a,
             (_, TypeData::Nullable(x)) if x == a => b,
             (TypeData::Nullable(x), _) => match self.join(x, b) {
@@ -818,7 +821,18 @@ impl Types {
             // No value is a `Void`, so it's no other type, not even an
             // `AnyValue` (t854).
             _ if s == VOID => Some(false),
-            (Null, Nullable(_)) => Some(true),
+            // Only null, and what never completes, is a `Never?`.
+            _ if t == NULL => match self.get(s) {
+                Nullable(_) => Some(false),
+                NeverOf(a) => self.subtype(*a, t, depth),
+                Param(_) => self.param_subtype(s, t, depth),
+                _ => (self.is_definite(s)
+                    || self.is_class_like(s)
+                    || self.is_core_nominal(s)
+                    || s == ANY_VALUE)
+                    .then_some(false),
+            },
+            (Nullable(a), Nullable(_)) if a == NEVER => Some(true),
             (Nullable(a), Nullable(b)) => self.subtype(a, b, depth),
             (_, Nullable(b)) => self.subtype(s, b, depth),
             // `Never<A>` is what an `A` is, and is a `Never<B>` if `A` is a
@@ -827,34 +841,18 @@ impl Types {
             (NeverOf(a), NeverOf(b)) => self.subtype(a, b, depth),
             (NeverOf(a), _) => self.subtype(a, t, depth),
             (_, NeverOf(_)) => Some(false),
-            // Only null is a `Null`, null's type, as core names it.
-            (Nullable(_), Null) => Some(false),
-            (_, Null) if !matches!(self.get(s), Param(_)) => (self.is_definite(s)
-                || self.is_class_like(s)
-                || self.is_core_nominal(s)
-                || s == ANY_VALUE)
-                .then_some(false),
             // Unless its bound is nullable, `T` isn't.
-            (Null | Nullable(_), Param(_))
-                if self.subtype(NULL, self.upper(t), depth) != Some(false) =>
-            {
+            (Nullable(_), Param(_)) if self.subtype(NULL, self.upper(t), depth) != Some(false) => {
                 None
             }
-            (Null | Nullable(_), _) => (self.is_definite(t)
+            (Nullable(_), _) => (self.is_definite(t)
                 || self.is_class_like(t)
                 || self.is_core_nominal(t)
                 || t == ANY_VALUE)
                 .then_some(false),
             // A type parameter is a subtype of its bound only, and nothing
             // but itself and `Never` is a subtype of it.
-            (Param(_), _) => {
-                let upper = self.upper(s);
-                match (upper, self.subtype(upper, t, depth)) {
-                    // What an `AnyValue` may hold, a `T` needn't.
-                    (ANY_VALUE, None) => Some(false),
-                    (_, known) => known,
-                }
-            }
+            (Param(_), _) => self.param_subtype(s, t, depth),
             (_, Param(_)) => Some(false),
             // Core's `AnyValue` docs: `Bubble` isn't one.
             _ if t == ANY_VALUE && self.is_bubble(s) => Some(false),
@@ -875,6 +873,17 @@ impl Types {
             // A function and a class or interface that isn't `@fun`.
             (Fn { .. }, Class(_)) | (Class(_), Fn { .. }) => Some(false),
             _ => (self.is_definite(s) && self.is_definite(t)).then_some(false),
+        }
+    }
+
+    /// [`Types::subtype`] for a type parameter `s`: a subtype of its bound
+    /// only.
+    fn param_subtype(&mut self, s: TypeId, t: TypeId, depth: u32) -> Option<bool> {
+        let upper = self.upper(s);
+        match (upper, self.subtype(upper, t, depth)) {
+            // What an `AnyValue` may hold, a `T` needn't.
+            (ANY_VALUE, None) => Some(false),
+            (_, known) => known,
         }
     }
 
@@ -1106,7 +1115,6 @@ impl Types {
             TypeData::Unknown => "?".into(),
             TypeData::Never => "Never".into(),
             TypeData::NeverOf(t) => format!("Never<{}>", self.display(*t, class_name)),
-            TypeData::Null => "Null".into(),
             TypeData::Builtin(i) => TYPES[*i as usize].into(),
             TypeData::Class(symbol) | TypeData::Param(symbol) => class_name(*symbol),
             TypeData::Applied { base, args } => {

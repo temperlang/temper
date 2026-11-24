@@ -89,7 +89,6 @@ core, so a type core adds needs a row.
 | `Mapped<K, V>` | no, interface | no, sealed | no, type arguments | no |
 | `Never<T>` | no, interface | no, sealed | no, it has no values | no |
 | `NoStringIndex` | no, private (`StringIndex.none`) | no | no, connected | no |
-| `Null` | no, private (`null`) | no | yes | no |
 | `Pair<K, V>` | `(key, value)` | no | no, connected | no |
 | `Promise<T>` | no, private (`PromiseBuilder`) | no | no, connected | no |
 | `PromiseBuilder<T>` | `()` | no | no, type arguments | no |
@@ -104,11 +103,12 @@ core, so a type core adds needs a row.
 
 Core also exports `Function`, `Invalid` and `Problem`, which libraries
 can't name (they aren't in `builtins::TYPES`). `Console`, `getConsole`,
-`Equatable` and `Null` are named as in Kotlin Temper, whose core was the
-prelude: a function may take a `Console`, a class may implement one, a
-bound may be `T extends Equatable<T>` (the builtin types that are
-`Equatable`s are, through `MapKey` for `Int32` and `String`), and `Null`
-is null's type, which only null is.
+and `Equatable` are named as in Kotlin Temper, whose core was the
+prelude: a function may take a `Console`, a class may implement one, and
+a bound may be `T extends Equatable<T>` (the builtin types that are
+`Equatable`s are, through `MapKey` for `Int32` and `String`). Kotlin's
+`Null` is gone: null has no type of its own ([typing.md](typing.md),
+"Null").
 
 Statics: `String.fromCodePoint`, `.fromCodePoints` and `.begin`,
 `StringIndex.none`, `Float64.e` and `.pi`, and `List.of`.
@@ -134,7 +134,8 @@ The open questions of t856 are decided (notes/decisions.md, 2026-11-21
 and 2026-11-23): `MapKey` is sealed; Kotlin's connected rule is
 Temper's, for core's and users' connected types; `DoneResult`'s
 constructor is private; users' private constructors are enforced per
-class; `Console`, `getConsole`, `Equatable` and `Null` are nameable.
+class; `Console`, `getConsole`, and `Equatable` are nameable (`Null`
+was too, until t955 removed it).
 
 - **`Pair`, `Deque`, `DenseBitVector`** are `@connected` (2026-11-23),
   without `@mayDowncastTo`, so `is` and `as` can't target them; `Deque`
@@ -161,6 +162,6 @@ class; `Console`, `getConsole`, `Equatable` and `Null` are nameable.
 - **`Generator`, `SafeGenerator`, `GeneratorFn`, `AnyValue`, `Console`**
   may be extended, as in Kotlin, but tmpl can't translate a user class
   that does yet ("not yet in tmpl: a builtin supertype").
-- **Not translated yet:** an `Equatable<T>` bound, a `Null` type, and on
+- **Not translated yet:** an `Equatable<T>` bound, and on
   JS, Lua, and Rust a `Console` passed as a value; `getConsole(name)`
   and `console.log` work on every backend.

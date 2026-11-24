@@ -1774,19 +1774,6 @@ this in the future.
 
 `:` `fn(`[*Equatable*](#interface-equatable)&lt;[*EQ*](#equatableeq)&gt;, [*EQ*](#equatableeq)`):` [*Boolean*](#class-boolean)
 
-## *class Null*
-
-The singleton [*null*](builtins.md#null) value represents
-the absence of a value of another type.
-
-In Temper, *null* is a valid value of any nullable type,
-any regular type followed by `?`.
-
-*String?* is a valid type for a local variable or function
-input that might refer to either *null* or a string value.
-
-*Null* `extends` [*AnyValue*](#interface-anyvalue)
-
 ## *class Empty*
 
 *Empty* is the type for a stateless singleton value which may be used
@@ -1795,7 +1782,7 @@ judiciously to work around some problems in generic programming.
 When not solving generic programming problems, prefer [*Void*](#class-void).
 *Void* translates to the idiomatic no-usable-result concept which for many
 typed functional languages is the same as *Empty* but for many dynamic
-languages is the same as [*Null*](#class-null).
+languages is the same as [*null*](builtins.md#null).
 
 *Empty* differs from [*Void*](#class-void) in that it can be used as the type
 of a function input and of a local variable.
@@ -1805,7 +1792,7 @@ languages; a function may be effectively *Void* but can instead return
 *Empty* allowing its return type to bind to agree with a type parameter.
 
 As seen below, the empty value may be retrieved by calling the `empty()`
-function, and is distinct from [*Null*](#class-null).
+function, and is distinct from [*null*](builtins.md#null).
 
 ```temper
 let e: Empty? = empty();

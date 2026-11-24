@@ -93,7 +93,6 @@ const ROWS: &[(&str, New, Ext, Cast, Key)] = &[
     ("Mapped<String, Int>", New::Abstract, Ext::Sealed, Cast::TypeArgs, Key::No),
     ("Never<Int>", New::Abstract, Ext::Sealed, Cast::Impossible, Key::No),
     ("NoStringIndex", New::Private, Ext::Concrete, Cast::Connected, Key::No),
-    ("Null", New::Private, Ext::Concrete, Cast::Yes, Key::No),
     ("Pair<Int, Int>", New::Args("1, 2"), Ext::Concrete, Cast::Connected, Key::No),
     ("Promise<Int>", New::Private, Ext::Concrete, Cast::Connected, Key::No),
     ("PromiseBuilder<Int>", New::Args(""), Ext::Concrete, Cast::TypeArgs, Key::No),
@@ -213,10 +212,9 @@ const OTHERS: &[(&str, &[&str])] = &[
         "class C {\n  private constructor() {}\n}\nlet f(): Void { let D = C; let c = new D(); }",
         &["C is not a concrete type with a public constructor"],
     ),
-    // `Console`, `Equatable` and `Null`, which core exports, as Kotlin
-    // Temper's did: a console may be passed around, implemented, and
-    // got by name; the equatable builtin types are `Equatable`s, as a
-    // bound; `Null` is null's type.
+    // `Console` and `Equatable`, which core exports, as Kotlin Temper's
+    // did: a console may be passed around, implemented, and got by name;
+    // the equatable builtin types are `Equatable`s, as a bound.
     (
         "let c: Console = console;\nc.log(\"a\");\nlet d: Console = getConsole(\"mine\");\n\
          let e: Console = getConsole();",
@@ -254,8 +252,13 @@ const OTHERS: &[(&str, &[&str])] = &[
         "let k: Equatable<String> = 1;",
         &["Cannot assign to Equatable<String> from Int32"],
     ),
-    ("let n: Null = null;\nlet m: Null? = null;", &[]),
-    ("let n: Null = 1;", &["Cannot assign to Null from Int32"]),
+    // Core has no `Null`, unlike Kotlin Temper: null has no type of its
+    // own (notes/typing.md, "Null"), and a user may declare one.
+    ("let n: Null? = null;", &["Null has not been declared"]),
+    (
+        "class Null {}\nlet n: Null? = null;\nlet m: Null = new Null();",
+        &[],
+    ),
     // A user's class named as a builtin type is the user's.
     (
         "class Int32 { public get big(): Boolean { true } }\nlet b = new Int32().big;",

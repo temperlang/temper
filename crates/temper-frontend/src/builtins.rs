@@ -169,7 +169,6 @@ pub const TYPES: &[&str] = &[
     "Mapped",
     "Never",
     "NoStringIndex",
-    "Null",
     "Pair",
     "Promise",
     "PromiseBuilder",

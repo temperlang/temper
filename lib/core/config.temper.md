@@ -14,7 +14,7 @@ none.
 Core is one module, a file per topic, as std is a module per topic:
 
 - `any.temper.md`: `AnyValue`, `Equatable`, `MapKey`, `Bubble`, `Invalid`,
-  `Never`, `Null`, `Empty`, `Function`, `GeneratorFn`, and `Problem`
+  `Never`, `Empty`, `Function`, `GeneratorFn`, and `Problem`
 - `console.temper.md`: `Console` and `console`
 - `generators.temper.md`: generators, their results, and promises
 - `language.temper.md`: `ignore`, and the bodiless `@connected` declarations

@@ -734,6 +734,9 @@ impl Translator<'_> {
             _ if self.has_errors() && matches!(self.s.typing.types.get(t), FTypeData::Unknown) => {
                 TypeId::ANY_VALUE
             }
+            // A bare null's `Never?` translates to no type: its place
+            // gives it one.
+            ft::NULL => return self.not_yet(at, "null"),
             _ if matches!(self.s.typing.types.get(t), FTypeData::Nullable(_)) => {
                 let &FTypeData::Nullable(inner) = self.s.typing.types.get(t) else {
                     unreachable!()
@@ -748,7 +751,6 @@ impl Translator<'_> {
                 let what = match self.s.typing.types.get(t) {
                     FTypeData::Unknown => "an expression of unknown type",
                     FTypeData::Never | FTypeData::NeverOf(_) => "type Never",
-                    FTypeData::Null => "null",
                     FTypeData::Builtin(_) => "a builtin type core's fixture lacks",
                     FTypeData::Class(_) => "a class or interface type",
                     FTypeData::Param(_) => "a type parameter",
@@ -1983,7 +1985,7 @@ impl Translator<'_> {
         let ty = self.b.program().decls.get(local).ty;
         let init = match init {
             Some(init) => {
-                // An `if` or `when` typing types `Null` or `Never` is of
+                // An `if` or `when` typing types null or `Never` is of
                 // the type declared ([`Self::if_value_in`]).
                 let bottom = matches!(self.s.typing.expr(init), Some(ft::NULL | ft::NEVER));
                 let init = match self.kind(init) {
@@ -2886,7 +2888,7 @@ impl Translator<'_> {
 
     /// [`Self::if_value`] for an `if` that's the value of a branch of
     /// another, whose type `outer` is, if it's given: an `if` typing types
-    /// `Null` or `Never`, as one of a `when`'s last branches, `2 -> null;
+    /// null or `Never`, as one of a `when`'s last branches, `2 -> null;
     /// else -> panic();`, is of the type of the `if` it's in, as Kotlin
     /// Temper's solver types it.
     fn if_value_in(&mut self, node: FNode, outer: TypeId) -> Tx<NodeId> {
@@ -3808,8 +3810,7 @@ impl Translator<'_> {
     fn value_type(&mut self, values: &[FNode]) -> Option<TypeId> {
         let null = values.iter().any(|&v| {
             let v = self.last_value(v);
-            (self.s.typing.expr(v))
-                .is_some_and(|t| matches!(self.s.typing.types.get(t), FTypeData::Null))
+            self.s.typing.expr(v) == Some(ft::NULL)
         });
         let found = self.known_value_type(values)?;
         let nullable = self.b.program().types.is_nullable(found);

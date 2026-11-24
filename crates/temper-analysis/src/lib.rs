@@ -329,7 +329,7 @@ impl Analysis<'_> {
             None => self.local(node),
         };
         let Some(target) = target else {
-            let t = self.settled.typing.expr(node)?;
+            let t = self.settled.typing.in_place(node)?;
             return Some(Hover {
                 span,
                 name: None,
@@ -433,7 +433,7 @@ impl Analysis<'_> {
     /// An expression's type as hover shows it, if typing knows it.
     fn known_type(&self, node: NodeId) -> Option<String> {
         let typing = &self.settled.typing;
-        let t = typing.expr(node)?;
+        let t = typing.in_place(node)?;
         (!matches!(typing.types.get(t), TypeData::Unknown)).then(|| self.show(t))
     }
 

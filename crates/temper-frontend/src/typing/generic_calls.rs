@@ -550,6 +550,11 @@ impl Settle {
                 types.substitute(p.ty, &solved.formals, &checked)
             })
             .collect();
+        for (i, &arg) in solved.args.iter().enumerate().take(wanted.len()) {
+            if arg_types[i] == NULL {
+                self.null_in_place(arg, wanted[i]);
+            }
+        }
         // A `Void` argument is "Void expressions cannot be used as values"
         // ([`Settle::check_not_void`]), not a mismatch too.
         let unfit: Vec<usize> = (0..wanted.len())

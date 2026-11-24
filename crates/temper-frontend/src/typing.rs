@@ -151,6 +151,10 @@ pub struct Typing {
     unreachable: HashSet<NodeId>,
     /// Each sealed interface's subtypes, by its symbol, once one's needed.
     sealed_subtypes: Option<HashMap<SymbolId, Vec<SymbolId>>>,
+    /// The nullable type each place wants of a null there, by the null
+    /// (or other expression typed [`NULL`]), as `String?` for `f(null)`
+    /// with `f(s: String?)`, where checks find one ([`Typing::in_place`]).
+    null_places: HashMap<NodeId, TypeId>,
 }
 
 const UNSET: TypeId = TypeId(u32::MAX);
@@ -163,6 +167,16 @@ impl Typing {
             .get(node.0 as usize)
             .copied()
             .filter(|&t| t != UNSET)
+    }
+
+    /// An expression's type as its place sees it: for null, which has no
+    /// type of its own, the nullable type its place wants, if typing
+    /// knows it (notes/typing.md, "Null"); else [`Typing::expr`]'s.
+    pub fn in_place(&self, node: NodeId) -> Option<TypeId> {
+        match self.expr(node)? {
+            NULL => self.null_places.get(&node).copied(),
+            t => Some(t),
+        }
     }
 
     /// What a generic call binds its callee's type parameters to (a
@@ -1359,6 +1373,13 @@ impl Settle {
         };
         let kind = self.scopes.symbol(b).kind;
         let role = self.lib.tree.data(node) & core::ROLE_MASK;
+        let is_value = matches!(kind, SymbolKind::TopLevel | SymbolKind::Local);
+        if ty.is_none() && is_value && self.only_null(node, init) {
+            let shown = self.lib.names.get(self.scopes.symbol(b).name).to_string();
+            let span = self.lib.tree.span(name);
+            self.lib
+                .report(Level::Error, Message::NullNeedsType(shown), span);
+        }
         let wants_type = match kind {
             SymbolKind::TopLevel | SymbolKind::Local => ty.is_none(),
             SymbolKind::Member => role == core::ROLE_METHOD || role == core::ROLE_GETTER,
@@ -1398,6 +1419,25 @@ impl Settle {
             if is_void && is_fn && core::fn_parts(&self.lib.tree, init).1.is_none() {
                 self.check_bubbles(init);
             }
+        }
+    }
+
+    /// Notes the nullable type a place that wants a `t` gives a null
+    /// there ([`Typing::in_place`]).
+    pub(super) fn null_in_place(&mut self, null: NodeId, t: TypeId) {
+        if self.typing.types.is_known(t) && t != VOID {
+            let t = self.typing.types.nullable(t);
+            self.typing.null_places.insert(null, t);
+        }
+    }
+
+    /// Whether a declaration's only values are null, from its
+    /// initializer, or else what's assigned to it first, which leaves it
+    /// no type (notes/typing.md, "Null").
+    fn only_null(&mut self, decl: NodeId, init: Option<NodeId>) -> bool {
+        match init {
+            Some(init) => self.known_type(init) == NULL,
+            None => self.initializers_join(decl, true) == Ok(Some(NULL)),
         }
     }
 
@@ -1928,6 +1968,7 @@ impl Settle {
             return;
         }
         if s == NULL {
+            self.null_in_place(value, t);
             if self.is_mismatch(NULL, t) {
                 let t_or_null = self.typing.types.nullable(t);
                 let message = Message::ExpectedSubType(self.show(t), self.show(t_or_null));

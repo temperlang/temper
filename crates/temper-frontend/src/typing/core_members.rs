@@ -1309,7 +1309,7 @@ mod tests {
             assert_eq!(shape(t).may_downcast, Some(false), "{t}");
         }
         assert_eq!(shape("Void").may_downcast, None);
-        assert_eq!(shape("Null").may_downcast, Some(true));
+        assert_eq!(shape("Empty").may_downcast, None);
         let listed = shape("Listed");
         assert!(listed.interface && listed.sealed && !listed.public_constructor);
         assert!(shape("MapKey").sealed);

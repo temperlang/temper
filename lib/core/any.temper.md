@@ -80,23 +80,6 @@ Temper *Never* types can translate to bottom types in languages that support tha
 
     export sealed interface Never<@out T> {}
 
-## Null
-
-*Null* is the type of the singleton [*null*][snippet/builtin/null] value, which represents
-the absence of a value of another type.
-
-In Temper, *null* is a valid value of any nullable type,
-any regular type followed by `?`.
-
-*String?* is a valid type for a local variable or function
-input that might refer to either *null* or a string value.
-
-    @imu
-    @mayDowncastTo(true)
-    export class Null {
-      private constructor(): Void {}
-    }
-
 ## Empty
 
 *Empty* is the type for a stateless singleton value which may be used
@@ -105,7 +88,7 @@ judiciously to work around some problems in generic programming.
 When not solving generic programming problems, prefer [snippet/type/Void].
 *Void* translates to the idiomatic no-usable-result concept which for many
 typed functional languages is the same as *Empty* but for many dynamic
-languages is the same as [snippet/type/Null].
+languages is the same as [snippet/builtin/null].
 
 *Empty* differs from [snippet/type/Void] in that it can be used as the type
 of a function input and of a local variable.
@@ -115,7 +98,7 @@ languages; a function may be effectively *Void* but can instead return
 *Empty* allowing its return type to bind to agree with a type parameter.
 
 As seen below, the empty value may be retrieved by calling the `empty()`
-function, and is distinct from [snippet/type/Null].
+function, and is distinct from [snippet/builtin/null].
 
 ```temper inert
 let e: Empty? = empty();

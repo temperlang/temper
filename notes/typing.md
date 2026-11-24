@@ -843,6 +843,33 @@ it has no values for variance to go wrong on, and a backend's fallback
 stays invariant, code relying on it would become an error that Kotlin
 doesn't report.
 
+## Null
+
+`null` has no type of its own, and core declares no `Null` (Kotlin
+Temper's core did; t955, 2026-11-23). It takes the nullable type its
+place wants: `Int?` in `let n: Int? = null;`, `String?` as an argument
+for an `s: String?`, a `List<Int?>`'s element type, or the other side's
+type in `x == null`.
+
+**Representation.** `T?` is `TypeData::Nullable(T)` (`types.rs`), with
+`T` never nullable itself. Where typing needs a type for a bare null, it
+uses `Never?`, `Nullable(Never)` (`NULL`), the nullable bottom: a
+subtype of every `T?`, and of nothing that isn't nullable. So joins need
+no special case (`Never?` joined with `Int` is `Int?`), and no other
+type stands for null. Two rules keep Kotlin's results: only null (and
+what never completes) is a `Never?`, and a type parameter isn't solved
+by null, so `or(null, 3)` for `or<T>(x: T?, d: T)` solves `T` as `Int32`.
+
+**Where its place is known,** checks note it (`Typing::in_place`): a
+declared type, an argument, a result, a field, a generic call's
+argument, or the other side of `==`. Hover shows that type, and never
+`Never?`; a null with no place shows no type.
+
+**A declaration needs a type** if null is all it's given, as `let a =
+null;`, or `let d; d = null;` with no other initializer: "Declare a
+type for a, as `a: String?`: null alone has none". Kotlin typed such a
+declaration `Null`, or from later uses.
+
 ## Inference
 
 - **Locals without annotations** take the type of their initializer, as

@@ -30,8 +30,9 @@ some of these types:
 - `AnyValue` - The supertype of all usable values. As for any type that
   isn't a sealed interface, you can't downcast from `AnyValue`. This allows
   type safety while still using appropriate backend values.
-- *Null* - Supports data interop with external systems. Can be used along with
-  other types, such as `String?`. There is only one *Null* value, `null`. For
+- `T?` - A nullable type: a `T`, or `null`, which supports data interop
+  with external systems, as `String?`. `null` has no type of its own, so
+  `let a = null;` is an error, but `let a: String? = null;` is fine. For
   functions that might fail, usually `Bubble` is a better choice than making
   the type nullable with `?`.
   And for functions whose result should be ignored, use `Void`.

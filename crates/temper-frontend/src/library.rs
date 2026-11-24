@@ -246,6 +246,10 @@ pub enum Message {
     CannotAssignStatic(String, String),
     /// A function without a return type where nothing gives it one.
     MissingReturnType,
+    /// A declaration without a type whose only values are null, as `let
+    /// a = null;`: null has no type of its own (notes/typing.md, "Null").
+    /// The declaration's name.
+    NullNeedsType(String),
     /// Arguments that don't fit the variant of a builtin that a call
     /// picks: the variant, the types it wants, and the arguments'. Kotlin's
     /// `SignatureInputMismatch`.
@@ -560,6 +564,9 @@ impl Message {
                 "Cannot assign to static member {member} of {class}; static members are only initialized at their declaration"
             ),
             Message::MissingReturnType => "Explicit return type required".into(),
+            Message::NullNeedsType(name) => {
+                format!("Declare a type for {name}, as `{name}: String?`: null alone has none")
+            }
             Message::SignatureMismatch(sig, expected, got) => format!(
                 "Actual arguments do not match signature: {sig} expected {expected}, but got {got}"
             ),

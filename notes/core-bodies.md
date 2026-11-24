@@ -45,7 +45,7 @@ named. "All" means all seven backends connect it.
 | `SafeGenerator.next` | `generator_method` | none: not yet in tmpl |
 | `ValueResult`, `Pair` constructors | `apply`'s `new` | `Pair` all; `ValueResult` C++, Java, Rust |
 | `getConsole` | the console | all |
-| `Null`, `Empty`, `NoStringIndex`, `StringIndex` constructors | builtin values | none |
+| `Empty`, `NoStringIndex`, `StringIndex` constructors | builtin values | none |
 | `GlobalConsole.log` | the console | none |
 | `GeneratorFnWrapper`, `SafeGeneratorFnWrapper` (8 members) | unused: generators are native | none |
 

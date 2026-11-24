@@ -60,6 +60,38 @@ fn hover_on_a_local() {
     assert_eq!(h.ty.as_deref(), Some("Int32"));
 }
 
+/// Null has no type of its own (notes/typing.md, "Null"): hover shows
+/// the nullable type its place wants, and never a `Null` type.
+#[test]
+fn hover_on_null_shows_its_place() {
+    let source = r#"let a: Int? = null;
+let f(s: String?): Void {}
+f(null);
+let g(): Boolean? { null }
+let x: String? = "x";
+let c = x == null;
+let xs: List<Int?> = [1, null];
+class Box(public v: Float64?) {}
+let b = new Box(null);
+let id<T>(t: T): T { t }
+let i = id<String?>(null);
+"#;
+    let a = analyze(source);
+    for (nth, ty) in [
+        (0, "Int32?"),
+        (1, "String?"),
+        (2, "Boolean?"),
+        (3, "String?"),
+        (4, "Int32?"),
+        (5, "Float64?"),
+        (6, "String?"),
+    ] {
+        let h = a.hover(MAIN, at(source, "null", nth, 1)).unwrap();
+        assert_eq!(h.name.as_deref(), Some("null"), "null {nth}");
+        assert_eq!(h.ty.as_deref(), Some(ty), "null {nth}");
+    }
+}
+
 #[test]
 fn hover_on_a_declaration() {
     let a = analyze(STACK);

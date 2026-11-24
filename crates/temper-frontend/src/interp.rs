@@ -2168,7 +2168,7 @@ fn compare(a: &Val, b: &Val) -> Option<std::cmp::Ordering> {
 fn type_name(value: &Val) -> &'static str {
     match value {
         Val::Void => "Void",
-        Val::Null => "Null",
+        Val::Null => "null",
         Val::Bool(_) => "Boolean",
         Val::Int(_) => "Int",
         Val::Int64(_) => "Int64",

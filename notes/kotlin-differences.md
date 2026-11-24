@@ -938,17 +938,31 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   Test: settle/classes.cases, "a static member and an instance member
   can't share a name", "… with an inherited instance member".
 
-- **`Console`, `getConsole`, `Equatable` and `Null` are nameable**
+- **`Console`, `getConsole` and `Equatable` are nameable**
   (2026-11-23), as Kotlin's core, the prelude, made them; Temper refused
   them ("Console has not been declared"). `Equatable` stays sealed, so
   it's a type and a bound (`T extends Equatable<T>`), with `Int32`,
   `String`, `Boolean`, `Int64`, `Float64`, `Empty`, and
   `StringIndexOption` its subtypes, as core declares. `console` is a
-  `Console`. tmpl doesn't translate an `Equatable` bound, a `Null` type,
-  or a class extending `Console` yet, nor JS, Lua and Rust a `Console`
-  as a value.
+  `Console`. tmpl doesn't translate an `Equatable` bound or a class
+  extending `Console` yet, nor JS, Lua and Rust a `Console` as a value.
   Test: core_capabilities.rs; settle/builtins.cases, "Console,
-  getConsole, Equatable, and Null are core's".
+  getConsole, and Equatable are core's".
+
+- **No `Null` type** (t955, 2026-11-23). Kotlin's core exported `class
+  Null`, null's type, which code could name (`let n: Null = null;`).
+  Temper's core has none: null takes the nullable type its place wants,
+  and is `Never?` inside typing where it has none ([typing.md](typing.md),
+  "Null"). So `Null` is an undeclared name, free for a user's own
+  class, and a declaration given only null, as `let a = null;`, is an
+  error asking for a type, where Kotlin typed it `Null` or from later
+  uses. Programs that otherwise type-check behave the same. The
+  interpreter calls null "null" in its messages ("null is not a
+  function").
+  Test: core_capabilities.rs (`Null` undeclared, a user's `class Null`);
+  settle/types.cases, "null takes its type from where it goes" and
+  "null alone gives a declaration no type"; analysis.rs,
+  hover_on_null_shows_its_place.
 
 - **`Bubble` isn't an `AnyValue`, and `Never<T>` has no values**, as
   core's docs say (2026-11-19). Temper refuses `x is Bubble` and `x as

@@ -35,7 +35,9 @@ Ignore any value.
 
 `null` is the singleton value that any nullable type admits: a type
 followed by `?`, as *String?*. It may stand for an absent value, as an
-unspecified, optional input.
+unspecified, optional input. It has no type of its own, but takes the
+nullable type its place wants, so a declaration it initializes needs a
+type: `let name: String? = null;`.
 
     @connected
     export let nym`null`;

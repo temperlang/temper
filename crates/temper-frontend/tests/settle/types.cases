@@ -151,6 +151,117 @@ error 157..161: Expected subtype of String, but got String?
 error 196..200: Expected subtype of String, but got String?
 error 236..237: Cannot assign to String from String?
 
+=== null takes its type from where it goes
+// Null has no type of its own (notes/typing.md, "Null"): it fits any
+// nullable place, as an argument, a result, a field, a list element, a
+// fallback, a comparison, or a generic call's argument, which doesn't
+// solve a type parameter.
+class Box(public v: String?) {}
+let take(s: String?): String { s ?? "none" }
+let give(c: Boolean): Int? { if (c) { 1 } else { null } }
+let back(): String? { return null }
+let id<T>(x: T): T { x }
+let or<T>(x: T?, d: T): T { x ?? d }
+let n: Int? = null;
+var m: Int? = 1;
+m = null;
+let xs: List<Int?> = [1, null];
+let ys = [null, 2];
+let b = new Box(null);
+let g: String? = id<String?>(null);
+let h: Int? = give(true) ?? null;
+console.log("${take(null)} ${give(false) == null} ${back() == null} ${n == null} ${null == m}");
+console.log("${xs[1] == null} ${ys[0] == null} ${b.v == null} ${g ?? "g"} ${or(null, 3)} ${h ?? 0}");
+--- settled
+(Block
+  (Class ^Box:0 (Param ^v:14 (Call ? String)))
+  (Let
+    ^take:1
+    (Fn
+      (Let ^s:15 (Call ? String))
+      String
+      (Block (Block (If (Call == s:15 #null) "none" s:15)))))
+  (Let
+    ^give:2
+    (Fn
+      (Let ^c:16 Boolean)
+      (Call ? Int)
+      (Block (If c:16 (Block 1) (Block null)))))
+  (Let ^back:3 (Fn (Call ? String) (Block (Return @375 null))))
+  (Let ^id:4 (Fn (TypeParam ^T:17) (Let ^x:18 T:17) T:17 (Block x:18)))
+  (Let
+    ^or:5
+    (Fn
+      (TypeParam ^T:19)
+      (Let ^x:20 (Call ? T:19))
+      (Let ^d:21 T:19)
+      T:19
+      (Block (Block (If (Call == x:20 #null) d:21 x:20)))))
+  (Let ^n:6 (Call ? Int) null)
+  (Var ^m:7 (Call ? Int) 1)
+  (Assign m:7 null)
+  (Let ^xs:8 (Call <> List (Call ? Int)) (Call list 1 null))
+  (Let ^ys:9 (Call list null 2))
+  (Let ^b:10 (Call new Box:0 null))
+  (Let ^g:11 (Call ? String) (Call id:4 \typeArg (Call ? String) null))
+  (Let
+    ^h:12
+    (Call ? Int)
+    (Block
+      (Let ^subject#22 (Call give:2 true))
+      (If (Call == subject#22 #null) null subject#22)))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call take:1 null)
+      " "
+      (Call == (Call give:2 false) null)
+      " "
+      (Call == (Call back:3) null)
+      " "
+      (Call == n:6 null)
+      " "
+      (Call == null m:7)))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call == (Call [] xs:8 1) null)
+      " "
+      (Call == (Call [] ys:9 0) null)
+      " "
+      (Call == (Call . b:10 \v) null)
+      " "
+      (Block (If (Call == g:11 #null) "g" g:11))
+      " "
+      (Call or:5 null 3)
+      " "
+      (Block (If (Call == h:12 #null) 0 h:12))))
+  #void)
+log none true true true true
+log true true true g 3 1
+
+=== null alone gives a declaration no type
+// So one needs a declared type, as `let a: String? = null;`.
+let a = null;
+var b = null;
+let c = if (a == b) { null } else { null };
+let d;
+d = null;
+--- settled
+(Block
+  (Let ^a:0 null)
+  (Var ^b:1 null)
+  (Let ^c:2 (If (Call == a:0 b:1) (Block null) (Block null)))
+  (Let ^d:3)
+  (Assign d:3 null)
+  #void)
+error 66..67: Declare a type for a, as `a: String?`: null alone has none
+error 80..81: Declare a type for b, as `b: String?`: null alone has none
+error 94..95: Declare a type for c, as `c: String?`: null alone has none
+error 138..139: Declare a type for d, as `d: String?`: null alone has none
+
 === function results
 let count(): Void { var n = 0; n += 1 }
 let bump(): Void { var n = 0; n++ }
@@ -3338,7 +3449,7 @@ error 131..134: Expected subtype of fn (Int32): Void, but got (fn (Int32): Void)
 error 244..247: Expected subtype of Act, but got Act?
 log hi 1
 log hi 1
-Failed: Null is not a function
+Failed: null is not a function
 
 === Never<T> stands for its T
 // Valid: a Never<T> where its T fits, as a function, a generic one, a

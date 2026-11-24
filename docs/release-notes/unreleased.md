@@ -12,7 +12,8 @@
 - [🚨Breaking change: `Deque` and `DenseBitVector` are std's `Queue` and `BitVector`](#breaking-change-deque-and-densebitvector-are-stds-queue-and-bitvector)
 - [Explicit `null` for a parameter with a default gives the default](#explicit-null-for-a-parameter-with-a-default-gives-the-default)
 - [🚨Breaking change: private constructors, connected types, and member names](#breaking-change-private-constructors-connected-types-and-member-names)
-- [`Console`, `getConsole`, `Equatable`, and `Null` are nameable again](#console-getconsole-equatable-and-null-are-nameable-again)
+- [`Console`, `getConsole`, and `Equatable` are nameable again](#console-getconsole-and-equatable-are-nameable-again)
+- [🚨Breaking change: no `Null` type](#breaking-change-no-null-type)
 - [🆕 Module namespaces](#-module-namespaces)
 - [🚨Breaking change: `builtins.X` removed](#breaking-change-builtinsx-removed)
 - [🚨Breaking change: `Void` is never a value; type arguments fit their bounds](#breaking-change-void-is-never-a-value-type-arguments-fit-their-bounds)
@@ -78,11 +79,24 @@ the parameter's type is nullable. It's now documented, under
 - A local alias of a type, as `let D = C;` in a function, is the type:
   checked as it is, and left out of generated code.
 
-## `Console`, `getConsole`, `Equatable`, and `Null` are nameable again
+## `Console`, `getConsole`, and `Equatable` are nameable again
 
 As in Temper 0.6.0, code may name `Console` (and implement it),
-`getConsole(name)`, `Equatable<T>` (as a type or bound, as `T extends
-Equatable<T>`; it's sealed), and `Null`.
+`getConsole(name)`, and `Equatable<T>` (as a type or bound, as `T
+extends Equatable<T>`; it's sealed).
+
+## 🚨Breaking change: no `Null` type
+
+Core no longer declares `Null`. `null` has no type of its own: it takes
+the nullable type its place wants, so it still works wherever a `T?` is
+expected. A declaration whose only value is `null` now needs a type:
+
+```temper inert
+let a: String? = null; // not `let a = null;`
+```
+
+Code that named `Null` can use the nullable type it meant instead, and
+may declare its own `Null`.
 
 ## 🆕 Module namespaces
 
