@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 296" width="720" height="296" role="img" aria-labelledby="t d">
 <title id="t">Peak memory, settling every Temper file (MiB)</title>
-<desc id="d">local: 15 MiB at first, 12.1 MiB latest (f104ea0).</desc>
+<desc id="d">local: 15 MiB at first, 12.1 MiB latest (f104ea0); GitHub: 9.4 MiB at first, 9.4 MiB latest (f0f0715).</desc>
 <style>
   svg { --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --grid: #e4e3df;
         --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
@@ -29,102 +29,105 @@
 <line x1="56" x2="530" y1="72.0" y2="72.0" stroke="var(--grid)" stroke-width="1"/>
 <text x="48" y="76.0" text-anchor="end">20</text>
 <text x="56.0" y="276" text-anchor="middle">10-22</text>
-<text x="71.5" y="276" text-anchor="middle">10-23</text>
-<text x="94.9" y="276" text-anchor="middle">10-24</text>
-<text x="141.5" y="276" text-anchor="middle">10-25</text>
-<text x="157.0" y="276" text-anchor="middle">10-26</text>
-<text x="188.1" y="276" text-anchor="middle">10-27</text>
-<text x="227.0" y="276" text-anchor="middle">10-28</text>
-<text x="366.8" y="276" text-anchor="middle">10-29</text>
-<text x="452.3" y="276" text-anchor="middle">10-30</text>
-<text x="460.1" y="276" text-anchor="middle">11-03</text>
-<text x="483.4" y="276" text-anchor="middle">11-04</text>
-<text x="506.7" y="276" text-anchor="middle">11-06</text>
-<text x="522.2" y="276" text-anchor="middle">11-07</text>
-<text x="530.0" y="276" text-anchor="middle">11-08</text>
-<line x1="164.8" x2="164.8" y1="118.9" y2="114.3" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<line x1="172.6" x2="172.6" y1="118.0" y2="115.2" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<line x1="180.3" x2="180.3" y1="116.2" y2="115.2" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<line x1="188.1" x2="188.1" y1="117.1" y2="116.2" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<line x1="195.9" x2="195.9" y1="116.2" y2="114.3" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<line x1="203.6" x2="203.6" y1="118.0" y2="113.4" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<line x1="211.4" x2="211.4" y1="125.4" y2="124.4" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<line x1="219.2" x2="219.2" y1="124.4" y2="123.5" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<line x1="227.0" x2="227.0" y1="123.5" y2="106.0" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<line x1="234.7" x2="234.7" y1="124.4" y2="123.5" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<line x1="289.1" x2="289.1" y1="125.4" y2="124.4" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<line x1="304.7" x2="304.7" y1="123.5" y2="122.6" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<line x1="320.2" x2="320.2" y1="125.4" y2="123.5" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<line x1="328.0" x2="328.0" y1="125.4" y2="122.6" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<line x1="335.7" x2="335.7" y1="124.4" y2="123.5" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<line x1="343.5" x2="343.5" y1="125.4" y2="123.5" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<line x1="413.4" x2="413.4" y1="125.4" y2="124.4" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<line x1="421.2" x2="421.2" y1="124.4" y2="123.5" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<line x1="429.0" x2="429.0" y1="125.4" y2="121.7" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<line x1="436.8" x2="436.8" y1="124.4" y2="123.5" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<line x1="452.3" x2="452.3" y1="134.6" y2="133.6" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
-<path d="M56.0,118.0 L63.8,118.9 L71.5,118.0 L79.3,118.9 L87.1,118.9 L94.9,117.1 L102.6,118.0 L110.4,117.1 L118.2,117.1 L125.9,118.0 L133.7,113.4 L141.5,133.6 L149.2,133.6 L157.0,132.7 L164.8,116.6 L172.6,116.6 L180.3,115.7 L188.1,116.6 L195.9,115.2 L203.6,115.7 L211.4,124.9 L219.2,124.0 L227.0,114.8 L234.7,124.0 L242.5,124.4 L250.3,124.4 L258.0,124.4 L265.8,124.4 L273.6,125.4 L281.3,125.4 L289.1,124.9 L296.9,124.4 L304.7,123.1 L312.4,122.6 L320.2,124.4 L328.0,124.0 L335.7,124.0 L343.5,124.4 L351.3,125.4 L359.0,123.5 L366.8,123.5 L374.6,123.5 L382.4,123.5 L390.1,123.5 L397.9,123.5 L405.7,123.5 L413.4,124.9 L421.2,124.0 L429.0,123.5 L436.8,124.0 L444.5,133.6 L452.3,134.1 L460.1,147.4 L467.8,144.7 L475.6,148.4 L483.4,149.3 L491.1,146.5 L498.9,143.8 L506.7,146.5 L514.5,142.8 L522.2,139.2 L530.0,144.7" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round"/>
+<text x="71.3" y="276" text-anchor="middle">10-23</text>
+<text x="94.2" y="276" text-anchor="middle">10-24</text>
+<text x="140.1" y="276" text-anchor="middle">10-25</text>
+<text x="155.4" y="276" text-anchor="middle">10-26</text>
+<text x="186.0" y="276" text-anchor="middle">10-27</text>
+<text x="224.2" y="276" text-anchor="middle">10-28</text>
+<text x="361.8" y="276" text-anchor="middle">10-29</text>
+<text x="445.9" y="276" text-anchor="middle">10-30</text>
+<text x="453.5" y="276" text-anchor="middle">11-03</text>
+<text x="476.5" y="276" text-anchor="middle">11-04</text>
+<text x="499.4" y="276" text-anchor="middle">11-06</text>
+<text x="514.7" y="276" text-anchor="middle">11-07</text>
+<text x="522.4" y="276" text-anchor="middle">11-08</text>
+<text x="530.0" y="276" text-anchor="middle">11-24</text>
+<line x1="163.0" x2="163.0" y1="118.9" y2="114.3" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<line x1="170.7" x2="170.7" y1="118.0" y2="115.2" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<line x1="178.3" x2="178.3" y1="116.2" y2="115.2" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<line x1="186.0" x2="186.0" y1="117.1" y2="116.2" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<line x1="193.6" x2="193.6" y1="116.2" y2="114.3" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<line x1="201.3" x2="201.3" y1="118.0" y2="113.4" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<line x1="208.9" x2="208.9" y1="125.4" y2="124.4" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<line x1="216.5" x2="216.5" y1="124.4" y2="123.5" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<line x1="224.2" x2="224.2" y1="123.5" y2="106.0" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<line x1="231.8" x2="231.8" y1="124.4" y2="123.5" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<line x1="285.4" x2="285.4" y1="125.4" y2="124.4" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<line x1="300.6" x2="300.6" y1="123.5" y2="122.6" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<line x1="315.9" x2="315.9" y1="125.4" y2="123.5" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<line x1="323.6" x2="323.6" y1="125.4" y2="122.6" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<line x1="331.2" x2="331.2" y1="124.4" y2="123.5" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<line x1="338.9" x2="338.9" y1="125.4" y2="123.5" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<line x1="407.7" x2="407.7" y1="125.4" y2="124.4" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<line x1="415.3" x2="415.3" y1="124.4" y2="123.5" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<line x1="423.0" x2="423.0" y1="125.4" y2="121.7" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<line x1="430.6" x2="430.6" y1="124.4" y2="123.5" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<line x1="445.9" x2="445.9" y1="134.6" y2="133.6" stroke="var(--s1)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+<path d="M56.0,118.0 L63.6,118.9 L71.3,118.0 L78.9,118.9 L86.6,118.9 L94.2,117.1 L101.9,118.0 L109.5,117.1 L117.2,117.1 L124.8,118.0 L132.5,113.4 L140.1,133.6 L147.7,133.6 L155.4,132.7 L163.0,116.6 L170.7,116.6 L178.3,115.7 L186.0,116.6 L193.6,115.2 L201.3,115.7 L208.9,124.9 L216.5,124.0 L224.2,114.8 L231.8,124.0 L239.5,124.4 L247.1,124.4 L254.8,124.4 L262.4,124.4 L270.1,125.4 L277.7,125.4 L285.4,124.9 L293.0,124.4 L300.6,123.1 L308.3,122.6 L315.9,124.4 L323.6,124.0 L331.2,124.0 L338.9,124.4 L346.5,125.4 L354.2,123.5 L361.8,123.5 L369.5,123.5 L377.1,123.5 L384.7,123.5 L392.4,123.5 L400.0,123.5 L407.7,124.9 L415.3,124.0 L423.0,123.5 L430.6,124.0 L438.3,133.6 L445.9,134.1 L453.5,147.4 L461.2,144.7 L468.8,148.4 L476.5,149.3 L484.1,146.5 L491.8,143.8 L499.4,146.5 L507.1,142.8 L514.7,139.2 L522.4,144.7" fill="none" stroke="var(--s1)" stroke-width="2" stroke-linejoin="round"/>
 <circle cx="56.0" cy="118.0" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, cd8a59b with changes (2026-10-22): 15 MiB</title></circle>
-<circle cx="63.8" cy="118.9" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 8945bcb with changes (2026-10-22): 14.9 MiB</title></circle>
-<circle cx="71.5" cy="118.0" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 85b5cbb with changes (2026-10-23): 15 MiB</title></circle>
-<circle cx="79.3" cy="118.9" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 04789c6 with changes (2026-10-23): 14.9 MiB</title></circle>
-<circle cx="87.1" cy="118.9" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 704dca9 with changes (2026-10-23): 14.9 MiB</title></circle>
-<circle cx="94.9" cy="117.1" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, f735e3d with changes (2026-10-24): 15.1 MiB</title></circle>
-<circle cx="102.6" cy="118.0" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 0827f8a with changes (2026-10-24): 15 MiB</title></circle>
-<circle cx="110.4" cy="117.1" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 6a4f4dc with changes (2026-10-24): 15.1 MiB</title></circle>
-<circle cx="118.2" cy="117.1" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 3f2c331 with changes (2026-10-24): 15.1 MiB</title></circle>
-<circle cx="125.9" cy="118.0" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 5ab2a49 with changes (2026-10-24): 15 MiB</title></circle>
-<circle cx="133.7" cy="113.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, f3beacc with changes (2026-10-24): 15.5 MiB</title></circle>
-<circle cx="141.5" cy="133.6" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 561b4d9 with changes (2026-10-25): 13.3 MiB</title></circle>
-<circle cx="149.2" cy="133.6" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 25e32ca with changes (2026-10-25): 13.3 MiB</title></circle>
-<circle cx="157.0" cy="132.7" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 13f4889 with changes (2026-10-26): 13.4 MiB</title></circle>
-<circle cx="164.8" cy="116.6" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 684e37c with changes (2026-10-26): 14.9–15.4 MiB</title></circle>
-<circle cx="172.6" cy="116.6" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 3fdf7e7 with changes (2026-10-26): 15–15.3 MiB</title></circle>
-<circle cx="180.3" cy="115.7" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, d225dee with changes (2026-10-26): 15.2–15.3 MiB</title></circle>
-<circle cx="188.1" cy="116.6" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, b0db559 with changes (2026-10-27): 15.1–15.2 MiB</title></circle>
-<circle cx="195.9" cy="115.2" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 9f65728 with changes (2026-10-27): 15.2–15.4 MiB</title></circle>
-<circle cx="203.6" cy="115.7" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, e128e4c with changes (2026-10-27): 15–15.5 MiB</title></circle>
-<circle cx="211.4" cy="124.9" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 518fd73 (2026-10-27): 14.2–14.3 MiB</title></circle>
-<circle cx="219.2" cy="124.0" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, aa2d723 (2026-10-27): 14.3–14.4 MiB</title></circle>
-<circle cx="227.0" cy="114.8" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, b19d7ac with changes (2026-10-28): 14.4–16.3 MiB</title></circle>
-<circle cx="234.7" cy="124.0" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, b19d7ac (2026-10-28): 14.3–14.4 MiB</title></circle>
-<circle cx="242.5" cy="124.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 0faea27 (2026-10-28): 14.3 MiB</title></circle>
-<circle cx="250.3" cy="124.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 0faea27 with changes (2026-10-28): 14.3 MiB</title></circle>
-<circle cx="258.0" cy="124.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, a52d64b (2026-10-28): 14.3 MiB</title></circle>
-<circle cx="265.8" cy="124.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, a52d64b with changes (2026-10-28): 14.3 MiB</title></circle>
-<circle cx="273.6" cy="125.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, e550a2d (2026-10-28): 14.2 MiB</title></circle>
-<circle cx="281.3" cy="125.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, e550a2d with changes (2026-10-28): 14.2 MiB</title></circle>
-<circle cx="289.1" cy="124.9" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 3e29f54 (2026-10-28): 14.2–14.3 MiB</title></circle>
-<circle cx="296.9" cy="124.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 3e29f54 with changes (2026-10-28): 14.3 MiB</title></circle>
-<circle cx="304.7" cy="123.1" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 09fbc5f (2026-10-28): 14.4–14.5 MiB</title></circle>
-<circle cx="312.4" cy="122.6" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 09fbc5f with changes (2026-10-28): 14.5 MiB</title></circle>
-<circle cx="320.2" cy="124.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 96267ff (2026-10-28): 14.2–14.4 MiB</title></circle>
-<circle cx="328.0" cy="124.0" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 96267ff with changes (2026-10-28): 14.2–14.5 MiB</title></circle>
-<circle cx="335.7" cy="124.0" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, c74b270 (2026-10-28): 14.3–14.4 MiB</title></circle>
-<circle cx="343.5" cy="124.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, c74b270 with changes (2026-10-28): 14.2–14.4 MiB</title></circle>
-<circle cx="351.3" cy="125.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, fddb24a with changes (2026-10-28): 14.2 MiB</title></circle>
-<circle cx="359.0" cy="123.5" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 2e17cb0 with changes (2026-10-28): 14.4 MiB</title></circle>
-<circle cx="366.8" cy="123.5" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, cdec4c9 with changes (2026-10-29): 14.4 MiB</title></circle>
-<circle cx="374.6" cy="123.5" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 51acb11 with changes (2026-10-29): 14.4 MiB</title></circle>
-<circle cx="382.4" cy="123.5" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, ed9faa9 with changes (2026-10-29): 14.4 MiB</title></circle>
-<circle cx="390.1" cy="123.5" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 273ee31 with changes (2026-10-29): 14.4 MiB</title></circle>
-<circle cx="397.9" cy="123.5" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 86bc92c with changes (2026-10-29): 14.4 MiB</title></circle>
-<circle cx="405.7" cy="123.5" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 17af4d6 with changes (2026-10-29): 14.4 MiB</title></circle>
-<circle cx="413.4" cy="124.9" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 218c44e with changes (2026-10-29): 14.2–14.3 MiB</title></circle>
-<circle cx="421.2" cy="124.0" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 2fc1955 with changes (2026-10-29): 14.3–14.4 MiB</title></circle>
-<circle cx="429.0" cy="123.5" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 173262a with changes (2026-10-29): 14.2–14.6 MiB</title></circle>
-<circle cx="436.8" cy="124.0" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 0e7260f with changes (2026-10-29): 14.3–14.4 MiB</title></circle>
-<circle cx="444.5" cy="133.6" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, d106e3b with changes (2026-10-29): 13.3 MiB</title></circle>
-<circle cx="452.3" cy="134.1" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 06a7e0a (2026-10-30): 13.2–13.3 MiB</title></circle>
-<circle cx="460.1" cy="147.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 3d88eec with changes (2026-11-03): 11.8 MiB</title></circle>
-<circle cx="467.8" cy="144.7" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 42092b8 with changes (2026-11-03): 12.1 MiB</title></circle>
-<circle cx="475.6" cy="148.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 21ca58d with changes (2026-11-03): 11.7 MiB</title></circle>
-<circle cx="483.4" cy="149.3" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 807c5be with changes (2026-11-04): 11.6 MiB</title></circle>
-<circle cx="491.1" cy="146.5" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 8417090 with changes (2026-11-04): 11.9 MiB</title></circle>
-<circle cx="498.9" cy="143.8" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 6615672 with changes (2026-11-04): 12.2 MiB</title></circle>
-<circle cx="506.7" cy="146.5" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 3d91b41 with changes (2026-11-06): 11.9 MiB</title></circle>
-<circle cx="514.5" cy="142.8" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 75e0d51 with changes (2026-11-06): 12.3 MiB</title></circle>
-<circle cx="522.2" cy="139.2" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 849ccbd (2026-11-07): 12.7 MiB</title></circle>
-<circle cx="530.0" cy="144.7" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, f104ea0 (2026-11-08): 12.1 MiB</title></circle>
+<circle cx="63.6" cy="118.9" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 8945bcb with changes (2026-10-22): 14.9 MiB</title></circle>
+<circle cx="71.3" cy="118.0" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 85b5cbb with changes (2026-10-23): 15 MiB</title></circle>
+<circle cx="78.9" cy="118.9" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 04789c6 with changes (2026-10-23): 14.9 MiB</title></circle>
+<circle cx="86.6" cy="118.9" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 704dca9 with changes (2026-10-23): 14.9 MiB</title></circle>
+<circle cx="94.2" cy="117.1" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, f735e3d with changes (2026-10-24): 15.1 MiB</title></circle>
+<circle cx="101.9" cy="118.0" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 0827f8a with changes (2026-10-24): 15 MiB</title></circle>
+<circle cx="109.5" cy="117.1" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 6a4f4dc with changes (2026-10-24): 15.1 MiB</title></circle>
+<circle cx="117.2" cy="117.1" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 3f2c331 with changes (2026-10-24): 15.1 MiB</title></circle>
+<circle cx="124.8" cy="118.0" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 5ab2a49 with changes (2026-10-24): 15 MiB</title></circle>
+<circle cx="132.5" cy="113.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, f3beacc with changes (2026-10-24): 15.5 MiB</title></circle>
+<circle cx="140.1" cy="133.6" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 561b4d9 with changes (2026-10-25): 13.3 MiB</title></circle>
+<circle cx="147.7" cy="133.6" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 25e32ca with changes (2026-10-25): 13.3 MiB</title></circle>
+<circle cx="155.4" cy="132.7" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 13f4889 with changes (2026-10-26): 13.4 MiB</title></circle>
+<circle cx="163.0" cy="116.6" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 684e37c with changes (2026-10-26): 14.9–15.4 MiB</title></circle>
+<circle cx="170.7" cy="116.6" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 3fdf7e7 with changes (2026-10-26): 15–15.3 MiB</title></circle>
+<circle cx="178.3" cy="115.7" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, d225dee with changes (2026-10-26): 15.2–15.3 MiB</title></circle>
+<circle cx="186.0" cy="116.6" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, b0db559 with changes (2026-10-27): 15.1–15.2 MiB</title></circle>
+<circle cx="193.6" cy="115.2" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 9f65728 with changes (2026-10-27): 15.2–15.4 MiB</title></circle>
+<circle cx="201.3" cy="115.7" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, e128e4c with changes (2026-10-27): 15–15.5 MiB</title></circle>
+<circle cx="208.9" cy="124.9" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 518fd73 (2026-10-27): 14.2–14.3 MiB</title></circle>
+<circle cx="216.5" cy="124.0" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, aa2d723 (2026-10-27): 14.3–14.4 MiB</title></circle>
+<circle cx="224.2" cy="114.8" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, b19d7ac with changes (2026-10-28): 14.4–16.3 MiB</title></circle>
+<circle cx="231.8" cy="124.0" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, b19d7ac (2026-10-28): 14.3–14.4 MiB</title></circle>
+<circle cx="239.5" cy="124.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 0faea27 (2026-10-28): 14.3 MiB</title></circle>
+<circle cx="247.1" cy="124.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 0faea27 with changes (2026-10-28): 14.3 MiB</title></circle>
+<circle cx="254.8" cy="124.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, a52d64b (2026-10-28): 14.3 MiB</title></circle>
+<circle cx="262.4" cy="124.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, a52d64b with changes (2026-10-28): 14.3 MiB</title></circle>
+<circle cx="270.1" cy="125.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, e550a2d (2026-10-28): 14.2 MiB</title></circle>
+<circle cx="277.7" cy="125.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, e550a2d with changes (2026-10-28): 14.2 MiB</title></circle>
+<circle cx="285.4" cy="124.9" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 3e29f54 (2026-10-28): 14.2–14.3 MiB</title></circle>
+<circle cx="293.0" cy="124.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 3e29f54 with changes (2026-10-28): 14.3 MiB</title></circle>
+<circle cx="300.6" cy="123.1" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 09fbc5f (2026-10-28): 14.4–14.5 MiB</title></circle>
+<circle cx="308.3" cy="122.6" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 09fbc5f with changes (2026-10-28): 14.5 MiB</title></circle>
+<circle cx="315.9" cy="124.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 96267ff (2026-10-28): 14.2–14.4 MiB</title></circle>
+<circle cx="323.6" cy="124.0" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 96267ff with changes (2026-10-28): 14.2–14.5 MiB</title></circle>
+<circle cx="331.2" cy="124.0" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, c74b270 (2026-10-28): 14.3–14.4 MiB</title></circle>
+<circle cx="338.9" cy="124.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, c74b270 with changes (2026-10-28): 14.2–14.4 MiB</title></circle>
+<circle cx="346.5" cy="125.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, fddb24a with changes (2026-10-28): 14.2 MiB</title></circle>
+<circle cx="354.2" cy="123.5" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 2e17cb0 with changes (2026-10-28): 14.4 MiB</title></circle>
+<circle cx="361.8" cy="123.5" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, cdec4c9 with changes (2026-10-29): 14.4 MiB</title></circle>
+<circle cx="369.5" cy="123.5" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 51acb11 with changes (2026-10-29): 14.4 MiB</title></circle>
+<circle cx="377.1" cy="123.5" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, ed9faa9 with changes (2026-10-29): 14.4 MiB</title></circle>
+<circle cx="384.7" cy="123.5" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 273ee31 with changes (2026-10-29): 14.4 MiB</title></circle>
+<circle cx="392.4" cy="123.5" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 86bc92c with changes (2026-10-29): 14.4 MiB</title></circle>
+<circle cx="400.0" cy="123.5" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 17af4d6 with changes (2026-10-29): 14.4 MiB</title></circle>
+<circle cx="407.7" cy="124.9" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 218c44e with changes (2026-10-29): 14.2–14.3 MiB</title></circle>
+<circle cx="415.3" cy="124.0" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 2fc1955 with changes (2026-10-29): 14.3–14.4 MiB</title></circle>
+<circle cx="423.0" cy="123.5" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 173262a with changes (2026-10-29): 14.2–14.6 MiB</title></circle>
+<circle cx="430.6" cy="124.0" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 0e7260f with changes (2026-10-29): 14.3–14.4 MiB</title></circle>
+<circle cx="438.3" cy="133.6" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, d106e3b with changes (2026-10-29): 13.3 MiB</title></circle>
+<circle cx="445.9" cy="134.1" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 06a7e0a (2026-10-30): 13.2–13.3 MiB</title></circle>
+<circle cx="453.5" cy="147.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 3d88eec with changes (2026-11-03): 11.8 MiB</title></circle>
+<circle cx="461.2" cy="144.7" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 42092b8 with changes (2026-11-03): 12.1 MiB</title></circle>
+<circle cx="468.8" cy="148.4" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 21ca58d with changes (2026-11-03): 11.7 MiB</title></circle>
+<circle cx="476.5" cy="149.3" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 807c5be with changes (2026-11-04): 11.6 MiB</title></circle>
+<circle cx="484.1" cy="146.5" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 8417090 with changes (2026-11-04): 11.9 MiB</title></circle>
+<circle cx="491.8" cy="143.8" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 6615672 with changes (2026-11-04): 12.2 MiB</title></circle>
+<circle cx="499.4" cy="146.5" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 3d91b41 with changes (2026-11-06): 11.9 MiB</title></circle>
+<circle cx="507.1" cy="142.8" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 75e0d51 with changes (2026-11-06): 12.3 MiB</title></circle>
+<circle cx="514.7" cy="139.2" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, 849ccbd (2026-11-07): 12.7 MiB</title></circle>
+<circle cx="522.4" cy="144.7" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>local, f104ea0 (2026-11-08): 12.1 MiB</title></circle>
+<circle cx="530.0" cy="169.5" r="4" fill="var(--s2)" stroke="var(--surface)" stroke-width="2"><title>GitHub, f0f0715 (2026-11-24): 9.4 MiB</title></circle>
 <text class="label" x="542" y="148.7">local: 12.1</text>
+<text class="label" x="542" y="173.5">GitHub: 9.4</text>
 </svg>

@@ -1758,3 +1758,84 @@ date,commit,what,value,value_max,unit,conditions,notes
 2026-11-13,252861e,test-temper-core-cpu-s,0.5,,s,load=quieter,record_times.py
 2026-11-13,252861e,build-wasm-small-s,1.1,,s,load=quieter,record_times.py
 2026-11-13,252861e,build-wasm-small-cpu-s,1.1,,s,load=quieter,record_times.py
+2026-11-24,f0f0715,build-tempest-release-s,67.0,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,build-tempest-release-cpu-s,248.7,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,build-tempest-incremental-s,21.1,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,build-tempest-incremental-cpu-s,66.5,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,build-tests-s,48.9,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,build-tests-cpu-s,190.0,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,clippy-s,15.7,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,clippy-cpu-s,60.5,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-temper-analysis-s,8.5,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-temper-analysis-cpu-s,17.1,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,funtest-cpp-s,105.9,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,funtest-cpp-cpu-s,327.5,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,funtest-csharp-s,25.1,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,funtest-csharp-cpu-s,42.6,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,funtest-java-s,22.5,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,funtest-java-cpu-s,41.9,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,funtest-js-s,13.5,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,funtest-js-cpu-s,27.0,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,funtest-lua-s,12.9,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,funtest-lua-cpu-s,19.0,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,funtest-py-s,14.9,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,funtest-py-cpu-s,25.4,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,funtest-rust-s,33.6,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,funtest-rust-cpu-s,113.5,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-temper-be-testkit-s,10.7,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-temper-be-testkit-cpu-s,21.5,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-temper-driver-s,2.7,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-temper-driver-cpu-s,7.1,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-temper-frontend-s,41.9,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-temper-frontend-cpu-s,68.5,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-temper-funtests-s,0.0,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-temper-funtests-cpu-s,0.0,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-temper-lsp-s,9.7,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-temper-lsp-cpu-s,10.0,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-temper-os-s,0.3,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-temper-os-cpu-s,0.5,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-temper-syntax-s,5.4,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-temper-syntax-cpu-s,5.5,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-temper-tmpl-s,7.8,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-temper-tmpl-cpu-s,10.9,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-temper-wasm-s,6.7,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-temper-wasm-cpu-s,14.3,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-tempest-s,58.5,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,test-tempest-cpu-s,171.4,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,build-wasm-small-s,23.1,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,build-wasm-small-cpu-s,68.5,,s,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,record_times.py --steps
+2026-11-24,f0f0715,tempest-small-no-backends,5265984,,bytes,features=net;ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,wasm-small-no-backends,2631067,,bytes,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,backend-py-small,438272,,bytes,features=net;ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,backend-py-wasm,335637,,bytes,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,backend-rust-small,679936,,bytes,features=net;ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,backend-rust-wasm,505690,,bytes,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,backend-js-small,348160,,bytes,features=net;ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,backend-js-wasm,259994,,bytes,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,backend-java-small,479232,,bytes,features=net;ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,backend-java-wasm,315728,,bytes,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,backend-csharp-small,458752,,bytes,features=net;ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,backend-csharp-wasm,320965,,bytes,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,backend-cpp-small,610304,,bytes,features=net;ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,backend-cpp-wasm,350545,,bytes,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,backend-lua-small,581632,,bytes,features=net;ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,backend-lua-wasm,260366,,bytes,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,backends-shared-small,163840,,bytes,features=net;ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,backends-shared-wasm,68747,,bytes,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,lex-tokens-small,453024,,bytes,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,lex-tokens-release,631656,,bytes,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,parse-tree-small,551328,,bytes,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,parse-tree-release,777288,,bytes,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,ast-tree-small,756128,,bytes,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,ast-tree-release,1127136,,bytes,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,run-temper-small,4004360,,bytes,features=net;ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,run-temper-release,6962944,,bytes,features=net;ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,tempest-small,9144896,,bytes,features=net;ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,tempest-release,16236496,,bytes,features=net;ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,wasm-small,5109581,,bytes,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,wasm-small-gzip,1652886,,bytes,ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,peak-memory-parse-all,4.2,,MiB,run=rust;files=123;lines=15165;tokens=67723;ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,peak-memory-ast-all,6.4,,MiB,run=rust;files=123;lines=15165;tokens=67723;ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,peak-memory-settle-all,9.4,,MiB,run=rust;files=123;lines=15165;tokens=67723;ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,measure_size.py
+2026-11-24,f0f0715,lex-parse-module-ms,37.2,,ms,run=rust;files=123;lines=15165;tokens=67723;features=net;build=release;ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,"bench_settle.py, median of 5 runs' medians of 10 rounds (37.1–37.4)"
+2026-11-24,f0f0715,lex-parse-module-settle-ms,85.1,,ms,run=rust;files=123;lines=15165;tokens=67723;features=net;build=release;ci=github;cpu=Intel(R) Xeon(R) 6975P-C;cores=4,"bench_settle.py, median of 5 runs' medians of 10 rounds (85.0–85.3)"

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 296" width="720" height="296" role="img" aria-labelledby="t d">
 <title id="t">Functional tests by backend (s)</title>
-<desc id="d">No runs recorded yet.</desc>
+<desc id="d">C++: 106 s at first, 106 s latest (f0f0715); C#: 25.1 s at first, 25.1 s latest (f0f0715); Java: 22.5 s at first, 22.5 s latest (f0f0715); JavaScript: 13.5 s at first, 13.5 s latest (f0f0715); Lua: 12.9 s at first, 12.9 s latest (f0f0715); Python: 14.9 s at first, 14.9 s latest (f0f0715); Rust: 33.6 s at first, 33.6 s latest (f0f0715).</desc>
 <style>
   svg { --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --grid: #e4e3df;
         --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
@@ -18,5 +18,29 @@
 <text class="title" x="56" y="24">Functional tests by backend</text>
 <text x="56" y="42">s, by run; line: rolling median of 5 runs, band: the spread around it</text>
 <text x="56" y="58">GitHub's shared runners, nightly: a trend, not a benchmark</text>
-<text x="293.0" y="164.0" text-anchor="middle">No runs recorded yet</text>
+<line x1="56" x2="530" y1="256.0" y2="256.0" stroke="var(--grid)" stroke-width="1"/>
+<text x="48" y="260.0" text-anchor="end">0</text>
+<line x1="56" x2="530" y1="210.0" y2="210.0" stroke="var(--grid)" stroke-width="1"/>
+<text x="48" y="214.0" text-anchor="end">50</text>
+<line x1="56" x2="530" y1="164.0" y2="164.0" stroke="var(--grid)" stroke-width="1"/>
+<text x="48" y="168.0" text-anchor="end">100</text>
+<line x1="56" x2="530" y1="118.0" y2="118.0" stroke="var(--grid)" stroke-width="1"/>
+<text x="48" y="122.0" text-anchor="end">150</text>
+<line x1="56" x2="530" y1="72.0" y2="72.0" stroke="var(--grid)" stroke-width="1"/>
+<text x="48" y="76.0" text-anchor="end">200</text>
+<text x="293.0" y="276" text-anchor="middle">11-24</text>
+<circle cx="293.0" cy="158.6" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>C++, f0f0715 (2026-11-24): 106 s</title></circle>
+<circle cx="293.0" cy="232.9" r="4" fill="var(--s2)" stroke="var(--surface)" stroke-width="2"><title>C#, f0f0715 (2026-11-24): 25.1 s</title></circle>
+<circle cx="293.0" cy="235.3" r="4" fill="var(--s3)" stroke="var(--surface)" stroke-width="2"><title>Java, f0f0715 (2026-11-24): 22.5 s</title></circle>
+<circle cx="293.0" cy="243.6" r="4" fill="var(--s4)" stroke="var(--surface)" stroke-width="2"><title>JavaScript, f0f0715 (2026-11-24): 13.5 s</title></circle>
+<circle cx="293.0" cy="244.1" r="4" fill="var(--s5)" stroke="var(--surface)" stroke-width="2"><title>Lua, f0f0715 (2026-11-24): 12.9 s</title></circle>
+<circle cx="293.0" cy="242.3" r="4" fill="var(--s6)" stroke="var(--surface)" stroke-width="2"><title>Python, f0f0715 (2026-11-24): 14.9 s</title></circle>
+<circle cx="293.0" cy="225.1" r="4" fill="var(--s7)" stroke="var(--surface)" stroke-width="2"><title>Rust, f0f0715 (2026-11-24): 33.6 s</title></circle>
+<text class="label" x="542" y="162.6">C++: 106</text>
+<text class="label" x="542" y="208.0">Rust: 33.6</text>
+<text class="label" x="542" y="224.0">C#: 25.1</text>
+<text class="label" x="542" y="240.0">Java: 22.5</text>
+<text class="label" x="542" y="256.0">Python: 14.9</text>
+<text class="label" x="542" y="272.0">JavaScript: 13.5</text>
+<text class="label" x="542" y="288.0">Lua: 12.9</text>
 </svg>

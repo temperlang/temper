@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 296" width="720" height="296" role="img" aria-labelledby="t d">
 <title id="t">Build and lint times (s)</title>
-<desc id="d">No runs recorded yet.</desc>
+<desc id="d">release, clean: 67 s at first, 67 s latest (f0f0715); release, incremental: 21.1 s at first, 21.1 s latest (f0f0715); clippy: 15.7 s at first, 15.7 s latest (f0f0715); wasm (small): 23.1 s at first, 23.1 s latest (f0f0715).</desc>
 <style>
   svg { --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --grid: #e4e3df;
         --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
@@ -18,5 +18,23 @@
 <text class="title" x="56" y="24">Build and lint times</text>
 <text x="56" y="42">s, by run; line: rolling median of 5 runs, band: the spread around it</text>
 <text x="56" y="58">GitHub's shared runners, nightly: a trend, not a benchmark</text>
-<text x="293.0" y="164.0" text-anchor="middle">No runs recorded yet</text>
+<line x1="56" x2="530" y1="256.0" y2="256.0" stroke="var(--grid)" stroke-width="1"/>
+<text x="48" y="260.0" text-anchor="end">0</text>
+<line x1="56" x2="530" y1="210.0" y2="210.0" stroke="var(--grid)" stroke-width="1"/>
+<text x="48" y="214.0" text-anchor="end">20</text>
+<line x1="56" x2="530" y1="164.0" y2="164.0" stroke="var(--grid)" stroke-width="1"/>
+<text x="48" y="168.0" text-anchor="end">40</text>
+<line x1="56" x2="530" y1="118.0" y2="118.0" stroke="var(--grid)" stroke-width="1"/>
+<text x="48" y="122.0" text-anchor="end">60</text>
+<line x1="56" x2="530" y1="72.0" y2="72.0" stroke="var(--grid)" stroke-width="1"/>
+<text x="48" y="76.0" text-anchor="end">80</text>
+<text x="293.0" y="276" text-anchor="middle">11-24</text>
+<circle cx="293.0" cy="101.9" r="4" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"><title>release, clean, f0f0715 (2026-11-24): 67 s</title></circle>
+<circle cx="293.0" cy="207.5" r="4" fill="var(--s2)" stroke="var(--surface)" stroke-width="2"><title>release, incremental, f0f0715 (2026-11-24): 21.1 s</title></circle>
+<circle cx="293.0" cy="219.9" r="4" fill="var(--s3)" stroke="var(--surface)" stroke-width="2"><title>clippy, f0f0715 (2026-11-24): 15.7 s</title></circle>
+<circle cx="293.0" cy="202.9" r="4" fill="var(--s4)" stroke="var(--surface)" stroke-width="2"><title>wasm (small), f0f0715 (2026-11-24): 23.1 s</title></circle>
+<text class="label" x="542" y="105.9">release, clean: 67</text>
+<text class="label" x="542" y="206.9">wasm (small): 23.1</text>
+<text class="label" x="542" y="222.9">release, incremental: 21.1</text>
+<text class="label" x="542" y="238.9">clippy: 15.7</text>
 </svg>

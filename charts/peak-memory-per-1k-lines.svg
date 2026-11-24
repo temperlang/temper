@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 296" width="720" height="296" role="img" aria-labelledby="t d">
+<title id="t">Peak memory, settling every Temper file, per 1,000 lines (MiB per 1,000 lines)</title>
+<desc id="d">GitHub: 0.6 MiB per 1,000 lines at first, 0.6 MiB per 1,000 lines latest (f0f0715).</desc>
+<style>
+  svg { --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --grid: #e4e3df;
+        --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+        --s5: #e87ba4; --s6: #008300; --s7: #6250d6; }
+  @media (prefers-color-scheme: dark) {
+    svg { --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --grid: #34342f;
+          --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+          --s5: #d55181; --s6: #008300; --s7: #9085e9; }
+  }
+  text { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: var(--ink-2); }
+  .title { font-size: 14px; font-weight: 600; fill: var(--ink); }
+  .label { fill: var(--ink); }
+</style>
+<rect width="720" height="296" rx="8" fill="var(--surface)"/>
+<text class="title" x="56" y="24">Peak memory, settling every Temper file, per 1,000 lines</text>
+<text x="56" y="42">MiB per 1,000 lines, by commit measured; whiskers show each range</text>
+<text x="56" y="58">over the files at each commit; runs that recorded no line count are only on the raw chart</text>
+<line x1="56" x2="530" y1="256.0" y2="256.0" stroke="var(--grid)" stroke-width="1"/>
+<text x="48" y="260.0" text-anchor="end">0</text>
+<line x1="56" x2="530" y1="210.0" y2="210.0" stroke="var(--grid)" stroke-width="1"/>
+<text x="48" y="214.0" text-anchor="end">0.2</text>
+<line x1="56" x2="530" y1="164.0" y2="164.0" stroke="var(--grid)" stroke-width="1"/>
+<text x="48" y="168.0" text-anchor="end">0.4</text>
+<line x1="56" x2="530" y1="118.0" y2="118.0" stroke="var(--grid)" stroke-width="1"/>
+<text x="48" y="122.0" text-anchor="end">0.6</text>
+<line x1="56" x2="530" y1="72.0" y2="72.0" stroke="var(--grid)" stroke-width="1"/>
+<text x="48" y="76.0" text-anchor="end">0.8</text>
+<text x="293.0" y="276" text-anchor="middle">11-24</text>
+<circle cx="293.0" cy="113.4" r="4" fill="var(--s2)" stroke="var(--surface)" stroke-width="2"><title>GitHub, f0f0715 (2026-11-24): 0.6 MiB per 1,000 lines</title></circle>
+<text class="label" x="542" y="117.4">GitHub: 0.6</text>
+</svg>
