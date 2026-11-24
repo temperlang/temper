@@ -23,15 +23,15 @@
 //!   `}`, `,` or `=>`, or inside `( )` and `[ ]` with `,`, or `;` if their
 //!   contents start on a line of their own; or it starts with an infix
 //!   operator like `.` or `&&`) is indented from the statement's first
-//!   line: once if it breaks at an operator or punctuation, word
-//!   operators like `orelse` and `is` included (the line before ends with
-//!   one, or it starts with one), else twice (before another word, like
-//!   `extends`, or an operand). One starting with `;` or `,`
-//!   lines up with the statement, as a close bracket does. Comments never
-//!   count. A bracket opened on such a line indents its contents from that
-//!   line, but on a line continuing a declaration's header (starting with
-//!   a word, like `extends` or `throws`, not at an operator) from the
-//!   declaration's first line. Lines starting a node right after another
+//!   line, once, wherever it breaks; but a line continuing a header (a
+//!   class's, interface's, function's or function literal's, from its
+//!   first token to the `{` of its body, as `extends` or `throws` lines),
+//!   not in the header's own brackets, is indented twice from the
+//!   header's first line, to tell it from the body. One starting with `;`
+//!   or `,` lines up with the statement, as a close bracket does.
+//!   Comments never count. A bracket opened on a continuation line
+//!   indents its contents from that line, but on a header's from the
+//!   header's first line. Lines starting a node right after another
 //!   (statements with no `;` between them) or after a decorator line like
 //!   `@connected` start statements, and comment lines go with the code
 //!   after them.
@@ -63,7 +63,9 @@
 //! In a literate `.temper.md` file only Temper code blocks change, each
 //! indented from its block's own margin (the fence's indentation, or four
 //! columns past its list items' for indented code). Blocks continue each
-//! other's brackets. Lines indented with tabs keep their indentation.
+//! other's brackets. Lines indented with tabs keep their indentation, as
+//! do lines starting like a fence (```` ``` ````), which moving could make
+//! close their block.
 //!
 //! **Safety:** code that doesn't parse is left alone, with an error. After
 //! formatting, the result is parsed again and must have the same tokens,
@@ -93,8 +95,9 @@ pub struct Options {
     pub lists: bool,
     /// Whether lists of literals (data tables) keep their line breaks.
     pub keep_data: bool,
-    /// Whether continuation lines are indented twice from their
-    /// statement's first line, or keep their offset from it as written.
+    /// Whether continuation lines are indented by the rules (once, twice
+    /// in a header), or keep their offset from their
+    /// statement's first line as written.
     pub continuations: bool,
 }
 
@@ -353,6 +356,52 @@ fn roles(parsed: &Parsed) -> HashMap<u32, (Role, Operator)> {
     roles
 }
 
+/// Where the code tokens of headers start, each with where its header's
+/// first token starts: headers run from a class's, interface's,
+/// function's or function literal's first token to the `{` opening its
+/// body (`class C extends D {`, `fn (): Int throws Bubble {`), where a
+/// continuation line indents twice to tell it from the body. The first
+/// token is left out (a line starting with it continues what's before),
+/// and a token in nested headers gets the innermost.
+fn headers(parsed: &Parsed, tokens: &[Token]) -> HashMap<u32, u32> {
+    use Operator::*;
+    let tree = parsed.tree();
+    // Parents come off the stack before their children, so inner headers
+    // overwrite outer ones.
+    let mut starts = HashMap::new();
+    let mut stack = vec![parsed.root()];
+    while let Some(id) = stack.pop() {
+        let children = tree.children(id);
+        stack.extend(children.iter().copied());
+        let (NodeKind::Op(Curly), Some(&head)) = (tree.kind(id), children.first()) else {
+            continue;
+        };
+        let brace =
+            (children.iter().skip(1)).find_map(|&c| parsed.token(c).filter(|t| !t.synthetic));
+        let (Some(brace), Some(start)) = (brace, first_token(parsed, head)) else {
+            continue;
+        };
+        let from = tokens.partition_point(|t| t.start < start);
+        let declares = match tree.kind(head) {
+            NodeKind::Op(ExtendsComma | ExtendsNoComma | Throws) => true,
+            // A signature's return type: `f(...): T`.
+            NodeKind::Op(HighColon) => tree
+                .children(head)
+                .first()
+                .is_some_and(|&c| tree.kind(c) == NodeKind::Op(Paren)),
+            _ => tokens.get(from).is_some_and(|t| {
+                let text = &parsed.source()[t.start as usize..t.end as usize];
+                matches!(text, "class" | "interface" | "let" | "var" | "fn")
+            }),
+        };
+        if declares {
+            let to = tokens.partition_point(|t| t.start <= brace.start);
+            starts.extend(tokens[from + 1..to].iter().map(|t| (t.start, start)));
+        }
+    }
+    starts
+}
+
 /// Where nodes start that follow another node directly, as statements
 /// without a `;` between them do (`f()` and `g()` on lines of their own).
 fn juxtaposed(parsed: &Parsed) -> HashSet<u32> {
@@ -608,6 +657,11 @@ struct Formatter<'a> {
     roles: HashMap<u32, (Role, Operator)>,
     /// Where statements without a `;` before them start.
     juxtaposed: HashSet<u32>,
+    /// Where headers' tokens start, with their header's first token.
+    headers: HashMap<u32, u32>,
+    /// Headers' first lines and bracket depths, by their first tokens,
+    /// once written.
+    header_lines: HashMap<u32, Option<(Indent, usize)>>,
     ranges: &'a [CodeRange],
     standalone: bool,
     out: String,
@@ -634,9 +688,9 @@ struct Formatter<'a> {
     newline: &'static str,
     /// The current token's index in `tokens`.
     index: usize,
-    /// Whether the current line continues a declaration's header, as
-    /// `extends` does a class's.
-    line_continues_header: bool,
+    /// The first line of the header the current line continues, as an
+    /// `extends` line does a class's.
+    line_header: Option<Indent>,
     // Lists and their layouts, planned by `plan`.
     lists: Vec<List>,
     layouts: Vec<Layout>,
@@ -666,6 +720,8 @@ impl<'a> Formatter<'a> {
             }),
             roles: roles(parsed),
             juxtaposed: juxtaposed(parsed),
+            headers: HashMap::new(),
+            header_lines: HashMap::new(),
             ranges,
             standalone: kind == SourceKind::Standalone,
             out: String::with_capacity(parsed.source().len() + 64),
@@ -686,13 +742,15 @@ impl<'a> Formatter<'a> {
                 "\n"
             },
             index: 0,
-            line_continues_header: false,
+            line_header: None,
             lists: Vec::new(),
             layouts: Vec::new(),
             opens: Vec::new(),
             closes: Vec::new(),
             places: Vec::new(),
         };
+        formatter.headers = headers(parsed, &formatter.tokens);
+        formatter.header_lines = formatter.headers.values().map(|&h| (h, None)).collect();
         if options.lists {
             formatter.plan(parsed, &in_string);
         }
@@ -926,9 +984,15 @@ impl<'a> Formatter<'a> {
         }
         // Lines of fenced code may be less indented than the fence, and
         // tabs in markdown count to the next multiple of four: keep both,
-        // and space before `<`, which decides if it may be a bracket.
-        let keep =
-            actual < 0 || (!self.standalone && indent.contains('\t')) || self.text(next) == "<";
+        // and lines in markdown starting like a fence, which moving could
+        // make close the block, and space before `<`, which decides if it
+        // may be a bracket.
+        let rest = &source[next.start as usize..];
+        let fence = !self.standalone && (rest.starts_with("```") || rest.starts_with("~~~"));
+        let keep = actual < 0
+            || (!self.standalone && indent.contains('\t'))
+            || fence
+            || self.text(next) == "<";
         let formatted = self.line_start(next, Some(actual), keep);
         if keep {
             self.out.push_str(&indent[written as usize..]);
@@ -952,7 +1016,7 @@ impl<'a> Formatter<'a> {
         self.line_depth = self.stack.len();
         let text = self.text(first);
         let mut starts_statement = false;
-        self.line_continues_header = false;
+        self.line_header = None;
         let formatted = if keep {
             actual
         } else if matches!(first.kind, TokenKind::Margin | TokenKind::QuotedString) {
@@ -964,11 +1028,14 @@ impl<'a> Formatter<'a> {
             self.line_depth = self.line_depth.saturating_sub(1);
             self.stack.last().map_or(0, |o| o.base.formatted)
         } else if let Some((statement, code)) = self.continued_statement(first) {
-            // Broken at an operator (`a &&`, `.b` or `orelse`), or before
-            // another word or operand: `extends`, `throws`.
-            let at_operator =
-                self.previous.is_some_and(|p| self.is_operator(p)) || self.is_operator(code);
-            self.line_continues_header = code.kind == TokenKind::Word && !at_operator;
+            // Twice from a header's first line (`extends`, `throws`), to
+            // tell it from the body, but not in the header's own brackets
+            // (its parameters); else once from the statement's.
+            let header = self
+                .headers
+                .get(&code.start)
+                .and_then(|h| self.header_lines[h]);
+            self.line_header = header.filter(|h| h.1 == self.stack.len()).map(|h| h.0);
             if !self.options.continuations {
                 (statement.formatted + actual - statement.actual).max(0)
             } else if matches!(self.text(code), ";" | ",")
@@ -978,10 +1045,10 @@ impl<'a> Formatter<'a> {
                 // string, lines up with what it ends, as a close bracket
                 // does.
                 statement.formatted
-            } else if at_operator {
-                statement.formatted + UNIT
+            } else if let Some(header) = self.line_header {
+                header.formatted + 2 * UNIT
             } else {
-                statement.formatted + 2 * UNIT
+                statement.formatted + UNIT
             }
         } else {
             starts_statement = true;
@@ -1056,10 +1123,8 @@ impl<'a> Formatter<'a> {
 
     /// Whether a code token is an operator or punctuation other than a
     /// bracket, like `=`, `&&`, `.`, `->` or `,`, or a word operator in
-    /// an expression, like `orelse`, `is` or `as`: a line broken there
-    /// continues with one indentation step, against two before another
-    /// word (a header's `extends` or `throws`) or operand. Comments never
-    /// count.
+    /// an expression, like `orelse`, `is` or `as`: a line starting with
+    /// an infix one continues the statement. Comments never count.
     fn is_operator(&self, token: Token) -> bool {
         use Operator::*;
         let text = self.text(token);
@@ -1111,18 +1176,21 @@ impl<'a> Formatter<'a> {
             self.line_has_code = true;
             self.line_is_decorator = text == "@";
         }
+        if let Some(header) = self.header_lines.get_mut(&token.start) {
+            *header = Some((self.line, self.stack.len()));
+        }
         match token.kind {
             TokenKind::Punctuation
                 if text.ends_with(['(', '[', '{'])
                     || self.wrapped_angle(self.opens.get(self.index)) =>
             {
-                // From its own line if that started at this depth (but
-                // continued a header), else from the line that started
-                // its statement here.
-                let base = if self.line_depth == self.stack.len() && !self.line_continues_header {
-                    self.line
-                } else {
+                // From its own line if that started at this depth, but on a
+                // header's continuation line from the header's first line;
+                // else from the line that started its statement here.
+                let base = if self.line_depth != self.stack.len() {
                     self.statements.last().unwrap().unwrap_or(self.line)
+                } else {
+                    self.line_header.unwrap_or(self.line)
                 };
                 self.stack.push(Open {
                     start: token.start,

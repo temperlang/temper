@@ -215,8 +215,13 @@ pub fn command(name: &str) -> Option<String> {
              code blocks. A directory means the files under it, skipping\n\
              temper.out, hidden directories, and what .gitignore and\n\
              .temperignore files list; no PATH means the current directory.\n\
-             Code that doesn't parse is left as written, with an error.\n\
-             Exits with 1 if a file couldn't be formatted.\n\
+             \n\
+             It sets spacing, indentation, and blank lines, and keeps line breaks\n\
+             as written except in bracketed lists, which its trailing commas and\n\
+             line breaks lay out. Comments' text and strings never change. Code\n\
+             that doesn't parse, or that formatting would change the meaning of,\n\
+             is left as written, with an error. Exits with 1 if a file couldn't\n\
+             be formatted.\n\
              \n\
              Options:\n\
              \x20   --check\n\

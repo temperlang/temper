@@ -209,39 +209,11 @@ change. In `.temper.md` files, only Temper code blocks change; prose is
 left exactly as written. With `--check`, it changes nothing, lists the
 files that need formatting, and exits with 1 if there are any, for CI.
 
-It has no style options and no line width: where lines break is the
-author's choice. It keeps comments as written, and sets indentation
-(two spaces a level; a line continuing a statement two more if it
-breaks at an operator, as in `a &&`, `.b` or `orelse`, else four, as
-before `extends`), the space between tokens on a line (`a + b`, `f(x, y)`,
-`x: Int`, `if (c) { d }`), and blank lines (as written, but at most one
-in a row). It keeps line breaks as written, but in bracketed lists
-(arguments, parameters, list and object literals, type arguments, and
-a single item in `( )` or `[ ]`), which it lays out by how they're
-written:
-
-```temper inert
-f(a,
-  b);      // no line break after `(`: f(a, b); on one line
-f(
-  a,
-  b
-);         // a line break after `(`: a, b on one line between f( and )
-f(a, b,);  // a trailing comma: one item per line, each with its comma
-foo(fn {
-  body();
-},
-  b);      // an item over several lines: the next starts on its last
-           // line, as the rules say: foo(fn {, its lines, then }, b);
-```
-
-It never adds or removes commas: to go from one item per line back to
-one line, delete the trailing comma. Any item may span lines, its own
-lists and blocks laid out by the same rules; each item starts where the
-one before ends, or with a trailing comma on a line of its own. Lists
-with comments between items, an item that must end its line (a
-multi-quoted string), or only literals (tables of data) keep their line
-breaks.
+It has no style options and no line width: it sets spacing,
+indentation, and blank lines, keeps line breaks as written except in
+bracketed lists (laid out by their trailing commas and line breaks),
+and never changes comments' text, strings, or prose.
+[Formatting rules](fmt.md) has each rule, with examples.
 
 Code that doesn't parse is left as written, with an error and exit
 status 1, and it checks its own work: if formatting would change a

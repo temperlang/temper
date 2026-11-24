@@ -145,7 +145,8 @@ def run_bins(sources: list[Source]) -> None:
     lexed = parse_dump(run_chunked(str(ROOT / "target/release/lex-tokens"), paths))
     trees = parse_dump(run_chunked(str(ROOT / "target/release/parse-tree"), paths))
     for i, s in enumerate(sources):
-        roles = roles_of(trees[paths[i]])
+        nodes = nodes_of(trees[paths[i]])
+        roles = roles_of(nodes)
         toks = []
         btext = s.text.encode()
         for line in lexed[paths[i]]:
@@ -156,6 +157,7 @@ def run_bins(sources: list[Source]) -> None:
             text = btext[start:end].decode()
             toks.append(Tok(kind, start, end, text, roles.get(start, ("", ""))))
         s.tokens = toks
+        s.headers = headers_of(nodes, toks)
 
 
 def run_chunked(binary: str, paths: list[str]) -> str:
@@ -176,9 +178,9 @@ def parse_dump(out: str) -> dict[str, list[str]]:
     return by_file
 
 
-def roles_of(lines: list[str]) -> dict[int, tuple[str, str]]:
-    """Each operator token's role in its node, by start offset: `infix`
-    (between two operands), `prefix`, `postfix`, `open`, `close`, or `sep`."""
+def nodes_of(lines: list[str]) -> list:
+    """The parse tree's nodes, (op, children), the root first; children are
+    ("N", node) or ("T", start, synthetic, text)."""
     nodes = []  # (op, children) where children are ("N", node) or ("T", start, synthetic)
     stack: list[tuple[int, list]] = []
     for line in lines:
@@ -198,6 +200,52 @@ def roles_of(lines: list[str]) -> dict[int, tuple[str, str]]:
                 stack.pop()
             if stack:
                 stack[-1][1][1].append(("T", int(f[3]), f[5] == "s", f[6] if len(f) > 6 else ""))
+    return nodes
+
+
+def first_start(child) -> int | None:
+    """Where a tree child's first token as written starts."""
+    if child[0] == "T":
+        return None if child[2] else child[1]
+    return next((x for c in child[1][1] if (x := first_start(c)) is not None), None)
+
+
+def headers_of(nodes: list, toks: list) -> dict[int, int]:
+    """Where the tokens of headers start, each with where its header's
+    first token starts: from a class's, interface's, function's or
+    function literal's first token (left out) to the `{` opening its body,
+    innermost first, as `temper fmt` finds them (`headers` in fmt.rs)."""
+    texts = {t.start: t.text for t in toks}
+    starts = sorted(texts)
+    found = {}
+    spans = []
+    for op, children in nodes:
+        if op != "Curly" or not children:
+            continue
+        head = children[0]
+        brace = next((c[1] for c in children[1:] if c[0] == "T" and not c[2]), None)
+        start = first_start(head)
+        if brace is None or start is None:
+            continue
+        if head[0] == "N" and head[1][0] in ("ExtendsComma", "ExtendsNoComma", "Throws"):
+            declares = True
+        elif head[0] == "N" and head[1][0] == "HighColon":
+            kids = head[1][1]
+            declares = bool(kids) and kids[0][0] == "N" and kids[0][1][0] == "Paren"
+        else:
+            declares = texts.get(start) in ("class", "interface", "let", "var", "fn")
+        if declares:
+            spans.append((start, brace))
+    # Outer headers first, so inner ones overwrite them.
+    for start, brace in sorted(spans, key=lambda s: (s[0], -s[1])):
+        lo, hi = bisect.bisect_left(starts, start), bisect.bisect_right(starts, brace)
+        found.update((x, start) for x in starts[lo + 1 : hi])
+    return found
+
+
+def roles_of(nodes: list) -> dict[int, tuple[str, str]]:
+    """Each operator token's role in its node, by start offset: `infix`
+    (between two operands), `prefix`, `postfix`, `open`, `close`, or `sep`."""
     roles = {}
     for op, children in nodes:
         if op == "Leaf":
@@ -300,6 +348,8 @@ def analyze(s: Source, st: Stats, samples: int) -> None:
     decorator_line = False
     # The line that started the current statement, by bracket depth.
     stmt: dict[int, int] = {}
+    # Each code token's bracket depth, once passed.
+    depth_at: dict[int, int] = {}
     for li, ln in enumerate(lines):
         raw = btext[ln.start : ln.end].decode()
         if raw.strip():
@@ -324,16 +374,20 @@ def analyze(s: Source, st: Stats, samples: int) -> None:
                 first = stmt[level]
                 offset = ln.indent - lines[first].indent
                 st.add("continuation offset", offset)
-                # Where it breaks, as `temper fmt` tells: at an operator or
-                # punctuation (before or after the break), else before a
-                # word or operand; and lines starting with `;` or `,`.
+                # Where it breaks, as `temper fmt` tells: in a header
+                # (before its body's `{`) at its own depth, offset from its
+                # first line, else anywhere; and lines starting with `;`
+                # or `,`.
+                code = t if t.kind != "Comment" else next((c for c in code_toks if c.start > t.start), t)
+                header = s.headers.get(code.start)
                 if t.text in (";", ",") and t.role[0] == "sep":
                     brk = "starting with a separator"
-                elif operator(prev_code) or operator(t) and t.role[0] == "infix":
-                    brk = "at an operator"
+                elif header is not None and depth_at.get(header) == level:
+                    brk = "in a header"
                 else:
-                    brk = "before a word or operand"
-                st.add(f"continuation offset, {brk}", offset)
+                    brk = "elsewhere"
+                base = line_of_tok[header] if brk == "in a header" else first
+                st.add(f"continuation offset, {brk}", ln.indent - lines[base].indent)
                 st.sample(f"continuation offset {offset}", f"{s.name}:{li + 1}: {raw.strip()[:60]}", samples)
                 want = max(0, predicted[first] + offset)
                 kind = "continuation"
@@ -360,6 +414,7 @@ def analyze(s: Source, st: Stats, samples: int) -> None:
         elif codes:
             decorator_line = False
         for t in codes:
+            depth_at[t.start] = len(stack)
             if t.kind == "Punctuation" and t.text and t.text[-1] in OPENERS:
                 # Contents indent from the opener's line if that line
                 # started at the opener's depth, or else from the line that
