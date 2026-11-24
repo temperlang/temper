@@ -416,7 +416,7 @@ JSON source text.
         buffer.append("}");
         let currentState = state();
         if (JSON_STATE_OPEN_OBJECT == currentState ||
-            JSON_STATE_AFTER_PROPERTY == currentState) {
+          JSON_STATE_AFTER_PROPERTY == currentState) {
           stack.removeLast();
         } else {
           wellFormed = false;
@@ -447,7 +447,7 @@ JSON source text.
         buffer.append("]");
         let currentState = state();
         if (JSON_STATE_OPEN_ARRAY == currentState ||
-            JSON_STATE_AFTER_ELEMENT == currentState) {
+          JSON_STATE_AFTER_ELEMENT == currentState) {
           stack.removeLast();
         } else {
           wellFormed = false;
@@ -522,7 +522,7 @@ JSON source text.
           char'\r'     -> "\\r";
           char'"'      -> "\\\"";
           char'\\'     -> "\\\\";
-          else         ->
+          else ->
             // Control characters and non-USV code-points.
             if (cp < 0x20 || 0xD800 <= cp && cp <= 0xDFFF) {
               "\\u"
@@ -714,7 +714,7 @@ Some helpers let us route errors:
       shortExplanation: String,
     ): Void {
       let gotten = if (sourceText.hasIndex(i)) {
-        "`${ sourceText.slice(i, sourceText.end) }`"
+        "`${sourceText.slice(i, sourceText.end)}`"
       } else {
         "end-of-file"
       };
@@ -897,8 +897,7 @@ where such a distinction is not possible to represent.
     }
 
     let parseJsonStringTo(
-      sourceText: String, var i: StringIndex, sb: StringBuilder,
-      errOut: JsonProducer
+      sourceText: String, var i: StringIndex, sb: StringBuilder, errOut: JsonProducer
     ): StringIndexOption {
       if (!sourceText.hasIndex(i) || sourceText[i] != char'"') {
         expectedTokenError(sourceText, i, errOut, '"');
@@ -972,7 +971,7 @@ where such a distinction is not possible to represent.
             leadSurrogate = -1;
             decodedCp = (
               0x10000 +
-              (((lead - 0xD800) * 0x400) | (decodedCp - 0xDC00))
+                (((lead - 0xD800) * 0x400) | (decodedCp - 0xDC00))
             );
           }
         } else if (0xD800 <= decodedCp && decodedCp <= 0xDBFF) {
@@ -1050,7 +1049,7 @@ where such a distinction is not possible to represent.
       when (ch0) {
         char'f' -> do { keyword = "false"; n = 5 };
         char't' -> do { keyword = "true"; n = 4 };
-        else    -> do { keyword = null; n = 0 };
+        else -> do { keyword = null; n = 0 };
       }
 
       if (keyword != null) {
@@ -1082,9 +1081,7 @@ where such a distinction is not possible to represent.
     }
 
     let afterSubstring(
-      string: String,
-      inString: StringIndex,
-      substring: String
+      string: String, inString: StringIndex, substring: String
     ): StringIndexOption {
       var i = inString;
       var j = String.begin;
@@ -1149,8 +1146,8 @@ or *Float64*, then we use the lossless numeric syntax tree variant.
               // Overflow happened.
               if (
                 minInt64 - oldInt64 == -nextDigit.toInt64() &&
-                isNegative &&
-                oldInt64 > 0i64
+                  isNegative &&
+                  oldInt64 > 0i64
               ) {
                 // Ok because we landed exactly once on min int64.
               } else {
@@ -1176,7 +1173,7 @@ or *Float64*, then we use the lossless numeric syntax tree variant.
             nDigits += 1;
             nDigitsAfterPoint += 1;
             tentativeFloat64 = tentativeFloat64 * 10.0 +
-                (possibleDigit - char'0').toFloat64();
+              (possibleDigit - char'0').toFloat64();
           } else {
             break;
           }
@@ -1242,7 +1239,7 @@ or *Float64*, then we use the lossless numeric syntax tree variant.
       }
 
       if (doubleValue != -Infinity && doubleValue != Infinity &&
-          doubleValue != NaN) {
+        doubleValue != NaN) {
         out.float64Value(doubleValue);
       } else {
         out.numericTokenValue(numericTokenString);

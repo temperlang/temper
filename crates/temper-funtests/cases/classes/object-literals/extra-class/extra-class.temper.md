@@ -29,8 +29,8 @@ TODO: Once we have factory functions, expose this secondary one as
 a factory and update ./object-literals.temper to uncomment the
 property bag that uses it.
 
-    //@factory public static createSquare(squareWidth: Int): Rectangle {
-    //  ({ width: squareWidth, height: squareWidth })
-    //}
+      //@factory public static createSquare(squareWidth: Int): Rectangle {
+      //  ({ width: squareWidth, height: squareWidth })
+      //}
 
     }

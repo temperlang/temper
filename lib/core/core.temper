@@ -253,7 +253,7 @@ export let doneResult<YIELD extends AnyValue>(): DoneResult<YIELD> { new DoneRes
  * Wraps a [snippet/type/GeneratorFn] as a [snippet/type/Generator].
  */
 class GeneratorFnWrapper<@out YIELD extends AnyValue>
-extends Generator<YIELD> {
+    extends Generator<YIELD> {
   private let generatorFn: fn (): GeneratorResult<YIELD> throws Bubble;
   private var _done: builtins.Boolean = false;
 
@@ -285,7 +285,7 @@ extends Generator<YIELD> {
  * Like *GeneratorFnWrapper* but wraps as a [snippet/type/SafeGenerator].
  */
 class SafeGeneratorFnWrapper<@out YIELD extends AnyValue>
-extends SafeGenerator<YIELD> {
+    extends SafeGenerator<YIELD> {
   private let generatorFn: fn (): GeneratorResult<YIELD>;
   private var _done: builtins.Boolean = false;
 
@@ -789,8 +789,8 @@ export class StringBuilder {
     if (limit > sourceEnd) { limit = sourceEnd; }
 
     for (var index = begin;
-        index < limit;
-        index = source.next(index)) {
+      index < limit;
+      index = source.next(index)) {
       appendCodePoint(source[index]) orelse panic();
     }
   }
@@ -861,8 +861,8 @@ export interface Console {
   /**
    * Log a message at default informational level to this console.
    */
-   @connected
-   public log(message: String): Void;
+  @connected
+  public log(message: String): Void;
 
   // Additional methods are expected in the future.
 }
@@ -1273,7 +1273,7 @@ export sealed interface Mapped<@in K extends MapKey<K>, V> {
    * Calls [func] on each key and value in the [snippet/type/Mapped].
    */
   @connected
-  public toListWith<T>(func: fn(K, V): T): List<T> {
+  public toListWith<T>(func: fn (K, V): T): List<T> {
     toListBuilderWith(func).toList()
   }
 
@@ -1283,7 +1283,7 @@ export sealed interface Mapped<@in K extends MapKey<K>, V> {
    * Calls [func] on each key and value in the [snippet/type/Mapped].
    */
   @connected
-  public toListBuilderWith<T>(func: fn(K, V): T): ListBuilder<T> {
+  public toListBuilderWith<T>(func: fn (K, V): T): ListBuilder<T> {
     var builder = new ListBuilder<T>();
     forEach { key, value =>
       builder.add(func(key, value));
@@ -1297,7 +1297,7 @@ export sealed interface Mapped<@in K extends MapKey<K>, V> {
    * This method is more likely to change or be removed before Temper 1.0 than most
    */
   @connected
-  public forEach(func: fn(K, V): Void): Void;
+  public forEach(func: fn (K, V): Void): Void;
 }
 
 /**

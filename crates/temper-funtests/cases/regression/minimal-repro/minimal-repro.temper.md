@@ -2,7 +2,7 @@
 
     let ls: List<Int> = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-    console.log("All  ${ (ls.join(", ") { x => x.toString() }) }");
+    console.log("All  ${(ls.join(", ") { x => x.toString() })}");
 
     console.log("Even ${
       (ls.filter { x => (x & 1) == 0 }
@@ -15,7 +15,7 @@
     }");
 
     console.log("Neg  ${
-      (ls.map {(x): Int => -x }
+      (ls.map { (x): Int => -x }
         .join(", ") { x => x.toString() })
     }");
 

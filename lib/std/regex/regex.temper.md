@@ -568,7 +568,7 @@ class RegexFormatter {
       let escapeNeed = escapeNeeds[code];
       if (
         escapeNeed == needsSimpleEscape ||
-        (insideCodeSet && code == Codes.dash)
+          (insideCodeSet && code == Codes.dash)
       ) {
         out.append("\\");
         out.append(String.fromCodePoint(code));
@@ -582,10 +582,10 @@ class RegexFormatter {
     if (
       code >= Codes.supplementalMin || (
         code > Codes.highControlMax &&
-        !(
-          (Codes.surrogateMin <= code && code <= Codes.surrogateMax) ||
-          code == Codes.uint16Max
-        )
+          !(
+            (Codes.surrogateMin <= code && code <= Codes.surrogateMax) ||
+              code == Codes.uint16Max
+          )
       )
     ) {
       out.append(String.fromCodePoint(code));
@@ -760,33 +760,33 @@ let buildEscapeNeeds(): List<Int> {
       if (
         // Dash needs escaping in code sets, but we'll handle that specially.
         code == Codes.dash ||
-        code == Codes.space ||
-        code == Codes.underscore ||
-        (Codes.digit0 <= code && code <= Codes.digit9) ||
-        (Codes.upperA <= code && code <= Codes.upperZ) ||
-        (Codes.lowerA <= code && code <= Codes.lowerZ)
+          code == Codes.space ||
+          code == Codes.underscore ||
+          (Codes.digit0 <= code && code <= Codes.digit9) ||
+          (Codes.upperA <= code && code <= Codes.upperZ) ||
+          (Codes.lowerA <= code && code <= Codes.lowerZ)
       ) {
         needsNoEscape
       } else if (
         // Ampersand and tilde need escaped only in python for now, but meh.
         // Escaping ampersand breaks JS though.  Fix that in temper-core/regex.js
         code == Codes.ampersand ||
-        code == Codes.backslash ||
-        code == Codes.caret ||
-        code == Codes.curlyLeft ||
-        code == Codes.curlyRight ||
-        code == Codes.dot ||
-        code == Codes.peso ||
-        code == Codes.pipe ||
-        code == Codes.plus ||
-        code == Codes.question ||
-        code == Codes.roundLeft ||
-        code == Codes.roundRight ||
-        code == Codes.slash ||
-        code == Codes.squareLeft ||
-        code == Codes.squareRight ||
-        code == Codes.star ||
-        code == Codes.tilde
+          code == Codes.backslash ||
+          code == Codes.caret ||
+          code == Codes.curlyLeft ||
+          code == Codes.curlyRight ||
+          code == Codes.dot ||
+          code == Codes.peso ||
+          code == Codes.pipe ||
+          code == Codes.plus ||
+          code == Codes.question ||
+          code == Codes.roundLeft ||
+          code == Codes.roundRight ||
+          code == Codes.slash ||
+          code == Codes.squareLeft ||
+          code == Codes.squareRight ||
+          code == Codes.star ||
+          code == Codes.tilde
       ) {
         needsSimpleEscape
       } else {
