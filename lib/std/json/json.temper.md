@@ -416,7 +416,7 @@ JSON source text.
         buffer.append("}");
         let currentState = state();
         if (JSON_STATE_OPEN_OBJECT == currentState ||
-          JSON_STATE_AFTER_PROPERTY == currentState) {
+            JSON_STATE_AFTER_PROPERTY == currentState) {
           stack.removeLast();
         } else {
           wellFormed = false;
@@ -447,7 +447,7 @@ JSON source text.
         buffer.append("]");
         let currentState = state();
         if (JSON_STATE_OPEN_ARRAY == currentState ||
-          JSON_STATE_AFTER_ELEMENT == currentState) {
+            JSON_STATE_AFTER_ELEMENT == currentState) {
           stack.removeLast();
         } else {
           wellFormed = false;
@@ -1239,7 +1239,7 @@ or *Float64*, then we use the lossless numeric syntax tree variant.
       }
 
       if (doubleValue != -Infinity && doubleValue != Infinity &&
-        doubleValue != NaN) {
+          doubleValue != NaN) {
         out.float64Value(doubleValue);
       } else {
         out.numericTokenValue(numericTokenString);

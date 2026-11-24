@@ -111,13 +111,13 @@ Here's just enough of a Date type to get us started.
       @connected
       public constructor(year: Int, month: Int, day: Int): Void throws Bubble {
         if (1 <= month && month <= 12 &&
-          1 <= day && (
-            if (month != 2 || day != 29) {
-              day <= daysInMonth[month]
-            } else {
-              isLeapYear(year)
-            }
-          )) {
+            1 <= day && (
+              if (month != 2 || day != 29) {
+                day <= daysInMonth[month]
+              } else {
+                isLeapYear(year)
+              }
+            )) {
           this.year = year;
           this.month = month;
           this.day = day;
@@ -158,7 +158,7 @@ Here's just enough of a Date type to get us started.
         strIndex = isoString.prev(strIndex);
         // YYYY^-MM-DD
         if (isoString[strIndex] != char'-' ||
-          !isoString.hasAtLeast(String.begin, strIndex, 4)) {
+            !isoString.hasAtLeast(String.begin, strIndex, 4)) {
           bubble();
         }
         let day = isoString.slice(beforeDay, end).toInt32(10);

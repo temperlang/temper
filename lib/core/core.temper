@@ -789,8 +789,8 @@ export class StringBuilder {
     if (limit > sourceEnd) { limit = sourceEnd; }
 
     for (var index = begin;
-      index < limit;
-      index = source.next(index)) {
+        index < limit;
+        index = source.next(index)) {
       appendCodePoint(source[index]) orelse panic();
     }
   }
