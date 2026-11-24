@@ -23,9 +23,10 @@
 //!   `}`, `,` or `=>`, or inside `( )` and `[ ]` with `,`, or `;` if their
 //!   contents start on a line of their own; or it starts with an infix
 //!   operator like `.` or `&&`) is indented from the statement's first
-//!   line: once if it breaks at an operator or punctuation (the line
-//!   before ends with one, or it starts with one), else twice (before a
-//!   word like `extends`, or an operand). One starting with `;` or `,`
+//!   line: once if it breaks at an operator or punctuation, word
+//!   operators like `orelse` and `is` included (the line before ends with
+//!   one, or it starts with one), else twice (before another word, like
+//!   `extends`, or an operand). One starting with `;` or `,`
 //!   lines up with the statement, as a close bracket does. Comments never
 //!   count. A bracket opened on such a line indents its contents from that
 //!   line, but on a line continuing a declaration's header (starting with
@@ -963,8 +964,8 @@ impl<'a> Formatter<'a> {
             self.line_depth = self.line_depth.saturating_sub(1);
             self.stack.last().map_or(0, |o| o.base.formatted)
         } else if let Some((statement, code)) = self.continued_statement(first) {
-            // Broken at an operator (`a &&` or `.b`), or before a word or
-            // operand: `extends`, `throws`, `orelse`.
+            // Broken at an operator (`a &&`, `.b` or `orelse`), or before
+            // another word or operand: `extends`, `throws`.
             let at_operator =
                 self.previous.is_some_and(|p| self.is_operator(p)) || self.is_operator(code);
             self.line_continues_header = code.kind == TokenKind::Word && !at_operator;
@@ -1054,11 +1055,19 @@ impl<'a> Formatter<'a> {
     }
 
     /// Whether a code token is an operator or punctuation other than a
-    /// bracket, like `=`, `&&`, `.`, `->` or `,`: a line broken there
-    /// continues with one indentation step, against two before a word or
-    /// operand. Comments never count.
+    /// bracket, like `=`, `&&`, `.`, `->` or `,`, or a word operator in
+    /// an expression, like `orelse`, `is` or `as`: a line broken there
+    /// continues with one indentation step, against two before another
+    /// word (a header's `extends` or `throws`) or operand. Comments never
+    /// count.
     fn is_operator(&self, token: Token) -> bool {
+        use Operator::*;
         let text = self.text(token);
+        if token.kind == TokenKind::Word {
+            return self.role(token).is_some_and(|r| {
+                r.0 == Role::Infix && matches!(r.1, OrElse | In | Instanceof | Is | As)
+            });
+        }
         token.kind == TokenKind::Punctuation
             && !text.ends_with(['(', '[', '{'])
             && !matches!(text, ")" | "]" | "}")

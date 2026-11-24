@@ -59,10 +59,6 @@ let f(): Int
   throws Bubble {
   1
 }
-console.log(
-  do { f() }
-  orelse 0
-);
 --- formatted
 class GeneratorFnWrapper<@out YIELD extends AnyValue>
     extends Generator<YIELD> {
@@ -72,10 +68,41 @@ let f(): Int
     throws Bubble {
   1
 }
+
+=== a break at a word operator indents once
 console.log(
   do { f() }
       orelse 0
 );
+let a = do { f() } orelse
+g();
+let b = do {
+  f()
+}
+orelse 0;
+let c = x is
+    Foo;
+let d = x
+as Foo;
+let e = k
+    in m;
+--- formatted
+console.log(
+  do { f() }
+    orelse 0
+);
+let a = do { f() } orelse
+  g();
+let b = do {
+  f()
+}
+  orelse 0;
+let c = x is
+  Foo;
+let d = x
+  as Foo;
+let e = k
+  in m;
 
 === a break at an operator indents once
 let a =

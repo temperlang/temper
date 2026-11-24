@@ -27,8 +27,8 @@ the dominant style; "lines changed" is what applying it changes.
 | Indent characters | spaces 100% | spaces | 0 |
 | Indent step after an open bracket | 2: 99.6%, 4: 0.2% | 2 | (in the next row) |
 | Indentation, whole model (below) | matches 99.8% | the model | 104 (0.2%) |
-| Continuation lines broken at an operator, offset from the statement's first line | 2: 55%, 0: 37%, 4: 2% | 2 | (below) |
-| Continuation lines broken before a word or operand (`extends`) | 0: 93%, 2: 3%, 4: 2% | 4 | (below) |
+| Continuation lines broken at an operator (`orelse` too), offset from the statement's first line | 2: 56%, 0: 37%, 4: 2% | 2 | (below) |
+| Continuation lines broken before another word or operand (`extends`) | 0: 95%, 4: 2%, 2: 1% | 4 | (below) |
 | `{` on the line of what it follows | 100% | same line (kept: line breaks stay) | 0 |
 | `} else` on one line | 99.5% | one line (kept: line breaks stay) | 0 |
 | Space around infix operators | one 99.8% | one | 62 |
@@ -60,10 +60,10 @@ the dominant style; "lines changed" is what applying it changes.
 | Multi-line `[ ]` lists | tall 99.8% | the same | (below) |
 | Block arguments | trailing block 97%, `fn` in `( )` 3% | not changed (that's meaning) | - |
 
-**`temper fmt` itself** (`--temper`, over copies) changes 605 of 81,110
-lines (0.7%, prose included): 67 in core and std (4 files), 115 in test
-programs, 139 in docs examples, and 1 to 120 in each library (Ordable
-1, Argmas 16, Chromarite 19, Wherewith 55, Hrefine 73, Kelpto 120).
+**`temper fmt` itself** (`--temper`, over copies) changes 603 of 81,110
+lines (0.7%, prose included): 67 in core and std (4 files), 114 in test
+programs, 137 in docs examples, and 1 to 119 in each library (Ordable
+1, Argmas 16, Chromarite 19, Wherewith 57, Hrefine 73, Kelpto 119).
 Indenting every continuation line four spaces, and removing blank lines
 after `{` and before `}`, changed 895; Black-style wrapping at 100
 columns (an earlier commit) 758; with neither list rules nor
@@ -83,13 +83,14 @@ Notes on the numbers:
   operator or punctuation (the line before ends with `=`, `&&`, `+`,
   `->`, `,` and so on, or the line starts with `.`, `?.`, `&&`, `+`),
   one step, two spaces, as 55% are today (37% have none: chained `&&`
-  in conditions). Broken anywhere else (before a word like `extends` or
-  `throws`, or between operands), two steps, four spaces, which tells a
-  class's `extends` line from its body; today 93% of these have none
-  (`class C\nextends D {`). A word operator like `orelse` counts as a
-  word. Comments never count: after `a && // why`, the line breaks at
+  in conditions). Word operators in expressions (`orelse`, `is`, `as`,
+  `in`, `instanceof`) count as operators. Broken anywhere else (before
+  a header's word like `extends` or `throws`, or between operands), two
+  steps, four spaces, which tells a class's `extends` line from its
+  body; today 93% of these have none (`class C\nextends D {`). Comments
+  never count: after `a && // why`, the line breaks at
   `&&`. Four spaces for all of them, as in Java and Kotlin, changed far
-  more (157 lines in Wherewith, 117 in Kelpto, against 1 and 70; see
+  more (157 lines in Wherewith, 117 in Kelpto, against 3 and 69; see
   [the numbers](#the-numbers)).
 - **A line starting with `;` or `,`**, as after a multi-quoted string
   (`let s = """\n  "text\n;`), lines up with the start of what it ends
@@ -227,14 +228,14 @@ rule that the output with it doesn't have):
 | Group | Lines | `fmt` changes | List rules (data lists too) | Continuation indent |
 |---|---|---|---|---|
 | core+std | 4,594 | 66 | 6 (8) | 45 |
-| tests | 10,478 | 115 | 14 (86) | 1 |
-| docs (54 of 69 files whole) | 14,019 | 47 | 0 (0) | 32 |
+| tests | 10,478 | 114 | 14 (86) | 0 |
+| docs (54 of 69 files whole) | 14,020 | 47 | 0 (0) | 32 |
 | Argmas | 7,225 | 16 | 16 (23) | 0 |
 | Chromarite | 3,807 | 19 | 18 (188) | 0 |
 | Hrefine | 12,902 | 73 | 63 (590) | 8 |
-| Kelpto | 24,934 | 117 | 47 (184) | 70 |
+| Kelpto | 24,934 | 116 | 47 (184) | 69 |
 | Ordable | 3,169 | 1 | 0 (415) | 1 |
-| Wherewith | 11,841 | 55 | 54 (78) | 1 |
+| Wherewith | 11,841 | 57 | 54 (78) | 3 |
 
 What changes: lists written one item per line without a trailing comma
 hug (std's `json` signatures, `afterSubstring(\n  string, inString,
@@ -299,7 +300,8 @@ census shows authors already agree on almost everything else.
   a `for (` header split over lines each indent their contents one
   level, as the libraries do. A line continuing a statement is indented
   from the statement's first line, two spaces if it breaks at an
-  operator or punctuation and four otherwise (above): the code before
+  operator (word operators like `orelse` too) or punctuation and four
+  otherwise (above): the code before
   didn't end with `;`, `{`, `}`, `,` or `=>` (in `( )` and `[ ]`, `,`,
   or `;` if their contents start on a line of their own, as in
   `for (\n  a;\n  b;`), or it starts with an infix operator, as `.`,

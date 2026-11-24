@@ -377,8 +377,15 @@ def analyze(s: Source, st: Stats, samples: int) -> None:
             decorator_line = False
 
 
+# Word operators in expressions, which break like punctuation operators.
+WORD_OPERATORS = {"OrElse", "In", "Instanceof", "Is", "As"}
+
+
 def operator(t: Tok) -> bool:
-    """Whether a token is an operator or punctuation other than a bracket."""
+    """Whether a token is an operator or punctuation other than a bracket,
+    or a word operator like `orelse`."""
+    if t.kind == "Word":
+        return t.role[0] == "infix" and t.role[1] in WORD_OPERATORS
     return (
         t.kind == "Punctuation"
         and bool(t.text)
