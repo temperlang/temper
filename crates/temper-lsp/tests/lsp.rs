@@ -613,11 +613,123 @@ fn formatting() {
         client.request("textDocument/formatting", params.clone()),
         json!([])
     );
-    // After analysis, its parse is reused, with the same result.
-    change(&mut client, &file, 4, text);
+    assert_eq!(client.finish(), 0);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// After analysis, formatting reuses the document's parse, with the same
+/// result, counted by the server's hidden test statistics.
+#[test]
+fn formatting_reuses_the_parse() {
+    let text = "let  x=1;\n";
+    let dir = library("formatting-reuse", &[("f.temper", text)]);
+    let file = uri(&dir, "f.temper");
+    let mut client = Client::start_with_hook(Some("no such marker"));
+    client.request("initialize", json!({"capabilities": {}}));
+    open(&mut client, &file, text);
+    let params =
+        json!({"textDocument": doc(&file), "options": {"tabSize": 2, "insertSpaces": true}});
+    let reused = |client: &mut Client| {
+        num_at(
+            &client.request("tempest/testStats", Json::Null),
+            &["formatParsesReused"],
+        )
+    };
+    let before = client.request("textDocument/formatting", params.clone());
+    assert_eq!(reused(&mut client), 0);
     client.request("textDocument/hover", at(&file, 0, 5));
-    let again = client.request("textDocument/formatting", params);
-    assert_eq!(again, edits);
+    let after = client.request("textDocument/formatting", params.clone());
+    assert_eq!(after, before);
+    assert_eq!(reused(&mut client), 1);
+    // Changed since: parsed again.
+    change(&mut client, &file, 2, "let  y=1;\n");
+    client.request("textDocument/formatting", params);
+    assert_eq!(reused(&mut client), 1);
+    assert_eq!(client.finish(), 0);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Range formatting: a range of whole lines, which editors end at the
+/// next line's character 0, leaves that next line alone; a run of changed
+/// lines is one edit, even past the range; and past 500 changed lines the
+/// whole run between unchanged ends is one edit, so a range formats it
+/// all. Markdown prose gets no edits; an edit to the end of a last line
+/// without a line break ends at its UTF-16 length; CRLF lines keep their
+/// line breaks; and a document that isn't open gets no edits.
+#[test]
+fn formatting_ranges_and_documents() {
+    let lines = "let  a=1;\nlet c = 3;\nlet  b=2;\n";
+    let run = "f(a,\n  b,\n  c);\nlet y = 0;\nlet  z=1;\n";
+    let many = "let  x=1;\n".repeat(600);
+    let notes = "# Notes\n\nSome  prose.  \n\n    let a=1;\n";
+    let wide = "let s = \"😀\";  ";
+    let crlf = "let  x=1;\r\nlet y = 2;\r\n";
+    let dir = library(
+        "formatting-ranges",
+        &[
+            ("lines.temper", lines),
+            ("run.temper", run),
+            ("many.temper", &many),
+            ("notes.temper.md", notes),
+            ("wide.temper", wide),
+            ("crlf.temper", crlf),
+        ],
+    );
+    let mut client = Client::start();
+    client.request("initialize", json!({"capabilities": {}}));
+    let options = json!({"tabSize": 2, "insertSpaces": true});
+    let mut format = |name: &str, text: &str, range: Option<[u32; 4]>| {
+        let file = uri(&dir, name);
+        open(&mut client, &file, text);
+        let edits = match range {
+            None => client.request(
+                "textDocument/formatting",
+                json!({"textDocument": doc(&file), "options": options}),
+            ),
+            Some([l0, c0, l1, c1]) => client.request(
+                "textDocument/rangeFormatting",
+                json!({
+                    "textDocument": doc(&file),
+                    "range": {
+                        "start": {"line": l0, "character": c0},
+                        "end": {"line": l1, "character": c1},
+                    },
+                    "options": options,
+                }),
+            ),
+        };
+        (apply_edits(text, &edits), edits)
+    };
+    let (formatted, _) = format("lines.temper", lines, Some([0, 0, 2, 0]));
+    assert_eq!(formatted, "let a = 1;\nlet c = 3;\nlet  b=2;\n");
+    let (formatted, _) = format("lines.temper", lines, Some([0, 0, 2, 3]));
+    assert_eq!(formatted, "let a = 1;\nlet c = 3;\nlet b = 2;\n");
+    let (formatted, _) = format("run.temper", run, Some([1, 0, 1, 2]));
+    assert_eq!(formatted, "f(a, b, c);\nlet y = 0;\nlet  z=1;\n");
+    let (formatted, _) = format("many.temper", &many, Some([0, 0, 0, 3]));
+    assert_eq!(formatted, "let x = 1;\n".repeat(600));
+    let (formatted, edits) = format("notes.temper.md", notes, None);
+    assert_eq!(formatted, "# Notes\n\nSome  prose.  \n\n    let a = 1;\n");
+    assert_eq!(edits.as_array().unwrap().len(), 1, "{edits}");
+    let (_, edits) = format("wide.temper", wide, None);
+    assert_eq!(
+        edits,
+        json!([{
+            "range": {"start": {"line": 0, "character": 0}, "end": {"line": 0, "character": 15}},
+            "newText": "let s = \"😀\";\n",
+        }])
+    );
+    let (formatted, edits) = format("crlf.temper", crlf, None);
+    assert_eq!(formatted, "let x = 1;\r\nlet y = 2;\r\n");
+    assert_eq!(str_at(&edits[0], &["newText"]), "let x = 1;\r\n");
+    let unopened = uri(&dir, "unopened.temper");
+    assert_eq!(
+        client.request(
+            "textDocument/formatting",
+            json!({"textDocument": doc(&unopened), "options": options}),
+        ),
+        json!([])
+    );
     assert_eq!(client.finish(), 0);
     let _ = std::fs::remove_dir_all(&dir);
 }

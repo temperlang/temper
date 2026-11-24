@@ -386,7 +386,12 @@ census shows authors already agree on almost everything else.
   with the first line too, so stars written off that column stayed off
   it (`  *` under `/**`). Only that column changes,
   so the framing's other choices (a `/**` line of its own, stars on
-  every line) stay the author's.
+  every line) stay the author's. A comment whose lines can't all move
+  (one would go left of the margin) stays where it is, keeping its lines'
+  indentation relative to each other, which the safety check compares
+  (an ASCII diagram mustn't come apart). Trailing space goes from every
+  line of a comment, as from code: "trailing spaces go" with no
+  exception to explain, and it's never meaningful.
 - **`// fmt: off` regions:** lines after a
   `// fmt: off` comment on a line of its own, to a `// fmt: on` on a line
   of its own, keep their indentation, space, line breaks and trailing
@@ -400,7 +405,9 @@ census shows authors already agree on almost everything else.
   gain. In `.temper.md`, regions end with their code block, as cells do
   in notebooks, though blocks continue each other's brackets. The two
   comments themselves indent like any. Comments after code on their
-  line, `/* fmt: off */`, and other spellings don't count.
+  line, `/* fmt: off */`, `//fmt: off`, and other spellings don't count
+  (one spelling to look for and document), and a `// fmt: on` with no
+  region to end is an ordinary comment.
 - **Multi-quoted strings:** their content lines move with the line that
   opened the string; the margin's indentation is incidental, so their
   values don't change.
@@ -408,7 +415,9 @@ census shows authors already agree on almost everything else.
   from its block's margin (the fence's indentation, or four columns past
   its list items' for indented code); blocks continue each other's
   brackets, as the compiler reads them, so a class split over several
-  blocks indents consistently. Prose, including trailing space, is never
+  blocks indents consistently. Blank lines at a fenced block's start
+  and end collapse to one, as elsewhere (those are the block's, not
+  prose). Prose, including trailing space, is never
   touched, nor are lines indented with tabs (markdown counts tabs to the
   next multiple of four, as the margins do) or code lines starting like
   a fence (```` ``` ```` or `~~~`, which moving could make close their
@@ -422,9 +431,21 @@ census shows authors already agree on almost everything else.
 - **Safety:** input with lexing, bracket or parse errors, an unclosed
   block comment, string or `${` is left alone, with the first error.
   After formatting, the result is parsed again and must have the same
-  tokens (commas included), comments (ignoring each line's
-  indentation), parse tree and markdown outside code; otherwise `fmt`
-  refuses, as a bug.
+  tokens (commas included), comments (ignoring trailing space and the
+  indentation their lines share), parse tree and markdown outside code;
+  otherwise `fmt` refuses, as a bug. The tests don't rest on that
+  check alone: the repository and fuzzing tests check with their own
+  code that only space changed (the text without space is the same, the
+  tokens lexed again are, with comments' relative indentation, and
+  `// fmt: off` regions' lines are byte for byte), and that a quarter
+  of fuzzed inputs at least still parse, so refusing them all can't
+  pass. Push CI fuzzes with a fixed seed; nightly.yml's `fmt-fuzz`
+  with a new one each night.
+- **Line breaks and space-only files:** a file's line breaks stay its
+  own; the ones `fmt` adds, and the one at the end, are CRLF if the file
+  has any (mixed files keep each gap's own). A `.temper` file of only
+  space becomes empty, as one with code has no blank lines at its start
+  or end.
 - **Idempotence:** every rule depends on the tokens and on indentation
   the formatter computed itself, not on the input's (except line breaks
   as written, which the list rules keep where they decide), so formatted
@@ -432,7 +453,15 @@ census shows authors already agree on almost everything else.
   repository and randomly edited inputs (with lists' line breaks and
   trailing commas added and removed).
 - **Speed:** one lex and parse, a linear pass, and one more parse for
-  the check. Finding statements, lists and operators' roles in the tree
+  the check. Linear in the source, long lines and deep nesting too:
+  where each token's line starts, and how many tokens before each are
+  kept or after prose, are found in one pass beforehand, not by looking
+  back per token, which took quadratic time on a 600 KiB line (40k
+  statements: 8 s, now well under one). The parser's check for a
+  follower (`extends A, B`) counted a long comma list's tokens at each
+  comma, which made 80k-item lists quadratic too.
+  `formatting_time_grows_linearly` checks that twice the code takes
+  under three times as long, in debug. Finding statements, lists and operators' roles in the tree
   isn't slow: each is one walk over the tree, no searching. In release,
   with the machine quiet, `core.temper` (50 KiB) takes 6 to 8 ms, of
   which its two parses are 3.5 to 5 ms, so the formatter's own pass,
@@ -448,7 +477,12 @@ census shows authors already agree on almost everything else.
 - **Language server:** `textDocument/formatting` and `rangeFormatting`
   format the open text, reusing its unit's parse when that's current,
   and answer with the runs of changed lines (Myers' diff), all of them
-  or those on a range's lines. A document that doesn't parse gets no
+  or those touching a range's lines (a range ending at a line's
+  character 0, as a selection of whole lines does, leaves that line
+  out). A run is taken whole, even where it goes past the range, and
+  past 500 changed lines the diff stops and everything between the
+  unchanged ends is one run, so a range in such a document formats it
+  all. A document that doesn't parse gets no
   edits and no error. The VS Code extension formats on save by default
   (`editor.formatOnSave` for `[temper]` and `[temper-markdown]`).
 
@@ -501,6 +535,17 @@ Left out of this RFC and PR (Tom, 2026-11-24):
 - Doc comments' framing beyond their `*` column: adding or removing
   stars, moving `/**` or `*/` to lines of their own, rewrapping their
   text.
+
+The pre-PR tests review (2026-11-24) found and this branch fixed: a CRLF
+file without a final line break got a `\n`; the docs' examples check
+passed whatever `temper fmt` did (it now checks the exit status, the
+error lines and a canary block, with a self-test in CI); the directory
+walk followed links to directories, looping; quadratic time on long
+lines and deep nesting; tabs after keywords kept, trailing space after
+comments kept, a space-only file kept, blank lines at a code block's
+edges kept, `{a:1}` left tight; `fmt --check | head` panicking; a range
+ending at character 0 taking the next line; and `UPDATE_SNAPSHOTS=0`
+updating goldens.
 
 Next: the docs' `<!-- fmt: off -->` blocks could move to a
 `// fmt: off` first line, if wanted.

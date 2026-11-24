@@ -114,12 +114,20 @@ pub fn write_cases(path: &Path, cases: &[Case], separator: &str) {
     fs::write(path, out).unwrap();
 }
 
-/// Checks each case's output, and with `UPDATE_SNAPSHOTS` set, saves new
-/// output for review instead of failing.
+/// Whether `UPDATE_SNAPSHOTS`'s value asks to update goldens: only `1`
+/// does, so a stray `UPDATE_SNAPSHOTS=0` can't.
+pub fn updating(value: Option<&str>) -> bool {
+    value == Some("1")
+}
+
+/// Checks each case's output, and with `UPDATE_SNAPSHOTS=1`, saves new
+/// output for review instead of failing, saying which files it rewrote.
 pub fn check_cases(dir: &str, separator: &str, output: impl Fn(&Case) -> String) {
-    let update = env::var_os("UPDATE_SNAPSHOTS").is_some();
+    let update = updating(env::var("UPDATE_SNAPSHOTS").ok().as_deref());
     let mut failures = Vec::new();
     let mut count = 0;
+    // Failures in the files before this one.
+    let mut earlier = 0;
     for (path, mut cases) in case_files(dir, separator) {
         for case in &mut cases {
             count += 1;
@@ -129,9 +137,11 @@ pub fn check_cases(dir: &str, separator: &str, output: impl Fn(&Case) -> String)
                 case.expected = actual;
             }
         }
-        if update {
+        if update && failures.len() > earlier {
             write_cases(&path, &cases, separator);
+            eprintln!("UPDATE_SNAPSHOTS=1: rewrote {}", path.display());
         }
+        earlier = failures.len();
     }
     assert!(count > 0, "no cases found");
     assert!(

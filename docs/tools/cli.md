@@ -203,11 +203,12 @@ already has a `src` directory or a `config.temper.md`.
 
 Lays out each `.temper` and `.temper.md` file named, or under each
 directory named (the current one by default, skipping `temper.out`,
-hidden directories, and what [ignore files](#ignore-files) list), in
-the standard style, rewriting the files that
-change. In `.temper.md` files, only Temper code blocks change; prose is
-left exactly as written. With `--check`, it changes nothing, lists the
-files that need formatting, and exits with 1 if there are any, for CI.
+`temper.keep`, hidden directories, links to directories, and what
+[ignore files](#ignore-files) list), in the standard style, rewriting
+only the files that change. In `.temper.md` files, only Temper code
+blocks change; prose is left exactly as written. With `--check`, it
+changes nothing, lists the files that need formatting, says how many
+files it checked, and exits with 1 if any need formatting, for CI.
 
 It has no style options and no line width: it sets spacing,
 indentation, and blank lines, keeps line breaks as written except in

@@ -6,15 +6,18 @@ spaces, and keeps your line breaks, except in lists.
 
 ## Spacing
 
-One space goes around operators, after commas, semicolons and type
-colons, and inside `{ }`; none goes inside `( )` and `[ ]`, or between a
-called name and `(`.
+One space goes around operators, after commas, semicolons, and colons
+in types and object literals, and inside `{ }`; none goes inside `( )`
+and `[ ]`, or between a called name and `(`. Runs of spaces and tabs
+become one.
 
 ```temper inert
 let x:Int=f( a ,b )+1;          // before
 let x: Int = f(a, b) + 1;       // after
 if(ok){go()}                    // before
 if (ok) { go() }                // after
+let p = {x:1, y :2};            // before
+let p = { x: 1, y: 2 };         // after
 ```
 
 No space goes just inside a string's `${ }`, as in Kotlin, Python's
@@ -83,9 +86,12 @@ if (ready &&
 
 ## Blank lines
 
-Blank lines stay as you wrote them, but never more than one in a row,
-and none at the start of a file. Trailing spaces go, and a file ends
-with one line break.
+Blank lines stay as you wrote them, but never more than one in a row
+(at a `.temper.md` code block's start and end too), and none at the
+start of a file. Trailing spaces go, after comments
+too, and a file ends with one line break, unless it has nothing but
+space: then it's empty. A file's line breaks stay its own: in a file
+with CRLF line breaks, the ones `fmt` adds are CRLF too.
 
 ```temper inert
 let a = 1;
@@ -101,7 +107,8 @@ let b = 2;   // after: one
 ## Lists
 
 Lists are arguments, parameters, list and object literals, and type
-arguments. Your line breaks and trailing comma choose their layout:
+arguments, and a single item in parentheses or brackets, as in
+`(a + b)`. Your line breaks and trailing comma choose their layout:
 
 - No line break after the open bracket: all on one line.
 - A line break after the open bracket: the items together on one line
@@ -148,10 +155,12 @@ a multi-quoted string as an item keeps its line breaks.
 ## What it never changes
 
 - Line breaks outside lists.
-- Comments' text (a comment on its own line indents like the code
-  around it). In a doc comment over several lines, `/** ... */`, each
-  line starting with `*` lines up one column past the `/`, with what
-  follows the `*` as written.
+- Comments' text, apart from trailing spaces. A comment on its own line
+  indents like the code around it, its lines moving together, unless
+  that would take one left of the margin: then it stays where it is. In
+  a doc comment over several lines, `/** ... */`, each line starting
+  with `*` lines up one column past the `/`, with what follows the `*`
+  as written.
 - Strings.
 - Prose in `.temper.md` files: only Temper code blocks change.
 
@@ -162,7 +171,9 @@ line of its own, stay exactly as written, as for a table aligned in
 columns; the two comments indent like any other. Without a `// fmt: on`,
 the region ends where the brackets around it close (the end of its
 block), or at the end of the file or, in `.temper.md`, of its code
-block.
+block. Only those exact comments count: `//fmt: off` and
+`/* fmt: off */` don't, and a `// fmt: on` with no region to end is an
+ordinary comment.
 
 ```temper inert
 // fmt: off
@@ -181,8 +192,9 @@ comments, or parse tree, it leaves the file alone and says so.
 
 ## What it leaves out
 
-Under a directory, `fmt` skips `temper.out`, hidden directories, and
-what `.gitignore` and `.temperignore` files list, as `build` does. To
+Under a directory, `fmt` skips `temper.out`, `temper.keep`, hidden
+directories, and what `.gitignore` and `.temperignore` files list, and
+doesn't follow links to directories, as `build` does. To
 keep more as written, such as a golden test's input or code that
 doesn't parse on purpose, list it in a file of gitignore patterns,
 relative to that file's directory, and name it with `--ignorefile`

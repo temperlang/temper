@@ -38,15 +38,18 @@
 //!   after them.
 //! - **Spacing on a line:** one space around infix operators (not `.`,
 //!   `?.`, `..`, `::`, `<`/`>` of type arguments or label colons), after
-//!   `,` and `;` and type colons, around `{ }` contents, and between a
-//!   keyword like `if` or `fn` and `(`; none before `,`, `;` and type
-//!   colons, inside `( )` and `[ ]` and a string's `${x}`, between a
-//!   called name and `(`, or after prefix operators and `@`. Runs of
-//!   spaces become one. Space next to comments, inside strings, and
-//!   before `<` (which decides whether it may be an angle bracket) is
-//!   left as written.
-//! - **Lines:** no trailing space, blank lines as written but at most one
-//!   in a row, none at the start of a file, and one line break at its end.
+//!   `,` and `;` and type and object literals' colons, around `{ }`
+//!   contents, and between a keyword like `if` or `fn` and `(`; none
+//!   before `,`, `;` and those colons, inside `( )` and `[ ]` and a
+//!   string's `${x}`, between a called name and `(`, or after prefix
+//!   operators and `@`. Runs of spaces and tabs become one. Space next
+//!   to comments, inside strings, and before `<` (which decides whether
+//!   it may be an angle bracket) is left as written.
+//! - **Lines:** no trailing space (after comments too, on each of their
+//!   lines), blank lines as written but at most one in a row (at a
+//!   markdown code block's start and end too), none at the start of a
+//!   file, and one line break at its end, the file's own (CRLF if it has
+//!   any); a file of only space becomes empty.
 //! - **Lists** (arguments, parameters, list and object literals, type
 //!   arguments, and single items in `( )`, `[ ]` and `< >`) are laid out
 //!   as their author asks: with a trailing comma, one item per line; else,
@@ -60,13 +63,16 @@
 //!   data table), or in a string keeps its line breaks as written.
 //!
 //! Multi-line block comments and the lines of multi-quoted strings move
-//! with the line they start on; their text is otherwise kept, but a doc
+//! with the line they start on (a comment only if none of its lines would
+//! go left of the margin); their text is otherwise kept, but a doc
 //! comment's (`/** ... */`) lines starting with `*` line up one column
 //! past its `/`.
 //!
 //! Lines after a `// fmt: off` comment on a line of its own stay as
-//! written, up to a `// fmt: on` on a line of its own, or else the end of
-//! the brackets around it, of its code block (markdown) or of the file.
+//! written, trailing space included, up to a `// fmt: on` on a line of its
+//! own, or else the end of the brackets around it, of its code block
+//! (markdown) or of the file. Only those exact comments count (but for
+//! space after them), not `//fmt: off` or `/* fmt: off */`.
 //!
 //! In a literate `.temper.md` file only Temper code blocks change, each
 //! indented from its block's own margin (the fence's indentation, or four
@@ -77,10 +83,17 @@
 //!
 //! **Safety:** code that doesn't parse is left alone, with an error. After
 //! formatting, the result is parsed again and must have the same tokens,
-//! comments (apart from indentation), parse tree and, in markdown, prose;
-//! if not, the formatter refuses rather than change meaning. Formatting is
-//! idempotent: formatted code formats to itself (tested over every Temper
-//! file in the repository).
+//! comments (apart from trailing space and the indentation their lines
+//! share), parse tree and, in markdown, prose; if not, the formatter
+//! refuses rather than change meaning. Formatting is idempotent:
+//! formatted code formats to itself (tested over every Temper file in the
+//! repository, and fuzzed, with checks of the tests' own that only space
+//! changed).
+//!
+//! **Speed:** linear in the source: per-token facts that need a look back
+//! (where a line starts) or around (what's in a list) are found in one
+//! pass beforehand, so a long line or deep nesting costs no more per
+//! token (tested by `formatting_time_grows_linearly`).
 
 use crate::lex::{SourceKind, Synthetic, Token, TokenKind};
 use crate::literate::{self, Kind};
@@ -611,19 +624,28 @@ fn code_gaps(source: &str, lexed: &[Token]) -> (Vec<Token>, Vec<bool>, Vec<bool>
         Escape,
     }
     let mut frames = vec![Frame::Code];
+    // How many of them are strings, so asking takes no scan of deep ones.
+    let mut strings = 0;
     let (mut tokens, mut gaps, mut in_string) = (Vec::new(), Vec::new(), Vec::new());
     for &t in lexed.iter().filter(|t| t.kind != TokenKind::Space) {
         if t.synthetic.is_none() {
             tokens.push(t);
             gaps.push(frames.last() == Some(&Frame::Code));
-            in_string.push(frames.contains(&Frame::String));
+            in_string.push(strings > 0);
         }
         let text = t.text(source);
         match t.kind {
-            TokenKind::LeftDelimiter => frames.push(Frame::String),
+            TokenKind::LeftDelimiter => {
+                frames.push(Frame::String);
+                strings += 1;
+            }
             TokenKind::RightDelimiter => {
                 while let Some(frame) = frames.pop() {
-                    if frame == Frame::String || frames.is_empty() {
+                    if frame == Frame::String {
+                        strings -= 1;
+                        break;
+                    }
+                    if frames.is_empty() {
                         break;
                     }
                 }
@@ -637,10 +659,8 @@ fn code_gaps(source: &str, lexed: &[Token]) -> (Vec<Token>, Vec<bool>, Vec<bool>
             TokenKind::Punctuation if text == "${" => frames.push(Frame::Code),
             _ if frames.last() == Some(&Frame::String) => {}
             TokenKind::Punctuation if text.ends_with(['(', '[', '{']) => frames.push(Frame::Code),
-            TokenKind::Punctuation if matches!(&*text, ")" | "]" | "}") => {
-                if frames.len() > 1 {
-                    frames.pop();
-                }
+            TokenKind::Punctuation if matches!(&*text, ")" | "]" | "}") && frames.len() > 1 => {
+                frames.pop();
             }
             _ => {}
         }
@@ -726,8 +746,19 @@ struct Formatter<'a> {
     /// For the gap before each token, the list that may break there.
     places: Vec<Option<(usize, Place)>>,
     /// For each token, whether it's in a `// fmt: off` region, where it and
-    /// the space before it stay as written.
+    /// the space before it stay as written, and whether it ends one.
     kept: Vec<bool>,
+    region_ends: Vec<bool>,
+    /// For each token, where its line starts, found in one pass, as
+    /// scanning back for each token would take quadratic time on a long
+    /// line.
+    line_starts: Vec<u32>,
+    /// For each token, the index of the first token from it on that isn't
+    /// a comment (or the end).
+    next_code: Vec<usize>,
+    /// Where object literals' colons start, as in `{ a: 1 }`, unlike
+    /// labels' (`outer: while`).
+    properties: HashSet<u32>,
 }
 
 impl<'a> Formatter<'a> {
@@ -738,6 +769,25 @@ impl<'a> Formatter<'a> {
         options: Options,
     ) -> Self {
         let (tokens, code_gaps, in_string) = code_gaps(parsed.source(), parsed.lexed());
+        let source = parsed.source();
+        let mut line_starts = Vec::with_capacity(tokens.len());
+        let (mut at, mut line) = (0, 0);
+        for t in &tokens {
+            let start = t.start as usize;
+            if let Some(i) = source[at..start].rfind('\n') {
+                line = at + i + 1;
+            }
+            at = start;
+            line_starts.push(line as u32);
+        }
+        let mut next_code = vec![tokens.len(); tokens.len() + 1];
+        for i in (0..tokens.len()).rev() {
+            next_code[i] = if tokens[i].kind == TokenKind::Comment {
+                next_code[i + 1]
+            } else {
+                i
+            };
+        }
         let mut formatter = Formatter {
             source: parsed.source(),
             tokens,
@@ -777,8 +827,12 @@ impl<'a> Formatter<'a> {
             layouts: Vec::new(),
             places: Vec::new(),
             kept: Vec::new(),
+            region_ends: Vec::new(),
+            line_starts,
+            next_code,
+            properties: property_colons(parsed),
         };
-        formatter.kept = formatter.off_regions();
+        (formatter.kept, formatter.region_ends) = formatter.off_regions();
         (formatter.headers, formatter.bodies) = headers(parsed, &formatter.tokens);
         formatter.header_lines = formatter.headers.values().map(|&h| (h, None)).collect();
         if options.lists {
@@ -790,18 +844,19 @@ impl<'a> Formatter<'a> {
     /// Which tokens are in `// fmt: off` regions: from the line after a
     /// `// fmt: off` on a line of its own to a `// fmt: on` on a line of its
     /// own, or else to the end of the brackets around it (a block), of its
-    /// code block (in markdown) or of the file.
-    fn off_regions(&self) -> Vec<bool> {
+    /// code block (in markdown) or of the file; and which tokens end one
+    /// in its code block (`// fmt: on` or a close bracket), maybe one
+    /// with no tokens, whose lines up to theirs stay as written too.
+    fn off_regions(&self) -> (Vec<bool>, Vec<bool>) {
         let mut kept = vec![false; self.tokens.len()];
+        let mut ends = vec![false; self.tokens.len()];
         // The bracket depth and code block of the `// fmt: off`.
         let mut off: Option<(usize, u32)> = None;
         let mut depth = 0;
         for (i, &t) in self.tokens.iter().enumerate() {
             let text = self.text(t);
             let range = self.range_of(t.start).map(|r| r.start);
-            let line_start = self.source[..t.start as usize]
-                .rfind('\n')
-                .map_or(0, |n| n + 1);
+            let line_start = self.line_starts[i] as usize;
             let own_line = (self.source[line_start..t.start as usize].bytes())
                 .all(|b| b == b' ' || b == b'\t');
             let marker = (t.kind == TokenKind::Comment && own_line && range.is_some())
@@ -811,6 +866,7 @@ impl<'a> Formatter<'a> {
             if let Some((d, block)) = off {
                 if range != Some(block) || marker == Some(false) || (closer && depth == d) {
                     off = None;
+                    ends[i] = range == Some(block);
                 } else {
                     kept[i] = true;
                 }
@@ -824,7 +880,7 @@ impl<'a> Formatter<'a> {
                 off = range.map(|block| (depth, block));
             }
         }
-        kept
+        (kept, ends)
     }
 
     /// Finds the lists and decides their layouts, inner lists first, so
@@ -874,6 +930,16 @@ impl<'a> Formatter<'a> {
                 && z.kind != TokenKind::Comment
                 && !(in_string[last] && z.kind != TokenKind::RightDelimiter)
         };
+        // How many gaps before each token have prose before them, and how
+        // many tokens before it are kept, so each list asks in one step.
+        let count = |flags: &[bool]| -> Vec<usize> {
+            let mut sums = vec![0; flags.len() + 1];
+            for (i, &f) in flags.iter().enumerate() {
+                sums[i + 1] = sums[i] + usize::from(f);
+            }
+            sums
+        };
+        let (prose_before, kept_before) = (count(&prose), count(&self.kept));
         let mut order: Vec<usize> = (0..self.lists.len()).collect();
         order.sort_by_key(|&i| self.lists[i].close - self.lists[i].open);
         self.layouts = vec![Layout::Kept; self.lists.len()];
@@ -886,8 +952,8 @@ impl<'a> Formatter<'a> {
             let starts = [list.open].into_iter().chain(list.commas.iter().copied());
             let kept = (self.options.keep_data && list.data)
                 || in_string[list.open]
-                || (list.open + 1..=list.close).any(|j| prose[j])
-                || (list.open..=list.close).any(|j| self.kept[j])
+                || prose_before[list.close + 1] > prose_before[list.open + 1]
+                || kept_before[list.close + 1] > kept_before[list.open]
                 || starts.zip(ends).any(|(start, end)| {
                     breaks[start + 1] || breaks[end] || !item_fits(start + 1, end)
                 });
@@ -924,7 +990,14 @@ impl<'a> Formatter<'a> {
     fn run(mut self) -> String {
         let source = self.source;
         if self.tokens.is_empty() {
-            return source.to_string();
+            // Only space: a `.temper` file is empty, as one with code has
+            // no blank lines at its start or end.
+            let space = source.trim_matches([' ', '\t', '\r', '\n']).is_empty();
+            return if self.standalone && space {
+                String::new()
+            } else {
+                source.to_string()
+            };
         }
         // A copy, as other methods read `self.tokens` too.
         let tokens = self.tokens.clone();
@@ -933,18 +1006,11 @@ impl<'a> Formatter<'a> {
             self.index = i;
             let previous = i.checked_sub(1).map(|p| tokens[p]);
             let wanted = self.wanted_break();
-            let same_block = previous.is_some_and(|p| {
-                self.range_of(p.start).map(|r| r.start)
-                    == self.range_of(token.start).map(|r| r.start)
-            });
             if self.kept[i] {
                 self.kept_gap(end, token);
-            } else if i > 0 && self.kept[i - 1] && same_block {
+            } else if self.region_ends[i] {
                 // Lines in a region stay as written up to the line ending it.
-                let line_start = source[..token.start as usize]
-                    .rfind('\n')
-                    .map_or(0, |n| n + 1);
-                let line_start = (line_start as u32).max(end);
+                let line_start = self.line_starts[i].max(end);
                 self.out
                     .push_str(&source[end as usize..line_start as usize]);
                 self.gap(previous, line_start, token, wanted);
@@ -968,9 +1034,19 @@ impl<'a> Formatter<'a> {
                 )
             });
         if self.standalone && !in_string {
-            // One line break at the end.
-            let crlf = rest.contains("\r\n");
-            self.out.push_str(if crlf { "\r\n" } else { "\n" });
+            // A `// fmt: off` region's last line as written, trailing space
+            // too; then one line break at the end, the file's own.
+            if self.kept[tokens.len() - 1] {
+                self.out
+                    .push_str(&rest[..rest.find(['\r', '\n']).unwrap_or(rest.len())]);
+            }
+            self.out.push_str(self.newline);
+        } else if !in_string
+            && self.is_code(tokens[tokens.len() - 1])
+            && !self.kept[tokens.len() - 1]
+        {
+            // A code block left open at the end of a literate file.
+            self.code_end(rest);
         } else {
             self.out.push_str(rest);
         }
@@ -983,15 +1059,28 @@ impl<'a> Formatter<'a> {
         let source = self.source;
         self.out
             .push_str(&source[start as usize..next.start as usize]);
-        let line_start = source[..next.start as usize]
-            .rfind('\n')
-            .map_or(0, |i| i + 1);
+        let line_start = self.line_starts[self.index] as usize;
         let indent = &source[line_start..next.start as usize];
         if line_start as u32 >= start && indent.bytes().all(|b| b == b' ' || b == b'\t') {
             let margin = self.range_of(next.start).map_or(0, |r| r.margin);
             let actual = columns(indent) as i32 - margin;
             self.line_start(next, Some(actual), true, None);
         }
+    }
+
+    /// Writes the space after a code block's last token, up to its closing
+    /// fence or the file's end: no trailing space, and at most one blank
+    /// line.
+    fn code_end(&mut self, gap: &str) {
+        let Some(last) = gap.rfind('\n') else {
+            self.out.push_str(gap);
+            return;
+        };
+        let breaks = gap[..last].matches('\n').count() + 1;
+        for _ in 0..breaks.min(2) {
+            self.out.push_str(newline_of(gap));
+        }
+        self.out.push_str(&gap[last + 1..]);
     }
 
     fn range_of(&self, offset: u32) -> Option<CodeRange> {
@@ -1012,17 +1101,13 @@ impl<'a> Formatter<'a> {
         let source = self.source;
         let gap = &source[start as usize..next.start as usize];
         let Some(range) = self.range_of(next.start) else {
-            // Code ending, maybe before prose: drop the last line's
-            // trailing space.
-            let code_before = previous.is_some_and(|p| self.is_code(p));
-            let trailing = gap.len() - gap.trim_start_matches([' ', '\t']).len();
-            let ends_line = gap[trailing..].starts_with(['\n', '\r']);
-            let skip = if code_before && ends_line {
-                trailing
+            // Code ending, before prose (a closing fence).
+            let kept = self.index > 0 && self.kept[self.index - 1];
+            if previous.is_some_and(|p| self.is_code(p)) && !kept {
+                self.code_end(gap);
             } else {
-                0
-            };
-            self.out.push_str(&gap[skip..]);
+                self.out.push_str(gap);
+            }
             return;
         };
         match wanted {
@@ -1045,9 +1130,7 @@ impl<'a> Formatter<'a> {
         }
         let both_code =
             previous.is_none_or(|p| self.range_of(p.start).is_some()) && start >= range.start;
-        let line_start = source[..next.start as usize]
-            .rfind('\n')
-            .map_or(0, |i| i + 1) as u32;
+        let line_start = self.line_starts[self.index];
         // Only space before it on its line, and not a string's content;
         // prose before it may end with a list item's prefix of spaces.
         let indent = &source[line_start as usize..next.start as usize];
@@ -1071,7 +1154,7 @@ impl<'a> Formatter<'a> {
             let breaks = gap[..breaks_end - start as usize].matches('\n').count();
             // Blank lines are the author's; a run counts as one.
             let blank = breaks.saturating_sub(1).min(1);
-            let newline = if gap.contains("\r\n") { "\r\n" } else { "\n" };
+            let newline = newline_of(gap);
             // No break here when the previous token, a string's content,
             // ends with the line's.
             for _ in 0..(blank + 1) * usize::from(breaks > 0) {
@@ -1079,6 +1162,14 @@ impl<'a> Formatter<'a> {
             }
         } else if both_code && self.standalone {
             // The file's start: no blank lines.
+        } else if start < range.start && range.start as usize <= breaks_end {
+            // A code block's start, after prose: at most one blank line.
+            self.out
+                .push_str(&source[start as usize..range.start as usize]);
+            let blank = &source[range.start as usize..breaks_end];
+            if blank.contains('\n') {
+                self.out.push_str(newline_of(blank));
+            }
         } else {
             self.out.push_str(&source[start as usize..breaks_end]);
         }
@@ -1224,8 +1315,7 @@ impl<'a> Formatter<'a> {
         // statement if that does, but not before a close bracket or the
         // end.
         let first = if first.kind == TokenKind::Comment {
-            let next = (self.index..self.tokens.len())
-                .find(|&i| self.tokens[i].kind != TokenKind::Comment);
+            let next = Some(self.next_code[self.index]).filter(|&i| i < self.tokens.len());
             match next {
                 Some(i)
                     if !matches!(self.text(self.tokens[i]), ")" | "]" | "}")
@@ -1304,26 +1394,40 @@ impl<'a> Formatter<'a> {
                 .chars()
                 .count();
             let star = (is_doc(text) && !kept).then_some(column + 1);
+            // Its lines without trailing space, unless kept (or prose).
+            let trim = !kept && starts_comment(text);
+            let put = |out: &mut String, line: &str| match trim {
+                true => push_trimmed(out, line),
+                false => out.push_str(line),
+            };
             let mut lines = text.split('\n');
-            self.out.push_str(lines.next().unwrap());
+            put(&mut self.out, lines.next().unwrap());
             for line in lines {
                 self.out.push('\n');
                 let rest = line.trim_start_matches(' ');
                 if let Some(star) = star.filter(|_| rest.starts_with('*')) {
                     self.out.extend(std::iter::repeat_n(' ', star));
-                    self.out.push_str(rest);
+                    put(&mut self.out, rest);
                     continue;
                 }
                 if shift == 0 || line.trim().is_empty() {
-                    self.out.push_str(line);
+                    put(&mut self.out, line);
                     continue;
                 }
                 let indent = (line.len() - line.trim_start_matches(' ').len()) as i32;
                 for _ in 0..(indent + shift).max(0) {
                     self.out.push(' ');
                 }
-                self.out.push_str(line.trim_start_matches(' '));
+                put(&mut self.out, line.trim_start_matches(' '));
             }
+            return;
+        }
+        if token.kind == TokenKind::Comment
+            && self.is_code(token)
+            && starts_comment(text)
+            && !self.kept[self.index]
+        {
+            push_trimmed(&mut self.out, text);
             return;
         }
         self.out.push_str(text);
@@ -1455,9 +1559,18 @@ impl<'a> Formatter<'a> {
                 (!closer(tb)).then_some(" "),
             ),
             (dot(ra) || dot(rb), Some("")),
-            // Type colons.
-            (is(rb, Role::Infix) && op(rb) == Some(HighColon), Some("")),
-            (is(ra, Role::Infix) && op(ra) == Some(HighColon), Some(" ")),
+            // Type colons, and an object literal's, which are the same in
+            // its items after the first.
+            (
+                is(rb, Role::Infix) && op(rb) == Some(HighColon)
+                    || self.properties.contains(&b.start),
+                Some(""),
+            ),
+            (
+                is(ra, Role::Infix) && op(ra) == Some(HighColon)
+                    || self.properties.contains(&a.start),
+                Some(" "),
+            ),
             (spaced(ra, a) || spaced(rb, b), Some(" ")),
             // `if (` and `fn (`, but `f(`.
             (
@@ -1479,7 +1592,11 @@ impl<'a> Formatter<'a> {
                 Some(""),
             ),
             (angle || prefix, Some("")),
-            (gap.len() > 1 && gap.bytes().all(|c| c == b' '), Some(" ")),
+            // Runs of spaces and tabs.
+            (
+                gap != " " && !gap.is_empty() && gap.bytes().all(|c| c == b' ' || c == b'\t'),
+                Some(" "),
+            ),
         ];
         let want = rules.into_iter().find(|rule| rule.0)?.1?;
         // Never respace tokens so they'd lex differently, as `- -x`.
@@ -1490,6 +1607,58 @@ impl<'a> Formatter<'a> {
     }
 }
 
+/// The line break a gap's line breaks are written with.
+fn newline_of(gap: &str) -> &'static str {
+    if gap.contains("\r\n") { "\r\n" } else { "\n" }
+}
+
+/// Whether a comment token is a comment in code, `//` or `/*`, not
+/// markdown prose (in an indented code block's lines, as a list item's
+/// marker).
+fn starts_comment(text: &str) -> bool {
+    text.starts_with("//") || text.starts_with("/*")
+}
+
+/// Writes a comment's line without the space and tabs at its end, but
+/// with its `\r`.
+fn push_trimmed(out: &mut String, line: &str) {
+    let (body, cr) = line.strip_suffix('\r').map_or((line, ""), |b| (b, "\r"));
+    out.push_str(body.trim_end_matches([' ', '\t']));
+    out.push_str(cr);
+}
+
+/// Where object literals' (and object types') colons start, as in
+/// `{ a: 1 }`: those of a `{ }` group's items. A block's statements, as
+/// labels, aren't in one.
+fn property_colons(parsed: &Parsed) -> HashSet<u32> {
+    use Operator::*;
+    let tree = parsed.tree();
+    let mut colons = HashSet::new();
+    let mut stack = vec![parsed.root()];
+    let colon = |id: NodeId| {
+        let tokens = || tree.children(id).iter().filter_map(|&c| parsed.token(c));
+        (tree.kind(id) == NodeKind::Op(LowColon))
+            .then(|| tokens().find(|t| !t.synthetic && parsed.token_text(*t) == ":"))
+            .flatten()
+            .map(|t| t.start)
+    };
+    while let Some(id) = stack.pop() {
+        let children = tree.children(id);
+        stack.extend((children.iter()).filter(|&&c| tree.kind(c) != NodeKind::Token));
+        if tree.kind(id) != NodeKind::Op(CurlyGroup) {
+            continue;
+        }
+        for &c in children {
+            let items = match tree.kind(c) {
+                NodeKind::Op(Comma) => tree.children(c),
+                _ => std::slice::from_ref(&c),
+            };
+            colons.extend(items.iter().filter_map(|&i| colon(i)));
+        }
+    }
+    colons
+}
+
 /// Whether a comment is a doc comment over several lines, `/** ... */`,
 /// whose lines starting with `*` line up one column past its `/`.
 fn is_doc(comment: &str) -> bool {
@@ -1497,11 +1666,11 @@ fn is_doc(comment: &str) -> bool {
 }
 
 /// Whether a comment on a line of its own turns formatting off or on:
-/// `// fmt: off`, `// fmt: on`.
+/// exactly `// fmt: off` or `// fmt: on`, but for space at its end.
 fn fmt_marker(comment: &str) -> Option<bool> {
-    match comment.strip_prefix("//")?.trim() {
-        "fmt: off" => Some(true),
-        "fmt: on" => Some(false),
+    match comment.trim_end() {
+        "// fmt: off" => Some(true),
+        "// fmt: on" => Some(false),
         _ => None,
     }
 }
@@ -1528,8 +1697,31 @@ fn lexes_alone(a: &str, space: &str, b: &str) -> bool {
     })
 }
 
+/// A comment's text as formatting must keep it: its lines without
+/// trailing space, and without the indentation they share, so they may
+/// move together but not apart; but a doc comment's lines starting with
+/// `*` line up anew.
+fn comment_shape(comment: &str) -> String {
+    let doc = is_doc(comment);
+    let lines: Vec<&str> = comment.split('\n').map(str::trim_end).collect();
+    let starred = |l: &str| doc && l.trim_start().starts_with('*');
+    let shared = (lines.iter().skip(1))
+        .filter(|l| !l.is_empty() && !starred(l))
+        .map(|l| l.len() - l.trim_start().len())
+        .min()
+        .unwrap_or(0);
+    (lines.iter().enumerate())
+        .map(|(i, &l)| match () {
+            _ if i == 0 || l.is_empty() => l,
+            _ if starred(l) => l.trim_start(),
+            _ => &l[shared..],
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 /// Checks that `text`, the formatted `original`, has the same tokens,
-/// comments (but for each line's indentation), parse tree and markdown
+/// comments (as [`comment_shape`] has them), parse tree and markdown
 /// prose.
 fn check_same(original: &Parsed, text: &str, kind: SourceKind) -> Result<(), FmtError> {
     let unsafe_ = |why: &str| Err(FmtError::Unsafe(why.to_string()));
@@ -1544,10 +1736,7 @@ fn check_same(original: &Parsed, text: &str, kind: SourceKind) -> Result<(), Fmt
             .map(|t| {
                 let text = t.text(p.source());
                 let text = if t.kind == TokenKind::Comment {
-                    text.split('\n')
-                        .map(|l| l.trim())
-                        .collect::<Vec<_>>()
-                        .join("\n")
+                    comment_shape(&text)
                 } else {
                     text.into_owned()
                 };
@@ -1641,5 +1830,40 @@ mod tests {
         let md = |text: &str| check_same(&markdown, text, SourceKind::Markdown);
         assert_eq!(md("Prose.\n\n    let x  = 1;\n"), Ok(()));
         assert!(md("Prose!\n\n    let x = 1;\n").is_err());
+        // Code indented less, which turns it into prose.
+        assert!(md("Prose.\n\n   let x = 1;\n").is_err());
+    }
+
+    /// The same tokens in a different tree: a line break before `{` ends
+    /// the call, so it's no longer a block argument.
+    #[test]
+    fn check_refuses_a_different_tree() {
+        let original = parse("f() { x }\n", SourceKind::Standalone);
+        let ok = |text: &str| check_same(&original, text, SourceKind::Standalone);
+        assert_eq!(ok("f() {\n  x\n}\n"), Ok(()));
+        assert_eq!(
+            ok("f()\n{ x }\n"),
+            Err(FmtError::Unsafe("the parse tree differs".to_string()))
+        );
+        assert_eq!(
+            ok("f() { x\n"),
+            Err(FmtError::Unsafe("the result doesn't parse".to_string()))
+        );
+    }
+
+    /// A comment's lines may move together, but not apart.
+    #[test]
+    fn check_keeps_comments_lines_relative_indentation() {
+        let original = parse("/*\n  a\n    b\n*/\nx;\n", SourceKind::Standalone);
+        let ok = |text: &str| check_same(&original, text, SourceKind::Standalone);
+        assert_eq!(ok("  /*\n    a\n      b\n  */\nx;\n"), Ok(()));
+        assert_eq!(ok("/*\n  a   \n    b\n*/\nx;\n"), Ok(()));
+        assert!(ok("/*\n  a\n  b\n*/\nx;\n").is_err());
+        assert!(ok("/*\n    a\n  b\n*/\nx;\n").is_err());
+        // A doc comment's `*` lines line up anew.
+        let doc = parse("/**\n   * a\n  b\n    c\n */\nx;\n", SourceKind::Standalone);
+        let ok = |text: &str| check_same(&doc, text, SourceKind::Standalone);
+        assert_eq!(ok("/**\n * a\n  b\n    c\n */\nx;\n"), Ok(()));
+        assert!(ok("/**\n * a\n  b\n  c\n */\nx;\n").is_err());
     }
 }

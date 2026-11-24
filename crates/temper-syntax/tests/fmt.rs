@@ -7,20 +7,24 @@
 //! - `repo_files_format_safely` formats every Temper file in the repository
 //!   in memory, and checks that formatting is idempotent and keeps the parse
 //!   tree, comments and markdown prose (the formatter checks those itself
-//!   and refuses otherwise, so a refusal fails the test).
+//!   and refuses otherwise, so a refusal fails the test), and, apart from
+//!   the formatter's own check, that only space changed ([`only_space_changed`]).
 //! - `mutated_inputs_format_safely` does the same for randomly edited
 //!   copies of the formatter, parser and lexer cases (`FMT_FUZZ_SEED`,
 //!   `FMT_FUZZ_ROUNDS`), which also exercises the refusal for code that
-//!   doesn't parse.
+//!   doesn't parse; a share of the mutants must still parse, so the test
+//!   can't pass by refusing them all.
+//! - `formatting_time_grows_linearly` checks that formatting twice the
+//!   code takes about twice the time, on long lines and deep nesting.
 //! - `rules_census` (ignored) counts the lines each rule changes over the
 //!   repository and libraries, for notes/fmt.md.
 
 mod common;
 
 use common::{Rng, case_files, check_cases, env_number, mutate};
-use std::{fs, path::Path};
+use std::{fs, path::Path, time::Instant};
 use temper_syntax::fmt::{FmtError, Options, format, format_with};
-use temper_syntax::lex::SourceKind;
+use temper_syntax::lex::{SourceKind, TokenKind, lex};
 use temper_syntax::parse::parse;
 
 /// Formats twice, checking the second run changes nothing.
@@ -42,6 +46,248 @@ fn first_change(a: &str, b: &str) -> String {
         a.lines().nth(i),
         b.lines().nth(i)
     )
+}
+
+/// Checks that formatting `input` as `output` changed only space, by
+/// checks of the test's own, apart from the formatter's: the text without
+/// spaces, tabs and line breaks is the same; the tokens are, lexed again,
+/// with comments' lines compared without their trailing space and the
+/// indentation they share (doc comments' `*` lines without any), so that
+/// lines inside a comment keep their indentation relative to each other;
+/// and lines in `// fmt: off` regions are as written (`.temper` only).
+fn only_space_changed(input: &str, output: &str, kind: SourceKind) -> Result<(), String> {
+    let squeeze = |s: &str| s.replace([' ', '\t', '\r', '\n'], "");
+    if squeeze(input) != squeeze(output) {
+        return Err("more than space changed".to_string());
+    }
+    let tokens = |s: &str| -> Vec<String> {
+        (lex(s, kind).into_iter())
+            .filter(|t| t.kind != TokenKind::Space && t.synthetic.is_none())
+            .map(|t| match t.kind {
+                TokenKind::Comment => comment_lines(&t.text(s)),
+                _ => t.text(s).into_owned(),
+            })
+            .collect()
+    };
+    let (before, after) = (tokens(input), tokens(output));
+    if before != after {
+        let i = before
+            .iter()
+            .zip(&after)
+            .take_while(|(a, b)| a == b)
+            .count();
+        return Err(format!(
+            "token {i} differs: {:?} became {:?}",
+            before.get(i),
+            after.get(i)
+        ));
+    }
+    if kind == SourceKind::Standalone {
+        for region in off_regions(input) {
+            if !output.contains(region) {
+                return Err(format!("a fmt: off region changed: {region:?}"));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// A comment's lines without trailing space or their shared indentation.
+fn comment_lines(comment: &str) -> String {
+    let doc = comment.starts_with("/**");
+    let lines: Vec<&str> = comment.split('\n').map(str::trim_end).collect();
+    let starred = |l: &str| doc && l.trim_start().starts_with('*');
+    let shared = (lines.iter().skip(1))
+        .filter(|l| !l.is_empty() && !starred(l))
+        .map(|l| l.len() - l.trim_start().len())
+        .min()
+        .unwrap_or(0);
+    (lines.iter().enumerate())
+        .map(|(i, l)| match () {
+            _ if i == 0 || l.is_empty() => *l,
+            _ if starred(l) => l.trim_start(),
+            _ => &l[shared..],
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// The text of each `// fmt: off` region's whole lines in a `.temper`
+/// source, found apart from the formatter: from the line after a
+/// `// fmt: off` on a line of its own, up to the line of a `// fmt: on` on
+/// a line of its own or of the close bracket ending the brackets around
+/// it, or else to the end of the last line with code in it, if any.
+fn off_regions(source: &str) -> Vec<&str> {
+    let line_start = |at: usize| source[..at].rfind('\n').map_or(0, |i| i + 1);
+    let line_end = |at: usize| source[at..].find('\n').map_or(source.len(), |i| at + i);
+    let own_line = |at: usize| {
+        source[line_start(at)..at]
+            .trim_matches([' ', '\t'])
+            .is_empty()
+    };
+    let tokens: Vec<_> = (lex(source, SourceKind::Standalone).into_iter())
+        .filter(|t| t.kind != TokenKind::Space && t.synthetic.is_none())
+        .collect();
+    let mut regions = Vec::new();
+    let mut depth = 0usize;
+    let mut off: Option<(usize, usize)> = None; // Its depth and first line.
+    let mut last = None; // Where the last token in the region ends.
+    for t in &tokens {
+        let text = t.text(source);
+        let at = t.start as usize;
+        let marker = (t.kind == TokenKind::Comment && own_line(at)).then(|| text.trim_end());
+        let closer = t.kind == TokenKind::Punctuation && matches!(&*text, ")" | "]" | "}");
+        if let Some((d, from)) = off {
+            if marker == Some("// fmt: on") || (closer && depth == d) {
+                regions.push(&source[from..line_start(at).max(from)]);
+                off = None;
+            } else {
+                last = Some(t.end as usize);
+            }
+        }
+        if t.kind == TokenKind::Punctuation && text.ends_with(['(', '[', '{']) {
+            depth += 1;
+        } else if closer {
+            depth = depth.saturating_sub(1);
+        }
+        if off.is_none() && marker == Some("// fmt: off") {
+            let from = (line_end(at) + 1).min(source.len());
+            (off, last) = (Some((depth, from)), None);
+        }
+    }
+    if let (Some((_, from)), Some(last)) = (off, last) {
+        regions.push(&source[from..line_end(last).max(from)]);
+    }
+    regions
+}
+
+/// Formats twice, as [`format_twice`], and checks that only space changed.
+fn format_checked(text: &str, kind: SourceKind) -> Result<String, String> {
+    let once = format_twice(text, kind)?;
+    only_space_changed(text, &once, kind)?;
+    Ok(once)
+}
+
+/// The test's own checks catch what formatting must never do.
+#[test]
+fn only_space_changed_catches_changes() {
+    let ok = |a: &str, b: &str| only_space_changed(a, b, SourceKind::Standalone);
+    assert_eq!(ok("let x=1;\n", "let x = 1;\n"), Ok(()));
+    assert!(ok("let x = 1;\n", "let x = 2;\n").is_err());
+    // Merged tokens.
+    assert!(ok("a - -b;\n", "a --b;\n").is_err());
+    // A comment's lines keep their indentation relative to each other.
+    let comment = "/*\n  a\n    b\n*/\nx;\n";
+    assert_eq!(ok(comment, "  /*\n    a\n      b\n  */\nx;\n"), Ok(()));
+    assert!(ok(comment, "/*\n  a\n  b\n*/\nx;\n").is_err());
+    // A region kept as written.
+    let off = "// fmt: off\nlet  x=1;\n// fmt: on\nf( y );\n";
+    assert_eq!(
+        ok(off, "// fmt: off\nlet  x=1;\n// fmt: on\nf(y);\n"),
+        Ok(())
+    );
+    assert!(ok(off, "// fmt: off\nlet x = 1;\n// fmt: on\nf(y);\n").is_err());
+    let open = "f(\n  // fmt: off\n  a ,b,\n  c)\n";
+    assert_eq!(off_regions(open), ["  a ,b,\n"]);
+    assert_eq!(off_regions("// fmt: off\nx  ;  \n\n"), ["x  ;  "]);
+    assert_eq!(off_regions("// fmt: off\n  \n// fmt: on\n"), ["  \n"]);
+    assert!(off_regions("x;\n// fmt: off\n  \n").is_empty());
+}
+
+/// Formatting a file with CRLF line breaks writes CRLF where it adds or
+/// moves a line break, and at the end.
+#[test]
+fn crlf_files_keep_their_line_breaks() {
+    let standalone = [
+        ("a=1;\r\nb=2;", "a = 1;\r\nb = 2;\r\n"),
+        ("a=1;\r\nb=2;\r\n\r\n\r\n", "a = 1;\r\nb = 2;\r\n"),
+        ("f(a, b,);\r\n", "f(\r\n  a,\r\n  b,\r\n);\r\n"),
+        ("f(\r\n  a, b);\r\n", "f(\r\n  a, b\r\n);\r\n"),
+        ("f(a,\r\n  b);\r\n", "f(a, b);\r\n"),
+        (
+            "// c  \r\n/* a  \r\n b */\r\nx;",
+            "// c\r\n/* a\r\n b */\r\nx;\r\n",
+        ),
+        (
+            "if (a) {\r\n\r\n\r\ng();\r\n}",
+            "if (a) {\r\n\r\n  g();\r\n}\r\n",
+        ),
+        (" \r\n\r\n", ""),
+    ];
+    for (input, expected) in standalone {
+        assert_eq!(
+            format_checked(input, SourceKind::Standalone).as_deref(),
+            Ok(expected),
+            "{input:?}"
+        );
+    }
+    let markdown = "Prose.\r\n\r\n```temper\r\n\r\n\r\nlet x=1;\r\nf(a,b,)\r\n\r\n\r\n```\r\n";
+    assert_eq!(
+        format_checked(markdown, SourceKind::Markdown).as_deref(),
+        Ok("Prose.\r\n\r\n```temper\r\n\r\nlet x = 1;\r\nf(\r\n  a,\r\n  b,\r\n)\r\n\r\n```\r\n")
+    );
+}
+
+/// Formatting time grows linearly with the code, on one long line and in
+/// deep nesting too: formatting twice as much takes well under three times
+/// as long (quadratic work would take four). Each size is timed at its
+/// best of a few runs, to steady it. (Deep nesting over many lines is
+/// quadratic by nature, as each line's indentation grows.)
+#[test]
+fn formatting_time_grows_linearly() {
+    let items = |n: usize, item: fn(usize) -> String, between: &str| {
+        (0..n).map(item).collect::<Vec<_>>().join(between)
+    };
+    let make = |what: &str, n: usize| match what {
+        "a list on one line" => format!("let x = f({});\n", items(n, |i| format!("a{i}"), ", ")),
+        "statements on one line" => items(n, |i| format!("let x{i} = {i};"), "") + "\n",
+        "nested parentheses" => format!("let x = {}1{};\n", "(".repeat(n), ")".repeat(n)),
+        "nested blocks" => format!("{}{}\n", "if (a) {".repeat(n), "}".repeat(n)),
+        _ => "// c\n".repeat(4 * n) + "x;\n",
+    };
+    let inputs = [
+        "a list on one line",
+        "statements on one line",
+        "nested parentheses",
+        "nested blocks",
+        "comment lines",
+    ];
+    for what in inputs {
+        let time = |n: usize| {
+            let text = make(what, n);
+            (0..3)
+                .map(|_| {
+                    let start = Instant::now();
+                    format(&text, SourceKind::Standalone).unwrap();
+                    start.elapsed().as_secs_f64()
+                })
+                .fold(f64::INFINITY, f64::min)
+        };
+        let n = 4000;
+        let (once, twice) = (time(n), time(2 * n));
+        println!(
+            "{what}: {n}: {:.1} ms, {}: {:.1} ms",
+            once * 1e3,
+            2 * n,
+            twice * 1e3
+        );
+        assert!(
+            twice < 3.0 * once.max(0.002),
+            "{what}: {n} took {:.1} ms, but {} {:.1} ms",
+            once * 1e3,
+            2 * n,
+            twice * 1e3
+        );
+    }
+}
+
+/// Only `UPDATE_SNAPSHOTS=1` updates the goldens, not any value.
+#[test]
+fn snapshots_update_only_when_asked() {
+    assert!(common::updating(Some("1")));
+    for value in [None, Some("0"), Some(""), Some("false")] {
+        assert!(!common::updating(value), "{value:?}");
+    }
 }
 
 #[test]
@@ -85,7 +331,7 @@ fn repo_files_format_safely() {
         } else {
             SourceKind::Standalone
         };
-        match format_twice(&text, kind) {
+        match format_checked(&text, kind) {
             Ok(_) => formatted += 1,
             // Some test inputs are deliberately malformed.
             Err(_) if matches!(format(&text, kind), Err(FmtError::Unparseable(_))) => {}
@@ -171,6 +417,8 @@ fn mutated_inputs_format_safely() {
         ])
         .copied()
         .collect();
+    // How many inputs were formatted, and how many refused as not parsing.
+    let (mut formatted, mut refused) = (0, 0);
     for (dir, separator) in [
         ("tests/fmt", "formatted"),
         ("tests/parse", "tree"),
@@ -193,16 +441,24 @@ fn mutated_inputs_format_safely() {
                     };
                     for kind in [SourceKind::Standalone, SourceKind::Markdown] {
                         if let Err(FmtError::Unparseable(_)) = format(&text, kind) {
+                            refused += 1;
                             continue;
                         }
-                        if let Err(e) = format_twice(&text, kind) {
+                        if let Err(e) = format_checked(&text, kind) {
                             panic!("{} as {kind:?}: {e}\ninput: {text:?}", context());
                         }
+                        formatted += 1;
                     }
                 }
             }
         }
     }
+    println!("seed {seed}: {formatted} inputs formatted, {refused} refused as not parsing");
+    assert!(
+        formatted * 4 >= formatted + refused,
+        "seed {seed}: only {formatted} of {} inputs parse",
+        formatted + refused
+    );
 }
 
 fn temper_files(dir: &Path, out: &mut Vec<std::path::PathBuf>) {

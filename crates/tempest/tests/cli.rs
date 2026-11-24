@@ -1747,7 +1747,8 @@ fn fmt() {
     fs::create_dir_all(dir.join("temper.out")).unwrap();
     let messy = "let x=1;\n    let y = 2;\n";
     let tidy = "let x = 1;\nlet y = 2;\n";
-    let literate = "# Doc\n\n    let a = 1;\n";
+    let literate = "# Doc\n\nIt's  *one*.   \n\n    let a=1;\n";
+    let literate_tidy = "# Doc\n\nIt's  *one*.   \n\n    let a = 1;\n";
     let broken = "let f(x: Int {\n";
     fs::write(dir.join("a.temper"), messy).unwrap();
     fs::write(dir.join("b.temper.md"), literate).unwrap();
@@ -1764,8 +1765,17 @@ fn fmt() {
     let (code, out, err) = tempest(&["fmt", "--check", &path("")]);
     assert_eq!(code, 1, "{out}{err}");
     let listed: Vec<&str> = out.lines().collect();
-    assert_eq!(listed, [path("a.temper"), path("sub/d.temper")], "{out}");
+    assert_eq!(
+        listed,
+        [path("a.temper"), path("b.temper.md"), path("sub/d.temper")],
+        "{out}"
+    );
     assert!(err.contains("c.temper: doesn't parse (line 1"), "{err}");
+    // How many it checked, so a walk that finds nothing shows.
+    assert!(
+        err.ends_with("temper fmt: 4 files checked, 3 need formatting\n"),
+        "{err}"
+    );
     assert_eq!(read("a.temper"), messy);
 
     let (code, out, err) = tempest(&["fmt", &path("")]);
@@ -1773,7 +1783,7 @@ fn fmt() {
     assert!(err.contains("c.temper: doesn't parse"), "{err}");
     assert_eq!(read("a.temper"), tidy);
     assert_eq!(read("sub/d.temper"), tidy);
-    assert_eq!(read("b.temper.md"), literate);
+    assert_eq!(read("b.temper.md"), literate_tidy);
     assert_eq!(read("c.temper"), broken);
     assert_eq!(read("temper.out/e.temper"), messy);
     assert_eq!(read("sub/build/f.temper"), messy);
@@ -1781,13 +1791,150 @@ fn fmt() {
 
     assert_eq!(
         tempest(&["fmt", "--check", &path("a.temper"), &path("sub")]),
-        (0, String::new(), String::new())
+        (
+            0,
+            String::new(),
+            "temper fmt: 2 files checked, 0 need formatting\n".to_string()
+        )
     );
     let (code, _, err) = tempest(&["fmt", &path("missing.temper")]);
     assert_eq!(code, 1);
     assert!(err.contains("missing.temper"), "{err}");
     let (code, _, err) = tempest(&["fmt", &path("notes.txt")]);
     assert_eq!(code, 2, "{err}");
+    assert_eq!(tempest(&["fmt", "--bogus", &path("")]).0, 2);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+/// What `temper fmt` walks: the current directory by default; not hidden
+/// directories, `temper.keep`, or what `.gitignore` and `.temperignore`
+/// list (`.temperignore` having the last word); and not into symbolic
+/// links to directories, as `build` doesn't, so a link to a directory
+/// above can't make a loop.
+#[test]
+fn fmt_walk() {
+    let dir = std::env::temp_dir().join(format!("tempest-cli-{}-fmt-walk", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    for sub in [".hidden", "temper.keep", "ign", "a"] {
+        fs::create_dir_all(dir.join(sub)).unwrap();
+    }
+    let messy = "let x=1;\n";
+    for name in [
+        "top.temper",
+        ".hidden/h.temper",
+        "temper.keep/k.temper",
+        "ign/skip.temper",
+        "ign/keep.temper",
+        "a/x.temper",
+    ] {
+        fs::write(dir.join(name), messy).unwrap();
+    }
+    fs::write(dir.join("ign/.gitignore"), "*.temper\n").unwrap();
+    fs::write(dir.join("ign/.temperignore"), "!keep.temper\n").unwrap();
+    #[cfg(unix)]
+    std::os::unix::fs::symlink("..", dir.join("a/loop")).unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_temper"))
+        .args(["fmt", "--check"])
+        .current_dir(&dir)
+        .output()
+        .unwrap();
+    let (out, err) = (
+        String::from_utf8(output.stdout).unwrap(),
+        String::from_utf8(output.stderr).unwrap(),
+    );
+    assert_eq!(output.status.code(), Some(1), "{out}{err}");
+    let sep = std::path::MAIN_SEPARATOR;
+    let listed: Vec<String> = out.lines().map(|l| l.replace(sep, "/")).collect();
+    assert_eq!(
+        listed,
+        ["./a/x.temper", "./ign/keep.temper", "./top.temper"],
+        "{out}"
+    );
+    assert_eq!(err, "temper fmt: 3 files checked, 3 need formatting\n");
+    let _ = fs::remove_dir_all(&dir);
+}
+
+/// `temper fmt` keeps a file's line breaks, CRLF too; leaves a file
+/// alone if it's formatted already (not even writing it); and reports
+/// files it can't read as text or can't write, going on with the rest.
+#[test]
+fn fmt_files() {
+    let dir = std::env::temp_dir().join(format!("tempest-cli-{}-fmt-files", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    let path = |name: &str| dir.join(name).to_string_lossy().to_string();
+    let read = |name: &str| fs::read(dir.join(name)).unwrap();
+    fs::write(dir.join("crlf.temper"), "let x=1;\r\nf(a,b,);").unwrap();
+    fs::write(dir.join("binary.temper"), b"let x = \"\xff\";\n").unwrap();
+    fs::write(dir.join("tidy.temper"), "let x = 1;\n").unwrap();
+    fs::write(dir.join("locked.temper"), "let x=1;\n").unwrap();
+    // An old time, which a write would change.
+    let old = std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(1_000_000_000);
+    let tidy = fs::File::options()
+        .write(true)
+        .open(dir.join("tidy.temper"))
+        .unwrap();
+    tidy.set_modified(old).unwrap();
+    drop(tidy);
+    let mut locked = fs::metadata(dir.join("locked.temper"))
+        .unwrap()
+        .permissions();
+    locked.set_readonly(true);
+    fs::set_permissions(dir.join("locked.temper"), locked).unwrap();
+    // Root may write read-only files anyway.
+    let can_lock = fs::write(dir.join("locked.temper"), "let x=1;\n").is_err();
+
+    let (code, out, err) = tempest(&["fmt", &path("")]);
+    assert_eq!(code, 1, "{out}{err}");
+    assert_eq!(
+        read("crlf.temper"),
+        b"let x = 1;\r\nf(\r\n  a,\r\n  b,\r\n);\r\n"
+    );
+    assert!(
+        err.contains(&format!("{}: isn't UTF-8 text", path("binary.temper"))),
+        "{err}"
+    );
+    let modified = fs::metadata(dir.join("tidy.temper"))
+        .unwrap()
+        .modified()
+        .unwrap();
+    assert_eq!(modified, old);
+    if can_lock {
+        assert!(err.contains(&path("locked.temper")), "{err}");
+        assert_eq!(read("locked.temper"), b"let x=1;\n");
+    }
+    let mut unlocked = fs::metadata(dir.join("locked.temper"))
+        .unwrap()
+        .permissions();
+    #[allow(clippy::permissions_set_readonly_false)]
+    unlocked.set_readonly(false);
+    fs::set_permissions(dir.join("locked.temper"), unlocked).unwrap();
+    let _ = fs::remove_dir_all(&dir);
+}
+
+/// `temper fmt --check` piped to a reader that stops early, as `head`
+/// does, ends quietly rather than panicking.
+#[cfg(unix)]
+#[test]
+fn fmt_check_to_a_closed_pipe() {
+    let dir = std::env::temp_dir().join(format!("tempest-cli-{}-fmt-pipe", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    for i in 0..50 {
+        fs::write(dir.join(format!("f{i}.temper")), "let x=1;\n").unwrap();
+    }
+    let mut child = Command::new(env!("CARGO_BIN_EXE_temper"))
+        .args(["fmt", "--check"])
+        .arg(&dir)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+    drop(child.stdout.take());
+    let output = child.wait_with_output().unwrap();
+    let err = String::from_utf8(output.stderr).unwrap();
+    assert_eq!(output.status.code(), Some(1), "{err}");
+    assert!(!err.contains("panicked"), "{err}");
     let _ = fs::remove_dir_all(&dir);
 }
 
@@ -1835,8 +1982,9 @@ fn fmt_ignorefile() {
         [path("a.temper"), path("sub/keep.odd.temper")],
         "{out}"
     );
-    // Only the file that doesn't parse and isn't listed is reported.
-    assert_eq!(err.lines().count(), 1, "{err}");
+    // Only the file that doesn't parse and isn't listed is reported, then
+    // how many were checked.
+    assert_eq!(err.lines().count(), 2, "{err}");
     assert!(err.contains("sub/broken.temper: doesn't parse"), "{err}");
 
     // A directory below the ignore file's: its patterns apply from the
@@ -1845,7 +1993,7 @@ fn fmt_ignorefile() {
     assert_eq!(code, 1);
     let listed: Vec<&str> = out.lines().collect();
     assert_eq!(listed, [path("sub/keep.odd.temper")], "{out}");
-    assert_eq!(err.lines().count(), 1, "{err}");
+    assert_eq!(err.lines().count(), 2, "{err}");
 
     // An ignore file in a directory below the one named matches nothing.
     let (code, out, _) = tempest(&[

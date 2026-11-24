@@ -203,10 +203,11 @@ jobs:
       # Without the `net` web client, and `tempest` and `temper-wasm`
       # without their backend features. (The backends' crates have no
       # features, and their tests leave `net` out, so `backends`' runs
-      # are the same as theirs here would be.)
+      # are the same as theirs here would be; nor has temper-syntax, so
+      # its tests, the formatter's fuzzing among them, run once, above.)
       - name: Tests without default features
         if: ${{ !cancelled() && env.CORE == 'true' }}
-        run: cargo test --locked --workspace --no-default-features $BACKENDS
+        run: cargo test --locked --workspace --no-default-features $BACKENDS --exclude temper-syntax
       # Temper code laid out by `temper fmt` (docs/tools/fmt.md): the
       # repository's .temper and .temper.md files, but what .fmtignore
       # lists, and the docs' examples (compat/fmt_doc_examples.py), by
@@ -216,9 +217,13 @@ jobs:
         run: |
           cargo build --locked -q --workspace --no-default-features $BACKENDS --bin temper
           target/debug/temper fmt --check --ignorefile .fmtignore
+      # The script's self-test first: binaries that fail or do nothing
+      # must fail it, so the check can't pass by doing nothing.
       - name: Docs' examples formatting
         if: ${{ !cancelled() && env.CORE == 'true' }}
-        run: uv run compat/fmt_doc_examples.py --check --temper target/debug/temper
+        run: |
+          uv run compat/fmt_doc_examples.py --self-test --temper target/debug/temper
+          uv run compat/fmt_doc_examples.py --check --temper target/debug/temper
 
   # `temper`'s own tests with every backend built in, and so every
   # backend's toolchain: `temper test -b`, `build`, and `run` on small

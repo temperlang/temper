@@ -102,7 +102,8 @@ pub fn serve(input: impl Read + Send + 'static, output: impl Write, std_dir: Opt
 
 /// [`serve`], for tests, with a hook that makes a panic: an analysis of
 /// a unit whose open documents contain `panic_on` panics, as does the
-/// request `tempest/testPanic`.
+/// request `tempest/testPanic`; and with it, the request
+/// `tempest/testStats` answers with counts of the server's work.
 #[doc(hidden)]
 pub fn serve_with_hook(
     input: impl Read + Send + 'static,
@@ -137,6 +138,7 @@ pub fn serve_with_hook(
         shut_down: false,
         std_copy: None,
         panic_on,
+        format_parses_reused: std::cell::Cell::new(0),
     };
     loop {
         let message = match server.deadline {
@@ -201,6 +203,8 @@ struct Server<W: Write> {
     std_copy: Option<PathBuf>,
     /// The test hook's text ([`serve_with_hook`]).
     panic_on: Option<String>,
+    /// How many formatting requests reused their unit's parse, for tests.
+    format_parses_reused: std::cell::Cell<usize>,
 }
 
 /// A panic's message, from its payload.
@@ -646,12 +650,18 @@ impl<W: Write> Server<W> {
                 answer(self.format(&path, Some(p.range)))
             }
             "tempest/testPanic" if self.panic_on.is_some() => panic!("test hook: {method}"),
+            "tempest/testStats" if self.panic_on.is_some() => answer(json!({
+                "formatParsesReused": self.format_parses_reused.get(),
+            })),
             _ => Err((-32601, format!("no method {method}"))),
         }
     }
 
     /// The edits formatting an open document, or those of its lines in
-    /// `range`: none if it doesn't parse.
+    /// `range`: none if it doesn't parse. A range's last line is left out
+    /// if it ends at the line's start, as a selection of whole lines does.
+    /// Each edit is a run of changed lines ([`line_edits`]), taken whole if
+    /// it touches the range.
     fn format(&self, path: &str, range: Option<lsp::Range>) -> Vec<lsp::TextEdit> {
         let Some(doc) = self.docs.iter().find(|d| d.path == path) else {
             return Vec::new();
@@ -664,7 +674,10 @@ impl<W: Write> Server<W> {
             .find(|f| f.path == path && f.parsed.source() == doc.text)
             .map(|f| &f.parsed);
         let formatted = match parsed {
-            Some(parsed) => format_parsed(parsed, kind),
+            Some(parsed) => {
+                (self.format_parses_reused).set(self.format_parses_reused.get() + 1);
+                format_parsed(parsed, kind)
+            }
             None => format(&doc.text, kind),
         };
         let text = match formatted {
@@ -683,7 +696,9 @@ impl<W: Write> Server<W> {
         (line_edits(old, &text).into_iter())
             .filter(|e| {
                 range.is_none_or(|r| {
-                    let (start, end) = (r.start.line as usize, r.end.line as usize);
+                    let start = r.start.line as usize;
+                    let whole_lines = r.end.character == 0 && r.end.line > r.start.line;
+                    let end = r.end.line as usize - usize::from(whole_lines);
                     e.old.start <= end && e.old.end.max(e.old.start + 1) > start
                 })
             })

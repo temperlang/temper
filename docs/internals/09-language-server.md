@@ -100,7 +100,9 @@ Formatting isn't a query of `Analysis`: it's
 [`temper fmt`](../../notes/fmt.md)'s, over the open text alone, reusing
 its unit's parse when that's current. Its edits are the runs of changed
 lines ([`line_edits`](../../crates/temper-lsp/src/lib.rs), Myers' diff),
-for the whole document or for a range's lines; a document that doesn't
+for the whole document or those touching a range's lines (each run
+whole; a range ending at a line's character 0 leaves that line out, as
+a selection of whole lines ends there); a document that doesn't
 parse gets none, and no error, so formatting on save stays quiet while
 code is half written. The VS Code extension formats on save by default.
 

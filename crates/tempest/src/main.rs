@@ -672,11 +672,12 @@ fn init_command(args: &[String]) -> u8 {
 
 /// `temper fmt [--check] [--ignorefile FILE] [PATH]...`: formats each
 /// `.temper` and `.temper.md` file named or under a directory named (the
-/// current one by default), in place, or with `--check` lists the ones
-/// that would change. Under a directory, what `--ignorefile`'s file lists
-/// is skipped too, with the last word, as for `build`. Exits with 1 when
-/// a file couldn't be read, parsed or written, or with `--check`, when
-/// one needs formatting.
+/// current one by default), in place (writing only those that change), or
+/// with `--check` lists the ones that would change, then says how many it
+/// checked. Under a directory, what `--ignorefile`'s file lists is skipped
+/// too, with the last word, as for `build`. Exits with 1 when a file
+/// couldn't be read, parsed or written, or with `--check`, when one needs
+/// formatting (or the list's reader stopped reading).
 fn fmt_command(args: &[String]) -> u8 {
     let flags = match parse("fmt", args, &["check", "ignorefile"], usize::MAX) {
         Ok(flags) => flags,
@@ -714,11 +715,17 @@ fn fmt_command(args: &[String]) -> u8 {
             return USAGE;
         }
     }
-    for file in files {
-        let kind = source_kind(&file).unwrap_or(temper_syntax::lex::SourceKind::Standalone);
-        let text = match std::fs::read_to_string(&file) {
+    let mut stdout = std::io::stdout().lock();
+    let mut unformatted = 0;
+    for file in &files {
+        let kind = source_kind(file).unwrap_or(temper_syntax::lex::SourceKind::Standalone);
+        let text = match std::fs::read_to_string(file) {
             Ok(text) => text,
             Err(why) => {
+                let why = match why.kind() {
+                    std::io::ErrorKind::InvalidData => "isn't UTF-8 text".to_string(),
+                    _ => why.to_string(),
+                };
                 eprintln!("temper fmt: {}: {why}", file.display());
                 failed = true;
                 continue;
@@ -727,11 +734,15 @@ fn fmt_command(args: &[String]) -> u8 {
         match temper_syntax::fmt::format(&text, kind) {
             Ok(formatted) if formatted == text => {}
             Ok(_) if flags.check => {
-                println!("{}", file.display());
+                unformatted += 1;
+                // A reader that stopped, as `head` does, needs no more.
+                if writeln!(stdout, "{}", file.display()).is_err() {
+                    return FAILED;
+                }
                 failed = true;
             }
             Ok(formatted) => {
-                if let Err(why) = std::fs::write(&file, formatted) {
+                if let Err(why) = std::fs::write(file, formatted) {
                     eprintln!("temper fmt: {}: {why}", file.display());
                     failed = true;
                 }
@@ -741,6 +752,13 @@ fn fmt_command(args: &[String]) -> u8 {
                 failed = true;
             }
         }
+    }
+    if flags.check {
+        let s = if files.len() == 1 { "" } else { "s" };
+        eprintln!(
+            "temper fmt: {} file{s} checked, {unformatted} need formatting",
+            files.len()
+        );
     }
     if failed { FAILED } else { 0 }
 }
@@ -763,8 +781,9 @@ struct Walk<'a> {
 impl Walk<'_> {
     /// Adds the Temper source files under `dir`, in order, skipping
     /// `temper.out`, `temper.keep`, hidden directories, and what the
-    /// ignore files list, as finding libraries does; false if a directory
-    /// couldn't be read. `scanned` names `dir` as the ignore files see it
+    /// ignore files list, and not following links to directories, as
+    /// finding libraries does; false if a directory couldn't be read.
+    /// `scanned` names `dir` as the ignore files see it
     /// ([`project::scan_start`]).
     fn temper_files(&mut self, dir: &Path, scanned: &str) -> bool {
         let entries = match std::fs::read_dir(dir) {
@@ -774,7 +793,10 @@ impl Walk<'_> {
                 return false;
             }
         };
-        let mut paths: Vec<_> = entries.filter_map(|e| e.ok().map(|e| e.path())).collect();
+        // Each entry's path and whether it's a directory, not a link to one.
+        let mut paths: Vec<_> = (entries.filter_map(Result::ok))
+            .map(|e| (e.path(), e.file_type().is_ok_and(|t| t.is_dir())))
+            .collect();
         paths.sort();
         let own = self.ignores.len();
         for name in project::IGNORE_FILES {
@@ -783,13 +805,12 @@ impl Walk<'_> {
             }
         }
         let mut ok = true;
-        for path in paths {
+        for (path, is_dir) in paths {
             let name = path.file_name().unwrap_or_default().to_string_lossy();
             let relative = match scanned {
                 "" => name.to_string(),
                 _ => format!("{scanned}/{name}"),
             };
-            let is_dir = path.is_dir();
             let skip =
                 (self.extra.and_then(|f| f.decides(&relative, is_dir))).unwrap_or_else(|| {
                     temper_frontend::ignore::ignored(&self.ignores, &relative, is_dir)
