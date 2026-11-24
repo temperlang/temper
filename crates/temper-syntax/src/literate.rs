@@ -24,6 +24,10 @@ pub struct Block {
     /// Whether the block is inside a block quote. Quoted code is prose,
     /// unlike in Kotlin Temper; see [`Block::is_temper_code`].
     pub quoted: bool,
+    /// For indented code whose first line ended a list item, the column
+    /// from which that line would have continued the item instead: moving
+    /// the line there would change the block structure.
+    pub item_column: Option<usize>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -54,6 +58,7 @@ pub fn find_blocks(text: &str) -> Vec<Block> {
     let mut scanner = Scanner {
         text: text.to_string(),
         containers: Vec::new(),
+        item_column: None,
         leaf: Leaf::None,
         blocks: Vec::new(),
     };
@@ -118,6 +123,7 @@ enum Leaf {
         begin: usize,
         last: Line,
         quoted: bool,
+        item_column: Option<usize>,
     },
     Html {
         kind: u8,
@@ -129,6 +135,9 @@ enum Leaf {
 struct Scanner {
     text: String,
     containers: Vec<Container>,
+    /// The column from which the current line would have continued a list
+    /// item it ended, if it ended one.
+    item_column: Option<usize>,
     leaf: Leaf,
     blocks: Vec<Block>,
 }
@@ -208,7 +217,12 @@ impl Scanner {
             self.add_paragraph_line(line, pos);
             return;
         }
+        self.item_column = None;
         if !all_matched {
+            if let Container::ListItem { indent, .. } = self.containers[matched] {
+                let start = line_start(&self.text, pos);
+                self.item_column = Some(self.column(start, pos) + indent);
+            }
             self.close_leaf();
             self.containers.truncate(matched);
         }
@@ -265,6 +279,7 @@ impl Scanner {
                         begin: pos,
                         last: line,
                         quoted: self.in_quote(),
+                        item_column: self.item_column,
                     };
                 }
             }
@@ -382,6 +397,7 @@ impl Scanner {
                         begin: line_start..first,
                         end: after..after,
                         quoted: false,
+                        item_column: None,
                     });
                 }
             }
@@ -393,6 +409,7 @@ impl Scanner {
                 begin,
                 last,
                 quoted,
+                item_column,
             } => {
                 let after = past_newline(&self.text, last.end);
                 self.blocks.push(Block {
@@ -400,6 +417,7 @@ impl Scanner {
                     begin: line_start(&self.text, begin)..begin,
                     end: after..after,
                     quoted,
+                    item_column,
                 });
             }
             Leaf::Html { .. } | Leaf::None => {}
@@ -434,6 +452,7 @@ impl Scanner {
             begin,
             end,
             quoted,
+            item_column: None,
         });
     }
 

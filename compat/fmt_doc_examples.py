@@ -17,13 +17,15 @@ A block laid out by hand on purpose, as a table aligned in columns, or
 an example of where spaces matter, is kept as written by a
 `<!-- fmt: off -->` line among the HTML comments right before its fence
 (above a `<!-- known: ... -->` or `<!-- repl: ... -->`, which must be
-right before it). A block that doesn't parse, such as a REPL
-transcript, a fragment, or an example of an error, is left as written, and listed with --verbose
-(check_doc_examples.py judges whether blocks build as they say). With
---check, nothing changes: it lists the blocks that need formatting. Exits
-with 1 if any do (with --check), or if formatting would change a block's
-meaning (a bug in `temper fmt`). BIN defaults to target/release/temper,
-then target/small/temper.
+right before it), or by a `// fmt: off` first line in the block, as
+`temper fmt` itself keeps what follows one. A block that doesn't parse,
+such as a REPL transcript, a fragment, or an example of an error, is
+left as written, and listed with --verbose (check_doc_examples.py
+judges whether blocks build as they say). With --check, nothing changes:
+it lists the blocks that need formatting. Exits with 1 if any do (with
+--check), or if formatting would change a block's meaning (a bug in
+`temper fmt`). BIN defaults to target/release/temper, then
+target/small/temper.
 """
 
 import argparse
@@ -37,6 +39,7 @@ from check_doc_examples import FENCE, ROOT
 
 COMMENT = re.compile(r"^\s*<!--.*-->\s*$")
 OFF = re.compile(r"^\s*<!--\s*fmt:\s*off\s*-->\s*$")
+OFF_LINE = re.compile(r"^\s*//\s*fmt:\s*off\s*$")
 
 
 def indent(body: str) -> str:
@@ -54,6 +57,11 @@ def kept(text: str, fence: int) -> bool:
         if OFF.match(line):
             return True
     return False
+
+
+def off_inside(body: str) -> bool:
+    """Whether a block's first line with code is `// fmt: off`."""
+    return OFF_LINE.match(next((ln for ln in body.splitlines() if ln.strip()), "")) is not None
 
 
 def pages(paths: list[Path]) -> list[Path]:
@@ -85,7 +93,7 @@ def main() -> int:
     for page in pages(args.paths):
         text = page.read_text("utf-8")
         for m in FENCE.finditer(text):
-            if kept(text, m.start()):
+            if kept(text, m.start()) or off_inside(m.group(2)):
                 off += 1
             else:
                 blocks.append((page, text, m, indent(m.group(2))))

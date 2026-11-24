@@ -162,7 +162,8 @@ Notes on the numbers:
 - **Docs examples aligned in columns** (`builtins.md`'s `""       ==
   cat()             &&` chains) get the normal rules: one space around
   operators and continuation lines indented two. Space before `<` stays
-  as written (it decides angle brackets). There's no `// fmt: off`.
+  as written (it decides angle brackets). Those kept by hand use
+  [`// fmt: off`](#design) or the script's `<!-- fmt: off -->`.
 - The literate line numbers the script's `--samples N` prints count
   lines of the joined code blocks, not of the file.
 
@@ -329,7 +330,9 @@ census shows authors already agree on almost everything else.
   Space next to comments, inside strings (and `\u{...}` escapes), and
   before `<` (whether `<` follows space decides whether it may be an
   angle bracket) is copied, and any change is checked by lexing the two
-  tokens with the new space, so `- -x`, `a b` or `1 .x` never join.
+  tokens with the new space, after a value and after an operator (`/`
+  divides after one and starts a regex after the other), so `- -x`,
+  `a b`, `1 .x` or `x /  .y` never join.
 - **Lists** are the exception (above): the formatter finds them in the
   tree and decides each one's layout, inner lists first (so an outer
   list knows which items span lines), from its trailing
@@ -337,8 +340,9 @@ census shows authors already agree on almost everything else.
   pass that sets the space between tokens, it adds or removes line
   breaks only at each list's own places (after the open bracket, after
   a comma, before the close bracket). The lines it adds indent as any
-  line there would. A laid-out list's `< >` count as brackets for
-  indentation; other `<`s don't, as they may be less-than.
+  line there would. Type arguments' and parameters' `< >` (the tree
+  tells) count as brackets for indentation, empty ones holding a comment
+  too; other `<`s don't, as they may be less-than.
 - **Indentation** is computed in one pass with a stack of open brackets,
   each remembering the line its contents indent from: the bracket's own
   line if that line started at the bracket's depth, or else the line
@@ -374,7 +378,29 @@ census shows authors already agree on almost everything else.
   reattached: a comment on its own line is indented like the code
   around it, a trailing comment keeps its space. A multi-line block
   comment's later lines move with its first (doc comments' ` * ` lines),
-  and only if all of them can.
+  and only if all of them can, but a doc comment's (`/** ... */`)
+  lines starting with `*` line up one column past its `/`, as formatted
+  (the usual ` * ` frame), with what follows each `*` as written. Lines
+  without a `*` move with the first line as before; no stars are added
+  or removed, and no lines joined or split. Before, `*` lines only moved
+  with the first line too, so stars written off that column stayed off
+  it (`  *` under `/**`). Only that column changes,
+  so the framing's other choices (a `/**` line of its own, stars on
+  every line) stay the author's.
+- **`// fmt: off` regions:** lines after a
+  `// fmt: off` comment on a line of its own, to a `// fmt: on` on a line
+  of its own, keep their indentation, space, line breaks and trailing
+  space as written; the formatter still tracks their brackets, and lists
+  with a place in a region are laid out as written. The spelling is
+  Black's and ruff's (`# fmt: off`) with Temper's comment, shorter than
+  clang-format's `// clang-format off`. Without a `// fmt: on`, the
+  region ends where the brackets around the `off` close, at the end of
+  its block, much as Black and ruff end one with its indented block: to the end of the file would surprise in a
+  function, and requiring `on` would make a missing one an error for no
+  gain. In `.temper.md`, regions end with their code block, as cells do
+  in notebooks, though blocks continue each other's brackets. The two
+  comments themselves indent like any. Comments after code on their
+  line, `/* fmt: off */`, and other spellings don't count.
 - **Multi-quoted strings:** their content lines move with the line that
   opened the string; the margin's indentation is incidental, so their
   values don't change.
@@ -387,7 +413,12 @@ census shows authors already agree on almost everything else.
   next multiple of four, as the margins do) or code lines starting like
   a fence (```` ``` ```` or `~~~`, which moving could make close their
   block; found by fuzzing). No line is indented left
-  of its margin, even under a line kept there.
+  of its margin, even under a line kept there. The first line of
+  indented code right after a list item (`*     g();`, a blank line,
+  then `    h();` inside `g`'s brackets) stays left of the item's
+  content column, as written if formatting would reach it: there it
+  would continue the item, changing the blocks (fuzzing; the markdown
+  scanner reports that column).
 - **Safety:** input with lexing, bracket or parse errors, an unclosed
   block comment, string or `${` is left alone, with the first error.
   After formatting, the result is parsed again and must have the same
@@ -454,18 +485,22 @@ test programs formatted; `--ignorefile` (the repository's
 `.fmtignore`: code that doesn't parse on purpose); the docs' examples
 by `compat/fmt_doc_examples.py` (plain Markdown isn't `fmt`'s:
 `<!-- fmt: off -->` keeps hand-aligned tables and spacing examples);
-both checked in CI's lint job.
+both checked in CI's lint job; `// fmt: off` regions (the script also
+honors one as a block's first line), and doc comments' `*` lines lined
+up past their `/`; and fuzzing's finds formatted rather than refused (a
+`/` before a spaced `.`, `<</` at the end of a file, which now lexes as
+before a line break, indented code after a list item, and empty `< >`
+holding a comment).
 
-Next:
+Left out of this RFC and PR (Tom, 2026-11-24):
 
-1. Apply the trial reformat of the remaining funtests, a testkit
-   program, and the docs' examples (a trial patch, in review), which
-   CI's check needs. Empty `< >` holding
-   only a comment (a docs sketch, kept by `fmt: off`) isn't a bracket
-   for indentation yet.
-2. Doc comments' framing (`/** … */`), if wanted.
-3. A `// fmt: off` region, if hand-aligned code ever needs one.
-4. Markdown prose in `.temper.md`: left exactly as written. Formatting
-   it (rewrapping paragraphs, normalizing lists and emphasis) is a
-   Markdown formatter's job; should `fmt` call one, or leave prose to
-   editors?
+- Markdown prose in `.temper.md`, left exactly as written. Formatting
+  it (rewrapping paragraphs, normalizing lists and emphasis) is a
+  Markdown formatter's job; should `fmt` call one, or leave prose to
+  editors?
+- Doc comments' framing beyond their `*` column: adding or removing
+  stars, moving `/**` or `*/` to lines of their own, rewrapping their
+  text.
+
+Next: the docs' `<!-- fmt: off -->` blocks could move to a
+`// fmt: off` first line, if wanted.

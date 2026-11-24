@@ -164,6 +164,10 @@ fn mutated_inputs_format_safely() {
             "\"${ \"${ x }\" }\"",
             "${ ",
             " }",
+            // `// fmt: off` regions, and doc comments' framing.
+            "\n// fmt: off\n",
+            "\n  // fmt: on\n",
+            "\n/**\n   * d\n *  e\n f\n  */\n",
         ])
         .copied()
         .collect();

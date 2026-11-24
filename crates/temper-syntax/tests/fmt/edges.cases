@@ -1,0 +1,50 @@
+# `temper fmt` cases found by fuzzing: inputs it once refused (safely)
+# but should format.
+# Format and updating: see tests/fmt.rs.
+
+=== a slash before a spaced dot keeps its space when joining would lex differently
+x
+x = {}
+
+    extends /  .foo;
+--- formatted
+x
+  x = {}
+
+extends /  .foo;
+
+=== a slash at the very end lexes as it would before a line break
+<</
+--- formatted
+error: doesn't parse (line 1: a string is never closed); left as written
+
+=== an empty angle list holding only a comment
+let f<
+  // T
+>(): Void {}
+--- formatted
+let f<
+  // T
+>(): Void {}
+
+=== an indented code block right after a list item keeps a line that would join it (markdown)
+    let f(): Void {
+   *     g();
+
+    h();
+    }
+
+After the list:
+
+    let x = 1;
+
+--- formatted
+    let f(): Void {
+   *     g();
+
+    h();
+    }
+
+After the list:
+
+    let x = 1;

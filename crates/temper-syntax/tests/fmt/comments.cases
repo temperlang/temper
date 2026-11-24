@@ -1,0 +1,193 @@
+# `temper fmt` cases for comments that change formatting: `// fmt: off`
+# regions, and the framing of doc comments over several lines.
+# Format and updating: see tests/fmt.rs.
+
+=== fmt: off keeps lines as written up to fmt: on
+let a=1;
+    // fmt: off
+let table = [
+  1,   0,   0,
+  0,   1,   0 ,
+];   
+  let  b=2;
+
+        // fmt: on
+let c=3;
+--- formatted
+let a = 1;
+// fmt: off
+let table = [
+  1,   0,   0,
+  0,   1,   0 ,
+];   
+  let  b=2;
+
+// fmt: on
+let c = 3;
+
+=== fmt: off without fmt: on ends where its block does
+class C {
+    // fmt: off
+    let x  =  [1,
+               2];
+      let y:Int;
+}
+let z=1;
+// fmt: off
+let w  =  2;
+--- formatted
+class C {
+  // fmt: off
+    let x  =  [1,
+               2];
+      let y:Int;
+}
+let z = 1;
+// fmt: off
+let w  =  2;
+
+=== fmt: off keeps lists in it as written, and lists around it follow it
+f(a,
+  // fmt: off
+  g( b ,c ),
+  // fmt: on
+  d)
+--- formatted
+f(a,
+  // fmt: off
+  g( b ,c ),
+  // fmt: on
+  d)
+
+=== fmt: off after code on its line is an ordinary comment
+let a=1; // fmt: off
+let b=2;
+--- formatted
+let a = 1; // fmt: off
+let b = 2;
+
+=== fmt: off keeps a doc comment's framing too
+// fmt: off
+  /**
+       * Odd.
+   */
+let x=1;
+--- formatted
+// fmt: off
+  /**
+       * Odd.
+   */
+let x=1;
+
+=== fmt: off in a literate file ends with its code block (markdown)
+Kept:
+
+    // fmt: off
+    let a  =  1;
+
+Formatted:
+
+    let b  =  2;
+
+--- formatted
+Kept:
+
+    // fmt: off
+    let a  =  1;
+
+Formatted:
+
+    let b = 2;
+
+=== doc comments already framed stay as they are
+/**
+ * Adds.
+ *
+ *     sum(1, 2)
+ */
+let sum(a: Int, b: Int): Int { a + b }
+--- formatted
+/**
+ * Adds.
+ *
+ *     sum(1, 2)
+ */
+let sum(a: Int, b: Int): Int { a + b }
+
+=== doc comments' stars line up one column past the slash
+  /**
+     *   Adds,
+  *  with three spaces kept after the star.
+       */
+let sum(a: Int, b: Int): Int { a + b }
+--- formatted
+/**
+ *   Adds,
+ *  with three spaces kept after the star.
+ */
+let sum(a: Int, b: Int): Int { a + b }
+
+=== doc comment lines without a star keep their place in the comment
+    /**
+       Two lines
+         without stars,
+     * and one with.
+    */
+let x = 1;
+--- formatted
+/**
+   Two lines
+     without stars,
+ * and one with.
+ */
+let x = 1;
+
+=== doc comments in a class follow its indentation
+class C {
+      /**
+   * A field.
+        */
+      let x: Int;
+}
+--- formatted
+class C {
+  /**
+   * A field.
+   */
+  let x: Int;
+}
+
+=== one-line and plain block comments keep their framing
+/** One line. */
+let x = 1;
+  /*
+     * Not a doc comment.
+   */
+let y = 2;
+--- formatted
+/** One line. */
+let x = 1;
+/*
+   * Not a doc comment.
+ */
+let y = 2;
+
+=== doc comments in literate code (markdown)
+Code:
+
+    class C {
+          /**
+           * A field.
+        */
+      let x: Int;
+    }
+
+--- formatted
+Code:
+
+    class C {
+      /**
+       * A field.
+       */
+      let x: Int;
+    }

@@ -149,9 +149,29 @@ a multi-quoted string as an item keeps its line breaks.
 
 - Line breaks outside lists.
 - Comments' text (a comment on its own line indents like the code
-  around it).
+  around it). In a doc comment over several lines, `/** ... */`, each
+  line starting with `*` lines up one column past the `/`, with what
+  follows the `*` as written.
 - Strings.
 - Prose in `.temper.md` files: only Temper code blocks change.
+
+## Turning it off
+
+Lines between a `// fmt: off` and a `// fmt: on`, each a comment on a
+line of its own, stay exactly as written, as for a table aligned in
+columns; the two comments indent like any other. Without a `// fmt: on`,
+the region ends where the brackets around it close (the end of its
+block), or at the end of the file or, in `.temper.md`, of its code
+block.
+
+```temper inert
+// fmt: off
+let sizes = [
+  "small",   1,
+  "large", 100,
+];
+// fmt: on
+```
 
 ## What it refuses
 

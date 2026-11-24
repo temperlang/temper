@@ -60,7 +60,13 @@
 //!   data table), or in a string keeps its line breaks as written.
 //!
 //! Multi-line block comments and the lines of multi-quoted strings move
-//! with the line they start on; their text is otherwise kept.
+//! with the line they start on; their text is otherwise kept, but a doc
+//! comment's (`/** ... */`) lines starting with `*` line up one column
+//! past its `/`.
+//!
+//! Lines after a `// fmt: off` comment on a line of its own stay as
+//! written, up to a `// fmt: on` on a line of its own, or else the end of
+//! the brackets around it, of its code block (markdown) or of the file.
 //!
 //! In a literate `.temper.md` file only Temper code blocks change, each
 //! indented from its block's own margin (the fence's indentation, or four
@@ -240,6 +246,9 @@ struct CodeRange {
     start: u32,
     end: u32,
     margin: i32,
+    /// The column its first line must stay left of, as it would continue
+    /// the list item before it from there (markdown).
+    below: Option<i32>,
 }
 
 /// Where the code is: all of a `.temper` file, or a `.temper.md` file's
@@ -250,6 +259,7 @@ fn code_ranges(source: &str, kind: SourceKind) -> Vec<CodeRange> {
             start: 0,
             end: source.len() as u32,
             margin: 0,
+            below: None,
         }];
     }
     let mut ranges = Vec::new();
@@ -280,6 +290,7 @@ fn code_ranges(source: &str, kind: SourceKind) -> Vec<CodeRange> {
             start: start as u32,
             end: block.end.start as u32,
             margin: margin as i32,
+            below: block.item_column.map(|c| c as i32),
         });
     }
     ranges
@@ -712,11 +723,11 @@ struct Formatter<'a> {
     // Lists and their layouts, planned by `plan`.
     lists: Vec<List>,
     layouts: Vec<Layout>,
-    /// For each token, the list it opens or closes, if any.
-    opens: Vec<Option<usize>>,
-    closes: Vec<Option<usize>>,
     /// For the gap before each token, the list that may break there.
     places: Vec<Option<(usize, Place)>>,
+    /// For each token, whether it's in a `// fmt: off` region, where it and
+    /// the space before it stay as written.
+    kept: Vec<bool>,
 }
 
 impl<'a> Formatter<'a> {
@@ -764,16 +775,56 @@ impl<'a> Formatter<'a> {
             line_header: None,
             lists: Vec::new(),
             layouts: Vec::new(),
-            opens: Vec::new(),
-            closes: Vec::new(),
             places: Vec::new(),
+            kept: Vec::new(),
         };
+        formatter.kept = formatter.off_regions();
         (formatter.headers, formatter.bodies) = headers(parsed, &formatter.tokens);
         formatter.header_lines = formatter.headers.values().map(|&h| (h, None)).collect();
         if options.lists {
             formatter.plan(parsed, &in_string);
         }
         formatter
+    }
+
+    /// Which tokens are in `// fmt: off` regions: from the line after a
+    /// `// fmt: off` on a line of its own to a `// fmt: on` on a line of its
+    /// own, or else to the end of the brackets around it (a block), of its
+    /// code block (in markdown) or of the file.
+    fn off_regions(&self) -> Vec<bool> {
+        let mut kept = vec![false; self.tokens.len()];
+        // The bracket depth and code block of the `// fmt: off`.
+        let mut off: Option<(usize, u32)> = None;
+        let mut depth = 0;
+        for (i, &t) in self.tokens.iter().enumerate() {
+            let text = self.text(t);
+            let range = self.range_of(t.start).map(|r| r.start);
+            let line_start = self.source[..t.start as usize]
+                .rfind('\n')
+                .map_or(0, |n| n + 1);
+            let own_line = (self.source[line_start..t.start as usize].bytes())
+                .all(|b| b == b' ' || b == b'\t');
+            let marker = (t.kind == TokenKind::Comment && own_line && range.is_some())
+                .then(|| fmt_marker(text))
+                .flatten();
+            let closer = t.kind == TokenKind::Punctuation && matches!(text, ")" | "]" | "}");
+            if let Some((d, block)) = off {
+                if range != Some(block) || marker == Some(false) || (closer && depth == d) {
+                    off = None;
+                } else {
+                    kept[i] = true;
+                }
+            }
+            if t.kind == TokenKind::Punctuation && text.ends_with(['(', '[', '{']) {
+                depth += 1;
+            } else if closer {
+                depth = depth.saturating_sub(1);
+            }
+            if off.is_none() && marker == Some(true) {
+                off = range.map(|block| (depth, block));
+            }
+        }
+        kept
     }
 
     /// Finds the lists and decides their layouts, inner lists first, so
@@ -784,11 +835,8 @@ impl<'a> Formatter<'a> {
             .map(|(i, t)| (t.start, i))
             .collect();
         self.lists = find_lists(parsed, &index);
-        (self.opens, self.closes) = (vec![None; n], vec![None; n]);
         self.places = vec![None; n + 1];
         for (id, list) in self.lists.iter().enumerate() {
-            self.opens[list.open] = Some(id);
-            self.closes[list.close] = Some(id);
             self.places[list.open + 1] = Some((id, Place::AfterOpen));
             for &comma in &list.commas {
                 if comma + 1 < list.close {
@@ -839,6 +887,7 @@ impl<'a> Formatter<'a> {
             let kept = (self.options.keep_data && list.data)
                 || in_string[list.open]
                 || (list.open + 1..=list.close).any(|j| prose[j])
+                || (list.open..=list.close).any(|j| self.kept[j])
                 || starts.zip(ends).any(|(start, end)| {
                     breaks[start + 1] || breaks[end] || !item_fits(start + 1, end)
                 });
@@ -884,7 +933,22 @@ impl<'a> Formatter<'a> {
             self.index = i;
             let previous = i.checked_sub(1).map(|p| tokens[p]);
             let wanted = self.wanted_break();
-            if self.code_gaps[i] || token.kind == TokenKind::Margin {
+            let same_block = previous.is_some_and(|p| {
+                self.range_of(p.start).map(|r| r.start)
+                    == self.range_of(token.start).map(|r| r.start)
+            });
+            if self.kept[i] {
+                self.kept_gap(end, token);
+            } else if i > 0 && self.kept[i - 1] && same_block {
+                // Lines in a region stay as written up to the line ending it.
+                let line_start = source[..token.start as usize]
+                    .rfind('\n')
+                    .map_or(0, |n| n + 1);
+                let line_start = (line_start as u32).max(end);
+                self.out
+                    .push_str(&source[end as usize..line_start as usize]);
+                self.gap(previous, line_start, token, wanted);
+            } else if self.code_gaps[i] || token.kind == TokenKind::Margin {
                 self.gap(previous, end, token, wanted);
             } else {
                 self.out
@@ -911,6 +975,23 @@ impl<'a> Formatter<'a> {
             self.out.push_str(rest);
         }
         self.out
+    }
+
+    /// Writes the space before a token in a `// fmt: off` region as written,
+    /// starting its line as written if it starts one.
+    fn kept_gap(&mut self, start: u32, next: Token) {
+        let source = self.source;
+        self.out
+            .push_str(&source[start as usize..next.start as usize]);
+        let line_start = source[..next.start as usize]
+            .rfind('\n')
+            .map_or(0, |i| i + 1);
+        let indent = &source[line_start..next.start as usize];
+        if line_start as u32 >= start && indent.bytes().all(|b| b == b' ' || b == b'\t') {
+            let margin = self.range_of(next.start).map_or(0, |r| r.margin);
+            let actual = columns(indent) as i32 - margin;
+            self.line_start(next, Some(actual), true, None);
+        }
     }
 
     fn range_of(&self, offset: u32) -> Option<CodeRange> {
@@ -954,7 +1035,7 @@ impl<'a> Formatter<'a> {
             // A list's line broken where it wasn't.
             Some(true) if !gap.contains('\n') => {
                 self.out.push_str(self.newline);
-                let formatted = self.line_start(next, None, false);
+                let formatted = self.line_start(next, None, false, None);
                 for _ in 0..range.margin + formatted {
                     self.out.push(' ');
                 }
@@ -1012,7 +1093,13 @@ impl<'a> Formatter<'a> {
             || (!self.standalone && indent.contains('\t'))
             || fence
             || self.text(next) == "<";
-        let formatted = self.line_start(next, Some(actual), keep);
+        // An indented code block's first line, right after a list item,
+        // stays left of where it would continue the item.
+        let below = (line_start == range.start)
+            .then_some(range.below)
+            .flatten()
+            .map(|c| c - range.margin);
+        let formatted = self.line_start(next, Some(actual), keep, below);
         if keep {
             self.out.push_str(&indent[written as usize..]);
         } else {
@@ -1024,8 +1111,15 @@ impl<'a> Formatter<'a> {
 
     /// Starts a line whose first token is `first`, indented `actual`
     /// spaces past its margin (`None` for a line the formatter adds),
-    /// returning its formatted indentation, which is `actual` if `keep`.
-    fn line_start(&mut self, first: Token, written: Option<i32>, keep: bool) -> i32 {
+    /// returning its formatted indentation, which is `actual` if `keep`, or
+    /// if it would reach `below`.
+    fn line_start(
+        &mut self,
+        first: Token,
+        written: Option<i32>,
+        keep: bool,
+        below: Option<i32>,
+    ) -> i32 {
         let actual = written.unwrap_or(0);
         if self.line_has_code {
             self.after_decorator = self.line_is_decorator && self.stack.len() == self.line_depth;
@@ -1041,7 +1135,7 @@ impl<'a> Formatter<'a> {
         } else if matches!(first.kind, TokenKind::Margin | TokenKind::QuotedString) {
             (actual + self.string_shift).max(0)
         } else if first.kind == TokenKind::Punctuation && matches!(text, ")" | "]" | "}")
-            || self.wrapped_angle(self.closes.get(self.index))
+            || self.angle(self.index, Role::Close)
         {
             // Its line continues the bracket's, as `} else {` does.
             self.line_depth = self.line_depth.saturating_sub(1);
@@ -1080,16 +1174,27 @@ impl<'a> Formatter<'a> {
             starts_statement = true;
             self.stack.last().map_or(0, |o| o.base.formatted + UNIT)
         };
-        // Never left of the margin, under a line kept there (markdown).
+        // Never left of the margin, under a line kept there (markdown), nor
+        // where it would join a list item before it.
         let formatted = if keep { formatted } else { formatted.max(0) };
+        let formatted = if below.is_some_and(|b| formatted >= b) {
+            actual
+        } else {
+            formatted
+        };
         // A multi-line block comment moves only if all its lines can.
         let formatted = if first.kind == TokenKind::Comment && text.contains('\n') {
             let shift = formatted - actual;
             // In markdown, its lines must stay in the code block.
             let margin = self.range_of(first.start).map_or(0, |r| r.margin);
+            // A doc comment's lines starting with `*` follow its first.
+            let doc = is_doc(text);
             let fits = text.split('\n').skip(1).all(|line| {
-                let indent = line.len() - line.trim_start_matches(' ').len();
-                line.trim().is_empty() || indent as i32 + shift >= margin
+                let rest = line.trim_start_matches(' ');
+                let indent = line.len() - rest.len();
+                line.trim().is_empty()
+                    || (doc && rest.starts_with('*'))
+                    || indent as i32 + shift >= margin
             });
             if fits { formatted } else { actual }
         } else {
@@ -1124,7 +1229,7 @@ impl<'a> Formatter<'a> {
             match next {
                 Some(i)
                     if !matches!(self.text(self.tokens[i]), ")" | "]" | "}")
-                        && !self.wrapped_angle(self.closes.get(i)) =>
+                        && !self.angle(i, Role::Close) =>
                 {
                     self.tokens[i]
                 }
@@ -1186,16 +1291,29 @@ impl<'a> Formatter<'a> {
     fn token(&mut self, token: Token) {
         let text = self.text(token);
         if token.kind == TokenKind::Comment && text.contains('\n') && self.is_code(token) {
+            let kept = self.kept[self.index];
             // Its first line's shift, if it starts the line.
-            let shift = if self.line_first == token.start {
+            let shift = if self.line_first == token.start && !kept {
                 self.line.formatted - self.line.actual
             } else {
                 0
             };
+            // A doc comment's lines starting with `*` put it one column past
+            // its `/`, as written after it.
+            let column = self.out[self.out.rfind('\n').map_or(0, |i| i + 1)..]
+                .chars()
+                .count();
+            let star = (is_doc(text) && !kept).then_some(column + 1);
             let mut lines = text.split('\n');
             self.out.push_str(lines.next().unwrap());
             for line in lines {
                 self.out.push('\n');
+                let rest = line.trim_start_matches(' ');
+                if let Some(star) = star.filter(|_| rest.starts_with('*')) {
+                    self.out.extend(std::iter::repeat_n(' ', star));
+                    self.out.push_str(rest);
+                    continue;
+                }
                 if shift == 0 || line.trim().is_empty() {
                     self.out.push_str(line);
                     continue;
@@ -1221,8 +1339,7 @@ impl<'a> Formatter<'a> {
         }
         match token.kind {
             TokenKind::Punctuation
-                if text.ends_with(['(', '[', '{'])
-                    || self.wrapped_angle(self.opens.get(self.index)) =>
+                if text.ends_with(['(', '[', '{']) || self.angle(self.index, Role::Open) =>
             {
                 // From its own line if that started at this depth, but a
                 // body's `{` on a header's continuation line from the
@@ -1247,8 +1364,7 @@ impl<'a> Formatter<'a> {
                 self.statements.push(Some(self.line));
             }
             TokenKind::Punctuation
-                if matches!(text, ")" | "]" | "}")
-                    || self.wrapped_angle(self.closes.get(self.index)) =>
+                if matches!(text, ")" | "]" | "}") || self.angle(self.index, Role::Close) =>
             {
                 if self.stack.pop().is_some() {
                     self.statements.pop();
@@ -1264,13 +1380,13 @@ impl<'a> Formatter<'a> {
         }
     }
 
-    /// Whether a list, the current token's if any, is type arguments or
-    /// parameters, whose `<` and `>` count as brackets for indentation
-    /// (others don't, as `<` may be less-than).
-    fn wrapped_angle(&self, list: Option<&Option<usize>>) -> bool {
-        list.copied()
-            .flatten()
-            .is_some_and(|id| self.text(self.tokens[self.lists[id].open]) == "<")
+    /// Whether the token at `index` is the `<` (`Role::Open`) or `>`
+    /// (`Role::Close`) of type arguments or parameters, which count as
+    /// brackets for indentation (others don't, as `<` may be less-than).
+    fn angle(&self, index: usize, role: Role) -> bool {
+        self.tokens.get(index).is_some_and(|&t| {
+            self.role(t) == Some((role, Operator::Angle)) && matches!(self.text(t), "<" | ">")
+        })
     }
 
     fn text(&self, token: Token) -> &'a str {
@@ -1374,21 +1490,42 @@ impl<'a> Formatter<'a> {
     }
 }
 
+/// Whether a comment is a doc comment over several lines, `/** ... */`,
+/// whose lines starting with `*` line up one column past its `/`.
+fn is_doc(comment: &str) -> bool {
+    comment.starts_with("/**") && comment.contains('\n')
+}
+
+/// Whether a comment on a line of its own turns formatting off or on:
+/// `// fmt: off`, `// fmt: on`.
+fn fmt_marker(comment: &str) -> Option<bool> {
+    match comment.strip_prefix("//")?.trim() {
+        "fmt: off" => Some(true),
+        "fmt: on" => Some(false),
+        _ => None,
+    }
+}
+
 /// Whether `a`, `space` and `b` lex as just the tokens `a` and `b`. Space
 /// changes only in code, where each token's lexing depends only on its
 /// own text, the token before it, and whether `<` follows space (which
-/// [`Formatter::space`] keeps), so the pair alone almost always tells; the
-/// check after formatting catches the rest.
+/// [`Formatter::space`] keeps), so the pair alone almost always tells, after
+/// a value and after an operator both, as `/` divides after a value and
+/// starts a regex after an operator (`x /  .y` mustn't become `x /.y`);
+/// the check after formatting catches the rest.
 fn lexes_alone(a: &str, space: &str, b: &str) -> bool {
-    let text = format!("{a}{space}{b}");
-    let mut tokens = crate::lex::lex(&text, SourceKind::Standalone)
-        .into_iter()
-        .filter(|t| t.kind != TokenKind::Space && t.synthetic.is_none());
-    let (Some(x), Some(y), None) = (tokens.next(), tokens.next(), tokens.next()) else {
-        return false;
-    };
-    // Alone, brackets don't match, so inserted closers don't count.
-    x.text(&text) == a && y.text(&text) == b
+    ["", "x "].iter().all(|before| {
+        let text = format!("{before}{a}{space}{b}");
+        let mut tokens = crate::lex::lex(&text, SourceKind::Standalone)
+            .into_iter()
+            .filter(|t| t.kind != TokenKind::Space && t.synthetic.is_none())
+            .skip(usize::from(!before.is_empty()));
+        let (Some(x), Some(y), None) = (tokens.next(), tokens.next(), tokens.next()) else {
+            return false;
+        };
+        // Alone, brackets don't match, so inserted closers don't count.
+        x.text(&text) == a && y.text(&text) == b
+    })
 }
 
 /// Checks that `text`, the formatted `original`, has the same tokens,
