@@ -29,8 +29,9 @@ the dominant style; "lines changed" is what applying it changes.
 | Indent characters | spaces 100% | spaces | 0 |
 | Indent step after an open bracket | 2: 99.6%, 4: 0.2% | 2 | (in the next row) |
 | Indentation, whole model (below) | matches 99.8% | the model | 104 (0.2%) |
-| Continuation lines in a header, before its body's `{` (`extends`, `throws`), offset from the header's first line | 0: 75%, 2: 25% (4 lines) | 4 | (below) |
-| Other continuation lines (at an operator, `orelse` too, or before a word or operand) | 0: 53%, 2: 41%, 4: 2% | 2 | (below) |
+| Continuation lines in a header, before its body's `{` (`extends`, `throws`), offset from the header's first line | 4: 2, 2: 1, 0: 1 (4 lines) | 4 | (below) |
+| Continuation lines in `( )` whose contents start on the `(` line (`if (a \|\|\n  b) {`), offset from that line | 2: 86%, 0: 12% (176 lines) | 4 | (below) |
+| Other continuation lines (at an operator, `orelse` too, or before a word or operand) | 0: 61%, 2: 32%, 4: 2% (516 lines) | 2 | (below) |
 | `{` on the line of what it follows | 100% | same line (kept: line breaks stay) | 0 |
 | `} else` on one line | 99.5% | one line (kept: line breaks stay) | 0 |
 | Space around infix operators | one 99.8% | one | 62 |
@@ -63,10 +64,14 @@ the dominant style; "lines changed" is what applying it changes.
 | Multi-line `[ ]` lists | tall 99.8% | the same | (below) |
 | Block arguments | trailing block 97%, `fn` in `( )` 3% | not changed (that's meaning) | - |
 
-**`temper fmt` itself** (`--temper`, over copies) changes 645 of 81,110
-lines (0.8%, prose included): 68 in core and std (4 files), 149 in test
-programs, 143 in docs examples, and 1 to 119 in each library (Ordable
-1, Argmas 16, Chromarite 19, Wherewith 57, Hrefine 73, Kelpto 119).
+**`temper fmt` itself** (`--temper`, over copies, with lib/ and test
+programs already formatted) changes 714 of 81,110 lines (0.9%, prose
+included): 13 in core and std (3 files), 123 in test programs, 143 in
+docs examples, and 1 to 205 in each library (Ordable 1, Argmas 16,
+Chromarite 19, Hrefine 74, Kelpto 120, Wherewith 205). Before `( )`
+continuations went to four spaces it changed 548: that rule moves 166
+lines, 148 of them Wherewith's tests' `assert(a ==\n  "...")`. Before
+lib/ was formatted, it changed 645.
 Indenting every continuation line four spaces, and removing blank lines
 after `{` and before `}`, changed 895; Black-style wrapping at 100
 columns (an earlier commit) 758; with neither list rules nor
@@ -110,10 +115,24 @@ Notes on the numbers:
   could put them left of their own statement, and there's no body
   to tell them from. A line starting a header (`let g =\n  fn ...`)
   continues what's before it, once. The parse tree decides what's a
-  header. Only 4 lines are headers' continuations today (three with none). Four spaces for all continuation
+  header. Only 4 lines are headers' continuations today. Four spaces for all continuation
   lines, as in Java and Kotlin, changed far more (157 lines in
   Wherewith, 117 in Kelpto, against 3 and 69; see
   [the numbers](#the-numbers)).
+- **In parentheses whose contents start on the `(` line**, continuation
+  lines get four spaces too, from that line (Tom, 2026-11-24), to tell a
+  condition from the body after it: `if (a ||\n    b) {\n  c`. Temper's
+  `if`, `while` and `for` are calls with trailing blocks, not special
+  syntax, so the rule is structural and applies to every `( )`
+  (`foo(a ||\n    b)`, `for (var i = 0;\n    i < n;`, `do { } while (a
+  ||\n    b)`), not only those followed by a block: the simplest rule
+  to state, and the parse tree isn't needed. `[ ]` keep two
+  (`list[a +\n  b]`). With a line break right after `(`, the contents
+  start a line of their own and their continuations indent two from it,
+  as anywhere (`if (\n  a ||\n    b\n) {`). Brackets opened on a
+  four-space line indent their contents from it, so
+  `1 <= day && (\n  if ...` nests from the `1 <= day` line and `)) {`
+  returns to it. Today 176 such lines: 86% indented two, 12% none.
 - **`fmt` follows the parse tree:** a line starting with `orelse` after
   a line ending with `}` (`let x = do { f() }\norelse 7;`) continues the
   statement, by design: a `}` ending a line ends the statement unless the
@@ -128,14 +147,14 @@ Notes on the numbers:
 - **A condition over several lines** follows its line break after
   `if (`. With one, the first operand starts a line of its own and the
   rest continue it (`if (\n  a &&\n    b\n) {`); without, the rest
-  continue the `if` line (`if (a &&\n  b) {\n  c`), indented as the body
-  is: to tell them apart, break after `if (`.
+  continue the `if` line four spaces in (`if (a &&\n    b) {\n  c`), as
+  above.
 - **`for` headers** written `for (var i = 0;\n  i < n;\n  i += 1) {`,
   with the first clause on the `for (` line, are continuation lines
   too: a `;` in `( )` ends a statement only if the contents start on a
   line of their own (`for (\n  a;\n  b;\n) {`, each clause then indented
-  one level). Broken after `;`, the later clauses are indented two
-  spaces, as `if (a &&\n  b) {` is; their line breaks stay.
+  one level). Broken after `;`, the later clauses are indented four
+  spaces, as `if (a &&\n    b) {` is; their line breaks stay.
 - **Blank lines** are the author's, after `{` and before `}` too (std
   json's `) extends JsonSyntaxTree {` then a blank line); only runs of
   them become one, and there are none at a file's start. A comment is
@@ -251,29 +270,31 @@ that's the author's to fix, by breaking after the bracket.
 `rules_census` in `crates/temper-syntax/tests/fmt.rs` counts, over the
 repository and the six libraries, the lines `fmt` changes and the lines
 each rule for line breaks changes (a line of the output without the
-rule that the output with it doesn't have):
+rule that the output with it doesn't have). With lib/ and test
+programs already formatted (before, core+std changed 67 lines):
 
 | Group | Lines | `fmt` changes | List rules (data lists too) | Continuation indent |
 |---|---|---|---|---|
-| core+std | 4,594 | 67 | 6 (8) | 45 |
-| tests | 10,478 | 149 | 14 (86) | 0 |
-| docs (55 of 70 files whole) | 14,133 | 47 | 0 (0) | 32 |
+| core+std | 4,592 | 13 | 0 (2) | 13 |
+| tests | 10,480 | 123 | 13 (85) | 7 |
+| docs (55 of 70 files whole) | 14,153 | 47 | 0 (0) | 32 |
 | Argmas | 7,225 | 16 | 16 (23) | 0 |
 | Chromarite | 3,807 | 19 | 18 (188) | 0 |
-| Hrefine | 12,902 | 73 | 63 (590) | 8 |
-| Kelpto | 24,934 | 116 | 47 (184) | 69 |
+| Hrefine | 12,902 | 74 | 63 (590) | 9 |
+| Kelpto | 24,934 | 117 | 47 (184) | 70 |
 | Ordable | 3,169 | 1 | 0 (415) | 1 |
-| Wherewith | 11,841 | 57 | 54 (78) | 3 |
+| Wherewith | 11,841 | 203 | 54 (78) | 149 |
 
 What changes: lists written one item per line without a trailing comma
 hug (std's `json` signatures, `afterSubstring(\n  string, inString,
 substring\n)`); lists written a few items per line with a trailing
 comma go one per line (Kelpto's and Hrefine's long signatures and
 `tree.add(...)` calls); lists with no break after the bracket join.
-Continuation lines move most in Kelpto and core and std: lines after
-an operator written with no extra indent (`if (\n  a ||\n  b\n)`, which
-becomes `a ||\n    b`) or four spaces (`if (a ||\n    b) {`, two), and
-class headers' `extends` lines (four).
+Continuation lines move most in Wherewith, Kelpto, and core and std:
+`( )` continuations from two spaces to four (Wherewith's
+`assert(a ==\n    "...")`, std's `if (a ||\n    b) {`), lines after an
+operator written with no extra indent (`if (\n  a ||\n  b\n)`, which
+becomes `a ||\n    b`), and class headers' `extends` lines (four).
 Items over several lines and single items change almost nothing:
 authors already write `foo(a, b, fn {` and `outer(x, inner(`, and
 nowhere write a list (without a trailing comma) with a multi-line item
@@ -330,7 +351,9 @@ census shows authors already agree on almost everything else.
   from the statement's first line, two spaces, or four from a header's
   first line at the header's own depth (above; the tree marks headers'
   tokens, after a class's, interface's, function's or function
-  literal's first token, to its body's `{`): the code before
+  literal's first token, to its body's `{`), or four from a `(`'s line
+  when it continues the statement starting there (each line and open
+  bracket remembers the line it's on): the code before
   didn't end with `;`, `{`, `}`, `,` or `=>` (in `( )` and `[ ]`, `,`,
   or `;` if their contents start on a line of their own, as in
   `for (\n  a;\n  b;`), or it starts with an infix operator, as `.`,
@@ -341,9 +364,10 @@ census shows authors already agree on almost everything else.
   between them, `f()\ng()`) or after a decorator line (`@connected`)
   starts a statement, and a comment line goes with the code after it.
   A bracket opened on a continuation line indents its contents from that
-  line (`.map { x =>`), but on a header's continuation line from the
-  header's first line, so a class body indents one level from `class`,
-  and a function literal's from the line its header starts on. A line starting with a close bracket continues its bracket's
+  line (`.map { x =>`, `&& (` in a condition), but a header's body's
+  `{` from the header's first line, so a class body indents one level
+  from `class`, and a function literal's from the line its header
+  starts on. A line starting with a close bracket continues its bracket's
   line (`} else {`).
 - **Comments** never move between tokens, so they can't be lost or
   reattached: a comment on its own line is indented like the code
@@ -416,19 +440,21 @@ breaks and trailing commas, items over several lines in any position
 following the same rules (recursively), and comments between items,
 items that must end their line, and data lists kept; `for` headers and
 aligned docs examples by the normal rules;
-continuation lines indented two spaces, four in any header, lines starting with `;` or `,` lined up with their statement,
+continuation lines indented two spaces, four in any header and in
+`( )` whose contents start on the `(` line, lines starting with `;` or
+`,` lined up with their statement,
 blank lines kept (runs collapsed; Tom's reviews of trial reformats,
 2026-11-24); interpolations tight (`${x}`);
 golden cases (`tests/fmt/*.cases`),
 idempotence and tree-preservation tests over the repository's Temper
 files and randomly edited inputs; refusal for code that doesn't parse;
-language server formatting, on save by default in VS Code. The
-repository's own files aren't reformatted yet.
+language server formatting, on save by default in VS Code; lib/ and
+test programs formatted.
 
 Next:
 
-1. Format lib/ and docs in one commit of its own, listed in
-   `.git-blame-ignore-revs`; then `temper fmt --check` in CI.
+1. Format the docs' examples (no `.git-blame-ignore-revs`: not
+   needed, Tom); then `temper fmt --check` in CI.
 2. Doc comments' framing (`/** … */`), if wanted.
 3. A `// fmt: off` region, if hand-aligned code ever needs one.
 4. Markdown prose in `.temper.md`: left exactly as written. Formatting

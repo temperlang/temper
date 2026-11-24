@@ -23,14 +23,15 @@
 //!   `}`, `,` or `=>`, or inside `( )` and `[ ]` with `,`, or `;` if their
 //!   contents start on a line of their own; or it starts with an infix
 //!   operator like `.` or `&&`) is indented from the statement's first
-//!   line, once, wherever it breaks; but a line continuing a header (a
-//!   class's, interface's, function's or function literal's, from its
-//!   first token to the `{` of its body, as `extends` or `throws` lines),
-//!   not in the header's own brackets, is indented twice from the
-//!   header's first line, to tell it from the body. One starting with `;`
+//!   line, once, wherever it breaks; but twice, to tell it from what
+//!   follows, in a header (a class's, interface's, function's or function
+//!   literal's, from its first token to the `{` of its body, as `extends`
+//!   or `throws` lines, not in the header's own brackets), from the
+//!   header's first line, and in `( )` whose contents start on the `(`
+//!   line (`if (a ||\n    b) {`), from that line. One starting with `;`
 //!   or `,` lines up with the statement, as a close bracket does.
 //!   Comments never count. A bracket opened on a continuation line
-//!   indents its contents from that line, but on a header's from the
+//!   indents its contents from that line, but a header's body from the
 //!   header's first line. Lines starting a node right after another
 //!   (statements with no `;` between them) or after a decorator line like
 //!   `@connected` start statements, and comment lines go with the code
@@ -358,18 +359,20 @@ fn roles(parsed: &Parsed) -> HashMap<u32, (Role, Operator)> {
 }
 
 /// Where the code tokens of headers start, each with where its header's
-/// first token starts: headers run from a class's, interface's,
+/// first token starts, and where each header's body's `{` starts, by the
+/// header's first token. Headers run from a class's, interface's,
 /// function's or function literal's first token to the `{` opening its
 /// body (`class C extends D {`, `fn (): Int throws Bubble {`), where a
 /// continuation line indents twice to tell it from the body. The first
 /// token is left out (a line starting with it continues what's before),
 /// and a token in nested headers gets the innermost.
-fn headers(parsed: &Parsed, tokens: &[Token]) -> HashMap<u32, u32> {
+fn headers(parsed: &Parsed, tokens: &[Token]) -> (HashMap<u32, u32>, HashMap<u32, u32>) {
     use Operator::*;
     let tree = parsed.tree();
     // Parents come off the stack before their children, so inner headers
     // overwrite outer ones.
     let mut starts = HashMap::new();
+    let mut braces = HashMap::new();
     let mut stack = vec![parsed.root()];
     while let Some(id) = stack.pop() {
         let children = tree.children(id);
@@ -383,6 +386,7 @@ fn headers(parsed: &Parsed, tokens: &[Token]) -> HashMap<u32, u32> {
             continue;
         };
         let from = tokens.partition_point(|t| t.start < start);
+        let text = |i: usize| tokens.get(i).map(|t| &parsed.source()[t.range()]);
         let declares = match tree.kind(head) {
             NodeKind::Op(ExtendsComma | ExtendsNoComma | Throws) => true,
             // A signature's return type: `f(...): T`.
@@ -390,17 +394,18 @@ fn headers(parsed: &Parsed, tokens: &[Token]) -> HashMap<u32, u32> {
                 .children(head)
                 .first()
                 .is_some_and(|&c| tree.kind(c) == NodeKind::Op(Paren)),
-            _ => tokens.get(from).is_some_and(|t| {
-                let text = &parsed.source()[t.start as usize..t.end as usize];
-                matches!(text, "class" | "interface" | "let" | "var" | "fn")
-            }),
+            _ => matches!(
+                text(from),
+                Some("class" | "interface" | "let" | "var" | "fn")
+            ),
         };
         if declares {
             let to = tokens.partition_point(|t| t.start <= brace.start);
             starts.extend(tokens[from + 1..to].iter().map(|t| (t.start, start)));
+            braces.insert(start, brace.start);
         }
     }
-    starts
+    (starts, braces)
 }
 
 /// Where nodes start that follow another node directly, as statements
@@ -630,18 +635,24 @@ fn code_gaps(source: &str, lexed: &[Token]) -> (Vec<Token>, Vec<bool>, Vec<bool>
 }
 
 /// A line's indentation as written and as formatted, relative to its
-/// code block's margin.
-#[derive(Clone, Copy, Debug, Default)]
+/// code block's margin, and where its first token starts, which tells
+/// lines apart.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 struct Indent {
     actual: i32,
     formatted: i32,
+    first: u32,
 }
 
-/// An open bracket: its start, and the line its contents indent from.
+/// An open bracket: its start, the line its contents indent from, and the
+/// line it's on.
 #[derive(Clone, Copy, Debug)]
 struct Open {
     start: u32,
     base: Indent,
+    line: Indent,
+    /// Whether it's `(`.
+    paren: bool,
     round: bool,
     /// Whether its contents start on a line of their own.
     contents_own_line: bool,
@@ -660,6 +671,8 @@ struct Formatter<'a> {
     juxtaposed: HashSet<u32>,
     /// Where headers' tokens start, with their header's first token.
     headers: HashMap<u32, u32>,
+    /// Where each header's body's `{` starts, by the header's first token.
+    bodies: HashMap<u32, u32>,
     /// Headers' first lines and bracket depths, by their first tokens,
     /// once written.
     header_lines: HashMap<u32, Option<(Indent, usize)>>,
@@ -690,8 +703,9 @@ struct Formatter<'a> {
     /// The current token's index in `tokens`.
     index: usize,
     /// The first line of the header the current line continues, as an
-    /// `extends` line does a class's.
-    line_header: Option<Indent>,
+    /// `extends` line does a class's, and where the header's first token
+    /// starts.
+    line_header: Option<(Indent, u32)>,
     // Lists and their layouts, planned by `plan`.
     lists: Vec<List>,
     layouts: Vec<Layout>,
@@ -722,6 +736,7 @@ impl<'a> Formatter<'a> {
             roles: roles(parsed),
             juxtaposed: juxtaposed(parsed),
             headers: HashMap::new(),
+            bodies: HashMap::new(),
             header_lines: HashMap::new(),
             ranges,
             standalone: kind == SourceKind::Standalone,
@@ -750,7 +765,7 @@ impl<'a> Formatter<'a> {
             closes: Vec::new(),
             places: Vec::new(),
         };
-        formatter.headers = headers(parsed, &formatter.tokens);
+        (formatter.headers, formatter.bodies) = headers(parsed, &formatter.tokens);
         formatter.header_lines = formatter.headers.values().map(|&h| (h, None)).collect();
         if options.lists {
             formatter.plan(parsed, &in_string);
@@ -1031,12 +1046,17 @@ impl<'a> Formatter<'a> {
         } else if let Some((statement, code)) = self.continued_statement(first) {
             // Twice from a header's first line (`extends`, `throws`), to
             // tell it from the body, but not in the header's own brackets
-            // (its parameters); else once from the statement's.
-            let header = self
-                .headers
-                .get(&code.start)
-                .and_then(|h| self.header_lines[h]);
-            self.line_header = header.filter(|h| h.1 == self.stack.len()).map(|h| h.0);
+            // (its parameters); twice in parentheses whose contents start
+            // on the `(` line, from that line (`if (a ||\n    b) {`), to
+            // tell it from what follows; else once from the statement's.
+            self.line_header = self.headers.get(&code.start).and_then(|&h| {
+                let (line, depth) = self.header_lines[&h]?;
+                (depth == self.stack.len()).then_some((line, h))
+            });
+            let in_parens = self
+                .stack
+                .last()
+                .is_some_and(|o| o.paren && o.line == statement);
             if !self.options.continuations {
                 (statement.formatted + actual - statement.actual).max(0)
             } else if matches!(self.text(code), ";" | ",")
@@ -1046,8 +1066,10 @@ impl<'a> Formatter<'a> {
                 // string, lines up with what it ends, as a close bracket
                 // does.
                 statement.formatted
-            } else if let Some(header) = self.line_header {
+            } else if let Some((header, _)) = self.line_header {
                 header.formatted + 2 * UNIT
+            } else if in_parens {
+                statement.formatted + 2 * UNIT
             } else {
                 statement.formatted + UNIT
             }
@@ -1071,7 +1093,11 @@ impl<'a> Formatter<'a> {
             formatted
         };
         let actual = written.unwrap_or(formatted);
-        self.line = Indent { actual, formatted };
+        self.line = Indent {
+            actual,
+            formatted,
+            first: first.start,
+        };
         if starts_statement {
             *self.statements.last_mut().unwrap() = Some(self.line);
         }
@@ -1185,17 +1211,23 @@ impl<'a> Formatter<'a> {
                 if text.ends_with(['(', '[', '{'])
                     || self.wrapped_angle(self.opens.get(self.index)) =>
             {
-                // From its own line if that started at this depth, but on a
-                // header's continuation line from the header's first line;
-                // else from the line that started its statement here.
+                // From its own line if that started at this depth, but a
+                // body's `{` on a header's continuation line from the
+                // header's first line; else from the line that started its
+                // statement here.
                 let base = if self.line_depth != self.stack.len() {
                     self.statements.last().unwrap().unwrap_or(self.line)
                 } else {
-                    self.line_header.unwrap_or(self.line)
+                    match self.line_header {
+                        Some((header, h)) if self.bodies[&h] == token.start => header,
+                        _ => self.line,
+                    }
                 };
                 self.stack.push(Open {
                     start: token.start,
                     base,
+                    line: self.line,
+                    paren: text.ends_with('('),
                     round: !text.ends_with('{'),
                     contents_own_line: false,
                 });

@@ -379,7 +379,7 @@ let r = combine(a, [
   second,
 ], b);
 f(x, a +
-  b, c);
+    b, c);
 f(fn {
   // the item's own comment
   body();

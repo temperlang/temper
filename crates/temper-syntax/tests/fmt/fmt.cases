@@ -129,8 +129,8 @@ for (
   f(index);
 }
 for (var i = 0;
-  i < n;
-  i += 1) {
+    i < n;
+    i += 1) {
   f(i);
 }
 
@@ -150,8 +150,8 @@ let f(): Int
   }
 --- formatted
 for (var i = 0;
-  i < n;
-  i += 1) {
+    i < n;
+    i += 1) {
   f(i);
 }
 class GeneratorFnWrapper<YIELD>
@@ -414,8 +414,8 @@ let x = foo
   }
   .join(", ");
 if (a &&
-  b && (
-    c || d
-  )) {
+    b && (
+      c || d
+    )) {
   e();
 }

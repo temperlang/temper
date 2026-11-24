@@ -49,11 +49,14 @@ let ready = loaded &&
   checked;               // after
 ```
 
-A line that continues a header (a class's, interface's, function's, or
-function literal's, up to the `{` of its body) indents four spaces from
-the line the header starts on, so it stands apart from the body. Lines
-inside the header's own brackets, like its parameters, indent as any
-others do.
+A continuation line indents four spaces instead, to stand apart from
+what follows: in a header (a class's, interface's, function's, or
+function literal's, before the `{` of its body), from the line the
+header starts on; and in parentheses whose contents start on the `(`
+line, as a condition's do, from that line (break right after the `(`,
+and they indent two from their own first line, as above). Brackets
+opened on such a line indent their contents from it, but a body from its
+header's first line.
 
 ```temper inert
 let parse(text: String): Int
@@ -68,6 +71,14 @@ run(fn (x: Int): Int
     throws Bubble {      // after, in brackets too
   x
 });
+if (ready &&
+  checked) {             // before
+  go();
+}
+if (ready &&
+    checked) {           // after
+  go();
+}
 ```
 
 ## Blank lines

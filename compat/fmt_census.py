@@ -377,14 +377,17 @@ def analyze(s: Source, st: Stats, samples: int) -> None:
                 st.add("continuation offset", offset)
                 # Where it breaks, as `temper fmt` tells: in a header
                 # (before its body's `{`) at its own depth, offset from its
-                # first line, else anywhere; and lines starting with `;`
-                # or `,`.
+                # first line; in `( )` continuing a statement starting on
+                # the `(` line (`if (a ||`); else anywhere; and lines
+                # starting with `;` or `,`.
                 code = t if t.kind != "Comment" else next((c for c in code_toks if c.start > t.start), t)
                 header = s.headers.get(code.start)
                 if t.text in (";", ",") and t.role[0] == "sep":
                     brk = "starting with a separator"
                 elif header is not None and depth_at.get(header) == level:
                     brk = "in a header"
+                elif top is not None and top[0] == "(" and top[1] == first:
+                    brk = "in parentheses from the ( line"
                 else:
                     brk = "elsewhere"
                 base = line_of_tok[header] if brk == "in a header" else first

@@ -1,6 +1,7 @@
 # `temper fmt` cases for line rules: blank lines, continuation indent
 # (twice in any header, function literals' included, from the header's
-# first line; else once), and lines starting with `;` or `,`.
+# first line, and in parentheses whose contents start on the `(` line, as
+# conditions' do; else once), and lines starting with `;` or `,`.
 # Format and updating: see tests/fmt.rs.
 
 === blank lines are the author's, but runs collapse to one
@@ -200,7 +201,7 @@ let k =
     x
   };
 
-=== continuations inside a header's own brackets indent once
+=== continuations in a header's own brackets: twice in `( )` whose contents start on its line, else once
 let f(x: Int
     | Null): Int {
   1
@@ -215,7 +216,7 @@ let g(
 }
 --- formatted
 let f(x: Int
-  | Null): Int {
+    | Null): Int {
   1
 }
 class C<T extends
@@ -381,13 +382,13 @@ if (1 <= month && month <= 12 &&
 }
 --- formatted
 if (1 <= month && month <= 12 &&
-  1 <= day && (
-    if (month != 2 || day != 29) {
-      day <= daysInMonth[month]
-    } else {
-      isLeapYear(year)
-    }
-  )) {
+    1 <= day && (
+      if (month != 2 || day != 29) {
+        day <= daysInMonth[month]
+      } else {
+        isLeapYear(year)
+      }
+    )) {
   ok();
 }
 
@@ -421,3 +422,189 @@ let f(): Void {
     b,
   );
 }
+
+=== a condition continued in its parentheses indents twice
+class C {
+  let f(): Void {
+    if (JSON_STATE_OPEN_OBJECT == currentState ||
+      JSON_STATE_AFTER_PROPERTY == currentState) {
+      stack.removeLast();
+    } else {
+      wellFormed = false;
+    }
+  }
+}
+--- formatted
+class C {
+  let f(): Void {
+    if (JSON_STATE_OPEN_OBJECT == currentState ||
+        JSON_STATE_AFTER_PROPERTY == currentState) {
+      stack.removeLast();
+    } else {
+      wellFormed = false;
+    }
+  }
+}
+
+=== brackets opened on a condition's continuation line indent from that line
+class C {
+  let f(): Void {
+    if (1 <= month && month <= 12 &&
+      1 <= day && (
+        if (month != 2 || day != 29) {
+          day <= daysInMonth[month]
+        } else {
+          isLeapYear(year)
+        }
+      )) {
+      this.year = year;
+      this.month = month;
+      this.day = day;
+    } else {
+      bubble();
+    }
+  }
+}
+--- formatted
+class C {
+  let f(): Void {
+    if (1 <= month && month <= 12 &&
+        1 <= day && (
+          if (month != 2 || day != 29) {
+            day <= daysInMonth[month]
+          } else {
+            isLeapYear(year)
+          }
+        )) {
+      this.year = year;
+      this.month = month;
+      this.day = day;
+    } else {
+      bubble();
+    }
+  }
+}
+
+=== a condition starting a line of its own after `if (` indents once
+class C {
+  let f(): Void {
+    if (
+      1 <= month && month <= 12 &&
+        1 <= day && (
+          if (month != 2 || day != 29) {
+            day <= daysInMonth[month]
+          } else {
+            isLeapYear(year)
+          }
+        )
+    ) {
+      this.year = year;
+      this.month = month;
+      this.day = day;
+    } else {
+      bubble();
+    }
+  }
+}
+--- formatted
+class C {
+  let f(): Void {
+    if (
+      1 <= month && month <= 12 &&
+        1 <= day && (
+          if (month != 2 || day != 29) {
+            day <= daysInMonth[month]
+          } else {
+            isLeapYear(year)
+          }
+        )
+    ) {
+      this.year = year;
+      this.month = month;
+      this.day = day;
+    } else {
+      bubble();
+    }
+  }
+}
+
+=== in any parentheses whose contents start on the `(` line, continuations indent twice
+while (i < n &&
+  ok) {
+  i += 1;
+}
+for (var i = 0;
+  i < n;
+  i += 1) {
+  f(i);
+}
+for (let x of
+  xs) {
+  g(x);
+}
+when (a ||
+  b) {
+  true -> f();
+  else -> g();
+}
+if (a) {
+  f();
+} else if (b ||
+  c) {
+  g();
+} else if (check(d +
+  e)) {
+  h();
+} else {
+  k();
+}
+do {
+  f();
+} while (a ||
+  b);
+foo(a ||
+  b, c);
+let x = (first +
+  second) * 2;
+let y = list[first +
+  second];
+--- formatted
+while (i < n &&
+    ok) {
+  i += 1;
+}
+for (var i = 0;
+    i < n;
+    i += 1) {
+  f(i);
+}
+for (let x of
+    xs) {
+  g(x);
+}
+when (a ||
+    b) {
+  true -> f();
+  else -> g();
+}
+if (a) {
+  f();
+} else if (b ||
+    c) {
+  g();
+} else if (check(d +
+    e)) {
+  h();
+} else {
+  k();
+}
+do {
+  f();
+} while (a ||
+    b);
+foo(a ||
+    b, c);
+let x = (first +
+    second) * 2;
+let y = list[first +
+  second];

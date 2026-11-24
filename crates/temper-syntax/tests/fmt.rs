@@ -141,6 +141,15 @@ fn mutated_inputs_format_safely() {
             " &&\n",
             "\n  .",
             "\n    extends ",
+            // Control statements' conditions, continued and broken after
+            // `(`, with brackets opened on their continuation lines.
+            "if (a ||\n  b) {\n}",
+            "} else if (a &&\n",
+            "while (a &&\n  (\n    b\n  )) {\n}",
+            "for (a;\n b;\n c) {\n}",
+            "when (x ||\n y) {\n}",
+            " && (\n",
+            "if (\n",
             "\n;",
             "\n, ",
             "\n\n\n",
