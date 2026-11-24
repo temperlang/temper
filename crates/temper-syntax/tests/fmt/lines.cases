@@ -423,6 +423,54 @@ let f(): Void {
   );
 }
 
+=== a comma in a header's supertype list continues the header, twice
+class C extends D,
+E {
+}
+interface I<T> extends A<T>,
+B<T> {}
+class Outer {
+  class Inner extends D,
+      E,
+  F {}
+}
+--- formatted
+class C extends D,
+    E {
+}
+interface I<T> extends A<T>,
+    B<T> {}
+class Outer {
+  class Inner extends D,
+      E,
+      F {}
+}
+
+=== a block on a line of its own after a whole statement starts a statement, as it parses
+f(a)
+  { x }
+let x = 1
+    { y }
+if (c) {
+  g()
+      { z }
+}
+f(a) {
+  x
+}
+--- formatted
+f(a)
+{ x }
+let x = 1
+{ y }
+if (c) {
+  g()
+  { z }
+}
+f(a) {
+  x
+}
+
 === a label on its own line doesn't continue: its statement is next
 outer:
 for (;;) {

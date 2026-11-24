@@ -42,6 +42,21 @@ class C {
   let x: Int;
 }
 
+=== a multi-quoted string's lines indented with tabs stay as written
+if (a) {
+	let s = """
+		"x
+		"y
+	;
+}
+--- formatted
+if (a) {
+  let s = """
+		"x
+		"y
+  ;
+}
+
 === tabs indenting literate code are kept (markdown)
 Prose.
 

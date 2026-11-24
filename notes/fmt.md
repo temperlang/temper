@@ -139,6 +139,13 @@ Notes on the numbers:
   next token can only continue an expression, as infix-only operators
   like `.`, `?.`, `orelse`, `&&` and `==` can ([automatic semicolon
   insertion](../docs/language/syntax.md#automatic-semicolon-insertion)).
+  The other way, a `{ x }` on the line after a whole call `f(a)` is a
+  statement of its own (the parser inserts a `;` between them), so it
+  starts a statement, not a continuation: nodes with only inserted
+  tokens between them start statements as juxtaposed ones do.
+- **Supertype lists:** a comma between supertypes (`extends A,\n B`)
+  continues its header, four spaces from its first line, where other
+  commas outside brackets end a statement.
 - **A line starting with `;` or `,`**, as after a multi-quoted string
   (`let s = """\n  "text\n;`), lines up with the start of what it ends
   (the statement, or the list's item), as a close bracket lines up with
@@ -378,18 +385,27 @@ census shows authors already agree on almost everything else.
   reattached: a comment on its own line is indented like the code
   around it, a trailing comment keeps its space. A multi-line block
   comment's later lines move with its first (doc comments' ` * ` lines),
-  and only if all of them can, but a doc comment's (`/** ... */`)
-  lines starting with `*` line up one column past its `/`, as formatted
-  (the usual ` * ` frame), with what follows each `*` as written. Lines
-  without a `*` move with the first line as before; no stars are added
-  or removed, and no lines joined or split. Before, `*` lines only moved
+  and only if all of them can, but a doc comment's (`/** ... */`) star
+  gutter lines up one column past its `/`, as formatted (the usual
+  ` * ` frame), with what follows each `*` as written. A comment has a
+  gutter when every line after its first that isn't blank starts with
+  `*` after its indentation, its closing `*/` included; in one without,
+  `*` lines are text like any other (bullets, say) and move with the
+  rest, as their nesting would otherwise be lost. A gutter after a tab
+  on its first line stays as written, as spaces can't match a tab's
+  width. No stars are added or removed, and no lines joined or split. Before, `*` lines only moved
   with the first line too, so stars written off that column stayed off
   it (`  *` under `/**`). Only that column changes,
   so the framing's other choices (a `/**` line of its own, stars on
   every line) stay the author's. A comment whose lines can't all move
-  (one would go left of the margin) stays where it is, keeping its lines'
-  indentation relative to each other, which the safety check compares
-  (an ASCII diagram mustn't come apart). Trailing space goes from every
+  (one would go left of the margin, or is indented with a tab, where
+  moving would mix tabs and spaces) stays where it is, its first line's
+  indentation too, keeping its lines' indentation relative to each
+  other, which the safety check compares (an ASCII diagram mustn't come
+  apart). Indentation is spaces and tabs only: other Unicode space (an
+  ideographic space, NBSP) is the comment's text, and moves with it.
+  Likewise a multi-quoted string's line indented with tabs stays as
+  written; others move with the line the string starts on. Trailing space goes from every
   line of a comment, as from code: "trailing spaces go" with no
   exception to explain, and it's never meaningful.
 - **`// fmt: off` regions:** lines after a
@@ -443,7 +459,12 @@ census shows authors already agree on almost everything else.
   with a new one each night.
 - **Line breaks and space-only files:** a file's line breaks stay its
   own; the ones `fmt` adds, and the one at the end, are CRLF if the file
-  has any (mixed files keep each gap's own). A `.temper` file of only
+  has any (mixed files keep each gap's own). A lone `\r` (not before
+  `\n`), a line break to some editors and language clients but not to
+  Temper's lexer, is refused with its line (`FmtError::Unsupported`):
+  the simpler safe choice than counting it as a line break everywhere,
+  which would also have to change the lexer's and the language server's
+  line counting. A `.temper` file of only
   space becomes empty, as one with code has no blank lines at its start
   or end.
 - **Idempotence:** every rule depends on the tokens and on indentation
@@ -459,7 +480,11 @@ census shows authors already agree on almost everything else.
   back per token, which took quadratic time on a 600 KiB line (40k
   statements: 8 s, now well under one). The parser's check for a
   follower (`extends A, B`) counted a long comma list's tokens at each
-  comma, which made 80k-item lists quadratic too.
+  comma, which made 80k-item lists quadratic too. Headers nested in
+  headers (a function literal as a default value in a function's
+  parameters, thousands deep) were quadratic as each token was assigned
+  to every enclosing header; now one sweep with a stack of open headers
+  assigns each token its innermost once.
   `formatting_time_grows_linearly` checks that twice the code takes
   under three times as long, in debug. Finding statements, lists and operators' roles in the tree
   isn't slow: each is one walk over the tree, no searching. In release,
@@ -477,14 +502,42 @@ census shows authors already agree on almost everything else.
 - **Language server:** `textDocument/formatting` and `rangeFormatting`
   format the open text, reusing its unit's parse when that's current,
   and answer with the runs of changed lines (Myers' diff), all of them
-  or those touching a range's lines (a range ending at a line's
+  or those within a range's lines (a range ending at a line's
   character 0, as a selection of whole lines does, leaves that line
-  out). A run is taken whole, even where it goes past the range, and
-  past 500 changed lines the diff stops and everything between the
-  unchanged ends is one run, so a range in such a document formats it
-  all. A document that doesn't parse gets no
-  edits and no error. The VS Code extension formats on save by default
-  (`editor.formatOnSave` for `[temper]` and `[temper-markdown]`).
+  out). A run that keeps its number of lines is clipped to the range
+  line for line; one that joins or splits lines is taken only if the
+  range holds all of it, so `formatOnSaveMode: "modifications"` never
+  touches lines outside what changed. Past 500 changed lines the diff
+  stops and everything between the unchanged ends is one run. Edits'
+  positions are line starts, so only an edit to the end of a last line
+  without a line break counts UTF-16 units. A document formatting
+  refuses (it doesn't parse, a lone `\r`, or a bug) gets no edits and
+  no error, but a `window/showMessage` warning saying why, once per
+  version of the document, so saving again doesn't nag. The VS Code
+  extension formats on save by default (`editor.formatOnSave` for
+  `[temper]` and `[temper-markdown]`).
+- **Writing files:** each is written whole or not at all (a new hidden
+  file beside it, with its permissions, synced, then renamed over it,
+  and removed on any error), so a full disk or a kill mid-run leaves
+  the original. A link named on the command line has its target
+  replaced, staying a link. Files with other hard links (Unix), or in a
+  directory where no file can be added, are written in place, as a new
+  file would split the links or can't be made; read-only files are an
+  error, as before. On Windows `rename` replaces too, but fails if
+  another program holds the file open without sharing deletes. There's
+  no check that the file didn't change between reading and replacing
+  (gofmt and rustfmt don't either). A panic, a bug, costs only its
+  file: the CLI catches it, as the language server does, reports it,
+  and goes on, failing at the end.
+- **The walk** shares the library scanner's ignore and skip rules
+  (`project::{dir_ignores, skipped, scanned_dir, ignores_above}`), reads
+  the ignore files above the directory named up to its git repository's
+  root as `build` does, and skips symbolic links entirely (`build`
+  follows links to files), so `temper fmt` in a checkout never writes
+  outside it. It lists directories itself, as `Sources` doesn't say
+  what's a link. A directory named that `--ignorefile` lists is skipped
+  (not the ignore file's own), and a missing `--ignorefile` is an error
+  whatever's named.
 
 ### Alternatives
 
@@ -546,6 +599,18 @@ comments kept, a space-only file kept, blank lines at a code block's
 edges kept, `{a:1}` left tight; `fmt --check | head` panicking; a range
 ending at character 0 taking the next line; and `UPDATE_SNAPSHOTS=0`
 updating goldens.
+
+The pre-PR code review (2026-11-24) found and this branch fixed: a
+panic on comment lines indented with Unicode space (and a panic or
+error in one file stopping the CLI's run); writes that weren't atomic;
+the walk writing through links to files outside the root; `extends
+A,\n B` and a block after a call on its own line indented wrongly; `*`
+bullets in gutterless doc comments flattened; tab-indented comments and
+strings drifting; lone `\r`s; ignore-file gaps; nested headers'
+quadratic time; silent refusals and range edits past the range in the
+language server; and the docs script's CRLF pages and mixed
+indentation. The VS Code extension's server settings are now
+machine-scoped (a workspace can't pick the binary).
 
 Next: the docs' `<!-- fmt: off -->` blocks could move to a
 `// fmt: off` first line, if wanted.

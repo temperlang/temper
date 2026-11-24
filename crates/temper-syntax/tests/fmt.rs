@@ -92,20 +92,25 @@ fn only_space_changed(input: &str, output: &str, kind: SourceKind) -> Result<(),
     Ok(())
 }
 
-/// A comment's lines without trailing space or their shared indentation.
+/// A comment's lines without trailing space or the indentation (spaces
+/// and tabs) they share; a doc comment's with a star gutter (each line
+/// after the first that isn't blank starting with `*`) without the
+/// gutter's indentation.
 fn comment_lines(comment: &str) -> String {
-    let doc = comment.starts_with("/**");
     let lines: Vec<&str> = comment.split('\n').map(str::trim_end).collect();
-    let starred = |l: &str| doc && l.trim_start().starts_with('*');
+    let indent = |l: &str| l.len() - l.trim_start_matches([' ', '\t']).len();
+    let gutter = comment.starts_with("/**")
+        && (lines.iter().skip(1)).all(|l| l.is_empty() || l[indent(l)..].starts_with('*'));
+    let starred = |l: &str| gutter && l[indent(l)..].starts_with('*');
     let shared = (lines.iter().skip(1))
         .filter(|l| !l.is_empty() && !starred(l))
-        .map(|l| l.len() - l.trim_start().len())
+        .map(|l| indent(l))
         .min()
         .unwrap_or(0);
     (lines.iter().enumerate())
         .map(|(i, l)| match () {
             _ if i == 0 || l.is_empty() => *l,
-            _ if starred(l) => l.trim_start(),
+            _ if starred(l) => &l[indent(l)..],
             _ => &l[shared..],
         })
         .collect::<Vec<_>>()
@@ -228,6 +233,31 @@ fn crlf_files_keep_their_line_breaks() {
     );
 }
 
+/// A lone `\r`, a line break to some editors but not to Temper, is
+/// refused, with a message saying where, rather than formatted as one
+/// line (or edited where an editor counts other lines).
+#[test]
+fn lone_carriage_returns_are_refused() {
+    for (text, kind, line) in [
+        ("let a=1;\rlet b=2;\r", SourceKind::Standalone, 1),
+        ("let a = 1;\r\nlet b = 2;\r", SourceKind::Standalone, 2),
+        ("let s = \"a\rb\";\n", SourceKind::Standalone, 1),
+        ("Prose\rmore.\n\n    let a=1;\n", SourceKind::Markdown, 1),
+    ] {
+        let why = format(text, kind).map_err(|e| e.to_string());
+        let expected = format!("line {line}: a carriage return without a line feed");
+        assert!(
+            why.as_ref().is_err_and(|e| e.contains(&expected)),
+            "{text:?}: {why:?}"
+        );
+    }
+    // CRLF alone is fine.
+    assert_eq!(
+        format("let a=1;\r\n", SourceKind::Standalone).as_deref(),
+        Ok("let a = 1;\r\n")
+    );
+}
+
 /// Formatting time grows linearly with the code, on one long line and in
 /// deep nesting too: formatting twice as much takes well under three times
 /// as long (quadratic work would take four). Each size is timed at its
@@ -243,6 +273,13 @@ fn formatting_time_grows_linearly() {
         "statements on one line" => items(n, |i| format!("let x{i} = {i};"), "") + "\n",
         "nested parentheses" => format!("let x = {}1{};\n", "(".repeat(n), ")".repeat(n)),
         "nested blocks" => format!("{}{}\n", "if (a) {".repeat(n), "}".repeat(n)),
+        // Headers in headers: each function literal a default value in
+        // the parameters of the one around it.
+        "nested headers" => format!(
+            "{}{}\n",
+            items(n, |i| format!("let f{i}(a: Int = fn {{ "), ""),
+            "}) {} ".repeat(n)
+        ),
         _ => "// c\n".repeat(4 * n) + "x;\n",
     };
     let inputs = [
@@ -250,6 +287,7 @@ fn formatting_time_grows_linearly() {
         "statements on one line",
         "nested parentheses",
         "nested blocks",
+        "nested headers",
         "comment lines",
     ];
     for what in inputs {
@@ -334,7 +372,11 @@ fn repo_files_format_safely() {
         match format_checked(&text, kind) {
             Ok(_) => formatted += 1,
             // Some test inputs are deliberately malformed.
-            Err(_) if matches!(format(&text, kind), Err(FmtError::Unparseable(_))) => {}
+            Err(_)
+                if matches!(
+                    format(&text, kind),
+                    Err(FmtError::Unparseable(_) | FmtError::Unsupported(_))
+                ) => {}
             Err(e) => failures.push(format!("{}: {e}", path.display())),
         }
     }
@@ -414,6 +456,16 @@ fn mutated_inputs_format_safely() {
             "\n// fmt: off\n",
             "\n  // fmt: on\n",
             "\n/**\n   * d\n *  e\n f\n  */\n",
+            // Whitespace other than spaces, tabs leading comment lines,
+            // and doc comments with and without a star gutter.
+            "\u{3000}",
+            "\u{a0}",
+            "\u{2003}",
+            "/*\n\t x\n */",
+            "\n/**\n\t * a\n\t */\n",
+            "\n/**\n  a\n    * b\n */\n",
+            "\t\"",
+            "\r",
         ])
         .copied()
         .collect();
@@ -440,7 +492,9 @@ fn mutated_inputs_format_safely() {
                         )
                     };
                     for kind in [SourceKind::Standalone, SourceKind::Markdown] {
-                        if let Err(FmtError::Unparseable(_)) = format(&text, kind) {
+                        if let Err(FmtError::Unparseable(_) | FmtError::Unsupported(_)) =
+                            format(&text, kind)
+                        {
                             refused += 1;
                             continue;
                         }

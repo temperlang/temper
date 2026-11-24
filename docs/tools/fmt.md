@@ -43,7 +43,9 @@ if (ok) {
 ```
 
 A line that continues a statement indents two spaces from the
-statement's first line.
+statement's first line. One that starts a statement doesn't, as a
+`{ x }` block on the line after a whole call `f(a)` does (the line break
+ends the call, so the block isn't its argument).
 
 ```temper inert
 let ready = loaded &&
@@ -57,7 +59,9 @@ what follows: in a header (a class's, interface's, function's, or
 function literal's, before the `{` of its body), from the line the
 header starts on; and in parentheses whose contents start on the `(`
 line, as a condition's do, from that line (break right after the `(`,
-and they indent two from their own first line, as above). Brackets
+and they indent two from their own first line, as above). A comma
+between supertypes (`extends A,` then `B` on the next line) continues
+the header too. Brackets
 opened on such a line indent their contents from it, but a body from its
 header's first line.
 
@@ -157,11 +161,15 @@ a multi-quoted string as an item keeps its line breaks.
 - Line breaks outside lists.
 - Comments' text, apart from trailing spaces. A comment on its own line
   indents like the code around it, its lines moving together, unless
-  that would take one left of the margin: then it stays where it is. In
-  a doc comment over several lines, `/** ... */`, each line starting
-  with `*` lines up one column past the `/`, with what follows the `*`
-  as written.
-- Strings.
+  that would take one left of the margin, or one of its lines is
+  indented with tabs (moving would mix tabs and spaces): then it stays
+  where it is. A doc comment over several lines, `/** ... */`, with a
+  star gutter (every line after the first that isn't blank starts with
+  `*`, the closing `*/` too) has its `*` lines one column past the `/`,
+  with what follows each `*` as written. In one without a gutter, lines
+  starting with `*`, such as bullets, move with the rest.
+- Strings. A multi-quoted string's lines move with the line it starts
+  on, but lines indented with tabs stay as written.
 - Prose in `.temper.md` files: only Temper code blocks change.
 
 ## Turning it off
@@ -186,20 +194,35 @@ let sizes = [
 
 ## What it refuses
 
-Code that doesn't parse is left as written, with an error. `fmt` also
-checks its own work: if formatting would change a file's tokens,
-comments, or parse tree, it leaves the file alone and says so.
+Code that doesn't parse is left as written, with an error, as is a
+file with a carriage return not followed by a line feed (a line break to
+some editors but not to Temper; `fmt` takes `\n` and `\r\n`). `fmt`
+also checks its own work: if formatting would change a file's tokens,
+comments, or parse tree, it leaves the file alone and says so. A bug
+that stops formatting a file costs only that file: `fmt` reports it and
+goes on.
+
+Each file is written whole or not at all: the formatted text goes to a
+new file beside it, with its permissions, which then replaces it. A
+file with other hard links is written in place instead, so they all
+see the change, as is one in a directory where no file can be added. A
+read-only file is an error.
 
 ## What it leaves out
 
 Under a directory, `fmt` skips `temper.out`, `temper.keep`, hidden
-directories, and what `.gitignore` and `.temperignore` files list, and
-doesn't follow links to directories, as `build` does. To
+directories, and what `.gitignore` and `.temperignore` files list, in
+it and above it up to its git repository's root, as `build` does. It
+skips symbolic links too, to files as to directories, so a link in a
+checkout can't make it write outside; a link named on the command line
+formats the file it links to. To
 keep more as written, such as a golden test's input or code that
 doesn't parse on purpose, list it in a file of gitignore patterns,
 relative to that file's directory, and name it with `--ignorefile`
-([ignore files](cli.md#ignore-files)); a file named on the command
-line is formatted all the same. For a check in CI, with this
+([ignore files](cli.md#ignore-files)). A directory named that it lists
+is skipped too (but not its own directory, where its patterns start); a
+file named on the command line is formatted all the same. For a check
+in CI, with this
 `.fmtignore`:
 
 ```gitignore

@@ -100,11 +100,16 @@ Formatting isn't a query of `Analysis`: it's
 [`temper fmt`](../../notes/fmt.md)'s, over the open text alone, reusing
 its unit's parse when that's current. Its edits are the runs of changed
 lines ([`line_edits`](../../crates/temper-lsp/src/lib.rs), Myers' diff),
-for the whole document or those touching a range's lines (each run
-whole; a range ending at a line's character 0 leaves that line out, as
-a selection of whole lines ends there); a document that doesn't
-parse gets none, and no error, so formatting on save stays quiet while
-code is half written. The VS Code extension formats on save by default.
+for the whole document or those within a range's lines
+([`clip`](../../crates/temper-lsp/src/lib.rs): a run that keeps its
+number of lines line for line, one that joins or splits lines only if
+the range holds all of it; a range ending at a line's character 0
+leaves that line out, as a selection of whole lines ends there), so
+`formatOnSaveMode: "modifications"` touches only what changed. A
+document formatting refuses (it doesn't parse, say) gets no edits and
+no error, but a `window/showMessage` warning saying why, once for each
+version of the document. The VS Code extension formats on save by
+default.
 
 How a query finds what's at a position:
 [temper-analysis, in detail](detail/09-language-server.md#finding-whats-at-a-position).

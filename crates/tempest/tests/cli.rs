@@ -2028,3 +2028,179 @@ fn fmt_ignorefile() {
     assert!(err.contains("missing"), "{err}");
     let _ = fs::remove_dir_all(&dir);
 }
+
+/// A bug in the formatter (a panic) costs only its file: `temper fmt`
+/// reports it, goes on with the rest, and fails at the end. The panic
+/// comes from a hook in debug builds (`TEMPER_TEST_FMT_PANIC_ON`). A
+/// comment indented with an ideographic space, which once panicked, is
+/// formatted.
+#[test]
+fn fmt_survives_a_panic() {
+    if !cfg!(debug_assertions) {
+        return;
+    }
+    let dir = std::env::temp_dir().join(format!("tempest-cli-{}-fmt-panic", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    let messy = "let x=1;\n";
+    fs::write(dir.join("a.temper"), messy).unwrap();
+    fs::write(dir.join("b.temper"), "let x=1; // BOOM\n").unwrap();
+    fs::write(dir.join("c.temper"), messy).unwrap();
+    fs::write(dir.join("u.temper"), "x;\n/*\n\u{3000}a\n b */\ny ;\n").unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_temper"))
+        .arg("fmt")
+        .arg(&dir)
+        .env("TEMPER_TEST_FMT_PANIC_ON", "BOOM")
+        .output()
+        .unwrap();
+    let err = String::from_utf8(output.stderr).unwrap();
+    assert_eq!(output.status.code(), Some(1), "{err}");
+    let read = |name: &str| fs::read_to_string(dir.join(name)).unwrap();
+    assert_eq!(read("a.temper"), "let x = 1;\n");
+    assert_eq!(read("b.temper"), "let x=1; // BOOM\n");
+    assert_eq!(read("c.temper"), "let x = 1;\n");
+    assert_eq!(read("u.temper"), "x;\n/*\n\u{3000}a\n b */\ny;\n");
+    let b = dir.join("b.temper").to_string_lossy().to_string();
+    assert!(
+        err.contains(&format!("temper fmt: {b}: internal error")),
+        "{err}"
+    );
+    let _ = fs::remove_dir_all(&dir);
+}
+
+/// `temper fmt` writes a file whole or not at all: the formatted text goes
+/// to a new file beside it, with its permissions, which then replaces it
+/// (a new inode), leaving no temporary file. A file with other hard links
+/// is written in place, so every name sees the change; a link named on the
+/// command line formats the file it links to, staying a link.
+#[cfg(unix)]
+#[test]
+fn fmt_writes_atomically() {
+    use std::os::unix::fs::{MetadataExt, PermissionsExt};
+    let dir = std::env::temp_dir().join(format!("tempest-cli-{}-fmt-atomic", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(dir.join("in")).unwrap();
+    let messy = "let x=1;\n";
+    let tidy = "let x = 1;\n";
+    let path = |name: &str| dir.join(name);
+    for name in ["in/plain.temper", "in/hard.temper", "target.temper"] {
+        fs::write(path(name), messy).unwrap();
+    }
+    fs::set_permissions(path("in/plain.temper"), fs::Permissions::from_mode(0o751)).unwrap();
+    fs::hard_link(path("in/hard.temper"), path("hard-too.temper")).unwrap();
+    std::os::unix::fs::symlink("../target.temper", path("in/link.temper")).unwrap();
+    let inode = |name: &str| fs::metadata(path(name)).unwrap().ino();
+    let (plain, hard) = (inode("in/plain.temper"), inode("in/hard.temper"));
+
+    let args = |names: &[&str]| -> Vec<String> {
+        let mut args = vec!["fmt".to_string()];
+        args.extend(names.iter().map(|n| path(n).to_string_lossy().to_string()));
+        args
+    };
+    let named = args(&["in/plain.temper", "in/hard.temper", "in/link.temper"]);
+    let named: Vec<&str> = named.iter().map(String::as_str).collect();
+    let (code, out, err) = tempest(&named);
+    assert_eq!(code, 0, "{out}{err}");
+    let read = |name: &str| fs::read_to_string(path(name)).unwrap();
+    assert_eq!(read("in/plain.temper"), tidy);
+    assert_ne!(inode("in/plain.temper"), plain, "replaced, not rewritten");
+    let mode = fs::metadata(path("in/plain.temper")).unwrap().mode();
+    assert_eq!(mode & 0o777, 0o751);
+    assert_eq!(
+        (read("in/hard.temper"), read("hard-too.temper")),
+        (tidy.into(), tidy.into())
+    );
+    assert_eq!(inode("in/hard.temper"), hard);
+    assert_eq!(read("target.temper"), tidy);
+    let link = fs::symlink_metadata(path("in/link.temper")).unwrap();
+    assert!(link.file_type().is_symlink());
+    let mut names: Vec<String> = fs::read_dir(path("in"))
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().to_string())
+        .collect();
+    names.sort();
+    assert_eq!(names, ["hard.temper", "link.temper", "plain.temper"]);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+/// The walk skips symbolic links, to files as to directories, so a link
+/// in a checkout can't make `temper fmt` write outside it; a link named on
+/// the command line is formatted (`fmt_writes_atomically`).
+#[cfg(unix)]
+#[test]
+fn fmt_walk_skips_links_to_files() {
+    let dir = std::env::temp_dir().join(format!("tempest-cli-{}-fmt-links", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(dir.join("root")).unwrap();
+    fs::create_dir_all(dir.join("outside")).unwrap();
+    let messy = "let x=1;\n";
+    fs::write(dir.join("outside/secret.temper"), messy).unwrap();
+    fs::write(dir.join("root/own.temper"), messy).unwrap();
+    std::os::unix::fs::symlink("../outside/secret.temper", dir.join("root/link.temper")).unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_temper"))
+        .arg("fmt")
+        .current_dir(dir.join("root"))
+        .output()
+        .unwrap();
+    let err = String::from_utf8(output.stderr).unwrap();
+    assert_eq!(output.status.code(), Some(0), "{err}");
+    let read = |name: &str| fs::read_to_string(dir.join(name)).unwrap();
+    assert_eq!(read("root/own.temper"), "let x = 1;\n");
+    assert_eq!(read("outside/secret.temper"), messy);
+    let _ = fs::remove_dir_all(&dir);
+}
+
+/// Ignore files and the directories named: a directory named is skipped
+/// if `--ignorefile` lists it, but not by the ignore file's own directory;
+/// `.gitignore`s above a directory named, up to its git repository's
+/// root, apply as `build`'s do; and a missing `--ignorefile` is an error
+/// with files named too.
+#[test]
+fn fmt_ignores_and_named_directories() {
+    let dir = std::env::temp_dir().join(format!("tempest-cli-{}-fmt-named", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    for sub in ["proj/.git", "proj/a", "proj/src/gen"] {
+        fs::create_dir_all(dir.join(sub)).unwrap();
+    }
+    let messy = "let x=1;\n";
+    for name in [
+        "proj/a/x.temper",
+        "proj/src/s.temper",
+        "proj/src/gen/g.temper",
+    ] {
+        fs::write(dir.join(name), messy).unwrap();
+    }
+    fs::write(dir.join("proj/.fmtignore"), "/a/\n").unwrap();
+    fs::write(dir.join("proj/.gitignore"), "src/gen/\n").unwrap();
+    let path = |name: &str| dir.join(name).to_string_lossy().to_string();
+    let ignorefile = path("proj/.fmtignore");
+
+    let (code, out, err) = tempest(&[
+        "fmt",
+        "--check",
+        "--ignorefile",
+        &ignorefile,
+        &path("proj/a"),
+    ]);
+    assert_eq!((code, out.as_str()), (0, ""), "{err}");
+    assert_eq!(err, "temper fmt: 0 files checked, 0 need formatting\n");
+    // The ignore file's own directory is the root its patterns are from.
+    let (code, out, err) = tempest(&["fmt", "--check", "--ignorefile", &ignorefile, &path("proj")]);
+    assert_eq!(code, 1, "{err}");
+    assert_eq!(out.lines().collect::<Vec<_>>(), [path("proj/src/s.temper")]);
+    // The repository's .gitignore, above `src`.
+    let (code, out, err) = tempest(&["fmt", "--check", &path("proj/src")]);
+    assert_eq!(code, 1, "{err}");
+    assert_eq!(out.lines().collect::<Vec<_>>(), [path("proj/src/s.temper")]);
+    // A missing ignore file, with only a file named.
+    let (code, _, err) = tempest(&[
+        "fmt",
+        "--check",
+        "--ignorefile",
+        &path("nope"),
+        &path("proj/src/s.temper"),
+    ]);
+    assert_eq!(code, 1, "{err}");
+    assert!(err.contains("nope"), "{err}");
+    let _ = fs::remove_dir_all(&dir);
+}

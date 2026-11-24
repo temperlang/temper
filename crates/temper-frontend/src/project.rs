@@ -329,10 +329,61 @@ pub fn ignore_file(sources: &Sources, root: &str, path: &str) -> Result<IgnoreFi
     Ok(IgnoreFile::parse("", scanned(&root), ""))
 }
 
+/// Whether the ignore file at `path` (`--ignorefile`'s) lists the
+/// directory `dir` itself, as a scan of its parent would see it. The
+/// ignore file's own directory is never listed, as its patterns start
+/// there. The error says why the file can't be read.
+pub fn ignore_file_lists(sources: &Sources, path: &str, dir: &str) -> Result<bool, String> {
+    let Ok(absolute) = std::path::absolute(slashed(dir)) else {
+        return Ok(false);
+    };
+    let absolute = normalize(&slashed(&absolute.to_string_lossy()));
+    let absolute = absolute.trim_end_matches('/');
+    let Some((parent, _)) = absolute.rsplit_once('/').filter(|(p, _)| !p.is_empty()) else {
+        return Ok(false);
+    };
+    let file = ignore_file(sources, parent, path)?;
+    Ok(file.decides(absolute, true) == Some(true))
+}
+
+/// Whether ignore files say to skip `path`, as a scan names it: `extra`
+/// (`--ignorefile`'s) has the last word, then `ignores`, outermost first.
+pub fn skipped(
+    ignores: &[IgnoreFile],
+    extra: Option<&IgnoreFile>,
+    path: &str,
+    is_dir: bool,
+) -> bool {
+    (extra.and_then(|f| f.decides(path, is_dir)))
+        .unwrap_or_else(|| ignore::ignored(ignores, path, is_dir))
+}
+
+/// Whether a scan goes into a directory by its name: not hidden ones,
+/// `temper.out` or `temper.keep`.
+pub fn scanned_dir(name: &str) -> bool {
+    !(name.starts_with('.') || name == "temper.out" || name == "temper.keep")
+}
+
+/// The ignore files of a directory with these entries, as a scan from
+/// `start` names it ([`scan_start`]), in [`IGNORE_FILES`]' order.
+pub fn dir_ignores(
+    sources: &Sources,
+    dir: &str,
+    start: &str,
+    entries: &[Entry],
+) -> Vec<IgnoreFile> {
+    (IGNORE_FILES.iter())
+        .filter(|&&name| entries.iter().any(|e| e.name == name && !e.is_dir))
+        .filter_map(|name| sources.read(&format!("{dir}/{name}")).ok())
+        .map(|text| IgnoreFile::parse(&text, start, ""))
+        .collect()
+}
+
 /// The ignore files above the work root, outermost first, up to its git
 /// repository's root, the nearest directory holding `.git`: none outside
 /// one, or for a work root that is one.
-fn ignores_above(sources: &Sources, root: &str) -> Vec<IgnoreFile> {
+pub fn ignores_above(sources: &Sources, root: &str) -> Vec<IgnoreFile> {
+    let root = &normalize(&slashed(root));
     let has = |dir: &str, name: &str| {
         (sources.list(dir).unwrap_or_default().iter()).any(|e| e.name == name)
     };
@@ -396,27 +447,15 @@ impl Scan<'_> {
     fn scan(&mut self, dir: &str, library: Option<usize>) {
         let sources = self.sources;
         let mut entries = sources.list(dir).unwrap_or_default();
-        let mut own = 0;
-        for name in IGNORE_FILES {
-            if entries.iter().any(|e| e.name == name && !e.is_dir) {
-                if let Ok(text) = sources.read(&format!("{dir}/{name}")) {
-                    self.ignores
-                        .push(IgnoreFile::parse(&text, scanned(dir), ""));
-                    own += 1;
-                }
-            }
-        }
+        let found = dir_ignores(sources, dir, scanned(dir), &entries);
+        let own = found.len();
+        self.ignores.extend(found);
         let path_of = |name: &str| match dir {
             "." => name.to_string(),
             _ => format!("{dir}/{name}"),
         };
         let (ignores, extra) = (&*self.ignores, self.extra);
-        entries.retain(|e| {
-            let path = path_of(&e.name);
-            let skip = (extra.and_then(|f| f.decides(&path, e.is_dir)))
-                .unwrap_or_else(|| ignore::ignored(ignores, &path, e.is_dir));
-            !skip
-        });
+        entries.retain(|e| !skipped(ignores, extra, &path_of(&e.name), e.is_dir));
         let library = if (entries.iter()).any(|e| e.name == CONFIG_FILE && !e.is_dir) {
             self.libraries.push(LibrarySources {
                 root: dir.to_string(),
@@ -431,7 +470,7 @@ impl Scan<'_> {
         for Entry { name, is_dir } in entries {
             let path = path_of(&name);
             if is_dir {
-                if !(name.starts_with('.') || name == "temper.out" || name == "temper.keep") {
+                if scanned_dir(&name) {
                     self.scan(&path, library);
                 }
             } else if let Some(i) = library {
@@ -501,6 +540,12 @@ pub fn load_imports(sources: &Sources, library: &mut Library) {
 /// Whether a file name is a Temper source's.
 pub fn is_source(name: &str) -> bool {
     name.ends_with(".temper") || name.ends_with(".temper.md")
+}
+
+/// A file's kind by its name if it's a Temper source, as `temper fmt` and
+/// the language server's formatting decide, else `None`.
+pub fn file_kind(path: &str) -> Option<SourceKind> {
+    is_source(path).then(|| source_kind(path))
 }
 
 /// How to read a source: literate markdown, or plain Temper.

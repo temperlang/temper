@@ -35,6 +35,7 @@ fail it, and, with BIN, a page of examples of each kind of block.
 """
 
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -53,9 +54,24 @@ CANARY = ("let x=1;\n", "let x = 1;\n")
 
 
 def indent(body: str) -> str:
-    """The indentation a block's code lines all start with."""
+    """The indentation a block's code lines all start with: their
+    indentations' common prefix, as tabs and spaces may mix."""
     lines = [ln for ln in body.splitlines() if ln.strip()]
-    return min((ln[:len(ln) - len(ln.lstrip())] for ln in lines), key=len, default="")
+    return os.path.commonprefix([ln[:len(ln) - len(ln.lstrip())] for ln in lines])
+
+
+def read_page(page: Path) -> tuple[str, bool]:
+    """A page's text, and whether its line breaks are all `\\r\\n`: then
+    they're `\\n` here, and writing it puts them back. A page that mixes
+    them stays as read (its CRLF blocks don't match `FENCE`, so are left
+    alone), so no line break ever changes."""
+    text = page.read_bytes().decode("utf-8")
+    crlf = 0 < text.count("\r\n") == text.count("\n")
+    return (text.replace("\r\n", "\n") if crlf else text), crlf
+
+
+def write_page(page: Path, text: str, crlf: bool) -> None:
+    page.write_bytes((text.replace("\n", "\r\n") if crlf else text).encode("utf-8"))
 
 
 def kept(text: str, fence: int) -> bool:
@@ -110,7 +126,7 @@ def main(argv: list[str] | None = None) -> int:
     blocks = []
     off = 0
     for page in pages(args.paths):
-        text = page.read_text("utf-8")
+        text, _ = read_page(page)
         for m in FENCE.finditer(text):
             if kept(text, m.start()) or off_inside(m.group(2)):
                 off += 1
@@ -165,10 +181,10 @@ def main(argv: list[str] | None = None) -> int:
             changed.setdefault(page, []).append((m.start(2), m.end(2), new))
     if not args.check:
         for page, edits in changed.items():
-            text = page.read_text("utf-8")
+            text, crlf = read_page(page)
             for start, end, new in reversed(edits):
                 text = text[:start] + new + text[end:]
-            page.write_text(text, "utf-8")
+            write_page(page, text, crlf)
     for p in problems:
         print(p)
     count = sum(len(e) for e in changed.values())
@@ -227,8 +243,8 @@ def self_test(temper: Path | None) -> int:
     with tempfile.TemporaryDirectory() as tmp:
         page = Path(tmp, "page.md")
 
-        def run(binary: Path, *flags: str) -> subprocess.CompletedProcess:
-            page.write_text(PAGE, "utf-8")
+        def run(binary: Path, *flags: str, text: str = PAGE) -> subprocess.CompletedProcess:
+            page.write_bytes(text.encode("utf-8"))
             return subprocess.run(
                 [sys.executable, __file__, *flags, "--temper", str(binary), str(page)],
                 capture_output=True, text=True)
@@ -258,6 +274,16 @@ def self_test(temper: Path | None) -> int:
             if result.returncode != 0 or page.read_text("utf-8") != FORMATTED:
                 failures.append(f"formatting: exit {result.returncode}\n{result.stdout}"
                                 f"{page.read_text('utf-8')}")
+            # A page with CRLF line breaks keeps them, everywhere.
+            crlf = (PAGE.replace("\n", "\r\n"), FORMATTED.replace("\n", "\r\n"))
+            result = run(temper, text=crlf[0])
+            if result.returncode != 0 or page.read_bytes() != crlf[1].encode("utf-8"):
+                failures.append(f"CRLF: exit {result.returncode}\n{result.stdout}"
+                                f"{page.read_bytes()!r}")
+    # Indentation is what all of a block's lines start with.
+    for body, want in [("  a\n    b\n", "  "), ("\tx\n  y\n", ""), ("\t a\n\t  b\n", "\t "), ("", "")]:
+        if indent(body) != want:
+            failures.append(f"indent({body!r}) is {indent(body)!r}, not {want!r}")
     for f in failures:
         print(f"self-test: {f}")
     print(f"self-test: {'failed' if failures else 'passed'}"

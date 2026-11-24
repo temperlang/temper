@@ -141,6 +141,9 @@ pub enum FmtError {
     /// Formatting would have changed the code's tokens, tree, comments or
     /// prose: a bug in the formatter.
     Unsafe(String),
+    /// The source has what the formatter doesn't take: a lone `\r`, a
+    /// line break to some editors but not to Temper.
+    Unsupported(String),
 }
 
 impl fmt::Display for FmtError {
@@ -151,6 +154,7 @@ impl fmt::Display for FmtError {
                 f,
                 "formatting would change the code ({why}); left as written (a bug in temper fmt)"
             ),
+            FmtError::Unsupported(why) => write!(f, "{why}; left as written"),
         }
     }
 }
@@ -173,6 +177,13 @@ pub fn format_with(
     kind: SourceKind,
     options: Options,
 ) -> Result<String, FmtError> {
+    if let Some(at) = lone_carriage_return(parsed.source()) {
+        let line = parsed.source()[..at].matches('\n').count() + 1;
+        return Err(FmtError::Unsupported(format!(
+            "line {line}: a carriage return without a line feed after it \
+             (temper fmt takes line breaks as \\n or \\r\\n)"
+        )));
+    }
     if let Some(why) = first_error(parsed) {
         return Err(FmtError::Unparseable(why));
     }
@@ -180,6 +191,16 @@ pub fn format_with(
     let text = Formatter::new(parsed, &ranges, kind, options).run();
     check_same(parsed, &text, kind)?;
     Ok(text)
+}
+
+/// Where the first `\r` not followed by `\n` is, if any. Editors and
+/// language clients may count it as a line break, which Temper doesn't,
+/// so formatting refuses rather than disagree about lines.
+fn lone_carriage_return(source: &str) -> Option<usize> {
+    let bytes = source.as_bytes();
+    (bytes.iter().enumerate())
+        .find(|&(i, &b)| b == b'\r' && bytes.get(i + 1) != Some(&b'\n'))
+        .map(|(i, _)| i)
 }
 
 /// The first lexing or parsing error, as `line N: what`.
@@ -392,13 +413,14 @@ fn roles(parsed: &Parsed) -> HashMap<u32, (Role, Operator)> {
 /// body (`class C extends D {`, `fn (): Int throws Bubble {`), where a
 /// continuation line indents twice to tell it from the body. The first
 /// token is left out (a line starting with it continues what's before),
-/// and a token in nested headers gets the innermost.
+/// and a token in nested headers gets the innermost, each token assigned
+/// once, so nesting costs no more per token.
 fn headers(parsed: &Parsed, tokens: &[Token]) -> (HashMap<u32, u32>, HashMap<u32, u32>) {
     use Operator::*;
     let tree = parsed.tree();
-    // Parents come off the stack before their children, so inner headers
-    // overwrite outer ones.
-    let mut starts = HashMap::new();
+    // Each header's tokens, as a range of indices, with its first token's
+    // start. Headers nest or are apart, as they're nodes of the tree.
+    let mut spans: Vec<(usize, usize, u32)> = Vec::new();
     let mut braces = HashMap::new();
     let mut stack = vec![parsed.root()];
     while let Some(id) = stack.pop() {
@@ -428,28 +450,58 @@ fn headers(parsed: &Parsed, tokens: &[Token]) -> (HashMap<u32, u32>, HashMap<u32
         };
         if declares {
             let to = tokens.partition_point(|t| t.start <= brace.start);
-            starts.extend(tokens[from + 1..to].iter().map(|t| (t.start, start)));
+            if from + 1 < to {
+                spans.push((from + 1, to, start));
+            }
             braces.insert(start, brace.start);
+        }
+    }
+    // One sweep over the tokens, with the headers open at each, outer
+    // ones first, so each token gets the innermost.
+    spans.sort_by_key(|&(from, to, _)| (from, std::cmp::Reverse(to)));
+    let mut starts = HashMap::new();
+    let mut open: Vec<(usize, u32)> = Vec::new();
+    let mut next = spans.iter().peekable();
+    let end = spans.iter().map(|s| s.1).max().unwrap_or(0);
+    for (i, token) in tokens.iter().enumerate().take(end) {
+        while open.last().is_some_and(|&(to, _)| to <= i) {
+            open.pop();
+        }
+        while let Some(&(_, to, start)) = next.next_if(|s| s.0 == i) {
+            open.push((to, start));
+        }
+        if let Some(&(_, start)) = open.last() {
+            starts.insert(token.start, start);
         }
     }
     (starts, braces)
 }
 
-/// Where nodes start that follow another node directly, as statements
-/// without a `;` between them do (`f()` and `g()` on lines of their own).
+/// Where nodes start that follow another node directly, or with only
+/// tokens the parser inserted between them, as statements without a `;`
+/// written between them do (`f()` and `g()` on lines of their own, or
+/// `f(a)` and a `{ x }` on the next line, which the line break makes a
+/// statement of its own, not a block argument).
 fn juxtaposed(parsed: &Parsed) -> HashSet<u32> {
     let tree = parsed.tree();
     let mut starts = HashSet::new();
     let mut stack = vec![parsed.root()];
     while let Some(id) = stack.pop() {
         let children = tree.children(id);
-        let is_node = |c: NodeId| tree.kind(c) != NodeKind::Token;
-        for w in children.windows(2) {
-            if is_node(w[0]) && is_node(w[1]) {
-                starts.extend(first_token(parsed, w[1]));
+        let mut after_node = false;
+        for &c in children {
+            match parsed.token(c) {
+                Some(t) if t.synthetic => {}
+                Some(_) => after_node = false,
+                None => {
+                    if after_node {
+                        starts.extend(first_token(parsed, c));
+                    }
+                    after_node = true;
+                    stack.push(c);
+                }
             }
         }
-        stack.extend(children.iter().copied().filter(|&c| is_node(c)));
     }
     starts
 }
@@ -728,6 +780,9 @@ struct Formatter<'a> {
     line_depth: usize,
     /// Whether the last line with code was a decorator line.
     after_decorator: bool,
+    /// Whether the current line's indentation stays as written: a block
+    /// comment's that can't move.
+    keep_indent: bool,
     /// How far the line that opened the last multi-quoted string moved,
     /// which its content lines move too.
     string_shift: i32,
@@ -814,6 +869,7 @@ impl<'a> Formatter<'a> {
             line_is_decorator: false,
             line_depth: 0,
             after_decorator: false,
+            keep_indent: false,
             string_shift: 0,
             options,
             newline: if parsed.source().contains("\r\n") {
@@ -1180,8 +1236,11 @@ impl<'a> Formatter<'a> {
         // may be a bracket.
         let rest = &source[next.start as usize..];
         let fence = !self.standalone && (rest.starts_with("```") || rest.starts_with("~~~"));
+        // A string's line indented with tabs stays, as moving it would mix
+        // tabs and spaces.
+        let string_line = matches!(next.kind, TokenKind::Margin | TokenKind::QuotedString);
         let keep = actual < 0
-            || (!self.standalone && indent.contains('\t'))
+            || ((!self.standalone || string_line) && indent.contains('\t'))
             || fence
             || self.text(next) == "<";
         // An indented code block's first line, right after a list item,
@@ -1191,7 +1250,7 @@ impl<'a> Formatter<'a> {
             .flatten()
             .map(|c| c - range.margin);
         let formatted = self.line_start(next, Some(actual), keep, below);
-        if keep {
+        if keep || self.keep_indent {
             self.out.push_str(&indent[written as usize..]);
         } else {
             for _ in 0..range.margin + formatted - written {
@@ -1274,19 +1333,25 @@ impl<'a> Formatter<'a> {
             formatted
         };
         // A multi-line block comment moves only if all its lines can.
+        // Its lines can't move if one would go left of the margin, or if one
+        // is indented with tabs, which moving would mix with spaces; then
+        // its first line's indentation stays as written too.
+        self.keep_indent = false;
         let formatted = if first.kind == TokenKind::Comment && text.contains('\n') {
             let shift = formatted - actual;
             // In markdown, its lines must stay in the code block.
             let margin = self.range_of(first.start).map_or(0, |r| r.margin);
-            // A doc comment's lines starting with `*` follow its first.
-            let doc = is_doc(text);
+            // A star gutter's lines follow its first.
+            let gutter = has_gutter(text);
             let fits = text.split('\n').skip(1).all(|line| {
-                let rest = line.trim_start_matches(' ');
-                let indent = line.len() - rest.len();
+                let indent = indentation(line);
+                let rest = &line[indent.len()..];
                 line.trim().is_empty()
-                    || (doc && rest.starts_with('*'))
-                    || indent as i32 + shift >= margin
+                    || (gutter && rest.starts_with('*'))
+                    || (!indent.contains('\t') && indent.len() as i32 + shift >= margin)
+                    || shift == 0
             });
+            self.keep_indent = !fits;
             if fits { formatted } else { actual }
         } else {
             formatted
@@ -1346,9 +1411,18 @@ impl<'a> Formatter<'a> {
         let label = self
             .role(previous)
             .is_some_and(|r| r.1 == Operator::LowColon);
+        // A comma between supertypes (`extends A,\n B`) continues the
+        // header.
+        let supertypes = self
+            .role(previous)
+            .is_some_and(|r| r.1 == Operator::ExtendsComma);
         let ends = match self.stack.last() {
             Some(o) if o.round => text == "," || (text == ";" && o.contents_own_line),
-            _ => label || matches!(text, ";" | ";;" | "{" | "}" | "," | "=>"),
+            _ => {
+                label
+                    || matches!(text, ";" | ";;" | "{" | "}" | "=>")
+                    || (text == "," && !supertypes)
+            }
         };
         if ends {
             return None;
@@ -1388,12 +1462,12 @@ impl<'a> Formatter<'a> {
             } else {
                 0
             };
-            // A doc comment's lines starting with `*` put it one column past
-            // its `/`, as written after it.
-            let column = self.out[self.out.rfind('\n').map_or(0, |i| i + 1)..]
-                .chars()
-                .count();
-            let star = (is_doc(text) && !kept).then_some(column + 1);
+            // A star gutter's lines put it one column past its `/`, as
+            // written after it, unless a tab comes before it on its line,
+            // whose width spaces can't match: then they stay as written.
+            let before = &self.out[self.out.rfind('\n').map_or(0, |i| i + 1)..];
+            let column = before.chars().count();
+            let star = (has_gutter(text) && !kept && !before.contains('\t')).then_some(column + 1);
             // Its lines without trailing space, unless kept (or prose).
             let trim = !kept && starts_comment(text);
             let put = |out: &mut String, line: &str| match trim {
@@ -1404,7 +1478,8 @@ impl<'a> Formatter<'a> {
             put(&mut self.out, lines.next().unwrap());
             for line in lines {
                 self.out.push('\n');
-                let rest = line.trim_start_matches(' ');
+                let indent = indentation(line);
+                let rest = &line[indent.len()..];
                 if let Some(star) = star.filter(|_| rest.starts_with('*')) {
                     self.out.extend(std::iter::repeat_n(' ', star));
                     put(&mut self.out, rest);
@@ -1414,11 +1489,12 @@ impl<'a> Formatter<'a> {
                     put(&mut self.out, line);
                     continue;
                 }
-                let indent = (line.len() - line.trim_start_matches(' ').len()) as i32;
-                for _ in 0..(indent + shift).max(0) {
+                // Only space indents it here: a comment with tabs doesn't
+                // move (`line_start`).
+                for _ in 0..(indent.len() as i32 + shift).max(0) {
                     self.out.push(' ');
                 }
-                put(&mut self.out, line.trim_start_matches(' '));
+                put(&mut self.out, rest);
             }
             return;
         }
@@ -1660,9 +1736,23 @@ fn property_colons(parsed: &Parsed) -> HashSet<u32> {
 }
 
 /// Whether a comment is a doc comment over several lines, `/** ... */`,
-/// whose lines starting with `*` line up one column past its `/`.
-fn is_doc(comment: &str) -> bool {
-    comment.starts_with("/**") && comment.contains('\n')
+/// with a star gutter: every line after its first that isn't blank starts
+/// with `*` after its indentation, its closing `*/` included. Its gutter's
+/// lines line up one column past its `/`; in one without a gutter, lines
+/// starting with `*` (bullets, say) move with the rest.
+fn has_gutter(comment: &str) -> bool {
+    comment.starts_with("/**")
+        && comment.contains('\n')
+        && comment.split('\n').skip(1).all(|line| {
+            let rest = &line[indentation(line).len()..];
+            line.trim().is_empty() || rest.starts_with('*')
+        })
+}
+
+/// A line's indentation: the spaces and tabs it starts with, the only
+/// space the formatter moves lines by (not other Unicode space).
+fn indentation(line: &str) -> &str {
+    &line[..line.len() - line.trim_start_matches([' ', '\t']).len()]
 }
 
 /// Whether a comment on a line of its own turns formatting off or on:
@@ -1698,22 +1788,22 @@ fn lexes_alone(a: &str, space: &str, b: &str) -> bool {
 }
 
 /// A comment's text as formatting must keep it: its lines without
-/// trailing space, and without the indentation they share, so they may
-/// move together but not apart; but a doc comment's lines starting with
-/// `*` line up anew.
+/// trailing space, and without the indentation (spaces and tabs) they
+/// share, so they may move together but not apart; but a star gutter's
+/// lines line up anew.
 fn comment_shape(comment: &str) -> String {
-    let doc = is_doc(comment);
+    let gutter = has_gutter(comment);
     let lines: Vec<&str> = comment.split('\n').map(str::trim_end).collect();
-    let starred = |l: &str| doc && l.trim_start().starts_with('*');
+    let starred = |l: &str| gutter && l[indentation(l).len()..].starts_with('*');
     let shared = (lines.iter().skip(1))
         .filter(|l| !l.is_empty() && !starred(l))
-        .map(|l| l.len() - l.trim_start().len())
+        .map(|l| indentation(l).len())
         .min()
         .unwrap_or(0);
     (lines.iter().enumerate())
         .map(|(i, &l)| match () {
             _ if i == 0 || l.is_empty() => l,
-            _ if starred(l) => l.trim_start(),
+            _ if starred(l) => &l[indentation(l).len()..],
             _ => &l[shared..],
         })
         .collect::<Vec<_>>()
@@ -1860,10 +1950,23 @@ mod tests {
         assert_eq!(ok("/*\n  a   \n    b\n*/\nx;\n"), Ok(()));
         assert!(ok("/*\n  a\n  b\n*/\nx;\n").is_err());
         assert!(ok("/*\n    a\n  b\n*/\nx;\n").is_err());
-        // A doc comment's `*` lines line up anew.
+        // A star gutter's lines line up anew.
+        let doc = parse(
+            "/**\n   * a\n  *\n    * c\n */\nx;\n",
+            SourceKind::Standalone,
+        );
+        let ok = |text: &str| check_same(&doc, text, SourceKind::Standalone);
+        assert_eq!(ok("/**\n * a\n *\n * c\n */\nx;\n"), Ok(()));
+        // Without a gutter (a line without a star), `*` lines are like any
+        // other, as bullets.
         let doc = parse("/**\n   * a\n  b\n    c\n */\nx;\n", SourceKind::Standalone);
         let ok = |text: &str| check_same(&doc, text, SourceKind::Standalone);
-        assert_eq!(ok("/**\n * a\n  b\n    c\n */\nx;\n"), Ok(()));
-        assert!(ok("/**\n * a\n  b\n  c\n */\nx;\n").is_err());
+        assert_eq!(ok("/**\n    * a\n   b\n     c\n  */\nx;\n"), Ok(()));
+        assert!(ok("/**\n * a\n  b\n    c\n */\nx;\n").is_err());
+        // Indentation is spaces and tabs only, other space is text.
+        let wide = parse("/*\n\u{3000}a\n b\n*/\nx;\n", SourceKind::Standalone);
+        let ok = |text: &str| check_same(&wide, text, SourceKind::Standalone);
+        assert_eq!(ok("/*\n  \u{3000}a\n   b\n  */\nx;\n"), Ok(()));
+        assert!(ok("/*\n\u{3000}a\nb\n*/\nx;\n").is_err());
     }
 }

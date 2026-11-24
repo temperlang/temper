@@ -203,9 +203,9 @@ already has a `src` directory or a `config.temper.md`.
 
 Lays out each `.temper` and `.temper.md` file named, or under each
 directory named (the current one by default, skipping `temper.out`,
-`temper.keep`, hidden directories, links to directories, and what
+`temper.keep`, hidden directories, symbolic links, and what
 [ignore files](#ignore-files) list), in the standard style, rewriting
-only the files that change. In `.temper.md` files, only Temper code
+only the files that change, each whole or not at all. In `.temper.md` files, only Temper code
 blocks change; prose is left exactly as written. With `--check`, it
 changes nothing, lists the files that need formatting, says how many
 files it checked, and exits with 1 if any need formatting, for CI.
@@ -213,7 +213,8 @@ files it checked, and exits with 1 if any need formatting, for CI.
 It has no style options and no line width: it sets spacing,
 indentation, and blank lines, keeps line breaks as written except in
 bracketed lists (laid out by their trailing commas and line breaks),
-and never changes comments' text, strings, or prose.
+and never changes strings or prose, or comments' text beyond trailing
+space and their lines' indentation.
 [Formatting rules](fmt.md) has each rule, with examples.
 
 Code that doesn't parse is left as written, with an error and exit
@@ -222,8 +223,8 @@ file's tokens, comments, or parse tree, it leaves the file alone and
 says so.
 
 `--ignorefile FILE` skips more under the directories named, as for
-`build`, with each directory named in place of the work root; files
-named are formatted all the same.
+`build`, with each directory named in place of the work root, and a
+directory named that it lists; files named are formatted all the same.
 [Formatting rules](fmt.md#what-it-leaves-out) has an example.
 
 ## `serve`, or `lsp`

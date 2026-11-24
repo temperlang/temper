@@ -127,7 +127,7 @@ let sum(a: Int, b: Int): Int { a + b }
  */
 let sum(a: Int, b: Int): Int { a + b }
 
-=== doc comment lines without a star keep their place in the comment
+=== a doc comment without a star gutter moves as a block, as other block comments do
     /**
        Two lines
          without stars,
@@ -139,8 +139,108 @@ let x = 1;
    Two lines
      without stars,
  * and one with.
+*/
+let x = 1;
+
+=== bullets in a doc comment without a star gutter keep their indentation
+class C {
+/**
+  Items:
+    * one
+      * nested
  */
 let x = 1;
+}
+--- formatted
+class C {
+  /**
+    Items:
+      * one
+        * nested
+   */
+  let x = 1;
+}
+
+=== a doc comment's star gutter lines up across blank lines
+  /**
+     * a
+
+  * b
+     */
+let x = 1;
+--- formatted
+/**
+ * a
+
+ * b
+ */
+let x = 1;
+
+=== comment lines starting with other whitespace than spaces and tabs move as text
+x;
+/*
+　a
+ b */
+class C {
+/*
+ a
+　b
+ c
+*/
+let y = 1;
+}
+--- formatted
+x;
+/*
+　a
+ b */
+class C {
+  /*
+   a
+  　b
+   c
+  */
+  let y = 1;
+}
+
+=== a star gutter after a tab on its line stays as written (markdown)
+Code:
+
+	let a = 1;
+	/**
+	   * Doc.
+	 */
+	let w = 2;
+
+--- formatted
+Code:
+
+	let a = 1;
+	/**
+	   * Doc.
+	 */
+	let w = 2;
+
+=== block comments indented with tabs stay as written, as tabs and spaces can't mix
+if (a) {
+	/* x
+	   y */
+	let z = 1;
+	/**
+	 * Doc.
+	 */
+	let w = 2;
+}
+--- formatted
+if (a) {
+	/* x
+	   y */
+  let z = 1;
+  /**
+   * Doc.
+   */
+  let w = 2;
+}
 
 === doc comments in a class follow its indentation
 class C {

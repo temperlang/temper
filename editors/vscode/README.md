@@ -57,6 +57,10 @@ or a name on `PATH`, if set; else the bundled `temper`, then `temper`
 on `PATH`. If there's none, or it doesn't start, an error says what was
 tried and how to fix it, with a button to open the setting. **Temper: Server Args**
 (`temper.server.args`) adds arguments, as `["--std", "/path/to/std"]`.
+Both are read from user (or remote) settings only, not a workspace's,
+so a repository's `.vscode/settings.json` can't choose the program the
+extension runs; and the extension runs only in trusted workspaces, not
+in Restricted Mode.
 "Temper: Restart Language Server" restarts it; its log is in the Output
 panel's "Temper" channel.
 

@@ -18,6 +18,12 @@
   ],
   "main": "./out/extension.js",
   "activationEvents": [],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Temper's language server reads and analyzes the workspace's code, so it runs only in a trusted workspace."
+    }
+  },
   "contributes": {
     "languages": [
       {
@@ -94,11 +100,13 @@
       "properties": {
         "temper.server.path": {
           "type": "string",
+          "scope": "machine",
           "default": "",
           "markdownDescription": "The `temper` that runs the language server (`temper lsp`): a name on `PATH` or a full path. Empty uses the `temper` bundled with this extension, if it has one, and else `temper` on `PATH`."
         },
         "temper.server.args": {
           "type": "array",
+          "scope": "machine",
           "items": {
             "type": "string"
           },

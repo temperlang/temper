@@ -573,8 +573,9 @@ fn apply_edits(text: &str, edits: &Json) -> String {
 
 /// Formatting answers with edits of just the changed lines, for the whole
 /// document or a range's lines, laying lists out by their line breaks and
-/// trailing commas; a document that doesn't parse gets none, and no error,
-/// as formatting on save shouldn't nag while typing.
+/// trailing commas; a document that doesn't parse, or that formatting
+/// otherwise refuses, gets none, and no error, but a warning saying why,
+/// once for each version of the document, so saving again doesn't nag.
 #[test]
 fn formatting() {
     let text =
@@ -593,7 +594,7 @@ fn formatting() {
         "let x = 1;\nlet y = 2;\nf(a, b);\ng(\n  a, b\n);\nh(\n  a,\n  b,\n);\nlet z = x\n  + y;\n"
     );
     // A range on the call's lines: only its edit.
-    let range = json!({"start": {"line": 2, "character": 0}, "end": {"line": 3, "character": 0}});
+    let range = json!({"start": {"line": 2, "character": 0}, "end": {"line": 4, "character": 0}});
     let ranged = client.request(
         "textDocument/rangeFormatting",
         json!({"textDocument": doc(&file), "range": range, "options": options}),
@@ -613,6 +614,34 @@ fn formatting() {
         client.request("textDocument/formatting", params.clone()),
         json!([])
     );
+    let warnings = |client: &mut Client| -> Vec<String> {
+        let (shown, rest): (Vec<Json>, Vec<Json>) = client
+            .notes
+            .drain(..)
+            .partition(|n| n.get("method").and_then(Json::as_str) == Some("window/showMessage"));
+        client.notes = rest;
+        (shown.iter())
+            .inspect(|n| assert_eq!(num_at(n, &["params", "type"]), 2, "{n}"))
+            .map(|n| str_at(n, &["params", "message"]).to_string())
+            .collect()
+    };
+    let shown = warnings(&mut client);
+    assert_eq!(shown.len(), 1, "{shown:?}");
+    assert!(
+        shown[0].contains("f.temper: doesn't parse (line 2"),
+        "{shown:?}"
+    );
+    // The same version again: no second warning.
+    client.request("textDocument/formatting", params.clone());
+    assert_eq!(warnings(&mut client), Vec::<String>::new());
+    change(&mut client, &file, 4, "let a=1;\rlet b=2;\n");
+    assert_eq!(
+        client.request("textDocument/formatting", params.clone()),
+        json!([])
+    );
+    let shown = warnings(&mut client);
+    assert_eq!(shown.len(), 1, "{shown:?}");
+    assert!(shown[0].contains("carriage return"), "{shown:?}");
     assert_eq!(client.finish(), 0);
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -635,30 +664,35 @@ fn formatting_reuses_the_parse() {
             &["formatParsesReused"],
         )
     };
+    // Formatting may come before or after the first analysis.
     let before = client.request("textDocument/formatting", params.clone());
-    assert_eq!(reused(&mut client), 0);
     client.request("textDocument/hover", at(&file, 0, 5));
+    let analyzed = reused(&mut client);
     let after = client.request("textDocument/formatting", params.clone());
     assert_eq!(after, before);
-    assert_eq!(reused(&mut client), 1);
+    assert_eq!(reused(&mut client), analyzed + 1);
     // Changed since: parsed again.
     change(&mut client, &file, 2, "let  y=1;\n");
     client.request("textDocument/formatting", params);
-    assert_eq!(reused(&mut client), 1);
+    assert_eq!(reused(&mut client), analyzed + 1);
     assert_eq!(client.finish(), 0);
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// Range formatting: a range of whole lines, which editors end at the
-/// next line's character 0, leaves that next line alone; a run of changed
-/// lines is one edit, even past the range; and past 500 changed lines the
-/// whole run between unchanged ends is one edit, so a range formats it
-/// all. Markdown prose gets no edits; an edit to the end of a last line
+/// Range formatting, as for VS Code's `formatOnSaveMode: "modifications"`:
+/// edits stay within the range's lines. A range of whole lines, which
+/// editors end at the next line's character 0, leaves that next line
+/// alone; a run of changed lines that keeps its number of lines is
+/// clipped to the range, line by line (past 500 changed lines too, where
+/// the whole run between unchanged ends is one edit); and one that doesn't
+/// (lines joined or split) is formatted only if the range holds all of it.
+/// Markdown prose gets no edits; an edit to the end of a last line
 /// without a line break ends at its UTF-16 length; CRLF lines keep their
 /// line breaks; and a document that isn't open gets no edits.
 #[test]
 fn formatting_ranges_and_documents() {
     let lines = "let  a=1;\nlet c = 3;\nlet  b=2;\n";
+    let three = "let  a=1;\nlet  b=2;\nlet  c=3;\n";
     let run = "f(a,\n  b,\n  c);\nlet y = 0;\nlet  z=1;\n";
     let many = "let  x=1;\n".repeat(600);
     let notes = "# Notes\n\nSome  prose.  \n\n    let a=1;\n";
@@ -668,6 +702,7 @@ fn formatting_ranges_and_documents() {
         "formatting-ranges",
         &[
             ("lines.temper", lines),
+            ("three.temper", three),
             ("run.temper", run),
             ("many.temper", &many),
             ("notes.temper.md", notes),
@@ -704,9 +739,20 @@ fn formatting_ranges_and_documents() {
     assert_eq!(formatted, "let a = 1;\nlet c = 3;\nlet  b=2;\n");
     let (formatted, _) = format("lines.temper", lines, Some([0, 0, 2, 3]));
     assert_eq!(formatted, "let a = 1;\nlet c = 3;\nlet b = 2;\n");
+    let (formatted, _) = format("three.temper", three, Some([1, 0, 1, 9]));
+    assert_eq!(formatted, "let  a=1;\nlet b = 2;\nlet  c=3;\n");
+    let (formatted, _) = format("three.temper", three, Some([1, 0, 3, 0]));
+    assert_eq!(formatted, "let  a=1;\nlet b = 2;\nlet c = 3;\n");
     let (formatted, _) = format("run.temper", run, Some([1, 0, 1, 2]));
+    assert_eq!(formatted, run);
+    let (formatted, _) = format("run.temper", run, Some([0, 0, 3, 0]));
     assert_eq!(formatted, "f(a, b, c);\nlet y = 0;\nlet  z=1;\n");
     let (formatted, _) = format("many.temper", &many, Some([0, 0, 0, 3]));
+    assert_eq!(
+        formatted,
+        "let x = 1;\n".to_string() + &"let  x=1;\n".repeat(599)
+    );
+    let (formatted, _) = format("many.temper", &many, Some([0, 0, 600, 0]));
     assert_eq!(formatted, "let x = 1;\n".repeat(600));
     let (formatted, edits) = format("notes.temper.md", notes, None);
     assert_eq!(formatted, "# Notes\n\nSome  prose.  \n\n    let a = 1;\n");
