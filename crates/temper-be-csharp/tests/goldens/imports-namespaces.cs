@@ -24,7 +24,7 @@ public static class NamespacesGlobal
             int i = 0;
             while (i < length)
             {
-                IShape s = squares[i];
+                IShape s = Listed.Get(squares, i);
                 i = i + 1;
                 console.Log("area " + s.Area().ToString(CultureInfo.InvariantCulture));
             }
@@ -35,7 +35,7 @@ public static class NamespacesGlobal
             int i2 = 0;
             while (i2 < length2)
             {
-                IShape s2 = mixed[i2];
+                IShape s2 = Listed.Get(mixed, i2);
                 i2 = i2 + 1;
                 {
                     if (s2 is Square)

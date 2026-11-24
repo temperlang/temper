@@ -21,6 +21,7 @@ from temper_core import (
     int_div as _int_div,
     int_mul as _int_mul,
     int_sub as _int_sub,
+    list_builder_remove_last as _list_builder_remove_last,
     list_builder_set as _list_builder_set,
     list_get as _list_get,
     list_get_or as _list_get_or,
@@ -491,7 +492,7 @@ class JsonTextProducer(JsonProducer):
         self._buffer.append('}')
         current_state = self._state()
         if _json_state_open_object == current_state or _json_state_after_property == current_state:
-            self._stack.pop()
+            _list_builder_remove_last(self._stack)
         else:
             self._well_formed = False
 
@@ -517,7 +518,7 @@ class JsonTextProducer(JsonProducer):
         self._buffer.append(']')
         current_state = self._state()
         if _json_state_open_array == current_state or _json_state_after_element == current_state:
-            self._stack.pop()
+            _list_builder_remove_last(self._stack)
         else:
             self._well_formed = False
 
@@ -580,7 +581,7 @@ class JsonSyntaxTreeProducer(JsonProducer, JsonParseErrorReceiver):
     def end_object(self, /) -> None:
         if not self._stack:
             return
-        ls = self._stack.pop()
+        ls = _list_builder_remove_last(self._stack)
         m: dict[str, _Sequence[JsonSyntaxTree]] = {}
         multis: dict[str, _MutableSequence[JsonSyntaxTree]] | None = None
         i = 0
@@ -634,7 +635,7 @@ class JsonSyntaxTreeProducer(JsonProducer, JsonParseErrorReceiver):
     def end_array(self, /) -> None:
         if not self._stack:
             return
-        ls = self._stack.pop()
+        ls = _list_builder_remove_last(self._stack)
         self._store_value(JsonArray(tuple(ls)))
 
     def null_value(self, /) -> None:

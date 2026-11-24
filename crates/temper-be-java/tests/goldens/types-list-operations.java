@@ -104,9 +104,9 @@ public final class OperationsGlobal {
         }
         List<String> messageBuilder = new ArrayList<>();
         messageBuilder.add("hello");
-        messageBuilder.set(0, "hi");
+        Core.listSet(messageBuilder, 0, "hi");
         Core.listAddAll(messageBuilder, List.of("there", "y'all"));
-        messageBuilder.add(0, "say");
+        Core.listAdd(messageBuilder, "say", 0);
         List<String> copyThat = new ArrayList<>(messageBuilder);
         Core.listAddAll(messageBuilder, List.of("more", "than"), 1);
         Core.listAddAll(copyThat, messageBuilder);

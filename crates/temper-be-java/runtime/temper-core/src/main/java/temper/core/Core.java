@@ -515,6 +515,21 @@ public final class Core {
         return builder.toString();
     }
 
+    /**
+     * Implements {@code core.type String.get()}: the code point at
+     * {@code i}, panicking out of bounds, where
+     * {@link String#codePointAt} throws.
+     * @param s the string
+     * @param i the index
+     * @return the code point
+     */
+    public static int stringGet(String s, int i) {
+        if (i < 0 || i >= s.length()) {
+            throw indexOutOfBounds(i, s.length());
+        }
+        return s.codePointAt(i);
+    }
+
     public static int stringCountBetween(String s, int begin, int end) {
         int length = s.length();
         begin = Math.min(begin, length);
@@ -747,7 +762,9 @@ public final class Core {
      * @param <E> the element type
      */
     public static <E> void listAdd(List<E> target, E elem, int at) {
-        // TODO Inline?
+        if (at < 0 || at > target.size()) {
+            throw indexOutOfBounds(at, target.size());
+        }
         target.add(at, elem);
     }
 
@@ -767,7 +784,9 @@ public final class Core {
      * @param <E> the element type
      */
     public static <E> void listAddAll(List<E> target, Collection<? extends E> source, int at) {
-        // TODO Inline?
+        if (at < 0 || at > target.size()) {
+            throw indexOutOfBounds(at, target.size());
+        }
         target.addAll(at, source);
     }
 
@@ -777,8 +796,38 @@ public final class Core {
      * @param <E> the element type
      */
     public static <E> E listRemoveLast(List<E> target) {
-        // TODO Inline?
+        if (target.isEmpty()) {
+            throw indexOutOfBounds(-1, 0);
+        }
         return target.remove(target.size() - 1);
+    }
+
+    /**
+     * Implements {@code core.type ListBuilder.set()}, panicking out of
+     * bounds, where {@link List#set} throws.
+     * @param target a ListBuilder instance
+     * @param index where to set the element
+     * @param elem the new element
+     * @param <E> the element type
+     */
+    public static <E> void listSet(List<E> target, int index, E elem) {
+        if (index < 0 || index >= target.size()) {
+            throw indexOutOfBounds(index, target.size());
+        }
+        target.set(index, elem);
+    }
+
+    /**
+     * A panic for an index out of bounds of a list or string of
+     * {@code length}, as core's docs say reading or writing there does: an
+     * {@code Error} that no {@code orelse} catches, as {@code panic()}
+     * throws, with the message every backend gives.
+     * @param index the index
+     * @param length the list's or string's length
+     * @return the error to throw
+     */
+    public static AssertionError indexOutOfBounds(int index, int length) {
+        return new AssertionError("index " + index + " out of bounds for length " + length);
     }
 
     /**
@@ -969,11 +1018,13 @@ public final class Core {
     /**
      * @param source accessed randomly for the element
      * @param index the index to the element
-     * @return the element, possibly throwing a RuntimeException if OOB
+     * @return the element, panicking out of bounds
      * @param <E> the element type
      */
     public static <E> E listGet(List<E> source, int index) {
-        // TODO Inline?
+        if (index < 0 || index >= source.size()) {
+            throw indexOutOfBounds(index, source.size());
+        }
         return source.get(index);
     }
 
@@ -1273,7 +1324,7 @@ public final class Core {
 
     /** <p>Implements {@code core.type Listed.reduce()}.</p> */
     public static boolean listedReduceBool(List<Boolean> source, BooleanBiPredicate reducer) {
-        return listedReduceBoolToBool(source, source.get(0), 1, (reduction, item) -> reducer.test(reduction, item));
+        return listedReduceBoolToBool(source, listGet(source, 0), 1, (reduction, item) -> reducer.test(reduction, item));
     }
 
     /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
@@ -1291,7 +1342,7 @@ public final class Core {
 
     /** <p>Implements {@code core.type Listed.reduce()}.</p> */
     public static double listedReduceDouble(List<Double> source, DoubleBinaryOperator reducer) {
-        return listedReduceDoubleToDouble(source, source.get(0), 1, (reduction, item) -> reducer.applyAsDouble(reduction, item));
+        return listedReduceDoubleToDouble(source, listGet(source, 0), 1, (reduction, item) -> reducer.applyAsDouble(reduction, item));
     }
 
     /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
@@ -1309,7 +1360,7 @@ public final class Core {
 
     /** <p>Implements {@code core.type Listed.reduce()}.</p> */
     public static int listedReduceInt(List<Integer> source, IntBinaryOperator reducer) {
-        return listedReduceIntToInt(source, source.get(0), 1, (reduction, item) -> reducer.applyAsInt(reduction, item));
+        return listedReduceIntToInt(source, listGet(source, 0), 1, (reduction, item) -> reducer.applyAsInt(reduction, item));
     }
 
     /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
@@ -1327,7 +1378,7 @@ public final class Core {
 
     /** <p>Implements {@code core.type Listed.reduce()}.</p> */
     public static <R> R listedReduceObj(List<R> source, BinaryOperator<R> reducer) {
-        return listedReduceObjToObj(source, source.get(0), 1, (reduction, item) -> reducer.apply(reduction, item));
+        return listedReduceObjToObj(source, listGet(source, 0), 1, (reduction, item) -> reducer.apply(reduction, item));
     }
 
     /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
@@ -1599,7 +1650,7 @@ public final class Core {
     public static <E> E dequeRemoveFirst(Deque<E> deque) {
         if (deque.isEmpty()) {
             // Panics, as reading a list out of bounds does.
-            throw new AssertionError("index 0 out of bounds for length 0");
+            throw indexOutOfBounds(0, 0);
         }
         return deque.removeFirst();
     }

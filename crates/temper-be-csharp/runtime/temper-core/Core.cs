@@ -71,10 +71,21 @@ namespace TemperLang.Core
         {
             if (queue.Count == 0)
             {
-                Environment.FailFast("index 0 out of bounds for length 0");
+                IndexOutOfBounds(0, 0);
             }
             return queue.Dequeue();
         }
+
+        /// <summary>
+        /// Panics for an index out of bounds of a list or string of
+        /// <paramref name="length"/>, as core's docs say reading or writing
+        /// there does, with the message every backend gives.
+        /// </summary>
+        public static void IndexOutOfBounds(int index, int length) =>
+            Environment.FailFast(
+                "index " + index.ToString(CultureInfo.InvariantCulture)
+                + " out of bounds for length " + length.ToString(CultureInfo.InvariantCulture)
+            );
 
         public static void Bubble() => throw new Exception();
 

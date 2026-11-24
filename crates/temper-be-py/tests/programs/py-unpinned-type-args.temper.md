@@ -40,6 +40,28 @@ module, whose name an annotation would quote.
 
     class Later {}
 
+A generic function, static method, or method whose type parameter only
+its result mentions, as an empty queue's maker, can't learn it from its
+arguments, so the call names it, as a cast, `cast('deque[int]',
+_empty())`, and pyright is told the signature's lone `_T` is meant.
+
+    let empty<T>(): Queue<T> { new Queue<T>() }
+
+    class Factory {
+      public static fresh<U>(): Holder<U> { new Holder<U>() }
+      public made<V>(): List<V> { [] }
+    }
+
+    let relayed<W>(): Queue<W> { empty<W>() }
+
+    let filled: Queue<Int> = empty();
+    filled.add(2);
+    console.log(kind(empty<Int>()));
+    console.log(kind(Factory.fresh<String>()));
+    console.log(new Factory().made<Int>().length.toString());
+    console.log(kind(relayed<Boolean>()));
+    console.log(filled.removeFirst().toString());
+
     console.log(kind(new Holder<Int>()));
     console.log(kind(new Queue<String>()));
     console.log(kind(new MapBuilder<String, Int>()));
@@ -51,6 +73,11 @@ module, whose name an annotation would quote.
     console.log(early());
 
 ```log
+other
+other
+0
+other
+2
 other
 other
 other

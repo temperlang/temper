@@ -3119,7 +3119,7 @@ console.log((s[s.end] orelse -1).toString());
       (Call . (Orelse (Call [] s:0 (Call . s:0 \end)) (Call - 1)) \toString)))
   #void)
 log 62
-Panicked: string index 2 out of bounds
+Panicked: index 2 out of bounds for length 2
 
 === closures made in a generator's loop, each pass its own as in a function
 let plain(): String {

@@ -1355,8 +1355,15 @@ impl Settle {
                     mismatch = !self.leaves_fit(&leaves, BOOLEAN);
                     t = self.unjoined_type(&leaves);
                 }
-                if mismatch && t != NULL {
-                    let (expected, got) = (self.show(BOOLEAN), self.show(t));
+                if mismatch {
+                    // A condition that's only null, as `if (null)` or
+                    // `while (null)`, shows as written.
+                    let got = if t == NULL {
+                        "null".into()
+                    } else {
+                        self.show(t)
+                    };
+                    let expected = self.show(BOOLEAN);
                     let span = self.lib.tree.span(condition);
                     let message = Message::ExpectedValueOfType(expected, got);
                     self.lib.report(Level::Error, message, span);
@@ -1658,8 +1665,10 @@ impl Settle {
     /// Counter?". Beside [`Settle::check_call`]'s nullable function value.
     /// `c?.n` is fine, and so is a value Kotlin might work out while
     /// compiling ([`Settle::may_fold`]), as `s.isEmpty` for `let s:
-    /// String? = "q"`. Code is still generated; the access fails where it
-    /// runs, as for a member that isn't there.
+    /// String? = "q"`. A value that's only null, as `null.length`, has no
+    /// members at all ("No member length in null"). Code is still
+    /// generated; the access fails where it runs, as for a member that
+    /// isn't there.
     fn check_nullable_member(&mut self, node: NodeId) {
         let Some((object, key)) = self.dot_parts(node) else {
             return;
@@ -1668,7 +1677,11 @@ impl Settle {
             return;
         };
         let t = self.known_type(object);
-        if !matches!(self.typing.types.get(t), TypeData::Nullable(_)) || self.may_fold(object, 0) {
+        // A value that's only null, as `null.length`, has no members,
+        // folded or not.
+        let only_null = t == NULL;
+        let nullable = matches!(self.typing.types.get(t), TypeData::Nullable(_));
+        if !only_null && (!nullable || self.may_fold(object, 0)) {
             return;
         }
         let span = self.lib.tree.span(node);
@@ -1678,7 +1691,12 @@ impl Settle {
         if self.lib.diagnostics.iter().any(overlaps) {
             return;
         }
-        let message = Message::NoMember(self.lib.names.get(name).to_string(), self.show(t));
+        let shown = if only_null {
+            "null".into()
+        } else {
+            self.show(t)
+        };
+        let message = Message::NoMember(self.lib.names.get(name).to_string(), shown);
         self.lib.report(Level::Error, message, span);
     }
 

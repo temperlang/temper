@@ -961,8 +961,10 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   function").
   Test: core_capabilities.rs (`Null` undeclared, a user's `class Null`);
   settle/types.cases, "null takes its type from where it goes" and
-  "null alone gives a declaration no type" and "null alone, in a
-  function and a class, and its legal neighbors"; analysis.rs,
+  "null alone gives a declaration no type", "null alone, in a
+  function and a class, and its legal neighbors", and "a value that's
+  only null has no members and is no condition" (Kotlin: "No type for
+  subject of .isEmpty", "Expected value of type Boolean not Empty?"); analysis.rs,
   hover_on_null_shows_its_place and hover_on_null_never_shows_never.
 
 - **`Bubble` isn't an `AnyValue`, and `Never<T>` has no values**, as
@@ -1029,6 +1031,17 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   does.
   Test: settle/run.cases, "a string index past the end panics, as
   String.get's docs say".
+- **Lists and strings out of bounds** (`ls[i]`, `set`, `add` and
+  `addAll` at an index, `removeLast` and `reduce` when empty, `s[i]` at
+  the end) panic on every backend and the interpreter, as core's docs
+  say, with one message, "index 3 out of bounds for length 3"
+  (2026-11-24). Kotlin's runtimes raised host exceptions or bubbled,
+  which `orelse` could catch (Python's `IndexError`, C++'s and Lua's
+  bubbles, JS's `ReferenceError` for an unimported `bubble`), and JS
+  and Lua let `set` at a negative index pass.
+  Test: funtests types/list/index-past-end, builder-set-negative,
+  remove-last-empty, reduce-empty, and types/string/index-at-end, whose
+  ```panic blocks each backend's run must end in.
 - **`Int.toString(radix)`** fails outside 2 to 36, but core declares no
   `throws Bubble`. Tempest fails the same way; decide with builtin
   types' methods' signatures (history/milestone-4.md, slice 3).

@@ -51,7 +51,7 @@ public static class OperationsGlobal
             int i = 0;
             while (i < n)
             {
-                console.Log("  " + ls[i].ToString(CultureInfo.InvariantCulture));
+                console.Log("  " + Listed.Get(ls, i).ToString(CultureInfo.InvariantCulture));
                 i = i + 1;
             }
         }
@@ -73,7 +73,7 @@ public static class OperationsGlobal
             int j = 0;
             while (j < triangleOfFooBar.Count)
             {
-                IList<string> row = triangleOfFooBar[j];
+                IList<string> row = Listed.Get(triangleOfFooBar, j);
                 console.Log("Fwd  [" + Listed.Join(row, " ", (string x) => x) + "]");
                 Listed.Reverse(row);
                 j = j + 1;
@@ -84,16 +84,16 @@ public static class OperationsGlobal
             int j2 = 0;
             while (j2 < triangleOfFooBar.Count)
             {
-                IList<string> row2 = triangleOfFooBar[j2];
+                IList<string> row2 = Listed.Get(triangleOfFooBar, j2);
                 console.Log("Back [" + Listed.Join(row2, " ", (string x) => x) + "]");
                 j2 = j2 + 1;
             }
         }
         IList<string> messageBuilder = new List<string>();
         messageBuilder.Add("hello");
-        messageBuilder[0] = "hi";
+        Listed.Set(messageBuilder, 0, "hi");
         Listed.AddAll(messageBuilder, Listed.CreateReadOnlyList<string>("there", "y'all"));
-        messageBuilder.Insert(0, "say");
+        Listed.Add(messageBuilder, "say", 0);
         IList<string> copyThat = new List<string>(messageBuilder);
         Listed.AddAll(messageBuilder, Listed.CreateReadOnlyList<string>("more", "than"), 1);
         Listed.AddAll(copyThat, Listed.AsReadOnly(messageBuilder));

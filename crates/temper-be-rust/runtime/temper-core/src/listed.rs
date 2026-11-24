@@ -1,9 +1,17 @@
-use super::i32_to_usize;
+use super::index_out_of_bounds;
 use std::{
     cell::RefCell,
     ops::Deref,
     sync::{Arc, RwLock},
 };
+
+/// The value at `index` of `items`, or a panic out of bounds.
+fn item<T: Clone>(items: &[T], index: i32) -> T {
+    match usize::try_from(index).ok().and_then(|i| items.get(i)) {
+        Some(value) => value.clone(),
+        None => index_out_of_bounds(index, items.len()),
+    }
+}
 
 pub trait ListedTrait<T>: Sync + Send
 where
@@ -344,9 +352,7 @@ where
     }
 
     fn get(&self, index: i32) -> T {
-        <[T]>::get(self, i32_to_usize(index).unwrap())
-            .unwrap()
-            .clone()
+        item(self, index)
     }
 
     fn is_empty(&self) -> bool {
@@ -381,19 +387,26 @@ where
 pub use list_builder::*;
 
 pub mod list_builder {
-    use super::{List, ListBuilder, ToListed};
+    use super::{List, ListBuilder, ToListed, index_out_of_bounds};
     use std::sync::{Arc, RwLock};
 
+    /// `index` as a place to insert into `items` of `length`, from 0 to
+    /// `length`, or a panic.
+    fn insertion_index(index: i32, length: usize) -> usize {
+        match usize::try_from(index) {
+            Ok(at) if at <= length => at,
+            _ => index_out_of_bounds(index, length),
+        }
+    }
+
     pub fn add<T>(builder: &ListBuilder<T>, value: T, index: Option<i32>) -> () {
+        let mut builder = builder.write().unwrap();
         match index {
             Some(index) => {
-                let mut builder = builder.write().unwrap();
-                let index = index.try_into().unwrap();
+                let index = insertion_index(index, builder.len());
                 builder.insert(index, value);
             }
-            None => {
-                builder.write().unwrap().push(value);
-            }
+            None => builder.push(value),
         }
     }
 
@@ -406,7 +419,7 @@ pub mod list_builder {
         let values = values.to_listed().to_vec();
         let mut builder = builder.write().unwrap();
         let index = match index {
-            Some(index) => index.try_into().unwrap(),
+            Some(index) => insertion_index(index, builder.len()),
             None => builder.len(),
         };
         builder.splice(index..index, values);
@@ -421,7 +434,8 @@ pub mod list_builder {
     }
 
     pub fn remove_last<T>(builder: &ListBuilder<T>) -> T {
-        builder.write().unwrap().pop().unwrap()
+        let last = builder.write().unwrap().pop();
+        last.unwrap_or_else(|| index_out_of_bounds(-1, 0))
     }
 
     pub fn reverse<T>(builder: &ListBuilder<T>) {
@@ -429,8 +443,12 @@ pub mod list_builder {
     }
 
     pub fn set<T>(builder: &ListBuilder<T>, index: i32, value: T) {
-        let index: usize = index.try_into().unwrap();
-        builder.write().unwrap()[index] = value;
+        let mut items = builder.write().unwrap();
+        let length = items.len();
+        match usize::try_from(index).ok().and_then(|i| items.get_mut(i)) {
+            Some(slot) => *slot = value,
+            None => index_out_of_bounds(index, length),
+        }
     }
 
     /// Sorts a copy, holding no lock while comparing, so the comparison
@@ -510,9 +528,7 @@ where
     }
 
     fn get(&self, index: i32) -> T {
-        <[T]>::get(&self.read().unwrap(), i32_to_usize(index).unwrap())
-            .unwrap()
-            .clone()
+        item(&self.read().unwrap(), index)
     }
 
     fn is_empty(&self) -> bool {

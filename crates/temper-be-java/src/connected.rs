@@ -222,7 +222,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type ListBuilder.reverse()",
         Connection::Static("Collections", "reverse"),
     ),
-    ("core.type ListBuilder.set()", Connection::Method("set")),
+    (
+        "core.type ListBuilder.set()",
+        Connection::Static("Core", "listSet"),
+    ),
     (
         "core.type ListBuilder.sort()",
         Connection::Translate(list_sort),
@@ -361,7 +364,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type String.get isEmpty()",
         Connection::Method("isEmpty"),
     ),
-    ("core.type String.get()", Connection::Method("codePointAt")),
+    (
+        "core.type String.get()",
+        Connection::Static("Core", "stringGet"),
+    ),
     (
         "core.type String.hasAtLeast()",
         Connection::Static("Core", "stringHasAtLeast"),
@@ -834,7 +840,8 @@ fn copy_of(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     })
 }
 
-/// `b.add(x)`, or with a place, `b.add(at, x)`.
+/// `b.add(x)`, or with a place, `Core.listAdd(b, x, at)`, which panics
+/// out of bounds.
 fn list_add(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let (b, x, at) = match args {
         [b, x] => (*b, *x, None),
@@ -852,7 +859,7 @@ fn list_add(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
         None => b.method("add", vec![x]),
         Some(at) => {
             let at = t.expr(at)?;
-            b.method("add", vec![at, x])
+            core_call(t, "listAdd".into(), vec![b, x, at])
         }
     })
 }

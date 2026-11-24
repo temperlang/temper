@@ -25,7 +25,7 @@ namespace temper {
             template<class Elem>
             void add(const std::shared_ptr<std::vector<Elem>>& list, typename NonDeduced<Elem>::type elem, int32_t index) {
                 if (index < 0 || index > static_cast<int32_t>(list->size())) {
-                    bubble("list add index out of bounds");
+                    index_out_of_bounds(index, list->size());
                 }
                 list->insert(list->begin() + index, elem);
             }
@@ -47,7 +47,7 @@ namespace temper {
             template<class Elem>
             void addAll(const std::shared_ptr<std::vector<Elem>>& list, const std::shared_ptr<std::vector<Elem>>& other, int32_t index) {
                 if (index < 0 || index > static_cast<int32_t>(list->size())) {
-                    bubble("list addall index out of bounds");
+                    index_out_of_bounds(index, list->size());
                 }
                 if (list == other) {
                     const std::vector<Elem> items(*other);
@@ -60,7 +60,7 @@ namespace temper {
             template<class Elem>
             Elem removeLast(const std::shared_ptr<std::vector<Elem>>& list) {
                 if (list->empty()) {
-                    bubble<Elem>("removeLast on empty list");
+                    index_out_of_bounds<Elem>(-1, 0);
                 }
                 Elem last = list->back();
                 list->pop_back();
@@ -115,7 +115,7 @@ namespace temper {
             template<class Elem>
             void set(const std::shared_ptr<std::vector<Elem>>& list, int32_t index, typename NonDeduced<Elem>::type value) {
                 if (index < 0 || index >= static_cast<int32_t>(list->size())) {
-                    bubble("list set index out of bounds");
+                    index_out_of_bounds(index, list->size());
                 }
                 (*list)[index] = value;
             }

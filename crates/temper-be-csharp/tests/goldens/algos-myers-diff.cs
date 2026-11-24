@@ -20,7 +20,7 @@ public static class MyersDiffGlobal
             int i = 0;
             while (i < n)
             {
-                Change<string> change = changes[i];
+                Change<string> change = Listed.Get(changes, i);
                 string changeType = change.Type;
                 IReadOnlyList<string> items = change.Items;
                 string prefix = changeType == ChangeTypeAddition ? "+" : changeType == ChangeTypeDeletion ? "-" : " ";
@@ -29,7 +29,7 @@ public static class MyersDiffGlobal
                     int j = 0;
                     while (j < nItems)
                     {
-                        string item = items[j];
+                        string item = Listed.Get(items, j);
                         formatted = formatted + prefix + item + "\n";
                         j = j + 1;
                     }
@@ -81,9 +81,9 @@ public static class MyersDiffGlobal
                     int end;
                     while (i < n)
                     {
-                        string changeType = pathElements[i].ChangeType;
+                        string changeType = Listed.Get(pathElements, i).ChangeType;
                         end = i + 1;
-                        while (end < n && changeType == pathElements[end].ChangeType)
+                        while (end < n && changeType == Listed.Get(pathElements, end).ChangeType)
                         {
                             end = end + 1;
                         }
@@ -118,7 +118,7 @@ public static class MyersDiffGlobal
                 if (rightIndex < rightLength)
                 {
                     int sameReachedIndex = leftIndex + 1 + (rightIndex + 1) * reachedRowLength;
-                    if (!Core.BitGet(reached, sameReachedIndex) && eq(left[leftIndex], right[rightIndex]))
+                    if (!Core.BitGet(reached, sameReachedIndex) && eq(Listed.Get(left, leftIndex), Listed.Get(right, rightIndex)))
                     {
                         Core.BitSet(reached, sameReachedIndex, true);
                         costZeroEdges.Enqueue(new DiffPath(leftIndex + 1, rightIndex + 1, ChangeTypeUnchanged, diffPath));

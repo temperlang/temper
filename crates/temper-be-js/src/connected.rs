@@ -218,7 +218,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Listed.join()",
         Connection::ListHelper("listedJoin"),
     ),
-    ("core.type Listed.reduce()", Connection::Translate(reduce)),
+    (
+        "core.type Listed.reduce()",
+        Connection::ListHelper("listedReduce"),
+    ),
     (
         "core.type Listed.slice()",
         Connection::ListHelper("listedSlice"),
@@ -714,12 +717,6 @@ fn two(t: &mut Translator<'_>, args: &[NodeId], what: &str) -> Result<[Expr; 2],
             what: format!("`{what}` with other than its receiver and one argument"),
         }),
     }
-}
-
-/// `ls.reduce(accumulate)`, as Kotlin's.
-fn reduce(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
-    let [ls, accumulate] = two(t, args, "reduce")?;
-    Ok(ls.method("reduce", vec![accumulate]))
 }
 
 /// `x.length`.

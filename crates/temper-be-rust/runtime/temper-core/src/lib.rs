@@ -470,7 +470,7 @@ pub mod queue {
     /// Panics if empty, as reading a list out of bounds does.
     pub fn remove_first<T>(queue: &Queue<T>) -> T {
         let first = queue.write().unwrap().pop_front();
-        first.unwrap_or_else(|| panic!("index 0 out of bounds for length 0"))
+        first.unwrap_or_else(|| crate::index_out_of_bounds(0, 0))
     }
 }
 
@@ -531,6 +531,13 @@ pub fn i32_to_usize(i: i32) -> Result<usize> {
 
 pub fn usize_to_i32(u: usize) -> Result<i32> {
     u.try_into().map_err(|e| Error::with_source(Arc::new(e)))
+}
+
+/// Panics for an index out of bounds of a list or string of `length`, as
+/// core's docs say reading or writing there does.
+#[track_caller]
+pub(crate) fn index_out_of_bounds(index: impl fmt::Display, length: usize) -> ! {
+    panic!("index {index} out of bounds for length {length}")
 }
 
 // Ignore

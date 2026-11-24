@@ -1,3 +1,5 @@
+import {indexOutOfBounds} from "./core.js";
+
 
 /**
  * Implements extension method core.type Listed.map()
@@ -14,6 +16,22 @@ export const listedMap = (ls, transform) => {
     mapped[i] = transform(ls[i]);
   }
   return Object.freeze(mapped);
+}
+
+/**
+ * Implements extension method core.type Listed.reduce(), panicking if
+ * empty, as reading the first value does, where `Array.reduce` throws a
+ * `TypeError`.
+ * @template T
+ * @param {readonly T[]} ls
+ * @param {(prev: T, cur: T) => T} accumulate
+ * @returns {T}
+ */
+export const listedReduce = (ls, accumulate) => {
+  if (!ls.length) {
+    indexOutOfBounds(0, 0);
+  }
+  return ls.reduce(accumulate);
 }
 
 /**
@@ -84,7 +102,7 @@ export const listBuilderAdd = (ls, newItem, at) => {
     ls.push(newItem);
   } else {
     if (at < 0 || at > ls.length) {
-      bubble();
+      indexOutOfBounds(at, ls.length);
     }
     ls.splice(at, 0, newItem);
   }
@@ -102,7 +120,7 @@ export const listBuilderAddAll = (ls, newItems, at) => {
     ls.push(...newItems);
   } else {
     if (at < 0 || at > ls.length) {
-      bubble();
+      indexOutOfBounds(at, ls.length);
     }
     ls.splice(at, 0, ...newItems);
   }
@@ -156,7 +174,7 @@ export const listedGet = (ls, i) => {
   if (0 <= i && i < length) {
     return ls[i];
   }
-  bubble();
+  return indexOutOfBounds(i, length);
 }
 
 /**
@@ -222,9 +240,8 @@ export const listBuilderClear = (ls) => {
 export const listBuilderRemoveLast = (ls) => {
   if (ls.length) {
     return ls.pop();
-  } else {
-    bubble();
   }
+  return indexOutOfBounds(-1, 0);
 }
 
 /**
@@ -270,6 +287,8 @@ export const listBuilderSort = (ls, compare) => {
 export const listBuilderSet = (ls, i, newValue) => {
   if (0 <= i && i < ls.length) {
     ls[i] = newValue;
+  } else {
+    indexOutOfBounds(i, ls.length);
   }
 }
 

@@ -138,14 +138,21 @@ pub const DEFAULTS: [&str; 1] = ["classes/property-order"];
 /// translation covers: string indices and `StringIndexOption`,
 /// `StringBuilder`, `Empty`, and more of
 /// `String`'s and `Float64`'s members, as `split`, `countBetween`,
-/// `near`, and `pi`. Each backend runs them as it covers them, with
-/// [`cases_with`].
-pub const CORE_TYPES: [&str; 7] = [
+/// `near`, and `pi`; and list and string indices out of bounds and an
+/// empty list's `reduce`, whose runs end in each backend's panic
+/// ([`Case::panic`]). Each backend runs
+/// them as it covers them, with [`cases_with`].
+pub const CORE_TYPES: [&str; 12] = [
     "functions/defaulting",
     "functions/named-args",
     "regression/minimal-repro",
     "types/float/ops",
+    "types/list/builder-set-negative",
+    "types/list/index-past-end",
+    "types/list/reduce-empty",
+    "types/list/remove-last-empty",
     "types/string/build",
+    "types/string/index-at-end",
     "types/string/indices",
     "types/string/read",
 ];

@@ -68,7 +68,10 @@ fn prev(text: &str, i: u32) -> usize {
 pub(super) fn get(text: &str, i: u32) -> R {
     match text[at(text, i)..].chars().next() {
         Some(c) if (i as usize) < text.len() => Ok(Val::Int(c as i32)),
-        _ => Err(Abrupt::Panic(format!("string index {i} out of bounds"))),
+        _ => Err(Abrupt::Panic(format!(
+            "index {i} out of bounds for length {}",
+            text.len()
+        ))),
     }
 }
 

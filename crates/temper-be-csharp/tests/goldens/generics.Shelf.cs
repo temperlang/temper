@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TemperLang.Core;
 
 namespace Generics;
 
@@ -28,7 +29,7 @@ public class Shelf<T>
         }
         else
         {
-            return this.items[0].Name;
+            return Listed.Get(this.items, 0).Name;
         }
     }
 

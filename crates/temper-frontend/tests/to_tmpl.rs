@@ -104,14 +104,19 @@ const DEFAULTS: [&str; 1] = ["classes/property-order"];
 
 /// The functional tests with core's other types and members (string
 /// indices, `StringBuilder`, `Empty`, and more of `String`'s and
-/// `Float64`'s members) that translate, as the backends' testkit lists
-/// them.
-const CORE_TYPES: [&str; 7] = [
+/// `Float64`'s members, and list and string indices out of bounds) that
+/// translate, as the backends' testkit lists them.
+const CORE_TYPES: [&str; 12] = [
     "functions/defaulting",
     "functions/named-args",
     "regression/minimal-repro",
     "types/float/ops",
+    "types/list/builder-set-negative",
+    "types/list/index-past-end",
+    "types/list/reduce-empty",
+    "types/list/remove-last-empty",
     "types/string/build",
+    "types/string/index-at-end",
     "types/string/indices",
     "types/string/read",
 ];

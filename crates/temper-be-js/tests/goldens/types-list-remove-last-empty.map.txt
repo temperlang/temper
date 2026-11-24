@@ -1,0 +1,8 @@
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../remove-last-empty.temper.md:10:5  /** @type {string[]} */ <- let builder = new ListBuilde
+4:1 -> ../remove-last-empty.temper.md:10:5  const builder = []; <- let builder = new ListBuilde
+5:1 -> ../remove-last-empty.temper.md:11:5  builder.push("a"); <- builder.add("a");
+6:1 -> ../remove-last-empty.temper.md:12:5  console.log(listBuilderRemov <- console.log(builder.removeLa
+7:1 -> ../remove-last-empty.temper.md:13:5  console.log("before"); <- console.log("before");
+8:1 -> ../remove-last-empty.temper.md:14:5  console.log(listBuilderRemov <- console.log(builder.removeLa
+9:1 -> ../remove-last-empty.temper.md:15:5  console.log("not reached"); <- console.log("not reached");

@@ -56,6 +56,12 @@ local table_insert = table.insert
 local table_remove = table.remove
 local table_unpack = unpack or table.unpack
 
+-- Panics for a 0-based index out of bounds of a list or string of
+-- `length`, as core's docs say reading or writing there does: an error no
+-- `orelse` catches, as a bubble is, with the message every backend gives.
+local function index_out_of_bounds(index, length)
+    error("index " .. tostring(index) .. " out of bounds for length " .. tostring(length), 2)
+end
 
 function temper.wrap_func(f)
     return f
@@ -1148,7 +1154,7 @@ do
     local function temper_get(list, index)
         local got = list[index + 1]
         if got == nil then
-            return temper.bubble("core.type Listed.get(" .. tostring(index) .. ") index out of bounds 0 .. " .. tostring(#list))
+            index_out_of_bounds(index, #list)
         end
         return got
     end
@@ -1256,6 +1262,10 @@ function temper.list_foreach(list, func)
 end
 
 function temper.listbuilder_set(list, index, value)
+    -- Only a present value's slot, since a list holds no `nil`s.
+    if list[index + 1] == nil then
+        index_out_of_bounds(index, #list)
+    end
     list[index + 1] = value
 end
 
@@ -1312,7 +1322,7 @@ function temper.listbuilder_addall(builder, from, at)
     local len = #builder
     at = temper.null_to_nil(at) or len
     if at < 0 or at > len then
-        return temper.bubble("core.type ListBuilder.addAll() index " .. tostring(at) .. "out of range 0 .. " .. tostring(len))
+        index_out_of_bounds(at, len)
     end
     if from == builder and at ~= len then
         -- Its values as they were, before inserting moves them.
@@ -1335,7 +1345,7 @@ function temper.listbuilder_add(builder, obj, at)
     local len = #builder
     at = temper.null_to_nil(at) or len
     if at < 0 or at > len then
-        return temper.bubble("core.type ListBuilder.add() index " .. tostring(at) .. "out of range 0 .. " .. tostring(len))
+        index_out_of_bounds(at, len)
     end
     if at == len then
         builder[at + 1] = obj
@@ -1797,7 +1807,7 @@ end
 function temper.listbuilder_removelast(lb)
     local len = #lb
     if len == 0 then
-        return temper.bubble("core.type ListBuilder.removeLast() on empty list")
+        index_out_of_bounds(-1, 0)
     end
     local got = lb[len]
     lb[len] = nil
@@ -1906,7 +1916,8 @@ end
 
 function temper.string_get(str, i)
     if i > #str then
-        temper.bubble("core.type String.get() failed")
+        -- As a 0-based offset, as other backends give it.
+        index_out_of_bounds(i - 1, #str)
     end
     local ok, cp = pcall(temper_utf8.codepoint, str, i)
     if ok then return cp; end

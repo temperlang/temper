@@ -136,6 +136,13 @@ namespace temper {
             std::terminate();
         }
 
+        // Panics for an index out of bounds of a list or string of `length`,
+        // as core's docs say reading or writing there does.
+        template<class T = void>
+        [[noreturn]] T index_out_of_bounds(int32_t index, std::size_t length) {
+            panic<T>("index " + std::to_string(index) + " out of bounds for length " + std::to_string(length));
+        }
+
         template<class T>
         bool is_null(T) {
             return false;

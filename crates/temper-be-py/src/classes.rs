@@ -265,7 +265,10 @@ impl Translator<'_> {
             DeclKind::Method if self.is_eq_hook(method) && args.len() == 1 => {
                 Expr::bin(Bin::Eq, receiver, args.remove(0))
             }
-            DeclKind::Method => receiver.attr(name).call(args),
+            DeclKind::Method => {
+                let call = receiver.attr(name).call(args);
+                self.result_only_call(id, method, call)?
+            }
             kind => return not_yet(format!("a {} call as a value", kind.name())),
         })
     }
@@ -476,7 +479,8 @@ impl Translator<'_> {
                     }
                     _ => {
                         let name = self.member_name(d);
-                        body.push(self.def(m, d, params, Some(block), name.clone(), Vec::new())?);
+                        let def = self.def(m, d, params, Some(block), name.clone(), Vec::new())?;
+                        body.push(self.result_only_def(d, def));
                         if is_plain_to_string(p, d) {
                             body.push(self.str_hook(&name));
                         }
@@ -493,13 +497,20 @@ impl Translator<'_> {
                     _ => {
                         let decorators = vec![self.import("abc", "abstractmethod")];
                         let name = self.member_name(d);
-                        body.push(self.def(m, d, params, None, name, decorators)?);
+                        let def = self.def(m, d, params, None, name, decorators)?;
+                        body.push(self.result_only_def(d, def));
                     }
                 },
                 Node::Function { decl: d, .. } => {
                     let name = self.member_name(d);
                     let def = self.function(m, name, vec!["staticmethod".into()])?;
                     body.push(if self.static_clash(d) {
+                        // `type: ignore` hides pyright's other reports on
+                        // the line too ([`Translator::result_only_def`]).
+                        let def = match def {
+                            Stmt::Commented(def, _) => *def,
+                            def => def,
+                        };
                         Stmt::Commented(Box::new(def), STATIC_OVERRIDE.into())
                     } else {
                         def

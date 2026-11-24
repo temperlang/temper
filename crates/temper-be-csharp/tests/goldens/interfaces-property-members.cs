@@ -35,7 +35,7 @@ public static class PropertyMembersGlobal
         ILabeled<string, C> labeled = new LabeledSub(a);
         IReadOnlyList<C> heldAnd = ((IHolder<C>)labeled).HeldAnd(b);
         console.Log("Labeled thing is " + labeled.Label("first") + ".");
-        console.Log("Held are " + ((IHolder<C>)labeled).Held.X + " and " + heldAnd[1].X + ".");
+        console.Log("Held are " + ((IHolder<C>)labeled).Held.X + " and " + Listed.Get(heldAnd, 1).X + ".");
         IHigh high1 = new Low1(11);
         IHigh high1b = new Low1(12);
         IHigh high1c = new Low1(12);
@@ -50,7 +50,7 @@ public static class PropertyMembersGlobal
             int i2 = 0;
             while (i2 < length)
             {
-                KeyValuePair<IHigh, IHigh> pair = pairs[i2];
+                KeyValuePair<IHigh, IHigh> pair = Listed.Get(pairs, i2);
                 i2 = i2 + 1;
                 console.Log(pair.Key.ToString() + " == " + pair.Value.ToString() + ": " + (pair.Key.Eq(pair.Value) ? "true" : "false"));
             }

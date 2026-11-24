@@ -14,7 +14,7 @@ public final class ShiftyGlobal {
         int idx = 0;
         int end = hexString.length();
         if (Integer.compare(idx, end) < 0) {
-            int possibleSign = hexString.codePointAt(idx);
+            int possibleSign = Core.stringGet(hexString, idx);
             if (possibleSign == 43 || possibleSign == 45) {
                 idx = Core.stringNext(hexString, idx);
                 Core.stringBuilderAppendBetween(sb, hexString, 0, idx);

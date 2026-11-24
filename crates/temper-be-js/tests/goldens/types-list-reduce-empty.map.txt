@@ -1,0 +1,10 @@
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../reduce-empty.temper.md:10:5  /** <- let sum(values: Listed<Int>)
+7:1 -> ../reduce-empty.temper.md:10:5  function sum(values) { <- let sum(values: Listed<Int>)
+7:10 -> ../reduce-empty.temper.md:10:9 (sum)  sum(values) { <- sum(values: Listed<Int>): In
+7:13 -> ../reduce-empty.temper.md:10:5  (values) { <- let sum(values: Listed<Int>)
+8:3 -> ../reduce-empty.temper.md:11:7  return listedReduce(/** @typ <- values.reduce { a: Int, b: I
+11:1 -> ../reduce-empty.temper.md:14:5  console.log(sum(Object.freez <- console.log(sum([1, 2, 3]).t
+12:1 -> ../reduce-empty.temper.md:15:5  console.log("before"); <- console.log("before");
+13:1 -> ../reduce-empty.temper.md:16:5  console.log(sum(Object.freez <- console.log(sum([]).toString
+14:1 -> ../reduce-empty.temper.md:17:5  console.log("not reached"); <- console.log("not reached");

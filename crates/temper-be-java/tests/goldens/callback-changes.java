@@ -244,7 +244,7 @@ public final class CallbackChangesGlobal {
         console.log("walks " + show(walked));
         t = new ArrayList<>(List.of(3, 1, 2));
         IntBinaryOperator fn3 = (a, z) -> {
-            t.set(0, 99);
+            Core.listSet(t, 0, 99);
             return a - z;
         };
         Core.listSortInt(t, fn3);

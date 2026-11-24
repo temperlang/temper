@@ -8,6 +8,7 @@ from temper_core import (
     int_mul as _int_mul,
     int_sub as _int_sub,
     list_builder_add_all as _list_builder_add_all,
+    list_builder_remove_last as _list_builder_remove_last,
     list_builder_set as _list_builder_set,
     list_builder_sort as _list_builder_sort,
     list_builder_splice as _list_builder_splice,
@@ -52,7 +53,7 @@ def _map_shrinking() -> int:
     w = _words()
     def fn(s: str, /) -> str:
         if len(w) > 1:
-            w.pop()
+            _list_builder_remove_last(w)
         return s
     return len(_list_map(w, fn))
 
@@ -61,7 +62,7 @@ def _reduce_shrinking() -> int:
     w = _words()
     def fn(all: str, s: str, /) -> str:
         if len(w) > 1:
-            w.pop()
+            _list_builder_remove_last(w)
         return all
     all2 = _listed_reduce(w, fn)
     if not all2:
@@ -218,7 +219,7 @@ _u: _MutableSequence[int] = list((3, 1, 2))
 
 
 def _fn4(a: int, z: int, /) -> int:
-    last = _u.pop()
+    last = _list_builder_remove_last(_u)
     _u.append(_int_add(last, 10))
     return _int_sub(a, z)
 

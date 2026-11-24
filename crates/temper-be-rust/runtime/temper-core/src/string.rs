@@ -157,7 +157,7 @@ pub fn from_code_points(codes: &dyn ListedTrait<i32>) -> Result<Arc<String>> {
 pub fn get(text: impl AsStr, index: usize) -> i32 {
     let text = text.as_str();
     if index >= text.len() {
-        panic!();
+        crate::index_out_of_bounds(index, text.len());
     }
     let index = char_boundary_floor(text, index);
     text.get(index..).unwrap().chars().next().unwrap() as i32

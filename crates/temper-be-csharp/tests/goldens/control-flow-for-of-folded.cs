@@ -16,7 +16,7 @@ public static class ForOfFoldedGlobal
             int i = 0;
             while (i < length)
             {
-                int x = xs[i];
+                int x = Listed.Get(xs, i);
                 i = i + 1;
                 t = t + x;
             }
@@ -32,7 +32,7 @@ public static class ForOfFoldedGlobal
             int i = 0;
             while (i < length)
             {
-                int x = xs[i];
+                int x = Listed.Get(xs, i);
                 i = i + 1;
                 t = t + x;
             }
@@ -60,14 +60,14 @@ public static class ForOfFoldedGlobal
             int i = 0;
             while (i < length)
             {
-                IReadOnlyList<int> xs = xss[i];
+                IReadOnlyList<int> xs = Listed.Get(xss, i);
                 i = i + 1;
                 {
                     int length2 = xs.Count;
                     int i2 = 0;
                     while (i2 < length2)
                     {
-                        int x = xs[i2];
+                        int x = Listed.Get(xs, i2);
                         i2 = i2 + 1;
                         t = t + x;
                     }
@@ -84,7 +84,7 @@ public static class ForOfFoldedGlobal
             int i = 0;
             while (i < length)
             {
-                int x = xs[i];
+                int x = Listed.Get(xs, i);
                 i = i + 1;
                 if (x > n)
                 {

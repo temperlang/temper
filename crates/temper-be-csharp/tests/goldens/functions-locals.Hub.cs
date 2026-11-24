@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TemperLang.Core;
 
 namespace Locals;
 
@@ -23,7 +24,7 @@ internal class Hub<T>
             int i = 0;
             while (i < this.handlers.Count)
             {
-                this.handlers[i](item);
+                Listed.Get(this.handlers, i)(item);
                 i = i + 1;
             }
         }

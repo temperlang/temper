@@ -10,8 +10,13 @@ namespace TemperLang.Core
     {
         public static void Add<T>(this IList<T> list, T item, int? index = null)
         {
+            int at = index ?? list.Count;
+            if (at < 0 || at > list.Count)
+            {
+                Core.IndexOutOfBounds(at, list.Count);
+            }
             // Swap order.
-            list.Insert(index ?? list.Count, item);
+            list.Insert(at, item);
         }
 
         public static void AddAll<T>(
@@ -21,6 +26,10 @@ namespace TemperLang.Core
         )
         {
             int ind = index ?? list.Count;
+            if (ind < 0 || ind > list.Count)
+            {
+                Core.IndexOutOfBounds(ind, list.Count);
+            }
             if (ind == list.Count)
             {
                 // Customize in case `.Add` is more efficient then `.Insert` for
@@ -83,6 +92,66 @@ namespace TemperLang.Core
             }
         }
 
+        /// <summary>
+        /// The value at <paramref name="index"/>, panicking out of bounds,
+        /// where the indexer throws.
+        /// </summary>
+        public static T Get<T>(this IReadOnlyList<T> list, int index)
+        {
+            if (index < 0 || index >= list.Count)
+            {
+                Core.IndexOutOfBounds(index, list.Count);
+            }
+            return list[index];
+        }
+
+        public static T Get<T>(this IList<T> list, int index)
+        {
+            if (index < 0 || index >= list.Count)
+            {
+                Core.IndexOutOfBounds(index, list.Count);
+            }
+            return list[index];
+        }
+
+        // Both of the others apply to a List, so neither would be chosen.
+        public static T Get<T>(this List<T> list, int index) =>
+            Get((IList<T>)list, index);
+
+        /// <summary>
+        /// Sets the value at <paramref name="index"/>, panicking out of
+        /// bounds, where the indexer throws.
+        /// </summary>
+        public static void Set<T>(this IList<T> list, int index, T value)
+        {
+            if (index < 0 || index >= list.Count)
+            {
+                Core.IndexOutOfBounds(index, list.Count);
+            }
+            list[index] = value;
+        }
+
+        /// <summary>
+        /// Reduces from the first value, panicking if there's none, as
+        /// reading it does, where <c>Aggregate</c> throws.
+        /// </summary>
+        public static T Reduce<T>(IEnumerable<T> list, Func<T, T, T> accumulate)
+        {
+            using (IEnumerator<T> values = list.GetEnumerator())
+            {
+                if (!values.MoveNext())
+                {
+                    Core.IndexOutOfBounds(0, 0);
+                }
+                T result = values.Current;
+                while (values.MoveNext())
+                {
+                    result = accumulate(result, values.Current);
+                }
+                return result;
+            }
+        }
+
         public static T GetOr<T>(this IReadOnlyList<T> list, int index, T alternative)
         {
             if (index < 0 || index >= list.Count)
@@ -106,7 +175,7 @@ namespace TemperLang.Core
 
         /// <summary>
         /// Reduces from <paramref name="index"/>, none past the end. A
-        /// negative index fails as <c>list[index]</c> does.
+        /// negative index panics as reading there does.
         /// </summary>
         public static TOut ReduceFromIndex<T, TOut>(
             IEnumerable<T> list,
@@ -117,14 +186,17 @@ namespace TemperLang.Core
         {
             if (index < 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(index));
+                Core.IndexOutOfBounds(index, list.Count());
             }
             return list.Skip(index).Aggregate(initial, accumulate);
         }
 
         public static T RemoveLast<T>(this IList<T> list)
         {
-            // Let appropriate exceptions fly.
+            if (list.Count == 0)
+            {
+                Core.IndexOutOfBounds(-1, 0);
+            }
             T last = list[list.Count - 1];
             list.RemoveAt(list.Count - 1);
             return last;

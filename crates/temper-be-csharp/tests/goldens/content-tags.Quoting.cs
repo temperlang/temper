@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TemperLang.Core;
 
 namespace ContentTags;
 
@@ -76,7 +77,7 @@ public class Quoting : IContextualAutoescapingAccumulator
             int i = 0;
             while (i < length)
             {
-                IEffect e = list[i];
+                IEffect e = Listed.Get(list, i);
                 i = i + 1;
                 e.EnactOn(this.collector);
             }

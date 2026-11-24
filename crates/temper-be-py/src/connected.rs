@@ -217,7 +217,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "core.type ListBuilder.removeLast()",
-        Connection::Method("pop"),
+        Connection::Runtime("list_builder_remove_last"),
     ),
     (
         "core.type ListBuilder.reverse()",

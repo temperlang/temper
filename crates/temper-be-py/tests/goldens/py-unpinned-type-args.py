@@ -1,11 +1,17 @@
 from collections import deque as _deque
 from collections.abc import Sequence as _Sequence
-from temper_core import LoggingConsole as _LoggingConsole
-from typing import Generic as _Generic, TypeVar as _TypeVar
+from temper_core import (
+    LoggingConsole as _LoggingConsole,
+    deque_remove_first as _deque_remove_first,
+)
+from typing import Generic as _Generic, TypeVar as _TypeVar, cast as _cast
 
 __all__ = ()
 
 _T = _TypeVar('_T')
+_U = _TypeVar('_U')
+_V = _TypeVar('_V')
+_W = _TypeVar('_W')
 
 
 class _Holder(_Generic[_T]):
@@ -63,7 +69,31 @@ def _early() -> str:
     return _kind(_Holder[_Later]())
 
 
+def _empty() -> _deque[_T]:  # pyright: ignore[reportInvalidTypeVarUse]
+    return _deque[_T]()
+
+
+class _Factory:
+    __slots__ = ()
+    @staticmethod
+    def fresh() -> _Holder[_U]:  # pyright: ignore[reportInvalidTypeVarUse]
+        return _Holder[_U]()
+    def made(self, /) -> _Sequence[_V]:  # pyright: ignore[reportInvalidTypeVarUse]
+        return ()
+
+
+def _relayed() -> _deque[_W]:  # pyright: ignore[reportInvalidTypeVarUse]
+    return _cast('_deque[_W]', _empty())
+
+
 _console: _LoggingConsole = _LoggingConsole(__name__)
+_filled: _deque[int] = _cast('_deque[int]', _empty())
+_filled.append(2)
+_console.log(_kind(_cast('_deque[int]', _empty())))
+_console.log(_kind(_cast('_Holder[str]', _Factory.fresh())))
+_console.log(str(len(_cast('_Sequence[int]', _Factory().made()))))
+_console.log(_kind(_cast('_deque[bool]', _relayed())))
+_console.log(str(_deque_remove_first(_filled)))
 _console.log(_kind(_Holder[int]()))
 _console.log(_kind(_deque[str]()))
 _console.log(_kind({}))

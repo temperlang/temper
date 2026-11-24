@@ -674,10 +674,17 @@ def years_between(start: Date, end: Date) -> int:
     return year_delta
 
 
+def index_out_of_bounds(index: int, length: int) -> NoReturn:
+    """Panics for an index out of bounds of a list or string of `length`, as
+    core's docs say reading or writing there does, as `panic()` raises, past
+    any `orelse`."""
+    raise BaseException(f"index {index} out of bounds for length {length}")
+
+
 def string_get(s: str, i: int) -> int:
-    if i < 0:
-        raise IndexError()
-    return ord(s[i])
+    if 0 <= i < len(s):
+        return ord(s[i])
+    index_out_of_bounds(i, len(s))
 
 
 def string_count_between(s: str, left: int, right: int) -> int:
@@ -805,10 +812,10 @@ def list_for_each(lst: Sequence[T], action: Callable[[T], None]) -> None:
 
 
 def list_get(lst: Sequence[T], index: int) -> T:
-    "Get an item from a list by index."
-    if index < 0:  # Prohibit python index semantics
-        raise IndexError()
-    return lst[index]
+    "Get an item from a list by index, panicking out of bounds."
+    if 0 <= index < len(lst):  # Not Python's negative indices
+        return lst[index]
+    index_out_of_bounds(index, len(lst))
 
 
 def list_get_or(lst: Sequence[T], index: int, default: T) -> T:
@@ -831,7 +838,7 @@ def list_builder_add(
         lst.append(elem)
     else:
         if at < 0 or at > lst_len:
-            raise IndexError()
+            index_out_of_bounds(at, lst_len)
         lst.insert(at, elem)
 
 
@@ -844,7 +851,7 @@ def list_builder_add_all(
         lst.extend(elems)
     else:
         if at < 0 or at > lst_len:
-            raise IndexError()
+            index_out_of_bounds(at, lst_len)
         lst[at:at] = elems
 
 
@@ -859,6 +866,13 @@ def list_map(lst: Sequence[T], func: Callable[[T], U]) -> Sequence[U]:
 
 
 _lbrT = TypeVar("_lbrT")
+
+
+def list_builder_remove_last(lst: MutableSequence[_lbrT]) -> _lbrT:
+    "Removes and returns the last element, panicking if there's none."
+    if lst:
+        return lst.pop()
+    index_out_of_bounds(-1, 0)
 
 
 def list_builder_reverse(lst: MutableSequence[_lbrT]) -> None:
@@ -894,10 +908,11 @@ _lbsT = TypeVar("_lbsT")
 
 
 def list_builder_set(lst: MutableSequence[_lbsT], idx: int, val: _lbsT) -> None:
-    "set a list element, bubbling if out of bounds, or void on success."
-    if idx < 0:
-        raise IndexError()
-    lst[idx] = val
+    "Sets a list element, panicking out of bounds."
+    if 0 <= idx < len(lst):
+        lst[idx] = val
+    else:
+        index_out_of_bounds(idx, len(lst))
 
 
 _lbsoT = TypeVar("_lbsoT")
@@ -950,6 +965,9 @@ _lrT = TypeVar("_lrT")
 def listed_reduce(
     lst: Sequence[_lrT], accumulate: Callable[[_lrT, _lrT], _lrT]
 ) -> _lrT:
+    "Reduces from the first element, panicking if there's none."
+    if not lst:
+        index_out_of_bounds(0, 0)
     return reduce(accumulate, lst)
 
 

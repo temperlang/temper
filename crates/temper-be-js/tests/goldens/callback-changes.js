@@ -7,6 +7,7 @@ import {
   listedFilter,
   listedJoin,
   listedMap,
+  listedReduce,
   listedReduceFrom,
   mapBuilderRemove,
   mappedForEach,
@@ -85,7 +86,7 @@ function reduceShrinking() {
     }
     return all;
   }
-  const all2 = w.reduce(fn);
+  const all2 = listedReduce(w, fn);
   if (!all2) {
     return 0;
   } else {

@@ -878,6 +878,11 @@ nullable. `Never?` can't be written (`Never` needs its type argument),
 so no declared type gives a value null's. Kotlin typed such a
 declaration `Null`, or from later uses.
 
+**Null alone has no members and is no condition**: `null.isEmpty` is
+"No member isEmpty in null", and `if (null)`, `while (null)`, or `null
+&& b` is "Expected value of type Boolean not null" (Kotlin: "No type
+for subject of .isEmpty", "… not Empty?").
+
 ## Inference
 
 - **Locals without annotations** take the type of their initializer, as

@@ -28,7 +28,7 @@ public static class ReduceGlobal
     {
         ILoggingConsole console = Support.Logging.LoggingConsoleFactory.CreateConsole("Reduce");
         IReadOnlyList<int> vals = Listed.CreateReadOnlyList<int>(2, 3, 4);
-        int sum = Enumerable.Aggregate(vals, (int sum, int n) => sum + n);
+        int sum = Listed.Reduce(vals, (int sum, int n) => sum + n);
         string poorReverseJoin = Enumerable.Aggregate(vals, "", (string text, int n) => n.ToString(CultureInfo.InvariantCulture) + text);
         console.Log("Reductions: " + sum.ToString(CultureInfo.InvariantCulture) + " " + poorReverseJoin);
         console.Log("All even: " + (All(vals, (int n) => Core.ModSafe(n, 2) == 0) ? "true" : "false"));

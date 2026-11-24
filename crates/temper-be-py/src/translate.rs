@@ -1337,7 +1337,36 @@ impl<'a> Translator<'a> {
         else {
             return not_yet("a function that isn't one");
         };
-        self.def(item, decl, params, Some(body), name, decorators)
+        let def = self.def(item, decl, params, Some(body), name, decorators)?;
+        Ok(self.result_only_def(decl, def))
+    }
+
+    /// A generic function's `def` whose signature names a type parameter
+    /// once, in its result (`def _empty() -> deque[_T]`), which pyright's
+    /// strict `reportInvalidTypeVarUse` flags; Temper means it, as each
+    /// call names it ([`Translator::result_only_call`]).
+    pub(crate) fn result_only_def(&self, decl: DeclId, def: Stmt) -> Stmt {
+        if result_only(self.p, decl).contains(&1) {
+            let rule = "pyright: ignore[reportInvalidTypeVarUse]".to_string();
+            Stmt::Commented(Box::new(def), rule)
+        } else {
+            def
+        }
+    }
+
+    /// A call, `call`, of a generic function whose result alone names a
+    /// type parameter ([`result_only`]), as a cast to the call's type,
+    /// `cast('deque[int]', _empty())`, which checkers would otherwise
+    /// take from where the value goes, unknown where that doesn't name it
+    /// (an `object` parameter), as [`Translator::with_type_args`] names a
+    /// class's.
+    pub(crate) fn result_only_call(&mut self, id: NodeId, callee: DeclId, call: Expr) -> R<Expr> {
+        if result_only(self.p, callee).is_empty() {
+            return Ok(call);
+        }
+        let (ann, _) = self.ann_raw(self.p.nodes.ty(id))?;
+        let cast = self.import("typing", "cast");
+        Ok(Expr::name(cast).call(vec![Expr::Str(ann), call]))
     }
 
     /// Reaches the builtins a function's own names hide through
@@ -2149,12 +2178,14 @@ impl<'a> Translator<'a> {
                     return self.connected(callee, args);
                 }
                 let present = present(args)?;
-                if self.is_member(callee) {
+                let call = if self.is_member(callee) {
                     let class = self.p.decls.get(callee).owner;
                     let name = self.member_name(callee);
-                    return Ok(self.class_ref(class).attr(name).call(present));
-                }
-                self.top(callee).call(present)
+                    self.class_ref(class).attr(name).call(present)
+                } else {
+                    self.top(callee).call(present)
+                };
+                self.result_only_call(id, callee, call)?
             }
             Node::CallMethod {
                 method,
@@ -2814,34 +2845,53 @@ pub(crate) fn core_type(qname: &str) -> Option<(&'static str, &'static str)> {
     })
 }
 
+/// How many times `ty`'s annotation names the type parameter whose type
+/// is `param`, as checkers count them.
+fn count(p: &Program, ty: TypeId, param: TypeId) -> usize {
+    if ty == param {
+        return 1;
+    }
+    if !p.types.contains(ty) {
+        return 0;
+    }
+    match p.types.get(ty) {
+        TypeData::Nullable(t) => count(p, t, param),
+        // `NoReturn`, which names none.
+        TypeData::Never(_) => 0,
+        TypeData::Nominal { args, .. } => {
+            p.types.list(args).iter().map(|&a| count(p, a, param)).sum()
+        }
+        TypeData::Function { .. } => p.types.signature(ty).map_or(0, |sig| {
+            (sig.params.iter().chain([&sig.result]))
+                .map(|&t| count(p, t, param))
+                .sum()
+        }),
+        TypeData::Scalar(_) | TypeData::TypeParam { .. } => 0,
+    }
+}
+
 /// Whether a function's signature names the type parameter whose type
 /// is `param` only once, as one parameter's whole type, `T` or `T?`.
 fn only_as_a_parameter(p: &Program, decl: DeclId, param: TypeId) -> bool {
-    fn count(p: &Program, ty: TypeId, param: TypeId) -> usize {
-        if ty == param {
-            return 1;
-        }
-        if !p.types.contains(ty) {
-            return 0;
-        }
-        match p.types.get(ty) {
-            TypeData::Nullable(t) => count(p, t, param),
-            // `NoReturn`, which names none.
-            TypeData::Never(_) => 0,
-            TypeData::Nominal { args, .. } => {
-                p.types.list(args).iter().map(|&a| count(p, a, param)).sum()
-            }
-            TypeData::Function { .. } => p.types.signature(ty).map_or(0, |sig| {
-                (sig.params.iter().chain([&sig.result]))
-                    .map(|&t| count(p, t, param))
-                    .sum()
-            }),
-            TypeData::Scalar(_) | TypeData::TypeParam { .. } => 0,
-        }
-    }
     let Some(sig) = p.signature(decl) else {
         return false;
     };
     let bare = (sig.params.iter()).any(|&t| p.types.non_null(t) == param);
     bare && count(p, p.decls.get(decl).ty, param) == 1
+}
+
+/// A generic function's own type parameters that its result names and
+/// none of its parameters do, as `T` in `empty<T>(): Queue<T>`, with how
+/// many times the result names each: its callers can't learn them from
+/// their arguments.
+fn result_only(p: &Program, decl: DeclId) -> Vec<usize> {
+    let Some(sig) = p.signature(decl) else {
+        return Vec::new();
+    };
+    (p.decls.type_params(decl).iter())
+        .map(|&tp| p.decls.get(tp).ty)
+        .filter(|&t| !sig.params.iter().any(|&ty| p.types.mentions(ty, t)))
+        .map(|t| count(p, sig.result, t))
+        .filter(|&n| n > 0)
+        .collect()
 }

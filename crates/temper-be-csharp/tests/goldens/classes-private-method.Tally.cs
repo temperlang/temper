@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TemperLang.Core;
 
 namespace PrivateMethod;
 
@@ -15,7 +16,7 @@ internal class Tally
             int i = 0;
             while (i < children.Count)
             {
-                sum = sum + children[i].size;
+                sum = sum + Listed.Get(children, i).size;
                 i = i + 1;
             }
         }

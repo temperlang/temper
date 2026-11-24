@@ -1407,7 +1407,7 @@ True if this contains no elements.
 
 `:` `fn(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, [*Int32*](#class-int32)`):` [*T*](#listedt)
 
-The i<sup>th</sup> element, or [*Bubble*](builtins.md#bubble-1) if *i* is outside the range \[0, [length]\).
+The i<sup>th</sup> element; panics if *i* is outside the range \[0, [length]\).
 
 ```temper
 let ls = ["a", "b", "c"]; // List of length 3
@@ -1418,7 +1418,8 @@ console.log(ls[1]); //!outputs "b"
 // ✅
 ```
 
-Out of bounds results in panic. Check in advance when handling indices of
+Out of bounds results in panic, "index 3 out of bounds for length 3"
+on every backend. Check in advance when handling indices of
 uncertain origin. Panics can't be handled by code in Temper, although some
 backend languages can handle their particular implementations of panic.
 

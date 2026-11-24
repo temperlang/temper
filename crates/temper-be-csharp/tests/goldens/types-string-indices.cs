@@ -108,7 +108,7 @@ public static class IndicesGlobal
             int i = 0;
             while (i < length)
             {
-                int c = list[i];
+                int c = Listed.Get(list, i);
                 i = i + 1;
                 string t3;
                 try

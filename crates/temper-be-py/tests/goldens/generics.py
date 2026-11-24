@@ -11,6 +11,7 @@ from temper_core import (
     int_mul as _int_mul,
     int_sub as _int_sub,
     list_builder_add as _list_builder_add,
+    list_builder_remove_last as _list_builder_remove_last,
     list_builder_set as _list_builder_set,
     list_get as _list_get,
     list_get_or as _list_get_or,
@@ -259,7 +260,7 @@ _builder: _MutableSequence[str] = []
 _builder.append('x')
 _builder.append('y')
 _list_builder_add(_builder, 'w', 0)
-_console.log(f'{len(_builder)} {_list_get(_builder, 0)} {_builder.pop()}')
+_console.log(f'{len(_builder)} {_list_get(_builder, 0)} {_list_builder_remove_last(_builder)}')
 _built: _Sequence[str] = tuple(_builder)
 _console.log(f"{len(_built)} {_list_get_or(_built, 5, '?')} {_list_get(_list_slice(_built, 1, 2), 0)}")
 _m: _MappingProxyType[str, int] = _map_constructor((_Pair('a', 1), _Pair('b', 2)))

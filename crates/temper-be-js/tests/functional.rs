@@ -647,7 +647,7 @@ fn file_url_path(url: &str) -> PathBuf {
     let mut bytes = Vec::new();
     let mut rest = path.as_bytes();
     while let Some((&b, after)) = rest.split_first() {
-        let hex = |i: usize| (after.get(i).and_then(|h| (*h as char).to_digit(16)));
+        let hex = |i: usize| after.get(i).and_then(|h| (*h as char).to_digit(16));
         match (b, hex(0), hex(1)) {
             (b'%', Some(high), Some(low)) => {
                 bytes.push((high * 16 + low) as u8);

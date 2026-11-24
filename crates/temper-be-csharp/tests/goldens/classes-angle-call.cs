@@ -19,7 +19,7 @@ public static class AngleCallGlobal
 
     internal static T LastOf<T>(IReadOnlyList<T> things)
     {
-        T thing = things[things.Count - 1];
+        T thing = Listed.Get(things, things.Count - 1);
         return thing;
     }
 

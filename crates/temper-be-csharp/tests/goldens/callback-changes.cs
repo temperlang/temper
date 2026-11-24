@@ -72,7 +72,7 @@ public static class CallbackChangesGlobal
             }
             return all;
         }
-        string all2 = Enumerable.Aggregate(w, (Func<string, string, string>)fn);
+        string all2 = Listed.Reduce(w, (Func<string, string, string>)fn);
         if (all2.Length == 0)
         {
             return 0;
@@ -286,7 +286,7 @@ public static class CallbackChangesGlobal
         t = new List<int>(Listed.CreateReadOnlyList<int>(3, 1, 2));
         int fn3(int a, int z)
         {
-            t[0] = 99;
+            Listed.Set(t, 0, 99);
             return a - z;
         }
         Listed.Sort(t, (Func<int, int, int>)fn3);

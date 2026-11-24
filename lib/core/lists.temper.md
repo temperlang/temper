@@ -40,7 +40,7 @@ Usually, don't return type `Listed`. It's usually best to return type `List`.
       public get isEmpty(): Boolean { length == 0 }
 
       /**
-       * The i<sup>th</sup> element, or [snippet/builtin/Bubble] if *i* is outside the range \[0, [length]\).
+       * The i<sup>th</sup> element; panics if *i* is outside the range \[0, [length]\).
        *
        * ```temper
        * let ls = ["a", "b", "c"]; // List of length 3
@@ -51,7 +51,8 @@ Usually, don't return type `Listed`. It's usually best to return type `List`.
        * // ✅
        * ```
        *
-       * Out of bounds results in panic. Check in advance when handling indices of
+       * Out of bounds results in panic, "index 3 out of bounds for length 3"
+       * on every backend. Check in advance when handling indices of
        * uncertain origin. Panics can't be handled by code in Temper, although some
        * backend languages can handle their particular implementations of panic.
        *

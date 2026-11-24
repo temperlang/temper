@@ -1,4 +1,4 @@
-import { listedReduceFrom, modIntInt } from "@temperlang/core";
+import { listedReduce, listedReduceFrom, modIntInt } from "@temperlang/core";
 
 /**
  * @template T
@@ -24,7 +24,7 @@ function all(items, check) {
 
 /** @type {readonly number[]} */
 const vals = Object.freeze([2, 3, 4]);
-const sum = vals.reduce((sum, n) => (sum + n) | 0);
+const sum = listedReduce(/** @type {number[]} */ (vals), (sum, n) => (sum + n) | 0);
 const poorReverseJoin = listedReduceFrom(/** @type {number[]} */ (vals), "", (text, n) => `${n}${text}`);
 console.log(`Reductions: ${sum} ${poorReverseJoin}`);
 console.log(`All even: ${all(vals, (n) => modIntInt(n, 2) === 0)}`);

@@ -326,9 +326,45 @@ error 4..5: Declare a type for a, as `a: String?`: null alone has none
 error 69..73: Expected subtype of Int32, but got Int32?
 error 92..126: Expected subtype of Int32, but got Int32?
 error 136..140: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32?, Int32]
+error 229..233: Expected value of type Boolean not null
 error 278..282: Actual arguments do not match signature: <listT extends AnyValue>(listT) -> List<listT> expected [Int32], but got [Int32?]
 error 302..306: Expected subtype of Int32, but got Int32?
+error 154..165: No member length in null
 Failed: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32?, Int32]
+
+=== a value that's only null has no members and is no condition
+let e = null.isEmpty;
+if (null) { console.log("no"); }
+while (null) { console.log("no"); }
+do { console.log("once"); } while (null);
+for (var i = 0; null; i++) { console.log("no"); }
+let f = null && true;
+let s: String? = null;
+let g = s?.isEmpty;
+--- settled
+(Block
+  (Let ^e:0 (Call . null \isEmpty))
+  (If null (Block (Call (Call . console \log) "no") #void) (Block))
+  (Loop (If null (Block (Call (Call . console \log) "no") #void) (Break @55)))
+  (Loop
+    (Block (Call (Call . console \log) "once") #void)
+    (If null (Block) (Break @91)))
+  (Block
+    (Var ^i:4 0)
+    (Loop
+      (If null (Block (Call (Call . console \log) "no") #void) (Break @133))
+      (Block (Let ^t#5 i:4) (Assign i:4 (Call + t#5 1)) t#5)))
+  (Let ^f:1 (If null true #false))
+  (Let ^s:2 (Call ? String) null)
+  (Let ^g:3 (Block (If (Call == s:2 #null) #null (Call . s:2 \isEmpty))))
+  #void)
+error 26..30: Expected value of type Boolean not null
+error 62..66: Expected value of type Boolean not null
+error 126..130: Expected value of type Boolean not null
+error 149..153: Expected value of type Boolean not null
+error 191..195: Expected value of type Boolean not null
+error 8..20: No member isEmpty in null
+Failed: No member isEmpty in null
 
 === function results
 let count(): Void { var n = 0; n += 1 }

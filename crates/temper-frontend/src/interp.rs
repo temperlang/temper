@@ -1435,7 +1435,7 @@ impl Interp<'_> {
             ("removeLast", []) => builder
                 .borrow_mut()
                 .pop()
-                .ok_or_else(|| Abrupt::Panic("removeLast on an empty ListBuilder".into())),
+                .ok_or_else(|| Abrupt::Panic("index -1 out of bounds for length 0".into())),
             ("reverse", []) => {
                 builder.borrow_mut().reverse();
                 Ok(Val::Void)
