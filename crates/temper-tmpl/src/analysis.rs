@@ -240,7 +240,7 @@ pub(crate) fn named_but(
                 }
                 return;
             }
-            Node::Let { local, .. } => local,
+            Node::Let { local, .. } | Node::Catch { local, .. } => local,
             _ => return,
         };
         let mut types = Vec::new();

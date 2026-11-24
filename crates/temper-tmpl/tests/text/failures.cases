@@ -1,0 +1,144 @@
+# Declared failures (RFC 164) in canonical text: failure types under the
+# library's base, results that fail with them, throw, and catch, and what
+# the validator's T5, F3, F4, F8, and D6 rules say of them. The format is
+# described in tests/text.rs.
+
+=== throw, catch, causes, and a sealed failure type
+tmpl 1 model 1 library failures 0.1.0
+
+uses `temper-core`#40 0.1.0 {
+  interface Error#41 {
+    connected get message#42(): String;
+    connected get cause#43(): Error#41?;
+  }
+}
+
+module failures#0 {
+  export failureBase interface ~FailuresError#1 extends Error#41 {}
+
+  export class NotFound#2 extends ~FailuresError#1 {
+    let key#10: String;
+    constructor constructor#11(key#12: String): NotFound#2 {
+      this.key#10 = key#12;
+    }
+    get message#13(): String {
+      return %String.cat("not found (key: ", %String.cat(this.key#10, ")"));
+    }
+  }
+
+  export interface SignError#3 extends ~FailuresError#1 {}
+
+  export class BadSign#4 extends SignError#3 {
+    constructor constructor#14(): BadSign#4 {}
+    get message#15(): String {
+      return "bad sign";
+    }
+  }
+
+  export class EmptyText#5 extends SignError#3 {
+    constructor constructor#16(): EmptyText#5 {}
+    get message#17(): String {
+      return "empty text";
+    }
+  }
+
+  fn lookup#6(key#18: String): Int32 throws NotFound#2 {
+    if (%String.eq(key#18, "a")) {
+      return 1;
+    }
+    (throw(new constructor#11(key#18))^): Void;
+  }
+
+  fn sign#7(text#19: String): Int32 throws BadSign#4 {
+    if (%String.eq(text#19, "+")) {
+      return 1;
+    }
+    return (throw(new constructor#14())^): Int32;
+  }
+
+  fn parseSign#8(text#20: String): Int32 throws SignError#3 {
+    if (%String.eq(text#20, "")) {
+      (throw((upcast(new constructor#16())): SignError#3)^): Void;
+    }
+    return sign#7(text#20)^;
+  }
+
+  fn setting#9(name#21: String): Int32 throws SignError#3 {
+    let n#22: Int32 = (catch(lookup#6(name#21)^, e#23: NotFound#2, (value { let k#27: String = e#23.key#10; 0 }): Int32)): Int32;
+    return (catch(lookup#6(name#21)^, ~failure#24: NotFound#2, (throw(new constructor#16(), ~failure#24)^): Int32)): Int32;
+  }
+
+  init {
+    let m#25: String = (catch((value { parseSign#8("?")^; "fine" }): String, e#26: SignError#3, ((upcast(e#26)): Error#41).message#42())): String;
+  }
+}
+
+=== failure problems (T5, F3, F4, F8, D6)
+tmpl 1 model 1 library failures 0.1.0
+
+uses `temper-core`#40 0.1.0 {
+  interface Error#41 {
+    connected get message#42(): String;
+    connected get cause#43(): Error#41?;
+  }
+}
+
+module failures#0 {
+  export failureBase interface ~FailuresError#1 extends Error#41 {}
+
+  export failureBase interface ~OtherError#2 extends Error#41 {}
+
+  export class NotFound#3 extends ~FailuresError#1 {
+    constructor constructor#10(): NotFound#3 {}
+  }
+
+  export class Direct#4 extends Error#41 {
+    constructor constructor#11(): Direct#4 {}
+  }
+
+  export interface Box#5<T#12> extends ~FailuresError#1 {}
+
+  export interface Other#6 extends ~FailuresError#1 {}
+
+  export class Both#7 extends Other#6, ~FailuresError#1 {
+    constructor constructor#13(): Both#7 {}
+  }
+
+  fn lookup#8(): Int32 throws NotFound#3 {
+    (throw(new constructor#10())): Void;
+    return 1;
+  }
+
+  fn wrong#9(n#14: Int32): Int32 throws String {
+    (throw("no")^): Void;
+    let a#15: Int32 = (catch(lookup#8()^, e#16: String, 0)): Int32;
+    let b#17: Int32 = (catch((bubble()^): Int32, e#18: NotFound#3, 0)): Int32;
+    return 0;
+  }
+
+  fn quiet#19(): Int32 {
+    return lookup#8()^;
+  }
+
+  fn bubbly#20(): Int32 throws Bubble {
+    let c#21: Int32 = lookup#8()^;
+    return (throw(new constructor#10(), 1)^): Int32;
+  }
+
+  init {}
+}
+--- problems
+D6 #2: a library has one failure base, a compiler-made, exported interface extending only Error
+D6 #4: a failure type extends its library's base, not Error itself
+D6 #5: a failure type can't be generic
+D6 #7: a failure type has more than one failure type above it
+F3 @16: throw fails, but isn't marked
+T5 #9: fn (Int32): Int32 throws String fails with String, not Bubble or a failure type
+F8 @25: throw's value is String, not a failure type
+F8 @27: a catch binds String, not a failure type
+F4 @28: the call of lookup#8 may fail with NotFound#3, but its catch takes only String
+F4 @32: bubble() bubbles, but its catch takes only NotFound#3
+F4 @39: the call of lookup#8 may fail with NotFound#3, but quiet#19 can't
+F4 @43: the call of lookup#8 may fail with NotFound#3, but bubbly#20 takes only Bubble
+F4 @45: throw fails with NotFound#3, but bubbly#20 takes only Bubble
+F8 @47: throw's cause is Int32, not a failure type

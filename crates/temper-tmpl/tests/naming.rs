@@ -3,7 +3,7 @@
 //! names shared, prefixed, escaped, and suffixed only on real conflicts.
 
 use temper_tmpl::naming::{Case, Interface, NamingRules, assign, pascal_case, snake_case};
-use temper_tmpl::{DeclId, DeclKind, text};
+use temper_tmpl::{DeclId, DeclKind, Profile, text, validate};
 
 #[test]
 fn snake_case_as_kotlin() {
@@ -77,6 +77,7 @@ const RULES: NamingRules = NamingRules {
     fields_apart: false,
     types_apart: false,
     modules_share_names: false,
+    failure_suffix: None,
 };
 
 const PROGRAM: &str = "tmpl 1 model 1 library t 0.0.0
@@ -461,4 +462,72 @@ module t#0 {
     let name = |d: u32| names.get(DeclId(d));
     assert_eq!((name(2), name(1)), ("_foo_bar", "_foo_bar2"));
     assert_eq!((name(4), name(3)), ("_baz_qux", "_baz_qux2"));
+}
+
+/// Under `failure_suffix`, as Java's and C#'s rules have it, failure
+/// types (below core's `Error`, the library's base among them) that end
+/// in `Error` end in `Exception`; other names, and failure types that
+/// don't end so, keep theirs; and a `catch`'s local is named as a local.
+#[test]
+fn failure_types_take_their_suffix() {
+    let keep = NamingRules {
+        case: |_, _| Case::Keep,
+        ..RULES
+    };
+    let rules = NamingRules {
+        failure_suffix: Some(("Error", "Exception")),
+        ..keep
+    };
+    let p = text::read(
+        "tmpl 1 model 1 library t 0.0.0
+
+uses `temper-core`#10 0.1.0 {
+  interface Error#11 {
+    connected get message#12(): String;
+    connected get cause#13(): Error#11?;
+  }
+}
+
+module t#0 {
+  export failureBase interface ~TError#1 extends Error#11 {}
+
+  export class ConfigError#2 extends ~TError#1 {
+    constructor constructor#5(): ConfigError#2 {}
+  }
+
+  export class NotFound#3 extends ~TError#1 {
+    constructor constructor#6(): NotFound#3 {}
+  }
+
+  export class ParseError#4 {
+    constructor constructor#7(): ParseError#4 {}
+  }
+
+  fn f#8(): Int32 {
+    return (catch((throw(new constructor#5())^): Int32, e#9: ConfigError#2, 0)): Int32;
+  }
+
+  init {}
+}
+",
+    )
+    .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(validate(&p, &Profile::full()), []);
+    let names = assign(&p, &rules);
+    let name = |d: u32| names.get(DeclId(d));
+    assert_eq!(
+        (name(1), name(2), name(3), name(4), name(9)),
+        (
+            "TException",
+            "ConfigException",
+            "NotFound",
+            "ParseError",
+            "e"
+        )
+    );
+    let plain = assign(&p, &keep);
+    assert_eq!(
+        (plain.get(DeclId(1)), plain.get(DeclId(2))),
+        ("TError", "ConfigError")
+    );
 }

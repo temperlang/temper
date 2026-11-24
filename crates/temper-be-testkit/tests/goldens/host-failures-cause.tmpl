@@ -1,0 +1,56 @@
+tmpl 1 model 1 library `host-failures-cause` 0.0.0
+
+uses `temper-core`#3 0.0.0-alpha.0.0 {
+  interface Error#4 {}
+  interface Console#15 {
+    connected method log#16(message: String): Void;
+  }
+  connected fn getConsole#22(name?: String): Console#15;
+}
+
+module `host-failures-cause`#0 {
+  export failureBase interface ~HostFailuresCauseError#5 extends Error#4 {}
+
+  let ~console#17: Console#15;
+
+  export class NotFound#1 extends ~HostFailuresCauseError#5 {
+    let key#6: String;
+    constructor constructor#7(key#12: String): NotFound#1 {
+      this.key#6 = key#12;
+    }
+    get message#13(): String {
+      return %String.cat(%String.cat("not found (key: ", this.key#6), ")");
+    }
+  }
+
+  connected export fn hostLookup#10(key#14: String): Int32 throws NotFound#1 {
+    if (%String.eq(key#14, "bug")) {
+      (panic()): Void;
+    }
+    if (%String.eq(key#14, "a")) {
+      return 1;
+    }
+    (throw(new constructor#7(key#14))^): Void;
+  }
+
+  class LookupFailed#2 extends ~HostFailuresCauseError#5 {
+    let name#8: String;
+    constructor constructor#9(name#18: String): LookupFailed#2 {
+      this.name#8 = name#18;
+    }
+    get message#19(): String {
+      return %String.cat(%String.cat("lookup failed (name: ", this.name#8), ")");
+    }
+  }
+
+  fn setting#11(name#20: String): Int32 throws LookupFailed#2 {
+    return (catch(hostLookup#10(name#20)^, ~failure#21: NotFound#1, (throw(new constructor#9(name#20), ~failure#21)^): Int32)): Int32;
+  }
+
+  init {
+    init ~console#17 = getConsole#22(omitted);
+    ~console#17.log#16("before");
+    setting#11("port")^;
+    ~console#17.log#16("after");
+  }
+}

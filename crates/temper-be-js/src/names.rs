@@ -229,6 +229,7 @@ pub const RULES: NamingRules = NamingRules {
     fields_apart: false,
     types_apart: false,
     modules_share_names: false,
+    failure_suffix: None,
 };
 
 /// A module's file name, without `.js`: the library's name with `_` for

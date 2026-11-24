@@ -197,6 +197,8 @@ fn author(authors: &str) -> String {
 /// root module's file take it as a Python name (`hello-world` gives
 /// `hello_world`).
 pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet> {
+    // Declared failures, not yet (RFC 164).
+    temper_tmpl::failures::not_yet(p).map_err(|what| NotYet { what })?;
     // Type-only errors run as written, or fail where they are
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);

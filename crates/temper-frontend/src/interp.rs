@@ -23,7 +23,7 @@
 //! that, as an ordinary class, as Kotlin Temper's interpreter does.
 
 pub mod compile_time;
-mod failures;
+pub(crate) mod failures;
 mod frame;
 mod lower;
 mod maps;

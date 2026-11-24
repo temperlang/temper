@@ -259,6 +259,8 @@ fn bin_section(package: &str) -> String {
 }
 
 pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet> {
+    // Declared failures, not yet (RFC 164).
+    temper_tmpl::failures::not_yet(p).map_err(NotYet::new)?;
     // Type-only errors run as written, or fail where they are
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);

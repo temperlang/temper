@@ -275,6 +275,9 @@ impl Writer {
         if d.facts.contains(Facts::FUN) {
             self.out.push_str("fun ");
         }
+        if d.facts.contains(Facts::FAILURE_BASE) {
+            self.out.push_str("failureBase ");
+        }
         if d.facts.contains(Facts::OPERATOR_EQ) {
             self.out.push_str("operator(\"==\") ");
         }
@@ -872,6 +875,33 @@ impl Writer {
                 self.out.push_str(", ");
                 self.expr(p, fallback);
                 self.out.push(')');
+                self.written_type(p, id);
+            }
+            Node::Catch {
+                local,
+                body,
+                fallback,
+            } => {
+                self.out.push_str("(catch(");
+                self.expr(p, body);
+                self.out.push_str(", ");
+                self.typed_decl(p, local);
+                self.out.push_str(", ");
+                self.expr(p, fallback);
+                self.out.push(')');
+                self.written_type(p, id);
+            }
+            Node::Throw { value, cause, .. } => {
+                self.out.push_str("(throw(");
+                self.expr(p, value);
+                if let Some(cause) = cause {
+                    self.out.push_str(", ");
+                    self.expr(p, cause);
+                }
+                self.out.push(')');
+                if p.nodes.flags(id).contains(Flags::MAY_BUBBLE) {
+                    self.out.push('^');
+                }
                 self.written_type(p, id);
             }
             Node::Bubble { .. } => {

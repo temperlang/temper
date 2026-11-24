@@ -79,15 +79,13 @@ type Tx<T> = Result<T, NotYet>;
 mod classes;
 #[path = "to_tmpl_defaults.rs"]
 mod defaults;
+#[path = "to_tmpl_failures.rs"]
+mod failures;
 #[path = "to_tmpl_functions.rs"]
 mod functions;
 use classes::{Assigned, Member};
 
 /// Core's members that tmpl knows, as external declarations.
-/// What's not yet in tmpl of declared failures (RFC 164): failure types,
-/// `throw`, and a `catch (e)` binding.
-pub(crate) const DECLARED_FAILURES: &str = "declared failures (RFC 164)";
-
 const CORE_FIXTURE: &str = include_str!("../../temper-tmpl/tests/fixtures/core.tmpl");
 
 /// Core's declarations that tmpl knows, and each by its key: `Type.member`
@@ -273,6 +271,10 @@ fn translate(
         gaps: gaps.is_some().then(Vec::new),
         catching: Vec::new(),
         always_jumps: RefCell::new(HashMap::new()),
+        first_module: DeclId::NONE,
+        failure_base: None,
+        handling: Vec::new(),
+        adopted: HashSet::new(),
     };
     let result = translate_with(&mut t);
     if let (Some(out), Some(found)) = (gaps, t.gaps.take()) {
@@ -297,6 +299,9 @@ fn translate_with(t: &mut Translator) -> Tx<()> {
                 decl
             };
             t.module_files(module, decl);
+            if own.is_empty() {
+                t.first_module = decl;
+            }
             own.push((module, decl));
         }
     }
@@ -425,6 +430,18 @@ struct Translator<'a> {
     /// ([`Self::always_jumps`]), kept, as it's asked of each statement
     /// and so again of each part of each.
     always_jumps: RefCell<HashMap<FNode, bool>>,
+    /// The library's first module, which holds what the compiler makes
+    /// for the whole library, as its base failure type.
+    first_module: DeclId,
+    /// The library's base failure type, once a failure type needs it
+    /// ([`Self::failure_base`]).
+    failure_base: Option<DeclId>,
+    /// The handlers' fallbacks being translated, innermost last
+    /// ([`failures::Handling`]).
+    handling: Vec<failures::Handling>,
+    /// The `let e = caught()`s whose `catch`es declare `e` themselves,
+    /// which then translate to nothing.
+    adopted: HashSet<FNode>,
 }
 
 impl Translator<'_> {
@@ -685,9 +702,6 @@ impl Translator<'_> {
             return Ok(self.b.function_type_with(&types, &optional, result));
         }
         if let FTypeData::Result { pass, fail } = *self.s.typing.types.get(t) {
-            if !matches!(self.s.typing.types.get(fail), FTypeData::Param(_)) && fail != ft::BUBBLE {
-                return self.not_yet(at, DECLARED_FAILURES);
-            }
             let pass = self.ty(pass, at)?;
             let fail = self.ty(fail, at)?;
             return Ok(self.b.result(pass, fail));
@@ -1768,6 +1782,10 @@ impl Translator<'_> {
     }
 
     fn stmt_or_gap(&mut self, node: FNode, out: &mut Vec<NodeId>) -> Tx<()> {
+        // A `catch (e)`'s `let e = caught()`, whose `catch` declares `e`.
+        if self.adopted.contains(&node) {
+            return Ok(());
+        }
         // An error, or a `let` or assignment of one, which fails first.
         if let Some(message) = self.error_at(node).or_else(|| self.stored_error(node)) {
             let error = self.b.error(TypeId::VOID, &message);
@@ -1904,7 +1922,6 @@ impl Translator<'_> {
                 let value = self.or_else_typed(node, Some(TypeId::VOID))?;
                 self.b.expr_statement(value)
             }
-            NodeKind::Fail if !children.is_empty() => return self.not_yet(node, DECLARED_FAILURES),
             NodeKind::Fail => {
                 let value = self.expr(node)?;
                 let value = self.fit(value, TypeId::VOID);
@@ -2093,6 +2110,21 @@ impl Translator<'_> {
             }
             false => None,
         };
+        // A fallback that needs the failure, from a body that fails with a
+        // failure type: a `catch` binds it, and keeps it in a nullable
+        // local for the fallback, which runs after.
+        let bound = match self.needs_failure(fallback) {
+            true => self.handled_type(value),
+            false => None,
+        };
+        let caught_held = bound.map(|ty| {
+            let holder = self.b.nullable(ty);
+            let null = self.b.null(holder);
+            let held = local_made(self, "caught", holder, null);
+            let local = (self.b).declare_made(DeclKind::Local, &["failure"], self.owner, ty);
+            self.b.set_decl_spans(local, span, span);
+            (local, held)
+        });
         let (held, body_stmt) = match target {
             Some((_, ty)) => {
                 let holder = self.b.nullable(ty);
@@ -2112,6 +2144,14 @@ impl Translator<'_> {
         let body = self.b.block_value(TypeId::VOID, &[body_stmt], void);
         let body = self.made(body, node);
         let mut caught = Vec::new();
+        if let Some((local, held)) = caught_held {
+            let read = self.b.local(local);
+            let read = self.made(read, node);
+            let read = self.b.as_nullable(read);
+            let read = self.made(read, node);
+            let set = self.b.assign(held, read);
+            caught.push(self.made(set, node));
+        }
         if let Some(failed) = failed {
             let yes = self.b.bool_lit(true);
             let yes = self.made(yes, node);
@@ -2127,10 +2167,48 @@ impl Translator<'_> {
                 self.made(made, node)
             }
         };
-        let made = self.b.or_else(TypeId::VOID, body, caught);
+        let made = match caught_held {
+            Some((local, _)) => self.b.catch(TypeId::VOID, local, body, caught),
+            None => self.b.or_else(TypeId::VOID, body, caught),
+        };
         let made = self.made(made, node);
         let made = self.b.expr_statement(made);
         out.push(self.made(made, node));
+        self.handling.push(failures::Handling {
+            owner: self.owner,
+            caught: caught_held.map(|(_, held)| failures::Caught::Held(held)),
+        });
+        let translated = self.jumping_fallback(fallback, target, held, nullable, node);
+        self.handling.pop();
+        let (stmts, els) = translated?;
+        let then = self.b.block(&stmts);
+        let then = self.made(then, fallback);
+        let check = match (failed, held) {
+            (Some(failed), _) => self.b.local(failed),
+            (None, Some(held)) => {
+                let read = self.b.local(held);
+                let read = self.made(read, node);
+                self.b.is_null(read)
+            }
+            (None, None) => unreachable!("a flag or a holder"),
+        };
+        let check = self.made(check, node);
+        let made = self.b.if_stmt(check, then, els);
+        out.push(self.own(made, node));
+        Ok(())
+    }
+
+    /// A jumping `orelse`'s fallback ([`Self::or_else_jumping`]), as
+    /// statements, and, where it has a target, the `else` that assigns
+    /// it what's held.
+    fn jumping_fallback(
+        &mut self,
+        fallback: FNode,
+        target: Option<(DeclId, TypeId)>,
+        held: Option<DeclId>,
+        nullable: bool,
+        node: FNode,
+    ) -> Tx<(Vec<NodeId>, Option<NodeId>)> {
         let mut stmts = Vec::new();
         let els = match (target, held) {
             (Some((local, ty)), Some(held)) => {
@@ -2153,21 +2231,7 @@ impl Translator<'_> {
                 None
             }
         };
-        let then = self.b.block(&stmts);
-        let then = self.made(then, fallback);
-        let check = match (failed, held) {
-            (Some(failed), _) => self.b.local(failed),
-            (None, Some(held)) => {
-                let read = self.b.local(held);
-                let read = self.made(read, node);
-                self.b.is_null(read)
-            }
-            (None, None) => unreachable!("a flag or a holder"),
-        };
-        let check = self.made(check, node);
-        let made = self.b.if_stmt(check, then, els);
-        out.push(self.own(made, node));
-        Ok(())
+        Ok((stmts, els))
     }
 
     /// Whether a value ends in a jump (a `break`, `continue`, or
@@ -2959,9 +3023,7 @@ impl Translator<'_> {
             NodeKind::Fn => self.literal(node),
             NodeKind::Await => self.await_expr(node),
             NodeKind::Orelse => self.or_else(node),
-            NodeKind::Fail if !self.children(node).is_empty() => {
-                self.not_yet(node, DECLARED_FAILURES)
-            }
+            NodeKind::Fail if !self.children(node).is_empty() => self.throw(node),
             NodeKind::Fail => {
                 let made = self.b.bubble(TypeId::NONE);
                 Ok(self.own(made, node))
@@ -3166,7 +3228,8 @@ impl Translator<'_> {
         let mut last = last;
         let mut stored = None;
         for &child in rest {
-            if self.error_at(child).is_some() {
+            // So is an error, or a `throw`, as nothing after it runs.
+            if self.error_at(child).is_some() || self.is_throw(child) {
                 last = child;
                 break;
             }
@@ -3205,6 +3268,11 @@ impl Translator<'_> {
         }
         let made = self.b.block_value(ty, &stmts, value);
         Ok(self.own(made, node))
+    }
+
+    /// Whether a node is a `throw` of a declared failure.
+    fn is_throw(&self, node: FNode) -> bool {
+        self.kind(node) == NodeKind::Fail && !self.children(node).is_empty()
     }
 
     /// `doPure { … }`: its block's body, in place, as Kotlin's `DoPureFn`
@@ -3283,7 +3351,7 @@ impl Translator<'_> {
         let (callee, args) = (children[0], &children[1..]);
         let f = self.function_of(callee);
         if f == Some(Function::Caught) {
-            return self.not_yet(node, DECLARED_FAILURES);
+            return self.caught(node);
         }
         if f == Some(Function::Is) {
             return self.is_check(node, args);
@@ -3860,7 +3928,23 @@ impl Translator<'_> {
                 self.fit(body, ty)
             });
         }
-        let fallback = self.block_value(fallback, typed.unwrap_or(TypeId::NONE))?;
+        // A fallback that needs the failure, from a body that fails with
+        // a failure type, binds it, in a `catch`.
+        let bound = match self.needs_failure(fallback) {
+            true => self.handled_type(body),
+            false => None,
+        };
+        let local = match bound {
+            Some(ty) => Some(self.catch_local(fallback, ty)?),
+            None => None,
+        };
+        self.handling.push(failures::Handling {
+            owner: self.owner,
+            caught: local.map(failures::Caught::Bound),
+        });
+        let fallback = self.block_value(fallback, typed.unwrap_or(TypeId::NONE));
+        self.handling.pop();
+        let fallback = fallback?;
         // Where typing has no type for it, as a function's last value, its
         // parts' type.
         let ty = typed.unwrap_or_else(|| {
@@ -3877,8 +3961,26 @@ impl Translator<'_> {
         } else {
             (self.fit(body, ty), self.fit(fallback, ty))
         };
-        let made = self.b.or_else(ty, body, fallback);
+        let made = match local {
+            Some(local) => self.b.catch(ty, local, body, fallback),
+            None => self.b.or_else(ty, body, fallback),
+        };
         Ok(self.own(made, node))
+    }
+
+    /// A `catch`'s local, of type `ty`: a `catch (e)`'s `e`, which its
+    /// `let e = caught()` then doesn't declare again, or one the compiler
+    /// makes, for a fallback that only throws.
+    fn catch_local(&mut self, fallback: FNode, ty: TypeId) -> Tx<DeclId> {
+        if let Some(bind) = self.catch_binding(fallback) {
+            let local = self.declare_let(bind)?;
+            self.adopted.insert(bind);
+            return Ok(local);
+        }
+        let local = (self.b).declare_made(DeclKind::Local, &["failure"], self.owner, ty);
+        let span = self.span(fallback);
+        self.b.set_decl_spans(local, span, span);
+        Ok(local)
     }
 
     /// Whether anything in a translated value may bubble.

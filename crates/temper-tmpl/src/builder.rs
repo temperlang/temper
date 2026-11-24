@@ -864,7 +864,7 @@ impl Builder {
         self.expr(Kind::Omitted, ty, (0, 0), &[])
     }
 
-    /// Gives a node typed by its place (`Null`, `Bubble`, `Panic`,
+    /// Gives a node typed by its place (`Null`, `Bubble`, `Throw`, `Panic`,
     /// `Error`, or a function literal or reference) its type, once the place is known; other nodes keep theirs.
     pub fn retype(&mut self, node: NodeId, ty: TypeId) {
         let kind = self.p.nodes.kind(node);
@@ -872,6 +872,7 @@ impl Builder {
             kind,
             Kind::Null
                 | Kind::Bubble
+                | Kind::Throw
                 | Kind::Panic
                 | Kind::Error
                 | Kind::FunctionLiteral
@@ -933,6 +934,19 @@ impl Builder {
     /// `bubble()`, typed as its place wants.
     pub fn bubble(&mut self, ty: TypeId) -> NodeId {
         self.raw(Kind::Bubble, ty, (0, 0), Flags::MAY_BUBBLE, &[])
+    }
+
+    /// `throw value`, with the failure being handled as its `cause` in a
+    /// handler's fallback; typed as its place wants.
+    pub fn throw(&mut self, ty: TypeId, value: NodeId, cause: Option<NodeId>) -> NodeId {
+        let kids: Vec<NodeId> = [value].into_iter().chain(cause).collect();
+        self.raw(Kind::Throw, ty, (0, 0), Flags::MAY_BUBBLE, &kids)
+    }
+
+    /// `catch (local)`: `body`'s value, or `fallback`'s with `local`
+    /// holding the failure.
+    pub fn catch(&mut self, ty: TypeId, local: DeclId, body: NodeId, fallback: NodeId) -> NodeId {
+        self.expr(Kind::Catch, ty, (local.0, 0), &[body, fallback])
     }
 
     /// `panic()`, typed as its place wants.

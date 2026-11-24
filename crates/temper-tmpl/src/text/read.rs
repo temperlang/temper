@@ -789,6 +789,7 @@ impl Reader {
             ("protected", Facts::PROTECTED),
             ("auto", Facts::AUTO),
             ("fun", Facts::FUN),
+            ("failureBase", Facts::FAILURE_BASE),
         ] {
             if self.eat_word(word) {
                 marks.member = marks.member | fact;
@@ -2170,6 +2171,38 @@ impl Reader {
             return Ok(self
                 .b
                 .raw(Kind::Coalesce, ty, (0, 0), Flags::NONE, &[left, right]));
+        }
+        if self.is_word("catch") && *self.peek_at(1) == Tok::Punct("(") {
+            self.pos += 2;
+            let body = self.expr()?;
+            self.expect(",")?;
+            // Declared here, in scope in the fallback.
+            let local = self.define(DeclKind::Local, self.owner, TypeId::NONE)?;
+            self.expect(":")?;
+            self.b.program_mut().decls.get_mut(local).ty = self.ty()?;
+            self.expect(",")?;
+            let fallback = self.expr()?;
+            self.expect(")")?;
+            let ty = self.written_type()?;
+            return Ok(self.b.catch(ty, local, body, fallback));
+        }
+        if self.is_word("throw") && *self.peek_at(1) == Tok::Punct("(") {
+            self.pos += 2;
+            let value = self.expr()?;
+            let cause = if self.eat(",") {
+                Some(self.expr()?)
+            } else {
+                None
+            };
+            self.expect(")")?;
+            let flags = if self.eat("^") {
+                Flags::MAY_BUBBLE
+            } else {
+                Flags::NONE
+            };
+            let ty = self.written_type()?;
+            let kids: Vec<NodeId> = [value].into_iter().chain(cause).collect();
+            return Ok(self.b.raw(Kind::Throw, ty, (0, 0), flags, &kids));
         }
         if self.is_word("orelse") && *self.peek_at(1) == Tok::Punct("(") {
             self.pos += 2;

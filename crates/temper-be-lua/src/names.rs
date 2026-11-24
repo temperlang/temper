@@ -129,4 +129,5 @@ pub const RULES: NamingRules = NamingRules {
     fields_apart: false,
     types_apart: false,
     modules_share_names: false,
+    failure_suffix: None,
 };

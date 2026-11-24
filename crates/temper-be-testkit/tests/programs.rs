@@ -17,9 +17,13 @@
 //!   errors, or settle but don't run yet on the interpreter ("Not
 //!   supported yet"), so the change that makes one run moves it to
 //!   `INTERP_SPECS`; and those don't translate to tmpl yet, so the
-//!   change that makes one translate moves it to `PROGRAMS`.
+//!   change that makes one translate moves it to `TMPL_SPECS`, and the
+//!   one that makes backends run it, to `PROGRAMS`.
 //! - `specs_run_on_the_interpreter`: the specifications the interpreter
 //!   runs (`INTERP_SPECS`) log what they should there, as programs do.
+//! - `specs_translate_to_tmpl`: the specifications tmpl has
+//!   (`TMPL_SPECS`) translate to valid tmpl, as their goldens show, a
+//!   golden per run, as programs' are.
 
 use temper_be_testkit::{self as kit};
 
@@ -132,6 +136,13 @@ fn specs_are_pending() {
             let log = temper_funtests::expected_log(&text, "interp");
             assert!(!log.is_empty(), "{name}: no log");
             let errors = kit::spec_errors(name);
+            if kit::TMPL_SPECS.contains(&name) {
+                // Translated (`specs_translate_to_tmpl`), and pending
+                // while backends don't run them.
+                assert!(kit::INTERP_SPECS.contains(&name), "{name}");
+                assert_eq!(errors, Vec::<String>::new(), "{name}");
+                continue;
+            }
             if kit::INTERP_SPECS.contains(&name) {
                 // Run on the interpreter (`specs_run_on_the_interpreter`),
                 // but pending while tmpl doesn't translate them.
@@ -153,6 +164,27 @@ fn specs_are_pending() {
                 );
             }
         }
+    });
+}
+
+/// The specifications tmpl has translate to valid tmpl, which matches
+/// its golden (`tests/goldens/NAME.tmpl`, or a run's, without spans), as
+/// programs do ([`programs_translate_to_tmpl`]).
+#[test]
+fn specs_translate_to_tmpl() {
+    kit::with_stack(|| {
+        let mut goldens = kit::Goldens::new(env!("CARGO_MANIFEST_DIR"));
+        for name in kit::TMPL_SPECS {
+            for case in kit::spec_cases("rust", name) {
+                let mut program = kit::program(&case);
+                program.has_spans = false;
+                goldens.check(
+                    &format!("{}.tmpl", case.key),
+                    &temper_tmpl::text::write(&program),
+                );
+            }
+        }
+        goldens.finish();
     });
 }
 

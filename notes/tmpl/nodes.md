@@ -701,6 +701,71 @@ for a `finally` holding jumps, should bring that as a shared helper
 (it was briefly `temper_tmpl::exits`, a copying stub, removed until
 then).
 
+### Declared failures (As built, 2026-11-24, Proposed)
+
+RFC 164's failure types, beside `Bubble`, which stays as it was
+([types.md](types.md#results); typing.md, "Declared failures"). No
+backend has them yet: each says "not yet in the … backend: declared
+failures: …" for a program that uses them
+(`temper_tmpl::failures::not_yet`), and a program that uses only
+`Bubble` is unchanged, node for node.
+
+| Kind | Children | Payload and flags | Type |
+|---|---|---|---|
+| `Throw` | the failure, then its cause if any | `MAY_BUBBLE`, always | written: as its place wants |
+| `Catch` | the body, then the fallback | `a`: its local, holding the failure | written: as `OrElse`'s |
+
+- **Failure types** are the classes and interfaces below core's
+  `Error`, an external interface with connected getters `message` and
+  `cause` (`failures::root`). A signature fails with `Bubble`, a
+  failure type, or a type parameter (a failure parameter, not made by
+  `to_tmpl` yet); failures are ordinary values, `Bubble` never is.
+- **The library's base:** a compiler-made, exported interface marked
+  `FAILURE_BASE` (text `failureBase`), named `<Library>Error`
+  (`to_tmpl`'s `failure_base_name`), extending only `Error`, in the
+  library's first module. Each failure type that extends `Error` in the
+  source extends the base instead, so targets write it over their own
+  exception type and host code never catches a Temper type (RFC 164,
+  "host presentation").
+- **Messages:** a failure class without a member named `message` gets a
+  `message` getter giving the interpreter's default message, `not found
+  (key: y)` (`interp::failures`). `cause` stays core's, which targets
+  map to their own (`getCause()`, `__cause__`, `{ cause }`).
+- **`Throw`'s cause** is the failure the innermost handler's fallback
+  around it handles, in its own function (a `for … of` body inlined
+  there counts), where that handler binds it; the thrown failure takes
+  it unless it already has a cause, so a rethrow keeps its first.
+- **`Catch`** is `OrElse` with a binding, its local, declared by it and
+  in scope only in the fallback: `catch (e)`'s `e`, or a compiler-made
+  `~failure` where a fallback only throws. `to_tmpl` makes one only
+  where the fallback needs the failure and the body fails with a
+  failure type; else it's an `OrElse`. Where the fallback jumps
+  (`return`, `break`, `continue`) and so runs after it, the `catch`
+  keeps the failure in a nullable `~caught` local the fallback reads.
+- **`when` over failure types** needs nothing new: `Is` and `Downcast`.
+- **Naming:** Java's and C#'s rules say `Exception` for `Error` at the
+  end of a failure type's name (`NamingRules::failure_suffix`), so
+  `ConfigError` is `ConfigException` there, the base too.
+- **Text:** `(throw(new NotFound#1(k#2))^): Void`, `(throw(x#3,
+  e#4)^): Int32`, `(catch(f#5()^, e#6: NotFound#1, 0)): Int32`, and
+  `export failureBase interface ~FailuresError#7 extends Error#8 {}`.
+
+Validator rules: T5 lets a signature fail with a failure type or a type
+parameter; F3 marks every `Throw`; F4 checks the failure's type where it
+goes: anything in an `OrElse`'s body or an init block, only what the
+`Catch` binds (or below it) in its body, and elsewhere only the
+function's failure type or below, `Bubble` and failure types never
+mixing; F8: a `Throw`'s value and cause are failure types, and a
+`Catch` binds one; D6: failure types aren't generic and have one
+failure type above them, which is the library's base where it'd be
+`Error`, and the base is the one compiler-made, exported interface
+extending only `Error`.
+
+Not yet: failure parameters (generic `E`) in calls' type arguments,
+`throw` and `catch` in generators, checking a failure type's own
+`message` against the root's, and a field named `message`, which gets
+no getter.
+
 ## Level 3: Ops, and core as declarations
 
 **Decided (2026-10-29):** customization is general, by naming: only
@@ -771,14 +836,16 @@ many times. Golden tests list problems as `RULE @node: message`.
   off its end. F2: a `Return` has a value exactly when the result
   isn't `Void`. F3: `MAY_BUBBLE` is set exactly when the callee may
   bubble. F4: a call that may bubble has a handler, or its function
-  may bubble. F5: an initializer doesn't read a module `let` that's
+  may bubble (with declared failures, of a type that fits; F8 for
+  `Throw` and `Catch`). F5: an initializer doesn't read a module `let` that's
   initialized later (through a call, it's a warning, [question 19](open-questions.md)).
 - **D, declarations.** D1: every compiler-made declaration has a hint
   with at least one candidate. D2: owners form a tree rooted at
   modules. D3: every type an export mentions is exported or external.
   D4: `@imu` and `@partialImu` marks hold (subset B,
   [mutability.md](mutability.md)). D5: stored facts (may-bubble marks,
-  and from subset B captures) match their recomputation.
+  and from subset B captures) match their recomputation. D6: failure
+  types and the library's base are well formed ("Declared failures").
 - **Q, qnames and connected** (Proposed 2026-10-29, built;
   [names.md](names.md#level-3-qnames)). Q1: qnames are unique within a
   library. Q2: every declaration but compiler-made ones has one. Q3: a
@@ -832,4 +899,5 @@ As built (2026-10-29, Proposed), with core's declarations:
 - **Room for failure kinds** ([question 44](open-questions.md)): a
   signature's result says what it fails with, a result type
   ([types.md](types.md#results)), and a node's `MAY_BUBBLE` stays a
-  flag until a call may fail with more than one type.
+  flag, its failure's type found from the node
+  (`failures::node_failure`), as declared failures have it.

@@ -40,6 +40,7 @@ mod children;
 pub mod coroutines;
 mod decls;
 pub mod errors;
+pub mod failures;
 pub mod host;
 mod ids;
 pub mod line_directives;

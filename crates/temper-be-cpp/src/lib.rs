@@ -224,6 +224,8 @@ pub fn translate_with_lines(
     variant: &Variant,
     lines: Option<&str>,
 ) -> Result<Vec<OutFile>, NotYet> {
+    // Declared failures, not yet (RFC 164).
+    temper_tmpl::failures::not_yet(p).map_err(|what| NotYet { what })?;
     // Type-only errors run as written, or fail where they are
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);

@@ -129,6 +129,12 @@ pub struct NamingRules {
     /// `class Engine` of one doesn't redefine another's exported
     /// `Engine`, and only exports can clash.
     pub modules_share_names: bool,
+    /// For failure types' names (classes and interfaces below core's
+    /// `Error`, the library's base among them), a suffix and what takes
+    /// its place: `("Error", "Exception")` in Java and C#, whose
+    /// convention it is, so `ConfigError` is `ConfigException` there
+    /// (RFC 164's naming rule, open for the team). `None` elsewhere.
+    pub failure_suffix: Option<(&'static str, &'static str)>,
 }
 
 /// Output names, by [`DeclId`].
@@ -736,14 +742,23 @@ fn candidates(p: &Program, rules: &NamingRules, decl: DeclId, module_level: bool
     let exported = d.facts.contains(Facts::EXPORTED) || is_external(p, decl);
     let mut raw: Vec<&str> = vec![p.name(decl)];
     raw.extend(p.decls.alts(decl).iter().map(|&s| p.strings.get(s)));
+    let failure_suffix = rules.failure_suffix.filter(|_| {
+        matches!(d.kind, DeclKind::Class | DeclKind::Interface)
+            && crate::failures::is_below_root(p, decl)
+    });
     raw.into_iter()
         .filter(|r| !r.is_empty())
         .map(|r| {
-            let styled = match (rules.case)(d.kind, exported) {
+            let mut styled = match (rules.case)(d.kind, exported) {
                 Case::Keep => r.to_string(),
                 Case::Snake => snake_case(r),
                 Case::Pascal => pascal_case(r),
             };
+            if let Some((from, to)) = failure_suffix {
+                if let Some(stem) = styled.strip_suffix(from) {
+                    styled = format!("{stem}{to}");
+                }
+            }
             let mut name = String::new();
             for (i, c) in styled.chars().enumerate() {
                 if (rules.identifier)(c, i == 0) {
@@ -826,7 +841,7 @@ fn name_module(
     let mut stack: Vec<NodeId> = module.test_init.into_iter().chain([module.init]).collect();
     while let Some(id) = stack.pop() {
         match p.nodes.get(id) {
-            Node::Let { local, .. } => {
+            Node::Let { local, .. } | Node::Catch { local, .. } => {
                 level.push(local);
                 init_locals.push(local);
             }
@@ -1162,6 +1177,16 @@ impl Live {
             Node::Param { decl } => {
                 self.define(decl);
             }
+            Node::Catch {
+                local,
+                body,
+                fallback,
+            } => {
+                self.visit(p, body);
+                self.pos += 1;
+                self.define(local);
+                self.visit(p, fallback);
+            }
             Node::FunctionLiteral { decl, .. } => {
                 self.define(decl);
                 for &kid in p.nodes.kids(id) {
@@ -1230,7 +1255,7 @@ fn name_function(
     let mut decls: Vec<DeclId> = Vec::new();
     walk(p, function, &mut |id| match p.nodes.get(id) {
         Node::Param { decl } | Node::FunctionLiteral { decl, .. } => decls.push(decl),
-        Node::Let { local, .. } => decls.push(local),
+        Node::Let { local, .. } | Node::Catch { local, .. } => decls.push(local),
         _ => {}
     });
     // A literal may run after its captures' last uses, so they stay live
@@ -1333,6 +1358,10 @@ impl Scopes {
                 self.of.insert(decl, scope);
             }
             Node::Let { local, .. } => {
+                self.of.insert(local, scope);
+            }
+            // In scope in its fallback, which is in the block around it.
+            Node::Catch { local, .. } => {
                 self.of.insert(local, scope);
             }
             Node::FunctionLiteral { decl, .. } => {

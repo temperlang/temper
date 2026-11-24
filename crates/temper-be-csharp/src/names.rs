@@ -140,6 +140,8 @@ pub const RULES: NamingRules = NamingRules {
     fields_apart: false,
     types_apart: true,
     modules_share_names: false,
+    // Failure types say `Exception` for `Error` (RFC 164).
+    failure_suffix: Some(("Error", "Exception")),
 };
 
 /// A library's root namespace, as Kotlin's `dashToPascal` makes it from

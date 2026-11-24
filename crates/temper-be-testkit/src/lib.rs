@@ -355,8 +355,8 @@ pub const HOST_CODE: [&str; 3] = ["host-error-causes", "host-error-tests", "host
 /// says of a failure nothing handles, a run per section, with host code
 /// laid out as [`HOST_CODE`]'s. Each says what it assumes of what's still
 /// open. Once the interpreter runs one, it joins [`INTERP_SPECS`]; once
-/// tmpl and backends do, it joins [`PROGRAMS`], each backend's run list
-/// in turn.
+/// tmpl does, [`TMPL_SPECS`]; and once backends do, it joins
+/// [`PROGRAMS`], each backend's run list in turn.
 pub const SPECS: [&str; 4] = [
     "failures",
     "failure-params",
@@ -368,6 +368,12 @@ pub const SPECS: [&str; 4] = [
 /// logs are checked there, as [`PROGRAMS`]' are, while tmpl doesn't
 /// translate them yet ([`spec_cases`]).
 pub const INTERP_SPECS: [&str; 3] = ["failures", "failure-params", "host-failures"];
+
+/// The specifications ([`INTERP_SPECS`]) that translate to tmpl already,
+/// whose tmpl is checked against goldens, as [`PROGRAMS`]' is, while
+/// backends say they don't have declared failures yet. `failure-params`
+/// waits for generic failure parameters in tmpl.
+pub const TMPL_SPECS: [&str; 2] = ["failures", "host-failures"];
 
 /// A specification's path and text: `NAME.temper.md`, or in a directory
 /// of its own beside its host code.

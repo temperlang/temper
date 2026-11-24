@@ -1,0 +1,47 @@
+tmpl 1 model 1 library `host-failures-host-error-passes-catch` 0.0.0
+
+uses `temper-core`#2 0.0.0-alpha.0.0 {
+  interface Error#3 {}
+  interface Console#12 {
+    connected method log#13(message: String): Void;
+  }
+  class Int32#15 {
+    connected method toString#16(radix?: Int32): String;
+  }
+  connected fn getConsole#17(name?: String): Console#12;
+}
+
+module `host-failures-host-error-passes-catch`#0 {
+  export failureBase interface ~HostFailuresHostErrorPassesCatchError#4 extends Error#3 {}
+
+  let ~console#14: Console#12;
+
+  export class NotFound#1 extends ~HostFailuresHostErrorPassesCatchError#4 {
+    let key#5: String;
+    constructor constructor#6(key#9: String): NotFound#1 {
+      this.key#5 = key#9;
+    }
+    get message#10(): String {
+      return %String.cat(%String.cat("not found (key: ", this.key#5), ")");
+    }
+  }
+
+  connected export fn hostLookup#7(key#11: String): Int32 throws NotFound#1 {
+    if (%String.eq(key#11, "bug")) {
+      (panic()): Void;
+    }
+    if (%String.eq(key#11, "a")) {
+      return 1;
+    }
+    (throw(new constructor#6(key#11))^): Void;
+  }
+
+  let h#8: Int32;
+
+  init {
+    init ~console#14 = getConsole#17(omitted);
+    ~console#14.log#13("before");
+    init h#8 = (orelse(hostLookup#7("bug")^, %Int32.neg(1))): Int32;
+    ~console#14.log#13(%String.cat("after ", h#8.toString#16(omitted)));
+  }
+}

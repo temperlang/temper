@@ -237,7 +237,9 @@ New with that round, all Proposed:
     to a native exception class or error variant where they can, and
     ignore it where they can't. Until the language decides, `Bubble`
     stays the only failure, and nothing in subset A's layout should
-    rule this out.
+    rule this out. **In progress (2026-11-24):** RFC 164's declared
+    failures reach tmpl as failure types, `Throw`, and `Catch`
+    ([nodes.md](nodes.md), "Declared failures"), beside `Bubble`.
 45. **Where `x++` as a statement simplifies:** the frontend's macro
     expands `x++` to `do { let t = x; x = t + 1; t }`, since expansion
     can't know whether the value is used; `to_tmpl` drops the

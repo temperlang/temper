@@ -154,7 +154,7 @@ fn default_message(s: &Settled, failure: &Object) -> String {
 
 /// A type's name in lowercase words: `NotFound` is `not found`,
 /// `HTTPFailure` is `http failure`, `Utf8Error` is `utf8 error`.
-fn words(name: &str) -> String {
+pub(crate) fn words(name: &str) -> String {
     let chars: Vec<char> = name.chars().collect();
     let mut out = String::new();
     for (i, &c) in chars.iter().enumerate() {

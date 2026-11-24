@@ -193,7 +193,9 @@ As built (2026-11-23, Proposed): **`Result { pass, fail }`** (text `Int32
 throws Bubble`), interned once per pair (`TypeTable::result`, which gives
 `pass` back for a `Never` failure), is a signature's result where it may
 fail, as the frontend's result types are (typing.md, "Results").
-`Scalar::Bubble` is the only failure type for now.
+It fails with `Scalar::Bubble`, a failure type (a class or interface
+below core's `Error`), or a type parameter ([nodes.md](nodes.md),
+"Declared failures").
 
 - **Only a signature's result** (T5): no declaration, parameter, or node
   has a result type or `Bubble`.
@@ -202,8 +204,9 @@ fail, as the frontend's result types are (typing.md, "Results").
   `sig.pass` and `sig.bubbles()` and never spell a result type.
 - **Part by part** in substitution, `mentions`, `same`, and lowering
   (`nevers`), so a failure type parameter can be an ordinary one later.
-- `MAY_BUBBLE` on calls and an operator's `bubbles` stay flags until a
-  call can fail with more than one type.
+- `MAY_BUBBLE` on calls and an operator's `bubbles` stay flags; what a
+  node fails with is its callee's failure type, with type arguments put
+  in, or `Bubble` (`failures::node_failure`).
 
 ## Never
 

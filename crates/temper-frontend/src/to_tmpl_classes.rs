@@ -15,7 +15,7 @@
 //! a function or method as a value, supertypes from core (as
 //! `Stringable`), and static fields assigned after their initializer.
 
-use super::{DECLARED_FAILURES, Translator, Tx};
+use super::{Translator, Tx};
 use crate::builtins::Function;
 use crate::core::{
     self, CLASS_CONNECTED, CLASS_INTERFACE, FN_NO_BODY, LET_INIT, LET_VAR, MEMBER_CONNECTED,
@@ -238,8 +238,11 @@ impl Translator<'_> {
                 let root = Some(crate::builtins::Builtin::named(
                     crate::builtins::FAILURE_ROOT,
                 ));
+                // A failure type extends its library's base in place of
+                // core's `Error`.
                 if Some(self.s.scopes.resolved_builtin(name)) == root {
-                    return self.not_yet(sup, DECLARED_FAILURES);
+                    types.push(self.failure_base(sup)?);
+                    continue;
                 }
                 return self.not_yet(sup, "a builtin supertype");
             };
@@ -583,6 +586,7 @@ impl Translator<'_> {
                 .map_or(0, |i| i + 1);
             nodes.insert(at, ctor);
         }
+        nodes.extend(self.default_message(class, decl)?);
         self.this_class = outer;
         let item = self.b.class(decl, &nodes);
         Ok(self.own(item, class))

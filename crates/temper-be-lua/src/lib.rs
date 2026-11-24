@@ -175,6 +175,8 @@ pub fn rock_version(p: &Program) -> String {
 /// relative, as Kotlin does when it has no path, and writes no zip:
 /// `luarocks make` in the library's directory needs none.
 pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet> {
+    // Declared failures, not yet (RFC 164).
+    temper_tmpl::failures::not_yet(p).map_err(|what| NotYet { what })?;
     // Type-only errors run as written, or fail where they are
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);

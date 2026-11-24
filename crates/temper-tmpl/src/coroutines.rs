@@ -270,7 +270,7 @@ fn to_state_machine(b: &mut Builder, h: &Helpers, literal: NodeId) -> R<()> {
         &mut |id| match b.program().nodes.get(id) {
             Node::While { label, .. } | Node::DoWhile { label, .. } => owned.push(label),
             Node::FunctionLiteral { decl: d, .. } => owned.push(d),
-            Node::Let { local, .. } => owned.push(local),
+            Node::Let { local, .. } | Node::Catch { local, .. } => owned.push(local),
             _ => {}
         },
     );
@@ -811,6 +811,7 @@ impl Machine<'_> {
         match p.nodes.get(e) {
             Node::Await { promise, .. } => return Ok(self.first_pause(promise)?.or(Some(e))),
             Node::OrElse { .. } | Node::BlockValue { .. } => return Ok(Some(e)),
+            Node::Catch { .. } => return Err("a pause in a catch (declared failures)".into()),
             _ => {}
         }
         let conditional = matches!(p.nodes.kind(e), Kind::IfValue | Kind::And | Kind::Or);

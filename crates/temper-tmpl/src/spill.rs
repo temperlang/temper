@@ -181,7 +181,7 @@ fn find(p: &Program, id: NodeId, owner: DeclId, sites: &mut Vec<(NodeId, DeclId)
     };
     let chooses = matches!(
         p.nodes.kind(id),
-        Kind::And | Kind::Or | Kind::IfValue | Kind::OrElse | Kind::BlockValue
+        Kind::And | Kind::Or | Kind::IfValue | Kind::OrElse | Kind::Catch | Kind::BlockValue
     );
     let kids = p.nodes.kids(id);
     if !chooses && p.nodes.kind(id) != Kind::FunctionLiteral {
@@ -238,7 +238,7 @@ fn find_choices(
     }
 }
 
-/// Whether an expression has an `orelse` or a block's value in it,
+/// Whether an expression has an `orelse`, a `catch`, or a block's value in it,
 /// outside function literals.
 fn hoists(p: &Program, id: NodeId) -> bool {
     hoists_with(p, id, &|_| false)
@@ -247,7 +247,7 @@ fn hoists(p: &Program, id: NodeId) -> bool {
 /// [`hoists`], or has an expression in it that `also` marks.
 fn hoists_with(p: &Program, id: NodeId, also: &dyn Fn(NodeId) -> bool) -> bool {
     match p.nodes.kind(id) {
-        Kind::OrElse | Kind::BlockValue => true,
+        Kind::OrElse | Kind::Catch | Kind::BlockValue => true,
         Kind::FunctionLiteral => false,
         _ => also(id) || p.nodes.kids(id).iter().any(|&k| hoists_with(p, k, also)),
     }

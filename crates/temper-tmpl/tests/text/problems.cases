@@ -374,7 +374,7 @@ module results#0 {
 }
 --- problems
 T5 #3: fn (Bubble): Int32 throws Int32 has a failure where a value goes
-T5 #3: fn (Bubble): Int32 throws Int32 fails with Int32, not Bubble
+T5 #3: fn (Bubble): Int32 throws Int32 fails with Int32, not Bubble or a failure type
 T5 #4: Bubble isn't a value's type
 T5 #5: Bubble isn't a value's type
 T5 @9: Bubble isn't a value's type

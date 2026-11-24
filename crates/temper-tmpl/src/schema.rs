@@ -16,8 +16,9 @@
 //! from subset B, classes and interfaces with their members, `this`,
 //! fields, statics, `new`, conversions, `is`, and identity; and function
 //! values: literals with their captures, references, calls of values, and
-//! the conversions between `@fun` interfaces and function types; and
-//! `Coalesce`, for parameters' defaults.
+//! the conversions between `@fun` interfaces and function types;
+//! `Coalesce`, for parameters' defaults; and declared failures' `Throw`
+//! and `Catch`.
 
 use crate::ids::{DeclId, NodeId, StrId, TypeId};
 use crate::nodes::{Flags, Kids, Nodes};
@@ -540,6 +541,27 @@ schema! {
     /// `bubble()`: fails, to the nearest `orelse` or the function's
     /// caller; typed as its place wants, since it never completes.
     Bubble(Expr, Written) { may_bubble: bool = flag }
+    /// `throw value`: fails with `value`, an object of a failure type (a
+    /// class below core's `Error`), to the nearest handler or the
+    /// function's caller, which must take its type; typed as its place
+    /// wants, since it never completes. `cause`, in a handler's fallback,
+    /// is the failure being handled, which becomes the thrown one's cause
+    /// unless it has one already (notes/tmpl/nodes.md, "Declared
+    /// failures").
+    Throw(Expr, Written) {
+        may_bubble: bool = flag,
+        value: NodeId = one Expr,
+        cause: Option<NodeId> = opt Expr,
+    }
+    /// `catch (e)`: `body`'s value, or if it fails, `fallback`'s, with
+    /// `local`, declared here and in scope only in `fallback`, holding the
+    /// failure. Everything `body` may fail with is of `local`'s type, a
+    /// failure type, so never `Bubble`. Typed as `OrElse` is.
+    Catch(Expr, Written) {
+        local: DeclId = a,
+        body: NodeId = one Expr,
+        fallback: NodeId = one Expr,
+    }
     /// `panic()`: stops the program, which no `orelse` handles; typed as
     /// its place wants.
     Panic(Expr, Written) {}
