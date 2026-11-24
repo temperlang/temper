@@ -314,7 +314,7 @@ void global_init_init() {
     core::NullableParam<core::Str> subject2 = empty->firstName();
     core::Console::log(temper_globals::console.value, subject2 == nullptr ? TEMPER_STR("none") : subject2.value);
     int32_t n = core::Int::add(shelf->tally<std::shared_ptr<Named>>(1), shelf->tally<std::shared_ptr<Named>>(2));
-    core::Console::log(temper_globals::console.value, std::to_string(tagged<std::shared_ptr<Scene>, int32_t>(4)) + " " + generics::tagged<std::shared_ptr<Scene>, core::Str>(TEMPER_STR("t")) + " " + std::to_string(countOf<std::shared_ptr<core::AnyValueBase>>(3)) + " " + std::to_string(relayed<std::shared_ptr<Scene>, int32_t>(5)) + " " + std::to_string(n));
+    core::Console::log(temper_globals::console.value, std::to_string(tagged<std::shared_ptr<Scene>, int32_t>(4)) + " " + generics::tagged<std::shared_ptr<Scene>, core::Str>(TEMPER_STR("t")) + " " + std::to_string(countOf<std::shared_ptr<core::AnyValueBase>>(3)) + " " + std::to_string(relayed<std::shared_ptr<Stage>, int32_t>(5)) + " " + std::to_string(n));
     std::shared_ptr<std::vector<core::Str>> builder = core::ListBuilder::make<core::Str>();
     core::ListBuilder::add<core::Str>(builder, TEMPER_STR("x"));
     core::ListBuilder::add<core::Str>(builder, TEMPER_STR("y"));

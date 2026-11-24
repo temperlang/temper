@@ -402,9 +402,10 @@ class BitVector(object):
         return bool(self._bytearray[byte_index] & (1 << (idx & 7)))
 
     def set(self, idx: int, bit: bool) -> None:
-        "set a bit in the bit vector, expanding the vector as needed."
+        """Sets a bit in the bit vector, expanding the vector as needed; a
+        negative index panics, as `panic()` raises, past any `orelse`."""
         if idx < 0:
-            raise IndexError()
+            raise BaseException(f"index {idx} out of bounds")
         byte_array = self._bytearray
         byte_size = len(byte_array)
         byte_index = idx >> 3
@@ -989,7 +990,10 @@ def listed_to_list(lst: Sequence[T]) -> Sequence[T]:
 
 
 def deque_remove_first(deq: Deque[T]) -> T:
-    "Defer to deque.popleft, except bubbling when the deque is empty."
+    """Defer to deque.popleft, except panicking when the deque is empty, as
+    reading a list out of bounds does."""
+    if not deq:
+        raise BaseException("index 0 out of bounds for length 0")
     return deq.popleft()
 
 

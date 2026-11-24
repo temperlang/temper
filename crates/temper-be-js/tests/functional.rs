@@ -980,3 +980,77 @@ fn std_package_name() {
         assert!(text.contains("\"name\": \"@temperlang/std\""), "{text}");
     });
 }
+
+/// A std class whose constructor JS connects is made by the host, so
+/// its shell declares no private fields, which only that constructor
+/// would set (tsc's TS2564); one with private fields must connect every
+/// member too, or a member's Temper body would read a field the shell
+/// lacks.
+#[test]
+fn host_made_std_classes_are_shells() {
+    use temper_tmpl::Node;
+    use temper_tmpl::qname::connected_member_node;
+    kit::with_stack(|| {
+        let p = kit::std_program();
+        let connects = temper_be_js::connected::connects_std;
+        let mut host_made = Vec::new();
+        for module in &p.modules {
+            for item in module.all_items() {
+                let Node::Class { decl, members, .. } = p.nodes.get(item) else {
+                    continue;
+                };
+                let members = p.nodes.list(members);
+                let is_constructor = |&m: &temper_tmpl::NodeId| match p.nodes.get(m) {
+                    Node::Method { decl, .. } | Node::AbstractMethod { decl, .. } => {
+                        p.decls.get(decl).kind == temper_tmpl::DeclKind::Constructor
+                    }
+                    _ => false,
+                };
+                let made = (members.iter())
+                    .any(|m| is_constructor(m) && connected_member_node(&p, *m, connects));
+                if !made {
+                    continue;
+                }
+                let name = p.strings.get(p.decls.get(decl).name).to_string();
+                let private = (members.iter()).any(|&m| match p.nodes.get(m) {
+                    Node::Field { decl } => p
+                        .decls
+                        .get(decl)
+                        .facts
+                        .contains(temper_tmpl::Facts::PRIVATE),
+                    _ => false,
+                });
+                if !private {
+                    continue;
+                }
+                for &m in members {
+                    let is_member = matches!(
+                        p.nodes.get(m),
+                        Node::Method { .. } | Node::AbstractMethod { .. }
+                    );
+                    assert!(
+                        !is_member || connected_member_node(&p, m, connects),
+                        "{name}: a member isn't connected"
+                    );
+                }
+                host_made.push(name);
+            }
+        }
+        host_made.sort();
+        assert_eq!(host_made, ["BitVector", "Queue"]);
+        let files = translate(&p, &JS).unwrap();
+        let collections = files
+            .iter()
+            .find(|f| f.path.ends_with("collections.internal.js"));
+        let text = &collections.expect("std's collections.internal.js").text;
+        for class in ["Queue", "BitVector"] {
+            let start = text.find(&format!("class {class} ")).expect(class);
+            let body = &text[start..];
+            let body = &body[..body.find("\n}").unwrap_or(body.len())];
+            assert!(
+                !body.contains('#'),
+                "{class} declares private fields:\n{body}"
+            );
+        }
+    });
+}

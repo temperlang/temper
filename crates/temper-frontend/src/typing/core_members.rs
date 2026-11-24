@@ -1309,7 +1309,6 @@ mod tests {
             assert_eq!(shape(t).may_downcast, Some(false), "{t}");
         }
         assert_eq!(shape("Void").may_downcast, None);
-        assert_eq!(shape("Empty").may_downcast, None);
         let listed = shape("Listed");
         assert!(listed.interface && listed.sealed && !listed.public_constructor);
         assert!(shape("MapKey").sealed);
@@ -1321,5 +1320,10 @@ mod tests {
         assert!(!shape("Empty").public_constructor);
         assert_eq!(core_shape("ignore"), None);
         assert_eq!(core_shape("Nope"), None);
+        // Core's no longer: null has no type of its own, and std has
+        // `Queue` and `BitVector`.
+        for gone in ["Null", "Deque", "DenseBitVector"] {
+            assert_eq!(core_shape(gone), None, "{gone}");
+        }
     }
 }

@@ -52,7 +52,7 @@ public static class MyersDiffGlobal
         Queue<DiffPath> costOneEdges = new Queue<DiffPath>();
         while (true)
         {
-            DiffPath? diffPath = costZeroEdges.Count != 0 ? costZeroEdges.Dequeue() : costOneEdges.Count != 0 ? costOneEdges.Dequeue() : null;
+            DiffPath? diffPath = costZeroEdges.Count != 0 ? Core.QueueRemoveFirst(costZeroEdges) : costOneEdges.Count != 0 ? Core.QueueRemoveFirst(costOneEdges) : null;
             int leftIndex;
             int? subject = diffPath == null ? null : (int?)diffPath.LeftIndex;
             leftIndex = subject == null ? 0 : subject.Value;

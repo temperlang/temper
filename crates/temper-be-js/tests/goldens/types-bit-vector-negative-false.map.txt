@@ -1,0 +1,7 @@
+# generated line:column -> source:line:column, and the text at each
+7:1 -> ../bit-vector-negative-false.temper.md:12:5  const v = denseBitVectorCons <- let v = new BitVector(2);
+8:1 -> ../bit-vector-negative-false.temper.md:13:5  denseBitVectorSet(v, 5, fals <- v.set(5, false);
+9:1 -> ../bit-vector-negative-false.temper.md:14:5  console.log(`v[5]=${denseBit <- console.log("v[5]=${v[5]}");
+10:1 -> ../bit-vector-negative-false.temper.md:15:5  console.log("before"); <- console.log("before");
+11:1 -> ../bit-vector-negative-false.temper.md:16:5  denseBitVectorSet(v, -1, fal <- v.set(-1, false);
+12:1 -> ../bit-vector-negative-false.temper.md:17:5  console.log("not reached"); <- console.log("not reached");

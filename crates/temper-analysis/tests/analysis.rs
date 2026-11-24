@@ -92,6 +92,73 @@ let i = id<String?>(null);
     }
 }
 
+/// Hover never shows null's internal type (`Never?`), nor a `Null`,
+/// for a null in any place, annotated or not, nor for what's declared
+/// with only null (an error), in functions and classes too.
+#[test]
+fn hover_on_null_never_shows_never() {
+    let source = r#"class Box(public v: String?) {}
+let take(s: String?): String { s ?? "none" }
+let give(c: Boolean): Int? { if (c) { 1 } else { null } }
+let back(): String? { return null }
+let id<T>(x: T): T { x }
+let or<T>(x: T?, d: T): T { x ?? d }
+let n: Int? = null;
+var m: Int? = 1;
+m = null;
+let xs: List<Int?> = [1, null];
+let ys = [null, 2];
+let b = new Box(null);
+let g: String? = id<String?>(null);
+let h: Int? = give(true) ?? null;
+let e = if (n == null) { 1 } else { null };
+let k = give(true) ?? null;
+let o = or(null, 3);
+let a = null;
+let f(): Void { let z = null; console.log("${z == null}"); }
+class C { public var x = null; }
+"#;
+    let a = analyze(source);
+    // Each null's type is the place's, or none where no place gives one
+    // (`?`, as typing has no type, for a declaration of only null).
+    let mut shown = Vec::new();
+    for nth in 0..source.matches("null").count() {
+        let h = a.hover(MAIN, at(source, "null", nth, 1)).unwrap();
+        shown.push(h.ty);
+    }
+    let some = |t: &str| Some(t.to_string());
+    let expected = [
+        some("Int32?"),  // give's else
+        some("String?"), // return
+        some("Int32?"),  // n
+        some("Int32?"),  // m = null
+        some("Int32?"),  // [1, null] for a List<Int?>
+        None,            // [null, 2]
+        some("String?"), // new Box(null)
+        some("String?"), // id<String?>(null)
+        None,            // ?? null for an Int?
+        some("Int32?"),  // n == null
+        None,            // e's else
+        None,            // k's ?? null
+        some("Int32?"),  // or(null, 3)
+        None,            // let a = null
+        None,            // let z = null
+        None,            // z == null
+        None,            // var x = null
+    ];
+    assert_eq!(shown, expected);
+    for (needle, ty) in [
+        ("let a ", "?"),
+        ("let z ", "?"),
+        ("var x ", "?"),
+        ("let e ", "Int32?"),
+        ("let k ", "Int32?"),
+    ] {
+        let h = a.hover(MAIN, at(source, needle, 0, 4)).unwrap();
+        assert_eq!(h.ty.as_deref(), Some(ty), "{needle}");
+    }
+}
+
 #[test]
 fn hover_on_a_declaration() {
     let a = analyze(STACK);

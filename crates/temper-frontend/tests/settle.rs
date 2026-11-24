@@ -655,7 +655,8 @@ fn calls_resolve_to_what_they_call() {
 /// arguments, type arguments, or the type wanted, through an alias too,
 /// fields typed by their initializers, `for … of` variables, a type
 /// parameter's members, `i++`, `doPure`, a block that returns, `empty()`,
-/// string indices, a generic function, and tests, one asserting a
+/// string indices, a generic function, one called with only type
+/// arguments, and tests, one asserting a
 /// nullable list is null with its own message (the message `assert`
 /// makes would show the list, which has no `toString`).
 #[test]
@@ -682,6 +683,8 @@ fn every_expression_is_typed() {
                     console.log(\"${leastX(P.origin, new P(1)).x} ${digit(char'7')} ${raw\"\\d\"} ${p.key}\");\n\
                     console.log(\"${c.length} ${n.length} ${pure.length} ${e == e} ${j < s.end}\");\n\
                     let none: List<Int>? = null;\n\
+                    let mk<T>(): ListBuilder<T> { new ListBuilder<T>() }\n\
+                    let made = mk<String>();\n\
                     test(\"adds\") { assert(i == 2) }\n\
                     test(\"none\") { assert(none == null) { \"none isn't null\" } }";
         library.add_file("main.temper", main, SourceKind::Standalone);
@@ -1145,7 +1148,7 @@ fn toy_settled(hook: &str, files: &[(&str, &str)]) -> (bool, temper_frontend::se
     let main = format!("{hook}\n{}", toy_tag());
     library.add_file("main.temper", &main, SourceKind::Standalone);
     for &(path, text) in files {
-        library.add_file(path, text, SourceKind::Standalone);
+        library.add_file(path, text, source_kind(path));
     }
     let settled = settle(library);
     let mut tree = String::new();
@@ -1179,6 +1182,28 @@ fn content_tags_reach_nothing_at_compile_time() {
         // Control: a pure hook folds.
         let (folded, _) = toy_settled("let hook(k: String?): Void {}", &[]);
         assert!(folded, "the control should fold");
+        // So does one using std's collections, on the allowlist, whose
+        // `@connected` classes the interpreter runs as their Temper bodies.
+        let collections = std::fs::read_to_string(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../lib/std/collections/collections.temper.md"),
+        )
+        .unwrap();
+        let hook = "let { Queue, BitVector } = import(\"std/collections\");\n\
+                    let hook(k: String?): Void {\n\
+                      let q = new Queue<String>(); q.add(k ?? \"\"); q.removeFirst();\n\
+                      let v = new BitVector(1); v[40] = true; if (!v[40]) { panic(); }\n\
+                    }";
+        let file = (
+            "-std-/collections/collections.temper.md",
+            collections.as_str(),
+        );
+        let (folded, settled) = toy_settled(hook, &[file]);
+        let errors: Vec<String> = (settled.library.diagnostics.iter())
+            .filter(|d| d.level == Level::Error)
+            .map(|d| d.message.text())
+            .collect();
+        assert!(folded && errors.is_empty(), "collections: {errors:?}");
         let cases: Vec<ReachCase> = vec![
             (
                 "a request in the propagation",

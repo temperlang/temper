@@ -76,9 +76,9 @@ but the more clarity around `null` the better.
 The value `true` of type [*Boolean*](types.md#class-boolean).
 
 ### *void*
-The value `void` is the sole value in type [*Void*](types.md#class-void).
-
-`Void` is disjoint from `AnyValue` so no `void` value is directly usable.
+`void` does nothing, as a branch or fallback with nothing to do, as in
+`x orelse void`. It has type [*Void*](types.md#class-void), which is
+never a value's, so `void` can't be stored or passed.
 See also [issue#38](https://github.com/temperlang/temper/issues/38).
 
 ## Special functions

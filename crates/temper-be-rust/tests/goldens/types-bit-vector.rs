@@ -32,6 +32,24 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 v.get(1000),
                 v.get(100)
             );
+            let u = temper_core::BitVector::with_capacity(0);
+            u.set(8, true);
+            u.set(32, true);
+            u.set(64, true);
+            println!(
+                "{} {} {} {} {} {} {} {} {}",
+                u.get(7),
+                u.get(8),
+                u.get(9),
+                u.get(31),
+                u.get(32),
+                u.get(33),
+                u.get(63),
+                u.get(64),
+                u.get(65)
+            );
+            v.set(1000, false);
+            println!("v[1000]={} v[999]={}", v.get(1000), v.get(999));
             let w = temper_core::BitVector::with_capacity(-9);
             w.set(1, true);
             println!("w[0]={} w[1]={}", w.get(0), w.get(1));

@@ -262,6 +262,74 @@ error 80..81: Declare a type for b, as `b: String?`: null alone has none
 error 94..95: Declare a type for c, as `c: String?`: null alone has none
 error 138..139: Declare a type for d, as `d: String?`: null alone has none
 
+=== null alone, in a function and a class, and its legal neighbors
+// A local in a function needs a type as a top-level one does. A null
+// joined with a value takes its type, nullable, and a value from a
+// typed place, even one typed `Never?`, isn't null alone.
+let give(c: Boolean): Int? { if (c) { 1 } else { null } }
+let f(): Void { let z = null; }
+class C { public var x = null; }
+let e = if (give(true) == null) { 1 } else { null };
+let k = give(true) ?? null;
+let zs = [null];
+let n: Never? = null;
+let m = n;
+--- settled
+(Block
+  (Let
+    ^give:0
+    (Fn (Let ^c:8 Boolean) (Call ? Int) (Block (If c:8 (Block 1) (Block null)))))
+  (Let ^f:1 (Fn Void (Block (Let ^z:9 null) #void)))
+  (Class ^C:2 (Var ^x:11 null))
+  (Let ^e:3 (If (Call == (Call give:0 true) null) (Block 1) (Block null)))
+  (Let
+    ^k:4
+    (Block
+      (Let ^subject#12 (Call give:0 true))
+      (If (Call == subject#12 #null) null subject#12)))
+  (Let ^zs:5 (Call list null))
+  (Let ^n:6 (Call ? Never) null)
+  (Let ^m:7 n:6)
+  #void)
+error 275..276: Declare a type for z, as `z: String?`: null alone has none
+error 308..309: Declare a type for x, as `x: String?`: null alone has none
+error 425..430: Never needs the type it stands for, as Never<Int> or Never<Void>
+
+=== messages about a null never show its internal type
+let a = null;
+let b: Int = a;
+let two(x: Int, y: Int): Int { 1 }
+two(null, 2);
+let c: Int = if (b == 1) { null } else { null };
+let d = null + 1;
+let e = null.length;
+let f: String = "${null}";
+let g: Boolean = null == null;
+if (null) { console.log("no"); }
+let h: List<Int> = [null];
+let one(): Int { null }
+--- settled
+(Block
+  (Let ^a:0 null)
+  (Let ^b:1 Int a:0)
+  (Let ^two:2 (Fn (Let ^x:10 Int) (Let ^y:11 Int) Int (Block 1)))
+  (Call two:2 null 2)
+  (Let ^c:3 Int (If (Call == b:1 1) (Block null) (Block null)))
+  (Let ^d:4 (Call + null 1))
+  (Let ^e:5 (Call . null \length))
+  (Let ^f:6 String (Call cat null))
+  (Let ^g:7 Boolean (Call == null null))
+  (If null (Block (Call (Call . console \log) "no") #void) (Block))
+  (Let ^h:8 (Call <> List Int) (Call list null))
+  (Let ^one:9 (Fn Int (Block null))))
+error 4..5: Declare a type for a, as `a: String?`: null alone has none
+error 69..73: Expected subtype of Int32, but got Int32?
+error 92..126: Expected subtype of Int32, but got Int32?
+error 136..140: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32?, Int32]
+error 278..282: Actual arguments do not match signature: <listT extends AnyValue>(listT) -> List<listT> expected [Int32], but got [Int32?]
+error 302..306: Expected subtype of Int32, but got Int32?
+Failed: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32?, Int32]
+
 === function results
 let count(): Void { var n = 0; n += 1 }
 let bump(): Void { var n = 0; n++ }
@@ -985,7 +1053,8 @@ log a
 // Each call binds the function's type parameters, from its type
 // arguments or else its arguments' types; a parameter bound two ways is
 // left unknown, as Kotlin may find a common supertype. Kotlin folds a
-// call of constants first, so `id<Int>("a")` then passes as a `String`.
+// call of constants first, so `id<Int>("a")` then passes as a `String`;
+// type arguments still bind what no argument does, as `none<Int>()`'s.
 interface Animal {}
 class Dog extends Animal {}
 let id<T>(x: T): T { x }
@@ -1008,6 +1077,8 @@ let c9: String = both(1, 2);
 let d1: String = id<Int>(1);
 let d2: Animal = id(new Dog());
 let d3 = id<Int, Int>(1);
+let none<T>(): List<T> { [] }
+let d4 = none<Int>();
 let f(n: Int, s: String, xs: List<Int>): Void {
   g(n, s);
   g(n);
@@ -1027,47 +1098,47 @@ console.log(id(1).toString());
 (Block
   (Interface ^Animal:0)
   (Class ^Dog:1 Animal:0)
-  (Let ^id:2 (Fn (TypeParam ^T:25) (Let ^x:26 T:25) T:25 (Block x:26)))
+  (Let ^id:2 (Fn (TypeParam ^T:27) (Let ^x:28 T:27) T:27 (Block x:28)))
   (Let
     ^pair:3
-    (Fn (TypeParam ^T:27) (Let ^a:28 T:27) (Let ^b:29 T:27) T:27 (Block a:28)))
+    (Fn (TypeParam ^T:29) (Let ^a:30 T:29) (Let ^b:31 T:29) T:29 (Block a:30)))
   (Let
     ^wrap:4
     (Fn
-      (TypeParam ^T:30)
-      (Let ^x:31 T:30)
-      (Call <> List T:30)
-      (Block (Call list x:31))))
+      (TypeParam ^T:32)
+      (Let ^x:33 T:32)
+      (Call <> List T:32)
+      (Block (Call list x:33))))
   (Let
     ^pick:5
-    (Fn (TypeParam ^T:32 Animal:0) (Let ^x:33 T:32) T:32 (Block x:33)))
+    (Fn (TypeParam ^T:34 Animal:0) (Let ^x:35 T:34) T:34 (Block x:35)))
   (Let
     ^opt:6
     (Fn
-      (TypeParam ^T:34)
-      (Let ^x:35 (Call ? T:34))
-      T:34
-      (Block (Orelse x:35 (Call panic)))))
+      (TypeParam ^T:36)
+      (Let ^x:37 (Call ? T:36))
+      T:36
+      (Block (Orelse x:37 (Call panic)))))
   (Let
     ^both:7
     (Fn
-      (TypeParam ^T:36)
-      (TypeParam ^U:37)
-      (Let ^a:38 T:36)
-      (Let ^b:39 U:37)
-      U:37
-      (Block b:39)))
+      (TypeParam ^T:38)
+      (TypeParam ^U:39)
+      (Let ^a:40 T:38)
+      (Let ^b:41 U:39)
+      U:39
+      (Block b:41)))
   (Let
     ^g:8
-    (Fn (TypeParam ^T:40) (Let ^x:41 T:40) (Let ^n:42 Int) T:40 (Block x:41)))
+    (Fn (TypeParam ^T:42) (Let ^x:43 T:42) (Let ^n:44 Int) T:42 (Block x:43)))
   (Let
     ^k:9
     (Fn
-      (TypeParam ^T:43)
-      (Let ^xs:44 (Call <> List T:43))
-      (Let ^x:45 T:43)
-      T:43
-      (Block x:45)))
+      (TypeParam ^T:45)
+      (Let ^xs:46 (Call <> List T:45))
+      (Let ^x:47 T:45)
+      T:45
+      (Block x:47)))
   (Let ^c1:10 String (Call id:2 1))
   (Let ^c2:11 Int (Call id:2 1))
   (Let ^c3:12 (Call pair:3 1 "a"))
@@ -1080,45 +1151,47 @@ console.log(id(1).toString());
   (Let ^d1:19 String (Call id:2 \typeArg Int 1))
   (Let ^d2:20 Animal:0 (Call id:2 (Call new Dog:1)))
   (Let ^d3:21 (Call id:2 \typeArg Int \typeArg Int 1))
+  (Let ^none:22 (Fn (TypeParam ^T:48) (Call <> List T:48) (Block (Call list))))
+  (Let ^d4:23 (Call none:22 \typeArg Int))
   (Let
-    ^f:22
+    ^f:24
     (Fn
-      (Let ^n:46 Int)
-      (Let ^s:47 String)
-      (Let ^xs:48 (Call <> List Int))
+      (Let ^n:49 Int)
+      (Let ^s:50 String)
+      (Let ^xs:51 (Call <> List Int))
       Void
       (Block
-        (Call g:8 n:46 s:47)
-        (Call g:8 n:46)
-        (Call g:8 \typeArg String n:46 s:47)
-        (Call pick:5 n:46)
+        (Call g:8 n:49 s:50)
+        (Call g:8 n:49)
+        (Call g:8 \typeArg String n:49 s:50)
+        (Call pick:5 n:49)
         (Call pick:5 \typeArg Dog:1 (Call new Dog:1))
         (Call id:2 \typeArg Animal:0 (Call new Dog:1))
-        (Let ^a:49 String (Call g:8 n:46 1))
-        (Call k:9 xs:48 s:47)
-        (Let ^b:50 String (Call k:9 xs:48 n:46))
-        (Let ^c:51 Int (Call id:2 (Call id:2 s:47)))
-        (Let ^e:52 String (Call id:2 \typeArg Int n:46))
-        (Let ^h:53 Int (Call id:2 \typeArg Int n:46))
+        (Let ^a:52 String (Call g:8 n:49 1))
+        (Call k:9 xs:51 s:50)
+        (Let ^b:53 String (Call k:9 xs:51 n:49))
+        (Let ^c:54 Int (Call id:2 (Call id:2 s:50)))
+        (Let ^e:55 String (Call id:2 \typeArg Int n:49))
+        (Let ^h:56 Int (Call id:2 \typeArg Int n:49))
         #void)))
   (Call (Call . console \log) (Call (Call . (Call id:2 1) \toString)))
   #void)
-error 488..489: Cannot assign to T from T?
-error 629..634: Cannot assign to String from Int32
-error 694..706: Cannot assign to Int32 from String
-error 736..737: Actual arguments do not match signature: <T extends AnyValue>(T) -> List<T> expected [String], but got [Int32]
-error 749..756: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
-error 806..812: Cannot assign to String from Int32
-error 831..841: Cannot assign to String from Int32
-error 860..870: Cannot assign to String from Int32
-error 985..986: Actual arguments do not match signature: <T extends AnyValue>(T, Int32) -> T expected [Int32, Int32], but got [Int32, String]
-error 991..995: No callee matches inputs [Int32] among [<T extends AnyValue>(T, Int32) -> T]
-error 1009..1013: Actual arguments do not match signature: <T extends AnyValue>(T, Int32) -> T expected [String, Int32], but got [Int32, String]
-error 1018..1025: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
-error 1094..1101: Cannot assign to String from Int32
-error 1133..1141: Cannot assign to String from Int32
-error 1158..1167: Cannot assign to Int32 from String
-error 1187..1197: Cannot assign to String from Int32
+error 560..561: Cannot assign to T from T?
+error 701..706: Cannot assign to String from Int32
+error 766..778: Cannot assign to Int32 from String
+error 808..809: Actual arguments do not match signature: <T extends AnyValue>(T) -> List<T> expected [String], but got [Int32]
+error 821..828: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
+error 878..884: Cannot assign to String from Int32
+error 903..913: Cannot assign to String from Int32
+error 932..942: Cannot assign to String from Int32
+error 1109..1110: Actual arguments do not match signature: <T extends AnyValue>(T, Int32) -> T expected [Int32, Int32], but got [Int32, String]
+error 1115..1119: No callee matches inputs [Int32] among [<T extends AnyValue>(T, Int32) -> T]
+error 1133..1137: Actual arguments do not match signature: <T extends AnyValue>(T, Int32) -> T expected [String, Int32], but got [Int32, String]
+error 1142..1149: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
+error 1218..1225: Cannot assign to String from Int32
+error 1257..1265: Cannot assign to String from Int32
+error 1282..1291: Cannot assign to Int32 from String
+error 1311..1321: Cannot assign to String from Int32
 Failed: Actual arguments do not match signature: <T extends AnyValue>(T) -> List<T> expected [String], but got [Int32]
 
 === generic functions without bodies declare their type parameters

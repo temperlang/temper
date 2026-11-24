@@ -93,7 +93,13 @@ fn host_types_are_connected_in_core() {
         .filter(|name| !NOT_HOST_SCALARS.contains(name));
     let scalars: Vec<&str> = scalars.collect();
     let std_types = connected_std_types();
-    assert!(std_types.iter().any(|t| t == "std/temporal.type Date"));
+    for std_type in [
+        "std/temporal.type Date",
+        "std/collections.type Queue",
+        "std/collections.type BitVector",
+    ] {
+        assert!(std_types.iter().any(|t| t == std_type), "{std_type}");
+    }
     let mut wrong = Vec::new();
     let mut checked = 0;
     let mut std_named = 0;

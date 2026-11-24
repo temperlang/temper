@@ -40,6 +40,13 @@ void global_init_init() {
     core::Console::log(console, "v[99]=" + core::Boolean::toString(core::BitVector::get(v, 99)) + " v[100]=" + core::Boolean::toString(core::BitVector::get(v, 100)) + " v[101]=" + core::Boolean::toString(core::BitVector::get(v, 101)) + " v[200]=" + core::Boolean::toString(core::BitVector::get(v, 200)) + " v[-1]=" + core::Boolean::toString(core::BitVector::get(v, -1)));
     core::BitVector::set(v, 1000, true);
     core::Console::log(console, "v[999]=" + core::Boolean::toString(core::BitVector::get(v, 999)) + " v[1000]=" + core::Boolean::toString(core::BitVector::get(v, 1000)) + " v[100]=" + core::Boolean::toString(core::BitVector::get(v, 100)));
+    std::shared_ptr<std::vector<bool>> u = core::BitVector::make(0);
+    core::BitVector::set(u, 8, true);
+    core::BitVector::set(u, 32, true);
+    core::BitVector::set(u, 64, true);
+    core::Console::log(console, core::Boolean::toString(core::BitVector::get(u, 7)) + " " + core::Boolean::toString(core::BitVector::get(u, 8)) + " " + core::Boolean::toString(core::BitVector::get(u, 9)) + " " + core::Boolean::toString(core::BitVector::get(u, 31)) + " " + core::Boolean::toString(core::BitVector::get(u, 32)) + " " + core::Boolean::toString(core::BitVector::get(u, 33)) + " " + core::Boolean::toString(core::BitVector::get(u, 63)) + " " + core::Boolean::toString(core::BitVector::get(u, 64)) + " " + core::Boolean::toString(core::BitVector::get(u, 65)));
+    core::BitVector::set(v, 1000, false);
+    core::Console::log(console, "v[1000]=" + core::Boolean::toString(core::BitVector::get(v, 1000)) + " v[999]=" + core::Boolean::toString(core::BitVector::get(v, 999)));
     std::shared_ptr<std::vector<bool>> w = core::BitVector::make(-9);
     core::BitVector::set(w, 1, true);
     core::Console::log(console, "w[0]=" + core::Boolean::toString(core::BitVector::get(w, 0)) + " w[1]=" + core::Boolean::toString(core::BitVector::get(w, 1)));

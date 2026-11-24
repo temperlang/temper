@@ -75,6 +75,16 @@ pub fn import_hint(name: &str) -> Option<String> {
     })
 }
 
+/// What std's module at `path` exports now under a name it, or core,
+/// once did, as `Queue` for `Deque` from `std/collections`.
+pub fn renamed(path: &str, name: &str) -> Option<&'static str> {
+    let module = path.strip_prefix("std/")?;
+    let found = MOVED
+        .iter()
+        .find(|&&(n, export, m)| n == name && n != export && m == module);
+    found.map(|&(_, export, _)| export)
+}
+
 /// std as a library of its own, its modules named in `modules` (as
 /// [`MODULES`] names them) loaded from `sources`, with what they import,
 /// ready to settle and translate as the library `std`.

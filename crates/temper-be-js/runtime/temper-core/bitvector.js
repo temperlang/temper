@@ -1,6 +1,3 @@
-import {panic} from "./core.js";
-
-
 /**
  * @param {number} byte
  * @returns {string}
@@ -47,7 +44,8 @@ export class BitVector {
    */
   set(index, newBitValue) {
     if (index < 0) {
-      panic();
+      // Panics, even to set false, as a list's set out of bounds does.
+      throw new Error(`index ${index} out of bounds`);
     }
     let values = this.values;
     const len = values.byteLength;

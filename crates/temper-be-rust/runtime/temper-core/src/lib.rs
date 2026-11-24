@@ -411,9 +411,11 @@ impl BitVector {
         BitVector(Arc::new(RwLock::new(bits)))
     }
 
-    /// Panics for a negative index.
+    /// Panics for a negative index, as a list's set out of bounds does.
     fn split_index(index: i32) -> (usize, u32) {
-        let index: usize = index.try_into().unwrap();
+        let Ok(index) = usize::try_from(index) else {
+            panic!("index {index} out of bounds");
+        };
         (index / BIT_CHUNK_SIZE, 1 << (index % BIT_CHUNK_SIZE))
     }
 
@@ -465,8 +467,10 @@ pub mod queue {
         queue.read().unwrap().is_empty()
     }
 
+    /// Panics if empty, as reading a list out of bounds does.
     pub fn remove_first<T>(queue: &Queue<T>) -> T {
-        queue.write().unwrap().pop_front().unwrap()
+        let first = queue.write().unwrap().pop_front();
+        first.unwrap_or_else(|| panic!("index 0 out of bounds for length 0"))
     }
 }
 

@@ -458,7 +458,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "std/collections.type BitVector.set()",
-        Connection::Method("set"),
+        Connection::Static("Core", "bitVectorSet"),
     ),
     (
         "std/collections.type Queue.add()",

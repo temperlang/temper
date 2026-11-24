@@ -175,7 +175,7 @@ public static class GenericsGlobal
         string? subject2 = empty.FirstName();
         console.Log(subject2 == null ? "none" : subject2);
         int n = shelf.Tally<Named>(1) + shelf.Tally<Named>(2);
-        console.Log(string.Create(CultureInfo.InvariantCulture, $"{Tagged<IScene, int>(4)} {Tagged<IScene, string>("t")} {CountOf<object>(3)} {Relayed<IScene, int>(5)} {n}"));
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{Tagged<IScene, int>(4)} {Tagged<IScene, string>("t")} {CountOf<object>(3)} {Relayed<Stage, int>(5)} {n}"));
         IList<string> builder = new List<string>();
         builder.Add("x");
         builder.Add("y");

@@ -48,7 +48,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 tagged::<Scene, i32>(4),
                 tagged::<Scene, Arc<String>>(Arc::new("t".to_string())),
                 count_of::<temper_core::AnyValue>(3),
-                relayed::<Scene, i32>(5)
+                relayed::<Stage, i32>(5)
             );
             let builder: temper_core::ListBuilder<Arc<String>> = temper_core::listed::new_builder();
             temper_core::listed::add(&builder, Arc::new("x".to_string()), None);

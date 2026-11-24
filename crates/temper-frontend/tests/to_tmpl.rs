@@ -174,14 +174,16 @@ const ASYNC: [&str; 5] = [
 /// The functional tests that use std's classes' members and
 /// constructors, declared in tmpl as another library's, that translate;
 /// the backends run them once std translates as a library of its own.
-const STD_MEMBERS: [&str; 7] = [
+const STD_MEMBERS: [&str; 9] = [
     "regex/match",
     "regex/zero-advance",
     "testing/asserts",
     "types/bit-vector",
+    "types/bit-vector-negative-false",
     "types/date",
     "types/json-syntax-tree",
     "types/queue",
+    "types/queue-empty",
 ];
 
 /// The functional tests new in the 2026-11-09 sync with Kotlin's `main`

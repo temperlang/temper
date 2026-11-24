@@ -27,7 +27,8 @@ namespace temper {
             template<class Elem>
             Elem removeFirst(const std::shared_ptr<std::deque<Elem>>& dq) {
                 if (dq->empty()) {
-                    bubble<Elem>("removeFirst on an empty queue");
+                    // Panics, as reading a list out of bounds does.
+                    panic<Elem>("index 0 out of bounds for length 0");
                 }
                 Elem front = dq->front();
                 dq->pop_front();

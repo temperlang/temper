@@ -989,7 +989,8 @@ end
 function temper.queue_removefirst(queue)
     local head = queue.head
     if head == queue.tail then
-        return temper.bubble("std/collections.type Queue.removeFirst() on an empty queue")
+        -- Panics, as reading a list out of bounds does.
+        error("index 0 out of bounds for length 0")
     end
     local first = queue[head]
     queue.head = head + 1
@@ -2297,7 +2298,8 @@ end
 
 function temper.bitvector_set(vec, key, setto)
     if key < 0 then
-        return temper.bubble("std/collections.type BitVector.set(" .. tostring(key) .. ") index out of bounds")
+        -- Panics, even to set false, as a list's set out of bounds does.
+        error("index " .. tostring(key) .. " out of bounds")
     end
     vec[key] = setto
 end

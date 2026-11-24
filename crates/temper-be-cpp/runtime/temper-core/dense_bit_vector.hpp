@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <vector>
 #include "temper_bubble.hpp"
 #include "base_types.hpp"
@@ -38,7 +39,9 @@ namespace temper {
                 // already false, and a true one grows the vector.
                 int32_t sz = static_cast<int32_t>(bv->size());
                 if (index < 0) {
-                    bubble("BitVector set index out of bounds");
+                    // Panics, even to set false, as a list's set out of
+                    // bounds does.
+                    panic("index " + std::to_string(index) + " out of bounds");
                 }
                 if (index >= sz) {
                     if (!value) {

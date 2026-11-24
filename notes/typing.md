@@ -354,8 +354,10 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   value before checking it, so such a call with type arguments is solved
   from its arguments instead, as its value's type would be: `let s:
   String = id<Int>("a")` passes, and `let n: Int = id<Int>("a")` is
-  "Cannot assign to Int32 from String". A constructor's or method's call
-  isn't folded.
+  "Cannot assign to Int32 from String". Its type arguments still bind
+  the type parameters no parameter mentions, so `mk<Int>()` for `mk<T>():
+  List<T>` is a `List<Int32>`, and `relayed<Stage, Int>(5)` binds `S`
+  as `Stage`. A constructor's or method's call isn't folded.
 - **From the type wanted:** where a call's value is stored in a
   declaration with a type or a field, returned, given as a function's
   result, or assigned, and its type doesn't fit the type wanted there, the type
@@ -863,11 +865,17 @@ by null, so `or(null, 3)` for `or<T>(x: T?, d: T)` solves `T` as `Int32`.
 **Where its place is known,** checks note it (`Typing::in_place`): a
 declared type, an argument, a result, a field, a generic call's
 argument, or the other side of `==`. Hover shows that type, and never
-`Never?`; a null with no place shows no type.
+`Never?`; a null with no place, as a branch joined with a value
+(`if (c) { 1 } else { null }`) or an element of an unannotated list,
+shows no type, and messages never show `Never?` for it.
 
 **A declaration needs a type** if null is all it's given, as `let a =
-null;`, or `let d; d = null;` with no other initializer: "Declare a
-type for a, as `a: String?`: null alone has none". Kotlin typed such a
+null;`, a local in a function, an unannotated field (`var x = null;`),
+or `let d; d = null;` with no other initializer: "Declare a type for
+a, as `a: String?`: null alone has none". A join with a value, as `if
+(c) { 1 } else { null }` or `x ?? null`, has that value's type, made
+nullable. `Never?` can't be written (`Never` needs its type argument),
+so no declared type gives a value null's. Kotlin typed such a
 declaration `Null`, or from later uses.
 
 ## Inference

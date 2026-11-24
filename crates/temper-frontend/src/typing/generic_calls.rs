@@ -205,6 +205,18 @@ impl Settle {
                     *actual = UNKNOWN;
                 }
             }
+            // A folded call's type arguments still bind those no
+            // parameter mentions, as `T` in `mk<Int>()`, which its value
+            // would show.
+            if folds && type_args.len() == formals.len() {
+                for (i, &t) in type_args.iter().enumerate() {
+                    let types = &self.typing.types;
+                    let mentioned = (params.iter()).any(|p| types.mentions(p.ty, &formals[i..=i]));
+                    if !mentioned {
+                        actuals[i] = self.eval_type(t);
+                    }
+                }
+            }
         }
         Ok(Some(Solved {
             sig,

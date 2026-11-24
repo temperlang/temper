@@ -323,7 +323,9 @@ impl Settle {
     }
 
     /// That the module at `path`, whose scope is `scope`, doesn't export
-    /// `name`, with the export of the most similar name, if one's close.
+    /// `name`, with what std exports under its new name, as `Queue` for
+    /// `Deque`, or else the export of the most similar name, if one's
+    /// close.
     fn not_exported(&self, path: &str, scope: ScopeId, name: NameId) -> Message {
         let names = &self.lib.names;
         let text = names.get(name);
@@ -331,7 +333,10 @@ impl Settle {
             .map(|(n, _)| names.get(n))
             .collect();
         exports.sort_unstable();
-        let similar = similar(text, &exports).map(str::to_string);
+        let renamed = crate::stdlib::renamed(path, text);
+        let similar = renamed
+            .or_else(|| similar(text, &exports))
+            .map(str::to_string);
         Message::NotExported(path.to_string(), text.to_string(), similar)
     }
 

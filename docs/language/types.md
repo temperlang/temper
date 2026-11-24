@@ -1732,7 +1732,7 @@ The keyword `fn` is used to denote function values and types.
 
 | Example | Means |
 | ------- | ----- |
-| `fn (): Void` | Type for a function that takes no arguments and returns the `void` value |
+| `fn (): Void` | Type for a function that takes no arguments and returns no value |
 | `fn (Int): Int` | Type for a function that takes one integer and returns an integer |
 | `fn<T> (T): List<T>` | Type for a generic function with a type parameter `<T>` |
 | `fn (...Int): Boolean` | Type for a function that takes any number of integers |

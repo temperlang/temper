@@ -67,7 +67,8 @@ dropped once they're at least half of the list.
       }
 
       /**
-       * Removes and returns the first element. Panics if empty.
+       * Removes and returns the first element. Panics if empty, as
+       * reading a list out of bounds does.
        */
       @connected
       public removeFirst(): T {

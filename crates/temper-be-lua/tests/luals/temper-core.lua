@@ -795,7 +795,7 @@ function temper.queue_add(d, item) end
 ---@return boolean
 function temper.queue_isempty(d) end
 
----The first item, removed; it bubbles if there's none.
+---The first item, removed; it panics if there's none.
 ---@param d temper.Queue
 ---@return any
 function temper.queue_removefirst(d) end
@@ -812,7 +812,7 @@ function temper.bitvector_constructor(capacity) end
 ---@return boolean
 function temper.bitvector_get(v, i) end
 
----It bubbles for a negative index.
+---It panics for a negative index.
 ---@param v temper.BitVector
 ---@param i integer
 ---@param bit boolean

@@ -229,13 +229,15 @@ pub const TESTS: [&str; 1] = ["testing/asserts"];
 /// `std/json`, `std/temporal`, `std/collections`), which translate as
 /// part of std: each backend builds std's output beside them
 /// ([`Case::needs_std`]), with [`cases_with`].
-pub const WITH_STD: [&str; 6] = [
+pub const WITH_STD: [&str; 8] = [
     "regex/match",
     "regex/zero-advance",
     "types/bit-vector",
+    "types/bit-vector-negative-false",
     "types/date",
     "types/json-syntax-tree",
     "types/queue",
+    "types/queue-empty",
 ];
 
 /// The functional tests of std's `net`, which send requests to the test
@@ -432,8 +434,8 @@ pub struct Case {
     /// Whether its run fails (`expectRunFailure = true`), after logging
     /// what's expected ([`check_case`]).
     pub fails: bool,
-    /// For a shared program whose run must end in a panic, the panic's
-    /// message, as its ` ```panic ` block gives it ([`check_case`]).
+    /// For a run that must end in a panic, the panic's message, as its
+    /// ` ```panic ` block gives it ([`check_case`]).
     pub panic: Option<String>,
 }
 
@@ -555,7 +557,7 @@ pub fn functional_cases(backend: &str, tests: &[&str]) -> Vec<Case> {
             no_connected: false,
             tests: (test.runs_as_test()).then(|| test.expected_failures()),
             fails: test.expects_run_failure(),
-            panic: None,
+            panic: test.expected_panic(),
         };
         if !case.host_files.is_empty() {
             cases.push(case.clone());
@@ -586,7 +588,7 @@ fn cases_of(backend: &str, programs: &[&str]) -> Vec<Case> {
         };
         let text = fs::read_to_string(&path).unwrap();
         let fails = text.contains("expectRunFailure = true");
-        let panic = panic_message(&text);
+        let panic = temper_funtests::expected_panic(&text);
         let expected = if file.ends_with(".tmpl") {
             (text.lines())
                 .filter_map(|l| l.strip_prefix("// log: "))
@@ -1126,15 +1128,6 @@ pub fn check_log(failures: &mut Vec<String>, name: &str, out: &Output, expected:
             String::from_utf8_lossy(&out.stderr)
         ));
     }
-}
-
-/// The message a shared program's run must panic with, if it must: the
-/// line of its ` ```panic ` block, which a backend's panic shows
-/// ([`check_case`]).
-fn panic_message(text: &str) -> Option<String> {
-    let mut lines = text.lines().map(str::trim);
-    lines.find(|&l| l == "```panic")?;
-    lines.next().map(str::to_string)
 }
 
 /// [`check_log`] for a case's run on `backend`: one that's expected to

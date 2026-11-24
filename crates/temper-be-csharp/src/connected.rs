@@ -491,7 +491,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "std/collections.type Queue.removeFirst()",
-        Connection::Method("Dequeue"),
+        Connection::Static("Core", "QueueRemoveFirst"),
     ),
     (
         "std/net.sendRequest()",

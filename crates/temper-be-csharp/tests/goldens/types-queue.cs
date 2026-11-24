@@ -20,18 +20,18 @@ public static class QueueGlobal
         CheckEmpty();
         if (queue.Count != 0)
         {
-            console.Log(queue.Dequeue());
+            console.Log(Core.QueueRemoveFirst(queue));
         }
         queue.Enqueue("foo");
         queue.Enqueue("bar");
-        console.Log(queue.Dequeue());
+        console.Log(Core.QueueRemoveFirst(queue));
         queue.Enqueue("baz");
-        console.Log(queue.Dequeue());
+        console.Log(Core.QueueRemoveFirst(queue));
         queue.Enqueue("boo");
         CheckEmpty();
         while (queue.Count != 0)
         {
-            console.Log(queue.Dequeue());
+            console.Log(Core.QueueRemoveFirst(queue));
         }
         CheckEmpty();
         global::System.Collections.Generic.Queue<int?> numbers = new global::System.Collections.Generic.Queue<int?>();
@@ -45,10 +45,10 @@ public static class QueueGlobal
                 if (Core.ModSafe(i, 3) == 0)
                 {
                     int int32 = sum;
-                    int? subject = numbers.Dequeue();
+                    int? subject = Core.QueueRemoveFirst(numbers);
                     sum = int32 + (subject == null ? -1000 : subject.Value);
                     int value = sum;
-                    int? subject2 = numbers.Dequeue();
+                    int? subject2 = Core.QueueRemoveFirst(numbers);
                     sum = value + (subject2 == null ? 1 : subject2.Value);
                 }
                 i = i + 1;
@@ -58,7 +58,7 @@ public static class QueueGlobal
         int expected = 34;
         while (numbers.Count != 0)
         {
-            int? n = numbers.Dequeue();
+            int? n = Core.QueueRemoveFirst(numbers);
             if (n != null)
             {
                 if (n.Value != expected)

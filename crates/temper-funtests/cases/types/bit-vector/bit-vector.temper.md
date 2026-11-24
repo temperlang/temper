@@ -49,6 +49,22 @@ v[99]=false v[100]=true v[101]=false v[200]=false v[-1]=false
 v[999]=false v[1000]=true v[100]=true
 ```
 
+Bits at the boundaries of each backend's storage units (8, 32, and 64
+bits) stay apart, and a bit that grew the vector can be cleared.
+
+    let u = new BitVector(0);
+    u[8] = true;
+    u[32] = true;
+    u[64] = true;
+    console.log("${u[7]} ${u[8]} ${u[9]} ${u[31]} ${u[32]} ${u[33]} ${u[63]} ${u[64]} ${u[65]}");
+    v[1000] = false;
+    console.log("v[1000]=${v[1000]} v[999]=${v[999]}");
+
+```log
+false true false false true false false true false
+v[1000]=false v[999]=false
+```
+
 A negative capacity is none.
 
     let w = new BitVector(-9);
@@ -68,4 +84,11 @@ run, so it goes last.
 
 ```log
 before
+```
+
+The run ends in each backend's panic, with this message, not in a host
+exception:
+
+```panic
+index -1 out of bounds
 ```

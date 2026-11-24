@@ -1,6 +1,5 @@
 
 // Implements extension method std/collections.type Queue.add()
-import {bubble} from "./core.js";
 
 const DEQUE_NTAKEN = Symbol("Deque::nTaken");
 
@@ -48,7 +47,8 @@ export const dequeRemoveFirst = (deque) => {
   if (length === nTaken) {
     deque[DEQUE_NTAKEN] = 0;
     deque.length = 0;
-    bubble();
+    // Panics, as reading a list out of bounds does.
+    throw new Error("index 0 out of bounds for length 0");
   }
   let item = deque[nTaken];
   let nShiftThreshold = (length / 2) | 0;

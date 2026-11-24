@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -39,6 +40,11 @@ namespace TemperLang.Core
 
         public static void BitSet(this BitArray bits, int index, bool value)
         {
+            if (index < 0)
+            {
+                // Panics, even to set false, as a list's set out of bounds does.
+                Environment.FailFast($"index {index.ToString(CultureInfo.InvariantCulture)} out of bounds");
+            }
             if (index >= bits.Length)
             {
                 if (!value)
@@ -55,6 +61,19 @@ namespace TemperLang.Core
                 bits.Length = Math.Max(3 * bits.Length / 2, index + 1);
             }
             bits[index] = value;
+        }
+
+        /// <summary>
+        /// std's <c>Queue.removeFirst</c>: panics if empty, as reading a
+        /// list out of bounds does, where <c>Dequeue</c> throws.
+        /// </summary>
+        public static T QueueRemoveFirst<T>(this Queue<T> queue)
+        {
+            if (queue.Count == 0)
+            {
+                Environment.FailFast("index 0 out of bounds for length 0");
+            }
+            return queue.Dequeue();
         }
 
         public static void Bubble() => throw new Exception();

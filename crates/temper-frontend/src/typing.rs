@@ -1373,7 +1373,9 @@ impl Settle {
         };
         let kind = self.scopes.symbol(b).kind;
         let role = self.lib.tree.data(node) & core::ROLE_MASK;
-        let is_value = matches!(kind, SymbolKind::TopLevel | SymbolKind::Local);
+        // A field (role 0) holds a value as a top-level or local does.
+        let is_value = matches!(kind, SymbolKind::TopLevel | SymbolKind::Local)
+            || (kind == SymbolKind::Member && role == 0);
         if ty.is_none() && is_value && self.only_null(node, init) {
             let shown = self.lib.names.get(self.scopes.symbol(b).name).to_string();
             let span = self.lib.tree.span(name);

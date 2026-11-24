@@ -1575,13 +1575,32 @@ public final class Core {
     }
 
     /**
-     * Wraps the removeFirst method.
+     * std's {@code BitVector.set}: panics for a negative index, even to
+     * set false, as a list's set out of bounds does, where
+     * {@link BitSet#set} throws.
+     * @param bits the bits
+     * @param index the bit's index
+     * @param value whether to set the bit
+     */
+    public static void bitVectorSet(BitSet bits, int index, boolean value) {
+        if (index < 0) {
+            throw new AssertionError("index " + index + " out of bounds");
+        }
+        bits.set(index, value);
+    }
+
+    /**
+     * std's {@code Queue.removeFirst}: panics if empty, where
+     * {@link Deque#removeFirst} throws.
      * @param deque a deque instance
      * @return the first element removed from the deque
      * @param <E> the element type
      */
     public static <E> E dequeRemoveFirst(Deque<E> deque) {
-        // TODO Inline?
+        if (deque.isEmpty()) {
+            // Panics, as reading a list out of bounds does.
+            throw new AssertionError("index 0 out of bounds for length 0");
+        }
         return deque.removeFirst();
     }
 

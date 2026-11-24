@@ -47,9 +47,12 @@ and `java.util.BitSet` in Java, `collections.deque` in Python, and so
 on); the runtimes' own types are renamed to match (`temper_core.BitVector`
 in Python, `temper_core::Queue` in Rust, `temper.Queue` in Lua). Every
 backend now agrees on the edges, as std's Temper body has them: `get` at
-a negative index is `false`, `set` at one panics, and a negative
-capacity is none, where each backend differed somewhere before; and
-JavaScript's `set` far past the end no longer drops the bit. See [`std/collections`](../std/collections.md).
+a negative index is `false`, `set` at one panics (setting `false` too),
+`removeFirst` on an empty queue panics, as reading a list out of bounds
+does, with the same message everywhere, and a negative capacity is none,
+where each backend differed somewhere before (some threw a host
+exception, some bubbled); and JavaScript's `set` far past the end no
+longer drops the bit. See [`std/collections`](../std/collections.md).
 
 ## Explicit `null` for a parameter with a default gives the default
 

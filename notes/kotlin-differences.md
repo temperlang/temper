@@ -961,8 +961,9 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   function").
   Test: core_capabilities.rs (`Null` undeclared, a user's `class Null`);
   settle/types.cases, "null takes its type from where it goes" and
-  "null alone gives a declaration no type"; analysis.rs,
-  hover_on_null_shows_its_place.
+  "null alone gives a declaration no type" and "null alone, in a
+  function and a class, and its legal neighbors"; analysis.rs,
+  hover_on_null_shows_its_place and hover_on_null_never_shows_never.
 
 - **`Bubble` isn't an `AnyValue`, and `Never<T>` has no values**, as
   core's docs say (2026-11-19). Temper refuses `x is Bubble` and `x as

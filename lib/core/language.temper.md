@@ -42,8 +42,9 @@ type: `let name: String? = null;`.
     @connected
     export let nym`null`;
 
-`void` is the sole value of type [snippet/type/Void]. *Void* is disjoint from
-[snippet/type/AnyValue], so no `void` value is directly usable.
+`void` does nothing, as a branch or fallback with nothing to do, as in
+`x orelse void`. It has type [snippet/type/Void], which is never a
+value's, so `void` can't be stored or passed.
 
     @connected
     export let nym`void`;
@@ -63,7 +64,9 @@ type: `let name: String? = null;`.
 ## Void
 
 *Void* is the return type for functions that are called for their
-effect, not to produce a value. Its sole value is `void`.
+effect, not to produce a value. It has no values: it's disjoint from
+[snippet/type/AnyValue], and no variable, parameter, or type argument
+may be *Void*.
 
     export class Void {
       private constructor();

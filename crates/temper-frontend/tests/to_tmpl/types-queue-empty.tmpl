@@ -1,0 +1,34 @@
+tmpl 1 model 1 library `queue-empty` 0.0.0
+
+uses std#1 0.0.0-alpha.0.0 {
+  module collections#2 {
+    connected class Queue#3<T#4> {
+      connected constructor constructor#6(): Queue#3<T#4>;
+      connected method add#7(element: T#4): Void;
+      connected method removeFirst#12(): T#4;
+    }
+  }
+}
+
+uses `temper-core`#8 0.0.0-alpha.0.0 {
+  interface Console#9 {
+    connected method log#10(message: String): Void;
+  }
+  connected fn getConsole#13(name?: String): Console#9;
+}
+
+module `queue-empty`#0 {
+  let ~console#11: Console#9;
+
+  let queue#5: Queue#3<String>;
+
+  init {
+    init ~console#11 = getConsole#13(omitted);
+    init queue#5 = new constructor#6<String>();
+    queue#5.add#7("a");
+    ~console#11.log#10(queue#5.removeFirst#12());
+    ~console#11.log#10("before");
+    ~console#11.log#10(queue#5.removeFirst#12());
+    ~console#11.log#10("not reached");
+  }
+}

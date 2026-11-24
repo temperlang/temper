@@ -112,20 +112,20 @@ public final class MyersDiffGlobal {
                 if (rightIndex < rightLength) {
                     int sameReachedIndex = leftIndex + 1 + (rightIndex + 1) * reachedRowLength;
                     if (!Core.bitVectorGet(reached, sameReachedIndex) && eq.test(Core.listGet(left, leftIndex), Core.listGet(right, rightIndex))) {
-                        reached.set(sameReachedIndex, true);
+                        Core.bitVectorSet(reached, sameReachedIndex, true);
                         costZeroEdges.addLast(new DiffPath(leftIndex + 1, rightIndex + 1, ChangeTypeUnchanged, diffPath));
                     }
                 }
                 int delReachedIndex = leftIndex + 1 + rightIndex * reachedRowLength;
                 if (!Core.bitVectorGet(reached, delReachedIndex)) {
-                    reached.set(delReachedIndex, true);
+                    Core.bitVectorSet(reached, delReachedIndex, true);
                     costOneEdges.addLast(new DiffPath(leftIndex + 1, rightIndex, ChangeTypeDeletion, diffPath));
                 }
             }
             if (rightIndex < rightLength) {
                 int addReachedIndex = leftIndex + (rightIndex + 1) * reachedRowLength;
                 if (!Core.bitVectorGet(reached, addReachedIndex)) {
-                    reached.set(addReachedIndex, true);
+                    Core.bitVectorSet(reached, addReachedIndex, true);
                     costOneEdges.addLast(new DiffPath(leftIndex, rightIndex + 1, ChangeTypeAddition, diffPath));
                 }
             }
