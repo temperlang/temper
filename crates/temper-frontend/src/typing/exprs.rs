@@ -9,7 +9,9 @@
 //! An expression is a node whose value a program computes: a value other
 //! than a symbol, a name read as a value, a call, a function, and a
 //! block, `if` or `orelse` whose value is used, as a declaration's
-//! initializer, a value assigned or returned, an argument, or a condition.
+//! initializer, a value assigned or returned (a function's result too,
+//! however nested in its body's blocks and `if`s), an argument, or a
+//! condition.
 //! Not a type, a declared name, a named argument's symbol, a callee that
 //! names what's called (a builtin, a function, or `o.m` for a method,
 //! though `o` is an expression, unless it's `console`), a name that's
@@ -182,7 +184,36 @@ impl<'a> Exprs<'a> {
             }
         }
         if let Some(body) = body {
-            self.stmt(body, out);
+            self.result(body, out);
+        }
+    }
+
+    /// A function's result: its body's value, which is used, as is every
+    /// value it's made of. Its body, a block, and an `if` there aren't
+    /// values themselves, as a `return` goes into each branch; their
+    /// last parts and branches are its results.
+    fn result(&self, node: NodeId, out: &mut Vec<Expr>) {
+        let children = self.children(node);
+        match self.kind(node) {
+            NodeKind::Block => {
+                if let Some((&last, rest)) = children.split_last() {
+                    for &child in rest {
+                        self.stmt(child, out);
+                    }
+                    self.result(last, out);
+                }
+            }
+            NodeKind::If => {
+                let branches = children.len().saturating_sub(2);
+                for (i, &child) in children.iter().enumerate() {
+                    if i < branches {
+                        self.value(child, out);
+                    } else {
+                        self.result(child, out);
+                    }
+                }
+            }
+            _ => self.value(node, out),
         }
     }
 

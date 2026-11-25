@@ -161,7 +161,7 @@ not found
 
 One handler catches failures of two libraries, each under a root of its
 own, `count-failures`' beside this one's: what it catches is core's
-`Error`, whose message it reads, and which `is` tells apart. A
+`Error`, whose message it reads, and which `when` tells apart. A
 `throw` there takes it as its cause, and an `orelse` catches a bubble
 beside both. Another library's failure that nothing handles ends the
 run too:
@@ -171,7 +171,7 @@ run too:
     let total(key: String, count: String): Int {
       (hostLookup(key) + parseCount(count)) catch (e) {
         console.log("caught ${e.message}");
-        if (e is NotFound) { -1 } else { -2 }
+        when (e) { is NotFound -> -1; else -> -2 }
       }
     }
     console.log("${total("a", "two")} ${total("z", "two")} ${total("a", "x")}");

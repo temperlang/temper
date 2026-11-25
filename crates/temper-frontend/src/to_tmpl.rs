@@ -2291,15 +2291,7 @@ impl Translator<'_> {
     /// == null) { return null; } else { t = y; } t }`. Backends hoist it
     /// as they hoist any block's value, keeping the order of what runs.
     fn jumping_value(&mut self, node: FNode) -> Tx<NodeId> {
-        // Where typing has no type for it, as a function's last value, the
-        // type of its parts' values, as [`Self::or_else_typed`] finds it.
-        let ty = match self.s.typing.expr(node) {
-            Some(t) if t != ft::NEVER && self.s.typing.types.is_known(t) => self.ty(t, node)?,
-            _ => match self.value_type(self.children(node).to_vec().as_slice()) {
-                Some(t) => t,
-                None => self.expr_ty(node)?,
-            },
-        };
+        let ty = self.expr_ty(node)?;
         let local = self.b.declare_made(DeclKind::Local, &["t"], self.owner, ty);
         self.b.add_facts(local, Facts::VAR);
         let span = self.span(node);
@@ -3150,17 +3142,9 @@ impl Translator<'_> {
         let [cond, then, els] = self.children(node).to_vec()[..] else {
             return self.not_yet(node, "an if's form");
         };
-        // Where typing has no type for it, as the last value of an
-        // `orelse`'s fallback that's a function's last value, `x ?? "a"`
-        // in `do { … } orelse (x ?? "a")`, its branches' type, as
-        // [`Self::or_else_typed`] finds it.
         let ty = match self.s.typing.expr(node) {
             Some(ft::NULL | ft::NEVER) if !outer.is_none() && outer != TypeId::VOID => outer,
-            None => match self.value_type(&[then, els]) {
-                Some(t) => t,
-                None => self.expr_ty(node)?,
-            },
-            Some(_) => self.expr_ty(node)?,
+            _ => self.expr_ty(node)?,
         };
         let cond = self.condition(cond)?;
         let then = self.block_value(then, ty)?;
@@ -3196,10 +3180,11 @@ impl Translator<'_> {
         let Some((&last, rest)) = children.split_last() else {
             return self.not_yet(node, "an empty block's value");
         };
-        if ty == TypeId::VOID && self.s.typing.expr(last).is_none() {
-            // A `Void` block whose last part is a statement, as
-            // `do { …; if (…) { … } } orelse panic()`: its statements,
-            // then `void`.
+        let statement = self.s.typing.expr(last).is_none() || self.kind(last) == NodeKind::If;
+        if ty == TypeId::VOID && statement {
+            // A `Void` block whose last part is a statement, or an `if`,
+            // whose value is dropped, as `do { …; if (…) { … } } orelse
+            // panic()`'s: its statements, then `void`.
             let mut stmts = Vec::new();
             self.stmts(node, &mut stmts)?;
             let value = self.b.void();
@@ -3907,12 +3892,6 @@ impl Translator<'_> {
             Some(t) if t != ft::NEVER && self.s.typing.types.is_known(t) => Some(self.ty(t, node)?),
             _ => None,
         };
-        // Where typing has no type for it, as a function's last value, the
-        // type of its parts' values, known before a block's value is made.
-        let typed = match typed {
-            Some(t) => Some(t),
-            None => self.value_type(&[body, fallback]),
-        };
         self.catching.push(self.owner);
         let body = self.block_value(body, typed.unwrap_or(TypeId::NONE));
         self.catching.pop();
@@ -3944,8 +3923,7 @@ impl Translator<'_> {
         let fallback = self.block_value(fallback, typed.unwrap_or(TypeId::NONE));
         self.handling.pop();
         let fallback = fallback?;
-        // Where typing has no type for it, as a function's last value, its
-        // parts' type.
+        // Where typing gives it no type tmpl has, as `Never`, its parts'.
         let ty = typed.unwrap_or_else(|| {
             let p = self.b.program();
             [body, fallback]
@@ -3992,53 +3970,6 @@ impl Translator<'_> {
                 || matches!(p.nodes.get(n), temper_tmpl::Node::Error { .. });
         });
         found
-    }
-
-    /// The first type typing knows of these values, each a block's last
-    /// value if it's a block, made nullable if another is `null`, as
-    /// `f() orelse null`'s.
-    fn value_type(&mut self, values: &[FNode]) -> Option<TypeId> {
-        let null = values.iter().any(|&v| {
-            let v = self.last_value(v);
-            (self.s.typing.expr(v))
-                .is_some_and(|t| matches!(self.s.typing.types.get(t), FTypeData::Null))
-        });
-        let found = self.known_value_type(values)?;
-        let nullable = self.b.program().types.is_nullable(found);
-        Some(if null && !nullable {
-            self.b.nullable(found)
-        } else {
-            found
-        })
-    }
-
-    /// A value, or a block's last value, through nested blocks.
-    fn last_value(&self, value: FNode) -> FNode {
-        let mut value = value;
-        while self.kind(value) == NodeKind::Block {
-            match self.children(value).last() {
-                Some(&last) => value = last,
-                None => break,
-            }
-        }
-        value
-    }
-
-    /// The first type typing knows of these values, as [`Self::value_type`].
-    fn known_value_type(&mut self, values: &[FNode]) -> Option<TypeId> {
-        for &value in values {
-            let value = self.last_value(value);
-            match self.s.typing.expr(value) {
-                Some(t) if t != ft::NEVER && self.s.typing.types.is_known(t) => {
-                    // A type tmpl doesn't have yet is left to the parts.
-                    if let Ok(t) = self.ty(t, value) {
-                        return Some(t);
-                    }
-                }
-                _ => {}
-            }
-        }
-        None
     }
 
     /// The arguments for a call of `callee`, with `Omitted` for optional

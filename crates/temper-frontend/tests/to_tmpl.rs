@@ -22,11 +22,13 @@
 //!   as written, reached as Kotlin marks them.
 
 use std::{env, fs, path::PathBuf};
+use temper_frontend::interp::run;
 use temper_frontend::library::Library;
 use temper_frontend::project::load_imports;
 use temper_frontend::settle::{Settled, settle};
 use temper_frontend::sources::Sources;
 use temper_frontend::to_tmpl::{NotYet, gaps, to_tmpl};
+use temper_frontend::typing::coverage;
 use temper_syntax::lex::SourceKind;
 use temper_tmpl::coroutines::{CoroutineStrategy, lower};
 use temper_tmpl::reach::{Reach, partition, reach, reach_for};
@@ -586,6 +588,131 @@ fn gaps_lists_every_gap() {
         );
         load_imports(&Sources::standard(), &mut library);
         assert!(gaps(&settle(library), "fine").is_empty());
+    });
+}
+
+/// A value in a function's result position is typed as any other value
+/// is, so it translates however it's nested (t1060): a `when`, an `if`,
+/// or a block after a statement, as a `catch (e)` handler's value, a
+/// `let`'s, or a statement; in an `orelse`'s fallback; over a parameter;
+/// in a result `if`'s branch, a function literal's result, a block's
+/// passed to a function, a `for … of`
+/// body, and a nested handler; and a `Void` function's last handler.
+#[test]
+fn result_values_are_typed_however_nested() {
+    with_stack(|| {
+        let source = r#"
+    export sealed interface AppError extends Error {}
+    export class NotFound(public key: String) extends AppError {}
+    export class Bad(public why: String) extends AppError {}
+    let find(k: String): Int throws AppError {
+      if (k == "n") { throw new NotFound(k) }
+      if (k == "b") { throw new Bad(k) }
+      0
+    }
+    export let catchWhenIs(k: String): Int {
+      find(k) catch (e) { when (e) { is NotFound -> 1; else -> 2; } }
+    }
+    export let catchWhenSealed(k: String): Int {
+      find(k) catch (e) { when (e) { is NotFound -> 1; is Bad -> 2; } }
+    }
+    export let catchWhenValue(k: String): Int {
+      find(k) catch (e) { when (k) { "n" -> 1; else -> 2; } }
+    }
+    export let catchIf(k: String): Int {
+      find(k) catch (e) { if (e is NotFound) { 1 } else { 2 } }
+    }
+    export let catchDo(k: String): Int {
+      find(k) catch (e) { do { let t = 1; t } }
+    }
+    export let catchLet(k: String): Int {
+      find(k) catch (e) {
+        let r = when (e) { is NotFound -> 1; else -> 2; };
+        r
+      }
+    }
+    export let catchStatement(k: String): Int {
+      find(k) catch (e) {
+        when (e) { is NotFound -> console.log("n"); else -> console.log("o"); }
+        3
+      }
+    }
+    export let orelseWhen(k: String): Int {
+      find(k) orelse when (k) { "n" -> 1; else -> 2; }
+    }
+    export let orelseDo(k: String): Int {
+      find(k) orelse do { let t = 1; when (k) { "n" -> t; else -> 2; } }
+    }
+    export let paramWhen(e: AppError): Int {
+      when (e) { is NotFound -> 1; else -> 2; }
+    }
+    export let paramAfterStatement(e: AppError): Int {
+      let t = 1;
+      when (e) { is NotFound -> t; else -> 2; }
+    }
+    export let inBranch(k: String, c: Boolean): Int {
+      if (c) {
+        find(k) catch (e) { when (e) { is NotFound -> 1; else -> 2; } }
+      } else {
+        0
+      }
+    }
+    export let inLiteral(k: String): Int {
+      let f: fn (): Int = fn (): Int { find(k) catch (e) { when (e) { is NotFound -> 1; else -> 2; } } };
+      f() + apply { find(k) catch (e) { when (e) { is NotFound -> 10; else -> 20; } } }
+    }
+    export let inForOf(ks: List<String>): Int {
+      var n = 0;
+      for (let k of ks) {
+        let v = find(k) catch (e) { when (e) { is NotFound -> 1; else -> 2; } };
+        n = n * 10 + v;
+      }
+      n
+    }
+    export let nested(k: String): Int {
+      find(k) catch (e) {
+        find("b") catch (f) {
+          when (f) { is Bad -> when (e) { is NotFound -> 1; else -> 2; }; else -> 3; }
+        }
+      }
+    }
+    let apply(f: fn (): Int): Int { f() }
+    let check(k: String): Void throws AppError { find(k); }
+    export let voidCatch(k: String): Void {
+      check(k) catch (e) { when (e) { is NotFound -> console.log("vn"); else -> console.log("vo"); } }
+    }
+    console.log("${catchWhenIs("n")} ${catchWhenIs("b")} ${catchWhenSealed("b")} ${catchWhenValue("n")} ${catchIf("b")} ${catchDo("n")}");
+    console.log("${catchLet("n")} ${catchStatement("b")} ${orelseWhen("n")} ${orelseDo("n")} ${orelseDo("x")}");
+    console.log("${paramWhen(new Bad("x"))} ${paramAfterStatement(new NotFound("x"))} ${inBranch("n", true)} ${inLiteral("b")}");
+    console.log("${inForOf(["n", "b", "x"])} ${nested("n")} ${nested("b")}");
+    voidCatch("n");
+"#;
+        let mut library = Library::new();
+        library.add_file("results.temper.md", source, SourceKind::Markdown);
+        load_imports(&Sources::standard(), &mut library);
+        let settled = settle(library);
+        let errors: Vec<String> = (settled.library.diagnostics.iter())
+            .map(|d| d.message.text())
+            .collect();
+        assert_eq!(errors, Vec::<String>::new());
+        let lib = &settled.library;
+        let text = |node| lib.source_text(lib.tree.span(node)).to_string();
+        let file = coverage(&settled)
+            .into_iter()
+            .find(|f| f.path == "results.temper.md")
+            .unwrap();
+        let untyped: Vec<String> = file.untyped.iter().map(|&(n, _)| text(n)).collect();
+        assert_eq!(untyped, Vec::<String>::new());
+        assert_eq!(gaps(&settled, "results"), Vec::new());
+        let program = to_tmpl(&settled, "results").unwrap_or_else(|e| panic!("{e}"));
+        let problems = validate(&program, &Profile::full());
+        assert!(problems.is_empty(), "{problems:#?}");
+        let ran = run(&settled, Some(1_000_000));
+        assert_eq!(ran.failure, None);
+        assert_eq!(
+            ran.output,
+            ["1 2 2 1 2 1", "o", "1 3 1 1 0", "2 1 1 22", "120 1 2", "vn",]
+        );
     });
 }
 

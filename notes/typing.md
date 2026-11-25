@@ -1682,6 +1682,14 @@ and resolves every call ("Resolutions", below).
   argument's symbol, a callee that names what's called (a builtin, a
   function, or `o.m`, though `o` is an expression unless it's
   `console`), a name assigned, a tag's lists of parts, nor a statement.
+- **A function's result** is used too: its body's value, through the
+  blocks and `if`s it ends in, which aren't values themselves, as tmpl's
+  translation returns from each branch, so an `orelse` or `catch` there
+  is typed with all it holds, as `find(k) catch (e) { log(e); when (e)
+  { … } }` (t1060, 2026-11-25). Before, it was left untyped, and tmpl
+  guessed its type from its parts', which missed a `when` after a
+  statement in a handler. A `Void` block's last `if` is still a
+  statement in tmpl, whatever its type.
 - **Typed for this:** a block that jumps away before its end, as `{
   return -1; }`, never completes, so `if (c) { 1 } else { return -1; }`
   is an `Int32`; a generic function's own type is its signature with its
