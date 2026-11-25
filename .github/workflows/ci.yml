@@ -66,6 +66,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  # By hand, on any pushed branch, before it has a pull request: with no
+  # base to compare with, every job runs.
+  workflow_dispatch:
 
 # Read-only token: nothing here writes to the repository.
 permissions:

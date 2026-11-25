@@ -16,7 +16,10 @@ weekly, and whenever someone asks (below).
 
 [ci.yml](../../.github/workflows/ci.yml) runs on every push to `main`
 and every pull request, on `ubuntu-24.04`, in four parallel jobs, so a
-run takes about as long as its slowest job:
+run takes about as long as its slowest job. It can also be run by hand
+on any pushed branch (Actions, CI, "Run workflow", or `gh workflow run
+ci.yml --ref <branch>`), as for a branch not yet ready for a pull
+request; with no base to compare with, every job runs.
 
 | Job | What it checks |
 | --- | --- |
