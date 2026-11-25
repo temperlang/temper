@@ -29,14 +29,17 @@ whether `<` may be an angle bracket.
 
 | Spacing | Operators |
 |---|---|
-| One space around, or inside | `=>`, `->`, `=`, `+=`, `-=`, `*=`, `/=`, `%=`, `&=`, `^=`, `\|=`, `&&=`, `\|\|=`, `<<=`, `>>=`, `>>>=`, `??`, `\|\|`, `&&`, `==`, `!=`, `===`, `!==`, `=~`, `!~`, `<`, `<=`, `>`, `>=`, `\|`, `^`, `&` (infix), `<<`, `>>`, `>>>`, `+` (infix), `-` (infix), `*` (infix), `/`, `%`, `~` (infix), `**`, `{ }` |
-| None around, after, or inside | `@`, `< >`, `++` (prefix), `--` (prefix), `+` (prefix), `-` (prefix), `!` (prefix), `~` (prefix), `&` (prefix), `*` (prefix), `...`, `.`, `?.`, `( )`, `[ ]`, `\`, `${ }` |
+| One space around, or inside | `=>`, `->`, `=`, `+=`, `-=`, `*=`, `/=`, `%=`, `&=`, `^=`, `\|=`, `&&=`, `\|\|=`, `<<=`, `>>=`, `>>>=`, `??`, `\|\|`, `&&`, `==`, `!=`, `===`, `!==`, `=~`, `!~`, `<`, `<=`, `>`, `>=`, `\|`, `^`, `&` (infix), `<<`, `>>`, `>>>`, `+` (infix), `-` (infix), `*` (infix), `/`, `%`, `~` (infix), `**`, `{ }`, `\{ }` |
+| None around, after, or inside | `@`, `< >`, `++` (prefix), `--` (prefix), `+` (prefix), `-` (prefix), `!` (prefix), `~` (prefix), `&` (prefix), `*` (prefix), `...`, `.`, `?.`, `( )`, `[ ]`, `\`, `\( )`, `${ }` |
 | None before, one after | `;`, `,`, `:` (type) |
-| As written (a run of spaces and tabs becomes one) | `;;;`, `;;`, `:` (marker), `given`, `return`, `throw`, `yield`, `of`, `:` (label), `case`, `orelse`, `extends`, `implements`, `forbids`, `supports`, `throws`, `in`, `instanceof`, `is`, `as`, `::`, `await`, `++` (postfix), `--` (postfix), `!` (postfix), `?`, `..`, `\( )`, `\{ }`, `\u{ }`, `new` |
+| As written (a run of spaces and tabs becomes one) | `;;;`, `;;`, `:` (marker), `given`, `return`, `throw`, `yield`, `of`, `:` (label), `case`, `orelse`, `extends`, `implements`, `forbids`, `supports`, `throws`, `in`, `instanceof`, `is`, `as`, `::`, `await`, `++` (postfix), `--` (postfix), `!` (postfix), `?`, `..`, `\u{ }`, `new` |
 
 No space goes just inside a string's `${ }`, as in Kotlin, Python's
 f-strings, and JavaScript's template literals; one over several lines
-keeps its line breaks.
+keeps its line breaks. Quasi-quotes space, indent, and lay out lists as
+their plain brackets do (`\(a + b)`, `\{ f(x) }`). A string's `\u{ }`
+is the string's own text, where a space would be part of a code point
+(an error), so it stays exactly as written.
 
 ```temper inert
 "hi, ${ name }, ${ f({ a: 1 }) }"   // before

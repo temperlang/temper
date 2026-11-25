@@ -38,19 +38,21 @@
 //! - **Spacing on a line:** one space around infix operators (not `.`,
 //!   `?.`, `..`, `::`, `<`/`>` of type arguments or label colons), after
 //!   `,` and `;` and type and object literals' colons, around `{ }`
-//!   contents, and between a word like `if` or `fn` and `(`; none
-//!   before `,`, `;` and those colons, inside `( )` and `[ ]` and a
-//!   string's `${x}`, between a called name and `(`, or after prefix
-//!   operators and `@`. Runs of spaces and tabs become one. Space next
-//!   to comments, inside strings, and before `<` (which decides whether
-//!   it may be an angle bracket) is left as written.
+//!   and `\{ }` contents, and between a word like `if` or `fn` and `(`;
+//!   none before `,`, `;` and those colons, inside `( )`, `\( )` and
+//!   `[ ]` and a string's `${x}`, between a called name and `(`, or
+//!   after prefix operators and `@`. Runs of spaces and tabs become one.
+//!   Space next to comments, inside strings (a `\u{...}` escape's too),
+//!   and before `<` (which decides whether it may be an angle bracket)
+//!   is left as written.
 //! - **Lines:** no trailing space (after comments too, on each of their
 //!   lines), blank lines as written but at most one in a row (at a
 //!   markdown code block's start and end too), none at the start of a
 //!   file, and one line break at its end, the file's own (CRLF if it has
 //!   any); a file of only space becomes empty.
 //! - **Lists** (arguments, parameters, list and object literals, type
-//!   arguments, and single items in `( )`, `[ ]` and `< >`) are laid out
+//!   arguments, and single items in `( )`, `[ ]` and `< >`, quasi-quotes'
+//!   `\( )` and `\{ }` as their plain brackets) are laid out
 //!   as their author asks: with a trailing comma, one item per line; else,
 //!   with a line break after the open bracket, the items together on one
 //!   line between the brackets' lines ("hugged"); else on one line,
@@ -541,7 +543,7 @@ fn first_token(parsed: &Parsed, id: NodeId) -> Option<u32> {
 /// A bracketed list: arguments, parameters, a list or object literal, or
 /// type arguments, of two or more items or with a trailing comma; or a
 /// single item in `( )`, `[ ]` or `< >` (in `{ }`, it may be a block's
-/// statement). Its fields are indices in [`Formatter`]'s tokens.
+/// statement); quasi-quotes' `\( )` and `\{ }` as `( )` and `{ }`. Its fields are indices in [`Formatter`]'s tokens.
 #[derive(Debug)]
 struct List {
     open: usize,
@@ -599,8 +601,9 @@ fn find_lists(parsed: &Parsed, index: &HashMap<u32, usize>) -> Vec<List> {
     let mut lists = Vec::new();
     for id in nodes(parsed) {
         let children = tree.children(id);
-        let NodeKind::Op(Paren | ParenGroup | Square | SquareGroup | CurlyGroup | Angle) =
-            tree.kind(id)
+        let NodeKind::Op(
+            Paren | ParenGroup | EscParen | Square | SquareGroup | CurlyGroup | EscCurly | Angle,
+        ) = tree.kind(id)
         else {
             continue;
         };
@@ -610,11 +613,12 @@ fn find_lists(parsed: &Parsed, index: &HashMap<u32, usize>) -> Vec<List> {
             };
             let brackets = (parsed.token_text(open), parsed.token_text(close));
             let list = match tree.kind(w[1]) {
-                NodeKind::Op(Comma) => {
-                    matches!(brackets, ("(", ")") | ("[", "]") | ("{", "}") | ("<", ">"))
-                }
+                NodeKind::Op(Comma) => matches!(
+                    brackets,
+                    ("(" | "\\(", ")") | ("[", "]") | ("{" | "\\{", "}") | ("<", ">")
+                ),
                 NodeKind::Token => false,
-                _ => matches!(brackets, ("(", ")") | ("[", "]") | ("<", ">")),
+                _ => matches!(brackets, ("(" | "\\(", ")") | ("[", "]") | ("<", ">")),
             };
             if !list || open.synthetic || close.synthetic {
                 continue;

@@ -373,6 +373,76 @@ let b = "${f(
 let c = "sum: ${x +
   y}";
 
+=== quasi-quotes space as their plain brackets: `\( )` as `( )`, `\{ }` as `{ }`
+let a = \( x+1 );
+let b = \(  f( x ,y )  );
+let c = \{f(x); g(y)};
+let d = \{   a+b   };
+let e = \{ f(${ x }); };
+let f = [\( a ), \{b}];
+--- formatted
+let a = \(x + 1);
+let b = \(f(x, y));
+let c = \{ f(x); g(y) };
+let d = \{ a + b };
+let e = \{ f(${x}); };
+let f = [\(a), \{ b }];
+
+=== quasi-quotes over several lines indent and lay out lists as plain brackets do
+let a = \{
+    let x = 1;
+      f(x)
+};
+let b = \(
+  a +
+  b);
+let c = \(g(
+  a,
+  b,
+));
+let d = \(f(
+  a, b)
+);
+let e = \{ a,
+  b };
+let f = \{ a, b,
+  c, };
+--- formatted
+let a = \{
+  let x = 1;
+  f(x)
+};
+let b = \(
+  a +
+    b
+);
+let c = \(g(
+  a,
+  b,
+));
+let d = \(f(
+  a, b
+));
+let e = \{ a, b };
+let f = \{
+  a,
+  b,
+  c,
+};
+
+=== `\u{ }` runs are string content: their spaces stay, but code in their holes is spaced
+let a = "\u{41,42} and \u{ 41 } and \u{41, 42}";
+let b = "tab\t\u{1F600}${ x }\u{20,${ "y" },21}\n";
+let c = """
+    "\u{41,42}  ${ f( x ) }  \u{ 43 }
+;
+--- formatted
+let a = "\u{41,42} and \u{ 41 } and \u{41, 42}";
+let b = "tab\t\u{1F600}${x}\u{20,${"y"},21}\n";
+let c = """
+    "\u{41,42}  ${f(x)}  \u{ 43 }
+;
+
 === code that doesn't parse is left alone
 let f(x: Int {
   x

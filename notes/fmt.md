@@ -48,6 +48,7 @@ the dominant style; "lines changed" is what applying it changes.
 | Before `{` (but `({`, `${`) | one 100% | one | 0 |
 | Inside `{ }` on one line | one 97% (the rest: `{}`, `{Date}`) | one; `{}` as written | 34 |
 | Inside a string's `${ }` | of 2,931: none 97.1%, one 1.7%, over several lines 1.2% | none (Tom, 2026-11-24) | 48 |
+| Quasi-quotes `\( )`, `\{ }` | none in code | as `( )` and `{ }` (Tom, 2026-11-25) | 0 |
 | After prefix operators and `@` | none 100% | none | 0 |
 | Runs of spaces elsewhere | 1 case | one space | 1 |
 | Before a trailing comment | one 84%, aligned 15% | keep as written | 0 |
@@ -94,6 +95,13 @@ Notes on the numbers:
   as in any bracket; only space on the `${` or `}` line, next to them,
   goes (`${ f(\n  a\n) }` becomes `${f(\n  a\n)}`), so one rule
   covers both.
+- **Quasi-quotes** space, indent and lay out lists as their plain
+  brackets: `\(a + b)` as `( )`, `\{ f(x) }` as `{ }` (Tom,
+  2026-11-25). None are in the census's code (only in strings), so
+  this changes no lines. A string's `\u{41,42}` stays as written: the
+  lexer reads its space as the string's text, so `\u{41, 42}` is a
+  malformed code point (an error, in Kotlin Temper too), and spacing
+  it as a comma list would need the language to allow that space first.
 - **Line width:** there's none. It was dominated by data: Hrefine and
   Kelpto keep Unicode and entity tables on very long lines (up to 4,780
   columns), and in core and std only 8 lines were over 100 columns.
@@ -248,7 +256,9 @@ Some places keep a list's line breaks as written:
   write, so when in doubt, it's left out.
 - **A line break before a comma**, and code split between literate
   code blocks.
-- **A list in a string's `${ }`**.
+- **A list in a string's `${ }`**. A `\u{ }` escape's commas aren't a
+  list: its text, space included, is the string's (a space there is a
+  malformed code point, an error), so it stays exactly as written.
 - **Data**: a list whose items (two or more) are all literals (numbers, `true`,
   `false`, `null`, strings without holes, `char'a'`, negated numbers) or
   lists or calls of them (`new Pair("a", 1)`). Tables are written a few

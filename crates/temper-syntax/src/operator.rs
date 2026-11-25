@@ -267,9 +267,10 @@ operators! {
     Paren = op(24, "(", Infix).closer().arity(1, MANY),
     Square = op(24, "[", Infix).closer(),
     Esc = op(24, "\\", Prefix),
-    EscParen = op(24, "\\(", Prefix).closer().spacing(AsWritten),
-    EscCurly = op(24, "\\{", Prefix).closer().spacing(AsWritten),
+    EscParen = op(24, "\\(", Prefix).closer(),
+    EscCurly = op(24, "\\{", Prefix).closer().spacing(Spaced),
     DollarCurly = op(24, "${", Prefix).closer().arity(0, 1),
+    // Its space is the string's: `\u{ 41 }` has malformed code points.
     UnicodeRun = op(24, "\\u{", Prefix).closer().arity(0, MANY).spacing(AsWritten),
     New = op(24, "new", Prefix).min(0),
     // A quoted string's parts: delimiters, content and holes.
