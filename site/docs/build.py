@@ -5,7 +5,7 @@
 
     uv run site/docs/build.py [--out DIR] [--kelpto DIR] [--temper BIN]
                               [--chromium PATH | --no-diagrams]
-                              [--commit REV]
+                              [--commit REV] [--stats DIR]
 
 Kelpto, the Markdown and HTML library written in Temper, renders every
 page, built for Python by temper itself: this copies Kelpto's four
@@ -27,6 +27,13 @@ docs/ (sources in the repository) go to them on GitHub, at REPO_URL, at
 the commit the site is built from: `--commit REV`, else `$GITHUB_SHA` (in
 GitHub Actions), else HEAD. If the working tree has uncommitted changes,
 links still go to HEAD, and the build says so.
+
+The size and speed charts live on the `stats` branch, so pages show
+them by their raw address on GitHub (STATS_URL), which GitHub's own
+rendering of the Markdown shows too. With `--stats DIR`, a checkout of
+that branch (pages.yml makes one), each such image is copied onto the
+site, under `stats/`, and its page links that copy, so the site doesn't
+load images from elsewhere; without it, they stay as they are.
 
 Mermaid diagrams are drawn here, as inline SVG, light and dark, by
 site/docs/mermaid/render.mjs: mermaid in headless Chromium, through
@@ -99,6 +106,8 @@ KELPTO_LIBS = ["kelpto-core", "kelpto-md", "kelpto-html", "kelpto"]
 # The site's published address, which links to it (as the README's to
 # the playground) are made relative to.
 SITE_URL = "https://temperlang.dev/"
+# The `stats` branch's files, raw (stats.yml commits them there).
+STATS_URL = "https://raw.githubusercontent.com/temperlang/temper/stats/"
 # Links to the repository's files outside the site go to REPO_URL, at a
 # commit; the header's sections are SECTIONS (both from site/shared).
 # Files at the top of the repository published as text, for the license links.
@@ -543,8 +552,11 @@ def themed_picture(m: re.Match) -> str:
 
 
 class Site:
-    def __init__(self, kelpto: Kelpto, highlighter: Highlighter, out: Path, diagrams: Diagrams | None, repo: Repo):
+    def __init__(self, kelpto: Kelpto, highlighter: Highlighter, out: Path, diagrams: Diagrams | None, repo: Repo,
+                 stats: Path | None = None):
         self.kelpto = kelpto
+        self.stats = stats
+        self.stats_files: set[str] = set()  # the `stats` branch's files the pages show
         self.repo = repo
         self.diagrams = diagrams
         self.highlighter = highlighter
@@ -666,6 +678,9 @@ class Site:
 
         def image(m: re.Match) -> str:
             href = html.unescape(m.group(2))
+            if self.stats and href.startswith(STATS_URL):
+                self.stats_files.add(href[len(STATS_URL) :])
+                return f'{m.group(1)}"{html.escape(relative("stats/" + href[len(STATS_URL) :], page))}"'
             new = site_relative(href, github=False)
             if new is None:
                 self.outside.append(f"{src}: {href}: an image not on the site")
@@ -900,6 +915,10 @@ class Site:
                 dest = self.out / f.relative_to(ROOT)
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(f, dest)
+        for path in self.stats_files:  # a missing one fails the link check
+            if self.stats and (self.stats / path).is_file():
+                (self.out / "stats" / path).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(self.stats / path, self.out / "stats" / path)
         for name in TEXT_FILES:
             shutil.copyfile(ROOT / name, self.out / f"{name}.txt")
         if (BLOG / "images").is_dir():
@@ -996,6 +1015,7 @@ def main() -> int:
     parser.add_argument(
         "--commit", default=os.environ.get("GITHUB_SHA"), help="the commit repository links go to (default $GITHUB_SHA, else HEAD)"
     )
+    parser.add_argument("--stats", type=Path, help="a checkout of the stats branch, for its charts")
     args = parser.parse_args()
     started = time.monotonic()
     temper = args.temper or next(
@@ -1008,7 +1028,7 @@ def main() -> int:
     built = time.monotonic()
     diagrams = None if args.no_diagrams else Diagrams(args.chromium)
     repo = Repo(args.commit)
-    site = Site(Kelpto(py), Highlighter(), args.out.resolve(), diagrams, repo)
+    site = Site(Kelpto(py), Highlighter(), args.out.resolve(), diagrams, repo, args.stats)
     n = site.build()
     rendered = time.monotonic()
     problems, count, skipped = check(args.out.resolve())

@@ -35,8 +35,9 @@ Part of the [rewrite plan](README.md).
   that already differ a step earlier.
 - **Benchmarks:** each stage gets a `--bench` mode on both sides and a
   script that alternates them; results go as rows in
-  [size-and-speed.csv](size-and-speed.csv) (`compat/measure_size.py
-  --record` for sizes and memory), and
+  [size-and-speed.csv](https://github.com/temperlang/temper/blob/stats/size-and-speed.csv)
+  on the `stats` branch (`compat/measure_size.py --record` for sizes
+  and memory; nightly, the Stats workflow), and
   [size-and-speed.md](size-and-speed.md) explains only what rows can't.
 - **Oracles:** small Java programs that call Kotlin Temper's jars give
   reference results per file: literate blocks, tokens, and parse trees

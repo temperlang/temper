@@ -1,0 +1,50 @@
+# Java 21, and JUnit 5.9.2's jars in Maven's local repository
+# (~/.m2/repository), where the Java backend's tests read them
+# (`JUNIT` in crates/temper-be-java/src/tools.rs lists the jars; keep
+# the two in step). The tests themselves run javac and java, not Maven,
+# so these fetches are the only time CI resolves anything from Maven
+# Central. After checkout, as a local action, for the toolchains action
+# and nightly.yml's `libraries`:
+#
+#     - uses: ./.github/actions/java
+#
+# Central sometimes fails a request for a moment, so the repository is
+# cached (`actions/cache`), keyed on this file, which names everything
+# fetched: a hit skips Maven entirely. On a miss (an older cache, from
+# `restore-keys`, saves most downloads), each artifact is tried three
+# times, 15 seconds apart, on top of the retries Maven 3.9's resolver
+# makes for each request, and the cache saved only once all are in.
+name: Java and JUnit
+description: Sets up Java 21, with JUnit's jars in Maven's local repository.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+      with:
+        distribution: temurin
+        java-version: 21
+    - id: cache
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.m2/repository
+        key: maven-junit-${{ runner.os }}-${{ hashFiles('.github/actions/java/action.yml') }}
+        restore-keys: maven-junit-${{ runner.os }}-
+    - name: JUnit
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        # The plugin named in full, so Maven needn't look up the prefix
+        # `dependency` in Central's metadata (a lookup that sometimes fails
+        # for a moment).
+        for artifact in org.junit.jupiter:junit-jupiter-engine:5.9.2 org.junit.platform:junit-platform-launcher:1.9.2; do
+          for try in 1 2 3; do
+            mvn -B -q org.apache.maven.plugins:maven-dependency-plugin:3.8.1:get -Dartifact="$artifact" && break
+            [ "$try" = 3 ] && exit 1
+            sleep 15
+          done
+        done
+    - if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.m2/repository
+        key: ${{ steps.cache.outputs.cache-primary-key }}

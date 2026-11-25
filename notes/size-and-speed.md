@@ -92,57 +92,25 @@ as it lands, and profile with `perf`.
 
 ### Data
 
-Measurements live in [size-and-speed.csv](size-and-speed.csv), one per
-row; this file explains them. Columns:
+Measurements live on the `stats` branch, in
+[size-and-speed.csv](https://github.com/temperlang/temper/blob/stats/size-and-speed.csv),
+one per row, with charts drawn from it; the branch's
+[README](https://github.com/temperlang/temper/blob/stats/README.md)
+says what each column, metric id, and condition means, and this file
+explains the numbers. The nightly Stats workflow now adds the rows,
+measured on GitHub's runners
+([Size and speed](../docs/contributing/size-and-speed.md) says what it
+measures, and how to run the same steps locally); the rows before were
+measured on a local machine, with Kotlin Temper's beside them, and
+`main` carried the CSV and charts until then.
 
-- `date` and `commit`: when, and the commit measured. `tree=dirty` in
-  `conditions` means that commit plus uncommitted work, the change its
-  notes describe (what the old tables called "after `X`"). An empty
-  commit wasn't recorded.
-- `what`: a stable metric id. Sizes: `<binary>-small`, `<binary>-release`,
-  `wasm-small`, and `wasm-small-gzip`; `tempest-small-no-backends`
-  and `wasm-small-no-backends`, and each backend's share of the small
-  `tempest` and of wasm (`backend-<name>-small`, `backend-<name>-wasm`)
-  and what they share (`backends-shared-small`,
-  `backends-shared-wasm`), below. Peak memory of one `--bench 1` run
-  over all files: `peak-memory-parse-all` (`parse-tree`),
-  `peak-memory-ast-all` (`ast-tree`), and `peak-memory-settle-all`
-  (`run-temper`). Stage times: `lex-ms`, `lex-parse-ms`,
-  `lex-parse-grammar-ms`, `lex-parse-module-ms`, and
-  `lex-parse-module-settle-ms`. Interpreter loops, per iteration:
-  `interp-loop-us`, `interp-calls-us`, `interp-closures-us`, and
-  `interp-fib-us`. Kotlin's time over ours: `*-kotlin-over-rust`. Whole
-  test runs: `chromarite-tests`, `ordable-tests`, and `ordable-import`.
-  Build and test steps, one row per run, wall seconds (below,
-  "Charts"): `funtest-<backend>-s` (a backend crate's `cargo
-  test -p temper-be-<backend>`, mostly its functional tests),
-  `test-<crate>-s` for the other crates, `clippy-s`,
-  `build-wasm-small-s`, `build-tempest-release-s` (from clean), and
-  `build-tempest-incremental-s` (after touching one frontend file);
-  each with its CPU seconds, children included, as `<id>-cpu-s`.
-- `value` and `value_max`: a number, or a range's low and high ends, since
-  most timings on this noisy machine are ranges of medians. Plot `value`,
-  the low end, which is the better guide. Approximate values (`~2×`) keep
-  the number and say so in `notes`.
-- `unit`: `bytes`, `KiB`, `MiB`, `ms`, `us`, `s`, or `ratio`. Older sizes
-  are in KiB, as the tables had them; `measure_size.py --record` writes
-  bytes.
-- `conditions`: `key=value` pairs joined by `;`: `run=rust`,
-  `kotlin-warm`, or `kotlin-jvm`; `runner=tempest`, `py`, or `lua`;
-  `features=net` or `no-net` (none before `net` existed); `build=release`;
-  `args=--module`; `files=N` when the inputs changed; `load=busy` or
-  `quieter`; and `tree=dirty`.
-- `notes`: short free text, such as what changed.
+Explain here only what rows can't say: why a number moved, how it was
+measured, and what to try next, naming the commit so the text and rows
+meet. Older rows' `value` and `value_max` are mostly ranges of medians
+from a noisy machine; their low end is the better guide.
 
-To record, `uv run compat/record_times.py LOG --last --record` appends
-a CI-style run's step times from its log (tab separated: date, commit,
-dirty, step, wall and CPU seconds, result), and `uv run
-compat/record_times.py --time ID --record -- COMMAND...` times one
-command, either one redrawing the charts; `uv run compat/measure_size.py --record` appends sizes and
-peak memory (with `--shares`, each backend's share too); append other measurements as rows by hand. Explain here only
-what rows can't say: why a number moved, how it was measured, and what to
-try next, naming the commit so the text and rows meet.
-`uv run compat/size_speed_table.py [WHAT ...]` prints the latest values.
+`uv run compat/size_speed_table.py [WHAT ...]`, with `stats` checked
+out at stats/, prints the latest values.
 The main ones, as of 2026-11-04, after std's `temporal` (sizes and memory; the timings are
 older, since the machine was too busy for them to mean anything):
 
@@ -240,27 +208,37 @@ cheapest first step, then the translators' largest functions.
 
 ### Charts
 
-Drawn from the CSV by `uv run compat/size_speed_charts.py`, which CI checks
-is current (`--check`), so rerun it after adding rows. Each point is one
-commit's measurement, with its range as a whisker. Ordable's test times
-also move with Ordable's own tests (its notes say how many), and its
-property tests shrank on 2026-10-28, so later rows aren't comparable with
-earlier ones.
+Drawn from the CSV on the `stats` branch by
+`compat/size_speed_charts.py`, which the Stats workflow runs after each
+night's rows. Each point is one commit's measurement, with its range as
+a whisker. Ordable's test times also move with Ordable's own tests (its
+notes say how many), and its property tests shrank on 2026-10-28, so
+later rows aren't comparable with earlier ones. Settle time and peak
+memory on GitHub are over this repository's own Temper files, fewer
+than the local runs' three repositories, so they start a line of their
+own; those files change with each commit, so they're also charted per
+1,000 lines, from the rows that record a line count.
 
-![Binary sizes](charts/sizes.svg)
-![Settle time](charts/settle-time.svg)
-![Peak memory](charts/peak-memory.svg)
-![Ordable's tests](charts/ordable-tests.svg)
+![Binary sizes](https://raw.githubusercontent.com/temperlang/temper/stats/charts/sizes.svg)
+![Settle time](https://raw.githubusercontent.com/temperlang/temper/stats/charts/settle-time.svg)
+![Peak memory](https://raw.githubusercontent.com/temperlang/temper/stats/charts/peak-memory.svg)
+![Settle time per 1,000 lines](https://raw.githubusercontent.com/temperlang/temper/stats/charts/settle-time-per-1k-lines.svg)
+![Peak memory per 1,000 lines](https://raw.githubusercontent.com/temperlang/temper/stats/charts/peak-memory-per-1k-lines.svg)
+![Ordable's tests](https://raw.githubusercontent.com/temperlang/temper/stats/charts/ordable-tests.svg)
 
 The timing charts plot every run as its own point, with a centered
 rolling median over each point's neighbors (two each side) as the line
-and the median distance from it as a band. Single runs here share the
-machine with other agents and vary by tens of percent, so read the
-line, not the points; `load=` in a row's conditions says what else was
-running when that's known.
+and the median distance from it as a band. Single runs vary by tens of
+percent, on GitHub's shared runners as on a local machine shared with
+other agents, so read the line, not the points: a trend, not a
+benchmark. The nightly runs on GitHub are charted apart from the local
+ones before them; `load=` in a local row's conditions says what else
+was running when that's known.
 
-![Functional tests by backend](charts/funtest-times.svg)
-![Build and lint times](charts/build-times.svg)
+![Functional tests by backend](https://raw.githubusercontent.com/temperlang/temper/stats/charts/funtest-times.svg)
+![Build and lint times](https://raw.githubusercontent.com/temperlang/temper/stats/charts/build-times.svg)
+![Functional tests by backend, on a local machine](https://raw.githubusercontent.com/temperlang/temper/stats/charts/funtest-times-local.svg)
+![Build and lint times, on a local machine](https://raw.githubusercontent.com/temperlang/temper/stats/charts/build-times-local.svg)
 
 ### Measured so far
 

@@ -20,7 +20,7 @@ run takes about as long as its slowest job:
 
 | Job | What it checks |
 | --- | --- |
-| `lint, core` | formatting; clippy, with and without default features; the workflows parse as YAML; the docs' links; Temper's functional tests on the interpreter; the size and speed charts; the rules for release tags; then every crate's tests but the backends' and `tempest`'s, and again without default features, `tempest`'s included (temper-syntax's once, as it has no features); and, by that build, `temper fmt --check` on the repository's Temper code and the docs' examples (after the script's self-test) |
+| `lint, core` | formatting; clippy, with and without default features; the workflows parse as YAML; the docs' links; Temper's functional tests on the interpreter; the size and speed charts, drawn from the `stats` branch's data, and the tests of the scripts that write its rows and commit them, with stats.yml's permissions; the rules for release tags; then every crate's tests but the backends' and `tempest`'s, and again without default features, `tempest`'s included (temper-syntax's once, as it has no features); and, by that build, `temper fmt --check` on the repository's Temper code and the docs' examples (after the script's self-test) |
 | `cli` | The `tempest` crate's tests with every backend, so every toolchain |
 | `py, js, lua, rust` | those backends' tests, with mypy, pyright, TypeScript, Mocha, LuaLS, Lua 5.4.6 and LuaSocket, and again on LuaJIT; the Rust runtime's own; and the version's spellings, sorted by each ecosystem's comparator |
 | `java, csharp, cpp` | those backends' tests, with Java 21 and JUnit, .NET 6, and g++ 13, sanitized too, and libcurl; and `strict`: all generated C++ at -O2 by g++ 12 and 14 and clang++ |
@@ -199,6 +199,40 @@ platform before anything is published: its contents, `version`,
 ([smoke.py](../../.github/ci-tools/smoke.py)). nightly.yml's
 `platforms` jobs test the rest, with each language's tools.
 
+### Nightly: size and speed
+
+[stats.yml](../../.github/workflows/stats.yml) measures `main`'s latest
+commit every night (04:23 UTC, skipped if `stats` already has rows for
+it) and whenever it's run by hand (**Actions → Stats → Run
+workflow**), and records the rows on the `stats` branch
+([Size and speed](size-and-speed.md) says what's measured). Three jobs:
+`recent` reads the last row's commit; `measure`, read-only, runs the
+measurements on one `ubuntu-24.04` runner, with every backend's
+toolchain and no build cache, and passes the rows on as an artifact,
+even after a failed step; and `commit`, the only job that can write
+(`contents: write`), only for `main` and only in temperlang/temper,
+appends them to `stats`' CSV, redraws its charts, and commits them.
+
+The commit goes through GitHub's GraphQL API, `createCommitOnBranch`
+([commit_stats.py](../../.github/ci-tools/commit_stats.py), by `gh api
+graphql`), with the workflow's own token: GitHub makes the commit, so
+it's signed by GitHub and shows as Verified, authored by
+`github-actions[bot]`, with no key to keep and no `git push`. It names
+the head it expects (`expectedHeadOid`); if `stats` moved meanwhile, the
+job checks out the new head, appends its rows again, and tries once
+more; a re-run after a commit finds its rows there and adds nothing.
+One run at a time (`concurrency`), so two never race. Only
+commit_stats.py gets the token (`GH_TOKEN`). In the `lint` job,
+[test_size_speed.py](../../compat/test_size_speed.py) and
+[test_commit_stats.py](../../.github/ci-tools/test_commit_stats.py)
+test the rows from writing to the charts, the request and exit codes
+with a fake `gh`, and stats.yml's read-only token outside `commit`,
+its guards, and that no `${{ }}` expression reaches a shell script.
+[pages.yml](../../.github/workflows/pages.yml) checks `stats` out too,
+and copies the charts onto the docs site, so it also runs whenever a
+Stats run on `main` finishes (`workflow_run`), after the night's
+commit; it runs as it is on `main`, never the Stats run's code.
+
 ### On a `v` tag: the release
 
 [release.yml](../../.github/workflows/release.yml) checks the tag
@@ -218,12 +252,16 @@ the GitHub release, a pre-release for an alpha, beta, or rc tag
   contents: read`) except where a job needs more: the `release` and
   `nightly` job in [binaries.yml](../../.github/workflows/binaries.yml)
   and the `release` job in
-  [release.yml](../../.github/workflows/release.yml) (`contents:
+  [release.yml](../../.github/workflows/release.yml) and the `commit`
+  job in [stats.yml](../../.github/workflows/stats.yml) (`contents:
   write`), and [pages.yml](../../.github/workflows/pages.yml) (`pages:
   write`, `id-token: write`). release.yml's call of binaries.yml grants
   it `contents: write` too, as a called workflow can't otherwise have
   what its `nightly` job asks for, though that job never runs for a
-  tag; binaries.yml's other jobs stay read-only.
+  tag; binaries.yml's other jobs stay read-only. A ruleset on `stats`
+  should block force-pushes and deletion, and `main`'s protection
+  should reject writes by `GITHUB_TOKEN`, so the `commit` job's token
+  can only add commits to `stats`.
 - **Crates:** every `cargo` command over the workspace runs with
   `--locked`, so CI builds exactly `Cargo.lock`. Crates the backends'
   tests generate have no lockfile and aren't locked.
@@ -255,8 +293,8 @@ the GitHub release, a pre-release for an alpha, beta, or rc tag
   .NET 6, and Node 24, as the tests', and Java 8, the Maven toolchain
   temper-core's pom asks for; Maven as the image has it.
 
-- **Runner images:** ci.yml's and pages.yml's jobs are pinned to
-  `ubuntu-24.04`, for Lua (above); nightly.yml's `platforms` and `platforms-quick` to the
+- **Runner images:** ci.yml's, stats.yml's, and pages.yml's jobs are
+  pinned to `ubuntu-24.04`, for Lua (above); nightly.yml's `platforms` and `platforms-quick` to the
   images in its table above, so a new image arrives as a deliberate
   bump, not a surprise.
 
@@ -274,7 +312,10 @@ the image has, updates from Ubuntu's own sources only, and retries each
 download three times with a 30-second timeout, so a dead mirror fails
 in minutes; Playwright's Chromium is installed without `--with-deps`
 (which runs apt), as the image has Chrome's libraries; VS Code is cached
-(`actions/cache`, keyed on its version), and
+(`actions/cache`, keyed on its version); JUnit's jars, the only things
+CI fetches from Maven Central, are cached in Maven's local repository
+by the [java action](../../.github/actions/java/action.yml), which on
+a miss tries each fetch three times; and
 [test/run.ts](../../editors/vscode/test/run.ts) tries a failed download
 three times before running the tests, which run once, and prints each
 error inside an `AggregateError` or `cause`.
@@ -315,7 +356,7 @@ baseline says.
 
 - **Actions:** Dependabot ([.github/dependabot.yml](../../.github/dependabot.yml))
   opens one monthly pull request updating the SHAs and their comments,
-  in the workflows and the local action together, for releases at least
+  in the workflows and the local actions together, for releases at least
   two weeks old, majors included. Read each major's release notes and
   check the inputs we pass before merging, and after merging, run
   Nightly, Binaries, and Pages by hand, since only `ci.yml` runs on the

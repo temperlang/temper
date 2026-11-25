@@ -1580,7 +1580,7 @@ errors, nor does any of the 722 directories of Temper sources scanned
 one fixture's errors changed, as an object literal's errors now come
 after expansion's; `tempest test` passes Chromarite's 56 tests and
 Ordable's 36. Settle time and peak memory are unchanged beyond noise
-([size-and-speed.csv](../size-and-speed.csv)).
+([size-and-speed.csv](https://github.com/temperlang/temper/blob/stats/size-and-speed.csv)).
 
 **Left for the generics slice,** in rough order:
 
