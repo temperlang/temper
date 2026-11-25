@@ -14,8 +14,9 @@
 //!   `FMT_FUZZ_ROUNDS`), which also exercises the refusal for code that
 //!   doesn't parse; a share of the mutants must still parse, so the test
 //!   can't pass by refusing them all.
-//! - `formatting_time_grows_linearly` checks that formatting twice the
-//!   code takes about twice the time, on long lines and deep nesting.
+//! - `formatting_time_grows_linearly` checks that formatting four times
+//!   the code takes about four times as long (under eight, where quadratic
+//!   work takes sixteen), on long lines and deep nesting.
 //! - `rules_census` (ignored) counts the lines each rule changes over the
 //!   repository and libraries, for notes/fmt.md.
 
@@ -259,10 +260,13 @@ fn lone_carriage_returns_are_refused() {
 }
 
 /// Formatting time grows linearly with the code, on one long line and in
-/// deep nesting too: formatting twice as much takes well under three times
-/// as long (quadratic work would take four). Each size is timed at its
-/// best of a few runs, to steady it. (Deep nesting over many lines is
-/// quadratic by nature, as each line's indentation grows.)
+/// deep nesting too. Formatting four times as much should take about four
+/// times as long, and quadratic work sixteen; the bound, eight, is twice
+/// from each, so timing noise on a busy machine or CI runner doesn't fail
+/// linear work, and quadratic work can't pass. Each size is timed at its
+/// best of five runs, the two sizes taking turns so a busy spell slows
+/// both. (Deep nesting over many lines is quadratic by nature, as each
+/// line's indentation grows.)
 #[test]
 fn formatting_time_grows_linearly() {
     let items = |n: usize, item: fn(usize) -> String, between: &str| {
@@ -290,32 +294,28 @@ fn formatting_time_grows_linearly() {
         "nested headers",
         "comment lines",
     ];
+    let (n, step, bound) = (1000, 4, 8.0);
     for what in inputs {
-        let time = |n: usize| {
-            let text = make(what, n);
-            (0..3)
-                .map(|_| {
-                    let start = Instant::now();
-                    format(&text, SourceKind::Standalone).unwrap();
-                    start.elapsed().as_secs_f64()
-                })
-                .fold(f64::INFINITY, f64::min)
+        let (small, large) = (make(what, n), make(what, step * n));
+        let time = |text: &str| {
+            let start = Instant::now();
+            format(text, SourceKind::Standalone).unwrap();
+            start.elapsed().as_secs_f64()
         };
-        let n = 4000;
-        let (once, twice) = (time(n), time(2 * n));
-        println!(
+        let (mut once, mut more) = (f64::INFINITY, f64::INFINITY);
+        for _ in 0..5 {
+            once = once.min(time(&small));
+            more = more.min(time(&large));
+        }
+        let message = format!(
             "{what}: {n}: {:.1} ms, {}: {:.1} ms",
             once * 1e3,
-            2 * n,
-            twice * 1e3
+            step * n,
+            more * 1e3
         );
-        assert!(
-            twice < 3.0 * once.max(0.002),
-            "{what}: {n} took {:.1} ms, but {} {:.1} ms",
-            once * 1e3,
-            2 * n,
-            twice * 1e3
-        );
+        println!("{message}");
+        // The floor keeps a tiny first timing from making the bound tiny.
+        assert!(more < bound * once.max(0.002), "{message}");
     }
 }
 
