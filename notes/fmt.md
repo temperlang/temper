@@ -373,8 +373,9 @@ census shows authors already agree on almost everything else.
   with the statement's first line. Which token is before a line, or
   first on it, is always code: comments are skipped. But a line
   starting a node right after another (statements without a `;`
-  between them, `f()\ng()`) or after a decorator line (`@connected`)
-  starts a statement, and a comment line goes with the code after it.
+  between them, `f()\ng()`, which covers a declaration after a
+  decorator line like `@connected`) starts a statement, and a comment
+  line goes with the code after it.
   A bracket opened on a continuation line indents its contents from that
   line (`.map { x =>`, `&& (` in a condition), but a header's body's
   `{` from the header's first line, so a class body indents one level

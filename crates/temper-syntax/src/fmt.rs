@@ -33,13 +33,12 @@
 //!   as a close bracket does. Comments never count. A bracket opened on a
 //!   continuation line indents its contents from that line, but a header's
 //!   body from the header's first line. Lines starting a node right after
-//!   another (statements with no `;` between them) or after a decorator line
-//!   like `@connected` start statements, and comment lines go with the code
-//!   after them.
+//!   another (statements with no `;` between them) start statements, and
+//!   comment lines go with the code after them.
 //! - **Spacing on a line:** one space around infix operators (not `.`,
 //!   `?.`, `..`, `::`, `<`/`>` of type arguments or label colons), after
 //!   `,` and `;` and type and object literals' colons, around `{ }`
-//!   contents, and between a keyword like `if` or `fn` and `(`; none
+//!   contents, and between a word like `if` or `fn` and `(`; none
 //!   before `,`, `;` and those colons, inside `( )` and `[ ]` and a
 //!   string's `${x}`, between a called name and `(`, or after prefix
 //!   operators and `@`. Runs of spaces and tabs become one. Space next
@@ -105,6 +104,15 @@ use std::fmt;
 
 /// Spaces per indentation level.
 const UNIT: i32 = 2;
+
+/// Words that get a space before their call's `(`, as a style choice:
+/// `if (x)` and `fn (x)`, but `f(x)`. Temper has no keywords: the lexer
+/// and parser read these as names, and the frontend's builtins make them
+/// control flow, which this crate can't see, so the list is here. A
+/// function of the user's with one of these names is spaced the same.
+/// (Words the grammar reads as operators, as `return` and `new`, keep
+/// the space before their `(` as written.)
+const SPACED_BEFORE_PAREN: &[&str] = &["if", "while", "for", "when", "catch", "fn"];
 
 /// Choices `temper fmt` makes, for measuring alternatives
 /// (`rules_census` in tests/fmt.rs); [`format`] uses the defaults.
@@ -350,15 +358,41 @@ enum Role {
     Separator,
 }
 
+/// The parse tree's nodes, not its tokens, each once, every node before
+/// its children.
+fn nodes(parsed: &Parsed) -> impl Iterator<Item = NodeId> + '_ {
+    let tree = parsed.tree();
+    let mut stack = vec![parsed.root()];
+    std::iter::from_fn(move || {
+        let id = stack.pop()?;
+        let children = tree.children(id).iter().copied();
+        stack.extend(children.filter(|&c| tree.kind(c) != NodeKind::Token));
+        Some(id)
+    })
+}
+
+/// Whether a token's text opens a bracket: `(`, `[` or `{`, or a string's
+/// `${` or an escape's `\u{`.
+fn opens(text: &str) -> bool {
+    text.ends_with(['(', '[', '{'])
+}
+
+/// Whether a token's text closes a bracket.
+fn closes(text: &str) -> bool {
+    matches!(text, ")" | "]" | "}")
+}
+
 /// Each operator token's role and operator, by its start in the source.
 fn roles(parsed: &Parsed) -> HashMap<u32, (Role, Operator)> {
     let tree = parsed.tree();
     let mut roles = HashMap::new();
-    let mut stack = vec![parsed.root()];
-    while let Some(id) = stack.pop() {
+    for id in nodes(parsed) {
         let NodeKind::Op(op) = tree.kind(id) else {
             continue;
         };
+        if op == Operator::Leaf {
+            continue;
+        }
         let children = tree.children(id);
         let is_node = |c: &NodeId| tree.kind(*c) != NodeKind::Token;
         // Whether a token has operands before and after it.
@@ -366,10 +400,6 @@ fn roles(parsed: &Parsed) -> HashMap<u32, (Role, Operator)> {
         let last = children.iter().rposition(is_node).unwrap_or(0);
         for (i, &child) in children.iter().enumerate() {
             if is_node(&child) {
-                stack.push(child);
-                continue;
-            }
-            if op == Operator::Leaf {
                 continue;
             }
             let Some(token) = parsed.token(child) else {
@@ -380,10 +410,9 @@ fn roles(parsed: &Parsed) -> HashMap<u32, (Role, Operator)> {
             }
             let text = parsed.token_text(token);
             let (before, after) = (first < i, i < last);
-            let role = if text.ends_with(['(', '[', '{']) || (text == "<" && op == Operator::Angle)
-            {
+            let role = if opens(text) || (text == "<" && op == Operator::Angle) {
                 Role::Open
-            } else if matches!(text, ")" | "]" | "}") || (text == ">" && op == Operator::Angle) {
+            } else if closes(text) || (text == ">" && op == Operator::Angle) {
                 Role::Close
             } else if text == ","
                 || matches!(
@@ -422,10 +451,8 @@ fn headers(parsed: &Parsed, tokens: &[Token]) -> (HashMap<u32, u32>, HashMap<u32
     // start. Headers nest or are apart, as they're nodes of the tree.
     let mut spans: Vec<(usize, usize, u32)> = Vec::new();
     let mut braces = HashMap::new();
-    let mut stack = vec![parsed.root()];
-    while let Some(id) = stack.pop() {
+    for id in nodes(parsed) {
         let children = tree.children(id);
-        stack.extend(children.iter().copied());
         let (NodeKind::Op(Curly), Some(&head)) = (tree.kind(id), children.first()) else {
             continue;
         };
@@ -485,11 +512,9 @@ fn headers(parsed: &Parsed, tokens: &[Token]) -> (HashMap<u32, u32>, HashMap<u32
 fn juxtaposed(parsed: &Parsed) -> HashSet<u32> {
     let tree = parsed.tree();
     let mut starts = HashSet::new();
-    let mut stack = vec![parsed.root()];
-    while let Some(id) = stack.pop() {
-        let children = tree.children(id);
+    for id in nodes(parsed) {
         let mut after_node = false;
-        for &c in children {
+        for &c in tree.children(id) {
             match parsed.token(c) {
                 Some(t) if t.synthetic => {}
                 Some(_) => after_node = false,
@@ -498,7 +523,6 @@ fn juxtaposed(parsed: &Parsed) -> HashSet<u32> {
                         starts.extend(first_token(parsed, c));
                     }
                     after_node = true;
-                    stack.push(c);
                 }
             }
         }
@@ -573,10 +597,8 @@ fn find_lists(parsed: &Parsed, index: &HashMap<u32, usize>) -> Vec<List> {
     use Operator::*;
     let tree = parsed.tree();
     let mut lists = Vec::new();
-    let mut stack = vec![parsed.root()];
-    while let Some(id) = stack.pop() {
+    for id in nodes(parsed) {
         let children = tree.children(id);
-        stack.extend((children.iter()).filter(|&&c| tree.kind(c) != NodeKind::Token));
         let NodeKind::Op(Paren | ParenGroup | Square | SquareGroup | CurlyGroup | Angle) =
             tree.kind(id)
         else {
@@ -710,8 +732,8 @@ fn code_gaps(source: &str, lexed: &[Token]) -> (Vec<Token>, Vec<bool>, Vec<bool>
             TokenKind::Punctuation if text == "\\u{" => frames.push(Frame::Escape),
             TokenKind::Punctuation if text == "${" => frames.push(Frame::Code),
             _ if frames.last() == Some(&Frame::String) => {}
-            TokenKind::Punctuation if text.ends_with(['(', '[', '{']) => frames.push(Frame::Code),
-            TokenKind::Punctuation if matches!(&*text, ")" | "]" | "}") && frames.len() > 1 => {
+            TokenKind::Punctuation if opens(&text) => frames.push(Frame::Code),
+            TokenKind::Punctuation if closes(&text) && frames.len() > 1 => {
                 frames.pop();
             }
             _ => {}
@@ -773,13 +795,8 @@ struct Formatter<'a> {
     line: Indent,
     /// Where the current line's first token starts.
     line_first: u32,
-    /// Whether the current line has code yet, and started with `@`, and
-    /// the bracket depth at its start.
-    line_has_code: bool,
-    line_is_decorator: bool,
+    /// The bracket depth at the current line's start.
     line_depth: usize,
-    /// Whether the last line with code was a decorator line.
-    after_decorator: bool,
     /// Whether the current line's indentation stays as written: a block
     /// comment's that can't move.
     keep_indent: bool,
@@ -865,10 +882,7 @@ impl<'a> Formatter<'a> {
             previous: None,
             line: Indent::default(),
             line_first: u32::MAX,
-            line_has_code: false,
-            line_is_decorator: false,
             line_depth: 0,
-            after_decorator: false,
             keep_indent: false,
             string_shift: 0,
             options,
@@ -918,7 +932,7 @@ impl<'a> Formatter<'a> {
             let marker = (t.kind == TokenKind::Comment && own_line && range.is_some())
                 .then(|| fmt_marker(text))
                 .flatten();
-            let closer = t.kind == TokenKind::Punctuation && matches!(text, ")" | "]" | "}");
+            let closer = t.kind == TokenKind::Punctuation && closes(text);
             if let Some((d, block)) = off {
                 if range != Some(block) || marker == Some(false) || (closer && depth == d) {
                     off = None;
@@ -927,7 +941,7 @@ impl<'a> Formatter<'a> {
                     kept[i] = true;
                 }
             }
-            if t.kind == TokenKind::Punctuation && text.ends_with(['(', '[', '{']) {
+            if t.kind == TokenKind::Punctuation && opens(text) {
                 depth += 1;
             } else if closer {
                 depth = depth.saturating_sub(1);
@@ -1271,11 +1285,6 @@ impl<'a> Formatter<'a> {
         below: Option<i32>,
     ) -> i32 {
         let actual = written.unwrap_or(0);
-        if self.line_has_code {
-            self.after_decorator = self.line_is_decorator && self.stack.len() == self.line_depth;
-        }
-        self.line_has_code = false;
-        self.line_is_decorator = false;
         self.line_depth = self.stack.len();
         let text = self.text(first);
         let mut starts_statement = false;
@@ -1284,9 +1293,7 @@ impl<'a> Formatter<'a> {
             actual
         } else if matches!(first.kind, TokenKind::Margin | TokenKind::QuotedString) {
             (actual + self.string_shift).max(0)
-        } else if first.kind == TokenKind::Punctuation && matches!(text, ")" | "]" | "}")
-            || self.angle(self.index, Role::Close)
-        {
+        } else if self.closes_bracket(self.index) {
             // Its line continues the bracket's, as `} else {` does.
             self.line_depth = self.line_depth.saturating_sub(1);
             self.stack.last().map_or(0, |o| o.base.formatted)
@@ -1382,12 +1389,7 @@ impl<'a> Formatter<'a> {
         let first = if first.kind == TokenKind::Comment {
             let next = Some(self.next_code[self.index]).filter(|&i| i < self.tokens.len());
             match next {
-                Some(i)
-                    if !matches!(self.text(self.tokens[i]), ")" | "]" | "}")
-                        && !self.angle(i, Role::Close) =>
-                {
-                    self.tokens[i]
-                }
+                Some(i) if !self.closes_bracket(i) => self.tokens[i],
                 _ => return None,
             }
         } else {
@@ -1397,7 +1399,7 @@ impl<'a> Formatter<'a> {
         if self.is_operator(first) && self.role(first).is_some_and(|r| r.0 == Role::Infix) {
             return statement;
         }
-        if self.after_decorator || self.juxtaposed.contains(&first.start) {
+        if self.juxtaposed.contains(&first.start) {
             return None;
         }
         if let Some(top) = self.stack.last_mut() {
@@ -1443,8 +1445,8 @@ impl<'a> Formatter<'a> {
             });
         }
         token.kind == TokenKind::Punctuation
-            && !text.ends_with(['(', '[', '{'])
-            && !matches!(text, ")" | "]" | "}")
+            && !opens(text)
+            && !closes(text)
             && !self
                 .role(token)
                 .is_some_and(|r| r.1 == Operator::Angle && matches!(r.0, Role::Open | Role::Close))
@@ -1510,17 +1512,11 @@ impl<'a> Formatter<'a> {
         if !self.is_code(token) || token.kind == TokenKind::Comment {
             return;
         }
-        if !self.line_has_code {
-            self.line_has_code = true;
-            self.line_is_decorator = text == "@";
-        }
         if let Some(header) = self.header_lines.get_mut(&token.start) {
             *header = Some((self.line, self.stack.len()));
         }
         match token.kind {
-            TokenKind::Punctuation
-                if text.ends_with(['(', '[', '{']) || self.angle(self.index, Role::Open) =>
-            {
+            _ if self.opens_bracket(self.index) => {
                 // From its own line if that started at this depth, but a
                 // body's `{` on a header's continuation line from the
                 // header's first line; else from the line that started its
@@ -1543,9 +1539,7 @@ impl<'a> Formatter<'a> {
                 });
                 self.statements.push(Some(self.line));
             }
-            TokenKind::Punctuation
-                if matches!(text, ")" | "]" | "}") || self.angle(self.index, Role::Close) =>
-            {
+            _ if self.closes_bracket(self.index) => {
                 if self.stack.pop().is_some() {
                     self.statements.pop();
                 }
@@ -1560,9 +1554,25 @@ impl<'a> Formatter<'a> {
         }
     }
 
+    /// Whether the token at `index` opens a bracket for indentation: `(`,
+    /// `[`, `{` (`${` and `\u{` too), or the `<` of type arguments or
+    /// parameters (other `<`s may be less-than).
+    fn opens_bracket(&self, index: usize) -> bool {
+        let token = self.tokens[index];
+        (token.kind == TokenKind::Punctuation && opens(self.text(token)))
+            || self.angle(index, Role::Open)
+    }
+
+    /// Whether the token at `index` closes a bracket for indentation, as
+    /// [`Self::opens_bracket`] opens one.
+    fn closes_bracket(&self, index: usize) -> bool {
+        let token = self.tokens[index];
+        (token.kind == TokenKind::Punctuation && closes(self.text(token)))
+            || self.angle(index, Role::Close)
+    }
+
     /// Whether the token at `index` is the `<` (`Role::Open`) or `>`
-    /// (`Role::Close`) of type arguments or parameters, which count as
-    /// brackets for indentation (others don't, as `<` may be less-than).
+    /// (`Role::Close`) of type arguments or parameters.
     fn angle(&self, index: usize, role: Role) -> bool {
         self.tokens.get(index).is_some_and(|&t| {
             self.role(t) == Some((role, Operator::Angle)) && matches!(self.text(t), "<" | ">")
@@ -1596,7 +1606,6 @@ impl<'a> Formatter<'a> {
         let (ra, rb) = (self.role(a), self.role(b));
         let is = |r: Option<(Role, Operator)>, role: Role| r.is_some_and(|r| r.0 == role);
         let op = |r: Option<(Role, Operator)>| r.map(|r| r.1);
-        let closer = |t: &str| matches!(t, ")" | "]" | "}");
         let tight = |r: Option<(Role, Operator)>| {
             matches!(
                 op(r),
@@ -1615,8 +1624,7 @@ impl<'a> Formatter<'a> {
         let spaced = |r: Option<(Role, Operator)>, t: Token| {
             is(r, Role::Infix) && t.kind == Punctuation && !tight(r)
         };
-        let opens = |t: &str| t.ends_with(['(', '[', '{']);
-        let keyword = matches!(ta, "if" | "while" | "for" | "when" | "catch" | "fn");
+        let spaced_word = SPACED_BEFORE_PAREN.contains(&ta);
         let angle = op(ra) == Some(Angle) && is(ra, Role::Open)
             || op(rb) == Some(Angle) && matches!(rb.map(|r| r.0), Some(Role::Open | Role::Close));
         let prefix = is(ra, Role::Prefix)
@@ -1632,7 +1640,7 @@ impl<'a> Formatter<'a> {
             (is(rb, Role::Separator) && matches!(tb, "," | ";"), Some("")),
             (
                 is(ra, Role::Separator) && matches!(ta, "," | ";"),
-                (!closer(tb)).then_some(" "),
+                (!closes(tb)).then_some(" "),
             ),
             (dot(ra) || dot(rb), Some("")),
             // Type colons, and an object literal's, which are the same in
@@ -1651,7 +1659,7 @@ impl<'a> Formatter<'a> {
             // `if (` and `fn (`, but `f(`.
             (
                 is(rb, Role::Open) && tb == "(" && op(rb) == Some(Paren),
-                (a.kind == Word).then_some(if keyword { " " } else { "" }),
+                (a.kind == Word).then_some(if spaced_word { " " } else { "" }),
             ),
             // `{ a }`, `f {`, but `({` and `{}` as written.
             (
@@ -1710,7 +1718,6 @@ fn property_colons(parsed: &Parsed) -> HashSet<u32> {
     use Operator::*;
     let tree = parsed.tree();
     let mut colons = HashSet::new();
-    let mut stack = vec![parsed.root()];
     let colon = |id: NodeId| {
         let tokens = || tree.children(id).iter().filter_map(|&c| parsed.token(c));
         (tree.kind(id) == NodeKind::Op(LowColon))
@@ -1718,13 +1725,11 @@ fn property_colons(parsed: &Parsed) -> HashSet<u32> {
             .flatten()
             .map(|t| t.start)
     };
-    while let Some(id) = stack.pop() {
-        let children = tree.children(id);
-        stack.extend((children.iter()).filter(|&&c| tree.kind(c) != NodeKind::Token));
+    for id in nodes(parsed) {
         if tree.kind(id) != NodeKind::Op(CurlyGroup) {
             continue;
         }
-        for &c in children {
+        for &c in tree.children(id) {
             let items = match tree.kind(c) {
                 NodeKind::Op(Comma) => tree.children(c),
                 _ => std::slice::from_ref(&c),

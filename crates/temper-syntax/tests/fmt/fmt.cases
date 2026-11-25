@@ -189,6 +189,25 @@ class C {
   public f(): Void;
 }
 
+=== declarations after decorator lines, with arguments or stacked, don't continue them
+@connected("C::f")
+  export let f(): Void;
+@a
+@b(1)
+    export class D {
+  @json
+    let x: Int;
+}
+--- formatted
+@connected("C::f")
+export let f(): Void;
+@a
+@b(1)
+export class D {
+  @json
+  let x: Int;
+}
+
 === spacing around operators and punctuation
 let x=a+b*c-d;
 let y:Int = f( a ,b )[ 0 ];
