@@ -26,10 +26,11 @@
 //!   of a range) answers from the open text alone, without analysis,
 //!   reusing its unit's parse when that's current. Its edits are the runs
 //!   of changed lines ([`line_edits`]), clipped to a range's lines
-//!   ([`clip`]). A document formatting refuses (it doesn't parse, or has a
-//!   lone `\r`, or, a bug, the result would change the code) gets no
-//!   edits and no error, but a `window/showMessage` warning saying why,
-//!   once for each version of the document, so saving again doesn't nag.
+//!   ([`clip`]). A document formatting refuses gets no edits and no
+//!   error. If it doesn't parse, that's all, as its syntax error is
+//!   already a diagnostic; otherwise (a lone `\r`, or, a bug, the result
+//!   would change the code) a `window/showMessage` warning says why, once
+//!   for each version of the document, so saving again doesn't nag.
 //! - **Panics,** bugs in tempest, don't end the server: each request and
 //!   each analysis runs under `catch_unwind`. A request that panics gets
 //!   an error response, an analysis that panics an "internal error"
@@ -675,8 +676,9 @@ impl<W: Write> Server<W> {
     }
 
     /// The edits formatting an open document, or those of its lines in
-    /// `range`: none if formatting refuses it (it doesn't parse, say), with
-    /// a warning saying why, once for each version of the document. A
+    /// `range`: none if formatting refuses it, with a warning saying why,
+    /// once for each version of the document, unless it doesn't parse
+    /// (a diagnostic already says so). A
     /// range's last line is left out if it ends at the line's start, as a
     /// selection of whole lines does. Each edit is a run of changed lines
     /// ([`line_edits`]), clipped to the range's lines ([`clip`]).
@@ -708,8 +710,10 @@ impl<W: Write> Server<W> {
                 if matches!(why, FmtError::Unsafe(_)) {
                     eprintln!("temper lsp: formatting {path}: {why}");
                 }
+                // Not parsing is already a diagnostic: no warning for it.
                 let doc = &mut self.docs[i];
-                if doc.format_warned != Some(doc.version) {
+                let quiet = matches!(why, FmtError::Unparseable(_));
+                if !quiet && doc.format_warned != Some(doc.version) {
                     doc.format_warned = Some(doc.version);
                     let name = path.rsplit('/').next().unwrap_or(path);
                     let message = format!("temper fmt: {name}: {why}");

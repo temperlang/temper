@@ -18,7 +18,8 @@ the language server for:
 - go to definition, into the standard library too;
 - completion of names, members, and object literals' properties;
 - find references, rename, the outline, and signature help;
-- formatting, as [`temper fmt`](cli.md#fmt) does, on save by default.
+- formatting, as [`temper fmt`](cli.md#fmt) does, on save by default
+  ([in editors](fmt.md#in-editors)).
 
 Blocks tagged `temper inert`, Temper shown for reading but not compiled,
 are highlighted too, tinted and labeled "inert" in the editor, the

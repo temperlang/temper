@@ -511,9 +511,11 @@ census shows authors already agree on almost everything else.
   stops and everything between the unchanged ends is one run. Edits'
   positions are line starts, so only an edit to the end of a last line
   without a line break counts UTF-16 units. A document formatting
-  refuses (it doesn't parse, a lone `\r`, or a bug) gets no edits and
-  no error, but a `window/showMessage` warning saying why, once per
-  version of the document, so saving again doesn't nag. The VS Code
+  refuses gets no edits and no error. One that doesn't parse gets
+  nothing more, as its syntax error is already a diagnostic (Tom,
+  2026-11-24); the surprising refusals, a lone `\r` or a bug, get a
+  `window/showMessage` warning saying why, once per version of the
+  document, so saving again doesn't nag. The VS Code
   extension formats on save by default (`editor.formatOnSave` for
   `[temper]` and `[temper-markdown]`).
 - **Writing files:** each is written whole or not at all (a new hidden

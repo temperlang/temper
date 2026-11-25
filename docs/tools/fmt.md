@@ -45,25 +45,36 @@ if (ok) {
 A line that continues a statement indents two spaces from the
 statement's first line. One that starts a statement doesn't, as a
 `{ x }` block on the line after a whole call `f(a)` does (the line break
-ends the call, so the block isn't its argument).
+ends the call, so the block isn't its argument), or the statement on the
+line after a label (`outer:`). A line starting with `;`, `;;`, or `,`,
+as after a multi-quoted string, lines up with the statement or item it
+ends, as a close bracket lines up with its open bracket's line.
 
 ```temper inert
 let ready = loaded &&
             checked;     // before
 let ready = loaded &&
   checked;               // after
+outer:
+  for (;;) { f() }       // before
+outer:
+for (;;) { f() }         // after
 ```
 
-A continuation line indents four spaces instead, to stand apart from
-what follows: in a header (a class's, interface's, function's, or
-function literal's, before the `{` of its body), from the line the
-header starts on; and in parentheses whose contents start on the `(`
-line, as a condition's do, from that line (break right after the `(`,
-and they indent two from their own first line, as above). A comma
-between supertypes (`extends A,` then `B` on the next line) continues
-the header too. Brackets
-opened on such a line indent their contents from it, but a body from its
-header's first line.
+Two kinds of continuation line indent four spaces instead, to stand
+apart from what follows:
+
+- In a header (a class's, interface's, function's, or function
+  literal's, before the `{` of its body), from the line the header
+  starts on. A comma between supertypes (`extends A,` then `B` on the
+  next line) continues the header too.
+- In parentheses whose contents start on the `(` line, as a
+  condition's do, from that line. With a line break right after the
+  `(`, the contents start a line of their own, and their continuations
+  indent two from it, as above.
+
+Brackets opened on such a line indent their contents from it, but a
+header's body indents from the header's first line.
 
 ```temper inert
 let parse(text: String): Int
@@ -86,15 +97,21 @@ if (ready &&
     checked) {           // after
   go();
 }
+if (
+  ready &&
+    checked              // after, with a break after `(`
+) {
+  go();
+}
 ```
 
 ## Blank lines
 
 Blank lines stay as you wrote them, but never more than one in a row
 (at a `.temper.md` code block's start and end too), and none at the
-start of a file. Trailing spaces go, after comments
-too, and a file ends with one line break, unless it has nothing but
-space: then it's empty. A file's line breaks stay its own: in a file
+start of a file. Trailing spaces go, after comments too, and a file
+ends with one line break, unless it has nothing but space: then it's
+empty. A file's line breaks stay its own: in a file
 with CRLF line breaks, the ones `fmt` adds are CRLF too.
 
 ```temper inert
@@ -111,8 +128,8 @@ let b = 2;   // after: one
 ## Lists
 
 Lists are arguments, parameters, list and object literals, and type
-arguments, and a single item in parentheses or brackets, as in
-`(a + b)`. Your line breaks and trailing comma choose their layout:
+arguments. Grouping parentheses, as in `(a + b)`, are lists too, of one
+item, as is an index in brackets, as in `items[i]`. Your line breaks and trailing comma choose their layout:
 
 - No line break after the open bracket: all on one line.
 - A line break after the open bracket: the items together on one line
@@ -211,19 +228,18 @@ read-only file is an error.
 ## What it leaves out
 
 Under a directory, `fmt` skips `temper.out`, `temper.keep`, hidden
-directories, and what `.gitignore` and `.temperignore` files list, in
-it and above it up to its git repository's root, as `build` does. It
-skips symbolic links too, to files as to directories, so a link in a
-checkout can't make it write outside; a link named on the command line
-formats the file it links to. To
-keep more as written, such as a golden test's input or code that
-doesn't parse on purpose, list it in a file of gitignore patterns,
-relative to that file's directory, and name it with `--ignorefile`
-([ignore files](cli.md#ignore-files)). A directory named that it lists
-is skipped too (but not its own directory, where its patterns start); a
-file named on the command line is formatted all the same. For a check
-in CI, with this
-`.fmtignore`:
+directories, and what `.gitignore` and `.temperignore` files list, as
+`build` does ([ignore files](cli.md#ignore-files)). It skips symbolic
+links too, to files as to directories, so a link in a checkout can't
+make it write outside; a link named on the command line formats the
+file it links to.
+
+To keep more as written, such as a golden test's input or code that
+doesn't parse on purpose, list it in a file of gitignore patterns and
+name it with `--ignorefile`. A directory named that it lists is skipped
+too (but not its own directory, where its patterns start); a file named
+on the command line is formatted all the same. For a check in CI, with
+this `.fmtignore`:
 
 ```gitignore
 # Golden inputs, kept as written
@@ -235,3 +251,17 @@ tests/inputs/
 ```sh
 temper fmt --check --ignorefile .fmtignore
 ```
+
+## In editors
+
+The [language server](editors.md) formats with the same code, a whole
+document or the lines of a range, and the VS Code extension formats on
+save by default. To turn that off, set the standard
+`editor.formatOnSave` to `false` for `[temper]` (and
+`[temper-markdown]`, for `.temper.md` files) in your settings. In
+Restricted Mode, for a workspace you haven't trusted, the extension
+doesn't run, so neither does formatting.
+
+When it refuses a file, it leaves it as written and says why, except
+for code that doesn't parse, whose syntax error already shows as a
+diagnostic.

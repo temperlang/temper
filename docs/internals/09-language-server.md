@@ -106,9 +106,10 @@ number of lines line for line, one that joins or splits lines only if
 the range holds all of it; a range ending at a line's character 0
 leaves that line out, as a selection of whole lines ends there), so
 `formatOnSaveMode: "modifications"` touches only what changed. A
-document formatting refuses (it doesn't parse, say) gets no edits and
-no error, but a `window/showMessage` warning saying why, once for each
-version of the document. The VS Code extension formats on save by
+document formatting refuses gets no edits and no error. One that
+doesn't parse gets nothing more, as its syntax error is already a
+diagnostic; otherwise (a lone `\r`, or a bug) a `window/showMessage`
+warning says why, once for each version of the document. The VS Code extension formats on save by
 default.
 
 How a query finds what's at a position:

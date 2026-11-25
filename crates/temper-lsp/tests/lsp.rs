@@ -573,9 +573,11 @@ fn apply_edits(text: &str, edits: &Json) -> String {
 
 /// Formatting answers with edits of just the changed lines, for the whole
 /// document or a range's lines, laying lists out by their line breaks and
-/// trailing commas; a document that doesn't parse, or that formatting
-/// otherwise refuses, gets none, and no error, but a warning saying why,
-/// once for each version of the document, so saving again doesn't nag.
+/// trailing commas; a document that formatting refuses gets none, and no
+/// error. One that doesn't parse gets no warning either, as its syntax
+/// error is already a diagnostic; one refused for another reason (a lone
+/// `\r`) gets a warning saying why, once for each version of the
+/// document, so saving again doesn't nag.
 #[test]
 fn formatting() {
     let text =
@@ -625,14 +627,7 @@ fn formatting() {
             .map(|n| str_at(n, &["params", "message"]).to_string())
             .collect()
     };
-    let shown = warnings(&mut client);
-    assert_eq!(shown.len(), 1, "{shown:?}");
-    assert!(
-        shown[0].contains("f.temper: doesn't parse (line 2"),
-        "{shown:?}"
-    );
-    // The same version again: no second warning.
-    client.request("textDocument/formatting", params.clone());
+    // Not parsing: no warning, as the syntax error is a diagnostic.
     assert_eq!(warnings(&mut client), Vec::<String>::new());
     change(&mut client, &file, 4, "let a=1;\rlet b=2;\n");
     assert_eq!(
@@ -641,7 +636,13 @@ fn formatting() {
     );
     let shown = warnings(&mut client);
     assert_eq!(shown.len(), 1, "{shown:?}");
-    assert!(shown[0].contains("carriage return"), "{shown:?}");
+    assert!(
+        shown[0].contains("f.temper:") && shown[0].contains("carriage return"),
+        "{shown:?}"
+    );
+    // The same version again: no second warning.
+    client.request("textDocument/formatting", params.clone());
+    assert_eq!(warnings(&mut client), Vec::<String>::new());
     assert_eq!(client.finish(), 0);
     let _ = std::fs::remove_dir_all(&dir);
 }
