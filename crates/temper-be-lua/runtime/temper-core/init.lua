@@ -232,7 +232,7 @@ do
     local function traced(err)
         local raised_again = again ~= nil and rawequal(again, err)
         again = nil
-        if raised_again or is_bubble(err) then
+        if raised_again or is_bubble(err) or temper.is_failure(err) then
             return err
         end
         local trace = debug.traceback(tostring(err), 2)
@@ -274,6 +274,49 @@ do
         return caught(xpcall(function()
             return f(table_unpack(args, 1, args.n))
         end, traced))
+    end
+
+    -- What a handler of declared failures (RFC 164) catches besides
+    -- failure types: bubbles, as `temper.catch`'s argument.
+    local Bubble = setmetatable({}, {
+        __tostring = function()
+            return "temper.Bubble"
+        end
+    })
+    temper.Bubble = Bubble
+
+    -- Whether a handler that catches `caught`, a failure type,
+    -- `Bubble`, or a list of them, catches `err`.
+    local function catches(caught, err)
+        if caught == Bubble then
+            return is_bubble(err)
+        elseif rawget(caught, "typename") ~= nil then
+            return temper.instance_of(err, caught)
+        end
+        for i = 1, #caught do
+            if catches(caught[i], err) then
+                return true
+            end
+        end
+        return false
+    end
+
+    local function caught_by(caught, ok, ...)
+        if ok or catches(caught, (...)) then
+            return ok, ...
+        end
+        again = (...)
+        error((...), 0)
+    end
+
+    -- A handler of declared failures, `orelse` or `catch`: `pcall`, but
+    -- catching only what follows `f`, each a failure type, whose
+    -- subtypes' failures it catches too, or `temper.Bubble`, raising
+    -- anything else (a panic, a host error, another failure) again,
+    -- unchanged, as `temper.pcall` does.
+    function temper.catch(f, ...)
+        local caught = select('#', ...) == 1 and ... or { ... }
+        return caught_by(caught, xpcall(f, traced))
     end
 
     -- Bubbles, as every builtin that bubbles does; host code bubbles by
@@ -754,14 +797,49 @@ do
         end
     }
 
+    -- Declared failures (RFC 164): the instances of `temper.Failure`, the
+    -- root of failure types, and of every type under it, have a metatable
+    -- of their own, the instances', with `__tostring` giving the
+    -- failure's `message` and `cause`, the failure being handled where it
+    -- was thrown (`temper.with_cause`), read as `nil` where there's none.
+    local failure_meta = {
+        __index = function(self, k)
+            if k == "cause" then
+                return nil
+            end
+            return inst_meta.__index(self, k)
+        end,
+        __newindex = inst_meta.__newindex,
+        __tostring = function(self)
+            return self.message
+        end
+    }
+
+    -- Failure types' own, whose call makes an instance with it.
+    local failure_type_meta = {
+        __call = function(self, ...)
+            local inst = {}
+            inst[temper.type_tag] = self
+            setmetatable(inst, failure_meta)
+            self.constructor(inst, ...)
+            return inst
+        end,
+        __index = type_meta.__index,
+        __tostring = type_meta.__tostring
+    }
+
     function temper.type(typename, ...)
         local get = {}
         local set = {}
         local methods = {}
         local super = {}
+        local meta = type_meta
 
         for i = select('#', ...), 1, -1 do
             local t = select(i, ...)
+            if getmetatable(t) == failure_type_meta then
+                meta = failure_type_meta
+            end
             for k, v in pairs(t.get) do
                 get[k] = v
             end
@@ -786,10 +864,76 @@ do
 
         tab.super[typename] = true
 
-        setmetatable(tab, type_meta)
+        setmetatable(tab, meta)
 
         return tab
     end
+
+    -- The root of declared failure types, core's `Error`: each library's
+    -- base failure type is under it, and its failure types under that.
+    temper.Failure = setmetatable(temper.type("temper.Failure"), failure_type_meta)
+end
+
+-- Whether `err` is a declared failure.
+function temper.is_failure(err)
+    return temper.instance_of(err, temper.Failure)
+end
+
+-- `failure`, with `cause` as its cause, for a `throw` in a handler, unless
+-- it has one already: a failure thrown again keeps the cause it was first
+-- thrown with. Never itself, nor a loop of causes.
+function temper.with_cause(failure, cause)
+    if rawget(failure, "cause") ~= nil then
+        return failure
+    end
+    local seen = {}
+    local c = cause
+    while type(c) == "table" and not seen[c] do
+        if rawequal(c, failure) then
+            return failure
+        end
+        seen[c] = true
+        c = rawget(c, "cause")
+    end
+    rawset(failure, "cause", cause)
+    return failure
+end
+
+-- A failure's cause, as Temper's `Error.cause` gives it: the failure that
+-- was being handled where it was thrown, or `temper.null`, also where that
+-- was something else, such as a bubble.
+function temper.failure_cause(failure)
+    local cause = rawget(failure, "cause")
+    if temper.is_failure(cause) then
+        return cause
+    end
+    return temper.null
+end
+
+-- What a report of a failure nothing handled says, as `temper run`
+-- shows it: its type's name and message, then its causes', a line each;
+-- `nil` for what isn't a failure.
+function temper.failure_report(err)
+    if not temper.is_failure(err) then
+        return nil
+    end
+    local lines = {}
+    local seen = {}
+    local prefix = "uncaught failure: "
+    local e = err
+    while type(e) == "table" and not seen[e] do
+        seen[e] = true
+        if not temper.is_failure(e) then
+            lines[#lines + 1] = "caused by a bubble"
+            break
+        end
+        local typename = rawget(e, temper.type_tag).typename
+        local name = string_match(typename, "([^.]*)$")
+        lines[#lines + 1] = prefix .. name .. ": " .. tostring(e)
+        prefix = "caused by: "
+        e = rawget(e, "cause")
+    end
+    return table_concat(lines, "\n")
 end
 
 -- Math constants which we leave as functions for now for convenience.
@@ -2423,15 +2567,20 @@ function temper.cast_to(thing, to)
     end
 end
 
+-- `thing is T`, for a class or interface `T`: false for a value of a
+-- builtin type or none, as a bubble, a panic's string, or a host's error.
 function temper.instance_of(thing, ...)
     if type(thing) ~= "table" then
         return false
     end
+    local tag = rawget(thing, temper.type_tag)
+    if type(tag) ~= "table" then
+        return false
+    end
     local n = select('#', ...)
-    local type_tag = temper.type_tag
     for i=1,n do
-        local tag = select(i, ...)
-        if thing[type_tag].super[tag.typename] then
+        local t = select(i, ...)
+        if tag.super[t.typename] then
             return true
         end
     end
@@ -2472,6 +2621,8 @@ function temper.test_assertpanics(test, block, msg)
         test.failures[#test.failures + 1] = msg
     elseif temper.is_bubble(err) then
         test.failures[#test.failures + 1] = msg .. ', but it bubbled'
+    elseif temper.is_failure(err) then
+        test.failures[#test.failures + 1] = msg .. ', but it failed: ' .. tostring(err)
     elseif temper.is_test_failure(err) then
         error(err, 0)
     end

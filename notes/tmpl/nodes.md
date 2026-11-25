@@ -704,9 +704,9 @@ then).
 ### Declared failures (As built, 2026-11-24, Proposed)
 
 RFC 164's failure types, beside `Bubble`, which stays as it was
-([types.md](types.md#results); typing.md, "Declared failures"). Python,
-Java, Rust, C++, JS, and C# have them (below); Lua says "not yet in the … backend:
-declared failures: …" for a program that uses them
+([types.md](types.md#results); typing.md, "Declared failures"). Every
+backend has them (below); a backend without them would say "not yet in
+the … backend: declared failures: …" for a program that uses them
 (`temper_tmpl::failures::not_yet`), and a program that uses only
 `Bubble` is unchanged, node for node.
 
@@ -886,6 +886,27 @@ catch exactly `Bubble` or the join, `catch (NotFound e)`, or both,
 and host exceptions pass. A `~caught` read takes `!`. A function
 failing with a failure type says so in an XML doc comment, `///
 <exception cref="NotFound">`.
+
+**In Lua** (chunk 13): the runtime's types, as other classes are.
+Core's `Error` is `temper.Failure`, a type whose instances, and those
+of every type under it, have a metatable of their own: `__tostring`
+gives the failure's `message`, and `cause` reads as `nil` where there's
+none. The base is `temper.type("failures.FailuresError",
+temper.Failure)`, failure types under it as other types are, LuaCATS
+classes under `temper.Failure`; a failure type's member named `cause` is
+`cause_`. `message` is the getter; `cause` is `temper.failure_cause(e)`,
+the key `cause` where it's a failure. `Throw` is `error(x)`,
+`error(temper.with_cause(x, cause))` in a handler (keeps a cause it
+has). `OrElse` and `Catch` are `temper.catch(function() … end,
+NotFound)`, catching exactly the join, by `temper.instance_of`, and
+`temper.Bubble` where the body may bubble too, raising anything else
+again unchanged; a body that only bubbles keeps `temper.pcall`. A
+`catch`'s binding is its second result, `local ok, e =
+temper.catch(…)`, or where the body jumps, a local of the fallback.
+`orelse panic()` names a failure as its cause by its message. A failure
+nothing handles: `temper run` and the tests' runner report it as
+`uncaught failure: LookupFailed: lookup failed (name: port)`, then
+`caused by: …` lines (`temper.failure_report`).
 
 Validator rules: T5 lets a signature fail with a failure type or a type
 parameter; F3 marks every `Throw`; F4 checks the failure's type where it

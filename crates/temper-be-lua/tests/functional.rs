@@ -23,8 +23,12 @@
 //! that host code plugs in (`tests/host/net.lua`), on
 //! the shared programs (`crates/temper-be-testkit/programs/`), which
 //! cover operators, jumps, module state, string order, classes, and
-//! nullables beyond those tests, and on programs of Lua's own ([`HIDING`],
-//! [`HOISTING`], [`MEMBERS`], [`REPEATS`], and [`locals`]).
+//! nullables beyond those tests, the testkit's specifications of
+//! declared failures, `failures` and `host-failures` ([`SPECS`]), and on
+//! programs of Lua's own ([`HIDING`], [`HOISTING`], [`MEMBERS`],
+//! [`REPEATS`], [`locals`], [`FAILURE_IMPORTS`], and `tests/programs/`'
+//! [`OWN`], with host code that catches their failures,
+//! `tests/host/failures.lua`).
 //!
 //! - `goldens`: each program's generated library, laid out as Kotlin's,
 //!   with its `init.lua` matching the golden in `tests/goldens/`, named
@@ -421,7 +425,8 @@ fn cases() -> Vec<Case> {
         &kit::NET[..],
     ]
     .concat();
-    let mut cases = kit::cases_with("lua", &kit::PROGRAMS, &tests);
+    let programs = [&kit::PROGRAMS[..], &SPECS[..]].concat();
+    let mut cases = kit::cases_with("lua", &programs, &tests);
     // Kotlin's suite expects `regex/zero-advance` to fail on Lua (its
     // issue 166): the runtime's engine replaces nothing for `(^|,)\s*`
     // (`^` alone matches, and `,\s*` leaves the space), so the slice
@@ -466,7 +471,60 @@ fn cases() -> Vec<Case> {
     ));
     let (text, expected) = locals();
     cases.push(Case::inline("locals", "locals.temper.md", text, expected));
+    let (path, text) = FAILURE_IMPORTS[0];
+    let mut imports = Case::inline("failure-imports", path, text, vec!["-1".into()]);
+    let (path, text) = FAILURE_IMPORTS[1];
+    imports.sources.push((path.into(), text.into()));
+    cases.push(imports);
+    // This crate's own programs, in `tests/programs/`.
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/programs");
+    for name in OWN {
+        let path = dir.join(format!("{name}.temper.md"));
+        let text = fs::read_to_string(&path).unwrap();
+        let expected = log_block(&text);
+        cases.push(Case::inline(
+            name,
+            &format!("{name}.temper.md"),
+            text,
+            expected,
+        ));
+    }
     cases
+}
+
+/// A library whose root module handles failures of a type only its
+/// module `a` names, which the root then requires for `temper.catch` to
+/// check against, as it requires a type it casts to.
+const FAILURE_IMPORTS: [(&str, &str); 2] = [
+    (
+        "failure-imports.temper.md",
+        "# Failure imports\n\n    let { lookup } = import(\"./a\");\n    \
+         let n = lookup(\"x\") orelse -1;\n    console.log(n.toString());\n",
+    ),
+    (
+        "a/a.temper.md",
+        "# A\n\n    export class NotFound(public key: String) extends Error {}\n    \
+         export let lookup(key: String): Int throws NotFound { throw new NotFound(key) }\n",
+    ),
+];
+
+/// The testkit's specifications (`kit::SPECS`) Lua runs, as every other
+/// backend does.
+const SPECS: [&str; 2] = ["failures", "host-failures"];
+
+/// This crate's own programs, in `tests/programs/`: `lua-failures`,
+/// declared failures as Lua callers catch them, with host code that does
+/// (`tests/host/failures.lua`).
+const OWN: [&str; 1] = ["lua-failures"];
+
+/// The lines of a program's one log block.
+fn log_block(text: &str) -> Vec<String> {
+    (text.lines())
+        .skip_while(|l| !l.starts_with("```log"))
+        .skip(1)
+        .take_while(|l| !l.starts_with("```"))
+        .map(str::to_string)
+        .collect()
 }
 
 /// A case's generated files.
@@ -551,7 +609,7 @@ fn programs_log_as_the_interpreter_does() {
         for case in cases() {
             if !matches!(
                 case.key.as_str(),
-                "hiding" | "members" | "locals" | "hoisting"
+                "hiding" | "members" | "locals" | "hoisting" | "lua-failures"
             ) {
                 continue;
             }
@@ -578,9 +636,16 @@ const LUA_PATH: &str = "?.lua;?/init.lua";
 
 /// Requires each library named on the command line in turn, after a line
 /// naming it, so one process runs them all; an error is a line too.
-const RUNNER: &str = r#"for _, name in ipairs(arg) do
+/// An uncaught declared failure is the line of the runtime's report,
+/// which says its causes too (`temper.failure_report`), as `temper run`'s.
+const RUNNER: &str = r#"local function report(err)
+  local t = package.loaded["temper-core"]
+  local r = type(t) == "table" and rawget(t, "failure_report")
+  return r and r(err) or tostring(err)
+end
+for _, name in ipairs(arg) do
   io.write("==> ", name, "\n")
-  local ok, err = pcall(require, name)
+  local ok, err = xpcall(function() return require(name) end, report)
   if not ok then
     io.write("!!> ", (tostring(err):gsub("\n", " ")), "\n")
   end
@@ -988,6 +1053,10 @@ fn runs() {
         if let Some(case) = cases.iter().find(|c| c.key == "async-turns") {
             host_interop(&lua, &dir, &case.expected, &mut failures);
         }
+        // Host code that catches `lua-failures`' failures, likewise.
+        if let Some(case) = cases.iter().find(|c| c.key == "lua-failures") {
+            failures_interop(&lua, &dir, &case.expected, &mut failures);
+        }
         // Host code that plugs its own client into std `net`.
         let nets: Vec<&(&Case, PathBuf)> = apart.iter().filter(|(c, _)| is_net(c)).collect();
         if nets.len() == kit::NET.len() {
@@ -1139,6 +1208,41 @@ fn host_interop(lua: &str, dir: &Path, logged: &[String], failures: &mut Vec<Str
         )
         .collect();
     kit::check_log(failures, "host interop", &run, &expected);
+}
+
+/// `tests/host/failures.lua`, host code that catches `lua-failures`'
+/// declared failures with `pcall`, tells them apart with
+/// `temper.instance_of` by their own types, the library's base, a sealed
+/// interface's, and `temper.Failure`, reads their fields, messages, and
+/// causes, raises one of its own, and sees a panic is none of them,
+/// copied into `dir`, beside it.
+fn failures_interop(lua: &str, dir: &Path, logged: &[String], failures: &mut Vec<String>) {
+    let script = dir.join("failures.lua");
+    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/failures.lua");
+    fs::copy(source, &script).unwrap();
+    let run = Command::new(lua)
+        .arg(&script)
+        .current_dir(dir)
+        .env("LUA_PATH", LUA_PATH)
+        .output()
+        .unwrap();
+    let expected: Vec<String> = (logged.iter().cloned())
+        .chain(
+            [
+                "NotFound z: not found (key: z)",
+                "base true, Failure true, sign false, not found (key: y)",
+                "sign BadSign: bad sign (text: x)",
+                "sign EmptyText: no text",
+                "LookupFailed port lookup failed (name: port), caused by not found (key: port)",
+                "made before lookup failed (name: early), caused by not found (key: early)",
+                "thrown again lookup failed (name: first), caused by not found (key: first)",
+                "made by host not found (key: host) nil",
+                "panic passes, false, string",
+            ]
+            .map(String::from),
+        )
+        .collect();
+    kit::check_log(failures, "failures interop", &run, &expected);
 }
 
 /// Checks the generated libraries in `dir` with LuaLS, against the

@@ -131,5 +131,7 @@ pub const RULES: NamingRules = NamingRules {
     modules_share_names: false,
     failure_suffix: None,
     failure_base: None,
-    failure_member_reserved: &[],
+    // A failure's cause is its key `cause`, so a failure type's own
+    // member named so is `cause_`.
+    failure_member_reserved: &["cause"],
 };

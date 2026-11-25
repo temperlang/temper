@@ -221,13 +221,27 @@ impl Types {
 
 impl Translator<'_> {
     /// A type's table, as code refers to it.
+    /// Core's `Error`, the root of declared failures, is the runtime's
+    /// `temper.Failure`.
     pub(crate) fn type_ref(&self, ty: DeclId) -> Expr {
+        if self.is_failure_root(ty) {
+            return ops::temper().member("Failure");
+        }
         self.access(ty)
     }
 
+    /// Whether a type is core's `Error`, the root of declared failures.
+    pub(crate) fn is_failure_root(&self, ty: DeclId) -> bool {
+        is_external(self.p, ty) && self.qname(ty) == "core.type Error"
+    }
+
     /// A type's name, for the runtime and for LuaLS: its module's path,
-    /// with `.` for `/`, and its name.
+    /// with `.` for `/`, and its name; for core's `Error`, the runtime's
+    /// `temper.Failure`.
     pub(crate) fn lua_type(&self, ty: DeclId) -> String {
+        if self.is_failure_root(ty) {
+            return "temper.Failure".to_string();
+        }
         let module = home(self.p, ty).unwrap_or(ty);
         format!(
             "{}.{}",
@@ -312,6 +326,8 @@ impl Translator<'_> {
         let supers: Vec<DeclId> = (p.decls.supers(decl).iter())
             .filter_map(|&s| nominal_decl(p, s))
             .collect();
+        // A declared failure type, whose `message` is its `__tostring`.
+        let failure = temper_tmpl::failures::is_below_root(p, decl);
 
         // The instance's LuaCATS class.
         let mut doc = vec![match supers.is_empty() {
@@ -409,7 +425,7 @@ impl Translator<'_> {
                             }
                         },
                     };
-                    to_string |= is_class && is_plain_to_string(p, d);
+                    to_string |= is_class && !failure && is_plain_to_string(p, d);
                     let result = match kind {
                         DeclKind::Constructor | DeclKind::Setter => None,
                         _ => match p.signature(d) {
@@ -747,6 +763,10 @@ pub fn refs(p: &Program, item: NodeId) -> Vec<DeclId> {
                 Some(t) => t,
                 None => return,
             },
+            Node::OrElse { .. } | Node::Catch { .. } => match caught_type(p, id) {
+                Some(t) => t,
+                None => return,
+            },
             _ => return,
         };
         if !is_external(p, decl) && !found.contains(&decl) {
@@ -781,9 +801,25 @@ pub fn classy(p: &Program, id: NodeId, classy: &HashSet<DeclId>) -> bool {
     found
 }
 
+/// The failure type a handler (`orelse` or `catch`) catches by its table,
+/// as `temper.catch`'s argument: the one nearest above the declared
+/// failures its body may fail with, if any (core's `Error` for several
+/// libraries').
+pub fn caught_type(p: &Program, handler: NodeId) -> Option<DeclId> {
+    let (Node::OrElse { body, .. } | Node::Catch { body, .. }) = p.nodes.get(handler) else {
+        return None;
+    };
+    let declared: Vec<TypeId> = (temper_tmpl::failures::failures_under(p, body).into_iter())
+        .map(|(_, f)| f)
+        .filter(|&f| f != TypeId::BUBBLE)
+        .collect();
+    let root = temper_tmpl::failures::root(p);
+    nominal_decl(p, temper_tmpl::failures::join(p, root, &declared)?)
+}
+
 /// What `roots` import ([`temper_tmpl::analysis::imports`]), with the
-/// types they cast to with `as`, which needs the type's table, though
-/// tmpl's imports don't list it.
+/// types they cast to with `as`, or whose failures a handler catches,
+/// which need the type's table, though tmpl's imports don't list them.
 pub fn with_casts(
     p: &Program,
     module: DeclId,
@@ -792,10 +828,12 @@ pub fn with_casts(
 ) -> Vec<temper_tmpl::analysis::Import> {
     for &root in roots {
         walk(p, root, &mut |id| {
-            if !matches!(p.nodes.get(id), Node::As { .. }) {
-                return;
-            }
-            let Some(ty) = nominal_decl(p, p.nodes.ty(id)) else {
+            let ty = match p.nodes.get(id) {
+                Node::As { .. } => nominal_decl(p, p.nodes.ty(id)),
+                Node::OrElse { .. } | Node::Catch { .. } => caught_type(p, id),
+                _ => return,
+            };
+            let Some(ty) = ty else {
                 return;
             };
             let Some(from) = home(p, ty).filter(|&m| m != module) else {

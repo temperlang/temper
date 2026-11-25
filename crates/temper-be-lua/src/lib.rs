@@ -31,6 +31,14 @@
 //! that, raising anything else again, so a panic (`error("panic")`) or
 //! a host error passes every `orelse`. Every builtin that bubbles calls
 //! `temper.bubble`, as host code (`_connected.lua`) must to bubble.
+//! Declared failures (RFC 164) are instances of the runtime's types too,
+//! under each library's base, `temper.type("lib.LibError",
+//! temper.Failure)`, `__tostring` giving their `message`, and `cause` a
+//! field; `throw` is Lua's `error(x)`, with `temper.with_cause(x, e)` in a
+//! handler, and a handler of them `temper.catch(function() … end,
+//! NotFound)`, which catches only what follows its function, by
+//! `temper.instance_of`, raising anything else again (notes/tmpl/nodes.md,
+//! "Declared failures").
 //! What Lua can't write inline (`orelse`,
 //! statements before a value, as `??` makes, and `if` values that Lua's
 //! `and` and `or` can't choose) goes before its statement
@@ -175,8 +183,6 @@ pub fn rock_version(p: &Program) -> String {
 /// relative, as Kotlin does when it has no path, and writes no zip:
 /// `luarocks make` in the library's directory needs none.
 pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet> {
-    // Declared failures, not yet (RFC 164).
-    temper_tmpl::failures::not_yet(p).map_err(|what| NotYet { what })?;
     // Type-only errors run as written, or fail where they are
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);

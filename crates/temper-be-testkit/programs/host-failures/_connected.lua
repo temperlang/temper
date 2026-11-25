@@ -1,7 +1,6 @@
--- A specification: `NotFound` is the library's own failure type, a
--- metatable on its module's exports called to make one, as the Lua
--- backend will name it; raising it is a failure, and a string a host
--- error.
+-- `NotFound` is the library's own failure type, a local of its module,
+-- which this is inlined in; calling it makes one, and raising that is a
+-- failure, and a string a host error.
 local _connected = {}
 
 do
@@ -14,6 +13,6 @@ do
     if key == "a" then
       return 1
     end
-    error(require("host-failures").NotFound(key))
+    error(NotFound(key))
   end
 end

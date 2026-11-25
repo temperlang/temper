@@ -23,13 +23,16 @@ fn run(dir: &Path, library: &Tested, _: &[Tested]) -> Result<bool, String> {
     // Under `xpcall`, so an error that isn't a string, as a bubble, gets
     // a stack trace too, which `lua`'s own handler gives only strings;
     // one that passed an `orelse`, from where it was first raised
-    // (`temper.raised_trace`).
+    // (`temper.raised_trace`); and a declared failure, its report, with
+    // its causes (`temper.failure_report`).
     let init = format!("{}/init.lua", library.name);
     let main = format!(
         "local ok, e = xpcall(function() return dofile([==[{init}]==]) end, \
          function(e) local t = package.loaded[\"temper-core\"] \
          local r = type(t) == \"table\" and rawget(t, \"raised_trace\") \
-         return r and r(e) or debug.traceback(tostring(e), 2) end) \
+         local f = type(t) == \"table\" and rawget(t, \"failure_report\") \
+         local said = f and f(e) or tostring(e) \
+         return r and r(e) or debug.traceback(said, 2) end) \
          if not ok then io.stderr:write(\"lua: \", e, \"\\n\") os.exit(1) end"
     );
     program(

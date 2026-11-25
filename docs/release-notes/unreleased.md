@@ -521,11 +521,10 @@ them need the new ones.
 declared failures RFC 164 proposes, so they can't name a variable,
 function, parameter, or member, though a name after a `.`, as in
 `promise.catch`, still reads as one. The syntax parses, is type
-checked, and runs on the interpreter (`temper run -b interp`) and in
-Python, Java, Rust, C++, JS, and C#, where Lua doesn't translate it yet (it says
-"not yet … declared failures"), and `error case` is reported as not
-supported yet. In Python, a library's failure types are exception
-classes under its own base, as `WherewithError(Failure, Exception)`
+checked, and runs on the interpreter (`temper run -b interp`) and on
+every backend, and `error case` is reported as not supported yet. In
+Python, a library's failure types are exception classes under its own
+base, as `WherewithError(Failure, Exception)`
 with `temper_core`'s `Failure` marker, which host code catches by those
 types, never a `temper_core` one; `str(e)` is the message, and the
 cause is `__cause__`. In Java, they're unchecked exceptions under the
@@ -557,7 +556,13 @@ rest `sealed`; `Message` is the message, `InnerException` the cause,
 set where a failure is made by a `throw` in a handler (one made before
 keeps its cause for Temper's `cause` alone, as C# can't set
 `InnerException` later), and doc comments say what a function may
-throw with `<exception cref="…">`. A failure's `message` is its type's own getter's, or else its
+throw with `<exception cref="…">`. In Lua, they're the runtime's types
+under the library's own base, as `temper.type("wherewith.WherewithError",
+temper.Failure)`, raised with `error(x)`, so host code catches them with
+`pcall` and tells them apart with `temper.instance_of`; `tostring(e)`
+and `message` are the message, `cause` the cause (a failure's own member
+named `cause` is `cause_` in Lua), and `temper run` reports one nothing
+handles with its causes. A failure's `message` is its type's own getter's, or else its
 type's name and public fields, as `not found (key: y)`; a failure thrown
 while handling another has that one as its `cause`; and one nothing
 handles ends the run saying its message, where it was thrown, and its

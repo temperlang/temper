@@ -1224,11 +1224,11 @@ don't take a failing callback to `map` yet (chunk 15).
 
 ## Declared failures
 
-In progress (RFC 164, chunks 4 to 12 of
+In progress (RFC 164, chunks 4 to 13 of
 notes/error-custom-kinds-plan.md, 2026-11-24): typed in the frontend,
 run on the interpreter, and translated to tmpl
-([tmpl/nodes.md](tmpl/nodes.md), "Declared failures") and to Python,
-Java, Rust, C++, JS, and C#, while Lua says "not yet"; failure parameters aren't in tmpl yet, and `error case`
+([tmpl/nodes.md](tmpl/nodes.md), "Declared failures") and to every
+backend; failure parameters aren't in tmpl yet, and `error case`
 is still an error. The user-visible names, the root's (`FAILURE_ROOT` in
 `builtins.rs`, and core's `interface Error`), the messages' wording,
 and the default message and reports (`interp/failures.rs`), are kept in

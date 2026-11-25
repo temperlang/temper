@@ -168,6 +168,21 @@ function temper.is_null(a) end
 ---@return string? kind
 function temper.pcall(f) end
 
+---What `temper.catch` catches besides failure types: bubbles.
+---@type table
+temper.Bubble = {}
+
+---Runs a function, as `temper.pcall`, but catching only what follows
+---it, failure types, with their subtypes, or `temper.Bubble`, as
+---declared failures' handlers do; raising anything else again. Gives what
+---the function did, or false and what it caught.
+---@param f fun(): any?, string?
+---@param ... temper.Type|table
+---@return boolean ok
+---@return any value
+---@return string? kind
+function temper.catch(f, ...) end
+
 ---The value, if it's a string; else it bubbles.
 ---@param thing any
 ---@return string
@@ -347,6 +362,40 @@ function temper.test_failedonassert(test) end
 ---@param ... temper.Type
 ---@return temper.Type
 function temper.type(typename, ...) end
+
+---A declared failure: an instance of a failure type, under its library's
+---base, under `temper.Failure`, the root, core's `Error`. `tostring` gives
+---its message.
+---@class temper.Failure
+---@field message string
+---@field cause temper.Failure|table|nil
+
+---The root of failure types.
+---@type temper.Type
+temper.Failure = {}
+
+---Whether a value is a declared failure.
+---@param err any
+---@return boolean
+function temper.is_failure(err) end
+
+---The failure, with the cause given unless it has one already.
+---@generic F: temper.Failure
+---@param failure F
+---@param cause any
+---@return F
+function temper.with_cause(failure, cause) end
+
+---A failure's cause, if it's a failure, else null.
+---@param failure temper.Failure
+---@return temper.Failure|temper.Null
+function temper.failure_cause(failure) end
+
+---What a report of a failure nothing handles says, with its causes; nil
+---for what isn't a failure.
+---@param err any
+---@return string?
+function temper.failure_report(err) end
 
 ---Whether a value is an instance of any of the types.
 ---@param thing any

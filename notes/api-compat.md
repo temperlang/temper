@@ -389,11 +389,20 @@ unexported names.
 `Hi(args)` with positional arguments; `obj.prop` and `obj:m()`; null is the
 `temper.null` sentinel, which is returned to callers; failure is `error(...)`.
 
+- Declared failures (RFC 164, in progress): each failure type is a
+  `temper.type` under the library's own base, `temper.type("lib.LibError",
+  temper.Failure)`, raised with `error(x)`; host code catches them with
+  `pcall` and tells them apart with `temper.instance_of(e, lib.NotFound)`
+  (by own type, the base, a sealed interface's, or `temper.Failure`).
+  `tostring(e)` and `e.message` give the message, `e.cause` the failure
+  being handled where it was thrown, or `nil`; a failure type's member
+  named `cause` is `cause_`. A panic stays a string.
+
 **Naming.** Temper names unchanged; keywords get `_`; non-ASCII names are
 hex-mangled. No public numbered names.
 
 **Keep:** module paths, names, the class protocol, `temper.null` (see
-Proposed changes).
+Proposed changes), `temper.Failure` and failures' `message` and `cause`.
 
 ## Proposed changes
 

@@ -72,6 +72,17 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Deque.removeFirst()",
         Connection::Helper("deque_removefirst"),
     ),
+    // A declared failure's cause, the runtime's `failure_cause`, where
+    // it's a declared failure; its message, the `message` every failure
+    // class has, as a getter.
+    (
+        "core.type Error.get cause()",
+        Connection::Helper("failure_cause"),
+    ),
+    (
+        "core.type Error.get message()",
+        Connection::Translate(failure_message),
+    ),
     ("core.type Float64.abs()", Connection::Math("abs")),
     ("core.type Float64.acos()", Connection::Math("acos")),
     ("core.type Float64.asin()", Connection::Math("asin")),
@@ -566,6 +577,16 @@ fn int_to_string(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet
 fn boolean_to_string(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let (b, _) = receiver_and_radix(t, args)?;
     Ok(Expr::name("tostring").call(vec![t.expr(b)?]))
+}
+
+/// `Error.message`: the failure's `message`, its class's getter.
+fn failure_message(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let [failure] = args else {
+        return Err(NotYet {
+            what: "`Error.message` without its receiver".into(),
+        });
+    };
+    Ok(t.expr(*failure)?.member("message"))
 }
 
 /// `s == ""`, where Kotlin's is `#s == 0`.
