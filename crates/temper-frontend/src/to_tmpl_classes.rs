@@ -1481,62 +1481,17 @@ impl Translator<'_> {
         self.b.block_value(TypeId::BOOLEAN, &held, value)
     }
 
-    /// `x is C`.
+    /// `x is C`, for the type typing checked by the rule `as` shares
+    /// (`check_rtti`): a class or interface, or `T` for `x: T?`.
     pub(super) fn is_check(&mut self, node: FNode, args: &[FNode]) -> Tx<NodeId> {
-        let [value, ty] = *args else {
+        let [value, written] = *args else {
             return self.not_yet(node, "an is check's form");
         };
-        // `x is C<T>` checks for `C<T>`, as typing read it.
-        let base = match (self.kind(ty), self.children(ty)) {
-            (NodeKind::Call, &[angle, base, ..])
-                if self.s.scopes.resolved_builtin(angle)
-                    == Some(crate::builtins::Builtin::Function(Function::Angle)) =>
-            {
-                Some(base)
-            }
-            _ => None,
-        };
-        let class = self.s.scopes.resolved(base.unwrap_or(ty));
-        let class = class.and_then(|s| self.class_node(s));
-        let applied = (base.is_some())
-            .then(|| self.s.typing.rtti_targets.get(&node).copied())
-            .flatten();
-        let Some(class) = class.filter(|_| base.is_none() || applied.is_some()) else {
-            // `x is T` for `x: T?`, where `T` is builtin: a null check.
-            if let Some(crate::builtins::Builtin::Type(i)) = self.s.scopes.resolved_builtin(ty) {
-                let name = match crate::builtins::TYPES[i as usize] {
-                    "Int" => "Int32",
-                    name => name,
-                };
-                let t = temper_tmpl::TypeTable::scalar_named(name).unwrap_or(TypeId::NONE);
-                let value = self.expr(value)?;
-                let have = self.b.program().nodes.ty(value);
-                if self.b.program().types.is_nullable(have)
-                    && self.b.program().types.non_null(have) == t
-                {
-                    let check = self.b.is_null(value);
-                    let check = self.made(check, node);
-                    let not = Op::named("Boolean.not").unwrap();
-                    let made = self.b.op(not, &[check]);
-                    return Ok(self.own(made, node));
-                }
-                // `x is StringIndex`, one of core's classes.
-                let core = self.core_decl(crate::builtins::TYPES[i as usize]);
-                let core = core.filter(|&d| {
-                    let decl = self.b.program().decls.get(d);
-                    decl.kind == DeclKind::Class && self.b.program().decls.type_params(d).is_empty()
-                });
-                if let Some(d) = core {
-                    let ty = self.b.nominal(d);
-                    let made = self.b.is(ty, value);
-                    return Ok(self.own(made, node));
-                }
-            }
-            return self.generator_result_check(node, value, ty);
-        };
-        let ty = match applied {
-            Some(t) => self.ty(t, node)?,
-            None => self.class_type(class, node)?,
+        let target = self.s.typing.rtti_targets.get(&node).copied();
+        let ty = match target.map(|t| self.ty(t, node)) {
+            Some(Ok(ty)) => ty,
+            // A generator's result, without type arguments.
+            _ => return self.generator_result_check(node, value, written),
         };
         let value = self.expr(value)?;
         let have = self.b.program().nodes.ty(value);

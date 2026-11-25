@@ -3004,10 +3004,12 @@ impl<'a> Translator<'a> {
             }
             Node::Is { ty, value } => {
                 let class = self.pointee(ty)?;
+                // An `AnyValue` is its polymorphic base's.
                 let from = p.nodes.ty(value);
-                let polymorphic = temper_tmpl::analysis::nominal_decl(p, from).is_some_and(|d| {
-                    p.decls.get(d).kind == DeclKind::Interface || !p.decls.supers(d).is_empty()
-                });
+                let polymorphic = from == TypeId::ANY_VALUE
+                    || temper_tmpl::analysis::nominal_decl(p, from).is_some_and(|d| {
+                        p.decls.get(d).kind == DeclKind::Interface || !p.decls.supers(d).is_empty()
+                    });
                 if !polymorphic {
                     return not_yet("`is` on a class without interfaces");
                 }

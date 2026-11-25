@@ -380,8 +380,8 @@ block). Expressions:
 | `GetStatic` | none | `a`: a static field | its declaration's |
 | `New` | arguments | `a`: a constructor; `MAY_BUBBLE` | its signature's result, the class |
 | `Upcast`, `Downcast` | the value | | written: a proper supertype, or (after an `is` check, unchecked) subtype |
-| `As` | the value | `MAY_BUBBLE`, always | written: a proper subtype, checked when run |
-| `Is` | the value | `a`: a class's or interface's type | `Boolean` |
+| `As` | the value | `MAY_BUBBLE`, always | written: checked when run, by `Is`'s rule (C3), or the value's type without null |
+| `Is` | the value, not null | `a`: a class's or interface's type | `Boolean` |
 | `Identical` | left, right | | `Boolean` |
 
 Declarations: `Field`, `StaticField`, `Constructor` (named
@@ -417,8 +417,13 @@ Validator rules (C):
   of it, matching Kotlin's PR), a protected one only there and below.
 - **C3:** a field assigned only if `var`, or on `this` in its class's
   constructor; a static field initialized only in its own module's
-  init block; `Upcast`, `Downcast`, and `As` only up or down the
-  supertypes; `Is` and `Identical` only on classes and interfaces.
+  init block; `Upcast` and `Downcast` only up or down the supertypes;
+  `Is` and `As`, one rule: to a class or interface above or below the
+  value's type (`As` also from `T?` to `T`), and a host type (core's
+  but `Error`, or connected), which a backend may represent by a type
+  that isn't distinct, only from a class or interface it extends, as
+  `StringIndex` from `StringIndexOption`; `Identical` only on classes
+  and interfaces.
 
 Not yet checked: that a class implements every abstract member it
 inherits (the frontend reports it), and statics read before their

@@ -1606,9 +1606,19 @@ In order, the first that applies:
    `TYPE_PARAM_VARIANT`, or core's, as `Generator<@out YIELD>`) isn't
    counted, though tempest doesn't honor variance otherwise ("Type
    parameters are invariant", above), until it's known what relies on
-   it. Other downcasts are fine. Kotlin's wording ends at "checks" for
-   both erasure errors; tempest says why
+   it. Kotlin's wording ends at "checks" for both erasure errors;
+   tempest says why
    ([kotlin-differences.md](kotlin-differences.md#changes-we-recommend-to-temper)).
+   Next, a downcast to a host type, which a backend may represent by a
+   type that isn't distinct (JavaScript's `StringBuilder` is an array,
+   Lua's `StringIndex` a number): one of core's types other than
+   `Error`, or a `@connected` class or interface, unless `S` is a
+   sealed interface (core's `StringIndexOption` and `GeneratorResult`
+   are, whose classes backends check specially): "Core's types and
+   @connected types cannot be targeted with is or as runtime type checks
+   but from a sealed interface they extend, …: <[StringBuilder]> from
+   AnyValue". Kotlin reports this for user code's connected classes
+   only. Other downcasts are fine.
 6. **Unnecessary,** as information: every `S` passes the target as
    written, `T` or `T?`, that is `S` (non-null) is a subtype of `T`, and
    `S` isn't nullable or the target is; for `is`, or for `as` only where
@@ -1634,8 +1644,16 @@ better written `c == null`. Backends, once tempest has them, translate
 Kotlin Temper's backends do.
 
 And `x` of type `Void` is also "Expected subtype of AnyValue?, but got
-Void", at `x`. Not yet: `@connected` types (core's, which tempest
-doesn't type yet; Kotlin fails on user code's).
+Void", at `x`.
+
+**One rule for `is` and `as`.** Every rule above judges both alike, and
+translation keeps them alike (t1071): both take the target typing
+checked, and tmpl's validator checks both by one rule (C3: a class or
+interface above or below the value's type, a host type only from a
+class or interface it extends), so `if (x is C) { … x … }` works
+wherever `x as C` does, from `AnyValue` too. tmpl's `Is` takes only
+non-null values (N1); translation splits `x is C` for `x: T?` into a
+null check and an `Is`.
 
 ## `Void` as a value
 

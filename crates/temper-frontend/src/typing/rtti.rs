@@ -5,11 +5,14 @@
 //! parameter, and, as information, checks that are unnecessary.
 
 use crate::builtins::{Builtin, Function};
-use crate::core::{self, CLASS_INTERFACE, ROLE_MASK, ROLE_TYPE_PARAM, TYPE_PARAM_VARIANT};
+use crate::core::{
+    self, CLASS_CONNECTED, CLASS_INTERFACE, CLASS_SEALED, ROLE_MASK, ROLE_TYPE_PARAM,
+    TYPE_PARAM_VARIANT,
+};
 use crate::library::{Level, Message, RttiProblem};
 use crate::scope::SymbolKind;
 use crate::settle::Settle;
-use crate::types::{ANY_VALUE, NEVER, NULL, TypeData, TypeId, VOID};
+use crate::types::{ANY_VALUE, ERROR, NEVER, NULL, TypeData, TypeId, VOID};
 use temper_syntax::tree::{NodeId, NodeKind};
 
 impl Settle {
@@ -96,6 +99,8 @@ impl Settle {
                 RttiProblem::MayDowncast
             } else if self.introduces_args(s_judged, t) {
                 RttiProblem::Actuals
+            } else if self.is_host_type(t) && !self.is_sealed(s_judged) {
+                RttiProblem::Host
             } else {
                 return;
             }
@@ -135,6 +140,33 @@ impl Settle {
         };
         let have = types.args(s);
         (types.args(t).iter().enumerate()).any(|(i, a)| !variant(i) && !have.contains(a))
+    }
+
+    /// Whether a backend may give `t`'s values a type of its own, which
+    /// needn't be distinct from others' (a `StringBuilder` is a list on
+    /// some): one of core's types, but `Error`, which libraries' failure
+    /// types extend, or a `@connected` class or interface.
+    fn is_host_type(&self, t: TypeId) -> bool {
+        let base = self.typing.types.base(t);
+        match *self.typing.types.get(base) {
+            TypeData::Builtin(_) => base != ERROR,
+            TypeData::Class(symbol) => (self.type_decl(symbol))
+                .is_some_and(|c| self.lib.tree.data(c) & CLASS_CONNECTED != 0),
+            _ => false,
+        }
+    }
+
+    /// Whether `t` is a sealed interface, whose subtypes backends can tell
+    /// apart, as core's `StringIndexOption`'s.
+    fn is_sealed(&self, t: TypeId) -> bool {
+        let base = self.typing.types.base(t);
+        match *self.typing.types.get(base) {
+            TypeData::Builtin(_) => self.typing.types.is_builtin_sealed(base),
+            TypeData::Class(symbol) => {
+                (self.type_decl(symbol)).is_some_and(|c| self.lib.tree.data(c) & CLASS_SEALED != 0)
+            }
+            _ => false,
+        }
     }
 
     /// `t` without its `?`, as `String` for `String?`.
@@ -184,11 +216,12 @@ impl Settle {
 
     /// Whether `a` is a subtype of `b`, by declarations only, as Kotlin
     /// Temper's checks see it: `AnyValue` is no other type's, nor `Void`
-    /// an `AnyValue`.
+    /// an `AnyValue`, and every other type is one, core's classes too.
     fn rtti_subtype(&mut self, a: TypeId, b: TypeId) -> Option<bool> {
         match (a, b) {
             _ if a == b => Some(true),
             (ANY_VALUE, _) | (VOID, ANY_VALUE) => Some(false),
+            (_, ANY_VALUE) => Some(true),
             _ => self.typing.types.is_subtype(a, b),
         }
     }

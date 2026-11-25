@@ -40,6 +40,19 @@ function Gala.get.name(this)
   return "Gala"
 end
 
+---@param v any|temper.Null
+---@return string
+local function describe(v)
+  if not temper.is_null(v) and temper.instance_of(v --[[@as any]], Fuji) then
+    return "Fuji " .. (v --[[@as as-expr.Fuji]]).name
+  end
+  if not temper.is_null(v) and temper.instance_of(v --[[@as any]], Apple) then
+    return (v --[[@as as-expr.Apple]]).name
+  else
+    return "other"
+  end
+end
+
 do
   ---@type as-expr.Apple|temper.Null
   local x
@@ -54,9 +67,14 @@ do
   x = temper.null
   print(not temper.is_null(x) and "Tasty nothing." or "Was null!")
 end
-local thing0 = false
-local thing1 = 1
 local thing2 = "two"
+local thing1 = 1
+print(describe(Fuji()))
+print(describe(Gala()))
+print(describe(thing2))
+print(describe(thing1))
+print(describe(temper.null))
+local thing0 = false
 local thing3 = 3.14
 
-return { thing0 = thing0, thing1 = thing1, thing2 = thing2, thing3 = thing3 }
+return { thing2 = thing2, thing1 = thing1, thing0 = thing0, thing3 = thing3 }

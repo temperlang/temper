@@ -337,6 +337,10 @@ pub enum RttiProblem {
     /// Ours: `T` is a `@fun` interface, which Kotlin Temper documents as
     /// not allowed but doesn't report.
     FunInterface,
+    /// Ours: `T` is one of core's types or a `@connected` one, which a
+    /// backend may represent by a type that isn't distinct, checked from
+    /// other than a sealed interface it extends.
+    Host,
 }
 
 /// How a `@fun` interface breaks the rules Kotlin Temper documents for
@@ -602,6 +606,11 @@ impl Message {
                     RttiProblem::FunInterface => (
                         "@fun interfaces cannot be targeted",
                         ", because backends may make them plain function types",
+                    ),
+                    RttiProblem::Host => (
+                        "Core's types and @connected types cannot be targeted",
+                        " but from a sealed interface they extend, because backends may \
+                         represent them by types that aren't distinct",
                     ),
                 };
                 format!("{what} with is or as runtime type checks{why}: <[{target}]> from {from}")

@@ -1123,3 +1123,100 @@ fn check_partition_for(test: &str, p: &Program, connects: fn(&str) -> bool) {
     let again = partition(&parted, connects);
     assert_eq!(difference(&parted, &again), None, "{test}");
 }
+
+/// `x is T` and `x as T` share one rule (t1071), the frontend's
+/// (`check_rtti`) and tmpl's (C3): over a grid of what's checked, from
+/// `AnyValue`, a user interface, a sealed one, core's sealed
+/// `StringIndexOption`, and nullable ones, for a user interface above
+/// some of them, a user class, a user interface, a sealed subtype, core's classes (`StringBuilder`, and
+/// `StringIndex`, checkable only from `StringIndexOption`), a generic
+/// type, and `String`, each `is` is accepted exactly where its `as` is,
+/// with the same errors, translating and validating.
+#[test]
+fn is_and_as_share_one_rule() {
+    with_stack(|| {
+        let decls = "
+    export interface Thing {}
+    export interface Named extends Thing {}
+    export class Plain extends Thing {}
+    export sealed interface Apple extends Thing {}
+    export class Gala extends Apple {}
+    export class Box<T>(public t: T) extends Thing {}
+    export let box(): Box<Int> { new Box<Int>(1) }
+    export let up(): Boolean { new Plain() is Thing }
+";
+        // What each check gives: "ok", or the start of its error.
+        const ACTUALS: &str = "Type arguments cannot be introduced";
+        const MAY_DOWNCAST: &str = "Types marked @mayDowncastTo(false)";
+        const UNRELATED: &str = "Unrelated types cannot be targeted";
+        const CORE: &str = "Core's types and @connected types cannot be targeted";
+        let targets = [
+            "Thing",
+            "Plain",
+            "Named",
+            "Gala",
+            "StringBuilder",
+            "StringIndex",
+            "Box<Int>",
+            "String",
+        ];
+        const OK: &str = "ok";
+        let from_any = [OK, OK, OK, OK, CORE, CORE, ACTUALS, MAY_DOWNCAST];
+        let from_thing = [OK, OK, OK, OK, UNRELATED, UNRELATED, ACTUALS, UNRELATED];
+        let from_apple = [
+            OK, UNRELATED, UNRELATED, OK, UNRELATED, UNRELATED, UNRELATED, UNRELATED,
+        ];
+        let from_option = [
+            UNRELATED, UNRELATED, UNRELATED, UNRELATED, UNRELATED, OK, UNRELATED, UNRELATED,
+        ];
+        let sources = [
+            ("AnyValue", from_any),
+            ("AnyValue?", from_any),
+            ("Thing", from_thing),
+            ("Thing?", from_thing),
+            ("Apple", from_apple),
+            ("StringIndexOption", from_option),
+            ("StringIndexOption?", from_option),
+        ];
+        let outcome = |name: &str, source: String| -> String {
+            let mut library = Library::new();
+            library.add_file(&format!("{name}.temper.md"), &source, SourceKind::Markdown);
+            load_imports(&Sources::standard(), &mut library);
+            let settled = settle(library);
+            let errors: Vec<String> = (settled.library.diagnostics.iter())
+                .filter(|d| d.level == temper_frontend::library::Level::Error)
+                .map(|d| d.message.text())
+                .collect();
+            if !errors.is_empty() {
+                return errors.join("; ");
+            }
+            let program = match to_tmpl(&settled, name) {
+                Ok(program) => program,
+                Err(e) => return format!("not yet: {}", e.what),
+            };
+            let problems = validate(&program, &Profile::full());
+            // Without node numbers, which differ between `is` and `as`.
+            let problems: Vec<String> = (problems.iter())
+                .map(|p| format!("{:?} {}", p.rule, p.message))
+                .collect();
+            if problems.is_empty() {
+                "ok".into()
+            } else {
+                problems.join("; ")
+            }
+        };
+        let mut wrong = Vec::new();
+        for (from, expected) in sources {
+            for (to, want) in targets.iter().zip(expected) {
+                let is = format!("{decls}    export let f(x: {from}): Boolean {{ x is {to} }}\n");
+                let is = outcome("checks", is);
+                let as_ = format!("{decls}    export let f(x: {from}): {to} {{ x as {to} }}\n");
+                let as_ = outcome("checks", as_);
+                if is != as_ || !is.starts_with(want) {
+                    wrong.push(format!("{from} to {to}:\n  is {is}\n  as {as_}"));
+                }
+            }
+        }
+        assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+    });
+}

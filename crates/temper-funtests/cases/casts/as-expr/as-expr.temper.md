@@ -55,6 +55,38 @@ Gala
 Was null!
 ```
 
+`is` checks what `as` casts, by the same rule, so it too works from
+`AnyValue`, for classes and interfaces, and narrows the value it checks.
+Neither checks for core's types, as `StringBuilder`, which backends may
+represent by types that aren't distinct.
+
+    let describe(v: AnyValue?): String {
+      if (v is Fuji) {
+        return "Fuji ${v.name}";
+      }
+      when (v) {
+        is Apple -> v.name;
+        else -> "other";
+      }
+    }
+    do {
+      console.log(describe(new Fuji()));
+      console.log(describe(new Gala()));
+      console.log(describe(thing2));
+      console.log(describe(thing1));
+      console.log(describe(null));
+    }
+
+prints
+
+```log
+Fuji Fuji
+Gala
+other
+other
+other
+```
+
 ## Upcasting Builtins
 
 This isn't very interesting, but it's allowed. And we currently seem to optimize

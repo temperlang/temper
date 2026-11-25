@@ -151,6 +151,15 @@ pub fn builtin_supertype(name: &str) -> Option<&'static str> {
         .map(|&(_, sup)| sup)
 }
 
+/// Core's sealed interfaces among the builtin types.
+const BUILTIN_SEALED: [&str; 5] = [
+    "GeneratorResult",
+    "Listed",
+    "Mapped",
+    "Never",
+    "StringIndexOption",
+];
+
 /// Core's non-generic classes and interface beyond the final types:
 /// `StringIndex` and `NoStringIndex` extend the sealed `StringIndexOption`,
 /// and nothing else extends any of them, so each is a subtype of only
@@ -548,6 +557,12 @@ impl Types {
         (self.is_final(base) && base != VOID)
             || (self.builtin_name(base))
                 .is_some_and(|n| BUILTIN_GENERIC_CLASSES[..NO_DOWNCAST].contains(&n))
+    }
+
+    /// Whether `t`, or a generic type's base, is one of core's sealed
+    /// interfaces, as `StringIndexOption`.
+    pub fn is_builtin_sealed(&self, t: TypeId) -> bool {
+        (self.builtin_name(self.base(t))).is_some_and(|n| BUILTIN_SEALED.contains(&n))
     }
 
     /// Whether core marks a builtin generic type's `index`th type
@@ -1467,6 +1482,18 @@ mod tests {
             });
             assert!(declared, "{sub} extends {sup}");
         }
+    }
+
+    #[test]
+    fn builtin_sealed_are_cores() {
+        let core = include_str!("../../../lib/core/core.temper");
+        let mut sealed: Vec<&str> = (core.lines())
+            .filter_map(|line| line.strip_prefix("export sealed interface "))
+            .map(|rest| rest.split(|c: char| !c.is_alphanumeric()).next().unwrap())
+            .filter(|name| TYPES.contains(name))
+            .collect();
+        sealed.sort();
+        assert_eq!(sealed, BUILTIN_SEALED);
     }
 
     #[test]

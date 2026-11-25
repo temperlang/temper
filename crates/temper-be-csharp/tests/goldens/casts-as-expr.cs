@@ -4,10 +4,28 @@ namespace AsExpr;
 
 public static class AsExprGlobal
 {
-    public static readonly object Thing0;
-    public static readonly object Thing1;
     public static readonly object Thing2;
+    public static readonly object Thing1;
+    public static readonly object Thing0;
     public static readonly object Thing3;
+
+    internal static string Describe(object? v)
+    {
+        if (v != null && v is Fuji)
+        {
+            return "Fuji " + ((Fuji)v).Name;
+        }
+        {
+            if (v != null && v is IApple)
+            {
+                return ((IApple)v).Name;
+            }
+            else
+            {
+                return "other";
+            }
+        }
+    }
 
     static AsExprGlobal()
     {
@@ -25,9 +43,16 @@ public static class AsExprGlobal
             x = null;
             console.Log(x != null ? "Tasty nothing." : "Was null!");
         }
-        Thing0 = false;
-        Thing1 = 1;
         Thing2 = "two";
+        Thing1 = 1;
+        {
+            console.Log(Describe(new Fuji()));
+            console.Log(Describe(new Gala()));
+            console.Log(Describe(Thing2));
+            console.Log(Describe(Thing1));
+            console.Log(Describe(null));
+        }
+        Thing0 = false;
         Thing3 = 3.14;
     }
 }

@@ -5,7 +5,7 @@ from temper_core import (
     cast_none as _cast_none,
 )
 
-__all__ = ('thing0', 'thing1', 'thing2', 'thing3')
+__all__ = ('thing2', 'thing1', 'thing0', 'thing3')
 
 
 class _Apple(metaclass=_ABCMeta):
@@ -33,6 +33,15 @@ class _Gala(_Apple):
         return 'Gala'
 
 
+def _describe(v: object | None, /) -> str:
+    if v is not None and isinstance(v, _Fuji):
+        return f'Fuji {v.name}'
+    if v is not None and isinstance(v, _Apple):
+        return v.name
+    else:
+        return 'other'
+
+
 _console: _LoggingConsole = _LoggingConsole(__name__)
 _x: _Apple | None
 _x = _Fuji()
@@ -45,7 +54,12 @@ _console.log(_cast_by_type(_y, _Apple).name)  # type: ignore[type-abstract]
 _console.log(_cast_by_type(_y, _Gala).name)
 _x = None
 _console.log('Tasty nothing.' if _x is not None else 'Was null!')  # pyright: ignore[reportUnnecessaryComparison]
-thing0: object = False
-thing1: object = 1
 thing2: object = 'two'
+thing1: object = 1
+_console.log(_describe(_Fuji()))
+_console.log(_describe(_Gala()))
+_console.log(_describe(thing2))
+_console.log(_describe(thing1))
+_console.log(_describe(None))
+thing0: object = False
 thing3: object = 3.14

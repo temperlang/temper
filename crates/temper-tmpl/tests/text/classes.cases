@@ -392,11 +392,66 @@ C3 @10: fixed#3 isn't a var, so only its class's constructor may set it, on this
 C3 @15: fixed#3 isn't a var, so only its class's constructor may set it, on this
 C3 @23: C#2 isn't a proper subtype of C#2
 C3 @26: C#2 isn't a proper subtype of C#2
-C3 @29: I#1 isn't a proper subtype of C#2
-C3 @38: the value checked is Int32, not a class or interface
-C3 @39: the type checked is Int32, not a class or interface
+C3 @37: C#2 isn't a subtype or supertype of Int32
+C3 @39: Int32 isn't a class or interface
 C3 @42: an operand of identical is Int32, not a class or interface
 C3 @48: shared#4 is another module's
+
+=== run-time type checks: is and as share one rule (C3, N1)
+tmpl 1 model 1 library checks 0.1.0
+
+uses `temper-core`#39 0.1.0 {
+  interface Error#40 {}
+  interface StringIndexOption#41 {}
+  class StringBuilder#42 {}
+  class StringIndex#43 extends StringIndexOption#41 {}
+}
+
+module checks#0 {
+  interface I#1 {}
+
+  interface J#2 extends I#1 {}
+
+  class C#3 extends J#2 {}
+
+  interface H#4<T#5> extends I#1 {}
+
+  fn f#6(a#7: AnyValue, i#8: I#1, n#9: I#1?, h#10: H#4<Int32>, k#11: Int32?, o#28: StringIndexOption#41): Void {
+    let a1#12: C#3 = (as(a#7)): C#3;
+    let a2#13: Boolean = is(a#7, C#3);
+    let i1#14: J#2 = (as(i#8)): J#2;
+    let i2#15: Boolean = is(i#8, J#2);
+    let s1#16: I#1 = (as(i#8)): I#1;
+    let s2#17: Boolean = is(i#8, I#1);
+    let g1#18: H#4<Int32> = (as(a#7)): H#4<Int32>;
+    let g2#19: Boolean = is(a#7, H#4<Int32>);
+    let b1#20: Int32 = (as(a#7)): Int32;
+    let b2#21: Boolean = is(a#7, Int32);
+    let u1#22: C#3 = (as(h#10)): C#3;
+    let u2#23: Boolean = is(h#10, C#3);
+    let k1#24: Int32 = (as(k#11)): Int32;
+    let k2#25: Boolean = is(k#11, Int32);
+    let n1#26: C#3 = (as(n#9)): C#3;
+    let n2#27: Boolean = is(n#9, C#3);
+    let h1#29: StringBuilder#42 = (as(a#7)): StringBuilder#42;
+    let h2#30: Boolean = is(a#7, StringBuilder#42);
+    let o1#31: StringIndex#43 = (as(o#28)): StringIndex#43;
+    let o2#32: Boolean = is(o#28, StringIndex#43);
+    let e1#33: Error#40 = (as(a#7)): Error#40;
+    let e2#34: Boolean = is(a#7, Error#40);
+  }
+
+  init {}
+}
+--- problems
+C3 @37: Int32 isn't a class or interface
+C3 @40: Int32 isn't a class or interface
+C3 @43: C#3 isn't a subtype or supertype of H#4<Int32>
+C3 @46: C#3 isn't a subtype or supertype of H#4<Int32>
+N1 @52: the value checked is Int32?, which may be null
+N1 @58: the value checked is I#1?, which may be null
+C3 @61: StringBuilder#42 is core's or connected, checked only from a type it extends
+C3 @64: StringBuilder#42 is core's or connected, checked only from a type it extends
 
 === reading: this outside a method, without its type
 tmpl 1 model 1 library e 0.1.0

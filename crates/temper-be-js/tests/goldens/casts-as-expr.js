@@ -1,5 +1,22 @@
 import { requireInstanceOf, requireNotNull, type } from "@temperlang/core";
 
+/**
+ * @param {unknown | null} v
+ * @returns {string}
+ */
+function describe(v) {
+  if (v != null && v instanceof Fuji) {
+    return `Fuji ${/** @type {Fuji} */ (/** @type {unknown} */ (v)).name}`;
+  }
+  {
+    if (v != null && v instanceof Apple) {
+      return /** @type {Apple} */ (/** @type {unknown} */ (v)).name;
+    } else {
+      return "other";
+    }
+  }
+}
+
 class Apple extends type() {
   /** @type {string} */
   name = /** @type {any} */ (undefined);
@@ -33,7 +50,14 @@ class Gala extends type(Apple) {
   x = null;
   console.log(x != null ? "Tasty nothing." : "Was null!");
 }
-export const thing0 = false;
-export const thing1 = 1;
 export const thing2 = "two";
+export const thing1 = 1;
+{
+  console.log(describe(new Fuji()));
+  console.log(describe(new Gala()));
+  console.log(describe(thing2));
+  console.log(describe(thing1));
+  console.log(describe(null));
+}
+export const thing0 = false;
 export const thing3 = 3.14;

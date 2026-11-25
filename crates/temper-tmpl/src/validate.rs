@@ -73,10 +73,13 @@
 //!   assigned only if it's a `var`, or on `this` in its class's
 //!   constructor, a static field initialized only in its module's init
 //!   block, and conversions only up or down the supertypes (`Upcast`,
-//!   `Downcast`), with `Is` and `Identical` only on classes and
+//!   `Downcast`); `Is` and `As`, run-time type checks, by one rule: to a
+//!   class or interface above or below the value's type (or from `T?` to
+//!   `T`), a host type (core's but `Error`, or connected) only from a
+//!   class or interface it extends; and `Identical` only on classes and
 //!   interfaces.
 //! - **N1** (nullable types, subset B) `Null` typed nullable; `IsNull`
-//!   and `NonNull` only on nullable values; `NonNull` from `T?` to `T`
+//!   and `NonNull` only on nullable values, `Is` only on others; `NonNull` from `T?` to `T`
 //!   and `AsNullable` from `T` to `T?`, exactly; `EqNullable` an
 //!   equality operator on `T`, with both sides `T?`; `Coalesce` of a
 //!   `T?` typed `T` or `T?`, as its fallback is. `OrElse`'s body
@@ -1713,6 +1716,39 @@ impl Validator {
         }
     }
 
+    /// C3: a run-time type check, `Is` or `As`, of a value of type `have`
+    /// for `target`, which needs `target` a class's or interface's type,
+    /// or `have`'s without null (a null check), and a subtype of `have`
+    /// or a supertype (a check that can't fail); and a host type (core's
+    /// but `Error`, or connected), which backends may represent by one
+    /// that isn't distinct, checked only from a class or interface it
+    /// extends, as `StringIndex` from `StringIndexOption`.
+    fn type_check(&mut self, p: &Program, id: NodeId, have: TypeId, target: TypeId) {
+        use crate::analysis::nominal_decl;
+        let decl = nominal_decl(p, target);
+        let host = decl.is_some_and(|d| {
+            p.decls.get(d).facts.contains(Facts::CONNECTED)
+                || (is_external(p, d)
+                    && library_of(p, d) == "core"
+                    && Some(d) != crate::failures::root(p))
+        });
+        let null_check = have != target && p.types.non_null(have) == target;
+        let message = if decl.is_none() && !null_check {
+            format!("{} isn't a class or interface", p.show_type(target))
+        } else if !crate::analysis::is_subtype(p, target, have)
+            && !crate::analysis::is_subtype(p, have, target)
+        {
+            let (t, have) = (p.show_type(target), p.show_type(have));
+            format!("{t} isn't a subtype or supertype of {have}")
+        } else if host && nominal_decl(p, p.types.non_null(have)).is_none() {
+            let message = "is core's or connected, checked only from a type it extends";
+            format!("{} {message}", p.show_type(target))
+        } else {
+            return;
+        };
+        self.node_problem(Rule::C3, id, message);
+    }
+
     /// C3: whether a type is a class's or interface's.
     fn nominal(&mut self, p: &Program, id: NodeId, ty: TypeId, role: &str) {
         if crate::analysis::nominal_decl(p, ty).is_none() && p.nodes.kind(id) != Kind::Error {
@@ -2236,20 +2272,20 @@ impl Validator {
             }
             Node::As { value } => {
                 self.expr(p, value, flow);
-                let have = p.nodes.ty(value);
-                if have == ty || !crate::analysis::is_subtype(p, ty, have) {
-                    let message = format!(
-                        "{} isn't a proper subtype of {}",
-                        p.show_type(ty),
-                        p.show_type(have)
-                    );
-                    self.node_problem(Rule::C3, id, message);
-                }
+                self.type_check(p, id, p.nodes.ty(value), ty);
             }
             Node::Is { ty: of, value } => {
                 self.expr(p, value, flow);
-                self.nominal(p, id, of, "the type checked");
-                self.nominal(p, value, p.nodes.ty(value), "the value checked");
+                let have = p.nodes.ty(value);
+                self.type_check(p, id, have, of);
+                // A null is no type's, so `is` checks only what isn't.
+                if p.types.is_nullable(have) {
+                    let message = format!(
+                        "the value checked is {}, which may be null",
+                        p.show_type(have)
+                    );
+                    self.node_problem(Rule::N1, id, message);
+                }
             }
             Node::Identical { left, right } => {
                 for side in [left, right] {

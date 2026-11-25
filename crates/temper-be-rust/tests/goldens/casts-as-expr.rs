@@ -52,12 +52,19 @@ pub(crate) fn init() -> temper_core::Result<()> {
                     }
                 );
             }
-            THING0
-                .set(false.as_any_value())
-                .unwrap_or_else(|_| panic!());
-            THING1.set(1.as_any_value()).unwrap_or_else(|_| panic!());
             THING2
                 .set(Arc::new("two".to_string()).as_any_value())
+                .unwrap_or_else(|_| panic!());
+            THING1.set(1.as_any_value()).unwrap_or_else(|_| panic!());
+            {
+                println!("{}", describe(Some(Fuji::new().as_any_value())));
+                println!("{}", describe(Some(Gala::new().as_any_value())));
+                println!("{}", describe(Some(thing2())));
+                println!("{}", describe(Some(thing1())));
+                println!("{}", describe(None));
+            }
+            THING0
+                .set(false.as_any_value())
                 .unwrap_or_else(|_| panic!());
             THING3.set(3.14.as_any_value()).unwrap_or_else(|_| panic!());
             Ok(())
@@ -157,10 +164,28 @@ impl AppleTrait for Gala {
 
 temper_core::impl_any_value_trait!(Gala, [Apple]);
 
-static THING0: OnceLock<temper_core::AnyValue> = OnceLock::new();
+pub(crate) fn describe(v: Option<temper_core::AnyValue>) -> Arc<String> {
+    if v.is_some() && temper_core::is::<Fuji>(v.clone().unwrap()) {
+        return Arc::new(format!(
+            "Fuji {}",
+            temper_core::cast::<Fuji>(v.clone().unwrap())
+                .unwrap()
+                .name()
+        ));
+    }
+    if v.is_some() && temper_core::is::<Apple>(v.clone().unwrap()) {
+        temper_core::cast::<Apple>(v.clone().unwrap())
+            .unwrap()
+            .name()
+    } else {
+        Arc::new("other".to_string())
+    }
+}
 
-pub fn thing0() -> temper_core::AnyValue {
-    crate::support::initialized(|| THING0.get()).clone()
+static THING2: OnceLock<temper_core::AnyValue> = OnceLock::new();
+
+pub fn thing2() -> temper_core::AnyValue {
+    crate::support::initialized(|| THING2.get()).clone()
 }
 
 static THING1: OnceLock<temper_core::AnyValue> = OnceLock::new();
@@ -169,10 +194,10 @@ pub fn thing1() -> temper_core::AnyValue {
     crate::support::initialized(|| THING1.get()).clone()
 }
 
-static THING2: OnceLock<temper_core::AnyValue> = OnceLock::new();
+static THING0: OnceLock<temper_core::AnyValue> = OnceLock::new();
 
-pub fn thing2() -> temper_core::AnyValue {
-    crate::support::initialized(|| THING2.get()).clone()
+pub fn thing0() -> temper_core::AnyValue {
+    crate::support::initialized(|| THING0.get()).clone()
 }
 
 static THING3: OnceLock<temper_core::AnyValue> = OnceLock::new();

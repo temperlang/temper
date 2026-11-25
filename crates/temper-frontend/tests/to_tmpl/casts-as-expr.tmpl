@@ -1,14 +1,14 @@
 tmpl 1 model 1 library `as-expr` 0.0.0
 
-uses `temper-core`#14 0.0.0-alpha.0.0 {
-  interface Console#15 {
-    connected method log#16(message: String): Void;
+uses `temper-core`#15 0.0.0-alpha.0.0 {
+  interface Console#16 {
+    connected method log#17(message: String): Void;
   }
-  connected fn getConsole#19(name?: String): Console#15;
+  connected fn getConsole#21(name?: String): Console#16;
 }
 
 module `as-expr`#0 {
-  let ~console#17: Console#15;
+  let ~console#18: Console#16;
 
   interface Apple#1 {
     abstract get name#4(): String;
@@ -28,32 +28,52 @@ module `as-expr`#0 {
     }
   }
 
-  export let thing0#9: AnyValue;
+  fn describe#9(v#20: AnyValue?): String {
+    if (%Boolean.not(isNull(v#20)) && is((nonNull(v#20)): AnyValue, Fuji#2)) {
+      return %String.cat("Fuji ", ((downcast((nonNull(v#20)): AnyValue)): Fuji#2).name#5());
+    }
+    {
+      if (%Boolean.not(isNull(v#20)) && is((nonNull(v#20)): AnyValue, Apple#1)) {
+        return ((downcast((nonNull(v#20)): AnyValue)): Apple#1).name#4();
+      } else {
+        return "other";
+      }
+    }
+  }
 
-  export let thing1#10: AnyValue;
+  export let thing2#10: AnyValue;
 
-  export let thing2#11: AnyValue;
+  export let thing1#11: AnyValue;
 
-  export let thing3#12: AnyValue;
+  export let thing0#12: AnyValue;
+
+  export let thing3#13: AnyValue;
 
   init {
-    init ~console#17 = getConsole#19(omitted);
+    init ~console#18 = getConsole#21(omitted);
     {
-      var x#13: Apple#1?;
-      x#13 = (asNullable((upcast(new constructor#6())): Apple#1)): Apple#1?;
-      ~console#17.log#16(((as(x#13)): Apple#1).name#4());
-      ~console#17.log#16(((as(x#13)): Fuji#2).name#5());
-      x#13 = (asNullable((upcast(new constructor#8())): Apple#1)): Apple#1?;
-      ~console#17.log#16((if (%Boolean.not(isNull(x#13)) && is((nonNull(x#13)): Apple#1, Fuji#2)) ((as(x#13)): Fuji#2).name#5() else "Cast failed!"): String);
-      let y#18: AnyValue? = (upcast(x#13)): AnyValue?;
-      ~console#17.log#16(((as(y#18)): Apple#1).name#4());
-      ~console#17.log#16(((as(y#18)): Gala#3).name#7());
-      x#13 = (null): Apple#1?;
-      ~console#17.log#16((if (%Boolean.not(isNull(x#13))) "Tasty nothing." else "Was null!"): String);
+      var x#14: Apple#1?;
+      x#14 = (asNullable((upcast(new constructor#6())): Apple#1)): Apple#1?;
+      ~console#18.log#17(((as(x#14)): Apple#1).name#4());
+      ~console#18.log#17(((as(x#14)): Fuji#2).name#5());
+      x#14 = (asNullable((upcast(new constructor#8())): Apple#1)): Apple#1?;
+      ~console#18.log#17((if (%Boolean.not(isNull(x#14)) && is((nonNull(x#14)): Apple#1, Fuji#2)) ((as(x#14)): Fuji#2).name#5() else "Cast failed!"): String);
+      let y#19: AnyValue? = (upcast(x#14)): AnyValue?;
+      ~console#18.log#17(((as(y#19)): Apple#1).name#4());
+      ~console#18.log#17(((as(y#19)): Gala#3).name#7());
+      x#14 = (null): Apple#1?;
+      ~console#18.log#17((if (%Boolean.not(isNull(x#14))) "Tasty nothing." else "Was null!"): String);
     }
-    init thing0#9 = (upcast(false)): AnyValue;
-    init thing1#10 = (upcast(1)): AnyValue;
-    init thing2#11 = (upcast("two")): AnyValue;
-    init thing3#12 = (upcast(3.14)): AnyValue;
+    init thing2#10 = (upcast("two")): AnyValue;
+    init thing1#11 = (upcast(1)): AnyValue;
+    {
+      ~console#18.log#17(describe#9((asNullable((upcast(new constructor#6())): AnyValue)): AnyValue?));
+      ~console#18.log#17(describe#9((asNullable((upcast(new constructor#8())): AnyValue)): AnyValue?));
+      ~console#18.log#17(describe#9((asNullable(thing2#10)): AnyValue?));
+      ~console#18.log#17(describe#9((asNullable(thing1#11)): AnyValue?));
+      ~console#18.log#17(describe#9((null): AnyValue?));
+    }
+    init thing0#12 = (upcast(false)): AnyValue;
+    init thing3#13 = (upcast(3.14)): AnyValue;
   }
 }

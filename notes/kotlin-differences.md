@@ -472,9 +472,9 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   tempest also reports, 2026-11-13, connecting it as without a list); and a
   connected class can be the target of `is` or `as` only from a sealed
   supertype ("Connected types cannot be targeted with is or as runtime
-  type checks …"). Tempest treats them as ordinary classes for now and
-  reports none of these ([milestone-4.md](history/milestone-4.md), "`is` and
-  `as` checks"). Since Kotlin's #642 (connected fallback types), a
+  type checks …"). Tempest reports the last for core's types too, in its
+  own words ([typing.md](typing.md), "Run-time type checks"), and treats
+  connected classes as ordinary ones otherwise. Since Kotlin's #642 (connected fallback types), a
   connected class may have a complete Temper implementation, a body for
   every method, which the interpreter, backends not in its
   `@connected([...])` list, and `--no-connected` use. Tempest matches

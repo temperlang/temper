@@ -31,15 +31,15 @@ struct Gala : public virtual Apple {
 // Storage, which the library reads and its init sets; read values
 // through the accessors below.
 namespace temper_globals {
-extern temper::core::GlobalSlot<std::shared_ptr<temper::core::AnyValueBase>> thing0;
-extern temper::core::GlobalSlot<std::shared_ptr<temper::core::AnyValueBase>> thing1;
 extern temper::core::GlobalSlot<std::shared_ptr<temper::core::AnyValueBase>> thing2;
+extern temper::core::GlobalSlot<std::shared_ptr<temper::core::AnyValueBase>> thing1;
+extern temper::core::GlobalSlot<std::shared_ptr<temper::core::AnyValueBase>> thing0;
 extern temper::core::GlobalSlot<std::shared_ptr<temper::core::AnyValueBase>> thing3;
 }  // namespace temper_globals
 
-std::shared_ptr<temper::core::AnyValueBase> const & thing0();
-std::shared_ptr<temper::core::AnyValueBase> const & thing1();
 std::shared_ptr<temper::core::AnyValueBase> const & thing2();
+std::shared_ptr<temper::core::AnyValueBase> const & thing1();
+std::shared_ptr<temper::core::AnyValueBase> const & thing0();
 std::shared_ptr<temper::core::AnyValueBase> const & thing3();
 
 }  // namespace as_expr
@@ -53,16 +53,16 @@ namespace core = temper::core;
 
 namespace temper_globals {
 
-core::GlobalSlot<std::shared_ptr<core::AnyValueBase>> thing0;
-core::GlobalSlot<std::shared_ptr<core::AnyValueBase>> thing1;
 core::GlobalSlot<std::shared_ptr<core::AnyValueBase>> thing2;
+core::GlobalSlot<std::shared_ptr<core::AnyValueBase>> thing1;
+core::GlobalSlot<std::shared_ptr<core::AnyValueBase>> thing0;
 core::GlobalSlot<std::shared_ptr<core::AnyValueBase>> thing3;
 
 }  // namespace temper_globals
 
-std::shared_ptr<core::AnyValueBase> const & thing0() {
+std::shared_ptr<core::AnyValueBase> const & thing2() {
   global_init_init();
-  return temper_globals::thing0.value;
+  return temper_globals::thing2.value;
 }
 
 std::shared_ptr<core::AnyValueBase> const & thing1() {
@@ -70,9 +70,9 @@ std::shared_ptr<core::AnyValueBase> const & thing1() {
   return temper_globals::thing1.value;
 }
 
-std::shared_ptr<core::AnyValueBase> const & thing2() {
+std::shared_ptr<core::AnyValueBase> const & thing0() {
   global_init_init();
-  return temper_globals::thing2.value;
+  return temper_globals::thing0.value;
 }
 
 std::shared_ptr<core::AnyValueBase> const & thing3() {
@@ -98,11 +98,24 @@ core::Str Gala::get_name() const {
   return TEMPER_STR("Gala");
 }
 
+static core::Str describe(std::shared_ptr<core::AnyValueBase> const & v) {
+  if (v != nullptr && dynamic_cast<Fuji const *>(v.get()) != nullptr) {
+    return "Fuji " + core::checked_cast<Fuji>(v)->get_name();
+  }
+  {
+    if (v != nullptr && dynamic_cast<Apple const *>(v.get()) != nullptr) {
+      return core::checked_cast<Apple>(v)->get_name();
+    } else {
+      return TEMPER_STR("other");
+    }
+  }
+}
+
 void global_init_init() {
   core::init_once([] {
-    temper_globals::thing0.construct();
-    temper_globals::thing1.construct();
     temper_globals::thing2.construct();
+    temper_globals::thing1.construct();
+    temper_globals::thing0.construct();
     temper_globals::thing3.construct();
     std::shared_ptr<core::Console::Type> console = core::Console::get_console();
     {
@@ -118,9 +131,16 @@ void global_init_init() {
       x = nullptr;
       core::Console::log(console, x != nullptr ? TEMPER_STR("Tasty nothing.") : TEMPER_STR("Was null!"));
     }
-    temper_globals::thing0.value = core::any_box(false);
-    temper_globals::thing1.value = core::any_box(1);
     temper_globals::thing2.value = core::any_box(TEMPER_STR("two"));
+    temper_globals::thing1.value = core::any_box(1);
+    {
+      core::Console::log(console, as_expr::describe(core::to_base<core::AnyValueBase>(Fuji::make())));
+      core::Console::log(console, as_expr::describe(core::to_base<core::AnyValueBase>(Gala::make())));
+      core::Console::log(console, as_expr::describe(temper_globals::thing2.value));
+      core::Console::log(console, as_expr::describe(temper_globals::thing1.value));
+      core::Console::log(console, as_expr::describe(nullptr));
+    }
+    temper_globals::thing0.value = core::any_box(false);
     temper_globals::thing3.value = core::any_box(3.14);
   });
 }

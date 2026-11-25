@@ -2548,7 +2548,7 @@ let g = make { (): GeneratorResult<Int> throws Bubble extends GeneratorFn =>
   bubble();
   yield 2;
 };
-console.log("${g is SafeGenerator<Int>} ${g.next() is ValueResult<Int>}");
+console.log("${g.next() is ValueResult<Int>}");
 console.log(g.next() is ValueResult<Int> orelse "bubbled");
 console.log("${g.done} ${g.next() is DoneResult<Int>}");
 g.nextSafe();
@@ -2570,11 +2570,7 @@ g.nextSafe();
         (Block (Yield @78 1) (Fail) (Yield @78 2) #void))))
   (Call
     (Call . console \log)
-    (Call
-      cat
-      (Call is g:1 (Call <> SafeGenerator Int))
-      " "
-      (Call is (Call (Call . g:1 \next)) (Call <> ValueResult Int))))
+    (Call cat (Call is (Call (Call . g:1 \next)) (Call <> ValueResult Int))))
   (Call
     (Call . console \log)
     (Orelse
@@ -2589,8 +2585,8 @@ g.nextSafe();
       (Call is (Call (Call . g:1 \next)) (Call <> DoneResult Int))))
   (Call (Call . g:1 \nextSafe))
   #void)
-error 266..311: Expected subtype of String, but got AnyValue
-log false true
+error 239..284: Expected subtype of String, but got AnyValue
+log true
 log bubbled
 log true true
 Failed: No method nextSafe for Generator
