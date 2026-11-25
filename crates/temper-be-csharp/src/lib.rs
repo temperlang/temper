@@ -377,18 +377,34 @@ pub fn nuget_dependency(text: &str) -> Option<(&str, &str)> {
     }
 }
 
+/// Text for a project file, where MSBuild reads XML and then evaluates
+/// what it finds: `$(…)` and `@(…)` expand, `;` splits items, `'`
+/// quotes conditions, and `%XX` unescapes. Each of these is escaped as
+/// `%XX`, which MSBuild gives back literally, and then the whole as
+/// XML's text ([`temper_tmpl::xml_text`]).
+fn msbuild_text(text: &str) -> String {
+    let mut escaped = String::new();
+    for c in text.chars() {
+        match c {
+            '%' | '$' | '@' | ';' | '\'' => escaped.push_str(&format!("%{:02X}", c as u32)),
+            c => escaped.push(c),
+        }
+    }
+    temper_tmpl::xml_text(&escaped)
+}
+
 /// A reference to a library's project beside this one's: std's as
 /// Kotlin's, `../../std/src/TemperLang.Std.csproj`.
 fn project_reference(p: &Program, name: &str) -> String {
-    let project = temper_tmpl::xml_text(&translate::library_namespace(p, name));
-    let name = temper_tmpl::xml_text(name);
+    let project = msbuild_text(&translate::library_namespace(p, name));
+    let name = msbuild_text(name);
     format!("\n    <ProjectReference Include=\"../../{name}/src/{project}.csproj\"/>")
 }
 
 /// The tests' project, as Kotlin's: on the library's project, MSTest,
 /// and a JUnit logger, and on what only the tests use.
 fn test_project(p: &Program, root: &str, variant: &Variant) -> String {
-    let root = temper_tmpl::xml_text(root);
+    let root = msbuild_text(root);
     let framework = variant.target_framework;
     let version = version_line(&p.library.version);
     let tests_only = temper_tmpl::analysis::test_only_libraries(p);
@@ -424,7 +440,7 @@ fn version_line(version: &str) -> String {
     if version == "0.0.0" {
         String::new()
     } else {
-        format!("    <Version>{version}</Version>\n")
+        format!("    <Version>{}</Version>\n", msbuild_text(version))
     }
 }
 
@@ -436,7 +452,7 @@ fn version_line(version: &str) -> String {
 fn package_metadata(p: &Program) -> (String, String) {
     let meta = p.metadata();
     let line = |tag: &str, value: Option<&str>| match value {
-        Some(value) => format!("    <{tag}>{}</{tag}>\n", temper_tmpl::xml_text(value)),
+        Some(value) => format!("    <{tag}>{}</{tag}>\n", msbuild_text(value)),
         None => String::new(),
     };
     let about =
@@ -456,7 +472,7 @@ fn package_metadata(p: &Program) -> (String, String) {
 /// internals, and it refers to the runtime's project beside it, which
 /// packing turns into a package reference.
 fn library_project(p: &Program, root: &str, variant: &Variant) -> String {
-    let root = temper_tmpl::xml_text(root);
+    let root = msbuild_text(root);
     let framework = variant.target_framework;
     let version = version_line(&p.library.version);
     let (about, links) = package_metadata(p);
@@ -482,13 +498,12 @@ fn library_project(p: &Program, root: &str, variant: &Variant) -> String {
     let packages = match packages.is_empty() {
         true => String::new(),
         false => {
-            let xml = temper_tmpl::xml_text;
             let lines = (packages.iter())
                 .map(|(name, version)| {
                     format!(
                         "\n    <PackageReference Include=\"{}\" Version=\"{}\"/>",
-                        xml(name),
-                        xml(version)
+                        msbuild_text(name),
+                        msbuild_text(version)
                     )
                 })
                 .collect::<Vec<_>>()
@@ -517,7 +532,7 @@ fn library_project(p: &Program, root: &str, variant: &Variant) -> String {
 
 /// The program's project, as Kotlin's.
 fn program_project(root: &str, version: &str, variant: &Variant) -> String {
-    let root = temper_tmpl::xml_text(root);
+    let root = msbuild_text(root);
     let framework = variant.target_framework;
     let version = version_line(version);
     format!(

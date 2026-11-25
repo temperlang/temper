@@ -237,8 +237,9 @@ Feel free to add more tests for additional library features.
 Temper currently supports a small set of library configuration options. Let's
 add these to the config to try them out. These include the following:
 
-- `version`: The version of your library. We recommend following
-  [Semver](https://semver.org/).
+- `version`: The version of your library, in [SemVer](https://semver.org/)'s
+  spelling, as `1.2.3`, or `1.2.3-alpha.1`, `-beta.1`, or `-rc.1` for a
+  pre-release. Each backend respells it as its package tools want it.
 - `license`: The license of your library. Where possible, we recommend using a
   [SPDX identifier](https://spdx.org/licenses/).
 - `description`, `authors`, `homepage`, and `repository`: A line about your

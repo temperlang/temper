@@ -1293,7 +1293,14 @@ Other differences we won't copy:
   class (`PyConfig`'s `name`, `JavaConfig`'s `package`, …), name its
   package and what code that uses it imports, as Kotlin's, but an empty
   Java package, which Kotlin takes as no package at all, counts as
-  unset. Test: crates/temper-driver/tests/metadata.rs.
+  unset. Kotlin writes the version and metadata into package files as
+  given; tempest escapes them for each format (MSBuild's `$(…)`, `@(…)`,
+  `;`, `'`, and `%` too, as `%XX`), and a `version` that isn't SemVer
+  (`1.2.3`, `1.2.3-beta.1`, …), or config text holding control
+  characters other than tabs and line breaks, is a config error. Tests:
+  crates/temper-driver/tests/metadata.rs, crates/temper-frontend/src/config.rs,
+  and `hostile_versions_and_metadata_are_errors` in
+  crates/tempest/tests/cli.rs.
 
 - **Backend config classes** (2026-11-20): each backend injects its
   config class (`CSharpConfig`, `JavaConfig`, …) as Kotlin's do, with

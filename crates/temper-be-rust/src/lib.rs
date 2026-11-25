@@ -457,7 +457,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     let dependency = |name: &str, version: &str| {
         let package = translate::rust_name(name, p.metadata_of(name));
         let path = name;
-        let version = temper_tmpl::version_or_default(version);
+        let version = temper_tmpl::json_string(temper_tmpl::version_or_default(version));
         let features = match name {
             "std" if !std_features.is_empty() => {
                 let list: Vec<String> = std_features.iter().map(|f| format!("\"{f}\"")).collect();
@@ -465,7 +465,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
             }
             _ => String::new(),
         };
-        format!("{package} = {{ path = \"../{path}\", version = \"{version}\"{features} }}\n")
+        format!("{package} = {{ path = \"../{path}\", version = {version}{features} }}\n")
     };
     let (mut dependencies, mut dev_dependencies) = (String::new(), String::new());
     for (name, version) in p.dependencies() {
@@ -501,7 +501,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     let cargo = format!(
         r#"[package]
 name = "{name}"
-version = "{version}"
+version = {version}
 {metadata}edition = "2021"
 rust-version = "{rust}"
 
@@ -510,7 +510,7 @@ temper-core = {{ path = "../temper-core", version = "={runtime}" }}
 {dependencies}{dev_dependencies}{bin}"#,
         bin = bin_section(cargo_name),
         name = cargo_name,
-        version = p.version_or_default(),
+        version = temper_tmpl::json_string(p.version_or_default()),
         metadata = package_metadata(p),
         rust = variant.rust_version,
         runtime = temper_tmpl::version::current(),

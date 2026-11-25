@@ -514,7 +514,7 @@ fn pom(
     tests: &[String],
     variant: &Variant,
 ) -> String {
-    let version = p.version_or_default();
+    let version = temper_tmpl::xml_text(p.version_or_default());
     let (group, artifact) = coordinates(p, library);
     // Each library used, by its coordinates; for the tests alone, in
     // their scope.
@@ -535,7 +535,7 @@ fn pom(
       <type>jar</type>
       <scope>{scope}</scope>
     </dependency>"#,
-                temper_tmpl::version_or_default(version),
+                temper_tmpl::xml_text(temper_tmpl::version_or_default(version)),
             )
         })
         .collect::<Vec<_>>()

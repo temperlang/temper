@@ -14,7 +14,10 @@
 //! a declared type that disagrees with `class:`, a property its class
 //! doesn't have, a value of another type or form, or an instance under
 //! another key is a config error, at its place in the file. Every other
-//! export is an ordinary value, which nothing need read.
+//! export is an ordinary value, which nothing need read, but strings go
+//! into package files as metadata: a `version` that isn't SemVer, or a
+//! string holding control characters other than tabs and line breaks,
+//! is an error too.
 
 use temper_syntax::ast::{Ast, Builtin, Level, Value as Literal};
 use temper_syntax::lex::SourceKind;
@@ -255,6 +258,11 @@ pub fn check(exports: &[Export], classes: &Classes) -> Checked {
         if by_key.is_none() && classes.elsewhere.contains(&key) {
             continue;
         }
+        if let Value::String(s) = &export.value {
+            if let Some(message) = string_problem(key, s) {
+                problem(export.span, message);
+            }
+        }
         let declared = export.declared.as_ref();
         let Value::Instance { class, args } = &export.value else {
             // A string or the like, which is fine but where a config
@@ -408,6 +416,29 @@ pub fn check(exports: &[Export], classes: &Classes) -> Checked {
     }
     checked.configs = configs;
     checked
+}
+
+/// What's wrong with a string the config exports, if anything. Package
+/// files take them all as metadata, and a library's version goes into
+/// each using library's files too: a version is SemVer, as
+/// [`temper_tmpl::version::Version::parse`] takes it, and text holds no
+/// control characters but tabs and line breaks, which no package file
+/// needs and some (XML's) can't hold.
+fn string_problem(key: &str, s: &str) -> Option<String> {
+    if key == "version" && temper_tmpl::version::Version::parse(s).is_none() {
+        let s = s.escape_debug();
+        return Some(format!(
+            "`version` is a version, as `1.2.3` or `1.2.3-beta.1`, not `{s}`"
+        ));
+    }
+    let control = s
+        .chars()
+        .find(|c| c.is_control() && !matches!(c, '\t' | '\n' | '\r'))?;
+    Some(format!(
+        "`{key}` holds a control character, U+{:04X}; only tabs and line breaks may be in \
+         config text",
+        control as u32
+    ))
 }
 
 /// Why a property's value is wrong, where it should be `want`, as `a
@@ -653,6 +684,36 @@ mod tests {
                 "\"../a\": ToyConfig's `name` is a word, as `toy`, not `../a`",
                 "toy: `toy` is set twice; set each config class once",
                 "toy: `toy` is set twice; set each config class once",
+            ]
+        );
+    }
+
+    /// A version is SemVer, as package files take it, and metadata holds
+    /// no control characters but tabs and line breaks: both go into
+    /// package files' markup, and a library's version into those of each
+    /// library using it.
+    #[test]
+    fn versions_and_metadata_text() {
+        let text = "    export let version = \"1.2.3-beta.1\";
+    export let description = \"Line one\\n\\tline two\\r\\n\";
+    export let version = \"0.1.0\\\"<x>'\\n\";
+    export let version = \"1.0\";
+    export let version = \"\";
+    export let authors = \"A\\u{1}B\";
+    export let license = \"MIT\\u{0}\";
+";
+        let (_, problems) = checked(text);
+        assert_eq!(
+            problems,
+            [
+                "version: `version` is a version, as `1.2.3` or `1.2.3-beta.1`, not \
+                 `0.1.0\\\"<x>\\'\\n`",
+                "version: `version` is a version, as `1.2.3` or `1.2.3-beta.1`, not `1.0`",
+                "version: `version` is a version, as `1.2.3` or `1.2.3-beta.1`, not ``",
+                "authors: `authors` holds a control character, U+0001; only tabs and line \
+                 breaks may be in config text",
+                "license: `license` holds a control character, U+0000; only tabs and line \
+                 breaks may be in config text",
             ]
         );
     }

@@ -1009,6 +1009,44 @@ fn hostile_config_names_are_errors() {
     });
 }
 
+/// A version that isn't SemVer, or metadata holding control characters,
+/// is a config error, as both go into package files (a library's version
+/// into those of each library using it too), for `build` and `test`
+/// alike.
+#[test]
+fn hostile_versions_and_metadata_are_errors() {
+    let config = "    export let name = \"a\";
+    export let version = \"0.1.0\\\"<x>'\\n\";
+    export let description = \"ok\\nnext line\";
+    export let authors = \"A\\u{1}\";
+";
+    let files = [
+        ("config.temper.md", config),
+        ("a.temper", "export let a = 1;\n"),
+    ];
+    with_library("hostile-versions", &files, |dir| {
+        let path = format!("{dir}/config.temper.md");
+        let expected = [
+            format!(
+                "{path}:2:16: error: `version` is a version, as `1.2.3` or `1.2.3-beta.1`, \
+                 not `0.1.0\\\"<x>\\'\\n`\n"
+            ),
+            format!(
+                "{path}:4:16: error: `authors` holds a control character, U+0001; only tabs \
+                 and line breaks may be in config text\n"
+            ),
+        ];
+        for command in ["build", "test"] {
+            let (code, _, err) = tempest(&[command, "-w", dir]);
+            assert_eq!(code, 1, "{command}: {err}");
+            for line in &expected {
+                assert!(err.contains(line.as_str()), "{command}: {line}{err}");
+            }
+            assert!(!err.contains("description"), "{command}: {err}");
+        }
+    });
+}
+
 /// Every file's path under a directory, if it's there.
 #[allow(dead_code)] // Unless every backend is left out.
 fn files_under(dir: &Path, out: &mut Vec<String>) {

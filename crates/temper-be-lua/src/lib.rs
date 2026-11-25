@@ -292,7 +292,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     );
     let version = rock_version(p);
     let tests_only = temper_tmpl::analysis::test_only_libraries(p);
-    let quoted = |s: &str| format!("'{}'", s.replace('\\', "\\\\").replace('\'', "\\'"));
+    let quoted = tree::single_quoted;
     let dependency_lines = |tests: bool| {
         (p.dependencies().iter())
             .filter(|(name, _)| tests_only.iter().any(|t| t == name) == tests)

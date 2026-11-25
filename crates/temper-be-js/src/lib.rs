@@ -365,13 +365,15 @@ fn generate(p: &Program, variant: &Variant, maps: Option<&str>) -> Result<Vec<Ou
         Vec::new(),
     );
     for (name, version) in p.dependencies() {
+        let version = match version {
+            "0.0.0" => "*".to_string(),
+            v => version::respell(v, Spelling::SemVer),
+        };
+        let quoted = temper_tmpl::json_string;
         let line = format!(
-            "        \"{}\": \"{}\"",
-            translate::package_of(p, name),
-            match version {
-                "0.0.0" => "*".to_string(),
-                v => version::respell(v, Spelling::SemVer),
-            }
+            "        {}: {}",
+            quoted(&translate::package_of(p, name)),
+            quoted(&version)
         );
         match tests_only.iter().any(|l| l == name) {
             true => dev.push(line),

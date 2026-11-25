@@ -177,8 +177,8 @@ fn csharp() {
     assert!(
         text.contains(
             "    <Version>1.2.3</Version>\n    \
-             <Authors>Jo Doe, Inc. &lt;jo@example.com&gt;</Authors>\n    \
-             <Description>Apps &amp; more, for $5</Description>\n    \
+             <Authors>Jo Doe, Inc. &lt;jo%40example.com&gt;</Authors>\n    \
+             <Description>Apps &amp; more, for %245</Description>\n    \
              <IsPackable>true</IsPackable>\n    \
              <PackageLicenseExpression>Apache-2.0 OR MIT</PackageLicenseExpression>\n    \
              <PackageProjectUrl>https://example.com/app</PackageProjectUrl>\n    \
@@ -522,5 +522,103 @@ fn flat_keys_have_no_effect() {
             "app/src/App.csproj",
             "<RootNamespace>App</RootNamespace>",
         );
+    }
+}
+
+/// A version, and metadata, that the config check refuses (versions are
+/// SemVer; text holds no control characters but tabs and line breaks).
+#[allow(dead_code)] // Unless every backend is left out.
+const HOSTILE_VERSION: &str = "1\"<x>'$(Y);%\n";
+
+/// [`USES`]'s `app`, at [`HOSTILE_VERSION`], using `util` at it too, and
+/// with a description that MSBuild would evaluate and that breaks a line,
+/// as a build without the config check could give them: each package
+/// file escapes them all the same.
+#[allow(dead_code)] // Unless every backend is left out.
+fn hostile(rules: &temper_tmpl::naming::NamingRules) -> Program {
+    let mut program = named_as(rules, false);
+    program.library.version = HOSTILE_VERSION.into();
+    for uses in &mut program.uses {
+        uses.version = HOSTILE_VERSION.into();
+    }
+    let description = "$(A) 100%3B @(B); 'q'\r\nline\0".to_string();
+    program.metadata[0].1.exports = vec![("description".into(), description)];
+    program
+}
+
+#[test]
+fn hostile_versions_and_metadata_are_escaped() {
+    #[allow(unused_variables)] // Unless every backend is left out.
+    let check = |files: Vec<temper_tmpl::OutFile>, path: &str, wanted: &[&str]| {
+        let text = match path {
+            // Its name has the version in it.
+            ".rockspec" => {
+                (files.into_iter())
+                    .find(|f| f.path.ends_with(path))
+                    .unwrap()
+                    .text
+            }
+            _ => file(files, path),
+        };
+        for want in wanted {
+            assert!(text.contains(want), "{want}\n{text}");
+        }
+    };
+    #[cfg(feature = "py")]
+    {
+        use temper_be_py::{PY, translate};
+        let files = translate(&hostile(&PY.rules), &PY).unwrap();
+        let wanted = [
+            "\nversion = \"1\\\"<x>'$(Y);%\\n\"\n",
+            "\n    \"util==1\\\"<x>'$(Y);%\\n\"",
+        ];
+        check(files, "app/pyproject.toml", &wanted);
+    }
+    #[cfg(feature = "js")]
+    {
+        use temper_be_js::{JS, translate};
+        let files = translate(&hostile(&JS.rules), &JS).unwrap();
+        let wanted = [
+            "\"version\": \"1\\\"<x>'$(Y);%\\n\",\n",
+            "\"util\": \"1\\\"<x>'$(Y);%\\n\"",
+        ];
+        check(files, "app/package.json", &wanted);
+    }
+    #[cfg(feature = "rust")]
+    {
+        use temper_be_rust::{RUST, translate};
+        let files = translate(&hostile(&RUST.rules), &RUST).unwrap();
+        let wanted = [
+            "\nversion = \"1\\\"<x>'$(Y);%\\n\"\n",
+            "version = \"1\\\"<x>'$(Y);%\\n\" }\n",
+        ];
+        check(files, "app/Cargo.toml", &wanted);
+    }
+    #[cfg(feature = "java")]
+    {
+        use temper_be_java::{JAVA, translate};
+        let files = translate(&hostile(&JAVA.rules), &JAVA).unwrap();
+        let version = "<version>1&quot;&lt;x&gt;&apos;$(Y);%\n</version>";
+        check(files, "app/pom.xml", &[version]);
+    }
+    #[cfg(feature = "csharp")]
+    {
+        use temper_be_csharp::{CSHARP, translate};
+        let files = translate(&hostile(&CSHARP.rules), &CSHARP).unwrap();
+        let wanted = [
+            "<Version>1&quot;&lt;x&gt;%27%24(Y)%3B%25\n</Version>",
+            "<Description>%24(A) 100%253B %40(B)%3B %27q%27\r\nline",
+        ];
+        check(files, "app/src/App.csproj", &wanted);
+    }
+    #[cfg(feature = "lua")]
+    {
+        use temper_be_lua::{LUA, translate};
+        let files = translate(&hostile(&LUA.rules), &LUA).unwrap();
+        let wanted = [
+            "    summary = '$(A) 100%3B @(B); \\'q\\'\\r\\nline\\000',\n",
+            "    'util == 1\"<x>\\'$(Y);%\\n',\n",
+        ];
+        check(files, ".rockspec", &wanted);
     }
 }

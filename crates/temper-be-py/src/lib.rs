@@ -369,7 +369,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     let pyproject = format!(
         r#"[project]
 name = "{project}"
-version = "{version}"
+version = {version}
 description = {description}
 readme = {{text = "n/a", content-type = "text/plain"}}
 requires-python = ">=3.11"
@@ -385,7 +385,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 "#,
         project = names::project_name(&project),
-        version = version::respell(p.version_or_default(), Spelling::Python),
+        version = quoted(&version::respell(p.version_or_default(), Spelling::Python)),
         description = quoted(meta.get("description").unwrap_or("")),
         license = quoted(license),
         dependencies = dependencies(p, false),

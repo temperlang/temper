@@ -365,6 +365,15 @@ pub fn string_literal(text: &str) -> String {
     out
 }
 
+/// A string literal in single quotes, as rockspecs have them, escaped as
+/// [`string_literal`] escapes one.
+pub fn single_quoted(text: &str) -> String {
+    let mut out = String::from('\'');
+    escape_into(&mut out, text, '\'');
+    out.push('\'');
+    out
+}
+
 fn float_literal(f: f64) -> String {
     if f.is_nan() {
         "0.0 / 0.0".into()
