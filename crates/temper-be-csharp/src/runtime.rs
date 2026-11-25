@@ -19,6 +19,10 @@ pub const FILES: &[(&str, &str)] = &[
     ),
     ("Core.cs", include_str!("../runtime/temper-core/Core.cs")),
     (
+        "Failure.cs",
+        include_str!("../runtime/temper-core/Failure.cs"),
+    ),
+    (
         "Float64.cs",
         include_str!("../runtime/temper-core/Float64.cs"),
     ),

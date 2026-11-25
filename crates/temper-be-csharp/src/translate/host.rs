@@ -72,6 +72,7 @@ impl Translator<'_> {
         let call = Expr::name(class).method(pascal_case(p.name(decl)), args);
         stmts.push(returning(&result, call));
         Ok(tree::Method {
+            doc: self.throws_doc(decl)?,
             public: self.exported(decl),
             result,
             name: self.generic_name(decl, self.name(decl))?,

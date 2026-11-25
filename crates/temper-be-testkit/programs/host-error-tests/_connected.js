@@ -1,7 +1,5 @@
 // @ts-check
 
-import { fail } from "node:assert";
-
 /**
  * @param {number} n
  * @returns {number}
@@ -17,7 +15,13 @@ export const hostFails = (n) => {
   }
 };
 
-/** Node's own test failure, as its assertions throw. */
+/**
+ * A test failure as Node's assertions throw it: an `AssertionError`, which
+ * the runtime knows by name (no `node:assert` import, so tsc needs no
+ * Node types).
+ */
 export const hostFailsTest = () => {
-  fail("host test failure");
+  const failure = new Error("host test failure");
+  failure.name = "AssertionError";
+  throw failure;
 };

@@ -256,7 +256,11 @@ impl Translator<'_> {
 /// `throw` of a block `{ panic(); }`.
 fn has_statements(p: &temper_tmpl::Program, id: NodeId) -> bool {
     match p.nodes.get(id) {
-        Node::OrElse { .. } | Node::BlockValue { .. } | Node::Panic {} => true,
+        Node::OrElse { .. }
+        | Node::Catch { .. }
+        | Node::BlockValue { .. }
+        | Node::Panic {}
+        | Node::Throw { .. } => true,
         Node::FunctionLiteral { .. } => false,
         _ => p.nodes.kids(id).iter().any(|&k| has_statements(p, k)),
     }

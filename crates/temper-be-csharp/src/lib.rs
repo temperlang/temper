@@ -44,7 +44,11 @@
 //! anything else, a host exception from a builtin not declared to
 //! bubble or from a callback, passes every `orelse`, and a library's
 //! host code (its `.cs` files) bubbles only by throwing a `Bubble`
-//! (`Core.Bubble()`); and generics
+//! (`Core.Bubble()`); declared failures (RFC 164) as exceptions, each
+//! library's failure types under its own base, `<Library>Exception :
+//! Exception, IFailure`, `throw` as C#'s, the cause as `InnerException`,
+//! and handlers that catch exactly what their bodies may fail with
+//! (`translate`'s `failures` module says how); and generics
 //! (`First<T>`, `class Shelf<T> where T : Named`, and explicit type
 //! arguments on `new`), with core's lists as `IReadOnlyList` and `IList`,
 //! maps as `IReadOnlyDictionary` and `IDictionary` (the runtime's
@@ -204,8 +208,6 @@ pub fn translate_with_lines(
     variant: &Variant,
     lines: Option<&str>,
 ) -> Result<Vec<OutFile>, NotYet> {
-    // Declared failures, not yet (RFC 164).
-    temper_tmpl::failures::not_yet(p).map_err(|what| NotYet { what })?;
     // Type-only errors run as written, or fail where they are
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);

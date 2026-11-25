@@ -705,7 +705,7 @@ then).
 
 RFC 164's failure types, beside `Bubble`, which stays as it was
 ([types.md](types.md#results); typing.md, "Declared failures"). Python,
-Java, Rust, C++, and JS have them (below); each other backend says "not yet in the … backend:
+Java, Rust, C++, JS, and C# have them (below); Lua says "not yet in the … backend:
 declared failures: …" for a program that uses them
 (`temper_tmpl::failures::not_yet`), and a program that uses only
 `Bubble` is unchanged, node for node.
@@ -859,6 +859,33 @@ throw e$;`, a `catch`'s binding the variable, so TypeScript narrows it
 (not yet beside a bubble, which it can't). A `~caught` read after a
 jumping fallback is cast to its failure type. A function failing with
 a failure type says so with JSDoc's `@throws`.
+
+**In C#** (chunk 12): exception classes. Core's `Error` is
+`TemperLang.Core.IFailure`, a marker interface (`Message`,
+`InnerException`, both `Exception`'s); the base is `public abstract
+class FailuresException : Exception, IFailure`, a sealed failure
+interface an abstract class under it (no `I`), failure classes
+`sealed`; abstract ones' constructors are `private protected` (C# can't
+seal a hierarchy across files). A failure's `message` getter is
+`public override string Message`; a member named as another of
+`Exception`'s is "not yet". The cause is `InnerException`, which C#
+sets only by constructor, so passed as hand-written C# does: each
+failure class's public constructor calls an `internal` one that takes
+the cause too and has the body, `: this(key, null)` (its parameter
+`cause`, numbered past the class's own names), passing it to the
+base's, `private protected`, and on to `Exception`'s; the `Throw` of a
+failure made in a handler calls it, `throw new LookupFailed(name, e)`,
+every argument given, so a failure made among its arguments takes none.
+A failure made before and thrown in a handler, or another library's
+(whose internal constructor is out of reach), is `Core.WithCause(x,
+e)`, keeping the cause beside it (a `ConditionalWeakTable`) for
+Temper's `cause` (`Core.FailureCause`) alone, unless it has one. `Throw` is `throw`,
+`Core.ThrowFailure<T>(x)` where C# needs a value. `OrElse` and `Catch`
+catch exactly `Bubble` or the join, `catch (NotFound e)`, or both,
+`catch (Exception e) when (e is Bubble || e is NotFound)`, so panics
+and host exceptions pass. A `~caught` read takes `!`. A function
+failing with a failure type says so in an XML doc comment, `///
+<exception cref="NotFound">`.
 
 Validator rules: T5 lets a signature fail with a failure type or a type
 parameter; F3 marks every `Throw`; F4 checks the failure's type where it

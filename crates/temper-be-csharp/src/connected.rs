@@ -65,6 +65,18 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Deque.removeFirst()",
         Connection::Static("Listed", "RemoveFirst"),
     ),
+    // A declared failure's cause is its `InnerException`, where that's a
+    // declared failure (`IFailure`), or one it took after it was made
+    // (the runtime's `Core.WithCause`); its message, `Message`, which every
+    // failure class overrides.
+    (
+        "core.type Error.get cause()",
+        Connection::Static("Core", "FailureCause"),
+    ),
+    (
+        "core.type Error.get message()",
+        Connection::Translate(failure_message),
+    ),
     ("core.type Float64.abs()", Connection::Static("Math", "Abs")),
     (
         "core.type Float64.acos()",
@@ -678,6 +690,15 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
             namespace: "System",
         },
     ),
+    // Core's root of declared failures, the runtime's marker, which each
+    // library's base failure class implements.
+    (
+        "core.type Error",
+        TypeConnection {
+            name: "IFailure",
+            namespace: "TemperLang.Core",
+        },
+    ),
     (
         "core.type Generator",
         TypeConnection {
@@ -1035,6 +1056,11 @@ fn same(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
 /// `x.Count`.
 fn count(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     Ok(one(t, args, "length")?.member("Count"))
+}
+
+/// `e.Message`, a declared failure's.
+fn failure_message(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    Ok(one(t, args, "message")?.member("Message"))
 }
 
 /// `x.Count == 0`.

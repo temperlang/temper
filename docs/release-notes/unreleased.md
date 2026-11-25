@@ -522,7 +522,7 @@ declared failures RFC 164 proposes, so they can't name a variable,
 function, parameter, or member, though a name after a `.`, as in
 `promise.catch`, still reads as one. The syntax parses, is type
 checked, and runs on the interpreter (`temper run -b interp`) and in
-Python, Java, Rust, C++, and JS, where no other backend translates it yet (each says
+Python, Java, Rust, C++, JS, and C#, where Lua doesn't translate it yet (it says
 "not yet … declared failures"), and `error case` is reported as not
 supported yet. In Python, a library's failure types are exception
 classes under its own base, as `WherewithError(Failure, Exception)`
@@ -549,7 +549,15 @@ extends Error`, so host code catches them with `instanceof`, by their
 own types or as any `Error`; `message` is the message, `name` the
 type's name (a failure's own member named `name`, `stack`, or `cause`
 is `name_`, and so on, in JS), the cause the standard `cause`, and
-functions say what they may throw with JSDoc's `@throws`. A failure's `message` is its type's own getter's, or else its
+functions say what they may throw with JSDoc's `@throws`. In C#,
+they're exception classes under the library's own base, as
+`WherewithException : Exception` (`…Error` names say `…Exception`, as
+in Java), sealed failure interfaces abstract classes between and the
+rest `sealed`; `Message` is the message, `InnerException` the cause,
+set where a failure is made by a `throw` in a handler (one made before
+keeps its cause for Temper's `cause` alone, as C# can't set
+`InnerException` later), and doc comments say what a function may
+throw with `<exception cref="…">`. A failure's `message` is its type's own getter's, or else its
 type's name and public fields, as `not found (key: y)`; a failure thrown
 while handling another has that one as its `cause`; and one nothing
 handles ends the run saying its message, where it was thrown, and its

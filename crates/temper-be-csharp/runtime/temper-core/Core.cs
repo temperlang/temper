@@ -10,7 +10,7 @@ using C = System.Collections;
 namespace TemperLang.Core
 {
     // Only put things here if they have no or few things to group with.
-    public static class Core
+    public static partial class Core
     {
         public static IGenerator<T> AdaptGenerator<T>(Func<IEnumerable<T>> makeEnumerable)
         {
@@ -39,7 +39,8 @@ namespace TemperLang.Core
         /// std's <c>Test.assertPanics</c>: whether it threw anything but a
         /// bubble or a test framework's failure (MSTest's, NUnit's, or
         /// xUnit's), as on every backend, so a <see cref="Panic"/> or a
-        /// host's exception. What isn't passes through.
+        /// host's exception; a declared failure (an <see cref="IFailure"/>)
+        /// is a failure, not a panic. What isn't passes through.
         /// </summary>
         public static bool BlockPanics(Action block)
         {
@@ -47,7 +48,7 @@ namespace TemperLang.Core
             {
                 block();
             }
-            catch (Exception e) when (!(e is TemperLang.Core.Bubble) && !IsTestFailure(e))
+            catch (Exception e) when (!(e is TemperLang.Core.Bubble) && !(e is IFailure) && !IsTestFailure(e))
             {
                 return true;
             }

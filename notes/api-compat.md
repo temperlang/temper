@@ -248,6 +248,20 @@ sub-namespace and subdirectory; one file per type; module top levels in
   `IDictionary`; functions `Func`/`Action`; `Task<T>`; failure is
   `TemperLang.Core.Bubble`, an `Exception`.
 - Exported `let`s are `public static` fields.
+- Declared failures (RFC 164, in progress): each failure type is a class
+  under the library's own base, `public abstract class <Lib>Exception :
+  Exception, IFailure` (the runtime's marker), a sealed failure interface
+  an abstract class between (no `I`), the rest `sealed`; abstract ones'
+  constructors are `private protected`, so only the library extends
+  them. `…Error` names say `…Exception`, as in Java. `Message` is
+  overridden; the cause is `InnerException`, passed by constructor as
+  hand-written C# does: each failure class's public constructor calls an
+  `internal` one that also takes the cause (`: this(key, null)`), which
+  a `throw` in a handler calls (`new LookupFailed(name, e)`); a failure
+  made before, or another library's (its internal constructor out of
+  reach), keeps its cause for Temper's `cause` alone. Functions failing with one say so in a doc comment, `///
+  <exception cref="NotFound">`. A failure's member named as another of
+  `Exception`'s (`Source`, `Data`, …) is "not yet".
 
 **Naming.** Types PascalCase with `I` on interfaces; members PascalCase;
 keywords escaped with `@`; a member named like its type gets `_`.

@@ -319,13 +319,16 @@ pub enum Stmt {
     Throw(Expr),
     /// Lines of code as written, each indented in place: a helper's body.
     Raw(String),
-    /// `try { … } catch (Bubble) { … }`: Temper's `orelse`, catching
-    /// only the runtime's `Bubble` (`class`, as the translator names it),
-    /// `catch (Bubble name)` where `var` names it.
+    /// `try { … } catch (Bubble) { … }`: Temper's `orelse` or `catch`,
+    /// catching only what its body may fail with, the runtime's `Bubble`
+    /// or a declared failure's class (`class`, as the translator names
+    /// it), `catch (Bubble name)` where `var` names it, and `catch
+    /// (Exception name) when (filter)` where it's several.
     TryCatch {
         body: Vec<Stmt>,
         class: Expr,
         var: Option<String>,
+        filter: Option<Expr>,
         catch: Vec<Stmt>,
     },
     /// `yield return value;`, in an iterator: a generator's.
@@ -367,6 +370,10 @@ pub enum Access {
     Public,
     Internal,
     Protected,
+    /// `private protected`: its class's and those below it in its
+    /// assembly, as a declared failure's abstract class's constructor,
+    /// so only its library's failure types extend it.
+    PrivateProtected,
     Private,
 }
 
@@ -376,6 +383,7 @@ impl Access {
             Access::Public => "public ",
             Access::Internal => "internal ",
             Access::Protected => "protected ",
+            Access::PrivateProtected => "private protected ",
             Access::Private => "private ",
         }
     }
@@ -384,6 +392,8 @@ impl Access {
 /// A static method.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Method {
+    /// Its XML doc comment's lines, after `/// `, if any.
+    pub doc: Vec<String>,
     pub public: bool,
     pub result: String,
     pub name: String,
@@ -777,15 +787,20 @@ fn stmt(out: &mut Printed, s: &Stmt, depth: usize) {
             body,
             class,
             var,
+            filter,
             catch,
         } => {
             out.push_str("try\n");
             block(out, body, depth);
             indent(out, depth);
             let _ = match var {
-                Some(var) => writeln!(out, "catch ({} {var})", expr(class, TOP)),
-                None => writeln!(out, "catch ({})", expr(class, TOP)),
+                Some(var) => write!(out, "catch ({} {var})", expr(class, TOP)),
+                None => write!(out, "catch ({})", expr(class, TOP)),
             };
+            if let Some(filter) = filter {
+                let _ = write!(out, " when ({})", expr(filter, TOP));
+            }
+            out.push('\n');
             block(out, catch, depth);
         }
         Stmt::YieldReturn(e) => {
@@ -837,6 +852,9 @@ pub struct TypeDecl {
     pub namespace: String,
     pub access: Access,
     pub interface: bool,
+    /// A class's own modifiers, after its access: `abstract ` or
+    /// `sealed ` for a declared failure's (RFC 164), else none.
+    pub modifiers: &'static str,
     pub name: String,
     /// Its type parameters, `<T>`, or empty.
     pub generics: String,
@@ -857,15 +875,23 @@ pub enum Member {
         ty: String,
         name: String,
     },
+    /// A constructor: `public`, but a declared failure's internal one
+    /// that takes its cause and its abstract class's, with `init`, a call
+    /// of another constructor, as `this(key, null)` or `base(cause)`,
+    /// where it has one.
     Constructor {
+        access: Access,
         name: String,
         params: Vec<(String, String)>,
+        init: Option<Expr>,
         body: Vec<Stmt>,
     },
     /// A method, static or not; without a body, an interface's abstract
     /// one. `modifiers` come after the access: `static `, `override `,
     /// `new `.
     Method {
+        /// Its XML doc comment's lines, after `/// `, if any.
+        doc: Vec<String>,
         access: Option<Access>,
         modifiers: &'static str,
         result: String,
@@ -908,7 +934,14 @@ pub fn type_decl(t: &TypeDecl) -> String {
     }
     let _ = writeln!(out, "namespace {};\n", t.namespace);
     let kind = if t.interface { "interface" } else { "class" };
-    let _ = write!(out, "{}{kind} {}{}", t.access.text(), t.name, t.generics);
+    let _ = write!(
+        out,
+        "{}{}{kind} {}{}",
+        t.access.text(),
+        t.modifiers,
+        t.name,
+        t.generics
+    );
     if !t.bases.is_empty() {
         let _ = write!(out, " : {}", t.bases.join(", "));
     }
@@ -934,11 +967,22 @@ pub fn type_decl(t: &TypeDecl) -> String {
                 }
                 let _ = writeln!(out, "{ty} {name};");
             }
-            Member::Constructor { name, params, body } => {
-                let _ = writeln!(out, "public {name}({})", params_text(params));
+            Member::Constructor {
+                access,
+                name,
+                params,
+                init,
+                body,
+            } => {
+                let _ = write!(out, "{}{name}({})", access.text(), params_text(params));
+                if let Some(init) = init {
+                    let _ = write!(out, "\n        : {}", expr(init, TOP));
+                }
+                out.push('\n');
                 block(&mut out, body, 1);
             }
             Member::Method {
+                doc,
                 access,
                 modifiers,
                 result,
@@ -946,6 +990,9 @@ pub fn type_decl(t: &TypeDecl) -> String {
                 params,
                 body,
             } => {
+                for line in doc {
+                    let _ = write!(out, "/// {line}\n    ");
+                }
                 if let Some(a) = access {
                     out.push_str(a.text());
                 }
@@ -1068,6 +1115,9 @@ fn statics(out: &mut Printed, c: &Class) -> bool {
     for m in &c.methods {
         gap(out);
         restore(out);
+        for line in &m.doc {
+            let _ = writeln!(out, "    /// {line}");
+        }
         out.push_str("    ");
         out.push_str(if m.public { "public " } else { "internal " });
         let params: Vec<String> = m.params.iter().map(|(t, n)| format!("{t} {n}")).collect();

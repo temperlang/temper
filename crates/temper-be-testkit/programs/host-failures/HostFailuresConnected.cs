@@ -3,7 +3,7 @@ using System;
 namespace HostFailures
 {
     // A specification: `NotFound` is the library's own failure class, in
-    // its namespace, as the C# backend will name it.
+    // its namespace, as the C# backend names it.
     static class HostFailuresConnected
     {
         internal static int HostLookup(string key)

@@ -62,12 +62,17 @@
 //! no `orelse` catches, though a test framework does, test by test;
 //! Kotlin's throws what an `orelse` catches.
 //!
+//! Declared failures (RFC 164) are exceptions under each library's base,
+//! `<Library>Exception`, an `orelse` or `catch` catching exactly what its
+//! body may fail with ([`failures`] says how).
+//!
 //! A static field is a static property (`Rect.Unit`), Kotlin's a field:
 //! its value is in a `readonly` field of the module's class, which the
 //! module's init sets where Temper initializes it, in source order, and
 //! the property reads, which runs the module's init first, as Kotlin's
 //! field initializers, run whenever .NET first uses the class, don't.
 
+mod failures;
 mod functions;
 mod host;
 
@@ -110,6 +115,7 @@ const NAMESPACES: &[(&str, &str)] = &[
     ("Float64", "TemperLang.Core"),
     ("IDictionary", "System.Collections.Generic"),
     ("IEnumerable", "System.Collections.Generic"),
+    ("IFailure", "TemperLang.Core"),
     ("IGenerator", "TemperLang.Core"),
     ("IList", "System.Collections.Generic"),
     ("ILoggingConsole", "TemperLang.Core"),
@@ -515,10 +521,13 @@ impl<'a> Translator<'a> {
     }
 
     /// A class's or interface's simple name: an interface's with `I`
-    /// before it, as Kotlin's (`IShape`).
+    /// before it, as Kotlin's (`IShape`), but a declared failure's, which
+    /// is a class ([`failures`]).
     fn simple_type_name(&self, decl: DeclId) -> String {
         let name = self.name(decl);
-        if self.p.decls.get(decl).kind == DeclKind::Interface {
+        if self.p.decls.get(decl).kind == DeclKind::Interface
+            && !failures::failure_class(self.p, decl)
+        {
             format!("I{name}")
         } else {
             name
@@ -604,6 +613,7 @@ impl<'a> Translator<'a> {
                 continue;
             };
             methods.push(tree::Method {
+                doc: Vec::new(),
                 public: false,
                 result: h.result.to_string(),
                 name: name.to_string(),
@@ -1097,6 +1107,7 @@ impl<'a> Translator<'a> {
         let (generics, constraints) = self.type_params(decl)?;
         let name = format!("{}{generics}", self.name(decl));
         Ok(tree::Method {
+            doc: self.throws_doc(decl)?,
             public: self.exported(decl),
             result,
             name,
@@ -1212,16 +1223,33 @@ impl<'a> Translator<'a> {
         else {
             return not_yet("a type that isn't a class or interface");
         };
-        let interface = p.decls.get(decl).kind == DeclKind::Interface;
+        // A declared failure type is a class, a sealed failure interface
+        // an abstract one ([`failures`]).
+        let failure = failures::failure_class(p, decl);
+        let declared_interface = p.decls.get(decl).kind == DeclKind::Interface;
+        let interface = declared_interface && !failure;
+        let modifiers = match (failure, declared_interface) {
+            (false, _) => "",
+            (true, true) => "abstract ",
+            (true, false) => "sealed ",
+        };
         let name = self.simple_type_name(decl);
         let usings = std::mem::take(&mut self.usings);
         let classes = std::mem::take(&mut self.classes);
         let class = std::mem::replace(&mut self.class, name.clone());
         self.in_type = Some(decl);
-        let translated = self.type_members(decl, p.nodes.list(members), interface);
-        let bases = (p.decls.supers(decl).iter())
-            .map(|&s| self.ty(s))
-            .collect::<R<Vec<_>>>();
+        let mut translated = self.type_members(decl, p.nodes.list(members), interface);
+        if let (true, Ok(members)) = (failure, &mut translated) {
+            if let Err(e) = self.failure_members(item, decl, declared_interface, members) {
+                translated = Err(e);
+            }
+        }
+        let bases = match failure {
+            true => self.failure_bases(decl),
+            false => (p.decls.supers(decl).iter())
+                .map(|&s| self.ty(s))
+                .collect::<R<Vec<_>>>(),
+        };
         let generics = self.type_params(decl);
         self.in_type = None;
         let type_usings = std::mem::replace(&mut self.usings, usings);
@@ -1236,6 +1264,7 @@ impl<'a> Translator<'a> {
                 Access::Internal
             },
             interface,
+            modifiers,
             name,
             generics: generics.as_ref().map(|g| g.0.clone()).unwrap_or_default(),
             constraints: generics?.1,
@@ -1360,8 +1389,10 @@ impl<'a> Translator<'a> {
                 } if p.decls.get(ctor).kind == DeclKind::Constructor => {
                     let (_, params, body) = self.callable(m, ctor, params, Some(body))?;
                     out.push(Member::Constructor {
+                        access: Access::Public,
                         name: self.simple_type_name(decl),
                         params,
+                        init: None,
                         body: body.unwrap_or_default(),
                     });
                     out.extend(properties.take().unwrap_or_default());
@@ -1389,6 +1420,7 @@ impl<'a> Translator<'a> {
                     args.extend(params.iter().map(|(_, n)| Expr::name(n.clone())));
                     let call = Expr::name(helper.clone()).call(args);
                     out.push(Member::Method {
+                        doc: Vec::new(),
                         access: self.member_access(md, interface),
                         modifiers: if self.hides(decl, md) { "new " } else { "" },
                         result: result.clone(),
@@ -1399,6 +1431,7 @@ impl<'a> Translator<'a> {
                     let mut helper_params = vec![(self.own_type(decl)?, "@this".to_string())];
                     helper_params.extend(params);
                     out.push(Member::Method {
+                        doc: Vec::new(),
                         access: Some(Access::Protected),
                         modifiers: "static ",
                         result,
@@ -1422,6 +1455,7 @@ impl<'a> Translator<'a> {
                     };
                     let name = self.generic_name(md, name)?;
                     out.push(Member::Method {
+                        doc: self.throws_doc(md)?,
                         access: self.member_access(md, interface),
                         modifiers,
                         result,
@@ -1434,6 +1468,7 @@ impl<'a> Translator<'a> {
                     let (result, params, _) = self.callable(m, md, params, None)?;
                     let name = self.generic_name(md, self.member_name(md))?;
                     out.push(Member::Method {
+                        doc: self.throws_doc(md)?,
                         access: self.member_access(md, interface),
                         modifiers: if self.hides(decl, md) { "new " } else { "" },
                         result,
@@ -1457,6 +1492,7 @@ impl<'a> Translator<'a> {
                         access => access,
                     };
                     out.push(Member::Method {
+                        doc: self.throws_doc(f)?,
                         access,
                         modifiers: "static ",
                         result,
@@ -1533,6 +1569,7 @@ impl<'a> Translator<'a> {
                         .call(vec![Expr::name("this"), Expr::name("value")]);
                     let this = (self.own_type(owner)?, "@this".to_string());
                     helpers.push(tree::Member::Method {
+                        doc: Vec::new(),
                         access: Some(Access::Protected),
                         modifiers: "static ",
                         result: "void".into(),
@@ -1553,6 +1590,7 @@ impl<'a> Translator<'a> {
                     let call = Expr::name(name.clone()).call(vec![Expr::name("this")]);
                     let this = (self.own_type(owner)?, "@this".to_string());
                     helpers.push(tree::Member::Method {
+                        doc: Vec::new(),
                         access: Some(Access::Protected),
                         modifiers: "static ",
                         result: result.clone(),
@@ -1572,6 +1610,7 @@ impl<'a> Translator<'a> {
                 None | Some(Access::Public) => 3,
                 Some(Access::Protected) => 2,
                 Some(Access::Internal) => 1,
+                Some(Access::PrivateProtected) => 1,
                 Some(Access::Private) => 0,
             }
         }
@@ -1743,6 +1782,7 @@ impl<'a> Translator<'a> {
         let args = params.iter().map(|(_, n)| Expr::name(n.clone())).collect();
         let call = self.helper_call(class, chosen, args)?;
         Ok(tree::Member::Method {
+            doc: Vec::new(),
             access: Some(Access::Public),
             modifiers: "",
             result: result.clone(),
@@ -2088,7 +2128,7 @@ impl<'a> Translator<'a> {
         match p.nodes.get(id) {
             // One hoisted runs before the statement, after those hoisted
             // before it, so it's no effect for the next.
-            Node::BlockValue { .. } | Node::OrElse { .. } => {
+            Node::BlockValue { .. } | Node::OrElse { .. } | Node::Catch { .. } => {
                 if *effect {
                     return;
                 }
@@ -2179,7 +2219,14 @@ impl<'a> Translator<'a> {
         match p.nodes.get(id) {
             // Each side after where it comes from, as the `try` spans
             // lines.
-            Node::OrElse { body, fallback } => {
+            Node::OrElse { body, fallback } | Node::Catch { body, fallback, .. } => {
+                // What it catches: `Bubble`, a declared failure's class,
+                // or both ([`Self::handled`]).
+                let classes = self.handled(body)?;
+                let local = match p.nodes.get(id) {
+                    Node::Catch { local, .. } => Some(self.name(local)),
+                    _ => None,
+                };
                 let mut tried = Vec::new();
                 self.mark(body, &mut tried);
                 self.sink(body, place, &mut tried)?;
@@ -2187,30 +2234,51 @@ impl<'a> Translator<'a> {
                 self.mark(fallback, &mut caught);
                 self.sink(fallback, place, &mut caught)?;
                 if yields(&tried) || yields(&caught) {
+                    if local.is_some() || classes.len() > 1 {
+                        return not_yet("a handler of declared failures that awaits");
+                    }
                     out.push(self.try_around_yields(tried, caught)?);
                     return Ok(());
                 }
-                // `orelse panic()` panics with the bubble as its inner
+                // `orelse panic()` panics with the failure as its inner
                 // exception.
-                let mut var = None;
+                let mut var = local;
                 if matches!(p.nodes.get(fallback), Node::Panic {}) {
-                    let bubble = self.temporary("bubble");
+                    let failure = var.get_or_insert_with(|| self.temporary("bubble")).clone();
                     let message = Expr::Str("panic".into());
                     let panic = self
                         .class("Core")
-                        .method("Panic", vec![message, Expr::name(&bubble)]);
+                        .method("Panic", vec![message, Expr::name(failure)]);
                     // Its mark kept, its plain panic replaced.
                     caught.retain(|s| matches!(s, Stmt::Line(_)));
                     caught.push(Stmt::Throw(panic));
-                    var = Some(bubble);
                 }
-                let class = self.class("Bubble");
+                // Several: `catch (Exception e) when (e is A || e is B)`,
+                // which leaves the rest unhandled.
+                let (class, filter) = match &classes[..] {
+                    [class] => (Expr::name(class.clone()), None),
+                    _ => {
+                        let failure = var.get_or_insert_with(|| self.temporary("failure")).clone();
+                        let filter = (classes.iter())
+                            .map(|c| Expr::Is(Box::new(Expr::name(failure.clone())), c.clone()))
+                            .reduce(|a, b| Expr::bin(Bin::Or, a, b))
+                            .expect("a class");
+                        (self.class("Exception"), Some(filter))
+                    }
+                };
                 out.push(Stmt::TryCatch {
                     body: tried,
                     class,
                     var,
+                    filter,
                     catch: caught,
                 });
+                return Ok(());
+            }
+            // `throw`, wherever its value would go.
+            Node::Throw { value, cause, .. } => {
+                let thrown = self.thrown(value, cause)?;
+                out.push(Stmt::Throw(thrown));
                 return Ok(());
             }
             Node::BlockValue { stmts, value } => {
@@ -2400,7 +2468,11 @@ impl<'a> Translator<'a> {
     /// branch.
     fn needs_statements(&self, id: NodeId) -> bool {
         match self.p.nodes.get(id) {
-            Node::OrElse { .. } | Node::BlockValue { .. } | Node::Panic {} => true,
+            Node::OrElse { .. }
+            | Node::Catch { .. }
+            | Node::BlockValue { .. }
+            | Node::Panic {}
+            | Node::Throw { .. } => true,
             Node::IfValue { then, els, .. } => {
                 self.needs_statements(then) || self.needs_statements(els)
             }
@@ -3194,6 +3266,7 @@ impl<'a> Translator<'a> {
                 if self.is_value_type(p.nodes.ty(id)) || self.is_optional(p.nodes.ty(value)) {
                     e.member("Value")
                 } else if matches!(p.nodes.get(value), Node::Local { .. })
+                    && !failures::is_kept_failure(p, value)
                     || matches!(p.nodes.get(value),
                         Node::GetModuleLet { target } if !self.statics.contains(&target))
                 {
@@ -3222,11 +3295,19 @@ impl<'a> Translator<'a> {
                 let l = self.expr(left)?;
                 Expr::bin(Bin::Coalesce, l, self.expr(right)?)
             }
-            Node::OrElse { .. } | Node::BlockValue { .. } if self.hoist.contains(&id) => {
+            Node::OrElse { .. } | Node::Catch { .. } | Node::BlockValue { .. }
+                if self.hoist.contains(&id) =>
+            {
                 self.hoisted(id)?
             }
-            Node::OrElse { .. } | Node::BlockValue { .. } => {
+            Node::OrElse { .. } | Node::Catch { .. } | Node::BlockValue { .. } => {
                 return not_yet("an orelse or a block's value that can't run first");
+            }
+            // A `throw` where C# needs a value: `Core.ThrowFailure<T>(x)`.
+            Node::Throw { value, cause, .. } => {
+                let thrown = self.thrown(value, cause)?;
+                let ty = self.ty(p.nodes.ty(id))?;
+                (self.class("Core")).method(format!("ThrowFailure<{ty}>"), vec![thrown])
             }
             Node::Bubble { .. } => {
                 let ty = p.nodes.ty(id);
@@ -3417,7 +3498,9 @@ impl<'a> Translator<'a> {
                 // Its value runs after its statements, and may hoist
                 // statements of its own, as an `orelse` does.
                 match p.nodes.get(value) {
-                    Node::OrElse { .. } | Node::BlockValue { .. } => self.hoisted(value),
+                    Node::OrElse { .. } | Node::Catch { .. } | Node::BlockValue { .. } => {
+                        self.hoisted(value)
+                    }
                     _ => {
                         let mut after = Vec::new();
                         let e = self.value_after(value, &mut after)?;
@@ -3813,7 +3896,7 @@ fn needs_stmts(p: &Program, id: NodeId) -> bool {
     temper_tmpl::analysis::walk(p, id, &mut |n| {
         found |= matches!(
             p.nodes.get(n),
-            Node::OrElse { .. } | Node::BlockValue { .. }
+            Node::OrElse { .. } | Node::Catch { .. } | Node::BlockValue { .. }
         );
     });
     found
@@ -3839,7 +3922,7 @@ fn block_writes(p: &Program) -> HashSet<DeclId> {
         let id = NodeId(i as u32);
         if !matches!(
             p.nodes.get(id),
-            Node::BlockValue { .. } | Node::OrElse { .. }
+            Node::BlockValue { .. } | Node::OrElse { .. } | Node::Catch { .. }
         ) {
             continue;
         }
@@ -3872,6 +3955,7 @@ impl Split {
                 body: std::mem::take(&mut self.run),
                 class: self.class.clone(),
                 var: None,
+                filter: None,
                 catch: vec![Stmt::Goto(self.catch.clone())],
             });
         }
