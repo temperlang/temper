@@ -8,8 +8,11 @@
 //! interface, a library's roots among them, is an `enum` over the types
 //! right under it, `From` each failure type below, so `?` converts;
 //! [`impl_failure_enum!`](crate::impl_failure_enum) gives them the same
-//! traits, each the variant's. A failure is never a panic: generated code
-//! returns it in an `Err`.
+//! traits, each the variant's. Each failure type converts into core's
+//! `Error`, `Arc<dyn Failure>`, by `From` too, which is a [`Failure`]
+//! itself, so a handler of several libraries' failures runs its body as a
+//! `Result` of it, and `?` converts. A failure is never a panic:
+//! generated code returns it in an `Err`.
 
 use crate::{AnyValue, AnyValueTrait, AsAnyValue};
 use std::fmt;
@@ -37,6 +40,43 @@ pub trait Failure: std::error::Error + AnyValueTrait + AsAnyValue + Send + Sync 
 impl AsAnyValue for Arc<dyn Failure> {
     fn as_any_value(&self) -> AnyValue {
         (**self).as_any_value()
+    }
+}
+
+/// Core's `Error` is a failure too, the one it holds: what a handler of
+/// several libraries' failures catches, which a `throw` there takes as
+/// its cause. Each failure type converts into it by `From`, so `?` does
+/// ([`impl_failure!`](crate::impl_failure),
+/// [`impl_failure_enum!`](crate::impl_failure_enum)).
+impl Failure for Arc<dyn Failure> {
+    fn message(&self) -> Arc<String> {
+        (**self).message()
+    }
+
+    fn cause(&self) -> Option<Arc<dyn Failure>> {
+        Failure::cause(&**self)
+    }
+
+    fn set_cause(&self, cause: Arc<dyn Failure>) {
+        (**self).set_cause(cause)
+    }
+
+    fn as_error(&self) -> &(dyn std::error::Error + Send + Sync + 'static) {
+        (**self).as_error()
+    }
+}
+
+impl AnyValueTrait for Arc<dyn Failure> {
+    fn cast(&self, type_id: std::any::TypeId) -> Option<Box<dyn std::any::Any>> {
+        (**self).cast(type_id)
+    }
+
+    fn is(&self, type_id: std::any::TypeId) -> bool {
+        (**self).is(type_id)
+    }
+
+    fn ptr_id(&self) -> usize {
+        (**self).ptr_id()
     }
 }
 
@@ -121,6 +161,12 @@ macro_rules! impl_failure {
             }
         }
 
+        impl std::convert::From<$type> for std::sync::Arc<dyn temper_core::Failure> {
+            fn from(failure: $type) -> std::sync::Arc<dyn temper_core::Failure> {
+                std::sync::Arc::new(failure)
+            }
+        }
+
         impl temper_core::Failure for $type {
             fn message(&self) -> std::sync::Arc<std::string::String> {
                 self.$message()
@@ -201,6 +247,12 @@ macro_rules! impl_failure_enum {
                 match self {
                     $($type::$variant(e) => std::error::Error::source(e),)*
                 }
+            }
+        }
+
+        impl std::convert::From<$type> for std::sync::Arc<dyn temper_core::Failure> {
+            fn from(failure: $type) -> std::sync::Arc<dyn temper_core::Failure> {
+                std::sync::Arc::new(failure)
             }
         }
 

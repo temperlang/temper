@@ -703,9 +703,12 @@ impl<'a> Translator<'a> {
     /// classes: `Bubble`, imported from the runtime, if `body` may bubble,
     /// and the failure class nearest above all its declared failures,
     /// never what else Java throws, so panics (`AssertionError`s) and
-    /// hosts' exceptions pass. Not yet where that's core's `Error`, for
-    /// failures of several libraries.
-    fn handled(&mut self, body: NodeId) -> R<Vec<String>> {
+    /// hosts' exceptions pass. Where that's core's `Error`, the runtime's
+    /// `Failure` marker, for failures of several libraries' roots, which
+    /// isn't an exception, the clause catches `RuntimeException`, what
+    /// every root and `Bubble` extend, and the classes come second, for
+    /// the handler to throw again what isn't one of them.
+    fn handled(&mut self, body: NodeId) -> R<(Vec<String>, Option<Vec<String>>)> {
         let p = self.p;
         let fails: Vec<TypeId> = (temper_tmpl::failures::failures_under(p, body).into_iter())
             .map(|(_, f)| f)
@@ -719,24 +722,41 @@ impl<'a> Translator<'a> {
         }
         let declared: Vec<TypeId> = fails.into_iter().filter(|&f| f != TypeId::BUBBLE).collect();
         let root = temper_tmpl::failures::root(p);
-        if let Some(ty) = temper_tmpl::failures::join(p, root, &declared) {
-            if analysis::nominal_decl(p, ty) == root {
-                return not_yet("a handler of failures of several libraries");
-            }
+        let join = temper_tmpl::failures::join(p, root, &declared);
+        let marker = join.is_some_and(|ty| analysis::nominal_decl(p, ty) == root);
+        if let Some(ty) = join {
             classes.push(self.ty(ty)?);
         }
-        Ok(classes)
+        Ok(match marker {
+            true => (vec!["RuntimeException".into()], Some(classes)),
+            false => (classes, None),
+        })
+    }
+
+    /// A failure as a `Throwable`, where it's core's `Error`, the
+    /// runtime's `Failure` marker, which isn't one: cast to the
+    /// `RuntimeException` every failure is.
+    fn throwable(&mut self, failure: NodeId) -> R<Expr> {
+        let p = self.p;
+        let root = temper_tmpl::failures::root(p);
+        let value = self.expr(failure)?;
+        Ok(
+            match analysis::nominal_decl(p, p.nodes.ty(failure)) == root {
+                true => Expr::Cast("RuntimeException".into(), Box::new(value)),
+                false => value,
+            },
+        )
     }
 
     /// `throw value`, as Java's, with its cause, the failure a handler
     /// handles, where it's thrown there: `Core.withCause(value, cause)`,
     /// which keeps a cause it has already.
     fn thrown(&mut self, value: NodeId, cause: Option<NodeId>) -> R<Expr> {
-        let value = self.expr(value)?;
+        let value = self.throwable(value)?;
         let Some(cause) = cause else {
             return Ok(value);
         };
-        let cause = self.expr(cause)?;
+        let cause = self.throwable(cause)?;
         self.import("temper.core.Core");
         Ok(Expr::name("Core").method("withCause", vec![value, cause]))
     }
@@ -1207,7 +1227,7 @@ impl<'a> Translator<'a> {
                 self.into(&Place::Assign(Expr::name(name.clone())), value, out)
             }
             (_, Node::OrElse { body, fallback } | Node::Catch { body, fallback, .. }) => {
-                let classes = self.handled(body)?;
+                let (classes, only) = self.handled(body)?;
                 let local = match p.nodes.get(value) {
                     Node::Catch { local, .. } => Some(local),
                     _ => None,
@@ -1218,30 +1238,47 @@ impl<'a> Translator<'a> {
                     return not_yet("a catch that binds a failure and a bubble");
                 }
                 let body = self.sub(|t, o| t.into(into, body, o))?;
-                // `orelse panic()` panics with the failure as its cause.
-                let (var, handler) = match p.nodes.get(fallback) {
-                    Node::Panic {} => {
-                        let var = match local {
-                            Some(local) => self.name(local),
-                            None => self.fresh("bubble"),
-                        };
-                        let cause = Expr::name(var.clone());
-                        (
-                            var,
-                            vec![Stmt::Throw(Expr::New(
-                                "AssertionError".into(),
-                                vec![Expr::Str("panic".into()), cause],
-                            ))],
-                        )
+                // What it catches: the binding, where there's one Java
+                // catches by type.
+                let var = match (local, &only) {
+                    (Some(local), None) => self.name(local),
+                    (_, Some(_)) => self.fresh("caught"),
+                    (None, None) if matches!(p.nodes.get(fallback), Node::Panic {}) => {
+                        self.fresh("bubble")
                     }
-                    _ => (
-                        match local {
-                            Some(local) => self.name(local),
-                            None => self.fresh("ignored"),
-                        },
-                        self.sub(|t, o| t.into(into, fallback, o))?,
-                    ),
+                    (None, None) => self.fresh("ignored"),
                 };
+                let caught = Expr::name(var.clone());
+                let mut handler = Vec::new();
+                // Of all it catches, only failures, throwing the rest
+                // again, then the binding as the failure it is.
+                if let Some(only) = only {
+                    let test = (only.iter())
+                        .map(|class| Expr::InstanceOf(Box::new(caught.clone()), class.clone()))
+                        .reduce(|a, b| Expr::bin(Bin::Or, a, b))
+                        .unwrap();
+                    handler.push(Stmt::If {
+                        cond: Expr::unary(Unary::Not, test),
+                        then: vec![Stmt::Throw(caught.clone())],
+                        els: Vec::new(),
+                    });
+                    if let Some(local) = local {
+                        let ty = self.ty(p.decls.get(local).ty)?;
+                        handler.push(Stmt::Local {
+                            ty: ty.clone(),
+                            name: self.name(local),
+                            value: Some(Expr::Cast(ty, Box::new(caught.clone()))),
+                        });
+                    }
+                }
+                // `orelse panic()` panics with the failure as its cause.
+                match p.nodes.get(fallback) {
+                    Node::Panic {} => handler.push(Stmt::Throw(Expr::New(
+                        "AssertionError".into(),
+                        vec![Expr::Str("panic".into()), caught],
+                    ))),
+                    _ => handler.extend(self.sub(|t, o| t.into(into, fallback, o))?),
+                }
                 let stmt = Stmt::TryCatch {
                     body,
                     classes,

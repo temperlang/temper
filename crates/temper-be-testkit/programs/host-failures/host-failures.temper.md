@@ -156,3 +156,105 @@ panic
 ```stderr-absent
 not found
 ```
+
+## Several libraries
+
+One handler catches failures of two libraries, each under a root of its
+own, `count-failures`' beside this one's: what it catches is core's
+`Error`, whose message it reads, and which `is` tells apart. A
+`throw` there takes it as its cause, and an `orelse` catches a bubble
+beside both. Another library's failure that nothing handles ends the
+run too:
+
+    let { parseCount } = import("count-failures");
+
+    let total(key: String, count: String): Int {
+      (hostLookup(key) + parseCount(count)) catch (e) {
+        console.log("caught ${e.message}");
+        if (e is NotFound) { -1 } else { -2 }
+      }
+    }
+    console.log("${total("a", "two")} ${total("z", "two")} ${total("a", "x")}");
+
+    class Unreadable(public key: String) extends HostFailuresError {}
+
+    let reading(key: String, count: String): Int throws Unreadable {
+      (hostLookup(key) + parseCount(count)) catch { throw new Unreadable(key); }
+    }
+
+    let r = reading("a", "x") catch (e) {
+      console.log("${e.message}, caused by ${e.cause?.message ?? "nothing"}");
+      0
+    };
+
+    let ratio(key: String, count: String): Int {
+      (hostLookup(key) / parseCount(count)) orelse -9
+    }
+    console.log(
+      "${r} ${ratio("a", "two")} ${ratio("a", "zero")} ${ratio("a", "x")} ${ratio("z", "two")}"
+    );
+    try parseCount("x");
+    console.log("after");
+
+```log
+before
+caught not found (key: z)
+caught bad count (text: x)
+3 -1 -2
+unreadable (key: a), caused by bad count (text: x)
+0 0 -9 -9 -9
+```
+
+```stderr
+bad count (text: x)
+```
+
+## Host error passes several libraries' handler
+
+Host code's own error passes a handler of two libraries' failures too:
+
+    let { parseCount } = import("count-failures");
+
+    let h = (parseCount("two") + hostLookup("bug")) catch (e) {
+      console.log("caught ${e.message}");
+      -1
+    };
+    console.log("after ${h}");
+
+```log
+before
+```
+
+```stderr interp
+Panicked: panic()
+```
+
+```stderr ~interp
+host bug
+```
+
+## Panic passes several libraries' handler
+
+So does a panic, where the handler catches a bubble too:
+
+    let { parseCount } = import("count-failures");
+
+    let p = do {
+      let n = try parseCount("two");
+      let m = try hostLookup("a");
+      if (n + m > 2) { panic() }
+      10 / (n - m)
+    } orelse -1;
+    console.log("after ${p}");
+
+```log
+before
+```
+
+```stderr interp
+Panicked: panic()
+```
+
+```stderr ~interp
+panic
+```

@@ -742,6 +742,12 @@ the … backend: declared failures: …" for a program that uses them
   (`return`, `break`, `continue`) and so runs after it, the `catch`
   keeps the failure in a nullable `~caught` local the fallback reads.
 - **`when` over failure types** needs nothing new: `Is` and `Downcast`.
+- **Several roots in one handler:** where a handler's body may fail
+  with failure types under different roots, of one library or several,
+  their join is core's `Error`, which a `catch` binds (signatures can't
+  fail with `Error`, so only handlers have it). Each target catches only
+  failures there, by its runtime's marker, and lets panics and hosts'
+  errors pass, as below (Lua's already did).
 - **Naming:** Java's and C#'s rules say `Exception` for `Error` at the
   end of a failure type's name (`NamingRules::failure_suffix`), so
   `ConfigError` is `ConfigException` there, the roots too.
@@ -758,8 +764,9 @@ the failure, else `raise with_cause(x, cause)`, which keeps a cause it
 has. `OrElse` and `Catch` are `try`/`except` of exactly what the body
 may fail with: `Bubble` and the join of its declared failures
 (`failures::failures_under`, `join`), so panics and hosts' errors pass;
-a join of only core's `Error` (several libraries' failures) is "not
-yet". `cause` is `failure_cause(e)`, `__cause__` where it's a
+where the join is core's `Error`, `except Exception as e:` then `if not
+isinstance(e, Failure): raise e` (with `Bubble` in a tuple where the body
+bubbles too), which checkers narrow. `cause` is `failure_cause(e)`, `__cause__` where it's a
 `Failure`; `~caught` read after a jumping fallback is asserted not
 null for checkers.
 
@@ -777,7 +784,12 @@ named as another of `Throwable`'s methods is "not yet". `Throw` is
 it has), `Core.throwFailure(x)` where Java needs a value. `OrElse` and
 `Catch` are `try`/`catch` of exactly `Bubble` and/or the join, a
 multi-catch where both, so panics (`AssertionError`) and host
-exceptions pass. A function failing with a failure type lists it in
+exceptions pass; where the join is core's `Error`, `catch
+(RuntimeException caught)`, what every root and `Bubble` extend, then
+`if (!(caught instanceof Failure)) { throw caught; }` (`Bubble ||` too
+where the body bubbles), and a `catch` binding `Failure e = (Failure)
+caught;`; an `Error` thrown or taken as a cause is cast back to
+`RuntimeException`. A function failing with a failure type lists it in
 a `throws` clause. Stack traces are kept (made where the failure is
 constructed), unlike `Bubble`'s.
 
@@ -797,7 +809,11 @@ see through it (`AnyValueTrait` by the variant). `Throw` is `return
 Err(x)`, `.into()` where the code fails with a type above, through
 `temper_core::with_cause(x, cause)` in a handler. `OrElse` and `Catch`
 run the body as a `Result` of exactly what it may fail with (the join,
-or `temper_core::Error` with a bubble, which failures convert into);
+or `temper_core::Error` with a bubble, which failures convert into); a
+join that's core's `Error` is `Arc<dyn Failure>`, which each failure
+type and enum converts into by `From` (in `impl_failure!` and
+`impl_failure_enum!`, so `?` does) and which is a `Failure` itself, so a
+`throw` there takes it as a cause;
 `Catch` is `unwrap_or_else(|e| …)`, `map_err(|e| thrown)?` for a
 throwing fallback, `or_else(|e| …)?` for another failing one, and as a
 statement `if let Err(e) = …`. `?` converts by `From`; `Ok(e?)` is `e`
@@ -805,7 +821,7 @@ only where the types match. A module's init takes any failure as a
 bubble; `uncaught` names it a failure and lists causes. No
 `catch_unwind`: a panic passes every handler. Not yet: a `catch` whose
 body jumps, or binding a failure beside a bubble; failure interfaces
-with members; a failure join of several libraries.
+with members.
 
 **In C++** (chunk 10): values, never thrown. A signature failing with a
 failure type returns `core::Expected<T, F>`, `F` the failure's
@@ -830,7 +846,9 @@ which throws `core::UncaughtFailure` out of the init. `OrElse` and
 `Catch` branch on the result: where the body's one failing call runs
 first in it, `if (r.has_value()) { …body with *r… } else { …fallback… }`;
 else the body is a lambda called at once giving `core::Expected` of the
-join. A body that also bubbles is in a `try`, its failure bubbled to
+join, `std::shared_ptr<core::Failure>` where that's core's `Error`
+(each library's failure's `shared_ptr` converts into it, as its root is
+a `core::Failure`). A body that also bubbles is in a `try`, its failure bubbled to
 the `catch` (an exception on that path only). Panics and host
 exceptions pass every handler. Not yet: a `catch` binding a failure
 beside a bubble, a lambda body that jumps out, a failing call where
@@ -857,7 +875,9 @@ generated constructor), and where JS needs a value, `(() => { throw x;
 })()`. `OrElse` and `Catch` are `try`/`catch` rethrowing all but what
 the body may fail with: `if (!(isBubble(e$) || e$ instanceof NotFound))
 throw e$;`, a `catch`'s binding the variable, so TypeScript narrows it
-(not yet beside a bubble, which it can't). A `~caught` read after a
+(not yet beside a bubble, which it can't); where the join is core's
+`Error`, the runtime's `isFailure(e$)`, a type predicate (`e is
+Error`). A `~caught` read after a
 jumping fallback is cast to its failure type. A function failing with
 a failure type says so with JSDoc's `@throws`.
 
@@ -884,7 +904,10 @@ Temper's `cause` (`Core.FailureCause`) alone, unless it has one. `Throw` is `thr
 `Core.ThrowFailure<T>(x)` where C# needs a value. `OrElse` and `Catch`
 catch exactly `Bubble` or the join, `catch (NotFound e)`, or both,
 `catch (Exception e) when (e is Bubble || e is NotFound)`, so panics
-and host exceptions pass. A `~caught` read takes `!`. A function
+and host exceptions pass; where the join is core's `Error`, `catch
+(Exception caught) when (caught is IFailure)`, and a `catch` binding
+`IFailure e = (IFailure)caught;`; an `Error` thrown or taken as a cause
+is cast back to `Exception`. A `~caught` read takes `!`. A function
 failing with a failure type says so in an XML doc comment, `///
 <exception cref="NotFound">`.
 
@@ -899,7 +922,8 @@ classes under `temper.Failure`; a failure type's member named `cause` is
 the key `cause` where it's a failure. `Throw` is `error(x)`,
 `error(temper.with_cause(x, cause))` in a handler (keeps a cause it
 has). `OrElse` and `Catch` are `temper.catch(function() … end,
-NotFound)`, catching exactly the join, by `temper.instance_of`, and
+NotFound)`, catching exactly the join, by `temper.instance_of`
+(`temper.Failure` where it's core's `Error`), and
 `temper.Bubble` where the body may bubble too, raising anything else
 again unchanged; a body that only bubbles keeps `temper.pcall`. A
 `catch`'s binding is its second result, `local ok, e =

@@ -291,8 +291,9 @@ pub fn without_net(cases: &mut [Case]) {
 /// host code ([`HOST_CODE`]), as has `host-error-tests`, whose host
 /// error passes `assertPanics` too, run as tests; and `sealed-whens`
 /// `when`s that cover a sealed interface without `else`, as values
-/// wherever one is wanted.
-pub const PROGRAMS: [&str; 31] = [
+/// wherever one is wanted; and `count-failures` a library with a failure
+/// root of its own, which `host-failures` imports.
+pub const PROGRAMS: [&str; 32] = [
     "classes",
     "nullables",
     "generics",
@@ -324,6 +325,7 @@ pub const PROGRAMS: [&str; 31] = [
     "host-error-causes",
     "host-error-tests",
     "sealed-whens",
+    "count-failures",
 ];
 
 /// The shared programs whose run fails, after logging what's expected
@@ -351,7 +353,8 @@ pub const HOST_CODE: [&str; 3] = ["host-error-causes", "host-error-tests", "host
 /// grouped by a sealed type, kept as values, and converted;
 /// `failure-params` functions generic over their callbacks' failure
 /// types; `failure-async` promises broken with failures; and
-/// `host-failures` host code's failures and errors, and what a report
+/// `host-failures` host code's failures and errors, one handler of two
+/// libraries' failures (its own and `count-failures`'), and what a report
 /// says of a failure nothing handles, a run per section, with host code
 /// laid out as [`HOST_CODE`]'s. Each says what it assumes of what's still
 /// open. Once the interpreter runs one, it joins [`INTERP_SPECS`]; once
@@ -396,7 +399,20 @@ pub fn spec_case(name: &str) -> Case {
     let (path, text) = spec_source(name);
     let mut case = Case::inline(name, &path.to_string_lossy(), text, Vec::new());
     case.dir = path.parent().unwrap().to_path_buf();
+    case.libraries = libraries_beside(name);
     case
+}
+
+/// The other shared libraries a shared program may import, if it's one
+/// of [`LIBRARIES`], each with its root.
+fn libraries_beside(file: &str) -> Vec<(String, PathBuf)> {
+    if !LIBRARIES.contains(&file) {
+        return Vec::new();
+    }
+    (LIBRARIES.iter())
+        .filter(|&&l| l != file)
+        .map(|&l| (l.to_string(), programs_dir().join(l)))
+        .collect()
 }
 
 /// A specification's cases, as [`cases`] gives a shared program's: a run
@@ -500,9 +516,18 @@ pub fn check_test_parts_apart<'a>(
     assert!(misplaced.is_empty(), "{}", misplaced.join("\n"));
 }
 
-/// The shared programs that are libraries of several modules, in
-/// directories of their own: what [`Case::libraries`] lists.
-pub const LIBRARIES: [&str; 4] = ["modules", "imports-library", "defaults", "renamed"];
+/// The shared programs that are libraries of several modules, or that
+/// import such libraries or are imported, in directories of their own:
+/// what [`Case::libraries`] lists. `host-failures` imports
+/// `count-failures`.
+pub const LIBRARIES: [&str; 6] = [
+    "modules",
+    "imports-library",
+    "defaults",
+    "renamed",
+    "count-failures",
+    "host-failures",
+];
 
 /// The shared programs' directory.
 pub fn programs_dir() -> PathBuf {
@@ -734,14 +759,7 @@ fn cases_of(backend: &str, programs: &[&str]) -> Vec<Case> {
                 stderr_absent: temper_funtests::fenced_lines(&text, "stderr-absent", &[backend]),
                 sources: vec![(path.to_string_lossy().into_owned(), text)],
                 dir: if in_dir { dir.join(file) } else { dir.clone() },
-                libraries: if LIBRARIES.contains(&file) {
-                    (LIBRARIES.iter())
-                        .filter(|&&l| l != file)
-                        .map(|&l| (l.to_string(), dir.join(l)))
-                        .collect()
-                } else {
-                    Vec::new()
-                },
+                libraries: libraries_beside(file),
                 host_files: match HOST_CODE.contains(&file) {
                     true => (temper_funtests::host_files(&dir.join(file)).into_iter())
                         .map(|s| (s.path, s.text))

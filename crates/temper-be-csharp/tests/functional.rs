@@ -1088,7 +1088,8 @@ fn runs() {
                 .collect();
             run("failures interop", &interop, &[], &expected);
         }
-        // Each library with host code, strictly, host code and all, and its
+        // Each library with host code, strictly, host code and all, with the
+        // generated assembly where it imports a shared library, and its
         // `Program.cs`, in a directory of its own.
         for case in &hosted {
             let dir = out.join("hosted").join(&case.key);
@@ -1107,7 +1108,13 @@ fn runs() {
                 }
             }
             let library = bin.join(format!("{}.dll", names::root_namespace(&case.library)));
-            let build = dotnet.csc(&strict(&library), &[&runtime], &sources);
+            // The shared libraries it imports, in the generated assembly.
+            let mut references = vec![runtime.as_path()];
+            if !kit::libraries(case, "csharp").is_empty() {
+                references.push(&generated);
+                fs::copy(&generated, bin.join("Generated.dll")).unwrap();
+            }
+            let build = dotnet.csc(&strict(&library), &references, &sources);
             assert!(
                 build.status.success(),
                 "{}: csc, generated C# and host code:\n{}",
@@ -1121,7 +1128,8 @@ fn runs() {
                 "-warnaserror+".into(),
                 format!("-out:{}", exe.display()),
             ];
-            let build = dotnet.csc(&options, &[&runtime, &library], &[program.unwrap()]);
+            references.push(&library);
+            let build = dotnet.csc(&options, &references, &[program.unwrap()]);
             assert!(
                 build.status.success(),
                 "{}: csc, Program.cs:\n{}",

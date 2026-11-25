@@ -1399,7 +1399,8 @@ fn runs() {
         }
 
         // Each library with host code, alone, its host `.cpp`s with its
-        // modules, as its CMake project builds them, and its `main.cpp`
+        // modules and those of the shared libraries it imports, as its
+        // CMake project builds them, and its `main.cpp`
         // linked as Kotlin's program, plainly and under the sanitizers.
         // Host `.cpp`s aren't written for [`STRICT`] (the functional
         // test's `length` converts `size()` to `int32_t`), so they build
@@ -1408,7 +1409,7 @@ fn runs() {
         for case in &connected {
             let root = out.join("connected").join(&case.key);
             let src = root.join("src");
-            let mut sources = Vec::new();
+            let mut sources = imported(case, &src);
             let mut host = Vec::new();
             for file in generate(case) {
                 let path = src.join(&file.path);
@@ -1513,6 +1514,25 @@ fn runs() {
     });
 }
 
+/// The shared libraries a library with host code imports, which builds
+/// alone ([`connected_alone`]), written beside it under `src`: their
+/// modules' `.cpp`s, to build with it.
+fn imported(case: &Case, src: &Path) -> Vec<PathBuf> {
+    let mut sources = Vec::new();
+    for library in kit::libraries(case, "cpp") {
+        for file in generate(&library) {
+            let path = src.join(&file.path);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(&path, &file.text).unwrap();
+            let module = !file.path.ends_with("/main.cpp") && !file.path.ends_with("/test.cpp");
+            if file.path.ends_with(".cpp") && module {
+                sources.push(path);
+            }
+        }
+    }
+    sources
+}
+
 /// Every library's generated C++, as other people build it: each `.cpp`
 /// of every case [`runs`] builds, std's, and the generated files of the
 /// libraries with host code, compiled (not linked) at `-O2` with every
@@ -1581,7 +1601,8 @@ fn strict() {
             let module = |s: &PathBuf| !main_cpp(s) && !s.ends_with("test.cpp");
             plain.extend(sources.into_iter().filter(module));
         }
-        // Each library with host code, its generated files alone.
+        // Each library with host code, its generated files alone, beside
+        // the shared libraries it imports.
         let connected: Vec<(PathBuf, Vec<PathBuf>)> = (connected.iter())
             .map(|case| {
                 let root = out.join("connected").join(&case.key);
@@ -1591,6 +1612,7 @@ fn strict() {
                         .unwrap();
                     (case.host_files.iter()).any(|(p, _)| Path::new(p) == rest)
                 };
+                imported(case, &root.join("src"));
                 let sources = write(&root.join("src"), generate(case));
                 let sources = sources.into_iter().filter(|s| !host(s)).collect();
                 (root, sources)

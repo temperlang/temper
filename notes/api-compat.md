@@ -309,7 +309,10 @@ before anything else: statics are `OnceLock`s read with `unwrap()`.
   interface is an `enum` of the types right under it, a library's root
   (`#[non_exhaustive]` where exported) among them, each `From` every type
   below it (`impl_failure_enum!`, `impl_failure_from!`), so host `?`
-  converts; a failure the library doesn't export is a variant whose type
+  converts; every failure type and enum also converts into
+  `Arc<dyn temper_core::Failure>`, itself a `Failure`, so `?` gathers
+  several libraries' failures there, as generated handlers of them do;
+  a failure the library doesn't export is a variant whose type
   host code can't name. A library with one exported root, and no `Error`
   of its own, also has it as the crate's `Error` (`pub type Error =
   r#mod::WherewithError;`). A failure in a module's init is a

@@ -1,7 +1,8 @@
 //! Declared failures (RFC 164) reach every built-in backend: each
 //! translates every specification tmpl has (the testkit's `TMPL_SPECS`, by
-//! their tmpl goldens), but for host code they're given elsewhere, as
-//! each runs them in its own functional tests; and a program with only
+//! their tmpl goldens), but for host code and imported libraries' names
+//! they're given elsewhere, as each runs them in its own functional
+//! tests; and a program with only
 //! `Bubble` isn't one that uses them.
 
 use std::fs;
@@ -31,15 +32,17 @@ fn spec_goldens() -> Vec<(String, String)> {
 #[test]
 fn every_backend_translates_declared_failures() {
     let goldens = spec_goldens();
-    assert_eq!(goldens.len(), 6, "failures, and host-failures' five runs");
+    assert_eq!(goldens.len(), 9, "failures, and host-failures' eight runs");
     for (name, golden) in goldens {
         let p = text::read(&golden).unwrap_or_else(|e| panic!("{name}: {e}"));
         assert_eq!(validate(&p, &Profile::full()), [], "{name}");
         for backend in Registry::built_in().all() {
-            // Translated, or not for want of host code, which the
+            // Translated, or not for want of host code, or of the names
+            // of a library it imports (`count-failures`'), which the
             // testkit's runs give it.
             if let Err(why) = (backend.translate)(&p, SourceLinks::default()) {
-                assert!(why.contains("host code"), "{name}: {}: {why}", backend.name);
+                let given = why.contains("host code") || why.contains("another library's");
+                assert!(given, "{name}: {}: {why}", backend.name);
             }
         }
     }

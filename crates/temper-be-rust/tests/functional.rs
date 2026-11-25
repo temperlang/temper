@@ -108,11 +108,12 @@ const UNUSED: [&str; 5] = [
 /// fields get getters for host code, as any class's do where a library
 /// has host code, which no code calls. Their packages are linted as
 /// [`UNUSED`]'s are.
-const UNUSED_KEYS: [&str; 4] = [
+const UNUSED_KEYS: [&str; 5] = [
     "functions-connected",
     "functions-connected-no-connected",
     "host-failures-cause",
     "host-failures-own-message",
+    "host-failures-several-libraries",
 ];
 
 /// Tests, by key, whose root module's layout differs from rustfmt's, and

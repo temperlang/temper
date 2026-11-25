@@ -1,0 +1,9 @@
+[package]
+name = "host-failures-panic-passes-several-libraries-handler"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.71.1"
+
+[dependencies]
+temper-core = { path = "../temper-core", version = "=0.0.0-alpha.0.0" }
+count-failures = { path = "../count-failures", version = "0.0.1" }

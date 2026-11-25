@@ -1,0 +1,31 @@
+# generated line:column -> source:line:column, and the text at each
+11:1 -> ../host-failures.temper.md:31:5  /** <- @connected
+16:1 -> ../host-failures.temper.md:31:5  export function hostLookup(k <- @connected
+16:17 -> ../host-failures.temper.md:32:16 (hostLookup)  hostLookup(key) { <- hostLookup(key: String): Int
+16:27 -> ../host-failures.temper.md:31:5  (key) { <- @connected
+20:1 -> ../host-failures.temper.md:28:5  export class HostFailuresErr <- export sealed interface Host
+20:14 -> ../host-failures.temper.md:28:29 (HostFailuresError)  HostFailuresError extends Er <- HostFailuresError extends Er
+20:31 -> ../host-failures.temper.md:28:5   extends Error {} <- export sealed interface Host
+24:1 -> ../host-failures.temper.md:29:5  export class NotFound extend <- export class NotFound(public
+24:14 -> ../host-failures.temper.md:29:18 (NotFound)  NotFound extends HostFailure <- NotFound(public key: String)
+24:22 -> ../host-failures.temper.md:29:5   extends HostFailuresError { <- export class NotFound(public
+25:3 -> ../host-failures.temper.md:29:34  /** @type {string} */ <- key: String) extends HostFai
+26:3 -> ../host-failures.temper.md:29:34  #key; <- key: String) extends HostFai
+28:3 -> ../host-failures.temper.md:29:5  /** @param {string} key */ <- export class NotFound(public
+29:3 -> ../host-failures.temper.md:29:5  constructor(key) { <- export class NotFound(public
+31:5 -> ../host-failures.temper.md:29:34  this.#key = key; <- key: String) extends HostFai
+34:3 -> ../host-failures.temper.md:29:34  /** @returns {string} */ <- key: String) extends HostFai
+35:3 -> ../host-failures.temper.md:29:34  get key() { <- key: String) extends HostFai
+35:7 -> ../host-failures.temper.md:29:34 (key)  key() { <- key: String) extends HostFai
+39:3 -> ../host-failures.temper.md:29:5  /** @returns {string} */ <- export class NotFound(public
+40:3 -> ../host-failures.temper.md:29:5  get message() { <- export class NotFound(public
+41:5 -> ../host-failures.temper.md:29:5  return `not found (key: ${th <- export class NotFound(public
+45:1 -> ../host-failures.temper.md:38:5  console.log("before"); <- console.log("before");
+46:1 -> ../host-failures.temper.md:242:5  /** @type {number} */ <- let p = do {
+47:1 -> ../host-failures.temper.md:242:5  export let p; <- let p = do {
+48:1 -> ../host-failures.temper.md:242:5  try { <- let p = do {
+49:3 -> ../host-failures.temper.md:243:7  const n = parseCount("two"); <- let n = try parseCount("two"
+50:3 -> ../host-failures.temper.md:244:7  const m = hostLookup("a"); <- let m = try hostLookup("a");
+51:3 -> ../host-failures.temper.md:245:7  if (((n + m) | 0) > 2) { <- if (n + m > 2) { panic() }
+52:5 -> ../host-failures.temper.md:245:24  panic(); <- panic() }
+59:1 -> ../host-failures.temper.md:248:5  console.log(`after ${p}`); <- console.log("after ${p}");

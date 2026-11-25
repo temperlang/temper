@@ -1,8 +1,8 @@
 //! Declared failures as generated code writes them: failure classes with
 //! `impl_failure!`, a sealed interface's enum and a crate's `Error` with
 //! `impl_failure_enum!`, causes set once and never looping, `?` into the
-//! enums and into a bubble, `is` and `cast` through an enum, and what an
-//! uncaught one says.
+//! enums, into a bubble, and into core's `Error` (several roots' join),
+//! `is` and `cast` through an enum, and what an uncaught one says.
 
 use std::error::Error as _;
 use std::sync::Arc;
@@ -117,6 +117,28 @@ fn question_marks_convert_into_enums_and_bubbles() {
         .unwrap()
         .downcast_ref::<NotFound>()
         .is_some());
+}
+
+#[test]
+fn question_marks_convert_into_core_error() {
+    // A handler's body failing with several roots' types, as one of core's
+    // `Error`, which is a failure too, so a `throw` there takes it as a
+    // cause.
+    let caught =
+        (|| -> Result<i32, Arc<dyn Failure>> { Ok(lookup("j")? + sign()?) })().unwrap_err();
+    assert!(temper_core::is::<NotFound>(caught.clone()));
+    assert_eq!(caught.message().as_str(), "not found (key: j)");
+    let enum_first = (|| -> Result<i32, Arc<dyn Failure>> { Ok(sign()? + lookup("j")?) })();
+    assert!(temper_core::is::<BadSign>(enum_first.unwrap_err()));
+    let outer = with_cause(NotFound::new("outer"), caught.clone());
+    assert_eq!(outer.source().unwrap().to_string(), "not found (key: j)");
+    assert!(outer.source().unwrap().downcast_ref::<NotFound>().is_some());
+    // Not its own cause through it either.
+    let again = with_cause(caught.clone(), caught.clone());
+    assert!(Failure::cause(&again).is_none());
+    // Into a bubble, where the body may bubble too.
+    let bubble = temper_core::Error::from(caught);
+    assert_eq!(bubble.to_string(), "not found (key: j)");
 }
 
 #[test]

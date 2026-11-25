@@ -1,0 +1,33 @@
+tmpl 1 model 1 library `count-failures` 0.0.0
+
+uses `temper-core`#3 0.0.0-alpha.0.0 {
+  interface Error#4 {}
+}
+
+module `count-failures`#0 {
+  export interface CountError#1 extends Error#4 {}
+
+  export class BadCount#2 extends CountError#1 {
+    let text#5: String;
+    constructor constructor#6(text#8: String): BadCount#2 {
+      this.text#5 = text#8;
+    }
+    get message#9(): String {
+      return %String.cat(%String.cat("bad count (text: ", this.text#5), ")");
+    }
+  }
+
+  export fn parseCount#7(text#10: String): Int32 throws BadCount#2 {
+    {
+      if (%String.eq(text#10, "zero")) {
+        return 0;
+      } else if (%String.eq(text#10, "two")) {
+        return 2;
+      } else {
+        (throw(new constructor#6(text#10))^): Void;
+      }
+    }
+  }
+
+  init {}
+}

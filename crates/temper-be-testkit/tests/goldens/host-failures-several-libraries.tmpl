@@ -1,0 +1,83 @@
+tmpl 1 model 1 library `host-failures-several-libraries` 0.0.0
+
+uses `temper-core`#4 0.0.0-alpha.0.0 {
+  interface Error#5 {
+    connected get message#29(): String;
+    connected get cause#40(): Error#5?;
+  }
+  interface Console#18 {
+    connected method log#19(message: String): Void;
+  }
+  class Int32#30 {
+    connected method toString#31(radix?: Int32): String;
+  }
+  connected fn getConsole#43(name?: String): Console#18;
+}
+
+uses `count-failures`#23 0.0.0 {
+  module ``#24 {
+    class BadCount#25 extends CountError#26 {}
+    interface CountError#26 extends Error#5 {}
+    fn parseCount#27(text: String): Int32 throws BadCount#25;
+  }
+}
+
+module `host-failures-several-libraries`#0 {
+  let ~console#20: Console#18;
+
+  export interface HostFailuresError#1 extends Error#5 {}
+
+  export class NotFound#2 extends HostFailuresError#1 {
+    let key#6: String;
+    constructor constructor#7(key#15: String): NotFound#2 {
+      this.key#6 = key#15;
+    }
+    get message#16(): String {
+      return %String.cat(%String.cat("not found (key: ", this.key#6), ")");
+    }
+  }
+
+  connected export fn hostLookup#10(key#17: String): Int32 throws NotFound#2 {
+    if (%String.eq(key#17, "bug")) {
+      (panic()): Void;
+    }
+    if (%String.eq(key#17, "a")) {
+      return 1;
+    }
+    (throw(new constructor#7(key#17))^): Void;
+  }
+
+  fn total#11(key#21: String, count#22: String): Int32 {
+    return (catch(%Int32.add(hostLookup#10(key#21)^, parseCount#27(count#22)^), e#28: Error#5, (value { ~console#20.log#19(%String.cat("caught ", e#28.message#29())); (if (is(e#28, NotFound#2)) %Int32.neg(1) else %Int32.neg(2)): Int32 }): Int32)): Int32;
+  }
+
+  class Unreadable#3 extends HostFailuresError#1 {
+    let key#8: String;
+    constructor constructor#9(key#32: String): Unreadable#3 {
+      this.key#8 = key#32;
+    }
+    get message#33(): String {
+      return %String.cat(%String.cat("unreadable (key: ", this.key#8), ")");
+    }
+  }
+
+  fn reading#12(key#34: String, count#35: String): Int32 throws Unreadable#3 {
+    return (catch(%Int32.add(hostLookup#10(key#34)^, parseCount#27(count#35)^), ~failure#36: Error#5, (throw(new constructor#9(key#34), ~failure#36)^): Int32)): Int32;
+  }
+
+  let r#13: Int32;
+
+  fn ratio#14(key#41: String, count#42: String): Int32 {
+    return (orelse(%Int32.div(hostLookup#10(key#41)^, parseCount#27(count#42)^)^, %Int32.neg(9))): Int32;
+  }
+
+  init {
+    init ~console#20 = getConsole#43(omitted);
+    ~console#20.log#19("before");
+    ~console#20.log#19(%String.cat(%String.cat(%String.cat(%String.cat(total#11("a", "two").toString#31(omitted), " "), total#11("z", "two").toString#31(omitted)), " "), total#11("a", "x").toString#31(omitted)));
+    init r#13 = (catch(reading#12("a", "x")^, e#37: Unreadable#3, (value { ~console#20.log#19(%String.cat(%String.cat(((upcast(e#37)): Error#5).message#29(), ", caused by "), (value { let subject#38: String? = (value { let subject#39: Error#5? = ((upcast(e#37)): Error#5).cause#40(); (if (isNull(subject#39)) (null): String? else (asNullable(((nonNull(subject#39)): Error#5).message#29())): String?): String? }): String?; (if (isNull(subject#38)) "nothing" else (nonNull(subject#38)): String): String }): String)); 0 }): Int32)): Int32;
+    ~console#20.log#19(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(r#13.toString#31(omitted), " "), ratio#14("a", "two").toString#31(omitted)), " "), ratio#14("a", "zero").toString#31(omitted)), " "), ratio#14("a", "x").toString#31(omitted)), " "), ratio#14("z", "two").toString#31(omitted)));
+    parseCount#27("x")^;
+    ~console#20.log#19("after");
+  }
+}

@@ -2222,19 +2222,38 @@ impl<'a> Translator<'a> {
             Node::OrElse { body, fallback } | Node::Catch { body, fallback, .. } => {
                 // What it catches: `Bubble`, a declared failure's class,
                 // or both ([`Self::handled`]).
-                let classes = self.handled(body)?;
+                let (classes, marker) = self.handled(body)?;
                 let local = match p.nodes.get(id) {
-                    Node::Catch { local, .. } => Some(self.name(local)),
+                    Node::Catch { local, .. } => Some(local),
                     _ => None,
+                };
+                // The binding, unless it's caught as an `Exception` and
+                // then set as the `IFailure` it is, first in the handler.
+                let bound = match (local, marker) {
+                    (Some(local), true) => Some((local, self.temporary("caught"))),
+                    _ => None,
+                };
+                let local = match (local, &bound) {
+                    (_, Some((_, caught))) => Some(caught.clone()),
+                    (local, None) => local.map(|l| self.name(l)),
                 };
                 let mut tried = Vec::new();
                 self.mark(body, &mut tried);
                 self.sink(body, place, &mut tried)?;
                 let mut caught = Vec::new();
+                if let Some((local, from)) = bound {
+                    let ty = self.ty(p.decls.get(local).ty)?;
+                    let value = Expr::Cast(ty.clone(), Box::new(Expr::name(from)));
+                    caught.push(Stmt::Local {
+                        ty,
+                        name: self.name(local),
+                        value: Some(value),
+                    });
+                }
                 self.mark(fallback, &mut caught);
                 self.sink(fallback, place, &mut caught)?;
                 if yields(&tried) || yields(&caught) {
-                    if local.is_some() || classes.len() > 1 {
+                    if local.is_some() || classes.len() > 1 || marker {
                         return not_yet("a handler of declared failures that awaits");
                     }
                     out.push(self.try_around_yields(tried, caught)?);
@@ -2253,10 +2272,10 @@ impl<'a> Translator<'a> {
                     caught.retain(|s| matches!(s, Stmt::Line(_)));
                     caught.push(Stmt::Throw(panic));
                 }
-                // Several: `catch (Exception e) when (e is A || e is B)`,
-                // which leaves the rest unhandled.
+                // Several, or core's `Error`: `catch (Exception e) when (e
+                // is A || e is B)`, which leaves the rest unhandled.
                 let (class, filter) = match &classes[..] {
-                    [class] => (Expr::name(class.clone()), None),
+                    [class] if !marker => (Expr::name(class.clone()), None),
                     _ => {
                         let failure = var.get_or_insert_with(|| self.temporary("failure")).clone();
                         let filter = (classes.iter())

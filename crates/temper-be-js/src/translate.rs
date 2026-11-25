@@ -1529,12 +1529,13 @@ impl<'a> Translator<'a> {
     /// catching exactly what its body may fail with: a bubble, by
     /// `isBubble(e$)`, and the failure class nearest above its declared
     /// failures, by `instanceof` (a `catch`'s binding, narrowed so for
-    /// TypeScript). Anything else, a panic or a host's error, passes it,
-    /// even where the fallback only panics, whose panic then has what it
-    /// caught as its `cause`, `panic("panic", e$)`. Not yet where the
-    /// failure class is core's `Error`, for failures of several
-    /// libraries, nor for a `catch` binding a failure beside a bubble,
-    /// which TypeScript can't narrow to the failure's type.
+    /// TypeScript), or where that's core's `Error`, for failures of
+    /// several libraries' roots, by the runtime's `isFailure(e$)`.
+    /// Anything else, a panic or a host's error, passes it, even where
+    /// the fallback only panics, whose panic then has what it caught as
+    /// its `cause`, `panic("panic", e$)`. Not yet for a `catch` binding a
+    /// failure beside a bubble, which TypeScript can't narrow to the
+    /// failure's type.
     fn try_catch(&mut self, body: Vec<Stmt>, mut catch: Vec<Stmt>, handler: NodeId) -> R<Stmt> {
         let p = self.p;
         let (body_node, fallback, local) = handler_parts(p, handler);
@@ -1556,13 +1557,15 @@ impl<'a> Translator<'a> {
         if let Some(ty) = temper_tmpl::failures::join(p, root, &declared) {
             let class = nominal_decl(p, ty);
             if class == root {
-                return not_yet("a handler of failures of several libraries");
+                self.imports.insert("isFailure");
+                tests.push(Expr::name("isFailure").call(vec![Expr::name(var.clone())]));
+            } else {
+                let Some(class) = class else {
+                    return not_yet("a handler of a failure that isn't a class's");
+                };
+                let class = self.class_ref(class);
+                tests.push(Expr::bin(Bin::InstanceOf, Expr::name(var.clone()), class));
             }
-            let Some(class) = class else {
-                return not_yet("a handler of a failure that isn't a class's");
-            };
-            let class = self.class_ref(class);
-            tests.push(Expr::bin(Bin::InstanceOf, Expr::name(var.clone()), class));
         }
         if local.is_some() && tests.len() > 1 {
             return not_yet("a catch that binds a failure beside a bubble");

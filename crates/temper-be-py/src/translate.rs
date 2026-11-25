@@ -1512,9 +1512,11 @@ impl<'a> Translator<'a> {
     /// classes: `Bubble`, imported from the runtime, if `body` may bubble,
     /// and the failure class nearest above all its declared failures,
     /// never what else Python raises, so panics and hosts' errors pass.
-    /// Not yet where that's core's `Error`, for failures of several
-    /// libraries.
-    fn handled(&mut self, body: NodeId) -> R<Expr> {
+    /// Where that's core's `Error`, the runtime's `Failure` marker, for
+    /// failures of several libraries' roots, which isn't an exception,
+    /// the clause catches `Exception`, and the classes come second, for
+    /// the handler to raise again what isn't one of them.
+    fn handled(&mut self, body: NodeId) -> R<(Expr, Option<Expr>)> {
         let p = self.p;
         let fails: Vec<TypeId> = (temper_tmpl::failures::failures_under(p, body).into_iter())
             .map(|(_, f)| f)
@@ -1525,17 +1527,20 @@ impl<'a> Translator<'a> {
         }
         let declared: Vec<TypeId> = fails.into_iter().filter(|&f| f != TypeId::BUBBLE).collect();
         let root = temper_tmpl::failures::root(p);
-        if let Some(ty) = temper_tmpl::failures::join(p, root, &declared) {
-            if nominal_decl(p, ty) == root {
-                return not_yet("a handler of failures of several libraries");
-            }
+        let join = temper_tmpl::failures::join(p, root, &declared);
+        let marker = join.is_some_and(|ty| nominal_decl(p, ty) == root);
+        if let Some(ty) = join {
             classes.push(self.type_ref(ty)?);
         }
-        Ok(match classes.len() {
+        let classes = match classes.len() {
             // A body that can't fail, as one `to_tmpl` kept: `Bubble`'s.
             0 => Expr::name(self.import("temper_core", "Bubble")),
             1 => classes.pop().unwrap(),
             _ => Expr::Tuple(classes),
+        };
+        Ok(match marker {
+            true => (Expr::builtin("Exception"), Some(classes)),
+            false => (classes, None),
         })
     }
 
@@ -1619,8 +1624,18 @@ impl<'a> Translator<'a> {
                     Sink::Discard => Sink::Discard,
                 };
                 self.value_into(body, sink, &mut tried)?;
-                let class = self.handled(body)?;
+                let (class, only) = self.handled(body)?;
                 let mut bound = local.map(|l| self.name(l));
+                // Of all it catches, only failures, raising the rest again.
+                if let Some(only) = only {
+                    let name = Expr::name(bound.get_or_insert_with(|| self.temp()).clone());
+                    let test = Expr::builtin("isinstance").call(vec![name.clone(), only]);
+                    caught.push(Stmt::If {
+                        cond: Expr::unary(tree::Unary::Not, test),
+                        then: vec![Stmt::Raise(name)],
+                        els: Vec::new(),
+                    });
+                }
                 // `orelse panic()` panics with the failure as its cause.
                 match self.p.nodes.get(fallback) {
                     Node::Panic {} => {

@@ -320,10 +320,11 @@ export const failureBase = (base) => {
 };
 
 /**
- * Whether `e` is a declared failure, made by any copy of this runtime.
+ * Whether `e` is a declared failure, made by any copy of this runtime:
+ * what generated code catches of failures of several libraries.
  *
  * @param {unknown} e
- * @returns {boolean}
+ * @returns {e is Error}
  */
 export const isFailure = (e) =>
   typeof e === "object" && e !== null && failureMark in e;

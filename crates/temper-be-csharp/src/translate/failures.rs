@@ -295,9 +295,12 @@ impl Translator<'_> {
     /// What a handler around `body` catches, its `catch` clause's
     /// classes: `Bubble`, from the runtime, if `body` may bubble, and the
     /// failure class nearest above all its declared failures, never what
-    /// else C# throws, so panics and hosts' exceptions pass. Not yet where
-    /// that's core's `Error`, for failures of several libraries.
-    pub(super) fn handled(&mut self, body: NodeId) -> R<Vec<String>> {
+    /// else C# throws, so panics and hosts' exceptions pass. Where that's
+    /// core's `Error`, for failures of several libraries' roots, it's the
+    /// runtime's `IFailure` marker, which isn't an exception, so the
+    /// clause catches `Exception` and filters by it (and whether it's
+    /// one, the second result).
+    pub(super) fn handled(&mut self, body: NodeId) -> R<(Vec<String>, bool)> {
         let p = self.p;
         let fails: Vec<TypeId> = (temper_tmpl::failures::failures_under(p, body).into_iter())
             .map(|(_, f)| f)
@@ -312,13 +315,24 @@ impl Translator<'_> {
         }
         let declared: Vec<TypeId> = fails.into_iter().filter(|&f| f != TypeId::BUBBLE).collect();
         let root = temper_tmpl::failures::root(p);
-        if let Some(ty) = temper_tmpl::failures::join(p, root, &declared) {
-            if nominal_decl(p, ty) == root {
-                return not_yet("a handler of failures of several libraries");
-            }
+        let join = temper_tmpl::failures::join(p, root, &declared);
+        if let Some(ty) = join {
             classes.push(self.ty(ty)?);
         }
-        Ok(classes)
+        Ok((classes, join.is_some_and(|ty| nominal_decl(p, ty) == root)))
+    }
+
+    /// A failure as an `Exception`, where it's core's `Error`, the
+    /// runtime's `IFailure` marker, which isn't one: cast to it, as every
+    /// failure is one.
+    fn exception(&mut self, failure: NodeId) -> R<Expr> {
+        let p = self.p;
+        let root = temper_tmpl::failures::root(p);
+        let value = self.expr(failure)?;
+        Ok(match nominal_decl(p, p.nodes.ty(failure)) == root {
+            true => Expr::Cast("Exception".into(), Box::new(value)),
+            false => value,
+        })
     }
 
     /// `throw value`'s value, with its cause, the failure a handler
@@ -331,7 +345,7 @@ impl Translator<'_> {
     pub(super) fn thrown(&mut self, value: NodeId, cause: Option<NodeId>) -> R<Expr> {
         let p = self.p;
         let Some(cause) = cause else {
-            return self.expr(value);
+            return self.exception(value);
         };
         match p.nodes.get(value) {
             Node::New { ctor, args, .. } if failure_class(p, p.decls.get(ctor).owner) => {
@@ -339,12 +353,12 @@ impl Translator<'_> {
                 let mut args = self.args(p.nodes.list(args))?;
                 let all = p.signature(ctor).map_or(0, |s| s.params.len());
                 args.resize(all.max(args.len()), Expr::name("null"));
-                args.push(self.expr(cause)?);
+                args.push(self.exception(cause)?);
                 Ok(Expr::name(format!("new {ty}")).call(args))
             }
             _ => {
-                let thrown = self.expr(value)?;
-                let cause = self.expr(cause)?;
+                let thrown = self.exception(value)?;
+                let cause = self.exception(cause)?;
                 Ok((self.class("Core")).method("WithCause", vec![thrown, cause]))
             }
         }

@@ -1118,16 +1118,15 @@ impl<'a> Translator<'a> {
 
     /// A declared failure type, as a `Result`'s error: a failure class's
     /// struct or a sealed failure interface's enum, the library's roots
-    /// among them. Not yet a failure parameter, nor core's
-    /// `Error`, the join of several libraries' failures.
+    /// among them, or core's `Error`, `Arc<dyn temper_core::Failure>`, for
+    /// a handler's body failing with several libraries' (only a handler's,
+    /// as a signature can't fail with `Error`), which each failure type
+    /// converts into by `From`. Not yet a failure parameter.
     pub(crate) fn failure_ty(&mut self, fail: TypeId) -> R<String> {
         let p = self.p;
         let root = temper_tmpl::failures::root(p);
         if !temper_tmpl::failures::is_failure_type(p, root, fail) {
             return not_yet("a failure parameter");
-        }
-        if temper_tmpl::analysis::nominal_decl(p, fail) == root {
-            return not_yet("failures of several libraries");
         }
         self.ty(fail)
     }
