@@ -33,7 +33,7 @@
 //!   as its `pom.xml` says, into `CARGO_TARGET_TMPDIR`, reused until its
 //!   sources or the JDK change; then every generated package, a
 //!   harness that runs `module-state` from 8 threads, and host code
-//!   (`tests/host/`) using `async-turns` and `java-statics`, in one more `javac`,
+//!   (`tests/host/`) using `async-turns`, `java-statics`, and `module-state`, in one more `javac`,
 //!   for Java 17, with every lint as an error ([`LINTS`]), or one per
 //!   batch where two libraries share a name; then `java` (or
 //!   `JAVA`) runs each program's main class, which logs what the test
@@ -463,8 +463,10 @@ fn runs() {
                 batches[at].1.push(host);
                 interop = Some((case, at));
             }
-            // Host code that uses `java-statics`' statics from outside.
+            // Host code that uses `java-statics`' statics from outside,
+            // and `module-state`'s, in the first batch with it.
             if case.key == "java-statics" {
+                assert_eq!(at, 0, "java-statics must share module-state's batch");
                 let host = out.join("src/statics/Statics.java");
                 fs::create_dir_all(host.parent().unwrap()).unwrap();
                 let source =
@@ -532,13 +534,17 @@ fn runs() {
                 .collect();
             run("host interop", at, "interop.Interop", &expected);
         }
-        // `tests/host/Statics.java`: loading `Policy` first runs the
-        // module's init, whose logs come first; its statics read right
-        // through getters, and none is a field it reaches.
+        // `tests/host/Statics.java`: loading `module-state`'s `Palette`
+        // first, then `Policy`, runs each module's init, whose logs come
+        // first; their statics read right through getters, and none is a
+        // field it reaches.
         if let Some((case, at)) = statics {
-            let expected: Vec<String> = (case.expected.iter().cloned())
+            let state = cases.iter().find(|c| c.library == "module-state").unwrap();
+            let expected: Vec<String> = (state.expected.iter().cloned())
+                .chain(case.expected.iter().cloned())
                 .chain(
                     [
+                        "palette p-warm p-warm",
                         "standard a b",
                         "default [a b]",
                         "textOnly []",

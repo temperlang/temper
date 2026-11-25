@@ -1052,7 +1052,8 @@ struct FirstUse {
 
 /// [`FirstUse`] runs. `first-use-order` enters a module that another
 /// imports, then that one, which initializes the first only once, before
-/// it.
+/// it. `first-use-palette` reads `module-state`'s `Palette.warm` first,
+/// whose init sets it and `favorite`, which reads it, in order.
 const FIRST_USE: &[FirstUse] = &[
     FirstUse {
         name: "first-use-function",
@@ -1084,6 +1085,14 @@ const FIRST_USE: &[FirstUse] = &[
         name: "first-use-static",
         logs: &["classes-static-properties"],
         prints: &[("static_properties::Simple::other()", "22")],
+    },
+    FirstUse {
+        name: "first-use-palette",
+        logs: &["module-state"],
+        prints: &[(
+            "module_state::Palette::warm()->name << \" \" << module_state::favorite()->name",
+            "p-warm p-warm",
+        )],
     },
 ];
 

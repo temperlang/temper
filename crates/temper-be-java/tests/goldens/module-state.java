@@ -1,5 +1,6 @@
 package module_state;
 
+import java.util.List;
 import java.util.logging.Logger;
 import temper.core.Core;
 import temper.core.Core.Console;
@@ -12,6 +13,8 @@ public final class ModuleStateGlobal {
     static final int limit;
     public static volatile int total;
     public static volatile int ticks;
+    static final List<String> prefixes;
+    public static final Palette favorite;
 
     static int bump() {
         synchronized (ModuleStateGlobal.class) {
@@ -31,6 +34,8 @@ public final class ModuleStateGlobal {
         return greeting + " " + bump() + " of " + limit + " " + total;
     }
 
+    static void initStatics() {}
+
     static {
         Console console = Core.getConsole(Logger.getLogger("module_state"));
         greeting = "hi";
@@ -39,9 +44,13 @@ public final class ModuleStateGlobal {
         total = 10;
         ticks = 0;
         int local = 1;
+        prefixes = List.of("p-");
+        Palette.warm = Palette.named("warm");
+        favorite = Palette.warm;
         local = local + limit;
         console.log(report());
         console.log(report());
         console.log("local " + local);
+        console.log(Palette.warm.name + " " + favorite.name);
     }
 }

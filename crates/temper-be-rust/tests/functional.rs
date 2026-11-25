@@ -485,7 +485,9 @@ const THREADS_MAIN: &str = "fn main() {
 /// A harness that calls libraries with no `init` first, which they run
 /// on the first read of a module-level value: `twice` reads none, so it
 /// runs no init, and `sum` initializes its library whole, each module
-/// after those it imports, as `magic_number` does its own.
+/// after those it imports, as `magic_number` does its own; reading
+/// `module-state`'s `Palette::warm` first runs its init, which sets it
+/// and `favorite`, which reads it, in order.
 const FIRST_USE: &str = "[package]
 name = \"first-use\"
 version = \"0.0.0\"
@@ -493,6 +495,7 @@ edition = \"2021\"
 
 [dependencies]
 modules = { path = \"../modules\" }
+module-state = { path = \"../module-state\" }
 values = { path = \"../values\" }
 ";
 
@@ -514,6 +517,8 @@ const FIRST_USE_MAIN: &str = "fn main() {
     println!(\"{}\", modules::sum(3));
     println!(\"{}\", values::exporter::magic_number());
     println!(\"{}\", values::times_magic(2));
+    let warm = module_state::Palette::warm().name();
+    println!(\"{warm} {}\", module_state::favorite().name());
 }
 ";
 
@@ -528,6 +533,8 @@ fn first_use_expected(cases: &[Case]) -> Vec<String> {
     out.push("17".into());
     out.extend(log("values"));
     out.extend(["42".to_string(), "84".to_string()]);
+    out.extend(log("module-state"));
+    out.push("p-warm p-warm".into());
     out
 }
 

@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java_statics.JavaStaticsGlobal;
 import java_statics.Policy;
+import module_state.ModuleStateGlobal;
+import module_state.Palette;
 import temper.core.Core;
 
 /**
@@ -13,7 +15,10 @@ import temper.core.Core;
  * for {@code functional.rs}'s {@code runs}: it loads {@code Policy} before
  * the module's class, reads its statics through their getters, and
  * lists the static fields code outside the package reaches, which
- * should be none.
+ * should be none. First it reads {@code module_state}'s
+ * {@code Palette.warm} before anything else of that module: its static
+ * block runs the module's init, which sets it and {@code favorite},
+ * which reads it, in order.
  */
 public final class Statics {
     private Statics() {}
@@ -26,13 +31,16 @@ public final class Statics {
     public static void main(String[] args) {
         Core.initSimpleLogging();
         Core.beginTopLevel();
+        Palette warm;
         Policy standard;
         try {
+            warm = Palette.getWarm();
             // Policy first: its static block runs the module's init.
             standard = Policy.getStandard();
         } finally {
             Core.endTopLevel();
         }
+        System.out.println("palette " + warm.getName() + " " + ModuleStateGlobal.favorite.getName());
         System.out.println("standard " + standard.getNames());
         System.out.println("default " + JavaStaticsGlobal.describe());
         System.out.println("textOnly [" + Policy.getTextOnly().getNames() + "]");

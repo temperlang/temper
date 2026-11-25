@@ -1102,7 +1102,7 @@ fn runs() {
             .output()
             .unwrap();
         let stdout = kit::printed(&read.stdout);
-        let expected = "hi 1 of 3 11\nhi 2 of 3 13\nlocal 4\n2\t13\thi\tnil\n";
+        let expected = "hi 1 of 3 11\nhi 2 of 3 13\nlocal 4\np-warm p-warm\n2\t13\thi\tnil\n";
         if !read.status.success() || stdout != expected {
             failures.push(format!(
                 "module-state's exports: expected {expected:?}, got {stdout:?}\n{}",

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Globalization;
 using TemperLang.Core;
 
@@ -10,6 +11,9 @@ public static class ModuleStateGlobal
     internal static readonly int limit;
     public static volatile int Total;
     public static volatile int Ticks;
+    internal static readonly IReadOnlyList<string> prefixes;
+    internal static readonly Palette paletteWarm;
+    public static readonly Palette Favorite;
     private static readonly object moduleLock = new();
 
     internal static int Bump()
@@ -44,9 +48,13 @@ public static class ModuleStateGlobal
         Total = 10;
         Ticks = 0;
         int local = 1;
+        prefixes = Listed.CreateReadOnlyList<string>("p-");
+        paletteWarm = Palette.Named("warm");
+        Favorite = paletteWarm;
         local = local + limit;
         console.Log(Report());
         console.Log(Report());
         console.Log("local " + local.ToString(CultureInfo.InvariantCulture));
+        console.Log(paletteWarm.Name + " " + Favorite.Name);
     }
 }

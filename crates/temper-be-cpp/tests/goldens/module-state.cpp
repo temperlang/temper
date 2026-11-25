@@ -10,12 +10,30 @@ namespace module_state {
 // optional.
 void global_init_init();
 
+struct Palette;
+
+struct Palette : public std::enable_shared_from_this<Palette> {
+ private:
+  struct temper_statics {
+    static temper::core::GlobalSlot<std::shared_ptr<Palette>> warm;
+  };
+  friend void global_init_init();
+
+ public:
+  temper::core::Str name;
+  static std::shared_ptr<Palette> const & warm();
+  static std::shared_ptr<Palette> make(temper::core::Str const & name);
+  static std::shared_ptr<Palette> named(temper::core::Str const & n);
+  temper::core::Str get_name() const;
+};
+
 // Storage, which the library reads and its init sets; read values
 // through the accessors below.
 namespace temper_globals {
 extern temper::core::GlobalSlot<temper::core::Str> greeting;
 extern temper::core::GlobalSlot<int32_t> total;
 extern temper::core::GlobalSlot<int32_t> ticks;
+extern temper::core::GlobalSlot<std::shared_ptr<Palette>> favorite;
 }  // namespace temper_globals
 
 temper::core::Str const & greeting();
@@ -25,6 +43,7 @@ int32_t total();
 // The module's functions write it, so this reads it under their
 // lock and gives a copy.
 int32_t ticks();
+std::shared_ptr<Palette> const & favorite();
 
 void tick();
 temper::core::Str report();
@@ -47,6 +66,8 @@ static core::GlobalSlot<int32_t> count;
 static core::GlobalSlot<int32_t> limit;
 core::GlobalSlot<int32_t> total;
 core::GlobalSlot<int32_t> ticks;
+static core::GlobalSlot<std::shared_ptr<std::vector<core::Str>>> prefixes;
+core::GlobalSlot<std::shared_ptr<Palette>> favorite;
 
 }  // namespace temper_globals
 
@@ -72,6 +93,34 @@ int32_t total() {
 int32_t ticks() {
   global_init_init();
   return load(temper_globals::ticks.value);
+}
+
+std::shared_ptr<Palette> const & favorite() {
+  global_init_init();
+  return temper_globals::favorite.value;
+}
+
+core::GlobalSlot<std::shared_ptr<Palette>> Palette::temper_statics::warm;
+
+std::shared_ptr<Palette> const & Palette::warm() {
+  global_init_init();
+  return Palette::temper_statics::warm.value;
+}
+
+std::shared_ptr<Palette> Palette::make(core::Str const & name) {
+  global_init_init();
+  std::shared_ptr<Palette> self = std::make_shared<Palette>();
+  self->name = name;
+  return self;
+}
+
+std::shared_ptr<Palette> Palette::named(core::Str const & n) {
+  global_init_init();
+  return Palette::make(core::List::get<core::Str>(temper_globals::prefixes.value, 0) + n);
+}
+
+core::Str Palette::get_name() const {
+  return this->name;
 }
 
 static int32_t bump() {
@@ -100,6 +149,9 @@ void global_init_init() {
     temper_globals::limit.construct();
     temper_globals::total.construct();
     temper_globals::ticks.construct();
+    temper_globals::prefixes.construct();
+    temper_globals::favorite.construct();
+    Palette::temper_statics::warm.construct();
     std::shared_ptr<core::Console::Type> console = core::Console::get_console();
     temper_globals::greeting.value = TEMPER_STR("hi");
     temper_globals::count.value = 0;
@@ -107,10 +159,14 @@ void global_init_init() {
     temper_globals::total.value = 10;
     temper_globals::ticks.value = 0;
     int32_t local = 1;
+    temper_globals::prefixes.value = core::List::make<core::Str>(TEMPER_STR("p-"));
+    Palette::temper_statics::warm.value = Palette::named(TEMPER_STR("warm"));
+    temper_globals::favorite.value = Palette::temper_statics::warm.value;
     local = core::Int::add(local, temper_globals::limit.value);
     core::Console::log(console, report());
     core::Console::log(console, report());
     core::Console::log(console, "local " + std::to_string(local));
+    core::Console::log(console, Palette::temper_statics::warm.value->name + " " + temper_globals::favorite.value->name);
   });
 }
 
