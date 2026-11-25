@@ -16,9 +16,11 @@ on:
   push:
     branches: [pr-stats]
 
-# Read-only token: nothing here writes to the repository.
+# Read-only token: nothing here writes to the repository; it lists open
+# pull requests.
 permissions:
   contents: read
+  pull-requests: read
 
 # A newer push cancels the older run.
 concurrency:
@@ -29,9 +31,14 @@ env:
   PROFILE: small
 
 jobs:
-  # branches.txt as a JSON list of {branch, base} for the matrix: each
-  # line is a branch, optionally followed by its base branch (default
-  # main); blank lines and lines starting with # are skipped.
+  # The branches to measure, as a JSON list of {branch, base} for the
+  # matrix: every open pull request of this repository's own branches
+  # into main, drafts included (not Dependabot's, nor ones into the
+  # Kotlin compiler's branches, which don't build `temper`); then
+  # branches.txt, whose
+  # lines add branches without a pull request (each a branch, optionally
+  # followed by its base branch, default main; blank lines and lines
+  # starting with # are skipped) or override a pull request's base.
   branches:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -44,18 +51,33 @@ jobs:
           sparse-checkout-cone-mode: false
       - id: list
         shell: python3 {0}
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          import json, os, re
-          jobs = []
+          import json, os, re, subprocess
+          name = re.compile(r"[A-Za-z0-9._/-]+")
+          bases = {}
+          pulls = subprocess.run(
+              ["gh", "api", "--paginate", f"repos/{os.environ['GITHUB_REPOSITORY']}/pulls?state=open&per_page=100",
+               "--jq", ".[] | select(.head.repo.full_name == .base.repo.full_name and .base.ref == \"main\""
+                         + " and (.head.ref | startswith(\"dependabot/\") | not)) | [.head.ref, .base.ref] | @tsv"],
+              check=True, capture_output=True, text=True,
+          ).stdout
+          for line in pulls.splitlines():
+              branch, base = line.split("\t")
+              if name.fullmatch(branch) and name.fullmatch(base):
+                  bases[branch] = base
           for number, line in enumerate(open("branches.txt"), 1):
               words = line.split()
               if not words or words[0].startswith("#"):
                   continue
-              if len(words) > 2 or not all(re.fullmatch(r"[A-Za-z0-9._/-]+", w) for w in words):
+              if len(words) > 2 or not all(name.fullmatch(w) for w in words):
                   raise SystemExit(f"branches.txt:{number}: expected BRANCH [BASE], got {line.strip()!r}")
-              jobs.append({"branch": words[0], "base": words[1] if len(words) > 1 else "main"})
+              bases[words[0]] = words[1] if len(words) > 1 else bases.get(words[0], "main")
+          jobs = [{"branch": branch, "base": base} for branch, base in sorted(bases.items())]
           if not jobs:
-              raise SystemExit("branches.txt lists no branches")
+              raise SystemExit("no open pull requests, and branches.txt lists no branches")
+          print("\n".join(f"{j['branch']} against {j['base']}" for j in jobs))
           with open(os.environ["GITHUB_OUTPUT"], "a") as out:
               out.write(f"list={json.dumps(jobs)}\n")
 

@@ -8,7 +8,9 @@ tiny and can be reused for other simple CI tasks like this one.
 
 ## What it measures
 
-For each branch in `branches.txt`, one CI job builds `temper` from the
+For each open pull request of this repository's own branches (drafts
+included, each against its base branch) and each branch in
+`branches.txt`, one CI job builds `temper` from the
 branch and from its merge-base with `main` (the `small` profile, which
 is what's released) on the same runner and runs `measure.py`, which
 compares them, alternating which runs first, with five runs of each.
@@ -31,10 +33,12 @@ information, how many commits the branch is behind `main`.
 
 ## Use
 
-1. Edit `branches.txt`: one branch per line; `#` starts a comment. For
-   a branch stacked on another, put its base branch after it, as
-   `error-custom-kinds error-common-ground`; it's then measured against
-   its merge-base with that branch.
+1. Open pull requests, drafts included, are found by themselves. Edit
+   `branches.txt` only for branches without a pull request, or to give
+   a branch a different base: one branch per line; `#` starts a
+   comment. For a branch stacked on another, put its base branch after
+   it, as `error-custom-kinds error-common-ground`; it's then measured
+   against its merge-base with that branch.
 2. Commit and push to `pr-stats`. The push runs
    `.github/workflows/pr-stats.yml` (`workflow_dispatch` works only for
    workflows on the default branch, so a push is the trigger).
