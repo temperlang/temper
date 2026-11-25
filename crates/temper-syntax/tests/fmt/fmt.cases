@@ -1,0 +1,536 @@
+# `temper fmt` cases: input, then `--- formatted` and the expected output,
+# or `error: ` and the message for input left alone.
+# Format and updating: see tests/fmt.rs.
+
+=== already formatted
+let f(x: Int): Int {
+  // A comment.
+  x + 1
+}
+--- formatted
+let f(x: Int): Int {
+  // A comment.
+  x + 1
+}
+
+=== indentation by brackets
+class C {
+    let a: Int;
+      public f(): Void {
+  if (a > 0) {
+              g(
+     1,
+   2,
+                );
+        }
+    }
+}
+--- formatted
+class C {
+  let a: Int;
+  public f(): Void {
+    if (a > 0) {
+      g(
+        1,
+        2,
+      );
+    }
+  }
+}
+
+=== continuation lines indent from the statement's first line, once after an operator
+  let x = a &&
+      b;
+    let y = foo
+    .bar()
+      .baz();
+let z = first
++ second
+        + third;
+let w =
+  if (c) {
+  a
+  } else {
+  b
+  };
+--- formatted
+let x = a &&
+  b;
+let y = foo
+  .bar()
+  .baz();
+let z = first
+  + second
+  + third;
+let w =
+  if (c) {
+    a
+  } else {
+    b
+  };
+
+=== comment lines indent as the code after them
+let x = a &&
+// why b
+b;
+let y = foo
+// then bar
+.bar();
+let f(): Int {
+  g()
+      // before the end of a block
+}
+1 + 2 == 3
+// ✅
+--- formatted
+let x = a &&
+  // why b
+  b;
+let y = foo
+  // then bar
+  .bar();
+let f(): Int {
+  g()
+  // before the end of a block
+}
+1 + 2 == 3
+// ✅
+
+=== statements without a `;` between them don't continue each other
+let format(regex: Int): String {
+  pushRegex(regex)
+      out.toString()
+}
+--- formatted
+let format(regex: Int): String {
+  pushRegex(regex)
+  out.toString()
+}
+
+=== in parentheses, `;` ends a statement if their contents start on a line of their own
+for (
+    var index = String.begin;
+        value.hasIndex(index);
+  index = value.next(index)
+) {
+  f(index);
+}
+for (var i = 0;
+  i < n;
+  i += 1) {
+  f(i);
+}
+--- formatted
+for (
+  var index = String.begin;
+  value.hasIndex(index);
+  index = value.next(index)
+) {
+  f(index);
+}
+for (var i = 0;
+    i < n;
+    i += 1) {
+  f(i);
+}
+
+=== contents indent from the statement's first line, also after a header's continuation
+for (var i = 0;
+    i < n;
+    i += 1) {
+      f(i);
+    }
+class GeneratorFnWrapper<YIELD>
+extends Generator<YIELD> {
+      let x: Int;
+}
+let f(): Int
+  throws Bubble {
+    1
+  }
+--- formatted
+for (var i = 0;
+    i < n;
+    i += 1) {
+  f(i);
+}
+class GeneratorFnWrapper<YIELD>
+    extends Generator<YIELD> {
+  let x: Int;
+}
+let f(): Int
+    throws Bubble {
+  1
+}
+
+=== hugged block argument
+foo(a, fn {
+      body();
+    });
+list.forEach { (x: Int): Void =>
+      console.log(x.toString());
+}
+--- formatted
+foo(a, fn {
+  body();
+});
+list.forEach { (x: Int): Void =>
+  console.log(x.toString());
+}
+
+=== decorators don't continue
+class C {
+  @connected
+    public f(): Void;
+}
+--- formatted
+class C {
+  @connected
+  public f(): Void;
+}
+
+=== declarations after decorator lines, with arguments or stacked, don't continue them
+@connected("C::f")
+  export let f(): Void;
+@a
+@b(1)
+    export class D {
+  @json
+    let x: Int;
+}
+--- formatted
+@connected("C::f")
+export let f(): Void;
+@a
+@b(1)
+export class D {
+  @json
+  let x: Int;
+}
+
+=== spacing around operators and punctuation
+let x=a+b*c-d;
+let y:Int = f( a ,b )[ 0 ];
+if(x==y&& !z){ g() }
+let h = fn(a: Int): Int { a };
+let s = a . b?.c;
+let t: List<Int> = [1,2];
+--- formatted
+let x = a + b * c - d;
+let y: Int = f(a, b)[0];
+if (x == y && !z) { g() }
+let h = fn (a: Int): Int { a };
+let s = a.b?.c;
+let t: List<Int> = [1, 2];
+
+=== a comma after `extends` separates super types, as any comma does
+class C extends A , B {}
+interface I<T> extends A,B<T> {}
+--- formatted
+class C extends A, B {}
+interface I<T> extends A, B<T> {}
+
+=== angle brackets with a comment keep their line breaks, and indent as brackets do
+let h<
+// Type parameters go here.
+  T,
+    >(x: T): T { x }
+let j: Map<
+  // Keys, then values.
+  String, Int
+  > = m;
+--- formatted
+let h<
+  // Type parameters go here.
+  T,
+>(x: T): T { x }
+let j: Map<
+  // Keys, then values.
+  String, Int
+> = m;
+
+=== spacing leaves words, unary minus and empty braces
+let  x = - 1;
+let y = -x - -z;
+let z = {};
+let w = f({ a: 1 });
+--- formatted
+let x = -1;
+let y = -x - -z;
+let z = {};
+let w = f({ a: 1 });
+
+=== blank lines collapse, but stay at block edges; none at file start
+
+
+let a = 1;
+
+
+
+let b = 2;
+let f(): Void {
+
+  g();
+
+  h();
+
+}
+--- formatted
+let a = 1;
+
+let b = 2;
+let f(): Void {
+
+  g();
+
+  h();
+
+}
+
+=== trailing space and final newline
+let a = 1;   
+let b = 2;
+--- formatted
+let a = 1;
+let b = 2;
+
+=== comments stay, block comments move with their line
+    /**
+     * Doc.
+     */
+    let f(): Void {
+        g(); // trailing   comment
+            /* inside */ h();
+    }
+--- formatted
+/**
+ * Doc.
+ */
+let f(): Void {
+  g(); // trailing   comment
+  /* inside */ h();
+}
+
+=== multi-quoted strings move with their statement
+    let s = """
+        "Hello,  ${name}!
+        "  Bye.
+    ;
+--- formatted
+let s = """
+    "Hello,  ${name}!
+    "  Bye.
+;
+
+=== strings are never changed
+let s = "a  +  b";
+let t = "${x}  ${y} ";
+--- formatted
+let s = "a  +  b";
+let t = "${x}  ${y} ";
+
+=== interpolations on one line are tight, inside their own `{ }` too
+let a = "hi, ${name}";
+let b = "hi, ${ name }!";
+let c = "${   f( x )   }";
+let d = "${ "inner ${ x } and ${y}" } ${ z }";
+let e = "${ f({ a: 1 }) }";
+let g = "${ xs.map { x => x + 1 } }";
+let h = """
+    "Hello, ${ name }!
+;
+--- formatted
+let a = "hi, ${name}";
+let b = "hi, ${name}!";
+let c = "${f(x)}";
+let d = "${"inner ${x} and ${y}"} ${z}";
+let e = "${f({ a: 1 })}";
+let g = "${xs.map { x => x + 1 }}";
+let h = """
+    "Hello, ${name}!
+;
+
+=== interpolations over several lines keep their line breaks, tight at the ends
+let a = "${
+      name
+    }";
+let b = "${ f(
+  a, b
+) } and ${ g({
+  a: 1,
+}) }";
+let c = "sum: ${ x +
+y }";
+--- formatted
+let a = "${
+  name
+}";
+let b = "${f(
+  a, b
+)} and ${g({
+  a: 1,
+})}";
+let c = "sum: ${x +
+  y}";
+
+=== quasi-quotes space as their plain brackets: `\( )` as `( )`, `\{ }` as `{ }`
+let a = \( x+1 );
+let b = \(  f( x ,y )  );
+let c = \{f(x); g(y)};
+let d = \{   a+b   };
+let e = \{ f(${ x }); };
+let f = [\( a ), \{b}];
+--- formatted
+let a = \(x + 1);
+let b = \(f(x, y));
+let c = \{ f(x); g(y) };
+let d = \{ a + b };
+let e = \{ f(${x}); };
+let f = [\(a), \{ b }];
+
+=== quasi-quotes over several lines indent and lay out lists as plain brackets do
+let a = \{
+    let x = 1;
+      f(x)
+};
+let b = \(
+  a +
+  b);
+let c = \(g(
+  a,
+  b,
+));
+let d = \(f(
+  a, b)
+);
+let e = \{ a,
+  b };
+let f = \{ a, b,
+  c, };
+--- formatted
+let a = \{
+  let x = 1;
+  f(x)
+};
+let b = \(
+  a +
+    b
+);
+let c = \(g(
+  a,
+  b,
+));
+let d = \(f(
+  a, b
+));
+let e = \{ a, b };
+let f = \{
+  a,
+  b,
+  c,
+};
+
+=== `\u{ }` runs are string content: their spaces stay, but code in their holes is spaced
+let a = "\u{41,42} and \u{ 41 } and \u{41, 42}";
+let b = "tab\t\u{1F600}${ x }\u{20,${ "y" },21}\n";
+let c = """
+    "\u{41,42}  ${ f( x ) }  \u{ 43 }
+;
+--- formatted
+let a = "\u{41,42} and \u{ 41 } and \u{41, 42}";
+let b = "tab\t\u{1F600}${x}\u{20,${"y"},21}\n";
+let c = """
+    "\u{41,42}  ${f(x)}  \u{ 43 }
+;
+
+=== code that doesn't parse is left alone
+let f(x: Int {
+  x
+--- formatted
+error: doesn't parse (line 2: `{` from line 1 is never closed); left as written
+
+=== literate files change only Temper code (markdown)
+# Title  
+
+Some   prose,  left alone.   
+
+    let x=1;
+        let y = 2;
+
+```temper
+f( x )
+```
+
+```temper inert
+f( x )
+```
+
+```js
+f( x )
+```
+
+--- formatted
+# Title  
+
+Some   prose,  left alone.   
+
+    let x = 1;
+    let y = 2;
+
+```temper
+f(x)
+```
+
+```temper inert
+f( x )
+```
+
+```js
+f( x )
+```
+
+=== literate blocks continue each other's brackets (markdown)
+A class:
+
+    export class C(
+        public a: Int,
+
+The second property:
+
+          public b: Int,
+    ) {}
+
+--- formatted
+A class:
+
+    export class C(
+      public a: Int,
+
+The second property:
+
+      public b: Int,
+    ) {}
+
+=== brackets on expression continuation lines indent from that line
+let x = foo
+  .map { (s: String): String =>
+      s + "!"
+    }
+  .join(", ");
+if (a &&
+    b && (
+  c || d)) {
+    e();
+}
+--- formatted
+let x = foo
+  .map { (s: String): String =>
+    s + "!"
+  }
+  .join(", ");
+if (a &&
+    b && (
+      c || d
+    )) {
+  e();
+}

@@ -61,7 +61,7 @@
 106:1 -> ../basics.temper.md:60:5  if (neq(negativeZero, zero)) <- if (neq(negativeZero, zero))
 107:3 -> ../basics.temper.md:61:7  console.log("zeroes not equa <- console.log("zeroes not equa
 109:1 -> ../basics.temper.md:63:5  if (lt(negativeZero, zero)) <- if (lt(negativeZero, zero))
-110:3 -> ../basics.temper.md:64:5  console.log("negZero < zero" <- console.log("negZero < zero"
+110:3 -> ../basics.temper.md:64:7  console.log("negZero < zero" <- console.log("negZero < zero"
 112:1 -> ../basics.temper.md:66:5  if (eqFloat64(zero - zero, z <- if (zero - zero == zero) {
 113:3 -> ../basics.temper.md:67:7  console.log("zero subtractio <- console.log("zero subtractio
 115:1 -> ../basics.temper.md:69:5  if (eqFloat64(zero + zero, z <- if (zero + zero == zero) {

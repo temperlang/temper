@@ -404,6 +404,7 @@ that are super-types for the produced function value.
 The signature is followed by the double-semicolon token (`;;`) which is
 distinct from two, space-separated semicolons (`; ;`).
 
+<!-- fmt: off -->
 ```temper
 someFunction /* <- callee */ {
   (x): ReturnType               // <- Optional signature
@@ -1075,7 +1076,7 @@ content from the expression, and the content after.
 
 ```temper
 "foo ${"bar"} baz"
-== "foo bar baz"
+  == "foo bar baz"
 // ✅
 ```
 
@@ -1087,7 +1088,7 @@ such as *Int*.
 ```temper
 let two = 2;
 "one ${two} three"
-== "one 2 three"
+  == "one 2 three"
 // ✅
 ```
 
@@ -1111,7 +1112,7 @@ easier.
 "A very long string ${
   // Breaking this string across multiple lines.
 }that runs on and on"
-== "A very long string that runs on and on"
+  == "A very long string that runs on and on"
 // ✅
 ```
 
@@ -1122,7 +1123,7 @@ the end of a line in a multi-quoted string.
 """
 "Line 1
 ~Line 2 ${}
-== "Line 1\nLine 2 "
+  == "Line 1\nLine 2 "
 // ✅
 ```
 

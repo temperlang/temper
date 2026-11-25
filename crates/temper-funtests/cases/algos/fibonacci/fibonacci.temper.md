@@ -15,9 +15,9 @@ A straightforward implementation of the fibonacci series.
     };
     var zero = 0;
     zero = zero;
-    console.log("fib(1)=${ fib(zero + 1) }");
-    console.log("fib(10)=${ fib(zero + 10) }");
-    console.log("fib(20)=${ fib(zero + 20) }");
+    console.log("fib(1)=${fib(zero + 1)}");
+    console.log("fib(10)=${fib(zero + 10)}");
+    console.log("fib(20)=${fib(zero + 20)}");
 
 Expected output:
 

@@ -2,8 +2,8 @@
 
 `temper lsp` is a language server: an editor starts it, talks to it
 over stdin and stdout, and gets errors as you type, hover, go to
-definition, completion, find references, rename, an outline, and
-signature help. It answers from the same
+definition, completion, find references, rename, an outline,
+signature help, and formatting. It answers from the same
 [`Analysis`](../../crates/temper-analysis/src/lib.rs) as the
 [playground](08-playground.md#editor-queries), so both always agree.
 `editors/vscode/` holds a VS Code extension that starts it, with
@@ -95,6 +95,22 @@ Each is a method of `Analysis`, shared by the server and the playground:
   brackets open at the cursor from the text
   ([`open_brackets`](../../crates/temper-analysis/src/signatures.rs)),
   since a call being typed hasn't settled into a call yet.
+
+Formatting isn't a query of `Analysis`: it's
+[`temper fmt`](../../notes/fmt.md)'s, over the open text alone, reusing
+its unit's parse when that's current. Its edits are the runs of changed
+lines ([`line_edits`](../../crates/temper-lsp/src/lib.rs), Myers' diff),
+for the whole document or those within a range's lines
+([`clip`](../../crates/temper-lsp/src/lib.rs): a run that keeps its
+number of lines line for line, one that joins or splits lines only if
+the range holds all of it; a range ending at a line's character 0
+leaves that line out, as a selection of whole lines ends there), so
+`formatOnSaveMode: "modifications"` touches only what changed. A
+document formatting refuses gets no edits and no error. One that
+doesn't parse gets nothing more, as its syntax error is already a
+diagnostic; otherwise (a lone `\r`, or a bug) a `window/showMessage`
+warning says why, once for each version of the document. The VS Code extension formats on save by
+default.
 
 How a query finds what's at a position:
 [temper-analysis, in detail](detail/09-language-server.md#finding-whats-at-a-position).

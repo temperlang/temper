@@ -27,8 +27,11 @@ gives.
     export let Callout = fn (String, Boolean): Void;
     let ignore(problem: String, isError: Boolean): Void { if (isError) { console.log(problem); } }
     export let propagateOver(
-      p: Propagator, before: Boolean, known: String?,
-      same: fn (Boolean, Boolean): Boolean, callout: Callout,
+      p: Propagator,
+      before: Boolean,
+      known: String?,
+      same: fn (Boolean, Boolean): Boolean,
+      callout: Callout,
     ): After {
       if (known == null) { return new After([], before); }
       if (known == "!") { return new After([new EventParseEffect(new Mark("bang"))], before); }

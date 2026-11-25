@@ -25,6 +25,8 @@
 # CI (ci.yml) tests `temper test` and `build` on small fixtures instead
 # (notes/test-speed.md, "Real libraries, nightly").
 #
+# And `temper fmt`'s fuzzing with a new seed each night (`fmt-fuzz`).
+#
 # And an early warning for the checkers of generated code: the backends'
 # tests with the latest TypeScript, pyright, mypy, or LuaLS in place of
 # the version ci.yml pins, one job each, so a failure names its checker.
@@ -281,6 +283,26 @@ jobs:
           CHECKER: ${{ matrix.checker }}
           VERSIONS: ${{ steps.checkers.outputs.versions }}
           TEMPER_REQUIRE_CHECKERS: "1"
+
+  # `temper fmt`'s fuzzing (temper-syntax's tests/fmt.rs) with a new seed
+  # each night and many more rounds than ci.yml's fixed seed, so it keeps
+  # finding new inputs, not only those the commit that tuned it saw. A
+  # failure names its seed; `FMT_FUZZ_SEED=<seed> FMT_FUZZ_ROUNDS=500`
+  # repeats it.
+  fmt-fuzz:
+    if: github.event_name != 'schedule' || github.event.schedule == '41 3 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@cfcaf53ba4c621917ec7f78a66bff7a8848ddad4 # 1.85.0 branch, 2026-10-16
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - name: Fuzzing with a new seed
+        run: |
+          seed=$(date +%s)
+          echo "FMT_FUZZ_SEED=$seed"
+          FMT_FUZZ_SEED=$seed FMT_FUZZ_ROUNDS=500 cargo test --locked --release \
+            -p temper-syntax --test fmt mutated_inputs_format_safely -- --nocapture
 
   # The platforms binaries.yml releases for but Linux x64, which ci.yml
   # covers on every push, natively, on each OS and architecture's own

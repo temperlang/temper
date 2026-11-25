@@ -13,6 +13,7 @@ what isn't available yet says so.
 | [`run`](#run) | Builds the work root, then runs a library's top level with a backend's language |
 | [`repl`](repl.md) | An interactive shell for Temper (a backend language's own, with `-b`, isn't available yet) |
 | [`init`](#init) | Creates a new library: a `config.temper.md` and a first source file |
+| [`fmt`](#fmt) | Lays out Temper source in the standard style |
 | [`serve`](#serve-or-lsp) | Starts the language server for an editor, over standard input and output; `lsp` is the same |
 | [`version`](#version-license-and-licenses), `license`, `licenses` | About the tool itself |
 | [`help`](#help) | The commands, or one command's options |
@@ -31,7 +32,7 @@ the same wherever they're taken:
 | Option | Taken by | Meaning |
 |---|---|---|
 | `-w DIR`, `--workroot DIR` | `build`, `test`, `run`, `repl` | The [work root](#the-work-root) |
-| `-ign FILE`, `--ignorefile FILE` | `build`, `test`, `run`, `repl` | An [ignore file](#ignore-files) with the last word |
+| `-ign FILE`, `--ignorefile FILE` | `build`, `test`, `run`, `repl`, `fmt` | An [ignore file](#ignore-files) with the last word |
 | `-b BACKEND`, `--backend BACKEND` | `build`, `test`, `run` | A backend: `cpp`, `csharp`, `java`, `js`, `lua`, `py`, or `rust` ([target languages](../backends/README.md)), or `interp`, the interpreter, for `test` and `run`. `build` and `test` take it more than once |
 | `--no-connected` | `build`, `test`, `run` | Use the Temper bodies of `@connected` functions, where they have them, instead of each language's own code |
 | `-v`, `--verbose` | `build`, `test`, `run` | Say more: what was written, every test's result, what the code logs, and [hints](#diagnostics) |
@@ -196,6 +197,36 @@ directory's name, dashed (`MyProj` gives `my-proj`), byte for byte as
 earlier releases write them. It fails, writing nothing, if `DIR`
 already has a `src` directory or a `config.temper.md`.
 
+## `fmt`
+
+    temper fmt [--check] [-ign FILE] [PATH]...
+
+Lays out each `.temper` and `.temper.md` file named, or under each
+directory named (the current one by default, skipping `temper.out`,
+`temper.keep`, hidden directories, symbolic links, and what
+[ignore files](#ignore-files) list), in the standard style, rewriting
+only the files that change, each whole or not at all. In `.temper.md` files, only Temper code
+blocks change; prose is left exactly as written. With `--check`, it
+changes nothing, lists the files that need formatting, says how many
+files it checked, and exits with 1 if any need formatting, for CI.
+
+It has no style options and no line width: it sets spacing,
+indentation, and blank lines, keeps line breaks as written except in
+bracketed lists (laid out by their trailing commas and line breaks),
+and never changes strings or prose, or comments' text beyond trailing
+space and their lines' indentation.
+[Formatting rules](fmt.md) has each rule, with examples.
+
+Code that doesn't parse is left as written, with an error and exit
+status 1, and it checks its own work: if formatting would change a
+file's tokens, comments, or parse tree, it leaves the file alone and
+says so.
+
+`--ignorefile FILE` skips more under the directories named, as for
+`build`, with each directory named in place of the work root, and a
+directory named that it lists; files named are formatted all the same.
+[Formatting rules](fmt.md#what-it-leaves-out) has an example.
+
 ## `serve`, or `lsp`
 
     temper serve --port N [--tokens add|full|none]
@@ -289,7 +320,7 @@ unchanged.
 | Code | Meaning |
 |---|---|
 | 0 | Success |
-| 1 | Failure: errors in the code, a test that failed or didn't run, a library that didn't build, or a backend this build of `temper` was built without |
+| 1 | Failure: errors in the code, a test that failed or didn't run, a library that didn't build, a backend this build of `temper` was built without, or a file `fmt` couldn't format (or, with `--check`, that needs formatting) |
 | 2 | A usage error: an unknown command or option, a missing value, or a backend that doesn't exist |
 | 3 | Not available yet: `watch`, `doc`, `repl -b`, a backend of earlier releases, or `serve --port` |
 | 101 | A bug in Temper: it panicked, saying where on standard error. Please report it with what you ran |

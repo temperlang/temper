@@ -26,7 +26,7 @@
 52:7 -> ../json-syntax-tree.temper.md:47:40  bubbled = true; <- bubbled = true; }
 54:5 -> ../json-syntax-tree.temper.md:48:7  const error = p.jsonError; <- let error = p.jsonError;
 55:5 -> ../json-syntax-tree.temper.md:49:7  console.log(`\`${s2}\` has${ <- console.log(
-58:1 -> ../json-syntax-tree.temper.md:69:6  const selectCodePoints = "\x <- let selectCodePoints = "\x00
+58:1 -> ../json-syntax-tree.temper.md:69:5  const selectCodePoints = "\x <- let selectCodePoints = "\x00
 59:1 -> ../json-syntax-tree.temper.md:76:5  { <- do {
 60:3 -> ../json-syntax-tree.temper.md:77:7  const p2 = new JsonTextProdu <- let p = new JsonTextProducer
 61:3 -> ../json-syntax-tree.temper.md:78:7  p2.stringValue(selectCodePoi <- p.stringValue(selectCodePoin
@@ -67,7 +67,7 @@
 102:3 -> ../json-syntax-tree.temper.md:143:7  const int64OrNullAdapter = n <- let int64OrNullAdapter = new
 103:3 -> ../json-syntax-tree.temper.md:144:7  const z = int64OrNullAdapter <- let z: Int64? = int64OrNullA
 104:3 -> ../json-syntax-tree.temper.md:145:7  console.log(`z ?? -1 -> ${(z <- console.log("z ?? -1 -> ${z
-106:1 -> ../json-syntax-tree.temper.md:160:6  const normalJson = new JsonT <- let normalJson = new JsonTex
-107:1 -> ../json-syntax-tree.temper.md:161:6  parseJsonToProducer('{\n  "f <- parseJsonToProducer(
-108:1 -> ../json-syntax-tree.temper.md:173:6  console.log("Normalized:"); <- console.log("Normalized:");
-109:1 -> ../json-syntax-tree.temper.md:174:6  console.log(normalJson.toJso <- console.log(normalJson.toJso
+106:1 -> ../json-syntax-tree.temper.md:160:5  const normalJson = new JsonT <- let normalJson = new JsonTex
+107:1 -> ../json-syntax-tree.temper.md:161:5  parseJsonToProducer('{\n  "f <- parseJsonToProducer(
+108:1 -> ../json-syntax-tree.temper.md:173:5  console.log("Normalized:"); <- console.log("Normalized:");
+109:1 -> ../json-syntax-tree.temper.md:174:5  console.log(normalJson.toJso <- console.log(normalJson.toJso

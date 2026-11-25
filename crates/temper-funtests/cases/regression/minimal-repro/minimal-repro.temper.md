@@ -2,21 +2,21 @@
 
     let ls: List<Int> = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-    console.log("All  ${ (ls.join(", ") { x => x.toString() }) }");
+    console.log("All  ${(ls.join(", ") { x => x.toString() })}");
 
     console.log("Even ${
       (ls.filter { x => (x & 1) == 0 }
-        .join(", ") { x => x.toString() })
+          .join(", ") { x => x.toString() })
     }");
 
     console.log("Odd  ${
       (ls.filter { x => (x & 1) != 0 }
-        .join(", ") { x => x.toString() })
+          .join(", ") { x => x.toString() })
     }");
 
     console.log("Neg  ${
-      (ls.map {(x): Int => -x }
-        .join(", ") { x => x.toString() })
+      (ls.map { (x): Int => -x }
+          .join(", ") { x => x.toString() })
     }");
 
     let strs = "1 ; 2 ; 3".split(" ; ");

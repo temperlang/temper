@@ -1,0 +1,8 @@
+# What `temper fmt --check --ignorefile .fmtignore` leaves out, in CI's
+# lint job: gitignore patterns, from this directory
+# (docs/tools/cli.md#ignore-files). The docs' examples, in plain
+# Markdown, are compat/fmt_doc_examples.py's.
+
+# Code that doesn't parse, on purpose: code with errors still translates
+# and runs.
+/crates/temper-be-testkit/programs/errors.temper.md

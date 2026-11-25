@@ -1,0 +1,690 @@
+# `temper fmt` cases for line rules: blank lines, continuation indent
+# (twice in any header, function literals' included, from the header's
+# first line, and in parentheses whose contents start on the `(` line, as
+# conditions' do; else once), and lines starting with `;` or `,`.
+# Format and updating: see tests/fmt.rs.
+
+=== blank lines are the author's, but runs collapse to one
+class A {
+
+  let x: Int;
+
+
+
+  let y: Int;
+
+}
+let f(): Void {
+  g(
+
+    a,
+
+  );
+}
+--- formatted
+class A {
+
+  let x: Int;
+
+  let y: Int;
+
+}
+let f(): Void {
+  g(
+
+    a,
+
+  );
+}
+
+=== a trailing comment ending in `{` doesn't open a block
+class A {} // x {
+
+class B {}
+let c = 1; // (
+
+let d = 2;
+--- formatted
+class A {} // x {
+
+class B {}
+let c = 1; // (
+
+let d = 2;
+
+=== a declaration's header continued before its `{` indents twice
+class GeneratorFnWrapper<@out YIELD extends AnyValue>
+extends Generator<YIELD> {
+  private let generatorFn: Int;
+}
+interface Shape
+  extends Equatable {
+  area(): Float64;
+}
+export let parseAll(
+  text: String,
+  limit: Int,
+): List<Int>
+throws Bubble {
+  1
+}
+let f(): Int throws Bubble |
+  Other {
+  1
+}
+class Box {
+  public get(i: Int): Int
+  throws Bubble {
+    i
+  }
+}
+let g = fn (x: Int): Int
+throws Bubble {
+  x
+};
+--- formatted
+class GeneratorFnWrapper<@out YIELD extends AnyValue>
+    extends Generator<YIELD> {
+  private let generatorFn: Int;
+}
+interface Shape
+    extends Equatable {
+  area(): Float64;
+}
+export let parseAll(
+  text: String,
+  limit: Int,
+): List<Int>
+    throws Bubble {
+  1
+}
+let f(): Int throws Bubble |
+    Other {
+  1
+}
+class Box {
+  public get(i: Int): Int
+      throws Bubble {
+    i
+  }
+}
+let g = fn (x: Int): Int
+    throws Bubble {
+  x
+};
+
+=== function literals' headers in brackets indent twice too, from their first line
+let f(): Void {
+  run(fn (x: Int): Int
+    throws Bubble {
+    x
+  });
+  run(a, fn (x: Int): Int
+  throws Bubble {
+    x
+  }, b);
+  run(
+    fn (x: Int): Int
+    throws Bubble {
+      x
+    },
+  );
+  let fs = [fn (x: Int): Int
+  throws Bubble {
+    x
+  }];
+  run(fn (
+    x: Int,
+  ): Int
+  throws Bubble {
+    x
+  });
+}
+--- formatted
+let f(): Void {
+  run(fn (x: Int): Int
+      throws Bubble {
+    x
+  });
+  run(a, fn (x: Int): Int
+      throws Bubble {
+    x
+  }, b);
+  run(
+    fn (x: Int): Int
+        throws Bubble {
+      x
+    },
+  );
+  let fs = [fn (x: Int): Int
+      throws Bubble {
+    x
+  }];
+  run(fn (
+    x: Int,
+  ): Int
+      throws Bubble {
+    x
+  });
+}
+
+=== a code line that would close its fence keeps its indentation (markdown)
+```
+let a = b
+    ```c`
+```
+
+--- formatted
+```
+let a = b
+    ```c`
+```
+
+=== a line starting a function literal continues its statement once
+let g =
+    fn (x: Int): Int { x };
+let h = f(x) ??
+fn (x: Int): Int { x };
+let k =
+fn (x: Int): Int
+throws Bubble {
+  x
+};
+--- formatted
+let g =
+  fn (x: Int): Int { x };
+let h = f(x) ??
+  fn (x: Int): Int { x };
+let k =
+  fn (x: Int): Int
+      throws Bubble {
+    x
+  };
+
+=== continuations in a header's own brackets: twice in `( )` whose contents start on its line, else once
+let f(x: Int
+    | Null): Int {
+  1
+}
+class C<T extends
+    Foo> {}
+let g(
+  cb: fn (Int): Int =
+          fn (x: Int): Int { x },
+): Int {
+  1
+}
+--- formatted
+let f(x: Int
+    | Null): Int {
+  1
+}
+class C<T extends
+  Foo> {}
+let g(
+  cb: fn (Int): Int =
+    fn (x: Int): Int { x },
+): Int {
+  1
+}
+
+=== other continuation lines indent once, before a word or operand too
+let n = new
+Foo(
+  a,
+);
+let m = await
+    g();
+let s = list
+[0];
+--- formatted
+let n = new
+  Foo(
+    a,
+  );
+let m = await
+  g();
+let s = list
+  [0];
+
+=== a break at a word operator indents once
+console.log(
+  do { f() }
+      orelse 0
+);
+let a = do { f() } orelse
+g();
+let b = do {
+  f()
+}
+orelse 0;
+let c = x is
+    Foo;
+let d = x
+as Foo;
+let e = k
+    in m;
+--- formatted
+console.log(
+  do { f() }
+    orelse 0
+);
+let a = do { f() } orelse
+  g();
+let b = do {
+  f()
+}
+  orelse 0;
+let c = x is
+  Foo;
+let d = x
+  as Foo;
+let e = k
+  in m;
+
+=== a break at an operator indents once
+let a =
+      first;
+let b = foo
+        .bar()
+  ?.baz();
+let c = x +
+    y -
+z;
+let d = x
+    + y
+        * z;
+let e = p &&
+q ||
+  r;
+when (s) {
+  1 ->
+      f();
+  else ->
+      g();
+}
+--- formatted
+let a =
+  first;
+let b = foo
+  .bar()
+  ?.baz();
+let c = x +
+  y -
+  z;
+let d = x
+  + y
+  * z;
+let e = p &&
+  q ||
+  r;
+when (s) {
+  1 ->
+    f();
+  else ->
+    g();
+}
+
+=== comments don't decide the break's kind
+let x = a && // why
+b;
+let f(): Int // =
+throws Bubble {
+  1
+}
+let y = a // and
+    && b;
+--- formatted
+let x = a && // why
+  b;
+let f(): Int // =
+    throws Bubble {
+  1
+}
+let y = a // and
+  && b;
+
+=== a condition with a line break after `if (`
+if (
+  1 <= month && month <= 12 &&
+  1 <= day && (
+  if (month != 2 || day != 29) {
+  day <= daysInMonth[month]
+  } else {
+  isLeapYear(year)
+  })
+) {
+  ok();
+}
+--- formatted
+if (
+  1 <= month && month <= 12 &&
+    1 <= day && (
+      if (month != 2 || day != 29) {
+        day <= daysInMonth[month]
+      } else {
+        isLeapYear(year)
+      }
+    )
+) {
+  ok();
+}
+
+=== the same condition without the line break after `if (`
+if (1 <= month && month <= 12 &&
+    1 <= day && (
+      if (month != 2 || day != 29) {
+        day <= daysInMonth[month]
+      } else {
+        isLeapYear(year)
+      })) {
+  ok();
+}
+--- formatted
+if (1 <= month && month <= 12 &&
+    1 <= day && (
+      if (month != 2 || day != 29) {
+        day <= daysInMonth[month]
+      } else {
+        isLeapYear(year)
+      }
+    )) {
+  ok();
+}
+
+=== a line starting with `;` or `,` lines up with what it ends
+let s = """
+    "abc
+      ;
+let f(): Void {
+  let t = """
+      "def
+      ; // done
+  g(
+    """
+      "ghi
+        ,
+    b,
+  );
+}
+--- formatted
+let s = """
+    "abc
+;
+let f(): Void {
+  let t = """
+      "def
+  ; // done
+  g(
+    """
+      "ghi
+    ,
+    b,
+  );
+}
+
+=== a comma in a header's supertype list continues the header, twice
+class C extends D,
+E {
+}
+interface I<T> extends A<T>,
+B<T> {}
+class Outer {
+  class Inner extends D,
+      E,
+  F {}
+}
+--- formatted
+class C extends D,
+    E {
+}
+interface I<T> extends A<T>,
+    B<T> {}
+class Outer {
+  class Inner extends D,
+      E,
+      F {}
+}
+
+=== a block on a line of its own after a whole statement starts a statement, as it parses
+f(a)
+  { x }
+let x = 1
+    { y }
+if (c) {
+  g()
+      { z }
+}
+f(a) {
+  x
+}
+--- formatted
+f(a)
+{ x }
+let x = 1
+{ y }
+if (c) {
+  g()
+  { z }
+}
+f(a) {
+  x
+}
+
+=== a label on its own line doesn't continue: its statement is next
+outer:
+for (;;) {
+  inner:
+    while (true) { break outer; }
+}
+--- formatted
+outer:
+for (;;) {
+  inner:
+  while (true) { break outer; }
+}
+
+=== `;;` ends a block's signature as `;` ends a statement
+f {
+  (x: Int): Int
+  ;;
+    x + 1
+}
+g { (x: Int): Int;;
+    x + 1
+}
+--- formatted
+f {
+  (x: Int): Int
+  ;;
+  x + 1
+}
+g { (x: Int): Int;;
+  x + 1
+}
+
+=== a condition continued in its parentheses indents twice
+class C {
+  let f(): Void {
+    if (JSON_STATE_OPEN_OBJECT == currentState ||
+      JSON_STATE_AFTER_PROPERTY == currentState) {
+      stack.removeLast();
+    } else {
+      wellFormed = false;
+    }
+  }
+}
+--- formatted
+class C {
+  let f(): Void {
+    if (JSON_STATE_OPEN_OBJECT == currentState ||
+        JSON_STATE_AFTER_PROPERTY == currentState) {
+      stack.removeLast();
+    } else {
+      wellFormed = false;
+    }
+  }
+}
+
+=== brackets opened on a condition's continuation line indent from that line
+class C {
+  let f(): Void {
+    if (1 <= month && month <= 12 &&
+      1 <= day && (
+        if (month != 2 || day != 29) {
+          day <= daysInMonth[month]
+        } else {
+          isLeapYear(year)
+        }
+      )) {
+      this.year = year;
+      this.month = month;
+      this.day = day;
+    } else {
+      bubble();
+    }
+  }
+}
+--- formatted
+class C {
+  let f(): Void {
+    if (1 <= month && month <= 12 &&
+        1 <= day && (
+          if (month != 2 || day != 29) {
+            day <= daysInMonth[month]
+          } else {
+            isLeapYear(year)
+          }
+        )) {
+      this.year = year;
+      this.month = month;
+      this.day = day;
+    } else {
+      bubble();
+    }
+  }
+}
+
+=== a condition starting a line of its own after `if (` indents once
+class C {
+  let f(): Void {
+    if (
+      1 <= month && month <= 12 &&
+        1 <= day && (
+          if (month != 2 || day != 29) {
+            day <= daysInMonth[month]
+          } else {
+            isLeapYear(year)
+          }
+        )
+    ) {
+      this.year = year;
+      this.month = month;
+      this.day = day;
+    } else {
+      bubble();
+    }
+  }
+}
+--- formatted
+class C {
+  let f(): Void {
+    if (
+      1 <= month && month <= 12 &&
+        1 <= day && (
+          if (month != 2 || day != 29) {
+            day <= daysInMonth[month]
+          } else {
+            isLeapYear(year)
+          }
+        )
+    ) {
+      this.year = year;
+      this.month = month;
+      this.day = day;
+    } else {
+      bubble();
+    }
+  }
+}
+
+=== in any parentheses whose contents start on the `(` line, continuations indent twice
+while (i < n &&
+  ok) {
+  i += 1;
+}
+for (var i = 0;
+  i < n;
+  i += 1) {
+  f(i);
+}
+for (let x of
+  xs) {
+  g(x);
+}
+when (a ||
+  b) {
+  true -> f();
+  else -> g();
+}
+if (a) {
+  f();
+} else if (b ||
+  c) {
+  g();
+} else if (check(d +
+  e)) {
+  h();
+} else {
+  k();
+}
+do {
+  f();
+} while (a ||
+  b);
+foo(a ||
+  b, c);
+let x = (first +
+  second) * 2;
+let y = list[first +
+  second];
+--- formatted
+while (i < n &&
+    ok) {
+  i += 1;
+}
+for (var i = 0;
+    i < n;
+    i += 1) {
+  f(i);
+}
+for (let x of
+    xs) {
+  g(x);
+}
+when (a ||
+    b) {
+  true -> f();
+  else -> g();
+}
+if (a) {
+  f();
+} else if (b ||
+    c) {
+  g();
+} else if (check(d +
+    e)) {
+  h();
+} else {
+  k();
+}
+do {
+  f();
+} while (a ||
+    b);
+foo(a ||
+    b, c);
+let x = (first +
+    second) * 2;
+let y = list[first +
+  second];

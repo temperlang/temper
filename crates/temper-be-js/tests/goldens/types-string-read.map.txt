@@ -119,11 +119,11 @@
 174:3 -> ../read.temper.md:226:7  const before3b = stringStep( <- let before3b = s.step(before
 175:3 -> ../read.temper.md:230:7  const wayBefore = stringStep <- let wayBefore = s.step(befor
 176:3 -> ../read.temper.md:231:7  const wayAfter = stringStep( <- let wayAfter = s.step(before
-177:3 -> ../read.temper.md:233:7  console.log(`s[3:]  -> ${s.s <- console.log("s[3:]  -> ${ s.
-178:3 -> ../read.temper.md:234:7  console.log(`s[:3]  -> ${s.s <- console.log("s[:3]  -> ${ s.
-179:3 -> ../read.temper.md:235:7  console.log(`s[1:4] -> ${s.s <- console.log("s[1:4] -> ${ s.
-180:3 -> ../read.temper.md:236:7  console.log(`s[:4]  -> ${s.s <- console.log("s[:4]  -> ${ s.
-181:3 -> ../read.temper.md:237:7  console.log(`s[1:4] -> ${s.s <- console.log("s[1:4] -> ${ s.
+177:3 -> ../read.temper.md:233:7  console.log(`s[3:]  -> ${s.s <- console.log("s[3:]  -> ${s.s
+178:3 -> ../read.temper.md:234:7  console.log(`s[:3]  -> ${s.s <- console.log("s[:3]  -> ${s.s
+179:3 -> ../read.temper.md:235:7  console.log(`s[1:4] -> ${s.s <- console.log("s[1:4] -> ${s.s
+180:3 -> ../read.temper.md:236:7  console.log(`s[:4]  -> ${s.s <- console.log("s[:4]  -> ${s.s
+181:3 -> ../read.temper.md:237:7  console.log(`s[1:4] -> ${s.s <- console.log("s[1:4] -> ${s.s
 182:3 -> ../read.temper.md:238:7  console.log(`s[-many:many] - <- console.log("s[-many:many] -
 184:1 -> ../read.temper.md:276:5  const hay = "It was the best <- let hay = "It was the best o
 185:1 -> ../read.temper.md:275:5  const needle = "time"; <- let needle = "time";

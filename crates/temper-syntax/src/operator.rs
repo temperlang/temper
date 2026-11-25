@@ -27,6 +27,25 @@ pub enum OpType {
     Nullary,
 }
 
+/// How `temper fmt` spaces an operator's token from what's next to it on a
+/// line: around it if infix, after it if prefix or a separator, inside if
+/// brackets. Followers, like the `,` of `extends A, B`, are spaced as their
+/// own operators ([`Operator::spacing`]). docs/tools/fmt.md's table of
+/// operator spacing is checked against these.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Spacing {
+    /// One space: `a + b`, `{ a }`.
+    Spaced,
+    /// None: `a.b`, `-a`, `f(a)`.
+    Tight,
+    /// None before, one after: `a, b`, `x: Int`.
+    After,
+    /// As written, but a run of spaces and tabs becomes one: `a..b`,
+    /// `A::B`, a label's `:`, postfix `!`, and words like `is`, which need
+    /// their space.
+    AsWritten,
+}
+
 /// Facts about an operator.
 #[derive(Clone, Copy, Debug)]
 pub struct Info {
@@ -45,6 +64,10 @@ pub struct Info {
     /// Whether a longer punctuation token may act as this operator, like
     /// `+=` as `=`, or a custom `<+>` as `<`.
     pub customizable: bool,
+    /// How `temper fmt` spaces it: by default one space around infix
+    /// punctuation and none after prefix punctuation, or inside brackets;
+    /// words and the rest as written.
+    pub spacing: Spacing,
 }
 
 const MANY: u32 = u32::MAX;
@@ -61,6 +84,7 @@ const fn op(precedence: i32, text: &'static str, op_type: OpType) -> Info {
     } else {
         text.as_bytes()[0]
     };
+    let punctuation = !first.is_ascii_alphabetic() && !text.is_empty();
     Info {
         precedence,
         text,
@@ -70,7 +94,12 @@ const fn op(precedence: i32, text: &'static str, op_type: OpType) -> Info {
         follower: None,
         min_arity,
         max_arity,
-        customizable: !first.is_ascii_alphabetic() && !text.is_empty(),
+        customizable: punctuation,
+        spacing: match op_type {
+            OpType::Infix if punctuation => Spaced,
+            OpType::Prefix if punctuation => Tight,
+            _ => AsWritten,
+        },
     }
 }
 
@@ -84,8 +113,12 @@ impl Info {
     const fn closer(self) -> Info {
         Info {
             closer: true,
+            spacing: Tight,
             ..self
         }
+    }
+    const fn spacing(self, spacing: Spacing) -> Info {
+        Info { spacing, ..self }
     }
     const fn arity(self, min_arity: u32, max_arity: u32) -> Info {
         Info {
@@ -124,6 +157,7 @@ macro_rules! operators {
 }
 
 use OpType::{Infix, Nullary, Postfix, Prefix, Separator};
+use Spacing::{After, AsWritten, Spaced, Tight};
 
 // Order matters where several operators share a token: earlier ones are
 // tried first, as `Angle` before `Lt`.
@@ -131,8 +165,8 @@ operators! {
     Root = op(i32::MIN, "", Prefix).arity(0, MANY),
     SemiSemiSemi = op(-6, ";;;", Separator).right(),
     SemiSemi = op(-5, ";;", Separator).right(),
-    Arrow = op(-5, "=>", Separator).right(),
-    Semi = op(-4, ";", Separator).right(),
+    Arrow = op(-5, "=>", Separator).right().spacing(Spaced),
+    Semi = op(-4, ";", Separator).right().spacing(After),
     // Only for markers like `mixin("name"):` between statements.
     SelectivePostColon = op(-3, ":", Postfix).fixed(),
     ThinArrow = op(-2, "->", Infix).right(),
@@ -142,9 +176,9 @@ operators! {
     Throw = op(-1, "throw", Prefix),
     Yield = op(-1, "yield", Prefix).min(0),
     Of = op(-1, "of", Infix).right(),
-    Comma = op(0, ",", Separator).right(),
+    Comma = op(0, ",", Separator).right().spacing(After),
     // `label: stmt`, below comma so `{ a: b, c: d }` works as a bag.
-    LowColon = op(1, ":", Infix).fixed(),
+    LowColon = op(1, ":", Infix).fixed().spacing(AsWritten),
     PreCase = op(1, "case", Prefix),
     At = op(2, "@", Prefix).arity(1, 2),
     Eq = op(3, "=", Infix).right(),
@@ -173,7 +207,7 @@ operators! {
     ForbidsNoComma = op(6, "forbids", Infix),
     SupportsNoComma = op(6, "supports", Infix),
     // `name: Type`.
-    HighColon = op(7, ":", Infix).right(),
+    HighColon = op(7, ":", Infix).right().spacing(After),
     Throws = op(8, "throws", Infix).follower("|"),
     Coalesce = op(9, "??", Infix),
     BarBar = op(10, "||", Infix).right(),
@@ -201,7 +235,7 @@ operators! {
     LtLt = op(17, "<<", Infix),
     GtGt = op(17, ">>", Infix),
     GtGtGt = op(17, ">>>", Infix),
-    ColonColon = op(18, "::", Infix).right(),
+    ColonColon = op(18, "::", Infix).right().spacing(AsWritten),
     Plus = op(19, "+", Infix),
     Dash = op(19, "-", Infix),
     Star = op(20, "*", Infix),
@@ -223,20 +257,21 @@ operators! {
     PostDecr = op(23, "--", Postfix),
     PostBang = op(23, "!", Postfix),
     PostQuest = op(23, "?", Postfix),
-    Dot = op(24, ".", Infix),
-    ChainNull = op(24, "?.", Infix),
-    DotDot = op(24, "..", Infix).right(),
-    CurlyGroup = op(24, "{", Prefix).closer().arity(0, MANY),
+    Dot = op(24, ".", Infix).spacing(Tight),
+    ChainNull = op(24, "?.", Infix).spacing(Tight),
+    DotDot = op(24, "..", Infix).right().spacing(AsWritten),
+    CurlyGroup = op(24, "{", Prefix).closer().arity(0, MANY).spacing(Spaced),
     ParenGroup = op(24, "(", Prefix).closer().arity(0, MANY),
     SquareGroup = op(24, "[", Prefix).closer().min(0),
-    Curly = op(24, "{", Infix).closer().arity(1, MANY),
+    Curly = op(24, "{", Infix).closer().arity(1, MANY).spacing(Spaced),
     Paren = op(24, "(", Infix).closer().arity(1, MANY),
     Square = op(24, "[", Infix).closer(),
     Esc = op(24, "\\", Prefix),
     EscParen = op(24, "\\(", Prefix).closer(),
-    EscCurly = op(24, "\\{", Prefix).closer(),
+    EscCurly = op(24, "\\{", Prefix).closer().spacing(Spaced),
     DollarCurly = op(24, "${", Prefix).closer().arity(0, 1),
-    UnicodeRun = op(24, "\\u{", Prefix).closer().arity(0, MANY),
+    // Its space is the string's: `\u{ 41 }` has malformed code points.
+    UnicodeRun = op(24, "\\u{", Prefix).closer().arity(0, MANY).spacing(AsWritten),
     New = op(24, "new", Prefix).min(0),
     // A quoted string's parts: delimiters, content and holes.
     QuotedGroup = op(25, "", Prefix).closer().arity(0, MANY),
@@ -266,6 +301,26 @@ impl Operator {
     pub fn partner(self) -> Option<&'static str> {
         let i = OPEN_BRACKETS.iter().position(|&t| t == self.info().text)?;
         Some(CLOSE_BRACKET_PARTNERS[i])
+    }
+
+    /// How `temper fmt` spaces this operator's token `text`: as the
+    /// operator does, a longer form too (`:=` as `=`); but a follower, like
+    /// the `,` of `extends A, B` or the `|` of `throws A | B`, as the
+    /// operator it is alone, and a bracket's longer form (`</` as `<`),
+    /// which isn't a bracket, as written.
+    pub fn spacing(self, text: &str) -> Spacing {
+        let info = self.info();
+        if text == info.text {
+            info.spacing
+        } else if info.follower == Some(text) {
+            by_text(text)
+                .first()
+                .map_or(info.spacing, |alone| alone.info().spacing)
+        } else if info.closer && Some(text) != self.partner() {
+            Spacing::AsWritten
+        } else {
+            info.spacing
+        }
     }
 
     /// The operators of `op_type` that a token may be, in order of preference.
@@ -442,6 +497,75 @@ mod tests {
 
     fn names(text: &str, kind: TokenKind, op_type: OpType) -> Vec<Operator> {
         Operator::matching(text, kind, op_type).iter().collect()
+    }
+
+    /// docs/tools/fmt.md's table of operator spacing, rendered from the
+    /// operators' [`Spacing`]: each class's operators, in the table's
+    /// order, a bracket as its pair, and a text that's in more than one
+    /// class marked with its kind.
+    fn spacing_table() -> String {
+        // The operators written in code (`callJoin:` the parser inserts).
+        let written: Vec<Operator> = (ALL.iter().copied())
+            .filter(|&op| !op.info().text.is_empty() && op != Operator::CallJoin)
+            .collect();
+        let entry = |op: Operator| match op.partner() {
+            Some(close) if op.closer() => format!("{} {close}", op.info().text),
+            _ => op.info().text.to_string(),
+        };
+        let kind = |op: Operator| match op {
+            Operator::LowColon => "label",
+            Operator::HighColon => "type",
+            Operator::SelectivePostColon => "marker",
+            _ => match op.op_type() {
+                Prefix => "prefix",
+                Postfix => "postfix",
+                _ => "infix",
+            },
+        };
+        let rows = [
+            (Spaced, "One space around, or inside"),
+            (Tight, "None around, after, or inside"),
+            (After, "None before, one after"),
+            (
+                AsWritten,
+                "As written (a run of spaces and tabs becomes one)",
+            ),
+        ];
+        let mut table = "| Spacing | Operators |\n|---|---|\n".to_string();
+        for (spacing, what) in rows {
+            let mut cells: Vec<String> = Vec::new();
+            for &op in &written {
+                if op.info().spacing != spacing {
+                    continue;
+                }
+                let text = entry(op);
+                let shared =
+                    (written.iter()).any(|&o| entry(o) == text && o.info().spacing != spacing);
+                let cell = format!("`{}`", text.replace('|', "\\|"));
+                let cell = match shared {
+                    true => format!("{cell} ({})", kind(op)),
+                    false => cell,
+                };
+                if !cells.contains(&cell) {
+                    cells.push(cell);
+                }
+            }
+            table += &format!("| {what} | {} |\n", cells.join(", "));
+        }
+        table
+    }
+
+    /// The docs' table of how `temper fmt` spaces each operator can't
+    /// drift from the operators' declared [`Spacing`].
+    #[test]
+    fn docs_spacing_table_is_the_operators() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../docs/tools/fmt.md");
+        let docs = std::fs::read_to_string(path).unwrap().replace("\r\n", "\n");
+        let table = spacing_table();
+        assert!(
+            docs.contains(&table),
+            "docs/tools/fmt.md's table of operator spacing should read:\n\n{table}"
+        );
     }
 
     #[test]

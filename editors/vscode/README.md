@@ -13,7 +13,11 @@ and Temper's language server, `temper lsp`, for:
 - completion of names in scope, members after `.` (builtin types' too),
   and an object literal's property names;
 - find references and rename, across the library's files;
-- the outline (document symbols), and signature help in calls.
+- the outline (document symbols), and signature help in calls;
+- formatting, `temper fmt`'s, on save by default ("Format Document"
+  and "Format Selection" too). To turn it off, set
+  `"[temper]": {"editor.formatOnSave": false}` (and likewise
+  `[temper-markdown]`) in your settings.
 
 Blocks tagged `temper inert`, Temper shown but not compiled, are
 highlighted too, with their lines tinted and an "inert" label after the
@@ -53,6 +57,10 @@ or a name on `PATH`, if set; else the bundled `temper`, then `temper`
 on `PATH`. If there's none, or it doesn't start, an error says what was
 tried and how to fix it, with a button to open the setting. **Temper: Server Args**
 (`temper.server.args`) adds arguments, as `["--std", "/path/to/std"]`.
+Both are read from user (or remote) settings only, not a workspace's,
+so a repository's `.vscode/settings.json` can't choose the program the
+extension runs; and the extension runs only in trusted workspaces, not
+in Restricted Mode.
 "Temper: Restart Language Server" restarts it; its log is in the Output
 panel's "Temper" channel.
 

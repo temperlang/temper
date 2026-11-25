@@ -13,6 +13,6 @@
 14:3 -> ../fibonacci.temper.md:14:7  return a; <- a
 17:1 -> ../fibonacci.temper.md:16:5  let zero = 0; <- var zero = 0;
 18:1 -> ../fibonacci.temper.md:17:5  zero = zero; <- zero = zero;
-19:1 -> ../fibonacci.temper.md:18:5  console.log(`fib(1)=${fib((z <- console.log("fib(1)=${ fib(z
-20:1 -> ../fibonacci.temper.md:19:5  console.log(`fib(10)=${fib(( <- console.log("fib(10)=${ fib(
-21:1 -> ../fibonacci.temper.md:20:5  console.log(`fib(20)=${fib(( <- console.log("fib(20)=${ fib(
+19:1 -> ../fibonacci.temper.md:18:5  console.log(`fib(1)=${fib((z <- console.log("fib(1)=${fib(ze
+20:1 -> ../fibonacci.temper.md:19:5  console.log(`fib(10)=${fib(( <- console.log("fib(10)=${fib(z
+21:1 -> ../fibonacci.temper.md:20:5  console.log(`fib(20)=${fib(( <- console.log("fib(20)=${fib(z

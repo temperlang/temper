@@ -14,9 +14,9 @@ Then use a call to `f` as the default parameter value of a function `g`.
     let g(x: Int = f()): Int {
       x
     }
-    console.log("fCalls=${ fCalls }");
-    console.log("g(   )=${ g(   ) }");
-    console.log("fCalls=${ fCalls }");
+    console.log("fCalls=${fCalls}");
+    console.log("g(   )=${g()}");
+    console.log("fCalls=${fCalls}");
 
 ```log
 fCalls=0
@@ -28,8 +28,8 @@ The above call to `g` uses the default argument, so `fCalls` increments. But
 now call `g` with an explicit value, so `f` *doesn't* get called, and `fCalls`
 remains unchanged.
 
-    console.log("g(123)=${ g(123) }");
-    console.log("fCalls=${ fCalls }");
+    console.log("g(123)=${g(123)}");
+    console.log("fCalls=${fCalls}");
 
 ```log
 g(123)=123

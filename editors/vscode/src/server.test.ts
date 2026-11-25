@@ -1,7 +1,7 @@
 // Tests for finding temper (server.ts), under Node's test runner.
 
 import assert from "node:assert/strict";
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { test } from "node:test";
@@ -75,4 +75,19 @@ test("a setting that isn't there isn't used, nor anything else", () => {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("only user settings choose the server, and restricted mode runs none", () => {
+  // A workspace's settings (a cloned repository's .vscode/settings.json)
+  // mustn't name the program to run or its arguments: "machine" scope
+  // takes them from user settings only.
+  const manifest = JSON.parse(readFileSync("package.json", "utf8")) as {
+    contributes: { configuration: { properties: Record<string, { scope?: string }> } };
+    capabilities?: { untrustedWorkspaces?: { supported?: boolean | string } };
+  };
+  const properties = manifest.contributes.configuration.properties;
+  const server = Object.keys(properties).filter((name) => name.startsWith("temper.server."));
+  assert.deepEqual(server.sort(), ["temper.server.args", "temper.server.path"]);
+  for (const name of server) assert.equal(properties[name]?.scope, "machine", name);
+  assert.equal(manifest.capabilities?.untrustedWorkspaces?.supported, false);
 });

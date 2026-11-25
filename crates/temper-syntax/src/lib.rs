@@ -12,6 +12,7 @@
 //! - [`module`] finishes a module's tree as Kotlin's `ParseStage` does:
 //!   metadata as JSON, and call joins rewritten.
 //! - [`print`](mod@print) writes trees as text, for tests and comparisons.
+//! - [`fmt`](mod@fmt) lays out source canonically, for `temper fmt`.
 //! - [`nfkc`] checks that identifiers are in Unicode NFKC.
 //! - [`id_parts`] holds Unicode's identifier character classes, which
 //!   the lexer and library names (Kotlin's `DashedIdentifier`) use.
@@ -19,6 +20,7 @@
 pub mod adapt;
 pub mod ast;
 pub mod balance;
+pub mod fmt;
 mod grammar;
 pub mod id_parts;
 pub mod lex;

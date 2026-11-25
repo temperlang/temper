@@ -26,7 +26,9 @@ name isn't a type there.
     }
 
     let effects: List<Effect<Int>> = [
-      new Append<Int>("a"), new Mark<Int>(1), new Append<Int>("b"),
+      new Append<Int>("a"),
+      new Mark<Int>(1),
+      new Append<Int>("b"),
     ];
     console.log(texts(effects));
     console.log(firstText(effects[0]));

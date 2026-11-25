@@ -4,7 +4,7 @@
 
 /// Each command, alphabetically, with its line in `temper help`, and
 /// whether tempest has it yet.
-pub const COMMANDS: [(&str, &str, bool); 13] = [
+pub const COMMANDS: [(&str, &str, bool); 14] = [
     (
         "build",
         "Brings Temper libraries under the work root up to date.",
@@ -14,6 +14,11 @@ pub const COMMANDS: [(&str, &str, bool); 13] = [
         "doc",
         "Generates documentation for Temper libraries (not available yet).",
         false,
+    ),
+    (
+        "fmt",
+        "Lays out Temper source files in the standard style.",
+        true,
     ),
     ("help", "Prints help text for a command and exits.", true),
     (
@@ -202,6 +207,33 @@ pub fn command(name: &str) -> Option<String> {
              \x20           Semantic tokens; none are sent yet, so all\n\
              \x20           three are as none.\n\
              {STD}"
+        ),
+        "fmt" => format!(
+            "usage: temper fmt [--check] [-ign FILE] [PATH]...\n\
+             \n\
+             Lays out Temper source in the standard style, rewriting each .temper\n\
+             and .temper.md file that needs it; in .temper.md files, only Temper\n\
+             code blocks. A directory means the files under it, skipping\n\
+             temper.out, temper.keep, hidden directories, symbolic links, and\n\
+             what .gitignore and .temperignore files (those above it too, up to\n\
+             its git repository's root), and --ignorefile's, list; no PATH means\n\
+             the current directory. Files and links named are formatted all the\n\
+             same. Each file is written whole or not at all.\n\
+             \n\
+             It sets spacing, indentation, and blank lines, and keeps line breaks\n\
+             as written except in bracketed lists, which its trailing commas and\n\
+             line breaks lay out. Strings never change, and comments' text only\n\
+             loses trailing space and moves with its lines (a doc comment's `*`\n\
+             gutter lines up). Code that doesn't parse, has a carriage return\n\
+             without a line feed, or that formatting would change the meaning of,\n\
+             is left as written, with an error. Exits with 1 if a file couldn't\n\
+             be formatted.\n\
+             \n\
+             Options:\n\
+             \x20   --check\n\
+             \x20           Change nothing; list the files that need formatting,\n\
+             \x20           and exit with 1 if there are any.\n\
+             {IGNOREFILE}"
         ),
         "help" => "usage: temper help [COMMAND]\n\
              \n\

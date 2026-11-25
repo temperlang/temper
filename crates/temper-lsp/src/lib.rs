@@ -22,6 +22,15 @@
 //! - **std:** going to a definition in std writes std's sources, once,
 //!   to a directory in the system's temporary directory, for the editor
 //!   to open, as built-in std has no files of its own.
+//! - **Formatting** (`temper fmt`'s, for the whole document or the lines
+//!   of a range) answers from the open text alone, without analysis,
+//!   reusing its unit's parse when that's current. Its edits are the runs
+//!   of changed lines ([`line_edits`]), clipped to a range's lines
+//!   ([`clip`]). A document formatting refuses gets no edits and no
+//!   error. If it doesn't parse, that's all, as its syntax error is
+//!   already a diagnostic; otherwise (a lone `\r`, or, a bug, the result
+//!   would change the code) a `window/showMessage` warning says why, once
+//!   for each version of the document, so saving again doesn't nag.
 //! - **Panics,** bugs in tempest, don't end the server: each request and
 //!   each analysis runs under `catch_unwind`. A request that panics gets
 //!   an error response, an analysis that panics an "internal error"
@@ -45,6 +54,7 @@ use temper_frontend::project::{find_libraries, library_of, load_imports, load_li
 use temper_frontend::settle::settle;
 use temper_frontend::sources::{Source, Sources};
 use temper_frontend::{corelib, stdlib};
+use temper_syntax::fmt::{FmtError, format, format_parsed};
 
 /// How long typing must pause before stale documents are analyzed again.
 const DEBOUNCE: Duration = Duration::from_millis(250);
@@ -95,7 +105,8 @@ pub fn serve(input: impl Read + Send + 'static, output: impl Write, std_dir: Opt
 
 /// [`serve`], for tests, with a hook that makes a panic: an analysis of
 /// a unit whose open documents contain `panic_on` panics, as does the
-/// request `tempest/testPanic`.
+/// request `tempest/testPanic`; and with it, the request
+/// `tempest/testStats` answers with counts of the server's work.
 #[doc(hidden)]
 pub fn serve_with_hook(
     input: impl Read + Send + 'static,
@@ -129,7 +140,10 @@ pub fn serve_with_hook(
         initialized: false,
         shut_down: false,
         std_copy: None,
-        panic_on,
+        hook: panic_on.map(|panic_on| Hook {
+            panic_on,
+            format_parses_reused: 0,
+        }),
     };
     loop {
         let message = match server.deadline {
@@ -165,6 +179,10 @@ struct Doc {
     path: String,
     uri: String,
     text: String,
+    /// Its version, the editor's count of its changes.
+    version: i32,
+    /// The version formatting last warned about, if any, so it warns once.
+    format_warned: Option<i32>,
 }
 
 /// What's analyzed together: a library, or a file on its own.
@@ -192,8 +210,16 @@ struct Server<W: Write> {
     shut_down: bool,
     /// Where std's sources were written for the editor, once they were.
     std_copy: Option<PathBuf>,
-    /// The test hook's text ([`serve_with_hook`]).
-    panic_on: Option<String>,
+    /// The test hook, only in tests ([`serve_with_hook`]).
+    hook: Option<Hook>,
+}
+
+/// The test hook ([`serve_with_hook`]): its text, and counts of the
+/// server's work for `tempest/testStats`.
+struct Hook {
+    panic_on: String,
+    /// How many formatting requests reused their unit's parse.
+    format_parses_reused: usize,
 }
 
 /// A panic's message, from its payload.
@@ -283,6 +309,8 @@ impl<W: Write> Server<W> {
                     path: path.clone(),
                     uri,
                     text: p.text_document.text,
+                    version: p.text_document.version,
+                    format_warned: None,
                 });
                 self.touch(path);
                 // Opening shows a document's problems at once.
@@ -295,6 +323,7 @@ impl<W: Write> Server<W> {
                 };
                 let path = uri_to_path(p.text_document.uri.as_str());
                 if let Some(doc) = self.docs.iter_mut().find(|d| d.path == path) {
+                    doc.version = p.text_document.version;
                     // Incremental sync: each change replaces a range, or,
                     // without one, the whole text.
                     for change in p.content_changes {
@@ -390,7 +419,7 @@ impl<W: Write> Server<W> {
         for file in &files {
             self.stale.remove(file);
         }
-        let hooked = (self.panic_on.as_deref()).filter(|marker| {
+        let hooked = (self.hook.as_ref().map(|h| h.panic_on.as_str())).filter(|marker| {
             (self.docs.iter()).any(|d| files.contains(&d.path) && d.text.contains(marker))
         });
         let analyzed = catch_unwind(AssertUnwindSafe(|| {
@@ -629,9 +658,98 @@ impl<W: Write> Server<W> {
                 });
                 answer(found.flatten())
             }
-            "tempest/testPanic" if self.panic_on.is_some() => panic!("test hook: {method}"),
+            "textDocument/formatting" => {
+                let p: lsp::DocumentFormattingParams = params(p)?;
+                answer(self.format(&uri_to_path(p.text_document.uri.as_str()), None))
+            }
+            "textDocument/rangeFormatting" => {
+                let p: lsp::DocumentRangeFormattingParams = params(p)?;
+                let path = uri_to_path(p.text_document.uri.as_str());
+                answer(self.format(&path, Some(p.range)))
+            }
+            "tempest/testPanic" if self.hook.is_some() => panic!("test hook: {method}"),
+            "tempest/testStats" if self.hook.is_some() => answer(json!({
+                "formatParsesReused": self.hook.as_ref().map_or(0, |h| h.format_parses_reused),
+            })),
             _ => Err((-32601, format!("no method {method}"))),
         }
+    }
+
+    /// The edits formatting an open document, or those of its lines in
+    /// `range`: none if formatting refuses it, with a warning saying why,
+    /// once for each version of the document, unless it doesn't parse
+    /// (a diagnostic already says so). A
+    /// range's last line is left out if it ends at the line's start, as a
+    /// selection of whole lines does. Each edit is a run of changed lines
+    /// ([`line_edits`]), clipped to the range's lines ([`clip`]).
+    fn format(&mut self, path: &str, range: Option<lsp::Range>) -> Vec<lsp::TextEdit> {
+        let Some(i) = self.docs.iter().position(|d| d.path == path) else {
+            return Vec::new();
+        };
+        let Some(kind) = temper_frontend::project::file_kind(path) else {
+            return Vec::new();
+        };
+        let doc = &self.docs[i];
+        // Its unit's parse, if that's of this text.
+        let parsed = (self.units.iter())
+            .flat_map(|u| &u.analysis.settled.library.files)
+            .find(|f| f.path == path && f.parsed.source() == doc.text)
+            .map(|f| &f.parsed);
+        let formatted = match parsed {
+            Some(parsed) => {
+                if let Some(hook) = &mut self.hook {
+                    hook.format_parses_reused += 1;
+                }
+                format_parsed(parsed, kind)
+            }
+            None => format(&doc.text, kind),
+        };
+        let text = match formatted {
+            Ok(text) => text,
+            Err(why) => {
+                if matches!(why, FmtError::Unsafe(_)) {
+                    eprintln!("temper lsp: formatting {path}: {why}");
+                }
+                // Not parsing is already a diagnostic: no warning for it.
+                let doc = &mut self.docs[i];
+                let quiet = matches!(why, FmtError::Unparseable(_));
+                if !quiet && doc.format_warned != Some(doc.version) {
+                    doc.format_warned = Some(doc.version);
+                    let name = path.rsplit('/').next().unwrap_or(path);
+                    let message = format!("temper fmt: {name}: {why}");
+                    self.send(&json!({
+                        "jsonrpc": "2.0",
+                        "method": "window/showMessage",
+                        "params": {"type": 2, "message": message},
+                    }));
+                }
+                return Vec::new();
+            }
+        };
+        let old = &self.docs[i].text;
+        // Edits start at line starts, so most positions are a line's start;
+        // only the end of a last line without a line break needs counting.
+        let lines = 1 + old.matches('\n').count();
+        let end = std::cell::OnceCell::new();
+        let at = |line: usize| match line < lines {
+            true => lsp::Position::new(line as u32, 0),
+            false => *end.get_or_init(|| position(old, old.len() as u32)),
+        };
+        let wanted = range.map(|r| {
+            let whole_lines = r.end.character == 0 && r.end.line > r.start.line;
+            let last = (r.end.line - u32::from(whole_lines)).max(r.start.line);
+            r.start.line as usize..last as usize + 1
+        });
+        (line_edits(old, &text).into_iter())
+            .filter_map(|e| match &wanted {
+                Some(lines) => clip(e, lines.clone()),
+                None => Some(e),
+            })
+            .map(|e| lsp::TextEdit {
+                range: lsp::Range::new(at(e.old.start), at(e.old.end)),
+                new_text: e.new_text,
+            })
+            .collect()
     }
 
     /// Runs a query at a position in a document, against its unit's
@@ -829,6 +947,8 @@ fn initialize_result() -> lsp::InitializeResult {
                 work_done_progress_options: Default::default(),
             })),
             document_symbol_provider: Some(lsp::OneOf::Left(true)),
+            document_formatting_provider: Some(lsp::OneOf::Left(true)),
+            document_range_formatting_provider: Some(lsp::OneOf::Left(true)),
             signature_help_provider: Some(lsp::SignatureHelpOptions {
                 trigger_characters: Some(vec!["(".to_string(), ",".to_string()]),
                 ..Default::default()
@@ -886,6 +1006,159 @@ fn completion_kind(kind: DeclKind) -> lsp::CompletionItemKind {
         DeclKind::Builtin => K::VALUE,
         DeclKind::TypeParameter => K::TYPE_PARAMETER,
     }
+}
+
+/// A run of changed lines: the old text's lines `old` (from 0, the end
+/// excluded) become `new_text`.
+#[derive(Debug, PartialEq, Eq)]
+pub struct LineEdit {
+    pub old: std::ops::Range<usize>,
+    pub new_text: String,
+}
+
+/// The part of an edit within the lines `wanted` (as a range of line
+/// numbers), if any: an edit that keeps its number of lines, as most
+/// formatting does, line for line; one that doesn't (lines joined or
+/// split) whole if it lies within them, else none, as its lines can't be
+/// told apart; an insertion if it's at one of their starts.
+pub fn clip(edit: LineEdit, wanted: std::ops::Range<usize>) -> Option<LineEdit> {
+    let old = edit.old.clone();
+    if old.is_empty() {
+        return wanted.contains(&old.start).then_some(edit);
+    }
+    let new: Vec<&str> = edit.new_text.split_inclusive('\n').collect();
+    if new.len() == old.len() {
+        let (from, to) = (old.start.max(wanted.start), old.end.min(wanted.end));
+        return (from < to).then(|| LineEdit {
+            old: from..to,
+            new_text: new[from - old.start..to - old.start].concat(),
+        });
+    }
+    (wanted.start <= old.start && old.end <= wanted.end).then_some(edit)
+}
+
+/// Diffs that differ in more lines than this are one edit.
+const MAX_DIFF: usize = 500;
+
+/// The runs of lines that differ between `old` and `new`, by Myers'
+/// diff, so an editor's cursor and folds stay where nothing changed. A
+/// line's break counts as part of it.
+pub fn line_edits(old: &str, new: &str) -> Vec<LineEdit> {
+    if old == new {
+        return Vec::new();
+    }
+    let a: Vec<&str> = old.split_inclusive('\n').collect();
+    let b: Vec<&str> = new.split_inclusive('\n').collect();
+    // Common lines at the ends need no search.
+    let prefix = a.iter().zip(&b).take_while(|(x, y)| x == y).count();
+    let suffix = (a[prefix..].iter().rev())
+        .zip(b[prefix..].iter().rev())
+        .take_while(|(x, y)| x == y)
+        .count();
+    let (a_mid, b_mid) = (&a[prefix..a.len() - suffix], &b[prefix..b.len() - suffix]);
+    let whole = || {
+        vec![LineEdit {
+            old: prefix..a.len() - suffix,
+            new_text: b_mid.concat(),
+        }]
+    };
+    let Some(script) = myers(a_mid, b_mid) else {
+        return whole();
+    };
+    // Each run of deletions and insertions between equal lines is an edit.
+    let mut edits: Vec<LineEdit> = Vec::new();
+    let (mut i, mut j) = (0, 0);
+    let mut run: Option<(usize, usize)> = None;
+    let mut flush = |run: &mut Option<(usize, usize)>, i: usize, j: usize| {
+        if let Some((i0, j0)) = run.take() {
+            edits.push(LineEdit {
+                old: prefix + i0..prefix + i,
+                new_text: b_mid[j0..j].concat(),
+            });
+        }
+    };
+    for step in script {
+        match step {
+            Step::Same => {
+                flush(&mut run, i, j);
+                i += 1;
+                j += 1;
+            }
+            Step::Delete => {
+                run.get_or_insert((i, j));
+                i += 1;
+            }
+            Step::Insert => {
+                run.get_or_insert((i, j));
+                j += 1;
+            }
+        }
+    }
+    flush(&mut run, i, j);
+    edits
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Step {
+    Same,
+    Delete,
+    Insert,
+}
+
+/// The shortest edit script from `a` to `b`, or `None` past [`MAX_DIFF`]
+/// changes. It keeps each round's frontier, so memory grows with the
+/// square of the changes, not with the text.
+fn myers(a: &[&str], b: &[&str]) -> Option<Vec<Step>> {
+    let (n, m) = (a.len() as isize, b.len() as isize);
+    let max = (a.len() + b.len()).min(MAX_DIFF) as isize;
+    let offset = max + 1;
+    let mut v = vec![0isize; 2 * offset as usize + 1];
+    let mut trace: Vec<Vec<isize>> = Vec::new();
+    let at = |k: isize| (offset + k) as usize;
+    let mut found = None;
+    'search: for d in 0..=max {
+        for k in (-d..=d).step_by(2) {
+            let mut x = if k == -d || (k != d && v[at(k - 1)] < v[at(k + 1)]) {
+                v[at(k + 1)]
+            } else {
+                v[at(k - 1)] + 1
+            };
+            let mut y = x - k;
+            while x < n && y < m && a[x as usize] == b[y as usize] {
+                x += 1;
+                y += 1;
+            }
+            v[at(k)] = x;
+            if x >= n && y >= m {
+                trace.push(v[at(-d)..=at(d)].to_vec());
+                found = Some(d);
+                break 'search;
+            }
+        }
+        trace.push(v[at(-d)..=at(d)].to_vec());
+    }
+    // Back from the end, each round's one step and the equal lines after it.
+    let mut steps = Vec::new();
+    let (mut x, mut y) = (n, m);
+    for d in (1..=found?).rev() {
+        let k = x - y;
+        let previous = &trace[d as usize - 1];
+        let get = |k: isize| previous[(k + d - 1) as usize];
+        let down = k == -d || (k != d && get(k - 1) < get(k + 1));
+        let k0 = if down { k + 1 } else { k - 1 };
+        let x0 = get(k0);
+        let y0 = x0 - k0;
+        // The step goes to `x0 + 1` across, or down, then equal lines.
+        while x > x0 + isize::from(!down) {
+            steps.push(Step::Same);
+            x -= 1;
+        }
+        steps.push(if down { Step::Insert } else { Step::Delete });
+        (x, y) = (x0, y0);
+    }
+    steps.extend(std::iter::repeat_n(Step::Same, x as usize));
+    steps.reverse();
+    Some(steps)
 }
 
 /// An LSP position: a line from 0 and a UTF-16 character in it.
@@ -1062,6 +1335,66 @@ mod tests {
         // Without a range, the whole text.
         apply_change(&mut text, change(None, "x"));
         assert_eq!(text, "x");
+    }
+
+    #[test]
+    fn line_edits_are_runs_of_changed_lines() {
+        let apply = |old: &str, edits: &[LineEdit]| {
+            let mut lines: Vec<String> = old.split_inclusive('\n').map(String::from).collect();
+            for e in edits.iter().rev() {
+                lines.splice(e.old.clone(), [e.new_text.clone()]);
+            }
+            lines.concat()
+        };
+        let old = "a\nb\nc\nd\ne\nf\n";
+        let new = "a\nB\nc\nd\nx\ny\nf\n";
+        let edits = line_edits(old, new);
+        assert_eq!(
+            edits,
+            [
+                LineEdit {
+                    old: 1..2,
+                    new_text: "B\n".to_string()
+                },
+                LineEdit {
+                    old: 4..5,
+                    new_text: "x\ny\n".to_string()
+                },
+            ]
+        );
+        assert_eq!(apply(old, &edits), new);
+        // Insertions, deletions, a last line without a break, and nothing.
+        for (old, new) in [
+            ("a\nb\n", "a\nx\nb\n"),
+            ("a\nx\nb\n", "a\nb\n"),
+            ("a\nb", "a\nc"),
+            ("", "a\n"),
+            ("a\n", ""),
+            ("x\ny\nz\n", "z\ny\nx\n"),
+            ("same\n", "same\n"),
+        ] {
+            assert_eq!(apply(old, &line_edits(old, new)), new, "{old:?} to {new:?}");
+        }
+        // Random texts of a few distinct lines.
+        let mut seed: u64 = 1;
+        let mut text = || {
+            let mut out = String::new();
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            for i in 0..(seed >> 60) {
+                out.push_str(["a\n", "b\n", "c"][((seed >> (i * 2 + 20)) % 3) as usize]);
+            }
+            out
+        };
+        for _ in 0..500 {
+            let (old, new) = (text(), text());
+            assert_eq!(
+                apply(&old, &line_edits(&old, &new)),
+                new,
+                "{old:?} to {new:?}"
+            );
+        }
     }
 
     #[test]

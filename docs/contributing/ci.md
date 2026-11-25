@@ -20,7 +20,7 @@ run takes about as long as its slowest job:
 
 | Job | What it checks |
 | --- | --- |
-| `lint, core` | formatting; clippy, with and without default features; the workflows parse as YAML; the docs' links; Temper's functional tests on the interpreter; the size and speed charts, drawn from the `stats` branch's data, and the tests of the scripts that write its rows and commit them, with stats.yml's permissions; the rules for release tags; then every crate's tests but the backends' and `tempest`'s, and again without default features, `tempest`'s included |
+| `lint, core` | formatting; clippy, with and without default features; the workflows parse as YAML; the docs' links; Temper's functional tests on the interpreter; the size and speed charts, drawn from the `stats` branch's data, and the tests of the scripts that write its rows and commit them, with stats.yml's permissions; the rules for release tags; then every crate's tests but the backends' and `tempest`'s, and again without default features, `tempest`'s included (temper-syntax's once, as it has no features); and, by that build, `temper fmt --check` on the repository's Temper code and the docs' examples (after the script's self-test) |
 | `cli` | The `tempest` crate's tests with every backend, so every toolchain |
 | `py, js, lua, rust` | those backends' tests, with mypy, pyright, TypeScript, Mocha, LuaLS, Lua 5.4.6 and LuaSocket, and again on LuaJIT; the Rust runtime's own; and the version's spellings, sorted by each ecosystem's comparator |
 | `java, csharp, cpp` | those backends' tests, with Java 21 and JUnit, .NET 6, and g++ 13, sanitized too, and libcurl; and `strict`: all generated C++ at -O2 by g++ 12 and 14 and clang++ |
@@ -329,6 +329,14 @@ tests with one checker at a time at its latest release (TypeScript,
 pyright, mypy, or LuaLS), the rest at their pins. They block nothing: a
 failure, named for its checker and with the versions in its summary,
 is the cue to fix the backend or the tests before bumping that pin.
+
+## `temper fmt` fuzzing, nightly
+
+Push CI fuzzes the formatter with a fixed seed, the same inputs each
+time. The nightly `fmt-fuzz` job runs it with a new seed (the time) and
+500 rounds, so it keeps trying new inputs. A failure prints its seed;
+`FMT_FUZZ_SEED=<seed> FMT_FUZZ_ROUNDS=500 cargo test -p temper-syntax
+--test fmt mutated` repeats it.
 
 ## Real libraries' Python types, nightly
 

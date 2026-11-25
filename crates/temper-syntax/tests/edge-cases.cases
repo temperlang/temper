@@ -892,3 +892,12 @@ Space	31	34	-	-	\n\n\n
 LeftDelimiter	0	1	b	-	"
 QuotedString	1	6	-	-	\\😀
 RightDelimiter	6	7	b	-	"
+
+=== a slash ending the source after `<<` starts a regex, as before a line break
+a <</
+--- tokens
+Word	0	1	-	-	a
+Space	1	2	-	-	 
+Punctuation	2	4	-	-	<<
+LeftDelimiter	4	5	b	-	/
+RightDelimiter	5	5	sb	-	/

@@ -169,6 +169,30 @@ export async function run(): Promise<void> {
     assert.deepEqual(files.sort(), [shapes.toString(), uses.toString()].sort());
   });
 
+  test("formatting on save, by default", async () => {
+    const tidy = vscode.Uri.joinPath(folder, "tidy.temper");
+    const doc = await vscode.workspace.openTextDocument(tidy);
+    await vscode.window.showTextDocument(doc);
+    const editor = vscode.workspace.getConfiguration("editor", { languageId: "temper" });
+    assert.equal(editor.get("formatOnSave"), true);
+    // The server formats once it has the document.
+    for (let tries = 0; ; tries++) {
+      const edits = await vscode.commands.executeCommand<vscode.TextEdit[] | undefined>(
+        "vscode.executeFormatDocumentProvider",
+        tidy,
+        { tabSize: 2, insertSpaces: true },
+      );
+      if ((edits?.length ?? 0) > 0) break;
+      assert.ok(tries < 600, "formatting edits");
+      await sleep(50);
+    }
+    const edit = new vscode.WorkspaceEdit();
+    edit.insert(tidy, new vscode.Position(2, 0), "let  d = c;\n");
+    assert.ok(await vscode.workspace.applyEdit(edit));
+    assert.ok(await doc.save());
+    assert.equal(doc.getText(), "let c = f(a, b);\nlet d = c;\n");
+  });
+
   const notes = vscode.Uri.joinPath(folder, "notes.temper.md");
   /** The preview's first message since `from` that `f` gives something for. */
   const heard = <T>(what: string, from: number, f: (m: FromPreview) => T | undefined | false): Promise<T> =>

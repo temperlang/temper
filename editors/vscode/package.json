@@ -1,7 +1,7 @@
 {
   "name": "temper",
   "displayName": "Temper",
-  "description": "Temper in VS Code: highlighting for .temper and literate .temper.md files, a rendered preview of .temper.md, and Temper's language server for errors as you type, hover, go to definition, completion, references, rename, outlines, and signature help",
+  "description": "Temper in VS Code: highlighting for .temper and literate .temper.md files, a rendered preview of .temper.md, and Temper's language server for errors as you type, hover, go to definition, completion, references, rename, outlines, signature help, and formatting (on save by default)",
   "version": "0.0.1",
   "publisher": "temperlang",
   "license": "Apache-2.0 OR MIT",
@@ -18,6 +18,12 @@
   ],
   "main": "./out/extension.js",
   "activationEvents": [],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Temper's language server reads and analyzes the workspace's code, so it runs only in a trusted workspace."
+    }
+  },
   "contributes": {
     "languages": [
       {
@@ -79,16 +85,28 @@
         }
       }
     ],
+    "configurationDefaults": {
+      "[temper]": {
+        "editor.defaultFormatter": "temperlang.temper",
+        "editor.formatOnSave": true
+      },
+      "[temper-markdown]": {
+        "editor.defaultFormatter": "temperlang.temper",
+        "editor.formatOnSave": true
+      }
+    },
     "configuration": {
       "title": "Temper",
       "properties": {
         "temper.server.path": {
           "type": "string",
+          "scope": "machine",
           "default": "",
           "markdownDescription": "The `temper` that runs the language server (`temper lsp`): a name on `PATH` or a full path. Empty uses the `temper` bundled with this extension, if it has one, and else `temper` on `PATH`."
         },
         "temper.server.args": {
           "type": "array",
+          "scope": "machine",
           "items": {
             "type": "string"
           },

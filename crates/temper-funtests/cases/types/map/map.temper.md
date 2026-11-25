@@ -113,7 +113,7 @@ mapOfTwo: 2
 # Maps get with defaults
 
     let colorToHex(color: List<Boolean>): String {
-      var c = color.join("", fn(b: Boolean): String {
+      var c = color.join("", fn (b: Boolean): String {
         if (b) {
           return "FF";
         } else {

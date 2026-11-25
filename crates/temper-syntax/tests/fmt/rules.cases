@@ -1,0 +1,406 @@
+# `temper fmt` cases for docs/tools/fmt.md's rules that the other files'
+# inputs already follow: each input here breaks the rule it names.
+# Format and updating: see tests/fmt.rs.
+
+=== no space between a called name and `(`
+f (a);
+let y = g (1, 2);
+--- formatted
+f(a);
+let y = g(1, 2);
+
+=== space goes inside `{ }`, and after `if` and `)`
+if(ok){go()}
+--- formatted
+if (ok) { go() }
+
+=== an object literal's colons get none before and one after, as type colons do
+let o = {a:1, b :2};
+let p: {key:Int} = { key:  1 };
+--- formatted
+let o = { a: 1, b: 2 };
+let p: { key: Int } = { key: 1 };
+
+=== space after `;` within a line
+for (var i = 0;i < n;i += 1) { f(i) }
+--- formatted
+for (var i = 0; i < n; i += 1) { f(i) }
+
+=== a tab between tokens becomes one space, after a keyword too
+let	x =	1;
+let 	 y = 2;
+--- formatted
+let x = 1;
+let y = 2;
+
+=== tabs indenting a .temper file's lines become spaces
+class C {
+	let x: Int;
+}
+--- formatted
+class C {
+  let x: Int;
+}
+
+=== a multi-quoted string's lines indented with tabs stay as written
+if (a) {
+	let s = """
+		"x
+		"y
+	;
+}
+--- formatted
+if (a) {
+  let s = """
+		"x
+		"y
+  ;
+}
+
+=== tabs indenting literate code are kept (markdown)
+Prose.
+
+```temper
+	let x=1;
+```
+
+--- formatted
+Prose.
+
+```temper
+	let x = 1;
+```
+
+=== blank lines at the end of a file collapse to its one line break
+let x = 1;
+
+
+
+--- formatted
+let x = 1;
+
+=== a file of only spaces and line breaks becomes empty
+   
+
+  
+--- formatted
+
+=== an empty file stays empty
+--- formatted
+
+=== a file of only a comment gains its line break at the end
+// hi
+--- formatted
+// hi
+
+=== trailing space after comments goes, on each line of a block comment too
+let x = 1; // c   
+/* a   
+   b */
+/** d	
+ * e  
+ */
+let y = 2;
+--- formatted
+let x = 1; // c
+/* a
+   b */
+/** d
+ * e
+ */
+let y = 2;
+
+=== trailing space in a fmt: off region stays
+// fmt: off
+let x = 1; // c   
+// fmt: on
+--- formatted
+// fmt: off
+let x = 1; // c   
+// fmt: on
+
+=== a fmt: off region without code keeps its lines too
+// fmt: off
+   
+
+// fmt: on
+let x=1;
+--- formatted
+// fmt: off
+   
+
+// fmt: on
+let x = 1;
+
+=== trailing space on a fmt: off region's last line stays at the end of the file
+// fmt: off
+let x  = 1;   
+
+
+--- formatted
+// fmt: off
+let x  = 1;   
+
+=== a line of only spaces in a block becomes blank
+let f(): Void {
+  g();
+   
+  h();
+}
+--- formatted
+let f(): Void {
+  g();
+
+  h();
+}
+
+=== a block comment moving right keeps its lines' relative indentation
+class C {
+/*
+  a
+    b
+*/
+let x: Int;
+}
+--- formatted
+class C {
+  /*
+    a
+      b
+  */
+  let x: Int;
+}
+
+=== a block comment that can't move left of column 0 stays where it is
+        /*
+  a
+    b
+        */
+let x = 1;
+--- formatted
+        /*
+  a
+    b
+        */
+let x = 1;
+
+=== fmt: off in an argument list without fmt: on ends at its `)`
+f(a,
+  // fmt: off
+  g( b ,c ),
+  d )
+let x=1;
+--- formatted
+f(a,
+  // fmt: off
+  g( b ,c ),
+  d)
+let x = 1;
+
+=== fmt: on with no fmt: off before it is an ordinary comment
+// fmt: on
+let x=1;
+--- formatted
+// fmt: on
+let x = 1;
+
+=== a second fmt: off in a region changes nothing; its fmt: on ends it
+// fmt: off
+let x=1;
+// fmt: off
+let y=2;
+// fmt: on
+let z=3;
+--- formatted
+// fmt: off
+let x=1;
+// fmt: off
+let y=2;
+// fmt: on
+let z = 3;
+
+=== only `// fmt: off` itself is a marker, not `//fmt: off` or a block comment
+//fmt: off
+let x=1;
+/* fmt: off */
+let y=2;
+//  fmt: off
+let z=3;
+--- formatted
+//fmt: off
+let x = 1;
+/* fmt: off */
+let y = 2;
+//  fmt: off
+let z = 3;
+
+=== fmt: off in a fenced block ends with it (markdown)
+```temper
+// fmt: off
+let x=1;
+```
+
+```temper
+let y=2;
+```
+
+--- formatted
+```temper
+// fmt: off
+let x=1;
+```
+
+```temper
+let y = 2;
+```
+
+=== a fenced block in a list item (markdown)
+- An item:
+
+  ```temper
+  let f(): Void {
+  g();
+  }
+  ```
+
+--- formatted
+- An item:
+
+  ```temper
+  let f(): Void {
+    g();
+  }
+  ```
+
+=== tilde fences (markdown)
+~~~temper
+let x=1;
+~~~
+
+--- formatted
+~~~temper
+let x = 1;
+~~~
+
+=== code blocks in a block quote are prose (markdown)
+> ```temper
+> let x=1;
+> ```
+
+--- formatted
+> ```temper
+> let x=1;
+> ```
+
+=== a fence never closed runs to the end of the file (markdown)
+Prose.
+
+```temper
+let x=1;
+
+--- formatted
+Prose.
+
+```temper
+let x = 1;
+
+=== blank lines at a code block's edges collapse to one (markdown)
+```temper
+
+
+
+let x=1;
+
+
+```
+
+```temper
+let y=2;
+  
+```
+
+--- formatted
+```temper
+
+let x = 1;
+
+```
+
+```temper
+let y = 2;
+
+```
+
+=== trailing space after a code block's last line goes, before another block (markdown)
+```temper
+let x = 1;   
+```
+Prose.
+
+    let y = 2;   
+
+More.
+
+--- formatted
+```temper
+let x = 1;
+```
+Prose.
+
+    let y = 2;
+
+More.
+
+=== non-ASCII names and strings space like others
+let été=1;let s="😀";
+--- formatted
+let été = 1; let s = "😀";
+
+=== a byte order mark doesn't lex as Temper
+﻿let x = 1;
+--- formatted
+error: doesn't parse (line 1: unrecognized token); left as written
+
+=== a line kept left of the margin starts its statement; its continuation indents from it (markdown)
+Code:
+
+  ```temper
+  let x = 1;
+let y =
+      2;
+  ```
+
+--- formatted
+Code:
+
+  ```temper
+  let x = 1;
+let y =
+  2;
+  ```
+
+=== a statement started in a fmt: off region continues from its line as written
+class C {
+  // fmt: off
+    let
+  // fmt: on
+  x = 1;
+}
+--- formatted
+class C {
+  // fmt: off
+    let
+      // fmt: on
+      x = 1;
+}
+
+=== a line kept for its `<` starts its statement, and its block closes at its line
+<for (a;
+ b;
+ c) {
+}
+--- formatted
+<for (a;
+    b;
+    c) {
+}

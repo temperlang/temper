@@ -24,7 +24,7 @@ Some facts about the Gregorian calendar.
     ];
 
     let isLeapYear(year: Int): Boolean {
-       year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)
+      year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)
     }
 
     /**
@@ -116,7 +116,8 @@ Here's just enough of a Date type to get us started.
                 day <= daysInMonth[month]
               } else {
                 isLeapYear(year)
-              })) {
+              }
+            )) {
           this.year = year;
           this.month = month;
           this.day = day;
@@ -160,9 +161,9 @@ Here's just enough of a Date type to get us started.
             !isoString.hasAtLeast(String.begin, strIndex, 4)) {
           bubble();
         }
-        let day   = isoString.slice(beforeDay,    end)       .toInt32(10);
-        let month = isoString.slice(beforeMonth,  afterMonth).toInt32(10);
-        let year  = isoString.slice(String.begin, strIndex)  .toInt32(10);
+        let day = isoString.slice(beforeDay, end).toInt32(10);
+        let month = isoString.slice(beforeMonth, afterMonth).toInt32(10);
+        let year = isoString.slice(String.begin, strIndex).toInt32(10);
         return new Date(year, month, day);
       }
 
@@ -190,13 +191,13 @@ Here's just enough of a Date type to get us started.
         let yearDelta = end.year - start.year;
         let monthDelta = end.month - start.month;
         yearDelta - (
-            // If the end month/day is before the start's then we
-            // don't have a full year.
-            if (monthDelta < 0 || monthDelta == 0 && end.day < start.day) {
-              1
-            } else {
-              0
-            })
+          // If the end month/day is before the start's then we
+          // don't have a full year.
+          if (monthDelta < 0 || monthDelta == 0 && end.day < start.day) {
+            1
+          } else {
+            0
+          })
       }
 
       /** Today's date in UTC */

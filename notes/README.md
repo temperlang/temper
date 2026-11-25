@@ -59,6 +59,8 @@ This folder holds the plan in parts:
   tempest's design and plan, by chunks.
 - [online-repl.md](online-repl.md): the REPL in the browser, beside
   the playground: design, decisions, and plan, by chunks.
+- [fmt.md](fmt.md): `temper fmt`: a census of today's layout, the
+  rules, the design, and next steps.
 - [kotlin-differences.md](kotlin-differences.md): where tempest differs
   from Kotlin Temper on purpose, and Kotlin Temper's known bugs.
 

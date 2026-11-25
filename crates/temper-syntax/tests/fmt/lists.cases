@@ -1,0 +1,560 @@
+# `temper fmt` cases for bracketed lists (arguments, parameters, list and
+# object literals, type arguments): input, then `--- formatted` and the
+# expected output. The author's line breaks decide, with no line width:
+# no line break after the open bracket joins the list onto one line; a
+# line break there and no trailing comma puts its items together on one
+# line between the brackets' lines; a trailing comma puts one item per
+# line. Format and updating: see tests/fmt.rs.
+
+=== no line break after the open bracket: one line, however long
+f(a,
+  b);
+f(a,
+  b
+);
+let xs = [first,
+    second, third];
+let o = { a: 1,
+  b: 2 };
+let m: Map<String,
+  Int> = make();
+let combine(first: Int,
+    second: Int): Int { first }
+let resultOfTheComputation = someRatherLongFunctionName(argumentNumberOne, argumentNumberTwo,
+  argumentNumberThreeAndSomeMore, andTheFourthOne);
+--- formatted
+f(a, b);
+f(a, b);
+let xs = [first, second, third];
+let o = { a: 1, b: 2 };
+let m: Map<String, Int> = make();
+let combine(first: Int, second: Int): Int { first }
+let resultOfTheComputation = someRatherLongFunctionName(argumentNumberOne, argumentNumberTwo, argumentNumberThreeAndSomeMore, andTheFourthOne);
+
+=== a line break after the open bracket, no trailing comma: the items on one line
+f(
+  a,
+  b
+);
+let resultOfTheComputation = someRatherLongFunctionName(
+    argumentNumberOne, argumentNumberTwo,
+    argumentNumberThreeAndSomeMore);
+let xs = [
+  first, second];
+let o = {
+  a: 1,
+  b: 2 };
+let combine(
+  first: Int,
+  second: Int
+): Int {
+  first
+}
+let m: Map<
+  String, Int> = make();
+--- formatted
+f(
+  a, b
+);
+let resultOfTheComputation = someRatherLongFunctionName(
+  argumentNumberOne, argumentNumberTwo, argumentNumberThreeAndSomeMore
+);
+let xs = [
+  first, second
+];
+let o = {
+  a: 1, b: 2
+};
+let combine(
+  first: Int, second: Int
+): Int {
+  first
+}
+let m: Map<
+  String, Int
+> = make();
+
+=== a trailing comma: one item per line
+f(a, b,);
+let xs = [first, second,
+  third,];
+let o = { a: 1, b: 2, };
+let combine(
+  first: Int, second: Int,
+): Int {
+  first
+}
+g(a,);
+--- formatted
+f(
+  a,
+  b,
+);
+let xs = [
+  first,
+  second,
+  third,
+];
+let o = {
+  a: 1,
+  b: 2,
+};
+let combine(
+  first: Int,
+  second: Int,
+): Int {
+  first
+}
+g(
+  a,
+);
+
+=== adding a line break after the open bracket, or removing it
+f(
+a, b, c);
+g(a,
+  b, c
+);
+--- formatted
+f(
+  a, b, c
+);
+g(a, b, c);
+
+=== adding a trailing comma, or removing it
+f(
+  a, b, c,
+);
+g(
+  a,
+  b,
+  c
+);
+h(a,
+  b,
+  c
+);
+k(a, b, c,
+);
+--- formatted
+f(
+  a,
+  b,
+  c,
+);
+g(
+  a, b, c
+);
+h(a, b, c);
+k(
+  a,
+  b,
+  c,
+);
+
+=== each list follows its own line breaks
+let table = build(
+  headings(first, second), rows(source,
+    filter),
+  options,
+);
+let nested = outer(short, inner(
+    first,
+    second
+));
+--- formatted
+let table = build(
+  headings(first, second),
+  rows(source, filter),
+  options,
+);
+let nested = outer(short, inner(
+  first, second
+));
+
+=== a single item follows the same rules
+f(
+  a
+);
+f(a
+);
+f(
+  a);
+g(a,);
+g(h(a,
+  b));
+let total = (
+  first + second);
+let item = items[
+  index];
+let block = run(fn {
+  body();
+});
+if (
+  ready
+) {
+  go();
+}
+--- formatted
+f(
+  a
+);
+f(a);
+f(
+  a
+);
+g(
+  a,
+);
+g(h(a, b));
+let total = (
+  first + second
+);
+let item = items[
+  index
+];
+let block = run(fn {
+  body();
+});
+if (
+  ready
+) {
+  go();
+}
+
+=== a multi-line last item: the rules still apply, and it keeps its own lines
+foo(a,
+  b, fn {
+    body();
+  });
+let nested = outer(short,
+  inner(
+    first, second
+  ));
+--- formatted
+foo(a, b, fn {
+  body();
+});
+let nested = outer(short, inner(
+  first, second
+));
+
+=== last items over several lines: a list, an object, a block, in each layout
+let xs = combine(a,
+  b, [
+    first,
+    second,
+  ]);
+let o = make(name,
+  {
+    a: 1,
+    b: 2,
+  });
+run(
+  first, second,
+  fn {
+    // why
+    body();
+  }
+);
+run(first,
+  fn {
+    body();
+  },);
+let r = a(x, b(y,
+  c(z, fn {
+    body();
+  })));
+let table = build(
+  first,
+  rows(source,
+    fn {
+      body();
+    }),
+);
+--- formatted
+let xs = combine(a, b, [
+  first,
+  second,
+]);
+let o = make(name, {
+  a: 1,
+  b: 2,
+});
+run(
+  first, second, fn {
+    // why
+    body();
+  }
+);
+run(
+  first,
+  fn {
+    body();
+  },
+);
+let r = a(x, b(y, c(z, fn {
+  body();
+})));
+let table = build(
+  first,
+  rows(source, fn {
+    body();
+  }),
+);
+
+=== with a trailing comma, any item may span lines: each starts its own
+serialize(scheme, if (h == null) {
+    null
+  } else {
+    h
+  }, port,
+  fn {
+    body();
+  },);
+let rows = [
+  {
+    name: first,
+  }, {
+    name: second,
+  },
+];
+--- formatted
+serialize(
+  scheme,
+  if (h == null) {
+    null
+  } else {
+    h
+  },
+  port,
+  fn {
+    body();
+  },
+);
+let rows = [
+  {
+    name: first,
+  },
+  {
+    name: second,
+  },
+];
+
+=== multi-line items anywhere: each starts where the one before ends
+foo(fn {
+  body();
+},
+  b);
+foo(fn {
+    body();
+  }, b, fn {
+    more();
+  },
+  c);
+let r = combine(a, [
+    first,
+    second,
+  ],
+  b);
+f(x,
+  a +
+    b, c);
+f(fn {
+  // the item's own comment
+  body();
+},
+  b);
+--- formatted
+foo(fn {
+  body();
+}, b);
+foo(fn {
+  body();
+}, b, fn {
+  more();
+}, c);
+let r = combine(a, [
+  first,
+  second,
+], b);
+f(x, a +
+    b, c);
+f(fn {
+  // the item's own comment
+  body();
+}, b);
+
+=== lists nested in multi-line items follow their own rules
+let r = outer(fn {
+  inner(a,
+    b);
+  other(
+    c, d,);
+  hugged(
+    e,
+    f);
+}, last(x,
+  y), {
+    name: first,
+  });
+--- formatted
+let r = outer(fn {
+  inner(a, b);
+  other(
+    c,
+    d,
+  );
+  hugged(
+    e, f
+  );
+}, last(x, y), {
+  name: first,
+});
+
+=== multi-line items with a line break after the open bracket, and with a trailing comma
+run(
+  fn {
+    body();
+  },
+  b, fn {
+    more();
+  },
+  c
+);
+run(fn {
+    body();
+  }, b,);
+--- formatted
+run(
+  fn {
+    body();
+  }, b, fn {
+    more();
+  }, c
+);
+run(
+  fn {
+    body();
+  },
+  b,
+);
+
+=== items that must end their line, and comments between items, keep the list's line breaks
+let s = f(a,
+  """
+    "text
+);
+let t = f("""
+    "text
+, b);
+f(x,
+  // the last
+  g(fn {
+    body();
+  }));
+f(fn {
+  body();
+}, // why
+  b);
+let xs = [
+  a, // the first
+  b
+];
+let s = "${f(a,
+  b)}";
+--- formatted
+let s = f(a,
+  """
+    "text
+);
+let t = f("""
+    "text
+, b);
+f(x,
+  // the last
+  g(fn {
+    body();
+  }));
+f(fn {
+  body();
+}, // why
+  b);
+let xs = [
+  a, // the first
+  b
+];
+let s = "${f(a,
+  b)}";
+
+=== data lists, all literals, keep their line breaks
+let rows = [
+  ["a", "b"], ["c", "d"],
+  [-1, 2.5], [true, null],
+];
+let codes = [0x41, 0x42,
+  0x43, 0x44];
+let pairs = [
+    new Pair("a", 1), new Pair("b", 2),
+    new Pair("c", 3)
+];
+check("a long expected string for this test",
+  "and another string to compare it with");
+--- formatted
+let rows = [
+  ["a", "b"], ["c", "d"],
+  [-1, 2.5], [true, null],
+];
+let codes = [0x41, 0x42,
+  0x43, 0x44];
+let pairs = [
+  new Pair("a", 1), new Pair("b", 2),
+  new Pair("c", 3)
+];
+check("a long expected string for this test",
+  "and another string to compare it with");
+
+=== lists in literate code blocks keep their margins (markdown)
+Prose stays exactly as written, (f(a,
+b, c)).
+
+1. A list item:
+
+   ```temper
+   let r = someFunction(
+       argumentNumberOne,
+       argumentNumberTwo);
+   f(a,
+     b
+   );
+   ```
+
+More prose.
+
+    let built = makeSomething(first,
+      second,);
+
+--- formatted
+Prose stays exactly as written, (f(a,
+b, c)).
+
+1. A list item:
+
+   ```temper
+   let r = someFunction(
+     argumentNumberOne, argumentNumberTwo
+   );
+   f(a, b);
+   ```
+
+More prose.
+
+    let built = makeSomething(
+      first,
+      second,
+    );
+
+=== an item starting with `<` keeps its line breaks, as space before `<` decides angle brackets
+f(a (< b || c > d,)| c > d)
+--- formatted
+f(a(< b || c > d,) | c > d)

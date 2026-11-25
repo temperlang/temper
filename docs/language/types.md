@@ -60,6 +60,7 @@ of confusion.
 // ✅ 0
 ```
 
+<!-- fmt: off -->
 ```temper
 let hundred = 100;
 let ten     = 010; // <!-- No
@@ -70,6 +71,7 @@ let one     = 001; // <!-- Still no
 You can't use commas in a number literal to make large numbers readable,
 but you can use an underscore to separate digit groups.
 
+<!-- fmt: off -->
 ```temper
 let commas =      [123,456,789];  // Commas separate list elements
 let underscores = [123_456_789];  // Underscores make long numbers easier to read
@@ -91,6 +93,7 @@ Exponential notation is fine for floating point values, but not for integers.
 And feel free to use a base like hexadecimal or binary when that fits what you're
 modeling.
 
+<!-- fmt: off -->
 ```temper
 0x10 == 16 && // Hex
 0b10 ==  2 && // Binary
@@ -264,12 +267,13 @@ The exponent follows the letter 'e', either upper or lower-case.
 
 ```temper
 123e2 == 12_300.0 &&
-123e2 == 123E2
+  123e2 == 123E2
 // ✅
 ```
 
 Exponents may have a sign.
 
+<!-- fmt: off -->
 ```temper
 125e+2     == 12_500.0 &&
 1.25e+2    == 125.0 &&
@@ -282,7 +286,7 @@ An integer-like number with a decimal suffix is a Float64.
 
 ```temper
 1F64 == 1.0 &&
-1f64 == 1.0
+  1f64 == 1.0
 // ✅
 ```
 
@@ -572,7 +576,7 @@ let a = """
   : for (let number of numbers) {
       ~ ${number}! Ha HA ha.
   : }
-  ;
+;
 
 let b = do {
   let sb = new StringBuilder();
@@ -652,7 +656,7 @@ interpolation `${...}`, or hole `${}` contributes
   "Line 1
   "Line 2
   ~Line 3 without LF at end
-== "Line 1\nLine 2\nLine 3 without LF at end"
+  == "Line 1\nLine 2\nLine 3 without LF at end"
 // ✅
 ```
 
@@ -664,7 +668,7 @@ It's good style to line up the margin characters, but not necessary.
     " Line 1
    "  Line 2
     "   Line 3
-== " Line 1\n  Line 2\n   Line 3\n"
+  == " Line 1\n  Line 2\n   Line 3\n"
 // ✅
 ```
 
@@ -688,7 +692,7 @@ interpolation or hole:
     "Line 1  ${"interpolation"}
     "Line 2  ${/*hole*/}
     ~Line 3
-    == "Line 1  interpolation\nLine 2  \nLine 3"
+  == "Line 1  interpolation\nLine 2  \nLine 3"
 // ✅
 ```
 
@@ -724,7 +728,7 @@ content from the expression, and the content after.
 
 ```temper
 "foo ${"bar"} baz"
-== "foo bar baz"
+  == "foo bar baz"
 // ✅
 ```
 
@@ -736,7 +740,7 @@ such as *Int*.
 ```temper
 let two = 2;
 "one ${two} three"
-== "one 2 three"
+  == "one 2 three"
 // ✅
 ```
 
@@ -760,7 +764,7 @@ easier.
 "A very long string ${
   // Breaking this string across multiple lines.
 }that runs on and on"
-== "A very long string that runs on and on"
+  == "A very long string that runs on and on"
 // ✅
 ```
 
@@ -771,7 +775,7 @@ the end of a line in a multi-quoted string.
 """
 "Line 1
 ~Line 2 ${}
-== "Line 1\nLine 2 "
+  == "Line 1\nLine 2 "
 // ✅
 ```
 
@@ -798,6 +802,7 @@ True iff this string has no code-points.
 
 The index at the end of this string, just past the last character if any.
 
+<!-- fmt: off -->
 ```temper
 // An empty string's end is the same as its start.
    "".end.compareTo(String.begin) == 0 &&
@@ -906,6 +911,7 @@ requires no counting.
 At no point is it worse than O(min(n, minCount)) where n is the actual
 count between begin and end.
 
+<!-- fmt: off -->
 ```temper
 let s = "abcdefghijklmnopqrstuvwxyz";
 let i = s.next(String.begin); // Points at 'b'
@@ -1926,8 +1932,8 @@ let applyAndNegate<T>(x: T, predicate: Predicate<T>): Boolean {
 let s = "abcd";
 //!outputs: "Is 'abcd' empty? The answer is NOT: true."
 console.log("Is '${s}' empty? The answer is NOT: ${
-    applyAndNegate(s) { x => x.empty }
-    //                ^^^^^^^^^^^^^^^^ That block is-a Predicate<String>
+  applyAndNegate(s) { x => x.empty }
+  //                ^^^^^^^^^^^^^^^^ That block is-a Predicate<String>
 }.");
 // ⏸️
 ```
@@ -1937,6 +1943,7 @@ abbreviated method-like syntax.
 
 The parts of an abbreviated functional interface declaration are shown below.
 
+<!-- fmt: off -->
 ```temper
 // other decorators
 @fun
@@ -2291,6 +2298,7 @@ constraints here, however. `Void | Bubble` makes sense, but
 In the middle are *NominalType*s.  These are types declared with a name
 and parameters.  *NominalTypes* include all these:
 
+<!-- fmt: off -->
 ```temper
 Boolean         // A builtin type
 List<T?>        // A parameterized type

@@ -552,11 +552,11 @@ impl Parser {
             if !ready {
                 continue;
             }
-            // Past the operator's own token.
-            let tokens = el.children.iter().filter(|&&c| self.is_token(c)).count();
-            let may_follow = tokens >= 1
-                && token.kind == TokenKind::Punctuation
-                && el.op.info().follower == Some(text);
+            // Past the operator's own token (asked last, as a long list's
+            // element has many children).
+            let may_follow = token.kind == TokenKind::Punctuation
+                && el.op.info().follower == Some(text)
+                && el.children.iter().any(|&c| self.is_token(c));
             if may_follow {
                 self.commit_to(j + 1);
                 return true;

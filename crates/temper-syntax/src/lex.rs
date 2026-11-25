@@ -1018,7 +1018,9 @@ impl Lexer {
                     _ => false,
                 },
                 CharKind::Dot => after.is_ascii_digit(),
-                CharKind::Slash if self.end + 1 < len => {
+                // As at a line's end, so a line break added after it
+                // can't change how it lexes.
+                CharKind::Slash => {
                     if after == b'*' || after == b'/' {
                         true
                     } else if self.byte(self.start) == b'<' {
@@ -1031,7 +1033,6 @@ impl Lexer {
                         false
                     }
                 }
-                CharKind::Slash => false,
                 _ => true,
             };
             if stop {

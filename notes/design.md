@@ -144,7 +144,8 @@ There's one node type, in two copies:
   an origin link to the parse node they came from, for error spans, hover
   and go-to-definition.
 
-There's no separate lossless syntax tree type.
+There's no separate lossless syntax tree type: `temper fmt` lays out
+code from the parse result alone ([fmt.md](fmt.md)).
 
 ## 5. The settle loop
 
