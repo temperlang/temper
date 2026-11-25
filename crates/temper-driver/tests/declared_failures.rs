@@ -1,5 +1,5 @@
 //! Declared failures (RFC 164) reach every built-in backend: each
-//! translates every specification tmpl has (the testkit's `TMPL_SPECS`, by
+//! translates the testkit's `failures` and `host-failures` programs (by
 //! their tmpl goldens), but for host code and imported libraries' names
 //! they're given elsewhere, as each runs them in its own functional
 //! tests; and a program with only
@@ -10,7 +10,7 @@ use std::path::Path;
 use temper_driver::Registry;
 use temper_tmpl::{Profile, SourceLinks, text, validate};
 
-/// The testkit's goldens of the specifications tmpl has.
+/// The testkit's goldens of `failures` and `host-failures`.
 fn spec_goldens() -> Vec<(String, String)> {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../temper-be-testkit/tests/goldens");
     let mut found: Vec<(String, String)> = fs::read_dir(&dir)

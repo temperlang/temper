@@ -106,11 +106,11 @@ print("by name", option.describe(), option.clamp(12))
 
 # Declared failures are exceptions under the library's root, caught by
 # their own types, the root, or a sealed interface's.
-from py_failures import (  # noqa: E402
+from failures_interop import (  # noqa: E402
     BadSign,
+    FailuresInteropError,
     LookupFailed,
     NotFound,
-    PyFailuresError,
     SignError,
     lookup,
     made_before,
@@ -136,7 +136,7 @@ def raised(call: Callable[[], object]) -> BaseException | None:
 
 
 failed = raised(lambda: lookup("y"))
-print(f"base {isinstance(failed, PyFailuresError)}, Exception {isinstance(failed, Exception)}")
+print(f"base {isinstance(failed, FailuresInteropError)}, Exception {isinstance(failed, Exception)}")
 
 for text in ["x", ""]:
     try:

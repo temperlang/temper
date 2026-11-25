@@ -15,10 +15,9 @@
 //! those tests, and on programs of C++'s own: names C++ takes
 //! ([`HIDING`]), a nullable result discarded ([`DISCARDED`]),
 //! `Float64.toString` across its range ([`FLOAT_FORMAT`]), and objects
-//! a call frees while it runs ([`LIFETIMES`]); this crate's own programs,
-//! in `tests/programs/` ([`OWN`]); and the testkit's specifications of
-//! declared failures ([`SPECS`]), whose host code returns its failures
-//! in `Expected`s.
+//! a call frees while it runs ([`LIFETIMES`]); and the testkit's programs
+//! of declared failures (`failures`, `host-failures`, whose host code
+//! returns its failures in `Expected`s, and `failures-interop`).
 //!
 //! - `goldens`: each program's generated library, laid out as Kotlin's,
 //!   with its `init.cpp` matching the golden in `tests/goldens/`, named
@@ -87,8 +86,8 @@
 //!   and the shim again), strictly and under the sanitizers, each
 //!   printing the same lines.
 //! - `failures_interop`: `host/failures.cpp`, host code using the
-//!   `cpp-failures` program's declared failures, built with its generated
-//!   library as C++14 and as C++23, under the sanitizers.
+//!   testkit's `failures-interop` program's declared failures, built with
+//!   its generated library as C++14 and as C++23, under the sanitizers.
 
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
@@ -282,15 +281,6 @@ const LIFETIMES: &str = "# Lifetimes
     console.log(made().length.toString());
 ";
 
-/// This crate's own programs, in `tests/programs/`, which test what's
-/// particular to C++: `cpp-failures`, declared failures as C++ callers
-/// branch on them, with host code that does (`tests/host/failures.cpp`).
-const OWN: [&str; 1] = ["cpp-failures"];
-
-/// The testkit's specifications (`kit::SPECS`) C++ runs, as Python, Java,
-/// and Rust do; the other backends don't yet.
-const SPECS: [&str; 2] = ["failures", "host-failures"];
-
 /// Building tests: plain, with the tests defined.
 const TESTS: Mode = Mode {
     name: "tests",
@@ -374,10 +364,9 @@ fn cases() -> Vec<Case> {
         &kit::NET[..],
     ]
     .concat();
-    let programs = [&kit::PROGRAMS[..], &SPECS[..]].concat();
-    let mut cases = kit::cases_with("cpp", &programs, &tests);
+    let mut cases = kit::cases_with("cpp", &kit::PROGRAMS, &tests);
     cases.iter_mut().for_each(rename_host_code);
-    let all = kit::all_libraries(&programs, &tests);
+    let all = kit::all_libraries(&kit::PROGRAMS, &tests);
     // Kotlin's suite expects std `net`'s tests to fail on C++, which has
     // no `net`; here they pass where libcurl's headers are.
     if !curl() {
@@ -424,18 +413,6 @@ fn cases() -> Vec<Case> {
         BIT_VECTOR,
         vec!["false true false false".into()],
     ));
-    for name in OWN {
-        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("tests/programs")
-            .join(format!("{name}.temper.md"));
-        let text = fs::read_to_string(&path).unwrap();
-        // Its one log block.
-        let log = text.split("```log\n").nth(1).unwrap_or_default();
-        let expected = log.split("```").next().unwrap_or_default();
-        let expected = expected.lines().map(str::to_string).collect();
-        let file = format!("{name}.temper.md");
-        cases.push(Case::inline(name, &file, text, expected));
-    }
     cases.push(Case::inline(
         "lifetimes",
         "lifetimes.temper.md",
@@ -2047,8 +2024,8 @@ fn expected_shim() {
     let _ = fs::remove_dir_all(&out);
 }
 
-/// `tests/host/failures.cpp`, host code using the `cpp-failures`
-/// program's declared failures, built with its generated library, all
+/// `tests/host/failures.cpp`, host code using the testkit's
+/// `failures-interop` program's declared failures, built with its generated library, all
 /// strictly, under the sanitizers, as C++14 (the runtime's shim) and
 /// C++23 (`std::expected`): it logs what the library's top level does,
 /// then a line per check.
@@ -2062,7 +2039,7 @@ fn failures_interop() {
         let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("be-cpp-failures");
         let _ = fs::remove_dir_all(&out);
         let case = (cases().into_iter())
-            .find(|c| c.key == "cpp-failures")
+            .find(|c| c.key == "failures-interop")
             .unwrap();
         let src = out.join("src");
         let mut sources = Vec::new();

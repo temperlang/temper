@@ -21,8 +21,8 @@
 //! other modules, the testkit's `WITH_STD`, and `net`'s, `NET`, against
 //! the testkit's test server; and for generators, `async`,
 //! and `await`, as Python's generators, the testkit's `ASYNC`; and for
-//! declared failures, the testkit's specifications `failures` and
-//! `host-failures`, which other backends don't run yet.
+//! declared failures, the testkit's `failures`, `host-failures`, and
+//! `failures-interop`.
 //!
 //! - `goldens`: each test's generated Python, laid out as Kotlin's, with
 //!   its root module matching the golden in `tests/goldens/`, named for
@@ -63,7 +63,7 @@ use temper_be_py::{OutFile, PY, translate};
 use temper_be_testkit::{self as kit, Case, Goldens};
 
 /// The shared programs that Python's translation covers so far.
-const PROGRAMS: [&str; 29] = [
+const PROGRAMS: [&str; 30] = [
     "classes",
     "nullables",
     "generics",
@@ -91,9 +91,9 @@ const PROGRAMS: [&str; 29] = [
     "host-error-causes",
     "host-error-tests",
     "sealed-whens",
-    // Specifications (`kit::SPECS`) Python runs, other backends not yet.
     "failures",
     "host-failures",
+    "failures-interop",
 ];
 
 fn cases() -> Vec<Case> {
@@ -137,9 +137,13 @@ fn cases() -> Vec<Case> {
 /// This crate's own programs, in `tests/programs/`: `py-builtin-params`,
 /// parameters named like Python's builtins, which keep their names
 /// (`host_interop` passes one by name), and names a function binds more
-/// than once, annotated once; and `py-failures`, declared failures as
-/// Python callers catch them (`host_interop`).
-const PY_PROGRAMS: [&str; 2] = ["py-builtin-params", "py-failures"];
+/// than once, annotated once.
+const PY_PROGRAMS: [&str; 1] = ["py-builtin-params"];
+
+/// The programs whose libraries `host_interop` imports after
+/// `async-turns`, in order: `py-builtin-params`, and the shared
+/// `failures-interop`, whose declared failures it catches.
+const INTEROP: [&str; 2] = ["py-builtin-params", "failures-interop"];
 
 /// The lines of a program's log blocks, in order.
 fn log_blocks(text: &str) -> Vec<String> {
@@ -805,8 +809,8 @@ fn runs() {
         let mut modules = Vec::new();
         // The cases to type-check, for `check_types`.
         let mut checked = Vec::new();
-        // `async-turns`'s import path, and this crate's own programs'
-        // projects and logs, in order, for `host_interop`.
+        // `async-turns`'s import path, and [`INTEROP`]'s projects and
+        // logs, for `host_interop`.
         let mut interop = None;
         let mut own = Vec::new();
         for case in cases() {
@@ -841,8 +845,8 @@ fn runs() {
             if case.key == "async-turns" {
                 interop = Some((projects.clone(), case.expected.clone()));
             }
-            if PY_PROGRAMS.contains(&case.key.as_str()) {
-                own.push((project.clone(), case.expected.clone()));
+            if let Some(at) = INTEROP.iter().position(|&k| k == case.key) {
+                own.push((at, project.clone(), case.expected.clone()));
             }
             let tests = project.join("tests");
             if tests.exists() {
@@ -899,10 +903,11 @@ fn runs() {
             }
         }
         run_batch(&python, &batch, &mut failures);
-        if let Some((mut projects, logged)) = interop.filter(|_| own.len() == PY_PROGRAMS.len()) {
-            projects.extend(own.iter().map(|(project, _)| project.clone()));
+        if let Some((mut projects, logged)) = interop.filter(|_| own.len() == INTEROP.len()) {
+            own.sort_by_key(|(at, ..)| *at);
+            projects.extend(own.iter().map(|(_, project, _)| project.clone()));
             let checkers = (mypy.as_deref(), pyright.as_deref());
-            let [(_, params), (_, failing)] = &own[..] else {
+            let [(_, _, params), (_, _, failing)] = &own[..] else {
                 unreachable!()
             };
             let logs = [&logged[..], &params[..], &failing[..]];
@@ -936,7 +941,7 @@ fn runs() {
 /// which fails clearly; loops over a generated generator, which a
 /// failed step leaves done; catches a failure as `RuntimeError`; and,
 /// once `py-builtin-params`'s import has logged `then`, passes its constructor its parameters by name
-/// (`help=`), as they keep their names; and once `py-failures`' import
+/// (`help=`), as they keep their names; and once `failures-interop`'s import
 /// has logged `failing`, catches its declared failures by their own
 /// types, its base, and a sealed interface's, with their messages and
 /// causes, while a panic passes `except Exception`. mypy and pyright check it,

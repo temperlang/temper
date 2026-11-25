@@ -21,8 +21,9 @@
 //! jumps, string order, modules and imports (`modules`, and
 //! `imports-library`, which imports it), and tests (`testing`), and on
 //! this crate's own (`tests/programs/`), which cover what's particular
-//! to Rust ([`OWN`]), and the testkit's specifications of declared
-//! failures ([`SPECS`]), whose host code returns its failures in `Err`s.
+//! to Rust ([`OWN`]), and the testkit's programs of declared failures
+//! (`failures`, `host-failures`, whose host code returns its failures in
+//! `Err`s, and `failures-interop`).
 //! - `goldens`: each program's generated crate, laid out as Kotlin's,
 //!   with its `src/mod.rs` matching the golden in `tests/goldens/`, named
 //!   for the test's path (`algos-fibonacci.rs`), its other modules'
@@ -143,13 +144,8 @@ const LAYOUT_GAPS: [&str; 9] = [
 ];
 
 /// This crate's own programs, in `tests/programs/`, which test what's
-/// particular to Rust: `rust-failures`, declared failures as Rust callers
-/// match them, with host code that does (`tests/host/failures.rs`).
-const OWN: [&str; 3] = ["class-edges", "nullable-edges", "rust-failures"];
-
-/// The testkit's specifications (`kit::SPECS`) Rust runs, as Python and
-/// Java do; the other backends don't yet.
-const SPECS: [&str; 2] = ["failures", "host-failures"];
+/// particular to Rust.
+const OWN: [&str; 2] = ["class-edges", "nullable-edges"];
 
 fn cases() -> Vec<Case> {
     let tests = [
@@ -172,8 +168,7 @@ fn cases() -> Vec<Case> {
         &kit::NET[..],
     ]
     .concat();
-    let programs = [&kit::PROGRAMS[..], &SPECS[..]].concat();
-    let mut cases = kit::cases_with("rust", &programs, &tests);
+    let mut cases = kit::cases_with("rust", &kit::PROGRAMS, &tests);
     // A library named a Rust keyword (`regex/match`'s `match`), which
     // cargo refuses as a package's name, by its key (`regex-match`).
     for case in &mut cases {
@@ -501,14 +496,14 @@ temper-core = { path = \"../temper-core\" }
 ";
 
 /// The crate of `tests/host/failures.rs`, host code that uses
-/// `rust-failures`' declared failures.
-const FAILURES_INTEROP: &str = "[package]
-name = \"failures-interop\"
+/// `failures-interop`'s declared failures.
+const FAILURES_HOST: &str = "[package]
+name = \"failures-host\"
 version = \"0.0.0\"
 edition = \"2021\"
 
 [dependencies]
-rust-failures = { path = \"../rust-failures\" }
+failures-interop = { path = \"../failures-interop\" }
 ";
 
 const FIRST_USE_MAIN: &str = "fn main() {
@@ -596,12 +591,12 @@ fn runs_and_lints() {
             include_str!("host/interop.rs"),
         );
         members.push("host-interop".into());
-        kit::write_if_changed(&root.join("failures-interop/Cargo.toml"), FAILURES_INTEROP);
+        kit::write_if_changed(&root.join("failures-host/Cargo.toml"), FAILURES_HOST);
         kit::write_if_changed(
-            &root.join("failures-interop/src/main.rs"),
+            &root.join("failures-host/src/main.rs"),
             include_str!("host/failures.rs"),
         );
-        members.push("failures-interop".into());
+        members.push("failures-host".into());
         let list: Vec<String> = members.iter().map(|m| format!("\"{m}\"")).collect();
         kit::write_if_changed(
             &root.join("Cargo.toml"),
@@ -692,10 +687,10 @@ fn runs_and_lints() {
             run("host-interop", &expected);
         }
         // `tests/host/failures.rs`, host code that matches
-        // `rust-failures`' declared failures by their own types, a sealed
+        // `failures-interop`'s declared failures by their own types, a sealed
         // interface's enum, and the crate's `Error`, `?`s them, reads
         // their messages and `source()` chains, and sees a panic stay one.
-        if let Some(case) = cases.iter().find(|c| c.key == "rust-failures") {
+        if let Some(case) = cases.iter().find(|c| c.key == "failures-interop") {
             let expected: Vec<String> = (case.expected.iter().cloned())
                 .chain(
                     [
@@ -715,7 +710,7 @@ fn runs_and_lints() {
                     .map(String::from),
                 )
                 .collect();
-            run("failures-interop", &expected);
+            run("failures-host", &expected);
         }
         // The test form builds and runs, against std's crate.
         let tests = cargo(&root, &["test", "--quiet", "-p", "testing"]);

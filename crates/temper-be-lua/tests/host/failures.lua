@@ -1,4 +1,4 @@
--- Host code using the generated `lua-failures` library's declared
+-- Host code using the generated `failures-interop` library's declared
 -- failures the standard way, for `functional.rs`'s `runs`: `pcall`
 -- catches them, `temper.instance_of` tells them apart by their own
 -- types, the library's root, a sealed interface's, and the runtime's
@@ -9,7 +9,7 @@
 
 local temper = require("temper-core")
 -- Its top-level code logs.
-local lf = require("lua-failures")
+local lf = require("failures-interop")
 
 ---What calling `f` with `arg` raised.
 ---@param f fun(arg: any): any
@@ -23,11 +23,11 @@ end
 
 local missing = raised(lf.lookup, "z")
 assert(temper.instance_of(missing, lf.NotFound))
----@cast missing lua-failures.NotFound
+---@cast missing failures-interop.NotFound
 print("NotFound " .. missing.key .. ": " .. missing.message)
 
 local failure = raised(lf.lookup, "y")
-assert(temper.instance_of(failure, lf.LuaFailuresError))
+assert(temper.instance_of(failure, lf.FailuresInteropError))
 print(
   "base " .. tostring(temper.instance_of(failure, lf.NotFound))
     .. ", Failure " .. tostring(temper.instance_of(failure, temper.Failure))
@@ -39,7 +39,7 @@ for _, text in ipairs({ "x", "" }) do
   local e = raised(lf.sign, text)
   assert(temper.instance_of(e, lf.SignError))
   if temper.instance_of(e, lf.BadSign) then
-    ---@cast e lua-failures.BadSign
+    ---@cast e failures-interop.BadSign
     print("sign BadSign: " .. tostring(e))
     assert(e.text == "x")
   else
@@ -49,10 +49,10 @@ end
 
 local lookupFailed = raised(lf.setting, "port")
 assert(temper.instance_of(lookupFailed, lf.LookupFailed))
----@cast lookupFailed lua-failures.LookupFailed
+---@cast lookupFailed failures-interop.LookupFailed
 local cause = lookupFailed.cause
 assert(temper.instance_of(cause, lf.NotFound))
----@cast cause lua-failures.NotFound
+---@cast cause failures-interop.NotFound
 print(
   "LookupFailed " .. lookupFailed.name .. " " .. tostring(lookupFailed)
     .. ", caused by " .. cause.message
@@ -78,7 +78,7 @@ print("panic passes, " .. tostring(temper.instance_of(panic, temper.Failure)) ..
 
 -- A type of host code's own under a sealed one, which Temper's exhaustive
 -- `when` over it doesn't know, panics there.
----@class host.Rogue: lua-failures.SignError
+---@class host.Rogue: failures-interop.SignError
 ---@class host.Rogue.type: temper.Type
 ---@operator call: host.Rogue
 local Rogue = temper.type("host.Rogue", lf.SignError)

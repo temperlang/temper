@@ -1,8 +1,8 @@
 # Host failures
 
-A specification, not run yet: what hosts see of declared failures, as
-RFC 164 proposes them, which later changes build (`SPECS` in the
-testkit). A connected function's host code throws the library's own
+What hosts see of declared failures, as RFC 164 proposes them, written
+ahead as a specification (`SPECS` in the testkit), now built on every
+backend. A connected function's host code throws the library's own
 failure type, which Temper code catches like any other, and its own
 host error, which passes every handler, as a panic does. A failure
 nothing handles ends the run, saying its message and its cause's. Each

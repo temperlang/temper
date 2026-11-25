@@ -1,8 +1,8 @@
 # Failures
 
-A specification, not run yet: declared failures as RFC 164 proposes
-them, which later changes build (`SPECS` in the testkit). The log is
-what the interpreter should give. It assumes, of what's still open:
+Declared failures as RFC 164 proposes them, written ahead as a
+specification (`SPECS` in the testkit) before later changes built them
+on every backend. The log is what the interpreter gives. It assumed:
 
 - Each failure type is under one root, a sealed interface of the
   library's own that extends core's `Error`; a library may have several

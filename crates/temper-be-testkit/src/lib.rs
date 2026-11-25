@@ -292,8 +292,18 @@ pub fn without_net(cases: &mut [Case]) {
 /// error passes `assertPanics` too, run as tests; and `sealed-whens`
 /// `when`s that cover a sealed interface without `else`, as values
 /// wherever one is wanted; and `count-failures` a library with a failure
-/// root of its own, which `host-failures` imports.
-pub const PROGRAMS: [&str; 32] = [
+/// root of its own, which `host-failures` imports. Declared failures,
+/// written ahead of them as specifications ([`SPECS`]) until every
+/// backend ran them: `failures` has them thrown, caught, propagated,
+/// grouped by a sealed type, kept as values, and converted;
+/// `host-failures` host code's failures and errors, one handler of two
+/// libraries' failures (its own and `count-failures`'), and what a report
+/// says of a failure nothing handles, a run per section, with host code
+/// ([`HOST_CODE`]); and `failures-interop` them as each backend's host
+/// code sees them, each backend running host code of its own beside it
+/// (its crate's `tests/host/`), what's particular to one language
+/// included.
+pub const PROGRAMS: [&str; 35] = [
     "classes",
     "nullables",
     "generics",
@@ -326,12 +336,15 @@ pub const PROGRAMS: [&str; 32] = [
     "host-error-tests",
     "sealed-whens",
     "count-failures",
+    "failures",
+    "host-failures",
+    "failures-interop",
 ];
 
 /// The shared programs whose run fails, after logging what's expected
 /// ([`Case::fails`]): `panics`, whose panic no `orelse` stops, and
 /// `panic-causes` and `host-error-causes`, whose failures nothing
-/// handles; and the specification `host-failures` ([`SPECS`]), alike. A
+/// handles; and `host-failures`, alike. A
 /// failing program with sections runs each on its own (`runs`), as a
 /// run fails only once.
 pub const FAILING: [&str; 4] = [
@@ -343,43 +356,42 @@ pub const FAILING: [&str; 4] = [
 
 /// The shared programs with host code, in a directory of their own
 /// beside their host files, each backend's as a functional test's
-/// ([`CONNECTED`]), which name their library as the program; and the
-/// specification `host-failures`, alike.
+/// ([`CONNECTED`]), which name their library as the program.
 pub const HOST_CODE: [&str; 3] = ["host-error-causes", "host-error-tests", "host-failures"];
 
 /// The specifications in `programs/`: shared programs of behavior not
-/// built yet, written ahead with the logs they should give, which no run
-/// list has. `failures` has declared failures thrown, caught, propagated,
-/// grouped by a sealed type, kept as values, and converted;
-/// `failure-params` functions generic over their callbacks' failure
-/// types; `failure-async` promises broken with failures; and
-/// `host-failures` host code's failures and errors, one handler of two
-/// libraries' failures (its own and `count-failures`'), and what a report
-/// says of a failure nothing handles, a run per section, with host code
-/// laid out as [`HOST_CODE`]'s. Each says what it assumes of what's still
-/// open. Once the interpreter runs one, it joins [`INTERP_SPECS`]; once
-/// tmpl does, [`TMPL_SPECS`]; a backend that runs one lists it with its
-/// shared programs, as every backend lists `failures` and
-/// `host-failures` ([`cases`] takes either); and once every backend
-/// does, it joins [`PROGRAMS`], which `failures` and `host-failures` are
-/// ready to.
+/// built yet everywhere, written ahead with the logs they should give,
+/// which only backends that have it run: `failure-params` functions
+/// generic over their callbacks' failure types; `failure-async` promises
+/// broken with failures; `failure-jumps` a `catch` whose body jumps out
+/// of its loop, which Lua runs, while Rust and C++ say not yet; and
+/// `failure-causes` failures made among a thrown one's arguments, and a
+/// constructor's parameter named `cause`, which C# runs (its
+/// `failures-interop` host code reads them too), while Rust's output
+/// doesn't build yet. Each
+/// says what it assumes of what's still open. Once the interpreter
+/// runs one, it joins [`INTERP_SPECS`]; once tmpl does, [`TMPL_SPECS`];
+/// a backend that runs one lists it with its shared programs ([`cases`]
+/// takes either); and once every backend does, it joins [`PROGRAMS`], as
+/// `failures` and `host-failures` have. One with host code is laid out
+/// as [`HOST_CODE`]'s.
 pub const SPECS: [&str; 4] = [
-    "failures",
     "failure-params",
     "failure-async",
-    "host-failures",
+    "failure-jumps",
+    "failure-causes",
 ];
 
 /// The specifications ([`SPECS`]) the interpreter runs already, whose
 /// logs are checked there, as [`PROGRAMS`]' are, while tmpl doesn't
 /// translate them yet ([`spec_cases`]).
-pub const INTERP_SPECS: [&str; 3] = ["failures", "failure-params", "host-failures"];
+pub const INTERP_SPECS: [&str; 3] = ["failure-params", "failure-jumps", "failure-causes"];
 
 /// The specifications ([`INTERP_SPECS`]) that translate to tmpl already,
 /// whose tmpl is checked against goldens, as [`PROGRAMS`]' is, while
-/// backends say they don't have declared failures yet. `failure-params`
-/// waits for generic failure parameters in tmpl.
-pub const TMPL_SPECS: [&str; 2] = ["failures", "host-failures"];
+/// not every backend runs them yet. `failure-params` waits for generic
+/// failure parameters in tmpl.
+pub const TMPL_SPECS: [&str; 2] = ["failure-jumps", "failure-causes"];
 
 /// A specification's path and text: `NAME.temper.md`, or in a directory
 /// of its own beside its host code.

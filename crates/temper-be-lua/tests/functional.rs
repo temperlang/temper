@@ -23,12 +23,12 @@
 //! that host code plugs in (`tests/host/net.lua`), on
 //! the shared programs (`crates/temper-be-testkit/programs/`), which
 //! cover operators, jumps, module state, string order, classes, and
-//! nullables beyond those tests, the testkit's specifications of
-//! declared failures, `failures` and `host-failures` ([`SPECS`]), and on
+//! nullables beyond those tests, the testkit's programs of declared
+//! failures, `failures`, `host-failures`, and `failures-interop` (with
+//! host code that catches its failures, `tests/host/failures.lua`), and
+//! the specification `failure-jumps` ([`SPECS`]), and on
 //! programs of Lua's own ([`HIDING`], [`HOISTING`], [`MEMBERS`],
-//! [`REPEATS`], [`locals`], [`FAILURE_IMPORTS`], and `tests/programs/`'
-//! [`OWN`], with host code that catches their failures,
-//! `tests/host/failures.lua`).
+//! [`REPEATS`], [`locals`], and [`FAILURE_IMPORTS`]).
 //!
 //! - `goldens`: each program's generated library, laid out as Kotlin's,
 //!   with its `init.lua` matching the golden in `tests/goldens/`, named
@@ -476,21 +476,12 @@ fn cases() -> Vec<Case> {
     let (path, text) = FAILURE_IMPORTS[1];
     imports.sources.push((path.into(), text.into()));
     cases.push(imports);
-    // This crate's own programs, in `tests/programs/`.
-    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/programs");
-    for name in OWN {
-        let path = dir.join(format!("{name}.temper.md"));
-        let text = fs::read_to_string(&path).unwrap();
-        let expected = log_block(&text);
-        cases.push(Case::inline(
-            name,
-            &format!("{name}.temper.md"),
-            text,
-            expected,
-        ));
-    }
     cases
 }
+
+/// The testkit's specifications (`kit::SPECS`) Lua runs, which other
+/// backends don't all yet: `failure-jumps`.
+const SPECS: [&str; 1] = ["failure-jumps"];
 
 /// A library whose root module handles failures of a type only its
 /// module `a` names, which the root then requires for `temper.catch` to
@@ -508,25 +499,6 @@ const FAILURE_IMPORTS: [(&str, &str); 2] = [
          export let lookup(key: String): Int throws NotFound { throw new NotFound(key) }\n",
     ),
 ];
-
-/// The testkit's specifications (`kit::SPECS`) Lua runs, as every other
-/// backend does.
-const SPECS: [&str; 2] = ["failures", "host-failures"];
-
-/// This crate's own programs, in `tests/programs/`: `lua-failures`,
-/// declared failures as Lua callers catch them, with host code that does
-/// (`tests/host/failures.lua`).
-const OWN: [&str; 1] = ["lua-failures"];
-
-/// The lines of a program's one log block.
-fn log_block(text: &str) -> Vec<String> {
-    (text.lines())
-        .skip_while(|l| !l.starts_with("```log"))
-        .skip(1)
-        .take_while(|l| !l.starts_with("```"))
-        .map(str::to_string)
-        .collect()
-}
 
 /// A case's generated files.
 fn generate(case: &Case) -> Vec<OutFile> {
@@ -610,7 +582,7 @@ fn programs_log_as_the_interpreter_does() {
         for case in cases() {
             if !matches!(
                 case.key.as_str(),
-                "hiding" | "members" | "locals" | "hoisting" | "lua-failures"
+                "hiding" | "members" | "locals" | "hoisting"
             ) {
                 continue;
             }
@@ -1054,8 +1026,8 @@ fn runs() {
         if let Some(case) = cases.iter().find(|c| c.key == "async-turns") {
             host_interop(&lua, &dir, &case.expected, &mut failures);
         }
-        // Host code that catches `lua-failures`' failures, likewise.
-        if let Some(case) = cases.iter().find(|c| c.key == "lua-failures") {
+        // Host code that catches `failures-interop`'s failures, likewise.
+        if let Some(case) = cases.iter().find(|c| c.key == "failures-interop") {
             failures_interop(&lua, &dir, &case.expected, &mut failures);
         }
         // Host code that plugs its own client into std `net`.
@@ -1211,7 +1183,7 @@ fn host_interop(lua: &str, dir: &Path, logged: &[String], failures: &mut Vec<Str
     kit::check_log(failures, "host interop", &run, &expected);
 }
 
-/// `tests/host/failures.lua`, host code that catches `lua-failures`'
+/// `tests/host/failures.lua`, host code that catches `failures-interop`'s
 /// declared failures with `pcall`, tells them apart with
 /// `temper.instance_of` by their own types, the library's base, a sealed
 /// interface's, and `temper.Failure`, reads their fields, messages, and

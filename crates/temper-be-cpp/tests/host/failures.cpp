@@ -1,4 +1,4 @@
-// Host code using the generated `cpp-failures` library's declared
+// Host code using the generated `failures-interop` library's declared
 // failures the standard way, for `functional.rs`'s `failures_interop`: it
 // branches on `has_value()`, reads `error()` by its own type, a sealed
 // interface's, and the library's root, its fields, `what()` (as any
@@ -8,7 +8,7 @@
 // compares with what it expects. Built as C++14, where `Expected` is the
 // runtime's shim, and as C++23, where it's `std::expected`.
 
-#include <cpp-failures/init.hpp>
+#include <failures-interop/init.hpp>
 
 #include <iostream>
 #include <memory>
@@ -16,7 +16,7 @@
 #include <string>
 
 namespace core = temper::core;
-namespace lib = cpp_failures;
+namespace lib = failures_interop;
 
 namespace {
 
@@ -39,7 +39,7 @@ namespace {
 
     // Any of the library's failures, passed on as its root, as host code
     // that propagates them does.
-    core::Expected<int32_t, std::shared_ptr<lib::CppFailuresError>> both(
+    core::Expected<int32_t, std::shared_ptr<lib::FailuresInteropError>> both(
         const std::string& key, const std::string& text) {
         auto found = lib::lookup(key);
         if (!found.has_value()) {

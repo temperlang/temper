@@ -15,9 +15,9 @@
 //! of labeled loops' jumps and classes declared in functions
 //! (`temper_be_testkit::LOOPS_AND_CLASSES`), and of generators, `async`,
 //! and `await`, as `function*`s (`temper_be_testkit::ASYNC`), and
-//! declared failures, the testkit's specifications `failures` and
-//! `host-failures` ([`SPECS`]), and this crate's own programs
-//! (`tests/programs/`, [`OWN`]).
+//! declared failures, the testkit's `failures`, `host-failures`, and
+//! `failures-interop`, and this crate's own programs (`tests/programs/`,
+//! [`OWN`]).
 //!
 //! - `goldens`: each program's generated package, laid out as Kotlin's,
 //!   with its root module's `.internal.js` matching the golden in
@@ -83,8 +83,7 @@ fn cases() -> Vec<Case> {
         &kit::NET[..],
     ]
     .concat();
-    let programs = [&kit::PROGRAMS[..], &SPECS[..]].concat();
-    let mut cases = kit::cases_with("js", &programs, &tests);
+    let mut cases = kit::cases_with("js", &kit::PROGRAMS, &tests);
     for case in &mut cases {
         rename_host_code(case);
     }
@@ -112,15 +111,9 @@ fn cases() -> Vec<Case> {
     cases
 }
 
-/// The testkit's specifications (`kit::SPECS`) JS runs, as Python, Java,
-/// Rust, and C++ do; the other backends don't yet.
-const SPECS: [&str; 2] = ["failures", "host-failures"];
-
 /// This crate's own programs, in `tests/programs/`: `hoisting`, for what
-/// JS writes as statements before the expression they're in, and
-/// `js-failures`, declared failures as JS callers catch them, with host
-/// code that does (`tests/host/failures.mjs`).
-const OWN: [&str; 2] = ["hoisting", "js-failures"];
+/// JS writes as statements before the expression they're in.
+const OWN: [&str; 1] = ["hoisting"];
 
 /// A run of a program in sections (`host-failures-cause`, of
 /// `host-failures`), a library of its own, with the program's host code
@@ -455,8 +448,8 @@ fn describe<'a>(case: &'a Case, module: &'a str, map: &Map) -> (String, Vec<Stri
                     let local_doc = js.starts_with("/**") && compiler_local(documented, temper);
                     // A `when`'s arm, `??`, `?.`, an `if` value, an
                     // `else if` value with a branch that jumps (spanning
-                    // from its condition), or an `orelse` whose fallback
-                    // jumps, each of which may become an `if` statement,
+                    // from its condition), or an `orelse` or `catch` whose
+                    // fallback jumps, each of which may become an `if` statement,
                     // maps to its value or the statement it's in.
                     let arm = js.starts_with("if (")
                         && (source_line.contains("->")
@@ -466,7 +459,8 @@ fn describe<'a>(case: &'a Case, module: &'a str, map: &Map) -> (String, Vec<Stri
                             || ["return", "break", "continue"]
                                 .iter()
                                 .any(|j| temper.contains(j))
-                            || temper.contains("orelse"));
+                            || temper.contains("orelse")
+                            || temper.contains(" catch "));
                     // A parameter's default, at the parameter.
                     let default = (js.split_once(" ??= ").map(|(n, _)| n))
                         .or_else(|| js.strip_prefix("if (")?.strip_suffix(" == null) {"))
@@ -827,7 +821,7 @@ fn host_interop(node: &str, root: &Path, logged: &[String], failures: &mut Vec<S
     script
 }
 
-/// `tests/host/failures.mjs`, host code that catches `js-failures`'
+/// `tests/host/failures.mjs`, host code that catches `failures-interop`'s
 /// declared failures by their own types, the library's base, a sealed
 /// interface's, and `Error`, reads their fields, messages, names, stacks,
 /// and causes, and lets a panic pass a `catch` that checks the type,
@@ -995,7 +989,7 @@ fn runs() {
             if case.key == "async-turns" {
                 checked.push(host_interop(&node, &root, &case.expected, &mut failures));
             }
-            if case.key == "js-failures" {
+            if case.key == "failures-interop" {
                 checked.push(failures_interop(
                     &node,
                     &root,

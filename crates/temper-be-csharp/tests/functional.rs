@@ -14,8 +14,8 @@
 //! (`crates/temper-be-testkit/programs/`), which cover operators,
 //! jumps, module state, string order, several modules, imports, tests,
 //! classes, and nullables beyond those tests; and declared failures, the
-//! testkit's specifications `failures` and `host-failures` ([`SPECS`]),
-//! and this crate's own programs (`tests/programs/`, [`OWN`]).
+//! testkit's `failures`, `host-failures`, and `failures-interop`, and its
+//! specification `failure-causes` ([`SPECS`]).
 //!
 //! - `goldens`: each program's generated library, laid out as Kotlin's,
 //!   with its `ROOTGlobal.cs` matching the golden in `tests/goldens/`,
@@ -203,15 +203,6 @@ fn cases() -> Vec<Case> {
     for case in &mut cases {
         rename_host_code(case);
     }
-    for name in OWN {
-        let file = format!("{name}.temper.md");
-        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("tests/programs")
-            .join(&file);
-        let text = fs::read_to_string(path).unwrap();
-        let expected = log_block(&text);
-        cases.push(Case::inline(name, &file, text, expected));
-    }
     cases.push(Case::inline(
         "hiding",
         "hiding.temper.md",
@@ -233,25 +224,10 @@ fn cases() -> Vec<Case> {
     cases
 }
 
-/// The testkit's specifications (`kit::SPECS`) C# runs, as Python, Java,
-/// Rust, C++, and JS do; Lua doesn't yet.
-const SPECS: [&str; 2] = ["failures", "host-failures"];
-
-/// This crate's own programs, in `tests/programs/`: Temper, with what
-/// each logs in a log block; `csharp-failures`, declared failures as C#
-/// callers catch them, with host code that does
-/// (`tests/host/FailuresInterop.cs`).
-const OWN: &[&str] = &["csharp-failures"];
-
-/// The lines of a program's log block.
-fn log_block(text: &str) -> Vec<String> {
-    (text.lines())
-        .skip_while(|l| *l != "```log")
-        .skip(1)
-        .take_while(|l| *l != "```")
-        .map(str::to_string)
-        .collect()
-}
+/// The testkit's specifications (`kit::SPECS`) C# runs, which other
+/// backends don't all yet: `failure-causes`, whose failures
+/// `tests/host/FailuresHost.cs` reads too.
+const SPECS: [&str; 1] = ["failure-causes"];
 
 /// A run of a program in sections (`host-failures-cause`, of
 /// `host-failures`), a library of its own, with the program's host code
@@ -1041,15 +1017,17 @@ fn runs() {
                 .collect();
             run("host interop", &interop, &[], &expected);
         }
-        // `tests/host/FailuresInterop.cs`, host code that catches
-        // `csharp-failures`' declared failures by their own types, the
-        // library's base, and a sealed interface's abstract class, reads
-        // their messages, inner exceptions, and stack traces, and lets a
-        // panic pass a handler of the library's failures.
-        if let Some(case) = cases.iter().find(|c| c.key == "csharp-failures") {
+        // `tests/host/FailuresHost.cs`, host code that catches
+        // `failures-interop`'s and `failure-causes`' declared failures by
+        // their own types, the library's base, and a sealed interface's
+        // abstract class, reads their messages, inner exceptions, and stack
+        // traces, and lets a panic pass a handler of the library's failures.
+        let interop = cases.iter().find(|c| c.key == "failures-interop");
+        let causes = cases.iter().find(|c| c.key == "failure-causes");
+        if let (Some(case), Some(causes)) = (interop, causes) {
             let source =
-                PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/FailuresInterop.cs");
-            let interop = bin.join("FailuresInterop.dll");
+                PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/FailuresHost.cs");
+            let interop = bin.join("FailuresHost.dll");
             let options = [
                 "-target:exe".to_string(),
                 "-nullable:enable".into(),
@@ -1060,15 +1038,12 @@ fn runs() {
             let build = dotnet.csc(&options, &references, &[source]);
             assert!(
                 build.status.success(),
-                "csc, tests/host/FailuresInterop.cs:\n{}",
+                "csc, tests/host/FailuresHost.cs:\n{}",
                 String::from_utf8_lossy(&build.stdout)
             );
-            fs::write(
-                bin.join("FailuresInterop.runtimeconfig.json"),
-                RUNTIME_CONFIG,
-            )
-            .unwrap();
+            fs::write(bin.join("FailuresHost.runtimeconfig.json"), RUNTIME_CONFIG).unwrap();
             let expected: Vec<String> = (case.expected.iter().cloned())
+                .chain(causes.expected.iter().cloned())
                 .chain(
                     [
                         "NotFound z: not found (key: z)",
@@ -1080,7 +1055,7 @@ fn runs() {
                         "retry r 2, inner not found (key: r); made by host 1 none",
                         "made before lookup failed (name: early), inner none",
                         "thrown again lookup failed (name: first), inner not found (key: first)",
-                        "trace at CsharpFailures.CsharpFailuresGlobal.Lookup",
+                        "trace at FailuresInterop.FailuresInteropGlobal.Lookup",
                         "panic passes, a failure False, Panic",
                     ]
                     .map(String::from),

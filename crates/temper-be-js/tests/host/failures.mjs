@@ -1,4 +1,4 @@
-// Host code using the generated `js-failures` package's declared
+// Host code using the generated `failures-interop` package's declared
 // failures the standard way, for `functional.rs`'s `runs`: it catches
 // them with `instanceof` by their own types, the library's root, a sealed
 // interface's abstract class, and `Error`, reads their fields, `message`,
@@ -9,7 +9,7 @@
 // Its top-level code logs.
 import {
   BadSign,
-  JsFailuresError,
+  FailuresInteropError,
   LookupFailed,
   NotFound,
   SignError,
@@ -20,7 +20,7 @@ import {
   sign,
   signName,
   thrownAgain,
-} from "./js-failures/index.js";
+} from "./failures-interop/index.js";
 
 try {
   lookup("z");
@@ -32,7 +32,7 @@ try {
 try {
   lookup("y");
 } catch (e) {
-  if (!(e instanceof JsFailuresError)) throw e;
+  if (!(e instanceof FailuresInteropError)) throw e;
   console.log(
     `base ${e instanceof NotFound}, Error ${e instanceof Error}, name ${e.name}, ${String(e)}`,
   );
@@ -88,11 +88,11 @@ try {
   try {
     risky(2);
   } catch (e) {
-    if (!(e instanceof JsFailuresError)) throw e;
+    if (!(e instanceof FailuresInteropError)) throw e;
     console.log("panic caught");
   }
 } catch (e) {
-  console.log(`panic passes, ${e instanceof JsFailuresError}`);
+  console.log(`panic passes, ${e instanceof FailuresInteropError}`);
 }
 
 // A type of host code's own under a sealed one, which Temper's exhaustive
@@ -104,6 +104,6 @@ try {
   signName(new Rogue());
   console.log("unknown subtype passes");
 } catch (e) {
-  const failure = e instanceof JsFailuresError;
+  const failure = e instanceof FailuresInteropError;
   console.log(`unknown subtype panics, ${failure}, ${e instanceof Error ? e.message : e}`);
 }
