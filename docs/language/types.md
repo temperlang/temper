@@ -2182,9 +2182,11 @@ Temper *Never* types can translate to bottom types in languages that support tha
 ### *interface Error*
 
 *Error* is the root of declared failure types (RFC 164, in progress):
-classes that extend it, or sealed interfaces that do, are what `throws`
-declares and `throw` throws ([failures](syntax.md#failures)). *Error*
-itself isn't one a function may throw.
+what `throws` declares and `throw` throws ([failures](syntax.md#failures)).
+Each failure type is under one of its library's roots, sealed interfaces
+that extend *Error* itself, as `sealed interface LookupError extends
+Error {}`; classes extend a root, or a sealed interface under one, never
+*Error* itself. *Error* itself isn't one a function may throw.
 
 *Error* `extends` [*AnyValue*](#interface-anyvalue)
 
@@ -2198,7 +2200,7 @@ What went wrong, for people, as a report of a failure nothing handles
 shows it. A failure type may declare its own getter; otherwise it's the
 type's name in lowercase words, then its public fields' names and
 values, as `not found (key: y)` for `class NotFound(public key: String)
-extends Error {}`.
+extends LookupError {}`.
 
 ##### `Error.cause`
 

@@ -21,18 +21,18 @@ do
   end
 end
 
----@class host-failures-host-error-passes-catch.HostFailuresHostErrorPassesCatchError: temper.Failure
+---@class host-failures-host-error-passes-catch.HostFailuresError: temper.Failure
 
----@class host-failures-host-error-passes-catch.HostFailuresHostErrorPassesCatchError.type: temper.Type
-local HostFailuresHostErrorPassesCatchError = temper.type("host-failures-host-error-passes-catch.HostFailuresHostErrorPassesCatchError", temper.Failure)
+---@class host-failures-host-error-passes-catch.HostFailuresError.type: temper.Type
+local HostFailuresError = temper.type("host-failures-host-error-passes-catch.HostFailuresError", temper.Failure)
 
----@class host-failures-host-error-passes-catch.NotFound: host-failures-host-error-passes-catch.HostFailuresHostErrorPassesCatchError
+---@class host-failures-host-error-passes-catch.NotFound: host-failures-host-error-passes-catch.HostFailuresError
 ---@field key string
 ---@field message string
 
 ---@class host-failures-host-error-passes-catch.NotFound.type: temper.Type
 ---@operator call: host-failures-host-error-passes-catch.NotFound
-NotFound = temper.type("host-failures-host-error-passes-catch.NotFound", HostFailuresHostErrorPassesCatchError)
+NotFound = temper.type("host-failures-host-error-passes-catch.NotFound", HostFailuresError)
 
 ---@param this host-failures-host-error-passes-catch.NotFound
 ---@param key string
@@ -63,7 +63,7 @@ end
 print("after " .. h)
 
 return {
-  HostFailuresHostErrorPassesCatchError = HostFailuresHostErrorPassesCatchError,
+  HostFailuresError = HostFailuresError,
   NotFound = NotFound,
   hostLookup = hostLookup,
 }

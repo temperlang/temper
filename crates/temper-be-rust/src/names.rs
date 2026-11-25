@@ -92,7 +92,6 @@ pub const RULES: NamingRules = NamingRules {
     types_apart: false,
     modules_share_names: false,
     failure_suffix: None,
-    failure_base: Some("Error"),
     failure_member_reserved: &[],
 };
 

@@ -17,7 +17,8 @@ testkit). The log is what the interpreter should give. It assumes what
 One block waits on promises, in order, and another settles them all,
 breaking two with failures:
 
-    class Timeout(public after: Int) extends Error {}
+    sealed interface FailureAsyncError extends Error {}
+    class Timeout(public after: Int) extends FailureAsyncError {}
 
     let first = new PromiseBuilder<Int, Timeout>();
     let second = new PromiseBuilder<Int, Timeout>();

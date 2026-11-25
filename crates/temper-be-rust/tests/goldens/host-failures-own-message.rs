@@ -17,12 +17,12 @@ pub(crate) fn init() -> temper_core::Result<()> {
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 #[allow(private_interfaces)]
-pub enum Error {
+pub enum HostFailuresError {
     NotFound(NotFound),
     Expired(Expired),
 }
 
-temper_core::impl_failure_enum!(Error, NotFound(NotFound), Expired(Expired));
+temper_core::impl_failure_enum!(HostFailuresError, NotFound(NotFound), Expired(Expired));
 
 struct NotFoundStruct {
     key: Arc<String>,
@@ -52,7 +52,7 @@ impl NotFound {
 
 temper_core::impl_failure!(NotFound, message, cause);
 
-temper_core::impl_any_value_trait!(NotFound, [Error]);
+temper_core::impl_any_value_trait!(NotFound, [HostFailuresError]);
 
 pub fn host_lookup(key: impl ToArcString) -> Result<i32, NotFound> {
     crate::_connected::host_lookup(key)
@@ -85,7 +85,7 @@ impl Expired {
 
 temper_core::impl_failure!(Expired, message, cause);
 
-temper_core::impl_any_value_trait!(Expired, [Error]);
+temper_core::impl_any_value_trait!(Expired, [HostFailuresError]);
 
 pub(crate) fn check(days: i32) -> Result<(), Expired> {
     if days > 0 {

@@ -736,11 +736,11 @@ impl<'a> Translator<'a> {
         )))
     }
 
-    /// A sealed failure interface, the library's base among them: an enum
+    /// A sealed failure interface, the library's roots among them: an enum
     /// of the failure types right under it, each a variant of its name,
     /// `From` each type below it, with `impl_failure_enum!`'s traits, each
-    /// the variant's; the base's `#[non_exhaustive]`, as a library may add
-    /// failure types.
+    /// the variant's; an exported root's `#[non_exhaustive]`, as a library
+    /// may add failure types.
     fn failure_enum(&mut self, iface: DeclId) -> R<Vec<Item>> {
         let p = self.p;
         if !self.member_nodes(iface).is_empty() {
@@ -783,13 +783,14 @@ impl<'a> Translator<'a> {
         }
         let name = self.name(iface);
         let mut attrs = vec!["#[derive(Clone, Debug)]".to_string()];
-        if self.facts(iface).contains(Facts::FAILURE_BASE) {
+        let exported = self.facts(iface).contains(Facts::EXPORTED);
+        if exported && temper_tmpl::failures::is_library_root(p, self.failure_root, iface) {
             attrs.push("#[non_exhaustive]".into());
         }
         // A failure type the library doesn't export, which host code
         // sees only as the variant's value (`Display`, `source()`), not
         // by its type's name.
-        if private && self.facts(iface).contains(Facts::EXPORTED) {
+        if private && exported {
             attrs.push("#[allow(private_interfaces)]".into());
         }
         let mut args = vec![Expr::path(&name)];

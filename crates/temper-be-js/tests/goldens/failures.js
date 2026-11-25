@@ -151,7 +151,7 @@ function pair(a, b) {
   }
 }
 
-export class FailuresError extends Error {}
+class FailuresError extends Error {}
 
 failureBase(FailuresError);
 
@@ -176,7 +176,9 @@ class NotFound extends FailuresError {
   }
 }
 
-class SignError extends FailuresError {}
+class SignError extends Error {}
+
+failureBase(SignError);
 
 class EmptyText extends SignError {
   /** @returns {string} */

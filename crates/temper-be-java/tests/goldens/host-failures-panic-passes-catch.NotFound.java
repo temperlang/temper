@@ -1,7 +1,7 @@
 package host_failures_panic_passes_catch;
 
 @SuppressWarnings("serial")
-public final class NotFound extends HostFailuresPanicPassesCatchException {
+public final class NotFound extends HostFailuresException {
     public final String key;
 
     public NotFound(String key) {

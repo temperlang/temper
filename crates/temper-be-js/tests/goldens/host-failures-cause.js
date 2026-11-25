@@ -24,11 +24,11 @@ export function setting(name) {
   }
 }
 
-export class HostFailuresCauseError extends Error {}
+export class HostFailuresError extends Error {}
 
-failureBase(HostFailuresCauseError);
+failureBase(HostFailuresError);
 
-export class NotFound extends HostFailuresCauseError {
+export class NotFound extends HostFailuresError {
   /** @type {string} */
   #key;
 
@@ -49,7 +49,7 @@ export class NotFound extends HostFailuresCauseError {
   }
 }
 
-export class LookupFailed extends HostFailuresCauseError {
+export class LookupFailed extends HostFailuresError {
   /** @type {string} */
   #name_;
 

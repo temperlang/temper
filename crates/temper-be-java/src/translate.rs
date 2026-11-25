@@ -45,7 +45,7 @@
 //!
 //! Declared failures (RFC 164; notes/tmpl/nodes.md, "Declared failures")
 //! are unchecked exceptions, each library's failure types classes under
-//! its base, `<Library>Exception extends RuntimeException implements
+//! its roots, `WherewithException extends RuntimeException implements
 //! Failure` ([`classes`] says how), so callbacks and generic code need
 //! nothing of them. `throw` is Java's, its cause, in a handler, set by
 //! `Core.withCause`; an `orelse` or `catch` catches exactly what its body

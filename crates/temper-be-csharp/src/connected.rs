@@ -691,7 +691,7 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
         },
     ),
     // Core's root of declared failures, the runtime's marker, which each
-    // library's base failure class implements.
+    // library's failure roots implement.
     (
         "core.type Error",
         TypeConnection {

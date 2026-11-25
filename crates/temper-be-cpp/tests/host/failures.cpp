@@ -1,7 +1,7 @@
 // Host code using the generated `cpp-failures` library's declared
 // failures the standard way, for `functional.rs`'s `failures_interop`: it
 // branches on `has_value()`, reads `error()` by its own type, a sealed
-// interface's, and the library's base, its fields, `what()` (as any
+// interface's, and the library's root, its fields, `what()` (as any
 // `std::exception`'s), `get_message()`, and its causes (`get_cause()`),
 // passes a failure on into a result of its own, and sees a panic stay a
 // panic, never a failure. It prints a line per check, which the test
@@ -20,6 +20,12 @@ namespace lib = cpp_failures;
 
 namespace {
 
+    // A type of host code's own under a sealed one, which Temper's
+    // exhaustive `when` over it doesn't know.
+    struct Rogue : public virtual lib::SignError {
+        core::Str get_message() const override { return "rogue"; }
+    };
+
     // A failure's message and its causes', as `get_cause()` gives them.
     std::string chain(const std::shared_ptr<core::Failure>& failure) {
         std::string out = failure->what();
@@ -31,7 +37,7 @@ namespace {
         return out;
     }
 
-    // Any of the library's failures, passed on as its base, as host code
+    // Any of the library's failures, passed on as its root, as host code
     // that propagates them does.
     core::Expected<int32_t, std::shared_ptr<lib::CppFailuresError>> both(
         const std::string& key, const std::string& text) {
@@ -108,5 +114,14 @@ int main() {
         std::cout << "panic gave a result " << result.has_value() << "\n";
     } catch (const Panicked& e) {
         std::cout << "panic passes " << e.what() << "\n";
+    }
+
+    // An exhaustive `when` panics on it.
+    std::cout << "known subtype " << lib::signName(lib::BadSign::make("?")) << "\n";
+    try {
+        core::Str name = lib::signName(std::make_shared<Rogue>());
+        std::cout << "unknown subtype passes " << name << "\n";
+    } catch (const Panicked& e) {
+        std::cout << "unknown subtype panics " << e.what() << "\n";
     }
 }

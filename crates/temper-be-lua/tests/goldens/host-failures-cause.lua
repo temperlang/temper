@@ -21,18 +21,18 @@ do
   end
 end
 
----@class host-failures-cause.HostFailuresCauseError: temper.Failure
+---@class host-failures-cause.HostFailuresError: temper.Failure
 
----@class host-failures-cause.HostFailuresCauseError.type: temper.Type
-local HostFailuresCauseError = temper.type("host-failures-cause.HostFailuresCauseError", temper.Failure)
+---@class host-failures-cause.HostFailuresError.type: temper.Type
+local HostFailuresError = temper.type("host-failures-cause.HostFailuresError", temper.Failure)
 
----@class host-failures-cause.NotFound: host-failures-cause.HostFailuresCauseError
+---@class host-failures-cause.NotFound: host-failures-cause.HostFailuresError
 ---@field key string
 ---@field message string
 
 ---@class host-failures-cause.NotFound.type: temper.Type
 ---@operator call: host-failures-cause.NotFound
-NotFound = temper.type("host-failures-cause.NotFound", HostFailuresCauseError)
+NotFound = temper.type("host-failures-cause.NotFound", HostFailuresError)
 
 ---@param this host-failures-cause.NotFound
 ---@param key string
@@ -52,13 +52,13 @@ local function hostLookup(key)
   return _connected.hostLookup(key)
 end
 
----@class host-failures-cause.LookupFailed: host-failures-cause.HostFailuresCauseError
+---@class host-failures-cause.LookupFailed: host-failures-cause.HostFailuresError
 ---@field name string
 ---@field message string
 
 ---@class host-failures-cause.LookupFailed.type: temper.Type
 ---@operator call: host-failures-cause.LookupFailed
-local LookupFailed = temper.type("host-failures-cause.LookupFailed", HostFailuresCauseError)
+local LookupFailed = temper.type("host-failures-cause.LookupFailed", HostFailuresError)
 
 ---@param this host-failures-cause.LookupFailed
 ---@param name string
@@ -91,7 +91,7 @@ setting("port")
 print("after")
 
 return {
-  HostFailuresCauseError = HostFailuresCauseError,
+  HostFailuresError = HostFailuresError,
   NotFound = NotFound,
   hostLookup = hostLookup,
 }

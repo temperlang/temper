@@ -271,8 +271,6 @@ fn translate(
         gaps: gaps.is_some().then(Vec::new),
         catching: Vec::new(),
         always_jumps: RefCell::new(HashMap::new()),
-        first_module: DeclId::NONE,
-        failure_base: None,
         handling: Vec::new(),
         adopted: HashSet::new(),
     };
@@ -299,9 +297,6 @@ fn translate_with(t: &mut Translator) -> Tx<()> {
                 decl
             };
             t.module_files(module, decl);
-            if own.is_empty() {
-                t.first_module = decl;
-            }
             own.push((module, decl));
         }
     }
@@ -430,12 +425,6 @@ struct Translator<'a> {
     /// ([`Self::always_jumps`]), kept, as it's asked of each statement
     /// and so again of each part of each.
     always_jumps: RefCell<HashMap<FNode, bool>>,
-    /// The library's first module, which holds what the compiler makes
-    /// for the whole library, as its base failure type.
-    first_module: DeclId,
-    /// The library's base failure type, once a failure type needs it
-    /// ([`Self::failure_base`]).
-    failure_base: Option<DeclId>,
     /// The handlers' fallbacks being translated, innermost last
     /// ([`failures::Handling`]).
     handling: Vec<failures::Handling>,

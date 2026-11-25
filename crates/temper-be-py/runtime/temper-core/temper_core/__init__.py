@@ -159,10 +159,10 @@ class Bubble(RuntimeError):
 
 class Failure(metaclass=ABCMeta):
     """
-    Marks a Temper library's declared failures (RFC 164): each library's
-    base failure class, as `WherewithError`, extends it beside
+    Marks a Temper library's declared failures (RFC 164): each of a
+    library's root failure classes, as `WherewithError`, extends it beside
     `Exception` (`class WherewithError(Failure, Exception)`), and its
-    failure types extend that. Host code catches those, never this: it
+    failure types extend those. Host code catches those, never this: it
     isn't an exception itself. It gives each failure `str(e)`, its
     `message`; its cause is Python's own `__cause__`.
     """

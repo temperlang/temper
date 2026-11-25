@@ -14,7 +14,8 @@ assumes what `failures` does, and, of what's still open:
 
 What every section uses:
 
-    class Missing(public key: String) extends Error {}
+    sealed interface FailureParamsError extends Error {}
+    class Missing(public key: String) extends FailureParamsError {}
 
     let find(key: String): Int throws Missing {
       if (key == "one") { return 1; }

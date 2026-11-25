@@ -10,12 +10,12 @@ namespace host_failures_host_failure {
 // optional.
 void global_init_init();
 
-struct HostFailuresHostFailureError;
+struct HostFailuresError;
 struct NotFound;
 
-struct HostFailuresHostFailureError : public virtual temper::core::Failure {};
+struct HostFailuresError : public virtual temper::core::Failure {};
 
-struct NotFound : public virtual HostFailuresHostFailureError {
+struct NotFound : public virtual HostFailuresError {
   temper::core::Str key;
   static std::shared_ptr<NotFound> make(temper::core::Str const & key);
   temper::core::Str get_message() const override;

@@ -16,12 +16,16 @@ pub(crate) fn init() -> temper_core::Result<()> {
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 #[allow(private_interfaces)]
-pub enum Error {
+pub enum HostFailuresError {
     NotFound(NotFound),
     LookupFailed(LookupFailed),
 }
 
-temper_core::impl_failure_enum!(Error, NotFound(NotFound), LookupFailed(LookupFailed));
+temper_core::impl_failure_enum!(
+    HostFailuresError,
+    NotFound(NotFound),
+    LookupFailed(LookupFailed)
+);
 
 struct NotFoundStruct {
     key: Arc<String>,
@@ -51,7 +55,7 @@ impl NotFound {
 
 temper_core::impl_failure!(NotFound, message, cause);
 
-temper_core::impl_any_value_trait!(NotFound, [Error]);
+temper_core::impl_any_value_trait!(NotFound, [HostFailuresError]);
 
 pub fn host_lookup(key: impl ToArcString) -> Result<i32, NotFound> {
     crate::_connected::host_lookup(key)
@@ -85,7 +89,7 @@ impl LookupFailed {
 
 temper_core::impl_failure!(LookupFailed, message, cause);
 
-temper_core::impl_any_value_trait!(LookupFailed, [Error]);
+temper_core::impl_any_value_trait!(LookupFailed, [HostFailuresError]);
 
 pub(crate) fn setting(name: impl ToArcString) -> Result<i32, LookupFailed> {
     let name = name.to_arc_string();

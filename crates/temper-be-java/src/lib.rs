@@ -36,7 +36,7 @@
 //! passes every `orelse`, and a library's host code (its `.java` files)
 //! bubbles only by throwing a `Bubble` (`throw Core.bubble()`); and
 //! declared failures (RFC 164) as unchecked exceptions, each library's
-//! failure types under its own base, `<Library>Exception extends
+//! failure types under its roots, `WherewithException extends
 //! RuntimeException implements temper.core.Failure`, `throw` as Java's,
 //! and handlers that catch exactly what their bodies may fail with
 //! (`translate` says how); and generics, with boxed type arguments (`List<Integer>`) and explicit

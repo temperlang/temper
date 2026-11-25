@@ -9,7 +9,7 @@
 
 use crate::Program;
 use crate::analysis::{ancestors, bindings, fun_signature, nominal_decl, walk};
-use crate::decls::{DeclKind, Facts};
+use crate::decls::DeclKind;
 use crate::ids::{DeclId, NodeId, TypeId};
 use crate::qname::{is_external, library_of};
 use crate::schema::Node;
@@ -35,11 +35,19 @@ pub fn is_below_root(p: &Program, decl: DeclId) -> bool {
     ancestors(p, decl).iter().any(|&a| is_root(p, a))
 }
 
-/// The program's own base failure type ([`Facts::FAILURE_BASE`]), if it
-/// declares failures.
-pub fn base(p: &Program) -> Option<DeclId> {
-    (p.decls.ids())
-        .find(|&d| p.decls.contains(d) && p.decls.get(d).facts.contains(Facts::FAILURE_BASE))
+/// Whether a declaration is one of a library's roots: a failure type
+/// right under core's `Error` (`root`, as [`root`] finds it), a sealed
+/// interface in the source, which targets make their own exception type,
+/// so host code catches no Temper type (RFC 164, "host presentation").
+pub fn is_library_root(p: &Program, root: Option<DeclId>, decl: DeclId) -> bool {
+    let Some(root) = root else {
+        return false;
+    };
+    let is_type = matches!(
+        p.decls.get(decl).kind,
+        DeclKind::Class | DeclKind::Interface
+    );
+    is_type && (p.decls.supers(decl).iter()).any(|&s| nominal_decl(p, s) == Some(root))
 }
 
 /// Whether a class or interface is a failure type: the root (`root`, as
@@ -228,9 +236,9 @@ uses `temper-core`#20 0.1.0 {
 }
 
 module t#0 {
-  export failureBase interface ~TError#1 extends Error#21 {}
+  export interface TError#1 extends Error#21 {}
 
-  export interface SignError#2 extends ~TError#1 {}
+  export interface SignError#2 extends TError#1 {}
 
   export class BadSign#3 extends SignError#2 {
     constructor constructor#6(): BadSign#3 {}
@@ -240,7 +248,7 @@ module t#0 {
     constructor constructor#7(): EmptyText#4 {}
   }
 
-  export class NotFound#5 extends ~TError#1 {
+  export class NotFound#5 extends TError#1 {
     constructor constructor#8(): NotFound#5 {}
   }
 
@@ -261,7 +269,6 @@ module t#0 {
         let ty = |d: u32| p.decls.get(DeclId(d)).ty;
         let root = root(&p);
         assert_eq!(root, Some(DeclId(21)));
-        assert_eq!(base(&p), Some(DeclId(1)));
         assert_eq!(join(&p, root, &[]), None);
         assert_eq!(join(&p, root, &[ty(3), ty(3)]), Some(ty(3)));
         assert_eq!(join(&p, root, &[ty(3), ty(4)]), Some(ty(2)));
@@ -271,6 +278,7 @@ module t#0 {
             Some(TypeId::BUBBLE)
         );
         assert!(is_failure_type(&p, root, ty(1)) && !is_failure_type(&p, root, TypeId::INT32));
+        assert!(is_library_root(&p, root, DeclId(1)) && !is_library_root(&p, root, DeclId(2)));
         let module = &p.modules[0];
         let under = failures_under(&p, module.items[5]);
         let failed: Vec<TypeId> = under.iter().map(|&(_, f)| f).collect();

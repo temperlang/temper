@@ -155,12 +155,6 @@ impl Facts {
     /// Marked `@keepTest`: kept for tests' host code, as `KEEP` is for the
     /// library's, so its name is claimed first too, and tests reach it.
     pub const KEEP_TEST: Facts = Facts(8192);
-    /// A library's base failure type: a compiler-made, exported interface
-    /// extending core's `Error`, which each of the library's failure types
-    /// is below in place of `Error` itself, and which targets write over
-    /// their own exception type, so no Temper type is what host code
-    /// catches (notes/tmpl/nodes.md, "Declared failures").
-    pub const FAILURE_BASE: Facts = Facts(16384);
 
     pub fn contains(self, other: Facts) -> bool {
         self.0 & other.0 == other.0

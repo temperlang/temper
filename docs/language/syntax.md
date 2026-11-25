@@ -417,11 +417,14 @@ member's.
 
 How they're typed, for now:
 
-- A failure type is a class that extends core's
-  [*Error*](types.md#interface-error), or a sealed interface that does,
-  whose classes are its variants. It has no type parameters and extends
-  one failure type at most. `throws E` takes one, `Bubble`, or a type
-  parameter; `throw` takes a value of one.
+- A failure type is under one root, a sealed interface its library
+  declares that extends core's [*Error*](types.md#interface-error)
+  itself, as `sealed interface LookupError extends Error {}`; a library
+  may have several. Classes extend a root, or a sealed interface under
+  one, whose classes are its variants, never *Error* itself. A failure
+  type has no type parameters and extends one failure type. `throws E`
+  takes one, `Bubble`, or a type parameter; `throw` takes a value of
+  one.
 - A function passes on a failure of its own failure type, or of one of
   its variants, with `try` or, for now, without it. Any other failure
   must be handled there, and converting one is explicit: `f() catch (e)

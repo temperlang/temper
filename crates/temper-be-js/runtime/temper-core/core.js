@@ -299,9 +299,9 @@ export const isBubble = (e) =>
 const failureMark = Symbol.for("@temperlang/core.Failure");
 
 /**
- * Makes `base` a library's base failure class (RFC 164's declared
- * failures): generated code declares it as `class WherewithError extends
- * Error {}`, with its failure types below it, and calls this once. Its
+ * Makes `base` one of a library's root failure classes (RFC 164's
+ * declared failures): generated code declares it as `class WherewithError
+ * extends Error {}`, with its failure types below it, and calls this once. Its
  * instances get the marker `isFailure` reads, which host code never
  * needs, and `name`, the class's own name, as `Error`'s says what it is
  * (`NotFound: not found (key: y)`). A failure type's own member named

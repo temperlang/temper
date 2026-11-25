@@ -2903,7 +2903,7 @@ pub(crate) fn core_type(qname: &str) -> Option<(&'static str, &'static str)> {
         "core.type Deque" => ("collections", "deque"),
         "core.type DenseBitVector" => ("temper_core", "DenseBitVector"),
         // Core's root of declared failures, the runtime's marker, which
-        // each library's base failure class extends beside `Exception`.
+        // each library's failure roots extend beside `Exception`.
         "core.type Error" => ("temper_core", "Failure"),
         // `()`, its one value. Kotlin's `_empty` is undefined.
         "core.type Empty" => ("builtins", "tuple[()]"),

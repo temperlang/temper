@@ -2068,6 +2068,8 @@ fn failures_interop() {
                     "made before lookup failed (name: early), caused by not found (key: early)",
                     "thrown again lookup failed (name: first), caused by not found (key: first)",
                     "panic passes panic",
+                    "known subtype bad sign",
+                    "unknown subtype panics panic",
                 ]
                 .map(String::from),
             )

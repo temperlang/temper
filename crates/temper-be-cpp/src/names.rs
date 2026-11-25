@@ -199,7 +199,6 @@ pub const RULES: NamingRules = NamingRules {
     // Every module's declarations are the library namespace's.
     modules_share_names: true,
     failure_suffix: None,
-    failure_base: None,
     failure_member_reserved: &[],
 };
 

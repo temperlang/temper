@@ -460,6 +460,47 @@ fn libraries_import_each_other() {
     assert!(passed);
 }
 
+/// A failure type is under a root of its own library: another
+/// library's root, or a failure type under one, is sealed to it.
+#[test]
+fn failure_roots_belong_to_their_library() {
+    let tree = write_tree(
+        "failure-roots",
+        &[
+            ("config.temper.md", "# Root\n"),
+            (
+                "util/config.temper.md",
+                "# Util\n\n    export let name = \"util\";\n",
+            ),
+            (
+                "util/u.temper",
+                "export sealed interface UtilError extends Error {}\n\
+                 export class Missing extends UtilError {}\n",
+            ),
+            (
+                "app/config.temper.md",
+                "# App\n\n    export let name = \"app\";\n",
+            ),
+            (
+                "app/a.temper",
+                "let { UtilError } = import(\"util\");\n\
+                 class Mine extends UtilError {}\n\
+                 test(\"a\") { assert(true) }\n",
+            ),
+        ],
+    );
+    let root = &tree.root;
+    let (passed, _, err) = test(root);
+    assert_eq!(
+        err,
+        format!(
+            "{root}/app/a.temper:2:7: error: UtilError is another library's failure type; \
+             a failure type is under a root of its own library\n"
+        )
+    );
+    assert!(!passed);
+}
+
 /// `import("..")` and `import(".")` are relative, as `../` and `./`
 /// are, and a bare `import("…")` statement makes a module part of the
 /// library without ordering it, so it may name a module that imports the

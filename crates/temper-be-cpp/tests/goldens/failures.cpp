@@ -26,7 +26,7 @@ struct NotFound : public virtual FailuresError {
   temper::core::Str get_key() const;
 };
 
-struct SignError : public virtual FailuresError {};
+struct SignError : public virtual temper::core::Failure {};
 
 struct EmptyText : public virtual SignError {
   static std::shared_ptr<EmptyText> make();

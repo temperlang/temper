@@ -10,11 +10,11 @@ export function hostLookup(key) {
   return _connected.hostLookup(key);
 }
 
-export class HostFailuresHostErrorPassesCatchError extends Error {}
+export class HostFailuresError extends Error {}
 
-failureBase(HostFailuresHostErrorPassesCatchError);
+failureBase(HostFailuresError);
 
-export class NotFound extends HostFailuresHostErrorPassesCatchError {
+export class NotFound extends HostFailuresError {
   /** @type {string} */
   #key;
 

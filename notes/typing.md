@@ -1224,8 +1224,8 @@ don't take a failing callback to `map` yet (chunk 15).
 
 ## Declared failures
 
-In progress (RFC 164, chunks 4 to 13 of
-notes/error-custom-kinds-plan.md, 2026-11-24): typed in the frontend,
+In progress (RFC 164, chunks 4 to 13 and decision 17's rework of
+notes/error-custom-kinds-plan.md, 2026-11-25): typed in the frontend,
 run on the interpreter, and translated to tmpl
 ([tmpl/nodes.md](tmpl/nodes.md), "Declared failures") and to every
 backend; failure parameters aren't in tmpl yet, and `error case`
@@ -1236,14 +1236,24 @@ one place each, as they may change.
 
 - **Failure types** (`Types::is_failure`): a class, or sealed
   interface, that extends core's root `Error` (`types::ERROR`), directly or
-  through another failure type. Each is checked
+  through another failure type. Each is under one of its library's
+  **roots** (decision 17, 2026-11-25): a sealed interface extending
+  `Error` itself, as `sealed interface WherewithError extends Error {}`,
+  which backends make the host's exception type; a library may have
+  several, and a root may have members. Each failure type is checked
   (`check_failure_class`): no type parameters ("Failure type Box can't
-  have type parameters"), an interface is sealed ("Interface Loose
-  extends Error, so it must be sealed"), and at most one failure type
-  among what it extends, beside the root ("Both extends two failure
-  types, A1 and A2; a failure type extends one"). The root is an
-  `AnyValue`, and what extends it is an `Error`; joins of two failure
-  types with no closer common type are `Error`.
+  have type parameters"); an interface is sealed ("Interface Loose
+  extends Error, so it must be sealed"), so every one between a class
+  and its root is; one failure type, or `Error`, among what it extends
+  ("Both extends two failure types, A1 and A2; a failure type extends
+  one", which counts `Error` too); a class never extends `Error` itself
+  ("Class Direct can't extend Error itself; declare a root to extend, …");
+  and what it extends is of its own library (`Library::library_root_at`;
+  "UtilError is another library's failure type; a failure type is under
+  a root of its own library"), so roots stay sealed. Core's `Error` is
+  the one open interface. The root is an `AnyValue`, and what extends it
+  is an `Error`; joins of two failure types with no closer common type
+  (two roots' types) are `Error`.
 - **`throws E`** (`eval_result`, `check_throws`): `E` is a failure type,
   `Bubble`, a type parameter, or a `Never`. Anything else is "String
   isn't a failure type; …", and the root, "Error is the root of failure

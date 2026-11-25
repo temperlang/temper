@@ -130,6 +130,22 @@ export function signMessage(text) {
 }
 
 /**
+ * @param {SignError} e
+ * @returns {string}
+ */
+export function signName(e) {
+  {
+    if (e instanceof BadSign) {
+      return "bad sign";
+    } else if (e instanceof EmptyText) {
+      return "empty text";
+    } else {
+      panic();
+    }
+  }
+}
+
+/**
  * @param {string} key
  * @param {number} n
  * @returns {number}

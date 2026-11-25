@@ -1,17 +1,17 @@
 local temper = require("temper-core")
 
----@class failure-imports.a.FailureImportsError: temper.Failure
+---@class failure-imports.a.AError: temper.Failure
 
----@class failure-imports.a.FailureImportsError.type: temper.Type
-local FailureImportsError = temper.type("failure-imports.a.FailureImportsError", temper.Failure)
+---@class failure-imports.a.AError.type: temper.Type
+local AError = temper.type("failure-imports.a.AError", temper.Failure)
 
----@class failure-imports.a.NotFound: failure-imports.a.FailureImportsError
+---@class failure-imports.a.NotFound: failure-imports.a.AError
 ---@field key string
 ---@field message string
 
 ---@class failure-imports.a.NotFound.type: temper.Type
 ---@operator call: failure-imports.a.NotFound
-local NotFound = temper.type("failure-imports.a.NotFound", FailureImportsError)
+local NotFound = temper.type("failure-imports.a.NotFound", AError)
 
 ---@param this failure-imports.a.NotFound
 ---@param key string
@@ -31,8 +31,4 @@ local function lookup(key)
   error(NotFound(key))
 end
 
-return {
-  FailureImportsError = FailureImportsError,
-  NotFound = NotFound,
-  lookup = lookup,
-}
+return { AError = AError, NotFound = NotFound, lookup = lookup }

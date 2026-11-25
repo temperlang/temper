@@ -441,7 +441,7 @@ impl<'a> Translator<'a> {
                     // `empty()`'s, as the runtime declares it.
                     "core.type Empty" => "{}".to_string(),
                     // Core's root of declared failures, which each
-                    // library's base failure class extends.
+                    // library's failure roots extend.
                     "core.type Error" => "Error".to_string(),
                     _ if matches!(
                         self.p.decls.get(decl).kind,

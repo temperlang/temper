@@ -268,6 +268,10 @@ pub enum Message {
     /// A class or interface, named, that extends two failure types, the
     /// two named.
     TwoFailureParents(String, String, String),
+    /// A failure class, named, that extends the failure root itself.
+    FailureClassExtendsRoot(String),
+    /// A failure type that extends another library's, as written.
+    ForeignFailureParent(String),
     /// `x is T` or `x as T` that can never succeed: `x`'s type, not
     /// null, and `T`. Kotlin's `ImpossibleRttiCheck`.
     ImpossibleRttiCheck(String, String),
@@ -574,6 +578,14 @@ impl Message {
             Message::TwoFailureParents(name, a, b) => {
                 format!("{name} extends two failure types, {a} and {b}; a failure type extends one")
             }
+            Message::FailureClassExtendsRoot(name) => format!(
+                "Class {name} can't extend {FAILURE_ROOT} itself; declare a root to extend, a \
+                 sealed interface that does, as `sealed interface MyError extends {FAILURE_ROOT} {{}}`"
+            ),
+            Message::ForeignFailureParent(sup) => format!(
+                "{sup} is another library's failure type; a failure type is under a root of its \
+                 own library"
+            ),
             Message::ImpossibleRttiCheck(from, to) => {
                 format!("Runtime type check from {from} to {to} can never succeed")
             }
@@ -880,6 +892,20 @@ impl Library {
     /// ([`Sources`](crate::sources::Sources)).
     pub fn std_root(&self) -> &str {
         stdlib::DIR
+    }
+
+    /// The root directory of the library the source at `pos` is in: std's
+    /// ([`Library::std_root`]), or the deepest of [`Library::libraries`]
+    /// holding its module; `None` for neither, as a lone file's.
+    pub fn library_root_at(&self, pos: u32) -> Option<&str> {
+        let file = &self.files[self.locate(pos).0.0 as usize];
+        let dir = &self.modules[file.module.0 as usize].dir;
+        let holds = |root: &str| dir == root || dir.starts_with(&format!("{root}/"));
+        let roots = (self.libraries.iter()).map(|(_, root)| root.as_str());
+        std::iter::once(self.std_root())
+            .chain(roots)
+            .filter(|root| holds(root))
+            .max_by_key(|root| root.len())
     }
 
     /// Whether the source at `pos` is std's, whose `@connected`

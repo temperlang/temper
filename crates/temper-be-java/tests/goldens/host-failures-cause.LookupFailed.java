@@ -1,7 +1,7 @@
 package host_failures_cause;
 
 @SuppressWarnings("serial")
-final class LookupFailed extends HostFailuresCauseException {
+final class LookupFailed extends HostFailuresException {
     public final String name;
 
     public LookupFailed(String name) {

@@ -235,13 +235,13 @@ impl Translator<'_> {
                 .resolved(name)
                 .and_then(|s| self.class_node(s));
             let Some(node) = node else {
-                let root = Some(crate::builtins::Builtin::named(
-                    crate::builtins::FAILURE_ROOT,
-                ));
-                // A failure type extends its library's base in place of
-                // core's `Error`.
-                if Some(self.s.scopes.resolved_builtin(name)) == root {
-                    types.push(self.failure_base(sup)?);
+                // A failure root extends core's `Error`.
+                let root = crate::builtins::Builtin::named(crate::builtins::FAILURE_ROOT);
+                if Some(self.s.scopes.resolved_builtin(name)) == Some(root) {
+                    let Some(error) = self.core_decl(crate::builtins::FAILURE_ROOT) else {
+                        return self.not_yet(sup, "core's Error");
+                    };
+                    types.push(self.b.nominal(error));
                     continue;
                 }
                 return self.not_yet(sup, "a builtin supertype");

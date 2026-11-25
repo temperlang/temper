@@ -3,8 +3,9 @@
 A library's failure types are Rust error types: each failure class a
 struct implementing `Display` (its message) and `std::error::Error`
 (its cause as `source()`), each sealed failure interface an `enum` over
-its types, and the library's base its crate's `Error` enum, which
-`From` takes every failure into, so `?` does. Functions that fail
+its types, the library's root, `RustFailuresError`, among them, and,
+as its one root, the crate's `Error` too, which `From` takes every
+failure into, so `?` does. Functions that fail
 return `Result<T, F>`. `runs_and_lints` has host code
 (`tests/host/failures.rs`) match them by their own types, the sealed
 interface's enum, and the crate's `Error`, read their fields, `Display`
@@ -12,15 +13,17 @@ give their messages and `source()` the failure being handled where one
 was thrown, `?` them into the crate's `Error` and a boxed error, and
 see a panic stay a panic, never an `Err`.
 
-    export class NotFound(public key: String) extends Error {}
+    export sealed interface RustFailuresError extends Error {}
 
-    export sealed interface SignError extends Error {}
+    export class NotFound(public key: String) extends RustFailuresError {}
+
+    export sealed interface SignError extends RustFailuresError {}
     export class BadSign(public text: String) extends SignError {}
     export class EmptyText extends SignError {
       public get message(): String { "no text" }
     }
 
-    export class LookupFailed(public name: String) extends Error {}
+    export class LookupFailed(public name: String) extends RustFailuresError {}
 
     export let lookup(key: String): Int throws NotFound {
       if (key == "a") { return 1; }

@@ -45,7 +45,7 @@
 //! bubble or from a callback, passes every `orelse`, and a library's
 //! host code (its `.cs` files) bubbles only by throwing a `Bubble`
 //! (`Core.Bubble()`); declared failures (RFC 164) as exceptions, each
-//! library's failure types under its own base, `<Library>Exception :
+//! library's failure types under its roots, `WherewithException :
 //! Exception, IFailure`, `throw` as C#'s, the cause as `InnerException`,
 //! and handlers that catch exactly what their bodies may fail with
 //! (`translate`'s `failures` module says how); and generics

@@ -123,22 +123,12 @@ pub(crate) fn init() -> temper_core::Result<()> {
 }
 
 #[derive(Clone, Debug)]
-#[non_exhaustive]
-#[allow(private_interfaces)]
-pub enum Error {
+pub(crate) enum FailuresError {
     NotFound(NotFound),
-    SignError(SignError),
     ConfigError(ConfigError),
 }
 
-temper_core::impl_failure_enum!(
-    Error,
-    NotFound(NotFound),
-    SignError(SignError),
-    ConfigError(ConfigError)
-);
-
-temper_core::impl_failure_from!(Error, SignError, EmptyText, BadSign);
+temper_core::impl_failure_enum!(FailuresError, NotFound(NotFound), ConfigError(ConfigError));
 
 struct NotFoundStruct {
     key: Arc<String>,
@@ -164,7 +154,7 @@ impl NotFound {
 
 temper_core::impl_failure!(NotFound, message, cause);
 
-temper_core::impl_any_value_trait!(NotFound, [Error]);
+temper_core::impl_any_value_trait!(NotFound, [FailuresError]);
 
 pub(crate) fn lookup(key: impl ToArcString) -> Result<i32, NotFound> {
     let key = key.to_arc_string();
@@ -235,7 +225,7 @@ impl EmptyText {
 
 temper_core::impl_failure!(EmptyText, message, cause);
 
-temper_core::impl_any_value_trait!(EmptyText, [SignError, Error]);
+temper_core::impl_any_value_trait!(EmptyText, [SignError]);
 
 struct BadSignStruct {
     text: Arc<String>,
@@ -261,7 +251,7 @@ impl BadSign {
 
 temper_core::impl_failure!(BadSign, message, cause);
 
-temper_core::impl_any_value_trait!(BadSign, [SignError, Error]);
+temper_core::impl_any_value_trait!(BadSign, [SignError]);
 
 pub(crate) fn sign(text: impl ToArcString) -> Result<i32, BadSign> {
     let text = text.to_arc_string();
@@ -323,7 +313,7 @@ impl ConfigError {
 
 temper_core::impl_failure!(ConfigError, message, cause);
 
-temper_core::impl_any_value_trait!(ConfigError, [Error]);
+temper_core::impl_any_value_trait!(ConfigError, [FailuresError]);
 
 pub(crate) fn setting(name: impl ToArcString) -> Result<i32, ConfigError> {
     let name = name.to_arc_string();

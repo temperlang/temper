@@ -216,6 +216,37 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
 /// for `-` (`hello-world` gives `hello_world`); its binary too, but for
 /// the names cargo forbids a binary ([`bin_name`]). Kotlin also copies
 /// `temper-core` beside the package; `temper build` does too ([`runtime`]).
+/// `pub type Error = r#mod::WherewithError;`, the crate's `Error`, as
+/// `serde_json::Error`: its one failure root, exported, where it has one
+/// and no `Error` of its own; else nothing.
+fn error_alias(
+    p: &temper_tmpl::Program,
+    translator: &translate::Translator,
+    names: &temper_tmpl::naming::NameMap,
+) -> String {
+    let root = temper_tmpl::failures::root(p);
+    let own =
+        |d: &temper_tmpl::DeclId| p.decls.contains(*d) && !temper_tmpl::qname::is_external(p, *d);
+    let roots: Vec<temper_tmpl::DeclId> = (p.decls.ids().filter(own))
+        .filter(|&d| temper_tmpl::failures::is_library_root(p, root, d))
+        .collect();
+    let named_error = p.decls.ids().filter(own).any(|d| p.name(d) == "Error");
+    let [root] = roots[..] else {
+        return String::new();
+    };
+    let module = temper_tmpl::analysis::home(p, root).and_then(|m| translator.module_path(m));
+    match module {
+        Some(module) if !named_error && p.decls.get(root).facts.contains(Facts::EXPORTED) => {
+            let path = module.trim_start_matches("crate::");
+            let name = names.get(root);
+            format!(
+                "\n/// The library's failure type, its one root.\npub type Error = {path}::{name};\n"
+            )
+        }
+        _ => String::new(),
+    }
+}
+
 /// The name of a library's binary, which runs its `init`: the package's
 /// own, unless cargo forbids that for a binary (`build`, `deps`,
 /// `examples`, and `incremental`, its target directory's names), then
@@ -466,6 +497,7 @@ temper-core = {{ path = "../temper-core", version = "={runtime}" }}
         (false, true) => "\nuse r#mod::*;\n",
         (false, false) => "",
     };
+    let reexport = reexport.to_string() + &error_alias(p, &translator, &names);
     let host_mod = match root_host {
         true => format!("{}\nmod _connected;\n", tree::HOST_ALLOW),
         false => String::new(),

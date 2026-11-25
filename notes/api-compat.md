@@ -129,8 +129,9 @@ effects. File names keep Temper's directory names.
 - Generics only in JSDoc; nullable is `T | null`; failure throws `Bubble`,
   an `Error`; promises are native; async uses the runtime's adapter.
 - Declared failures (RFC 164, in progress): each failure type is a class
-  under the library's own base, `<Lib>Error extends Error` (natively, not
-  through `type()`), a sealed one abstract between, so host code catches
+  under one of the library's roots, sealed interfaces it declares
+  (`WherewithError extends Error`, natively, not through `type()`), a
+  sealed one abstract between, so host code catches
   them with `instanceof`; `message` is a getter, `name` the class's name
   (set by the runtime's `failureBase`, beside an invisible marker
   symbol), the cause the standard `cause`, and a function failing with
@@ -171,8 +172,8 @@ package `__init__.py` does `from .<root> import *` and imports every module.
   (Kotlin's annotate `Future`; a host passing its own plain `Future` as
   a promise argument now needs a cast for strict checkers).
 - Declared failures (RFC 164, in progress): each failure type is an
-  exception class under the library's own base, `<Lib>Error(Failure,
-  Exception)`, with `temper_core.Failure` only as a marker (not an
+  exception class under one of the library's roots, sealed interfaces it
+  declares, `WherewithError(Failure, Exception)`, with `temper_core.Failure` only as a marker (not an
   exception); `str(e)` is its message, its cause `__cause__`.
 
 **Naming.** Values, functions, methods and properties are snake_case; types
@@ -209,9 +210,9 @@ initializer), one file per type, synthetic functional interfaces in
   interfaces; failure is `temper.core.Bubble`, an unchecked
   `RuntimeException`; promises are `CompletableFuture`.
 - Declared failures (RFC 164, in progress): unchecked too. Each failure
-  type is a class under the library's own base, `public abstract class
-  <Lib>Exception extends RuntimeException implements
-  temper.core.Failure` (`Failure` only a marker); a sealed failure
+  type is a class under one of the library's roots, sealed interfaces
+  it declares, `public abstract class WherewithException extends
+  RuntimeException implements temper.core.Failure` (`Failure` only a marker); a sealed failure
   interface is an abstract class between, with a `protected`
   constructor; a type named `…Error` is `…Exception`. `getMessage()` is
   its message, `getCause()` its cause; stack traces kept. Functions list
@@ -249,8 +250,9 @@ sub-namespace and subdirectory; one file per type; module top levels in
   `TemperLang.Core.Bubble`, an `Exception`.
 - Exported `let`s are `public static` fields.
 - Declared failures (RFC 164, in progress): each failure type is a class
-  under the library's own base, `public abstract class <Lib>Exception :
-  Exception, IFailure` (the runtime's marker), a sealed failure interface
+  under one of the library's roots, sealed interfaces it declares,
+  `public abstract class WherewithException : Exception, IFailure` (the
+  runtime's marker), a sealed failure interface
   an abstract class between (no `I`), the rest `sealed`; abstract ones'
   constructors are `private protected`, so only the library extends
   them. `…Error` names say `…Exception`, as in Java. `Message` is
@@ -304,11 +306,13 @@ before anything else: statics are `OnceLock`s read with `unwrap()`.
   `Debug` (`NotFound { message: "…" }`), `std::error::Error` (its cause
   as `source()`), and `temper_core::Failure` (core's `Error`, also
   `Arc<dyn Failure>`), by `temper_core::impl_failure!`. A sealed failure
-  interface is an `enum` of the types right under it, the library's base
-  the crate's `#[non_exhaustive] pub enum Error`, each `From` every type
+  interface is an `enum` of the types right under it, a library's root
+  (`#[non_exhaustive]` where exported) among them, each `From` every type
   below it (`impl_failure_enum!`, `impl_failure_from!`), so host `?`
   converts; a failure the library doesn't export is a variant whose type
-  host code can't name. A failure in a module's init is a
+  host code can't name. A library with one exported root, and no `Error`
+  of its own, also has it as the crate's `Error` (`pub type Error =
+  r#mod::WherewithError;`). A failure in a module's init is a
   `temper_core::Error` with it as source; `uncaught` says "uncaught
   failure" and each cause. Panics stay panics.
 
@@ -338,8 +342,8 @@ failure throws `TemperBubble`; lists are `shared_ptr<vector<T>>`.
   with the same API for what it has (`expected.hpp`); host code branches
   on `has_value()` and reads `error()`, and returns failures as
   `temper::core::unexpected(NotFound::make(key))`. A failure class is a
-  class as above, below the library's base, `struct <Lib>Error : virtual
-  temper::core::Failure` (core's `Error`, a `std::exception`: `what()` is
+  class as above, below one of the library's roots, sealed interfaces it
+  declares, `struct WherewithError : virtual temper::core::Failure` (core's `Error`, a `std::exception`: `what()` is
   its message, `get_message()` too, and `get_cause()` the failure it was
   thrown while handling); a sealed failure interface is an abstract struct
   between. Failures are never thrown, but one a module's top level
@@ -390,10 +394,11 @@ unexported names.
 `temper.null` sentinel, which is returned to callers; failure is `error(...)`.
 
 - Declared failures (RFC 164, in progress): each failure type is a
-  `temper.type` under the library's own base, `temper.type("lib.LibError",
-  temper.Failure)`, raised with `error(x)`; host code catches them with
-  `pcall` and tells them apart with `temper.instance_of(e, lib.NotFound)`
-  (by own type, the base, a sealed interface's, or `temper.Failure`).
+  `temper.type` under one of the library's roots, sealed interfaces it
+  declares, `temper.type("lib.LibError", temper.Failure)`, raised with
+  `error(x)`; host code catches them with `pcall` and tells them apart
+  with `temper.instance_of(e, lib.NotFound)` (by own type, a root, a
+  sealed interface's, or `temper.Failure`).
   `tostring(e)` and `e.message` give the message, `e.cause` the failure
   being handled where it was thrown, or `nil`; a failure type's member
   named `cause` is `cause_`. A panic stays a string.

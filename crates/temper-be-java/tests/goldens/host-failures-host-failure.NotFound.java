@@ -1,7 +1,7 @@
 package host_failures_host_failure;
 
 @SuppressWarnings("serial")
-public final class NotFound extends HostFailuresHostFailureException {
+public final class NotFound extends HostFailuresException {
     public final String key;
 
     public NotFound(String key) {

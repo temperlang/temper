@@ -71,10 +71,10 @@ local function shown(a, b)
   return tostring(total)
 end
 
----@class failures.SignError: failures.FailuresError
+---@class failures.SignError: temper.Failure
 
 ---@class failures.SignError.type: temper.Type
-local SignError = temper.type("failures.SignError", FailuresError)
+local SignError = temper.type("failures.SignError", temper.Failure)
 
 ---@class failures.EmptyText: failures.SignError
 ---@field message string
@@ -347,4 +347,4 @@ do
 end
 print(tostring(total))
 
-return { FailuresError = FailuresError }
+return {}

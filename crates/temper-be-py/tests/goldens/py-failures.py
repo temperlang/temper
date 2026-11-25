@@ -23,6 +23,7 @@ __all__ = (
     'risky',
     'explained',
     'sign_message',
+    'sign_name',
     'mixed',
 )
 
@@ -153,6 +154,15 @@ def sign_message(text: str, /) -> str:
         return str(sign(text))
     except SignError as e:
         return e.message
+
+
+def sign_name(e: SignError, /) -> str:
+    if isinstance(e, BadSign):
+        return 'bad sign'
+    elif isinstance(e, EmptyText):
+        return 'empty text'
+    else:
+        raise BaseException('panic')
 
 
 def mixed(key: str, n: int, /) -> int:

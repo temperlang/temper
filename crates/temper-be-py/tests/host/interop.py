@@ -104,8 +104,8 @@ from py_builtin_params import Option  # noqa: E402
 option = Option(help="how", min=1, max=9, type="flag")
 print("by name", option.describe(), option.clamp(12))
 
-# Declared failures are exceptions under the library's own base, caught
-# by their own types, the base, or a sealed interface's.
+# Declared failures are exceptions under the library's root, caught by
+# their own types, the root, or a sealed interface's.
 from py_failures import (  # noqa: E402
     BadSign,
     LookupFailed,
@@ -117,6 +117,7 @@ from py_failures import (  # noqa: E402
     risky,
     setting,
     sign,
+    sign_name,
     thrown_again,
 )
 
@@ -169,3 +170,23 @@ try:
         print("panic caught")
 except BaseException:
     print("panic passes")
+
+
+# A type of host code's own under a sealed one, which Temper's exhaustive
+# `when` over it doesn't know, panics there.
+class Rogue(SignError):
+    __slots__ = ()
+
+    @property
+    def message(self) -> str:
+        return "rogue"
+
+
+print(f"known subtype {sign_name(BadSign('?'))}")
+try:
+    try:
+        sign_name(Rogue())
+    except Exception:
+        print("unknown subtype caught")
+except BaseException as e:
+    print(f"unknown subtype panics: {e}")

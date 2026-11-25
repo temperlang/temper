@@ -701,7 +701,7 @@ for a `finally` holding jumps, should bring that as a shared helper
 (it was briefly `temper_tmpl::exits`, a copying stub, removed until
 then).
 
-### Declared failures (As built, 2026-11-24, Proposed)
+### Declared failures (As built, 2026-11-25, Proposed)
 
 RFC 164's failure types, beside `Bubble`, which stays as it was
 ([types.md](types.md#results); typing.md, "Declared failures"). Every
@@ -720,13 +720,12 @@ the … backend: declared failures: …" for a program that uses them
   `cause` (`failures::root`). A signature fails with `Bubble`, a
   failure type, or a type parameter (a failure parameter, not made by
   `to_tmpl` yet); failures are ordinary values, `Bubble` never is.
-- **The library's base:** a compiler-made, exported interface marked
-  `FAILURE_BASE` (text `failureBase`), named `<Library>Error`
-  (`to_tmpl`'s `failure_base_name`), extending only `Error`, in the
-  library's first module. Each failure type that extends `Error` in the
-  source extends the base instead, so targets write it over their own
-  exception type and host code never catches a Temper type (RFC 164,
-  "host presentation").
+- **The library's roots:** the interfaces right under `Error`
+  (`failures::is_library_root`), sealed interfaces the library declares
+  (decision 17; the frontend checks the rules, notes/typing.md), each
+  failure type under one. Targets write each over their own exception
+  type, so host code never catches a Temper type (RFC 164, "host
+  presentation"); a library may have several.
 - **Messages:** a failure class without a member named `message` gets a
   `message` getter giving the interpreter's default message, `not found
   (key: y)` (`interp::failures`). `cause` stays core's, which targets
@@ -745,14 +744,14 @@ the … backend: declared failures: …" for a program that uses them
 - **`when` over failure types** needs nothing new: `Is` and `Downcast`.
 - **Naming:** Java's and C#'s rules say `Exception` for `Error` at the
   end of a failure type's name (`NamingRules::failure_suffix`), so
-  `ConfigError` is `ConfigException` there, the base too.
+  `ConfigError` is `ConfigException` there, the roots too.
 - **Text:** `(throw(new NotFound#1(k#2))^): Void`, `(throw(x#3,
   e#4)^): Int32`, `(catch(f#5()^, e#6: NotFound#1, 0)): Int32`, and
-  `export failureBase interface ~FailuresError#7 extends Error#8 {}`.
+  `interface FailuresError#7 extends Error#8 {}`.
 
 **In Python** (chunk 7): core's `Error` is `temper_core.Failure`, a
-marker that isn't an exception, giving `__str__` from `message`; the
-base is `class FailuresError(Failure, Exception)`, the failure types
+marker that isn't an exception, giving `__str__` from `message`; a
+root is `class FailuresError(Failure, Exception)`, the failure types
 classes under it (a sealed interface abstract, by `Failure`'s
 `ABCMeta`). `Throw` is `raise`, `raise X(…) from cause` where it makes
 the failure, else `raise with_cause(x, cause)`, which keeps a cause it
@@ -766,7 +765,7 @@ null for checkers.
 
 **In Java** (chunk 8): unchecked exceptions. Core's `Error` is
 `temper.core.Failure`, a marker interface (`getMessage()`,
-`getCause()`); the base is `public abstract class FailuresException
+`getCause()`); a root is `public abstract class FailuresException
 extends RuntimeException implements Failure`, a sealed failure
 interface an abstract class under it (Java 8's runtime has no
 `sealed`, and a library's modules are packages of their own), each with
@@ -788,10 +787,12 @@ a failure type returns `Result<T, F>` (`Bubble`'s stays
 `temper_core::Cause` field and `impl_failure!` (`Display` its message,
 `Debug`, `std::error::Error` with `source()` its cause, and
 `temper_core::Failure`, which core's `Error` is, `Arc<dyn Failure>`); a
-sealed failure interface, the base among them, is an `enum` of the
+sealed failure interface, the roots among them, is an `enum` of the
 types right under it, `From` each below (`impl_failure_enum!`,
-`impl_failure_from!`), the base named `Error`
-(`NamingRules::failure_base`) and `#[non_exhaustive]`; `is` and `as`
+`impl_failure_from!`), an exported root's `#[non_exhaustive]`, and the
+crate's `Error` the one root, `pub type Error = r#mod::WherewithError;`
+in `lib.rs`, where the library has one, exported, and no `Error` of its
+own; `is` and `as`
 see through it (`AnyValueTrait` by the variant). `Throw` is `return
 Err(x)`, `.into()` where the code fails with a type above, through
 `temper_core::with_cause(x, cause)` in a handler. `OrElse` and `Catch`
@@ -814,7 +815,7 @@ has (`expected.hpp`, with its own tests on both); `Bubble`'s signatures
 are unchanged. Core's `Error` is the runtime's `core::Failure`, a
 `std::exception` (`what()` its message, made once when first asked)
 with `get_message()`, pure virtual, and a cause set once
-(`get_cause()`, `set_cause`, never itself or a loop); the base is
+(`get_cause()`, `set_cause`, never itself or a loop); a root is
 `struct FailuresError : virtual core::Failure`, sealed failure
 interfaces abstract structs under it, failure classes structs under
 those, their `message` getters `override`. A failing call is computed
@@ -839,7 +840,7 @@ parameters.
 
 **In JS** (chunk 11): classes extending JS's `Error`, natively rather
 than through the runtime's `type()` mixin, so `instanceof`, `stack`,
-`name`, and `message` work for hosts: the base is `class FailuresError
+`name`, and `message` work for hosts: a root is `class FailuresError
 extends Error {}` followed by `failureBase(FailuresError)`, which gives
 its instances the runtime's marker symbol (`isFailure`) and `name`, the
 class's own; a sealed failure interface is a class under it, never made
@@ -862,7 +863,7 @@ a failure type says so with JSDoc's `@throws`.
 
 **In C#** (chunk 12): exception classes. Core's `Error` is
 `TemperLang.Core.IFailure`, a marker interface (`Message`,
-`InnerException`, both `Exception`'s); the base is `public abstract
+`InnerException`, both `Exception`'s); a root is `public abstract
 class FailuresException : Exception, IFailure`, a sealed failure
 interface an abstract class under it (no `I`), failure classes
 `sealed`; abstract ones' constructors are `private protected` (C# can't
@@ -891,7 +892,7 @@ failing with a failure type says so in an XML doc comment, `///
 Core's `Error` is `temper.Failure`, a type whose instances, and those
 of every type under it, have a metatable of their own: `__tostring`
 gives the failure's `message`, and `cause` reads as `nil` where there's
-none. The base is `temper.type("failures.FailuresError",
+none. A root is `temper.type("failures.FailuresError",
 temper.Failure)`, failure types under it as other types are, LuaCATS
 classes under `temper.Failure`; a failure type's member named `cause` is
 `cause_`. `message` is the getter; `cause` is `temper.failure_cause(e)`,
@@ -915,9 +916,8 @@ goes: anything in an `OrElse`'s body or an init block, only what the
 function's failure type or below, `Bubble` and failure types never
 mixing; F8: a `Throw`'s value and cause are failure types, and a
 `Catch` binds one; D6: failure types aren't generic and have one
-failure type above them, which is the library's base where it'd be
-`Error`, and the base is the one compiler-made, exported interface
-extending only `Error`.
+failure type above them, and one that's `Error` itself, a root, is an
+interface, never a class.
 
 Not yet: failure parameters (generic `E`) in calls' type arguments,
 `throw` and `catch` in generators, checking a failure type's own

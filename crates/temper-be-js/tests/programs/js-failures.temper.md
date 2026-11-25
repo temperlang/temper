@@ -1,24 +1,26 @@
 # Declared failures, as JS callers see them
 
-A library's failure types are classes under the library's own base,
+A library's failure types are classes under the root it declares,
 `JsFailuresError`, a JS `Error`: `runs` has host code
 (`tests/host/failures.mjs`) catch them with `instanceof` by their own
-types, the base, a sealed interface's (an abstract class), and `Error`,
+types, the root, a sealed interface's (an abstract class), and `Error`,
 read their fields, `message`, `name`, and `stack`, and `cause`, the
 failure being handled where one was thrown; and a panic, a plain
 `Error`, passes a `catch` that checks the type. A failure type's member
 named as one of `Error`'s own (`name`) takes a `_`, as `name_`, since
 `name` is the type's name.
 
-    export class NotFound(public key: String) extends Error {}
+    export sealed interface JsFailuresError extends Error {}
 
-    export sealed interface SignError extends Error {}
+    export class NotFound(public key: String) extends JsFailuresError {}
+
+    export sealed interface SignError extends JsFailuresError {}
     export class BadSign(public text: String) extends SignError {}
     export class EmptyText extends SignError {
       public get message(): String { "no text" }
     }
 
-    export class LookupFailed(public name: String) extends Error {}
+    export class LookupFailed(public name: String) extends JsFailuresError {}
 
     export let lookup(key: String): Int throws NotFound {
       if (key == "a") { return 1; }
@@ -71,6 +73,16 @@ a sealed interface:
 
     export let signMessage(text: String): String {
       sign(text).toString() catch (e) { e.message }
+    }
+
+An exhaustive `when` over a sealed type needs no `else`, and panics
+where host code passes a value of a type of its own under it:
+
+    export let signName(e: SignError): String {
+      when (e) {
+        is BadSign -> "bad sign";
+        is EmptyText -> "empty text";
+      }
     }
 
 An `orelse` handles a bubble and a declared failure alike, and a panic

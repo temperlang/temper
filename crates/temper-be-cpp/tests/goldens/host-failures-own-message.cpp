@@ -10,20 +10,20 @@ namespace host_failures_own_message {
 // optional.
 void global_init_init();
 
-struct HostFailuresOwnMessageError;
+struct HostFailuresError;
 struct NotFound;
 struct Expired;
 
-struct HostFailuresOwnMessageError : public virtual temper::core::Failure {};
+struct HostFailuresError : public virtual temper::core::Failure {};
 
-struct NotFound : public virtual HostFailuresOwnMessageError {
+struct NotFound : public virtual HostFailuresError {
   temper::core::Str key;
   static std::shared_ptr<NotFound> make(temper::core::Str const & key);
   temper::core::Str get_message() const override;
   temper::core::Str get_key() const;
 };
 
-struct Expired : public virtual HostFailuresOwnMessageError {
+struct Expired : public virtual HostFailuresError {
   int32_t days;
   static std::shared_ptr<Expired> make(int32_t days);
   temper::core::Str get_message() const override;

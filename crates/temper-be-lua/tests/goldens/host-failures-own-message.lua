@@ -21,18 +21,18 @@ do
   end
 end
 
----@class host-failures-own-message.HostFailuresOwnMessageError: temper.Failure
+---@class host-failures-own-message.HostFailuresError: temper.Failure
 
----@class host-failures-own-message.HostFailuresOwnMessageError.type: temper.Type
-local HostFailuresOwnMessageError = temper.type("host-failures-own-message.HostFailuresOwnMessageError", temper.Failure)
+---@class host-failures-own-message.HostFailuresError.type: temper.Type
+local HostFailuresError = temper.type("host-failures-own-message.HostFailuresError", temper.Failure)
 
----@class host-failures-own-message.NotFound: host-failures-own-message.HostFailuresOwnMessageError
+---@class host-failures-own-message.NotFound: host-failures-own-message.HostFailuresError
 ---@field key string
 ---@field message string
 
 ---@class host-failures-own-message.NotFound.type: temper.Type
 ---@operator call: host-failures-own-message.NotFound
-NotFound = temper.type("host-failures-own-message.NotFound", HostFailuresOwnMessageError)
+NotFound = temper.type("host-failures-own-message.NotFound", HostFailuresError)
 
 ---@param this host-failures-own-message.NotFound
 ---@param key string
@@ -52,13 +52,13 @@ local function hostLookup(key)
   return _connected.hostLookup(key)
 end
 
----@class host-failures-own-message.Expired: host-failures-own-message.HostFailuresOwnMessageError
+---@class host-failures-own-message.Expired: host-failures-own-message.HostFailuresError
 ---@field days integer
 ---@field message string
 
 ---@class host-failures-own-message.Expired.type: temper.Type
 ---@operator call: host-failures-own-message.Expired
-local Expired = temper.type("host-failures-own-message.Expired", HostFailuresOwnMessageError)
+local Expired = temper.type("host-failures-own-message.Expired", HostFailuresError)
 
 ---@param this host-failures-own-message.Expired
 ---@param days integer
@@ -85,7 +85,7 @@ check(3)
 print("after")
 
 return {
-  HostFailuresOwnMessageError = HostFailuresOwnMessageError,
+  HostFailuresError = HostFailuresError,
   NotFound = NotFound,
   hostLookup = hostLookup,
 }

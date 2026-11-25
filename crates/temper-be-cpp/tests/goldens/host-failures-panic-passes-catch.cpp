@@ -10,12 +10,12 @@ namespace host_failures_panic_passes_catch {
 // optional.
 void global_init_init();
 
-struct HostFailuresPanicPassesCatchError;
+struct HostFailuresError;
 struct NotFound;
 
-struct HostFailuresPanicPassesCatchError : public virtual temper::core::Failure {};
+struct HostFailuresError : public virtual temper::core::Failure {};
 
-struct NotFound : public virtual HostFailuresPanicPassesCatchError {
+struct NotFound : public virtual HostFailuresError {
   temper::core::Str key;
   static std::shared_ptr<NotFound> make(temper::core::Str const & key);
   temper::core::Str get_message() const override;

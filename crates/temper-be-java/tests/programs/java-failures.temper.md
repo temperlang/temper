@@ -1,22 +1,25 @@
 # Declared failures, as Java callers see them
 
-A library's failure types are unchecked exceptions under the library's
-own base, `JavaFailuresException`, a `RuntimeException`: `runs` has
+A library's failure types are unchecked exceptions under the root it
+declares, `JavaFailuresException` (`JavaFailuresError` in Temper), a
+`RuntimeException`: `runs` has
 host code (`tests/host/FailuresInterop.java`) catch them by their own
-types, the base, and a sealed interface's (an abstract class), read
+types, the root, and a sealed interface's (an abstract class), read
 their fields, `getMessage()` give their messages, and `getCause()` the
 failure being handled where one was thrown; and a panic, an
 `AssertionError`, passes `catch (RuntimeException e)`.
 
-    export class NotFound(public key: String) extends Error {}
+    export sealed interface JavaFailuresError extends Error {}
 
-    export sealed interface SignError extends Error {}
+    export class NotFound(public key: String) extends JavaFailuresError {}
+
+    export sealed interface SignError extends JavaFailuresError {}
     export class BadSign(public text: String) extends SignError {}
     export class EmptyText extends SignError {
       public get message(): String { "no text" }
     }
 
-    export class LookupFailed(public name: String) extends Error {}
+    export class LookupFailed(public name: String) extends JavaFailuresError {}
 
     export let lookup(key: String): Int throws NotFound {
       if (key == "a") { return 1; }

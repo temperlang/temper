@@ -4,9 +4,9 @@ A specification, not run yet: declared failures as RFC 164 proposes
 them, which later changes build (`SPECS` in the testkit). The log is
 what the interpreter should give. It assumes, of what's still open:
 
-- A failure type extends core's root, `Error`, as a class or as a
-  sealed interface whose classes do; another name for the root changes
-  only those lines.
+- Each failure type is under one root, a sealed interface of the
+  library's own that extends core's `Error`; a library may have several
+  roots. Another name for `Error` changes only the roots' lines.
 - `try` is written wherever a failure propagates, which is right
   whether `try` ends up optional or required. Nothing leaves it out, and
   nothing checks what leaving it out does.
@@ -21,10 +21,12 @@ what the interpreter should give. It assumes, of what's still open:
 
 ## Throwing, and defaults
 
-A failure is an object of a declared failure type, with fields. `throw`
-ends the function with it, and `orelse` gives a default instead:
+A failure is an object of a declared failure type, with fields, under
+a root the library declares. `throw` ends the function with it, and
+`orelse` gives a default instead:
 
-    class NotFound(public key: String) extends Error {}
+    sealed interface FailuresError extends Error {}
+    class NotFound(public key: String) extends FailuresError {}
 
     let lookup(key: String): Int throws NotFound {
       if (key == "a") { return 1; }
@@ -81,7 +83,8 @@ same, and stops where it fails. A handler's block may `return`:
 
 ## Sealed failure types
 
-A sealed interface groups failure types. A function that throws it may
+A sealed interface groups failure types, and this one is a root of its
+own, beside the first. A function that throws it may
 throw any of them, or pass them on from a function that throws one, and
 `when` tells them apart without `else`, as the function's result or
 right in a handler:
@@ -148,7 +151,7 @@ again k
 A failure of another type passes on only explicitly, by throwing a
 failure of the function's own type from a handler:
 
-    class ConfigError(public setting: String) extends Error {}
+    class ConfigError(public setting: String) extends FailuresError {}
 
     let setting(name: String): Int throws ConfigError {
       lookup(name) catch (e) { throw new ConfigError("${name}: missing ${e.key}"); }

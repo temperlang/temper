@@ -2,8 +2,8 @@
 //! as values, never thrown: a function that declares a failure type
 //! returns `core::Expected<T, F>` (`std::expected` from C++23, the
 //! runtime's shim before, `expected.hpp`), `F` the failure type's
-//! `shared_ptr`. Failure classes are structs as any class's, below the
-//! library's base, `struct FailuresError : virtual core::Failure`, which is
+//! `shared_ptr`. Failure classes are structs as any class's, below one of
+//! the library's roots, `struct FailuresError : virtual core::Failure`, which is
 //! core's `Error`, a `std::exception` with `what()` its message and a
 //! cause (`failure.hpp`); a sealed failure interface is an abstract struct
 //! between, as any interface.

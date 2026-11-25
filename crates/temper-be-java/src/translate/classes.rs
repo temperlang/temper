@@ -39,8 +39,8 @@
 //! - A class's plain `toString()` overrides `Object`'s, by its name
 //!   alone; an `@operator` method is a method; `<=>`'s calls compare
 //!   with 0 as tmpl has them.
-//! - A declared failure type (RFC 164) is an unchecked exception: the
-//!   library's base, `public abstract class <Library>Exception extends
+//! - A declared failure type (RFC 164) is an unchecked exception: each of
+//!   the library's roots, `public abstract class WherewithException extends
 //!   RuntimeException implements Failure` (the runtime's marker, for
 //!   core's `Error`), a sealed failure interface an abstract class under
 //!   it, and a failure class a final class under the one failure type
@@ -260,7 +260,7 @@ const THROWABLE_METHODS: &[&str] = &[
 
 /// Whether a declaration is a declared failure type of the program's own
 /// (`temper_tmpl::failures`): a class, under `RuntimeException`, or an
-/// interface (the library's base, or a sealed one), as an abstract class,
+/// interface (a root, or another sealed one), as an abstract class,
 /// since Java's exceptions are classes. Each has one failure type above
 /// it (the frontend's rule), which it extends.
 pub(super) fn failure_class(p: &Program, decl: DeclId) -> bool {
@@ -826,8 +826,8 @@ impl Translator<'_> {
 
     /// The class a type extends, if any, and what else it implements (or
     /// for an interface, extends): a declared failure type
-    /// ([`failure_class`]) extends the one failure type above it, the
-    /// library's base `RuntimeException`, implementing the runtime's
+    /// ([`failure_class`]) extends the one failure type above it, a root
+    /// `RuntimeException`, implementing the runtime's
     /// marker, `Failure`, core's `Error`.
     fn supers(&mut self, decl: DeclId, failure: bool) -> R<(Option<String>, Vec<String>)> {
         let p = self.p;

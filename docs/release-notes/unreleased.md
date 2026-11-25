@@ -522,42 +522,46 @@ declared failures RFC 164 proposes, so they can't name a variable,
 function, parameter, or member, though a name after a `.`, as in
 `promise.catch`, still reads as one. The syntax parses, is type
 checked, and runs on the interpreter (`temper run -b interp`) and on
-every backend, and `error case` is reported as not supported yet. In
-Python, a library's failure types are exception classes under its own
-base, as `WherewithError(Failure, Exception)`
+every backend, and `error case` is reported as not supported yet. A
+failure type is under one of its library's roots, sealed interfaces
+that extend core's `Error` (`export sealed interface WherewithError
+extends Error {}`), which each backend makes the host's own exception
+type; classes extend a root, never `Error` itself. In Python, a
+library's failure types are exception classes under its roots, as
+`WherewithError(Failure, Exception)`
 with `temper_core`'s `Failure` marker, which host code catches by those
 types, never a `temper_core` one; `str(e)` is the message, and the
 cause is `__cause__`. In Java, they're unchecked exceptions under the
-library's own base, as `WherewithException extends RuntimeException`
+roots, as `WherewithException extends RuntimeException`
 (a type named `…Error` is `…Exception`), implementing the
 `temper.core.Failure` marker; `getMessage()` is the message,
 `getCause()` the cause, and functions list what they may throw in a
 `throws` clause. In Rust, a function that fails returns `Result<T, F>`;
 each failure class is a struct implementing `Display` (the message) and
 `std::error::Error` (the cause as `source()`), each sealed failure
-interface an `enum` of the types under it, and the library's base its
-crate's `Error` enum, which `?` converts any of them into; a panic stays
-a panic. In C++, a function that fails returns
+interface, the roots among them, an `enum` of the types under it, which
+`?` converts any of them into, and a library's one root its crate's
+`Error` too; a panic stays a panic. In C++, a function that fails returns
 `temper::core::Expected<T, std::shared_ptr<F>>` (`std::expected` from
 C++23, the runtime's C++14 shim before), and each failure class is a
-struct below the library's base, as `WherewithError`, which is the
+struct below a root, as `WherewithError`, which is the
 runtime's `temper::core::Failure`, a `std::exception` whose `what()` is
 the message, with `get_cause()`; failures are values, never thrown. In
-JS, they're classes under the library's own base, as `WherewithError
-extends Error`, so host code catches them with `instanceof`, by their
+JS, they're classes under the roots, as `WherewithError extends
+Error`, so host code catches them with `instanceof`, by their
 own types or as any `Error`; `message` is the message, `name` the
 type's name (a failure's own member named `name`, `stack`, or `cause`
 is `name_`, and so on, in JS), the cause the standard `cause`, and
 functions say what they may throw with JSDoc's `@throws`. In C#,
-they're exception classes under the library's own base, as
-`WherewithException : Exception` (`…Error` names say `…Exception`, as
+they're exception classes under the roots, as `WherewithException :
+Exception` (`…Error` names say `…Exception`, as
 in Java), sealed failure interfaces abstract classes between and the
 rest `sealed`; `Message` is the message, `InnerException` the cause,
 set where a failure is made by a `throw` in a handler (one made before
 keeps its cause for Temper's `cause` alone, as C# can't set
 `InnerException` later), and doc comments say what a function may
 throw with `<exception cref="…">`. In Lua, they're the runtime's types
-under the library's own base, as `temper.type("wherewith.WherewithError",
+under the roots, as `temper.type("wherewith.WherewithError",
 temper.Failure)`, raised with `error(x)`, so host code catches them with
 `pcall` and tells them apart with `temper.instance_of`; `tostring(e)`
 and `message` are the message, `cause` the cause (a failure's own member

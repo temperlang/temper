@@ -25,11 +25,11 @@ export function risky(n) {
   return n;
 }
 
-export class HostFailuresPanicPassesCatchError extends Error {}
+export class HostFailuresError extends Error {}
 
-failureBase(HostFailuresPanicPassesCatchError);
+failureBase(HostFailuresError);
 
-export class NotFound extends HostFailuresPanicPassesCatchError {
+export class NotFound extends HostFailuresError {
   /** @type {string} */
   #key;
 

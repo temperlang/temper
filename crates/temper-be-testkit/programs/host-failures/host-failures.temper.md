@@ -11,10 +11,10 @@ interpreter, which has no host, runs the Temper body, which panics
 where host code has its own error. It assumes what `failures` does,
 and, of what's still open:
 
-- Each failure type is a host type under the library's own name, which
-  host code makes and throws as its language does (on Rust and C++ by
-  returning it); host code's names and paths here are guesses that each
-  backend settles when it runs this.
+- Each failure type is a host type under its root's, which host code
+  makes and throws as its language does (on Rust and C++ by returning
+  it); host code's names and paths here are guesses that each backend
+  settles when it runs this.
 - A failure's message, unless its type gives its own with a `message`
   getter, is its type's name in lowercase words, then its fields:
   `not found (key: y)`.
@@ -22,9 +22,11 @@ and, of what's still open:
   and a report shows the cause's message too.
 - A failure that top-level code passes on with `try` ends the run.
 
-The function, and a line logged before each section's:
+The library's root, the function, and a line logged before each
+section's:
 
-    export class NotFound(public key: String) extends Error {}
+    export sealed interface HostFailuresError extends Error {}
+    export class NotFound(public key: String) extends HostFailuresError {}
 
     @connected
     export let hostLookup(key: String): Int throws NotFound {
@@ -80,7 +82,7 @@ host bug
 A failure thrown while handling another keeps that one as its cause,
 and the report says both:
 
-    class LookupFailed(public name: String) extends Error {}
+    class LookupFailed(public name: String) extends HostFailuresError {}
 
     let setting(name: String): Int throws LookupFailed {
       hostLookup(name) catch { throw new LookupFailed(name); }
@@ -102,7 +104,7 @@ not found (key: port)
 
 A failure type's `message` getter gives its message instead:
 
-    class Expired(public days: Int) extends Error {
+    class Expired(public days: Int) extends HostFailuresError {
       public get message(): String { "expired ${days} days ago" }
     }
 

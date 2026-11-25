@@ -6,10 +6,10 @@ using System.Runtime.CompilerServices;
 namespace TemperLang.Core
 {
     /// <summary>
-    /// Marks a Temper library's declared failures (RFC 164): each
-    /// library's base failure class, as <c>WherewithException</c>,
+    /// Marks a Temper library's declared failures (RFC 164): each of a
+    /// library's root failure classes, as <c>WherewithException</c>,
     /// extends <see cref="Exception"/> and implements this, and its failure
-    /// types extend that base. Host code catches those, never this, which
+    /// types extend those. Host code catches those, never this, which
     /// isn't an exception itself; generated code uses it only where it
     /// can't name a failure type. A failure's message is
     /// <see cref="Message"/>, Temper's <c>message</c>, and its cause is

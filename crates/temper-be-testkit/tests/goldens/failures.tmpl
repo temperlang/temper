@@ -1,7 +1,7 @@
 tmpl 1 model 1 library failures 0.0.0
 
-uses `temper-core`#6 0.0.0-alpha.0.0 {
-  interface Error#7 {}
+uses `temper-core`#7 0.0.0-alpha.0.0 {
+  interface Error#8 {}
   class List#29<T#30> extends Listed#31<T#30> {
     connected get length#67(): Int32;
     connected method get#68(index: Int32): T#30;
@@ -19,13 +19,13 @@ uses `temper-core`#6 0.0.0-alpha.0.0 {
 }
 
 module failures#0 {
-  export failureBase interface ~FailuresError#8 extends Error#7 {}
-
   let ~console#46: Console#44;
 
-  class NotFound#1 extends ~FailuresError#8 {
+  interface FailuresError#1 extends Error#8 {}
+
+  class NotFound#2 extends FailuresError#1 {
     let key#9: String;
-    constructor constructor#10(key#41: String): NotFound#1 {
+    constructor constructor#10(key#41: String): NotFound#2 {
       this.key#9 = key#41;
     }
     get message#42(): String {
@@ -33,7 +33,7 @@ module failures#0 {
     }
   }
 
-  fn lookup#16(key#43: String): Int32 throws NotFound#1 {
+  fn lookup#16(key#43: String): Int32 throws NotFound#2 {
     if (%String.eq(key#43, "a")) {
       return 1;
     }
@@ -51,7 +51,7 @@ module failures#0 {
 
   let m#20: Int32;
 
-  fn sum#21(a#50: String, b#51: String): Int32 throws NotFound#1 {
+  fn sum#21(a#50: String, b#51: String): Int32 throws NotFound#2 {
     let x#52: Int32 = lookup#16(a#50)^;
     let y#53: Int32 = lookup#16(b#51)^;
     return %Int32.add(x#52, y#53);
@@ -59,11 +59,11 @@ module failures#0 {
 
   fn shown#22(a#54: String, b#55: String): String {
     var total#56: Int32;
-    var ~caught#57: NotFound#1? = (null): NotFound#1?;
+    var ~caught#57: NotFound#2? = (null): NotFound#2?;
     var ~held#59: Int32? = (null): Int32?;
-    (catch((value { ~held#59 = (asNullable(sum#21(a#54, b#55)^)): Int32?; void }): Void, ~failure#58: NotFound#1, (value { ~caught#57 = (asNullable(~failure#58)): NotFound#1?; void }): Void)): Void;
+    (catch((value { ~held#59 = (asNullable(sum#21(a#54, b#55)^)): Int32?; void }): Void, ~failure#58: NotFound#2, (value { ~caught#57 = (asNullable(~failure#58)): NotFound#2?; void }): Void)): Void;
     if (isNull(~held#59)) {
-      let e#60: NotFound#1 = (nonNull(~caught#57)): NotFound#1;
+      let e#60: NotFound#2 = (nonNull(~caught#57)): NotFound#2;
       return %String.cat("no ", e#60.key#9);
     } else {
       total#56 = (nonNull(~held#59)): Int32;
@@ -71,18 +71,18 @@ module failures#0 {
     return total#56.toString#48(omitted);
   }
 
-  interface SignError#2 extends ~FailuresError#8 {}
+  interface SignError#3 extends Error#8 {}
 
-  class EmptyText#3 extends SignError#2 {
-    constructor constructor#11(): EmptyText#3 {}
+  class EmptyText#4 extends SignError#3 {
+    constructor constructor#11(): EmptyText#4 {}
     get message#61(): String {
       return "empty text";
     }
   }
 
-  class BadSign#4 extends SignError#2 {
+  class BadSign#5 extends SignError#3 {
     let text#12: String;
-    constructor constructor#13(text#62: String): BadSign#4 {
+    constructor constructor#13(text#62: String): BadSign#5 {
       this.text#12 = text#62;
     }
     get message#63(): String {
@@ -90,7 +90,7 @@ module failures#0 {
     }
   }
 
-  fn sign#23(text#64: String): Int32 throws BadSign#4 {
+  fn sign#23(text#64: String): Int32 throws BadSign#5 {
     {
       if (%String.eq(text#64, "+")) {
         return 1;
@@ -102,19 +102,19 @@ module failures#0 {
     }
   }
 
-  fn parseSign#24(text#65: String): Int32 throws SignError#2 {
+  fn parseSign#24(text#65: String): Int32 throws SignError#3 {
     if (%String.eq(text#65, "")) {
       (throw(new constructor#11())^): Void;
     }
     return sign#23(text#65)^;
   }
 
-  fn describe#25(e#66: SignError#2): String {
+  fn describe#25(e#66: SignError#3): String {
     {
-      if (is(e#66, EmptyText#3)) {
+      if (is(e#66, EmptyText#4)) {
         return "empty";
-      } else if (is(e#66, BadSign#4)) {
-        return %String.cat("bad sign ", ((downcast(e#66)): BadSign#4).text#12);
+      } else if (is(e#66, BadSign#5)) {
+        return %String.cat("bad sign ", ((downcast(e#66)): BadSign#5).text#12);
       } else {
         (panic()): Void;
       }
@@ -123,21 +123,21 @@ module failures#0 {
 
   let code#26: Int32;
 
-  var kept#27: NotFound#1;
+  var kept#27: NotFound#2;
 
   let v#28: Int32;
 
-  let problems#33: List#29<NotFound#1>;
+  let problems#33: List#29<NotFound#2>;
 
-  fn rethrown#34(p#84: NotFound#1): Int32 throws NotFound#1 {
+  fn rethrown#34(p#84: NotFound#2): Int32 throws NotFound#2 {
     (throw(p#84)^): Void;
   }
 
   let w#35: Int32;
 
-  class ConfigError#5 extends ~FailuresError#8 {
+  class ConfigError#6 extends FailuresError#1 {
     let setting#14: String;
-    constructor constructor#15(setting#86: String): ConfigError#5 {
+    constructor constructor#15(setting#86: String): ConfigError#6 {
       this.setting#14 = setting#86;
     }
     get message#87(): String {
@@ -145,8 +145,8 @@ module failures#0 {
     }
   }
 
-  fn setting#36(name#88: String): Int32 throws ConfigError#5 {
-    return (catch(lookup#16(name#88)^, e#89: NotFound#1, (throw(new constructor#15(%String.cat(%String.cat(name#88, ": missing "), e#89.key#9)), e#89)^): Int32)): Int32;
+  fn setting#36(name#88: String): Int32 throws ConfigError#6 {
+    return (catch(lookup#16(name#88)^, e#89: NotFound#2, (throw(new constructor#15(%String.cat(%String.cat(name#88, ": missing "), e#89.key#9)), e#89)^): Int32)): Int32;
   }
 
   let port#37: Int32;
@@ -154,7 +154,7 @@ module failures#0 {
   let first#38: Int32;
 
   fn pair#39(a#91: String, b#92: String): String {
-    return (catch((value { let x#93: Int32 = lookup#16(a#91)^; let y#94: Int32 = (orelse(lookup#16(b#92)^, 0)): Int32; %String.cat(%String.cat(x#93.toString#48(omitted), "+"), y#94.toString#48(omitted)) }): String, e#95: NotFound#1, %String.cat("outer ", e#95.key#9))): String;
+    return (catch((value { let x#93: Int32 = lookup#16(a#91)^; let y#94: Int32 = (orelse(lookup#16(b#92)^, 0)): Int32; %String.cat(%String.cat(x#93.toString#48(omitted), "+"), y#94.toString#48(omitted)) }): String, e#95: NotFound#2, %String.cat("outer ", e#95.key#9))): String;
   }
 
   var total#40: Int32;
@@ -164,7 +164,7 @@ module failures#0 {
     init found#17 = (orelse(lookup#16("a")^, %Int32.neg(1))): Int32;
     init missing#18 = (orelse(lookup#16("z")^, %Int32.neg(1))): Int32;
     ~console#46.log#45(%String.cat(%String.cat(found#17.toString#48(omitted), " "), missing#18.toString#48(omitted)));
-    init n#19 = (catch(lookup#16("q")^, e#49: NotFound#1, (value { ~console#46.log#45(%String.cat("not found: ", e#49.key#9)); 0 }): Int32)): Int32;
+    init n#19 = (catch(lookup#16("q")^, e#49: NotFound#2, (value { ~console#46.log#45(%String.cat("not found: ", e#49.key#9)); 0 }): Int32)): Int32;
     init m#20 = (orelse(lookup#16("b")^, %Int32.neg(1))): Int32;
     ~console#46.log#45(%String.cat(%String.cat(n#19.toString#48(omitted), " "), m#20.toString#48(omitted)));
     ~console#46.log#45(%String.cat(%String.cat(%String.cat(%String.cat(shown#22("a", "b"), " "), shown#22("a", "x")), " "), shown#22("y", "z")));
@@ -176,11 +176,11 @@ module failures#0 {
         let t#73: String = ~list#69.get#68(~i#71);
         ~i#71 = %Int32.add(~i#71, 1);
         var s#74: Int32;
-        var ~caught#75: SignError#2? = (null): SignError#2?;
+        var ~caught#75: SignError#3? = (null): SignError#3?;
         var ~held#77: Int32? = (null): Int32?;
-        (catch((value { ~held#77 = (asNullable(parseSign#24(t#73)^)): Int32?; void }): Void, ~failure#76: SignError#2, (value { ~caught#75 = (asNullable(~failure#76)): SignError#2?; void }): Void)): Void;
+        (catch((value { ~held#77 = (asNullable(parseSign#24(t#73)^)): Int32?; void }): Void, ~failure#76: SignError#3, (value { ~caught#75 = (asNullable(~failure#76)): SignError#3?; void }): Void)): Void;
         if (isNull(~held#77)) {
-          let e#78: SignError#2 = (nonNull(~caught#75)): SignError#2;
+          let e#78: SignError#3 = (nonNull(~caught#75)): SignError#3;
           ~console#46.log#45(describe#25(e#78));
           continue ~loop#72;
         } else {
@@ -189,16 +189,16 @@ module failures#0 {
         ~console#46.log#45(s#74.toString#48(omitted));
       }
     }
-    init code#26 = (catch(parseSign#24("?")^, e#79: SignError#2, (if (is(e#79, EmptyText#3)) 0 else (if (is(e#79, BadSign#4)) 9 else (panic()): Int32): Int32): Int32)): Int32;
+    init code#26 = (catch(parseSign#24("?")^, e#79: SignError#3, (if (is(e#79, EmptyText#4)) 0 else (if (is(e#79, BadSign#5)) 9 else (panic()): Int32): Int32): Int32)): Int32;
     ~console#46.log#45(code#26.toString#48(omitted));
     init kept#27 = new constructor#10("none");
-    init v#28 = (catch(lookup#16("k")^, e#80: NotFound#1, (value { kept#27 = e#80; %Int32.neg(1) }): Int32)): Int32;
-    init problems#33 = (list(new constructor#10("x"), kept#27)): List#29<NotFound#1>;
-    ~console#46.log#45(%String.cat(%String.cat(v#28.toString#48(omitted), " "), problems#33.join#81(",", (fn ~fn#82(p#83: NotFound#1): String {
+    init v#28 = (catch(lookup#16("k")^, e#80: NotFound#2, (value { kept#27 = e#80; %Int32.neg(1) }): Int32)): Int32;
+    init problems#33 = (list(new constructor#10("x"), kept#27)): List#29<NotFound#2>;
+    ~console#46.log#45(%String.cat(%String.cat(v#28.toString#48(omitted), " "), problems#33.join#81(",", (fn ~fn#82(p#83: NotFound#2): String {
       return p#83.key#9;
-    }): fn (NotFound#1): String)));
-    init w#35 = (catch(rethrown#34(kept#27)^, e#85: NotFound#1, (value { ~console#46.log#45(%String.cat("again ", e#85.key#9)); 0 }): Int32)): Int32;
-    init port#37 = (catch(setting#36("port")^, e#90: ConfigError#5, (value { ~console#46.log#45(e#90.setting#14); %Int32.neg(1) }): Int32)): Int32;
+    }): fn (NotFound#2): String)));
+    init w#35 = (catch(rethrown#34(kept#27)^, e#85: NotFound#2, (value { ~console#46.log#45(%String.cat("again ", e#85.key#9)); 0 }): Int32)): Int32;
+    init port#37 = (catch(setting#36("port")^, e#90: ConfigError#6, (value { ~console#46.log#45(e#90.setting#14); %Int32.neg(1) }): Int32)): Int32;
     init first#38 = (orelse(setting#36("a")^, %Int32.neg(1))): Int32;
     ~console#46.log#45(%String.cat(%String.cat(port#37.toString#48(omitted), " "), first#38.toString#48(omitted)));
     ~console#46.log#45(%String.cat(%String.cat(pair#39("a", "z"), " "), pair#39("z", "a")));

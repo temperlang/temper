@@ -62,8 +62,8 @@
 //! no `orelse` catches, though a test framework does, test by test;
 //! Kotlin's throws what an `orelse` catches.
 //!
-//! Declared failures (RFC 164) are exceptions under each library's base,
-//! `<Library>Exception`, an `orelse` or `catch` catching exactly what its
+//! Declared failures (RFC 164) are exceptions under each library's roots,
+//! as `WherewithException`, an `orelse` or `catch` catching exactly what its
 //! body may fail with ([`failures`] says how).
 //!
 //! A static field is a static property (`Rect.Unit`), Kotlin's a field:

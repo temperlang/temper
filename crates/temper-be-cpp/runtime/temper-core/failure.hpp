@@ -2,7 +2,7 @@
 // Declared failures (RFC 164): what every library's failure types share.
 //
 // A library's failure class is a struct, a `shared_ptr` as any class's,
-// below its library's base (`struct FailuresError : virtual Failure`),
+// below one of its library's roots (`struct FailuresError : virtual Failure`),
 // and `Failure` is core's `Error`: a `std::exception` whose `what()` is
 // its message, with the failure it was thrown while handling, if any, as
 // its cause. A failure is never thrown: a function that declares one

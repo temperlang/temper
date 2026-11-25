@@ -32,20 +32,20 @@ pub(crate) fn init() -> temper_core::Result<()> {
 
 #[derive(Clone, Debug)]
 #[non_exhaustive]
-pub enum Error {
+pub enum RustFailuresError {
     NotFound(NotFound),
     SignError(SignError),
     LookupFailed(LookupFailed),
 }
 
 temper_core::impl_failure_enum!(
-    Error,
+    RustFailuresError,
     NotFound(NotFound),
     SignError(SignError),
     LookupFailed(LookupFailed)
 );
 
-temper_core::impl_failure_from!(Error, SignError, BadSign, EmptyText);
+temper_core::impl_failure_from!(RustFailuresError, SignError, BadSign, EmptyText);
 
 struct NotFoundStruct {
     key: Arc<String>,
@@ -75,7 +75,7 @@ impl NotFound {
 
 temper_core::impl_failure!(NotFound, message, cause);
 
-temper_core::impl_any_value_trait!(NotFound, [Error]);
+temper_core::impl_any_value_trait!(NotFound, [RustFailuresError]);
 
 #[derive(Clone, Debug)]
 pub enum SignError {
@@ -113,7 +113,7 @@ impl BadSign {
 
 temper_core::impl_failure!(BadSign, message, cause);
 
-temper_core::impl_any_value_trait!(BadSign, [SignError, Error]);
+temper_core::impl_any_value_trait!(BadSign, [SignError, RustFailuresError]);
 
 struct EmptyTextStruct {
     cause: temper_core::Cause,
@@ -137,7 +137,7 @@ impl EmptyText {
 
 temper_core::impl_failure!(EmptyText, message, cause);
 
-temper_core::impl_any_value_trait!(EmptyText, [SignError, Error]);
+temper_core::impl_any_value_trait!(EmptyText, [SignError, RustFailuresError]);
 
 struct LookupFailedStruct {
     name: Arc<String>,
@@ -167,7 +167,7 @@ impl LookupFailed {
 
 temper_core::impl_failure!(LookupFailed, message, cause);
 
-temper_core::impl_any_value_trait!(LookupFailed, [Error]);
+temper_core::impl_any_value_trait!(LookupFailed, [RustFailuresError]);
 
 pub fn lookup(key: impl ToArcString) -> Result<i32, NotFound> {
     let key = key.to_arc_string();

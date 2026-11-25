@@ -424,41 +424,60 @@ impl Settle {
     /// Checks a class or interface that extends a failure type, or the
     /// root, against the rules for failure types (notes/typing.md,
     /// "Declared failures"): it has no type parameters; an interface is
-    /// sealed, so every interface between a failure class and the root
-    /// is; and it extends no more than one failure type beside the root,
+    /// sealed, so every interface between a failure class and its root
+    /// is; a class doesn't extend the root itself, which only a library's
+    /// own roots, sealed interfaces, do; and it extends one failure type
+    /// or the root, of its own library, so each failure type has one root,
     /// as backends make a failure type a class under one other.
     pub(super) fn check_failure_class(&mut self, class: NodeId) {
         let (name, supers, _) = core::class_parts(&self.lib.tree, class);
         let supers = supers.to_vec();
         let mut parents = Vec::new();
-        let mut is_failure = false;
+        let mut foreign = None;
         for sup in supers {
             let t = self.eval_type(sup);
-            let failure_base = match *self.typing.types.get(t) {
-                TypeData::Applied { base, .. } => self.typing.types.is_failure(base),
-                _ => self.typing.types.is_failure(t),
+            let symbol = match *self.typing.types.get(self.typing.types.base(t)) {
+                TypeData::Class(symbol) if self.typing.types.is_failure_class(symbol) => symbol,
+                _ if t == ERROR => {
+                    parents.push((sup, t));
+                    continue;
+                }
+                _ => continue,
             };
-            is_failure |= t == ERROR || failure_base;
-            if failure_base {
-                parents.push(sup);
+            parents.push((sup, t));
+            let own = |n: Option<NodeId>| {
+                n.map(|n| self.lib.library_root_at(self.lib.tree.span(n).start))
+            };
+            if own(self.scopes.symbol(symbol).decl) != own(Some(class)) {
+                foreign = Some(sup);
             }
         }
-        if !is_failure {
+        if parents.is_empty() {
             return;
         }
         let text = self.member_text(class).to_string();
         let tree = &self.lib.tree;
+        let source = |n: NodeId| self.lib.source_text(self.lib.tree.span(n)).to_string();
         let mut problems = Vec::new();
         if !core::type_params(tree, class).is_empty() {
             problems.push(Message::GenericFailureType(text.clone()));
         }
         let data = tree.data(class);
-        if data & core::CLASS_INTERFACE != 0 && data & core::CLASS_SEALED == 0 {
+        let is_interface = data & core::CLASS_INTERFACE != 0;
+        if is_interface && data & core::CLASS_SEALED == 0 {
             problems.push(Message::UnsealedFailureInterface(text.clone()));
         }
-        if let [a, b, ..] = parents[..] {
-            let source = |n: NodeId| self.lib.source_text(self.lib.tree.span(n)).to_string();
-            problems.push(Message::TwoFailureParents(text, source(a), source(b)));
+        match parents[..] {
+            [(a, _), (b, _), ..] => {
+                problems.push(Message::TwoFailureParents(text, source(a), source(b)));
+            }
+            [(_, ERROR)] if !is_interface => {
+                problems.push(Message::FailureClassExtendsRoot(text));
+            }
+            _ => {}
+        }
+        if let Some(sup) = foreign {
+            problems.push(Message::ForeignFailureParent(source(sup)));
         }
         let span = self.lib.tree.span(name);
         for message in problems {

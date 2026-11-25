@@ -21,18 +21,18 @@ do
   end
 end
 
----@class host-failures-panic-passes-catch.HostFailuresPanicPassesCatchError: temper.Failure
+---@class host-failures-panic-passes-catch.HostFailuresError: temper.Failure
 
----@class host-failures-panic-passes-catch.HostFailuresPanicPassesCatchError.type: temper.Type
-local HostFailuresPanicPassesCatchError = temper.type("host-failures-panic-passes-catch.HostFailuresPanicPassesCatchError", temper.Failure)
+---@class host-failures-panic-passes-catch.HostFailuresError.type: temper.Type
+local HostFailuresError = temper.type("host-failures-panic-passes-catch.HostFailuresError", temper.Failure)
 
----@class host-failures-panic-passes-catch.NotFound: host-failures-panic-passes-catch.HostFailuresPanicPassesCatchError
+---@class host-failures-panic-passes-catch.NotFound: host-failures-panic-passes-catch.HostFailuresError
 ---@field key string
 ---@field message string
 
 ---@class host-failures-panic-passes-catch.NotFound.type: temper.Type
 ---@operator call: host-failures-panic-passes-catch.NotFound
-NotFound = temper.type("host-failures-panic-passes-catch.NotFound", HostFailuresPanicPassesCatchError)
+NotFound = temper.type("host-failures-panic-passes-catch.NotFound", HostFailuresError)
 
 ---@param this host-failures-panic-passes-catch.NotFound
 ---@param key string
@@ -75,7 +75,7 @@ end
 print("after " .. r)
 
 return {
-  HostFailuresPanicPassesCatchError = HostFailuresPanicPassesCatchError,
+  HostFailuresError = HostFailuresError,
   NotFound = NotFound,
   hostLookup = hostLookup,
 }

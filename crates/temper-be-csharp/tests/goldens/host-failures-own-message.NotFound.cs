@@ -2,7 +2,7 @@ using System;
 
 namespace HostFailuresOwnMessage;
 
-public sealed class NotFound : HostFailuresOwnMessageException
+public sealed class NotFound : HostFailuresException
 {
     private readonly string key;
 

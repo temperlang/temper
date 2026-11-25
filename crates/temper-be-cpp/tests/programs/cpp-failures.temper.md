@@ -1,27 +1,29 @@
 # Declared failures, as C++ callers see them
 
 A library's failure types are C++ structs, `shared_ptr`s as any class's:
-each failure class below the library's base, `CppFailuresError`, which
-is the runtime's `temper::core::Failure`, a `std::exception` whose
+each failure class below the library's root, `CppFailuresError` (a
+sealed interface it declares), which is the runtime's `temper::core::Failure`, a `std::exception` whose
 `what()` is its message, with its cause; each sealed failure interface
 an abstract struct between. Functions that fail return
 `temper::core::Expected<T, F>` (`std::expected` from C++23, the
 runtime's shim before). `failures_interop` has host code
 (`tests/host/failures.cpp`) branch on `has_value()`, read `error()` by
-its own type, the sealed interface's, and the base's, read fields,
+its own type, the sealed interface's, and the root's, read fields,
 `what()`, `get_message()`, and the cause chain (`get_cause()`), pass a
 failure on into a result of its own, and see a panic stay a panic,
 never a failure.
 
-    export class NotFound(public key: String) extends Error {}
+    export sealed interface CppFailuresError extends Error {}
 
-    export sealed interface SignError extends Error {}
+    export class NotFound(public key: String) extends CppFailuresError {}
+
+    export sealed interface SignError extends CppFailuresError {}
     export class BadSign(public text: String) extends SignError {}
     export class EmptyText extends SignError {
       public get message(): String { "no text" }
     }
 
-    export class LookupFailed(public name: String) extends Error {}
+    export class LookupFailed(public name: String) extends CppFailuresError {}
 
     export let lookup(key: String): Int throws NotFound {
       if (key == "a") { return 1; }
@@ -74,6 +76,16 @@ interface:
 
     export let signMessage(text: String): String {
       sign(text).toString() catch (e) { e.message }
+    }
+
+An exhaustive `when` over a sealed type needs no `else`, and panics
+where host code passes a value of a type of its own under it:
+
+    export let signName(e: SignError): String {
+      when (e) {
+        is BadSign -> "bad sign";
+        is EmptyText -> "empty text";
+      }
     }
 
 An `orelse` handles a bubble and a declared failure alike, and a

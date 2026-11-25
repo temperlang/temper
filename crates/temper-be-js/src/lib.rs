@@ -38,7 +38,7 @@
 //! (`_connected.js`) does unless it throws a `Bubble` or calls
 //! `bubble()`, and `orelse panic()` panics with the bubble as its
 //! `cause`; declared failures (RFC 164) as classes extending JS's `Error`
-//! under each library's base, `throw` as JS's, with the standard `cause`
+//! under each library's roots, `throw` as JS's, with the standard `cause`
 //! in a handler, and handlers that rethrow all but what their bodies may
 //! fail with, by `instanceof` (`translate::classes` and
 //! notes/tmpl/nodes.md, "Declared failures", say how); and generics, with JSDoc's `@template`

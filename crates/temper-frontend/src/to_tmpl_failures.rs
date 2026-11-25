@@ -1,11 +1,10 @@
 //! Declared failures in [`to_tmpl`](super) (RFC 164; notes/tmpl/nodes.md,
-//! "Declared failures"): the library's base failure type, failure
-//! classes' default messages, `throw`, and handlers that bind the failure
-//! they handle, as `catch (e)` and a fallback that throws do.
+//! "Declared failures"): failure classes' default messages, `throw`, and
+//! handlers that bind the failure they handle, as `catch (e)` and a
+//! fallback that throws do.
 //!
-//! The choices people see are each in one place, as they may change:
-//! the base's name ([`failure_base_name`]) and a failure's default
-//! message (`interp::failures`, which the interpreter shares).
+//! A failure's default message, which people see and which may change,
+//! is in one place (`interp::failures`, which the interpreter shares).
 
 use super::{Translator, Tx};
 use crate::builtins::Function;
@@ -13,27 +12,7 @@ use crate::core::{
     self, FN_LOOP_BODY, MEMBER_NO_PROPERTY, MEMBER_PUBLIC, MEMBER_STATIC, ROLE_MASK,
 };
 use temper_syntax::tree::{NodeId as FNode, NodeKind};
-use temper_tmpl::{DeclId, DeclKind, Facts, NodeId, TypeData, TypeId};
-
-/// The name of a library's base failure type: the library's name in
-/// `PascalCase`, then `Error`, as `WherewithError` for `wherewith` and
-/// `HostFailuresError` for `host-failures`. A hint, as for any
-/// compiler-made declaration; Java and C# say `Exception` for `Error` in
-/// every failure type's name (their naming rules'
-/// [`failure_suffix`](temper_tmpl::naming::NamingRules::failure_suffix)).
-/// Open for the team (RFC 164).
-pub(super) fn failure_base_name(library: &str) -> String {
-    let mut name = String::new();
-    for word in library.split(|c: char| !c.is_alphanumeric()) {
-        let mut chars = word.chars();
-        if let Some(first) = chars.next() {
-            name.extend(first.to_uppercase());
-            name.push_str(chars.as_str());
-        }
-    }
-    name.push_str("Error");
-    name
-}
+use temper_tmpl::{DeclId, DeclKind, NodeId, TypeData, TypeId};
 
 /// What a handler's fallback holds of the failure it handles, if it
 /// binds it: a `catch`'s local, or where the fallback runs after the
@@ -54,36 +33,6 @@ pub(super) struct Handling {
 }
 
 impl Translator<'_> {
-    /// The library's base failure type, as a type: declared the first
-    /// time a failure type extends core's `Error`, which it then extends
-    /// in its place, in the library's first module, exported.
-    pub(super) fn failure_base(&mut self, at: FNode) -> Tx<TypeId> {
-        if let Some(base) = self.failure_base {
-            return Ok(self.b.program().decls.get(base).ty);
-        }
-        let Some(root) = self.core_decl("Error") else {
-            return self.not_yet(at, "core's Error");
-        };
-        let root = self.b.nominal(root);
-        let name = failure_base_name(&self.b.program().library.name);
-        let module = self.first_module;
-        let base = self
-            .b
-            .declare_made(DeclKind::Interface, &[&name], module, TypeId::NONE);
-        let ty = self.b.nominal(base);
-        self.b.set_decl_type(base, ty);
-        self.b
-            .add_facts(base, Facts::EXPORTED | Facts::FAILURE_BASE);
-        self.b.set_supers(base, &[root]);
-        let span = self.span(at);
-        self.b.set_decl_spans(base, span, span);
-        let item = self.b.class(base, &[]);
-        let item = self.made(item, at);
-        self.b.add_item(module, item);
-        self.failure_base = Some(base);
-        Ok(ty)
-    }
-
     /// A failure class's `message` getter, where it declares none: its
     /// default message, as the interpreter gives it
     /// (`interp::failures::default_message`): its name in lowercase

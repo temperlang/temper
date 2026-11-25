@@ -870,7 +870,7 @@ do
     end
 
     -- The root of declared failure types, core's `Error`: each library's
-    -- base failure type is under it, and its failure types under that.
+    -- roots are under it, and its failure types under those.
     temper.Failure = setmetatable(temper.type("temper.Failure"), failure_type_meta)
 end
 

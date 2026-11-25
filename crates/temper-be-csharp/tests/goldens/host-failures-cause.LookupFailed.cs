@@ -2,7 +2,7 @@ using System;
 
 namespace HostFailuresCause;
 
-internal sealed class LookupFailed : HostFailuresCauseException
+internal sealed class LookupFailed : HostFailuresException
 {
     private readonly string name;
 

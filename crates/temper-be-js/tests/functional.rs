@@ -854,6 +854,8 @@ fn failures_interop(
                 "thrown again lookup failed (name: first), caused by not found (key: first)",
                 "stack NotFound: not found (key: w), at lookup",
                 "panic passes, false",
+                "known subtype bad sign",
+                "unknown subtype panics, false, panic",
             ]
             .map(String::from),
         )

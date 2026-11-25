@@ -1,7 +1,7 @@
 package host_failures_own_message;
 
 @SuppressWarnings("serial")
-final class Expired extends HostFailuresOwnMessageException {
+final class Expired extends HostFailuresException {
     public final int days;
 
     public Expired(int days) {

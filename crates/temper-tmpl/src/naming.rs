@@ -130,17 +130,11 @@ pub struct NamingRules {
     /// `Engine`, and only exports can clash.
     pub modules_share_names: bool,
     /// For failure types' names (classes and interfaces below core's
-    /// `Error`, the library's base among them), a suffix and what takes
+    /// `Error`, the library's roots among them), a suffix and what takes
     /// its place: `("Error", "Exception")` in Java and C#, whose
     /// convention it is, so `ConfigError` is `ConfigException` there
     /// (RFC 164's naming rule, open for the team). `None` elsewhere.
     pub failure_suffix: Option<(&'static str, &'static str)>,
-    /// A name for the library's base failure type (`Facts::FAILURE_BASE`),
-    /// tried before its own (`~WherewithError`) where no declaration of
-    /// the library's own has it: `Error` in Rust, where a crate's error
-    /// type is its `Error` (`wherewith::Error`, as `serde_json::Error`).
-    /// `None` elsewhere.
-    pub failure_base: Option<&'static str>,
     /// Names a failure type's members may not take, beside
     /// [`member_reserved`](Self::member_reserved)'s: the target's own
     /// exception's properties that mean something else there, as JS's
@@ -753,15 +747,6 @@ fn candidates(p: &Program, rules: &NamingRules, decl: DeclId, module_level: bool
     // Another library's declarations are its exports.
     let exported = d.facts.contains(Facts::EXPORTED) || is_external(p, decl);
     let mut raw: Vec<&str> = vec![p.name(decl)];
-    // Not where a declaration of the library's own has the name, whose
-    // name, written in the source, comes first.
-    if let Some(base) = rules.failure_base {
-        let taken =
-            || (p.decls.ids()).any(|o| o != decl && !is_external(p, o) && p.name(o) == base);
-        if d.facts.contains(Facts::FAILURE_BASE) && !taken() {
-            raw.insert(0, base);
-        }
-    }
     raw.extend(p.decls.alts(decl).iter().map(|&s| p.strings.get(s)));
     let failure_suffix = rules.failure_suffix.filter(|_| {
         matches!(d.kind, DeclKind::Class | DeclKind::Interface)

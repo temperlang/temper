@@ -1,221 +1,223 @@
 # generated line:column -> source:line:column, and the text at each
-9:1 -> ../failures.temper.md:29:5  /** <- let lookup(key: String): Int
-14:1 -> ../failures.temper.md:29:5  function lookup(key) { <- let lookup(key: String): Int
-14:10 -> ../failures.temper.md:29:9 (lookup)  lookup(key) { <- lookup(key: String): Int thr
-14:16 -> ../failures.temper.md:29:5  (key) { <- let lookup(key: String): Int
-15:3 -> ../failures.temper.md:30:7  if (key === "a") { <- if (key == "a") { return 1;
-16:5 -> ../failures.temper.md:30:25  return 1; <- return 1; }
-18:3 -> ../failures.temper.md:31:7  if (key === "b") { <- if (key == "b") { return 2;
-19:5 -> ../failures.temper.md:31:25  return 2; <- return 2; }
-21:3 -> ../failures.temper.md:32:7  throw new NotFound(key); <- throw new NotFound(key);
-24:1 -> ../failures.temper.md:65:5  /** <- let sum(a: String, b: String
-30:1 -> ../failures.temper.md:65:5  function sum(a, b) { <- let sum(a: String, b: String
-30:10 -> ../failures.temper.md:65:9 (sum)  sum(a, b) { <- sum(a: String, b: String): I
-30:13 -> ../failures.temper.md:65:5  (a, b) { <- let sum(a: String, b: String
-31:3 -> ../failures.temper.md:66:7  const x = lookup(a); <- let x = try lookup(a);
-32:3 -> ../failures.temper.md:67:7  const y = lookup(b); <- let y = try lookup(b);
-33:3 -> ../failures.temper.md:68:7  return (x + y) | 0; <- x + y
-36:1 -> ../failures.temper.md:71:5  /** <- let shown(a: String, b: Stri
-41:1 -> ../failures.temper.md:71:5  function shown(a, b) { <- let shown(a: String, b: Stri
-41:10 -> ../failures.temper.md:71:9 (shown)  shown(a, b) { <- shown(a: String, b: String):
-41:15 -> ../failures.temper.md:71:5  (a, b) { <- let shown(a: String, b: Stri
-42:3 -> ../failures.temper.md:72:7  /** @type {number} */ <- let total = sum(a, b) catch
-43:3 -> ../failures.temper.md:72:7  let total; <- let total = sum(a, b) catch
-44:3 -> ../failures.temper.md:72:19  /** @type {NotFound | null} <- sum(a, b) catch (e) { return
-45:3 -> ../failures.temper.md:72:19  let caught = null; <- sum(a, b) catch (e) { return
-46:3 -> ../failures.temper.md:72:19  /** @type {number | null} */ <- sum(a, b) catch (e) { return
-47:3 -> ../failures.temper.md:72:19  let held = null; <- sum(a, b) catch (e) { return
-48:3 -> ../failures.temper.md:72:19  try { <- sum(a, b) catch (e) { return
-49:5 -> ../failures.temper.md:72:19  held = sum(a, b); <- sum(a, b) catch (e) { return
-52:5 -> ../failures.temper.md:72:19  caught = failure; <- sum(a, b) catch (e) { return
-54:3 -> ../failures.temper.md:72:19  if (held == null) { <- sum(a, b) catch (e) { return
-55:5 -> ../failures.temper.md:72:36  const e = /** @type {NotFoun <- e) { return "no ${e.key}"; }
-56:5 -> ../failures.temper.md:72:41  return `no ${e.key}`; <- return "no ${e.key}"; };
-58:5 -> ../failures.temper.md:72:19  total = held; <- sum(a, b) catch (e) { return
-60:3 -> ../failures.temper.md:73:7  return total.toString(); <- total.toString()
-63:1 -> ../failures.temper.md:93:5  /** <- let sign(text: String): Int
-68:1 -> ../failures.temper.md:93:5  function sign(text) { <- let sign(text: String): Int
-68:10 -> ../failures.temper.md:93:9 (sign)  sign(text) { <- sign(text: String): Int thro
-68:14 -> ../failures.temper.md:93:5  (text) { <- let sign(text: String): Int
-69:3 -> ../failures.temper.md:94:7  { <- when (text) {
-70:5 -> ../failures.temper.md:95:16  if (text === "+") { <- 1;
-71:7 -> ../failures.temper.md:95:16  return 1; <- 1;
-72:12 -> ../failures.temper.md:96:16  if (text === "-") { <- -1;
-73:7 -> ../failures.temper.md:96:16  return -1; <- -1;
-75:7 -> ../failures.temper.md:97:17  throw new BadSign(text); <- throw new BadSign(text);
-80:1 -> ../failures.temper.md:101:5  /** <- let parseSign(text: String):
-85:1 -> ../failures.temper.md:101:5  function parseSign(text) { <- let parseSign(text: String):
-85:10 -> ../failures.temper.md:101:9 (parseSign)  parseSign(text) { <- parseSign(text: String): Int
-85:19 -> ../failures.temper.md:101:5  (text) { <- let parseSign(text: String):
-86:3 -> ../failures.temper.md:102:7  if (text === "") { <- if (text == "") { throw new
-87:5 -> ../failures.temper.md:102:25  throw new EmptyText(); <- throw new EmptyText(); }
-89:3 -> ../failures.temper.md:103:7  return sign(text); <- try sign(text)
-92:1 -> ../failures.temper.md:106:5  /** <- let describe(e: SignError):
-96:1 -> ../failures.temper.md:106:5  function describe(e) { <- let describe(e: SignError):
-96:10 -> ../failures.temper.md:106:9 (describe)  describe(e) { <- describe(e: SignError): Stri
-96:18 -> ../failures.temper.md:106:5  (e) { <- let describe(e: SignError):
-97:3 -> ../failures.temper.md:107:7  { <- when (e) {
-98:5 -> ../failures.temper.md:108:25  if (e instanceof EmptyText) <- "empty";
-99:7 -> ../failures.temper.md:108:25  return "empty"; <- "empty";
-100:12 -> ../failures.temper.md:109:23  if (e instanceof BadSign) { <- "bad sign ${e.text}";
-101:7 -> ../failures.temper.md:109:23  return `bad sign ${/** @type <- "bad sign ${e.text}";
-103:7 -> ../failures.temper.md:110:8  panic(); <- 
-108:1 -> ../failures.temper.md:138:5  /** <- let rethrown(p: NotFound): I
-113:1 -> ../failures.temper.md:138:5  function rethrown(p) { <- let rethrown(p: NotFound): I
-113:10 -> ../failures.temper.md:138:9 (rethrown)  rethrown(p) { <- rethrown(p: NotFound): Int t
-113:18 -> ../failures.temper.md:138:5  (p) { <- let rethrown(p: NotFound): I
-114:3 -> ../failures.temper.md:138:54  throw p; <- throw p; }
-117:1 -> ../failures.temper.md:153:5  /** <- let setting(name: String): I
-122:1 -> ../failures.temper.md:153:5  function setting(name) { <- let setting(name: String): I
-122:10 -> ../failures.temper.md:153:9 (setting)  setting(name) { <- setting(name: String): Int t
-122:17 -> ../failures.temper.md:153:5  (name) { <- let setting(name: String): I
-123:3 -> ../failures.temper.md:154:7  try { <- lookup(name) catch (e) { thr
-131:1 -> ../failures.temper.md:172:5  /** <- let pair(a: String, b: Strin
-136:1 -> ../failures.temper.md:172:5  function pair(a, b) { <- let pair(a: String, b: Strin
-136:10 -> ../failures.temper.md:172:9 (pair)  pair(a, b) { <- pair(a: String, b: String):
-136:14 -> ../failures.temper.md:172:5  (a, b) { <- let pair(a: String, b: Strin
-137:3 -> ../failures.temper.md:173:7  try { <- do {
-138:5 -> ../failures.temper.md:174:9  const x = lookup(a); <- let x = try lookup(a);
-139:5 -> ../failures.temper.md:175:9  /** @type {number} */ <- let y = lookup(b) catch { 0
-140:5 -> ../failures.temper.md:175:9  let y; <- let y = lookup(b) catch { 0
-141:5 -> ../failures.temper.md:175:9  try { <- let y = lookup(b) catch { 0
-154:1 -> ../failures.temper.md:27:48  export class FailuresError e <- Error {}
-158:1 -> ../failures.temper.md:27:5  class NotFound extends Failu <- class NotFound(public key: S
-158:7 -> ../failures.temper.md:27:11 (NotFound)  NotFound extends FailuresErr <- NotFound(public key: String)
-158:15 -> ../failures.temper.md:27:5   extends FailuresError { <- class NotFound(public key: S
-159:3 -> ../failures.temper.md:27:27  /** @type {string} */ <- key: String) extends Error {
-160:3 -> ../failures.temper.md:27:27  #key; <- key: String) extends Error {
-162:3 -> ../failures.temper.md:27:5  /** @param {string} key */ <- class NotFound(public key: S
-163:3 -> ../failures.temper.md:27:5  constructor(key) { <- class NotFound(public key: S
-165:5 -> ../failures.temper.md:27:27  this.#key = key; <- key: String) extends Error {
-168:3 -> ../failures.temper.md:27:27  /** @returns {string} */ <- key: String) extends Error {
-169:3 -> ../failures.temper.md:27:27  get key() { <- key: String) extends Error {
-169:7 -> ../failures.temper.md:27:27 (key)  key() { <- key: String) extends Error {
-173:3 -> ../failures.temper.md:27:5  /** @returns {string} */ <- class NotFound(public key: S
-174:3 -> ../failures.temper.md:27:5  get message() { <- class NotFound(public key: S
-175:5 -> ../failures.temper.md:27:5  return `not found (key: ${th <- class NotFound(public key: S
-179:1 -> ../failures.temper.md:89:5  class SignError extends Fail <- sealed interface SignError e
-179:7 -> ../failures.temper.md:89:22 (SignError)  SignError extends FailuresEr <- SignError extends Error {}
-179:16 -> ../failures.temper.md:89:5   extends FailuresError {} <- sealed interface SignError e
-181:1 -> ../failures.temper.md:90:5  class EmptyText extends Sign <- class EmptyText extends Sign
-181:7 -> ../failures.temper.md:90:11 (EmptyText)  EmptyText extends SignError <- EmptyText extends SignError
-181:16 -> ../failures.temper.md:90:5   extends SignError { <- class EmptyText extends Sign
-182:3 -> ../failures.temper.md:90:5  /** @returns {string} */ <- class EmptyText extends Sign
-183:3 -> ../failures.temper.md:90:5  get message() { <- class EmptyText extends Sign
-184:5 -> ../failures.temper.md:90:5  return "empty text"; <- class EmptyText extends Sign
-188:1 -> ../failures.temper.md:91:5  class BadSign extends SignEr <- class BadSign(public text: S
-188:7 -> ../failures.temper.md:91:11 (BadSign)  BadSign extends SignError { <- BadSign(public text: String)
-188:14 -> ../failures.temper.md:91:5   extends SignError { <- class BadSign(public text: S
-189:3 -> ../failures.temper.md:91:26  /** @type {string} */ <- text: String) extends SignEr
-190:3 -> ../failures.temper.md:91:26  #text; <- text: String) extends SignEr
-192:3 -> ../failures.temper.md:91:5  /** @param {string} text */ <- class BadSign(public text: S
-193:3 -> ../failures.temper.md:91:5  constructor(text) { <- class BadSign(public text: S
-195:5 -> ../failures.temper.md:91:26  this.#text = text; <- text: String) extends SignEr
-198:3 -> ../failures.temper.md:91:26  /** @returns {string} */ <- text: String) extends SignEr
-199:3 -> ../failures.temper.md:91:26  get text() { <- text: String) extends SignEr
-199:7 -> ../failures.temper.md:91:26 (text)  text() { <- text: String) extends SignEr
-203:3 -> ../failures.temper.md:91:5  /** @returns {string} */ <- class BadSign(public text: S
-204:3 -> ../failures.temper.md:91:5  get message() { <- class BadSign(public text: S
-205:5 -> ../failures.temper.md:91:5  return `bad sign (text: ${th <- class BadSign(public text: S
-209:1 -> ../failures.temper.md:151:5  class ConfigError extends Fa <- class ConfigError(public set
-209:7 -> ../failures.temper.md:151:11 (ConfigError)  ConfigError extends Failures <- ConfigError(public setting:
-209:18 -> ../failures.temper.md:151:5   extends FailuresError { <- class ConfigError(public set
-210:3 -> ../failures.temper.md:151:30  /** @type {string} */ <- setting: String) extends Err
-211:3 -> ../failures.temper.md:151:30  #setting; <- setting: String) extends Err
-213:3 -> ../failures.temper.md:151:5  /** @param {string} setting <- class ConfigError(public set
-214:3 -> ../failures.temper.md:151:5  constructor(setting) { <- class ConfigError(public set
-216:5 -> ../failures.temper.md:151:30  this.#setting = setting; <- setting: String) extends Err
-219:3 -> ../failures.temper.md:151:30  /** @returns {string} */ <- setting: String) extends Err
-220:3 -> ../failures.temper.md:151:30  get setting() { <- setting: String) extends Err
-220:7 -> ../failures.temper.md:151:30 (setting)  setting() { <- setting: String) extends Err
-224:3 -> ../failures.temper.md:151:5  /** @returns {string} */ <- class ConfigError(public set
-225:3 -> ../failures.temper.md:151:5  get message() { <- class ConfigError(public set
-226:5 -> ../failures.temper.md:151:5  return `config error (settin <- class ConfigError(public set
-230:1 -> ../failures.temper.md:35:5  /** @type {number} */ <- let found = lookup("a") orel
-231:1 -> ../failures.temper.md:35:5  let found; <- let found = lookup("a") orel
-232:1 -> ../failures.temper.md:35:5  try { <- let found = lookup("a") orel
-238:1 -> ../failures.temper.md:36:5  /** @type {number} */ <- let missing = lookup("z") or
-239:1 -> ../failures.temper.md:36:5  let missing; <- let missing = lookup("z") or
-240:1 -> ../failures.temper.md:36:5  try { <- let missing = lookup("z") or
-246:1 -> ../failures.temper.md:37:5  console.log(`${found} ${miss <- console.log("${found} ${miss
-247:1 -> ../failures.temper.md:48:5  /** @type {number} */ <- let n = lookup("q") catch (e
-248:1 -> ../failures.temper.md:48:5  let n; <- let n = lookup("q") catch (e
-249:1 -> ../failures.temper.md:48:5  try { <- let n = lookup("q") catch (e
-253:3 -> ../failures.temper.md:49:7  console.log(`not found: ${e. <- console.log("not found: ${e.
-256:1 -> ../failures.temper.md:52:5  /** @type {number} */ <- let m = lookup("b") catch {
-257:1 -> ../failures.temper.md:52:5  let m; <- let m = lookup("b") catch {
-258:1 -> ../failures.temper.md:52:5  try { <- let m = lookup("b") catch {
-264:1 -> ../failures.temper.md:53:5  console.log(`${n} ${m}`); <- console.log("${n} ${m}");
-265:1 -> ../failures.temper.md:76:5  console.log(`${shown("a", "b <- console.log("${shown("a", "b
-266:1 -> ../failures.temper.md:113:5  { <- for (let t of ["+", "-", "",
-267:3 -> ../failures.temper.md:113:19  /** @type {readonly string[] <- ["+", "-", "", "x"]) {
-268:3 -> ../failures.temper.md:113:19  const list = Object.freeze([ <- ["+", "-", "", "x"]) {
-269:3 -> ../failures.temper.md:113:5  const length = list.length; <- for (let t of ["+", "-", "",
-270:3 -> ../failures.temper.md:113:5  let i = 0; <- for (let t of ["+", "-", "",
-271:3 -> ../failures.temper.md:113:5  while (i < length) { <- for (let t of ["+", "-", "",
-272:5 -> ../failures.temper.md:113:5  const t = listedGet(/** @typ <- for (let t of ["+", "-", "",
-273:5 -> ../failures.temper.md:113:5  i = (i + 1) | 0; <- for (let t of ["+", "-", "",
-274:5 -> ../failures.temper.md:114:7  /** @type {number} */ <- let s = parseSign(t) catch (
-275:5 -> ../failures.temper.md:114:7  let s; <- let s = parseSign(t) catch (
-276:5 -> ../failures.temper.md:114:15  /** @type {SignError | null} <- parseSign(t) catch (e) { con
-277:5 -> ../failures.temper.md:114:15  let caught = null; <- parseSign(t) catch (e) { con
-278:5 -> ../failures.temper.md:114:15  /** @type {number | null} */ <- parseSign(t) catch (e) { con
-279:5 -> ../failures.temper.md:114:15  let held = null; <- parseSign(t) catch (e) { con
-280:5 -> ../failures.temper.md:114:15  try { <- parseSign(t) catch (e) { con
-281:7 -> ../failures.temper.md:114:15  held = parseSign(t); <- parseSign(t) catch (e) { con
-284:7 -> ../failures.temper.md:114:15  caught = failure; <- parseSign(t) catch (e) { con
-286:5 -> ../failures.temper.md:114:15  if (held == null) { <- parseSign(t) catch (e) { con
-287:7 -> ../failures.temper.md:114:35  const e2 = /** @type {SignEr <- e) { console.log(describe(e)
-288:7 -> ../failures.temper.md:114:40  console.log(describe(e2)); <- console.log(describe(e)); co
-289:7 -> ../failures.temper.md:114:66  continue; <- continue; };
-291:7 -> ../failures.temper.md:114:15  s = held; <- parseSign(t) catch (e) { con
-293:5 -> ../failures.temper.md:115:7  console.log(s.toString()); <- console.log(s.toString());
-296:1 -> ../failures.temper.md:117:5  /** @type {number} */ <- let code = parseSign("?") ca
-297:1 -> ../failures.temper.md:117:5  let code; <- let code = parseSign("?") ca
-298:1 -> ../failures.temper.md:117:5  try { <- let code = parseSign("?") ca
-304:1 -> ../failures.temper.md:118:5  console.log(code.toString()) <- console.log(code.toString())
-305:1 -> ../failures.temper.md:133:5  let kept = new NotFound("non <- var kept = new NotFound("non
-306:1 -> ../failures.temper.md:134:5  /** @type {number} */ <- let v = lookup("k") catch (e
-307:1 -> ../failures.temper.md:134:5  let v; <- let v = lookup("k") catch (e
-308:1 -> ../failures.temper.md:134:5  try { <- let v = lookup("k") catch (e
-312:3 -> ../failures.temper.md:134:37  kept = e4; <- kept = e; -1 };
-315:1 -> ../failures.temper.md:135:5  /** @type {readonly NotFound <- let problems = [new NotFound
-316:1 -> ../failures.temper.md:135:5  const problems = Object.free <- let problems = [new NotFound
-317:1 -> ../failures.temper.md:136:5  console.log(`${v} ${listedJo <- console.log("${v} ${problems
-318:1 -> ../failures.temper.md:139:5  /** @type {number} */ <- let w = rethrown(kept) catch
-319:1 -> ../failures.temper.md:139:5  let w; <- let w = rethrown(kept) catch
-320:1 -> ../failures.temper.md:139:5  try { <- let w = rethrown(kept) catch
-324:3 -> ../failures.temper.md:139:40  console.log(`again ${e5.key} <- console.log("again ${e.key}"
-327:1 -> ../failures.temper.md:157:5  /** @type {number} */ <- let port = setting("port") c
-328:1 -> ../failures.temper.md:157:5  let port; <- let port = setting("port") c
-329:1 -> ../failures.temper.md:157:5  try { <- let port = setting("port") c
-333:3 -> ../failures.temper.md:157:44  console.log(e6.setting); <- console.log(e.setting); -1 }
-336:1 -> ../failures.temper.md:158:5  /** @type {number} */ <- let first = setting("a") ore
-337:1 -> ../failures.temper.md:158:5  let first; <- let first = setting("a") ore
-338:1 -> ../failures.temper.md:158:5  try { <- let first = setting("a") ore
-344:1 -> ../failures.temper.md:159:5  console.log(`${port} ${first <- console.log("${port} ${first
-345:1 -> ../failures.temper.md:181:5  console.log(`${pair("a", "z" <- console.log("${pair("a", "z"
-346:1 -> ../failures.temper.md:183:5  let total = 0; <- var total = 0;
-347:1 -> ../failures.temper.md:184:5  { <- for (let k of ["a", "b", "c"
-348:3 -> ../failures.temper.md:184:19  /** @type {readonly string[] <- ["a", "b", "c", "a"]) {
-349:3 -> ../failures.temper.md:184:19  const list2 = Object.freeze( <- ["a", "b", "c", "a"]) {
-350:3 -> ../failures.temper.md:184:5  const length2 = list2.length <- for (let k of ["a", "b", "c"
-351:3 -> ../failures.temper.md:184:5  let i2 = 0; <- for (let k of ["a", "b", "c"
-352:3 -> ../failures.temper.md:184:5  while (i2 < length2) { <- for (let k of ["a", "b", "c"
-353:5 -> ../failures.temper.md:184:5  const k = listedGet(/** @typ <- for (let k of ["a", "b", "c"
-354:5 -> ../failures.temper.md:184:5  i2 = (i2 + 1) | 0; <- for (let k of ["a", "b", "c"
-355:5 -> ../failures.temper.md:185:7  const t$1 = total; <- total += lookup(k) catch { b
-356:5 -> ../failures.temper.md:185:7  /** @type {number} */ <- total += lookup(k) catch { b
-357:5 -> ../failures.temper.md:185:7  let t$0; <- total += lookup(k) catch { b
-358:5 -> ../failures.temper.md:185:7  { <- total += lookup(k) catch { b
-359:7 -> ../failures.temper.md:185:16  /** @type {number} */ <- lookup(k) catch { break; };
-360:7 -> ../failures.temper.md:185:16  let t2; <- lookup(k) catch { break; };
-361:7 -> ../failures.temper.md:185:16  /** @type {number | null} */ <- lookup(k) catch { break; };
-362:7 -> ../failures.temper.md:185:16  let held2 = null; <- lookup(k) catch { break; };
-363:7 -> ../failures.temper.md:185:16  try { <- lookup(k) catch { break; };
-364:9 -> ../failures.temper.md:185:16  held2 = lookup(k); <- lookup(k) catch { break; };
-368:7 -> ../failures.temper.md:185:16  if (held2 == null) { <- lookup(k) catch { break; };
-369:9 -> ../failures.temper.md:185:34  break; <- break; };
-371:9 -> ../failures.temper.md:185:16  t2 = held2; <- lookup(k) catch { break; };
-375:5 -> ../failures.temper.md:185:7  total = (t$1 + t$0) | 0; <- total += lookup(k) catch { b
-378:1 -> ../failures.temper.md:187:5  console.log(total.toString() <- console.log(total.toString()
+9:1 -> ../failures.temper.md:31:5  /** <- let lookup(key: String): Int
+14:1 -> ../failures.temper.md:31:5  function lookup(key) { <- let lookup(key: String): Int
+14:10 -> ../failures.temper.md:31:9 (lookup)  lookup(key) { <- lookup(key: String): Int thr
+14:16 -> ../failures.temper.md:31:5  (key) { <- let lookup(key: String): Int
+15:3 -> ../failures.temper.md:32:7  if (key === "a") { <- if (key == "a") { return 1;
+16:5 -> ../failures.temper.md:32:25  return 1; <- return 1; }
+18:3 -> ../failures.temper.md:33:7  if (key === "b") { <- if (key == "b") { return 2;
+19:5 -> ../failures.temper.md:33:25  return 2; <- return 2; }
+21:3 -> ../failures.temper.md:34:7  throw new NotFound(key); <- throw new NotFound(key);
+24:1 -> ../failures.temper.md:67:5  /** <- let sum(a: String, b: String
+30:1 -> ../failures.temper.md:67:5  function sum(a, b) { <- let sum(a: String, b: String
+30:10 -> ../failures.temper.md:67:9 (sum)  sum(a, b) { <- sum(a: String, b: String): I
+30:13 -> ../failures.temper.md:67:5  (a, b) { <- let sum(a: String, b: String
+31:3 -> ../failures.temper.md:68:7  const x = lookup(a); <- let x = try lookup(a);
+32:3 -> ../failures.temper.md:69:7  const y = lookup(b); <- let y = try lookup(b);
+33:3 -> ../failures.temper.md:70:7  return (x + y) | 0; <- x + y
+36:1 -> ../failures.temper.md:73:5  /** <- let shown(a: String, b: Stri
+41:1 -> ../failures.temper.md:73:5  function shown(a, b) { <- let shown(a: String, b: Stri
+41:10 -> ../failures.temper.md:73:9 (shown)  shown(a, b) { <- shown(a: String, b: String):
+41:15 -> ../failures.temper.md:73:5  (a, b) { <- let shown(a: String, b: Stri
+42:3 -> ../failures.temper.md:74:7  /** @type {number} */ <- let total = sum(a, b) catch
+43:3 -> ../failures.temper.md:74:7  let total; <- let total = sum(a, b) catch
+44:3 -> ../failures.temper.md:74:19  /** @type {NotFound | null} <- sum(a, b) catch (e) { return
+45:3 -> ../failures.temper.md:74:19  let caught = null; <- sum(a, b) catch (e) { return
+46:3 -> ../failures.temper.md:74:19  /** @type {number | null} */ <- sum(a, b) catch (e) { return
+47:3 -> ../failures.temper.md:74:19  let held = null; <- sum(a, b) catch (e) { return
+48:3 -> ../failures.temper.md:74:19  try { <- sum(a, b) catch (e) { return
+49:5 -> ../failures.temper.md:74:19  held = sum(a, b); <- sum(a, b) catch (e) { return
+52:5 -> ../failures.temper.md:74:19  caught = failure; <- sum(a, b) catch (e) { return
+54:3 -> ../failures.temper.md:74:19  if (held == null) { <- sum(a, b) catch (e) { return
+55:5 -> ../failures.temper.md:74:36  const e = /** @type {NotFoun <- e) { return "no ${e.key}"; }
+56:5 -> ../failures.temper.md:74:41  return `no ${e.key}`; <- return "no ${e.key}"; };
+58:5 -> ../failures.temper.md:74:19  total = held; <- sum(a, b) catch (e) { return
+60:3 -> ../failures.temper.md:75:7  return total.toString(); <- total.toString()
+63:1 -> ../failures.temper.md:96:5  /** <- let sign(text: String): Int
+68:1 -> ../failures.temper.md:96:5  function sign(text) { <- let sign(text: String): Int
+68:10 -> ../failures.temper.md:96:9 (sign)  sign(text) { <- sign(text: String): Int thro
+68:14 -> ../failures.temper.md:96:5  (text) { <- let sign(text: String): Int
+69:3 -> ../failures.temper.md:97:7  { <- when (text) {
+70:5 -> ../failures.temper.md:98:16  if (text === "+") { <- 1;
+71:7 -> ../failures.temper.md:98:16  return 1; <- 1;
+72:12 -> ../failures.temper.md:99:16  if (text === "-") { <- -1;
+73:7 -> ../failures.temper.md:99:16  return -1; <- -1;
+75:7 -> ../failures.temper.md:100:17  throw new BadSign(text); <- throw new BadSign(text);
+80:1 -> ../failures.temper.md:104:5  /** <- let parseSign(text: String):
+85:1 -> ../failures.temper.md:104:5  function parseSign(text) { <- let parseSign(text: String):
+85:10 -> ../failures.temper.md:104:9 (parseSign)  parseSign(text) { <- parseSign(text: String): Int
+85:19 -> ../failures.temper.md:104:5  (text) { <- let parseSign(text: String):
+86:3 -> ../failures.temper.md:105:7  if (text === "") { <- if (text == "") { throw new
+87:5 -> ../failures.temper.md:105:25  throw new EmptyText(); <- throw new EmptyText(); }
+89:3 -> ../failures.temper.md:106:7  return sign(text); <- try sign(text)
+92:1 -> ../failures.temper.md:109:5  /** <- let describe(e: SignError):
+96:1 -> ../failures.temper.md:109:5  function describe(e) { <- let describe(e: SignError):
+96:10 -> ../failures.temper.md:109:9 (describe)  describe(e) { <- describe(e: SignError): Stri
+96:18 -> ../failures.temper.md:109:5  (e) { <- let describe(e: SignError):
+97:3 -> ../failures.temper.md:110:7  { <- when (e) {
+98:5 -> ../failures.temper.md:111:25  if (e instanceof EmptyText) <- "empty";
+99:7 -> ../failures.temper.md:111:25  return "empty"; <- "empty";
+100:12 -> ../failures.temper.md:112:23  if (e instanceof BadSign) { <- "bad sign ${e.text}";
+101:7 -> ../failures.temper.md:112:23  return `bad sign ${/** @type <- "bad sign ${e.text}";
+103:7 -> ../failures.temper.md:113:8  panic(); <- 
+108:1 -> ../failures.temper.md:141:5  /** <- let rethrown(p: NotFound): I
+113:1 -> ../failures.temper.md:141:5  function rethrown(p) { <- let rethrown(p: NotFound): I
+113:10 -> ../failures.temper.md:141:9 (rethrown)  rethrown(p) { <- rethrown(p: NotFound): Int t
+113:18 -> ../failures.temper.md:141:5  (p) { <- let rethrown(p: NotFound): I
+114:3 -> ../failures.temper.md:141:54  throw p; <- throw p; }
+117:1 -> ../failures.temper.md:156:5  /** <- let setting(name: String): I
+122:1 -> ../failures.temper.md:156:5  function setting(name) { <- let setting(name: String): I
+122:10 -> ../failures.temper.md:156:9 (setting)  setting(name) { <- setting(name: String): Int t
+122:17 -> ../failures.temper.md:156:5  (name) { <- let setting(name: String): I
+123:3 -> ../failures.temper.md:157:7  try { <- lookup(name) catch (e) { thr
+131:1 -> ../failures.temper.md:175:5  /** <- let pair(a: String, b: Strin
+136:1 -> ../failures.temper.md:175:5  function pair(a, b) { <- let pair(a: String, b: Strin
+136:10 -> ../failures.temper.md:175:9 (pair)  pair(a, b) { <- pair(a: String, b: String):
+136:14 -> ../failures.temper.md:175:5  (a, b) { <- let pair(a: String, b: Strin
+137:3 -> ../failures.temper.md:176:7  try { <- do {
+138:5 -> ../failures.temper.md:177:9  const x = lookup(a); <- let x = try lookup(a);
+139:5 -> ../failures.temper.md:178:9  /** @type {number} */ <- let y = lookup(b) catch { 0
+140:5 -> ../failures.temper.md:178:9  let y; <- let y = lookup(b) catch { 0
+141:5 -> ../failures.temper.md:178:9  try { <- let y = lookup(b) catch { 0
+154:1 -> ../failures.temper.md:28:5  class FailuresError extends <- sealed interface FailuresErr
+154:7 -> ../failures.temper.md:28:22 (FailuresError)  FailuresError extends Error <- FailuresError extends Error
+154:20 -> ../failures.temper.md:28:5   extends Error {} <- sealed interface FailuresErr
+158:1 -> ../failures.temper.md:29:5  class NotFound extends Failu <- class NotFound(public key: S
+158:7 -> ../failures.temper.md:29:11 (NotFound)  NotFound extends FailuresErr <- NotFound(public key: String)
+158:15 -> ../failures.temper.md:29:5   extends FailuresError { <- class NotFound(public key: S
+159:3 -> ../failures.temper.md:29:27  /** @type {string} */ <- key: String) extends Failure
+160:3 -> ../failures.temper.md:29:27  #key; <- key: String) extends Failure
+162:3 -> ../failures.temper.md:29:5  /** @param {string} key */ <- class NotFound(public key: S
+163:3 -> ../failures.temper.md:29:5  constructor(key) { <- class NotFound(public key: S
+165:5 -> ../failures.temper.md:29:27  this.#key = key; <- key: String) extends Failure
+168:3 -> ../failures.temper.md:29:27  /** @returns {string} */ <- key: String) extends Failure
+169:3 -> ../failures.temper.md:29:27  get key() { <- key: String) extends Failure
+169:7 -> ../failures.temper.md:29:27 (key)  key() { <- key: String) extends Failure
+173:3 -> ../failures.temper.md:29:5  /** @returns {string} */ <- class NotFound(public key: S
+174:3 -> ../failures.temper.md:29:5  get message() { <- class NotFound(public key: S
+175:5 -> ../failures.temper.md:29:5  return `not found (key: ${th <- class NotFound(public key: S
+179:1 -> ../failures.temper.md:92:5  class SignError extends Erro <- sealed interface SignError e
+179:7 -> ../failures.temper.md:92:22 (SignError)  SignError extends Error {} <- SignError extends Error {}
+179:16 -> ../failures.temper.md:92:5   extends Error {} <- sealed interface SignError e
+183:1 -> ../failures.temper.md:93:5  class EmptyText extends Sign <- class EmptyText extends Sign
+183:7 -> ../failures.temper.md:93:11 (EmptyText)  EmptyText extends SignError <- EmptyText extends SignError
+183:16 -> ../failures.temper.md:93:5   extends SignError { <- class EmptyText extends Sign
+184:3 -> ../failures.temper.md:93:5  /** @returns {string} */ <- class EmptyText extends Sign
+185:3 -> ../failures.temper.md:93:5  get message() { <- class EmptyText extends Sign
+186:5 -> ../failures.temper.md:93:5  return "empty text"; <- class EmptyText extends Sign
+190:1 -> ../failures.temper.md:94:5  class BadSign extends SignEr <- class BadSign(public text: S
+190:7 -> ../failures.temper.md:94:11 (BadSign)  BadSign extends SignError { <- BadSign(public text: String)
+190:14 -> ../failures.temper.md:94:5   extends SignError { <- class BadSign(public text: S
+191:3 -> ../failures.temper.md:94:26  /** @type {string} */ <- text: String) extends SignEr
+192:3 -> ../failures.temper.md:94:26  #text; <- text: String) extends SignEr
+194:3 -> ../failures.temper.md:94:5  /** @param {string} text */ <- class BadSign(public text: S
+195:3 -> ../failures.temper.md:94:5  constructor(text) { <- class BadSign(public text: S
+197:5 -> ../failures.temper.md:94:26  this.#text = text; <- text: String) extends SignEr
+200:3 -> ../failures.temper.md:94:26  /** @returns {string} */ <- text: String) extends SignEr
+201:3 -> ../failures.temper.md:94:26  get text() { <- text: String) extends SignEr
+201:7 -> ../failures.temper.md:94:26 (text)  text() { <- text: String) extends SignEr
+205:3 -> ../failures.temper.md:94:5  /** @returns {string} */ <- class BadSign(public text: S
+206:3 -> ../failures.temper.md:94:5  get message() { <- class BadSign(public text: S
+207:5 -> ../failures.temper.md:94:5  return `bad sign (text: ${th <- class BadSign(public text: S
+211:1 -> ../failures.temper.md:154:5  class ConfigError extends Fa <- class ConfigError(public set
+211:7 -> ../failures.temper.md:154:11 (ConfigError)  ConfigError extends Failures <- ConfigError(public setting:
+211:18 -> ../failures.temper.md:154:5   extends FailuresError { <- class ConfigError(public set
+212:3 -> ../failures.temper.md:154:30  /** @type {string} */ <- setting: String) extends Fai
+213:3 -> ../failures.temper.md:154:30  #setting; <- setting: String) extends Fai
+215:3 -> ../failures.temper.md:154:5  /** @param {string} setting <- class ConfigError(public set
+216:3 -> ../failures.temper.md:154:5  constructor(setting) { <- class ConfigError(public set
+218:5 -> ../failures.temper.md:154:30  this.#setting = setting; <- setting: String) extends Fai
+221:3 -> ../failures.temper.md:154:30  /** @returns {string} */ <- setting: String) extends Fai
+222:3 -> ../failures.temper.md:154:30  get setting() { <- setting: String) extends Fai
+222:7 -> ../failures.temper.md:154:30 (setting)  setting() { <- setting: String) extends Fai
+226:3 -> ../failures.temper.md:154:5  /** @returns {string} */ <- class ConfigError(public set
+227:3 -> ../failures.temper.md:154:5  get message() { <- class ConfigError(public set
+228:5 -> ../failures.temper.md:154:5  return `config error (settin <- class ConfigError(public set
+232:1 -> ../failures.temper.md:37:5  /** @type {number} */ <- let found = lookup("a") orel
+233:1 -> ../failures.temper.md:37:5  let found; <- let found = lookup("a") orel
+234:1 -> ../failures.temper.md:37:5  try { <- let found = lookup("a") orel
+240:1 -> ../failures.temper.md:38:5  /** @type {number} */ <- let missing = lookup("z") or
+241:1 -> ../failures.temper.md:38:5  let missing; <- let missing = lookup("z") or
+242:1 -> ../failures.temper.md:38:5  try { <- let missing = lookup("z") or
+248:1 -> ../failures.temper.md:39:5  console.log(`${found} ${miss <- console.log("${found} ${miss
+249:1 -> ../failures.temper.md:50:5  /** @type {number} */ <- let n = lookup("q") catch (e
+250:1 -> ../failures.temper.md:50:5  let n; <- let n = lookup("q") catch (e
+251:1 -> ../failures.temper.md:50:5  try { <- let n = lookup("q") catch (e
+255:3 -> ../failures.temper.md:51:7  console.log(`not found: ${e. <- console.log("not found: ${e.
+258:1 -> ../failures.temper.md:54:5  /** @type {number} */ <- let m = lookup("b") catch {
+259:1 -> ../failures.temper.md:54:5  let m; <- let m = lookup("b") catch {
+260:1 -> ../failures.temper.md:54:5  try { <- let m = lookup("b") catch {
+266:1 -> ../failures.temper.md:55:5  console.log(`${n} ${m}`); <- console.log("${n} ${m}");
+267:1 -> ../failures.temper.md:78:5  console.log(`${shown("a", "b <- console.log("${shown("a", "b
+268:1 -> ../failures.temper.md:116:5  { <- for (let t of ["+", "-", "",
+269:3 -> ../failures.temper.md:116:19  /** @type {readonly string[] <- ["+", "-", "", "x"]) {
+270:3 -> ../failures.temper.md:116:19  const list = Object.freeze([ <- ["+", "-", "", "x"]) {
+271:3 -> ../failures.temper.md:116:5  const length = list.length; <- for (let t of ["+", "-", "",
+272:3 -> ../failures.temper.md:116:5  let i = 0; <- for (let t of ["+", "-", "",
+273:3 -> ../failures.temper.md:116:5  while (i < length) { <- for (let t of ["+", "-", "",
+274:5 -> ../failures.temper.md:116:5  const t = listedGet(/** @typ <- for (let t of ["+", "-", "",
+275:5 -> ../failures.temper.md:116:5  i = (i + 1) | 0; <- for (let t of ["+", "-", "",
+276:5 -> ../failures.temper.md:117:7  /** @type {number} */ <- let s = parseSign(t) catch (
+277:5 -> ../failures.temper.md:117:7  let s; <- let s = parseSign(t) catch (
+278:5 -> ../failures.temper.md:117:15  /** @type {SignError | null} <- parseSign(t) catch (e) { con
+279:5 -> ../failures.temper.md:117:15  let caught = null; <- parseSign(t) catch (e) { con
+280:5 -> ../failures.temper.md:117:15  /** @type {number | null} */ <- parseSign(t) catch (e) { con
+281:5 -> ../failures.temper.md:117:15  let held = null; <- parseSign(t) catch (e) { con
+282:5 -> ../failures.temper.md:117:15  try { <- parseSign(t) catch (e) { con
+283:7 -> ../failures.temper.md:117:15  held = parseSign(t); <- parseSign(t) catch (e) { con
+286:7 -> ../failures.temper.md:117:15  caught = failure; <- parseSign(t) catch (e) { con
+288:5 -> ../failures.temper.md:117:15  if (held == null) { <- parseSign(t) catch (e) { con
+289:7 -> ../failures.temper.md:117:35  const e2 = /** @type {SignEr <- e) { console.log(describe(e)
+290:7 -> ../failures.temper.md:117:40  console.log(describe(e2)); <- console.log(describe(e)); co
+291:7 -> ../failures.temper.md:117:66  continue; <- continue; };
+293:7 -> ../failures.temper.md:117:15  s = held; <- parseSign(t) catch (e) { con
+295:5 -> ../failures.temper.md:118:7  console.log(s.toString()); <- console.log(s.toString());
+298:1 -> ../failures.temper.md:120:5  /** @type {number} */ <- let code = parseSign("?") ca
+299:1 -> ../failures.temper.md:120:5  let code; <- let code = parseSign("?") ca
+300:1 -> ../failures.temper.md:120:5  try { <- let code = parseSign("?") ca
+306:1 -> ../failures.temper.md:121:5  console.log(code.toString()) <- console.log(code.toString())
+307:1 -> ../failures.temper.md:136:5  let kept = new NotFound("non <- var kept = new NotFound("non
+308:1 -> ../failures.temper.md:137:5  /** @type {number} */ <- let v = lookup("k") catch (e
+309:1 -> ../failures.temper.md:137:5  let v; <- let v = lookup("k") catch (e
+310:1 -> ../failures.temper.md:137:5  try { <- let v = lookup("k") catch (e
+314:3 -> ../failures.temper.md:137:37  kept = e4; <- kept = e; -1 };
+317:1 -> ../failures.temper.md:138:5  /** @type {readonly NotFound <- let problems = [new NotFound
+318:1 -> ../failures.temper.md:138:5  const problems = Object.free <- let problems = [new NotFound
+319:1 -> ../failures.temper.md:139:5  console.log(`${v} ${listedJo <- console.log("${v} ${problems
+320:1 -> ../failures.temper.md:142:5  /** @type {number} */ <- let w = rethrown(kept) catch
+321:1 -> ../failures.temper.md:142:5  let w; <- let w = rethrown(kept) catch
+322:1 -> ../failures.temper.md:142:5  try { <- let w = rethrown(kept) catch
+326:3 -> ../failures.temper.md:142:40  console.log(`again ${e5.key} <- console.log("again ${e.key}"
+329:1 -> ../failures.temper.md:160:5  /** @type {number} */ <- let port = setting("port") c
+330:1 -> ../failures.temper.md:160:5  let port; <- let port = setting("port") c
+331:1 -> ../failures.temper.md:160:5  try { <- let port = setting("port") c
+335:3 -> ../failures.temper.md:160:44  console.log(e6.setting); <- console.log(e.setting); -1 }
+338:1 -> ../failures.temper.md:161:5  /** @type {number} */ <- let first = setting("a") ore
+339:1 -> ../failures.temper.md:161:5  let first; <- let first = setting("a") ore
+340:1 -> ../failures.temper.md:161:5  try { <- let first = setting("a") ore
+346:1 -> ../failures.temper.md:162:5  console.log(`${port} ${first <- console.log("${port} ${first
+347:1 -> ../failures.temper.md:184:5  console.log(`${pair("a", "z" <- console.log("${pair("a", "z"
+348:1 -> ../failures.temper.md:186:5  let total = 0; <- var total = 0;
+349:1 -> ../failures.temper.md:187:5  { <- for (let k of ["a", "b", "c"
+350:3 -> ../failures.temper.md:187:19  /** @type {readonly string[] <- ["a", "b", "c", "a"]) {
+351:3 -> ../failures.temper.md:187:19  const list2 = Object.freeze( <- ["a", "b", "c", "a"]) {
+352:3 -> ../failures.temper.md:187:5  const length2 = list2.length <- for (let k of ["a", "b", "c"
+353:3 -> ../failures.temper.md:187:5  let i2 = 0; <- for (let k of ["a", "b", "c"
+354:3 -> ../failures.temper.md:187:5  while (i2 < length2) { <- for (let k of ["a", "b", "c"
+355:5 -> ../failures.temper.md:187:5  const k = listedGet(/** @typ <- for (let k of ["a", "b", "c"
+356:5 -> ../failures.temper.md:187:5  i2 = (i2 + 1) | 0; <- for (let k of ["a", "b", "c"
+357:5 -> ../failures.temper.md:188:7  const t$1 = total; <- total += lookup(k) catch { b
+358:5 -> ../failures.temper.md:188:7  /** @type {number} */ <- total += lookup(k) catch { b
+359:5 -> ../failures.temper.md:188:7  let t$0; <- total += lookup(k) catch { b
+360:5 -> ../failures.temper.md:188:7  { <- total += lookup(k) catch { b
+361:7 -> ../failures.temper.md:188:16  /** @type {number} */ <- lookup(k) catch { break; };
+362:7 -> ../failures.temper.md:188:16  let t2; <- lookup(k) catch { break; };
+363:7 -> ../failures.temper.md:188:16  /** @type {number | null} */ <- lookup(k) catch { break; };
+364:7 -> ../failures.temper.md:188:16  let held2 = null; <- lookup(k) catch { break; };
+365:7 -> ../failures.temper.md:188:16  try { <- lookup(k) catch { break; };
+366:9 -> ../failures.temper.md:188:16  held2 = lookup(k); <- lookup(k) catch { break; };
+370:7 -> ../failures.temper.md:188:16  if (held2 == null) { <- lookup(k) catch { break; };
+371:9 -> ../failures.temper.md:188:34  break; <- break; };
+373:9 -> ../failures.temper.md:188:16  t2 = held2; <- lookup(k) catch { break; };
+377:5 -> ../failures.temper.md:188:7  total = (t$1 + t$0) | 0; <- total += lookup(k) catch { b
+380:1 -> ../failures.temper.md:190:5  console.log(total.toString() <- console.log(total.toString()

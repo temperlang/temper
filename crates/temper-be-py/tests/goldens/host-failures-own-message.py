@@ -1,6 +1,6 @@
 from temper_core import Failure as _Failure, LoggingConsole as _LoggingConsole
 
-__all__ = ('HostFailuresOwnMessageError', 'NotFound', 'host_lookup')
+__all__ = ('HostFailuresError', 'NotFound', 'host_lookup')
 
 
 # A specification: `NotFound` is the library's own failure class, in the
@@ -14,11 +14,11 @@ class _connected:
         raise NotFound(key)  # noqa: F821
 
 
-class HostFailuresOwnMessageError(_Failure, Exception):
+class HostFailuresError(_Failure, Exception):
     __slots__ = ()
 
 
-class NotFound(HostFailuresOwnMessageError):
+class NotFound(HostFailuresError):
     __slots__ = ('_key',)
     _key: str
 
@@ -38,7 +38,7 @@ def host_lookup(key: str, /) -> int:
     return _connected.host_lookup(key)
 
 
-class _Expired(HostFailuresOwnMessageError):
+class _Expired(HostFailuresError):
     __slots__ = ('_days',)
     _days: int
 

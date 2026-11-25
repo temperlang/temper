@@ -7,14 +7,14 @@ from temper_core import (
     list_join as _list_join,
 )
 
-__all__ = ('FailuresError',)
+__all__ = ()
 
 
-class FailuresError(_Failure, Exception):
+class _FailuresError(_Failure, Exception):
     __slots__ = ()
 
 
-class _NotFound(FailuresError):
+class _NotFound(_FailuresError):
     __slots__ = ('_key',)
     _key: str
 
@@ -61,7 +61,7 @@ def _shown(a: str, b: str, /) -> str:
     return str(total)
 
 
-class _SignError(FailuresError):
+class _SignError(_Failure, Exception):
     __slots__ = ()
 
 
@@ -117,7 +117,7 @@ def _rethrown(p: _NotFound, /) -> int:
     raise p
 
 
-class _ConfigError(FailuresError):
+class _ConfigError(_FailuresError):
     __slots__ = ('_setting',)
     _setting: str
 

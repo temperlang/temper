@@ -2,7 +2,7 @@ using System;
 
 namespace HostFailuresPanicPassesCatch;
 
-public sealed class NotFound : HostFailuresPanicPassesCatchException
+public sealed class NotFound : HostFailuresException
 {
     private readonly string key;
 

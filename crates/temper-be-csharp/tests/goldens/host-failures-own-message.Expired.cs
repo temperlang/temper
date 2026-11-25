@@ -3,7 +3,7 @@ using System.Globalization;
 
 namespace HostFailuresOwnMessage;
 
-internal sealed class Expired : HostFailuresOwnMessageException
+internal sealed class Expired : HostFailuresException
 {
     private readonly int days;
 

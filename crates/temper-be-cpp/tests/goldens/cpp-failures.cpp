@@ -55,6 +55,7 @@ temper::core::Expected<int32_t, std::shared_ptr<LookupFailed>> thrownAgain(tempe
 temper::core::Expected<int32_t, std::shared_ptr<NotFound>> risky(int32_t n);
 temper::core::Str explained(temper::core::Str const & name);
 temper::core::Str signMessage(temper::core::Str const & text);
+temper::core::Str signName(std::shared_ptr<SignError> const & e);
 int32_t mixed(temper::core::Str const & key, int32_t n);
 temper::core::Str firstSign(std::shared_ptr<std::vector<temper::core::Str>> const & texts);
 
@@ -214,6 +215,19 @@ core::Str signMessage(core::Str const & text) {
   } else {
     std::shared_ptr<SignError> e = signResult.error();
     return e->get_message();
+  }
+}
+
+core::Str signName(std::shared_ptr<SignError> const & e) {
+  global_init_init();
+  {
+    if (dynamic_cast<BadSign const *>(e.get()) != nullptr) {
+      return TEMPER_STR("bad sign");
+    } else if (dynamic_cast<EmptyText const *>(e.get()) != nullptr) {
+      return TEMPER_STR("empty text");
+    } else {
+      core::panic();
+    }
   }
 }
 

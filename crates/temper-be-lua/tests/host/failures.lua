@@ -1,7 +1,7 @@
 -- Host code using the generated `lua-failures` library's declared
 -- failures the standard way, for `functional.rs`'s `runs`: `pcall`
 -- catches them, `temper.instance_of` tells them apart by their own
--- types, the library's base, a sealed interface's, and the runtime's
+-- types, the library's root, a sealed interface's, and the runtime's
 -- `temper.Failure`, `tostring` and `message` give their messages, and
 -- `cause` the failure being handled where one was thrown; a panic, a
 -- string, is none of them. It prints a line per check, which the test
@@ -75,3 +75,22 @@ print("made by host " .. tostring(made) .. " " .. tostring(made.cause))
 
 local panic = raised(lf.risky, 2)
 print("panic passes, " .. tostring(temper.instance_of(panic, temper.Failure)) .. ", " .. type(panic))
+
+-- A type of host code's own under a sealed one, which Temper's exhaustive
+-- `when` over it doesn't know, panics there.
+---@class host.Rogue: lua-failures.SignError
+---@class host.Rogue.type: temper.Type
+---@operator call: host.Rogue
+local Rogue = temper.type("host.Rogue", lf.SignError)
+
+---@param this host.Rogue
+---@return string
+function Rogue.get.message(this)
+  return "rogue"
+end
+
+print("known subtype " .. lf.signName(lf.BadSign("?")))
+local unknown = raised(lf.signName, Rogue())
+-- Its message, after the place `error` puts first.
+local said = tostring(unknown):gsub("^.*: ", "")
+print("unknown subtype panics, " .. tostring(temper.instance_of(unknown, temper.Failure)) .. ", " .. said)

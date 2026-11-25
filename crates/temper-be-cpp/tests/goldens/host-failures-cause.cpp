@@ -10,20 +10,20 @@ namespace host_failures_cause {
 // optional.
 void global_init_init();
 
-struct HostFailuresCauseError;
+struct HostFailuresError;
 struct NotFound;
 struct LookupFailed;
 
-struct HostFailuresCauseError : public virtual temper::core::Failure {};
+struct HostFailuresError : public virtual temper::core::Failure {};
 
-struct NotFound : public virtual HostFailuresCauseError {
+struct NotFound : public virtual HostFailuresError {
   temper::core::Str key;
   static std::shared_ptr<NotFound> make(temper::core::Str const & key);
   temper::core::Str get_message() const override;
   temper::core::Str get_key() const;
 };
 
-struct LookupFailed : public virtual HostFailuresCauseError {
+struct LookupFailed : public virtual HostFailuresError {
   temper::core::Str name;
   static std::shared_ptr<LookupFailed> make(temper::core::Str const & name);
   temper::core::Str get_message() const override;

@@ -5,11 +5,11 @@
 //! and [`impl_failure!`](crate::impl_failure) makes it a Rust error:
 //! `Display` its message, `Debug`, `std::error::Error` with its cause as
 //! `source()`, and [`Failure`], core's `Error`. A sealed failure
-//! interface is an `enum` over the types right under it, and the
-//! library's base its crate's `Error` enum, `From` each failure type
-//! below, so `?` converts; [`impl_failure_enum!`](crate::impl_failure_enum)
-//! gives them the same traits, each the variant's. A failure is never a
-//! panic: generated code returns it in an `Err`.
+//! interface, a library's roots among them, is an `enum` over the types
+//! right under it, `From` each failure type below, so `?` converts;
+//! [`impl_failure_enum!`](crate::impl_failure_enum) gives them the same
+//! traits, each the variant's. A failure is never a panic: generated code
+//! returns it in an `Err`.
 
 use crate::{AnyValue, AnyValueTrait, AsAnyValue};
 use std::fmt;

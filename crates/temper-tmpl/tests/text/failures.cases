@@ -1,5 +1,5 @@
 # Declared failures (RFC 164) in canonical text: failure types under the
-# library's base, results that fail with them, throw, and catch, and what
+# library's roots, results that fail with them, throw, and catch, and what
 # the validator's T5, F3, F4, F8, and D6 rules say of them. The format is
 # described in tests/text.rs.
 
@@ -14,9 +14,9 @@ uses `temper-core`#40 0.1.0 {
 }
 
 module failures#0 {
-  export failureBase interface ~FailuresError#1 extends Error#41 {}
+  export interface FailuresError#1 extends Error#41 {}
 
-  export class NotFound#2 extends ~FailuresError#1 {
+  export class NotFound#2 extends FailuresError#1 {
     let key#10: String;
     constructor constructor#11(key#12: String): NotFound#2 {
       this.key#10 = key#12;
@@ -26,7 +26,7 @@ module failures#0 {
     }
   }
 
-  export interface SignError#3 extends ~FailuresError#1 {}
+  export interface SignError#3 extends FailuresError#1 {}
 
   export class BadSign#4 extends SignError#3 {
     constructor constructor#14(): BadSign#4 {}
@@ -84,11 +84,11 @@ uses `temper-core`#40 0.1.0 {
 }
 
 module failures#0 {
-  export failureBase interface ~FailuresError#1 extends Error#41 {}
+  export interface FailuresError#1 extends Error#41 {}
 
-  export failureBase interface ~OtherError#2 extends Error#41 {}
+  export interface OtherError#2 extends Error#41 {}
 
-  export class NotFound#3 extends ~FailuresError#1 {
+  export class NotFound#3 extends FailuresError#1 {
     constructor constructor#10(): NotFound#3 {}
   }
 
@@ -96,11 +96,11 @@ module failures#0 {
     constructor constructor#11(): Direct#4 {}
   }
 
-  export interface Box#5<T#12> extends ~FailuresError#1 {}
+  export interface Box#5<T#12> extends FailuresError#1 {}
 
-  export interface Other#6 extends ~FailuresError#1 {}
+  export interface Other#6 extends FailuresError#1 {}
 
-  export class Both#7 extends Other#6, ~FailuresError#1 {
+  export class Both#7 extends Other#6, FailuresError#1 {
     constructor constructor#13(): Both#7 {}
   }
 
@@ -128,8 +128,7 @@ module failures#0 {
   init {}
 }
 --- problems
-D6 #2: a library has one failure base, a compiler-made, exported interface extending only Error
-D6 #4: a failure type extends its library's base, not Error itself
+D6 #4: a failure class extends a root, not Error itself
 D6 #5: a failure type can't be generic
 D6 #7: a failure type has more than one failure type above it
 F3 @16: throw fails, but isn't marked

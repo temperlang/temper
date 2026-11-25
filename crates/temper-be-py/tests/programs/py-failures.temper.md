@@ -1,21 +1,23 @@
 # Declared failures, as Python callers see them
 
-A library's failure types are Python exceptions under the library's own
-base, `PyFailuresError`, an `Exception`: `host_interop` (`tests/host/
-interop.py`) catches them by their own types, the base, and a sealed
+A library's failure types are Python exceptions under the root it
+declares, `PyFailuresError`, an `Exception`: `host_interop` (`tests/host/
+interop.py`) catches them by their own types, the root, and a sealed
 interface's, reads their fields, `str()` gives their messages, and a
 failure thrown while another was handled has it as its `__cause__`;
 and a panic passes `except Exception`.
 
-    export class NotFound(public key: String) extends Error {}
+    export sealed interface PyFailuresError extends Error {}
 
-    export sealed interface SignError extends Error {}
+    export class NotFound(public key: String) extends PyFailuresError {}
+
+    export sealed interface SignError extends PyFailuresError {}
     export class BadSign(public text: String) extends SignError {}
     export class EmptyText extends SignError {
       public get message(): String { "no text" }
     }
 
-    export class LookupFailed(public name: String) extends Error {}
+    export class LookupFailed(public name: String) extends PyFailuresError {}
 
     export let lookup(key: String): Int throws NotFound {
       if (key == "a") { return 1; }
@@ -68,6 +70,16 @@ interface:
 
     export let signMessage(text: String): String {
       sign(text).toString() catch (e) { e.message }
+    }
+
+An exhaustive `when` over a sealed type needs no `else`, and panics
+where host code passes a value of a type of its own under it:
+
+    export let signName(e: SignError): String {
+      when (e) {
+        is BadSign -> "bad sign";
+        is EmptyText -> "empty text";
+      }
     }
 
 An `orelse` handles a bubble and a declared failure alike:

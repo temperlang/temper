@@ -1,11 +1,12 @@
 using System;
+using TemperLang.Core;
 
 namespace Failures;
 
-internal abstract class SignException : FailuresException
+internal abstract class SignException : Exception, IFailure
 {
     private protected SignException(Exception? cause)
-        : base(cause)
+        : base(null, cause)
     {
     }
 }

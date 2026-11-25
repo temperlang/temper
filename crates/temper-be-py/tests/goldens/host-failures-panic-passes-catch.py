@@ -1,6 +1,6 @@
 from temper_core import Failure as _Failure, LoggingConsole as _LoggingConsole
 
-__all__ = ('HostFailuresPanicPassesCatchError', 'NotFound', 'host_lookup')
+__all__ = ('HostFailuresError', 'NotFound', 'host_lookup')
 
 
 # A specification: `NotFound` is the library's own failure class, in the
@@ -14,11 +14,11 @@ class _connected:
         raise NotFound(key)  # noqa: F821
 
 
-class HostFailuresPanicPassesCatchError(_Failure, Exception):
+class HostFailuresError(_Failure, Exception):
     __slots__ = ()
 
 
-class NotFound(HostFailuresPanicPassesCatchError):
+class NotFound(HostFailuresError):
     __slots__ = ('_key',)
     _key: str
 

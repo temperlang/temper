@@ -1117,8 +1117,8 @@ impl<'a> Translator<'a> {
     }
 
     /// A declared failure type, as a `Result`'s error: a failure class's
-    /// struct or a sealed failure interface's enum, the library's base
-    /// its crate's `Error` enum. Not yet a failure parameter, nor core's
+    /// struct or a sealed failure interface's enum, the library's roots
+    /// among them. Not yet a failure parameter, nor core's
     /// `Error`, the join of several libraries' failures.
     pub(crate) fn failure_ty(&mut self, fail: TypeId) -> R<String> {
         let p = self.p;

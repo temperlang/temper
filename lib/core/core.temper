@@ -38,10 +38,13 @@ export sealed interface Equatable<EQ extends AnyValue> {
  * it, and its callers handle it with `catch` or [snippet/builtin/orelse],
  * or pass it on.
  *
- * A failure type is a class that extends *Error*, or a sealed interface
- * that does, whose classes are its variants. It has no type parameters,
- * and extends no more than one failure type. *Error* itself isn't one a
- * function may throw.
+ * Each failure type is under one root: a sealed interface of its own
+ * library that extends *Error* itself, as `sealed interface LookupError
+ * extends Error {}`. A library may declare several. Classes extend a
+ * root, or a sealed interface under one, whose classes are its variants,
+ * never *Error* itself. A failure type has no type parameters, and
+ * extends one failure type. *Error* itself isn't one a function may
+ * throw.
  *
  * Unlike [snippet/type/Bubble], a failure is a value, whose fields
  * say what went wrong.
@@ -52,7 +55,7 @@ export interface Error {
    * handles shows it. A failure type may declare its own getter;
    * otherwise it's the type's name in lowercase words, then its public
    * fields' names and values, as `not found (key: y)` for
-   * `class NotFound(public key: String) extends Error {}`.
+   * `class NotFound(public key: String) extends LookupError {}`.
    */
   @connected
   public get message(): String;

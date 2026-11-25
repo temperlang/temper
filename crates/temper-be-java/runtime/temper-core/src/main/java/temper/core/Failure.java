@@ -1,10 +1,10 @@
 package temper.core;
 
 /**
- * Marks a Temper library's declared failures (RFC 164): each library's
- * base failure class, as {@code WherewithException}, extends
+ * Marks a Temper library's declared failures (RFC 164): each of a
+ * library's root failure classes, as {@code WherewithException}, extends
  * {@link RuntimeException} and implements this, and its failure types
- * extend that base. Host code catches those, never this, which isn't an
+ * extend those. Host code catches those, never this, which isn't an
  * exception itself; generated code uses it only where it can't name a
  * failure type. A failure's message is {@link #getMessage()}, Temper's
  * {@code message}, and its cause is Java's own {@link #getCause()}: the

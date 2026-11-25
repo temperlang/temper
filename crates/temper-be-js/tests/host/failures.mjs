@@ -1,6 +1,6 @@
 // Host code using the generated `js-failures` package's declared
 // failures the standard way, for `functional.rs`'s `runs`: it catches
-// them with `instanceof` by their own types, the library's base, a sealed
+// them with `instanceof` by their own types, the library's root, a sealed
 // interface's abstract class, and `Error`, reads their fields, `message`,
 // `name`, `stack`, and `cause`, and lets a panic pass a `catch` that
 // checks the type. It prints a line per check, which the test compares
@@ -18,6 +18,7 @@ import {
   risky,
   setting,
   sign,
+  signName,
   thrownAgain,
 } from "./js-failures/index.js";
 
@@ -92,4 +93,17 @@ try {
   }
 } catch (e) {
   console.log(`panic passes, ${e instanceof JsFailuresError}`);
+}
+
+// A type of host code's own under a sealed one, which Temper's exhaustive
+// `when` over it doesn't know, panics there.
+class Rogue extends SignError {}
+
+console.log(`known subtype ${signName(new BadSign("?"))}`);
+try {
+  signName(new Rogue());
+  console.log("unknown subtype passes");
+} catch (e) {
+  const failure = e instanceof JsFailuresError;
+  console.log(`unknown subtype panics, ${failure}, ${e instanceof Error ? e.message : e}`);
 }

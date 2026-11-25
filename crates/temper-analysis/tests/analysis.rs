@@ -89,7 +89,8 @@ fn hover_on_a_parameter() {
 #[test]
 fn hover_on_a_catch_binding() {
     const SOURCE: &str = r#"
-class NotFound(public key: String) extends Error {}
+sealed interface LookupError extends Error {}
+class NotFound(public key: String) extends LookupError {}
 let lookup(key: String): Int throws NotFound { throw new NotFound(key) }
 let n = lookup("a") catch (e) { console.log(e.key); 0 };
 "#;

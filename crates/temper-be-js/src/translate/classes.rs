@@ -30,12 +30,12 @@
 //! through `unknown`.
 //!
 //! A declared failure type (RFC 164) extends the one failure type above
-//! it natively instead, the library's base JS's `Error`, so hosts'
-//! `instanceof`, `stack`, `name`, and `message` work: `class
+//! it natively instead, each of the library's roots JS's `Error`, so
+//! hosts' `instanceof`, `stack`, `name`, and `message` work: `class
 //! WherewithError extends Error {}`, then `failureBase(WherewithError)`,
-//! the runtime's marker and `name`; a sealed failure interface is a class
-//! under it, never made itself; and `message` is a getter over `Error`'s,
-//! read when asked.
+//! the runtime's marker and `name`; a root, or another sealed failure
+//! interface, is a class that's never made itself; and `message` is a
+//! getter over `Error`'s, read when asked.
 
 use super::*;
 use crate::names;
@@ -80,9 +80,10 @@ impl Translator<'_> {
             let class = self.class(item);
             body.append(&mut self.static_lets);
             body.push(class?);
-            // The library's base failure class gets the runtime's marker
-            // and its `name` ([`Translator::failure_base`]).
-            if p.decls.get(decl).facts.contains(Facts::FAILURE_BASE) {
+            // A library's root failure class gets the runtime's marker and
+            // its `name`.
+            let root = temper_tmpl::failures::root(p);
+            if temper_tmpl::failures::is_library_root(p, root, decl) {
                 self.imports.insert("failureBase");
                 let call = Expr::name("failureBase").call(vec![self.class_ref(decl)]);
                 body.push(Stmt::Expr(call));
@@ -93,10 +94,11 @@ impl Translator<'_> {
 
     /// Whether a class or interface is a declared failure type of the
     /// program's own (`temper_tmpl::failures`): a JS class extending the one
-    /// failure type above it, natively, the library's base extending JS's
-    /// `Error`, so `instanceof`, `stack`, `name`, and `message` work as
-    /// hosts expect; an interface (the base, or a sealed one) is a class
-    /// that's never made itself, as other interfaces are.
+    /// failure type above it, natively, each of the library's roots
+    /// extending JS's `Error`, so `instanceof`, `stack`, `name`, and
+    /// `message` work as hosts expect; an interface (a root, or another
+    /// sealed one) is a class that's never made itself, as other
+    /// interfaces are.
     pub(super) fn is_failure_type(&self, decl: DeclId) -> bool {
         let p = self.p;
         matches!(
@@ -107,7 +109,7 @@ impl Translator<'_> {
     }
 
     /// What a failure type extends: the one failure type above it, or
-    /// JS's `Error` for the library's base, which core's `Error` is. Not
+    /// JS's `Error` for a root, which core's `Error` is. Not
     /// yet for other supertypes, which JS's single inheritance can't give
     /// it beside that one, nor for a failure interface's abstract members,
     /// which, declared as fields for TypeScript, would hide its classes'.
@@ -546,13 +548,7 @@ impl Translator<'_> {
                 Expr::name("type").call(supers)
             }
         };
-        let d = p.decls.get(decl);
-        // A made one's, as the library's base failure class, isn't its
-        // source's.
-        let name_span = match d.facts.contains(Facts::COMPILER_MADE) {
-            true => Span::UNKNOWN,
-            false => d.name_span,
-        };
+        let name_span = p.decls.get(decl).name_span;
         Ok(Stmt::Class {
             export: self.exported(decl),
             name: self.name(decl),

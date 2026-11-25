@@ -503,7 +503,8 @@ const FAILURE_IMPORTS: [(&str, &str); 2] = [
     ),
     (
         "a/a.temper.md",
-        "# A\n\n    export class NotFound(public key: String) extends Error {}\n    \
+        "# A\n\n    export sealed interface AError extends Error {}\n    \
+         export class NotFound(public key: String) extends AError {}\n    \
          export let lookup(key: String): Int throws NotFound { throw new NotFound(key) }\n",
     ),
 ];
@@ -1238,6 +1239,8 @@ fn failures_interop(lua: &str, dir: &Path, logged: &[String], failures: &mut Vec
                 "thrown again lookup failed (name: first), caused by not found (key: first)",
                 "made by host not found (key: host) nil",
                 "panic passes, false, string",
+                "known subtype bad sign",
+                "unknown subtype panics, false, panic",
             ]
             .map(String::from),
         )

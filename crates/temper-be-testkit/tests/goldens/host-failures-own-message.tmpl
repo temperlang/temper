@@ -1,7 +1,7 @@
 tmpl 1 model 1 library `host-failures-own-message` 0.0.0
 
-uses `temper-core`#3 0.0.0-alpha.0.0 {
-  interface Error#4 {}
+uses `temper-core`#4 0.0.0-alpha.0.0 {
+  interface Error#5 {}
   interface Console#16 {
     connected method log#17(message: String): Void;
   }
@@ -12,13 +12,13 @@ uses `temper-core`#3 0.0.0-alpha.0.0 {
 }
 
 module `host-failures-own-message`#0 {
-  export failureBase interface ~HostFailuresOwnMessageError#5 extends Error#4 {}
-
   let ~console#18: Console#16;
 
-  export class NotFound#1 extends ~HostFailuresOwnMessageError#5 {
+  export interface HostFailuresError#1 extends Error#5 {}
+
+  export class NotFound#2 extends HostFailuresError#1 {
     let key#6: String;
-    constructor constructor#7(key#13: String): NotFound#1 {
+    constructor constructor#7(key#13: String): NotFound#2 {
       this.key#6 = key#13;
     }
     get message#14(): String {
@@ -26,7 +26,7 @@ module `host-failures-own-message`#0 {
     }
   }
 
-  connected export fn hostLookup#11(key#15: String): Int32 throws NotFound#1 {
+  connected export fn hostLookup#11(key#15: String): Int32 throws NotFound#2 {
     if (%String.eq(key#15, "bug")) {
       (panic()): Void;
     }
@@ -36,9 +36,9 @@ module `host-failures-own-message`#0 {
     (throw(new constructor#7(key#15))^): Void;
   }
 
-  class Expired#2 extends ~HostFailuresOwnMessageError#5 {
+  class Expired#3 extends HostFailuresError#1 {
     let days#8: Int32;
-    constructor constructor#10(days#21: Int32): Expired#2 {
+    constructor constructor#10(days#21: Int32): Expired#3 {
       this.days#8 = days#21;
     }
     get message#9(): String {
@@ -46,7 +46,7 @@ module `host-failures-own-message`#0 {
     }
   }
 
-  fn check#12(days#22: Int32): Void throws Expired#2 {
+  fn check#12(days#22: Int32): Void throws Expired#3 {
     if (%Int32.gt(days#22, 0)) {
       (throw(new constructor#10(days#22))^): Void;
     }

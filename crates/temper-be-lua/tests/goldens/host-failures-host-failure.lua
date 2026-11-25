@@ -21,18 +21,18 @@ do
   end
 end
 
----@class host-failures-host-failure.HostFailuresHostFailureError: temper.Failure
+---@class host-failures-host-failure.HostFailuresError: temper.Failure
 
----@class host-failures-host-failure.HostFailuresHostFailureError.type: temper.Type
-local HostFailuresHostFailureError = temper.type("host-failures-host-failure.HostFailuresHostFailureError", temper.Failure)
+---@class host-failures-host-failure.HostFailuresError.type: temper.Type
+local HostFailuresError = temper.type("host-failures-host-failure.HostFailuresError", temper.Failure)
 
----@class host-failures-host-failure.NotFound: host-failures-host-failure.HostFailuresHostFailureError
+---@class host-failures-host-failure.NotFound: host-failures-host-failure.HostFailuresError
 ---@field key string
 ---@field message string
 
 ---@class host-failures-host-failure.NotFound.type: temper.Type
 ---@operator call: host-failures-host-failure.NotFound
-NotFound = temper.type("host-failures-host-failure.NotFound", HostFailuresHostFailureError)
+NotFound = temper.type("host-failures-host-failure.NotFound", HostFailuresError)
 
 ---@param this host-failures-host-failure.NotFound
 ---@param key string
@@ -75,7 +75,7 @@ hostLookup("y")
 print("after")
 
 return {
-  HostFailuresHostFailureError = HostFailuresHostFailureError,
+  HostFailuresError = HostFailuresError,
   NotFound = NotFound,
   hostLookup = hostLookup,
 }

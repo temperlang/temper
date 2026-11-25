@@ -20,11 +20,11 @@ export function check(days) {
   }
 }
 
-export class HostFailuresOwnMessageError extends Error {}
+export class HostFailuresError extends Error {}
 
-failureBase(HostFailuresOwnMessageError);
+failureBase(HostFailuresError);
 
-export class NotFound extends HostFailuresOwnMessageError {
+export class NotFound extends HostFailuresError {
   /** @type {string} */
   #key;
 
@@ -45,7 +45,7 @@ export class NotFound extends HostFailuresOwnMessageError {
   }
 }
 
-export class Expired extends HostFailuresOwnMessageError {
+export class Expired extends HostFailuresError {
   /** @type {number} */
   #days;
 

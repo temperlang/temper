@@ -215,6 +215,18 @@ local function earlyCause(name)
   return t
 end
 
+---@param e lua-failures.SignError
+---@return string
+local function signName(e)
+  if temper.instance_of(e, BadSign) then
+    return "bad sign"
+  elseif temper.instance_of(e, EmptyText) then
+    return "empty text"
+  else
+    error("panic")
+  end
+end
+
 ---@param key string
 ---@param n integer
 ---@return integer
@@ -313,6 +325,7 @@ return {
   explained = explained,
   signMessage = signMessage,
   earlyCause = earlyCause,
+  signName = signName,
   mixed = mixed,
   firstMissing = firstMissing,
   scan = scan,

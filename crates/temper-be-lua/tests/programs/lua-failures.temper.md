@@ -1,23 +1,25 @@
 # Declared failures, as Lua callers see them
 
-A library's failure types are the runtime's types under the library's
-own base, `LuaFailuresError`, which is under the runtime's
+A library's failure types are the runtime's types under the root it
+declares, `LuaFailuresError`, which is under the runtime's
 `temper.Failure`: `runs` has host code (`tests/host/failures.lua`)
 catch them with `pcall` and tell them apart with `temper.instance_of`
-by their own types, the base, a sealed interface's, and
+by their own types, the root, a sealed interface's, and
 `temper.Failure`, read their fields, `tostring` and `message` give their
 messages, and `cause` the failure being handled where one was thrown;
 and a panic, a string, is none of them.
 
-    export class NotFound(public key: String) extends Error {}
+    export sealed interface LuaFailuresError extends Error {}
 
-    export sealed interface SignError extends Error {}
+    export class NotFound(public key: String) extends LuaFailuresError {}
+
+    export sealed interface SignError extends LuaFailuresError {}
     export class BadSign(public text: String) extends SignError {}
     export class EmptyText extends SignError {
       public get message(): String { "no text" }
     }
 
-    export class LookupFailed(public name: String) extends Error {}
+    export class LookupFailed(public name: String) extends LuaFailuresError {}
 
     export let lookup(key: String): Int throws NotFound {
       if (key == "a") { return 1; }
@@ -76,6 +78,16 @@ interface:
       madeBefore(name).toString() catch (e) {
         let cause = e.cause;
         if (cause != null) { cause.message } else { "nothing" }
+      }
+    }
+
+An exhaustive `when` over a sealed type needs no `else`, and panics
+where host code passes a value of a type of its own under it:
+
+    export let signName(e: SignError): String {
+      when (e) {
+        is BadSign -> "bad sign";
+        is EmptyText -> "empty text";
       }
     }
 

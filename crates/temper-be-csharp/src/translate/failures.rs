@@ -1,8 +1,8 @@
 //! Declared failures (RFC 164; notes/tmpl/nodes.md, "Declared failures")
 //! as C# exceptions.
 //!
-//! - **Types:** each library's failure types are classes under its base,
-//!   `public abstract class <Library>Exception : Exception, IFailure`
+//! - **Types:** each library's failure types are classes under its roots,
+//!   `public abstract class WherewithException : Exception, IFailure`
 //!   (the runtime's marker, for core's `Error`); a sealed failure
 //!   interface is an abstract class under the one failure type above it,
 //!   and a failure class a `sealed` one. C# can't seal a hierarchy across
@@ -81,8 +81,8 @@ pub(super) fn is_kept_failure(p: &Program, id: NodeId) -> bool {
 }
 
 impl Translator<'_> {
-    /// A failure type's bases: the one failure type above it, or for the
-    /// library's base, `Exception` and the runtime's marker, `IFailure`,
+    /// A failure type's bases: the one failure type above it, or for one
+    /// of the library's roots, `Exception` and the runtime's marker, `IFailure`,
     /// core's `Error`; then any others.
     pub(super) fn failure_bases(&mut self, decl: DeclId) -> R<Vec<String>> {
         let p = self.p;

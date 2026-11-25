@@ -32,7 +32,7 @@
 //! a host error passes every `orelse`. Every builtin that bubbles calls
 //! `temper.bubble`, as host code (`_connected.lua`) must to bubble.
 //! Declared failures (RFC 164) are instances of the runtime's types too,
-//! under each library's base, `temper.type("lib.LibError",
+//! under each library's roots, `temper.type("lib.LibError",
 //! temper.Failure)`, `__tostring` giving their `message`, and `cause` a
 //! field; `throw` is Lua's `error(x)`, with `temper.with_cause(x, e)` in a
 //! handler, and a handler of them `temper.catch(function() … end,

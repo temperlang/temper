@@ -50,9 +50,8 @@
 //! - **D1** compiler-made declarations have a hint; **D2** owners form a
 //!   tree rooted at modules, or for external declarations at their `uses`
 //!   section's library; **D6** (declared failures) the program's failure
-//!   types aren't generic and have one failure type above them, the
-//!   library's base where it'd be core's `Error`, and the base is the one
-//!   compiler-made, exported interface extending only `Error`.
+//!   types aren't generic and have one failure type above them, and one
+//!   right under core's `Error`, a root, is an interface.
 //! - **Q1** qnames unique in the library; **Q2** every declaration but
 //!   compiler-made ones, labels, modules, and libraries has one; **Q3** a
 //!   function without a body is connected or external; **Q4** a connected
@@ -825,28 +824,17 @@ impl Validator {
 
     /// D6: the program's own failure types, the classes and interfaces
     /// below core's `Error`, aren't generic and have one failure type
-    /// among their supertypes, which for each but the library's base
-    /// ([`Facts::FAILURE_BASE`]) isn't `Error` itself; the base, at most
-    /// one, is a compiler-made, exported interface whose one supertype is
-    /// `Error`.
+    /// among their supertypes; where that's `Error` itself, the type is
+    /// one of the library's roots, an interface (a sealed one in the
+    /// source), never a class.
     fn failure_types(&mut self, p: &Program) {
-        let mut bases = 0;
         for decl in p.decls.ids().filter(|&d| p.decls.contains(d)) {
             let d = p.decls.get(decl);
-            let is_base = d.facts.contains(Facts::FAILURE_BASE);
             let types = [DeclKind::Class, DeclKind::Interface];
             if !types.contains(&d.kind) || is_external(p, decl) {
-                if is_base {
-                    let message = "only the program's own interface is a failure base".into();
-                    self.decl_problem(Rule::D6, decl, message);
-                }
                 continue;
             }
             if !crate::failures::is_failure_decl(p, self.root, decl) {
-                if is_base {
-                    let message = "a failure base extends Error".into();
-                    self.decl_problem(Rule::D6, decl, message);
-                }
                 continue;
             }
             let root = self.root.map(|r| p.decls.get(r).ty);
@@ -861,19 +849,8 @@ impl Validator {
                 let message = "a failure type has more than one failure type above it".into();
                 self.decl_problem(Rule::D6, decl, message);
             }
-            if is_base {
-                bases += 1;
-                let made = d.facts.contains(Facts::COMPILER_MADE | Facts::EXPORTED);
-                let fits = d.kind == DeclKind::Interface
-                    && made
-                    && p.decls.supers(decl) == root.as_slice()
-                    && bases == 1;
-                if !fits {
-                    let message = "a library has one failure base, a compiler-made, exported interface extending only Error".into();
-                    self.decl_problem(Rule::D6, decl, message);
-                }
-            } else if parents.iter().any(|&t| Some(t) == root) {
-                let message = "a failure type extends its library's base, not Error itself".into();
+            if d.kind == DeclKind::Class && parents.iter().any(|&t| Some(t) == root) {
+                let message = "a failure class extends a root, not Error itself".into();
                 self.decl_problem(Rule::D6, decl, message);
             }
         }

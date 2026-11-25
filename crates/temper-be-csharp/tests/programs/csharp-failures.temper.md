@@ -1,22 +1,25 @@
 # Declared failures, as C# callers see them
 
-A library's failure types are exceptions under the library's own base,
-`CsharpFailuresException`, an `Exception`: `runs` has host code
+A library's failure types are exceptions under the root it declares,
+`CsharpFailuresException` (`CsharpFailuresError` in Temper), an
+`Exception`: `runs` has host code
 (`tests/host/FailuresInterop.cs`) catch them by their own types, the
-base, and a sealed interface's (an abstract class), read their
+root, and a sealed interface's (an abstract class), read their
 properties, `Message` give their messages, and `InnerException` the
 failure being handled where one was made and thrown; and a panic passes
 host code that catches only failures.
 
-    export class NotFound(public key: String) extends Error {}
+    export sealed interface CsharpFailuresError extends Error {}
 
-    export sealed interface SignError extends Error {}
+    export class NotFound(public key: String) extends CsharpFailuresError {}
+
+    export sealed interface SignError extends CsharpFailuresError {}
     export class BadSign(public text: String) extends SignError {}
     export class EmptyText extends SignError {
       public get message(): String { "no text" }
     }
 
-    export class LookupFailed(public name: String) extends Error {}
+    export class LookupFailed(public name: String) extends CsharpFailuresError {}
 
     export let lookup(key: String): Int throws NotFound {
       if (key == "a") { return 1; }
@@ -42,13 +45,13 @@ type made among the thrown one's arguments has none. One with a
 constructor of its own, a defaulted parameter, and a parameter named
 `cause` takes it the same way:
 
-    export class Wrapped(public label: String, public first: Wrapped?) extends Error {}
+    export class Wrapped(public label: String, public first: Wrapped?) extends CsharpFailuresError {}
 
     export let wrapLookup(name: String): Int throws Wrapped {
       lookup(name) catch { throw new Wrapped("outer", new Wrapped("inner", null)); }
     }
 
-    export class Retry extends Error {
+    export class Retry extends CsharpFailuresError {
       public reason: String;
       public tries: Int;
       public constructor(cause: String, tries: Int = 1) {
