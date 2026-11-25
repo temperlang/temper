@@ -27,10 +27,12 @@ final class Rect implements Shape {
     }
 
     public static Rect decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) {
-        JsonObject obj = Core.cast(JsonObject.class, t);
-        JsonNumeric widthJson = Core.cast(JsonNumeric.class, obj.propertyValueOrBubble("width"));
+        JsonObject obj = t instanceof JsonObject ? (JsonObject) t : Core.throwBubble();
+        JsonSyntaxTree widthTree = obj.propertyValueOrBubble("width");
+        JsonNumeric widthJson = widthTree instanceof JsonNumeric ? (JsonNumeric) widthTree : Core.throwBubble();
         int width = widthJson.asInt32();
-        JsonNumeric heightJson = Core.cast(JsonNumeric.class, obj.propertyValueOrBubble("height"));
+        JsonSyntaxTree heightTree = obj.propertyValueOrBubble("height");
+        JsonNumeric heightJson = heightTree instanceof JsonNumeric ? (JsonNumeric) heightTree : Core.throwBubble();
         int height = heightJson.asInt32();
         return new Rect(width, height);
     }

@@ -27,10 +27,12 @@ final class Point {
     }
 
     public static Point decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) {
-        JsonObject obj = Core.cast(JsonObject.class, t);
-        JsonNumeric xJson = Core.cast(JsonNumeric.class, obj.propertyValueOrBubble("x"));
+        JsonObject obj = t instanceof JsonObject ? (JsonObject) t : Core.throwBubble();
+        JsonSyntaxTree xTree = obj.propertyValueOrBubble("x");
+        JsonNumeric xJson = xTree instanceof JsonNumeric ? (JsonNumeric) xTree : Core.throwBubble();
         int x = xJson.asInt32();
-        JsonNumeric yJson = Core.cast(JsonNumeric.class, obj.propertyValueOrBubble("y"));
+        JsonSyntaxTree yTree = obj.propertyValueOrBubble("y");
+        JsonNumeric yJson = yTree instanceof JsonNumeric ? (JsonNumeric) yTree : Core.throwBubble();
         int y = yJson.asInt32();
         return new Point(x, y);
     }

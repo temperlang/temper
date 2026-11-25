@@ -27,15 +27,7 @@ end
 
 ---@param instance specific.AlphaInterface
 local function checkB(instance)
-  ---@type string
-  local t
-  if not temper.pcall(function()
-    temper.cast_to(instance, BravoClass)
-    t = "yep"
-  end) then
-    t = "nope"
-  end
-  print(t)
+  print(temper.instance_of(instance, BravoClass) and "yep" or "nope")
 end
 
 ---@param instance specific.AlphaInterface

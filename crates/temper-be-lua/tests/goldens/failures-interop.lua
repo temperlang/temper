@@ -227,6 +227,16 @@ local function signName(e)
   end
 end
 
+---@param n integer
+---@return integer
+local function nonzero(n)
+  if n == 0 then
+    return temper.bubble()
+  else
+    return n
+  end
+end
+
 ---@param key string
 ---@param n integer
 ---@return integer
@@ -234,7 +244,7 @@ local function mixed(key, n)
   ---@type integer
   local t_1
   if not temper.catch(function()
-    t_1 = temper.int32_add(lookup(key), temper.int32_div(10, n))
+    t_1 = temper.int32_add(lookup(key), temper.int32_div(10, nonzero(n)))
   end, temper.Bubble, NotFound) then
     t_1 = -1
   end

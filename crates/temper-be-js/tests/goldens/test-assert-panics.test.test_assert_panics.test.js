@@ -1,4 +1,14 @@
-import { bubble, endTest, isBubble, listedGet, panic } from "@temperlang/core";
+import {
+  bubble,
+  divIntInt,
+  endTest,
+  isBubble,
+  listedGet,
+  modInt64,
+  panic,
+  requireInstanceOf,
+  type,
+} from "@temperlang/core";
 import { it } from "node:test";
 import { Test } from "@temperlang/std/testing";
 
@@ -13,6 +23,38 @@ function at(ls, i) {
   }
   return listedGet(/** @type {number[]} */ (ls), i);
 }
+
+/**
+ * @param {number} a
+ * @param {number} b
+ * @returns {number}
+ */
+function divide(a, b) {
+  return divIntInt(a, b);
+}
+
+/**
+ * @param {bigint} a
+ * @param {bigint} b
+ * @returns {bigint}
+ */
+function remainder(a, b) {
+  return modInt64(a, b);
+}
+
+/**
+ * @param {Shape} s
+ * @returns {Square}
+ */
+function squared(s) {
+  return requireInstanceOf(s, Square);
+}
+
+class Shape extends type() {}
+
+class Square extends type(Shape) {}
+
+class Circle extends type(Shape) {}
 
 it("passes before", async function () {
   const test = new Test();
@@ -43,6 +85,36 @@ it("passes when the block panics", async function () {
       panic();
     }
     test.assertPanics(fn2);
+  } catch (e) {
+    failure = e;
+    throw e;
+  } finally {
+    await endTest(test, failure);
+  }
+});
+
+it("passes when division by zero or a cast panics", async function () {
+  const test = new Test();
+  let failure;
+  try {
+    function fn() {
+      divide(1, 0);
+    }
+    test.assertPanics(fn);
+    function fn2() {
+      remainder(1n, 0n);
+    }
+    test.assertPanics(fn2);
+    function fn3() {
+      squared(new Circle());
+    }
+    test.assertPanics(fn3);
+    squared(new Square());
+    {
+      const actual = divide(-7, 2);
+      const expected = -3;
+      test.assert(actual === expected, () => `expected divide(-7, 2) == (${expected}) not (${actual})`);
+    }
   } catch (e) {
     failure = e;
     throw e;

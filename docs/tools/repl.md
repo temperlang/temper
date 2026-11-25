@@ -119,6 +119,7 @@ and a later read of it fails, saying why:
 
 ```console
 $ let half = 1 / 0
+Panicked: division by zero
 interactive#2: fail
 $ half + 1
 Failed: half has no value: interactive#2 failed

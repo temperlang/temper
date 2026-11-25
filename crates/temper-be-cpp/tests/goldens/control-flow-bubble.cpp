@@ -48,14 +48,7 @@ static void report(core::NullableParam<core::Str> x) {
   }
   core::Str suffix;
   try {
-    int32_t value;
-    try {
-      core::not_null(x);
-      value = 1;
-    } catch (core::TemperBubble const &) {
-      value = 0;
-    }
-    suffix = std::to_string(bubble::more(value));
+    suffix = std::to_string(bubble::more(x != nullptr ? 1 : 0));
   } catch (core::TemperBubble const &) {
     suffix = core::Str();
   }

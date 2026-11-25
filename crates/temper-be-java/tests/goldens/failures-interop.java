@@ -103,9 +103,17 @@ public final class FailuresInteropGlobal {
         }
     }
 
+    static int nonzero(int n) {
+        if (n == 0) {
+            throw Core.bubble();
+        } else {
+            return n;
+        }
+    }
+
     public static int mixed(String key, int n) {
         try {
-            return lookup(key) + Core.divIntInt(10, n);
+            return lookup(key) + 10 / nonzero(n);
         } catch (Bubble | NotFound ignored) {
             return -1;
         }

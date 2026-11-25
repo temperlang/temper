@@ -105,7 +105,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 temper_core::is::<Square>(q.clone()),
                 temper_core::is::<Square>(s.clone())
             );
-            let sq = temper_core::cast::<Square>(q.clone()).ok_or_else(temper_core::Error::new)?;
+            let sq = temper_core::cast::<Square>(q.clone()).unwrap();
             println!("{}", sq.area());
             if temper_core::is::<Rect>(s.clone()) {
                 println!("{}", temper_core::cast::<Rect>(s.clone()).unwrap().0.w);

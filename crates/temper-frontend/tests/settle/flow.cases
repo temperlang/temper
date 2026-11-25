@@ -675,13 +675,10 @@ error 1675..1678: Expected subtype of Int32, but got Int32?
 error 1698..1706: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32?, Int32]
 error 1735..1741: Expected subtype of Int32, but got Int32?
 error 1790..1793: Expected subtype of Int32, but got Int32?
-error 1842..1850: Cannot bubble from a function without Bubble in its return type
-error 1892..1900: Cannot bubble from a function without Bubble in its return type
 error 2303..2304: Expected subtype of Int32, but got Int32?
 error 2350..2351: Expected subtype of Int32, but got Int32?
 error 2354..2355: Cannot assign to Int32 from Int32?
 error 2429..2430: Expected subtype of Int32, but got Int32?
-error 2468..2476: Cannot bubble from a function without Bubble in its return type
 error 2669..2670: Cannot assign to fn (Int32): Boolean from (fn (Int32): Boolean)?
 error 962..971: No member isEmpty in String?
 
@@ -1097,6 +1094,7 @@ error 1473..1474: Expected subtype of D, but got I
 // Kotlin also says where the paths that miss it are. An orelse's
 // fallback follows what may fail in its body, as the division, but not
 // the assignment of s.
+let d(a: Int, b: Int): Int throws Bubble { if (b == 0) { bubble() } else { a / b } }
 let maybe(b: Boolean): Int {
   let a, c;
   if (b) {
@@ -1124,7 +1122,7 @@ let loops(b: Boolean, xs: List<Int>): Int {
 }
 let failing(b: Boolean, n: Int): Int {
   let q;
-  let r = do { q = 10 / n; 0 } orelse 2;
+  let r = do { q = d(10, n); 0 } orelse 2;
   let s;
   (s = n) orelse panic();
   let t;
@@ -1147,85 +1145,93 @@ console.log("after");
 --- settled
 (Block
   (Let
-    ^maybe:0
+    ^d:0
     (Fn
-      (Let ^b:5 Boolean)
-      Int
-      (Block
-        (Let ^a:6)
-        (Let ^c:7)
-        (If b:5 (Block (Assign a:6 1) #void) (Block (Assign c:7 2) #void))
-        (Call + a:6 c:7))))
+      (Let ^a:6 Int)
+      (Let ^b:7 Int)
+      (Call throws Int Bubble)
+      (Block (If (Call == b:7 0) (Block (Fail)) (Block (Call / a:6 b:7))))))
   (Let
-    ^missingElse:1
+    ^maybe:1
     (Fn
       (Let ^b:8 Boolean)
-      Void
-      (Block
-        (Let ^x:9)
-        (If b:8 (Block (Assign x:9 1) #void) (Block))
-        (Call (Call . console \log) (Call (Call . x:9 \toString)))
-        #void)))
-  (Let
-    ^loops:2
-    (Fn
-      (Let ^b:10 Boolean)
-      (Let ^xs:11 (Call <> List Int))
       Int
       (Block
-        (Var ^w:12)
-        (Loop (If b:10 (Block (Assign w:12 1) #void) (Break @418)))
-        (Let ^y:13)
+        (Let ^a:9)
+        (Let ^c:10)
+        (If b:8 (Block (Assign a:9 1) #void) (Block (Assign c:10 2) #void))
+        (Call + a:9 c:10))))
+  (Let
+    ^missingElse:2
+    (Fn
+      (Let ^b:11 Boolean)
+      Void
+      (Block
+        (Let ^x:12)
+        (If b:11 (Block (Assign x:12 1) #void) (Block))
+        (Call (Call . console \log) (Call (Call . x:12 \toString)))
+        #void)))
+  (Let
+    ^loops:3
+    (Fn
+      (Let ^b:13 Boolean)
+      (Let ^xs:14 (Call <> List Int))
+      Int
+      (Block
+        (Var ^w:15)
+        (Loop (If b:13 (Block (Assign w:15 1) #void) (Break @503)))
+        (Let ^y:16)
         (Loop
           (Block
             (Call
-              (Call . xs:11 \forEach)
-              (Fn (Let ^x:15) (Block (Assign y:13 x:15) #void)))
-            (Break @450)))
-        (Var ^z:14)
-        (Assign z:14 (Call + z:14 1))
-        (Call + (Call + w:12 y:13) z:14))))
+              (Call . xs:14 \forEach)
+              (Fn (Let ^x:18) (Block (Assign y:16 x:18) #void)))
+            (Break @535)))
+        (Var ^z:17)
+        (Assign z:17 (Call + z:17 1))
+        (Call + (Call + w:15 y:16) z:17))))
   (Let
-    ^failing:3
+    ^failing:4
     (Fn
-      (Let ^b:16 Boolean)
-      (Let ^n:17 Int)
+      (Let ^b:19 Boolean)
+      (Let ^n:20 Int)
       Int
       (Block
-        (Let ^q:18)
-        (Let ^r:19 (Orelse (Block (Assign q:18 (Call / 10 n:17)) 0) 2))
-        (Let ^s:20)
-        (Orelse (Assign s:20 n:17) (Call panic))
-        (Let ^t:21)
-        (Block (If (Call == b:16 true) (Assign t:21 1) (Block)))
-        (Call + (Call + (Call + q:18 r:19) s:20) t:21))))
+        (Let ^q:21)
+        (Let ^r:22 (Orelse (Block (Assign q:21 (Call d:0 10 n:20)) 0) 2))
+        (Let ^s:23)
+        (Orelse (Assign s:23 n:20) (Call panic))
+        (Let ^t:24)
+        (Block (If (Call == b:19 true) (Assign t:24 1) (Block)))
+        (Call + (Call + (Call + q:21 r:22) s:23) t:24))))
   (Let
-    ^once:4
+    ^once:5
     (Fn
-      (Let ^b:22 Boolean)
+      (Let ^b:25 Boolean)
       Int
       (Block
-        (Let ^u:23)
-        (If b:22 (Block (Assign u:23 1) #void) (Block))
-        (Let ^f:24 (Fn Int (Block u:23)))
-        (Let ^g:25 (Fn Int (Block (Let ^v:26) v:26)))
-        (Call + (Call + (Call + u:23 u:23) (Call f:24)) (Call g:25)))))
-  (Call (Call . console \log) (Call (Call . (Call maybe:0 true) \toString)))
+        (Let ^u:26)
+        (If b:25 (Block (Assign u:26 1) #void) (Block))
+        (Let ^f:27 (Fn Int (Block u:26)))
+        (Let ^g:28 (Fn Int (Block (Let ^v:29) v:29)))
+        (Call + (Call + (Call + u:26 u:26) (Call f:27)) (Call g:28)))))
+  (Call (Call . console \log) (Call (Call . (Call maybe:1 true) \toString)))
   (Call (Call . console \log) "after")
   #void)
-error 253..254: a is not initialized along branches
-error 257..258: c is not initialized along branches
-error 346..347: x is not initialized along branches
-error 490..491: z is not initialized along branches
-error 500..501: w is not initialized along branches
-error 504..505: y is not initialized along branches
-error 683..684: q is not initialized along branches
-error 695..696: t is not initialized along branches
-error 927..928: v is not initialized along branches
-error 934..935: u is not initialized along branches
+error 338..339: a is not initialized along branches
+error 342..343: c is not initialized along branches
+error 431..432: x is not initialized along branches
+error 575..576: z is not initialized along branches
+error 585..586: w is not initialized along branches
+error 589..590: y is not initialized along branches
+error 770..771: q is not initialized along branches
+error 782..783: t is not initialized along branches
+error 1014..1015: v is not initialized along branches
+error 1021..1022: u is not initialized along branches
 Failed: a is not initialized along branches
 
 === locals assigned on every path, as Kotlin Temper's UseBeforeInit accepts them
+let d(a: Int, b: Int): Int throws Bubble { if (b == 0) { bubble() } else { a / b } }
 let branches(b: Boolean): Int {
   let x;
   if (b) { x = 1; } else { x = 2; }
@@ -1261,9 +1267,9 @@ let loops(b: Boolean): Int {
 }
 let failing(n: Int): Int {
   let q;
-  do { q = 10 / n; } orelse do { q = 2; }
+  do { q = d(10, n); } orelse do { q = 2; }
   let r;
-  do { r = 4 / 2; } orelse panic();
+  do { r = d(4, 2); } orelse panic();
   q + r
 }
 let later(): Int {
@@ -1278,99 +1284,106 @@ console.log("${x} ${branches(true)} ${loops(true)} ${failing(0)} ${later()} ${bu
 --- settled
 (Block
   (Let
-    ^branches:0
+    ^d:0
     (Fn
-      (Let ^b:6 Boolean)
+      (Let ^a:7 Int)
+      (Let ^b:8 Int)
+      (Call throws Int Bubble)
+      (Block (If (Call == b:8 0) (Block (Fail)) (Block (Call / a:7 b:8))))))
+  (Let
+    ^branches:1
+    (Fn
+      (Let ^b:9 Boolean)
       Int
       (Block
-        (Let ^x:7)
-        (If b:6 (Block (Assign x:7 1) #void) (Block (Assign x:7 2) #void))
-        (Let ^y:8)
-        (If b:6 (Block (Assign y:8 1) #void) (Block (Return @0 0) #void))
-        (Let ^z:9)
-        (Block (If (Call == b:6 true) (Assign z:9 1) (Assign z:9 2)))
-        (Let ^u:10)
-        (If b:6 (Block (Assign u:10 1) #void) (Block (Call panic) #void))
-        (Call + (Call + (Call + x:7 y:8) z:9) u:10))))
+        (Let ^x:10)
+        (If b:9 (Block (Assign x:10 1) #void) (Block (Assign x:10 2) #void))
+        (Let ^y:11)
+        (If b:9 (Block (Assign y:11 1) #void) (Block (Return @85 0) #void))
+        (Let ^z:12)
+        (Block (If (Call == b:9 true) (Assign z:12 1) (Assign z:12 2)))
+        (Let ^u:13)
+        (If b:9 (Block (Assign u:13 1) #void) (Block (Call panic) #void))
+        (Call + (Call + (Call + x:10 y:11) z:12) u:13))))
   (Let
-    ^bubbles:1
+    ^bubbles:2
     (Fn
-      (Let ^b:11 Boolean)
+      (Let ^b:14 Boolean)
       (Call throws Int Bubble)
       (Block
-        (Let ^v:12)
-        (If b:11 (Block (Assign v:12 1) #void) (Block (Fail) #void))
-        v:12)))
+        (Let ^v:15)
+        (If b:14 (Block (Assign v:15 1) #void) (Block (Fail) #void))
+        v:15)))
   (Let
-    ^loops:2
+    ^loops:3
     (Fn
-      (Let ^b:13 Boolean)
+      (Let ^b:16 Boolean)
       Int
       (Block
-        (Let ^x:14)
+        (Let ^x:17)
         (Loop
-          (Block (Assign x:14 3) #void)
-          (If (Call < x:14 2) (Block) (Break @393)))
-        (Var ^w:15)
-        (Loop (If true (Block (Assign w:15 1) (Break @433) #void) (Break @433)))
-        (Var ^n:16)
+          (Block (Assign x:17 3) #void)
+          (If (Call < x:17 2) (Block) (Break @478)))
+        (Var ^w:18)
+        (Loop (If true (Block (Assign w:18 1) (Break @518) #void) (Break @518)))
+        (Var ^n:19)
         (Block
           (Loop
-            (Block (If b:13 (Block (Assign n:16 1) (Break @475) #void) (Block)))))
-        (Let ^k:17)
+            (Block (If b:16 (Block (Assign n:19 1) (Break @560) #void) (Block)))))
+        (Let ^k:20)
         (Block
-          (Var ^i:18 0)
+          (Var ^i:21 0)
           (Loop
             (If
-              (Call < i:18 3)
+              (Call < i:21 3)
               (Block
-                (If (Call == i:18 1) (Block (Continue @524) #void) (Block)))
-              (Break @524))
-            (Assign i:18 (Call + i:18 1))))
-        (Assign k:17 4)
-        (Call + (Call + (Call + x:14 w:15) n:16) k:17))))
+                (If (Call == i:21 1) (Block (Continue @609) #void) (Block)))
+              (Break @609))
+            (Assign i:21 (Call + i:21 1))))
+        (Assign k:20 4)
+        (Call + (Call + (Call + x:17 w:18) n:19) k:20))))
   (Let
-    ^failing:3
+    ^failing:4
     (Fn
-      (Let ^n:19 Int)
+      (Let ^n:22 Int)
       Int
       (Block
-        (Let ^q:20)
+        (Let ^q:23)
         (Orelse
-          (Block (Assign q:20 (Call / 10 n:19)) #void)
-          (Block (Assign q:20 2) #void))
-        (Let ^r:21)
-        (Orelse (Block (Assign r:21 (Call / 4 2)) #void) (Call panic))
-        (Call + q:20 r:21))))
+          (Block (Assign q:23 (Call d:0 10 n:22)) #void)
+          (Block (Assign q:23 2) #void))
+        (Let ^r:24)
+        (Orelse (Block (Assign r:24 (Call d:0 4 2)) #void) (Call panic))
+        (Call + q:23 r:24))))
   (Let
-    ^later:4
+    ^later:5
     (Fn
       Int
       (Block
-        (Let ^x:22)
-        (Let ^f:23 (Fn Int (Block x:22)))
-        (Assign x:22 1)
-        (Call f:23))))
-  (Let ^x:5)
+        (Let ^x:25)
+        (Let ^f:26 (Fn Int (Block x:25)))
+        (Assign x:25 1)
+        (Call f:26))))
+  (Let ^x:6)
   (If
-    (Call > (Call branches:0 true) 0)
-    (Block (Assign x:5 1) #void)
-    (Block (Assign x:5 2) #void))
+    (Call > (Call branches:1 true) 0)
+    (Block (Assign x:6 1) #void)
+    (Block (Assign x:6 2) #void))
   (Call
     (Call . console \log)
     (Call
       cat
-      x:5
+      x:6
       " "
-      (Call branches:0 true)
+      (Call branches:1 true)
       " "
-      (Call loops:2 true)
+      (Call loops:3 true)
       " "
-      (Call failing:3 0)
+      (Call failing:4 0)
       " "
-      (Call later:4)
+      (Call later:5)
       " "
-      (Orelse (Call bubbles:1 true) 0)))
+      (Orelse (Call bubbles:2 true) 0)))
   #void)
 log 1 4 9 4 1 1
 

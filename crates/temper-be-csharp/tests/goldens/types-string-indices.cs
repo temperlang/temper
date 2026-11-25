@@ -67,29 +67,13 @@ public static class IndicesGlobal
     internal static bool Has3(string s, int c)
     {
         int i = IndexOfChar(s, c);
-        try
-        {
-            StringUtil.RequireStringIndex(i);
-            return true;
-        }
-        catch (global::TemperLang.Core.Bubble)
-        {
-            return false;
-        }
+        return i >= 0;
     }
 
     internal static bool Has4(string s, int c)
     {
         int i = IndexOfChar(s, c);
-        try
-        {
-            StringUtil.RequireNoStringIndex(i);
-            return false;
-        }
-        catch (global::TemperLang.Core.Bubble)
-        {
-            return true;
-        }
+        return i >= 0;
     }
 
     static IndicesGlobal()

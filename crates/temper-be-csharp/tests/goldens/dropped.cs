@@ -54,7 +54,7 @@ public static class DroppedGlobal
         int t1;
         try
         {
-            t1 = Go(l, true, 0);
+            t1 = Go(l, true, 2);
         }
         catch (global::TemperLang.Core.Bubble)
         {

@@ -52,7 +52,9 @@ void global_init_init() {
     core::Console::log(console, std::to_string(core::Int::mul(-7, one) >> 1) + " " + std::to_string(core::Int::ushr(core::Int::mul(-7, one), 28)) + " " + std::to_string(core::Int::shl(one, 33)) + " " + std::to_string(~one) + " " + std::to_string(5 & 3) + " " + std::to_string(5 | 3) + " " + std::to_string(5 ^ 3));
     core::Console::log(console, std::to_string(core::Compare::cmp(3, 5)) + " " + std::to_string(core::Compare::cmp(TEMPER_STR("b"), TEMPER_STR("a"))));
     core::Console::log(console, same(true, true) + " " + same(true, false) + " " + same(false, true));
-    core::Console::log(console, std::to_string(quot(-7, 2)) + " " + std::to_string(rem(-7, 2)) + " " + std::to_string(quot(small, -1)));
+    int32_t int32 = quot(-7, 2);
+    int32_t value = rem(-7, 2);
+    core::Console::log(console, std::to_string(int32) + " " + std::to_string(value) + " " + std::to_string(quot(small, -1)));
     core::Console::log(console, operators::words(TEMPER_STR("apple"), TEMPER_STR("banana")));
     core::Console::log(console, operators::words(TEMPER_STR("pear"), TEMPER_STR("pear")));
     core::Console::log(console, operators::words(TEMPER_STR("zoo"), TEMPER_STR("yak")));

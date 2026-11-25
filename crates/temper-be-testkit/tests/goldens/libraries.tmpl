@@ -165,7 +165,7 @@ module libraries#0 {
   }
 
   fn rows#110(values#191: List#34<Float64>, ncols#192: Int32): Int32 {
-    return (orelse(%Int32.div(values#191.length#193(), ncols#192)^, (panic()): Int32)): Int32;
+    return %Int32.div(values#191.length#193(), ncols#192);
   }
 
   fn scaled#111(grid#194: Grid#1): Grid#1 throws Bubble {
@@ -192,13 +192,13 @@ module libraries#0 {
   fn total#114(values#205: List#34<Float64>): Float64 {
     var sum#206: Float64 = 0.0;
     each#113(values#205, (fn ~fn#207(x#208: Float64): Void [sum#206] {
-      (orelse((value { let part#209: Float64 = %Float64.div(x#208, 2.0)^; sum#206 = %Float64.add(sum#206, part#209); void }): Void, (panic()): Void)): Void;
+      (value { let part#209: Float64 = %Float64.div(x#208, 2.0); sum#206 = %Float64.add(sum#206, part#209); void }): Void;
     }): fn (Float64): Void);
     return sum#206;
   }
 
   fn half#115(x#210: Float64): Float64 {
-    return (orelse(%Float64.div(x#210, 2.0)^, (panic()): Float64)): Float64;
+    return %Float64.div(x#210, 2.0);
   }
 
   fn cube#116(x#211: Float64): Float64 {

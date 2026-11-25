@@ -6,7 +6,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
 }
 
 pub fn share(n: i32, d: i32) -> i32 {
-    temper_core::int_div(n, d).unwrap_or(0)
+    n.wrapping_div(d)
 }
 
 struct RatioStruct {

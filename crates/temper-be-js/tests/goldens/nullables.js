@@ -199,7 +199,7 @@ console.log(firstWord("") ?? "nothing");
 console.log(`${same(null, null)} ${same("a", null)} ${same(null, "a")} ${same("a", "a")}`);
 console.log(`${sameInt(1, 2)} ${sameInt(3, 3)} ${sameInt(null, 3)}`);
 console.log(`${parse("12")} ${parse("x")}`);
-console.log(`${halved("12", 2)} ${halved("x", 2)} ${halved("12", 0)}`);
+console.log(`${halved("12", 2)} ${halved("x", 2)}`);
 console.log(checked(7).toString());
 console.log(`${orZero(null)} ${orZero(5)}`);
 varying();

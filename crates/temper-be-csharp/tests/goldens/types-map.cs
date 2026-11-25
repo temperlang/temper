@@ -71,7 +71,7 @@ public static class MapGlobal
         console.Log("Codes: " + Listed.Join(ListKeys(messages), " ", (int it) => it.ToString(CultureInfo.InvariantCulture)));
         console.Log("Again: " + Listed.Join(Mapped.Keys(messages), " ", (int it) => it.ToString(CultureInfo.InvariantCulture)));
         console.Log("Messages: " + Listed.Join(Mapped.Values(messages), ", ", (string it) => it));
-        IReadOnlyList<int> groups = Mapped.ToListWith(messages, (int key, string value) => Core.DivSafe(key, 100));
+        IReadOnlyList<int> groups = Mapped.ToListWith(messages, (int key, string value) => Core.Div(key, 100));
         console.Log("Groups: " + Listed.Join(groups, " ", (int it) => it.ToString(CultureInfo.InvariantCulture)));
         IReadOnlyDictionary<string, IReadOnlyList<string>> neighbors;
         IDictionary<string, IReadOnlyList<string>> builder2 = new TemperLang.Core.OrderedDictionary<string, IReadOnlyList<string>>();

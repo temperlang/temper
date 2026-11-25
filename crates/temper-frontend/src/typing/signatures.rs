@@ -23,7 +23,7 @@ use crate::library::{Level, Message};
 use crate::scope::SymbolKind;
 use crate::settle::{Fact, Settle};
 use crate::types::{
-    BOOLEAN, BUBBLE, FLOAT64, INT32, INT64, NEVER, NULL, STRING, TypeData, TypeId, UNKNOWN, VOID,
+    BOOLEAN, FLOAT64, INT32, INT64, NEVER, NULL, STRING, TypeData, TypeId, UNKNOWN, VOID,
 };
 use temper_syntax::ast::Value;
 use temper_syntax::tree::{NodeId, NodeKind, Span};
@@ -47,14 +47,6 @@ const fn sig(params: &'static [TypeId], pass: TypeId) -> Sig {
     }
 }
 
-const fn bubbly(params: &'static [TypeId], pass: TypeId) -> Sig {
-    Sig {
-        params,
-        pass,
-        fail: BUBBLE,
-    }
-}
-
 const ARITH: &[Sig] = &[
     sig(&[INT32, INT32], INT32),
     sig(&[INT64, INT64], INT64),
@@ -64,11 +56,6 @@ const NEGATE: &[Sig] = &[
     sig(&[INT32], INT32),
     sig(&[INT64], INT64),
     sig(&[FLOAT64], FLOAT64),
-];
-const DIVIDE: &[Sig] = &[
-    bubbly(&[INT32, INT32], INT32),
-    bubbly(&[INT64, INT64], INT64),
-    bubbly(&[FLOAT64, FLOAT64], FLOAT64),
 ];
 // `&` has a third variant, for intersection types, which no value fits.
 const BITS: &[Sig] = &[sig(&[INT32, INT32], INT32), sig(&[INT64, INT64], INT64)];
@@ -120,8 +107,7 @@ pub(super) fn variants(f: Function, arity: usize) -> &'static [Sig] {
     use Function::*;
     match (f, arity) {
         (Add | Sub, 1) => NEGATE,
-        (Add | Sub | Mul, 2) => ARITH,
-        (Div | Mod, 2) => DIVIDE,
+        (Add | Sub | Mul | Div | Mod, 2) => ARITH,
         (BitAnd | BitOr | BitXor, 2) => BITS,
         (BitNot, 1) => BIT_NOT,
         (Shl | Shr | UShr, 2) => SHIFT,

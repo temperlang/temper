@@ -178,9 +178,16 @@ def sign_name(e: SignError, /) -> str:
         raise BaseException('panic')
 
 
+def _nonzero(n: int, /) -> int:
+    if n == 0:
+        raise _Bubble()
+    else:
+        return n
+
+
 def mixed(key: str, n: int, /) -> int:
     try:
-        return _int_add(lookup(key), _int_div(10, n))
+        return _int_add(lookup(key), _int_div(10, _nonzero(n)))
     except (_Bubble, NotFound):
         return -1
 

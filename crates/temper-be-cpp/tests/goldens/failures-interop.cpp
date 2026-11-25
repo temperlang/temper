@@ -245,12 +245,21 @@ core::Str signName(std::shared_ptr<SignError> const & e) {
   }
 }
 
+static int32_t nonzero(int32_t n) {
+  if (n == 0) {
+    core::bubble();
+  } else {
+    return n;
+  }
+}
+
 int32_t mixed(core::Str const & key, int32_t n) {
   global_init_init();
   try {
     auto lookupResult = failures_interop::lookup(key);
     if (lookupResult.has_value()) {
-      return core::Int::add(*lookupResult, core::Int::div_wrap(10, n));
+      int32_t int32 = *lookupResult;
+      return core::Int::add(int32, core::Int::div_wrap(10, nonzero(n)));
     } else {
       core::bubble();
     }
@@ -340,12 +349,14 @@ void global_init_init() {
       core::uncaught_failure(settingResult.error());
     }
     core::Console::log(console, std::to_string(*lookupResult) + " " + std::to_string(*signResult) + " " + std::to_string(*settingResult));
-    core::Console::log(console, std::to_string(failures_interop::mixed(TEMPER_STR("a"), 0)) + " " + std::to_string(failures_interop::mixed(TEMPER_STR("z"), 1)) + " " + std::to_string(failures_interop::mixed(TEMPER_STR("a"), 5)));
+    int32_t int32 = failures_interop::mixed(TEMPER_STR("a"), 0);
+    int32_t value = failures_interop::mixed(TEMPER_STR("z"), 1);
+    core::Console::log(console, std::to_string(int32) + " " + std::to_string(value) + " " + std::to_string(failures_interop::mixed(TEMPER_STR("a"), 5)));
     core::Str string = failures_interop::explained(TEMPER_STR("port"));
-    core::Str value = failures_interop::explained(TEMPER_STR("a"));
-    core::Console::log(console, string + "; " + value + "; " + failures_interop::signMessage(TEMPER_STR("x")));
-    core::Str value2 = failures_interop::earlyCause(TEMPER_STR("soon"));
-    core::Console::log(console, value2 + "; " + failures_interop::firstMissing(core::List::make<core::Str>(TEMPER_STR("a"), TEMPER_STR("b"), TEMPER_STR("c"))) + " " + failures_interop::firstMissing(core::List::make<core::Str>(TEMPER_STR("a"))));
+    core::Str value2 = failures_interop::explained(TEMPER_STR("a"));
+    core::Console::log(console, string + "; " + value2 + "; " + failures_interop::signMessage(TEMPER_STR("x")));
+    core::Str value3 = failures_interop::earlyCause(TEMPER_STR("soon"));
+    core::Console::log(console, value3 + "; " + failures_interop::firstMissing(core::List::make<core::Str>(TEMPER_STR("a"), TEMPER_STR("b"), TEMPER_STR("c"))) + " " + failures_interop::firstMissing(core::List::make<core::Str>(TEMPER_STR("a"))));
     core::Console::log(console, failures_interop::firstSign(core::List::make<core::Str>(core::Str(), TEMPER_STR("+"))) + " " + failures_interop::firstSign(core::List::make<core::Str>(core::Str(), TEMPER_STR("?"))) + " " + failures_interop::firstSign(core::List::make<core::Str>()));
   });
 }

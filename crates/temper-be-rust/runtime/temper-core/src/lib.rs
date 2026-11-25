@@ -687,43 +687,11 @@ pub(crate) struct Caught {
 
 // Int
 
-pub fn int_div(a: i32, b: i32) -> Result<i32> {
-    if b == 0 {
-        // We want explicit errors for 0 but not for min / -1.
-        return Err(Error::new());
-    }
-    Ok(a.wrapping_div(b))
-}
-
-pub fn int_rem(a: i32, b: i32) -> Result<i32> {
-    if b == 0 {
-        // We want explicit errors for 0 but not for min % -1.
-        return Err(Error::new());
-    }
-    Ok(a.wrapping_rem(b))
-}
-
 pub fn int_to_string(i: i32, radix: Option<i32>) -> Arc<String> {
     int64_to_string(i as i64, radix)
 }
 
 // Int64
-
-pub fn int64_div(a: i64, b: i64) -> Result<i64> {
-    if b == 0 {
-        // We want explicit errors for 0 but not for min / -1.
-        return Err(Error::new());
-    }
-    Ok(a.wrapping_div(b))
-}
-
-pub fn int64_rem(a: i64, b: i64) -> Result<i64> {
-    if b == 0 {
-        // We want explicit errors for 0 but not for min % -1.
-        return Err(Error::new());
-    }
-    Ok(a.wrapping_rem(b))
-}
 
 const MANTISSA_MAX_I64: i64 = 1i64 << 53;
 

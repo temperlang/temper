@@ -105,7 +105,7 @@ given node:
 
 ```temper
 $ walk(parent) { node: Node<String>, parent: Node<String>? =>
-    let extra = " under ${(parent as Node<String>).value}" orelse "";
+    let extra = if (parent != null) { " under ${parent.value}" } else { "" };
     console.log("${node.value}${extra}");
   }
 parent

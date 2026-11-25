@@ -557,11 +557,7 @@ static std::shared_ptr<std::vector<int32_t>> sizes(std::shared_ptr<Shape> const 
 }
 
 static int32_t rows(std::shared_ptr<std::vector<double>> const & values, int32_t ncols) {
-  try {
-    return core::Int::div_wrap(core::List::length<double>(values), ncols);
-  } catch (core::TemperBubble const &) {
-    core::panic();
-  }
+  return core::Int::div_wrap(core::List::length<double>(values), ncols);
 }
 
 static std::shared_ptr<Grid> scaled(std::shared_ptr<Grid> const & grid) {
@@ -592,16 +588,16 @@ static void each(std::shared_ptr<std::vector<double>> const & values, std::funct
 
 static double total(std::shared_ptr<std::vector<double>> const & values) {
   std::shared_ptr<double> sum = std::make_shared<double>(0.0);
-  libraries::each(values, [=](double x) -> void { try { double part = x / 2.0; *sum = (*sum) + part; } catch (core::TemperBubble const &) { core::panic(); } });
+  auto fn = [=](double x) -> void {
+    double part = x / 2.0;
+    *sum = (*sum) + part;
+  };
+  libraries::each(values, fn);
   return (*sum);
 }
 
 static double half(double x) {
-  try {
-    return x / 2.0;
-  } catch (core::TemperBubble const &) {
-    core::panic();
-  }
+  return x / 2.0;
 }
 
 static double cube(double x) {
@@ -931,8 +927,7 @@ void global_init_init() {
     temper_globals::ticks.value = 0;
     temper_globals::extras.value = core::List::make<int32_t>(1);
     std::shared_ptr<Grid> grid = Grid::make(2, core::List::make<double>(1.0, 2.0, 3.0, 4.0));
-    int32_t value2 = libraries::rows(grid->values, 2);
-    core::Console::log(console, std::to_string(value2) + " " + core::Float64::toString(half(3.0)) + " " + core::Float64::toString(cube(8.0)));
+    core::Console::log(console, std::to_string(libraries::rows(grid->values, 2)) + " " + core::Float64::toString(half(3.0)) + " " + core::Float64::toString(cube(8.0)));
     core::Console::log(console, core::Float64::toString(libraries::corner(grid)));
     core::Console::log(console, core::Float64::toString(libraries::total(grid->values)));
     core::NullableParam<core::Str> none = text(0);
@@ -951,21 +946,21 @@ void global_init_init() {
     std::shared_ptr<Casing> left3 = casing(0);
     std::shared_ptr<Casing> right = casing(0);
     core::Console::log(console, core::Boolean::toString(left == nullptr ? false : left->eq(Casing::temper_statics::first.value)) + " " + core::Boolean::toString(left2 == nullptr ? false : left2->eq(Casing::temper_statics::first.value)) + " " + core::Boolean::toString(!(left3 == nullptr ? right == nullptr : right == nullptr ? false : left3->eq(right))));
-    core::Str value3 = libraries::captured(core::Str());
-    core::Console::log(console, value3 + " " + libraries::captured(TEMPER_STR("2.5")));
+    core::Str value2 = libraries::captured(core::Str());
+    core::Console::log(console, value2 + " " + libraries::captured(TEMPER_STR("2.5")));
     core::Console::log(console, core::Boolean::toString(bidi() != TEMPER_STR("lookout")));
     core::Console::log(console, std::to_string(core::Compare::cmp(word(1), word(2))) + " " + std::to_string(core::Compare::cmp(word(2), word(1))) + " " + std::to_string(core::Compare::cmp(word(2), word(3))));
     core::Str named = word(2);
     core::Console::log(console, core::Boolean::toString(named == word(3) && named + "!" != named));
     std::shared_ptr<std::vector<int32_t>> digits = core::List::make<int32_t>(1, 2, 4, 3);
     core::Console::log(console, std::to_string(libraries::byteAt(digits, true, 1)) + " " + std::to_string(libraries::byteAt(digits, false, 0)) + " " + core::Boolean::toString(libraries::ascending(digits)) + " " + std::to_string(libraries::firstDrop(digits)) + " " + std::to_string(libraries::sizeWith<int32_t>(digits)));
-    int32_t value4 = tickIf(true);
-    int32_t value5 = tickIf(false);
-    bool value6 = ticked();
-    core::Console::log(console, std::to_string(value4) + " " + std::to_string(value5) + " " + core::Boolean::toString(value6) + " " + std::to_string(tickWhile()));
-    core::Str value7 = libraries::shapeName(shapeOf(1));
-    core::Str value8 = libraries::shapeName(shapeOf(2));
-    core::Str string = value7 + " " + value8 + " " + std::to_string(core::List::length<int32_t>(libraries::sizes(shapeOf(1)))) + " " + std::to_string(core::List::length<int32_t>(libraries::sizes(shapeOf(2)))) + " ";
+    int32_t value3 = tickIf(true);
+    int32_t value4 = tickIf(false);
+    bool value5 = ticked();
+    core::Console::log(console, std::to_string(value3) + " " + std::to_string(value4) + " " + core::Boolean::toString(value5) + " " + std::to_string(tickWhile()));
+    core::Str value6 = libraries::shapeName(shapeOf(1));
+    core::Str value7 = libraries::shapeName(shapeOf(2));
+    core::Str string = value6 + " " + value7 + " " + std::to_string(core::List::length<int32_t>(libraries::sizes(shapeOf(1)))) + " " + std::to_string(core::List::length<int32_t>(libraries::sizes(shapeOf(2)))) + " ";
     core::NullableParam<int32_t> part4 = Dot::make(1)->get_grown();
     core::NullableParam<int32_t> part5 = Dot::make(3)->get_grown();
     core::Console::log(console, string + (part4 == nullptr ? TEMPER_STR("null") : core::Str(std::to_string(part4.value))) + " " + (part5 == nullptr ? TEMPER_STR("null") : core::Str(std::to_string(part5.value))) + " " + Casing::temper_statics::last.value->toString() + " " + Casing::temper_statics::first.value->get_marked());
@@ -992,21 +987,21 @@ void global_init_init() {
     std::shared_ptr<Held<std::shared_ptr<Tag>>> subject3 = other->next;
     std::shared_ptr<Tag> subject2 = subject3 == nullptr ? nullptr : subject3->item;
     core::Console::log(console, string2 + (subject2 == nullptr ? Tag::make(TEMPER_STR("none")) : subject2)->toString() + " " + core::Boolean::toString(libraries::sameHeld<std::shared_ptr<Tag>>(held, held)) + " " + core::Boolean::toString(libraries::sameHeld<std::shared_ptr<Tag>>(held, other)) + " " + core::Boolean::toString(libraries::sameHeld<std::shared_ptr<Tag>>(nobody, nobody)) + " " + core::Boolean::toString(libraries::sameHeld<std::shared_ptr<Tag>>(nobody, held)));
-    core::Str value9 = libraries::effectsOf<int32_t>(TEMPER_STR("ab"), 1, 2);
-    core::Console::log(console, value9 + " " + Bundle<core::Str>::make(core::List::make<std::shared_ptr<Effect<core::Str>>>(), TEMPER_STR("2"))->first + " " + std::to_string(core::List::length<bool>(flags)));
+    core::Str value8 = libraries::effectsOf<int32_t>(TEMPER_STR("ab"), 1, 2);
+    core::Console::log(console, value8 + " " + Bundle<core::Str>::make(core::List::make<std::shared_ptr<Effect<core::Str>>>(), TEMPER_STR("2"))->first + " " + std::to_string(core::List::length<bool>(flags)));
     std::shared_ptr<Ticks> counter = Ticks::make();
     std::shared_ptr<Counting<core::Str>> stepper = core::to_base<Counting<core::Str>>(counter);
     stepper->step();
-    core::Str value10 = core::List::get<core::Str>(stepper->step(), 0);
-    core::Console::log(console, value10 + " " + std::to_string(counter->get_count()) + " " + std::to_string(Names::make()->take(Tag::make(TEMPER_STR("abc")))) + " " + Quoting::make()->escapeFlag(true));
+    core::Str value9 = core::List::get<core::Str>(stepper->step(), 0);
+    core::Console::log(console, value9 + " " + std::to_string(counter->get_count()) + " " + std::to_string(Names::make()->take(Tag::make(TEMPER_STR("abc")))) + " " + Quoting::make()->escapeFlag(true));
     core::NullableParam<core::Str> subject4 = problem(0);
-    core::Str value11 = subject4 == nullptr ? TEMPER_STR("none") : subject4.value;
+    core::Str value10 = subject4 == nullptr ? TEMPER_STR("none") : subject4.value;
     core::NullableParam<core::Str> subject5 = message(1);
-    core::Str value12 = subject5 == nullptr ? TEMPER_STR("none") : subject5.value;
+    core::Str value11 = subject5 == nullptr ? TEMPER_STR("none") : subject5.value;
     core::NullableParam<core::Str> subject6 = message(2);
-    core::Str value13 = subject6 == nullptr ? TEMPER_STR("none") : subject6.value;
-    int32_t value14 = libraries::sumParsed(core::List::make<core::Str>(TEMPER_STR("1"), TEMPER_STR("x"), TEMPER_STR("2")));
-    core::Console::log(console, value11 + " " + value12 + " " + value13 + " " + std::to_string(value14) + " " + std::to_string(libraries::backwards(core::List::make<int32_t>(1, 2, 3))));
+    core::Str value12 = subject6 == nullptr ? TEMPER_STR("none") : subject6.value;
+    int32_t value13 = libraries::sumParsed(core::List::make<core::Str>(TEMPER_STR("1"), TEMPER_STR("x"), TEMPER_STR("2")));
+    core::Console::log(console, value10 + " " + value11 + " " + value12 + " " + std::to_string(value13) + " " + std::to_string(libraries::backwards(core::List::make<int32_t>(1, 2, 3))));
   });
 }
 

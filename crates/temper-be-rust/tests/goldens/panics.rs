@@ -5,13 +5,10 @@ pub(crate) fn init() -> temper_core::Result<()> {
     static INIT_ONCE: OnceLock<temper_core::Result<()>> = OnceLock::new();
     INIT_ONCE
         .get_or_init(|| {
-            let zero = failing(0).unwrap_or(-1);
+            let _zero = failing(0).unwrap_or(-1);
             let a = failing(1).unwrap_or(-1);
             let b = (|| Ok::<_, temper_core::Error>(downcast(Shape::new(Circle::new()))?.0.side))()
                 .unwrap_or(-2);
-            let c = temper_core::int_div(1, zero).unwrap_or(-3);
-            let d = (|| temper_core::int64_to_int32(temper_core::int64_div(1, zero as i64)?))()
-                .unwrap_or(-4);
             let e = temper_core::string::to_int("nope", None).unwrap_or(-5);
             let f = temper_core::string::to_float64("x").unwrap_or(-6.0);
             let g = temper_core::string::from_code_point(1114112)
@@ -32,14 +29,9 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 .unwrap_or_else(|_| Arc::new("no digits".to_string()));
             let i = calling(Arc::new(move || failing(2)));
             println!(
-                "{a} {b} {c} {d} {e} {} {g} {h} {i}",
+                "{a} {b} {e} {} {g} {h} {i}",
                 temper_core::float64::cmp(f, -6.0) == 0
             );
-            let nothing = None;
-            let j = nothing
-                .clone()
-                .ok_or_else(temper_core::Error::new)
-                .unwrap_or_else(|_| Arc::new("null".to_string()));
             let k = temper_core::string::to_int64("zz", None).unwrap_or(-7);
             let l = temper_core::string::to_int("99999999999", None).unwrap_or(-8);
             let m = temper_core::float64::to_int(1e20).unwrap_or(-9);
@@ -65,7 +57,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
             })()
             .unwrap_or_else(|_| Arc::new("bad date".to_string()));
             let u = parsing("[1,").unwrap_or_else(|_| Arc::new("bad json".to_string()));
-            println!("{j} {k} {l} {m} {n} {o} {q} {r} {s} {t} {u}");
+            println!("{k} {l} {m} {n} {o} {q} {r} {s} {t} {u}");
             println!("panicking");
             let p = inner().unwrap_or(-1);
             println!("after the panic {p}");
@@ -155,7 +147,11 @@ pub(crate) fn failing(n: i32) -> temper_core::Result<i32> {
 }
 
 pub(crate) fn downcast(s: Shape) -> temper_core::Result<Square> {
-    temper_core::cast::<Square>(s.clone()).ok_or_else(temper_core::Error::new)
+    if temper_core::is::<Square>(s.clone()) {
+        Ok(temper_core::cast::<Square>(s.clone()).unwrap())
+    } else {
+        Err(temper_core::Error::new())
+    }
 }
 
 pub(crate) fn calling(f: Arc<dyn Fn() -> temper_core::Result<i32> + Send + Sync>) -> i32 {

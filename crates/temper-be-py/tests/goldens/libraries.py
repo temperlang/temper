@@ -248,10 +248,7 @@ def _sizes(s: Shape, /) -> _Sequence[int]:
 
 
 def _rows(values: _Sequence[float], ncols: int, /) -> int:
-    try:
-        return _int_div(len(values), ncols)
-    except _Bubble as t_0:
-        raise BaseException('panic') from t_0
+    return _int_div(len(values), ncols)
 
 
 def _scaled(grid: Grid, /) -> Grid:
@@ -279,20 +276,14 @@ def _total(values: _Sequence[float], /) -> float:
     sum = 0.0
     def fn(x: float, /) -> None:
         nonlocal sum
-        try:
-            part = x / 2.0
-            sum = sum + part
-        except _Bubble as t_0:
-            raise BaseException('panic') from t_0
+        part = x / 2.0
+        sum = sum + part
     _each(values, fn)
     return sum
 
 
 def _half(x: float, /) -> float:
-    try:
-        return x / 2.0
-    except _Bubble as t_0:
-        raise BaseException('panic') from t_0
+    return x / 2.0
 
 
 def _cube(x: float, /) -> float:

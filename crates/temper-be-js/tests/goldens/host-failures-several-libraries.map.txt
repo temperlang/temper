@@ -1,65 +1,72 @@
 # generated line:column -> source:line:column, and the text at each
-12:1 -> ../host-failures.temper.md:31:5  /** <- @connected
-17:1 -> ../host-failures.temper.md:31:5  export function hostLookup(k <- @connected
-17:17 -> ../host-failures.temper.md:32:16 (hostLookup)  hostLookup(key) { <- hostLookup(key: String): Int
-17:27 -> ../host-failures.temper.md:31:5  (key) { <- @connected
-21:1 -> ../host-failures.temper.md:171:5  /** <- let total(key: String, count
-26:1 -> ../host-failures.temper.md:171:5  export function total(key, c <- let total(key: String, count
-26:17 -> ../host-failures.temper.md:171:9 (total)  total(key, count) { <- total(key: String, count: St
-26:22 -> ../host-failures.temper.md:171:5  (key, count) { <- let total(key: String, count
-27:3 -> ../host-failures.temper.md:172:7  try { <- (hostLookup(key) + parseCoun
-31:5 -> ../host-failures.temper.md:173:9  console.log(`caught ${e.mess <- console.log("caught ${e.mess
-36:1 -> ../host-failures.temper.md:181:5  /** <- let reading(key: String, cou
-42:1 -> ../host-failures.temper.md:181:5  export function reading(key, <- let reading(key: String, cou
-42:17 -> ../host-failures.temper.md:181:9 (reading)  reading(key, count) { <- reading(key: String, count:
-42:24 -> ../host-failures.temper.md:181:5  (key, count) { <- let reading(key: String, cou
-43:3 -> ../host-failures.temper.md:182:7  try { <- (hostLookup(key) + parseCoun
-51:1 -> ../host-failures.temper.md:190:5  /** <- let ratio(key: String, count
-56:1 -> ../host-failures.temper.md:190:5  export function ratio(key, c <- let ratio(key: String, count
-56:17 -> ../host-failures.temper.md:190:9 (ratio)  ratio(key, count) { <- ratio(key: String, count: St
-56:22 -> ../host-failures.temper.md:190:5  (key, count) { <- let ratio(key: String, count
-57:3 -> ../host-failures.temper.md:191:7  try { <- (hostLookup(key) / parseCoun
-65:1 -> ../host-failures.temper.md:28:5  export class HostFailuresErr <- export sealed interface Host
-65:14 -> ../host-failures.temper.md:28:29 (HostFailuresError)  HostFailuresError extends Er <- HostFailuresError extends Er
-65:31 -> ../host-failures.temper.md:28:5   extends Error {} <- export sealed interface Host
-69:1 -> ../host-failures.temper.md:29:5  export class NotFound extend <- export class NotFound(public
-69:14 -> ../host-failures.temper.md:29:18 (NotFound)  NotFound extends HostFailure <- NotFound(public key: String)
-69:22 -> ../host-failures.temper.md:29:5   extends HostFailuresError { <- export class NotFound(public
-70:3 -> ../host-failures.temper.md:29:34  /** @type {string} */ <- key: String) extends HostFai
-71:3 -> ../host-failures.temper.md:29:34  #key; <- key: String) extends HostFai
-73:3 -> ../host-failures.temper.md:29:5  /** @param {string} key */ <- export class NotFound(public
-74:3 -> ../host-failures.temper.md:29:5  constructor(key) { <- export class NotFound(public
-76:5 -> ../host-failures.temper.md:29:34  this.#key = key; <- key: String) extends HostFai
-79:3 -> ../host-failures.temper.md:29:34  /** @returns {string} */ <- key: String) extends HostFai
-80:3 -> ../host-failures.temper.md:29:34  get key() { <- key: String) extends HostFai
-80:7 -> ../host-failures.temper.md:29:34 (key)  key() { <- key: String) extends HostFai
-84:3 -> ../host-failures.temper.md:29:5  /** @returns {string} */ <- export class NotFound(public
-85:3 -> ../host-failures.temper.md:29:5  get message() { <- export class NotFound(public
-86:5 -> ../host-failures.temper.md:29:5  return `not found (key: ${th <- export class NotFound(public
-90:1 -> ../host-failures.temper.md:179:5  export class Unreadable exte <- class Unreadable(public key:
-90:14 -> ../host-failures.temper.md:179:11 (Unreadable)  Unreadable extends HostFailu <- Unreadable(public key: Strin
-90:24 -> ../host-failures.temper.md:179:5   extends HostFailuresError { <- class Unreadable(public key:
-91:3 -> ../host-failures.temper.md:179:29  /** @type {string} */ <- key: String) extends HostFai
-92:3 -> ../host-failures.temper.md:179:29  #key; <- key: String) extends HostFai
-94:3 -> ../host-failures.temper.md:179:5  /** @param {string} key */ <- class Unreadable(public key:
-95:3 -> ../host-failures.temper.md:179:5  constructor(key) { <- class Unreadable(public key:
-97:5 -> ../host-failures.temper.md:179:29  this.#key = key; <- key: String) extends HostFai
-100:3 -> ../host-failures.temper.md:179:29  /** @returns {string} */ <- key: String) extends HostFai
-101:3 -> ../host-failures.temper.md:179:29  get key() { <- key: String) extends HostFai
-101:7 -> ../host-failures.temper.md:179:29 (key)  key() { <- key: String) extends HostFai
-105:3 -> ../host-failures.temper.md:179:5  /** @returns {string} */ <- class Unreadable(public key:
-106:3 -> ../host-failures.temper.md:179:5  get message() { <- class Unreadable(public key:
-107:5 -> ../host-failures.temper.md:179:5  return `unreadable (key: ${t <- class Unreadable(public key:
-111:1 -> ../host-failures.temper.md:38:5  console.log("before"); <- console.log("before");
-112:1 -> ../host-failures.temper.md:177:5  console.log(`${total("a", "t <- console.log("${total("a", "t
-113:1 -> ../host-failures.temper.md:185:5  /** @type {number} */ <- let r = reading("a", "x") ca
-114:1 -> ../host-failures.temper.md:185:5  export let r; <- let r = reading("a", "x") ca
-115:1 -> ../host-failures.temper.md:185:5  try { <- let r = reading("a", "x") ca
-119:3 -> ../host-failures.temper.md:186:7  /** @type {string | null} */ <- console.log("${e.message}, c
-120:3 -> ../host-failures.temper.md:186:7  let t$0; <- console.log("${e.message}, c
-121:3 -> ../host-failures.temper.md:186:7  { <- console.log("${e.message}, c
-122:5 -> ../host-failures.temper.md:186:46  const subject2 = failureCaus <- e.cause?.message ?? "nothing
-125:3 -> ../host-failures.temper.md:186:7  console.log(`${e.message}, c <- console.log("${e.message}, c
-128:1 -> ../host-failures.temper.md:193:5  console.log(`${r} ${ratio("a <- console.log(
-129:1 -> ../host-failures.temper.md:196:5  parseCount("x"); <- try parseCount("x");
-130:1 -> ../host-failures.temper.md:197:5  console.log("after"); <- console.log("after");
+13:1 -> ../host-failures.temper.md:31:5  /** <- @connected
+18:1 -> ../host-failures.temper.md:31:5  export function hostLookup(k <- @connected
+18:17 -> ../host-failures.temper.md:32:16 (hostLookup)  hostLookup(key) { <- hostLookup(key: String): Int
+18:27 -> ../host-failures.temper.md:31:5  (key) { <- @connected
+22:1 -> ../host-failures.temper.md:171:5  /** <- let total(key: String, count
+27:1 -> ../host-failures.temper.md:171:5  export function total(key, c <- let total(key: String, count
+27:17 -> ../host-failures.temper.md:171:9 (total)  total(key, count) { <- total(key: String, count: St
+27:22 -> ../host-failures.temper.md:171:5  (key, count) { <- let total(key: String, count
+28:3 -> ../host-failures.temper.md:172:7  try { <- (hostLookup(key) + parseCoun
+32:5 -> ../host-failures.temper.md:173:9  console.log(`caught ${e.mess <- console.log("caught ${e.mess
+37:1 -> ../host-failures.temper.md:181:5  /** <- let reading(key: String, cou
+43:1 -> ../host-failures.temper.md:181:5  export function reading(key, <- let reading(key: String, cou
+43:17 -> ../host-failures.temper.md:181:9 (reading)  reading(key, count) { <- reading(key: String, count:
+43:24 -> ../host-failures.temper.md:181:5  (key, count) { <- let reading(key: String, cou
+44:3 -> ../host-failures.temper.md:182:7  try { <- (hostLookup(key) + parseCoun
+52:1 -> ../host-failures.temper.md:190:5  /** <- let nonzero(n: Int): Int thr
+56:1 -> ../host-failures.temper.md:190:5  export function nonzero(n) { <- let nonzero(n: Int): Int thr
+56:17 -> ../host-failures.temper.md:190:9 (nonzero)  nonzero(n) { <- nonzero(n: Int): Int throws
+56:24 -> ../host-failures.temper.md:190:5  (n) { <- let nonzero(n: Int): Int thr
+57:3 -> ../host-failures.temper.md:190:46  if (n === 0) { <- if (n == 0) { bubble() } els
+58:5 -> ../host-failures.temper.md:190:60  bubble(); <- bubble() } else { n } }
+60:5 -> ../host-failures.temper.md:190:78  return n; <- n } }
+64:1 -> ../host-failures.temper.md:191:5  /** <- let ratio(key: String, count
+69:1 -> ../host-failures.temper.md:191:5  export function ratio(key, c <- let ratio(key: String, count
+69:17 -> ../host-failures.temper.md:191:9 (ratio)  ratio(key, count) { <- ratio(key: String, count: St
+69:22 -> ../host-failures.temper.md:191:5  (key, count) { <- let ratio(key: String, count
+70:3 -> ../host-failures.temper.md:192:7  try { <- (hostLookup(key) / nonzero(p
+78:1 -> ../host-failures.temper.md:28:5  export class HostFailuresErr <- export sealed interface Host
+78:14 -> ../host-failures.temper.md:28:29 (HostFailuresError)  HostFailuresError extends Er <- HostFailuresError extends Er
+78:31 -> ../host-failures.temper.md:28:5   extends Error {} <- export sealed interface Host
+82:1 -> ../host-failures.temper.md:29:5  export class NotFound extend <- export class NotFound(public
+82:14 -> ../host-failures.temper.md:29:18 (NotFound)  NotFound extends HostFailure <- NotFound(public key: String)
+82:22 -> ../host-failures.temper.md:29:5   extends HostFailuresError { <- export class NotFound(public
+83:3 -> ../host-failures.temper.md:29:34  /** @type {string} */ <- key: String) extends HostFai
+84:3 -> ../host-failures.temper.md:29:34  #key; <- key: String) extends HostFai
+86:3 -> ../host-failures.temper.md:29:5  /** @param {string} key */ <- export class NotFound(public
+87:3 -> ../host-failures.temper.md:29:5  constructor(key) { <- export class NotFound(public
+89:5 -> ../host-failures.temper.md:29:34  this.#key = key; <- key: String) extends HostFai
+92:3 -> ../host-failures.temper.md:29:34  /** @returns {string} */ <- key: String) extends HostFai
+93:3 -> ../host-failures.temper.md:29:34  get key() { <- key: String) extends HostFai
+93:7 -> ../host-failures.temper.md:29:34 (key)  key() { <- key: String) extends HostFai
+97:3 -> ../host-failures.temper.md:29:5  /** @returns {string} */ <- export class NotFound(public
+98:3 -> ../host-failures.temper.md:29:5  get message() { <- export class NotFound(public
+99:5 -> ../host-failures.temper.md:29:5  return `not found (key: ${th <- export class NotFound(public
+103:1 -> ../host-failures.temper.md:179:5  export class Unreadable exte <- class Unreadable(public key:
+103:14 -> ../host-failures.temper.md:179:11 (Unreadable)  Unreadable extends HostFailu <- Unreadable(public key: Strin
+103:24 -> ../host-failures.temper.md:179:5   extends HostFailuresError { <- class Unreadable(public key:
+104:3 -> ../host-failures.temper.md:179:29  /** @type {string} */ <- key: String) extends HostFai
+105:3 -> ../host-failures.temper.md:179:29  #key; <- key: String) extends HostFai
+107:3 -> ../host-failures.temper.md:179:5  /** @param {string} key */ <- class Unreadable(public key:
+108:3 -> ../host-failures.temper.md:179:5  constructor(key) { <- class Unreadable(public key:
+110:5 -> ../host-failures.temper.md:179:29  this.#key = key; <- key: String) extends HostFai
+113:3 -> ../host-failures.temper.md:179:29  /** @returns {string} */ <- key: String) extends HostFai
+114:3 -> ../host-failures.temper.md:179:29  get key() { <- key: String) extends HostFai
+114:7 -> ../host-failures.temper.md:179:29 (key)  key() { <- key: String) extends HostFai
+118:3 -> ../host-failures.temper.md:179:5  /** @returns {string} */ <- class Unreadable(public key:
+119:3 -> ../host-failures.temper.md:179:5  get message() { <- class Unreadable(public key:
+120:5 -> ../host-failures.temper.md:179:5  return `unreadable (key: ${t <- class Unreadable(public key:
+124:1 -> ../host-failures.temper.md:38:5  console.log("before"); <- console.log("before");
+125:1 -> ../host-failures.temper.md:177:5  console.log(`${total("a", "t <- console.log("${total("a", "t
+126:1 -> ../host-failures.temper.md:185:5  /** @type {number} */ <- let r = reading("a", "x") ca
+127:1 -> ../host-failures.temper.md:185:5  export let r; <- let r = reading("a", "x") ca
+128:1 -> ../host-failures.temper.md:185:5  try { <- let r = reading("a", "x") ca
+132:3 -> ../host-failures.temper.md:186:7  /** @type {string | null} */ <- console.log("${e.message}, c
+133:3 -> ../host-failures.temper.md:186:7  let t$0; <- console.log("${e.message}, c
+134:3 -> ../host-failures.temper.md:186:7  { <- console.log("${e.message}, c
+135:5 -> ../host-failures.temper.md:186:46  const subject2 = failureCaus <- e.cause?.message ?? "nothing
+138:3 -> ../host-failures.temper.md:186:7  console.log(`${e.message}, c <- console.log("${e.message}, c
+141:1 -> ../host-failures.temper.md:194:5  console.log(`${r} ${ratio("a <- console.log(
+142:1 -> ../host-failures.temper.md:197:5  parseCount("x"); <- try parseCount("x");
+143:1 -> ../host-failures.temper.md:198:5  console.log("after"); <- console.log("after");

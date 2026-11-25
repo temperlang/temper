@@ -22,7 +22,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
             );
             let b = Box::new();
             println!("{} {}", b.count(), b.0.twice);
-            let q = temper_core::cast::<Person>(n.clone()).ok_or_else(temper_core::Error::new)?;
+            let q = temper_core::cast::<Person>(n.clone()).unwrap();
             println!("{}", q.0.title);
             println!("{}", Duo::new(p.clone(), None, None::<Arc<String>>).names());
             println!(

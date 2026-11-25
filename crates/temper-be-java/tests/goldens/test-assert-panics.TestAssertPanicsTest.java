@@ -13,6 +13,18 @@ public final class TestAssertPanicsTest {
         return Core.listGet(ls, i);
     }
 
+    static int divide(int a, int b) {
+        return a / b;
+    }
+
+    static long remainder(long a, long b) {
+        return a % b;
+    }
+
+    static Square squared(Shape s) {
+        return Core.cast(Square.class, s);
+    }
+
     static {
         Bubble.keepStackTraces();
     }
@@ -42,6 +54,28 @@ public final class TestAssertPanicsTest {
         try {
             test.assertPanics(() -> at(List.of(1, 2), 5));
             test.assertPanics(() -> Core.throwAssertionError("panic"));
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
+        } finally {
+            Core.endTest(failure, test::softFailToHard);
+        }
+    }
+
+    @org.junit.jupiter.api.Test
+    public void passesWhenDivisionByZeroOrACastPanics() {
+        Test test = new Test();
+        Throwable failure = null;
+        try {
+            test.assertPanics(() -> divide(1, 0));
+            test.assertPanics(() -> remainder(1L, 0L));
+            test.assertPanics(() -> squared(new Circle()));
+            squared(new Square());
+            {
+                int actual = divide(-7, 2);
+                int expected = -3;
+                test.assert_(actual == expected, () -> "expected divide(-7, 2) == (" + expected + ") not (" + actual + ")");
+            }
         } catch (Throwable e) {
             failure = e;
             throw e;

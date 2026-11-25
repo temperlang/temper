@@ -6,7 +6,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
         .get_or_init(|| {
             let greeter = Greeter::new(HiGreeter::new());
             temper_core::cast::<HiGreeter>(greeter.clone())
-                .ok_or_else(temper_core::Error::new)?
+                .unwrap()
                 .greet();
             Ok(())
         })

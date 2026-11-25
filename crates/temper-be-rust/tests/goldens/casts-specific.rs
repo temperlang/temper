@@ -92,12 +92,11 @@ temper_core::impl_any_value_trait!(CharlieClass, [AlphaInterface]);
 pub(crate) fn check_b(instance: AlphaInterface) {
     println!(
         "{}",
-        (|| {
-            temper_core::cast::<BravoClass>(instance.clone())
-                .ok_or_else(temper_core::Error::new)?;
-            Ok::<_, temper_core::Error>(Arc::new("yep".to_string()))
-        })()
-        .unwrap_or_else(|_| Arc::new("nope".to_string()))
+        if temper_core::is::<BravoClass>(instance.clone()) {
+            "yep"
+        } else {
+            "nope"
+        }
     );
 }
 

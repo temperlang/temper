@@ -95,8 +95,8 @@ its value may be narrower: a tuple than a `Sequence`, a class than the
 interface it implements, a list literal than a list of another length,
 or a value than the nullable type. A walrus that binds such a name
 first, for `??`, is declared just before, if its value may be
-narrower. A cast's local is annotated too, also under `orelse`, as
-pyright takes `cast_by_type` to give its argument's type, the wider; and
+narrower. A cast's local is annotated too, as pyright takes
+`cast_by_type` to give its argument's type, the wider; and
 so is a builder made from a list literal, which pyright takes for a
 list of its items' literal types (`list[Literal[0]]`).
 
@@ -134,7 +134,7 @@ list of its items' literal types (`list[Literal[0]]`).
       sizes.length
     }
     export let helpOf(d: Described): String throws Bubble {
-      let option = d as Option orelse bubble();
+      let option = if (d is Option) { d } else { bubble() };
       option.help
     }
     export let pieces(n: Int): List<Int> {

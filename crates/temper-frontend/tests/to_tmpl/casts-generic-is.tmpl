@@ -55,7 +55,11 @@ module `generic-is`#0 {
   }
 
   fn firstText#18<T#19>(effect#35: Effect#1<T#19>): String {
-    return (orelse(((as(effect#35)^): Append#2<T#19>).text#7, "none")): String;
+    if (is(effect#35, Append#2<T#19>)) {
+      return ((downcast(effect#35)): Append#2<T#19>).text#7;
+    } else {
+      return "none";
+    }
   }
 
   let effects#20: List#14<Effect#1<Int32>>;

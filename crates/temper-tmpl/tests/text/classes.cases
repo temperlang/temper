@@ -185,7 +185,7 @@ module classes#0 {
     ~console#74.log#73(new constructor#40(new constructor#36(3), "a").eq#39(new constructor#40(new constructor#36(%Int32.neg(3)), "a")).toString#76());
     ~console#74.log#73(%String.cat(%String.cat(%Int32.lt(new constructor#44(1, 2).compareTo#43(new constructor#44(1, 3)), 0).toString#76(), " "), %Int32.ge(new constructor#44(2, 0).compareTo#43(new constructor#44(1, 9)), 0).toString#76()));
     ~console#74.log#73(%String.cat(%String.cat(is(q#48, Square#3).toString#76(), " "), is(s#47, Square#3).toString#76()));
-    init sq#50 = (as(q#48)^): Square#3;
+    init sq#50 = (as(q#48)): Square#3;
     ~console#74.log#73(sq#50.area#19().toString#53(omitted));
     if (is(s#47, Rect#2)) {
       ~console#74.log#73(((downcast(s#47)): Rect#2).w#11.toString#53(omitted));
@@ -240,7 +240,7 @@ module more#0 {
     b#24.label#7 = "x";
     t#25.name#19("y");
     let n#26: Named#2 = (upcast(t#25)): Named#2;
-    let again#27: Tag#15 = (as(n#26)^): Tag#15;
+    let again#27: Tag#15 = (as(n#26)): Tag#15;
     let made#28: Box#5 = make#10()^;
     let s#29: String = ((upcast(t#25)): Named#2).name#3();
     if (is(n#26, Tag#15)) {
@@ -372,8 +372,8 @@ module conv#0 {
   fn f#8(c#9: C#2, i#10: I#1): Boolean throws Bubble {
     let same#11: C#2 = (upcast(c#9)): C#2;
     let down#12: C#2 = (downcast(c#9)): C#2;
-    let up#13: I#1 = (as(c#9)^): I#1;
-    let unmarked#14: C#2 = (as(i#10)): C#2;
+    let up#13: I#1 = (as(c#9)): I#1;
+    let checked#14: C#2 = (as(i#10)): C#2;
     return is(1, C#2) && is(c#9, Int32) && identical(1, c#9);
   }
 
@@ -393,7 +393,6 @@ C3 @15: fixed#3 isn't a var, so only its class's constructor may set it, on this
 C3 @23: C#2 isn't a proper subtype of C#2
 C3 @26: C#2 isn't a proper subtype of C#2
 C3 @29: I#1 isn't a proper subtype of C#2
-F3 @32: as may bubble, but isn't marked
 C3 @38: the value checked is Int32, not a class or interface
 C3 @39: the type checked is Int32, not a class or interface
 C3 @42: an operand of identical is Int32, not a class or interface

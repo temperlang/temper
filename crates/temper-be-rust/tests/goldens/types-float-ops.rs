@@ -8,66 +8,26 @@ pub(crate) fn init() -> temper_core::Result<()> {
             let mut one: f64 = 1.0;
             one = one;
             TWO.set(one + one).unwrap_or_else(|_| panic!());
-            let half = temper_core::float64::div(one, two())?;
+            let half = one / two();
             near("half.abs()", half.abs(), half);
             near("(-half).abs()", (-half).abs(), half);
             let three = one + two();
-            near(
-                "half.acos()",
-                half.acos(),
-                temper_core::float64::div(std::f64::consts::PI, three)?,
-            );
+            near("half.acos()", half.acos(), std::f64::consts::PI / three);
             let pi = std::f64::consts::PI;
             let six = two() * three;
-            near(
-                "half.asin()",
-                half.asin(),
-                temper_core::float64::div(pi, six)?,
-            );
+            near("half.asin()", half.asin(), pi / six);
             let four = two() * two();
-            near(
-                "(-one).atan()",
-                (-one).atan(),
-                temper_core::float64::div(-pi, four)?,
-            );
-            near(
-                "one.atan2(-one)",
-                one.atan2(-one),
-                temper_core::float64::div(three * pi, four)?,
-            );
-            near(
-                "(four / three).ceil()",
-                temper_core::float64::div(four, three)?.ceil(),
-                two(),
-            );
-            near(
-                "(-four / three).ceil()",
-                temper_core::float64::div(-four, three)?.ceil(),
-                -one,
-            );
-            near(
-                "(pi / three).cos()",
-                temper_core::float64::div(pi, three)?.cos(),
-                half,
-            );
+            near("(-one).atan()", (-one).atan(), -pi / four);
+            near("one.atan2(-one)", one.atan2(-one), three * pi / four);
+            near("(four / three).ceil()", (four / three).ceil(), two());
+            near("(-four / three).ceil()", (-four / three).ceil(), -one);
+            near("(pi / three).cos()", (pi / three).cos(), half);
             let e = std::f64::consts::E;
-            near(
-                "one.cosh()",
-                one.cosh(),
-                temper_core::float64::div(e + temper_core::float64::div(one, e)?, two())?,
-            );
+            near("one.cosh()", one.cosh(), (e + one / e) / two());
             near("half.exp() == e.sqrt()", half.exp(), e.sqrt());
             near("half.expm1()", half.exp_m1(), e.sqrt() - one);
-            near(
-                "(four / three).floor()",
-                temper_core::float64::div(four, three)?.floor(),
-                one,
-            );
-            near(
-                "(-four / three).floor()",
-                temper_core::float64::div(-four, three)?.floor(),
-                -two(),
-            );
+            near("(four / three).floor()", (four / three).floor(), one);
+            near("(-four / three).floor()", (-four / three).floor(), -two());
             near("e.log()", std::f64::consts::E.ln(), one);
             let five = one + four;
             let ten = two() * five;
@@ -95,27 +55,11 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 }),
             );
             println!("maxMinCombos: {max_min_combos}");
-            let quarter = temper_core::float64::div(half, two())?;
-            near(
-                "2.25 % 2.0",
-                temper_core::float64::rem(two() + quarter, two())?,
-                0.25,
-            );
-            near(
-                "2.25 % -2.0",
-                temper_core::float64::rem(two() + quarter, -two())?,
-                0.25,
-            );
-            near(
-                "-2.25 % 2.0",
-                temper_core::float64::rem(-(two() + quarter), two())?,
-                -0.25,
-            );
-            near(
-                "-2.25 % -2.0",
-                temper_core::float64::rem(-(two() + quarter), -two())?,
-                -0.25,
-            );
+            let quarter = half / two();
+            near("2.25 % 2.0", (two() + quarter) % two(), 0.25);
+            near("2.25 % -2.0", (two() + quarter) % -two(), 0.25);
+            near("-2.25 % 2.0", -(two() + quarter) % two(), -0.25);
+            near("-2.25 % -2.0", -(two() + quarter) % -two(), -0.25);
             near("pi.round()", pi.round(), three);
             near("(-pi).round()", (-pi).round(), -three);
             near("pi.sign()", temper_core::float64::sign(pi), one);
@@ -129,30 +73,14 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 "(-zero).sign(): {}",
                 temper_core::float64::to_string(temper_core::float64::sign(-zero))
             );
-            near(
-                "(pi / six).sin()",
-                temper_core::float64::div(pi, six)?.sin(),
-                half,
-            );
-            near(
-                "one.sinh()",
-                one.sinh(),
-                temper_core::float64::div(e - temper_core::float64::div(one, e)?, two())?,
-            );
-            near(
-                "(-pi / four).tan()",
-                temper_core::float64::div(-pi, four)?.tan(),
-                -one,
-            );
-            near(
-                "(three * pi / four).tan()",
-                temper_core::float64::div(three * pi, four)?.tan(),
-                -one,
-            );
+            near("(pi / six).sin()", (pi / six).sin(), half);
+            near("one.sinh()", one.sinh(), (e - one / e) / two());
+            near("(-pi / four).tan()", (-pi / four).tan(), -one);
+            near("(three * pi / four).tan()", (three * pi / four).tan(), -one);
             near(
                 "one.tanh()",
                 one.tanh(),
-                temper_core::float64::div(e.powf(2.0) - 1.0, e.powf(2.0) + 1.0)?,
+                (e.powf(2.0) - 1.0) / (e.powf(2.0) + 1.0),
             );
             println!(
                 "one.near(one + 0.1): {}",

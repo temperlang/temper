@@ -65,15 +65,7 @@ end
 ---@return boolean
 local function has3(s, c)
   local i = indexOfChar(s, c)
-  ---@type boolean
-  local t
-  if not temper.pcall(function()
-    temper.require_string_index(i)
-    t = true
-  end) then
-    t = false
-  end
-  return t
+  return i >= 1
 end
 
 ---@param s string
@@ -81,15 +73,7 @@ end
 ---@return boolean
 local function has4(s, c)
   local i = indexOfChar(s, c)
-  ---@type boolean
-  local t
-  if not temper.pcall(function()
-    temper.require_no_string_index(i)
-    t = false
-  end) then
-    t = true
-  end
-  return t
+  return i >= 1
 end
 
 comparePositions("cookie", 99, 105)

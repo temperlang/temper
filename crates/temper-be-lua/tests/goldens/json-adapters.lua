@@ -76,10 +76,12 @@ end
 ---@param ic std.json.InterchangeContext
 ---@return json-adapters.Point
 function Point.decodeFromJson(t, ic)
-  local obj = temper.cast_to(t, JsonObject)
-  local xJson = temper.cast_to(obj:propertyValueOrBubble("x"), JsonNumeric)
+  local obj = temper.instance_of(t, JsonObject) and (t --[[@as std.json.JsonObject]]) or temper.bubble()
+  local xTree = obj:propertyValueOrBubble("x")
+  local xJson = temper.instance_of(xTree, JsonNumeric) and (xTree --[[@as std.json.JsonNumeric]]) or temper.bubble()
   local x = xJson:asInt32()
-  local yJson = temper.cast_to(obj:propertyValueOrBubble("y"), JsonNumeric)
+  local yTree = obj:propertyValueOrBubble("y")
+  local yJson = temper.instance_of(yTree, JsonNumeric) and (yTree --[[@as std.json.JsonNumeric]]) or temper.bubble()
   local y = yJson:asInt32()
   return Point(x, y)
 end
@@ -168,14 +170,18 @@ end
 ---@param ic std.json.InterchangeContext
 ---@return json-adapters.Record
 function Record.decodeFromJson(t, ic)
-  local obj = temper.cast_to(t, JsonObject)
-  local nameJson = temper.cast_to(obj:propertyValueOrBubble("name"), JsonString)
+  local obj = temper.instance_of(t, JsonObject) and (t --[[@as std.json.JsonObject]]) or temper.bubble()
+  local nameTree = obj:propertyValueOrBubble("name")
+  local nameJson = temper.instance_of(nameTree, JsonString) and (nameTree --[[@as std.json.JsonString]]) or temper.bubble()
   local name = nameJson.content
-  local activeJson = temper.cast_to(obj:propertyValueOrBubble("is-active"), JsonBoolean)
+  local activeTree = obj:propertyValueOrBubble("is-active")
+  local activeJson = temper.instance_of(activeTree, JsonBoolean) and (activeTree --[[@as std.json.JsonBoolean]]) or temper.bubble()
   local active = activeJson.content
-  local scoreJson = temper.cast_to(obj:propertyValueOrBubble("score"), JsonNumeric)
+  local scoreTree = obj:propertyValueOrBubble("score")
+  local scoreJson = temper.instance_of(scoreTree, JsonNumeric) and (scoreTree --[[@as std.json.JsonNumeric]]) or temper.bubble()
   local score = scoreJson:asFloat64()
-  local bigJson = temper.cast_to(obj:propertyValueOrBubble("big"), JsonNumeric)
+  local bigTree = obj:propertyValueOrBubble("big")
+  local bigJson = temper.instance_of(bigTree, JsonNumeric) and (bigTree --[[@as std.json.JsonNumeric]]) or temper.bubble()
   local big = bigJson:asInt64()
   local nickname = OrNullJsonAdapter(stringJsonAdapter()):decodeFromJson(obj:propertyValueOrBubble("nickname"), ic)
   local points = listJsonAdapter(Point.jsonAdapter()):decodeFromJson(obj:propertyValueOrBubble("points"), ic)
@@ -225,7 +231,7 @@ local Shape = temper.type("json-adapters.Shape")
 ---@return json-adapters.Shape
 function Shape.decodeFromJson(t, ic)
   do
-    local obj = temper.cast_to(t, JsonObject)
+    local obj = temper.instance_of(t, JsonObject) and (t --[[@as std.json.JsonObject]]) or temper.bubble()
     local valueForRadius = obj:propertyValueOrNull("radius")
     if not temper.is_null(valueForRadius) then
       return Circle.jsonAdapter():decodeFromJson(obj, ic)
@@ -269,8 +275,9 @@ end
 ---@param ic std.json.InterchangeContext
 ---@return json-adapters.Circle
 function Circle.decodeFromJson(t, ic)
-  local obj = temper.cast_to(t, JsonObject)
-  local radiusJson = temper.cast_to(obj:propertyValueOrBubble("radius"), JsonNumeric)
+  local obj = temper.instance_of(t, JsonObject) and (t --[[@as std.json.JsonObject]]) or temper.bubble()
+  local radiusTree = obj:propertyValueOrBubble("radius")
+  local radiusJson = temper.instance_of(radiusTree, JsonNumeric) and (radiusTree --[[@as std.json.JsonNumeric]]) or temper.bubble()
   local radius = radiusJson:asInt32()
   return Circle(radius)
 end
@@ -339,10 +346,12 @@ end
 ---@param ic std.json.InterchangeContext
 ---@return json-adapters.Rect
 function Rect.decodeFromJson(t, ic)
-  local obj = temper.cast_to(t, JsonObject)
-  local widthJson = temper.cast_to(obj:propertyValueOrBubble("width"), JsonNumeric)
+  local obj = temper.instance_of(t, JsonObject) and (t --[[@as std.json.JsonObject]]) or temper.bubble()
+  local widthTree = obj:propertyValueOrBubble("width")
+  local widthJson = temper.instance_of(widthTree, JsonNumeric) and (widthTree --[[@as std.json.JsonNumeric]]) or temper.bubble()
   local width = widthJson:asInt32()
-  local heightJson = temper.cast_to(obj:propertyValueOrBubble("height"), JsonNumeric)
+  local heightTree = obj:propertyValueOrBubble("height")
+  local heightJson = temper.instance_of(heightTree, JsonNumeric) and (heightTree --[[@as std.json.JsonNumeric]]) or temper.bubble()
   local height = heightJson:asInt32()
   return Rect(width, height)
 end
@@ -417,7 +426,7 @@ local Message = temper.type("json-adapters.Message")
 ---@return json-adapters.Message
 function Message.decodeFromJson(t, ic)
   do
-    local obj = temper.cast_to(t, JsonObject)
+    local obj = temper.instance_of(t, JsonObject) and (t --[[@as std.json.JsonObject]]) or temper.bubble()
     local valueForKind = obj:propertyValueOrNull("kind")
     if not temper.is_null(valueForKind) and temper.instance_of(valueForKind --[[@as std.json.JsonSyntaxTree]], JsonString) then
       local subject = (valueForKind --[[@as std.json.JsonString]]).content
@@ -465,8 +474,9 @@ end
 ---@param ic std.json.InterchangeContext
 ---@return json-adapters.Hello
 function Hello.decodeFromJson(t, ic)
-  local obj = temper.cast_to(t, JsonObject)
-  local textJson = temper.cast_to(obj:propertyValueOrBubble("text"), JsonString)
+  local obj = temper.instance_of(t, JsonObject) and (t --[[@as std.json.JsonObject]]) or temper.bubble()
+  local textTree = obj:propertyValueOrBubble("text")
+  local textJson = temper.instance_of(textTree, JsonString) and (textTree --[[@as std.json.JsonString]]) or temper.bubble()
   local text = textJson.content
   return Hello(text)
 end
@@ -532,8 +542,9 @@ end
 ---@param ic std.json.InterchangeContext
 ---@return json-adapters.Bye
 function Bye.decodeFromJson(t, ic)
-  local obj = temper.cast_to(t, JsonObject)
-  local textJson = temper.cast_to(obj:propertyValueOrBubble("text"), JsonString)
+  local obj = temper.instance_of(t, JsonObject) and (t --[[@as std.json.JsonObject]]) or temper.bubble()
+  local textTree = obj:propertyValueOrBubble("text")
+  local textJson = temper.instance_of(textTree, JsonString) and (textTree --[[@as std.json.JsonString]]) or temper.bubble()
   local text = textJson.content
   return Bye(text)
 end

@@ -112,8 +112,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
             {
                 let s3 = Arc::new("{\"x\":null,\"y\":123,\"z\":123456789012}".to_string());
                 let ast = temper_std::json::parse_json(s3.clone())?;
-                let obj = temper_core::cast::<temper_std::json::JsonObject>(ast.clone())
-                    .ok_or_else(temper_core::Error::new)?;
+                let obj = temper_core::cast::<temper_std::json::JsonObject>(ast.clone()).unwrap();
                 let x_ast = obj.property_value_or_bubble("x")?;
                 let y_ast = obj.property_value_or_bubble("y")?;
                 println!(

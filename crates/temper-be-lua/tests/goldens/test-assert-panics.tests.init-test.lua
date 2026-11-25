@@ -1,4 +1,6 @@
 local temper = require("temper-core")
+local int64_1 = temper.int64_constructor(1)
+local int64_0 = temper.int64_constructor(0)
 local tested = require("test-assert-panics")["$test"]
 local luaunit = require("luaunit")
 luaunit.FAILURE_PREFIX = temper.test_failure_prefix
@@ -11,6 +13,51 @@ local function at(ls, i)
     return temper.bubble()
   end
   return temper.list_get(ls, i)
+end
+
+---@class test-assert-panics.Shape
+
+---@class test-assert-panics.Shape.type: temper.Type
+local Shape = temper.type("test-assert-panics.Shape")
+
+---@class test-assert-panics.Square: test-assert-panics.Shape
+
+---@class test-assert-panics.Square.type: temper.Type
+---@operator call: test-assert-panics.Square
+local Square = temper.type("test-assert-panics.Square", Shape)
+
+---@param this test-assert-panics.Square
+function Square.constructor(this)
+end
+
+---@class test-assert-panics.Circle: test-assert-panics.Shape
+
+---@class test-assert-panics.Circle.type: temper.Type
+---@operator call: test-assert-panics.Circle
+local Circle = temper.type("test-assert-panics.Circle", Shape)
+
+---@param this test-assert-panics.Circle
+function Circle.constructor(this)
+end
+
+---@param a integer
+---@param b integer
+---@return integer
+local function divide(a, b)
+  return temper.int32_div(a, b)
+end
+
+---@param a integer
+---@param b integer
+---@return integer
+local function remainder(a, b)
+  return temper.int64_mod(a, b)
+end
+
+---@param s test-assert-panics.Shape
+---@return test-assert-panics.Square
+local function squared(s)
+  return temper.cast_to(s, Square)
 end
 
 Test_ = {}
@@ -29,6 +76,20 @@ function Test_.test_passes_when_the_block_panics()
   temper.test("passes when the block panics", function(test)
     temper.test_assertpanics(test, function() at({ 1, 2 }, 5) end)
     temper.test_assertpanics(test, function() error("panic") end)
+  end)
+end
+
+function Test_.test_passes_when_division_by_zero_or_a_cast_panics()
+  temper.test("passes when division by zero or a cast panics", function(test)
+    temper.test_assertpanics(test, function() divide(1, 0) end)
+    temper.test_assertpanics(test, function() remainder(int64_1, int64_0) end)
+    temper.test_assertpanics(test, function() squared(Circle()) end)
+    squared(Square())
+    do
+      local actual = divide(-7, 2)
+      local expected = -3
+      temper.test_assert(test, actual == expected, function() return "expected divide(-7, 2) == (" .. expected .. ") not (" .. actual .. ")" end)
+    end
   end)
 end
 

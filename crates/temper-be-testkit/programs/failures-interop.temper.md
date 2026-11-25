@@ -103,8 +103,9 @@ whose handler jumps out keeps the failure for it (a `catch` whose body
 jumps out of its loop is `failure-jumps`, which Rust and C++ don't have
 yet):
 
+    let nonzero(n: Int): Int throws Bubble { if (n == 0) { bubble() } else { n } }
     export let mixed(key: String, n: Int): Int {
-      (lookup(key) + 10 / n) orelse -1
+      (lookup(key) + 10 / nonzero(n)) orelse -1
     }
 
     export let firstSign(texts: List<String>): String {

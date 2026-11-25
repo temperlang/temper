@@ -76,11 +76,11 @@ pub(crate) fn same(a: bool, b: bool) -> Arc<String> {
 }
 
 pub(crate) fn quot(a: i32, b: i32) -> temper_core::Result<i32> {
-    temper_core::int_div(a, b)
+    Ok(a.wrapping_div(b))
 }
 
 pub(crate) fn rem(a: i32, b: i32) -> temper_core::Result<i32> {
-    temper_core::int_rem(a, b)
+    Ok(a.wrapping_rem(b))
 }
 
 pub(crate) fn words(a: impl ToArcString, b: impl ToArcString) -> Arc<String> {

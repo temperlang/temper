@@ -12,11 +12,11 @@ public final class OperatorsGlobal {
     }
 
     static int quot(int a, int b) {
-        return Core.divIntInt(a, b);
+        return a / b;
     }
 
     static int rem(int a, int b) {
-        return Core.modIntInt(a, b);
+        return a % b;
     }
 
     static String words(String a, String b) {

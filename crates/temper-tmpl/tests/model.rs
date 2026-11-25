@@ -76,15 +76,12 @@ fn builder_nodes_decode_to_their_fields() {
     assert_eq!(p.nodes.get(big), Node::Int64Lit { value: -1 << 40 });
     assert_eq!(p.nodes.get(x), Node::Float64Lit { value: -0.5 });
     assert_eq!(p.nodes.ty(read), TypeId::INT64);
-    let Node::Op {
-        op: k,
-        may_bubble,
-        args,
-    } = p.nodes.get(div)
-    else {
+    let Node::Op { op: k, args } = p.nodes.get(div) else {
         panic!()
     };
-    assert_eq!((k, may_bubble), (op("Int64.div"), true));
+    assert_eq!(k, op("Int64.div"));
+    // It may panic, so it isn't pure.
+    assert!(!k.pure());
     assert_eq!(p.nodes.list(args), [read, big]);
     assert_eq!(p.nodes.get(ret), Node::Return { value: None });
     let Node::Block { stmts } = p.nodes.get(block) else {
@@ -250,20 +247,11 @@ fn profiles_limit_kinds() {
 fn type_reference_and_declaration_problems() {
     let p = with_function(|b| {
         // A literal of the wrong type, an expression without one, a
-        // missing declaration, a flag that disagrees with the callee, and
-        // a compiler-made local without a hint.
+        // missing declaration, and a compiler-made local without a hint.
         let wrong = b.raw(Kind::Int32Lit, TypeId::BOOLEAN, (1, 0), Flags::NONE, &[]);
         let log = b.op(op("Boolean.not"), &[wrong]);
         let untyped = b.raw(Kind::BoolLit, TypeId::NONE, (1, 0), Flags::NONE, &[]);
         let ghost = b.raw(Kind::Local, TypeId::INT32, (99, 0), Flags::NONE, &[]);
-        let one = b.int32(1);
-        let marked = b.raw(
-            Kind::Op,
-            TypeId::INT32,
-            (op("Int32.neg").0, 0),
-            Flags::MAY_BUBBLE,
-            &[one],
-        );
         let owner = temper_tmpl::DeclId(1);
         let nameless = b.declare_made(DeclKind::Local, &[""], owner, TypeId::INT32);
         let two = b.int32(2);
@@ -272,7 +260,6 @@ fn type_reference_and_declaration_problems() {
             b.expr_statement(log),
             b.expr_statement(untyped),
             b.expr_statement(ghost),
-            b.expr_statement(marked),
             b.let_stmt(nameless, Some(two)),
             b.return_stmt(Some(three)),
         ]
@@ -283,7 +270,6 @@ fn type_reference_and_declaration_problems() {
             "T2 @4: Int32Lit is Int32, not Boolean",
             "T1 @6: BoolLit needs a type",
             "R1 @8: declaration #99 doesn't exist",
-            "F3 @10: the call of %Int32.neg can't bubble, but is marked",
             "D1 #2: compiler-made without a hint",
         ]
     );

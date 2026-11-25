@@ -1,17 +1,10 @@
-from temper_core import (
-    Bubble as _Bubble,
-    int_div as _int_div,
-    int_mul as _int_mul,
-)
+from temper_core import int_div as _int_div, int_mul as _int_mul
 
 __all__ = ('share', 'Ratio', 'ratio_of')
 
 
 def share(n: int, d: int, /) -> int:
-    try:
-        return _int_div(n, d)
-    except _Bubble:
-        return 0
+    return _int_div(n, d)
 
 
 class Ratio:

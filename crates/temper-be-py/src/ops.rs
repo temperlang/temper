@@ -3,10 +3,11 @@
 //!
 //! `Int32` and `Int64` arithmetic that can overflow calls `temper_core`'s
 //! wrapping helpers (`int_add`, `int64_mul`, …), as Kotlin's Python
-//! backend does, and division and remainder call helpers that bubble for
-//! a zero divisor (`int_div`, `float64_div`, …), as the runtime's
-//! `Bubble`, where Python raises `ZeroDivisionError` (but `Float64`
-//! division by a nonzero literal is Python's `/`); everything Python's
+//! backend does, and division and remainder call helpers (`int_div`,
+//! `float64_div`, …) that panic for an integer zero divisor and give
+//! IEEE 754's results for a float one, where Python raises
+//! `ZeroDivisionError` (but `Float64` division by a nonzero literal is
+//! Python's `/`); everything Python's
 //! own operators get right is written with them. Three-way comparisons of ints and strings are
 //! `(a > b) - (a < b)`, which gives -1, 0, or 1, where the operands are
 //! names or literals; otherwise ints' is `a - b`, as Kotlin's, which has
@@ -68,7 +69,7 @@ pub fn spelling(op: Op) -> Option<Spelling> {
         ("Float64", "add") => Bin(crate::tree::Bin::Add),
         ("Float64", "sub") => Bin(crate::tree::Bin::Sub),
         ("Float64", "mul") => Bin(crate::tree::Bin::Mul),
-        // Bubbling for a zero divisor, where Python raises.
+        // IEEE 754's for a zero divisor, where Python raises.
         ("Float64", "div") => Helper(CORE, "float64_div"),
         ("Float64", "mod") => Helper(CORE, "float64_mod"),
         ("Float64", "neg") => Unary(crate::tree::Unary::Neg),
@@ -76,7 +77,7 @@ pub fn spelling(op: Op) -> Option<Spelling> {
         (_, "add") => Helper(CORE, if int64 { "int64_add" } else { "int_add" }),
         (_, "sub") => Helper(CORE, if int64 { "int64_sub" } else { "int_sub" }),
         (_, "mul") => Helper(CORE, if int64 { "int64_mul" } else { "int_mul" }),
-        // By a divisor that can't fail them too, as Kotlin's.
+        // By a divisor that can't be zero too, as Kotlin's.
         (_, "div" | "divSafe") => Helper(CORE, if int64 { "int64_div" } else { "int_div" }),
         (_, "mod" | "modSafe") => Helper(CORE, "arith_int_mod"),
         (_, "neg") => Helper(CORE, if int64 { "int64_negate" } else { "int_negate" }),

@@ -70,12 +70,12 @@ module indices#0 {
 
   fn has3#8(s#41: String, c#42: Int32): Boolean {
     let i#43: StringIndexOption#3 = indexOfChar#1(s#41, c#42);
-    return (orelse((value { (as(i#43)^): StringIndex#13; true }): Boolean, false)): Boolean;
+    return is(i#43, StringIndex#13);
   }
 
   fn has4#9(s#44: String, c#45: Int32): Boolean {
     let i#46: StringIndexOption#3 = indexOfChar#1(s#44, c#45);
-    return (orelse((value { (as(i#46)^): NoStringIndex#22; false }): Boolean, true)): Boolean;
+    return %Boolean.not(is(i#46, NoStringIndex#22));
   }
 
   let s#10: String;

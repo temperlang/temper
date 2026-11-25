@@ -1907,11 +1907,7 @@ impl Validator {
                     self.call(p, id, &what, Callee::of(sig), (may_bubble, args), &binds);
                 }
             }
-            Node::Op {
-                op,
-                may_bubble,
-                args,
-            } => {
+            Node::Op { op, args } => {
                 for &arg in p.nodes.list(args) {
                     self.expr(p, arg, flow);
                 }
@@ -1924,14 +1920,14 @@ impl Validator {
                 let callee = Callee {
                     params: info.params,
                     optional: &[],
-                    fail: info.bubbles.then_some(TypeId::BUBBLE),
+                    fail: None,
                 };
                 self.call(
                     p,
                     id,
                     &what,
                     callee,
-                    (may_bubble, args),
+                    (false, args),
                     &(Vec::new(), Vec::new()),
                 );
             }
@@ -2238,7 +2234,7 @@ impl Validator {
                     self.node_problem(Rule::C3, id, message);
                 }
             }
-            Node::As { may_bubble, value } => {
+            Node::As { value } => {
                 self.expr(p, value, flow);
                 let have = p.nodes.ty(value);
                 if have == ty || !crate::analysis::is_subtype(p, ty, have) {
@@ -2248,12 +2244,6 @@ impl Validator {
                         p.show_type(have)
                     );
                     self.node_problem(Rule::C3, id, message);
-                }
-                if !may_bubble {
-                    let message = "as may bubble, but isn't marked".into();
-                    self.node_problem(Rule::F3, id, message);
-                } else {
-                    self.passes(p, id, "as may bubble", TypeId::BUBBLE);
                 }
             }
             Node::Is { ty: of, value } => {

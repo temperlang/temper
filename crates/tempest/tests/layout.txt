@@ -12,6 +12,8 @@ cpp * temper-core/core.hpp
 cpp * temper-core/date.hpp
 cpp * temper-core/dense_bit_vector.hpp
 cpp * temper-core/deque.hpp
+cpp * temper-core/expected.hpp
+cpp * temper-core/failure.hpp
 cpp * temper-core/float64.hpp
 cpp * temper-core/generator.hpp
 cpp * temper-core/int.hpp
@@ -140,6 +142,7 @@ cpp types/string/is-empty is-empty/main.cpp
 csharp * temper-core/Async.cs
 csharp * temper-core/Bubble.cs
 csharp * temper-core/Core.cs
+csharp * temper-core/Failure.cs
 csharp * temper-core/Float64.cs
 csharp * temper-core/Generator.cs
 csharp * temper-core/Listed.cs
@@ -330,6 +333,7 @@ csharp types/string/is-empty is-empty/src/Logging.cs
 java * temper-core/pom.xml
 java * temper-core/src/main/java/temper/core/Bubble.java
 java * temper-core/src/main/java/temper/core/Core.java
+java * temper-core/src/main/java/temper/core/Failure.java
 java * temper-core/src/main/java/temper/core/Generator.java
 java * temper-core/src/main/java/temper/core/NonNull.java
 java * temper-core/src/main/java/temper/core/Nullable.java
@@ -755,6 +759,7 @@ py types/string/is-empty is-empty/is_empty/is_empty.py
 py types/string/is-empty is-empty/pyproject.toml
 rust * temper-core/Cargo.lock
 rust * temper-core/Cargo.toml
+rust * temper-core/src/failure.rs
 rust * temper-core/src/float64.rs
 rust * temper-core/src/generator.rs
 rust * temper-core/src/lib.rs

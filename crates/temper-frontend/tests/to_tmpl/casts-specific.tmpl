@@ -25,7 +25,7 @@ module specific#0 {
   }
 
   fn checkB#6(instance#14: AlphaInterface#1): Void {
-    ~console#17.log#16((orelse((value { (as(instance#14)^): BravoClass#2; "yep" }): String, "nope")): String);
+    ~console#17.log#16((if (is(instance#14, BravoClass#2)) "yep" else "nope"): String);
   }
 
   let items#12: List#8<AlphaInterface#1>;

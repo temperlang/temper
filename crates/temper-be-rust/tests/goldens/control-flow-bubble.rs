@@ -62,14 +62,7 @@ pub(crate) fn report(x: Option<impl ToArcString>) {
     let message = something(x.clone()).unwrap_or_else(|_| Arc::new("null".to_string()));
     let suffix = (|| {
         Ok::<_, temper_core::Error>(Arc::new(
-            more(Some(
-                (|| {
-                    x.clone().ok_or_else(temper_core::Error::new)?;
-                    Ok::<_, temper_core::Error>(1)
-                })()
-                .unwrap_or(0),
-            ))?
-            .to_string(),
+            more(Some(if x.is_some() { 1 } else { 0 }))?.to_string(),
         ))
     })()
     .unwrap_or_else(|_| Arc::new(String::new()));
@@ -78,10 +71,10 @@ pub(crate) fn report(x: Option<impl ToArcString>) {
 
 pub(crate) fn calc_rows(cols: i32, total: i32) -> temper_core::Result<i32> {
     println!("calcRows({cols}, {total})");
-    if temper_core::int_rem(total, cols)? != 0 {
+    if total.wrapping_rem(cols) != 0 {
         return Err(temper_core::Error::new());
     }
-    temper_core::int_div(total, cols)
+    Ok(total.wrapping_div(cols))
 }
 
 pub(crate) fn count_below(s: impl ToArcString) -> temper_core::Result<i32> {

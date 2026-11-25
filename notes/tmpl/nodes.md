@@ -70,7 +70,7 @@ and labels are declared by the statements below.
 - Equality and comparison, below.
 - Conversions ([overview.md](overview.md#fully-explicit)): `Upcast`, `ToFun` and `FromFun`, `AsNullable`,
   `NonNull` (checked), and `FromNever`; and run-time checks `Is` and
-  `As` (which may bubble).
+  `As` (which panics where it fails).
 - Functions: `FunctionLiteral`, with its parameters, captures, and
   body, typed by its `@fun` interface or bare function type (as built,
   2026-10-31: "Subset B's next step: function values", below).
@@ -285,8 +285,8 @@ Invariants, per kind (the validator's rule codes are below):
 - **Calls** have one argument per parameter, each of exactly the
   parameter's type after substituting the type arguments (subset A has
   no conversions, since it has no subtypes), or `Omitted` for an
-  optional one. `MAY_BUBBLE` is set exactly when the callee or
-  operator may bubble.
+  optional one. `MAY_BUBBLE` is set exactly when the callee may bubble
+  (no operator does: integer division by zero panics).
 - **Bubbling:** in subset A, a call that may bubble has no handler
   (`orelse` comes with B), so its function must be marked may-bubble.
   In an init block, it fails the module's initialization
@@ -615,8 +615,7 @@ in the core fixture, used by the nodes that already exist.
   while (s.hasIndex(i)) { let c = s[i]; i = s.next(i); … }`.
 - **Not yet:** a library's own bodiless `@connected` function, which
   needs its backend code (`functions/connected`), while one with a body
-  translates as its body, its backend code unused; and a constant `/`
-  or `%` where nothing may bubble (`types/int/shifty`, `types/map`).
+  translates as its body, its backend code unused.
 
 ### Switch (As built, 2026-11-06, Proposed)
 
@@ -965,9 +964,11 @@ Proposed, replacing subset A's 113-key table:
   `ushr` (the integer types); `Float64.pow`; `Boolean.not`; and
   `String.cat`. As built, 69 since 2026-11-02, with `divSafe` and
   `modSafe` for the integer types: `/` and `%` by a constant that
-  can't fail them (not 0, and for `%` positive), which never bubble,
-  as Kotlin's `DivIntIntSafe` and the like, so a function that can't
-  bubble may divide by one. They belong to the language, not a library, and passes
+  can't be zero (not 0, and for `%` positive), which skip the zero
+  check, as Kotlin's `DivIntIntSafe` and the like. No operator fails
+  (2026-11-25): integer `div` and `mod` panic for a zero divisor, so
+  they aren't pure ([`OpInfo::pure`]), and `Float64`'s give IEEE 754's
+  results. They belong to the language, not a library, and passes
   and analyses (purity, value ranges, hoisting) match them by enum,
   never by string. Each variant spells every one.
 - **Everything else is a declaration of core or std,** referenced by

@@ -21,7 +21,7 @@ this form exercises more constructs, unless we optimize it out at some point.
 
     let report(x: String?): Void {
       let message = something(x) orelse "null";
-      let suffix = more(do { x as String; 1 } orelse 0).toString() orelse "";
+      let suffix = more(if (x is String) { 1 } else { 0 }).toString() orelse "";
       console.log("${message}${suffix}");
     }
 

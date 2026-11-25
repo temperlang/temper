@@ -42,9 +42,17 @@ public final class HostFailuresSeveralLibrariesGlobal {
         }
     }
 
+    static int nonzero(int n) {
+        if (n == 0) {
+            throw Core.bubble();
+        } else {
+            return n;
+        }
+    }
+
     static int ratio(String key, String count) {
         try {
-            return Core.divIntInt(hostLookup(key), CountFailuresGlobal.parseCount(count));
+            return hostLookup(key) / nonzero(CountFailuresGlobal.parseCount(count));
         } catch (RuntimeException caught) {
             if (!(caught instanceof Bubble || caught instanceof Failure)) {
                 throw caught;

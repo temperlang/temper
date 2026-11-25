@@ -1,5 +1,4 @@
 local temper = require("temper-core")
-local int64_1 = temper.int64_constructor(1)
 local int64_neg7 = temper.int64_constructor(-7)
 local int64_5000000000 = temper.int64_constructor(1, 705032704)
 local Regex = require("std/regex").Regex
@@ -51,7 +50,11 @@ end
 ---@param s panics.Shape
 ---@return panics.Square
 local function downcast(s)
-  return temper.cast_to(s, Square)
+  if temper.instance_of(s, Square) then
+    return s --[[@as panics.Square]]
+  else
+    return temper.bubble()
+  end
 end
 
 ---@param f fun(): integer
@@ -132,20 +135,6 @@ end) then
   b = -2
 end
 ---@type integer
-local c
-if not temper.pcall(function()
-  c = temper.int32_div(1, zero)
-end) then
-  c = -3
-end
----@type integer
-local d
-if not temper.pcall(function()
-  d = temper.int64_toint32(temper.int64_div(int64_1, temper.int32_toint64(zero)))
-end) then
-  d = -4
-end
----@type integer
 local e
 if not temper.pcall(function()
   e = temper.string_toint32("nope")
@@ -175,15 +164,7 @@ end) then
   h = "no digits"
 end
 local i = calling(function() return failing(2) end)
-print(a .. " " .. b .. " " .. c .. " " .. d .. " " .. e .. " " .. tostring(temper.float_eq(f, -6.0)) .. " " .. g .. " " .. h .. " " .. i)
-local nothing = temper.null
----@type string
-local j
-if not temper.pcall(function()
-  j = temper.cast_to_string(nothing)
-end) then
-  j = "null"
-end
+print(a .. " " .. b .. " " .. e .. " " .. tostring(temper.float_eq(f, -6.0)) .. " " .. g .. " " .. h .. " " .. i)
 ---@type integer
 local k
 if not temper.pcall(function()
@@ -256,7 +237,7 @@ if not temper.pcall(function()
 end) then
   u = "bad json"
 end
-print(j .. " " .. temper.int64_tostring(k) .. " " .. l .. " " .. m .. " " .. n .. " " .. o .. " " .. q .. " " .. r .. " " .. s .. " " .. t .. " " .. u)
+print(temper.int64_tostring(k) .. " " .. l .. " " .. m .. " " .. n .. " " .. o .. " " .. q .. " " .. r .. " " .. s .. " " .. t .. " " .. u)
 print("panicking")
 ---@type integer
 local p

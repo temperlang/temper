@@ -58,11 +58,11 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 println!("negative zero plus negative zero is negative zero");
             }
             println!("{}", temper_core::float64::to_string(negative_zero));
-            let mut third = temper_core::float64::div(one, three)?;
+            let mut third = one / three;
             third = third;
-            let mut half = temper_core::float64::div(one, two)?;
+            let mut half = one / two;
             half = half;
-            let mut two_thirds = temper_core::float64::div(two, three)?;
+            let mut two_thirds = two / three;
             two_thirds = two_thirds;
             if gt(third, half) {
                 println!("oops third > half");
@@ -106,7 +106,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
             let mut biggest = bigger * bigger * bigger * bigger * bigger * bigger;
             biggest = biggest;
             println!("biggest {}", temper_core::float64::to_string(biggest));
-            let mut tiniest = temper_core::float64::div(one, biggest)?;
+            let mut tiniest = one / biggest;
             tiniest = tiniest;
             println!("tiniest {}", temper_core::float64::to_string(tiniest));
             let mut negative_infinity = biggest * -1.0;

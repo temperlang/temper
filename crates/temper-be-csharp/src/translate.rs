@@ -2173,7 +2173,7 @@ impl<'a> Translator<'a> {
                 !reads_var(d) || !self.block_writes.contains(&d)
             }
             Node::GetField { field: d, .. } | Node::GetStatic { target: d } => !reads_var(d),
-            Node::Op { may_bubble, .. } => !may_bubble,
+            Node::Op { op, .. } => op.pure(),
             // Core's that only read.
             Node::CallMethod {
                 method,
@@ -3222,10 +3222,9 @@ impl<'a> Translator<'a> {
             }
             // C# converts to an interface by itself.
             Node::Upcast { value } => self.expr(value)?,
-            // `as` bubbles where it fails, by the runtime's `Cast`, or
-            // from a nullable type, its `CastToNonNull`, as C#'s own
-            // cast would throw `InvalidCastException`, which no `orelse`
-            // catches, and lets null through to a class.
+            // `as` panics where it fails, by the runtime's `Cast`, or
+            // from a nullable type, its `CastToNonNull`, as C#'s own cast
+            // lets null through to a class.
             Node::As { value, .. } if p.types.is_nullable(p.nodes.ty(value)) => {
                 let ty = self.ty(p.nodes.ty(id))?;
                 let e = self.expr(value)?;
@@ -3994,13 +3993,13 @@ fn unconverted(p: &Program, mut id: NodeId) -> NodeId {
 }
 
 /// Whether a value, dropped, needn't be written at all: literals, reads
-/// of locals, module `let`s, and fields, operators that can't fail, and
+/// of locals, module `let`s, and fields, operators that can't panic, and
 /// functions made but not called, which do nothing a statement would
 /// show. Anything else, dropped, is `_ = e;`.
 fn no_effects(p: &Program, id: NodeId) -> bool {
     let here = match p.nodes.get(id) {
         Node::FunctionLiteral { .. } | Node::FunctionRef { .. } => return true,
-        Node::Op { may_bubble, .. } => !may_bubble,
+        Node::Op { op, .. } => op.pure(),
         Node::BoolLit { .. }
         | Node::Int32Lit { .. }
         | Node::Int64Lit { .. }

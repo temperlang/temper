@@ -111,44 +111,12 @@ void global_init_init() {
       core::Console::log(console, core::checked_cast<Apple>(x)->get_name());
       core::Console::log(console, core::checked_cast<Fuji>(x)->get_name());
       x = core::to_base<Apple>(Gala::make());
-      core::Str value;
-      try {
-        value = core::checked_cast<Fuji>(x)->get_name();
-      } catch (core::TemperBubble const &) {
-        value = TEMPER_STR("Cast failed!");
-      }
-      core::Console::log(console, value);
+      core::Console::log(console, x != nullptr && dynamic_cast<Fuji const *>(x.get()) != nullptr ? core::checked_cast<Fuji>(x)->get_name() : TEMPER_STR("Cast failed!"));
       std::shared_ptr<core::AnyValueBase> y = x;
-      core::Str value2;
-      try {
-        value2 = core::checked_cast<Apple>(y)->get_name();
-      } catch (core::TemperBubble const &) {
-        value2 = TEMPER_STR("Cast from AnyValue failed!");
-      }
-      core::Console::log(console, value2);
-      core::Str value3;
-      try {
-        value3 = core::checked_cast<Gala>(y)->get_name();
-      } catch (core::TemperBubble const &) {
-        value3 = TEMPER_STR("Cast from AnyValue failed!");
-      }
-      core::Console::log(console, value3);
-      core::Str value4;
-      try {
-        value4 = core::checked_cast<Fuji>(y)->get_name();
-      } catch (core::TemperBubble const &) {
-        value4 = TEMPER_STR("Cast from AnyValue failed!");
-      }
-      core::Console::log(console, value4);
+      core::Console::log(console, core::checked_cast<Apple>(y)->get_name());
+      core::Console::log(console, core::checked_cast<Gala>(y)->get_name());
       x = nullptr;
-      core::Str value5;
-      try {
-        core::checked_cast<Apple>(x);
-        value5 = TEMPER_STR("Tasty nothing.");
-      } catch (core::TemperBubble const &) {
-        value5 = TEMPER_STR("Was null!");
-      }
-      core::Console::log(console, value5);
+      core::Console::log(console, x != nullptr ? TEMPER_STR("Tasty nothing.") : TEMPER_STR("Was null!"));
     }
     temper_globals::thing0.value = core::any_box(false);
     temper_globals::thing1.value = core::any_box(1);

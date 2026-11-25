@@ -22,7 +22,7 @@ public static class ShiftyGlobal
                 StringUtil.AppendBetween(sb, hexString, 0, idx);
             }
         }
-        int nFirstGroup = Core.ModSafe(StringUtil.CountBetween(hexString, idx, end), 4);
+        int nFirstGroup = Core.Mod(StringUtil.CountBetween(hexString, idx, end), 4);
         bool needsUnderscore = false;
         if (nFirstGroup != 0)
         {

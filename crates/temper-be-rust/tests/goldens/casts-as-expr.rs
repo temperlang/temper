@@ -7,72 +7,49 @@ pub(crate) fn init() -> temper_core::Result<()> {
         .get_or_init(|| {
             {
                 let mut x = Some(Apple::new(Fuji::new()));
-                println!("{}", x.clone().ok_or_else(temper_core::Error::new)?.name());
+                println!("{}", x.clone().unwrap().name());
                 println!(
                     "{}",
                     x.clone()
                         .and_then(temper_core::cast::<Fuji>)
-                        .ok_or_else(temper_core::Error::new)?
+                        .unwrap()
                         .name()
                 );
                 x = Some(Apple::new(Gala::new()));
                 println!(
                     "{}",
-                    (|| {
-                        Ok::<_, temper_core::Error>(
-                            x.clone()
-                                .and_then(temper_core::cast::<Fuji>)
-                                .ok_or_else(temper_core::Error::new)?
-                                .name(),
-                        )
-                    })()
-                    .unwrap_or_else(|_| Arc::new("Cast failed!".to_string()))
+                    if x.is_some() && temper_core::is::<Fuji>(x.clone().unwrap()) {
+                        x.clone()
+                            .and_then(temper_core::cast::<Fuji>)
+                            .unwrap()
+                            .name()
+                    } else {
+                        Arc::new("Cast failed!".to_string())
+                    }
                 );
                 let y = x.clone().map(|it| it.as_any_value());
                 println!(
                     "{}",
-                    (|| {
-                        Ok::<_, temper_core::Error>(
-                            y.clone()
-                                .and_then(temper_core::cast::<Apple>)
-                                .ok_or_else(temper_core::Error::new)?
-                                .name(),
-                        )
-                    })()
-                    .unwrap_or_else(|_| Arc::new("Cast from AnyValue failed!".to_string()))
+                    y.clone()
+                        .and_then(temper_core::cast::<Apple>)
+                        .unwrap()
+                        .name()
                 );
                 println!(
                     "{}",
-                    (|| {
-                        Ok::<_, temper_core::Error>(
-                            y.clone()
-                                .and_then(temper_core::cast::<Gala>)
-                                .ok_or_else(temper_core::Error::new)?
-                                .name(),
-                        )
-                    })()
-                    .unwrap_or_else(|_| Arc::new("Cast from AnyValue failed!".to_string()))
-                );
-                println!(
-                    "{}",
-                    (|| {
-                        Ok::<_, temper_core::Error>(
-                            y.clone()
-                                .and_then(temper_core::cast::<Fuji>)
-                                .ok_or_else(temper_core::Error::new)?
-                                .name(),
-                        )
-                    })()
-                    .unwrap_or_else(|_| Arc::new("Cast from AnyValue failed!".to_string()))
+                    y.clone()
+                        .and_then(temper_core::cast::<Gala>)
+                        .unwrap()
+                        .name()
                 );
                 x = None;
                 println!(
                     "{}",
-                    (|| {
-                        x.clone().ok_or_else(temper_core::Error::new)?;
-                        Ok::<_, temper_core::Error>(Arc::new("Tasty nothing.".to_string()))
-                    })()
-                    .unwrap_or_else(|_| Arc::new("Was null!".to_string()))
+                    if x.is_some() {
+                        "Tasty nothing."
+                    } else {
+                        "Was null!"
+                    }
                 );
             }
             THING0

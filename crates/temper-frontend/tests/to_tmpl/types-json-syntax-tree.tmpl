@@ -124,7 +124,7 @@ module `json-syntax-tree`#0 {
     {
       let s#66: String = "{\"x\":null,\"y\":123,\"z\":123456789012}";
       let ast#67: JsonSyntaxTree#19 = parseJson#21(s#66)^;
-      let obj#69: JsonObject#68 = (as(ast#67)^): JsonObject#68;
+      let obj#69: JsonObject#68 = (as(ast#67)): JsonObject#68;
       let xAst#70: JsonSyntaxTree#19 = obj#69.propertyValueOrBubble#71("x")^;
       let yAst#72: JsonSyntaxTree#19 = obj#69.propertyValueOrBubble#71("y")^;
       ~console#24.log#23(%String.cat("for x, got JSON null: ", is(xAst#70, JsonNull#73).toString#26()));

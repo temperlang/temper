@@ -16,14 +16,14 @@ internal class Money
 
     private int Whole()
     {
-        return Core.DivSafe(this.cents, 100);
+        return Core.Div(this.cents, 100);
     }
 
     private int Rounded
     {
         get
         {
-            return Core.DivSafe(this.cents + 50, 100);
+            return Core.Div(this.cents + 50, 100);
         }
     }
 

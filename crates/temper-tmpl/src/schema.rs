@@ -463,7 +463,6 @@ schema! {
     /// An operator or member of a builtin type.
     Op(Expr, TypeRule::Op) {
         op: Op = a,
-        may_bubble: bool = flag,
         args: Kids = many Expr,
     }
     /// Calls a method or getter on a receiver; virtual exactly when the
@@ -498,9 +497,9 @@ schema! {
     /// A value as a subtype that flow facts (an `is` check) prove it has,
     /// unchecked.
     Downcast(Expr, Written) { value: NodeId = one Expr }
-    /// A value as a subtype, checked when run: it bubbles if the value
+    /// A value as a subtype, checked when run: it panics if the value
     /// isn't one, as Temper's `as` does.
-    As(Expr, Written) { may_bubble: bool = flag, value: NodeId = one Expr }
+    As(Expr, Written) { value: NodeId = one Expr }
     /// Whether a value is an instance of a class or interface.
     Is(Expr, Fixed(TypeId::BOOLEAN)) { ty: TypeId = a, value: NodeId = one Expr }
     /// Whether two values of class or interface types are the same object,

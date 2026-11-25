@@ -5,9 +5,9 @@
 //! where that's right: `Int32` and `Int64` arithmetic goes through the
 //! runtime's `Int` and `Int64` helpers (`core::Int::add`), which wrap as
 //! Temper's does rather than overflow, which C++ leaves undefined, and
-//! division and remainder through `div_wrap` and `mod_wrap`, which bubble
+//! division and remainder through `div_wrap` and `mod_wrap`, which panic
 //! on a zero divisor and give `INT32_MIN / -1` without C++'s undefined
-//! behavior, or by a divisor that can't fail them, `div_safe` and
+//! behavior, or by a divisor that can't be zero, `div_safe` and
 //! `mod_safe`; comparisons, bitwise operators, and `Float64`'s arithmetic
 //! are C++'s own; `Float64`'s comparisons go through the runtime's
 //! `Float64::lt` and the like, which order NaN and signed zeros as Temper

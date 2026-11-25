@@ -12,7 +12,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 if n.wrapping_add(m) > 2 {
                     panic!();
                 }
-                temper_core::int_div(10, n.wrapping_sub(m))
+                Ok::<_, Arc<dyn temper_core::Failure>>(10i32.wrapping_div(n.wrapping_sub(m)))
             })()
             .unwrap_or(-1);
             println!("after {p}");

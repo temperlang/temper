@@ -1,4 +1,5 @@
 import {
+  bubble,
   divIntInt,
   failureBase,
   failureCause,
@@ -161,13 +162,25 @@ export function signName(e) {
 }
 
 /**
+ * @param {number} n
+ * @returns {number}
+ */
+function nonzero(n) {
+  if (n === 0) {
+    bubble();
+  } else {
+    return n;
+  }
+}
+
+/**
  * @param {string} key
  * @param {number} n
  * @returns {number}
  */
 export function mixed(key, n) {
   try {
-    return (lookup(key) + divIntInt(10, n)) | 0;
+    return (lookup(key) + divIntInt(10, nonzero(n))) | 0;
   } catch (e$) {
     if (!(isBubble(e$) || e$ instanceof NotFound)) throw e$;
     return -1;

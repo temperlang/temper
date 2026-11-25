@@ -43,7 +43,7 @@ namespace temper {
         std::shared_ptr<Target> checked_cast(const std::shared_ptr<Source>& src) {
             std::shared_ptr<Target> result = std::dynamic_pointer_cast<Target>(src);
             if (result == nullptr) {
-                throw TemperBubble("bad cast");
+                panic("failed cast");
             }
             return result;
         }
@@ -60,7 +60,7 @@ namespace temper {
         std::shared_ptr<AnyValueBox<T>> checked_cast_box(const std::shared_ptr<AnyValueBase>& src) {
             std::shared_ptr<AnyValueBox<T>> result = std::dynamic_pointer_cast<AnyValueBox<T>>(src);
             if (result == nullptr) {
-                throw TemperBubble("bad cast: AnyValue does not hold expected type");
+                panic("failed cast: AnyValue does not hold expected type");
             }
             return result;
         }

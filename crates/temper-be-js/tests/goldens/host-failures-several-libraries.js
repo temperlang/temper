@@ -1,5 +1,6 @@
 import * as _connected from "./_connected.js";
 import {
+  bubble,
   divIntInt,
   failureBase,
   failureCause,
@@ -49,13 +50,25 @@ export function reading(key, count) {
 }
 
 /**
+ * @param {number} n
+ * @returns {number}
+ */
+export function nonzero(n) {
+  if (n === 0) {
+    bubble();
+  } else {
+    return n;
+  }
+}
+
+/**
  * @param {string} key
  * @param {string} count
  * @returns {number}
  */
 export function ratio(key, count) {
   try {
-    return divIntInt(hostLookup(key), parseCount(count));
+    return divIntInt(hostLookup(key), nonzero(parseCount(count)));
   } catch (e$) {
     if (!(isBubble(e$) || isFailure(e$))) throw e$;
     return -9;

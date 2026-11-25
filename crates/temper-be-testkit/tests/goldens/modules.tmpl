@@ -63,7 +63,7 @@ module helpers#1 in "helpers" {
 
 module core#2 in "core" {
   export fn share#39(n#41: Int32, d#42: Int32): Int32 {
-    return (orelse(%Int32.div(n#41, d#42)^, 0)): Int32;
+    return %Int32.div(n#41, d#42);
   }
 
   export class Ratio#8 {

@@ -18,59 +18,12 @@ public static class AsExprGlobal
             console.Log(Core.CastToNonNull<IApple>(x).Name);
             console.Log(Core.CastToNonNull<Fuji>(x).Name);
             x = new Gala();
-            string t1;
-            try
-            {
-                t1 = Core.CastToNonNull<Fuji>(x).Name;
-            }
-            catch (global::TemperLang.Core.Bubble)
-            {
-                t1 = "Cast failed!";
-            }
-            console.Log(t1);
+            console.Log(x != null && x is Fuji ? Core.CastToNonNull<Fuji>(x).Name : "Cast failed!");
             object? y = x;
-            string t2;
-            try
-            {
-                t2 = Core.CastToNonNull<IApple>(y).Name;
-            }
-            catch (global::TemperLang.Core.Bubble)
-            {
-                t2 = "Cast from AnyValue failed!";
-            }
-            console.Log(t2);
-            string t3;
-            try
-            {
-                t3 = Core.CastToNonNull<Gala>(y).Name;
-            }
-            catch (global::TemperLang.Core.Bubble)
-            {
-                t3 = "Cast from AnyValue failed!";
-            }
-            console.Log(t3);
-            string t4;
-            try
-            {
-                t4 = Core.CastToNonNull<Fuji>(y).Name;
-            }
-            catch (global::TemperLang.Core.Bubble)
-            {
-                t4 = "Cast from AnyValue failed!";
-            }
-            console.Log(t4);
+            console.Log(Core.CastToNonNull<IApple>(y).Name);
+            console.Log(Core.CastToNonNull<Gala>(y).Name);
             x = null;
-            string t5;
-            try
-            {
-                Core.CastToNonNull<IApple>(x);
-                t5 = "Tasty nothing.";
-            }
-            catch (global::TemperLang.Core.Bubble)
-            {
-                t5 = "Was null!";
-            }
-            console.Log(t5);
+            console.Log(x != null ? "Tasty nothing." : "Was null!");
         }
         Thing0 = false;
         Thing1 = 1;

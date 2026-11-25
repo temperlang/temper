@@ -6,9 +6,10 @@
 //! arithmetic wraps (C# is `unchecked` unless a project says otherwise,
 //! and Kotlin's `.csproj` doesn't) and whose shifts mask their count, as
 //! Temper's do, so they're C#'s own operators, but for division and
-//! remainder, which call the runtime's `Core.Div` and `Core.Mod` to bubble
-//! on a zero divisor and to give `int.MinValue / -1` without C#'s
-//! `OverflowException`, and an unsigned shift, `Core.UShr`, since C# 10
+//! remainder, which call the runtime's `Core.Div` and `Core.Mod` to give
+//! `int.MinValue / -1` without C#'s `OverflowException` (a zero divisor
+//! throws C#'s `DivideByZeroException`, a panic; `Float64`'s give IEEE
+//! 754's results), and an unsigned shift, `Core.UShr`, since C# 10
 //! has no `>>>`. Three-way comparisons of integers and booleans are
 //! `CompareTo`, which gives -1, 0, or 1; `Float64`'s go through the
 //! runtime's `Float64.Compare`, which orders NaN and signed zeros as
@@ -80,12 +81,10 @@ pub fn spelling(op: Op) -> Option<Spelling> {
         (_, "cmp") => CompareTo,
         (_, _) if compare(op).is_some() => Bin(compare(op)?),
         ("Float64", "pow") => Static("Math", "Pow"),
-        ("Int32" | "Int64", "div") => Static("Core", "Div"),
-        ("Int32" | "Int64", "mod") => Static("Core", "Mod"),
-        // By a divisor that can't fail them, as Kotlin's, without the zero
-        // check; `MinValue / -1` still wraps, where C# would throw.
-        ("Int32" | "Int64", "divSafe") => Static("Core", "DivSafe"),
-        ("Int32" | "Int64", "modSafe") => Static("Core", "ModSafe"),
+        // `MinValue / -1` wraps, where C# would throw; a zero divisor
+        // throws C#'s `DivideByZeroException`, a panic.
+        ("Int32" | "Int64", "div" | "divSafe") => Static("Core", "Div"),
+        ("Int32" | "Int64", "mod" | "modSafe") => Static("Core", "Mod"),
         ("Int32" | "Int64", "ushr") => Static("Core", "UShr"),
         (_, "add") => Bin(crate::tree::Bin::Add),
         (_, "sub") => Bin(crate::tree::Bin::Sub),

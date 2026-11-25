@@ -4,16 +4,12 @@ from temper_core import (
     Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     boolean_to_string as _boolean_to_string,
-    cast_by_type as _cast_by_type,
-    cast_none as _cast_none,
     date_from_iso_string as _date_from_iso_string,
     date_of as _date_of,
     date_to_string as _date_to_string,
     float64_to_int as _float64_to_int,
     float_eq as _float_eq,
-    int64_div as _int64_div,
     int64_to_int32 as _int64_to_int32,
-    int_div as _int_div,
     map_builder_remove as _map_builder_remove,
     string_from_code_point as _string_from_code_point,
     string_from_code_points as _string_from_code_points,
@@ -59,7 +55,10 @@ def _failing(n: int, /) -> int:
 
 
 def _downcast(s: _Shape, /) -> _Square:
-    return _cast_by_type(s, _Square)
+    if isinstance(s, _Square):
+        return s
+    else:
+        raise _Bubble()
 
 
 def _calling(f: _Callable[[], int], /) -> int:
@@ -114,16 +113,6 @@ try:
     _b = _downcast(_Circle()).side
 except _Bubble:
     _b = -2
-_c: int
-try:
-    _c = _int_div(1, _zero)
-except _Bubble:
-    _c = -3
-_d: int
-try:
-    _d = _int64_to_int32(_int64_div(1, _zero))
-except _Bubble:
-    _d = -4
 _e: int
 try:
     _e = _string_to_int32('nope')
@@ -146,13 +135,7 @@ try:
 except _Bubble:
     _h = 'no digits'
 _i: int = _calling(lambda: _failing(2))
-_console.log(f'{_a} {_b} {_c} {_d} {_e} {_boolean_to_string(_float_eq(_f, -6.0))} {_g} {_h} {_i}')
-_nothing: str | None = None
-_j: str
-try:
-    _j = _cast_none(_nothing)
-except _Bubble:
-    _j = 'null'
+_console.log(f'{_a} {_b} {_e} {_boolean_to_string(_float_eq(_f, -6.0))} {_g} {_h} {_i}')
 _k: int
 try:
     _k = _string_to_int64('zz')
@@ -205,7 +188,7 @@ try:
     _u = _parsing('[1,')
 except _Bubble:
     _u = 'bad json'
-_console.log(f'{_j} {str(_k)} {_l} {_m} {_n} {_o} {_q} {_r} {_s} {_t} {_u}')
+_console.log(f'{str(_k)} {_l} {_m} {_n} {_o} {_q} {_r} {_s} {_t} {_u}')
 _console.log('panicking')
 _p: int
 try:

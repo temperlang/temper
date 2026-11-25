@@ -1,80 +1,119 @@
 # generated line:column -> source:line:column, and the text at each
-5:1 -> ../../test-assert-panics.temper.md:12:5  /** <- let at(ls: List<Int>, i: Int
-10:1 -> ../../test-assert-panics.temper.md:12:5  function at(ls, i) { <- let at(ls: List<Int>, i: Int
-10:10 -> ../../test-assert-panics.temper.md:12:9 (at)  at(ls, i) { <- at(ls: List<Int>, i: Int): I
-10:12 -> ../../test-assert-panics.temper.md:12:5  (ls, i) { <- let at(ls: List<Int>, i: Int
-11:3 -> ../../test-assert-panics.temper.md:13:7  if (i === 99) { <- if (i == 99) { bubble() }
-12:5 -> ../../test-assert-panics.temper.md:13:22  bubble(); <- bubble() }
-14:3 -> ../../test-assert-panics.temper.md:14:7  return listedGet(/** @type { <- ls[i]
-17:1 -> ../../test-assert-panics.temper.md:17:5  it("passes before", async fu <- test("passes before") {
-21:5 -> ../../test-assert-panics.temper.md:18:7  { <- assert(at([1, 2], 1) == 2);
-22:7 -> ../../test-assert-panics.temper.md:18:7  const actual = at(Object.fre <- assert(at([1, 2], 1) == 2);
-23:7 -> ../../test-assert-panics.temper.md:18:7  const expected = 2; <- assert(at([1, 2], 1) == 2);
-24:7 -> ../../test-assert-panics.temper.md:18:7  test.assert(actual === expec <- assert(at([1, 2], 1) == 2);
-34:1 -> ../../test-assert-panics.temper.md:21:5  it("passes when the block pa <- test("passes when the block
-38:5 -> ../../test-assert-panics.temper.md:22:25  function fn() { <- { at([1, 2], 5); };
-39:7 -> ../../test-assert-panics.temper.md:22:27  at(Object.freeze([1, 2]), 5) <- at([1, 2], 5); };
-41:5 -> ../../test-assert-panics.temper.md:22:7  test.assertPanics(fn); <- test.assertPanics { at([1, 2
-42:5 -> ../../test-assert-panics.temper.md:23:25  function fn2() { <- { panic(); };
-43:7 -> ../../test-assert-panics.temper.md:23:27  panic(); <- panic(); };
-45:5 -> ../../test-assert-panics.temper.md:23:7  test.assertPanics(fn2); <- test.assertPanics { panic();
-54:1 -> ../../test-assert-panics.temper.md:26:5  it("passes past an orelse", <- test("passes past an orelse"
-58:5 -> ../../test-assert-panics.temper.md:27:25  function fn() { <- {
-59:7 -> ../../test-assert-panics.temper.md:28:9  /** @type {number} */ <- let n = at([1, 2], 5) orelse
-60:7 -> ../../test-assert-panics.temper.md:28:9  let n; <- let n = at([1, 2], 5) orelse
-61:7 -> ../../test-assert-panics.temper.md:28:9  try { <- let n = at([1, 2], 5) orelse
-67:7 -> ../../test-assert-panics.temper.md:29:9  test.assert(n === -1, () => <- assert(n == -1) { "caught by
-69:5 -> ../../test-assert-panics.temper.md:27:7  test.assertPanics(fn); <- test.assertPanics {
-78:1 -> ../../test-assert-panics.temper.md:33:5  it("fails when the block ret <- test("fails when the block r
-82:5 -> ../../test-assert-panics.temper.md:34:25  function fn() { <- { at([1, 2], 0); };
-83:7 -> ../../test-assert-panics.temper.md:34:27  at(Object.freeze([1, 2]), 0) <- at([1, 2], 0); };
-85:5 -> ../../test-assert-panics.temper.md:34:7  test.assertPanics(fn); <- test.assertPanics { at([1, 2
-94:1 -> ../../test-assert-panics.temper.md:37:5  it("fails with its message", <- test("fails with its message
-98:5 -> ../../test-assert-panics.temper.md:38:51  function fn() { <- { at([1, 2], 1); };
-99:7 -> ../../test-assert-panics.temper.md:38:53  at(Object.freeze([1, 2]), 1) <- at([1, 2], 1); };
-101:5 -> ../../test-assert-panics.temper.md:38:7  test.assertPanics(fn, "readi <- test.assertPanics("reading i
-110:1 -> ../../test-assert-panics.temper.md:41:5  it("fails when the block bub <- test("fails when the block b
-114:5 -> ../../test-assert-panics.temper.md:42:25  function fn() { <- { at([1, 2], 99); };
-115:7 -> ../../test-assert-panics.temper.md:42:27  at(Object.freeze([1, 2]), 99 <- at([1, 2], 99); };
-117:5 -> ../../test-assert-panics.temper.md:42:7  test.assertPanics(fn); <- test.assertPanics { at([1, 2
-126:1 -> ../../test-assert-panics.temper.md:45:5  it("fails with its message w <- test("fails with its message
-130:5 -> ../../test-assert-panics.temper.md:46:52  function fn() { <- { at([1, 2], 99); };
-131:7 -> ../../test-assert-panics.temper.md:46:54  at(Object.freeze([1, 2]), 99 <- at([1, 2], 99); };
-133:5 -> ../../test-assert-panics.temper.md:46:7  test.assertPanics(fn, "readi <- test.assertPanics("reading i
-142:1 -> ../../test-assert-panics.temper.md:49:5  it("goes on after failing", <- test("goes on after failing"
-146:5 -> ../../test-assert-panics.temper.md:50:25  function fn() { <- { at([1, 2], 0); };
-147:7 -> ../../test-assert-panics.temper.md:50:27  at(Object.freeze([1, 2]), 0) <- at([1, 2], 0); };
-149:5 -> ../../test-assert-panics.temper.md:50:7  test.assertPanics(fn); <- test.assertPanics { at([1, 2
-150:5 -> ../../test-assert-panics.temper.md:51:7  test.assert(false, () => "we <- assert(false) { "went on" };
-159:1 -> ../../test-assert-panics.temper.md:54:5  it("nests", async function ( <- test("nests") { test =>
-163:5 -> ../../test-assert-panics.temper.md:55:25  function fn() { <- {
-164:7 -> ../../test-assert-panics.temper.md:56:27  function fn2() { <- { panic(); };
-165:9 -> ../../test-assert-panics.temper.md:56:29  panic(); <- panic(); };
-167:7 -> ../../test-assert-panics.temper.md:56:9  test.assertPanics(fn2); <- test.assertPanics { panic();
-168:7 -> ../../test-assert-panics.temper.md:57:44  function fn3() { <- { at([1, 2], 0); };
-169:9 -> ../../test-assert-panics.temper.md:57:46  at(Object.freeze([1, 2]), 0) <- at([1, 2], 0); };
-171:7 -> ../../test-assert-panics.temper.md:57:9  test.assertPanics(fn3, "inne <- test.assertPanics("inner ret
-172:7 -> ../../test-assert-panics.temper.md:58:9  panic(); <- panic();
-174:5 -> ../../test-assert-panics.temper.md:55:7  test.assertPanics(fn); <- test.assertPanics {
-183:1 -> ../../test-assert-panics.temper.md:62:5  it("keeps what the block cha <- test("keeps what the block c
-187:5 -> ../../test-assert-panics.temper.md:63:7  let n = 0; <- var n = 0;
-188:5 -> ../../test-assert-panics.temper.md:64:25  function fn() { <- { n += 1; panic(); };
-189:7 -> ../../test-assert-panics.temper.md:64:27  n = (n + 1) | 0; <- n += 1; panic(); };
-190:7 -> ../../test-assert-panics.temper.md:64:35  panic(); <- panic(); };
-192:5 -> ../../test-assert-panics.temper.md:64:7  test.assertPanics(fn); <- test.assertPanics { n += 1;
-193:5 -> ../../test-assert-panics.temper.md:65:7  test.assert(n === 1, () => " <- assert(n == 1) { "lost the c
-202:1 -> ../../test-assert-panics.temper.md:68:5  it("fails on a panic after t <- test("fails on a panic after
-206:5 -> ../../test-assert-panics.temper.md:69:25  function fn() { <- { panic(); };
-207:7 -> ../../test-assert-panics.temper.md:69:27  panic(); <- panic(); };
-209:5 -> ../../test-assert-panics.temper.md:69:7  test.assertPanics(fn); <- test.assertPanics { panic();
-210:5 -> ../../test-assert-panics.temper.md:70:7  at(Object.freeze([1, 2]), 7) <- at([1, 2], 7);
-219:1 -> ../../test-assert-panics.temper.md:73:5  it("ends on a fail in the bl <- test("ends on a fail in the
-223:5 -> ../../test-assert-panics.temper.md:74:25  function fn() { <- { test.fail("failed inside")
-224:7 -> ../../test-assert-panics.temper.md:74:27  test.fail("failed inside"); <- test.fail("failed inside");
-226:5 -> ../../test-assert-panics.temper.md:74:7  test.assertPanics(fn); <- test.assertPanics { test.fai
-227:5 -> ../../test-assert-panics.temper.md:75:7  test.fail("swallowed"); <- test.fail("swallowed");
-236:1 -> ../../test-assert-panics.temper.md:78:5  it("passes after", async fun <- test("passes after") {
-240:5 -> ../../test-assert-panics.temper.md:79:7  { <- assert(at([1, 2], 0) == 1);
-241:7 -> ../../test-assert-panics.temper.md:79:7  const actual = at(Object.fre <- assert(at([1, 2], 0) == 1);
-242:7 -> ../../test-assert-panics.temper.md:79:7  const expected = 1; <- assert(at([1, 2], 0) == 1);
-243:7 -> ../../test-assert-panics.temper.md:79:7  test.assert(actual === expec <- assert(at([1, 2], 0) == 1);
+15:1 -> ../../test-assert-panics.temper.md:12:5  /** <- let at(ls: List<Int>, i: Int
+20:1 -> ../../test-assert-panics.temper.md:12:5  function at(ls, i) { <- let at(ls: List<Int>, i: Int
+20:10 -> ../../test-assert-panics.temper.md:12:9 (at)  at(ls, i) { <- at(ls: List<Int>, i: Int): I
+20:12 -> ../../test-assert-panics.temper.md:12:5  (ls, i) { <- let at(ls: List<Int>, i: Int
+21:3 -> ../../test-assert-panics.temper.md:13:7  if (i === 99) { <- if (i == 99) { bubble() }
+22:5 -> ../../test-assert-panics.temper.md:13:22  bubble(); <- bubble() }
+24:3 -> ../../test-assert-panics.temper.md:14:7  return listedGet(/** @type { <- ls[i]
+27:1 -> ../../test-assert-panics.temper.md:34:5  /** <- let divide(a: Int, b: Int):
+32:1 -> ../../test-assert-panics.temper.md:34:5  function divide(a, b) { <- let divide(a: Int, b: Int):
+32:10 -> ../../test-assert-panics.temper.md:34:9 (divide)  divide(a, b) { <- divide(a: Int, b: Int): Int
+32:16 -> ../../test-assert-panics.temper.md:34:5  (a, b) { <- let divide(a: Int, b: Int):
+33:3 -> ../../test-assert-panics.temper.md:34:39  return divIntInt(a, b); <- a / b }
+36:1 -> ../../test-assert-panics.temper.md:35:5  /** <- let remainder(a: Int64, b: I
+41:1 -> ../../test-assert-panics.temper.md:35:5  function remainder(a, b) { <- let remainder(a: Int64, b: I
+41:10 -> ../../test-assert-panics.temper.md:35:9 (remainder)  remainder(a, b) { <- remainder(a: Int64, b: Int64
+41:19 -> ../../test-assert-panics.temper.md:35:5  (a, b) { <- let remainder(a: Int64, b: I
+42:3 -> ../../test-assert-panics.temper.md:35:48  return modInt64(a, b); <- a % b }
+45:1 -> ../../test-assert-panics.temper.md:36:5  /** <- let squared(s: Shape): Squar
+49:1 -> ../../test-assert-panics.temper.md:36:5  function squared(s) { <- let squared(s: Shape): Squar
+49:10 -> ../../test-assert-panics.temper.md:36:9 (squared)  squared(s) { <- squared(s: Shape): Square {
+49:17 -> ../../test-assert-panics.temper.md:36:5  (s) { <- let squared(s: Shape): Squar
+50:3 -> ../../test-assert-panics.temper.md:36:37  return requireInstanceOf(s, <- s as Square }
+53:1 -> ../../test-assert-panics.temper.md:31:5  class Shape extends type() { <- interface Shape {}
+53:7 -> ../../test-assert-panics.temper.md:31:15 (Shape)  Shape extends type() {} <- Shape {}
+53:12 -> ../../test-assert-panics.temper.md:31:5   extends type() {} <- interface Shape {}
+55:1 -> ../../test-assert-panics.temper.md:32:5  class Square extends type(Sh <- class Square extends Shape {
+55:7 -> ../../test-assert-panics.temper.md:32:11 (Square)  Square extends type(Shape) { <- Square extends Shape {}
+55:13 -> ../../test-assert-panics.temper.md:32:5   extends type(Shape) {} <- class Square extends Shape {
+57:1 -> ../../test-assert-panics.temper.md:33:5  class Circle extends type(Sh <- class Circle extends Shape {
+57:7 -> ../../test-assert-panics.temper.md:33:11 (Circle)  Circle extends type(Shape) { <- Circle extends Shape {}
+57:13 -> ../../test-assert-panics.temper.md:33:5   extends type(Shape) {} <- class Circle extends Shape {
+59:1 -> ../../test-assert-panics.temper.md:17:5  it("passes before", async fu <- test("passes before") {
+63:5 -> ../../test-assert-panics.temper.md:18:7  { <- assert(at([1, 2], 1) == 2);
+64:7 -> ../../test-assert-panics.temper.md:18:7  const actual = at(Object.fre <- assert(at([1, 2], 1) == 2);
+65:7 -> ../../test-assert-panics.temper.md:18:7  const expected = 2; <- assert(at([1, 2], 1) == 2);
+66:7 -> ../../test-assert-panics.temper.md:18:7  test.assert(actual === expec <- assert(at([1, 2], 1) == 2);
+76:1 -> ../../test-assert-panics.temper.md:21:5  it("passes when the block pa <- test("passes when the block
+80:5 -> ../../test-assert-panics.temper.md:22:25  function fn() { <- { at([1, 2], 5); };
+81:7 -> ../../test-assert-panics.temper.md:22:27  at(Object.freeze([1, 2]), 5) <- at([1, 2], 5); };
+83:5 -> ../../test-assert-panics.temper.md:22:7  test.assertPanics(fn); <- test.assertPanics { at([1, 2
+84:5 -> ../../test-assert-panics.temper.md:23:25  function fn2() { <- { panic(); };
+85:7 -> ../../test-assert-panics.temper.md:23:27  panic(); <- panic(); };
+87:5 -> ../../test-assert-panics.temper.md:23:7  test.assertPanics(fn2); <- test.assertPanics { panic();
+96:1 -> ../../test-assert-panics.temper.md:38:5  it("passes when division by <- test("passes when division b
+100:5 -> ../../test-assert-panics.temper.md:39:25  function fn() { <- { divide(1, 0); };
+101:7 -> ../../test-assert-panics.temper.md:39:27  divide(1, 0); <- divide(1, 0); };
+103:5 -> ../../test-assert-panics.temper.md:39:7  test.assertPanics(fn); <- test.assertPanics { divide(1
+104:5 -> ../../test-assert-panics.temper.md:40:25  function fn2() { <- { remainder(1i64, 0i64); };
+105:7 -> ../../test-assert-panics.temper.md:40:27  remainder(1n, 0n); <- remainder(1i64, 0i64); };
+107:5 -> ../../test-assert-panics.temper.md:40:7  test.assertPanics(fn2); <- test.assertPanics { remainde
+108:5 -> ../../test-assert-panics.temper.md:41:25  function fn3() { <- { squared(new Circle()); };
+109:7 -> ../../test-assert-panics.temper.md:41:27  squared(new Circle()); <- squared(new Circle()); };
+111:5 -> ../../test-assert-panics.temper.md:41:7  test.assertPanics(fn3); <- test.assertPanics { squared(
+112:5 -> ../../test-assert-panics.temper.md:42:7  squared(new Square()); <- squared(new Square());
+113:5 -> ../../test-assert-panics.temper.md:43:7  { <- assert(divide(-7, 2) == -3);
+114:7 -> ../../test-assert-panics.temper.md:43:7  const actual = divide(-7, 2) <- assert(divide(-7, 2) == -3);
+115:7 -> ../../test-assert-panics.temper.md:43:7  const expected = -3; <- assert(divide(-7, 2) == -3);
+116:7 -> ../../test-assert-panics.temper.md:43:7  test.assert(actual === expec <- assert(divide(-7, 2) == -3);
+126:1 -> ../../test-assert-panics.temper.md:46:5  it("passes past an orelse", <- test("passes past an orelse"
+130:5 -> ../../test-assert-panics.temper.md:47:25  function fn() { <- {
+131:7 -> ../../test-assert-panics.temper.md:48:9  /** @type {number} */ <- let n = at([1, 2], 5) orelse
+132:7 -> ../../test-assert-panics.temper.md:48:9  let n; <- let n = at([1, 2], 5) orelse
+133:7 -> ../../test-assert-panics.temper.md:48:9  try { <- let n = at([1, 2], 5) orelse
+139:7 -> ../../test-assert-panics.temper.md:49:9  test.assert(n === -1, () => <- assert(n == -1) { "caught by
+141:5 -> ../../test-assert-panics.temper.md:47:7  test.assertPanics(fn); <- test.assertPanics {
+150:1 -> ../../test-assert-panics.temper.md:53:5  it("fails when the block ret <- test("fails when the block r
+154:5 -> ../../test-assert-panics.temper.md:54:25  function fn() { <- { at([1, 2], 0); };
+155:7 -> ../../test-assert-panics.temper.md:54:27  at(Object.freeze([1, 2]), 0) <- at([1, 2], 0); };
+157:5 -> ../../test-assert-panics.temper.md:54:7  test.assertPanics(fn); <- test.assertPanics { at([1, 2
+166:1 -> ../../test-assert-panics.temper.md:57:5  it("fails with its message", <- test("fails with its message
+170:5 -> ../../test-assert-panics.temper.md:58:51  function fn() { <- { at([1, 2], 1); };
+171:7 -> ../../test-assert-panics.temper.md:58:53  at(Object.freeze([1, 2]), 1) <- at([1, 2], 1); };
+173:5 -> ../../test-assert-panics.temper.md:58:7  test.assertPanics(fn, "readi <- test.assertPanics("reading i
+182:1 -> ../../test-assert-panics.temper.md:61:5  it("fails when the block bub <- test("fails when the block b
+186:5 -> ../../test-assert-panics.temper.md:62:25  function fn() { <- { at([1, 2], 99); };
+187:7 -> ../../test-assert-panics.temper.md:62:27  at(Object.freeze([1, 2]), 99 <- at([1, 2], 99); };
+189:5 -> ../../test-assert-panics.temper.md:62:7  test.assertPanics(fn); <- test.assertPanics { at([1, 2
+198:1 -> ../../test-assert-panics.temper.md:65:5  it("fails with its message w <- test("fails with its message
+202:5 -> ../../test-assert-panics.temper.md:66:52  function fn() { <- { at([1, 2], 99); };
+203:7 -> ../../test-assert-panics.temper.md:66:54  at(Object.freeze([1, 2]), 99 <- at([1, 2], 99); };
+205:5 -> ../../test-assert-panics.temper.md:66:7  test.assertPanics(fn, "readi <- test.assertPanics("reading i
+214:1 -> ../../test-assert-panics.temper.md:69:5  it("goes on after failing", <- test("goes on after failing"
+218:5 -> ../../test-assert-panics.temper.md:70:25  function fn() { <- { at([1, 2], 0); };
+219:7 -> ../../test-assert-panics.temper.md:70:27  at(Object.freeze([1, 2]), 0) <- at([1, 2], 0); };
+221:5 -> ../../test-assert-panics.temper.md:70:7  test.assertPanics(fn); <- test.assertPanics { at([1, 2
+222:5 -> ../../test-assert-panics.temper.md:71:7  test.assert(false, () => "we <- assert(false) { "went on" };
+231:1 -> ../../test-assert-panics.temper.md:74:5  it("nests", async function ( <- test("nests") { test =>
+235:5 -> ../../test-assert-panics.temper.md:75:25  function fn() { <- {
+236:7 -> ../../test-assert-panics.temper.md:76:27  function fn2() { <- { panic(); };
+237:9 -> ../../test-assert-panics.temper.md:76:29  panic(); <- panic(); };
+239:7 -> ../../test-assert-panics.temper.md:76:9  test.assertPanics(fn2); <- test.assertPanics { panic();
+240:7 -> ../../test-assert-panics.temper.md:77:44  function fn3() { <- { at([1, 2], 0); };
+241:9 -> ../../test-assert-panics.temper.md:77:46  at(Object.freeze([1, 2]), 0) <- at([1, 2], 0); };
+243:7 -> ../../test-assert-panics.temper.md:77:9  test.assertPanics(fn3, "inne <- test.assertPanics("inner ret
+244:7 -> ../../test-assert-panics.temper.md:78:9  panic(); <- panic();
+246:5 -> ../../test-assert-panics.temper.md:75:7  test.assertPanics(fn); <- test.assertPanics {
+255:1 -> ../../test-assert-panics.temper.md:82:5  it("keeps what the block cha <- test("keeps what the block c
+259:5 -> ../../test-assert-panics.temper.md:83:7  let n = 0; <- var n = 0;
+260:5 -> ../../test-assert-panics.temper.md:84:25  function fn() { <- { n += 1; panic(); };
+261:7 -> ../../test-assert-panics.temper.md:84:27  n = (n + 1) | 0; <- n += 1; panic(); };
+262:7 -> ../../test-assert-panics.temper.md:84:35  panic(); <- panic(); };
+264:5 -> ../../test-assert-panics.temper.md:84:7  test.assertPanics(fn); <- test.assertPanics { n += 1;
+265:5 -> ../../test-assert-panics.temper.md:85:7  test.assert(n === 1, () => " <- assert(n == 1) { "lost the c
+274:1 -> ../../test-assert-panics.temper.md:88:5  it("fails on a panic after t <- test("fails on a panic after
+278:5 -> ../../test-assert-panics.temper.md:89:25  function fn() { <- { panic(); };
+279:7 -> ../../test-assert-panics.temper.md:89:27  panic(); <- panic(); };
+281:5 -> ../../test-assert-panics.temper.md:89:7  test.assertPanics(fn); <- test.assertPanics { panic();
+282:5 -> ../../test-assert-panics.temper.md:90:7  at(Object.freeze([1, 2]), 7) <- at([1, 2], 7);
+291:1 -> ../../test-assert-panics.temper.md:93:5  it("ends on a fail in the bl <- test("ends on a fail in the
+295:5 -> ../../test-assert-panics.temper.md:94:25  function fn() { <- { test.fail("failed inside")
+296:7 -> ../../test-assert-panics.temper.md:94:27  test.fail("failed inside"); <- test.fail("failed inside");
+298:5 -> ../../test-assert-panics.temper.md:94:7  test.assertPanics(fn); <- test.assertPanics { test.fai
+299:5 -> ../../test-assert-panics.temper.md:95:7  test.fail("swallowed"); <- test.fail("swallowed");
+308:1 -> ../../test-assert-panics.temper.md:98:5  it("passes after", async fun <- test("passes after") {
+312:5 -> ../../test-assert-panics.temper.md:99:7  { <- assert(at([1, 2], 0) == 1);
+313:7 -> ../../test-assert-panics.temper.md:99:7  const actual = at(Object.fre <- assert(at([1, 2], 0) == 1);
+314:7 -> ../../test-assert-panics.temper.md:99:7  const expected = 1; <- assert(at([1, 2], 0) == 1);
+315:7 -> ../../test-assert-panics.temper.md:99:7  test.assert(actual === expec <- assert(at([1, 2], 0) == 1);

@@ -49,7 +49,7 @@ public static class LimitsGlobal
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{small} * 4 == {small * 4}"));
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{small + 1} * 4 == {(small + 1) * 4}"));
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{small + 1} * {big} == {(small + 1) * big}"));
-        console.Log(string.Create(CultureInfo.InvariantCulture, $"{small} / -1 == {Core.DivSafe(small, -1)}"));
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{small} / -1 == {Core.Div(small, -1)}"));
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{small} % -1 == {Core.Mod(small, -1)}"));
         console.Log(string.Create(CultureInfo.InvariantCulture, $"-({small}) == {-small}"));
         int three = 3 * one;
@@ -71,7 +71,7 @@ public static class LimitsGlobal
         long small64 = -9223372036854775808L * (long)one;
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{big64} + 1 == {big64 + 1L}"));
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{small64} - 1 == {small64 - 1L}"));
-        console.Log(string.Create(CultureInfo.InvariantCulture, $"{small64} / -1 == {Core.DivSafe(small64, -1L)}"));
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{small64} / -1 == {Core.Div(small64, -1L)}"));
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{small64} % -1 == {Core.Mod(small64, -1L)}"));
         console.Log(string.Create(CultureInfo.InvariantCulture, $"-({small64}) == {-small64}"));
         long three64 = (long)three;

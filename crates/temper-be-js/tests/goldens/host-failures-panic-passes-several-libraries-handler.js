@@ -1,11 +1,5 @@
 import * as _connected from "./_connected.js";
-import {
-  divIntInt,
-  failureBase,
-  isBubble,
-  isFailure,
-  panic,
-} from "@temperlang/core";
+import { divIntInt, failureBase, isFailure, panic } from "@temperlang/core";
 import { parseCount } from "count-failures";
 
 /**
@@ -53,7 +47,7 @@ try {
   }
   p = divIntInt(10, (n - m) | 0);
 } catch (e$) {
-  if (!(isBubble(e$) || isFailure(e$))) throw e$;
+  if (!isFailure(e$)) throw e$;
   p = -1;
 }
 console.log(`after ${p}`);

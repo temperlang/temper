@@ -9,17 +9,7 @@ public static class SpecificGlobal
 
     internal static void CheckB(IAlphaInterface instance)
     {
-        string t1;
-        try
-        {
-            Core.Cast<BravoClass>(instance);
-            t1 = "yep";
-        }
-        catch (global::TemperLang.Core.Bubble)
-        {
-            t1 = "nope";
-        }
-        console.Log(t1);
+        console.Log(instance is BravoClass ? "yep" : "nope");
     }
 
     internal static void CheckIfB(IAlphaInterface instance)

@@ -23,8 +23,9 @@ final class Circle implements Shape {
     }
 
     public static Circle decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) {
-        JsonObject obj = Core.cast(JsonObject.class, t);
-        JsonNumeric radiusJson = Core.cast(JsonNumeric.class, obj.propertyValueOrBubble("radius"));
+        JsonObject obj = t instanceof JsonObject ? (JsonObject) t : Core.throwBubble();
+        JsonSyntaxTree radiusTree = obj.propertyValueOrBubble("radius");
+        JsonNumeric radiusJson = radiusTree instanceof JsonNumeric ? (JsonNumeric) radiusTree : Core.throwBubble();
         int radius = radiusJson.asInt32();
         return new Circle(radius);
     }

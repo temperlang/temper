@@ -2958,9 +2958,9 @@ impl<'a> Translator<'a> {
             // Checked as `as` is, as Kotlin's: interfaces are virtual
             // bases, which only a `dynamic_cast` leaves, and one that
             // could give null would need a check, or `-Wnull-dereference`
-            // mentions it. `as` bubbles if it isn't one.
+            // mentions it. `as` panics if it isn't one.
             // `x as T` for `x: T?`, for `T` not a class's: the runtime's
-            // check, which bubbles on null.
+            // check, which panics on null.
             Node::As { value, .. }
                 if p.types.is_nullable(p.nodes.ty(value))
                     && temper_tmpl::analysis::nominal_decl(p, p.nodes.ty(id)).is_none() =>
@@ -2969,7 +2969,7 @@ impl<'a> Translator<'a> {
                 self.core("not_null").call(vec![value])
             }
             // String indices are `int32_t`s: `as` checks by the runtime,
-            // which bubbles, as Kotlin's; a downcast, already checked, is
+            // which panics; a downcast, already checked, is
             // the value.
             Node::As { value, .. } if string_index_check(p, p.nodes.ty(id)).is_some() => {
                 let check = string_index_check(p, p.nodes.ty(id)).unwrap_or_default();

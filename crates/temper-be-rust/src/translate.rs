@@ -2329,14 +2329,7 @@ impl<'a> Translator<'a> {
                 let x = self.expr(other, Want::Owned)?;
                 if lit { x } else { Expr::unary(Unary::Not, x) }
             }
-            Node::Op {
-                op,
-                may_bubble,
-                args,
-            } => {
-                let e = self.op(id, op, p.nodes.list(args), want)?;
-                if may_bubble { e.try_() } else { e }
-            }
+            Node::Op { op, args } => self.op(id, op, p.nodes.list(args), want)?,
             Node::And { left, right } => Expr::bin(
                 Bin::And,
                 self.expr(left, Want::Owned)?,
@@ -2467,15 +2460,8 @@ impl<'a> Translator<'a> {
             {
                 self.as_non_null(value)?
             }
-            Node::As { may_bubble, value } => {
-                let cast = self.cast(id, value)?;
-                if may_bubble {
-                    cast.method("ok_or_else", vec![Expr::path("temper_core::Error::new")])
-                        .try_()
-                } else {
-                    cast.method("unwrap", Vec::new())
-                }
-            }
+            // Panics where it fails, as `as` does.
+            Node::As { value } => self.cast(id, value)?.method("unwrap", Vec::new()),
             Node::Is { ty, value } => self.is(ty, value)?,
             Node::Identical { left, right } => self.identical(left, right)?,
             Node::Null {} => Expr::path("None"),
@@ -2793,8 +2779,13 @@ fn float(value: f64) -> Expr {
 /// branch, needn't end before they do, so its statements join them
 /// first, at any depth.
 fn tail_of(stmts: &mut Vec<Stmt>) -> Option<Expr> {
-    if matches!(stmts.last(), Some(Stmt::Block(b)) if b.tail.is_none()) {
-        if let Some(Stmt::Block(b)) = stmts.pop() {
+    // A block last, as a statement or one dropped as a value (an
+    // `orelse` whose body can't fail, as std json's), is its statements.
+    if matches!(
+        stmts.last(),
+        Some(Stmt::Block(b) | Stmt::Expr(Expr::Block(b))) if b.tail.is_none()
+    ) {
+        if let Some(Stmt::Block(b) | Stmt::Expr(Expr::Block(b))) = stmts.pop() {
             stmts.extend(b.stmts);
         }
     }

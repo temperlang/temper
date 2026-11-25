@@ -3,8 +3,6 @@ from temper_core import (
     LoggingConsole as _LoggingConsole,
     int_add as _int_add,
     list_get as _list_get,
-    require_no_string_index as _require_no_string_index,
-    require_string_index as _require_string_index,
     string_builder_end as _string_builder_end,
     string_from_code_point as _string_from_code_point,
     string_get as _string_get,
@@ -55,20 +53,12 @@ def _has2(s: str, c: int, /) -> bool:
 
 def _has3(s: str, c: int, /) -> bool:
     i = _index_of_char(s, c)
-    try:
-        _require_string_index(i)
-        return True
-    except _Bubble:
-        return False
+    return i >= 0
 
 
 def _has4(s: str, c: int, /) -> bool:
     i = _index_of_char(s, c)
-    try:
-        _require_no_string_index(i)
-        return False
-    except _Bubble:
-        return True
+    return not i < 0
 
 
 _console: _LoggingConsole = _LoggingConsole(__name__)

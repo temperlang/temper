@@ -49,8 +49,9 @@ end
 
 local function int64_div(a, b)
     if b == 0 then
-        -- Not Lua's own error for `//` by zero, which isn't a bubble.
-        temper.bubble("division by zero")
+        -- A panic, as Lua's own error for `//` by zero is, but the same
+        -- message on every Lua.
+        error("division by zero", 2)
     end
     local result = a // b
     if (a < 0) ~= (b < 0) and a % b ~= 0 then

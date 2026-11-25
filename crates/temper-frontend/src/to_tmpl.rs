@@ -3791,7 +3791,7 @@ impl Translator<'_> {
             .map(|(v, t)| self.fit(v, t))
             .collect();
         // `/` or `%` by a constant that can't fail, not 0, and for `%`
-        // positive, is `divSafe` or `modSafe`, which never bubble, as
+        // positive, is `divSafe` or `modSafe`, which skip the zero check, as
         // Kotlin's `DivIntIntSafe` and the like, wherever it is.
         let op = match (op.info().map(|i| i.name), args.last()) {
             (
@@ -3808,21 +3808,6 @@ impl Translator<'_> {
             }
             _ => op,
         };
-        // A divisor that typing lets a function that can't bubble use,
-        // as one Kotlin might fold, but that doesn't fold here, as a
-        // builtin's call, outside any `orelse`'s body: not yet.
-        let bubbles = op.info().is_some_and(|i| i.bubbles);
-        let owner = self.b.program().decls.get(self.owner);
-        let callable = !matches!(owner.kind, DeclKind::Module);
-        let can_bubble = self
-            .b
-            .program()
-            .signature(self.owner)
-            .is_some_and(|s| s.bubbles());
-        let caught = self.catching.contains(&self.owner);
-        if bubbles && callable && !can_bubble && !caught {
-            return self.not_yet(node, "a division that can't fail, where nothing may bubble");
-        }
         let made = self.b.op(op, &values);
         Ok(self.own(made, node))
     }

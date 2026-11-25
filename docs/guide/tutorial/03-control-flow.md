@@ -302,9 +302,12 @@ efficiently checked in advance:
 
 ```temper
 // The value after `orelse` is used when the lefthand side is `Bubble`.
-$ shapes[0] as Circle orelse ({ radius: 1.0 })
-interactive#19: {class: Circle, radius: 1.0}
+$ "1.5".toInt32() orelse -1
+interactive#19: -1
 ```
+
+(A cast, `shapes[0] as Circle`, that fails panics, so check with `is` first
+where a value may be of another type.)
 
 We can use this in our own functions as well. For example, we adjust our length
 suffix function from earlier:

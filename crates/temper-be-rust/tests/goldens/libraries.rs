@@ -594,8 +594,7 @@ pub(crate) fn sizes(s: Shape) -> temper_core::List<i32> {
 
 pub(crate) fn rows(values: impl temper_core::ToList<f64>, ncols: i32) -> i32 {
     let values = values.to_list();
-    temper_core::int_div(temper_core::ListedTrait::len(&values), ncols)
-        .unwrap_or_else(|e| panic!("panic\ncaused by: {e}"))
+    temper_core::ListedTrait::len(&values).wrapping_div(ncols)
 }
 
 pub(crate) fn scaled(grid: Grid) -> temper_core::Result<Grid> {
@@ -629,20 +628,15 @@ pub(crate) fn total(values: impl temper_core::ToList<f64>) -> f64 {
     each(values.clone(), {
         let sum = sum.clone();
         Arc::new(move |x: f64| {
-            if let Err(e) = (|| {
-                let part = temper_core::float64::div(x, 2.0)?;
-                *sum.write().unwrap() = temper_core::read_locked(&sum) + part;
-                Ok::<_, temper_core::Error>(())
-            })() {
-                panic!("panic\ncaused by: {e}");
-            }
+            let part = x / 2.0;
+            *sum.write().unwrap() = temper_core::read_locked(&sum) + part;
         })
     });
     temper_core::read_locked(&sum)
 }
 
 pub(crate) fn half(x: f64) -> f64 {
-    temper_core::float64::div(x, 2.0).unwrap_or_else(|e| panic!("panic\ncaused by: {e}"))
+    x / 2.0
 }
 
 pub(crate) fn cube(x: f64) -> f64 {

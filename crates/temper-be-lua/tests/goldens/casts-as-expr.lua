@@ -47,49 +47,12 @@ do
   print(temper.cast_to(x, Apple).name)
   print(temper.cast_to(x, Fuji).name)
   x = Gala()
-  ---@type string
-  local t
-  if not temper.pcall(function()
-    t = temper.cast_to(x, Fuji).name
-  end) then
-    t = "Cast failed!"
-  end
-  print(t)
+  print(not temper.is_null(x) and temper.instance_of(x --[[@as as-expr.Apple]], Fuji) and temper.cast_to(x, Fuji).name or "Cast failed!")
   local y = x
-  ---@type string
-  local t_1
-  if not temper.pcall(function()
-    t_1 = temper.cast_to(y, Apple).name
-  end) then
-    t_1 = "Cast from AnyValue failed!"
-  end
-  print(t_1)
-  ---@type string
-  local t_2
-  if not temper.pcall(function()
-    t_2 = temper.cast_to(y, Gala).name
-  end) then
-    t_2 = "Cast from AnyValue failed!"
-  end
-  print(t_2)
-  ---@type string
-  local t_3
-  if not temper.pcall(function()
-    t_3 = temper.cast_to(y, Fuji).name
-  end) then
-    t_3 = "Cast from AnyValue failed!"
-  end
-  print(t_3)
+  print(temper.cast_to(y, Apple).name)
+  print(temper.cast_to(y, Gala).name)
   x = temper.null
-  ---@type string
-  local t_4
-  if not temper.pcall(function()
-    temper.cast_to(x, Apple)
-    t_4 = "Tasty nothing."
-  end) then
-    t_4 = "Was null!"
-  end
-  print(t_4)
+  print(not temper.is_null(x) and "Tasty nothing." or "Was null!")
 end
 local thing0 = false
 local thing1 = 1

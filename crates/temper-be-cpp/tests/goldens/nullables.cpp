@@ -168,8 +168,7 @@ void global_init_init() {
     int32_t int32 = nullables::parse(TEMPER_STR("12"));
     core::Console::log(temper_globals::console.value, std::to_string(int32) + " " + std::to_string(nullables::parse(TEMPER_STR("x"))));
     int32_t value2 = nullables::halved(TEMPER_STR("12"), 2);
-    int32_t value3 = nullables::halved(TEMPER_STR("x"), 2);
-    core::Console::log(temper_globals::console.value, std::to_string(value2) + " " + std::to_string(value3) + " " + std::to_string(nullables::halved(TEMPER_STR("12"), 0)));
+    core::Console::log(temper_globals::console.value, std::to_string(value2) + " " + std::to_string(nullables::halved(TEMPER_STR("x"), 2)));
     core::Console::log(temper_globals::console.value, std::to_string(checked(7)));
     core::Console::log(temper_globals::console.value, std::to_string(nullables::orZero(nullptr)) + " " + std::to_string(nullables::orZero(5)));
     varying();

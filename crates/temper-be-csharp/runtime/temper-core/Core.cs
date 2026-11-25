@@ -123,11 +123,11 @@ namespace TemperLang.Core
 
         public static T Bubble<T>() => throw new Bubble();
 
-        /// <summary>Temper's <c>as</c>: bubbles if item isn't a T.</summary>
-        public static T Cast<T>(object item) => item is T t ? t : throw new Bubble();
+        /// <summary>Temper's <c>as</c>: panics if item isn't a T.</summary>
+        public static T Cast<T>(object item) => item is T t ? t : throw new Panic("failed cast");
 
         /// <summary>
-        /// Temper's <c>as</c> from a nullable type: bubbles if item is null
+        /// Temper's <c>as</c> from a nullable type: panics if item is null
         /// or isn't a T.
         /// </summary>
         public static T CastToNonNull<T>(object item) => Cast<T>(item);
@@ -137,30 +137,22 @@ namespace TemperLang.Core
             return Math.Max(min, Math.Min(i, max));
         }
 
+        /// <summary>
+        /// Temper's <c>/</c>: C#'s, but for <c>MinValue / -1</c>, which wraps
+        /// where C# would throw. A zero divisor throws C#'s
+        /// <c>DivideByZeroException</c>, a panic.
+        /// </summary>
         public static int Div(this int a, int b)
-        {
-            if (b == 0)
-            {
-                Bubble();
-            }
-            return DivSafe(a, b);
-        }
-
-        public static int DivSafe(this int a, int b)
         {
             return a == int.MinValue && b == -1 ? int.MinValue : a / b;
         }
 
+        /// <summary>
+        /// Temper's <c>/</c>: C#'s, but for <c>MinValue / -1</c>, which wraps
+        /// where C# would throw. A zero divisor throws C#'s
+        /// <c>DivideByZeroException</c>, a panic.
+        /// </summary>
         public static long Div(this long a, long b)
-        {
-            if (b == 0)
-            {
-                Bubble();
-            }
-            return DivSafe(a, b);
-        }
-
-        public static long DivSafe(this long a, long b)
         {
             return a == long.MinValue && b == -1 ? long.MinValue : a / b;
         }
@@ -289,30 +281,14 @@ namespace TemperLang.Core
 
         public static void Garbage() => throw new Exception();
 
+        /// <summary>Temper's <c>%</c>, as <see cref="Div(int, int)"/>.</summary>
         public static int Mod(this int a, int b)
-        {
-            if (b == 0)
-            {
-                Bubble();
-            }
-            return ModSafe(a, b);
-        }
-
-        public static int ModSafe(this int a, int b)
         {
             return a == int.MinValue && b == -1 ? 0 : a % b;
         }
 
+        /// <summary>Temper's <c>%</c>, as <see cref="Div(int, int)"/>.</summary>
         public static long Mod(this long a, long b)
-        {
-            if (b == 0)
-            {
-                Bubble();
-            }
-            return ModSafe(a, b);
-        }
-
-        public static long ModSafe(this long a, long b)
         {
             return a == long.MinValue && b == -1 ? 0L : a % b;
         }

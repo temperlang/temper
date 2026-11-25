@@ -167,11 +167,11 @@ module basics#0 {
       ~console#46.log#45("negative zero plus negative zero is negative zero");
     }
     ~console#46.log#45(negativeZero#1.toString#48());
-    init third#11 = %Float64.div(one#3, three#5)^;
+    init third#11 = %Float64.div(one#3, three#5);
     third#11 = third#11;
-    init half#12 = %Float64.div(one#3, two#4)^;
+    init half#12 = %Float64.div(one#3, two#4);
     half#12 = half#12;
-    init twoThirds#13 = %Float64.div(two#4, three#5)^;
+    init twoThirds#13 = %Float64.div(two#4, three#5);
     twoThirds#13 = twoThirds#13;
     if (gt#6(third#11, half#12)) {
       ~console#46.log#45("oops third > half");
@@ -204,7 +204,7 @@ module basics#0 {
     init biggest#18 = %Float64.mul(%Float64.mul(%Float64.mul(%Float64.mul(%Float64.mul(bigger#16, bigger#16), bigger#16), bigger#16), bigger#16), bigger#16);
     biggest#18 = biggest#18;
     ~console#46.log#45(%String.cat("biggest ", biggest#18.toString#48()));
-    init tiniest#19 = %Float64.div(one#3, biggest#18)^;
+    init tiniest#19 = %Float64.div(one#3, biggest#18);
     tiniest#19 = tiniest#19;
     ~console#46.log#45(%String.cat("tiniest ", tiniest#19.toString#48()));
     init negativeInfinity#20 = %Float64.mul(biggest#18, %Float64.neg(1.0));

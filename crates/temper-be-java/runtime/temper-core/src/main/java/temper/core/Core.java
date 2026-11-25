@@ -76,7 +76,7 @@ public final class Core {
     public static void doNothing(Object val) {}
 
     /**
-     * Temper's `as`: bubbles if value is null or not an instance.
+     * Temper's `as`: panics if value is null or not an instance.
      * @param klass the class literal to cast to
      * @param value the value to cast
      * @return the value cast to the new type
@@ -84,13 +84,13 @@ public final class Core {
      */
     public static <T> T cast(Class<? extends T> klass, Object value) {
         if (!klass.isInstance(value)) {
-            throw bubble();
+            throw new AssertionError("failed cast");
         }
         return klass.cast(value);
     }
 
     /**
-     * Casts, bubbling if value is null or not an instance, as {@link #cast}.
+     * Casts, panicking if value is null or not an instance, as {@link #cast}.
      * @param klass the class literal to cast to
      * @param value the value to cast
      * @return the value cast to the new type
@@ -101,7 +101,7 @@ public final class Core {
     }
 
     /**
-     * Temper's `as` to a generic class: bubbles if value is null or not
+     * Temper's `as` to a generic class: panics if value is null or not
      * an instance of klass, else gives it back with its own type, for a
      * Java cast to the type with its arguments that then can't fail.
      * @param klass the class literal to check against
@@ -111,7 +111,7 @@ public final class Core {
      */
     public static <T> T check(Class<?> klass, T value) {
         if (!klass.isInstance(value)) {
-            throw bubble();
+            throw new AssertionError("failed cast");
         }
         return value;
     }
@@ -119,12 +119,12 @@ public final class Core {
     /**
      * Temper's `as` from a nullable type to its non-null one.
      * @param value the value to check
-     * @return value, bubbling if it's null
+     * @return value, panicking if it's null
      * @param <T> value's type
      */
     public static <T> T requireNonNull(T value) {
         if (value == null) {
-            throw bubble();
+            throw new AssertionError("failed cast");
         }
         return value;
     }
@@ -135,7 +135,7 @@ public final class Core {
      */
     public static int requireNoStringIndex(int i) {
         if (i < 0) { return -1; }
-        throw new Bubble("Required NoStringIndex but got " + i);
+        throw new AssertionError("failed cast: required NoStringIndex but got " + i);
     }
 
     /**
@@ -144,7 +144,7 @@ public final class Core {
      */
     public static int requireStringIndex(int i) {
         if (i >= 0) { return i; }
-        throw new Bubble("Required StringIndex but got " + i);
+        throw new AssertionError("failed cast: required StringIndex but got " + i);
     }
 
     /**
@@ -236,58 +236,6 @@ public final class Core {
      */
     public static GlobalConsole getConsole(Logger logger) {
         return new GlobalConsole(logger);
-    }
-
-    /**
-     * Integer division, rethrowing.
-     * @param left the numerator
-     * @param right the denominator
-     * @return the quotient
-     */
-    public static int divIntInt(int left, int right) {
-        if (right == 0) {
-            throw bubble();
-        }
-        return left / right;
-    }
-
-    /**
-     * 64-bit integer division, rethrowing.
-     * @param left the numerator
-     * @param right the denominator
-     * @return the quotient
-     */
-    public static long divIntInt(long left, long right) {
-        if (right == 0) {
-            throw bubble();
-        }
-        return left / right;
-    }
-
-    /**
-     * Integer modulo, rethrowing.
-     * @param left the numerator
-     * @param right the denominator
-     * @return the quotient
-     */
-    public static int modIntInt(int left, int right) {
-        if (right == 0) {
-            throw bubble();
-        }
-        return left % right;
-    }
-
-    /**
-     * 64-bit integer modulo, rethrowing.
-     * @param left the numerator
-     * @param right the denominator
-     * @return the quotient
-     */
-    public static long modIntInt(long left, long right) {
-        if (right == 0) {
-            throw bubble();
-        }
-        return left % right;
     }
 
     /**

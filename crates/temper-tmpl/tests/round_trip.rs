@@ -871,10 +871,7 @@ impl Gen {
                 }
             }
             2 | 3 => {
-                let may_bubble = self.may_bubble;
-                let ops: Vec<usize> = (0..OPS.len())
-                    .filter(|&i| OPS[i].result == ty && (may_bubble || !OPS[i].bubbles))
-                    .collect();
+                let ops: Vec<usize> = (0..OPS.len()).filter(|&i| OPS[i].result == ty).collect();
                 if ops.is_empty() {
                     return self.literal(ty);
                 }

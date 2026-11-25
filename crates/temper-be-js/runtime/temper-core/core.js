@@ -8,7 +8,7 @@
 export const divIntInt = (x, y) => {
   const result = Math.trunc(x / y);
   if (!Number.isSafeInteger(result)) {
-    bubble();
+    panic("division by zero");
   }
   /* not NaN or infinite */
   return result | 0;
@@ -23,7 +23,7 @@ export const modIntInt = (x, y) => {
   const result = Math.trunc(x % y);
   // TODO: is this ever false if `Number.isSafeInteger(x)`?
   if (!Number.isSafeInteger(result)) {
-    bubble();
+    panic("division by zero");
   }
   /* not NaN or infinite */
   return result | 0;
@@ -96,7 +96,7 @@ export const clampInt64 = (x) => {
 };
 
 /**
- * `a / b`, truncated, wrapped to Int64, bubbling on a zero divisor,
+ * `a / b`, truncated, wrapped to Int64, panicking on a zero divisor,
  * where BigInt's `/` throws a `RangeError`.
  * @param {bigint} a
  * @param {bigint} b
@@ -104,20 +104,20 @@ export const clampInt64 = (x) => {
  */
 export const divInt64 = (a, b) => {
   if (b === 0n) {
-    bubble();
+    panic("division by zero");
   }
   return clampInt64(a / b);
 };
 
 /**
- * `a % b`, bubbling on a zero divisor.
+ * `a % b`, panicking on a zero divisor.
  * @param {bigint} a
  * @param {bigint} b
  * @returns {bigint}
  */
 export const modInt64 = (a, b) => {
   if (b === 0n) {
-    bubble();
+    panic("division by zero");
   }
   return a % b;
 };

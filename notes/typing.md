@@ -1332,20 +1332,13 @@ call:
   is reported), nor a call with an argument that doesn't fit its
   parameter. A call with the wrong number of arguments isn't reported,
   as Kotlin can't pick its callee.
-- `x as T` that checks something and is allowed (below, "Run-time
-  type checks"): a downcast, as `i as D` for `D extends I` or `x as C`
-  for `x: AnyValue`, or a nullable `x` (`x as Int` for `x: Int?`). Not
-  one where `x` is a `T` already, nor one that's an error, nor a nullable
-  `x` for a nullable target (`x as Int?`, which null passes). What `x`
-  holds doesn't matter, so `n as Int` for `let n: Int? = 1` may bubble.
-- `a / b` and `a % b`, unless Kotlin might fold the call, or the divisor
-  is an integer that's a constant (maybe negated) other than zero, or for
-  `%`, positive, or the divisor is anything Kotlin might fold (it may
-  fold to such a constant). Dividing `Float64`s always may bubble.
+- Not `x as T` that fails, nor `a / b` or `a % b` by zero: they panic
+  (2026-11-25; Kotlin bubbles), and dividing `Float64`s gives IEEE 754's
+  results.
 
 Not looked into: the arguments of an operator that don't fit the
-signature it picks, as `h(y)` in `1.0 + h(y)` or `mk(n)` in `h == mk(n)`
-(the operator itself, as `x / y` with `x: Int?`, still is), unless the
+signature it picks, as `h(y)` in `1.0 + h(y)` or `mk(n)` in `h == mk(n)`,
+unless the
 operator has several variants and its first argument fits none, as in
 `"a" - h(y)` or `k == mk(n)` for a class without `@operator("==")`,
 where all are; an `orelse`'s body (its fallback is), functions

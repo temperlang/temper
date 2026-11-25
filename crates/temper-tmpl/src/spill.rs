@@ -255,7 +255,7 @@ fn hoists_with(p: &Program, id: NodeId, also: &dyn Fn(NodeId) -> bool) -> bool {
 
 /// Whether an operand does nothing that running it later could show:
 /// literals, locals (but those in `assigned`), `this`, functions, module
-/// `let`s and statics that aren't `var`, and operators that can't fail,
+/// `let`s and statics that aren't `var`, and operators that can't panic,
 /// choices, null checks, and conversions of those. A call, or anything
 /// else, may.
 fn simple(p: &Program, id: NodeId, assigned: &[DeclId]) -> bool {
@@ -264,7 +264,7 @@ fn simple(p: &Program, id: NodeId, assigned: &[DeclId]) -> bool {
     match p.nodes.get(id) {
         Node::Local { local } => !assigned.contains(&local),
         Node::GetModuleLet { target } | Node::GetStatic { target } => !var(target),
-        Node::Op { .. } => !p.nodes.flags(id).contains(crate::nodes::Flags::MAY_BUBBLE) && parts(p),
+        Node::Op { op, .. } => op.pure() && parts(p),
         Node::IsNull { .. }
         | Node::IfValue { .. }
         | Node::And { .. }

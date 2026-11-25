@@ -271,10 +271,20 @@ pub fn sign_name(e: SignError) -> Arc<String> {
     }
 }
 
+pub(crate) fn nonzero(n: i32) -> temper_core::Result<i32> {
+    if n == 0 {
+        Err(temper_core::Error::new())
+    } else {
+        Ok(n)
+    }
+}
+
 pub fn mixed(key: impl ToArcString, n: i32) -> i32 {
     let key = key.to_arc_string();
     (|| {
-        Ok::<_, temper_core::Error>(lookup(key.clone())?.wrapping_add(temper_core::int_div(10, n)?))
+        Ok::<_, temper_core::Error>(
+            lookup(key.clone())?.wrapping_add(10i32.wrapping_div(nonzero(n)?)),
+        )
     })()
     .unwrap_or(-1)
 }

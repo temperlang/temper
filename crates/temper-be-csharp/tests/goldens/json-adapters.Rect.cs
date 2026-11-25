@@ -42,10 +42,12 @@ internal class Rect : IShape
 
     public static Rect DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
-        JsonObject obj = Core.Cast<JsonObject>(t);
-        IJsonNumeric widthJson = Core.Cast<IJsonNumeric>(obj.PropertyValueOrBubble("width"));
+        JsonObject obj = t is JsonObject ? (JsonObject)t : Core.Bubble<JsonObject>();
+        IJsonSyntaxTree widthTree = obj.PropertyValueOrBubble("width");
+        IJsonNumeric widthJson = widthTree is IJsonNumeric ? (IJsonNumeric)widthTree : Core.Bubble<IJsonNumeric>();
         int width = widthJson.AsInt32();
-        IJsonNumeric heightJson = Core.Cast<IJsonNumeric>(obj.PropertyValueOrBubble("height"));
+        IJsonSyntaxTree heightTree = obj.PropertyValueOrBubble("height");
+        IJsonNumeric heightJson = heightTree is IJsonNumeric ? (IJsonNumeric)heightTree : Core.Bubble<IJsonNumeric>();
         int height = heightJson.AsInt32();
         return new Rect(width, height);
     }

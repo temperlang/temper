@@ -5,7 +5,7 @@ from collections.abc import (
 )
 from temper_core import (
     Bubble as _Bubble,
-    cast_by_type as _cast_by_type,
+    bubble as _bubble,
     cast_none as _cast_none,
     float64_to_int as _float64_to_int,
     float64_to_int64 as _float64_to_int64,
@@ -193,7 +193,11 @@ class JsonObject(JsonSyntaxTree):
             return None
 
     def property_value_or_bubble(self, property_key: str, /) -> JsonSyntaxTree:
-        return _cast_none(self.property_value_or_null(property_key))
+        subject: JsonSyntaxTree | None = self.property_value_or_null(property_key)
+        if subject is None:
+            raise _Bubble()
+        else:
+            return subject
 
     def produce(self, p: JsonProducer, /) -> None:
         p.start_object()
@@ -601,24 +605,20 @@ class JsonSyntaxTreeProducer(JsonProducer, JsonParseErrorReceiver):
             if _mapped_has(m, key):
                 if multis is None:  # pyright: ignore[reportUnnecessaryComparison]
                     multis = {}
-                mb: dict[str, _MutableSequence[JsonSyntaxTree]]
-                try:
-                    mb = _cast_none(multis)
-                except _Bubble as t_0:
-                    raise BaseException('panic') from t_0
+                mb: dict[str, _MutableSequence[JsonSyntaxTree]] = _cast_none(multis)
                 if not _mapped_has(mb, key):
-                    t_1: _Sequence[JsonSyntaxTree]
+                    t_0: _Sequence[JsonSyntaxTree]
                     try:
-                        t_1 = _mapped_get(m, key)
-                    except _Bubble as t_2:
-                        raise BaseException('panic') from t_2
-                    _map_builder_set(mb, key, list(t_1))
-                t_3: _MutableSequence[JsonSyntaxTree]
+                        t_0 = _mapped_get(m, key)
+                    except _Bubble as t_1:
+                        raise BaseException('panic') from t_1
+                    _map_builder_set(mb, key, list(t_0))
+                t_2: _MutableSequence[JsonSyntaxTree]
                 try:
-                    t_3 = _mapped_get(mb, key)
-                except _Bubble as t_4:
-                    raise BaseException('panic') from t_4
-                t_3.append(value)
+                    t_2 = _mapped_get(mb, key)
+                except _Bubble as t_3:
+                    raise BaseException('panic') from t_3
+                t_2.append(value)
             else:
                 _map_builder_set(m, key, (value,))
         multis = multis
@@ -824,77 +824,66 @@ def _parse_json_string_to(source_text: str, i: int, sb: list[str], err_out: Json
 
 
 def _parse_json_object(source_text: str, i: int, out: JsonProducer, /) -> int:
-    try:
-        if not len(source_text) > i or _string_get(source_text, i) != 123:
-            _expected_token_error(source_text, i, out, "'{'")
-            return -1
-        out.start_object()
-        i = _skip_json_spaces(source_text, _string_next(source_text, i))
-        if len(source_text) > i and _string_get(source_text, i) != 125:
-            while True:
-                key_buffer = ['']
-                after_key = _parse_json_string_to(source_text, i, key_buffer, out)
-                if not after_key >= 0:
+    if not len(source_text) > i or _string_get(source_text, i) != 123:
+        _expected_token_error(source_text, i, out, "'{'")
+        return -1
+    out.start_object()
+    i = _skip_json_spaces(source_text, _string_next(source_text, i))
+    if len(source_text) > i and _string_get(source_text, i) != 125:
+        while True:
+            key_buffer = ['']
+            after_key = _parse_json_string_to(source_text, i, key_buffer, out)
+            if not after_key >= 0:
+                return -1
+            out.object_key(''.join(key_buffer))
+            i = _skip_json_spaces(source_text, _require_string_index(after_key))
+            if len(source_text) > i and _string_get(source_text, i) == 58:
+                i = _string_next(source_text, i)
+                after_property_value = _parse_json_value(source_text, i, out)
+                if not after_property_value >= 0:
                     return -1
-                out.object_key(''.join(key_buffer))
-                t_0: int
-                try:
-                    t_0 = _require_string_index(after_key)
-                except _Bubble as t_1:
-                    raise BaseException('panic') from t_1
-                i = _skip_json_spaces(source_text, t_0)
-                if len(source_text) > i and _string_get(source_text, i) == 58:
-                    i = _string_next(source_text, i)
-                    after_property_value = _parse_json_value(source_text, i, out)
-                    if not after_property_value >= 0:
-                        return -1
-                    i = _require_string_index(after_property_value)
-                else:
-                    _expected_token_error(source_text, i, out, "':'")
-                    return -1
-                i = _skip_json_spaces(source_text, i)
-                if len(source_text) > i and _string_get(source_text, i) == 44:
-                    i = _skip_json_spaces(source_text, _string_next(source_text, i))
-                    continue
-                else:
-                    break
-        if len(source_text) > i and _string_get(source_text, i) == 125:
-            out.end_object()
-            return _string_next(source_text, i)
-        else:
-            _expected_token_error(source_text, i, out, "'}'")
-            return -1
-    except _Bubble as t_2:
-        raise BaseException('panic') from t_2
+                i = _require_string_index(after_property_value)
+            else:
+                _expected_token_error(source_text, i, out, "':'")
+                return -1
+            i = _skip_json_spaces(source_text, i)
+            if len(source_text) > i and _string_get(source_text, i) == 44:
+                i = _skip_json_spaces(source_text, _string_next(source_text, i))
+                continue
+            else:
+                break
+    if len(source_text) > i and _string_get(source_text, i) == 125:
+        out.end_object()
+        return _string_next(source_text, i)
+    else:
+        _expected_token_error(source_text, i, out, "'}'")
+        return -1
 
 
 def _parse_json_array(source_text: str, i: int, out: JsonProducer, /) -> int:
-    try:
-        if not len(source_text) > i or _string_get(source_text, i) != 91:
-            _expected_token_error(source_text, i, out, "'['")
-            return -1
-        out.start_array()
-        i = _skip_json_spaces(source_text, _string_next(source_text, i))
-        if len(source_text) > i and _string_get(source_text, i) != 93:
-            while True:
-                after_element_value = _parse_json_value(source_text, i, out)
-                if not after_element_value >= 0:
-                    return -1
-                i = _require_string_index(after_element_value)
-                i = _skip_json_spaces(source_text, i)
-                if len(source_text) > i and _string_get(source_text, i) == 44:
-                    i = _skip_json_spaces(source_text, _string_next(source_text, i))
-                    continue
-                else:
-                    break
-        if len(source_text) > i and _string_get(source_text, i) == 93:
-            out.end_array()
-            return _string_next(source_text, i)
-        else:
-            _expected_token_error(source_text, i, out, "']'")
-            return -1
-    except _Bubble as t_0:
-        raise BaseException('panic') from t_0
+    if not len(source_text) > i or _string_get(source_text, i) != 91:
+        _expected_token_error(source_text, i, out, "'['")
+        return -1
+    out.start_array()
+    i = _skip_json_spaces(source_text, _string_next(source_text, i))
+    if len(source_text) > i and _string_get(source_text, i) != 93:
+        while True:
+            after_element_value = _parse_json_value(source_text, i, out)
+            if not after_element_value >= 0:
+                return -1
+            i = _require_string_index(after_element_value)
+            i = _skip_json_spaces(source_text, i)
+            if len(source_text) > i and _string_get(source_text, i) == 44:
+                i = _skip_json_spaces(source_text, _string_next(source_text, i))
+                continue
+            else:
+                break
+    if len(source_text) > i and _string_get(source_text, i) == 93:
+        out.end_array()
+        return _string_next(source_text, i)
+    else:
+        _expected_token_error(source_text, i, out, "']'")
+        return -1
 
 
 def _parse_json_string(source_text: str, i: int, out: JsonProducer, /) -> int:
@@ -1098,7 +1087,10 @@ class _BooleanJsonAdapter(JsonAdapter[bool]):
         p.boolean_value(x)
 
     def decode_from_json(self, t: JsonSyntaxTree, ic: InterchangeContext, /) -> bool:
-        return _cast_by_type(t, JsonBoolean).content
+        if isinstance(t, JsonBoolean):
+            return t.content
+        else:
+            raise _Bubble()
 
 
 def boolean_json_adapter() -> JsonAdapter[bool]:
@@ -1112,7 +1104,10 @@ class _Float64JsonAdapter(JsonAdapter[float]):
         p.float64_value(x)
 
     def decode_from_json(self, t: JsonSyntaxTree, ic: InterchangeContext, /) -> float:
-        return _cast_by_type(t, JsonNumeric).as_float64()  # type: ignore[type-abstract]
+        if isinstance(t, JsonNumeric):
+            return t.as_float64()
+        else:
+            raise _Bubble()
 
 
 def float64_json_adapter() -> JsonAdapter[float]:
@@ -1126,7 +1121,10 @@ class _Int32JsonAdapter(JsonAdapter[int]):
         p.int32_value(x)
 
     def decode_from_json(self, t: JsonSyntaxTree, ic: InterchangeContext, /) -> int:
-        return _cast_by_type(t, JsonNumeric).as_int32()  # type: ignore[type-abstract]
+        if isinstance(t, JsonNumeric):
+            return t.as_int32()
+        else:
+            raise _Bubble()
 
 
 def int32_json_adapter() -> JsonAdapter[int]:
@@ -1140,7 +1138,10 @@ class _Int64JsonAdapter(JsonAdapter[int]):
         p.int64_value(x)
 
     def decode_from_json(self, t: JsonSyntaxTree, ic: InterchangeContext, /) -> int:
-        return _cast_by_type(t, JsonNumeric).as_int64()  # type: ignore[type-abstract]
+        if isinstance(t, JsonNumeric):
+            return t.as_int64()
+        else:
+            raise _Bubble()
 
 
 def int64_json_adapter() -> JsonAdapter[int]:
@@ -1154,7 +1155,10 @@ class _StringJsonAdapter(JsonAdapter[str]):
         p.string_value(x)
 
     def decode_from_json(self, t: JsonSyntaxTree, ic: InterchangeContext, /) -> str:
-        return _cast_by_type(t, JsonString).content
+        if isinstance(t, JsonString):
+            return t.content
+        else:
+            raise _Bubble()
 
 
 def string_json_adapter() -> JsonAdapter[str]:
@@ -1180,7 +1184,7 @@ class _ListJsonAdapter(JsonAdapter[_Sequence[_T]], _Generic[_T]):
 
     def decode_from_json(self, t: JsonSyntaxTree, ic: InterchangeContext, /) -> _Sequence[_T]:
         b: _MutableSequence[_T] = []
-        elements = _cast_by_type(t, JsonArray).elements
+        elements = t.elements if isinstance(t, JsonArray) else _bubble()
         n = len(elements)
         i = 0
         while i < n:

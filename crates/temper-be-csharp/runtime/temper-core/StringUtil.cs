@@ -209,7 +209,7 @@ namespace TemperLang.Core
             {
                 return i;
             }
-            throw new Bubble($"Required StringIndex but got {i}");
+            throw new Panic($"failed cast: required StringIndex but got {i}");
         }
 
         public static int RequireNoStringIndex(int i)
@@ -218,7 +218,7 @@ namespace TemperLang.Core
             {
                 return -1;
             }
-            throw new Bubble($"Required NoStringIndex but got {i}");
+            throw new Panic($"failed cast: required NoStringIndex but got {i}");
         }
 
         /**

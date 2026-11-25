@@ -1,18 +1,12 @@
 package modules.core;
 
-import temper.core.Bubble;
-import temper.core.Core;
 import temper.core.Nullable;
 
 public final class CoreGlobal {
     private CoreGlobal() {}
 
     public static int share(int n, int d) {
-        try {
-            return Core.divIntInt(n, d);
-        } catch (Bubble ignored) {
-            return 0;
-        }
+        return n / d;
     }
 
     public static @Nullable Ratio ratioOf(int n, int d) {

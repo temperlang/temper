@@ -1123,7 +1123,7 @@ error 2230..2238: Types marked @mayDowncastTo(false) cannot be targeted with is 
 error 2279..2287: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from AnyValue
 error 2395..2401: Unrelated types cannot be targeted with is or as runtime type checks: <[J]> from I
 
-=== as may bubble
+=== as checks, which panic where they fail
 interface I {}
 class D extends I {}
 class C {}
@@ -1194,16 +1194,10 @@ let b8(i: I?): I? { i as I? }
       (Let ^i:41 (Call ? I:0))
       (Call ? I:0)
       (Block (Call as i:41 (Call ? I:0))))))
-error 65..71: Cannot bubble from a function without Bubble in its return type
-error 97..105: Cannot bubble from a function without Bubble in its return type
-error 127..133: Cannot bubble from a function without Bubble in its return type
-error 155..161: Cannot bubble from a function without Bubble in its return type
-error 189..195: Cannot bubble from a function without Bubble in its return type
 error 226..234: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from AnyValue
 hint 269..277: Unnecessary type check to Int32 from expression with type Int32 which is a subtype
 error 332..343: Runtime type check from Int32 to String can never succeed
 error 364..370: Runtime type check from C to D can never succeed
-error 562..568: Cannot bubble from a function without Bubble in its return type
 error 605..611: Type parameters cannot be targeted with is or as runtime type checks, because a type argument's run-time type can't be checked: <[T]> from AnyValue
 error 636..642: Unrelated types cannot be targeted with is or as runtime type checks: <[C]> from I
 hint 666..673: Unnecessary type check to I? from expression with type I? which is a subtype
@@ -1321,15 +1315,15 @@ console.log((do { g(new E()) } orelse "failed"));
 hint 151..158: Unnecessary type check to D? from expression with type D which is a subtype
 hint 186..193: Unnecessary type check to D? from expression with type D? which is a subtype
 hint 216..223: Unnecessary type check to D? from expression with type D? which is a subtype
-error 275..282: Cannot bubble from a function without Bubble in its return type
 error 354..361: Runtime type check from C to D can never succeed
 error 448..460: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[String]> from AnyValue?
 hint 487..496: Unnecessary type check to Int32? from expression with type Int32? which is a subtype
-error 589..596: Cannot bubble from a function without Bubble in its return type
 log yes
 log yes
 log no
-Failed: Cannot bubble from a function without Bubble in its return type
+log null
+log d
+Panicked: failed cast
 
 === is and as checks of type parameters' values and generic types
 // A type parameter's value is checked as its bound's, all that's known of
@@ -1493,7 +1487,6 @@ console.log(pet(new Dog()));
 error 571..579: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from T
 error 624..632: Unrelated types cannot be targeted with is or as runtime type checks: <[Cat]> from T
 hint 677..688: Unnecessary type check to Animal from expression with type T which is a subtype
-error 783..791: Cannot bubble from a function without Bubble in its return type
 hint 821..827: Unnecessary type check to T from expression with type T which is a subtype
 error 861..875: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[List<Int32>]> from AnyValue
 error 909..922: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Box<Int32>]> from AnyValue
@@ -1502,7 +1495,6 @@ hint 1008..1019: Unnecessary type check to Box<T> from expression with type Box<
 error 1056..1067: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Box<T>]> from AnyValue
 error 1104..1118: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[List<Int32>]> from Listed<Int32>
 error 1167..1180: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Box<Int32>]> from AnyValue
-error 1262..1275: Cannot bubble from a function without Bubble in its return type
 error 1309..1325: Unrelated types cannot be targeted with is or as runtime type checks: <[Box<String>]> from Box<Int32>
 error 1357..1373: Runtime type check from String to Box<String> can never succeed
 error 1410..1418: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from MapKey<Int32>

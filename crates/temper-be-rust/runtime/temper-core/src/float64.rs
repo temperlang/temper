@@ -19,13 +19,6 @@ pub fn cmp_option(x: Option<f64>, y: Option<f64>) -> i32 {
     }
 }
 
-pub fn div(x: f64, y: f64) -> Result<f64> {
-    if y == 0.0 {
-        return Err(Error::new());
-    }
-    Ok(x / y)
-}
-
 pub fn max(x: f64, y: f64) -> f64 {
     if x.is_nan() || y.is_nan() {
         return f64::NAN;
@@ -45,13 +38,6 @@ pub fn near(x: f64, y: f64, rel_tol: Option<f64>, abs_tol: Option<f64>) -> bool 
     let abs_tol = abs_tol.unwrap_or(0.0);
     let margin = (x.abs().max(y.abs()) * rel_tol).max(abs_tol);
     (x - y).abs() <= margin
-}
-
-pub fn rem(x: f64, y: f64) -> Result<f64> {
-    if y == 0.0 {
-        return Err(Error::new());
-    }
-    Ok(x % y)
 }
 
 pub fn sign(x: f64) -> f64 {

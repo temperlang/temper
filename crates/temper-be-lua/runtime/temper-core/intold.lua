@@ -95,7 +95,7 @@ end
 
 local function int64_divmod(a, b)
     if b.hi == 0 and b.lo == 0 then
-        temper.bubble("division by zero")
+        error("division by zero", 3)
     end
     -- Handle sign, so we can work unsigned below.
     local neg = false
@@ -180,11 +180,11 @@ local function trunc(x)
     return result
 end
 
--- Integer division by zero bubbles, as `intnew.lua`'s does, where floats
+-- Integer division by zero panics, as `intnew.lua`'s does, where floats
 -- would give inf or nan.
 local function nonzero(b)
     if b == 0 then
-        temper.bubble("division by zero")
+        error("division by zero", 3)
     end
     return b
 end

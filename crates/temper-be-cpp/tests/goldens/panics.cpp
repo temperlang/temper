@@ -67,7 +67,11 @@ static int32_t failing(int32_t n) {
 }
 
 static std::shared_ptr<Square> downcast(std::shared_ptr<Shape> const & s) {
-  return core::checked_cast<Square>(s);
+  if (dynamic_cast<Square const *>(s.get()) != nullptr) {
+    return core::checked_cast<Square>(s);
+  } else {
+    core::bubble();
+  }
 }
 
 static int32_t calling(std::function<int32_t()> const & f) {
@@ -122,6 +126,7 @@ void global_init_init() {
     } catch (core::TemperBubble const &) {
       zero = -1;
     }
+    static_cast<void>(zero);
     int32_t a;
     try {
       a = failing(1);
@@ -133,18 +138,6 @@ void global_init_init() {
       b = panics::downcast(core::to_base<Shape>(Circle::make()))->side;
     } catch (core::TemperBubble const &) {
       b = -2;
-    }
-    int32_t c;
-    try {
-      c = core::Int::div_wrap(1, zero);
-    } catch (core::TemperBubble const &) {
-      c = -3;
-    }
-    int32_t d;
-    try {
-      d = core::Int64::toInt32(core::Int64::div_wrap(int64_t{1}, core::Int::toInt64(zero)));
-    } catch (core::TemperBubble const &) {
-      d = -4;
     }
     int32_t e;
     try {
@@ -172,14 +165,7 @@ void global_init_init() {
       h = TEMPER_STR("no digits");
     }
     int32_t i = panics::calling([]() -> int32_t { return failing(2); });
-    core::Console::log(temper_globals::console.value, std::to_string(a) + " " + std::to_string(b) + " " + std::to_string(c) + " " + std::to_string(d) + " " + std::to_string(e) + " " + core::Boolean::toString(core::Float64::eq(f, -6.0)) + " " + g + " " + h + " " + std::to_string(i));
-    core::NullableParam<core::Str> nothing = nullptr;
-    core::Str j;
-    try {
-      j = core::not_null(nothing);
-    } catch (core::TemperBubble const &) {
-      j = TEMPER_STR("null");
-    }
+    core::Console::log(temper_globals::console.value, std::to_string(a) + " " + std::to_string(b) + " " + std::to_string(e) + " " + core::Boolean::toString(core::Float64::eq(f, -6.0)) + " " + g + " " + h + " " + std::to_string(i));
     int64_t k;
     try {
       k = core::String::toInt64(TEMPER_STR("zz"));
@@ -242,7 +228,7 @@ void global_init_init() {
     } catch (core::TemperBubble const &) {
       u = TEMPER_STR("bad json");
     }
-    core::Console::log(temper_globals::console.value, j + " " + std::to_string(k) + " " + std::to_string(l) + " " + std::to_string(m) + " " + std::to_string(n) + " " + o + " " + q + " " + std::to_string(r) + " " + s + " " + t + " " + u);
+    core::Console::log(temper_globals::console.value, std::to_string(k) + " " + std::to_string(l) + " " + std::to_string(m) + " " + std::to_string(n) + " " + o + " " + q + " " + std::to_string(r) + " " + s + " " + t + " " + u);
     core::Console::log(temper_globals::console.value, TEMPER_STR("panicking"));
     int32_t p;
     try {

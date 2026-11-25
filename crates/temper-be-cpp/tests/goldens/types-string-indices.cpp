@@ -71,22 +71,12 @@ static bool has2(core::Str const & s, int32_t c) {
 
 static bool has3(core::Str const & s, int32_t c) {
   int32_t i = indices::indexOfChar(s, c);
-  try {
-    core::String::requireStringIndex(i);
-    return true;
-  } catch (core::TemperBubble const &) {
-    return false;
-  }
+  return core::String::isStringIndex(i);
 }
 
 static bool has4(core::Str const & s, int32_t c) {
   int32_t i = indices::indexOfChar(s, c);
-  try {
-    core::String::requireNoStringIndex(i);
-    return false;
-  } catch (core::TemperBubble const &) {
-    return true;
-  }
+  return !core::String::isNoStringIndex(i);
 }
 
 void global_init_init() {
@@ -113,8 +103,7 @@ void global_init_init() {
         } catch (core::TemperBubble const &) {
           value = TEMPER_STR("?");
         }
-        core::Str string = value;
-        core::Console::log(temper_globals::console.value, "'" + string + "' in \"" + s + "\": " + (indices::has0(s, c) ? TEMPER_STR("y") : TEMPER_STR("n")) + ", " + (indices::has1(s, c) ? TEMPER_STR("y") : TEMPER_STR("n")) + ", " + (indices::has2(s, c) ? TEMPER_STR("y") : TEMPER_STR("n")) + ", " + (indices::has3(s, c) ? TEMPER_STR("y") : TEMPER_STR("n")) + ", " + (indices::has4(s, c) ? TEMPER_STR("y") : TEMPER_STR("n")));
+        core::Console::log(temper_globals::console.value, "'" + value + "' in \"" + s + "\": " + (indices::has0(s, c) ? TEMPER_STR("y") : TEMPER_STR("n")) + ", " + (indices::has1(s, c) ? TEMPER_STR("y") : TEMPER_STR("n")) + ", " + (indices::has2(s, c) ? TEMPER_STR("y") : TEMPER_STR("n")) + ", " + (indices::has3(s, c) ? TEMPER_STR("y") : TEMPER_STR("n")) + ", " + (indices::has4(s, c) ? TEMPER_STR("y") : TEMPER_STR("n")));
       }
     }
     {

@@ -32,34 +32,34 @@
 8:1 -> ../core/core.temper:1:1  export function share(n, d) <- export let share(n: Int, d:
 8:17 -> ../core/core.temper:1:12 (share)  share(n, d) { <- share(n: Int, d: Int): Int {
 8:22 -> ../core/core.temper:1:1  (n, d) { <- export let share(n: Int, d:
-9:3 -> ../core/core.temper:1:41  try { <- n / d orelse 0 }
-17:1 -> ../core/core.temper:8:1  /** <- export let ratioOf(n: Int, d
-22:1 -> ../core/core.temper:8:1  export function ratioOf(n, d <- export let ratioOf(n: Int, d
-22:17 -> ../core/core.temper:8:12 (ratioOf)  ratioOf(n, d) { <- ratioOf(n: Int, d: Int): Rat
-22:24 -> ../core/core.temper:8:1  (n, d) { <- export let ratioOf(n: Int, d
-23:3 -> ../core/core.temper:8:46  if (d === 0) { <- if (d == 0) { null } else {
-24:5 -> ../core/core.temper:8:60  return null; <- null } else { new Ratio(n, d
-26:5 -> ../core/core.temper:8:74  return new Ratio(n, d); <- new Ratio(n, d) } }
-30:1 -> ../core/core.temper:3:1  export class Ratio extends t <- export class Ratio(public n:
-30:14 -> ../core/core.temper:3:14 (Ratio)  Ratio extends type() { <- Ratio(public n: Int, public
-30:19 -> ../core/core.temper:3:1   extends type() { <- export class Ratio(public n:
-31:3 -> ../core/core.temper:3:27  /** @type {number} */ <- n: Int, public d: Int) {
-32:3 -> ../core/core.temper:3:27  #n; <- n: Int, public d: Int) {
-33:3 -> ../core/core.temper:3:42  /** @type {number} */ <- d: Int) {
-34:3 -> ../core/core.temper:3:42  #d; <- d: Int) {
-44:3 -> ../core/core.temper:3:1  /** <- export class Ratio(public n:
-48:3 -> ../core/core.temper:3:1  constructor(n, d) { <- export class Ratio(public n:
-50:5 -> ../core/core.temper:3:27  this.#n = n; <- n: Int, public d: Int) {
-51:5 -> ../core/core.temper:3:42  this.#d = d; <- d: Int) {
-54:3 -> ../core/core.temper:3:27  /** @returns {number} */ <- n: Int, public d: Int) {
-55:3 -> ../core/core.temper:3:27  get n() { <- n: Int, public d: Int) {
-55:7 -> ../core/core.temper:3:27 (n)  n() { <- n: Int, public d: Int) {
-59:3 -> ../core/core.temper:3:42  /** @returns {number} */ <- d: Int) {
-60:3 -> ../core/core.temper:3:42  get d() { <- d: Int) {
-60:7 -> ../core/core.temper:3:42 (d)  d() { <- d: Int) {
-64:3 -> ../core/core.temper:5:10  /** <- eq(other: Ratio): Boolean {
-68:3 -> ../core/core.temper:5:10 (eq)  eq(other) { <- eq(other: Ratio): Boolean {
-69:5 -> ../core/core.temper:5:38  return Math.imul(this.#n, ot <- n * other.d == other.n * d }
+9:3 -> ../core/core.temper:1:41  return divIntInt(n, d); <- n / d orelse 0 }
+12:1 -> ../core/core.temper:8:1  /** <- export let ratioOf(n: Int, d
+17:1 -> ../core/core.temper:8:1  export function ratioOf(n, d <- export let ratioOf(n: Int, d
+17:17 -> ../core/core.temper:8:12 (ratioOf)  ratioOf(n, d) { <- ratioOf(n: Int, d: Int): Rat
+17:24 -> ../core/core.temper:8:1  (n, d) { <- export let ratioOf(n: Int, d
+18:3 -> ../core/core.temper:8:46  if (d === 0) { <- if (d == 0) { null } else {
+19:5 -> ../core/core.temper:8:60  return null; <- null } else { new Ratio(n, d
+21:5 -> ../core/core.temper:8:74  return new Ratio(n, d); <- new Ratio(n, d) } }
+25:1 -> ../core/core.temper:3:1  export class Ratio extends t <- export class Ratio(public n:
+25:14 -> ../core/core.temper:3:14 (Ratio)  Ratio extends type() { <- Ratio(public n: Int, public
+25:19 -> ../core/core.temper:3:1   extends type() { <- export class Ratio(public n:
+26:3 -> ../core/core.temper:3:27  /** @type {number} */ <- n: Int, public d: Int) {
+27:3 -> ../core/core.temper:3:27  #n; <- n: Int, public d: Int) {
+28:3 -> ../core/core.temper:3:42  /** @type {number} */ <- d: Int) {
+29:3 -> ../core/core.temper:3:42  #d; <- d: Int) {
+39:3 -> ../core/core.temper:3:1  /** <- export class Ratio(public n:
+43:3 -> ../core/core.temper:3:1  constructor(n, d) { <- export class Ratio(public n:
+45:5 -> ../core/core.temper:3:27  this.#n = n; <- n: Int, public d: Int) {
+46:5 -> ../core/core.temper:3:42  this.#d = d; <- d: Int) {
+49:3 -> ../core/core.temper:3:27  /** @returns {number} */ <- n: Int, public d: Int) {
+50:3 -> ../core/core.temper:3:27  get n() { <- n: Int, public d: Int) {
+50:7 -> ../core/core.temper:3:27 (n)  n() { <- n: Int, public d: Int) {
+54:3 -> ../core/core.temper:3:42  /** @returns {number} */ <- d: Int) {
+55:3 -> ../core/core.temper:3:42  get d() { <- d: Int) {
+55:7 -> ../core/core.temper:3:42 (d)  d() { <- d: Int) {
+59:3 -> ../core/core.temper:5:10  /** <- eq(other: Ratio): Boolean {
+63:3 -> ../core/core.temper:5:10 (eq)  eq(other) { <- eq(other: Ratio): Boolean {
+64:5 -> ../core/core.temper:5:38  return Math.imul(this.#n, ot <- n * other.d == other.n * d }
 # modules/state.internal.js
 # generated line:column -> source:line:column, and the text at each
 3:1 -> ../state/state.temper:1:1  export class State extends t <- export class State(public id

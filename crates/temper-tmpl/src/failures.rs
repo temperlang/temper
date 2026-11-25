@@ -68,7 +68,7 @@ pub fn is_failure_type(p: &Program, root: Option<DeclId>, ty: TypeId) -> bool {
 /// What a node may fail with, if anything: a failing call's callee's
 /// failure type, with its type arguments put in; a `throw`'s value's
 /// type; and `Bubble` for the rest that may bubble (`bubble()`, checked
-/// operators, `as`, `await`) and for `Error` nodes, which fail as
+/// `await`) and for `Error` nodes, which fail as
 /// `bubble()` does.
 pub fn node_failure(p: &Program, id: NodeId) -> Option<TypeId> {
     let callee = |callee: DeclId, receiver: Option<NodeId>, args: TypeArgs| {
@@ -110,13 +110,7 @@ pub fn node_failure(p: &Program, id: NodeId) -> Option<TypeId> {
             sig.and_then(|s| p.types.signature(s)?.fail)
         }
         Node::Throw { value, .. } => Some(p.nodes.ty(value)),
-        Node::Op {
-            may_bubble: true, ..
-        }
-        | Node::As {
-            may_bubble: true, ..
-        }
-        | Node::Await {
+        Node::Await {
             may_bubble: true, ..
         }
         | Node::Bubble { .. }

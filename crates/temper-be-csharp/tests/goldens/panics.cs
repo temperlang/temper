@@ -24,7 +24,14 @@ public static class PanicsGlobal
 
     internal static Square Downcast(IShape s)
     {
-        return Core.Cast<Square>(s);
+        if (s is Square)
+        {
+            return (Square)s;
+        }
+        else
+        {
+            return Core.Bubble<Square>();
+        }
     }
 
     internal static int Calling(Func<int> f)
@@ -128,24 +135,6 @@ public static class PanicsGlobal
         {
             b = -2;
         }
-        int c;
-        try
-        {
-            c = Core.Div(1, zero);
-        }
-        catch (global::TemperLang.Core.Bubble)
-        {
-            c = -3;
-        }
-        int d;
-        try
-        {
-            d = Core.ToInt(Core.Div(1L, (long)zero));
-        }
-        catch (global::TemperLang.Core.Bubble)
-        {
-            d = -4;
-        }
         int e;
         try
         {
@@ -184,17 +173,7 @@ public static class PanicsGlobal
             h = "no digits";
         }
         int i = Calling(() => Failing(2));
-        console.Log(string.Create(CultureInfo.InvariantCulture, $"{a} {b} {c} {d} {e} {(Float64.Compare(f, -6.0) == 0 ? "true" : "false")} {g} {h} {i}"));
-        string? nothing = null;
-        string j;
-        try
-        {
-            j = Core.CastToNonNull<string>(nothing);
-        }
-        catch (global::TemperLang.Core.Bubble)
-        {
-            j = "null";
-        }
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{a} {b} {e} {(Float64.Compare(f, -6.0) == 0 ? "true" : "false")} {g} {h} {i}"));
         long k;
         try
         {
@@ -287,7 +266,7 @@ public static class PanicsGlobal
         {
             u = "bad json";
         }
-        console.Log(string.Create(CultureInfo.InvariantCulture, $"{j} {k} {l} {m} {n} {o} {q} {r} {s} {t} {u}"));
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{k} {l} {m} {n} {o} {q} {r} {s} {t} {u}"));
         console.Log("panicking");
         int p;
         try

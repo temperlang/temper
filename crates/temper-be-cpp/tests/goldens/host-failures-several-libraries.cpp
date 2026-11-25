@@ -127,6 +127,14 @@ static core::Expected<int32_t, std::shared_ptr<Unreadable>> reading(core::Str co
   }
 }
 
+static int32_t nonzero(int32_t n) {
+  if (n == 0) {
+    core::bubble();
+  } else {
+    return n;
+  }
+}
+
 static int32_t ratio(core::Str const & key, core::Str const & count) {
   try {
     auto result = [&]() -> core::Expected<int32_t, std::shared_ptr<core::Failure>> {
@@ -139,7 +147,7 @@ static int32_t ratio(core::Str const & key, core::Str const & count) {
       if (!parseCountResult.has_value()) {
         return core::unexpected(parseCountResult.error());
       }
-      return core::Int::div_wrap(int32, *parseCountResult);
+      return core::Int::div_wrap(int32, nonzero(*parseCountResult));
     }();
     if (result.has_value()) {
       return *result;

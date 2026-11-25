@@ -1,9 +1,8 @@
 # Panics
 
 `orelse` handles a bubble, wherever it comes from, and never a panic.
-Bubbles here come from `bubble()`, from builtins (a failed downcast,
-`Int` and `Int64` division by zero, a failed number parse, and a code
-point out of range), from std (a regex that finds nothing), and from
+Bubbles here come from `bubble()`, from builtins (a failed number
+parse, and a code point out of range), from std (a regex that finds nothing), and from
 inside a function value an `orelse` calls. Each `orelse` gives its
 fallback:
 
@@ -19,25 +18,24 @@ fallback:
       if (n > 0) { bubble() }
       n
     }
-    let downcast(s: Shape): Square throws Bubble { s as Square }
+    let downcast(s: Shape): Square throws Bubble {
+      if (s is Square) { s } else { bubble() }
+    }
     let calling(f: fn (): Int throws Bubble): Int { f() orelse -9 }
 
     let zero = failing(0) orelse -1;
     let a = failing(1) orelse -1;
     let b = downcast(new Circle()).side orelse -2;
-    let c = 1 / zero orelse -3;
-    let d = (1i64 / zero.toInt64()).toInt32() orelse -4;
     let e = "nope".toInt32() orelse -5;
     let f = "x".toFloat64() orelse -6.0;
     let g = String.fromCodePoint(0x110000) orelse "?";
     let digits: Regex = /[0-9]+/;
     let h = digits.find("none").full.value orelse "no digits";
     let i = calling(fn (): Int throws Bubble { failing(2) });
-    console.log("${a} ${b} ${c} ${d} ${e} ${(f == -6.0).toString()} ${g} ${h} ${i}");
+    console.log("${a} ${b} ${e} ${(f == -6.0).toString()} ${g} ${h} ${i}");
 
 The other builtins and std functions that bubble, each where a host
-library fails for it on some backend: a null `as` a non-null type,
-other number parses and conversions, code points out of range, a
+library fails for it on some backend: other number parses and conversions, code points out of range, a
 missing key, an invalid date, and malformed JSON:
 
     let appending(codePoint: Int): String throws Bubble {
@@ -49,8 +47,6 @@ missing key, an invalid date, and malformed JSON:
       parseJson(text);
       "parsed"
     }
-    let nothing: String? = null;
-    let j = (nothing as String) orelse "null";
     let k = "zz".toInt64() orelse -7i64;
     let l = "99999999999".toInt32() orelse -8;
     let m = 1.0e20.toInt32() orelse -9;
@@ -63,7 +59,7 @@ missing key, an invalid date, and malformed JSON:
     let s = new Date(2023, 2, 30).toString() orelse "no date";
     let t = Date.fromIsoString("2023-13-01").toString() orelse "bad date";
     let u = parsing("[1,") orelse "bad json";
-    console.log("${j} ${k.toString()} ${l} ${m} ${n} ${o} ${q} ${r} ${s} ${t} ${u}");
+    console.log("${k.toString()} ${l} ${m} ${n} ${o} ${q} ${r} ${s} ${t} ${u}");
 
 A panic passes every `orelse` untouched: the one in `inner` around the
 call that panics, and the one around `inner()`. So the run fails right
@@ -83,7 +79,7 @@ after `panicking`, and neither the fallback nor the line after logs:
     console.log("after the panic ${p}");
 
 ```log
--1 -2 -3 -4 -5 true ? no digits -9
-null -7 -8 -9 -10 ? ? -11 no date bad date bad json
+-1 -2 -5 true ? no digits -9
+-7 -8 -9 -10 ? ? -11 no date bad date bad json
 panicking
 ```

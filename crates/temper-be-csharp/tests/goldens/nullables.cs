@@ -135,7 +135,7 @@ public static class NullablesGlobal
         console.Log((Same(null, null) ? "true" : "false") + " " + (Same("a", null) ? "true" : "false") + " " + (Same(null, "a") ? "true" : "false") + " " + (Same("a", "a") ? "true" : "false"));
         console.Log((SameInt(1, 2) ? "true" : "false") + " " + (SameInt(3, 3) ? "true" : "false") + " " + (SameInt(null, 3) ? "true" : "false"));
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{Parse("12")} {Parse("x")}"));
-        console.Log(string.Create(CultureInfo.InvariantCulture, $"{Halved("12", 2)} {Halved("x", 2)} {Halved("12", 0)}"));
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{Halved("12", 2)} {Halved("x", 2)}"));
         console.Log(Checked(7).ToString(CultureInfo.InvariantCulture));
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{OrZero(null)} {OrZero(5)}"));
         Varying();

@@ -19,20 +19,30 @@ log -2147483648
 log -2147483648
 log -2
 
-=== division by zero fails
+=== integer division by zero panics; Float64's gives IEEE 754's results
 let zero = 0;
-console.log((1 / zero orelse -1).toString());
+let fzero = 0.0;
+console.log("${1.0 / fzero} ${-1.0 / fzero} ${0.0 / fzero} ${1.0 % fzero}");
 console.log((1 / zero).toString());
 --- settled
 (Block
   (Let ^zero:0 0)
+  (Let ^fzero:1 0.0)
   (Call
     (Call . console \log)
-    (Call (Call . (Orelse (Call / 1 zero:0) (Call - 1)) \toString)))
+    (Call
+      cat
+      (Call / 1.0 fzero:1)
+      " "
+      (Call / (Call - 1.0) fzero:1)
+      " "
+      (Call / 0.0 fzero:1)
+      " "
+      (Call % 1.0 fzero:1)))
   (Call (Call . console \log) (Call (Call . (Call / 1 zero:0) \toString)))
   #void)
-log -1
-Failed
+log Infinity -Infinity NaN NaN
+Panicked: division by zero
 
 === conditions must be Boolean
 if (1) { console.log("no") }
@@ -844,7 +854,7 @@ console.log("${"1f".toFloat64() orelse -1.0} ${"-.5".toFloat64() orelse -1.0} ${
       (Orelse (Call (Call . "+Infinity" \toFloat64)) (Call - 1.0))))
   #void)
 log 0.0 -0.0 1.0 1.0e+7 1234567.0 9.99e-4 1.0e+23 4.9e-324 0.3000000000000000 NaN -Infinity
-log true false true true -1.0
+log true false true true Infinity
 log 2.0 -0.0 NaN 1.4142135623730951 -1 -4
 log 0.5 -1.0 false true 3.141592653589793
 log -1.0 -1.0 -1.0 -1.0 -1.0
@@ -2083,6 +2093,7 @@ log 3 2
 Failed: Capturing this in a function before f is set
 
 === jumps out of expressions, orelse and for … of bodies
+let d(a: Int, b: Int): Int throws Bubble { if (b == 0) { bubble() } else { a / b } }
 var total = 0;
 for (var k = 0; k < 10; ++k) {
   if (k == 2) { continue; }
@@ -2107,34 +2118,41 @@ let first(xs: List<Int>): Int {
 console.log("first ${first([1, 5, 7])} ${first([])}");
 var fails = 0;
 for (var m = 3; m >= 0; --m) {
-  let q = (10 / (m - 2)) orelse do { fails += 1; if (m == 3) { 0 } else { break } };
+  let q = (d(10, (m - 2))) orelse do { fails += 1; if (m == 3) { 0 } else { break } };
   console.log("q ${q}");
 }
 console.log("fails ${fails}");
 --- settled
 (Block
-  (Var ^total:0 0)
+  (Let
+    ^d:0
+    (Fn
+      (Let ^a:5 Int)
+      (Let ^b:6 Int)
+      (Call throws Int Bubble)
+      (Block (If (Call == b:6 0) (Block (Fail)) (Block (Call / a:5 b:6))))))
+  (Var ^total:1 0)
   (Block
-    (Var ^k:4 0)
+    (Var ^k:7 0)
     (Loop
       (If
-        (Call < k:4 10)
+        (Call < k:7 10)
         (Block
-          (If (Call == k:4 2) (Block (Continue @15) #void) (Block))
+          (If (Call == k:7 2) (Block (Continue @100) #void) (Block))
           (Assign
-            total:0
+            total:1
             (Call
               +
-              total:0
-              (Call + k:4 (If (Call == k:4 5) (Block (Break @15)) (Block 0)))))
+              total:1
+              (Call + k:7 (If (Call == k:7 5) (Block (Break @100)) (Block 0)))))
           #void)
-        (Break @15))
-      (Assign k:4 (Call + k:4 1))))
-  (Call (Call . console \log) (Call cat "total " total:0))
+        (Break @100))
+      (Assign k:7 (Call + k:7 1))))
+  (Call (Call . console \log) (Call cat "total " total:1))
   (Let
-    ^found:1
+    ^found:2
     (Block
-      (Var ^r:5 (Call - 1))
+      (Var ^r:8 (Call - 1))
       (Block
         (Loop
           (Block
@@ -2144,70 +2162,70 @@ console.log("fails ${fails}");
                 (Call list (Call list 1 2) (Call list 3 4) (Call list 5))
                 \forEach)
               (Fn
-                (Let ^xs:6)
+                (Let ^xs:9)
                 (Block
                   (Loop
                     (Block
                       (Call
-                        (Call . xs:6 \forEach)
+                        (Call . xs:9 \forEach)
                         (Fn
-                          (Let ^x:7)
+                          (Let ^x:10)
                           (Block
                             (If
-                              (Call == x:7 2)
-                              (Block (Continue @198) #void)
+                              (Call == x:10 2)
+                              (Block (Continue @283) #void)
                               (Block))
                             (If
-                              (Call == x:7 4)
-                              (Block (Assign r:5 x:7) (Break @191) #void)
+                              (Call == x:10 4)
+                              (Block (Assign r:8 x:10) (Break @276) #void)
                               (Block)))))
-                      (Break @242))))))
-            (Break @198))))
-      r:5))
-  (Call (Call . console \log) (Call cat "found " found:1))
+                      (Break @327))))))
+            (Break @283))))
+      r:8))
+  (Call (Call . console \log) (Call cat "found " found:2))
   (Let
-    ^first:2
+    ^first:3
     (Fn
-      (Let ^xs:8 (Call <> List Int))
+      (Let ^xs:11 (Call <> List Int))
       Int
       (Block
         (Loop
           (Block
             (Call
-              (Call . xs:8 \forEach)
+              (Call . xs:11 \forEach)
               (Fn
-                (Let ^x:9)
+                (Let ^x:12)
                 (Block
-                  (If (Call > x:9 1) (Block (Return @390 x:9) #void) (Block)))))
-            (Break @424)))
+                  (If (Call > x:12 1) (Block (Return @475 x:12) #void) (Block)))))
+            (Break @509)))
         (Call - 1))))
   (Call
     (Call . console \log)
     (Call
       cat
       "first "
-      (Call first:2 (Call list 1 5 7))
+      (Call first:3 (Call list 1 5 7))
       " "
-      (Call first:2 (Call list))))
-  (Var ^fails:3 0)
+      (Call first:3 (Call list))))
+  (Var ^fails:4 0)
   (Block
-    (Var ^m:10 3)
+    (Var ^m:13 3)
     (Loop
       (If
-        (Call >= m:10 0)
+        (Call >= m:13 0)
         (Block
           (Let
-            ^q:11
+            ^q:14
             (Orelse
-              (Call / 10 (Call - m:10 2))
+              (Call d:0 10 (Call - m:13 2))
               (Block
-                (Assign fails:3 (Call + fails:3 1))
-                (If (Call == m:10 3) (Block 0) (Block (Break @548))))))
-          (Call (Call . console \log) (Call cat "q " q:11))
+                (Assign fails:4 (Call + fails:4 1))
+                (If (Call == m:13 3) (Block 0) (Block (Break @633))))))
+          (Call (Call . console \log) (Call cat "q " q:14))
           #void)
-        (Break @548))
-      (Assign m:10 (Call - m:10 1))))
-  (Call (Call . console \log) (Call cat "fails " fails:3))
+        (Break @633))
+      (Assign m:13 (Call - m:13 1))))
+  (Call (Call . console \log) (Call cat "fails " fails:4))
   #void)
 log total 8
 log found 4
@@ -2425,19 +2443,20 @@ log step 2 false done true
 log step 3 false done true
 
 === yield in nested orelse
+let d(a: Int, b: Int): Int throws Bubble { if (b == 0) { bubble() } else { a / b } }
 let make(body: fn (Int, Int): Generator<Boolean>): Generator<Boolean> { body(6, 2) }
 let g = make { (x: Int, y: Int): GeneratorResult<Boolean> throws Bubble extends GeneratorFn =>
   do {
-    console.log("x / (y + 1) = ${x / (y + 1)}");
+    console.log("x / (y + 1) = ${d(x, (y + 1))}");
     do {
-      console.log("x / (y - 2) = ${x / (y - 2)}");
+      console.log("d(x, (y - 2)) = ${d(x, (y - 2))}");
       yield true;
     } orelse do {
       console.log("cannot divide by ${y - 2}");
       yield false;
     }
     console.log("after");
-    x / (y - 2);
+    d(x, (y - 2));
   } orelse do {
     console.log("outer orelse");
   }
@@ -2450,18 +2469,25 @@ console.log("r2 ${r2 is ValueResult<Boolean>} done ${g.done}");
 --- settled
 (Block
   (Let
-    ^make:0
+    ^d:0
     (Fn
-      (Let ^body:4 (Call FnType Int Int (Call <> Generator Boolean)))
-      (Call <> Generator Boolean)
-      (Block (Call body:4 6 2))))
+      (Let ^a:5 Int)
+      (Let ^b:6 Int)
+      (Call throws Int Bubble)
+      (Block (If (Call == b:6 0) (Block (Fail)) (Block (Call / a:5 b:6))))))
   (Let
-    ^g:1
+    ^make:1
+    (Fn
+      (Let ^body:7 (Call FnType Int Int (Call <> Generator Boolean)))
+      (Call <> Generator Boolean)
+      (Block (Call body:7 6 2))))
+  (Let
+    ^g:2
     (Call
-      make:0
+      make:1
       (Fn
-        (Let ^x:5 Int)
-        (Let ^y:6 Int)
+        (Let ^x:8 Int)
+        (Let ^y:9 Int)
         (Call throws (Call <> GeneratorResult Boolean) Bubble)
         GeneratorFn
         (Block
@@ -2469,43 +2495,43 @@ console.log("r2 ${r2 is ValueResult<Boolean>} done ${g.done}");
             (Block
               (Call
                 (Call . console \log)
-                (Call cat "x / (y + 1) = " (Call / x:5 (Call + y:6 1))))
+                (Call cat "x / (y + 1) = " (Call d:0 x:8 (Call + y:9 1))))
               (Orelse
                 (Block
                   (Call
                     (Call . console \log)
-                    (Call cat "x / (y - 2) = " (Call / x:5 (Call - y:6 2))))
-                  (Yield @98 true)
+                    (Call cat "d(x, (y - 2)) = " (Call d:0 x:8 (Call - y:9 2))))
+                  (Yield @183 true)
                   #void)
                 (Block
                   (Call
                     (Call . console \log)
-                    (Call cat "cannot divide by " (Call - y:6 2)))
-                  (Yield @98 false)
+                    (Call cat "cannot divide by " (Call - y:9 2)))
+                  (Yield @183 false)
                   #void))
               (Call (Call . console \log) "after")
-              (Call / x:5 (Call - y:6 2))
+              (Call d:0 x:8 (Call - y:9 2))
               #void)
             (Block (Call (Call . console \log) "outer orelse") #void))))))
   (Call (Call . console \log) "made")
-  (Let ^r1:2 (Call (Call . g:1 \next)))
+  (Let ^r1:3 (Call (Call . g:2 \next)))
   (Call
     (Call . console \log)
     (Call
       cat
       "r1 "
-      (Call is r1:2 (Call <> ValueResult Boolean))
+      (Call is r1:3 (Call <> ValueResult Boolean))
       " done "
-      (Call . g:1 \done)))
-  (Let ^r2:3 (Call (Call . g:1 \next)))
+      (Call . g:2 \done)))
+  (Let ^r2:4 (Call (Call . g:2 \next)))
   (Call
     (Call . console \log)
     (Call
       cat
       "r2 "
-      (Call is r2:3 (Call <> ValueResult Boolean))
+      (Call is r2:4 (Call <> ValueResult Boolean))
       " done "
-      (Call . g:1 \done)))
+      (Call . g:2 \done)))
   #void)
 log made
 log x / (y + 1) = 2
@@ -2680,9 +2706,10 @@ console.log("not reached");
   (Call (Call . console \log) "not reached")
   #void)
 error 180..184: Cannot assign to fn: SafeGenerator<Int32> from fn (Int32): SafeGenerator<Int32>
-error 134..166: Cannot bubble from a function without Bubble in its return type
 log made
-Failed: Cannot bubble from a function without Bubble in its return type
+log body
+log 2
+Failed: Too few arguments
 
 === next from within a running generator, and close
 // In a function: at top level, the temporary `g?.` holds `g` in moves
@@ -2764,6 +2791,7 @@ log true false
 log true true
 
 === generators from named functions and methods, which Kotlin Temper lacks
+let d(a: Int, b: Int): Int throws Bubble { if (b == 0) { bubble() } else { a / b } }
 let count(n: Int): GeneratorResult<Int> extends GeneratorFn {
   yield n;
 }
@@ -2779,48 +2807,54 @@ console.log("${first(count(1))} ${first(g)} ${first(g)} ${g.nextSafe() is DoneRe
 --- settled
 (Block
   (Let
-    ^count:0
+    ^d:0
     (Fn
-      (Let ^n:4 Int)
+      (Let ^a:5 Int)
+      (Let ^b:6 Int)
+      (Call throws Int Bubble)
+      (Block (If (Call == b:6 0) (Block (Fail)) (Block (Call / a:5 b:6))))))
+  (Let
+    ^count:1
+    (Fn
+      (Let ^n:7 Int)
       (Call <> GeneratorResult Int)
       GeneratorFn
-      (Block (Yield @0 n:4) #void)))
+      (Block (Yield @85 n:7) #void)))
   (Class
-    ^C:1
-    (Param ^n:6 Int)
+    ^C:2
+    (Param ^n:9 Int)
     (Method
-      ^gen:7
+      ^gen:10
       (Fn
         (Call <> GeneratorResult Int)
         GeneratorFn
-        (Block (Yield @109 n:6) (Yield @109 (Call + n:6 1)) #void))))
-  (Let ^g:2 (Call (Call . (Call new C:1 5) \gen)))
+        (Block (Yield @194 n:9) (Yield @194 (Call + n:9 1)) #void))))
+  (Let ^g:3 (Call (Call . (Call new C:2 5) \gen)))
   (Let
-    ^first:3
+    ^first:4
     (Fn
-      (Let ^g:8 (Call <> SafeGenerator Int))
+      (Let ^g:11 (Call <> SafeGenerator Int))
       String
       (Block
         (Call
           cat
           (Call
             .
-            (Call as (Call (Call . g:8 \nextSafe)) (Call <> ValueResult Int))
+            (Call as (Call (Call . g:11 \nextSafe)) (Call <> ValueResult Int))
             \value)))))
   (Call
     (Call . console \log)
     (Call
       cat
-      (Call first:3 (Call count:0 1))
+      (Call first:4 (Call count:1 1))
       " "
-      (Call first:3 g:2)
+      (Call first:4 g:3)
       " "
-      (Call first:3 g:2)
+      (Call first:4 g:3)
       " "
-      (Call is (Call (Call . g:2 \nextSafe)) (Call <> DoneResult Int))))
+      (Call is (Call (Call . g:3 \nextSafe)) (Call <> DoneResult Int))))
   #void)
-error 266..298: Cannot bubble from a function without Bubble in its return type
-Failed: Cannot bubble from a function without Bubble in its return type
+log 1 5 6 true
 
 === yield outside a generator
 let f(): Int { yield 1; 2 }

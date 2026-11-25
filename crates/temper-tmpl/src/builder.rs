@@ -846,7 +846,7 @@ impl Builder {
 
     /// `value as ty`, checked, bubbling if it fails.
     pub fn as_cast(&mut self, ty: TypeId, value: NodeId) -> NodeId {
-        self.raw(Kind::As, ty, (0, 0), Flags::MAY_BUBBLE, &[value])
+        self.raw(Kind::As, ty, (0, 0), Flags::NONE, &[value])
     }
 
     /// Whether `value` is of type `ty`, a class or interface.
@@ -954,14 +954,10 @@ impl Builder {
         self.expr(Kind::Panic, ty, (0, 0), &[])
     }
 
-    /// Calls an operator, marked if it may bubble.
+    /// Calls an operator.
     pub fn op(&mut self, op: Op, args: &[NodeId]) -> NodeId {
-        let (result, flags) = match op.info() {
-            Some(info) if info.bubbles => (info.result, Flags::MAY_BUBBLE),
-            Some(info) => (info.result, Flags::NONE),
-            None => (TypeId::NONE, Flags::NONE),
-        };
-        self.raw(Kind::Op, result, (op.0, 0), flags, args)
+        let result = op.info().map_or(TypeId::NONE, |info| info.result);
+        self.raw(Kind::Op, result, (op.0, 0), Flags::NONE, args)
     }
 
     pub fn and(&mut self, left: NodeId, right: NodeId) -> NodeId {

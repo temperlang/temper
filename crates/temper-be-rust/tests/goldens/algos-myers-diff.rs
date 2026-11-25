@@ -211,7 +211,7 @@ pub fn diff<T: Clone + Send + Sync + 'static>(
             {
                 let mut path_element = diff_path.clone();
                 while path_element.is_some() {
-                    let path = path_element.clone().ok_or_else(temper_core::Error::new)?;
+                    let path = path_element.clone().unwrap();
                     temper_core::listed::add(&path_elements, path.clone(), None);
                     path_element = path.0.previous.clone();
                 }

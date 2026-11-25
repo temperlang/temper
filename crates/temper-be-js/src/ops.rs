@@ -4,12 +4,13 @@
 //! As Kotlin's JS backend spells them (its `JsSupportNetwork.kt`), with
 //! the same `@temperlang/core` helpers: `Int32` is a `number` kept in
 //! range by `| 0` after `+`, `-`, and negation, `Math.imul` for `*`, and
-//! `divIntInt` and `modIntInt`, which bubble on a zero divisor (`divSafe`,
-//! by a divisor that can't fail it, is `a / b | 0`); `Int64` is
+//! `divIntInt` and `modIntInt`, which panic on a zero divisor (`divSafe`,
+//! by a divisor that can't be zero, is `a / b | 0`); `Int64` is
 //! a `bigint`, wrapped by `clampInt64` after `+`, `-`, `*`, `/`, and
-//! negation, with `/` and `%` as `divInt64` and `modInt64`, which bubble
+//! negation, with `/` and `%` as `divInt64` and `modInt64`, which panic
 //! on a zero divisor, where BigInt's throw a `RangeError` (by a divisor
-//! that can't fail them, `clampInt64(a / b)` and `a % b`); shifts that JS's own operators get wrong
+//! that can't be zero, `clampInt64(a / b)` and `a % b`); `Float64`'s
+//! `/` and `%` are JS's, IEEE 754's; shifts that JS's own operators get wrong
 //! (`Int32.ushr`, and every `Int64` shift) call the runtime; `Float64` and
 //! `String` comparisons go through `cmpFloat64` and `cmpString`, which
 //! order NaN, signed zeros, and code points as Temper does, and
@@ -95,7 +96,7 @@ pub fn spelling(op: Op) -> Option<Spelling> {
         ("Int64", "add") => Clamp64(crate::tree::Bin::Add),
         ("Int64", "sub") => Clamp64(crate::tree::Bin::Sub),
         ("Int64", "mul") => Clamp64(crate::tree::Bin::Mul),
-        // A zero divisor bubbles, where BigInt's `/` and `%` throw.
+        // A zero divisor panics, where BigInt's `/` and `%` throw.
         ("Int64", "div") => Helper("divInt64"),
         ("Int64", "divSafe") => Clamp64(crate::tree::Bin::Div),
         ("Int64", "mod") => Helper("modInt64"),
@@ -105,7 +106,7 @@ pub fn spelling(op: Op) -> Option<Spelling> {
         ("Int32", "sub") => Wrap32(crate::tree::Bin::Sub),
         ("Int32", "mul") => Imul,
         ("Int32", "div") => Helper("divIntInt"),
-        // By a divisor that can't fail it, as Kotlin's: `a / b | 0`.
+        // By a divisor that can't be zero, as Kotlin's: `a / b | 0`.
         ("Int32", "divSafe") => Wrap32(crate::tree::Bin::Div),
         ("Int32", "mod" | "modSafe") => Helper("modIntInt"),
         ("Int32", "neg") => Neg32,

@@ -21,8 +21,8 @@
 34:3 -> ../host-failures.temper.md:29:5  get message() { <- export class NotFound(public
 35:5 -> ../host-failures.temper.md:29:5  return `not found (key: ${th <- export class NotFound(public
 39:1 -> ../host-failures.temper.md:38:5  console.log("before"); <- console.log("before");
-40:1 -> ../host-failures.temper.md:218:5  /** @type {number} */ <- let h = (parseCount("two") +
-41:1 -> ../host-failures.temper.md:218:5  export let h; <- let h = (parseCount("two") +
-42:1 -> ../host-failures.temper.md:218:5  try { <- let h = (parseCount("two") +
-46:3 -> ../host-failures.temper.md:219:7  console.log(`caught ${e.mess <- console.log("caught ${e.mess
-49:1 -> ../host-failures.temper.md:222:5  console.log(`after ${h}`); <- console.log("after ${h}");
+40:1 -> ../host-failures.temper.md:219:5  /** @type {number} */ <- let h = (parseCount("two") +
+41:1 -> ../host-failures.temper.md:219:5  export let h; <- let h = (parseCount("two") +
+42:1 -> ../host-failures.temper.md:219:5  try { <- let h = (parseCount("two") +
+46:3 -> ../host-failures.temper.md:220:7  console.log(`caught ${e.mess <- console.log("caught ${e.mess
+49:1 -> ../host-failures.temper.md:223:5  console.log(`after ${h}`); <- console.log("after ${h}");

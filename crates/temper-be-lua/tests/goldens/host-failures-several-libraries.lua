@@ -104,6 +104,16 @@ local function reading(key, count)
   return t
 end
 
+---@param n integer
+---@return integer
+local function nonzero(n)
+  if n == 0 then
+    return temper.bubble()
+  else
+    return n
+  end
+end
+
 ---@param key string
 ---@param count string
 ---@return integer
@@ -111,7 +121,7 @@ local function ratio(key, count)
   ---@type integer
   local t
   if not temper.catch(function()
-    t = temper.int32_div(hostLookup(key), parseCount(count))
+    t = temper.int32_div(hostLookup(key), nonzero(parseCount(count)))
   end, temper.Bubble, temper.Failure) then
     t = -9
   end

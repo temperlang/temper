@@ -49,6 +49,7 @@ boom()
 interactive#0: void
 Panicked: panic()
 interactive#1: fail
+Panicked: division by zero
 interactive#2: fail
 interactive#3: 2
 
@@ -57,6 +58,7 @@ let z = 1 / 0
 z
 let w = z + 1
 --- transcript
+Panicked: division by zero
 interactive#0: fail
 Failed: z has no value: interactive#0 failed
 interactive#1: fail

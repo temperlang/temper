@@ -42,10 +42,12 @@ internal class Point
 
     public static Point DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
-        JsonObject obj = Core.Cast<JsonObject>(t);
-        IJsonNumeric xJson = Core.Cast<IJsonNumeric>(obj.PropertyValueOrBubble("x"));
+        JsonObject obj = t is JsonObject ? (JsonObject)t : Core.Bubble<JsonObject>();
+        IJsonSyntaxTree xTree = obj.PropertyValueOrBubble("x");
+        IJsonNumeric xJson = xTree is IJsonNumeric ? (IJsonNumeric)xTree : Core.Bubble<IJsonNumeric>();
         int x = xJson.AsInt32();
-        IJsonNumeric yJson = Core.Cast<IJsonNumeric>(obj.PropertyValueOrBubble("y"));
+        IJsonSyntaxTree yTree = obj.PropertyValueOrBubble("y");
+        IJsonNumeric yJson = yTree is IJsonNumeric ? (IJsonNumeric)yTree : Core.Bubble<IJsonNumeric>();
         int y = yJson.AsInt32();
         return new Point(x, y);
     }

@@ -23,6 +23,26 @@ before it panicked stays changed.
       test.assertPanics { panic(); };
     }
 
+Integer division by zero panics, as does a cast that fails, on every
+backend, whether it's the host's own error (Java's
+`ArithmeticException`, C#'s `DivideByZeroException`, Rust's panic) or
+the runtime's:
+
+    interface Shape {}
+    class Square extends Shape {}
+    class Circle extends Shape {}
+    let divide(a: Int, b: Int): Int { a / b }
+    let remainder(a: Int64, b: Int64): Int64 { a % b }
+    let squared(s: Shape): Square { s as Square }
+
+    test("passes when division by zero or a cast panics") { test =>
+      test.assertPanics { divide(1, 0); };
+      test.assertPanics { remainder(1i64, 0i64); };
+      test.assertPanics { squared(new Circle()); };
+      squared(new Square());
+      assert(divide(-7, 2) == -3);
+    }
+
     test("passes past an orelse") { test =>
       test.assertPanics {
         let n = at([1, 2], 5) orelse -1;

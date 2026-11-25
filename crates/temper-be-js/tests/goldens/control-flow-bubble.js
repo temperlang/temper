@@ -4,7 +4,6 @@ import {
   isBubble,
   modIntInt,
   panic,
-  requireNotNull,
   stringToInt32,
 } from "@temperlang/core";
 
@@ -43,16 +42,7 @@ function report(x) {
   /** @type {string} */
   let suffix;
   try {
-    /** @type {number} */
-    let t$0;
-    try {
-      requireNotNull(x);
-      t$0 = 1;
-    } catch (e$) {
-      if (!isBubble(e$)) throw e$;
-      t$0 = 0;
-    }
-    suffix = more(t$0).toString();
+    suffix = more(x != null ? 1 : 0).toString();
   } catch (e$) {
     if (!isBubble(e$)) throw e$;
     suffix = "";
@@ -153,9 +143,17 @@ function isNone(r) {
  */
 function viaOrElse(n) {
   /** @type {number} */
+  let t$0;
+  try {
+    t$0 = firstOver(n);
+  } catch (e$) {
+    if (!isBubble(e$)) throw e$;
+    t$0 = -1;
+  }
+  /** @type {number} */
   let t$1;
   try {
-    t$1 = firstOver(n);
+    t$1 = sumSkipping(n);
   } catch (e$) {
     if (!isBubble(e$)) throw e$;
     t$1 = -1;
@@ -163,20 +161,12 @@ function viaOrElse(n) {
   /** @type {number} */
   let t$2;
   try {
-    t$2 = sumSkipping(n);
+    t$2 = tenTimes(n);
   } catch (e$) {
     if (!isBubble(e$)) throw e$;
     t$2 = -1;
   }
-  /** @type {number} */
-  let t$3;
-  try {
-    t$3 = tenTimes(n);
-  } catch (e$) {
-    if (!isBubble(e$)) throw e$;
-    t$3 = -1;
-  }
-  return `${t$1} ${t$2} ${t$3}`;
+  return `${t$0} ${t$1} ${t$2}`;
 }
 
 /** @returns {never} */
@@ -288,38 +278,46 @@ report("hi");
 report(null);
 console.log(calcRows(3, 6).toString());
 /** @type {number} */
+let t$3;
+try {
+  t$3 = countBelow("abc");
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
+  t$3 = -1;
+}
+console.log(t$3.toString());
+/** @type {number} */
 let t$4;
 try {
-  t$4 = countBelow("abc");
+  t$4 = firstOver(1);
 } catch (e$) {
   if (!isBubble(e$)) throw e$;
   t$4 = -1;
 }
-console.log(t$4.toString());
-/** @type {number} */
+/** @type {number | null} */
 let t$5;
 try {
   t$5 = firstOver(1);
 } catch (e$) {
   if (!isBubble(e$)) throw e$;
-  t$5 = -1;
+  t$5 = null;
 }
-/** @type {number | null} */
-let t$6;
-try {
-  t$6 = firstOver(1);
-} catch (e$) {
-  if (!isBubble(e$)) throw e$;
-  t$6 = null;
-}
-console.log(`${t$5} ${isNone(t$6)}`);
+console.log(`${t$4} ${isNone(t$5)}`);
 console.log(viaOrElse(2));
 console.log(viaOrElse(12));
 console.log(`${pick(true)} ${named(true) ?? "-"} ${named(false) ?? "null"}`);
 /** @type {number} */
+let t$6;
+try {
+  t$6 = half(4);
+} catch (e$) {
+  if (!isBubble(e$)) throw e$;
+  t$6 = -1;
+}
+/** @type {number} */
 let t$7;
 try {
-  t$7 = half(4);
+  t$7 = half(3);
 } catch (e$) {
   if (!isBubble(e$)) throw e$;
   t$7 = -1;
@@ -327,20 +325,12 @@ try {
 /** @type {number} */
 let t$8;
 try {
-  t$8 = half(3);
+  t$8 = half(-2);
 } catch (e$) {
   if (!isBubble(e$)) throw e$;
   t$8 = -1;
 }
-/** @type {number} */
-let t$9;
-try {
-  t$9 = half(-2);
-} catch (e$) {
-  if (!isBubble(e$)) throw e$;
-  t$9 = -1;
-}
-console.log(`${t$7} ${t$8} ${t$9}`);
+console.log(`${t$6} ${t$7} ${t$8}`);
 console.log(`${chosen(true)} ${shout("hey")}`);
 branch(0, 2);
 branch(2, 0);

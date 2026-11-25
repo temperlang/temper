@@ -62,29 +62,25 @@ void global_init_init() {
     std::shared_ptr<core::Console::Type> console = core::Console::get_console();
     core::Console::log(console, TEMPER_STR("before"));
     int32_t p;
-    try {
-      auto result = [&]() -> core::Expected<int32_t, std::shared_ptr<core::Failure>> {
-        auto parseCountResult = count_failures::parseCount(TEMPER_STR("two"));
-        if (!parseCountResult.has_value()) {
-          return core::unexpected(parseCountResult.error());
-        }
-        int32_t n = *parseCountResult;
-        auto hostLookupResult = host_failures_panic_passes_several_libraries_handler::hostLookup(TEMPER_STR("a"));
-        if (!hostLookupResult.has_value()) {
-          return core::unexpected(hostLookupResult.error());
-        }
-        int32_t m = *hostLookupResult;
-        if (core::Int::add(n, m) > 2) {
-          core::panic();
-        }
-        return core::Int::div_wrap(10, core::Int::sub(n, m));
-      }();
-      if (result.has_value()) {
-        p = *result;
-      } else {
-        core::bubble();
+    auto result = [&]() -> core::Expected<int32_t, std::shared_ptr<core::Failure>> {
+      auto parseCountResult = count_failures::parseCount(TEMPER_STR("two"));
+      if (!parseCountResult.has_value()) {
+        return core::unexpected(parseCountResult.error());
       }
-    } catch (core::TemperBubble const &) {
+      int32_t n = *parseCountResult;
+      auto hostLookupResult = host_failures_panic_passes_several_libraries_handler::hostLookup(TEMPER_STR("a"));
+      if (!hostLookupResult.has_value()) {
+        return core::unexpected(hostLookupResult.error());
+      }
+      int32_t m = *hostLookupResult;
+      if (core::Int::add(n, m) > 2) {
+        core::panic();
+      }
+      return core::Int::div_wrap(10, core::Int::sub(n, m));
+    }();
+    if (result.has_value()) {
+      p = *result;
+    } else {
       p = -1;
     }
     core::Console::log(console, "after " + std::to_string(p));

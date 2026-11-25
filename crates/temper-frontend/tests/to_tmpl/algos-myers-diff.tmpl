@@ -122,7 +122,7 @@ module `myers-diff`#0 {
         {
           var pathElement#82: DiffPath#3? = diffPath#71;
           ~loop#83: while (%Boolean.not(isNull(pathElement#82))) {
-            let path#84: DiffPath#3 = (as(pathElement#82)^): DiffPath#3;
+            let path#84: DiffPath#3 = (as(pathElement#82)): DiffPath#3;
             pathElements#80.add#85(path#84, omitted);
             pathElement#82 = path#84.previous#21;
           }

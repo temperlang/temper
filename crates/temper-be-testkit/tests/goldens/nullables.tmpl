@@ -64,7 +64,7 @@ module nullables#0 {
   }
 
   fn halved#11(s#36: String, d#37: Int32): Int32 {
-    return (orelse(%Int32.div(s#36.toInt32#35(omitted)^, d#37)^, %Int32.neg(1))): Int32;
+    return (orelse(%Int32.div(s#36.toInt32#35(omitted)^, d#37), %Int32.neg(1))): Int32;
   }
 
   fn positive#12(n#38: Int32): Int32 throws Bubble {
@@ -118,7 +118,7 @@ module nullables#0 {
     ~console#46.log#45(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(same#8((null): String?, (null): String?).toString#48(), " "), same#8((asNullable("a")): String?, (null): String?).toString#48()), " "), same#8((null): String?, (asNullable("a")): String?).toString#48()), " "), same#8((asNullable("a")): String?, (asNullable("a")): String?).toString#48()));
     ~console#46.log#45(%String.cat(%String.cat(%String.cat(%String.cat(sameInt#9((asNullable(1)): Int32?, (asNullable(2)): Int32?).toString#48(), " "), sameInt#9((asNullable(3)): Int32?, (asNullable(3)): Int32?).toString#48()), " "), sameInt#9((null): Int32?, (asNullable(3)): Int32?).toString#48()));
     ~console#46.log#45(%String.cat(%String.cat(parse#10("12").toString#27(omitted), " "), parse#10("x").toString#27(omitted)));
-    ~console#46.log#45(%String.cat(%String.cat(%String.cat(%String.cat(halved#11("12", 2).toString#27(omitted), " "), halved#11("x", 2).toString#27(omitted)), " "), halved#11("12", 0).toString#27(omitted)));
+    ~console#46.log#45(%String.cat(%String.cat(halved#11("12", 2).toString#27(omitted), " "), halved#11("x", 2).toString#27(omitted)));
     ~console#46.log#45(checked#13(7).toString#27(omitted));
     ~console#46.log#45(%String.cat(%String.cat(orZero#15((null): Int32?).toString#27(omitted), " "), orZero#15((asNullable(5)): Int32?).toString#27(omitted)));
     varying#17();

@@ -731,13 +731,10 @@ impl Translator<'_> {
         Expr::path(format!("let Some({name}) = {by}{name}"))
     }
 
-    /// `x as T` where `x` is `T?`: `x.ok_or_else(temper_core::Error::new)?`.
+    /// `x as T` where `x` is `T?`: `x.unwrap()`, which panics on null.
     pub(crate) fn as_non_null(&mut self, value: NodeId) -> R<Expr> {
         let v = self.expr(value, Want::Owned)?;
-        Ok(
-            v.method("ok_or_else", vec![Expr::path("temper_core::Error::new")])
-                .try_(),
-        )
+        Ok(v.method("unwrap", Vec::new()))
     }
 
     /// `!isNull(x)` as `x.is_some()`.

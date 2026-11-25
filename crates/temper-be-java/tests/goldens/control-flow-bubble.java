@@ -32,15 +32,8 @@ public final class BubbleGlobal {
         }
         String suffix;
         try {
-            int t;
-            try {
-                Core.requireNonNull(x);
-                t = 1;
-            } catch (Bubble ignored2) {
-                t = 0;
-            }
-            suffix = Integer.toString(more(t));
-        } catch (Bubble ignored3) {
+            suffix = Integer.toString(more(x != null ? 1 : 0));
+        } catch (Bubble ignored2) {
             suffix = "";
         }
         console.log(message + suffix);
@@ -48,10 +41,10 @@ public final class BubbleGlobal {
 
     static int calcRows(int cols, int total) {
         console.log("calcRows(" + cols + ", " + total + ")");
-        if (Core.modIntInt(total, cols) != 0) {
+        if (total % cols != 0) {
             throw Core.bubble();
         }
-        return Core.divIntInt(total, cols);
+        return total / cols;
     }
 
     static int countBelow(String s) {

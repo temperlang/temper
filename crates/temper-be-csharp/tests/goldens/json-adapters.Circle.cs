@@ -30,8 +30,9 @@ internal class Circle : IShape
 
     public static Circle DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
-        JsonObject obj = Core.Cast<JsonObject>(t);
-        IJsonNumeric radiusJson = Core.Cast<IJsonNumeric>(obj.PropertyValueOrBubble("radius"));
+        JsonObject obj = t is JsonObject ? (JsonObject)t : Core.Bubble<JsonObject>();
+        IJsonSyntaxTree radiusTree = obj.PropertyValueOrBubble("radius");
+        IJsonNumeric radiusJson = radiusTree is IJsonNumeric ? (IJsonNumeric)radiusTree : Core.Bubble<IJsonNumeric>();
         int radius = radiusJson.AsInt32();
         return new Circle(radius);
     }

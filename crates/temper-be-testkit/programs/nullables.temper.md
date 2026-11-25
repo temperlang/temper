@@ -28,8 +28,7 @@ the interpreter gives.
 
     let parse(s: String): Int { s.toInt32() orelse -1 }
 
-    // The division may bubble, and so may the call in it, which the
-    // `orelse` catches too.
+    // The call in the division may bubble, which the `orelse` catches.
     let halved(s: String, d: Int): Int { s.toInt32() / d orelse -1 }
 
     let positive(n: Int): Int throws Bubble {
@@ -63,7 +62,7 @@ the interpreter gives.
     console.log("${same(null, null)} ${same("a", null)} ${same(null, "a")} ${same("a", "a")}");
     console.log("${sameInt(1, 2)} ${sameInt(3, 3)} ${sameInt(null, 3)}");
     console.log("${parse("12")} ${parse("x")}");
-    console.log("${halved("12", 2)} ${halved("x", 2)} ${halved("12", 0)}");
+    console.log("${halved("12", 2)} ${halved("x", 2)}");
     console.log(checked(7).toString());
     console.log("${orZero(null)} ${orZero(5)}");
     varying();
@@ -86,7 +85,7 @@ nothing
 true false false true
 false true false
 12 -1
-6 -1 -1
+6 -1
 7
 0 5
 true

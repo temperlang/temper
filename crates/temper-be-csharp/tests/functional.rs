@@ -139,7 +139,7 @@ const DROPPED: &str = "# Dropped
     let l = new L();
     go(l, true, 1) orelse panic();
     console.log(l.n.toString());
-    console.log((go(l, true, 0) orelse -1).toString());
+    console.log((go(l, true, 2) orelse -1).toString());
     console.log(l.n.toString());
 ";
 
@@ -219,7 +219,7 @@ fn cases() -> Vec<Case> {
         "dropped",
         "dropped.temper.md",
         DROPPED,
-        vec!["13".into(), "-1".into(), "25".into()],
+        vec!["13".into(), "0".into(), "26".into()],
     ));
     cases
 }

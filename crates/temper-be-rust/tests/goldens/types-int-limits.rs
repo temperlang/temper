@@ -25,35 +25,35 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 small.wrapping_add(1).wrapping_mul(big)
             );
             println!("{small} / -1 == {}", small.wrapping_div(-1));
-            println!("{small} % -1 == {}", temper_core::int_rem(small, -1)?);
+            println!("{small} % -1 == {}", small.wrapping_rem(-1));
             println!("-({small}) == {}", small.wrapping_neg());
             let three = 3i32.wrapping_mul(one);
             let five = 5i32.wrapping_mul(one);
-            println!("{five} / {three} == {}", temper_core::int_div(five, three)?);
+            println!("{five} / {three} == {}", five.wrapping_div(three));
             println!(
                 "{five} / -{three} == {}",
-                temper_core::int_div(five, three.wrapping_neg())?
+                five.wrapping_div(three.wrapping_neg())
             );
             println!(
                 "-{five} / {three} == {}",
-                temper_core::int_div(five.wrapping_neg(), three)?
+                five.wrapping_neg().wrapping_div(three)
             );
             println!(
                 "-{five} / -{three} == {}",
-                temper_core::int_div(five.wrapping_neg(), three.wrapping_neg())?
+                five.wrapping_neg().wrapping_div(three.wrapping_neg())
             );
-            println!("{five} % {three} == {}", temper_core::int_rem(five, three)?);
+            println!("{five} % {three} == {}", five.wrapping_rem(three));
             println!(
                 "{five} % -{three} == {}",
-                temper_core::int_rem(five, three.wrapping_neg())?
+                five.wrapping_rem(three.wrapping_neg())
             );
             println!(
                 "-{five} % {three} == {}",
-                temper_core::int_rem(five.wrapping_neg(), three)?
+                five.wrapping_neg().wrapping_rem(three)
             );
             println!(
                 "-{five} % -{three} == {}",
-                temper_core::int_rem(five.wrapping_neg(), three.wrapping_neg())?
+                five.wrapping_neg().wrapping_rem(three.wrapping_neg())
             );
             println!("Int64");
             let not_so_big = big as i64;
@@ -67,41 +67,35 @@ pub(crate) fn init() -> temper_core::Result<()> {
             println!("{big64} + 1 == {}", big64.wrapping_add(1));
             println!("{small64} - 1 == {}", small64.wrapping_sub(1));
             println!("{small64} / -1 == {}", small64.wrapping_div(-1));
-            println!("{small64} % -1 == {}", temper_core::int64_rem(small64, -1)?);
+            println!("{small64} % -1 == {}", small64.wrapping_rem(-1));
             println!("-({small64}) == {}", small64.wrapping_neg());
             let three64 = three as i64;
             let five64 = five as i64;
-            println!(
-                "{five64} / {three64} == {}",
-                temper_core::int64_div(five64, three64)?
-            );
+            println!("{five64} / {three64} == {}", five64.wrapping_div(three64));
             println!(
                 "{five64} / -{three64} == {}",
-                temper_core::int64_div(five64, three64.wrapping_neg())?
+                five64.wrapping_div(three64.wrapping_neg())
             );
             println!(
                 "-{five64} / {three64} == {}",
-                temper_core::int64_div(five64.wrapping_neg(), three64)?
+                five64.wrapping_neg().wrapping_div(three64)
             );
             println!(
                 "-{five64} / -{three64} == {}",
-                temper_core::int64_div(five64.wrapping_neg(), three64.wrapping_neg())?
+                five64.wrapping_neg().wrapping_div(three64.wrapping_neg())
             );
-            println!(
-                "{five64} % {three64} == {}",
-                temper_core::int64_rem(five64, three64)?
-            );
+            println!("{five64} % {three64} == {}", five64.wrapping_rem(three64));
             println!(
                 "{five64} % -{three64} == {}",
-                temper_core::int64_rem(five64, three64.wrapping_neg())?
+                five64.wrapping_rem(three64.wrapping_neg())
             );
             println!(
                 "-{five64} % {three64} == {}",
-                temper_core::int64_rem(five64.wrapping_neg(), three64)?
+                five64.wrapping_neg().wrapping_rem(three64)
             );
             println!(
                 "-{five64} % -{three64} == {}",
-                temper_core::int64_rem(five64.wrapping_neg(), three64.wrapping_neg())?
+                five64.wrapping_neg().wrapping_rem(three64.wrapping_neg())
             );
             check_parse32("7FFFFFFF");
             check_parse32("-80000000");

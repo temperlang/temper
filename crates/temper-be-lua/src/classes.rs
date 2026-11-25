@@ -668,7 +668,7 @@ impl Translator<'_> {
         })
     }
 
-    /// `temper.cast_to(value, T)`, which bubbles if it isn't one.
+    /// `temper.cast_to(value, T)`, which panics if it isn't one.
     pub(crate) fn cast(&mut self, id: NodeId, value: NodeId) -> R<Expr> {
         let ty = self.p.nodes.ty(id);
         // `x as T` for `x: T?`, of a builtin type: the runtime's check of
@@ -715,7 +715,7 @@ impl Translator<'_> {
         let value = self.expr(value)?;
         self.uses_temper = true;
         if let Some(index) = string_index(self.p, decl) {
-            // The runtime's check, as Kotlin's, which bubbles.
+            // The runtime's check, which panics.
             let name = match index {
                 true => "require_string_index",
                 false => "require_no_string_index",

@@ -4,6 +4,7 @@ from temper_core import (
     Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     boolean_to_string as _boolean_to_string,
+    bubble as _bubble,
     cast_by_type as _cast_by_type,
 )
 from temper_std.json import (
@@ -56,10 +57,12 @@ class _Point:
 
     @staticmethod
     def decode_from_json(t: _JsonSyntaxTree, ic: _InterchangeContext, /) -> '_Point':
-        obj: _JsonObject = _cast_by_type(t, _JsonObject)
-        x_json: _JsonNumeric = _cast_by_type(obj.property_value_or_bubble('x'), _JsonNumeric)  # type: ignore[type-abstract]
+        obj = t if isinstance(t, _JsonObject) else _bubble()
+        x_tree = obj.property_value_or_bubble('x')
+        x_json = x_tree if isinstance(x_tree, _JsonNumeric) else _bubble()
         x = x_json.as_int32()
-        y_json: _JsonNumeric = _cast_by_type(obj.property_value_or_bubble('y'), _JsonNumeric)  # type: ignore[type-abstract]
+        y_tree = obj.property_value_or_bubble('y')
+        y_json = y_tree if isinstance(y_tree, _JsonNumeric) else _bubble()
         y = y_json.as_int32()
         return _Point(x, y)
 
@@ -137,14 +140,18 @@ class _Record:
 
     @staticmethod
     def decode_from_json(t: _JsonSyntaxTree, ic: _InterchangeContext, /) -> '_Record':
-        obj: _JsonObject = _cast_by_type(t, _JsonObject)
-        name_json: _JsonString = _cast_by_type(obj.property_value_or_bubble('name'), _JsonString)
+        obj = t if isinstance(t, _JsonObject) else _bubble()
+        name_tree = obj.property_value_or_bubble('name')
+        name_json = name_tree if isinstance(name_tree, _JsonString) else _bubble()
         name = name_json.content
-        active_json: _JsonBoolean = _cast_by_type(obj.property_value_or_bubble('is-active'), _JsonBoolean)
+        active_tree = obj.property_value_or_bubble('is-active')
+        active_json = active_tree if isinstance(active_tree, _JsonBoolean) else _bubble()
         active = active_json.content
-        score_json: _JsonNumeric = _cast_by_type(obj.property_value_or_bubble('score'), _JsonNumeric)  # type: ignore[type-abstract]
+        score_tree = obj.property_value_or_bubble('score')
+        score_json = score_tree if isinstance(score_tree, _JsonNumeric) else _bubble()
         score = score_json.as_float64()
-        big_json: _JsonNumeric = _cast_by_type(obj.property_value_or_bubble('big'), _JsonNumeric)  # type: ignore[type-abstract]
+        big_tree = obj.property_value_or_bubble('big')
+        big_json = big_tree if isinstance(big_tree, _JsonNumeric) else _bubble()
         big = big_json.as_int64()
         nickname: str | None = _OrNullJsonAdapter(_string_json_adapter()).decode_from_json(obj.property_value_or_bubble('nickname'), ic)
         points = _list_json_adapter(_Point.json_adapter()).decode_from_json(obj.property_value_or_bubble('points'), ic)
@@ -174,7 +181,7 @@ class _Shape(metaclass=_ABCMeta):
 
     @staticmethod
     def decode_from_json(t: _JsonSyntaxTree, ic: _InterchangeContext, /) -> '_Shape':
-        obj: _JsonObject = _cast_by_type(t, _JsonObject)
+        obj = t if isinstance(t, _JsonObject) else _bubble()
         value_for_radius: _JsonSyntaxTree | None = obj.property_value_or_null('radius')
         if value_for_radius is not None:
             return _Circle.json_adapter().decode_from_json(obj, ic)
@@ -206,8 +213,9 @@ class _Circle(_Shape):
 
     @staticmethod
     def decode_from_json(t: _JsonSyntaxTree, ic: _InterchangeContext, /) -> '_Circle':
-        obj: _JsonObject = _cast_by_type(t, _JsonObject)
-        radius_json: _JsonNumeric = _cast_by_type(obj.property_value_or_bubble('radius'), _JsonNumeric)  # type: ignore[type-abstract]
+        obj = t if isinstance(t, _JsonObject) else _bubble()
+        radius_tree = obj.property_value_or_bubble('radius')
+        radius_json = radius_tree if isinstance(radius_tree, _JsonNumeric) else _bubble()
         radius = radius_json.as_int32()
         return _Circle(radius)
 
@@ -253,10 +261,12 @@ class _Rect(_Shape):
 
     @staticmethod
     def decode_from_json(t: _JsonSyntaxTree, ic: _InterchangeContext, /) -> '_Rect':
-        obj: _JsonObject = _cast_by_type(t, _JsonObject)
-        width_json: _JsonNumeric = _cast_by_type(obj.property_value_or_bubble('width'), _JsonNumeric)  # type: ignore[type-abstract]
+        obj = t if isinstance(t, _JsonObject) else _bubble()
+        width_tree = obj.property_value_or_bubble('width')
+        width_json = width_tree if isinstance(width_tree, _JsonNumeric) else _bubble()
         width = width_json.as_int32()
-        height_json: _JsonNumeric = _cast_by_type(obj.property_value_or_bubble('height'), _JsonNumeric)  # type: ignore[type-abstract]
+        height_tree = obj.property_value_or_bubble('height')
+        height_json = height_tree if isinstance(height_tree, _JsonNumeric) else _bubble()
         height = height_json.as_int32()
         return _Rect(width, height)
 
@@ -294,7 +304,7 @@ class _Message(metaclass=_ABCMeta):
 
     @staticmethod
     def decode_from_json(t: _JsonSyntaxTree, ic: _InterchangeContext, /) -> '_Message':
-        obj: _JsonObject = _cast_by_type(t, _JsonObject)
+        obj = t if isinstance(t, _JsonObject) else _bubble()
         value_for_kind: _JsonSyntaxTree | None = obj.property_value_or_null('kind')
         if value_for_kind is not None and isinstance(value_for_kind, _JsonString):
             subject = value_for_kind.content
@@ -330,8 +340,9 @@ class _Hello(_Message):
 
     @staticmethod
     def decode_from_json(t: _JsonSyntaxTree, ic: _InterchangeContext, /) -> '_Hello':
-        obj: _JsonObject = _cast_by_type(t, _JsonObject)
-        text_json: _JsonString = _cast_by_type(obj.property_value_or_bubble('text'), _JsonString)
+        obj = t if isinstance(t, _JsonObject) else _bubble()
+        text_tree = obj.property_value_or_bubble('text')
+        text_json = text_tree if isinstance(text_tree, _JsonString) else _bubble()
         text = text_json.content
         return _Hello(text)
 
@@ -371,8 +382,9 @@ class _Bye(_Message):
 
     @staticmethod
     def decode_from_json(t: _JsonSyntaxTree, ic: _InterchangeContext, /) -> '_Bye':
-        obj: _JsonObject = _cast_by_type(t, _JsonObject)
-        text_json: _JsonString = _cast_by_type(obj.property_value_or_bubble('text'), _JsonString)
+        obj = t if isinstance(t, _JsonObject) else _bubble()
+        text_tree = obj.property_value_or_bubble('text')
+        text_json = text_tree if isinstance(text_tree, _JsonString) else _bubble()
         text = text_json.content
         return _Bye(text)
 

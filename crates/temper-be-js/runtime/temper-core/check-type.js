@@ -1,6 +1,7 @@
 
-// Export runtime value type checks used for safe casting
-import {bubble} from "./core.js";
+// Export runtime value type checks used for safe casting, which panic
+// where a cast fails
+import {panic} from "./core.js";
 
 /**
  * @typedef { "bigint" | "boolean" | "number" | "object" | "string" | "symbol" | "undefined" } TypeOf
@@ -14,7 +15,7 @@ import {bubble} from "./core.js";
  */
 export const requireInstanceOf = (x, typeRequirement) => {
   if (!(x instanceof typeRequirement)) {
-    bubble();
+    panic("failed cast");
   }
   return x;
 };
@@ -26,7 +27,7 @@ export const requireInstanceOf = (x, typeRequirement) => {
  */
 export const requireIsArray = (x) => {
   if (!Array.isArray(x)) {
-    bubble();
+    panic("failed cast");
   }
   return x;
 };
@@ -39,7 +40,7 @@ export const requireIsArray = (x) => {
  * @returns {NonNullable<T>}
  */
 export const requireNotNull = (x) =>
-  x == null ? bubble() : x
+  x == null ? panic("failed cast") : x
 
 /**
  * @template X, Y
@@ -49,7 +50,7 @@ export const requireNotNull = (x) =>
  */
 export const requireSame = (x, y) => {
   if (x !== y) {
-    bubble();
+    panic("failed cast");
   }
   return x;
 };
@@ -62,7 +63,7 @@ export const requireSame = (x, y) => {
  */
 export const requireTypeOf = (x, typeOfString) => {
   if (typeof x !== typeOfString) {
-    bubble();
+    panic("failed cast");
   }
   return x;
 };

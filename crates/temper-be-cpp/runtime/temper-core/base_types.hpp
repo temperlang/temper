@@ -192,7 +192,7 @@ namespace temper {
         template<class T>
         T not_null(const NullableParam<T>& value) {
             if (!value.has_value) {
-                bubble<T>("not_null on null value");
+                panic<T>("failed cast: null");
             }
             return value.value;
         }

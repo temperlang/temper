@@ -1630,7 +1630,7 @@ impl Translator<'_> {
         Ok(self.own(made, node))
     }
 
-    /// `x as C`, checked, bubbling if it fails.
+    /// `x as C`, checked, panicking if it fails.
     pub(super) fn as_cast(&mut self, node: FNode, args: &[FNode]) -> Tx<NodeId> {
         let [value, _] = *args else {
             return self.not_yet(node, "an as cast's form");

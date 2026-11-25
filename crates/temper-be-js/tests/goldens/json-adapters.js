@@ -137,10 +137,12 @@ class Point extends type() {
    * @returns {Point}
    */
   static decodeFromJson(t, ic) {
-    const obj = requireInstanceOf(t, JsonObject);
-    const xJson = requireInstanceOf(obj.propertyValueOrBubble("x"), JsonNumeric);
+    const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : bubble();
+    const xTree = obj.propertyValueOrBubble("x");
+    const xJson = xTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (xTree)) : bubble();
     const x = xJson.asInt32();
-    const yJson = requireInstanceOf(obj.propertyValueOrBubble("y"), JsonNumeric);
+    const yTree = obj.propertyValueOrBubble("y");
+    const yJson = yTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (yTree)) : bubble();
     const y = yJson.asInt32();
     return new Point(x, y);
   }
@@ -264,14 +266,18 @@ class Record extends type() {
    * @returns {Record}
    */
   static decodeFromJson(t, ic) {
-    const obj = requireInstanceOf(t, JsonObject);
-    const nameJson = requireInstanceOf(obj.propertyValueOrBubble("name"), JsonString);
+    const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : bubble();
+    const nameTree = obj.propertyValueOrBubble("name");
+    const nameJson = nameTree instanceof JsonString ? /** @type {JsonString} */ (/** @type {unknown} */ (nameTree)) : bubble();
     const name = nameJson.content;
-    const activeJson = requireInstanceOf(obj.propertyValueOrBubble("is-active"), JsonBoolean);
+    const activeTree = obj.propertyValueOrBubble("is-active");
+    const activeJson = activeTree instanceof JsonBoolean ? /** @type {JsonBoolean} */ (/** @type {unknown} */ (activeTree)) : bubble();
     const active = activeJson.content;
-    const scoreJson = requireInstanceOf(obj.propertyValueOrBubble("score"), JsonNumeric);
+    const scoreTree = obj.propertyValueOrBubble("score");
+    const scoreJson = scoreTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (scoreTree)) : bubble();
     const score = scoreJson.asFloat64();
-    const bigJson = requireInstanceOf(obj.propertyValueOrBubble("big"), JsonNumeric);
+    const bigTree = obj.propertyValueOrBubble("big");
+    const bigJson = bigTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (bigTree)) : bubble();
     const big = bigJson.asInt64();
     const nickname = new OrNullJsonAdapter(stringJsonAdapter()).decodeFromJson(obj.propertyValueOrBubble("nickname"), ic);
     /** @type {readonly Point[]} */
@@ -315,7 +321,7 @@ class Shape extends type() {
    */
   static decodeFromJson(t, ic) {
     {
-      const obj = requireInstanceOf(t, JsonObject);
+      const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : bubble();
       const valueForRadius = obj.propertyValueOrNull("radius");
       {
         if (valueForRadius != null) {
@@ -364,8 +370,9 @@ class Circle extends type(Shape) {
    * @returns {Circle}
    */
   static decodeFromJson(t, ic) {
-    const obj = requireInstanceOf(t, JsonObject);
-    const radiusJson = requireInstanceOf(obj.propertyValueOrBubble("radius"), JsonNumeric);
+    const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : bubble();
+    const radiusTree = obj.propertyValueOrBubble("radius");
+    const radiusJson = radiusTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (radiusTree)) : bubble();
     const radius = radiusJson.asInt32();
     return new Circle(radius);
   }
@@ -445,10 +452,12 @@ class Rect extends type(Shape) {
    * @returns {Rect}
    */
   static decodeFromJson(t, ic) {
-    const obj = requireInstanceOf(t, JsonObject);
-    const widthJson = requireInstanceOf(obj.propertyValueOrBubble("width"), JsonNumeric);
+    const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : bubble();
+    const widthTree = obj.propertyValueOrBubble("width");
+    const widthJson = widthTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (widthTree)) : bubble();
     const width = widthJson.asInt32();
-    const heightJson = requireInstanceOf(obj.propertyValueOrBubble("height"), JsonNumeric);
+    const heightTree = obj.propertyValueOrBubble("height");
+    const heightJson = heightTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (heightTree)) : bubble();
     const height = heightJson.asInt32();
     return new Rect(width, height);
   }
@@ -508,7 +517,7 @@ class Message extends type() {
    */
   static decodeFromJson(t, ic) {
     {
-      const obj = requireInstanceOf(t, JsonObject);
+      const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : bubble();
       const valueForKind = obj.propertyValueOrNull("kind");
       {
         if (valueForKind != null && valueForKind instanceof JsonString) {
@@ -561,8 +570,9 @@ class Hello extends type(Message) {
    * @returns {Hello}
    */
   static decodeFromJson(t, ic) {
-    const obj = requireInstanceOf(t, JsonObject);
-    const textJson = requireInstanceOf(obj.propertyValueOrBubble("text"), JsonString);
+    const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : bubble();
+    const textTree = obj.propertyValueOrBubble("text");
+    const textJson = textTree instanceof JsonString ? /** @type {JsonString} */ (/** @type {unknown} */ (textTree)) : bubble();
     const text = textJson.content;
     return new Hello(text);
   }
@@ -623,8 +633,9 @@ class Bye extends type(Message) {
    * @returns {Bye}
    */
   static decodeFromJson(t, ic) {
-    const obj = requireInstanceOf(t, JsonObject);
-    const textJson = requireInstanceOf(obj.propertyValueOrBubble("text"), JsonString);
+    const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : bubble();
+    const textTree = obj.propertyValueOrBubble("text");
+    const textJson = textTree instanceof JsonString ? /** @type {JsonString} */ (/** @type {unknown} */ (textTree)) : bubble();
     const text = textJson.content;
     return new Bye(text);
   }

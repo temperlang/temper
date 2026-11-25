@@ -28,23 +28,22 @@ Fuji
 Fuji
 ```
 
-Casts are safe.  If a value is not of the right type,
-then the cast won't succeed.
+A cast that fails panics, so where a value may be of another type,
+check with `is` first, which narrows it.
 
       x = new Gala(); // Override the value in `x` with a different value.
-      console.log((x as Fuji).name orelse "Cast failed!");
+      console.log(if (x is Fuji) { (x as Fuji).name } else { "Cast failed!" });
 
 We can also cast from AnyValue to either interface or class types.
 
       let y: AnyValue? = x;
-      console.log((y as Apple).name orelse "Cast from AnyValue failed!");
-      console.log((y as Gala).name orelse "Cast from AnyValue failed!");
-      console.log((y as Fuji).name orelse "Cast from AnyValue failed!");
+      console.log((y as Apple).name);
+      console.log((y as Gala).name);
 
 Also try null safety.
 
       x = null;
-      console.log(do { x as Apple; "Tasty nothing." } orelse "Was null!");
+      console.log(if (x is Apple) { "Tasty nothing." } else { "Was null!" });
     }
 
 prints
@@ -53,7 +52,6 @@ prints
 Cast failed!
 Gala
 Gala
-Cast from AnyValue failed!
 Was null!
 ```
 

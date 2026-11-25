@@ -41,16 +41,15 @@ module `as-expr`#0 {
     {
       var x#13: Apple#1?;
       x#13 = (asNullable((upcast(new constructor#6())): Apple#1)): Apple#1?;
-      ~console#17.log#16(((as(x#13)^): Apple#1).name#4());
-      ~console#17.log#16(((as(x#13)^): Fuji#2).name#5());
+      ~console#17.log#16(((as(x#13)): Apple#1).name#4());
+      ~console#17.log#16(((as(x#13)): Fuji#2).name#5());
       x#13 = (asNullable((upcast(new constructor#8())): Apple#1)): Apple#1?;
-      ~console#17.log#16((orelse(((as(x#13)^): Fuji#2).name#5(), "Cast failed!")): String);
+      ~console#17.log#16((if (%Boolean.not(isNull(x#13)) && is((nonNull(x#13)): Apple#1, Fuji#2)) ((as(x#13)): Fuji#2).name#5() else "Cast failed!"): String);
       let y#18: AnyValue? = (upcast(x#13)): AnyValue?;
-      ~console#17.log#16((orelse(((as(y#18)^): Apple#1).name#4(), "Cast from AnyValue failed!")): String);
-      ~console#17.log#16((orelse(((as(y#18)^): Gala#3).name#7(), "Cast from AnyValue failed!")): String);
-      ~console#17.log#16((orelse(((as(y#18)^): Fuji#2).name#5(), "Cast from AnyValue failed!")): String);
+      ~console#17.log#16(((as(y#18)): Apple#1).name#4());
+      ~console#17.log#16(((as(y#18)): Gala#3).name#7());
       x#13 = (null): Apple#1?;
-      ~console#17.log#16((orelse((value { (as(x#13)^): Apple#1; "Tasty nothing." }): String, "Was null!")): String);
+      ~console#17.log#16((if (%Boolean.not(isNull(x#13))) "Tasty nothing." else "Was null!"): String);
     }
     init thing0#9 = (upcast(false)): AnyValue;
     init thing1#10 = (upcast(1)): AnyValue;

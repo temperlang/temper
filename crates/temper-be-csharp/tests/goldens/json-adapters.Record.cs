@@ -91,14 +91,18 @@ internal class Record
 
     public static Record DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
-        JsonObject obj = Core.Cast<JsonObject>(t);
-        JsonString nameJson = Core.Cast<JsonString>(obj.PropertyValueOrBubble("name"));
+        JsonObject obj = t is JsonObject ? (JsonObject)t : Core.Bubble<JsonObject>();
+        IJsonSyntaxTree nameTree = obj.PropertyValueOrBubble("name");
+        JsonString nameJson = nameTree is JsonString ? (JsonString)nameTree : Core.Bubble<JsonString>();
         string name = nameJson.Content;
-        JsonBoolean activeJson = Core.Cast<JsonBoolean>(obj.PropertyValueOrBubble("is-active"));
+        IJsonSyntaxTree activeTree = obj.PropertyValueOrBubble("is-active");
+        JsonBoolean activeJson = activeTree is JsonBoolean ? (JsonBoolean)activeTree : Core.Bubble<JsonBoolean>();
         bool active = activeJson.Content;
-        IJsonNumeric scoreJson = Core.Cast<IJsonNumeric>(obj.PropertyValueOrBubble("score"));
+        IJsonSyntaxTree scoreTree = obj.PropertyValueOrBubble("score");
+        IJsonNumeric scoreJson = scoreTree is IJsonNumeric ? (IJsonNumeric)scoreTree : Core.Bubble<IJsonNumeric>();
         double score = scoreJson.AsFloat64();
-        IJsonNumeric bigJson = Core.Cast<IJsonNumeric>(obj.PropertyValueOrBubble("big"));
+        IJsonSyntaxTree bigTree = obj.PropertyValueOrBubble("big");
+        IJsonNumeric bigJson = bigTree is IJsonNumeric ? (IJsonNumeric)bigTree : Core.Bubble<IJsonNumeric>();
         long big = bigJson.AsInt64();
         string? nickname = Optional.OrNull<string>(new OrNullJsonAdapter<string>(JsonGlobal.StringJsonAdapter()).DecodeFromJson(obj.PropertyValueOrBubble("nickname"), ic));
         IReadOnlyList<Point> points = JsonGlobal.ListJsonAdapter(Point.JsonAdapter()).DecodeFromJson(obj.PropertyValueOrBubble("points"), ic);

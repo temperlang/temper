@@ -44,14 +44,14 @@ some of these types:
 
 As suggested above, sometimes we can distinguish types at runtime, but this
 often depends on the specific backend. That's why downcasting is so constrained
-in Temper. But in addition to sealed interface subtypes, you can also downcast
-to check against `null`:
+in Temper. A cast, `x as T`, panics where it fails, so check first. Besides
+sealed interface subtypes, you can check against `null`, which narrows:
 
 <!-- repl: restart -->
 ```console
 $ let maybeMultiply(x: Float64?, y: Float64?): Float64? {
-    // The ` as T` macro has return type `T throws Bubble`, so use `orelse`.
-    ((x as Float64) * (y as Float64)) orelse null
+    // Checking for null narrows each to `Float64`.
+    if (x != null && y != null) { x * y } else { null }
   }
 interactive#0: void
 $ maybeMultiply(1.5, 2.0)

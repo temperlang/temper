@@ -78,12 +78,7 @@ function sizes(s) {
  * @returns {number}
  */
 function rows(values, ncols) {
-  try {
-    return divIntInt(values.length, ncols);
-  } catch (e$) {
-    if (!isBubble(e$)) throw e$;
-    return panic("panic", e$);
-  }
+  return divIntInt(values.length, ncols);
 }
 
 /**
@@ -134,13 +129,14 @@ function total(values) {
   let sum = 0.0;
   /** @param {number} x */
   function fn(x) {
-    try {
+    /** @type {void} */
+    let t$0;
+    {
       const part = x / 2.0;
       sum = sum + part;
-    } catch (e$) {
-      if (!isBubble(e$)) throw e$;
-      panic("panic", e$);
+      t$0 = undefined;
     }
+    t$0;
   }
   each(values, fn);
   return sum;
@@ -151,12 +147,7 @@ function total(values) {
  * @returns {number}
  */
 function half(x) {
-  try {
-    return x / 2.0;
-  } catch (e$) {
-    if (!isBubble(e$)) throw e$;
-    return panic("panic", e$);
-  }
+  return x / 2.0;
 }
 
 /**
@@ -198,12 +189,12 @@ function maybe(n) {
  */
 function mapped(grid) {
   /** @type {Grid} */
-  let t$0;
+  let t$1;
   try {
-    t$0 = scaled(grid);
+    t$1 = scaled(grid);
   } catch (e$) {
     if (!isBubble(e$)) throw e$;
-    t$0 = panic("panic", e$);
+    t$1 = panic("panic", e$);
   }
   /**
    * @param {number} x
@@ -216,7 +207,7 @@ function mapped(grid) {
       return x;
     }
   }
-  return listedMap(/** @type {number[]} */ (t$0.values), fn);
+  return listedMap(/** @type {number[]} */ (t$1.values), fn);
 }
 
 /**
@@ -426,15 +417,15 @@ export function effectsOf(text, event, other) {
  */
 export function sameHeld(a, b) {
   /** @type {boolean} */
-  let t$1;
+  let t$2;
   {
     /** @type {Held<T> | null} */
     const left = a;
     /** @type {Held<T> | null} */
     const right = b;
-    t$1 = left == null ? right == null : right == null ? false : left === right;
+    t$2 = left == null ? right == null : right == null ? false : left === right;
   }
-  return t$1;
+  return t$2;
 }
 
 /**
@@ -522,12 +513,12 @@ function backwards(xs) {
     let i = xs.length;
     while (true) {
       /** @type {number} */
-      let t$2;
+      let t$3;
       {
         i = (i - 1) | 0;
-        t$2 = i;
+        t$3 = i;
       }
-      if (t$2 < 0) {
+      if (t$3 < 0) {
         break;
       }
       t = (Math.imul(t, 10) + listedGet(/** @type {number[]} */ (xs), i)) | 0;
@@ -1061,48 +1052,48 @@ console.log(float64ToString(total(grid.values)));
 const none = text(0);
 const some = count(3);
 /** @type {string} */
-let t$3;
-{
-  const part2 = some;
-  t$3 = part2 == null ? "null" : part2.toString();
-}
-/** @type {string} */
 let t$4;
 {
+  const part2 = some;
+  t$4 = part2 == null ? "null" : part2.toString();
+}
+/** @type {string} */
+let t$5;
+{
   /** @type {number | null} */
-  let t$5;
+  let t$6;
   {
     const subject = maybe(0);
-    t$5 = subject == null ? null : subject.ncols;
+    t$6 = subject == null ? null : subject.ncols;
   }
-  const part3 = t$5;
-  t$4 = part3 == null ? "null" : part3.toString();
+  const part3 = t$6;
+  t$5 = part3 == null ? "null" : part3.toString();
 }
-console.log(`${none ?? "null"} ${t$3} ${t$4}`);
+console.log(`${none ?? "null"} ${t$4} ${t$5}`);
 console.log(`${maybe(1) != null} ${maybe(0) != null} ${Grid.parse("") == null}`);
 console.log(Casing.first.toString());
 console.log(listedJoin(/** @type {number[]} */ (mapped(grid)), ",", (x) => float64ToString(x)));
 console.log(listedJoin(/** @type {number[]} */ (cubes(grid)), ",", (x) => float64ToString(x)));
 /** @type {boolean} */
-let t$6;
-{
-  const left = casing(1);
-  t$6 = left == null ? false : left.eq(Casing.first);
-}
-/** @type {boolean} */
 let t$7;
 {
-  const left2 = casing(0);
-  t$7 = left2 == null ? false : left2.eq(Casing.first);
+  const left = casing(1);
+  t$7 = left == null ? false : left.eq(Casing.first);
 }
 /** @type {boolean} */
 let t$8;
 {
+  const left2 = casing(0);
+  t$8 = left2 == null ? false : left2.eq(Casing.first);
+}
+/** @type {boolean} */
+let t$9;
+{
   const left3 = casing(0);
   const right = casing(0);
-  t$8 = left3 == null ? right == null : right == null ? false : left3.eq(right);
+  t$9 = left3 == null ? right == null : right == null ? false : left3.eq(right);
 }
-console.log(`${t$6} ${t$7} ${!t$8}`);
+console.log(`${t$7} ${t$8} ${!t$9}`);
 console.log(`${captured("")} ${captured("2.5")}`);
 console.log((bidi() !== "lookout").toString());
 console.log(`${Math.sign(cmpString(word(1), word(2)))} ${Math.sign(cmpString(word(2), word(1)))} ${Math.sign(cmpString(word(2), word(3)))}`);
@@ -1113,31 +1104,31 @@ const digits = Object.freeze([1, 2, 4, 3]);
 console.log(`${byteAt(digits, true, 1)} ${byteAt(digits, false, 0)} ${ascending(digits)} ${firstDrop(digits)} ${sizeWith(digits)}`);
 console.log(`${tickIf(true)} ${tickIf(false)} ${ticked()} ${tickWhile()}`);
 /** @type {string} */
-let t$9;
-{
-  const part4 = new Dot(1).grown;
-  t$9 = part4 == null ? "null" : part4.toString();
-}
-/** @type {string} */
 let t$10;
 {
-  const part5 = new Dot(3).grown;
-  t$10 = part5 == null ? "null" : part5.toString();
+  const part4 = new Dot(1).grown;
+  t$10 = part4 == null ? "null" : part4.toString();
 }
-console.log(`${shapeName(shapeOf(1))} ${shapeName(shapeOf(2))} ${sizes(shapeOf(1)).length} ${sizes(shapeOf(2)).length} ${t$9} ${t$10} ${Casing.last.toString()} ${Casing.first.marked}`);
+/** @type {string} */
+let t$11;
+{
+  const part5 = new Dot(3).grown;
+  t$11 = part5 == null ? "null" : part5.toString();
+}
+console.log(`${shapeName(shapeOf(1))} ${shapeName(shapeOf(2))} ${sizes(shapeOf(1)).length} ${sizes(shapeOf(2)).length} ${t$10} ${t$11} ${Casing.last.toString()} ${Casing.first.marked}`);
 const carry = new Carry(3);
 console.log(`${carry.carrying} ${carry.state} ${new Carry(0).carrying} ${tagged().label ?? "null"} ${tagged("x").label ?? "null"} ${weight(42)} ${weight(60)}`);
 /** @type {readonly boolean[]} */
-let t$11;
+let t$12;
 {
   /** @type {boolean[]} */
   const b = [];
   b.push(true);
   b.push(false);
-  t$11 = listBuilderToList(b);
+  t$12 = listBuilderToList(b);
 }
 /** @type {readonly boolean[]} */
-const flags = t$11;
+const flags = t$12;
 const joiner = new Joiner();
 joiner.addWord(new Word("a"));
 joiner.addFlags(Object.freeze([true]));
@@ -1153,13 +1144,13 @@ const other = new Held(new Tag("b"), held);
 /** @type {Held<Tag> | null} */
 const nobody = null;
 /** @type {Tag | null} */
-let t$12;
+let t$13;
 {
   /** @type {Held<Tag> | null} */
   const subject3 = other.next;
-  t$12 = subject3 == null ? null : subject3.item;
+  t$13 = subject3 == null ? null : subject3.item;
 }
-console.log(`${held.toString()} ${(t$12 ?? new Tag("none")).toString()} ${sameHeld(held, held)} ${sameHeld(held, other)} ${sameHeld(nobody, nobody)} ${sameHeld(nobody, held)}`);
+console.log(`${held.toString()} ${(t$13 ?? new Tag("none")).toString()} ${sameHeld(held, held)} ${sameHeld(held, other)} ${sameHeld(nobody, nobody)} ${sameHeld(nobody, held)}`);
 console.log(`${effectsOf("ab", 1, 2)} ${new Bundle(Object.freeze([]), "2").first} ${flags.length}`);
 const counter = new Ticks();
 /** @type {Counting<string>} */

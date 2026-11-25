@@ -104,19 +104,11 @@ pub(crate) fn has2(s: impl ToArcString, c: i32) -> bool {
 pub(crate) fn has3(s: impl ToArcString, c: i32) -> bool {
     let s = s.to_arc_string();
     let i = index_of_char(s.clone(), c);
-    (|| {
-        temper_core::string::cast_as_index(i).ok_or_else(temper_core::Error::new)?;
-        Ok::<_, temper_core::Error>(true)
-    })()
-    .unwrap_or(false)
+    i.is_some()
 }
 
 pub(crate) fn has4(s: impl ToArcString, c: i32) -> bool {
     let s = s.to_arc_string();
     let i = index_of_char(s.clone(), c);
-    (|| {
-        temper_core::string::cast_as_no_index(i).ok_or_else(temper_core::Error::new)?;
-        Ok::<_, temper_core::Error>(false)
-    })()
-    .unwrap_or(true)
+    i.is_some()
 }

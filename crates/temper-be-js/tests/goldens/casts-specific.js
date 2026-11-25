@@ -1,17 +1,8 @@
-import { isBubble, listedGet, requireInstanceOf, type } from "@temperlang/core";
+import { listedGet, type } from "@temperlang/core";
 
 /** @param {AlphaInterface} instance */
 function checkB(instance) {
-  /** @type {string} */
-  let t$0;
-  try {
-    requireInstanceOf(instance, BravoClass);
-    t$0 = "yep";
-  } catch (e$) {
-    if (!isBubble(e$)) throw e$;
-    t$0 = "nope";
-  }
-  console.log(t$0);
+  console.log(instance instanceof BravoClass ? "yep" : "nope");
 }
 
 /** @param {AlphaInterface} instance */

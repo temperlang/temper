@@ -2,16 +2,12 @@ import {
   bubble,
   dateConstructor,
   dateFromIsoString,
-  divInt64,
-  divIntInt,
   eqFloat64,
   float64ToInt32,
   int64ToInt32,
   isBubble,
   mapBuilderRemove,
   panic,
-  requireInstanceOf,
-  requireNotNull,
   stringBuilderAppendCodePoint,
   stringFromCodePoint,
   stringFromCodePoints,
@@ -45,7 +41,11 @@ function failing(n) {
  * @returns {Square}
  */
 function downcast(s) {
-  return requireInstanceOf(s, Square);
+  if (s instanceof Square) {
+    return /** @type {Square} */ (/** @type {unknown} */ (s));
+  } else {
+    bubble();
+  }
 }
 
 /**
@@ -155,22 +155,6 @@ try {
   b = -2;
 }
 /** @type {number} */
-let c;
-try {
-  c = divIntInt(1, zero);
-} catch (e$) {
-  if (!isBubble(e$)) throw e$;
-  c = -3;
-}
-/** @type {number} */
-let d;
-try {
-  d = int64ToInt32(divInt64(1n, BigInt(zero)));
-} catch (e$) {
-  if (!isBubble(e$)) throw e$;
-  d = -4;
-}
-/** @type {number} */
 let e;
 try {
   e = stringToInt32("nope", null);
@@ -204,17 +188,7 @@ try {
   h = "no digits";
 }
 const i = calling(() => failing(2));
-console.log(`${a} ${b} ${c} ${d} ${e} ${eqFloat64(f, -6.0)} ${g} ${h} ${i}`);
-/** @type {string | null} */
-const nothing = null;
-/** @type {string} */
-let j;
-try {
-  j = requireNotNull(nothing);
-} catch (e$) {
-  if (!isBubble(e$)) throw e$;
-  j = "null";
-}
+console.log(`${a} ${b} ${e} ${eqFloat64(f, -6.0)} ${g} ${h} ${i}`);
 /** @type {bigint} */
 let k;
 try {
@@ -299,7 +273,7 @@ try {
   if (!isBubble(e$)) throw e$;
   u = "bad json";
 }
-console.log(`${j} ${k.toString()} ${l} ${m} ${n} ${o} ${q} ${r} ${s} ${t} ${u}`);
+console.log(`${k.toString()} ${l} ${m} ${n} ${o} ${q} ${r} ${s} ${t} ${u}`);
 console.log("panicking");
 /** @type {number} */
 let p;

@@ -167,6 +167,7 @@ interactive#1: fail
 === input 0's tests don't run if it fails
 let x: Int = 1 / 0; test("t") { assert(x == 1) }
 --- transcript
+Panicked: division by zero
 Tests passed: 0 of 1 (1 not run)
 interactive#0: fail
 

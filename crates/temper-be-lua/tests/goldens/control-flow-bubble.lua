@@ -28,15 +28,7 @@ local function report(x)
   ---@type string
   local suffix
   if not temper.pcall(function()
-    ---@type integer
-    local t_1
-    if not temper.pcall(function()
-      temper.cast_to_string(x)
-      t_1 = 1
-    end) then
-      t_1 = 0
-    end
-    suffix = tostring(more(t_1))
+    suffix = tostring(more(not temper.is_null(x) and 1 or 0))
   end) then
     suffix = ""
   end

@@ -482,9 +482,9 @@ fn reassigned_loop_captures_fail_clearly() {
 fn constant_divisors_fold_as_typing_does() {
     with_stack(|| {
         // As Hrefine's `s / (jamoVCount * jamoTCount)`: module `let`s and
-        // arithmetic on them make a divisor that can't fail, which typing
-        // lets a function that can't bubble use, so it's `divSafe`. One
-        // that folds to 0 may fail, which typing reports.
+        // arithmetic on them make a divisor that can't be zero, so it's
+        // `divSafe`. One that folds to 0 panics where it runs; dividing
+        // never fails, so typing reports neither.
         let source = "
     let jamoVCount = 21;
     let jamoTCount = 28;
@@ -501,10 +501,7 @@ fn constant_divisors_fold_as_typing_does() {
         let errors: Vec<String> = (settled.library.diagnostics.iter())
             .map(|d| d.message.text())
             .collect();
-        assert_eq!(
-            errors,
-            ["Cannot bubble from a function without Bubble in its return type"]
-        );
+        assert!(errors.is_empty(), "{errors:?}");
     });
     with_stack(|| {
         let source = "

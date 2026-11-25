@@ -16,7 +16,7 @@ Casts are safe. If a value is not of the right type, then the cast won't
 succeed.
 
     let checkB(instance: AlphaInterface): Void {
-      console.log(do { instance as BravoClass; "yep" } orelse "nope");
+      console.log(if (instance is BravoClass) { "yep" } else { "nope" });
     }
 
 Now we can try out some variations.

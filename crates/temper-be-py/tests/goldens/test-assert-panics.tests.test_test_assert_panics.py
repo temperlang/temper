@@ -1,5 +1,14 @@
+from abc import ABCMeta
 from collections.abc import Sequence
-from temper_core import Bubble, end_test, int_add, list_get
+from temper_core import (
+    Bubble,
+    arith_int_mod,
+    cast_by_type,
+    end_test,
+    int_add,
+    int_div,
+    list_get,
+)
 from temper_std.testing import Test
 from unittest import TestCase
 
@@ -8,6 +17,30 @@ def _at(ls: Sequence[int], i: int, /) -> int:
     if i == 99:
         raise Bubble()
     return list_get(ls, i)
+
+
+class _Shape(metaclass=ABCMeta):
+    __slots__ = ()
+
+
+class _Square(_Shape):
+    __slots__ = ()
+
+
+class _Circle(_Shape):
+    __slots__ = ()
+
+
+def _divide(a: int, b: int, /) -> int:
+    return int_div(a, b)
+
+
+def _remainder(a: int, b: int, /) -> int:
+    return arith_int_mod(a, b)
+
+
+def _squared(s: _Shape, /) -> _Square:
+    return cast_by_type(s, _Square)
 
 
 class TestTestAssertPanics(TestCase):
@@ -29,6 +62,24 @@ class TestTestAssertPanics(TestCase):
             def fn2() -> None:
                 raise BaseException('panic')
             test.assert_panics(fn2)
+
+    def test_passes_when_division_by_zero_or_a_cast_panics(self, /) -> None:
+        'passes when division by zero or a cast panics'
+        test: Test = Test()
+        with end_test(test):
+            def fn() -> None:
+                _divide(1, 0)
+            test.assert_panics(fn)
+            def fn2() -> None:
+                _remainder(1, 0)
+            test.assert_panics(fn2)
+            def fn3() -> None:
+                _squared(_Circle())
+            test.assert_panics(fn3)
+            _squared(_Square())
+            actual = _divide(-7, 2)
+            expected = -3
+            test.assert_(actual == expected, lambda: f'expected divide(-7, 2) == ({expected}) not ({actual})')
 
     def test_passes_past_an_orelse(self, /) -> None:
         'passes past an orelse'

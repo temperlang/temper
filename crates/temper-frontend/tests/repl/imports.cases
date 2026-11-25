@@ -78,7 +78,7 @@ g3
 interactive#0: void
 1 promise is unresolved.
 interactive#1: fail
-interactive#1 failed
+interactive#1 failed: Panicked: division by zero
 interactive#2: void
 Failed: g2 has no value: interactive#1 failed
 interactive#3: fail

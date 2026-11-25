@@ -63,8 +63,7 @@ error 299..302: Actual arguments do not match signature: (Int32, Int32) -> Int32
 error 326..329: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, String]
 error 333..336: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]
 error 374..375: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Void]
-error 409..410: Actual arguments do not match signature: (Int32, Int32) -> Int32 throws Bubble expected [Int32, Int32], but got [Int32?, Int32]
-error 409..414: Cannot bubble from a function without Bubble in its return type
+error 409..410: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32?, Int32]
 error 439..443: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32?, Int32]
 error 473..477: Actual arguments do not match signature: (Int32) -> Int32 expected [Int32], but got [Int32?]
 error 498..501: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]
@@ -206,90 +205,101 @@ let a9(x: Int): Boolean { x == null }
   (Let ^a9:6 (Fn (Let ^x:17 Int) Boolean (Block (Call == x:17 null)))))
 
 === what may bubble where it can't
+let d(a: Int, b: Int): Int throws Bubble { if (b == 0) { bubble() } else { a / b } }
 let g(x: Int): Int throws Bubble { if (x == 0) { bubble() } else { x } }
 let a1(x: Int): Int { if (x < 0) { bubble() } else { x } }
 let a2(): Int { return bubble(); }
 let a3(x: Int): Int { g(x) }
 let a4(h: fn (Int): Int throws Bubble): Int { h(1) }
 let a5(x: Int): Int { let k = g; k(x) }
-let a6(a: Int, b: Int): Int { a / b }
-let a7(a: Int): Int { a / 0 }
+let a6(a: Int, b: Int): Int { d(a, b) }
+let a7(a: Int): Int { d(a, 0) }
 let a8(a: Int): Int { a % -3 }
 let a9(a: Float64): Float64 { a / 2.0 }
 let b1(a: Int): Void { a % a; }
-let b2(a: Int): Void { console.log("${a / a}") }
-let b3(a: Int): Int { if (a / a == 1) { 1 } else { 0 } }
-let b4(a: Int): Int { do { let f(): Int { a / a }; f() } orelse 0 }
-let b5(a: Int): Int { do { a / a } orelse bubble() }
-let b6(a: Int): Void { for (let x of [1]) { console.log("${x / a}"); } }
-let b7(a: Int): Int { let f = fn (): Int { a / a }; f() }
-let b8(a: Int): Int { let f(y: Int = a / a): Int { y }; f() }
-let b9(a: Int): Int { if (true) { a / a } else { 0 } }
+let b2(a: Int): Void { console.log("${d(a, a)}") }
+let b3(a: Int): Int { if (d(a, a) == 1) { 1 } else { 0 } }
+let b4(a: Int): Int { do { let f(): Int { d(a, a) }; f() } orelse 0 }
+let b5(a: Int): Int { do { d(a, a) } orelse bubble() }
+let b6(a: Int): Void { for (let x of [1]) { console.log("${d(x, a)}"); } }
+let b7(a: Int): Int { let f = fn (): Int { d(a, a) }; f() }
+let b8(a: Int): Int { let f(y: Int = d(a, a)): Int { y }; f() }
+let b9(a: Int): Int { if (true) { d(a, a) } else { 0 } }
 class D {
   private var q: Int = 0;
-  public constructor(a: Int) { q = a / a; }
+  public constructor(a: Int) { q = d(a, a); }
   public m(a: Int): Int { a % a }
-  public get p(): Int { q / q }
-  public set p(v: Int): Void { q = v / v; }
+  public get p(): Int { d(q, q) }
+  public set p(v: Int): Void { q = d(v, v); }
 }
 --- settled
 (Block
   (Let
-    ^g:0
+    ^d:0
     (Fn
-      (Let ^x:20 Int)
+      (Let ^a:21 Int)
+      (Let ^b:22 Int)
       (Call throws Int Bubble)
-      (Block (If (Call == x:20 0) (Block (Fail)) (Block x:20)))))
+      (Block (If (Call == b:22 0) (Block (Fail)) (Block (Call / a:21 b:22))))))
   (Let
-    ^a1:1
+    ^g:1
     (Fn
-      (Let ^x:21 Int)
+      (Let ^x:23 Int)
+      (Call throws Int Bubble)
+      (Block (If (Call == x:23 0) (Block (Fail)) (Block x:23)))))
+  (Let
+    ^a1:2
+    (Fn
+      (Let ^x:24 Int)
       Int
-      (Block (If (Call < x:21 0) (Block (Fail)) (Block x:21)))))
-  (Let ^a2:2 (Fn Int (Block (Return @132 (Fail)) #void)))
-  (Let ^a3:3 (Fn (Let ^x:22 Int) Int (Block (Call g:0 x:22))))
+      (Block (If (Call < x:24 0) (Block (Fail)) (Block x:24)))))
+  (Let ^a2:3 (Fn Int (Block (Return @217 (Fail)) #void)))
+  (Let ^a3:4 (Fn (Let ^x:25 Int) Int (Block (Call g:1 x:25))))
   (Let
-    ^a4:4
+    ^a4:5
     (Fn
-      (Let ^h:23 (Call FnType Int (Call throws Int Bubble)))
+      (Let ^h:26 (Call FnType Int (Call throws Int Bubble)))
       Int
-      (Block (Call h:23 1))))
-  (Let ^a5:5 (Fn (Let ^x:24 Int) Int (Block (Let ^k:25 g:0) (Call k:25 x:24))))
+      (Block (Call h:26 1))))
+  (Let ^a5:6 (Fn (Let ^x:27 Int) Int (Block (Let ^k:28 g:1) (Call k:28 x:27))))
   (Let
-    ^a6:6
-    (Fn (Let ^a:26 Int) (Let ^b:27 Int) Int (Block (Call / a:26 b:27))))
-  (Let ^a7:7 (Fn (Let ^a:28 Int) Int (Block (Call / a:28 0))))
-  (Let ^a8:8 (Fn (Let ^a:29 Int) Int (Block (Call % a:29 (Call - 3)))))
-  (Let ^a9:9 (Fn (Let ^a:30 Float64) Float64 (Block (Call / a:30 2.0))))
-  (Let ^b1:10 (Fn (Let ^a:31 Int) Void (Block (Call % a:31 a:31) #void)))
+    ^a6:7
+    (Fn (Let ^a:29 Int) (Let ^b:30 Int) Int (Block (Call d:0 a:29 b:30))))
+  (Let ^a7:8 (Fn (Let ^a:31 Int) Int (Block (Call d:0 a:31 0))))
+  (Let ^a8:9 (Fn (Let ^a:32 Int) Int (Block (Call % a:32 (Call - 3)))))
+  (Let ^a9:10 (Fn (Let ^a:33 Float64) Float64 (Block (Call / a:33 2.0))))
+  (Let ^b1:11 (Fn (Let ^a:34 Int) Void (Block (Call % a:34 a:34) #void)))
   (Let
-    ^b2:11
+    ^b2:12
     (Fn
-      (Let ^a:32 Int)
+      (Let ^a:35 Int)
       Void
-      (Block (Call (Call . console \log) (Call cat (Call / a:32 a:32))))))
+      (Block (Call (Call . console \log) (Call cat (Call d:0 a:35 a:35))))))
   (Let
-    ^b3:12
+    ^b3:13
     (Fn
-      (Let ^a:33 Int)
+      (Let ^a:36 Int)
       Int
-      (Block (If (Call == (Call / a:33 a:33) 1) (Block 1) (Block 0)))))
+      (Block (If (Call == (Call d:0 a:36 a:36) 1) (Block 1) (Block 0)))))
   (Let
-    ^b4:13
+    ^b4:14
     (Fn
-      (Let ^a:34 Int)
+      (Let ^a:37 Int)
       Int
       (Block
         (Orelse
-          (Block (Let ^f:35 (Fn Int (Block (Call / a:34 a:34)))) (Call f:35))
+          (Block (Let ^f:38 (Fn Int (Block (Call d:0 a:37 a:37)))) (Call f:38))
           0))))
   (Let
-    ^b5:14
-    (Fn (Let ^a:36 Int) Int (Block (Orelse (Block (Call / a:36 a:36)) (Fail)))))
-  (Let
-    ^b6:15
+    ^b5:15
     (Fn
-      (Let ^a:37 Int)
+      (Let ^a:39 Int)
+      Int
+      (Block (Orelse (Block (Call d:0 a:39 a:39)) (Fail)))))
+  (Let
+    ^b6:16
+    (Fn
+      (Let ^a:40 Int)
       Void
       (Block
         (Loop
@@ -297,144 +307,150 @@ class D {
             (Call
               (Call . (Call list 1) \forEach)
               (Fn
-                (Let ^x:38)
+                (Let ^x:41)
                 (Block
-                  (Call (Call . console \log) (Call cat (Call / x:38 a:37)))
+                  (Call (Call . console \log) (Call cat (Call d:0 x:41 a:40)))
                   #void)))
-            (Break @710))))))
+            (Break @807))))))
   (Let
-    ^b7:16
+    ^b7:17
     (Fn
-      (Let ^a:39 Int)
+      (Let ^a:42 Int)
       Int
-      (Block (Let ^f:40 (Fn Int (Block (Call / a:39 a:39)))) (Call f:40))))
+      (Block (Let ^f:43 (Fn Int (Block (Call d:0 a:42 a:42)))) (Call f:43))))
   (Let
-    ^b8:17
-    (Fn
-      (Let ^a:41 Int)
-      Int
-      (Block
-        (Let ^f:42 (Fn (Let ^y:43 Int (Call / a:41 a:41)) Int (Block y:43)))
-        (Call f:42))))
-  (Let
-    ^b9:18
+    ^b8:18
     (Fn
       (Let ^a:44 Int)
       Int
-      (Block (If true (Block (Call / a:44 a:44)) (Block 0)))))
+      (Block
+        (Let ^f:45 (Fn (Let ^y:46 Int (Call d:0 a:44 a:44)) Int (Block y:46)))
+        (Call f:45))))
+  (Let
+    ^b9:19
+    (Fn
+      (Let ^a:47 Int)
+      Int
+      (Block (If true (Block (Call d:0 a:47 a:47)) (Block 0)))))
   (Class
-    ^D:19
-    (Var private ^q:46 Int 0)
+    ^D:20
+    (Var private ^q:49 Int 0)
     (Constructor
-      ^constructor:47
-      (Fn (Let ^a:51 Int) (Block (Assign q:46 (Call / a:51 a:51)) #void)))
-    (Method ^m:48 (Fn (Let ^a:52 Int) Int (Block (Call % a:52 a:52))))
-    (Get ^p:49 (Fn Int (Block (Call / q:46 q:46))))
+      ^constructor:50
+      (Fn (Let ^a:54 Int) (Block (Assign q:49 (Call d:0 a:54 a:54)) #void)))
+    (Method ^m:51 (Fn (Let ^a:55 Int) Int (Block (Call % a:55 a:55))))
+    (Get ^p:52 (Fn Int (Block (Call d:0 q:49 q:49))))
     (Set
-      ^p:50
-      (Fn (Let ^v:53 Int) Void (Block (Assign q:46 (Call / v:53 v:53)) #void)))))
-error 108..116: Cannot bubble from a function without Bubble in its return type
-error 155..163: Cannot bubble from a function without Bubble in its return type
-error 189..193: Cannot bubble from a function without Bubble in its return type
-error 242..246: Cannot bubble from a function without Bubble in its return type
-error 282..286: Cannot bubble from a function without Bubble in its return type
-error 319..324: Cannot bubble from a function without Bubble in its return type
-error 349..354: Cannot bubble from a function without Bubble in its return type
-error 379..385: Cannot bubble from a function without Bubble in its return type
-error 418..425: Cannot bubble from a function without Bubble in its return type
-error 451..456: Cannot bubble from a function without Bubble in its return type
-error 498..503: Cannot bubble from a function without Bubble in its return type
-error 535..540: Cannot bubble from a function without Bubble in its return type
-error 608..613: Cannot bubble from a function without Bubble in its return type
-error 676..684: Cannot bubble from a function without Bubble in its return type
-error 746..751: Cannot bubble from a function without Bubble in its return type
-error 803..808: Cannot bubble from a function without Bubble in its return type
-error 790..810: f needs a declared type, such as a @fun interface, since a function literal takes its type from the type wanted
-error 855..860: Cannot bubble from a function without Bubble in its return type
-error 914..919: Cannot bubble from a function without Bubble in its return type
-error 1006..1011: Cannot bubble from a function without Bubble in its return type
-error 1041..1046: Cannot bubble from a function without Bubble in its return type
-error 1073..1078: Cannot bubble from a function without Bubble in its return type
-error 1116..1121: Cannot bubble from a function without Bubble in its return type
+      ^p:53
+      (Fn (Let ^v:56 Int) Void (Block (Assign q:49 (Call d:0 v:56 v:56)) #void)))))
+error 193..201: Cannot bubble from a function without Bubble in its return type
+error 240..248: Cannot bubble from a function without Bubble in its return type
+error 274..278: Cannot bubble from a function without Bubble in its return type
+error 327..331: Cannot bubble from a function without Bubble in its return type
+error 367..371: Cannot bubble from a function without Bubble in its return type
+error 404..411: Cannot bubble from a function without Bubble in its return type
+error 436..443: Cannot bubble from a function without Bubble in its return type
+error 587..594: Cannot bubble from a function without Bubble in its return type
+error 626..633: Cannot bubble from a function without Bubble in its return type
+error 701..708: Cannot bubble from a function without Bubble in its return type
+error 773..781: Cannot bubble from a function without Bubble in its return type
+error 843..850: Cannot bubble from a function without Bubble in its return type
+error 902..909: Cannot bubble from a function without Bubble in its return type
+error 889..911: f needs a declared type, such as a @fun interface, since a function literal takes its type from the type wanted
+error 956..963: Cannot bubble from a function without Bubble in its return type
+error 1017..1024: Cannot bubble from a function without Bubble in its return type
+error 1111..1118: Cannot bubble from a function without Bubble in its return type
+error 1180..1187: Cannot bubble from a function without Bubble in its return type
+error 1225..1232: Cannot bubble from a function without Bubble in its return type
 
 === what may bubble where it can
+let d(a: Int, b: Int): Int throws Bubble { if (b == 0) { bubble() } else { a / b } }
 let g(x: Int): Int throws Bubble { if (x == 0) { bubble() } else { x } }
 let n = 2;
-let a1(a: Int): Int throws Bubble { a / a }
+let a1(a: Int): Int throws Bubble { d(a, a) }
 let a2(a: Int): Void throws Bubble { bubble() }
-let a3(a: Int): Int { (a / a) orelse 0 }
-let a4(a: Int): Int { a / n }
+let a3(a: Int): Int { (d(a, a)) orelse 0 }
+let a4(a: Int): Int { d(a, n) }
 let a5(a: Int): Int { a / -3 }
-let a6(a: Int): Int { a / (1 + 1) }
+let a6(a: Int): Int { d(a, (1 + 1)) }
 let a7(a: Int64): Int64 { a % 2i64 }
 let a8(a: Int): Int { let k = 3; a % k }
 let a9(): Int { g(1) }
 let b1(a: Int): Int { if (false) { bubble() } else { a } }
 let b2(a: Int): Int { panic() }
 let b3(ls: List<Int>, a: Int): Void throws Bubble {
-  for (let x of ls) { console.log("${x / a}"); }
+  for (let x of ls) { console.log("${d(x, a)}"); }
 }
 let b4(a: Int): Void { let f = fn { bubble() }; }
-let b5(a: Int): Int { let f(): Int throws Bubble { a / a }; f() orelse 0 }
-console.log("${1 / (n - 2)}") orelse console.log("top level");
+let b5(a: Int): Int { let f(): Int throws Bubble { d(a, a) }; f() orelse 0 }
+console.log("${d(1, (n - 2))}") orelse console.log("top level");
 --- settled
 (Block
   (Let
-    ^g:0
+    ^d:0
     (Fn
-      (Let ^x:16 Int)
+      (Let ^a:17 Int)
+      (Let ^b:18 Int)
       (Call throws Int Bubble)
-      (Block (If (Call == x:16 0) (Block (Fail)) (Block x:16)))))
-  (Let ^n:1 2)
+      (Block (If (Call == b:18 0) (Block (Fail)) (Block (Call / a:17 b:18))))))
   (Let
-    ^a1:2
-    (Fn (Let ^a:17 Int) (Call throws Int Bubble) (Block (Call / a:17 a:17))))
-  (Let ^a2:3 (Fn (Let ^a:18 Int) (Call throws Void Bubble) (Block (Fail))))
-  (Let ^a3:4 (Fn (Let ^a:19 Int) Int (Block (Orelse (Call / a:19 a:19) 0))))
-  (Let ^a4:5 (Fn (Let ^a:20 Int) Int (Block (Call / a:20 n:1))))
-  (Let ^a5:6 (Fn (Let ^a:21 Int) Int (Block (Call / a:21 (Call - 3)))))
-  (Let ^a6:7 (Fn (Let ^a:22 Int) Int (Block (Call / a:22 (Call + 1 1)))))
-  (Let ^a7:8 (Fn (Let ^a:23 Int64) Int64 (Block (Call % a:23 2i64))))
-  (Let ^a8:9 (Fn (Let ^a:24 Int) Int (Block (Let ^k:25 3) (Call % a:24 k:25))))
-  (Let ^a9:10 (Fn Int (Block (Call g:0 1))))
-  (Let
-    ^b1:11
-    (Fn (Let ^a:26 Int) Int (Block (If false (Block (Fail)) (Block a:26)))))
-  (Let ^b2:12 (Fn (Let ^a:27 Int) Int (Block (Call panic))))
-  (Let
-    ^b3:13
+    ^g:1
     (Fn
-      (Let ^ls:28 (Call <> List Int))
-      (Let ^a:29 Int)
+      (Let ^x:19 Int)
+      (Call throws Int Bubble)
+      (Block (If (Call == x:19 0) (Block (Fail)) (Block x:19)))))
+  (Let ^n:2 2)
+  (Let
+    ^a1:3
+    (Fn (Let ^a:20 Int) (Call throws Int Bubble) (Block (Call d:0 a:20 a:20))))
+  (Let ^a2:4 (Fn (Let ^a:21 Int) (Call throws Void Bubble) (Block (Fail))))
+  (Let ^a3:5 (Fn (Let ^a:22 Int) Int (Block (Orelse (Call d:0 a:22 a:22) 0))))
+  (Let ^a4:6 (Fn (Let ^a:23 Int) Int (Block (Call d:0 a:23 n:2))))
+  (Let ^a5:7 (Fn (Let ^a:24 Int) Int (Block (Call / a:24 (Call - 3)))))
+  (Let ^a6:8 (Fn (Let ^a:25 Int) Int (Block (Call d:0 a:25 (Call + 1 1)))))
+  (Let ^a7:9 (Fn (Let ^a:26 Int64) Int64 (Block (Call % a:26 2i64))))
+  (Let ^a8:10 (Fn (Let ^a:27 Int) Int (Block (Let ^k:28 3) (Call % a:27 k:28))))
+  (Let ^a9:11 (Fn Int (Block (Call g:1 1))))
+  (Let
+    ^b1:12
+    (Fn (Let ^a:29 Int) Int (Block (If false (Block (Fail)) (Block a:29)))))
+  (Let ^b2:13 (Fn (Let ^a:30 Int) Int (Block (Call panic))))
+  (Let
+    ^b3:14
+    (Fn
+      (Let ^ls:31 (Call <> List Int))
+      (Let ^a:32 Int)
       (Call throws Void Bubble)
       (Block
         (Loop
           (Block
             (Call
-              (Call . ls:28 \forEach)
+              (Call . ls:31 \forEach)
               (Fn
-                (Let ^x:30)
+                (Let ^x:33)
                 (Block
-                  (Call (Call . console \log) (Call cat (Call / x:30 a:29)))
+                  (Call (Call . console \log) (Call cat (Call d:0 x:33 a:32)))
                   #void)))
-            (Break @560))))))
+            (Break @653))))))
   (Let
-    ^b4:14
-    (Fn (Let ^a:31 Int) Void (Block (Let ^f:32 (Fn (Block (Fail)))) #void)))
+    ^b4:15
+    (Fn (Let ^a:34 Int) Void (Block (Let ^f:35 (Fn (Block (Fail)))) #void)))
   (Let
-    ^b5:15
+    ^b5:16
     (Fn
-      (Let ^a:33 Int)
+      (Let ^a:36 Int)
       Int
       (Block
-        (Let ^f:34 (Fn (Call throws Int Bubble) (Block (Call / a:33 a:33))))
-        (Orelse (Call f:34) 0))))
+        (Let ^f:37 (Fn (Call throws Int Bubble) (Block (Call d:0 a:36 a:36))))
+        (Orelse (Call f:37) 0))))
   (Orelse
-    (Call (Call . console \log) (Call cat (Call / 1 (Call - n:1 2))))
+    (Call (Call . console \log) (Call cat (Call d:0 1 (Call - n:2 2))))
     (Call (Call . console \log) "top level"))
   #void)
-error 643..643: Explicit return type required
-error 640..655: f needs a declared type, such as a @fun interface, since a function literal takes its type from the type wanted
+error 328..335: Cannot bubble from a function without Bubble in its return type
+error 391..404: Cannot bubble from a function without Bubble in its return type
+error 738..738: Explicit return type required
+error 735..750: f needs a declared type, such as a @fun interface, since a function literal takes its type from the type wanted
 log top level
 
 === builtin types' methods have core's signatures

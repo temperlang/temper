@@ -79,28 +79,28 @@ public static class LoopsGlobal
                                         while (k < 25)
                                         {
                                             prime = prime + 1;
-                                            if (prime != 2 && Core.ModSafe(prime, 2) == 0)
+                                            if (prime != 2 && Core.Mod(prime, 2) == 0)
                                             {
                                                 {
                                                     i4 = i4 + 1;
                                                     goto outerNext2;
                                                 }
                                             }
-                                            if (prime != 3 && Core.ModSafe(prime, 3) == 0)
+                                            if (prime != 3 && Core.Mod(prime, 3) == 0)
                                             {
                                                 {
                                                     j2 = j2 + 1;
                                                     goto outerNext3;
                                                 }
                                             }
-                                            if (prime != 5 && Core.ModSafe(prime, 5) == 0)
+                                            if (prime != 5 && Core.Mod(prime, 5) == 0)
                                             {
                                                 {
                                                     k = k + 1;
                                                     continue;
                                                 }
                                             }
-                                            if (prime != 7 && Core.ModSafe(prime, 7) == 0)
+                                            if (prime != 7 && Core.Mod(prime, 7) == 0)
                                             {
                                                 {
                                                     k = k + 1;

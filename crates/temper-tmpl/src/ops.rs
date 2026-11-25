@@ -5,8 +5,9 @@
 //! `Int64`, `Float64`, and `String`); `add`, `sub`, `mul`, `div`, `mod`, and
 //! `neg` (the numeric types); `divSafe` and `modSafe` (the integer types:
 //! by a divisor known not to fail them, a constant other than 0, and for
-//! `modSafe` positive, which never bubble, as Kotlin's `DivIntIntSafe` and
-//! the like); `bitAnd`, `bitOr`, `bitXor`, `bitNot`, `shl`, `shr`, and
+//! `modSafe` positive, which skip the zero check, as Kotlin's
+//! `DivIntIntSafe` and the like). No operator fails: integer `div` and
+//! `mod` panic for a zero divisor; `Float64`'s give IEEE 754's results; `bitAnd`, `bitOr`, `bitXor`, `bitNot`, `shl`, `shr`, and
 //! `ushr` (the integer types); `Float64.pow`; `Boolean.not`; and
 //! `String.cat`. They belong to the language, as Kotlin's
 //! `BuiltinOperatorId`s do, so passes match them by enum. Everything else
@@ -29,10 +30,9 @@ pub struct OpInfo {
     pub name: &'static str,
     pub params: &'static [TypeId],
     pub result: TypeId,
-    /// Whether a call may bubble: written `^` in text.
-    pub bubbles: bool,
-    /// Whether it has no side effects (bubbling aside): every operator,
-    /// so far.
+    /// Whether it has no side effects: every operator but integer `div`
+    /// and `mod`, which panic for a zero divisor (a panic shows, so it
+    /// keeps its place among what else shows).
     pub pure: bool,
 }
 
@@ -51,6 +51,11 @@ impl Op {
         Some(Op(sorted[i]))
     }
 
+    /// Whether it has no side effects ([`OpInfo::pure`]).
+    pub fn pure(self) -> bool {
+        self.info().is_some_and(|info| info.pure)
+    }
+
     /// Its entry, if it's an operator at all.
     pub fn info(self) -> Option<&'static OpInfo> {
         OPS.get(self.0 as usize)
@@ -64,36 +69,29 @@ const F: TypeId = TypeId::FLOAT64;
 const S: TypeId = TypeId::STRING;
 
 macro_rules! ops {
-    ($($name:literal ($($param:ident),*) -> $result:ident $($mark:ident)?;)*) => {
+    ($($name:literal ($($param:ident),*) -> $result:ident $($panics:ident)?;)*) => {
         /// Every operator, in a fixed order: an operator's index is its id.
         pub const OPS: &[OpInfo] = &[$(
-            op($name, &[$($param),*], $result, mark!($($mark)?)),
+            op($name, &[$($param),*], $result, !panics!($($panics)?)),
         )*];
     };
 }
 
-macro_rules! mark {
+macro_rules! panics {
     () => {
-        Mark::Plain
+        false
     };
-    ($mark:ident) => {
-        Mark::$mark
+    (panics) => {
+        true
     };
 }
 
-/// How an operator differs from a plain one, which is pure and never bubbles.
-enum Mark {
-    Plain,
-    Bubbles,
-}
-
-const fn op(name: &'static str, params: &'static [TypeId], result: TypeId, mark: Mark) -> OpInfo {
+const fn op(name: &'static str, params: &'static [TypeId], result: TypeId, pure: bool) -> OpInfo {
     OpInfo {
         name,
         params,
         result,
-        bubbles: matches!(mark, Mark::Bubbles),
-        pure: true,
+        pure,
     }
 }
 
@@ -109,8 +107,8 @@ ops! {
     "Int32.add" (I, I) -> I;
     "Int32.sub" (I, I) -> I;
     "Int32.mul" (I, I) -> I;
-    "Int32.div" (I, I) -> I Bubbles;
-    "Int32.mod" (I, I) -> I Bubbles;
+    "Int32.div" (I, I) -> I panics;
+    "Int32.mod" (I, I) -> I panics;
     "Int32.divSafe" (I, I) -> I;
     "Int32.modSafe" (I, I) -> I;
     "Int32.neg" (I) -> I;
@@ -131,8 +129,8 @@ ops! {
     "Int64.add" (L, L) -> L;
     "Int64.sub" (L, L) -> L;
     "Int64.mul" (L, L) -> L;
-    "Int64.div" (L, L) -> L Bubbles;
-    "Int64.mod" (L, L) -> L Bubbles;
+    "Int64.div" (L, L) -> L panics;
+    "Int64.mod" (L, L) -> L panics;
     "Int64.divSafe" (L, L) -> L;
     "Int64.modSafe" (L, L) -> L;
     "Int64.neg" (L) -> L;
@@ -153,8 +151,8 @@ ops! {
     "Float64.add" (F, F) -> F;
     "Float64.sub" (F, F) -> F;
     "Float64.mul" (F, F) -> F;
-    "Float64.div" (F, F) -> F Bubbles;
-    "Float64.mod" (F, F) -> F Bubbles;
+    "Float64.div" (F, F) -> F;
+    "Float64.mod" (F, F) -> F;
     "Float64.neg" (F) -> F;
     "Float64.pow" (F, F) -> F;
     "Float64.eq" (F, F) -> B;

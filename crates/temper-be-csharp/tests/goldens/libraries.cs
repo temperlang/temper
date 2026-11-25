@@ -74,14 +74,7 @@ public static class LibrariesGlobal
 
     internal static int Rows(IReadOnlyList<double> values, int ncols)
     {
-        try
-        {
-            return Core.Div(values.Count, ncols);
-        }
-        catch (global::TemperLang.Core.Bubble bubble1)
-        {
-            throw Core.Panic("panic", bubble1);
-        }
+        return Core.Div(values.Count, ncols);
     }
 
     internal static Grid Scaled(Grid grid)
@@ -100,9 +93,9 @@ public static class LibrariesGlobal
             IReadOnlyList<double> more = Listed.ToReadOnlyList(Enumerable.Select(Scaled(grid).Values, (double x) => x * x * x));
             return more;
         }
-        catch (global::TemperLang.Core.Bubble bubble2)
+        catch (global::TemperLang.Core.Bubble bubble1)
         {
-            throw Core.Panic("panic", bubble2);
+            throw Core.Panic("panic", bubble1);
         }
     }
 
@@ -123,15 +116,8 @@ public static class LibrariesGlobal
         double sum = 0.0;
         void fn(double x)
         {
-            try
-            {
-                double part = x / 2.0;
-                sum = sum + part;
-            }
-            catch (global::TemperLang.Core.Bubble bubble3)
-            {
-                throw Core.Panic("panic", bubble3);
-            }
+            double part = x / 2.0;
+            sum = sum + part;
         }
         Each(values, fn);
         return sum;
@@ -139,14 +125,7 @@ public static class LibrariesGlobal
 
     internal static double Half(double x)
     {
-        try
-        {
-            return x / 2.0;
-        }
-        catch (global::TemperLang.Core.Bubble bubble4)
-        {
-            throw Core.Panic("panic", bubble4);
-        }
+        return x / 2.0;
     }
 
     internal static double Cube(double x)
@@ -185,9 +164,9 @@ public static class LibrariesGlobal
         {
             t1 = Scaled(grid);
         }
-        catch (global::TemperLang.Core.Bubble bubble5)
+        catch (global::TemperLang.Core.Bubble bubble2)
         {
-            throw Core.Panic("panic", bubble5);
+            throw Core.Panic("panic", bubble2);
         }
         double fn(double x)
         {

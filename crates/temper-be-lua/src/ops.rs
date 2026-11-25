@@ -12,8 +12,8 @@
 //!   `temper.int32_add`, `int32_sub`, `int32_mul`, and `int32_unm` wrap
 //!   their 64-bit result to 32 bits, and `int32_div` and `int32_mod`
 //!   truncate toward zero, as Temper's do, rather than flooring, as Lua's
-//!   `//` and `%` do, and fail on a zero divisor (Lua's integer `//`
-//!   raises an error, which bubbles). Comparisons are Lua's own;
+//!   `//` and `%` do, and panic on a zero divisor (a Lua error, as
+//!   Lua's integer `//` raises). Comparisons are Lua's own;
 //!   `int_cmp` gives -1, 0, or 1.
 //! - `Int64`: whatever the runtime's `int64_constructor` makes, as
 //!   Kotlin's: a Lua integer on Lua 5.3 and later, and on 5.1 and LuaJIT
@@ -28,8 +28,8 @@
 //!   `bnot` (for both widths), and `shl32`, `shl64`, and the rest, which
 //!   mask the count as Temper does.
 //! - `Float64`: Lua's own `+`, `-`, `*`, `/`, `^`, and negation, as
-//!   Kotlin's (so division by zero gives an infinity or NaN, as Kotlin's
-//!   JS and Lua do, where tmpl's operators bubble); `fmod`, `float_eq`,
+//!   Kotlin's (so division by zero gives an infinity or NaN, IEEE 754's,
+//!   as Temper's does); `fmod`, `float_eq`,
 //!   and `float_cmp` from the runtime, which order NaN and signed zeros
 //!   as Temper does, so `<` and the rest compare `float_cmp`'s result with
 //!   0, as Kotlin's.
@@ -107,7 +107,7 @@ pub fn spelling(op: Op) -> Option<Spelling> {
         ("Int32", "add") => Helper("int32_add"),
         ("Int32", "sub") => Helper("int32_sub"),
         ("Int32", "mul") => Helper("int32_mul"),
-        // By a divisor that can't fail them too, as Kotlin's.
+        // By a divisor that can't be zero too, as Kotlin's.
         ("Int32", "div" | "divSafe") => Helper("int32_div"),
         ("Int32", "mod" | "modSafe") => Helper("int32_mod"),
         ("Int32", "neg") => Helper("int32_unm"),

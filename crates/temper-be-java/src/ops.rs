@@ -4,8 +4,10 @@
 //! As Kotlin's Java backend spells them (its `JavaSupportNetwork.kt`),
 //! where that's right: `Int32` and `Int64` are `int` and `long`, whose
 //! arithmetic wraps and whose shifts mask their count, as Temper's do, so
-//! they're Java's own operators, but for division and remainder, which
-//! call `Core.divIntInt` and `Core.modIntInt` to bubble on a zero divisor;
+//! they're Java's own operators, division and remainder too, whose
+//! `ArithmeticException` for a zero divisor is a panic (a host's error,
+//! which no handler catches), and whose `MIN_VALUE / -1` wraps as
+//! Temper's does;
 //! three-way comparisons are `Integer.compare` and its kin, and a
 //! string's `compareTo`; string equality is `equals`; `Float64.pow` is
 //! `Math.pow`; and `Float64` comparisons go through `Double.compare`,
@@ -85,17 +87,11 @@ pub fn spelling(op: Op) -> Option<Spelling> {
         ("Boolean" | "Float64", _) if compare(op).is_some() => CmpWith(boxed(ty)?, compare(op)?),
         (_, _) if compare(op).is_some() => Bin(compare(op)?),
         ("Float64", "pow") => Static("Math", "pow"),
-        ("Int32" | "Int64", "div") => Static("Core", "divIntInt"),
-        ("Int32" | "Int64", "mod") => Static("Core", "modIntInt"),
-        // By a divisor that can't fail them, as Kotlin's: Java's own, whose
-        // `MIN_VALUE / -1` wraps as Temper's does.
-        ("Int32" | "Int64", "divSafe") => Bin(crate::tree::Bin::Div),
-        ("Int32" | "Int64", "modSafe") => Bin(crate::tree::Bin::Mod),
+        (_, "div" | "divSafe") => Bin(crate::tree::Bin::Div),
+        (_, "mod" | "modSafe") => Bin(crate::tree::Bin::Mod),
         (_, "add") => Bin(crate::tree::Bin::Add),
         (_, "sub") => Bin(crate::tree::Bin::Sub),
         (_, "mul") => Bin(crate::tree::Bin::Mul),
-        (_, "div") => Bin(crate::tree::Bin::Div),
-        (_, "mod") => Bin(crate::tree::Bin::Mod),
         (_, "neg") => Unary(crate::tree::Unary::Neg),
         (_, "bitAnd") => Bin(crate::tree::Bin::BitAnd),
         (_, "bitOr") => Bin(crate::tree::Bin::BitOr),

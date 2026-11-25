@@ -154,11 +154,23 @@ public static class FailuresInteropGlobal
         }
     }
 
+    internal static int Nonzero(int n)
+    {
+        if (n == 0)
+        {
+            return Core.Bubble<int>();
+        }
+        else
+        {
+            return n;
+        }
+    }
+
     public static int Mixed(string key, int n)
     {
         try
         {
-            return Lookup(key) + Core.Div(10, n);
+            return Lookup(key) + Core.Div(10, Nonzero(n));
         }
         catch (Exception failure1) when (failure1 is global::TemperLang.Core.Bubble || failure1 is NotFound)
         {

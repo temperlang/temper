@@ -121,9 +121,10 @@ needs these:
 
 - **The operator table** (`ops::OPS`, data rather than an
   analysis): each operator's name (`Int32.add`), its signature, whether
-  it may bubble (`Int32.div` and `Int32.mod` on zero), and whether it's
-  pure. As built (2026-10-29), the 65 operators (69 from 2026-11-02,
-  with the integer types' `divSafe` and `modSafe`, which never bubble); subset A's first
+  and whether it's pure (all but integer `div` and `mod`, which panic on
+  zero, from 2026-11-25; before, they bubbled). As built (2026-10-29),
+  the 65 operators (69 from 2026-11-02, with the integer types'
+  `divSafe` and `modSafe`, which skip the zero check); subset A's first
   table also had core's members and `console.log`, 113 entries in all,
   which are now core's external declarations
   ([nodes.md](nodes.md#level-3-ops-and-core-as-declarations)). A

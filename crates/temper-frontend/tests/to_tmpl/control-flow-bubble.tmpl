@@ -35,16 +35,16 @@ module bubble#0 {
 
   fn report#3(x#25: String?): Void {
     let message#26: String = (orelse(something#2(x#25)^, "null")): String;
-    let suffix#27: String = (orelse(more#1((asNullable((orelse((value { (as(x#25)^): String; 1 }): Int32, 0)): Int32)): Int32?)^.toString#30(omitted), "")): String;
+    let suffix#27: String = (orelse(more#1((asNullable((if (%Boolean.not(isNull(x#25))) 1 else 0): Int32)): Int32?)^.toString#30(omitted), "")): String;
     ~console#33.log#32(%String.cat(message#26, suffix#27));
   }
 
   fn calcRows#4(cols#34: Int32, total#35: Int32): Int32 throws Bubble {
     ~console#33.log#32(%String.cat(%String.cat(%String.cat(%String.cat("calcRows(", cols#34.toString#30(omitted)), ", "), total#35.toString#30(omitted)), ")"));
-    if (%Boolean.not(%Int32.eq(%Int32.mod(total#35, cols#34)^, 0))) {
+    if (%Boolean.not(%Int32.eq(%Int32.mod(total#35, cols#34), 0))) {
       (bubble()^): Void;
     }
-    return %Int32.div(total#35, cols#34)^;
+    return %Int32.div(total#35, cols#34);
   }
 
   fn countBelow#5(s#36: String): Int32 throws Bubble {

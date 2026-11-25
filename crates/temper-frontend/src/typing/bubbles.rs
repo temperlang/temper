@@ -7,13 +7,12 @@
 //! one, if its place wants a function type, which gives it its own.
 //!
 //! What may bubble: `bubble()`; `await`, of a promise that may be broken;
-//! a call of a function whose type `throws Bubble`; `x as T` that checks
-//! something ([`Settle::cast_bubbles`]); and `/` and `%`, unless the
-//! divisor is an integer constant that can't make them fail (not zero,
-//! and for `%`, positive), as [`fold_int`] works it out, which
-//! `to_tmpl` uses too. Kotlin folds constants first, so as for the other
-//! type errors, a call it might work out while compiling isn't reported
-//! (`may_fold`), nor is a branch of an `if` whose condition it might.
+//! and a call of a function whose type `throws Bubble`. (`x as T` that
+//! fails and `/` or `%` of integers by zero panic; floats' give IEEE
+//! 754's infinities and NaN.) Kotlin folds constants first, so as for
+//! the other type errors, a call it might work out while compiling isn't
+//! reported (`may_fold`), nor is a branch of an `if` whose condition it
+//! might.
 
 use super::signatures;
 use crate::builtins::{Builtin, Constant, Function};
@@ -21,7 +20,7 @@ use crate::core;
 use crate::library::{Level, Library, Message};
 use crate::scope::{Scopes, SymbolKind};
 use crate::settle::{Fact, Settle};
-use crate::types::{BUBBLE, ERROR, FLOAT64, TypeData, TypeId, UNKNOWN};
+use crate::types::{BUBBLE, ERROR, TypeData, TypeId, UNKNOWN};
 use temper_syntax::ast::Value;
 use temper_syntax::tree::{NodeId, NodeKind};
 
@@ -153,7 +152,6 @@ fn fold_float_at(
                     Function::Add => Some(a + b),
                     Function::Sub => Some(a - b),
                     Function::Mul => Some(a * b),
-                    Function::Div | Function::Mod if b == 0.0 => None,
                     Function::Div => Some(a / b),
                     Function::Mod => Some(a % b),
                     _ => None,
@@ -565,10 +563,6 @@ impl Settle {
         let children = self.lib.tree.children(call).to_vec();
         let (&callee, args) = children.split_first()?;
         match self.scopes.resolved_builtin(callee) {
-            Some(Builtin::Function(f @ (Function::Div | Function::Mod))) => {
-                self.division_bubbles(call, f, args).then_some(BUBBLE)
-            }
-            Some(Builtin::Function(Function::As)) => self.cast_bubbles(args).then_some(BUBBLE),
             Some(Builtin::Function(Function::New)) => self.new_failure(args),
             // `a[i]` calls `a.get(i)`.
             Some(Builtin::Function(Function::Index)) if !args.is_empty() => {
@@ -680,31 +674,6 @@ impl Settle {
                 .collect(),
             _ => Vec::new(),
         }
-    }
-
-    /// Whether `a / b` or `a % b` may bubble. Kotlin Temper picks variants
-    /// that can't for an integer divisor that's a constant, not zero, and
-    /// for `%`, positive; dividing floats always may.
-    fn division_bubbles(&mut self, call: NodeId, f: Function, args: &[NodeId]) -> bool {
-        let &[a, b] = args else {
-            return false;
-        };
-        if self.may_fold(call, 0) {
-            return false;
-        }
-        if self.known_type(a) == FLOAT64 || self.known_type(b) == FLOAT64 {
-            return true;
-        }
-        match self.constant_int(b) {
-            Some(n) if f == Function::Div => n == 0,
-            Some(n) => n <= 0,
-            None => !self.may_fold(b, 0),
-        }
-    }
-
-    /// An integer constant's value ([`fold_int`]).
-    fn constant_int(&self, node: NodeId) -> Option<i64> {
-        fold_int(&self.lib, &self.scopes, &self.typing, node)
     }
 
     /// `true` or `false`, written as such.

@@ -145,13 +145,21 @@ pub(crate) fn reading(key: impl ToArcString, count: impl ToArcString) -> Result<
     .map_err(|failure| temper_core::with_cause(Unreadable::new(key.clone()), failure.clone()))
 }
 
+pub(crate) fn nonzero(n: i32) -> temper_core::Result<i32> {
+    if n == 0 {
+        Err(temper_core::Error::new())
+    } else {
+        Ok(n)
+    }
+}
+
 pub(crate) fn ratio(key: impl ToArcString, count: impl ToArcString) -> i32 {
     let key = key.to_arc_string();
     let count = count.to_arc_string();
     (|| {
-        temper_core::int_div(
-            host_lookup(key.clone())?,
-            count_failures::parse_count(count.clone())?,
+        Ok::<_, temper_core::Error>(
+            host_lookup(key.clone())?
+                .wrapping_div(nonzero(count_failures::parse_count(count.clone())?)?),
         )
     })()
     .unwrap_or(-9)

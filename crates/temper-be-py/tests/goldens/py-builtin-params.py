@@ -8,7 +8,7 @@ from temper_core import (
     Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     boolean_to_string as _boolean_to_string,
-    cast_by_type as _cast_by_type,
+    bubble as _bubble,
     int_add as _int_add,
     int_mul as _int_mul,
     int_sub as _int_sub,
@@ -205,11 +205,7 @@ def resized(more: bool, /) -> int:
 
 
 def help_of(d: Described, /) -> str:
-    option: Option
-    try:
-        option = _cast_by_type(d, Option)
-    except _Bubble:
-        raise _Bubble()
+    option = d if isinstance(d, Option) else _bubble()
     return option.help
 
 

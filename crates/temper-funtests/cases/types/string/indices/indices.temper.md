@@ -74,12 +74,12 @@ We can define predicates for *as* and *is* by checking whether
 
     let has3(s: String, c: Int): Boolean {
       let i = indexOfChar(s, c);
-      do { i as StringIndex; true } orelse false
+      i is StringIndex
     }
 
     let has4(s: String, c: Int): Boolean {
       let i = indexOfChar(s, c);
-      do { i as NoStringIndex; false } orelse true
+      !(i is NoStringIndex)
     }
 
 Now, we'll build a table of outputs by looking for several characters

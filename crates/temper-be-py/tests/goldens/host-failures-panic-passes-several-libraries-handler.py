@@ -1,6 +1,5 @@
 from count_failures import parse_count as _parse_count
 from temper_core import (
-    Bubble as _Bubble,
     Failure as _Failure,
     LoggingConsole as _LoggingConsole,
     int_add as _int_add,
@@ -56,7 +55,7 @@ try:
         raise BaseException('panic')
     _p = _int_div(10, _int_sub(_n, _m))
 except Exception as _t_0:
-    if not isinstance(_t_0, (_Bubble, _Failure)):
+    if not isinstance(_t_0, _Failure):
         raise _t_0
     _p = -1
 _console.log(f'after {_p}')

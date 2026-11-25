@@ -474,14 +474,14 @@ namespace temper {
 
             inline int32_t requireStringIndex(int32_t i) {
                 if (i < 0) {
-                    bubble<int32_t>("not a StringIndex");
+                    panic<int32_t>("failed cast: not a StringIndex");
                 }
                 return i;
             }
 
             inline int32_t requireNoStringIndex(int32_t i) {
                 if (i >= 0) {
-                    bubble<int32_t>("not a NoStringIndex");
+                    panic<int32_t>("failed cast: not a NoStringIndex");
                 }
                 return i;
             }

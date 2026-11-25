@@ -1,8 +1,6 @@
 import {
   isBubble,
   listedGet,
-  requireNoStringIndex,
-  requireStringIndex,
   stringFromCodePoint,
   stringGet,
   stringNext,
@@ -87,13 +85,7 @@ function has2(s, c) {
  */
 function has3(s, c) {
   const i = indexOfChar(s, c);
-  try {
-    requireStringIndex(i);
-    return true;
-  } catch (e$) {
-    if (!isBubble(e$)) throw e$;
-    return false;
-  }
+  return i >= 0;
 }
 
 /**
@@ -103,13 +95,7 @@ function has3(s, c) {
  */
 function has4(s, c) {
   const i = indexOfChar(s, c);
-  try {
-    requireNoStringIndex(i);
-    return false;
-  } catch (e$) {
-    if (!isBubble(e$)) throw e$;
-    return true;
-  }
+  return i >= 0;
 }
 
 comparePositions("cookie", 99, 105);

@@ -187,8 +187,9 @@ run too:
       0
     };
 
+    let nonzero(n: Int): Int throws Bubble { if (n == 0) { bubble() } else { n } }
     let ratio(key: String, count: String): Int {
-      (hostLookup(key) / parseCount(count)) orelse -9
+      (hostLookup(key) / nonzero(parseCount(count))) orelse -9
     }
     console.log(
       "${r} ${ratio("a", "two")} ${ratio("a", "zero")} ${ratio("a", "x")} ${ratio("z", "two")}"

@@ -32,8 +32,9 @@ internal class Bye : IMessage
 
     public static Bye DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
-        JsonObject obj = Core.Cast<JsonObject>(t);
-        JsonString textJson = Core.Cast<JsonString>(obj.PropertyValueOrBubble("text"));
+        JsonObject obj = t is JsonObject ? (JsonObject)t : Core.Bubble<JsonObject>();
+        IJsonSyntaxTree textTree = obj.PropertyValueOrBubble("text");
+        JsonString textJson = textTree is JsonString ? (JsonString)textTree : Core.Bubble<JsonString>();
         string text = textJson.Content;
         return new Bye(text);
     }

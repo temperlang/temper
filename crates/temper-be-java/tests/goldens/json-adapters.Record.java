@@ -49,14 +49,18 @@ final class Record {
     }
 
     public static Record decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) {
-        JsonObject obj = Core.cast(JsonObject.class, t);
-        JsonString nameJson = Core.cast(JsonString.class, obj.propertyValueOrBubble("name"));
+        JsonObject obj = t instanceof JsonObject ? (JsonObject) t : Core.throwBubble();
+        JsonSyntaxTree nameTree = obj.propertyValueOrBubble("name");
+        JsonString nameJson = nameTree instanceof JsonString ? (JsonString) nameTree : Core.throwBubble();
         String name = nameJson.content;
-        JsonBoolean activeJson = Core.cast(JsonBoolean.class, obj.propertyValueOrBubble("is-active"));
+        JsonSyntaxTree activeTree = obj.propertyValueOrBubble("is-active");
+        JsonBoolean activeJson = activeTree instanceof JsonBoolean ? (JsonBoolean) activeTree : Core.throwBubble();
         boolean active = activeJson.content;
-        JsonNumeric scoreJson = Core.cast(JsonNumeric.class, obj.propertyValueOrBubble("score"));
+        JsonSyntaxTree scoreTree = obj.propertyValueOrBubble("score");
+        JsonNumeric scoreJson = scoreTree instanceof JsonNumeric ? (JsonNumeric) scoreTree : Core.throwBubble();
         double score = scoreJson.asFloat64();
-        JsonNumeric bigJson = Core.cast(JsonNumeric.class, obj.propertyValueOrBubble("big"));
+        JsonSyntaxTree bigTree = obj.propertyValueOrBubble("big");
+        JsonNumeric bigJson = bigTree instanceof JsonNumeric ? (JsonNumeric) bigTree : Core.throwBubble();
         long big = bigJson.asInt64();
         @Nullable String nickname = new OrNullJsonAdapter<String>(JsonGlobal.stringJsonAdapter()).decodeFromJson(obj.propertyValueOrBubble("nickname"), ic);
         List<Point> points = JsonGlobal.listJsonAdapter(Point.jsonAdapter()).decodeFromJson(obj.propertyValueOrBubble("points"), ic);

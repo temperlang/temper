@@ -210,7 +210,7 @@ key order would lead to brittle unmarshalling.
       }
 
       public propertyValueOrBubble(propertyKey: String): JsonSyntaxTree throws Bubble {
-        propertyValueOrNull(propertyKey) as JsonSyntaxTree
+        propertyValueOrNull(propertyKey) ?? bubble()
       }
 
       public produce(p: JsonProducer): Void {
@@ -1283,7 +1283,7 @@ let us make *Boolean.jsonAdapter()* work as if it were built in.
         p.booleanValue(x);
       }
       public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): Boolean throws Bubble {
-        (t as JsonBoolean).content
+        if (t is JsonBoolean) { t.content } else { bubble() }
       }
     }
 
@@ -1297,7 +1297,7 @@ let us make *Boolean.jsonAdapter()* work as if it were built in.
         p.float64Value(x);
       }
       public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): Float64 throws Bubble {
-        (t as JsonNumeric).asFloat64()
+        if (t is JsonNumeric) { t.asFloat64() } else { bubble() }
       }
     }
 
@@ -1311,7 +1311,7 @@ let us make *Boolean.jsonAdapter()* work as if it were built in.
         p.int32Value(x);
       }
       public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): Int throws Bubble {
-        (t as JsonNumeric).asInt32()
+        if (t is JsonNumeric) { t.asInt32() } else { bubble() }
       }
     }
 
@@ -1325,7 +1325,7 @@ let us make *Boolean.jsonAdapter()* work as if it were built in.
         p.int64Value(x);
       }
       public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): Int64 throws Bubble {
-        (t as JsonNumeric).asInt64()
+        if (t is JsonNumeric) { t.asInt64() } else { bubble() }
       }
     }
 
@@ -1339,7 +1339,7 @@ let us make *Boolean.jsonAdapter()* work as if it were built in.
         p.stringValue(x);
       }
       public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): String throws Bubble {
-        (t as JsonString).content
+        if (t is JsonString) { t.content } else { bubble() }
       }
     }
 
@@ -1360,7 +1360,7 @@ let us make *Boolean.jsonAdapter()* work as if it were built in.
       }
       public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): List<T> throws Bubble {
         let b = new ListBuilder<T>();
-        let elements = (t as JsonArray).elements;
+        let elements = if (t is JsonArray) { t.elements } else { bubble() };
         let n = elements.length;
         var i = 0;
         while (i < n) {

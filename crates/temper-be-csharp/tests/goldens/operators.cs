@@ -56,7 +56,7 @@ public static class OperatorsGlobal
         do
         {
             n = n + 1;
-            if (Core.ModSafe(n, 2) != 0)
+            if (Core.Mod(n, 2) != 0)
             {
                 odd = odd + n;
             }

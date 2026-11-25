@@ -406,12 +406,10 @@ fn is_simple(p: &Program, pure: &HashSet<DeclId>, value: NodeId) -> bool {
         | Node::FromFun { value }
         | Node::AsNullable { value } => simple(&value),
         Node::ListLit { items } => all(items),
-        Node::Op {
-            may_bubble: false, ..
+        Node::Op { op, .. } if op.pure() => p.nodes.kids(value).iter().all(simple),
+        Node::And { .. } | Node::Or { .. } | Node::IfValue { .. } => {
+            p.nodes.kids(value).iter().all(simple)
         }
-        | Node::And { .. }
-        | Node::Or { .. }
-        | Node::IfValue { .. } => p.nodes.kids(value).iter().all(simple),
         Node::CallFunction {
             callee: d,
             may_bubble: false,

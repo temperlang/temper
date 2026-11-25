@@ -157,15 +157,24 @@ impl Point {
         t: temper_std::json::JsonSyntaxTree,
         ic: temper_std::json::InterchangeContext,
     ) -> temper_core::Result<Point> {
-        let obj = temper_core::cast::<temper_std::json::JsonObject>(t.clone())
-            .ok_or_else(temper_core::Error::new)?;
-        let x_json =
-            temper_core::cast::<temper_std::json::JsonNumeric>(obj.property_value_or_bubble("x")?)
-                .ok_or_else(temper_core::Error::new)?;
+        let obj = if temper_core::is::<temper_std::json::JsonObject>(t.clone()) {
+            temper_core::cast::<temper_std::json::JsonObject>(t.clone()).unwrap()
+        } else {
+            return Err(temper_core::Error::new())
+        };
+        let x_tree = obj.property_value_or_bubble("x")?;
+        let x_json = if temper_core::is::<temper_std::json::JsonNumeric>(x_tree.clone()) {
+            temper_core::cast::<temper_std::json::JsonNumeric>(x_tree.clone()).unwrap()
+        } else {
+            return Err(temper_core::Error::new())
+        };
         let x = temper_std::json::JsonNumericTrait::as_int32(&x_json)?;
-        let y_json =
-            temper_core::cast::<temper_std::json::JsonNumeric>(obj.property_value_or_bubble("y")?)
-                .ok_or_else(temper_core::Error::new)?;
+        let y_tree = obj.property_value_or_bubble("y")?;
+        let y_json = if temper_core::is::<temper_std::json::JsonNumeric>(y_tree.clone()) {
+            temper_core::cast::<temper_std::json::JsonNumeric>(y_tree.clone()).unwrap()
+        } else {
+            return Err(temper_core::Error::new())
+        };
         let y = temper_std::json::JsonNumericTrait::as_int32(&y_json)?;
         Ok(Point::new(x, y))
     }
@@ -280,25 +289,38 @@ impl Record {
         t: temper_std::json::JsonSyntaxTree,
         ic: temper_std::json::InterchangeContext,
     ) -> temper_core::Result<Record> {
-        let obj = temper_core::cast::<temper_std::json::JsonObject>(t.clone())
-            .ok_or_else(temper_core::Error::new)?;
-        let name_json =
-            temper_core::cast::<temper_std::json::JsonString>(obj.property_value_or_bubble("name")?)
-                .ok_or_else(temper_core::Error::new)?;
+        let obj = if temper_core::is::<temper_std::json::JsonObject>(t.clone()) {
+            temper_core::cast::<temper_std::json::JsonObject>(t.clone()).unwrap()
+        } else {
+            return Err(temper_core::Error::new())
+        };
+        let name_tree = obj.property_value_or_bubble("name")?;
+        let name_json = if temper_core::is::<temper_std::json::JsonString>(name_tree.clone()) {
+            temper_core::cast::<temper_std::json::JsonString>(name_tree.clone()).unwrap()
+        } else {
+            return Err(temper_core::Error::new())
+        };
         let name = name_json.content();
-        let active_json = temper_core::cast::<temper_std::json::JsonBoolean>(
-            obj.property_value_or_bubble("is-active")?,
-        )
-        .ok_or_else(temper_core::Error::new)?;
+        let active_tree = obj.property_value_or_bubble("is-active")?;
+        let active_json = if temper_core::is::<temper_std::json::JsonBoolean>(active_tree.clone()) {
+            temper_core::cast::<temper_std::json::JsonBoolean>(active_tree.clone()).unwrap()
+        } else {
+            return Err(temper_core::Error::new())
+        };
         let active = active_json.content();
-        let score_json = temper_core::cast::<temper_std::json::JsonNumeric>(
-            obj.property_value_or_bubble("score")?,
-        )
-        .ok_or_else(temper_core::Error::new)?;
+        let score_tree = obj.property_value_or_bubble("score")?;
+        let score_json = if temper_core::is::<temper_std::json::JsonNumeric>(score_tree.clone()) {
+            temper_core::cast::<temper_std::json::JsonNumeric>(score_tree.clone()).unwrap()
+        } else {
+            return Err(temper_core::Error::new())
+        };
         let score = temper_std::json::JsonNumericTrait::as_float64(&score_json)?;
-        let big_json =
-            temper_core::cast::<temper_std::json::JsonNumeric>(obj.property_value_or_bubble("big")?)
-                .ok_or_else(temper_core::Error::new)?;
+        let big_tree = obj.property_value_or_bubble("big")?;
+        let big_json = if temper_core::is::<temper_std::json::JsonNumeric>(big_tree.clone()) {
+            temper_core::cast::<temper_std::json::JsonNumeric>(big_tree.clone()).unwrap()
+        } else {
+            return Err(temper_core::Error::new())
+        };
         let big = temper_std::json::JsonNumericTrait::as_int64(&big_json)?;
         let nickname =
             temper_std::json::OrNullJsonAdapter::new(temper_std::json::string_json_adapter())
@@ -391,12 +413,17 @@ impl Circle {
         t: temper_std::json::JsonSyntaxTree,
         ic: temper_std::json::InterchangeContext,
     ) -> temper_core::Result<Circle> {
-        let obj = temper_core::cast::<temper_std::json::JsonObject>(t.clone())
-            .ok_or_else(temper_core::Error::new)?;
-        let radius_json = temper_core::cast::<temper_std::json::JsonNumeric>(
-            obj.property_value_or_bubble("radius")?,
-        )
-        .ok_or_else(temper_core::Error::new)?;
+        let obj = if temper_core::is::<temper_std::json::JsonObject>(t.clone()) {
+            temper_core::cast::<temper_std::json::JsonObject>(t.clone()).unwrap()
+        } else {
+            return Err(temper_core::Error::new())
+        };
+        let radius_tree = obj.property_value_or_bubble("radius")?;
+        let radius_json = if temper_core::is::<temper_std::json::JsonNumeric>(radius_tree.clone()) {
+            temper_core::cast::<temper_std::json::JsonNumeric>(radius_tree.clone()).unwrap()
+        } else {
+            return Err(temper_core::Error::new())
+        };
         let radius = temper_std::json::JsonNumericTrait::as_int32(&radius_json)?;
         Ok(Circle::new(radius))
     }
@@ -487,17 +514,24 @@ impl Rect {
         t: temper_std::json::JsonSyntaxTree,
         ic: temper_std::json::InterchangeContext,
     ) -> temper_core::Result<Rect> {
-        let obj = temper_core::cast::<temper_std::json::JsonObject>(t.clone())
-            .ok_or_else(temper_core::Error::new)?;
-        let width_json = temper_core::cast::<temper_std::json::JsonNumeric>(
-            obj.property_value_or_bubble("width")?,
-        )
-        .ok_or_else(temper_core::Error::new)?;
+        let obj = if temper_core::is::<temper_std::json::JsonObject>(t.clone()) {
+            temper_core::cast::<temper_std::json::JsonObject>(t.clone()).unwrap()
+        } else {
+            return Err(temper_core::Error::new())
+        };
+        let width_tree = obj.property_value_or_bubble("width")?;
+        let width_json = if temper_core::is::<temper_std::json::JsonNumeric>(width_tree.clone()) {
+            temper_core::cast::<temper_std::json::JsonNumeric>(width_tree.clone()).unwrap()
+        } else {
+            return Err(temper_core::Error::new())
+        };
         let width = temper_std::json::JsonNumericTrait::as_int32(&width_json)?;
-        let height_json = temper_core::cast::<temper_std::json::JsonNumeric>(
-            obj.property_value_or_bubble("height")?,
-        )
-        .ok_or_else(temper_core::Error::new)?;
+        let height_tree = obj.property_value_or_bubble("height")?;
+        let height_json = if temper_core::is::<temper_std::json::JsonNumeric>(height_tree.clone()) {
+            temper_core::cast::<temper_std::json::JsonNumeric>(height_tree.clone()).unwrap()
+        } else {
+            return Err(temper_core::Error::new())
+        };
         let height = temper_std::json::JsonNumericTrait::as_int32(&height_json)?;
         Ok(Rect::new(width, height))
     }
@@ -583,8 +617,11 @@ impl Shape {
         t: temper_std::json::JsonSyntaxTree,
         ic: temper_std::json::InterchangeContext,
     ) -> temper_core::Result<Shape> {
-        let obj = temper_core::cast::<temper_std::json::JsonObject>(t.clone())
-            .ok_or_else(temper_core::Error::new)?;
+        let obj = if temper_core::is::<temper_std::json::JsonObject>(t.clone()) {
+            temper_core::cast::<temper_std::json::JsonObject>(t.clone()).unwrap()
+        } else {
+            return Err(temper_core::Error::new())
+        };
         let value_for_radius = obj.property_value_or_null("radius");
         {
             if value_for_radius.is_some() {
@@ -699,11 +736,17 @@ impl Hello {
         t: temper_std::json::JsonSyntaxTree,
         ic: temper_std::json::InterchangeContext,
     ) -> temper_core::Result<Hello> {
-        let obj = temper_core::cast::<temper_std::json::JsonObject>(t.clone())
-            .ok_or_else(temper_core::Error::new)?;
-        let text_json =
-            temper_core::cast::<temper_std::json::JsonString>(obj.property_value_or_bubble("text")?)
-                .ok_or_else(temper_core::Error::new)?;
+        let obj = if temper_core::is::<temper_std::json::JsonObject>(t.clone()) {
+            temper_core::cast::<temper_std::json::JsonObject>(t.clone()).unwrap()
+        } else {
+            return Err(temper_core::Error::new())
+        };
+        let text_tree = obj.property_value_or_bubble("text")?;
+        let text_json = if temper_core::is::<temper_std::json::JsonString>(text_tree.clone()) {
+            temper_core::cast::<temper_std::json::JsonString>(text_tree.clone()).unwrap()
+        } else {
+            return Err(temper_core::Error::new())
+        };
         let text = text_json.content();
         Ok(Hello::new(text.clone()))
     }
@@ -794,11 +837,17 @@ impl Bye {
         t: temper_std::json::JsonSyntaxTree,
         ic: temper_std::json::InterchangeContext,
     ) -> temper_core::Result<Bye> {
-        let obj = temper_core::cast::<temper_std::json::JsonObject>(t.clone())
-            .ok_or_else(temper_core::Error::new)?;
-        let text_json =
-            temper_core::cast::<temper_std::json::JsonString>(obj.property_value_or_bubble("text")?)
-                .ok_or_else(temper_core::Error::new)?;
+        let obj = if temper_core::is::<temper_std::json::JsonObject>(t.clone()) {
+            temper_core::cast::<temper_std::json::JsonObject>(t.clone()).unwrap()
+        } else {
+            return Err(temper_core::Error::new())
+        };
+        let text_tree = obj.property_value_or_bubble("text")?;
+        let text_json = if temper_core::is::<temper_std::json::JsonString>(text_tree.clone()) {
+            temper_core::cast::<temper_std::json::JsonString>(text_tree.clone()).unwrap()
+        } else {
+            return Err(temper_core::Error::new())
+        };
         let text = text_json.content();
         Ok(Bye::new(text.clone()))
     }
@@ -884,8 +933,11 @@ impl Message {
         t: temper_std::json::JsonSyntaxTree,
         ic: temper_std::json::InterchangeContext,
     ) -> temper_core::Result<Message> {
-        let obj = temper_core::cast::<temper_std::json::JsonObject>(t.clone())
-            .ok_or_else(temper_core::Error::new)?;
+        let obj = if temper_core::is::<temper_std::json::JsonObject>(t.clone()) {
+            temper_core::cast::<temper_std::json::JsonObject>(t.clone()).unwrap()
+        } else {
+            return Err(temper_core::Error::new())
+        };
         let value_for_kind = obj.property_value_or_null("kind");
         {
             if value_for_kind.is_some()
@@ -1003,8 +1055,7 @@ impl Celsius {
         ic: temper_std::json::InterchangeContext,
     ) -> temper_core::Result<Celsius> {
         Ok(Celsius::new(temper_std::json::JsonNumericTrait::as_int32(
-            &temper_core::cast::<temper_std::json::JsonNumeric>(t.clone())
-                .ok_or_else(temper_core::Error::new)?,
+            &temper_core::cast::<temper_std::json::JsonNumeric>(t.clone()).unwrap(),
         )?,))
     }
 

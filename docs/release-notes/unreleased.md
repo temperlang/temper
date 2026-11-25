@@ -24,6 +24,7 @@
 - [`temper` and its `TEMPER_*` settings](#temper-and-its-temper_-settings)
 - [Fixes on Windows](#fixes-on-windows)
 - [🚨Breaking change: `try` and `catch` are reserved](#breaking-change-try-and-catch-are-reserved)
+- [🚨Breaking change: division by zero and failed casts panic](#breaking-change-division-by-zero-and-failed-casts-panic)
 
 ## 🚨Breaking change: Rest parameter syntax removed.
 
@@ -576,3 +577,25 @@ Core gains an `Error` interface, the root of declared failure types. A
 library's own type named `Error` still takes its place there.
 `throws X` for an `X` that isn't `Bubble`, a type parameter, or a
 failure type, which until now meant `throws Bubble`, is an error.
+
+## 🚨Breaking change: division by zero and failed casts panic
+
+Integer `/` and `%` by zero, and an `as` cast that fails, now panic, as
+reading past a list's end does, instead of bubbling, so no `orelse`
+handles them and functions using them needn't say `throws Bubble`.
+`Float64` `/` and `%` never fail: a zero divisor gives IEEE 754's
+infinities and NaN, as most backends already did. Check first where a
+value may be zero or of another type:
+
+```temper inert
+let ratio(a: Int, b: Int): Int? { if (b == 0) { null } else { a / b } }
+let side(s: Shape): Int? { if (s is Square) { s.side } else { null } }
+```
+
+`x as T orelse panic()` can drop its `orelse`. Java, C#, and Rust use
+their own division, whose zero-divisor error (`ArithmeticException`,
+`DivideByZeroException`, a Rust panic) is the panic. `@json` decoding
+and std's adapters check a tree's shape with `is`, so decoding JSON of
+another shape still fails as before. This is a first step toward
+replacing `Bubble`.
+

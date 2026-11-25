@@ -2192,7 +2192,7 @@ function temper.require_no_string_index(i)
     if temper.is_no_string_index(i) then
         return -1
     else
-        temper.bubble("required no string index but got " .. i)
+        error("failed cast: required no string index but got " .. i, 2)
     end
 end
 
@@ -2200,7 +2200,7 @@ function temper.require_string_index(i)
     if temper.is_string_index(i) then
         return i
     else
-        temper.bubble("required string index but got " .. i)
+        error("failed cast: required string index but got " .. i, 2)
     end
 end
 
@@ -2474,84 +2474,84 @@ end
 
 function temper.cast_to_boolean(thing)
     if type(thing) ~= 'boolean' then
-        return temper.bubble("cast to Boolean")
+        error("failed cast to Boolean", 2)
     end
     return thing
 end
 
 function temper.cast_to_float64(thing)
     if type(thing) ~= 'number' then
-        return temper.bubble("cast to Float64")
+        error("failed cast to Float64", 2)
     end
     return thing
 end
 
 function temper.cast_to_int(thing)
     if type(thing) ~= 'number' or thing ~= math_floor(thing) then
-        return temper.bubble("cast to Int")
+        error("failed cast to Int", 2)
     end
     return thing
 end
 
 function temper.cast_to_string(thing)
     if type(thing) ~= 'string' then
-        return temper.bubble("cast to String")
+        error("failed cast to String", 2)
     end
     return thing
 end
 
 function temper.cast_to_function(thing)
     if type(thing) ~= 'function' then
-        return temper.bubble("cast to Function")
+        error("failed cast to Function", 2)
     end
     return thing
 end
 
 function temper.cast_to_list(thing)
     if type(thing) ~= 'table' or thing[temper.type_tag] ~= 'List' then
-        return temper.bubble("cast to List")
+        error("failed cast to List", 2)
     end
     return thing
 end
 
 function temper.cast_to_listbuilder(thing)
     if type(thing) ~= 'table' or thing[temper.type_tag] ~= 'ListBuilder' then
-        return temper.bubble("cast to ListBuilder")
+        error("failed cast to ListBuilder", 2)
     end
     return thing
 end
 
 function temper.cast_to_listed(thing)
     if type(thing) ~= 'table' or (thing[temper.type_tag] ~= 'List' and thing[temper.type_tag] ~= 'ListBuilder') then
-        return temper.bubble("cast to Listed")
+        error("failed cast to Listed", 2)
     end
     return thing
 end
 
 function temper.cast_to_map(thing)
     if type(thing) ~= 'table' or thing[temper.type_tag] ~= 'Map' then
-        return temper.bubble("cast to Map")
+        error("failed cast to Map", 2)
     end
     return thing
 end
 
 function temper.cast_to_mapbuilder(thing)
     if type(thing) ~= 'table' or thing[temper.type_tag] ~= 'MapBuilder' then
-        return temper.bubble("cast to MapBuilder")
+        error("failed cast to MapBuilder", 2)
     end
     return thing
 end
 
 function temper.cast_to_map(thing)
     if type(thing) ~= 'table' or (thing[temper.type_tag] ~= 'Map' and thing[temper.type_tag] ~= 'MapBuilder') then
-        return temper.bubble("cast to Mapped")
+        error("failed cast to Mapped", 2)
     end
     return thing
 end
 
 function temper.cast_to_null(thing)
     if thing ~= temper.null then
-        return temper.bubble("cast to null")
+        error("failed cast to null", 2)
     end
     return thing
 end
@@ -2563,7 +2563,7 @@ function temper.cast_to(thing, to)
     if type(tag) == "table" and tag.super[to.typename] then
         return thing
     else
-        return temper.bubble("cast to " .. tostring(to.typename) .. " (was a " .. tostring(tag) .. ")")
+        error("failed cast to " .. tostring(to.typename) .. " (was a " .. tostring(tag) .. ")", 2)
     end
 end
 

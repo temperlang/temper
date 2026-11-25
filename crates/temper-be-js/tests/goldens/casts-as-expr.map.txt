@@ -1,54 +1,37 @@
 # generated line:column -> source:line:column, and the text at each
-8:1 -> ../as-expr.temper.md:7:5  class Apple extends type() { <- interface Apple { public get
-8:7 -> ../as-expr.temper.md:7:15 (Apple)  Apple extends type() { <- Apple { public get name(): S
-8:12 -> ../as-expr.temper.md:7:5   extends type() { <- interface Apple { public get
-9:3 -> ../as-expr.temper.md:7:30  /** @type {string} */ <- get name(): String; }
-10:3 -> ../as-expr.temper.md:7:30  name = /** @type {any} */ (u <- get name(): String; }
-13:1 -> ../as-expr.temper.md:8:5  class Fuji extends type(Appl <- class Fuji extends Apple { p
-13:7 -> ../as-expr.temper.md:8:11 (Fuji)  Fuji extends type(Apple) { <- Fuji extends Apple { public
-13:11 -> ../as-expr.temper.md:8:5   extends type(Apple) { <- class Fuji extends Apple { p
-14:3 -> ../as-expr.temper.md:8:39  /** @returns {string} */ <- get name(): String { "Fuji"
-15:3 -> ../as-expr.temper.md:8:39  get name() { <- get name(): String { "Fuji"
-15:7 -> ../as-expr.temper.md:8:43 (name)  name() { <- name(): String { "Fuji" } }
-16:5 -> ../as-expr.temper.md:8:60  return "Fuji"; <- "Fuji" } }
-20:1 -> ../as-expr.temper.md:9:5  class Gala extends type(Appl <- class Gala extends Apple { p
-20:7 -> ../as-expr.temper.md:9:11 (Gala)  Gala extends type(Apple) { <- Gala extends Apple { public
-20:11 -> ../as-expr.temper.md:9:5   extends type(Apple) { <- class Gala extends Apple { p
-21:3 -> ../as-expr.temper.md:9:39  /** @returns {string} */ <- get name(): String { "Gala"
-22:3 -> ../as-expr.temper.md:9:39  get name() { <- get name(): String { "Gala"
-22:7 -> ../as-expr.temper.md:9:43 (name)  name() { <- name(): String { "Gala" } }
-23:5 -> ../as-expr.temper.md:9:60  return "Gala"; <- "Gala" } }
-27:1 -> ../as-expr.temper.md:13:5  { <- do {
-28:3 -> ../as-expr.temper.md:14:7  /** @type {Apple | null} */ <- var x: Apple?;
-29:3 -> ../as-expr.temper.md:14:7  let x; <- var x: Apple?;
-30:3 -> ../as-expr.temper.md:15:7  x = new Fuji(); <- x = new Fuji();
-31:3 -> ../as-expr.temper.md:21:7  console.log(requireNotNull(x <- console.log((x as Apple).nam
-32:3 -> ../as-expr.temper.md:22:7  console.log(requireInstanceO <- console.log((x as Fuji).name
-33:3 -> ../as-expr.temper.md:34:7  x = new Gala(); <- x = new Gala(); // Override
-34:3 -> ../as-expr.temper.md:35:7  /** @type {string} */ <- console.log((x as Fuji).name
-35:3 -> ../as-expr.temper.md:35:7  let t$0; <- console.log((x as Fuji).name
-36:3 -> ../as-expr.temper.md:35:7  try { <- console.log((x as Fuji).name
-42:3 -> ../as-expr.temper.md:35:7  console.log(t$0); <- console.log((x as Fuji).name
-43:3 -> ../as-expr.temper.md:39:7  const y = x; <- let y: AnyValue? = x;
-44:3 -> ../as-expr.temper.md:40:7  /** @type {string} */ <- console.log((y as Apple).nam
-45:3 -> ../as-expr.temper.md:40:7  let t$1; <- console.log((y as Apple).nam
-46:3 -> ../as-expr.temper.md:40:7  try { <- console.log((y as Apple).nam
-52:3 -> ../as-expr.temper.md:40:7  console.log(t$1); <- console.log((y as Apple).nam
-53:3 -> ../as-expr.temper.md:41:7  /** @type {string} */ <- console.log((y as Gala).name
-54:3 -> ../as-expr.temper.md:41:7  let t$2; <- console.log((y as Gala).name
-55:3 -> ../as-expr.temper.md:41:7  try { <- console.log((y as Gala).name
-61:3 -> ../as-expr.temper.md:41:7  console.log(t$2); <- console.log((y as Gala).name
-62:3 -> ../as-expr.temper.md:42:7  /** @type {string} */ <- console.log((y as Fuji).name
-63:3 -> ../as-expr.temper.md:42:7  let t$3; <- console.log((y as Fuji).name
-64:3 -> ../as-expr.temper.md:42:7  try { <- console.log((y as Fuji).name
-70:3 -> ../as-expr.temper.md:42:7  console.log(t$3); <- console.log((y as Fuji).name
-71:3 -> ../as-expr.temper.md:46:7  x = null; <- x = null;
-72:3 -> ../as-expr.temper.md:47:7  /** @type {string} */ <- console.log(do { x as Apple;
-73:3 -> ../as-expr.temper.md:47:7  let t$4; <- console.log(do { x as Apple;
-74:3 -> ../as-expr.temper.md:47:7  try { <- console.log(do { x as Apple;
-75:5 -> ../as-expr.temper.md:47:24  requireNotNull(x); <- x as Apple; "Tasty nothing."
-81:3 -> ../as-expr.temper.md:47:7  console.log(t$4); <- console.log(do { x as Apple;
-83:1 -> ../as-expr.temper.md:65:5  export const thing0 = false; <- export let thing0: AnyValue
-84:1 -> ../as-expr.temper.md:66:5  export const thing1 = 1; <- export let thing1: AnyValue
-85:1 -> ../as-expr.temper.md:67:5  export const thing2 = "two"; <- export let thing2: AnyValue
-86:1 -> ../as-expr.temper.md:68:5  export const thing3 = 3.14; <- export let thing3: AnyValue
+3:1 -> ../as-expr.temper.md:7:5  class Apple extends type() { <- interface Apple { public get
+3:7 -> ../as-expr.temper.md:7:15 (Apple)  Apple extends type() { <- Apple { public get name(): S
+3:12 -> ../as-expr.temper.md:7:5   extends type() { <- interface Apple { public get
+4:3 -> ../as-expr.temper.md:7:30  /** @type {string} */ <- get name(): String; }
+5:3 -> ../as-expr.temper.md:7:30  name = /** @type {any} */ (u <- get name(): String; }
+8:1 -> ../as-expr.temper.md:8:5  class Fuji extends type(Appl <- class Fuji extends Apple { p
+8:7 -> ../as-expr.temper.md:8:11 (Fuji)  Fuji extends type(Apple) { <- Fuji extends Apple { public
+8:11 -> ../as-expr.temper.md:8:5   extends type(Apple) { <- class Fuji extends Apple { p
+9:3 -> ../as-expr.temper.md:8:39  /** @returns {string} */ <- get name(): String { "Fuji"
+10:3 -> ../as-expr.temper.md:8:39  get name() { <- get name(): String { "Fuji"
+10:7 -> ../as-expr.temper.md:8:43 (name)  name() { <- name(): String { "Fuji" } }
+11:5 -> ../as-expr.temper.md:8:60  return "Fuji"; <- "Fuji" } }
+15:1 -> ../as-expr.temper.md:9:5  class Gala extends type(Appl <- class Gala extends Apple { p
+15:7 -> ../as-expr.temper.md:9:11 (Gala)  Gala extends type(Apple) { <- Gala extends Apple { public
+15:11 -> ../as-expr.temper.md:9:5   extends type(Apple) { <- class Gala extends Apple { p
+16:3 -> ../as-expr.temper.md:9:39  /** @returns {string} */ <- get name(): String { "Gala"
+17:3 -> ../as-expr.temper.md:9:39  get name() { <- get name(): String { "Gala"
+17:7 -> ../as-expr.temper.md:9:43 (name)  name() { <- name(): String { "Gala" } }
+18:5 -> ../as-expr.temper.md:9:60  return "Gala"; <- "Gala" } }
+22:1 -> ../as-expr.temper.md:13:5  { <- do {
+23:3 -> ../as-expr.temper.md:14:7  /** @type {Apple | null} */ <- var x: Apple?;
+24:3 -> ../as-expr.temper.md:14:7  let x; <- var x: Apple?;
+25:3 -> ../as-expr.temper.md:15:7  x = new Fuji(); <- x = new Fuji();
+26:3 -> ../as-expr.temper.md:21:7  console.log(requireNotNull(x <- console.log((x as Apple).nam
+27:3 -> ../as-expr.temper.md:22:7  console.log(requireInstanceO <- console.log((x as Fuji).name
+28:3 -> ../as-expr.temper.md:34:7  x = new Gala(); <- x = new Gala(); // Override
+29:3 -> ../as-expr.temper.md:35:7  console.log(x != null && x i <- console.log(if (x is Fuji) {
+30:3 -> ../as-expr.temper.md:39:7  const y = x; <- let y: AnyValue? = x;
+31:3 -> ../as-expr.temper.md:40:7  console.log(requireInstanceO <- console.log((y as Apple).nam
+32:3 -> ../as-expr.temper.md:41:7  console.log(requireInstanceO <- console.log((y as Gala).name
+33:3 -> ../as-expr.temper.md:45:7  x = null; <- x = null;
+34:3 -> ../as-expr.temper.md:46:7  console.log(x != null ? "Tas <- console.log(if (x is Apple)
+36:1 -> ../as-expr.temper.md:63:5  export const thing0 = false; <- export let thing0: AnyValue
+37:1 -> ../as-expr.temper.md:64:5  export const thing1 = 1; <- export let thing1: AnyValue
+38:1 -> ../as-expr.temper.md:65:5  export const thing2 = "two"; <- export let thing2: AnyValue
+39:1 -> ../as-expr.temper.md:66:5  export const thing3 = 3.14; <- export let thing3: AnyValue

@@ -43,11 +43,23 @@ public static class HostFailuresSeveralLibrariesGlobal
         }
     }
 
+    internal static int Nonzero(int n)
+    {
+        if (n == 0)
+        {
+            return Core.Bubble<int>();
+        }
+        else
+        {
+            return n;
+        }
+    }
+
     internal static int Ratio(string key, string count)
     {
         try
         {
-            return Core.Div(HostLookup(key), CountFailuresGlobal.ParseCount(count));
+            return Core.Div(HostLookup(key), Nonzero(CountFailuresGlobal.ParseCount(count)));
         }
         catch (Exception failure1) when (failure1 is global::TemperLang.Core.Bubble || failure1 is IFailure)
         {

@@ -258,15 +258,7 @@ end
 ---@param ncols integer
 ---@return integer
 local function rows(values, ncols)
-  ---@type integer
-  local t_1
-  local t_2, t_3 = temper.pcall(function()
-    t_1 = temper.int32_div(temper.list_length(values), ncols)
-  end)
-  if not t_2 then
-    error("panic\ncaused by: " .. tostring(t_3))
-  end
-  return t_1
+  return temper.int32_div(temper.list_length(values), ncols)
 end
 
 ---@param grid libraries.Grid
@@ -311,13 +303,9 @@ local function total(values)
   local sum = 0.0
   ---@param x number
   local function fn(x)
-    local t_1, t_2 = temper.pcall(function()
-      local part = x / 2.0
-      sum = sum + part
-    end)
-    if not t_1 then
-      error("panic\ncaused by: " .. tostring(t_2))
-    end
+    local part = x / 2.0
+    sum = sum + part
+    local _ = nil
   end
   each(values, fn)
   return sum
@@ -326,15 +314,7 @@ end
 ---@param x number
 ---@return number
 local function half(x)
-  ---@type number
-  local t_1
-  local t_2, t_3 = temper.pcall(function()
-    t_1 = x / 2.0
-  end)
-  if not t_2 then
-    error("panic\ncaused by: " .. tostring(t_3))
-  end
-  return t_1
+  return x / 2.0
 end
 
 ---@param x number

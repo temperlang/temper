@@ -28,7 +28,7 @@ public static class HostFailuresPanicPassesSeveralLibrariesHandlerGlobal
             }
             p = Core.Div(10, n - m);
         }
-        catch (Exception failure1) when (failure1 is global::TemperLang.Core.Bubble || failure1 is IFailure)
+        catch (Exception failure1) when (failure1 is IFailure)
         {
             p = -1;
         }

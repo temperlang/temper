@@ -52,11 +52,7 @@ public final class LibrariesGlobal {
     }
 
     static int rows(List<Double> values, int ncols) {
-        try {
-            return Core.divIntInt(values.size(), ncols);
-        } catch (Bubble bubble) {
-            throw new AssertionError("panic", bubble);
-        }
+        return values.size() / ncols;
     }
 
     static Grid scaled(Grid grid) {
@@ -92,23 +88,15 @@ public final class LibrariesGlobal {
         final SumCell sum = new SumCell();
         sum.value = 0.0;
         DoubleConsumer fn = x -> {
-            try {
-                double part = x / 2.0;
-                sum.value = sum.value + part;
-            } catch (Bubble bubble) {
-                throw new AssertionError("panic", bubble);
-            }
+            double part = x / 2.0;
+            sum.value = sum.value + part;
         };
         each(values, fn);
         return sum.value;
     }
 
     static double half(double x) {
-        try {
-            return x / 2.0;
-        } catch (Bubble bubble) {
-            throw new AssertionError("panic", bubble);
-        }
+        return x / 2.0;
     }
 
     static double cube(double x) {

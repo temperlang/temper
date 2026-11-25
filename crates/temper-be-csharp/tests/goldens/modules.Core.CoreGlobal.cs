@@ -4,14 +4,7 @@ public static class CoreGlobal
 {
     public static int Share(int n, int d)
     {
-        try
-        {
-            return global::TemperLang.Core.Core.Div(n, d);
-        }
-        catch (global::TemperLang.Core.Bubble)
-        {
-            return 0;
-        }
+        return global::TemperLang.Core.Core.Div(n, d);
     }
 
     public static Ratio? RatioOf(int n, int d)

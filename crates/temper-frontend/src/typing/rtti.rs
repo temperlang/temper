@@ -137,40 +137,6 @@ impl Settle {
         (types.args(t).iter().enumerate()).any(|(i, a)| !variant(i) && !have.contains(a))
     }
 
-    /// Whether `subject as target` may bubble: when it's allowed and
-    /// checks something, a downcast or that the subject isn't null,
-    /// judged by the subject's type, whatever its value. Not where either
-    /// type isn't fully known. Null passes a nullable target, as `x as
-    /// T?`.
-    pub(super) fn cast_bubbles(&mut self, args: &[NodeId]) -> bool {
-        let &[subject, target] = args else {
-            return false;
-        };
-        let written = target;
-        let target = self.strip_nullable(target);
-        let s = self.known_type(subject);
-        let s_inner = self.non_null(s);
-        let s_judged = self.typing.types.upper(s_inner);
-        let t = self.eval_type(target);
-        if !self.is_nominal(s_judged) || !self.is_nominal(t) {
-            return false;
-        }
-        let types = &self.typing.types;
-        if self.is_concrete(s_judged)
-            && self.is_concrete(t)
-            && types.base(s_judged) != types.base(t)
-        {
-            return false;
-        }
-        if self.rtti_subtype(s_inner, t) == Some(true) {
-            return s != s_inner && target == written;
-        }
-        // Not where the check is an error.
-        !self.typing.types.no_downcast(t)
-            && self.rtti_subtype(t, s_judged) == Some(true)
-            && !self.introduces_args(s_judged, t)
-    }
-
     /// `t` without its `?`, as `String` for `String?`.
     pub(super) fn non_null(&self, t: TypeId) -> TypeId {
         match self.typing.types.get(t) {

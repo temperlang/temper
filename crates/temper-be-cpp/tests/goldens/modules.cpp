@@ -162,11 +162,7 @@ namespace modules {
 namespace core = temper::core;
 
 int32_t share(int32_t n, int32_t d) {
-  try {
-    return core::Int::div_wrap(n, d);
-  } catch (core::TemperBubble const &) {
-    return 0;
-  }
+  return core::Int::div_wrap(n, d);
 }
 
 std::shared_ptr<Ratio> Ratio::make(int32_t n, int32_t d) {

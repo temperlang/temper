@@ -40,17 +40,7 @@ public static class BubbleGlobal
         string suffix;
         try
         {
-            int t1;
-            try
-            {
-                Core.CastToNonNull<string>(x);
-                t1 = 1;
-            }
-            catch (global::TemperLang.Core.Bubble)
-            {
-                t1 = 0;
-            }
-            suffix = More(t1).ToString(CultureInfo.InvariantCulture);
+            suffix = More(x != null ? 1 : 0).ToString(CultureInfo.InvariantCulture);
         }
         catch (global::TemperLang.Core.Bubble)
         {
@@ -137,10 +127,19 @@ public static class BubbleGlobal
 
     internal static string ViaOrElse(int n)
     {
+        int t1;
+        try
+        {
+            t1 = FirstOver(n);
+        }
+        catch (global::TemperLang.Core.Bubble)
+        {
+            t1 = -1;
+        }
         int t2;
         try
         {
-            t2 = FirstOver(n);
+            t2 = SumSkipping(n);
         }
         catch (global::TemperLang.Core.Bubble)
         {
@@ -149,22 +148,13 @@ public static class BubbleGlobal
         int t3;
         try
         {
-            t3 = SumSkipping(n);
+            t3 = TenTimes(n);
         }
         catch (global::TemperLang.Core.Bubble)
         {
             t3 = -1;
         }
-        int t4;
-        try
-        {
-            t4 = TenTimes(n);
-        }
-        catch (global::TemperLang.Core.Bubble)
-        {
-            t4 = -1;
-        }
-        return string.Create(CultureInfo.InvariantCulture, $"{t2} {t3} {t4}");
+        return string.Create(CultureInfo.InvariantCulture, $"{t1} {t2} {t3}");
     }
 
     internal static int UnreachableInt()
@@ -194,7 +184,7 @@ public static class BubbleGlobal
 
     internal static int Half(int n)
     {
-        if (Core.ModSafe(n, 2) != 0)
+        if (Core.Mod(n, 2) != 0)
         {
             Bail();
             throw Core.Panic("panic");
@@ -205,7 +195,7 @@ public static class BubbleGlobal
         }
         else
         {
-            return Core.DivSafe(n, 2);
+            return Core.Div(n, 2);
         }
     }
 
@@ -272,45 +262,54 @@ public static class BubbleGlobal
         Report("hi");
         Report(null);
         console.Log(CalcRows(3, 6).ToString(CultureInfo.InvariantCulture));
+        int t4;
+        try
+        {
+            t4 = CountBelow("abc");
+        }
+        catch (global::TemperLang.Core.Bubble)
+        {
+            t4 = -1;
+        }
+        console.Log(t4.ToString(CultureInfo.InvariantCulture));
         int t5;
         try
         {
-            t5 = CountBelow("abc");
+            t5 = FirstOver(1);
         }
         catch (global::TemperLang.Core.Bubble)
         {
             t5 = -1;
         }
-        console.Log(t5.ToString(CultureInfo.InvariantCulture));
-        int t6;
+        int? t6;
         try
         {
             t6 = FirstOver(1);
         }
         catch (global::TemperLang.Core.Bubble)
         {
-            t6 = -1;
+            t6 = null;
         }
-        int? t7;
-        try
-        {
-            t7 = FirstOver(1);
-        }
-        catch (global::TemperLang.Core.Bubble)
-        {
-            t7 = null;
-        }
-        console.Log(t6.ToString(CultureInfo.InvariantCulture) + " " + (IsNone(t7) ? "true" : "false"));
+        console.Log(t5.ToString(CultureInfo.InvariantCulture) + " " + (IsNone(t6) ? "true" : "false"));
         console.Log(ViaOrElse(2));
         console.Log(ViaOrElse(12));
         string @string = Pick(true).ToString(CultureInfo.InvariantCulture) + " ";
         string? subject = Named(true);
         string? subject2 = Named(false);
         console.Log(@string + (subject == null ? "-" : subject) + " " + (subject2 == null ? "null" : subject2));
+        int t7;
+        try
+        {
+            t7 = Half(4);
+        }
+        catch (global::TemperLang.Core.Bubble)
+        {
+            t7 = -1;
+        }
         int t8;
         try
         {
-            t8 = Half(4);
+            t8 = Half(3);
         }
         catch (global::TemperLang.Core.Bubble)
         {
@@ -319,22 +318,13 @@ public static class BubbleGlobal
         int t9;
         try
         {
-            t9 = Half(3);
+            t9 = Half(-2);
         }
         catch (global::TemperLang.Core.Bubble)
         {
             t9 = -1;
         }
-        int t10;
-        try
-        {
-            t10 = Half(-2);
-        }
-        catch (global::TemperLang.Core.Bubble)
-        {
-            t10 = -1;
-        }
-        console.Log(string.Create(CultureInfo.InvariantCulture, $"{t8} {t9} {t10}"));
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{t7} {t8} {t9}"));
         console.Log(Chosen(true).ToString(CultureInfo.InvariantCulture) + " " + Shout("hey"));
         Branch(0, 2);
         Branch(2, 0);

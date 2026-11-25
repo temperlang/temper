@@ -81,9 +81,16 @@ def _reading(key: str, count: str, /) -> int:
         raise _Unreadable(key) from failure
 
 
+def _nonzero(n: int, /) -> int:
+    if n == 0:
+        raise _Bubble()
+    else:
+        return n
+
+
 def _ratio(key: str, count: str, /) -> int:
     try:
-        return _int_div(host_lookup(key), _parse_count(count))
+        return _int_div(host_lookup(key), _nonzero(_parse_count(count)))
     except Exception as t_0:
         if not isinstance(t_0, (_Bubble, _Failure)):
             raise t_0

@@ -93,9 +93,9 @@ public static class AsyncTurnsGlobal
                 {
                     break;
                 }
-                if (Core.ModSafe(n, 2) == 0)
+                if (Core.Mod(n, 2) == 0)
                 {
-                    n = Core.DivSafe(n, 2);
+                    n = Core.Div(n, 2);
                 }
                 else
                 {
@@ -135,11 +135,11 @@ public static class AsyncTurnsGlobal
 
     public static int Halve(int n)
     {
-        if (Core.ModSafe(n, 2) != 0)
+        if (Core.Mod(n, 2) != 0)
         {
             return Core.Bubble<int>();
         }
-        return Core.DivSafe(n, 2);
+        return Core.Div(n, 2);
     }
 
     static AsyncTurnsGlobal()

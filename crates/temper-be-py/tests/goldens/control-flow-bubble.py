@@ -3,7 +3,6 @@ from temper_core import (
     LoggingConsole as _LoggingConsole,
     arith_int_mod as _arith_int_mod,
     boolean_to_string as _boolean_to_string,
-    cast_none as _cast_none,
     int_add as _int_add,
     int_div as _int_div,
     int_mul as _int_mul,
@@ -31,13 +30,7 @@ def _report(x: str | None, /) -> None:
     except _Bubble:
         message = 'null'
     try:
-        t_0: int
-        try:
-            _cast_none(x)
-            t_0 = 1
-        except _Bubble:
-            t_0 = 0
-        suffix = str(_more(t_0))
+        suffix = str(_more(1 if x is not None else 0))
     except _Bubble:
         suffix = ''
     _console.log(message + suffix)

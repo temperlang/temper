@@ -290,7 +290,7 @@ def arith_int_mod(dividend: int, divisor: int) -> int:
     arith_int_mod(-5, 3) == -2
     """
     if divisor == 0:
-        raise Bubble("division by zero")
+        panic("division by zero")
     q = dividend // divisor
     if (dividend ^ divisor) < 0 and q * divisor != dividend:
         q += 1
@@ -362,9 +362,9 @@ def isinstance_char(val: T) -> bool:
 
 
 def cast_none(val: Union[T, None]) -> T:
-    "Checks that value is not None, else bubbling."
+    "Checks that value is not None, else panicking."
     if val is None:
-        raise Bubble()
+        panic("failed cast")
     return val
 
 
@@ -372,17 +372,17 @@ _cbtT = TypeVar("_cbtT")
 
 
 def cast_by_type(val: Union[_cbtT, Any], py_type: Type[_cbtT]) -> _cbtT:
-    "Cast to a python type by an isinstance check, else bubbling."
+    "Cast to a python type by an isinstance check, else panicking."
     if isinstance(val, py_type):
         return val
     else:
-        raise Bubble()
+        panic("failed cast")
 
 
 def cast_by_test(val: T, predicate: Callable[[T], bool]) -> Any:
     "This cast validates that a temper function meets some predicate, e.g. callable."
     if not predicate(val):
-        raise Bubble()
+        panic("failed cast")
     return val
 
 
@@ -533,23 +533,24 @@ def int_div(a: int, b: int) -> int:
     if a <= -0x8000_0000 and b < 0:
         return int_clamp(int(a / b))
     if b == 0:
-        raise Bubble("division by zero")
+        panic("division by zero")
     return int(a / b)
 
 
 def float64_div(a: float, b: float) -> float:
-    "Float64 division, bubbling for a zero divisor, where Python raises."
+    "Float64 division, IEEE 754's for a zero divisor, where Python raises."
     if b == 0.0:
-        raise Bubble("division by zero")
+        if a == 0.0 or isnan(a):
+            return nan
+        return copysign(inf, a) * copysign(1.0, b)
     return a / b
 
 
 def float64_mod(a: float, b: float) -> float:
-    "Float64 remainder, bubbling where `fmod` raises (a zero divisor)."
-    try:
-        return fmod(a, b)
-    except ValueError as e:
-        raise Bubble(*e.args) from e
+    "Float64 remainder, IEEE 754's NaN where `fmod` raises."
+    if b == 0.0 or isinf(a):
+        return nan
+    return fmod(a, b)
 
 
 def mapped_get(mapping: Mapping[T, U], key: T) -> U:
@@ -625,7 +626,7 @@ def int64_div(a: int, b: int) -> int:
     if a <= -0x8000_0000_0000_0000 and b < 0:
         return int64_clamp(int(a / b))
     if b == 0:
-        raise Bubble("division by zero")
+        panic("division by zero")
     r = a // b
     if (a ^ b) < 0 and r * b != a:
         r += 1
@@ -854,14 +855,14 @@ def require_string_index(i: int) -> int:
     "Checked cast from i to StringIndex, an alias for a non-negative int"
     if i >= 0:
         return i
-    raise Bubble(f"require_string_index; {i!r} not >= 0 ")
+    panic(f"failed cast: require_string_index; {i!r} not >= 0")
 
 
 def require_no_string_index(i: int) -> int:
     "Checked cast from i to NoStringIndex, a negative int"
     if i < 0:
         return i
-    raise Bubble(f"require_no_string_index; {i!r} not < 0 ")
+    panic(f"failed cast: require_no_string_index; {i!r} not < 0")
 
 
 utf32_type_code: str = ""

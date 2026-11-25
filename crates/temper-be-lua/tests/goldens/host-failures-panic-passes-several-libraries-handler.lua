@@ -63,7 +63,7 @@ if not temper.catch(function()
     error("panic")
   end
   p = temper.int32_div(10, temper.int32_sub(n, m))
-end, temper.Bubble, temper.Failure) then
+end, temper.Failure) then
   p = -1
 end
 print("after " .. p)

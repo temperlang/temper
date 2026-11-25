@@ -57,22 +57,12 @@ public final class IndicesGlobal {
 
     static boolean has3(String s, int c) {
         int i = indexOfChar(s, c);
-        try {
-            Core.requireStringIndex(i);
-            return true;
-        } catch (Bubble ignored) {
-            return false;
-        }
+        return i >= 0;
     }
 
     static boolean has4(String s, int c) {
         int i = indexOfChar(s, c);
-        try {
-            Core.requireNoStringIndex(i);
-            return false;
-        } catch (Bubble ignored) {
-            return true;
-        }
+        return i >= 0;
     }
 
     static {

@@ -22,7 +22,7 @@ name isn't a type there.
     }
 
     let firstText<T>(effect: Effect<T>): String {
-      do { (effect as Append<T>).text } orelse "none"
+      if (effect is Append<T>) { effect.text } else { "none" }
     }
 
     let effects: List<Effect<Int>> = [

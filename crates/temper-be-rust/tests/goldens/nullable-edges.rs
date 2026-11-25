@@ -26,10 +26,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 longer(None::<Arc<String>>),
                 longer(Some("x"))
             );
-            println!(
-                "{}",
-                must(Some("ok")).unwrap_or_else(|_| Arc::new("bad".to_string()))
-            );
+            println!("{}", must(Some("ok")).unwrap_or_else(|_| sure(Some("bad"))));
             println!("{} {}", tried("7"), tried("x"));
             println!(
                 "{} {}",
@@ -82,9 +79,18 @@ pub(crate) fn same_long(a: Option<i64>, b: Option<i64>) -> bool {
     a == b
 }
 
+pub(crate) fn sure(s: Option<impl ToArcString>) -> Arc<String> {
+    let s = s.map(|x| x.to_arc_string());
+    s.clone().unwrap()
+}
+
 pub(crate) fn must(s: Option<impl ToArcString>) -> temper_core::Result<Arc<String>> {
     let s = s.map(|x| x.to_arc_string());
-    s.clone().ok_or_else(temper_core::Error::new)
+    if let Some(s) = &s {
+        Ok(s.clone())
+    } else {
+        Err(temper_core::Error::new())
+    }
 }
 
 pub(crate) fn longer(s: Option<impl ToArcString>) -> i32 {
@@ -179,14 +185,19 @@ impl PartTrait for NoCode {
 
 temper_core::impl_any_value_trait!(NoCode, [Part]);
 
+pub(crate) fn code_of(part: Part) -> temper_core::Result<Code> {
+    if temper_core::is::<Code>(part.clone()) {
+        Ok(temper_core::cast::<Code>(part.clone()).unwrap())
+    } else {
+        Err(temper_core::Error::new())
+    }
+}
+
 pub(crate) fn first_code(attempt: Part) -> temper_core::Result<i32> {
     Ok({
         let attempt2 = (|| {
             Ok::<_, temper_core::Error>(temper_core::string::get(
-                &temper_core::cast::<Code>(attempt.clone())
-                    .ok_or_else(temper_core::Error::new)?
-                    .0
-                    .text,
+                &code_of(attempt.clone())?.0.text,
                 0usize,
             ))
         })();

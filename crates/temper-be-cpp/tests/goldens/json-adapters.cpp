@@ -218,10 +218,12 @@ void Point::encodeToJson(std::shared_ptr<temper_std::JsonProducer> const & p) co
 }
 
 std::shared_ptr<Point> Point::decodeFromJson(std::shared_ptr<temper_std::JsonSyntaxTree> const & t, std::shared_ptr<temper_std::InterchangeContext> const &) {
-  std::shared_ptr<temper_std::JsonObject> obj = core::checked_cast<temper_std::JsonObject>(t);
-  std::shared_ptr<temper_std::JsonNumeric> xJson = core::checked_cast<temper_std::JsonNumeric>(obj->propertyValueOrBubble(TEMPER_STR("x")));
+  std::shared_ptr<temper_std::JsonObject> obj = dynamic_cast<temper_std::JsonObject const *>(t.get()) != nullptr ? core::checked_cast<temper_std::JsonObject>(t) : core::bubble<std::shared_ptr<temper_std::JsonObject>>();
+  std::shared_ptr<temper_std::JsonSyntaxTree> xTree = obj->propertyValueOrBubble(TEMPER_STR("x"));
+  std::shared_ptr<temper_std::JsonNumeric> xJson = dynamic_cast<temper_std::JsonNumeric const *>(xTree.get()) != nullptr ? core::checked_cast<temper_std::JsonNumeric>(xTree) : core::bubble<std::shared_ptr<temper_std::JsonNumeric>>();
   int32_t x = xJson->asInt32();
-  std::shared_ptr<temper_std::JsonNumeric> yJson = core::checked_cast<temper_std::JsonNumeric>(obj->propertyValueOrBubble(TEMPER_STR("y")));
+  std::shared_ptr<temper_std::JsonSyntaxTree> yTree = obj->propertyValueOrBubble(TEMPER_STR("y"));
+  std::shared_ptr<temper_std::JsonNumeric> yJson = dynamic_cast<temper_std::JsonNumeric const *>(yTree.get()) != nullptr ? core::checked_cast<temper_std::JsonNumeric>(yTree) : core::bubble<std::shared_ptr<temper_std::JsonNumeric>>();
   int32_t y = yJson->asInt32();
   return Point::make(x, y);
 }
@@ -281,14 +283,18 @@ void Record::encodeToJson(std::shared_ptr<temper_std::JsonProducer> const & p) c
 }
 
 std::shared_ptr<Record> Record::decodeFromJson(std::shared_ptr<temper_std::JsonSyntaxTree> const & t, std::shared_ptr<temper_std::InterchangeContext> const & ic) {
-  std::shared_ptr<temper_std::JsonObject> obj = core::checked_cast<temper_std::JsonObject>(t);
-  std::shared_ptr<temper_std::JsonString> nameJson = core::checked_cast<temper_std::JsonString>(obj->propertyValueOrBubble(TEMPER_STR("name")));
+  std::shared_ptr<temper_std::JsonObject> obj = dynamic_cast<temper_std::JsonObject const *>(t.get()) != nullptr ? core::checked_cast<temper_std::JsonObject>(t) : core::bubble<std::shared_ptr<temper_std::JsonObject>>();
+  std::shared_ptr<temper_std::JsonSyntaxTree> nameTree = obj->propertyValueOrBubble(TEMPER_STR("name"));
+  std::shared_ptr<temper_std::JsonString> nameJson = dynamic_cast<temper_std::JsonString const *>(nameTree.get()) != nullptr ? core::checked_cast<temper_std::JsonString>(nameTree) : core::bubble<std::shared_ptr<temper_std::JsonString>>();
   core::Str name = nameJson->content;
-  std::shared_ptr<temper_std::JsonBoolean> activeJson = core::checked_cast<temper_std::JsonBoolean>(obj->propertyValueOrBubble(TEMPER_STR("is-active")));
+  std::shared_ptr<temper_std::JsonSyntaxTree> activeTree = obj->propertyValueOrBubble(TEMPER_STR("is-active"));
+  std::shared_ptr<temper_std::JsonBoolean> activeJson = dynamic_cast<temper_std::JsonBoolean const *>(activeTree.get()) != nullptr ? core::checked_cast<temper_std::JsonBoolean>(activeTree) : core::bubble<std::shared_ptr<temper_std::JsonBoolean>>();
   bool active = activeJson->content;
-  std::shared_ptr<temper_std::JsonNumeric> scoreJson = core::checked_cast<temper_std::JsonNumeric>(obj->propertyValueOrBubble(TEMPER_STR("score")));
+  std::shared_ptr<temper_std::JsonSyntaxTree> scoreTree = obj->propertyValueOrBubble(TEMPER_STR("score"));
+  std::shared_ptr<temper_std::JsonNumeric> scoreJson = dynamic_cast<temper_std::JsonNumeric const *>(scoreTree.get()) != nullptr ? core::checked_cast<temper_std::JsonNumeric>(scoreTree) : core::bubble<std::shared_ptr<temper_std::JsonNumeric>>();
   double score = scoreJson->asFloat64();
-  std::shared_ptr<temper_std::JsonNumeric> bigJson = core::checked_cast<temper_std::JsonNumeric>(obj->propertyValueOrBubble(TEMPER_STR("big")));
+  std::shared_ptr<temper_std::JsonSyntaxTree> bigTree = obj->propertyValueOrBubble(TEMPER_STR("big"));
+  std::shared_ptr<temper_std::JsonNumeric> bigJson = dynamic_cast<temper_std::JsonNumeric const *>(bigTree.get()) != nullptr ? core::checked_cast<temper_std::JsonNumeric>(bigTree) : core::bubble<std::shared_ptr<temper_std::JsonNumeric>>();
   int64_t big = bigJson->asInt64();
   std::shared_ptr<temper_std::OrNullJsonAdapter<core::Str>> orNullJsonAdapter = temper_std::OrNullJsonAdapter<core::Str>::make(temper_std::stringJsonAdapter());
   core::NullableParam<core::Str> nickname = orNullJsonAdapter->decodeFromJson(obj->propertyValueOrBubble(TEMPER_STR("nickname")), ic);
@@ -352,8 +358,9 @@ void Circle::encodeToJson(std::shared_ptr<temper_std::JsonProducer> const & p) c
 }
 
 std::shared_ptr<Circle> Circle::decodeFromJson(std::shared_ptr<temper_std::JsonSyntaxTree> const & t, std::shared_ptr<temper_std::InterchangeContext> const &) {
-  std::shared_ptr<temper_std::JsonObject> obj = core::checked_cast<temper_std::JsonObject>(t);
-  std::shared_ptr<temper_std::JsonNumeric> radiusJson = core::checked_cast<temper_std::JsonNumeric>(obj->propertyValueOrBubble(TEMPER_STR("radius")));
+  std::shared_ptr<temper_std::JsonObject> obj = dynamic_cast<temper_std::JsonObject const *>(t.get()) != nullptr ? core::checked_cast<temper_std::JsonObject>(t) : core::bubble<std::shared_ptr<temper_std::JsonObject>>();
+  std::shared_ptr<temper_std::JsonSyntaxTree> radiusTree = obj->propertyValueOrBubble(TEMPER_STR("radius"));
+  std::shared_ptr<temper_std::JsonNumeric> radiusJson = dynamic_cast<temper_std::JsonNumeric const *>(radiusTree.get()) != nullptr ? core::checked_cast<temper_std::JsonNumeric>(radiusTree) : core::bubble<std::shared_ptr<temper_std::JsonNumeric>>();
   int32_t radius = radiusJson->asInt32();
   return Circle::make(radius);
 }
@@ -396,10 +403,12 @@ void Rect::encodeToJson(std::shared_ptr<temper_std::JsonProducer> const & p) con
 }
 
 std::shared_ptr<Rect> Rect::decodeFromJson(std::shared_ptr<temper_std::JsonSyntaxTree> const & t, std::shared_ptr<temper_std::InterchangeContext> const &) {
-  std::shared_ptr<temper_std::JsonObject> obj = core::checked_cast<temper_std::JsonObject>(t);
-  std::shared_ptr<temper_std::JsonNumeric> widthJson = core::checked_cast<temper_std::JsonNumeric>(obj->propertyValueOrBubble(TEMPER_STR("width")));
+  std::shared_ptr<temper_std::JsonObject> obj = dynamic_cast<temper_std::JsonObject const *>(t.get()) != nullptr ? core::checked_cast<temper_std::JsonObject>(t) : core::bubble<std::shared_ptr<temper_std::JsonObject>>();
+  std::shared_ptr<temper_std::JsonSyntaxTree> widthTree = obj->propertyValueOrBubble(TEMPER_STR("width"));
+  std::shared_ptr<temper_std::JsonNumeric> widthJson = dynamic_cast<temper_std::JsonNumeric const *>(widthTree.get()) != nullptr ? core::checked_cast<temper_std::JsonNumeric>(widthTree) : core::bubble<std::shared_ptr<temper_std::JsonNumeric>>();
   int32_t width = widthJson->asInt32();
-  std::shared_ptr<temper_std::JsonNumeric> heightJson = core::checked_cast<temper_std::JsonNumeric>(obj->propertyValueOrBubble(TEMPER_STR("height")));
+  std::shared_ptr<temper_std::JsonSyntaxTree> heightTree = obj->propertyValueOrBubble(TEMPER_STR("height"));
+  std::shared_ptr<temper_std::JsonNumeric> heightJson = dynamic_cast<temper_std::JsonNumeric const *>(heightTree.get()) != nullptr ? core::checked_cast<temper_std::JsonNumeric>(heightTree) : core::bubble<std::shared_ptr<temper_std::JsonNumeric>>();
   int32_t height = heightJson->asInt32();
   return Rect::make(width, height);
 }
@@ -431,7 +440,7 @@ std::shared_ptr<Shape> ShapeJsonAdapter::decodeFromJson(std::shared_ptr<temper_s
 
 std::shared_ptr<Shape> Shape::decodeFromJson(std::shared_ptr<temper_std::JsonSyntaxTree> const & t, std::shared_ptr<temper_std::InterchangeContext> const & ic) {
   {
-    std::shared_ptr<temper_std::JsonObject> obj = core::checked_cast<temper_std::JsonObject>(t);
+    std::shared_ptr<temper_std::JsonObject> obj = dynamic_cast<temper_std::JsonObject const *>(t.get()) != nullptr ? core::checked_cast<temper_std::JsonObject>(t) : core::bubble<std::shared_ptr<temper_std::JsonObject>>();
     std::shared_ptr<temper_std::JsonSyntaxTree> valueForRadius = obj->propertyValueOrNull(TEMPER_STR("radius"));
     {
       if (valueForRadius != nullptr) {
@@ -478,8 +487,9 @@ void Hello::encodeToJson(std::shared_ptr<temper_std::JsonProducer> const & p) co
 }
 
 std::shared_ptr<Hello> Hello::decodeFromJson(std::shared_ptr<temper_std::JsonSyntaxTree> const & t, std::shared_ptr<temper_std::InterchangeContext> const &) {
-  std::shared_ptr<temper_std::JsonObject> obj = core::checked_cast<temper_std::JsonObject>(t);
-  std::shared_ptr<temper_std::JsonString> textJson = core::checked_cast<temper_std::JsonString>(obj->propertyValueOrBubble(TEMPER_STR("text")));
+  std::shared_ptr<temper_std::JsonObject> obj = dynamic_cast<temper_std::JsonObject const *>(t.get()) != nullptr ? core::checked_cast<temper_std::JsonObject>(t) : core::bubble<std::shared_ptr<temper_std::JsonObject>>();
+  std::shared_ptr<temper_std::JsonSyntaxTree> textTree = obj->propertyValueOrBubble(TEMPER_STR("text"));
+  std::shared_ptr<temper_std::JsonString> textJson = dynamic_cast<temper_std::JsonString const *>(textTree.get()) != nullptr ? core::checked_cast<temper_std::JsonString>(textTree) : core::bubble<std::shared_ptr<temper_std::JsonString>>();
   core::Str text = textJson->content;
   return Hello::make(text);
 }
@@ -521,8 +531,9 @@ void Bye::encodeToJson(std::shared_ptr<temper_std::JsonProducer> const & p) cons
 }
 
 std::shared_ptr<Bye> Bye::decodeFromJson(std::shared_ptr<temper_std::JsonSyntaxTree> const & t, std::shared_ptr<temper_std::InterchangeContext> const &) {
-  std::shared_ptr<temper_std::JsonObject> obj = core::checked_cast<temper_std::JsonObject>(t);
-  std::shared_ptr<temper_std::JsonString> textJson = core::checked_cast<temper_std::JsonString>(obj->propertyValueOrBubble(TEMPER_STR("text")));
+  std::shared_ptr<temper_std::JsonObject> obj = dynamic_cast<temper_std::JsonObject const *>(t.get()) != nullptr ? core::checked_cast<temper_std::JsonObject>(t) : core::bubble<std::shared_ptr<temper_std::JsonObject>>();
+  std::shared_ptr<temper_std::JsonSyntaxTree> textTree = obj->propertyValueOrBubble(TEMPER_STR("text"));
+  std::shared_ptr<temper_std::JsonString> textJson = dynamic_cast<temper_std::JsonString const *>(textTree.get()) != nullptr ? core::checked_cast<temper_std::JsonString>(textTree) : core::bubble<std::shared_ptr<temper_std::JsonString>>();
   core::Str text = textJson->content;
   return Bye::make(text);
 }
@@ -550,7 +561,7 @@ std::shared_ptr<Message> MessageJsonAdapter::decodeFromJson(std::shared_ptr<temp
 
 std::shared_ptr<Message> Message::decodeFromJson(std::shared_ptr<temper_std::JsonSyntaxTree> const & t, std::shared_ptr<temper_std::InterchangeContext> const & ic) {
   {
-    std::shared_ptr<temper_std::JsonObject> obj = core::checked_cast<temper_std::JsonObject>(t);
+    std::shared_ptr<temper_std::JsonObject> obj = dynamic_cast<temper_std::JsonObject const *>(t.get()) != nullptr ? core::checked_cast<temper_std::JsonObject>(t) : core::bubble<std::shared_ptr<temper_std::JsonObject>>();
     std::shared_ptr<temper_std::JsonSyntaxTree> valueForKind = obj->propertyValueOrNull(TEMPER_STR("kind"));
     {
       if (valueForKind != nullptr && dynamic_cast<temper_std::JsonString const *>(valueForKind.get()) != nullptr) {

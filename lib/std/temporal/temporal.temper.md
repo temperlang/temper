@@ -256,7 +256,7 @@ Here's just enough of a Date type to get us started.
         t: JsonSyntaxTree,
         ic: InterchangeContext,
       ): Date throws Bubble {
-        Date.fromIsoString((t as JsonString).content)
+        if (t is JsonString) { Date.fromIsoString(t.content) } else { bubble() }
       }
     };
 

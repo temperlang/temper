@@ -220,10 +220,17 @@ Language and frontend:
   the types. Done ([typing.md](typing.md), "Run-time type checks").
   Test: settle/class-types.cases, "is and as checks of type parameters'
   values and generic types".
-- **Float64 division by a nonzero constant** (`x / 2.0`) can't fail, so
-  it needn't count as bubbling, as `Int` division by one doesn't. Tempest
-  matches Kotlin for now ([milestone-4.md](history/milestone-4.md), builtins'
-  signatures).
+- **Division by zero and failed casts panic** (2026-11-25, a first step
+  toward replacing `Bubble`, which is Kotlin's): integer `/` and `%` by
+  zero and an `as` that fails panic instead of bubbling, so no `orelse`
+  handles them and no function needs `throws Bubble` for them; `Float64`
+  `/` and `%` give IEEE 754's results (Kotlin's docs say they bubble,
+  but five of its backends gave Inf/NaN). Kotlin-era code that handled
+  them (`x as T orelse y`, `a / b orelse 0`) now panics; check with `is`
+  or a zero test. Kotlin's constant-divisor variants (`divSafe`) stay as
+  a speed choice only. Test: settle/run.cases, "integer division by zero
+  panics; Float64's gives IEEE 754's results"; testkit
+  test-assert-panics, "passes when division by zero or a cast panics".
 - **An `internal` visibility** (module or library) between `public` and
   `private`, so module functions can use a class's hidden parts. Design it
   from what JS can express (only public and `#private`). Not planned yet.

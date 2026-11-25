@@ -697,9 +697,11 @@ impl Settle {
             g.std("JsonObject"),
         );
         let me = g.ph(Sub::Name(class));
+        // `as` panics where it fails, so a tree of another shape is
+        // checked with `is`, failing as decoding does.
         let mut decode = format!(
             "public static decodeFromJson(t: {tree_ty}, ic: {ic_ty}): {me} throws Bubble {{\n  \
-             let obj = t as {object};\n"
+             let obj = if (t is {object}) {{ t }} else {{ bubble() }};\n"
         );
         let mut taken: Vec<String> = ["t", "ic", "obj"].map(String::from).to_vec();
         let mut args = Vec::new();
@@ -728,7 +730,15 @@ impl Settle {
                     let cast_local = Self::fresh(&mut taken, &format!("{param_text}Json"));
                     let cast_name = self.lib.names.intern(&cast_local);
                     let (a, b) = (g.ph(Sub::Name(cast_name)), g.ph(Sub::Name(cast_name)));
-                    writeln!(decode, "  let {a} = {tree_expr} as {cast};").unwrap();
+                    let tree_local = Self::fresh(&mut taken, &format!("{param_text}Tree"));
+                    let tree_name = self.lib.names.intern(&tree_local);
+                    let [t1, t2, t3] = [(); 3].map(|_| g.ph(Sub::Name(tree_name)));
+                    writeln!(
+                        decode,
+                        "  let {t1} = {tree_expr};\n  \
+                         let {a} = if ({t2} is {cast}) {{ {t3} }} else {{ bubble() }};"
+                    )
+                    .unwrap();
                     match method {
                         Some(m) => format!("{b}.{m}()"),
                         None => format!("{b}.content"),
@@ -1047,7 +1057,8 @@ impl Settle {
         let cases: Vec<usize> = (0..subtypes.len()).collect();
         let tree = decision_tree(&cases, &features, &categorize);
         let object = g.std("JsonObject");
-        let mut text = format!("do {{\n  let obj = t as {object};\n");
+        let mut text =
+            format!("do {{\n  let obj = if (t is {object}) {{ t }} else {{ bubble() }};\n");
         let mut names = Vec::new();
         self.plant_tree(g, &tree, subtypes, class_text, &mut names, &mut text, 1)?;
         text.push_str("  bubble()\n}\n");

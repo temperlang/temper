@@ -25,8 +25,9 @@ final class Hello implements Message {
     }
 
     public static Hello decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) {
-        JsonObject obj = Core.cast(JsonObject.class, t);
-        JsonString textJson = Core.cast(JsonString.class, obj.propertyValueOrBubble("text"));
+        JsonObject obj = t instanceof JsonObject ? (JsonObject) t : Core.throwBubble();
+        JsonSyntaxTree textTree = obj.propertyValueOrBubble("text");
+        JsonString textJson = textTree instanceof JsonString ? (JsonString) textTree : Core.throwBubble();
         String text = textJson.content;
         return new Hello(text);
     }

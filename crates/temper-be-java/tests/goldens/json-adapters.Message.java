@@ -14,7 +14,7 @@ interface Message {
 
     static Message decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) {
         {
-            JsonObject obj = Core.cast(JsonObject.class, t);
+            JsonObject obj = t instanceof JsonObject ? (JsonObject) t : Core.throwBubble();
             @Nullable JsonSyntaxTree valueForKind = obj.propertyValueOrNull("kind");
             if (valueForKind != null && valueForKind instanceof JsonString) {
                 String subject = ((JsonString) valueForKind).content;

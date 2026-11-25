@@ -266,7 +266,16 @@ impl Effects {
                     may_bubble,
                     ..
                 } => self.called(p, d, names).and(bubbles(may_bubble)),
-                Node::Op { may_bubble, .. } | Node::As { may_bubble, .. } => bubbles(may_bubble),
+                // An integer division panics for a zero divisor, and a
+                // cast where it fails, as `panic()` does.
+                Node::Op { op, .. } => Effect {
+                    writes: !op.pure(),
+                    ..Effect::default()
+                },
+                Node::As { .. } => Effect {
+                    writes: true,
+                    ..Effect::default()
+                },
                 Node::Error { .. } | Node::Bubble { .. } | Node::Throw { .. } => bubbles(true),
                 // Stopping the program shows before or after anything
                 // else that shows.

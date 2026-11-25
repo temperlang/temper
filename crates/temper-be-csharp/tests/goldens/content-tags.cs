@@ -38,7 +38,7 @@ public static class ContentTagsGlobal
             callout("states differ from themselves", true);
         }
         int quotes = Core.Split(known, p.Quote).Count - 1;
-        return new After(Listed.CreateReadOnlyList<IEffect>(new AppendParseEffect(known)), Core.ModSafe(quotes, 2) == 1 ? !before : before);
+        return new After(Listed.CreateReadOnlyList<IEffect>(new AppendParseEffect(known)), Core.Mod(quotes, 2) == 1 ? !before : before);
     }
 
     internal static string Greet(string name, string who)

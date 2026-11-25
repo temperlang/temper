@@ -873,7 +873,7 @@ impl Interp<'_> {
                 match f {
                     Function::Is => Ok(Val::Bool(is)),
                     _ if is => Ok(value),
-                    _ => Err(Abrupt::Fail(None)),
+                    _ => Err(Abrupt::Panic("failed cast".into())),
                 }
             }
             // Interpolated objects are their `toString()`.
@@ -1062,9 +1062,6 @@ impl Interp<'_> {
                 int_op(f, *a as i64, *b as i64).map(|n| Val::Int(n as i32))
             }
             (_, [Val::Int64(a), Val::Int64(b)]) => int_op(f, *a, *b).map(Val::Int64),
-            // Like integers', and unlike IEEE 754's, float division fails
-            // for a zero divisor.
-            (Div | Mod, [Val::Float(_), Val::Float(b)]) if *b == 0.0 => Err(Abrupt::Fail(None)),
             (Pow, [Val::Float(a), Val::Float(b)]) => Ok(Val::Float(a.powf(*b))),
             (Add | Sub | Mul | Div | Mod, [Val::Float(a), Val::Float(b)]) => {
                 Ok(Val::Float(match f {
@@ -2139,14 +2136,14 @@ fn builtin_value(b: Builtin) -> Option<Val> {
 }
 
 /// Integer arithmetic on operands widened to `i64`, wrapping; callers
-/// truncate for `Int`, which wraps as Temper's does. Division by zero fails.
+/// truncate for `Int`, which wraps as Temper's does. Division by zero panics.
 fn int_op(f: Function, a: i64, b: i64) -> Result<i64, Abrupt> {
     use Function::*;
     Ok(match f {
         Add => a.wrapping_add(b),
         Sub => a.wrapping_sub(b),
         Mul => a.wrapping_mul(b),
-        Div | Mod if b == 0 => return Err(Abrupt::Fail(None)),
+        Div | Mod if b == 0 => return Err(Abrupt::Panic("division by zero".into())),
         Div => a.wrapping_div(b),
         Mod => a.wrapping_rem(b),
         BitAnd => a & b,

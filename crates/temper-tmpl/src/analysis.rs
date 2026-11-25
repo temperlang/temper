@@ -680,8 +680,8 @@ impl Effects {
                         ..Effect::default()
                     })
                 }
-                Node::Op { may_bubble, .. } => Effect {
-                    bubbles: may_bubble,
+                Node::Op { op, .. } => Effect {
+                    writes: !op.pure(),
                     ..Effect::default()
                 },
                 Node::Error { .. } => Effect {

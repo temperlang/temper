@@ -15,9 +15,24 @@ void global_init_init();
 
 
 #ifdef TEMPER_TESTS
+struct Shape;
+struct Square;
+struct Circle;
+
+struct Shape : public virtual temper::core::AnyValueBase {};
+
+struct Square : public virtual Shape {
+  static std::shared_ptr<Square> make();
+};
+
+struct Circle : public virtual Shape {
+  static std::shared_ptr<Circle> make();
+};
+
 // Tests, which `test.cpp` runs.
 void passesBefore(std::shared_ptr<temper_std::Test> const & test);
 void passesWhenTheBlockPanics(std::shared_ptr<temper_std::Test> const & test);
+void passesWhenDivisionByZeroOrACastPanics(std::shared_ptr<temper_std::Test> const & test);
 void passesPastAnOrelse(std::shared_ptr<temper_std::Test> const & test);
 void failsWhenTheBlockReturns(std::shared_ptr<temper_std::Test> const & test);
 void failsWithItsMessage(std::shared_ptr<temper_std::Test> const & test);
@@ -47,6 +62,28 @@ static int32_t at(std::shared_ptr<std::vector<int32_t>> const & ls, int32_t i) {
   }
   return core::List::get<int32_t>(ls, i);
 }
+
+std::shared_ptr<Square> Square::make() {
+  std::shared_ptr<Square> self = std::make_shared<Square>();
+  return self;
+}
+
+std::shared_ptr<Circle> Circle::make() {
+  std::shared_ptr<Circle> self = std::make_shared<Circle>();
+  return self;
+}
+
+static int32_t divide(int32_t a, int32_t b) {
+  return core::Int::div_wrap(a, b);
+}
+
+static int64_t remainder(int64_t a, int64_t b) {
+  return core::Int64::mod_wrap(a, b);
+}
+
+static std::shared_ptr<Square> squared(std::shared_ptr<Shape> const & s) {
+  return core::checked_cast<Square>(s);
+}
 #endif  // TEMPER_TESTS
 
 void global_init_init() {}
@@ -68,6 +105,18 @@ void passesBefore(std::shared_ptr<temper_std::Test> const & test) {
 void passesWhenTheBlockPanics(std::shared_ptr<temper_std::Test> const & test) {
   test->assertPanics([]() -> void { test_assert_panics::at(core::List::make<int32_t>(1, 2), 5); });
   test->assertPanics([]() -> void { core::panic(); });
+}
+
+void passesWhenDivisionByZeroOrACastPanics(std::shared_ptr<temper_std::Test> const & test) {
+  test->assertPanics([]() -> void { divide(1, 0); });
+  test->assertPanics([]() -> void { remainder(int64_t{1}, int64_t{0}); });
+  test->assertPanics([]() -> void { test_assert_panics::squared(core::to_base<Shape>(Circle::make())); });
+  test_assert_panics::squared(core::to_base<Shape>(Square::make()));
+  {
+    int32_t actual = divide(-7, 2);
+    int32_t expected = -3;
+    test->assert_(actual == expected, [=]() -> core::Str { return "expected divide(-7, 2) == (" + std::to_string(expected) + ") not (" + std::to_string(actual) + ")"; });
+  }
 }
 
 void passesPastAnOrelse(std::shared_ptr<temper_std::Test> const & test) {
@@ -179,6 +228,14 @@ int main() {
       {"passes when the block panics", [] {
         auto test = temper_std::Test::make();
         test_assert_panics::passesWhenTheBlockPanics(test);
+        auto messages = test->messagesCombined();
+        return temper::core::TestOutcome{
+            test->get_passing(),
+            temper::core::is_null(messages) ? std::string() : temper::core::Str(messages).str()};
+      }},
+      {"passes when division by zero or a cast panics", [] {
+        auto test = temper_std::Test::make();
+        test_assert_panics::passesWhenDivisionByZeroOrACastPanics(test);
         auto messages = test->messagesCombined();
         return temper::core::TestOutcome{
             test->get_passing(),
