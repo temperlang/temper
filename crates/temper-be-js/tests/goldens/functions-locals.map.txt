@@ -16,16 +16,16 @@
 24:7 -> ../locals.temper.md:9:37  i = (i + 1) | 0; <- i++) {
 27:3 -> ../locals.temper.md:15:7  s.push("]"); <- s.add("]");
 28:3 -> ../locals.temper.md:17:7  return listedJoin(s, "", (v) <- return s.join("") { v => v }
-31:1 -> ../locals.temper.md:20:5  /** <- let nestBlock<T>(b: fn ():T)
-36:1 -> ../locals.temper.md:20:5  function nestBlock(b) { <- let nestBlock<T>(b: fn ():T)
-36:10 -> ../locals.temper.md:20:9 (nestBlock)  nestBlock(b) { <- nestBlock<T>(b: fn ():T): T
-36:19 -> ../locals.temper.md:20:5  (b) { <- let nestBlock<T>(b: fn ():T)
-37:3 -> ../locals.temper.md:20:39  return b(); <- b() }
-40:1 -> ../locals.temper.md:22:5  /** @param {() => void} b */ <- let nestBlockVoid(b: fn ():V
-41:1 -> ../locals.temper.md:22:5  function nestBlockVoid(b) { <- let nestBlockVoid(b: fn ():V
-41:10 -> ../locals.temper.md:22:9 (nestBlockVoid)  nestBlockVoid(b) { <- nestBlockVoid(b: fn ():Void)
-41:23 -> ../locals.temper.md:22:5  (b) { <- let nestBlockVoid(b: fn ():V
-42:3 -> ../locals.temper.md:22:46  b(); <- b() }
+31:1 -> ../locals.temper.md:20:5  /** <- let nestBlock<T>(b: fn (): T
+36:1 -> ../locals.temper.md:20:5  function nestBlock(b) { <- let nestBlock<T>(b: fn (): T
+36:10 -> ../locals.temper.md:20:9 (nestBlock)  nestBlock(b) { <- nestBlock<T>(b: fn (): T): T
+36:19 -> ../locals.temper.md:20:5  (b) { <- let nestBlock<T>(b: fn (): T
+37:3 -> ../locals.temper.md:20:40  return b(); <- b() }
+40:1 -> ../locals.temper.md:22:5  /** @param {() => void} b */ <- let nestBlockVoid(b: fn ():
+41:1 -> ../locals.temper.md:22:5  function nestBlockVoid(b) { <- let nestBlockVoid(b: fn ():
+41:10 -> ../locals.temper.md:22:9 (nestBlockVoid)  nestBlockVoid(b) { <- nestBlockVoid(b: fn (): Void
+41:23 -> ../locals.temper.md:22:5  (b) { <- let nestBlockVoid(b: fn ():
+42:3 -> ../locals.temper.md:22:47  b(); <- b() }
 45:1 -> ../locals.temper.md:26:5  /** <- let constantCapture(x: Liste
 49:1 -> ../locals.temper.md:26:5  function constantCapture(x, <- let constantCapture(x: Liste
 49:10 -> ../locals.temper.md:26:9 (constantCapture)  constantCapture(x, a) { <- constantCapture(x: Listed<In
@@ -59,15 +59,15 @@
 84:10 -> ../locals.temper.md:72:9 (mutableCaptureNested)  mutableCaptureNested(x) { <- mutableCaptureNested(x: List
 84:30 -> ../locals.temper.md:72:5  (x) { <- let mutableCaptureNested(x:
 85:3 -> ../locals.temper.md:73:7  let sum = 0; <- var sum = 0;  // free variab
-86:3 -> ../locals.temper.md:74:27  /** @returns {readonly numbe <- { () : List<Int>  =>
-87:3 -> ../locals.temper.md:74:27  function fn() { <- { () : List<Int>  =>
+86:3 -> ../locals.temper.md:74:27  /** @returns {readonly numbe <- { (): List<Int> =>
+87:3 -> ../locals.temper.md:74:27  function fn() { <- { (): List<Int> =>
 88:5 -> ../locals.temper.md:75:15  /** <- {
 92:5 -> ../locals.temper.md:75:15  function fn2(n) { <- {
 93:7 -> ../locals.temper.md:77:11  sum = (sum + n) | 0; <- sum += n;
 94:7 -> ../locals.temper.md:78:11  return sum; <- sum
 96:5 -> ../locals.temper.md:75:9  return listedMap(/** @type { <- x.map {
-98:3 -> ../locals.temper.md:74:7  /** @type {readonly number[] <- let out = nestBlock { () : L
-99:3 -> ../locals.temper.md:74:7  const out = nestBlock(fn); <- let out = nestBlock { () : L
+98:3 -> ../locals.temper.md:74:7  /** @type {readonly number[] <- let out = nestBlock { (): Li
+99:3 -> ../locals.temper.md:74:7  const out = nestBlock(fn); <- let out = nestBlock { (): Li
 100:3 -> ../locals.temper.md:81:7  console.log(`mutableCaptureN <- console.log("mutableCaptureN
 103:1 -> ../locals.temper.md:91:5  /** <- export let thresh(values: Li
 107:1 -> ../locals.temper.md:91:5  export function thresh(value <- export let thresh(values: Li
@@ -109,11 +109,11 @@
 150:3 -> ../locals.temper.md:133:7  function mapper(i, out) { <- let mapper(i: Int, out: List
 150:12 -> ../locals.temper.md:133:11 (mapper)  mapper(i, out) { <- mapper(i: Int, out: ListBuil
 150:18 -> ../locals.temper.md:133:7  (i, out) { <- let mapper(i: Int, out: List
-151:5 -> ../locals.temper.md:134:23  function fn2() { <- { () : Void =>
+151:5 -> ../locals.temper.md:134:23  function fn2() { <- { (): Void =>
 152:7 -> ../locals.temper.md:135:11  if (i < x.length) { <- if (i < x.length) {
 153:9 -> ../locals.temper.md:136:13  out.push(Math.imul(listedGet <- out.add(x[i] * 2);
 154:9 -> ../locals.temper.md:137:13  mapper((i + 1) | 0, out); <- mapper(i + 1, out);
-157:5 -> ../locals.temper.md:134:9  nestBlockVoid(fn2); <- nestBlockVoid { () : Void =>
+157:5 -> ../locals.temper.md:134:9  nestBlockVoid(fn2); <- nestBlockVoid { (): Void =>
 159:3 -> ../locals.temper.md:141:7  /** @type {number[]} */ <- let out = new ListBuilder<In
 160:3 -> ../locals.temper.md:141:7  const out2 = []; <- let out = new ListBuilder<In
 161:3 -> ../locals.temper.md:142:7  mapper(0, out2); <- mapper(0, out);

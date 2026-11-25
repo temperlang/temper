@@ -2,15 +2,15 @@
 3:1 -> ../private-method.temper.md:5:5  class C extends type() { <- class C {
 3:7 -> ../private-method.temper.md:5:11 (C)  C extends type() { <- C {
 3:8 -> ../private-method.temper.md:5:5   extends type() { <- class C {
-4:3 -> ../private-method.temper.md:6:17  /** <- helper(x: Int): Int { x + 1
-8:3 -> ../private-method.temper.md:6:17 (helper)  #helper(x) { <- helper(x: Int): Int { x + 1
-9:5 -> ../private-method.temper.md:6:39  return (x + 1) | 0; <- x + 1 }
-12:3 -> ../private-method.temper.md:7:16  /** <- method1(x: Int): Int { helpe
-16:3 -> ../private-method.temper.md:7:16 (method1)  method1(x) { <- method1(x: Int): Int { helpe
-17:5 -> ../private-method.temper.md:7:39  return this.#helper(Math.imu <- helper(x * 2) }
-20:3 -> ../private-method.temper.md:8:16  /** <- method2(x: Int): Int { helpe
-24:3 -> ../private-method.temper.md:8:16 (method2)  method2(x) { <- method2(x: Int): Int { helpe
-25:5 -> ../private-method.temper.md:8:39  return this.#helper(Math.imu <- helper(x * 3) }
+4:3 -> ../private-method.temper.md:6:15  /** <- helper(x: Int): Int { x + 1
+8:3 -> ../private-method.temper.md:6:15 (helper)  #helper(x) { <- helper(x: Int): Int { x + 1
+9:5 -> ../private-method.temper.md:6:37  return (x + 1) | 0; <- x + 1 }
+12:3 -> ../private-method.temper.md:7:14  /** <- method1(x: Int): Int { helpe
+16:3 -> ../private-method.temper.md:7:14 (method1)  method1(x) { <- method1(x: Int): Int { helpe
+17:5 -> ../private-method.temper.md:7:37  return this.#helper(Math.imu <- helper(x * 2) }
+20:3 -> ../private-method.temper.md:8:14  /** <- method2(x: Int): Int { helpe
+24:3 -> ../private-method.temper.md:8:14 (method2)  method2(x) { <- method2(x: Int): Int { helpe
+25:5 -> ../private-method.temper.md:8:37  return this.#helper(Math.imu <- helper(x * 3) }
 29:1 -> ../private-method.temper.md:30:5  class Money extends type() { <- class Money(
 29:7 -> ../private-method.temper.md:30:11 (Money)  Money extends type() { <- Money(
 29:12 -> ../private-method.temper.md:30:5   extends type() { <- class Money(
@@ -116,8 +116,8 @@
 199:7 -> ../private-method.temper.md:106:18 (total)  total() { <- total(): Int { size }
 200:5 -> ../private-method.temper.md:106:33  return this.#size; <- size }
 204:1 -> ../private-method.temper.md:11:5  const c = new C(); <- let c = new C();
-205:1 -> ../private-method.temper.md:13:5  console.log(`method1(10)=${c <- console.log("method1(10)=${
-206:1 -> ../private-method.temper.md:14:5  console.log(`method2(10)=${c <- console.log("method2(10)=${
+205:1 -> ../private-method.temper.md:13:5  console.log(`method1(10)=${c <- console.log("method1(10)=${c
+206:1 -> ../private-method.temper.md:14:5  console.log(`method2(10)=${c <- console.log("method2(10)=${c
 207:1 -> ../private-method.temper.md:47:5  const a = new Money(150); <- let a = new Money(150);
 208:1 -> ../private-method.temper.md:48:5  const b = new Money(175); <- let b = new Money(175);
 209:1 -> ../private-method.temper.md:49:5  console.log(`plus: ${a.plus( <- console.log("plus: ${a.plus(

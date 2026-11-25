@@ -86,11 +86,11 @@
 123:3 -> ../defaulting.temper.md:136:31  get string() { <- string: String) {}
 123:7 -> ../defaulting.temper.md:136:31 (string)  string() { <- string: String) {}
 128:1 -> ../defaulting.temper.md:6:5  let fCalls = 0; <- var fCalls = 0;
-129:1 -> ../defaulting.temper.md:17:5  console.log(`fCalls=${fCalls <- console.log("fCalls=${ fCall
-130:1 -> ../defaulting.temper.md:18:5  console.log(`g(   )=${g()}`) <- console.log("g(   )=${ g(
-131:1 -> ../defaulting.temper.md:19:5  console.log(`fCalls=${fCalls <- console.log("fCalls=${ fCall
-132:1 -> ../defaulting.temper.md:31:5  console.log(`g(123)=${g(123) <- console.log("g(123)=${ g(123
-133:1 -> ../defaulting.temper.md:32:5  console.log(`fCalls=${fCalls <- console.log("fCalls=${ fCall
+129:1 -> ../defaulting.temper.md:17:5  console.log(`fCalls=${fCalls <- console.log("fCalls=${fCalls
+130:1 -> ../defaulting.temper.md:18:5  console.log(`g(   )=${g()}`) <- console.log("g(   )=${g()}")
+131:1 -> ../defaulting.temper.md:19:5  console.log(`fCalls=${fCalls <- console.log("fCalls=${fCalls
+132:1 -> ../defaulting.temper.md:31:5  console.log(`g(123)=${g(123) <- console.log("g(123)=${g(123)
+133:1 -> ../defaulting.temper.md:32:5  console.log(`fCalls=${fCalls <- console.log("fCalls=${fCalls
 134:1 -> ../defaulting.temper.md:42:5  console.log(`g(null)=${g(noI <- console.log("g(null)=${g(noI
 135:1 -> ../defaulting.temper.md:43:5  console.log(`fCalls=${fCalls <- console.log("fCalls=${fCalls
 136:1 -> ../defaulting.temper.md:72:5  new Thing().say("hi"); <- new Thing().say("hi");

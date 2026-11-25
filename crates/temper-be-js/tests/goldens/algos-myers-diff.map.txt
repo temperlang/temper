@@ -1,30 +1,30 @@
 # generated line:column -> source:line:column, and the text at each
-18:1 -> ../myers-diff-lib.temper.md:221:5  /** <- export let formatPatch(patch
-22:1 -> ../myers-diff-lib.temper.md:221:5  export function formatPatch( <- export let formatPatch(patch
-22:17 -> ../myers-diff-lib.temper.md:221:16 (formatPatch)  formatPatch(patch) { <- formatPatch(patch: Patch<Str
-22:28 -> ../myers-diff-lib.temper.md:221:5  (patch) { <- export let formatPatch(patch
-23:3 -> ../myers-diff-lib.temper.md:225:7  let formatted = ""; <- var formatted: String = "";
-24:3 -> ../myers-diff-lib.temper.md:226:7  /** @type {readonly Change<s <- let changes = patch.changes;
-25:3 -> ../myers-diff-lib.temper.md:226:7  const changes = patch.change <- let changes = patch.changes;
-26:3 -> ../myers-diff-lib.temper.md:227:7  const n = changes.length; <- let n: Int = changes.length;
-27:3 -> ../myers-diff-lib.temper.md:228:7  { <- for (var i: Int = 0; i < n;
-28:5 -> ../myers-diff-lib.temper.md:228:12  let i = 0; <- var i: Int = 0; i < n; ++i)
-29:5 -> ../myers-diff-lib.temper.md:228:7  while (i < n) { <- for (var i: Int = 0; i < n;
-30:7 -> ../myers-diff-lib.temper.md:229:9  /** @type {Change<string>} * <- let change: Change<String> =
-31:7 -> ../myers-diff-lib.temper.md:229:9  const change = listedGet(/** <- let change: Change<String> =
-32:7 -> ../myers-diff-lib.temper.md:230:9  const changeType = change.ty <- let changeType: ChangeType =
-33:7 -> ../myers-diff-lib.temper.md:231:9  /** @type {readonly string[] <- let items = change.items;
-34:7 -> ../myers-diff-lib.temper.md:231:9  const items = change.items; <- let items = change.items;
-35:7 -> ../myers-diff-lib.temper.md:232:9  const prefix = changeType == <- let prefix: String = when (c
-36:7 -> ../myers-diff-lib.temper.md:237:9  const nItems = items.length; <- let nItems = items.length;
-37:7 -> ../myers-diff-lib.temper.md:238:9  { <- for (var j: Int = 0; j < nIt
-38:9 -> ../myers-diff-lib.temper.md:238:14  let j = 0; <- var j: Int = 0; j < nItems;
-39:9 -> ../myers-diff-lib.temper.md:238:9  while (j < nItems) { <- for (var j: Int = 0; j < nIt
-40:11 -> ../myers-diff-lib.temper.md:239:11  const item = listedGet(/** @ <- let item = items.get(j);
-41:11 -> ../myers-diff-lib.temper.md:240:11  formatted = `${formatted}${p <- formatted = "${formatted}${p
-42:11 -> ../myers-diff-lib.temper.md:238:42  j = (j + 1) | 0; <- ++j) {
-45:7 -> ../myers-diff-lib.temper.md:228:35  i = (i + 1) | 0; <- ++i) {
-48:3 -> ../myers-diff-lib.temper.md:243:7  return formatted; <- return formatted;
+18:1 -> ../myers-diff-lib.temper.md:216:5  /** <- export let formatPatch(patch
+22:1 -> ../myers-diff-lib.temper.md:216:5  export function formatPatch( <- export let formatPatch(patch
+22:17 -> ../myers-diff-lib.temper.md:216:16 (formatPatch)  formatPatch(patch) { <- formatPatch(patch: Patch<Str
+22:28 -> ../myers-diff-lib.temper.md:216:5  (patch) { <- export let formatPatch(patch
+23:3 -> ../myers-diff-lib.temper.md:220:7  let formatted = ""; <- var formatted: String = "";
+24:3 -> ../myers-diff-lib.temper.md:221:7  /** @type {readonly Change<s <- let changes = patch.changes;
+25:3 -> ../myers-diff-lib.temper.md:221:7  const changes = patch.change <- let changes = patch.changes;
+26:3 -> ../myers-diff-lib.temper.md:222:7  const n = changes.length; <- let n: Int = changes.length;
+27:3 -> ../myers-diff-lib.temper.md:223:7  { <- for (var i: Int = 0; i < n;
+28:5 -> ../myers-diff-lib.temper.md:223:12  let i = 0; <- var i: Int = 0; i < n; ++i)
+29:5 -> ../myers-diff-lib.temper.md:223:7  while (i < n) { <- for (var i: Int = 0; i < n;
+30:7 -> ../myers-diff-lib.temper.md:224:9  /** @type {Change<string>} * <- let change: Change<String> =
+31:7 -> ../myers-diff-lib.temper.md:224:9  const change = listedGet(/** <- let change: Change<String> =
+32:7 -> ../myers-diff-lib.temper.md:225:9  const changeType = change.ty <- let changeType: ChangeType =
+33:7 -> ../myers-diff-lib.temper.md:226:9  /** @type {readonly string[] <- let items = change.items;
+34:7 -> ../myers-diff-lib.temper.md:226:9  const items = change.items; <- let items = change.items;
+35:7 -> ../myers-diff-lib.temper.md:227:9  const prefix = changeType == <- let prefix: String = when (c
+36:7 -> ../myers-diff-lib.temper.md:232:9  const nItems = items.length; <- let nItems = items.length;
+37:7 -> ../myers-diff-lib.temper.md:233:9  { <- for (var j: Int = 0; j < nIt
+38:9 -> ../myers-diff-lib.temper.md:233:14  let j = 0; <- var j: Int = 0; j < nItems;
+39:9 -> ../myers-diff-lib.temper.md:233:9  while (j < nItems) { <- for (var j: Int = 0; j < nIt
+40:11 -> ../myers-diff-lib.temper.md:234:11  const item = listedGet(/** @ <- let item = items.get(j);
+41:11 -> ../myers-diff-lib.temper.md:235:11  formatted = `${formatted}${p <- formatted = "${formatted}${p
+42:11 -> ../myers-diff-lib.temper.md:233:42  j = (j + 1) | 0; <- ++j) {
+45:7 -> ../myers-diff-lib.temper.md:223:35  i = (i + 1) | 0; <- ++i) {
+48:3 -> ../myers-diff-lib.temper.md:238:7  return formatted; <- return formatted;
 51:1 -> ../myers-diff-lib.temper.md:43:5  /** <- export let diff<T /*-| Chang
 58:1 -> ../myers-diff-lib.temper.md:43:5  export function diff(left, r <- export let diff<T /*-| Chang
 58:17 -> ../myers-diff-lib.temper.md:43:16 (diff)  diff(left, right, eq) { <- diff<T /*-| Change<T> | List
@@ -80,25 +80,25 @@
 111:15 -> ../myers-diff-lib.temper.md:158:17  nRightItems = nItems; <- nRightItems = nItems;
 113:13 -> ../myers-diff-lib.temper.md:160:15  nLeftItems = nItems; <- nLeftItems = nItems;
 115:11 -> ../myers-diff-lib.temper.md:162:13  changes.push(new Change(chan <- changes.add(
-116:11 -> ../myers-diff-lib.temper.md:170:13  leftPatchIndex = (leftPatchI <- leftPatchIndex += nLeftItems
-117:11 -> ../myers-diff-lib.temper.md:171:13  rightPatchIndex = (rightPatc <- rightPatchIndex += nRightIte
+116:11 -> ../myers-diff-lib.temper.md:167:13  leftPatchIndex = (leftPatchI <- leftPatchIndex += nLeftItems
+117:11 -> ../myers-diff-lib.temper.md:168:13  rightPatchIndex = (rightPatc <- rightPatchIndex += nRightIte
 118:11 -> ../myers-diff-lib.temper.md:139:49  i = end; <- i = end) {
-121:7 -> ../myers-diff-lib.temper.md:173:11  return new Patch(listBuilder <- return new Patch<T>(changes.
-123:5 -> ../myers-diff-lib.temper.md:179:9  if (leftIndex < leftLength) <- if (leftIndex < leftLength)
-124:7 -> ../myers-diff-lib.temper.md:180:11  if (rightIndex < rightLength <- if (rightIndex < rightLength
-125:9 -> ../myers-diff-lib.temper.md:181:13  const sameReachedIndex = ((( <- let sameReachedIndex: Int =
-126:9 -> ../myers-diff-lib.temper.md:183:13  if (!denseBitVectorGet(reach <- if (!reached[sameReachedInde
-127:11 -> ../myers-diff-lib.temper.md:184:15  denseBitVectorSet(reached, s <- reached[sameReachedIndex] =
-128:11 -> ../myers-diff-lib.temper.md:185:15  dequeAdd(costZeroEdges, new <- costZeroEdges.add(
-131:7 -> ../myers-diff-lib.temper.md:193:11  const delReachedIndex = (((l <- let delReachedIndex: Int = l
-132:7 -> ../myers-diff-lib.temper.md:194:11  if (!denseBitVectorGet(reach <- if (!reached[delReachedIndex
-133:9 -> ../myers-diff-lib.temper.md:195:13  denseBitVectorSet(reached, d <- reached[delReachedIndex] = t
-134:9 -> ../myers-diff-lib.temper.md:196:13  dequeAdd(costOneEdges, new D <- costOneEdges.add(new DiffPat
-137:5 -> ../myers-diff-lib.temper.md:202:9  if (rightIndex < rightLength <- if (rightIndex < rightLength
-138:7 -> ../myers-diff-lib.temper.md:203:11  const addReachedIndex = (lef <- let addReachedIndex: Int = l
-139:7 -> ../myers-diff-lib.temper.md:204:11  if (!denseBitVectorGet(reach <- if (!reached[addReachedIndex
-140:9 -> ../myers-diff-lib.temper.md:205:13  denseBitVectorSet(reached, a <- reached[addReachedIndex] = t
-141:9 -> ../myers-diff-lib.temper.md:206:13  dequeAdd(costOneEdges, new D <- costOneEdges.add(new DiffPat
+121:7 -> ../myers-diff-lib.temper.md:170:11  return new Patch(listBuilder <- return new Patch<T>(changes.
+123:5 -> ../myers-diff-lib.temper.md:176:9  if (leftIndex < leftLength) <- if (leftIndex < leftLength)
+124:7 -> ../myers-diff-lib.temper.md:177:11  if (rightIndex < rightLength <- if (rightIndex < rightLength
+125:9 -> ../myers-diff-lib.temper.md:178:13  const sameReachedIndex = ((( <- let sameReachedIndex: Int =
+126:9 -> ../myers-diff-lib.temper.md:180:13  if (!denseBitVectorGet(reach <- if (!reached[sameReachedInde
+127:11 -> ../myers-diff-lib.temper.md:181:15  denseBitVectorSet(reached, s <- reached[sameReachedIndex] =
+128:11 -> ../myers-diff-lib.temper.md:182:15  dequeAdd(costZeroEdges, new <- costZeroEdges.add(
+131:7 -> ../myers-diff-lib.temper.md:189:11  const delReachedIndex = (((l <- let delReachedIndex: Int = l
+132:7 -> ../myers-diff-lib.temper.md:190:11  if (!denseBitVectorGet(reach <- if (!reached[delReachedIndex
+133:9 -> ../myers-diff-lib.temper.md:191:13  denseBitVectorSet(reached, d <- reached[delReachedIndex] = t
+134:9 -> ../myers-diff-lib.temper.md:192:13  dequeAdd(costOneEdges, new D <- costOneEdges.add(new DiffPat
+137:5 -> ../myers-diff-lib.temper.md:197:9  if (rightIndex < rightLength <- if (rightIndex < rightLength
+138:7 -> ../myers-diff-lib.temper.md:198:11  const addReachedIndex = (lef <- let addReachedIndex: Int = l
+139:7 -> ../myers-diff-lib.temper.md:199:11  if (!denseBitVectorGet(reach <- if (!reached[addReachedIndex
+140:9 -> ../myers-diff-lib.temper.md:200:13  denseBitVectorSet(reached, a <- reached[addReachedIndex] = t
+141:9 -> ../myers-diff-lib.temper.md:201:13  dequeAdd(costOneEdges, new D <- costOneEdges.add(new DiffPat
 147:1 -> ../myers-diff-lib.temper.md:23:5  /** @template T */ <- export class Change<T /* -|
 148:14 -> ../myers-diff-lib.temper.md:23:18 (Change)  Change extends type() { <- Change<T /* -| Change<T> | L
 148:20 -> ../myers-diff-lib.temper.md:23:5   extends type() { <- export class Change<T /* -|

@@ -1,7 +1,7 @@
 # generated line:column -> source:line:column, and the text at each
 8:1 -> ../minimal-repro.temper.md:3:5  /** @type {readonly number[] <- let ls: List<Int> = [0, 1, 2
 9:1 -> ../minimal-repro.temper.md:3:5  const ls = Object.freeze([0, <- let ls: List<Int> = [0, 1, 2
-10:1 -> ../minimal-repro.temper.md:5:5  console.log(`All  ${listedJo <- console.log("All  ${ (ls.joi
+10:1 -> ../minimal-repro.temper.md:5:5  console.log(`All  ${listedJo <- console.log("All  ${(ls.join
 11:1 -> ../minimal-repro.temper.md:7:5  console.log(`Even ${listedJo <- console.log("Even ${
 12:1 -> ../minimal-repro.temper.md:12:5  console.log(`Odd  ${listedJo <- console.log("Odd  ${
 13:1 -> ../minimal-repro.temper.md:17:5  console.log(`Neg  ${listedJo <- console.log("Neg  ${

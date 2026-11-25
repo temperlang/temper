@@ -27,7 +27,7 @@
 55:1 -> ../operations.temper.md:20:5  reportLength(Object.freeze([ <- reportLength(List.of<AnyValu
 56:1 -> ../operations.temper.md:38:5  /** @type {readonly number[] <- let ls: List<Int> = [5, 6, 7
 57:1 -> ../operations.temper.md:38:5  const ls = listedSorted(/** <- let ls: List<Int> = [5, 6, 7
-58:1 -> ../operations.temper.md:44:5  console.log(`All  ${listedJo <- console.log("All  ${ (ls.joi
+58:1 -> ../operations.temper.md:44:5  console.log(`All  ${listedJo <- console.log("All  ${(ls.join
 59:1 -> ../operations.temper.md:54:5  console.log(`Even ${listedJo <- console.log(
 60:1 -> ../operations.temper.md:69:5  console.log(`Odd  ${listedJo <- console.log(
 61:1 -> ../operations.temper.md:84:5  console.log(`Neg  ${listedJo <- console.log(
@@ -117,18 +117,18 @@
 161:3 -> ../operations.temper.md:368:7  /** @type {readonly boolean[ <- var ls = [true, false];
 162:3 -> ../operations.temper.md:368:7  const ls2 = Object.freeze([t <- var ls = [true, false];
 163:3 -> ../operations.temper.md:369:7  const joined = listedJoin(/* <- var joined = ls.join(", ", b
-164:3 -> ../operations.temper.md:370:7  /** @type {readonly boolean[ <- var inverted = ls.map(fn(b:
-165:3 -> ../operations.temper.md:370:7  const inverted = listedMap(/ <- var inverted = ls.map(fn(b:
-166:3 -> ../operations.temper.md:373:51  /** <- fn(b: Boolean): String {
-170:3 -> ../operations.temper.md:373:51  function fn22(b) { <- fn(b: Boolean): String {
+164:3 -> ../operations.temper.md:370:7  /** @type {readonly boolean[ <- var inverted = ls.map(fn (b:
+165:3 -> ../operations.temper.md:370:7  const inverted = listedMap(/ <- var inverted = ls.map(fn (b:
+166:3 -> ../operations.temper.md:373:51  /** <- fn (b: Boolean): String {
+170:3 -> ../operations.temper.md:373:51  function fn22(b) { <- fn (b: Boolean): String {
 171:5 -> ../operations.temper.md:374:9  if (b) { <- if (b) {
 172:7 -> ../operations.temper.md:375:11  return "not false"; <- return "not false";
 174:7 -> ../operations.temper.md:377:11  return "not true"; <- return "not true";
 177:3 -> ../operations.temper.md:373:7  const joinedAndInverted = li <- var joinedAndInverted = inve
 178:3 -> ../operations.temper.md:380:7  console.log(`list = [${joine <- console.log("list = [${joine
 179:3 -> ../operations.temper.md:381:7  console.log(`list (each inve <- console.log("list (each inve
-180:3 -> ../operations.temper.md:382:7  /** @type {readonly boolean[ <- var onlyTrue = ls.filter(fn(
-181:3 -> ../operations.temper.md:382:7  const onlyTrue = listedFilte <- var onlyTrue = ls.filter(fn(
+180:3 -> ../operations.temper.md:382:7  /** @type {readonly boolean[ <- var onlyTrue = ls.filter(fn
+181:3 -> ../operations.temper.md:382:7  const onlyTrue = listedFilte <- var onlyTrue = ls.filter(fn
 182:3 -> ../operations.temper.md:385:7  /** @type {readonly boolean[ <- var onlyFalse = ls.filter(fn
 183:3 -> ../operations.temper.md:385:7  const onlyFalse = listedFilt <- var onlyFalse = ls.filter(fn
 184:3 -> ../operations.temper.md:388:7  console.log(`list (== true o <- console.log("list (== true o

@@ -13,12 +13,12 @@
 38:1 -> ../map.temper.md:115:5  function colorToHex(color) { <- let colorToHex(color: List<B
 38:10 -> ../map.temper.md:115:9 (colorToHex)  colorToHex(color) { <- colorToHex(color: List<Boole
 38:20 -> ../map.temper.md:115:5  (color) { <- let colorToHex(color: List<B
-39:3 -> ../map.temper.md:116:30  /** <- fn(b: Boolean): String {
-43:3 -> ../map.temper.md:116:30  function fn(b) { <- fn(b: Boolean): String {
+39:3 -> ../map.temper.md:116:30  /** <- fn (b: Boolean): String {
+43:3 -> ../map.temper.md:116:30  function fn(b) { <- fn (b: Boolean): String {
 44:5 -> ../map.temper.md:117:9  if (b) { <- if (b) {
 45:7 -> ../map.temper.md:118:11  return "FF"; <- return "FF";
 47:7 -> ../map.temper.md:120:11  return "00"; <- return "00";
-50:3 -> ../map.temper.md:116:7  const c = listedJoin(/** @ty <- var c = color.join("", fn(b:
+50:3 -> ../map.temper.md:116:7  const c = listedJoin(/** @ty <- var c = color.join("", fn (b
 51:3 -> ../map.temper.md:123:7  return `#${c}`; <- return "#${c}";
 54:1 -> ../map.temper.md:157:5  /** <- let printMap(name: String, m
 58:1 -> ../map.temper.md:157:5  function printMap(name, map) <- let printMap(name: String, m

@@ -1,7 +1,7 @@
 # generated line:column -> source:line:column, and the text at each
 8:1 -> ../date.temper.md:36:5  const d = dateConstructor(20 <- let d = { year: 2023, month:
 9:1 -> ../date.temper.md:40:5  console.log(`year    = ${d.g <- console.log(
-10:1 -> ../date.temper.md:58:5  console.log(`ISO 8601: ${d.t <- console.log("ISO 8601: ${ d
+10:1 -> ../date.temper.md:58:5  console.log(`ISO 8601: ${d.t <- console.log("ISO 8601: ${d}"
 11:1 -> ../date.temper.md:67:5  const yonksAgo = dateConstru <- let yonksAgo = { year: 12, m
 12:1 -> ../date.temper.md:69:5  console.log(`ISO 8601 yonks: <- console.log("ISO 8601 yonks:
 13:1 -> ../date.temper.md:74:5  console.log(`yonksAgo.year = <- console.log("yonksAgo.year =
