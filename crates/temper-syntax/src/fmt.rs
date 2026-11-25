@@ -96,7 +96,7 @@
 
 use crate::lex::{SourceKind, Synthetic, Token, TokenKind};
 use crate::literate::{self, Kind};
-use crate::operator::{OpType, Operator};
+use crate::operator::{Operator, Spacing};
 use crate::parse::{Parsed, parse};
 use crate::tree::{NodeId, NodeKind};
 use std::collections::{HashMap, HashSet};
@@ -797,9 +797,6 @@ struct Formatter<'a> {
     line_first: u32,
     /// The bracket depth at the current line's start.
     line_depth: usize,
-    /// Whether the current line's indentation stays as written: a block
-    /// comment's that can't move.
-    keep_indent: bool,
     /// How far the line that opened the last multi-quoted string moved,
     /// which its content lines move too.
     string_shift: i32,
@@ -883,7 +880,6 @@ impl<'a> Formatter<'a> {
             line: Indent::default(),
             line_first: u32::MAX,
             line_depth: 0,
-            keep_indent: false,
             string_shift: 0,
             options,
             newline: if parsed.source().contains("\r\n") {
@@ -1134,7 +1130,7 @@ impl<'a> Formatter<'a> {
         if line_start as u32 >= start && indent.bytes().all(|b| b == b' ' || b == b'\t') {
             let margin = self.range_of(next.start).map_or(0, |r| r.margin);
             let actual = columns(indent) as i32 - margin;
-            self.line_start(next, Some(actual), true, None);
+            self.line_start(next, Some(actual), None);
         }
     }
 
@@ -1190,7 +1186,7 @@ impl<'a> Formatter<'a> {
             // A list's line broken where it wasn't.
             Some(true) if !gap.contains('\n') => {
                 self.out.push_str(self.newline);
-                let formatted = self.line_start(next, None, false, None);
+                let formatted = self.line_start(next, None, None).unwrap_or(0);
                 for _ in 0..range.margin + formatted {
                     self.out.push(' ');
                 }
@@ -1243,56 +1239,38 @@ impl<'a> Formatter<'a> {
         } else {
             self.out.push_str(&source[start as usize..breaks_end]);
         }
-        // Lines of fenced code may be less indented than the fence, and
-        // tabs in markdown count to the next multiple of four: keep both,
-        // and lines in markdown starting like a fence, which moving could
-        // make close the block, and space before `<`, which decides if it
-        // may be a bracket.
-        let rest = &source[next.start as usize..];
-        let fence = !self.standalone && (rest.starts_with("```") || rest.starts_with("~~~"));
-        // A string's line indented with tabs stays, as moving it would mix
-        // tabs and spaces.
-        let string_line = matches!(next.kind, TokenKind::Margin | TokenKind::QuotedString);
-        let keep = actual < 0
-            || ((!self.standalone || string_line) && indent.contains('\t'))
-            || fence
-            || self.text(next) == "<";
         // An indented code block's first line, right after a list item,
         // stays left of where it would continue the item.
         let below = (line_start == range.start)
             .then_some(range.below)
             .flatten()
             .map(|c| c - range.margin);
-        let formatted = self.line_start(next, Some(actual), keep, below);
-        if keep || self.keep_indent {
-            self.out.push_str(&indent[written as usize..]);
-        } else {
-            for _ in 0..range.margin + formatted - written {
-                self.out.push(' ');
+        match self.line_start(next, Some(actual), below) {
+            Some(formatted) => {
+                for _ in 0..range.margin + formatted - written {
+                    self.out.push(' ');
+                }
             }
+            None => self.out.push_str(&indent[written as usize..]),
         }
     }
 
-    /// Starts a line whose first token is `first`, indented `actual`
-    /// spaces past its margin (`None` for a line the formatter adds),
-    /// returning its formatted indentation, which is `actual` if `keep`, or
-    /// if it would reach `below`.
+    /// Starts a line whose first token is `first`, indented `written`
+    /// past its margin (`None` for a line the formatter adds), and
+    /// returns its indentation as formatted, or `None` if it stays as
+    /// written ([`Self::stays_as_written`]; `below` is that method's).
     fn line_start(
         &mut self,
         first: Token,
         written: Option<i32>,
-        keep: bool,
         below: Option<i32>,
-    ) -> i32 {
+    ) -> Option<i32> {
         let actual = written.unwrap_or(0);
         self.line_depth = self.stack.len();
-        let text = self.text(first);
         let mut starts_statement = false;
         self.line_header = None;
-        let formatted = if keep {
-            actual
-        } else if matches!(first.kind, TokenKind::Margin | TokenKind::QuotedString) {
-            (actual + self.string_shift).max(0)
+        let formatted = if matches!(first.kind, TokenKind::Margin | TokenKind::QuotedString) {
+            actual + self.string_shift
         } else if self.closes_bracket(self.index) {
             // Its line continues the bracket's, as `} else {` does.
             self.line_depth = self.line_depth.saturating_sub(1);
@@ -1312,7 +1290,7 @@ impl<'a> Formatter<'a> {
                 .last()
                 .is_some_and(|o| o.paren && o.line == statement);
             if !self.options.continuations {
-                (statement.formatted + actual - statement.actual).max(0)
+                statement.formatted + actual - statement.actual
             } else if matches!(self.text(code), ";" | ";;" | ",")
                 && self.role(code).is_some_and(|r| r.0 == Role::Separator)
             {
@@ -1331,41 +1309,12 @@ impl<'a> Formatter<'a> {
             starts_statement = true;
             self.stack.last().map_or(0, |o| o.base.formatted + UNIT)
         };
-        // Never left of the margin, under a line kept there (markdown), nor
-        // where it would join a list item before it.
-        let formatted = if keep { formatted } else { formatted.max(0) };
-        let formatted = if below.is_some_and(|b| formatted >= b) {
-            actual
-        } else {
-            formatted
-        };
-        // A multi-line block comment moves only if all its lines can.
-        // Its lines can't move if one would go left of the margin, or if one
-        // is indented with tabs, which moving would mix with spaces; then
-        // its first line's indentation stays as written too.
-        self.keep_indent = false;
-        let formatted = if first.kind == TokenKind::Comment && text.contains('\n') {
-            let shift = formatted - actual;
-            // In markdown, its lines must stay in the code block.
-            let margin = self.range_of(first.start).map_or(0, |r| r.margin);
-            // A star gutter's lines follow its first.
-            let gutter = has_gutter(text);
-            let fits = text.split('\n').skip(1).all(|line| {
-                let indent = indentation(line);
-                let rest = &line[indent.len()..];
-                line.trim().is_empty()
-                    || (gutter && rest.starts_with('*'))
-                    || (!indent.contains('\t') && indent.len() as i32 + shift >= margin)
-                    || shift == 0
-            });
-            self.keep_indent = !fits;
-            if fits { formatted } else { actual }
-        } else {
-            formatted
-        };
-        let actual = written.unwrap_or(formatted);
+        // Never left of the margin, even under a line kept there.
+        let formatted = formatted.max(0);
+        let stays = written.is_some() && self.stays_as_written(first, actual, formatted, below);
+        let formatted = if stays { actual } else { formatted };
         self.line = Indent {
-            actual,
+            actual: written.unwrap_or(formatted),
             formatted,
             first: first.start,
         };
@@ -1373,7 +1322,42 @@ impl<'a> Formatter<'a> {
             *self.statements.last_mut().unwrap() = Some(self.line);
         }
         self.line_first = first.start;
-        formatted
+        (!stays).then_some(formatted)
+    }
+
+    /// Whether a line starting with `first`, indented `actual` past its
+    /// margin as written and `formatted` by the rules, stays as
+    /// written: in a `// fmt: off` region; left of its margin (markdown,
+    /// where fenced code may be less indented than its fence); indented
+    /// with tabs in markdown (which counts them to the next multiple of
+    /// four) or as a string's line (moving would mix tabs and spaces);
+    /// starting like a fence in markdown, which moving could make close
+    /// its block; starting with `<`, as space before it decides whether
+    /// it may be a bracket; an indented code block's first line, after a
+    /// list item, if formatting would take it to `below`, where it would
+    /// continue the item; or a multi-line block comment whose lines can't
+    /// all move ([`comment_moves`]).
+    fn stays_as_written(
+        &self,
+        first: Token,
+        actual: i32,
+        formatted: i32,
+        below: Option<i32>,
+    ) -> bool {
+        let indent = &self.source[self.line_starts[self.index] as usize..first.start as usize];
+        let text = self.text(first);
+        let rest = &self.source[first.start as usize..];
+        let string_line = matches!(first.kind, TokenKind::Margin | TokenKind::QuotedString);
+        let margin = self.range_of(first.start).map_or(0, |r| r.margin);
+        self.kept[self.index]
+            || actual < 0
+            || ((!self.standalone || string_line) && indent.contains('\t'))
+            || (!self.standalone && (rest.starts_with("```") || rest.starts_with("~~~")))
+            || text == "<"
+            || below.is_some_and(|b| formatted >= b)
+            || (first.kind == TokenKind::Comment
+                && text.contains('\n')
+                && !comment_moves(text, formatted - actual, margin))
     }
 
     /// The statement a line starting with `first` continues, if the code
@@ -1381,7 +1365,7 @@ impl<'a> Formatter<'a> {
     /// `.` or `&&`; and the line's first code token (after comments). A `;`
     /// ends one in parentheses too if their contents start on a line of
     /// their own (`for (\n  a;\n  b;`), not in `for (a;\n  b;`.
-    fn continued_statement(&mut self, first: Token) -> Option<(Indent, Token)> {
+    fn continued_statement(&self, first: Token) -> Option<(Indent, Token)> {
         let previous = self.previous?;
         // A comment line goes with the code after it: it continues the
         // statement if that does, but not before a close bracket or the
@@ -1402,11 +1386,9 @@ impl<'a> Formatter<'a> {
         if self.juxtaposed.contains(&first.start) {
             return None;
         }
-        if let Some(top) = self.stack.last_mut() {
-            if top.start == previous.start {
-                top.contents_own_line = true;
-                return None;
-            }
+        // The first line in brackets starts a statement.
+        if self.stack.last().is_some_and(|o| o.start == previous.start) {
+            return None;
         }
         let text = self.text(previous);
         // A label's `:` too: the statement it labels is next.
@@ -1529,13 +1511,17 @@ impl<'a> Formatter<'a> {
                         _ => self.line,
                     }
                 };
+                // A line break before its first code token, as written.
+                let next = self.tokens.get(self.next_code[self.index + 1]);
+                let contents = next.map_or(self.source.len(), |t| t.start as usize);
+                let contents_own_line = self.source[token.end as usize..contents].contains('\n');
                 self.stack.push(Open {
                     start: token.start,
                     base,
                     line: self.line,
                     paren: text.ends_with('('),
                     round: !text.ends_with('{'),
-                    contents_own_line: false,
+                    contents_own_line,
                 });
                 self.statements.push(Some(self.line));
             }
@@ -1589,7 +1575,8 @@ impl<'a> Formatter<'a> {
 
     /// The space between two tokens on a line, or `None` to keep it.
     fn space(&self, a: Token, b: Token, gap: &str) -> Option<&'static str> {
-        use Operator::*;
+        use Role::*;
+        use Spacing::*;
         use TokenKind::*;
         if gap.contains(['\n', '\r'])
             || matches!(a.kind, Comment | LeftDelimiter | QuotedString | Margin)
@@ -1603,79 +1590,53 @@ impl<'a> Formatter<'a> {
         if tb == "<" {
             return None;
         }
+        // Each token's role and operator, and its spacing (an object
+        // literal's colon spaced as a type's).
         let (ra, rb) = (self.role(a), self.role(b));
-        let is = |r: Option<(Role, Operator)>, role: Role| r.is_some_and(|r| r.0 == role);
-        let op = |r: Option<(Role, Operator)>| r.map(|r| r.1);
-        let tight = |r: Option<(Role, Operator)>| {
-            matches!(
-                op(r),
-                Some(
-                    Dot | ChainNull | DotDot | ColonColon | HighColon | LowColon | Angle | CallJoin
-                )
-            )
+        let spacing = |t: Token, r: Option<(Role, Operator)>| {
+            let (role, op) = r?;
+            let spacing = match self.properties.contains(&t.start) {
+                true => After,
+                false => op.spacing(self.text(t)),
+            };
+            Some((role, spacing))
         };
-        let curly = |r: Option<(Role, Operator)>| matches!(op(r), Some(Curly | CurlyGroup));
-        let round = |r: Option<(Role, Operator)>| {
-            matches!(op(r), Some(Paren | ParenGroup | Square | SquareGroup))
-        };
-        let dot = |r: Option<(Role, Operator)>| {
-            is(r, Role::Infix) && matches!(op(r), Some(Dot | ChainNull))
-        };
-        let spaced = |r: Option<(Role, Operator)>, t: Token| {
-            is(r, Role::Infix) && t.kind == Punctuation && !tight(r)
-        };
-        let spaced_word = SPACED_BEFORE_PAREN.contains(&ta);
-        let angle = op(ra) == Some(Angle) && is(ra, Role::Open)
-            || op(rb) == Some(Angle) && matches!(rb.map(|r| r.0), Some(Role::Open | Role::Close));
-        let prefix = is(ra, Role::Prefix)
-            && a.kind == Punctuation
-            && op(ra).is_some_and(|o| o.op_type() == OpType::Prefix);
-        let hole =
-            |r: Option<(Role, Operator)>, role: Role| is(r, role) && op(r) == Some(DollarCurly);
+        let (sa, sb) = (spacing(a, ra), spacing(b, rb));
+        let is = |s: Option<(Role, Spacing)>, role: Role, spacing| s == Some((role, spacing));
         // The first rule that applies decides; `None` keeps the space.
         let rules = [
-            // A string's `${x}`: none inside, unlike `{ a }`.
-            (hole(ra, Role::Open) || hole(rb, Role::Close), Some("")),
-            // `,` and `;`: none before, one after, but before a closer.
-            (is(rb, Role::Separator) && matches!(tb, "," | ";"), Some("")),
+            // A string's `${x}`: none inside, before a closer after a
+            // separator too (`${a; }`), unlike other brackets.
             (
-                is(ra, Role::Separator) && matches!(ta, "," | ";"),
-                (!closes(tb)).then_some(" "),
-            ),
-            (dot(ra) || dot(rb), Some("")),
-            // Type colons, and an object literal's, which are the same in
-            // its items after the first.
-            (
-                is(rb, Role::Infix) && op(rb) == Some(HighColon)
-                    || self.properties.contains(&b.start),
+                ra == Some((Open, Operator::DollarCurly))
+                    || rb == Some((Close, Operator::DollarCurly)),
                 Some(""),
             ),
-            (
-                is(ra, Role::Infix) && op(ra) == Some(HighColon)
-                    || self.properties.contains(&a.start),
-                Some(" "),
-            ),
-            (spaced(ra, a) || spaced(rb, b), Some(" ")),
+            // `,`, `;` and colons: none before, one after, but `,` and `;`
+            // before a closer as written.
+            (is(sb, Separator, After) || is(sb, Infix, After), Some("")),
+            (is(sa, Separator, After), (!closes(tb)).then_some(" ")),
+            (is(sa, Infix, Tight) || is(sb, Infix, Tight), Some("")),
+            (is(sa, Infix, After), Some(" ")),
+            (is(sa, Infix, Spaced) || is(sb, Infix, Spaced), Some(" ")),
             // `if (` and `fn (`, but `f(`.
             (
-                is(rb, Role::Open) && tb == "(" && op(rb) == Some(Paren),
-                (a.kind == Word).then_some(if spaced_word { " " } else { "" }),
+                rb == Some((Open, Operator::Paren)),
+                (a.kind == Word).then_some(if SPACED_BEFORE_PAREN.contains(&ta) {
+                    " "
+                } else {
+                    ""
+                }),
             ),
             // `{ a }`, `f {`, but `({` and `{}` as written.
+            (is(sb, Open, Spaced), (!opens(ta)).then_some(" ")),
+            (is(sa, Open, Spaced), (!closes(tb)).then_some(" ")),
+            (is(sb, Close, Spaced), Some(" ")),
+            // `(a)`, `a[i]`, `List<T>`, `-a`.
             (
-                is(rb, Role::Open) && tb == "{" && curly(rb),
-                (!opens(ta)).then_some(" "),
-            ),
-            (
-                is(ra, Role::Open) && ta == "{" && curly(ra),
-                (tb != "}").then_some(" "),
-            ),
-            (is(rb, Role::Close) && tb == "}" && curly(rb), Some(" ")),
-            (
-                is(ra, Role::Open) && round(ra) || is(rb, Role::Close) && round(rb),
+                is(sa, Open, Tight) || is(sb, Close, Tight) || is(sa, Prefix, Tight),
                 Some(""),
             ),
-            (angle || prefix, Some("")),
             // Runs of spaces and tabs.
             (
                 gap != " " && !gap.is_empty() && gap.bytes().all(|c| c == b' ' || c == b'\t'),
@@ -1751,6 +1712,21 @@ fn has_gutter(comment: &str) -> bool {
         && comment.split('\n').skip(1).all(|line| {
             let rest = &line[indentation(line).len()..];
             line.trim().is_empty() || rest.starts_with('*')
+        })
+}
+
+/// Whether a multi-line block comment's lines can all move `shift`
+/// columns with its first: none would go left of `margin` (its code
+/// block's, in markdown) or is indented with tabs, which moving would mix
+/// with spaces. A star gutter's lines follow its first.
+fn comment_moves(comment: &str, shift: i32, margin: i32) -> bool {
+    let gutter = has_gutter(comment);
+    shift == 0
+        || comment.split('\n').skip(1).all(|line| {
+            let indent = indentation(line);
+            line.trim().is_empty()
+                || (gutter && line[indent.len()..].starts_with('*'))
+                || (!indent.contains('\t') && indent.len() as i32 + shift >= margin)
         })
 }
 

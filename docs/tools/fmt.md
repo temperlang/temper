@@ -21,6 +21,19 @@ let p = {x:1, y :2};            // before
 let p = { x: 1, y: 2 };         // after
 ```
 
+Each operator's spacing is declared in the parser's operator table:
+around an infix operator, after a prefix one, inside brackets. Followers
+space as themselves (the `,` in `extends A, B`), and an object literal's
+`:` as a type's. Space before `<` always stays as written, as it decides
+whether `<` may be an angle bracket.
+
+| Spacing | Operators |
+|---|---|
+| One space around, or inside | `=>`, `->`, `=`, `+=`, `-=`, `*=`, `/=`, `%=`, `&=`, `^=`, `\|=`, `&&=`, `\|\|=`, `<<=`, `>>=`, `>>>=`, `??`, `\|\|`, `&&`, `==`, `!=`, `===`, `!==`, `=~`, `!~`, `<`, `<=`, `>`, `>=`, `\|`, `^`, `&` (infix), `<<`, `>>`, `>>>`, `+` (infix), `-` (infix), `*` (infix), `/`, `%`, `~` (infix), `**`, `{ }` |
+| None around, after, or inside | `@`, `< >`, `++` (prefix), `--` (prefix), `+` (prefix), `-` (prefix), `!` (prefix), `~` (prefix), `&` (prefix), `*` (prefix), `...`, `.`, `?.`, `( )`, `[ ]`, `\`, `${ }` |
+| None before, one after | `;`, `,`, `:` (type) |
+| As written (a run of spaces and tabs becomes one) | `;;;`, `;;`, `:` (marker), `given`, `return`, `throw`, `yield`, `of`, `:` (label), `case`, `orelse`, `extends`, `implements`, `forbids`, `supports`, `throws`, `in`, `instanceof`, `is`, `as`, `::`, `await`, `++` (postfix), `--` (postfix), `!` (postfix), `?`, `..`, `\( )`, `\{ }`, `\u{ }`, `new` |
+
 No space goes just inside a string's `${ }`, as in Kotlin, Python's
 f-strings, and JavaScript's template literals; one over several lines
 keeps its line breaks.

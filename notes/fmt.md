@@ -332,8 +332,17 @@ census shows authors already agree on almost everything else.
   tree gives each operator token its role (infix, prefix, open or close
   bracket, separator) for spacing.
 - **Output:** the tokens in order, each gap rewritten: on a line, by the
-  spacing rules, keyed on the two tokens' roles and operators; across
-  lines, the line breaks (blank lines capped), then the indentation.
+  spacing rules, keyed on the two tokens' roles and their operators'
+  spacing, declared in the operator table (`operator::Spacing`: one
+  space, none, none before and one after, or as written; docs/tools/fmt.md's
+  table is checked against it); across lines, the line breaks (blank
+  lines capped), then the indentation. Every line's indentation is
+  computed by the same rules; then one decision,
+  `Formatter::stays_as_written`, keeps some as written (`// fmt: off`
+  regions, left of the margin, tabs in markdown or a string's line, a
+  fence-like line, a leading `<`, a line that would join a list item,
+  a block comment that can't move). A kept line still starts or
+  continues statements, as its indentation as written.
   Space next to comments, inside strings (and `\u{...}` escapes), and
   before `<` (whether `<` follows space decides whether it may be an
   angle bracket) is copied, and any change is checked by lexing the two

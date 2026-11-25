@@ -360,3 +360,47 @@ let été = 1; let s = "😀";
 ﻿let x = 1;
 --- formatted
 error: doesn't parse (line 1: unrecognized token); left as written
+
+=== a line kept left of the margin starts its statement; its continuation indents from it (markdown)
+Code:
+
+  ```temper
+  let x = 1;
+let y =
+      2;
+  ```
+
+--- formatted
+Code:
+
+  ```temper
+  let x = 1;
+let y =
+  2;
+  ```
+
+=== a statement started in a fmt: off region continues from its line as written
+class C {
+  // fmt: off
+    let
+  // fmt: on
+  x = 1;
+}
+--- formatted
+class C {
+  // fmt: off
+    let
+      // fmt: on
+      x = 1;
+}
+
+=== a line kept for its `<` starts its statement, and its block closes at its line
+<for (a;
+ b;
+ c) {
+}
+--- formatted
+<for (a;
+    b;
+    c) {
+}
