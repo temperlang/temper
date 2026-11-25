@@ -150,6 +150,38 @@ true false
 2 2 3 3
 ```
 
+## Spreads
+
+`{ ...old, a: e }` copies an `@imu` object with some properties changed:
+the constructor runs, each property not given read from `old`, which
+runs first, then the given values, in the order written.
+
+    @imu
+    class Theme(
+      public fg: String,
+      public bg: String,
+      public size: Int = 12,
+      public bold: Boolean = false,
+    ) {
+      public get weight(): String { if (bold) { "bold" } else { "plain" } }
+      public toString(): String { "${fg}/${bg} ${size} ${weight}" }
+    }
+    let plain: Theme = { fg: "black", bg: "white" };
+    let loud = { ...plain, size: 20, bold: true };
+    let dark = { ...loud, fg: plain.bg, bg: plain.fg };
+    console.log("${plain} | ${loud} | ${dark}");
+    let picked(t: Theme, why: String): Theme { console.log(why); t }
+    let noted(s: String): String { console.log(s); s }
+    let mixed = { ...picked(dark, "old"), size: 9, fg: noted("red") };
+    console.log(mixed.toString());
+
+```log
+black/white 12 plain | black/white 20 bold | white/black 20 bold
+old
+red
+red/black 9 bold
+```
+
 ## Equality, every way round
 
 A table of `==` and `!=` on `Loose`, whose `@operator("==")` method

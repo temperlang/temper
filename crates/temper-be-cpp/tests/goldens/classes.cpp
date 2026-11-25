@@ -22,6 +22,7 @@ struct Boxed;
 struct Holder;
 struct Version;
 struct Stock;
+struct Theme;
 struct Sql;
 struct Limited;
 struct Stepper;
@@ -130,6 +131,22 @@ struct Stock : public std::enable_shared_from_this<Stock> {
   int32_t get_size() const;
 };
 
+struct Theme : public std::enable_shared_from_this<Theme> {
+  temper::core::Str fg;
+  temper::core::Str bg;
+  int32_t size;
+  bool bold;
+  static std::shared_ptr<Theme> make(temper::core::Str const & fg, temper::core::Str const & bg, temper::core::NullableParam<int32_t> size, temper::core::NullableParam<bool> bold);
+  static std::shared_ptr<Theme> make(temper::core::Str const & fg, temper::core::Str const & bg, temper::core::NullableParam<int32_t> size);
+  static std::shared_ptr<Theme> make(temper::core::Str const & fg, temper::core::Str const & bg);
+  temper::core::Str get_weight() const;
+  temper::core::Str toString() const;
+  temper::core::Str get_fg() const;
+  temper::core::Str get_bg() const;
+  int32_t get_size() const;
+  bool get_bold() const;
+};
+
 struct Sql : public std::enable_shared_from_this<Sql> {
   std::shared_ptr<std::vector<temper::core::Str>> parts;
   static std::shared_ptr<Sql> make();
@@ -222,6 +239,12 @@ T AnyFailing<T>::fail() const {
 namespace classes {
 
 namespace core = temper::core;
+
+namespace temper_globals {
+
+static core::GlobalSlot<std::shared_ptr<core::Console::Type>> console;
+
+}  // namespace temper_globals
 
 core::Str Shape::describe() const {
   std::shared_ptr<Shape const> self = std::shared_ptr<Shape const>(shared_from_this(), this);
@@ -461,6 +484,64 @@ static std::shared_ptr<Shape> shape(std::shared_ptr<Shape> const & x) {
   return x;
 }
 
+std::shared_ptr<Theme> Theme::make(core::Str const & fg, core::Str const & bg, core::NullableParam<int32_t> size, core::NullableParam<bool> bold) {
+  std::shared_ptr<Theme> self = std::make_shared<Theme>();
+  int32_t size2 = size == nullptr ? 12 : size.value;
+  bool bold2 = bold == nullptr ? false : bold.value;
+  self->fg = fg;
+  self->bg = bg;
+  self->size = size2;
+  self->bold = bold2;
+  return self;
+}
+
+std::shared_ptr<Theme> Theme::make(core::Str const & fg, core::Str const & bg, core::NullableParam<int32_t> size) {
+  return make(fg, bg, size, nullptr);
+}
+
+std::shared_ptr<Theme> Theme::make(core::Str const & fg, core::Str const & bg) {
+  return make(fg, bg, nullptr, nullptr);
+}
+
+core::Str Theme::get_weight() const {
+  if (this->bold) {
+    return TEMPER_STR("bold");
+  } else {
+    return TEMPER_STR("plain");
+  }
+}
+
+core::Str Theme::toString() const {
+  std::shared_ptr<Theme const> self = shared_from_this();
+  return self->fg + "/" + self->bg + " " + std::to_string(self->size) + " " + self->get_weight();
+}
+
+core::Str Theme::get_fg() const {
+  return this->fg;
+}
+
+core::Str Theme::get_bg() const {
+  return this->bg;
+}
+
+int32_t Theme::get_size() const {
+  return this->size;
+}
+
+bool Theme::get_bold() const {
+  return this->bold;
+}
+
+static std::shared_ptr<Theme> picked(std::shared_ptr<Theme> const & t, core::Str const & why) {
+  core::Console::log(temper_globals::console.value, why);
+  return t;
+}
+
+static core::Str noted(core::Str const & s) {
+  core::Console::log(temper_globals::console.value, s);
+  return s;
+}
+
 static core::Str compared(std::function<bool(std::shared_ptr<Loose>, std::shared_ptr<Loose>)> const & eq) {
   std::shared_ptr<std::vector<int32_t>> ns = core::List::make<int32_t>(0, 1, -1, 2);
   std::shared_ptr<std::vector<core::Str>> out = core::ListBuilder::make<core::Str>();
@@ -582,60 +663,73 @@ static T orFail(bool ok, T x, std::shared_ptr<Failing<T>> const & f) {
 
 void global_init_init() {
   core::init_once([] {
+    temper_globals::console.construct();
     Rect::temper_statics::unit.construct();
-    std::shared_ptr<core::Console::Type> console = core::Console::get_console();
+    temper_globals::console.value = core::Console::get_console();
     Rect::temper_statics::unit.value = Rect::make(1, 1);
     std::shared_ptr<Rect> r = Rect::make(2, 3);
-    core::Console::log(console, r->toString());
-    core::Console::log(console, std::to_string(r->get_area()));
+    core::Console::log(temper_globals::console.value, r->toString());
+    core::Console::log(temper_globals::console.value, std::to_string(r->get_area()));
     std::shared_ptr<Shape> s = classes::shape(core::to_base<Shape>(r));
-    core::Console::log(console, s->describe());
+    core::Console::log(temper_globals::console.value, s->describe());
     std::shared_ptr<Shape> q = classes::shape(core::to_base<Shape>(Square::make(4)));
-    core::Console::log(console, q->describe());
-    core::Console::log(console, std::to_string(q->get_area()));
-    core::Console::log(console, std::to_string(r->scaled(2)->scaled(3)->get_area()));
-    core::Console::log(console, Rect::temper_statics::unit.value->scaled(5)->toString());
+    core::Console::log(temper_globals::console.value, q->describe());
+    core::Console::log(temper_globals::console.value, std::to_string(q->get_area()));
+    core::Console::log(temper_globals::console.value, std::to_string(r->scaled(2)->scaled(3)->get_area()));
+    core::Console::log(temper_globals::console.value, Rect::temper_statics::unit.value->scaled(5)->toString());
     std::shared_ptr<Counter> c = Counter::zero();
     c->bump()->bump();
-    core::Console::log(console, std::to_string(c->count));
+    core::Console::log(temper_globals::console.value, std::to_string(c->count));
     c->set_doubled(10);
-    core::Console::log(console, std::to_string(c->get_doubled()));
-    core::Console::log(console, core::Boolean::toString(c->same(Counter::make()->bump()->bump())));
+    core::Console::log(temper_globals::console.value, std::to_string(c->get_doubled()));
+    core::Console::log(temper_globals::console.value, core::Boolean::toString(c->same(Counter::make()->bump()->bump())));
     c->set_added(5);
     int32_t t = 2;
     c->set_added(t);
     int32_t t2 = t;
     c->set_added(t2);
     int32_t added = t2;
-    core::Console::log(console, std::to_string(added) + " " + std::to_string(c->count));
-    core::Console::log(console, core::Boolean::toString(Point::make(1, 2)->eq(Point::make(1, 2))) + " " + core::Boolean::toString(!Point::make(1, 2)->eq(Point::make(2, 1))));
-    core::Console::log(console, core::Boolean::toString(Holder::make(Loose::make(3), TEMPER_STR("a"))->eq(Holder::make(Loose::make(-3), TEMPER_STR("a")))));
+    core::Console::log(temper_globals::console.value, std::to_string(added) + " " + std::to_string(c->count));
+    core::Console::log(temper_globals::console.value, core::Boolean::toString(Point::make(1, 2)->eq(Point::make(1, 2))) + " " + core::Boolean::toString(!Point::make(1, 2)->eq(Point::make(2, 1))));
+    core::Console::log(temper_globals::console.value, core::Boolean::toString(Holder::make(Loose::make(3), TEMPER_STR("a"))->eq(Holder::make(Loose::make(-3), TEMPER_STR("a")))));
     std::shared_ptr<Loose> loose = Loose::make(2);
     core::Str string = core::Boolean::toString(loose->mirrors(Loose::make(-2))) + " ";
     std::shared_ptr<Loose> left = maybeLoose(-2);
     std::shared_ptr<Loose> left2 = loose;
     std::shared_ptr<Loose> right = maybeLoose(0);
     std::shared_ptr<Loose> left3 = maybeLoose(0);
-    core::Console::log(console, string + core::Boolean::toString(left == nullptr ? false : left->eq(loose)) + " " + core::Boolean::toString(right == nullptr ? false : left2->eq(right)) + " " + core::Boolean::toString(!(left3 == nullptr ? false : left3->eq(loose))));
+    core::Console::log(temper_globals::console.value, string + core::Boolean::toString(left == nullptr ? false : left->eq(loose)) + " " + core::Boolean::toString(right == nullptr ? false : left2->eq(right)) + " " + core::Boolean::toString(!(left3 == nullptr ? false : left3->eq(loose))));
     std::shared_ptr<Loose> subject = maybeLoose(-2);
     core::Str matched = (subject == nullptr ? false : subject->eq(loose)) ? TEMPER_STR("loose") : TEMPER_STR("other");
-    core::Console::log(console, matched);
+    core::Console::log(temper_globals::console.value, matched);
     std::shared_ptr<Boxed<core::Str>> b1 = Boxed<core::Str>::make(TEMPER_STR("x"), 1);
     std::shared_ptr<Boxed<core::Str>> b3 = Boxed<core::Str>::make(TEMPER_STR("z"), 2);
-    core::Console::log(console, b1->value + " " + core::Boolean::toString(b1->eq(Boxed<core::Str>::make(TEMPER_STR("y"), 1))) + " " + core::Boolean::toString(!b1->eq(b3)) + " " + core::Boolean::toString(b1->sameAs(Boxed<core::Str>::make(TEMPER_STR("y"), 1))) + " " + core::Boolean::toString(b3->sameAs(b1)));
-    core::Console::log(console, core::Boolean::toString(Version::make(1, 2)->compareTo(Version::make(1, 3)) < 0) + " " + core::Boolean::toString(Version::make(2, 0)->compareTo(Version::make(1, 9)) >= 0));
-    core::Console::log(console, core::Boolean::toString(dynamic_cast<Square const *>(q.get()) != nullptr) + " " + core::Boolean::toString(dynamic_cast<Square const *>(s.get()) != nullptr));
+    core::Console::log(temper_globals::console.value, b1->value + " " + core::Boolean::toString(b1->eq(Boxed<core::Str>::make(TEMPER_STR("y"), 1))) + " " + core::Boolean::toString(!b1->eq(b3)) + " " + core::Boolean::toString(b1->sameAs(Boxed<core::Str>::make(TEMPER_STR("y"), 1))) + " " + core::Boolean::toString(b3->sameAs(b1)));
+    core::Console::log(temper_globals::console.value, core::Boolean::toString(Version::make(1, 2)->compareTo(Version::make(1, 3)) < 0) + " " + core::Boolean::toString(Version::make(2, 0)->compareTo(Version::make(1, 9)) >= 0));
+    core::Console::log(temper_globals::console.value, core::Boolean::toString(dynamic_cast<Square const *>(q.get()) != nullptr) + " " + core::Boolean::toString(dynamic_cast<Square const *>(s.get()) != nullptr));
     std::shared_ptr<Square> sq = core::checked_cast<Square>(q);
-    core::Console::log(console, std::to_string(sq->get_area()));
+    core::Console::log(temper_globals::console.value, std::to_string(sq->get_area()));
     if (dynamic_cast<Rect const *>(s.get()) != nullptr) {
-      core::Console::log(console, std::to_string(core::checked_cast<Rect>(s)->w));
+      core::Console::log(temper_globals::console.value, std::to_string(core::checked_cast<Rect>(s)->w));
     }
     std::shared_ptr<Stock> st = Stock::make(core::List::make<int32_t>(4, 5));
     st->set_items(core::List::make<int32_t>(1, 2, 3));
-    core::Console::log(console, std::to_string(st->count) + " " + std::to_string(st->size) + " " + std::to_string(st->sizeNow()) + " " + std::to_string(core::List::length<int32_t>(st->get_items())));
-    core::Console::log(console, classes::compared([](std::shared_ptr<Loose> a, std::shared_ptr<Loose> b) -> bool { return a == nullptr ? b == nullptr : b == nullptr ? false : a->eq(b); }));
-    core::Console::log(console, classes::compared([](std::shared_ptr<Loose> a, std::shared_ptr<Loose> b) -> bool { return !(a == nullptr ? b == nullptr : b == nullptr ? false : a->eq(b)); }));
-    core::Console::log(console, classes::compared([](std::shared_ptr<Loose> a, std::shared_ptr<Loose> b) -> bool { return b == nullptr ? a == nullptr : a == nullptr ? false : b->eq(a); }));
+    core::Console::log(temper_globals::console.value, std::to_string(st->count) + " " + std::to_string(st->size) + " " + std::to_string(st->sizeNow()) + " " + std::to_string(core::List::length<int32_t>(st->get_items())));
+    std::shared_ptr<Theme> plain = Theme::make(TEMPER_STR("black"), TEMPER_STR("white"));
+    std::shared_ptr<Theme> spread = plain;
+    std::shared_ptr<Theme> loud = Theme::make(spread->fg, spread->bg, 20, true);
+    std::shared_ptr<Theme> spread2 = loud;
+    std::shared_ptr<Theme> dark = Theme::make(plain->bg, plain->fg, spread2->size, spread2->bold);
+    core::Console::log(temper_globals::console.value, plain->toString() + " | " + loud->toString() + " | " + dark->toString());
+    std::shared_ptr<Theme> spread3 = classes::picked(dark, TEMPER_STR("old"));
+    core::Str arg = spread3->bg;
+    core::Str arg2 = classes::noted(TEMPER_STR("red"));
+    bool arg3 = spread3->bold;
+    std::shared_ptr<Theme> mixed = Theme::make(arg2, arg, 9, arg3);
+    core::Console::log(temper_globals::console.value, mixed->toString());
+    core::Console::log(temper_globals::console.value, classes::compared([](std::shared_ptr<Loose> a, std::shared_ptr<Loose> b) -> bool { return a == nullptr ? b == nullptr : b == nullptr ? false : a->eq(b); }));
+    core::Console::log(temper_globals::console.value, classes::compared([](std::shared_ptr<Loose> a, std::shared_ptr<Loose> b) -> bool { return !(a == nullptr ? b == nullptr : b == nullptr ? false : a->eq(b)); }));
+    core::Console::log(temper_globals::console.value, classes::compared([](std::shared_ptr<Loose> a, std::shared_ptr<Loose> b) -> bool { return b == nullptr ? a == nullptr : a == nullptr ? false : b->eq(a); }));
     auto fn4 = [](std::shared_ptr<Loose> a, std::shared_ptr<Loose> b) -> bool {
       if (a == nullptr) {
         return false;
@@ -645,7 +739,7 @@ void global_init_init() {
       }
       return a->mirrors(b);
     };
-    core::Console::log(console, classes::compared(fn4));
+    core::Console::log(temper_globals::console.value, classes::compared(fn4));
     std::type_index favorite = classes::same(std::type_index(typeid(int64_t)));
     static_cast<void>(favorite);
     int32_t named = 0;
@@ -657,14 +751,14 @@ void global_init_init() {
         i = core::Int::add(i, 1);
       }
     }
-    core::Console::log(console, std::to_string(named) + " types");
+    core::Console::log(temper_globals::console.value, std::to_string(named) + " types");
     std::shared_ptr<Sql> sql = Sql::make();
     sql->appendString(TEMPER_STR("it"));
     sql->appendString(nullptr);
     sql->appendInt(3);
     sql->appendShape(core::to_base<Shape>(Square::make(2)));
     sql->appendRect(Rect::make(1, 2));
-    core::Console::log(console, sql->get_accumulated());
+    core::Console::log(temper_globals::console.value, sql->get_accumulated());
     int32_t seven = 7;
     std::shared_ptr<Sql> accumulator = Sql::make();
     {
@@ -675,11 +769,11 @@ void global_init_init() {
       accumulator->appendSafe(TEMPER_STR(" FROM "));
       accumulator->appendRect(Rect::make(2, 2));
     }
-    core::Console::log(console, accumulator->get_accumulated());
+    core::Console::log(temper_globals::console.value, accumulator->get_accumulated());
     std::shared_ptr<Limited> stepper = core::to_base<Limited>(Stepper::make(3));
-    core::Console::log(console, "next " + std::to_string(stepper->next(1)));
+    core::Console::log(temper_globals::console.value, "next " + std::to_string(stepper->next(1)));
     int32_t int32 = classes::orFail<int32_t>(true, 4, core::to_base<Failing<int32_t>>(IntFailing::make()));
-    core::Console::log(console, std::to_string(int32) + " " + classes::orFail<core::Str>(true, TEMPER_STR("s"), core::to_base<Failing<core::Str>>(AnyFailing<core::Str>::make())));
+    core::Console::log(temper_globals::console.value, std::to_string(int32) + " " + classes::orFail<core::Str>(true, TEMPER_STR("s"), core::to_base<Failing<core::Str>>(AnyFailing<core::Str>::make())));
   });
 }
 

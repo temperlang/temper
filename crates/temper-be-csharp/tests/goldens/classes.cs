@@ -7,6 +7,7 @@ namespace Classes;
 
 public static class ClassesGlobal
 {
+    internal static readonly ILoggingConsole console;
     internal static readonly Rect rectUnit;
 
     internal static Loose? MaybeLoose(int n)
@@ -24,6 +25,18 @@ public static class ClassesGlobal
     internal static IShape Shape(IShape x)
     {
         return x;
+    }
+
+    internal static Theme Picked(Theme t, string why)
+    {
+        console.Log(why);
+        return t;
+    }
+
+    internal static string Noted(string s)
+    {
+        console.Log(s);
+        return s;
     }
 
     internal static string Compared(Func<Loose?, Loose?, bool> eq)
@@ -101,7 +114,7 @@ public static class ClassesGlobal
 
     static ClassesGlobal()
     {
-        ILoggingConsole console = Support.Logging.LoggingConsoleFactory.CreateConsole("Classes");
+        console = Support.Logging.LoggingConsoleFactory.CreateConsole("Classes");
         rectUnit = new Rect(1, 1);
         Rect r = new Rect(2, 3);
         console.Log(r.ToString());
@@ -155,6 +168,21 @@ public static class ClassesGlobal
         Stock st = new Stock(Listed.CreateReadOnlyList<int>(4, 5));
         st.Items = Listed.CreateReadOnlyList<int>(1, 2, 3);
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{st.Count} {st.Size} {st.SizeNow()} {st.Items.Count}"));
+        Theme plain = new Theme("black", "white");
+        Theme loud;
+        Theme spread = plain;
+        loud = new Theme(spread.Fg, spread.Bg, 20, true);
+        Theme dark;
+        Theme spread2 = loud;
+        dark = new Theme(plain.Bg, plain.Fg, spread2.Size, spread2.Bold);
+        console.Log(plain.ToString() + " | " + loud.ToString() + " | " + dark.ToString());
+        Theme mixed;
+        Theme spread3 = Picked(dark, "old");
+        string arg = spread3.Bg;
+        string arg2 = Noted("red");
+        bool arg3 = spread3.Bold;
+        mixed = new Theme(arg2, arg, 9, arg3);
+        console.Log(mixed.ToString());
         console.Log(Compared((Loose? a, Loose? b) => a == null ? b == null : b == null ? false : a.Eq(b)));
         console.Log(Compared((Loose? a, Loose? b) => !(a == null ? b == null : b == null ? false : a.Eq(b))));
         console.Log(Compared((Loose? a, Loose? b) => b == null ? a == null : a == null ? false : b.Eq(a)));

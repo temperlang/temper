@@ -28,6 +28,25 @@ function shape(x) {
 }
 
 /**
+ * @param {Theme} t
+ * @param {string} why
+ * @returns {Theme}
+ */
+function picked(t, why) {
+  console.log(why);
+  return t;
+}
+
+/**
+ * @param {string} s
+ * @returns {string}
+ */
+function noted(s) {
+  console.log(s);
+  return s;
+}
+
+/**
  * @param {(arg0: Loose | null, arg1: Loose | null) => boolean} eq
  * @returns {string}
  */
@@ -543,6 +562,75 @@ class Stock extends type() {
   }
 }
 
+class Theme extends type() {
+  /** @type {string} */
+  #fg;
+  /** @type {string} */
+  #bg;
+  /** @type {number} */
+  #size;
+  /** @type {boolean} */
+  #bold;
+
+  /**
+   * @param {{ fg: string, bg: string, size?: number | null, bold?: boolean | null }} props
+   * @returns {Theme}
+   */
+  static new(props) {
+    return new Theme(props.fg, props.bg, props.size, props.bold);
+  }
+
+  /**
+   * @param {string} fg
+   * @param {string} bg
+   * @param {number | null} [size]
+   * @param {boolean | null} [bold]
+   */
+  constructor(fg, bg, size, bold) {
+    super();
+    size ??= 12;
+    bold ??= false;
+    this.#fg = fg;
+    this.#bg = bg;
+    this.#size = size;
+    this.#bold = bold;
+  }
+
+  /** @returns {string} */
+  get fg() {
+    return this.#fg;
+  }
+
+  /** @returns {string} */
+  get bg() {
+    return this.#bg;
+  }
+
+  /** @returns {number} */
+  get size() {
+    return this.#size;
+  }
+
+  /** @returns {boolean} */
+  get bold() {
+    return this.#bold;
+  }
+
+  /** @returns {string} */
+  get weight() {
+    if (this.#bold) {
+      return "bold";
+    } else {
+      return "plain";
+    }
+  }
+
+  /** @returns {string} */
+  toString() {
+    return `${this.#fg}/${this.#bg} ${this.#size} ${this.weight}`;
+  }
+}
+
 class Sql extends type() {
   /** @type {string[]} */
   #parts;
@@ -724,6 +812,33 @@ if (s instanceof Rect) {
 const st = new Stock(Object.freeze([4, 5]));
 st.items = Object.freeze([1, 2, 3]);
 console.log(`${st.count} ${st.size} ${st.sizeNow()} ${st.items.length}`);
+const plain = new Theme("black", "white");
+/** @type {Theme} */
+let t$6;
+{
+  const spread = plain;
+  t$6 = new Theme(spread.fg, spread.bg, 20, true);
+}
+const loud = t$6;
+/** @type {Theme} */
+let t$7;
+{
+  const spread2 = loud;
+  t$7 = new Theme(plain.bg, plain.fg, spread2.size, spread2.bold);
+}
+const dark = t$7;
+console.log(`${plain.toString()} | ${loud.toString()} | ${dark.toString()}`);
+/** @type {Theme} */
+let t$8;
+{
+  const spread3 = picked(dark, "old");
+  const arg = spread3.bg;
+  const arg2 = noted("red");
+  const arg3 = spread3.bold;
+  t$8 = new Theme(arg2, arg, 9, arg3);
+}
+const mixed = t$8;
+console.log(mixed.toString());
 console.log(compared((a, b) => a == null ? b == null : b == null ? false : a.eq(b)));
 console.log(compared((a, b) => !(a == null ? b == null : b == null ? false : a.eq(b))));
 console.log(compared((a, b) => b == null ? a == null : a == null ? false : b.eq(a)));
@@ -764,7 +879,7 @@ sql.appendRect(new Rect(1, 2));
 console.log(sql.accumulated);
 const seven = 7;
 /** @type {string} */
-let t$6;
+let t$9;
 {
   const accumulator = new Sql();
   {
@@ -775,9 +890,9 @@ let t$6;
     accumulator.appendSafe(" FROM ");
     accumulator.appendRect(new Rect(2, 2));
   }
-  t$6 = accumulator.accumulated;
+  t$9 = accumulator.accumulated;
 }
-console.log(t$6);
+console.log(t$9);
 const stepper = new Stepper(3);
 console.log(`next ${stepper.next(1)}`);
 console.log(`${orFail(true, 4, new IntFailing())} ${orFail(true, "s", new AnyFailing())}`);

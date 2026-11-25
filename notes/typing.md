@@ -660,6 +660,33 @@ the names together (language.md, "Object literals, not named arguments"):
   values' places want what the arguments' would. No `\a` markers are
   left.
 
+## Object spread
+
+`{ ...old, b: e }` (#694; `typing/object_literals.rs`,
+`Settle::place_spread`) is sugar for the object literal that gives every
+constructor parameter, so it goes through the same constructor call:
+
+- **Syntax:** a property `\... old`, first, after any `class: C`; another
+  spread, or one later, is "Only one spread, written first, is supported
+  in an object literal for now".
+- **When:** in typing's round, even with `class: C`, once `old`'s type
+  is known.
+- **Which class:** `old`'s, which must be a class, not nullable ("A
+  spread needs a value of a class type, not Shape"); `class: C` must name
+  it ("A spread from Sq can't build Other; …"). The type wanted is
+  checked against it as for any value.
+- **What it copies:** each constructor parameter not given, from
+  `old`'s property of that name, which must be readable there, a field
+  or getter, private only in its class ("A spread can't copy code: Secret
+  has no property code readable here"). A defaulted parameter takes
+  `old`'s value, except that a null there, as for any null passed to a
+  defaulted parameter, takes the default; a property no parameter sets,
+  as a getter's, isn't copied, as the constructor works it out again.
+- **What it becomes:** `do { let spread#1 = old; new C(spread#1.a, e) }`:
+  `old` once, first, then the given values in the order written, the
+  copies among them in the parameters' order, placed as for any object
+  literal (temporaries only where the given values aren't in order).
+
 ## Function types
 
 What tempest does today (`fn_subtype` in `types.rs`); status in

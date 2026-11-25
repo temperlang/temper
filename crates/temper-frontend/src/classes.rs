@@ -17,7 +17,8 @@
 //!
 //! An object literal, `{ a: 1, b }`, is a constructor call with named
 //! arguments, `new void(\a 1, \b b)`, lowered by
-//! [`Settle::object_literal`], once its class is known.
+//! [`Settle::object_literal`], once its class is known. One with a spread,
+//! `{ ...old, a: 1 }`, is `new void(\... old, \a 1)`, which typing lowers.
 
 use crate::builtins::{Builtin, Function, Macro};
 use crate::core::{
@@ -1293,8 +1294,9 @@ impl Settle {
     /// ([`Settle::place_literal`]); otherwise its class waits for the type
     /// its place wants, once typing knows that
     /// ([`Settle::decide_object_literal`]), while its values settle as
-    /// any others do. Returns whether the call became something else, a
-    /// block or an error.
+    /// any others do. A spread's class waits for typing too, which lowers
+    /// it ([`Settle::place_spread`]). Returns whether the call became
+    /// something else, a block or an error.
     pub(crate) fn object_literal(
         &mut self,
         call: NodeId,
@@ -1309,10 +1311,17 @@ impl Settle {
         if !is_void && !children[2..].iter().any(|&c| self.lib.symbol(c).is_some()) {
             return Ok(false);
         }
-        if self.literal_props(call).is_none() {
+        let Some(props) = self.literal_props(call) else {
             self.error(call, Message::MalformedSpecial("new".into()));
             return Ok(true);
+        };
+        if props.iter().skip(1).any(|&(name, _)| self.is_spread(name)) {
+            self.error(call, Message::SpreadNotFirst);
+            return Ok(true);
         }
+        // A spread's class comes from its value's type, so it waits for
+        // typing too ([`Settle::decide_spread`]).
+        let spread = props.first().is_some_and(|&(name, _)| self.is_spread(name));
         let mut puns = false;
         for i in (3..children.len()).step_by(2) {
             let value = children[i];
@@ -1330,7 +1339,7 @@ impl Settle {
         if puns {
             self.set_children(call, &children);
         }
-        if is_void {
+        if is_void || spread {
             self.object_literals.insert(call, scope);
             return Ok(false);
         }
@@ -1345,6 +1354,11 @@ impl Settle {
             self.place_literal(call, target, class),
             Placed::InPlace
         ))
+    }
+
+    /// Whether an object literal's property name is a spread's, `\...`.
+    pub(crate) fn is_spread(&self, name: NameId) -> bool {
+        self.lib.names.get(name) == "..."
     }
 
     /// An object literal's names and values, as `new C(\a 1, \b 2)` gives

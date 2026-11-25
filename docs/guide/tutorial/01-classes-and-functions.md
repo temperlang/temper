@@ -144,14 +144,24 @@ $ [width, h] // `List` literal, a type we'll see more of later
 interactive#12: [1.5,0.5]
 ```
 
+To copy an object with a few properties changed, spread the old one first.
+It's an object literal like the others, so the constructor runs, with each
+property not given taken from the old object. For now, there's one spread,
+written first, of a value of the class being made.
+
+```console
+$ { ...box, height: 2.0 }
+interactive#13: {class: Rectangle, width: 1.5, height: 2.0}
+```
+
 Also, note that variables defined with `let` can't be reassigned.
 
 ```console
 $ h = 1.0;
-interactive#13:1:1: error: Cannot assign to h, which is not a var
+interactive#14:1:1: error: Cannot assign to h, which is not a var
     h = 1.0;
     ^
-interactive#13: void
+interactive#14: void
 ```
 
 The error is reported, and the assignment isn't done. To allow reassignment,

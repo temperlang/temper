@@ -7,6 +7,7 @@
 - [🚨Breaking change: type parameter variance now requires `@`.](#breaking-change-type-parameter-variance-now-requires-)
 - [🚨Breaking change: Multiline string syntax (yes, again)](#breaking-change-multiline-string-syntax-yes-again)
 - [🆕 Bitwise operators](#-bitwise-operators)
+- [🆕 Object spread](#-object-spread)
 - [🚨Breaking change: Details of rules for `<` ambiguity have changed](#breaking-change-details-of-rules-for--ambiguity-have-changed)
 - [🚨Breaking change: Python parameters keep builtins' names](#breaking-change-python-parameters-keep-builtins-names)
 - [Rust crates depend on `temper-std` only when they use it](#rust-crates-depend-on-temper-std-only-when-they-use-it)
@@ -281,6 +282,24 @@ Negative integers have defined semantics for shifting, as per their
 2's complement representation, and shifting a positive value's bit
 left into the most significant bit produces a negative integer again
 per 2's complement.
+
+## 🆕 Object spread
+
+An object literal may start with a spread, to copy an object with a few
+properties changed:
+
+```temper
+class Point(public x: Int, public y: Int, public label: String) {}
+let p = new Point(1, 2, "a");
+let q = { ...p, x: 3 };
+console.log("${q.x} ${q.y} ${q.label}"); //!outputs "3 2 a"
+// ✅
+```
+
+It's the object literal that gives every constructor parameter, those
+not written read from the old object, so the constructor runs and its
+checks apply. For now, there's one spread, written first, of a class's
+value, building that same class.
 
 ## 🚨Breaking change: Details of rules for `<` ambiguity have changed
 

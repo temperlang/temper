@@ -289,6 +289,19 @@ do { a: b }
 error 19..24: In {...} object syntax, any `class` property must appear first
 error 75..80: In {...} object syntax, any `class` property must appear first
 
+=== object spread
+let o = { ...p, a: 1 };
+let q = { class: C, ...p.q, b };
+let r = { ...p };
+let s = { a: 1, ...p, ...q };
+--- ast
+(Block
+  (Decl ^o \init (Call new #void \... p \a 1))
+  (Decl ^q \init (Call new C \... (Call %. p \q) \b (Call #desugarPun)))
+  (Decl ^r \init (Call new #void \... p))
+  (Decl ^s \init (Call new #void \a 1 \... p \... q))
+  #void)
+
 === labels and jumps
 outer: for (;;) { inner: do { break outer; continue; } }
 return; return 1; throw x; yield; await p;

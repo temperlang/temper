@@ -972,7 +972,7 @@ PrefixOp := (Prefix operators but not `new`, `case`: PrefixOperators)
 #### Syntax for *Prop*
 
 ```ebnf
-Prop := PropName ":" Expr | PropName
+Prop := PropName ":" Expr | Spread | PropName
 ```
 
 #### Syntax for *PropClass*

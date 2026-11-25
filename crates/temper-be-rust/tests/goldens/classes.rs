@@ -119,6 +119,34 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 st.size_now(),
                 temper_core::ListedTrait::len(&st.items())
             );
+            let plain = Theme::new("black", "white", None, None);
+            let loud = {
+                let spread = plain.clone();
+                Theme::new(
+                    spread.0.fg.clone(),
+                    spread.0.bg.clone(),
+                    Some(20),
+                    Some(true),
+                )
+            };
+            let dark = {
+                let spread2 = loud.clone();
+                Theme::new(
+                    plain.0.bg.clone(),
+                    plain.0.fg.clone(),
+                    Some(spread2.0.size),
+                    Some(spread2.0.bold),
+                )
+            };
+            println!("{plain} | {loud} | {dark}");
+            let mixed = {
+                let spread3 = picked(dark.clone(), "old");
+                let arg = spread3.0.bg.clone();
+                let arg2 = noted("red");
+                let arg3 = spread3.0.bold;
+                Theme::new(arg2.clone(), arg.clone(), Some(9), Some(arg3))
+            };
+            println!("{mixed}");
             println!(
                 "{}",
                 compared(Arc::new(move |a: Option<Loose>, b: Option<Loose>| {
@@ -617,6 +645,69 @@ temper_core::impl_any_value_trait!(Stock, []);
 
 pub(crate) fn shape(x: Shape) -> Shape {
     x.clone()
+}
+
+struct ThemeStruct {
+    fg: Arc<String>,
+    bg: Arc<String>,
+    size: i32,
+    bold: bool,
+}
+
+#[derive(Clone)]
+pub(crate) struct Theme(Arc<ThemeStruct>);
+
+impl Theme {
+    pub fn new(
+        fg: impl ToArcString,
+        bg: impl ToArcString,
+        size: Option<i32>,
+        bold: Option<bool>,
+    ) -> Theme {
+        let fg = fg.to_arc_string();
+        let bg = bg.to_arc_string();
+        let size = size.unwrap_or(12);
+        let bold = bold.unwrap_or(false);
+        Theme(Arc::new(ThemeStruct { fg, bg, size, bold }))
+    }
+
+    pub fn weight(&self) -> Arc<String> {
+        if self.0.bold {
+            Arc::new("bold".to_string())
+        } else {
+            Arc::new("plain".to_string())
+        }
+    }
+
+    pub fn to_string(&self) -> Arc<String> {
+        Arc::new(format!(
+            "{}/{} {} {}",
+            self.0.fg,
+            self.0.bg,
+            self.0.size,
+            self.weight()
+        ))
+    }
+}
+
+impl std::fmt::Display for Theme {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.to_string())
+    }
+}
+
+temper_core::impl_any_value_trait!(Theme, []);
+
+pub(crate) fn picked(t: Theme, why: impl ToArcString) -> Theme {
+    let why = why.to_arc_string();
+    println!("{why}");
+    t.clone()
+}
+
+pub(crate) fn noted(s: impl ToArcString) -> Arc<String> {
+    let s = s.to_arc_string();
+    println!("{s}");
+    s.clone()
 }
 
 pub(crate) fn compared(

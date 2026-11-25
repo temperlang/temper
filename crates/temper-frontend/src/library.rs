@@ -115,6 +115,17 @@ pub enum Message {
     /// An object literal whose names fit another class's constructor than
     /// the type wanted there takes: the type wanted and that class.
     ObjectLiteralWantsOther(String, String),
+    /// Ours: a spread, `...old`, after an object literal's first property,
+    /// or a second one, which may come later.
+    SpreadNotFirst,
+    /// Ours: a spread of a value whose type isn't a class: the type.
+    SpreadNeedsClass(String),
+    /// Ours: `{ class: D, ...c }` where `c` isn't a `D`: the classes,
+    /// spread and named, which may differ later.
+    SpreadOtherClass(String, String),
+    /// Ours: a constructor parameter that a spread copies with no property
+    /// of its name readable there: the name and the class.
+    SpreadCannotCopy(String, String),
     /// `class C extends D` where `D` is a class: their names.
     CannotExtendConcrete(String),
     /// `interface I(x: Int)`.
@@ -376,6 +387,20 @@ impl Message {
             Message::NoValuePassed(name) => format!("No value passed for {name}"),
             Message::ObjectLiteralWantsOther(wanted, class) => {
                 format!("{wanted} is wanted here, but these properties fit {class}'s constructor")
+            }
+            Message::SpreadNotFirst => {
+                "Only one spread, written first, is supported in an object literal for now".into()
+            }
+            Message::SpreadNeedsClass(t) => {
+                format!("A spread needs a value of a class type, not {t}")
+            }
+            Message::SpreadOtherClass(from, to) => {
+                format!(
+                    "A spread from {from} can't build {to}; spreading across classes isn't supported yet"
+                )
+            }
+            Message::SpreadCannotCopy(name, class) => {
+                format!("A spread can't copy {name}: {class} has no property {name} readable here")
             }
             Message::CannotExtendConcrete(names) => {
                 format!("Cannot extend concrete type(s) {names}")

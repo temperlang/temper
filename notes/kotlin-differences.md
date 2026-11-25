@@ -68,6 +68,13 @@ Language and frontend:
   Test: settle/types.cases, "list literals typed from the type wanted",
   "function literals typed from the type wanted", and "object literals
   take their class from the type wanted".
+- **Object spread** (#694, 2026-11-25; [typing.md](typing.md), "Object
+  spread"): `{ ...old, x: 2 }` is the object literal of `old`'s class
+  with each constructor parameter not given read from `old`, so the
+  constructor runs; one spread, written first, of a class's value, and
+  only to build that class, for now. Kotlin doesn't parse it.
+  Test: settle/types.cases, "a spread copies the properties it doesn't
+  give" and "spreads report what they can't copy".
 - **Named `@fun` interfaces are nominal** (decided 2026-10-29, done;
   [typing.md](typing.md), "Fun interfaces"): a `Pred` isn't a `Check`,
   even where their `apply`s' signatures match, and the error suggests
@@ -977,6 +984,9 @@ to report those inputs as expected.
   ([kotlin-differences.md](kotlin-differences.md), "Bracket recovery").
   Balanced input is untouched; `deviations.py` excuses inputs whose
   output shows recovery (`B` lines, or its diagnostics), as `brackets`.
+- **An object literal may start with a spread,** `{ ...old, a: 1 }`, a
+  property `\... old` (above, "Object spread"); Kotlin's grammar has no
+  spread there. `deviations.py` lists its case as `object-spread`.
 - **Operands with no operator between them keep their statement**
   (`operand`): the first operand is kept and the rest are one
   `MissingOperator` error ("Missing operators", above). `deviations.py`

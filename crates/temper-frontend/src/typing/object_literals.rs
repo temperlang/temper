@@ -7,16 +7,24 @@
 //! decides its class, by that type and by the names given together, and
 //! becomes a constructor call with its arguments placed
 //! ([`Settle::place_literal`]), publishing [`Fact::ObjectLiteral`]. Its
-//! type, and the types its values' places want, wait for that fact.
+//! type, and the types its values' places want, wait for that fact. A
+//! spread, `{ ...old, b }`, waits instead for `old`'s type, which gives
+//! its class, and becomes the literal that gives every property
+//! ([`Settle::place_spread`]; notes/typing.md, "Object spread").
 
+use crate::builtins::{Builtin, Function};
 use crate::classes::Placed;
-use crate::core::{CLASS_INTERFACE, class_parts};
+use crate::core::{
+    CLASS_INTERFACE, MEMBER_PRIVATE, MEMBER_STATIC, ROLE_GETTER, ROLE_MASK, ROLE_PARAM,
+    class_parts, constructor_params,
+};
 use crate::library::Message;
 use crate::scope::{ScopeId, ScopeKind, SymbolId};
 use crate::settle::{Fact, Settle};
-use crate::types::{TypeData, TypeId};
+use crate::types::{TypeData, TypeId, UNKNOWN};
+use temper_syntax::ast::Value;
 use temper_syntax::names::NameId;
-use temper_syntax::tree::NodeId;
+use temper_syntax::tree::{NodeId, NodeKind};
 
 impl Settle {
     /// Queues deciding each object literal's class, as typing starts.
@@ -46,6 +54,13 @@ impl Settle {
         if !self.literal_undecided(call) {
             return Ok(());
         }
+        let key = self.lib.tree.children(call).get(2);
+        if key
+            .and_then(|&k| self.lib.symbol(k))
+            .is_some_and(|n| self.is_spread(n))
+        {
+            return self.decide_spread(call, scope, forced);
+        }
         let wanted = match self.wanted_type(call, forced) {
             Ok(wanted) => wanted,
             Err(fact) if !forced => return Err(fact),
@@ -64,7 +79,8 @@ impl Settle {
                 let span = self.lib.tree.span(target);
                 let class_name = self.builtin_name(symbol, span, target);
                 if let Placed::Block(temporaries) = self.place_literal(call, class_name, class) {
-                    self.declare_temporaries(call, scope, &temporaries);
+                    let block_scope = self.scopes.add(scope, ScopeKind::Block, call, true);
+                    self.declare_temporaries(block_scope, &temporaries);
                 }
             }
             Err(message) => self.error(call, message),
@@ -72,6 +88,148 @@ impl Settle {
         self.note_parents(call);
         self.publish(Fact::ObjectLiteral(call));
         Ok(())
+    }
+
+    /// Lowers a spread, `{ ...old, b: e }`, once `old`'s type is known
+    /// ([`Settle::place_spread`]), or reports why it can't.
+    fn decide_spread(&mut self, call: NodeId, scope: ScopeId, forced: bool) -> Result<(), Fact> {
+        let old = self.lib.tree.children(call)[3];
+        let t = match self.expr_type(old, forced) {
+            Ok(t) => t,
+            Err(fact) if !forced => return Err(fact),
+            Err(_) => UNKNOWN,
+        };
+        self.object_literals.remove(&call);
+        if let Err(message) = self.place_spread(call, scope, t) {
+            self.error(call, message);
+        }
+        self.note_parents(call);
+        self.publish(Fact::ObjectLiteral(call));
+        Ok(())
+    }
+
+    /// Makes a spread, `{ ...old, b: e }`, whose value `old` has type `t`,
+    /// the object literal that gives every property, those not given read
+    /// from `old`, held in a temporary that runs first: `do { let spread#1
+    /// = old; new C(spread#1.a, e) }`. So the class's constructor runs, as
+    /// for any object literal ([`Settle::place_literal`]), and a parameter
+    /// with a default takes `old`'s value. The class is `old`'s, which must
+    /// be a class; `class: C`, if given, must name it; and each property
+    /// copied must be readable here. Copied properties go among the given
+    /// ones in the parameters' order, so placing them needs no more
+    /// temporaries than the given ones do.
+    fn place_spread(&mut self, call: NodeId, scope: ScopeId, t: TypeId) -> Result<(), Message> {
+        let children = self.lib.tree.children(call).to_vec();
+        let &[callee, target, _, old, ref given @ ..] = &children[..] else {
+            return Err(Message::MalformedSpecial("new".into()));
+        };
+        let symbol = match *self.typing.types.get(self.typing.types.base(t)) {
+            TypeData::Class(symbol) => Some(symbol),
+            _ => None,
+        };
+        let Some((symbol, class)) = symbol.and_then(|b| Some((b, self.class_of(b)?))) else {
+            return Err(Message::SpreadNeedsClass(self.show(t)));
+        };
+        let span = self.lib.tree.span(call);
+        let class_name = if self.lib.value(target) == Some(&Value::Void) {
+            self.builtin_name(symbol, span, target)
+        } else if self.scopes.resolved(target).and_then(|b| self.class_of(b)) == Some(class) {
+            target
+        } else {
+            let named = self.lib.source_text(self.lib.tree.span(target)).to_string();
+            return Err(Message::SpreadOtherClass(
+                self.member_text(class).into(),
+                named,
+            ));
+        };
+        let params = constructor_params(&self.lib.tree, class);
+        let param_names: Vec<Option<NameId>> = (params.iter())
+            .map(|&p| self.lib.name(self.lib.tree.children(p)[0]))
+            .collect();
+        let given_names: Vec<Option<NameId>> = given
+            .chunks(2)
+            .map(|pair| self.lib.symbol(pair[0]))
+            .collect();
+        let mut copied = Vec::new();
+        for (i, &name) in param_names.iter().enumerate() {
+            let Some(name) = name.filter(|n| !given_names.contains(&Some(*n))) else {
+                continue;
+            };
+            if !self.readable_here(class, name, scope) {
+                let text = self.lib.names.get(name).to_string();
+                return Err(Message::SpreadCannotCopy(
+                    text,
+                    self.member_text(class).into(),
+                ));
+            }
+            copied.push((i, name));
+        }
+        let held = self.lib.names.temporary("spread");
+        let old_span = self.lib.tree.span(old);
+        let left = self.lib.add_name(NodeKind::LeftName, held, old_span, old);
+        let decl = self.make_let(left, None, Some(old), 0, old_span, old);
+        let dot = self.scopes.hidden(Builtin::Function(Function::Dot));
+        let at = |name: Option<NameId>| param_names.iter().position(|&n| n == name);
+        let mut given = given.chunks(2).peekable();
+        let mut args = vec![callee, class_name];
+        let mut uses = Vec::new();
+        for (i, name) in copied {
+            while let Some(pair) =
+                given.next_if(|pair| at(self.lib.symbol(pair[0])).is_some_and(|g| g < i))
+            {
+                args.extend_from_slice(pair);
+            }
+            let used = self.lib.add_name(NodeKind::RightName, held, old_span, old);
+            uses.push(used);
+            let key = self.lib.add_value(Value::Symbol(name), span, call);
+            let dot = self.builtin_name(dot, span, call);
+            let read = (self.lib).add(NodeKind::Call, span, 0, &[dot, used, key], call);
+            args.extend([key, read]);
+        }
+        args.extend(given.flatten());
+        self.set_children(call, &args);
+        let temporaries = match self.place_literal(call, class_name, class) {
+            // Reported already.
+            Placed::Error => return Ok(()),
+            Placed::InPlace => {
+                let made = self.lib.tree.children(call).to_vec();
+                let made = self.lib.add(NodeKind::Call, span, 0, &made, call);
+                self.rewrite(call, NodeKind::Block, 0, &[made]);
+                Vec::new()
+            }
+            Placed::Block(temporaries) => temporaries,
+        };
+        let mut statements = vec![decl];
+        statements.extend_from_slice(self.lib.tree.children(call));
+        self.set_children(call, &statements);
+        let block_scope = self.scopes.add(scope, ScopeKind::Block, call, true);
+        self.declare_temporary(block_scope, decl, &uses);
+        self.declare_temporaries(block_scope, &temporaries);
+        Ok(())
+    }
+
+    /// Whether code in `scope` may read a class's instance property
+    /// `name`, a field or getter: if it's private, only in the class that
+    /// declares it.
+    fn readable_here(&self, class: NodeId, name: NameId, scope: ScopeId) -> bool {
+        let tree = &self.lib.tree;
+        let inside = |owner: NodeId| {
+            let mut at = Some(scope);
+            while let Some(id) = at {
+                let s = self.scopes.get(id);
+                if s.kind == ScopeKind::Class && s.node == owner {
+                    return true;
+                }
+                at = s.parent;
+            }
+            false
+        };
+        (self.members_named(class, name, false).into_iter()).any(|m| {
+            let data = tree.data(m);
+            matches!(data & ROLE_MASK, 0 | ROLE_PARAM | ROLE_GETTER)
+                && data & MEMBER_STATIC == 0
+                && (data & MEMBER_PRIVATE == 0 || self.member_owner(m).is_some_and(inside))
+        })
     }
 
     /// Decides the object literals left undecided, as when the step budget
@@ -154,24 +312,25 @@ impl Settle {
     }
 
     /// Declares the temporaries that hold an object literal's values,
-    /// now a block, in a scope of the block's own, as reading the block
-    /// would have, and queues inferring their types. A value's place wants
-    /// what its temporary's use does.
-    fn declare_temporaries(
-        &mut self,
-        block: NodeId,
-        scope: ScopeId,
-        temporaries: &[(NodeId, NodeId)],
-    ) {
-        let block_scope = self.scopes.add(scope, ScopeKind::Block, block, true);
+    /// now a block, in the block's own scope, as reading the block would
+    /// have. A value's place wants what its temporary's use does.
+    fn declare_temporaries(&mut self, block_scope: ScopeId, temporaries: &[(NodeId, NodeId)]) {
         for &(decl, used) in temporaries {
-            self.declare(decl, block_scope);
-            if let Some(b) = self.scopes.resolved(self.lib.tree.children(decl)[0]) {
+            self.declare_temporary(block_scope, decl, &[used]);
+            self.typing.literal_temporaries.insert(decl, used);
+        }
+    }
+
+    /// Declares a temporary in a block's scope, with its uses, and queues
+    /// inferring its type.
+    fn declare_temporary(&mut self, block_scope: ScopeId, decl: NodeId, uses: &[NodeId]) {
+        self.declare(decl, block_scope);
+        if let Some(b) = self.scopes.resolved(self.lib.tree.children(decl)[0]) {
+            for &used in uses {
                 self.scopes.resolve(used, b);
             }
-            self.typing.literal_temporaries.insert(decl, used);
-            self.queue_type(decl);
         }
+        self.queue_type(decl);
     }
 
     /// Notes the parents of a node's descendants, once typing has begun,

@@ -311,6 +311,63 @@ def _shape(x: Shape, /) -> Shape:
     return x
 
 
+class _Theme:
+    __slots__ = ('_fg', '_bg', '_size', '_bold')
+    _fg: str
+    _bg: str
+    _size: int
+    _bold: bool
+
+    def __init__(self, /, fg: str, bg: str, size: int | None = None, bold: bool | None = None) -> None:
+        if size is None:
+            size = 12
+        if bold is None:
+            bold = False
+        self._fg = fg
+        self._bg = bg
+        self._size = size
+        self._bold = bold
+
+    @property
+    def fg(self, /) -> str:
+        return self._fg
+
+    @property
+    def bg(self, /) -> str:
+        return self._bg
+
+    @property
+    def size(self, /) -> int:
+        return self._size
+
+    @property
+    def bold(self, /) -> bool:
+        return self._bold
+
+    @property
+    def weight(self, /) -> str:
+        if self._bold:
+            return 'bold'
+        else:
+            return 'plain'
+
+    def to_string(self, /) -> str:
+        return f'{self._fg}/{self._bg} {self._size} {self.weight}'
+
+    def __str__(self, /) -> str:
+        return self.to_string()
+
+
+def _picked(t: _Theme, why: str, /) -> _Theme:
+    _console.log(why)
+    return t
+
+
+def _noted(s: str, /) -> str:
+    _console.log(s)
+    return s
+
+
 def _compared(eq: _Callable[[_Loose | None, _Loose | None], bool], /) -> str:
     ns = (0, 1, -1, 2)
     out: _MutableSequence[str] = []
@@ -484,6 +541,18 @@ if isinstance(_s, Rect):
 _st: _Stock = _Stock((4, 5))
 _st.items = (1, 2, 3)
 _console.log(f'{_st.count} {_st.size} {_st.size_now()} {len(_st.items)}')
+_plain: _Theme = _Theme('black', 'white')
+_spread = _plain
+_loud: _Theme = _Theme(_spread.fg, _spread.bg, 20, True)
+_spread2 = _loud
+_dark: _Theme = _Theme(_plain.bg, _plain.fg, _spread2.size, _spread2.bold)
+_console.log(f'{_plain.to_string()} | {_loud.to_string()} | {_dark.to_string()}')
+_spread3 = _picked(_dark, 'old')
+_arg = _spread3.bg
+_arg2 = _noted('red')
+_arg3 = _spread3.bold
+_mixed: _Theme = _Theme(_arg2, _arg, 9, _arg3)
+_console.log(_mixed.to_string())
 _console.log(_compared(lambda a, b: b is None if a is None else False if b is None else a == b))
 _console.log(_compared(lambda a, b: not (b is None if a is None else False if b is None else a == b)))
 _console.log(_compared(lambda a, b: a is None if b is None else False if a is None else b == a))

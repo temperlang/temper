@@ -1499,7 +1499,11 @@ impl Grammar {
     }
 
     /// Prop := (infixColons y ( y PropName y ":" y Expr y ))
+    ///   / (Ellipsis y ( y "...".asSymbol(surpriseMe) y Expr y ))
     ///   / (PropName y callTree(impliedValue(desugarPun, Left)))
+    ///
+    /// A spread, `...old`, is ours: `\... old`, which settling allows
+    /// only first.
     fn prop(&mut self, p: usize) -> R {
         first!(
             self,
@@ -1509,6 +1513,12 @@ impl Grammar {
                 let p = g.open(p)?;
                 let p = g.prop_name(p)?;
                 let p = g.tok(p, ":")?;
+                let p = g.expr(p)?;
+                g.close(p)
+            },
+            |g, p| {
+                let p = g.open_op(p, O::Ellipsis)?;
+                let p = g.as_symbol(p, "...", g.sym.surprise_me)?;
                 let p = g.expr(p)?;
                 g.close(p)
             },
