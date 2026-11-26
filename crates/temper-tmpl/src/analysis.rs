@@ -20,11 +20,14 @@
 //! and the groups of local functions that use each other or themselves
 //! ([`function_groups`]). And the defaults a function's body starts with
 //! ([`defaults`]), and the classes a spread may copy with a target's own
-//! copy form ([`copyable_classes`]).
+//! copy form ([`copyable_classes`]), what a spread's argument copies
+//! ([`spread_copy_of`]), and the fields its arguments set
+//! ([`spread_fields`]).
 
 use crate::decls::{DeclKind, Facts};
 use crate::ids::TypeId;
 use crate::ids::{DeclId, NodeId};
+use crate::nodes::Flags;
 use crate::qname::{QNames, is_external};
 use crate::schema::Node;
 use crate::types::{Scalar, TypeData};
@@ -1263,4 +1266,41 @@ pub fn copyable_classes(p: &Program) -> HashSet<DeclId> {
         }
     }
     found
+}
+
+/// What a spread's copy, `copy(spread#1.a)`, as it is or made nullable,
+/// reads from: the local holding `old` (rule C4).
+pub fn spread_copy_of(p: &Program, arg: NodeId) -> Option<NodeId> {
+    let read = match p.nodes.get(arg) {
+        Node::AsNullable { value } => value,
+        _ => arg,
+    };
+    match p.nodes.get(read) {
+        Node::GetField { object, .. } if p.nodes.flags(read).contains(Flags::SPREAD_COPY) => {
+            Some(object)
+        }
+        _ => None,
+    }
+}
+
+/// The fields a copyable class's constructor `ctor` sets, by its
+/// parameters, each the field of its name, as a `data` class's
+/// constructor only stores them; `members` are the class's.
+pub fn spread_fields(p: &Program, members: &[NodeId], ctor: DeclId) -> Vec<DeclId> {
+    let params = members.iter().find_map(|&m| match p.nodes.get(m) {
+        Node::Method { decl, params, .. } if decl == ctor => Some(p.nodes.list(params)),
+        _ => None,
+    });
+    let field_named = |name: &str| {
+        members.iter().find_map(|&m| match p.nodes.get(m) {
+            Node::Field { decl } if p.name(decl) == name => Some(decl),
+            _ => None,
+        })
+    };
+    (params.unwrap_or_default().iter())
+        .filter_map(|&n| match p.nodes.get(n) {
+            Node::Param { decl } => field_named(p.name(decl)),
+            _ => None,
+        })
+        .collect()
 }

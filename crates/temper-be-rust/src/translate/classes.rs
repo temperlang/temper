@@ -39,10 +39,12 @@ use super::{Params, R, Translator, Want, not_yet};
 use crate::names::static_name;
 use crate::tree::{Bin, Block, Expr, Item, Member, Stmt, Unary};
 use std::collections::{HashMap, HashSet};
-use temper_tmpl::analysis::{ancestors, home, is_plain_to_string, nominal_decl, walk};
+use temper_tmpl::analysis::{
+    ancestors, home, is_plain_to_string, nominal_decl, spread_copy_of, spread_fields, walk,
+};
 use temper_tmpl::naming::snake_case;
 use temper_tmpl::qname::{is_external, library_of};
-use temper_tmpl::{DeclId, DeclKind, Facts, Flags, Kids, Module, Node, NodeId, Program, TypeId};
+use temper_tmpl::{DeclId, DeclKind, Facts, Kids, Module, Node, NodeId, Program, TypeId};
 
 /// What `this` is in the code being translated.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -75,21 +77,6 @@ pub(crate) fn index(p: &Program) -> HashMap<DeclId, NodeId> {
 /// [`Translator::plan_accessors`] says.
 const UNUSED: &str = "#[allow(dead_code)]\n";
 const UNUSED_PUB: &str = "#[allow(dead_code)]\npub";
-
-/// What a spread's copy, `copy(spread#1.a)`, as it is or made nullable,
-/// reads from.
-fn copy_of(p: &Program, arg: NodeId) -> Option<NodeId> {
-    let read = match p.nodes.get(arg) {
-        Node::AsNullable { value } => value,
-        _ => arg,
-    };
-    match p.nodes.get(read) {
-        Node::GetField { object, .. } if p.nodes.flags(read).contains(Flags::SPREAD_COPY) => {
-            Some(object)
-        }
-        _ => None,
-    }
-}
 
 /// A member's kind for overriding: a getter, a setter, or a method.
 fn slot(kind: DeclKind) -> DeclKind {
@@ -1668,7 +1655,7 @@ impl<'a> Translator<'a> {
         let mut base = None;
         for (&a, field) in args.iter().zip(self.spread_fields(class, ctor)) {
             let fty = p.decls.get(field).ty;
-            match (copy_of(p, a), p.nodes.get(a)) {
+            match (spread_copy_of(p, a), p.nodes.get(a)) {
                 (Some(old), _) => base = Some(old),
                 _ if p.nodes.ty(a) == fty => {}
                 (_, Node::AsNullable { value }) if p.nodes.ty(value) == fty => {}
@@ -1678,27 +1665,9 @@ impl<'a> Translator<'a> {
         base
     }
 
-    /// A copyable class's fields, by its constructor's parameters, which
-    /// set those of their names.
+    /// A copyable class's fields, by its constructor's parameters.
     fn spread_fields(&self, class: DeclId, ctor: DeclId) -> Vec<DeclId> {
-        let p = self.p;
-        let members = self.member_nodes(class);
-        let params = members.iter().find_map(|&m| match p.nodes.get(m) {
-            Node::Method { decl, params, .. } if decl == ctor => Some(p.nodes.list(params)),
-            _ => None,
-        });
-        let field_named = |name: &str| {
-            members.iter().find_map(|&m| match p.nodes.get(m) {
-                Node::Field { decl } if p.name(decl) == name => Some(decl),
-                _ => None,
-            })
-        };
-        (params.unwrap_or_default().iter())
-            .filter_map(|&n| match p.nodes.get(n) {
-                Node::Param { decl } => field_named(p.name(decl)),
-                _ => None,
-            })
-            .collect()
+        spread_fields(self.p, self.member_nodes(class), ctor)
     }
 
     /// A spread of a copyable class ([`Translator::spread_base`]) as a
@@ -1713,7 +1682,7 @@ impl<'a> Translator<'a> {
         let class = p.decls.get(ctor).owner;
         let mut lits = Vec::new();
         for (&a, field) in args.iter().zip(self.spread_fields(class, ctor)) {
-            if copy_of(p, a).is_some() {
+            if spread_copy_of(p, a).is_some() {
                 continue;
             }
             let value = match p.nodes.get(a) {

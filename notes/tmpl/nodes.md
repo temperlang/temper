@@ -451,9 +451,18 @@ struct update, `Theme(Arc::new(ThemeStruct { size: 20,
 values run in order, then the base, the temporary already holding
 `old`. In another module, where the struct is private, or with a given
 value needing the constructor's conversion (a nullable one for an
-optional parameter), it calls the constructor. Other backends still
-call it: their generated classes don't have the shape their copy forms
-take.
+optional parameter), it calls the constructor.
+
+C++ copies (2026-11-26): such a spread is `std::make_shared<C>(*spread)`
+and an assignment of each given value, in order, into the local a `let`
+declares, else a temporary: `std::shared_ptr<Theme> loud =
+std::make_shared<Theme>(*spread); loud->size = 20;`. The struct's
+implicit copy constructor copies the fields, and `make_shared` gives the
+copy its own `enable_shared_from_this`. An assignment's copy is a
+temporary, as a given value may read the variable assigned; where no
+statement may go first, it calls `make`. Other backends still call the
+constructor: their generated classes don't have the shape their copy
+forms take.
 
 ### Subset B's next step: nullable types, `orelse`, `bubble()`, and `panic()` (As built, 2026-10-30, Proposed)
 

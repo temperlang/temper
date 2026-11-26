@@ -748,9 +748,14 @@ void global_init_init() {
     core::Console::log(temper_globals::console.value, std::to_string(st->count) + " " + std::to_string(st->size) + " " + std::to_string(st->sizeNow()) + " " + std::to_string(core::List::length<int32_t>(st->get_items())));
     std::shared_ptr<Theme> plain = Theme::make(TEMPER_STR("black"), TEMPER_STR("white"), 12, false);
     std::shared_ptr<Theme> spread = plain;
-    std::shared_ptr<Theme> loud = Theme::make(spread->fg, spread->bg, 20, true, TEMPER_STR("!"));
+    std::shared_ptr<Theme> loud = std::make_shared<Theme>(*spread);
+    loud->size = 20;
+    loud->bold = true;
+    loud->note = TEMPER_STR("!");
     std::shared_ptr<Theme> spread2 = loud;
-    std::shared_ptr<Theme> dark = Theme::make(plain->bg, plain->fg, spread2->size, spread2->bold, spread2->note);
+    std::shared_ptr<Theme> dark = std::make_shared<Theme>(*spread2);
+    dark->fg = plain->bg;
+    dark->bg = plain->fg;
     core::Console::log(temper_globals::console.value, plain->toString() + " | " + loud->toString() + " | " + dark->toString());
     std::shared_ptr<Theme> spread3 = classes::picked(dark, TEMPER_STR("old"));
     core::Str arg = spread3->bg;
@@ -760,8 +765,9 @@ void global_init_init() {
     std::shared_ptr<Theme> mixed = Theme::make(arg2, arg, 9, arg3, arg4);
     core::Console::log(temper_globals::console.value, mixed->toString());
     std::shared_ptr<Theme> spread4 = classes::picked(plain, TEMPER_STR("first"));
-    core::Str value2 = classes::noted(TEMPER_STR("second"));
-    std::shared_ptr<Theme> ordered = Theme::make(value2, classes::noted(TEMPER_STR("third")), spread4->size, spread4->bold, spread4->note);
+    std::shared_ptr<Theme> ordered = std::make_shared<Theme>(*spread4);
+    ordered->fg = classes::noted(TEMPER_STR("second"));
+    ordered->bg = classes::noted(TEMPER_STR("third"));
     core::Console::log(temper_globals::console.value, ordered->toString());
     std::shared_ptr<Tally> first = Tally::make(1, TEMPER_STR("a"));
     std::shared_ptr<Tally> spread5 = first;
@@ -813,8 +819,8 @@ void global_init_init() {
     core::Console::log(temper_globals::console.value, accumulator->get_accumulated());
     std::shared_ptr<Limited> stepper = core::to_base<Limited>(Stepper::make(3));
     core::Console::log(temper_globals::console.value, "next " + std::to_string(stepper->next(1)));
-    int32_t value3 = classes::orFail<int32_t>(true, 4, core::to_base<Failing<int32_t>>(IntFailing::make()));
-    core::Console::log(temper_globals::console.value, std::to_string(value3) + " " + classes::orFail<core::Str>(true, TEMPER_STR("s"), core::to_base<Failing<core::Str>>(AnyFailing<core::Str>::make())));
+    int32_t value2 = classes::orFail<int32_t>(true, 4, core::to_base<Failing<int32_t>>(IntFailing::make()));
+    core::Console::log(temper_globals::console.value, std::to_string(value2) + " " + classes::orFail<core::Str>(true, TEMPER_STR("s"), core::to_base<Failing<core::Str>>(AnyFailing<core::Str>::make())));
   });
 }
 
