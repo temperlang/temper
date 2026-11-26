@@ -180,24 +180,34 @@ with `is` checks (`if (!(i is D)) { return; }; takeD(i)`):
 
 ## Type parameters are invariant
 
-Temper plans to make all type parameters invariant, because C++ and Rust,
-among others, can't express variance well. Tempest doesn't support
-covariant or contravariant type parameters at all: `List<Sub>` is never a
-`List<Super>`. Kotlin Temper's `@out` and `@in` annotations (about a dozen,
-all in `core.temper`, as on `Generator<@out YIELD>`) parse as ordinary
-decorations and are ignored, with no error. When copying `core.temper` and
-the `std` library from Kotlin Temper, keep them as they are, so the files
-stay easy to diff, and rely on this rule. Decided (2026-10-28): tempest
-stays invariant, and Kotlin Temper should change to match
-([kotlin-differences.md](kotlin-differences.md)). Until then, tempest
-doesn't report what only variance accepts (below), so it gives no false
-errors; once it's known what code relies on `@out` and `@in`, it can.
-A parameter not marked either is invariant in Kotlin too, so there
-tempest reports what Kotlin does (2026-11-26).
+Every type parameter is invariant, because C++ and Rust, among others,
+can't express variance well: `List<Sub>` is never a `List<Super>`, nor a
+`Box<Sub>` a `Box<Super>`. One generic type is another only where, as
+the supertype with the other's base, it has the same arguments
+("Generic types", below). Decided 2026-10-28; reported since 2026-11-26,
+once a census found nothing in core, std, the tests, or the showcase
+libraries that relied on variance.
+
+- **`@out` and `@in` in user code** are errors, "Variance annotations
+  aren't supported; type parameters are invariant", at the annotation,
+  and otherwise ignored. A type-only error: the code still runs.
+- **Core's** annotations (about a dozen, as on `Generator<@out YIELD>`)
+  stay in `core.temper`'s text, so it stays easy to diff with Kotlin
+  Temper's, and are ignored: core isn't lowered as user code is, and
+  nothing reads them.
+- **`Never<T>`** has its own rule, not variance: a `Never<A>` is a
+  `Never<B>` where an `A` is a `B` ("Never", below).
+- **Migrating** code that relied on variance: take a `List<T>` for `<T
+  extends Super>` instead of a `List<Super>` (a generic function), or
+  build the `List<Super>` in the first place (a list literal takes its
+  element type from the type wanted).
+
+Kotlin Temper honors `@out` and `@in`, and should drop them
+([kotlin-differences.md](kotlin-differences.md)).
 
 ### To explore later: variance without runtime variance
 
-Both ideas only accept more programs, so neither conflicts with starting
+Both ideas only accept more programs, so neither conflicts with being
 invariant.
 
 1. **Use-site sugar for bounded generics.** Most wanted covariance is
@@ -252,17 +262,13 @@ milestone 4's generics slice; status in [milestone-4.md](history/milestone-4.md)
   itself a type parameter, as in `<T, U extends T>`, is unknown for now,
   so whether a `U` is a `T` goes unreported.
 - **Arguments:** one generic type given arguments is another only if
-  they're the same type. Since Kotlin Temper honors `@out` and `@in`
-  (`List<@out T>`), where tempest's parameters are invariant ("Type
-  parameters are invariant", above), a mismatch is reported only where
-  the bases are the same and some pair of arguments is unrelated, neither
-  a subtype of the other, which no variance accepts: `List<Int32>` isn't
-  a `List<String>`, nor `List<T>` a `List<Int32>`, but `List<Dog>` as a
-  `List<Animal>`, or `List<Int32?>` as a `List<Int32>`, isn't reported.
-  For a parameter not marked `@out` or `@in` (a user's, or core's, as
-  `Listed<T>`), one argument not known to be the other is enough, as in
-  Kotlin: a `Box<Dog>` isn't a `Box<Animal>`, nor a `List<Dog>` (seen as
-  a `Listed<Dog>`) a `Listed<Animal>` (2026-11-26).
+  they're the same type, as type parameters are invariant ("Type
+  parameters are invariant", above): `List<Int32>` isn't a
+  `List<String>`, nor a `List<Dog>` a `List<Animal>` or a
+  `List<Int32?>`, nor a `Box<Dog>` a `Box<Animal>`, nor a `List<Dog>`
+  (seen as a `Listed<Dog>`) a `Listed<Animal>` (2026-11-26). Where an
+  argument isn't worked out, it's a mismatch only if some argument can't
+  be the other's.
 - **Builtin supertypes,** as core declares them: `List<T>` and
   `ListBuilder<T>` are `Listed<T>`s, `Map<K, V>` and `MapBuilder<K, V>`
   are `Mapped<K, V>`s, `SafeGenerator<T>` is a `Generator<T>`,
@@ -836,24 +842,17 @@ one. These are Kotlin Temper's rules (`type2/TypeContext2.kt`,
 - **Errors Kotlin means to add** (TODOs there): `Never<Never<T>>`
   written out, and `<T extends Never<T>>`.
 
-**Tempest today** has one bottom, `TypeData::Never` (`types.rs`), a
-subtype of every type, used for `return`, `panic()`, and the like and
-for a bare `Never`. A written `Never<String>` is `Never` for now, as
-std's `bail(): Never<Void> throws Bubble`. Both accept everything Kotlin accepts,
-since Kotlin's `Never<T>` is a subtype of fewer types, but a backend
-can't get its fallback type, and a `Never<A>` used as an unrelated `B`
-isn't reported. Before code generation (milestone 5), or reporting that,
-`Never` should carry its `T`, with the rules above, likely alongside the
-generics slice in [milestone-4.md](history/milestone-4.md).
+**Tempest** follows these rules with `TypeData::NeverOf` (`types.rs`),
+and has `TypeData::Never`, a subtype of every type, for what never
+completes, as `return`.
 
-**Open: is `Never` covariant?** Kotlin honors its `@out`, so there
-`Never<Sub>` is a `Never<Super>`; tempest ignores `@out` (above). Only
-that one relation depends on it: `Never<Sub>` is still a `Sub`, and so a
-`Super`, either way. Making `Never` the one exception looks safe, since
-it has no values for variance to go wrong on, and a backend's fallback
-`Sub` to `Super` is an ordinary upcast. Not yet decided; if `Never`
-stays invariant, code relying on it would become an error that Kotlin
-doesn't report.
+**`Never<Sub>` is a `Never<Super>`,** by `Never`'s own rule, not
+variance, which tempest doesn't have ("Type parameters are invariant",
+above): it has no values for anything to go wrong on, and a backend's
+fallback `Sub` to `Super` is an ordinary upcast (2026-11-26). Kotlin
+gets the same from `Never`'s `@out`. A `Never<Super>` isn't a
+`Never<Sub>`, and a `Never<List<Dog>>` isn't a `Never<List<Animal>>`, as
+a `List<Dog>` isn't a `List<Animal>`.
 
 ## Inference
 
@@ -1217,13 +1216,12 @@ Decided 2026-11-06, as Kotlin Temper does (`Typer.kt`,
   and `null` to `appendString(x: String?)`. The expected type plays
   no part. Where none fits or none is most specific, the call stays
   unresolved, as before; Kotlin reports "No callee matches".
-- **Generic arguments** (2026-11-06), as Kotlin's `@out` on `List`
-  decides them, though tempest's subtyping leaves them unknown
-  ("Generic types"): a `List<String?>` doesn't fit a `List<String>`
-  parameter, and of two that fit, `List<String>` is more specific than
-  `List<String?>`. A class whose supertypes are all known isn't a
-  builtin generic type it doesn't extend, so a `Name` doesn't fit a
-  `List<Boolean>` parameter either (`types.rs`, `generic_subtype`).
+- **Generic arguments,** as subtyping judges them ("Generic types"):
+  a `List<String?>` doesn't fit a `List<String>` parameter, nor a
+  `List<String>` a `List<String?>` one. A class whose supertypes are
+  all known isn't a builtin generic type it doesn't extend, so a `Name`
+  doesn't fit a `List<Boolean>` parameter either (`types.rs`,
+  `generic_subtype`).
 - **Rewriting:** the call's key then names the method, `c.appendInt(x)`,
   as Kotlin's `SimplifyDotHelper` rewrites it, so the interpreter, tmpl,
   and every backend call it by its own name, matching Kotlin's
@@ -1356,12 +1354,11 @@ In order, the first that applies:
    way to check, as `x is Box<Int>` for `x: AnyValue`, but not
    `Box<T>` from `Sup<T>`: "Type arguments cannot be introduced with is
    or as runtime type checks, because a type argument's run-time type
-   can't be checked: <[Box<Int32>]> from AnyValue". As in Kotlin, an
-   argument of a parameter marked `@out` or `@in` (a user's, kept as
-   `TYPE_PARAM_VARIANT`, or core's, as `Generator<@out YIELD>`) isn't
-   counted, though tempest doesn't honor variance otherwise ("Type
-   parameters are invariant", above), until it's known what relies on
-   it. Other downcasts are fine. Kotlin's wording ends at "checks" for
+   can't be checked: <[Box<Int32>]> from AnyValue", also for a
+   parameter Kotlin marks `@out` or `@in`, as `Generator<@out YIELD>`,
+   whose arguments Kotlin doesn't count, as type parameters are
+   invariant ("Type parameters are invariant", above). Other downcasts
+   are fine. Kotlin's wording ends at "checks" for
    both erasure errors; tempest says why
    ([kotlin-differences.md](kotlin-differences.md#changes-we-recommend-to-temper)).
 6. **Unnecessary,** as information: every `S` passes the target as

@@ -99,7 +99,7 @@ module generics#0 {
         return (asNullable(((upcast(this.items#28.get#84(0))): Named#3).name#20)): String?;
       }
     }
-    method tally#30<TName#31>(extra#85: Int32): Int32 {
+    method tally#30<TName#31 extends Named#3>(extra#85: Int32): Int32 {
       return %Int32.add(this.items#28.length#86(), extra#85);
     }
   }
@@ -110,7 +110,7 @@ module generics#0 {
     constructor constructor#33(): Stage#7 {}
   }
 
-  fn tagged#34<S#35, T#36>(x#88: T#36): T#36 {
+  fn tagged#34<S#35 extends Scene#6, T#36>(x#88: T#36): T#36 {
     return x#88;
   }
 

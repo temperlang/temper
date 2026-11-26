@@ -2214,14 +2214,20 @@ copied Kotlin's:
   and C++ headers exposing private members.
 - **Variance (recommended change):** Kotlin Temper honors `@out` and
   `@in` on type parameters, so it accepts a `List<Dog>` as a
-  `List<Animal>`. Temper plans invariant type parameters, since C++ and
-  Rust, among others, can't express variance well, and tempest stays
-  invariant ([typing.md](typing.md), "Type parameters are invariant").
-  Recommended: Kotlin Temper drops variance too. Tempest won't report
-  what only variance accepts until code relying on it is found and
-  changed.
-  Test: settle/types.cases, "function types compared part by part" and
-  "list literals typed from the type wanted".
+  `List<Animal>`, and leaves alone a run-time check to a type whose
+  argument is one of them. Every type parameter is invariant in tempest,
+  since C++ and Rust, among others, can't express variance well
+  ([typing.md](typing.md), "Type parameters are invariant"): it reports
+  "Cannot assign to List<Animal> from List<Dog>", and `@out` or `@in` in
+  user code is "Variance annotations aren't supported; type parameters
+  are invariant" (2026-11-26). `Never<Sub>` is still a `Never<Super>`,
+  by `Never`'s own rule. Nothing in core, std, the tests, or the six
+  showcase libraries relied on variance. Recommended: Kotlin Temper
+  drops variance too, keeping `Never`'s rule.
+  Test: settle/types.cases, "type parameters are invariant, and @out and
+  @in are errors" and "Never<A> is a Never<B> where A is a B, by its own
+  rule"; settle/class-types.cases, "is and as checks of type parameters'
+  values and generic types".
 
 - **Kotlin Temper's move to its newer types** (PR #500, in review
   2026-10-29) carries `Never<T>` with its fallback type into its tmpl,

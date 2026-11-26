@@ -149,24 +149,6 @@ impl Settle {
         found
     }
 
-    /// Whether an argument of type `a` may go to a parameter of type `p`:
-    /// unless typing says it can't, or they're one generic type and an
-    /// argument of `a`'s can't be `p`'s, as a `List<String?>` can't be a
-    /// `List<String>`, where Kotlin Temper's `@out` on `List` decides
-    /// ([`Settle::narrower`]).
-    pub(super) fn may_fit(&mut self, a: TypeId, p: TypeId) -> bool {
-        let types = &mut self.typing.types;
-        if types.is_subtype(a, p) == Some(false) {
-            return false;
-        }
-        let (TypeData::Applied { base: x, args: xs }, TypeData::Applied { base: y, args: ys }) =
-            (types.get(a).clone(), types.get(p).clone())
-        else {
-            return true;
-        };
-        x != y || xs.len() != ys.len() || (xs.iter().zip(&ys)).all(|(&x, &y)| self.may_fit(x, y))
-    }
-
     /// Whether parameters `a` are at least as specific as `b` for `n`
     /// arguments: each of the first `n` a subtype of the other's
     /// ([`Settle::narrower`]).
@@ -174,22 +156,15 @@ impl Settle {
         (a.iter().zip(b).take(n)).all(|(x, y)| self.narrower(x.ty, y.ty))
     }
 
+    /// Whether an argument of type `a` may go to a parameter of type `p`:
+    /// unless typing says it can't.
+    pub(super) fn may_fit(&mut self, a: TypeId, p: TypeId) -> bool {
+        self.typing.types.is_subtype(a, p) != Some(false)
+    }
+
     /// Whether type `x` is `y`, or a subtype of it, for choosing an
-    /// overload: also where they're one generic type and each of `x`'s
-    /// arguments is narrower than `y`'s, as `List<String>` than
-    /// `List<String?>`, which Kotlin Temper's `@out` on `List` makes a
-    /// subtype, though tempest leaves it unknown ("Type parameters are
-    /// invariant").
+    /// overload.
     fn narrower(&mut self, x: TypeId, y: TypeId) -> bool {
-        let types = &mut self.typing.types;
-        if x == y || types.is_subtype(x, y) == Some(true) {
-            return true;
-        }
-        let (TypeData::Applied { base: a, args: xs }, TypeData::Applied { base: b, args: ys }) =
-            (types.get(x).clone(), types.get(y).clone())
-        else {
-            return false;
-        };
-        a == b && xs.len() == ys.len() && (xs.iter().zip(&ys)).all(|(&x, &y)| self.narrower(x, y))
+        x == y || self.typing.types.is_subtype(x, y) == Some(true)
     }
 }

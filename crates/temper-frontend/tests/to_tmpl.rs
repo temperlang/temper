@@ -378,6 +378,25 @@ fn std_library() {
     });
 }
 
+/// std, with core, settles without errors, as type parameters are
+/// invariant: nothing in it relies on a `List<Sub>` being a
+/// `List<Super>`.
+#[test]
+fn std_settles_without_errors() {
+    with_stack(|| {
+        let library = temper_frontend::stdlib::library(
+            &Sources::standard(),
+            &temper_frontend::stdlib::MODULES,
+        );
+        let settled = settle(library);
+        let errors: Vec<String> = (settled.library.diagnostics.iter())
+            .filter(|d| d.level == temper_frontend::library::Level::Error)
+            .map(|d| format!("{:?}: {}", d.span, d.message.text()))
+            .collect();
+        assert!(errors.is_empty(), "{errors:#?}");
+    });
+}
+
 /// Each state machine's step reads its state, then sets it to `-1`
 /// before anything else runs, so a step that fails stays failed: stepped
 /// again, it reads `-1` and says it's done, rather than running again.

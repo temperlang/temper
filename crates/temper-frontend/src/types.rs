@@ -87,8 +87,6 @@ pub struct ClassInfo {
     pub ancestors: Vec<SymbolId>,
     /// Its type parameters, as `T` in `class Sub<T>`.
     pub formals: Vec<SymbolId>,
-    /// Which of them are marked `@out` or `@in`.
-    pub variant: Vec<bool>,
     /// The types it extends, as written, naming its type parameters, as
     /// `Sup<T>` in `class Sub<T> extends Sup<T>`; [`UNKNOWN`] where not
     /// worked out.
@@ -165,25 +163,6 @@ const BUILTIN_GENERIC_CLASSES: [&str; 10] = [
 
 /// How many of [`BUILTIN_GENERIC_CLASSES`] are `@mayDowncastTo(false)`.
 const NO_DOWNCAST: usize = 4;
-
-/// The builtin generic types' type parameters, by index, that core marks
-/// `@out` or `@in`, which Kotlin Temper honors and tempest doesn't
-/// (notes/typing.md, "Type parameters are invariant").
-const BUILTIN_VARIANT_PARAMS: [(&str, usize); 13] = [
-    ("DoneResult", 0),
-    ("Generator", 0),
-    ("GeneratorResult", 0),
-    ("List", 0),
-    ("Map", 0),
-    ("Map", 1),
-    ("Mapped", 0),
-    ("Never", 0),
-    ("Pair", 0),
-    ("Pair", 1),
-    ("Promise", 0),
-    ("SafeGenerator", 0),
-    ("ValueResult", 0),
-];
 
 /// How deep [`Types::is_subtype`] looks, through type parameters' bounds
 /// and type arguments, before giving up.
@@ -516,24 +495,6 @@ impl Types {
                 .is_some_and(|n| BUILTIN_GENERIC_CLASSES[..NO_DOWNCAST].contains(&n))
     }
 
-    /// Whether core marks a builtin generic type's `index`th type
-    /// parameter `@out` or `@in`.
-    pub fn is_builtin_variant(&self, base: TypeId, index: usize) -> bool {
-        (self.builtin_name(base)).is_some_and(|n| BUILTIN_VARIANT_PARAMS.contains(&(n, index)))
-    }
-
-    /// Whether a generic type's `index`th type parameter is marked `@out`
-    /// or `@in`, or isn't known to be invariant, as a class's whose
-    /// parameters aren't worked out yet.
-    fn is_variant(&self, base: TypeId, index: usize) -> bool {
-        match self.get(base) {
-            TypeData::Class(symbol) => (self.classes.get(symbol))
-                .and_then(|info| info.variant.get(index).copied())
-                .unwrap_or(true),
-            _ => self.is_builtin_variant(base, index),
-        }
-    }
-
     /// A generic type's base, as `List` for `List<Int>`, or `t` itself.
     pub fn base(&self, t: TypeId) -> TypeId {
         match self.get(t) {
@@ -714,12 +675,12 @@ impl Types {
 
     /// Whether a value of type `s` may be used as a `t`, if that's known.
     /// One generic type given arguments is another's only if, as its
-    /// supertype with the other's base sees it, they're the same, but
-    /// reported as not only where an argument sets them apart under any
-    /// variance (notes/typing.md, "Generic types"); likewise one function
-    /// type is another only if they're the same, but is reported as not
-    /// only where Kotlin Temper's variance rejects it too
-    /// ([`Types::fn_subtype`]). A type parameter is a subtype of its
+    /// supertype with the other's base sees it, they're the same, as type
+    /// parameters are invariant (notes/typing.md, "Generic types"); one
+    /// function type is another only if they're the same, but is reported
+    /// as not only where Kotlin Temper's variance rejects it too
+    /// ([`Types::fn_subtype`]). A `Never<A>` is a `Never<B>` where an `A`
+    /// is a `B`, by its own rule. A type parameter is a subtype of its
     /// bound. A class or interface is a subtype of what it extends, and
     /// nothing else, even if a value of an interface may be of a class that
     /// extends another type too: an `is` check narrows it to that. A
@@ -745,8 +706,10 @@ impl Types {
             (Nullable(a), Nullable(b)) => self.subtype(a, b, depth),
             (_, Nullable(b)) => self.subtype(s, b, depth),
             // `Never<A>` is what an `A` is, and is a `Never<B>` if `A` is a
-            // `B`, `@out` as core declares it; nothing else is a `Never<B>`
-            // but what never completes.
+            // `B`: it has no values, so nothing can go wrong, and a backend
+            // without a bottom type upcasts its `A` to its `B`. This is
+            // `Never`'s own rule, not variance. Nothing else is a
+            // `Never<B>` but what never completes.
             (NeverOf(a), NeverOf(b)) => self.subtype(a, b, depth),
             (NeverOf(a), _) => self.subtype(a, t, depth),
             (_, NeverOf(_)) => Some(false),
@@ -920,12 +883,12 @@ impl Types {
     /// arguments, neither of them null, nullable, a type parameter, or
     /// `AnyValue` for `t`. `s` is compared as its supertype with `t`'s base
     /// sees it ([`Types::supertype_as`]): with the same arguments, it's a
-    /// `t`; with a pair of arguments neither of which is a subtype of the
-    /// other, it isn't, whatever the parameters' variance; otherwise it
-    /// may be, under some variance. Without such a supertype, it isn't one
-    /// where its declaration says what it extends: a builtin type, which
-    /// extends only builtin types core says it does, or a user's class or
-    /// interface that doesn't extend `t`'s.
+    /// `t`, and with others it isn't, as type parameters are invariant,
+    /// unless some argument isn't worked out, which may yet make them the
+    /// same. Without such a supertype, it isn't one where its declaration
+    /// says what it extends: a builtin type, which extends only builtin
+    /// types core says it does, or a user's class or interface that
+    /// doesn't extend `t`'s.
     fn generic_subtype(&mut self, s: TypeId, t: TypeId, depth: u32) -> Option<bool> {
         let (s_base, t_base) = (self.base(s), self.base(t));
         if let Some(seen) = self.supertype_as(s, t_base) {
@@ -933,13 +896,16 @@ impl Types {
                 return Some(true);
             }
             let (x, y) = (self.args(seen).to_vec(), self.args(t).to_vec());
-            let apart = x.len() == y.len()
-                && (x.iter().zip(&y).enumerate()).any(|(i, (&x, &y))| {
-                    let (up, down) = (self.subtype(x, y, depth), self.subtype(y, x, depth));
-                    match self.is_variant(t_base, i) {
-                        true => up == Some(false) && down == Some(false),
-                        false => up == Some(false) || down == Some(false),
-                    }
+            if x.len() != y.len() {
+                return None;
+            }
+            // Type parameters are invariant, so it's a `t` only with the
+            // same arguments; where some aren't worked out, only one that
+            // can't be the other tells.
+            let apart = (self.is_known(seen) && self.is_known(t))
+                || (x.iter().zip(&y)).any(|(&x, &y)| {
+                    self.subtype(x, y, depth) == Some(false)
+                        || self.subtype(y, x, depth) == Some(false)
                 });
             return apart.then_some(false);
         }
@@ -1212,7 +1178,6 @@ mod tests {
         let core = include_str!("../../../lib/core/core.temper");
         let mut classes = Vec::new();
         let mut no_downcast = Vec::new();
-        let mut variant = Vec::new();
         let mut previous = "";
         for line in core.lines() {
             let decl = line.trim_start_matches("export ");
@@ -1227,31 +1192,13 @@ mod tests {
                         continue;
                     }
                 };
-            let Some((name, params)) = rest.split_once('<') else {
+            let Some((name, _)) = rest.split_once('<') else {
                 previous = line;
                 continue;
             };
             if !line.starts_with("export") || !name.chars().all(char::is_alphanumeric) {
                 previous = line;
                 continue;
-            }
-            // The parameters, split at commas outside nested `<…>`.
-            let (mut depth, mut pieces) = (0, vec![String::new()]);
-            for c in params.chars() {
-                match c {
-                    '>' if depth == 0 => break,
-                    ',' if depth == 0 => pieces.push(String::new()),
-                    _ => {
-                        depth += i32::from(c == '<') - i32::from(c == '>');
-                        pieces.last_mut().unwrap().push(c);
-                    }
-                }
-            }
-            for (index, piece) in pieces.iter().enumerate() {
-                let piece = piece.trim_start();
-                if piece.starts_with("@out ") || piece.starts_with("@in ") {
-                    variant.push((name, index));
-                }
             }
             if is_class {
                 classes.push(name);
@@ -1270,8 +1217,6 @@ mod tests {
             sorted(no_downcast),
             sorted(BUILTIN_GENERIC_CLASSES[..NO_DOWNCAST].to_vec())
         );
-        variant.sort();
-        assert_eq!(variant, BUILTIN_VARIANT_PARAMS.to_vec());
     }
 
     #[test]
@@ -1289,9 +1234,9 @@ mod tests {
         let strings = applied(&mut types, STRING);
         let values = applied(&mut types, ANY_VALUE);
         assert_eq!(types.is_subtype(ints, strings), Some(false));
-        // `List<Int32>` may be a `List<AnyValue>`, as `List` is `@out`
-        // in Kotlin Temper.
-        assert_eq!(types.is_subtype(ints, values), None);
+        // Type parameters are invariant, even those core marks `@out`,
+        // as `List`'s.
+        assert_eq!(types.is_subtype(ints, values), Some(false));
         assert_eq!(types.is_subtype(ints, ANY_VALUE), Some(true));
         assert_eq!(types.is_subtype(ints, STRING), Some(false));
         assert_eq!(types.display(ints, &|_| String::new()), "List<Int32>");
@@ -1331,9 +1276,7 @@ mod tests {
         assert_eq!(types.is_subtype(ints, listed_strings), Some(false));
         assert_eq!(types.is_subtype(built_ints, ints), Some(false));
         assert_eq!(types.is_subtype(listed_ints, ints), Some(false));
-        // `Listed`'s parameter isn't `@out`, so, as in Kotlin Temper, a
-        // `List<Int32>` is no `Listed<Int32?>`, though it may be a
-        // `List<Int32?>`.
+        // Nor is a `List<Int32>` a `Listed<Int32?>` or a `List<Int32?>`.
         let int_or_null = types.nullable(INT32);
         let (listed_maybe, maybe) = (
             types.intern(TypeData::Applied {
@@ -1343,7 +1286,7 @@ mod tests {
             applied(&mut types, int_or_null),
         );
         assert_eq!(types.is_subtype(ints, listed_maybe), Some(false));
-        assert_eq!(types.is_subtype(ints, maybe), None);
+        assert_eq!(types.is_subtype(ints, maybe), Some(false));
         let string_key = types.intern(TypeData::Applied {
             base: map_key,
             args: vec![STRING],

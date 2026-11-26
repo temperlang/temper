@@ -717,11 +717,12 @@ error 1702..1711: No member length in List<Int32>?
 // `toListWith<T>`, from their arguments and the type wanted, with the
 // receiver shown as the declaring type sees it (`Listed<Int32>`). Kotlin
 // also binds `O` to `String` where `0` and `addS` bind it two ways (b3),
-// where tempest binds it from the type wanted and reports `addS`, solves from the type wanted where only variance tells `Animal` and `Dog`
-// apart (c3), and first (d1, `fn (Int32): String`, not `AnyValue`). A
-// function literal argument binds by its declared result, as in Kotlin
-// (d3). Explicit type arguments bind as written (d4), where Kotlin fails,
-// as for users' methods.
+// where tempest binds it from the type wanted and reports `addS`, binds
+// it to `Dog` from the type wanted, as type parameters are invariant, and
+// reports `anim` (c3), and first (d1, `fn (Int32): String`, not
+// `AnyValue`). A function literal argument binds by its declared result,
+// as in Kotlin (d3). Explicit type arguments bind as written (d4), where
+// Kotlin fails, as for users' methods.
 class Animal {}
 class Dog extends Animal {}
 let toStr(x: Int): String { x.toString() }
@@ -803,23 +804,24 @@ let f(ls: List<Int>, lb: ListBuilder<Int>, ld: Listed<Int>, m: Map<String, Int>,
           (Call <> List String)
           (Call (Call . ls:18 \map) \typeArg String toStr:2))
         #void))))
-error 703..709: Cannot extend concrete type(s) Animal
-error 1063..1068: Actual arguments do not match signature: <O extends AnyValue>(Listed<Int32>, fn (Int32): O) -> List<O> expected [Listed<Int32>, fn (Int32): Int32], but got [List<Int32>, fn (Int32): String]
-error 1087..1100: Cannot assign to Int32 from List<String>
-error 1150..1152: Cannot assign to List<Int32> from List<String>
-error 1170..1183: Cannot assign to Int32 from List<String>
-error 1216..1221: Actual arguments do not match signature: <O extends AnyValue>(Listed<Int32>, fn (Int32): O) -> List<O> expected [Listed<Int32>, fn (Int32): Int32], but got [Listed<Int32>, fn (Int32): String]
-error 1243..1265: Cannot assign to String from Int32
-error 1283..1306: Cannot assign to Int32 from String
-error 1341..1345: Actual arguments do not match signature: <O extends AnyValue>(Listed<Int32>, O, fn (O, Int32): O) -> O expected [Listed<Int32>, Int32, fn (Int32, Int32): Int32], but got [List<Int32>, Int32, fn (String, Int32): String]
-error 1364..1395: Cannot assign to Int32 from String
-error 1432..1434: Actual arguments do not match signature: <T extends AnyValue>(Mapped<String, Int32>, fn (String, Int32): T) -> List<T> expected [Mapped<String, Int32>, fn (String, Int32): Int32], but got [Map<String, Int32>, fn (String, Int32): String]
-error 1453..1477: Cannot assign to Int32 from ListBuilder<String>
-error 1524..1525: Actual arguments do not match signature: <O extends AnyValue>(Listed<Int32>, fn (Int32): O) -> List<O> expected [Listed<Int32>, fn (Int32): AnyValue], but got [List<Int32>, Int32]
-error 1530..1546: No callee matches inputs [List<Int32>, fn (Int32): String, Int32] among [<O extends AnyValue>(Listed<Int32>, fn (Int32): O) -> List<O>]
-error 1580..1584: Actual arguments do not match signature: <O extends AnyValue>(Listed<Int32>, fn (Int32): O) -> List<O> expected [Listed<Int32>, fn (Int32): String], but got [List<Int32>, fn (String, Int32): String]
-error 1606..1654: Cannot assign to String from Int32
-error 1672..1706: Cannot assign to Int32 from List<String>
+error 720..726: Cannot extend concrete type(s) Animal
+error 1080..1085: Actual arguments do not match signature: <O extends AnyValue>(Listed<Int32>, fn (Int32): O) -> List<O> expected [Listed<Int32>, fn (Int32): Int32], but got [List<Int32>, fn (Int32): String]
+error 1104..1117: Cannot assign to Int32 from List<String>
+error 1167..1169: Cannot assign to List<Int32> from List<String>
+error 1187..1200: Cannot assign to Int32 from List<String>
+error 1233..1238: Actual arguments do not match signature: <O extends AnyValue>(Listed<Int32>, fn (Int32): O) -> List<O> expected [Listed<Int32>, fn (Int32): Int32], but got [Listed<Int32>, fn (Int32): String]
+error 1260..1282: Cannot assign to String from Int32
+error 1300..1323: Cannot assign to Int32 from String
+error 1358..1362: Actual arguments do not match signature: <O extends AnyValue>(Listed<Int32>, O, fn (O, Int32): O) -> O expected [Listed<Int32>, Int32, fn (Int32, Int32): Int32], but got [List<Int32>, Int32, fn (String, Int32): String]
+error 1381..1412: Cannot assign to Int32 from String
+error 1449..1451: Actual arguments do not match signature: <T extends AnyValue>(Mapped<String, Int32>, fn (String, Int32): T) -> List<T> expected [Mapped<String, Int32>, fn (String, Int32): Int32], but got [Map<String, Int32>, fn (String, Int32): String]
+error 1470..1494: Cannot assign to Int32 from ListBuilder<String>
+error 1525..1529: Actual arguments do not match signature: <O extends AnyValue>(Listed<Int32>, fn (Int32): O) -> List<O> expected [Listed<Int32>, fn (Int32): Dog], but got [List<Int32>, fn (Int32): Animal]
+error 1541..1542: Actual arguments do not match signature: <O extends AnyValue>(Listed<Int32>, fn (Int32): O) -> List<O> expected [Listed<Int32>, fn (Int32): AnyValue], but got [List<Int32>, Int32]
+error 1547..1563: No callee matches inputs [List<Int32>, fn (Int32): String, Int32] among [<O extends AnyValue>(Listed<Int32>, fn (Int32): O) -> List<O>]
+error 1597..1601: Actual arguments do not match signature: <O extends AnyValue>(Listed<Int32>, fn (Int32): O) -> List<O> expected [Listed<Int32>, fn (Int32): String], but got [List<Int32>, fn (String, Int32): String]
+error 1623..1671: Cannot assign to String from Int32
+error 1689..1723: Cannot assign to Int32 from List<String>
 
 === what may bubble: methods of builtin types, arity, misfits and operators
 // Kotlin also says "Cannot bubble" for c9, whose constant argument fails

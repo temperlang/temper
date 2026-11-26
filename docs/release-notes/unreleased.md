@@ -425,11 +425,23 @@ Code that relied on these going unchecked is now an error:
 - A list literal's elements are checked against the element type its
   place wants, an argument's too, nullable or not: `take(["a", 3])` for
   `take(xs: List<String>?)` reports the `3`.
-- A type parameter not marked `@out` or `@in` is invariant, as Temper
-  0.6.0 has it: a `Box<Dog>` isn't a `Box<Animal>`, and `[new A(1)]`,
-  a `List<A>`, isn't a `Listed<P>` for `class A extends P`. Pass `[a]`
-  for an `a: P`, or want a `List<P>`, which a list literal takes its
-  element type from.
+- Every type parameter is invariant, core's too, as C++ and Rust,
+  among others, can't express variance well: a `List<Dog>` isn't a
+  `List<Animal>`, as a `Box<Dog>` isn't a `Box<Animal>`, though Temper
+  0.6.0 accepts the first. The same goes for `Listed`, `Map`, `Mapped`,
+  `Pair`, `Generator`, `SafeGenerator`, `GeneratorResult`, `ValueResult`,
+  `DoneResult`, and `Promise`. To migrate, make the function generic,
+  `let names<T extends Animal>(xs: List<T>)` in place of `let names(xs:
+  List<Animal>)`, or build the list you need in the first place: a list
+  literal takes its element type from the type wanted, so `let xs:
+  List<Animal> = [new Dog()]` works, and `[new A(1)]`, a `List<A>`, isn't
+  a `Listed<P>` for `class A extends P` either. A `Never<Dog>` is still a
+  `Never<Animal>`, as `Never` has no values.
+- `@out` and `@in` on a type parameter are errors: "Variance annotations
+  aren't supported; type parameters are invariant". Remove them.
+- A run-time check that would introduce a type argument is an error for
+  every generic type, as `x is Generator<Int>` for an `x: AnyValue`,
+  where Temper 0.6.0 left alone those marked `@out` or `@in`.
 - A generic call with the wrong number of type arguments, as
   `apply<Int, Int>(n, f)` for `apply<T, R, E>`, is "Wrong number of
   type arguments.  Expected 3".

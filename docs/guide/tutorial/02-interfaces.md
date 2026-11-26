@@ -265,9 +265,23 @@ $ let shapes: List<Shape> = [boxes[0], boxes[1], { radius: 2.0 }];
 interactive#20: void
 $ toStrings(shapes)
 interactive#21: ["Shape of area 1.0","Shape of area 0.75","Circle of radius 2.0"]
-// Temper `List` is immutable and so is covariant in its item type.
-$ toStrings(boxes)
-interactive#22: ["Shape of area 1.0","Shape of area 0.75"]
+```
+
+But `toStrings(boxes)` is an error: a `List<Rectangular>` isn't a
+`List<Shape>`. Temper's type parameters are invariant, because many
+languages it translates to, such as C++ and Rust, can't treat one as the
+other. A generic function takes a list of any kind of shape:
+
+<!-- repl: paste -->
+```temper
+let shapeStrings<T extends Shape>(shapes: List<T>): List<String> {
+  shapes.map { (shape): String => shape.toString() }
+}
+```
+
+```console
+$ shapeStrings(boxes)
+interactive#23: ["Shape of area 1.0","Shape of area 0.75"]
 ```
 
 So for **hierarchies and abstractions of behavior**, use **interfaces**.

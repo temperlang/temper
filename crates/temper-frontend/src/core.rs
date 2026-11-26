@@ -107,12 +107,6 @@ pub const MEMBER_OPERATOR_CMP: u32 = 1 << 17;
 /// field in tmpl; the interpreter keeps it in a private one.
 pub const MEMBER_NO_PROPERTY: u32 = 1 << 19;
 
-/// A type parameter marked `@out` or `@in`, which Kotlin Temper honors
-/// and tempest ignores (notes/typing.md, "Type parameters are
-/// invariant"), so that checks can leave alone what only variance
-/// accepts.
-pub const TYPE_PARAM_VARIANT: u32 = 1 << 18;
-
 /// Where a `Fn`'s or `Class`'s data counts its type parameters, in 8 bits.
 pub const TYPE_PARAMS_SHIFT: u32 = 20;
 

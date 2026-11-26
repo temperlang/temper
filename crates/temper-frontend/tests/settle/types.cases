@@ -697,7 +697,7 @@ let q4<T extends Animal>(x: T): Boolean {
   if (x is Dog) { let d: Dog = x; true } else { false }
 }
 let q5<T, U extends T>(x: U): T { x }
-// Kotlin honors List's `@out`; the rule waits for variance.
+// Type parameters are invariant, `List`'s too, which Kotlin marks `@out`.
 let v1(a: List<Dog>): List<Animal> { a }
 // Calls are solved from their arguments, as in Kotlin.
 let id<T>(x: T): T { x }
@@ -862,7 +862,8 @@ error 1188..1189: Cannot assign to List<Int32> from List<T>
 error 1216..1217: Cannot assign to Void from T
 error 1351..1352: Cannot assign to Dog from T
 error 1393..1394: Cannot assign to T from Dog
-error 1735..1740: Cannot assign to String from Int32
+error 1647..1648: Cannot assign to List<Animal> from List<Dog>
+error 1749..1754: Cannot assign to String from Int32
 log a
 
 === generic calls solved per call, as Kotlin Temper reports them
@@ -3625,15 +3626,19 @@ error 674..684: Expected subtype of Listed<P>, but got List<A>
 error 709..719: Cannot assign to Listed<P> from List<A>
 error 749..750: Actual arguments do not match signature: <listT extends AnyValue>(listT) -> List<listT> expected [String], but got [Int32]
 
-=== a type parameter not marked @out or @in is invariant, as in Kotlin Temper
-// So a `Box<Dog>` is no `Box<Animal>`, nor a `ListBuilder<Dog>` a
-// `Listed<Animal>`, but a `Crate<Dog>` may be a `Crate<Animal>`, and a
-// `List<Dog>` a `List<Animal>`, where only variance would tell them
-// apart.
+=== type parameters are invariant, and @out and @in are errors
+// A `Box<Dog>` is no `Box<Animal>`, nor a `List<Dog>` a `List<Animal>`
+// or a `Listed<Animal>`, and so for core's generic types that Kotlin
+// Temper marks `@out` or `@in` (`Map`, `Mapped`, `Pair`, the generators,
+// their results, and `Promise`). A `SafeGenerator<Dog>` is a
+// `Generator<Dog>`, and a `DoneResult<Dog>` a `GeneratorResult<Dog>`, by
+// what they extend. Marking a type parameter `@out` or `@in` is an
+// error, and changes nothing.
 interface Animal {}
 class Dog extends Animal {}
 class Box<T>(public item: T) {}
 class Crate<@out T>(public item: T) {}
+class Sink<@in T> {}
 let f(b: Box<Dog>, c: Crate<Dog>, lb: ListBuilder<Dog>, ls: List<Dog>): Void {
   let b1: Box<Animal> = b;
   let b2: Box<Dog?> = b;
@@ -3642,34 +3647,213 @@ let f(b: Box<Dog>, c: Crate<Dog>, lb: ListBuilder<Dog>, ls: List<Dog>): Void {
   let l2: Listed<Animal> = ls;
   let l3: List<Animal> = ls;
   let l4: Listed<Dog> = ls;
+  let l5: List<Dog?> = ls;
+}
+let g(m: Map<String, Dog>, p: Pair<String, Dog>, gen: Generator<Dog>, sg: SafeGenerator<Dog>, s: Sink<Animal>): Void {
+  let m1: Map<String, Animal> = m;
+  let m2: Mapped<String, Animal> = m;
+  let p1: Pair<String, Animal> = p;
+  let g1: Generator<Animal> = gen;
+  let g2: Generator<Animal> = sg;
+  let g3: Generator<Dog> = sg;
+  let s1: Sink<Dog> = s;
+}
+let h(r: GeneratorResult<Dog>, v: ValueResult<Dog>, d: DoneResult<Dog>, pr: Promise<Dog>): Void {
+  let r1: GeneratorResult<Animal> = r;
+  let r2: GeneratorResult<Animal> = v;
+  let r3: GeneratorResult<Animal> = d;
+  let r4: GeneratorResult<Dog> = d;
+  let pr1: Promise<Animal> = pr;
 }
 --- settled
 (Block
   (Interface ^Animal:0)
   (Class ^Dog:1 Animal:0)
-  (Class ^Box:2 (TypeParam ^T:7) (Param ^item:9 T:7))
-  (Class ^Crate:3 (TypeParam ^T:10) (Param ^item:12 T:10))
+  (Class ^Box:2 (TypeParam ^T:10) (Param ^item:12 T:10))
+  (Class ^Crate:3 (TypeParam ^T:13) (Param ^item:15 T:13))
+  (Class ^Sink:4 (TypeParam ^T:16))
   (Let
-    ^f:4
+    ^f:5
     (Fn
-      (Let ^b:13 (Call <> Box:2 Dog:1))
-      (Let ^c:14 (Call <> Crate:3 Dog:1))
-      (Let ^lb:15 (Call <> ListBuilder Dog:1))
-      (Let ^ls:16 (Call <> List Dog:1))
+      (Let ^b:18 (Call <> Box:2 Dog:1))
+      (Let ^c:19 (Call <> Crate:3 Dog:1))
+      (Let ^lb:20 (Call <> ListBuilder Dog:1))
+      (Let ^ls:21 (Call <> List Dog:1))
       Void
       (Block
-        (Let ^b1:17 (Call <> Box:2 Animal:0) b:13)
-        (Let ^b2:18 (Call <> Box:2 (Call ? Dog:1)) b:13)
-        (Let ^c1:19 (Call <> Crate:3 Animal:0) c:14)
-        (Let ^l1:20 (Call <> Listed Animal:0) lb:15)
-        (Let ^l2:21 (Call <> Listed Animal:0) ls:16)
-        (Let ^l3:22 (Call <> List Animal:0) ls:16)
-        (Let ^l4:23 (Call <> Listed Dog:1) ls:16)
+        (Let ^b1:22 (Call <> Box:2 Animal:0) b:18)
+        (Let ^b2:23 (Call <> Box:2 (Call ? Dog:1)) b:18)
+        (Let ^c1:24 (Call <> Crate:3 Animal:0) c:19)
+        (Let ^l1:25 (Call <> Listed Animal:0) lb:20)
+        (Let ^l2:26 (Call <> Listed Animal:0) ls:21)
+        (Let ^l3:27 (Call <> List Animal:0) ls:21)
+        (Let ^l4:28 (Call <> Listed Dog:1) ls:21)
+        (Let ^l5:29 (Call <> List (Call ? Dog:1)) ls:21)
+        #void)))
+  (Let
+    ^g:6
+    (Fn
+      (Let ^m:30 (Call <> Map String Dog:1))
+      (Let ^p:31 (Call <> Pair String Dog:1))
+      (Let ^gen:32 (Call <> Generator Dog:1))
+      (Let ^sg:33 (Call <> SafeGenerator Dog:1))
+      (Let ^s:34 (Call <> Sink:4 Animal:0))
+      Void
+      (Block
+        (Let ^m1:35 (Call <> Map String Animal:0) m:30)
+        (Let ^m2:36 (Call <> Mapped String Animal:0) m:30)
+        (Let ^p1:37 (Call <> Pair String Animal:0) p:31)
+        (Let ^g1:38 (Call <> Generator Animal:0) gen:32)
+        (Let ^g2:39 (Call <> Generator Animal:0) sg:33)
+        (Let ^g3:40 (Call <> Generator Dog:1) sg:33)
+        (Let ^s1:41 (Call <> Sink:4 Dog:1) s:34)
+        #void)))
+  (Let
+    ^h:7
+    (Fn
+      (Let ^r:42 (Call <> GeneratorResult Dog:1))
+      (Let ^v:43 (Call <> ValueResult Dog:1))
+      (Let ^d:44 (Call <> DoneResult Dog:1))
+      (Let ^pr:45 (Call <> Promise Dog:1))
+      Void
+      (Block
+        (Let ^r1:46 (Call <> GeneratorResult Animal:0) r:42)
+        (Let ^r2:47 (Call <> GeneratorResult Animal:0) v:43)
+        (Let ^r3:48 (Call <> GeneratorResult Animal:0) d:44)
+        (Let ^r4:49 (Call <> GeneratorResult Dog:1) d:44)
+        (Let ^pr1:50 (Call <> Promise Animal:0) pr:45)
         #void))))
-error 440..441: Cannot assign to Box<Animal> from Box<Dog>
-error 465..466: Cannot assign to Box<Dog?> from Box<Dog>
-error 524..526: Cannot assign to Listed<Animal> from ListBuilder<Dog>
-error 555..557: Cannot assign to Listed<Animal> from List<Dog>
+error 543..547: Variance annotations aren't supported; type parameters are invariant
+error 581..584: Variance annotations aren't supported; type parameters are invariant
+error 694..695: Cannot assign to Box<Animal> from Box<Dog>
+error 719..720: Cannot assign to Box<Dog?> from Box<Dog>
+error 748..749: Cannot assign to Crate<Animal> from Crate<Dog>
+error 778..780: Cannot assign to Listed<Animal> from ListBuilder<Dog>
+error 809..811: Cannot assign to Listed<Animal> from List<Dog>
+error 838..840: Cannot assign to List<Animal> from List<Dog>
+error 893..895: Cannot assign to List<Dog?> from List<Dog>
+error 1050..1051: Cannot assign to Map<String, Animal> from Map<String, Dog>
+error 1088..1089: Cannot assign to Mapped<String, Animal> from Map<String, Dog>
+error 1124..1125: Cannot assign to Pair<String, Animal> from Pair<String, Dog>
+error 1157..1160: Cannot assign to Generator<Animal> from Generator<Dog>
+error 1192..1194: Cannot assign to Generator<Animal> from SafeGenerator<Dog>
+error 1249..1250: Cannot assign to Sink<Dog> from Sink<Animal>
+error 1388..1389: Cannot assign to GeneratorResult<Animal> from GeneratorResult<Dog>
+error 1427..1428: Cannot assign to GeneratorResult<Animal> from ValueResult<Dog>
+error 1466..1467: Cannot assign to GeneratorResult<Animal> from DoneResult<Dog>
+error 1534..1536: Cannot assign to Promise<Animal> from Promise<Dog>
+
+=== core's generators and results work without variance
+// What core's generators and their results need: `doneResult()`, `new
+// DoneResult()` and `new ValueResult(1)` take their type argument from
+// the type wanted, a `SafeGenerator<Int>` is a `Generator<Int>`, a `when`
+// narrows a result to a `ValueResult<Int>`, and a generator function's
+// block makes a `SafeGenerator`. Only `r` is an error.
+let pull(g: Generator<Int>): GeneratorResult<Int> throws Bubble { g.next() }
+let done(): GeneratorResult<Int> { doneResult() }
+let done2(): GeneratorResult<Int> { new DoneResult() }
+let value(): GeneratorResult<Int> { new ValueResult(1) }
+let safe(g: SafeGenerator<Int>): Generator<Int> { g }
+let first(r: GeneratorResult<Int>): Int {
+  when (r) {
+    is ValueResult<Int> -> r.value;
+    else -> 0;
+  }
+}
+let run(body: fn (): SafeGenerator<Int>): Int { first(body().nextSafe()) }
+let ran = run { (): GeneratorResult<Int> extends GeneratorFn =>
+  yield();
+};
+let r(): GeneratorResult<AnyValue> { new ValueResult<Int>(1) }
+--- settled
+(Block
+  (Let
+    ^pull:0
+    (Fn
+      (Let ^g:9 (Call <> Generator Int))
+      (Call throws (Call <> GeneratorResult Int) Bubble)
+      (Block (Call (Call . g:9 \next)))))
+  (Let ^done:1 (Fn (Call <> GeneratorResult Int) (Block (Call doneResult))))
+  (Let
+    ^done2:2
+    (Fn (Call <> GeneratorResult Int) (Block (Call new DoneResult))))
+  (Let
+    ^value:3
+    (Fn (Call <> GeneratorResult Int) (Block (Call new ValueResult 1))))
+  (Let
+    ^safe:4
+    (Fn
+      (Let ^g:10 (Call <> SafeGenerator Int))
+      (Call <> Generator Int)
+      (Block g:10)))
+  (Let
+    ^first:5
+    (Fn
+      (Let ^r:11 (Call <> GeneratorResult Int))
+      Int
+      (Block
+        (Block
+          (If (Call is r:11 (Call <> ValueResult Int)) (Call . r:11 \value) 0)))))
+  (Let
+    ^run:6
+    (Fn
+      (Let ^body:12 (Call FnType (Call <> SafeGenerator Int)))
+      Int
+      (Block (Call first:5 (Call (Call . (Call body:12) \nextSafe))))))
+  (Let
+    ^ran:7
+    (Call
+      run:6
+      (Fn
+        (Call <> GeneratorResult Int)
+        GeneratorFn
+        (Block (Yield @840 #null) #void))))
+  (Let
+    ^r:8
+    (Fn
+      (Call <> GeneratorResult AnyValue)
+      (Block (Call new (Call <> ValueResult Int) 1)))))
+error 941..964: Cannot assign to GeneratorResult<AnyValue> from ValueResult<Int32>
+
+=== Never<A> is a Never<B> where A is a B, by its own rule
+// `Never` has no values, so a `Never<Dog>` is a `Never<Animal>`, and a
+// `Dog`, with nothing that variance could get wrong; but a
+// `Never<Animal>` isn't a `Never<Dog>` or a `Dog`, as a backend without a
+// bottom type writes it as its `T`. `List<Dog>` isn't a `List<Animal>`
+// inside it either.
+interface Animal {}
+class Dog extends Animal {}
+let stopDog(): Never<Dog> { panic() }
+let stopAnimal(): Never<Animal> { panic() }
+let stopDogs(): Never<List<Dog>> { panic() }
+let a1(): Never<Animal> { stopDog() }
+let a2(): Animal { stopDog() }
+let a3(): Never<Dog> { stopAnimal() }
+let a4(): Dog { stopAnimal() }
+let a5(): Never<List<Animal>> { stopDogs() }
+let a6(): Never<List<Dog>> { stopDogs() }
+--- settled
+(Block
+  (Interface ^Animal:0)
+  (Class ^Dog:1 Animal:0)
+  (Let ^stopDog:2 (Fn (Call <> Never Dog:1) (Block (Call panic))))
+  (Let ^stopAnimal:3 (Fn (Call <> Never Animal:0) (Block (Call panic))))
+  (Let
+    ^stopDogs:4
+    (Fn (Call <> Never (Call <> List Dog:1)) (Block (Call panic))))
+  (Let ^a1:5 (Fn (Call <> Never Animal:0) (Block (Call stopDog:2))))
+  (Let ^a2:6 (Fn Animal:0 (Block (Call stopDog:2))))
+  (Let ^a3:7 (Fn (Call <> Never Dog:1) (Block (Call stopAnimal:3))))
+  (Let ^a4:8 (Fn Dog:1 (Block (Call stopAnimal:3))))
+  (Let
+    ^a5:9
+    (Fn (Call <> Never (Call <> List Animal:0)) (Block (Call stopDogs:4))))
+  (Let
+    ^a6:10
+    (Fn (Call <> Never (Call <> List Dog:1)) (Block (Call stopDogs:4)))))
+error 567..579: Cannot assign to Never<Dog> from Never<Animal>
+error 598..610: Cannot assign to Dog from Never<Animal>
+error 645..655: Cannot assign to Never<List<Animal>> from Never<List<Dog>>
 
 === generic calls with the wrong number of type arguments
 // Reported at the call, for functions, methods and constructors; the

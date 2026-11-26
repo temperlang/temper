@@ -1324,8 +1324,8 @@ Failed: Cannot bubble from a function without Bubble in its return type
 // A type parameter's value is checked as its bound's, all that's known of
 // it at run time, so `x is Dog` for `T extends Animal` is a downcast,
 // where Kotlin Temper says the types are unrelated; and a check can't
-// introduce a type argument, which erasure leaves no way to check. Kotlin
-// leaves alone parameters marked `@out` or `@in`, as `Out`'s.
+// introduce a type argument, which erasure leaves no way to check, even
+// one marked `@out` (an error), as `Out`'s, which Kotlin leaves alone.
 interface Animal {}
 class Dog extends Animal {}
 class Cat {}
@@ -1479,23 +1479,25 @@ console.log(pet(new Dog()));
       (Block (If (Call is x:66 Dog:1) (Block "dog") (Block "other")))))
   (Call (Call . console \log) (Call pet:26 (Call new Dog:1)))
   #void)
-error 571..579: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from T
-error 624..632: Unrelated types cannot be targeted with is or as runtime type checks: <[Cat]> from T
-hint 677..688: Unnecessary type check to Animal from expression with type T which is a subtype
-error 783..791: Cannot bubble from a function without Bubble in its return type
-hint 821..827: Unnecessary type check to T from expression with type T which is a subtype
-error 861..875: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[List<Int32>]> from AnyValue
-error 909..922: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Box<Int32>]> from AnyValue
-error 956..973: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Box<String>]> from AnyValue
-hint 1008..1019: Unnecessary type check to Box<T> from expression with type Box<T> which is a subtype
-error 1056..1067: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Box<T>]> from AnyValue
-error 1104..1118: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[List<Int32>]> from Listed<Int32>
-error 1167..1180: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Box<Int32>]> from AnyValue
-error 1262..1275: Cannot bubble from a function without Bubble in its return type
-error 1309..1325: Unrelated types cannot be targeted with is or as runtime type checks: <[Box<String>]> from Box<Int32>
-error 1357..1373: Runtime type check from String to Box<String> can never succeed
-error 1410..1418: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from MapKey<Int32>
-error 1455..1466: Unrelated types cannot be targeted with is or as runtime type checks: <[String]> from MapKey<Int32>
+error 449..453: Variance annotations aren't supported; type parameters are invariant
+error 578..586: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from T
+error 631..639: Unrelated types cannot be targeted with is or as runtime type checks: <[Cat]> from T
+hint 684..695: Unnecessary type check to Animal from expression with type T which is a subtype
+error 790..798: Cannot bubble from a function without Bubble in its return type
+hint 828..834: Unnecessary type check to T from expression with type T which is a subtype
+error 868..882: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[List<Int32>]> from AnyValue
+error 916..929: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Box<Int32>]> from AnyValue
+error 963..980: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Box<String>]> from AnyValue
+hint 1015..1026: Unnecessary type check to Box<T> from expression with type Box<T> which is a subtype
+error 1063..1074: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Box<T>]> from AnyValue
+error 1111..1125: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[List<Int32>]> from Listed<Int32>
+error 1174..1187: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Box<Int32>]> from AnyValue
+error 1221..1234: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Out<Int32>]> from AnyValue
+error 1269..1282: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Out<Int32>]> from AnyValue
+error 1316..1332: Unrelated types cannot be targeted with is or as runtime type checks: <[Box<String>]> from Box<Int32>
+error 1364..1380: Runtime type check from String to Box<String> can never succeed
+error 1417..1425: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from MapKey<Int32>
+error 1462..1473: Unrelated types cannot be targeted with is or as runtime type checks: <[String]> from MapKey<Int32>
 log dog
 
 === is and as checks through users' generic supertypes
