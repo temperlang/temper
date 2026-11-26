@@ -21,7 +21,7 @@ them, and what's weak or planned.
   - [Not available yet, said plainly](#not-available-yet-said-plainly)
   - [One Sources value for every read](#one-sources-value-for-every-read)
   - [Finding libraries as Kotlin does, ignore files as git does](#finding-libraries-as-kotlin-does-ignore-files-as-git-does)
-  - [Configs read, not run](#configs-read-not-run)
+  - [Configs settled and run, all at once](#configs-settled-and-run-all-at-once)
   - [std built into the binary](#std-built-into-the-binary)
   - [A registry built at startup, from cargo features](#a-registry-built-at-startup-from-cargo-features)
   - [A backend is a struct of function pointers](#a-backend-is-a-struct-of-function-pointers)
@@ -266,24 +266,38 @@ this compiler leaves them out.
 **Status:** the work-root rule and library names are Kotlin's
 (`libraryNameFor`); the ignore-file reading is this compiler's choice.
 
-### Configs read, not run
+### Configs settled and run, all at once
 
-**Chosen:** a library's `config.temper.md` is read line by line
-([`Config`](../../../crates/temper-frontend/src/project.rs)): each
-`export let KEY = "VALUE";` line is a setting. The name is the `name`
-setting, or else the first line as a slug, or else the root's path, or
-else `unnamed`, as Kotlin's `libraryNameFor` decides; two libraries of
-one name stop the command
+**Chosen:** finding libraries settles every library's
+`config.temper.md` as Temper, in one library, each config its own module
+([`settle_configs`](../../../crates/temper-frontend/src/config.rs)).
+Each backend's config class is in a shared prelude module that each
+config imports unseen, so the classes are in its scope, as Kotlin's
+injected ones are. Then each config's top-level statements run once,
+each on its own, with the compile-time interpreter, and its exports are
+read: strings are metadata, objects of config classes are each
+backend's settings, which the backend checks
+([`ConfigType::validate`](../../../crates/temper-tmpl/src/config.rs)).
+A config's own `import(…)` statements, and exports for backends this
+build lacks, are left out, as their modules and classes aren't loaded.
+The name is the `name` export, or else the first line as a slug, or
+else the root's path, or else `unnamed`, as Kotlin's `libraryNameFor`
+decides; two libraries of one name stop the command
 ([`duplicate_names`](../../../crates/temper-frontend/src/project.rs)).
 
-**Alternatives:** Kotlin's way: settle and run the config as Temper.
+**Alternatives:** read `export let` lines without running them, as this
+compiler once did, with a checker of its own; or inject the classes'
+declarations into each config, as Kotlin does.
 
-**Pros:** cheap and dependency-free; finding libraries needs no settling.
+**Pros:** configs are ordinary code, with the type checker's messages,
+and values may be computed; one settle for all configs costs about 1 to
+2 ms for a work root, and about 0.3 ms for each library more; the
+shared prelude settles the classes once, not per config.
 
-**Cons:** a config that computes a value, or spans lines, isn't
-understood; nothing warns. Every library we know of writes plain lines.
+**Cons:** a config's imports aren't loaded while finding libraries, so
+a value can't come from another module.
 
-**Status:** this compiler's choice, a deliberate shortcut.
+**Status:** Kotlin's way, but for the prelude, which is shared.
 
 ### std built into the binary
 

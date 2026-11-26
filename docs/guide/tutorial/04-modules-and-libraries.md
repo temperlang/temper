@@ -287,9 +287,10 @@ name, with the class as its type.
     export let rust: RustConfig = { name: "geometry-rs" };
 ````
 
-(`{ class: JavaConfig, name: "geometry-java" }` works too.) A setting the class
-doesn't have, or a value of the wrong type, is an error when you build, so a
-typo can't go unnoticed. Temper's earlier releases read
+(`{ class: JavaConfig, name: "geometry-java" }` works too.) The config is
+ordinary Temper code, so a value may be computed, as `"${name}-java"`. A setting
+the class doesn't have, or a value of the wrong type, is an error when you build,
+so a typo can't go unnoticed. Temper's earlier releases read
 flat names such as `javaName` and `pyName` instead; those are now ordinary
 values with no effect.
 

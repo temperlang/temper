@@ -6,10 +6,12 @@
 //! ```
 //!
 //! as Kotlin Temper's backends inject theirs into config modules. Each
-//! backend declares its own [`ConfigType`] beside its [`crate::Backend`];
-//! the frontend checks configs against the types a build has, without
-//! knowing any backend, and the build gives each library's checked
-//! values to backends in its [`Metadata::configs`].
+//! backend declares its own [`ConfigType`] beside its [`crate::Backend`]:
+//! its class as Temper source, which configs are settled with as normal
+//! Temper code, and the forms its values take, which it checks
+//! ([`ConfigType::validate`]). The frontend does this without knowing any
+//! backend, and the build gives each library's checked values to backends
+//! in its [`Metadata::configs`].
 
 use crate::Metadata;
 
@@ -20,6 +22,11 @@ pub struct ConfigType {
     pub key: &'static str,
     /// Its class's name, as `JavaConfig`.
     pub class: &'static str,
+    /// Its class's declaration, as Temper source: `export class
+    /// JavaConfig(public name: String? = null, …) {}`, a constructor
+    /// property for each of [`Self::properties`], in order, nullable and
+    /// `null` by default.
+    pub source: &'static str,
     /// Its properties, in order, each unset by default.
     pub properties: &'static [Property],
     /// What std's config sets, as each of Kotlin's backends injects std's
@@ -123,7 +130,74 @@ pub enum Value {
     Strings(Vec<String>),
 }
 
+/// What's wrong with a value a config sets ([`ConfigType::validate`]):
+/// where, as its property and, in a list, its item's index; and what.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Problem {
+    pub property: &'static str,
+    pub item: Option<usize>,
+    pub message: String,
+}
+
 impl ConfigType {
+    /// Checks the values a library's config sets for this class, by
+    /// property, against the forms its properties take, giving those
+    /// kept and the problems. A blank string is kept, as unset; a list's
+    /// items are trimmed, and an item not in its form, or naming a
+    /// package listed before it, is left out.
+    pub fn validate(
+        &self,
+        values: Vec<(&'static str, Value)>,
+    ) -> (Vec<(String, Value)>, Vec<Problem>) {
+        let mut kept = Vec::new();
+        let mut problems = Vec::new();
+        for (property, value) in values {
+            let Some(p) = self.properties.iter().find(|p| p.name == property) else {
+                continue;
+            };
+            let whose = format!("{}'s `{property}`", self.class);
+            let mut problem = |item, message| {
+                problems.push(Problem {
+                    property: p.name,
+                    item,
+                    message,
+                })
+            };
+            match (p.kind, value) {
+                (Kind::String { valid, form }, Value::String(s)) => {
+                    if s.trim().is_empty() || valid(&s) {
+                        kept.push((property.to_string(), Value::String(s)));
+                    } else {
+                        problem(None, format!("{whose} is {form}, not `{s}`"));
+                    }
+                }
+                (Kind::Strings { form, package }, Value::Strings(items)) => {
+                    let mut strings = Vec::new();
+                    let mut packages = Vec::new();
+                    for (i, item) in items.iter().enumerate() {
+                        let item = item.trim();
+                        match package(item) {
+                            Some(p) if packages.contains(&p) => {
+                                problem(Some(i), format!("{whose} lists `{p}` twice"))
+                            }
+                            Some(p) => {
+                                packages.push(p);
+                                strings.push(item.to_string());
+                            }
+                            None => {
+                                problem(Some(i), format!("{whose} are each `{form}`, not `{item}`"))
+                            }
+                        }
+                    }
+                    kept.push((property.to_string(), Value::Strings(strings)));
+                }
+                // The type checker reports a value of another type.
+                _ => {}
+            }
+        }
+        (kept, problems)
+    }
+
     /// What a library's config sets for a property, if it sets a value
     /// that isn't blank; for std, what std's config sets.
     pub fn get<'a>(
@@ -179,6 +253,7 @@ mod tests {
     const TOY: ConfigType = ConfigType {
         key: "toy",
         class: "ToyConfig",
+        source: "",
         properties: &[
             Property {
                 name: "name",
@@ -228,6 +303,61 @@ mod tests {
         assert_eq!(TOY.get("app", &Metadata::default(), "name"), None);
         assert_eq!(TOY.strings(&metadata, "parts"), ["a"]);
         assert_eq!(TOY.strings(&blank, "parts"), [] as [String; 0]);
+    }
+
+    /// A backend checks its own values' forms, saying where each problem
+    /// is, by property and item; what's wrong is left out, and a blank
+    /// name is kept, as unset.
+    #[test]
+    fn validate_checks_forms() {
+        const PARTS: ConfigType = ConfigType {
+            properties: &[
+                Property {
+                    name: "name",
+                    doc: "",
+                    kind: Kind::String {
+                        form: "a word",
+                        valid: |s| s.chars().all(|c| c.is_ascii_alphanumeric()),
+                    },
+                },
+                Property {
+                    name: "parts",
+                    doc: "",
+                    kind: Kind::Strings {
+                        form: "name@version",
+                        package: |s| s.split_once('@').map(|(n, _)| n.to_lowercase()),
+                    },
+                },
+            ],
+            ..TOY
+        };
+        let strings =
+            |items: &[&str]| Value::Strings(items.iter().map(|s| s.to_string()).collect());
+        let (kept, problems) = PARTS.validate(vec![
+            ("name", Value::String("../x".into())),
+            ("parts", strings(&[" a@1 ", "b", "A@2", "c@3"])),
+        ]);
+        assert_eq!(kept, [("parts".to_string(), strings(&["a@1", "c@3"]))]);
+        let problem = |property, item, message: &str| Problem {
+            property,
+            item,
+            message: message.into(),
+        };
+        assert_eq!(
+            problems,
+            [
+                problem("name", None, "ToyConfig's `name` is a word, not `../x`"),
+                problem(
+                    "parts",
+                    Some(1),
+                    "ToyConfig's `parts` are each `name@version`, not `b`"
+                ),
+                problem("parts", Some(2), "ToyConfig's `parts` lists `a` twice"),
+            ]
+        );
+        let (kept, problems) = PARTS.validate(vec![("name", Value::String(" ".into()))]);
+        assert_eq!(kept, [("name".to_string(), Value::String(" ".into()))]);
+        assert_eq!(problems, []);
     }
 
     /// What [`spelled`] and [`dotted_identifier`] allow, and hostile

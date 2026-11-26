@@ -101,13 +101,18 @@ fn run_interp(
     err: &mut dyn Write,
 ) -> bool {
     let log = options.log;
-    let Some(mut libraries) =
-        libraries_to_test(sources, root, options.ignore, Some(library), log, err)
-    else {
+    let classes = crate::Registry::built_in().config_classes();
+    let Some(libraries) = libraries_to_test(
+        sources,
+        root,
+        options.ignore,
+        Some(library),
+        &classes,
+        log,
+        err,
+    ) else {
         return false;
     };
-    let classes = crate::Registry::built_in().config_classes();
-    temper_frontend::project::check_configs(libraries.iter_mut().map(|l| &mut l.config), &classes);
     let Some(found) = libraries.iter().find(|l| l.config.name == library) else {
         return false;
     };

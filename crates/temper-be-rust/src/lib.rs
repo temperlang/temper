@@ -167,6 +167,7 @@ pub use temper_tmpl::OutFile;
 pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
     key: "rust",
     class: "RustConfig",
+    source: include_str!("config.temper"),
     properties: &[
         temper_tmpl::Property {
             name: "name",

@@ -53,8 +53,8 @@ server goes on
   One [`Analysis`](../../crates/temper-analysis/src/lib.rs) answers for
   all of its files, so references and rename cross files. A library's
   `config.temper.md` stands alone, and shows the problems `temper build`
-  reports for it: its exports checked against each backend's config
-  class, as `RustConfig`'s properties.
+  reports for it: those of settling it with each backend's config
+  class, as `RustConfig`, beside its work root's other configs.
 - **Staying current:** a change marks its unit stale. Once typing
   pauses for 250 ms, stale units are settled again and their
   diagnostics published, for each of the unit's own files (not std's).

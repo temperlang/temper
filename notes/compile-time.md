@@ -283,9 +283,11 @@ run time, path by path, and is always safe:
 
 ### What runs at compile time
 
-The content-tag session is the only place tempest runs the
-interpreter before run time (constant folding and macros are Rust
-code), and it runs only what an allowlist in one place,
+The content-tag session, and reading libraries' configs (each
+config's top-level statements run once, each on its own, as finding
+libraries settles them; `crate::config`), are the only places tempest
+runs the interpreter before run time (constant folding and macros are
+Rust code), and they run only what an allowlist in one place,
 `interp::compile_time`, permits; anything else is refused as "not
 yet", so the use it was for is left to run time and nothing outside
 the interpreter happens. Effects (network, clock, randomness, I/O) are

@@ -50,7 +50,7 @@ use std::path::Path;
 use temper_frontend::ignore::IgnoreFile;
 use temper_frontend::library_tests::{Reported, libraries_to_test, problem};
 use temper_frontend::log::LogFormat;
-use temper_frontend::project::{LibrarySources, check_configs, library_of, load_library};
+use temper_frontend::project::{LibrarySources, library_of, load_library};
 use temper_frontend::settle::settle;
 use temper_frontend::sources::Sources;
 use temper_frontend::to_tmpl::gaps;
@@ -138,11 +138,18 @@ pub fn build(
     out: &mut dyn Write,
     err: &mut dyn Write,
 ) -> Option<Built> {
-    let mut libraries = libraries_to_test(sources, root, options.ignore, None, options.log, err)?;
     // Configs may use every backend's config class, not only those of the
     // backends built for.
     let classes = crate::Registry::built_in().config_classes();
-    check_configs(libraries.iter_mut().map(|l| &mut l.config), &classes);
+    let libraries = libraries_to_test(
+        sources,
+        root,
+        options.ignore,
+        None,
+        &classes,
+        options.log,
+        err,
+    )?;
     let temper_out = options.out(root);
     let mut results = Vec::new();
     let mut programs = Vec::new();

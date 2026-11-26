@@ -64,10 +64,19 @@ Language and frontend:
   makes a `Mark` and says "Cannot assign to A from Mark", at the same
   position. Kotlin also reports "Void expressions cannot be used as
   values" after "No signature matches" for an object literal no class
-  fits, a follow-on error tempest doesn't report.
+  fits, a follow-on error tempest doesn't report. Where the class
+  wanted, or named with `class:`, doesn't take a property, tempest says
+  so at the property, with what was likely meant ("Point has no
+  property `yy`; did you mean `y`?"), where Kotlin says "No signature
+  matches" of the whole literal (2026-11-25); and where the declared or
+  named class isn't declared, tempest reports only that, where Kotlin
+  also guesses a class from the names, as "Multiple types have matching
+  constructors".
   Test: settle/types.cases, "list literals typed from the type wanted",
-  "function literals typed from the type wanted", and "object literals
-  take their class from the type wanted".
+  "function literals typed from the type wanted", "object literals
+  take their class from the type wanted", and "object literals say
+  which property the class wanted lacks, and guess no class for an
+  undeclared type".
 - **Named `@fun` interfaces are nominal** (decided 2026-10-29, done;
   [typing.md](typing.md), "Fun interfaces"): a `Pred` isn't a `Check`,
   even where their `apply`s' signatures match, and the error suggests
@@ -1302,16 +1311,17 @@ Other differences we won't copy:
   and `hostile_versions_and_metadata_are_errors` in
   crates/tempest/tests/cli.rs.
 
-- **Backend config classes** (2026-11-20): each backend injects its
-  config class (`CSharpConfig`, `JavaConfig`, …) as Kotlin's do, with
-  Kotlin's names and properties, and `CppConfig` and `LuaConfig` with
-  none, as Kotlin's placeholders. Kotlin runs the config module; tempest
-  reads its exports without running it, so values are literals (a
-  string, a list of strings, or `null`), and a computed one is an
-  error. The object may take its class from the declared type
+- **Backend config classes** (2026-11-20, settled since 2026-11-25):
+  each backend gives its config class (`CSharpConfig`, `JavaConfig`,
+  …) as Temper source, with Kotlin's names and properties, and
+  `CppConfig` and `LuaConfig` with none, as Kotlin's placeholders.
+  Configs are settled and run as Temper, as Kotlin's are, so values may
+  be computed, but all of a build's at once, with the classes in one
+  shared module that each config imports unseen, where Kotlin plants
+  them in each config module; a config's own `import(…)`s aren't
+  loaded for this. The object takes its class from the declared type
   (`export let java: JavaConfig = { … }`), as Kotlin's target typing
-  does, or name it (`class:`); a class that disagrees with the type is
-  an error. `dependencies` lists packages for host code, as Kotlin's,
+  does, or names it (`class:`); mistakes are ordinary type errors. `dependencies` lists packages for host code, as Kotlin's,
   in the same spellings, and malformed ones are errors where Kotlin
   printed one and skipped them; npm names may be scoped
   (`"@scope/name@1.0.0"`), which Kotlin's split at `@` rejected. Where
@@ -1321,12 +1331,14 @@ Other differences we won't copy:
   dependency plugin for Java's class path (no Maven otherwise).
   Kotlin also read the older flat keys (`pyName`, `javaPackage`, …) where
   a config class didn't set a value; tempest doesn't, so they're
-  ordinary values. A class or property that isn't there, a value of
-  another type, or an instance under another backend's name is a config
-  error at its place in the file, where Kotlin printed a console error
-  and went on. A config file's code is only its code blocks, as in
-  Kotlin; tempest once also read `export let` lines in its prose. Tests:
-  crates/temper-frontend/src/config.rs, crates/tempest/tests/cli.rs
+  ordinary values. An instance under another backend's name, a class
+  set twice, or a value not in its backend's form (each backend checks
+  its own) is a config error at its place in the file, where Kotlin
+  printed a console error and went on, or dropped the value. A config
+  file's code is only its code blocks, as in Kotlin; tempest once also
+  read `export let` lines in its prose. Tests:
+  crates/temper-frontend/src/config.rs,
+  crates/temper-driver/tests/config_classes.rs, crates/tempest/tests/cli.rs
   (`typed_config_*`, `config_dependencies_in_package_files`, and
   `connecteds_*`, Kotlin's `connecteds` test with real packages, as
   written, each checking the generated code defines Bitset once, in host

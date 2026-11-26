@@ -208,7 +208,7 @@ fn work_root_and_skipped_directories() {
         config: Config::read(config, dir),
     };
     assert_eq!(
-        find_libraries(&disk, root),
+        find_libraries(&disk, root, &Default::default()),
         [
             sources("lib", &["lib/a.temper.md", "lib/sub/b.temper"], CONFIG),
             sources("other", &[], OTHER),
@@ -247,7 +247,7 @@ fn gitignore_files_skip_what_they_list() {
     );
     let root = format!("{}/repo", tree.root);
     let disk = Sources::standard();
-    let found = find_libraries(&disk, &root);
+    let found = find_libraries(&disk, &root, &Default::default());
     assert_eq!(found.len(), 1, "{found:?}");
     let files: Vec<&str> = (found[0].files.iter())
         .map(|f| f.strip_prefix(&root).unwrap_or(f))
@@ -399,7 +399,8 @@ fn library_in_memory() {
 }
 
 /// Libraries' names, as Kotlin's `libraryNameFor` gives them: what the
-/// config exports, else its first line as a slug, else the root's path.
+/// config exports, which may be computed, else its first line as a slug,
+/// else the root's path.
 #[test]
 fn library_names() {
     let name = |text: &str, path: &str| Config::read(text, path).name;
@@ -410,6 +411,8 @@ fn library_names() {
         "source-path"
     );
     assert_eq!(name("", ""), "unnamed");
+    let computed = "# A\n\n    let base = \"geo\";\n    export let name = \"${base}-lib\";\n";
+    assert_eq!(name(computed, ""), "geo-lib");
     let config = Config::read(
         "# A\n\n    export let name = \"a\";\n    export let version = \"1.2.0\";\n",
         "",

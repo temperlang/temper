@@ -1,0 +1,3 @@
+// What a library's config may set for the C++ backend, as
+// `export let cpp: CppConfig = { … };`: nothing yet.
+export class CppConfig() {}

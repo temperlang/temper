@@ -1,0 +1,7 @@
+// What a library's config may set for the C# backend, as
+// `export let csharp: CSharpConfig = { … };`, each unset by default.
+// The backend checks the values' forms (src/lib.rs, `CONFIG`).
+export class CSharpConfig(
+  public rootNamespace: String? = null,
+  public dependencies: List<String>? = null,
+) {}

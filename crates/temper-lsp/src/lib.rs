@@ -386,7 +386,19 @@ impl<W: Write> Server<W> {
         let sources = self.sources();
         let dir = parent(path);
         let root = work_root(&sources, &dir);
-        let libraries = find_libraries(&sources, &root);
+        // Finding libraries settles their configs, so it's under
+        // `catch_unwind` too.
+        let found = catch_unwind(AssertUnwindSafe(|| {
+            find_libraries(&sources, &root, &self.config_classes)
+        }));
+        let libraries = found.unwrap_or_else(|payload| {
+            let why = internal_error(
+                &format!("reading configs under {root}"),
+                &panic_message(&*payload),
+            );
+            eprintln!("temper lsp: {why}");
+            Vec::new()
+        });
         // A library's config, whose problems are its config's
         // ([`config_diagnostics`]), not its analysis's.
         let config = (library_of(&libraries, &dir))
@@ -422,7 +434,7 @@ impl<W: Write> Server<W> {
             let analysis = Analysis::new(settle(load()?));
             let by_file = match config {
                 Some(config) => {
-                    let found = config_diagnostics(config, &self.config_classes);
+                    let found = config_diagnostics(config);
                     vec![(path.to_string(), found)]
                 }
                 None => diagnostics_by_file(&analysis, &files),
@@ -729,11 +741,11 @@ fn diagnostics_by_file(
     by_file
 }
 
-/// A library config's problems, as `temper build` reports them: its
-/// syntax errors, and its exports checked against the config classes.
-/// Not its analysis's, as a config is read, not run as code.
-fn config_diagnostics(config: &Config, classes: &Classes) -> Vec<lsp::Diagnostic> {
-    (config.check(classes).problems.into_iter())
+/// A library config's problems, as `temper build` reports them, found
+/// settling it with the config classes, as its own module, beside its
+/// work root's other configs; not its library's analysis's.
+fn config_diagnostics(config: &Config) -> Vec<lsp::Diagnostic> {
+    (config.problems.iter().cloned())
         .map(|problem| lsp::Diagnostic {
             range: range(&config.text, problem.span.start, problem.span.end),
             severity: Some(lsp::DiagnosticSeverity::ERROR),

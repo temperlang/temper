@@ -2,8 +2,9 @@
 //! modules' top-level code once, then lets a pass call functions and
 //! members on the values they made, each call under a step budget, as
 //! Kotlin Temper's frontend interprets a module before its passes use the
-//! values. So far only the contextual autoescaping pass uses it
-//! ([`crate::autoescape`]).
+//! values. The contextual autoescaping pass uses it
+//! ([`crate::autoescape`]), and so does reading libraries' configs
+//! ([`crate::config`]).
 //!
 //! What a pass learns comes back as owned data, never as live values: a
 //! value to be rebuilt in code is a [`Construction`].
@@ -199,6 +200,29 @@ impl Session {
         };
         session.run_modules(s, modules, fuel);
         session
+    }
+
+    /// Runs every module's top-level statements, as [`Session::new`]
+    /// runs modules, but each on its own, with `fuel` steps, going on
+    /// past one that fails, as later ones may not need it, so what they
+    /// declare has its value; gives each that failed, and why.
+    pub(crate) fn new_each(s: &Settled, fuel: u64) -> (Session, Vec<(NodeId, String)>) {
+        let mut session = Session::new(s, 0, fuel);
+        let mut failed = Vec::new();
+        for module in &s.modules {
+            for &statement in &module.top_levels {
+                let code = (session.interp.lowering).module(s, module.scope, &[statement]);
+                session.interp.fuel = fuel;
+                session.interp.depth = 0;
+                let result = session.interp.run_code(s, code, Rc::from([]), Vec::new());
+                session.interp.ready.clear();
+                session.interp.output.lines.clear();
+                if let Err(abrupt) = result {
+                    failed.push((statement, describe(abrupt)));
+                }
+            }
+        }
+        (session, failed)
     }
 
     /// Starts again, after a call failed: module state is dropped, then

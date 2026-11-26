@@ -14,8 +14,10 @@
 //!   name = "chromarite";`), or else its config's first line as a slug
 //!   (`# Hi There!` gives `hi-there`), or else its root's path under the
 //!   work root, with `-` between directories, or else `unnamed`, as
-//!   Kotlin's `libraryNameFor` decides ([`Config`]). Two libraries of one
-//!   name are an error, as in Kotlin.
+//!   Kotlin's `libraryNameFor` decides ([`Config`]). Configs are settled
+//!   as Temper, all of a work root's at once, as libraries are found
+//!   ([`settle_configs`]). Two libraries of one name are an error, as in
+//!   Kotlin.
 //! - An import's path may start with a library's name, as
 //!   `import("other-lib/sub")`, naming that library's `sub` directory,
 //!   as Kotlin resolves it; the library's modules then build with the
@@ -59,42 +61,28 @@ pub struct LibrarySources {
     pub config: Config,
 }
 
-/// What a library's config file says: the string values it exports, in
-/// order, and the library's name; and everything it exports, which the
-/// config classes that backends inject check ([`Config::check`]). Kotlin
-/// runs the config as Temper; this reads its code without running it
-/// ([`crate::config`]).
+/// What a library's config file says, settled as Temper with a build's
+/// config classes ([`settle_configs`], [`crate::config`]): the string
+/// values it exports, in order; its values for each config class, by
+/// key; its problems; where each export's name is; and the library's
+/// name.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Config {
     /// The library's name (see the module docs).
     pub name: String,
     pub exports: Vec<(String, String)>,
-    /// Everything it exports, strings and config class instances among
-    /// them.
-    pub values: Vec<crate::config::Export>,
-    /// Its syntax errors.
+    pub configs: Vec<(String, Vec<(String, temper_tmpl::ConfigValue)>)>,
     pub problems: Vec<crate::config::Problem>,
-    /// Its text, which problems' spans are in.
+    pub keys: Vec<(String, temper_syntax::tree::Span)>,
+    /// Its text, which spans are in.
     pub text: String,
-    /// What it says, checked against a build's config classes, once all
-    /// its libraries are found ([`check_configs`]); empty until then.
-    pub checked: crate::config::Checked,
 }
 
 impl Config {
-    /// Reads a config file's text, for a library whose root is `path`
-    /// under the work root (as `a/b`, or empty for the work root).
-    pub fn read(text: &str, path: &str) -> Config {
-        let (values, problems) = crate::config::read(text);
-        let exports: Vec<(String, String)> = (values.iter())
-            .filter_map(|e| match &e.value {
-                crate::config::Value::String(s) => Some((e.key.clone(), s.clone())),
-                _ => None,
-            })
-            .collect();
-        let configured = (exports.iter())
-            .find(|(k, v)| k == "name" && !v.trim().is_empty())
-            .map(|(_, v)| v.clone());
+    /// A config file's text, not yet settled, for a library whose root is
+    /// `path` under the work root (as `a/b`, or empty for the work root),
+    /// named as if it exported no `name`.
+    pub fn new(text: &str, path: &str) -> Config {
         let from_path = || {
             let joined = (path.split('/'))
                 .filter(|p| !p.is_empty() && *p != ".")
@@ -102,47 +90,43 @@ impl Config {
                 .join("-");
             dashed(&joined)
         };
-        let name = configured
-            .or_else(|| text.lines().next().and_then(|l| dashed(&slug(l))))
+        let name = (text.lines().next().and_then(|l| dashed(&slug(l))))
             .or_else(from_path)
             .unwrap_or_else(|| "unnamed".to_string());
         Config {
             name,
-            exports,
-            values,
-            problems,
             text: text.to_string(),
-            checked: Default::default(),
+            ..Config::default()
         }
     }
 
-    /// Its exports checked against the config classes in its scope, one
-    /// for each of a build's backends, with its syntax errors first; not
-    /// against other libraries' configs, as [`check_configs`] checks
-    /// them.
-    pub fn check(&self, classes: &crate::config::Classes) -> crate::config::Checked {
-        let mut checked = crate::config::check(&self.values, classes);
-        checked.problems.splice(0..0, self.problems.iter().cloned());
-        checked
+    /// A config file's text settled alone, without config classes, as
+    /// std's is.
+    pub fn read(text: &str, path: &str) -> Config {
+        let mut config = Config::new(text, path);
+        settle_configs([&mut config], &crate::config::Classes::default());
+        config
     }
 
     /// What it says, for package files: its string exports, and its
-    /// values for each backend's config class, as checked
-    /// ([`Config::checked`]).
+    /// values for each backend's config class.
     pub fn metadata(&self) -> temper_tmpl::Metadata {
         temper_tmpl::Metadata {
             exports: self.exports.clone(),
-            configs: self.checked.configs.clone(),
+            configs: self.configs.clone(),
         }
     }
 
     /// Where a problem with what it sets for a config class goes: at its
     /// export of that class, or else of its name, or else at the start.
     fn span_for(&self, key: &str) -> temper_syntax::tree::Span {
-        (self.values.iter())
-            .find(|e| e.key == key)
-            .or_else(|| self.values.iter().find(|e| e.key == "name"))
-            .map_or(temper_syntax::tree::Span { start: 0, end: 0 }, |e| e.span)
+        let at = |key: &str| {
+            self.keys
+                .iter()
+                .find(|(k, _)| k == key)
+                .map(|&(_, span)| span)
+        };
+        (at(key).or_else(|| at("name"))).unwrap_or_default()
     }
 
     /// A string the config exports, if it does.
@@ -158,22 +142,32 @@ impl Config {
     }
 }
 
-/// Checks the configs of a build's libraries against its config classes,
-/// once, keeping what's found in each ([`Config::checked`]): each alone
-/// ([`Config::check`]), then against each other, as their packages meet
-/// in one place (`PYTHONPATH`, `node_modules`, a Cargo workspace). Two
-/// libraries taking one name for a backend ([`temper_tmpl::ConfigType::names`],
-/// case folded), or a `dependencies` item naming a library's package,
-/// std's, or the runtime's (`temper-core`), is a problem in each config
-/// concerned.
-pub fn check_configs<'a>(
+/// Settles the configs of a build's libraries with its config classes,
+/// all at once ([`crate::config::settle_configs`]), keeping what each
+/// says, and its name, if it exports one; then checks them against each
+/// other, as their packages meet in one place (`PYTHONPATH`,
+/// `node_modules`, a Cargo workspace). Two libraries taking one name for
+/// a backend ([`temper_tmpl::ConfigType::names`], case folded), or a
+/// `dependencies` item naming a library's package, std's, or the
+/// runtime's (`temper-core`), is a problem in each config concerned.
+pub fn settle_configs<'a>(
     configs: impl IntoIterator<Item = &'a mut Config>,
     classes: &crate::config::Classes,
 ) {
     use temper_tmpl::{ConfigKind, ConfigValue};
     let mut configs: Vec<&mut Config> = configs.into_iter().collect();
-    for config in configs.iter_mut() {
-        config.checked = config.check(classes);
+    let texts: Vec<&str> = configs.iter().map(|c| c.text.as_str()).collect();
+    let said = crate::config::settle_configs(&texts, classes);
+    for (config, said) in configs.iter_mut().zip(said) {
+        if let Some((_, name)) =
+            (said.exports.iter()).find(|(k, v)| k == "name" && !v.trim().is_empty())
+        {
+            config.name = name.clone();
+        }
+        config.exports = said.exports;
+        config.configs = said.configs;
+        config.problems = said.problems;
+        config.keys = said.keys;
     }
     let metadata: Vec<temper_tmpl::Metadata> = configs.iter().map(|c| c.metadata()).collect();
     for t in &classes.types {
@@ -205,7 +199,7 @@ pub fn check_configs<'a>(
             }
         }
         for (i, config) in configs.iter().enumerate() {
-            let lists = (config.checked.configs.iter())
+            let lists = (config.configs.iter())
                 .filter(|(key, _)| key == t.key)
                 .flat_map(|(_, values)| values);
             for (property, value) in lists {
@@ -232,7 +226,7 @@ pub fn check_configs<'a>(
         for (i, message) in found {
             let span = configs[i].span_for(t.key);
             let problem = crate::config::Problem { span, message };
-            configs[i].checked.problems.push(problem);
+            configs[i].problems.push(problem);
         }
     }
 }
@@ -341,10 +335,14 @@ pub fn work_root(sources: &Sources, dir: &str) -> String {
     ancestor(up.unwrap_or(0))
 }
 
-/// The libraries under a work root, in path order, each with its config
-/// read.
-pub fn find_libraries(sources: &Sources, root: &str) -> Vec<LibrarySources> {
-    find_libraries_ignoring(sources, root, None)
+/// The libraries under a work root, in path order, with their configs
+/// settled with a build's config classes ([`settle_configs`]).
+pub fn find_libraries(
+    sources: &Sources,
+    root: &str,
+    classes: &crate::config::Classes,
+) -> Vec<LibrarySources> {
+    find_libraries_ignoring(sources, root, None, classes)
 }
 
 /// The libraries under a work root, as [`find_libraries`] finds them,
@@ -354,6 +352,7 @@ pub fn find_libraries_ignoring(
     sources: &Sources,
     root: &str,
     extra: Option<&IgnoreFile>,
+    classes: &crate::config::Classes,
 ) -> Vec<LibrarySources> {
     let root = normalize(&slashed(root));
     let mut libraries = Vec::new();
@@ -371,8 +370,9 @@ pub fn find_libraries_ignoring(
         let path = (library.root.strip_prefix(&root))
             .unwrap_or(&library.root)
             .trim_start_matches('/');
-        library.config = Config::read(&text.unwrap_or_default(), path);
+        library.config = Config::new(&text.unwrap_or_default(), path);
     }
+    settle_configs(libraries.iter_mut().map(|l| &mut l.config), classes);
     libraries
 }
 

@@ -1,10 +1,11 @@
-//! The config classes the backends inject ([`temper_tmpl::ConfigType`]):
+//! The config classes the backends give ([`temper_tmpl::ConfigType`]):
 //! docs/backends/README.md's table of them, which is generated from them,
 //! so it can't fall behind (on a difference, the test prints the table to
-//! paste in); and the frontend's config checking, which never names one.
+//! paste in); their Temper declarations and their own checks of values;
+//! and the frontend's settling of configs, which never names one.
 
 use temper_driver::Registry;
-use temper_frontend::project::{Config, check_configs};
+use temper_frontend::project::{Config, settle_configs};
 
 /// The marks around the generated table.
 #[allow(dead_code)] // Unless every backend is left out.
@@ -104,7 +105,7 @@ fn std_configs_set_properties() {
 fn problems(configs: &[Config]) -> Vec<(String, String, String)> {
     let mut found = Vec::new();
     for config in configs {
-        for p in &config.checked.problems {
+        for p in &config.problems {
             let at = &config.text[p.span.start as usize..p.span.end as usize];
             found.push((config.name.clone(), at.to_string(), p.message.clone()));
         }
@@ -113,20 +114,20 @@ fn problems(configs: &[Config]) -> Vec<(String, String, String)> {
 }
 
 /// The configs of a build's libraries, each named `NAME` and saying
-/// `TEXT`, checked against `registry`'s classes.
+/// `TEXT`, settled with `registry`'s classes.
 #[allow(dead_code)] // Unless every backend is left out.
 fn checked(registry: &Registry, libraries: &[(&str, &str)]) -> Vec<Config> {
     let mut configs: Vec<Config> = (libraries.iter())
         .map(|(name, text)| {
             let text = format!("    export let name = \"{name}\";\n{text}");
-            Config::read(&text, name)
+            Config::new(&text, name)
         })
         .collect();
-    check_configs(configs.iter_mut(), &registry.config_classes());
+    settle_configs(configs.iter_mut(), &registry.config_classes());
     configs
 }
 
-/// A build without a backend skips what configs set for it, as a build
+/// A build without a backend drops what configs set for it, as a build
 /// with it checks it, but still finds mistakes in the rest.
 #[test]
 #[cfg(all(feature = "csharp", feature = "py"))]
@@ -142,11 +143,8 @@ fn configs_for_backends_a_build_lacks() {
 ";
     let found = problems(&checked(&registry, &[("a", text)]));
     let expected: Vec<(String, String, String)> = [
-        ("PyConfg", "`py` is for PyConfig, not `PyConfg`"),
-        (
-            "JsConfg",
-            "No config class `JsConfg`; did you mean `JsConfig`?",
-        ),
+        ("PyConfg", "PyConfg has not been declared"),
+        ("JsConfg", "JsConfg has not been declared"),
     ]
     .iter()
     .map(|(at, m)| ("a".to_string(), at.to_string(), m.to_string()))
@@ -252,5 +250,65 @@ fn names_shared_across_libraries() {
 fn config_keys_are_backend_names() {
     for b in Registry::built_in().all() {
         assert_eq!(b.config.key, b.name);
+    }
+}
+
+/// Each backend declares its config class in Temper as its properties
+/// say, in order, each nullable and null by default; and a config may
+/// set each, as settling shows.
+#[test]
+fn class_sources_declare_properties() {
+    let registry = Registry::built_in();
+    for t in registry.config_classes().types {
+        let mut rest = t.source;
+        let header = format!("export class {}(", t.class);
+        rest = &rest[rest.find(&header).unwrap_or_else(|| panic!("{}", t.class))..];
+        for p in t.properties {
+            let declared = format!("public {}: {}? = null,", p.name, p.kind.type_name());
+            let at = rest.find(&declared);
+            rest = &rest[at.unwrap_or_else(|| panic!("{}: {declared}", t.class))..];
+        }
+        let sets: Vec<String> = (t.properties.iter())
+            .map(|p| match p.kind {
+                temper_tmpl::ConfigKind::String { .. } => format!("{}: null", p.name),
+                temper_tmpl::ConfigKind::Strings { .. } => format!("{}: []", p.name),
+            })
+            .collect();
+        let text = format!(
+            "    export let {}: {} = {{ {} }};\n",
+            t.key,
+            t.class,
+            sets.join(", ")
+        );
+        let configs = checked(&registry, &[("a", &text)]);
+        assert_eq!(problems(&configs), [], "{text}");
+        assert_eq!(configs[0].configs.len(), 1, "{text}");
+    }
+}
+
+/// Each backend checks its own values' forms: no hostile name or
+/// dependency gets through, and each problem says where it is.
+#[test]
+fn backends_check_their_own_values() {
+    for t in Registry::built_in().config_classes().types {
+        for p in t.properties {
+            let (value, item) = match p.kind {
+                temper_tmpl::ConfigKind::String { .. } => {
+                    (temper_tmpl::ConfigValue::String("../x".into()), None)
+                }
+                temper_tmpl::ConfigKind::Strings { .. } => {
+                    let items = vec!["--index-url=x".to_string()];
+                    (temper_tmpl::ConfigValue::Strings(items), Some(0))
+                }
+            };
+            let (kept, found) = t.validate(vec![(p.name, value)]);
+            assert_eq!(found.len(), 1, "{}'s {}", t.class, p.name);
+            assert_eq!((found[0].property, found[0].item), (p.name, item));
+            let leaked = kept.iter().any(|(_, v)| match v {
+                temper_tmpl::ConfigValue::String(_) => true,
+                temper_tmpl::ConfigValue::Strings(items) => !items.is_empty(),
+            });
+            assert!(!leaked, "{}'s {}: {kept:?}", t.class, p.name);
+        }
     }
 }

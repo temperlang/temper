@@ -1,0 +1,7 @@
+// What a library's config may set for the Rust backend, as
+// `export let rust: RustConfig = { … };`, each unset by default.
+// The backend checks the values' forms (src/lib.rs, `CONFIG`).
+export class RustConfig(
+  public name: String? = null,
+  public dependencies: List<String>? = null,
+) {}

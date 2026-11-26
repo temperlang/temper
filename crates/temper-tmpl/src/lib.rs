@@ -67,8 +67,8 @@ pub mod version;
 pub use backend::{Backend, OutFile, Run, TestResults, Tested, Tools, clashing_paths};
 pub use builder::Builder;
 pub use config::{
-    ConfigType, Kind as ConfigKind, Property, Value as ConfigValue, dependency_parts,
-    dotted_identifier, no_names, spelled,
+    ConfigType, Kind as ConfigKind, Problem as ConfigProblem, Property, Value as ConfigValue,
+    dependency_parts, dotted_identifier, no_names, spelled,
 };
 pub use decls::{Decl, DeclKind, DeclTable, Facts, Strings};
 pub use ids::{DeclId, FileId, NodeId, SourceFile, Span, StrId, TypeId};

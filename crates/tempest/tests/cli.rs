@@ -883,23 +883,20 @@ fn typed_config_errors() {
                 "{path}:2:44: error: JavaConfig has no property `pacakge`; did you mean \
                  `package`?\n"
             ),
-            format!("{path}:3:46: error: PyConfig's `name` is a String, not an Int\n"),
-            format!("{path}:4:30: error: `js` is for JsConfig, not `JsConf`\n"),
+            format!("{path}:3:46: error: Expected subtype of String?, but got Int32\n"),
+            format!("{path}:4:30: error: JsConf has not been declared\n"),
             format!("{path}:5:16: error: RustConfig goes in `export let rust`, not `rs`\n"),
             format!(
                 "{path}:6:16: error: `csharp` is for CSharpConfig, as \
                  `export let csharp: CSharpConfig = {{ … }}`\n"
             ),
             format!("{path}:7:16: error: CppConfig goes in `export let cpp`, not `lua`\n"),
-            format!(
-                "{path}:8:42: error: `class: LuaConfig` disagrees with the declared type, \
-                 `CppConfig`\n"
-            ),
+            format!("{path}:8:33: error: Cannot assign to CppConfig from LuaConfig\n"),
             format!(
                 "{path}:9:52: error: RustConfig's `dependencies` are each `name@version`, \
                  not `roaring`\n"
             ),
-            format!("{path}:10:22: error: `java` is for JavaConfig, not `JavaConfg`\n"),
+            format!("{path}:10:22: error: JavaConfg has not been declared\n"),
             format!(
                 "{path}:11:56: error: CSharpConfig's `dependencies` are each `Name:version`, \
                  not `Foo:$(GITHUB_TOKEN)`\n"

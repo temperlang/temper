@@ -196,6 +196,7 @@ fn num_at(value: &Json, path: &[&str]) -> u32 {
 const TOY_CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
     key: "toy",
     class: "ToyConfig",
+    source: "export class ToyConfig(public name: String? = null) {}\n",
     properties: &[temper_tmpl::Property {
         name: "name",
         doc: "The toy's name.",
@@ -372,9 +373,10 @@ let b: Int = area(",
 }
 
 /// A library's `config.temper.md` shows its problems as `temper build`
-/// reports them, checked against the config classes the server was
-/// given: here a property its class doesn't have, at the property's
-/// name, with the one meant. Fixed, as typed, it has none.
+/// reports them, settled with the config classes the server was given:
+/// here a property its class doesn't have, at the property's name, with
+/// the one meant, and then a class it doesn't have. Fixed, as typed, it
+/// has none.
 #[test]
 fn config_problems() {
     let dir = library("config", &[("a.temper", "export let a = 1;\n")]);
@@ -404,7 +406,7 @@ fn config_problems() {
     assert_eq!(found.len(), 1, "{found:?}");
     assert_eq!(
         str_at(&found[0], &["message"]),
-        "`toy` is for ToyConfig, not `ToyConfg`"
+        "ToyConfg has not been declared"
     );
     change(
         &mut client,

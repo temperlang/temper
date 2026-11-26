@@ -122,6 +122,7 @@ pub use temper_tmpl::OutFile;
 pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
     key: "lua",
     class: "LuaConfig",
+    source: include_str!("config.temper"),
     properties: &[],
     std: &[],
     names: temper_tmpl::no_names,

@@ -51,7 +51,7 @@ Getting started with each language is in the
 Each backend has a config class for its own settings, which a
 library's `config.temper.md` sets in an object of that class, exported
 under the backend's ID, the object taking its class from the declared
-type:
+type, as any object literal does:
 
 ```temper
 export let java: JavaConfig = {
@@ -60,13 +60,16 @@ export let java: JavaConfig = {
 };
 ```
 
-`{ class: JavaConfig, … }` names the class too. Each setting is unset by
-default. A setting the class doesn't have, a value of another type, a
-class that disagrees with the declared type, or a class set twice is a
-config error. A build of `temper` without some backend skips that
+`{ class: JavaConfig, … }` or `new JavaConfig(…)` names the class too.
+Each setting is unset by default. A config is ordinary Temper, which
+`temper` type-checks and runs, so values may be computed; a setting the
+class doesn't have or a value of another type is an ordinary error,
+and a class set twice, or under another backend's name, is a config
+error. A build of `temper` without some backend leaves out that
 backend's config, unchecked.
 
-Names are spelled as each language's tools allow, ASCII only: C#
+Each backend checks the forms of its own settings. Names are spelled
+as each language's tools allow, ASCII only: C#
 namespaces and Java packages are identifiers joined by `.`; Maven IDs
 and NuGet IDs are letters, digits, `.`, `_`, and `-`; npm names are
 those and `~`, maybe under an `@scope/`; PyPI names are letters,

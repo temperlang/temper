@@ -1338,7 +1338,14 @@ impl Settle {
             self.resolve_name(target, scope, forced)?;
         }
         let Some(class) = self.scopes.resolved(target).and_then(|b| self.class_of(b)) else {
-            self.error(call, Message::NoSignatureMatches);
+            match self.lib.tree.kind(target) {
+                // Failing as the class's name did, which says why.
+                NodeKind::Error => {
+                    let index = self.lib.tree.data(target);
+                    self.rewrite(call, NodeKind::Error, index, &[]);
+                }
+                _ => self.error(call, Message::NoSignatureMatches),
+            }
             return Ok(true);
         };
         Ok(!matches!(
@@ -1385,7 +1392,31 @@ impl Settle {
                 .position(|&p| param_name(self, p) == Some(name));
             match at {
                 Some(at) if placed[at].is_none() => placed[at] = Some(i),
-                _ => {
+                // Said at the property, with what was likely meant.
+                None => {
+                    let names: Vec<&str> = (params.iter())
+                        .filter_map(|&p| param_name(self, p))
+                        .map(|n| self.lib.names.get(n))
+                        .collect();
+                    let typed = self.lib.names.get(name);
+                    let has = match suggest(typed, names.iter().copied()) {
+                        Some(meant) => format!("did you mean `{meant}`?"),
+                        None => {
+                            let names = names.iter().map(|n| format!("`{n}`")).collect();
+                            format!("it has {}", listed(names))
+                        }
+                    };
+                    let message = Message::NoLiteralProperty(
+                        self.member_text(class).into(),
+                        typed.into(),
+                        has,
+                    );
+                    let key = self.lib.tree.children(call)[2 + 2 * i];
+                    let index = (self.lib).report(Level::Error, message, self.lib.tree.span(key));
+                    self.rewrite(call, NodeKind::Error, index, &[]);
+                    return Placed::Error;
+                }
+                Some(_) => {
                     self.error(call, Message::NoSignatureMatches);
                     return Placed::Error;
                 }
@@ -1564,4 +1595,50 @@ pub(crate) fn visibility_rank(data: u32) -> u8 {
     } else {
         2
     }
+}
+
+/// `a`, `a and b`, or `a, b, and c`.
+fn listed(items: Vec<String>) -> String {
+    match items.as_slice() {
+        [] => "none".into(),
+        [one] => one.clone(),
+        [a, b] => format!("{a} and {b}"),
+        [rest @ .., last] => format!("{}, and {last}", rest.join(", ")),
+    }
+}
+
+/// The name among `names` that `typed` most likely meant: the same but
+/// for case, or else the nearest within two edits, if one is.
+fn suggest<'a>(typed: &str, names: impl Iterator<Item = &'a str> + Clone) -> Option<&'a str> {
+    let lower = typed.to_lowercase();
+    if let Some(same) = names.clone().find(|n| n.to_lowercase() == lower) {
+        return Some(same);
+    }
+    (names.map(|n| (distance(&lower, &n.to_lowercase()), n)))
+        .filter(|(d, _)| *d <= 2)
+        .min_by_key(|(d, _)| *d)
+        .map(|(_, n)| n)
+}
+
+/// Edits from one text to another: insertions, deletions, substitutions,
+/// and swaps of neighbors, each one.
+fn distance(a: &str, b: &str) -> usize {
+    let (a, b): (Vec<char>, Vec<char>) = (a.chars().collect(), b.chars().collect());
+    let mut rows = vec![(0..=b.len()).collect::<Vec<_>>(); a.len() + 1];
+    for (i, row) in rows.iter_mut().enumerate() {
+        row[0] = i;
+    }
+    for i in 1..=a.len() {
+        for j in 1..=b.len() {
+            let cost = usize::from(a[i - 1] != b[j - 1]);
+            let mut d = (rows[i - 1][j] + 1)
+                .min(rows[i][j - 1] + 1)
+                .min(rows[i - 1][j - 1] + cost);
+            if i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1] {
+                d = d.min(rows[i - 2][j - 2] + 1);
+            }
+            rows[i][j] = d;
+        }
+    }
+    rows[a.len()][b.len()]
 }

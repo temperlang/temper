@@ -108,6 +108,10 @@ pub enum Message {
     NotExported(String, String),
     /// An object literal whose property names no visible constructor takes.
     NoSignatureMatches,
+    /// An object literal's property that its class's constructor doesn't
+    /// take: the class, the property, and what was likely meant, or what
+    /// it has.
+    NoLiteralProperty(String, String, String),
     /// An object literal that several classes' constructors match: their names.
     MultipleConstructorsMatch(String),
     /// A constructor parameter without a default that an object literal skips.
@@ -370,6 +374,9 @@ impl Message {
             Message::ImportFailed(path) => format!("Import of {path} failed"),
             Message::NotExported(module, name) => format!("{module} does not export symbol {name}"),
             Message::NoSignatureMatches => "No signature matches".into(),
+            Message::NoLiteralProperty(class, name, has) => {
+                format!("{class} has no property `{name}`; {has}")
+            }
             Message::MultipleConstructorsMatch(names) => {
                 format!("Multiple types have matching constructors: {names}")
             }

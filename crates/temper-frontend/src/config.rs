@@ -1,67 +1,39 @@
-//! A library's config file, `config.temper.md`, read as Temper code:
-//! what it exports ([`read`]), and the config classes that a build's
-//! backends inject into its scope, checked ([`check`]).
+//! Libraries' config files, `config.temper.md`, settled as Temper modules
+//! and run, all of a build's at once ([`settle_configs`]).
 //!
-//! An export is a string, as `export let license = "MIT";`, or an
-//! instance of a config class, as
-//! `export let KEY: CLASS = { PROPERTY: VALUE, … };`, the object taking
-//! its class from the declared type, or as
-//! `export let KEY = { class: CLASS, … };`. Each config class is a
-//! [`ConfigType`] that the build gives, one per backend; this module
-//! never names one. Kotlin runs the config module, with those classes
-//! declared in it; we don't run it, so values are literals: a string, a
-//! list of strings, or `null` for none. A class this scope doesn't have,
-//! a declared type that disagrees with `class:`, a property its class
-//! doesn't have, a value of another type or form, or an instance under
-//! another key is a config error, at its place in the file. Every other
-//! export is an ordinary value, which nothing need read, but strings go
-//! into package files as metadata: a `version` that isn't SemVer, or a
-//! string holding control characters other than tabs and line breaks,
-//! is an error too.
+//! Each config is a module of its own, as Kotlin's is, in one library
+//! with a shared prelude: each backend's config class, as the backend
+//! declares it in Temper ([`ConfigType::source`]), in a module that every
+//! config imports, unseen, so the classes are in its scope. The standard
+//! type checker checks configs, so a value may be computed, and a
+//! mistake gets an ordinary diagnostic. Then each config's top level runs
+//! once with the compile-time interpreter, and what it exports is read:
+//!
+//! - A string is metadata for package files, as `export let license =
+//!   "MIT";`. A `version` that isn't SemVer, or text holding control
+//!   characters other than tabs and line breaks, is a problem, as package
+//!   files can't take them.
+//! - An object of a config class, as `export let KEY: CLASS = { PROPERTY:
+//!   VALUE, … };`, goes in the export of its key, once, and its values are
+//!   checked by its backend ([`ConfigType::validate`]).
+//!   A string or the like under a class's key is a problem.
+//! - Anything else is an ordinary value, which nothing reads.
+//!
+//! This module never names a backend. Exports keyed to a backend this
+//! build lacks ([`Classes::elsewhere`]) are dropped before settling, as
+//! their classes aren't here, and so are the config's own `import(…)`
+//! statements, which name its library's modules, not loaded here.
 
-use temper_syntax::ast::{Ast, Builtin, Level, Value as Literal};
+use crate::core::{class_parts, let_parts};
+use crate::interp::Val;
+use crate::interp::compile_time::{Session, class_node, field};
+use crate::library::{FileId, Level, Library};
+use crate::scope::SymbolId;
+use crate::settle::{Settled, settle};
+use temper_syntax::ast::{Builtin, Value};
 use temper_syntax::lex::SourceKind;
 use temper_syntax::tree::{NodeId, NodeKind, Span};
-use temper_tmpl::{ConfigKind, ConfigType, ConfigValue};
-
-/// An export: its name, where that is, its declared type's text and
-/// where that is, if it has one, and its value.
-#[derive(Clone, Debug, PartialEq)]
-pub struct Export {
-    pub key: String,
-    pub span: Span,
-    pub declared: Option<(String, Span)>,
-    pub value: Value,
-}
-
-/// An export's value, or a property's.
-#[derive(Clone, Debug, PartialEq)]
-pub enum Value {
-    String(String),
-    Null,
-    /// `{ class: CLASS, … }`, or `new CLASS(…)`: the class's name and
-    /// where it is, unless it's `{ … }`, which takes its class from the
-    /// declared type; and its arguments.
-    Instance {
-        class: Option<(String, Span)>,
-        args: Vec<Arg>,
-    },
-    /// `[…]`: each item, and where it is.
-    List(Vec<(Span, Value)>),
-    /// A literal of another type, as `an Int`.
-    Other(&'static str),
-    /// An expression, which would need running.
-    Computed,
-}
-
-/// An argument of an instance: its property's name and where that is,
-/// unless it's positional; and its value and where that is.
-#[derive(Clone, Debug, PartialEq)]
-pub struct Arg {
-    pub property: Option<(String, Span)>,
-    pub span: Span,
-    pub value: Value,
-}
+use temper_tmpl::{ConfigType, ConfigValue};
 
 /// A config error: where, and what's wrong.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -70,352 +42,380 @@ pub struct Problem {
     pub message: String,
 }
 
-/// A config file's exports, in order, and its syntax errors.
-pub fn read(text: &str) -> (Vec<Export>, Vec<Problem>) {
-    let parsed = temper_syntax::parse::parse(text, SourceKind::Markdown);
-    let ast = temper_syntax::ast::build(&parsed);
-    let mut problems: Vec<Problem> = (parsed.errors().iter())
-        .map(|e| Problem {
-            span: e.span,
-            message: e.message(),
-        })
-        .collect();
-    problems.extend(
-        (ast.diagnostics().iter())
-            .filter(|d| d.level == Level::Error)
-            .map(|d| Problem {
-                span: d.span,
-                message: d.message.text(),
-            }),
-    );
-    let tree = ast.tree();
-    let mut exports = Vec::new();
-    for &statement in tree.children(ast.root()) {
-        // `@export` applied to a declaration: `(Call @ export (Decl …))`.
-        let decl = match tree.children(statement) {
-            [at, export, decl]
-                if tree.kind(statement) == NodeKind::Call
-                    && name(&ast, *at) == Some("@")
-                    && name(&ast, *export) == Some("export")
-                    && tree.kind(*decl) == NodeKind::Decl =>
-            {
-                *decl
-            }
-            _ => continue,
-        };
-        let [declared, rest @ ..] = tree.children(decl) else {
-            continue;
-        };
-        let Some(key) = name(&ast, *declared) else {
-            continue;
-        };
-        let part = |which: &str| {
-            (rest.chunks(2))
-                .find(|pair| symbol(&ast, pair[0]) == Some(which))
-                .and_then(|pair| pair.get(1).copied())
-        };
-        let declared_type = part("type").map(|t| {
-            let span = tree.span(t);
-            let text = text.get(span.start as usize..span.end as usize);
-            (text.unwrap_or_default().to_string(), span)
-        });
-        if let Some(init) = part("init") {
-            exports.push(Export {
-                key: key.to_string(),
-                span: tree.span(*declared),
-                declared: declared_type,
-                value: value(&ast, init),
-            });
-        }
-    }
-    (exports, problems)
-}
-
-/// A name node's text.
-fn name(ast: &Ast, id: NodeId) -> Option<&str> {
-    ast.name(id).map(|n| ast.names().get(n))
-}
-
-/// A symbol value's text, as `init` for `\init`.
-fn symbol(ast: &Ast, id: NodeId) -> Option<&str> {
-    match ast.value(id) {
-        Some(Literal::Symbol(n)) => Some(ast.names().get(*n)),
-        _ => None,
-    }
-}
-
-/// What an expression is, as far as a config needs.
-fn value(ast: &Ast, id: NodeId) -> Value {
-    let tree = ast.tree();
-    if let Some(literal) = ast.value(id) {
-        return match literal {
-            Literal::String(s) => Value::String(s.clone()),
-            Literal::Null => Value::Null,
-            Literal::Int32(_) => Value::Other("an Int"),
-            Literal::Int64(_) => Value::Other("an Int64"),
-            Literal::Float64(_) => Value::Other("a Float64"),
-            Literal::Bool(_) => Value::Other("a Boolean"),
-            _ => Value::Computed,
-        };
-    }
-    match name(ast, id) {
-        Some("null") => return Value::Null,
-        Some("true" | "false") => return Value::Other("a Boolean"),
-        _ if tree.kind(id) != NodeKind::Call => return Value::Computed,
-        _ => {}
-    }
-    let children = tree.children(id);
-    let builtin = |id: NodeId| match ast.value(id) {
-        Some(Literal::Builtin(b)) => Some(*b),
-        _ => None,
-    };
-    match children {
-        // A string without interpolation: its parts, each a literal.
-        [callee, tag, tagged, parts @ ..]
-            if builtin(*callee) == Some(Builtin::StringExpr)
-                && ast.value(*tag) == Some(&Literal::Null)
-                && ast.value(*tagged) == Some(&Literal::Bool(false)) =>
-        {
-            let mut text = String::new();
-            for &part in parts {
-                match ast.value(part) {
-                    Some(Literal::String(s)) => text.push_str(s),
-                    _ => return Value::Computed,
-                }
-            }
-            Value::String(text)
-        }
-        [callee, items @ ..] if builtin(*callee) == Some(Builtin::List) => Value::List(
-            (items.iter())
-                .map(|&i| (tree.span(i), value(ast, i)))
-                .collect(),
-        ),
-        [new, class, args @ ..] if name(ast, *new) == Some("new") => {
-            let class = match name(ast, *class) {
-                Some(n) => Some((n.to_string(), tree.span(*class))),
-                None if ast.value(*class) == Some(&Literal::Void) => None,
-                None => return Value::Other("an object of a class that isn't named"),
-            };
-            let mut found = Vec::new();
-            let mut args = args.iter();
-            while let Some(&arg) = args.next() {
-                let (property, arg) = match symbol(ast, arg) {
-                    Some(property) => {
-                        let Some(&v) = args.next() else { break };
-                        (Some((property.to_string(), tree.span(arg))), v)
-                    }
-                    None => (None, arg),
-                };
-                found.push(Arg {
-                    property,
-                    span: tree.span(arg),
-                    value: value(ast, arg),
-                });
-            }
-            Value::Instance { class, args: found }
-        }
-        _ => Value::Computed,
-    }
-}
-
-/// The config classes in a build's scope: those its backends inject, and
+/// The config classes in a build's scope: those its backends give, and
 /// the keys of backends that configs may set but this build doesn't have
 /// (a build with fewer backends, or one that hasn't loaded them yet),
-/// whose exports are skipped, unchecked, so a library's config holds
-/// whichever binary builds it. Empty, configs aren't checked.
+/// whose exports are dropped, unchecked, so a library's config holds
+/// whichever binary builds it.
 #[derive(Clone, Debug, Default)]
 pub struct Classes {
     pub types: Vec<&'static ConfigType>,
     pub elsewhere: Vec<&'static str>,
 }
 
-impl Classes {
-    /// Whether there are none, so configs aren't checked.
-    pub fn is_empty(&self) -> bool {
-        self.types.is_empty() && self.elsewhere.is_empty()
-    }
-}
-
-/// A config's exports, checked against the config classes in its scope:
-/// each class's key with the properties set, in order, and the problems.
+/// What a config says, settled: its string exports, in order; its values
+/// for each config class, by key, as checked; its problems; and where
+/// each export's name is.
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct Checked {
+pub struct Said {
+    pub exports: Vec<(String, String)>,
     pub configs: Vec<(String, Vec<(String, ConfigValue)>)>,
     pub problems: Vec<Problem>,
+    pub keys: Vec<(String, Span)>,
 }
 
-/// Checks a config's exports against the config classes in its scope.
-pub fn check(exports: &[Export], classes: &Classes) -> Checked {
-    let types = &classes.types;
-    let mut checked = Checked::default();
-    let mut problem = |span: Span, message: String| {
-        checked.problems.push(Problem { span, message });
-    };
-    let mut configs = Vec::new();
-    for export in exports {
-        let key = export.key.as_str();
-        let by_key = types.iter().find(|t| t.key == key);
-        if by_key.is_none() && classes.elsewhere.contains(&key) {
-            continue;
-        }
-        if let Value::String(s) = &export.value {
-            if let Some(message) = string_problem(key, s) {
-                problem(export.span, message);
-            }
-        }
-        let declared = export.declared.as_ref();
-        let Value::Instance { class, args } = &export.value else {
-            // A string or the like, which is fine but where a config
-            // class is due, by its key or its declared type.
-            let by_type = declared.and_then(|(d, _)| types.iter().find(|t| t.class == d));
-            if let Some(t) = by_key.or(by_type) {
-                let (key, class) = (t.key, t.class);
-                let message = match by_key {
-                    Some(_) => format!("`{key}` is for {class}, as "),
-                    None => format!("A {class} is an object, as "),
-                };
-                problem(
-                    export.span,
-                    message + &format!("`export let {key}: {class} = {{ … }}`"),
-                );
-            }
-            continue;
+/// The prelude's module, beside the configs' (`config0`, `config1`, …).
+const PRELUDE: &str = "config-classes";
+
+/// Where a top-level export is in its config's text, for problems with
+/// it: its name, and each property's value that an object literal sets,
+/// with its items' places if it's a list literal.
+struct Place {
+    key: Span,
+    properties: Vec<(String, Span, Vec<Span>)>,
+}
+
+impl Place {
+    /// Where a property's value, or its `item`th item, is, as far as
+    /// known; else the export's name.
+    fn of(&self, property: &str, item: Option<usize>) -> Span {
+        let Some((_, value, items)) = self.properties.iter().find(|(p, ..)| p == property) else {
+            return self.key;
         };
-        // Its class, as `class:` names it, or else its declared type.
-        let (class, span) = match (class, declared) {
-            (Some((class, span)), Some((d, _))) if class != d => {
-                let message = format!("`class: {class}` disagrees with the declared type, `{d}`");
-                problem(*span, message);
-                continue;
-            }
-            (Some((class, span)), _) | (None, Some((class, span))) => (class, span),
-            (None, None) => {
-                if let Some(t) = by_key {
-                    let (key, class) = (t.key, t.class);
-                    let message = format!(
-                        "`{key}` needs its class, as `export let {key}: {class} = {{ … }}`"
-                    );
-                    problem(export.span, message);
-                }
-                continue;
-            }
-        };
-        let Some(t) = types.iter().find(|t| t.class == class) else {
-            let message = match (by_key, suggest(class, types.iter().map(|t| t.class))) {
-                (Some(t), _) => format!("`{}` is for {}, not `{class}`", t.key, t.class),
-                (None, Some(meant)) => {
-                    format!("No config class `{class}`; did you mean `{meant}`?")
-                }
-                (None, None) => {
-                    let classes = (types.iter()).map(|t| format!("`{}`", t.class));
-                    format!(
-                        "No config class `{class}`; those here are {}",
-                        listed(classes.collect())
-                    )
-                }
-            };
-            problem(*span, message);
-            continue;
-        };
-        if t.key != key {
-            let message = format!("{} goes in `export let {}`, not `{key}`", t.class, t.key);
-            problem(export.span, message);
-            continue;
-        }
-        let mut values: Vec<(String, ConfigValue)> = Vec::new();
-        for Arg {
-            property,
-            span: at,
-            value,
-        } in args
-        {
-            let Some((property, name_span)) = property else {
-                let message = format!("Name each property of {}, as `{{ name: value }}`", t.class);
-                problem(*at, message);
-                continue;
-            };
-            let Some(p) = t.properties.iter().find(|p| p.name == property) else {
-                let names = t.properties.iter().map(|p| p.name);
-                let message = match (suggest(property, names.clone()), t.properties) {
-                    (Some(meant), _) => format!(
-                        "{} has no property `{property}`; did you mean `{meant}`?",
-                        t.class
-                    ),
-                    (None, []) => format!("{} has no properties yet", t.class),
-                    (None, _) => format!(
-                        "{} has no property `{property}`; it has {}",
-                        t.class,
-                        listed(names.map(|n| format!("`{n}`")).collect())
-                    ),
-                };
-                problem(*name_span, message);
-                continue;
-            };
-            if values.iter().any(|(p, _)| p == property) {
-                let message = format!("{}'s `{property}` is set twice", t.class);
-                problem(*name_span, message);
-                continue;
-            }
-            let whose = format!("{}'s `{property}`", t.class);
-            match (p.kind, value) {
-                (_, Value::Null) => {}
-                // A blank name is unset, as `null` is.
-                (ConfigKind::String { valid, .. }, Value::String(s))
-                    if s.trim().is_empty() || valid(s) =>
-                {
-                    values.push((property.clone(), ConfigValue::String(s.clone())))
-                }
-                (ConfigKind::String { form, .. }, Value::String(s)) => {
-                    problem(*at, format!("{whose} is {form}, not `{s}`"))
-                }
-                (ConfigKind::String { .. }, value) => {
-                    problem(*at, wrong(&whose, value, "a String"))
-                }
-                (ConfigKind::Strings { form, package }, Value::List(items)) => {
-                    let mut strings = Vec::new();
-                    let mut packages = Vec::new();
-                    for (span, item) in items {
-                        match item {
-                            Value::String(s) => match package(s.trim()) {
-                                Some(p) if packages.contains(&p) => {
-                                    let message = format!("{whose} lists `{p}` twice");
-                                    problem(*span, message);
-                                }
-                                Some(p) => {
-                                    packages.push(p);
-                                    strings.push(s.trim().to_string());
-                                }
-                                None => {
-                                    let message =
-                                        format!("{whose} are each `{form}`, not `{}`", s.trim());
-                                    problem(*span, message);
-                                }
-                            },
-                            Value::Computed => problem(*span, wrong(&whose, item, "a String")),
-                            _ => {
-                                let message = format!("{whose} holds Strings, not {}", what(item));
-                                problem(*span, message);
-                            }
-                        }
-                    }
-                    values.push((property.clone(), ConfigValue::Strings(strings)));
-                }
-                (ConfigKind::Strings { .. }, value) => {
-                    problem(*at, wrong(&whose, value, "a List<String>"))
-                }
-            }
-        }
-        // One object per class, as a module declares a name once; a
-        // second would leave which one counts unclear.
-        if configs.iter().any(|(k, _)| k == t.key) {
-            let message = format!("`{}` is set twice; set each config class once", t.key);
-            problem(export.span, message);
-            continue;
-        }
-        configs.push((t.key.to_string(), values));
+        item.and_then(|i| items.get(i).copied()).unwrap_or(*value)
     }
-    checked.configs = configs;
-    checked
+}
+
+/// Settles configs' texts, in one library, giving what each says, in
+/// order, with spans in its text.
+pub fn settle_configs(texts: &[&str], classes: &Classes) -> Vec<Said> {
+    let mut lib = Library::new();
+    let names: Vec<&str> = classes.types.iter().map(|t| t.class).collect();
+    let prelude = (!names.is_empty()).then(|| {
+        let source: String = classes.types.iter().map(|t| t.source).collect();
+        lib.add_file(
+            &format!("{PRELUDE}/classes.temper"),
+            &source,
+            SourceKind::Standalone,
+        )
+    });
+    let import = format!(
+        "let {{ {} }} = import(\"../{PRELUDE}\");\n",
+        names.join(", ")
+    );
+    let mut configs = Vec::new();
+    for (i, text) in texts.iter().enumerate() {
+        let file = lib.add_file(
+            &format!("config{i}/config.temper.md"),
+            text,
+            SourceKind::Markdown,
+        );
+        let places = prepare(&mut lib, file, &classes.elsewhere);
+        if prelude.is_some() {
+            lib.add_file(
+                &format!("config{i}/prelude.temper"),
+                &import,
+                SourceKind::Standalone,
+            );
+        }
+        configs.push((file, places));
+    }
+    let s = settle(lib);
+    let mut said = vec![Said::default(); texts.len()];
+    let module_of = |file: FileId| s.library.files[file.0 as usize].module;
+    let config_of = |file: FileId| {
+        configs
+            .iter()
+            .position(|&(f, _)| module_of(f) == module_of(file))
+    };
+    // Where a span is in its config's text, or at the start for what the
+    // config imports unseen.
+    let in_config = |span: Span| {
+        let (file, start) = s.library.locate(span.start);
+        let i = config_of(file)?;
+        let span = match configs[i].0 == file {
+            true => Span {
+                start,
+                end: start + (span.end - span.start),
+            },
+            false => Span::default(),
+        };
+        Some((i, span))
+    };
+    let errors = || {
+        s.library
+            .diagnostics
+            .iter()
+            .filter(|d| d.level == Level::Error)
+    };
+    for d in errors() {
+        let Some((i, span)) = in_config(d.span) else {
+            debug_assert!(false, "a config class has an error: {}", d.message.text());
+            continue;
+        };
+        let message = d.message.text();
+        said[i].problems.push(Problem { span, message });
+    }
+    // Code with an error, which says what's wrong, isn't read.
+    let has_error = |node: NodeId| {
+        let span = s.library.tree.span(node);
+        errors().any(|d| span.start <= d.span.start && d.span.end <= span.end)
+    };
+    let (session, failed) = Session::new_each(&s, crate::interp::FUEL);
+    let reader = Reader {
+        s: &s,
+        classes,
+        prelude,
+    };
+    for (statement, why) in failed {
+        if let (false, Some((i, span))) = (
+            has_error(statement),
+            in_config(s.library.tree.span(statement)),
+        ) {
+            let message = format!("Running this config failed: {why}");
+            said[i].problems.push(Problem { span, message });
+        }
+    }
+    for (i, (file, places)) in configs.iter().enumerate() {
+        let Some(m) = s.modules.iter().find(|m| m.id == module_of(*file)) else {
+            continue;
+        };
+        // Its own exports, in order, not the prelude's classes.
+        let mut exports: Vec<(u32, SymbolId, NodeId)> = (s.scopes.get(m.scope).names.iter())
+            .filter_map(|&(_, symbol)| {
+                let sym = s.scopes.symbol(symbol);
+                let decl = sym.decl?;
+                let start = s.library.tree.span(decl).start;
+                (sym.exported && s.library.locate(start).0 == *file)
+                    .then_some((start, symbol, decl))
+            })
+            .collect();
+        exports.sort_by_key(|&(start, ..)| start);
+        for (_, symbol, decl) in exports {
+            let key = s.library.names.get(s.scopes.symbol(symbol).name);
+            let name = s.library.tree.span(let_parts(&s.library.tree, decl).0);
+            let Some((_, at)) = in_config(name) else {
+                continue;
+            };
+            let unplaced = Place {
+                key: at,
+                properties: Vec::new(),
+            };
+            let place = places
+                .iter()
+                .find(|p| p.key.start == at.start)
+                .unwrap_or(&unplaced);
+            // A config class's key exported before, as a module declares
+            // a name once, so which one counts would be unclear.
+            let twice = classes.types.iter().any(|t| t.key == key)
+                && said[i].keys.iter().any(|(k, _)| k == key);
+            said[i].keys.push((key.to_string(), place.key));
+            if !has_error(decl) {
+                let value = session.global(&s, symbol);
+                reader.read(key, value, place, twice, &mut said[i]);
+            }
+        }
+        said[i].problems.sort_by_key(|p| p.span.start);
+    }
+    said
+}
+
+/// Drops a config's top-level `import(…)` statements, and its exports
+/// keyed to a backend `elsewhere`; gives the places of its other exports.
+fn prepare(lib: &mut Library, file: FileId, elsewhere: &[&str]) -> Vec<Place> {
+    let root = lib.files[file.0 as usize].root;
+    let base = lib.files[file.0 as usize].base;
+    let named = |lib: &Library, id: NodeId, text: &str| {
+        lib.name(id).is_some_and(|n| lib.names.get(n) == text)
+    };
+    let in_file = |span: Span| Span {
+        start: span.start - base,
+        end: span.end - base,
+    };
+    let mut places = Vec::new();
+    // A copy, as dropping a statement changes the tree.
+    let statements = lib.tree.children(root).to_vec();
+    for statement in statements {
+        let children = lib.tree.children(statement).to_vec();
+        let drop = match children[..] {
+            [callee, _] if lib.tree.kind(statement) == NodeKind::Call => {
+                named(lib, callee, "import")
+            }
+            // `@export` applied to a declaration: `(Call @ export (Decl …))`.
+            [at, export, decl]
+                if lib.tree.kind(statement) == NodeKind::Call
+                    && named(lib, at, "@")
+                    && named(lib, export, "export")
+                    && lib.tree.kind(decl) == NodeKind::Decl =>
+            {
+                let parts = lib.tree.children(decl).to_vec();
+                let key = parts
+                    .first()
+                    .and_then(|&k| lib.name(k))
+                    .map(|k| lib.names.get(k).to_string());
+                let Some(key) = key else { continue };
+                if elsewhere.contains(&key.as_str()) {
+                    true
+                } else {
+                    // The initializer follows `\init`.
+                    let init = (parts[1..].chunks(2))
+                        .find(|pair| {
+                            lib.symbol(pair[0])
+                                .is_some_and(|n| lib.names.get(n) == "init")
+                        })
+                        .and_then(|pair| pair.get(1).copied());
+                    let properties = init.map_or(Vec::new(), |init| literal_places(lib, init));
+                    let properties = (properties.into_iter())
+                        .map(|(p, v, items)| {
+                            (p, in_file(v), items.into_iter().map(in_file).collect())
+                        })
+                        .collect();
+                    places.push(Place {
+                        key: in_file(lib.tree.span(parts[0])),
+                        properties,
+                    });
+                    false
+                }
+            }
+            _ => false,
+        };
+        if drop {
+            lib.tree.replace(statement, NodeKind::Block, 0, &[]);
+        }
+    }
+    places
+}
+
+/// Each property an object literal sets, `{ a: v, … }`, maybe with
+/// `class: C`, with its value's span, and its items' if it's a list
+/// literal.
+fn literal_places(lib: &Library, node: NodeId) -> Vec<(String, Span, Vec<Span>)> {
+    let tree = &lib.tree;
+    let children = tree.children(node);
+    let is_new = tree.kind(node) == NodeKind::Call
+        && children
+            .first()
+            .and_then(|&c| lib.name(c))
+            .is_some_and(|n| lib.names.get(n) == "new");
+    if !is_new || children.len() < 2 {
+        return Vec::new();
+    }
+    let mut out = Vec::new();
+    let mut args = children[2..].iter();
+    while let Some(&arg) = args.next() {
+        let Some(property) = lib.symbol(arg) else {
+            continue;
+        };
+        let Some(&value) = args.next() else { break };
+        let items = match tree.children(value) {
+            [callee, items @ ..]
+                if tree.kind(value) == NodeKind::Call
+                    && lib.value(*callee) == Some(&Value::Builtin(Builtin::List)) =>
+            {
+                items.iter().map(|&i| tree.span(i)).collect()
+            }
+            _ => Vec::new(),
+        };
+        out.push((lib.names.get(property).to_string(), tree.span(value), items));
+    }
+    out
+}
+
+/// What reads exports' values: the settled configs, the config classes,
+/// and the prelude's file, which declares them.
+struct Reader<'a> {
+    s: &'a Settled,
+    classes: &'a Classes,
+    prelude: Option<FileId>,
+}
+
+impl Reader<'_> {
+    /// Reads an export's value into what its config says; one of a class
+    /// set `twice` is checked, but not kept.
+    fn read(&self, key: &str, value: Option<Val>, place: &Place, twice: bool, said: &mut Said) {
+        let Reader {
+            s,
+            classes,
+            prelude,
+        } = *self;
+        let mut problem =
+            |span: Span, message: String| said.problems.push(Problem { span, message });
+        let due = classes.types.iter().find(|t| t.key == key);
+        let is_for = |t: &ConfigType| {
+            let (key, class) = (t.key, t.class);
+            format!("`{key}` is for {class}, as `export let {key}: {class} = {{ … }}`")
+        };
+        // An object of a config class: of the prelude's, not one of the same name.
+        let class = value.as_ref().and_then(class_node).filter(|&c| {
+            let start = s.library.tree.span(c).start;
+            prelude == Some(s.library.locate(start).0)
+        });
+        let class = class.and_then(|c| {
+            let name = s.library.name(class_parts(&s.library.tree, c).0)?;
+            let name = s.library.names.get(name);
+            classes.types.iter().find(|t| t.class == name)
+        });
+        match (value.as_ref(), class) {
+            // Not run, as its code failed, which says why; or unset.
+            (None, _) | (Some(Val::Null), _) => {}
+            (Some(object), Some(t)) => {
+                if t.key != key {
+                    problem(
+                        place.key,
+                        format!("{} goes in `export let {}`, not `{key}`", t.class, t.key),
+                    );
+                    return;
+                }
+                let mut values = Vec::new();
+                for p in t.properties {
+                    let Some(name) = s.library.names.find(p.name) else {
+                        continue;
+                    };
+                    match field(s, object, name).as_ref() {
+                        Some(Val::Str(text)) => {
+                            values.push((p.name, ConfigValue::String(text.to_string())))
+                        }
+                        Some(Val::List(items)) => {
+                            let strings = (items.iter())
+                                .filter_map(|item| match item {
+                                    Val::Str(text) => Some(text.to_string()),
+                                    _ => None,
+                                })
+                                .collect();
+                            values.push((p.name, ConfigValue::Strings(strings)));
+                        }
+                        _ => {}
+                    }
+                }
+                let (kept, found) = t.validate(values);
+                for p in found {
+                    problem(place.of(p.property, p.item), p.message);
+                }
+                if twice {
+                    problem(
+                        place.key,
+                        format!("`{key}` is set twice; set each config class once"),
+                    );
+                    return;
+                }
+                said.configs.push((key.to_string(), kept));
+            }
+            (Some(Val::Str(text)), _) => {
+                if let Some(message) = string_problem(key, text) {
+                    problem(place.key, message);
+                }
+                if let Some(t) = due {
+                    problem(place.key, is_for(t));
+                }
+                said.exports.push((key.to_string(), text.to_string()));
+            }
+            (Some(_), None) => {
+                if let Some(t) = due {
+                    problem(place.key, is_for(t));
+                }
+            }
+        }
+    }
 }
 
 /// What's wrong with a string the config exports, if anything. Package
@@ -441,85 +441,22 @@ fn string_problem(key: &str, s: &str) -> Option<String> {
     ))
 }
 
-/// Why a property's value is wrong, where it should be `want`, as `a
-/// String`.
-fn wrong(whose: &str, value: &Value, want: &str) -> String {
-    match value {
-        Value::Computed => format!(
-            "{whose} needs {want} literal: config files aren't run, so values aren't computed"
-        ),
-        _ => format!("{whose} is {want}, not {}", what(value)),
-    }
-}
-
-/// What a value is, as `a List`.
-fn what(value: &Value) -> &'static str {
-    match value {
-        Value::String(_) => "a String",
-        Value::Null => "null",
-        Value::Instance { .. } => "an object",
-        Value::List(_) => "a List",
-        Value::Other(what) => what,
-        Value::Computed => "a computed value",
-    }
-}
-
-/// `a`, `a and b`, or `a, b, and c`.
-fn listed(items: Vec<String>) -> String {
-    match items.as_slice() {
-        [] => "none".into(),
-        [one] => one.clone(),
-        [a, b] => format!("{a} and {b}"),
-        [rest @ .., last] => format!("{}, and {last}", rest.join(", ")),
-    }
-}
-
-/// The name among `names` that `typed` most likely meant: the same but
-/// for case, or else the nearest within two edits, if one is.
-fn suggest<'a>(typed: &str, names: impl Iterator<Item = &'a str> + Clone) -> Option<&'a str> {
-    let lower = typed.to_lowercase();
-    if let Some(same) = names.clone().find(|n| n.to_lowercase() == lower) {
-        return Some(same);
-    }
-    (names.map(|n| (distance(&lower, &n.to_lowercase()), n)))
-        .filter(|(d, _)| *d <= 2)
-        .min_by_key(|(d, _)| *d)
-        .map(|(_, n)| n)
-}
-
-/// Edits from one text to another: insertions, deletions, substitutions,
-/// and swaps of neighbors, each one.
-fn distance(a: &str, b: &str) -> usize {
-    let (a, b): (Vec<char>, Vec<char>) = (a.chars().collect(), b.chars().collect());
-    let mut rows = vec![(0..=b.len()).collect::<Vec<_>>(); a.len() + 1];
-    for (i, row) in rows.iter_mut().enumerate() {
-        row[0] = i;
-    }
-    for i in 1..=a.len() {
-        for j in 1..=b.len() {
-            let cost = usize::from(a[i - 1] != b[j - 1]);
-            let mut d = (rows[i - 1][j] + 1)
-                .min(rows[i][j - 1] + 1)
-                .min(rows[i - 1][j - 1] + cost);
-            if i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1] {
-                d = d.min(rows[i - 2][j - 2] + 1);
-            }
-            rows[i][j] = d;
-        }
-    }
-    rows[a.len()][b.len()]
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use temper_tmpl::Property;
+    use temper_tmpl::{ConfigKind, Property};
 
     /// A config class that no backend has, so these tests show the
-    /// frontend checks whatever it's given.
+    /// frontend settles configs with whatever classes it's given.
     const TOY: ConfigType = ConfigType {
         key: "toy",
         class: "ToyConfig",
+        source: "export class ToyConfig(
+  public name: String? = null,
+  public flavor: String? = null,
+  public parts: List<String>? = null,
+) {}
+",
         properties: &[
             Property {
                 name: "name",
@@ -557,6 +494,7 @@ mod tests {
     const EMPTY: ConfigType = ConfigType {
         key: "empty",
         class: "EmptyConfig",
+        source: "export class EmptyConfig() {}\n",
         properties: &[],
         std: &[],
         names: temper_tmpl::no_names,
@@ -574,15 +512,15 @@ mod tests {
     /// Each class's key and the properties set.
     type Configs = Vec<(String, Vec<(String, ConfigValue)>)>;
 
-    fn checked(text: &str) -> (Configs, Vec<String>) {
-        checked_with(text, &both())
+    fn said(text: &str) -> (Configs, Vec<String>) {
+        said_with(text, &both())
     }
 
-    fn checked_with(text: &str, classes: &Classes) -> (Configs, Vec<String>) {
-        let (exports, problems) = read(text);
-        assert_eq!(problems, []);
-        let checked = check(&exports, classes);
-        let problems = (checked.problems.iter())
+    /// The config values, and each problem as the text it's at and its
+    /// message.
+    fn said_with(text: &str, classes: &Classes) -> (Configs, Vec<String>) {
+        let said = settle_configs(&[text], classes).remove(0);
+        let problems = (said.problems.iter())
             .map(|p| {
                 format!(
                     "{}: {}",
@@ -591,11 +529,15 @@ mod tests {
                 )
             })
             .collect();
-        (checked.configs, problems)
+        (said.configs, problems)
     }
 
     fn string(s: &str) -> ConfigValue {
         ConfigValue::String(s.into())
+    }
+
+    fn strings(items: &[&str]) -> ConfigValue {
+        ConfigValue::Strings(items.iter().map(|s| s.to_string()).collect())
     }
 
     #[test]
@@ -603,7 +545,7 @@ mod tests {
         let text = "# Toy\n\n    export let name = \"t\";\n    export let toy = {\n      \
                     class: ToyConfig,\n      name: \"toy-\\\"t\\\"\",\n\nProse.\n\n      \
                     flavor: null,\n    };\n    export let empty = new EmptyConfig();\n";
-        let (configs, problems) = checked(text);
+        let (configs, problems) = said(text);
         assert_eq!(problems, Vec::<String>::new());
         let toy = (
             "toy".to_string(),
@@ -613,7 +555,8 @@ mod tests {
     }
 
     /// The object takes its class from the declared type, or names it
-    /// too, the same; lists hold strings, each trimmed.
+    /// too, the same; lists hold strings, each trimmed; other exports are
+    /// ordinary values.
     #[test]
     fn declared_types_and_lists() {
         let text = "    export let toy: ToyConfig = {
@@ -621,32 +564,54 @@ mod tests {
       parts: [\"a@1\", \" b@2 \",],
     };
     export let empty: EmptyConfig = { class: EmptyConfig };
-    export let toy: ToyConfig = { parts: [], flavor: null };
     export let license: String = \"MIT\";
     export let names: List<String> = [\"x\"];
+    export let count = 1;
 ";
-        let (configs, problems) = checked(text);
-        // The second `toy` is checked, but one class is set once.
-        assert_eq!(
-            problems,
-            ["toy: `toy` is set twice; set each config class once"]
-        );
-        let parts = |items: &[&str]| {
-            let items = items.iter().map(|s| s.to_string()).collect();
-            ("parts".to_string(), ConfigValue::Strings(items))
-        };
+        let (configs, problems) = said(text);
+        assert_eq!(problems, Vec::<String>::new());
         assert_eq!(
             configs,
             [
                 (
                     "toy".to_string(),
-                    vec![("name".into(), string("t")), parts(&["a@1", "b@2"])]
+                    vec![
+                        ("name".into(), string("t")),
+                        ("parts".into(), strings(&["a@1", "b@2"]))
+                    ]
                 ),
                 ("empty".to_string(), vec![]),
             ]
         );
     }
 
+    /// Values may be computed, as configs are run; and objects made with
+    /// `new`, their properties by position.
+    #[test]
+    fn computed_values() {
+        let text = "    let base = \"geo\";
+    let parts(n: Int): List<String> {
+      let out = new ListBuilder<String>();
+      for (var i = 1; i <= n; i += 1) { out.add(\"p${i}@${i}.0\"); }
+      out.toList()
+    }
+    export let name = \"${base}-lib\";
+    export let toy = new ToyConfig(\"${base}-toy\", null, parts(2));
+";
+        let said = settle_configs(&[text], &both()).remove(0);
+        assert_eq!(said.problems, []);
+        assert_eq!(said.exports, [("name".to_string(), "geo-lib".to_string())]);
+        let toy = vec![
+            ("name".to_string(), string("geo-toy")),
+            ("parts".to_string(), strings(&["p1@1.0", "p2@2.0"])),
+        ];
+        assert_eq!(said.configs, [("toy".to_string(), toy)]);
+    }
+
+    /// Mistakes are ordinary diagnostics where the type checker finds
+    /// them, and config problems where a value is in the wrong place or
+    /// form; a mistake in one export leaves the others checked, as each
+    /// statement runs on its own.
     #[test]
     fn mistakes_are_problems() {
         let text = "    export let toy = { class: ToyConfig, nmae: \"a\", flavor: 1 };
@@ -662,30 +627,70 @@ mod tests {
     export let toy = { class: ToyConfig, name: \"../a\" };
     export let toy = { class: ToyConfig, name: \" \" };
 ";
-        let (_, problems) = checked(text);
+        let (configs, problems) = said(text);
         assert_eq!(
             problems,
             [
                 "nmae: ToyConfig has no property `nmae`; did you mean `name`?",
-                "1: ToyConfig's `flavor` is a String, not an Int",
-                "x: EmptyConfig has no properties yet",
+                "x: EmptyConfig has no property `x`; it has none",
                 "toys: ToyConfig goes in `export let toy`, not `toys`",
-                "ToyConfg: No config class `ToyConfg`; did you mean `ToyConfig`?",
-                "Unknown: No config class `Unknown`; those here are `ToyConfig` and \
-                 `EmptyConfig`",
+                "ToyConfg: ToyConfg has not been declared",
+                "Unknown: Unknown has not been declared",
                 "empty: `empty` is for EmptyConfig, as `export let empty: EmptyConfig = { … }`",
                 "toy: EmptyConfig goes in `export let empty`, not `toy`",
-                "\"a${b}\": ToyConfig's `name` needs a String literal: config files aren't \
-                 run, so values aren't computed",
-                "[\"x\"]: ToyConfig's `flavor` is a String, not a List",
+                "b: b has not been declared",
+                "[\"x\"]: Expected subtype of String?, but got List<String>",
                 "toy: `toy` is set twice; set each config class once",
-                "\"a\": Name each property of ToyConfig, as `{ name: value }`",
                 "toy: `toy` is set twice; set each config class once",
                 "\"../a\": ToyConfig's `name` is a word, as `toy`, not `../a`",
                 "toy: `toy` is set twice; set each config class once",
-                "toy: `toy` is set twice; set each config class once",
             ]
         );
+        // Only the first of a class's exports counts, which had an error.
+        assert_eq!(configs, []);
+    }
+
+    /// Declared types that aren't declared, or disagree with `class:`,
+    /// or aren't objects; and lists that aren't, or hold what they
+    /// shouldn't. An export with an error isn't read, so nothing more is
+    /// said of it.
+    #[test]
+    fn declared_type_and_list_mistakes() {
+        let text = "    export let toy: ToyConfg = { name: \"a\" };
+    export let toy: ToyConfig = { class: EmptyConfig };
+    export let toy: Other.Config = { name: \"a\" };
+    export let toys: ToyConfig = { name: \"a\" };
+    export let x: ToyConfig = \"a\";
+    export let toy: ToyConfig = { parts: \"a@1\" };
+    export let toy: ToyConfig = { parts: [\"a@1\", \"b\", \"${c}\"] };
+    export let toy: ToyConfig = { name: [\"a\"] };
+    export let toy: ToyConfig? = null;
+";
+        let (_, problems) = said(text);
+        assert_eq!(
+            problems,
+            [
+                "ToyConfg: ToyConfg has not been declared",
+                "{ class: EmptyConfig }: Cannot assign to ToyConfig from EmptyConfig",
+                "Other: Other has not been declared",
+                "toys: ToyConfig goes in `export let toy`, not `toys`",
+                "\"a\": Cannot assign to ToyConfig from String",
+                "\"a@1\": Expected subtype of List<String>?, but got String",
+                "c: c has not been declared",
+                "[\"a\"]: Expected subtype of String?, but got List<String>",
+            ]
+        );
+    }
+
+    /// A package listed twice, as the class compares packages (here,
+    /// ignoring case), is a problem; the list keeps the first.
+    #[test]
+    fn packages_listed_twice() {
+        let text = "    export let toy: ToyConfig = { parts: [\"a@1\", \"b@1\", \"A@2\"] };\n";
+        let (configs, problems) = said(text);
+        assert_eq!(problems, ["\"A@2\": ToyConfig's `parts` lists `a` twice"]);
+        let toy = vec![("parts".to_string(), strings(&["a@1", "b@1"]))];
+        assert_eq!(configs, [("toy".to_string(), toy)]);
     }
 
     /// A version is SemVer, as package files take it, and metadata holds
@@ -702,7 +707,7 @@ mod tests {
     export let authors = \"A\\u{1}B\";
     export let license = \"MIT\\u{0}\";
 ";
-        let (_, problems) = checked(text);
+        let (_, problems) = said(text);
         assert_eq!(
             problems,
             [
@@ -718,60 +723,39 @@ mod tests {
         );
     }
 
-    /// Declared types that name no config class, or disagree with
-    /// `class:`, or aren't objects; objects without classes; and lists
-    /// that aren't, or hold what they shouldn't.
+    /// Code that fails when run is a problem where it is, unless settling
+    /// found why; the config's own imports aren't loaded, so they're left
+    /// out.
     #[test]
-    fn declared_type_and_list_mistakes() {
-        let text = "    export let toy: ToyConfg = { name: \"a\" };
-    export let toy: ToyConfig = { class: EmptyConfig };
-    export let toy: Other.Config = { name: \"a\" };
-    export let toys: ToyConfig = { name: \"a\" };
-    export let toy = { name: \"a\" };
-    export let x: ToyConfig = \"a\";
-    export let toy: ToyConfig = { parts: \"a@1\" };
-    export let toy: ToyConfig = { parts: [\"a@1\", \"b\", 3, \"${c}\"] };
-    export let toy: ToyConfig = { name: [\"a\"] };
-    export let thing = { name: \"a\" };
+    fn failures_when_run() {
+        let text = "    import(\"./elsewhere\");
+    export let name = panic();
+    export let license = \"MIT\";
+    export let toy = { class: ToyConfg };
 ";
-        let (_, problems) = checked(text);
+        let said = settle_configs(&[text], &both()).remove(0);
+        let problems: Vec<String> = (said.problems.iter())
+            .map(|p| {
+                format!(
+                    "{}: {}",
+                    &text[p.span.start as usize..p.span.end as usize],
+                    p.message
+                )
+            })
+            .collect();
         assert_eq!(
             problems,
             [
-                "ToyConfg: `toy` is for ToyConfig, not `ToyConfg`",
-                "EmptyConfig: `class: EmptyConfig` disagrees with the declared type, \
-                 `ToyConfig`",
-                "Other.Config: `toy` is for ToyConfig, not `Other.Config`",
-                "toys: ToyConfig goes in `export let toy`, not `toys`",
-                "toy: `toy` needs its class, as `export let toy: ToyConfig = { … }`",
-                "x: A ToyConfig is an object, as `export let toy: ToyConfig = { … }`",
-                "\"a@1\": ToyConfig's `parts` is a List<String>, not a String",
-                "\"b\": ToyConfig's `parts` are each `name@version`, not `b`",
-                "3: ToyConfig's `parts` holds Strings, not an Int",
-                "\"${c}\": ToyConfig's `parts` needs a String literal: config files aren't \
-                 run, so values aren't computed",
-                "toy: `toy` is set twice; set each config class once",
-                "[\"a\"]: ToyConfig's `name` is a String, not a List",
-                "toy: `toy` is set twice; set each config class once",
+                "export let name = panic(): Running this config failed: Panicked: panic()",
+                "ToyConfg: ToyConfg has not been declared",
             ]
         );
+        assert_eq!(said.exports, [("license".to_string(), "MIT".to_string())]);
     }
 
-    /// A package listed twice, as the class compares packages (here,
-    /// ignoring case), is a problem; the list keeps the first.
-    #[test]
-    fn packages_listed_twice() {
-        let text = "    export let toy: ToyConfig = { parts: [\"a@1\", \"b@1\", \"A@2\"] };\n";
-        let (configs, problems) = checked(text);
-        assert_eq!(problems, ["\"A@2\": ToyConfig's `parts` lists `a` twice"]);
-        let parts = vec!["a@1".to_string(), "b@1".to_string()];
-        let toy = vec![("parts".to_string(), ConfigValue::Strings(parts))];
-        assert_eq!(configs, [("toy".to_string(), toy)]);
-    }
-
-    /// A build without a backend skips what configs set for it, whatever
+    /// A build without a backend drops what configs set for it, whatever
     /// its class, as another build checks it; other mistakes are still
-    /// problems, suggesting the classes it has.
+    /// problems.
     #[test]
     fn classes_of_backends_elsewhere() {
         let classes = Classes {
@@ -784,23 +768,31 @@ mod tests {
     export let other = { class: EmptyConfig };
     export let t = { class: ToyConfg };
 ";
-        let (configs, problems) = checked_with(text, &classes);
+        let (configs, problems) = said_with(text, &classes);
         assert_eq!(
             problems,
             [
-                "EmptyConfig: No config class `EmptyConfig`; those here are `ToyConfig`",
-                "ToyConfg: No config class `ToyConfg`; did you mean `ToyConfig`?",
+                "EmptyConfig: EmptyConfig has not been declared",
+                "ToyConfg: ToyConfg has not been declared",
             ]
         );
         let toy = vec![("name".to_string(), string("t"))];
         assert_eq!(configs, [("toy".to_string(), toy)]);
     }
 
+    /// Configs settle together, each a module of its own, each with the
+    /// prelude's classes.
     #[test]
-    fn suggestions() {
-        let names = ["name", "package", "group", "artifact"];
-        assert_eq!(suggest("pacakge", names.iter().copied()), Some("package"));
-        assert_eq!(suggest("Name", names.iter().copied()), Some("name"));
-        assert_eq!(suggest("version", names.iter().copied()), None);
+    fn configs_settle_together() {
+        let a = "    export let name = \"a\";\n    let shared = \"a@1\";\n";
+        let b = "    export let toy = new ToyConfig(\"b\");\n    export let shared = 1;\n";
+        let said = settle_configs(&[a, b, ""], &both());
+        let problems: Vec<usize> = said.iter().map(|s| s.problems.len()).collect();
+        assert_eq!(problems, [0, 0, 0]);
+        assert_eq!(said[0].exports, [("name".to_string(), "a".to_string())]);
+        assert_eq!(said[0].configs, []);
+        let toy = vec![("name".to_string(), string("b"))];
+        assert_eq!(said[1].configs, [("toy".to_string(), toy)]);
+        assert_eq!(said[2], Said::default());
     }
 }

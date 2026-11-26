@@ -19,8 +19,8 @@ use crate::library::Diagnostic;
 use crate::library::Level;
 use crate::log::{LogFormat, Pos, Value, record, write_json_diagnostic, write_json_diagnostics};
 use crate::project::{
-    CONFIG_FILE, LibrarySources, check_configs, duplicate_names, find_libraries_ignoring,
-    library_of, load_library, work_root,
+    CONFIG_FILE, LibrarySources, duplicate_names, find_libraries_ignoring, library_of,
+    load_library, work_root,
 };
 use crate::settle::{Settled, settle};
 use crate::sources::Sources;
@@ -68,8 +68,7 @@ pub struct TestOptions<'a> {
     /// default is [`TEST_FUEL`].
     pub fuel: Option<u64>,
     /// The config classes in the build's scope, which configs are
-    /// checked against ([`crate::project::check_configs`]); none to leave
-    /// them unchecked.
+    /// settled with ([`crate::project::settle_configs`]).
     pub config_classes: Classes,
 }
 
@@ -88,21 +87,16 @@ pub fn test_libraries(
 ) -> Option<(bool, Tally)> {
     let json = options.log == LogFormat::Json;
     let mut tally = Tally::default();
-    let mut libraries = libraries_to_test(
+    let libraries = libraries_to_test(
         sources,
         root,
         options.ignore,
         options.library,
+        &options.config_classes,
         options.log,
         err,
     )?;
     let mut ok = true;
-    if !options.config_classes.is_empty() {
-        check_configs(
-            libraries.iter_mut().map(|l| &mut l.config),
-            &options.config_classes,
-        );
-    }
     let mut reported = Reported::new(options.verbose);
     for library in &libraries {
         if options
@@ -185,17 +179,19 @@ pub fn test_libraries(
     Some((ok && tally.all_passed(), tally))
 }
 
-/// The libraries under a work root, or `None`, having said why: there
-/// are none, two share a name, or none has the name asked for.
+/// The libraries under a work root, their configs settled with
+/// `classes`, or `None`, having said why: there are none, two share a
+/// name, or none has the name asked for.
 pub fn libraries_to_test(
     sources: &Sources,
     root: &str,
     ignore: Option<&IgnoreFile>,
     library: Option<&str>,
+    classes: &Classes,
     log: LogFormat,
     err: &mut dyn Write,
 ) -> Option<Vec<LibrarySources>> {
-    let libraries = find_libraries_ignoring(sources, root, ignore);
+    let libraries = find_libraries_ignoring(sources, root, ignore, classes);
     if libraries.is_empty() {
         let message = format!("No Temper library (config.temper.md) under {root}");
         problem(log, err, "NoLibraries", &message, &[root.into()]);
@@ -472,13 +468,13 @@ impl Reported {
 
     /// A library's config problems that aren't reported yet, as
     /// [`Reported::new_diagnostics`] reports diagnostics, as
-    /// `ConfigError`s: those [`crate::project::check_configs`] found, if
-    /// it checked the configs.
+    /// `ConfigError`s: those settling its config found
+    /// ([`crate::project::settle_configs`]).
     fn config_problems(&mut self, library: &LibrarySources, log: LogFormat) -> String {
         let config = &library.config;
         let path = format!("{}/{CONFIG_FILE}", library.root);
         let mut out = String::new();
-        for problem in &config.checked.problems {
+        for problem in &config.problems {
             let span = problem.span;
             let key = (path.clone(), span.start, span.end, problem.message.clone());
             if !self.seen.insert(key) {
