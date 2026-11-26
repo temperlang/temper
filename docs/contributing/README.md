@@ -20,6 +20,8 @@ This repository is Temper's compiler, written in Rust. Start with:
 - [Writing these docs](docs.md): their conventions, how their examples
   are checked, and the plan for rendering them.
 - [CI and supply chain](ci.md): what CI pins, and how to bump it.
+- [Size and speed](size-and-speed.md): what's measured every night,
+  where it's kept, and the charts.
 - [Releasing](releasing.md): tagging a release, release candidates
   first, reviewing what the release workflow makes, and undoing a bad tag.
 

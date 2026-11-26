@@ -19,8 +19,9 @@ This folder holds the plan in parts:
 - [api-compat.md](api-compat.md): the public API each backend must keep, what
   may change, and proposed deliberate changes.
 - [size-and-speed.md](size-and-speed.md): code size today vs. target,
-  speed and memory targets, and what the measurements in
-  [size-and-speed.csv](size-and-speed.csv) show.
+  speed and memory targets, and what the measurements show (in
+  [size-and-speed.csv](https://github.com/temperlang/temper/blob/stats/size-and-speed.csv),
+  on the `stats` branch, with its charts).
 - [output-speed.md](output-speed.md): making generated code faster,
   compatibly first, then with small additions and design changes.
 - [compile-time.md](compile-time.md): macros, constants and inlining:

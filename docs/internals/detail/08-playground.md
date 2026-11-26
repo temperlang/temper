@@ -592,8 +592,8 @@ TypeScript, in `site/playground/src/`:
 ## Sizes
 
 `compat/measure_size.py` records the wasm's size in
-[notes/size-and-speed.csv](../../../notes/size-and-speed.csv) as
-`wasm-small` and `wasm-small-gzip`: 4,214,709 bytes and 1,363,094
+[size-and-speed.csv](https://github.com/temperlang/temper/blob/stats/size-and-speed.csv),
+on the `stats` branch, as `wasm-small` and `wasm-small-gzip`: 4,214,709 bytes and 1,363,094
 gzipped at 75e0d51 (2026-11-06), up from 434 KiB on 2026-10-22, when it
 only settled and ran. The backends are most of it: on 2026-11-03, the
 seven came to about 1.8 MiB and what only they use (much of tmpl) to

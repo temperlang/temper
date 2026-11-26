@@ -178,8 +178,9 @@ def main() -> int:
             print(f"::{kind} title={escape(title, prop=True)}::{escape(message)}", flush=True)
 
     if not out.is_dir():
-        print(f"check_library_py: no build at {args.out}", file=sys.stderr)
-        annotate("error", "Python type checks", f"no build at {args.out}")
+        message = f"no Python build at {args.out}: `temper test -b py` didn't make one (see its output above)"
+        print(f"check_library_py: {message}", file=sys.stderr)
+        annotate("error", "Python type checks", message)
         return 1
     path = projects(out)
     own = [p for p in path if p.name not in SEPARATE]

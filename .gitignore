@@ -5,6 +5,9 @@ __pycache__/
 # A local decision-graph tool's database
 .deciduous/
 
+# The `stats` branch, checked out here for compat/'s size and speed scripts
+/stats/
+
 # javac's argument files, left behind when a compile fails
 javac.*.args
 
