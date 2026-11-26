@@ -257,10 +257,10 @@ d = null;
   (Let ^d:3)
   (Assign d:3 null)
   #void)
-error 66..67: Declare a type for a, as `a: String?`: null alone has none
-error 80..81: Declare a type for b, as `b: String?`: null alone has none
-error 94..95: Declare a type for c, as `c: String?`: null alone has none
-error 138..139: Declare a type for d, as `d: String?`: null alone has none
+error 66..67: Declare a nullable type for a: null alone has none
+error 80..81: Declare a nullable type for b: null alone has none
+error 94..95: Declare a nullable type for c: null alone has none
+error 138..139: Declare a nullable type for d: null alone has none
 
 === null alone, in a function and a class, and its legal neighbors
 // A local in a function needs a type as a top-level one does. A null
@@ -291,8 +291,8 @@ let m = n;
   (Let ^n:6 (Call ? Never) null)
   (Let ^m:7 n:6)
   #void)
-error 275..276: Declare a type for z, as `z: String?`: null alone has none
-error 308..309: Declare a type for x, as `x: String?`: null alone has none
+error 275..276: Declare a nullable type for z: null alone has none
+error 308..309: Declare a nullable type for x: null alone has none
 error 425..430: Never needs the type it stands for, as Never<Int> or Never<Void>
 
 === messages about a null never show its internal type
@@ -322,7 +322,7 @@ let one(): Int { null }
   (If null (Block (Call (Call . console \log) "no") #void) (Block))
   (Let ^h:8 (Call <> List Int) (Call list null))
   (Let ^one:9 (Fn Int (Block null))))
-error 4..5: Declare a type for a, as `a: String?`: null alone has none
+error 4..5: Declare a nullable type for a: null alone has none
 error 69..73: Expected subtype of Int32, but got Int32?
 error 92..126: Expected subtype of Int32, but got Int32?
 error 136..140: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32?, Int32]

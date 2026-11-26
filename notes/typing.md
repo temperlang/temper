@@ -871,8 +871,8 @@ shows no type, and messages never show `Never?` for it.
 
 **A declaration needs a type** if null is all it's given, as `let a =
 null;`, a local in a function, an unannotated field (`var x = null;`),
-or `let d; d = null;` with no other initializer: "Declare a type for
-a, as `a: String?`: null alone has none". A join with a value, as `if
+or `let d; d = null;` with no other initializer: "Declare a nullable
+type for a: null alone has none". A join with a value, as `if
 (c) { 1 } else { null }` or `x ?? null`, has that value's type, made
 nullable. `Never?` can't be written (`Never` needs its type argument),
 so no declared type gives a value null's. Kotlin typed such a

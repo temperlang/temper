@@ -565,7 +565,7 @@ impl Message {
             ),
             Message::MissingReturnType => "Explicit return type required".into(),
             Message::NullNeedsType(name) => {
-                format!("Declare a type for {name}, as `{name}: String?`: null alone has none")
+                format!("Declare a nullable type for {name}: null alone has none")
             }
             Message::SignatureMismatch(sig, expected, got) => format!(
                 "Actual arguments do not match signature: {sig} expected {expected}, but got {got}"
