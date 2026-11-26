@@ -1644,8 +1644,9 @@ impl<'a> Translator<'a> {
     /// struct update ([`Translator::struct_update`]): a spread
     /// (`copy(spread#1.b)` among its arguments) of a class of this module,
     /// whose struct's fields are visible here, that `copyable_classes`
-    /// allows, each given value of its field's type, or made nullable
-    /// from one (an optional parameter's).
+    /// allows, each given value of its field's type (not so for a generic
+    /// field's `T`, given an `Int`). A `data` class's fields are typed as
+    /// its parameters, so a given value needs no conversion.
     pub(crate) fn spread_base(&self, ctor: DeclId, args: &[NodeId]) -> Option<NodeId> {
         let p = self.p;
         let class = p.decls.get(ctor).owner;
@@ -1654,12 +1655,10 @@ impl<'a> Translator<'a> {
         }
         let mut base = None;
         for (&a, field) in args.iter().zip(self.spread_fields(class, ctor)) {
-            let fty = p.decls.get(field).ty;
-            match (spread_copy_of(p, a), p.nodes.get(a)) {
-                (Some(old), _) => base = Some(old),
-                _ if p.nodes.ty(a) == fty => {}
-                (_, Node::AsNullable { value }) if p.nodes.ty(value) == fty => {}
-                _ => return None,
+            match spread_copy_of(p, a) {
+                Some(old) => base = Some(old),
+                None if p.nodes.ty(a) == p.decls.get(field).ty => {}
+                None => return None,
             }
         }
         base
@@ -1685,12 +1684,8 @@ impl<'a> Translator<'a> {
             if spread_copy_of(p, a).is_some() {
                 continue;
             }
-            let value = match p.nodes.get(a) {
-                Node::AsNullable { value } if p.nodes.ty(a) != p.decls.get(field).ty => value,
-                _ => a,
-            };
             let name = self.name(field);
-            lits.push(match self.expr(value, Want::Owned)? {
+            lits.push(match self.expr(a, Want::Owned)? {
                 Expr::Path(x) if x == name => (name, None),
                 e => (name, Some(e)),
             });

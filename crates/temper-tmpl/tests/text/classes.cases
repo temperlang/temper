@@ -419,7 +419,16 @@ module spread#0 {
     let renamed#13: P#1 = new constructor#4(copy(p#9.b#3), omitted);
     let two#14: P#1 = new constructor#4(copy(p#9.a#2), (asNullable(copy(q#10.b#3))): Int32?);
     let made#15: P#1 = new constructor#4(copy(new constructor#4(1, omitted).a#2), omitted);
+    let nullable#16: P#1 = new constructor#4(copy(p#9.a#2), (asNullable(copy(p#9.a#2))): Int32?);
+    let other#17: Q#18 = new constructor#20(copy(p#9.a#2));
     return ok#11;
+  }
+
+  class Q#18 {
+    let a#19: Int32;
+    constructor constructor#20(a#21: Int32): Q#18 {
+      this.a#19 = a#21;
+    }
   }
 
   init {}
@@ -428,6 +437,9 @@ module spread#0 {
 C4 @33: a spread copies b#3 for parameter a
 C4 @41: a spread copies from p#9 and q#10, not one local
 C4 @45: a spread copies from a local, not New
+C4 @55: a spread copies a#2 for parameter b
+C4 @59: a spread copies a#2, not Q#18's
+C4 @59: a spread copies from p#9, not a Q#18
 
 === reading: a copy that isn't a field read
 tmpl 1 model 1 library e 0.1.0

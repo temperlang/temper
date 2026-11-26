@@ -5,6 +5,7 @@ local Checked = require("renamed").Checked
 local Builtins = require("renamed").Builtins
 local lambda = require("renamed").lambda
 local native = require("renamed").native
+local Spot = require("modules/state").Spot
 local sum = require("modules").sum
 local twice = require("modules/helpers").twice
 local base = require("modules/helpers").base
@@ -26,5 +27,8 @@ print("renamed " .. checked:delete() .. " " .. checked.local_ .. " " .. checked.
 local b = Builtins(4)
 print("builtins " .. b.hash .. " " .. b:get(1) .. " " .. b:set(3) .. " " .. b:map(5) .. " " .. b:format() .. " " .. b.int .. " " .. b:later())
 print(b:print())
+local spread = Spot(3, 4)
+local far = Spot(9, spread.y)
+print("spot far " .. far.x .. " " .. far.y)
 
 return { both = both }

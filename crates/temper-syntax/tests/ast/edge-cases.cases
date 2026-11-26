@@ -302,6 +302,108 @@ let s = { a: 1, ...p, ...q };
   (Decl ^s \init (Call new #void \a 1 \... p \... q))
   #void)
 
+=== object properties after the first take any value, as the first does
+let a = { x: f() orelse -1, y: 2 };
+let b = { y: 7, x: f() orelse -1 };
+let c = { ...p, x: f() orelse -1, y: await g() orelse 0 };
+let d = { ...p, x: (f() orelse -1) };
+--- ast
+(Block
+  (Decl
+    ^a
+    \init
+    (Call
+      new
+      #void
+      \x
+      (Call #desugarOperation orelse (Call f) (Call #desugarOperation - 1))
+      \y
+      2))
+  (Decl
+    ^b
+    \init
+    (Call
+      new
+      #void
+      \y
+      7
+      \x
+      (Call #desugarOperation orelse (Call f) (Call #desugarOperation - 1))))
+  (Decl
+    ^c
+    \init
+    (Call
+      new
+      #void
+      \...
+      p
+      \x
+      (Call #desugarOperation orelse (Call f) (Call #desugarOperation - 1))
+      \y
+      (Call #desugarOperation orelse (Call await (Call g)) 0)))
+  (Decl
+    ^d
+    \init
+    (Call
+      new
+      #void
+      \...
+      p
+      \x
+      (Call #desugarOperation orelse (Call f) (Call #desugarOperation - 1))))
+  #void)
+
+=== object spread edge cases
+let a = { ...p, };
+let c = { ... p };
+let d = { ...{ ...p, x: 1 } };
+let e = { ...f(1).g, x: h(2), y: p.q };
+let f = {
+  ...p,
+  x: 1,
+};
+apply { (n: Int): P => { ...p, x: n } };
+apply { (n: Int): P => ({ ...p, x: n }) };
+--- ast
+(Block
+  (Decl ^a \init (Call new #void \... p))
+  (Decl ^c \init (Call new #void \... p))
+  (Decl ^d \init (Call new #void \... (Call new #void \... p \x 1)))
+  (Decl
+    ^e
+    \init
+    (Call
+      new
+      #void
+      \...
+      (Call %. (Call f 1) \g)
+      \x
+      (Call h 2)
+      \y
+      (Call %. p \q)))
+  (Decl ^f \init (Call new #void \... p \x 1))
+  (Call
+    apply
+    (Fun
+      (Block \_complexArg_ n \type Int)
+      \outType
+      P
+      (Block (Block (Call #, (Call #desugarOperation ... p) (Call : x n))))))
+  (Call
+    apply
+    (Fun
+      (Block \_complexArg_ n \type Int)
+      \outType
+      P
+      (Block (Call new #void \... p \x n))))
+  #void)
+
+=== object spread with nothing to spread
+let b = { ... };
+--- ast
+(Block (Error) #void)
+error 0..15: Expected a TopLevel here
+
 === labels and jumps
 outer: for (;;) { inner: do { break outer; continue; } }
 return; return 1; throw x; yield; await p;

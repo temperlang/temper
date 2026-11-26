@@ -48,4 +48,39 @@ export class Parts extends type() {
   }
 }
 
+export class Spot extends type() {
+  /** @type {number} */
+  #x;
+  /** @type {number} */
+  #y;
+
+  /**
+   * @param {{ x: number, y: number }} props
+   * @returns {Spot}
+   */
+  static new(props) {
+    return new Spot(props.x, props.y);
+  }
+
+  /**
+   * @param {number} x
+   * @param {number} y
+   */
+  constructor(x, y) {
+    super();
+    this.#x = x;
+    this.#y = y;
+  }
+
+  /** @returns {number} */
+  get x() {
+    return this.#x;
+  }
+
+  /** @returns {number} */
+  get y() {
+    return this.#y;
+  }
+}
+
 export const firstId = 1;

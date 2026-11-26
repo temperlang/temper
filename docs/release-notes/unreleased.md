@@ -310,6 +310,10 @@ need no `public`; its methods still need a visibility. Some
 backends may copy a `@data` object natively for a spread, as an
 optimization.
 
+Any property's value in an object literal may now use `orelse`, as in
+`{ ...p, x: f() orelse -1 }`; before, only the first property's could,
+and a later one needed parentheses.
+
 ## 🚨Breaking change: Details of rules for `<` ambiguity have changed
 
 The previous parsing rules for determining when a `<` token is an

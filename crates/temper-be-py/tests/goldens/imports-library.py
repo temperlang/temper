@@ -1,6 +1,7 @@
 from modules import sum_ as _sum_
 from modules.core import Ratio as _Ratio, ratio_of as _ratio_of
 from modules.helpers import base as _base, twice as _twice
+from modules.state import Spot as _Spot
 from renamed import (
     Builtins as _Builtins,
     Checked as _Checked,
@@ -29,3 +30,6 @@ _console.log(f'renamed {_checked.delete()} {_checked.local} {_checked.end}')
 _b: _Builtins = _Builtins(4)
 _console.log(f'builtins {_b.hash} {_b.get(1)} {_b.set(3)} {_b.map(5)} {_b.format()} {_b.int_} {_b.later()}')
 _console.log(_b.print())
+_spread = _Spot(3, 4)
+_far: _Spot = _Spot(9, _spread.y)
+_console.log(f'spot far {_far.x} {_far.y}')

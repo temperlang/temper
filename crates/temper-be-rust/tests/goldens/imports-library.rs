@@ -45,6 +45,11 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 b.later()
             );
             println!("{}", b.print());
+            let far = {
+                let spread = modules::state::Spot::new(3, 4);
+                modules::state::Spot::new(9, spread.y())
+            };
+            println!("spot far {} {}", far.x(), far.y());
             Ok(())
         })
         .clone()

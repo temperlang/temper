@@ -1852,7 +1852,7 @@ impl Settle {
         match (self.lib.name(decorator)).map(|n| self.lib.names.get(n)) {
             Some("keep") => _ = self.lib.kept.insert(call),
             Some("keepTest") => _ = self.lib.kept_for_tests.insert(call),
-            Some("data") => _ = self.data_classes.insert(call),
+            Some("data") => _ = self.data_classes.insert(call, decorator),
             Some("imu") => _ = self.imu.insert(call),
             _ => {}
         }

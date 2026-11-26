@@ -2,3 +2,4 @@ export class State(public id: Int) {}
 export class Engine(public n: Int) {}
 export class Parts(public count: Int) {}
 export let firstId = 1;
+@data export class Spot(x: Int, y: Int) {}

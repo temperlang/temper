@@ -120,8 +120,8 @@ pub enum Message {
     SpreadNotFirst,
     /// Ours: a spread of a value whose type isn't a class: the type.
     SpreadNeedsClass(String),
-    /// Ours: `{ class: D, ...c }` where `c` isn't a `D`: the classes,
-    /// spread and named, which may differ later.
+    /// Ours: `{ class: D, ...c }` where `D` isn't the name of `c`'s
+    /// class: that class, and what `class:` names.
     SpreadOtherClass(String, String),
     /// Ours: a spread of a class that isn't `@data`, or breaks its rules:
     /// the class.
@@ -262,6 +262,9 @@ pub enum Message {
     /// Ours: a `@fun` interface that breaks Kotlin Temper's documented
     /// rules for one: the interface, and how.
     FunInterfaceRule(String, FunRule),
+    /// Ours: `@data` on a declaration that's no class or interface, as a
+    /// `let` or a function.
+    DataNotClass,
     /// Ours: a `@data` declaration that breaks a rule of `@data`'s: its
     /// name, and the rule.
     DataRule(String, DataRule),
@@ -419,7 +422,7 @@ impl Message {
             }
             Message::SpreadOtherClass(from, to) => {
                 format!(
-                    "A spread from {from} can't build {to}; spreading across classes isn't supported yet"
+                    "A spread of {from} builds {from}, so class: may name only {from}, not {to}"
                 )
             }
             Message::SpreadNeedsData(class) => {
@@ -572,6 +575,7 @@ impl Message {
                 "{name} needs a declared type, such as a @fun interface, since a function \
                  literal takes its type from the type wanted"
             ),
+            Message::DataNotClass => "@data applies only to classes".into(),
             Message::DataRule(name, rule) => match rule {
                 DataRule::Interface => {
                     format!("@data applies only to classes, not interface {name}")

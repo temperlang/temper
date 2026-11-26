@@ -1023,8 +1023,11 @@ fn can_nest(bracket: Option<Shape>, grand: Option<Shape>, parent: Shape, child: 
     if p.info().text == ":" && child.mixin {
         return p == O::SelectivePostColon;
     }
-    // Labels only in blocks and at the top level.
-    if p == O::LowColon && !is_block_like(grand.map(|g| g.op)) {
+    // Labels only in blocks and at the top level, and so properties too,
+    // which a comma in `{ }` separates: `{ a: b, c: d orelse e }`.
+    let in_curly_list = grand.is_some_and(|g| g.op == O::Comma)
+        && bracket.is_some_and(|b| matches!(b.op, O::Curly | O::CurlyGroup));
+    if p == O::LowColon && !in_curly_list && !is_block_like(grand.map(|g| g.op)) {
         return false;
     }
     // `label:` but not `let x:`, which becomes a type annotation.

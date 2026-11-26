@@ -252,7 +252,8 @@ pub fn without_net(cases: &mut [Case]) {
 /// `imports-library` imports `modules`, and `renamed`, whose exports'
 /// names backends' namings change. `testing` has tests, which need
 /// std's `testing` to run, so backends check only their form for now.
-/// `classes` has classes and interfaces, beyond what [`CLASSES`] covers.
+/// `classes` has classes and interfaces, beyond what [`CLASSES`] covers;
+/// `spreads` spreads of `@data` objects in each place a value goes.
 /// `nullables` has nullable types, null checks, `??`, and `orelse` with
 /// `bubble()` and `panic()`; `generics` generic functions, classes, and
 /// interfaces, and core's lists, pairs, and maps; `functions` function
@@ -273,8 +274,9 @@ pub fn without_net(cases: &mut [Case]) {
 /// at compile time, so their escapers are called directly, in branches
 /// and loops, and one left to run time; `reach` what only tests reach,
 /// and what nothing does, which runs as tests ([`AS_TESTS`]).
-pub const PROGRAMS: [&str; 20] = [
+pub const PROGRAMS: [&str; 21] = [
     "classes",
+    "spreads",
     "nullables",
     "generics",
     "functions",

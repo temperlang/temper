@@ -67,8 +67,8 @@
 //!   `Downcast`), with `Is` and `Identical` only on classes and
 //!   interfaces; **C4** a spread's copy (`Flags::SPREAD_COPY`) reads a
 //!   field from a local, and as a `New`'s argument, as it is or made
-//!   nullable, the field named as its parameter, one `New`'s copies all
-//!   from one local.
+//!   nullable, the field named as its parameter, of the class constructed,
+//!   one `New`'s copies all from one local of that class.
 //! - **N1** (nullable types, subset B) `Null` typed nullable; `IsNull`
 //!   and `NonNull` only on nullable values; `NonNull` from `T?` to `T`
 //!   and `AsNullable` from `T` to `T?`, exactly; `EqNullable` an
@@ -2170,9 +2170,10 @@ impl Validator {
     }
 
     /// C4: a `New`'s arguments that are a spread's copies, as they are or
-    /// made nullable, each read the field named as its parameter, all
-    /// from one local.
+    /// made nullable, each read the field named as its parameter, of the
+    /// class constructed, all from one local of that class.
     fn spread_copies(&mut self, p: &Program, ctor: DeclId, args: Kids) {
+        let class = p.decls.get(ctor).owner;
         let mut from = None;
         for (i, &arg) in p.nodes.list(args).iter().enumerate() {
             let read = match p.nodes.get(arg) {
@@ -2188,6 +2189,22 @@ impl Validator {
             let Node::Local { local } = p.nodes.get(object) else {
                 continue;
             };
+            if p.decls.get(field).owner != class {
+                let message = format!(
+                    "a spread copies {}, not {}'s",
+                    show(p, field),
+                    show(p, class)
+                );
+                self.node_problem(Rule::C4, read, message);
+            }
+            if analysis::nominal_decl(p, p.decls.get(local).ty) != Some(class) {
+                let message = format!(
+                    "a spread copies from {}, not a {}",
+                    show(p, local),
+                    show(p, class)
+                );
+                self.node_problem(Rule::C4, read, message);
+            }
             let params = (self.ctor_params).get_or_insert_with(|| analysis::constructor_params(p));
             let param = match params.get(&ctor) {
                 Some(params) => params.get(i).map(|&d| p.name(d)),

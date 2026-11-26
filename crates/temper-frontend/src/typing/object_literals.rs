@@ -97,7 +97,12 @@ impl Settle {
             Err(_) => UNKNOWN,
         };
         self.object_literals.remove(&call);
-        if let Err(message) = self.place_spread(call, scope, t) {
+        // A value of no known type has its error reported already, which
+        // is the spread's too.
+        let reported = self.error_under(old).filter(|_| t == UNKNOWN);
+        if let Some(error) = reported {
+            self.become_node(call, error);
+        } else if let Err(message) = self.place_spread(call, scope, t) {
             self.error(call, message);
         }
         self.note_parents(call);

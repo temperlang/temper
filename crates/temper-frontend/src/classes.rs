@@ -111,7 +111,7 @@ impl Settle {
                 let first_member = children.len();
                 // A `@data` class's properties are public by default, as
                 // interface members are.
-                let data = self.data_classes.contains(&call);
+                let data = self.data_classes.contains_key(&call);
                 let visibility = MEMBER_PUBLIC | MEMBER_PROTECTED | MEMBER_PRIVATE;
                 for param in params {
                     let Some(m) = self.lower_member(param, 0, true) else {
@@ -170,7 +170,7 @@ impl Settle {
             }
         }
         let imu = self.imu.remove(&call);
-        let data = self.data_classes.remove(&call) && {
+        let data = self.data_classes.remove(&call).is_some() && {
             let members = children[1 + type_params.len() + supers.len()..].to_vec();
             self.check_data(call, *name, &members, interface, imu)
         };
@@ -885,6 +885,18 @@ impl Settle {
             self.lib.report(Level::Error, message, span);
         }
         ok
+    }
+
+    /// Reports each `@data` left on what isn't a class or interface, as a
+    /// `let` or a function, once expansion settles.
+    pub(crate) fn report_data_not_classes(&mut self) {
+        let mut spans: Vec<_> = (self.data_classes.drain())
+            .map(|(_, decorator)| self.lib.tree.span(decorator))
+            .collect();
+        spans.sort_by_key(|span| span.start);
+        for span in spans {
+            self.lib.report(Level::Error, Message::DataNotClass, span);
+        }
     }
 
     /// Whether a node, not yet resolved, is `null`, as JSON's literals are

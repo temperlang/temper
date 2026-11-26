@@ -1138,15 +1138,6 @@ impl<'a> Translator<'a> {
         mut result: Option<String>,
         void: bool,
     ) -> (Option<String>, Block) {
-        // A block that ends the function needn't end before it does.
-        if let Some(Stmt::Block(b)) = stmts.last() {
-            if b.tail.is_none() {
-                let Some(Stmt::Block(b)) = stmts.pop() else {
-                    unreachable!()
-                };
-                stmts.extend(b.stmts);
-            }
-        }
         let mut tail = tail_of(&mut stmts);
         if let Some(Stmt::Return(None)) = stmts.last() {
             stmts.pop();
@@ -2585,8 +2576,18 @@ fn float(value: f64) -> Expr {
 
 /// Whether a `return` continues in a function's last statement, so it
 /// may end the function as its value instead: a `return` with a value,
-/// or an `if` … `else` whose branches each end so.
+/// or an `if` … `else` whose branches each end so or never finish (as
+/// a `panic!()`), one at least ending so. A block that ends the
+/// statements needn't end before they do, so its statements join them.
 fn tail_of(stmts: &mut Vec<Stmt>) -> Option<Expr> {
+    if let Some(Stmt::Block(b)) = stmts.last() {
+        if b.tail.is_none() {
+            let Some(Stmt::Block(b)) = stmts.pop() else {
+                unreachable!()
+            };
+            stmts.extend(b.stmts);
+        }
+    }
     match stmts.last() {
         Some(Stmt::Return(Some(_))) => match stmts.pop() {
             Some(Stmt::Return(value)) => value,
@@ -2598,13 +2599,21 @@ fn tail_of(stmts: &mut Vec<Stmt>) -> Option<Expr> {
             ..
         }) => {
             let (mut then, mut els) = (then.clone(), els.clone());
-            let then_tail = tail_of(&mut then.stmts)?;
-            let els_tail = tail_of(&mut els.stmts)?;
+            let then_tail = tail_of(&mut then.stmts);
+            let els_tail = tail_of(&mut els.stmts);
+            let ends =
+                |tail: &Option<Expr>, b: &Block| tail.is_some() || crate::tree::diverges(&b.stmts);
+            if then_tail.is_none() && els_tail.is_none()
+                || !ends(&then_tail, &then)
+                || !ends(&els_tail, &els)
+            {
+                return None;
+            }
             let Some(Stmt::If { cond, .. }) = stmts.pop() else {
                 return None;
             };
-            then.tail = Some(Box::new(then_tail));
-            els.tail = Some(Box::new(els_tail));
+            then.tail = then_tail.map(Box::new);
+            els.tail = els_tail.map(Box::new);
             Some(nullables::unwrap_or(Expr::If(Box::new(cond), then, els)))
         }
         _ => None,

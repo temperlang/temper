@@ -272,49 +272,6 @@ const LIFETIMES: &str = "# Lifetimes
     console.log(made().length.toString());
 ";
 
-/// Spreads that copy a `@data` class's object, `std::make_shared<C>(*old)`
-/// then the given fields: of a class with an interface (a virtual base)
-/// and a generic one, as a `let`, an expression, a `return`, and an
-/// assignment whose given values read the object assigned, which a copy
-/// into it would change first; nested, and in order among a call's
-/// arguments.
-const SPREADS: &str = "# Spreads
-
-    interface Sized { public area(): Int; }
-    @imu @data
-    class Box(w: Int, h: Int, label: String? = null) extends Sized {
-      public area(): Int { w * h }
-      public toString(): String { \"${label ?? \"box\"} ${w}x${h}\" }
-    }
-    @data
-    class Two<T>(first: T, second: T) {}
-    let grown(b: Box): Box { { ...b, w: b.w + 1 } }
-    let a: Box = { w: 2, h: 3 };
-    let b = grown(a);
-    console.log(\"${a} ${b} ${b.area()}\");
-    console.log({ ...b, label: \"named\" }.toString());
-    let wide = a.w > 1 && { ...a, w: 10 }.area() > 20;
-    let p: Two<Int> = { first: 1, second: 2 };
-    let q = { ...p, second: 5 };
-    console.log(\"${wide.toString()} ${q.first} ${q.second}\");
-    let widths(b: Box, n: Int): Int {
-      var t = b;
-      for (var i = 0; i < n; ++i) { t = { ...t, w: t.h, h: t.w + 1 }; }
-      while ({ ...t, h: 1 }.area() < 9) { t = { ...t, w: t.w + 1 }; }
-      if (t.w > 0) {
-        let b = { ...b, label: \"inner\" };
-        console.log(b.toString());
-      }
-      t.w
-    }
-    console.log(widths(a, 3).toString());
-    let nested = { ...{ ...a, w: 7 }, h: 8 };
-    let said(s: String, n: Int): Int { console.log(s); n }
-    let both(x: Int, b: Box): String { \"${x} ${b}\" }
-    console.log(both(said(\"one\", 1), { ...a, h: said(\"two\", 2) }));
-    console.log(\"${nested} ${(a.w > 5 || { ...a, w: said(\"three\", 3) }.w == 3).toString()}\");
-";
-
 /// Building tests: plain, with the tests defined.
 const TESTS: Mode = Mode {
     name: "tests",
@@ -453,25 +410,6 @@ fn cases() -> Vec<Case> {
         [
             "old", "new", "newer", "newer", "other", "chained", "slotted", "none", "first",
             "after", "temp", "fallback", "temp", "kept", "fresh", "replaced", "list", "2",
-        ]
-        .map(String::from)
-        .to_vec(),
-    ));
-    cases.push(Case::inline(
-        "spreads",
-        "spreads.temper.md",
-        SPREADS,
-        [
-            "box 2x3 box 3x3 9",
-            "named 3x3",
-            "true 1 5",
-            "inner 2x3",
-            "9",
-            "one",
-            "two",
-            "1 box 2x2",
-            "three",
-            "box 7x8 true",
         ]
         .map(String::from)
         .to_vec(),
@@ -1125,7 +1063,7 @@ const FIRST_USE: &[FirstUse] = &[
             ("modules::twice(2)", "hello, helpers from deep\n4"),
             (
                 "modules::sum(3)",
-                "hello, modules from deep\nsum 17\nshare 3 42\nown, state 1 engine 4 parts 5\ncalls 0\ncalls now 3\ntrue true true\n17",
+                "hello, modules from deep\nsum 17\nshare 3 42\nown, state 1 engine 4 parts 5\ncalls 0\ncalls now 3\ntrue true true\nspot 1 5\n17",
             ),
         ],
     },

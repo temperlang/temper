@@ -430,9 +430,11 @@ A spread, `{ ...old, a: e }`, arrives as the frontend lowers it:
 `value { let spread#1 = old; new C(copy(spread#1.a), e) }`. Each
 argument that copies `old`'s property as it is, or made nullable, is a
 `GetField` marked `SPREAD_COPY` (`copy(x.f)` in text); copies held in
-temporaries, where given values come out of order, aren't marked. Rule
-**C4**: a copy reads a field from a local, and as a `New`'s argument
-the field named as its parameter, one `New`'s copies all from one local.
+temporaries, where given values come out of order, aren't marked; a
+marked copy held in a temporary is allowed, and backends ignore it.
+Rule **C4**: a copy reads a field from a local, and as a `New`'s
+argument the field named as its parameter, of the class constructed,
+one `New`'s copies all from one local of that class.
 
 So a target with its own copy form (Rust's `..old`, C#'s `with`,
 Python's `dataclasses.replace`) may pass only the other arguments, where
@@ -449,9 +451,11 @@ Rust resugars (2026-11-26): a spread of such a class of the module is a
 struct update, `Theme(Arc::new(ThemeStruct { size: 20,
 ..(*spread.0).clone() }))`, whose struct alone derives `Clone`; given
 values run in order, then the base, the temporary already holding
-`old`. In another module, where the struct is private, or with a given
-value needing the constructor's conversion (a nullable one for an
-optional parameter), it calls the constructor.
+`old`. A `data` class's fields are typed as its parameters, so given
+values go in as they are, a nullable one too (`note: Some(…)`). In
+another module, where the struct is private, or where a given value's
+type isn't its field's (a generic class's `T`, given an `Int`), it
+calls the constructor.
 
 C++ copies (2026-11-26): such a spread is `std::make_shared<C>(*spread)`
 and an assignment of each given value, in order, into the local a `let`

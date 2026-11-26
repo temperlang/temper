@@ -636,38 +636,67 @@ fn joins_and_sealed_whens() {
 
 /// Which classes a spread may copy with a target's own copy form: the
 /// `@data` ones without a `var` property, marked `data` in tmpl, so
-/// `Plain`, a nullable property defaulting to null among its own; not
-/// `Mutable`, with a `var`, though it's `data` too, nor a class without
-/// `@data`. And a spread's copies passed as they are are marked; those
-/// held first, as values out of order are, aren't.
+/// `Plain`, a nullable property defaulting to null among its own,
+/// `Two<T>`, generic, and `Open`, a nullable property without a default;
+/// not `Mutable`, with a `var`, though it's `data` too, nor `Broken`,
+/// which breaks a rule of `@data`'s, nor a class without `@data`. And a
+/// spread's copies passed as they are are marked; those held first, as
+/// values out of order are, aren't.
 #[test]
 fn copyable_classes_and_spread_copies() {
     with_stack(|| {
         let source = "
     @data class Plain(public a: Int, public b: Int, public c: Int? = null) {}
     @data class Mutable(public a: Int, public var b: Int) {}
+    @data class Two<T>(public a: T, public b: T) {}
+    @data class Open(public s: String?) {}
+    @data class Broken(public a: Int) { public get twice(): Int { a * 2 } }
     class Undecorated(public a: Int) {}
     let p: Plain = { a: 1, b: 3 };
     let same(n: Int): Int { n }
     let q = { ...p, a: 2 };
     let r = { ...p, c: same(1), a: same(2) };
     let m = { ...new Mutable(1, 2), a: 3 };
-    console.log(\"${q.b} ${r.b} ${m.b}\");
+    let t = { ...new Two(1, 2), b: 3 };
+    let o = { ...new Open(null) };
+    console.log(\"${q.b} ${r.b} ${m.b} ${t.a} ${o.s ?? \"-\"} ${new Broken(1).a}\");
 ";
-        let program = translate_source("copyable", source);
+        let (program, errors) = translate_with_errors("copyable", source);
+        assert_eq!(
+            errors,
+            [
+                "@data class Broken may declare only its constructor's properties and methods, not getter twice"
+            ]
+        );
         let mut names: Vec<&str> = (copyable_classes(&program).into_iter())
             .map(|d| program.name(d))
             .collect();
         names.sort();
-        assert_eq!(names, ["Plain"]);
-        let written = text::write(&program);
-        assert!(written.contains("data class Plain#"), "{written}");
-        assert!(written.contains("data class Mutable#"), "{written}");
-        assert!(written.contains("\n  class Undecorated#"), "{written}");
-        let marked = "(2, copy(spread#26.b#5), copy(spread#26.c#6))";
+        assert_eq!(names, ["Open", "Plain", "Two"]);
+        // Without ids, which other changes renumber.
+        let written = without_ids(&text::write(&program));
+        assert!(written.contains("data class Plain {"), "{written}");
+        assert!(written.contains("data class Mutable {"), "{written}");
+        assert!(written.contains("\n  class Broken {"), "{written}");
+        assert!(written.contains("\n  class Undecorated {"), "{written}");
+        let marked = "(2, copy(spread.b), copy(spread.c))";
         assert!(written.contains(marked), "{written}");
-        assert!(written.contains("= spread#27.b#5;"), "{written}");
+        assert!(written.contains("= spread.b;"), "{written}");
     });
+}
+
+/// tmpl text without its `#1` ids.
+fn without_ids(text: &str) -> String {
+    let mut out = String::new();
+    let mut chars = text.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '#' && chars.peek().is_some_and(char::is_ascii_digit) {
+            while chars.next_if(char::is_ascii_digit).is_some() {}
+        } else {
+            out.push(c);
+        }
+    }
+    out
 }
 
 /// A module whose only `console.log` is in a test declares its

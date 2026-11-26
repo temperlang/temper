@@ -6,6 +6,7 @@ import modules.core.Ratio;
 import modules.helpers.HelpersGlobal;
 import modules.helpers.deep.DeepGlobal;
 import modules.machine.MachineGlobal;
+import modules.state.Spot;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Nullable;
@@ -38,5 +39,8 @@ public final class ModulesGlobal {
         Ratio left2 = half;
         @Nullable Ratio right = CoreGlobal.ratioOf(1, 0);
         console.log(t2 + !(right == null ? false : left2.eq(right)));
+        Spot spread = new Spot(1, 2);
+        Spot moved = new Spot(spread.x, 5);
+        console.log("spot " + moved.x + " " + moved.y);
     }
 }

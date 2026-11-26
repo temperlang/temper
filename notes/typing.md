@@ -674,8 +674,10 @@ constructor parameter, so it goes through the same constructor call:
 - **Which class:** `old`'s, which must be a class, not nullable ("A
   spread needs a value of a class type, not Shape"), and `@data` (below;
   "Spreads need a @data class; Square isn't one"); `class: C` must name
-  it ("A spread from Sq can't build Other; …"). The type wanted is
-  checked against it as for any value.
+  it ("A spread of Sq builds Sq, so class: may name only Sq, not
+  Other"). The type wanted is checked against it as for any value. A
+  value whose type is unknown has its error reported already, which the
+  spread fails with too.
 - **What it copies:** each constructor parameter not given, from
   `old`'s property of that name, which `@data` makes public. A null
   there, as for any null passed to a defaulted parameter, takes the
@@ -696,7 +698,9 @@ constructor's parameters. Its rules, each broken one an error naming it
 methods, not property twice"), kept conservative, as loosening later is
 compatible and tightening isn't:
 
-- It's a class, not an interface, and not `@connected`.
+- It's a class, not an interface, and not `@connected`; on a `let` or
+  function it's "@data applies only to classes", reported once
+  expansion settles, for any `@data` not used up by a class.
 - Each constructor parameter is a property (no `@noProperty`), public,
   with no default but `null`, and not a `var` if the class is `@imu`.
   One without a visibility is public (2026-11-26), as interface

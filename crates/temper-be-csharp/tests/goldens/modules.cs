@@ -2,6 +2,7 @@ using Modules.Core;
 using Modules.Helpers;
 using Modules.Helpers.Deep;
 using Modules.Machine;
+using Modules.State;
 using System.Globalization;
 using TemperLang.Core;
 
@@ -35,5 +36,9 @@ public static class ModulesGlobal
         Ratio left2 = half;
         Ratio? right = CoreGlobal.RatioOf(1, 0);
         console.Log(@string + ((left == null ? false : left.Eq(half)) ? "true" : "false") + " " + (!(right == null ? false : left2.Eq(right)) ? "true" : "false"));
+        Spot moved;
+        Spot spread = new Spot(1, 2);
+        moved = new Spot(spread.X, 5);
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"spot {moved.X} {moved.Y}"));
     }
 }

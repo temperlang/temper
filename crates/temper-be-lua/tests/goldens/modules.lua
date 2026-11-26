@@ -1,5 +1,4 @@
 local temper = require("temper-core")
-require("modules/state")
 require("modules/parts/regex")
 local greet = require("modules/helpers/deep").greet
 local twice = require("modules/helpers").twice
@@ -9,6 +8,7 @@ local bump = require("modules/helpers").bump
 local Ratio = require("modules/core").Ratio
 local share = require("modules/core").share
 local ratioOf = require("modules/core").ratioOf
+local Spot = require("modules/state").Spot
 local describe = require("modules/machine").describe
 
 ---@type integer
@@ -49,5 +49,8 @@ local left = ratioOf(3, 6)
 local left2 = half
 local right = ratioOf(1, 0)
 print(string_ .. tostring(not temper.is_null(left) and (left --[[@as modules.core.Ratio]]):eq(half)) .. " " .. tostring(not (not temper.is_null(right) and left2:eq(right --[[@as modules.core.Ratio]]))))
+local spread = Spot(1, 2)
+local moved = Spot(spread.x, 5)
+print("spot " .. moved.x .. " " .. moved.y)
 
 return { sum = sum }

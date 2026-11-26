@@ -2748,8 +2748,9 @@ log red 30 - true green 12 - false
 
 === spreads report what they can't copy
 // Only one spread, written first; of a `@data` class, not an interface,
-// a nullable value, or a class without `@data`; building the same class,
-// by `class:` or the type wanted.
+// a nullable value, or a class without `@data`. It builds old's class,
+// which `class:` may only name: the type wanted doesn't change it, so
+// `h` is a `Sq`, which isn't an `Other`.
 interface Shape { public get area(): Int; }
 class Square(public side: Int) extends Shape {
   public get area(): Int { side * side }
@@ -2792,14 +2793,14 @@ let h: Other = { ...sq };
     Other:3
     (Block (Let ^spread#24 sq:6) (Call new Sq:2 (Call . spread#24 \side))))
   #void)
-error 481..497: Only one spread, written first, is supported in an object literal for now
-error 507..525: Only one spread, written first, is supported in an object literal for now
-error 535..547: A spread needs a value of a class type, not Shape
-error 557..569: A spread needs a value of a class type, not Sq?
-error 579..602: A spread from Sq can't build Other; spreading across classes isn't supported yet
-error 612..641: Spreads need a @data class; Square isn't one
-error 651..669: No signature matches
-error 686..695: Cannot assign to Other from Sq
+error 557..573: Only one spread, written first, is supported in an object literal for now
+error 583..601: Only one spread, written first, is supported in an object literal for now
+error 611..623: A spread needs a value of a class type, not Shape
+error 633..645: A spread needs a value of a class type, not Sq?
+error 655..678: A spread of Sq builds Sq, so class: may name only Sq, not Other
+error 688..717: Spreads need a @data class; Square isn't one
+error 727..745: No signature matches
+error 762..771: Cannot assign to Other from Sq
 Failed: Only one spread, written first, is supported in an object literal for now
 
 === @data classes keep to their rules
@@ -2971,6 +2972,159 @@ log 1 5 6 a 3 n
     (Method ^twice:4 (Fn Int (Block (Call * n:2 2))))))
 error 231..253: Members of class Loose require explicit visibility: [.twice(...)]
 error 219..220: @data class Loose's property m must be public
+
+=== a spread of a value whose type is unknown reports only why
+// An undeclared name is reported once, without a second error for the
+// spread. A value that may fail spreads what it gives in the end.
+@data class P(public x: Int) {}
+let f(): P throws Bubble { bubble() }
+let p = new P(1);
+let a = { ...nope, x: 1 };
+let b = { ...(f() orelse p) };
+console.log(b.x.toString());
+--- settled
+(Block
+  (Class ^P:0 (Param ^x:6 Int))
+  (Let ^f:1 (Fn (Call throws P:0 Bubble) (Block (Fail))))
+  (Let ^p:2 (Call new P:0 1))
+  (Let ^a:3 (Error))
+  (Let
+    ^b:4
+    (Block
+      (Let ^spread#7 (Orelse (Call f:1) p:2))
+      (Call new P:0 (Call . spread#7 \x))))
+  (Call (Call . console \log) (Call (Call . (Call . b:4 \x) \toString)))
+  #void)
+error 239..243: nope has not been declared
+Failed: nope has not been declared
+
+=== @data applies only to classes
+// `@data` on a function or a `let` is an error, as on an interface.
+@data let f(): Int { 1 }
+@data let v = 1;
+@data var w = 2;
+--- settled
+(Block (Let ^f:0 (Fn Int (Block 1))) (Let ^v:1 1) (Var ^w:2 2) #void)
+error 70..74: @data applies only to classes
+error 95..99: @data applies only to classes
+error 112..116: @data applies only to classes
+
+=== spreads with other decorators and shapes
+// `@json`, `@auto("==")`, and `@imu` in either order work beside
+// `@data`. A generic `@data` class spreads with its type arguments from
+// `old`, in a generic function too. A class with no properties spreads
+// to a new object; a nullable property needs no default; a pun may
+// follow a spread; a key given twice is an error, as without a spread.
+@auto("==") @data class Eq(public n: Int) {}
+@data @imu class Late(public n: Int) {}
+@data class Two<T>(public a: T, public b: T) {}
+let swap<T>(x: Two<T>): Two<T> { { ...x, a: x.b, b: x.a } }
+@data class E {}
+@data class N(public s: String?, public n: Int) {}
+let e = new E();
+let copy = { ...e };
+let t: Two<Int> = { a: 1, b: 2 };
+let u = { ...t, b: 5 };
+let w = swap(u);
+let n = { ...new N(null, 1), n: 2 };
+let s = "set";
+let m = { ...n, s };
+let late = { ...new Late(1), n: 2 };
+console.log("${{ ...new Eq(1) } == new Eq(1)} ${u.a}${u.b} ${w.a}${w.b} ${n.s ?? "-"} ${m.s ?? "-"} ${late.n} ${copy is E}");
+let d = { ...n, n: 3, n: 4 };
+--- settled
+(Block
+  (Class
+    ^Eq:0
+    (Param ^n:17 Int)
+    (Method
+      ^eq:18
+      (Fn
+        (Let ^other:19 Eq:0)
+        Boolean
+        (Block (Call == (Call . this#16 \n) (Call . other:19 \n))))))
+  (Class ^Late:1 (Param ^n:21 Int))
+  (Class ^Two:2 (TypeParam ^T:22) (Param ^a:24 T:22) (Param ^b:25 T:22))
+  (Let
+    ^swap:3
+    (Fn
+      (TypeParam ^T:26)
+      (Let ^x:27 (Call <> Two:2 T:26))
+      (Call <> Two:2 T:26)
+      (Block
+        (Block
+          (Let ^spread#34 x:27)
+          (Call new Two:2 (Call . x:27 \b) (Call . x:27 \a))))))
+  (Class ^E:4)
+  (Class ^N:5 (Param ^s:30 (Call ? String)) (Param ^n:31 Int))
+  (Let ^e:6 (Call new E:4))
+  (Let ^copy:7 (Block (Let ^spread#35 e:6) (Call new E:4)))
+  (Let ^t:8 (Call <> Two:2 Int) (Call new Two:2 1 2))
+  (Let
+    ^u:9
+    (Block (Let ^spread#36 t:8) (Call new Two:2 (Call . spread#36 \a) 5)))
+  (Let ^w:10 (Call swap:3 u:9))
+  (Let
+    ^n:11
+    (Block
+      (Let ^spread#37 (Call new N:5 null 1))
+      (Call new N:5 (Call . spread#37 \s) 2)))
+  (Let ^s:12 "set")
+  (Let
+    ^m:13
+    (Block (Let ^spread#38 n:11) (Call new N:5 s:12 (Call . spread#38 \n))))
+  (Let
+    ^late:14
+    (Block (Let ^spread#39 (Call new Late:1 1)) (Call new Late:1 2)))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call
+        ==
+        (Block
+          (Let ^spread#40 (Call new Eq:0 1))
+          (Call new Eq:0 (Call . spread#40 \n)))
+        (Call new Eq:0 1))
+      " "
+      (Call . u:9 \a)
+      (Call . u:9 \b)
+      " "
+      (Call . w:10 \a)
+      (Call . w:10 \b)
+      " "
+      (Block
+        (Let ^subject#32 (Call . n:11 \s))
+        (If (Call == subject#32 #null) "-" subject#32))
+      " "
+      (Block
+        (Let ^subject#33 (Call . m:13 \s))
+        (If (Call == subject#33 #null) "-" subject#33))
+      " "
+      (Call . late:14 \n)
+      " "
+      (Call is copy:7 E:4)))
+  (Let ^d:15 (Error))
+  #void)
+error 969..989: No signature matches
+hint 947..956: Unnecessary type check to E from expression with type E which is a subtype
+log true 15 51 - set 2 true
+Failed: No signature matches
+
+=== a spread names its class only as old's
+// `class: G<Int>` isn't old's class's name, which is all `class:` may
+// be in a spread. (Nor does `{ class: G<Int>, t: 1 }` work for now.)
+@data class G<T>(public t: T) {}
+let g = new G(1);
+let h = { class: G<Int>, ...g };
+--- settled
+(Block
+  (Class ^G:0 (TypeParam ^T:3) (Param ^t:5 T:3))
+  (Let ^g:1 (Call new G:0 1))
+  (Let ^h:2 (Error))
+  #void)
+error 200..223: A spread of G builds G, so class: may name only G, not G<Int>
+Failed: A spread of G builds G, so class: may name only G, not G<Int>
 
 === a function literal needs a type wanted
 // A function literal takes its type from the type wanted, so one that

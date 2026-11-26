@@ -169,3 +169,14 @@ hi
 interactive#0: 1
 1 6
 interactive#1: void
+
+=== a spread copies an object from an earlier input
+@data class Pt(x: Int, y: Int) {}
+let p = new Pt(1, 2)
+let q = { ...p, y: 5 }
+"${q.x} ${q.y} ${p.y}"
+--- transcript
+interactive#0: Pt
+interactive#1: void
+interactive#2: void
+interactive#3: "1 5 2"

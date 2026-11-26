@@ -1840,6 +1840,12 @@ impl<'a> Translator<'a> {
                     out.extend(t);
                     return Ok(());
                 }
+                // `bubble()` and `panic()` give nothing to assign.
+                if matches!(p.nodes.get(value), Node::Bubble { .. } | Node::Panic {}) {
+                    let target = self.access(target);
+                    out.extend(self.assigning(&target, value)?);
+                    return Ok(());
+                }
                 let value = self.expr(value)?;
                 let target = self.access(target);
                 // `x = x` does nothing.

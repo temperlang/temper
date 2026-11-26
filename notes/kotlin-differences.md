@@ -995,6 +995,12 @@ to report those inputs as expected.
 - **An object literal may start with a spread,** `{ ...old, a: 1 }`, a
   property `\... old` (above, "Object spread"); Kotlin's grammar has no
   spread there. `deviations.py` lists its case as `object-spread`.
+- **Each property's `:` binds as the first's does** (`can_nest`): in
+  `{ a: b, c: d }`, a `:` after a comma in `{ }` is a `LowColon`, as the
+  first is, so a value may hold looser operators:
+  `{ ...p, x: f() orelse -1 }`. Kotlin makes later ones `HighColon`,
+  so `(x: f()) orelse -1` isn't a property and fails to parse.
+  `deviations.py` lists the cases as `property-colons`.
 - **Operands with no operator between them keep their statement**
   (`operand`): the first operand is kept and the rest are one
   `MissingOperator` error ("Missing operators", above). `deviations.py`

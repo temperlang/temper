@@ -12,6 +12,7 @@ from modules.helpers import (
 )
 from modules.helpers.deep import greet as _greet
 from modules.machine import describe as _describe
+from modules.state import Spot as _Spot
 from temper_core import (
     LoggingConsole as _LoggingConsole,
     boolean_to_string as _boolean_to_string,
@@ -54,3 +55,6 @@ _t_0 = _boolean_to_string(False if (_left := _ratio_of(3, 6)) is None else _left
 _left2 = _half
 _right: _Ratio | None = _ratio_of(1, 0)
 _console.log(f'{_t_1} {_t_0} {_boolean_to_string(not (False if _right is None else _left2 == _right))}')
+_spread = _Spot(1, 2)
+_moved: _Spot = _Spot(_spread.x, 5)
+_console.log(f'spot {_moved.x} {_moved.y}')

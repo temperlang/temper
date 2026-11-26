@@ -200,8 +200,8 @@ fn structure_problems() {
         ["S2 @4: its child Int32Lit has another parent too"]
     );
     // An expression where a statement goes, a statement where an
-    // expression goes, a child after its parent, and a flag on a kind
-    // without it.
+    // expression goes, a child after its parent, and flags on a kind
+    // without them.
     let p = with_function(|b| {
         let one = b.int32(1);
         let empty = b.block(&[]);
@@ -215,7 +215,8 @@ fn structure_problems() {
             &[later],
         );
         let flagged = b.raw(Kind::Block, TypeId::NONE, (0, 0), Flags::MAY_BUBBLE, &[]);
-        vec![one, bad, after, flagged]
+        let copy = b.raw(Kind::Block, TypeId::NONE, (0, 0), Flags::SPREAD_COPY, &[]);
+        vec![one, bad, after, flagged, copy]
     });
     assert_eq!(
         problems(&p, &Profile::full()),
@@ -224,6 +225,7 @@ fn structure_problems() {
             "S3 @4: Block can't go where Expr goes",
             "S1 @5: node 100 doesn't exist",
             "S1 @6: Block can't be marked may-bubble",
+            "S1 @7: Block can't be marked a spread's copy",
         ]
     );
 }

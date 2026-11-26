@@ -215,6 +215,7 @@ void global_init_state();
 struct State;
 struct Engine;
 struct Parts;
+struct Spot;
 
 struct State : public std::enable_shared_from_this<State> {
   int32_t id;
@@ -232,6 +233,14 @@ struct Parts : public std::enable_shared_from_this<Parts> {
   int32_t count;
   static std::shared_ptr<Parts> make(int32_t count);
   int32_t get_count() const;
+};
+
+struct Spot : public std::enable_shared_from_this<Spot> {
+  int32_t x;
+  int32_t y;
+  static std::shared_ptr<Spot> make(int32_t x, int32_t y);
+  int32_t get_x() const;
+  int32_t get_y() const;
 };
 
 // Storage, which the library reads and its init sets; read values
@@ -293,6 +302,22 @@ std::shared_ptr<Parts> Parts::make(int32_t count) {
 
 int32_t Parts::get_count() const {
   return this->count;
+}
+
+std::shared_ptr<Spot> Spot::make(int32_t x, int32_t y) {
+  global_init_state();
+  std::shared_ptr<Spot> self = std::make_shared<Spot>();
+  self->x = x;
+  self->y = y;
+  return self;
+}
+
+int32_t Spot::get_x() const {
+  return this->x;
+}
+
+int32_t Spot::get_y() const {
+  return this->y;
 }
 
 void global_init_state() {
@@ -387,6 +412,7 @@ void global_init_machine() {
 #include <modules/helpers/deep.hpp>
 #include <modules/helpers.hpp>
 #include <modules/core.hpp>
+#include <modules/state.hpp>
 #include <modules/machine.hpp>
 
 namespace modules {
@@ -442,6 +468,7 @@ void global_init_init() {
     global_init_deep();
     global_init_helpers();
     global_init_core();
+    global_init_state();
     global_init_machine();
     std::shared_ptr<core::Console::Type> console2 = core::Console::get_console();
     int32_t calls2 = temper_globals::calls.value;
@@ -460,6 +487,10 @@ void global_init_init() {
     std::shared_ptr<Ratio> left2 = half;
     std::shared_ptr<Ratio> right = ratioOf(1, 0);
     core::Console::log(console2, string + core::Boolean::toString(left == nullptr ? false : left->eq(half)) + " " + core::Boolean::toString(!(right == nullptr ? false : left2->eq(right))));
+    std::shared_ptr<Spot> spread = Spot::make(1, 2);
+    std::shared_ptr<Spot> moved = std::make_shared<Spot>(*spread);
+    moved->y = 5;
+    core::Console::log(console2, "spot " + std::to_string(moved->x) + " " + std::to_string(moved->y));
   });
 }
 

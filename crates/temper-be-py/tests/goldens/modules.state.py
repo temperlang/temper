@@ -1,4 +1,4 @@
-__all__ = ('State', 'Engine', 'Parts', 'first_id')
+__all__ = ('State', 'Engine', 'Parts', 'first_id', 'Spot')
 
 
 class State:
@@ -35,6 +35,24 @@ class Parts:
     @property
     def count(self, /) -> int:
         return self._count
+
+
+class Spot:
+    __slots__ = ('_x', '_y')
+    _x: int
+    _y: int
+
+    def __init__(self, /, x: int, y: int) -> None:
+        self._x = x
+        self._y = y
+
+    @property
+    def x(self, /) -> int:
+        return self._x
+
+    @property
+    def y(self, /) -> int:
+        return self._y
 
 
 first_id: int = 1

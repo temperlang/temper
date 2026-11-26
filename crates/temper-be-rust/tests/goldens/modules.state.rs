@@ -72,3 +72,43 @@ static FIRST_ID: OnceLock<i32> = OnceLock::new();
 pub fn first_id() -> i32 {
     *crate::support::initialized(|| FIRST_ID.get())
 }
+
+struct SpotStruct {
+    x: i32,
+    y: i32,
+}
+
+#[derive(Clone)]
+pub struct Spot(Arc<SpotStruct>);
+
+impl Spot {
+    pub fn new(x: i32, y: i32) -> Spot {
+        Spot(Arc::new(SpotStruct { x, y }))
+    }
+
+    pub fn x(&self) -> i32 {
+        self.0.x
+    }
+
+    pub fn y(&self) -> i32 {
+        self.0.y
+    }
+}
+
+temper_core::impl_any_value_trait!(Spot, []);
+
+pub mod builders {
+    use super::*;
+
+    #[derive(Clone)]
+    pub struct SpotBuilder {
+        pub x: i32,
+        pub y: i32,
+    }
+
+    impl SpotBuilder {
+        pub fn build(self) -> Spot {
+            Spot::new(self.x, self.y)
+        }
+    }
+}
