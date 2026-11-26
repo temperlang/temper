@@ -114,14 +114,13 @@ Usually, don't return type `Listed`. It's usually best to return type `List`.
       public sorted(compare: fn (T, T): Int): List<T>;
     }
 
-    // Listed's generic methods are extensions, `xs.map { … }` calling
-    // `listedMap(xs) { … }`: an interface's methods may be overridden, so
-    // they can't be generic, in core as in any library.
-
 ## Listed extensions
 
-Code calls each as a method, as `listed.map { … }`: the function names
-are core's own, which no other library can name.
+Listed's generic methods are extensions, `xs.map { … }` calling
+`listedMap(xs) { … }`: an interface's methods may be overridden, so they
+can't be generic, in core as in any library. Code calls each as a
+method: the function names are core's own, which no other library can
+name.
 
 `listedMap` (`listed.map { … }`) maps elements using [transform].
 

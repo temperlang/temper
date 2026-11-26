@@ -15,6 +15,10 @@ member (`interp/core_bodies.rs`). Bodiless members stay native, so each
 body runs on the natives it builds on, as it would on a backend that
 translated only it.
 
+CI runs it with the rest of `cargo test --workspace`. The backend leg,
+`CORE_BODIES_LIBRARY=dir` and then `temper test -b …` on that library,
+is manual.
+
 ## Inventory
 
 69 members and functions have bodies; the cases run 53 of them, plus

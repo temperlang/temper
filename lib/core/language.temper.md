@@ -10,16 +10,13 @@ Ignore any value.
     @connected
     export let ignore(value: AnyValue): Void {}
 
-    // Builtins that the compiler provides: values, functions, and macros.
-    // Each is `@connected` without a body: the compiler supplies it, so in
-    // core the declaration declares nothing, and core's own code still names
-    // the builtin. It's here for its doc comment, which editors show. Words
-    // the parser treats specially are quoted, as ``nym`true` ``. Operators
-    // and jumps (`return`, `break`, `continue`) aren't declared here:
-    // operators wait on the operator design, and jumps are syntax, neither
-    // values nor macros.
-
-    // Values.
+The rest are builtins that the compiler provides: values, functions,
+and macros. Each is `@connected` without a body: the compiler supplies
+it, so in core the declaration declares nothing, and core's own code
+still names the builtin. Each is here for its docs. Words the parser
+treats specially are quoted, as ``nym`true` ``. Operators and jumps
+(`return`, `break`, `continue`) aren't declared here: operators wait on
+the operator design, and jumps are syntax, neither values nor macros.
 
 ## Values
 
@@ -59,9 +56,9 @@ value's, so `void` can't be stored or passed.
     @connected
     export let Infinity;
 
-    // Types.
+## Types
 
-## Void
+### Void
 
 *Void* is the return type for functions that are called for their
 effect, not to produce a value. It has no values: it's disjoint from
@@ -72,15 +69,13 @@ may be *Void*.
       private constructor();
     }
 
-## Type
+### Type
 
 Type values represent a Temper type, allowing them to be inputs to macros.
 
     export class Type {
       private constructor();
     }
-
-    // Functions.
 
 ## Functions
 
@@ -117,8 +112,6 @@ later, from the run queue.
 
     @connected
     export let async;
-
-    // Macros.
 
 ## Macros
 

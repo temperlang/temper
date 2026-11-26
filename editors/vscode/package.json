@@ -60,7 +60,7 @@
     "colors": [
       {
         "id": "temper.inertBlockBackground",
-        "description": "Background of a temper inert block's lines in .temper.md: Temper shown for reading, not compiled.",
+        "description": "Background of a temper inert block's lines in .temper.md: Temper not compiled as part of the file.",
         "defaults": {
           "light": "#80808014",
           "dark": "#8080801c",

@@ -150,9 +150,9 @@ Key-value collections: `Pair`, the read-only view `Mapped`, the read-only
       public forEach(func: fn(K, V): Void): Void;
     }
 
-    // Mapped's generic methods are extensions, as Listed's are.
-
 ## Mapped extensions
+
+Mapped's generic methods are extensions, as Listed's are.
 
 `mappedToListWith` (`mapped.toListWith(…)`) is similar to [snippet/type/Mapped/method/toListBuilderWith].
 

@@ -19,7 +19,7 @@ the language server for:
 - completion of names, members, and object literals' properties;
 - find references, rename, the outline, and signature help.
 
-Blocks tagged `temper inert`, Temper shown for reading but not compiled,
+Blocks tagged `temper inert`, Temper that isn't compiled with its file,
 are highlighted too, tinted and labeled "inert" in the editor, the
 preview, and on this site; the language server leaves them alone.
 

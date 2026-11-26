@@ -137,12 +137,12 @@ MORE_WORD = "temper-blog-more"
 
 # Inert blocks
 
-# A fence tagged `temper inert` is Temper that isn't compiled. GFM keeps
-# only an info string's first word, so such a fence's info becomes this one
-# word before rendering; its block is highlighted as Temper, tinted, and
-# labeled "inert", as the VS Code extension shows it.
+# A fence tagged `temper inert` is Temper that isn't compiled as part of
+# its file. GFM keeps only an info string's first word, so such a fence's
+# info becomes this one word before rendering; its block is highlighted as
+# Temper, tinted, and labeled "inert", as the VS Code extension shows it.
 INERT_LANG = "temper-inert"
-INERT_TITLE = "Not compiled: shown for reading only"
+INERT_TITLE = "Not compiled as part of this file"
 FENCE = re.compile(r"^([ \t]*)(`{3,}|~{3,})(.*)$")
 
 

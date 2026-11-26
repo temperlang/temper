@@ -139,9 +139,9 @@ a declaration's name, or a member after `.`. Then:
 - [`hover`](../../../crates/temper-analysis/src/lib.rs) shows a name's
   [`DeclKind`](../../../crates/temper-analysis/src/lib.rs), its type
   or signature with parameter names (a generic class's type arguments
-  filled in), and its doc comment, a builtin's from core, or else the
-  prose that documents it in a `.temper.md` file; for other
-  code, the smallest typed expression's type.
+  filled in), and its docs, a doc comment or else the prose that
+  documents it in a `.temper.md` file (a builtin's from core); for
+  other code, the smallest typed expression's type.
 - [`definition`](../../../crates/temper-analysis/src/lib.rs) follows a
   name to its declaration, and through imports to what they import
   (`imported`, at most eight hops), into std's files too.
@@ -542,12 +542,12 @@ which embeds Temper in fenced blocks (untagged or tagged `temper`) and
 indented blocks, as the
 [literate split](../../../crates/temper-syntax/src/literate.rs) reads
 them, and uses VS Code's Markdown grammar for the prose. Blocks tagged
-`temper inert`, which aren't compiled, are Temper too, scoped
-`meta.embedded.block.temper.inert`, with `inert` on the fence scoped
-`storage.modifier.inert.temper`; the extension
+`temper inert`, which aren't compiled as part of their file, are Temper
+too, scoped `meta.embedded.block.temper.inert`, with `inert` on the
+fence scoped `storage.modifier.inert.temper`; the extension
 ([`inert.ts`](../../../editors/vscode/src/inert.ts)) tints their lines
-and labels the fence "inert", with a hover, "Not compiled: shown for
-reading only", from the same fence scan the preview uses
+and labels the fence "inert", with a hover, "Not compiled as part of
+this file", from the same fence scan the preview uses
 ([`inertBlocks`](../../../editors/vscode/src/page.ts)); the theme colors
 are `temper.inertBlockBackground` and `temper.inertLabelForeground`. The
 language server doesn't analyze them, as the compiler doesn't. Nothing can run
