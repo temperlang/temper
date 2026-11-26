@@ -61,6 +61,24 @@ const ALLOWED: &[(&str, &str, Side, &str)] = &[
         "no zip for LuaRocks, whose rockspec names it relative (kotlin-differences.md)",
     ),
     (
+        "lua",
+        "temper-core/powersort/README.md",
+        Side::Kotlin,
+        "a merge sort in init.lua in place of Kotlin's generated powersort",
+    ),
+    (
+        "lua",
+        "temper-core/powersort/init.lua",
+        Side::Kotlin,
+        "the same",
+    ),
+    (
+        "lua",
+        "temper-core/powersort/init-internal.lua",
+        Side::Kotlin,
+        "the same",
+    ),
+    (
         "cpp",
         "/CMakeLists.txt",
         Side::Tempest,

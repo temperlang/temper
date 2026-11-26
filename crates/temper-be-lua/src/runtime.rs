@@ -22,18 +22,6 @@ pub const FILES: &[(&str, &str)] = &[
         include_str!("../runtime/temper-core/intold.lua"),
     ),
     (
-        "powersort/README.md",
-        include_str!("../runtime/temper-core/powersort/README.md"),
-    ),
-    (
-        "powersort/init-internal.lua",
-        include_str!("../runtime/temper-core/powersort/init-internal.lua"),
-    ),
-    (
-        "powersort/init.lua",
-        include_str!("../runtime/temper-core/powersort/init.lua"),
-    ),
-    (
         "regex/runtime.lua",
         include_str!("../runtime/temper-core/regex/runtime.lua"),
     ),

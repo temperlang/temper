@@ -1130,6 +1130,30 @@ fn host_interop(lua: &str, dir: &Path, logged: &[String], failures: &mut Vec<Str
     kit::check_log(failures, "host interop", &run, &expected);
 }
 
+/// `tests/runtime/sort.lua`, on the runtime alone: `ListBuilder.sort`
+/// and `sorted` match a stable reference sort on sorted, nearly sorted,
+/// reversed, duplicate, sawtooth, short, empty, and fuzzed inputs, within
+/// bounds on comparisons, and a failing comparison's error comes through
+/// with the list left as it was.
+/// Skipped without `lua` (or `LUA`).
+#[test]
+fn runtime_sorts() {
+    let Some(lua) = tool("LUA", "lua", "-v") else {
+        kit::missing("no Lua (on PATH, or named by LUA)");
+        return;
+    };
+    let script = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/runtime/sort.lua");
+    let run = capped(&lua)
+        .arg(script)
+        .current_dir(runtime().parent().unwrap())
+        .env("LUA_PATH", LUA_PATH)
+        .output()
+        .unwrap();
+    let mut failures = Vec::new();
+    kit::check_log(&mut failures, "runtime sort", &run, &["ok".to_string()]);
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
 /// Checks the generated libraries in `dir` with LuaLS, against the
 /// runtime's typed view, and std's output in `std` as a library, which
 /// LuaLS reads for its types but doesn't check: as Kotlin's, it calls

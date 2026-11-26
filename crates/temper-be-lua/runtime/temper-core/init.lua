@@ -1031,12 +1031,6 @@ function temper.listed_slice(list, start, stop)
     return ret
 end
 
-function temper.listed_sorted(list, compare)
-    local ret = temper.list_tolistbuilder(list)
-    temper.listbuilder_sort(ret, compare)
-    return ret
-end
-
 do
     local function temper_length(list)
         return #list
@@ -1241,13 +1235,141 @@ function temper.listbuilder_set(list, index, value)
     list[index + 1] = value
 end
 
--- Defer loading powersort, because it also loads temper-core.
-local powersort
-function temper.listbuilder_sort(list, compare)
-    if powersort == nil then
-        powersort = require("temper-core/powersort").powersort
+-- `ListBuilder.sort`, and so `sorted`: a stable merge sort. Not
+-- `table.sort`, which isn't stable, may raise "invalid order function"
+-- for a comparison that isn't consistent, and on LuaJIT calls back from C
+-- for every comparison, which is slow: in a benchmark of 100 to 100,000
+-- items, a stable `table.sort` over indices took 2.6 to 200 times as long
+-- as this on LuaJIT (1.1 to 65 on Lua 5.4). Run back to back on 1,000
+-- to 100,000 items, the earlier, generated powersort took LuaJIT 0.6–5×
+-- as long as this (about the same on input in a few long runs), and
+-- Lua 5.4 1.9–12×.
+--
+-- Sorted input takes one pass, and strictly descending input is reversed
+-- (no two equal, so that's stable). Other input is sorted in a copy,
+-- written back once every comparison has succeeded, so a comparison that
+-- fails leaves the list as it was; a long run at the start is kept, the
+-- rest sorted, and the two merged once.
+do
+    -- Ranges this short get insertion sort.
+    local LEAF = 12
+
+    -- Merges sorted `items[lo, mid)` and `items[mid, hi)`, through `buf`.
+    local function merge(items, buf, compare, lo, mid, hi)
+        if compare(items[mid - 1], items[mid]) <= 0 then
+            return -- Already in order.
+        end
+        -- Merge the left half, from `buf`, with the right, in place.
+        local n = mid - lo
+        for i = 1, n do
+            buf[i] = items[lo + i - 1]
+        end
+        local i, j, k = 1, mid, lo
+        while i <= n and j < hi do
+            local left, right = buf[i], items[j]
+            if compare(right, left) < 0 then
+                items[k] = right
+                j = j + 1
+            else -- Ties take the left, for stability.
+                items[k] = left
+                i = i + 1
+            end
+            k = k + 1
+        end
+        -- What's left of the right half is already in place.
+        while i <= n do
+            items[k] = buf[i]
+            i = i + 1
+            k = k + 1
+        end
     end
-    powersort(list, compare)
+
+    -- Sorts `items[lo, hi)`, through `buf` for merging.
+    local function merge_sort(items, buf, compare, lo, hi)
+        if hi - lo <= LEAF then
+            for i = lo + 1, hi - 1 do
+                local v = items[i]
+                local j = i
+                while j > lo and compare(v, items[j - 1]) < 0 do
+                    items[j] = items[j - 1]
+                    j = j - 1
+                end
+                items[j] = v
+            end
+            return
+        end
+        local mid = math_floor((lo + hi) / 2)
+        merge_sort(items, buf, compare, lo, mid)
+        merge_sort(items, buf, compare, mid, hi)
+        merge(items, buf, compare, lo, mid, hi)
+    end
+
+    -- Reverses `items[lo, hi)`.
+    local function reverse(items, lo, hi)
+        for j = 0, math_floor((hi - lo) / 2) - 1 do
+            items[lo + j], items[hi - 1 - j] = items[hi - 1 - j], items[lo + j]
+        end
+    end
+
+    -- Sorts `list`; in a copy, written back at the end, unless `in_place`.
+    local function sort(list, compare, in_place)
+        local n = #list
+        if n < 2 then
+            return
+        end
+        -- Find the run at the start, ascending or strictly descending.
+        local i = 3
+        local descending = compare(list[1], list[2]) > 0
+        if descending then
+            while i <= n and compare(list[i - 1], list[i]) > 0 do
+                i = i + 1
+            end
+        else
+            while i <= n and compare(list[i - 1], list[i]) <= 0 do
+                i = i + 1
+            end
+        end
+        if i > n then
+            if descending then
+                reverse(list, 1, n + 1)
+            end
+            return
+        end
+        local items = list
+        if not in_place then
+            items = {}
+            for j = 1, n do
+                items[j] = list[j]
+            end
+        end
+        local buf = {}
+        if i - 1 > LEAF then
+            -- Keep a long run, sorting only the rest.
+            if descending then
+                reverse(items, 1, i)
+            end
+            merge_sort(items, buf, compare, i, n + 1)
+            merge(items, buf, compare, 1, i, n + 1)
+        else
+            merge_sort(items, buf, compare, 1, n + 1)
+        end
+        if not in_place then
+            for j = 1, n do
+                list[j] = items[j]
+            end
+        end
+    end
+
+    function temper.listbuilder_sort(list, compare)
+        sort(list, compare, false)
+    end
+
+    function temper.listed_sorted(list, compare)
+        local ret = temper.list_tolistbuilder(list)
+        -- No one else sees `ret` yet, so it needs no copy.
+        sort(ret, compare, true)
+        return ret
+    end
 end
 
 function temper.import(mod, ent)
