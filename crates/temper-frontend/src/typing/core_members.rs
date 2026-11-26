@@ -856,7 +856,8 @@ mod tests {
         else {
             panic!("a method");
         };
-        assert_eq!((&type_params[..], ret), (&["T".to_string()][..], &list(&o)));
+        let names = ["T".to_string(), "E".to_string()];
+        assert_eq!((&type_params[..], ret), (&names[..], &throws_e(list(&o))));
         assert_eq!(
             find("Mapped", "get").kind,
             CoreMemberKind::Method {

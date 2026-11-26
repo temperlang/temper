@@ -1074,3 +1074,495 @@ lookup("q") orelse panic();
   (Orelse (Call lookup:2 "q") (Call panic))
   #void)
 Panicked: panic(), caused by NotFound: not found (key: q), at test.temper:3:48
+
+=== a failure parameter is bound by Error where it follows throws
+// RFC 164: a type parameter used after `throws` in its declaration, as
+// `E` in `fn (): Int throws E`, is a failure parameter, bound by
+// `Error` without saying so, so generic code may throw it, read its
+// message, and check it against failure types. A `@fun` interface's
+// and a class's alike. What isn't a failure can't bind it (s1); a
+// bubble can, until `Bubble` goes (b1). A type parameter not after
+// `throws` is bound by `AnyValue` as before (v1).
+sealed interface AppError extends Error {}
+class Missing(public key: String) extends AppError {}
+let find(key: String): Int throws Missing { throw new Missing(key) }
+let again<E>(f: fn (): Int throws E): Int throws E {
+  f() catch (e) { console.log("again ${e.message}"); throw e }
+}
+let named<E>(f: fn (): Int throws E): String {
+  f().toString() catch (e) { when (e) { is Missing -> "missing"; else -> e.message } }
+}
+@fun interface Thunk<E>(): Int throws E;
+let run<E>(t: Thunk<E>): Int throws E { t() catch (e) { throw e } }
+class Holder<E>(public t: Thunk<E>) {
+  public get(): Int throws E { t() catch (e) { throw e } }
+}
+let s1(): Int { again<String> { 1 } }
+let b1(): Int { again { bubble() } orelse -2 }
+let v1<T>(x: T): Int { throw x }
+console.log("${again { find("a") } orelse -1} ${named { find("b") }} ${b1()}");
+console.log("${run(fn (): Int throws Missing { find("c") }) orelse -3} ${new Holder<Missing>(fn (): Int throws Missing { 4 }).get() orelse -4}");
+--- settled
+(Block
+  (Interface ^AppError:0 Error)
+  (Class ^Missing:1 AppError:0 (Param ^key:13 String))
+  (Let
+    ^find:2
+    (Fn
+      (Let ^key:14 String)
+      (Call throws Int Missing:1)
+      (Block (Fail (Call new Missing:1 key:14)))))
+  (Let
+    ^again:3
+    (Fn
+      (TypeParam ^E:15)
+      (Let ^f:16 (Call FnType (Call throws Int E:15)))
+      (Call throws Int E:15)
+      (Block
+        (Orelse
+          (Call f:16)
+          (Block
+            (Let ^e:17 (Call caught))
+            (Call
+              (Call . console \log)
+              (Call cat "again " (Call . e:17 \message)))
+            (Fail e:17))))))
+  (Let
+    ^named:4
+    (Fn
+      (TypeParam ^E:18)
+      (Let ^f:19 (Call FnType (Call throws Int E:18)))
+      String
+      (Block
+        (Orelse
+          (Call (Call . (Call f:19) \toString))
+          (Block
+            (Let ^e:20 (Call caught))
+            (Block
+              (If (Call is e:20 Missing:1) "missing" (Call . e:20 \message))))))))
+  (Interface
+    ^Thunk:5
+    (TypeParam ^E:21)
+    (Method ^apply:23 (Signature (Call throws Int E:21))))
+  (Let
+    ^run:6
+    (Fn
+      (TypeParam ^E:24)
+      (Let ^t:25 (Call <> Thunk:5 E:24))
+      (Call throws Int E:24)
+      (Block (Orelse (Call t:25) (Block (Let ^e:26 (Call caught)) (Fail e:26))))))
+  (Class
+    ^Holder:7
+    (TypeParam ^E:27)
+    (Param ^t:29 (Call <> Thunk:5 E:27))
+    (Method
+      ^get:30
+      (Fn
+        (Call throws Int E:27)
+        (Block
+          (Orelse (Call t:29) (Block (Let ^e:31 (Call caught)) (Fail e:31)))))))
+  (Let ^s1:8 (Fn Int (Block (Call again:3 \typeArg String (Fn (Block 1))))))
+  (Let
+    ^b1:9
+    (Fn Int (Block (Orelse (Call again:3 (Fn (Block (Fail)))) (Call - 2)))))
+  (Let ^v1:10 (Fn (TypeParam ^T:32) (Let ^x:33 T:32) Int (Block (Fail x:33))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Orelse (Call again:3 (Fn (Block (Call find:2 "a")))) (Call - 1))
+      " "
+      (Call named:4 (Fn (Block (Call find:2 "b"))))
+      " "
+      (Call b1:9)))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Orelse
+        (Call run:6 (Fn (Call throws Int Missing:1) (Block (Call find:2 "c"))))
+        (Call - 3))
+      " "
+      (Orelse
+        (Call
+          (Call
+            .
+            (Call
+              new
+              (Call <> Holder:7 Missing:1)
+              (Fn (Call throws Int Missing:1) (Block 4)))
+            \get))
+        (Call - 4))))
+  #void)
+error 1106..1125: Type formal <E extends Error> cannot bind to String which does not fit upper bounds [Error]
+error 1204..1205: Expected subtype of Error, but got T
+log again missing (key: a)
+log again bubble
+log -1 missing -2
+log -3 4
+
+=== a failure parameter solved two ways is their join
+// Two arguments that fail differently solve one failure parameter as
+// their join: the sealed type both are under (j1), or else the root,
+// `Error`, which only a handler takes (j3, j4). A bubble beside a
+// declared failure is a mismatch, as they never mix (k1).
+sealed interface AppError extends Error {}
+class Missing(public key: String) extends AppError {}
+class Bad(public why: String) extends AppError {}
+sealed interface OtherError extends Error {}
+class Other() extends OtherError {}
+let find(key: String): Int throws Missing {
+  if (key != "one") { throw new Missing(key) }
+  1
+}
+let check(key: String): Int throws Bad {
+  if (key != "one") { throw new Bad(key) }
+  1
+}
+let other(key: String): Int throws Other { throw new Other() }
+let bubbles(key: String): Int throws Bubble { bubble() }
+let both<E>(a: fn (String): Int throws E, b: fn (String): Int throws E, key: String): Int throws E {
+  a(key) + b(key)
+}
+let j1(key: String): Int throws AppError { both(find, check, key) }
+let j2(key: String): Int throws Missing { both(find, check, key) }
+let j3(key: String): Int { both(find, other, key) catch (e) { when (e) { is Missing -> -1; else -> -2 } } }
+let j4(key: String): Int { both(find, other, key) }
+let j5(key: String): Int { both(find, fn (k: String): Int { 2 }, key) orelse -3 }
+let k1(key: String): Int { both(find, bubbles, key) orelse -4 }
+console.log("${j1("one")} ${j1("two") orelse -5} ${j3("two")} ${j3("one")} ${j5("one")}");
+--- settled
+(Block
+  (Interface ^AppError:0 Error)
+  (Class ^Missing:1 AppError:0 (Param ^key:18 String))
+  (Class ^Bad:2 AppError:0 (Param ^why:20 String))
+  (Interface ^OtherError:3 Error)
+  (Class ^Other:4 OtherError:3)
+  (Let
+    ^find:5
+    (Fn
+      (Let ^key:23 String)
+      (Call throws Int Missing:1)
+      (Block
+        (If
+          (Call != key:23 "one")
+          (Block (Fail (Call new Missing:1 key:23)))
+          (Block))
+        1)))
+  (Let
+    ^check:6
+    (Fn
+      (Let ^key:24 String)
+      (Call throws Int Bad:2)
+      (Block
+        (If
+          (Call != key:24 "one")
+          (Block (Fail (Call new Bad:2 key:24)))
+          (Block))
+        1)))
+  (Let
+    ^other:7
+    (Fn
+      (Let ^key:25 String)
+      (Call throws Int Other:4)
+      (Block (Fail (Call new Other:4)))))
+  (Let
+    ^bubbles:8
+    (Fn (Let ^key:26 String) (Call throws Int Bubble) (Block (Fail))))
+  (Let
+    ^both:9
+    (Fn
+      (TypeParam ^E:27)
+      (Let ^a:28 (Call FnType String (Call throws Int E:27)))
+      (Let ^b:29 (Call FnType String (Call throws Int E:27)))
+      (Let ^key:30 String)
+      (Call throws Int E:27)
+      (Block (Call + (Call a:28 key:30) (Call b:29 key:30)))))
+  (Let
+    ^j1:10
+    (Fn
+      (Let ^key:31 String)
+      (Call throws Int AppError:0)
+      (Block (Call both:9 find:5 check:6 key:31))))
+  (Let
+    ^j2:11
+    (Fn
+      (Let ^key:32 String)
+      (Call throws Int Missing:1)
+      (Block (Call both:9 find:5 check:6 key:32))))
+  (Let
+    ^j3:12
+    (Fn
+      (Let ^key:33 String)
+      Int
+      (Block
+        (Orelse
+          (Call both:9 find:5 other:7 key:33)
+          (Block
+            (Let ^e:34 (Call caught))
+            (Block (If (Call is e:34 Missing:1) (Call - 1) (Call - 2))))))))
+  (Let
+    ^j4:13
+    (Fn (Let ^key:35 String) Int (Block (Call both:9 find:5 other:7 key:35))))
+  (Let
+    ^j5:14
+    (Fn
+      (Let ^key:36 String)
+      Int
+      (Block
+        (Orelse
+          (Call both:9 find:5 (Fn (Let ^k:37 String) Int (Block 2)) key:36)
+          (Call - 3)))))
+  (Let
+    ^k1:15
+    (Fn
+      (Let ^key:38 String)
+      Int
+      (Block (Orelse (Call both:9 find:5 bubbles:8 key:38) (Call - 4)))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call j1:10 "one")
+      " "
+      (Orelse (Call j1:10 "two") (Call - 5))
+      " "
+      (Call j3:12 "two")
+      " "
+      (Call j3:12 "one")
+      " "
+      (Call j5:14 "one")))
+  #void)
+error 1032..1054: Cannot throw AppError from a function that throws Missing; catch it, and throw a Missing there if need be
+error 1192..1214: Cannot throw Error, failures under different roots, from a function; handle them with orelse or catch
+error 1331..1335: Actual arguments do not match signature: <E extends Error>(fn (String): Int32 throws E, fn (String): Int32 throws E, String) -> Int32 throws E expected [fn (String): Int32 throws Bubble, fn (String): Int32 throws Bubble, String], but got [fn (String): Int32 throws Missing, fn (String): Int32 throws Bubble, String]
+log 2 -5 -1 -2 3
+
+=== core's functions that take callbacks fail as their callbacks do
+// RFC 164: core's `Listed` and `Mapped` functions that take callbacks
+// are generic over what the callbacks may fail with, as `map` is, so
+// each passes it on and can't fail where its callback can't.
+sealed interface AppError extends Error {}
+class Missing(public key: String) extends AppError {}
+let find(key: String): Int throws Missing {
+  if (key == "x") { throw new Missing(key) }
+  if (key == "a") { 1 } else { 2 }
+}
+let ks = ["a", "bb", "x"];
+let filtered(): List<String> throws Missing { ks.filter { k => find(k) > 1 } }
+let reduced(): String throws Missing { ks.reduce { a, b => if (find(b) > 0) { "${a}${b}" } else { a } } }
+let reducedFrom(): Int throws Missing { ks.reduceFrom(0) { n, k => n + find(k) } }
+let joined(): String throws Missing { ks.join("+") { k => find(k).toString() } }
+let sorted(): List<String> throws Missing { ks.sorted { a, b => find(a) - find(b) } }
+let sortedSafe(): List<Int> { [2, 1].sorted { a, b => a - b } }
+let sortedHere(): Void throws Missing {
+  let b = new ListBuilder<String>();
+  b.addAll(ks);
+  b.sort { x, y => find(y) - find(x) }
+}
+let each(): Void throws Missing { ks.forEach { k => console.log("each ${find(k)}"); } }
+let codes(): Void throws Missing {
+  "ab".forEach { c => console.log("code ${find(if (c == 97) { "a" } else { "x" })}"); }
+}
+let entries(): List<Int> throws Missing {
+  let m = new Map([new Pair("a", 1), new Pair("x", 2)]);
+  m.forEach { k, v => console.log("entry ${k} ${v}"); }
+  m.toListWith { k, v => find(k) + v }
+}
+let safe(): String { ks.filter { k => k != "x" }.join(",") { k => k } }
+console.log("${filtered().length orelse -1} ${reduced() orelse "r"} ${reducedFrom() orelse -2} ${joined() orelse "j"}");
+console.log("${sorted().length orelse -3} ${sortedSafe().join(",") { k => k.toString() }} ${safe()}");
+sortedHere() orelse console.log("sort failed");
+each() orelse console.log("each failed");
+codes() orelse console.log("codes failed");
+entries() orelse console.log("entries failed");
+--- settled
+(Block
+  (Interface ^AppError:0 Error)
+  (Class ^Missing:1 AppError:0 (Param ^key:17 String))
+  (Let
+    ^find:2
+    (Fn
+      (Let ^key:18 String)
+      (Call throws Int Missing:1)
+      (Block
+        (If
+          (Call == key:18 "x")
+          (Block (Fail (Call new Missing:1 key:18)))
+          (Block))
+        (If (Call == key:18 "a") (Block 1) (Block 2)))))
+  (Let ^ks:3 (Call list "a" "bb" "x"))
+  (Let
+    ^filtered:4
+    (Fn
+      (Call throws (Call <> List String) Missing:1)
+      (Block
+        (Call
+          (Call . ks:3 \filter)
+          (Fn (Let ^k:19) (Block (Call > (Call find:2 k:19) 1)))))))
+  (Let
+    ^reduced:5
+    (Fn
+      (Call throws String Missing:1)
+      (Block
+        (Call
+          (Call . ks:3 \reduce)
+          (Fn
+            (Let ^a:20)
+            (Let ^b:21)
+            (Block
+              (If
+                (Call > (Call find:2 b:21) 0)
+                (Block (Call cat a:20 b:21))
+                (Block a:20))))))))
+  (Let
+    ^reducedFrom:6
+    (Fn
+      (Call throws Int Missing:1)
+      (Block
+        (Call
+          (Call . ks:3 \reduceFrom)
+          0
+          (Fn (Let ^n:22) (Let ^k:23) (Block (Call + n:22 (Call find:2 k:23))))))))
+  (Let
+    ^joined:7
+    (Fn
+      (Call throws String Missing:1)
+      (Block
+        (Call
+          (Call . ks:3 \join)
+          "+"
+          (Fn (Let ^k:24) (Block (Call (Call . (Call find:2 k:24) \toString))))))))
+  (Let
+    ^sorted:8
+    (Fn
+      (Call throws (Call <> List String) Missing:1)
+      (Block
+        (Call
+          (Call . ks:3 \sorted)
+          (Fn
+            (Let ^a:25)
+            (Let ^b:26)
+            (Block (Call - (Call find:2 a:25) (Call find:2 b:26))))))))
+  (Let
+    ^sortedSafe:9
+    (Fn
+      (Call <> List Int)
+      (Block
+        (Call
+          (Call . (Call list 2 1) \sorted)
+          (Fn (Let ^a:27) (Let ^b:28) (Block (Call - a:27 b:28)))))))
+  (Let
+    ^sortedHere:10
+    (Fn
+      (Call throws Void Missing:1)
+      (Block
+        (Let ^b:29 (Call new (Call <> ListBuilder String)))
+        (Call (Call . b:29 \addAll) ks:3)
+        (Call
+          (Call . b:29 \sort)
+          (Fn
+            (Let ^x:30)
+            (Let ^y:31)
+            (Block (Call - (Call find:2 y:31) (Call find:2 x:30))))))))
+  (Let
+    ^each:11
+    (Fn
+      (Call throws Void Missing:1)
+      (Block
+        (Call
+          (Call . ks:3 \forEach)
+          (Fn
+            (Let ^k:32)
+            (Block
+              (Call (Call . console \log) (Call cat "each " (Call find:2 k:32)))
+              #void))))))
+  (Let
+    ^codes:12
+    (Fn
+      (Call throws Void Missing:1)
+      (Block
+        (Call
+          (Call . "ab" \forEach)
+          (Fn
+            (Let ^c:33)
+            (Block
+              (Call
+                (Call . console \log)
+                (Call
+                  cat
+                  "code "
+                  (Call find:2 (If (Call == c:33 97) (Block "a") (Block "x")))))
+              #void))))))
+  (Let
+    ^entries:13
+    (Fn
+      (Call throws (Call <> List Int) Missing:1)
+      (Block
+        (Let
+          ^m:34
+          (Call new Map (Call list (Call new Pair "a" 1) (Call new Pair "x" 2))))
+        (Call
+          (Call . m:34 \forEach)
+          (Fn
+            (Let ^k:35)
+            (Let ^v:36)
+            (Block
+              (Call (Call . console \log) (Call cat "entry " k:35 " " v:36))
+              #void)))
+        (Call
+          (Call . m:34 \toListWith)
+          (Fn (Let ^k:37) (Let ^v:38) (Block (Call + (Call find:2 k:37) v:38)))))))
+  (Let
+    ^safe:14
+    (Fn
+      String
+      (Block
+        (Call
+          (Call
+            .
+            (Call
+              (Call . ks:3 \filter)
+              (Fn (Let ^k:39) (Block (Call != k:39 "x"))))
+            \join)
+          ","
+          (Fn (Let ^k:40) (Block k:40))))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Orelse (Call . (Call filtered:4) \length) (Call - 1))
+      " "
+      (Orelse (Call reduced:5) "r")
+      " "
+      (Orelse (Call reducedFrom:6) (Call - 2))
+      " "
+      (Orelse (Call joined:7) "j")))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Orelse (Call . (Call sorted:8) \length) (Call - 3))
+      " "
+      (Call
+        (Call . (Call sortedSafe:9) \join)
+        ","
+        (Fn (Let ^k:41) (Block (Call (Call . k:41 \toString)))))
+      " "
+      (Call safe:14)))
+  (Orelse (Call sortedHere:10) (Call (Call . console \log) "sort failed"))
+  (Orelse (Call each:11) (Call (Call . console \log) "each failed"))
+  (Orelse (Call codes:12) (Call (Call . console \log) "codes failed"))
+  (Orelse (Call entries:13) (Call (Call . console \log) "entries failed"))
+  #void)
+log -1 r -2 j
+log -3 1,2 a,bb
+log sort failed
+log each 1
+log each 2
+log each failed
+log code 1
+log codes failed
+log entry a 1
+log entry x 2
+log entries failed

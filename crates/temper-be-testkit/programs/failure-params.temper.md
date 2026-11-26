@@ -1,16 +1,18 @@
 # Failure parameters
 
-A specification, not run yet: functions generic over their callbacks'
-failure types, as RFC 164 proposes, which later changes build (`SPECS`
-in the testkit). The log is what the interpreter should give. It
-assumes what `failures` does, and, of what's still open:
+A specification, which the interpreter runs and the backends don't yet:
+functions generic over their callbacks' failure types, as RFC 164
+proposes (`SPECS` in the testkit). It assumes what `failures` does,
+and, of what's still open:
 
 - The failure type is an ordinary type parameter, written here with its
-  bound, `E extends Error`; whether the bound may be left out is open.
+  bound, `E extends Error`, which may be left out where `E` follows
+  `throws`.
 - A callback that can't fail makes `E` `Never<Error>`, and calls with
   it need no `try`; nothing writes one there.
 - A `@fun interface` takes `E` as any other type parameter.
-- Two callbacks of one function share one `E`.
+- Two callbacks of one function share one `E`, the join of what they
+  fail with.
 
 What every section uses:
 
@@ -113,4 +115,50 @@ and `E` is the one that may's:
 ```log
 lost six
 12 -1
+```
+
+## Two callbacks that fail differently
+
+Their failures' join is `E`, the sealed type both are under:
+
+    class Unknown(public word: String) extends FailureParamsError {}
+
+    let word(key: String): Int throws Unknown {
+      if (key == "ten") { return 10; }
+      throw new Unknown(key);
+    }
+
+    let either(key: String): String {
+      let n = both(find, word, key) catch (e) {
+        return when (e) {
+          is Missing -> "no ${e.key}";
+          is Unknown -> "unknown ${e.word}";
+        };
+      };
+      n.toString()
+    }
+    console.log("${either("one")} ${either("ten")}");
+
+```log
+unknown one no ten
+```
+
+## Core's functions that take callbacks
+
+Core's `Listed` and `Mapped` functions that take callbacks fail as their
+callbacks do, and can't where those can't:
+
+    let parts(keys: List<String>): String throws Missing {
+      let found = keys.filter { k => find(k) > 1 };
+      let total = keys.reduceFrom(0) { n, k => n + find(k) };
+      "${found.join(",") { k => k }} ${total} ${keys.join("+") { k => find(k).toString() }}"
+    }
+    console.log(parts(["one", "two"]) orelse "?");
+    console.log(parts(["one", "six"]) catch (e) { "missing ${e.key}" });
+    console.log([3, 1, 2].sorted { a, b => a - b }.join(",") { n => n.toString() });
+
+```log
+two 3 1+2
+missing six
+1,2,3
 ```

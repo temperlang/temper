@@ -1064,7 +1064,7 @@ impl Translator<'_> {
         let (name, _, init) = core::let_parts(&self.s.library.tree, decl);
         let name = self.name_of(name).to_string();
         let var = self.data(decl) & LET_VAR != 0;
-        let d = match init.filter(|&i| self.kind(i) == NodeKind::Fn) {
+        let d = match init.filter(|&i| self.is_function_literal(i)) {
             Some(f) => {
                 // A generic one's type parameters first, which its
                 // signature names, as std's `listJsonAdapter<T>`.
@@ -1496,6 +1496,19 @@ impl Translator<'_> {
             DeclKind::Constructor => self.b.program().decls.get(callee).owner,
             _ => callee,
         };
+        // tmpl has no failure parameters yet (RFC 164's later chunks): a
+        // call can't fail by one, nor give one.
+        if let Some(fails) = self.s.typing.failure_args(call) {
+            let types = &self.s.typing.types;
+            let can_fail =
+                |&t: &ft::TypeId| !matches!(types.get(t), FTypeData::Never | FTypeData::NeverOf(_));
+            if fails.iter().any(can_fail) {
+                return self.not_yet(
+                    call,
+                    "a call that fails as its callback does (a failure parameter)",
+                );
+            }
+        }
         let wanted = self.b.program().decls.type_params(generic).len();
         if wanted == 0 {
             return Ok(Vec::new());
@@ -1513,6 +1526,9 @@ impl Translator<'_> {
             return self.not_yet(call, "a generic call's type arguments");
         };
         let args = args.to_vec();
+        if args.len() != wanted && self.s.typing.failure_args(call).is_some() {
+            return self.not_yet(call, "a call of a function with a failure parameter");
+        }
         if args.len() != wanted {
             return self.not_yet(call, "a generic call's type arguments");
         }
@@ -1554,7 +1570,7 @@ impl Translator<'_> {
             self.bodiless.insert(node);
             return Ok(());
         }
-        let is_fn = init.is_some_and(|i| self.kind(i) == NodeKind::Fn);
+        let is_fn = init.is_some_and(|i| self.is_function_literal(i));
         let name = self.name_of(name).to_string();
         let decl = if is_fn {
             if var {
@@ -1961,7 +1977,7 @@ impl Translator<'_> {
                 && t.data(c) & LET_VAR == 0
                 && core::let_parts(&t.s.library.tree, c)
                     .2
-                    .is_some_and(|i| t.kind(i) == NodeKind::Fn)
+                    .is_some_and(|i| t.is_function_literal(i))
         };
         let mut i = 0;
         while i < children.len() {
@@ -3410,11 +3426,12 @@ impl Translator<'_> {
                 if self.decls.get(&d).is_some_and(|&l| {
                     matches!(
                         self.b.program().decls.get(l).kind,
-                        DeclKind::Local | DeclKind::Param
+                        DeclKind::Local | DeclKind::Param | DeclKind::ModuleLet
                     )
                 }) =>
             {
-                // A local function, or a local holding a function value.
+                // A local function, or a local, parameter, or module's
+                // `let` holding a function value.
                 self.call_value(node, callee, args)
             }
             Some(Resolved::Decl(_)) => self.not_yet(node, "a call of a member or constructor"),
@@ -3458,6 +3475,15 @@ impl Translator<'_> {
         Ok(self.own(made, node))
     }
 
+    /// Whether a module's `let` with this initializer declares a function:
+    /// a function literal, unless it's a `@fun` interface's value, as in
+    /// `let inc: Mapper<Int, Int> = fn …`, which the `let` holds.
+    fn is_function_literal(&self, init: FNode) -> bool {
+        let typing = &self.s.typing;
+        self.kind(init) == NodeKind::Fn
+            && !(typing.expr(init)).is_some_and(|t| typing.types.is_fun_interface(t))
+    }
+
     /// Whether a `Let` declares a function of the library's, or of another
     /// module or library, following imports.
     fn is_function(&self, decl: FNode) -> bool {
@@ -3469,8 +3495,7 @@ impl Translator<'_> {
             .let_symbol(decl)
             .is_some_and(|s| self.module_of(s).is_some());
         let init = core::let_parts(&self.s.library.tree, decl).2;
-        top && self.kind(decl) == NodeKind::Let
-            && init.is_some_and(|i| self.kind(i) == NodeKind::Fn)
+        top && self.kind(decl) == NodeKind::Let && init.is_some_and(|i| self.is_function_literal(i))
     }
 
     /// `object` in a callee `object.name`, if it's one.

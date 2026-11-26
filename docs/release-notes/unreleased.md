@@ -28,6 +28,7 @@
 - [🚨Breaking change: core and std throw declared failures](#breaking-change-core-and-std-throw-declared-failures)
 - [🚨Breaking change: std regex `find` gives null; tests may throw any error](#breaking-change-std-regex-find-gives-null-tests-may-throw-any-error)
 - [🚨Breaking change: `await` of a broken promise throws `BrokenPromise`](#breaking-change-await-of-a-broken-promise-throws-brokenpromise)
+- [Functions generic over their callbacks' failures](#functions-generic-over-their-callbacks-failures)
 
 ## 🚨Breaking change: Rest parameter syntax removed.
 
@@ -686,3 +687,32 @@ either, so it handles its `await`s too. Each backend's runtime throws
 its own `BrokenPromise` (Python `temper_core.BrokenPromise`, Java
 `temper.core.BrokenPromise`, and so on), and a `catch` around an
 `await` works on every backend.
+
+## Functions generic over their callbacks' failures
+
+A function may pass on what its callbacks fail with, by a type parameter
+after `throws`, which is bound by `Error` without saying so:
+
+```temper inert
+let mapAll<T, R, E>(xs: List<T>, f: fn (T): R throws E): List<R> throws E {
+  let out = new ListBuilder<R>();
+  for (let x of xs) { out.add(f(x)); }
+  out.toList()
+}
+let ports = mapAll(texts) { t => t.toInt32() } orelse [];
+let lengths = mapAll(texts) { t => t.countBetween(String.begin, t.end) };
+```
+
+Each call solves `E` from its arguments, a function literal's body too,
+so `ports` may fail with `ParseError` and `lengths` can't fail; two
+callbacks of one `E` give their closest common failure type. A `@fun
+interface` may take an `E` too. Core's `Listed.map`, `filter`, `reduce`,
+`reduceFrom`, `join`, and `sorted`, `List.forEach`, `String.forEach`,
+`ListBuilder.sort`, and `Mapped.forEach`, `toListWith`, and
+`toListBuilderWith` are generic so, so a callback may now fail with a
+declared failure there: `keys.filter { k => m[k] > 0 }` throws
+`MissingKey`. For now this runs on the interpreter only: on the backends, a call that fails by its
+callback, and any call of a library's function with a failure
+parameter, is reported as not yet supported. Also fixed: a module's
+`let` of a `@fun` interface, `let inc: Mapper<Int, Int> = fn …`, and
+`let xs = f() orelse []`, which failed on every backend.

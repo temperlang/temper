@@ -601,24 +601,26 @@ impl Settle {
             return Ok(None);
         }
         let key = (found.type_name, found.index);
-        let formals = match self.typing.core_formals.get(&key) {
-            Some(formals) => formals.clone(),
+        let (formals, fresh) = match self.typing.core_formals.get(&key) {
+            Some(formals) => (formals.clone(), false),
             None => {
                 let formals: Vec<SymbolId> = (type_params.iter())
-                    .map(|p| {
-                        let name = self.lib.names.intern(p);
-                        let symbol = self.scopes.unnamed_type_param(name);
-                        self.typing.types.set_bound(symbol, ANY_VALUE);
-                        symbol
-                    })
+                    .map(|p| self.scopes.unnamed_type_param(self.lib.names.intern(p)))
                     .collect();
                 self.typing.core_formals.insert(key, formals.clone());
-                formals
+                (formals, true)
             }
         };
         let types = &mut self.typing.types;
         let own: Vec<TypeId> = formals.iter().map(|&f| types.param(f)).collect();
         let sig = core_signature(types, &found.member.kind, &found.args, &own);
+        // Bound by `AnyValue`, or `Error` for a failure parameter, one the
+        // method fails with, as `E` in `map`'s `fn (T): O throws E`
+        // ([`Settle::unwritten_bound`]).
+        for (k, &formal) in formals.iter().enumerate().filter(|_| fresh) {
+            let fails = types.fails_with(sig, &formals[k..=k]);
+            types.set_bound(formal, if fails { ERROR } else { ANY_VALUE });
+        }
         let base = (TYPES.iter().position(|&t| t == found.type_name))
             .map_or(UNKNOWN, |i| types.builtin(i as u8));
         let declarer = match found.args.is_empty() {

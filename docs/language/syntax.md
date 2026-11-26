@@ -435,6 +435,17 @@ How they're typed, for now:
 - `Bubble` and declared failures never mix: a `throws Bubble` function
   can't pass a declared failure on, nor one that throws a declared type
   bubble, and a bubble has no value for `catch (e)` to bind.
+- A function may be generic over what its callbacks fail with, by a
+  type parameter after `throws`, bound by *Error* without saying so:
+  `let mapAll<T, R, E>(xs: List<T>, f: fn (T): R throws E): List<R>
+  throws E`. Each call solves `E` from its arguments, a function
+  literal's body too, so it fails as its callback does: `mapAll(keys) {
+  k => lookup(k) }` may fail with `lookup`'s failure type, and
+  `mapAll(keys) { k => k.length }` can't fail. Two callbacks of one `E`
+  give their failures' closest common type. Core's functions that take
+  callbacks, as `map`, `filter`, `join`, `sorted`, and `forEach`, are
+  generic so. On the backends, a call that fails by its callback isn't
+  built yet.
 
 ### Syntax for *StmtBlock*
 

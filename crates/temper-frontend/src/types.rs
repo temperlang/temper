@@ -425,6 +425,9 @@ impl Types {
         use TypeData::*;
         match (self.get(pattern).clone(), self.get(actual).clone()) {
             (NeverOf(p), NeverOf(a)) => self.unify(p, a, formals, actuals, conflicts),
+            // A failure parameter's "can't fail" ([`Types::no_failure`])
+            // solves nothing, as one left unsolved is that anyway.
+            (_, NeverOf(ERROR)) => {}
             (_, NeverOf(a)) => self.unify(pattern, a, formals, actuals, conflicts),
             // Results solve part by part; only a result's pass type solves
             // a pattern that isn't one, so no type parameter but a failure
@@ -692,6 +695,20 @@ impl Types {
         match *self.get(t) {
             TypeData::Fn { result, .. } => self.pass(result),
             _ => UNKNOWN,
+        }
+    }
+
+    /// One type for what two places may fail with: `Bubble` if either may
+    /// bubble, unknown if either is, else their join, or the root,
+    /// `Error`, where they have no closer common type.
+    pub fn join_failures(&mut self, a: TypeId, b: TypeId) -> TypeId {
+        match (a, b) {
+            (BUBBLE, _) | (_, BUBBLE) => BUBBLE,
+            (UNKNOWN, _) | (_, UNKNOWN) => UNKNOWN,
+            _ => match self.join(a, b) {
+                UNKNOWN => ERROR,
+                t => t,
+            },
         }
     }
 
@@ -966,6 +983,9 @@ impl Types {
                 (None, _) => Some(false),
             },
             _ if s == ERROR => Some(false),
+            // A bubble and declared failures never mix (RFC 164), so
+            // `Bubble` is only itself.
+            _ if s == BUBBLE || t == BUBBLE => Some(false),
             _ if self.is_fun_pair(s, t) => self.fun_subtype(s, t, depth),
             // Core's non-generic classes, as `StringBuilder`, are only what
             // core says they extend, and no other type is one of them.

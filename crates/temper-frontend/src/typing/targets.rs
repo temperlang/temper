@@ -228,26 +228,32 @@ impl Settle {
             return Ok(None);
         };
         let is_last = index + 1 == children.len();
-        let other_branch = (tree.kind(parent) == NodeKind::If && matches!(index, 1 | 2))
-            .then(|| children.get(3 - index).copied())
-            .flatten();
+        // The other branch of an `if` (after its condition) or an `orelse`
+        // (its operand or fallback).
+        let (is_branch, other_branch) = match tree.kind(parent) {
+            NodeKind::If if matches!(index, 1 | 2) => (true, children.get(3 - index)),
+            NodeKind::Orelse => (true, children.get(usize::from(index == 0))),
+            _ => (false, None),
+        };
+        let other_branch = other_branch.copied();
         Ok(match tree.kind(parent) {
             NodeKind::Block if is_last => self.wanted_type(parent, forced)?,
-            // An `if`'s branches, after its condition, and an `orelse`'s.
-            // With nothing wanted, a branch that's `[]` wants the other's
-            // type, as Kotlin Temper's solver finds: `if (c) { xs } else
-            // { [] }`.
-            NodeKind::If if matches!(index, 1 | 2) => match self.wanted_type(parent, forced)? {
-                None if self.ends_in_empty_list(node) => match other_branch {
-                    Some(other) if !self.ends_in_empty_list(other) => {
-                        Some(self.expr_type(other, forced)?)
-                            .filter(|&t| self.wanted_element(t).is_some())
-                    }
-                    _ => None,
-                },
-                wanted => wanted,
-            },
-            NodeKind::Orelse => self.wanted_type(parent, forced)?,
+            // An `if`'s branches and an `orelse`'s. With nothing wanted, a
+            // branch that's `[]` wants the other's type, as Kotlin
+            // Temper's solver finds: `if (c) { xs } else { [] }`, `f()
+            // orelse []`.
+            NodeKind::If | NodeKind::Orelse if is_branch => {
+                match self.wanted_type(parent, forced)? {
+                    None if self.ends_in_empty_list(node) => match other_branch {
+                        Some(other) if !self.ends_in_empty_list(other) => {
+                            Some(self.expr_type(other, forced)?)
+                                .filter(|&t| self.wanted_element(t).is_some())
+                        }
+                        _ => None,
+                    },
+                    wanted => wanted,
+                }
+            }
             NodeKind::Fn if core::fn_parts(tree, parent).2 == Some(node) => {
                 self.fn_result(parent, forced)?
             }

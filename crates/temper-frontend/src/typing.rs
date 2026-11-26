@@ -139,6 +139,10 @@ pub struct Typing {
     /// constructor binds its type parameters to, by the call: the callee's
     /// own, or for a constructor, its class's, unknown where unsolved.
     type_args: HashMap<NodeId, Vec<TypeId>>,
+    /// What each generic call of a function with failure parameters (RFC
+    /// 164) binds them to, in full, from its function literals' bodies
+    /// too: `Never<Error>` where the call can't fail by one.
+    failure_args: HashMap<NodeId, Vec<TypeId>>,
     /// The empty blocks standing for missing `else`s that are never
     /// reached, as `is` checks before them cover a sealed type
     /// ([`sealed`]): `Never`, and a panic in tmpl, as Kotlin's.
@@ -171,6 +175,12 @@ impl Typing {
     /// constructor's, its class's), if typing solved it.
     pub fn type_args(&self, call: NodeId) -> Option<&[TypeId]> {
         self.type_args.get(&call).map(Vec::as_slice)
+    }
+
+    /// What a generic call binds its callee's failure parameters to, if
+    /// it has any ([`Typing::type_args`] leaves them out).
+    pub fn failure_args(&self, call: NodeId) -> Option<&[TypeId]> {
+        self.failure_args.get(&call).map(Vec::as_slice)
     }
 
     /// What a call, operator or member read resolves to, if typing knows.
@@ -931,8 +941,9 @@ impl Settle {
         is_type.then_some(init)
     }
 
-    /// A type parameter's type, as `T` names it, with its bound: `AnyValue`
-    /// or the type it `extends`. Not a class's synthetic parameter.
+    /// A type parameter's type, as `T` names it, with its bound: the type
+    /// it `extends`, or else [`Settle::unwritten_bound`]'s. Not a class's
+    /// synthetic parameter.
     fn type_param_type(&mut self, symbol: SymbolId) -> TypeId {
         let tree = &self.lib.tree;
         let Some(decl) = (self.scopes.symbol(symbol).decl).filter(|&d| {
@@ -948,24 +959,45 @@ impl Settle {
         let t = self.typing.types.param(symbol);
         let bound = match core::let_parts(tree, decl).1 {
             Some(bound) => self.eval_type(bound),
-            None => ANY_VALUE,
+            None => self.unwritten_bound(symbol, decl),
         };
         self.typing.types.set_bound(symbol, bound);
         t
     }
 
+    /// The bound of a type parameter declared without one: `Error` for a
+    /// failure parameter, one its declaration (a function, interface, or
+    /// class) uses after `throws`, as `E` in `fn (T): R throws E`, so
+    /// generic code may throw it and read its message (RFC 164); else
+    /// `AnyValue`.
+    fn unwritten_bound(&self, symbol: SymbolId, decl: NodeId) -> TypeId {
+        let tree = &self.lib.tree;
+        let mut stack: Vec<NodeId> = self.typing.parent(decl).into_iter().collect();
+        while let Some(node) = stack.pop() {
+            let thrown = self.is_throws(node)
+                && (tree.children(node).get(2))
+                    .is_some_and(|&f| self.scopes.resolved(f) == Some(symbol));
+            if thrown {
+                return ERROR;
+            }
+            stack.extend(tree.children(node));
+        }
+        ANY_VALUE
+    }
+
     /// A type parameter's bound as declared: the type it `extends`, or
-    /// `AnyValue`; for one not declared by a `let` (core's), as
-    /// [`Types::bound_of`] has it, `AnyValue` if unset. Evaluated here, as
+    /// what it's bound by without one ([`Settle::unwritten_bound`]); for
+    /// one not declared by a `let` (core's), as [`Types::bound_of`] has
+    /// it, `AnyValue` if unset. Evaluated here, as
     /// [`Types::param`] may have made its type before its bound was set.
     pub(crate) fn declared_bound(&mut self, symbol: SymbolId) -> TypeId {
         let tree = &self.lib.tree;
         let decl = (self.scopes.symbol(symbol).decl).filter(|&d| {
             tree.kind(d) == NodeKind::Let && tree.data(d) & ROLE_MASK == ROLE_TYPE_PARAM
         });
-        match decl.map(|d| core::let_parts(tree, d).1) {
-            Some(Some(bound)) => self.eval_type(bound),
-            Some(None) => ANY_VALUE,
+        match decl.map(|d| (d, core::let_parts(tree, d).1)) {
+            Some((_, Some(bound))) => self.eval_type(bound),
+            Some((d, None)) => self.unwritten_bound(symbol, d),
             None => self.typing.types.bound_of(symbol).unwrap_or(ANY_VALUE),
         }
     }

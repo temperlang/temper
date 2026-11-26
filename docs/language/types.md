@@ -965,9 +965,10 @@ Where splitting by "" returns each code point as a separate string.
 
 #### `String.forEach`
 
-`:` `fn(`[*String*](#class-string), `fn(`[*Int32*](#class-int32)`):` [*Void*](#class-void)`):` [*Void*](#class-void)
+`:` `fn<`*E*`>(`[*String*](#class-string), `fn(`[*Int32*](#class-int32)`):` [*Void*](#class-void) `throws` *E*`):` [*Void*](#class-void) `throws` *E*
 
-Invokes body with each code point value in order.
+Invokes body with each code point value in order, and fails as it does,
+if it may.
 
 ```temper
 for (let codePoint: Int of "foo-bar") {
@@ -1270,7 +1271,9 @@ Panic on index out of bounds.
 
 #### `List.forEach`
 
-`:` `fn(`[*List*](#class-list)&lt;[*T*](#listt)&gt;, `fn(`[*T*](#listt)`):` [*Void*](#class-void)`):` [*Void*](#class-void)
+`:` `fn<`*E*`>(`[*List*](#class-list)&lt;[*T*](#listt)&gt;, `fn(`[*T*](#listt)`):` [*Void*](#class-void) `throws` *E*`):` [*Void*](#class-void) `throws` *E*
+
+Fails as [body] does, if it may.
 
 ### statics
 
@@ -1344,9 +1347,10 @@ Panics on index out of bounds.
 
 #### `ListBuilder.sort`
 
-`:` `fn(`[*ListBuilder*](#class-listbuilder)&lt;[*T*](#listbuildert)&gt;, `fn(`[*T*](#listbuildert), [*T*](#listbuildert)`):` [*Int32*](#class-int32)`):` [*Void*](#class-void)
+`:` `fn<`*E*`>(`[*ListBuilder*](#class-listbuilder)&lt;[*T*](#listbuildert)&gt;, `fn(`[*T*](#listbuildert), [*T*](#listbuildert)`):` [*Int32*](#class-int32) `throws` *E*`):` [*Void*](#class-void) `throws` *E*
 
-Sorts in place. Uses stable sorting.
+Sorts in place. Uses stable sorting. Fails as [compare] does, if it
+may, leaving the order unspecified.
 
 #### `ListBuilder.splice`
 
@@ -1468,40 +1472,47 @@ Always creates a new object and backing buffer even if this is already a
 
 #### `Listed.map`
 
-`:` `fn<`*O*`>(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, `fn(`[*T*](#listedt)`):` *O*`):` [*List*](#class-list)&lt;*O*&gt;
+`:` `fn<`*O*, *E*`>(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, `fn(`[*T*](#listedt)`):` *O* `throws` *E*`):` [*List*](#class-list)&lt;*O*&gt; `throws` *E*
 
-Maps elements using [transform].
+Maps elements using [transform]. Fails as [transform] does, if it
+may: `E` is what it may fail with.
 
 #### `Listed.filter`
 
-`:` `fn(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, `fn(`[*T*](#listedt)`):` [*Boolean*](#class-boolean)`):` [*List*](#class-list)&lt;[*T*](#listedt)&gt;
+`:` `fn<`*E*`>(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, `fn(`[*T*](#listedt)`):` [*Boolean*](#class-boolean) `throws` *E*`):` [*List*](#class-list)&lt;[*T*](#listedt)&gt; `throws` *E*
+
+Fails as [predicate] does, if it may: `E` is what it may fail with.
 
 #### `Listed.reduce`
 
-`:` `fn(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, `fn(`[*T*](#listedt), [*T*](#listedt)`):` [*T*](#listedt)`):` [*T*](#listedt)
+`:` `fn<`*E*`>(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, `fn(`[*T*](#listedt), [*T*](#listedt)`):` [*T*](#listedt) `throws` *E*`):` [*T*](#listedt) `throws` *E*
 
 Reduce to a single value, starting from the first item in this list.
-Panic if empty.
+Panic if empty. Fails as [accumulate] does, if it may.
 
 #### `Listed.reduceFrom`
 
-`:` `fn<`*O*`>(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, *O*, `fn(`*O*, [*T*](#listedt)`):` *O*`):` *O*
+`:` `fn<`*O*, *E*`>(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, *O*, `fn(`*O*, [*T*](#listedt)`):` *O* `throws` *E*`):` *O* `throws` *E*
 
 Reduce to a single value, starting from the given initial value.
+Fails as [accumulate] does, if it may.
 
 #### `Listed.reduceFromIndex`
 
-`:` `fn<`*O*`>(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, *O*, [*Int32*](#class-int32), `fn(`*O*, [*T*](#listedt)`):` *O*`):` *O*
+`:` `fn<`*O*, *E*`>(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, *O*, [*Int32*](#class-int32), `fn(`*O*, [*T*](#listedt)`):` *O* `throws` *E*`):` *O* `throws` *E*
 
 #### `Listed.join`
 
-`:` `fn(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, [*String*](#class-string), `fn(`[*T*](#listedt)`):` [*String*](#class-string)`):` [*String*](#class-string)
+`:` `fn<`*E*`>(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, [*String*](#class-string), `fn(`[*T*](#listedt)`):` [*String*](#class-string) `throws` *E*`):` [*String*](#class-string) `throws` *E*
+
+Fails as [stringify] does, if it may.
 
 #### `Listed.sorted`
 
-`:` `fn(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, `fn(`[*T*](#listedt), [*T*](#listedt)`):` [*Int32*](#class-int32)`):` [*List*](#class-list)&lt;[*T*](#listedt)&gt;
+`:` `fn<`*E*`>(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, `fn(`[*T*](#listedt), [*T*](#listedt)`):` [*Int32*](#class-int32) `throws` *E*`):` [*List*](#class-list)&lt;[*T*](#listedt)&gt; `throws` *E*
 
-Returns a sorted version of this listed. Uses stable sorting.
+Returns a sorted version of this listed. Uses stable sorting. Fails as
+[compare] does, if it may.
 
 ## *class Map*
 
@@ -1663,25 +1674,28 @@ for each key and value in the [*Mapped*](#interface-mapped).
 
 #### `Mapped.toListWith`
 
-`:` `fn<`*T*`>(`[*Mapped*](#interface-mapped)&lt;[*K*](#mappedk), [*V*](#mappedv)&gt;, `fn(`[*K*](#mappedk), [*V*](#mappedv)`):` *T*`):` [*List*](#class-list)&lt;*T*&gt;
+`:` `fn<`*T*, *E*`>(`[*Mapped*](#interface-mapped)&lt;[*K*](#mappedk), [*V*](#mappedv)&gt;, `fn(`[*K*](#mappedk), [*V*](#mappedv)`):` *T* `throws` *E*`):` [*List*](#class-list)&lt;*T*&gt; `throws` *E*
 
 Similar to [`Mapped.toListBuilderWith`](#mappedtolistbuilderwith).
 
-Calls [func] on each key and value in the [*Mapped*](#interface-mapped).
+Calls [func] on each key and value in the [*Mapped*](#interface-mapped), and
+fails as it does, if it may.
 
 #### `Mapped.toListBuilderWith`
 
-`:` `fn<`*T*`>(`[*Mapped*](#interface-mapped)&lt;[*K*](#mappedk), [*V*](#mappedv)&gt;, `fn(`[*K*](#mappedk), [*V*](#mappedv)`):` *T*`):` [*ListBuilder*](#class-listbuilder)&lt;*T*&gt;
+`:` `fn<`*T*, *E*`>(`[*Mapped*](#interface-mapped)&lt;[*K*](#mappedk), [*V*](#mappedv)&gt;, `fn(`[*K*](#mappedk), [*V*](#mappedv)`):` *T* `throws` *E*`):` [*ListBuilder*](#class-listbuilder)&lt;*T*&gt; `throws` *E*
 
 Returns a [*ListBuilder*](#class-listbuilder)<*T*>.
 
-Calls [func] on each key and value in the [*Mapped*](#interface-mapped).
+Calls [func] on each key and value in the [*Mapped*](#interface-mapped), and
+fails as it does, if it may.
 
 #### `Mapped.forEach`
 
-`:` `fn(`[*Mapped*](#interface-mapped)&lt;[*K*](#mappedk), [*V*](#mappedv)&gt;, `fn(`[*K*](#mappedk), [*V*](#mappedv)`):` [*Void*](#class-void)`):` [*Void*](#class-void)
+`:` `fn<`*E*`>(`[*Mapped*](#interface-mapped)&lt;[*K*](#mappedk), [*V*](#mappedv)&gt;, `fn(`[*K*](#mappedk), [*V*](#mappedv)`):` [*Void*](#class-void) `throws` *E*`):` [*Void*](#class-void) `throws` *E*
 
-Calls the provided binary function func on each key and value for the side effect
+Calls the provided binary function func on each key and value for the side effect,
+and fails as it does, if it may.
 
 This method is more likely to change or be removed before Temper 1.0 than most
 

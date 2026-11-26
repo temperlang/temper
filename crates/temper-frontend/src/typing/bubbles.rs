@@ -218,6 +218,7 @@ impl Settle {
                 BUBBLE => Message::ExpectedNoBubble,
                 UNKNOWN if self.lib.tree.kind(node) == NodeKind::Fail => continue,
                 UNKNOWN => Message::ExpectedNoBubble,
+                ERROR => Message::UnhandledRootFailure,
                 _ => Message::UndeclaredFailure(self.show(fail)),
             };
             let span = self.lib.tree.span(node);
@@ -277,14 +278,7 @@ impl Settle {
         for &(_, fail) in fails {
             joined = Some(match joined {
                 None => fail,
-                Some(BUBBLE) => BUBBLE,
-                Some(_) if fail == BUBBLE => BUBBLE,
-                Some(UNKNOWN) => UNKNOWN,
-                Some(_) if fail == UNKNOWN => UNKNOWN,
-                Some(so_far) => match self.typing.types.join(so_far, fail) {
-                    UNKNOWN => ERROR,
-                    t => t,
-                },
+                Some(so_far) => self.typing.types.join_failures(so_far, fail),
             });
         }
         joined

@@ -721,7 +721,8 @@ export class String extends MapKey<String> {
   public split(separator: builtins.String): List<builtins.String>;
 
   /**
-   * Invokes body with each code point value in order.
+   * Invokes body with each code point value in order, and fails as it does,
+   * if it may.
    *
    * ```temper
    * for (let codePoint: Int of "foo-bar") {
@@ -737,7 +738,7 @@ export class String extends MapKey<String> {
    * ```
    */
   @connected
-  public forEach(@inlineUnrealizedGoal let body: fn (Int): Void): Void {
+  public forEach<E>(@inlineUnrealizedGoal let body: fn (Int): Void throws E): Void throws E {
     for (var index = String.begin; this.hasIndex(index); index = this.next(index)) {
       let codePoint: Int = this[index];
       body(codePoint);
@@ -1107,25 +1108,29 @@ export sealed interface Listed<T> {
   @connected
   public map<O, E>(transform: fn (T): O throws E): List<O> throws E;
 
+  /** Fails as [predicate] does, if it may: `E` is what it may fail with. */
   @connected
-  public filter(predicate: fn (T): builtins.Boolean): List<T>;
+  public filter<E>(predicate: fn (T): builtins.Boolean throws E): List<T> throws E;
 
   /**
    * Reduce to a single value, starting from the first item in this list.
-   * Panic if empty.
+   * Panic if empty. Fails as [accumulate] does, if it may.
    */
   @connected
-  public reduce(accumulate: fn (T, T): T): T {
+  public reduce<E>(accumulate: fn (T, T): T throws E): T throws E {
     reduceFromIndex(this[0], 1, accumulate)
   }
 
-  /** Reduce to a single value, starting from the given initial value. */
+  /**
+   * Reduce to a single value, starting from the given initial value.
+   * Fails as [accumulate] does, if it may.
+   */
   @connected
-  public reduceFrom<O>(initial: O, accumulate: fn (O, T): O): O {
+  public reduceFrom<O, E>(initial: O, accumulate: fn (O, T): O throws E): O throws E {
     reduceFromIndex(initial, 0, accumulate)
   }
 
-  public reduceFromIndex<O>(initial: O, index: Int, accumulate: fn (O, T): O): O {
+  public reduceFromIndex<O, E>(initial: O, index: Int, accumulate: fn (O, T): O throws E): O throws E {
     var result = initial;
     for (var i = index; i < length; i += 1) {
       result = accumulate(result, this[i]);
@@ -1133,14 +1138,16 @@ export sealed interface Listed<T> {
     result
   }
 
+  /** Fails as [stringify] does, if it may. */
   @connected
-  public join(separator: String, stringify: fn (T): String): String;
+  public join<E>(separator: String, stringify: fn (T): String throws E): String throws E;
 
   /**
-   * Returns a sorted version of this listed. Uses stable sorting.
+   * Returns a sorted version of this listed. Uses stable sorting. Fails as
+   * [compare] does, if it may.
    */
   @connected
-  public sorted(compare: fn (T, T): Int): List<T>;
+  public sorted<E>(compare: fn (T, T): Int throws E): List<T> throws E;
 }
 
 /**
@@ -1179,8 +1186,9 @@ export class List<@out T> extends Listed<T> {
 
   // TODO(mikesamuel): once we know what semantics we want for iterating when body mutates,
   // move this onto Listed.
+  /** Fails as [body] does, if it may. */
   @connected
-  public forEach(@inlineUnrealizedGoal let body: fn (T): Void): Void {
+  public forEach<E>(@inlineUnrealizedGoal let body: fn (T): Void throws E): Void throws E {
     let n = length;
     var i = 0;
     while (i < n) {
@@ -1235,10 +1243,11 @@ export class ListBuilder<T> extends Listed<T> {
   public set(index: builtins.Int, newValue: T): Void;
 
   /**
-   * Sorts in place. Uses stable sorting.
+   * Sorts in place. Uses stable sorting. Fails as [compare] does, if it
+   * may, leaving the order unspecified.
    */
   @connected
-  public sort(compare: fn (T, T): Int): Void;
+  public sort<E>(compare: fn (T, T): Int throws E): Void throws E;
 
   /**
    * Removes `removeCount` items starting at `index`, or until the end of the
@@ -1402,20 +1411,22 @@ export sealed interface Mapped<@in K extends MapKey<K>, V> {
   /**
    * Similar to [snippet/type/Mapped/method/toListBuilderWith].
    *
-   * Calls [func] on each key and value in the [snippet/type/Mapped].
+   * Calls [func] on each key and value in the [snippet/type/Mapped], and
+   * fails as it does, if it may.
    */
   @connected
-  public toListWith<T>(func: fn(K, V): T): List<T> {
+  public toListWith<T, E>(func: fn(K, V): T throws E): List<T> throws E {
     toListBuilderWith(func).toList()
   }
 
   /**
    * Returns a [snippet/type/ListBuilder]<*T*>.
    *
-   * Calls [func] on each key and value in the [snippet/type/Mapped].
+   * Calls [func] on each key and value in the [snippet/type/Mapped], and
+   * fails as it does, if it may.
    */
   @connected
-  public toListBuilderWith<T>(func: fn(K, V): T): ListBuilder<T> {
+  public toListBuilderWith<T, E>(func: fn(K, V): T throws E): ListBuilder<T> throws E {
     var builder = new ListBuilder<T>();
     forEach { key, value =>
       builder.add(func(key, value));
@@ -1424,12 +1435,13 @@ export sealed interface Mapped<@in K extends MapKey<K>, V> {
   }
 
   /**
-   * Calls the provided binary function func on each key and value for the side effect
+   * Calls the provided binary function func on each key and value for the side effect,
+   * and fails as it does, if it may.
    *
    * This method is more likely to change or be removed before Temper 1.0 than most
    */
   @connected
-  public forEach(func: fn(K, V): Void): Void;
+  public forEach<E>(func: fn(K, V): Void throws E): Void throws E;
 }
 
 /**

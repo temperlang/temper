@@ -249,6 +249,9 @@ pub enum Message {
     /// A declared failure, of the type named, in a function that can't
     /// fail.
     UndeclaredFailure(String),
+    /// Failures under different roots, whose join is the root, `Error`,
+    /// which no function but a test may throw, in one that can't fail.
+    UnhandledRootFailure,
     /// A declared failure, of the first type, in a function that throws
     /// the second, which it isn't one of.
     FailureMismatch(String, String),
@@ -556,6 +559,10 @@ impl Message {
             Message::UndeclaredFailure(t) => {
                 format!("Cannot throw {t} from a function without {t} in its return type")
             }
+            Message::UnhandledRootFailure => format!(
+                "Cannot throw {FAILURE_ROOT}, failures under different roots, from a function; \
+                 handle them with orelse or catch"
+            ),
             Message::FailureMismatch(t, allowed) => format!(
                 "Cannot throw {t} from a function that throws {allowed}; catch it, and throw {} \
                  there if need be",

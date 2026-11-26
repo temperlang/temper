@@ -1710,7 +1710,8 @@ error 1542..1589: Cannot assign to fn (Int32): Boolean from fn (Int32): Boolean 
 error 1690..1691: Expected subtype of fn (Int32): Boolean, but got fn (String): Boolean
 error 1725..1732: Cannot assign to fn (Int32): Boolean from fn (String): Boolean
 error 1772..1785: Cannot assign to fn (Int32): Boolean from fn (String): Boolean
-error 1837..1844: Expected subtype of fn (Int32): Boolean, but got fn (String): Boolean
+error 1837..1844: Actual arguments do not match signature: <E extends Error>(Listed<Int32>, fn (Int32): Boolean throws E) -> List<Int32> throws E expected [Listed<Int32>, fn (Int32): Boolean], but got [List<Int32>, fn (String): Boolean]
+Failed: Actual arguments do not match signature: <E extends Error>(Listed<Int32>, fn (Int32): Boolean throws E) -> List<Int32> throws E expected [Listed<Int32>, fn (Int32): Boolean], but got [List<Int32>, fn (String): Boolean]
 
 === a type parameter no argument binds is checked as its bound
 // As Kotlin Temper's solver binds it, apart from names. Kotlin also says
@@ -2346,7 +2347,8 @@ error 508..511: Expected subtype of Int32, but got String
 // input was also built with Kotlin Temper: every error matches but for
 // those positions and a2's, and Kotlin's "but got Top" for a literal
 // whose result never returns (a7, b1, b5, b6), which tempest doesn't
-// report.
+// report. Core's `filter` is generic over its callback's failure (RFC
+// 164), so b6 fails at its call, as the literal's body may.
 let apply(f: fn (Int): Int): Int { f(1) }
 let applyB(f: fn (Int): Int throws Bubble): Int throws Bubble { f(1) }
 let eat(f: fn (Int): Void): Void { f(1) }
@@ -2389,7 +2391,7 @@ let f(ls: List<Int>): Void {
       (Block
         (Let
           ^a1:8
-          (Call apply:0 (Fn (Let ^x:22) (Block (Return @932 "a") #void))))
+          (Call apply:0 (Fn (Let ^x:22) (Block (Return @1053 "a") #void))))
         (Let
           ^a2:9
           (Call
@@ -2397,33 +2399,33 @@ let f(ls: List<Int>): Void {
             (Fn
               (Let ^x:23)
               (Block
-                (If (Call > x:23 0) (Block (Return @974 x:23) #void) (Block))
-                (Return @974 null)
+                (If (Call > x:23 0) (Block (Return @1095 x:23) #void) (Block))
+                (Return @1095 null)
                 #void))))
         (Let
           ^a3:10
-          (Call apply:0 (Fn (Let ^x:24) (Block (Return @1052 #void) #void))))
-        (Call eat:2 (Fn (Let ^x:25) (Block (Return @1079 x:25) #void)))
+          (Call apply:0 (Fn (Let ^x:24) (Block (Return @1173 #void) #void))))
+        (Call eat:2 (Fn (Let ^x:25) (Block (Return @1200 x:25) #void)))
         (Let
           ^a4:11
           (Call
             apply:0
-            (Fn (Let ^x:26) (Block (Return @1119 (Call + x:26 1)) #void))))
+            (Fn (Let ^x:26) (Block (Return @1240 (Call + x:26 1)) #void))))
         (Let
           ^a5:12
           (Call FnType Int Int)
-          (Fn (Let ^x:27) (Block (Return @1172 "b") #void)))
+          (Fn (Let ^x:27) (Block (Return @1293 "b") #void)))
         (Let
           ^a6:13
           (Call <> List String)
           (Call
             (Call . ls:7 \map)
-            (Fn (Let ^x:28) (Block (Return @1228 x:28) #void))))
+            (Fn (Let ^x:28) (Block (Return @1349 x:28) #void))))
         (Let
           ^a7:14
           (Call
             apply:0
-            (Fn (Let ^x:29) (Block (Return @1268 (Call panic)) #void))))
+            (Fn (Let ^x:29) (Block (Return @1389 (Call panic)) #void))))
         (Let ^b1:15 (Call apply:0 (Fn (Let ^x:30) (Block (Fail)))))
         (Let
           ^b2:16
@@ -2448,16 +2450,16 @@ let f(ls: List<Int>): Void {
           (Call FnType Int Int)
           (Fn (Let ^x:37) (Block (Call / x:37 0))))
         #void))))
-error 948..951: Expected subtype of Int32, but got String
-error 1023..1027: Expected subtype of Int32, but got Int32?
-error 1061..1067: Expected subtype of Int32, but got Void
-error 1095..1096: Expected subtype of Void, but got Int32
-error 1188..1191: Expected subtype of Int32, but got String
-error 1244..1245: Expected subtype of String, but got Int32
-error 1321..1329: Cannot bubble from a function without Bubble in its return type
-error 1378..1386: Cannot bubble from a function without Bubble in its return type
-error 1547..1555: Cannot bubble from a function without Bubble in its return type
-error 1572..1580: Cannot bubble from a function without Bubble in its return type
+error 1069..1072: Expected subtype of Int32, but got String
+error 1144..1148: Expected subtype of Int32, but got Int32?
+error 1182..1188: Expected subtype of Int32, but got Void
+error 1216..1217: Expected subtype of Void, but got Int32
+error 1309..1312: Expected subtype of Int32, but got String
+error 1365..1366: Expected subtype of String, but got Int32
+error 1442..1450: Cannot bubble from a function without Bubble in its return type
+error 1499..1507: Cannot bubble from a function without Bubble in its return type
+error 1693..1701: Cannot bubble from a function without Bubble in its return type
+error 1651..1678: Cannot bubble from a function without Bubble in its return type
 
 === @fun interfaces as the function types they stand for, as Kotlin Temper reports them
 // A `@fun` interface's type stands for its `apply`'s signature: a
@@ -3703,7 +3705,7 @@ log 1
 // parameters are; one they leave unsolved is `Never<…>`, so the call
 // can't fail. A function literal without a declared result gives it from
 // its body, so a4, a8, and m2 fail at the call (inferring is tested
-// below). Core's `Listed.map` is one; `filter` isn't yet (b1).
+// below). Core's `Listed.map` is one, and `filter` (b1).
 let d(a: Int, b: Int): Int throws Bubble { if (b == 0) { bubble() } else { a / b } }
 let apply<T, R, E>(x: T, f: fn (T): R throws E): R throws E { f(x) }
 @fun interface Mapper<T, R, E>(x: T): R throws E;
@@ -3784,7 +3786,7 @@ console.log("${show(f1([1, 2]))} ${show(f2([0]))} ${show(f2([5]))} ${k1(2)} ${k2
               (Fn
                 (Let ^x:47)
                 (Block (Call (Call . out:46 \add) (Call f:45 x:47)) #void)))
-            (Break @802)))
+            (Break @796)))
         (Call (Call . out:46 \toList)))))
   (Let
     ^both:4
@@ -4104,14 +4106,14 @@ console.log("${show(f1([1, 2]))} ${show(f2([0]))} ${show(f2([5]))} ${k1(2)} ${k2
       " "
       (Call k2:24 5)))
   #void)
-error 1093..1145: Cannot bubble from a function without Bubble in its return type
-error 1170..1196: Cannot bubble from a function without Bubble in its return type
-error 1471..1536: Cannot bubble from a function without Bubble in its return type
-error 1732..1756: Cannot bubble from a function without Bubble in its return type
-error 2062..2107: Cannot bubble from a function without Bubble in its return type
-error 2331..2386: Cannot bubble from a function without Bubble in its return type
-error 2602..2678: Cannot bubble from a function without Bubble in its return type
-error 2733..2741: Cannot bubble from a function without Bubble in its return type
+error 1087..1139: Cannot bubble from a function without Bubble in its return type
+error 1164..1190: Cannot bubble from a function without Bubble in its return type
+error 1465..1530: Cannot bubble from a function without Bubble in its return type
+error 1726..1750: Cannot bubble from a function without Bubble in its return type
+error 2056..2101: Cannot bubble from a function without Bubble in its return type
+error 2325..2380: Cannot bubble from a function without Bubble in its return type
+error 2596..2672: Cannot bubble from a function without Bubble in its return type
+error 2710..2741: Cannot bubble from a function without Bubble in its return type
 log 2 3 -1 2 -2 7 0
 log 2,3 10,5 -1  2,4
 log 3,6  2 4 -1 7

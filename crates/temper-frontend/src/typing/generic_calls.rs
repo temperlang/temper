@@ -18,7 +18,7 @@ use crate::core::{self, CLASS_INTERFACE};
 use crate::library::{Level, Message};
 use crate::scope::{SymbolId, SymbolKind};
 use crate::settle::{Fact, Settle};
-use crate::types::{ANY_VALUE, NULL, Param, TypeData, TypeId, UNKNOWN, VOID};
+use crate::types::{ANY_VALUE, BUBBLE, ERROR, NULL, Param, TypeData, TypeId, UNKNOWN, VOID};
 use temper_syntax::tree::{NodeId, NodeKind, Span};
 
 /// A call of a generic function, solved.
@@ -132,6 +132,10 @@ impl Settle {
             }
         } else {
             let placed = self.placed_params(&params, &args);
+            let types = &mut self.typing.types;
+            let failing: Vec<bool> = (0..formals.len())
+                .map(|k| types.fails_with(sig, &formals[k..=k]))
+                .collect();
             for (&arg, &i) in args.iter().zip(&placed) {
                 let Some(param) = params.get(i) else {
                     continue;
@@ -157,8 +161,21 @@ impl Settle {
                     NodeKind::Fn => self.fn_type(arg),
                     _ => self.expr_type(arg, forced)?,
                 };
+                // A failure parameter is the join of what each argument
+                // gives it (RFC 164), as `E` is `AppError` for `both(find,
+                // check)` whose callbacks fail with `Missing` and `Bad`.
                 let types = &mut self.typing.types;
+                let before = actuals.clone();
+                for (actual, _) in actuals.iter_mut().zip(&failing).filter(|(_, f)| **f) {
+                    *actual = UNKNOWN;
+                }
                 types.unify(param.ty, t, &formals, &mut actuals, &mut ambiguous);
+                for k in (0..formals.len()).filter(|&k| failing[k]) {
+                    actuals[k] = match (before[k], actuals[k]) {
+                        (UNKNOWN, given) | (given, UNKNOWN) => given,
+                        (so_far, given) => types.join_failures(so_far, given),
+                    };
+                }
             }
             for (actual, &conflict) in actuals.iter_mut().zip(&ambiguous) {
                 if conflict {
@@ -246,12 +263,14 @@ impl Settle {
 
     /// Whether a node is a function literal whose result comes from its
     /// body where its place doesn't say it: one without a declared result
-    /// type that isn't a generator's.
+    /// type that isn't a generator's, nor a `for … of` body, whose
+    /// failures are its function's, not its loop's `forEach` call's.
     pub(super) fn infers_result(&self, f: NodeId) -> bool {
         let tree = &self.lib.tree;
         tree.kind(f) == NodeKind::Fn
             && core::fn_parts(tree, f).1.is_none()
             && core::fn_supers(tree, f).is_empty()
+            && tree.data(f) & core::FN_LOOP_BODY == 0
     }
 
     /// Which of a solved call's type parameters (by index) its function
@@ -388,8 +407,21 @@ impl Settle {
         let param = types.param(solved.formals[k]);
         let bound = types.upper(param);
         let wanted = types.substitute(bound, &solved.formals, &solved.actuals);
+        self.fits_param_bound(actual, wanted)
+    }
+
+    /// Whether `actual` fits a type parameter's bound, `wanted`, as
+    /// Kotlin's check takes it: a nullable type fits `AnyValue`, so `new
+    /// PromiseBuilder<String?>()` and `f<Int?>(null)` for `<T extends
+    /// AnyValue>` (or `<T>`) pass. A bubble fits `Error`, as a failure
+    /// parameter's bound, until `Bubble` goes, as `throws Error` takes
+    /// one too.
+    fn fits_param_bound(&mut self, actual: TypeId, wanted: TypeId) -> bool {
+        let types = &mut self.typing.types;
         let seen = match *types.get(actual) {
             TypeData::Nullable(inner) if wanted == ANY_VALUE => inner,
+            TypeData::NeverOf(BUBBLE) if wanted == ERROR => return true,
+            _ if actual == BUBBLE && wanted == ERROR => return true,
             _ => actual,
         };
         types.is_subtype(seen, wanted) != Some(false)
@@ -579,15 +611,8 @@ impl Settle {
             // extends MapKey<K>` does, so it's checked with what they're
             // bound to put in; the message shows it as declared.
             let wanted = types.substitute(bound, &solved.formals, &solved.actuals);
-            // Kotlin's check takes a nullable type as fitting `AnyValue`,
-            // so `new PromiseBuilder<String?>()` and `f<Int?>(null)` for
-            // `<T extends AnyValue>` (or `<T>`) pass.
-            let seen = match *types.get(actual) {
-                TypeData::Nullable(inner) if wanted == ANY_VALUE => inner,
-                _ => actual,
-            };
-            let fits = types.is_subtype(seen, wanted) != Some(false);
-            if fits || !types.is_known(wanted) {
+            let fits = self.fits_param_bound(actual, wanted);
+            if fits || !self.typing.types.is_known(wanted) {
                 continue;
             }
             let message = Message::TypeFormalBound(
@@ -599,7 +624,26 @@ impl Settle {
             return true;
         }
         self.check_generic_args(&solved);
+        self.note_failure_args(&solved);
         true
+    }
+
+    /// Notes what a solved call's failure parameters are, solved in full
+    /// ([`Settle::solve_fully`]), if its function has any
+    /// ([`Typing::failure_args`](super::Typing::failure_args)).
+    fn note_failure_args(&mut self, solved: &Solved) {
+        let types = &mut self.typing.types;
+        let failing: Vec<usize> = (0..solved.formals.len())
+            .filter(|&k| types.fails_with(solved.sig, &solved.formals[k..=k]))
+            .collect();
+        if failing.is_empty() {
+            return;
+        }
+        let Ok(Some(full)) = self.solve_fully(solved.call, false) else {
+            return;
+        };
+        let args = failing.iter().map(|&k| full.actuals[k]).collect();
+        self.typing.failure_args.insert(solved.call, args);
     }
 
     /// Reports a generic call's arguments that don't fit what the type

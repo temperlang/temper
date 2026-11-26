@@ -1221,3 +1221,146 @@ fn is_and_as_share_one_rule() {
         assert!(wrong.is_empty(), "{}", wrong.join("\n"));
     });
 }
+
+/// Settles a source with std, checks it has no errors and leaves nothing
+/// untyped, and gives its tmpl, validated, and what running it logs.
+fn translate_and_run(name: &str, source: &str) -> (String, Vec<String>) {
+    let mut library = Library::new();
+    library.add_file(&format!("{name}.temper.md"), source, SourceKind::Markdown);
+    load_imports(&Sources::standard(), &mut library);
+    let settled = settle(library);
+    let errors: Vec<String> = (settled.library.diagnostics.iter())
+        .map(|d| d.message.text())
+        .collect();
+    assert_eq!(errors, Vec::<String>::new());
+    let lib = &settled.library;
+    let file = (coverage(&settled).into_iter())
+        .find(|f| f.path == format!("{name}.temper.md"))
+        .unwrap();
+    let untyped: Vec<&str> = (file.untyped.iter())
+        .map(|&(n, _)| lib.source_text(lib.tree.span(n)))
+        .collect();
+    assert_eq!(untyped, Vec::<&str>::new());
+    let program = to_tmpl(&settled, name).unwrap_or_else(|e| panic!("{e}"));
+    let problems = validate(&program, &Profile::full());
+    assert!(problems.is_empty(), "{problems:#?}");
+    let ran = run(&settled, Some(1_000_000));
+    assert_eq!(ran.failure, None);
+    (text::write(&program), ran.output)
+}
+
+/// A module's `let` of a `@fun` interface, initialized by a function
+/// literal, holds the interface's value, as a local one does; it doesn't
+/// declare a function. One of a function type still declares one.
+#[test]
+fn module_lets_of_fun_interfaces_hold_values() {
+    with_stack(|| {
+        let source = "
+    @fun interface Mapper<T, R>(x: T): R;
+    sealed interface MapError extends Error {}
+    class Odd(public n: Int) extends MapError {}
+    @fun interface Failing<T, E extends Error>(x: T): T throws E;
+    let inc: Mapper<Int, Int> = fn (n: Int): Int { n + 1 };
+    let safe: Failing<Int, Never<Error>> = fn (n: Int): Int { n * 2 };
+    let even: Failing<Int, Odd> = fn (n: Int): Int throws Odd {
+      if (n % 2 == 1) { throw new Odd(n) }
+      n
+    };
+    let plain: fn (Int): Int = fn (n: Int): Int { n - 1 };
+    let local(): Int { let m: Mapper<Int, Int> = fn (n: Int): Int { n * 10 }; m(1) }
+    console.log(\"${inc(1)} ${safe(2)} ${even(3) orelse -1} ${plain(4)} ${local()}\");
+";
+        let (written, output) = translate_and_run("funlets", source);
+        assert_eq!(output, ["2 4 -1 3 10"]);
+        // `inc` is a module `let` of `Mapper`; `plain` a function.
+        assert!(written.contains("let inc#"), "{written}");
+        assert!(written.contains("fn plain#"), "{written}");
+    });
+}
+
+/// A `[]` that an `orelse` or `catch` falls back to takes the list type
+/// of the operand, as an `if`'s `[]` branch takes the other branch's,
+/// wherever nothing else gives it one: a module's `let`, a local `let`,
+/// and an `if`'s branch.
+#[test]
+fn empty_list_fallbacks_take_the_operands_type() {
+    with_stack(|| {
+        let source = "
+    sealed interface FindError extends Error {}
+    class Missing(public key: String) extends FindError {}
+    let find(key: String): List<Int> throws Missing {
+      if (key == \"one\") { return [1]; }
+      throw new Missing(key);
+    }
+    let named = find(\"x\") orelse [];
+    let caught = find(\"one\") catch { [] };
+    let fallen = [] orelse find(\"one\");
+    let local(): Int { let found = find(\"y\") orelse []; found.length }
+    let branch(c: Boolean): Int {
+      let found = if (c) { find(\"z\") orelse [] } else { [2, 3] };
+      found.length
+    }
+    console.log(\"${named.length} ${caught.length} ${fallen.length} ${local()} ${branch(true)} ${branch(false)}\");
+";
+        let (written, output) = translate_and_run("fallbacks", source);
+        assert_eq!(output, ["0 1 0 0 0 2"]);
+        assert!(written.contains("let named#"), "{written}");
+    });
+}
+
+/// tmpl has no failure parameters yet (RFC 164's later chunks), so a call
+/// that fails as its callback does, of core's (`map`) or the library's,
+/// and a call of a function with a failure parameter, say not yet,
+/// rather than giving tmpl the validator rejects; calls of core's that
+/// can't fail translate as before.
+#[test]
+fn failure_parameters_not_yet_in_tmpl() {
+    with_stack(|| {
+        let outcome = |body: &str| -> String {
+            let source = format!(
+                "
+    sealed interface AppError extends Error {{}}
+    class Missing(public key: String) extends AppError {{}}
+    let find(key: String): Int throws Missing {{ throw new Missing(key) }}
+    let apply<E>(f: fn (): Int throws E): Int throws E {{ f() }}
+    {body}
+"
+            );
+            let mut library = Library::new();
+            library.add_file("params.temper.md", &source, SourceKind::Markdown);
+            load_imports(&Sources::standard(), &mut library);
+            let settled = settle(library);
+            let errors: Vec<String> = (settled.library.diagnostics.iter())
+                .map(|d| d.message.text())
+                .collect();
+            assert_eq!(errors, Vec::<String>::new(), "{body}");
+            match to_tmpl(&settled, "params") {
+                Ok(program) => {
+                    let problems = validate(&program, &Profile::full());
+                    assert!(problems.is_empty(), "{problems:#?}");
+                    "ok".to_string()
+                }
+                Err(e) => e.what,
+            }
+        };
+        const FAILS: &str = "a call that fails as its callback does (a failure parameter)";
+        const PARAM: &str = "a call of a function with a failure parameter";
+        let cases = [
+            ("let xs = [\"a\"].map { k => find(k) } orelse [];", FAILS),
+            (
+                "let n = [\"a\"].filter { k => find(k) > 0 }.length orelse 0;",
+                FAILS,
+            ),
+            ("let n = apply { find(\"a\") } orelse 0;", FAILS),
+            ("let n = apply { 1 };", PARAM),
+            ("let xs = [\"a\"].map { k => k.end };", "ok"),
+            (
+                "let s = [1, 2].filter { n => n > 1 }.join(\",\") { n => n.toString() };",
+                "ok",
+            ),
+        ];
+        for (body, expected) in cases {
+            assert_eq!(outcome(body), expected, "{body}");
+        }
+    });
+}

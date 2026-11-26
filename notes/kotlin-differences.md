@@ -1128,6 +1128,18 @@ to report those inputs as expected.
   which Kotlin takes as `throws Bubble`; the interpreter runs them, and
   every backend translates them. `deviations.py` excuses fuzzed inputs whose
   differences start at one of these words.
+- **Failure parameters** (RFC 164, ours, 2026-11-26; chunk 14,
+  `tests/settle/failures.cases`): a type parameter after `throws` is
+  bound by `Error` and solved per call, the join where arguments differ,
+  and core's `Listed.map`, `filter`, `reduce`, `reduceFrom`, `join`,
+  `sorted`, `List.forEach`, `String.forEach`, `ListBuilder.sort`, and
+  `Mapped`'s `forEach`, `toListWith`, and `toListBuilderWith` are
+  generic on their callbacks' failures, where Kotlin's take callbacks that can't fail (or
+  `throws Bubble` for all). So a callback of the wrong type to `filter`
+  is reported as a generic call's mismatched arguments ("Actual
+  arguments do not match signature: <E extends Error>…"), as `map`'s
+  already was, and one that bubbles fails at the call rather than in
+  the literal.
 - **Operands nested over 1000 deep are an error** (`NestedTooDeeply`),
   where Kotlin overflows its stack, already at about 300 nested calls or
   a 1000-term `a+a+...`.

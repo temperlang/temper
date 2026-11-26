@@ -822,7 +822,10 @@ P(x: Int): Boolean;`: `@fun` is metadata plus the `apply` convention.
   where its function type fits, as Java types lambdas and method
   references: `keep(isPos)`, for `keep(p: Pred)`, passes `isPos` as a
   `Pred`. A value already typed as one interface needs the adapter to
-  become another.
+  become another. A module's `let inc: Mapper<Int, Int> = fn …` holds
+  that value, as a local `let` does; only a function literal of a
+  function type declares a function (`is_function_literal` in
+  `to_tmpl.rs`, t1015).
 - **A function literal with no type wanted** is an error for now: one
   that initializes a `let` or `var` without a declared type, as `let f =
   fn (x: Int): Boolean { x > 0 };`, is "f needs a declared type, such as
@@ -957,7 +960,9 @@ no such one, or two, it's unknown, a gap rather than a guess.
 
 With nothing wanted, a branch that's `[]` takes the other branch's list
 type, as Kotlin's solver finds it: `when (b) { is H -> b.kids; else ->
-[] }` is a `List<Inline>`.
+[] }` is a `List<Inline>`. An `orelse`'s or `catch`'s fallback and its
+operand are branches alike, so `let xs = f() orelse []` is a list of
+`f()`'s type, at a module's level too (t1016).
 
 A sealed interface's subtypes are the classes and interfaces of its
 library that extend it directly. An `if` chain without a final `else`,
@@ -1226,10 +1231,40 @@ literal without a declared result, from its body, so `ls.map { x => 10
 / x }` fails at the call ("Function literals' results from their
 bodies", above). One that nothing solves is `Never<Error>`
 (`Types::no_failure`), which `Types::result` drops, so the call can't
-fail. Whether a call fails
-comes from its solved signature (`bubbles.rs`). tmpl has no failure
-parameters yet, so calls' type arguments leave them out, and backends
-don't take a failing callback to `map` yet (chunk 15).
+fail; a `Never<Error>` argument solves nothing either. Whether a call
+fails comes from its solved signature (`bubbles.rs`). As built
+(2026-11-26, chunk 14):
+
+- **Bound:** one declared without a bound is bound by `Error`, so
+  generic code may `throw` it, read its `message`, and check it with
+  `is` (`Settle::unwritten_bound`, for core's methods from their
+  signatures); writing `E extends Error` is allowed too. A bubble fits
+  that bound until `Bubble` goes (`fits_param_bound`), as `throws Error`
+  takes one; anything else that isn't a failure is "Type formal <E
+  extends Error> cannot bind to String …".
+- **Joins:** arguments that solve it two ways give their join
+  (`Types::join_failures`, in `solve_call`): `both(find, check)` for
+  callbacks failing with `Missing` and `Bad` under `AppError` fails with
+  `AppError`; under different roots, with `Error`, which only a handler
+  takes ("Cannot throw Error, failures under different roots, from a
+  function; handle them with orelse or catch"). `Bubble` beside a
+  declared failure is `Bubble`, so the declared one's argument doesn't
+  fit: they never mix, and `Bubble` is a subtype of nothing else
+  (`Types::subtype`).
+- **Core:** `Listed`'s `map`, `filter`, `reduce`, `reduceFrom`,
+  `reduceFromIndex`, `join`, and `sorted`, `List.forEach`,
+  `String.forEach`, `ListBuilder.sort`, and `Mapped`'s `forEach`,
+  `toListWith`, and `toListBuilderWith` are generic on their callbacks'
+  failures. A `for
+  … of` body solves nothing (`infers_result`): its failures are its
+  function's, as before.
+- **tmpl** has no failure parameters yet (chunks 15 and 16), so calls'
+  type arguments leave them out (`settled_type_args`), and typing notes
+  what each call's are, solved in full (`Typing::failure_args`): a call
+  that fails by one is "not yet in tmpl: a call that fails as its
+  callback does (a failure parameter)", and a call of a library's
+  function with one, "a call of a function with a failure parameter".
+  Calls of core's that can't fail translate as before.
 
 ## Declared failures
 
@@ -1237,8 +1272,8 @@ In progress (RFC 164, chunks 4 to 13 and decision 17's rework of
 notes/error-custom-kinds-plan.md, 2026-11-25): typed in the frontend,
 run on the interpreter, and translated to tmpl
 ([tmpl/nodes.md](tmpl/nodes.md), "Declared failures") and to every
-backend; failure parameters aren't in tmpl yet, and `error case`
-is still an error. The user-visible names, the root's (`FAILURE_ROOT` in
+backend; failure parameters ("Failure parameters", above) aren't in
+tmpl yet, and `error case` is still an error. The user-visible names, the root's (`FAILURE_ROOT` in
 `builtins.rs`, and core's `interface Error`), the messages' wording,
 and the default message and reports (`interp/failures.rs`), are kept in
 one place each, as they may change.
@@ -1335,9 +1370,9 @@ one place each, as they may change.
   `BrokenPromise` declaration), and the state machines'
   `getPromiseResultSync` all name it in one place each, which `E` will
   replace.
-- **Not yet:** `error case`, promises and generators with `E`, a
-  failure parameter's implied `extends Error` bound, and checks that a
-  failure type's own `message` or `cause` fits the root's.
+- **Not yet:** `error case`, promises and generators with `E`, failure
+  parameters in tmpl, and checks that a failure type's own `message` or
+  `cause` fits the root's.
 
 ## What may bubble
 
