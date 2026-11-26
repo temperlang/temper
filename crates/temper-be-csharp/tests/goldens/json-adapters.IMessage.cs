@@ -1,4 +1,3 @@
-using TemperLang.Core;
 using TemperLang.Std.Json;
 
 namespace JsonAdapters;
@@ -7,10 +6,19 @@ internal interface IMessage
 {
     void EncodeToJson(IJsonProducer p);
 
+    /// <exception cref="JsonException">Where it fails with JsonException.</exception>
     public static IMessage DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
         {
-            JsonObject obj = t is JsonObject ? (JsonObject)t : Core.Bubble<JsonObject>();
+            JsonObject obj;
+            if (t is JsonObject)
+            {
+                obj = (JsonObject)t;
+            }
+            else
+            {
+                throw new JsonShapeException("expected Message JSON object");
+            }
             IJsonSyntaxTree? valueForKind = obj.PropertyValueOrNull("kind");
             {
                 if (valueForKind != null && valueForKind is JsonString)
@@ -26,7 +34,7 @@ internal interface IMessage
                     }
                 }
             }
-            return Core.Bubble<IMessage>();
+            throw new JsonShapeException("expected one of Message's JSON shapes");
         }
     }
 

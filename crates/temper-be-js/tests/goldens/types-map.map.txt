@@ -1,146 +1,168 @@
 # generated line:column -> source:line:column, and the text at each
-17:1 -> ../map.temper.md:16:5  /** <- let listKeys<K extends MapKe
-23:1 -> ../map.temper.md:16:5  function listKeys(mapped) { <- let listKeys<K extends MapKe
-23:10 -> ../map.temper.md:16:9 (listKeys)  listKeys(mapped) { <- listKeys<K extends MapKey<K>
-23:18 -> ../map.temper.md:16:5  (mapped) { <- let listKeys<K extends MapKe
-24:3 -> ../map.temper.md:18:7  return listedMap(/** @type { <- mapped.toList().map { (entry
-27:1 -> ../map.temper.md:30:5  /** <- let messageDefined(code: Int
-31:1 -> ../map.temper.md:30:5  function messageDefined(code <- let messageDefined(code: Int
-31:10 -> ../map.temper.md:30:9 (messageDefined)  messageDefined(code) { <- messageDefined(code: Int): S
-31:24 -> ../map.temper.md:30:5  (code) { <- let messageDefined(code: Int
-32:3 -> ../map.temper.md:30:45  return messages.has(code).to <- messages.has(code).toString(
-35:1 -> ../map.temper.md:115:5  /** <- let colorToHex(color: List<B
-39:1 -> ../map.temper.md:115:5  function colorToHex(color) { <- let colorToHex(color: List<B
-39:10 -> ../map.temper.md:115:9 (colorToHex)  colorToHex(color) { <- colorToHex(color: List<Boole
-39:20 -> ../map.temper.md:115:5  (color) { <- let colorToHex(color: List<B
-40:3 -> ../map.temper.md:116:30  /** <- fn(b: Boolean): String {
-44:3 -> ../map.temper.md:116:30  function fn(b) { <- fn(b: Boolean): String {
-45:5 -> ../map.temper.md:117:9  if (b) { <- if (b) {
-46:7 -> ../map.temper.md:118:11  return "FF"; <- return "FF";
-48:7 -> ../map.temper.md:120:11  return "00"; <- return "00";
-51:3 -> ../map.temper.md:116:7  const c = listedJoin(/** @ty <- var c = color.join("", fn(b:
-52:3 -> ../map.temper.md:123:7  return `#${c}`; <- return "#${c}";
-55:1 -> ../map.temper.md:157:5  /** <- let printMap(name: String, m
-59:1 -> ../map.temper.md:157:5  function printMap(name, map) <- let printMap(name: String, m
-59:10 -> ../map.temper.md:157:9 (printMap)  printMap(name, map) { <- printMap(name: String, map:
-59:18 -> ../map.temper.md:157:5  (name, map) { <- let printMap(name: String, m
-60:3 -> ../map.temper.md:158:7  console.log(`--- ${name} --- <- console.log("--- ${name} ---
-61:3 -> ../map.temper.md:159:19  /** <- { key, value =>
-65:3 -> ../map.temper.md:159:19  function fn(key, value) { <- { key, value =>
-66:5 -> ../map.temper.md:160:9  console.log(`${key} = ${valu <- console.log("${key} = ${valu
-68:3 -> ../map.temper.md:159:7  mappedForEach(map, fn); <- map.forEach { key, value =>
-71:1 -> ../map.temper.md:164:5  /** <- let printMapBuilder(name: St
-75:1 -> ../map.temper.md:164:5  function printMapBuilder(nam <- let printMapBuilder(name: St
-75:10 -> ../map.temper.md:164:9 (printMapBuilder)  printMapBuilder(name, map) { <- printMapBuilder(name: String
-75:25 -> ../map.temper.md:164:5  (name, map) { <- let printMapBuilder(name: St
-76:3 -> ../map.temper.md:165:7  console.log(`--- ${name} --- <- console.log("--- ${name} ---
-77:3 -> ../map.temper.md:166:19  /** <- { key, value =>
-81:3 -> ../map.temper.md:166:19  function fn(key, value) { <- { key, value =>
-82:5 -> ../map.temper.md:167:9  console.log(`${key} = ${valu <- console.log("${key} = ${valu
-84:3 -> ../map.temper.md:166:7  mappedForEach(map, fn); <- map.forEach { key, value =>
-87:1 -> ../map.temper.md:25:5  /** @type {Map<number, strin <- let messages = new Map([
-88:1 -> ../map.temper.md:25:5  const messages = mapConstruc <- let messages = new Map([
-89:1 -> ../map.temper.md:31:5  const message = mappedGet(me <- let message = messages[200];
-90:1 -> ../map.temper.md:32:5  console.log(`Message: ${mess <- console.log("Message: ${mess
-91:1 -> ../map.temper.md:33:5  console.log(`Has 200: ${mess <- console.log("Has 200: ${mess
-92:1 -> ../map.temper.md:34:5  /** @type {string} */ <- console.log("Fallback: ${mes
-93:1 -> ../map.temper.md:34:5  let t$0; <- console.log("Fallback: ${mes
-94:1 -> ../map.temper.md:34:5  try { <- console.log("Fallback: ${mes
-100:1 -> ../map.temper.md:34:5  console.log(`Fallback: ${t$0 <- console.log("Fallback: ${mes
-101:1 -> ../map.temper.md:35:5  console.log(`Codes: ${listed <- console.log(
-102:1 -> ../map.temper.md:38:5  console.log(`Again: ${listed <- console.log("Again: ${messag
-103:1 -> ../map.temper.md:39:5  console.log(`Messages: ${lis <- console.log("Messages: ${mes
-104:1 -> ../map.temper.md:40:5  /** @type {readonly number[] <- let groups = messages.toList
-105:1 -> ../map.temper.md:40:5  const groups = mappedToListW <- let groups = messages.toList
-106:1 -> ../map.temper.md:41:5  console.log(`Groups: ${liste <- console.log("Groups: ${group
-107:1 -> ../map.temper.md:58:5  /** @type {Map<string, reado <- let neighbors = do {
-108:1 -> ../map.temper.md:58:5  let t$1; <- let neighbors = do {
-109:1 -> ../map.temper.md:58:5  { <- let neighbors = do {
-110:3 -> ../map.temper.md:60:7  /** @type {Map<string, reado <- let builder = new MapBuilder
-111:3 -> ../map.temper.md:60:7  const builder2 = new Map(); <- let builder = new MapBuilder
-112:3 -> ../map.temper.md:61:7  builder2.set("Honduras", Obj <- builder["Honduras"] = ["El S
-113:3 -> ../map.temper.md:63:7  console.log(`From builder: $ <- console.log(
-114:3 -> ../map.temper.md:66:7  console.log(`Key so far: ${l <- console.log("Key so far: ${l
-115:3 -> ../map.temper.md:68:7  builder2.set("El Salvador", <- builder["El Salvador"] = ["G
-116:3 -> ../map.temper.md:69:7  builder2.set("Nicaragua", Ob <- builder["Nicaragua"] = ["Cos
-117:3 -> ../map.temper.md:70:7  builder2.set("Panama", Objec <- builder["Panama"] = ["Colomb
-118:3 -> ../map.temper.md:72:7  try { <- builder.remove("Honduras") o
-123:3 -> ../map.temper.md:73:7  /** @type {readonly string[] <- let was = builder.remove("El
-124:3 -> ../map.temper.md:73:7  const was = mapBuilderRemove <- let was = builder.remove("El
-125:3 -> ../map.temper.md:74:7  console.log(`Was there: ${li <- console.log("Was there: ${wa
-126:3 -> ../map.temper.md:75:7  /** @type {string} */ <- console.log(builder.remove("
-127:3 -> ../map.temper.md:75:7  let t$2; <- console.log(builder.remove("
-128:3 -> ../map.temper.md:75:7  try { <- console.log(builder.remove("
-134:3 -> ../map.temper.md:75:7  console.log(t$2); <- console.log(builder.remove("
-137:1 -> ../map.temper.md:58:5  /** @type {Map<string, reado <- let neighbors = do {
-138:1 -> ../map.temper.md:58:5  const neighbors = t$1; <- let neighbors = do {
-139:1 -> ../map.temper.md:79:5  console.log(`From built: ${l <- console.log(
-140:1 -> ../map.temper.md:95:5  /** @type {Map<number, numbe <- let mapOfNone = new Map<Int,
-141:1 -> ../map.temper.md:95:5  const mapOfNone = mapConstru <- let mapOfNone = new Map<Int,
-142:1 -> ../map.temper.md:96:5  /** @type {Map<string, strin <- let mapOfOne = new Map<Strin
-143:1 -> ../map.temper.md:96:5  const mapOfOne = mapConstruc <- let mapOfOne = new Map<Strin
-144:1 -> ../map.temper.md:99:5  /** @type {Map<number, strin <- let mapOfTwo = new Map<Int,
-145:1 -> ../map.temper.md:99:5  const mapOfTwo = mapConstruc <- let mapOfTwo = new Map<Int,
-146:1 -> ../map.temper.md:103:5  console.log(`mapOfNone: ${ma <- console.log("mapOfNone: ${ma
-147:1 -> ../map.temper.md:104:5  console.log(`mapOfOne: ${map <- console.log("mapOfOne: ${map
-148:1 -> ../map.temper.md:105:5  console.log(`mapOfTwo: ${map <- console.log("mapOfTwo: ${map
-149:1 -> ../map.temper.md:125:5  /** @type {Map<string, reado <- let eightColors = new MapBui
-150:1 -> ../map.temper.md:125:5  const eightColors = new Map( <- let eightColors = new MapBui
-151:1 -> ../map.temper.md:126:5  eightColors.set("black", Obj <- eightColors["black"] = [fals
-152:1 -> ../map.temper.md:127:5  eightColors.set("red", Objec <- eightColors["red"] = [true,
-153:1 -> ../map.temper.md:128:5  eightColors.set("green", Obj <- eightColors["green"] = [fals
-154:1 -> ../map.temper.md:129:5  eightColors.set("blue", Obje <- eightColors["blue"] = [false
-155:1 -> ../map.temper.md:130:5  eightColors.set("yellow", Ob <- eightColors["yellow"] = [tru
-156:1 -> ../map.temper.md:131:5  eightColors.set("cyan", Obje <- eightColors["cyan"] = [false
-157:1 -> ../map.temper.md:132:5  eightColors.set("purple", Ob <- eightColors["purple"] = [tru
-158:1 -> ../map.temper.md:133:5  eightColors.set("white", Obj <- eightColors["white"] = [true
-159:1 -> ../map.temper.md:134:5  console.log(`with 3 bits you <- console.log("with 3 bits you
-161:1 -> ../map.temper.md:135:25  /** <- { color, bits =>
-165:1 -> ../map.temper.md:135:25  function fn9(color, bits) { <- { color, bits =>
-166:3 -> ../map.temper.md:136:7  /** @type {readonly boolean[ <- var foundByGetOr = eightColo
-167:3 -> ../map.temper.md:136:7  const foundByGetOr = mappedG <- var foundByGetOr = eightColo
-168:3 -> ../map.temper.md:137:7  if (foundByGetOr.length !== <- if (foundByGetOr.length != 3
-169:5 -> ../map.temper.md:138:9  console.log(`getOr("${color} <- console.log("getOr(\"${color
-171:3 -> ../map.temper.md:140:7  const want = colorToHex(bits <- var want = colorToHex(bits);
-172:3 -> ../map.temper.md:141:7  const got = colorToHex(found <- var got = colorToHex(foundBy
-173:3 -> ../map.temper.md:142:7  if (want !== got) { <- if (want != got) {
-174:5 -> ../map.temper.md:143:9  console.log(`getOr("${color} <- console.log("getOr(\"${color
-178:1 -> ../map.temper.md:135:5  mappedForEach(eightColors, f <- eightColors.forEach { color,
-179:1 -> ../map.temper.md:173:5  /** @type {Map<string, strin <- var map = new Map<String, St
-180:1 -> ../map.temper.md:173:5  let map = mapConstructor(/** <- var map = new Map<String, St
-181:1 -> ../map.temper.md:177:5  printMap("map", map); <- printMap("map", map);
-182:1 -> ../map.temper.md:187:5  /** @type {Map<string, strin <- var builder = map.toMapBuild
-183:1 -> ../map.temper.md:187:5  let builder = new Map(map); <- var builder = map.toMapBuild
-184:1 -> ../map.temper.md:188:5  builder.set("added key", "ad <- builder["added key"] = "adde
-185:1 -> ../map.temper.md:189:5  builder.set("key", "replaced <- builder["key"] = "replaced v
-186:1 -> ../map.temper.md:190:5  printMapBuilder("builder", b <- printMapBuilder("builder", b
-187:1 -> ../map.temper.md:201:5  printMap("map (same as above <- printMap("map (same as above
-188:1 -> ../map.temper.md:213:5  /** @type {Map<string, strin <- var newMap = builder.toMap()
-189:1 -> ../map.temper.md:213:5  let newMap = mappedToMap(bui <- var newMap = builder.toMap()
-190:1 -> ../map.temper.md:214:5  printMap("builder to map", n <- printMap("builder to map", n
-191:1 -> ../map.temper.md:227:5  /** @type {Map<string, strin <- let builderAsMapped: Mapped<
-192:1 -> ../map.temper.md:227:5  const builderAsMapped = buil <- let builderAsMapped: Mapped<
-193:1 -> ../map.temper.md:228:5  /** @type {Map<string, strin <- let newMapFromMapped = build
-194:1 -> ../map.temper.md:228:5  const newMapFromMapped = map <- let newMapFromMapped = build
-195:1 -> ../map.temper.md:232:5  mapBuilderRemove(builder, "o <- builder.remove("other key");
-196:1 -> ../map.temper.md:233:5  builder.set("key", "double r <- builder["key"] = "double rep
-197:1 -> ../map.temper.md:234:5  printMap("builder to map (sa <- printMap("builder to map (sa
-198:1 -> ../map.temper.md:235:5  printMap("builder to map via <- printMap("builder to map via
-199:1 -> ../map.temper.md:250:5  builder.clear(); <- builder.clear();
-200:1 -> ../map.temper.md:251:5  builder.set("something", "al <- builder["something"] = "alon
-201:1 -> ../map.temper.md:252:5  printMapBuilder("recently cl <- printMapBuilder("recently cl
-202:1 -> ../map.temper.md:263:5  /** @type {Map<string, strin <- var mayOrMayNotCopyMap = map
-203:1 -> ../map.temper.md:263:5  let mayOrMayNotCopyMap = map <- var mayOrMayNotCopyMap = map
-204:1 -> ../map.temper.md:267:5  /** @type {Map<string, strin <- var mapped: Mapped<String, S
-205:1 -> ../map.temper.md:267:5  let mapped = map; <- var mapped: Mapped<String, S
-206:1 -> ../map.temper.md:268:5  /** @type {Map<string, strin <- var mayOrMayNotCopyMapped =
-207:1 -> ../map.temper.md:268:5  let mayOrMayNotCopyMapped = <- var mayOrMayNotCopyMapped =
-208:1 -> ../map.temper.md:272:5  /** @type {Map<string, strin <- var madeBy = new MapBuilder<
-209:1 -> ../map.temper.md:272:5  let madeBy = new Map(); <- var madeBy = new MapBuilder<
-210:1 -> ../map.temper.md:273:5  madeBy.set("temper", "temper <- madeBy["temper"] = "temper s
-211:1 -> ../map.temper.md:274:5  printMapBuilder("made by", m <- printMapBuilder("made by", m
-212:1 -> ../map.temper.md:281:5  /** @type {Map<string, strin <- var madeByAndJokes = madeBy.
-213:1 -> ../map.temper.md:281:5  let madeByAndJokes = new Map <- var madeByAndJokes = madeBy.
-214:1 -> ../map.temper.md:282:5  madeByAndJokes.set("milk", " <- madeByAndJokes["milk"] = "mi
-215:1 -> ../map.temper.md:283:5  printMapBuilder("made by (an <- printMapBuilder("made by (an
-216:1 -> ../map.temper.md:291:5  printMapBuilder("made by (no <- printMapBuilder("made by (no
+18:1 -> ../map.temper.md:16:5  /** <- let listKeys<K extends MapKe
+24:1 -> ../map.temper.md:16:5  function listKeys(mapped) { <- let listKeys<K extends MapKe
+24:10 -> ../map.temper.md:16:9 (listKeys)  listKeys(mapped) { <- listKeys<K extends MapKey<K>
+24:18 -> ../map.temper.md:16:5  (mapped) { <- let listKeys<K extends MapKe
+25:3 -> ../map.temper.md:18:7  return listedMap(/** @type { <- mapped.toList().map { (entry
+28:1 -> ../map.temper.md:30:5  /** <- let messageDefined(code: Int
+32:1 -> ../map.temper.md:30:5  function messageDefined(code <- let messageDefined(code: Int
+32:10 -> ../map.temper.md:30:9 (messageDefined)  messageDefined(code) { <- messageDefined(code: Int): S
+32:24 -> ../map.temper.md:30:5  (code) { <- let messageDefined(code: Int
+33:3 -> ../map.temper.md:30:45  return messages.has(code).to <- messages.has(code).toString(
+36:1 -> ../map.temper.md:100:5  /** <- let lookUp(code: Int): Strin
+41:1 -> ../map.temper.md:100:5  function lookUp(code) { <- let lookUp(code: Int): Strin
+41:10 -> ../map.temper.md:100:9 (lookUp)  lookUp(code) { <- lookUp(code: Int): String th
+41:16 -> ../map.temper.md:100:5  (code) { <- let lookUp(code: Int): Strin
+42:3 -> ../map.temper.md:100:55  return mappedGet(messages, c <- messages[code] }
+45:1 -> ../map.temper.md:134:5  /** <- let colorToHex(color: List<B
+49:1 -> ../map.temper.md:134:5  function colorToHex(color) { <- let colorToHex(color: List<B
+49:10 -> ../map.temper.md:134:9 (colorToHex)  colorToHex(color) { <- colorToHex(color: List<Boole
+49:20 -> ../map.temper.md:134:5  (color) { <- let colorToHex(color: List<B
+50:3 -> ../map.temper.md:135:30  /** <- fn(b: Boolean): String {
+54:3 -> ../map.temper.md:135:30  function fn(b) { <- fn(b: Boolean): String {
+55:5 -> ../map.temper.md:136:9  if (b) { <- if (b) {
+56:7 -> ../map.temper.md:137:11  return "FF"; <- return "FF";
+58:7 -> ../map.temper.md:139:11  return "00"; <- return "00";
+61:3 -> ../map.temper.md:135:7  const c = listedJoin(/** @ty <- var c = color.join("", fn(b:
+62:3 -> ../map.temper.md:142:7  return `#${c}`; <- return "#${c}";
+65:1 -> ../map.temper.md:176:5  /** <- let printMap(name: String, m
+69:1 -> ../map.temper.md:176:5  function printMap(name, map) <- let printMap(name: String, m
+69:10 -> ../map.temper.md:176:9 (printMap)  printMap(name, map) { <- printMap(name: String, map:
+69:18 -> ../map.temper.md:176:5  (name, map) { <- let printMap(name: String, m
+70:3 -> ../map.temper.md:177:7  console.log(`--- ${name} --- <- console.log("--- ${name} ---
+71:3 -> ../map.temper.md:178:19  /** <- { key, value =>
+75:3 -> ../map.temper.md:178:19  function fn(key, value) { <- { key, value =>
+76:5 -> ../map.temper.md:179:9  console.log(`${key} = ${valu <- console.log("${key} = ${valu
+78:3 -> ../map.temper.md:178:7  mappedForEach(map, fn); <- map.forEach { key, value =>
+81:1 -> ../map.temper.md:183:5  /** <- let printMapBuilder(name: St
+85:1 -> ../map.temper.md:183:5  function printMapBuilder(nam <- let printMapBuilder(name: St
+85:10 -> ../map.temper.md:183:9 (printMapBuilder)  printMapBuilder(name, map) { <- printMapBuilder(name: String
+85:25 -> ../map.temper.md:183:5  (name, map) { <- let printMapBuilder(name: St
+86:3 -> ../map.temper.md:184:7  console.log(`--- ${name} --- <- console.log("--- ${name} ---
+87:3 -> ../map.temper.md:185:19  /** <- { key, value =>
+91:3 -> ../map.temper.md:185:19  function fn(key, value) { <- { key, value =>
+92:5 -> ../map.temper.md:186:9  console.log(`${key} = ${valu <- console.log("${key} = ${valu
+94:3 -> ../map.temper.md:185:7  mappedForEach(map, fn); <- map.forEach { key, value =>
+97:1 -> ../map.temper.md:25:5  /** @type {Map<number, strin <- let messages = new Map([
+98:1 -> ../map.temper.md:25:5  const messages = mapConstruc <- let messages = new Map([
+99:1 -> ../map.temper.md:31:5  const message = mappedGet(me <- let message = messages[200];
+100:1 -> ../map.temper.md:32:5  console.log(`Message: ${mess <- console.log("Message: ${mess
+101:1 -> ../map.temper.md:33:5  console.log(`Has 200: ${mess <- console.log("Has 200: ${mess
+102:1 -> ../map.temper.md:34:5  /** @type {string} */ <- console.log("Fallback: ${mes
+103:1 -> ../map.temper.md:34:5  let t$0; <- console.log("Fallback: ${mes
+104:1 -> ../map.temper.md:34:5  try { <- console.log("Fallback: ${mes
+110:1 -> ../map.temper.md:34:5  console.log(`Fallback: ${t$0 <- console.log("Fallback: ${mes
+111:1 -> ../map.temper.md:35:5  console.log(`Or null: ${mapp <- console.log("Or null: ${mess
+112:1 -> ../map.temper.md:36:5  console.log(`Codes: ${listed <- console.log(
+113:1 -> ../map.temper.md:39:5  console.log(`Again: ${listed <- console.log("Again: ${messag
+114:1 -> ../map.temper.md:40:5  console.log(`Messages: ${lis <- console.log("Messages: ${mes
+115:1 -> ../map.temper.md:41:5  /** @type {readonly number[] <- let groups = messages.toList
+116:1 -> ../map.temper.md:41:5  const groups = mappedToListW <- let groups = messages.toList
+117:1 -> ../map.temper.md:42:5  console.log(`Groups: ${liste <- console.log("Groups: ${group
+118:1 -> ../map.temper.md:60:5  /** @type {Map<string, reado <- let neighbors = do {
+119:1 -> ../map.temper.md:60:5  let t$1; <- let neighbors = do {
+120:1 -> ../map.temper.md:60:5  { <- let neighbors = do {
+121:3 -> ../map.temper.md:62:7  /** @type {Map<string, reado <- let builder = new MapBuilder
+122:3 -> ../map.temper.md:62:7  const builder2 = new Map(); <- let builder = new MapBuilder
+123:3 -> ../map.temper.md:63:7  builder2.set("Honduras", Obj <- builder["Honduras"] = ["El S
+124:3 -> ../map.temper.md:65:7  console.log(`From builder: $ <- console.log(
+125:3 -> ../map.temper.md:68:7  console.log(`Key so far: ${l <- console.log("Key so far: ${l
+126:3 -> ../map.temper.md:70:7  builder2.set("El Salvador", <- builder["El Salvador"] = ["G
+127:3 -> ../map.temper.md:71:7  builder2.set("Nicaragua", Ob <- builder["Nicaragua"] = ["Cos
+128:3 -> ../map.temper.md:72:7  builder2.set("Panama", Objec <- builder["Panama"] = ["Colomb
+129:3 -> ../map.temper.md:74:7  try { <- builder.remove("Honduras") o
+134:3 -> ../map.temper.md:75:7  /** @type {readonly string[] <- let was = builder.remove("El
+135:3 -> ../map.temper.md:75:7  let was; <- let was = builder.remove("El
+136:3 -> ../map.temper.md:75:7  try { <- let was = builder.remove("El
+142:3 -> ../map.temper.md:76:7  console.log(`Was there: ${li <- console.log("Was there: ${wa
+143:3 -> ../map.temper.md:77:7  /** @type {string} */ <- console.log(builder.remove("
+144:3 -> ../map.temper.md:77:7  let t$2; <- console.log(builder.remove("
+145:3 -> ../map.temper.md:77:7  try { <- console.log(builder.remove("
+151:3 -> ../map.temper.md:77:7  console.log(t$2); <- console.log(builder.remove("
+152:3 -> ../map.temper.md:78:7  /** @type {string} */ <- console.log(do { builder.rem
+153:3 -> ../map.temper.md:78:7  let t$3; <- console.log(do { builder.rem
+154:3 -> ../map.temper.md:78:7  try { <- console.log(do { builder.rem
+155:5 -> ../map.temper.md:78:24  mapBuilderRemove(builder2, " <- builder.remove("Belize"); "r
+161:3 -> ../map.temper.md:78:7  console.log(t$3); <- console.log(do { builder.rem
+164:1 -> ../map.temper.md:60:5  /** @type {Map<string, reado <- let neighbors = do {
+165:1 -> ../map.temper.md:60:5  const neighbors = t$1; <- let neighbors = do {
+166:1 -> ../map.temper.md:82:5  console.log(`From built: ${l <- console.log(
+167:1 -> ../map.temper.md:101:5  /** @type {string} */ <- console.log(lookUp(302) catc
+168:1 -> ../map.temper.md:101:5  let t$4; <- console.log(lookUp(302) catc
+169:1 -> ../map.temper.md:101:5  try { <- console.log(lookUp(302) catc
+175:1 -> ../map.temper.md:101:5  console.log(t$4); <- console.log(lookUp(302) catc
+176:1 -> ../map.temper.md:102:5  /** @type {Map<string, numbe <- let fromBuilder = new MapBui
+177:1 -> ../map.temper.md:102:5  const fromBuilder = new Map( <- let fromBuilder = new MapBui
+178:1 -> ../map.temper.md:103:5  /** @type {number} */ <- console.log((fromBuilder["no
+179:1 -> ../map.temper.md:103:5  let t$5; <- console.log((fromBuilder["no
+180:1 -> ../map.temper.md:103:5  try { <- console.log((fromBuilder["no
+186:1 -> ../map.temper.md:103:5  console.log(t$5.toString()); <- console.log((fromBuilder["no
+187:1 -> ../map.temper.md:114:5  /** @type {Map<number, numbe <- let mapOfNone = new Map<Int,
+188:1 -> ../map.temper.md:114:5  const mapOfNone = mapConstru <- let mapOfNone = new Map<Int,
+189:1 -> ../map.temper.md:115:5  /** @type {Map<string, strin <- let mapOfOne = new Map<Strin
+190:1 -> ../map.temper.md:115:5  const mapOfOne = mapConstruc <- let mapOfOne = new Map<Strin
+191:1 -> ../map.temper.md:118:5  /** @type {Map<number, strin <- let mapOfTwo = new Map<Int,
+192:1 -> ../map.temper.md:118:5  const mapOfTwo = mapConstruc <- let mapOfTwo = new Map<Int,
+193:1 -> ../map.temper.md:122:5  console.log(`mapOfNone: ${ma <- console.log("mapOfNone: ${ma
+194:1 -> ../map.temper.md:123:5  console.log(`mapOfOne: ${map <- console.log("mapOfOne: ${map
+195:1 -> ../map.temper.md:124:5  console.log(`mapOfTwo: ${map <- console.log("mapOfTwo: ${map
+196:1 -> ../map.temper.md:144:5  /** @type {Map<string, reado <- let eightColors = new MapBui
+197:1 -> ../map.temper.md:144:5  const eightColors = new Map( <- let eightColors = new MapBui
+198:1 -> ../map.temper.md:145:5  eightColors.set("black", Obj <- eightColors["black"] = [fals
+199:1 -> ../map.temper.md:146:5  eightColors.set("red", Objec <- eightColors["red"] = [true,
+200:1 -> ../map.temper.md:147:5  eightColors.set("green", Obj <- eightColors["green"] = [fals
+201:1 -> ../map.temper.md:148:5  eightColors.set("blue", Obje <- eightColors["blue"] = [false
+202:1 -> ../map.temper.md:149:5  eightColors.set("yellow", Ob <- eightColors["yellow"] = [tru
+203:1 -> ../map.temper.md:150:5  eightColors.set("cyan", Obje <- eightColors["cyan"] = [false
+204:1 -> ../map.temper.md:151:5  eightColors.set("purple", Ob <- eightColors["purple"] = [tru
+205:1 -> ../map.temper.md:152:5  eightColors.set("white", Obj <- eightColors["white"] = [true
+206:1 -> ../map.temper.md:153:5  console.log(`with 3 bits you <- console.log("with 3 bits you
+208:1 -> ../map.temper.md:154:25  /** <- { color, bits =>
+212:1 -> ../map.temper.md:154:25  function fn9(color, bits) { <- { color, bits =>
+213:3 -> ../map.temper.md:155:7  /** @type {readonly boolean[ <- var foundByGetOr = eightColo
+214:3 -> ../map.temper.md:155:7  const foundByGetOr = mappedG <- var foundByGetOr = eightColo
+215:3 -> ../map.temper.md:156:7  if (foundByGetOr.length !== <- if (foundByGetOr.length != 3
+216:5 -> ../map.temper.md:157:9  console.log(`getOr("${color} <- console.log("getOr(\"${color
+218:3 -> ../map.temper.md:159:7  const want = colorToHex(bits <- var want = colorToHex(bits);
+219:3 -> ../map.temper.md:160:7  const got = colorToHex(found <- var got = colorToHex(foundBy
+220:3 -> ../map.temper.md:161:7  if (want !== got) { <- if (want != got) {
+221:5 -> ../map.temper.md:162:9  console.log(`getOr("${color} <- console.log("getOr(\"${color
+225:1 -> ../map.temper.md:154:5  mappedForEach(eightColors, f <- eightColors.forEach { color,
+226:1 -> ../map.temper.md:192:5  /** @type {Map<string, strin <- var map = new Map<String, St
+227:1 -> ../map.temper.md:192:5  let map = mapConstructor(/** <- var map = new Map<String, St
+228:1 -> ../map.temper.md:196:5  printMap("map", map); <- printMap("map", map);
+229:1 -> ../map.temper.md:206:5  /** @type {Map<string, strin <- var builder = map.toMapBuild
+230:1 -> ../map.temper.md:206:5  let builder = new Map(map); <- var builder = map.toMapBuild
+231:1 -> ../map.temper.md:207:5  builder.set("added key", "ad <- builder["added key"] = "adde
+232:1 -> ../map.temper.md:208:5  builder.set("key", "replaced <- builder["key"] = "replaced v
+233:1 -> ../map.temper.md:209:5  printMapBuilder("builder", b <- printMapBuilder("builder", b
+234:1 -> ../map.temper.md:220:5  printMap("map (same as above <- printMap("map (same as above
+235:1 -> ../map.temper.md:232:5  /** @type {Map<string, strin <- var newMap = builder.toMap()
+236:1 -> ../map.temper.md:232:5  let newMap = mappedToMap(bui <- var newMap = builder.toMap()
+237:1 -> ../map.temper.md:233:5  printMap("builder to map", n <- printMap("builder to map", n
+238:1 -> ../map.temper.md:246:5  /** @type {Map<string, strin <- let builderAsMapped: Mapped<
+239:1 -> ../map.temper.md:246:5  const builderAsMapped = buil <- let builderAsMapped: Mapped<
+240:1 -> ../map.temper.md:247:5  /** @type {Map<string, strin <- let newMapFromMapped = build
+241:1 -> ../map.temper.md:247:5  const newMapFromMapped = map <- let newMapFromMapped = build
+242:1 -> ../map.temper.md:251:5  mapBuilderRemove(builder, "o <- builder.remove("other key");
+243:1 -> ../map.temper.md:252:5  builder.set("key", "double r <- builder["key"] = "double rep
+244:1 -> ../map.temper.md:253:5  printMap("builder to map (sa <- printMap("builder to map (sa
+245:1 -> ../map.temper.md:254:5  printMap("builder to map via <- printMap("builder to map via
+246:1 -> ../map.temper.md:269:5  builder.clear(); <- builder.clear();
+247:1 -> ../map.temper.md:270:5  builder.set("something", "al <- builder["something"] = "alon
+248:1 -> ../map.temper.md:271:5  printMapBuilder("recently cl <- printMapBuilder("recently cl
+249:1 -> ../map.temper.md:282:5  /** @type {Map<string, strin <- var mayOrMayNotCopyMap = map
+250:1 -> ../map.temper.md:282:5  let mayOrMayNotCopyMap = map <- var mayOrMayNotCopyMap = map
+251:1 -> ../map.temper.md:286:5  /** @type {Map<string, strin <- var mapped: Mapped<String, S
+252:1 -> ../map.temper.md:286:5  let mapped = map; <- var mapped: Mapped<String, S
+253:1 -> ../map.temper.md:287:5  /** @type {Map<string, strin <- var mayOrMayNotCopyMapped =
+254:1 -> ../map.temper.md:287:5  let mayOrMayNotCopyMapped = <- var mayOrMayNotCopyMapped =
+255:1 -> ../map.temper.md:291:5  /** @type {Map<string, strin <- var madeBy = new MapBuilder<
+256:1 -> ../map.temper.md:291:5  let madeBy = new Map(); <- var madeBy = new MapBuilder<
+257:1 -> ../map.temper.md:292:5  madeBy.set("temper", "temper <- madeBy["temper"] = "temper s
+258:1 -> ../map.temper.md:293:5  printMapBuilder("made by", m <- printMapBuilder("made by", m
+259:1 -> ../map.temper.md:300:5  /** @type {Map<string, strin <- var madeByAndJokes = madeBy.
+260:1 -> ../map.temper.md:300:5  let madeByAndJokes = new Map <- var madeByAndJokes = madeBy.
+261:1 -> ../map.temper.md:301:5  madeByAndJokes.set("milk", " <- madeByAndJokes["milk"] = "mi
+262:1 -> ../map.temper.md:302:5  printMapBuilder("made by (an <- printMapBuilder("made by (an
+263:1 -> ../map.temper.md:310:5  printMapBuilder("made by (no <- printMapBuilder("made by (no

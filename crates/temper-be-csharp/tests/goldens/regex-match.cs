@@ -59,7 +59,7 @@ public static class MatchGlobal
             {
                 option1 = Mapped.Get(groups, "option1").Value;
             }
-            catch (global::TemperLang.Core.Bubble)
+            catch (MissingKey)
             {
                 option1 = "";
             }
@@ -68,7 +68,7 @@ public static class MatchGlobal
             {
                 alphaOption2 = Mapped.Get(groups, "alphaOption2").Value;
             }
-            catch (global::TemperLang.Core.Bubble)
+            catch (MissingKey)
             {
                 alphaOption2 = "";
             }

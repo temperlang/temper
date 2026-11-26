@@ -28,7 +28,7 @@ the interpreter gives.
 
     let parse(s: String): Int { s.toInt32() orelse -1 }
 
-    // The call in the division may bubble, which the `orelse` catches.
+    // The parse in the division may fail, which the `orelse` handles.
     let halved(s: String, d: Int): Int { s.toInt32() / d orelse -1 }
 
     let positive(n: Int): Int throws Bubble {

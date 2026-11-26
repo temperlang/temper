@@ -28,12 +28,37 @@ internal class Circle : IShape
         p.EndObject();
     }
 
+    /// <exception cref="JsonException">Where it fails with JsonException.</exception>
     public static Circle DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
-        JsonObject obj = t is JsonObject ? (JsonObject)t : Core.Bubble<JsonObject>();
+        JsonObject obj;
+        if (t is JsonObject)
+        {
+            obj = (JsonObject)t;
+        }
+        else
+        {
+            throw new JsonShapeException("expected Circle JSON object");
+        }
         IJsonSyntaxTree radiusTree = obj.PropertyValueOrBubble("radius");
-        IJsonNumeric radiusJson = radiusTree is IJsonNumeric ? (IJsonNumeric)radiusTree : Core.Bubble<IJsonNumeric>();
-        int radius = radiusJson.AsInt32();
+        IJsonNumeric radiusJson;
+        if (radiusTree is IJsonNumeric)
+        {
+            radiusJson = (IJsonNumeric)radiusTree;
+        }
+        else
+        {
+            throw new JsonShapeException("expected Int for radius");
+        }
+        int radius;
+        try
+        {
+            radius = radiusJson.AsInt32();
+        }
+        catch (ParseError failure)
+        {
+            throw Core.WithCause(new JsonShapeException("expected Int for radius"), failure);
+        }
         return new Circle(radius);
     }
 

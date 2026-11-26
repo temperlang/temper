@@ -1,4 +1,4 @@
-use super::{i32_to_usize, Error, List, Listed, Result, ToList};
+use super::{i32_to_usize, List, Listed, MissingKey, ToList};
 use indexmap::IndexMap;
 use std::{
     cell::RefCell,
@@ -15,9 +15,14 @@ where
 
     // TODO Receive &K? And more references all throughout be-rust?
     // TODO &Q where K: Borrow<Q>? See also indexmap::Equivalent.
-    fn get(&self, key: K) -> Result<V>;
+    /// The key's value, or a `MissingKey` failure.
+    fn get(&self, key: K) -> std::result::Result<V, MissingKey>;
 
     fn get_or(&self, key: K, fallback: V) -> V;
+
+    /// The key's value, or `None`: `getOr` with a null fallback where the
+    /// values aren't nullable.
+    fn get_or_null(&self, key: K) -> Option<V>;
 
     fn has(&self, key: K) -> bool;
 
@@ -100,12 +105,16 @@ where
         }
     }
 
-    fn get(&self, key: K) -> Result<V> {
-        Ok(self.0.get(&key).ok_or_else(Error::new)?.clone())
+    fn get(&self, key: K) -> std::result::Result<V, MissingKey> {
+        self.0.get(&key).cloned().ok_or_else(|| MissingKey::of(&key))
     }
 
     fn get_or(&self, key: K, fallback: V) -> V {
         self.0.get(&key).cloned().unwrap_or(fallback)
+    }
+
+    fn get_or_null(&self, key: K) -> Option<V> {
+        self.0.get(&key).cloned()
     }
 
     fn has(&self, key: K) -> bool {
@@ -165,12 +174,14 @@ where
         Some(((*key).clone(), (*value).clone()))
     }
 
-    pub fn remove(&self, key: K) -> Result<V> {
-        self.0
-            .write()
-            .unwrap()
-            .shift_remove(&key)
-            .ok_or_else(Error::new)
+    /// Removes the key's entry, giving its value, or a `MissingKey` if
+    /// there's none.
+    pub fn remove(&self, key: K) -> std::result::Result<V, MissingKey>
+    where
+        K: Send + Sync + 'static,
+    {
+        let removed = self.0.write().unwrap().shift_remove(&key);
+        removed.ok_or_else(|| MissingKey::of(&key))
     }
 
     pub fn set(&self, key: K, value: V) {
@@ -195,23 +206,17 @@ where
         }
     }
 
-    fn get(&self, key: K) -> Result<V> {
-        Ok(self
-            .0
-            .read()
-            .unwrap()
-            .get(&key)
-            .ok_or_else(Error::new)?
-            .clone())
+    fn get(&self, key: K) -> std::result::Result<V, MissingKey> {
+        self.get_or_null(key.clone())
+            .ok_or_else(|| MissingKey::of(&key))
     }
 
     fn get_or(&self, key: K, fallback: V) -> V {
-        self.0
-            .read()
-            .unwrap()
-            .get(&key)
-            .cloned()
-            .unwrap_or(fallback)
+        self.get_or_null(key).unwrap_or(fallback)
+    }
+
+    fn get_or_null(&self, key: K) -> Option<V> {
+        self.0.read().unwrap().get(&key).cloned()
     }
 
     fn has(&self, key: K) -> bool {

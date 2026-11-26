@@ -13,6 +13,7 @@ internal class MessageJsonAdapter : IJsonAdapter<IMessage>
         x.EncodeToJson(p);
     }
 
+    /// <exception cref="JsonException">Where it fails with JsonException.</exception>
     public IMessage DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
         return IMessage.DecodeFromJson(t, ic);

@@ -39,25 +39,36 @@ pub(crate) fn init() -> temper_core::Result<()> {
             let points: temper_core::List<i32> = Arc::new(vec![65, 1114112]);
             let o =
                 temper_core::string::from_code_points(&*temper_core::Listed::new(points.clone()))
-                    .unwrap_or_else(|_| Arc::new("?".to_string()));
-            let q = appending(-1).unwrap_or_else(|_| Arc::new("?".to_string()));
+                    .unwrap_or_else(|e2| temper_core::int_to_string(e2.code_point(), Some(16)));
+            let q = appending(-1).unwrap_or_else(|e3| Arc::new(e3.code_point().to_string()));
             let builder: temper_core::MapBuilder<Arc<String>, i32> = temper_core::MapBuilder::new();
             let r =
-                temper_core::MapBuilder::remove(&builder, Arc::new("x".to_string())).unwrap_or(-11);
+                temper_core::MappedTrait::get(&builder, Arc::new("x".to_string())).unwrap_or(-11);
+            let r2 = (|| {
+                Ok::<_, temper_core::MissingKey>(Arc::new(
+                    temper_core::MapBuilder::remove(&builder, Arc::new("y".to_string()))?
+                        .to_string(),
+                ))
+            })()
+            .unwrap_or_else(|e4| e4.message());
             let s = (|| {
-                Ok::<_, temper_core::Error>(
+                Ok::<_, temper_std::temporal::TemporalError>(
                     temper_std::temporal::Date::new(2023, 2, 30)?.to_string(),
                 )
             })()
             .unwrap_or_else(|_| Arc::new("no date".to_string()));
             let t = (|| {
-                Ok::<_, temper_core::Error>(
+                Ok::<_, temper_std::temporal::TemporalError>(
                     temper_std::temporal::Date::from_iso_string("2023-13-01")?.to_string(),
                 )
             })()
             .unwrap_or_else(|_| Arc::new("bad date".to_string()));
             let u = parsing("[1,").unwrap_or_else(|_| Arc::new("bad json".to_string()));
-            println!("{k} {l} {m} {n} {o} {q} {r} {s} {t} {u}");
+            let partial = temper_std::json::JsonTextProducer::new(None);
+            partial.start_object();
+            let v = partial.to_json_string().unwrap_or_else(|e5| e5.problem());
+            println!("{k} {l} {m} {n} {o} {q} {r} {r2} {s} {t} {u}");
+            println!("{v}");
             println!("panicking");
             let p = inner().unwrap_or(-1);
             println!("after the panic {p}");
@@ -158,13 +169,13 @@ pub(crate) fn calling(f: Arc<dyn Fn() -> temper_core::Result<i32> + Send + Sync>
     f().unwrap_or(-9)
 }
 
-pub(crate) fn appending(code_point: i32) -> temper_core::Result<Arc<String>> {
+pub(crate) fn appending(code_point: i32) -> Result<Arc<String>, temper_core::InvalidCodePoint> {
     let sb = Arc::new(std::sync::RwLock::new(String::new()));
     temper_core::string::builder::append_code_point(&sb, code_point)?;
     Ok(temper_core::string::builder::to_string(&sb))
 }
 
-pub(crate) fn parsing(text: impl ToArcString) -> temper_core::Result<Arc<String>> {
+pub(crate) fn parsing(text: impl ToArcString) -> Result<Arc<String>, temper_std::json::JsonError> {
     let text = text.to_arc_string();
     temper_std::json::parse_json(text.clone())?;
     Ok(Arc::new("parsed".to_string()))

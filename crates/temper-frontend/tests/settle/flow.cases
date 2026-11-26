@@ -1399,7 +1399,7 @@ log 1 4 9 4 1 1
 let stop(): Never<Void> { panic() }
 let stopInt(): Never<Int> { panic() }
 let stopStr(): Never<String> { panic() }
-let p(s: String): Int throws Bubble { s.toInt32() }
+let p(s: String): Int throws Bubble { s.toInt32() orelse bubble() }
 let plain(): Void {}
 let assigned(b: Boolean): Int {
   let x: Int;
@@ -1463,7 +1463,7 @@ console.log("${endsInt(true)} ${orElseInt("4")} ${coalesced("c")} ${whenInt(1)} 
     (Fn
       (Let ^s:20 String)
       (Call throws Int Bubble)
-      (Block (Call (Call . s:20 \toInt32)))))
+      (Block (Orelse (Call (Call . s:20 \toInt32)) (Fail)))))
   (Let ^plain:4 (Fn Void (Block)))
   (Let
     ^assigned:5
@@ -1512,7 +1512,7 @@ console.log("${endsInt(true)} ${orElseInt("4")} ${coalesced("c")} ${whenInt(1)} 
     (Fn
       (Let ^b:30 Boolean)
       Int
-      (Block (If b:30 (Block (Return @1178 1)) (Block)) (Call stopInt:1))))
+      (Block (If b:30 (Block (Return @1194 1)) (Block)) (Call stopInt:1))))
   (Let
     ^orElseInt:11
     (Fn
@@ -1546,14 +1546,14 @@ console.log("${endsInt(true)} ${orElseInt("4")} ${coalesced("c")} ${whenInt(1)} 
               (If (Call > i:35 3) (Block (Call stop:0)) (Block))
               (Assign i:35 (Call + i:35 1))
               #void)
-            (Break @1498)))
+            (Break @1514)))
         i:35)))
   (Let
     ^endsVoid:16
     (Fn
       (Let ^b:36 Boolean)
       Int
-      (Block (If b:36 (Block (Return @1562 1)) (Block)) (Call stop:0))))
+      (Block (If b:36 (Block (Return @1578 1)) (Block)) (Call stop:0))))
   (Let
     ^orElseVoid:17
     (Fn (Let ^s:37 String) Int (Block (Orelse (Call p:3 s:37) (Call stop:0)))))
@@ -1594,10 +1594,10 @@ console.log("${endsInt(true)} ${orElseInt("4")} ${coalesced("c")} ${whenInt(1)} 
       " "
       (Call inLoop:15 2)))
   #void)
-error 1618..1624: Cannot assign to Int32 from Void
-error 1672..1678: Cannot assign to Int32 from Void
-error 1726..1732: Cannot assign to String from Void
-error 1790..1796: Cannot assign to Int32 from Void
-error 1007..1008: x is not initialized along branches
+error 1634..1640: Cannot assign to Int32 from Void
+error 1688..1694: Cannot assign to Int32 from Void
+error 1742..1748: Cannot assign to String from Void
+error 1806..1812: Cannot assign to Int32 from Void
+error 1023..1024: x is not initialized along branches
 log 1 1 n p
 log 1 4 c 2 2

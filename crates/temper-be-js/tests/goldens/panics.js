@@ -1,4 +1,7 @@
 import {
+  InvalidCodePoint,
+  MissingKey,
+  ParseError,
   bubble,
   dateConstructor,
   dateFromIsoString,
@@ -7,6 +10,7 @@ import {
   int64ToInt32,
   isBubble,
   mapBuilderRemove,
+  mappedGet,
   panic,
   stringBuilderAppendCodePoint,
   stringFromCodePoint,
@@ -16,7 +20,12 @@ import {
   stringToInt64,
   type,
 } from "@temperlang/core";
-import { parseJson } from "@temperlang/std/json";
+import {
+  JsonError,
+  JsonSyntaxError,
+  JsonTextProducer,
+  parseJson,
+} from "@temperlang/std/json";
 import {
   CodePart,
   CodeRange,
@@ -24,6 +33,11 @@ import {
   RegexNode,
   Repeat,
 } from "@temperlang/std/regex";
+import {
+  InvalidDate,
+  InvalidIsoDate,
+  TemporalError,
+} from "@temperlang/std/temporal";
 
 /**
  * @param {number} n
@@ -64,6 +78,7 @@ function calling(f) {
 /**
  * @param {number} codePoint
  * @returns {string}
+ * @throws {InvalidCodePoint}
  */
 function appending(codePoint) {
   const sb = [""];
@@ -74,6 +89,7 @@ function appending(codePoint) {
 /**
  * @param {string} text
  * @returns {string}
+ * @throws {JsonError}
  */
 function parsing(text) {
   parseJson(text);
@@ -159,7 +175,7 @@ let e;
 try {
   e = stringToInt32("nope", null);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof ParseError)) throw e$;
   e = -5;
 }
 /** @type {number} */
@@ -167,7 +183,7 @@ let f;
 try {
   f = stringToFloat64("x");
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof ParseError)) throw e$;
   f = -6.0;
 }
 /** @type {string} */
@@ -175,7 +191,7 @@ let g;
 try {
   g = stringFromCodePoint(1114112);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof InvalidCodePoint)) throw e$;
   g = "?";
 }
 const digits = /** @type {RegexNode} */ (/** @type {unknown} */ (new Repeat(/** @type {RegexNode} */ (/** @type {unknown} */ (new CodeSet(Object.freeze([/** @type {CodePart} */ (/** @type {unknown} */ (new CodeRange(48, 57)))]), false))), 1, null, false))).compiled();
@@ -194,7 +210,7 @@ let k;
 try {
   k = stringToInt64("zz", null);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof ParseError)) throw e$;
   k = -7n;
 }
 /** @type {number} */
@@ -202,7 +218,7 @@ let l;
 try {
   l = stringToInt32("99999999999", null);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof ParseError)) throw e$;
   l = -8;
 }
 /** @type {number} */
@@ -210,7 +226,7 @@ let m;
 try {
   m = float64ToInt32(1e20);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof ParseError)) throw e$;
   m = -9;
 }
 /** @type {number} */
@@ -218,7 +234,7 @@ let n;
 try {
   n = int64ToInt32(5000000000n);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof ParseError)) throw e$;
   n = -10;
 }
 /** @type {readonly number[]} */
@@ -227,42 +243,50 @@ const points = Object.freeze([65, 1114112]);
 let o;
 try {
   o = stringFromCodePoints(/** @type {number[]} */ (points));
-} catch (e$) {
-  if (!isBubble(e$)) throw e$;
-  o = "?";
+} catch (e2) {
+  if (!(e2 instanceof InvalidCodePoint)) throw e2;
+  o = e2.codePoint.toString(16);
 }
 /** @type {string} */
 let q;
 try {
   q = appending(-1);
-} catch (e$) {
-  if (!isBubble(e$)) throw e$;
-  q = "?";
+} catch (e3) {
+  if (!(e3 instanceof InvalidCodePoint)) throw e3;
+  q = e3.codePoint.toString();
 }
 /** @type {Map<string, number>} */
 const builder = new Map();
 /** @type {number} */
 let r;
 try {
-  r = mapBuilderRemove(builder, "x");
+  r = mappedGet(builder, "x");
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof MissingKey)) throw e$;
   r = -11;
+}
+/** @type {string} */
+let r2;
+try {
+  r2 = mapBuilderRemove(builder, "y").toString();
+} catch (e4) {
+  if (!(e4 instanceof MissingKey)) throw e4;
+  r2 = /** @type {Error} */ (/** @type {unknown} */ (e4)).message;
 }
 /** @type {string} */
 let s;
 try {
-  s = dateConstructor(2023, 2, 30).toISOString().split("T")[0];
+  s = dateConstructor(2023, 2, 30, InvalidDate).toISOString().split("T")[0];
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof TemporalError)) throw e$;
   s = "no date";
 }
 /** @type {string} */
 let t;
 try {
-  t = dateFromIsoString("2023-13-01").toISOString().split("T")[0];
+  t = dateFromIsoString("2023-13-01", InvalidIsoDate).toISOString().split("T")[0];
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof TemporalError)) throw e$;
   t = "bad date";
 }
 /** @type {string} */
@@ -270,10 +294,21 @@ let u;
 try {
   u = parsing("[1,");
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof JsonError)) throw e$;
   u = "bad json";
 }
-console.log(`${k.toString()} ${l} ${m} ${n} ${o} ${q} ${r} ${s} ${t} ${u}`);
+const partial = new JsonTextProducer();
+partial.startObject();
+/** @type {string} */
+let v;
+try {
+  v = partial.toJsonString();
+} catch (e5) {
+  if (!(e5 instanceof JsonSyntaxError)) throw e5;
+  v = e5.problem;
+}
+console.log(`${k.toString()} ${l} ${m} ${n} ${o} ${q} ${r} ${r2} ${s} ${t} ${u}`);
+console.log(v);
 console.log("panicking");
 /** @type {number} */
 let p;

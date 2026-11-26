@@ -89,57 +89,15 @@ namespace temper {
                 return years;
             }
 
-            /// Bubbles unless there's such a day in the proleptic Gregorian calendar.
-            inline void requireValid(int32_t year, int32_t month, int32_t day) {
-                static const int32_t days[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-                if (month < 1 || month > 12 || day < 1) {
-                    bubble("no such date");
-                }
-                bool leap = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
-                int32_t last = month == 2 && leap ? 29 : days[month - 1];
-                if (day > last) {
-                    bubble("no such date");
-                }
-            }
-
+            // A date of fields known to name a day, as the clock gives it:
+            // std's own `Date` constructor checks those it's given.
             template<class D>
             std::shared_ptr<D> makeDate(int32_t year, int32_t month, int32_t day) {
-                requireValid(year, month, day);
                 std::shared_ptr<D> d = std::make_shared<D>();
                 d->year = year;
                 d->month = month;
                 d->day = day;
                 return d;
-            }
-
-            template<class D>
-            std::shared_ptr<D> fromIso(const Str& isoString) {
-                size_t pos = 0;
-                bool is_negative = false;
-                if (!isoString.empty() && isoString[0] == '-') {
-                    is_negative = true;
-                    pos = 1;
-                }
-                size_t dash1 = isoString.find('-', pos);
-                if (dash1 == std::string::npos) {
-                    bubble<std::shared_ptr<D>>("invalid ISO date string");
-                }
-                size_t dash2 = isoString.find('-', dash1 + 1);
-                if (dash2 == std::string::npos) {
-                    bubble<std::shared_ptr<D>>("invalid ISO date string");
-                }
-                int32_t y = 0, m = 0, d = 0;
-                try {
-                    y = std::stoi(isoString.substr(pos, dash1 - pos));
-                    if (is_negative) {
-                        y = -y;
-                    }
-                    m = std::stoi(isoString.substr(dash1 + 1, dash2 - dash1 - 1));
-                    d = std::stoi(isoString.substr(dash2 + 1));
-                } catch (const std::exception&) {
-                    bubble<std::shared_ptr<D>>("invalid ISO date string");
-                }
-                return makeDate<D>(y, m, d);
             }
 
             template<class D>

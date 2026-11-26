@@ -7,8 +7,12 @@ local Repeat = require("std/regex").Repeat
 local CodeSet = require("std/regex").CodeSet
 local CodePart = require("std/regex").CodePart
 local CodeRange = require("std/regex").CodeRange
+local JsonError = require("std/json").JsonError
+local JsonTextProducer = require("std/json").JsonTextProducer
+local JsonSyntaxError = require("std/json").JsonSyntaxError
 local parseJson = require("std/json").parseJson
 local Date = require("std/temporal").Date
+local TemporalError = require("std/temporal").TemporalError
 
 ---@class panics.Shape
 
@@ -136,23 +140,23 @@ end) then
 end
 ---@type integer
 local e
-if not temper.pcall(function()
+if not temper.catch(function()
   e = temper.string_toint32("nope")
-end) then
+end, temper.ParseError) then
   e = -5
 end
 ---@type number
 local f
-if not temper.pcall(function()
+if not temper.catch(function()
   f = temper.string_tofloat64("x")
-end) then
+end, temper.ParseError) then
   f = -6.0
 end
 ---@type string
 local g
-if not temper.pcall(function()
+if not temper.catch(function()
   g = temper.string_fromcodepoint(1114112)
-end) then
+end, temper.InvalidCodePoint) then
   g = "?"
 end
 local digits = Repeat(CodeSet({ CodeRange(48, 57) }, false), 1, temper.null, false):compiled()
@@ -167,77 +171,98 @@ local i = calling(function() return failing(2) end)
 print(a .. " " .. b .. " " .. e .. " " .. tostring(temper.float_eq(f, -6.0)) .. " " .. g .. " " .. h .. " " .. i)
 ---@type integer
 local k
-if not temper.pcall(function()
+if not temper.catch(function()
   k = temper.string_toint64("zz")
-end) then
+end, temper.ParseError) then
   k = int64_neg7
 end
 ---@type integer
 local l
-if not temper.pcall(function()
+if not temper.catch(function()
   l = temper.string_toint32("99999999999")
-end) then
+end, temper.ParseError) then
   l = -8
 end
 ---@type integer
 local m
-if not temper.pcall(function()
+if not temper.catch(function()
   m = temper.float64_toint32(1e20)
-end) then
+end, temper.ParseError) then
   m = -9
 end
 ---@type integer
 local n
-if not temper.pcall(function()
+if not temper.catch(function()
   n = temper.int64_toint32(int64_5000000000)
-end) then
+end, temper.ParseError) then
   n = -10
 end
 local points = { 65, 1114112 }
 ---@type string
 local o
-if not temper.pcall(function()
+local t_1, e2 = temper.catch(function()
   o = temper.string_fromcodepoints(points)
-end) then
-  o = "?"
+end, temper.InvalidCodePoint)
+if not t_1 then
+  o = temper.int32_tostring(e2.codePoint, 16)
 end
 ---@type string
 local q
-if not temper.pcall(function()
+local t_2, e3 = temper.catch(function()
   q = appending(-1)
-end) then
-  q = "?"
+end, temper.InvalidCodePoint)
+if not t_2 then
+  q = tostring(e3.codePoint)
 end
 local builder = temper.mapbuilder_constructor()
 ---@type integer
 local r
-if not temper.pcall(function()
-  r = temper.mapbuilder_remove(builder, "x")
-end) then
+if not temper.catch(function()
+  r = temper.mapped_get(builder, "x")
+end, temper.MissingKey) then
   r = -11
 end
 ---@type string
+local r2
+local t_3, e4 = temper.catch(function()
+  r2 = tostring(temper.mapbuilder_remove(builder, "y"))
+end, temper.MissingKey)
+if not t_3 then
+  r2 = e4.message
+end
+---@type string
 local s
-if not temper.pcall(function()
+if not temper.catch(function()
   s = temper.date_tostring(temper.date_constructor(2023, 2, 30))
-end) then
+end, TemporalError) then
   s = "no date"
 end
 ---@type string
 local t
-if not temper.pcall(function()
+if not temper.catch(function()
   t = temper.date_tostring(temper.date_fromisostring("2023-13-01"))
-end) then
+end, TemporalError) then
   t = "bad date"
 end
 ---@type string
 local u
-if not temper.pcall(function()
+if not temper.catch(function()
   u = parsing("[1,")
-end) then
+end, JsonError) then
   u = "bad json"
 end
-print(temper.int64_tostring(k) .. " " .. l .. " " .. m .. " " .. n .. " " .. o .. " " .. q .. " " .. r .. " " .. s .. " " .. t .. " " .. u)
+local partial = JsonTextProducer()
+partial:startObject()
+---@type string
+local v
+local t_4, e5 = temper.catch(function()
+  v = partial:toJsonString()
+end, JsonSyntaxError)
+if not t_4 then
+  v = e5.problem
+end
+print(temper.int64_tostring(k) .. " " .. l .. " " .. m .. " " .. n .. " " .. o .. " " .. q .. " " .. r .. " " .. r2 .. " " .. s .. " " .. t .. " " .. u)
+print(v)
 print("panicking")
 ---@type integer
 local p

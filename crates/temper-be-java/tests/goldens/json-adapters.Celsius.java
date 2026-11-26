@@ -1,10 +1,13 @@
 package json_adapters;
 
 import temper.core.Core;
+import temper.core.ParseError;
 import temper.std.json.InterchangeContext;
 import temper.std.json.JsonAdapter;
+import temper.std.json.JsonException;
 import temper.std.json.JsonNumeric;
 import temper.std.json.JsonProducer;
+import temper.std.json.JsonShapeException;
 import temper.std.json.JsonSyntaxTree;
 
 final class Celsius {
@@ -18,8 +21,14 @@ final class Celsius {
         p.int32Value(this.degrees);
     }
 
-    public static Celsius decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) {
-        return new Celsius(Core.cast(JsonNumeric.class, t).asInt32());
+    public static Celsius decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) throws JsonException {
+        int t2;
+        try {
+            t2 = Core.cast(JsonNumeric.class, t).asInt32();
+        } catch (ParseError failure) {
+            throw Core.withCause(new JsonShapeException("expected degrees"), failure);
+        }
+        return new Celsius(t2);
     }
 
     public static JsonAdapter<Celsius> jsonAdapter() {

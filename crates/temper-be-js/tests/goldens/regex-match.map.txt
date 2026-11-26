@@ -1,106 +1,106 @@
 # generated line:column -> source:line:column, and the text at each
-26:1 -> ../match.temper.md:84:5  /** @param {Group} group */ <- let checkGroup(group: Group)
-27:1 -> ../match.temper.md:84:5  function checkGroup(group) { <- let checkGroup(group: Group)
-27:10 -> ../match.temper.md:84:9 (checkGroup)  checkGroup(group) { <- checkGroup(group: Group): Vo
-27:20 -> ../match.temper.md:84:5  (group) { <- let checkGroup(group: Group)
-28:3 -> ../match.temper.md:85:7  const name = group.name; <- let { name, value, begin, en
-29:3 -> ../match.temper.md:85:7  const value = group.value; <- let { name, value, begin, en
-30:3 -> ../match.temper.md:85:7  const begin = group.begin; <- let { name, value, begin, en
-31:3 -> ../match.temper.md:85:7  const end = group.end; <- let { name, value, begin, en
-32:3 -> ../match.temper.md:86:7  const size = stringCountBetw <- let size = text.countBetween
-33:3 -> ../match.temper.md:87:7  const begin2 = stringCountBe <- let begin = text.countBetwee
-34:3 -> ../match.temper.md:88:7  console.log(`match group '${ <- console.log(
-37:1 -> ../match.temper.md:20:5  const regex = /** @type {Reg <- let regex = new Sequence([
-38:1 -> ../match.temper.md:24:5  const full = entire(regex.da <- let full = entire(regex.data
-39:1 -> ../match.temper.md:31:5  /** @type {readonly string[] <- let strings = [
-40:1 -> ../match.temper.md:31:5  const strings = Object.freez <- let strings = [
-41:1 -> ../match.temper.md:44:5  { <- strings.forEach { string =>
-42:3 -> ../match.temper.md:44:5  const length = strings.lengt <- strings.forEach { string =>
-43:3 -> ../match.temper.md:44:5  let i = 0; <- strings.forEach { string =>
-44:3 -> ../match.temper.md:44:5  while (i < length) { <- strings.forEach { string =>
-45:5 -> ../match.temper.md:44:5  const string = listedGet(/** <- strings.forEach { string =>
-46:5 -> ../match.temper.md:44:5  i = (i + 1) | 0; <- strings.forEach { string =>
-47:5 -> ../match.temper.md:45:7  console.log(`found ${string} <- console.log("found ${string}
-48:5 -> ../match.temper.md:46:7  console.log(`matches ${strin <- console.log("matches ${strin
-51:1 -> ../match.temper.md:76:5  const catcher = /** @type {R <- let catcher = /a+(?intro=b+)
-52:1 -> ../match.temper.md:82:5  const text = "🌍aaabbceef"; <- let text = "🌍aaabbceef";
-53:1 -> ../match.temper.md:83:5  const match = catcher.find(t <- let match = catcher.find(tex
-54:1 -> ../match.temper.md:92:5  checkGroup(match.full); <- checkGroup(match.full);
-55:1 -> ../match.temper.md:93:5  checkGroup(mappedGet(match.g <- checkGroup(match.groups["int
-56:1 -> ../match.temper.md:94:5  checkGroup(mappedGet(match.g <- checkGroup(match.groups["alp
-57:1 -> ../match.temper.md:108:5  const thing = /** @type {Reg <- let thing = /[a-z]+/;
-58:1 -> ../match.temper.md:109:5  const multiText = "---abc--- <- let multiText = "---abc---xy
-59:1 -> ../match.temper.md:110:5  const first = thing.find(mul <- let first = thing.find(multi
-60:1 -> ../match.temper.md:111:5  const second = thing.find(mu <- let second = thing.find(mult
-61:1 -> ../match.temper.md:112:5  console.log(`Found both ${fi <- console.log("Found both ${fi
-62:1 -> ../match.temper.md:127:5  const moreText = "🌍aaabbcee🌎 <- let moreText = "🌍aaabbcee🌎ab
-64:1 -> ../match.temper.md:128:46  /** <- { match =>
-68:1 -> ../match.temper.md:128:46  function fn(match) { <- { match =>
-69:3 -> ../match.temper.md:130:7  /** @type {Map<string, Group <- let { groups } = match;
-70:3 -> ../match.temper.md:130:7  const groups = match.groups; <- let { groups } = match;
-71:3 -> ../match.temper.md:131:7  /** @type {string} */ <- let option1 = groups["option
-72:3 -> ../match.temper.md:131:7  let option1; <- let option1 = groups["option
-73:3 -> ../match.temper.md:131:7  try { <- let option1 = groups["option
-79:3 -> ../match.temper.md:132:7  /** @type {string} */ <- let alphaOption2 = groups["a
-80:3 -> ../match.temper.md:132:7  let alphaOption2; <- let alphaOption2 = groups["a
-81:3 -> ../match.temper.md:132:7  try { <- let alphaOption2 = groups["a
-87:3 -> ../match.temper.md:133:7  const begin = stringCountBet <- let begin = moreText.countBe
-88:3 -> ../match.temper.md:134:7  return `-${option1}${alphaOp <- "-${option1}${alphaOption2}$
-91:1 -> ../match.temper.md:128:5  const replaced = catcher.rep <- let replaced = catcher.repla
-92:1 -> ../match.temper.md:136:5  console.log(`replaced: ${rep <- console.log("replaced: ${rep
-93:1 -> ../match.temper.md:138:5  const notReplaced = catcher. <- let notReplaced = catcher.re
-94:1 -> ../match.temper.md:139:5  console.log(`not replaced: $ <- console.log("not replaced: $
-95:1 -> ../match.temper.md:153:5  /** @type {string} */ <- let noMatch = catcher.find("
-96:1 -> ../match.temper.md:153:5  let noMatch; <- let noMatch = catcher.find("
-97:1 -> ../match.temper.md:153:5  try { <- let noMatch = catcher.find("
-103:1 -> ../match.temper.md:154:5  console.log(`No match says $ <- console.log("No match says $
-104:1 -> ../match.temper.md:173:5  const or = /** @type {RegexN <- let or = /ab|bc/.data;
-105:1 -> ../match.temper.md:174:5  const option1 = "ab"; <- let option1 = "ab";
-106:1 -> ../match.temper.md:175:5  const option2 = "bc"; <- let option2 = "bc";
-107:1 -> ../match.temper.md:176:5  const optionNone = "cb"; <- let optionNone = "cb";
-108:1 -> ../match.temper.md:177:5  console.log(`or option 1: ${ <- console.log("or option 1: ${
-109:1 -> ../match.temper.md:178:5  console.log(`or option 2: ${ <- console.log("or option 2: ${
-110:1 -> ../match.temper.md:179:5  console.log(`or option none: <- console.log("or option none:
-111:1 -> ../match.temper.md:189:5  const begin = /** @type {Reg <- let begin = /^a/;
-112:1 -> ../match.temper.md:190:5  const beginsWithATrue = "ab" <- let beginsWithATrue = "ab";
-113:1 -> ../match.temper.md:191:5  const beginsWithAFalse = "ba <- let beginsWithAFalse = "bab"
-114:1 -> ../match.temper.md:192:5  console.log(`begin true: ${b <- console.log("begin true: ${b
-115:1 -> ../match.temper.md:193:5  console.log(`begin false: ${ <- console.log("begin false: ${
-116:1 -> ../match.temper.md:205:5  const negatedBasic = entire( <- let negatedBasic = entire(/a
-117:1 -> ../match.temper.md:206:5  const nbTrue = "a🌍"; <- let nbTrue = "a🌍";
-118:1 -> ../match.temper.md:207:5  const nbFalse = "ac"; <- let nbFalse = "ac";
-119:1 -> ../match.temper.md:208:5  console.log(`negated basic t <- console.log("negated basic t
-120:1 -> ../match.temper.md:209:5  console.log(`negated basic f <- console.log("negated basic f
-121:1 -> ../match.temper.md:222:5  const simplerLines = "It was <- let simplerLines = """
-122:1 -> ../match.temper.md:226:5  console.log(/** @type {Regex <- console.log(/[^]+/.find(simp
-123:1 -> ../match.temper.md:230:5  /** @type {string} */ <- console.log(/[]+/.find(simpl
-124:1 -> ../match.temper.md:230:5  let t$0; <- console.log(/[]+/.find(simpl
-125:1 -> ../match.temper.md:230:5  try { <- console.log(/[]+/.find(simpl
-131:1 -> ../match.temper.md:230:5  console.log(t$0); <- console.log(/[]+/.find(simpl
-132:1 -> ../match.temper.md:253:5  const notLow = /** @type {Re <- let notLow = oneOrMore(new C
-133:1 -> ../match.temper.md:254:5  console.log(`not low: ${notL <- console.log("not low: ${notL
-134:1 -> ../match.temper.md:255:5  console.log(`not space or >: <- console.log("not space or >:
-135:1 -> ../match.temper.md:269:5  const idStart = /** @type {R <- let idStart = /[a-zA-Z_]/.da
-136:1 -> ../match.temper.md:270:5  const idContinue = new Or(Ob <- let idContinue = new Or([idS
-137:1 -> ../match.temper.md:271:5  const word = /** @type {Rege <- let word = new Sequence([
-138:1 -> ../match.temper.md:283:5  const expected = "def_456"; <- let expected = "def_456";
-139:1 -> ../match.temper.md:284:5  const found = word.find(`123 <- let found = word.find("123_a
-140:1 -> ../match.temper.md:285:5  console.log(`Found id: ${fou <- console.log("Found id: ${fou
-141:1 -> ../match.temper.md:298:5  const stringToEscape = "$(*^ <- let stringToEscape = "$(*^";
-142:1 -> ../match.temper.md:303:5  const regexWithInterpolatedS <- let regexWithInterpolatedStr
-143:1 -> ../match.temper.md:304:5  const stringToEscapeAndMore <- let stringToEscapeAndMore =
-144:1 -> ../match.temper.md:305:5  const escapedMatch = regexWi <- let escapedMatch = regexWith
-145:1 -> ../match.temper.md:306:5  console.log(escapedMatch.ful <- console.log(escapedMatch.ful
-146:1 -> ../match.temper.md:320:5  const ownFullMatch = /** @ty <- let ownFullMatch = /.(?full=
-147:1 -> ../match.temper.md:321:5  const ownFull = mappedGet(ow <- let ownFull = ownFullMatch.g
-148:1 -> ../match.temper.md:322:5  console.log(`Own full: ${own <- console.log("Own full: ${own
-149:1 -> ../match.temper.md:333:5  const comboLines = "It was t <- let comboLines =
-150:1 -> ../match.temper.md:336:5  { <- /\n|\r\n?/.split(comboLines)
-151:3 -> ../match.temper.md:336:5  /** @type {readonly string[] <- /\n|\r\n?/.split(comboLines)
-152:3 -> ../match.temper.md:336:5  const list = /** @type {Rege <- /\n|\r\n?/.split(comboLines)
-153:3 -> ../match.temper.md:336:5  const length2 = list.length; <- /\n|\r\n?/.split(comboLines)
-154:3 -> ../match.temper.md:336:5  let i2 = 0; <- /\n|\r\n?/.split(comboLines)
-155:3 -> ../match.temper.md:336:5  while (i2 < length2) { <- /\n|\r\n?/.split(comboLines)
-156:5 -> ../match.temper.md:336:5  const line = listedGet(/** @ <- /\n|\r\n?/.split(comboLines)
-157:5 -> ../match.temper.md:336:5  i2 = (i2 + 1) | 0; <- /\n|\r\n?/.split(comboLines)
-158:5 -> ../match.temper.md:337:7  console.log(`${line};`); <- console.log("${line};");
+27:1 -> ../match.temper.md:84:5  /** @param {Group} group */ <- let checkGroup(group: Group)
+28:1 -> ../match.temper.md:84:5  function checkGroup(group) { <- let checkGroup(group: Group)
+28:10 -> ../match.temper.md:84:9 (checkGroup)  checkGroup(group) { <- checkGroup(group: Group): Vo
+28:20 -> ../match.temper.md:84:5  (group) { <- let checkGroup(group: Group)
+29:3 -> ../match.temper.md:85:7  const name = group.name; <- let { name, value, begin, en
+30:3 -> ../match.temper.md:85:7  const value = group.value; <- let { name, value, begin, en
+31:3 -> ../match.temper.md:85:7  const begin = group.begin; <- let { name, value, begin, en
+32:3 -> ../match.temper.md:85:7  const end = group.end; <- let { name, value, begin, en
+33:3 -> ../match.temper.md:86:7  const size = stringCountBetw <- let size = text.countBetween
+34:3 -> ../match.temper.md:87:7  const begin2 = stringCountBe <- let begin = text.countBetwee
+35:3 -> ../match.temper.md:88:7  console.log(`match group '${ <- console.log(
+38:1 -> ../match.temper.md:20:5  const regex = /** @type {Reg <- let regex = new Sequence([
+39:1 -> ../match.temper.md:24:5  const full = entire(regex.da <- let full = entire(regex.data
+40:1 -> ../match.temper.md:31:5  /** @type {readonly string[] <- let strings = [
+41:1 -> ../match.temper.md:31:5  const strings = Object.freez <- let strings = [
+42:1 -> ../match.temper.md:44:5  { <- strings.forEach { string =>
+43:3 -> ../match.temper.md:44:5  const length = strings.lengt <- strings.forEach { string =>
+44:3 -> ../match.temper.md:44:5  let i = 0; <- strings.forEach { string =>
+45:3 -> ../match.temper.md:44:5  while (i < length) { <- strings.forEach { string =>
+46:5 -> ../match.temper.md:44:5  const string = listedGet(/** <- strings.forEach { string =>
+47:5 -> ../match.temper.md:44:5  i = (i + 1) | 0; <- strings.forEach { string =>
+48:5 -> ../match.temper.md:45:7  console.log(`found ${string} <- console.log("found ${string}
+49:5 -> ../match.temper.md:46:7  console.log(`matches ${strin <- console.log("matches ${strin
+52:1 -> ../match.temper.md:76:5  const catcher = /** @type {R <- let catcher = /a+(?intro=b+)
+53:1 -> ../match.temper.md:82:5  const text = "🌍aaabbceef"; <- let text = "🌍aaabbceef";
+54:1 -> ../match.temper.md:83:5  const match = catcher.find(t <- let match = catcher.find(tex
+55:1 -> ../match.temper.md:92:5  checkGroup(match.full); <- checkGroup(match.full);
+56:1 -> ../match.temper.md:93:5  checkGroup(mappedGet(match.g <- checkGroup(match.groups["int
+57:1 -> ../match.temper.md:94:5  checkGroup(mappedGet(match.g <- checkGroup(match.groups["alp
+58:1 -> ../match.temper.md:108:5  const thing = /** @type {Reg <- let thing = /[a-z]+/;
+59:1 -> ../match.temper.md:109:5  const multiText = "---abc--- <- let multiText = "---abc---xy
+60:1 -> ../match.temper.md:110:5  const first = thing.find(mul <- let first = thing.find(multi
+61:1 -> ../match.temper.md:111:5  const second = thing.find(mu <- let second = thing.find(mult
+62:1 -> ../match.temper.md:112:5  console.log(`Found both ${fi <- console.log("Found both ${fi
+63:1 -> ../match.temper.md:127:5  const moreText = "🌍aaabbcee🌎 <- let moreText = "🌍aaabbcee🌎ab
+65:1 -> ../match.temper.md:128:46  /** <- { match =>
+69:1 -> ../match.temper.md:128:46  function fn(match) { <- { match =>
+70:3 -> ../match.temper.md:130:7  /** @type {Map<string, Group <- let { groups } = match;
+71:3 -> ../match.temper.md:130:7  const groups = match.groups; <- let { groups } = match;
+72:3 -> ../match.temper.md:131:7  /** @type {string} */ <- let option1 = groups["option
+73:3 -> ../match.temper.md:131:7  let option1; <- let option1 = groups["option
+74:3 -> ../match.temper.md:131:7  try { <- let option1 = groups["option
+80:3 -> ../match.temper.md:132:7  /** @type {string} */ <- let alphaOption2 = groups["a
+81:3 -> ../match.temper.md:132:7  let alphaOption2; <- let alphaOption2 = groups["a
+82:3 -> ../match.temper.md:132:7  try { <- let alphaOption2 = groups["a
+88:3 -> ../match.temper.md:133:7  const begin = stringCountBet <- let begin = moreText.countBe
+89:3 -> ../match.temper.md:134:7  return `-${option1}${alphaOp <- "-${option1}${alphaOption2}$
+92:1 -> ../match.temper.md:128:5  const replaced = catcher.rep <- let replaced = catcher.repla
+93:1 -> ../match.temper.md:136:5  console.log(`replaced: ${rep <- console.log("replaced: ${rep
+94:1 -> ../match.temper.md:138:5  const notReplaced = catcher. <- let notReplaced = catcher.re
+95:1 -> ../match.temper.md:139:5  console.log(`not replaced: $ <- console.log("not replaced: $
+96:1 -> ../match.temper.md:153:5  /** @type {string} */ <- let noMatch = catcher.find("
+97:1 -> ../match.temper.md:153:5  let noMatch; <- let noMatch = catcher.find("
+98:1 -> ../match.temper.md:153:5  try { <- let noMatch = catcher.find("
+104:1 -> ../match.temper.md:154:5  console.log(`No match says $ <- console.log("No match says $
+105:1 -> ../match.temper.md:173:5  const or = /** @type {RegexN <- let or = /ab|bc/.data;
+106:1 -> ../match.temper.md:174:5  const option1 = "ab"; <- let option1 = "ab";
+107:1 -> ../match.temper.md:175:5  const option2 = "bc"; <- let option2 = "bc";
+108:1 -> ../match.temper.md:176:5  const optionNone = "cb"; <- let optionNone = "cb";
+109:1 -> ../match.temper.md:177:5  console.log(`or option 1: ${ <- console.log("or option 1: ${
+110:1 -> ../match.temper.md:178:5  console.log(`or option 2: ${ <- console.log("or option 2: ${
+111:1 -> ../match.temper.md:179:5  console.log(`or option none: <- console.log("or option none:
+112:1 -> ../match.temper.md:189:5  const begin = /** @type {Reg <- let begin = /^a/;
+113:1 -> ../match.temper.md:190:5  const beginsWithATrue = "ab" <- let beginsWithATrue = "ab";
+114:1 -> ../match.temper.md:191:5  const beginsWithAFalse = "ba <- let beginsWithAFalse = "bab"
+115:1 -> ../match.temper.md:192:5  console.log(`begin true: ${b <- console.log("begin true: ${b
+116:1 -> ../match.temper.md:193:5  console.log(`begin false: ${ <- console.log("begin false: ${
+117:1 -> ../match.temper.md:205:5  const negatedBasic = entire( <- let negatedBasic = entire(/a
+118:1 -> ../match.temper.md:206:5  const nbTrue = "a🌍"; <- let nbTrue = "a🌍";
+119:1 -> ../match.temper.md:207:5  const nbFalse = "ac"; <- let nbFalse = "ac";
+120:1 -> ../match.temper.md:208:5  console.log(`negated basic t <- console.log("negated basic t
+121:1 -> ../match.temper.md:209:5  console.log(`negated basic f <- console.log("negated basic f
+122:1 -> ../match.temper.md:222:5  const simplerLines = "It was <- let simplerLines = """
+123:1 -> ../match.temper.md:226:5  console.log(/** @type {Regex <- console.log(/[^]+/.find(simp
+124:1 -> ../match.temper.md:230:5  /** @type {string} */ <- console.log(/[]+/.find(simpl
+125:1 -> ../match.temper.md:230:5  let t$0; <- console.log(/[]+/.find(simpl
+126:1 -> ../match.temper.md:230:5  try { <- console.log(/[]+/.find(simpl
+132:1 -> ../match.temper.md:230:5  console.log(t$0); <- console.log(/[]+/.find(simpl
+133:1 -> ../match.temper.md:253:5  const notLow = /** @type {Re <- let notLow = oneOrMore(new C
+134:1 -> ../match.temper.md:254:5  console.log(`not low: ${notL <- console.log("not low: ${notL
+135:1 -> ../match.temper.md:255:5  console.log(`not space or >: <- console.log("not space or >:
+136:1 -> ../match.temper.md:269:5  const idStart = /** @type {R <- let idStart = /[a-zA-Z_]/.da
+137:1 -> ../match.temper.md:270:5  const idContinue = new Or(Ob <- let idContinue = new Or([idS
+138:1 -> ../match.temper.md:271:5  const word = /** @type {Rege <- let word = new Sequence([
+139:1 -> ../match.temper.md:283:5  const expected = "def_456"; <- let expected = "def_456";
+140:1 -> ../match.temper.md:284:5  const found = word.find(`123 <- let found = word.find("123_a
+141:1 -> ../match.temper.md:285:5  console.log(`Found id: ${fou <- console.log("Found id: ${fou
+142:1 -> ../match.temper.md:298:5  const stringToEscape = "$(*^ <- let stringToEscape = "$(*^";
+143:1 -> ../match.temper.md:303:5  const regexWithInterpolatedS <- let regexWithInterpolatedStr
+144:1 -> ../match.temper.md:304:5  const stringToEscapeAndMore <- let stringToEscapeAndMore =
+145:1 -> ../match.temper.md:305:5  const escapedMatch = regexWi <- let escapedMatch = regexWith
+146:1 -> ../match.temper.md:306:5  console.log(escapedMatch.ful <- console.log(escapedMatch.ful
+147:1 -> ../match.temper.md:320:5  const ownFullMatch = /** @ty <- let ownFullMatch = /.(?full=
+148:1 -> ../match.temper.md:321:5  const ownFull = mappedGet(ow <- let ownFull = ownFullMatch.g
+149:1 -> ../match.temper.md:322:5  console.log(`Own full: ${own <- console.log("Own full: ${own
+150:1 -> ../match.temper.md:333:5  const comboLines = "It was t <- let comboLines =
+151:1 -> ../match.temper.md:336:5  { <- /\n|\r\n?/.split(comboLines)
+152:3 -> ../match.temper.md:336:5  /** @type {readonly string[] <- /\n|\r\n?/.split(comboLines)
+153:3 -> ../match.temper.md:336:5  const list = /** @type {Rege <- /\n|\r\n?/.split(comboLines)
+154:3 -> ../match.temper.md:336:5  const length2 = list.length; <- /\n|\r\n?/.split(comboLines)
+155:3 -> ../match.temper.md:336:5  let i2 = 0; <- /\n|\r\n?/.split(comboLines)
+156:3 -> ../match.temper.md:336:5  while (i2 < length2) { <- /\n|\r\n?/.split(comboLines)
+157:5 -> ../match.temper.md:336:5  const line = listedGet(/** @ <- /\n|\r\n?/.split(comboLines)
+158:5 -> ../match.temper.md:336:5  i2 = (i2 + 1) | 0; <- /\n|\r\n?/.split(comboLines)
+159:5 -> ../match.temper.md:337:7  console.log(`${line};`); <- console.log("${line};");

@@ -8,7 +8,9 @@
 //! Throwing, handling, and causes are in [`super::frame`] and
 //! [`super::lower`].
 
-use super::{Abrupt, Cause, Class, Interp, Object, Val, describe, to_string, type_name};
+use super::{
+    Abrupt, Cause, Class, Interp, Object, Val, describe, thrown_cell, to_string, type_name,
+};
 use crate::builtins::{Builtin, FAILURE_ROOT, TYPES};
 use crate::core::{self, MEMBER_NO_PROPERTY, MEMBER_PUBLIC, MEMBER_STATIC, ROLE_MASK, ROLE_PARAM};
 use crate::settle::Settled;
@@ -29,22 +31,27 @@ impl Interp<'_> {
     /// its message, and where it was first thrown, as `NotFound: not found
     /// (key: y), at lib/a.temper:3:5`, then `caused by …`, or `caused by
     /// a bubble`.
-    pub(super) fn failure_report(&mut self, s: &Settled, failure: &Rc<Object>) -> String {
+    pub(super) fn failure_report(&mut self, s: &Settled, failure: &Val) -> String {
         let mut out = String::new();
         let mut next = Some(failure.clone());
         while let Some(failure) = next.take() {
             if !out.is_empty() {
                 out.push_str("\ncaused by ");
             }
-            let name = class_name(s, &failure.class);
-            let message = self.failure_message(s, &failure);
+            let (name, message) = match &failure {
+                Val::Object(object) => (
+                    class_name(s, &object.class),
+                    self.failure_message(s, object),
+                ),
+                Val::CoreFailure(core) => (core.type_name.to_string(), core.message()),
+                _ => break,
+            };
             out.push_str(&format!("{name}: {message}"));
-            if let Some(thrown) = failure.thrown.get() {
+            if let Some(thrown) = thrown_cell(&failure).and_then(|t| t.get()) {
                 let (path, line, column) = s.library.position(thrown.at);
                 out.push_str(&format!(", at {path}:{line}:{column}"));
                 match &thrown.cause {
-                    Some(Cause::Failure(Val::Object(cause))) => next = Some(cause.clone()),
-                    Some(Cause::Failure(_)) => {}
+                    Some(Cause::Failure(cause)) => next = Some(cause.clone()),
                     Some(Cause::Bubble) => out.push_str("\ncaused by a bubble"),
                     None => {}
                 }

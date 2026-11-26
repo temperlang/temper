@@ -1104,7 +1104,7 @@ fn flat_if(e: &Expr) -> Option<String> {
         return None;
     };
     let branch = |b: &Block| match (&b.stmts[..], b.tail.as_deref()) {
-        ([], Some(v)) if !matches!(v, Expr::If(..)) => flat(v),
+        ([], Some(v)) if !matches!(v, Expr::If(..) | Expr::Return(_)) => flat(v),
         _ => None,
     };
     let text = format!(
@@ -1674,8 +1674,14 @@ fn block(b: &Block, indent: usize) -> String {
         out.push_str(&stmt(s, indent));
     }
     if let Some(tail) = &b.tail {
+        // A `return` that ends a block takes `;`, as rustfmt gives it.
+        let end = if matches!(**tail, Expr::Return(_)) {
+            ";"
+        } else {
+            ""
+        };
         out.push_str(&format!(
-            "{}{}\n",
+            "{}{}{end}\n",
             pad(indent),
             layout(tail, indent, indent)
         ));

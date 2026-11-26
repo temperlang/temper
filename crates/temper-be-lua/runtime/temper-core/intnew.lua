@@ -113,7 +113,7 @@ function temper.float64_toint64(n)
     if -mantissa_max <= n and n <= mantissa_max then
         return temper.float64_toint64unsafe(n)
     end
-    temper.bubble("out of range")
+    temper.parse_error(temper.float64_tostring(n), "out of Int64 range")
 end
 
 function temper.float64_toint64unsafe(x)
@@ -158,7 +158,7 @@ function temper.int64_tofloat64(n)
     if -mantissa_max <= n and n <= mantissa_max then
         return temper.int64_tofloat64unsafe(n)
     end
-    temper.bubble("out of range")
+    temper.parse_error(tostring(n), "not exact as Float64")
 end
 
 function temper.int64_tofloat64unsafe(n)
@@ -205,7 +205,7 @@ function temper.string_toint64(str, radix)
     if temper.int64_is_safe(ret) then
         return ret
     end
-    temper.bubble("bad parse")
+    temper.parse_error(str, "not an Int64")
 end
 
 return {

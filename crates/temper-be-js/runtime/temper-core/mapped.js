@@ -1,5 +1,5 @@
 import { pairConstructor } from "./pair.js";
-import { bubble } from "./core.js";
+import { MissingKey } from "./core.js";
 
 /**
  * @typedef {import("./pair.js").Pair} Pair
@@ -56,9 +56,9 @@ export const mapBuilderConstructor = (entries) => {
 export const mapBuilderRemove = (builder, key) => {
   const result = builder.get(key);
   if (builder.delete(key)) {
-    return result;
+    return /** @type {V} */ (result);
   } else {
-    bubble();
+    throw new MissingKey(key);
   }
 }
 
@@ -126,17 +126,18 @@ export const mappedGet = (map, key) => {
   // TODO Under compiler-error-free Temper, could undefined values get set?
   // TODO Would Map<?, Void> be impossible to feed once we get checks in place?
   if (result === undefined) {
-    bubble();
+    throw new MissingKey(key);
   }
   return result;
 }
 
 /**
- * @template K, V
+ * The key's value, or `fallback`, which may be null where `V` isn't.
+ * @template K, V, R
  * @param {Map<K, V>} map
  * @param {K} key
- * @param {V} fallback
- * @returns {V}
+ * @param {R} fallback
+ * @returns {V | R}
  */
 export const mappedGetOr = (map, key, fallback) => {
   return map.get(key) ?? fallback;

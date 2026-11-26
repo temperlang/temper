@@ -549,7 +549,7 @@ class RegexFormatter {
     out.append("?<${name}>");
   }
 
-  private pushCode(code: Int, insideCodeSet: Boolean): Void { do {
+  private pushCode(code: Int, insideCodeSet: Boolean): Void {
     // Goal here is to be pretty where commonly accepted by regex dialects.
     // Start with pretty escapes to avoid needing numeric escapes.
     let specialEscape = when (code) {
@@ -571,10 +571,10 @@ class RegexFormatter {
         (insideCodeSet && code == Codes.dash)
       ) {
         out.append("\\");
-        out.append(String.fromCodePoint(code));
+        out.append(String.fromCodePoint(code) orelse panic());
         return;
       } else if (escapeNeed == needsNoEscape) {
-        out.append(String.fromCodePoint(code));
+        out.append(String.fromCodePoint(code) orelse panic());
         return;
       }
     }
@@ -588,12 +588,12 @@ class RegexFormatter {
         )
       )
     ) {
-      out.append(String.fromCodePoint(code));
+      out.append(String.fromCodePoint(code) orelse panic());
     } else {
       // No pretty options above, so go numeric. Each backend often varies here.
       pushCodeTo(out, code, insideCodeSet);
     }
-  } orelse panic() } // fromCodePoint bubbles
+  }
 
   @connected
   private pushCodeTo(out: StringBuilder, code: Int, insideCodeSet: Boolean): Void;

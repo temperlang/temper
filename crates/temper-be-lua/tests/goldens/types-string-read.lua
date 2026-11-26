@@ -1,4 +1,5 @@
 local temper = require("temper-core")
+local int64_neg1 = temper.int64_constructor(-1)
 
 ---@type string
 local hay
@@ -62,9 +63,9 @@ local function checkParse(string_, radix)
   end
   ---@type string
   local converted
-  if not temper.pcall(function()
+  if not temper.catch(function()
     converted = tostring(not temper.is_null(radix) and temper.string_toint32(string_, radix --[[@as integer]]) or temper.string_toint32(string_))
-  end) then
+  end, temper.ParseError) then
     converted = "failed"
   end
   print("Parse " .. string_ .. " -> " .. converted)
@@ -115,29 +116,73 @@ print(temper.string_fromcodepoint(127757))
 print(fromCodeNoInline(127757))
 ---@type string
 local t
-if not temper.pcall(function()
+if not temper.catch(function()
   t = fromCodeNoInline(1114112)
-end) then
+end, temper.InvalidCodePoint) then
   t = "nope"
 end
 print(t)
 ---@type string
 local t_1
-if not temper.pcall(function()
+if not temper.catch(function()
   t_1 = fromCodeNoInline(55296)
-end) then
+end, temper.InvalidCodePoint) then
   t_1 = "no to surrogate"
 end
 print(t_1)
 print(fromCodesNoInline({ 128059, 8205, 10052, 65039 }))
 ---@type string
 local t_2
-if not temper.pcall(function()
+if not temper.catch(function()
   t_2 = fromCodesNoInline({ 55296, 56320 })
-end) then
+end, temper.InvalidCodePoint) then
   t_2 = "no to surrogates"
 end
 print(t_2)
+---@type string
+local t_3
+local t_4, e = temper.catch(function()
+  t_3 = fromCodesNoInline({ 65, -1, 56320 })
+end, temper.InvalidCodePoint)
+if not t_4 then
+  t_3 = temper.int32_tostring(e.codePoint, 16)
+end
+print(t_3)
+---@type string
+local t_5
+local t_6, e2 = temper.catch(function()
+  t_5 = temper.string_fromcodepoint(57343)
+end, temper.InvalidCodePoint)
+if not t_6 then
+  t_5 = e2.message
+end
+print(t_5)
+---@type string
+local t_7
+local t_8, e3 = temper.catch(function()
+  t_7 = tostring(temper.string_toint32("x"))
+end, temper.ParseError)
+if not t_8 then
+  t_7 = e3.message
+end
+print(t_7)
+---@type string
+local t_9
+local t_10, e4 = temper.catch(function()
+  t_9 = tostring(temper.float64_toint32(1e300))
+end, temper.ParseError)
+if not t_10 then
+  t_9 = e4.reason
+end
+print(t_9)
+---@type integer
+local t_11
+if not temper.catch(function()
+  t_11 = temper.string_toint64("12")
+end, temper.ParseError) then
+  t_11 = int64_neg1
+end
+print(temper.int64_tostring(t_11))
 checkParse("-1", temper.null)
 checkParse("2", temper.null)
 checkParse(" 2 ", temper.null)
@@ -149,6 +194,25 @@ checkParse("2a", 16)
 checkParse("20", 7)
 checkParse("20", 17)
 checkParse("20", 37)
+checkParse("10", 0)
+checkParse("0", 1)
+---@type string
+local t_12
+local t_13, e5 = temper.catch(function()
+  t_12 = temper.int64_tostring(temper.string_toint64("10", 0))
+end, temper.ParseError)
+if not t_13 then
+  t_12 = e5.reason
+end
+print(t_12)
+---@type integer
+local t_14
+if not temper.catch(function()
+  t_14 = temper.string_toint64("10", -2)
+end, temper.ParseError) then
+  t_14 = int64_neg1
+end
+print(temper.int64_tostring(t_14))
 do
   local s = "foo-bar"
   local after1_2 = temper.string_next(s, 1)

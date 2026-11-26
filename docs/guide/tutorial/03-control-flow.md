@@ -296,14 +296,17 @@ indices causes a panic that can't be recovered in Temper. Backend languages
 might be able to recover, depending on the idiomatic representation of panic in
 each.
 
-However, Temper does have a way to handle failures based on declared `Bubble`,
-which typically applies to failable operations that can't perhaps be easily or
-efficiently checked in advance:
+However, Temper does have a way to handle failures that a program can't
+easily or efficiently check in advance, as text that isn't a number, or a
+map's missing key. Those throw declared failures, `ParseError` and
+`MissingKey`, which `orelse` handles:
 
 ```temper
-// The value after `orelse` is used when the lefthand side is `Bubble`.
+// The value after `orelse` is used when the lefthand side fails.
 $ "1.5".toInt32() orelse -1
 interactive#19: -1
+$ new Map([new Pair("a", 1)])["b"] orelse -1
+interactive#20: -1
 ```
 
 (A cast, `shapes[0] as Circle`, that fails panics, so check with `is` first
@@ -332,7 +335,7 @@ it. Let's handle that case:
 
 ```console
 $ [0, 1, 2, -1].map { (n): String => lengthSuffix(n) orelse "s???" }
-interactive#22: ["s","","s","s???"]
+interactive#23: ["s","","s","s???"]
 ```
 
 Some details on `Bubble` propagation still need to be worked out on backends,

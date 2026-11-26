@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
+import temper.core.MissingKey;
 import temper.core.Nullable;
 
 public final class GenericsGlobal {
@@ -127,7 +127,7 @@ public final class GenericsGlobal {
         console.log(locals + " " + x + " " + y + " " + fields + " " + same + " " + p.n + " " + q.n + " " + items + " " + Core.listGet(a, 0) + " " + Core.listGet(b, 0));
     }
 
-    static int bump(String key) {
+    static int bump(String key) throws MissingKey {
         tally.put(key, Core.mappedGet(tally, key) - 1);
         int t = Core.mappedGet(tally, key);
         tally.put(key, t + 1);
@@ -172,14 +172,14 @@ public final class GenericsGlobal {
         int t;
         try {
             t = Core.mappedGet(m, "b");
-        } catch (Bubble ignored) {
+        } catch (MissingKey ignored) {
             t = -1;
         }
         String t2 = t + " ";
         int t3;
         try {
             t3 = Core.mappedGet(m, "c");
-        } catch (Bubble ignored2) {
+        } catch (MissingKey ignored2) {
             t3 = -1;
         }
         console.log(t2 + t3 + " " + m.containsKey("a") + " " + m.size());
@@ -190,40 +190,39 @@ public final class GenericsGlobal {
         String t4 = (subject3 == null ? -2 : subject3) + " ";
         @Nullable Integer subject4 = mb.getOrDefault("n", 0);
         console.log(t4 + (subject4 == null ? -2 : subject4) + " " + mb.containsKey("n"));
-        @Nullable Integer subject6;
-        try {
-            subject6 = Core.mapBuilderRemove(mb, "q");
-        } catch (Bubble ignored3) {
-            subject6 = 0;
-        }
+        @Nullable Integer subject6 = Core.mapBuilderRemove(mb, "q");
         @Nullable String subject5 = subject6 == null ? null : Integer.toString(subject6);
         console.log(subject5 == null ? "null" : subject5);
+        @Nullable Integer subject7 = mb.getOrDefault("z", null);
+        String t5 = (subject7 == null ? -3 : subject7) + " ";
+        @Nullable String subject8 = Core.listGetOr(built, 7, null);
+        console.log(t5 + (subject8 == null ? "none" : subject8));
         console.log(Integer.toString(List.copyOf(mb.keySet()).size()));
         indexed();
         both();
         tally = new LinkedHashMap<>();
         tally.put("k", 2);
-        int t5;
+        int t6;
         try {
-            t5 = bump("k");
-        } catch (Bubble ignored4) {
-            t5 = -1;
+            t6 = bump("k");
+        } catch (MissingKey ignored3) {
+            t6 = -1;
         }
-        String t6 = t5 + " ";
-        int t7;
+        String t7 = t6 + " ";
+        int t8;
         try {
-            t7 = bump("z");
-        } catch (Bubble ignored5) {
-            t7 = -1;
+            t8 = bump("z");
+        } catch (MissingKey ignored4) {
+            t8 = -1;
         }
-        String t8 = t6 + t7 + " ";
-        int t9;
+        String t9 = t7 + t8 + " ";
+        int t10;
         try {
-            t9 = Core.mappedGet(tally, "k");
-        } catch (Bubble ignored6) {
-            t9 = -1;
+            t10 = Core.mappedGet(tally, "k");
+        } catch (MissingKey ignored5) {
+            t10 = -1;
         }
-        console.log(t8 + t9);
+        console.log(t9 + t10);
         console.log(firstSame(List.of(1000), List.of(1000)) + " " + firstSame(List.of(1000), List.of(7)));
     }
 }

@@ -102,6 +102,21 @@ namespace temper {
                 return (index >= 0 && index < sz) ? (*list)[index] : defaultValue;
             }
 
+            // The item, or `fallback`, which may be null where `Elem`
+            // isn't nullable: `getOr` given a null.
+            template<class Elem>
+            NullableParam<Elem> getOrNull(
+                const std::shared_ptr<std::vector<Elem>>& list,
+                int32_t index,
+                NullableParam<Elem> fallback
+            ) {
+                int32_t sz = static_cast<int32_t>(list->size());
+                if (index >= 0 && index < sz) {
+                    return (*list)[index];
+                }
+                return fallback;
+            }
+
             template<class Elem, class F>
             void forEach(const std::shared_ptr<std::vector<Elem>>& list, F fn) {
                 for (const Elem& elem : *list) {

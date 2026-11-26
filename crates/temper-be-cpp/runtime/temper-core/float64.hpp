@@ -9,6 +9,7 @@
 #include <string>
 #include "base_types.hpp"
 #include "nullable_param.hpp"
+#include "failure.hpp"
 
 namespace temper {
     namespace core {
@@ -126,12 +127,15 @@ namespace temper {
                 return std::pow(base, exponent);
             }
 
-            inline int32_t toInt32(double f) {
+            inline Str toString(double f);
+
+            // Truncated toward zero, or a `ParseError` out of range, or for NaN.
+            inline Parsed<int32_t> toInt32(double f) {
                 if (std::isnan(f)
                 || std::isinf(f)
                 || f > static_cast<double>(std::numeric_limits<int32_t>::max())
                 || f < static_cast<double>(std::numeric_limits<int32_t>::min())) {
-                    bubble("Float64 out of Int32 range");
+                    return parse_error(toString(f), "out of Int32 range");
                 }
                 return static_cast<int32_t>(f);
             }
@@ -140,11 +144,12 @@ namespace temper {
                 return static_cast<int32_t>(f);
             }
 
-            inline int64_t toInt64(double f) {
+            // Truncated toward zero, or a `ParseError` out of range, or for NaN.
+            inline Parsed<int64_t> toInt64(double f) {
                 const double maxSafe = 9007199254740991.0;
                 const double minSafe = -9007199254740991.0;
                 if (!(f >= minSafe && f <= maxSafe)) {
-                    bubble("Float64 out of safe Int64 range");
+                    return parse_error(toString(f), "out of Int64 range");
                 }
                 return static_cast<int64_t>(f);
             }

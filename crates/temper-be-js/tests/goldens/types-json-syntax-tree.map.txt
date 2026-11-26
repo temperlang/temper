@@ -1,73 +1,86 @@
 # generated line:column -> source:line:column, and the text at each
-20:1 -> ../json-syntax-tree.temper.md:24:5  { <- for (let s of ['[]', ' [] ',
-21:3 -> ../json-syntax-tree.temper.md:24:19  /** @type {readonly string[] <- ['[]', ' [] ', ' [ ] ', '[1]
-22:3 -> ../json-syntax-tree.temper.md:24:19  const list = Object.freeze([ <- ['[]', ' [] ', ' [ ] ', '[1]
-23:3 -> ../json-syntax-tree.temper.md:24:5  const length = list.length; <- for (let s of ['[]', ' [] ',
-24:3 -> ../json-syntax-tree.temper.md:24:5  let i = 0; <- for (let s of ['[]', ' [] ',
-25:3 -> ../json-syntax-tree.temper.md:24:5  while (i < length) { <- for (let s of ['[]', ' [] ',
-26:5 -> ../json-syntax-tree.temper.md:24:5  const s = listedGet(/** @typ <- for (let s of ['[]', ' [] ',
-27:5 -> ../json-syntax-tree.temper.md:24:5  i = (i + 1) | 0; <- for (let s of ['[]', ' [] ',
-28:5 -> ../json-syntax-tree.temper.md:25:7  /** @type {JsonSyntaxTree | <- let jsonValue: JsonSyntaxTre
-29:5 -> ../json-syntax-tree.temper.md:25:7  let jsonValue; <- let jsonValue: JsonSyntaxTre
-30:5 -> ../json-syntax-tree.temper.md:25:7  try { <- let jsonValue: JsonSyntaxTre
-36:5 -> ../json-syntax-tree.temper.md:26:7  console.log(`\`${s}\` is emp <- console.log(
-39:1 -> ../json-syntax-tree.temper.md:43:5  { <- for (let s of ['[', ']', '[,
-40:3 -> ../json-syntax-tree.temper.md:43:19  /** @type {readonly string[] <- ['[', ']', '[,]', '[]]', '[1
-41:3 -> ../json-syntax-tree.temper.md:43:19  const list2 = Object.freeze( <- ['[', ']', '[,]', '[]]', '[1
-42:3 -> ../json-syntax-tree.temper.md:43:5  const length2 = list2.length <- for (let s of ['[', ']', '[,
-43:3 -> ../json-syntax-tree.temper.md:43:5  let i2 = 0; <- for (let s of ['[', ']', '[,
-44:3 -> ../json-syntax-tree.temper.md:43:5  while (i2 < length2) { <- for (let s of ['[', ']', '[,
-45:5 -> ../json-syntax-tree.temper.md:43:5  const s2 = listedGet(/** @ty <- for (let s of ['[', ']', '[,
-46:5 -> ../json-syntax-tree.temper.md:43:5  i2 = (i2 + 1) | 0; <- for (let s of ['[', ']', '[,
-47:5 -> ../json-syntax-tree.temper.md:44:7  let bubbled = false; <- var bubbled = false;
-48:5 -> ../json-syntax-tree.temper.md:45:7  const p = new JsonSyntaxTree <- let p = new JsonSyntaxTreePr
-49:5 -> ../json-syntax-tree.temper.md:46:7  parseJsonToProducer(s2, /** <- parseJsonToProducer(s, p);
-50:5 -> ../json-syntax-tree.temper.md:47:7  try { <- p.toJsonSyntaxTree() orelse
-54:7 -> ../json-syntax-tree.temper.md:47:40  bubbled = true; <- bubbled = true; }
-56:5 -> ../json-syntax-tree.temper.md:48:7  const error = p.jsonError; <- let error = p.jsonError;
-57:5 -> ../json-syntax-tree.temper.md:49:7  console.log(`\`${s2}\` has${ <- console.log(
-60:1 -> ../json-syntax-tree.temper.md:69:6  const selectCodePoints = "\x <- let selectCodePoints = "\x00
-61:1 -> ../json-syntax-tree.temper.md:76:5  { <- do {
-62:3 -> ../json-syntax-tree.temper.md:77:7  const p2 = new JsonTextProdu <- let p = new JsonTextProducer
-63:3 -> ../json-syntax-tree.temper.md:78:7  p2.stringValue(selectCodePoi <- p.stringValue(selectCodePoin
-64:3 -> ../json-syntax-tree.temper.md:79:7  /** @type {string} */ <- console.log(
-65:3 -> ../json-syntax-tree.temper.md:79:7  let t$0; <- console.log(
-66:3 -> ../json-syntax-tree.temper.md:79:7  try { <- console.log(
-72:3 -> ../json-syntax-tree.temper.md:79:7  console.log(`string with sel <- console.log(
-74:1 -> ../json-syntax-tree.temper.md:101:5  { <- do {
-75:3 -> ../json-syntax-tree.temper.md:102:7  const p3 = new JsonTextProdu <- let p = new JsonTextProducer
-76:3 -> ../json-syntax-tree.temper.md:103:7  p3.startObject(); <- p.startObject();
-77:3 -> ../json-syntax-tree.temper.md:104:7  /** @type {OrNullJsonAdapter <- let intOrNullAdapter = new O
-78:3 -> ../json-syntax-tree.temper.md:104:7  const intOrNullAdapter = new <- let intOrNullAdapter = new O
-79:3 -> ../json-syntax-tree.temper.md:105:7  /** @type {number | null} */ <- var x: Int? = null;
-80:3 -> ../json-syntax-tree.temper.md:105:7  const x = null; <- var x: Int? = null;
-81:3 -> ../json-syntax-tree.temper.md:106:7  const y = 123; <- var y: Int? = 123;
-82:3 -> ../json-syntax-tree.temper.md:107:7  p3.objectKey("x"); <- p.objectKey("x");
-83:3 -> ../json-syntax-tree.temper.md:108:7  intOrNullAdapter.encodeToJso <- intOrNullAdapter.encodeToJso
-84:3 -> ../json-syntax-tree.temper.md:109:7  p3.objectKey("y"); <- p.objectKey("y");
-85:3 -> ../json-syntax-tree.temper.md:110:7  intOrNullAdapter.encodeToJso <- intOrNullAdapter.encodeToJso
-86:3 -> ../json-syntax-tree.temper.md:111:7  p3.endObject(); <- p.endObject();
-87:3 -> ../json-syntax-tree.temper.md:113:7  console.log(p3.toJsonString( <- console.log(p.toJsonString()
-89:1 -> ../json-syntax-tree.temper.md:122:5  { <- do {
-90:3 -> ../json-syntax-tree.temper.md:123:7  const s3 = '{"x":null,"y":12 <- let s = '{"x":null,"y":123,"
-91:3 -> ../json-syntax-tree.temper.md:124:7  const ast = parseJson(s3); <- let ast = parseJson(s);
-92:3 -> ../json-syntax-tree.temper.md:126:7  const obj = requireInstanceO <- let obj = ast as JsonObject;
-93:3 -> ../json-syntax-tree.temper.md:127:7  const xAst = obj.propertyVal <- let xAst = obj.propertyValue
-94:3 -> ../json-syntax-tree.temper.md:128:7  const yAst = obj.propertyVal <- let yAst = obj.propertyValue
-95:3 -> ../json-syntax-tree.temper.md:130:7  console.log(`for x, got JSON <- console.log("for x, got JSON
-96:3 -> ../json-syntax-tree.temper.md:131:7  console.log(`for y, got JSON <- console.log("for y, got JSON
-97:3 -> ../json-syntax-tree.temper.md:133:7  /** @type {OrNullJsonAdapter <- let intOrNullAdapter = new O
-98:3 -> ../json-syntax-tree.temper.md:133:7  const intOrNullAdapter2 = ne <- let intOrNullAdapter = new O
-99:3 -> ../json-syntax-tree.temper.md:134:7  const x2 = intOrNullAdapter2 <- let x: Int? = intOrNullAdapt
-100:3 -> ../json-syntax-tree.temper.md:135:7  const y2 = intOrNullAdapter2 <- let y: Int? = intOrNullAdapt
-101:3 -> ../json-syntax-tree.temper.md:137:7  console.log(`x ?? -1 -> ${x2 <- console.log("x ?? -1 -> ${x
-102:3 -> ../json-syntax-tree.temper.md:138:7  console.log(`y ?? -1 -> ${y2 <- console.log("y ?? -1 -> ${y
-103:3 -> ../json-syntax-tree.temper.md:142:7  const zAst = obj.propertyVal <- let zAst = obj.propertyValue
-104:3 -> ../json-syntax-tree.temper.md:143:7  /** @type {OrNullJsonAdapter <- let int64OrNullAdapter = new
-105:3 -> ../json-syntax-tree.temper.md:143:7  const int64OrNullAdapter = n <- let int64OrNullAdapter = new
-106:3 -> ../json-syntax-tree.temper.md:144:7  const z = int64OrNullAdapter <- let z: Int64? = int64OrNullA
-107:3 -> ../json-syntax-tree.temper.md:145:7  console.log(`z ?? -1 -> ${(z <- console.log("z ?? -1 -> ${z
-109:1 -> ../json-syntax-tree.temper.md:160:6  const normalJson = new JsonT <- let normalJson = new JsonTex
-110:1 -> ../json-syntax-tree.temper.md:161:6  parseJsonToProducer('{\n  "f <- parseJsonToProducer(
-111:1 -> ../json-syntax-tree.temper.md:173:6  console.log("Normalized:"); <- console.log("Normalized:");
-112:1 -> ../json-syntax-tree.temper.md:174:6  console.log(normalJson.toJso <- console.log(normalJson.toJso
+22:1 -> ../json-syntax-tree.temper.md:24:5  { <- for (let s of ['[]', ' [] ',
+23:3 -> ../json-syntax-tree.temper.md:24:19  /** @type {readonly string[] <- ['[]', ' [] ', ' [ ] ', '[1]
+24:3 -> ../json-syntax-tree.temper.md:24:19  const list = Object.freeze([ <- ['[]', ' [] ', ' [ ] ', '[1]
+25:3 -> ../json-syntax-tree.temper.md:24:5  const length = list.length; <- for (let s of ['[]', ' [] ',
+26:3 -> ../json-syntax-tree.temper.md:24:5  let i = 0; <- for (let s of ['[]', ' [] ',
+27:3 -> ../json-syntax-tree.temper.md:24:5  while (i < length) { <- for (let s of ['[]', ' [] ',
+28:5 -> ../json-syntax-tree.temper.md:24:5  const s = listedGet(/** @typ <- for (let s of ['[]', ' [] ',
+29:5 -> ../json-syntax-tree.temper.md:24:5  i = (i + 1) | 0; <- for (let s of ['[]', ' [] ',
+30:5 -> ../json-syntax-tree.temper.md:25:7  /** @type {JsonSyntaxTree | <- let jsonValue: JsonSyntaxTre
+31:5 -> ../json-syntax-tree.temper.md:25:7  let jsonValue; <- let jsonValue: JsonSyntaxTre
+32:5 -> ../json-syntax-tree.temper.md:25:7  try { <- let jsonValue: JsonSyntaxTre
+38:5 -> ../json-syntax-tree.temper.md:26:7  console.log(`\`${s}\` is emp <- console.log(
+41:1 -> ../json-syntax-tree.temper.md:43:5  { <- for (let s of ['[', ']', '[,
+42:3 -> ../json-syntax-tree.temper.md:43:19  /** @type {readonly string[] <- ['[', ']', '[,]', '[]]', '[1
+43:3 -> ../json-syntax-tree.temper.md:43:19  const list2 = Object.freeze( <- ['[', ']', '[,]', '[]]', '[1
+44:3 -> ../json-syntax-tree.temper.md:43:5  const length2 = list2.length <- for (let s of ['[', ']', '[,
+45:3 -> ../json-syntax-tree.temper.md:43:5  let i2 = 0; <- for (let s of ['[', ']', '[,
+46:3 -> ../json-syntax-tree.temper.md:43:5  while (i2 < length2) { <- for (let s of ['[', ']', '[,
+47:5 -> ../json-syntax-tree.temper.md:43:5  const s2 = listedGet(/** @ty <- for (let s of ['[', ']', '[,
+48:5 -> ../json-syntax-tree.temper.md:43:5  i2 = (i2 + 1) | 0; <- for (let s of ['[', ']', '[,
+49:5 -> ../json-syntax-tree.temper.md:44:7  let failed = false; <- var failed = false;
+50:5 -> ../json-syntax-tree.temper.md:45:7  const p = new JsonSyntaxTree <- let p = new JsonSyntaxTreePr
+51:5 -> ../json-syntax-tree.temper.md:46:7  parseJsonToProducer(s2, /** <- parseJsonToProducer(s, p);
+52:5 -> ../json-syntax-tree.temper.md:47:7  try { <- p.toJsonSyntaxTree() orelse
+56:7 -> ../json-syntax-tree.temper.md:47:40  failed = true; <- failed = true; }
+58:5 -> ../json-syntax-tree.temper.md:48:7  const error = p.jsonError; <- let error = p.jsonError;
+59:5 -> ../json-syntax-tree.temper.md:49:7  console.log(`\`${s2}\` has${ <- console.log(
+62:1 -> ../json-syntax-tree.temper.md:69:5  { <- for (let s of ['[1,]', '"a"'
+63:3 -> ../json-syntax-tree.temper.md:69:19  /** @type {readonly string[] <- ['[1,]', '"a"', '7']) {
+64:3 -> ../json-syntax-tree.temper.md:69:19  const list3 = Object.freeze( <- ['[1,]', '"a"', '7']) {
+65:3 -> ../json-syntax-tree.temper.md:69:5  const length3 = list3.length <- for (let s of ['[1,]', '"a"'
+66:3 -> ../json-syntax-tree.temper.md:69:5  let i3 = 0; <- for (let s of ['[1,]', '"a"'
+67:3 -> ../json-syntax-tree.temper.md:69:5  while (i3 < length3) { <- for (let s of ['[1,]', '"a"'
+68:5 -> ../json-syntax-tree.temper.md:69:5  const s3 = listedGet(/** @ty <- for (let s of ['[1,]', '"a"'
+69:5 -> ../json-syntax-tree.temper.md:69:5  i3 = (i3 + 1) | 0; <- for (let s of ['[1,]', '"a"'
+70:5 -> ../json-syntax-tree.temper.md:70:7  /** @type {string} */ <- let decoded = do {
+71:5 -> ../json-syntax-tree.temper.md:70:7  let decoded; <- let decoded = do {
+72:5 -> ../json-syntax-tree.temper.md:70:7  try { <- let decoded = do {
+73:7 -> ../json-syntax-tree.temper.md:71:9  const tree = parseJson(s3); <- let tree = parseJson(s);
+79:5 -> ../json-syntax-tree.temper.md:74:7  console.log(decoded); <- console.log(decoded);
+82:1 -> ../json-syntax-tree.temper.md:89:6  const selectCodePoints = "\x <- let selectCodePoints = "\x00
+83:1 -> ../json-syntax-tree.temper.md:96:5  { <- do {
+84:3 -> ../json-syntax-tree.temper.md:97:7  const p2 = new JsonTextProdu <- let p = new JsonTextProducer
+85:3 -> ../json-syntax-tree.temper.md:98:7  p2.stringValue(selectCodePoi <- p.stringValue(selectCodePoin
+86:3 -> ../json-syntax-tree.temper.md:99:7  /** @type {string} */ <- console.log(
+87:3 -> ../json-syntax-tree.temper.md:99:7  let t$0; <- console.log(
+88:3 -> ../json-syntax-tree.temper.md:99:7  try { <- console.log(
+94:3 -> ../json-syntax-tree.temper.md:99:7  console.log(`string with sel <- console.log(
+96:1 -> ../json-syntax-tree.temper.md:121:5  { <- do {
+97:3 -> ../json-syntax-tree.temper.md:122:7  const p3 = new JsonTextProdu <- let p = new JsonTextProducer
+98:3 -> ../json-syntax-tree.temper.md:123:7  p3.startObject(); <- p.startObject();
+99:3 -> ../json-syntax-tree.temper.md:124:7  /** @type {OrNullJsonAdapter <- let intOrNullAdapter = new O
+100:3 -> ../json-syntax-tree.temper.md:124:7  const intOrNullAdapter = new <- let intOrNullAdapter = new O
+101:3 -> ../json-syntax-tree.temper.md:125:7  /** @type {number | null} */ <- var x: Int? = null;
+102:3 -> ../json-syntax-tree.temper.md:125:7  const x = null; <- var x: Int? = null;
+103:3 -> ../json-syntax-tree.temper.md:126:7  const y = 123; <- var y: Int? = 123;
+104:3 -> ../json-syntax-tree.temper.md:127:7  p3.objectKey("x"); <- p.objectKey("x");
+105:3 -> ../json-syntax-tree.temper.md:128:7  intOrNullAdapter.encodeToJso <- intOrNullAdapter.encodeToJso
+106:3 -> ../json-syntax-tree.temper.md:129:7  p3.objectKey("y"); <- p.objectKey("y");
+107:3 -> ../json-syntax-tree.temper.md:130:7  intOrNullAdapter.encodeToJso <- intOrNullAdapter.encodeToJso
+108:3 -> ../json-syntax-tree.temper.md:131:7  p3.endObject(); <- p.endObject();
+109:3 -> ../json-syntax-tree.temper.md:133:7  console.log(p3.toJsonString( <- console.log(p.toJsonString()
+111:1 -> ../json-syntax-tree.temper.md:142:5  { <- do {
+112:3 -> ../json-syntax-tree.temper.md:143:7  const s4 = '{"x":null,"y":12 <- let s = '{"x":null,"y":123,"
+113:3 -> ../json-syntax-tree.temper.md:144:7  const ast = parseJson(s4); <- let ast = parseJson(s);
+114:3 -> ../json-syntax-tree.temper.md:146:7  const obj = requireInstanceO <- let obj = ast as JsonObject;
+115:3 -> ../json-syntax-tree.temper.md:147:7  const xAst = obj.propertyVal <- let xAst = obj.propertyValue
+116:3 -> ../json-syntax-tree.temper.md:148:7  const yAst = obj.propertyVal <- let yAst = obj.propertyValue
+117:3 -> ../json-syntax-tree.temper.md:150:7  console.log(`for x, got JSON <- console.log("for x, got JSON
+118:3 -> ../json-syntax-tree.temper.md:151:7  console.log(`for y, got JSON <- console.log("for y, got JSON
+119:3 -> ../json-syntax-tree.temper.md:153:7  /** @type {OrNullJsonAdapter <- let intOrNullAdapter = new O
+120:3 -> ../json-syntax-tree.temper.md:153:7  const intOrNullAdapter2 = ne <- let intOrNullAdapter = new O
+121:3 -> ../json-syntax-tree.temper.md:154:7  const x2 = intOrNullAdapter2 <- let x: Int? = intOrNullAdapt
+122:3 -> ../json-syntax-tree.temper.md:155:7  const y2 = intOrNullAdapter2 <- let y: Int? = intOrNullAdapt
+123:3 -> ../json-syntax-tree.temper.md:157:7  console.log(`x ?? -1 -> ${x2 <- console.log("x ?? -1 -> ${x
+124:3 -> ../json-syntax-tree.temper.md:158:7  console.log(`y ?? -1 -> ${y2 <- console.log("y ?? -1 -> ${y
+125:3 -> ../json-syntax-tree.temper.md:162:7  const zAst = obj.propertyVal <- let zAst = obj.propertyValue
+126:3 -> ../json-syntax-tree.temper.md:163:7  /** @type {OrNullJsonAdapter <- let int64OrNullAdapter = new
+127:3 -> ../json-syntax-tree.temper.md:163:7  const int64OrNullAdapter = n <- let int64OrNullAdapter = new
+128:3 -> ../json-syntax-tree.temper.md:164:7  const z = int64OrNullAdapter <- let z: Int64? = int64OrNullA
+129:3 -> ../json-syntax-tree.temper.md:165:7  console.log(`z ?? -1 -> ${(z <- console.log("z ?? -1 -> ${z
+131:1 -> ../json-syntax-tree.temper.md:180:6  const normalJson = new JsonT <- let normalJson = new JsonTex
+132:1 -> ../json-syntax-tree.temper.md:181:6  parseJsonToProducer('{\n  "f <- parseJsonToProducer(
+133:1 -> ../json-syntax-tree.temper.md:193:6  console.log("Normalized:"); <- console.log("Normalized:");
+134:1 -> ../json-syntax-tree.temper.md:194:6  console.log(normalJson.toJso <- console.log(normalJson.toJso

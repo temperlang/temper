@@ -47,9 +47,10 @@ static double add(double a, double b) {
 
 static void checkParse(core::Str const & string) {
   core::Str converted;
-  try {
-    converted = core::Float64::toString(core::String::toFloat64(string));
-  } catch (core::TemperBubble const &) {
+  auto Result = core::String::toFloat64(string);
+  if (Result.has_value()) {
+    converted = core::Float64::toString(*Result);
+  } else {
     converted = TEMPER_STR("failed");
   }
   core::Console::log(temper_globals::console.value, "Parse " + string + " -> " + converted);
@@ -57,9 +58,10 @@ static void checkParse(core::Str const & string) {
 
 static void checkTiny(core::Str const & string) {
   core::Str positive;
-  try {
-    positive = core::Boolean::toString(core::Float64::gt(core::String::toFloat64(string), 0.0));
-  } catch (core::TemperBubble const &) {
+  auto Result = core::String::toFloat64(string);
+  if (Result.has_value()) {
+    positive = core::Boolean::toString(core::Float64::gt(*Result, 0.0));
+  } else {
     positive = TEMPER_STR("failed");
   }
   core::Console::log(temper_globals::console.value, "Parse " + string + " > 0 -> " + positive);
@@ -168,16 +170,18 @@ void global_init_init() {
     core::Console::log(temper_globals::console.value, "Positive to int: " + std::to_string(core::Float64::toInt32Unsafe(4.9 * one)));
     core::Console::log(temper_globals::console.value, "Negative to int: " + std::to_string(core::Float64::toInt32Unsafe(-4.9 * one)));
     core::Str value;
-    try {
-      value = std::to_string(core::Float64::toInt32(infinity));
-    } catch (core::TemperBubble const &) {
+    auto Result = core::Float64::toInt32(infinity);
+    if (Result.has_value()) {
+      value = std::to_string(*Result);
+    } else {
       value = TEMPER_STR("no");
     }
     core::Console::log(temper_globals::console.value, "Infinity to int: " + value);
     core::Str value2;
-    try {
-      value2 = std::to_string(core::Float64::toInt32(std::numeric_limits<double>::quiet_NaN()));
-    } catch (core::TemperBubble const &) {
+    auto Result2 = core::Float64::toInt32(std::numeric_limits<double>::quiet_NaN());
+    if (Result2.has_value()) {
+      value2 = std::to_string(*Result2);
+    } else {
       value2 = TEMPER_STR("no");
     }
     core::Console::log(temper_globals::console.value, "NaN to int: " + value2);
@@ -186,37 +190,41 @@ void global_init_init() {
     int64_t notSoSmall = core::Int64::mul(int64_t{-2147483648}, oneInt64);
     int64_t slightlyBigger = core::Float64::toInt64Unsafe(core::Int64::toFloat64Unsafe(notSoBig) + 1.5);
     int64_t slightlySmaller = core::Float64::toInt64Unsafe(core::Int64::toFloat64Unsafe(notSoSmall) - 1.5);
-    int64_t tooBigForFloat64 = core::Int64::mul(int64_t{9007199254740992}, core::Float64::toInt64(one));
+    int64_t tooBigForFloat64 = core::Int64::mul(int64_t{9007199254740992}, oneInt64);
     double okToConvert64 = core::Int64::toFloat64Unsafe(core::Int64::sub(tooBigForFloat64, int64_t{1}));
     double sneakyBig = okToConvert64 + 1.0;
     core::Console::log(temper_globals::console.value, "Bigger to Int64: " + std::to_string(slightlyBigger));
     core::Console::log(temper_globals::console.value, "Smaller to Int64: " + std::to_string(slightlySmaller));
     core::Console::log(temper_globals::console.value, "Barely ok to Int64: " + std::to_string(core::Float64::toInt64Unsafe(okToConvert64)));
     core::Str value3;
-    try {
-      value3 = std::to_string(core::Float64::toInt64(sneakyBig));
-    } catch (core::TemperBubble const &) {
+    auto Result3 = core::Float64::toInt64(sneakyBig);
+    if (Result3.has_value()) {
+      value3 = std::to_string(*Result3);
+    } else {
       value3 = TEMPER_STR("no");
     }
     core::Console::log(temper_globals::console.value, "Sneaky big to Int64: " + value3);
     core::Str value4;
-    try {
-      value4 = core::Float64::toString(core::Int64::toFloat64(tooBigForFloat64));
-    } catch (core::TemperBubble const &) {
+    auto Result4 = core::Int64::toFloat64(tooBigForFloat64);
+    if (Result4.has_value()) {
+      value4 = core::Float64::toString(*Result4);
+    } else {
       value4 = TEMPER_STR("no");
     }
     core::Console::log(temper_globals::console.value, "Too big Int64 to Float64: " + value4);
     core::Str value5;
-    try {
-      value5 = std::to_string(core::Float64::toInt64(infinity));
-    } catch (core::TemperBubble const &) {
+    auto Result5 = core::Float64::toInt64(infinity);
+    if (Result5.has_value()) {
+      value5 = std::to_string(*Result5);
+    } else {
       value5 = TEMPER_STR("no");
     }
     core::Console::log(temper_globals::console.value, "Infinity to Int64: " + value5);
     core::Str value6;
-    try {
-      value6 = std::to_string(core::Float64::toInt64(std::numeric_limits<double>::quiet_NaN()));
-    } catch (core::TemperBubble const &) {
+    auto Result6 = core::Float64::toInt64(std::numeric_limits<double>::quiet_NaN());
+    if (Result6.has_value()) {
+      value6 = std::to_string(*Result6);
+    } else {
       value6 = TEMPER_STR("no");
     }
     core::Console::log(temper_globals::console.value, "NaN to Int64: " + value6);

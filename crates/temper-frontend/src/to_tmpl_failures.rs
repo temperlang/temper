@@ -199,8 +199,15 @@ impl Translator<'_> {
     /// it (`catch (e)`), or throws, in it or a `for … of` body in it, not
     /// in another function.
     pub(super) fn needs_failure(&self, fallback: FNode) -> bool {
+        // A `catch (e)` whose `e` nothing reads binds nothing.
+        let unread = self
+            .catch_binding(fallback)
+            .filter(|&b| !self.binding_read(fallback, b));
         let mut stack = vec![fallback];
         while let Some(node) = stack.pop() {
+            if Some(node) == unread {
+                continue;
+            }
             match self.kind(node) {
                 NodeKind::Fail if !self.children(node).is_empty() => return true,
                 NodeKind::Call
@@ -232,6 +239,23 @@ impl Translator<'_> {
         let fits = temper_tmpl::failures::is_failure_type(p, root, joined)
             || matches!(p.types.get(joined), TypeData::TypeParam { .. });
         fits.then_some(joined)
+    }
+
+    /// Whether anything under `within` reads the local `bind` declares.
+    pub(super) fn binding_read(&self, within: FNode, bind: FNode) -> bool {
+        let scopes = &self.s.scopes;
+        let mut stack = vec![within];
+        while let Some(node) = stack.pop() {
+            let reads = self.kind(node) == NodeKind::RightName
+                && scopes
+                    .resolved(node)
+                    .is_some_and(|s| scopes.symbol(s).decl == Some(bind));
+            if reads {
+                return true;
+            }
+            stack.extend_from_slice(self.children(node));
+        }
+        false
     }
 
     /// The `let e = caught()` that starts a `catch (e)`'s block, if

@@ -83,6 +83,8 @@ pub enum Val {
     /// A class or interface, as its name's value, for `new`, `as` and `is`.
     Class(Rc<Class>),
     Object(Rc<Object>),
+    /// A value of one of core's failure types, as `MissingKey`.
+    CoreFailure(Rc<CoreFailure>),
     Console,
     /// A type name used as a value; types aren't run yet.
     Type,
@@ -158,6 +160,7 @@ impl Val {
                 | Val::NullableType(_)
                 | Val::ValueResult(_)
                 | Val::Object(_)
+                | Val::CoreFailure(_)
                 | Val::Fn(_)
                 | Val::Class(_)
         )
@@ -212,6 +215,16 @@ fn take_containers(value: &mut Val, work: &mut Vec<Val>) {
                 }
             }
         }
+        Val::CoreFailure(failure) => {
+            if let Some(failure) = Rc::get_mut(failure) {
+                failure.fields.iter_mut().for_each(|(_, v)| take(v));
+                if let Some(Cause::Failure(cause)) =
+                    failure.thrown.get_mut().and_then(|t| t.cause.as_mut())
+                {
+                    take(cause);
+                }
+            }
+        }
         Val::Fn(closure) => (Rc::get_mut(closure).into_iter())
             .filter_map(|c| Rc::get_mut(&mut c.captures))
             .flat_map(|cells| cells.iter_mut())
@@ -261,6 +274,68 @@ pub struct Object {
     fields: RefCell<Vec<Val>>,
     /// A failure's, once thrown ([`Thrown`]).
     thrown: OnceCell<Box<Thrown>>,
+}
+
+/// A value of one of core's failure types, which the interpreter makes
+/// itself where a builtin fails: its type's name, as `MissingKey`, its
+/// public fields' names and values, and where it was first thrown.
+#[derive(Debug)]
+pub struct CoreFailure {
+    type_name: &'static str,
+    fields: Vec<(&'static str, Val)>,
+    thrown: OnceCell<Box<Thrown>>,
+}
+
+impl CoreFailure {
+    /// A value of `type_name` with `fields`.
+    fn value(type_name: &'static str, fields: Vec<(&'static str, Val)>) -> Val {
+        Val::CoreFailure(Rc::new(CoreFailure {
+            type_name,
+            fields,
+            thrown: OnceCell::new(),
+        }))
+    }
+
+    /// Thrown as a `ParseError` of `input`, the text or number converted,
+    /// and `reason`, as `not an Int32`.
+    fn parse_error(input: String, reason: &str) -> Abrupt {
+        let fields = vec![
+            ("input", Val::Str(input.into())),
+            ("reason", Val::Str(reason.into())),
+        ];
+        Abrupt::Throw(CoreFailure::value("ParseError", fields))
+    }
+
+    /// Its message, as a declared failure's default one says it: `missing
+    /// key (key: a)`.
+    fn message(&self) -> String {
+        let mut out = failures::words(self.type_name);
+        let shown: Vec<String> = (self.fields.iter())
+            .map(|(name, value)| format!("{name}: {}", to_string(value)))
+            .collect();
+        if !shown.is_empty() {
+            out.push_str(&format!(" ({})", shown.join(", ")));
+        }
+        out
+    }
+
+    /// The failure being handled where it was first thrown, or null.
+    fn cause(&self) -> Val {
+        match self.thrown.get().and_then(|t| t.cause.as_ref()) {
+            Some(Cause::Failure(cause)) => cause.clone(),
+            _ => Val::Null,
+        }
+    }
+}
+
+/// Where a failure, an object or a core failure, was first thrown, once
+/// it's thrown.
+fn thrown_cell(failure: &Val) -> Option<&OnceCell<Box<Thrown>>> {
+    match failure {
+        Val::Object(object) => Some(&object.thrown),
+        Val::CoreFailure(failure) => Some(&failure.thrown),
+        _ => None,
+    }
 }
 
 impl Object {
@@ -318,9 +393,10 @@ enum Abrupt {
     Await(Rc<Promise>),
     /// A failure, as from `bubble()`, with a message for error nodes.
     Fail(Option<String>),
-    /// A declared failure, an object of a failure type, from `throw`
-    /// (RFC 164), which handlers handle as they do a `Fail`.
-    Throw(Rc<Object>),
+    /// A declared failure, from `throw` (RFC 164), which handlers handle
+    /// as they do a `Fail`: an object of a failure type, or a
+    /// [`Val::CoreFailure`] from a builtin.
+    Throw(Val),
     /// Something `orelse` can't catch: a panic, or the interpreter's limits.
     Panic(String),
     /// A test's failure, with its messages, from std's `Test.bail`, which
@@ -849,6 +925,23 @@ impl Interp<'_> {
                 Some((Val::BuiltinType(t), [])) if TYPES[*t as usize] == "PromiseBuilder" => {
                     Ok(Val::PromiseBuilder(Rc::default()))
                 }
+                Some((Val::BuiltinType(t), [key])) if TYPES[*t as usize] == "MissingKey" => {
+                    Ok(CoreFailure::value("MissingKey", vec![("key", key.clone())]))
+                }
+                Some((Val::BuiltinType(t), [input, reason]))
+                    if TYPES[*t as usize] == "ParseError" =>
+                {
+                    let fields = vec![("input", input.clone()), ("reason", reason.clone())];
+                    Ok(CoreFailure::value("ParseError", fields))
+                }
+                Some((Val::BuiltinType(t), [code_point]))
+                    if TYPES[*t as usize] == "InvalidCodePoint" =>
+                {
+                    Ok(CoreFailure::value(
+                        "InvalidCodePoint",
+                        vec![("codePoint", code_point.clone())],
+                    ))
+                }
                 _ => Err(fail("new needs a class")),
             },
             Val::Builtin(f @ (Function::As | Function::Is)) => {
@@ -1271,6 +1364,10 @@ fn is_builtin_type(value: &Val, ty: &str) -> bool {
         "DoneResult" => matches!(value, Val::DoneResult),
         "Promise" => matches!(value, Val::Promise(_)),
         "PromiseBuilder" => matches!(value, Val::PromiseBuilder(_)),
+        "CoreError" => matches!(value, Val::CoreFailure(_)),
+        "MissingKey" | "ParseError" | "InvalidCodePoint" => {
+            matches!(value, Val::CoreFailure(f) if f.type_name == ty)
+        }
         "AnyValue" => !matches!(value, Val::Null),
         "Void" => matches!(value, Val::Void),
         "Never" => false,
@@ -2082,6 +2179,12 @@ fn property(object: Val, name: NameId, text: &str) -> R {
         (Val::Pair(pair), "key") => Ok(pair.0.clone()),
         (Val::Pair(pair), "value") => Ok(pair.1.clone()),
         (Val::ValueResult(value), "value") => Ok((**value).clone()),
+        (Val::CoreFailure(failure), "message") => Ok(Val::Str(failure.message().into())),
+        (Val::CoreFailure(failure), "cause") => Ok(failure.cause()),
+        (Val::CoreFailure(failure), _) => (failure.fields.iter())
+            .find(|(field, _)| *field == text)
+            .map(|(_, value)| value.clone())
+            .ok_or_else(|| fail(format!("No member {text}"))),
         (Val::Generator(generator), "done") => Ok(Val::Bool(generator.frame.borrow().is_none())),
         (Val::PromiseBuilder(promise), "promise") => Ok(Val::Promise(promise.clone())),
         (Val::NetResponse(response), _) => {
@@ -2171,6 +2274,7 @@ fn equal(a: &Val, b: &Val) -> bool {
         (Val::StringBuilder(a), Val::StringBuilder(b)) => Rc::ptr_eq(a, b),
         (Val::Fn(a), Val::Fn(b)) => Rc::ptr_eq(a, b),
         (Val::Object(a), Val::Object(b)) => Rc::ptr_eq(a, b),
+        (Val::CoreFailure(a), Val::CoreFailure(b)) => Rc::ptr_eq(a, b),
         (Val::ListBuilder(a), Val::ListBuilder(b)) => Rc::ptr_eq(a, b),
         (Val::Deque(a), Val::Deque(b)) => Rc::ptr_eq(a, b),
         (Val::Bits(a), Val::Bits(b)) => Rc::ptr_eq(a, b),
@@ -2237,6 +2341,7 @@ fn type_name(value: &Val) -> &'static str {
         Val::Console => "Console",
         Val::Class(_) => "Class",
         Val::Object(_) => "Object",
+        Val::CoreFailure(failure) => failure.type_name,
         Val::Type | Val::BuiltinType(_) | Val::NullableType(_) => "Type",
         Val::Empty => "Empty",
         Val::Regex(_) => "Regex",

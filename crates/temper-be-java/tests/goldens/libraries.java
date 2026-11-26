@@ -9,6 +9,7 @@ import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Nullable;
+import temper.core.ParseError;
 
 public final class LibrariesGlobal {
     private LibrariesGlobal() {}
@@ -20,7 +21,13 @@ public final class LibrariesGlobal {
         if (s.equals("")) {
             throw Core.bubble();
         }
-        return new Grid(1, List.of(Core.stringToFloat64(s)));
+        double t;
+        try {
+            t = Core.stringToFloat64(s);
+        } catch (ParseError ignored) {
+            throw Core.bubble();
+        }
+        return new Grid(1, List.of(t));
     }
 
     static Tagged tagged(@Nullable String label) {
@@ -298,7 +305,7 @@ public final class LibrariesGlobal {
                 @Nullable Integer held = null;
                 try {
                     held = Core.stringToInt(x);
-                } catch (Bubble ignored) {
+                } catch (ParseError ignored) {
                 }
                 if (held == null) {
                     i = i + 1;
@@ -320,7 +327,7 @@ public final class LibrariesGlobal {
                 @Nullable Integer held = null;
                 try {
                     held = Core.stringToInt(x);
-                } catch (Bubble ignored2) {
+                } catch (ParseError ignored2) {
                 }
                 if (held == null) {
                     continue;

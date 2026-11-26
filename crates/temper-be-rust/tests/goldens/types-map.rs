@@ -24,6 +24,12 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 temper_core::MappedTrait::get(&messages(), 302)
                     .unwrap_or_else(|_| Arc::new("Found".to_string()))
             );
+            println!("Or null: {}", {
+                let subject = temper_core::MappedTrait::get_or_null(&messages(), 302);
+                subject
+                    .clone()
+                    .unwrap_or_else(|| Arc::new("none".to_string()))
+            });
             println!(
                 "Codes: {}",
                 temper_core::listed::join(
@@ -116,10 +122,9 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 );
                 let _ =
                     temper_core::MapBuilder::remove(&builder2, Arc::new("Honduras".to_string()));
-                let was: temper_core::List<Arc<String>> = temper_core::MapBuilder::remove(
-                    &builder2,
-                    Arc::new("El Salvador".to_string()),
-                )?;
+                let was: temper_core::List<Arc<String>> =
+                    temper_core::MapBuilder::remove(&builder2, Arc::new("El Salvador".to_string()))
+                        .unwrap_or_else(|e| panic!("panic\ncaused by: {e}"));
                 println!(
                     "Was there: {}",
                     temper_core::listed::join(
@@ -131,7 +136,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 println!(
                     "{}",
                     (|| {
-                        Ok::<_, temper_core::Error>(temper_core::ListedTrait::get(
+                        Ok::<_, temper_core::MissingKey>(temper_core::ListedTrait::get(
                             &temper_core::MapBuilder::remove(
                                 &builder2,
                                 Arc::new("El Salvador".to_string()),
@@ -140,6 +145,14 @@ pub(crate) fn init() -> temper_core::Result<()> {
                         ))
                     })()
                     .unwrap_or_else(|_| Arc::new("Gone".to_string()))
+                );
+                println!(
+                    "{}",
+                    (|| {
+                        temper_core::MapBuilder::remove(&builder2, Arc::new("Belize".to_string()))?;
+                        Ok::<_, temper_core::MissingKey>(Arc::new("removed".to_string()))
+                    })()
+                    .unwrap_or_else(|e| e.message())
                 );
                 temper_core::MappedTrait::to_map(&builder2)
             };
@@ -150,6 +163,14 @@ pub(crate) fn init() -> temper_core::Result<()> {
                     Arc::new(", ".to_string()),
                     &(|it: Arc<String>| it.clone()),
                 )
+            );
+            println!("{}", look_up(302).unwrap_or_else(|e2| e2.message()));
+            let from_builder: temper_core::MapBuilder<Arc<String>, i32> =
+                temper_core::MapBuilder::new();
+            println!(
+                "{}",
+                temper_core::MappedTrait::get(&from_builder, Arc::new("nope".to_string()))
+                    .unwrap_or(-1)
             );
             let map_of_none: temper_core::Map<i32, i32> = temper_core::Map::new(Arc::new(vec![]));
             let map_of_one: temper_core::Map<Arc<String>, Arc<String>> =
@@ -329,6 +350,10 @@ pub(crate) fn messages() -> temper_core::Map<i32, Arc<String>> {
 
 pub(crate) fn message_defined(code: i32) -> Arc<String> {
     Arc::new(temper_core::MappedTrait::has(&messages(), code).to_string())
+}
+
+pub(crate) fn look_up(code: i32) -> Result<Arc<String>, temper_core::MissingKey> {
+    temper_core::MappedTrait::get(&messages(), code)
 }
 
 pub(crate) fn color_to_hex(color: impl temper_core::ToList<bool>) -> Arc<String> {

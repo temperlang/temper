@@ -3,6 +3,7 @@ from temper_core import (
     Bubble as _Bubble,
     LabelPair as _LabelPair,
     LoggingConsole as _LoggingConsole,
+    ParseError as _ParseError,
     boolean_to_string as _boolean_to_string,
     int_add as _int_add,
     int_mul as _int_mul,
@@ -26,7 +27,10 @@ def _pair(a: int, b: int, /) -> int:
 
 
 def _parse(s: str, /) -> int:
-    return _string_to_int32(s)
+    try:
+        return _string_to_int32(s)
+    except _ParseError:
+        raise _Bubble()
 
 
 def _next(y: int | None, /) -> int | None:

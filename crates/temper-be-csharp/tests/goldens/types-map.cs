@@ -22,6 +22,12 @@ public static class MapGlobal
         return messages.ContainsKey(code) ? "true" : "false";
     }
 
+    /// <exception cref="MissingKey">Where it fails with MissingKey.</exception>
+    internal static string LookUp(int code)
+    {
+        return Mapped.Get(messages, code);
+    }
+
     internal static string ColorToHex(IReadOnlyList<bool> color)
     {
         string fn(bool b)
@@ -63,11 +69,13 @@ public static class MapGlobal
         {
             t1 = Mapped.Get(messages, 302);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (MissingKey)
         {
             t1 = "Found";
         }
         console.Log("Fallback: " + t1);
+        string? subject = Mapped.GetOrNull(messages, 302);
+        console.Log("Or null: " + (subject == null ? "none" : subject));
         console.Log("Codes: " + Listed.Join(ListKeys(messages), " ", (int it) => it.ToString(CultureInfo.InvariantCulture)));
         console.Log("Again: " + Listed.Join(Mapped.Keys(messages), " ", (int it) => it.ToString(CultureInfo.InvariantCulture)));
         console.Log("Messages: " + Listed.Join(Mapped.Values(messages), ", ", (string it) => it));
@@ -85,23 +93,63 @@ public static class MapGlobal
         {
             Core.RemoveGet(builder2, "Honduras");
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (MissingKey)
         {
         }
-        IReadOnlyList<string> was = Core.RemoveGet(builder2, "El Salvador");
+        IReadOnlyList<string> was;
+        try
+        {
+            was = Core.RemoveGet(builder2, "El Salvador");
+        }
+        catch (MissingKey bubble1)
+        {
+            throw Core.Panic("panic", bubble1);
+        }
         console.Log("Was there: " + Listed.Join(was, ", ", (string it) => it));
         string t2;
         try
         {
             t2 = Listed.Get(Core.RemoveGet(builder2, "El Salvador"), 0);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (MissingKey)
         {
             t2 = "Gone";
         }
         console.Log(t2);
+        string t3;
+        try
+        {
+            Core.RemoveGet(builder2, "Belize");
+            t3 = "removed";
+        }
+        catch (MissingKey e)
+        {
+            t3 = e.Message;
+        }
+        console.Log(t3);
         neighbors = Mapped.ToMap(builder2);
         console.Log("From built: " + Listed.Join(Mapped.Get(neighbors, "Nicaragua"), ", ", (string it) => it));
+        string t4;
+        try
+        {
+            t4 = LookUp(302);
+        }
+        catch (MissingKey e2)
+        {
+            t4 = e2.Message;
+        }
+        console.Log(t4);
+        IDictionary<string, int> fromBuilder = new TemperLang.Core.OrderedDictionary<string, int>();
+        int t5;
+        try
+        {
+            t5 = Mapped.Get(fromBuilder, "nope");
+        }
+        catch (MissingKey)
+        {
+            t5 = -1;
+        }
+        console.Log(t5.ToString(CultureInfo.InvariantCulture));
         IReadOnlyDictionary<int, int> mapOfNone = Mapped.ConstructMap(Listed.CreateReadOnlyList<KeyValuePair<int, int>>());
         IReadOnlyDictionary<string, string> mapOfOne = Mapped.ConstructMap(Listed.CreateReadOnlyList<KeyValuePair<string, string>>(new KeyValuePair<string, string>("jack", "all trades")));
         IReadOnlyDictionary<int, string> mapOfTwo = Mapped.ConstructMap(Listed.CreateReadOnlyList<KeyValuePair<int, string>>(new KeyValuePair<int, string>(1, "one"), new KeyValuePair<int, string>(2, "electric boogaloo")));

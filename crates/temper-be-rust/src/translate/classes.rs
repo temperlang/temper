@@ -1766,6 +1766,12 @@ impl<'a> Translator<'a> {
             }
         }
         let obj = self.expr(object, Want::Borrowed)?;
+        // Core's failures' fields, by their accessors' own names, in
+        // snake case, as `code_point()`.
+        if is_external(p, field) && library_of(p, field) == "core" {
+            let name = temper_tmpl::naming::snake_case(p.name(field));
+            return Ok(obj.method(name, Vec::new()));
+        }
         let name = self.name(field);
         let here = home(p, field) == Some(self.here);
         if !here || self.facts(field).contains(Facts::VAR) {

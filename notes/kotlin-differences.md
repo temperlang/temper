@@ -231,6 +231,28 @@ Language and frontend:
   a speed choice only. Test: settle/run.cases, "integer division by zero
   panics; Float64's gives IEEE 754's results"; testkit
   test-assert-panics, "passes when division by zero or a cast panics".
+- **Core's and std's failing APIs throw declared failures, not
+  `Bubble`** (2026-11-25, stage 2 of replacing `Bubble`): conversions
+  (`String.toInt32/toInt64/toFloat64`, `Float64.toInt32/toInt64`,
+  `Int64.toInt32/toFloat64`) throw core's `ParseError` (input, reason);
+  `Mapped.get` (`m[k]`) and `MapBuilder.remove` throw `MissingKey` (key);
+  code points that aren't Unicode scalar values
+  (`String.fromCodePoint(s)`, `StringBuilder.appendCodePoint`) throw
+  `InvalidCodePoint` (codePoint); all three under core's sealed
+  `CoreError`. A radix outside 2 through 36 throws `ParseError` on every
+  backend (Kotlin's JS read 0 as 10). `getOr(k, null)` is a
+  `V?` (the join of the values' type and the fallback's; Kotlin rejects
+  the `null`). std: `new Date(y, m, d)` throws `InvalidDate` and
+  `Date.fromIsoString` `InvalidIsoDate` (std temporal's `TemporalError`);
+  json's `parseJson` throws `JsonSyntaxError`, adapters and `@json`
+  `JsonShapeError` (std json's `JsonError`), as does `toJsonString` on a
+  partial value (`JsonSyntaxError`). `orelse` handles these as it did bubbles, but a
+  function that passes one on declares it (`throws ParseError`), where
+  Kotlin's said `throws Bubble`. Test: settle/run.cases, "conversions
+  throw ParseError, …", "a missing key throws MissingKey, …", "invalid
+  code points throw InvalidCodePoint"; settle/failures.cases, "core's
+  failure types: …"; testkit programs/panics.temper.md; funtests
+  types/string/read (bad radix too), types/string/build, types/map.
 - **An `internal` visibility** (module or library) between `public` and
   `private`, so module functions can use a class's hidden parts. Design it
   from what JS can express (only public and `#private`). Not planned yet.

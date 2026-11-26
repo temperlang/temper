@@ -63,9 +63,18 @@ static int32_t calcRows(int32_t cols, int32_t total) {
   return core::Int::div_wrap(total, cols);
 }
 
+static int32_t parsed(core::Str const & s) {
+  auto Result = core::String::toInt32(s);
+  if (Result.has_value()) {
+    return *Result;
+  } else {
+    core::bubble();
+  }
+}
+
 static int32_t countBelow(core::Str const & s) {
   int32_t i = 0;
-  while (i < core::String::toInt32(s)) {
+  while (i < bubble::parsed(s)) {
     i = core::Int::add(i, 1);
   }
   return i;

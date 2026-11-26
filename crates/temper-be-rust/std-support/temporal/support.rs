@@ -4,7 +4,7 @@ use crate::temporal::Date;
 /// days since the Unix epoch to a proleptic Gregorian date (Howard
 /// Hinnant's `civil_from_days`).
 #[cfg(feature = "temporal")]
-pub fn today() -> temper_core::Result<Date> {
+pub fn today() -> Result<Date, crate::temporal::TemporalError> {
     let secs = match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
         Ok(d) => d.as_secs() as i64,
         Err(e) => -(e.duration().as_secs() as i64) - 1,

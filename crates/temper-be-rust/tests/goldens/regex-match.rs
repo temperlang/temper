@@ -120,14 +120,14 @@ pub(crate) fn init() -> temper_core::Result<()> {
                     let groups: temper_core::Map<Arc<String>, temper_std::regex::Group> =
                         r#match.groups();
                     let option1 = (|| {
-                        Ok::<_, temper_core::Error>(
+                        Ok::<_, temper_core::MissingKey>(
                             temper_core::MappedTrait::get(&groups, Arc::new("option1".to_string()))?
                                 .value(),
                         )
                     })()
                     .unwrap_or_else(|_| Arc::new(String::new()));
                     let alpha_option2 = (|| {
-                        Ok::<_, temper_core::Error>(
+                        Ok::<_, temper_core::MissingKey>(
                             temper_core::MappedTrait::get(
                                 &groups,
                                 Arc::new("alphaOption2".to_string()),

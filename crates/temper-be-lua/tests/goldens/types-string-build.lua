@@ -24,15 +24,16 @@ local built = temper.stringbuilder_tostring(builder)
 temper.stringbuilder_append(builder, "\n")
 temper.stringbuilder_append(builder, built)
 print(temper.stringbuilder_tostring(builder))
-if not temper.pcall(function()
+if not temper.catch(function()
   temper.stringbuilder_appendcodepoint(builder, 1114112)
-end) then
+end, temper.InvalidCodePoint) then
   print("High code blocked.")
 end
-if not temper.pcall(function()
+local t, e = temper.catch(function()
   temper.stringbuilder_appendcodepoint(builder, 55296)
-end) then
-  print("Surrogate blocked.")
+end, temper.InvalidCodePoint)
+if not t then
+  print("Surrogate 0x" .. temper.int32_tostring(e.codePoint, 16) .. " blocked.")
 end
 print(temper.stringbuilder_tostring(builder))
 temper.stringbuilder_clear(builder)
@@ -45,15 +46,15 @@ print(marks)
 print("Same: " .. tostring(marks == "a??=b??/c??>d???e"))
 temper.stringbuilder_clear(builder)
 temper.stringbuilder_append(builder, "??")
-if not temper.pcall(function()
+if not temper.catch(function()
   temper.stringbuilder_appendcodepoint(builder, 1)
-end) then
+end, temper.InvalidCodePoint) then
   print("No U+1.")
 end
 temper.stringbuilder_append(builder, "0")
-if not temper.pcall(function()
+if not temper.catch(function()
   temper.stringbuilder_appendcodepoint(builder, 8364)
-end) then
+end, temper.InvalidCodePoint) then
   print("No euro.")
 end
 temper.stringbuilder_append(builder, "1")

@@ -1,4 +1,3 @@
-using TemperLang.Core;
 using TemperLang.Std.Json;
 
 namespace JsonAdapters;
@@ -30,11 +29,28 @@ internal class Bye : IMessage
         p.EndObject();
     }
 
+    /// <exception cref="JsonException">Where it fails with JsonException.</exception>
     public static Bye DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
-        JsonObject obj = t is JsonObject ? (JsonObject)t : Core.Bubble<JsonObject>();
+        JsonObject obj;
+        if (t is JsonObject)
+        {
+            obj = (JsonObject)t;
+        }
+        else
+        {
+            throw new JsonShapeException("expected Bye JSON object");
+        }
         IJsonSyntaxTree textTree = obj.PropertyValueOrBubble("text");
-        JsonString textJson = textTree is JsonString ? (JsonString)textTree : Core.Bubble<JsonString>();
+        JsonString textJson;
+        if (textTree is JsonString)
+        {
+            textJson = (JsonString)textTree;
+        }
+        else
+        {
+            throw new JsonShapeException("expected String for text");
+        }
         string text = textJson.Content;
         return new Bye(text);
     }

@@ -1,4 +1,4 @@
-use super::{Error, Result};
+use super::ParseError;
 use std::sync::Arc;
 
 pub fn cmp(x: f64, y: f64) -> i32 {
@@ -47,19 +47,21 @@ pub fn sign(x: f64) -> f64 {
     }
 }
 
-pub fn to_int(x: f64) -> Result<i32> {
+/// Truncated toward zero, or a `ParseError` out of range, or for NaN.
+pub fn to_int(x: f64) -> Result<i32, ParseError> {
     match () {
         _ if x > (i32::MIN as f64) - 1.0 && x < (i32::MAX as f64) + 1.0 => Ok(x as i32),
-        _ => Err(Error::new()),
+        _ => Err(ParseError::new(to_string(x), "out of Int32 range")),
     }
 }
 
 const MANTISSA_MAX: f64 = (1i64 << 53) as f64;
 
-pub fn to_int64(x: f64) -> Result<i64> {
+/// Truncated toward zero, or a `ParseError` out of range, or for NaN.
+pub fn to_int64(x: f64) -> Result<i64, ParseError> {
     match () {
         _ if x > -MANTISSA_MAX && x < MANTISSA_MAX => Ok(x as i64),
-        _ => Err(Error::new()),
+        _ => Err(ParseError::new(to_string(x), "out of Int64 range")),
     }
 }
 

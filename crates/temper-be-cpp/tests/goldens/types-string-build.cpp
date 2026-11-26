@@ -42,7 +42,10 @@ void global_init_init() {
     std::shared_ptr<core::Console::Type> console = core::Console::get_console();
     std::shared_ptr<std::ostringstream> builder = core::StringBuilder::make();
     core::StringBuilder::append(builder, TEMPER_STR("Hi "));
-    core::StringBuilder::appendCodepoint(builder, 127759);
+    auto Result = core::StringBuilder::appendCodepoint(builder, 127759);
+    if (!Result.has_value()) {
+      core::uncaught_failure(Result.error());
+    }
     core::Str source = TEMPER_STR("Wow!! Neato!");
     int32_t bangIndex = core::String::step(source, core::String::begin(), 3);
     int32_t spaceIndex = core::String::step(source, bangIndex, 2);
@@ -51,15 +54,14 @@ void global_init_init() {
     core::StringBuilder::append(builder, TEMPER_STR("\n"));
     core::StringBuilder::append(builder, built);
     core::Console::log(console, core::StringBuilder::toString(builder));
-    try {
-      core::StringBuilder::appendCodepoint(builder, 1114112);
-    } catch (core::TemperBubble const &) {
+    auto Result2 = core::StringBuilder::appendCodepoint(builder, 1114112);
+    if (!Result2.has_value()) {
       core::Console::log(console, TEMPER_STR("High code blocked."));
     }
-    try {
-      core::StringBuilder::appendCodepoint(builder, 55296);
-    } catch (core::TemperBubble const &) {
-      core::Console::log(console, TEMPER_STR("Surrogate blocked."));
+    auto Result3 = core::StringBuilder::appendCodepoint(builder, 55296);
+    if (!Result3.has_value()) {
+      std::shared_ptr<core::InvalidCodePoint> e = Result3.error();
+      core::Console::log(console, "Surrogate 0x" + core::Int::toString(e->codePoint, 16) + " blocked.");
     }
     core::Console::log(console, core::StringBuilder::toString(builder));
     core::StringBuilder::clear(builder);
@@ -72,15 +74,13 @@ void global_init_init() {
     core::Console::log(console, "Same: " + core::Boolean::toString(marks == TEMPER_STR("a?\?=b?\?/c?\?>d?\?\?e")));
     core::StringBuilder::clear(builder);
     core::StringBuilder::append(builder, TEMPER_STR("?\?"));
-    try {
-      core::StringBuilder::appendCodepoint(builder, 1);
-    } catch (core::TemperBubble const &) {
+    auto Result4 = core::StringBuilder::appendCodepoint(builder, 1);
+    if (!Result4.has_value()) {
       core::Console::log(console, TEMPER_STR("No U+1."));
     }
     core::StringBuilder::append(builder, TEMPER_STR("0"));
-    try {
-      core::StringBuilder::appendCodepoint(builder, 8364);
-    } catch (core::TemperBubble const &) {
+    auto Result5 = core::StringBuilder::appendCodepoint(builder, 8364);
+    if (!Result5.has_value()) {
       core::Console::log(console, TEMPER_STR("No euro."));
     }
     core::StringBuilder::append(builder, TEMPER_STR("1"));

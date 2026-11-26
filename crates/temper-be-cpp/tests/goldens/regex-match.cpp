@@ -67,8 +67,16 @@ void global_init_init() {
     temper_globals::text.value = TEMPER_STR("🌍aaabbceef");
     std::shared_ptr<temper_std::Match> match = catcher->find(temper_globals::text.value);
     match::checkGroup(match->full);
-    match::checkGroup(core::Mapped::get<core::Str, std::shared_ptr<temper_std::Group>>(match->groups, TEMPER_STR("intro")));
-    match::checkGroup(core::Mapped::get<core::Str, std::shared_ptr<temper_std::Group>>(match->groups, TEMPER_STR("alphaOption2")));
+    auto Result = core::Mapped::get<core::Str, std::shared_ptr<temper_std::Group>>(match->groups, TEMPER_STR("intro"));
+    if (!Result.has_value()) {
+      core::uncaught_failure(Result.error());
+    }
+    match::checkGroup(*Result);
+    auto Result2 = core::Mapped::get<core::Str, std::shared_ptr<temper_std::Group>>(match->groups, TEMPER_STR("alphaOption2"));
+    if (!Result2.has_value()) {
+      core::uncaught_failure(Result2.error());
+    }
+    match::checkGroup(*Result2);
     std::shared_ptr<temper_std::Regex> thing = temper_std::Repeat::make(core::to_base<temper_std::RegexNode>(temper_std::CodeSet::make(core::List::make<std::shared_ptr<temper_std::CodePart>>(core::to_base<temper_std::CodePart>(temper_std::CodeRange::make(97, 122))), false)), 1, nullptr, false)->compiled();
     core::Str multiText = TEMPER_STR("---abc---xyz---");
     std::shared_ptr<temper_std::Match> first = thing->find(multiText);
@@ -78,15 +86,29 @@ void global_init_init() {
     auto fn = [](std::shared_ptr<temper_std::Match> match2) -> core::Str {
       std::shared_ptr<core::Mapped::Ordered<core::Str, std::shared_ptr<temper_std::Group>>> groups = match2->groups;
       core::Str option1_2;
-      try {
-        option1_2 = core::Mapped::get<core::Str, std::shared_ptr<temper_std::Group>>(groups, TEMPER_STR("option1"))->value;
-      } catch (core::TemperBubble const &) {
+      auto result = [&]() -> core::Expected<core::Str, std::shared_ptr<core::MissingKey>> {
+        auto Result3 = core::Mapped::get<core::Str, std::shared_ptr<temper_std::Group>>(groups, TEMPER_STR("option1"));
+        if (!Result3.has_value()) {
+          return core::unexpected(Result3.error());
+        }
+        return (*Result3)->value;
+      }();
+      if (result.has_value()) {
+        option1_2 = *result;
+      } else {
         option1_2 = core::Str();
       }
       core::Str alphaOption2;
-      try {
-        alphaOption2 = core::Mapped::get<core::Str, std::shared_ptr<temper_std::Group>>(groups, TEMPER_STR("alphaOption2"))->value;
-      } catch (core::TemperBubble const &) {
+      auto result2 = [&]() -> core::Expected<core::Str, std::shared_ptr<core::MissingKey>> {
+        auto Result4 = core::Mapped::get<core::Str, std::shared_ptr<temper_std::Group>>(groups, TEMPER_STR("alphaOption2"));
+        if (!Result4.has_value()) {
+          return core::unexpected(Result4.error());
+        }
+        return (*Result4)->value;
+      }();
+      if (result2.has_value()) {
+        alphaOption2 = *result2;
+      } else {
         alphaOption2 = core::Str();
       }
       int32_t begin2 = core::String::countBetween(temper_globals::moreText.value, core::String::begin(), match2->full->begin);
@@ -151,7 +173,11 @@ void global_init_init() {
     std::shared_ptr<temper_std::Match> escapedMatch = regexWithInterpolatedString->find(stringToEscapeAndMore);
     core::Console::log(temper_globals::console.value, escapedMatch->full->value);
     std::shared_ptr<temper_std::Match> ownFullMatch = temper_std::Sequence::make(core::List::make<std::shared_ptr<temper_std::RegexNode>>(core::to_base<temper_std::RegexNode>(temper_std::temper_globals::Dot.value), core::to_base<temper_std::RegexNode>(temper_std::Capture::make(TEMPER_STR("full"), core::to_base<temper_std::RegexNode>(temper_std::temper_globals::Dot.value)))))->compiled()->find(TEMPER_STR("ab"));
-    core::Str ownFull = core::Mapped::get<core::Str, std::shared_ptr<temper_std::Group>>(ownFullMatch->groups, TEMPER_STR("full"))->value;
+    auto Result5 = core::Mapped::get<core::Str, std::shared_ptr<temper_std::Group>>(ownFullMatch->groups, TEMPER_STR("full"));
+    if (!Result5.has_value()) {
+      core::uncaught_failure(Result5.error());
+    }
+    core::Str ownFull = (*Result5)->value;
     core::Console::log(temper_globals::console.value, "Own full: " + ownFull + " vs " + ownFullMatch->full->value);
     core::Str comboLines = TEMPER_STR("It was the best\nof times.\r\n\rIt was the worst of times.");
     {

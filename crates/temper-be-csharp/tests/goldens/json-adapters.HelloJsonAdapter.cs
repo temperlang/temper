@@ -13,6 +13,7 @@ internal class HelloJsonAdapter : IJsonAdapter<Hello>
         x.EncodeToJson(p);
     }
 
+    /// <exception cref="JsonException">Where it fails with JsonException.</exception>
     public Hello DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
         return Hello.DecodeFromJson(t, ic);

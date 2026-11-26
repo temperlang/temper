@@ -400,7 +400,7 @@ public final class Core {
 
     /**
      * @param n the value to convert to an int
-     * @throws Bubble if the result can't be expressed with less than an error of 1
+     * @throws ParseError if the result can't be expressed with less than an error of 1
      * @return the value as an int
      */
     public static int float64ToInt(double n) {
@@ -409,13 +409,13 @@ public final class Core {
             return (int) n;
         } else {
             // NaN should also end up here due to false comparison above.
-            throw bubble();
+            throw new ParseError(float64ToString(n), "out of Int32 range");
         }
     }
 
     /**
      * @param n the value to convert to a long
-     * @throws Bubble if the result can't be expressed with less than an error of 1
+     * @throws ParseError if the result can't be expressed with less than an error of 1
      * @return the value as a long
      */
     public static long float64ToInt64(double n) {
@@ -423,7 +423,7 @@ public final class Core {
             return (long) n;
         } else {
             // NaN should also end up here due to false comparison above.
-            throw bubble();
+            throw new ParseError(float64ToString(n), "out of Int64 range");
         }
     }
 
@@ -456,14 +456,14 @@ public final class Core {
 
     /**
      * @param n the value to convert to a double
-     * @throws Bubble if the result can't be expressed
+     * @throws ParseError if the result can't be expressed
      * @return the value as a double
      */
     public static double int64ToFloat64(long n) {
         if (n >= -MANTISSA_LIMIT && n <= MANTISSA_LIMIT) {
             return (double) n;
         } else {
-            throw bubble();
+            throw new ParseError(Long.toString(n), "not exact as Float64");
         }
     }
 
@@ -471,26 +471,28 @@ public final class Core {
 
     /**
      * @param n the value to convert to an int
-     * @throws Bubble if the result can't be expressed
+     * @throws ParseError if the result can't be expressed
      * @return the value as an int
      */
     public static int int64ToInt(long n) {
         if (n >= Integer.MIN_VALUE && n <= Integer.MAX_VALUE) {
             return (int) n;
         } else {
-            throw bubble();
+            throw new ParseError(Long.toString(n), "out of Int32 range");
         }
     }
 
-    /** Bubbles unless codePoint is a Unicode scalar value: in range and not a surrogate. */
+    /**
+     * Throws an {@link InvalidCodePoint} unless codePoint is a Unicode scalar value: in range and
+     * not a surrogate.
+     */
     private static void denySurrogate(int codePoint) {
         // Use custom logic because Character.isSurrogate works on char, not int.
         if (
             !Character.isValidCodePoint(codePoint)
                 || codePoint >= Character.MIN_SURROGATE && codePoint <= Character.MAX_SURROGATE
         ) {
-            // Focus on Unicode scalar value wording, because it might explain motive better than avoiding surrogates.
-            throw new Bubble(String.format("Not a valid Unicode scalar value: 0x%X", codePoint));
+            throw new InvalidCodePoint(codePoint);
         }
     }
 
@@ -728,39 +730,66 @@ public final class Core {
         return listCopyOfTrusted(result);
     }
 
+    /**
+     * @param s the text to parse
+     * @throws ParseError if it isn't a number
+     * @return the number it spells
+     */
     public static double stringToFloat64(String s) {
         String trimmed = s.trim();
         if (trimmed.startsWith(".") || trimmed.endsWith(".")) {
-            throw bubble();
+            throw new ParseError(s, "not a Float64");
         }
         try {
             return Double.parseDouble(s);
         } catch (NumberFormatException e) {
-            throw new Bubble(e.getMessage(), e);
+            throw new ParseError(s, "not a Float64");
         }
     }
 
+    /**
+     * @param s the text to parse
+     * @throws ParseError if it isn't an int
+     * @return the int it spells
+     */
     public static int stringToInt(String s) {
         return stringToInt(s, 10);
     }
 
+    /**
+     * @param s the text to parse
+     * @param radix the radix, 2 through 36
+     * @throws ParseError if it isn't an int
+     * @return the int it spells
+     */
     public static int stringToInt(String s, int radix) {
         try {
             return Integer.parseInt(s.trim(), radix);
         } catch (NumberFormatException e) {
-            throw new Bubble(e.getMessage(), e);
+            throw new ParseError(s, "not an Int32");
         }
     }
 
+    /**
+     * @param s the text to parse
+     * @throws ParseError if it isn't a long
+     * @return the long it spells
+     */
     public static long stringToInt64(String s) {
         return stringToInt64(s, 10);
     }
 
+    /**
+     * @param s the text to parse
+     * @param radix the radix, 2 through 36
+     * @throws ParseError if it isn't a long
+     * @return the long it spells
+     */
     public static long stringToInt64(String s, int radix) {
         try {
             return Long.parseLong(s.trim(), radix);
         } catch (NumberFormatException e) {
-            throw new Bubble(e.getMessage(), e);
+            throw new ParseError(s, "not an Int64");
         }
     }
 
@@ -1694,7 +1723,7 @@ public final class Core {
     public static <K, V> V mappedGet(Map<K, V> map, K key) {
         V value = map.get(key);
         if (value == null && !map.containsKey(key)) {
-            throw bubble();
+            throw new MissingKey(key);
         }
         return value;
     }
@@ -1777,10 +1806,11 @@ public final class Core {
      * @return the value that was mapped to the key
      * @param <K> the key type
      * @param <V> the value type
+     * @throws MissingKey if the key is missing
      */
     public static <K, V> V mapBuilderRemove(Map<K, V> map, K key) {
         if(!map.containsKey(key)) {
-            throw bubble();
+            throw new MissingKey(key);
         }
         return map.remove(key);
     }

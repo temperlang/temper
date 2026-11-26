@@ -1658,7 +1658,7 @@ console.log(m.toListWith { k, v => "${k}=${v}" }.join(" ") { it => it });
 let b = m.toMapBuilder();
 b["a"] = "x";
 b[1] = "uno";
-console.log("${b.remove(2)} ${b.remove(2) orelse "gone"} ${b.length} ${m.length}");
+console.log("${b.remove(2)} ${b.has(2)} ${b.length} ${m.length}");
 b.forEach { k, v => console.log("${k}: ${v}") };
 let p = b.toList()[0];
 console.log("${p.key} ${p.value} ${p is Pair} ${b is Mapped} ${m is MapBuilder}");
@@ -1713,7 +1713,7 @@ console.log("${p.key} ${p.value} ${p is Pair} ${b is Mapped} ${m is MapBuilder}"
       cat
       (Call (Call . b:1 \remove) 2)
       " "
-      (Orelse (Call (Call . b:1 \remove) 2) "gone")
+      (Call (Call . b:1 \has) 2)
       " "
       (Call . b:1 \length)
       " "
@@ -1740,14 +1740,262 @@ console.log("${p.key} ${p.value} ${p is Pair} ${b is Mapped} ${m is MapBuilder}"
       (Call is m:0 MapBuilder)))
   #void)
 error 326..329: Expected subtype of Int32, but got String
-error 571..586: Runtime type check from Map<Int32, String> to MapBuilder can never succeed
+error 554..569: Runtime type check from Map<Int32, String> to MapBuilder can never succeed
 log 2 deux false none ?
 log 2,1
 log 2=deux 1=one
-log deux gone 2 2
+log deux false 2 2
 log 1: uno
 log a: x
 Failed: Runtime type check from Map<Int32, String> to MapBuilder can never succeed
+
+=== conversions throw ParseError, saying the input and why
+let a: Int? = "x".toInt32() orelse null;
+let b = "ff".toInt32(16) orelse -1;
+let parse(s: String): Int { s.toInt32() orelse 0 }
+let declared(s: String): Int throws ParseError { s.toInt32() }
+let strict(s: String): Int { s.toInt32() }
+console.log("${a ?? 0} ${b} ${parse("7")} ${(2.9).toInt64()} ${declared("8")}");
+console.log(do { "x".toInt32().toString() } catch (e) { e.message });
+console.log(do { "1.5".toInt64().toString() } catch (e) { "${e.input} ${e.reason}" });
+console.log(do { "1.5x".toFloat64().toString() } catch (e) { e.message });
+console.log(do { (1.0e300).toInt32().toString() } catch (e) { e.message });
+console.log(do { (2147483647i64 + 1i64).toInt32().toString() } catch (e) { e.message });
+console.log(do { (9007199254740993i64).toFloat64().toString() } catch (e) { e.message });
+--- settled
+(Block
+  (Let ^a:0 (Call ? Int) (Orelse (Call (Call . "x" \toInt32)) null))
+  (Let ^b:1 (Orelse (Call (Call . "ff" \toInt32) 16) (Call - 1)))
+  (Let
+    ^parse:2
+    (Fn (Let ^s:5 String) Int (Block (Orelse (Call (Call . s:5 \toInt32)) 0))))
+  (Let
+    ^declared:3
+    (Fn
+      (Let ^s:6 String)
+      (Call throws Int ParseError)
+      (Block (Call (Call . s:6 \toInt32)))))
+  (Let
+    ^strict:4
+    (Fn (Let ^s:7 String) Int (Block (Call (Call . s:7 \toInt32)))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Block (If (Call == a:0 #null) 0 a:0))
+      " "
+      b:1
+      " "
+      (Call parse:2 "7")
+      " "
+      (Call (Call . 2.9 \toInt64))
+      " "
+      (Call declared:3 "8")))
+  (Call
+    (Call . console \log)
+    (Orelse
+      (Block (Call (Call . (Call (Call . "x" \toInt32)) \toString)))
+      (Block (Let ^e:8 (Call caught)) (Call . e:8 \message))))
+  (Call
+    (Call . console \log)
+    (Orelse
+      (Block (Call (Call . (Call (Call . "1.5" \toInt64)) \toString)))
+      (Block
+        (Let ^e:9 (Call caught))
+        (Call cat (Call . e:9 \input) " " (Call . e:9 \reason)))))
+  (Call
+    (Call . console \log)
+    (Orelse
+      (Block (Call (Call . (Call (Call . "1.5x" \toFloat64)) \toString)))
+      (Block (Let ^e:10 (Call caught)) (Call . e:10 \message))))
+  (Call
+    (Call . console \log)
+    (Orelse
+      (Block (Call (Call . (Call (Call . 1e300 \toInt32)) \toString)))
+      (Block (Let ^e:11 (Call caught)) (Call . e:11 \message))))
+  (Call
+    (Call . console \log)
+    (Orelse
+      (Block
+        (Call
+          (Call
+            .
+            (Call (Call . (Call + 2147483647i64 1i64) \toInt32))
+            \toString)))
+      (Block (Let ^e:12 (Call caught)) (Call . e:12 \message))))
+  (Call
+    (Call . console \log)
+    (Orelse
+      (Block
+        (Call (Call . (Call (Call . 9007199254740993i64 \toFloat64)) \toString)))
+      (Block (Let ^e:13 (Call caught)) (Call . e:13 \message))))
+  #void)
+error 220..231: Cannot throw ParseError from a function without ParseError in its return type
+log 0 255 7 2 8
+log parse error (input: x, reason: not an Int32)
+log 1.5 not an Int64
+log parse error (input: 1.5x, reason: not a Float64)
+log parse error (input: 1.0e+300, reason: out of Int32 range)
+log parse error (input: 2147483648, reason: out of Int32 range)
+log parse error (input: 9007199254740993, reason: not exact as Float64)
+
+=== invalid code points throw InvalidCodePoint
+let sb = new StringBuilder();
+sb.appendCodePoint(0x1F600) orelse panic();
+let one(c: Int): String throws InvalidCodePoint { String.fromCodePoint(c) }
+let many(cs: List<Int>): String throws InvalidCodePoint { String.fromCodePoints(cs) }
+let unhandled(c: Int): String { String.fromCodePoint(c) }
+console.log("${one(65) orelse "?"} ${sb.toString()} ${one(66) orelse "?"} ${many([67, 68]) orelse "?"}");
+console.log(one(0xD800) catch (e) { e.message });
+console.log(many([0x41, 0x110000, -1]) catch (e) { e.codePoint.toString(16) });
+sb.appendCodePoint(-1) catch (e) { console.log("${e.codePoint} ${sb.toString()}") };
+--- settled
+(Block
+  (Let ^sb:0 (Call new StringBuilder))
+  (Orelse (Call (Call . sb:0 \appendCodePoint) 128512) (Call panic))
+  (Let
+    ^one:1
+    (Fn
+      (Let ^c:4 Int)
+      (Call throws String InvalidCodePoint)
+      (Block (Call (Call . String \fromCodePoint) c:4))))
+  (Let
+    ^many:2
+    (Fn
+      (Let ^cs:5 (Call <> List Int))
+      (Call throws String InvalidCodePoint)
+      (Block (Call (Call . String \fromCodePoints) cs:5))))
+  (Let
+    ^unhandled:3
+    (Fn (Let ^c:6 Int) String (Block (Call (Call . String \fromCodePoint) c:6))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Orelse (Call one:1 65) "?")
+      " "
+      (Call (Call . sb:0 \toString))
+      " "
+      (Orelse (Call one:1 66) "?")
+      " "
+      (Orelse (Call many:2 (Call list 67 68)) "?")))
+  (Call
+    (Call . console \log)
+    (Orelse
+      (Call one:1 55296)
+      (Block (Let ^e:7 (Call caught)) (Call . e:7 \message))))
+  (Call
+    (Call . console \log)
+    (Orelse
+      (Call many:2 (Call list 65 1114112 (Call - 1)))
+      (Block
+        (Let ^e:8 (Call caught))
+        (Call (Call . (Call . e:8 \codePoint) \toString) 16))))
+  (Orelse
+    (Call (Call . sb:0 \appendCodePoint) (Call - 1))
+    (Block
+      (Let ^e:9 (Call caught))
+      (Call
+        (Call . console \log)
+        (Call cat (Call . e:9 \codePoint) " " (Call (Call . sb:0 \toString))))))
+  #void)
+error 268..291: Cannot throw InvalidCodePoint from a function without InvalidCodePoint in its return type
+log A 😀 B CD
+log invalid code point (codePoint: 55296)
+log 110000
+log -1 😀
+
+=== a missing key throws MissingKey, and getOr is nullable only with a nullable fallback
+let m = new Map([new Pair("a", 1)]);
+let get(k: String): Int throws MissingKey { m[k] }
+let unhandled(k: String): Int { m[k] }
+let n = get("a") orelse -1;
+let o = get("z") catch (e) { console.log(e.message); -1 };
+let p: Int = m.getOr("z", 0);
+let q: Int? = m.getOr("z", null);
+let r = m.getOr("z", null);
+let s: Int = m.getOr("z", null);
+let ls = [1, 2];
+let t: Int? = ls.getOr(5, null);
+console.log("${n} ${o} ${p} ${q ?? -2} ${r ?? -3} ${t ?? -4}");
+let b = m.toMapBuilder();
+console.log("${b.remove("a") orelse -1} ${b.length}");
+let removing(k: String): Int throws MissingKey { b.remove(k) }
+console.log((removing("a") catch (e) { console.log(e.message); -1 }).toString());
+--- settled
+(Block
+  (Let ^m:0 (Call new Map (Call list (Call new Pair "a" 1))))
+  (Let
+    ^get:1
+    (Fn
+      (Let ^k:13 String)
+      (Call throws Int MissingKey)
+      (Block (Call [] m:0 k:13))))
+  (Let ^unhandled:2 (Fn (Let ^k:14 String) Int (Block (Call [] m:0 k:14))))
+  (Let ^n:3 (Orelse (Call get:1 "a") (Call - 1)))
+  (Let
+    ^o:4
+    (Orelse
+      (Call get:1 "z")
+      (Block
+        (Let ^e:15 (Call caught))
+        (Call (Call . console \log) (Call . e:15 \message))
+        (Call - 1))))
+  (Let ^p:5 Int (Call (Call . m:0 \getOr) "z" 0))
+  (Let ^q:6 (Call ? Int) (Call (Call . m:0 \getOr) "z" null))
+  (Let ^r:7 (Call (Call . m:0 \getOr) "z" null))
+  (Let ^s:8 Int (Call (Call . m:0 \getOr) "z" null))
+  (Let ^ls:9 (Call list 1 2))
+  (Let ^t:10 (Call ? Int) (Call (Call . ls:9 \getOr) 5 null))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      n:3
+      " "
+      o:4
+      " "
+      p:5
+      " "
+      (Block (If (Call == q:6 #null) (Call - 2) q:6))
+      " "
+      (Block (If (Call == r:7 #null) (Call - 3) r:7))
+      " "
+      (Block (If (Call == t:10 #null) (Call - 4) t:10))))
+  (Let ^b:11 (Call (Call . m:0 \toMapBuilder)))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Orelse (Call (Call . b:11 \remove) "a") (Call - 1))
+      " "
+      (Call . b:11 \length)))
+  (Let
+    ^removing:12
+    (Fn
+      (Let ^k:16 String)
+      (Call throws Int MissingKey)
+      (Block (Call (Call . b:11 \remove) k:16))))
+  (Call
+    (Call . console \log)
+    (Call
+      (Call
+        .
+        (Orelse
+          (Call removing:12 "a")
+          (Block
+            (Let ^e:17 (Call caught))
+            (Call (Call . console \log) (Call . e:17 \message))
+            (Call - 1)))
+        \toString)))
+  #void)
+error 120..124: Cannot throw MissingKey from a function without MissingKey in its return type
+error 319..337: Cannot assign to Int32 from Int32?
+log missing key (key: z)
+log 1 -1 0 -2 -3 -4
+log 1 0
+log missing key (key: a)
+log -1
 
 === static extensions where visible
 @staticExtension(Int, "seven")

@@ -40,15 +40,56 @@ internal class Rect : IShape
         p.EndObject();
     }
 
+    /// <exception cref="JsonException">Where it fails with JsonException.</exception>
     public static Rect DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
-        JsonObject obj = t is JsonObject ? (JsonObject)t : Core.Bubble<JsonObject>();
+        JsonObject obj;
+        if (t is JsonObject)
+        {
+            obj = (JsonObject)t;
+        }
+        else
+        {
+            throw new JsonShapeException("expected Rect JSON object");
+        }
         IJsonSyntaxTree widthTree = obj.PropertyValueOrBubble("width");
-        IJsonNumeric widthJson = widthTree is IJsonNumeric ? (IJsonNumeric)widthTree : Core.Bubble<IJsonNumeric>();
-        int width = widthJson.AsInt32();
+        IJsonNumeric widthJson;
+        if (widthTree is IJsonNumeric)
+        {
+            widthJson = (IJsonNumeric)widthTree;
+        }
+        else
+        {
+            throw new JsonShapeException("expected Int for width");
+        }
+        int width;
+        try
+        {
+            width = widthJson.AsInt32();
+        }
+        catch (ParseError failure)
+        {
+            throw Core.WithCause(new JsonShapeException("expected Int for width"), failure);
+        }
         IJsonSyntaxTree heightTree = obj.PropertyValueOrBubble("height");
-        IJsonNumeric heightJson = heightTree is IJsonNumeric ? (IJsonNumeric)heightTree : Core.Bubble<IJsonNumeric>();
-        int height = heightJson.AsInt32();
+        IJsonNumeric heightJson;
+        if (heightTree is IJsonNumeric)
+        {
+            heightJson = (IJsonNumeric)heightTree;
+        }
+        else
+        {
+            throw new JsonShapeException("expected Int for height");
+        }
+        int height;
+        try
+        {
+            height = heightJson.AsInt32();
+        }
+        catch (ParseError failure2)
+        {
+            throw Core.WithCause(new JsonShapeException("expected Int for height"), failure2);
+        }
         return new Rect(width, height);
     }
 

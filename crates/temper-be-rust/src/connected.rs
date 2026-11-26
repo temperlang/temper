@@ -9,7 +9,7 @@
 use crate::NotYet;
 use crate::translate::{Translator, Want};
 use crate::tree::{Bin, Expr, Unary};
-use temper_tmpl::{Node, NodeId};
+use temper_tmpl::{Node, NodeId, TypeData};
 
 /// Custom output: from the call's argument nodes (a method's receiver
 /// first, and `Omitted` for an argument left out) and what its place
@@ -176,6 +176,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Translate(to_string),
     ),
     (
+        "core.type InvalidCodePoint.constructor()",
+        Connection::Function("temper_core::InvalidCodePoint::new"),
+    ),
+    (
         "core.type List.get length()",
         Connection::Ufcs("temper_core::ListedTrait::len"),
     ),
@@ -254,7 +258,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "core.type Listed.getOr()",
-        Connection::Ufcs("temper_core::ListedTrait::get_or"),
+        Connection::Translate(listed_get_or),
     ),
     (
         "core.type Listed.join()",
@@ -322,7 +326,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "core.type Mapped.getOr()",
-        Connection::Ufcs("temper_core::MappedTrait::get_or"),
+        Connection::Translate(mapped_get_or),
     ),
     (
         "core.type Mapped.has()",
@@ -353,8 +357,16 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Ufcs("temper_core::MappedTrait::values"),
     ),
     (
+        "core.type MissingKey.constructor()",
+        Connection::Function("temper_core::MissingKey::new"),
+    ),
+    (
         "core.type Pair.constructor()",
         Connection::Translate(new_pair),
+    ),
+    (
+        "core.type ParseError.constructor()",
+        Connection::Function("temper_core::ParseError::new"),
     ),
     (
         "core.type PromiseBuilder.breakPromise()",
@@ -555,6 +567,43 @@ pub fn lookup_type(qname: &str) -> Option<TypeConnection> {
         .binary_search_by_key(&qname, |(k, _)| k)
         .ok()
         .map(|i| TYPES[i].1)
+}
+
+/// `temper_core::MappedTrait::get_or(&m, k, fallback)`, or where the
+/// fallback is null and the values aren't, `get_or_null(&m, k)`, then
+/// `.or(fallback)` unless that's `None`: the call's result is an
+/// `Option` of the values then.
+fn mapped_get_or(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, NotYet> {
+    get_or(t, args, "temper_core::MappedTrait")
+}
+
+/// As [`mapped_get_or`], for `temper_core::ListedTrait`.
+fn listed_get_or(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<Expr, NotYet> {
+    get_or(t, args, "temper_core::ListedTrait")
+}
+
+fn get_or(t: &mut Translator<'_>, args: &[NodeId], by: &str) -> Result<Expr, NotYet> {
+    let &[receiver, key, fallback] = args else {
+        return Err(NotYet::new("`getOr` without a key and a fallback"));
+    };
+    let p = t.program();
+    let element = p.types.args(p.nodes.ty(receiver)).last().copied();
+    let widened = element.is_some_and(|e| {
+        matches!(p.types.get(p.nodes.ty(fallback)), TypeData::Nullable(_))
+            && !matches!(p.types.get(e), TypeData::Nullable(_))
+    });
+    let method = if widened { "get_or_null" } else { "get_or" };
+    let mut fargs = vec![t.handle_ref(receiver)?];
+    fargs.push(t.expr(key, Want::Owned)?);
+    if !widened {
+        fargs.push(t.expr(fallback, Want::Owned)?);
+        return Ok(Expr::path(format!("{by}::{method}")).call(fargs));
+    }
+    let got = Expr::path(format!("{by}::{method}")).call(fargs);
+    Ok(match p.nodes.get(fallback) {
+        Node::Null {} => got,
+        _ => got.method("or", vec![t.expr(fallback, Want::Owned)?]),
+    })
 }
 
 /// `println!`, with the message's literal parts in its format string, as

@@ -176,9 +176,10 @@ let my64: Int64 = 1i64;
 
 #### `Int64.toFloat64`
 
-`:` `fn(`[*Int64*](#class-int64)`):` [*Float64*](#class-float64) `throws` [*Bubble*](#class-bubble)
+`:` `fn(`[*Int64*](#class-int64)`):` [*Float64*](#class-float64) `throws` [*ParseError*](#class-parseerror)
 
-Bubbles if the result isn't within the exponent error of the original.
+Throws a [*ParseError*](#class-parseerror) if the result isn't exact: outside
+plus or minus 0x1f_ffff_ffff_ffff, inclusive.
 
 #### `Int64.toFloat64Unsafe`
 
@@ -188,11 +189,9 @@ If outside bounds, returns a backend-dependent value. Use fuzz testing.
 
 #### `Int64.toInt32`
 
-`:` `fn(`[*Int64*](#class-int64)`):` [*Int32*](#class-int32) `throws` [*Bubble*](#class-bubble)
+`:` `fn(`[*Int64*](#class-int64)`):` [*Int32*](#class-int32) `throws` [*ParseError*](#class-parseerror)
 
-Bubbles if the result isn't within bounds.
-TODO Should this panic instead since this is an easy check?
-TODO But many others cost more to check the panic on fail.
+Throws a [*ParseError*](#class-parseerror) if the result isn't within bounds.
 
 #### `Int64.toInt32Unsafe`
 
@@ -323,9 +322,10 @@ Temper also does not recognize all C's number suffixes.
 
 #### `Float64.toInt32`
 
-`:` `fn(`[*Float64*](#class-float64)`):` [*Int32*](#class-int32) `throws` [*Bubble*](#class-bubble)
+`:` `fn(`[*Float64*](#class-float64)`):` [*Int32*](#class-int32) `throws` [*ParseError*](#class-parseerror)
 
-Truncates toward zero. Bubbles if the value isn't within 1 of Int32 limits.
+Truncates toward zero. Throws a [*ParseError*](#class-parseerror) if the value
+isn't within 1 of Int32 limits, or is NaN.
 
 #### `Float64.toInt32Unsafe`
 
@@ -335,9 +335,10 @@ If outside bounds, returns a backend-dependent value. Use fuzz testing.
 
 #### `Float64.toInt64`
 
-`:` `fn(`[*Float64*](#class-float64)`):` [*Int64*](#class-int64) `throws` [*Bubble*](#class-bubble)
+`:` `fn(`[*Float64*](#class-float64)`):` [*Int64*](#class-int64) `throws` [*ParseError*](#class-parseerror)
 
-Truncates toward zero. Bubbles if the value isn't within plus or minus
+Truncates toward zero. Throws a [*ParseError*](#class-parseerror) if the value
+isn't within plus or minus
 0x1f_ffff_ffff_ffff, inclusive.
 
 #### `Float64.toInt64Unsafe`
@@ -984,21 +985,24 @@ for (let codePoint: Int of "foo-bar") {
 
 #### `String.toFloat64`
 
-`:` `fn(`[*String*](#class-string)`):` [*Float64*](#class-float64) `throws` [*Bubble*](#class-bubble)
+`:` `fn(`[*String*](#class-string)`):` [*Float64*](#class-float64) `throws` [*ParseError*](#class-parseerror)
 
-Supports numeric JSON format plus Infinity and NaN.
+Supports numeric JSON format plus Infinity and NaN; throws a
+[*ParseError*](#class-parseerror) for other text.
 
 #### `String.toInt32`
 
-`:` `fn(`[*String*](#class-string), [*Int32*](#class-int32)&#63; \= \.\.\.`):` [*Int32*](#class-int32) `throws` [*Bubble*](#class-bubble)
+`:` `fn(`[*String*](#class-string), [*Int32*](#class-int32)&#63; \= \.\.\.`):` [*Int32*](#class-int32) `throws` [*ParseError*](#class-parseerror)
 
-Supports integer JSON format, plus any radix 2 through 36.
+Supports integer JSON format, plus any radix 2 through 36; throws a
+[*ParseError*](#class-parseerror) for other text, or a value out of range.
 
 #### `String.toInt64`
 
-`:` `fn(`[*String*](#class-string), [*Int32*](#class-int32)&#63; \= \.\.\.`):` [*Int64*](#class-int64) `throws` [*Bubble*](#class-bubble)
+`:` `fn(`[*String*](#class-string), [*Int32*](#class-int32)&#63; \= \.\.\.`):` [*Int64*](#class-int64) `throws` [*ParseError*](#class-parseerror)
 
-Supports integer JSON format, plus any radix 2 through 36.
+Supports integer JSON format, plus any radix 2 through 36; throws a
+[*ParseError*](#class-parseerror) for other text, or a value out of range.
 
 #### `String.toString`
 
@@ -1012,17 +1016,20 @@ Supports integer JSON format, plus any radix 2 through 36.
 
 #### `String.fromCodePoint`
 
-`static` `:` `fn(`[*Int32*](#class-int32)`):` [*String*](#class-string) `throws` [*Bubble*](#class-bubble)
+`static` `:` `fn(`[*Int32*](#class-int32)`):` [*String*](#class-string) `throws` [*InvalidCodePoint*](#class-invalidcodepoint)
 
-Convert the single code point to a string if it's valid. Specifically, it
-must be a Unicode scalar value, which is between 0 and 0x10FFFF, inclusive,
-except for the surrogate range 0xD800 through 0xDFFF.
+Convert the single code point to a string. It must be a Unicode scalar
+value, which is between 0 and 0x10FFFF, inclusive, except for the
+surrogate range 0xD800 through 0xDFFF; anything else throws an
+[*InvalidCodePoint*](#class-invalidcodepoint).
 
 #### `String.fromCodePoints`
 
-`static` `:` `fn(`[*Listed*](#interface-listed)&lt;[*Int32*](#class-int32)&gt;`):` [*String*](#class-string) `throws` [*Bubble*](#class-bubble)
+`static` `:` `fn(`[*Listed*](#interface-listed)&lt;[*Int32*](#class-int32)&gt;`):` [*String*](#class-string) `throws` [*InvalidCodePoint*](#class-invalidcodepoint)
 
-Convert the list of code points to a string if they're valid.
+Convert the list of code points to a string. Each must be a Unicode
+scalar value, as for `fromCodePoint`, or this throws an
+[*InvalidCodePoint*](#class-invalidcodepoint) for the first that isn't.
 
 #### `String.begin`
 
@@ -1090,11 +1097,12 @@ You can append a string at the end.
 
 #### `StringBuilder.appendCodePoint`
 
-`:` `fn(`[*StringBuilder*](#class-stringbuilder), [*Int32*](#class-int32)`):` [*Void*](#class-void) `throws` [*Bubble*](#class-bubble)
+`:` `fn(`[*StringBuilder*](#class-stringbuilder), [*Int32*](#class-int32)`):` [*Void*](#class-void) `throws` [*InvalidCodePoint*](#class-invalidcodepoint)
 
 A single code point can be appended.  If it's not a valid
 [Unicode scalar value](https://www.unicode.org/glossary/#unicode_scalar_value),
-the call bubbles.  This operation can be more efficient on some backends
+the call throws an [*InvalidCodePoint*](#class-invalidcodepoint) and
+appends nothing.  This operation can be more efficient on some backends
 than making a temporary string from a code point just for appending.
 
 #### `StringBuilder.appendBetween`
@@ -1408,7 +1416,7 @@ True if this contains no elements.
 
 `:` `fn(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, [*Int32*](#class-int32)`):` [*T*](#listedt)
 
-The i<sup>th</sup> element, or [*Bubble*](builtins.md#bubble-1) if *i* is outside the range \[0, [length]\).
+The i<sup>th</sup> element; panics if *i* is outside the range \[0, [length]\).
 
 ```temper
 let ls = ["a", "b", "c"]; // List of length 3
@@ -1432,6 +1440,10 @@ backend languages can handle their particular implementations of panic.
 #### `Listed.getOr`
 
 `:` `fn(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, [*Int32*](#class-int32), [*T*](#listedt)`):` [*T*](#listedt)
+
+The i<sup>th</sup> element, or [fallback] outside the range. With a nullable
+fallback, as `null`, the result is nullable too: `ls.getOr(i, null)` is a
+`T?`.
 
 #### `Listed.slice`
 
@@ -1546,9 +1558,10 @@ Removes all entries, retaining internal capacity where possible.
 
 #### `MapBuilder.remove`
 
-`:` `fn(`[*MapBuilder*](#class-mapbuilder)&lt;[*K*](#mapbuilderk), [*V*](#mapbuilderv)&gt;, [*K*](#mapbuilderk)`):` [*V*](#mapbuilderv) `throws` [*Bubble*](#class-bubble)
+`:` `fn(`[*MapBuilder*](#class-mapbuilder)&lt;[*K*](#mapbuilderk), [*V*](#mapbuilderv)&gt;, [*K*](#mapbuilderk)`):` [*V*](#mapbuilderv) `throws` [*MissingKey*](#class-missingkey)
 
-Removes the given entry if found, and returns its value.
+Removes the given entry and returns its value. Throws a
+[*MissingKey*](#class-missingkey) if there's none.
 
 #### `MapBuilder.set`
 
@@ -1583,15 +1596,18 @@ The number of key value pairs in the [*Mapped*](#interface-mapped).
 
 #### `Mapped.get`
 
-`:` `fn(`[*Mapped*](#interface-mapped)&lt;[*K*](#mappedk), [*V*](#mappedv)&gt;, [*K*](#mappedk)`):` [*V*](#mappedv) `throws` [*Bubble*](#class-bubble)
+`:` `fn(`[*Mapped*](#interface-mapped)&lt;[*K*](#mappedk), [*V*](#mappedv)&gt;, [*K*](#mappedk)`):` [*V*](#mappedv) `throws` [*MissingKey*](#class-missingkey)
 
-Get the value associated with [key], or [`bubble()`](builtins.md#bubble)s if no key is found.
+Get the value associated with [key], or throw a
+[*MissingKey*](#class-missingkey) if there's none.
 
 #### `Mapped.getOr`
 
 `:` `fn(`[*Mapped*](#interface-mapped)&lt;[*K*](#mappedk), [*V*](#mappedv)&gt;, [*K*](#mappedk), [*V*](#mappedv)`):` [*V*](#mappedv)
 
-Get the value associated with [key], falling back to [fallback] when no such key exists.
+Get the value associated with [key], falling back to [fallback] when no
+such key exists. With a nullable fallback, as `null`, the result is
+nullable too: `m.getOr(key, null)` is a `V?`.
 
 #### `Mapped.has`
 
@@ -1668,6 +1684,49 @@ Calls [func] on each key and value in the [*Mapped*](#interface-mapped).
 Calls the provided binary function func on each key and value for the side effect
 
 This method is more likely to change or be removed before Temper 1.0 than most
+
+## *interface CoreError*
+
+`sealed interface CoreError extends Error`
+
+The root of core's own failure types, [*MissingKey*](#class-missingkey),
+[*ParseError*](#class-parseerror), and
+[*InvalidCodePoint*](#class-invalidcodepoint), as a library's roots are its
+failures'.
+
+## *class MissingKey*
+
+`class MissingKey extends CoreError`
+
+What [`Mapped.get`](#mappedget) (`m[key]`) and
+[`MapBuilder.remove`](#mapbuilderremove) throw when the key they're given
+has no value: which keys a map holds depends on data, and checking first
+costs a second lookup, so callers handle it, unlike a list's index out of
+range, a bug, which panics. Its `key` is the
+key that was missing; its message, as `missing key (key: z)`, says it.
+
+## *class ParseError*
+
+`class ParseError extends CoreError`
+
+What a conversion throws for a value it can't convert: text that isn't a
+number of the type wanted, as `"x".toInt32()`, or a number out of the
+type's range, as `1.0e300.toInt32()`. Its `input` is the text, or the
+number as text, and its `reason` says what's wrong, as `not an Int32`,
+`out of Int32 range`, or `not exact as Float64`. Callers that want a
+default write `s.toInt32() orelse 0`, or `orelse null`.
+
+## *class InvalidCodePoint*
+
+`class InvalidCodePoint extends CoreError`
+
+What [`String.fromCodePoint`](#stringfromcodepoint),
+[`String.fromCodePoints`](#stringfromcodepoints), and
+[`StringBuilder.appendCodePoint`](#stringbuilderappendcodepoint) throw for a
+number that isn't a Unicode scalar value: below 0, above 0x10FFFF, or a
+surrogate, 0xD800 through 0xDFFF. Code points often come from decoded
+data, as character references and escapes. Its `codePoint` is the number
+given; its message, as `invalid code point (codePoint: 55296)`, says it.
 
 ## *class Pair*
 

@@ -13,6 +13,7 @@ internal class CircleJsonAdapter : IJsonAdapter<Circle>
         x.EncodeToJson(p);
     }
 
+    /// <exception cref="JsonException">Where it fails with JsonException.</exception>
     public Circle DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
         return Circle.DecodeFromJson(t, ic);

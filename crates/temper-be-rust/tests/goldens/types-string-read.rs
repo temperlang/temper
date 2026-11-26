@@ -28,6 +28,37 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 from_codes_no_inline(Arc::new(vec![55296, 56320]))
                     .unwrap_or_else(|_| Arc::new("no to surrogates".to_string()))
             );
+            println!(
+                "{}",
+                from_codes_no_inline(Arc::new(vec![65, -1, 56320]))
+                    .unwrap_or_else(|e| temper_core::int_to_string(e.code_point(), Some(16)))
+            );
+            println!(
+                "{}",
+                temper_core::string::from_code_point(57343).unwrap_or_else(|e2| e2.message())
+            );
+            println!(
+                "{}",
+                (|| {
+                    Ok::<_, temper_core::ParseError>(Arc::new(
+                        temper_core::string::to_int("x", None)?.to_string(),
+                    ))
+                })()
+                .unwrap_or_else(|e3| e3.message())
+            );
+            println!(
+                "{}",
+                (|| {
+                    Ok::<_, temper_core::ParseError>(Arc::new(
+                        temper_core::float64::to_int(1e300)?.to_string(),
+                    ))
+                })()
+                .unwrap_or_else(|e4| e4.reason())
+            );
+            println!(
+                "{}",
+                temper_core::string::to_int64("12", None).unwrap_or(-1)
+            );
             check_parse("-1", None);
             check_parse("2", None);
             check_parse(" 2 ", None);
@@ -39,6 +70,21 @@ pub(crate) fn init() -> temper_core::Result<()> {
             check_parse("20", Some(7));
             check_parse("20", Some(17));
             check_parse("20", Some(37));
+            check_parse("10", Some(0));
+            check_parse("0", Some(1));
+            println!(
+                "{}",
+                (|| {
+                    Ok::<_, temper_core::ParseError>(Arc::new(
+                        temper_core::string::to_int64("10", Some(0))?.to_string(),
+                    ))
+                })()
+                .unwrap_or_else(|e5| e5.reason())
+            );
+            println!(
+                "{}",
+                temper_core::string::to_int64("10", Some(-2)).unwrap_or(-1)
+            );
             {
                 let s = Arc::new("foo-bar".to_string());
                 let after1_2 = temper_core::string::next(&s, 0usize);
@@ -169,14 +215,14 @@ pub(crate) fn compare_ends(message: impl ToArcString) {
     println!("end <= end? {}", Some(end).cmp(&Some(end)) as i32 <= 0);
 }
 
-pub(crate) fn from_code_no_inline(code: i32) -> temper_core::Result<Arc<String>> {
+pub(crate) fn from_code_no_inline(code: i32) -> Result<Arc<String>, temper_core::InvalidCodePoint> {
     println!("From 0x{}", temper_core::int_to_string(code, Some(16)));
     temper_core::string::from_code_point(code)
 }
 
 pub(crate) fn from_codes_no_inline(
     codes: impl temper_core::ToListed<i32>,
-) -> temper_core::Result<Arc<String>> {
+) -> Result<Arc<String>, temper_core::InvalidCodePoint> {
     let codes = codes.to_listed();
     println!("From codes");
     temper_core::string::from_code_points(&*codes)
@@ -185,7 +231,7 @@ pub(crate) fn from_codes_no_inline(
 pub(crate) fn check_parse(string: impl ToArcString, radix: Option<i32>) {
     let string = string.to_arc_string();
     let converted = (|| {
-        Ok::<_, temper_core::Error>(Arc::new(
+        Ok::<_, temper_core::ParseError>(Arc::new(
             (if let Some(radix) = radix {
                 temper_core::string::to_int(&string, Some(radix))?
             } else {

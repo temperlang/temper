@@ -1,4 +1,5 @@
 import {
+  ParseError,
   bubble,
   divIntInt,
   isBubble,
@@ -56,7 +57,7 @@ function parse(s) {
   try {
     return stringToInt32(s, null);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof ParseError)) throw e$;
     return -1;
   }
 }
@@ -70,7 +71,7 @@ function halved(s, d) {
   try {
     return divIntInt(stringToInt32(s, null), d);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof ParseError)) throw e$;
     return -1;
   }
 }

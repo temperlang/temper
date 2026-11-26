@@ -533,28 +533,29 @@ let b9(s: String): Int { s.toInt32(null) }
   (Let
     ^b9:17
     (Fn (Let ^s:32 String) Int (Block (Call (Call . s:32 \toInt32) null)))))
-error 64..75: Cannot bubble from a function without Bubble in its return type
+error 64..75: Cannot throw ParseError from a function without ParseError in its return type
 error 100..112: Cannot assign to Int32 from String
 error 146..149: Expected subtype of Int32, but got String
 error 140..150: Cannot assign to String from Int32
 error 188..191: Expected subtype of Int32?, but got String
-error 178..192: Cannot bubble from a function without Bubble in its return type
+error 178..192: Cannot throw ParseError from a function without ParseError in its return type
 error 220..229: Cannot assign to Int32 from Boolean
-error 258..269: Cannot bubble from a function without Bubble in its return type
+error 258..269: Cannot throw ParseError from a function without ParseError in its return type
 error 309..310: Expected subtype of Float64, but got Int32
 error 302..311: Cannot assign to Float64 from Boolean
 error 339..355: Wrong number of arguments.  Expected 1
+error 377..401: Cannot throw InvalidCodePoint from a function without InvalidCodePoint in its return type
 error 420..430: Cannot assign to Int32 from Float64
-error 449..462: Cannot bubble from a function without Bubble in its return type
+error 449..462: Cannot throw ParseError from a function without ParseError in its return type
 error 509..522: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]
 error 551..563: Cannot assign to Int32 from String
 error 610..623: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]
 error 662..663: Expected subtype of String, but got Int32
 error 654..664: Cannot assign to String from List<String>
-error 696..709: Cannot bubble from a function without Bubble in its return type
+error 696..709: Cannot throw ParseError from a function without ParseError in its return type
 error 759..760: Expected subtype of Float64, but got Int32
 error 745..761: Cannot assign to Int32 from Float64
-error 789..804: Cannot bubble from a function without Bubble in its return type
+error 789..804: Cannot throw ParseError from a function without ParseError in its return type
 
 === generic builtin types' members have core's signatures
 // With the receiver's type arguments put in, inherited from `Listed` or
@@ -588,7 +589,7 @@ let f(ls: List<Int>, lb: ListBuilder<String>, ld: Listed<Int>, s: String, n: Int
   let b1: List<Int> = ls.map(fn (x: Int): String { x.toString() });
   let b2 = ls.filter(isLong);
 }
-let k(m: Map<String, Int>, mb: MapBuilder<String, Int>, md: Mapped<String, Int>): Int throws Bubble {
+let k(m: Map<String, Int>, mb: MapBuilder<String, Int>, md: Mapped<String, Int>): Int throws MissingKey {
   let a1: String = m["k"];
   let a2: String = m.get("k");
   let a3: Int = m[1];
@@ -662,7 +663,7 @@ let h(xs: List<Int>?): Int { xs.length }
       (Let ^m:36 (Call <> Map String Int))
       (Let ^mb:37 (Call <> MapBuilder String Int))
       (Let ^md:38 (Call <> Mapped String Int))
-      (Call throws Int Bubble)
+      (Call throws Int MissingKey)
       (Block
         (Let ^a1:39 String (Call [] m:36 "k"))
         (Let ^a2:40 String (Call (Call . m:36 \get) "k"))
@@ -705,24 +706,24 @@ error 853..856: Expected subtype of Int32, but got String
 error 841..857: Cannot assign to String from Int32
 error 881..893: Cannot assign to List<Int32> from List<String>
 error 904..907: Expected subtype of Int32, but got String
-error 987..988: Expected subtype of Int32, but got Int32?
+error 975..989: Cannot assign to Int32 from Int32?
 error 1007..1011: Cannot assign to Int32 from String
 error 1029..1034: Cannot assign to Int32 from String
 error 1055..1070: Cannot assign to String from Int32
 error 1101..1137: Actual arguments do not match signature: <O extends AnyValue, E extends AnyValue>(Listed<Int32>, fn (Int32): O throws E) -> List<O> throws E expected [Listed<Int32>, fn (Int32): Int32], but got [List<Int32>, fn (Int32): String]
 error 1161..1167: Expected subtype of fn (Int32): Boolean, but got fn (String): Boolean
-error 1293..1299: Cannot assign to String from Int32
-error 1320..1330: Cannot assign to String from Int32
-error 1350..1351: Expected subtype of String, but got Int32
-error 1366..1369: Expected subtype of Int32, but got String
-error 1390..1399: Cannot assign to String from Int32
-error 1427..1428: Expected subtype of String, but got Int32
-error 1455..1463: Cannot assign to Listed<Int32> from Listed<String>
-error 1484..1498: Cannot assign to String from Int32
-error 1526..1536: Cannot assign to Map<Int32, Int32> from Map<String, Int32>
-error 1604..1610: Cannot bubble from a function without Bubble in its return type
-error 1623..1633: Cannot bubble from a function without Bubble in its return type
-error 1702..1711: No member length in List<Int32>?
+error 1297..1303: Cannot assign to String from Int32
+error 1324..1334: Cannot assign to String from Int32
+error 1354..1355: Expected subtype of String, but got Int32
+error 1370..1373: Expected subtype of Int32, but got String
+error 1394..1403: Cannot assign to String from Int32
+error 1431..1432: Expected subtype of String, but got Int32
+error 1459..1467: Cannot assign to Listed<Int32> from Listed<String>
+error 1488..1502: Cannot assign to String from Int32
+error 1530..1540: Cannot assign to Map<Int32, Int32> from Map<String, Int32>
+error 1608..1614: Cannot throw MissingKey from a function without MissingKey in its return type
+error 1627..1637: Cannot throw MissingKey from a function without MissingKey in its return type
+error 1706..1715: No member length in List<Int32>?
 
 === builtin generic methods' own type parameters are solved per call
 // `map<O>`, `reduceFrom<O>`, `reduceFromIndex<O>` and `Mapped`'s
@@ -833,8 +834,10 @@ error 1542..1590: Cannot assign to String from Int32
 error 1608..1642: Cannot assign to Int32 from List<String>
 
 === what may bubble: methods of builtin types, arity, misfits and operators
-// Kotlin also says "Cannot bubble" for c9, whose constant argument fails
-// when it folds the call, and counts `this` in d2's arity.
+// Core's conversions throw ParseError and code points InvalidCodePoint
+// (2026-11-25): a call that may throw a declared failure is a failing
+// place wherever it is, as Kotlin never folds one; Kotlin counts `this`
+// in d2's arity.
 let c1(x: Int64): Int { x.toInt32Unsafe() + x.toFloat64() }
 let c2(x: Int64): Float64 { x.toFloat64() }
 let c3(x: Int64): Int { 1 + x.toInt32() }
@@ -934,36 +937,37 @@ let e8(s: String): Boolean { !(s.toInt32()) }
       (Let ^s:41 String)
       Boolean
       (Block (Call ! (Call (Call . s:41 \toInt32)))))))
-error 178..191: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]
-error 222..235: Cannot bubble from a function without Bubble in its return type
-error 266..277: Cannot bubble from a function without Bubble in its return type
-error 310..321: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
-error 304..321: Cannot assign to Int32 from Float64
-error 379..382: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
-error 373..382: Cannot assign to Int32 from Float64
-error 414..419: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
-error 407..420: Cannot assign to Int32 from Float64
-error 452..463: Cannot bubble from a function without Bubble in its return type
-error 482..504: Cannot bubble from a function without Bubble in its return type
-error 584..607: Cannot bubble from a function without Bubble in its return type
-error 635..652: Wrong number of arguments.  Expected 1
-error 645..648: Expected subtype of Int32?, but got Float64
-error 746..751: Cannot assign to String from StringIndex
-error 815..822: Wrong number of arguments.  Expected 1
-error 849..852: Expected subtype of Int32, but got String
-error 847..853: Cannot bubble from a function without Bubble in its return type
-error 884..888: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
-error 878..888: Cannot assign to Int32 from Float64
-error 917..921: Cannot bubble from a function without Bubble in its return type
-error 954..958: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
-error 946..959: Cannot assign to Int32 from Float64
-error 992..996: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
-error 986..996: Expected subtype of Int32, but got Float64
-error 984..997: Cannot bubble from a function without Bubble in its return type
-error 1041..1052: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
-error 1035..1052: Expected subtype of Int32?, but got Float64
-error 1025..1053: Cannot bubble from a function without Bubble in its return type
-error 1087..1098: Expected subtype of Boolean, but got Int32
+error 278..291: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Float64]
+error 322..335: Cannot throw ParseError from a function without ParseError in its return type
+error 366..377: Cannot throw ParseError from a function without ParseError in its return type
+error 410..421: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
+error 404..421: Cannot assign to Int32 from Float64
+error 479..482: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
+error 473..482: Cannot assign to Int32 from Float64
+error 514..519: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
+error 507..520: Cannot assign to Int32 from Float64
+error 552..563: Cannot throw ParseError from a function without ParseError in its return type
+error 582..604: Cannot throw ParseError from a function without ParseError in its return type
+error 626..656: Cannot throw InvalidCodePoint from a function without InvalidCodePoint in its return type
+error 684..707: Cannot throw InvalidCodePoint from a function without InvalidCodePoint in its return type
+error 735..752: Wrong number of arguments.  Expected 1
+error 745..748: Expected subtype of Int32?, but got Float64
+error 846..851: Cannot assign to String from StringIndex
+error 915..922: Wrong number of arguments.  Expected 1
+error 949..952: Expected subtype of Int32, but got String
+error 947..953: Cannot bubble from a function without Bubble in its return type
+error 984..988: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
+error 978..988: Cannot assign to Int32 from Float64
+error 1017..1021: Cannot bubble from a function without Bubble in its return type
+error 1054..1058: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
+error 1046..1059: Cannot assign to Int32 from Float64
+error 1092..1096: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
+error 1086..1096: Expected subtype of Int32, but got Float64
+error 1084..1097: Cannot bubble from a function without Bubble in its return type
+error 1141..1152: Actual arguments do not match signature: (Float64, Float64) -> Float64 expected [Float64, Float64], but got [Float64, Int32]
+error 1135..1152: Expected subtype of Int32?, but got Float64
+error 1125..1153: Cannot throw ParseError from a function without ParseError in its return type
+error 1187..1198: Expected subtype of Boolean, but got Int32
 
 === what may bubble: constructors that say so
 // Kotlin doesn't fold a constructor's call, so reports one with constant

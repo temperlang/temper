@@ -140,7 +140,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
             println!(
                 "Infinity to int: {}",
                 (|| {
-                    Ok::<_, temper_core::Error>(Arc::new(
+                    Ok::<_, temper_core::ParseError>(Arc::new(
                         temper_core::float64::to_int(infinity)?.to_string(),
                     ))
                 })()
@@ -149,7 +149,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
             println!(
                 "NaN to int: {}",
                 (|| {
-                    Ok::<_, temper_core::Error>(Arc::new(
+                    Ok::<_, temper_core::ParseError>(Arc::new(
                         temper_core::float64::to_int(f64::NAN)?.to_string(),
                     ))
                 })()
@@ -160,8 +160,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
             let not_so_small = (-2147483648i64).wrapping_mul(one_int64);
             let slightly_bigger = (not_so_big as f64 + 1.5) as i64;
             let slightly_smaller = (not_so_small as f64 - 1.5) as i64;
-            let too_big_for_float64 =
-                9007199254740992i64.wrapping_mul(temper_core::float64::to_int64(one)?);
+            let too_big_for_float64 = 9007199254740992i64.wrapping_mul(one_int64);
             let ok_to_convert64 = too_big_for_float64.wrapping_sub(1) as f64;
             let sneaky_big = ok_to_convert64 + 1.0;
             println!("Bigger to Int64: {slightly_bigger}");
@@ -170,7 +169,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
             println!(
                 "Sneaky big to Int64: {}",
                 (|| {
-                    Ok::<_, temper_core::Error>(Arc::new(
+                    Ok::<_, temper_core::ParseError>(Arc::new(
                         temper_core::float64::to_int64(sneaky_big)?.to_string(),
                     ))
                 })()
@@ -179,7 +178,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
             println!(
                 "Too big Int64 to Float64: {}",
                 (|| {
-                    Ok::<_, temper_core::Error>(temper_core::float64::to_string(
+                    Ok::<_, temper_core::ParseError>(temper_core::float64::to_string(
                         temper_core::int64_to_float64(too_big_for_float64)?,
                     ))
                 })()
@@ -188,7 +187,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
             println!(
                 "Infinity to Int64: {}",
                 (|| {
-                    Ok::<_, temper_core::Error>(Arc::new(
+                    Ok::<_, temper_core::ParseError>(Arc::new(
                         temper_core::float64::to_int64(infinity)?.to_string(),
                     ))
                 })()
@@ -197,7 +196,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
             println!(
                 "NaN to Int64: {}",
                 (|| {
-                    Ok::<_, temper_core::Error>(Arc::new(
+                    Ok::<_, temper_core::ParseError>(Arc::new(
                         temper_core::float64::to_int64(f64::NAN)?.to_string(),
                     ))
                 })()
@@ -248,7 +247,7 @@ pub(crate) fn add(a: f64, b: f64) -> f64 {
 pub(crate) fn check_parse(string: impl ToArcString) {
     let string = string.to_arc_string();
     let converted = (|| {
-        Ok::<_, temper_core::Error>(temper_core::float64::to_string(
+        Ok::<_, temper_core::ParseError>(temper_core::float64::to_string(
             temper_core::string::to_float64(&string)?,
         ))
     })()
@@ -259,7 +258,7 @@ pub(crate) fn check_parse(string: impl ToArcString) {
 pub(crate) fn check_tiny(string: impl ToArcString) {
     let string = string.to_arc_string();
     let positive = (|| {
-        Ok::<_, temper_core::Error>(Arc::new(
+        Ok::<_, temper_core::ParseError>(Arc::new(
             (temper_core::float64::cmp(temper_core::string::to_float64(&string)?, 0.0) > 0)
                 .to_string(),
         ))

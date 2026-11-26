@@ -12,7 +12,7 @@
 use crate::NotYet;
 use crate::translate::Translator;
 use crate::tree::{Bin, Expr};
-use temper_tmpl::{Node, NodeId};
+use temper_tmpl::{Node, NodeId, TypeData};
 
 /// Custom output: from the call's argument nodes, a method's receiver
 /// first, and `Omitted` for an argument left out.
@@ -207,6 +207,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Int64.toString()",
         Connection::Translate(int_to_string),
     ),
+    (
+        "core.type InvalidCodePoint.constructor()",
+        Connection::Translate(new_invalid_code_point),
+    ),
     ("core.type List.get length()", Connection::Translate(count)),
     ("core.type List.get()", Connection::Static("Listed", "Get")),
     ("core.type List.toList()", Connection::Translate(same)),
@@ -277,7 +281,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "core.type Listed.getOr()",
-        Connection::Static("Listed", "GetOr"),
+        Connection::Translate(listed_get_or),
     ),
     (
         "core.type Listed.join()",
@@ -339,7 +343,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "core.type Mapped.getOr()",
-        Connection::Static("Mapped", "GetOrDefault"),
+        Connection::Translate(mapped_get_or),
     ),
     ("core.type Mapped.has()", Connection::Method("ContainsKey")),
     (
@@ -367,8 +371,16 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Static("Mapped", "Values"),
     ),
     (
+        "core.type MissingKey.constructor()",
+        Connection::Translate(new_missing_key),
+    ),
+    (
         "core.type Pair.constructor()",
         Connection::Translate(new_pair),
+    ),
+    (
+        "core.type ParseError.constructor()",
+        Connection::Translate(new_parse_error),
     ),
     (
         "core.type PromiseBuilder.breakPromise()",
@@ -629,7 +641,7 @@ return main + frac + exp;",
         body: "string trimmed = s.Trim();
 if (trimmed.StartsWith('.') || trimmed.EndsWith('.'))
 {
-    throw new global::TemperLang.Core.Bubble();
+    throw new global::TemperLang.Core.ParseError(s, \"not a Float64\");
 }
 return trimmed switch
 {
@@ -639,7 +651,7 @@ return trimmed switch
         trimmed,
         global::System.Globalization.NumberStyles.Float,
         global::System.Globalization.CultureInfo.InvariantCulture,
-        out double d) ? d : throw new global::TemperLang.Core.Bubble(),
+        out double d) ? d : throw new global::TemperLang.Core.ParseError(s, \"not a Float64\"),
 };",
     },
 ];
@@ -659,6 +671,14 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
         "core.type Console",
         TypeConnection {
             name: "ILoggingConsole",
+            namespace: "TemperLang.Core",
+        },
+    ),
+    // Core's own failures, the runtime's classes.
+    (
+        "core.type CoreError",
+        TypeConnection {
+            name: "CoreException",
             namespace: "TemperLang.Core",
         },
     ),
@@ -714,6 +734,13 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
         },
     ),
     (
+        "core.type InvalidCodePoint",
+        TypeConnection {
+            name: "InvalidCodePoint",
+            namespace: "TemperLang.Core",
+        },
+    ),
+    (
         "core.type List",
         TypeConnection {
             name: "IReadOnlyList",
@@ -756,6 +783,13 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
         },
     ),
     (
+        "core.type MissingKey",
+        TypeConnection {
+            name: "MissingKey",
+            namespace: "TemperLang.Core",
+        },
+    ),
+    (
         "core.type NoStringIndex",
         TypeConnection {
             name: "int",
@@ -767,6 +801,13 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
         TypeConnection {
             name: "KeyValuePair",
             namespace: "System.Collections.Generic",
+        },
+    ),
+    (
+        "core.type ParseError",
+        TypeConnection {
+            name: "ParseError",
+            namespace: "TemperLang.Core",
         },
     ),
     (
@@ -1130,6 +1171,82 @@ fn new_map_builder(t: &mut Translator<'_>, _: &[NodeId]) -> Result<Expr, NotYet>
     let ty = t.call_type()?;
     let args = ty.split_once('<').map_or("", |(_, a)| a);
     Ok(Expr::name(format!("new TemperLang.Core.OrderedDictionary<{args}")).call(Vec::new()))
+}
+
+/// `new MissingKey(key)`, the runtime's class.
+fn new_missing_key(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let key = one(t, args, "MissingKey")?;
+    Ok(t.construct("MissingKey", vec![key]))
+}
+
+/// `new InvalidCodePoint(codePoint)`, the runtime's class.
+fn new_invalid_code_point(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let code_point = one(t, args, "InvalidCodePoint")?;
+    Ok(t.construct("InvalidCodePoint", vec![code_point]))
+}
+
+/// `new ParseError(input, reason)`, the runtime's class.
+fn new_parse_error(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let args = t.connected_args(args)?;
+    Ok(t.construct("ParseError", args))
+}
+
+/// `Mapped.GetOrDefault(m, k, fallback)`, or where the fallback is null
+/// and the values aren't, `Mapped.GetValueOrNull(m, k)` (for a value
+/// type's) or `Mapped.GetOrNull(m, k)`, then `?? fallback` unless that's
+/// `null`: C# can't pass null for a value type's `TValue`.
+fn mapped_get_or(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    get_or(t, args, "Mapped", "GetOrDefault")
+}
+
+/// As [`mapped_get_or`], for `Listed.GetOr`.
+fn listed_get_or(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    get_or(t, args, "Listed", "GetOr")
+}
+
+fn get_or(
+    t: &mut Translator<'_>,
+    args: &[NodeId],
+    class: &str,
+    method: &str,
+) -> Result<Expr, NotYet> {
+    let &[receiver, key, fallback] = args else {
+        return Err(NotYet {
+            what: format!("`getOr` without a key and a fallback ({class})"),
+        });
+    };
+    let p = t.program();
+    // The receiver's values' type, its last type argument.
+    let element = p.types.args(p.nodes.ty(receiver)).last().copied();
+    let wanted = p.nodes.ty(fallback);
+    let widened = match (element, p.types.get(wanted)) {
+        (Some(e), TypeData::Nullable(inner))
+            if !matches!(p.types.get(e), TypeData::Nullable(_)) =>
+        {
+            Some(inner)
+        }
+        _ => None,
+    };
+    let Some(inner) = widened else {
+        let exprs = t.connected_args(args)?;
+        return Ok(t.class(class).method(method, exprs));
+    };
+    if t.is_optional(wanted) {
+        return Err(NotYet {
+            what: "`getOr` of a type parameter's values with a null fallback".into(),
+        });
+    }
+    let or_null = match t.is_value_type(inner) {
+        true => "GetValueOrNull",
+        false => "GetOrNull",
+    };
+    let receiver = t.expr(receiver)?;
+    let key = t.expr(key)?;
+    let got = t.class(class).method(or_null, vec![receiver, key]);
+    Ok(match p.nodes.get(fallback) {
+        Node::Null {} => got,
+        _ => Expr::bin(Bin::Coalesce, got, t.expr(fallback)?),
+    })
 }
 
 /// A pair, `new KeyValuePair<K, V>(key, value)`.

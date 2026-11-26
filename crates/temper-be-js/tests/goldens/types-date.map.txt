@@ -1,24 +1,38 @@
 # generated line:column -> source:line:column, and the text at each
-9:1 -> ../date.temper.md:36:5  const d = dateConstructor(20 <- let d = { year: 2023, month:
-10:1 -> ../date.temper.md:40:5  console.log(`year    = ${d.g <- console.log(
-11:1 -> ../date.temper.md:58:5  console.log(`ISO 8601: ${d.t <- console.log("ISO 8601: ${ d
-12:1 -> ../date.temper.md:67:5  const yonksAgo = dateConstru <- let yonksAgo = { year: 12, m
-13:1 -> ../date.temper.md:69:5  console.log(`ISO 8601 yonks: <- console.log("ISO 8601 yonks:
-14:1 -> ../date.temper.md:74:5  console.log(`yonksAgo.year = <- console.log("yonksAgo.year =
-15:1 -> ../date.temper.md:85:5  { <- for (let y of [1700, 1800, 1
-16:3 -> ../date.temper.md:85:19  /** @type {readonly number[] <- [1700, 1800, 1900, 2000, 210
-17:3 -> ../date.temper.md:85:19  const list = Object.freeze([ <- [1700, 1800, 1900, 2000, 210
-18:3 -> ../date.temper.md:85:5  const length = list.length; <- for (let y of [1700, 1800, 1
-19:3 -> ../date.temper.md:85:5  let i = 0; <- for (let y of [1700, 1800, 1
-20:3 -> ../date.temper.md:85:5  while (i < length) { <- for (let y of [1700, 1800, 1
-21:5 -> ../date.temper.md:85:5  const y = listedGet(/** @typ <- for (let y of [1700, 1800, 1
-22:5 -> ../date.temper.md:85:5  i = (i + 1) | 0; <- for (let y of [1700, 1800, 1
-23:5 -> ../date.temper.md:86:7  console.log(`${y}: Jan 1 wee <- console.log(
-26:1 -> ../date.temper.md:108:5  dateToday(); <- Date.today();
-27:1 -> ../date.temper.md:114:5  const start = dateConstructo <- let start = new Date(2010, 3
-28:1 -> ../date.temper.md:115:5  const firstYears = dateYears <- let firstYears = Date.yearsB
-29:1 -> ../date.temper.md:116:5  console.log(`First years bet <- console.log("First years bet
-30:1 -> ../date.temper.md:117:5  const secondYears = dateYear <- let secondYears = Date.years
-31:1 -> ../date.temper.md:118:5  console.log(`Second years be <- console.log("Second years be
-32:1 -> ../date.temper.md:129:5  const rdc = dateFromIsoStrin <- let rdc = Date.fromIsoString
-33:1 -> ../date.temper.md:130:5  console.log(`Happy birthday, <- console.log(
+17:1 -> ../date.temper.md:109:5  /** <- let checkDate(year: Int, mon
+23:1 -> ../date.temper.md:109:5  function checkDate(year, mon <- let checkDate(year: Int, mon
+23:10 -> ../date.temper.md:109:9 (checkDate)  checkDate(year, month, day) <- checkDate(year: Int, month:
+23:19 -> ../date.temper.md:109:5  (year, month, day) { <- let checkDate(year: Int, mon
+24:3 -> ../date.temper.md:110:7  try { <- new Date(year, month, day).t
+32:1 -> ../date.temper.md:36:5  const d = dateConstructor(20 <- let d = { year: 2023, month:
+33:1 -> ../date.temper.md:40:5  console.log(`year    = ${d.g <- console.log(
+34:1 -> ../date.temper.md:58:5  console.log(`ISO 8601: ${d.t <- console.log("ISO 8601: ${ d
+35:1 -> ../date.temper.md:67:5  const yonksAgo = dateConstru <- let yonksAgo = { year: 12, m
+36:1 -> ../date.temper.md:69:5  console.log(`ISO 8601 yonks: <- console.log("ISO 8601 yonks:
+37:1 -> ../date.temper.md:74:5  console.log(`yonksAgo.year = <- console.log("yonksAgo.year =
+38:1 -> ../date.temper.md:85:5  { <- for (let y of [1700, 1800, 1
+39:3 -> ../date.temper.md:85:19  /** @type {readonly number[] <- [1700, 1800, 1900, 2000, 210
+40:3 -> ../date.temper.md:85:19  const list = Object.freeze([ <- [1700, 1800, 1900, 2000, 210
+41:3 -> ../date.temper.md:85:5  const length = list.length; <- for (let y of [1700, 1800, 1
+42:3 -> ../date.temper.md:85:5  let i = 0; <- for (let y of [1700, 1800, 1
+43:3 -> ../date.temper.md:85:5  while (i < length) { <- for (let y of [1700, 1800, 1
+44:5 -> ../date.temper.md:85:5  const y = listedGet(/** @typ <- for (let y of [1700, 1800, 1
+45:5 -> ../date.temper.md:85:5  i = (i + 1) | 0; <- for (let y of [1700, 1800, 1
+46:5 -> ../date.temper.md:86:7  console.log(`${y}: Jan 1 wee <- console.log(
+49:1 -> ../date.temper.md:112:5  console.log(`${checkDate(202 <- console.log("${checkDate(202
+51:1 -> ../date.temper.md:113:65  /** <- { (s): String =>
+55:1 -> ../date.temper.md:113:65  function fn(s) { <- { (s): String =>
+56:3 -> ../date.temper.md:114:7  try { <- Date.fromIsoString(s).toStri
+64:1 -> ../date.temper.md:113:5  /** @type {readonly string[] <- let parsed = (["2024-02-29",
+65:1 -> ../date.temper.md:113:5  const parsed = listedMap(/** <- let parsed = (["2024-02-29",
+66:1 -> ../date.temper.md:116:5  console.log(listedJoin(/** @ <- console.log(parsed.join(" ")
+67:1 -> ../date.temper.md:128:5  dateToday(); <- Date.today();
+68:1 -> ../date.temper.md:134:5  const start = dateConstructo <- let start = new Date(2010, 3
+69:1 -> ../date.temper.md:135:5  const firstYears = dateYears <- let firstYears = Date.yearsB
+70:1 -> ../date.temper.md:136:5  console.log(`First years bet <- console.log("First years bet
+71:1 -> ../date.temper.md:137:5  const secondYears = dateYear <- let secondYears = Date.years
+72:1 -> ../date.temper.md:138:5  console.log(`Second years be <- console.log("Second years be
+73:1 -> ../date.temper.md:149:5  /** @type {globalThis.Date} <- let rdc = Date.fromIsoString
+74:1 -> ../date.temper.md:149:5  let rdc; <- let rdc = Date.fromIsoString
+75:1 -> ../date.temper.md:149:5  try { <- let rdc = Date.fromIsoString
+81:1 -> ../date.temper.md:150:5  console.log(`Happy birthday, <- console.log(

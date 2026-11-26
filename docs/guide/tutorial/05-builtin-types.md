@@ -112,13 +112,16 @@ interactive#1: 3.5
 $ 1 + (2.5).toInt32()
 interactive#2: 3
 $ 1 + Infinity.toInt32()
+Failed with ParseError: parse error (input: Infinity, reason: out of Int32 range), at -repl-/interactive#3:1:5
 interactive#3: fail
 $ 1 + NaN.toInt32()
+Failed with ParseError: parse error (input: NaN, reason: out of Int32 range), at -repl-/interactive#4:1:5
 interactive#4: fail
 ```
 
-The methods `toFloat64` and `toInt32` might fail with `Bubble` depending on the
-size of the values (or NaN) and the backend's `Int` size. Variants
+The methods `toFloat64` and `toInt32` throw a `ParseError` where the value
+doesn't fit (or is NaN); `orelse` gives a default, as `x.toInt32() orelse 0`.
+Variants
 `toFloat64Unsafe` and `toInt32Unsafe` always return a value, but they have
 backend-dependent behavior outside safe values. The unsafe methods should be
 used only for small values and/or with fuzz testing across backends.

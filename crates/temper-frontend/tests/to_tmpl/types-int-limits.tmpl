@@ -10,16 +10,19 @@ uses `temper-core`#14 0.0.0-alpha.0.0 {
   }
   class Int64#21 {
     connected method toString#22(radix?: Int32): String;
-    connected method toInt32Unsafe#27(): Int32;
-    connected method toInt32#28(): Int32 throws Bubble;
-    connected method min#32(other: Int64): Int64;
-    connected method max#33(other: Int64): Int64;
+    connected method toInt32Unsafe#30(): Int32;
+    connected method toInt32#31(): Int32 throws ParseError#27;
+    connected method min#35(other: Int64): Int64;
+    connected method max#36(other: Int64): Int64;
   }
   class String#25 {
-    connected method toInt32#26(radix?: Int32): Int32 throws Bubble;
-    connected method toInt64#31(radix?: Int32): Int64 throws Bubble;
+    connected method toInt32#26(radix?: Int32): Int32 throws ParseError#27;
+    connected method toInt64#34(radix?: Int32): Int64 throws ParseError#27;
   }
-  connected fn getConsole#34(name?: String): Console#15;
+  class ParseError#27 extends CoreError#28 {}
+  interface CoreError#28 extends Error#29 {}
+  interface Error#29 {}
+  connected fn getConsole#37(name?: String): Console#15;
 }
 
 module limits#0 {
@@ -52,13 +55,13 @@ module limits#0 {
     ~console#17.log#16(%String.cat(%String.cat(%String.cat("Parse ", string#23), " -> "), converted#24));
   }
 
-  fn checkParse64#13(string#29: String): Void {
-    let converted#30: String = (orelse(string#29.toInt64#31(16)^.toString#22(omitted), "failed")): String;
-    ~console#17.log#16(%String.cat(%String.cat(%String.cat("Parse ", string#29), " -> "), converted#30));
+  fn checkParse64#13(string#32: String): Void {
+    let converted#33: String = (orelse(string#32.toInt64#34(16)^.toString#22(omitted), "failed")): String;
+    ~console#17.log#16(%String.cat(%String.cat(%String.cat("Parse ", string#32), " -> "), converted#33));
   }
 
   init {
-    init ~console#17 = getConsole#34(omitted);
+    init ~console#17 = getConsole#37(omitted);
     ~console#17.log#16("Int32");
     init one#1 = 1;
     one#1 = one#1;
@@ -109,12 +112,12 @@ module limits#0 {
     checkParse32#12("-80000000");
     checkParse32#12("80000000");
     checkParse32#12("-80000001");
-    ~console#17.log#16(%String.cat("Not so big: ", notSoBig#6.toInt32Unsafe#27().toString#19(omitted)));
-    ~console#17.log#16(%String.cat("Actually big: ", (orelse(big64#8.toInt32#28()^.toString#19(omitted), "no")): String));
+    ~console#17.log#16(%String.cat("Not so big: ", notSoBig#6.toInt32Unsafe#30().toString#19(omitted)));
+    ~console#17.log#16(%String.cat("Actually big: ", (orelse(big64#8.toInt32#31()^.toString#19(omitted), "no")): String));
     checkParse64#13("7FFFFFFFFFFFFFFF");
     checkParse64#13("-8000000000000000");
     checkParse64#13("8000000000000000");
     checkParse64#13("-8000000000000001");
-    ~console#17.log#16(%String.cat(%String.cat(small64#9.min#32(big64#8).toString#22(omitted), " < "), small64#9.max#33(big64#8).toString#22(omitted)));
+    ~console#17.log#16(%String.cat(%String.cat(small64#9.min#35(big64#8).toString#22(omitted), " < "), small64#9.max#36(big64#8).toString#22(omitted)));
   }
 }

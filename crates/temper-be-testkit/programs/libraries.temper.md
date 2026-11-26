@@ -39,7 +39,7 @@ the interpreter gives.
 
     export let parseGrid(s: String): Grid throws Bubble {
       if (s == "") { bubble() }
-      new Grid(1, [s.toFloat64()])
+      new Grid(1, [s.toFloat64() orelse bubble()])
     }
 
     export class Grid(public ncols: Int, public values: List<Float64>) {

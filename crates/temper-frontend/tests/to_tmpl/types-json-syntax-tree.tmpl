@@ -3,44 +3,49 @@ tmpl 1 model 1 library `json-syntax-tree` 0.0.0
 uses std#2 0.0.0-alpha.0.0 {
   module json#3 {
     class JsonTextProducer#4 extends JsonProducer#5 {
-      constructor constructor#46(interchangeContext?: InterchangeContext#45?): JsonTextProducer#4;
-      method stringValue#49(x: String): Void;
-      method toJsonString#50(): String throws Bubble;
-      method startObject#52(): Void;
-      method objectKey#63(key: String): Void;
-      method endObject#65(): Void;
+      constructor constructor#66(interchangeContext?: InterchangeContext#58?): JsonTextProducer#4;
+      method stringValue#67(x: String): Void;
+      method toJsonString#68(): String throws JsonSyntaxError#21;
+      method startObject#70(): Void;
+      method objectKey#78(key: String): Void;
+      method endObject#80(): Void;
     }
     interface JsonProducer#5 {}
     interface JsonSyntaxTree#19 {}
-    fn parseJson#21(sourceText: String): JsonSyntaxTree#19 throws Bubble;
-    class JsonArray#27 extends JsonSyntaxTree#19 {
-      let elements#29: List#8<JsonSyntaxTree#19>;
+    class JsonSyntaxError#21 extends JsonError#22 {}
+    interface JsonError#22 extends Error#23 {}
+    fn parseJson#24(sourceText: String): JsonSyntaxTree#19 throws JsonSyntaxError#21;
+    class JsonArray#30 extends JsonSyntaxTree#19 {
+      let elements#32: List#8<JsonSyntaxTree#19>;
     }
-    class JsonSyntaxTreeProducer#36 extends JsonProducer#5, JsonParseErrorReceiver#37 {
-      constructor constructor#39(): JsonSyntaxTreeProducer#36;
-      method toJsonSyntaxTree#41(): JsonSyntaxTree#19 throws Bubble;
-      get jsonError#43(): String?;
+    class JsonSyntaxTreeProducer#39 extends JsonProducer#5, JsonParseErrorReceiver#40 {
+      constructor constructor#42(): JsonSyntaxTreeProducer#39;
+      method toJsonSyntaxTree#44(): JsonSyntaxTree#19 throws JsonSyntaxError#21;
+      get jsonError#46(): String?;
     }
-    interface JsonParseErrorReceiver#37 {}
-    fn parseJsonToProducer#40(sourceText: String, out: JsonProducer#5): Void;
-    interface InterchangeContext#45 {}
-    class NullInterchangeContext#47 extends InterchangeContext#45 {
-      static let instance#48: NullInterchangeContext#47;
+    interface JsonParseErrorReceiver#40 {}
+    fn parseJsonToProducer#43(sourceText: String, out: JsonProducer#5): Void;
+    interface JsonAdapter#56<T#57> {
+      method decodeFromJson#59(t: JsonSyntaxTree#19, ic: InterchangeContext#58): T#57 throws JsonError#22;
     }
-    class OrNullJsonAdapter#53<T#54> extends JsonAdapter#55<T#54?> {
-      private let adapterForT#58: JsonAdapter#55<T#54>;
-      constructor constructor#59(adapterForT: JsonAdapter#55<T#54>): OrNullJsonAdapter#53<T#54>;
-      method encodeToJson#64(x: T#54?, p: JsonProducer#5): Void;
-      method decodeFromJson#77(t: JsonSyntaxTree#19, ic: InterchangeContext#45): T#54? throws Bubble;
+    interface InterchangeContext#58 {}
+    fn int32JsonAdapter#60(): JsonAdapter#56<Int32>;
+    class NullInterchangeContext#61 extends InterchangeContext#58 {
+      static let instance#62: NullInterchangeContext#61;
     }
-    interface JsonAdapter#55<T#56> {}
-    fn int32JsonAdapter#60(): JsonAdapter#55<Int32>;
-    class JsonObject#68 extends JsonSyntaxTree#19 {
-      method propertyValueOrBubble#71(propertyKey: String): JsonSyntaxTree#19 throws Bubble;
+    class OrNullJsonAdapter#71<T#72> extends JsonAdapter#56<T#72?> {
+      private let adapterForT#74: JsonAdapter#56<T#72>;
+      constructor constructor#75(adapterForT: JsonAdapter#56<T#72>): OrNullJsonAdapter#71<T#72>;
+      method encodeToJson#79(x: T#72?, p: JsonProducer#5): Void;
+      method decodeFromJson#93(t: JsonSyntaxTree#19, ic: InterchangeContext#58): T#72? throws JsonError#22;
     }
-    class JsonNull#73 extends JsonSyntaxTree#19 {}
-    interface JsonNumeric#74 extends JsonSyntaxTree#19 {}
-    fn int64JsonAdapter#83(): JsonAdapter#55<Int64>;
+    class JsonObject#83 extends JsonSyntaxTree#19 {
+      method propertyValueOrBubble#87(propertyKey: String): JsonSyntaxTree#19 throws JsonShapeError#86;
+    }
+    class JsonShapeError#86 extends JsonError#22 {}
+    class JsonNull#89 extends JsonSyntaxTree#19 {}
+    interface JsonNumeric#90 extends JsonSyntaxTree#19 {}
+    fn int64JsonAdapter#97(): JsonAdapter#56<Int64>;
   }
 }
 
@@ -50,32 +55,35 @@ uses `temper-core`#7 0.0.0-alpha.0.0 {
     connected method get#13(index: Int32): T#9;
   }
   interface Listed#10<T#11> {
-    connected get isEmpty#28(): Boolean;
+    connected get isEmpty#31(): Boolean;
   }
-  interface Console#22 {
-    connected method log#23(message: String): Void;
+  interface Error#23 {
+    connected get message#64(): String;
   }
-  class Boolean#25 {
-    connected method toString#26(): String;
+  interface Console#25 {
+    connected method log#26(message: String): Void;
   }
-  class Int32#79 {
-    connected method toString#80(radix?: Int32): String;
+  class Boolean#28 {
+    connected method toString#29(): String;
   }
-  class Int64#85 {
-    connected method toString#86(radix?: Int32): String;
+  class Int32#54 {
+    connected method toString#55(radix?: Int32): String;
   }
-  connected fn getConsole#87(name?: String): Console#22;
+  class Int64#99 {
+    connected method toString#100(radix?: Int32): String;
+  }
+  connected fn getConsole#101(name?: String): Console#25;
 }
 
 module `json-syntax-tree`#0 {
-  let ~console#24: Console#22;
+  let ~console#27: Console#25;
 
   let selectCodePoints#1: String;
 
   let normalJson#6: JsonTextProducer#4;
 
   init {
-    init ~console#24 = getConsole#87(omitted);
+    init ~console#27 = getConsole#101(omitted);
     {
       let ~list#14: List#8<String> = (list("[]", " [] ", " [ ] ", "[1]", "null")): List#8<String>;
       let ~length#15: Int32 = ~list#14.length#12();
@@ -83,65 +91,76 @@ module `json-syntax-tree`#0 {
       ~loop#17: while (%Int32.lt(~i#16, ~length#15)) {
         let s#18: String = ~list#14.get#13(~i#16);
         ~i#16 = %Int32.add(~i#16, 1);
-        let jsonValue#20: JsonSyntaxTree#19? = (orelse((asNullable(parseJson#21(s#18)^)): JsonSyntaxTree#19?, (null): JsonSyntaxTree#19?)): JsonSyntaxTree#19?;
-        ~console#24.log#23(%String.cat(%String.cat(%String.cat("`", s#18), "` is empty array: "), (%Boolean.not(isNull(jsonValue#20)) && is((nonNull(jsonValue#20)): JsonSyntaxTree#19, JsonArray#27) && ((downcast((nonNull(jsonValue#20)): JsonSyntaxTree#19)): JsonArray#27).elements#29.isEmpty#28()).toString#26()));
+        let jsonValue#20: JsonSyntaxTree#19? = (orelse((asNullable(parseJson#24(s#18)^)): JsonSyntaxTree#19?, (null): JsonSyntaxTree#19?)): JsonSyntaxTree#19?;
+        ~console#27.log#26(%String.cat(%String.cat(%String.cat("`", s#18), "` is empty array: "), (%Boolean.not(isNull(jsonValue#20)) && is((nonNull(jsonValue#20)): JsonSyntaxTree#19, JsonArray#30) && ((downcast((nonNull(jsonValue#20)): JsonSyntaxTree#19)): JsonArray#30).elements#32.isEmpty#31()).toString#29()));
       }
     }
     {
-      let ~list#30: List#8<String> = (list("[", "]", "[,]", "[]]", "[1,]", "[1,,2]")): List#8<String>;
-      let ~length#31: Int32 = ~list#30.length#12();
-      var ~i#32: Int32 = 0;
-      ~loop#33: while (%Int32.lt(~i#32, ~length#31)) {
-        let s#34: String = ~list#30.get#13(~i#32);
-        ~i#32 = %Int32.add(~i#32, 1);
-        var bubbled#35: Boolean = false;
-        let p#38: JsonSyntaxTreeProducer#36 = new constructor#39();
-        parseJsonToProducer#40(s#34, (upcast(p#38)): JsonProducer#5);
-        (orelse(p#38.toJsonSyntaxTree#41()^, (value { bubbled#35 = true; void }): Void)): Void;
-        let error#42: String? = p#38.jsonError#43();
-        ~console#24.log#23(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("`", s#34), "` has"), (if (bubbled#35) "" else " no"): String), " error: "), (if (isNull(error#42)) "MISSING ERROR" else (nonNull(error#42)): String): String));
+      let ~list#33: List#8<String> = (list("[", "]", "[,]", "[]]", "[1,]", "[1,,2]")): List#8<String>;
+      let ~length#34: Int32 = ~list#33.length#12();
+      var ~i#35: Int32 = 0;
+      ~loop#36: while (%Int32.lt(~i#35, ~length#34)) {
+        let s#37: String = ~list#33.get#13(~i#35);
+        ~i#35 = %Int32.add(~i#35, 1);
+        var failed#38: Boolean = false;
+        let p#41: JsonSyntaxTreeProducer#39 = new constructor#42();
+        parseJsonToProducer#43(s#37, (upcast(p#41)): JsonProducer#5);
+        (orelse(p#41.toJsonSyntaxTree#44()^, (value { failed#38 = true; void }): Void)): Void;
+        let error#45: String? = p#41.jsonError#46();
+        ~console#27.log#26(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("`", s#37), "` has"), (if (failed#38) "" else " no"): String), " error: "), (if (isNull(error#45)) "MISSING ERROR" else (nonNull(error#45)): String): String));
+      }
+    }
+    {
+      let ~list#47: List#8<String> = (list("[1,]", "\"a\"", "7")): List#8<String>;
+      let ~length#48: Int32 = ~list#47.length#12();
+      var ~i#49: Int32 = 0;
+      ~loop#50: while (%Int32.lt(~i#49, ~length#48)) {
+        let s#51: String = ~list#47.get#13(~i#49);
+        ~i#49 = %Int32.add(~i#49, 1);
+        let decoded#52: String = (catch((value { let tree#53: JsonSyntaxTree#19 = parseJson#24(s#51)^; int32JsonAdapter#60().decodeFromJson#59(tree#53, (upcast(instance#62)): InterchangeContext#58)^.toString#55(omitted) }): String, e#63: JsonError#22, ((upcast(e#63)): Error#23).message#64())): String;
+        ~console#27.log#26(decoded#52);
       }
     }
     init selectCodePoints#1 = %String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("\u{0}", "\u{1}"), "\u{2}"), "\u{3}"), "\u{4}"), "\u{5}"), "\u{6}"), "\u{7}"), "\u{8}"), "\t"), "\n"), "\u{b}"), "\u{c}"), "\r"), "\u{e}"), "\u{f}"), "\u{10}"), "\u{11}"), "\u{12}"), "\u{13}"), "\u{14}"), "\u{15}"), "\u{16}"), "\u{17}"), "\u{18}"), "\u{19}"), "\u{1a}"), "\u{1b}"), "\u{1c}"), "\u{1d}"), "\u{1e}"), "\u{1f}"), " "), "-"), "𐀀"), "-"), ""), "-"), "퟿"), " "), " "), "\u{85}");
     {
-      let p#44: JsonTextProducer#4 = new constructor#46((asNullable((upcast(instance#48)): InterchangeContext#45)): InterchangeContext#45?);
-      p#44.stringValue#49(selectCodePoints#1);
-      ~console#24.log#23(%String.cat("string with select code points: ", (orelse(p#44.toJsonString#50()^, "?!")): String));
+      let p#65: JsonTextProducer#4 = new constructor#66((asNullable((upcast(instance#62)): InterchangeContext#58)): InterchangeContext#58?);
+      p#65.stringValue#67(selectCodePoints#1);
+      ~console#27.log#26(%String.cat("string with select code points: ", (orelse(p#65.toJsonString#68()^, "?!")): String));
     }
     {
-      let p#51: JsonTextProducer#4 = new constructor#46((asNullable((upcast(instance#48)): InterchangeContext#45)): InterchangeContext#45?);
-      p#51.startObject#52();
-      let intOrNullAdapter#57: OrNullJsonAdapter#53<Int32> = new constructor#59<Int32>(int32JsonAdapter#60());
-      var x#61: Int32? = (null): Int32?;
-      var y#62: Int32? = (asNullable(123)): Int32?;
-      p#51.objectKey#63("x");
-      intOrNullAdapter#57.encodeToJson#64(x#61, (upcast(p#51)): JsonProducer#5);
-      p#51.objectKey#63("y");
-      intOrNullAdapter#57.encodeToJson#64(y#62, (upcast(p#51)): JsonProducer#5);
-      p#51.endObject#65();
-      ~console#24.log#23(p#51.toJsonString#50()^);
+      let p#69: JsonTextProducer#4 = new constructor#66((asNullable((upcast(instance#62)): InterchangeContext#58)): InterchangeContext#58?);
+      p#69.startObject#70();
+      let intOrNullAdapter#73: OrNullJsonAdapter#71<Int32> = new constructor#75<Int32>(int32JsonAdapter#60());
+      var x#76: Int32? = (null): Int32?;
+      var y#77: Int32? = (asNullable(123)): Int32?;
+      p#69.objectKey#78("x");
+      intOrNullAdapter#73.encodeToJson#79(x#76, (upcast(p#69)): JsonProducer#5);
+      p#69.objectKey#78("y");
+      intOrNullAdapter#73.encodeToJson#79(y#77, (upcast(p#69)): JsonProducer#5);
+      p#69.endObject#80();
+      ~console#27.log#26(p#69.toJsonString#68()^);
     }
     {
-      let s#66: String = "{\"x\":null,\"y\":123,\"z\":123456789012}";
-      let ast#67: JsonSyntaxTree#19 = parseJson#21(s#66)^;
-      let obj#69: JsonObject#68 = (as(ast#67)): JsonObject#68;
-      let xAst#70: JsonSyntaxTree#19 = obj#69.propertyValueOrBubble#71("x")^;
-      let yAst#72: JsonSyntaxTree#19 = obj#69.propertyValueOrBubble#71("y")^;
-      ~console#24.log#23(%String.cat("for x, got JSON null: ", is(xAst#70, JsonNull#73).toString#26()));
-      ~console#24.log#23(%String.cat("for y, got JSON numeric: ", is(yAst#72, JsonNumeric#74).toString#26()));
-      let intOrNullAdapter#75: OrNullJsonAdapter#53<Int32> = new constructor#59<Int32>(int32JsonAdapter#60());
-      let x#76: Int32? = intOrNullAdapter#75.decodeFromJson#77(xAst#70, (upcast(instance#48)): InterchangeContext#45)^;
-      let y#78: Int32? = intOrNullAdapter#75.decodeFromJson#77(yAst#72, (upcast(instance#48)): InterchangeContext#45)^;
-      ~console#24.log#23(%String.cat("x ?? -1 -> ", ((if (isNull(x#76)) %Int32.neg(1) else (nonNull(x#76)): Int32): Int32).toString#80(omitted)));
-      ~console#24.log#23(%String.cat("y ?? -1 -> ", ((if (isNull(y#78)) %Int32.neg(1) else (nonNull(y#78)): Int32): Int32).toString#80(omitted)));
-      let zAst#81: JsonSyntaxTree#19 = obj#69.propertyValueOrBubble#71("z")^;
-      let int64OrNullAdapter#82: OrNullJsonAdapter#53<Int64> = new constructor#59<Int64>(int64JsonAdapter#83());
-      let z#84: Int64? = int64OrNullAdapter#82.decodeFromJson#77(zAst#81, (upcast(instance#48)): InterchangeContext#45)^;
-      ~console#24.log#23(%String.cat("z ?? -1 -> ", ((if (isNull(z#84)) %Int64.neg(1i64) else (nonNull(z#84)): Int64): Int64).toString#86(omitted)));
+      let s#81: String = "{\"x\":null,\"y\":123,\"z\":123456789012}";
+      let ast#82: JsonSyntaxTree#19 = parseJson#24(s#81)^;
+      let obj#84: JsonObject#83 = (as(ast#82)): JsonObject#83;
+      let xAst#85: JsonSyntaxTree#19 = obj#84.propertyValueOrBubble#87("x")^;
+      let yAst#88: JsonSyntaxTree#19 = obj#84.propertyValueOrBubble#87("y")^;
+      ~console#27.log#26(%String.cat("for x, got JSON null: ", is(xAst#85, JsonNull#89).toString#29()));
+      ~console#27.log#26(%String.cat("for y, got JSON numeric: ", is(yAst#88, JsonNumeric#90).toString#29()));
+      let intOrNullAdapter#91: OrNullJsonAdapter#71<Int32> = new constructor#75<Int32>(int32JsonAdapter#60());
+      let x#92: Int32? = intOrNullAdapter#91.decodeFromJson#93(xAst#85, (upcast(instance#62)): InterchangeContext#58)^;
+      let y#94: Int32? = intOrNullAdapter#91.decodeFromJson#93(yAst#88, (upcast(instance#62)): InterchangeContext#58)^;
+      ~console#27.log#26(%String.cat("x ?? -1 -> ", ((if (isNull(x#92)) %Int32.neg(1) else (nonNull(x#92)): Int32): Int32).toString#55(omitted)));
+      ~console#27.log#26(%String.cat("y ?? -1 -> ", ((if (isNull(y#94)) %Int32.neg(1) else (nonNull(y#94)): Int32): Int32).toString#55(omitted)));
+      let zAst#95: JsonSyntaxTree#19 = obj#84.propertyValueOrBubble#87("z")^;
+      let int64OrNullAdapter#96: OrNullJsonAdapter#71<Int64> = new constructor#75<Int64>(int64JsonAdapter#97());
+      let z#98: Int64? = int64OrNullAdapter#96.decodeFromJson#93(zAst#95, (upcast(instance#62)): InterchangeContext#58)^;
+      ~console#27.log#26(%String.cat("z ?? -1 -> ", ((if (isNull(z#98)) %Int64.neg(1i64) else (nonNull(z#98)): Int64): Int64).toString#100(omitted)));
     }
-    init normalJson#6 = new constructor#46(omitted);
-    parseJsonToProducer#40("{\n  \"foo\": \"bar\",\n  \"baz\": [\n    \"boo\",\n    { \"f\": 1, \"a\": null, \"r\": 123.0 }\n  ]\n}\n", (upcast(normalJson#6)): JsonProducer#5);
-    ~console#24.log#23("Normalized:");
-    ~console#24.log#23(normalJson#6.toJsonString#50()^);
+    init normalJson#6 = new constructor#66(omitted);
+    parseJsonToProducer#43("{\n  \"foo\": \"bar\",\n  \"baz\": [\n    \"boo\",\n    { \"f\": 1, \"a\": null, \"r\": 123.0 }\n  ]\n}\n", (upcast(normalJson#6)): JsonProducer#5);
+    ~console#27.log#26("Normalized:");
+    ~console#27.log#26(normalJson#6.toJsonString#68()^);
   }
 }

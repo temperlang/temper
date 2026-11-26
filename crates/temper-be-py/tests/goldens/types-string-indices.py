@@ -1,5 +1,5 @@
 from temper_core import (
-    Bubble as _Bubble,
+    InvalidCodePoint as _InvalidCodePoint,
     LoggingConsole as _LoggingConsole,
     int_add as _int_add,
     list_get as _list_get,
@@ -27,12 +27,12 @@ def _compare_positions(s: str, a: int, b: int, /) -> None:
     t_0: str
     try:
         t_0 = _string_from_code_point(a)
-    except _Bubble:
+    except _InvalidCodePoint:
         t_0 = '?'
     t_1: str
     try:
         t_1 = _string_from_code_point(b)
-    except _Bubble:
+    except _InvalidCodePoint:
         t_1 = '?'
     _console.log(f'\'{t_0}\' is {rel_pos} \'{t_1}\' in "{s}".')
 
@@ -78,7 +78,7 @@ while _i < _length:
     _t_0: str
     try:
         _t_0 = _string_from_code_point(_c)
-    except _Bubble:
+    except _InvalidCodePoint:
         _t_0 = '?'
     _console.log(f"'{_t_0}' in \"{_s}\": {'y' if _has0(_s, _c) else 'n'}, {'y' if _has1(_s, _c) else 'n'}, {'y' if _has2(_s, _c) else 'n'}, {'y' if _has3(_s, _c) else 'n'}, {'y' if _has4(_s, _c) else 'n'}")
 _string_builder = ['']

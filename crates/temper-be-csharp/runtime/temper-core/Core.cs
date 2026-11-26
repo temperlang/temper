@@ -310,7 +310,7 @@ namespace TemperLang.Core
 #endif
             if (!found)
             {
-                throw new Bubble();
+                throw new MissingKey(key!);
             }
 #if !NETCOREAPP2_0_OR_GREATER
             dictionary.Remove(key);
@@ -362,32 +362,43 @@ namespace TemperLang.Core
             return string.Concat(codePoints.Select(StringFromCodePoint));
         }
 
+        /// <summary>The value as an int, or a ParseError out of range.</summary>
         public static int ToInt(this long i64)
         {
             if (i64 < int.MinValue || i64 > int.MaxValue)
             {
-                throw new Bubble();
+                throw new ParseError(i64.ToString(System.Globalization.CultureInfo.InvariantCulture), "out of Int32 range");
             }
             return (int)i64;
         }
 
+        /// <summary>The int the text spells in the radix, or a ParseError.</summary>
         public static int ToInt(this string text, int radix = 10)
         {
             // Just reuse int64 parsing for convenience.
-            long i64 = text.ToInt64(radix);
-            return i64.ToInt();
+            long? i64 = ParseInt64(text, radix);
+            if (i64 is not long n || n < int.MinValue || n > int.MaxValue)
+            {
+                throw new ParseError(text, "not an Int32");
+            }
+            return (int)n;
         }
 
-        public static long ToInt64(this string text, int radix = 10)
+        /// <summary>The long the text spells in the radix, or a ParseError.</summary>
+        public static long ToInt64(this string text, int radix = 10) =>
+            ParseInt64(text, radix) ?? throw new ParseError(text, "not an Int64");
+
+        /// <summary>The long the text spells in the radix, or null.</summary>
+        private static long? ParseInt64(string text, int radix)
         {
-            // Bubbles for whatever isn't an Int64 in the radix.
+            // Null for whatever isn't an Int64 in the radix.
             if (radix < 2 || radix > 36)
             {
-                throw new Bubble();
+                return null;
             }
             if (text == "")
             {
-                throw new Bubble();
+                return null;
             }
             // Parse manually because Convert.ToInt[N] only supports bases 2, 8, 10, & 16.
             long sum = 0;
@@ -423,7 +434,7 @@ namespace TemperLang.Core
                 var digit = c >= 'a' ? c - 'a' + 10 : c - '0';
                 if (digit < 0 || digit >= radix || (c < 'a' && digit > 9))
                 {
-                    throw new Bubble();
+                    return null;
                 }
                 // Check for overflow before adding.
                 if (sign > 0)
@@ -434,7 +445,7 @@ namespace TemperLang.Core
                     // 1 > (15 - 5) / 10 -> 1 > 10 / 10 -> 1 > 1 -> false
                     if (sum > (long.MaxValue - digit) / radix)
                     {
-                        throw new Bubble();
+                        return null;
                     }
                 }
                 else
@@ -446,7 +457,7 @@ namespace TemperLang.Core
                     // Then 1 * 10 + 6 -> 16 -> -16, later -16 * -1 -> -16
                     if (-sum < (long.MinValue + digit) / radix)
                     {
-                        throw new Bubble();
+                        return null;
                     }
                 }
                 sum = sum * radix + digit;
@@ -457,7 +468,7 @@ namespace TemperLang.Core
                 var c = text[index];
                 if (!char.IsWhiteSpace(c))
                 {
-                    throw new Bubble();
+                    return null;
                 }
                 index += 1;
             }

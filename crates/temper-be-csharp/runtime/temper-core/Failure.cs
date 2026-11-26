@@ -28,6 +28,100 @@ namespace TemperLang.Core
         Exception? InnerException { get; }
     }
 
+    /// <summary>
+    /// The root of core's own declared failures, <see cref="MissingKey"/>,
+    /// <see cref="ParseError"/>, and <see cref="InvalidCodePoint"/>, as each
+    /// library's roots are its failures' (Temper's <c>CoreError</c>).
+    /// </summary>
+    public abstract class CoreException : Exception, IFailure
+    {
+        private protected CoreException(Exception? cause)
+            : base(null, cause)
+        {
+        }
+    }
+
+    /// <summary>
+    /// What a map's <c>get</c> throws for a key it doesn't have, with that
+    /// key. (Later perhaps a <see cref="System.Collections.Generic.KeyNotFoundException"/>
+    /// too, as C#'s own lookups throw.)
+    /// </summary>
+    public sealed class MissingKey : CoreException
+    {
+        private readonly object key;
+
+        public MissingKey(object key)
+            : this(key, null)
+        {
+        }
+
+        public MissingKey(object key, Exception? cause)
+            : base(cause)
+        {
+            this.key = key;
+        }
+
+        /// <summary>The key that was missing.</summary>
+        public object Key => this.key;
+
+        public override string Message => "missing key (key: " + this.key + ")";
+    }
+
+    /// <summary>
+    /// What a conversion throws for a value it can't convert: its input, as
+    /// text, and why, as <c>not an Int32</c>. (Later perhaps a
+    /// <see cref="FormatException"/> too, as C#'s own parsing throws.)
+    /// </summary>
+    public sealed class ParseError : CoreException
+    {
+        public ParseError(string input, string reason)
+            : this(input, reason, null)
+        {
+        }
+
+        public ParseError(string input, string reason, Exception? cause)
+            : base(cause)
+        {
+            this.Input = input;
+            this.Reason = reason;
+        }
+
+        /// <summary>The text, or the number as text.</summary>
+        public string Input { get; }
+
+        /// <summary>Why it couldn't be converted.</summary>
+        public string Reason { get; }
+
+        public override string Message =>
+            "parse error (input: " + this.Input + ", reason: " + this.Reason + ")";
+    }
+
+    /// <summary>
+    /// What making a string from a code point throws for one that isn't a
+    /// Unicode scalar value, with that number. (Later perhaps an
+    /// <see cref="ArgumentOutOfRangeException"/> too, as
+    /// <c>char.ConvertFromUtf32</c> throws.)
+    /// </summary>
+    public sealed class InvalidCodePoint : CoreException
+    {
+        public InvalidCodePoint(int codePoint)
+            : this(codePoint, null)
+        {
+        }
+
+        public InvalidCodePoint(int codePoint, Exception? cause)
+            : base(cause)
+        {
+            this.CodePoint = codePoint;
+        }
+
+        /// <summary>The number that isn't a Unicode scalar value.</summary>
+        public int CodePoint { get; }
+
+        public override string Message =>
+            "invalid code point (codePoint: " + this.CodePoint + ")";
+    }
+
     // Declared failures' causes. C# sets an exception's `InnerException`
     // only through its constructor, so a Temper `throw new X(…)` in a
     // handler calls an internal constructor of X's that takes the cause

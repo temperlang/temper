@@ -13,6 +13,7 @@ internal class PointJsonAdapter : IJsonAdapter<Point>
         x.EncodeToJson(p);
     }
 
+    /// <exception cref="JsonException">Where it fails with JsonException.</exception>
     public Point DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
         return Point.DecodeFromJson(t, ic);

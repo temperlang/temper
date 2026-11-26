@@ -25,6 +25,7 @@
 - [Fixes on Windows](#fixes-on-windows)
 - [🚨Breaking change: `try` and `catch` are reserved](#breaking-change-try-and-catch-are-reserved)
 - [🚨Breaking change: division by zero and failed casts panic](#breaking-change-division-by-zero-and-failed-casts-panic)
+- [🚨Breaking change: core and std throw declared failures](#breaking-change-core-and-std-throw-declared-failures)
 
 ## 🚨Breaking change: Rest parameter syntax removed.
 
@@ -599,3 +600,46 @@ and std's adapters check a tree's shape with `is`, so decoding JSON of
 another shape still fails as before. This is a first step toward
 replacing `Bubble`.
 
+## 🚨Breaking change: core and std throw declared failures
+
+Core's and std's APIs that bubbled now throw declared failures, which
+say what went wrong:
+
+- Conversions, `String.toInt32`, `toInt64`, and `toFloat64`,
+  `Float64.toInt32` and `toInt64`, and `Int64.toInt32` and `toFloat64`,
+  throw core's `ParseError`, with the `input` (as text) and a `reason`,
+  as `not an Int32` or `out of Int32 range`.
+- `Map.get` (`m[key]`) and `MapBuilder.remove` throw core's
+  `MissingKey`, with the `key`. `getOr(key, null)` is nullable (`V?`)
+  where the values aren't, and `getOr(key, fallback)` stays a `V`.
+- `String.fromCodePoint`, `String.fromCodePoints`, and
+  `StringBuilder.appendCodePoint` throw core's `InvalidCodePoint`, with
+  the `codePoint`, for what isn't a Unicode scalar value. All three
+  classes are under core's `CoreError`.
+- std `temporal`: `new Date(year, month, day)` throws `InvalidDate`, and
+  `Date.fromIsoString` `InvalidIsoDate`, both under `TemporalError`.
+- std `json`: `parseJson` throws `JsonSyntaxError`, and decoding JSON of
+  another shape, by an adapter or `@json`'s, `JsonShapeError`, both under
+  `JsonError`; `JsonNumeric.asInt32()` and its siblings throw
+  `ParseError`; `JsonTextProducer.toJsonString()` throws
+  `JsonSyntaxError` unless one whole value was produced.
+
+`orelse` handles them as it handled bubbles, so `s.toInt32() orelse 0`
+is unchanged. What changes is a function that passes one on:
+
+```temper inert
+// Before
+let port(s: String): Int throws Bubble { s.toInt32() }
+// After: declare what it throws, or handle it
+let port(s: String): Int throws ParseError { s.toInt32() }
+let portOrNull(s: String): Int? { s.toInt32() orelse null }
+```
+
+`catch (e)` reads the failure: `e.message`, `e.input`, `e.key`,
+`e.codePoint`. A custom `decodeFromJson` declares `throws JsonError`.
+A bad radix to `toInt32` or `toInt64`, outside 2 through 36, throws
+`ParseError` on every backend (JavaScript read 0 as 10). Each backend's runtime has these classes (Python
+`temper_core.ParseError`, Java `temper.core.ParseError`, and so on);
+mapping them to hosts' own exceptions, as Python's `KeyError`, Java's
+`NoSuchElementException`, and C#'s `KeyNotFoundException` for
+`MissingKey`, may come later.

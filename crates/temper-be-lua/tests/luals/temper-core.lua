@@ -203,7 +203,7 @@ function temper.cast_to_float64(thing) end
 ---@return boolean
 function temper.cast_to_boolean(thing) end
 
----Core's conversions, which bubble where Temper's do.
+---Core's conversions, which raise a `ParseError` where Temper's throw one.
 
 ---@param n number
 ---@return integer
@@ -374,6 +374,61 @@ function temper.type(typename, ...) end
 ---@type temper.Type
 temper.Failure = {}
 
+---A failure of core's own.
+---@class temper.CoreError: temper.Failure
+
+---The root of core's own failure types.
+---@type temper.Type
+temper.CoreError = {}
+
+---What a map's `get` raises for a key it doesn't have, with that key.
+---@class temper.MissingKey: temper.CoreError
+---@field key any
+
+---Its type, whose call makes one.
+---@type temper.Type
+temper.MissingKey = {}
+
+---A `MissingKey` for `key`.
+---@param key any
+---@return temper.MissingKey
+function temper.missingkey_constructor(key) end
+
+---What a conversion raises for a value it can't convert.
+---@class temper.ParseError: temper.CoreError
+---@field input string
+---@field reason string
+
+---Its type, whose call makes one.
+---@type temper.Type
+temper.ParseError = {}
+
+---A `ParseError` of `input`, as text, and why.
+---@param input string
+---@param reason string
+---@return temper.ParseError
+function temper.parseerror_constructor(input, reason) end
+
+---What making a string from a code point raises for one that isn't a
+---Unicode scalar value, with that number.
+---@class temper.InvalidCodePoint: temper.CoreError
+---@field codePoint integer
+
+---Its type, whose call makes one.
+---@type temper.Type
+temper.InvalidCodePoint = {}
+
+---An `InvalidCodePoint` for `code_point`.
+---@param code_point integer
+---@return temper.InvalidCodePoint
+function temper.invalidcodepoint_constructor(code_point) end
+
+---Raises a `ParseError` of `input`, as text, and why.
+---@param input string
+---@param reason string
+---@return any
+function temper.parse_error(input, reason) end
+
 ---Whether a value is a declared failure.
 ---@param err any
 ---@return boolean
@@ -423,12 +478,12 @@ function temper.list_get(list, index) end
 ---@return T
 function temper.listed_get(list, index) end
 
----A list's item, or the fallback out of bounds.
----@generic T
+---A list's item, or the fallback out of bounds, which may be nil.
+---@generic T, R
 ---@param list T[]
 ---@param index integer
----@param orvalue T
----@return T
+---@param orvalue R
+---@return T|R
 function temper.listed_getor(list, index, orvalue) end
 
 ---A list's length.
@@ -648,12 +703,12 @@ function temper.mapbuilder_clear(builder) end
 ---@return V
 function temper.mapped_get(mapped, key) end
 
----A key's value, or the fallback.
----@generic K, V
+---A key's value, or the fallback, which may be nil.
+---@generic K, V, R
 ---@param mapped table<K, V>
 ---@param key K
----@param otherwise V
----@return V
+---@param otherwise R
+---@return V|R
 function temper.mapped_getor(mapped, key, otherwise) end
 
 ---Whether a map has a key.
@@ -783,7 +838,7 @@ function temper.string_split(s, separator) end
 ---@return integer
 function temper.string_indexof(s, target, start) end
 
----It bubbles for other than a Unicode scalar value.
+---It panics for other than a Unicode scalar value.
 ---@param code_point integer
 ---@return string
 function temper.string_fromcodepoint(code_point) end
@@ -812,7 +867,7 @@ function temper.stringbuilder_constructor() end
 ---@param s string
 function temper.stringbuilder_append(b, s) end
 
----It bubbles for other than a Unicode scalar value.
+---It panics for other than a Unicode scalar value.
 ---@param b temper.StringBuilder
 ---@param code_point integer
 function temper.stringbuilder_appendcodepoint(b, code_point) end
@@ -933,7 +988,7 @@ function temper.float64_near(x, y, rel_tol, abs_tol) end
 -- std's `Date`, a table of `year`, `month`, and `day`, which std's
 -- connected members are on Lua, as Kotlin's.
 
----Bubbles for a date that doesn't exist.
+---Raises std's `InvalidDate` for a date that doesn't exist.
 ---@param year integer
 ---@param month integer
 ---@param day integer
@@ -962,7 +1017,8 @@ function temper.date_dayofweek(date) end
 ---@return string
 function temper.date_tostring(date) end
 
----Bubbles for a string that isn't `YYYY-MM-DD` or a date that doesn't exist.
+---Raises std's `InvalidIsoDate` for a string that isn't `YYYY-MM-DD`, or
+---a date that doesn't exist.
 ---@param isostring string
 ---@return any
 function temper.date_fromisostring(isostring) end

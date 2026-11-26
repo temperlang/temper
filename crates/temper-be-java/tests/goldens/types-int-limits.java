@@ -1,9 +1,9 @@
 package limits;
 
 import java.util.logging.Logger;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
+import temper.core.ParseError;
 
 public final class LimitsGlobal {
     private LimitsGlobal() {}
@@ -14,7 +14,7 @@ public final class LimitsGlobal {
         String converted;
         try {
             converted = Integer.toString(Core.stringToInt(string, 16));
-        } catch (Bubble ignored) {
+        } catch (ParseError ignored) {
             converted = "failed";
         }
         console.log("Parse " + string + " -> " + converted);
@@ -24,7 +24,7 @@ public final class LimitsGlobal {
         String converted;
         try {
             converted = Long.toString(Core.stringToInt64(string, 16));
-        } catch (Bubble ignored) {
+        } catch (ParseError ignored) {
             converted = "failed";
         }
         console.log("Parse " + string + " -> " + converted);
@@ -86,7 +86,7 @@ public final class LimitsGlobal {
         String t;
         try {
             t = Integer.toString(Core.int64ToInt(big64));
-        } catch (Bubble ignored) {
+        } catch (ParseError ignored) {
             t = "no";
         }
         console.log("Actually big: " + t);

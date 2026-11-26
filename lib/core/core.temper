@@ -71,6 +71,67 @@ export interface Error {
 }
 
 /**
+ * *CoreError* is the root of core's own failure types,
+ * [snippet/type/MissingKey], [snippet/type/ParseError], and
+ * [snippet/type/InvalidCodePoint].
+ */
+export sealed interface CoreError extends Error {}
+
+/**
+ * *MissingKey* is what [snippet/type/Mapped/method/get] and
+ * [snippet/type/MapBuilder/method/remove] throw when the key they're
+ * given has no value: which keys a map holds depends on data, and
+ * checking first costs a second lookup, so callers handle it, unlike a
+ * list's index out of range, a bug, which panics. Its [key] is the key
+ * that was missing.
+ */
+export class MissingKey extends CoreError {
+  public key: AnyValue;
+
+  @connected
+  public constructor(key: AnyValue) {
+    this.key = key;
+  }
+}
+
+/**
+ * *ParseError* is what a conversion throws for a value it can't convert:
+ * text that isn't a number of the type wanted, as `"x".toInt32()`, or a
+ * number out of the type's range, as `1.0e300.toInt32()`. Its [input] is
+ * the text, or the number as text, and its [reason] says what's wrong, as
+ * `not an Int32` or `out of Int32 range`. Callers that want a default
+ * write `s.toInt32() orelse 0`, or `orelse null`.
+ */
+export class ParseError extends CoreError {
+  public input: String;
+  public reason: String;
+
+  @connected
+  public constructor(input: String, reason: String) {
+    this.input = input;
+    this.reason = reason;
+  }
+}
+
+/**
+ * *InvalidCodePoint* is what [snippet/type/String/method/fromCodePoint],
+ * [snippet/type/String/method/fromCodePoints], and
+ * [snippet/type/StringBuilder/method/appendCodePoint] throw for a number
+ * that isn't a Unicode scalar value: below 0, above 0x10FFFF, or a
+ * surrogate, 0xD800 through 0xDFFF. Code points often come from decoded
+ * data, as character references and escapes. Its [codePoint] is the
+ * number given.
+ */
+export class InvalidCodePoint extends CoreError {
+  public codePoint: Int;
+
+  @connected
+  public constructor(codePoint: Int) {
+    this.codePoint = codePoint;
+  }
+}
+
+/**
  * *Invalid* is an untranslatable type that represents a failure to properly type an
  * expression.  Some backends, notably dynamic language backends, might be able
  * to produce a partially working translation and run tests even in the presence of type
@@ -421,16 +482,22 @@ export class String extends MapKey<String> {
   private let content: builtins.String;
 
   /**
-   * Convert the single code point to a string if it's valid. Specifically, it
-   * must be a Unicode scalar value, which is between 0 and 0x10FFFF, inclusive,
-   * except for the surrogate range 0xD800 through 0xDFFF.
+   * Convert the single code point to a string. It must be a Unicode scalar
+   * value, which is between 0 and 0x10FFFF, inclusive, except for the
+   * surrogate range 0xD800 through 0xDFFF; anything else throws an
+   * [snippet/type/InvalidCodePoint].
    */
   @connected
-  public static fromCodePoint(codePoint: Int): String throws Bubble;
+  public static fromCodePoint(codePoint: Int): String throws InvalidCodePoint;
 
-  /** Convert the list of code points to a string if they're valid. */
+  /**
+   * Convert the list of code points to a string. Each must be a Unicode
+   * scalar value, as for [snippet/type/String/method/fromCodePoint], or
+   * this throws an [snippet/type/InvalidCodePoint] for the first that
+   * isn't.
+   */
   @connected
-  public static fromCodePoints(codePoints: Listed<Int>): String throws Bubble;
+  public static fromCodePoints(codePoints: Listed<Int>): String throws InvalidCodePoint;
 
   /** True iff this string has no code-points. */
   @connected
@@ -664,17 +731,26 @@ export class String extends MapKey<String> {
     }
   }
 
-  /** Supports numeric JSON format plus Infinity and NaN. */
+  /**
+   * Supports numeric JSON format plus Infinity and NaN; throws a
+   * [snippet/type/ParseError] for other text.
+   */
   @connected
-  public toFloat64(): builtins.Float64 throws Bubble;
+  public toFloat64(): builtins.Float64 throws ParseError;
 
-  /** Supports integer JSON format, plus any radix 2 through 36. */
+  /**
+   * Supports integer JSON format, plus any radix 2 through 36; throws a
+   * [snippet/type/ParseError] for other text, or a value out of range.
+   */
   @connected
-  public toInt32(radix: builtins.Int = 10): builtins.Int throws Bubble;
+  public toInt32(radix: builtins.Int = 10): builtins.Int throws ParseError;
 
-  /** Supports integer JSON format, plus any radix 2 through 36. */
+  /**
+   * Supports integer JSON format, plus any radix 2 through 36; throws a
+   * [snippet/type/ParseError] for other text, or a value out of range.
+   */
   @connected
-  public toInt64(radix: builtins.Int = 10): builtins.Int64 throws Bubble;
+  public toInt64(radix: builtins.Int = 10): builtins.Int64 throws ParseError;
 
   @connected
   public toString(): builtins.String { content }
@@ -802,11 +878,12 @@ export class StringBuilder {
   /**
    * A single code point can be appended.  If it's not a valid
    * [Unicode scalar value](https://www.unicode.org/glossary/#unicode_scalar_value),
-   * the call bubbles.  This operation can be more efficient on some backends
+   * the call throws an [snippet/type/InvalidCodePoint] and appends
+   * nothing.  This operation can be more efficient on some backends
    * than making a temporary string from a code point just for appending.
    */
   @connected
-  public appendCodePoint(cp: Int): Void throws Bubble {
+  public appendCodePoint(cp: Int): Void throws InvalidCodePoint {
     append(String.fromCodePoint(cp));
   }
 
@@ -964,7 +1041,7 @@ export sealed interface Listed<T> {
   public get isEmpty(): builtins.Boolean { length == 0 }
 
   /**
-   * The i<sup>th</sup> element, or [snippet/builtin/Bubble] if *i* is outside the range \[0, [length]\).
+   * The i<sup>th</sup> element; panics if *i* is outside the range \[0, [length]\).
    *
    * ```temper
    * let ls = ["a", "b", "c"]; // List of length 3
@@ -1202,10 +1279,11 @@ export sealed interface Mapped<@in K extends MapKey<K>, V> {
   }
 
   /**
-   * Get the value associated with [key], or [snippet/builtin/bubble]s if no key is found.
+   * Get the value associated with [key], or throw a
+   * [snippet/type/MissingKey] if there's none.
    */
   @connected
-  public get(key: K): V throws Bubble {
+  public get(key: K): V throws MissingKey {
     var values = new ListBuilder<V>();
     forEach { (k: K, v: V): Void =>
       if (key == k) {
@@ -1213,18 +1291,18 @@ export sealed interface Mapped<@in K extends MapKey<K>, V> {
       }
     }
     if (values.length != 1) {
-      bubble();
+      throw new MissingKey(key);
     }
     return values[0];
   }
 
   /**
-   * Get the value associated with [key], falling back to [fallback] when no such key exists.
+   * Get the value associated with [key], falling back to [fallback] when no
+   * such key exists. With a nullable fallback, as `null`, the result is
+   * nullable too: `m.getOr(key, null)` is a `V?`.
    */
   @connected
   public getOr(key: K, fallback: V): V {
-    // TODO Reimplement this to allow panic on simple get???
-    // TODO Is this method just for better optimization on some backends?
     return this[key] orelse fallback;
   }
 
@@ -1377,9 +1455,12 @@ export class MapBuilder<K extends MapKey<K>, V> extends Mapped<K, V> {
   @connected
   public clear(): Void;
 
-  /** Removes the given entry if found, and returns its value. */
+  /**
+   * Removes the given entry and returns its value. Throws a
+   * [snippet/type/MissingKey] if there's none.
+   */
   @connected
-  public remove(key: K): V throws Bubble;
+  public remove(key: K): V throws MissingKey;
 
   @connected
   public set(key: K, newValue: V): Void;
@@ -1583,21 +1664,20 @@ export class Int32 extends MapKey<Int32> {
 export class Int64 extends Equatable<Int64> { // TODO extends MapKey?
   private let content: builtins.Int64;
 
-  /** Bubbles if the result isn't within the exponent error of the original. */
+  /**
+   * Throws a [snippet/type/ParseError] if the result isn't exact: outside
+   * plus or minus 0x1f_ffff_ffff_ffff, inclusive.
+   */
   @connected
-  public toFloat64(): Float64 throws Bubble;
+  public toFloat64(): Float64 throws ParseError;
 
   /** If outside bounds, returns a backend-dependent value. Use fuzz testing. */
   @connected
   public toFloat64Unsafe(): Float64;
 
-  /**
-   * Bubbles if the result isn't within bounds.
-   * TODO Should this panic instead since this is an easy check?
-   * TODO But many others cost more to check the panic on fail.
-   */
+  /** Throws a [snippet/type/ParseError] if the result isn't within bounds. */
   @connected
-  public toInt32(): Int32 throws Bubble;
+  public toInt32(): Int32 throws ParseError;
 
   /**
    * If outside bounds, returns a backend-dependent value. Use fuzz testing.
@@ -1650,21 +1730,22 @@ export class Float64 extends Equatable<Float64> {
   private let content: builtins.Float64;
 
   /**
-   * Truncates toward zero. Bubbles if the value isn't within 1 of Int32 limits.
+   * Truncates toward zero. Throws a [snippet/type/ParseError] if the value
+   * isn't within 1 of Int32 limits, or is NaN.
    */
   @connected
-  public toInt32(): Int throws Bubble;
+  public toInt32(): Int throws ParseError;
 
   /** If outside bounds, returns a backend-dependent value. Use fuzz testing. */
   @connected
   public toInt32Unsafe(): Int;
 
   /**
-   * Truncates toward zero. Bubbles if the value isn't within plus or minus
-   * 0x1f_ffff_ffff_ffff, inclusive.
+   * Truncates toward zero. Throws a [snippet/type/ParseError] if the value
+   * isn't within plus or minus 0x1f_ffff_ffff_ffff, inclusive, or is NaN.
    */
   @connected
-  public toInt64(): Int64 throws Bubble;
+  public toInt64(): Int64 throws ParseError;
 
   /** If outside bounds, returns a backend-dependent value. Use fuzz testing. */
   @connected

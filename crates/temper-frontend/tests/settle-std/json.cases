@@ -42,9 +42,9 @@ log cat 137
 log dog 1337
 
 === nullable fields decode null and values
-let { NullInterchangeContext, parseJson, JsonTextProducer } = import("std/json");
+let { JsonError, NullInterchangeContext, parseJson, JsonTextProducer } = import("std/json");
 @json class C(public i: Int?) {}
-let decode(s: String): C throws Bubble {
+let decode(s: String): C throws JsonError {
   C.jsonAdapter().decodeFromJson(parseJson(s), NullInterchangeContext.instance)
 }
 let encode(c: C): String {
@@ -54,11 +54,13 @@ let encode(c: C): String {
 }
 console.log(encode(decode("{\"i\": null}") orelse panic()));
 console.log(encode(decode("{\"i\": 5}") orelse panic()));
-console.log(do { decode("{}"); "decoded" } orelse "missing i bubbles");
+console.log(do { decode("{}"); "decoded" } catch (e) { e.message });
+console.log(do { decode("{"); "decoded" } catch (e) { e.message });
 --- settled
 log {"i":null}
 log {"i":5}
-log missing i bubbles
+log json shape error (problem: expected property i)
+log json syntax error (problem: Expected '}', but got end-of-file)
 
 === a list of nullable values
 let { NullInterchangeContext, OrNullJsonAdapter, booleanJsonAdapter, listJsonAdapter, parseJson } = import("std/json");
@@ -86,11 +88,11 @@ log {"x":1,"y":2}
 log (4, 5)
 
 === a class that encodes itself gets only jsonAdapter
-let { InterchangeContext, JsonNumeric, JsonProducer, JsonSyntaxTree, JsonTextProducer } = import("std/json");
+let { InterchangeContext, JsonError, JsonNumeric, JsonProducer, JsonShapeError, JsonSyntaxTree, JsonTextProducer } = import("std/json");
 @json class IntWrapper(public i: Int) {
   public encodeToJson(p: JsonProducer): Void { p.int32Value(i); }
-  public static decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): IntWrapper throws Bubble {
-    new IntWrapper((t as JsonNumeric).asInt32())
+  public static decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): IntWrapper throws JsonError {
+    new IntWrapper((t as JsonNumeric).asInt32() orelse throw new JsonShapeError("expected Int"))
   }
 }
 let p = new JsonTextProducer();
@@ -175,6 +177,19 @@ Date.jsonAdapter();
 --- settled
 error 39..55: No member jsonAdapter in Date
 Failed: No member jsonAdapter in Date
+
+=== Date.decodeFromJson's shape error has the InvalidIsoDate as its cause
+let { Date, InvalidIsoDate } = import("std/temporal");
+let { JsonString, NullInterchangeContext } = import("std/json");
+let decoded = Date.decodeFromJson(
+  new JsonString("2023-02-29"), NullInterchangeContext.instance
+).toString() catch (e) {
+  let cause = e.cause;
+  "${e.message}, cause ${if (cause is InvalidIsoDate) { cause.text } else { "lost" }}"
+};
+console.log(decoded);
+--- settled
+log json shape error (problem: expected Date), cause 2023-02-29
 
 === what @json can't derive
 @json interface I {}

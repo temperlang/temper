@@ -207,6 +207,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Int64.toString()",
         Connection::Translate(int_to_string),
     ),
+    (
+        "core.type InvalidCodePoint.constructor()",
+        Connection::Runtime("InvalidCodePoint"),
+    ),
     ("core.type List.get length()", Connection::Builtin("len")),
     ("core.type List.get()", Connection::Runtime("list_get")),
     ("core.type List.toList()", Connection::Identity),
@@ -352,7 +356,15 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Mapped.values()",
         Connection::Translate(mapped_values),
     ),
+    (
+        "core.type MissingKey.constructor()",
+        Connection::Runtime("MissingKey"),
+    ),
     ("core.type Pair.constructor()", Connection::Runtime("Pair")),
+    (
+        "core.type ParseError.constructor()",
+        Connection::Runtime("ParseError"),
+    ),
     (
         "core.type PromiseBuilder.breakPromise()",
         Connection::Runtime("break_promise"),

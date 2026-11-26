@@ -872,7 +872,55 @@ do
     -- The root of declared failure types, core's `Error`: each library's
     -- roots are under it, and its failure types under those.
     temper.Failure = setmetatable(temper.type("temper.Failure"), failure_type_meta)
+
+    -- Core's own failures, as generated code declares a library's: the
+    -- root `CoreError`; `MissingKey`, what a map's `get` raises for a key
+    -- it doesn't have; `ParseError`, what a conversion raises; and
+    -- `InvalidCodePoint`, what making a string from a code point raises
+    -- for one that isn't a Unicode scalar value.
+    temper.CoreError = temper.type("temper.CoreError", temper.Failure)
+    temper.MissingKey = temper.type("temper.MissingKey", temper.CoreError)
+    function temper.MissingKey.constructor(this, key)
+        this.key = key
+    end
+    function temper.MissingKey.get.message(this)
+        return "missing key (key: " .. tostring(this.key) .. ")"
+    end
+    temper.ParseError = temper.type("temper.ParseError", temper.CoreError)
+    function temper.ParseError.constructor(this, input, reason)
+        this.input = input
+        this.reason = reason
+    end
+    function temper.ParseError.get.message(this)
+        return "parse error (input: " .. this.input .. ", reason: " .. this.reason .. ")"
+    end
+    temper.InvalidCodePoint = temper.type("temper.InvalidCodePoint", temper.CoreError)
+    function temper.InvalidCodePoint.constructor(this, codePoint)
+        this.codePoint = codePoint
+    end
+    function temper.InvalidCodePoint.get.message(this)
+        return "invalid code point (codePoint: " .. tostring(this.codePoint) .. ")"
+    end
 end
+
+function temper.missingkey_constructor(key)
+    return temper.MissingKey(key)
+end
+
+function temper.parseerror_constructor(input, reason)
+    return temper.ParseError(input, reason)
+end
+
+function temper.invalidcodepoint_constructor(code_point)
+    return temper.InvalidCodePoint(code_point)
+end
+
+-- Raises a `ParseError` of `input`, as text, and why.
+function temper.parse_error(input, reason)
+    error(temper.ParseError(input, reason))
+end
+-- The integer module's own failed conversions too.
+temper_int.parse_error = temper.parse_error
 
 -- Whether `err` is a declared failure.
 function temper.is_failure(err)
@@ -1093,6 +1141,8 @@ function temper.float64_tostring(n)
         return s
     end
 end
+-- The integer module writes a float as Temper does in its failures.
+temper_int.float64_tostring = temper.float64_tostring
 
 temper.int32_max = math_max
 temper.int32_min = math_min
@@ -1122,9 +1172,8 @@ function temper.float64_toint32(n)
     end
     if temper.is_safe_int32(ret) then
         return ret
-    else
-        return temper.bubble("core.type Float64.toInt32() failed")
     end
+    temper.parse_error(temper.float64_tostring(n), "out of Int32 range")
 end
 
 function temper.float64_toint32unsafe(n)
@@ -1357,7 +1406,7 @@ do
     local function temper_get(mapped, index)
         local got = mapped[index]
         if got == nil then
-            temper.bubble("core.type Mapped.get() no such key " .. tostring(index))
+            error(temper.MissingKey(index))
         end
         return got
     end
@@ -1542,7 +1591,7 @@ function temper.int64_toint32(n)
     if temper.int32_toint64(result) == n then
         return result
     end
-    return temper.bubble("core.type Int64.toInt32() failed")
+    temper.parse_error(temper.int64_tostring(n), "out of Int32 range")
 end
 
 function temper.int32_tofloat64(n)
@@ -1786,15 +1835,16 @@ do
         temper.int64_tostring = temper.int32_tostring
     end
 
+    -- The Int64 `s` spells in `base`, or `temper.null`.
     local function parse_int64(s, base)
         base = base or 10
         if base < 2 or base > 36 then
-            temper.bubble("bad base")
+            return temper.null
         end
         -- Trim whitespace.
         s = s:match("^%s*(.-)%s*$")
         if s == "" then
-            temper.bubble("empty")
+            return temper.null
         end
         -- Check sign.
         local neg = s:sub(1, 1) == "-"
@@ -1802,7 +1852,7 @@ do
             s = s:sub(2)
         end
         if s == "" then
-            temper.bubble("empty")
+            return temper.null
         end
         -- Trim leading zeros.
         s = s:match("^0*(.*)")
@@ -1820,16 +1870,16 @@ do
                 d = string.byte(c) - 87
             end
             if d >= base then
-                temper.bubble("bad digit")
+                return temper.null
             end
             d = temper.int64_constructor(d)
             if neg then
                 if -n < temper.int64_div((min + d), b64) then
-                    temper.bubble("underflow")
+                    return temper.null
                 end
             else
                 if n > temper.int64_div((max - d), b64) then
-                    temper.bubble("overflow")
+                    return temper.null
                 end
             end
             n = n * b64 + d
@@ -1840,7 +1890,13 @@ do
         return n
     end
 
-    temper.string_toint64 = parse_int64
+    function temper.string_toint64(s, base)
+        local n = parse_int64(s, base)
+        if n == temper.null then
+            temper.parse_error(s, "not an Int64")
+        end
+        return n
+    end
 end
 
 function temper.stringindex_compareto(a, b)
@@ -1863,7 +1919,7 @@ function temper.string_fromcodepoint(code_point)
         or (code_point >= 0xD800 and code_point <= 0xDFFF)
         or code_point > 0x10FFFF
     then
-        temper.bubble("core.type String.fromCodePoint() invalid scalar value")
+        error(temper.InvalidCodePoint(code_point))
     end
     return temper_utf8.char(code_point)
 end
@@ -2044,21 +2100,21 @@ function temper.string_tofloat64(str)
             end
         end
     end
-    temper.bubble("core.type String.toFloat64() failed")
+    temper.parse_error(str, "not a Float64")
 end
 
 function temper.string_toint32(str, radix)
     if radix == nil then
         radix = 10
     elseif radix < 2 or radix > 36 then
-        -- Not `tonumber`'s error, which isn't a bubble.
-        temper.bubble("core.type String.toInt32() bad radix")
+        -- Not `tonumber`'s error.
+        temper.parse_error(str, "not an Int32")
     end
     local ret = tonumber(str, radix)
     if temper.is_safe_int32(ret) then
         return ret
     end
-    temper.bubble("core.type String.toInt32() failed")
+    temper.parse_error(str, "not an Int32")
 end
 
 function temper.string_end(str)
@@ -2286,7 +2342,7 @@ end
 function temper.mapbuilder_remove(builder, key)
     local got = builder[key]
     if got == nil then
-        temper.bubble("core.type MapBuilder.remove() key not found: " .. tostring(key))
+        error(temper.MissingKey(key))
     end
     rawset(builder, key, nil)
     local key_order_list = rawget(builder, map_key_order)
@@ -2359,12 +2415,13 @@ do
         return is_leap_year_then_days[is_leap_year(year)][month]
     end
 
-    function temper.date_constructor(year, month, day)
+    -- The date, or nil where there's no such day.
+    local function date_or_nil(year, month, day)
         if not (1 <= month and month <= 12) then
-            temper.bubble("std/temporal.type Date.constructor() bad month " .. month)
+            return nil
         end
         if not (1 <= day and day <= days_in_month_of_year(year, month)) then
-            temper.bubble("std/temporal.type Date.constructor() can only go up to day " .. days_in_month_of_year(year, month) .. ", got " .. day)
+            return nil
         end
         return {
             year = year,
@@ -2372,6 +2429,18 @@ do
             day = day,
             [temper.type_tag] = 'Date'
         }
+    end
+    temper.date_or_nil = date_or_nil
+
+    -- std/temporal's Date constructor, raising std's `InvalidDate` where
+    -- there's no such day, required only then, as std requires this
+    -- runtime.
+    function temper.date_constructor(year, month, day)
+        local date = date_or_nil(year, month, day)
+        if date == nil then
+            error(require("std/temporal").InvalidDate(year, month, day))
+        end
+        return date
     end
 end
 
@@ -2429,22 +2498,21 @@ do
     end
 end
 
+-- std/temporal's Date.fromIsoString, a date from text in YYYY-MM-DD
+-- form, raising std's `InvalidIsoDate` for other text, or no such day.
 function temper.date_fromisostring(isostring)
-    if string_len(isostring) ~= 10 or string_byte(isostring, 5) ~= 45 or string_byte(isostring, 8) ~= 45 then
-        temper.bubble(isostring)
+    local year, month, day = string_match(isostring, "^(%d%d%d%d)-(%d%d)-(%d%d)$")
+    local date = year and temper.date_or_nil(tonumber(year), tonumber(month), tonumber(day))
+    if not date then
+        error(require("std/temporal").InvalidIsoDate(isostring))
     end
-    local year  = tonumber(string_sub(isostring, 1, 4))
-    local month = tonumber(string_sub(isostring, 6, 7))
-    local day   = tonumber(string_sub(isostring, 9, 10))
-    if year == nil or month == nil or day == nil then
-        temper.bubble(isostring)
-    end
-    return temper.date_constructor(year, month, day)
+    return date
 end
 
 function temper.date_today()
     -- The '!' below causes formatting according to UTC.
-    return temper.date_fromisostring(os.date('!%Y-%m-%d', os.time()))
+    local year, month, day = string_match(os.date('!%Y-%m-%d', os.time()), "^(%d+)-(%d+)-(%d+)$")
+    return temper.date_or_nil(tonumber(year), tonumber(month), tonumber(day))
 end
 
 function temper.date_yearsbetween(start, end_)

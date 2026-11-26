@@ -86,7 +86,8 @@ a private one. The log is what the interpreter gives.
     mb.set("q", 5);
     mb.set("n", null);
     console.log("${mb.getOr("q", 0) ?? -2} ${mb.getOr("n", 0) ?? -2} ${mb.has("n")}");
-    console.log((mb.remove("q") orelse 0)?.toString() ?? "null");
+    console.log(mb.remove("q")?.toString() ?? "null");
+    console.log("${mb.getOr("z", null) ?? -3} ${built.getOr(7, null) ?? "none"}");
     console.log(mb.keys().length.toString());
     // Compound assignment and increments on indexed targets read the
     // builder and the index once. In a function, as top-level statements
@@ -126,7 +127,7 @@ a private one. The log is what the interpreter gives.
     both();
     let tally = new MapBuilder<String, Int>();
     tally.set("k", 2);
-    let bump(key: String): Int throws Bubble {
+    let bump(key: String): Int throws MissingKey {
       tally[key] -= 1;
       let before = tally[key]++;
       let after = ++tally[key];
@@ -151,6 +152,7 @@ none
 2 -1 true 2
 5 -2 true
 5
+-3 none
 1
 5 31 6 4 1
 11 2 11 1100 203 103 1001 33 4 31

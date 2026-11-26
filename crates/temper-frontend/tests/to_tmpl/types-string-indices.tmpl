@@ -12,26 +12,29 @@ uses `temper-core`#2 0.0.0-alpha.0.0 {
     connected method hasIndex#18(index: StringIndex#13): Boolean;
     connected method get#19(index: StringIndex#13): Int32;
     connected method next#20(index: StringIndex#13): StringIndex#13;
-    connected static fromCodePoint#32(codePoint: Int32): String throws Bubble;
-    connected method slice#66(begin: StringIndex#13, end: StringIndex#13): String;
-    connected get end#67(): StringIndex#13;
+    connected static fromCodePoint#32(codePoint: Int32): String throws InvalidCodePoint#33;
+    connected method slice#69(begin: StringIndex#13, end: StringIndex#13): String;
+    connected get end#70(): StringIndex#13;
   }
   class NoStringIndex#22 extends StringIndexOption#3 {}
   interface Console#29 {
     connected method log#30(message: String): Void;
   }
-  class List#47<T#48> extends Listed#49<T#48> {
-    connected get length#51(): Int32;
-    connected method get#52(index: Int32): T#48;
+  class InvalidCodePoint#33 extends CoreError#34 {}
+  interface CoreError#34 extends Error#35 {}
+  interface Error#35 {}
+  class List#50<T#51> extends Listed#52<T#51> {
+    connected get length#54(): Int32;
+    connected method get#55(index: Int32): T#51;
   }
-  interface Listed#49<T#50> {}
-  class StringBuilder#58 {
-    connected constructor constructor#60(): StringBuilder#58;
-    connected method append#61(substring: String): Void;
-    connected get end#63(): StringIndex#13;
-    connected method toString#65(): String;
+  interface Listed#52<T#53> {}
+  class StringBuilder#61 {
+    connected constructor constructor#63(): StringBuilder#61;
+    connected method append#64(substring: String): Void;
+    connected get end#66(): StringIndex#13;
+    connected method toString#68(): String;
   }
-  connected fn getConsole#68(name?: String): Console#29;
+  connected fn getConsole#71(name?: String): Console#29;
 }
 
 module indices#0 {
@@ -54,34 +57,34 @@ module indices#0 {
     ~console#31.log#30(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("'", (orelse(fromCodePoint#32(a#24)^, "?")): String), "' is "), relPos#28), " '"), (orelse(fromCodePoint#32(b#25)^, "?")): String), "' in "), "\""), s#23), "\""), "."));
   }
 
-  fn has0#5(s#33: String, c#34: Int32): Boolean {
-    return is(indexOfChar#1(s#33, c#34), StringIndex#13);
+  fn has0#5(s#36: String, c#37: Int32): Boolean {
+    return is(indexOfChar#1(s#36, c#37), StringIndex#13);
   }
 
-  fn has1#6(s#35: String, c#36: Int32): Boolean {
-    let i#37: StringIndexOption#3 = indexOfChar#1(s#35, c#36);
-    return is(i#37, StringIndex#13);
-  }
-
-  fn has2#7(s#38: String, c#39: Int32): Boolean {
+  fn has1#6(s#38: String, c#39: Int32): Boolean {
     let i#40: StringIndexOption#3 = indexOfChar#1(s#38, c#39);
-    return %Boolean.not(is(i#40, NoStringIndex#22));
+    return is(i#40, StringIndex#13);
   }
 
-  fn has3#8(s#41: String, c#42: Int32): Boolean {
+  fn has2#7(s#41: String, c#42: Int32): Boolean {
     let i#43: StringIndexOption#3 = indexOfChar#1(s#41, c#42);
-    return is(i#43, StringIndex#13);
+    return %Boolean.not(is(i#43, NoStringIndex#22));
   }
 
-  fn has4#9(s#44: String, c#45: Int32): Boolean {
+  fn has3#8(s#44: String, c#45: Int32): Boolean {
     let i#46: StringIndexOption#3 = indexOfChar#1(s#44, c#45);
-    return %Boolean.not(is(i#46, NoStringIndex#22));
+    return is(i#46, StringIndex#13);
+  }
+
+  fn has4#9(s#47: String, c#48: Int32): Boolean {
+    let i#49: StringIndexOption#3 = indexOfChar#1(s#47, c#48);
+    return %Boolean.not(is(i#49, NoStringIndex#22));
   }
 
   let s#10: String;
 
   init {
-    init ~console#31 = getConsole#68(omitted);
+    init ~console#31 = getConsole#71(omitted);
     comparePositions#4("cookie", 99, 105);
     comparePositions#4("cookie", 107, 111);
     comparePositions#4("cookie", 107, 107);
@@ -90,24 +93,24 @@ module indices#0 {
     comparePositions#4("cookie", 120, 121);
     init s#10 = "cookie";
     {
-      let ~list#53: List#47<Int32> = (list(111, 105, 122)): List#47<Int32>;
-      let ~length#54: Int32 = ~list#53.length#51();
-      var ~i#55: Int32 = 0;
-      ~loop#56: while (%Int32.lt(~i#55, ~length#54)) {
-        let c#57: Int32 = ~list#53.get#52(~i#55);
-        ~i#55 = %Int32.add(~i#55, 1);
-        ~console#31.log#30(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("'", (orelse(fromCodePoint#32(c#57)^, "?")): String), "' in "), "\""), s#10), "\""), ": "), (if (has0#5(s#10, c#57)) "y" else "n"): String), ", "), (if (has1#6(s#10, c#57)) "y" else "n"): String), ", "), (if (has2#7(s#10, c#57)) "y" else "n"): String), ", "), (if (has3#8(s#10, c#57)) "y" else "n"): String), ", "), (if (has4#9(s#10, c#57)) "y" else "n"): String));
+      let ~list#56: List#50<Int32> = (list(111, 105, 122)): List#50<Int32>;
+      let ~length#57: Int32 = ~list#56.length#54();
+      var ~i#58: Int32 = 0;
+      ~loop#59: while (%Int32.lt(~i#58, ~length#57)) {
+        let c#60: Int32 = ~list#56.get#55(~i#58);
+        ~i#58 = %Int32.add(~i#58, 1);
+        ~console#31.log#30(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("'", (orelse(fromCodePoint#32(c#60)^, "?")): String), "' in "), "\""), s#10), "\""), ": "), (if (has0#5(s#10, c#60)) "y" else "n"): String), ", "), (if (has1#6(s#10, c#60)) "y" else "n"): String), ", "), (if (has2#7(s#10, c#60)) "y" else "n"): String), ", "), (if (has3#8(s#10, c#60)) "y" else "n"): String), ", "), (if (has4#9(s#10, c#60)) "y" else "n"): String));
       }
     }
     {
-      let stringBuilder#59: StringBuilder#58 = new constructor#60();
-      stringBuilder#59.append#61("Hello");
-      stringBuilder#59.append#61(",");
-      let afterComma#62: StringIndex#13 = stringBuilder#59.end#63();
-      stringBuilder#59.append#61(" World!");
-      let str#64: String = stringBuilder#59.toString#65();
-      ~console#31.log#30(str#64.slice#66(begin#16, afterComma#62));
-      ~console#31.log#30(str#64.slice#66(afterComma#62, str#64.end#67()));
+      let stringBuilder#62: StringBuilder#61 = new constructor#63();
+      stringBuilder#62.append#64("Hello");
+      stringBuilder#62.append#64(",");
+      let afterComma#65: StringIndex#13 = stringBuilder#62.end#66();
+      stringBuilder#62.append#64(" World!");
+      let str#67: String = stringBuilder#62.toString#68();
+      ~console#31.log#30(str#67.slice#69(begin#16, afterComma#65));
+      ~console#31.log#30(str#67.slice#69(afterComma#65, str#67.end#70()));
     }
   }
 }

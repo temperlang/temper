@@ -4,8 +4,8 @@ from collections.abc import (
     Sequence as _Sequence,
 )
 from temper_core import (
-    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
+    MissingKey as _MissingKey,
     Pair as _Pair,
     boolean_to_string as _boolean_to_string,
     int_add as _int_add,
@@ -270,43 +270,39 @@ _m: _MappingProxyType[str, int] = _map_constructor((_Pair('a', 1), _Pair('b', 2)
 _t_0: int
 try:
     _t_0 = _mapped_get(_m, 'b')
-except _Bubble:
+except _MissingKey:
     _t_0 = -1
 _t_1: int
 try:
     _t_1 = _mapped_get(_m, 'c')
-except _Bubble:
+except _MissingKey:
     _t_1 = -1
 _console.log(f"{_t_0} {_t_1} {_boolean_to_string(_mapped_has(_m, 'a'))} {len(_m)}")
 _mb: dict[str, int | None] = {}
 _map_builder_set(_mb, 'q', 5)
 _map_builder_set(_mb, 'n', None)
 _console.log(f"{-2 if (_subject3 := _mb.get('q', 0)) is None else _subject3} {-2 if (_subject4 := _mb.get('n', 0)) is None else _subject4} {_boolean_to_string(_mapped_has(_mb, 'n'))}")
-_t_2: int | None
-try:
-    _t_2 = _map_builder_remove(_mb, 'q')
-except _Bubble:
-    _t_2 = 0
-_console.log('null' if (_subject5 := None if (_subject6 := _t_2) is None else str(_subject6)) is None else _subject5)
+_console.log('null' if (_subject5 := None if (_subject6 := _map_builder_remove(_mb, 'q')) is None else str(_subject6)) is None else _subject5)
+_console.log(f"{-3 if (_subject7 := _mb.get('z', None)) is None else _subject7} {'none' if (_subject8 := _list_get_or(_built, 7, None)) is None else _subject8}")
 _console.log(str(len(list(_mb.keys()))))
 _indexed()
 _both()
 _tally: dict[str, int] = {}
 _map_builder_set(_tally, 'k', 2)
+_t_2: int
+try:
+    _t_2 = _bump('k')
+except _MissingKey:
+    _t_2 = -1
 _t_3: int
 try:
-    _t_3 = _bump('k')
-except _Bubble:
+    _t_3 = _bump('z')
+except _MissingKey:
     _t_3 = -1
 _t_4: int
 try:
-    _t_4 = _bump('z')
-except _Bubble:
+    _t_4 = _mapped_get(_tally, 'k')
+except _MissingKey:
     _t_4 = -1
-_t_5: int
-try:
-    _t_5 = _mapped_get(_tally, 'k')
-except _Bubble:
-    _t_5 = -1
-_console.log(f'{_t_3} {_t_4} {_t_5}')
+_console.log(f'{_t_2} {_t_3} {_t_4}')
 _console.log(f'{_boolean_to_string(_first_same((1000,), (1000,)))} {_boolean_to_string(_first_same((1000,), (7,)))}')

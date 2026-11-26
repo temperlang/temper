@@ -405,7 +405,14 @@ std::shared_ptr<Grid> parseGrid(core::Str const & s) {
   if (s == core::Str()) {
     core::bubble();
   }
-  return Grid::make(1, core::List::make<double>(core::String::toFloat64(s)));
+  double value2;
+  auto Result = core::String::toFloat64(s);
+  if (Result.has_value()) {
+    value2 = *Result;
+  } else {
+    core::bubble();
+  }
+  return Grid::make(1, core::List::make<double>(value2));
 }
 
 core::GlobalSlot<std::shared_ptr<Casing>> Casing::temper_statics::first;
@@ -859,9 +866,9 @@ static int32_t sumParsed(std::shared_ptr<std::vector<core::Str>> const & xs) {
       core::Str x = core::List::get<core::Str>(xs, i);
       int32_t n;
       core::NullableParam<int32_t> held = nullptr;
-      try {
-        held = core::String::toInt32(x);
-      } catch (core::TemperBubble const &) {
+      auto Result = core::String::toInt32(x);
+      if (Result.has_value()) {
+        held = *Result;
       }
       if (held == nullptr) {
         {
@@ -883,9 +890,9 @@ static int32_t sumParsed(std::shared_ptr<std::vector<core::Str>> const & xs) {
       i = core::Int::add(i, 1);
       int32_t m;
       core::NullableParam<int32_t> held = nullptr;
-      try {
-        held = core::String::toInt32(x);
-      } catch (core::TemperBubble const &) {
+      auto Result2 = core::String::toInt32(x);
+      if (Result2.has_value()) {
+        held = *Result2;
       }
       if (held == nullptr) {
         continue;

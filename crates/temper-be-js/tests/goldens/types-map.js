@@ -1,5 +1,5 @@
 import {
-  isBubble,
+  MissingKey,
   listedGet,
   listedJoin,
   listedMap,
@@ -12,6 +12,7 @@ import {
   mappedToListWith,
   mappedToMap,
   pairConstructor,
+  panic,
 } from "@temperlang/core";
 
 /**
@@ -30,6 +31,15 @@ function listKeys(mapped) {
  */
 function messageDefined(code) {
   return messages.has(code).toString();
+}
+
+/**
+ * @param {number} code
+ * @returns {string}
+ * @throws {MissingKey}
+ */
+function lookUp(code) {
+  return mappedGet(messages, code);
 }
 
 /**
@@ -94,10 +104,11 @@ let t$0;
 try {
   t$0 = mappedGet(messages, 302);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof MissingKey)) throw e$;
   t$0 = "Found";
 }
 console.log(`Fallback: ${t$0}`);
+console.log(`Or null: ${mappedGetOr(messages, 302, null) ?? "none"}`);
 console.log(`Codes: ${listedJoin(/** @type {number[]} */ (listKeys(messages)), " ", (it) => it.toString())}`);
 console.log(`Again: ${listedJoin(/** @type {number[]} */ (Object.freeze(Array.from(messages.keys()))), " ", (it) => it.toString())}`);
 console.log(`Messages: ${listedJoin(/** @type {string[]} */ (Object.freeze(Array.from(messages.values()))), ", ", (it) => it)}`);
@@ -118,25 +129,61 @@ let t$1;
   try {
     mapBuilderRemove(builder2, "Honduras");
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof MissingKey)) throw e$;
   }
   /** @type {readonly string[]} */
-  const was = mapBuilderRemove(builder2, "El Salvador");
+  let was;
+  try {
+    was = mapBuilderRemove(builder2, "El Salvador");
+  } catch (e$) {
+    if (!(e$ instanceof MissingKey)) throw e$;
+    was = panic("panic", e$);
+  }
   console.log(`Was there: ${listedJoin(/** @type {string[]} */ (was), ", ", (it) => it)}`);
   /** @type {string} */
   let t$2;
   try {
     t$2 = listedGet(/** @type {string[]} */ (mapBuilderRemove(builder2, "El Salvador")), 0);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof MissingKey)) throw e$;
     t$2 = "Gone";
   }
   console.log(t$2);
+  /** @type {string} */
+  let t$3;
+  try {
+    mapBuilderRemove(builder2, "Belize");
+    t$3 = "removed";
+  } catch (e) {
+    if (!(e instanceof MissingKey)) throw e;
+    t$3 = /** @type {Error} */ (/** @type {unknown} */ (e)).message;
+  }
+  console.log(t$3);
   t$1 = mappedToMap(builder2);
 }
 /** @type {Map<string, readonly string[]>} */
 const neighbors = t$1;
 console.log(`From built: ${listedJoin(/** @type {string[]} */ (mappedGet(neighbors, "Nicaragua")), ", ", (it) => it)}`);
+/** @type {string} */
+let t$4;
+try {
+  t$4 = lookUp(302);
+} catch (e2) {
+  if (!(e2 instanceof MissingKey)) throw e2;
+  t$4 = /** @type {Error} */ (/** @type {unknown} */ (e2)).message;
+}
+console.log(t$4);
+/** @type {Map<string, number>} */
+const fromBuilder = new Map();
+/** @type {number} */
+let t$5;
+try {
+  t$5 = mappedGet(fromBuilder, "nope");
+} catch (e$) {
+  if (!(e$ instanceof MissingKey)) throw e$;
+  t$5 = -1;
+}
+console.log(t$5.toString());
 /** @type {Map<number, number>} */
 const mapOfNone = mapConstructor(/** @type {any} */ (Object.freeze([])));
 /** @type {Map<string, string>} */

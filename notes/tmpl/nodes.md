@@ -724,6 +724,14 @@ the … backend: declared failures: …" for a program that uses them
   `cause` (`failures::root`). A signature fails with `Bubble`, a
   failure type, or a type parameter (a failure parameter, not made by
   `to_tmpl` yet); failures are ordinary values, `Bubble` never is.
+- **Core's own failure types,** external like `Error`: the root
+  `CoreError` and its classes `MissingKey` (`key`, an `AnyValue`; what
+  `Mapped.get` and `MapBuilder.remove` fail with), `ParseError` (`input`
+  and `reason`; what conversions fail with), and `InvalidCodePoint`
+  (`codePoint`; what `String.fromCodePoint(s)` and
+  `StringBuilder.appendCodePoint` fail with). Each target's runtime declares them, as its
+  own exception types, and its connection tables name them; `to_tmpl`
+  makes a `catch (e)` whose `e` nothing reads an `OrElse`.
 - **The library's roots:** the interfaces right under `Error`
   (`failures::is_library_root`), sealed interfaces the library declares
   (decision 17; the frontend checks the rules, notes/typing.md), each

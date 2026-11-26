@@ -16,12 +16,12 @@ namespace TemperLang.Core
             sb.Append(s, left, right - left);
         }
 
-        /// <summary>Bubbles unless codePoint is a Unicode scalar value.</summary>
+        /// <summary>Throws an <see cref="InvalidCodePoint"/> unless codePoint is a Unicode scalar value.</summary>
         public static void RequireScalarValue(int codePoint)
         {
             if (codePoint < 0 || (codePoint >= 0xD800 && codePoint <= 0xDFFF) || codePoint > 0x10FFFF)
             {
-                throw new Bubble($"Invalid Unicode scalar value: {codePoint:X}");
+                throw new InvalidCodePoint(codePoint);
             }
         }
 

@@ -2,6 +2,7 @@ from collections.abc import Sequence as _Sequence_
 from temper_core import (
     Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
+    MissingKey as _MissingKey,
     boolean_to_string as _boolean_to_string,
     int_add as _int_add,
     list_get as _list_get,
@@ -69,11 +70,11 @@ def _fn(match: _Match, /) -> str:
     groups = match.groups
     try:
         option1 = _mapped_get(groups, 'option1').value
-    except _Bubble:
+    except _MissingKey:
         option1 = ''
     try:
         alpha_option2 = _mapped_get(groups, 'alphaOption2').value
-    except _Bubble:
+    except _MissingKey:
         alpha_option2 = ''
     begin = _string_count_between(_more_text, 0, match.full.begin)
     return f'-{option1}{alpha_option2}{begin}-'

@@ -77,10 +77,19 @@ pub(crate) fn calc_rows(cols: i32, total: i32) -> temper_core::Result<i32> {
     Ok(total.wrapping_div(cols))
 }
 
+pub(crate) fn parsed(s: impl ToArcString) -> temper_core::Result<i32> {
+    let s = s.to_arc_string();
+    Ok(if let Ok(v) = temper_core::string::to_int(&s, None) {
+        v
+    } else {
+        return Err(temper_core::Error::new());
+    })
+}
+
 pub(crate) fn count_below(s: impl ToArcString) -> temper_core::Result<i32> {
     let s = s.to_arc_string();
     let mut i: i32 = 0;
-    while i < temper_core::string::to_int(&s, None)? {
+    while i < parsed(s.clone())? {
         i = i.wrapping_add(1);
     }
     Ok(i)

@@ -1,6 +1,6 @@
 from temper_core import (
-    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
+    ParseError as _ParseError,
     boolean_to_string as _boolean_to_string,
     float64_div as _float64_div,
     float64_to_int as _float64_to_int,
@@ -42,7 +42,7 @@ def _add(a: float, b: float, /) -> float:
 def _check_parse(string: str, /) -> None:
     try:
         converted = _float64_to_string(_string_to_float64(string))
-    except _Bubble:
+    except _ParseError:
         converted = 'failed'
     _console.log(f'Parse {string} -> {converted}')
 
@@ -50,7 +50,7 @@ def _check_parse(string: str, /) -> None:
 def _check_tiny(string: str, /) -> None:
     try:
         positive = _boolean_to_string(_float_cmp(_string_to_float64(string), 0.0) > 0)
-    except _Bubble:
+    except _ParseError:
         positive = 'failed'
     _console.log(f'Parse {string} > 0 -> {positive}')
 
@@ -152,13 +152,13 @@ _console.log(f'Negative to int: {_float64_to_int_unsafe(-4.9 * _one)}')
 _t_0: str
 try:
     _t_0 = str(_float64_to_int(_infinity))
-except _Bubble:
+except _ParseError:
     _t_0 = 'no'
 _console.log(f'Infinity to int: {_t_0}')
 _t_1: str
 try:
     _t_1 = str(_float64_to_int(float('nan')))
-except _Bubble:
+except _ParseError:
     _t_1 = 'no'
 _console.log(f'NaN to int: {_t_1}')
 _one_int64: int = _float64_to_int64_unsafe(_one)
@@ -166,7 +166,7 @@ _not_so_big: int = _int64_mul(2147483647, _one_int64)
 _not_so_small: int = _int64_mul(-2147483648, _one_int64)
 _slightly_bigger: int = _float64_to_int64_unsafe(float(_not_so_big) + 1.5)
 _slightly_smaller: int = _float64_to_int64_unsafe(float(_not_so_small) - 1.5)
-_too_big_for_float64: int = _int64_mul(9007199254740992, _float64_to_int64(_one))
+_too_big_for_float64: int = _int64_mul(9007199254740992, _one_int64)
 _ok_to_convert64: float = float(_int64_sub(_too_big_for_float64, 1))
 _sneaky_big: float = _ok_to_convert64 + 1.0
 _console.log(f'Bigger to Int64: {str(_slightly_bigger)}')
@@ -175,25 +175,25 @@ _console.log(f'Barely ok to Int64: {str(_float64_to_int64_unsafe(_ok_to_convert6
 _t_2: str
 try:
     _t_2 = str(_float64_to_int64(_sneaky_big))
-except _Bubble:
+except _ParseError:
     _t_2 = 'no'
 _console.log(f'Sneaky big to Int64: {_t_2}')
 _t_3: str
 try:
     _t_3 = _float64_to_string(_int64_to_float64(_too_big_for_float64))
-except _Bubble:
+except _ParseError:
     _t_3 = 'no'
 _console.log(f'Too big Int64 to Float64: {_t_3}')
 _t_4: str
 try:
     _t_4 = str(_float64_to_int64(_infinity))
-except _Bubble:
+except _ParseError:
     _t_4 = 'no'
 _console.log(f'Infinity to Int64: {_t_4}')
 _t_5: str
 try:
     _t_5 = str(_float64_to_int64(float('nan')))
-except _Bubble:
+except _ParseError:
     _t_5 = 'no'
 _console.log(f'NaN to Int64: {_t_5}')
 _check_parse('-1.5')

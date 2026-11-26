@@ -1,5 +1,5 @@
 import {
-  isBubble,
+  InvalidCodePoint,
   stringBuilderAppendCodePoint,
   stringStep,
   type,
@@ -35,14 +35,14 @@ console.log(builder[0]);
 try {
   stringBuilderAppendCodePoint(builder, 1114112);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof InvalidCodePoint)) throw e$;
   console.log("High code blocked.");
 }
 try {
   stringBuilderAppendCodePoint(builder, 55296);
-} catch (e$) {
-  if (!isBubble(e$)) throw e$;
-  console.log("Surrogate blocked.");
+} catch (e) {
+  if (!(e instanceof InvalidCodePoint)) throw e;
+  console.log(`Surrogate 0x${e.codePoint.toString(16)} blocked.`);
 }
 console.log(builder[0]);
 builder[0] = "";
@@ -58,14 +58,14 @@ builder[0] += "??";
 try {
   stringBuilderAppendCodePoint(builder, 1);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof InvalidCodePoint)) throw e$;
   console.log("No U+1.");
 }
 builder[0] += "0";
 try {
   stringBuilderAppendCodePoint(builder, 8364);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof InvalidCodePoint)) throw e$;
   console.log("No euro.");
 }
 builder[0] += "1";

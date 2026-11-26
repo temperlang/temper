@@ -82,14 +82,20 @@ static int32_t calling(std::function<int32_t()> const & f) {
   }
 }
 
-static core::Str appending(int32_t codePoint) {
+static core::Expected<core::Str, std::shared_ptr<core::InvalidCodePoint>> appending(int32_t codePoint) {
   std::shared_ptr<std::ostringstream> sb = core::StringBuilder::make();
-  core::StringBuilder::appendCodepoint(sb, codePoint);
+  auto Result = core::StringBuilder::appendCodepoint(sb, codePoint);
+  if (!Result.has_value()) {
+    return core::unexpected(Result.error());
+  }
   return core::StringBuilder::toString(sb);
 }
 
-static core::Str parsing(core::Str const & text) {
-  temper_std::parseJson(text);
+static core::Expected<core::Str, std::shared_ptr<temper_std::JsonError>> parsing(core::Str const & text) {
+  auto parseJsonResult = temper_std::parseJson(text);
+  if (!parseJsonResult.has_value()) {
+    return core::unexpected(parseJsonResult.error());
+  }
   return TEMPER_STR("parsed");
 }
 
@@ -140,21 +146,24 @@ void global_init_init() {
       b = -2;
     }
     int32_t e;
-    try {
-      e = core::String::toInt32(TEMPER_STR("nope"));
-    } catch (core::TemperBubble const &) {
+    auto Result = core::String::toInt32(TEMPER_STR("nope"));
+    if (Result.has_value()) {
+      e = *Result;
+    } else {
       e = -5;
     }
     double f;
-    try {
-      f = core::String::toFloat64(TEMPER_STR("x"));
-    } catch (core::TemperBubble const &) {
+    auto Result2 = core::String::toFloat64(TEMPER_STR("x"));
+    if (Result2.has_value()) {
+      f = *Result2;
+    } else {
       f = -6.0;
     }
     core::Str g;
-    try {
-      g = core::String::fromCodepoint(1114112);
-    } catch (core::TemperBubble const &) {
+    auto Result3 = core::String::fromCodepoint(1114112);
+    if (Result3.has_value()) {
+      g = *Result3;
+    } else {
       g = TEMPER_STR("?");
     }
     std::shared_ptr<temper_std::Regex> digits = temper_std::Repeat::make(core::to_base<temper_std::RegexNode>(temper_std::CodeSet::make(core::List::make<std::shared_ptr<temper_std::CodePart>>(core::to_base<temper_std::CodePart>(temper_std::CodeRange::make(48, 57))), false)), 1, nullptr, false)->compiled();
@@ -167,68 +176,99 @@ void global_init_init() {
     int32_t i = panics::calling([]() -> int32_t { return failing(2); });
     core::Console::log(temper_globals::console.value, std::to_string(a) + " " + std::to_string(b) + " " + std::to_string(e) + " " + core::Boolean::toString(core::Float64::eq(f, -6.0)) + " " + g + " " + h + " " + std::to_string(i));
     int64_t k;
-    try {
-      k = core::String::toInt64(TEMPER_STR("zz"));
-    } catch (core::TemperBubble const &) {
+    auto Result4 = core::String::toInt64(TEMPER_STR("zz"));
+    if (Result4.has_value()) {
+      k = *Result4;
+    } else {
       k = int64_t{-7};
     }
     int32_t l;
-    try {
-      l = core::String::toInt32(TEMPER_STR("99999999999"));
-    } catch (core::TemperBubble const &) {
+    auto Result5 = core::String::toInt32(TEMPER_STR("99999999999"));
+    if (Result5.has_value()) {
+      l = *Result5;
+    } else {
       l = -8;
     }
     int32_t m;
-    try {
-      m = core::Float64::toInt32(1e20);
-    } catch (core::TemperBubble const &) {
+    auto Result6 = core::Float64::toInt32(1e20);
+    if (Result6.has_value()) {
+      m = *Result6;
+    } else {
       m = -9;
     }
     int32_t n;
-    try {
-      n = core::Int64::toInt32(int64_t{5000000000});
-    } catch (core::TemperBubble const &) {
+    auto Result7 = core::Int64::toInt32(int64_t{5000000000});
+    if (Result7.has_value()) {
+      n = *Result7;
+    } else {
       n = -10;
     }
     std::shared_ptr<std::vector<int32_t>> points = core::List::make<int32_t>(65, 1114112);
     core::Str o;
-    try {
-      o = core::String::fromCodepoints(points);
-    } catch (core::TemperBubble const &) {
-      o = TEMPER_STR("?");
+    auto Result8 = core::String::fromCodepoints(points);
+    if (Result8.has_value()) {
+      o = *Result8;
+    } else {
+      std::shared_ptr<core::InvalidCodePoint> e2 = Result8.error();
+      o = core::Int::toString(e2->codePoint, 16);
     }
     core::Str q;
-    try {
-      q = appending(-1);
-    } catch (core::TemperBubble const &) {
-      q = TEMPER_STR("?");
+    auto appendingResult = appending(-1);
+    if (appendingResult.has_value()) {
+      q = *appendingResult;
+    } else {
+      std::shared_ptr<core::InvalidCodePoint> e3 = appendingResult.error();
+      q = std::to_string(e3->codePoint);
     }
     std::shared_ptr<core::Mapped::Ordered<core::Str, int32_t>> builder = core::Map::make<core::Str, int32_t>();
     int32_t r;
-    try {
-      r = core::MapBuilder::remove<core::Str, int32_t>(builder, TEMPER_STR("x"));
-    } catch (core::TemperBubble const &) {
+    auto Result9 = core::Mapped::get<core::Str, int32_t>(builder, TEMPER_STR("x"));
+    if (Result9.has_value()) {
+      r = *Result9;
+    } else {
       r = -11;
     }
+    core::Str r2;
+    auto Result10 = core::MapBuilder::remove<core::Str, int32_t>(builder, TEMPER_STR("y"));
+    if (Result10.has_value()) {
+      r2 = std::to_string(*Result10);
+    } else {
+      std::shared_ptr<core::MissingKey> e4 = Result10.error();
+      r2 = e4->get_message();
+    }
     core::Str s;
-    try {
-      s = core::Date::toString(core::Date::makeDate<temper_std::Date>(2023, 2, 30));
-    } catch (core::TemperBubble const &) {
+    auto dateResult = temper_std::Date::make(2023, 2, 30);
+    if (dateResult.has_value()) {
+      s = core::Date::toString(*dateResult);
+    } else {
       s = TEMPER_STR("no date");
     }
     core::Str t;
-    try {
-      t = core::Date::toString(core::Date::fromIso<temper_std::Date>(TEMPER_STR("2023-13-01")));
-    } catch (core::TemperBubble const &) {
+    auto fromIsoStringResult = temper_std::Date::fromIsoString(TEMPER_STR("2023-13-01"));
+    if (fromIsoStringResult.has_value()) {
+      t = core::Date::toString(*fromIsoStringResult);
+    } else {
       t = TEMPER_STR("bad date");
     }
     core::Str u;
-    try {
-      u = panics::parsing(TEMPER_STR("[1,"));
-    } catch (core::TemperBubble const &) {
+    auto parsingResult = panics::parsing(TEMPER_STR("[1,"));
+    if (parsingResult.has_value()) {
+      u = *parsingResult;
+    } else {
       u = TEMPER_STR("bad json");
     }
-    core::Console::log(temper_globals::console.value, std::to_string(k) + " " + std::to_string(l) + " " + std::to_string(m) + " " + std::to_string(n) + " " + o + " " + q + " " + std::to_string(r) + " " + s + " " + t + " " + u);
+    std::shared_ptr<temper_std::JsonTextProducer> partial = temper_std::JsonTextProducer::make();
+    partial->startObject();
+    core::Str v;
+    auto toJsonStringResult = partial->toJsonString();
+    if (toJsonStringResult.has_value()) {
+      v = *toJsonStringResult;
+    } else {
+      std::shared_ptr<temper_std::JsonSyntaxError> e5 = toJsonStringResult.error();
+      v = e5->problem;
+    }
+    core::Console::log(temper_globals::console.value, std::to_string(k) + " " + std::to_string(l) + " " + std::to_string(m) + " " + std::to_string(n) + " " + o + " " + q + " " + std::to_string(r) + " " + r2 + " " + s + " " + t + " " + u);
+    core::Console::log(temper_globals::console.value, v);
     core::Console::log(temper_globals::console.value, TEMPER_STR("panicking"));
     int32_t p;
     try {

@@ -12,6 +12,18 @@ provides a JSON builder to support marshalling domain values to JSON.
 For the purposes of this document, "JSON" is defined by [ECMA-404],
 "*The JSON data interchange syntax*."
 
+## Errors
+
+JSON's failures are under one root. Text that isn't JSON is a
+*JsonSyntaxError*, and JSON that doesn't fit the type being decoded is a
+*JsonShapeError*, each saying what's wrong.
+
+    export sealed interface JsonError extends Error {}
+
+    export class JsonSyntaxError(public problem: String) extends JsonError {}
+
+    export class JsonShapeError(public problem: String) extends JsonError {}
+
 ## Context
 
 Producers and consumers may need to engage in [content negotiation].
@@ -209,8 +221,9 @@ key order would lead to brittle unmarshalling.
         }
       }
 
-      public propertyValueOrBubble(propertyKey: String): JsonSyntaxTree throws Bubble {
-        propertyValueOrNull(propertyKey) ?? bubble()
+      public propertyValueOrBubble(propertyKey: String): JsonSyntaxTree throws JsonShapeError {
+        propertyValueOrNull(propertyKey) ??
+          throw new JsonShapeError("expected property ${propertyKey}")
       }
 
       public produce(p: JsonProducer): Void {
@@ -263,9 +276,12 @@ key order would lead to brittle unmarshalling.
     export sealed interface JsonNumeric extends JsonSyntaxTree {
       public asJsonNumericToken(): String;
 
-      public asInt32(): Int throws Bubble;
-      public asInt64(): Int64 throws Bubble;
-      public asFloat64(): Float64 throws Bubble;
+      /** The value as an *Int*, or a *ParseError* if it isn't one. */
+      public asInt32(): Int throws ParseError;
+      /** The value as an *Int64*, or a *ParseError* if it isn't one. */
+      public asInt64(): Int64 throws ParseError;
+      /** The value as a *Float64*, or a *ParseError* if it isn't one. */
+      public asFloat64(): Float64 throws ParseError;
     }
 
     export let JsonInt = JsonInt32;
@@ -281,13 +297,13 @@ key order would lead to brittle unmarshalling.
         content.toString()
       }
 
-      public asInt32(): Int throws Bubble { content }
+      public asInt32(): Int throws ParseError { content }
       public asInt32Safe(): Int { content }
 
-      public asInt64(): Int64 throws Bubble { asInt64Safe() }
+      public asInt64(): Int64 throws ParseError { asInt64Safe() }
       public asInt64Safe(): Int64 { content.toInt64() }
 
-      public asFloat64(): Float64 throws Bubble { asFloat64Safe() }
+      public asFloat64(): Float64 throws ParseError { asFloat64Safe() }
       public asFloat64Safe(): Float64 { content.toFloat64() }
     }
 
@@ -302,12 +318,12 @@ key order would lead to brittle unmarshalling.
         content.toString()
       }
 
-      public asInt32(): Int throws Bubble { content.toInt32() }
+      public asInt32(): Int throws ParseError { content.toInt32() }
 
-      public asInt64(): Int64 throws Bubble { content }
+      public asInt64(): Int64 throws ParseError { content }
       public asInt64Safe(): Int64 { content }
 
-      public asFloat64(): Float64 throws Bubble { content.toFloat64() }
+      public asFloat64(): Float64 throws ParseError { content.toFloat64() }
     }
 
     export class JsonFloat64(
@@ -321,11 +337,11 @@ key order would lead to brittle unmarshalling.
         content.toString()
       }
 
-      public asInt32(): Int throws Bubble { content.toInt32() }
+      public asInt32(): Int throws ParseError { content.toInt32() }
 
-      public asInt64(): Int64 throws Bubble { content.toInt64() }
+      public asInt64(): Int64 throws ParseError { content.toInt64() }
 
-      public asFloat64(): Float64 throws Bubble { content }
+      public asFloat64(): Float64 throws ParseError { content }
       public asFloat64Safe(): Float64 { content }
     }
 
@@ -340,17 +356,17 @@ key order would lead to brittle unmarshalling.
         content
       }
 
-      public asInt32(): Int throws Bubble {
+      public asInt32(): Int throws ParseError {
         // TODO Prohibit nonzero fractional values.
         content.toInt32() orelse content.toFloat64().toInt32()
       }
 
-      public asInt64(): Int64 throws Bubble {
+      public asInt64(): Int64 throws ParseError {
         // TODO Prohibit nonzero fractional values.
         content.toInt64() orelse content.toFloat64().toInt64()
       }
 
-      public asFloat64(): Float64 throws Bubble { content.toFloat64() }
+      public asFloat64(): Float64 throws ParseError { content.toFloat64() }
     }
 
 The *produce* method allows a JSON syntax tree to describe itself to a
@@ -490,11 +506,15 @@ JSON source text.
         encodeJsonString(x, buffer);
       }
 
-      public toJsonString(): String throws Bubble {
+      /**
+       * The JSON text produced, or a *JsonSyntaxError* if it isn't one
+       * whole JSON value, as when a value was started and not finished.
+       */
+      public toJsonString(): String throws JsonSyntaxError {
         if (wellFormed && stack.length == 1 && state() == JSON_STATE_ONE_VALUE) {
           return buffer.toString();
         } else {
-          bubble();
+          throw new JsonSyntaxError("expected one JSON value");
         }
       }
     }
@@ -617,14 +637,14 @@ valid JSON, but if given a string that is not valid JSON, it has a syntax error.
         for (var i = 0, n = ls.length & -2; i < n;) {
           let keyTree = ls[i++];
           if (!(keyTree is JsonString)) { break }
-          let key = (keyTree as JsonString orelse panic()).content;
+          let key = (keyTree as JsonString).content;
           let value = ls[i++];
 
           if (m.has(key)) {
             if (multis == null) {
               multis = new MapBuilder<String, ListBuilder<JsonSyntaxTree>>();
             }
-            let mb = multis as MapBuilder<String, ListBuilder<JsonSyntaxTree>> orelse panic();
+            let mb = multis as MapBuilder<String, ListBuilder<JsonSyntaxTree>>;
             if (!mb.has(key)) {
               mb[key] = (m[key] orelse panic()).toListBuilder();
             }
@@ -688,11 +708,17 @@ valid JSON, but if given a string that is not valid JSON, it has a syntax error.
         storeValue(new JsonString(x));
       }
 
-      public toJsonSyntaxTree(): JsonSyntaxTree throws Bubble {
-        if (stack.length != 1 || error != null) { bubble() }
-        let ls = stack[0];
-        if (ls.length != 1) { bubble() }
-        ls[0]
+      /**
+       * The tree of the one JSON value produced, or a *JsonSyntaxError*
+       * saying why there's none.
+       */
+      public toJsonSyntaxTree(): JsonSyntaxTree throws JsonSyntaxError {
+        let error = this.error;
+        if (error != null) { throw new JsonSyntaxError(error) }
+        if (stack.length != 1 || stack[0].length != 1) {
+          throw new JsonSyntaxError("expected one JSON value");
+        }
+        stack[0][0]
       }
 
       public get jsonError(): String? { error }
@@ -800,7 +826,7 @@ After the last property or lone '{', there must be a '}'.
           let afterKey = parseJsonStringTo(sourceText, i, keyBuffer, out);
           if (!(afterKey is StringIndex)) { return StringIndex.none; }
           out.objectKey(keyBuffer.toString());
-          i = skipJsonSpaces(sourceText, afterKey as StringIndex orelse panic());
+          i = skipJsonSpaces(sourceText, afterKey as StringIndex);
           if (sourceText.hasIndex(i) && sourceText[i] == char':') {
             i = sourceText.next(i);
             let afterPropertyValue = parseJsonValue(sourceText, i, out);
@@ -1233,12 +1259,8 @@ or *Float64*, then we use the lossless numeric syntax tree variant.
       let numericTokenString = sourceText.slice(startOfNumber, i);
       var doubleValue = NaN;
       if (nExponentDigits != 0 || nDigitsAfterPoint != 0) {
-        do {
-          doubleValue = numericTokenString.toFloat64();
-        } orelse do {
-          // Fall back to numeric token below
-          ;
-        }
+        // NaN falls back to a numeric token below.
+        doubleValue = numericTokenString.toFloat64() orelse NaN;
       }
 
       if (doubleValue != -Infinity && doubleValue != Infinity &&
@@ -1256,10 +1278,9 @@ or *Float64*, then we use the lossless numeric syntax tree variant.
 As a convenience, the *parseJson* helper just creates a tree producer,
 calls the parser and gets the tree.
 
-    export let parseJson(sourceText: String): JsonSyntaxTree throws Bubble {
+    export let parseJson(sourceText: String): JsonSyntaxTree throws JsonSyntaxError {
       let p = new JsonSyntaxTreeProducer();
       parseJsonToProducer(sourceText, p);
-      // TODO: if there is a syntax error, produce it.
       p.toJsonSyntaxTree()
     }
 
@@ -1272,7 +1293,13 @@ type.
 
     export interface JsonAdapter<T> {
       public encodeToJson(x: T, p: JsonProducer): Void;
-      public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): T throws Bubble;
+      public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): T throws JsonError;
+    }
+
+A tree of another shape than the one wanted is a *JsonShapeError*:
+
+    let shapeError(wanted: String): JsonShapeError {
+      new JsonShapeError("expected ${wanted}")
     }
 
 Our intrinsic types, like *Boolean* need json adapters.  Static extensions
@@ -1282,8 +1309,8 @@ let us make *Boolean.jsonAdapter()* work as if it were built in.
       public encodeToJson(x: Boolean, p: JsonProducer): Void {
         p.booleanValue(x);
       }
-      public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): Boolean throws Bubble {
-        if (t is JsonBoolean) { t.content } else { bubble() }
+      public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): Boolean throws JsonError {
+        if (t is JsonBoolean) { t.content } else { throw shapeError("Boolean") }
       }
     }
 
@@ -1296,8 +1323,8 @@ let us make *Boolean.jsonAdapter()* work as if it were built in.
       public encodeToJson(x: Float64, p: JsonProducer): Void {
         p.float64Value(x);
       }
-      public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): Float64 throws Bubble {
-        if (t is JsonNumeric) { t.asFloat64() } else { bubble() }
+      public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): Float64 throws JsonError {
+        if (t is JsonNumeric) { t.asFloat64() orelse throw shapeError("Float64") } else { throw shapeError("Float64") }
       }
     }
 
@@ -1310,8 +1337,8 @@ let us make *Boolean.jsonAdapter()* work as if it were built in.
       public encodeToJson(x: Int, p: JsonProducer): Void {
         p.int32Value(x);
       }
-      public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): Int throws Bubble {
-        if (t is JsonNumeric) { t.asInt32() } else { bubble() }
+      public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): Int throws JsonError {
+        if (t is JsonNumeric) { t.asInt32() orelse throw shapeError("Int") } else { throw shapeError("Int") }
       }
     }
 
@@ -1324,8 +1351,8 @@ let us make *Boolean.jsonAdapter()* work as if it were built in.
       public encodeToJson(x: Int64, p: JsonProducer): Void {
         p.int64Value(x);
       }
-      public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): Int64 throws Bubble {
-        if (t is JsonNumeric) { t.asInt64() } else { bubble() }
+      public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): Int64 throws JsonError {
+        if (t is JsonNumeric) { t.asInt64() orelse throw shapeError("Int64") } else { throw shapeError("Int64") }
       }
     }
 
@@ -1338,8 +1365,8 @@ let us make *Boolean.jsonAdapter()* work as if it were built in.
       public encodeToJson(x: String, p: JsonProducer): Void {
         p.stringValue(x);
       }
-      public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): String throws Bubble {
-        if (t is JsonString) { t.content } else { bubble() }
+      public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): String throws JsonError {
+        if (t is JsonString) { t.content } else { throw shapeError("String") }
       }
     }
 
@@ -1358,9 +1385,9 @@ let us make *Boolean.jsonAdapter()* work as if it were built in.
         }
         p.endArray();
       }
-      public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): List<T> throws Bubble {
+      public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): List<T> throws JsonError {
         let b = new ListBuilder<T>();
-        let elements = if (t is JsonArray) { t.elements } else { bubble() };
+        let elements = if (t is JsonArray) { t.elements } else { throw shapeError("List") };
         let n = elements.length;
         var i = 0;
         while (i < n) {
@@ -1387,7 +1414,7 @@ let us make *Boolean.jsonAdapter()* work as if it were built in.
           adapterForT.encodeToJson(x, p);
         }
       }
-      public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): T? throws Bubble {
+      public decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): T? throws JsonError {
         if (t is JsonNull) {
           null
         } else {

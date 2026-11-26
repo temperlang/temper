@@ -30,9 +30,10 @@ export const modIntInt = (x, y) => {
 };
 
 /**
+ * The integer `s` spells in `radix`, or null if it isn't one.
  * @param {string} s
  * @param {(number | bigint)?} radix
- * @returns {bigint}
+ * @returns {bigint | null}
  */
 export const parseBigInt = (s, radix) => {
     const rdx = BigInt(radix ?? 10);
@@ -45,6 +46,9 @@ export const parseBigInt = (s, radix) => {
       i++;
       sign = -1n;
     }
+    if (i === s.length) {
+      return null;
+    }
     for (; i < s.length; i++) {
       const c = s.charCodeAt(i);
       /** @type {bigint} */
@@ -56,10 +60,10 @@ export const parseBigInt = (s, radix) => {
       } else if (c >= ca && c <= cz) {
         digit = BigInt(c - ca + 10);
       } else {
-        bubble();
+        return null;
       }
       if (digit >= rdx) {
-        bubble();
+        return null;
       }
       result = result * rdx + digit;
     }
@@ -149,7 +153,7 @@ export const int64Min = (a, b) => {
  */
 export const int64ToInt32 = (n) => {
   if (n < INT32_MIN || n > INT32_MAX) {
-    bubble();
+    throw new ParseError(n.toString(), "out of Int32 range");
   }
   return int64ToInt32Unsafe(n);
 }
@@ -170,7 +174,7 @@ export const int64ToInt32Unsafe = (n) => {
  */
 export const int64ToFloat64 = (n) => {
   if (n < Number.MIN_SAFE_INTEGER || n > Number.MAX_SAFE_INTEGER) {
-    bubble();
+    throw new ParseError(n.toString(), "not exact as Float64");
   }
   return Number(n);
 }
@@ -318,6 +322,101 @@ export const failureBase = (base) => {
     },
   });
 };
+
+/**
+ * The root of core's own declared failures, `MissingKey`, `ParseError`,
+ * and `InvalidCodePoint`, as each library's roots are its failures'.
+ */
+export class CoreError extends Error {}
+
+failureBase(CoreError);
+
+/**
+ * What a map's `get` throws for a key it doesn't have, with that key.
+ * (Later perhaps a `RangeError` too, or what hosts' lookups throw.)
+ */
+export class MissingKey extends CoreError {
+  /** @type {unknown} */
+  #key;
+
+  /** @param {unknown} key */
+  constructor(key) {
+    super();
+    this.#key = key;
+  }
+
+  /** @returns {unknown} */
+  get key() {
+    return this.#key;
+  }
+
+  /** @returns {string} */
+  get message() {
+    return `missing key (key: ${this.#key})`;
+  }
+}
+
+/**
+ * What a conversion throws for a value it can't convert: its input, as
+ * text, and why, as `not an Int32`.
+ */
+export class ParseError extends CoreError {
+  /** @type {string} */
+  #input;
+  /** @type {string} */
+  #reason;
+
+  /**
+   * @param {string} input
+   * @param {string} reason
+   */
+  constructor(input, reason) {
+    super();
+    this.#input = input;
+    this.#reason = reason;
+  }
+
+  /** @returns {string} */
+  get input() {
+    return this.#input;
+  }
+
+  /** @returns {string} */
+  get reason() {
+    return this.#reason;
+  }
+
+  /** @returns {string} */
+  get message() {
+    return `parse error (input: ${this.#input}, reason: ${this.#reason})`;
+  }
+}
+
+/**
+ * What making a string from a code point throws for one that isn't a
+ * Unicode scalar value, with that number. (Later perhaps a `RangeError`
+ * too, as `String.fromCodePoint` throws.)
+ */
+export class InvalidCodePoint extends CoreError {
+  /** @type {number} */
+  #codePoint;
+
+  /** @param {number} codePoint */
+  constructor(codePoint) {
+    super();
+    this.#codePoint = codePoint;
+  }
+
+  /** @returns {number} */
+  get codePoint() {
+    return this.#codePoint;
+  }
+
+  /** @returns {string} */
+  get message() {
+    return `invalid code point (codePoint: ${this.#codePoint})`;
+  }
+}
 
 /**
  * Whether `e` is a declared failure, made by any copy of this runtime:

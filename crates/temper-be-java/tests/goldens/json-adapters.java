@@ -2,12 +2,13 @@ package json_adapters;
 
 import java.util.List;
 import java.util.logging.Logger;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Nullable;
 import temper.std.json.JsonAdapter;
+import temper.std.json.JsonException;
 import temper.std.json.JsonGlobal;
+import temper.std.json.JsonSyntaxException;
 import temper.std.json.JsonTextProducer;
 import temper.std.json.NullInterchangeContext;
 
@@ -21,12 +22,12 @@ public final class JsonAdaptersGlobal {
         adapter.encodeToJson(value, p);
         try {
             return p.toJsonString();
-        } catch (Bubble ignored) {
+        } catch (JsonSyntaxException ignored) {
             return "bad JSON";
         }
     }
 
-    static <T> T decode(JsonAdapter<T> adapter, String text) {
+    static <T> T decode(JsonAdapter<T> adapter, String text) throws JsonException {
         return adapter.decodeFromJson(JsonGlobal.parseJson(text), NullInterchangeContext.instance);
     }
 
@@ -35,7 +36,7 @@ public final class JsonAdaptersGlobal {
         T back;
         try {
             back = decode(adapter, text);
-        } catch (Bubble bubble) {
+        } catch (JsonException bubble) {
             throw new AssertionError("panic", bubble);
         }
         String again = encode(adapter, back);
@@ -54,7 +55,7 @@ public final class JsonAdaptersGlobal {
         Shape shape;
         try {
             shape = decode(Shape.jsonAdapter(), "{\"height\": 6, \"width\": 5}");
-        } catch (Bubble bubble) {
+        } catch (JsonException bubble) {
             throw new AssertionError("panic", bubble);
         }
         if (shape instanceof Rect) {
@@ -65,7 +66,7 @@ public final class JsonAdaptersGlobal {
         Record record_;
         try {
             record_ = decode(Record.jsonAdapter(), "{\"name\": \"Bo\", \"is-active\": false, \"score\": 2, \"big\": 7, \"nickname\": \"B\", \"points\": []}");
-        } catch (Bubble bubble2) {
+        } catch (JsonException bubble2) {
             throw new AssertionError("panic", bubble2);
         }
         String t = record_.name + " " + record_.active + " ";
@@ -75,16 +76,16 @@ public final class JsonAdaptersGlobal {
         try {
             decode(Point.jsonAdapter(), "{\"x\": 1}");
             t2 = "decoded";
-        } catch (Bubble ignored) {
-            t2 = "no y";
+        } catch (JsonException e) {
+            t2 = e.getMessage();
         }
         console.log(t2);
         String t3;
         try {
             decode(Message.jsonAdapter(), "{\"kind\": \"what\", \"text\": \"?\"}");
             t3 = "decoded";
-        } catch (Bubble ignored2) {
-            t3 = "no such kind";
+        } catch (JsonException e2) {
+            t3 = e2.getMessage();
         }
         console.log(t3);
     }

@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 #include "temper_bubble.hpp"
+#include "failure.hpp"
 #include "base_types.hpp"
 
 namespace temper {
@@ -75,24 +76,24 @@ namespace temper {
                 return cp >= 0 && cp < 0x110000 && !(cp >= 0xD800 && cp <= 0xDFFF);
             }
 
-            inline Str fromCodepoint(int32_t cp) {
+            inline CodePointed<Str> fromCodepoint(int32_t cp) {
                 if (!isValidCodepoint(cp)) {
-                    bubble<Str>("invalid code point");
+                    return unexpected(InvalidCodePoint::make(cp));
                 }
                 char bytes[4];
                 return Str(bytes, static_cast<size_t>(encodeUtf8(cp, bytes)));
             }
 
-            inline Str fromCodepoints(const std::shared_ptr<std::vector<int32_t>>& codePoints) {
+            inline CodePointed<Str> fromCodepoints(const std::shared_ptr<std::vector<int32_t>>& codePoints) {
                 std::string result;
                 for (int32_t cp : *codePoints) {
                     if (!isValidCodepoint(cp)) {
-                        bubble<Str>("invalid code point");
+                        return unexpected(InvalidCodePoint::make(cp));
                     }
                     char bytes[4];
                     result.append(bytes, static_cast<size_t>(encodeUtf8(cp, bytes)));
                 }
-                return result;
+                return Str(result);
             }
 
             inline bool isEmpty(const Str& s) {
@@ -280,12 +281,13 @@ namespace temper {
                 }
             }
 
-            inline double toFloat64(const Str& s) {
+            // The number `s` spells, or a `ParseError`.
+            inline Parsed<double> toFloat64(const Str& s) {
                 std::string trimmed = s.str();
                 size_t start = trimmed.find_first_not_of(" \t\n\r");
                 size_t end_pos = trimmed.find_last_not_of(" \t\n\r");
                 if (start == std::string::npos) {
-                    bubble("invalid float string");
+                    return parse_error(s, "not a Float64");
                 }
                 trimmed = trimmed.substr(start, end_pos - start + 1);
                 if (trimmed == "NaN") {
@@ -302,7 +304,7 @@ namespace temper {
                     i++;
                 }
                 if (i >= trimmed.size() || !isDigitChar(trimmed[i])) {
-                    bubble("invalid float");
+                    return parse_error(s, "not a Float64");
                 }
                 while (i < trimmed.size() && isDigitChar(trimmed[i])) {
                     i++;
@@ -310,7 +312,7 @@ namespace temper {
                 if (i < trimmed.size() && trimmed[i] == '.') {
                     i++;
                     if (i >= trimmed.size() || !isDigitChar(trimmed[i])) {
-                        bubble("invalid float");
+                        return parse_error(s, "not a Float64");
                     }
                     while (i < trimmed.size() && isDigitChar(trimmed[i])) {
                         i++;
@@ -322,59 +324,35 @@ namespace temper {
                         i++;
                     }
                     if (i >= trimmed.size() || !isDigitChar(trimmed[i])) {
-                        bubble("invalid float");
+                        return parse_error(s, "not a Float64");
                     }
                     while (i < trimmed.size() && isDigitChar(trimmed[i])) {
                         i++;
                     }
                 }
                 if (i != trimmed.size()) {
-                    bubble("invalid float");
+                    return parse_error(s, "not a Float64");
                 }
                 // Not std::stod: it throws out_of_range whenever strtod sets ERANGE, and strtod
                 // sets ERANGE for a result that underflows, subnormal or rounded to zero, as well
                 // as for one that overflows. The grammar check above leaves only range errors.
                 // An underflowing result is the nearest double, as on the other backends.
-                // An overflowing one still bubbles, as before and as on py; whether it should be
-                // Infinity instead is undecided (#557).
+                // An overflowing one is a `ParseError`, as on py; whether it should be Infinity
+                // instead is undecided (#557).
                 errno = 0;
                 double result = std::strtod(trimmed.c_str(), nullptr);
                 if (errno == ERANGE && std::isinf(result)) {
-                    bubble("invalid float");
+                    return parse_error(s, "not a Float64");
                 }
                 return result;
             }
 
-            inline int32_t toInt32(const Str& s) {
-                size_t start = 0, end_pos = s.size();
-                while (start < end_pos && isSpaceChar(s[start])) {
-                    ++start;
-                }
-                while (end_pos > start && isSpaceChar(s[end_pos - 1])) {
-                    --end_pos;
-                }
-                std::string trimmed = s.substr(start, end_pos - start);
-                if (trimmed.empty()) {
-                    bubble<int32_t>("invalid int");
-                }
-                try {
-                    size_t pos = 0;
-                    int32_t result = std::stoi(trimmed, &pos);
-                    if (pos != trimmed.size()) {
-                        bubble<int32_t>("invalid int");
-                    }
-                    return result;
-                } catch (const TemperBubble&) {
-                    throw;
-                }
-                catch (const std::exception&) {
-                    bubble<int32_t>("invalid int");
-                }
-            }
-
-            inline int32_t toInt32(const Str& s, int32_t base) {
+            // The integer `s` spells in `base`, around spaces, or null: in
+            // `I`'s range, as `std::stoll` reads it.
+            template<class I>
+            NullableParam<I> parseInt(const Str& s, int32_t base) {
                 if (base < 2 || base > 36) {
-                    bubble<int32_t>("invalid base");
+                    return nullptr;
                 }
                 size_t start = 0, end_pos = s.size();
                 while (start < end_pos && isSpaceChar(s[start])) {
@@ -385,78 +363,36 @@ namespace temper {
                 }
                 std::string trimmed = s.substr(start, end_pos - start);
                 if (trimmed.empty()) {
-                    bubble<int32_t>("invalid int");
+                    return nullptr;
                 }
                 try {
                     size_t pos = 0;
-                    int32_t result = std::stoi(trimmed, &pos, base);
-                    if (pos != trimmed.size()) {
-                        bubble<int32_t>("invalid int");
+                    long long result = std::stoll(trimmed, &pos, base);
+                    if (pos != trimmed.size()
+                        || result < std::numeric_limits<I>::min()
+                        || result > std::numeric_limits<I>::max()) {
+                        return nullptr;
                     }
-                    return result;
-                } catch (const TemperBubble&) {
-                    throw;
-                }
-                catch (const std::exception&) {
-                    bubble<int32_t>("invalid int");
+                    return static_cast<I>(result);
+                } catch (const std::exception&) {
+                    return nullptr;
                 }
             }
 
-            inline int64_t toInt64(const Str& s) {
-                size_t start = 0, end_pos = s.size();
-                while (start < end_pos && isSpaceChar(s[start])) {
-                    ++start;
+            inline Parsed<int32_t> toInt32(const Str& s, int32_t base = 10) {
+                NullableParam<int32_t> n = parseInt<int32_t>(s, base);
+                if (!n.has_value) {
+                    return parse_error(s, "not an Int32");
                 }
-                while (end_pos > start && isSpaceChar(s[end_pos - 1])) {
-                    --end_pos;
-                }
-                std::string trimmed = s.substr(start, end_pos - start);
-                if (trimmed.empty()) {
-                    bubble<int64_t>("invalid int64");
-                }
-                try {
-                    size_t pos = 0;
-                    int64_t result = std::stoll(trimmed, &pos);
-                    if (pos != trimmed.size()) {
-                        bubble<int64_t>("invalid int64");
-                    }
-                    return result;
-                } catch (const TemperBubble&) {
-                    throw;
-                }
-                catch (const std::exception&) {
-                    bubble<int64_t>("invalid int64");
-                }
+                return n.value;
             }
 
-            inline int64_t toInt64(const Str& s, int32_t base) {
-                if (base < 2 || base > 36) {
-                    bubble<int64_t>("invalid base");
+            inline Parsed<int64_t> toInt64(const Str& s, int32_t base = 10) {
+                NullableParam<int64_t> n = parseInt<int64_t>(s, base);
+                if (!n.has_value) {
+                    return parse_error(s, "not an Int64");
                 }
-                size_t start = 0, end_pos = s.size();
-                while (start < end_pos && isSpaceChar(s[start])) {
-                    ++start;
-                }
-                while (end_pos > start && isSpaceChar(s[end_pos - 1])) {
-                    --end_pos;
-                }
-                std::string trimmed = s.substr(start, end_pos - start);
-                if (trimmed.empty()) {
-                    bubble<int64_t>("invalid int64");
-                }
-                try {
-                    size_t pos = 0;
-                    int64_t result = std::stoll(trimmed, &pos, base);
-                    if (pos != trimmed.size()) {
-                        bubble<int64_t>("invalid int64");
-                    }
-                    return result;
-                } catch (const TemperBubble&) {
-                    throw;
-                }
-                catch (const std::exception&) {
-                    bubble<int64_t>("invalid int64");
-                }
+                return n.value;
             }
 
             inline Str toString(const Str& s) {

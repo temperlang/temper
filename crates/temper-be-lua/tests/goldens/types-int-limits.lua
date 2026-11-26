@@ -8,9 +8,9 @@ local int64_neg1 = temper.int64_constructor(-1)
 local function checkParse32(string_)
   ---@type string
   local converted
-  if not temper.pcall(function()
+  if not temper.catch(function()
     converted = tostring(temper.string_toint32(string_, 16))
-  end) then
+  end, temper.ParseError) then
     converted = "failed"
   end
   print("Parse " .. string_ .. " -> " .. converted)
@@ -20,9 +20,9 @@ end
 local function checkParse64(string_)
   ---@type string
   local converted
-  if not temper.pcall(function()
+  if not temper.catch(function()
     converted = temper.int64_tostring(temper.string_toint64(string_, 16))
-  end) then
+  end, temper.ParseError) then
     converted = "failed"
   end
   print("Parse " .. string_ .. " -> " .. converted)
@@ -80,9 +80,9 @@ checkParse32("-80000001")
 print("Not so big: " .. temper.int64_toint32unsafe(notSoBig))
 ---@type string
 local t
-if not temper.pcall(function()
+if not temper.catch(function()
   t = tostring(temper.int64_toint32(big64))
-end) then
+end, temper.ParseError) then
   t = "no"
 end
 print("Actually big: " .. t)

@@ -284,16 +284,16 @@ print(temper.list_length(built) .. " " .. temper.listed_getor(built, 5, "?") .. 
 local m = temper.map_constructor({ temper.pair_constructor("a", 1), temper.pair_constructor("b", 2) })
 ---@type integer
 local t_1
-if not temper.pcall(function()
+if not temper.catch(function()
   t_1 = temper.mapped_get(m, "b")
-end) then
+end, temper.MissingKey) then
   t_1 = -1
 end
 ---@type integer
 local t_2
-if not temper.pcall(function()
+if not temper.catch(function()
   t_2 = temper.mapped_get(m, "c")
-end) then
+end, temper.MissingKey) then
   t_2 = -1
 end
 print(t_1 .. " " .. t_2 .. " " .. tostring(temper.mapped_has(m, "a")) .. " " .. temper.mapped_length(m))
@@ -303,15 +303,12 @@ temper.mapbuilder_set(mb, "n", temper.null)
 local subject3 = temper.mapped_getor(mb, "q", 0)
 local subject4 = temper.mapped_getor(mb, "n", 0)
 print((temper.is_null(subject3) and -2 or (subject3 --[[@as integer]])) .. " " .. (temper.is_null(subject4) and -2 or (subject4 --[[@as integer]])) .. " " .. tostring(temper.mapped_has(mb, "n")))
----@type integer|temper.Null
-local subject6
-if not temper.pcall(function()
-  subject6 = temper.mapbuilder_remove(mb, "q")
-end) then
-  subject6 = 0
-end
+local subject6 = temper.mapbuilder_remove(mb, "q")
 local subject5 = temper.is_null(subject6) and temper.null or tostring(subject6 --[[@as integer]])
 print(temper.is_null(subject5) and "null" or (subject5 --[[@as string]]))
+local subject7 = temper.mapped_getor(mb, "z", temper.null)
+local subject8 = temper.listed_getor(built, 7, temper.null)
+print((temper.is_null(subject7) and -3 or (subject7 --[[@as integer]])) .. " " .. (temper.is_null(subject8) and "none" or (subject8 --[[@as string]])))
 print(tostring(temper.listed_length(temper.mapped_keys(mb))))
 indexed()
 both()
@@ -319,23 +316,23 @@ tally = temper.mapbuilder_constructor()
 temper.mapbuilder_set(tally, "k", 2)
 ---@type integer
 local t_3
-if not temper.pcall(function()
+if not temper.catch(function()
   t_3 = bump("k")
-end) then
+end, temper.MissingKey) then
   t_3 = -1
 end
 ---@type integer
 local t_4
-if not temper.pcall(function()
+if not temper.catch(function()
   t_4 = bump("z")
-end) then
+end, temper.MissingKey) then
   t_4 = -1
 end
 ---@type integer
 local t_5
-if not temper.pcall(function()
+if not temper.catch(function()
   t_5 = temper.mapped_get(tally, "k")
-end) then
+end, temper.MissingKey) then
   t_5 = -1
 end
 print(t_3 .. " " .. t_4 .. " " .. t_5)

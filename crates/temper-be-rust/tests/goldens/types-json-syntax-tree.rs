@@ -18,7 +18,9 @@ pub(crate) fn init() -> temper_core::Result<()> {
                     let s = temper_core::ListedTrait::get(&list, i);
                     i = i.wrapping_add(1);
                     let json_value = (|| {
-                        Ok::<_, temper_core::Error>(Some(temper_std::json::parse_json(s.clone())?))
+                        Ok::<_, temper_std::json::JsonSyntaxError>(Some(
+                            temper_std::json::parse_json(s.clone())?,
+                        ))
                     })()
                     .unwrap_or(None);
                     println!(
@@ -49,7 +51,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 while i2 < length2 {
                     let s2 = temper_core::ListedTrait::get(&list2, i2);
                     i2 = i2.wrapping_add(1);
-                    let mut bubbled = false;
+                    let mut failed = false;
                     let p = temper_std::json::JsonSyntaxTreeProducer::new();
                     temper_std::json::parse_json_to_producer(
                         s2.clone(),
@@ -57,17 +59,45 @@ pub(crate) fn init() -> temper_core::Result<()> {
                     );
                     if p.to_json_syntax_tree().is_err() {
                         {
-                            bubbled = true;
+                            failed = true;
                         };
                     }
                     let error = p.json_error();
                     println!(
                         "`{s2}` has{} error: {}",
-                        if bubbled { "" } else { " no" },
+                        if failed { "" } else { " no" },
                         error
                             .clone()
                             .unwrap_or_else(|| Arc::new("MISSING ERROR".to_string()))
                     );
+                }
+            }
+            {
+                let list3: temper_core::List<Arc<String>> = Arc::new(vec![
+                    Arc::new("[1,]".to_string()),
+                    Arc::new("\"a\"".to_string()),
+                    Arc::new("7".to_string()),
+                ]);
+                let length3 = temper_core::ListedTrait::len(&list3);
+                let mut i3: i32 = 0;
+                while i3 < length3 {
+                    let s3 = temper_core::ListedTrait::get(&list3, i3);
+                    i3 = i3.wrapping_add(1);
+                    let decoded = (|| {
+                        let tree = temper_std::json::parse_json(s3.clone())?;
+                        Ok::<_, temper_std::json::JsonError>(Arc::new(
+                            temper_std::json::JsonAdapterTrait::decode_from_json(
+                                &temper_std::json::int32_json_adapter(),
+                                tree.clone(),
+                                temper_std::json::InterchangeContext::new(
+                                    temper_std::json::NullInterchangeContext::instance(),
+                                ),
+                            )?
+                            .to_string(),
+                        ))
+                    })()
+                    .unwrap_or_else(|e| e.message());
+                    println!("{decoded}");
                 }
             }
             let select_code_points = Arc::new(
@@ -110,8 +140,8 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 println!("{}", p3.to_json_string()?);
             }
             {
-                let s3 = Arc::new("{\"x\":null,\"y\":123,\"z\":123456789012}".to_string());
-                let ast = temper_std::json::parse_json(s3.clone())?;
+                let s4 = Arc::new("{\"x\":null,\"y\":123,\"z\":123456789012}".to_string());
+                let ast = temper_std::json::parse_json(s4.clone())?;
                 let obj = temper_core::cast::<temper_std::json::JsonObject>(ast.clone()).unwrap();
                 let x_ast = obj.property_value_or_bubble("x")?;
                 let y_ast = obj.property_value_or_bubble("y")?;

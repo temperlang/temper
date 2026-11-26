@@ -38,10 +38,13 @@ Hi 🌏!!
 ## Bad Scalar Values
 
 Code points need to be both valid Unicode code points and also Unicode scalar
-values, meaning no surrogates.
+values, meaning no surrogates. Appending one that isn't throws an
+*InvalidCodePoint*.
 
     builder.appendCodePoint(0x110000) orelse console.log("High code blocked.");
-    builder.appendCodePoint(0xD800) orelse console.log("Surrogate blocked.");
+    builder.appendCodePoint(0xD800) catch (e) {
+      console.log("Surrogate 0x${e.codePoint.toString(16)} blocked.");
+    }
 
 And we shouldn't have changed content.
 
@@ -49,7 +52,7 @@ And we shouldn't have changed content.
 
 ```log
 High code blocked.
-Surrogate blocked.
+Surrogate 0xd800 blocked.
 Hi 🌏!!
 Hi 🌏!!
 ```

@@ -21,7 +21,14 @@ end
 ---@param s string
 ---@return integer
 local function parse(s)
-  return temper.string_toint32(s)
+  ---@type integer
+  local t_1
+  if not temper.catch(function()
+    t_1 = temper.string_toint32(s)
+  end, temper.ParseError) then
+    temper.bubble()
+  end
+  return t_1
 end
 
 ---@param y integer|temper.Null

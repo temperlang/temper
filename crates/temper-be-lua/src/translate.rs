@@ -557,8 +557,12 @@ impl<'a> Translator<'a> {
                     // (`connected::next_safe`).
                     ("core.type GeneratorResult" | "core.type ValueResult", [_])
                     | ("core.type DoneResult", [_]) => "table".to_string(),
-                    // Core's root of declared failures.
+                    // Core's failure types, the runtime's.
                     ("core.type Error", []) => "temper.Failure".to_string(),
+                    ("core.type CoreError", []) => "temper.CoreError".to_string(),
+                    ("core.type MissingKey", []) => "temper.MissingKey".to_string(),
+                    ("core.type ParseError", []) => "temper.ParseError".to_string(),
+                    ("core.type InvalidCodePoint", []) => "temper.InvalidCodePoint".to_string(),
                     // `{}`, as the runtime's `temper.empty()` makes.
                     ("core.type Empty", []) => "table".to_string(),
                     // The runtime's test, as `temper.test` gives a test's

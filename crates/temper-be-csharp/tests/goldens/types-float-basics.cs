@@ -40,7 +40,7 @@ public static class BasicsGlobal
         {
             converted = FormatFloat64(ParseFloat64(@string));
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             converted = "failed";
         }
@@ -54,7 +54,7 @@ public static class BasicsGlobal
         {
             positive = Float64.Compare(ParseFloat64(@string), 0.0) > 0 ? "true" : "false";
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             positive = "failed";
         }
@@ -84,7 +84,7 @@ public static class BasicsGlobal
         string trimmed = s.Trim();
         if (trimmed.StartsWith('.') || trimmed.EndsWith('.'))
         {
-            throw new global::TemperLang.Core.Bubble();
+            throw new global::TemperLang.Core.ParseError(s, "not a Float64");
         }
         return trimmed switch
         {
@@ -94,7 +94,7 @@ public static class BasicsGlobal
                 trimmed,
                 global::System.Globalization.NumberStyles.Float,
                 global::System.Globalization.CultureInfo.InvariantCulture,
-                out double d) ? d : throw new global::TemperLang.Core.Bubble(),
+                out double d) ? d : throw new global::TemperLang.Core.ParseError(s, "not a Float64"),
         };
     }
 
@@ -225,7 +225,7 @@ public static class BasicsGlobal
         {
             t1 = Float64.ToInt(infinity).ToString(CultureInfo.InvariantCulture);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             t1 = "no";
         }
@@ -235,7 +235,7 @@ public static class BasicsGlobal
         {
             t2 = Float64.ToInt(double.NaN).ToString(CultureInfo.InvariantCulture);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             t2 = "no";
         }
@@ -245,7 +245,7 @@ public static class BasicsGlobal
         long notSoSmall = -2147483648L * oneInt64;
         long slightlyBigger = (long)((double)notSoBig + 1.5);
         long slightlySmaller = (long)((double)notSoSmall - 1.5);
-        long tooBigForFloat64 = 9007199254740992L * Float64.ToInt64(one);
+        long tooBigForFloat64 = 9007199254740992L * oneInt64;
         double okToConvert64 = (double)(tooBigForFloat64 - 1L);
         double sneakyBig = okToConvert64 + 1.0;
         console.Log("Bigger to Int64: " + slightlyBigger.ToString(CultureInfo.InvariantCulture));
@@ -256,7 +256,7 @@ public static class BasicsGlobal
         {
             t3 = Float64.ToInt64(sneakyBig).ToString(CultureInfo.InvariantCulture);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             t3 = "no";
         }
@@ -266,7 +266,7 @@ public static class BasicsGlobal
         {
             t4 = FormatFloat64(Float64.ToFloat64(tooBigForFloat64));
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             t4 = "no";
         }
@@ -276,7 +276,7 @@ public static class BasicsGlobal
         {
             t5 = Float64.ToInt64(infinity).ToString(CultureInfo.InvariantCulture);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             t5 = "no";
         }
@@ -286,7 +286,7 @@ public static class BasicsGlobal
         {
             t6 = Float64.ToInt64(double.NaN).ToString(CultureInfo.InvariantCulture);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             t6 = "no";
         }

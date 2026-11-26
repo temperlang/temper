@@ -1,18 +1,21 @@
 import {
-  bubble,
-  isBubble,
+  ParseError,
   panic,
   requireInstanceOf,
   type,
+  withCause,
 } from "@temperlang/core";
 import {
   InterchangeContext,
   JsonAdapter,
   JsonBoolean,
+  JsonError,
   JsonNumeric,
   JsonObject,
   JsonProducer,
+  JsonShapeError,
   JsonString,
+  JsonSyntaxError,
   JsonSyntaxTree,
   JsonTextProducer,
   NullInterchangeContext,
@@ -34,7 +37,7 @@ function encode(adapter, value) {
   try {
     return p.toJsonString();
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof JsonSyntaxError)) throw e$;
     return "bad JSON";
   }
 }
@@ -44,6 +47,7 @@ function encode(adapter, value) {
  * @param {JsonAdapter<T>} adapter
  * @param {string} text
  * @returns {T}
+ * @throws {JsonError}
  */
 function decode(adapter, text) {
   return adapter.decodeFromJson(parseJson(text), /** @type {InterchangeContext} */ (/** @type {unknown} */ (NullInterchangeContext.instance)));
@@ -61,7 +65,7 @@ function roundTrip(adapter, value) {
   try {
     back = decode(adapter, text);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof JsonError)) throw e$;
     back = panic("panic", e$);
   }
   const again = encode(adapter, back);
@@ -81,6 +85,7 @@ class PointJsonAdapter extends type(JsonAdapter) {
    * @param {JsonSyntaxTree} t
    * @param {InterchangeContext} ic
    * @returns {Point}
+   * @throws {JsonError}
    */
   decodeFromJson(t, ic) {
     return Point.decodeFromJson(t, ic);
@@ -135,15 +140,30 @@ class Point extends type() {
    * @param {JsonSyntaxTree} t
    * @param {InterchangeContext} ic
    * @returns {Point}
+   * @throws {JsonError}
    */
   static decodeFromJson(t, ic) {
-    const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : bubble();
+    const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : (() => { throw new JsonShapeError("expected Point JSON object"); })();
     const xTree = obj.propertyValueOrBubble("x");
-    const xJson = xTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (xTree)) : bubble();
-    const x = xJson.asInt32();
+    const xJson = xTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (xTree)) : (() => { throw new JsonShapeError("expected Int for x"); })();
+    /** @type {number} */
+    let x;
+    try {
+      x = xJson.asInt32();
+    } catch (failure) {
+      if (!(failure instanceof ParseError)) throw failure;
+      throw withCause(new JsonShapeError("expected Int for x"), failure);
+    }
     const yTree = obj.propertyValueOrBubble("y");
-    const yJson = yTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (yTree)) : bubble();
-    const y = yJson.asInt32();
+    const yJson = yTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (yTree)) : (() => { throw new JsonShapeError("expected Int for y"); })();
+    /** @type {number} */
+    let y;
+    try {
+      y = yJson.asInt32();
+    } catch (failure2) {
+      if (!(failure2 instanceof ParseError)) throw failure2;
+      throw withCause(new JsonShapeError("expected Int for y"), failure2);
+    }
     return new Point(x, y);
   }
 
@@ -166,6 +186,7 @@ class RecordJsonAdapter extends type(JsonAdapter) {
    * @param {JsonSyntaxTree} t
    * @param {InterchangeContext} ic
    * @returns {Record}
+   * @throws {JsonError}
    */
   decodeFromJson(t, ic) {
     return Record.decodeFromJson(t, ic);
@@ -264,21 +285,36 @@ class Record extends type() {
    * @param {JsonSyntaxTree} t
    * @param {InterchangeContext} ic
    * @returns {Record}
+   * @throws {JsonError}
    */
   static decodeFromJson(t, ic) {
-    const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : bubble();
+    const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : (() => { throw new JsonShapeError("expected Record JSON object"); })();
     const nameTree = obj.propertyValueOrBubble("name");
-    const nameJson = nameTree instanceof JsonString ? /** @type {JsonString} */ (/** @type {unknown} */ (nameTree)) : bubble();
+    const nameJson = nameTree instanceof JsonString ? /** @type {JsonString} */ (/** @type {unknown} */ (nameTree)) : (() => { throw new JsonShapeError("expected String for name"); })();
     const name = nameJson.content;
     const activeTree = obj.propertyValueOrBubble("is-active");
-    const activeJson = activeTree instanceof JsonBoolean ? /** @type {JsonBoolean} */ (/** @type {unknown} */ (activeTree)) : bubble();
+    const activeJson = activeTree instanceof JsonBoolean ? /** @type {JsonBoolean} */ (/** @type {unknown} */ (activeTree)) : (() => { throw new JsonShapeError("expected Boolean for is-active"); })();
     const active = activeJson.content;
     const scoreTree = obj.propertyValueOrBubble("score");
-    const scoreJson = scoreTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (scoreTree)) : bubble();
-    const score = scoreJson.asFloat64();
+    const scoreJson = scoreTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (scoreTree)) : (() => { throw new JsonShapeError("expected Float64 for score"); })();
+    /** @type {number} */
+    let score;
+    try {
+      score = scoreJson.asFloat64();
+    } catch (failure) {
+      if (!(failure instanceof ParseError)) throw failure;
+      throw withCause(new JsonShapeError("expected Float64 for score"), failure);
+    }
     const bigTree = obj.propertyValueOrBubble("big");
-    const bigJson = bigTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (bigTree)) : bubble();
-    const big = bigJson.asInt64();
+    const bigJson = bigTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (bigTree)) : (() => { throw new JsonShapeError("expected Int64 for big"); })();
+    /** @type {bigint} */
+    let big;
+    try {
+      big = bigJson.asInt64();
+    } catch (failure2) {
+      if (!(failure2 instanceof ParseError)) throw failure2;
+      throw withCause(new JsonShapeError("expected Int64 for big"), failure2);
+    }
     const nickname = new OrNullJsonAdapter(stringJsonAdapter()).decodeFromJson(obj.propertyValueOrBubble("nickname"), ic);
     /** @type {readonly Point[]} */
     const points = listJsonAdapter(Point.jsonAdapter()).decodeFromJson(obj.propertyValueOrBubble("points"), ic);
@@ -304,6 +340,7 @@ class CircleJsonAdapter extends type(JsonAdapter) {
    * @param {JsonSyntaxTree} t
    * @param {InterchangeContext} ic
    * @returns {Circle}
+   * @throws {JsonError}
    */
   decodeFromJson(t, ic) {
     return Circle.decodeFromJson(t, ic);
@@ -318,10 +355,11 @@ class Shape extends type() {
    * @param {JsonSyntaxTree} t
    * @param {InterchangeContext} ic
    * @returns {Shape}
+   * @throws {JsonError}
    */
   static decodeFromJson(t, ic) {
     {
-      const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : bubble();
+      const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : (() => { throw new JsonShapeError("expected Shape JSON object"); })();
       const valueForRadius = obj.propertyValueOrNull("radius");
       {
         if (valueForRadius != null) {
@@ -331,7 +369,7 @@ class Shape extends type() {
           return Rect.jsonAdapter().decodeFromJson(/** @type {JsonSyntaxTree} */ (/** @type {unknown} */ (obj)), ic);
         }
       }
-      bubble();
+      throw new JsonShapeError("expected one of Shape's JSON shapes");
     }
   }
 
@@ -368,12 +406,20 @@ class Circle extends type(Shape) {
    * @param {JsonSyntaxTree} t
    * @param {InterchangeContext} ic
    * @returns {Circle}
+   * @throws {JsonError}
    */
   static decodeFromJson(t, ic) {
-    const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : bubble();
+    const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : (() => { throw new JsonShapeError("expected Circle JSON object"); })();
     const radiusTree = obj.propertyValueOrBubble("radius");
-    const radiusJson = radiusTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (radiusTree)) : bubble();
-    const radius = radiusJson.asInt32();
+    const radiusJson = radiusTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (radiusTree)) : (() => { throw new JsonShapeError("expected Int for radius"); })();
+    /** @type {number} */
+    let radius;
+    try {
+      radius = radiusJson.asInt32();
+    } catch (failure) {
+      if (!(failure instanceof ParseError)) throw failure;
+      throw withCause(new JsonShapeError("expected Int for radius"), failure);
+    }
     return new Circle(radius);
   }
 
@@ -396,6 +442,7 @@ class RectJsonAdapter extends type(JsonAdapter) {
    * @param {JsonSyntaxTree} t
    * @param {InterchangeContext} ic
    * @returns {Rect}
+   * @throws {JsonError}
    */
   decodeFromJson(t, ic) {
     return Rect.decodeFromJson(t, ic);
@@ -450,15 +497,30 @@ class Rect extends type(Shape) {
    * @param {JsonSyntaxTree} t
    * @param {InterchangeContext} ic
    * @returns {Rect}
+   * @throws {JsonError}
    */
   static decodeFromJson(t, ic) {
-    const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : bubble();
+    const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : (() => { throw new JsonShapeError("expected Rect JSON object"); })();
     const widthTree = obj.propertyValueOrBubble("width");
-    const widthJson = widthTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (widthTree)) : bubble();
-    const width = widthJson.asInt32();
+    const widthJson = widthTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (widthTree)) : (() => { throw new JsonShapeError("expected Int for width"); })();
+    /** @type {number} */
+    let width;
+    try {
+      width = widthJson.asInt32();
+    } catch (failure) {
+      if (!(failure instanceof ParseError)) throw failure;
+      throw withCause(new JsonShapeError("expected Int for width"), failure);
+    }
     const heightTree = obj.propertyValueOrBubble("height");
-    const heightJson = heightTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (heightTree)) : bubble();
-    const height = heightJson.asInt32();
+    const heightJson = heightTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (heightTree)) : (() => { throw new JsonShapeError("expected Int for height"); })();
+    /** @type {number} */
+    let height;
+    try {
+      height = heightJson.asInt32();
+    } catch (failure2) {
+      if (!(failure2 instanceof ParseError)) throw failure2;
+      throw withCause(new JsonShapeError("expected Int for height"), failure2);
+    }
     return new Rect(width, height);
   }
 
@@ -481,6 +543,7 @@ class ShapeJsonAdapter extends type(JsonAdapter) {
    * @param {JsonSyntaxTree} t
    * @param {InterchangeContext} ic
    * @returns {Shape}
+   * @throws {JsonError}
    */
   decodeFromJson(t, ic) {
     return Shape.decodeFromJson(t, ic);
@@ -500,6 +563,7 @@ class HelloJsonAdapter extends type(JsonAdapter) {
    * @param {JsonSyntaxTree} t
    * @param {InterchangeContext} ic
    * @returns {Hello}
+   * @throws {JsonError}
    */
   decodeFromJson(t, ic) {
     return Hello.decodeFromJson(t, ic);
@@ -514,10 +578,11 @@ class Message extends type() {
    * @param {JsonSyntaxTree} t
    * @param {InterchangeContext} ic
    * @returns {Message}
+   * @throws {JsonError}
    */
   static decodeFromJson(t, ic) {
     {
-      const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : bubble();
+      const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : (() => { throw new JsonShapeError("expected Message JSON object"); })();
       const valueForKind = obj.propertyValueOrNull("kind");
       {
         if (valueForKind != null && valueForKind instanceof JsonString) {
@@ -529,7 +594,7 @@ class Message extends type() {
           }
         }
       }
-      bubble();
+      throw new JsonShapeError("expected one of Message's JSON shapes");
     }
   }
 
@@ -568,11 +633,12 @@ class Hello extends type(Message) {
    * @param {JsonSyntaxTree} t
    * @param {InterchangeContext} ic
    * @returns {Hello}
+   * @throws {JsonError}
    */
   static decodeFromJson(t, ic) {
-    const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : bubble();
+    const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : (() => { throw new JsonShapeError("expected Hello JSON object"); })();
     const textTree = obj.propertyValueOrBubble("text");
-    const textJson = textTree instanceof JsonString ? /** @type {JsonString} */ (/** @type {unknown} */ (textTree)) : bubble();
+    const textJson = textTree instanceof JsonString ? /** @type {JsonString} */ (/** @type {unknown} */ (textTree)) : (() => { throw new JsonShapeError("expected String for text"); })();
     const text = textJson.content;
     return new Hello(text);
   }
@@ -596,6 +662,7 @@ class ByeJsonAdapter extends type(JsonAdapter) {
    * @param {JsonSyntaxTree} t
    * @param {InterchangeContext} ic
    * @returns {Bye}
+   * @throws {JsonError}
    */
   decodeFromJson(t, ic) {
     return Bye.decodeFromJson(t, ic);
@@ -631,11 +698,12 @@ class Bye extends type(Message) {
    * @param {JsonSyntaxTree} t
    * @param {InterchangeContext} ic
    * @returns {Bye}
+   * @throws {JsonError}
    */
   static decodeFromJson(t, ic) {
-    const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : bubble();
+    const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : (() => { throw new JsonShapeError("expected Bye JSON object"); })();
     const textTree = obj.propertyValueOrBubble("text");
-    const textJson = textTree instanceof JsonString ? /** @type {JsonString} */ (/** @type {unknown} */ (textTree)) : bubble();
+    const textJson = textTree instanceof JsonString ? /** @type {JsonString} */ (/** @type {unknown} */ (textTree)) : (() => { throw new JsonShapeError("expected String for text"); })();
     const text = textJson.content;
     return new Bye(text);
   }
@@ -659,6 +727,7 @@ class MessageJsonAdapter extends type(JsonAdapter) {
    * @param {JsonSyntaxTree} t
    * @param {InterchangeContext} ic
    * @returns {Message}
+   * @throws {JsonError}
    */
   decodeFromJson(t, ic) {
     return Message.decodeFromJson(t, ic);
@@ -678,6 +747,7 @@ class CelsiusJsonAdapter extends type(JsonAdapter) {
    * @param {JsonSyntaxTree} t
    * @param {InterchangeContext} ic
    * @returns {Celsius}
+   * @throws {JsonError}
    */
   decodeFromJson(t, ic) {
     return Celsius.decodeFromJson(t, ic);
@@ -708,9 +778,18 @@ class Celsius extends type() {
    * @param {JsonSyntaxTree} t
    * @param {InterchangeContext} ic
    * @returns {Celsius}
+   * @throws {JsonError}
    */
   static decodeFromJson(t, ic) {
-    return new Celsius(requireInstanceOf(t, JsonNumeric).asInt32());
+    /** @type {number} */
+    let t$0;
+    try {
+      t$0 = requireInstanceOf(t, JsonNumeric).asInt32();
+    } catch (failure) {
+      if (!(failure instanceof ParseError)) throw failure;
+      throw withCause(new JsonShapeError("expected degrees"), failure);
+    }
+    return new Celsius(t$0);
   }
 
   /** @returns {JsonAdapter<Celsius>} */
@@ -733,7 +812,7 @@ let shape;
 try {
   shape = decode(Shape.jsonAdapter(), '{"height": 6, "width": 5}');
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof JsonError)) throw e$;
   shape = panic("panic", e$);
 }
 {
@@ -748,27 +827,27 @@ let record;
 try {
   record = decode(Record.jsonAdapter(), '{"name": "Bo", "is-active": false, "score": 2, "big": 7, "nickname": "B", "points": []}');
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof JsonError)) throw e$;
   record = panic("panic", e$);
 }
 console.log(`${record.name} ${record.active} ${record.nickname ?? "none"} ${record.points.length}`);
 /** @type {string} */
-let t$0;
-try {
-  decode(Point.jsonAdapter(), '{"x": 1}');
-  t$0 = "decoded";
-} catch (e$) {
-  if (!isBubble(e$)) throw e$;
-  t$0 = "no y";
-}
-console.log(t$0);
-/** @type {string} */
 let t$1;
 try {
-  decode(Message.jsonAdapter(), '{"kind": "what", "text": "?"}');
+  decode(Point.jsonAdapter(), '{"x": 1}');
   t$1 = "decoded";
-} catch (e$) {
-  if (!isBubble(e$)) throw e$;
-  t$1 = "no such kind";
+} catch (e) {
+  if (!(e instanceof JsonError)) throw e;
+  t$1 = /** @type {Error} */ (/** @type {unknown} */ (e)).message;
 }
 console.log(t$1);
+/** @type {string} */
+let t$2;
+try {
+  decode(Message.jsonAdapter(), '{"kind": "what", "text": "?"}');
+  t$2 = "decoded";
+} catch (e2) {
+  if (!(e2 instanceof JsonError)) throw e2;
+  t$2 = /** @type {Error} */ (/** @type {unknown} */ (e2)).message;
+}
+console.log(t$2);

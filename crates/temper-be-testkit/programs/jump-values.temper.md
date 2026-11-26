@@ -14,7 +14,7 @@ is what the interpreter gives.
       n
     }
     let pair(a: Int, b: Int): Int { a * 10 + b }
-    let parse(s: String): Int throws Bubble { s.toInt32() }
+    let parse(s: String): Int throws Bubble { s.toInt32() orelse bubble() }
 
     let next(y: Int?): Int? {
       let x = y ?? return null;

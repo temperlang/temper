@@ -16,7 +16,7 @@ const FIXTURE: &str = include_str!("fixtures/core.tmpl");
 const CORE: &str = include_str!("../../../lib/core/core.temper");
 
 /// A member as `core.temper` declares it.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 struct Member {
     kind: &'static str,
     params: Vec<(String, String, bool)>,
@@ -287,6 +287,12 @@ const COMPILER_BUILTINS: [&str; 4] = [
     "safeAdaptGeneratorFn",
 ];
 
+/// Core's methods whose result tmpl gives a type parameter of its own,
+/// `R`, for the join of the receiver's type parameter (here, after the
+/// method) and the fallback's type, as typing finds it: `m.getOr(k,
+/// null)` is a `V?`.
+const JOINED_RESULTS: [(&str, &str); 2] = [("Listed.getOr", "T"), ("Mapped.getOr", "V")];
+
 #[test]
 fn the_fixture_is_valid_canonical_tmpl() {
     let p = text::read(FIXTURE).unwrap();
@@ -312,6 +318,16 @@ fn the_fixture_matches_core_temper() {
             continue;
         }
         let found = core.get(name);
-        assert_eq!(found, Some(&fixture[name]), "{name}");
+        let mut member = fixture[name].clone();
+        if let Some(&(_, param)) = JOINED_RESULTS.iter().find(|(n, _)| n == name) {
+            let own = |t: &mut String| {
+                if t == "R" {
+                    *t = param.to_string();
+                }
+            };
+            member.params.iter_mut().for_each(|p| own(&mut p.1));
+            own(&mut member.result);
+        }
+        assert_eq!(found, Some(&member), "{name}");
     }
 }

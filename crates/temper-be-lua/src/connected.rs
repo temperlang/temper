@@ -196,6 +196,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Helper("int64_tostring"),
     ),
     (
+        "core.type InvalidCodePoint.constructor()",
+        Connection::Helper("invalidcodepoint_constructor"),
+    ),
+    (
         "core.type List.get length()",
         Connection::Helper("list_length"),
     ),
@@ -352,8 +356,16 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Helper("mapped_values"),
     ),
     (
+        "core.type MissingKey.constructor()",
+        Connection::Helper("missingkey_constructor"),
+    ),
+    (
         "core.type Pair.constructor()",
         Connection::Helper("pair_constructor"),
+    ),
+    (
+        "core.type ParseError.constructor()",
+        Connection::Helper("parseerror_constructor"),
     ),
     (
         "core.type PromiseBuilder.breakPromise()",

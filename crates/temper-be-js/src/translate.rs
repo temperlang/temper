@@ -301,6 +301,24 @@ impl<'a> Translator<'a> {
         self.imports.insert(name);
     }
 
+    /// `name`, an export of std's `module`, imported unless this is that
+    /// module, for a connection that gives the runtime one of std's
+    /// classes, which it can't import.
+    pub(crate) fn import_std(&mut self, module: &str, name: &str) -> String {
+        let p = self.p;
+        let here = !self.here.is_none()
+            && p.name(self.here) == module
+            && temper_tmpl::qname::library_of(p, self.here) == "std";
+        if !here {
+            let specifier = format!("{}/{module}", package_of(p, "std"));
+            self.from
+                .entry(specifier)
+                .or_default()
+                .insert(name.to_string());
+        }
+        name.to_string()
+    }
+
     /// A node's type as JSDoc writes it.
     pub(crate) fn type_of(&mut self, id: NodeId) -> R<String> {
         self.ty(self.p.nodes.ty(id))
@@ -443,6 +461,15 @@ impl<'a> Translator<'a> {
                     // Core's root of declared failures, which each
                     // library's failure roots extend.
                     "core.type Error" => "Error".to_string(),
+                    // Core's own failures, the runtime's classes.
+                    "core.type CoreError"
+                    | "core.type MissingKey"
+                    | "core.type ParseError"
+                    | "core.type InvalidCodePoint" => {
+                        let name = self.core_failure(decl).unwrap_or("Error");
+                        self.import(name);
+                        applied(name.to_string())
+                    }
                     _ if matches!(
                         self.p.decls.get(decl).kind,
                         DeclKind::Class | DeclKind::Interface

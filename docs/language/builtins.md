@@ -2490,9 +2490,11 @@ auto-generated.
 ```temper
 let {
   InterchangeContext,
+  JsonError,
   JsonInt,
   JsonNumeric,
   JsonProducer,
+  JsonShapeError,
   JsonSyntaxTree,
   JsonTextProducer,
 } = import("std/json");
@@ -2504,8 +2506,8 @@ let {
     p.int32Value(i);
   }
 
-  public static decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): IntWrapper throws Bubble {
-    new IntWrapper((t as JsonNumeric).asInt32())
+  public static decodeFromJson(t: JsonSyntaxTree, ic: InterchangeContext): IntWrapper throws JsonError {
+    new IntWrapper((t as JsonNumeric).asInt32() orelse throw new JsonShapeError("expected Int"))
   }
 }
 

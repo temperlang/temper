@@ -15,7 +15,7 @@ public static class LimitsGlobal
         {
             converted = Core.ToInt(@string, 16).ToString(CultureInfo.InvariantCulture);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             converted = "failed";
         }
@@ -29,7 +29,7 @@ public static class LimitsGlobal
         {
             converted = Core.ToInt64(@string, 16).ToString(CultureInfo.InvariantCulture);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             converted = "failed";
         }
@@ -94,7 +94,7 @@ public static class LimitsGlobal
         {
             t1 = Core.ToInt(big64).ToString(CultureInfo.InvariantCulture);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             t1 = "no";
         }

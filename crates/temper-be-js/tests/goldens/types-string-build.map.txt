@@ -1,15 +1,15 @@
 # generated line:column -> source:line:column, and the text at each
-8:1 -> ../build.temper.md:106:5  class StringBuilderOwner ext <- class StringBuilderOwner(
-8:7 -> ../build.temper.md:106:11 (StringBuilderOwner)  StringBuilderOwner extends t <- StringBuilderOwner(
-8:25 -> ../build.temper.md:106:5   extends type() { <- class StringBuilderOwner(
-9:3 -> ../build.temper.md:107:14  /** @type {string[]} */ <- builder: StringBuilder,
-10:3 -> ../build.temper.md:107:14  #builder; <- builder: StringBuilder,
-12:3 -> ../build.temper.md:106:5  /** @param {string[]} builde <- class StringBuilderOwner(
-13:3 -> ../build.temper.md:106:5  constructor(builder) { <- class StringBuilderOwner(
-15:5 -> ../build.temper.md:107:14  this.#builder = builder; <- builder: StringBuilder,
-18:3 -> ../build.temper.md:107:14  /** @returns {string[]} */ <- builder: StringBuilder,
-19:3 -> ../build.temper.md:107:14  get builder() { <- builder: StringBuilder,
-19:7 -> ../build.temper.md:107:14 (builder)  builder() { <- builder: StringBuilder,
+8:1 -> ../build.temper.md:109:5  class StringBuilderOwner ext <- class StringBuilderOwner(
+8:7 -> ../build.temper.md:109:11 (StringBuilderOwner)  StringBuilderOwner extends t <- StringBuilderOwner(
+8:25 -> ../build.temper.md:109:5   extends type() { <- class StringBuilderOwner(
+9:3 -> ../build.temper.md:110:14  /** @type {string[]} */ <- builder: StringBuilder,
+10:3 -> ../build.temper.md:110:14  #builder; <- builder: StringBuilder,
+12:3 -> ../build.temper.md:109:5  /** @param {string[]} builde <- class StringBuilderOwner(
+13:3 -> ../build.temper.md:109:5  constructor(builder) { <- class StringBuilderOwner(
+15:5 -> ../build.temper.md:110:14  this.#builder = builder; <- builder: StringBuilder,
+18:3 -> ../build.temper.md:110:14  /** @returns {string[]} */ <- builder: StringBuilder,
+19:3 -> ../build.temper.md:110:14  get builder() { <- builder: StringBuilder,
+19:7 -> ../build.temper.md:110:14 (builder)  builder() { <- builder: StringBuilder,
 24:1 -> ../build.temper.md:7:5  const builder = [""]; <- let builder = new StringBuil
 25:1 -> ../build.temper.md:8:5  builder[0] += "Hi "; <- builder.append("Hi ");
 26:1 -> ../build.temper.md:9:5  stringBuilderAppendCodePoint <- builder.appendCodePoint(char
@@ -21,24 +21,25 @@
 32:1 -> ../build.temper.md:26:5  builder[0] += "\n"; <- builder.append("\n");
 33:1 -> ../build.temper.md:27:5  builder[0] += built; <- builder.append(built);
 34:1 -> ../build.temper.md:31:5  console.log(builder[0]); <- console.log(builder.toString
-35:1 -> ../build.temper.md:43:5  try { <- builder.appendCodePoint(0x11
-41:1 -> ../build.temper.md:44:5  try { <- builder.appendCodePoint(0xD8
-47:1 -> ../build.temper.md:48:5  console.log(builder[0]); <- console.log(builder.toString
-48:1 -> ../build.temper.md:59:5  builder[0] = ""; <- builder.clear();  // Now it'
-49:1 -> ../build.temper.md:60:5  builder[0] += "Back to squar <- builder.append("Back to squa
-50:1 -> ../build.temper.md:62:5  console.log(builder[0]); <- console.log(builder.toString
-51:1 -> ../build.temper.md:73:5  builder[0] = ""; <- builder.clear();
-52:1 -> ../build.temper.md:74:5  builder[0] += "a??=b??/c??>d <- builder.append("a??=b??/c??>
-53:1 -> ../build.temper.md:75:5  const marks = builder[0]; <- let marks = builder.toString
-54:1 -> ../build.temper.md:76:5  console.log(marks); <- console.log(marks);
-55:1 -> ../build.temper.md:77:5  console.log(`Same: ${marks = <- console.log("Same: ${marks =
-56:1 -> ../build.temper.md:88:5  builder[0] = ""; <- builder.clear();
-57:1 -> ../build.temper.md:89:5  builder[0] += "??"; <- builder.append("??");
-58:1 -> ../build.temper.md:90:5  try { <- builder.appendCodePoint(1) o
-64:1 -> ../build.temper.md:91:5  builder[0] += "0"; <- builder.append("0");
-65:1 -> ../build.temper.md:92:5  try { <- builder.appendCodePoint(0x20
-71:1 -> ../build.temper.md:93:5  builder[0] += "1"; <- builder.append("1");
-72:1 -> ../build.temper.md:94:5  console.log(`Digits after es <- console.log("Digits after es
-73:1 -> ../build.temper.md:113:5  const owner = new StringBuil <- let owner = new StringBuilde
-74:1 -> ../build.temper.md:114:5  owner.builder[0] += "Hi from <- owner.builder.append("Hi fro
-75:1 -> ../build.temper.md:115:5  console.log(owner.builder[0] <- console.log(owner.builder.to
+35:1 -> ../build.temper.md:44:5  try { <- builder.appendCodePoint(0x11
+41:1 -> ../build.temper.md:45:5  try { <- builder.appendCodePoint(0xD8
+45:3 -> ../build.temper.md:46:7  console.log(`Surrogate 0x${e <- console.log("Surrogate 0x${e
+47:1 -> ../build.temper.md:51:5  console.log(builder[0]); <- console.log(builder.toString
+48:1 -> ../build.temper.md:62:5  builder[0] = ""; <- builder.clear();  // Now it'
+49:1 -> ../build.temper.md:63:5  builder[0] += "Back to squar <- builder.append("Back to squa
+50:1 -> ../build.temper.md:65:5  console.log(builder[0]); <- console.log(builder.toString
+51:1 -> ../build.temper.md:76:5  builder[0] = ""; <- builder.clear();
+52:1 -> ../build.temper.md:77:5  builder[0] += "a??=b??/c??>d <- builder.append("a??=b??/c??>
+53:1 -> ../build.temper.md:78:5  const marks = builder[0]; <- let marks = builder.toString
+54:1 -> ../build.temper.md:79:5  console.log(marks); <- console.log(marks);
+55:1 -> ../build.temper.md:80:5  console.log(`Same: ${marks = <- console.log("Same: ${marks =
+56:1 -> ../build.temper.md:91:5  builder[0] = ""; <- builder.clear();
+57:1 -> ../build.temper.md:92:5  builder[0] += "??"; <- builder.append("??");
+58:1 -> ../build.temper.md:93:5  try { <- builder.appendCodePoint(1) o
+64:1 -> ../build.temper.md:94:5  builder[0] += "0"; <- builder.append("0");
+65:1 -> ../build.temper.md:95:5  try { <- builder.appendCodePoint(0x20
+71:1 -> ../build.temper.md:96:5  builder[0] += "1"; <- builder.append("1");
+72:1 -> ../build.temper.md:97:5  console.log(`Digits after es <- console.log("Digits after es
+73:1 -> ../build.temper.md:116:5  const owner = new StringBuil <- let owner = new StringBuilde
+74:1 -> ../build.temper.md:117:5  owner.builder[0] += "Hi from <- owner.builder.append("Hi fro
+75:1 -> ../build.temper.md:118:5  console.log(owner.builder[0] <- console.log(owner.builder.to

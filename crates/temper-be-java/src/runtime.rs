@@ -22,6 +22,10 @@ pub const FILES: &[(&str, &str)] = &[
         include_str!("../runtime/temper-core/src/main/java/temper/core/Core.java"),
     ),
     (
+        "src/main/java/temper/core/CoreException.java",
+        include_str!("../runtime/temper-core/src/main/java/temper/core/CoreException.java"),
+    ),
+    (
         "src/main/java/temper/core/Failure.java",
         include_str!("../runtime/temper-core/src/main/java/temper/core/Failure.java"),
     ),
@@ -30,12 +34,24 @@ pub const FILES: &[(&str, &str)] = &[
         include_str!("../runtime/temper-core/src/main/java/temper/core/Generator.java"),
     ),
     (
+        "src/main/java/temper/core/InvalidCodePoint.java",
+        include_str!("../runtime/temper-core/src/main/java/temper/core/InvalidCodePoint.java"),
+    ),
+    (
+        "src/main/java/temper/core/MissingKey.java",
+        include_str!("../runtime/temper-core/src/main/java/temper/core/MissingKey.java"),
+    ),
+    (
         "src/main/java/temper/core/NonNull.java",
         include_str!("../runtime/temper-core/src/main/java/temper/core/NonNull.java"),
     ),
     (
         "src/main/java/temper/core/Nullable.java",
         include_str!("../runtime/temper-core/src/main/java/temper/core/Nullable.java"),
+    ),
+    (
+        "src/main/java/temper/core/ParseError.java",
+        include_str!("../runtime/temper-core/src/main/java/temper/core/ParseError.java"),
     ),
     (
         "src/main/java/temper/core/Stub.java",

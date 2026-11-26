@@ -47,12 +47,14 @@ public static class ReadGlobal
         console.Log("end <= end? " + (end.CompareTo(end) <= 0 ? "true" : "false"));
     }
 
+    /// <exception cref="InvalidCodePoint">Where it fails with InvalidCodePoint.</exception>
     internal static string FromCodeNoInline(int code)
     {
         console.Log("From 0x" + Core.ConvertToString(code, 16));
         return Core.StringFromCodePoint(code);
     }
 
+    /// <exception cref="InvalidCodePoint">Where it fails with InvalidCodePoint.</exception>
     internal static string FromCodesNoInline(IReadOnlyList<int> codes)
     {
         console.Log("From codes");
@@ -66,7 +68,7 @@ public static class ReadGlobal
         {
             converted = (radix != null ? Core.ToInt(@string, radix.Value) : Core.ToInt(@string)).ToString(CultureInfo.InvariantCulture);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             converted = "failed";
         }
@@ -121,7 +123,7 @@ public static class ReadGlobal
         {
             t1 = FromCodeNoInline(1114112);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (InvalidCodePoint)
         {
             t1 = "nope";
         }
@@ -131,7 +133,7 @@ public static class ReadGlobal
         {
             t2 = FromCodeNoInline(55296);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (InvalidCodePoint)
         {
             t2 = "no to surrogate";
         }
@@ -142,11 +144,61 @@ public static class ReadGlobal
         {
             t3 = FromCodesNoInline(Listed.CreateReadOnlyList<int>(55296, 56320));
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (InvalidCodePoint)
         {
             t3 = "no to surrogates";
         }
         console.Log(t3);
+        string t4;
+        try
+        {
+            t4 = FromCodesNoInline(Listed.CreateReadOnlyList<int>(65, -1, 56320));
+        }
+        catch (InvalidCodePoint e)
+        {
+            t4 = Core.ConvertToString(e.CodePoint, 16);
+        }
+        console.Log(t4);
+        string t5;
+        try
+        {
+            t5 = Core.StringFromCodePoint(57343);
+        }
+        catch (InvalidCodePoint e2)
+        {
+            t5 = e2.Message;
+        }
+        console.Log(t5);
+        string t6;
+        try
+        {
+            t6 = Core.ToInt("x").ToString(CultureInfo.InvariantCulture);
+        }
+        catch (ParseError e3)
+        {
+            t6 = e3.Message;
+        }
+        console.Log(t6);
+        string t7;
+        try
+        {
+            t7 = Float64.ToInt(1e300).ToString(CultureInfo.InvariantCulture);
+        }
+        catch (ParseError e4)
+        {
+            t7 = e4.Reason;
+        }
+        console.Log(t7);
+        long t8;
+        try
+        {
+            t8 = Core.ToInt64("12");
+        }
+        catch (ParseError)
+        {
+            t8 = -1L;
+        }
+        console.Log(t8.ToString(CultureInfo.InvariantCulture));
         CheckParse("-1", null);
         CheckParse("2", null);
         CheckParse(" 2 ", null);
@@ -158,6 +210,28 @@ public static class ReadGlobal
         CheckParse("20", 7);
         CheckParse("20", 17);
         CheckParse("20", 37);
+        CheckParse("10", 0);
+        CheckParse("0", 1);
+        string t9;
+        try
+        {
+            t9 = Core.ToInt64("10", 0).ToString(CultureInfo.InvariantCulture);
+        }
+        catch (ParseError e5)
+        {
+            t9 = e5.Reason;
+        }
+        console.Log(t9);
+        long t10;
+        try
+        {
+            t10 = Core.ToInt64("10", -2);
+        }
+        catch (ParseError)
+        {
+            t10 = -1L;
+        }
+        console.Log(t10.ToString(CultureInfo.InvariantCulture));
         {
             string s = "foo-bar";
             int after1_2 = StringUtil.Next(s, 0);

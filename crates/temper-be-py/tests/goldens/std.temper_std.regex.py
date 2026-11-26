@@ -5,7 +5,7 @@ from collections.abc import (
     Sequence as _Sequence,
 )
 from temper_core import (
-    Bubble as _Bubble,
+    InvalidCodePoint as _InvalidCodePoint,
     Pair as _Pair,
     int_add as _int_add,
     list_get as _list_get,
@@ -565,27 +565,42 @@ class _RegexFormatter:
         self._out.append(')')
 
     def _push_code(self, code: int, inside_code_set: bool, /) -> None:
-        try:
-            special_escape = 'r' if code == _Codes.carriage_return else 'n' if code == _Codes.newline else 't' if code == _Codes.tab else ''
-            if special_escape != '':
+        special_escape = 'r' if code == _Codes.carriage_return else 'n' if code == _Codes.newline else 't' if code == _Codes.tab else ''
+        if special_escape != '':
+            self._out.append('\\')
+            self._out.append(special_escape)
+            return
+        if code <= 127:
+            escape_need = _list_get(_escape_needs, code)
+            if escape_need == _needs_simple_escape or inside_code_set and code == _Codes.dash:
                 self._out.append('\\')
-                self._out.append(special_escape)
+                t_2 = self._out
+                t_0: str
+                try:
+                    t_0 = _string_from_code_point(code)
+                except _InvalidCodePoint as t_1:
+                    raise BaseException('panic') from t_1
+                t_2.append(t_0)
                 return
-            if code <= 127:
-                escape_need = _list_get(_escape_needs, code)
-                if escape_need == _needs_simple_escape or inside_code_set and code == _Codes.dash:
-                    self._out.append('\\')
-                    self._out.append(_string_from_code_point(code))
-                    return
-                elif escape_need == _needs_no_escape:
-                    self._out.append(_string_from_code_point(code))
-                    return
-            if code >= _Codes.supplemental_min or code > _Codes.high_control_max and not (_Codes.surrogate_min <= code and code <= _Codes.surrogate_max or code == _Codes.uint16_max):
-                self._out.append(_string_from_code_point(code))
-            else:
-                _regex_formatter_push_code_to(self, self._out, code, inside_code_set)
-        except _Bubble as t_0:
-            raise BaseException('panic') from t_0
+            elif escape_need == _needs_no_escape:
+                t_5 = self._out
+                t_3: str
+                try:
+                    t_3 = _string_from_code_point(code)
+                except _InvalidCodePoint as t_4:
+                    raise BaseException('panic') from t_4
+                t_5.append(t_3)
+                return
+        if code >= _Codes.supplemental_min or code > _Codes.high_control_max and not (_Codes.surrogate_min <= code and code <= _Codes.surrogate_max or code == _Codes.uint16_max):
+            t_8 = self._out
+            t_6: str
+            try:
+                t_6 = _string_from_code_point(code)
+            except _InvalidCodePoint as t_7:
+                raise BaseException('panic') from t_7
+            t_8.append(t_6)
+        else:
+            _regex_formatter_push_code_to(self, self._out, code, inside_code_set)
 
     def _push_code_points(self, code_points: CodePoints, inside_code_set: bool, /) -> None:
         value = code_points.value

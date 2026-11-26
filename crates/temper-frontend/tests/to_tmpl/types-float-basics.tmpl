@@ -7,9 +7,9 @@ uses `temper-core`#43 0.0.0-alpha.0.0 {
   class Float64#47 {
     connected method toString#48(): String;
     connected method toInt32Unsafe#53(): Int32;
-    connected method toInt32#55(): Int32 throws Bubble;
-    connected method toInt64Unsafe#56(): Int64;
-    connected method toInt64#59(): Int64 throws Bubble;
+    connected method toInt32#55(): Int32 throws ParseError#56;
+    connected method toInt64Unsafe#59(): Int64;
+    connected method toInt64#63(): Int64 throws ParseError#56;
   }
   class Boolean#49 {
     connected method toString#50(): String;
@@ -18,15 +18,18 @@ uses `temper-core`#43 0.0.0-alpha.0.0 {
     connected method toFloat64#52(): Float64;
     connected method toString#54(radix?: Int32): String;
   }
-  class Int64#57 {
-    connected method toFloat64Unsafe#58(): Float64;
-    connected method toString#60(radix?: Int32): String;
-    connected method toFloat64#61(): Float64 throws Bubble;
+  class ParseError#56 extends CoreError#57 {}
+  interface CoreError#57 extends Error#58 {}
+  interface Error#58 {}
+  class Int64#60 {
+    connected method toFloat64Unsafe#61(): Float64;
+    connected method toString#62(radix?: Int32): String;
+    connected method toFloat64#64(): Float64 throws ParseError#56;
   }
-  class String#64 {
-    connected method toFloat64#65(): Float64 throws Bubble;
+  class String#67 {
+    connected method toFloat64#68(): Float64 throws ParseError#56;
   }
-  connected fn getConsole#68(name?: String): Console#44;
+  connected fn getConsole#71(name?: String): Console#44;
 }
 
 module basics#0 {
@@ -102,18 +105,18 @@ module basics#0 {
 
   let sneakyBig#30: Float64;
 
-  fn checkParse#31(string#62: String): Void {
-    let converted#63: String = (orelse(string#62.toFloat64#65()^.toString#48(), "failed")): String;
-    ~console#46.log#45(%String.cat(%String.cat(%String.cat("Parse ", string#62), " -> "), converted#63));
+  fn checkParse#31(string#65: String): Void {
+    let converted#66: String = (orelse(string#65.toFloat64#68()^.toString#48(), "failed")): String;
+    ~console#46.log#45(%String.cat(%String.cat(%String.cat("Parse ", string#65), " -> "), converted#66));
   }
 
-  fn checkTiny#32(string#66: String): Void {
-    let positive#67: String = (orelse(%Float64.gt(string#66.toFloat64#65()^, 0.0).toString#50(), "failed")): String;
-    ~console#46.log#45(%String.cat(%String.cat(%String.cat("Parse ", string#66), " > 0 -> "), positive#67));
+  fn checkTiny#32(string#69: String): Void {
+    let positive#70: String = (orelse(%Float64.gt(string#69.toFloat64#68()^, 0.0).toString#50(), "failed")): String;
+    ~console#46.log#45(%String.cat(%String.cat(%String.cat("Parse ", string#69), " > 0 -> "), positive#70));
   }
 
   init {
-    init ~console#46 = getConsole#68(omitted);
+    init ~console#46 = getConsole#71(omitted);
     init negativeZero#1 = %Float64.neg(0.0);
     init zero#2 = 0.0;
     zero#2 = zero#2;
@@ -228,21 +231,21 @@ module basics#0 {
     ~console#46.log#45(%String.cat("Negative to int: ", %Float64.mul(%Float64.neg(4.9), one#3).toInt32Unsafe#53().toString#54(omitted)));
     ~console#46.log#45(%String.cat("Infinity to int: ", (orelse(infinity#21.toInt32#55()^.toString#54(omitted), "no")): String));
     ~console#46.log#45(%String.cat("NaN to int: ", (orelse((nan).toInt32#55()^.toString#54(omitted), "no")): String));
-    init oneInt64#23 = one#3.toInt64Unsafe#56();
+    init oneInt64#23 = one#3.toInt64Unsafe#59();
     init notSoBig#24 = %Int64.mul(2147483647i64, oneInt64#23);
     init notSoSmall#25 = %Int64.mul(%Int64.neg(2147483648i64), oneInt64#23);
-    init slightlyBigger#26 = %Float64.add(notSoBig#24.toFloat64Unsafe#58(), 1.5).toInt64Unsafe#56();
-    init slightlySmaller#27 = %Float64.sub(notSoSmall#25.toFloat64Unsafe#58(), 1.5).toInt64Unsafe#56();
-    init tooBigForFloat64#28 = %Int64.mul(9007199254740992i64, one#3.toInt64#59()^);
-    init okToConvert64#29 = %Int64.sub(tooBigForFloat64#28, 1i64).toFloat64Unsafe#58();
+    init slightlyBigger#26 = %Float64.add(notSoBig#24.toFloat64Unsafe#61(), 1.5).toInt64Unsafe#59();
+    init slightlySmaller#27 = %Float64.sub(notSoSmall#25.toFloat64Unsafe#61(), 1.5).toInt64Unsafe#59();
+    init tooBigForFloat64#28 = %Int64.mul(9007199254740992i64, oneInt64#23);
+    init okToConvert64#29 = %Int64.sub(tooBigForFloat64#28, 1i64).toFloat64Unsafe#61();
     init sneakyBig#30 = %Float64.add(okToConvert64#29, 1.0);
-    ~console#46.log#45(%String.cat("Bigger to Int64: ", slightlyBigger#26.toString#60(omitted)));
-    ~console#46.log#45(%String.cat("Smaller to Int64: ", slightlySmaller#27.toString#60(omitted)));
-    ~console#46.log#45(%String.cat("Barely ok to Int64: ", okToConvert64#29.toInt64Unsafe#56().toString#60(omitted)));
-    ~console#46.log#45(%String.cat("Sneaky big to Int64: ", (orelse(sneakyBig#30.toInt64#59()^.toString#60(omitted), "no")): String));
-    ~console#46.log#45(%String.cat("Too big Int64 to Float64: ", (orelse(tooBigForFloat64#28.toFloat64#61()^.toString#48(), "no")): String));
-    ~console#46.log#45(%String.cat("Infinity to Int64: ", (orelse(infinity#21.toInt64#59()^.toString#60(omitted), "no")): String));
-    ~console#46.log#45(%String.cat("NaN to Int64: ", (orelse((nan).toInt64#59()^.toString#60(omitted), "no")): String));
+    ~console#46.log#45(%String.cat("Bigger to Int64: ", slightlyBigger#26.toString#62(omitted)));
+    ~console#46.log#45(%String.cat("Smaller to Int64: ", slightlySmaller#27.toString#62(omitted)));
+    ~console#46.log#45(%String.cat("Barely ok to Int64: ", okToConvert64#29.toInt64Unsafe#59().toString#62(omitted)));
+    ~console#46.log#45(%String.cat("Sneaky big to Int64: ", (orelse(sneakyBig#30.toInt64#63()^.toString#62(omitted), "no")): String));
+    ~console#46.log#45(%String.cat("Too big Int64 to Float64: ", (orelse(tooBigForFloat64#28.toFloat64#64()^.toString#48(), "no")): String));
+    ~console#46.log#45(%String.cat("Infinity to Int64: ", (orelse(infinity#21.toInt64#63()^.toString#62(omitted), "no")): String));
+    ~console#46.log#45(%String.cat("NaN to Int64: ", (orelse((nan).toInt64#63()^.toString#62(omitted), "no")): String));
     checkParse#31("-1.5");
     checkParse#31("-0");
     checkParse#31("2.0");

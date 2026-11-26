@@ -144,9 +144,31 @@ impl Translator<'_> {
     /// A class or interface, by its name, imported if it's another
     /// module's.
     pub(super) fn class_ref(&mut self, decl: DeclId) -> Expr {
+        if let Some(name) = self.core_failure(decl) {
+            self.import(name);
+            return Expr::name(name);
+        }
         match self.std_type(decl) {
             Some(name) => Expr::name(name),
             None => Expr::name(self.top(decl)),
+        }
+    }
+
+    /// The runtime's class for one of core's own failure types, as
+    /// `MissingKey`.
+    pub(super) fn core_failure(&self, decl: DeclId) -> Option<&'static str> {
+        let p = self.p;
+        if !temper_tmpl::qname::is_external(p, decl)
+            || temper_tmpl::qname::library_of(p, decl) != "core"
+        {
+            return None;
+        }
+        match p.name(decl) {
+            "CoreError" => Some("CoreError"),
+            "MissingKey" => Some("MissingKey"),
+            "ParseError" => Some("ParseError"),
+            "InvalidCodePoint" => Some("InvalidCodePoint"),
+            _ => None,
         }
     }
 

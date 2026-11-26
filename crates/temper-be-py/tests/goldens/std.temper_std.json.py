@@ -5,7 +5,10 @@ from collections.abc import (
 )
 from temper_core import (
     Bubble as _Bubble,
-    bubble as _bubble,
+    Failure as _Failure,
+    InvalidCodePoint as _InvalidCodePoint,
+    MissingKey as _MissingKey,
+    ParseError as _ParseError,
     cast_none as _cast_none,
     float64_to_int as _float64_to_int,
     float64_to_int64 as _float64_to_int64,
@@ -39,6 +42,7 @@ from temper_core import (
     string_to_float64 as _string_to_float64,
     string_to_int32 as _string_to_int32,
     string_to_int64 as _string_to_int64,
+    with_cause as _with_cause,
 )
 from types import MappingProxyType as _MappingProxyType
 from typing import (
@@ -48,6 +52,9 @@ from typing import (
 )
 
 __all__ = (
+    'JsonError',
+    'JsonSyntaxError',
+    'JsonShapeError',
     'InterchangeContext',
     'NullInterchangeContext',
     'JsonParseErrorReceiver',
@@ -78,6 +85,42 @@ __all__ = (
 )
 
 _T = _TypeVar('_T')
+
+
+class JsonError(_Failure, Exception):
+    __slots__ = ()
+
+
+class JsonSyntaxError(JsonError):
+    __slots__ = ('_problem',)
+    _problem: str
+
+    def __init__(self, /, problem: str) -> None:
+        self._problem = problem
+
+    @property
+    def problem(self, /) -> str:
+        return self._problem
+
+    @property
+    def message(self, /) -> str:
+        return f'json syntax error (problem: {self._problem})'
+
+
+class JsonShapeError(JsonError):
+    __slots__ = ('_problem',)
+    _problem: str
+
+    def __init__(self, /, problem: str) -> None:
+        self._problem = problem
+
+    @property
+    def problem(self, /) -> str:
+        return self._problem
+
+    @property
+    def message(self, /) -> str:
+        return f'json shape error (problem: {self._problem})'
 
 
 class InterchangeContext(metaclass=_ABCMeta):
@@ -195,7 +238,7 @@ class JsonObject(JsonSyntaxTree):
     def property_value_or_bubble(self, property_key: str, /) -> JsonSyntaxTree:
         subject: JsonSyntaxTree | None = self.property_value_or_null(property_key)
         if subject is None:
-            raise _Bubble()
+            raise JsonShapeError(f'expected property {property_key}')
         else:
             return subject
 
@@ -410,13 +453,13 @@ class JsonNumericToken(JsonNumeric):
     def as_int32(self, /) -> int:
         try:
             return _string_to_int32(self._content)
-        except _Bubble:
+        except _ParseError:
             return _float64_to_int(_string_to_float64(self._content))
 
     def as_int64(self, /) -> int:
         try:
             return _string_to_int64(self._content)
-        except _Bubble:
+        except _ParseError:
             return _float64_to_int64(_string_to_float64(self._content))
 
     def as_float64(self, /) -> float:
@@ -560,7 +603,7 @@ class JsonTextProducer(JsonProducer):
         if self._well_formed and (len(self._stack) == 1 and self._state() == _json_state_one_value):
             return ''.join(self._buffer)
         else:
-            raise _Bubble()
+            raise JsonSyntaxError('expected one JSON value')
 
 
 class JsonSyntaxTreeProducer(JsonProducer, JsonParseErrorReceiver):
@@ -610,13 +653,13 @@ class JsonSyntaxTreeProducer(JsonProducer, JsonParseErrorReceiver):
                     t_0: _Sequence[JsonSyntaxTree]
                     try:
                         t_0 = _mapped_get(m, key)
-                    except _Bubble as t_1:
+                    except _MissingKey as t_1:
                         raise BaseException('panic') from t_1
                     _map_builder_set(mb, key, list(t_0))
                 t_2: _MutableSequence[JsonSyntaxTree]
                 try:
                     t_2 = _mapped_get(mb, key)
-                except _Bubble as t_3:
+                except _MissingKey as t_3:
                     raise BaseException('panic') from t_3
                 t_2.append(value)
             else:
@@ -662,12 +705,12 @@ class JsonSyntaxTreeProducer(JsonProducer, JsonParseErrorReceiver):
         self._store_value(JsonString(x))
 
     def to_json_syntax_tree(self, /) -> JsonSyntaxTree:
-        if len(self._stack) != 1 or self._error is not None:
-            raise _Bubble()
-        ls = _list_get(self._stack, 0)
-        if len(ls) != 1:
-            raise _Bubble()
-        return _list_get(ls, 0)
+        error: str | None = self._error
+        if error is not None:
+            raise JsonSyntaxError(error)
+        if len(self._stack) != 1 or len(_list_get(self._stack, 0)) != 1:
+            raise JsonSyntaxError('expected one JSON value')
+        return _list_get(_list_get(self._stack, 0), 0)
 
     @property
     def json_error(self, /) -> str | None:
@@ -796,7 +839,7 @@ def _parse_json_string_to(source_text: str, i: int, sb: list[str], err_out: Json
             if lead_surrogate >= 0:
                 try:
                     sb.append(_string_from_code_point(lead_surrogate))
-                except _Bubble as t_1:
+                except _InvalidCodePoint as t_1:
                     raise BaseException('panic') from t_1
             if 55296 <= decoded_cp and decoded_cp <= 56319:
                 lead_surrogate = decoded_cp
@@ -804,7 +847,7 @@ def _parse_json_string_to(source_text: str, i: int, sb: list[str], err_out: Json
                 lead_surrogate = -1
                 try:
                     sb.append(_string_from_code_point(decoded_cp))
-                except _Bubble as t_2:
+                except _InvalidCodePoint as t_2:
                     raise BaseException('panic') from t_2
             consumed = i_next
         i = i_next
@@ -815,7 +858,7 @@ def _parse_json_string_to(source_text: str, i: int, sb: list[str], err_out: Json
         if lead_surrogate >= 0:
             try:
                 sb.append(_string_from_code_point(lead_surrogate))
-            except _Bubble as t_3:
+            except _InvalidCodePoint as t_3:
                 raise BaseException('panic') from t_3
         else:
             sb.append(source_text[consumed : i])
@@ -1022,8 +1065,8 @@ def _parse_json_number(source_text: str, i: int, out: JsonProducer, /) -> int:
         if n_exponent_digits != 0 or n_digits_after_point != 0:
             try:
                 double_value = _string_to_float64(numeric_token_string)
-            except _Bubble:
-                pass
+            except _ParseError:
+                double_value = float('nan')
         if not _float_eq(double_value, -float('inf')) and (not _float_eq(double_value, float('inf')) and not _float_eq(double_value, float('nan'))):
             out.float64_value(double_value)
         else:
@@ -1080,6 +1123,10 @@ class JsonAdapter(_Generic[_T], metaclass=_ABCMeta):
         ...
 
 
+def _shape_error(wanted: str, /) -> JsonShapeError:
+    return JsonShapeError(f'expected {wanted}')
+
+
 class _BooleanJsonAdapter(JsonAdapter[bool]):
     __slots__ = ()
 
@@ -1090,7 +1137,7 @@ class _BooleanJsonAdapter(JsonAdapter[bool]):
         if isinstance(t, JsonBoolean):
             return t.content
         else:
-            raise _Bubble()
+            raise _shape_error('Boolean')
 
 
 def boolean_json_adapter() -> JsonAdapter[bool]:
@@ -1105,9 +1152,12 @@ class _Float64JsonAdapter(JsonAdapter[float]):
 
     def decode_from_json(self, t: JsonSyntaxTree, ic: InterchangeContext, /) -> float:
         if isinstance(t, JsonNumeric):
-            return t.as_float64()
+            try:
+                return t.as_float64()
+            except _ParseError as failure:
+                raise _with_cause(_shape_error('Float64'), failure)
         else:
-            raise _Bubble()
+            raise _shape_error('Float64')
 
 
 def float64_json_adapter() -> JsonAdapter[float]:
@@ -1122,9 +1172,12 @@ class _Int32JsonAdapter(JsonAdapter[int]):
 
     def decode_from_json(self, t: JsonSyntaxTree, ic: InterchangeContext, /) -> int:
         if isinstance(t, JsonNumeric):
-            return t.as_int32()
+            try:
+                return t.as_int32()
+            except _ParseError as failure:
+                raise _with_cause(_shape_error('Int'), failure)
         else:
-            raise _Bubble()
+            raise _shape_error('Int')
 
 
 def int32_json_adapter() -> JsonAdapter[int]:
@@ -1139,9 +1192,12 @@ class _Int64JsonAdapter(JsonAdapter[int]):
 
     def decode_from_json(self, t: JsonSyntaxTree, ic: InterchangeContext, /) -> int:
         if isinstance(t, JsonNumeric):
-            return t.as_int64()
+            try:
+                return t.as_int64()
+            except _ParseError as failure:
+                raise _with_cause(_shape_error('Int64'), failure)
         else:
-            raise _Bubble()
+            raise _shape_error('Int64')
 
 
 def int64_json_adapter() -> JsonAdapter[int]:
@@ -1158,7 +1214,7 @@ class _StringJsonAdapter(JsonAdapter[str]):
         if isinstance(t, JsonString):
             return t.content
         else:
-            raise _Bubble()
+            raise _shape_error('String')
 
 
 def string_json_adapter() -> JsonAdapter[str]:
@@ -1184,7 +1240,12 @@ class _ListJsonAdapter(JsonAdapter[_Sequence[_T]], _Generic[_T]):
 
     def decode_from_json(self, t: JsonSyntaxTree, ic: InterchangeContext, /) -> _Sequence[_T]:
         b: _MutableSequence[_T] = []
-        elements = t.elements if isinstance(t, JsonArray) else _bubble()
+        t_0: _Sequence[JsonSyntaxTree]
+        if isinstance(t, JsonArray):
+            t_0 = t.elements
+        else:
+            raise _shape_error('List')
+        elements = t_0
         n = len(elements)
         i = 0
         while i < n:

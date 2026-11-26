@@ -228,6 +228,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Translate(int64_to_string),
     ),
     (
+        "core.type InvalidCodePoint.constructor()",
+        Connection::Static("InvalidCodePoint", "make"),
+    ),
+    (
         "core.type List.get length()",
         Connection::Templated("List::length"),
     ),
@@ -300,7 +304,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ("core.type Listed.get()", Connection::Templated("List::get")),
     (
         "core.type Listed.getOr()",
-        Connection::Templated("List::getOr"),
+        Connection::Translate(listed_get_or),
     ),
     ("core.type Listed.join()", Connection::Call("List::join")),
     ("core.type Listed.map()", Connection::Call("List::map")),
@@ -362,7 +366,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "core.type Mapped.getOr()",
-        Connection::Templated("Mapped::getOr"),
+        Connection::Translate(mapped_get_or),
     ),
     (
         "core.type Mapped.has()",
@@ -393,8 +397,16 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Templated("Mapped::values"),
     ),
     (
+        "core.type MissingKey.constructor()",
+        Connection::Static("MissingKey", "make"),
+    ),
+    (
         "core.type Pair.constructor()",
         Connection::Making("PairFactory::make"),
+    ),
+    (
+        "core.type ParseError.constructor()",
+        Connection::Static("ParseError", "make"),
     ),
     (
         "core.type PromiseBuilder.breakPromise()",
@@ -547,14 +559,6 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Call("Regex::compileFormatted"),
     ),
     (
-        "std/temporal.type Date.constructor()",
-        Connection::Made("Date::makeDate"),
-    ),
-    (
-        "std/temporal.type Date.fromIsoString()",
-        Connection::Made("Date::fromIso"),
-    ),
-    (
         "std/temporal.type Date.get dayOfWeek()",
         Connection::Translate(date_day_of_week),
     ),
@@ -587,13 +591,20 @@ pub const TABLE: &[(&str, Connection)] = &[
 /// runtime's, as Kotlin's.
 pub const TYPES: &[(&str, &str)] = &[
     ("core.type Console", "std::shared_ptr<core::Console::Type>"),
+    ("core.type CoreError", "std::shared_ptr<core::CoreError>"),
     (
         "core.type DenseBitVector",
         "std::shared_ptr<std::vector<bool>>",
     ),
     ("core.type Empty", "std::shared_ptr<core::Empty>"),
     ("core.type Error", "std::shared_ptr<core::Failure>"),
+    (
+        "core.type InvalidCodePoint",
+        "std::shared_ptr<core::InvalidCodePoint>",
+    ),
+    ("core.type MissingKey", "std::shared_ptr<core::MissingKey>"),
     ("core.type NoStringIndex", "int32_t"),
+    ("core.type ParseError", "std::shared_ptr<core::ParseError>"),
     (
         "core.type StringBuilder",
         "std::shared_ptr<std::ostringstream>",
@@ -761,6 +772,39 @@ fn float64_near(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet>
     Ok(t.core("Float64::near").call(out))
 }
 
+/// `core::Mapped::getOr<K, V>(m, k, fallback)`, or where the fallback
+/// is null and the values aren't nullable, `getOrNull`, whose result
+/// is a `NullableParam` of them.
+fn mapped_get_or(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    get_or(t, args, "Mapped")
+}
+
+/// As [`mapped_get_or`], for `core::List`.
+fn listed_get_or(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    get_or(t, args, "List")
+}
+
+fn get_or(t: &mut Translator<'_>, args: &[NodeId], by: &str) -> Result<Expr, NotYet> {
+    let &[receiver, _, fallback] = args else {
+        return Err(NotYet {
+            what: "`getOr` without a key and a fallback".into(),
+        });
+    };
+    let p = t.program();
+    let receiver_args = p.types.args(p.nodes.ty(receiver));
+    let element = receiver_args.last().copied();
+    let wanted = p.nodes.ty(fallback);
+    // A class's `shared_ptr` is nullable itself.
+    let widened = match element {
+        Some(e) => t.type_text(e)? != t.type_text(wanted)?,
+        None => false,
+    };
+    let method = if widened { "getOrNull" } else { "getOr" };
+    let targs = t.receiver_template_args(receiver)?;
+    let args = t.runtime_call_args(args)?;
+    Ok(t.core(&format!("{by}::{method}{targs}")).call(args))
+}
+
 /// `(core::Date::getDayOfWeek(d) + 6) % 7 + 1`: ISO's weekday, Sunday 7,
 /// where the runtime's, as Kotlin's, gives Sunday 0
 /// (notes/kotlin-differences.md); 7 stays 7 should the runtime's change.
@@ -789,9 +833,7 @@ pub const STD: &[&str] = &[
     "std/regex.type RegexFormatter.pushCaptureName()",
     "std/regex.type RegexFormatter.pushCodeTo()",
     "std/regex.type RegexFormatter.regexCompileFormatted()",
-    "std/temporal.type Date.constructor()",
     "std/temporal.type Date.day",
-    "std/temporal.type Date.fromIsoString()",
     "std/temporal.type Date.get dayOfWeek()",
     "std/temporal.type Date.month",
     "std/temporal.type Date.toString()",

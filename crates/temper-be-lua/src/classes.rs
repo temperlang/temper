@@ -221,26 +221,38 @@ impl Types {
 
 impl Translator<'_> {
     /// A type's table, as code refers to it.
-    /// Core's `Error`, the root of declared failures, is the runtime's
-    /// `temper.Failure`.
+    /// Core's failure types are the runtime's: `Error`, the root of
+    /// declared failures, its `temper.Failure`, and `MissingKey` its
+    /// `temper.MissingKey`.
     pub(crate) fn type_ref(&self, ty: DeclId) -> Expr {
-        if self.is_failure_root(ty) {
-            return ops::temper().member("Failure");
+        if let Some(name) = self.core_failure(ty) {
+            return ops::temper().member(name);
         }
         self.access(ty)
     }
 
-    /// Whether a type is core's `Error`, the root of declared failures.
-    pub(crate) fn is_failure_root(&self, ty: DeclId) -> bool {
-        is_external(self.p, ty) && self.qname(ty) == "core.type Error"
+    /// The runtime's name for one of core's failure types: `Failure` for
+    /// `Error`, the root, and the type's own for the others.
+    pub(crate) fn core_failure(&self, ty: DeclId) -> Option<&'static str> {
+        if !is_external(self.p, ty) {
+            return None;
+        }
+        match self.qname(ty).as_str() {
+            "core.type Error" => Some("Failure"),
+            "core.type CoreError" => Some("CoreError"),
+            "core.type MissingKey" => Some("MissingKey"),
+            "core.type ParseError" => Some("ParseError"),
+            "core.type InvalidCodePoint" => Some("InvalidCodePoint"),
+            _ => None,
+        }
     }
 
     /// A type's name, for the runtime and for LuaLS: its module's path,
-    /// with `.` for `/`, and its name; for core's `Error`, the runtime's
-    /// `temper.Failure`.
+    /// with `.` for `/`, and its name; for core's failure types, the
+    /// runtime's, as `temper.Failure`.
     pub(crate) fn lua_type(&self, ty: DeclId) -> String {
-        if self.is_failure_root(ty) {
-            return "temper.Failure".to_string();
+        if let Some(name) = self.core_failure(ty) {
+            return format!("temper.{name}");
         }
         let module = home(self.p, ty).unwrap_or(ty);
         format!(

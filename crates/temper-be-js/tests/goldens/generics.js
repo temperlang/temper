@@ -1,5 +1,5 @@
 import {
-  isBubble,
+  MissingKey,
   listBuilderAdd,
   listBuilderRemoveLast,
   listBuilderSet,
@@ -10,6 +10,7 @@ import {
   mapBuilderRemove,
   mapConstructor,
   mappedGet,
+  mappedGetOr,
   pairConstructor,
   type,
 } from "@temperlang/core";
@@ -233,6 +234,7 @@ function both() {
 /**
  * @param {string} key
  * @returns {number}
+ * @throws {MissingKey}
  */
 function bump(key) {
   {
@@ -416,7 +418,7 @@ let t$19;
 try {
   t$19 = mappedGet(m, "b");
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof MissingKey)) throw e$;
   t$19 = -1;
 }
 /** @type {number} */
@@ -424,7 +426,7 @@ let t$20;
 try {
   t$20 = mappedGet(m, "c");
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof MissingKey)) throw e$;
   t$20 = -1;
 }
 console.log(`${t$19} ${t$20} ${m.has("a")} ${m.size}`);
@@ -436,17 +438,11 @@ console.log(`${(mb.has("q") ? /** @type {number | null} */ (mb.get("q")) : 0) ??
 /** @type {string | null} */
 let t$21;
 {
-  /** @type {number | null} */
-  let subject6;
-  try {
-    subject6 = mapBuilderRemove(mb, "q");
-  } catch (e$) {
-    if (!isBubble(e$)) throw e$;
-    subject6 = 0;
-  }
+  const subject6 = mapBuilderRemove(mb, "q");
   t$21 = subject6 == null ? null : subject6.toString();
 }
 console.log(t$21 ?? "null");
+console.log(`${mappedGetOr(mb, "z", null) ?? -3} ${listedGetOr(/** @type {string[]} */ (built), 7, null) ?? "none"}`);
 console.log(Object.freeze(Array.from(mb.keys())).length.toString());
 indexed();
 both();
@@ -458,7 +454,7 @@ let t$22;
 try {
   t$22 = bump("k");
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof MissingKey)) throw e$;
   t$22 = -1;
 }
 /** @type {number} */
@@ -466,7 +462,7 @@ let t$23;
 try {
   t$23 = bump("z");
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof MissingKey)) throw e$;
   t$23 = -1;
 }
 /** @type {number} */
@@ -474,7 +470,7 @@ let t$24;
 try {
   t$24 = mappedGet(tally, "k");
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof MissingKey)) throw e$;
   t$24 = -1;
 }
 console.log(`${t$22} ${t$23} ${t$24}`);

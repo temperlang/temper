@@ -1,4 +1,3 @@
-using TemperLang.Core;
 using TemperLang.Std.Json;
 
 namespace JsonAdapters;
@@ -7,10 +6,19 @@ internal interface IShape
 {
     void EncodeToJson(IJsonProducer p);
 
+    /// <exception cref="JsonException">Where it fails with JsonException.</exception>
     public static IShape DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
         {
-            JsonObject obj = t is JsonObject ? (JsonObject)t : Core.Bubble<JsonObject>();
+            JsonObject obj;
+            if (t is JsonObject)
+            {
+                obj = (JsonObject)t;
+            }
+            else
+            {
+                throw new JsonShapeException("expected Shape JSON object");
+            }
             IJsonSyntaxTree? valueForRadius = obj.PropertyValueOrNull("radius");
             {
                 if (valueForRadius != null)
@@ -22,7 +30,7 @@ internal interface IShape
                     return Rect.JsonAdapter().DecodeFromJson(obj, ic);
                 }
             }
-            return Core.Bubble<IShape>();
+            throw new JsonShapeException("expected one of Shape's JSON shapes");
         }
     }
 

@@ -2,9 +2,9 @@ package indices;
 
 import java.util.List;
 import java.util.logging.Logger;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
+import temper.core.InvalidCodePoint;
 
 public final class IndicesGlobal {
     private IndicesGlobal() {}
@@ -28,14 +28,14 @@ public final class IndicesGlobal {
         String t;
         try {
             t = Core.stringFromCodePoint(a);
-        } catch (Bubble ignored) {
+        } catch (InvalidCodePoint ignored) {
             t = "?";
         }
         String t2 = "'" + t + "' is " + relPos + " '";
         String t3;
         try {
             t3 = Core.stringFromCodePoint(b);
-        } catch (Bubble ignored2) {
+        } catch (InvalidCodePoint ignored2) {
             t3 = "?";
         }
         console.log(t2 + t3 + "' in \"" + s + "\".");
@@ -84,7 +84,7 @@ public final class IndicesGlobal {
                 String t;
                 try {
                     t = Core.stringFromCodePoint(c);
-                } catch (Bubble ignored) {
+                } catch (InvalidCodePoint ignored) {
                     t = "?";
                 }
                 console.log("'" + t + "' in \"" + s + "\": " + (has0(s, c) ? "y" : "n") + ", " + (has1(s, c) ? "y" : "n") + ", " + (has2(s, c) ? "y" : "n") + ", " + (has3(s, c) ? "y" : "n") + ", " + (has4(s, c) ? "y" : "n"));

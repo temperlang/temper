@@ -25,9 +25,19 @@ internal class Celsius
         p.Int32_Value(this.degrees);
     }
 
+    /// <exception cref="JsonException">Where it fails with JsonException.</exception>
     public static Celsius DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
-        return new Celsius(Core.Cast<IJsonNumeric>(t).AsInt32());
+        int t1;
+        try
+        {
+            t1 = Core.Cast<IJsonNumeric>(t).AsInt32();
+        }
+        catch (ParseError failure)
+        {
+            throw Core.WithCause(new JsonShapeException("expected degrees"), failure);
+        }
+        return new Celsius(t1);
     }
 
     public static IJsonAdapter<Celsius> JsonAdapter()

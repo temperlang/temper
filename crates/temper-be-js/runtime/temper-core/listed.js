@@ -166,12 +166,13 @@ export const listedGet = (ls, i) => {
 }
 
 /**
- * Implements extension method core.type Listed.getOr()
- * @template T
+ * Implements extension method core.type Listed.getOr(), whose fallback
+ * may be null where `T` isn't.
+ * @template T, R
  * @param {T[]} ls
  * @param {number} i
- * @param {T} fallback
- * @returns {T}
+ * @param {R} fallback
+ * @returns {T | R}
  */
 export const listedGetOr = (ls, i, fallback) => {
   let { length } = ls;

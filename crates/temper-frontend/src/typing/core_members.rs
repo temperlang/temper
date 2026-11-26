@@ -28,7 +28,7 @@ use crate::corelib::TEXT as CORE;
 /// The builtin types whose members are read: first the final ones, which
 /// no other type extends, then the generic ones, then the rest whose
 /// members are used.
-const READ_TYPES: [&str; 26] = [
+const READ_TYPES: [&str; 30] = [
     "Boolean",
     "Int32",
     "Int64",
@@ -55,6 +55,10 @@ const READ_TYPES: [&str; 26] = [
     "NoStringIndex",
     "DenseBitVector",
     FAILURE_ROOT,
+    "CoreError",
+    "MissingKey",
+    "ParseError",
+    "InvalidCodePoint",
 ];
 
 /// A type in a member's signature.
@@ -737,14 +741,12 @@ mod tests {
         let int = builtin("Int");
         let string = builtin("String");
         let to_int = find("String", "toInt32");
-        let throws =
-            |t: &CoreType| CoreType::Throws(Box::new(t.clone()), Box::new(builtin("Bubble")));
         assert_eq!(
             to_int.kind,
             CoreMemberKind::Method {
                 type_params: Vec::new(),
                 params: vec![(int.clone(), true)],
-                ret: throws(&int),
+                ret: CoreType::Throws(Box::new(int.clone()), Box::new(builtin("ParseError"))),
             }
         );
         assert!(find("String", "fromCodePoint").is_static);
@@ -777,7 +779,13 @@ mod tests {
                 .all(|m| m.name != "content")
         );
         // Each type is found, though some declare no members.
-        let empty = ["DoneResult", "GeneratorResult", "Promise", "NoStringIndex"];
+        let empty = [
+            "DoneResult",
+            "GeneratorResult",
+            "Promise",
+            "NoStringIndex",
+            "CoreError",
+        ];
         // The final types come first, the generic ones after, then the
         // rest.
         for (i, ty) in READ_TYPES.into_iter().enumerate() {
@@ -853,7 +861,10 @@ mod tests {
             CoreMemberKind::Method {
                 type_params: Vec::new(),
                 params: vec![(t.clone(), false)],
-                ret: CoreType::Throws(Box::new(CoreType::Param(1)), Box::new(builtin("Bubble"))),
+                ret: CoreType::Throws(
+                    Box::new(CoreType::Param(1)),
+                    Box::new(builtin("MissingKey"))
+                ),
             }
         );
         assert_eq!(find("Pair", "key").kind, CoreMemberKind::Value(t.clone()));

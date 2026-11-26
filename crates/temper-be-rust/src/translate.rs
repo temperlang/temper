@@ -504,6 +504,11 @@ impl<'a> Translator<'a> {
                         "core.type ValueResult" => return Ok(texts.join(", ")),
                         "core.type DoneResult" => return Ok("()".into()),
                         "core.type DenseBitVector" => "temper_core::DenseBitVector".into(),
+                        // Core's own failures, the runtime's.
+                        "core.type CoreError" => "temper_core::CoreError".into(),
+                        "core.type MissingKey" => "temper_core::MissingKey".into(),
+                        "core.type ParseError" => "temper_core::ParseError".into(),
+                        "core.type InvalidCodePoint" => "temper_core::InvalidCodePoint".into(),
                         // Core's root of declared failures, any library's
                         // failure, as a failure's cause is.
                         "core.type Error" => {
@@ -2181,6 +2186,11 @@ impl<'a> Translator<'a> {
             ),
             _ => false,
         }
+    }
+
+    /// The program translated, for connections' hooks.
+    pub(crate) fn program(&self) -> &'a Program {
+        self.p
     }
 
     pub(crate) fn handle_ref(&mut self, id: NodeId) -> R<Expr> {

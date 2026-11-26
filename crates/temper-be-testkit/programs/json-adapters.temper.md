@@ -5,14 +5,17 @@ built-in types read and written directly, a nullable field, a list of
 another `@json` class, and a field `@jsonName` renames; a sealed
 interface whose decoder tells its classes apart by their properties,
 and one by a `@jsonExtra` value; and a class that encodes itself.
-Decoding bubbles on a missing property and on a value no class has.
+Decoding throws a `JsonShapeError`, a `JsonError`, on a missing property
+and on a value no class has, which says what it expected.
 The log is what the interpreter gives.
 
     let {
       InterchangeContext,
       JsonAdapter,
+      JsonError,
       JsonNumeric,
       JsonProducer,
+      JsonShapeError,
       JsonSyntaxTree,
       JsonTextProducer,
       NullInterchangeContext,
@@ -49,8 +52,8 @@ The log is what the interpreter gives.
       public static decodeFromJson(
         t: JsonSyntaxTree,
         ic: InterchangeContext,
-      ): Celsius throws Bubble {
-        new Celsius((t as JsonNumeric).asInt32())
+      ): Celsius throws JsonError {
+        new Celsius((t as JsonNumeric).asInt32() orelse throw new JsonShapeError("expected degrees"))
       }
     }
 
@@ -60,7 +63,7 @@ The log is what the interpreter gives.
       p.toJsonString() orelse "bad JSON"
     }
 
-    let decode<T>(adapter: JsonAdapter<T>, text: String): T throws Bubble {
+    let decode<T>(adapter: JsonAdapter<T>, text: String): T throws JsonError {
       adapter.decodeFromJson(parseJson(text), NullInterchangeContext.instance)
     }
 
@@ -92,10 +95,10 @@ The log is what the interpreter gives.
       "{\"name\": \"Bo\", \"is-active\": false, \"score\": 2, \"big\": 7, \"nickname\": \"B\", \"points\": []}",
     ) orelse panic();
     console.log("${record.name} ${record.active} ${record.nickname ?? "none"} ${record.points.length}");
-    console.log(do { decode(Point.jsonAdapter(), "{\"x\": 1}"); "decoded" } orelse "no y");
+    console.log(do { decode(Point.jsonAdapter(), "{\"x\": 1}"); "decoded" } catch (e) { e.message });
     console.log(
       do { decode(Message.jsonAdapter(), "{\"kind\": \"what\", \"text\": \"?\"}"); "decoded" }
-        orelse "no such kind"
+        catch (e) { e.message }
     );
 
 ```log
@@ -106,6 +109,6 @@ The log is what the interpreter gives.
 21
 rect 5x6
 Bo false B 0
-no y
-no such kind
+json shape error (problem: expected property y)
+json shape error (problem: expected one of Message's JSON shapes)
 ```

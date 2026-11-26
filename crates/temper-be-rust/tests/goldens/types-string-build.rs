@@ -23,8 +23,11 @@ pub(crate) fn init() -> temper_core::Result<()> {
             if temper_core::string::builder::append_code_point(&builder, 1114112).is_err() {
                 println!("High code blocked.");
             }
-            if temper_core::string::builder::append_code_point(&builder, 55296).is_err() {
-                println!("Surrogate blocked.");
+            if let Err(e) = temper_core::string::builder::append_code_point(&builder, 55296) {
+                println!(
+                    "Surrogate 0x{} blocked.",
+                    temper_core::int_to_string(e.code_point(), Some(16))
+                );
             }
             println!("{}", temper_core::string::builder::to_string(&builder));
             temper_core::string::builder::clear(&builder);

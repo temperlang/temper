@@ -253,7 +253,7 @@ Converting between `Int64` and `Float64` is potentially lossy, either direction.
     let notSoSmall = -0x8000_0000i64 * oneInt64;
     let slightlyBigger = (notSoBig.toFloat64Unsafe() + 1.5).toInt64Unsafe();
     let slightlySmaller = (notSoSmall.toFloat64Unsafe() - 1.5).toInt64Unsafe();
-    let tooBigForFloat64 = 0x20_0000_0000_0000i64 * one.toInt64();
+    let tooBigForFloat64 = 0x20_0000_0000_0000i64 * oneInt64;
     let okToConvert64 = (tooBigForFloat64 - 1i64).toFloat64Unsafe();
     let sneakyBig = okToConvert64 + 1.0;
 

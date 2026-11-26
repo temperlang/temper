@@ -6,6 +6,9 @@
 #include <vector>
 #include "temper_bubble.hpp"
 #include "base_types.hpp"
+#include "expected.hpp"
+#include "failure.hpp"
+#include "nullable_param.hpp"
 #include "pair.hpp"
 
 namespace temper {
@@ -24,13 +27,32 @@ namespace temper {
                 return static_cast<int32_t>(m->data.size());
             }
 
+            // The key's value, or a `MissingKey` failure.
             template<class Key, class Value>
-            Value get(const std::shared_ptr<Ordered<Key, Value>>& m, Key key) {
+            Expected<Value, std::shared_ptr<MissingKey>> get(
+                const std::shared_ptr<Ordered<Key, Value>>& m,
+                Key key
+            ) {
                 typename std::map<Key, Value>::iterator it = m->data.find(key);
                 if (it == m->data.end()) {
-                    bubble<Value>("key not found");
+                    return unexpected(MissingKey::of(key));
                 }
                 return it->second;
+            }
+
+            // The key's value, or `fallback`, which may be null where
+            // `Value` isn't nullable: `getOr` given a null.
+            template<class Key, class Value>
+            NullableParam<Value> getOrNull(
+                const std::shared_ptr<Ordered<Key, Value>>& m,
+                Key key,
+                NullableParam<Value> fallback
+            ) {
+                typename std::map<Key, Value>::iterator it = m->data.find(key);
+                if (it != m->data.end()) {
+                    return it->second;
+                }
+                return fallback;
             }
 
             template<class Key, class Value>

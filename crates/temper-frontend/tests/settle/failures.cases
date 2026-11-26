@@ -334,17 +334,105 @@ let d = lookup("a") catch (e) { do { sign(e.key) } catch (f) { console.log(f.tex
 error 528..579: Cannot assign to SignError? from Error?
 log a
 
+=== core's failure types: MissingKey under CoreError, joined with others' as Error
+sealed interface AppError extends Error {}
+class NotFound(public key: String) extends AppError {}
+let m = new Map([new Pair("a", 1)]);
+let lookup(key: String): Int throws NotFound { throw new NotFound(key) }
+let viaRoot(k: String): Int throws CoreError { m[k] }
+let own(k: String): Int throws MissingKey { throw new MissingKey(k) }
+let which(k: String): String {
+  do { lookup(k); m[k].toString() } catch (e) {
+    when (e) { is MissingKey -> "missing"; is NotFound -> "not found ${e.key}"; else -> "other" }
+  }
+}
+let c: CoreError? = do { viaRoot("z"); null } catch (e) { e };
+let n: NotFound? = do { m["z"]; null } catch (e) { e };
+console.log("${which("a")} ${c is MissingKey} ${(own("q") catch (e) { e.message })}");
+viaRoot("y");
+--- settled
+(Block
+  (Interface ^AppError:0 Error)
+  (Class ^NotFound:1 AppError:0 (Param ^key:11 String))
+  (Let ^m:2 (Call new Map (Call list (Call new Pair "a" 1))))
+  (Let
+    ^lookup:3
+    (Fn
+      (Let ^key:12 String)
+      (Call throws Int NotFound:1)
+      (Block (Fail (Call new NotFound:1 key:12)))))
+  (Let
+    ^viaRoot:4
+    (Fn
+      (Let ^k:13 String)
+      (Call throws Int CoreError)
+      (Block (Call [] m:2 k:13))))
+  (Let
+    ^own:5
+    (Fn
+      (Let ^k:14 String)
+      (Call throws Int MissingKey)
+      (Block (Fail (Call new MissingKey k:14)))))
+  (Let
+    ^which:6
+    (Fn
+      (Let ^k:15 String)
+      String
+      (Block
+        (Orelse
+          (Block
+            (Call lookup:3 k:15)
+            (Call (Call . (Call [] m:2 k:15) \toString)))
+          (Block
+            (Let ^e:16 (Call caught))
+            (Block
+              (If
+                (Call is e:16 MissingKey)
+                "missing"
+                (If
+                  (Call is e:16 NotFound:1)
+                  (Call cat "not found " (Call . e:16 \key))
+                  "other"))))))))
+  (Let
+    ^c:7
+    (Call ? CoreError)
+    (Orelse
+      (Block (Call viaRoot:4 "z") null)
+      (Block (Let ^e:17 (Call caught)) e:17)))
+  (Let
+    ^n:8
+    (Call ? NotFound:1)
+    (Orelse
+      (Block (Call [] m:2 "z") null)
+      (Block (Let ^e:18 (Call caught)) e:18)))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call which:6 "a")
+      " "
+      (Call is c:7 MissingKey)
+      " "
+      (Orelse
+        (Call own:5 "q")
+        (Block (Let ^e:19 (Call caught)) (Call . e:19 \message)))))
+  (Call viaRoot:4 "y")
+  #void)
+error 597..632: Cannot assign to NotFound? from MissingKey?
+log not found a true missing key (key: q)
+Failed with MissingKey: missing key (key: y), at test.temper:5:48
+
 === Bubble and declared failures don't mix
 sealed interface AppError extends Error {}
 class NotFound(public key: String) extends AppError {}
 let lookup(key: String): Int throws NotFound { throw new NotFound(key) }
 let a(): Int throws Bubble { lookup("a") }
 let b(): Int throws NotFound { bubble() }
-let c(s: String): Int throws NotFound { s.toInt32() }
+let c(s: String): Int throws NotFound { s.toInt32() orelse bubble() }
 let d(): Int throws Bubble { lookup("d") catch { bubble() } }
-let e(s: String): Int throws NotFound { s.toInt32() catch { throw new NotFound(s) } }
-let f(s: String): Int { s.toInt32() catch (x) { 0 } }
-let g(s: String): Int { s.toInt32() catch { 0 } }
+let e(s: String): Int throws NotFound { (s.toInt32() orelse bubble()) catch { throw new NotFound(s) } }
+let f(s: String): Int { (s.toInt32() orelse bubble()) catch (x) { 0 } }
+let g(s: String): Int { (s.toInt32() orelse bubble()) catch { 0 } }
 --- settled
 (Block
   (Interface ^AppError:0 Error)
@@ -362,7 +450,7 @@ let g(s: String): Int { s.toInt32() catch { 0 } }
     (Fn
       (Let ^s:14 String)
       (Call throws Int NotFound:1)
-      (Block (Call (Call . s:14 \toInt32)))))
+      (Block (Orelse (Call (Call . s:14 \toInt32)) (Fail)))))
   (Let
     ^d:6
     (Fn
@@ -375,7 +463,7 @@ let g(s: String): Int { s.toInt32() catch { 0 } }
       (Call throws Int NotFound:1)
       (Block
         (Orelse
-          (Call (Call . s:15 \toInt32))
+          (Orelse (Call (Call . s:15 \toInt32)) (Fail))
           (Block (Fail (Call new NotFound:1 s:15)))))))
   (Let
     ^f:8
@@ -384,18 +472,18 @@ let g(s: String): Int { s.toInt32() catch { 0 } }
       Int
       (Block
         (Orelse
-          (Call (Call . s:16 \toInt32))
+          (Orelse (Call (Call . s:16 \toInt32)) (Fail))
           (Block (Let ^x:17 (Call caught)) 0)))))
   (Let
     ^g:9
     (Fn
       (Let ^s:18 String)
       Int
-      (Block (Orelse (Call (Call . s:18 \toInt32)) (Block 0))))))
+      (Block (Orelse (Orelse (Call (Call . s:18 \toInt32)) (Fail)) (Block 0))))))
 error 200..211: Cannot throw NotFound from a function that throws Bubble; catch it, and bubble() there if need be
 error 245..253: Cannot bubble from a function that throws NotFound; handle it with orelse or catch, and throw a NotFound there if need be
-error 296..307: Cannot bubble from a function that throws NotFound; handle it with orelse or catch, and throw a NotFound there if need be
-error 501..502: A Bubble has no value to bind; catch it without (x), or with orelse
+error 315..323: Cannot bubble from a function that throws NotFound; handle it with orelse or catch, and throw a NotFound there if need be
+error 553..554: A Bubble has no value to bind; catch it without (x), or with orelse
 
 === failure types: non-generic, sealed interfaces, one root each
 // A root is a sealed interface that extends Error itself; a library may
@@ -862,7 +950,7 @@ console.log(show(new NotFound("new")));
   (Call (Call . console \log) (Call show:9 (Call new NotFound:1 "new")))
   #void)
 log lookup failed (name: port) <- not found (key: port)
-log lookup failed (name: x) <- nothing
+log lookup failed (name: x) <- parse error (input: x, reason: not an Int32)
 log lookup failed (name: a) <- not found (key: x)
 log lookup failed (name: f) <- nothing
 log not found (key: k) <- nothing
@@ -930,7 +1018,7 @@ parsed("x");
   (Call parsed:2 "x")
   #void)
 Failed with ParseFailed: parse failed (text: x), at test.temper:4:25
-caused by a bubble
+caused by ParseError: parse error (input: x, reason: not an Int32), at test.temper:4:3
 
 === a panic passes catch
 sealed interface AppError extends Error {}

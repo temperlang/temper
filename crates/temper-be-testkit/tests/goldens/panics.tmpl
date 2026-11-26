@@ -3,100 +3,123 @@ tmpl 1 model 1 library panics 0.0.0
 uses std#16 0.0.0-alpha.0.0 {
   module regex#17 {
     class Regex#18 {
-      method find#84(text: String, begin?: StringIndex#82?): Match#80 throws Bubble;
+      method find#95(text: String, begin?: StringIndex#93?): Match#91 throws Bubble;
     }
-    interface RegexNode#61 {
-      method compiled#62(): Regex#18;
+    interface RegexNode#72 {
+      method compiled#73(): Regex#18;
     }
-    class Repeat#63 extends RegexNode#61 {
-      let item#64: RegexNode#61;
-      let min#65: Int32;
-      let max#66: Int32?;
-      let reluctant#67: Boolean;
-      constructor constructor#68(item: RegexNode#61, min: Int32, max: Int32?, reluctant?: Boolean?): Repeat#63;
+    class Repeat#74 extends RegexNode#72 {
+      let item#75: RegexNode#72;
+      let min#76: Int32;
+      let max#77: Int32?;
+      let reluctant#78: Boolean;
+      constructor constructor#79(item: RegexNode#72, min: Int32, max: Int32?, reluctant?: Boolean?): Repeat#74;
     }
-    class CodeSet#69 extends RegexNode#61 {
-      let items#71: List#29<CodePart#70>;
-      let negated#72: Boolean;
-      constructor constructor#73(items: List#29<CodePart#70>, negated?: Boolean?): CodeSet#69;
+    class CodeSet#80 extends RegexNode#72 {
+      let items#82: List#34<CodePart#81>;
+      let negated#83: Boolean;
+      constructor constructor#84(items: List#34<CodePart#81>, negated?: Boolean?): CodeSet#80;
     }
-    interface CodePart#70 extends RegexNode#61 {}
-    class CodeRange#74 extends CodePart#70 {
-      let min#75: Int32;
-      let max#76: Int32;
-      constructor constructor#77(min: Int32, max: Int32): CodeRange#74;
+    interface CodePart#81 extends RegexNode#72 {}
+    class CodeRange#85 extends CodePart#81 {
+      let min#86: Int32;
+      let max#87: Int32;
+      constructor constructor#88(min: Int32, max: Int32): CodeRange#85;
     }
-    class Group#78 {
-      let value#79: String;
+    class Group#89 {
+      let value#90: String;
     }
-    class Match#80 {
-      let full#81: Group#78;
+    class Match#91 {
+      let full#92: Group#89;
     }
   }
-  module json#100 {
-    interface JsonSyntaxTree#101 {}
-    fn parseJson#102(sourceText: String): JsonSyntaxTree#101 throws Bubble;
-  }
-  module temporal#111 {
-    connected class Date#112 {
-      connected method toString#113(): String;
-      connected constructor constructor#114(year: Int32, month: Int32, day: Int32): Date#112 throws Bubble;
-      connected static fromIsoString#115(isoString: String): Date#112 throws Bubble;
+  module json#28 {
+    interface JsonError#29 extends Error#26 {}
+    class JsonTextProducer#55 extends JsonProducer#56 {
+      constructor constructor#136(interchangeContext?: InterchangeContext#135?): JsonTextProducer#55;
+      method startObject#137(): Void;
+      method toJsonString#138(): String throws JsonSyntaxError#112;
     }
+    interface JsonProducer#56 {}
+    interface JsonSyntaxTree#111 {}
+    class JsonSyntaxError#112 extends JsonError#29 {
+      let problem#140: String;
+    }
+    fn parseJson#113(sourceText: String): JsonSyntaxTree#111 throws JsonSyntaxError#112;
+    interface InterchangeContext#135 {}
+  }
+  module temporal#129 {
+    connected class Date#130 {
+      connected method toString#131(): String;
+      connected constructor constructor#133(year: Int32, month: Int32, day: Int32): Date#130 throws TemporalError#132;
+      connected static fromIsoString#134(isoString: String): Date#130 throws TemporalError#132;
+    }
+    interface TemporalError#132 extends Error#26 {}
   }
 }
 
-uses `temper-core`#28 0.0.0-alpha.0.0 {
-  class List#29<T#30> extends Listed#31<T#30> {}
-  interface Listed#31<T#32> {}
-  class MapBuilder#36<K#37 extends MapKey#39<K#37>, V#38> extends Mapped#41<K#37, V#38> {
-    connected constructor constructor#109(): MapBuilder#36<K#37, V#38>;
-    connected method remove#110(key: K#37): V#38 throws Bubble;
+uses `temper-core`#23 0.0.0-alpha.0.0 {
+  class InvalidCodePoint#24 extends CoreError#25 {
+    let codePoint#121: Int32;
   }
-  interface MapKey#39<EQ#40> {}
-  interface Mapped#41<K#42 extends MapKey#39<K#42>, V#43> {}
-  class String#57 {
-    connected method toInt32#58(radix?: Int32): Int32 throws Bubble;
-    connected method toFloat64#59(): Float64 throws Bubble;
-    connected static fromCodePoint#60(codePoint: Int32): String throws Bubble;
-    connected method toInt64#103(radix?: Int32): Int64 throws Bubble;
-    connected static fromCodePoints#108(codePoints: Listed#31<Int32>): String throws Bubble;
+  interface CoreError#25 extends Error#26 {}
+  interface Error#26 {
+    connected get message#128(): String;
   }
-  class StringIndex#82 extends StringIndexOption#83 {}
-  interface StringIndexOption#83 {}
-  interface Console#86 {
-    connected method log#87(message: String): Void;
+  class List#34<T#35> extends Listed#36<T#35> {}
+  interface Listed#36<T#37> {}
+  class MapBuilder#41<K#42 extends MapKey#44<K#42>, V#43> extends Mapped#46<K#42, V#43> {
+    connected constructor constructor#123(): MapBuilder#41<K#42, V#43>;
+    connected method remove#126(key: K#42): V#43 throws MissingKey#125;
   }
-  class Int32#89 {
-    connected method toString#90(radix?: Int32): String;
+  interface MapKey#44<EQ#45> {}
+  interface Mapped#46<K#47 extends MapKey#44<K#47>, V#48> {
+    connected method get#124(key: K#47): V#48 throws MissingKey#125;
   }
-  class Boolean#91 {
-    connected method toString#92(): String;
+  class String#67 {
+    connected method toInt32#68(radix?: Int32): Int32 throws ParseError#69;
+    connected method toFloat64#70(): Float64 throws ParseError#69;
+    connected static fromCodePoint#71(codePoint: Int32): String throws InvalidCodePoint#24;
+    connected method toInt64#114(radix?: Int32): Int64 throws ParseError#69;
+    connected static fromCodePoints#119(codePoints: Listed#36<Int32>): String throws InvalidCodePoint#24;
   }
-  class StringBuilder#94 {
-    connected constructor constructor#96(): StringBuilder#94;
-    connected method appendCodePoint#97(cp: Int32): Void throws Bubble;
-    connected method toString#98(): String;
+  class ParseError#69 extends CoreError#25 {}
+  class StringIndex#93 extends StringIndexOption#94 {}
+  interface StringIndexOption#94 {}
+  interface Console#97 {
+    connected method log#98(message: String): Void;
   }
-  class Float64#104 {
-    connected method toInt32#105(): Int32 throws Bubble;
+  class Int32#100 {
+    connected method toString#101(radix?: Int32): String;
   }
-  class Int64#106 {
-    connected method toInt32#107(): Int32 throws Bubble;
-    connected method toString#116(radix?: Int32): String;
+  class Boolean#102 {
+    connected method toString#103(): String;
   }
-  connected fn getConsole#119(name?: String): Console#86;
+  class StringBuilder#105 {
+    connected constructor constructor#107(): StringBuilder#105;
+    connected method appendCodePoint#108(cp: Int32): Void throws InvalidCodePoint#24;
+    connected method toString#109(): String;
+  }
+  class Float64#115 {
+    connected method toInt32#116(): Int32 throws ParseError#69;
+  }
+  class Int64#117 {
+    connected method toInt32#118(): Int32 throws ParseError#69;
+    connected method toString#141(radix?: Int32): String;
+  }
+  class MissingKey#125 extends CoreError#25 {}
+  connected fn getConsole#144(name?: String): Console#97;
 }
 
 module panics#0 {
-  let ~console#88: Console#86;
+  let ~console#99: Console#97;
 
   interface Shape#1 {}
 
   class Square#2 extends Shape#1 {
     let side#4: Int32;
-    constructor constructor#5(side#53: Int32): Square#2 {
-      this.side#4 = side#53;
+    constructor constructor#5(side#63: Int32): Square#2 {
+      this.side#4 = side#63;
     }
   }
 
@@ -104,23 +127,23 @@ module panics#0 {
     constructor constructor#6(): Circle#3 {}
   }
 
-  fn failing#7(n#54: Int32): Int32 throws Bubble {
-    if (%Int32.gt(n#54, 0)) {
+  fn failing#7(n#64: Int32): Int32 throws Bubble {
+    if (%Int32.gt(n#64, 0)) {
       (bubble()^): Void;
     }
-    return n#54;
+    return n#64;
   }
 
-  fn downcast#8(s#55: Shape#1): Square#2 throws Bubble {
-    if (is(s#55, Square#2)) {
-      return (downcast(s#55)): Square#2;
+  fn downcast#8(s#65: Shape#1): Square#2 throws Bubble {
+    if (is(s#65, Square#2)) {
+      return (downcast(s#65)): Square#2;
     } else {
       (bubble()^): Void;
     }
   }
 
-  fn calling#9(f#56: fn (): Int32 throws Bubble): Int32 {
-    return (orelse(f#56()^, %Int32.neg(9))): Int32;
+  fn calling#9(f#66: fn (): Int32 throws Bubble): Int32 {
+    return (orelse(f#66()^, %Int32.neg(9))): Int32;
   }
 
   let zero#10: Int32;
@@ -141,88 +164,99 @@ module panics#0 {
 
   let i#21: Int32;
 
-  fn appending#22(codePoint#93: Int32): String throws Bubble {
-    let sb#95: StringBuilder#94 = new constructor#96();
-    sb#95.appendCodePoint#97(codePoint#93)^;
-    return sb#95.toString#98();
+  fn appending#22(codePoint#104: Int32): String throws InvalidCodePoint#24 {
+    let sb#106: StringBuilder#105 = new constructor#107();
+    sb#106.appendCodePoint#108(codePoint#104)^;
+    return sb#106.toString#109();
   }
 
-  fn parsing#23(text#99: String): String throws Bubble {
-    parseJson#102(text#99)^;
+  fn parsing#27(text#110: String): String throws JsonError#29 {
+    parseJson#113(text#110)^;
     return "parsed";
   }
 
-  let k#24: Int64;
+  let k#30: Int64;
 
-  let l#25: Int32;
+  let l#31: Int32;
 
-  let m#26: Int32;
+  let m#32: Int32;
 
-  let n#27: Int32;
+  let n#33: Int32;
 
-  let points#33: List#29<Int32>;
+  let points#38: List#34<Int32>;
 
-  let o#34: String;
+  let o#39: String;
 
-  let q#35: String;
+  let q#40: String;
 
-  let builder#44: MapBuilder#36<String, Int32>;
+  let builder#49: MapBuilder#41<String, Int32>;
 
-  let r#45: Int32;
+  let r#50: Int32;
 
-  let s#46: String;
+  let r2#51: String;
 
-  let t#47: String;
+  let s#52: String;
 
-  let u#48: String;
+  let t#53: String;
 
-  fn explode#49(n#117: Int32): Int32 throws Bubble {
-    if (%Int32.gt(n#117, 0)) {
+  let u#54: String;
+
+  let partial#57: JsonTextProducer#55;
+
+  let v#58: String;
+
+  fn explode#59(n#142: Int32): Int32 throws Bubble {
+    if (%Int32.gt(n#142, 0)) {
       (panic()): Void;
     }
     (bubble()^): Void;
   }
 
-  fn noted#50(name#118: String): Int32 {
-    ~console#88.log#87(%String.cat(name#118, " fallback"));
+  fn noted#60(name#143: String): Int32 {
+    ~console#99.log#98(%String.cat(name#143, " fallback"));
     return %Int32.neg(2);
   }
 
-  fn inner#51(): Int32 throws Bubble {
-    return (orelse(explode#49(1)^, noted#50("inner"))): Int32;
+  fn inner#61(): Int32 throws Bubble {
+    return (orelse(explode#59(1)^, noted#60("inner"))): Int32;
   }
 
-  let p#52: Int32;
+  let p#62: Int32;
 
   init {
-    init ~console#88 = getConsole#119(omitted);
+    init ~console#99 = getConsole#144(omitted);
     init zero#10 = (orelse(failing#7(0)^, %Int32.neg(1))): Int32;
     init a#11 = (orelse(failing#7(1)^, %Int32.neg(1))): Int32;
     init b#12 = (orelse(downcast#8((upcast(new constructor#6())): Shape#1)^.side#4, %Int32.neg(2))): Int32;
-    init e#13 = (orelse("nope".toInt32#58(omitted)^, %Int32.neg(5))): Int32;
-    init f#14 = (orelse("x".toFloat64#59()^, %Float64.neg(6.0))): Float64;
-    init g#15 = (orelse(fromCodePoint#60(1114112)^, "?")): String;
-    init digits#19 = ((upcast(new constructor#68((upcast(new constructor#73((list((upcast(new constructor#77(48, 57))): CodePart#70)): List#29<CodePart#70>, (asNullable(false)): Boolean?))): RegexNode#61, 1, (null): Int32?, (asNullable(false)): Boolean?))): RegexNode#61).compiled#62();
-    init h#20 = (orelse(digits#19.find#84("none", omitted)^.full#81.value#79, "no digits")): String;
-    init i#21 = calling#9((fn ~fn#85(): Int32 throws Bubble {
+    init e#13 = (orelse("nope".toInt32#68(omitted)^, %Int32.neg(5))): Int32;
+    init f#14 = (orelse("x".toFloat64#70()^, %Float64.neg(6.0))): Float64;
+    init g#15 = (orelse(fromCodePoint#71(1114112)^, "?")): String;
+    init digits#19 = ((upcast(new constructor#79((upcast(new constructor#84((list((upcast(new constructor#88(48, 57))): CodePart#81)): List#34<CodePart#81>, (asNullable(false)): Boolean?))): RegexNode#72, 1, (null): Int32?, (asNullable(false)): Boolean?))): RegexNode#72).compiled#73();
+    init h#20 = (orelse(digits#19.find#95("none", omitted)^.full#92.value#90, "no digits")): String;
+    init i#21 = calling#9((fn ~fn#96(): Int32 throws Bubble {
       return failing#7(2)^;
     }): fn (): Int32 throws Bubble);
-    ~console#88.log#87(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(a#11.toString#90(omitted), " "), b#12.toString#90(omitted)), " "), e#13.toString#90(omitted)), " "), %Float64.eq(f#14, %Float64.neg(6.0)).toString#92()), " "), g#15), " "), h#20), " "), i#21.toString#90(omitted)));
-    init k#24 = (orelse("zz".toInt64#103(omitted)^, %Int64.neg(7i64))): Int64;
-    init l#25 = (orelse("99999999999".toInt32#58(omitted)^, %Int32.neg(8))): Int32;
-    init m#26 = (orelse((1.0e20).toInt32#105()^, %Int32.neg(9))): Int32;
-    init n#27 = (orelse(5000000000i64.toInt32#107()^, %Int32.neg(10))): Int32;
-    init points#33 = (list(65, 1114112)): List#29<Int32>;
-    init o#34 = (orelse(fromCodePoints#108((upcast(points#33)): Listed#31<Int32>)^, "?")): String;
-    init q#35 = (orelse(appending#22(%Int32.neg(1))^, "?")): String;
-    init builder#44 = new constructor#109<String, Int32>();
-    init r#45 = (orelse(builder#44.remove#110("x")^, %Int32.neg(11))): Int32;
-    init s#46 = (orelse(new constructor#114(2023, 2, 30)^.toString#113(), "no date")): String;
-    init t#47 = (orelse(fromIsoString#115("2023-13-01")^.toString#113(), "bad date")): String;
-    init u#48 = (orelse(parsing#23("[1,")^, "bad json")): String;
-    ~console#88.log#87(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(k#24.toString#116(omitted), " "), l#25.toString#90(omitted)), " "), m#26.toString#90(omitted)), " "), n#27.toString#90(omitted)), " "), o#34), " "), q#35), " "), r#45.toString#90(omitted)), " "), s#46), " "), t#47), " "), u#48));
-    ~console#88.log#87("panicking");
-    init p#52 = (orelse(inner#51()^, %Int32.neg(1))): Int32;
-    ~console#88.log#87(%String.cat("after the panic ", p#52.toString#90(omitted)));
+    ~console#99.log#98(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(a#11.toString#101(omitted), " "), b#12.toString#101(omitted)), " "), e#13.toString#101(omitted)), " "), %Float64.eq(f#14, %Float64.neg(6.0)).toString#103()), " "), g#15), " "), h#20), " "), i#21.toString#101(omitted)));
+    init k#30 = (orelse("zz".toInt64#114(omitted)^, %Int64.neg(7i64))): Int64;
+    init l#31 = (orelse("99999999999".toInt32#68(omitted)^, %Int32.neg(8))): Int32;
+    init m#32 = (orelse((1.0e20).toInt32#116()^, %Int32.neg(9))): Int32;
+    init n#33 = (orelse(5000000000i64.toInt32#118()^, %Int32.neg(10))): Int32;
+    init points#38 = (list(65, 1114112)): List#34<Int32>;
+    init o#39 = (catch(fromCodePoints#119((upcast(points#38)): Listed#36<Int32>)^, e#120: InvalidCodePoint#24, e#120.codePoint#121.toString#101(16))): String;
+    init q#40 = (catch(appending#22(%Int32.neg(1))^, e#122: InvalidCodePoint#24, e#122.codePoint#121.toString#101(omitted))): String;
+    init builder#49 = new constructor#123<String, Int32>();
+    init r#50 = (orelse(builder#49.get#124("x")^, %Int32.neg(11))): Int32;
+    init r2#51 = (catch(builder#49.remove#126("y")^.toString#101(omitted), e#127: MissingKey#125, ((upcast(e#127)): Error#26).message#128())): String;
+    init s#52 = (orelse(new constructor#133(2023, 2, 30)^.toString#131(), "no date")): String;
+    init t#53 = (orelse(fromIsoString#134("2023-13-01")^.toString#131(), "bad date")): String;
+    init u#54 = (orelse(parsing#27("[1,")^, "bad json")): String;
+    init partial#57 = new constructor#136(omitted);
+    partial#57.startObject#137();
+    init v#58 = (catch(partial#57.toJsonString#138()^, e#139: JsonSyntaxError#112, e#139.problem#140)): String;
+    ~console#99.log#98(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(k#30.toString#141(omitted), " "), l#31.toString#101(omitted)), " "), m#32.toString#101(omitted)), " "), n#33.toString#101(omitted)), " "), o#39), " "), q#40), " "), r#50.toString#101(omitted)), " "), r2#51), " "), s#52), " "), t#53), " "), u#54));
+    ~console#99.log#98(v#58);
+    ~console#99.log#98("panicking");
+    init p#62 = (orelse(inner#61()^, %Int32.neg(1))): Int32;
+    ~console#99.log#98(%String.cat("after the panic ", p#62.toString#101(omitted)));
   }
 }

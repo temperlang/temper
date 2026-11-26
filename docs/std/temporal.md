@@ -22,10 +22,10 @@ console.log(Date.yearsBetween(d, later).toString()); //!outputs "2"
 
 | Member | What it does |
 |---|---|
-| `new Date(year, month, day)` | A date; `month` is 1 to 12 and `day` 1 to 31, checked against the month; bubbles if out of range |
+| `new Date(year, month, day)` | A date; `month` is 1 to 12 and `day` 1 to 31, checked against the month; throws an `InvalidDate` (a `TemporalError`) if there's no such day |
 | `year`, `month`, `day` | Its parts; 1900 means 1900, and January is 1 |
 | `toString()` | ISO 8601 with dashes, as `"2000-12-31"` |
-| `Date.fromIsoString(s)` | Parses that form back; bubbles if malformed |
+| `Date.fromIsoString(s)` | Parses that form back; throws an `InvalidIsoDate` (a `TemporalError`) if malformed, or no such day |
 | `Date.today()` | Today's date, in UTC |
 | `Date.yearsBetween(start, end)` | Whole years from `start` to `end` |
 | `dayOfWeek` | ISO 8601 weekday: 1 for Monday to 7 for Sunday |

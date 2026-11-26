@@ -527,6 +527,27 @@ impl<'a> Translator<'a> {
 
     /// A name of the runtime's, relative to `temper::core`, or of the
     /// standard library's, qualified.
+    /// The program translated, for connections' hooks.
+    pub(crate) fn program(&self) -> &'a Program {
+        self.p
+    }
+
+    /// A type as C++ writes it, for connections' hooks.
+    pub(crate) fn type_text(&self, ty: TypeId) -> R<String> {
+        self.ty(ty)
+    }
+
+    /// A templated connection's template arguments, its receiver's type
+    /// arguments, as `<core::Str, int32_t>`.
+    pub(crate) fn receiver_template_args(&self, receiver: NodeId) -> R<String> {
+        self.template_args(self.p.types.args(self.p.nodes.ty(receiver)))
+    }
+
+    /// A connected call's arguments as the runtime takes them.
+    pub(crate) fn runtime_call_args(&mut self, args: &[NodeId]) -> R<Vec<Expr>> {
+        self.runtime_args(args)
+    }
+
     pub(crate) fn core(&self, path: &str) -> Expr {
         if path.starts_with("std::") {
             Expr::name(path)
@@ -2248,7 +2269,10 @@ impl<'a> Translator<'a> {
                 value,
             }
             | Node::InitLet { target, value }
-                if matches!(p.nodes.get(value), Node::OrElse { .. } | Node::Catch { .. }) =>
+                if matches!(
+                    p.nodes.get(value),
+                    Node::OrElse { .. } | Node::Catch { .. } | Node::Throw { .. }
+                ) =>
             {
                 let target = match p.decls.get(target).kind {
                     DeclKind::ModuleLet => self.top_name(target),

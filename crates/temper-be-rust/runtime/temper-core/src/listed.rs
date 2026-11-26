@@ -34,6 +34,12 @@ where
         }
     }
 
+    /// The item, or `None` out of bounds: `getOr` with a null fallback
+    /// where the items aren't nullable.
+    fn get_or_null(&self, index: i32) -> Option<T> {
+        (index >= 0 && index < self.len()).then(|| self.get(index))
+    }
+
     fn is_empty(&self) -> bool;
 
     fn len(&self) -> i32;

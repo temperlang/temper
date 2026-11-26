@@ -71,7 +71,14 @@ function parseGrid(s)
   if s == "" then
     return temper.bubble()
   end
-  return Grid(1, { temper.string_tofloat64(s) })
+  ---@type number
+  local t_1
+  if not temper.catch(function()
+    t_1 = temper.string_tofloat64(s)
+  end, temper.ParseError) then
+    temper.bubble()
+  end
+  return Grid(1, { t_1 })
 end
 
 ---@class libraries.Casing
@@ -841,9 +848,9 @@ local function sumParsed(xs)
       local n
       ---@type integer|temper.Null
       local held = temper.null
-      if not temper.pcall(function()
+      if not temper.catch(function()
         held = temper.string_toint32(x)
-      end) then
+      end, temper.ParseError) then
       end
       if temper.is_null(held) then
         i = temper.int32_add(i, 1)
@@ -866,9 +873,9 @@ local function sumParsed(xs)
       local m
       ---@type integer|temper.Null
       local held = temper.null
-      if not temper.pcall(function()
+      if not temper.catch(function()
         held = temper.string_toint32(x)
-      end) then
+      end, temper.ParseError) then
       end
       if temper.is_null(held) then
         goto continue

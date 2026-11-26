@@ -160,6 +160,20 @@ namespace TemperLang.Core
         public static T GetOr<T>(this IList<T> list, int index, T alternative) =>
             list.AsReadOnly().GetOr(index, alternative);
 
+        /// Temper's getOr with a null fallback, for a value type's items.
+        public static T? GetValueOrNull<T>(this IReadOnlyList<T> list, int index) where T : struct =>
+            index >= 0 && index < list.Count ? list[index] : null;
+
+        public static T? GetValueOrNull<T>(this IList<T> list, int index) where T : struct =>
+            list.AsReadOnly().GetValueOrNull(index);
+
+        /// Temper's getOr with a null fallback, for a reference type's items.
+        public static T? GetOrNull<T>(this IReadOnlyList<T> list, int index) where T : class =>
+            index >= 0 && index < list.Count ? list[index] : null;
+
+        public static T? GetOrNull<T>(this IList<T> list, int index) where T : class =>
+            list.AsReadOnly().GetOrNull(index);
+
         public static string Join<T>(
             this IEnumerable<T> values,
             string separator,

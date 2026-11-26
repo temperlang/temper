@@ -5,6 +5,7 @@
 #include <string>
 #include "temper_bubble.hpp"
 #include "base_types.hpp"
+#include "failure.hpp"
 
 namespace temper {
     namespace core {
@@ -59,11 +60,12 @@ namespace temper {
                 return result;
             }
 
-            inline double toFloat64(int64_t i) {
+            // The value as a double, or a `ParseError` where that isn't exact.
+            inline Parsed<double> toFloat64(int64_t i) {
                 const int64_t maxSafe = 9007199254740991LL;
                 const int64_t minSafe = -9007199254740991LL;
                 if (i < minSafe || i > maxSafe) {
-                    bubble("Int64 out of safe Float64 range");
+                    return parse_error(Str(std::to_string(i)), "not exact as Float64");
                 }
                 return static_cast<double>(i);
             }
@@ -72,10 +74,11 @@ namespace temper {
                 return static_cast<double>(i);
             }
 
-            inline int32_t toInt32(int64_t i) {
+            // The value as an int32_t, or a `ParseError` out of range.
+            inline Parsed<int32_t> toInt32(int64_t i) {
                 if (i > static_cast<int64_t>(std::numeric_limits<int32_t>::max())
                 || i < static_cast<int64_t>(std::numeric_limits<int32_t>::min())) {
-                    bubble("Int64 out of Int32 range");
+                    return parse_error(Str(std::to_string(i)), "out of Int32 range");
                 }
                 return static_cast<int32_t>(i);
             }

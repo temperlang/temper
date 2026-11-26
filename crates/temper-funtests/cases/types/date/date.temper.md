@@ -100,6 +100,26 @@ than in 2000, since 2000 is a leap year and the others are not.
 TODO: test negative year support once we've got a
 story for Python whose datetime.MIN_YEAR == 1.
 
+## Days that don't exist
+
+A year, month, and day that name no day of the calendar throw an
+*InvalidDate*, under std temporal's *TemporalError*, and parsing text
+that isn't a date throws an *InvalidIsoDate*.
+
+    let checkDate(year: Int, month: Int, day: Int): String {
+      new Date(year, month, day).toString() catch (e) { e.message }
+    }
+    console.log("${checkDate(2024, 2, 29)} ${checkDate(2023, 2, 29)}");
+    let parsed = (["2024-02-29", "2023-02-29", "2023-2-1"]).map { (s): String =>
+      Date.fromIsoString(s).toString() orelse "none"
+    };
+    console.log(parsed.join(" ") { it => it });
+
+```log
+2024-02-29 invalid date (year: 2023, month: 2, day: 29)
+2024-02-29 none none
+```
+
 ## Current date
 
 Also, just prove we can get today's date. Hard to say much about what it should
@@ -126,7 +146,7 @@ Second years between: 2
 
 A static method parses dates from an ISO 8601 string.
 
-    let rdc = Date.fromIsoString("1596-03-31");
+    let rdc = Date.fromIsoString("1596-03-31") orelse panic();
     console.log(
         """
         ~Happy birthday, René: day=${ rdc.day.toString() },

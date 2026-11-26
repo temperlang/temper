@@ -6,6 +6,7 @@ import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Nullable;
+import temper.core.ParseError;
 
 public final class NullablesGlobal {
     private NullablesGlobal() {}
@@ -38,7 +39,7 @@ public final class NullablesGlobal {
     static int parse(String s) {
         try {
             return Core.stringToInt(s);
-        } catch (Bubble ignored) {
+        } catch (ParseError ignored) {
             return -1;
         }
     }
@@ -46,7 +47,7 @@ public final class NullablesGlobal {
     static int halved(String s, int d) {
         try {
             return Core.stringToInt(s) / d;
-        } catch (Bubble ignored) {
+        } catch (ParseError ignored) {
             return -1;
         }
     }

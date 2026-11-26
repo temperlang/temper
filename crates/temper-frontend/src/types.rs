@@ -128,8 +128,11 @@ pub struct Types {
 /// same type arguments, as `class List<T> extends Listed<T>` in core; and
 /// the final types that are `MapKey`s of themselves, as `class String
 /// extends MapKey<String>`; and `StringIndex` and `NoStringIndex`, which
-/// extend `StringIndexOption`. Core's `Equatable` isn't a builtin type yet.
-const BUILTIN_SUPERTYPES: [(&str, &str); 11] = [
+/// extend `StringIndexOption`; and core's failure types, `CoreError` under
+/// the root and `MissingKey`, `ParseError`, and `InvalidCodePoint` under it. Core's
+/// `Equatable` isn't a builtin
+/// type yet.
+const BUILTIN_SUPERTYPES: [(&str, &str); 15] = [
     ("List", "Listed"),
     ("ListBuilder", "Listed"),
     ("Map", "Mapped"),
@@ -141,7 +144,22 @@ const BUILTIN_SUPERTYPES: [(&str, &str); 11] = [
     ("String", "MapKey"),
     ("StringIndex", "StringIndexOption"),
     ("NoStringIndex", "StringIndexOption"),
+    ("CoreError", FAILURE_ROOT),
+    ("MissingKey", "CoreError"),
+    ("ParseError", "CoreError"),
+    ("InvalidCodePoint", "CoreError"),
 ];
+
+/// What builtin type `name` extends, then what that extends, and so on,
+/// as `CoreError` and `Error` for `MissingKey`.
+fn builtin_ancestors(name: &str) -> impl Iterator<Item = &'static str> {
+    let up = |n: &str| {
+        (BUILTIN_SUPERTYPES.iter())
+            .find(|&&(sub, _)| sub == n)
+            .map(|&(_, sup)| sup)
+    };
+    std::iter::successors(up(name), move |&n| up(n))
+}
 
 /// The builtin generic type that builtin generic type `name` extends with
 /// the same type arguments, as `Listed` for `List`, if any.
@@ -152,7 +170,8 @@ pub fn builtin_supertype(name: &str) -> Option<&'static str> {
 }
 
 /// Core's sealed interfaces among the builtin types.
-const BUILTIN_SEALED: [&str; 5] = [
+const BUILTIN_SEALED: [&str; 6] = [
+    "CoreError",
     "GeneratorResult",
     "Listed",
     "Mapped",
@@ -162,11 +181,17 @@ const BUILTIN_SEALED: [&str; 5] = [
 
 /// Core's non-generic classes and interface beyond the final types:
 /// `StringIndex` and `NoStringIndex` extend the sealed `StringIndexOption`,
-/// and nothing else extends any of them, so each is a subtype of only
-/// itself and what core says it extends ([`Types::is_subtype`]).
-const CORE_NOMINAL: [&str; 5] = [
+/// `MissingKey`, `ParseError`, and `InvalidCodePoint` the sealed `CoreError`, and nothing else
+/// extends any of
+/// them, so each is a subtype of only itself and what core says it
+/// extends ([`Types::is_subtype`]).
+const CORE_NOMINAL: [&str; 9] = [
+    "CoreError",
     "DenseBitVector",
+    "InvalidCodePoint",
+    "MissingKey",
     "NoStringIndex",
+    "ParseError",
     "StringBuilder",
     "StringIndex",
     "StringIndexOption",
@@ -496,12 +521,16 @@ impl Types {
         }
         match *self.get(own) {
             TypeData::Builtin(_) if self.builtin_extends(own, base) => {
-                // `String` is a `MapKey<String>`; `List<T>`, a `Listed<T>`.
+                // `String` is a `MapKey<String>`; `List<T>`, a `Listed<T>`;
+                // `MissingKey`, an `Error`.
                 let args = match self.is_final(own) {
                     true => vec![t],
                     false => self.args(t).to_vec(),
                 };
-                Some(self.intern(TypeData::Applied { base, args }))
+                Some(match args.is_empty() {
+                    true => base,
+                    false => self.intern(TypeData::Applied { base, args }),
+                })
             }
             TypeData::Class(symbol) => {
                 let info = self.classes.get(&symbol)?;
@@ -679,7 +708,11 @@ impl Types {
     /// a non-generic class's or interface's that extends the root, not
     /// the root itself.
     pub fn is_failure(&self, t: TypeId) -> bool {
-        matches!(*self.get(t), TypeData::Class(symbol) if self.is_failure_class(symbol))
+        match *self.get(t) {
+            TypeData::Class(symbol) => self.is_failure_class(symbol),
+            TypeData::Builtin(i) => builtin_ancestors(TYPES[i as usize]).any(|a| a == FAILURE_ROOT),
+            _ => false,
+        }
     }
 
     /// Whether one of the type parameters `formals` is what something in
@@ -808,12 +841,10 @@ impl Types {
                 }
             }
             TypeData::Builtin(i) => {
-                let sup = BUILTIN_SUPERTYPES
-                    .iter()
-                    .find(|&&(sub, _)| sub == TYPES[*i as usize]);
-                if let Some(index) = sup.and_then(|&(_, sup)| TYPES.iter().position(|&n| n == sup))
-                {
-                    if let Some(&id) = self.ids.get(&TypeData::Builtin(index as u8)) {
+                for sup in builtin_ancestors(TYPES[*i as usize]) {
+                    let index = TYPES.iter().position(|&n| n == sup);
+                    if let Some(&id) = index.and_then(|i| self.ids.get(&TypeData::Builtin(i as u8)))
+                    {
                         out.push(id);
                     }
                 }
@@ -1153,16 +1184,17 @@ impl Types {
         )
     }
 
-    /// Whether builtin type `sub` extends builtin type `sup`, both bases
-    /// of generic types, and so takes the same type arguments, or is
-    /// a final type that's a `MapKey` of itself, as core declares them.
+    /// Whether builtin type `sub` extends builtin type `sup`, directly or
+    /// through another, both bases of generic types, and so takes the same
+    /// type arguments, or is a final type that's a `MapKey` of itself, as
+    /// core declares them.
     fn builtin_extends(&self, sub: TypeId, sup: TypeId) -> bool {
         let (TypeData::Builtin(sub), TypeData::Builtin(sup)) = (self.get(sub), self.get(sup))
         else {
             return false;
         };
-        let (sub, sup) = (TYPES[*sub as usize], TYPES[*sup as usize]);
-        BUILTIN_SUPERTYPES.contains(&(sub, sup))
+        let sup = TYPES[*sup as usize];
+        builtin_ancestors(TYPES[*sub as usize]).any(|a| a == sup)
     }
 
     /// A type as Kotlin Temper writes it in messages: `Int32`, `String?`,

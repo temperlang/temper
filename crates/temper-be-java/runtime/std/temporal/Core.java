@@ -2,7 +2,6 @@ package temper.std.temporal;
 
 import java.time.DateTimeException;
 import java.time.LocalDate;
-import temper.core.Bubble;
 
 /**
  * Java native implementation for the temper.std.temporal package, public
@@ -13,7 +12,7 @@ public final class Core {
     }
 
     /**
-     * The date, bubbling where there's no such date.
+     * The date, throwing an {@link InvalidDate} where there's no such date.
      * @param year the year
      * @param month the month, from 1
      * @param day the day of the month, from 1
@@ -23,12 +22,13 @@ public final class Core {
         try {
             return LocalDate.of(year, month, day);
         } catch (DateTimeException e) {
-            throw new Bubble(e.getMessage(), e);
+            throw new InvalidDate(year, month, day);
         }
     }
 
     /**
-     * The date an ISO 8601 date string gives, else bubbling.
+     * The date an ISO 8601 date string gives, throwing an
+     * {@link InvalidIsoDate} for other text, or no such day.
      * @param isoString a date such as "2000-12-31"
      * @return the date
      */
@@ -36,7 +36,7 @@ public final class Core {
         try {
             return LocalDate.parse(isoString);
         } catch (DateTimeException e) {
-            throw new Bubble(e.getMessage(), e);
+            throw new InvalidIsoDate(isoString);
         }
     }
 }

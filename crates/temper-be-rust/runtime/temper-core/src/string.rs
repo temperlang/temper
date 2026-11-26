@@ -1,4 +1,4 @@
-use super::{Error, List, ListedTrait, Result, ToArcString};
+use super::{InvalidCodePoint, List, ListedTrait, ParseError, ToArcString};
 use std::{cell::RefCell, sync::Arc};
 
 pub trait AsStr {
@@ -36,7 +36,8 @@ impl AsStr for &Arc<String> {
 }
 
 pub mod builder {
-    use crate::{string::AsStr, Error, Result};
+    use crate::string::AsStr;
+    use crate::InvalidCodePoint;
     use std::{sync::Arc, sync::RwLock};
 
     pub fn append(builder: &Arc<RwLock<String>>, text: impl AsStr) {
@@ -55,9 +56,14 @@ pub mod builder {
         append(builder, &text[begin..end]);
     }
 
-    pub fn append_code_point(builder: &Arc<RwLock<String>>, code: i32) -> Result<()> {
-        let mut builder = builder.write().unwrap();
-        builder.push(char::from_u32(code as u32).ok_or(Error::new())?);
+    /// Appends the code point, or an `InvalidCodePoint` where it isn't a
+    /// Unicode scalar value.
+    pub fn append_code_point(
+        builder: &Arc<RwLock<String>>,
+        code: i32,
+    ) -> Result<(), InvalidCodePoint> {
+        let c = super::scalar(code)?;
+        builder.write().unwrap().push(c);
         Ok(())
     }
 
@@ -134,24 +140,25 @@ pub fn for_each(text: impl AsStr, action: &dyn Fn(i32)) {
     }
 }
 
-// But functions here still produce Arc<String> for convenience.
-pub fn from_code_point(code: i32) -> Result<Arc<String>> {
-    Ok(char::from_u32(code as u32)
-        .ok_or(Error::new())?
-        .to_arc_string())
+/// A code point as a `char`, or an `InvalidCodePoint` where it isn't a
+/// Unicode scalar value.
+fn scalar(code: i32) -> Result<char, InvalidCodePoint> {
+    (u32::try_from(code).ok().and_then(char::from_u32)).ok_or_else(|| InvalidCodePoint::new(code))
 }
 
-pub fn from_code_points(codes: &dyn ListedTrait<i32>) -> Result<Arc<String>> {
-    let result: RefCell<Option<String>> = RefCell::new(None);
+// But functions here still produce Arc<String> for convenience.
+pub fn from_code_point(code: i32) -> Result<Arc<String>, InvalidCodePoint> {
+    Ok(scalar(code)?.to_arc_string())
+}
+
+/// The code points as a string, or an `InvalidCodePoint` for the first
+/// that isn't a Unicode scalar value.
+pub fn from_code_points(codes: &dyn ListedTrait<i32>) -> Result<Arc<String>, InvalidCodePoint> {
+    let result: RefCell<Result<String, InvalidCodePoint>> = RefCell::new(Ok(String::new()));
     codes.with_vec(&|values: &Vec<i32>| {
-        result.replace(
-            values
-                .iter()
-                .map(|&code| std::char::from_u32(code as u32))
-                .collect(),
-        );
+        *result.borrow_mut() = values.iter().map(|&code| scalar(code)).collect();
     });
-    Ok(Arc::new(result.into_inner().ok_or(Error::new())?))
+    result.into_inner().map(Arc::new)
 }
 
 pub fn get(text: impl AsStr, index: usize) -> i32 {
@@ -251,16 +258,19 @@ pub fn split(text: impl AsStr, sep: impl AsStr) -> List<Arc<String>> {
     Arc::new(parts)
 }
 
-pub fn to_float64(text: impl AsStr) -> Result<f64> {
-    let text = text.as_str();
+/// The number the text spells, or a `ParseError`.
+pub fn to_float64(text: impl AsStr) -> Result<f64, ParseError> {
+    let input = text.as_str();
+    float64_or_none(input).ok_or_else(|| ParseError::new(input, "not a Float64"))
+}
+
+fn float64_or_none(text: &str) -> Option<f64> {
     // See: https://doc.rust-lang.org/std/primitive.f64.html#method.from_str
     // We're more flexible in trimming than Rust.
     let text = text.trim();
     // And we can consider bytes because all valid numbers for us are ascii.
     let bytes = text.as_bytes();
-    let Some(last) = bytes.last() else {
-        return Err(Error::new());
-    };
+    let last = bytes.last()?;
     // But less flexible in main content.
     let ok = match last {
         b'0'..=b'9' => match bytes.iter().position(|&b| b == b'.') {
@@ -272,29 +282,32 @@ pub fn to_float64(text: impl AsStr) -> Result<f64> {
         _ => false,
     };
     match ok {
-        true => text.parse().map_err(|e| Error::with_source(Arc::new(e))),
-        false => Err(Error::new()),
+        true => text.parse().ok(),
+        false => None,
     }
 }
 
-pub fn to_int(text: impl AsStr, radix: Option<i32>) -> Result<i32> {
+/// The `i32` the text spells in the radix, or a `ParseError`.
+pub fn to_int(text: impl AsStr, radix: Option<i32>) -> Result<i32, ParseError> {
     let text = text.as_str();
     let radix = radix.unwrap_or(10);
-    if radix < 2 || radix > 36 {
-        // This panics in Rust. TODO Should it panic in Temper?
-        return Err(Error::new());
-    }
+    // Rust's parse panics for other radixes.
     // See rules here: https://github.com/rust-lang/rust/blob/01e2fff90c7ed19e1d9fb828ebc012e7b9732297/library/core/src/num/mod.rs#L1439
-    i32::from_str_radix(text.trim(), radix as u32).map_err(|e| Error::with_source(Arc::new(e)))
+    (2..=36)
+        .contains(&radix)
+        .then(|| i32::from_str_radix(text.trim(), radix as u32).ok())
+        .flatten()
+        .ok_or_else(|| ParseError::new(text, "not an Int32"))
 }
 
-pub fn to_int64(text: impl AsStr, radix: Option<i32>) -> Result<i64> {
+/// The `i64` the text spells in the radix, or a `ParseError`.
+pub fn to_int64(text: impl AsStr, radix: Option<i32>) -> Result<i64, ParseError> {
     let text = text.as_str();
     let radix = radix.unwrap_or(10);
-    if radix < 2 || radix > 36 {
-        // This panics in Rust. TODO Should it panic in Temper?
-        return Err(Error::new());
-    }
-    // See rules here: https://github.com/rust-lang/rust/blob/01e2fff90c7ed19e1d9fb828ebc012e7b9732297/library/core/src/num/mod.rs#L1439
-    i64::from_str_radix(text.trim(), radix as u32).map_err(|e| Error::with_source(Arc::new(e)))
+    // Rust's parse panics for other radixes.
+    (2..=36)
+        .contains(&radix)
+        .then(|| i64::from_str_radix(text.trim(), radix as u32).ok())
+        .flatten()
+        .ok_or_else(|| ParseError::new(text, "not an Int64"))
 }

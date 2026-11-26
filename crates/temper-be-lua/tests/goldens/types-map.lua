@@ -19,6 +19,12 @@ local function messageDefined(code)
   return tostring(temper.mapped_has(messages, code))
 end
 
+---@param code integer
+---@return string
+local function lookUp(code)
+  return temper.mapped_get(messages, code)
+end
+
 ---@param color boolean[]
 ---@return string
 local function colorToHex(color)
@@ -55,12 +61,14 @@ print("Message: " .. message)
 print("Has 200: " .. messageDefined(200) .. ", 302: " .. messageDefined(302))
 ---@type string
 local t
-if not temper.pcall(function()
+if not temper.catch(function()
   t = temper.mapped_get(messages, 302)
-end) then
+end, temper.MissingKey) then
   t = "Found"
 end
 print("Fallback: " .. t)
+local subject = temper.mapped_getor(messages, 302, temper.null)
+print("Or null: " .. (temper.is_null(subject) and "none" or (subject --[[@as string]])))
 print("Codes: " .. temper.listed_join(listKeys(messages), " ", function(it) return tostring(it) end))
 print("Again: " .. temper.listed_join(temper.mapped_keys(messages), " ", function(it) return tostring(it) end))
 print("Messages: " .. temper.listed_join(temper.mapped_values(messages), ", ", function(it) return it end))
@@ -73,22 +81,57 @@ print("Key so far: " .. temper.list_get(listKeys(builder2), 0))
 temper.mapbuilder_set(builder2, "El Salvador", { "Guatemala", "Honduras" })
 temper.mapbuilder_set(builder2, "Nicaragua", { "Costa Rica", "Honduras" })
 temper.mapbuilder_set(builder2, "Panama", { "Colombia", "Costa Rica" })
-if not temper.pcall(function()
+if not temper.catch(function()
   temper.mapbuilder_remove(builder2, "Honduras")
-end) then
+end, temper.MissingKey) then
 end
-local was = temper.mapbuilder_remove(builder2, "El Salvador")
+---@type string[]
+local was
+local t_1, t_2 = temper.catch(function()
+  was = temper.mapbuilder_remove(builder2, "El Salvador")
+end, temper.MissingKey)
+if not t_1 then
+  error("panic\ncaused by: " .. tostring(t_2))
+end
 print("Was there: " .. temper.listed_join(was, ", ", function(it) return it end))
 ---@type string
-local t_1
-if not temper.pcall(function()
-  t_1 = temper.list_get(temper.mapbuilder_remove(builder2, "El Salvador"), 0)
-end) then
-  t_1 = "Gone"
+local t_3
+if not temper.catch(function()
+  t_3 = temper.list_get(temper.mapbuilder_remove(builder2, "El Salvador"), 0)
+end, temper.MissingKey) then
+  t_3 = "Gone"
 end
-print(t_1)
+print(t_3)
+---@type string
+local t_4
+local t_5, e = temper.catch(function()
+  temper.mapbuilder_remove(builder2, "Belize")
+  t_4 = "removed"
+end, temper.MissingKey)
+if not t_5 then
+  t_4 = e.message
+end
+print(t_4)
 local neighbors = temper.mapped_tomap(builder2)
 print("From built: " .. temper.listed_join(temper.mapped_get(neighbors, "Nicaragua"), ", ", function(it) return it end))
+---@type string
+local t_6
+local t_7, e2 = temper.catch(function()
+  t_6 = lookUp(302)
+end, temper.MissingKey)
+if not t_7 then
+  t_6 = e2.message
+end
+print(t_6)
+local fromBuilder = temper.mapbuilder_constructor()
+---@type integer
+local t_8
+if not temper.catch(function()
+  t_8 = temper.mapped_get(fromBuilder, "nope")
+end, temper.MissingKey) then
+  t_8 = -1
+end
+print(tostring(t_8))
 local mapOfNone = temper.map_constructor({})
 local mapOfOne = temper.map_constructor({ temper.pair_constructor("jack", "all trades") })
 local mapOfTwo = temper.map_constructor({ temper.pair_constructor(1, "one"), temper.pair_constructor(2, "electric boogaloo") })

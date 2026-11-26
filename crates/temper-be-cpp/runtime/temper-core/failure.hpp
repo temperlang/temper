@@ -15,6 +15,7 @@
 #include <mutex>
 #include <string>
 #include "any_value.hpp"
+#include "expected.hpp"
 #include "str.hpp"
 
 namespace temper {
@@ -98,6 +99,108 @@ namespace temper {
         template<class F>
         [[noreturn]] void uncaught_failure(const F& failure) {
             throw UncaughtFailure(failure);
+        }
+
+        // Core's own failures' root, `CoreError`, as a library's roots are.
+        struct CoreError : public virtual Failure {};
+
+        // What a map's `get` gives for a key it doesn't have, with that key.
+        struct MissingKey : public virtual CoreError {
+            std::shared_ptr<AnyValueBase> key;
+            Str message;
+
+            // For `key`, a map key boxed, as Temper's `new MissingKey(key)`.
+            static std::shared_ptr<MissingKey> make(std::shared_ptr<AnyValueBase> key) {
+                std::shared_ptr<MissingKey> made = std::make_shared<MissingKey>();
+                made->message = Str("missing key (key: " + shown(key) + ")");
+                made->key = std::move(key);
+                return made;
+            }
+
+            // For a map's key, of a map key type: `int32_t` or `Str`.
+            template<class Key>
+            static std::shared_ptr<MissingKey> of(const Key& key) {
+                return make(any_box(key));
+            }
+
+            Str get_message() const override {
+                return message;
+            }
+
+            std::shared_ptr<AnyValueBase> get_key() const {
+                return key;
+            }
+
+        private:
+            // A map key's text, as a default message shows a field.
+            static std::string shown(const std::shared_ptr<AnyValueBase>& key) {
+                if (auto i = std::dynamic_pointer_cast<AnyValueBox<int32_t>>(key)) {
+                    return std::to_string(i->value);
+                }
+                if (auto s = std::dynamic_pointer_cast<AnyValueBox<Str>>(key)) {
+                    return s->value.str();
+                }
+                return "?";
+            }
+        };
+
+        // What a conversion gives for a value it can't convert: its input,
+        // as text, and why, as `not an Int32`.
+        struct ParseError : public virtual CoreError {
+            Str input;
+            Str reason;
+
+            static std::shared_ptr<ParseError> make(Str input, Str reason) {
+                std::shared_ptr<ParseError> made = std::make_shared<ParseError>();
+                made->input = std::move(input);
+                made->reason = std::move(reason);
+                return made;
+            }
+
+            Str get_message() const override {
+                return Str("parse error (input: " + input.str() + ", reason: " + reason.str() + ")");
+            }
+
+            Str get_input() const {
+                return input;
+            }
+
+            Str get_reason() const {
+                return reason;
+            }
+        };
+
+        // What making a string from a code point gives for one that isn't a
+        // Unicode scalar value, with that number.
+        struct InvalidCodePoint : public virtual CoreError {
+            int32_t codePoint = 0;
+
+            static std::shared_ptr<InvalidCodePoint> make(int32_t codePoint) {
+                std::shared_ptr<InvalidCodePoint> made = std::make_shared<InvalidCodePoint>();
+                made->codePoint = codePoint;
+                return made;
+            }
+
+            Str get_message() const override {
+                return Str("invalid code point (codePoint: " + std::to_string(codePoint) + ")");
+            }
+
+            int32_t get_codePoint() const {
+                return codePoint;
+            }
+        };
+
+        // A code point's result: its value, or an `InvalidCodePoint`.
+        template<class T>
+        using CodePointed = Expected<T, std::shared_ptr<InvalidCodePoint>>;
+
+        // A conversion's result: its value, or a `ParseError`.
+        template<class T>
+        using Parsed = Expected<T, std::shared_ptr<ParseError>>;
+
+        // A failed conversion of `input`, as text, and why.
+        inline Unexpected<std::shared_ptr<ParseError>> parse_error(Str input, Str reason) {
+            return unexpected(ParseError::make(std::move(input), std::move(reason)));
         }
 
     }

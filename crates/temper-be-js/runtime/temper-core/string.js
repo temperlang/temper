@@ -1,5 +1,6 @@
 import {
-    bubble, INT32_MAX, INT32_MIN, INT64_MAX, INT64_MIN, panic, parseBigInt
+    bubble, INT32_MAX, INT32_MIN, INT64_MAX, INT64_MIN, InvalidCodePoint, panic, parseBigInt,
+    ParseError
 } from "./core.js";
 
 /**
@@ -45,52 +46,67 @@ export const stringSplit = (s, separator) => {
 };
 
 /**
- * Implements extension method core.type String.toFloat64()
+ * Implements extension method core.type String.toFloat64(), throwing a
+ * `ParseError` for other text.
  * @param {string} s
  * @returns {number}
  */
 export const stringToFloat64 = (s) => {
     // TODO Consider JSON.parse + bonus constants instead? Faster or not?
     if (!/^\s*-?(?:\d+(?:\.\d+)?(?:[eE][-+]?\d+)?|NaN|Infinity)\s*$/.test(s)) {
-        bubble();
+        throw new ParseError(s, "not a Float64");
     }
     return Number(s);
 };
 
 /**
- * Implements extension method core.type String.toInt32()
+ * Whether `radix` is one `toInt32` and `toInt64` take, 2 through 36, as on
+ * every backend: `parseInt` reads 0 as 10.
+ * @param {number} radix
+ * @returns {boolean}
+ */
+const validRadix = (radix) => radix >= 2 && radix <= 36;
+
+/**
+ * Implements extension method core.type String.toInt32(), throwing a
+ * `ParseError` for other text or a value out of range.
  * @param {string} s
  * @param {number?} radix
  * @returns {number}
  */
 export const stringToInt32 = (s, radix) => {
+    const input = s;
     // This currently maybe allocates for trim and then also for check.
     // TODO Avoid that with manual char checks? Arbitrary base makes regex harder.
     s = s.trim();
     radix = radix ?? 10;
+    if (!validRadix(radix)) {
+        throw new ParseError(input, "not an Int32");
+    }
     const result = parseInt(s, radix);
     // This check also catches nan.
     if (!(result >= INT32_MIN && result <= INT32_MAX)) {
-        bubble();
+        throw new ParseError(input, "not an Int32");
     }
     const trimmed = s.slice(0, s.length - 1);
     if (parseInt(trimmed, radix) === result) {
         // Extraneous junk was ignored that we disallow.
-        bubble();
+        throw new ParseError(input, "not an Int32");
     }
     return result;
 };
 
 /**
- * Implements extension method core.type String.toInt64()
+ * Implements extension method core.type String.toInt64(), throwing a
+ * `ParseError` for other text or a value out of range.
  * @param {string} s
  * @param {number?} radix
  * @returns {bigint}
  */
 export const stringToInt64 = (s, radix) => {
-    const result = parseBigInt(s, radix);
-    if (result < INT64_MIN || result > INT64_MAX) {
-        bubble();
+    const result = validRadix(radix ?? 10) ? parseBigInt(s, radix) : null;
+    if (result === null || result < INT64_MIN || result > INT64_MAX) {
+        throw new ParseError(s, "not an Int64");
     }
     return result;
 };
@@ -254,6 +270,6 @@ export const stringBuilderAppendCodePoint = (s, c) => {
  */
 const requireScalarValue = (c) => {
     if (c < 0 || c > 0x10FFFF || (c >= 0xD800 && c <= 0xDFFF)) {
-        bubble(`Invalid Unicode scalar value ${c}`);
+        throw new InvalidCodePoint(c);
     }
 }

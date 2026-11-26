@@ -59,10 +59,22 @@ public static class BubbleGlobal
         return Core.Div(total, cols);
     }
 
+    internal static int Parsed(string s)
+    {
+        try
+        {
+            return Core.ToInt(s);
+        }
+        catch (ParseError)
+        {
+            return Core.Bubble<int>();
+        }
+    }
+
     internal static int CountBelow(string s)
     {
         int i = 0;
-        while (i < Core.ToInt(s))
+        while (i < Parsed(s))
         {
             i = i + 1;
         }

@@ -224,7 +224,7 @@ error 421..424: Cannot assign to Int32 from String
 // that doesn't fit is an AnyValue, as in Kotlin. `orelse` binds looser
 // than `==`, so `p("7") orelse 0i64 == x` is `p("7") orelse (0i64 ==
 // x)`, which can't be a Boolean.
-let p(text: String): Int64 throws Bubble { text.toInt64() }
+let p(text: String): Int64 throws Bubble { text.toInt64() orelse bubble() }
 let takesB(b: Boolean): Void {}
 class C(public b: Boolean) {}
 var z: Boolean = true;
@@ -249,7 +249,7 @@ let c = new C(p("1") orelse false);
     (Fn
       (Let ^text:14 String)
       (Call throws Int64 Bubble)
-      (Block (Call (Call . text:14 \toInt64)))))
+      (Block (Orelse (Call (Call . text:14 \toInt64)) (Fail)))))
   (Let ^takesB:1 (Fn (Let ^b:15 Boolean) Void (Block)))
   (Class ^C:2 (Param ^b:17 Boolean))
   (Var ^z:3 Boolean true)
@@ -258,7 +258,7 @@ let c = new C(p("1") orelse false);
   (Call takesB:1 (Orelse (Call p:0 "3") false))
   (Let
     ^r1:5
-    (Fn Boolean (Block (Return @556 (Orelse (Call p:0 "4") false)) #void)))
+    (Fn Boolean (Block (Return @572 (Orelse (Call p:0 "4") false)) #void)))
   (Let ^r2:6 (Fn Boolean (Block (Orelse (Call p:0 "5") false))))
   (Let ^y2:7 Int64 (Orelse (Call p:0 "6") false))
   (Let ^x:8 1i64)
@@ -276,21 +276,21 @@ let c = new C(p("1") orelse false);
     (Orelse (Call p:0 "1") (If z:3 (Block false) (Block (Call p:0 "2")))))
   (Let ^c:13 (Call new C:2 (Orelse (Call p:0 "1") false)))
   #void)
-error 481..487: Cannot assign to Boolean from Int64
-error 506..512: Cannot assign to Boolean from Int64
-error 534..553: Expected subtype of Boolean, but got AnyValue
-error 583..589: Cannot assign to Boolean from Int64
-error 626..632: Cannot assign to Boolean from Int64
-error 678..683: Cannot assign to Int64 from Boolean
-error 717..723: Cannot assign to Boolean from Int64
-error 749..772: Expected subtype of Boolean, but got AnyValue
-error 779..802: Expected value of type Boolean not AnyValue
-error 850..858: Cannot assign to Boolean from Int64
-error 894..900: Cannot assign to Boolean from Int64
-error 908..914: Cannot assign to Boolean from Int64
-error 948..954: Cannot assign to Boolean from Int64
-error 985..995: Cannot assign to Boolean from Int64
-error 1012..1031: Expected subtype of Boolean, but got AnyValue
+error 497..503: Cannot assign to Boolean from Int64
+error 522..528: Cannot assign to Boolean from Int64
+error 550..569: Expected subtype of Boolean, but got AnyValue
+error 599..605: Cannot assign to Boolean from Int64
+error 642..648: Cannot assign to Boolean from Int64
+error 694..699: Cannot assign to Int64 from Boolean
+error 733..739: Cannot assign to Boolean from Int64
+error 765..788: Expected subtype of Boolean, but got AnyValue
+error 795..818: Expected value of type Boolean not AnyValue
+error 866..874: Cannot assign to Boolean from Int64
+error 910..916: Cannot assign to Boolean from Int64
+error 924..930: Cannot assign to Boolean from Int64
+error 964..970: Cannot assign to Boolean from Int64
+error 1001..1011: Cannot assign to Boolean from Int64
+error 1028..1047: Expected subtype of Boolean, but got AnyValue
 Failed: Expected a Boolean, not Int64
 
 === if and orelse values whose branches fit where they're used
@@ -301,7 +301,7 @@ interface I {}
 interface J {}
 class A extends I, J {}
 class B extends I, J {}
-let p(text: String): Int64 throws Bubble { text.toInt64() }
+let p(text: String): Int64 throws Bubble { text.toInt64() orelse bubble() }
 let takesI(i: I): String { "i" }
 let ok1: Int64 = p("x") orelse 0i64;
 let ok2: Int64 = p("2") orelse panic();
@@ -327,7 +327,7 @@ console.log(takesI(if (ok8) { new A() } else { new B() }));
     (Fn
       (Let ^text:20 String)
       (Call throws Int64 Bubble)
-      (Block (Call (Call . text:20 \toInt64)))))
+      (Block (Orelse (Call (Call . text:20 \toInt64)) (Fail)))))
   (Let ^takesI:5 (Fn (Let ^i:21 I:0) String (Block "i")))
   (Let ^ok1:6 Int64 (Orelse (Call p:4 "x") 0i64))
   (Let ^ok2:7 Int64 (Orelse (Call p:4 "2") (Call panic)))
@@ -342,7 +342,7 @@ console.log(takesI(if (ok8) { new A() } else { new B() }));
       (Block
         (Let
           ^n:23
-          (Orelse (Call p:4 s:22) (Block (Return @588 (Call - 6i64)) #void)))
+          (Orelse (Call p:4 s:22) (Block (Return @604 (Call - 6i64)) #void)))
         n:23)))
   (Let ^ok7:12 AnyValue (Orelse (Call p:4 "x") false))
   (Let ^ok8:13 Boolean (Call == (Orelse (Call p:4 "x") 0i64) 0i64))
@@ -382,7 +382,7 @@ log i
 // after which nothing runs. Errors: a return's own value must still fit
 // the function's result, and break and continue need a loop.
 let pair(a: Int, b: Int): Int { a * 10 + b }
-let p(s: String): Int throws Bubble { s.toInt32() }
+let p(s: String): Int throws Bubble { s.toInt32() orelse bubble() }
 let a(y: Int?): Int? { let x: Int = y ?? return null; x + 1 }
 let b(ys: List<Int?>): Int {
   var sum = 0;
@@ -418,7 +418,7 @@ console.log("${e(true, null)} ${f(null).length} ${g(1)} ${g(-1)} ${h()} ${i(1)}"
     (Fn
       (Let ^s:15 String)
       (Call throws Int Bubble)
-      (Block (Call (Call . s:15 \toInt32)))))
+      (Block (Orelse (Call (Call . s:15 \toInt32)) (Fail)))))
   (Let
     ^a:2
     (Fn
@@ -428,7 +428,7 @@ console.log("${e(true, null)} ${f(null).length} ${g(1)} ${g(-1)} ${h()} ${i(1)}"
         (Let
           ^x:17
           Int
-          (Block (If (Call == y:16 #null) (Return @439 null) y:16)))
+          (Block (If (Call == y:16 #null) (Return @455 null) y:16)))
         (Call + x:17 1))))
   (Let
     ^b:3
@@ -447,13 +447,13 @@ console.log("${e(true, null)} ${f(null).length} ${g(1)} ${g(-1)} ${h()} ${i(1)}"
                   ^v:21
                   (Block
                     (Let ^subject#22 (Call [] ys:18 i:20))
-                    (If (Call == subject#22 #null) (Continue @547) subject#22)))
+                    (If (Call == subject#22 #null) (Continue @563) subject#22)))
                 (Assign
                   sum:19
-                  (Call + sum:19 (Orelse (Call p:1 "1") (Break @547))))
+                  (Call + sum:19 (Orelse (Call p:1 "1") (Break @563))))
                 (Assign sum:19 (Call + sum:19 v:21))
                 #void)
-              (Break @547))
+              (Break @563))
             (Assign i:20 (Call + i:20 1))))
         sum:19)))
   (Let
@@ -465,13 +465,13 @@ console.log("${e(true, null)} ${f(null).length} ${g(1)} ${g(-1)} ${h()} ${i(1)}"
         (Call
           pair:0
           1
-          (Block (If (Call == y:23 #null) (Return @674 (Call - 2)) y:23))))))
+          (Block (If (Call == y:23 #null) (Return @690 (Call - 2)) y:23))))))
   (Let
     ^d:5
     (Fn
       (Let ^s:24 String)
       Int
-      (Block (Orelse (Call p:1 s:24) (Return @722 (Call - 1))))))
+      (Block (Orelse (Call p:1 s:24) (Return @738 (Call - 1))))))
   (Let
     ^e:6
     (Fn
@@ -479,7 +479,7 @@ console.log("${e(true, null)} ${f(null).length} ${g(1)} ${g(-1)} ${h()} ${i(1)}"
       (Let ^y:26 (Call ? Int))
       Boolean
       (Block
-        (If (If t:25 (Call != y:26 null) #false) #true (Return @770 false)))))
+        (If (If t:25 (Call != y:26 null) #false) #true (Return @786 false)))))
   (Let
     ^f:7
     (Fn
@@ -489,7 +489,7 @@ console.log("${e(true, null)} ${f(null).length} ${g(1)} ${g(-1)} ${h()} ${i(1)}"
         (Call
           list
           1
-          (Block (If (Call == y:27 #null) (Return @841 (Call list)) y:27))))))
+          (Block (If (Call == y:27 #null) (Return @857 (Call list)) y:27))))))
   (Let
     ^g:8
     (Fn
@@ -499,25 +499,25 @@ console.log("${e(true, null)} ${f(null).length} ${g(1)} ${g(-1)} ${h()} ${i(1)}"
         (Let
           ^s:29
           String
-          (If (Call > n:28 0) (Block "pos") (Block (Return @891 "neg"))))
+          (If (Call > n:28 0) (Block "pos") (Block (Return @907 "neg"))))
         s:29)))
   (Let
     ^h:9
     (Fn
       Int
       (Block
-        (Let ^z:30 String (Return @979 7))
+        (Let ^z:30 String (Return @995 7))
         (Call (Call . console \log) z:30)
         8)))
   (Let
     ^i:10
-    (Fn (Let ^y:31 (Call ? Int)) Int (Block (Call pair:0 1 (Return @1040 2)))))
+    (Fn (Let ^y:31 (Call ? Int)) Int (Block (Call pair:0 1 (Return @1056 2)))))
   (Let
     ^bad1:11
     (Fn
       (Let ^y:32 (Call ? Int))
       Int
-      (Block (Block (If (Call == y:32 #null) (Return @1082 "s") y:32)))))
+      (Block (Block (If (Call == y:32 #null) (Return @1098 "s") y:32)))))
   (Let
     ^bad2:12
     (Fn
@@ -555,8 +555,8 @@ console.log("${e(true, null)} ${f(null).length} ${g(1)} ${g(-1)} ${h()} ${i(1)}"
       " "
       (Call i:10 1)))
   #void)
-error 1155..1160: No enclosing loop or label for break
-error 1112..1122: Cannot assign to Int32 from String
+error 1171..1176: No enclosing loop or label for break
+error 1128..1138: Cannot assign to Int32 from String
 log 2 null 6 11 -2 -1
 log false 0 pos neg 7 2
 
@@ -2363,7 +2363,7 @@ let f(ls: List<Int>): Void {
   let a6: List<String> = ls.map(fn (x) { return x; });
   let a7 = apply(fn (x) { return panic(); });
   let b1 = apply { x => bubble() };
-  let b2 = apply { x => "1".toInt32() };
+  let b2 = apply { x => "1".toInt32() orelse bubble() };
   let b3 = apply { x => x / 0 };
   let b4 = apply { x => "1".toInt32() orelse 0 };
   let b5 = applyB { x => bubble() } orelse 0;
@@ -2427,7 +2427,11 @@ let f(ls: List<Int>): Void {
         (Let ^b1:15 (Call apply:0 (Fn (Let ^x:30) (Block (Fail)))))
         (Let
           ^b2:16
-          (Call apply:0 (Fn (Let ^x:31) (Block (Call (Call . "1" \toInt32))))))
+          (Call
+            apply:0
+            (Fn
+              (Let ^x:31)
+              (Block (Orelse (Call (Call . "1" \toInt32)) (Fail))))))
         (Let ^b3:17 (Call apply:0 (Fn (Let ^x:32) (Block (Call / x:32 0)))))
         (Let
           ^b4:18
@@ -2451,9 +2455,9 @@ error 1095..1096: Expected subtype of Void, but got Int32
 error 1188..1191: Expected subtype of Int32, but got String
 error 1244..1245: Expected subtype of String, but got Int32
 error 1321..1329: Cannot bubble from a function without Bubble in its return type
-error 1357..1370: Cannot bubble from a function without Bubble in its return type
-error 1531..1539: Cannot bubble from a function without Bubble in its return type
-error 1556..1564: Cannot bubble from a function without Bubble in its return type
+error 1378..1386: Cannot bubble from a function without Bubble in its return type
+error 1547..1555: Cannot bubble from a function without Bubble in its return type
+error 1572..1580: Cannot bubble from a function without Bubble in its return type
 
 === @fun interfaces as the function types they stand for, as Kotlin Temper reports them
 // A `@fun` interface's type stands for its `apply`'s signature: a

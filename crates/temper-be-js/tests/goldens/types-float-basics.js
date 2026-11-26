@@ -1,4 +1,5 @@
 import {
+  ParseError,
   clampInt64,
   cmpFloat64,
   eqFloat64,
@@ -9,7 +10,6 @@ import {
   float64ToString,
   int64ToFloat64,
   int64ToFloat64Unsafe,
-  isBubble,
   stringToFloat64,
 } from "@temperlang/core";
 
@@ -65,7 +65,7 @@ function checkParse(string) {
   try {
     converted = float64ToString(stringToFloat64(string));
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof ParseError)) throw e$;
     converted = "failed";
   }
   console.log(`Parse ${string} -> ${converted}`);
@@ -78,7 +78,7 @@ function checkTiny(string) {
   try {
     positive = (cmpFloat64(stringToFloat64(string), 0.0) > 0).toString();
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof ParseError)) throw e$;
     positive = "failed";
   }
   console.log(`Parse ${string} > 0 -> ${positive}`);
@@ -201,7 +201,7 @@ let t$0;
 try {
   t$0 = float64ToInt32(infinity).toString();
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof ParseError)) throw e$;
   t$0 = "no";
 }
 console.log(`Infinity to int: ${t$0}`);
@@ -210,7 +210,7 @@ let t$1;
 try {
   t$1 = float64ToInt32(NaN).toString();
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof ParseError)) throw e$;
   t$1 = "no";
 }
 console.log(`NaN to int: ${t$1}`);
@@ -219,7 +219,7 @@ const notSoBig = clampInt64(2147483647n * oneInt64);
 const notSoSmall = clampInt64(-2147483648n * oneInt64);
 const slightlyBigger = float64ToInt64Unsafe(int64ToFloat64Unsafe(notSoBig) + 1.5);
 const slightlySmaller = float64ToInt64Unsafe(int64ToFloat64Unsafe(notSoSmall) - 1.5);
-const tooBigForFloat64 = clampInt64(9007199254740992n * float64ToInt64(one));
+const tooBigForFloat64 = clampInt64(9007199254740992n * oneInt64);
 const okToConvert64 = int64ToFloat64Unsafe(clampInt64(tooBigForFloat64 - 1n));
 const sneakyBig = okToConvert64 + 1.0;
 console.log(`Bigger to Int64: ${slightlyBigger.toString()}`);
@@ -230,7 +230,7 @@ let t$2;
 try {
   t$2 = float64ToInt64(sneakyBig).toString();
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof ParseError)) throw e$;
   t$2 = "no";
 }
 console.log(`Sneaky big to Int64: ${t$2}`);
@@ -239,7 +239,7 @@ let t$3;
 try {
   t$3 = float64ToString(int64ToFloat64(tooBigForFloat64));
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof ParseError)) throw e$;
   t$3 = "no";
 }
 console.log(`Too big Int64 to Float64: ${t$3}`);
@@ -248,7 +248,7 @@ let t$4;
 try {
   t$4 = float64ToInt64(infinity).toString();
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof ParseError)) throw e$;
   t$4 = "no";
 }
 console.log(`Infinity to Int64: ${t$4}`);
@@ -257,7 +257,7 @@ let t$5;
 try {
   t$5 = float64ToInt64(NaN).toString();
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof ParseError)) throw e$;
   t$5 = "no";
 }
 console.log(`NaN to Int64: ${t$5}`);

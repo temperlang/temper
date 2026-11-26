@@ -13,6 +13,7 @@ internal class RecordJsonAdapter : IJsonAdapter<Record>
         x.EncodeToJson(p);
     }
 
+    /// <exception cref="JsonException">Where it fails with JsonException.</exception>
     public Record DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
         return Record.DecodeFromJson(t, ic);

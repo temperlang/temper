@@ -7,6 +7,7 @@ from collections.abc import (
 from temper_core import (
     Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
+    ParseError as _ParseError,
     boolean_to_string as _boolean_to_string,
     float64_to_string as _float64_to_string,
     float_cmp as _float_cmp,
@@ -91,7 +92,12 @@ class Grid:
 def parse_grid(s: str, /) -> Grid:
     if s == '':
         raise _Bubble()
-    return Grid(1, (_string_to_float64(s),))
+    t_0: float
+    try:
+        t_0 = _string_to_float64(s)
+    except _ParseError:
+        raise _Bubble()
+    return Grid(1, (t_0,))
 
 
 class Casing:
@@ -706,7 +712,7 @@ def _sum_parsed(xs: _Sequence[str], /) -> int:
         held: int | None = None
         try:
             held = _string_to_int32(x)
-        except _Bubble:
+        except _ParseError:
             pass
         if held is None:  # pyright: ignore[reportUnnecessaryComparison]
             i = _int_add(i, 1)
@@ -724,7 +730,7 @@ def _sum_parsed(xs: _Sequence[str], /) -> int:
         held = None
         try:
             held = _string_to_int32(x)
-        except _Bubble:
+        except _ParseError:
             pass
         if held is None:  # pyright: ignore[reportUnnecessaryComparison]
             continue

@@ -314,7 +314,11 @@ pub fn parse_grid(s: impl ToArcString) -> temper_core::Result<Grid> {
     }
     Ok(Grid::new(
         1,
-        Arc::new(vec![temper_core::string::to_float64(&s)?]),
+        Arc::new(vec![if let Ok(v) = temper_core::string::to_float64(&s) {
+            v
+        } else {
+            return Err(temper_core::Error::new());
+        }]),
     ))
 }
 
@@ -1521,7 +1525,7 @@ pub(crate) fn sum_parsed(xs: impl temper_core::ToList<Arc<String>>) -> i32 {
             let mut held: Option<i32> = None;
             let _ = (|| {
                 held = Some(temper_core::string::to_int(&x, None)?);
-                Ok::<_, temper_core::Error>(())
+                Ok::<_, temper_core::ParseError>(())
             })();
             if let Some(held) = held {
                 n = held;
@@ -1545,7 +1549,7 @@ pub(crate) fn sum_parsed(xs: impl temper_core::ToList<Arc<String>>) -> i32 {
             let mut held: Option<i32> = None;
             let _ = (|| {
                 held = Some(temper_core::string::to_int(&x, None)?);
-                Ok::<_, temper_core::Error>(())
+                Ok::<_, temper_core::ParseError>(())
             })();
             if let Some(held) = held {
                 m = held;

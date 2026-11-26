@@ -85,6 +85,20 @@ Some facts about the Gregorian calendar.
       0, 3, 3, 6, 1, 4, 6, 2, 5, 0, 3, 5,
     ];
 
+Temporal's failures are under one root. A year, month, and day that
+name no day of the calendar, as February 30th, are an *InvalidDate*,
+and text that isn't an ISO 8601 date is an *InvalidIsoDate*.
+
+    export sealed interface TemporalError extends Error {}
+
+    export class InvalidDate(
+      public year: Int,
+      public month: Int,
+      public day: Int,
+    ) extends TemporalError {}
+
+    export class InvalidIsoDate(public text: String) extends TemporalError {}
+
 Here's just enough of a Date type to get us started.
 
     /**
@@ -108,8 +122,9 @@ Here's just enough of a Date type to get us started.
       @connected
       public day: Int;
 
+      /** Throws an *InvalidDate* where there's no such day. */
       @connected
-      public constructor(year: Int, month: Int, day: Int): Void throws Bubble {
+      public constructor(year: Int, month: Int, day: Int): Void throws TemporalError {
         if (1 <= month && month <= 12 &&
             1 <= day && (
               if (month != 2 || day != 29) {
@@ -121,7 +136,7 @@ Here's just enough of a Date type to get us started.
           this.month = month;
           this.day = day;
         } else {
-          bubble();
+          throw new InvalidDate(year, month, day);
         }
       }
 
@@ -137,9 +152,13 @@ Here's just enough of a Date type to get us started.
         return sb.toString();
       }
 
-      /** Parses a Date from an ISO 8601 Date string with dashes like "2000-12-21". */
+      /**
+       * Parses a Date from an ISO 8601 Date string with dashes like
+       * "2000-12-21", throwing an *InvalidIsoDate* if it isn't one, or
+       * names no day.
+       */
       @connected
-      public static fromIsoString(isoString: String): Date throws Bubble {
+      public static fromIsoString(isoString: String): Date throws TemporalError {
         let end = isoString.end;
         var strIndex = isoString.prev(isoString.prev(end));
         // strIndex at '^'
@@ -149,7 +168,7 @@ Here's just enough of a Date type to get us started.
         // YYYY-MM^-DD
         let afterMonth = strIndex;
         if (!isoString.hasIndex(afterMonth) || isoString[strIndex] != char'-') {
-          bubble();
+          throw new InvalidIsoDate(isoString);
         }
         strIndex = isoString.prev(isoString.prev(strIndex));
         // YYYY-^MM-DD
@@ -158,12 +177,12 @@ Here's just enough of a Date type to get us started.
         // YYYY^-MM-DD
         if (isoString[strIndex] != char'-' ||
             !isoString.hasAtLeast(String.begin, strIndex, 4)) {
-          bubble();
+          throw new InvalidIsoDate(isoString);
         }
-        let day   = isoString.slice(beforeDay,    end)       .toInt32(10);
-        let month = isoString.slice(beforeMonth,  afterMonth).toInt32(10);
-        let year  = isoString.slice(String.begin, strIndex)  .toInt32(10);
-        return new Date(year, month, day);
+        let day   = isoString.slice(beforeDay,    end)       .toInt32(10) orelse throw new InvalidIsoDate(isoString);
+        let month = isoString.slice(beforeMonth,  afterMonth).toInt32(10) orelse throw new InvalidIsoDate(isoString);
+        let year  = isoString.slice(String.begin, strIndex)  .toInt32(10) orelse throw new InvalidIsoDate(isoString);
+        return new Date(year, month, day) orelse throw new InvalidIsoDate(isoString);
       }
 
       /**
@@ -255,8 +274,14 @@ Here's just enough of a Date type to get us started.
       public static decodeFromJson(
         t: JsonSyntaxTree,
         ic: InterchangeContext,
-      ): Date throws Bubble {
-        if (t is JsonString) { Date.fromIsoString(t.content) } else { bubble() }
+      ): Date throws JsonError {
+        // Thrown in the orelse, the shape error's cause is the
+        // InvalidIsoDate, which says why.
+        if (t is JsonString) {
+          Date.fromIsoString(t.content) orelse throw new JsonShapeError("expected Date")
+        } else {
+          throw new JsonShapeError("expected Date")
+        }
       }
     };
 
@@ -264,7 +289,9 @@ Dates marshal to and from JSON via the ISO string form.
 
     let {
       InterchangeContext,
+      JsonError,
       JsonProducer,
+      JsonShapeError,
       JsonString,
       JsonSyntaxTree
     } = import("../json");

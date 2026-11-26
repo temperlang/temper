@@ -2,15 +2,16 @@ package json_syntax_tree;
 
 import java.util.List;
 import java.util.logging.Logger;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Nullable;
 import temper.std.json.JsonArray;
+import temper.std.json.JsonException;
 import temper.std.json.JsonGlobal;
 import temper.std.json.JsonNull;
 import temper.std.json.JsonNumeric;
 import temper.std.json.JsonObject;
+import temper.std.json.JsonSyntaxException;
 import temper.std.json.JsonSyntaxTree;
 import temper.std.json.JsonSyntaxTreeProducer;
 import temper.std.json.JsonTextProducer;
@@ -32,7 +33,7 @@ public final class JsonSyntaxTreeGlobal {
                 @Nullable JsonSyntaxTree jsonValue;
                 try {
                     jsonValue = JsonGlobal.parseJson(s);
-                } catch (Bubble ignored) {
+                } catch (JsonSyntaxException ignored) {
                     jsonValue = null;
                 }
                 console.log("`" + s + "` is empty array: " + (jsonValue != null && jsonValue instanceof JsonArray && ((JsonArray) jsonValue).elements.isEmpty()));
@@ -45,16 +46,33 @@ public final class JsonSyntaxTreeGlobal {
             while (i2 < length2) {
                 String s2 = Core.listGet(list2, i2);
                 i2 = i2 + 1;
-                boolean bubbled = false;
+                boolean failed = false;
                 JsonSyntaxTreeProducer p = new JsonSyntaxTreeProducer();
                 JsonGlobal.parseJsonToProducer(s2, p);
                 try {
                     p.toJsonSyntaxTree();
-                } catch (Bubble ignored2) {
-                    bubbled = true;
+                } catch (JsonSyntaxException ignored2) {
+                    failed = true;
                 }
                 @Nullable String error = p.getJsonError();
-                console.log("`" + s2 + "` has" + (bubbled ? "" : " no") + " error: " + (error == null ? "MISSING ERROR" : error));
+                console.log("`" + s2 + "` has" + (failed ? "" : " no") + " error: " + (error == null ? "MISSING ERROR" : error));
+            }
+        }
+        {
+            List<String> list3 = List.of("[1,]", "\"a\"", "7");
+            int length3 = list3.size();
+            int i3 = 0;
+            while (i3 < length3) {
+                String s3 = Core.listGet(list3, i3);
+                i3 = i3 + 1;
+                String decoded;
+                try {
+                    JsonSyntaxTree tree = JsonGlobal.parseJson(s3);
+                    decoded = Integer.toString(JsonGlobal.int32JsonAdapter().decodeFromJson(tree, NullInterchangeContext.instance));
+                } catch (JsonException e) {
+                    decoded = e.getMessage();
+                }
+                console.log(decoded);
             }
         }
         String selectCodePoints = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f -𐀀--퟿\u2028\u2029\u0085";
@@ -64,7 +82,7 @@ public final class JsonSyntaxTreeGlobal {
             String t;
             try {
                 t = p2.toJsonString();
-            } catch (Bubble ignored3) {
+            } catch (JsonSyntaxException ignored3) {
                 t = "?!";
             }
             console.log("string with select code points: " + t);
@@ -83,8 +101,8 @@ public final class JsonSyntaxTreeGlobal {
             console.log(p3.toJsonString());
         }
         {
-            String s3 = "{\"x\":null,\"y\":123,\"z\":123456789012}";
-            JsonSyntaxTree ast = JsonGlobal.parseJson(s3);
+            String s4 = "{\"x\":null,\"y\":123,\"z\":123456789012}";
+            JsonSyntaxTree ast = JsonGlobal.parseJson(s4);
             JsonObject obj = Core.cast(JsonObject.class, ast);
             JsonSyntaxTree xAst = obj.propertyValueOrBubble("x");
             JsonSyntaxTree yAst = obj.propertyValueOrBubble("y");

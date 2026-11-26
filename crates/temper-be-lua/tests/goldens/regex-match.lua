@@ -65,16 +65,16 @@ local function fn(match)
   local groups = match.groups
   ---@type string
   local option1
-  if not temper.pcall(function()
+  if not temper.catch(function()
     option1 = temper.mapped_get(groups, "option1").value
-  end) then
+  end, temper.MissingKey) then
     option1 = ""
   end
   ---@type string
   local alphaOption2
-  if not temper.pcall(function()
+  if not temper.catch(function()
     alphaOption2 = temper.mapped_get(groups, "alphaOption2").value
-  end) then
+  end, temper.MissingKey) then
     alphaOption2 = ""
   end
   local begin = temper.string_countbetween(moreText, 1, match.full.begin)

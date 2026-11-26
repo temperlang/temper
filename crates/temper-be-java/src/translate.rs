@@ -1812,15 +1812,20 @@ impl<'a> Translator<'a> {
             {
                 self.expr(object)?.member("value")
             }
-            // A pair's, an `Entry`'s.
+            // A pair's, an `Entry`'s; core's failures' are public fields.
             Node::GetField { field, object }
-                if by_connection(p, field, crate::connected::connects_std) =>
+                if by_connection(p, field, crate::connected::connects_std)
+                    && self.qname(p.decls.get(field).owner) == "core.type Pair" =>
             {
                 let getter = match p.name(field) {
                     "key" => "getKey",
                     _ => "getValue",
                 };
                 self.expr(object)?.method(getter, Vec::new())
+            }
+            // Core's failures' public fields, by their own names.
+            Node::GetField { field, object } if is_external(p, field) => {
+                self.expr(object)?.member(p.name(field))
             }
             Node::GetField { field, object } => self.expr(object)?.member(self.name(field)),
             // Always through its class: a local could hide its name.

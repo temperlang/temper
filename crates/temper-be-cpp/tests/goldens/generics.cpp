@@ -276,14 +276,26 @@ static void both() {
   core::Console::log(temper_globals::console.value, std::to_string(locals) + " " + std::to_string(x) + " " + std::to_string(y) + " " + std::to_string(fields) + " " + std::to_string(same) + " " + std::to_string(p->n) + " " + std::to_string(q->n) + " " + std::to_string(items) + " " + std::to_string(core::List::get<int32_t>(a, 0)) + " " + std::to_string(core::List::get<int32_t>(b, 0)));
 }
 
-static int32_t bump(core::Str const & key) {
+static core::Expected<int32_t, std::shared_ptr<core::MissingKey>> bump(core::Str const & key) {
   {
-    core::MapBuilder::set<core::Str, int32_t>(temper_globals::tally.value, key, core::Int::sub(core::Mapped::get<core::Str, int32_t>(temper_globals::tally.value, key), 1));
+    auto Result = core::Mapped::get<core::Str, int32_t>(temper_globals::tally.value, key);
+    if (!Result.has_value()) {
+      return core::unexpected(Result.error());
+    }
+    core::MapBuilder::set<core::Str, int32_t>(temper_globals::tally.value, key, core::Int::sub(*Result, 1));
   }
-  int32_t t = core::Mapped::get<core::Str, int32_t>(temper_globals::tally.value, key);
+  auto Result2 = core::Mapped::get<core::Str, int32_t>(temper_globals::tally.value, key);
+  if (!Result2.has_value()) {
+    return core::unexpected(Result2.error());
+  }
+  int32_t t = *Result2;
   core::MapBuilder::set<core::Str, int32_t>(temper_globals::tally.value, key, core::Int::add(t, 1));
   int32_t before = t;
-  int32_t t2 = core::Int::add(core::Mapped::get<core::Str, int32_t>(temper_globals::tally.value, key), 1);
+  auto Result3 = core::Mapped::get<core::Str, int32_t>(temper_globals::tally.value, key);
+  if (!Result3.has_value()) {
+    return core::unexpected(Result3.error());
+  }
+  int32_t t2 = core::Int::add(*Result3, 1);
   core::MapBuilder::set<core::Str, int32_t>(temper_globals::tally.value, key, t2);
   int32_t after = t2;
   return core::Int::add(before, after);
@@ -329,15 +341,17 @@ void global_init_init() {
     std::shared_ptr<core::Pair<core::Str, int32_t>> value3 = core::PairFactory::make<core::Str, int32_t>(TEMPER_STR("a"), 1);
     std::shared_ptr<core::Mapped::Ordered<core::Str, int32_t>> m = core::Map::make<core::Str, int32_t>(core::List::make<std::shared_ptr<core::Pair<core::Str, int32_t>>>(value3, core::PairFactory::make<core::Str, int32_t>(TEMPER_STR("b"), 2)));
     int32_t value4;
-    try {
-      value4 = core::Mapped::get<core::Str, int32_t>(m, TEMPER_STR("b"));
-    } catch (core::TemperBubble const &) {
+    auto Result = core::Mapped::get<core::Str, int32_t>(m, TEMPER_STR("b"));
+    if (Result.has_value()) {
+      value4 = *Result;
+    } else {
       value4 = -1;
     }
     int32_t value5;
-    try {
-      value5 = core::Mapped::get<core::Str, int32_t>(m, TEMPER_STR("c"));
-    } catch (core::TemperBubble const &) {
+    auto Result2 = core::Mapped::get<core::Str, int32_t>(m, TEMPER_STR("c"));
+    if (Result2.has_value()) {
+      value5 = *Result2;
+    } else {
       value5 = -1;
     }
     core::Console::log(temper_globals::console.value, std::to_string(value4) + " " + std::to_string(value5) + " " + core::Boolean::toString(core::Mapped::has<core::Str, int32_t>(m, TEMPER_STR("a"))) + " " + std::to_string(core::Mapped::length<core::Str, int32_t>(m)));
@@ -347,37 +361,42 @@ void global_init_init() {
     core::NullableParam<int32_t> subject3 = core::Mapped::getOr<core::Str, core::NullableParam<int32_t>>(mb, TEMPER_STR("q"), 0);
     core::NullableParam<int32_t> subject4 = core::Mapped::getOr<core::Str, core::NullableParam<int32_t>>(mb, TEMPER_STR("n"), 0);
     core::Console::log(temper_globals::console.value, std::to_string(subject3 == nullptr ? -2 : subject3.value) + " " + std::to_string(subject4 == nullptr ? -2 : subject4.value) + " " + core::Boolean::toString(core::Mapped::has<core::Str, core::NullableParam<int32_t>>(mb, TEMPER_STR("n"))));
-    core::NullableParam<int32_t> subject6;
-    try {
-      subject6 = core::MapBuilder::remove<core::Str, core::NullableParam<int32_t>>(mb, TEMPER_STR("q"));
-    } catch (core::TemperBubble const &) {
-      subject6 = 0;
+    auto Result3 = core::MapBuilder::remove<core::Str, core::NullableParam<int32_t>>(mb, TEMPER_STR("q"));
+    if (!Result3.has_value()) {
+      core::uncaught_failure(Result3.error());
     }
+    core::NullableParam<int32_t> subject6 = *Result3;
     core::NullableParam<core::Str> subject5 = subject6 == nullptr ? nullptr : core::NullableParam<core::Str>(std::to_string(subject6.value));
     core::Console::log(temper_globals::console.value, subject5 == nullptr ? TEMPER_STR("null") : subject5.value);
+    core::NullableParam<int32_t> subject7 = core::Mapped::getOr<core::Str, core::NullableParam<int32_t>>(mb, TEMPER_STR("z"), nullptr);
+    core::NullableParam<core::Str> subject8 = core::List::getOrNull<core::Str>(built, 7, nullptr);
+    core::Console::log(temper_globals::console.value, std::to_string(subject7 == nullptr ? -3 : subject7.value) + " " + (subject8 == nullptr ? TEMPER_STR("none") : subject8.value));
     core::Console::log(temper_globals::console.value, std::to_string(core::List::length<core::Str>(core::Mapped::keys<core::Str, core::NullableParam<int32_t>>(mb))));
     indexed();
     both();
     temper_globals::tally.value = core::Map::make<core::Str, int32_t>();
     core::MapBuilder::set<core::Str, int32_t>(temper_globals::tally.value, TEMPER_STR("k"), 2);
     int32_t value6;
-    try {
-      value6 = generics::bump(TEMPER_STR("k"));
-    } catch (core::TemperBubble const &) {
+    auto bumpResult = generics::bump(TEMPER_STR("k"));
+    if (bumpResult.has_value()) {
+      value6 = *bumpResult;
+    } else {
       value6 = -1;
     }
     int32_t value7 = value6;
     int32_t value8;
-    try {
-      value8 = generics::bump(TEMPER_STR("z"));
-    } catch (core::TemperBubble const &) {
+    auto bumpResult2 = generics::bump(TEMPER_STR("z"));
+    if (bumpResult2.has_value()) {
+      value8 = *bumpResult2;
+    } else {
       value8 = -1;
     }
     int32_t value9 = value8;
     int32_t value10;
-    try {
-      value10 = core::Mapped::get<core::Str, int32_t>(temper_globals::tally.value, TEMPER_STR("k"));
-    } catch (core::TemperBubble const &) {
+    auto Result4 = core::Mapped::get<core::Str, int32_t>(temper_globals::tally.value, TEMPER_STR("k"));
+    if (Result4.has_value()) {
+      value10 = *Result4;
+    } else {
       value10 = -1;
     }
     core::Console::log(temper_globals::console.value, std::to_string(value7) + " " + std::to_string(value9) + " " + std::to_string(value10));

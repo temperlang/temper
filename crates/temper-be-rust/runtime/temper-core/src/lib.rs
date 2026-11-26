@@ -6,8 +6,13 @@ use std::mem::forget;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 
+// The failure macros name the crate's items by its name, here too.
+extern crate self as temper_core;
+
 pub mod failure;
-pub use failure::{with_cause, Cause, Failure};
+pub use failure::{
+    with_cause, Cause, CoreError, Failure, InvalidCodePoint, MissingKey, ParseError,
+};
 pub mod float64;
 pub mod generator;
 pub use generator::{SafeGenerator, SafeGeneratorTrait};
@@ -695,18 +700,17 @@ pub fn int_to_string(i: i32, radix: Option<i32>) -> Arc<String> {
 
 const MANTISSA_MAX_I64: i64 = 1i64 << 53;
 
-pub fn int64_to_float64(i: i64) -> Result<f64> {
+/// The value as a float, or a `ParseError` where that isn't exact.
+pub fn int64_to_float64(i: i64) -> std::result::Result<f64, ParseError> {
     match () {
         _ if i > -MANTISSA_MAX_I64 && i < MANTISSA_MAX_I64 => Ok(i as f64),
-        _ => Err(Error::new()),
+        _ => Err(ParseError::new(i.to_string(), "not exact as Float64")),
     }
 }
 
-pub fn int64_to_int32(i: i64) -> Result<i32> {
-    match () {
-        _ if i >= (i32::MIN as i64) && i <= (i32::MAX as i64) => Ok(i as i32),
-        _ => Err(Error::new()),
-    }
+/// The value as an `i32`, or a `ParseError` out of range.
+pub fn int64_to_int32(i: i64) -> std::result::Result<i32, ParseError> {
+    i32::try_from(i).map_err(|_| ParseError::new(i.to_string(), "out of Int32 range"))
 }
 
 pub fn int64_to_string(i: i64, radix: Option<i32>) -> Arc<String> {

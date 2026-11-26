@@ -6,6 +6,7 @@ import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Nullable;
+import temper.core.ParseError;
 
 public final class JumpValuesGlobal {
     private JumpValuesGlobal() {}
@@ -26,7 +27,11 @@ public final class JumpValuesGlobal {
     }
 
     static int parse(String s) {
-        return Core.stringToInt(s);
+        try {
+            return Core.stringToInt(s);
+        } catch (ParseError ignored) {
+            throw Core.bubble();
+        }
     }
 
     static @Nullable Integer next(@Nullable Integer y) {

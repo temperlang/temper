@@ -98,14 +98,27 @@ pub(crate) fn init() -> temper_core::Result<()> {
             );
             println!("{}", {
                 let subject5 = {
-                    let subject6 = temper_core::MapBuilder::remove(&mb, Arc::new("q".to_string()))
-                        .unwrap_or(Some(0));
+                    let subject6 = temper_core::MapBuilder::remove(&mb, Arc::new("q".to_string()))?;
                     subject6.map(|subject6| Arc::new(subject6.to_string()))
                 };
                 subject5
                     .clone()
                     .unwrap_or_else(|| Arc::new("null".to_string()))
             });
+            println!(
+                "{} {}",
+                {
+                    let subject7 =
+                        temper_core::MappedTrait::get_or(&mb, Arc::new("z".to_string()), None);
+                    subject7.unwrap_or(-3)
+                },
+                {
+                    let subject8 = temper_core::ListedTrait::get_or_null(&built, 7);
+                    subject8
+                        .clone()
+                        .unwrap_or_else(|| Arc::new("none".to_string()))
+                }
+            );
             println!(
                 "{}",
                 temper_core::ListedTrait::len(&*temper_core::MappedTrait::keys(&mb))
@@ -508,7 +521,7 @@ pub(crate) fn tally() -> temper_core::MapBuilder<Arc<String>, i32> {
     crate::support::initialized(|| TALLY.get()).clone()
 }
 
-pub(crate) fn bump(key: impl ToArcString) -> temper_core::Result<i32> {
+pub(crate) fn bump(key: impl ToArcString) -> Result<i32, temper_core::MissingKey> {
     let key = key.to_arc_string();
     {
         temper_core::MapBuilder::set(

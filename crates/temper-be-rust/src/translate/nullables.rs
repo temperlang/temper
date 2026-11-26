@@ -785,7 +785,17 @@ pub(crate) fn unwrap_or(e: Expr) -> Expr {
             } else {
                 scrutinee
             };
-            let f = Expr::Closure(vec![name.to_string()], Block::of(args[0].clone()));
+            // `x.map(f)` where the closure only calls `f` with `x`, as
+            // clippy's `redundant_closure` wants.
+            let f = match &args[0] {
+                Expr::Call(g, xs)
+                    if matches!(&**g, Expr::Path(_))
+                        && matches!(&xs[..], [Expr::Path(x)] if x == name) =>
+                {
+                    (**g).clone()
+                }
+                body => Expr::Closure(vec![name.to_string()], Block::of(body.clone())),
+            };
             return scrutinee.method("map", vec![f]);
         }
     }

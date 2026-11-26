@@ -6,7 +6,7 @@
 //! where it left off.
 
 use super::lower::{Code, Exit, Op, Source};
-use super::{Abrupt, Cause, Class, Closure, Interp, R, Thrown, Val, fail};
+use super::{Abrupt, Cause, Class, Closure, Interp, R, Thrown, Val, fail, thrown_cell};
 use crate::settle::Settled;
 use std::cell::{OnceCell, RefCell};
 use std::rc::Rc;
@@ -273,18 +273,9 @@ impl Interp<'_> {
                 Op::Exit(Exit::Return(target)) => Err(Abrupt::Return(*target, frame.pop())),
                 Op::Fail(message) => Err(Abrupt::Fail(message.as_ref().map(|m| m.to_string()))),
                 Op::Throw => match frame.pop() {
-                    Val::Object(ref failure) => {
-                        // Where it's first thrown, and what's handled there.
-                        if failure.thrown.get().is_none() {
-                            let cause = match handled(frame, at) {
-                                Some(handled @ Val::Object(_)) => Some(Cause::Failure(handled)),
-                                Some(Val::Null) => Some(Cause::Bubble),
-                                _ => None,
-                            };
-                            let at = s.library.tree.span(code.nodes[at as usize]).start;
-                            _ = failure.thrown.set(Box::new(Thrown { at, cause }));
-                        }
-                        Err(Abrupt::Throw(failure.clone()))
+                    failure @ (Val::Object(_) | Val::CoreFailure(_)) => {
+                        mark_thrown(s, frame, at, &failure);
+                        Err(Abrupt::Throw(failure))
                     }
                     other => Err(fail(format!(
                         "Expected a failure, not {}",
@@ -361,6 +352,21 @@ fn capture(frame: &Frame, sources: &[Source]) -> Rc<[Cell]> {
 /// there needs it ([`super::lower::Handler`]): the innermost handler's
 /// whose fallback it's in, or, in a `for … of` body made in one, the
 /// one it captured after its variables.
+/// Notes where a failure is first thrown, by `throw` or by a builtin the
+/// op at `at` calls, as core's `Mapped.get`, and what's handled there.
+fn mark_thrown(s: &Settled, frame: &Frame, at: u32, failure: &Val) {
+    let Some(cell) = thrown_cell(failure).filter(|c| c.get().is_none()) else {
+        return;
+    };
+    let cause = match handled(frame, at) {
+        Some(handled @ (Val::Object(_) | Val::CoreFailure(_))) => Some(Cause::Failure(handled)),
+        Some(Val::Null) => Some(Cause::Bubble),
+        _ => None,
+    };
+    let at = s.library.tree.span(frame.code.nodes[at as usize]).start;
+    _ = cell.set(Box::new(Thrown { at, cause }));
+}
+
 fn handled(frame: &Frame, at: u32) -> Option<Val> {
     let code = &frame.code;
     match (code.handlers.iter()).find(|h| h.to <= at && at < h.fallback_end) {
@@ -387,6 +393,9 @@ impl Interp<'_> {
     ) -> Result<Option<Val>, Abrupt> {
         let code = frame.code.clone();
         let within = |start: u32, end: u32| start <= at && at < end;
+        if let Abrupt::Throw(failure @ Val::CoreFailure(_)) = &abrupt {
+            mark_thrown(s, frame, at, failure);
+        }
         match abrupt {
             Abrupt::Fail(_) | Abrupt::Throw(_) => {
                 if let Some(h) = code.handlers.iter().find(|h| within(h.start, h.end)) {
@@ -401,7 +410,7 @@ impl Interp<'_> {
                     frame.truncate(h.depth);
                     if let Some(slot) = h.slot {
                         frame.values[slot as usize] = match abrupt {
-                            Abrupt::Throw(failure) => Val::Object(failure),
+                            Abrupt::Throw(failure) => failure,
                             _ => Val::Null,
                         };
                     }

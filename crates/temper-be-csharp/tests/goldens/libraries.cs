@@ -21,7 +21,16 @@ public static class LibrariesGlobal
         {
             return Core.Bubble<Grid>();
         }
-        return new Grid(1, Listed.CreateReadOnlyList<double>(ParseFloat64(s)));
+        double t1;
+        try
+        {
+            t1 = ParseFloat64(s);
+        }
+        catch (ParseError)
+        {
+            t1 = Core.Bubble<double>();
+        }
+        return new Grid(1, Listed.CreateReadOnlyList<double>(t1));
     }
 
     internal static global::Libraries.Tagged Tagged(string? label = null)
@@ -159,10 +168,10 @@ public static class LibrariesGlobal
 
     internal static IReadOnlyList<double> Mapped(Grid grid)
     {
-        Grid t1;
+        Grid t2;
         try
         {
-            t1 = Scaled(grid);
+            t2 = Scaled(grid);
         }
         catch (global::TemperLang.Core.Bubble bubble2)
         {
@@ -179,7 +188,7 @@ public static class LibrariesGlobal
                 return x;
             }
         }
-        return Listed.ToReadOnlyList(Enumerable.Select(t1.Values, (Func<double, double>)fn));
+        return Listed.ToReadOnlyList(Enumerable.Select(t2.Values, (Func<double, double>)fn));
     }
 
     internal static int ByteAt(IReadOnlyList<int> digits, bool @short, int c)
@@ -434,7 +443,7 @@ public static class LibrariesGlobal
                 {
                     held = Core.ToInt(x);
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (ParseError)
                 {
                 }
                 if (held == null)
@@ -465,7 +474,7 @@ public static class LibrariesGlobal
                 {
                     held = Core.ToInt(x);
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (ParseError)
                 {
                 }
                 if (held == null)
@@ -523,7 +532,7 @@ public static class LibrariesGlobal
         string trimmed = s.Trim();
         if (trimmed.StartsWith('.') || trimmed.EndsWith('.'))
         {
-            throw new global::TemperLang.Core.Bubble();
+            throw new global::TemperLang.Core.ParseError(s, "not a Float64");
         }
         return trimmed switch
         {
@@ -533,7 +542,7 @@ public static class LibrariesGlobal
                 trimmed,
                 global::System.Globalization.NumberStyles.Float,
                 global::System.Globalization.CultureInfo.InvariantCulture,
-                out double d) ? d : throw new global::TemperLang.Core.Bubble(),
+                out double d) ? d : throw new global::TemperLang.Core.ParseError(s, "not a Float64"),
         };
     }
 

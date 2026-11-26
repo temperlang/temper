@@ -89,21 +89,78 @@ internal class Record
         p.EndObject();
     }
 
+    /// <exception cref="JsonException">Where it fails with JsonException.</exception>
     public static Record DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
-        JsonObject obj = t is JsonObject ? (JsonObject)t : Core.Bubble<JsonObject>();
+        JsonObject obj;
+        if (t is JsonObject)
+        {
+            obj = (JsonObject)t;
+        }
+        else
+        {
+            throw new JsonShapeException("expected Record JSON object");
+        }
         IJsonSyntaxTree nameTree = obj.PropertyValueOrBubble("name");
-        JsonString nameJson = nameTree is JsonString ? (JsonString)nameTree : Core.Bubble<JsonString>();
+        JsonString nameJson;
+        if (nameTree is JsonString)
+        {
+            nameJson = (JsonString)nameTree;
+        }
+        else
+        {
+            throw new JsonShapeException("expected String for name");
+        }
         string name = nameJson.Content;
         IJsonSyntaxTree activeTree = obj.PropertyValueOrBubble("is-active");
-        JsonBoolean activeJson = activeTree is JsonBoolean ? (JsonBoolean)activeTree : Core.Bubble<JsonBoolean>();
+        JsonBoolean activeJson;
+        if (activeTree is JsonBoolean)
+        {
+            activeJson = (JsonBoolean)activeTree;
+        }
+        else
+        {
+            throw new JsonShapeException("expected Boolean for is-active");
+        }
         bool active = activeJson.Content;
         IJsonSyntaxTree scoreTree = obj.PropertyValueOrBubble("score");
-        IJsonNumeric scoreJson = scoreTree is IJsonNumeric ? (IJsonNumeric)scoreTree : Core.Bubble<IJsonNumeric>();
-        double score = scoreJson.AsFloat64();
+        IJsonNumeric scoreJson;
+        if (scoreTree is IJsonNumeric)
+        {
+            scoreJson = (IJsonNumeric)scoreTree;
+        }
+        else
+        {
+            throw new JsonShapeException("expected Float64 for score");
+        }
+        double score;
+        try
+        {
+            score = scoreJson.AsFloat64();
+        }
+        catch (ParseError failure)
+        {
+            throw Core.WithCause(new JsonShapeException("expected Float64 for score"), failure);
+        }
         IJsonSyntaxTree bigTree = obj.PropertyValueOrBubble("big");
-        IJsonNumeric bigJson = bigTree is IJsonNumeric ? (IJsonNumeric)bigTree : Core.Bubble<IJsonNumeric>();
-        long big = bigJson.AsInt64();
+        IJsonNumeric bigJson;
+        if (bigTree is IJsonNumeric)
+        {
+            bigJson = (IJsonNumeric)bigTree;
+        }
+        else
+        {
+            throw new JsonShapeException("expected Int64 for big");
+        }
+        long big;
+        try
+        {
+            big = bigJson.AsInt64();
+        }
+        catch (ParseError failure2)
+        {
+            throw Core.WithCause(new JsonShapeException("expected Int64 for big"), failure2);
+        }
         string? nickname = Optional.OrNull<string>(new OrNullJsonAdapter<string>(JsonGlobal.StringJsonAdapter()).DecodeFromJson(obj.PropertyValueOrBubble("nickname"), ic));
         IReadOnlyList<Point> points = JsonGlobal.ListJsonAdapter(Point.JsonAdapter()).DecodeFromJson(obj.PropertyValueOrBubble("points"), ic);
         return new Record(name, active, score, big, nickname, points);

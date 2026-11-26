@@ -41,13 +41,13 @@ but we don't auto-run those on all backends as of this writing: 2024-8)
 ## Malformed "lists"
 
     for (let s of ['[', ']', '[,]', '[]]', '[1,]', '[1,,2]']) {
-      var bubbled = false;
+      var failed = false;
       let p = new JsonSyntaxTreeProducer();
       parseJsonToProducer(s, p);
-      p.toJsonSyntaxTree() orelse do { bubbled = true; }
+      p.toJsonSyntaxTree() orelse do { failed = true; }
       let error = p.jsonError;
       console.log(
-        "`${s}` has${if (bubbled) { "" } else { " no" }} error: ${error ?? "MISSING ERROR"}"
+        "`${s}` has${if (failed) { "" } else { " no" }} error: ${error ?? "MISSING ERROR"}"
       );
     }
 
@@ -58,6 +58,26 @@ but we don't auto-run those on all backends as of this writing: 2024-8)
 `[]]` has error: Extraneous JSON `]`
 `[1,]` has error: Expected JSON value, but got `]`
 `[1,,2]` has error: Expected JSON value, but got `,2]`
+```
+
+## Errors
+
+*parseJson* throws a *JsonSyntaxError* for text that isn't JSON, and an
+adapter throws a *JsonShapeError* for JSON of another shape than its
+type's, both under *JsonError*.
+
+    for (let s of ['[1,]', '"a"', '7']) {
+      let decoded = do {
+        let tree = parseJson(s);
+        int32JsonAdapter().decodeFromJson(tree, NullInterchangeContext.instance).toString()
+      } catch (e) { e.message };
+      console.log(decoded);
+    }
+
+```log
+json syntax error (problem: Expected JSON value, but got `]`)
+json shape error (problem: expected Int)
+7
 ```
 
 ## String encoding

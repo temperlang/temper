@@ -3,18 +3,20 @@ local int64_neg1 = temper.int64_constructor(-1)
 local JsonTextProducer = require("std/json").JsonTextProducer
 local JsonProducer = require("std/json").JsonProducer
 local JsonSyntaxTree = require("std/json").JsonSyntaxTree
+local JsonError = require("std/json").JsonError
 local parseJson = require("std/json").parseJson
 local JsonArray = require("std/json").JsonArray
 local JsonSyntaxTreeProducer = require("std/json").JsonSyntaxTreeProducer
 local parseJsonToProducer = require("std/json").parseJsonToProducer
 local InterchangeContext = require("std/json").InterchangeContext
+local int32JsonAdapter = require("std/json").int32JsonAdapter
 local NullInterchangeContext = require("std/json").NullInterchangeContext
 local OrNullJsonAdapter = require("std/json").OrNullJsonAdapter
-local int32JsonAdapter = require("std/json").int32JsonAdapter
 local JsonObject = require("std/json").JsonObject
 local JsonNull = require("std/json").JsonNull
 local JsonNumeric = require("std/json").JsonNumeric
 local int64JsonAdapter = require("std/json").int64JsonAdapter
+local JsonSyntaxError = require("std/json").JsonSyntaxError
 
 do
   local list = { "[]", " [] ", " [ ] ", "[1]", "null" }
@@ -25,9 +27,9 @@ do
     i = temper.int32_add(i, 1)
     ---@type std.json.JsonSyntaxTree|temper.Null
     local jsonValue
-    if not temper.pcall(function()
+    if not temper.catch(function()
       jsonValue = parseJson(s)
-    end) then
+    end, JsonSyntaxError) then
       jsonValue = temper.null
     end
     print("`" .. s .. "` is empty array: " .. tostring(not temper.is_null(jsonValue) and temper.instance_of(jsonValue --[[@as std.json.JsonSyntaxTree]], JsonArray) and temper.listed_isempty((jsonValue --[[@as std.json.JsonArray]]).elements)))
@@ -40,16 +42,35 @@ do
   while i2 < length2 do
     local s2 = temper.list_get(list2, i2)
     i2 = temper.int32_add(i2, 1)
-    local bubbled = false
+    local failed = false
     local p = JsonSyntaxTreeProducer()
     parseJsonToProducer(s2, p)
-    if not temper.pcall(function()
+    if not temper.catch(function()
       p:toJsonSyntaxTree()
-    end) then
-      bubbled = true
+    end, JsonSyntaxError) then
+      failed = true
     end
     local error_ = p.jsonError
-    print("`" .. s2 .. "` has" .. (bubbled and "" or " no") .. " error: " .. (temper.is_null(error_) and "MISSING ERROR" or (error_ --[[@as string]])))
+    print("`" .. s2 .. "` has" .. (failed and "" or " no") .. " error: " .. (temper.is_null(error_) and "MISSING ERROR" or (error_ --[[@as string]])))
+  end
+end
+do
+  local list3 = { "[1,]", '"a"', "7" }
+  local length3 = temper.list_length(list3)
+  local i3 = 0
+  while i3 < length3 do
+    local s3 = temper.list_get(list3, i3)
+    i3 = temper.int32_add(i3, 1)
+    ---@type string
+    local decoded
+    local t, e = temper.catch(function()
+      local tree = parseJson(s3)
+      decoded = tostring(int32JsonAdapter():decodeFromJson(tree, NullInterchangeContext.instance))
+    end, JsonError)
+    if not t then
+      decoded = e.message
+    end
+    print(decoded)
   end
 end
 local selectCodePoints = "\000\001\002\003\004\005\006\007\008\t\n\011\012\r\014\015\016\017\018\019\020\021\022\023\024\025\026\027\028\029\030\031 -𐀀--퟿\226\128\168\226\128\169\194\133"
@@ -57,13 +78,13 @@ do
   local p2 = JsonTextProducer(NullInterchangeContext.instance)
   p2:stringValue(selectCodePoints)
   ---@type string
-  local t
-  if not temper.pcall(function()
-    t = p2:toJsonString()
-  end) then
-    t = "?!"
+  local t_1
+  if not temper.catch(function()
+    t_1 = p2:toJsonString()
+  end, JsonSyntaxError) then
+    t_1 = "?!"
   end
-  print("string with select code points: " .. t)
+  print("string with select code points: " .. t_1)
 end
 do
   local p3 = JsonTextProducer(NullInterchangeContext.instance)
@@ -81,8 +102,8 @@ do
   print(p3:toJsonString())
 end
 do
-  local s3 = '{"x":null,"y":123,"z":123456789012}'
-  local ast = parseJson(s3)
+  local s4 = '{"x":null,"y":123,"z":123456789012}'
+  local ast = parseJson(s4)
   local obj = temper.cast_to(ast, JsonObject)
   local xAst = obj:propertyValueOrBubble("x")
   local yAst = obj:propertyValueOrBubble("y")

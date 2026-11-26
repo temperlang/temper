@@ -92,17 +92,19 @@ static bool sameInt(core::NullableParam<int32_t> a, core::NullableParam<int32_t>
 }
 
 static int32_t parse(core::Str const & s) {
-  try {
-    return core::String::toInt32(s);
-  } catch (core::TemperBubble const &) {
+  auto Result = core::String::toInt32(s);
+  if (Result.has_value()) {
+    return *Result;
+  } else {
     return -1;
   }
 }
 
 static int32_t halved(core::Str const & s, int32_t d) {
-  try {
-    return core::Int::div_wrap(core::String::toInt32(s), d);
-  } catch (core::TemperBubble const &) {
+  auto Result = core::String::toInt32(s);
+  if (Result.has_value()) {
+    return core::Int::div_wrap(*Result, d);
+  } else {
     return -1;
   }
 }

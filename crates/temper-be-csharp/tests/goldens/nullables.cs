@@ -44,7 +44,7 @@ public static class NullablesGlobal
         {
             return Core.ToInt(s);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             return -1;
         }
@@ -56,7 +56,7 @@ public static class NullablesGlobal
         {
             return Core.Div(Core.ToInt(s), d);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             return -1;
         }

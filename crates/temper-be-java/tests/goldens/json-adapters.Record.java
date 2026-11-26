@@ -3,13 +3,16 @@ package json_adapters;
 import java.util.List;
 import temper.core.Core;
 import temper.core.Nullable;
+import temper.core.ParseError;
 import temper.std.json.InterchangeContext;
 import temper.std.json.JsonAdapter;
 import temper.std.json.JsonBoolean;
+import temper.std.json.JsonException;
 import temper.std.json.JsonGlobal;
 import temper.std.json.JsonNumeric;
 import temper.std.json.JsonObject;
 import temper.std.json.JsonProducer;
+import temper.std.json.JsonShapeException;
 import temper.std.json.JsonString;
 import temper.std.json.JsonSyntaxTree;
 import temper.std.json.OrNullJsonAdapter;
@@ -48,20 +51,30 @@ final class Record {
         p.endObject();
     }
 
-    public static Record decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) {
-        JsonObject obj = t instanceof JsonObject ? (JsonObject) t : Core.throwBubble();
+    public static Record decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) throws JsonException {
+        JsonObject obj = t instanceof JsonObject ? (JsonObject) t : Core.throwFailure(new JsonShapeException("expected Record JSON object"));
         JsonSyntaxTree nameTree = obj.propertyValueOrBubble("name");
-        JsonString nameJson = nameTree instanceof JsonString ? (JsonString) nameTree : Core.throwBubble();
+        JsonString nameJson = nameTree instanceof JsonString ? (JsonString) nameTree : Core.throwFailure(new JsonShapeException("expected String for name"));
         String name = nameJson.content;
         JsonSyntaxTree activeTree = obj.propertyValueOrBubble("is-active");
-        JsonBoolean activeJson = activeTree instanceof JsonBoolean ? (JsonBoolean) activeTree : Core.throwBubble();
+        JsonBoolean activeJson = activeTree instanceof JsonBoolean ? (JsonBoolean) activeTree : Core.throwFailure(new JsonShapeException("expected Boolean for is-active"));
         boolean active = activeJson.content;
         JsonSyntaxTree scoreTree = obj.propertyValueOrBubble("score");
-        JsonNumeric scoreJson = scoreTree instanceof JsonNumeric ? (JsonNumeric) scoreTree : Core.throwBubble();
-        double score = scoreJson.asFloat64();
+        JsonNumeric scoreJson = scoreTree instanceof JsonNumeric ? (JsonNumeric) scoreTree : Core.throwFailure(new JsonShapeException("expected Float64 for score"));
+        double score;
+        try {
+            score = scoreJson.asFloat64();
+        } catch (ParseError failure) {
+            throw Core.withCause(new JsonShapeException("expected Float64 for score"), failure);
+        }
         JsonSyntaxTree bigTree = obj.propertyValueOrBubble("big");
-        JsonNumeric bigJson = bigTree instanceof JsonNumeric ? (JsonNumeric) bigTree : Core.throwBubble();
-        long big = bigJson.asInt64();
+        JsonNumeric bigJson = bigTree instanceof JsonNumeric ? (JsonNumeric) bigTree : Core.throwFailure(new JsonShapeException("expected Int64 for big"));
+        long big;
+        try {
+            big = bigJson.asInt64();
+        } catch (ParseError failure2) {
+            throw Core.withCause(new JsonShapeException("expected Int64 for big"), failure2);
+        }
         @Nullable String nickname = new OrNullJsonAdapter<String>(JsonGlobal.stringJsonAdapter()).decodeFromJson(obj.propertyValueOrBubble("nickname"), ic);
         List<Point> points = JsonGlobal.listJsonAdapter(Point.jsonAdapter()).decodeFromJson(obj.propertyValueOrBubble("points"), ic);
         return new Record(name, active, score, big, nickname, points);

@@ -31,12 +31,13 @@ namespace temper {
                 sb->write(s.data() + start, end_pos - start);
             }
 
-            inline void appendCodepoint(const std::shared_ptr<std::ostringstream>& sb, int32_t cp) {
+            inline CodePointed<void> appendCodepoint(const std::shared_ptr<std::ostringstream>& sb, int32_t cp) {
                 if (!String::isValidCodepoint(cp)) {
-                    bubble<void>("Invalid code point");
+                    return unexpected(InvalidCodePoint::make(cp));
                 }
                 char bytes[4];
                 sb->write(bytes, String::encodeUtf8(cp, bytes));
+                return {};
             }
 
             inline Str toString(const std::shared_ptr<std::ostringstream>& sb) {

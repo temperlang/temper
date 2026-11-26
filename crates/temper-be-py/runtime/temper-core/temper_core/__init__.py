@@ -17,6 +17,7 @@ from collections import deque
 from contextlib import contextmanager
 from concurrent.futures import Future, InvalidStateError, ThreadPoolExecutor
 from functools import cmp_to_key, reduce
+from importlib import import_module
 from logging import getLogger, INFO
 from math import copysign, fmod, inf, isclose, isinf, isnan, nan
 import threading
@@ -180,6 +181,69 @@ class Failure(metaclass=ABCMeta):
 
 
 _Raised = TypeVar("_Raised", bound=BaseException)
+
+
+class CoreError(Failure, Exception):
+    """
+    The root of core's own declared failures, `MissingKey`, `ParseError`,
+    and `InvalidCodePoint`, as each library's roots are its failures'.
+    """
+
+    __slots__ = ()
+
+
+class MissingKey(CoreError):
+    """
+    What a map's `get` raises for a key it doesn't have, with that key.
+    (Later perhaps a `KeyError` too, as Python's own lookups raise.)
+    """
+
+    __slots__ = ("key",)
+    key: object
+
+    def __init__(self, key: object, /) -> None:
+        self.key = key
+
+    @property
+    def message(self, /) -> str:
+        return f"missing key (key: {self.key})"
+
+
+class ParseError(CoreError):
+    """
+    What a conversion raises for a value it can't convert: its input, as
+    text, and why, as `not an Int32`. (Later perhaps a `ValueError` too.)
+    """
+
+    __slots__ = ("input", "reason")
+    input: str
+    reason: str
+
+    def __init__(self, input: str, reason: str, /) -> None:
+        self.input = input
+        self.reason = reason
+
+    @property
+    def message(self, /) -> str:
+        return f"parse error (input: {self.input}, reason: {self.reason})"
+
+
+class InvalidCodePoint(CoreError):
+    """
+    What making a string from a code point raises for one that isn't a
+    Unicode scalar value, with that number. (Later perhaps a `ValueError`
+    too, as `chr` raises.)
+    """
+
+    __slots__ = ("code_point",)
+    code_point: int
+
+    def __init__(self, code_point: int, /) -> None:
+        self.code_point = code_point
+
+    @property
+    def message(self, /) -> str:
+        return f"invalid code point (codePoint: {self.code_point})"
 
 
 def failure_cause(failure: Failure, /) -> Failure | None:
@@ -371,7 +435,7 @@ def cast_none(val: Union[T, None]) -> T:
 _cbtT = TypeVar("_cbtT")
 
 
-def cast_by_type(val: Union[_cbtT, Any], py_type: Type[_cbtT]) -> _cbtT:
+def cast_by_type(val: object, py_type: Type[_cbtT]) -> _cbtT:
     "Cast to a python type by an isinstance check, else panicking."
     if isinstance(val, py_type):
         return val
@@ -554,19 +618,19 @@ def float64_mod(a: float, b: float) -> float:
 
 
 def mapped_get(mapping: Mapping[T, U], key: T) -> U:
-    "A key's value, bubbling if the key is missing."
+    "A key's value, raising `MissingKey` if the key is missing."
     try:
         return mapping[key]
     except KeyError:
-        raise Bubble() from None
+        raise MissingKey(key) from None
 
 
 def map_builder_remove(mapping: Dict[T, U], key: T) -> U:
-    "Removes a key, giving its value, bubbling if the key is missing."
+    "Removes a key, giving its value, raising `MissingKey` if it's missing."
     try:
         return mapping.pop(key)
     except KeyError:
-        raise Bubble() from None
+        raise MissingKey(key) from None
 
 
 def int_mul(a: int, b: int) -> int:
@@ -651,14 +715,14 @@ def int64_to_float64(value: int) -> float:
     "Implements connected method core.type Int64.toFloat64()."
     if -0x20_0000_0000_0000 < value < 0x20_0000_0000_0000:
         return float(value)
-    raise Bubble()
+    raise ParseError(str(value), "not exact as Float64")
 
 
 def int64_to_int32(value: int) -> int:
     "Implements connected method core.type Int64.toInt32()."
     if -0x8000_0000 <= value <= 0x7FFF_FFFF:
         return int(value)
-    raise Bubble()
+    raise ParseError(str(value), "out of Int32 range")
 
 
 def int64_to_int32_unsafe(value: int) -> int:
@@ -704,7 +768,7 @@ def float64_to_int(value: float) -> int:
     "Implements connected method core.type Float64.toInt32()."
     if -0x8000_0001 < value < 0x8000_0000:
         return int(value)
-    raise Bubble()
+    raise ParseError(float64_to_string(value), "out of Int32 range")
 
 
 def float64_to_int_unsafe(value: float) -> int:
@@ -721,7 +785,7 @@ def float64_to_int64(value: float) -> int:
     "Implements connected method core.type Float64.toInt64()."
     if -0x1F_FFFF_FFFF_FFFF <= value <= 0x1F_FFFF_FFFF_FFFF:
         return int(value)
-    raise Bubble()
+    raise ParseError(float64_to_string(value), "out of Int64 range")
 
 
 def float64_to_int64_unsafe(value: float) -> int:
@@ -767,19 +831,29 @@ def date_to_string(value: Date) -> str:
 
 
 def date_from_iso_string(iso_string: str) -> Date:
-    "Converts a date from a string in YYYY-MM-DD format, else bubbling."
+    """
+    Implements std/temporal's Date.fromIsoString, a date from text in
+    YYYY-MM-DD form, raising std's `InvalidIsoDate` for other text, or no
+    such day, imported only then, as std imports this runtime.
+    """
     try:
         return Date.fromisoformat(iso_string)
-    except ValueError as e:
-        raise Bubble(*e.args) from e
+    except ValueError:
+        invalid = getattr(import_module("temper_std.temporal"), "InvalidIsoDate")
+        raise invalid(iso_string) from None
 
 
 def date_of(year: int, month: int, day: int) -> Date:
-    "Implements std/temporal's Date constructor, bubbling for no such date."
+    """
+    Implements std/temporal's Date constructor, raising std's
+    `InvalidDate` for no such date, imported only then, as std imports
+    this runtime.
+    """
     try:
         return Date(year, month, day)
-    except (ValueError, OverflowError) as e:
-        raise Bubble(*e.args) from e
+    except (ValueError, OverflowError):
+        invalid_date = getattr(import_module("temper_std.temporal"), "InvalidDate")
+        raise invalid_date(year, month, day) from None
 
 
 utc = timezone.utc
@@ -846,8 +920,9 @@ def string_step(s: str, i: int, by: int) -> int:
 
 
 def string_from_code_point(code_point: int) -> str:
+    "A code point as a string, raising `InvalidCodePoint` where it isn't a Unicode scalar value."
     if not 0 <= code_point <= 0x10FFFF or 0xD800 <= code_point <= 0xDFFF:
-        raise Bubble(f"invalid Unicode scalar value {code_point:X}")
+        raise InvalidCodePoint(code_point)
     return chr(code_point)
 
 
@@ -876,8 +951,11 @@ def string_from_code_points(code_points: Iterable[int]) -> str:
         utf32_type_code = next((_ for _ in ["I", "L"] if array(_, []).itemsize == 4))
     try:
         return array(utf32_type_code, code_points).tobytes().decode("utf-32")
-    except (OverflowError, UnicodeDecodeError) as e:
-        raise Bubble("invalid Unicode scalar value") from e
+    except (OverflowError, UnicodeDecodeError):
+        # The first that isn't a Unicode scalar value.
+        for code_point in code_points:
+            string_from_code_point(code_point)
+        raise
 
 
 def string_split(string: str, separator: str) -> Sequence[str]:
@@ -886,12 +964,12 @@ def string_split(string: str, separator: str) -> Sequence[str]:
 
 
 def string_to_float64(string: str) -> float:
-    "Convert string to float following Temper rules, else bubbling"
+    "Convert string to float following Temper rules, else raise ParseError"
     # Presume the common case, which also handles "NaN" and "Infinity".
     try:
         result = float(string)
-    except ValueError as e:
-        raise Bubble(*e.args) from e
+    except ValueError:
+        raise ParseError(string, "not a Float64") from None
     trimmed = string.strip()
     # But guard against things not in Temper.
     if (
@@ -900,34 +978,30 @@ def string_to_float64(string: str) -> float:
         or (isnan(result) and string != "NaN")
         or (isinf(result) and not string.endswith("Infinity"))
     ):
-        raise Bubble(string)
+        raise ParseError(string, "not a Float64")
     return result
 
 
-def string_to_int32(string: str, radix: Optional[int] = None) -> int:
-    if radix == 0:
-        # Other values we reject are checked already.
-        raise Bubble()
+def _parse_int(string: str, radix: Optional[int], low: int, high: int, reason: str) -> int:
+    "An int in [low, high] that `string` spells in `radix`, else raise ParseError."
     try:
-        value = int(string, radix or 10)
-    except ValueError as e:
-        raise Bubble(*e.args) from e
-    if -0x8000_0000 <= value <= 0x7FFF_FFFF:
-        return value
-    raise Bubble()
+        # A radix of 0 takes a prefix, as Temper doesn't.
+        value = int(string, radix or 10) if radix != 0 else None
+    except ValueError:
+        value = None
+    if value is None or not low <= value <= high:
+        raise ParseError(string, reason)
+    return value
+
+
+def string_to_int32(string: str, radix: Optional[int] = None) -> int:
+    return _parse_int(string, radix, -0x8000_0000, 0x7FFF_FFFF, "not an Int32")
 
 
 def string_to_int64(string: str, radix: Optional[int] = None) -> int:
-    if radix == 0:
-        # Other values we reject are checked already.
-        raise Bubble()
-    try:
-        value = int(string, radix or 10)
-    except ValueError as e:
-        raise Bubble(*e.args) from e
-    if -0x8000_0000_0000_0000 <= value <= 0x7FFF_FFFF_FFFF_FFFF:
-        return value
-    raise Bubble()
+    return _parse_int(
+        string, radix, -0x8000_0000_0000_0000, 0x7FFF_FFFF_FFFF_FFFF, "not an Int64"
+    )
 
 
 def list_filter(lst: Sequence[T], predicate: Callable[[T], bool]) -> Sequence[T]:

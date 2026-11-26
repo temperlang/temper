@@ -119,16 +119,18 @@ end <= end? true
 
 We can convert individual integer code points or lists of them.
 
-    let fromCodeNoInline(code: Int): String throws Bubble {
+    let fromCodeNoInline(code: Int): String throws InvalidCodePoint {
       console.log("From 0x${code.toString(16)}");
       String.fromCodePoint(code)
     }
-    let fromCodesNoInline(codes: Listed<Int>): String throws Bubble {
+    let fromCodesNoInline(codes: Listed<Int>): String throws InvalidCodePoint {
       console.log("From codes");
       String.fromCodePoints(codes)
     }
 
-The first one can inline in the front end, but the others shouldn't.
+The first one can inline in the front end, but the others shouldn't. A
+code point that isn't a Unicode scalar value, as 0x110000 or a surrogate,
+throws an *InvalidCodePoint*, a *CoreError*, with the code point.
 
     console.log(String.fromCodePoint(0x1F30D));
     console.log(fromCodeNoInline(0x1F30D));
@@ -136,6 +138,10 @@ The first one can inline in the front end, but the others shouldn't.
     console.log(fromCodeNoInline(0xD800) orelse "no to surrogate");
     console.log(fromCodesNoInline([0x1F43B, 0x200D, 0x2744, 0xFE0F]));
     console.log(fromCodesNoInline([0xD800, 0xDC00]) orelse "no to surrogates");
+    console.log(
+      fromCodesNoInline([0x41, -1, 0xDC00]) catch (e) { e.codePoint.toString(16) }
+    );
+    console.log(String.fromCodePoint(0xDFFF) catch (e) { e.message });
 
 ```log
 🌍
@@ -149,6 +155,24 @@ From codes
 🐻‍❄️
 From codes
 no to surrogates
+From codes
+-1
+invalid code point (codePoint: 57343)
+```
+
+## Parse errors
+
+A conversion that fails throws a *ParseError*, a *CoreError*, with the
+input as text and why.
+
+    console.log("x".toInt32().toString() catch (e) { e.message });
+    console.log((1.0e300).toInt32().toString() catch (e) { e.reason });
+    console.log(("12".toInt64() orelse -1i64).toString());
+
+```log
+parse error (input: x, reason: not an Int32)
+out of Int32 range
+12
 ```
 
 ## Parsing Int values
@@ -192,6 +216,14 @@ common bases, just to make sure we've supported those cases:
     checkParse("20", 17);
     checkParse("20", 37); // but only through base 36
 
+A radix outside 2 through 36 fails the same way on every backend, even
+0, which some hosts read as 10, and 1, for both sizes:
+
+    checkParse("10", 0);
+    checkParse("0", 1);
+    console.log("10".toInt64(0).toString() catch (e) { e.reason });
+    console.log(("10".toInt64(-2) orelse -1i64).toString());
+
 ```log
 Parse -1 -> -1
 Parse 2 -> 2
@@ -204,6 +236,10 @@ Parse 2a -> 42
 Parse 20 -> 14
 Parse 20 -> 34
 Parse 20 -> failed
+Parse 10 -> failed
+Parse 0 -> failed
+not an Int64
+-1
 ```
 
 ## Substrings

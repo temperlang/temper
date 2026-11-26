@@ -88,11 +88,12 @@ namespace TemperLang.Core
 
         private const long mantissaLimit = (1L << 53) - 1;
 
+        /// <summary>The value as a double, or a ParseError where that isn't exact.</summary>
         public static double ToFloat64(this long i64)
         {
             if (i64 < -mantissaLimit || i64 > mantissaLimit)
             {
-                throw new Bubble();
+                throw new ParseError(i64.ToString(System.Globalization.CultureInfo.InvariantCulture), "not exact as Float64");
             }
             return (double)i64;
         }
@@ -112,22 +113,24 @@ namespace TemperLang.Core
                     : double.Parse(trimmed);
         }
 
+        /// <summary>The value truncated, or a ParseError out of range.</summary>
         public static int ToInt(double value)
         {
             // Check this way because nans, too.
             if (!(value > int.MinValue - 1.0 && value < int.MaxValue + 1.0))
             {
-                throw new Bubble();
+                throw new ParseError(Format(value), "out of Int32 range");
             }
             return (int)value;
         }
 
+        /// <summary>The value truncated, or a ParseError out of range.</summary>
         public static long ToInt64(double value)
         {
             // Check this way because nans, too.
             if (!(value >= -mantissaLimit && value <= mantissaLimit))
             {
-                throw new Bubble();
+                throw new ParseError(Format(value), "out of Int64 range");
             }
             return (long)value;
         }

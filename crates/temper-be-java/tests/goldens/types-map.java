@@ -7,9 +7,10 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.logging.Logger;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
+import temper.core.MissingKey;
+import temper.core.Nullable;
 
 public final class MapGlobal {
     private MapGlobal() {}
@@ -24,6 +25,10 @@ public final class MapGlobal {
 
     static String messageDefined(int code) {
         return Boolean.toString(messages.containsKey(code));
+    }
+
+    static String lookUp(int code) throws MissingKey {
+        return Core.mappedGet(messages, code);
     }
 
     static String colorToHex(List<Boolean> color) {
@@ -57,10 +62,12 @@ public final class MapGlobal {
         String t;
         try {
             t = Core.mappedGet(messages, 302);
-        } catch (Bubble ignored) {
+        } catch (MissingKey ignored) {
             t = "Found";
         }
         console.log("Fallback: " + t);
+        @Nullable String subject = messages.getOrDefault(302, null);
+        console.log("Or null: " + (subject == null ? "none" : subject));
         console.log("Codes: " + Core.listJoinInt(listKeys(messages), " ", it -> Integer.toString(it)));
         console.log("Again: " + Core.listJoinInt(List.copyOf(messages.keySet()), " ", it -> Integer.toString(it)));
         console.log("Messages: " + Core.listJoinObj(Core.listCopyOf(messages.values()), ", ", it -> it));
@@ -75,19 +82,47 @@ public final class MapGlobal {
         builder2.put("Panama", List.of("Colombia", "Costa Rica"));
         try {
             Core.mapBuilderRemove(builder2, "Honduras");
-        } catch (Bubble ignored2) {
+        } catch (MissingKey ignored2) {
         }
-        List<String> was = Core.mapBuilderRemove(builder2, "El Salvador");
+        List<String> was;
+        try {
+            was = Core.mapBuilderRemove(builder2, "El Salvador");
+        } catch (MissingKey bubble) {
+            throw new AssertionError("panic", bubble);
+        }
         console.log("Was there: " + Core.listJoinObj(was, ", ", it -> it));
         String t2;
         try {
             t2 = Core.listGet(Core.mapBuilderRemove(builder2, "El Salvador"), 0);
-        } catch (Bubble ignored3) {
+        } catch (MissingKey ignored3) {
             t2 = "Gone";
         }
         console.log(t2);
+        String t3;
+        try {
+            Core.mapBuilderRemove(builder2, "Belize");
+            t3 = "removed";
+        } catch (MissingKey e) {
+            t3 = e.getMessage();
+        }
+        console.log(t3);
         Map<String, List<String>> neighbors = Core.mappedToMap(builder2);
         console.log("From built: " + Core.listJoinObj(Core.mappedGet(neighbors, "Nicaragua"), ", ", it -> it));
+        String t4;
+        try {
+            t4 = lookUp(302);
+        } catch (MissingKey e2) {
+            t4 = e2.getMessage();
+        }
+        console.log(t4);
+        Map<String, Integer> fromBuilder = new LinkedHashMap<>();
+        int t5;
+        try {
+            t5 = Core.mappedGet(fromBuilder, "nope");
+        } catch (MissingKey ignored4) {
+            t5 = -1;
+        }
+        console.log(Integer.toString(t5));
         Map<Integer, Integer> mapOfNone = Core.mapConstructor(List.of());
         Map<String, String> mapOfOne = Core.mapConstructor(List.of(new SimpleImmutableEntry<>("jack", "all trades")));
         Map<Integer, String> mapOfTwo = Core.mapConstructor(List.of(new SimpleImmutableEntry<>(1, "one"), new SimpleImmutableEntry<>(2, "electric boogaloo")));

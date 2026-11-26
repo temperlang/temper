@@ -1,9 +1,9 @@
 package basics;
 
 import java.util.logging.Logger;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
+import temper.core.ParseError;
 
 public final class BasicsGlobal {
     private BasicsGlobal() {}
@@ -34,7 +34,7 @@ public final class BasicsGlobal {
         String converted;
         try {
             converted = Core.float64ToString(Core.stringToFloat64(string));
-        } catch (Bubble ignored) {
+        } catch (ParseError ignored) {
             converted = "failed";
         }
         console.log("Parse " + string + " -> " + converted);
@@ -44,7 +44,7 @@ public final class BasicsGlobal {
         String positive;
         try {
             positive = Boolean.toString(Double.compare(Core.stringToFloat64(string), 0.0) > 0);
-        } catch (Bubble ignored) {
+        } catch (ParseError ignored) {
             positive = "failed";
         }
         console.log("Parse " + string + " > 0 -> " + positive);
@@ -167,14 +167,14 @@ public final class BasicsGlobal {
         String t;
         try {
             t = Integer.toString(Core.float64ToInt(infinity));
-        } catch (Bubble ignored) {
+        } catch (ParseError ignored) {
             t = "no";
         }
         console.log("Infinity to int: " + t);
         String t2;
         try {
             t2 = Integer.toString(Core.float64ToInt(Double.NaN));
-        } catch (Bubble ignored2) {
+        } catch (ParseError ignored2) {
             t2 = "no";
         }
         console.log("NaN to int: " + t2);
@@ -183,7 +183,7 @@ public final class BasicsGlobal {
         long notSoSmall = -2147483648L * oneInt64;
         long slightlyBigger = (long) ((double) notSoBig + 1.5);
         long slightlySmaller = (long) ((double) notSoSmall - 1.5);
-        long tooBigForFloat64 = 9007199254740992L * Core.float64ToInt64(one);
+        long tooBigForFloat64 = 9007199254740992L * oneInt64;
         double okToConvert64 = (double) (tooBigForFloat64 - 1L);
         double sneakyBig = okToConvert64 + 1.0;
         console.log("Bigger to Int64: " + Long.toString(slightlyBigger));
@@ -192,28 +192,28 @@ public final class BasicsGlobal {
         String t3;
         try {
             t3 = Long.toString(Core.float64ToInt64(sneakyBig));
-        } catch (Bubble ignored3) {
+        } catch (ParseError ignored3) {
             t3 = "no";
         }
         console.log("Sneaky big to Int64: " + t3);
         String t4;
         try {
             t4 = Core.float64ToString(Core.int64ToFloat64(tooBigForFloat64));
-        } catch (Bubble ignored4) {
+        } catch (ParseError ignored4) {
             t4 = "no";
         }
         console.log("Too big Int64 to Float64: " + t4);
         String t5;
         try {
             t5 = Long.toString(Core.float64ToInt64(infinity));
-        } catch (Bubble ignored5) {
+        } catch (ParseError ignored5) {
             t5 = "no";
         }
         console.log("Infinity to Int64: " + t5);
         String t6;
         try {
             t6 = Long.toString(Core.float64ToInt64(Double.NaN));
-        } catch (Bubble ignored6) {
+        } catch (ParseError ignored6) {
             t6 = "no";
         }
         console.log("NaN to Int64: " + t6);

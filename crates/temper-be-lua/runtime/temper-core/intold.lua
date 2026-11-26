@@ -244,7 +244,7 @@ function temper.float64_toint64(x)
     if math.abs(x) <= mantissa_max then
         return temper.float64_toint64unsafe(x)
     end
-    temper.bubble("out of range")
+    temper.parse_error(temper.float64_tostring(x), "out of Int64 range")
 end
 
 function temper.float64_toint64unsafe(x)
@@ -313,7 +313,7 @@ function temper.int64_tofloat64(x)
     if math.abs(result) <= mantissa_max then
         return result
     end
-    temper.bubble("out of range")
+    temper.parse_error(temper.int64_tostring(x), "not exact as Float64")
 end
 
 function temper.int64_tofloat64unsafe(x)

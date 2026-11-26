@@ -61,21 +61,38 @@ static void compareEnds(core::Str const & message) {
   core::Console::log(temper_globals::console.value, "end <= end? " + core::Boolean::toString(core::Compare::cmp(end, end) <= 0));
 }
 
-static core::Str fromCodeNoInline(int32_t code) {
+static core::Expected<core::Str, std::shared_ptr<core::InvalidCodePoint>> fromCodeNoInline(int32_t code) {
   core::Console::log(temper_globals::console.value, "From 0x" + core::Int::toString(code, 16));
   return core::String::fromCodepoint(code);
 }
 
-static core::Str fromCodesNoInline(std::shared_ptr<std::vector<int32_t>> const & codes) {
+static core::Expected<core::Str, std::shared_ptr<core::InvalidCodePoint>> fromCodesNoInline(std::shared_ptr<std::vector<int32_t>> const & codes) {
   core::Console::log(temper_globals::console.value, TEMPER_STR("From codes"));
   return core::String::fromCodepoints(codes);
 }
 
 static void checkParse(core::Str const & string, core::NullableParam<int32_t> radix) {
   core::Str converted;
-  try {
-    converted = std::to_string(radix != nullptr ? core::String::toInt32(string, radix.value) : core::String::toInt32(string));
-  } catch (core::TemperBubble const &) {
+  auto result = [&]() -> core::Expected<core::Str, std::shared_ptr<core::ParseError>> {
+    int32_t int32;
+    if (radix != nullptr) {
+      auto Result = core::String::toInt32(string, radix.value);
+      if (!Result.has_value()) {
+        return core::unexpected(Result.error());
+      }
+      int32 = *Result;
+    } else {
+      auto Result2 = core::String::toInt32(string);
+      if (!Result2.has_value()) {
+        return core::unexpected(Result2.error());
+      }
+      int32 = *Result2;
+    }
+    return std::to_string(int32);
+  }();
+  if (result.has_value()) {
+    converted = *result;
+  } else {
     converted = TEMPER_STR("failed");
   }
   core::Console::log(temper_globals::console.value, "Parse " + string + " -> " + converted);
@@ -124,30 +141,89 @@ void global_init_init() {
     read::reportSliceInfo(TEMPER_STR("κόσμε𐆊"));
     read::reportSliceInfo(TEMPER_STR("Hi"));
     read::compareEnds(TEMPER_STR("Hi"));
-    core::Console::log(temper_globals::console.value, core::String::fromCodepoint(127757));
-    core::Console::log(temper_globals::console.value, fromCodeNoInline(127757));
+    auto Result = core::String::fromCodepoint(127757);
+    if (!Result.has_value()) {
+      core::uncaught_failure(Result.error());
+    }
+    core::Console::log(temper_globals::console.value, *Result);
+    auto fromCodeNoInlineResult = fromCodeNoInline(127757);
+    if (!fromCodeNoInlineResult.has_value()) {
+      core::uncaught_failure(fromCodeNoInlineResult.error());
+    }
+    core::Console::log(temper_globals::console.value, *fromCodeNoInlineResult);
     core::Str value;
-    try {
-      value = fromCodeNoInline(1114112);
-    } catch (core::TemperBubble const &) {
+    auto fromCodeNoInlineResult2 = fromCodeNoInline(1114112);
+    if (fromCodeNoInlineResult2.has_value()) {
+      value = *fromCodeNoInlineResult2;
+    } else {
       value = TEMPER_STR("nope");
     }
     core::Console::log(temper_globals::console.value, value);
     core::Str value2;
-    try {
-      value2 = fromCodeNoInline(55296);
-    } catch (core::TemperBubble const &) {
+    auto fromCodeNoInlineResult3 = fromCodeNoInline(55296);
+    if (fromCodeNoInlineResult3.has_value()) {
+      value2 = *fromCodeNoInlineResult3;
+    } else {
       value2 = TEMPER_STR("no to surrogate");
     }
     core::Console::log(temper_globals::console.value, value2);
-    core::Console::log(temper_globals::console.value, read::fromCodesNoInline(core::List::make<int32_t>(128059, 8205, 10052, 65039)));
+    auto fromCodesNoInlineResult = read::fromCodesNoInline(core::List::make<int32_t>(128059, 8205, 10052, 65039));
+    if (!fromCodesNoInlineResult.has_value()) {
+      core::uncaught_failure(fromCodesNoInlineResult.error());
+    }
+    core::Console::log(temper_globals::console.value, *fromCodesNoInlineResult);
     core::Str value3;
-    try {
-      value3 = read::fromCodesNoInline(core::List::make<int32_t>(55296, 56320));
-    } catch (core::TemperBubble const &) {
+    auto fromCodesNoInlineResult2 = read::fromCodesNoInline(core::List::make<int32_t>(55296, 56320));
+    if (fromCodesNoInlineResult2.has_value()) {
+      value3 = *fromCodesNoInlineResult2;
+    } else {
       value3 = TEMPER_STR("no to surrogates");
     }
     core::Console::log(temper_globals::console.value, value3);
+    core::Str value4;
+    auto fromCodesNoInlineResult3 = read::fromCodesNoInline(core::List::make<int32_t>(65, -1, 56320));
+    if (fromCodesNoInlineResult3.has_value()) {
+      value4 = *fromCodesNoInlineResult3;
+    } else {
+      std::shared_ptr<core::InvalidCodePoint> e = fromCodesNoInlineResult3.error();
+      value4 = core::Int::toString(e->codePoint, 16);
+    }
+    core::Console::log(temper_globals::console.value, value4);
+    core::Str value5;
+    auto Result2 = core::String::fromCodepoint(57343);
+    if (Result2.has_value()) {
+      value5 = *Result2;
+    } else {
+      std::shared_ptr<core::InvalidCodePoint> e2 = Result2.error();
+      value5 = e2->get_message();
+    }
+    core::Console::log(temper_globals::console.value, value5);
+    core::Str value6;
+    auto Result3 = core::String::toInt32(TEMPER_STR("x"));
+    if (Result3.has_value()) {
+      value6 = std::to_string(*Result3);
+    } else {
+      std::shared_ptr<core::ParseError> e3 = Result3.error();
+      value6 = e3->get_message();
+    }
+    core::Console::log(temper_globals::console.value, value6);
+    core::Str value7;
+    auto Result4 = core::Float64::toInt32(1e300);
+    if (Result4.has_value()) {
+      value7 = std::to_string(*Result4);
+    } else {
+      std::shared_ptr<core::ParseError> e4 = Result4.error();
+      value7 = e4->reason;
+    }
+    core::Console::log(temper_globals::console.value, value7);
+    int64_t value8;
+    auto Result5 = core::String::toInt64(TEMPER_STR("12"));
+    if (Result5.has_value()) {
+      value8 = *Result5;
+    } else {
+      value8 = int64_t{-1};
+    }
+    core::Console::log(temper_globals::console.value, std::to_string(value8));
     read::checkParse(TEMPER_STR("-1"), nullptr);
     read::checkParse(TEMPER_STR("2"), nullptr);
     read::checkParse(TEMPER_STR(" 2 "), nullptr);
@@ -159,6 +235,25 @@ void global_init_init() {
     read::checkParse(TEMPER_STR("20"), 7);
     read::checkParse(TEMPER_STR("20"), 17);
     read::checkParse(TEMPER_STR("20"), 37);
+    read::checkParse(TEMPER_STR("10"), 0);
+    read::checkParse(TEMPER_STR("0"), 1);
+    core::Str value9;
+    auto Result6 = core::String::toInt64(TEMPER_STR("10"), 0);
+    if (Result6.has_value()) {
+      value9 = std::to_string(*Result6);
+    } else {
+      std::shared_ptr<core::ParseError> e5 = Result6.error();
+      value9 = e5->reason;
+    }
+    core::Console::log(temper_globals::console.value, value9);
+    int64_t value10;
+    auto Result7 = core::String::toInt64(TEMPER_STR("10"), -2);
+    if (Result7.has_value()) {
+      value10 = *Result7;
+    } else {
+      value10 = int64_t{-1};
+    }
+    core::Console::log(temper_globals::console.value, std::to_string(value10));
     {
       core::Str s = TEMPER_STR("foo-bar");
       int32_t after1_2 = core::String::next(s, core::String::begin());

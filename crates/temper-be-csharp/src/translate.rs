@@ -110,6 +110,7 @@ const NAMESPACES: &[(&str, &str)] = &[
     ("Async", "TemperLang.Core"),
     ("Bubble", "TemperLang.Core"),
     ("Core", "TemperLang.Core"),
+    ("CoreException", "TemperLang.Core"),
     ("CultureInfo", "System.Globalization"),
     ("Enumerable", "System.Linq"),
     ("Float64", "TemperLang.Core"),
@@ -125,6 +126,9 @@ const NAMESPACES: &[(&str, &str)] = &[
     ("List", "System.Collections.Generic"),
     ("Listed", "TemperLang.Core"),
     ("Mapped", "TemperLang.Core"),
+    ("MissingKey", "TemperLang.Core"),
+    ("ParseError", "TemperLang.Core"),
+    ("InvalidCodePoint", "TemperLang.Core"),
     ("Optional", "TemperLang.Core"),
     ("Math", "System"),
     ("BitArray", "System.Collections"),
@@ -525,9 +529,11 @@ impl<'a> Translator<'a> {
     /// is a class ([`failures`]).
     fn simple_type_name(&self, decl: DeclId) -> String {
         let name = self.name(decl);
-        if self.p.decls.get(decl).kind == DeclKind::Interface
-            && !failures::failure_class(self.p, decl)
-        {
+        let p = self.p;
+        // Another library's failure types are classes too.
+        let failure =
+            temper_tmpl::failures::is_failure_decl(p, temper_tmpl::failures::root(p), decl);
+        if p.decls.get(decl).kind == DeclKind::Interface && !failure {
             format!("I{name}")
         } else {
             name
@@ -2787,11 +2793,16 @@ impl<'a> Translator<'a> {
             return self.connected(field, &[object]);
         }
         let object = self.expr(object)?;
-        // A pair's, a `KeyValuePair`'s.
+        // A pair's, a `KeyValuePair`'s; core's failures' properties, in
+        // Pascal case, as `ParseError.Reason`.
         if by_connection(self.p, field, crate::connected::connects_std) {
+            let owner = self.qname(self.p.decls.get(field).owner);
             let name = match self.p.name(field) {
-                "key" => "Key",
-                _ => "Value",
+                _ if owner != "core.type Pair" => {
+                    temper_tmpl::naming::pascal_case(self.p.name(field))
+                }
+                "key" => "Key".to_string(),
+                _ => "Value".to_string(),
             };
             return Ok(object.member(name));
         }
@@ -3390,21 +3401,20 @@ impl<'a> Translator<'a> {
     /// `Nullable<T>`.
     /// Whether a type is a nullable type parameter's, `T?`, which is
     /// `Optional<T>`.
-    fn is_optional(&self, ty: TypeId) -> bool {
+    pub(crate) fn is_optional(&self, ty: TypeId) -> bool {
         matches!(self.p.types.get(ty), TypeData::Nullable(inner)
             if matches!(self.p.types.get(inner), TypeData::TypeParam { .. }))
     }
 
-    fn is_value_type(&self, ty: TypeId) -> bool {
+    pub(crate) fn is_value_type(&self, ty: TypeId) -> bool {
         match self.p.types.get(ty) {
             TypeData::Scalar(s) => matches!(
                 s,
                 Scalar::Boolean | Scalar::Int32 | Scalar::Int64 | Scalar::Float64
             ),
-            // String indices are ints.
-            TypeData::Nominal { decl, .. } => {
-                connected::lookup_type(&self.qname(decl)).is_some_and(|c| c.namespace.is_empty())
-            }
+            // String indices are ints; std's `Date` a `DateTime`.
+            TypeData::Nominal { decl, .. } => connected::lookup_type(&self.qname(decl))
+                .is_some_and(|c| c.namespace.is_empty() || c.name == "DateTime"),
             _ => false,
         }
     }

@@ -1,4 +1,5 @@
 import {
+  ParseError,
   bubble,
   divIntInt,
   isBubble,
@@ -67,9 +68,22 @@ function calcRows(cols, total) {
  * @param {string} s
  * @returns {number}
  */
+function parsed(s) {
+  try {
+    return stringToInt32(s, null);
+  } catch (e$) {
+    if (!(e$ instanceof ParseError)) throw e$;
+    return bubble();
+  }
+}
+
+/**
+ * @param {string} s
+ * @returns {number}
+ */
 function countBelow(s) {
   let i = 0;
-  while (i < stringToInt32(s, null)) {
+  while (i < parsed(s)) {
     i = (i + 1) | 0;
   }
   return i;

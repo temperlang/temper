@@ -3,74 +3,94 @@ tmpl 1 model 1 library date 0.0.0
 uses std#1 0.0.0-alpha.0.0 {
   module temporal#2 {
     connected class Date#3 {
-      connected constructor constructor#10(year: Int32, month: Int32, day: Int32): Date#3 throws Bubble;
-      connected let year#17: Int32;
-      connected let month#18: Int32;
-      connected let day#19: Int32;
-      connected get dayOfWeek#20(): Int32;
-      connected method toString#21(): String;
-      connected static today#33(): Date#3;
-      connected static yearsBetween#34(start: Date#3, end: Date#3): Int32;
-      connected static fromIsoString#35(isoString: String): Date#3 throws Bubble;
+      connected constructor constructor#19(year: Int32, month: Int32, day: Int32): Date#3 throws TemporalError#17;
+      connected let year#25: Int32;
+      connected let month#26: Int32;
+      connected let day#27: Int32;
+      connected get dayOfWeek#28(): Int32;
+      connected method toString#29(): String;
+      connected static fromIsoString#46(isoString: String): Date#3 throws TemporalError#17;
+      connected static today#50(): Date#3;
+      connected static yearsBetween#51(start: Date#3, end: Date#3): Int32;
     }
+    interface TemporalError#17 extends Error#18 {}
   }
 }
 
-uses `temper-core`#11 0.0.0-alpha.0.0 {
-  interface Console#12 {
-    connected method log#13(message: String): Void;
+uses `temper-core`#7 0.0.0-alpha.0.0 {
+  class List#8<T#9> extends Listed#10<T#9> {
+    connected get length#30(): Int32;
+    connected method get#31(index: Int32): T#9;
   }
-  class Int32#15 {
-    connected method toString#16(radix?: Int32): String;
+  interface Listed#10<T#11> {
+    connected method map#42<O#43>(transform: fn (T#11): O#43): List#8<O#43>;
+    connected method join#47(separator: String, stringify: fn (T#11): String): String;
   }
-  class List#22<T#23> extends Listed#24<T#23> {
-    connected get length#26(): Int32;
-    connected method get#27(index: Int32): T#23;
+  interface Error#18 {
+    connected get message#41(): String;
   }
-  interface Listed#24<T#25> {}
-  connected fn getConsole#36(name?: String): Console#12;
+  interface Console#20 {
+    connected method log#21(message: String): Void;
+  }
+  class Int32#23 {
+    connected method toString#24(radix?: Int32): String;
+  }
+  connected fn getConsole#52(name?: String): Console#20;
 }
 
 module date#0 {
-  let ~console#14: Console#12;
+  let ~console#22: Console#20;
 
   let d#4: Date#3;
 
   let yonksAgo#5: Date#3;
 
-  let start#6: Date#3;
+  fn checkDate#6(year#37: Int32, month#38: Int32, day#39: Int32): String {
+    return (catch(new constructor#19(year#37, month#38, day#39)^.toString#29(), e#40: TemporalError#17, ((upcast(e#40)): Error#18).message#41())): String;
+  }
 
-  let firstYears#7: Int32;
+  let parsed#12: List#8<String>;
 
-  let secondYears#8: Int32;
+  let start#13: Date#3;
 
-  let rdc#9: Date#3;
+  let firstYears#14: Int32;
+
+  let secondYears#15: Int32;
+
+  let rdc#16: Date#3;
 
   init {
-    init ~console#14 = getConsole#36(omitted);
-    init d#4 = new constructor#10(2023, 6, 29)^;
-    ~console#14.log#13(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("year    = ", d#4.year#17.toString#16(omitted)), "\nmonth   = "), d#4.month#18.toString#16(omitted)), "\nday     = "), d#4.day#19.toString#16(omitted)), "\nweekday = "), d#4.dayOfWeek#20().toString#16(omitted)));
-    ~console#14.log#13(%String.cat("ISO 8601: ", d#4.toString#21()));
-    init yonksAgo#5 = new constructor#10(12, 11, 10)^;
-    ~console#14.log#13(%String.cat("ISO 8601 yonks: ", yonksAgo#5.toString#21()));
-    ~console#14.log#13(%String.cat("yonksAgo.year = ", yonksAgo#5.year#17.toString#16(omitted)));
+    init ~console#22 = getConsole#52(omitted);
+    init d#4 = new constructor#19(2023, 6, 29)^;
+    ~console#22.log#21(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("year    = ", d#4.year#25.toString#24(omitted)), "\nmonth   = "), d#4.month#26.toString#24(omitted)), "\nday     = "), d#4.day#27.toString#24(omitted)), "\nweekday = "), d#4.dayOfWeek#28().toString#24(omitted)));
+    ~console#22.log#21(%String.cat("ISO 8601: ", d#4.toString#29()));
+    init yonksAgo#5 = new constructor#19(12, 11, 10)^;
+    ~console#22.log#21(%String.cat("ISO 8601 yonks: ", yonksAgo#5.toString#29()));
+    ~console#22.log#21(%String.cat("yonksAgo.year = ", yonksAgo#5.year#25.toString#24(omitted)));
     {
-      let ~list#28: List#22<Int32> = (list(1700, 1800, 1900, 2000, 2100, 2400)): List#22<Int32>;
-      let ~length#29: Int32 = ~list#28.length#26();
-      var ~i#30: Int32 = 0;
-      ~loop#31: while (%Int32.lt(~i#30, ~length#29)) {
-        let y#32: Int32 = ~list#28.get#27(~i#30);
-        ~i#30 = %Int32.add(~i#30, 1);
-        ~console#14.log#13(%String.cat(%String.cat(%String.cat(%String.cat(y#32.toString#16(omitted), ": Jan 1 weekday "), new constructor#10(y#32, 1, 1)^.dayOfWeek#20().toString#16(omitted)), ", Mar 1 weekday "), new constructor#10(y#32, 3, 1)^.dayOfWeek#20().toString#16(omitted)));
+      let ~list#32: List#8<Int32> = (list(1700, 1800, 1900, 2000, 2100, 2400)): List#8<Int32>;
+      let ~length#33: Int32 = ~list#32.length#30();
+      var ~i#34: Int32 = 0;
+      ~loop#35: while (%Int32.lt(~i#34, ~length#33)) {
+        let y#36: Int32 = ~list#32.get#31(~i#34);
+        ~i#34 = %Int32.add(~i#34, 1);
+        ~console#22.log#21(%String.cat(%String.cat(%String.cat(%String.cat(y#36.toString#24(omitted), ": Jan 1 weekday "), new constructor#19(y#36, 1, 1)^.dayOfWeek#28().toString#24(omitted)), ", Mar 1 weekday "), new constructor#19(y#36, 3, 1)^.dayOfWeek#28().toString#24(omitted)));
       }
     }
-    today#33();
-    init start#6 = new constructor#10(2010, 3, 21)^;
-    init firstYears#7 = yearsBetween#34(start#6, new constructor#10(2012, 3, 20)^);
-    ~console#14.log#13(%String.cat("First years between: ", firstYears#7.toString#16(omitted)));
-    init secondYears#8 = yearsBetween#34(start#6, new constructor#10(2012, 3, 21)^);
-    ~console#14.log#13(%String.cat("Second years between: ", secondYears#8.toString#16(omitted)));
-    init rdc#9 = fromIsoString#35("1596-03-31")^;
-    ~console#14.log#13(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("Happy birthday, René: day=", rdc#9.day#19.toString#16(omitted)), ", month="), rdc#9.month#18.toString#16(omitted)), ", year="), rdc#9.year#17.toString#16(omitted)));
+    ~console#22.log#21(%String.cat(%String.cat(checkDate#6(2024, 2, 29), " "), checkDate#6(2023, 2, 29)));
+    init parsed#12 = ((list("2024-02-29", "2023-02-29", "2023-2-1")): List#8<String>).map#42<String>((fn ~fn#44(s#45: String): String {
+      return (orelse(fromIsoString#46(s#45)^.toString#29(), "none")): String;
+    }): fn (String): String);
+    ~console#22.log#21(parsed#12.join#47(" ", (fn ~fn#48(it#49: String): String {
+      return it#49;
+    }): fn (String): String));
+    today#50();
+    init start#13 = new constructor#19(2010, 3, 21)^;
+    init firstYears#14 = yearsBetween#51(start#13, new constructor#19(2012, 3, 20)^);
+    ~console#22.log#21(%String.cat("First years between: ", firstYears#14.toString#24(omitted)));
+    init secondYears#15 = yearsBetween#51(start#13, new constructor#19(2012, 3, 21)^);
+    ~console#22.log#21(%String.cat("Second years between: ", secondYears#15.toString#24(omitted)));
+    init rdc#16 = (orelse(fromIsoString#46("1596-03-31")^, (panic()): Date#3)): Date#3;
+    ~console#22.log#21(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("Happy birthday, René: day=", rdc#16.day#27.toString#24(omitted)), ", month="), rdc#16.month#26.toString#24(omitted)), ", year="), rdc#16.year#25.toString#24(omitted)));
   }
 }

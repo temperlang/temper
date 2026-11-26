@@ -23,7 +23,7 @@ public static class JsonSyntaxTreeGlobal
                 {
                     jsonValue = JsonGlobal.ParseJson(s);
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (JsonSyntaxException)
                 {
                     jsonValue = null;
                 }
@@ -38,19 +38,40 @@ public static class JsonSyntaxTreeGlobal
             {
                 string s2 = Listed.Get(list2, i2);
                 i2 = i2 + 1;
-                bool bubbled = false;
+                bool failed = false;
                 JsonSyntaxTreeProducer p = new JsonSyntaxTreeProducer();
                 JsonGlobal.ParseJsonToProducer(s2, p);
                 try
                 {
                     p.ToJsonSyntaxTree();
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (JsonSyntaxException)
                 {
-                    bubbled = true;
+                    failed = true;
                 }
                 string? error = p.JsonError;
-                console.Log("`" + s2 + "` has" + (bubbled ? "" : " no") + " error: " + (error == null ? "MISSING ERROR" : error));
+                console.Log("`" + s2 + "` has" + (failed ? "" : " no") + " error: " + (error == null ? "MISSING ERROR" : error));
+            }
+        }
+        {
+            IReadOnlyList<string> list3 = Listed.CreateReadOnlyList<string>("[1,]", "\"a\"", "7");
+            int length3 = list3.Count;
+            int i3 = 0;
+            while (i3 < length3)
+            {
+                string s3 = Listed.Get(list3, i3);
+                i3 = i3 + 1;
+                string decoded;
+                try
+                {
+                    IJsonSyntaxTree tree = JsonGlobal.ParseJson(s3);
+                    decoded = JsonGlobal.Int32_JsonAdapter().DecodeFromJson(tree, NullInterchangeContext.Instance).ToString(CultureInfo.InvariantCulture);
+                }
+                catch (JsonException e)
+                {
+                    decoded = e.Message;
+                }
+                console.Log(decoded);
             }
         }
         string selectCodePoints = "\0\u0001\u0002\u0003\u0004\u0005\u0006\u0007\u0008\t\n\u000B\u000C\r\u000E\u000F\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001A\u001B\u001C\u001D\u001E\u001F -𐀀-\uE000-퟿\u2028\u2029\u0085";
@@ -62,7 +83,7 @@ public static class JsonSyntaxTreeGlobal
             {
                 t1 = p2.ToJsonString();
             }
-            catch (global::TemperLang.Core.Bubble)
+            catch (JsonSyntaxException)
             {
                 t1 = "?!";
             }
@@ -82,8 +103,8 @@ public static class JsonSyntaxTreeGlobal
             console.Log(p3.ToJsonString());
         }
         {
-            string s3 = "{\"x\":null,\"y\":123,\"z\":123456789012}";
-            IJsonSyntaxTree ast = JsonGlobal.ParseJson(s3);
+            string s4 = "{\"x\":null,\"y\":123,\"z\":123456789012}";
+            IJsonSyntaxTree ast = JsonGlobal.ParseJson(s4);
             JsonObject obj = Core.Cast<JsonObject>(ast);
             IJsonSyntaxTree xAst = obj.PropertyValueOrBubble("x");
             IJsonSyntaxTree yAst = obj.PropertyValueOrBubble("y");

@@ -22,16 +22,16 @@ local function comparePositions(s, a, b)
   local relPos = delta < 0 and "before" or (delta == 0 and "at" or "after")
   ---@type string
   local t
-  if not temper.pcall(function()
+  if not temper.catch(function()
     t = temper.string_fromcodepoint(a)
-  end) then
+  end, temper.InvalidCodePoint) then
     t = "?"
   end
   ---@type string
   local t_1
-  if not temper.pcall(function()
+  if not temper.catch(function()
     t_1 = temper.string_fromcodepoint(b)
-  end) then
+  end, temper.InvalidCodePoint) then
     t_1 = "?"
   end
   print("'" .. t .. "' is " .. relPos .. " '" .. t_1 .. "' in \"" .. s .. '".')
@@ -92,9 +92,9 @@ do
     i = temper.int32_add(i, 1)
     ---@type string
     local t
-    if not temper.pcall(function()
+    if not temper.catch(function()
       t = temper.string_fromcodepoint(c)
-    end) then
+    end, temper.InvalidCodePoint) then
       t = "?"
     end
     print("'" .. t .. "' in \"" .. s .. '": ' .. (has0(s, c) and "y" or "n") .. ", " .. (has1(s, c) and "y" or "n") .. ", " .. (has2(s, c) and "y" or "n") .. ", " .. (has3(s, c) and "y" or "n") .. ", " .. (has4(s, c) and "y" or "n"))

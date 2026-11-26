@@ -19,11 +19,16 @@ namespace temper {
                 }
             }
 
+            // Removes the key's entry, giving its value, or a `MissingKey`
+            // failure.
             template<class Key, class Value>
-            Value remove(const std::shared_ptr<Mapped::Ordered<Key, Value>>& m, Key key) {
+            Expected<Value, std::shared_ptr<MissingKey>> remove(
+                const std::shared_ptr<Mapped::Ordered<Key, Value>>& m,
+                Key key
+            ) {
                 typename std::map<Key, Value>::iterator it = m->data.find(key);
                 if (it == m->data.end()) {
-                    bubble<Value>("key not found");
+                    return unexpected(MissingKey::of(key));
                 }
                 Value result = it->second;
                 m->data.erase(it);

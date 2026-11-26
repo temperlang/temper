@@ -12,18 +12,18 @@ uses `temper-core`#0 0.1.0 {
     connected method max#8(other: Int32): Int32;
   }
   class Int64#9 {
-    connected method toFloat64#10(): Float64 throws Bubble;
+    connected method toFloat64#10(): Float64 throws ParseError#211;
     connected method toFloat64Unsafe#11(): Float64;
-    connected method toInt32#12(): Int32 throws Bubble;
+    connected method toInt32#12(): Int32 throws ParseError#211;
     connected method toInt32Unsafe#13(): Int32;
     connected method toString#14(radix?: Int32): String;
     connected method min#15(other: Int64): Int64;
     connected method max#16(other: Int64): Int64;
   }
   class Float64#17 {
-    connected method toInt32#18(): Int32 throws Bubble;
+    connected method toInt32#18(): Int32 throws ParseError#211;
     connected method toInt32Unsafe#19(): Int32;
-    connected method toInt64#20(): Int64 throws Bubble;
+    connected method toInt64#20(): Int64 throws ParseError#211;
     connected method toInt64Unsafe#21(): Int64;
     connected method toString#22(): String;
     connected method abs#23(): Float64;
@@ -54,11 +54,11 @@ uses `temper-core`#0 0.1.0 {
     connected static let pi#169: Float64;
   }
   class String#46 {
-    connected static fromCodePoint#47(codePoint: Int32): String throws Bubble;
+    connected static fromCodePoint#47(codePoint: Int32): String throws InvalidCodePoint#218;
     connected get isEmpty#48(): Boolean;
-    connected method toFloat64#49(): Float64 throws Bubble;
-    connected method toInt32#50(radix?: Int32): Int32 throws Bubble;
-    connected method toInt64#51(radix?: Int32): Int64 throws Bubble;
+    connected method toFloat64#49(): Float64 throws ParseError#211;
+    connected method toInt32#50(radix?: Int32): Int32 throws ParseError#211;
+    connected method toInt64#51(radix?: Int32): Int64 throws ParseError#211;
     connected method toString#52(): String;
     connected static let begin#127: StringIndex#128;
     connected get end#129(): StringIndex#128;
@@ -72,7 +72,7 @@ uses `temper-core`#0 0.1.0 {
     connected method slice#137(begin: StringIndex#128, end: StringIndex#128): String;
     connected method split#138(separator: String): List#64<String>;
     connected method indexOf#139(target: String, start?: StringIndex#128): StringIndexOption#140;
-    connected static fromCodePoints#170(codePoints: Listed#57<Int32>): String throws Bubble;
+    connected static fromCodePoints#170(codePoints: Listed#57<Int32>): String throws InvalidCodePoint#218;
   }
   interface Console#53 {
     connected method log#54(message: String): Void;
@@ -82,7 +82,7 @@ uses `temper-core`#0 0.1.0 {
     connected get length#59(): Int32;
     connected get isEmpty#60(): Boolean;
     connected method get#61(index: Int32): T#58;
-    connected method getOr#62(index: Int32, fallback: T#58): T#58;
+    connected method getOr#62<R#210>(index: Int32, fallback: R#210): R#210;
     connected method slice#63(begin: Int32, end: Int32): List#64<T#58>;
     connected method toList#65(): List#64<T#58>;
     connected method toListBuilder#66(): ListBuilder#67<T#58>;
@@ -121,8 +121,8 @@ uses `temper-core`#0 0.1.0 {
   interface MapKey#90<EQ#91> {}
   interface Mapped#92<K#93 extends MapKey#90<K#93>, V#94> {
     connected get length#95(): Int32;
-    connected method get#96(key: K#93): V#94 throws Bubble;
-    connected method getOr#97(key: K#93, fallback: V#94): V#94;
+    connected method get#96(key: K#93): V#94 throws MissingKey#206;
+    connected method getOr#97<R#209>(key: K#93, fallback: R#209): R#209;
     connected method has#98(key: K#93): Boolean;
     connected method keys#99(): Listed#57<K#93>;
     connected method values#100(): Listed#57<V#94>;
@@ -139,7 +139,7 @@ uses `temper-core`#0 0.1.0 {
   class MapBuilder#104<K#110 extends MapKey#90<K#110>, V#111> extends Mapped#92<K#110, V#111> {
     connected constructor constructor#112(): MapBuilder#104<K#110, V#111>;
     connected method clear#113(): Void;
-    connected method remove#114(key: K#110): V#111 throws Bubble;
+    connected method remove#114(key: K#110): V#111 throws MissingKey#206;
     connected method set#115(key: K#110, newValue: V#111): Void;
   }
   class StringIndex#128 extends StringIndexOption#140 {
@@ -153,7 +153,7 @@ uses `temper-core`#0 0.1.0 {
   class StringBuilder#145 {
     connected constructor constructor#146(): StringBuilder#145;
     connected method append#147(substring: String): Void;
-    connected method appendCodePoint#148(cp: Int32): Void throws Bubble;
+    connected method appendCodePoint#148(cp: Int32): Void throws InvalidCodePoint#218;
     connected method appendBetween#149(source: String, begin: StringIndex#128, end: StringIndex#128): Void;
     connected method clear#150(): Void;
     connected get end#151(): StringIndex#128;
@@ -197,6 +197,20 @@ uses `temper-core`#0 0.1.0 {
   interface Error#202 {
     connected get message#203(): String;
     connected get cause#204(): Error#202?;
+  }
+  interface CoreError#205 extends Error#202 {}
+  class MissingKey#206 extends CoreError#205 {
+    let key#207: AnyValue;
+    connected constructor constructor#208(key: AnyValue): MissingKey#206;
+  }
+  class ParseError#211 extends CoreError#205 {
+    let input#212: String;
+    let reason#213: String;
+    connected constructor constructor#214(input: String, reason: String): ParseError#211;
+  }
+  class InvalidCodePoint#218 extends CoreError#205 {
+    let codePoint#219: Int32;
+    connected constructor constructor#220(codePoint: Int32): InvalidCodePoint#218;
   }
 }
 

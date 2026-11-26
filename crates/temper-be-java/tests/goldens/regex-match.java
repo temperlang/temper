@@ -7,6 +7,7 @@ import java.util.logging.Logger;
 import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
+import temper.core.MissingKey;
 import temper.std.regex.Capture;
 import temper.std.regex.CodePoints;
 import temper.std.regex.CodeRange;
@@ -69,13 +70,13 @@ public final class MatchGlobal {
             String option1_2;
             try {
                 option1_2 = Core.mappedGet(groups, "option1").value;
-            } catch (Bubble ignored) {
+            } catch (MissingKey ignored) {
                 option1_2 = "";
             }
             String alphaOption2;
             try {
                 alphaOption2 = Core.mappedGet(groups, "alphaOption2").value;
-            } catch (Bubble ignored2) {
+            } catch (MissingKey ignored2) {
                 alphaOption2 = "";
             }
             int begin2 = Core.stringCountBetween(moreText, 0, match2.full.begin);

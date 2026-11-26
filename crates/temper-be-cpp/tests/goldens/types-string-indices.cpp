@@ -40,16 +40,18 @@ static void comparePositions(core::Str const & s, int32_t a, int32_t b) {
   int32_t delta = core::Compare::cmp(indices::indexOfChar(s, a), indices::indexOfChar(s, b));
   core::Str relPos = delta < 0 ? TEMPER_STR("before") : delta == 0 ? TEMPER_STR("at") : TEMPER_STR("after");
   core::Str value;
-  try {
-    value = core::String::fromCodepoint(a);
-  } catch (core::TemperBubble const &) {
+  auto Result = core::String::fromCodepoint(a);
+  if (Result.has_value()) {
+    value = *Result;
+  } else {
     value = TEMPER_STR("?");
   }
   core::Str string = value;
   core::Str value2;
-  try {
-    value2 = core::String::fromCodepoint(b);
-  } catch (core::TemperBubble const &) {
+  auto Result2 = core::String::fromCodepoint(b);
+  if (Result2.has_value()) {
+    value2 = *Result2;
+  } else {
     value2 = TEMPER_STR("?");
   }
   core::Console::log(temper_globals::console.value, "'" + string + "' is " + relPos + " '" + value2 + "' in \"" + s + "\".");
@@ -98,9 +100,10 @@ void global_init_init() {
         int32_t c = core::List::get<int32_t>(list, i);
         i = core::Int::add(i, 1);
         core::Str value;
-        try {
-          value = core::String::fromCodepoint(c);
-        } catch (core::TemperBubble const &) {
+        auto Result = core::String::fromCodepoint(c);
+        if (Result.has_value()) {
+          value = *Result;
+        } else {
           value = TEMPER_STR("?");
         }
         core::Console::log(temper_globals::console.value, "'" + value + "' in \"" + s + "\": " + (indices::has0(s, c) ? TEMPER_STR("y") : TEMPER_STR("n")) + ", " + (indices::has1(s, c) ? TEMPER_STR("y") : TEMPER_STR("n")) + ", " + (indices::has2(s, c) ? TEMPER_STR("y") : TEMPER_STR("n")) + ", " + (indices::has3(s, c) ? TEMPER_STR("y") : TEMPER_STR("n")) + ", " + (indices::has4(s, c) ? TEMPER_STR("y") : TEMPER_STR("n")));

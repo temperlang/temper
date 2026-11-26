@@ -1,11 +1,14 @@
 package json_adapters;
 
 import temper.core.Core;
+import temper.core.ParseError;
 import temper.std.json.InterchangeContext;
 import temper.std.json.JsonAdapter;
+import temper.std.json.JsonException;
 import temper.std.json.JsonNumeric;
 import temper.std.json.JsonObject;
 import temper.std.json.JsonProducer;
+import temper.std.json.JsonShapeException;
 import temper.std.json.JsonSyntaxTree;
 
 final class Rect implements Shape {
@@ -26,14 +29,24 @@ final class Rect implements Shape {
         p.endObject();
     }
 
-    public static Rect decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) {
-        JsonObject obj = t instanceof JsonObject ? (JsonObject) t : Core.throwBubble();
+    public static Rect decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) throws JsonException {
+        JsonObject obj = t instanceof JsonObject ? (JsonObject) t : Core.throwFailure(new JsonShapeException("expected Rect JSON object"));
         JsonSyntaxTree widthTree = obj.propertyValueOrBubble("width");
-        JsonNumeric widthJson = widthTree instanceof JsonNumeric ? (JsonNumeric) widthTree : Core.throwBubble();
-        int width = widthJson.asInt32();
+        JsonNumeric widthJson = widthTree instanceof JsonNumeric ? (JsonNumeric) widthTree : Core.throwFailure(new JsonShapeException("expected Int for width"));
+        int width;
+        try {
+            width = widthJson.asInt32();
+        } catch (ParseError failure) {
+            throw Core.withCause(new JsonShapeException("expected Int for width"), failure);
+        }
         JsonSyntaxTree heightTree = obj.propertyValueOrBubble("height");
-        JsonNumeric heightJson = heightTree instanceof JsonNumeric ? (JsonNumeric) heightTree : Core.throwBubble();
-        int height = heightJson.asInt32();
+        JsonNumeric heightJson = heightTree instanceof JsonNumeric ? (JsonNumeric) heightTree : Core.throwFailure(new JsonShapeException("expected Int for height"));
+        int height;
+        try {
+            height = heightJson.asInt32();
+        } catch (ParseError failure2) {
+            throw Core.withCause(new JsonShapeException("expected Int for height"), failure2);
+        }
         return new Rect(width, height);
     }
 

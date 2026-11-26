@@ -150,6 +150,17 @@ impl Prim {
         }
     }
 
+    /// Its name, for a decoder's problems.
+    fn name(self) -> &'static str {
+        match self {
+            Prim::Boolean => "Boolean",
+            Prim::Float64 => "Float64",
+            Prim::Int => "Int",
+            Prim::Int64 => "Int64",
+            Prim::String => "String",
+        }
+    }
+
     fn adapter(self) -> &'static str {
         match self {
             Prim::Boolean => "booleanJsonAdapter",
@@ -446,6 +457,7 @@ impl Settle {
                 module,
             }));
             let me = g.ph(Sub::Name(class));
+            let json_error = g.std("JsonError");
             // Abstract, where Kotlin's switches on `this`'s class to call
             // its adapter: each subtype's own `encodeToJson` overrides it,
             // as `@json` gives every one of them, so it does the same,
@@ -453,7 +465,7 @@ impl Settle {
             writeln!(
                 body,
                 "public encodeToJson(p: {producer}): Void;\n\
-                 public static decodeFromJson(t: {tree_ty}, ic: {ic}): {me} throws Bubble {{ {decode}() }}"
+                 public static decodeFromJson(t: {tree_ty}, ic: {ic}): {me} throws {json_error} {{ {decode}() }}"
             )
             .unwrap();
         } else {
@@ -697,11 +709,13 @@ impl Settle {
             g.std("JsonObject"),
         );
         let me = g.ph(Sub::Name(class));
+        let json_error = g.std("JsonError");
         // `as` panics where it fails, so a tree of another shape is
         // checked with `is`, failing as decoding does.
+        let not_object = Self::shape_error(g, &format!("{class_text} JSON object"));
         let mut decode = format!(
-            "public static decodeFromJson(t: {tree_ty}, ic: {ic_ty}): {me} throws Bubble {{\n  \
-             let obj = if (t is {object}) {{ t }} else {{ bubble() }};\n"
+            "public static decodeFromJson(t: {tree_ty}, ic: {ic_ty}): {me} throws {json_error} {{\n  \
+             let obj = if (t is {object}) {{ t }} else {{ {not_object} }};\n"
         );
         let mut taken: Vec<String> = ["t", "ic", "obj"].map(String::from).to_vec();
         let mut args = Vec::new();
@@ -733,14 +747,21 @@ impl Settle {
                     let tree_local = Self::fresh(&mut taken, &format!("{param_text}Tree"));
                     let tree_name = self.lib.names.intern(&tree_local);
                     let [t1, t2, t3] = [(); 3].map(|_| g.ph(Sub::Name(tree_name)));
+                    let wanted = format!("{} for {}", prim.name(), f.key);
+                    let mismatch = Self::shape_error(g, &wanted);
                     writeln!(
                         decode,
                         "  let {t1} = {tree_expr};\n  \
-                         let {a} = if ({t2} is {cast}) {{ {t3} }} else {{ bubble() }};"
+                         let {a} = if ({t2} is {cast}) {{ {t3} }} else {{ {mismatch} }};"
                     )
                     .unwrap();
+                    // A number's reader throws a `ParseError` for a
+                    // number out of the type's range.
                     match method {
-                        Some(m) => format!("{b}.{m}()"),
+                        Some(m) => {
+                            let out_of_range = Self::shape_error(g, &wanted);
+                            format!("{b}.{m}() orelse {out_of_range}")
+                        }
                         None => format!("{b}.content"),
                     }
                 }
@@ -759,6 +780,14 @@ impl Settle {
             return Err(problems);
         }
         Ok(format!("{encode}{decode}"))
+    }
+
+    /// `throw new JsonShapeError("expected …")`, for a tree of another
+    /// shape than `wanted`.
+    fn shape_error(g: &mut Gen, wanted: &str) -> String {
+        let error = g.std("JsonShapeError");
+        let problem = g.string(&format!("expected {wanted}"));
+        format!("throw new {error}({problem})")
     }
 
     /// `public static jsonAdapter(): JsonAdapter<C> { new
@@ -781,10 +810,11 @@ impl Settle {
             g.std("JsonSyntaxTree"),
             g.std("InterchangeContext"),
         );
+        let json_error = g.std("JsonError");
         format!(
             "class {adapter} extends {json_adapter}<{m1}> {{\n\
              public encodeToJson(x: {m2}, p: {producer}): Void {{\n  x.encodeToJson(p);\n}}\n\
-             public decodeFromJson(t: {tree_ty}, ic: {ic}): {m3} throws Bubble {{\n  \
+             public decodeFromJson(t: {tree_ty}, ic: {ic}): {m3} throws {json_error} {{\n  \
              {m4}.decodeFromJson(t, ic)\n}}\n}}\n"
         )
     }
@@ -926,7 +956,7 @@ impl Settle {
             Err(text) => {
                 self.lib
                     .report(crate::library::Level::Error, Message::JsonInterop(text), at);
-                "do { bubble() }".into()
+                "do { panic() }".into()
             }
         };
         let Some(root) = self.adopt(g, &source, span, call) else {
@@ -1057,11 +1087,13 @@ impl Settle {
         let cases: Vec<usize> = (0..subtypes.len()).collect();
         let tree = decision_tree(&cases, &features, &categorize);
         let object = g.std("JsonObject");
+        let not_object = Self::shape_error(g, &format!("{class_text} JSON object"));
         let mut text =
-            format!("do {{\n  let obj = if (t is {object}) {{ t }} else {{ bubble() }};\n");
+            format!("do {{\n  let obj = if (t is {object}) {{ t }} else {{ {not_object} }};\n");
         let mut names = Vec::new();
         self.plant_tree(g, &tree, subtypes, class_text, &mut names, &mut text, 1)?;
-        text.push_str("  bubble()\n}\n");
+        let no_match = Self::shape_error(g, &format!("one of {class_text}'s JSON shapes"));
+        writeln!(text, "  {no_match}\n}}").unwrap();
         Ok(text)
     }
 

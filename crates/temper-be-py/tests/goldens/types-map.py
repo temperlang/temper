@@ -1,7 +1,7 @@
 from collections.abc import Mapping as _Mapping, Sequence as _Sequence
 from temper_core import (
-    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
+    MissingKey as _MissingKey,
     Pair as _Pair,
     boolean_to_string as _boolean_to_string,
     int_div as _int_div,
@@ -33,6 +33,10 @@ def _list_keys(mapped: _Mapping[_K, _V], /) -> _Sequence[_K]:
 
 def _message_defined(code: int, /) -> str:
     return _boolean_to_string(_mapped_has(_messages, code))
+
+
+def _look_up(code: int, /) -> str:
+    return _mapped_get(_messages, code)
 
 
 def _color_to_hex(color: _Sequence[bool], /) -> str:
@@ -67,9 +71,10 @@ _console.log(f'Has 200: {_message_defined(200)}, 302: {_message_defined(302)}')
 _t_0: str
 try:
     _t_0 = _mapped_get(_messages, 302)
-except _Bubble:
+except _MissingKey:
     _t_0 = 'Found'
 _console.log(f'Fallback: {_t_0}')
+_console.log(f"Or null: {'none' if (_subject := _messages.get(302, None)) is None else _subject}")
 _console.log(f"Codes: {_list_join(_list_keys(_messages), ' ', lambda it: str(it))}")
 _console.log(f"Again: {_list_join(list(_messages.keys()), ' ', lambda it: str(it))}")
 _console.log(f"Messages: {_list_join(list(_messages.values()), ', ', lambda it: it)}")
@@ -84,18 +89,41 @@ _map_builder_set(_builder2, 'Nicaragua', ('Costa Rica', 'Honduras'))
 _map_builder_set(_builder2, 'Panama', ('Colombia', 'Costa Rica'))
 try:
     _map_builder_remove(_builder2, 'Honduras')
-except _Bubble:
+except _MissingKey:
     pass
-_was = _map_builder_remove(_builder2, 'El Salvador')
-_console.log(f"Was there: {_list_join(_was, ', ', lambda it: it)}")
-_t_1: str
 try:
-    _t_1 = _list_get(_map_builder_remove(_builder2, 'El Salvador'), 0)
-except _Bubble:
-    _t_1 = 'Gone'
-_console.log(_t_1)
+    _was = _map_builder_remove(_builder2, 'El Salvador')
+except _MissingKey as _t_1:
+    raise BaseException('panic') from _t_1
+_console.log(f"Was there: {_list_join(_was, ', ', lambda it: it)}")
+_t_2: str
+try:
+    _t_2 = _list_get(_map_builder_remove(_builder2, 'El Salvador'), 0)
+except _MissingKey:
+    _t_2 = 'Gone'
+_console.log(_t_2)
+_t_3: str
+try:
+    _map_builder_remove(_builder2, 'Belize')
+    _t_3 = 'removed'
+except _MissingKey as _e:
+    _t_3 = _e.message
+_console.log(_t_3)
 _neighbors: _MappingProxyType[str, _Sequence[str]] = _mapped_to_map(_builder2)
 _console.log(f"From built: {_list_join(_mapped_get(_neighbors, 'Nicaragua'), ', ', lambda it: it)}")
+_t_4: str
+try:
+    _t_4 = _look_up(302)
+except _MissingKey as _e2:
+    _t_4 = _e2.message
+_console.log(_t_4)
+_from_builder: dict[str, int] = {}
+_t_5: int
+try:
+    _t_5 = _mapped_get(_from_builder, 'nope')
+except _MissingKey:
+    _t_5 = -1
+_console.log(str(_t_5))
 _map_of_none: _MappingProxyType[int, int] = _map_constructor(())
 _map_of_one: _MappingProxyType[str, str] = _map_constructor((_Pair('jack', 'all trades'),))
 _map_of_two: _MappingProxyType[int, str] = _map_constructor((_Pair(1, 'one'), _Pair(2, 'electric boogaloo')))

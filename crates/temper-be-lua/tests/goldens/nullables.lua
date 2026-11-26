@@ -66,9 +66,9 @@ end
 local function parse(s)
   ---@type integer
   local t
-  if not temper.pcall(function()
+  if not temper.catch(function()
     t = temper.string_toint32(s)
-  end) then
+  end, temper.ParseError) then
     t = -1
   end
   return t
@@ -80,9 +80,9 @@ end
 local function halved(s, d)
   ---@type integer
   local t
-  if not temper.pcall(function()
+  if not temper.catch(function()
     t = temper.int32_div(temper.string_toint32(s), d)
-  end) then
+  end, temper.ParseError) then
     t = -1
   end
   return t

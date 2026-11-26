@@ -44,11 +44,23 @@ namespace TemperLang.Core
             TValue fallback
         ) => dictionary.TryGetValue(key, out var value) ? value : fallback;
 
-        /// Temper's get: the key's value, bubbling if it's missing.
+        /// Temper's getOr with a null fallback, for a value type's values.
+        public static TValue? GetValueOrNull<TKey, TValue>(
+            this IReadOnlyDictionary<TKey, TValue> dictionary,
+            TKey key
+        ) where TValue : struct => dictionary.TryGetValue(key, out var value) ? value : null;
+
+        /// Temper's getOr with a null fallback, for a reference type's values.
+        public static TValue? GetOrNull<TKey, TValue>(
+            this IReadOnlyDictionary<TKey, TValue> dictionary,
+            TKey key
+        ) where TValue : class => dictionary.TryGetValue(key, out var value) ? value : null;
+
+        /// Temper's get: the key's value, throwing MissingKey if it's missing.
         public static TValue Get<TKey, TValue>(
             this IReadOnlyDictionary<TKey, TValue> dictionary,
             TKey key
-        ) => dictionary.TryGetValue(key, out var value) ? value : throw new Bubble();
+        ) => dictionary.TryGetValue(key, out var value) ? value : throw new MissingKey(key!);
 
         public static bool ContainsKey<TKey, TValue>(
             this IReadOnlyDictionary<TKey, TValue> dictionary,
@@ -113,10 +125,20 @@ namespace TemperLang.Core
             ? dictionary[key]
             : fallback;
 
+        public static TValue? GetValueOrNull<TKey, TValue>(
+            this IDictionary<TKey, TValue> dictionary,
+            TKey key
+        ) where TValue : struct => dictionary.TryGetValue(key, out var value) ? value : null;
+
+        public static TValue? GetOrNull<TKey, TValue>(
+            this IDictionary<TKey, TValue> dictionary,
+            TKey key
+        ) where TValue : class => dictionary.TryGetValue(key, out var value) ? value : null;
+
         public static TValue Get<TKey, TValue>(
             this IDictionary<TKey, TValue> dictionary,
             TKey key
-        ) => dictionary.TryGetValue(key, out var value) ? value : throw new Bubble();
+        ) => dictionary.TryGetValue(key, out var value) ? value : throw new MissingKey(key!);
 
         public static bool ContainsKey<TKey, TValue>(
             this IDictionary<TKey, TValue> dictionary,

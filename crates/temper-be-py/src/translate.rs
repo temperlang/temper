@@ -2920,6 +2920,11 @@ pub(crate) fn core_type(qname: &str) -> Option<(&'static str, &'static str)> {
         // Core's root of declared failures, the runtime's marker, which
         // each library's failure roots extend beside `Exception`.
         "core.type Error" => ("temper_core", "Failure"),
+        // Core's own failures, the runtime's classes.
+        "core.type CoreError" => ("temper_core", "CoreError"),
+        "core.type MissingKey" => ("temper_core", "MissingKey"),
+        "core.type ParseError" => ("temper_core", "ParseError"),
+        "core.type InvalidCodePoint" => ("temper_core", "InvalidCodePoint"),
         // `()`, its one value. Kotlin's `_empty` is undefined.
         "core.type Empty" => ("builtins", "tuple[()]"),
         // `temper_core`'s `concurrent.futures.Future`, which asyncio can

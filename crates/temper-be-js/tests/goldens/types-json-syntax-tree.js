@@ -1,11 +1,13 @@
-import { isBubble, listedGet, requireInstanceOf } from "@temperlang/core";
+import { listedGet, requireInstanceOf } from "@temperlang/core";
 import {
   InterchangeContext,
   JsonArray,
+  JsonError,
   JsonNull,
   JsonNumeric,
   JsonObject,
   JsonProducer,
+  JsonSyntaxError,
   JsonSyntaxTree,
   JsonSyntaxTreeProducer,
   JsonTextProducer,
@@ -30,7 +32,7 @@ import {
     try {
       jsonValue = parseJson(s);
     } catch (e$) {
-      if (!isBubble(e$)) throw e$;
+      if (!(e$ instanceof JsonSyntaxError)) throw e$;
       jsonValue = null;
     }
     console.log(`\`${s}\` is empty array: ${jsonValue != null && jsonValue instanceof JsonArray && !/** @type {JsonArray} */ (/** @type {unknown} */ (jsonValue)).elements.length}`);
@@ -44,17 +46,37 @@ import {
   while (i2 < length2) {
     const s2 = listedGet(/** @type {string[]} */ (list2), i2);
     i2 = (i2 + 1) | 0;
-    let bubbled = false;
+    let failed = false;
     const p = new JsonSyntaxTreeProducer();
     parseJsonToProducer(s2, /** @type {JsonProducer} */ (/** @type {unknown} */ (p)));
     try {
       p.toJsonSyntaxTree();
     } catch (e$) {
-      if (!isBubble(e$)) throw e$;
-      bubbled = true;
+      if (!(e$ instanceof JsonSyntaxError)) throw e$;
+      failed = true;
     }
     const error = p.jsonError;
-    console.log(`\`${s2}\` has${bubbled ? "" : " no"} error: ${error == null ? "MISSING ERROR" : error}`);
+    console.log(`\`${s2}\` has${failed ? "" : " no"} error: ${error == null ? "MISSING ERROR" : error}`);
+  }
+}
+{
+  /** @type {readonly string[]} */
+  const list3 = Object.freeze(["[1,]", '"a"', "7"]);
+  const length3 = list3.length;
+  let i3 = 0;
+  while (i3 < length3) {
+    const s3 = listedGet(/** @type {string[]} */ (list3), i3);
+    i3 = (i3 + 1) | 0;
+    /** @type {string} */
+    let decoded;
+    try {
+      const tree = parseJson(s3);
+      decoded = int32JsonAdapter().decodeFromJson(tree, /** @type {InterchangeContext} */ (/** @type {unknown} */ (NullInterchangeContext.instance))).toString();
+    } catch (e) {
+      if (!(e instanceof JsonError)) throw e;
+      decoded = /** @type {Error} */ (/** @type {unknown} */ (e)).message;
+    }
+    console.log(decoded);
   }
 }
 const selectCodePoints = "\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f -𐀀--퟿\u2028\u2029\x85";
@@ -66,7 +88,7 @@ const selectCodePoints = "\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e
   try {
     t$0 = p2.toJsonString();
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof JsonSyntaxError)) throw e$;
     t$0 = "?!";
   }
   console.log(`string with select code points: ${t$0}`);
@@ -87,8 +109,8 @@ const selectCodePoints = "\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e
   console.log(p3.toJsonString());
 }
 {
-  const s3 = '{"x":null,"y":123,"z":123456789012}';
-  const ast = parseJson(s3);
+  const s4 = '{"x":null,"y":123,"z":123456789012}';
+  const ast = parseJson(s4);
   const obj = requireInstanceOf(ast, JsonObject);
   const xAst = obj.propertyValueOrBubble("x");
   const yAst = obj.propertyValueOrBubble("y");

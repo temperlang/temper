@@ -27,7 +27,14 @@ public static class JumpValuesGlobal
 
     internal static int Parse(string s)
     {
-        return Core.ToInt(s);
+        try
+        {
+            return Core.ToInt(s);
+        }
+        catch (ParseError)
+        {
+            return Core.Bubble<int>();
+        }
     }
 
     internal static int? Next(int? y)

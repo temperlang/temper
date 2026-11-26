@@ -105,7 +105,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
             println!(
                 "Actually big: {}",
                 (|| {
-                    Ok::<_, temper_core::Error>(Arc::new(
+                    Ok::<_, temper_core::ParseError>(Arc::new(
                         temper_core::int64_to_int32(big64)?.to_string(),
                     ))
                 })()
@@ -124,7 +124,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
 pub(crate) fn check_parse32(string: impl ToArcString) {
     let string = string.to_arc_string();
     let converted = (|| {
-        Ok::<_, temper_core::Error>(Arc::new(
+        Ok::<_, temper_core::ParseError>(Arc::new(
             temper_core::string::to_int(&string, Some(16))?.to_string(),
         ))
     })()
@@ -135,7 +135,7 @@ pub(crate) fn check_parse32(string: impl ToArcString) {
 pub(crate) fn check_parse64(string: impl ToArcString) {
     let string = string.to_arc_string();
     let converted = (|| {
-        Ok::<_, temper_core::Error>(Arc::new(
+        Ok::<_, temper_core::ParseError>(Arc::new(
             temper_core::string::to_int64(&string, Some(16))?.to_string(),
         ))
     })()

@@ -1,7 +1,7 @@
 //! Number methods, conversions and formatting, matching Kotlin Temper's
 //! (`FloatFns.kt`, `StandardLibraryHelpers.kt`, `FormatDouble.kt`).
 
-use super::{Abrupt, R, Val};
+use super::{CoreFailure, R, Val, to_string};
 use std::cmp::Ordering;
 
 /// Largest magnitude of an `Int64` that converts to and from `Float64`
@@ -122,8 +122,10 @@ pub(super) fn parse_float(text: &str) -> Option<f64> {
     text.parse().ok()
 }
 
-fn bubble() -> Abrupt {
-    Abrupt::Fail(None)
+/// A `ParseError` for a number another type can't hold, its `input` the
+/// number as `toString` gives it.
+fn out_of_range(n: Val, reason: &str) -> super::Abrupt {
+    CoreFailure::parse_error(to_string(&n), reason)
 }
 
 /// A float method, or `None` if there's no such method.
@@ -138,17 +140,15 @@ pub(super) fn float_method(f: f64, name: &str, args: &[Val]) -> Option<R> {
     match (name, args) {
         ("toInt32", []) => {
             let n = f as i32;
-            Some(if (f - n as f64).abs() < 1.0 {
-                Ok(Val::Int(n))
-            } else {
-                Err(bubble())
+            Some(match (f - n as f64).abs() < 1.0 {
+                true => Ok(Val::Int(n)),
+                false => Err(out_of_range(Val::Float(f), "out of Int32 range")),
             })
         }
         ("toInt32Unsafe", []) => Some(Ok(Val::Int(f as i32))),
-        ("toInt64", []) => Some(if f.abs() <= SAFE_INTEGER as f64 {
-            Ok(Val::Int64(f as i64))
-        } else {
-            Err(bubble())
+        ("toInt64", []) => Some(match f.abs() <= SAFE_INTEGER as f64 {
+            true => Ok(Val::Int64(f as i64)),
+            false => Err(out_of_range(Val::Float(f), "out of Int64 range")),
         }),
         ("toInt64Unsafe", []) => Some(Ok(Val::Int64(f as i64))),
         ("abs", []) => float(f.abs()),
@@ -205,11 +205,13 @@ pub(super) fn int_method(n: i64, is_64: bool, name: &str, args: &[Val]) -> Optio
     let result = match (name, args, is_64) {
         ("toFloat64", [], false) | ("toFloat64Unsafe", [], true) => Val::Float(n as f64),
         ("toFloat64", [], true) if !(-SAFE_INTEGER..=SAFE_INTEGER).contains(&n) => {
-            return Some(Err(bubble()));
+            return Some(Err(out_of_range(Val::Int64(n), "not exact as Float64")));
         }
         ("toFloat64", [], true) => Val::Float(n as f64),
         ("toInt64", [], false) => Val::Int64(n),
-        ("toInt32", [], true) if i32::try_from(n).is_err() => return Some(Err(bubble())),
+        ("toInt32", [], true) if i32::try_from(n).is_err() => {
+            return Some(Err(out_of_range(Val::Int64(n), "out of Int32 range")));
+        }
         ("toInt32" | "toInt32Unsafe", [], true) => Val::Int(n as i32),
         _ => return None,
     };

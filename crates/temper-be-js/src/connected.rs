@@ -161,6 +161,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Int64.toString()",
         Connection::Translate(to_string),
     ),
+    (
+        "core.type InvalidCodePoint.constructor()",
+        Connection::Translate(invalid_code_point),
+    ),
     ("core.type List.get length()", Connection::Translate(length)),
     ("core.type List.get()", Connection::ListHelper("listedGet")),
     ("core.type List.toList()", Connection::Translate(same)),
@@ -312,8 +316,16 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     ("core.type Mapped.values()", Connection::Translate(values)),
     (
+        "core.type MissingKey.constructor()",
+        Connection::Translate(missing_key),
+    ),
+    (
         "core.type Pair.constructor()",
         Connection::Helper("pairConstructor"),
+    ),
+    (
+        "core.type ParseError.constructor()",
+        Connection::Translate(parse_error),
     ),
     (
         "core.type PromiseBuilder.breakPromise()",
@@ -473,7 +485,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "std/temporal.type Date.constructor()",
-        Connection::Helper("dateConstructor"),
+        Connection::Translate(date_constructor),
     ),
     (
         "std/temporal.type Date.day",
@@ -481,7 +493,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "std/temporal.type Date.fromIsoString()",
-        Connection::Helper("dateFromIsoString"),
+        Connection::Translate(date_from_iso_string),
     ),
     (
         "std/temporal.type Date.get dayOfWeek()",
@@ -710,6 +722,50 @@ fn same(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     t.expr(*x)
 }
 
+/// `dateConstructor(y, m, d, InvalidDate)`, given std's `InvalidDate`
+/// to throw where there's no such day, as the runtime can't import std.
+fn date_constructor(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let mut args = t.in_order(args)?;
+    args.push(Expr::name(t.import_std("temporal", "InvalidDate")));
+    t.import("dateConstructor");
+    Ok(Expr::name("dateConstructor").call(args))
+}
+
+/// `dateFromIsoString(s, InvalidIsoDate)`, given std's `InvalidIsoDate`
+/// to throw for what isn't a date, as the runtime can't import std.
+fn date_from_iso_string(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let mut args = t.in_order(args)?;
+    args.push(Expr::name(t.import_std("temporal", "InvalidIsoDate")));
+    t.import("dateFromIsoString");
+    Ok(Expr::name("dateFromIsoString").call(args))
+}
+
+/// `new InvalidCodePoint(codePoint)`, the runtime's class.
+fn invalid_code_point(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let args = t.in_order(args)?;
+    t.import("InvalidCodePoint");
+    Ok(Expr::New(Box::new(Expr::name("InvalidCodePoint")), args))
+}
+
+/// `new ParseError(input, reason)`, the runtime's class.
+fn parse_error(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let args = t.in_order(args)?;
+    t.import("ParseError");
+    Ok(Expr::New(Box::new(Expr::name("ParseError")), args))
+}
+
+/// `new MissingKey(key)`, the runtime's class.
+fn missing_key(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let [key] = args else {
+        return Err(NotYet {
+            what: "`MissingKey` without its key".into(),
+        });
+    };
+    let key = t.expr(*key)?;
+    t.import("MissingKey");
+    Ok(Expr::New(Box::new(Expr::name("MissingKey")), vec![key]))
+}
+
 /// `BigInt(n)`, as Kotlin's `Int32.toInt64()`.
 fn big_int(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let [n] = args else {
@@ -883,7 +939,8 @@ fn mapped_get_or(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet
             what: "`getOr` without a key and a fallback".into(),
         });
     };
-    let nullable = t.may_be_null(fallback);
+    // `null` itself is the helper's fallback for a null value too.
+    let nullable = t.may_be_null(fallback) && !matches!(t.node(fallback), Node::Null {});
     let ty = t.type_of(fallback)?;
     let v = t.in_order(args)?;
     let [m, key, fallback] = <[Expr; 3]>::try_from(v).unwrap_or_else(|_| unreachable!());

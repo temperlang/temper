@@ -40,15 +40,56 @@ internal class Point
         p.EndObject();
     }
 
+    /// <exception cref="JsonException">Where it fails with JsonException.</exception>
     public static Point DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
-        JsonObject obj = t is JsonObject ? (JsonObject)t : Core.Bubble<JsonObject>();
+        JsonObject obj;
+        if (t is JsonObject)
+        {
+            obj = (JsonObject)t;
+        }
+        else
+        {
+            throw new JsonShapeException("expected Point JSON object");
+        }
         IJsonSyntaxTree xTree = obj.PropertyValueOrBubble("x");
-        IJsonNumeric xJson = xTree is IJsonNumeric ? (IJsonNumeric)xTree : Core.Bubble<IJsonNumeric>();
-        int x = xJson.AsInt32();
+        IJsonNumeric xJson;
+        if (xTree is IJsonNumeric)
+        {
+            xJson = (IJsonNumeric)xTree;
+        }
+        else
+        {
+            throw new JsonShapeException("expected Int for x");
+        }
+        int x;
+        try
+        {
+            x = xJson.AsInt32();
+        }
+        catch (ParseError failure)
+        {
+            throw Core.WithCause(new JsonShapeException("expected Int for x"), failure);
+        }
         IJsonSyntaxTree yTree = obj.PropertyValueOrBubble("y");
-        IJsonNumeric yJson = yTree is IJsonNumeric ? (IJsonNumeric)yTree : Core.Bubble<IJsonNumeric>();
-        int y = yJson.AsInt32();
+        IJsonNumeric yJson;
+        if (yTree is IJsonNumeric)
+        {
+            yJson = (IJsonNumeric)yTree;
+        }
+        else
+        {
+            throw new JsonShapeException("expected Int for y");
+        }
+        int y;
+        try
+        {
+            y = yJson.AsInt32();
+        }
+        catch (ParseError failure2)
+        {
+            throw Core.WithCause(new JsonShapeException("expected Int for y"), failure2);
+        }
         return new Point(x, y);
     }
 

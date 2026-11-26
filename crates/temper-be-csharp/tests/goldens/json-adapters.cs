@@ -17,12 +17,13 @@ public static class JsonAdaptersGlobal
         {
             return p.ToJsonString();
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (JsonSyntaxException)
         {
             return "bad JSON";
         }
     }
 
+    /// <exception cref="JsonException">Where it fails with JsonException.</exception>
     internal static T Decode<T>(IJsonAdapter<T> adapter, string text)
     {
         return adapter.DecodeFromJson(JsonGlobal.ParseJson(text), NullInterchangeContext.Instance);
@@ -36,7 +37,7 @@ public static class JsonAdaptersGlobal
         {
             back = Decode(adapter, text);
         }
-        catch (global::TemperLang.Core.Bubble bubble1)
+        catch (JsonException bubble1)
         {
             throw Core.Panic("panic", bubble1);
         }
@@ -59,7 +60,7 @@ public static class JsonAdaptersGlobal
         {
             shape = Decode(IShape.JsonAdapter(), "{\"height\": 6, \"width\": 5}");
         }
-        catch (global::TemperLang.Core.Bubble bubble2)
+        catch (JsonException bubble2)
         {
             throw Core.Panic("panic", bubble2);
         }
@@ -78,34 +79,34 @@ public static class JsonAdaptersGlobal
         {
             record = Decode(Record.JsonAdapter(), "{\"name\": \"Bo\", \"is-active\": false, \"score\": 2, \"big\": 7, \"nickname\": \"B\", \"points\": []}");
         }
-        catch (global::TemperLang.Core.Bubble bubble3)
+        catch (JsonException bubble3)
         {
             throw Core.Panic("panic", bubble3);
         }
         string @string = record.Name + " " + (record.Active ? "true" : "false") + " ";
         string? subject1 = record.Nickname;
         console.Log(@string + (subject1 == null ? "none" : subject1) + " " + record.Points.Count.ToString(CultureInfo.InvariantCulture));
-        string t1;
-        try
-        {
-            Decode(Point.JsonAdapter(), "{\"x\": 1}");
-            t1 = "decoded";
-        }
-        catch (global::TemperLang.Core.Bubble)
-        {
-            t1 = "no y";
-        }
-        console.Log(t1);
         string t2;
         try
         {
-            Decode(IMessage.JsonAdapter(), "{\"kind\": \"what\", \"text\": \"?\"}");
+            Decode(Point.JsonAdapter(), "{\"x\": 1}");
             t2 = "decoded";
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (JsonException e)
         {
-            t2 = "no such kind";
+            t2 = e.Message;
         }
         console.Log(t2);
+        string t3;
+        try
+        {
+            Decode(IMessage.JsonAdapter(), "{\"kind\": \"what\", \"text\": \"?\"}");
+            t3 = "decoded";
+        }
+        catch (JsonException e2)
+        {
+            t3 = e2.Message;
+        }
+        console.Log(t3);
     }
 }

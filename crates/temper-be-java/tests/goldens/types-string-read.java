@@ -2,10 +2,11 @@ package read;
 
 import java.util.List;
 import java.util.logging.Logger;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
+import temper.core.InvalidCodePoint;
 import temper.core.Nullable;
+import temper.core.ParseError;
 
 public final class ReadGlobal {
     private ReadGlobal() {}
@@ -48,12 +49,12 @@ public final class ReadGlobal {
         console.log("end <= end? " + (Integer.compare(end, end) <= 0));
     }
 
-    static String fromCodeNoInline(int code) {
+    static String fromCodeNoInline(int code) throws InvalidCodePoint {
         console.log("From 0x" + Integer.toString(code, 16));
         return Core.stringFromCodePoint(code);
     }
 
-    static String fromCodesNoInline(List<Integer> codes) {
+    static String fromCodesNoInline(List<Integer> codes) throws InvalidCodePoint {
         console.log("From codes");
         return Core.stringFromCodePoints(codes);
     }
@@ -62,7 +63,7 @@ public final class ReadGlobal {
         String converted;
         try {
             converted = Integer.toString(radix != null ? Core.stringToInt(string, radix) : Core.stringToInt(string));
-        } catch (Bubble ignored) {
+        } catch (ParseError ignored) {
             converted = "failed";
         }
         console.log("Parse " + string + " -> " + converted);
@@ -113,14 +114,14 @@ public final class ReadGlobal {
         String t;
         try {
             t = fromCodeNoInline(1114112);
-        } catch (Bubble ignored) {
+        } catch (InvalidCodePoint ignored) {
             t = "nope";
         }
         console.log(t);
         String t2;
         try {
             t2 = fromCodeNoInline(55296);
-        } catch (Bubble ignored2) {
+        } catch (InvalidCodePoint ignored2) {
             t2 = "no to surrogate";
         }
         console.log(t2);
@@ -128,10 +129,45 @@ public final class ReadGlobal {
         String t3;
         try {
             t3 = fromCodesNoInline(List.of(55296, 56320));
-        } catch (Bubble ignored3) {
+        } catch (InvalidCodePoint ignored3) {
             t3 = "no to surrogates";
         }
         console.log(t3);
+        String t4;
+        try {
+            t4 = fromCodesNoInline(List.of(65, -1, 56320));
+        } catch (InvalidCodePoint e) {
+            t4 = Integer.toString(e.codePoint, 16);
+        }
+        console.log(t4);
+        String t5;
+        try {
+            t5 = Core.stringFromCodePoint(57343);
+        } catch (InvalidCodePoint e2) {
+            t5 = e2.getMessage();
+        }
+        console.log(t5);
+        String t6;
+        try {
+            t6 = Integer.toString(Core.stringToInt("x"));
+        } catch (ParseError e3) {
+            t6 = e3.getMessage();
+        }
+        console.log(t6);
+        String t7;
+        try {
+            t7 = Integer.toString(Core.float64ToInt(1e300));
+        } catch (ParseError e4) {
+            t7 = e4.reason;
+        }
+        console.log(t7);
+        long t8;
+        try {
+            t8 = Core.stringToInt64("12");
+        } catch (ParseError ignored4) {
+            t8 = -1L;
+        }
+        console.log(Long.toString(t8));
         checkParse("-1", null);
         checkParse("2", null);
         checkParse(" 2 ", null);
@@ -143,6 +179,22 @@ public final class ReadGlobal {
         checkParse("20", 7);
         checkParse("20", 17);
         checkParse("20", 37);
+        checkParse("10", 0);
+        checkParse("0", 1);
+        String t9;
+        try {
+            t9 = Long.toString(Core.stringToInt64("10", 0));
+        } catch (ParseError e5) {
+            t9 = e5.reason;
+        }
+        console.log(t9);
+        long t10;
+        try {
+            t10 = Core.stringToInt64("10", -2);
+        } catch (ParseError ignored5) {
+            t10 = -1L;
+        }
+        console.log(Long.toString(t10));
         {
             String s = "foo-bar";
             int after1_2 = Core.stringNext(s, 0);

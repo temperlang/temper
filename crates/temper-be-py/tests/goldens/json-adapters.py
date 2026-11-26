@@ -1,20 +1,22 @@
 from abc import ABCMeta as _ABCMeta, abstractmethod as _abstractmethod
 from collections.abc import Sequence as _Sequence
 from temper_core import (
-    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
+    ParseError as _ParseError,
     boolean_to_string as _boolean_to_string,
-    bubble as _bubble,
     cast_by_type as _cast_by_type,
 )
 from temper_std.json import (
     InterchangeContext as _InterchangeContext,
     JsonAdapter as _JsonAdapter,
     JsonBoolean as _JsonBoolean,
+    JsonError as _JsonError,
     JsonNumeric as _JsonNumeric,
     JsonObject as _JsonObject,
     JsonProducer as _JsonProducer,
+    JsonShapeError as _JsonShapeError,
     JsonString as _JsonString,
+    JsonSyntaxError as _JsonSyntaxError,
     JsonSyntaxTree as _JsonSyntaxTree,
     JsonTextProducer as _JsonTextProducer,
     NullInterchangeContext as _NullInterchangeContext,
@@ -57,13 +59,34 @@ class _Point:
 
     @staticmethod
     def decode_from_json(t: _JsonSyntaxTree, ic: _InterchangeContext, /) -> '_Point':
-        obj = t if isinstance(t, _JsonObject) else _bubble()
+        t_0: _JsonObject
+        if isinstance(t, _JsonObject):
+            t_0 = t
+        else:
+            raise _JsonShapeError('expected Point JSON object')
+        obj = t_0
         x_tree = obj.property_value_or_bubble('x')
-        x_json = x_tree if isinstance(x_tree, _JsonNumeric) else _bubble()
-        x = x_json.as_int32()
+        t_1: _JsonNumeric
+        if isinstance(x_tree, _JsonNumeric):
+            t_1 = x_tree
+        else:
+            raise _JsonShapeError('expected Int for x')
+        x_json = t_1
+        try:
+            x = x_json.as_int32()
+        except _ParseError as failure:
+            raise _JsonShapeError('expected Int for x') from failure
         y_tree = obj.property_value_or_bubble('y')
-        y_json = y_tree if isinstance(y_tree, _JsonNumeric) else _bubble()
-        y = y_json.as_int32()
+        t_2: _JsonNumeric
+        if isinstance(y_tree, _JsonNumeric):
+            t_2 = y_tree
+        else:
+            raise _JsonShapeError('expected Int for y')
+        y_json = t_2
+        try:
+            y = y_json.as_int32()
+        except _ParseError as failure:
+            raise _JsonShapeError('expected Int for y') from failure
         return _Point(x, y)
 
     @staticmethod
@@ -140,19 +163,50 @@ class _Record:
 
     @staticmethod
     def decode_from_json(t: _JsonSyntaxTree, ic: _InterchangeContext, /) -> '_Record':
-        obj = t if isinstance(t, _JsonObject) else _bubble()
+        t_0: _JsonObject
+        if isinstance(t, _JsonObject):
+            t_0 = t
+        else:
+            raise _JsonShapeError('expected Record JSON object')
+        obj = t_0
         name_tree = obj.property_value_or_bubble('name')
-        name_json = name_tree if isinstance(name_tree, _JsonString) else _bubble()
+        t_1: _JsonString
+        if isinstance(name_tree, _JsonString):
+            t_1 = name_tree
+        else:
+            raise _JsonShapeError('expected String for name')
+        name_json = t_1
         name = name_json.content
         active_tree = obj.property_value_or_bubble('is-active')
-        active_json = active_tree if isinstance(active_tree, _JsonBoolean) else _bubble()
+        t_2: _JsonBoolean
+        if isinstance(active_tree, _JsonBoolean):
+            t_2 = active_tree
+        else:
+            raise _JsonShapeError('expected Boolean for is-active')
+        active_json = t_2
         active = active_json.content
         score_tree = obj.property_value_or_bubble('score')
-        score_json = score_tree if isinstance(score_tree, _JsonNumeric) else _bubble()
-        score = score_json.as_float64()
+        t_3: _JsonNumeric
+        if isinstance(score_tree, _JsonNumeric):
+            t_3 = score_tree
+        else:
+            raise _JsonShapeError('expected Float64 for score')
+        score_json = t_3
+        try:
+            score = score_json.as_float64()
+        except _ParseError as failure:
+            raise _JsonShapeError('expected Float64 for score') from failure
         big_tree = obj.property_value_or_bubble('big')
-        big_json = big_tree if isinstance(big_tree, _JsonNumeric) else _bubble()
-        big = big_json.as_int64()
+        t_4: _JsonNumeric
+        if isinstance(big_tree, _JsonNumeric):
+            t_4 = big_tree
+        else:
+            raise _JsonShapeError('expected Int64 for big')
+        big_json = t_4
+        try:
+            big = big_json.as_int64()
+        except _ParseError as failure:
+            raise _JsonShapeError('expected Int64 for big') from failure
         nickname: str | None = _OrNullJsonAdapter(_string_json_adapter()).decode_from_json(obj.property_value_or_bubble('nickname'), ic)
         points = _list_json_adapter(_Point.json_adapter()).decode_from_json(obj.property_value_or_bubble('points'), ic)
         return _Record(name, active, score, big, nickname, points)
@@ -181,13 +235,18 @@ class _Shape(metaclass=_ABCMeta):
 
     @staticmethod
     def decode_from_json(t: _JsonSyntaxTree, ic: _InterchangeContext, /) -> '_Shape':
-        obj = t if isinstance(t, _JsonObject) else _bubble()
+        t_0: _JsonObject
+        if isinstance(t, _JsonObject):
+            t_0 = t
+        else:
+            raise _JsonShapeError('expected Shape JSON object')
+        obj = t_0
         value_for_radius: _JsonSyntaxTree | None = obj.property_value_or_null('radius')
         if value_for_radius is not None:
             return _Circle.json_adapter().decode_from_json(obj, ic)
         if value_for_radius is None:
             return _Rect.json_adapter().decode_from_json(obj, ic)
-        raise _Bubble()
+        raise _JsonShapeError("expected one of Shape's JSON shapes")
 
     @staticmethod
     def json_adapter() -> '_JsonAdapter[_Shape]':
@@ -213,10 +272,23 @@ class _Circle(_Shape):
 
     @staticmethod
     def decode_from_json(t: _JsonSyntaxTree, ic: _InterchangeContext, /) -> '_Circle':
-        obj = t if isinstance(t, _JsonObject) else _bubble()
+        t_0: _JsonObject
+        if isinstance(t, _JsonObject):
+            t_0 = t
+        else:
+            raise _JsonShapeError('expected Circle JSON object')
+        obj = t_0
         radius_tree = obj.property_value_or_bubble('radius')
-        radius_json = radius_tree if isinstance(radius_tree, _JsonNumeric) else _bubble()
-        radius = radius_json.as_int32()
+        t_1: _JsonNumeric
+        if isinstance(radius_tree, _JsonNumeric):
+            t_1 = radius_tree
+        else:
+            raise _JsonShapeError('expected Int for radius')
+        radius_json = t_1
+        try:
+            radius = radius_json.as_int32()
+        except _ParseError as failure:
+            raise _JsonShapeError('expected Int for radius') from failure
         return _Circle(radius)
 
     @staticmethod
@@ -261,13 +333,34 @@ class _Rect(_Shape):
 
     @staticmethod
     def decode_from_json(t: _JsonSyntaxTree, ic: _InterchangeContext, /) -> '_Rect':
-        obj = t if isinstance(t, _JsonObject) else _bubble()
+        t_0: _JsonObject
+        if isinstance(t, _JsonObject):
+            t_0 = t
+        else:
+            raise _JsonShapeError('expected Rect JSON object')
+        obj = t_0
         width_tree = obj.property_value_or_bubble('width')
-        width_json = width_tree if isinstance(width_tree, _JsonNumeric) else _bubble()
-        width = width_json.as_int32()
+        t_1: _JsonNumeric
+        if isinstance(width_tree, _JsonNumeric):
+            t_1 = width_tree
+        else:
+            raise _JsonShapeError('expected Int for width')
+        width_json = t_1
+        try:
+            width = width_json.as_int32()
+        except _ParseError as failure:
+            raise _JsonShapeError('expected Int for width') from failure
         height_tree = obj.property_value_or_bubble('height')
-        height_json = height_tree if isinstance(height_tree, _JsonNumeric) else _bubble()
-        height = height_json.as_int32()
+        t_2: _JsonNumeric
+        if isinstance(height_tree, _JsonNumeric):
+            t_2 = height_tree
+        else:
+            raise _JsonShapeError('expected Int for height')
+        height_json = t_2
+        try:
+            height = height_json.as_int32()
+        except _ParseError as failure:
+            raise _JsonShapeError('expected Int for height') from failure
         return _Rect(width, height)
 
     @staticmethod
@@ -304,7 +397,12 @@ class _Message(metaclass=_ABCMeta):
 
     @staticmethod
     def decode_from_json(t: _JsonSyntaxTree, ic: _InterchangeContext, /) -> '_Message':
-        obj = t if isinstance(t, _JsonObject) else _bubble()
+        t_0: _JsonObject
+        if isinstance(t, _JsonObject):
+            t_0 = t
+        else:
+            raise _JsonShapeError('expected Message JSON object')
+        obj = t_0
         value_for_kind: _JsonSyntaxTree | None = obj.property_value_or_null('kind')
         if value_for_kind is not None and isinstance(value_for_kind, _JsonString):
             subject = value_for_kind.content
@@ -312,7 +410,7 @@ class _Message(metaclass=_ABCMeta):
                 return _Hello.json_adapter().decode_from_json(obj, ic)
             elif subject == 'bye':
                 return _Bye.json_adapter().decode_from_json(obj, ic)
-        raise _Bubble()
+        raise _JsonShapeError("expected one of Message's JSON shapes")
 
     @staticmethod
     def json_adapter() -> '_JsonAdapter[_Message]':
@@ -340,9 +438,19 @@ class _Hello(_Message):
 
     @staticmethod
     def decode_from_json(t: _JsonSyntaxTree, ic: _InterchangeContext, /) -> '_Hello':
-        obj = t if isinstance(t, _JsonObject) else _bubble()
+        t_0: _JsonObject
+        if isinstance(t, _JsonObject):
+            t_0 = t
+        else:
+            raise _JsonShapeError('expected Hello JSON object')
+        obj = t_0
         text_tree = obj.property_value_or_bubble('text')
-        text_json = text_tree if isinstance(text_tree, _JsonString) else _bubble()
+        t_1: _JsonString
+        if isinstance(text_tree, _JsonString):
+            t_1 = text_tree
+        else:
+            raise _JsonShapeError('expected String for text')
+        text_json = t_1
         text = text_json.content
         return _Hello(text)
 
@@ -382,9 +490,19 @@ class _Bye(_Message):
 
     @staticmethod
     def decode_from_json(t: _JsonSyntaxTree, ic: _InterchangeContext, /) -> '_Bye':
-        obj = t if isinstance(t, _JsonObject) else _bubble()
+        t_0: _JsonObject
+        if isinstance(t, _JsonObject):
+            t_0 = t
+        else:
+            raise _JsonShapeError('expected Bye JSON object')
+        obj = t_0
         text_tree = obj.property_value_or_bubble('text')
-        text_json = text_tree if isinstance(text_tree, _JsonString) else _bubble()
+        t_1: _JsonString
+        if isinstance(text_tree, _JsonString):
+            t_1 = text_tree
+        else:
+            raise _JsonShapeError('expected String for text')
+        text_json = t_1
         text = text_json.content
         return _Bye(text)
 
@@ -429,7 +547,12 @@ class _Celsius:
 
     @staticmethod
     def decode_from_json(t: _JsonSyntaxTree, ic: _InterchangeContext, /) -> '_Celsius':
-        return _Celsius(_cast_by_type(t, _JsonNumeric).as_int32())  # type: ignore[type-abstract]
+        t_0: int
+        try:
+            t_0 = _cast_by_type(t, _JsonNumeric).as_int32()  # type: ignore[type-abstract]
+        except _ParseError as failure:
+            raise _JsonShapeError('expected degrees') from failure
+        return _Celsius(t_0)
 
     @staticmethod
     def json_adapter() -> '_JsonAdapter[_Celsius]':
@@ -451,7 +574,7 @@ def _encode(adapter: _JsonAdapter[_T], value: _T, /) -> str:
     adapter.encode_to_json(value, p)
     try:
         return p.to_json_string()
-    except _Bubble:
+    except _JsonSyntaxError:
         return 'bad JSON'
 
 
@@ -463,7 +586,7 @@ def _round_trip(adapter: _JsonAdapter[_T], value: _T, /) -> None:
     text = _encode(adapter, value)
     try:
         back = _decode(adapter, text)
-    except _Bubble as t_0:
+    except _JsonError as t_0:
         raise BaseException('panic') from t_0
     again = _encode(adapter, back)
     _console.log(text if again == text else f'{text} became {again}')
@@ -480,7 +603,7 @@ _round_trip(_Celsius.json_adapter(), _Celsius(21))
 _shape: _Shape
 try:
     _shape = _decode(_Shape.json_adapter(), '{"height": 6, "width": 5}')
-except _Bubble as _t_0:
+except _JsonError as _t_0:
     raise BaseException('panic') from _t_0
 if isinstance(_shape, _Rect):
     _console.log(f'rect {_shape.width}x{_shape.height}')
@@ -489,20 +612,20 @@ else:
 _record: _Record
 try:
     _record = _decode(_Record.json_adapter(), '{"name": "Bo", "is-active": false, "score": 2, "big": 7, "nickname": "B", "points": []}')
-except _Bubble as _t_1:
+except _JsonError as _t_1:
     raise BaseException('panic') from _t_1
 _console.log(f"{_record.name} {_boolean_to_string(_record.active)} {'none' if (_subject := _record.nickname) is None else _subject} {len(_record.points)}")
 _t_2: str
 try:
     _decode(_Point.json_adapter(), '{"x": 1}')
     _t_2 = 'decoded'
-except _Bubble:
-    _t_2 = 'no y'
+except _JsonError as _e:
+    _t_2 = _e.message
 _console.log(_t_2)
 _t_3: str
 try:
     _decode(_Message.json_adapter(), '{"kind": "what", "text": "?"}')
     _t_3 = 'decoded'
-except _Bubble:
-    _t_3 = 'no such kind'
+except _JsonError as _e2:
+    _t_3 = _e2.message
 _console.log(_t_3)

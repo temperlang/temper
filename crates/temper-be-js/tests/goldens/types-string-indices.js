@@ -1,5 +1,5 @@
 import {
-  isBubble,
+  InvalidCodePoint,
   listedGet,
   stringFromCodePoint,
   stringGet,
@@ -35,7 +35,7 @@ function comparePositions(s, a, b) {
   try {
     t$0 = stringFromCodePoint(a);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof InvalidCodePoint)) throw e$;
     t$0 = "?";
   }
   /** @type {string} */
@@ -43,7 +43,7 @@ function comparePositions(s, a, b) {
   try {
     t$1 = stringFromCodePoint(b);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof InvalidCodePoint)) throw e$;
     t$1 = "?";
   }
   console.log(`'${t$0}' is ${relPos} '${t$1}' in "${s}".`);
@@ -118,7 +118,7 @@ const s = "cookie";
     try {
       t$2 = stringFromCodePoint(c);
     } catch (e$) {
-      if (!isBubble(e$)) throw e$;
+      if (!(e$ instanceof InvalidCodePoint)) throw e$;
       t$2 = "?";
     }
     console.log(`'${t$2}' in "${s}": ${has0(s, c) ? "y" : "n"}, ${has1(s, c) ? "y" : "n"}, ${has2(s, c) ? "y" : "n"}, ${has3(s, c) ? "y" : "n"}, ${has4(s, c) ? "y" : "n"}`);

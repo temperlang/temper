@@ -314,3 +314,153 @@ macro_rules! impl_failure_enum {
         }
     };
 }
+
+/// Core's own failures' root, `CoreError`: an enum over the types right
+/// under it, as a library's roots are.
+#[derive(Clone, Debug)]
+#[non_exhaustive]
+pub enum CoreError {
+    MissingKey(MissingKey),
+    ParseError(ParseError),
+    InvalidCodePoint(InvalidCodePoint),
+}
+
+crate::impl_failure_enum!(
+    CoreError,
+    MissingKey(MissingKey),
+    ParseError(ParseError),
+    InvalidCodePoint(InvalidCodePoint)
+);
+
+pub struct MissingKeyStruct {
+    key: AnyValue,
+    message: Arc<String>,
+    cause: Cause,
+}
+
+/// What a map's `get` gives for a key it doesn't have, with that key.
+#[derive(Clone)]
+pub struct MissingKey(Arc<MissingKeyStruct>);
+
+impl MissingKey {
+    /// For `key`, a map key's value, as Temper's `new MissingKey(key)`.
+    pub fn new(key: AnyValue) -> MissingKey {
+        let shown = shown_key(&key);
+        MissingKey(Arc::new(MissingKeyStruct {
+            key,
+            message: Arc::new(format!("missing key (key: {shown})")),
+            cause: Cause::new(),
+        }))
+    }
+
+    /// For a map's key, of a map key type: `i32` or `Arc<String>`.
+    pub fn of<K: Clone + Send + Sync + 'static>(key: &K) -> MissingKey {
+        let any: &dyn std::any::Any = key;
+        let key = if let Some(&i) = any.downcast_ref::<i32>() {
+            AnyValue::new(i)
+        } else if let Some(s) = any.downcast_ref::<Arc<String>>() {
+            AnyValue::new(s.clone())
+        } else {
+            AnyValue::new(())
+        };
+        MissingKey::new(key)
+    }
+
+    /// The key that was missing.
+    pub fn key(&self) -> AnyValue {
+        self.0.key.clone()
+    }
+
+    pub fn message(&self) -> Arc<String> {
+        self.0.message.clone()
+    }
+}
+
+/// A map key's text, as a default message shows a field.
+fn shown_key(key: &AnyValue) -> String {
+    let as_type = |t: std::any::TypeId| AnyValueTrait::cast(key, t);
+    if let Some(i) = as_type(std::any::TypeId::of::<i32>()).and_then(|b| b.downcast::<i32>().ok()) {
+        return i.to_string();
+    }
+    if let Some(s) = (as_type(std::any::TypeId::of::<Arc<String>>()))
+        .and_then(|b| b.downcast::<Arc<String>>().ok())
+    {
+        return s.as_str().to_string();
+    }
+    "?".to_string()
+}
+
+crate::impl_failure!(MissingKey, message, cause);
+
+crate::impl_any_value_trait!(MissingKey, [CoreError]);
+
+pub struct ParseErrorStruct {
+    input: Arc<String>,
+    reason: Arc<String>,
+    cause: Cause,
+}
+
+/// What a conversion gives for a value it can't convert: its input, as
+/// text, and why, as `not an Int32`.
+#[derive(Clone)]
+pub struct ParseError(Arc<ParseErrorStruct>);
+
+impl ParseError {
+    pub fn new(input: impl crate::ToArcString, reason: impl crate::ToArcString) -> ParseError {
+        ParseError(Arc::new(ParseErrorStruct {
+            input: input.to_arc_string(),
+            reason: reason.to_arc_string(),
+            cause: Cause::new(),
+        }))
+    }
+
+    /// The text, or the number as text.
+    pub fn input(&self) -> Arc<String> {
+        self.0.input.clone()
+    }
+
+    /// Why it couldn't be converted.
+    pub fn reason(&self) -> Arc<String> {
+        self.0.reason.clone()
+    }
+
+    pub fn message(&self) -> Arc<String> {
+        Arc::new(format!("parse error (input: {}, reason: {})", self.0.input, self.0.reason))
+    }
+}
+
+crate::impl_failure!(ParseError, message, cause);
+
+crate::impl_any_value_trait!(ParseError, [CoreError]);
+
+pub struct InvalidCodePointStruct {
+    code_point: i32,
+    cause: Cause,
+}
+
+/// What making a string from a code point gives for one that isn't a
+/// Unicode scalar value, with that number.
+#[derive(Clone)]
+pub struct InvalidCodePoint(Arc<InvalidCodePointStruct>);
+
+impl InvalidCodePoint {
+    pub fn new(code_point: i32) -> InvalidCodePoint {
+        InvalidCodePoint(Arc::new(InvalidCodePointStruct {
+            code_point,
+            cause: Cause::new(),
+        }))
+    }
+
+    /// The number that isn't a Unicode scalar value.
+    pub fn code_point(&self) -> i32 {
+        self.0.code_point
+    }
+
+    pub fn message(&self) -> Arc<String> {
+        Arc::new(format!("invalid code point (codePoint: {})", self.0.code_point))
+    }
+}
+
+crate::impl_failure!(InvalidCodePoint, message, cause);
+
+crate::impl_any_value_trait!(InvalidCodePoint, [CoreError]);

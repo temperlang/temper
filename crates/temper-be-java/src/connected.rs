@@ -200,6 +200,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Int64.toString()",
         Connection::Static("Long", "toString"),
     ),
+    (
+        "core.type InvalidCodePoint.constructor()",
+        Connection::Translate(new_invalid_code_point),
+    ),
     ("core.type List.get length()", Connection::Method("size")),
     (
         "core.type List.get()",
@@ -342,8 +346,16 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     ("core.type Mapped.values()", Connection::Translate(values)),
     (
+        "core.type MissingKey.constructor()",
+        Connection::Translate(new_missing_key),
+    ),
+    (
         "core.type Pair.constructor()",
         Connection::Translate(new_entry),
+    ),
+    (
+        "core.type ParseError.constructor()",
+        Connection::Translate(new_parse_error),
     ),
     (
         "core.type PromiseBuilder.breakPromise()",
@@ -576,6 +588,14 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
             import: "temper.core.Core.Console",
         },
     ),
+    // Core's own failures, the runtime's classes.
+    (
+        "core.type CoreError",
+        TypeConnection {
+            name: "CoreException",
+            import: "temper.core.CoreException",
+        },
+    ),
     (
         "core.type DenseBitVector",
         TypeConnection {
@@ -628,6 +648,13 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
         },
     ),
     (
+        "core.type InvalidCodePoint",
+        TypeConnection {
+            name: "InvalidCodePoint",
+            import: "temper.core.InvalidCodePoint",
+        },
+    ),
+    (
         "core.type List",
         TypeConnection {
             name: "List",
@@ -670,6 +697,13 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
         },
     ),
     (
+        "core.type MissingKey",
+        TypeConnection {
+            name: "MissingKey",
+            import: "temper.core.MissingKey",
+        },
+    ),
+    (
         "core.type NoStringIndex",
         TypeConnection {
             name: "int",
@@ -681,6 +715,13 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
         TypeConnection {
             name: "Entry",
             import: "java.util.Map.Entry",
+        },
+    ),
+    (
+        "core.type ParseError",
+        TypeConnection {
+            name: "ParseError",
+            import: "temper.core.ParseError",
         },
     ),
     (
@@ -1129,6 +1170,32 @@ fn awake_upon(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
 fn done_result(t: &mut Translator<'_>, _: &[NodeId]) -> Result<Expr, NotYet> {
     t.import("temper.core.Generator.DoneResult");
     Ok(Expr::name("DoneResult").method("get", Vec::new()))
+}
+
+/// `new MissingKey(key)`, the runtime's class.
+fn new_missing_key(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let key = one(t, args, "MissingKey")?;
+    t.import("temper.core.MissingKey");
+    Ok(Expr::New("MissingKey".into(), vec![key]))
+}
+
+/// `new InvalidCodePoint(codePoint)`, the runtime's class.
+fn new_invalid_code_point(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let code_point = one(t, args, "InvalidCodePoint")?;
+    t.import("temper.core.InvalidCodePoint");
+    Ok(Expr::New("InvalidCodePoint".into(), vec![code_point]))
+}
+
+/// `new ParseError(input, reason)`, the runtime's class.
+fn new_parse_error(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let [input, reason] = args else {
+        return Err(NotYet {
+            what: "`ParseError` with other than an input and a reason".into(),
+        });
+    };
+    let (input, reason) = (t.expr(*input)?, t.expr(*reason)?);
+    t.import("temper.core.ParseError");
+    Ok(Expr::New("ParseError".into(), vec![input, reason]))
 }
 
 /// `new ValueResult<>(value)`.

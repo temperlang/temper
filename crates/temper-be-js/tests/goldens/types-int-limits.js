@@ -1,4 +1,5 @@
 import {
+  ParseError,
   clampInt64,
   divInt64,
   divIntInt,
@@ -6,7 +7,6 @@ import {
   int64Min,
   int64ToInt32,
   int64ToInt32Unsafe,
-  isBubble,
   modInt64,
   modIntInt,
   stringToInt32,
@@ -20,7 +20,7 @@ function checkParse32(string) {
   try {
     converted = stringToInt32(string, 16).toString();
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof ParseError)) throw e$;
     converted = "failed";
   }
   console.log(`Parse ${string} -> ${converted}`);
@@ -33,7 +33,7 @@ function checkParse64(string) {
   try {
     converted = stringToInt64(string, 16).toString();
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof ParseError)) throw e$;
     converted = "failed";
   }
   console.log(`Parse ${string} -> ${converted}`);
@@ -95,7 +95,7 @@ let t$0;
 try {
   t$0 = int64ToInt32(big64).toString();
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof ParseError)) throw e$;
   t$0 = "no";
 }
 console.log(`Actually big: ${t$0}`);

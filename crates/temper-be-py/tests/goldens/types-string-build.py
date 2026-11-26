@@ -1,7 +1,8 @@
 from temper_core import (
-    Bubble as _Bubble,
+    InvalidCodePoint as _InvalidCodePoint,
     LoggingConsole as _LoggingConsole,
     boolean_to_string as _boolean_to_string,
+    int_to_string as _int_to_string,
     string_from_code_point as _string_from_code_point,
     string_step as _string_step,
 )
@@ -35,12 +36,12 @@ _builder.append(_built)
 _console.log(''.join(_builder))
 try:
     _builder.append(_string_from_code_point(1114112))
-except _Bubble:
+except _InvalidCodePoint:
     _console.log('High code blocked.')
 try:
     _builder.append(_string_from_code_point(55296))
-except _Bubble:
-    _console.log('Surrogate blocked.')
+except _InvalidCodePoint as _e:
+    _console.log(f'Surrogate 0x{_int_to_string(_e.code_point, 16)} blocked.')
 _console.log(''.join(_builder))
 _builder.clear()
 _builder.append('Back to square zero.')
@@ -54,12 +55,12 @@ _builder.clear()
 _builder.append('??')
 try:
     _builder.append(_string_from_code_point(1))
-except _Bubble:
+except _InvalidCodePoint:
     _console.log('No U+1.')
 _builder.append('0')
 try:
     _builder.append(_string_from_code_point(8364))
-except _Bubble:
+except _InvalidCodePoint:
     _console.log('No euro.')
 _builder.append('1')
 _console.log('Digits after escapes: ' + _boolean_to_string(''.join(_builder) == '??\x010€1'))

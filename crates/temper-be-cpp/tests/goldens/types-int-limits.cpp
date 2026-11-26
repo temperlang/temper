@@ -27,9 +27,10 @@ static core::GlobalSlot<std::shared_ptr<core::Console::Type>> console;
 
 static void checkParse32(core::Str const & string) {
   core::Str converted;
-  try {
-    converted = std::to_string(core::String::toInt32(string, 16));
-  } catch (core::TemperBubble const &) {
+  auto Result = core::String::toInt32(string, 16);
+  if (Result.has_value()) {
+    converted = std::to_string(*Result);
+  } else {
     converted = TEMPER_STR("failed");
   }
   core::Console::log(temper_globals::console.value, "Parse " + string + " -> " + converted);
@@ -37,9 +38,10 @@ static void checkParse32(core::Str const & string) {
 
 static void checkParse64(core::Str const & string) {
   core::Str converted;
-  try {
-    converted = std::to_string(core::String::toInt64(string, 16));
-  } catch (core::TemperBubble const &) {
+  auto Result = core::String::toInt64(string, 16);
+  if (Result.has_value()) {
+    converted = std::to_string(*Result);
+  } else {
     converted = TEMPER_STR("failed");
   }
   core::Console::log(temper_globals::console.value, "Parse " + string + " -> " + converted);
@@ -100,9 +102,10 @@ void global_init_init() {
     limits::checkParse32(TEMPER_STR("-80000001"));
     core::Console::log(temper_globals::console.value, "Not so big: " + std::to_string(core::Int64::toInt32Unsafe(notSoBig)));
     core::Str value;
-    try {
-      value = std::to_string(core::Int64::toInt32(big64));
-    } catch (core::TemperBubble const &) {
+    auto Result = core::Int64::toInt32(big64);
+    if (Result.has_value()) {
+      value = std::to_string(*Result);
+    } else {
       value = TEMPER_STR("no");
     }
     core::Console::log(temper_globals::console.value, "Actually big: " + value);

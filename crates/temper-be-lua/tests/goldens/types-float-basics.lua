@@ -43,9 +43,9 @@ end
 local function checkParse(string_)
   ---@type string
   local converted
-  if not temper.pcall(function()
+  if not temper.catch(function()
     converted = temper.float64_tostring(temper.string_tofloat64(string_))
-  end) then
+  end, temper.ParseError) then
     converted = "failed"
   end
   print("Parse " .. string_ .. " -> " .. converted)
@@ -55,9 +55,9 @@ end
 local function checkTiny(string_)
   ---@type string
   local positive
-  if not temper.pcall(function()
+  if not temper.catch(function()
     positive = tostring(temper.float_cmp(temper.string_tofloat64(string_), 0.0) > 0)
-  end) then
+  end, temper.ParseError) then
     positive = "failed"
   end
   print("Parse " .. string_ .. " > 0 -> " .. positive)
@@ -163,17 +163,17 @@ print("Positive to int: " .. temper.float64_toint32unsafe(4.9 * one))
 print("Negative to int: " .. temper.float64_toint32unsafe(-4.9 * one))
 ---@type string
 local t
-if not temper.pcall(function()
+if not temper.catch(function()
   t = tostring(temper.float64_toint32(infinity))
-end) then
+end, temper.ParseError) then
   t = "no"
 end
 print("Infinity to int: " .. t)
 ---@type string
 local t_1
-if not temper.pcall(function()
+if not temper.catch(function()
   t_1 = tostring(temper.float64_toint32(0.0 / 0.0))
-end) then
+end, temper.ParseError) then
   t_1 = "no"
 end
 print("NaN to int: " .. t_1)
@@ -182,7 +182,7 @@ local notSoBig = int64_2147483647 * oneInt64
 local notSoSmall = int64_neg2147483648 * oneInt64
 local slightlyBigger = temper.float64_toint64unsafe(temper.int64_tofloat64unsafe(notSoBig) + 1.5)
 local slightlySmaller = temper.float64_toint64unsafe(temper.int64_tofloat64unsafe(notSoSmall) - 1.5)
-local tooBigForFloat64 = int64_9007199254740992 * temper.float64_toint64(one)
+local tooBigForFloat64 = int64_9007199254740992 * oneInt64
 local okToConvert64 = temper.int64_tofloat64unsafe(tooBigForFloat64 - int64_1)
 local sneakyBig = okToConvert64 + 1.0
 print("Bigger to Int64: " .. temper.int64_tostring(slightlyBigger))
@@ -190,33 +190,33 @@ print("Smaller to Int64: " .. temper.int64_tostring(slightlySmaller))
 print("Barely ok to Int64: " .. temper.int64_tostring(temper.float64_toint64unsafe(okToConvert64)))
 ---@type string
 local t_2
-if not temper.pcall(function()
+if not temper.catch(function()
   t_2 = temper.int64_tostring(temper.float64_toint64(sneakyBig))
-end) then
+end, temper.ParseError) then
   t_2 = "no"
 end
 print("Sneaky big to Int64: " .. t_2)
 ---@type string
 local t_3
-if not temper.pcall(function()
+if not temper.catch(function()
   t_3 = temper.float64_tostring(temper.int64_tofloat64(tooBigForFloat64))
-end) then
+end, temper.ParseError) then
   t_3 = "no"
 end
 print("Too big Int64 to Float64: " .. t_3)
 ---@type string
 local t_4
-if not temper.pcall(function()
+if not temper.catch(function()
   t_4 = temper.int64_tostring(temper.float64_toint64(infinity))
-end) then
+end, temper.ParseError) then
   t_4 = "no"
 end
 print("Infinity to Int64: " .. t_4)
 ---@type string
 local t_5
-if not temper.pcall(function()
+if not temper.catch(function()
   t_5 = temper.int64_tostring(temper.float64_toint64(0.0 / 0.0))
-end) then
+end, temper.ParseError) then
   t_5 = "no"
 end
 print("NaN to Int64: " .. t_5)

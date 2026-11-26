@@ -1,6 +1,7 @@
 from temper_core import (
     Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
+    ParseError as _ParseError,
     arith_int_mod as _arith_int_mod,
     boolean_to_string as _boolean_to_string,
     int_add as _int_add,
@@ -43,9 +44,16 @@ def _calc_rows(cols: int, total: int, /) -> int:
     return _int_div(total, cols)
 
 
+def _parsed(s: str, /) -> int:
+    try:
+        return _string_to_int32(s)
+    except _ParseError:
+        raise _Bubble()
+
+
 def _count_below(s: str, /) -> int:
     i = 0
-    while i < _string_to_int32(s):
+    while i < _parsed(s):
         i = _int_add(i, 1)
     return i
 

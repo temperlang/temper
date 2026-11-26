@@ -48,9 +48,22 @@ end
 
 ---@param s string
 ---@return integer
+local function parsed(s)
+  ---@type integer
+  local t_1
+  if not temper.catch(function()
+    t_1 = temper.string_toint32(s)
+  end, temper.ParseError) then
+    temper.bubble()
+  end
+  return t_1
+end
+
+---@param s string
+---@return integer
 local function countBelow(s)
   local i = 0
-  while i < temper.string_toint32(s) do
+  while i < parsed(s) do
     i = temper.int32_add(i, 1)
   end
   return i

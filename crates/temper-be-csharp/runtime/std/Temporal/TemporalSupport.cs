@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 
 namespace TemperLang.Std.Temporal
 {
@@ -24,27 +23,27 @@ namespace TemperLang.Std.Temporal
 
         public static int IsoWeekdayNum(DateOnly d) => IsoWeekdayNum(d.DayOfWeek);
 
-        /// The date an ISO 8601 date string ("2000-12-31") gives, else
-        /// bubbling.
+        /// The date an ISO 8601 date string ("2000-12-31") gives, throwing
+        /// std's InvalidIsoDate for other text, or no such day.
         public static DateTime FromIsoString(string isoString) => DateTime.TryParseExact(
             isoString,
             "yyyy-MM-dd",
             // Do not take any locale-specific strings into account for ISO 8601.
-            CultureInfo.InvariantCulture,
-            DateTimeStyles.None,
+            System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None,
             out var date
-        ) ? date : throw new TemperLang.Core.Bubble();
+        ) ? date : throw new InvalidIsoDate(isoString);
 
-        /// The date, bubbling where there's no such date.
+        /// The date, throwing std's InvalidDate where there's no such date.
         public static DateTime Date(int year, int month, int day)
         {
             try
             {
                 return new DateTime(year, month, day);
             }
-            catch (ArgumentOutOfRangeException e)
+            catch (ArgumentOutOfRangeException)
             {
-                throw new TemperLang.Core.Bubble(e.Message, e);
+                throw new InvalidDate(year, month, day);
             }
         }
     }

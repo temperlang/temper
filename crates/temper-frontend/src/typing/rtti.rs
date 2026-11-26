@@ -145,11 +145,13 @@ impl Settle {
     /// Whether a backend may give `t`'s values a type of its own, which
     /// needn't be distinct from others' (a `StringBuilder` is a list on
     /// some): one of core's types, but `Error`, which libraries' failure
-    /// types extend, or a `@connected` class or interface.
+    /// types extend, and core's own failure types, as `MissingKey`, which
+    /// every backend makes a class of its own, or a `@connected` class or
+    /// interface.
     fn is_host_type(&self, t: TypeId) -> bool {
         let base = self.typing.types.base(t);
         match *self.typing.types.get(base) {
-            TypeData::Builtin(_) => base != ERROR,
+            TypeData::Builtin(_) => base != ERROR && !self.typing.types.is_failure(base),
             TypeData::Class(symbol) => (self.type_decl(symbol))
                 .is_some_and(|c| self.lib.tree.data(c) & CLASS_CONNECTED != 0),
             _ => false,

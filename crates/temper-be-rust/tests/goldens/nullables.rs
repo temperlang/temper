@@ -125,7 +125,7 @@ pub(crate) fn parse(s: impl ToArcString) -> i32 {
 
 pub(crate) fn halved(s: impl ToArcString, d: i32) -> i32 {
     let s = s.to_arc_string();
-    (|| Ok::<_, temper_core::Error>(temper_core::string::to_int(&s, None)?.wrapping_div(d)))()
+    (|| Ok::<_, temper_core::ParseError>(temper_core::string::to_int(&s, None)?.wrapping_div(d)))()
         .unwrap_or(-1)
 }
 

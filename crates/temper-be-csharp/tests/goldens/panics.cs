@@ -46,6 +46,7 @@ public static class PanicsGlobal
         }
     }
 
+    /// <exception cref="InvalidCodePoint">Where it fails with InvalidCodePoint.</exception>
     internal static string Appending(int codePoint)
     {
         StringBuilder sb = new StringBuilder();
@@ -53,6 +54,7 @@ public static class PanicsGlobal
         return sb.ToString();
     }
 
+    /// <exception cref="JsonException">Where it fails with JsonException.</exception>
     internal static string Parsing(string text)
     {
         JsonGlobal.ParseJson(text);
@@ -91,7 +93,7 @@ public static class PanicsGlobal
         string trimmed = s.Trim();
         if (trimmed.StartsWith('.') || trimmed.EndsWith('.'))
         {
-            throw new global::TemperLang.Core.Bubble();
+            throw new global::TemperLang.Core.ParseError(s, "not a Float64");
         }
         return trimmed switch
         {
@@ -101,7 +103,7 @@ public static class PanicsGlobal
                 trimmed,
                 global::System.Globalization.NumberStyles.Float,
                 global::System.Globalization.CultureInfo.InvariantCulture,
-                out double d) ? d : throw new global::TemperLang.Core.Bubble(),
+                out double d) ? d : throw new global::TemperLang.Core.ParseError(s, "not a Float64"),
         };
     }
 
@@ -140,7 +142,7 @@ public static class PanicsGlobal
         {
             e = Core.ToInt("nope");
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             e = -5;
         }
@@ -149,7 +151,7 @@ public static class PanicsGlobal
         {
             f = ParseFloat64("x");
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             f = -6.0;
         }
@@ -158,7 +160,7 @@ public static class PanicsGlobal
         {
             g = Core.StringFromCodePoint(1114112);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (InvalidCodePoint)
         {
             g = "?";
         }
@@ -179,7 +181,7 @@ public static class PanicsGlobal
         {
             k = Core.ToInt64("zz");
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             k = -7L;
         }
@@ -188,7 +190,7 @@ public static class PanicsGlobal
         {
             l = Core.ToInt("99999999999");
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             l = -8;
         }
@@ -197,7 +199,7 @@ public static class PanicsGlobal
         {
             m = Float64.ToInt(1e20);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             m = -9;
         }
@@ -206,7 +208,7 @@ public static class PanicsGlobal
         {
             n = Core.ToInt(5000000000L);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             n = -10;
         }
@@ -216,35 +218,44 @@ public static class PanicsGlobal
         {
             o = Core.StringFromCodePoints(points);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (InvalidCodePoint e2)
         {
-            o = "?";
+            o = Core.ConvertToString(e2.CodePoint, 16);
         }
         string q;
         try
         {
             q = Appending(-1);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (InvalidCodePoint e3)
         {
-            q = "?";
+            q = e3.CodePoint.ToString(CultureInfo.InvariantCulture);
         }
         IDictionary<string, int> builder = new TemperLang.Core.OrderedDictionary<string, int>();
         int r;
         try
         {
-            r = Core.RemoveGet(builder, "x");
+            r = Mapped.Get(builder, "x");
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (MissingKey)
         {
             r = -11;
+        }
+        string r2;
+        try
+        {
+            r2 = Core.RemoveGet(builder, "y").ToString(CultureInfo.InvariantCulture);
+        }
+        catch (MissingKey e4)
+        {
+            r2 = e4.Message;
         }
         string s;
         try
         {
             s = TemporalSupport.Date(2023, 2, 30).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (TemporalException)
         {
             s = "no date";
         }
@@ -253,7 +264,7 @@ public static class PanicsGlobal
         {
             t = TemporalSupport.FromIsoString("2023-13-01").ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (TemporalException)
         {
             t = "bad date";
         }
@@ -262,11 +273,23 @@ public static class PanicsGlobal
         {
             u = Parsing("[1,");
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (JsonException)
         {
             u = "bad json";
         }
-        console.Log(string.Create(CultureInfo.InvariantCulture, $"{k} {l} {m} {n} {o} {q} {r} {s} {t} {u}"));
+        JsonTextProducer partial = new JsonTextProducer();
+        partial.StartObject();
+        string v;
+        try
+        {
+            v = partial.ToJsonString();
+        }
+        catch (JsonSyntaxException e5)
+        {
+            v = e5.Problem;
+        }
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{k} {l} {m} {n} {o} {q} {r} {r2} {s} {t} {u}"));
+        console.Log(v);
         console.Log("panicking");
         int p;
         try

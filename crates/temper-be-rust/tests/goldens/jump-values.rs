@@ -125,7 +125,11 @@ pub(crate) fn pair(a: i32, b: i32) -> i32 {
 
 pub(crate) fn parse(s: impl ToArcString) -> temper_core::Result<i32> {
     let s = s.to_arc_string();
-    temper_core::string::to_int(&s, None)
+    Ok(if let Ok(v) = temper_core::string::to_int(&s, None) {
+        v
+    } else {
+        return Err(temper_core::Error::new());
+    })
 }
 
 pub(crate) fn next(y: Option<i32>) -> Option<i32> {

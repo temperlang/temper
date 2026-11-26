@@ -61,9 +61,10 @@ the `orelse` and then popped the loop a second time, from an empty stack, so
 the build crashed with an IndexOutOfBoundsException instead of using the
 `orelse`.
 
+    let parsed(s: String): Int throws Bubble { s.toInt32() orelse bubble() }
     let countBelow(s: String): Int throws Bubble {
       var i = 0;
-      while (i < s.toInt32()) { i += 1; }
+      while (i < parsed(s)) { i += 1; }
       i
     }
     console.log((countBelow("abc") orelse -1).toString());

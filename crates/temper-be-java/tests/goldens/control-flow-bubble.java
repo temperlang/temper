@@ -5,6 +5,7 @@ import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Nullable;
+import temper.core.ParseError;
 
 public final class BubbleGlobal {
     private BubbleGlobal() {}
@@ -47,9 +48,17 @@ public final class BubbleGlobal {
         return total / cols;
     }
 
+    static int parsed(String s) {
+        try {
+            return Core.stringToInt(s);
+        } catch (ParseError ignored) {
+            throw Core.bubble();
+        }
+    }
+
     static int countBelow(String s) {
         int i = 0;
-        while (i < Core.stringToInt(s)) {
+        while (i < parsed(s)) {
             i = i + 1;
         }
         return i;

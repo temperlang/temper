@@ -1111,6 +1111,15 @@ arity doesn't count `this`. `Int.m` is `Int32.m`, as core's `Int` is
   ls.map`. Anything else is unknown: a static member's use of the
   type's parameters, all of them for a generic type given the wrong
   number of arguments, and a method's own type parameter with a bound.
+- **A fallback joins into the result** (2026-11-25): a method whose
+  result is one of the receiver's type parameters, `T`, and which takes
+  a `T` too, `Listed.getOr` and `Mapped.getOr`, gives `T?` where that
+  argument is null or nullable and `T` isn't, the join of the two as an
+  `if`'s branches give it, and `T` otherwise; so `m.getOr(k, null)` is a
+  `V?` and `m.getOr(k, 0)` an `Int32` (`Settle::join_fallback`). Typing
+  records the joined `T` as the call's type argument, which tmpl's
+  `getOr<R>` takes, so backends whose `T` can't hold null use a
+  nullable result there.
 - **Inherited members:** an instance's member that a builtin generic
   type doesn't declare is looked up in the builtin generic type it
   extends with the same arguments ("Generic types", above): `List`'s and
@@ -1261,6 +1270,13 @@ one place each, as they may change.
 - **`throw x`** is a `Fail` node with `x` (`bubble()`'s has none), of
   type `Never`; `x` must be an `Error` ("Expected subtype of Error, but
   got Int32").
+- **Core's failure types** are builtin types (`types.rs`,
+  `BUILTIN_SUPERTYPES`): `CoreError`, a sealed root under `Error`, and
+  `MissingKey` (`Mapped.get`, `MapBuilder.remove`), `ParseError`
+  (conversions), and `InvalidCodePoint` (code points) under it,
+  failure types as a library's are (`Types::is_failure`), and checkable
+  with `is` from any failure type (`typing/rtti.rs`). The interpreter
+  holds their values as `Val::CoreFailure`.
 - **`try x`** is `x` for now (RFC 164's option B): failures propagate
   with or without it. Requiring it is a later chunk.
 - **`x catch { b }`** is `Orelse(x, b)`, and **`x catch (e) { b }`**
@@ -1326,11 +1342,11 @@ call:
 - `await p`, as a broken promise bubbles, at the `await`; it fails
   there when run, on every target, even for a promise that's kept.
 - A call of a function value whose type `throws Bubble`: a parameter,
-  local, function, or method, including a builtin type's (`s.toInt32()`).
-  A call Kotlin might fold, as `g(1)` or `String.fromCodePoint(65)`, isn't
-  reported, but Kotlin never folds a method of a value (`"1".toInt32()`
-  is reported), nor a call with an argument that doesn't fit its
-  parameter. A call with the wrong number of arguments isn't reported,
+  local, function, or method. A call Kotlin might fold, as `g(1)`, isn't
+  reported, but Kotlin never folds a method of a value, nor a call with
+  an argument that doesn't fit its parameter. Core's methods no longer
+  bubble (2026-11-25): conversions throw `ParseError`, `Mapped.get` and
+  `MapBuilder.remove` `MissingKey`, and code points `InvalidCodePoint`. A call with the wrong number of arguments isn't reported,
   as Kotlin can't pick its callee.
 - Not `x as T` that fails, nor `a / b` or `a % b` by zero: they panic
   (2026-11-25; Kotlin bubbles), and dividing `Float64`s gives IEEE 754's

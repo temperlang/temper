@@ -13,6 +13,7 @@ internal class RectJsonAdapter : IJsonAdapter<Rect>
         x.EncodeToJson(p);
     }
 
+    /// <exception cref="JsonException">Where it fails with JsonException.</exception>
     public Rect DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
         return Rect.DecodeFromJson(t, ic);

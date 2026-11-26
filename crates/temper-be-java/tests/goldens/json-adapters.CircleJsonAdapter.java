@@ -2,6 +2,7 @@ package json_adapters;
 
 import temper.std.json.InterchangeContext;
 import temper.std.json.JsonAdapter;
+import temper.std.json.JsonException;
 import temper.std.json.JsonProducer;
 import temper.std.json.JsonSyntaxTree;
 
@@ -12,7 +13,7 @@ final class CircleJsonAdapter implements JsonAdapter<Circle> {
         x.encodeToJson(p);
     }
 
-    public Circle decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) {
+    public Circle decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) throws JsonException {
         return Circle.decodeFromJson(t, ic);
     }
 }

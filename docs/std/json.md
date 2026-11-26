@@ -36,19 +36,25 @@ write to any producer, so the same code can build a syntax tree
 
 ## Reading JSON
 
-`parseJson(text)` gives a `JsonSyntaxTree`, or bubbles on malformed
-input: a `JsonObject` (`propertyValueOrNull(key)`,
-`propertyValueOrBubble(key)`), `JsonArray` (`elements`), `JsonString`,
-`JsonBoolean`, `JsonNull`, or a number: `JsonInt32` (also `JsonInt`),
-`JsonInt64`, `JsonFloat64`, or `JsonNumericToken` for numbers kept as
-written. Numbers convert with `asInt32()`, `asInt64()`, and
-`asFloat64()`. `parseJsonToProducer(text, producer)` streams the events
+`parseJson(text)` gives a `JsonSyntaxTree`, or throws a
+`JsonSyntaxError` for malformed input: a `JsonObject`
+(`propertyValueOrNull(key)`, and `propertyValueOrBubble(key)`, which
+throws a `JsonShapeError` for a missing property), `JsonArray`
+(`elements`), `JsonString`, `JsonBoolean`, `JsonNull`, or a number:
+`JsonInt32` (also `JsonInt`), `JsonInt64`, `JsonFloat64`, or
+`JsonNumericToken` for numbers kept as written. Numbers convert with
+`asInt32()`, `asInt64()`, and `asFloat64()`, which throw core's
+`ParseError` for a number the type can't hold. `toJsonString()` throws
+a `JsonSyntaxError` unless one whole value was produced.
+`parseJsonToProducer(text, producer)` streams the events
 instead, and reports errors to the producer's `parseErrorReceiver`.
 
 ## Adapters
 
 A `JsonAdapter<T>` has `encodeToJson(x, producer)` and
-`decodeFromJson(tree, context)`. `Boolean`, `Int`, `Int64`, `Float64`,
+`decodeFromJson(tree, context)`, which throws a `JsonError`: a
+`JsonShapeError` for JSON of another shape than the type's, saying what it
+expected. `Boolean`, `Int`, `Int64`, `Float64`,
 `String`, and `List` have them too (`Int.jsonAdapter()`,
 `List.jsonAdapter(Int.jsonAdapter())`), and `OrNullJsonAdapter` makes
 one for a nullable type. An `InterchangeContext` lets an adapter look at

@@ -446,14 +446,67 @@ impl Settle {
         callee: bool,
         forced: bool,
     ) -> Result<Option<TypeId>, Fact> {
-        let Some(found) = self.core_member_found(object, name, callee, forced)? else {
+        let Some(mut found) = self.core_member_found(object, name, callee, forced)? else {
             return Ok(None);
         };
+        if callee {
+            self.join_fallback(object, &mut found, forced)?;
+        }
         let types = &mut self.typing.types;
         Ok(Some(match &found.member.kind {
             CoreMemberKind::Value(t) => core_type(types, t, &found.args, &[]),
             kind => core_signature(types, kind, &found.args, &[]),
         }))
+    }
+
+    /// For a call of a builtin method whose result is one of the
+    /// receiver's type parameters, `T`, and which takes a `T` too, a
+    /// fallback, as `getOr(key, fallback)`: the call's `T` is the join of
+    /// the receiver's and the argument's, as an `if` with those branches
+    /// is, where that's nullable, so `m.getOr(k, null)` is a `V?` and
+    /// `m.getOr(k, v)` a `V`. Other types the argument must fit as before.
+    fn join_fallback(
+        &mut self,
+        object: NodeId,
+        found: &mut CoreFound,
+        forced: bool,
+    ) -> Result<(), Fact> {
+        let CoreMemberKind::Method {
+            params,
+            ret: CoreType::Param(t),
+            ..
+        } = &found.member.kind
+        else {
+            return Ok(());
+        };
+        let Some(at) = params.iter().position(|(p, _)| p == &CoreType::Param(*t)) else {
+            return Ok(());
+        };
+        let t = *t as usize;
+        let callee = self.typing.parent(object);
+        let call = callee.and_then(|c| self.typing.parent(c));
+        let (Some(callee), Some(call)) = (callee, call) else {
+            return Ok(());
+        };
+        let children = self.lib.tree.children(call);
+        let Some(&arg) = (children.first() == Some(&callee))
+            .then(|| children.get(1 + at))
+            .flatten()
+        else {
+            return Ok(());
+        };
+        let Some(&bound) = found.args.get(t) else {
+            return Ok(());
+        };
+        let given = self.expr_type(arg, forced)?;
+        let types = &mut self.typing.types;
+        if matches!(types.get(given), TypeData::Null | TypeData::Nullable(_)) {
+            found.args[t] = types.nullable(bound);
+        }
+        // tmpl's `getOr` has a type parameter of its own for its result,
+        // the join, as backends whose `V` isn't nullable need it.
+        self.typing.type_args.insert(call, vec![found.args[t]]);
+        Ok(())
     }
 
     /// The member of a builtin type `object.name` names, as

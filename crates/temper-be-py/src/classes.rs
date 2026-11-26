@@ -149,9 +149,14 @@ impl Translator<'_> {
     /// its property.
     pub(crate) fn field(&mut self, object: Expr, field: DeclId) -> Expr {
         let owner = self.p.decls.get(field).owner;
-        // Core's by its own name; another library's by its naming's.
+        // Core's by its own name, in snake case, as a failure's
+        // `code_point`; another library's by its naming's.
         if temper_tmpl::qname::by_connection(self.p, field, crate::connected::connects_std) {
-            return object.attr(self.p.name(field));
+            let name = self.p.name(field);
+            if temper_tmpl::qname::library_of(self.p, field) == "core" {
+                return object.attr(temper_tmpl::naming::snake_case(name));
+            }
+            return object.attr(name);
         }
         if is_external(self.p, field) {
             return object.attr(self.name(field));

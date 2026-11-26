@@ -1,6 +1,7 @@
 from temper_core import (
     Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
+    ParseError as _ParseError,
     boolean_to_string as _boolean_to_string,
     int_add as _int_add,
     int_div as _int_div,
@@ -59,14 +60,14 @@ def _same_int(a: int | None, b: int | None, /) -> bool:
 def _parse(s: str, /) -> int:
     try:
         return _string_to_int32(s)
-    except _Bubble:
+    except _ParseError:
         return -1
 
 
 def _halved(s: str, d: int, /) -> int:
     try:
         return _int_div(_string_to_int32(s), d)
-    except _Bubble:
+    except _ParseError:
         return -1
 
 

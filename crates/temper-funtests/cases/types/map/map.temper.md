@@ -32,6 +32,7 @@ TODO Does `key` interface constraint not get enforced? I tried float values.
     console.log("Message: ${message}");
     console.log("Has 200: ${messageDefined(200)}, 302: ${messageDefined(302)}");
     console.log("Fallback: ${messages[302] orelse "Found"}");
+    console.log("Or null: ${messages.getOr(302, null) ?? "none"}");
     console.log(
       "Codes: ${listKeys(messages).join(" ") { it => it.toString() }}"
     );
@@ -44,6 +45,7 @@ TODO Does `key` interface constraint not get enforced? I tried float values.
 Message: OK
 Has 200: true, 302: false
 Fallback: Found
+Or null: none
 Codes: 200 404 500
 Again: 200 404 500
 Messages: OK, Not Found, Internal Server Error
@@ -68,11 +70,12 @@ Now try out imperative building up.
       builder["El Salvador"] = ["Guatemala", "Honduras"];
       builder["Nicaragua"] = ["Costa Rica", "Honduras"];
       builder["Panama"] = ["Colombia", "Costa Rica"];
-      // And test removal as well.
+      // And test removal as well, which throws MissingKey for a missing key.
       builder.remove("Honduras") orelse void;
-      let was = builder.remove("El Salvador");
+      let was = builder.remove("El Salvador") orelse panic();
       console.log("Was there: ${was.join(", ") { it => it }}");
       console.log(builder.remove("El Salvador")[0] orelse "Gone");
+      console.log(do { builder.remove("Belize"); "removed" } catch (e) { e.message });
       // Finish
       builder.toMap()
     };
@@ -85,7 +88,23 @@ From builder: El Salvador, Guatemala, Nicaragua
 Key so far: Honduras
 Was there: Guatemala, Honduras
 Gone
+missing key (key: Belize)
 From built: Costa Rica, Honduras
+```
+
+## Missing keys
+
+Getting a missing key throws *MissingKey*, a *CoreError*, which says the
+key it didn't find.
+
+    let lookUp(code: Int): String throws MissingKey { messages[code] }
+    console.log(lookUp(302) catch (e) { e.message });
+    let fromBuilder = new MapBuilder<String, Int>();
+    console.log((fromBuilder["nope"] catch (e) { -1 }).toString());
+
+```log
+missing key (key: 302)
+-1
 ```
 
 # Map length

@@ -1,4 +1,6 @@
 import {
+  ParseError,
+  bubble,
   isBubble,
   listedGet,
   stringSplit,
@@ -29,7 +31,12 @@ function pair(a, b) {
  * @returns {number}
  */
 function parse(s) {
-  return stringToInt32(s, null);
+  try {
+    return stringToInt32(s, null);
+  } catch (e$) {
+    if (!(e$ instanceof ParseError)) throw e$;
+    return bubble();
+  }
 }
 
 /**

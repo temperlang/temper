@@ -135,6 +135,7 @@ public static class GenericsGlobal
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{locals} {x} {y} {fields} {same} {p.N} {q.N} {items} {Listed.Get(a, 0)} {Listed.Get(b, 0)}"));
     }
 
+    /// <exception cref="MissingKey">Where it fails with MissingKey.</exception>
     internal static int Bump(string key)
     {
         {
@@ -189,7 +190,7 @@ public static class GenericsGlobal
         {
             t9 = Mapped.Get(m, "b");
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (MissingKey)
         {
             t9 = -1;
         }
@@ -198,7 +199,7 @@ public static class GenericsGlobal
         {
             t10 = Mapped.Get(m, "c");
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (MissingKey)
         {
             t10 = -1;
         }
@@ -210,17 +211,12 @@ public static class GenericsGlobal
         int? subject4 = Mapped.GetOrDefault(mb, "n", 0);
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{(subject3 == null ? -2 : subject3.Value)} {(subject4 == null ? -2 : subject4.Value)} {(mb.ContainsKey("n") ? "true" : "false")}"));
         string? subject5;
-        int? subject6;
-        try
-        {
-            subject6 = Core.RemoveGet(mb, "q");
-        }
-        catch (global::TemperLang.Core.Bubble)
-        {
-            subject6 = 0;
-        }
+        int? subject6 = Core.RemoveGet(mb, "q");
         subject5 = subject6 == null ? null : subject6.Value.ToString(CultureInfo.InvariantCulture);
         console.Log(subject5 == null ? "null" : subject5);
+        int? subject7 = Mapped.GetOrDefault(mb, "z", null);
+        string? subject8 = Listed.GetOrNull(built, 7);
+        console.Log((subject7 == null ? -3 : subject7.Value).ToString(CultureInfo.InvariantCulture) + " " + (subject8 == null ? "none" : subject8));
         console.Log(Mapped.Keys(mb).Count.ToString(CultureInfo.InvariantCulture));
         Indexed();
         Both();
@@ -231,7 +227,7 @@ public static class GenericsGlobal
         {
             t11 = Bump("k");
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (MissingKey)
         {
             t11 = -1;
         }
@@ -240,7 +236,7 @@ public static class GenericsGlobal
         {
             t12 = Bump("z");
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (MissingKey)
         {
             t12 = -1;
         }
@@ -249,7 +245,7 @@ public static class GenericsGlobal
         {
             t13 = Mapped.Get(tally, "k");
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (MissingKey)
         {
             t13 = -1;
         }

@@ -44,7 +44,12 @@ static int32_t pair(int32_t a, int32_t b) {
 }
 
 static int32_t parse(core::Str const & s) {
-  return core::String::toInt32(s);
+  auto Result = core::String::toInt32(s);
+  if (Result.has_value()) {
+    return *Result;
+  } else {
+    core::bubble();
+  }
 }
 
 static core::NullableParam<int32_t> next(core::NullableParam<int32_t> y) {

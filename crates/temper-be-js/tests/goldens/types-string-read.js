@@ -1,5 +1,7 @@
 import {
-  isBubble,
+  InvalidCodePoint,
+  ParseError,
+  float64ToInt32,
   stringCountBetween,
   stringFromCodePoint,
   stringFromCodePoints,
@@ -9,6 +11,7 @@ import {
   stringPrev,
   stringStep,
   stringToInt32,
+  stringToInt64,
 } from "@temperlang/core";
 
 /** @param {string} s */
@@ -51,6 +54,7 @@ function compareEnds(message) {
 /**
  * @param {number} code
  * @returns {string}
+ * @throws {InvalidCodePoint}
  */
 function fromCodeNoInline(code) {
   console.log(`From 0x${code.toString(16)}`);
@@ -60,6 +64,7 @@ function fromCodeNoInline(code) {
 /**
  * @param {readonly number[]} codes
  * @returns {string}
+ * @throws {InvalidCodePoint}
  */
 function fromCodesNoInline(codes) {
   console.log("From codes");
@@ -77,7 +82,7 @@ function checkParse(string, radix) {
   try {
     converted = (radix != null ? stringToInt32(string, radix) : stringToInt32(string, null)).toString();
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof ParseError)) throw e$;
     converted = "failed";
   }
   console.log(`Parse ${string} -> ${converted}`);
@@ -133,7 +138,7 @@ let t$0;
 try {
   t$0 = fromCodeNoInline(1114112);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof InvalidCodePoint)) throw e$;
   t$0 = "nope";
 }
 console.log(t$0);
@@ -142,7 +147,7 @@ let t$1;
 try {
   t$1 = fromCodeNoInline(55296);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof InvalidCodePoint)) throw e$;
   t$1 = "no to surrogate";
 }
 console.log(t$1);
@@ -152,10 +157,55 @@ let t$2;
 try {
   t$2 = fromCodesNoInline(Object.freeze([55296, 56320]));
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof InvalidCodePoint)) throw e$;
   t$2 = "no to surrogates";
 }
 console.log(t$2);
+/** @type {string} */
+let t$3;
+try {
+  t$3 = fromCodesNoInline(Object.freeze([65, -1, 56320]));
+} catch (e) {
+  if (!(e instanceof InvalidCodePoint)) throw e;
+  t$3 = e.codePoint.toString(16);
+}
+console.log(t$3);
+/** @type {string} */
+let t$4;
+try {
+  t$4 = stringFromCodePoint(57343);
+} catch (e2) {
+  if (!(e2 instanceof InvalidCodePoint)) throw e2;
+  t$4 = /** @type {Error} */ (/** @type {unknown} */ (e2)).message;
+}
+console.log(t$4);
+/** @type {string} */
+let t$5;
+try {
+  t$5 = stringToInt32("x", null).toString();
+} catch (e3) {
+  if (!(e3 instanceof ParseError)) throw e3;
+  t$5 = /** @type {Error} */ (/** @type {unknown} */ (e3)).message;
+}
+console.log(t$5);
+/** @type {string} */
+let t$6;
+try {
+  t$6 = float64ToInt32(1e300).toString();
+} catch (e4) {
+  if (!(e4 instanceof ParseError)) throw e4;
+  t$6 = e4.reason;
+}
+console.log(t$6);
+/** @type {bigint} */
+let t$7;
+try {
+  t$7 = stringToInt64("12", null);
+} catch (e$) {
+  if (!(e$ instanceof ParseError)) throw e$;
+  t$7 = -1n;
+}
+console.log(t$7.toString());
 checkParse("-1", null);
 checkParse("2", null);
 checkParse(" 2 ", null);
@@ -167,6 +217,26 @@ checkParse("2a", 16);
 checkParse("20", 7);
 checkParse("20", 17);
 checkParse("20", 37);
+checkParse("10", 0);
+checkParse("0", 1);
+/** @type {string} */
+let t$8;
+try {
+  t$8 = stringToInt64("10", 0).toString();
+} catch (e5) {
+  if (!(e5 instanceof ParseError)) throw e5;
+  t$8 = e5.reason;
+}
+console.log(t$8);
+/** @type {bigint} */
+let t$9;
+try {
+  t$9 = stringToInt64("10", -2);
+} catch (e$) {
+  if (!(e$ instanceof ParseError)) throw e$;
+  t$9 = -1n;
+}
+console.log(t$9.toString());
 {
   const s = "foo-bar";
   const after1_2 = stringNext(s, 0);

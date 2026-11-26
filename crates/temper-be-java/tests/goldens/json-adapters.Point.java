@@ -1,11 +1,14 @@
 package json_adapters;
 
 import temper.core.Core;
+import temper.core.ParseError;
 import temper.std.json.InterchangeContext;
 import temper.std.json.JsonAdapter;
+import temper.std.json.JsonException;
 import temper.std.json.JsonNumeric;
 import temper.std.json.JsonObject;
 import temper.std.json.JsonProducer;
+import temper.std.json.JsonShapeException;
 import temper.std.json.JsonSyntaxTree;
 
 final class Point {
@@ -26,14 +29,24 @@ final class Point {
         p.endObject();
     }
 
-    public static Point decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) {
-        JsonObject obj = t instanceof JsonObject ? (JsonObject) t : Core.throwBubble();
+    public static Point decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) throws JsonException {
+        JsonObject obj = t instanceof JsonObject ? (JsonObject) t : Core.throwFailure(new JsonShapeException("expected Point JSON object"));
         JsonSyntaxTree xTree = obj.propertyValueOrBubble("x");
-        JsonNumeric xJson = xTree instanceof JsonNumeric ? (JsonNumeric) xTree : Core.throwBubble();
-        int x = xJson.asInt32();
+        JsonNumeric xJson = xTree instanceof JsonNumeric ? (JsonNumeric) xTree : Core.throwFailure(new JsonShapeException("expected Int for x"));
+        int x;
+        try {
+            x = xJson.asInt32();
+        } catch (ParseError failure) {
+            throw Core.withCause(new JsonShapeException("expected Int for x"), failure);
+        }
         JsonSyntaxTree yTree = obj.propertyValueOrBubble("y");
-        JsonNumeric yJson = yTree instanceof JsonNumeric ? (JsonNumeric) yTree : Core.throwBubble();
-        int y = yJson.asInt32();
+        JsonNumeric yJson = yTree instanceof JsonNumeric ? (JsonNumeric) yTree : Core.throwFailure(new JsonShapeException("expected Int for y"));
+        int y;
+        try {
+            y = yJson.asInt32();
+        } catch (ParseError failure2) {
+            throw Core.withCause(new JsonShapeException("expected Int for y"), failure2);
+        }
         return new Point(x, y);
     }
 

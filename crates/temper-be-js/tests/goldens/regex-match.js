@@ -1,4 +1,5 @@
 import {
+  MissingKey,
   isBubble,
   listedGet,
   mappedGet,
@@ -73,7 +74,7 @@ function fn(match) {
   try {
     option1 = mappedGet(groups, "option1").value;
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof MissingKey)) throw e$;
     option1 = "";
   }
   /** @type {string} */
@@ -81,7 +82,7 @@ function fn(match) {
   try {
     alphaOption2 = mappedGet(groups, "alphaOption2").value;
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof MissingKey)) throw e$;
     alphaOption2 = "";
   }
   const begin = stringCountBetween(moreText, 0, match.full.begin);

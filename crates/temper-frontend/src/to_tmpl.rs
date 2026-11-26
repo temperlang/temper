@@ -2106,6 +2106,12 @@ impl Translator<'_> {
             true => self.handled_type(value),
             false => None,
         };
+        // A `catch (e)` whose `e` nothing reads is an `orelse`.
+        if bound.is_none() {
+            if let Some(bind) = self.catch_binding(fallback) {
+                self.adopted.insert(bind);
+            }
+        }
         let caught_held = bound.map(|ty| {
             let holder = self.b.nullable(ty);
             let null = self.b.null(holder);
@@ -3899,7 +3905,13 @@ impl Translator<'_> {
         };
         let local = match bound {
             Some(ty) => Some(self.catch_local(fallback, ty)?),
-            None => None,
+            None => {
+                // A `catch (e)` whose `e` nothing reads is an `orelse`.
+                if let Some(bind) = self.catch_binding(fallback) {
+                    self.adopted.insert(bind);
+                }
+                None
+            }
         };
         self.handling.push(failures::Handling {
             owner: self.owner,

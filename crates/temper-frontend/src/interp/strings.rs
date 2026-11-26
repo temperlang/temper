@@ -8,7 +8,7 @@
 //! inside a character here; such an index counts as the start of that
 //! character (Kotlin's would point at a trailing surrogate instead).
 
-use super::{Abrupt, R, Val};
+use super::{Abrupt, CoreFailure, R, Val};
 use std::cell::RefCell;
 use std::rc::Rc;
 use temper_syntax::lex::is_kotlin_whitespace;
@@ -125,19 +125,17 @@ pub(super) fn string_method(text: &str, name: &str, args: &[Val]) -> Option<R> {
             };
             index_of(text, target, start)
         }
-        ("toInt32" | "toInt64", []) => return Some(parse_int(text, 10, name == "toInt64")),
-        ("toInt32" | "toInt64", [Val::Null]) => {
+        ("toInt32" | "toInt64", [] | [Val::Null]) => {
             return Some(parse_int(text, 10, name == "toInt64"));
         }
         ("toInt32" | "toInt64", [Val::Int(radix)]) => {
             return Some(parse_int(text, *radix, name == "toInt64"));
         }
         ("toFloat64", []) => {
-            return Some(
-                super::numbers::parse_float(text)
-                    .map(Val::Float)
-                    .ok_or_else(bubble),
-            );
+            return Some(match super::numbers::parse_float(text) {
+                Some(f) => Ok(Val::Float(f)),
+                None => Err(CoreFailure::parse_error(text.to_string(), "not a Float64")),
+            });
         }
         // Splitting by "" gives each code point.
         ("split", [Val::Str(separator)]) => {
@@ -179,10 +177,21 @@ fn index_of(text: &str, target: &str, start: u32) -> Val {
 
 /// `String.toInt32(radix)` and `toInt64`: an optional sign and digits,
 /// around whitespace, as Kotlin's `trim().toIntOrNull(radix)`, for radixes
-/// 2 through 36. Kotlin also takes non-ASCII digits, which we don't.
+/// 2 through 36, else a `ParseError`. Kotlin also takes non-ASCII digits,
+/// which we don't.
 fn parse_int(text: &str, radix: i32, is_64: bool) -> R {
+    let reason = if is_64 {
+        "not an Int64"
+    } else {
+        "not an Int32"
+    };
+    parse_int_or_none(text, radix, is_64)
+        .ok_or_else(|| CoreFailure::parse_error(text.to_string(), reason))
+}
+
+fn parse_int_or_none(text: &str, radix: i32, is_64: bool) -> Option<Val> {
     if !(2..=36).contains(&radix) {
-        return Err(bubble());
+        return None;
     }
     let text = text.trim_matches(is_kotlin_whitespace);
     let (negative, digits) = match text.as_bytes().first() {
@@ -191,20 +200,19 @@ fn parse_int(text: &str, radix: i32, is_64: bool) -> R {
         _ => (false, text),
     };
     if digits.is_empty() {
-        return Err(bubble());
+        return None;
     }
     let mut n: i128 = 0;
     for c in digits.chars() {
-        let digit = c.to_digit(radix as u32).ok_or_else(bubble)?;
-        n = n * radix as i128 + digit as i128;
+        n = n * radix as i128 + c.to_digit(radix as u32)? as i128;
         if n > 1 << 64 {
-            return Err(bubble());
+            return None;
         }
     }
     let n = if negative { -n } else { n };
     match is_64 {
-        true => i64::try_from(n).map(Val::Int64).map_err(|_| bubble()),
-        false => i32::try_from(n).map(Val::Int).map_err(|_| bubble()),
+        true => i64::try_from(n).ok().map(Val::Int64),
+        false => i32::try_from(n).ok().map(Val::Int),
     }
 }
 
@@ -231,12 +239,15 @@ pub(super) fn int_to_string(n: i64, radix: i32) -> R {
     Ok(Val::Str(digits.iter().rev().collect::<String>().into()))
 }
 
-/// A code point as a `char`, failing for surrogates and past `0x10FFFF`.
+/// A code point as a `char`, throwing an `InvalidCodePoint` for
+/// negatives, surrogates, and past `0x10FFFF`.
 fn scalar(code: i32) -> Result<char, Abrupt> {
-    u32::try_from(code)
-        .ok()
-        .and_then(char::from_u32)
-        .ok_or_else(bubble)
+    (u32::try_from(code).ok().and_then(char::from_u32)).ok_or_else(|| {
+        Abrupt::Throw(CoreFailure::value(
+            "InvalidCodePoint",
+            vec![("codePoint", Val::Int(code))],
+        ))
+    })
 }
 
 /// `String`'s static methods.

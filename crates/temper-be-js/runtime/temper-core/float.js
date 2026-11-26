@@ -1,7 +1,7 @@
 // @ts-check
 
 // Implements extension method core.type Float64.near()
-import {bubble, INT32_MAX, INT32_MIN, INT64_MAX, INT64_MIN} from "./core.js";
+import {INT32_MAX, INT32_MIN, INT64_MAX, INT64_MIN, ParseError} from "./core.js";
 
 /**
  * Successor function.
@@ -43,11 +43,10 @@ export const float64Near = (x, y, relTol, absTol) => {
  */
 export const float64ToInt32 = (n) => {
   const i = float64ToInt32Unsafe(n);
-  if (Math.abs(n - i) < 1) {
-    return i;
-  } else {
-    bubble();
+  if (!(Math.abs(n - i) < 1)) {
+    throw new ParseError(float64ToString(n), "out of Int32 range");
   }
+  return i;
 }
 
 /**
@@ -73,7 +72,7 @@ export const float64ToInt32Unsafe = (n) => {
 export const float64ToInt64 = (n) => {
   // Also blocks NaNs.
   if (!(n >= Number.MIN_SAFE_INTEGER && n <= Number.MAX_SAFE_INTEGER)) {
-    bubble();
+    throw new ParseError(float64ToString(n), "out of Int64 range");
   }
   return float64ToInt64Unsafe(n);
 }

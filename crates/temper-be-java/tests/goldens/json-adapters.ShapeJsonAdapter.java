@@ -2,6 +2,7 @@ package json_adapters;
 
 import temper.std.json.InterchangeContext;
 import temper.std.json.JsonAdapter;
+import temper.std.json.JsonException;
 import temper.std.json.JsonProducer;
 import temper.std.json.JsonSyntaxTree;
 
@@ -12,7 +13,7 @@ final class ShapeJsonAdapter implements JsonAdapter<Shape> {
         x.encodeToJson(p);
     }
 
-    public Shape decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) {
+    public Shape decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) throws JsonException {
         return Shape.decodeFromJson(t, ic);
     }
 }

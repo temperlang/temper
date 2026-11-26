@@ -4,28 +4,36 @@ uses `temper-core`#2 0.0.0-alpha.0.0 {
   class StringBuilder#3 {
     connected constructor constructor#15(): StringBuilder#3;
     connected method append#16(substring: String): Void;
-    connected method appendCodePoint#17(cp: Int32): Void throws Bubble;
-    connected method appendBetween#21(source: String, begin: StringIndex#8, end: StringIndex#8): Void;
-    connected method toString#22(): String;
-    connected method clear#26(): Void;
+    connected method appendCodePoint#17(cp: Int32): Void throws InvalidCodePoint#18;
+    connected method appendBetween#24(source: String, begin: StringIndex#8, end: StringIndex#8): Void;
+    connected method toString#25(): String;
+    connected method clear#33(): Void;
   }
   class StringIndex#8 extends StringIndexOption#9 {}
   interface StringIndexOption#9 {}
-  class String#18 {
-    connected method step#19(index: StringIndex#8, by: Int32): StringIndex#8;
-    connected static let begin#20: StringIndex#8;
+  class InvalidCodePoint#18 extends CoreError#19 {
+    let codePoint#32: Int32;
   }
-  interface Console#23 {
-    connected method log#24(message: String): Void;
+  interface CoreError#19 extends Error#20 {}
+  interface Error#20 {}
+  class String#21 {
+    connected method step#22(index: StringIndex#8, by: Int32): StringIndex#8;
+    connected static let begin#23: StringIndex#8;
   }
-  class Boolean#27 {
-    connected method toString#28(): String;
+  interface Console#26 {
+    connected method log#27(message: String): Void;
   }
-  connected fn getConsole#30(name?: String): Console#23;
+  class Int32#30 {
+    connected method toString#31(radix?: Int32): String;
+  }
+  class Boolean#34 {
+    connected method toString#35(): String;
+  }
+  connected fn getConsole#37(name?: String): Console#26;
 }
 
 module build#0 {
-  let ~console#25: Console#23;
+  let ~console#28: Console#26;
 
   let builder#6: StringBuilder#3;
 
@@ -41,46 +49,46 @@ module build#0 {
 
   class StringBuilderOwner#1 {
     let builder#4: StringBuilder#3;
-    constructor constructor#5(builder#29: StringBuilder#3): StringBuilderOwner#1 {
-      this.builder#4 = builder#29;
+    constructor constructor#5(builder#36: StringBuilder#3): StringBuilderOwner#1 {
+      this.builder#4 = builder#36;
     }
   }
 
   let owner#14: StringBuilderOwner#1;
 
   init {
-    init ~console#25 = getConsole#30(omitted);
+    init ~console#28 = getConsole#37(omitted);
     init builder#6 = new constructor#15();
     builder#6.append#16("Hi ");
     builder#6.appendCodePoint#17(127759)^;
     init source#7 = "Wow!! Neato!";
-    init bangIndex#10 = source#7.step#19(begin#20, 3);
-    init spaceIndex#11 = source#7.step#19(bangIndex#10, 2);
-    builder#6.appendBetween#21(source#7, bangIndex#10, spaceIndex#11);
-    init built#12 = builder#6.toString#22();
+    init bangIndex#10 = source#7.step#22(begin#23, 3);
+    init spaceIndex#11 = source#7.step#22(bangIndex#10, 2);
+    builder#6.appendBetween#24(source#7, bangIndex#10, spaceIndex#11);
+    init built#12 = builder#6.toString#25();
     builder#6.append#16("\n");
     builder#6.append#16(built#12);
-    ~console#25.log#24(builder#6.toString#22());
-    (orelse(builder#6.appendCodePoint#17(1114112)^, ~console#25.log#24("High code blocked."))): Void;
-    (orelse(builder#6.appendCodePoint#17(55296)^, ~console#25.log#24("Surrogate blocked."))): Void;
-    ~console#25.log#24(builder#6.toString#22());
-    builder#6.clear#26();
+    ~console#28.log#27(builder#6.toString#25());
+    (orelse(builder#6.appendCodePoint#17(1114112)^, ~console#28.log#27("High code blocked."))): Void;
+    (catch(builder#6.appendCodePoint#17(55296)^, e#29: InvalidCodePoint#18, (value { ~console#28.log#27(%String.cat(%String.cat("Surrogate 0x", e#29.codePoint#32.toString#31(16)), " blocked.")); void }): Void)): Void;
+    ~console#28.log#27(builder#6.toString#25());
+    builder#6.clear#33();
     builder#6.append#16("Back to square zero.");
-    ~console#25.log#24(builder#6.toString#22());
-    builder#6.clear#26();
+    ~console#28.log#27(builder#6.toString#25());
+    builder#6.clear#33();
     builder#6.append#16("a??=b??/c??>d???e");
-    init marks#13 = builder#6.toString#22();
-    ~console#25.log#24(marks#13);
-    ~console#25.log#24(%String.cat("Same: ", %String.eq(marks#13, "a??=b??/c??>d???e").toString#28()));
-    builder#6.clear#26();
+    init marks#13 = builder#6.toString#25();
+    ~console#28.log#27(marks#13);
+    ~console#28.log#27(%String.cat("Same: ", %String.eq(marks#13, "a??=b??/c??>d???e").toString#35()));
+    builder#6.clear#33();
     builder#6.append#16("??");
-    (orelse(builder#6.appendCodePoint#17(1)^, ~console#25.log#24("No U+1."))): Void;
+    (orelse(builder#6.appendCodePoint#17(1)^, ~console#28.log#27("No U+1."))): Void;
     builder#6.append#16("0");
-    (orelse(builder#6.appendCodePoint#17(8364)^, ~console#25.log#24("No euro."))): Void;
+    (orelse(builder#6.appendCodePoint#17(8364)^, ~console#28.log#27("No euro."))): Void;
     builder#6.append#16("1");
-    ~console#25.log#24(%String.cat("Digits after escapes: ", %String.eq(builder#6.toString#22(), %String.cat(%String.cat(%String.cat(%String.cat("??", "\u{1}"), "0"), "€"), "1")).toString#28()));
+    ~console#28.log#27(%String.cat("Digits after escapes: ", %String.eq(builder#6.toString#25(), %String.cat(%String.cat(%String.cat(%String.cat("??", "\u{1}"), "0"), "€"), "1")).toString#35()));
     init owner#14 = new constructor#5(new constructor#15());
     owner#14.builder#4.append#16("Hi from inside.");
-    ~console#25.log#24(owner#14.builder#4.toString#22());
+    ~console#28.log#27(owner#14.builder#4.toString#25());
   }
 }

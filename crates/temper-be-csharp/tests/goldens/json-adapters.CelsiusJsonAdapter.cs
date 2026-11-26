@@ -13,6 +13,7 @@ internal class CelsiusJsonAdapter : IJsonAdapter<Celsius>
         x.EncodeToJson(p);
     }
 
+    /// <exception cref="JsonException">Where it fails with JsonException.</exception>
     public Celsius DecodeFromJson(IJsonSyntaxTree t, IInterchangeContext ic)
     {
         return Celsius.DecodeFromJson(t, ic);
