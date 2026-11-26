@@ -15,71 +15,250 @@ uses `temper-core`#1 0.0.0-alpha.0.0 {
   connected fn safeAdaptGeneratorFn#18<YIELD#19>(step: fn (SafeGenerator#3<YIELD#19>): GeneratorResult#10<YIELD#19>): SafeGenerator#3<YIELD#19>;
   connected fn awakeUpon#20<T#21>(promise: Promise#22<T#21>, generator: SafeGenerator#3<Empty#7>): Void;
   class Promise#22<R#23> {}
-  connected fn getPromiseResultSync#24<T#25>(promise: Promise#22<T#25>): T#25 throws Bubble;
-  class PromiseBuilder#27<R#28> {
-    connected constructor constructor#30(): PromiseBuilder#27<R#28>;
-    connected get promise#35(): Promise#22<R#28>;
-    connected method complete#36(completion: R#28): Void;
-    connected method breakPromise#55(): Void;
+  connected fn getPromiseResultSync#24<T#25>(promise: Promise#22<T#25>): T#25 throws BrokenPromise#26;
+  class BrokenPromise#26 extends CoreError#27 {}
+  interface CoreError#27 extends Error#28 {}
+  interface Error#28 {}
+  class PromiseBuilder#30<R#31> {
+    connected constructor constructor#33(): PromiseBuilder#30<R#31>;
+    connected get promise#38(): Promise#22<R#31>;
+    connected method complete#39(completion: R#31): Void;
+    connected method breakPromise#58(): Void;
   }
-  interface Console#42 {
-    connected method log#43(message: String): Void;
+  interface Console#45 {
+    connected method log#46(message: String): Void;
   }
-  class Int32#45 {
-    connected method toString#46(radix?: Int32): String;
+  class Int32#48 {
+    connected method toString#49(radix?: Int32): String;
   }
-  connected fn getConsole#58(name?: String): Console#42;
+  connected fn getConsole#61(name?: String): Console#45;
 }
 
 module `async-waiters`#0 {
-  let ~console#44: Console#42;
+  let ~console#47: Console#45;
 
   init {
-    init ~console#44 = getConsole#58(omitted);
-    async#2((fn ~fn#26(): SafeGenerator#3<Empty#7> {
-      var ~caseIndex#95: Int32 = 0;
-      var b#29: PromiseBuilder#27<Int32>? = (null): PromiseBuilder#27<Int32>?;
-      var firstDone#31: PromiseBuilder#27<Int32>? = (null): PromiseBuilder#27<Int32>?;
-      var secondDone#32: PromiseBuilder#27<Int32>? = (null): PromiseBuilder#27<Int32>?;
-      var first#40: Int32 = 0;
-      var second#41: Int32 = 0;
-      var b#47: PromiseBuilder#27<Int32>? = (null): PromiseBuilder#27<Int32>?;
-      var firstDone#48: PromiseBuilder#27<Int32>? = (null): PromiseBuilder#27<Int32>?;
-      var secondDone#49: PromiseBuilder#27<Int32>? = (null): PromiseBuilder#27<Int32>?;
-      var first#56: Int32 = 0;
-      var second#57: Int32 = 0;
-      var ~awaited#97: Promise#22<Int32>? = (null): Promise#22<Int32>?;
-      var ~awaited#98: Promise#22<Int32>? = (null): Promise#22<Int32>?;
-      var ~awaited#99: Promise#22<Int32>? = (null): Promise#22<Int32>?;
+    init ~console#47 = getConsole#61(omitted);
+    async#2((fn ~fn#29(): SafeGenerator#3<Empty#7> {
+      var ~caseIndex#98: Int32 = 0;
+      var b#32: PromiseBuilder#30<Int32>? = (null): PromiseBuilder#30<Int32>?;
+      var firstDone#34: PromiseBuilder#30<Int32>? = (null): PromiseBuilder#30<Int32>?;
+      var secondDone#35: PromiseBuilder#30<Int32>? = (null): PromiseBuilder#30<Int32>?;
+      var first#43: Int32 = 0;
+      var second#44: Int32 = 0;
+      var b#50: PromiseBuilder#30<Int32>? = (null): PromiseBuilder#30<Int32>?;
+      var firstDone#51: PromiseBuilder#30<Int32>? = (null): PromiseBuilder#30<Int32>?;
+      var secondDone#52: PromiseBuilder#30<Int32>? = (null): PromiseBuilder#30<Int32>?;
+      var first#59: Int32 = 0;
+      var second#60: Int32 = 0;
       var ~awaited#100: Promise#22<Int32>? = (null): Promise#22<Int32>?;
-      return safeAdaptGeneratorFn#18<Empty#7>((fn ~convertedCoroutine#93(~generator#94: SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7> [b#29, firstDone#31, secondDone#32, first#40, second#41, b#47, firstDone#48, secondDone#49, first#56, second#57, ~caseIndex#95, ~awaited#97, ~awaited#98, ~awaited#99, ~awaited#100] {
-        ~loop#96: while (true) {
-          let ~caseIndexLocal#101: Int32 = ~caseIndex#95;
-          ~caseIndex#95 = -1;
-          switch (~caseIndexLocal#101) {
+      var ~awaited#101: Promise#22<Int32>? = (null): Promise#22<Int32>?;
+      var ~awaited#102: Promise#22<Int32>? = (null): Promise#22<Int32>?;
+      var ~awaited#103: Promise#22<Int32>? = (null): Promise#22<Int32>?;
+      return safeAdaptGeneratorFn#18<Empty#7>((fn ~convertedCoroutine#96(~generator#97: SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7> [b#32, firstDone#34, secondDone#35, first#43, second#44, b#50, firstDone#51, secondDone#52, first#59, second#60, ~caseIndex#98, ~awaited#100, ~awaited#101, ~awaited#102, ~awaited#103] {
+        ~loop#99: while (true) {
+          let ~caseIndexLocal#104: Int32 = ~caseIndex#98;
+          ~caseIndex#98 = -1;
+          switch (~caseIndexLocal#104) {
             case 0 {
-              (orelse((value { b#29 = (asNullable(new constructor#30<Int32>())): PromiseBuilder#27<Int32>?; firstDone#31 = (asNullable(new constructor#30<Int32>())): PromiseBuilder#27<Int32>?; secondDone#32 = (asNullable(new constructor#30<Int32>())): PromiseBuilder#27<Int32>?; async#2((fn ~fn#33(): SafeGenerator#3<Empty#7> [b#29, firstDone#31] { var ~caseIndex#61: Int32 = 0; var v#34: Int32 = 0; var ~awaited#63: Promise#22<Int32>? = (null): Promise#22<Int32>?; return safeAdaptGeneratorFn#18<Empty#7>((fn ~convertedCoroutine#59(~generator#60: SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7> [b#29, firstDone#31, v#34, ~caseIndex#61, ~awaited#63] { ~loop#62: while (true) { let ~caseIndexLocal#64: Int32 = ~caseIndex#61; ~caseIndex#61 = -1; switch (~caseIndexLocal#64) { case 0 { (orelse((value { ~awaited#63 = (asNullable(((nonNull(b#29)): PromiseBuilder#27<Int32>).promise#35())): Promise#22<Int32>?; ~caseIndex#61 = 3; awakeUpon#20<Int32>((nonNull(~awaited#63)): Promise#22<Int32>, ~generator#60); return (upcast(new constructor#12<Empty#7>(empty#17()))): GeneratorResult#10<Empty#7>; void }): Void, (value { ~caseIndex#61 = 1; void }): Void)): Void; } case 1 { v#34 = %Int32.neg(1); ~caseIndex#61 = 2; } case 2 { ((nonNull(firstDone#31)): PromiseBuilder#27<Int32>).complete#36(v#34); return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>; } case 3 { (orelse((value { v#34 = getPromiseResultSync#24<Int32>((nonNull(~awaited#63)): Promise#22<Int32>)^; ~caseIndex#61 = 2; void }): Void, (value { ~caseIndex#61 = 1; void }): Void)): Void; } default { return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>; } } } }): fn (SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7>); }): fn (): SafeGenerator#3<Empty#7>); async#2((fn ~fn#37(): SafeGenerator#3<Empty#7> [b#29, secondDone#32] { var ~caseIndex#67: Int32 = 0; var v#38: Int32 = 0; var ~awaited#69: Promise#22<Int32>? = (null): Promise#22<Int32>?; return safeAdaptGeneratorFn#18<Empty#7>((fn ~convertedCoroutine#65(~generator#66: SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7> [b#29, secondDone#32, v#38, ~caseIndex#67, ~awaited#69] { ~loop#68: while (true) { let ~caseIndexLocal#70: Int32 = ~caseIndex#67; ~caseIndex#67 = -1; switch (~caseIndexLocal#70) { case 0 { (orelse((value { ~awaited#69 = (asNullable(((nonNull(b#29)): PromiseBuilder#27<Int32>).promise#35())): Promise#22<Int32>?; ~caseIndex#67 = 3; awakeUpon#20<Int32>((nonNull(~awaited#69)): Promise#22<Int32>, ~generator#66); return (upcast(new constructor#12<Empty#7>(empty#17()))): GeneratorResult#10<Empty#7>; void }): Void, (value { ~caseIndex#67 = 1; void }): Void)): Void; } case 1 { v#38 = %Int32.neg(1); ~caseIndex#67 = 2; } case 2 { ((nonNull(secondDone#32)): PromiseBuilder#27<Int32>).complete#36(v#38); return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>; } case 3 { (orelse((value { v#38 = getPromiseResultSync#24<Int32>((nonNull(~awaited#69)): Promise#22<Int32>)^; ~caseIndex#67 = 2; void }): Void, (value { ~caseIndex#67 = 1; void }): Void)): Void; } default { return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>; } } } }): fn (SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7>); }): fn (): SafeGenerator#3<Empty#7>); async#2((fn ~fn#39(): SafeGenerator#3<Empty#7> [b#29] { var ~caseIndex#73: Int32 = 0; return safeAdaptGeneratorFn#18<Empty#7>((fn ~convertedCoroutine#71(~generator#72: SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7> [b#29, ~caseIndex#73] { let ~caseIndexLocal#75: Int32 = ~caseIndex#73; ~caseIndex#73 = -1; switch (~caseIndexLocal#75) { case 0 { ((nonNull(b#29)): PromiseBuilder#27<Int32>).complete#36(7); return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>; } default { return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>; } } }): fn (SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7>); }): fn (): SafeGenerator#3<Empty#7>); ~awaited#97 = (asNullable(((nonNull(firstDone#31)): PromiseBuilder#27<Int32>).promise#35())): Promise#22<Int32>?; ~caseIndex#95 = 3; awakeUpon#20<Int32>((nonNull(~awaited#97)): Promise#22<Int32>, ~generator#94); return (upcast(new constructor#12<Empty#7>(empty#17()))): GeneratorResult#10<Empty#7>; void }): Void, (value { ~caseIndex#95 = 1; void }): Void)): Void;
+              b#32 = (asNullable(new constructor#33<Int32>())): PromiseBuilder#30<Int32>?;
+              firstDone#34 = (asNullable(new constructor#33<Int32>())): PromiseBuilder#30<Int32>?;
+              secondDone#35 = (asNullable(new constructor#33<Int32>())): PromiseBuilder#30<Int32>?;
+              async#2((fn ~fn#36(): SafeGenerator#3<Empty#7> [b#32, firstDone#34] {
+                var ~caseIndex#64: Int32 = 0;
+                var v#37: Int32 = 0;
+                var ~awaited#66: Promise#22<Int32>? = (null): Promise#22<Int32>?;
+                return safeAdaptGeneratorFn#18<Empty#7>((fn ~convertedCoroutine#62(~generator#63: SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7> [b#32, firstDone#34, v#37, ~caseIndex#64, ~awaited#66] {
+                  ~loop#65: while (true) {
+                    let ~caseIndexLocal#67: Int32 = ~caseIndex#64;
+                    ~caseIndex#64 = -1;
+                    switch (~caseIndexLocal#67) {
+                      case 0 {
+                        ~awaited#66 = (asNullable(((nonNull(b#32)): PromiseBuilder#30<Int32>).promise#38())): Promise#22<Int32>?;
+                        ~caseIndex#64 = 3;
+                        awakeUpon#20<Int32>((nonNull(~awaited#66)): Promise#22<Int32>, ~generator#63);
+                        return (upcast(new constructor#12<Empty#7>(empty#17()))): GeneratorResult#10<Empty#7>;
+                      }
+                      case 1 {
+                        v#37 = %Int32.neg(1);
+                        ~caseIndex#64 = 2;
+                      }
+                      case 2 {
+                        ((nonNull(firstDone#34)): PromiseBuilder#30<Int32>).complete#39(v#37);
+                        return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>;
+                      }
+                      case 3 {
+                        (orelse((value { v#37 = getPromiseResultSync#24<Int32>((nonNull(~awaited#66)): Promise#22<Int32>)^; ~caseIndex#64 = 2; void }): Void, (value { ~caseIndex#64 = 1; void }): Void)): Void;
+                      }
+                      default {
+                        return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>;
+                      }
+                    }
+                  }
+                }): fn (SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7>);
+              }): fn (): SafeGenerator#3<Empty#7>);
+              async#2((fn ~fn#40(): SafeGenerator#3<Empty#7> [b#32, secondDone#35] {
+                var ~caseIndex#70: Int32 = 0;
+                var v#41: Int32 = 0;
+                var ~awaited#72: Promise#22<Int32>? = (null): Promise#22<Int32>?;
+                return safeAdaptGeneratorFn#18<Empty#7>((fn ~convertedCoroutine#68(~generator#69: SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7> [b#32, secondDone#35, v#41, ~caseIndex#70, ~awaited#72] {
+                  ~loop#71: while (true) {
+                    let ~caseIndexLocal#73: Int32 = ~caseIndex#70;
+                    ~caseIndex#70 = -1;
+                    switch (~caseIndexLocal#73) {
+                      case 0 {
+                        ~awaited#72 = (asNullable(((nonNull(b#32)): PromiseBuilder#30<Int32>).promise#38())): Promise#22<Int32>?;
+                        ~caseIndex#70 = 3;
+                        awakeUpon#20<Int32>((nonNull(~awaited#72)): Promise#22<Int32>, ~generator#69);
+                        return (upcast(new constructor#12<Empty#7>(empty#17()))): GeneratorResult#10<Empty#7>;
+                      }
+                      case 1 {
+                        v#41 = %Int32.neg(1);
+                        ~caseIndex#70 = 2;
+                      }
+                      case 2 {
+                        ((nonNull(secondDone#35)): PromiseBuilder#30<Int32>).complete#39(v#41);
+                        return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>;
+                      }
+                      case 3 {
+                        (orelse((value { v#41 = getPromiseResultSync#24<Int32>((nonNull(~awaited#72)): Promise#22<Int32>)^; ~caseIndex#70 = 2; void }): Void, (value { ~caseIndex#70 = 1; void }): Void)): Void;
+                      }
+                      default {
+                        return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>;
+                      }
+                    }
+                  }
+                }): fn (SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7>);
+              }): fn (): SafeGenerator#3<Empty#7>);
+              async#2((fn ~fn#42(): SafeGenerator#3<Empty#7> [b#32] {
+                var ~caseIndex#76: Int32 = 0;
+                return safeAdaptGeneratorFn#18<Empty#7>((fn ~convertedCoroutine#74(~generator#75: SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7> [b#32, ~caseIndex#76] {
+                  let ~caseIndexLocal#78: Int32 = ~caseIndex#76;
+                  ~caseIndex#76 = -1;
+                  switch (~caseIndexLocal#78) {
+                    case 0 {
+                      ((nonNull(b#32)): PromiseBuilder#30<Int32>).complete#39(7);
+                      return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>;
+                    }
+                    default {
+                      return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>;
+                    }
+                  }
+                }): fn (SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7>);
+              }): fn (): SafeGenerator#3<Empty#7>);
+              ~awaited#100 = (asNullable(((nonNull(firstDone#34)): PromiseBuilder#30<Int32>).promise#38())): Promise#22<Int32>?;
+              ~caseIndex#98 = 3;
+              awakeUpon#20<Int32>((nonNull(~awaited#100)): Promise#22<Int32>, ~generator#97);
+              return (upcast(new constructor#12<Empty#7>(empty#17()))): GeneratorResult#10<Empty#7>;
             }
             case 1 {
               (panic()): Void;
             }
             case 2 {
-              (orelse((value { b#47 = (asNullable(new constructor#30<Int32>())): PromiseBuilder#27<Int32>?; firstDone#48 = (asNullable(new constructor#30<Int32>())): PromiseBuilder#27<Int32>?; secondDone#49 = (asNullable(new constructor#30<Int32>())): PromiseBuilder#27<Int32>?; async#2((fn ~fn#50(): SafeGenerator#3<Empty#7> [b#47, firstDone#48] { var ~caseIndex#78: Int32 = 0; var v#51: Int32 = 0; var ~awaited#80: Promise#22<Int32>? = (null): Promise#22<Int32>?; return safeAdaptGeneratorFn#18<Empty#7>((fn ~convertedCoroutine#76(~generator#77: SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7> [b#47, firstDone#48, v#51, ~caseIndex#78, ~awaited#80] { ~loop#79: while (true) { let ~caseIndexLocal#81: Int32 = ~caseIndex#78; ~caseIndex#78 = -1; switch (~caseIndexLocal#81) { case 0 { (orelse((value { ~awaited#80 = (asNullable(((nonNull(b#47)): PromiseBuilder#27<Int32>).promise#35())): Promise#22<Int32>?; ~caseIndex#78 = 3; awakeUpon#20<Int32>((nonNull(~awaited#80)): Promise#22<Int32>, ~generator#77); return (upcast(new constructor#12<Empty#7>(empty#17()))): GeneratorResult#10<Empty#7>; void }): Void, (value { ~caseIndex#78 = 1; void }): Void)): Void; } case 1 { v#51 = %Int32.neg(1); ~caseIndex#78 = 2; } case 2 { ((nonNull(firstDone#48)): PromiseBuilder#27<Int32>).complete#36(v#51); return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>; } case 3 { (orelse((value { v#51 = getPromiseResultSync#24<Int32>((nonNull(~awaited#80)): Promise#22<Int32>)^; ~caseIndex#78 = 2; void }): Void, (value { ~caseIndex#78 = 1; void }): Void)): Void; } default { return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>; } } } }): fn (SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7>); }): fn (): SafeGenerator#3<Empty#7>); async#2((fn ~fn#52(): SafeGenerator#3<Empty#7> [b#47, secondDone#49] { var ~caseIndex#84: Int32 = 0; var v#53: Int32 = 0; var ~awaited#86: Promise#22<Int32>? = (null): Promise#22<Int32>?; return safeAdaptGeneratorFn#18<Empty#7>((fn ~convertedCoroutine#82(~generator#83: SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7> [b#47, secondDone#49, v#53, ~caseIndex#84, ~awaited#86] { ~loop#85: while (true) { let ~caseIndexLocal#87: Int32 = ~caseIndex#84; ~caseIndex#84 = -1; switch (~caseIndexLocal#87) { case 0 { (orelse((value { ~awaited#86 = (asNullable(((nonNull(b#47)): PromiseBuilder#27<Int32>).promise#35())): Promise#22<Int32>?; ~caseIndex#84 = 3; awakeUpon#20<Int32>((nonNull(~awaited#86)): Promise#22<Int32>, ~generator#83); return (upcast(new constructor#12<Empty#7>(empty#17()))): GeneratorResult#10<Empty#7>; void }): Void, (value { ~caseIndex#84 = 1; void }): Void)): Void; } case 1 { v#53 = %Int32.neg(1); ~caseIndex#84 = 2; } case 2 { ((nonNull(secondDone#49)): PromiseBuilder#27<Int32>).complete#36(v#53); return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>; } case 3 { (orelse((value { v#53 = getPromiseResultSync#24<Int32>((nonNull(~awaited#86)): Promise#22<Int32>)^; ~caseIndex#84 = 2; void }): Void, (value { ~caseIndex#84 = 1; void }): Void)): Void; } default { return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>; } } } }): fn (SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7>); }): fn (): SafeGenerator#3<Empty#7>); async#2((fn ~fn#54(): SafeGenerator#3<Empty#7> [b#47] { var ~caseIndex#90: Int32 = 0; return safeAdaptGeneratorFn#18<Empty#7>((fn ~convertedCoroutine#88(~generator#89: SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7> [b#47, ~caseIndex#90] { let ~caseIndexLocal#92: Int32 = ~caseIndex#90; ~caseIndex#90 = -1; switch (~caseIndexLocal#92) { case 0 { ((nonNull(b#47)): PromiseBuilder#27<Int32>).breakPromise#55(); return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>; } default { return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>; } } }): fn (SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7>); }): fn (): SafeGenerator#3<Empty#7>); ~awaited#99 = (asNullable(((nonNull(firstDone#48)): PromiseBuilder#27<Int32>).promise#35())): Promise#22<Int32>?; ~caseIndex#95 = 6; awakeUpon#20<Int32>((nonNull(~awaited#99)): Promise#22<Int32>, ~generator#94); return (upcast(new constructor#12<Empty#7>(empty#17()))): GeneratorResult#10<Empty#7>; void }): Void, (value { ~caseIndex#95 = 5; void }): Void)): Void;
+              b#50 = (asNullable(new constructor#33<Int32>())): PromiseBuilder#30<Int32>?;
+              firstDone#51 = (asNullable(new constructor#33<Int32>())): PromiseBuilder#30<Int32>?;
+              secondDone#52 = (asNullable(new constructor#33<Int32>())): PromiseBuilder#30<Int32>?;
+              async#2((fn ~fn#53(): SafeGenerator#3<Empty#7> [b#50, firstDone#51] {
+                var ~caseIndex#81: Int32 = 0;
+                var v#54: Int32 = 0;
+                var ~awaited#83: Promise#22<Int32>? = (null): Promise#22<Int32>?;
+                return safeAdaptGeneratorFn#18<Empty#7>((fn ~convertedCoroutine#79(~generator#80: SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7> [b#50, firstDone#51, v#54, ~caseIndex#81, ~awaited#83] {
+                  ~loop#82: while (true) {
+                    let ~caseIndexLocal#84: Int32 = ~caseIndex#81;
+                    ~caseIndex#81 = -1;
+                    switch (~caseIndexLocal#84) {
+                      case 0 {
+                        ~awaited#83 = (asNullable(((nonNull(b#50)): PromiseBuilder#30<Int32>).promise#38())): Promise#22<Int32>?;
+                        ~caseIndex#81 = 3;
+                        awakeUpon#20<Int32>((nonNull(~awaited#83)): Promise#22<Int32>, ~generator#80);
+                        return (upcast(new constructor#12<Empty#7>(empty#17()))): GeneratorResult#10<Empty#7>;
+                      }
+                      case 1 {
+                        v#54 = %Int32.neg(1);
+                        ~caseIndex#81 = 2;
+                      }
+                      case 2 {
+                        ((nonNull(firstDone#51)): PromiseBuilder#30<Int32>).complete#39(v#54);
+                        return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>;
+                      }
+                      case 3 {
+                        (orelse((value { v#54 = getPromiseResultSync#24<Int32>((nonNull(~awaited#83)): Promise#22<Int32>)^; ~caseIndex#81 = 2; void }): Void, (value { ~caseIndex#81 = 1; void }): Void)): Void;
+                      }
+                      default {
+                        return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>;
+                      }
+                    }
+                  }
+                }): fn (SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7>);
+              }): fn (): SafeGenerator#3<Empty#7>);
+              async#2((fn ~fn#55(): SafeGenerator#3<Empty#7> [b#50, secondDone#52] {
+                var ~caseIndex#87: Int32 = 0;
+                var v#56: Int32 = 0;
+                var ~awaited#89: Promise#22<Int32>? = (null): Promise#22<Int32>?;
+                return safeAdaptGeneratorFn#18<Empty#7>((fn ~convertedCoroutine#85(~generator#86: SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7> [b#50, secondDone#52, v#56, ~caseIndex#87, ~awaited#89] {
+                  ~loop#88: while (true) {
+                    let ~caseIndexLocal#90: Int32 = ~caseIndex#87;
+                    ~caseIndex#87 = -1;
+                    switch (~caseIndexLocal#90) {
+                      case 0 {
+                        ~awaited#89 = (asNullable(((nonNull(b#50)): PromiseBuilder#30<Int32>).promise#38())): Promise#22<Int32>?;
+                        ~caseIndex#87 = 3;
+                        awakeUpon#20<Int32>((nonNull(~awaited#89)): Promise#22<Int32>, ~generator#86);
+                        return (upcast(new constructor#12<Empty#7>(empty#17()))): GeneratorResult#10<Empty#7>;
+                      }
+                      case 1 {
+                        v#56 = %Int32.neg(1);
+                        ~caseIndex#87 = 2;
+                      }
+                      case 2 {
+                        ((nonNull(secondDone#52)): PromiseBuilder#30<Int32>).complete#39(v#56);
+                        return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>;
+                      }
+                      case 3 {
+                        (orelse((value { v#56 = getPromiseResultSync#24<Int32>((nonNull(~awaited#89)): Promise#22<Int32>)^; ~caseIndex#87 = 2; void }): Void, (value { ~caseIndex#87 = 1; void }): Void)): Void;
+                      }
+                      default {
+                        return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>;
+                      }
+                    }
+                  }
+                }): fn (SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7>);
+              }): fn (): SafeGenerator#3<Empty#7>);
+              async#2((fn ~fn#57(): SafeGenerator#3<Empty#7> [b#50] {
+                var ~caseIndex#93: Int32 = 0;
+                return safeAdaptGeneratorFn#18<Empty#7>((fn ~convertedCoroutine#91(~generator#92: SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7> [b#50, ~caseIndex#93] {
+                  let ~caseIndexLocal#95: Int32 = ~caseIndex#93;
+                  ~caseIndex#93 = -1;
+                  switch (~caseIndexLocal#95) {
+                    case 0 {
+                      ((nonNull(b#50)): PromiseBuilder#30<Int32>).breakPromise#58();
+                      return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>;
+                    }
+                    default {
+                      return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>;
+                    }
+                  }
+                }): fn (SafeGenerator#3<Empty#7>): GeneratorResult#10<Empty#7>);
+              }): fn (): SafeGenerator#3<Empty#7>);
+              ~awaited#102 = (asNullable(((nonNull(firstDone#51)): PromiseBuilder#30<Int32>).promise#38())): Promise#22<Int32>?;
+              ~caseIndex#98 = 6;
+              awakeUpon#20<Int32>((nonNull(~awaited#102)): Promise#22<Int32>, ~generator#97);
+              return (upcast(new constructor#12<Empty#7>(empty#17()))): GeneratorResult#10<Empty#7>;
             }
             case 3 {
-              (orelse((value { first#40 = getPromiseResultSync#24<Int32>((nonNull(~awaited#97)): Promise#22<Int32>)^; ~awaited#98 = (asNullable(((nonNull(secondDone#32)): PromiseBuilder#27<Int32>).promise#35())): Promise#22<Int32>?; ~caseIndex#95 = 4; awakeUpon#20<Int32>((nonNull(~awaited#98)): Promise#22<Int32>, ~generator#94); return (upcast(new constructor#12<Empty#7>(empty#17()))): GeneratorResult#10<Empty#7>; void }): Void, (value { ~caseIndex#95 = 1; void }): Void)): Void;
+              (orelse((value { first#43 = getPromiseResultSync#24<Int32>((nonNull(~awaited#100)): Promise#22<Int32>)^; ~awaited#101 = (asNullable(((nonNull(secondDone#35)): PromiseBuilder#30<Int32>).promise#38())): Promise#22<Int32>?; ~caseIndex#98 = 4; awakeUpon#20<Int32>((nonNull(~awaited#101)): Promise#22<Int32>, ~generator#97); return (upcast(new constructor#12<Empty#7>(empty#17()))): GeneratorResult#10<Empty#7>; void }): Void, (value { ~caseIndex#98 = 1; void }): Void)): Void;
             }
             case 4 {
-              (orelse((value { second#41 = getPromiseResultSync#24<Int32>((nonNull(~awaited#98)): Promise#22<Int32>)^; ~console#44.log#43(%String.cat(%String.cat(%String.cat("after complete: first got ", first#40.toString#46(omitted)), ", second got "), second#41.toString#46(omitted))); ~caseIndex#95 = 2; void }): Void, (value { ~caseIndex#95 = 1; void }): Void)): Void;
+              (orelse((value { second#44 = getPromiseResultSync#24<Int32>((nonNull(~awaited#101)): Promise#22<Int32>)^; ~console#47.log#46(%String.cat(%String.cat(%String.cat("after complete: first got ", first#43.toString#49(omitted)), ", second got "), second#44.toString#49(omitted))); ~caseIndex#98 = 2; void }): Void, (value { ~caseIndex#98 = 1; void }): Void)): Void;
             }
             case 5 {
               (panic()): Void;
             }
             case 6 {
-              (orelse((value { first#56 = getPromiseResultSync#24<Int32>((nonNull(~awaited#99)): Promise#22<Int32>)^; ~awaited#100 = (asNullable(((nonNull(secondDone#49)): PromiseBuilder#27<Int32>).promise#35())): Promise#22<Int32>?; ~caseIndex#95 = 7; awakeUpon#20<Int32>((nonNull(~awaited#100)): Promise#22<Int32>, ~generator#94); return (upcast(new constructor#12<Empty#7>(empty#17()))): GeneratorResult#10<Empty#7>; void }): Void, (value { ~caseIndex#95 = 5; void }): Void)): Void;
+              (orelse((value { first#59 = getPromiseResultSync#24<Int32>((nonNull(~awaited#102)): Promise#22<Int32>)^; ~awaited#103 = (asNullable(((nonNull(secondDone#52)): PromiseBuilder#30<Int32>).promise#38())): Promise#22<Int32>?; ~caseIndex#98 = 7; awakeUpon#20<Int32>((nonNull(~awaited#103)): Promise#22<Int32>, ~generator#97); return (upcast(new constructor#12<Empty#7>(empty#17()))): GeneratorResult#10<Empty#7>; void }): Void, (value { ~caseIndex#98 = 5; void }): Void)): Void;
             }
             case 7 {
-              (orelse((value { second#57 = getPromiseResultSync#24<Int32>((nonNull(~awaited#100)): Promise#22<Int32>)^; ~console#44.log#43(%String.cat(%String.cat(%String.cat("after breakPromise: first got ", first#56.toString#46(omitted)), ", second got "), second#57.toString#46(omitted))); ~caseIndex#95 = -1; void }): Void, (value { ~caseIndex#95 = 5; void }): Void)): Void;
+              (orelse((value { second#60 = getPromiseResultSync#24<Int32>((nonNull(~awaited#103)): Promise#22<Int32>)^; ~console#47.log#46(%String.cat(%String.cat(%String.cat("after breakPromise: first got ", first#59.toString#49(omitted)), ", second got "), second#60.toString#49(omitted))); ~caseIndex#98 = -1; void }): Void, (value { ~caseIndex#98 = 5; void }): Void)): Void;
             }
             default {
               return (upcast(doneResult#13<Empty#7>())): GeneratorResult#10<Empty#7>;

@@ -10,4 +10,5 @@
 26:3 -> ../netresponse-not-found.temper.md:21:7  try { <- do {
 27:5 -> ../netresponse-not-found.temper.md:22:9  yield doAwait(new NetRequest <- await new NetRequest("http:/
 28:5 -> ../netresponse-not-found.temper.md:23:9  console.log("port 1 answered <- console.log("port 1 answered
+31:5 -> ../netresponse-not-found.temper.md:25:9  console.log(`no response fro <- console.log("no response fro
 35:1 -> ../netresponse-not-found.temper.md:10:5  runAsync(adaptAwaiter(fn)); <- async { (): GeneratorResult<

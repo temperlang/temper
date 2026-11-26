@@ -1,8 +1,8 @@
 import {
+  BrokenPromise,
   PromiseBuilder,
   adaptAwaiter,
   bubble,
-  isBubble,
   listBuilderToList,
   listedJoin,
   modIntInt,
@@ -225,7 +225,7 @@ function* fn2(doAwait) {
   try {
     k = yield doAwait(gateA.promise);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof BrokenPromise)) throw e$;
     k = -1;
   }
   c.bump(`A${k}`, 10000);
@@ -244,7 +244,7 @@ function* fn3(doAwait) {
   try {
     k = yield doAwait(gateB.promise);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof BrokenPromise)) throw e$;
     k = -1;
   }
   c.bump(`B${k}`, 10000);

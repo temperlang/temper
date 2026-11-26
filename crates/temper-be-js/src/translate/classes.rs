@@ -168,6 +168,7 @@ impl Translator<'_> {
             "MissingKey" => Some("MissingKey"),
             "ParseError" => Some("ParseError"),
             "InvalidCodePoint" => Some("InvalidCodePoint"),
+            "BrokenPromise" => Some("BrokenPromise"),
             _ => None,
         }
     }

@@ -4,7 +4,7 @@ uses `temper-core`#1 0.0.0-alpha.0.0 {
   class PromiseBuilder#2<R#3> {
     connected constructor constructor#6(): PromiseBuilder#2<R#3>;
     connected method complete#7(completion: R#3): Void;
-    connected get promise#36(): Promise#28<R#3>;
+    connected get promise#39(): Promise#28<R#3>;
   }
   connected fn async#8(generatorFactory: fn (): SafeGenerator#9<Empty#13>): Void;
   interface SafeGenerator#9<YIELD#10> extends Generator#11<YIELD#10> {}
@@ -20,45 +20,48 @@ uses `temper-core`#1 0.0.0-alpha.0.0 {
   connected fn safeAdaptGeneratorFn#24<YIELD#25>(step: fn (SafeGenerator#9<YIELD#25>): GeneratorResult#16<YIELD#25>): SafeGenerator#9<YIELD#25>;
   connected fn awakeUpon#26<T#27>(promise: Promise#28<T#27>, generator: SafeGenerator#9<Empty#13>): Void;
   class Promise#28<R#29> {}
-  connected fn getPromiseResultSync#30<T#31>(promise: Promise#28<T#31>): T#31 throws Bubble;
-  interface Console#37 {
-    connected method log#38(message: String): Void;
+  connected fn getPromiseResultSync#30<T#31>(promise: Promise#28<T#31>): T#31 throws BrokenPromise#32;
+  class BrokenPromise#32 extends CoreError#33 {}
+  interface CoreError#33 extends Error#34 {}
+  interface Error#34 {}
+  interface Console#40 {
+    connected method log#41(message: String): Void;
   }
-  class Int32#40 {
-    connected method toString#41(radix?: Int32): String;
+  class Int32#43 {
+    connected method toString#44(radix?: Int32): String;
   }
-  connected fn getConsole#46(name?: String): Console#37;
+  connected fn getConsole#49(name?: String): Console#40;
 }
 
 module `await-in-loop`#0 {
-  let ~console#39: Console#37;
+  let ~console#42: Console#40;
 
   let once#4: PromiseBuilder#2<String>;
 
   let later#5: PromiseBuilder#2<String>;
 
   init {
-    init ~console#39 = getConsole#46(omitted);
+    init ~console#42 = getConsole#49(omitted);
     init once#4 = new constructor#6<String>();
     once#4.complete#7("same");
     init later#5 = new constructor#6<String>();
-    async#8((fn generator ~fn#32(): SafeGenerator#9<Empty#13> {
+    async#8((fn generator ~fn#35(): SafeGenerator#9<Empty#13> {
       {
-        var i#33: Int32 = 0;
-        ~loop#34: while (%Int32.lt(i#33, 2)) {
-          let s#35: String = (orelse((await(once#4.promise#36())^): String, "?")): String;
-          ~console#39.log#38(%String.cat(%String.cat(s#35, " "), i#33.toString#41(omitted)));
-          i#33 = %Int32.add(i#33, 1);
+        var i#36: Int32 = 0;
+        ~loop#37: while (%Int32.lt(i#36, 2)) {
+          let s#38: String = (orelse((await(once#4.promise#39())^): String, "?")): String;
+          ~console#42.log#41(%String.cat(%String.cat(s#38, " "), i#36.toString#44(omitted)));
+          i#36 = %Int32.add(i#36, 1);
         }
       }
-      var j#42: Int32 = 0;
-      ~loop#43: while (%Int32.lt(j#42, 2)) {
-        let s#44: String = (orelse((await(later#5.promise#36())^): String, "?")): String;
-        ~console#39.log#38(%String.cat(%String.cat(s#44, " "), j#42.toString#41(omitted)));
-        j#42 = %Int32.add(j#42, 1);
+      var j#45: Int32 = 0;
+      ~loop#46: while (%Int32.lt(j#45, 2)) {
+        let s#47: String = (orelse((await(later#5.promise#39())^): String, "?")): String;
+        ~console#42.log#41(%String.cat(%String.cat(s#47, " "), j#45.toString#44(omitted)));
+        j#45 = %Int32.add(j#45, 1);
       }
-      let t#45: String = (orelse((await(once#4.promise#36())^): String, "?")): String;
-      ~console#39.log#38(%String.cat(t#45, " after the loops"));
+      let t#48: String = (orelse((await(once#4.promise#39())^): String, "?")): String;
+      ~console#42.log#41(%String.cat(t#48, " after the loops"));
     }): fn (): SafeGenerator#9<Empty#13>);
     later#5.complete#7("later");
   }

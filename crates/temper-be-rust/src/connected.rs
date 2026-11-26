@@ -65,6 +65,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Translate(to_string),
     ),
     (
+        "core.type BrokenPromise.constructor()",
+        Connection::Function("temper_core::BrokenPromise::new"),
+    ),
+    (
         "core.type Console.log()",
         Connection::Translate(console_log),
     ),

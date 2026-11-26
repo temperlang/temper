@@ -78,7 +78,18 @@ runs it out of band.
 TODO: example
 
 ### `await(promise)`
-TODO: document me
+
+`await p`, in an `async` block's own body, pauses the block until the
+promise `p` is resolved, and gives its value. For a broken promise, it
+throws a [*BrokenPromise*](types.md#class-brokenpromise), which the block
+handles where it awaits, since an `async` block can't throw:
+
+```temper inert
+async { (): GeneratorResult<Empty> extends GeneratorFn =>
+  let text = await response.bodyContent catch (e) { e.message };
+  let n = await count orelse 0;
+}
+```
 
 ### `cat`
 Short for "con**cat**enate", combines multiple strings into one string.

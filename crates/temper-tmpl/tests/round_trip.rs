@@ -115,6 +115,8 @@ struct Core {
     get_console: DeclId,
     /// Core's `List<T>`, for list literals.
     list: DeclId,
+    /// Core's `Error`, what a test may throw.
+    error: TypeId,
 }
 
 struct Gen {
@@ -283,7 +285,10 @@ impl Gen {
         let list = b.declare_type(DeclKind::Class, "List", core);
         let t = b.declare_type_param("T", list, &[]);
         b.set_type_params(list, &[t]);
+        let error = b.declare_type(DeclKind::Interface, "Error", core);
+        let error = b.program().decls.get(error).ty;
         self.core = Some(Core {
+            error,
             console: console_ty,
             log: log.decl,
             get_console: get_console.decl,
@@ -408,7 +413,8 @@ impl Gen {
         }
     }
 
-    /// A test: a compiler-made function of std's `Test`, which may bubble.
+    /// A test: a compiler-made function of std's `Test`, which may throw
+    /// any error, core's `Error`, a bubble too.
     fn test(&mut self, module: DeclId, lets: &[Value]) {
         let test_type = match self.test_type {
             Some(t) => t,
@@ -421,7 +427,8 @@ impl Gen {
                 t
             }
         };
-        let result = self.b.result(TypeId::VOID, TypeId::BUBBLE);
+        let error = self.core.as_ref().unwrap().error;
+        let result = self.b.result(TypeId::VOID, error);
         let sig = self.b.function_type(&[test_type], result);
         let decl = self
             .b

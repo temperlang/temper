@@ -30,6 +30,33 @@ We can do the same, but with a broken promise :(
 Broken synchronously
 ```
 
+Awaiting a broken promise throws a `BrokenPromise`, which a `catch`
+catches.
+
+      do {
+        let b = new PromiseBuilder<String>();
+        b.breakPromise();
+        console.log(await b.promise catch (e) { "Caught ${e.message}" });
+      }
+
+```log
+Caught broken promise
+```
+
+The same goes for a promise broken while the block waits for it.
+
+      do {
+        let b = new PromiseBuilder<String>();
+        async { (): GeneratorResult<Empty> extends GeneratorFn =>
+          b.breakPromise();
+        }
+        console.log(await b.promise catch (e) { "Caught ${e.message} later" });
+      }
+
+```log
+Caught broken promise later
+```
+
 And we can complete a promise asynchronously.
 
       do {

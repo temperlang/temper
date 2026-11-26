@@ -8,9 +8,9 @@ b = temper.promisebuilder_constructor()
 local function fn()
   ---@type integer
   local v
-  if not temper.pcall(function()
+  if not temper.catch(function()
     v = temper.promisebuilder_promise(b):await()
-  end) then
+  end, temper.BrokenPromise) then
     v = -1
   end
   print("got " .. v)

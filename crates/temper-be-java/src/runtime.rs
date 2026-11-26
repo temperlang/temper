@@ -14,6 +14,10 @@ use temper_tmpl::version::{RuntimeVersion, Spelling, Unpublished, VersionSpot};
 pub const FILES: &[(&str, &str)] = &[
     ("pom.xml", include_str!("../runtime/temper-core/pom.xml")),
     (
+        "src/main/java/temper/core/BrokenPromise.java",
+        include_str!("../runtime/temper-core/src/main/java/temper/core/BrokenPromise.java"),
+    ),
+    (
         "src/main/java/temper/core/Bubble.java",
         include_str!("../runtime/temper-core/src/main/java/temper/core/Bubble.java"),
     ),

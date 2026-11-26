@@ -65,9 +65,9 @@ pub(crate) fn init() -> temper_core::Result<()> {
                                     {
                                         *case_index.write().unwrap() = 3;
                                     } else {
-                                        *case_index.write().unwrap() = 5;
+                                        *case_index.write().unwrap() = 4;
                                     }
-                                    Ok::<_, temper_core::Error>(())
+                                    Ok::<_, temper_core::BrokenPromise>(())
                                 })()
                                 .is_err()
                                 {
@@ -81,7 +81,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                                     Some(temper_std::net::NetResponseTrait::body_content(
                                         temper_core::read_locked(&resp).as_ref().unwrap(),
                                     ));
-                                *case_index.write().unwrap() = 6;
+                                *case_index.write().unwrap() = 5;
                                 crate::support::awake_upon(
                                     temper_core::read_locked(&awaited2).unwrap(),
                                     generator.clone(),
@@ -89,9 +89,6 @@ pub(crate) fn init() -> temper_core::Result<()> {
                                 return Some(());
                             }
                             4 => {
-                                *case_index.write().unwrap() = -1;
-                            }
-                            5 => {
                                 {
                                     println!(
                                         "HTTP status was not 200: {}!",
@@ -100,9 +97,9 @@ pub(crate) fn init() -> temper_core::Result<()> {
                                         )
                                     );
                                 }
-                                *case_index.write().unwrap() = 4;
+                                *case_index.write().unwrap() = -1;
                             }
-                            6 => {
+                            5 => {
                                 if (|| {
                                     *subject.write().unwrap() = temper_core::read_locked(&awaited2)
                                         .as_ref()
@@ -118,8 +115,8 @@ pub(crate) fn init() -> temper_core::Result<()> {
                                         "Thanks, server.  I got {}.",
                                         temper_core::read_locked(&body)
                                     );
-                                    *case_index.write().unwrap() = 4;
-                                    Ok::<_, temper_core::Error>(())
+                                    *case_index.write().unwrap() = -1;
+                                    Ok::<_, temper_core::BrokenPromise>(())
                                 })()
                                 .is_err()
                                 {

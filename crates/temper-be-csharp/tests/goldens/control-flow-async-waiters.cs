@@ -28,7 +28,7 @@ public static class AsyncWaitersGlobal
                         {
                             promise1 = b.Task;
                         }
-                        catch (global::TemperLang.Core.Bubble)
+                        catch (BrokenPromise)
                         {
                             goto CATCH1;
                         }
@@ -37,7 +37,7 @@ public static class AsyncWaitersGlobal
                         {
                             v = global::TemperLang.Core.Async.GetPromiseResult(promise1);
                         }
-                        catch (global::TemperLang.Core.Bubble)
+                        catch (BrokenPromise)
                         {
                             goto CATCH1;
                         }
@@ -63,7 +63,7 @@ public static class AsyncWaitersGlobal
                         {
                             promise2 = b.Task;
                         }
-                        catch (global::TemperLang.Core.Bubble)
+                        catch (BrokenPromise)
                         {
                             goto CATCH2;
                         }
@@ -72,7 +72,7 @@ public static class AsyncWaitersGlobal
                         {
                             v = global::TemperLang.Core.Async.GetPromiseResult(promise2);
                         }
-                        catch (global::TemperLang.Core.Bubble)
+                        catch (BrokenPromise)
                         {
                             goto CATCH2;
                         }
@@ -112,7 +112,7 @@ public static class AsyncWaitersGlobal
                     global::TemperLang.Core.Async.LaunchGeneratorAsync((Func<IEnumerable<Tuple<object?>>>)fn4);
                     promise3 = firstDone.Task;
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH3;
                 }
@@ -122,7 +122,7 @@ public static class AsyncWaitersGlobal
                     first = global::TemperLang.Core.Async.GetPromiseResult(promise3);
                     promise4 = secondDone.Task;
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH3;
                 }
@@ -132,7 +132,7 @@ public static class AsyncWaitersGlobal
                     second = global::TemperLang.Core.Async.GetPromiseResult(promise4);
                     console.Log(string.Create(CultureInfo.InvariantCulture, $"after complete: first got {first}, second got {second}"));
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH3;
                 }
@@ -156,7 +156,7 @@ public static class AsyncWaitersGlobal
                         {
                             promise5 = b2.Task;
                         }
-                        catch (global::TemperLang.Core.Bubble)
+                        catch (BrokenPromise)
                         {
                             goto CATCH4;
                         }
@@ -165,7 +165,7 @@ public static class AsyncWaitersGlobal
                         {
                             v = global::TemperLang.Core.Async.GetPromiseResult(promise5);
                         }
-                        catch (global::TemperLang.Core.Bubble)
+                        catch (BrokenPromise)
                         {
                             goto CATCH4;
                         }
@@ -191,7 +191,7 @@ public static class AsyncWaitersGlobal
                         {
                             promise6 = b2.Task;
                         }
-                        catch (global::TemperLang.Core.Bubble)
+                        catch (BrokenPromise)
                         {
                             goto CATCH5;
                         }
@@ -200,7 +200,7 @@ public static class AsyncWaitersGlobal
                         {
                             v = global::TemperLang.Core.Async.GetPromiseResult(promise6);
                         }
-                        catch (global::TemperLang.Core.Bubble)
+                        catch (BrokenPromise)
                         {
                             goto CATCH5;
                         }
@@ -240,7 +240,7 @@ public static class AsyncWaitersGlobal
                     global::TemperLang.Core.Async.LaunchGeneratorAsync((Func<IEnumerable<Tuple<object?>>>)fn7);
                     promise7 = firstDone2.Task;
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH6;
                 }
@@ -250,7 +250,7 @@ public static class AsyncWaitersGlobal
                     first2 = global::TemperLang.Core.Async.GetPromiseResult(promise7);
                     promise8 = secondDone2.Task;
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH6;
                 }
@@ -260,7 +260,7 @@ public static class AsyncWaitersGlobal
                     second2 = global::TemperLang.Core.Async.GetPromiseResult(promise8);
                     console.Log(string.Create(CultureInfo.InvariantCulture, $"after breakPromise: first got {first2}, second got {second2}"));
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH6;
                 }

@@ -262,7 +262,7 @@ fn subset_a_goldens() {
             let mut outputs = vec![(String::new(), text::write(&plain))];
             // Generators as state machines, as Rust, C++, and Java write
             // them: valid, and as the golden `….state-machine.tmpl` has it.
-            if ASYNC.contains(test) {
+            if ASYNC.contains(test) || NET.contains(test) {
                 let lowered = lower(&program, CoroutineStrategy::TranslateToRegularFunction)
                     .unwrap_or_else(|e| panic!("{test}: {e}"))
                     .unwrap_or_else(|| panic!("{test}: no generators"));
@@ -522,10 +522,11 @@ fn constant_divisors_fold_as_typing_does() {
     });
 }
 
-/// An `await` that may bubble where nothing handles it is the frontend's
-/// "Cannot bubble" error, and the rest translates and validates: the
-/// `await` becomes an `Error` that fails where it's reached, as other code
-/// that may bubble where it can't does, and one in an `orelse` stays.
+/// An `await` that may throw `BrokenPromise` where nothing handles it is
+/// the frontend's "Cannot throw" error, and the rest translates and
+/// validates: the `await` becomes an `Error` that fails where it's
+/// reached, as other code that may throw where it can't does, and one in
+/// an `orelse` stays.
 #[test]
 fn unhandled_awaits_fail_where_reached() {
     with_stack(|| {
@@ -542,10 +543,10 @@ fn unhandled_awaits_fail_where_reached() {
         let (program, errors) = translate_with_errors("awaits", source);
         assert_eq!(
             errors,
-            ["Cannot bubble from a function without Bubble in its return type"]
+            ["Cannot throw BrokenPromise from a function without BrokenPromise in its return type"]
         );
         let written = text::write(&program);
-        let failing = "(error(\"Cannot bubble from a function";
+        let failing = "(error(\"Cannot throw BrokenPromise from a function";
         assert_eq!(written.matches(failing).count(), 1, "{written}");
         assert_eq!(written.matches("(await(").count(), 1, "{written}");
     });

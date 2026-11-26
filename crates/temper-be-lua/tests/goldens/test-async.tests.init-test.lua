@@ -29,9 +29,9 @@ function Test_.test_fails_in_a_later_turn()
     local function fn()
       ---@type integer
       local n
-      if not temper.pcall(function()
+      if not temper.catch(function()
         n = temper.promisebuilder_promise(pb):await()
-      end) then
+      end, temper.BrokenPromise) then
         n = -1
       end
       temper.test_assert(test, n == 2, function() return "later turn got " .. n end)
@@ -89,9 +89,9 @@ function Test_.test_waits_on_nothing()
     local function fn()
       ---@type integer
       local n
-      if not temper.pcall(function()
+      if not temper.catch(function()
         n = temper.promisebuilder_promise(never):await()
-      end) then
+      end, temper.BrokenPromise) then
         n = -1
       end
       temper.test_assert(test, false, function() return "ran " .. n end)

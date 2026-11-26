@@ -18,38 +18,43 @@ uses `temper-core`#2 0.0.0-alpha.0.0 {
   connected fn safeAdaptGeneratorFn#21<YIELD#22>(step: fn (SafeGenerator#6<YIELD#22>): GeneratorResult#13<YIELD#22>): SafeGenerator#6<YIELD#22>;
   connected fn awakeUpon#23<T#24>(promise: Promise#25<T#24>, generator: SafeGenerator#6<Empty#10>): Void;
   class Promise#25<R#26> {}
-  connected fn getPromiseResultSync#27<T#28>(promise: Promise#25<T#28>): T#28 throws Bubble;
-  interface Console#38 {
-    connected method log#39(message: String): Void;
+  connected fn getPromiseResultSync#27<T#28>(promise: Promise#25<T#28>): T#28 throws BrokenPromise#29;
+  class BrokenPromise#29 extends CoreError#30 {}
+  interface CoreError#30 extends Error#31 {}
+  interface Error#31 {
+    connected get message#49(): String;
   }
-  connected fn getConsole#45(name?: String): Console#38;
+  interface Console#41 {
+    connected method log#42(message: String): Void;
+  }
+  connected fn getConsole#50(name?: String): Console#41;
 }
 
-uses std#30 0.0.0-alpha.0.0 {
-  module net#31 {
-    connected interface NetResponse#32 {
-      connected get status#41(): Int32;
-      connected get bodyContent#44(): Promise#25<String?>;
+uses std#33 0.0.0-alpha.0.0 {
+  module net#34 {
+    connected interface NetResponse#35 {
+      connected get status#44(): Int32;
+      connected get bodyContent#47(): Promise#25<String?>;
     }
-    class NetRequest#34 {
-      method send#35(): Promise#25<NetResponse#32>;
-      private let url#36: String;
-      constructor constructor#37(url: String): NetRequest#34;
+    class NetRequest#37 {
+      method send#38(): Promise#25<NetResponse#35>;
+      private let url#39: String;
+      constructor constructor#40(url: String): NetRequest#37;
     }
   }
 }
 
 module `netresponse-not-found`#0 {
-  let ~console#40: Console#38;
+  let ~console#43: Console#41;
 
   let url#1: String;
 
   init {
-    init ~console#40 = getConsole#45(omitted);
+    init ~console#43 = getConsole#50(omitted);
     init url#1 = %String.cat(%String.cat("http://127.0.0.1:", 28461.toString#4(omitted)), "/missing");
-    async#5((fn generator ~fn#29(): SafeGenerator#6<Empty#10> {
-      (orelse((value { let resp#33: NetResponse#32 = (await(new constructor#37(url#1).send#35())^): NetResponse#32; ~console#40.log#39(%String.cat("status ", resp#33.status#41().toString#4(omitted))); let body#42: String = (value { let subject#43: String? = (await(resp#33.bodyContent#44())^): String?; (if (isNull(subject#43)) "missing" else (nonNull(subject#43)): String): String }): String; ~console#40.log#39(%String.cat("body ", body#42)); void }): Void, ~console#40.log#39("broken promise"))): Void;
-      (orelse((value { (await(new constructor#37("http://127.0.0.1:1/").send#35())^): NetResponse#32; ~console#40.log#39("port 1 answered"); void }): Void, ~console#40.log#39("no response from port 1"))): Void;
+    async#5((fn generator ~fn#32(): SafeGenerator#6<Empty#10> {
+      (orelse((value { let resp#36: NetResponse#35 = (await(new constructor#40(url#1).send#38())^): NetResponse#35; ~console#43.log#42(%String.cat("status ", resp#36.status#44().toString#4(omitted))); let body#45: String = (value { let subject#46: String? = (await(resp#36.bodyContent#47())^): String?; (if (isNull(subject#46)) "missing" else (nonNull(subject#46)): String): String }): String; ~console#43.log#42(%String.cat("body ", body#45)); void }): Void, ~console#43.log#42("broken promise"))): Void;
+      (catch((value { (await(new constructor#40("http://127.0.0.1:1/").send#38())^): NetResponse#35; ~console#43.log#42("port 1 answered"); void }): Void, e#48: BrokenPromise#29, (value { ~console#43.log#42(%String.cat("no response from port 1: ", ((upcast(e#48)): Error#31).message#49())); void }): Void)): Void;
     }): fn (): SafeGenerator#6<Empty#10>);
   }
 }

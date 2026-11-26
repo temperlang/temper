@@ -86,7 +86,7 @@ public class TestAsyncTests
                     {
                         promise1 = pb.Task;
                     }
-                    catch (global::TemperLang.Core.Bubble)
+                    catch (BrokenPromise)
                     {
                         goto CATCH1;
                     }
@@ -95,7 +95,7 @@ public class TestAsyncTests
                     {
                         n = global::TemperLang.Core.Async.GetPromiseResult(promise1);
                     }
-                    catch (global::TemperLang.Core.Bubble)
+                    catch (BrokenPromise)
                     {
                         goto CATCH1;
                     }
@@ -263,7 +263,7 @@ public class TestAsyncTests
                     {
                         promise2 = never.Task;
                     }
-                    catch (global::TemperLang.Core.Bubble)
+                    catch (BrokenPromise)
                     {
                         goto CATCH2;
                     }
@@ -272,7 +272,7 @@ public class TestAsyncTests
                     {
                         n = global::TemperLang.Core.Async.GetPromiseResult(promise2);
                     }
-                    catch (global::TemperLang.Core.Bubble)
+                    catch (BrokenPromise)
                     {
                         goto CATCH2;
                     }

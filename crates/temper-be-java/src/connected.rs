@@ -51,6 +51,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Boolean.toString()",
         Connection::Static("Boolean", "toString"),
     ),
+    (
+        "core.type BrokenPromise.constructor()",
+        Connection::Translate(new_broken_promise),
+    ),
     ("core.type Console.log()", Connection::Method("log")),
     (
         "core.type DenseBitVector.constructor()",
@@ -581,6 +585,13 @@ pub struct TypeConnection {
 
 /// Sorted by qname.
 pub const TYPES: &[(&str, TypeConnection)] = &[
+    (
+        "core.type BrokenPromise",
+        TypeConnection {
+            name: "BrokenPromise",
+            import: "temper.core.BrokenPromise",
+        },
+    ),
     (
         "core.type Console",
         TypeConnection {
@@ -1230,12 +1241,23 @@ fn new_completable_future(t: &mut Translator<'_>, _: &[NodeId]) -> Result<Expr, 
     Ok(Expr::New("CompletableFuture<>".into(), Vec::new()))
 }
 
-/// `b.completeExceptionally(Core.bubble())`, as Kotlin's.
+/// `b.completeExceptionally(new BrokenPromise())`.
 fn break_promise(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let b = one(t, args, "breakPromise")?;
-    t.import("temper.core.Core");
-    let bubble = Expr::name("Core").method("bubble", Vec::new());
-    Ok(b.method("completeExceptionally", vec![bubble]))
+    t.import("temper.core.BrokenPromise");
+    let broken = Expr::New("BrokenPromise".into(), Vec::new());
+    Ok(b.method("completeExceptionally", vec![broken]))
+}
+
+/// `new BrokenPromise()`, the runtime's class.
+fn new_broken_promise(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    if !args.is_empty() {
+        return Err(NotYet {
+            what: "`BrokenPromise` with arguments".into(),
+        });
+    }
+    t.import("temper.core.BrokenPromise");
+    Ok(Expr::New("BrokenPromise".into(), Vec::new()))
 }
 
 /// The receiver itself: a promise builder's promise.

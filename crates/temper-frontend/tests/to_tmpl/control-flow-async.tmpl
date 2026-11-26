@@ -15,35 +15,52 @@ uses `temper-core`#1 0.0.0-alpha.0.0 {
   connected fn safeAdaptGeneratorFn#18<YIELD#19>(step: fn (SafeGenerator#3<YIELD#19>): GeneratorResult#10<YIELD#19>): SafeGenerator#3<YIELD#19>;
   connected fn awakeUpon#20<T#21>(promise: Promise#22<T#21>, generator: SafeGenerator#3<Empty#7>): Void;
   class Promise#22<R#23> {}
-  connected fn getPromiseResultSync#24<T#25>(promise: Promise#22<T#25>): T#25 throws Bubble;
-  class PromiseBuilder#27<R#28> {
-    connected constructor constructor#30(): PromiseBuilder#27<R#28>;
-    connected method complete#31(completion: R#28): Void;
-    connected get promise#35(): Promise#22<R#28>;
-    connected method breakPromise#37(): Void;
+  connected fn getPromiseResultSync#24<T#25>(promise: Promise#22<T#25>): T#25 throws BrokenPromise#26;
+  class BrokenPromise#26 extends CoreError#27 {}
+  interface CoreError#27 extends Error#28 {}
+  interface Error#28 {
+    connected get message#43(): String;
   }
-  interface Console#32 {
-    connected method log#33(message: String): Void;
+  class PromiseBuilder#30<R#31> {
+    connected constructor constructor#33(): PromiseBuilder#30<R#31>;
+    connected method complete#34(completion: R#31): Void;
+    connected get promise#38(): Promise#22<R#31>;
+    connected method breakPromise#40(): Void;
   }
-  connected fn getConsole#46(name?: String): Console#32;
+  interface Console#35 {
+    connected method log#36(message: String): Void;
+  }
+  connected fn getConsole#55(name?: String): Console#35;
 }
 
 module async#0 {
-  let ~console#34: Console#32;
+  let ~console#37: Console#35;
 
   init {
-    init ~console#34 = getConsole#46(omitted);
-    async#2((fn generator ~fn#26(): SafeGenerator#3<Empty#7> {
-      (orelse((value { let b#29: PromiseBuilder#27<String> = new constructor#30<String>(); b#29.complete#31("Completed synchronously"); ~console#34.log#33((await(b#29.promise#35())^): String); void }): Void, (panic()): Void)): Void;
+    init ~console#37 = getConsole#55(omitted);
+    async#2((fn generator ~fn#29(): SafeGenerator#3<Empty#7> {
+      (orelse((value { let b#32: PromiseBuilder#30<String> = new constructor#33<String>(); b#32.complete#34("Completed synchronously"); ~console#37.log#36((await(b#32.promise#38())^): String); void }): Void, (panic()): Void)): Void;
       {
-        let b#36: PromiseBuilder#27<String> = new constructor#30<String>();
-        b#36.breakPromise#37();
-        ~console#34.log#33((orelse((await(b#36.promise#35())^): String, "Broken synchronously")): String);
+        let b#39: PromiseBuilder#30<String> = new constructor#33<String>();
+        b#39.breakPromise#40();
+        ~console#37.log#36((orelse((await(b#39.promise#38())^): String, "Broken synchronously")): String);
       }
-      (orelse((value { let b#38: PromiseBuilder#27<String> = new constructor#30<String>(); async#2((fn generator ~fn#39(): SafeGenerator#3<Empty#7> [b#38] { b#38.complete#31("Completed asynchronously"); }): fn (): SafeGenerator#3<Empty#7>); ~console#34.log#33((await(b#38.promise#35())^): String); void }): Void, (panic()): Void)): Void;
-      (orelse((value { let b#40: PromiseBuilder#27<String> = new constructor#30<String>(); b#40.complete#31("Worth doing twice"); ~console#34.log#33((await(b#40.promise#35())^): String); ~console#34.log#33((await(b#40.promise#35())^): String); void }): Void, (panic()): Void)): Void;
-      (orelse((value { let a#41: PromiseBuilder#27<Empty#7> = new constructor#30<Empty#7>(); let b#42: PromiseBuilder#27<Empty#7> = new constructor#30<Empty#7>(); async#2((fn generator ~fn#43(): SafeGenerator#3<Empty#7> [a#41, b#42] { (orelse((await(b#42.promise#35())^): Empty#7, (panic()): Void)): Void; ~console#34.log#33("After"); a#41.complete#31(empty#17()); }): fn (): SafeGenerator#3<Empty#7>); async#2((fn generator ~fn#44(): SafeGenerator#3<Empty#7> [b#42] { ~console#34.log#33("Before"); b#42.complete#31(empty#17()); }): fn (): SafeGenerator#3<Empty#7>); (await(a#41.promise#35())^): Empty#7; void }): Void, (panic()): Void)): Void;
-      (orelse((value { ~console#34.log#33("What is your favourite colour?"); let b#45: PromiseBuilder#27<String> = new constructor#30<String>(); b#45.complete#31("Blue"); b#45.complete#31("No, yell..."); ~console#34.log#33((await(b#45.promise#35())^): String); void }): Void, void)): Void;
+      {
+        let b#41: PromiseBuilder#30<String> = new constructor#33<String>();
+        b#41.breakPromise#40();
+        ~console#37.log#36((catch((await(b#41.promise#38())^): String, e#42: BrokenPromise#26, %String.cat("Caught ", ((upcast(e#42)): Error#28).message#43()))): String);
+      }
+      {
+        let b#44: PromiseBuilder#30<String> = new constructor#33<String>();
+        async#2((fn generator ~fn#45(): SafeGenerator#3<Empty#7> [b#44] {
+          b#44.breakPromise#40();
+        }): fn (): SafeGenerator#3<Empty#7>);
+        ~console#37.log#36((catch((await(b#44.promise#38())^): String, e#46: BrokenPromise#26, %String.cat(%String.cat("Caught ", ((upcast(e#46)): Error#28).message#43()), " later"))): String);
+      }
+      (orelse((value { let b#47: PromiseBuilder#30<String> = new constructor#33<String>(); async#2((fn generator ~fn#48(): SafeGenerator#3<Empty#7> [b#47] { b#47.complete#34("Completed asynchronously"); }): fn (): SafeGenerator#3<Empty#7>); ~console#37.log#36((await(b#47.promise#38())^): String); void }): Void, (panic()): Void)): Void;
+      (orelse((value { let b#49: PromiseBuilder#30<String> = new constructor#33<String>(); b#49.complete#34("Worth doing twice"); ~console#37.log#36((await(b#49.promise#38())^): String); ~console#37.log#36((await(b#49.promise#38())^): String); void }): Void, (panic()): Void)): Void;
+      (orelse((value { let a#50: PromiseBuilder#30<Empty#7> = new constructor#33<Empty#7>(); let b#51: PromiseBuilder#30<Empty#7> = new constructor#33<Empty#7>(); async#2((fn generator ~fn#52(): SafeGenerator#3<Empty#7> [a#50, b#51] { (orelse((await(b#51.promise#38())^): Empty#7, (panic()): Void)): Void; ~console#37.log#36("After"); a#50.complete#34(empty#17()); }): fn (): SafeGenerator#3<Empty#7>); async#2((fn generator ~fn#53(): SafeGenerator#3<Empty#7> [b#51] { ~console#37.log#36("Before"); b#51.complete#34(empty#17()); }): fn (): SafeGenerator#3<Empty#7>); (await(a#50.promise#38())^): Empty#7; void }): Void, (panic()): Void)): Void;
+      (orelse((value { ~console#37.log#36("What is your favourite colour?"); let b#54: PromiseBuilder#30<String> = new constructor#33<String>(); b#54.complete#34("Blue"); b#54.complete#34("No, yell..."); ~console#37.log#36((await(b#54.promise#38())^): String); void }): Void, void)): Void;
     }): fn (): SafeGenerator#3<Empty#7>);
   }
 }

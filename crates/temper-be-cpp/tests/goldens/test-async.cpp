@@ -94,15 +94,10 @@ void failsInALaterTurn(std::shared_ptr<temper_std::Test> const & test) {
         *caseIndex = -1;
         switch (caseIndexLocal) {
           case 0:
-            try {
-              *awaited = core::getpromise(pb);
-              *caseIndex = 3;
-              core::awake_upon((*awaited), generator);
-              return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
-            } catch (core::TemperBubble const &) {
-              *caseIndex = 1;
-            }
-            break;
+            *awaited = core::getpromise(pb);
+            *caseIndex = 3;
+            core::awake_upon((*awaited), generator);
+            return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
           case 1:
             *n = -1;
             *caseIndex = 2;
@@ -110,14 +105,16 @@ void failsInALaterTurn(std::shared_ptr<temper_std::Test> const & test) {
           case 2:
             test->assert_((*n) == 2, [=]() -> core::Str { return "later turn got " + std::to_string((*n)); });
             return core::doneResult();
-          case 3:
-            try {
-              *n = core::get_promise_result_sync((*awaited));
+          case 3: {
+            auto Result = core::get_promise_result_sync((*awaited));
+            if (Result.has_value()) {
+              *n = *Result;
               *caseIndex = 2;
-            } catch (core::TemperBubble const &) {
+            } else {
               *caseIndex = 1;
             }
             break;
+          }
           default:
             return core::doneResult();
         }
@@ -209,15 +206,10 @@ void waitsOnNothing(std::shared_ptr<temper_std::Test> const & test) {
         *caseIndex = -1;
         switch (caseIndexLocal) {
           case 0:
-            try {
-              *awaited = core::getpromise(never);
-              *caseIndex = 3;
-              core::awake_upon((*awaited), generator);
-              return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
-            } catch (core::TemperBubble const &) {
-              *caseIndex = 1;
-            }
-            break;
+            *awaited = core::getpromise(never);
+            *caseIndex = 3;
+            core::awake_upon((*awaited), generator);
+            return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
           case 1:
             *n = -1;
             *caseIndex = 2;
@@ -225,14 +217,16 @@ void waitsOnNothing(std::shared_ptr<temper_std::Test> const & test) {
           case 2:
             test->assert_(false, [=]() -> core::Str { return "ran " + std::to_string((*n)); });
             return core::doneResult();
-          case 3:
-            try {
-              *n = core::get_promise_result_sync((*awaited));
+          case 3: {
+            auto Result = core::get_promise_result_sync((*awaited));
+            if (Result.has_value()) {
+              *n = *Result;
               *caseIndex = 2;
-            } catch (core::TemperBubble const &) {
+            } else {
               *caseIndex = 1;
             }
             break;
+          }
           default:
             return core::doneResult();
         }

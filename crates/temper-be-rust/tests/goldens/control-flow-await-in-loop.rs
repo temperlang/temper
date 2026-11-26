@@ -81,7 +81,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                                         .unwrap()
                                         .get()?;
                                     *case_index.write().unwrap() = 5;
-                                    Ok::<_, temper_core::Error>(())
+                                    Ok::<_, temper_core::BrokenPromise>(())
                                 })()
                                 .is_err()
                                 {
@@ -135,7 +135,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                                         .unwrap()
                                         .get()?;
                                     *case_index.write().unwrap() = 11;
-                                    Ok::<_, temper_core::Error>(())
+                                    Ok::<_, temper_core::BrokenPromise>(())
                                 })()
                                 .is_err()
                                 {
@@ -159,7 +159,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                                         .unwrap()
                                         .get()?;
                                     *case_index.write().unwrap() = 14;
-                                    Ok::<_, temper_core::Error>(())
+                                    Ok::<_, temper_core::BrokenPromise>(())
                                 })()
                                 .is_err()
                                 {

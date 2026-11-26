@@ -322,7 +322,7 @@ module late#8 in "late" {
 M1 @3: late#7 is in a module that comes later, so can't be imported
 M1 @12: hidden#5 isn't exported from its module
 M1 @15: shared#6 is another module's
-M2 @17: a test's signature is fn (Test): Void throws Bubble, with std's Test
+M2 @17: a test's signature is fn (Test): Void throws Error, with std's Test
 
 === switches (F7, R5)
 tmpl 1 model 1 library switches 0.1.0

@@ -5,7 +5,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
-import temper.core.Bubble;
+import temper.core.BrokenPromise;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Generator;
@@ -56,6 +56,11 @@ public final class NetresponseNotFoundGlobal {
             }
             final Awaited2Cell awaited2 = new Awaited2Cell();
             awaited2.value = null;
+            class ECell {
+                @Nullable BrokenPromise value;
+            }
+            final ECell e = new ECell();
+            e.value = null;
             class Awaited3Cell {
                 @Nullable CompletableFuture<NetResponse> value;
             }
@@ -67,29 +72,19 @@ public final class NetresponseNotFoundGlobal {
                     caseIndex.value = -1;
                     switch (caseIndexLocal) {
                         case 0:
-                            try {
-                                awaited.value = new NetRequest(url).send();
-                                caseIndex.value = 3;
-                                Core.awakeUpon(awaited.value, generator);
-                                return new ValueResult<>(Optional.empty());
-                            } catch (Bubble ignored) {
-                                caseIndex.value = 1;
-                            }
-                            break;
+                            awaited.value = new NetRequest(url).send();
+                            caseIndex.value = 3;
+                            Core.awakeUpon(awaited.value, generator);
+                            return new ValueResult<>(Optional.empty());
                         case 1:
                             console.log("broken promise");
                             caseIndex.value = 2;
                             break;
                         case 2:
-                            try {
-                                awaited3.value = new NetRequest("http://127.0.0.1:1/").send();
-                                caseIndex.value = 6;
-                                Core.awakeUpon(awaited3.value, generator);
-                                return new ValueResult<>(Optional.empty());
-                            } catch (Bubble ignored2) {
-                                caseIndex.value = 5;
-                            }
-                            break;
+                            awaited3.value = new NetRequest("http://127.0.0.1:1/").send();
+                            caseIndex.value = 6;
+                            Core.awakeUpon(awaited3.value, generator);
+                            return new ValueResult<>(Optional.empty());
                         case 3:
                             try {
                                 resp.value = Core.getPromiseResult(awaited.value);
@@ -98,7 +93,7 @@ public final class NetresponseNotFoundGlobal {
                                 caseIndex.value = 4;
                                 Core.awakeUpon(awaited2.value, generator);
                                 return new ValueResult<>(Optional.empty());
-                            } catch (Bubble ignored3) {
+                            } catch (BrokenPromise ignored) {
                                 caseIndex.value = 1;
                             }
                             break;
@@ -108,12 +103,12 @@ public final class NetresponseNotFoundGlobal {
                                 body.value = subject.value == null ? "missing" : subject.value;
                                 console.log("body " + body.value);
                                 caseIndex.value = 2;
-                            } catch (Bubble ignored4) {
+                            } catch (BrokenPromise ignored2) {
                                 caseIndex.value = 1;
                             }
                             break;
                         case 5:
-                            console.log("no response from port 1");
+                            console.log("no response from port 1: " + e.value.getMessage());
                             caseIndex.value = -1;
                             break;
                         case 6:
@@ -121,7 +116,8 @@ public final class NetresponseNotFoundGlobal {
                                 Core.getPromiseResult(awaited3.value);
                                 console.log("port 1 answered");
                                 caseIndex.value = -1;
-                            } catch (Bubble ignored5) {
+                            } catch (BrokenPromise failure) {
+                                e.value = failure;
                                 caseIndex.value = 5;
                             }
                             break;

@@ -13,6 +13,7 @@
 
 use crate::analysis::walk;
 use crate::decls::{DeclKind, Facts};
+use crate::failures::failures_under;
 use crate::ids::{DeclId, NodeId, Span, TypeId};
 use crate::nodes::Flags;
 use crate::schema::{Kind, Node};
@@ -36,7 +37,9 @@ pub enum CoroutineStrategy {
     /// state, calls `awakeUpon(promise, generator)`, which steps the
     /// generator again once the promise is resolved, and returns; the
     /// next step reads the result by `getPromiseResultSync(promise)`,
-    /// which bubbles if the promise is broken.
+    /// which throws core's `BrokenPromise` if the promise is broken. A
+    /// state in an `orelse` or a `catch` is in one too, whose fallback
+    /// goes to the handler's state, keeping a `catch`'s failure.
     TranslateToRegularFunction,
 }
 
@@ -133,13 +136,22 @@ impl Helpers {
     }
 }
 
-/// One state: its statements, and the state whose code handles a bubble
-/// in them (an `orelse`'s fallback), if any.
+/// One state: its statements, and what handles a failure in them, if
+/// anything.
 struct State {
     stmts: Vec<NodeId>,
-    handler: Option<usize>,
+    handler: Option<Handler>,
     /// Whether it ends, by a jump or a return, so nothing more goes in it.
     done: bool,
+}
+
+/// What handles a failure: an `orelse`'s or a `catch`'s fallback, which
+/// starts at `state`; for a `catch`, `caught` is its local, made a
+/// nullable local of the factory's, which the fallback reads.
+#[derive(Clone, Copy)]
+struct Handler {
+    state: usize,
+    caught: Option<DeclId>,
 }
 
 /// Where a value goes.
@@ -166,7 +178,7 @@ struct Machine<'a> {
     yields: TypeId,
     states: Vec<State>,
     current: usize,
-    handler: Option<usize>,
+    handler: Option<Handler>,
     /// The loops broken up into states: where `continue` and `break` go.
     loops: HashMap<DeclId, (usize, usize)>,
     /// The locals the factory declares, with their first values.
@@ -198,6 +210,11 @@ fn walk_own(p: &Program, id: NodeId, visit: &mut impl FnMut(NodeId)) {
     for &kid in p.nodes.kids(id) {
         walk_own(p, kid, visit);
     }
+}
+
+/// Whether any of `stmts` may fail.
+fn may_fail(p: &Program, stmts: &[NodeId]) -> bool {
+    stmts.iter().any(|&s| !failures_under(p, s).is_empty())
 }
 
 /// A local's first value where it's declared before it's set: its type's
@@ -749,28 +766,14 @@ impl Machine<'_> {
             return Ok(());
         }
         match self.p().nodes.get(e) {
-            Node::OrElse { body, fallback } => {
-                let outer = self.handler;
-                let (fallback_state, join) = (self.new_state(), self.new_state());
-                self.handler = Some(fallback_state);
-                // In the current state, if nothing's in it yet.
-                let here = &mut self.states[self.current];
-                if here.stmts.is_empty() && !here.done {
-                    here.handler = Some(fallback_state);
-                } else {
-                    let tried = self.new_state();
-                    self.handler = outer;
-                    self.jump(tried);
-                    self.start(tried);
-                    self.handler = Some(fallback_state);
-                }
-                self.value_into(body, sink)?;
-                self.jump(join);
-                self.handler = outer;
-                self.start(fallback_state);
-                self.value_into(fallback, sink)?;
-                self.jump(join);
-                self.start(join);
+            Node::OrElse { body, fallback } => self.handled_into(body, None, fallback, sink)?,
+            Node::Catch {
+                local,
+                body,
+                fallback,
+            } => {
+                self.hoist_caught(local, fallback);
+                self.handled_into(body, Some(local), fallback, sink)?;
             }
             Node::BlockValue { stmts, value } => {
                 let stmts: Vec<NodeId> = self.p().nodes.list(stmts).to_vec();
@@ -810,8 +813,9 @@ impl Machine<'_> {
         }
         match p.nodes.get(e) {
             Node::Await { promise, .. } => return Ok(self.first_pause(promise)?.or(Some(e))),
-            Node::OrElse { .. } | Node::BlockValue { .. } => return Ok(Some(e)),
-            Node::Catch { .. } => return Err("a pause in a catch (declared failures)".into()),
+            Node::OrElse { .. } | Node::Catch { .. } | Node::BlockValue { .. } => {
+                return Ok(Some(e));
+            }
             _ => {}
         }
         let conditional = matches!(p.nodes.kind(e), Kind::IfValue | Kind::And | Kind::Or);
@@ -848,6 +852,65 @@ impl Machine<'_> {
         Ok(None)
     }
 
+    /// `body`, its failures handled by `fallback`, in states of their
+    /// own, which `caught`, a `catch`'s local, tells the failure.
+    fn handled_into(
+        &mut self,
+        body: NodeId,
+        caught: Option<DeclId>,
+        fallback: NodeId,
+        sink: Sink,
+    ) -> R<()> {
+        let outer = self.handler;
+        let (fallback_state, join) = (self.new_state(), self.new_state());
+        let handler = Some(Handler {
+            state: fallback_state,
+            caught,
+        });
+        self.handler = handler;
+        // In the current state, if nothing's in it yet.
+        let here = &mut self.states[self.current];
+        if here.stmts.is_empty() && !here.done {
+            here.handler = handler;
+        } else {
+            let tried = self.new_state();
+            self.handler = outer;
+            self.jump(tried);
+            self.start(tried);
+            self.handler = handler;
+        }
+        self.value_into(body, sink)?;
+        self.jump(join);
+        self.handler = outer;
+        self.start(fallback_state);
+        self.value_into(fallback, sink)?;
+        self.jump(join);
+        self.start(join);
+        Ok(())
+    }
+
+    /// Makes a `catch`'s local one of the factory's, nullable, as its
+    /// fallback may pause, which reads it through `nonNull`.
+    fn hoist_caught(&mut self, local: DeclId, fallback: NodeId) {
+        let ty = self.p().decls.get(local).ty;
+        let nullable = self.b.nullable(ty);
+        self.b.set_decl_type(local, nullable);
+        self.b.add_facts(local, Facts::VAR);
+        let none = self.b.null(nullable);
+        self.hoisted.push((local, none));
+        let mut reads = Vec::new();
+        walk(self.p(), fallback, &mut |id| {
+            if self.p().nodes.get(id) == (Node::Local { local }) {
+                reads.push(id);
+            }
+        });
+        for id in reads {
+            let read = self.b.local(local);
+            let read = self.b.raw(Kind::NonNull, ty, (0, 0), Flags::NONE, &[read]);
+            self.b.replace_with(id, read);
+        }
+    }
+
     /// `await promise`, whose value goes to `sink`.
     fn await_into(&mut self, promise: NodeId, ty: TypeId, sink: Sink) -> R<()> {
         if pauses(self.p(), promise) {
@@ -864,6 +927,18 @@ impl Machine<'_> {
         let stored = self.b.as_nullable(promise);
         let stored = self.b.assign(awaited, stored);
         self.emit(stored);
+        // Its pause, which can't fail, in a state of its own outside a
+        // `catch` where this one may fail, so a `catch`'s states that fail
+        // never return, which targets that bind the failure can't handle
+        // in place.
+        let here = &self.states[self.current];
+        if here.handler.is_some_and(|h| h.caught.is_some()) && may_fail(self.p(), &here.stmts) {
+            let outer = std::mem::take(&mut self.handler);
+            let pausing = self.new_state();
+            self.jump(pausing);
+            self.start(pausing);
+            self.handler = outer;
+        }
         let read = self.b.local(awaited);
         let read = self.b.non_null(read);
         let generator = self.b.local(self.generator);
@@ -916,6 +991,13 @@ impl Machine<'_> {
             self.step,
             TypeId::INT32,
         );
+        // A handler of a state that can't fail, as one that only pauses,
+        // would never run.
+        for i in 0..self.states.len() {
+            if !may_fail(self.p(), &self.states[i].stmts) {
+                self.states[i].handler = None;
+            }
+        }
         let forwarded = self.forwarding();
         let numbers = self.numbering(&forwarded);
         let mut cases = Vec::new();
@@ -943,10 +1025,28 @@ impl Machine<'_> {
             if let Some(handler) = state.handler {
                 let void = self.b.void();
                 let body = self.b.block_value(TypeId::VOID, &stmts, void);
-                let set = self.set_state(handler);
+                let set = self.set_state(handler.state);
                 let void = self.b.void();
-                let fallback = self.b.block_value(TypeId::VOID, &[set], void);
-                let tried = self.b.or_else(TypeId::VOID, body, fallback);
+                let tried = match handler.caught {
+                    // The failure, in the step's own local, kept in the
+                    // `catch`'s for its fallback.
+                    Some(caught) => {
+                        let ty = self.p().decls.get(caught).ty;
+                        let ty = self.p().types.non_null(ty);
+                        let failure =
+                            self.b
+                                .declare_made(DeclKind::Local, &["failure"], self.step, ty);
+                        let read = self.b.local(failure);
+                        let read = self.b.as_nullable(read);
+                        let keep = self.b.assign(caught, read);
+                        let fallback = self.b.block_value(TypeId::VOID, &[keep, set], void);
+                        self.b.catch(TypeId::VOID, failure, body, fallback)
+                    }
+                    None => {
+                        let fallback = self.b.block_value(TypeId::VOID, &[set], void);
+                        self.b.or_else(TypeId::VOID, body, fallback)
+                    }
+                };
                 stmts = vec![self.b.expr_statement(tried)];
             }
             let body = self.b.block(&stmts);
@@ -1044,7 +1144,7 @@ impl Machine<'_> {
                 continue;
             }
             todo.extend(edges[i].iter().copied());
-            todo.extend(self.states[i].handler.map(|h| forwarded[h]));
+            todo.extend(self.states[i].handler.map(|h| forwarded[h.state]));
         }
         let mut next = 0;
         (0..count)

@@ -106,11 +106,15 @@ impl Translator<'_> {
         Ok(self.own(made, node))
     }
 
-    /// `await promise`, which may bubble, if the promise is broken.
+    /// `await promise`, which throws core's `BrokenPromise`, declared with
+    /// it, if the promise is broken.
     pub(super) fn await_expr(&mut self, node: FNode) -> Tx<NodeId> {
         let Some(&promise) = self.children(node).first() else {
             return self.not_yet(node, "an await's form");
         };
+        if self.core_decl("BrokenPromise").is_none() {
+            return self.not_yet(node, "core's BrokenPromise");
+        }
         let promise = self.expr(promise)?;
         // The promise's `T`, which typing leaves to it.
         let p = self.b.program();

@@ -1866,8 +1866,8 @@ public final class Core {
     /**
      * The promise's result, waiting for it if need be.  Waiting inside a
      * turn, for a promise not yet settled, throws instead of deadlocking,
-     * since what would settle it may need the turn.  A broken promise
-     * bubbles.
+     * since what would settle it may need the turn.  Each wait for a
+     * broken promise throws a new {@link BrokenPromise}.
      */
     public static <T> T getPromiseResult(Future<T> future) {
         if (!future.isDone() && TURN.isHeldByCurrentThread()) {
@@ -1879,21 +1879,26 @@ public final class Core {
         try {
             return future.get();
         } catch (ExecutionException e) {
-            // A broken promise bubbles, whatever broke it, but a panic
-            // (an Error) passes.
+            // Whatever broke it, which a host's exception stays the cause
+            // of, but a panic (an Error), which passes.
             Throwable cause = e.getCause();
             if (cause instanceof Error) {
                 throw (Error) cause;
             }
-            if (cause instanceof Bubble) {
-                throw (Bubble) cause;
-            }
-            throw new Bubble(String.valueOf(cause), cause);
+            throw brokenPromise(cause);
         } catch (CancellationException e) {
-            throw new Bubble("cancelled", e);
+            throw brokenPromise(e);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static BrokenPromise brokenPromise(Throwable cause) {
+        BrokenPromise broken = new BrokenPromise();
+        if (!(cause instanceof Failure)) {
+            broken.initCause(cause);
+        }
+        return broken;
     }
 
     // Temper runs one async block at a time and switches only at `await`,

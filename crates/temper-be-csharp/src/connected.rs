@@ -42,6 +42,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Boolean.toString()",
         Connection::Translate(boolean_to_string),
     ),
+    (
+        "core.type BrokenPromise.constructor()",
+        Connection::Translate(new_broken_promise),
+    ),
     ("core.type Console.log()", Connection::Method("Log")),
     (
         "core.type DenseBitVector.constructor()",
@@ -668,6 +672,13 @@ pub struct TypeConnection {
 /// Sorted by qname.
 pub const TYPES: &[(&str, TypeConnection)] = &[
     (
+        "core.type BrokenPromise",
+        TypeConnection {
+            name: "BrokenPromise",
+            namespace: "TemperLang.Core",
+        },
+    ),
+    (
         "core.type Console",
         TypeConnection {
             name: "ILoggingConsole",
@@ -1177,6 +1188,12 @@ fn new_map_builder(t: &mut Translator<'_>, _: &[NodeId]) -> Result<Expr, NotYet>
 fn new_missing_key(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let key = one(t, args, "MissingKey")?;
     Ok(t.construct("MissingKey", vec![key]))
+}
+
+/// `new BrokenPromise()`, the runtime's class.
+fn new_broken_promise(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let args = t.connected_args(args)?;
+    Ok(t.construct("BrokenPromise", args))
 }
 
 /// `new InvalidCodePoint(codePoint)`, the runtime's class.

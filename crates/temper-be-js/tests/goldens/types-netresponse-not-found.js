@@ -1,6 +1,6 @@
 import {
+  BrokenPromise,
   adaptAwaiter,
-  isBubble,
   netResponseGetBodyContent,
   netResponseGetStatus,
   runAsync,
@@ -20,15 +20,15 @@ function* fn(doAwait) {
     const body = (yield doAwait(netResponseGetBodyContent(resp))) ?? "missing";
     console.log(`body ${body}`);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof BrokenPromise)) throw e$;
     console.log("broken promise");
   }
   try {
     yield doAwait(new NetRequest("http://127.0.0.1:1/").send());
     console.log("port 1 answered");
-  } catch (e$) {
-    if (!isBubble(e$)) throw e$;
-    console.log("no response from port 1");
+  } catch (e) {
+    if (!(e instanceof BrokenPromise)) throw e;
+    console.log(`no response from port 1: ${/** @type {Error} */ (/** @type {unknown} */ (e)).message}`);
   }
 }
 

@@ -190,6 +190,22 @@ namespace temper {
             }
         };
 
+        // What awaiting a broken promise gives. It has no fields: a broken
+        // promise doesn't say why.
+        struct BrokenPromise : public virtual CoreError {
+            static std::shared_ptr<BrokenPromise> make() {
+                return std::make_shared<BrokenPromise>();
+            }
+
+            Str get_message() const override {
+                return Str("broken promise");
+            }
+        };
+
+        // A promise's result once settled: its value, or a `BrokenPromise`.
+        template<class T>
+        using Awaited = Expected<T, std::shared_ptr<BrokenPromise>>;
+
         // A code point's result: its value, or an `InvalidCodePoint`.
         template<class T>
         using CodePointed = Expected<T, std::shared_ptr<InvalidCodePoint>>;

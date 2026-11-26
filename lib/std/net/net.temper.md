@@ -23,9 +23,10 @@ along.
         this.bodyMimeType = mimeType;
       }
 
-*Send* makes a best effort to actual send an HTTP method.
-Backends may or may not support all request features in which
-case, send should return a broken promise.
+*Send* makes a best effort to actually send an HTTP request.
+Where there's no response, or a backend doesn't support a request's
+features, the promise is broken, so `await` of it throws a
+`BrokenPromise`. An HTTP error status is still a response.
 
       public send(): Promise<NetResponse> {
         sendRequest(

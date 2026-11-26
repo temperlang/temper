@@ -263,6 +263,15 @@ Language and frontend:
   `Error` there takes a bubble too. Test: settle-std regex.cases and
   testing.cases; library_tests `tests_may_throw_any_error`; testkit
   test-assert-panics; funtests regex/match, regex/code-sets.
+- **`await` of a broken promise throws core's `BrokenPromise`**
+  (2026-11-26), a fieldless `CoreError`, where Kotlin's bubbles; host
+  failures that break a promise (std `net`'s) give it too. An `async`
+  block, or a generator that says `throws Bubble`, handles it where it
+  awaits; a `catch` around an `await` works on every backend, state
+  machines (Rust, C++, Java) too. Test:
+  settle/run.cases, "broken promises throw BrokenPromise, …",
+  "BrokenPromise is a CoreError …", "an await that nothing handles";
+  funtests control-flow/async, types/netresponse-not-found.
 - **An `internal` visibility** (module or library) between `public` and
   `private`, so module functions can use a class's hidden parts. Design it
   from what JS can express (only public and `#private`). Not planned yet.
@@ -871,9 +880,10 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   tests/nevers.rs; the funtest control-flow/bubble ("Helpers that never
   return") and programs/classes ("Methods that never return"), on every
   backend.
-- **An `await` that may bubble where it can't** (2026-11-18), as in an
+- **An `await` that may fail where it can't** (2026-11-18), as in an
   `async` block without `orelse`, is "Cannot bubble from a function
-  without Bubble in its return type" at the `await` in both, and so is
+  without Bubble in its return type" at the `await` in both (tempest's
+  says "Cannot throw BrokenPromise …" since 2026-11-26), and so is
   `bubble()` or any other call that may bubble in a generator that
   doesn't say `throws Bubble`. Kotlin then runs the code as written (JS:
   an unhandled rejection; Python: `RuntimeError`); tempest's `await`
@@ -881,9 +891,9 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   every backend, as other code that may bubble where it can't does, even
   when the promise is kept. Tempest also checks named generator
   functions, which Kotlin lacks.
-  Test: settle/run.cases, "a bubbling await that nothing handles, as
-  Kotlin Temper reports it" and "a bubbling await that something
-  handles"; to_tmpl.rs, `unhandled_awaits_fail_where_reached`.
+  Test: settle/run.cases, "an await that nothing handles" and "an
+  await that something handles"; to_tmpl.rs,
+  `unhandled_awaits_fail_where_reached`.
 
 ### Interpreter, core and std
 

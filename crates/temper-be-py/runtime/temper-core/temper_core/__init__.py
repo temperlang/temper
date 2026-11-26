@@ -186,7 +186,8 @@ _Raised = TypeVar("_Raised", bound=BaseException)
 class CoreError(Failure, Exception):
     """
     The root of core's own declared failures, `MissingKey`, `ParseError`,
-    and `InvalidCodePoint`, as each library's roots are its failures'.
+    `InvalidCodePoint`, and `BrokenPromise`, as each library's roots are
+    its failures'.
     """
 
     __slots__ = ()
@@ -244,6 +245,20 @@ class InvalidCodePoint(CoreError):
     @property
     def message(self, /) -> str:
         return f"invalid code point (codePoint: {self.code_point})"
+
+
+class BrokenPromise(CoreError):
+    """
+    What awaiting a broken promise raises. It has no fields: a broken
+    promise doesn't say why, though what broke it, if anything, is its
+    `__cause__`.
+    """
+
+    __slots__ = ()
+
+    @property
+    def message(self, /) -> str:
+        return "broken promise"
 
 
 def failure_cause(failure: Failure, /) -> Failure | None:
@@ -1614,12 +1629,14 @@ def _step_async_coro(
             exc = p.exception()
             if exc is None:
                 result = p.result()
-            elif isinstance(exc, Exception) and not isinstance(exc, Bubble):
-                # A broken promise bubbles, whatever broke it; a panic,
-                # a BaseException, passes.
-                bubbled = Bubble(*exc.args)
-                bubbled.__cause__ = exc
-                exc = bubbled
+            elif isinstance(exc, Exception):
+                # Each await of a broken promise raises a new
+                # BrokenPromise, whatever broke it, which a host error
+                # stays the cause of; a panic, a BaseException, passes.
+                broken = BrokenPromise()
+                if not isinstance(exc, Failure):
+                    broken.__cause__ = exc
+                exc = broken
         try:
             if exc is not None:
                 yielded = generator.throw(exc)
@@ -1732,7 +1749,7 @@ def break_promise(p: Future[T], exc: Union[BaseException, None] = None) -> None:
     PromiseBuilder, second and subsequent resolutions are no-ops.
     """
     if exc is None:
-        exc = make_bubble_exception()
+        exc = BrokenPromise()
     try:
         p.set_exception(exc)
     except InvalidStateError:

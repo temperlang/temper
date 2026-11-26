@@ -1,6 +1,6 @@
 import {
+  BrokenPromise,
   adaptAwaiter,
-  isBubble,
   netResponseGetBodyContent,
   netResponseGetStatus,
   runAsync,
@@ -25,7 +25,7 @@ function* fn(doAwait) {
       console.log(`HTTP status was not 200: ${netResponseGetStatus(resp)}!`);
     }
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof BrokenPromise)) throw e$;
     console.log("failed");
   }
 }

@@ -24,7 +24,7 @@ public static class AsyncBrokenEarlyGlobal
                 {
                     promise1 = b.Task;
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH1;
                 }
@@ -33,7 +33,7 @@ public static class AsyncBrokenEarlyGlobal
                 {
                     v = global::TemperLang.Core.Async.GetPromiseResult(promise1);
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH1;
                 }

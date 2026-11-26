@@ -30,8 +30,9 @@ namespace TemperLang.Core
 
     /// <summary>
     /// The root of core's own declared failures, <see cref="MissingKey"/>,
-    /// <see cref="ParseError"/>, and <see cref="InvalidCodePoint"/>, as each
-    /// library's roots are its failures' (Temper's <c>CoreError</c>).
+    /// <see cref="ParseError"/>, <see cref="InvalidCodePoint"/>, and
+    /// <see cref="BrokenPromise"/>, as each library's roots are its
+    /// failures' (Temper's <c>CoreError</c>).
     /// </summary>
     public abstract class CoreException : Exception, IFailure
     {
@@ -120,6 +121,25 @@ namespace TemperLang.Core
 
         public override string Message =>
             "invalid code point (codePoint: " + this.CodePoint + ")";
+    }
+
+    /// <summary>
+    /// What awaiting a broken promise throws. It has no fields: a broken
+    /// promise doesn't say why.
+    /// </summary>
+    public sealed class BrokenPromise : CoreException
+    {
+        public BrokenPromise()
+            : this(null)
+        {
+        }
+
+        public BrokenPromise(Exception? cause)
+            : base(cause)
+        {
+        }
+
+        public override string Message => "broken promise";
     }
 
     // Declared failures' causes. C# sets an exception's `InnerException`

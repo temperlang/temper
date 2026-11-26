@@ -26,6 +26,11 @@ public class Bubble extends RuntimeException {
         stackTraces = true;
     }
 
+    /** Whether failures made now get stack traces. */
+    static boolean keepsStackTraces() {
+        return stackTraces;
+    }
+
     /** A bubble without a message. */
     public Bubble() {
         this(null, null);

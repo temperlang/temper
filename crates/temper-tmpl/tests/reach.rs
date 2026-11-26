@@ -41,6 +41,7 @@ const USES: &str = "uses `temper-core`#90 0.1.0 {
     connected method toString#95(radix?: Int32): String;
   }
   class List#99<T#100> {}
+  interface Error#101 {}
 }
 
 uses std#96 0.1.0 {
@@ -106,7 +107,7 @@ module roots#0 {{
     fromInit#7();
   }}
 
-  test \"t\" ~test#12(~test#13: Test#98): Void throws Bubble {{
+  test \"t\" ~test#12(~test#13: Test#98): Void throws Error#101 {{
     fromTest#8();
   }}
 }}
@@ -181,7 +182,7 @@ module chain#0 {{
 
   init {{}}
 
-  test \"t\" ~test#8(~test#9: Test#98): Void throws Bubble {{
+  test \"t\" ~test#8(~test#9: Test#98): Void throws Error#101 {{
     c#4();
     b#3();
   }}
@@ -346,7 +347,7 @@ module init#0 {{
     ~console#1.log#92(local#16.toString#95(omitted));
   }}
 
-  test \"t\" ~test#19(~test#20: Test#98): Void throws Bubble {{
+  test \"t\" ~test#19(~test#20: Test#98): Void throws Error#101 {{
     let n#21: List#99<Int32> = forTests#9;
   }}
 }}
@@ -469,7 +470,7 @@ module split#0 {{
     exported#1();
   }}
 
-  test \"t\" ~test#7(~test#8: Test#98): Void throws Bubble {{
+  test \"t\" ~test#7(~test#8: Test#98): Void throws Error#101 {{
     forTests#2();
   }}
 }}
@@ -573,7 +574,7 @@ module parts#0 {{
     exported#1();
   }}
 
-  test \"t\" ~test#14(~test#15: Test#98): Void throws Bubble {{
+  test \"t\" ~test#14(~test#15: Test#98): Void throws Error#101 {{
     forTests#3();
   }}
 }}
@@ -659,7 +660,7 @@ fn partition_text() {
     }
   }
 
-  test \"t\" ~test#14(~test#15: Test#98): Void throws Bubble {
+  test \"t\" ~test#14(~test#15: Test#98): Void throws Error#101 {
     forTests#3();
   }
 }
@@ -709,7 +710,7 @@ module imports#0 {{
 
   init {{}}
 
-  test \"t\" ~test#4(~test#5: Test#98): Void throws Bubble {{
+  test \"t\" ~test#4(~test#5: Test#98): Void throws Error#101 {{
     testHelper#2(~test#5);
   }}
 }}
@@ -845,7 +846,7 @@ module uses#0 {{
     init testValue#5 = base#4;
   }}
 
-  test \"t\" ~test#6(~test#7: Test#98): Void throws Bubble {{
+  test \"t\" ~test#6(~test#7: Test#98): Void throws Error#101 {{
     bump#3();
   }}
 }}

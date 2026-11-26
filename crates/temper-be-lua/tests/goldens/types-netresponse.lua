@@ -8,7 +8,7 @@ local url
 url = "http://127.0.0.1:" .. 28461
 
 local function fn()
-  if not temper.pcall(function()
+  if not temper.catch(function()
     local req = NetRequest(url)
     req:post("[]", "application/json")
     local resp = req:send():await()
@@ -19,7 +19,7 @@ local function fn()
     else
       print("HTTP status was not 200: " .. temper.netresponse_status(resp) .. "!")
     end
-  end) then
+  end, temper.BrokenPromise) then
     print("failed")
   end
 end

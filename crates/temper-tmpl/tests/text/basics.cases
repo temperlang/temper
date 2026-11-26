@@ -429,6 +429,10 @@ module params#0 {
 === modules, imports, other libraries, and tests
 tmpl 1 model 1 library mods 0.0.0
 
+uses `temper-core`#17 0.1.0 {
+  interface Error#18 {}
+}
+
 uses other#1 1.2.0 {
   module `sub/inner`#2 {
     fn shout#3(s: String): String;
@@ -463,7 +467,7 @@ module mods#0 {
     addTwice#12(count#4);
   }
 
-  test "twice" ~test#14(~test#15: Test#7): Void throws Bubble {
+  test "twice" ~test#14(~test#15: Test#7): Void throws Error#18 {
     let s#16: String = shout#3("hi");
     addTwice#12(1);
   }

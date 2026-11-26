@@ -135,7 +135,7 @@ mod tests {
                                         .unwrap()
                                         .get()?;
                                     *case_index.write().unwrap() = 2;
-                                    Ok::<_, temper_core::Error>(())
+                                    Ok::<_, temper_core::BrokenPromise>(())
                                 })()
                                 .is_err()
                                 {
@@ -326,7 +326,7 @@ mod tests {
                                         .unwrap()
                                         .get()?;
                                     *case_index.write().unwrap() = 2;
-                                    Ok::<_, temper_core::Error>(())
+                                    Ok::<_, temper_core::BrokenPromise>(())
                                 })()
                                 .is_err()
                                 {

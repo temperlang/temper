@@ -21,7 +21,7 @@ namespace TemperLang.Core
         {
             if (resolution == null)
             {
-                resolution = new Bubble();
+                resolution = new BrokenPromise();
             }
             Exception reason = resolution;
             // Temper semantics allow for multiple resolution where subsequent
@@ -347,8 +347,8 @@ namespace TemperLang.Core
         /// <summary>
         /// The task's result, waiting for it if need be.  Waiting inside a
         /// turn for a task not yet settled throws rather than deadlocking,
-        /// since what would settle it may need the turn. A broken promise
-        /// bubbles.
+        /// since what would settle it may need the turn. Each wait for a
+        /// broken promise throws a new <see cref="BrokenPromise"/>.
         /// </summary>
         public static T GetPromiseResult<T>(Task<T> task)
         {
@@ -362,14 +362,15 @@ namespace TemperLang.Core
             {
                 return task.GetAwaiter().GetResult();
             }
-            catch (Exception e) when (e is Bubble || e is Panic)
+            catch (Exception e) when (e is Panic)
             {
                 throw;
             }
             catch (Exception e)
             {
-                // A broken promise bubbles, whatever broke it but a panic.
-                throw new Bubble(e.Message, e);
+                // Whatever broke it but a panic, which a host error stays
+                // the inner exception of.
+                throw new BrokenPromise(e is IFailure ? null : e);
             }
         }
 

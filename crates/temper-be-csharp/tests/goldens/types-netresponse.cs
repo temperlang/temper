@@ -31,7 +31,7 @@ public static class NetresponseGlobal
                     req.Post("[]", "application/json");
                     promise1 = req.Send();
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH1;
                 }
@@ -45,7 +45,7 @@ public static class NetresponseGlobal
                     }
                     promise2 = resp.BodyContent;
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH1;
                 }
@@ -56,7 +56,7 @@ public static class NetresponseGlobal
                     body = subject == null ? "missing" : subject;
                     console.Log("Thanks, server.  I got " + body + ".");
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH1;
                 }
@@ -66,7 +66,7 @@ public static class NetresponseGlobal
                 {
                     console.Log("HTTP status was not 200: " + resp.Status.ToString(CultureInfo.InvariantCulture) + "!");
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH1;
                 }

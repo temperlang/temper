@@ -31,7 +31,7 @@ public static class AwaitInLoopGlobal
                         {
                             promise1 = once.Task;
                         }
-                        catch (global::TemperLang.Core.Bubble)
+                        catch (BrokenPromise)
                         {
                             goto CATCH1;
                         }
@@ -40,7 +40,7 @@ public static class AwaitInLoopGlobal
                         {
                             s = global::TemperLang.Core.Async.GetPromiseResult(promise1);
                         }
-                        catch (global::TemperLang.Core.Bubble)
+                        catch (BrokenPromise)
                         {
                             goto CATCH1;
                         }
@@ -65,7 +65,7 @@ public static class AwaitInLoopGlobal
                     {
                         promise2 = later.Task;
                     }
-                    catch (global::TemperLang.Core.Bubble)
+                    catch (BrokenPromise)
                     {
                         goto CATCH2;
                     }
@@ -74,7 +74,7 @@ public static class AwaitInLoopGlobal
                     {
                         s = global::TemperLang.Core.Async.GetPromiseResult(promise2);
                     }
-                    catch (global::TemperLang.Core.Bubble)
+                    catch (BrokenPromise)
                     {
                         goto CATCH2;
                     }
@@ -95,7 +95,7 @@ public static class AwaitInLoopGlobal
                 {
                     promise3 = once.Task;
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH3;
                 }
@@ -104,7 +104,7 @@ public static class AwaitInLoopGlobal
                 {
                     t = global::TemperLang.Core.Async.GetPromiseResult(promise3);
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH3;
                 }

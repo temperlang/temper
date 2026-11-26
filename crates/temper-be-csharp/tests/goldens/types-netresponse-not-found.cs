@@ -28,7 +28,7 @@ public static class NetresponseNotFoundGlobal
                 {
                     promise1 = new NetRequest(url).Send();
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH1;
                 }
@@ -39,7 +39,7 @@ public static class NetresponseNotFoundGlobal
                     console.Log("status " + resp.Status.ToString(CultureInfo.InvariantCulture));
                     promise2 = resp.BodyContent;
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH1;
                 }
@@ -50,7 +50,7 @@ public static class NetresponseNotFoundGlobal
                     body = subject == null ? "missing" : subject;
                     console.Log("body " + body);
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH1;
                 }
@@ -62,13 +62,15 @@ public static class NetresponseNotFoundGlobal
                 OK1: ;
             }
             {
+                BrokenPromise e;
                 Task<INetResponse> promise3;
                 try
                 {
                     promise3 = new NetRequest("http://127.0.0.1:1/").Send();
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise failure1)
                 {
+                    e = failure1;
                     goto CATCH2;
                 }
                 yield return global::TemperLang.Core.Async.AwakeUpon(promise3);
@@ -77,14 +79,15 @@ public static class NetresponseNotFoundGlobal
                     _ = global::TemperLang.Core.Async.GetPromiseResult(promise3);
                     console.Log("port 1 answered");
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise failure1)
                 {
+                    e = failure1;
                     goto CATCH2;
                 }
                 goto OK2;
                 CATCH2: ;
                 {
-                    console.Log("no response from port 1");
+                    console.Log("no response from port 1: " + e.Message);
                 }
                 OK2: ;
             }

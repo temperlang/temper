@@ -5,7 +5,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
-import temper.core.Bubble;
+import temper.core.BrokenPromise;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Generator;
@@ -102,290 +102,262 @@ public final class AsyncWaitersGlobal {
                     int caseIndexLocal2 = caseIndex2.value;
                     caseIndex2.value = -1;
                     switch (caseIndexLocal2) {
-                        case 0:
-                            try {
-                                b.value = new CompletableFuture<>();
-                                firstDone.value = new CompletableFuture<>();
-                                secondDone.value = new CompletableFuture<>();
-                                Supplier<Generator<Optional<? super Object>>> fn2 = () -> {
-                                    class CaseIndexCell {
-                                        int value;
-                                    }
-                                    final CaseIndexCell caseIndex = new CaseIndexCell();
-                                    caseIndex.value = 0;
-                                    class VCell {
-                                        int value;
-                                    }
-                                    final VCell v = new VCell();
-                                    v.value = 0;
-                                    class AwaitedCell {
-                                        @Nullable CompletableFuture<Integer> value;
-                                    }
-                                    final AwaitedCell awaited = new AwaitedCell();
-                                    awaited.value = null;
-                                    Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine = generator -> {
-                                        while (true) {
-                                            int caseIndexLocal = caseIndex.value;
-                                            caseIndex.value = -1;
-                                            switch (caseIndexLocal) {
-                                                case 0:
-                                                    try {
-                                                        awaited.value = b.value;
-                                                        caseIndex.value = 3;
-                                                        Core.awakeUpon(awaited.value, generator);
-                                                        return new ValueResult<>(Optional.empty());
-                                                    } catch (Bubble ignored) {
-                                                        caseIndex.value = 1;
-                                                    }
-                                                    break;
-                                                case 1:
-                                                    v.value = -1;
-                                                    caseIndex.value = 2;
-                                                    break;
-                                                case 2:
-                                                    firstDone.value.complete(v.value);
-                                                    return DoneResult.get();
-                                                case 3:
-                                                    try {
-                                                        v.value = Core.getPromiseResult(awaited.value);
-                                                        caseIndex.value = 2;
-                                                    } catch (Bubble ignored2) {
-                                                        caseIndex.value = 1;
-                                                    }
-                                                    break;
-                                                default:
-                                                    return DoneResult.get();
-                                            }
-                                        }
-                                    };
-                                    return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
-                                };
-                                Core.runAsync(fn2);
-                                Supplier<Generator<Optional<? super Object>>> fn3 = () -> {
-                                    class CaseIndexCell {
-                                        int value;
-                                    }
-                                    final CaseIndexCell caseIndex = new CaseIndexCell();
-                                    caseIndex.value = 0;
-                                    class VCell {
-                                        int value;
-                                    }
-                                    final VCell v = new VCell();
-                                    v.value = 0;
-                                    class AwaitedCell {
-                                        @Nullable CompletableFuture<Integer> value;
-                                    }
-                                    final AwaitedCell awaited = new AwaitedCell();
-                                    awaited.value = null;
-                                    Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine = generator -> {
-                                        while (true) {
-                                            int caseIndexLocal = caseIndex.value;
-                                            caseIndex.value = -1;
-                                            switch (caseIndexLocal) {
-                                                case 0:
-                                                    try {
-                                                        awaited.value = b.value;
-                                                        caseIndex.value = 3;
-                                                        Core.awakeUpon(awaited.value, generator);
-                                                        return new ValueResult<>(Optional.empty());
-                                                    } catch (Bubble ignored3) {
-                                                        caseIndex.value = 1;
-                                                    }
-                                                    break;
-                                                case 1:
-                                                    v.value = -1;
-                                                    caseIndex.value = 2;
-                                                    break;
-                                                case 2:
-                                                    secondDone.value.complete(v.value);
-                                                    return DoneResult.get();
-                                                case 3:
-                                                    try {
-                                                        v.value = Core.getPromiseResult(awaited.value);
-                                                        caseIndex.value = 2;
-                                                    } catch (Bubble ignored4) {
-                                                        caseIndex.value = 1;
-                                                    }
-                                                    break;
-                                                default:
-                                                    return DoneResult.get();
-                                            }
-                                        }
-                                    };
-                                    return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
-                                };
-                                Core.runAsync(fn3);
-                                Supplier<Generator<Optional<? super Object>>> fn4 = () -> {
-                                    class CaseIndexCell {
-                                        int value;
-                                    }
-                                    final CaseIndexCell caseIndex = new CaseIndexCell();
-                                    caseIndex.value = 0;
-                                    Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine = generator -> {
+                        case 0: {
+                            b.value = new CompletableFuture<>();
+                            firstDone.value = new CompletableFuture<>();
+                            secondDone.value = new CompletableFuture<>();
+                            Supplier<Generator<Optional<? super Object>>> fn2 = () -> {
+                                class CaseIndexCell {
+                                    int value;
+                                }
+                                final CaseIndexCell caseIndex = new CaseIndexCell();
+                                caseIndex.value = 0;
+                                class VCell {
+                                    int value;
+                                }
+                                final VCell v = new VCell();
+                                v.value = 0;
+                                class AwaitedCell {
+                                    @Nullable CompletableFuture<Integer> value;
+                                }
+                                final AwaitedCell awaited = new AwaitedCell();
+                                awaited.value = null;
+                                Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine = generator -> {
+                                    while (true) {
                                         int caseIndexLocal = caseIndex.value;
                                         caseIndex.value = -1;
                                         switch (caseIndexLocal) {
                                             case 0:
-                                                b.value.complete(7);
+                                                awaited.value = b.value;
+                                                caseIndex.value = 3;
+                                                Core.awakeUpon(awaited.value, generator);
+                                                return new ValueResult<>(Optional.empty());
+                                            case 1:
+                                                v.value = -1;
+                                                caseIndex.value = 2;
+                                                break;
+                                            case 2:
+                                                firstDone.value.complete(v.value);
                                                 return DoneResult.get();
+                                            case 3:
+                                                try {
+                                                    v.value = Core.getPromiseResult(awaited.value);
+                                                    caseIndex.value = 2;
+                                                } catch (BrokenPromise ignored) {
+                                                    caseIndex.value = 1;
+                                                }
+                                                break;
                                             default:
                                                 return DoneResult.get();
                                         }
-                                    };
-                                    return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
+                                    }
                                 };
-                                Core.runAsync(fn4);
-                                awaited2.value = firstDone.value;
-                                caseIndex2.value = 3;
-                                Core.awakeUpon(awaited2.value, generator2);
-                                return new ValueResult<>(Optional.empty());
-                            } catch (Bubble ignored5) {
-                                caseIndex2.value = 1;
-                            }
-                            break;
+                                return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
+                            };
+                            Core.runAsync(fn2);
+                            Supplier<Generator<Optional<? super Object>>> fn3 = () -> {
+                                class CaseIndexCell {
+                                    int value;
+                                }
+                                final CaseIndexCell caseIndex = new CaseIndexCell();
+                                caseIndex.value = 0;
+                                class VCell {
+                                    int value;
+                                }
+                                final VCell v = new VCell();
+                                v.value = 0;
+                                class AwaitedCell {
+                                    @Nullable CompletableFuture<Integer> value;
+                                }
+                                final AwaitedCell awaited = new AwaitedCell();
+                                awaited.value = null;
+                                Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine = generator -> {
+                                    while (true) {
+                                        int caseIndexLocal = caseIndex.value;
+                                        caseIndex.value = -1;
+                                        switch (caseIndexLocal) {
+                                            case 0:
+                                                awaited.value = b.value;
+                                                caseIndex.value = 3;
+                                                Core.awakeUpon(awaited.value, generator);
+                                                return new ValueResult<>(Optional.empty());
+                                            case 1:
+                                                v.value = -1;
+                                                caseIndex.value = 2;
+                                                break;
+                                            case 2:
+                                                secondDone.value.complete(v.value);
+                                                return DoneResult.get();
+                                            case 3:
+                                                try {
+                                                    v.value = Core.getPromiseResult(awaited.value);
+                                                    caseIndex.value = 2;
+                                                } catch (BrokenPromise ignored2) {
+                                                    caseIndex.value = 1;
+                                                }
+                                                break;
+                                            default:
+                                                return DoneResult.get();
+                                        }
+                                    }
+                                };
+                                return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
+                            };
+                            Core.runAsync(fn3);
+                            Supplier<Generator<Optional<? super Object>>> fn4 = () -> {
+                                class CaseIndexCell {
+                                    int value;
+                                }
+                                final CaseIndexCell caseIndex = new CaseIndexCell();
+                                caseIndex.value = 0;
+                                Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine = generator -> {
+                                    int caseIndexLocal = caseIndex.value;
+                                    caseIndex.value = -1;
+                                    switch (caseIndexLocal) {
+                                        case 0:
+                                            b.value.complete(7);
+                                            return DoneResult.get();
+                                        default:
+                                            return DoneResult.get();
+                                    }
+                                };
+                                return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
+                            };
+                            Core.runAsync(fn4);
+                            awaited2.value = firstDone.value;
+                            caseIndex2.value = 3;
+                            Core.awakeUpon(awaited2.value, generator2);
+                            return new ValueResult<>(Optional.empty());
+                        }
                         case 1:
                             throw new AssertionError("panic");
-                        case 2:
-                            try {
-                                b2.value = new CompletableFuture<>();
-                                firstDone2.value = new CompletableFuture<>();
-                                secondDone2.value = new CompletableFuture<>();
-                                Supplier<Generator<Optional<? super Object>>> fn2 = () -> {
-                                    class CaseIndexCell {
-                                        int value;
-                                    }
-                                    final CaseIndexCell caseIndex = new CaseIndexCell();
-                                    caseIndex.value = 0;
-                                    class VCell {
-                                        int value;
-                                    }
-                                    final VCell v = new VCell();
-                                    v.value = 0;
-                                    class AwaitedCell {
-                                        @Nullable CompletableFuture<Integer> value;
-                                    }
-                                    final AwaitedCell awaited = new AwaitedCell();
-                                    awaited.value = null;
-                                    Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine = generator -> {
-                                        while (true) {
-                                            int caseIndexLocal = caseIndex.value;
-                                            caseIndex.value = -1;
-                                            switch (caseIndexLocal) {
-                                                case 0:
-                                                    try {
-                                                        awaited.value = b2.value;
-                                                        caseIndex.value = 3;
-                                                        Core.awakeUpon(awaited.value, generator);
-                                                        return new ValueResult<>(Optional.empty());
-                                                    } catch (Bubble ignored6) {
-                                                        caseIndex.value = 1;
-                                                    }
-                                                    break;
-                                                case 1:
-                                                    v.value = -1;
-                                                    caseIndex.value = 2;
-                                                    break;
-                                                case 2:
-                                                    firstDone2.value.complete(v.value);
-                                                    return DoneResult.get();
-                                                case 3:
-                                                    try {
-                                                        v.value = Core.getPromiseResult(awaited.value);
-                                                        caseIndex.value = 2;
-                                                    } catch (Bubble ignored7) {
-                                                        caseIndex.value = 1;
-                                                    }
-                                                    break;
-                                                default:
-                                                    return DoneResult.get();
-                                            }
-                                        }
-                                    };
-                                    return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
-                                };
-                                Core.runAsync(fn2);
-                                Supplier<Generator<Optional<? super Object>>> fn3 = () -> {
-                                    class CaseIndexCell {
-                                        int value;
-                                    }
-                                    final CaseIndexCell caseIndex = new CaseIndexCell();
-                                    caseIndex.value = 0;
-                                    class VCell {
-                                        int value;
-                                    }
-                                    final VCell v = new VCell();
-                                    v.value = 0;
-                                    class AwaitedCell {
-                                        @Nullable CompletableFuture<Integer> value;
-                                    }
-                                    final AwaitedCell awaited = new AwaitedCell();
-                                    awaited.value = null;
-                                    Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine = generator -> {
-                                        while (true) {
-                                            int caseIndexLocal = caseIndex.value;
-                                            caseIndex.value = -1;
-                                            switch (caseIndexLocal) {
-                                                case 0:
-                                                    try {
-                                                        awaited.value = b2.value;
-                                                        caseIndex.value = 3;
-                                                        Core.awakeUpon(awaited.value, generator);
-                                                        return new ValueResult<>(Optional.empty());
-                                                    } catch (Bubble ignored8) {
-                                                        caseIndex.value = 1;
-                                                    }
-                                                    break;
-                                                case 1:
-                                                    v.value = -1;
-                                                    caseIndex.value = 2;
-                                                    break;
-                                                case 2:
-                                                    secondDone2.value.complete(v.value);
-                                                    return DoneResult.get();
-                                                case 3:
-                                                    try {
-                                                        v.value = Core.getPromiseResult(awaited.value);
-                                                        caseIndex.value = 2;
-                                                    } catch (Bubble ignored9) {
-                                                        caseIndex.value = 1;
-                                                    }
-                                                    break;
-                                                default:
-                                                    return DoneResult.get();
-                                            }
-                                        }
-                                    };
-                                    return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
-                                };
-                                Core.runAsync(fn3);
-                                Supplier<Generator<Optional<? super Object>>> fn4 = () -> {
-                                    class CaseIndexCell {
-                                        int value;
-                                    }
-                                    final CaseIndexCell caseIndex = new CaseIndexCell();
-                                    caseIndex.value = 0;
-                                    Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine = generator -> {
+                        case 2: {
+                            b2.value = new CompletableFuture<>();
+                            firstDone2.value = new CompletableFuture<>();
+                            secondDone2.value = new CompletableFuture<>();
+                            Supplier<Generator<Optional<? super Object>>> fn2 = () -> {
+                                class CaseIndexCell {
+                                    int value;
+                                }
+                                final CaseIndexCell caseIndex = new CaseIndexCell();
+                                caseIndex.value = 0;
+                                class VCell {
+                                    int value;
+                                }
+                                final VCell v = new VCell();
+                                v.value = 0;
+                                class AwaitedCell {
+                                    @Nullable CompletableFuture<Integer> value;
+                                }
+                                final AwaitedCell awaited = new AwaitedCell();
+                                awaited.value = null;
+                                Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine = generator -> {
+                                    while (true) {
                                         int caseIndexLocal = caseIndex.value;
                                         caseIndex.value = -1;
                                         switch (caseIndexLocal) {
                                             case 0:
-                                                b2.value.completeExceptionally(Core.bubble());
+                                                awaited.value = b2.value;
+                                                caseIndex.value = 3;
+                                                Core.awakeUpon(awaited.value, generator);
+                                                return new ValueResult<>(Optional.empty());
+                                            case 1:
+                                                v.value = -1;
+                                                caseIndex.value = 2;
+                                                break;
+                                            case 2:
+                                                firstDone2.value.complete(v.value);
                                                 return DoneResult.get();
+                                            case 3:
+                                                try {
+                                                    v.value = Core.getPromiseResult(awaited.value);
+                                                    caseIndex.value = 2;
+                                                } catch (BrokenPromise ignored3) {
+                                                    caseIndex.value = 1;
+                                                }
+                                                break;
                                             default:
                                                 return DoneResult.get();
                                         }
-                                    };
-                                    return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
+                                    }
                                 };
-                                Core.runAsync(fn4);
-                                awaited4.value = firstDone2.value;
-                                caseIndex2.value = 6;
-                                Core.awakeUpon(awaited4.value, generator2);
-                                return new ValueResult<>(Optional.empty());
-                            } catch (Bubble ignored10) {
-                                caseIndex2.value = 5;
-                            }
-                            break;
+                                return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
+                            };
+                            Core.runAsync(fn2);
+                            Supplier<Generator<Optional<? super Object>>> fn3 = () -> {
+                                class CaseIndexCell {
+                                    int value;
+                                }
+                                final CaseIndexCell caseIndex = new CaseIndexCell();
+                                caseIndex.value = 0;
+                                class VCell {
+                                    int value;
+                                }
+                                final VCell v = new VCell();
+                                v.value = 0;
+                                class AwaitedCell {
+                                    @Nullable CompletableFuture<Integer> value;
+                                }
+                                final AwaitedCell awaited = new AwaitedCell();
+                                awaited.value = null;
+                                Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine = generator -> {
+                                    while (true) {
+                                        int caseIndexLocal = caseIndex.value;
+                                        caseIndex.value = -1;
+                                        switch (caseIndexLocal) {
+                                            case 0:
+                                                awaited.value = b2.value;
+                                                caseIndex.value = 3;
+                                                Core.awakeUpon(awaited.value, generator);
+                                                return new ValueResult<>(Optional.empty());
+                                            case 1:
+                                                v.value = -1;
+                                                caseIndex.value = 2;
+                                                break;
+                                            case 2:
+                                                secondDone2.value.complete(v.value);
+                                                return DoneResult.get();
+                                            case 3:
+                                                try {
+                                                    v.value = Core.getPromiseResult(awaited.value);
+                                                    caseIndex.value = 2;
+                                                } catch (BrokenPromise ignored4) {
+                                                    caseIndex.value = 1;
+                                                }
+                                                break;
+                                            default:
+                                                return DoneResult.get();
+                                        }
+                                    }
+                                };
+                                return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
+                            };
+                            Core.runAsync(fn3);
+                            Supplier<Generator<Optional<? super Object>>> fn4 = () -> {
+                                class CaseIndexCell {
+                                    int value;
+                                }
+                                final CaseIndexCell caseIndex = new CaseIndexCell();
+                                caseIndex.value = 0;
+                                Function<Generator<Optional<? super Object>>, Result<Optional<? super Object>>> convertedCoroutine = generator -> {
+                                    int caseIndexLocal = caseIndex.value;
+                                    caseIndex.value = -1;
+                                    switch (caseIndexLocal) {
+                                        case 0:
+                                            b2.value.completeExceptionally(new BrokenPromise());
+                                            return DoneResult.get();
+                                        default:
+                                            return DoneResult.get();
+                                    }
+                                };
+                                return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
+                            };
+                            Core.runAsync(fn4);
+                            awaited4.value = firstDone2.value;
+                            caseIndex2.value = 6;
+                            Core.awakeUpon(awaited4.value, generator2);
+                            return new ValueResult<>(Optional.empty());
+                        }
                         case 3:
                             try {
                                 first.value = Core.getPromiseResult(awaited2.value);
@@ -393,7 +365,7 @@ public final class AsyncWaitersGlobal {
                                 caseIndex2.value = 4;
                                 Core.awakeUpon(awaited3.value, generator2);
                                 return new ValueResult<>(Optional.empty());
-                            } catch (Bubble ignored11) {
+                            } catch (BrokenPromise ignored5) {
                                 caseIndex2.value = 1;
                             }
                             break;
@@ -402,7 +374,7 @@ public final class AsyncWaitersGlobal {
                                 second.value = Core.getPromiseResult(awaited3.value);
                                 console.log("after complete: first got " + first.value + ", second got " + second.value);
                                 caseIndex2.value = 2;
-                            } catch (Bubble ignored12) {
+                            } catch (BrokenPromise ignored6) {
                                 caseIndex2.value = 1;
                             }
                             break;
@@ -415,7 +387,7 @@ public final class AsyncWaitersGlobal {
                                 caseIndex2.value = 7;
                                 Core.awakeUpon(awaited5.value, generator2);
                                 return new ValueResult<>(Optional.empty());
-                            } catch (Bubble ignored13) {
+                            } catch (BrokenPromise ignored7) {
                                 caseIndex2.value = 5;
                             }
                             break;
@@ -424,7 +396,7 @@ public final class AsyncWaitersGlobal {
                                 second2.value = Core.getPromiseResult(awaited5.value);
                                 console.log("after breakPromise: first got " + first2.value + ", second got " + second2.value);
                                 caseIndex2.value = -1;
-                            } catch (Bubble ignored14) {
+                            } catch (BrokenPromise ignored8) {
                                 caseIndex2.value = 5;
                             }
                             break;

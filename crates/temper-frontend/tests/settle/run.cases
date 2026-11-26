@@ -3255,7 +3255,7 @@ log completed a
 log got 1
 log then b gave 2
 
-=== broken promises fail, caught with orelse
+=== broken promises throw BrokenPromise, caught with orelse or catch
 let p = new PromiseBuilder<String>();
 let q = new PromiseBuilder<String>();
 async { (): GeneratorResult<Empty> extends GeneratorFn =>
@@ -3266,6 +3266,11 @@ async { (): GeneratorResult<Empty> extends GeneratorFn =>
     console.log(await q.promise);
     console.log("not here");
   } orelse console.log("q broken");
+  console.log(await p.promise catch (e) { caught(e) });
+}
+let caught(e: BrokenPromise): String {
+  let failure: Error = e;
+  "caught ${e.message}, a CoreError: ${(failure is CoreError).toString()}"
 }
 async { (): GeneratorResult<Empty> extends GeneratorFn =>
   q.breakPromise();
@@ -3274,6 +3279,19 @@ async { (): GeneratorResult<Empty> extends GeneratorFn =>
 (Block
   (Let ^p:0 (Call new (Call <> PromiseBuilder String)))
   (Let ^q:1 (Call new (Call <> PromiseBuilder String)))
+  (Let
+    ^caught:2
+    (Fn
+      (Let ^e:4 BrokenPromise)
+      String
+      (Block
+        (Let ^failure:5 Error e:4)
+        (Call
+          cat
+          "caught "
+          (Call . e:4 \message)
+          ", a CoreError: "
+          (Call (Call . (Call is failure:5 CoreError) \toString))))))
   (Call
     async
     (Fn
@@ -3291,6 +3309,11 @@ async { (): GeneratorResult<Empty> extends GeneratorFn =>
             (Call (Call . console \log) "not here")
             #void)
           (Call (Call . console \log) "q broken"))
+        (Call
+          (Call . console \log)
+          (Orelse
+            (Await @82 (Call . p:0 \promise))
+            (Block (Let ^e:3 (Call caught)) (Call caught:2 e:3))))
         #void)))
   (Call
     async
@@ -3300,6 +3323,45 @@ async { (): GeneratorResult<Empty> extends GeneratorFn =>
       (Block (Call (Call . q:1 \breakPromise)) #void))))
 log broken
 log q broken
+log caught broken promise, a CoreError: true
+
+=== BrokenPromise is a CoreError that code may declare and throw
+let check(ok: Boolean): String throws BrokenPromise {
+  if (!ok) { throw new BrokenPromise(); }
+  "ok"
+}
+console.log(check(true) orelse "no");
+console.log(check(false) catch (e) { e.message });
+let core(): String throws CoreError { check(false) }
+console.log(core() catch (e) { (e is BrokenPromise).toString() });
+--- settled
+(Block
+  (Let
+    ^check:0
+    (Fn
+      (Let ^ok:2 Boolean)
+      (Call throws String BrokenPromise)
+      (Block
+        (If (Call ! ok:2) (Block (Fail (Call new BrokenPromise)) #void) (Block))
+        "ok")))
+  (Call (Call . console \log) (Orelse (Call check:0 true) "no"))
+  (Call
+    (Call . console \log)
+    (Orelse
+      (Call check:0 false)
+      (Block (Let ^e:3 (Call caught)) (Call . e:3 \message))))
+  (Let ^core:1 (Fn (Call throws String CoreError) (Block (Call check:0 false))))
+  (Call
+    (Call . console \log)
+    (Orelse
+      (Call core:1)
+      (Block
+        (Let ^e:4 (Call caught))
+        (Call (Call . (Call is e:4 BrokenPromise) \toString)))))
+  #void)
+log ok
+log broken promise
+log true
 
 === every waiter resumes, in the order they began to wait
 let b = new PromiseBuilder<Int>();
@@ -3391,7 +3453,7 @@ async { (): GeneratorResult<Empty> extends GeneratorFn =>
       GeneratorFn
       (Block (Call (Call . console \log) "still runs") #void))))
 log still runs
-Panicked: panic(), caused by a bubble
+Panicked: panic(), caused by BrokenPromise: broken promise, at test.temper:3:3
 
 === await only in an async block's own body
 if (false) { await new PromiseBuilder<Int>().promise; }
@@ -3468,15 +3530,16 @@ async { (): GeneratorResult<Empty> extends GeneratorFn =>
         #void))))
 error 13..52: await outside generator function body
 error 197..236: Not supported yet: await in a for … of body
-error 86..93: Cannot bubble from a function without Bubble in its return type
+error 86..93: Cannot throw BrokenPromise from a function without BrokenPromise in its return type
 log not a promise
 log f failed
 Panicked: await of an unresolved promise outside an async block
 
-=== a bubbling await that nothing handles, as Kotlin Temper reports it
+=== an await that nothing handles
 // Each async block and generator function is a function of its own, so
-// a `throws Bubble` around one doesn't let it bubble. The await fails
-// where it's reached, as other code that may bubble where it can't does.
+// a `throws BrokenPromise` around one doesn't let a broken promise out.
+// The await fails where it's reached, as other code that may throw where
+// it can't does.
 let b = new PromiseBuilder<String>();
 b.complete("done");
 async { (): GeneratorResult<Empty> extends GeneratorFn =>
@@ -3486,7 +3549,7 @@ let work(): GeneratorResult<Empty> extends GeneratorFn {
   console.log(await b.promise);
 }
 async(work);
-let launch(): Void throws Bubble {
+let launch(): Void throws BrokenPromise {
   async { (): GeneratorResult<Empty> extends GeneratorFn =>
     console.log(await b.promise);
   }
@@ -3504,7 +3567,7 @@ console.log("top level");
       (Call <> GeneratorResult Empty)
       GeneratorFn
       (Block
-        (Call (Call . console \log) (Await @281 (Call . b:0 \promise)))
+        (Call (Call . console \log) (Await @301 (Call . b:0 \promise)))
         #void)))
   (Let
     ^work:1
@@ -3512,13 +3575,13 @@ console.log("top level");
       (Call <> GeneratorResult Empty)
       GeneratorFn
       (Block
-        (Call (Call . console \log) (Await @367 (Call . b:0 \promise)))
+        (Call (Call . console \log) (Await @387 (Call . b:0 \promise)))
         #void)))
   (Call async work:1)
   (Let
     ^launch:2
     (Fn
-      (Call throws Void Bubble)
+      (Call throws Void BrokenPromise)
       (Block
         (Call
           async
@@ -3526,7 +3589,7 @@ console.log("top level");
             (Call <> GeneratorResult Empty)
             GeneratorFn
             (Block
-              (Call (Call . console \log) (Await @514 (Call . b:0 \promise)))
+              (Call (Call . console \log) (Await @541 (Call . b:0 \promise)))
               #void))))))
   (Orelse (Call launch:2) void)
   (Let
@@ -3534,15 +3597,17 @@ console.log("top level");
     (Fn (Call <> GeneratorResult Empty) GeneratorFn (Block (Fail) #void)))
   (Call (Call . console \log) "top level")
   #void)
-error 347..362: Cannot bubble from a function without Bubble in its return type
-error 438..453: Cannot bubble from a function without Bubble in its return type
-error 582..597: Cannot bubble from a function without Bubble in its return type
-error 686..694: Cannot bubble from a function without Bubble in its return type
+error 367..382: Cannot throw BrokenPromise from a function without BrokenPromise in its return type
+error 458..473: Cannot throw BrokenPromise from a function without BrokenPromise in its return type
+error 609..624: Cannot throw BrokenPromise from a function without BrokenPromise in its return type
+error 713..721: Cannot bubble from a function without Bubble in its return type
 log top level
-Failed: Cannot bubble from a function without Bubble in its return type
+Failed: Cannot throw BrokenPromise from a function without BrokenPromise in its return type
 
-=== a bubbling await that something handles
-// An `orelse` around it, or a generator that says it may bubble.
+=== an await that something handles
+// An `orelse` or a `catch` around it. A generator that may bubble can't
+// pass a broken promise on: generators stay `throws Bubble` until they
+// get a failure type of their own.
 let b = new PromiseBuilder<String>();
 b.breakPromise();
 async { (): GeneratorResult<Empty> extends GeneratorFn =>
@@ -3555,8 +3620,15 @@ let work(): GeneratorResult<Empty> extends GeneratorFn {
 async(work);
 let make(body: fn (): Generator<String>): Generator<String> { body() }
 let g = make { (): GeneratorResult<String> throws Bubble extends GeneratorFn =>
+  yield await b.promise catch (e) { e.message };
+};
+let h = make { (): GeneratorResult<String> throws Bubble extends GeneratorFn =>
   yield await b.promise;
 };
+when (g.next() orelse panic()) {
+  is ValueResult<String> -> console.log("yielded");
+  else -> console.log("done");
+}
 --- settled
 (Block
   (Let ^b:0 (Call new (Call <> PromiseBuilder String)))
@@ -3569,10 +3641,10 @@ let g = make { (): GeneratorResult<String> throws Bubble extends GeneratorFn =>
       (Block
         (Call
           (Call . console \log)
-          (Orelse (Await @128 (Call . b:0 \promise)) "broken"))
+          (Orelse (Await @243 (Call . b:0 \promise)) "broken"))
         (Orelse
           (Block
-            (Call (Call . console \log) (Await @128 (Call . b:0 \promise)))
+            (Call (Call . console \log) (Await @243 (Call . b:0 \promise)))
             #void)
           (Call (Call . console \log) "caught"))
         #void)))
@@ -3584,15 +3656,15 @@ let g = make { (): GeneratorResult<String> throws Bubble extends GeneratorFn =>
       (Block
         (Call
           (Call . console \log)
-          (Orelse (Await @299 (Call . b:0 \promise)) "named"))
+          (Orelse (Await @414 (Call . b:0 \promise)) "named"))
         #void)))
   (Call async work:1)
   (Let
     ^make:2
     (Fn
-      (Let ^body:4 (Call FnType (Call <> Generator String)))
+      (Let ^body:5 (Call FnType (Call <> Generator String)))
       (Call <> Generator String)
-      (Block (Call body:4))))
+      (Block (Call body:5))))
   (Let
     ^g:3
     (Call
@@ -3600,8 +3672,28 @@ let g = make { (): GeneratorResult<String> throws Bubble extends GeneratorFn =>
       (Fn
         (Call throws (Call <> GeneratorResult String) Bubble)
         GeneratorFn
-        (Block (Yield @502 (Await @502 (Call . b:0 \promise))) #void))))
-  #void)
+        (Block
+          (Yield @617
+            (Orelse
+              (Await @617 (Call . b:0 \promise))
+              (Block (Let ^e:6 (Call caught)) (Call . e:6 \message))))
+          #void))))
+  (Let
+    ^h:4
+    (Call
+      make:2
+      (Fn
+        (Call throws (Call <> GeneratorResult String) Bubble)
+        GeneratorFn
+        (Block (Yield @749 (Await @749 (Call . b:0 \promise))) #void))))
+  (Block
+    (Let ^subject#7 (Orelse (Call (Call . g:3 \next)) (Call panic)))
+    (If
+      (Call is subject#7 (Call <> ValueResult String))
+      (Call (Call . console \log) "yielded")
+      (Call (Call . console \log) "done"))))
+error 824..839: Cannot throw BrokenPromise from a function that throws Bubble; catch it, and bubble() there if need be
+log yielded
 log broken
 log caught
 log named

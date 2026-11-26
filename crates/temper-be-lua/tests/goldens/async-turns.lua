@@ -169,9 +169,9 @@ local function fn2()
   c:bump("A", 10000)
   ---@type integer
   local k
-  if not temper.pcall(function()
+  if not temper.catch(function()
     k = temper.promisebuilder_promise(gateA):await()
-  end) then
+  end, temper.BrokenPromise) then
     k = -1
   end
   c:bump("A" .. k, 10000)
@@ -183,9 +183,9 @@ local function fn3()
   c:bump("B", 10000)
   ---@type integer
   local k
-  if not temper.pcall(function()
+  if not temper.catch(function()
     k = temper.promisebuilder_promise(gateB):await()
-  end) then
+  end, temper.BrokenPromise) then
     k = -1
   end
   c:bump("B" .. k, 10000)

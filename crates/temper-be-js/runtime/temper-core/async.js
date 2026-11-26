@@ -1,4 +1,4 @@
-import { Bubble, isBubble } from "./core.js";
+import { BrokenPromise } from "./core.js";
 
 
 // Launches waiting for their first step, and I/O in flight
@@ -133,14 +133,11 @@ export const adaptAwaiter = (generatorFactory) => {
      * @param {Promise<R>} p
      */
     const doAwait = (p) => {
-      // A broken promise bubbles where it's awaited, whatever it was
-      // rejected with (`breakPromise()` gives no reason, host code may
-      // give any).
+      // Each await of a broken promise throws a new BrokenPromise,
+      // whatever it was rejected with (host code may give any reason).
       p.then(
         (result) => { step(() => generator.next(result)) },
-        (error) => {
-          step(() => generator.throw(isBubble(error) ? error : new Bubble("broken promise")));
-        },
+        () => { step(() => generator.throw(new BrokenPromise())) },
       );
     };
 
@@ -184,7 +181,7 @@ export class PromiseBuilder {
   }
 
   /** @param {any} [reason] */
-  breakPromise(reason) {
+  breakPromise(reason = new BrokenPromise()) {
     this.reject(reason);
   }
 }

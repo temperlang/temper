@@ -925,6 +925,9 @@ impl Interp<'_> {
                 Some((Val::BuiltinType(t), [])) if TYPES[*t as usize] == "PromiseBuilder" => {
                     Ok(Val::PromiseBuilder(Rc::default()))
                 }
+                Some((Val::BuiltinType(t), [])) if TYPES[*t as usize] == "BrokenPromise" => {
+                    Ok(CoreFailure::value("BrokenPromise", Vec::new()))
+                }
                 Some((Val::BuiltinType(t), [key])) if TYPES[*t as usize] == "MissingKey" => {
                     Ok(CoreFailure::value("MissingKey", vec![("key", key.clone())]))
                 }
@@ -1365,7 +1368,7 @@ fn is_builtin_type(value: &Val, ty: &str) -> bool {
         "Promise" => matches!(value, Val::Promise(_)),
         "PromiseBuilder" => matches!(value, Val::PromiseBuilder(_)),
         "CoreError" => matches!(value, Val::CoreFailure(_)),
-        "MissingKey" | "ParseError" | "InvalidCodePoint" => {
+        "MissingKey" | "ParseError" | "InvalidCodePoint" | "BrokenPromise" => {
             matches!(value, Val::CoreFailure(f) if f.type_name == ty)
         }
         "AnyValue" => !matches!(value, Val::Null),

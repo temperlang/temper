@@ -115,7 +115,9 @@ pub(crate) fn init() -> temper_core::Result<()> {
                                                                     .unwrap()
                                                                     .get()?;
                                                                 *case_index.write().unwrap() = 2;
-                                                                Ok::<_, temper_core::Error>(())
+                                                                Ok::<_, temper_core::BrokenPromise>(
+                                                                    (),
+                                                                )
                                                             })()
                                                             .is_err()
                                                             {
@@ -194,7 +196,9 @@ pub(crate) fn init() -> temper_core::Result<()> {
                                                                     .unwrap()
                                                                     .get()?;
                                                                 *case_index2.write().unwrap() = 2;
-                                                                Ok::<_, temper_core::Error>(())
+                                                                Ok::<_, temper_core::BrokenPromise>(
+                                                                    (),
+                                                                )
                                                             })()
                                                             .is_err()
                                                             {
@@ -322,7 +326,9 @@ pub(crate) fn init() -> temper_core::Result<()> {
                                                                     .unwrap()
                                                                     .get()?;
                                                                 *case_index4.write().unwrap() = 2;
-                                                                Ok::<_, temper_core::Error>(())
+                                                                Ok::<_, temper_core::BrokenPromise>(
+                                                                    (),
+                                                                )
                                                             })()
                                                             .is_err()
                                                             {
@@ -401,7 +407,9 @@ pub(crate) fn init() -> temper_core::Result<()> {
                                                                     .unwrap()
                                                                     .get()?;
                                                                 *case_index5.write().unwrap() = 2;
-                                                                Ok::<_, temper_core::Error>(())
+                                                                Ok::<_, temper_core::BrokenPromise>(
+                                                                    (),
+                                                                )
                                                             })()
                                                             .is_err()
                                                             {
@@ -498,7 +506,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                                         temper_core::read_locked(&second)
                                     );
                                     *case_index7.write().unwrap() = 2;
-                                    Ok::<_, temper_core::Error>(())
+                                    Ok::<_, temper_core::BrokenPromise>(())
                                 })()
                                 .is_err()
                                 {
@@ -548,7 +556,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                                         temper_core::read_locked(&second2)
                                     );
                                     *case_index7.write().unwrap() = -1;
-                                    Ok::<_, temper_core::Error>(())
+                                    Ok::<_, temper_core::BrokenPromise>(())
                                 })()
                                 .is_err()
                                 {

@@ -11,7 +11,8 @@ extern crate self as temper_core;
 
 pub mod failure;
 pub use failure::{
-    with_cause, Cause, CoreError, Failure, InvalidCodePoint, MissingKey, ParseError,
+    with_cause, BrokenPromise, Cause, CoreError, Failure, InvalidCodePoint, MissingKey,
+    ParseError,
 };
 pub mod float64;
 pub mod generator;

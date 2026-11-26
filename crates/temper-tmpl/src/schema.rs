@@ -606,8 +606,9 @@ schema! {
     /// type, `List<T>`, which each item has.
     ListLit(Expr, Written) { items: Kids = many Expr }
     /// Waits for a promise, pausing the generator whose own body it's in
-    /// until the promise resolves: its value, or it bubbles if the promise
-    /// is broken. Typed as the promise's value.
+    /// until the promise resolves: its value, or it throws core's
+    /// `BrokenPromise` if the promise is broken. Typed as the promise's
+    /// value.
     Await(Expr, Written) { may_bubble: bool = flag, promise: NodeId = one Expr }
     /// Code the frontend couldn't settle; fails when run. Valid anywhere,
     /// with any type. Code that's only ill-typed, as a value that doesn't

@@ -167,7 +167,7 @@ public static class AsyncTurnsGlobal
                 {
                     promise1 = gateA.Task;
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH1;
                 }
@@ -176,7 +176,7 @@ public static class AsyncTurnsGlobal
                 {
                     k = global::TemperLang.Core.Async.GetPromiseResult(promise1);
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH1;
                 }
@@ -204,7 +204,7 @@ public static class AsyncTurnsGlobal
                 {
                     promise2 = gateB.Task;
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH2;
                 }
@@ -213,7 +213,7 @@ public static class AsyncTurnsGlobal
                 {
                     k = global::TemperLang.Core.Async.GetPromiseResult(promise2);
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (BrokenPromise)
                 {
                     goto CATCH2;
                 }

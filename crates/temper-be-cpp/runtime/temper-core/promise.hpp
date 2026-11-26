@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 #include "temper_bubble.hpp"
+#include "failure.hpp"
 #include "generator.hpp"
 #if defined(__cpp_impl_coroutine)
 #include <coroutine>
@@ -154,13 +155,11 @@ namespace temper {
                 }
             }
 
-            bool is_broken() const {
-                return state->broken;
-            }
-
-            R get() {
+            // Its value once settled, or for a broken one, a new
+            // `BrokenPromise`.
+            Awaited<R> result() const {
                 if (state->broken) {
-                    return bubble<R>("awaited a broken promise");
+                    return unexpected(BrokenPromise::make());
                 }
                 return state->value;
             }
@@ -212,22 +211,17 @@ namespace temper {
             });
         }
 
-        // Read the value an awaited promise settled with. A handler scope cannot span a
-        // suspension point, so rather than bubbling, a broken promise is reported by
-        // setting the caller's `fail` flag; the state machine then branches to its
-        // failure case (e.g. an `orelse`).
+        // Read the value an awaited promise settled with, or a `BrokenPromise`,
+        // which the state machine's handler, if any, takes (e.g. an `orelse`).
         template<class T>
-        T get_promise_result_sync(std::shared_ptr<Promise<T>> promise) {
-            if (promise->is_broken()) {
-                throw TemperBubble();
-            }
-            return promise->get();
+        Awaited<T> get_promise_result_sync(std::shared_ptr<Promise<T>> promise) {
+            return promise->result();
         }
 
 #if defined(__cpp_impl_coroutine)
         // C++20 interop: `co_await promise` in a C++ coroutine suspends it
         // until the Temper promise settles, then gives its value, or throws
-        // `TemperBubble` if it's broken. The coroutine resumes from the async
+        // an `UncaughtFailure` of a `BrokenPromise` if it's broken. The coroutine resumes from the async
         // queue, as a Temper async block does.
         template<class R>
         struct PromiseAwaiter {
@@ -239,7 +233,11 @@ namespace temper {
                 promise->on_ready([handle]() { handle.resume(); });
             }
             R await_resume() {
-                return promise->get();
+                Awaited<R> got = promise->result();
+                if (!got.has_value()) {
+                    uncaught_failure(got.error());
+                }
+                return std::move(got).value();
             }
         };
 

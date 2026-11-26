@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from concurrent.futures import Future
 from temper_core import (
-    Bubble,
+    BrokenPromise,
     TemperFuture,
     adapt_generator_factory,
     async_launch,
@@ -48,7 +48,7 @@ class TestTestAsync(TestCase):
             def fn(do_await: Callable[[Future[Any]], Any], /) -> Generator[Any, Any, None]:
                 try:
                     n = yield do_await(pb)
-                except Bubble:
+                except BrokenPromise:
                     n = -1
                 test.assert_(n == 2, lambda: f'later turn got {n}')
             async_launch(fn)
@@ -106,7 +106,7 @@ class TestTestAsync(TestCase):
             def fn(do_await: Callable[[Future[Any]], Any], /) -> Generator[Any, Any, None]:
                 try:
                     n = yield do_await(never)
-                except Bubble:
+                except BrokenPromise:
                     n = -1
                 test.assert_(False, lambda: f'ran {n}')
             async_launch(fn)

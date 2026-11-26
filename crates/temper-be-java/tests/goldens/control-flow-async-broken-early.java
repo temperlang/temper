@@ -5,7 +5,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
-import temper.core.Bubble;
+import temper.core.BrokenPromise;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Generator;
@@ -45,15 +45,10 @@ public final class AsyncBrokenEarlyGlobal {
                     caseIndex.value = -1;
                     switch (caseIndexLocal) {
                         case 0:
-                            try {
-                                awaited.value = b;
-                                caseIndex.value = 3;
-                                Core.awakeUpon(awaited.value, generator);
-                                return new ValueResult<>(Optional.empty());
-                            } catch (Bubble ignored) {
-                                caseIndex.value = 1;
-                            }
-                            break;
+                            awaited.value = b;
+                            caseIndex.value = 3;
+                            Core.awakeUpon(awaited.value, generator);
+                            return new ValueResult<>(Optional.empty());
                         case 1:
                             v.value = -1;
                             caseIndex.value = 2;
@@ -65,7 +60,7 @@ public final class AsyncBrokenEarlyGlobal {
                             try {
                                 v.value = Core.getPromiseResult(awaited.value);
                                 caseIndex.value = 2;
-                            } catch (Bubble ignored2) {
+                            } catch (BrokenPromise ignored) {
                                 caseIndex.value = 1;
                             }
                             break;
@@ -77,6 +72,6 @@ public final class AsyncBrokenEarlyGlobal {
             return Core.safeAdaptGeneratorFn(convertedCoroutine::apply);
         };
         Core.runAsync(fn);
-        b.completeExceptionally(Core.bubble());
+        b.completeExceptionally(new BrokenPromise());
     }
 }

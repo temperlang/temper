@@ -1,0 +1,105 @@
+tmpl 1 model 1 library netresponse 0.0.0
+
+uses `temper-core`#2 0.0.0-alpha.0.0 {
+  class Int32#3 {
+    connected method toString#4(radix?: Int32): String;
+  }
+  connected fn async#5(generatorFactory: fn (): SafeGenerator#6<Empty#10>): Void;
+  interface SafeGenerator#6<YIELD#7> extends Generator#8<YIELD#7> {}
+  interface Generator#8<YIELD#9> {}
+  class Empty#10 {}
+  class ValueResult#11<YIELD#12> extends GeneratorResult#13<YIELD#12> {
+    connected constructor constructor#15(value: YIELD#12): ValueResult#11<YIELD#12>;
+  }
+  interface GeneratorResult#13<YIELD#14> {}
+  connected fn doneResult#16<YIELD#17>(): DoneResult#18<YIELD#17>;
+  class DoneResult#18<YIELD#19> extends GeneratorResult#13<YIELD#19> {}
+  connected fn empty#20(): Empty#10;
+  connected fn safeAdaptGeneratorFn#21<YIELD#22>(step: fn (SafeGenerator#6<YIELD#22>): GeneratorResult#13<YIELD#22>): SafeGenerator#6<YIELD#22>;
+  connected fn awakeUpon#23<T#24>(promise: Promise#25<T#24>, generator: SafeGenerator#6<Empty#10>): Void;
+  class Promise#25<R#26> {}
+  connected fn getPromiseResultSync#27<T#28>(promise: Promise#25<T#28>): T#28 throws BrokenPromise#29;
+  class BrokenPromise#29 extends CoreError#30 {}
+  interface CoreError#30 extends Error#31 {}
+  interface Error#31 {}
+  interface Console#47 {
+    connected method log#48(message: String): Void;
+  }
+  connected fn getConsole#50(name?: String): Console#47;
+}
+
+uses std#33 0.0.0-alpha.0.0 {
+  module net#34 {
+    class NetRequest#35 {
+      private let url#37: String;
+      constructor constructor#38(url: String): NetRequest#35;
+      method post#39(content: String, mimeType: String): Void;
+      method send#42(): Promise#25<NetResponse#40>;
+    }
+    connected interface NetResponse#40 {
+      connected get status#43(): Int32;
+      connected get bodyContent#46(): Promise#25<String?>;
+    }
+  }
+}
+
+module netresponse#0 {
+  let ~console#49: Console#47;
+
+  let url#1: String;
+
+  init {
+    init ~console#49 = getConsole#50(omitted);
+    init url#1 = %String.cat("http://127.0.0.1:", 28461.toString#4(omitted));
+    async#5((fn ~fn#32(): SafeGenerator#6<Empty#10> {
+      var ~caseIndex#53: Int32 = 0;
+      var req#36: NetRequest#35? = (null): NetRequest#35?;
+      var resp#41: NetResponse#40? = (null): NetResponse#40?;
+      var body#44: String = "";
+      var subject#45: String? = (null): String?;
+      var ~awaited#55: Promise#25<NetResponse#40>? = (null): Promise#25<NetResponse#40>?;
+      var ~awaited#56: Promise#25<String?>? = (null): Promise#25<String?>?;
+      return safeAdaptGeneratorFn#21<Empty#10>((fn ~convertedCoroutine#51(~generator#52: SafeGenerator#6<Empty#10>): GeneratorResult#13<Empty#10> [req#36, resp#41, body#44, subject#45, ~caseIndex#53, ~awaited#55, ~awaited#56] {
+        ~loop#54: while (true) {
+          let ~caseIndexLocal#57: Int32 = ~caseIndex#53;
+          ~caseIndex#53 = -1;
+          switch (~caseIndexLocal#57) {
+            case 0 {
+              req#36 = (asNullable(new constructor#38(url#1))): NetRequest#35?;
+              ((nonNull(req#36)): NetRequest#35).post#39("[]", "application/json");
+              ~awaited#55 = (asNullable(((nonNull(req#36)): NetRequest#35).send#42())): Promise#25<NetResponse#40>?;
+              ~caseIndex#53 = 2;
+              awakeUpon#23<NetResponse#40>((nonNull(~awaited#55)): Promise#25<NetResponse#40>, ~generator#52);
+              return (upcast(new constructor#15<Empty#10>(empty#20()))): GeneratorResult#13<Empty#10>;
+            }
+            case 1 {
+              ~console#49.log#48("failed");
+              ~caseIndex#53 = -1;
+            }
+            case 2 {
+              (orelse((value { resp#41 = (asNullable(getPromiseResultSync#27<NetResponse#40>((nonNull(~awaited#55)): Promise#25<NetResponse#40>)^)): NetResponse#40?; if (%Int32.eq(((nonNull(resp#41)): NetResponse#40).status#43(), 200)) { ~caseIndex#53 = 3; } else { ~caseIndex#53 = 4; } void }): Void, (value { ~caseIndex#53 = 1; void }): Void)): Void;
+            }
+            case 3 {
+              ~awaited#56 = (asNullable(((nonNull(resp#41)): NetResponse#40).bodyContent#46())): Promise#25<String?>?;
+              ~caseIndex#53 = 5;
+              awakeUpon#23<String?>((nonNull(~awaited#56)): Promise#25<String?>, ~generator#52);
+              return (upcast(new constructor#15<Empty#10>(empty#20()))): GeneratorResult#13<Empty#10>;
+            }
+            case 4 {
+              {
+                ~console#49.log#48(%String.cat(%String.cat("HTTP status was not 200: ", ((nonNull(resp#41)): NetResponse#40).status#43().toString#4(omitted)), "!"));
+              }
+              ~caseIndex#53 = -1;
+            }
+            case 5 {
+              (orelse((value { subject#45 = getPromiseResultSync#27<String?>((nonNull(~awaited#56)): Promise#25<String?>)^; body#44 = (if (isNull(subject#45)) "missing" else (nonNull(subject#45)): String): String; ~console#49.log#48(%String.cat(%String.cat("Thanks, server.  I got ", body#44), ".")); ~caseIndex#53 = -1; void }): Void, (value { ~caseIndex#53 = 1; void }): Void)): Void;
+            }
+            default {
+              return (upcast(doneResult#16<Empty#10>())): GeneratorResult#13<Empty#10>;
+            }
+          }
+        }
+      }): fn (SafeGenerator#6<Empty#10>): GeneratorResult#13<Empty#10>);
+    }): fn (): SafeGenerator#6<Empty#10>);
+  }
+}

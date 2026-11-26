@@ -7,7 +7,7 @@
 //! connected function's work, such as `sendRequest`'s, can be queued too,
 //! as a job that resolves its promise when the queue reaches it.
 
-use super::{Abrupt, Generator, Interp, R, Val, fail, type_name};
+use super::{Abrupt, CoreFailure, Generator, Interp, R, Val, fail, type_name};
 use crate::settle::Settled;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -23,8 +23,8 @@ enum State {
     /// Not resolved yet, with the `async` blocks paused awaiting it.
     Pending(Vec<Rc<Generator>>),
     Complete(Val),
-    /// Broken, maybe saying why, for a failure that isn't caught.
-    Broken(Option<String>),
+    /// Broken: `await` throws a `BrokenPromise`, which doesn't say why.
+    Broken,
 }
 
 /// Work in the run queue.
@@ -32,7 +32,7 @@ pub(super) enum Task {
     /// An `async` block to run on from where it paused.
     Block(Rc<Generator>),
     /// Native work whose result resolves a promise: a value completes it,
-    /// and an error breaks it with that message.
+    /// and an error breaks it.
     Job(Rc<Promise>, Box<dyn FnOnce() -> Result<Val, String>>),
 }
 
@@ -59,12 +59,15 @@ impl Promise {
     }
 
     /// What `await` gives, once the promise is resolved: its value, or
-    /// for a broken one, a failure.
+    /// for a broken one, a new `BrokenPromise` thrown.
     pub(super) fn outcome(&self) -> Option<R> {
         match &*self.state.borrow() {
             State::Pending(_) => None,
             State::Complete(value) => Some(Ok(value.clone())),
-            State::Broken(why) => Some(Err(Abrupt::Fail(why.clone()))),
+            State::Broken => Some(Err(Abrupt::Throw(CoreFailure::value(
+                "BrokenPromise",
+                Vec::new(),
+            )))),
         }
     }
 }
@@ -114,7 +117,7 @@ impl Interp<'_> {
                 Task::Job(promise, job) => {
                     let resolution = match job() {
                         Ok(value) => State::Complete(value),
-                        Err(why) => State::Broken(Some(why)),
+                        Err(_) => State::Broken,
                     };
                     self.resolve(&promise, resolution);
                     continue;
@@ -155,7 +158,7 @@ impl Interp<'_> {
     ) -> Option<R> {
         let resolution = match (name, args) {
             ("complete", [value]) => State::Complete(value.clone()),
-            ("breakPromise", []) => State::Broken(None),
+            ("breakPromise", []) => State::Broken,
             _ => return None,
         };
         self.resolve(promise, resolution);

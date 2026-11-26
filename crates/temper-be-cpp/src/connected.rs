@@ -62,6 +62,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Boolean.toString()",
         Connection::Call("Boolean::toString"),
     ),
+    (
+        "core.type BrokenPromise.constructor()",
+        Connection::Static("BrokenPromise", "make"),
+    ),
     ("core.type Console.log()", Connection::Call("Console::log")),
     (
         "core.type DenseBitVector.constructor()",
@@ -590,6 +594,10 @@ pub const TABLE: &[(&str, Connection)] = &[
 /// Sorted by qname. String indices are `int32_t`, and the others the
 /// runtime's, as Kotlin's.
 pub const TYPES: &[(&str, &str)] = &[
+    (
+        "core.type BrokenPromise",
+        "std::shared_ptr<core::BrokenPromise>",
+    ),
     ("core.type Console", "std::shared_ptr<core::Console::Type>"),
     ("core.type CoreError", "std::shared_ptr<core::CoreError>"),
     (

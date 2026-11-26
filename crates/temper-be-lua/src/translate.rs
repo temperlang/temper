@@ -563,6 +563,7 @@ impl<'a> Translator<'a> {
                     ("core.type MissingKey", []) => "temper.MissingKey".to_string(),
                     ("core.type ParseError", []) => "temper.ParseError".to_string(),
                     ("core.type InvalidCodePoint", []) => "temper.InvalidCodePoint".to_string(),
+                    ("core.type BrokenPromise", []) => "temper.BrokenPromise".to_string(),
                     // `{}`, as the runtime's `temper.empty()` makes.
                     ("core.type Empty", []) => "table".to_string(),
                     // The runtime's test, as `temper.test` gives a test's

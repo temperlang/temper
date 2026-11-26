@@ -28,7 +28,7 @@ use crate::corelib::TEXT as CORE;
 /// The builtin types whose members are read: first the final ones, which
 /// no other type extends, then the generic ones, then the rest whose
 /// members are used.
-const READ_TYPES: [&str; 30] = [
+const READ_TYPES: [&str; 31] = [
     "Boolean",
     "Int32",
     "Int64",
@@ -59,6 +59,7 @@ const READ_TYPES: [&str; 30] = [
     "MissingKey",
     "ParseError",
     "InvalidCodePoint",
+    "BrokenPromise",
 ];
 
 /// A type in a member's signature.

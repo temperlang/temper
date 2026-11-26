@@ -24,10 +24,14 @@ async { (): GeneratorResult<Empty> extends GeneratorFn =>
 |---|---|
 | `new NetRequest(url)` | A `GET` request for `url` |
 | `post(content, mimeType)` | Makes it a `POST` with that textual body |
-| `send()` | Sends it: a `Promise<NetResponse>`, broken if the backend can't |
+| `send()` | Sends it: a `Promise<NetResponse>`, broken if there's no response or the backend can't send, so `await` throws a `BrokenPromise` |
 | `NetResponse.status` | The HTTP status code |
 | `NetResponse.contentType` | The body's content type, if any |
 | `NetResponse.bodyContent` | A promise of the body's text, if it's textual |
+
+An HTTP error status, as 404, is still a response. Awaiting a broken
+promise throws core's `BrokenPromise`, which an `async` block handles
+where it awaits, with `orelse` or `catch`.
 
 Each backend connects these to its language's HTTP support; C++ needs
 libcurl, and Lua needs LuaSocket.

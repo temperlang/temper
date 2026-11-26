@@ -3,23 +3,23 @@ tmpl 1 model 1 library `async-turns` 0.0.0
 uses `temper-core`#8 0.0.0-alpha.0.0 {
   class Promise#9<R#10> {}
   interface SafeGenerator#13<YIELD#14> extends Generator#15<YIELD#14> {
-    connected method nextSafe#74(): GeneratorResult#43<YIELD#14>;
+    connected method nextSafe#77(): GeneratorResult#43<YIELD#14>;
   }
   interface Generator#15<YIELD#16> {}
   class Empty#18 {}
   class List#25<T#26> extends Listed#27<T#26> {}
   interface Listed#27<T#28> {
-    connected method join#100(separator: String, stringify: fn (T#28): String): String;
+    connected method join#103(separator: String, stringify: fn (T#28): String): String;
   }
   class PromiseBuilder#32<R#33> {
     connected constructor constructor#39(): PromiseBuilder#32<R#33>;
-    connected method complete#58(completion: R#33): Void;
-    connected get promise#59(): Promise#9<R#33>;
+    connected method complete#61(completion: R#33): Void;
+    connected get promise#62(): Promise#9<R#33>;
   }
   connected fn async#40(generatorFactory: fn (): SafeGenerator#13<Empty#18>): Void;
   class ValueResult#41<YIELD#42> extends GeneratorResult#43<YIELD#42> {
     connected constructor constructor#45(value: YIELD#42): ValueResult#41<YIELD#42>;
-    let value#97: YIELD#42;
+    let value#100: YIELD#42;
   }
   interface GeneratorResult#43<YIELD#44> {}
   connected fn doneResult#46<YIELD#47>(): DoneResult#48<YIELD#47>;
@@ -27,49 +27,52 @@ uses `temper-core`#8 0.0.0-alpha.0.0 {
   connected fn empty#50(): Empty#18;
   connected fn safeAdaptGeneratorFn#51<YIELD#52>(step: fn (SafeGenerator#13<YIELD#52>): GeneratorResult#43<YIELD#52>): SafeGenerator#13<YIELD#52>;
   connected fn awakeUpon#53<T#54>(promise: Promise#9<T#54>, generator: SafeGenerator#13<Empty#18>): Void;
-  connected fn getPromiseResultSync#55<T#56>(promise: Promise#9<T#56>): T#56 throws Bubble;
-  interface Console#69 {
-    connected method log#70(message: String): Void;
+  connected fn getPromiseResultSync#55<T#56>(promise: Promise#9<T#56>): T#56 throws BrokenPromise#57;
+  class BrokenPromise#57 extends CoreError#58 {}
+  interface CoreError#58 extends Error#59 {}
+  interface Error#59 {}
+  interface Console#72 {
+    connected method log#73(message: String): Void;
   }
-  class Int32#72 {
-    connected method toString#73(radix?: Int32): String;
+  class Int32#75 {
+    connected method toString#76(radix?: Int32): String;
   }
-  class ListBuilder#89<T#90> extends Listed#27<T#90> {
-    connected constructor constructor#92(): ListBuilder#89<T#90>;
-    connected get length#94(): Int32;
-    connected method add#96(newValue: T#90, at?: Int32): Void;
-    connected method toList#98(): List#25<T#90>;
+  class ListBuilder#92<T#93> extends Listed#27<T#93> {
+    connected constructor constructor#95(): ListBuilder#92<T#93>;
+    connected get length#97(): Int32;
+    connected method add#99(newValue: T#93, at?: Int32): Void;
+    connected method toList#101(): List#25<T#93>;
   }
-  connected fn getConsole#114(name?: String): Console#69;
+  connected fn getConsole#117(name?: String): Console#72;
 }
 
 module `async-turns`#0 {
-  let ~console#71: Console#69;
+  let ~console#74: Console#72;
 
   export fn later#7(n#37: Int32): Promise#9<Int32> {
     let pb#38: PromiseBuilder#32<Int32> = new constructor#39<Int32>();
-    async#40((fn generator ~fn#57(): SafeGenerator#13<Empty#18> [n#37, pb#38] {
-      pb#38.complete#58(%Int32.mul(n#37, 2));
+    async#40((fn generator ~fn#60(): SafeGenerator#13<Empty#18> [n#37, pb#38] {
+      pb#38.complete#61(%Int32.mul(n#37, 2));
     }): fn (): SafeGenerator#13<Empty#18>);
-    return pb#38.promise#59();
+    return pb#38.promise#62();
   }
 
   export fun interface Tick#1 {
-    abstract method apply#3(i#60: Int32): Void;
+    abstract method apply#3(i#63: Int32): Void;
   }
 
-  fn generated#11<T#12>(make#61: fn (): SafeGenerator#13<T#12>): SafeGenerator#13<T#12> {
-    return make#61();
+  fn generated#11<T#12>(make#64: fn (): SafeGenerator#13<T#12>): SafeGenerator#13<T#12> {
+    return make#64();
   }
 
-  export fn ticks#17(n#62: Int32, each#63: Tick#1): SafeGenerator#13<Empty#18> {
-    return generated#11<Empty#18>((fn generator ~fn#64(): SafeGenerator#13<Empty#18> [n#62, each#63] {
+  export fn ticks#17(n#65: Int32, each#66: Tick#1): SafeGenerator#13<Empty#18> {
+    return generated#11<Empty#18>((fn generator ~fn#67(): SafeGenerator#13<Empty#18> [n#65, each#66] {
       {
-        var i#65: Int32 = 0;
-        ~loop#66: while (%Int32.lt(i#65, n#62)) {
-          each#63(i#65);
+        var i#68: Int32 = 0;
+        ~loop#69: while (%Int32.lt(i#68, n#65)) {
+          each#66(i#68);
           yield;
-          i#65 = %Int32.add(i#65, 1);
+          i#68 = %Int32.add(i#68, 1);
         }
       }
     }): fn (): SafeGenerator#13<Empty#18>);
@@ -77,56 +80,56 @@ module `async-turns`#0 {
 
   let t#19: SafeGenerator#13<Empty#18>;
 
-  fn startedAt#20<T#21>(start#75: Int32, make#76: fn (Int32): SafeGenerator#13<T#21>): SafeGenerator#13<T#21> {
-    return make#76(start#75);
+  fn startedAt#20<T#21>(start#78: Int32, make#79: fn (Int32): SafeGenerator#13<T#21>): SafeGenerator#13<T#21> {
+    return make#79(start#78);
   }
 
   export fn fibonacci#22(): SafeGenerator#13<Int32> {
-    return generated#11<Int32>((fn generator ~fn#77(): SafeGenerator#13<Int32> {
-      var a#78: Int32 = 0;
-      var b#79: Int32 = 1;
-      ~loop#80: while (true) {
-        yield a#78;
-        let next#81: Int32 = %Int32.add(a#78, b#79);
-        a#78 = b#79;
-        b#79 = next#81;
+    return generated#11<Int32>((fn generator ~fn#80(): SafeGenerator#13<Int32> {
+      var a#81: Int32 = 0;
+      var b#82: Int32 = 1;
+      ~loop#83: while (true) {
+        yield a#81;
+        let next#84: Int32 = %Int32.add(a#81, b#82);
+        a#81 = b#82;
+        b#82 = next#84;
       }
     }): fn (): SafeGenerator#13<Int32>);
   }
 
-  export fn collatz#23(start#82: Int32): SafeGenerator#13<Int32> {
-    return startedAt#20<Int32>(start#82, (fn generator ~fn#83(first#84: Int32): SafeGenerator#13<Int32> {
-      var n#85: Int32 = first#84;
-      ~loop#86: while (true) {
-        yield n#85;
-        if (%Int32.eq(n#85, 1)) {
-          break ~loop#86;
+  export fn collatz#23(start#85: Int32): SafeGenerator#13<Int32> {
+    return startedAt#20<Int32>(start#85, (fn generator ~fn#86(first#87: Int32): SafeGenerator#13<Int32> {
+      var n#88: Int32 = first#87;
+      ~loop#89: while (true) {
+        yield n#88;
+        if (%Int32.eq(n#88, 1)) {
+          break ~loop#89;
         }
-        if (%Int32.eq(%Int32.modSafe(n#85, 2), 0)) {
-          n#85 = %Int32.divSafe(n#85, 2);
+        if (%Int32.eq(%Int32.modSafe(n#88, 2), 0)) {
+          n#88 = %Int32.divSafe(n#88, 2);
         } else {
-          n#85 = %Int32.add(%Int32.mul(3, n#85), 1);
+          n#88 = %Int32.add(%Int32.mul(3, n#88), 1);
         }
       }
     }): fn (Int32): SafeGenerator#13<Int32>);
   }
 
-  fn take#24(g#87: SafeGenerator#13<Int32>, n#88: Int32): List#25<Int32> {
-    let taken#91: ListBuilder#89<Int32> = new constructor#92<Int32>();
-    ~loop#93: while (%Int32.lt(taken#91.length#94(), n#88)) {
-      let r#95: GeneratorResult#43<Int32> = g#87.nextSafe#74();
-      if (is(r#95, ValueResult#41<Int32>)) {
-        taken#91.add#96(((downcast(r#95)): ValueResult#41<Int32>).value#97, omitted);
+  fn take#24(g#90: SafeGenerator#13<Int32>, n#91: Int32): List#25<Int32> {
+    let taken#94: ListBuilder#92<Int32> = new constructor#95<Int32>();
+    ~loop#96: while (%Int32.lt(taken#94.length#97(), n#91)) {
+      let r#98: GeneratorResult#43<Int32> = g#90.nextSafe#77();
+      if (is(r#98, ValueResult#41<Int32>)) {
+        taken#94.add#99(((downcast(r#98)): ValueResult#41<Int32>).value#100, omitted);
       } else {
-        break ~loop#93;
+        break ~loop#96;
       }
     }
-    return taken#91.toList#98();
+    return taken#94.toList#101();
   }
 
-  fn shown#29(ints#99: List#25<Int32>): String {
-    return ints#99.join#100(" ", (fn ~fn#101(i#102: Int32): String {
-      return i#102.toString#73(omitted);
+  fn shown#29(ints#102: List#25<Int32>): String {
+    return ints#102.join#103(" ", (fn ~fn#104(i#105: Int32): String {
+      return i#105.toString#76(omitted);
     }): fn (Int32): String);
   }
 
@@ -137,17 +140,17 @@ module `async-turns`#0 {
     constructor constructor#6(): Counter#2 {
       this.n#4 = 0;
     }
-    method bump#5(tag#103: String, times#104: Int32): Void {
-      ~console#71.log#70(%String.cat(tag#103, " start"));
+    method bump#5(tag#106: String, times#107: Int32): Void {
+      ~console#74.log#73(%String.cat(tag#106, " start"));
       {
-        var i#105: Int32 = 0;
-        ~loop#106: while (%Int32.lt(i#105, times#104)) {
-          let before#107: Int32 = this.n#4;
-          this.n#4 = %Int32.add(before#107, 1);
-          i#105 = %Int32.add(i#105, 1);
+        var i#108: Int32 = 0;
+        ~loop#109: while (%Int32.lt(i#108, times#107)) {
+          let before#110: Int32 = this.n#4;
+          this.n#4 = %Int32.add(before#110, 1);
+          i#108 = %Int32.add(i#108, 1);
         }
       }
-      ~console#71.log#70(%String.cat(%String.cat(tag#103, " done n="), this.n#4.toString#73(omitted)));
+      ~console#74.log#73(%String.cat(%String.cat(tag#106, " done n="), this.n#4.toString#76(omitted)));
     }
   }
 
@@ -157,44 +160,44 @@ module `async-turns`#0 {
 
   let gateB#35: PromiseBuilder#32<Int32>;
 
-  export fn halve#36(n#113: Int32): Int32 throws Bubble {
-    if (%Boolean.not(%Int32.eq(%Int32.modSafe(n#113, 2), 0))) {
+  export fn halve#36(n#116: Int32): Int32 throws Bubble {
+    if (%Boolean.not(%Int32.eq(%Int32.modSafe(n#116, 2), 0))) {
       (bubble()^): Void;
     }
-    return %Int32.divSafe(n#113, 2);
+    return %Int32.divSafe(n#116, 2);
   }
 
   init {
-    init ~console#71 = getConsole#114(omitted);
-    init t#19 = ticks#17(2, (fn ~fn#67(i#68: Int32): Void {
-      ~console#71.log#70(%String.cat("tick ", i#68.toString#73(omitted)));
+    init ~console#74 = getConsole#117(omitted);
+    init t#19 = ticks#17(2, (fn ~fn#70(i#71: Int32): Void {
+      ~console#74.log#73(%String.cat("tick ", i#71.toString#76(omitted)));
     }): Tick#1);
-    t#19.nextSafe#74();
-    t#19.nextSafe#74();
-    t#19.nextSafe#74();
-    ~console#71.log#70(%String.cat("fibonacci ", shown#29(take#24(fibonacci#22(), 10))));
-    ~console#71.log#70(%String.cat("collatz ", shown#29(take#24(collatz#23(6), 100))));
+    t#19.nextSafe#77();
+    t#19.nextSafe#77();
+    t#19.nextSafe#77();
+    ~console#74.log#73(%String.cat("fibonacci ", shown#29(take#24(fibonacci#22(), 10))));
+    ~console#74.log#73(%String.cat("collatz ", shown#29(take#24(collatz#23(6), 100))));
     init fib#30 = fibonacci#22();
     take#24(fib#30, 5);
-    ~console#71.log#70(%String.cat("then ", shown#29(take#24(fib#30, 3))));
+    ~console#74.log#73(%String.cat("then ", shown#29(take#24(fib#30, 3))));
     init c#31 = new constructor#6();
     init gateA#34 = new constructor#39<Int32>();
     init gateB#35 = new constructor#39<Int32>();
-    async#40((fn generator ~fn#108(): SafeGenerator#13<Empty#18> {
+    async#40((fn generator ~fn#111(): SafeGenerator#13<Empty#18> {
       c#31.bump#5("A", 10000);
-      let k#109: Int32 = (orelse((await(gateA#34.promise#59())^): Int32, %Int32.neg(1))): Int32;
-      c#31.bump#5(%String.cat("A", k#109.toString#73(omitted)), 10000);
+      let k#112: Int32 = (orelse((await(gateA#34.promise#62())^): Int32, %Int32.neg(1))): Int32;
+      c#31.bump#5(%String.cat("A", k#112.toString#76(omitted)), 10000);
     }): fn (): SafeGenerator#13<Empty#18>);
-    async#40((fn generator ~fn#110(): SafeGenerator#13<Empty#18> {
+    async#40((fn generator ~fn#113(): SafeGenerator#13<Empty#18> {
       c#31.bump#5("B", 10000);
-      let k#111: Int32 = (orelse((await(gateB#35.promise#59())^): Int32, %Int32.neg(1))): Int32;
-      c#31.bump#5(%String.cat("B", k#111.toString#73(omitted)), 10000);
+      let k#114: Int32 = (orelse((await(gateB#35.promise#62())^): Int32, %Int32.neg(1))): Int32;
+      c#31.bump#5(%String.cat("B", k#114.toString#76(omitted)), 10000);
     }): fn (): SafeGenerator#13<Empty#18>);
-    async#40((fn generator ~fn#112(): SafeGenerator#13<Empty#18> {
-      ~console#71.log#70("opener: calling complete");
-      gateA#34.complete#58(1);
-      gateB#35.complete#58(2);
-      ~console#71.log#70("opener: complete returned");
+    async#40((fn generator ~fn#115(): SafeGenerator#13<Empty#18> {
+      ~console#74.log#73("opener: calling complete");
+      gateA#34.complete#61(1);
+      gateB#35.complete#61(2);
+      ~console#74.log#73("opener: complete returned");
     }): fn (): SafeGenerator#13<Empty#18>);
   }
 }

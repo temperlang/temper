@@ -9,7 +9,7 @@ import java.util.function.IntConsumer;
 import java.util.function.IntFunction;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
-import temper.core.Bubble;
+import temper.core.BrokenPromise;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Generator;
@@ -273,20 +273,15 @@ public final class AsyncTurnsGlobal {
                             c.bump("A" + k.value, 10000);
                             return DoneResult.get();
                         case 3:
-                            try {
-                                awaited.value = gateA;
-                                caseIndex.value = 4;
-                                Core.awakeUpon(awaited.value, generator);
-                                return new ValueResult<>(Optional.empty());
-                            } catch (Bubble ignored) {
-                                caseIndex.value = 1;
-                            }
-                            break;
+                            awaited.value = gateA;
+                            caseIndex.value = 4;
+                            Core.awakeUpon(awaited.value, generator);
+                            return new ValueResult<>(Optional.empty());
                         case 4:
                             try {
                                 k.value = Core.getPromiseResult(awaited.value);
                                 caseIndex.value = 2;
-                            } catch (Bubble ignored2) {
+                            } catch (BrokenPromise ignored) {
                                 caseIndex.value = 1;
                             }
                             break;
@@ -331,20 +326,15 @@ public final class AsyncTurnsGlobal {
                             c.bump("B" + k.value, 10000);
                             return DoneResult.get();
                         case 3:
-                            try {
-                                awaited.value = gateB;
-                                caseIndex.value = 4;
-                                Core.awakeUpon(awaited.value, generator);
-                                return new ValueResult<>(Optional.empty());
-                            } catch (Bubble ignored3) {
-                                caseIndex.value = 1;
-                            }
-                            break;
+                            awaited.value = gateB;
+                            caseIndex.value = 4;
+                            Core.awakeUpon(awaited.value, generator);
+                            return new ValueResult<>(Optional.empty());
                         case 4:
                             try {
                                 k.value = Core.getPromiseResult(awaited.value);
                                 caseIndex.value = 2;
-                            } catch (Bubble ignored4) {
+                            } catch (BrokenPromise ignored2) {
                                 caseIndex.value = 1;
                             }
                             break;

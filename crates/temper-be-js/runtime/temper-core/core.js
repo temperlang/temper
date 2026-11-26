@@ -325,7 +325,8 @@ export const failureBase = (base) => {
 
 /**
  * The root of core's own declared failures, `MissingKey`, `ParseError`,
- * and `InvalidCodePoint`, as each library's roots are its failures'.
+ * `InvalidCodePoint`, and `BrokenPromise`, as each library's roots are
+ * its failures'.
  */
 export class CoreError extends Error {}
 
@@ -415,6 +416,17 @@ export class InvalidCodePoint extends CoreError {
   /** @returns {string} */
   get message() {
     return `invalid code point (codePoint: ${this.#codePoint})`;
+  }
+}
+
+/**
+ * What awaiting a broken promise throws. It has no fields: a broken
+ * promise doesn't say why.
+ */
+export class BrokenPromise extends CoreError {
+  /** @returns {string} */
+  get message() {
+    return "broken promise";
   }
 }
 

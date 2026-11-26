@@ -6,10 +6,11 @@
 //! own, if they declare a return type, or, for a function literal without
 //! one, if its place wants a function type, which gives it its own.
 //!
-//! What may bubble: `bubble()`; `await`, of a promise that may be broken;
-//! and a call of a function whose type `throws Bubble`. (`x as T` that
-//! fails and `/` or `%` of integers by zero panic; floats' give IEEE
-//! 754's infinities and NaN.) Kotlin folds constants first, so as for
+//! What may bubble: `bubble()` and a call of a function whose type
+//! `throws Bubble`. (`await` of a broken promise throws core's
+//! `BrokenPromise`, a declared failure; `x as T` that fails and `/` or
+//! `%` of integers by zero panic; floats' give IEEE 754's infinities and
+//! NaN.) Kotlin folds constants first, so as for
 //! the other type errors, a call it might work out while compiling isn't
 //! reported (`may_fold`), nor is a branch of an `if` whose condition it
 //! might.
@@ -526,11 +527,12 @@ impl Settle {
                 let is_failure = self.typing.types.is_subtype(t, ERROR) == Some(true);
                 found.push((node, if is_failure { t } else { UNKNOWN }));
             }
+            // `await` of a broken promise throws core's `BrokenPromise`.
             (NodeKind::Await, _) => {
                 for child in children {
                     self.find_bubbles(child, found);
                 }
-                found.push((node, BUBBLE));
+                found.push((node, self.typing.types.broken_promise()));
             }
             // Kotlin doesn't look into the arguments of an operator that
             // don't fit it.

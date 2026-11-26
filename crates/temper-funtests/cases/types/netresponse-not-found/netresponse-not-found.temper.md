@@ -16,16 +16,18 @@ An HTTP error status is still a response. `send` resolves with it, and
       } orelse console.log("broken promise");
 
 When there is no response at all, because nothing listens on the port,
-the promise is broken.
+the promise is broken, so awaiting it throws a `BrokenPromise`.
 
       do {
         await new NetRequest("http://127.0.0.1:1/").send();
         console.log("port 1 answered");
-      } orelse console.log("no response from port 1");
+      } catch (e) {
+        console.log("no response from port 1: ${e.message}");
+      }
     }
 
 ```log
 status 404
 body not here
-no response from port 1
+no response from port 1: broken promise
 ```

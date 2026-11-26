@@ -15,9 +15,9 @@ local function fn()
     while i < 2 do
       ---@type string
       local s
-      if not temper.pcall(function()
+      if not temper.catch(function()
         s = temper.promisebuilder_promise(once):await()
-      end) then
+      end, temper.BrokenPromise) then
         s = "?"
       end
       print(s .. " " .. i)
@@ -28,9 +28,9 @@ local function fn()
   while j < 2 do
     ---@type string
     local s
-    if not temper.pcall(function()
+    if not temper.catch(function()
       s = temper.promisebuilder_promise(later):await()
-    end) then
+    end, temper.BrokenPromise) then
       s = "?"
     end
     print(s .. " " .. j)
@@ -38,9 +38,9 @@ local function fn()
   end
   ---@type string
   local t
-  if not temper.pcall(function()
+  if not temper.catch(function()
     t = temper.promisebuilder_promise(once):await()
-  end) then
+  end, temper.BrokenPromise) then
     t = "?"
   end
   print(t .. " after the loops")

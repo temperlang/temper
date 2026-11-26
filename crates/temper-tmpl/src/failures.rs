@@ -29,6 +29,18 @@ fn is_root(p: &Program, d: DeclId) -> bool {
         && library_of(p, d) == "core"
 }
 
+/// Core's `BrokenPromise`, what `await` of a broken promise throws, if
+/// the program has it, as one that awaits does.
+pub fn broken_promise(p: &Program) -> Option<TypeId> {
+    let is_it = |d: DeclId| {
+        p.decls.contains(d)
+            && p.name(d) == "BrokenPromise"
+            && is_external(p, d)
+            && library_of(p, d) == "core"
+    };
+    p.decls.ids().find(|&d| is_it(d)).map(|d| p.decls.get(d).ty)
+}
+
 /// Whether `ty` is core's `Error`, any error: a test's failure, and
 /// what std's `testing` takes, which may be a bubble too, until `Bubble`
 /// goes.
@@ -74,9 +86,8 @@ pub fn is_failure_type(p: &Program, root: Option<DeclId>, ty: TypeId) -> bool {
 
 /// What a node may fail with, if anything: a failing call's callee's
 /// failure type, with its type arguments put in; a `throw`'s value's
-/// type; and `Bubble` for the rest that may bubble (`bubble()`, checked
-/// `await`) and for `Error` nodes, which fail as
-/// `bubble()` does.
+/// type; core's `BrokenPromise` for an `await`; and `Bubble` for
+/// `bubble()` and for `Error` nodes, which fail as `bubble()` does.
 pub fn node_failure(p: &Program, id: NodeId) -> Option<TypeId> {
     let callee = |callee: DeclId, receiver: Option<NodeId>, args: TypeArgs| {
         let fail = p.signature(callee)?.fail?;
@@ -119,9 +130,8 @@ pub fn node_failure(p: &Program, id: NodeId) -> Option<TypeId> {
         Node::Throw { value, .. } => Some(p.nodes.ty(value)),
         Node::Await {
             may_bubble: true, ..
-        }
-        | Node::Bubble { .. }
-        | Node::Error { .. } => Some(TypeId::BUBBLE),
+        } => broken_promise(p),
+        Node::Bubble { .. } | Node::Error { .. } => Some(TypeId::BUBBLE),
         _ => None,
     }
 }

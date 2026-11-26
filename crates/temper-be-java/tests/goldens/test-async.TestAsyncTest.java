@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import temper.core.BrokenPromise;
 import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Generator;
@@ -113,15 +114,10 @@ public final class TestAsyncTest {
                         caseIndex.value = -1;
                         switch (caseIndexLocal) {
                             case 0:
-                                try {
-                                    awaited.value = pb;
-                                    caseIndex.value = 3;
-                                    Core.awakeUpon(awaited.value, generator);
-                                    return new ValueResult<>(Optional.empty());
-                                } catch (Bubble ignored) {
-                                    caseIndex.value = 1;
-                                }
-                                break;
+                                awaited.value = pb;
+                                caseIndex.value = 3;
+                                Core.awakeUpon(awaited.value, generator);
+                                return new ValueResult<>(Optional.empty());
                             case 1:
                                 n.value = -1;
                                 caseIndex.value = 2;
@@ -133,7 +129,7 @@ public final class TestAsyncTest {
                                 try {
                                     n.value = Core.getPromiseResult(awaited.value);
                                     caseIndex.value = 2;
-                                } catch (Bubble ignored2) {
+                                } catch (BrokenPromise ignored) {
                                     caseIndex.value = 1;
                                 }
                                 break;
@@ -302,15 +298,10 @@ public final class TestAsyncTest {
                         caseIndex.value = -1;
                         switch (caseIndexLocal) {
                             case 0:
-                                try {
-                                    awaited.value = never;
-                                    caseIndex.value = 3;
-                                    Core.awakeUpon(awaited.value, generator);
-                                    return new ValueResult<>(Optional.empty());
-                                } catch (Bubble ignored) {
-                                    caseIndex.value = 1;
-                                }
-                                break;
+                                awaited.value = never;
+                                caseIndex.value = 3;
+                                Core.awakeUpon(awaited.value, generator);
+                                return new ValueResult<>(Optional.empty());
                             case 1:
                                 n.value = -1;
                                 caseIndex.value = 2;
@@ -322,7 +313,7 @@ public final class TestAsyncTest {
                                 try {
                                     n.value = Core.getPromiseResult(awaited.value);
                                     caseIndex.value = 2;
-                                } catch (Bubble ignored2) {
+                                } catch (BrokenPromise ignored) {
                                     caseIndex.value = 1;
                                 }
                                 break;

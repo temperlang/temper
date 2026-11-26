@@ -193,7 +193,7 @@ uses `temper-core`#0 0.1.0 {
   connected fn async#195(generatorFactory: fn (): SafeGenerator#184<Empty#153>): Void;
   connected fn safeAdaptGeneratorFn#196<YIELD#197>(step: fn (SafeGenerator#184<YIELD#197>): GeneratorResult#172<YIELD#197>): SafeGenerator#184<YIELD#197>;
   connected fn awakeUpon#198<T#199>(promise: Promise#187<T#199>, generator: SafeGenerator#184<Empty#153>): Void;
-  connected fn getPromiseResultSync#200<T#201>(promise: Promise#187<T#201>): T#201 throws Bubble;
+  connected fn getPromiseResultSync#200<T#201>(promise: Promise#187<T#201>): T#201 throws BrokenPromise#221;
   interface Error#202 {
     connected get message#203(): String;
     connected get cause#204(): Error#202?;
@@ -211,6 +211,9 @@ uses `temper-core`#0 0.1.0 {
   class InvalidCodePoint#218 extends CoreError#205 {
     let codePoint#219: Int32;
     connected constructor constructor#220(codePoint: Int32): InvalidCodePoint#218;
+  }
+  class BrokenPromise#221 extends CoreError#205 {
+    connected constructor constructor#222(): BrokenPromise#221;
   }
 }
 

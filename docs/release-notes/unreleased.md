@@ -26,6 +26,8 @@
 - [🚨Breaking change: `try` and `catch` are reserved](#breaking-change-try-and-catch-are-reserved)
 - [🚨Breaking change: division by zero and failed casts panic](#breaking-change-division-by-zero-and-failed-casts-panic)
 - [🚨Breaking change: core and std throw declared failures](#breaking-change-core-and-std-throw-declared-failures)
+- [🚨Breaking change: std regex `find` gives null; tests may throw any error](#breaking-change-std-regex-find-gives-null-tests-may-throw-any-error)
+- [🚨Breaking change: `await` of a broken promise throws `BrokenPromise`](#breaking-change-await-of-a-broken-promise-throws-brokenpromise)
 
 ## 🚨Breaking change: Rest parameter syntax removed.
 
@@ -447,10 +449,11 @@ writes them, or from a release's packages
   that can't bubble is reported as "Cannot bubble from a function
   without Bubble in its return type", as Temper 0.6.0 reports it,
   instead of stopping translation.
-- An `await` that may bubble in an `async` block or other generator
-  that can't, with no `orelse`, is reported the same way, as Temper
-  0.6.0 reports it, instead of stopping translation; so is `bubble()`
-  in such a generator.
+- An `await` in an `async` block or other generator with no `orelse`
+  or `catch` is reported where it is (now "Cannot throw BrokenPromise
+  …", [below](#breaking-change-await-of-a-broken-promise-throws-brokenpromise)),
+  instead of stopping translation; so is `bubble()` in a generator that
+  can't bubble.
 - `x ?? d`, where `x` is a nullable member named bare in its class, is
   a non-null value, as `this.x ?? d` is; it was an error.
 - A function literal or function reference where another library's
@@ -664,3 +667,22 @@ message. `test.assertPanics { … }` fails, saying "expected a panic, but
 it threw", where its block throws an error (it said "but it bubbled").
 Tests' functions, and std `testing`'s `TestFun` and `assertPanics`'s
 block, are `throws Error`, which only the compiler and std may write.
+
+## 🚨Breaking change: `await` of a broken promise throws `BrokenPromise`
+
+`await` of a broken promise, broken by `PromiseBuilder.breakPromise()` or
+by the host, as std `net`'s requests that get no response, throws core's
+new `BrokenPromise`, under `CoreError`, instead of bubbling. It has no
+fields; its message is `broken promise`. An `async` block can't throw,
+so it handles each `await` that may fail, as before:
+
+```temper inert
+let body = await response.bodyContent orelse null;
+let n = await count catch (e) { console.log(e.message); 0 };
+```
+
+A generator that says `throws Bubble` can't pass a broken promise on
+either, so it handles its `await`s too. Each backend's runtime throws
+its own `BrokenPromise` (Python `temper_core.BrokenPromise`, Java
+`temper.core.BrokenPromise`, and so on), and a `catch` around an
+`await` works on every backend.

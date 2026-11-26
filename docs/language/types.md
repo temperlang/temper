@@ -1690,8 +1690,9 @@ This method is more likely to change or be removed before Temper 1.0 than most
 `sealed interface CoreError extends Error`
 
 The root of core's own failure types, [*MissingKey*](#class-missingkey),
-[*ParseError*](#class-parseerror), and
-[*InvalidCodePoint*](#class-invalidcodepoint), as a library's roots are its
+[*ParseError*](#class-parseerror),
+[*InvalidCodePoint*](#class-invalidcodepoint), and
+[*BrokenPromise*](#class-brokenpromise), as a library's roots are its
 failures'.
 
 ## *class MissingKey*
@@ -1727,6 +1728,18 @@ number that isn't a Unicode scalar value: below 0, above 0x10FFFF, or a
 surrogate, 0xD800 through 0xDFFF. Code points often come from decoded
 data, as character references and escapes. Its `codePoint` is the number
 given; its message, as `invalid code point (codePoint: 55296)`, says it.
+
+## *class BrokenPromise*
+
+`class BrokenPromise extends CoreError`
+
+What [`await`](builtins.md#awaitpromise) throws for a promise that's
+broken, by `PromiseBuilder.breakPromise()` or by the host, as for a
+network request that gets no response. A broken network connection is
+something a program can recover from, so it's declared, not a panic. It
+has no fields, as a broken promise doesn't say why; its message is
+`broken promise`. Each `await` of a broken promise throws one, so async
+code handles it, with `orelse` or `catch`, where it awaits.
 
 ## *class Pair*
 

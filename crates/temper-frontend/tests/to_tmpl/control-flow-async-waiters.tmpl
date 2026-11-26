@@ -15,30 +15,33 @@ uses `temper-core`#1 0.0.0-alpha.0.0 {
   connected fn safeAdaptGeneratorFn#18<YIELD#19>(step: fn (SafeGenerator#3<YIELD#19>): GeneratorResult#10<YIELD#19>): SafeGenerator#3<YIELD#19>;
   connected fn awakeUpon#20<T#21>(promise: Promise#22<T#21>, generator: SafeGenerator#3<Empty#7>): Void;
   class Promise#22<R#23> {}
-  connected fn getPromiseResultSync#24<T#25>(promise: Promise#22<T#25>): T#25 throws Bubble;
-  class PromiseBuilder#27<R#28> {
-    connected constructor constructor#30(): PromiseBuilder#27<R#28>;
-    connected get promise#35(): Promise#22<R#28>;
-    connected method complete#36(completion: R#28): Void;
-    connected method breakPromise#55(): Void;
+  connected fn getPromiseResultSync#24<T#25>(promise: Promise#22<T#25>): T#25 throws BrokenPromise#26;
+  class BrokenPromise#26 extends CoreError#27 {}
+  interface CoreError#27 extends Error#28 {}
+  interface Error#28 {}
+  class PromiseBuilder#30<R#31> {
+    connected constructor constructor#33(): PromiseBuilder#30<R#31>;
+    connected get promise#38(): Promise#22<R#31>;
+    connected method complete#39(completion: R#31): Void;
+    connected method breakPromise#58(): Void;
   }
-  interface Console#42 {
-    connected method log#43(message: String): Void;
+  interface Console#45 {
+    connected method log#46(message: String): Void;
   }
-  class Int32#45 {
-    connected method toString#46(radix?: Int32): String;
+  class Int32#48 {
+    connected method toString#49(radix?: Int32): String;
   }
-  connected fn getConsole#58(name?: String): Console#42;
+  connected fn getConsole#61(name?: String): Console#45;
 }
 
 module `async-waiters`#0 {
-  let ~console#44: Console#42;
+  let ~console#47: Console#45;
 
   init {
-    init ~console#44 = getConsole#58(omitted);
-    async#2((fn generator ~fn#26(): SafeGenerator#3<Empty#7> {
-      (orelse((value { let b#29: PromiseBuilder#27<Int32> = new constructor#30<Int32>(); let firstDone#31: PromiseBuilder#27<Int32> = new constructor#30<Int32>(); let secondDone#32: PromiseBuilder#27<Int32> = new constructor#30<Int32>(); async#2((fn generator ~fn#33(): SafeGenerator#3<Empty#7> [b#29, firstDone#31] { let v#34: Int32 = (orelse((await(b#29.promise#35())^): Int32, %Int32.neg(1))): Int32; firstDone#31.complete#36(v#34); }): fn (): SafeGenerator#3<Empty#7>); async#2((fn generator ~fn#37(): SafeGenerator#3<Empty#7> [b#29, secondDone#32] { let v#38: Int32 = (orelse((await(b#29.promise#35())^): Int32, %Int32.neg(1))): Int32; secondDone#32.complete#36(v#38); }): fn (): SafeGenerator#3<Empty#7>); async#2((fn generator ~fn#39(): SafeGenerator#3<Empty#7> [b#29] { b#29.complete#36(7); }): fn (): SafeGenerator#3<Empty#7>); let first#40: Int32 = (await(firstDone#31.promise#35())^): Int32; let second#41: Int32 = (await(secondDone#32.promise#35())^): Int32; ~console#44.log#43(%String.cat(%String.cat(%String.cat("after complete: first got ", first#40.toString#46(omitted)), ", second got "), second#41.toString#46(omitted))); void }): Void, (panic()): Void)): Void;
-      (orelse((value { let b#47: PromiseBuilder#27<Int32> = new constructor#30<Int32>(); let firstDone#48: PromiseBuilder#27<Int32> = new constructor#30<Int32>(); let secondDone#49: PromiseBuilder#27<Int32> = new constructor#30<Int32>(); async#2((fn generator ~fn#50(): SafeGenerator#3<Empty#7> [b#47, firstDone#48] { let v#51: Int32 = (orelse((await(b#47.promise#35())^): Int32, %Int32.neg(1))): Int32; firstDone#48.complete#36(v#51); }): fn (): SafeGenerator#3<Empty#7>); async#2((fn generator ~fn#52(): SafeGenerator#3<Empty#7> [b#47, secondDone#49] { let v#53: Int32 = (orelse((await(b#47.promise#35())^): Int32, %Int32.neg(1))): Int32; secondDone#49.complete#36(v#53); }): fn (): SafeGenerator#3<Empty#7>); async#2((fn generator ~fn#54(): SafeGenerator#3<Empty#7> [b#47] { b#47.breakPromise#55(); }): fn (): SafeGenerator#3<Empty#7>); let first#56: Int32 = (await(firstDone#48.promise#35())^): Int32; let second#57: Int32 = (await(secondDone#49.promise#35())^): Int32; ~console#44.log#43(%String.cat(%String.cat(%String.cat("after breakPromise: first got ", first#56.toString#46(omitted)), ", second got "), second#57.toString#46(omitted))); void }): Void, (panic()): Void)): Void;
+    init ~console#47 = getConsole#61(omitted);
+    async#2((fn generator ~fn#29(): SafeGenerator#3<Empty#7> {
+      (orelse((value { let b#32: PromiseBuilder#30<Int32> = new constructor#33<Int32>(); let firstDone#34: PromiseBuilder#30<Int32> = new constructor#33<Int32>(); let secondDone#35: PromiseBuilder#30<Int32> = new constructor#33<Int32>(); async#2((fn generator ~fn#36(): SafeGenerator#3<Empty#7> [b#32, firstDone#34] { let v#37: Int32 = (orelse((await(b#32.promise#38())^): Int32, %Int32.neg(1))): Int32; firstDone#34.complete#39(v#37); }): fn (): SafeGenerator#3<Empty#7>); async#2((fn generator ~fn#40(): SafeGenerator#3<Empty#7> [b#32, secondDone#35] { let v#41: Int32 = (orelse((await(b#32.promise#38())^): Int32, %Int32.neg(1))): Int32; secondDone#35.complete#39(v#41); }): fn (): SafeGenerator#3<Empty#7>); async#2((fn generator ~fn#42(): SafeGenerator#3<Empty#7> [b#32] { b#32.complete#39(7); }): fn (): SafeGenerator#3<Empty#7>); let first#43: Int32 = (await(firstDone#34.promise#38())^): Int32; let second#44: Int32 = (await(secondDone#35.promise#38())^): Int32; ~console#47.log#46(%String.cat(%String.cat(%String.cat("after complete: first got ", first#43.toString#49(omitted)), ", second got "), second#44.toString#49(omitted))); void }): Void, (panic()): Void)): Void;
+      (orelse((value { let b#50: PromiseBuilder#30<Int32> = new constructor#33<Int32>(); let firstDone#51: PromiseBuilder#30<Int32> = new constructor#33<Int32>(); let secondDone#52: PromiseBuilder#30<Int32> = new constructor#33<Int32>(); async#2((fn generator ~fn#53(): SafeGenerator#3<Empty#7> [b#50, firstDone#51] { let v#54: Int32 = (orelse((await(b#50.promise#38())^): Int32, %Int32.neg(1))): Int32; firstDone#51.complete#39(v#54); }): fn (): SafeGenerator#3<Empty#7>); async#2((fn generator ~fn#55(): SafeGenerator#3<Empty#7> [b#50, secondDone#52] { let v#56: Int32 = (orelse((await(b#50.promise#38())^): Int32, %Int32.neg(1))): Int32; secondDone#52.complete#39(v#56); }): fn (): SafeGenerator#3<Empty#7>); async#2((fn generator ~fn#57(): SafeGenerator#3<Empty#7> [b#50] { b#50.breakPromise#58(); }): fn (): SafeGenerator#3<Empty#7>); let first#59: Int32 = (await(firstDone#51.promise#38())^): Int32; let second#60: Int32 = (await(secondDone#52.promise#38())^): Int32; ~console#47.log#46(%String.cat(%String.cat(%String.cat("after breakPromise: first got ", first#59.toString#49(omitted)), ", second got "), second#60.toString#49(omitted))); void }): Void, (panic()): Void)): Void;
     }): fn (): SafeGenerator#3<Empty#7>);
   }
 }

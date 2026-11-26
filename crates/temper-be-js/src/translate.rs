@@ -465,7 +465,8 @@ impl<'a> Translator<'a> {
                     "core.type CoreError"
                     | "core.type MissingKey"
                     | "core.type ParseError"
-                    | "core.type InvalidCodePoint" => {
+                    | "core.type InvalidCodePoint"
+                    | "core.type BrokenPromise" => {
                         let name = self.core_failure(decl).unwrap_or("Error");
                         self.import(name);
                         applied(name.to_string())

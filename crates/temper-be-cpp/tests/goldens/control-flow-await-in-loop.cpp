@@ -63,15 +63,10 @@ void global_init_init() {
               }
               break;
             case 2:
-              try {
-                *awaited = core::getpromise(temper_globals::once.value);
-                *caseIndex = 6;
-                core::awake_upon((*awaited), generator);
-                return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
-              } catch (core::TemperBubble const &) {
-                *caseIndex = 4;
-              }
-              break;
+              *awaited = core::getpromise(temper_globals::once.value);
+              *caseIndex = 6;
+              core::awake_upon((*awaited), generator);
+              return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
             case 3:
               *j = 0;
               *caseIndex = 7;
@@ -85,14 +80,16 @@ void global_init_init() {
               *i = core::Int::add((*i), 1);
               *caseIndex = 1;
               break;
-            case 6:
-              try {
-                *s = core::get_promise_result_sync((*awaited));
+            case 6: {
+              auto Result = core::get_promise_result_sync((*awaited));
+              if (Result.has_value()) {
+                *s = *Result;
                 *caseIndex = 5;
-              } catch (core::TemperBubble const &) {
+              } else {
                 *caseIndex = 4;
               }
               break;
+            }
             case 7:
               if ((*j) < 2) {
                 *caseIndex = 8;
@@ -101,25 +98,15 @@ void global_init_init() {
               }
               break;
             case 8:
-              try {
-                *awaited2 = core::getpromise(temper_globals::later.value);
-                *caseIndex = 12;
-                core::awake_upon((*awaited2), generator);
-                return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
-              } catch (core::TemperBubble const &) {
-                *caseIndex = 10;
-              }
-              break;
+              *awaited2 = core::getpromise(temper_globals::later.value);
+              *caseIndex = 12;
+              core::awake_upon((*awaited2), generator);
+              return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
             case 9:
-              try {
-                *awaited3 = core::getpromise(temper_globals::once.value);
-                *caseIndex = 15;
-                core::awake_upon((*awaited3), generator);
-                return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
-              } catch (core::TemperBubble const &) {
-                *caseIndex = 13;
-              }
-              break;
+              *awaited3 = core::getpromise(temper_globals::once.value);
+              *caseIndex = 15;
+              core::awake_upon((*awaited3), generator);
+              return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
             case 10:
               *s2 = TEMPER_STR("?");
               *caseIndex = 11;
@@ -129,14 +116,16 @@ void global_init_init() {
               *j = core::Int::add((*j), 1);
               *caseIndex = 7;
               break;
-            case 12:
-              try {
-                *s2 = core::get_promise_result_sync((*awaited2));
+            case 12: {
+              auto Result2 = core::get_promise_result_sync((*awaited2));
+              if (Result2.has_value()) {
+                *s2 = *Result2;
                 *caseIndex = 11;
-              } catch (core::TemperBubble const &) {
+              } else {
                 *caseIndex = 10;
               }
               break;
+            }
             case 13:
               *t = TEMPER_STR("?");
               *caseIndex = 14;
@@ -144,14 +133,16 @@ void global_init_init() {
             case 14:
               core::Console::log(temper_globals::console.value, (*t) + " after the loops");
               return core::doneResult();
-            case 15:
-              try {
-                *t = core::get_promise_result_sync((*awaited3));
+            case 15: {
+              auto Result3 = core::get_promise_result_sync((*awaited3));
+              if (Result3.has_value()) {
+                *t = *Result3;
                 *caseIndex = 14;
-              } catch (core::TemperBubble const &) {
+              } else {
                 *caseIndex = 13;
               }
               break;
+            }
             default:
               return core::doneResult();
           }

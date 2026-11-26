@@ -1785,7 +1785,7 @@ fn co_await_interop() {
     let expected: Vec<String> = [
         "got ready",
         "waiting",
-        "broken",
+        "broken promise",
         "done",
         "for 1",
         "for 2",

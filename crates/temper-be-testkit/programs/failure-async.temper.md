@@ -10,9 +10,10 @@ testkit). The log is what the interpreter should give. It assumes what
 - `await p` throws `p`'s `E`, which `try await` passes on and handlers
   handle; a promise whose `E` is `Never<Error>` can't break, so its
   `await` needs neither.
-- Nothing uses a one-type-argument `Promise`, whose failure type is
-  open, nor lets a failure leave an `async` block, which is open too.
-  Generators are left for later.
+- A one-type-argument `Promise<T>` is `Promise<T, BrokenPromise>`:
+  its `await` throws core's `BrokenPromise`, as every `await` does
+  today. Nothing here uses one, nor lets a failure leave an `async`
+  block, which is open. Generators are left for later.
 
 One block waits on promises, in order, and another settles them all,
 breaking two with failures:

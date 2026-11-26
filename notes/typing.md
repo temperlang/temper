@@ -1273,7 +1273,8 @@ one place each, as they may change.
 - **Core's failure types** are builtin types (`types.rs`,
   `BUILTIN_SUPERTYPES`): `CoreError`, a sealed root under `Error`, and
   `MissingKey` (`Mapped.get`, `MapBuilder.remove`), `ParseError`
-  (conversions), and `InvalidCodePoint` (code points) under it,
+  (conversions), `InvalidCodePoint` (code points), and `BrokenPromise`
+  (`await`) under it,
   failure types as a library's are (`Types::is_failure`), and checkable
   with `is` from any failure type (`typing/rtti.rs`). The interpreter
   holds their values as `Val::CoreFailure`.
@@ -1289,8 +1290,8 @@ one place each, as they may change.
 - **What a function may fail with** (`allowed_failure`) is its declared
   result's failure type, or a function literal's, as before. Each
   failing place in it ("What may bubble", below) has a failure type:
-  `Bubble` for `bubble()`, `await`, `as`, `/`, and `%`; the value's
-  type for `throw`; and a call's callee's result's, solved
+  `Bubble` for `bubble()`; core's `BrokenPromise` for `await`; the
+  value's type for `throw`; and a call's callee's result's, solved
   (`call_failure`). A place passes if its type is the function's or a
   subtype (`check_failures`). Otherwise, where the function can't fail,
   "Cannot bubble …" as before, or "Cannot throw NotFound from a
@@ -1325,6 +1326,15 @@ one place each, as they may change.
   (name: port), at a.temper:5:24`, `caused by NotFound: …`. A panic of
   `orelse panic()` names it as its cause the same way. Panics pass every
   handler, as before.
+- **`await p`** throws core's `BrokenPromise` (2026-11-26), whatever
+  `p`'s `Promise<T>`: the failure is fixed, not read from the promise's
+  type. That keeps it compatible with a later `Promise<T, E>`, whose
+  `await` throws its `E`: a one-argument `Promise<T>` will be
+  `Promise<T, BrokenPromise>`, so code written now keeps its meaning.
+  Typing (`find_bubbles`), tmpl (`failures::node_failure`, by core's
+  `BrokenPromise` declaration), and the state machines'
+  `getPromiseResultSync` all name it in one place each, which `E` will
+  replace.
 - **Not yet:** `error case`, promises and generators with `E`, a
   failure parameter's implied `extends Error` bound, and checks that a
   failure type's own `message` or `cause` fits the root's.
@@ -1339,8 +1349,6 @@ bubble from a function without Bubble in its return type", at the
 call:
 
 - `bubble()`.
-- `await p`, as a broken promise bubbles, at the `await`; it fails
-  there when run, on every target, even for a promise that's kept.
 - A call of a function value whose type `throws Bubble`: a parameter,
   local, function, or method. A call Kotlin might fold, as `g(1)`, isn't
   reported, but Kotlin never folds a method of a value, nor a call with
@@ -1350,7 +1358,10 @@ call:
   as Kotlin can't pick its callee.
 - Not `x as T` that fails, nor `a / b` or `a % b` by zero: they panic
   (2026-11-25; Kotlin bubbles), and dividing `Float64`s gives IEEE 754's
-  results.
+  results. Nor `await p`, which throws core's `BrokenPromise`
+  (2026-11-26), "Cannot throw BrokenPromise from a function without
+  BrokenPromise in its return type" where nothing handles it; it fails
+  there when run, on every target, even for a promise that's kept.
 
 Not looked into: the arguments of an operator that don't fit the
 signature it picks, as `h(y)` in `1.0 + h(y)` or `mk(n)` in `h == mk(n)`,

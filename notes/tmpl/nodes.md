@@ -648,7 +648,9 @@ Generators and `async`, as Kotlin's `CoroutineStrategy` has them:
   Its value is a factory, typed `fn (T): SafeGenerator<Y>`, and its
   body's `return`s have no value. In its own body (not a literal's in
   it, rule F6), `Await` (`(await(p)^): T`) waits for a `Promise<T>` and
-  may bubble, if the promise is broken, and `Yield` pauses, giving its
+  throws core's `BrokenPromise`, if the promise is broken
+  (`failures::node_failure`, which finds the program's declaration of
+  it), and `Yield` pauses, giving its
   value, a `Y` (`yield x;`), or for `Empty`, none (`yield;`).
   `async { … }` calls core's `async` with the factory.
 - **Strategies** (`temper_tmpl::coroutines`): each backend's profile
@@ -660,8 +662,12 @@ Generators and `async`, as Kotlin's `CoroutineStrategy` has them:
   `safeAdaptGeneratorFn(step)`. The step is a state machine: `while
   (true) { let s = caseIndex; caseIndex = -1; switch (s) { case 0 { … }
   … default { return doneResult(); } } }`, so a step that fails is
-  done, each state's code in an `orelse` whose fallback sets the state
-  of the `orelse` it's in. A branch on a literal (`while (true)`'s) goes
+  done, each state's code that may fail in the `orelse` or `catch` it's
+  in, whose fallback sets the handler's state; a `catch`'s keeps the
+  failure in its local, made the factory's and nullable, which the
+  handler's states read through `nonNull`, and an `await` in one, after
+  code that may fail, pauses from a state of its own, so a `catch`'s
+  states that may fail never return (2026-11-26). A branch on a literal (`while (true)`'s) goes
   straight to its state, states that nothing reaches are dropped, a jump
   to a state that only jumps on goes straight on, states that only end
   the generator become -1 (the default's), and the rest are numbered

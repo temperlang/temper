@@ -31,8 +31,8 @@ Task use(std::shared_ptr<core::PromiseBuilder<std::string>> a,
     try {
         int32_t n = co_await core::getpromise(b);
         std::printf("got %d\n", n);
-    } catch (const core::TemperBubble&) {
-        std::printf("broken\n");
+    } catch (const core::UncaughtFailure& e) {
+        std::printf("%s\n", e.what());
     }
 }
 

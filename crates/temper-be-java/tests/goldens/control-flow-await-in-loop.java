@@ -5,7 +5,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
-import temper.core.Bubble;
+import temper.core.BrokenPromise;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Generator;
@@ -89,15 +89,10 @@ public final class AwaitInLoopGlobal {
                             }
                             break;
                         case 2:
-                            try {
-                                awaited.value = once;
-                                caseIndex.value = 6;
-                                Core.awakeUpon(awaited.value, generator);
-                                return new ValueResult<>(Optional.empty());
-                            } catch (Bubble ignored) {
-                                caseIndex.value = 4;
-                            }
-                            break;
+                            awaited.value = once;
+                            caseIndex.value = 6;
+                            Core.awakeUpon(awaited.value, generator);
+                            return new ValueResult<>(Optional.empty());
                         case 3:
                             j.value = 0;
                             caseIndex.value = 7;
@@ -115,7 +110,7 @@ public final class AwaitInLoopGlobal {
                             try {
                                 s.value = Core.getPromiseResult(awaited.value);
                                 caseIndex.value = 5;
-                            } catch (Bubble ignored2) {
+                            } catch (BrokenPromise ignored) {
                                 caseIndex.value = 4;
                             }
                             break;
@@ -127,25 +122,15 @@ public final class AwaitInLoopGlobal {
                             }
                             break;
                         case 8:
-                            try {
-                                awaited2.value = later;
-                                caseIndex.value = 12;
-                                Core.awakeUpon(awaited2.value, generator);
-                                return new ValueResult<>(Optional.empty());
-                            } catch (Bubble ignored3) {
-                                caseIndex.value = 10;
-                            }
-                            break;
+                            awaited2.value = later;
+                            caseIndex.value = 12;
+                            Core.awakeUpon(awaited2.value, generator);
+                            return new ValueResult<>(Optional.empty());
                         case 9:
-                            try {
-                                awaited3.value = once;
-                                caseIndex.value = 15;
-                                Core.awakeUpon(awaited3.value, generator);
-                                return new ValueResult<>(Optional.empty());
-                            } catch (Bubble ignored4) {
-                                caseIndex.value = 13;
-                            }
-                            break;
+                            awaited3.value = once;
+                            caseIndex.value = 15;
+                            Core.awakeUpon(awaited3.value, generator);
+                            return new ValueResult<>(Optional.empty());
                         case 10:
                             s2.value = "?";
                             caseIndex.value = 11;
@@ -159,7 +144,7 @@ public final class AwaitInLoopGlobal {
                             try {
                                 s2.value = Core.getPromiseResult(awaited2.value);
                                 caseIndex.value = 11;
-                            } catch (Bubble ignored5) {
+                            } catch (BrokenPromise ignored2) {
                                 caseIndex.value = 10;
                             }
                             break;
@@ -174,7 +159,7 @@ public final class AwaitInLoopGlobal {
                             try {
                                 t.value = Core.getPromiseResult(awaited3.value);
                                 caseIndex.value = 14;
-                            } catch (Bubble ignored6) {
+                            } catch (BrokenPromise ignored3) {
                                 caseIndex.value = 13;
                             }
                             break;

@@ -423,6 +423,17 @@ temper.InvalidCodePoint = {}
 ---@return temper.InvalidCodePoint
 function temper.invalidcodepoint_constructor(code_point) end
 
+---What awaiting a broken promise raises. It has no fields.
+---@class temper.BrokenPromise: temper.CoreError
+
+---Its type, whose call makes one.
+---@type temper.Type
+temper.BrokenPromise = {}
+
+---A `BrokenPromise`.
+---@return temper.BrokenPromise
+function temper.brokenpromise_constructor() end
+
 ---Raises a `ParseError` of `input`, as text, and why.
 ---@param input string
 ---@param reason string

@@ -2175,11 +2175,16 @@ impl Validator {
                     let message = "an await outside a generator's own body".into();
                     self.node_problem(Rule::F6, id, message);
                 }
-                if !may_bubble {
-                    let message = "an await bubbles, but isn't marked".into();
-                    self.node_problem(Rule::F3, id, message);
-                } else {
-                    self.passes(p, id, "an await bubbles", TypeId::BUBBLE);
+                match crate::failures::broken_promise(p) {
+                    _ if !may_bubble => {
+                        let message = "an await may fail, but isn't marked".into();
+                        self.node_problem(Rule::F3, id, message);
+                    }
+                    Some(broken) => self.passes(p, id, "an await may fail", broken),
+                    None => {
+                        let message = "an await without core's BrokenPromise".into();
+                        self.node_problem(Rule::F3, id, message);
+                    }
                 }
             }
             Node::BlockValue { stmts, value } => {

@@ -1,7 +1,7 @@
 import {
+  BrokenPromise,
   PromiseBuilder,
   adaptAwaiter,
-  isBubble,
   panic,
   runAsync,
 } from "@temperlang/core";
@@ -28,7 +28,7 @@ function* fn(doAwait) {
       try {
         v = yield doAwait_1(b.promise);
       } catch (e$) {
-        if (!isBubble(e$)) throw e$;
+        if (!(e$ instanceof BrokenPromise)) throw e$;
         v = -1;
       }
       firstDone.complete(v);
@@ -44,7 +44,7 @@ function* fn(doAwait) {
       try {
         v = yield doAwait_1(b.promise);
       } catch (e$) {
-        if (!isBubble(e$)) throw e$;
+        if (!(e$ instanceof BrokenPromise)) throw e$;
         v = -1;
       }
       secondDone.complete(v);
@@ -62,7 +62,7 @@ function* fn(doAwait) {
     const second = yield doAwait(secondDone.promise);
     console.log(`after complete: first got ${first}, second got ${second}`);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof BrokenPromise)) throw e$;
     panic("panic", e$);
   }
   try {
@@ -82,7 +82,7 @@ function* fn(doAwait) {
       try {
         v = yield doAwait_1(b2.promise);
       } catch (e$) {
-        if (!isBubble(e$)) throw e$;
+        if (!(e$ instanceof BrokenPromise)) throw e$;
         v = -1;
       }
       firstDone2.complete(v);
@@ -98,7 +98,7 @@ function* fn(doAwait) {
       try {
         v = yield doAwait_1(b2.promise);
       } catch (e$) {
-        if (!isBubble(e$)) throw e$;
+        if (!(e$ instanceof BrokenPromise)) throw e$;
         v = -1;
       }
       secondDone2.complete(v);
@@ -116,7 +116,7 @@ function* fn(doAwait) {
     const second2 = yield doAwait(secondDone2.promise);
     console.log(`after breakPromise: first got ${first2}, second got ${second2}`);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof BrokenPromise)) throw e$;
     panic("panic", e$);
   }
 }

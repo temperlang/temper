@@ -46,6 +46,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Translate(to_string),
     ),
     (
+        "core.type BrokenPromise.constructor()",
+        Connection::Translate(broken_promise),
+    ),
+    (
         "core.type Console.log()",
         Connection::Translate(console_log),
     ),
@@ -738,6 +742,13 @@ fn date_from_iso_string(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr,
     args.push(Expr::name(t.import_std("temporal", "InvalidIsoDate")));
     t.import("dateFromIsoString");
     Ok(Expr::name("dateFromIsoString").call(args))
+}
+
+/// `new BrokenPromise()`, the runtime's class.
+fn broken_promise(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let args = t.in_order(args)?;
+    t.import("BrokenPromise");
+    Ok(Expr::New(Box::new(Expr::name("BrokenPromise")), args))
 }
 
 /// `new InvalidCodePoint(codePoint)`, the runtime's class.

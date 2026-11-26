@@ -1,4 +1,4 @@
-use super::{Error, Result};
+use super::BrokenPromise;
 use crate::SafeGenerator;
 use std::{
     collections::VecDeque,
@@ -332,10 +332,11 @@ impl<T> Promise<T>
 where
     T: Clone,
 {
-    /// The result, waiting for it if need be. Waiting inside an async turn
-    /// for a promise not yet resolved panics rather than deadlocking, since
-    /// what would resolve it may need the turn.
-    pub fn get(&self) -> Result<T> {
+    /// The result, waiting for it if need be: its value, or for a broken
+    /// promise, a new `BrokenPromise`. Waiting inside an async turn for a
+    /// promise not yet resolved panics rather than deadlocking, since what
+    /// would resolve it may need the turn.
+    pub fn get(&self) -> Result<T, BrokenPromise> {
         let (lock, cvar) = &*self.state;
         let mut state = lock.lock().unwrap();
         if state.result.is_none() && in_turn() {
@@ -348,7 +349,7 @@ where
         while state.result.is_none() {
             state = cvar.wait(state).unwrap();
         }
-        state.result.clone().unwrap()
+        outcome(state.result.as_ref().unwrap())
     }
 
     /// Runs `next` once this promise is resolved: now if it already is,
@@ -373,12 +374,12 @@ impl<T> Future for Promise<T>
 where
     T: Clone,
 {
-    type Output = Result<T>;
+    type Output = Result<T, BrokenPromise>;
 
-    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<T>> {
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let mut state = self.state.0.lock().unwrap();
         if let Some(result) = &state.result {
-            return Poll::Ready(result.clone());
+            return Poll::Ready(outcome(result));
         }
         // One waker per task: a later poll's replaces its earlier one's.
         let waker = cx.waker();
@@ -417,11 +418,11 @@ where
     }
 
     pub fn break_promise(&self) {
-        self.resolve(Err(Error::new()));
+        self.resolve(None);
     }
 
     pub fn complete(&self, value: T) {
-        self.resolve(Ok(value));
+        self.resolve(Some(value));
     }
 
     pub fn promise(&self) -> Promise<T> {
@@ -429,7 +430,7 @@ where
     }
 
     /// The first resolution sticks. Later ones change nothing and wake no one.
-    fn resolve(&self, result: Result<T>) {
+    fn resolve(&self, result: Option<T>) {
         let (lock, cvar) = &*self.promise.state;
         let (waiters, wakers) = {
             let mut state = lock.lock().unwrap();
@@ -453,8 +454,15 @@ where
     }
 }
 
+/// What a resolved promise gives: its value, or for a broken one, `None`,
+/// which each wait for it gives as a new `BrokenPromise`.
+fn outcome<T: Clone>(result: &Option<T>) -> Result<T, BrokenPromise> {
+    result.clone().ok_or_else(BrokenPromise::new)
+}
+
 struct PromiseState<T> {
-    result: Option<Result<T>>,
+    /// Once resolved, its value, or `None` if it's broken.
+    result: Option<Option<T>>,
     waiters: Vec<Task>,
     /// The tasks of Rust code that `.await`s it ([`Future`]).
     wakers: Vec<Waker>,

@@ -243,6 +243,7 @@ impl Translator<'_> {
             "core.type MissingKey" => Some("MissingKey"),
             "core.type ParseError" => Some("ParseError"),
             "core.type InvalidCodePoint" => Some("InvalidCodePoint"),
+            "core.type BrokenPromise" => Some("BrokenPromise"),
             _ => None,
         }
     }

@@ -19,11 +19,14 @@ uses `temper-core`#2 0.0.0-alpha.0.0 {
   connected fn safeAdaptGeneratorFn#24<YIELD#25>(step: fn (SafeGenerator#3<YIELD#25>): GeneratorResult#14<YIELD#25>): SafeGenerator#3<YIELD#25>;
   connected fn awakeUpon#26<T#27>(promise: Promise#28<T#27>, generator: SafeGenerator#3<Empty#7>): Void;
   class Promise#28<R#29> {}
-  connected fn getPromiseResultSync#30<T#31>(promise: Promise#28<T#31>): T#31 throws Bubble;
-  class Int32#35 {
-    connected method toString#36(radix?: Int32): String;
+  connected fn getPromiseResultSync#30<T#31>(promise: Promise#28<T#31>): T#31 throws BrokenPromise#32;
+  class BrokenPromise#32 extends CoreError#33 {}
+  interface CoreError#33 extends Error#34 {}
+  interface Error#34 {}
+  class Int32#38 {
+    connected method toString#39(radix?: Int32): String;
   }
-  connected fn getConsole#37(name?: String): Console#10;
+  connected fn getConsole#40(name?: String): Console#10;
 }
 
 module `actor-run`#0 {
@@ -41,12 +44,12 @@ module `actor-run`#0 {
   }
 
   init {
-    init ~console#12 = getConsole#37(omitted);
-    f#1((fn generator ~fn#32(): SafeGenerator#3<Empty#7> {
-      var i#33: Int32 = 0;
-      ~loop#34: while (true) {
-        ~console#12.log#11(%String.cat("generated ", i#33.toString#36(omitted)));
-        i#33 = %Int32.add(i#33, 1);
+    init ~console#12 = getConsole#40(omitted);
+    f#1((fn generator ~fn#35(): SafeGenerator#3<Empty#7> {
+      var i#36: Int32 = 0;
+      ~loop#37: while (true) {
+        ~console#12.log#11(%String.cat("generated ", i#36.toString#39(omitted)));
+        i#36 = %Int32.add(i#36, 1);
         yield;
       }
     }): fn (): SafeGenerator#3<Empty#7>);

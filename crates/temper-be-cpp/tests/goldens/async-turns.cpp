@@ -284,23 +284,20 @@ void global_init_init() {
               temper_globals::c.value->bump("A" + std::to_string((*k)), 10000);
               return core::doneResult();
             case 3:
-              try {
-                *awaited = core::getpromise(temper_globals::gateA.value);
-                *caseIndex = 4;
-                core::awake_upon((*awaited), generator);
-                return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
-              } catch (core::TemperBubble const &) {
-                *caseIndex = 1;
-              }
-              break;
-            case 4:
-              try {
-                *k = core::get_promise_result_sync((*awaited));
+              *awaited = core::getpromise(temper_globals::gateA.value);
+              *caseIndex = 4;
+              core::awake_upon((*awaited), generator);
+              return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
+            case 4: {
+              auto Result = core::get_promise_result_sync((*awaited));
+              if (Result.has_value()) {
+                *k = *Result;
                 *caseIndex = 2;
-              } catch (core::TemperBubble const &) {
+              } else {
                 *caseIndex = 1;
               }
               break;
+            }
             default:
               return core::doneResult();
           }
@@ -330,23 +327,20 @@ void global_init_init() {
               temper_globals::c.value->bump("B" + std::to_string((*k)), 10000);
               return core::doneResult();
             case 3:
-              try {
-                *awaited = core::getpromise(temper_globals::gateB.value);
-                *caseIndex = 4;
-                core::awake_upon((*awaited), generator);
-                return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
-              } catch (core::TemperBubble const &) {
-                *caseIndex = 1;
-              }
-              break;
-            case 4:
-              try {
-                *k = core::get_promise_result_sync((*awaited));
+              *awaited = core::getpromise(temper_globals::gateB.value);
+              *caseIndex = 4;
+              core::awake_upon((*awaited), generator);
+              return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
+            case 4: {
+              auto Result2 = core::get_promise_result_sync((*awaited));
+              if (Result2.has_value()) {
+                *k = *Result2;
                 *caseIndex = 2;
-              } catch (core::TemperBubble const &) {
+              } else {
                 *caseIndex = 1;
               }
               break;
+            }
             default:
               return core::doneResult();
           }

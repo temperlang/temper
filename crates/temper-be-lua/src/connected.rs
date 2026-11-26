@@ -44,6 +44,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Translate(boolean_to_string),
     ),
     (
+        "core.type BrokenPromise.constructor()",
+        Connection::Helper("brokenpromise_constructor"),
+    ),
+    (
         "core.type Console.log()",
         Connection::Translate(console_log),
     ),

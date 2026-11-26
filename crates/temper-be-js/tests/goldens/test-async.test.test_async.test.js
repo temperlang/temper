@@ -1,8 +1,8 @@
 import {
+  BrokenPromise,
   PromiseBuilder,
   adaptAwaiter,
   endTest,
-  isBubble,
   listedGet,
   panic,
   runAsync,
@@ -66,7 +66,7 @@ it("fails in a later turn", async function () {
       try {
         n = yield doAwait(pb.promise);
       } catch (e$) {
-        if (!isBubble(e$)) throw e$;
+        if (!(e$ instanceof BrokenPromise)) throw e$;
         n = -1;
       }
       test.assert(n === 2, () => `later turn got ${n}`);
@@ -178,7 +178,7 @@ it("waits on nothing", async function () {
       try {
         n = yield doAwait(never.promise);
       } catch (e$) {
-        if (!isBubble(e$)) throw e$;
+        if (!(e$ instanceof BrokenPromise)) throw e$;
         n = -1;
       }
       test.assert(false, () => `ran ${n}`);

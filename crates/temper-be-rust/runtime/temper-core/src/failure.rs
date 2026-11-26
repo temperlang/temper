@@ -323,13 +323,15 @@ pub enum CoreError {
     MissingKey(MissingKey),
     ParseError(ParseError),
     InvalidCodePoint(InvalidCodePoint),
+    BrokenPromise(BrokenPromise),
 }
 
 crate::impl_failure_enum!(
     CoreError,
     MissingKey(MissingKey),
     ParseError(ParseError),
-    InvalidCodePoint(InvalidCodePoint)
+    InvalidCodePoint(InvalidCodePoint),
+    BrokenPromise(BrokenPromise)
 );
 
 pub struct MissingKeyStruct {
@@ -464,3 +466,34 @@ impl InvalidCodePoint {
 crate::impl_failure!(InvalidCodePoint, message, cause);
 
 crate::impl_any_value_trait!(InvalidCodePoint, [CoreError]);
+
+pub struct BrokenPromiseStruct {
+    cause: Cause,
+}
+
+/// What awaiting a broken promise gives. It has no fields: a broken
+/// promise doesn't say why.
+#[derive(Clone)]
+pub struct BrokenPromise(Arc<BrokenPromiseStruct>);
+
+impl BrokenPromise {
+    pub fn new() -> BrokenPromise {
+        BrokenPromise(Arc::new(BrokenPromiseStruct {
+            cause: Cause::new(),
+        }))
+    }
+
+    pub fn message(&self) -> Arc<String> {
+        Arc::new("broken promise".to_string())
+    }
+}
+
+impl Default for BrokenPromise {
+    fn default() -> BrokenPromise {
+        BrokenPromise::new()
+    }
+}
+
+crate::impl_failure!(BrokenPromise, message, cause);
+
+crate::impl_any_value_trait!(BrokenPromise, [CoreError]);

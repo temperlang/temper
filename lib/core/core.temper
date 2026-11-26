@@ -72,8 +72,8 @@ export interface Error {
 
 /**
  * *CoreError* is the root of core's own failure types,
- * [snippet/type/MissingKey], [snippet/type/ParseError], and
- * [snippet/type/InvalidCodePoint].
+ * [snippet/type/MissingKey], [snippet/type/ParseError],
+ * [snippet/type/InvalidCodePoint], and [snippet/type/BrokenPromise].
  */
 export sealed interface CoreError extends Error {}
 
@@ -129,6 +129,17 @@ export class InvalidCodePoint extends CoreError {
   public constructor(codePoint: Int) {
     this.codePoint = codePoint;
   }
+}
+
+/**
+ * *BrokenPromise* is what [snippet/builtin/await] throws for a promise
+ * that's broken, by [snippet/type/PromiseBuilder/method/breakPromise] or
+ * by the host, as for a network request that gets no response. It has
+ * no fields: a broken promise doesn't say why.
+ */
+export class BrokenPromise extends CoreError {
+  @connected
+  public constructor() {}
 }
 
 /**
@@ -417,7 +428,8 @@ extends SafeGenerator<YIELD> {
  *
  * This class provides no methods that introspect over whether that
  * value is available or what it is.
- * Use [builtin/await] to get at the value asynchronously.
+ * Use [builtin/await] to get at the value asynchronously, which throws a
+ * [snippet/type/BrokenPromise] if the promise is broken.
  */
 @connected
 export class Promise<@out R extends AnyValue> {}
@@ -445,6 +457,7 @@ export class PromiseBuilder<R extends AnyValue> {
   @connected
   public complete(completion: R): Void;
 
+  /** Breaks the promise, so [builtin/await] of it throws a [snippet/type/BrokenPromise]. */
   @connected
   public breakPromise(): Void;
 }

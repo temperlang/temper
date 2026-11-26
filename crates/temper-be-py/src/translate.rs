@@ -2925,6 +2925,7 @@ pub(crate) fn core_type(qname: &str) -> Option<(&'static str, &'static str)> {
         "core.type MissingKey" => ("temper_core", "MissingKey"),
         "core.type ParseError" => ("temper_core", "ParseError"),
         "core.type InvalidCodePoint" => ("temper_core", "InvalidCodePoint"),
+        "core.type BrokenPromise" => ("temper_core", "BrokenPromise"),
         // `()`, its one value. Kotlin's `_empty` is undefined.
         "core.type Empty" => ("builtins", "tuple[()]"),
         // `temper_core`'s `concurrent.futures.Future`, which asyncio can

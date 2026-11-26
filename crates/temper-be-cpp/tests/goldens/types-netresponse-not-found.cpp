@@ -41,6 +41,7 @@ void global_init_init() {
       std::shared_ptr<core::NullableParam<core::Str>> subject = std::make_shared<core::NullableParam<core::Str>>(nullptr);
       std::shared_ptr<std::shared_ptr<core::Promise<std::shared_ptr<temper_std::NetResponse>>>> awaited = std::make_shared<std::shared_ptr<core::Promise<std::shared_ptr<temper_std::NetResponse>>>>(nullptr);
       std::shared_ptr<std::shared_ptr<core::Promise<core::NullableParam<core::Str>>>> awaited2 = std::make_shared<std::shared_ptr<core::Promise<core::NullableParam<core::Str>>>>(nullptr);
+      std::shared_ptr<std::shared_ptr<core::BrokenPromise>> e = std::make_shared<std::shared_ptr<core::BrokenPromise>>(nullptr);
       std::shared_ptr<std::shared_ptr<core::Promise<std::shared_ptr<temper_std::NetResponse>>>> awaited3 = std::make_shared<std::shared_ptr<core::Promise<std::shared_ptr<temper_std::NetResponse>>>>(nullptr);
       auto convertedCoroutine = [=](std::shared_ptr<core::SafeGenerator<std::shared_ptr<core::Empty>>> generator) -> std::shared_ptr<core::GeneratorResult<std::shared_ptr<core::Empty>>> {
         while (true) {
@@ -48,64 +49,61 @@ void global_init_init() {
           *caseIndex = -1;
           switch (caseIndexLocal) {
             case 0:
-              try {
-                *awaited = temper_std::NetRequest::make(temper_globals::url.value)->send();
-                *caseIndex = 3;
-                core::awake_upon((*awaited), generator);
-                return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
-              } catch (core::TemperBubble const &) {
-                *caseIndex = 1;
-              }
-              break;
+              *awaited = temper_std::NetRequest::make(temper_globals::url.value)->send();
+              *caseIndex = 3;
+              core::awake_upon((*awaited), generator);
+              return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
             case 1:
               core::Console::log(temper_globals::console.value, TEMPER_STR("broken promise"));
               *caseIndex = 2;
               break;
             case 2:
-              try {
-                *awaited3 = temper_std::NetRequest::make(TEMPER_STR("http://127.0.0.1:1/"))->send();
-                *caseIndex = 6;
-                core::awake_upon((*awaited3), generator);
-                return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
-              } catch (core::TemperBubble const &) {
-                *caseIndex = 5;
-              }
-              break;
-            case 3:
-              try {
-                *resp = core::get_promise_result_sync((*awaited));
+              *awaited3 = temper_std::NetRequest::make(TEMPER_STR("http://127.0.0.1:1/"))->send();
+              *caseIndex = 6;
+              core::awake_upon((*awaited3), generator);
+              return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
+            case 3: {
+              auto Result = core::get_promise_result_sync((*awaited));
+              if (Result.has_value()) {
+                *resp = *Result;
                 core::Console::log(temper_globals::console.value, "status " + std::to_string((*resp)->get_status()));
                 *awaited2 = (*resp)->get_bodyContent();
                 *caseIndex = 4;
                 core::awake_upon((*awaited2), generator);
                 return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
-              } catch (core::TemperBubble const &) {
+              } else {
                 *caseIndex = 1;
               }
               break;
-            case 4:
-              try {
-                *subject = core::get_promise_result_sync((*awaited2));
+            }
+            case 4: {
+              auto Result2 = core::get_promise_result_sync((*awaited2));
+              if (Result2.has_value()) {
+                *subject = *Result2;
                 *body = (*subject) == nullptr ? TEMPER_STR("missing") : (*subject).value;
                 core::Console::log(temper_globals::console.value, "body " + (*body));
                 *caseIndex = 2;
-              } catch (core::TemperBubble const &) {
+              } else {
                 *caseIndex = 1;
               }
               break;
+            }
             case 5:
-              core::Console::log(temper_globals::console.value, TEMPER_STR("no response from port 1"));
+              core::Console::log(temper_globals::console.value, "no response from port 1: " + (*e)->get_message());
               *caseIndex = -1;
               break;
-            case 6:
-              try {
-                core::get_promise_result_sync((*awaited3));
+            case 6: {
+              auto Result3 = core::get_promise_result_sync((*awaited3));
+              if (Result3.has_value()) {
                 core::Console::log(temper_globals::console.value, TEMPER_STR("port 1 answered"));
                 *caseIndex = -1;
-              } catch (core::TemperBubble const &) {
+              } else {
+                std::shared_ptr<core::BrokenPromise> failure = Result3.error();
+                *e = failure;
                 *caseIndex = 5;
               }
               break;
+            }
             default:
               return core::doneResult();
           }

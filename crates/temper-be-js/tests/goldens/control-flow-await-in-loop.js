@@ -1,7 +1,7 @@
 import {
+  BrokenPromise,
   PromiseBuilder,
   adaptAwaiter,
-  isBubble,
   runAsync,
 } from "@temperlang/core";
 
@@ -24,7 +24,7 @@ function* fn(doAwait) {
       try {
         s = yield doAwait(once.promise);
       } catch (e$) {
-        if (!isBubble(e$)) throw e$;
+        if (!(e$ instanceof BrokenPromise)) throw e$;
         s = "?";
       }
       console.log(`${s} ${i}`);
@@ -38,7 +38,7 @@ function* fn(doAwait) {
     try {
       s = yield doAwait(later.promise);
     } catch (e$) {
-      if (!isBubble(e$)) throw e$;
+      if (!(e$ instanceof BrokenPromise)) throw e$;
       s = "?";
     }
     console.log(`${s} ${j}`);
@@ -49,7 +49,7 @@ function* fn(doAwait) {
   try {
     t = yield doAwait(once.promise);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof BrokenPromise)) throw e$;
     t = "?";
   }
   console.log(`${t} after the loops`);

@@ -158,6 +158,7 @@ pub const FAILURE_ROOT: &str = "Error";
 pub const TYPES: &[&str] = &[
     "AnyValue",
     "Boolean",
+    "BrokenPromise",
     "Bubble",
     "CoreError",
     "DenseBitVector",

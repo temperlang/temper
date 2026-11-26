@@ -17,6 +17,8 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 > = Arc::new(RwLock::new(None));
                 let awaited2: Arc<RwLock<Option<temper_core::Promise<Option<Arc<String>>>>>> =
                     Arc::new(RwLock::new(None));
+                let e: Arc<RwLock<Option<temper_core::BrokenPromise>>> =
+                    Arc::new(RwLock::new(None));
                 let awaited3: Arc<
                     RwLock<Option<temper_core::Promise<temper_std::net::NetResponse>>>,
                 > = Arc::new(RwLock::new(None));
@@ -24,6 +26,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                     let resp = resp.clone();
                     let body = body.clone();
                     let subject = subject.clone();
+                    let e = e.clone();
                     let case_index = case_index.clone();
                     let awaited = awaited.clone();
                     let awaited2 = awaited2.clone();
@@ -105,7 +108,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                                         };
                                     println!("body {}", temper_core::read_locked(&body));
                                     *case_index.write().unwrap() = 2;
-                                    Ok::<_, temper_core::Error>(())
+                                    Ok::<_, temper_core::BrokenPromise>(())
                                 })()
                                 .is_err()
                                 {
@@ -115,24 +118,26 @@ pub(crate) fn init() -> temper_core::Result<()> {
                                 }
                             }
                             5 => {
-                                println!("no response from port 1");
+                                {
+                                    println!(
+                                        "no response from port 1: {}",
+                                        temper_core::read_locked(&e).as_ref().unwrap().message()
+                                    );
+                                };
                                 *case_index.write().unwrap() = -1;
                             }
                             6 => {
-                                if (|| {
+                                if let Err(failure) = (|| {
                                     temper_core::read_locked(&awaited3)
                                         .as_ref()
                                         .unwrap()
                                         .get()?;
                                     println!("port 1 answered");
                                     *case_index.write().unwrap() = -1;
-                                    Ok::<_, temper_core::Error>(())
-                                })()
-                                .is_err()
-                                {
-                                    {
-                                        *case_index.write().unwrap() = 5;
-                                    };
+                                    Ok::<_, temper_core::BrokenPromise>(())
+                                })() {
+                                    *e.write().unwrap() = Some(failure.clone());
+                                    *case_index.write().unwrap() = 5;
                                 }
                             }
                             _ => {

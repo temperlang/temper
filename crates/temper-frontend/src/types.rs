@@ -129,10 +129,9 @@ pub struct Types {
 /// the final types that are `MapKey`s of themselves, as `class String
 /// extends MapKey<String>`; and `StringIndex` and `NoStringIndex`, which
 /// extend `StringIndexOption`; and core's failure types, `CoreError` under
-/// the root and `MissingKey`, `ParseError`, and `InvalidCodePoint` under it. Core's
-/// `Equatable` isn't a builtin
-/// type yet.
-const BUILTIN_SUPERTYPES: [(&str, &str); 15] = [
+/// the root and `MissingKey`, `ParseError`, `InvalidCodePoint`, and
+/// `BrokenPromise` under it. Core's `Equatable` isn't a builtin type yet.
+const BUILTIN_SUPERTYPES: [(&str, &str); 16] = [
     ("List", "Listed"),
     ("ListBuilder", "Listed"),
     ("Map", "Mapped"),
@@ -148,6 +147,7 @@ const BUILTIN_SUPERTYPES: [(&str, &str); 15] = [
     ("MissingKey", "CoreError"),
     ("ParseError", "CoreError"),
     ("InvalidCodePoint", "CoreError"),
+    ("BrokenPromise", "CoreError"),
 ];
 
 /// What builtin type `name` extends, then what that extends, and so on,
@@ -181,11 +181,12 @@ const BUILTIN_SEALED: [&str; 6] = [
 
 /// Core's non-generic classes and interface beyond the final types:
 /// `StringIndex` and `NoStringIndex` extend the sealed `StringIndexOption`,
-/// `MissingKey`, `ParseError`, and `InvalidCodePoint` the sealed `CoreError`, and nothing else
-/// extends any of
-/// them, so each is a subtype of only itself and what core says it
-/// extends ([`Types::is_subtype`]).
-const CORE_NOMINAL: [&str; 9] = [
+/// `MissingKey`, `ParseError`, `InvalidCodePoint`, and `BrokenPromise` the
+/// sealed `CoreError`, and nothing else extends any of them, so each is a
+/// subtype of only itself and what core says it extends
+/// ([`Types::is_subtype`]).
+const CORE_NOMINAL: [&str; 10] = [
+    "BrokenPromise",
     "CoreError",
     "DenseBitVector",
     "InvalidCodePoint",
@@ -623,6 +624,12 @@ impl Types {
             "Never" => NEVER,
             _ => self.intern(TypeData::Builtin(index)),
         }
+    }
+
+    /// Core's `BrokenPromise`, what `await` of a broken promise throws.
+    pub fn broken_promise(&mut self) -> TypeId {
+        let index = TYPES.iter().position(|&t| t == "BrokenPromise").unwrap();
+        self.builtin(index as u8)
     }
 
     /// `List<t>`.

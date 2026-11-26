@@ -129,6 +129,7 @@ const NAMESPACES: &[(&str, &str)] = &[
     ("MissingKey", "TemperLang.Core"),
     ("ParseError", "TemperLang.Core"),
     ("InvalidCodePoint", "TemperLang.Core"),
+    ("BrokenPromise", "TemperLang.Core"),
     ("Optional", "TemperLang.Core"),
     ("Math", "System"),
     ("BitArray", "System.Collections"),
@@ -2233,6 +2234,7 @@ impl<'a> Translator<'a> {
                     Node::Catch { local, .. } => Some(local),
                     _ => None,
                 };
+                let catch_decl = local;
                 // The binding, unless it's caught as an `Exception` and
                 // then set as the `IFailure` it is, first in the handler.
                 let bound = match (local, marker) {
@@ -2259,10 +2261,18 @@ impl<'a> Translator<'a> {
                 self.mark(fallback, &mut caught);
                 self.sink(fallback, place, &mut caught)?;
                 if yields(&tried) || yields(&caught) {
-                    if local.is_some() || classes.len() > 1 || marker {
-                        return not_yet("a handler of declared failures that awaits");
+                    let [class] = &classes[..] else {
+                        return not_yet("a handler of several failure types that awaits");
+                    };
+                    if marker {
+                        return not_yet("a handler of any error that awaits");
                     }
-                    out.push(self.try_around_yields(tried, caught)?);
+                    let bound = match (catch_decl, local) {
+                        (Some(decl), Some(name)) => Some((self.ty(p.decls.get(decl).ty)?, name)),
+                        _ => None,
+                    };
+                    let class = Expr::name(class.clone());
+                    out.push(self.try_around_yields(class, bound, tried, caught)?);
                     return Ok(());
                 }
                 // `orelse panic()` panics with the failure as its inner
@@ -2388,13 +2398,33 @@ impl<'a> Translator<'a> {
     /// `try` of its own, whose `catch` jumps to the fallback, after
     /// them; its locals and local functions are declared before them all,
     /// so each run sees the others'.
-    fn try_around_yields(&mut self, tried: Vec<Stmt>, caught: Vec<Stmt>) -> R<Stmt> {
+    fn try_around_yields(
+        &mut self,
+        class: Expr,
+        bound: Option<(String, String)>,
+        tried: Vec<Stmt>,
+        caught: Vec<Stmt>,
+    ) -> R<Stmt> {
         let catch_label = self.temporary("CATCH");
         let ok_label = self.temporary("OK");
+        // A `catch`'s local, declared first, which each run's `catch`
+        // sets from its own before jumping to the fallback.
+        let (decls, bound) = match bound {
+            Some((ty, name)) => {
+                let local = Stmt::Local {
+                    ty,
+                    name: name.clone(),
+                    value: None,
+                };
+                (vec![local], Some((name, self.temporary("failure"))))
+            }
+            None => (Vec::new(), None),
+        };
         let mut split = Split {
-            class: self.class("Bubble"),
+            class,
+            bound,
             catch: catch_label.clone(),
-            decls: Vec::new(),
+            decls,
             out: Vec::new(),
             run: Vec::new(),
         };
@@ -3969,6 +3999,9 @@ fn block_writes(p: &Program) -> HashSet<DeclId> {
 /// far, and the run of statements not yet in a `try`.
 struct Split {
     class: Expr,
+    /// A `catch`'s local, and the name each run's `catch` gives what it
+    /// catches, which it sets the local to.
+    bound: Option<(String, String)>,
     catch: String,
     decls: Vec<Stmt>,
     out: Vec<Stmt>,
@@ -3976,15 +4009,24 @@ struct Split {
 }
 
 impl Split {
-    /// The run so far, as a `try` whose `catch` jumps to the fallback.
+    /// The run so far, as a `try` whose `catch` jumps to the fallback,
+    /// keeping what it caught in the `catch`'s local, if there is one.
     fn flush(&mut self) {
         if !self.run.is_empty() {
+            let mut catch = Vec::new();
+            if let Some((local, var)) = &self.bound {
+                catch.push(Stmt::Assign {
+                    target: Expr::name(local.clone()),
+                    value: Expr::name(var.clone()),
+                });
+            }
+            catch.push(Stmt::Goto(self.catch.clone()));
             self.out.push(Stmt::TryCatch {
                 body: std::mem::take(&mut self.run),
                 class: self.class.clone(),
-                var: None,
+                var: self.bound.as_ref().map(|(_, var)| var.clone()),
                 filter: None,
-                catch: vec![Stmt::Goto(self.catch.clone())],
+                catch,
             });
         }
     }

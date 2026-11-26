@@ -42,15 +42,10 @@ void global_init_init() {
           *caseIndex = -1;
           switch (caseIndexLocal) {
             case 0:
-              try {
-                *awaited = core::getpromise(temper_globals::b.value);
-                *caseIndex = 3;
-                core::awake_upon((*awaited), generator);
-                return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
-              } catch (core::TemperBubble const &) {
-                *caseIndex = 1;
-              }
-              break;
+              *awaited = core::getpromise(temper_globals::b.value);
+              *caseIndex = 3;
+              core::awake_upon((*awaited), generator);
+              return core::ValueResult<std::shared_ptr<core::Empty>>::make(core::empty());
             case 1:
               *v = -1;
               *caseIndex = 2;
@@ -58,14 +53,16 @@ void global_init_init() {
             case 2:
               core::Console::log(temper_globals::console.value, "got " + std::to_string((*v)));
               return core::doneResult();
-            case 3:
-              try {
-                *v = core::get_promise_result_sync((*awaited));
+            case 3: {
+              auto Result = core::get_promise_result_sync((*awaited));
+              if (Result.has_value()) {
+                *v = *Result;
                 *caseIndex = 2;
-              } catch (core::TemperBubble const &) {
+              } else {
                 *caseIndex = 1;
               }
               break;
+            }
             default:
               return core::doneResult();
           }

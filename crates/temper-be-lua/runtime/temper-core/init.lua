@@ -475,7 +475,8 @@ do
         drain()
     end
 
-    -- The promise's value once it's settled, or a bubble if it's broken.
+    -- The promise's value once it's settled; a new `BrokenPromise` raised
+    -- if it's broken.
     function promise_methods:await()
         if self.waiters ~= nil then
             local co, main = coro_running()
@@ -487,7 +488,7 @@ do
             coro_yield()
         end
         if self.broken then
-            temper.bubble()
+            error(temper.BrokenPromise())
         end
         return self.value
     end
@@ -877,7 +878,8 @@ do
     -- root `CoreError`; `MissingKey`, what a map's `get` raises for a key
     -- it doesn't have; `ParseError`, what a conversion raises; and
     -- `InvalidCodePoint`, what making a string from a code point raises
-    -- for one that isn't a Unicode scalar value.
+    -- for one that isn't a Unicode scalar value; and `BrokenPromise`, what
+    -- awaiting a broken promise raises.
     temper.CoreError = temper.type("temper.CoreError", temper.Failure)
     temper.MissingKey = temper.type("temper.MissingKey", temper.CoreError)
     function temper.MissingKey.constructor(this, key)
@@ -901,6 +903,10 @@ do
     function temper.InvalidCodePoint.get.message(this)
         return "invalid code point (codePoint: " .. tostring(this.codePoint) .. ")"
     end
+    temper.BrokenPromise = temper.type("temper.BrokenPromise", temper.CoreError)
+    function temper.BrokenPromise.get.message()
+        return "broken promise"
+    end
 end
 
 function temper.missingkey_constructor(key)
@@ -913,6 +919,10 @@ end
 
 function temper.invalidcodepoint_constructor(code_point)
     return temper.InvalidCodePoint(code_point)
+end
+
+function temper.brokenpromise_constructor()
+    return temper.BrokenPromise()
 end
 
 -- Raises a `ParseError` of `input`, as text, and why.
