@@ -372,29 +372,41 @@ pub const HOST_CODE: [&str; 3] = ["host-error-causes", "host-error-tests", "host
 /// `failure-causes` failures made among a thrown one's arguments, and a
 /// constructor's parameter named `cause`, which C# runs (its
 /// `failures-interop` host code reads them too), while Rust's output
-/// doesn't build yet. Each
+/// doesn't build yet; and `failure-generators` generators whose bodies
+/// throw, which every backend runs. Each
 /// says what it assumes of what's still open. Once the interpreter
 /// runs one, it joins [`INTERP_SPECS`]; once tmpl does, [`TMPL_SPECS`];
 /// a backend that runs one lists it with its shared programs ([`cases`]
 /// takes either); and once every backend does, it joins [`PROGRAMS`], as
 /// `failures` and `host-failures` have. One with host code is laid out
 /// as [`HOST_CODE`]'s.
-pub const SPECS: [&str; 4] = [
+pub const SPECS: [&str; 5] = [
     "failure-params",
     "failure-async",
     "failure-jumps",
     "failure-causes",
+    "failure-generators",
 ];
 
 /// The specifications ([`SPECS`]) the interpreter runs already, whose
 /// logs are checked there, as [`PROGRAMS`]' are, while tmpl doesn't
 /// translate them yet ([`spec_cases`]).
-pub const INTERP_SPECS: [&str; 3] = ["failure-params", "failure-jumps", "failure-causes"];
+pub const INTERP_SPECS: [&str; 4] = [
+    "failure-params",
+    "failure-jumps",
+    "failure-causes",
+    "failure-generators",
+];
 
 /// The specifications ([`INTERP_SPECS`]) that translate to tmpl already,
 /// whose tmpl is checked against goldens, as [`PROGRAMS`]' is, while
 /// not every backend runs them yet.
-pub const TMPL_SPECS: [&str; 3] = ["failure-params", "failure-jumps", "failure-causes"];
+pub const TMPL_SPECS: [&str; 4] = [
+    "failure-params",
+    "failure-jumps",
+    "failure-causes",
+    "failure-generators",
+];
 
 /// A specification's path and text: `NAME.temper.md`, or in a directory
 /// of its own beside its host code.

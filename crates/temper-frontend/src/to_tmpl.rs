@@ -97,6 +97,23 @@ struct Catalog {
     version: String,
 }
 
+/// Core's declaration in the catalog with this key, or for a member the
+/// fixture leaves to a supertype, the supertype's: `SafeGenerator.next`,
+/// which core overrides with `Generator.next`'s signature, is
+/// `Generator.next`, which backends connect.
+fn catalog_decl(key: &str) -> Option<DeclId> {
+    let cat = catalog();
+    if let Some(&c) = cat.keys.get(key) {
+        return Some(c);
+    }
+    let (owner, name) = key.split_once('.')?;
+    let &t = cat.keys.get(owner)?;
+    cat.program.decls.supers(t).iter().find_map(|&s| {
+        let s = temper_tmpl::analysis::nominal_decl(&cat.program, s)?;
+        catalog_decl(&format!("{}.{name}", cat.program.name(s)))
+    })
+}
+
 fn catalog() -> &'static Catalog {
     static CATALOG: OnceLock<Catalog> = OnceLock::new();
     CATALOG.get_or_init(|| {
@@ -854,7 +871,7 @@ impl Translator<'_> {
     /// Core's declaration with this key, as `Int32.toString`, copied into
     /// the program's `uses` section the first time.
     fn core_decl(&mut self, key: &str) -> Option<DeclId> {
-        let &c = catalog().keys.get(key)?;
+        let c = catalog_decl(key)?;
         Some(self.external(c))
     }
 
@@ -2096,8 +2113,15 @@ impl Translator<'_> {
         };
         // Where the value can't be null, null in the holder says the body
         // failed, as a checker can follow (`if held is None: …`); else a
-        // flag says so.
-        let nullable = target.is_none_or(|(_, ty)| self.b.program().types.is_nullable(ty));
+        // flag says so, as for a `GeneratorResult`, whose `DoneResult`
+        // some hosts write as their null (Python's `None`).
+        let nullable = target.is_none_or(|(_, ty)| {
+            let p = self.b.program();
+            let result = temper_tmpl::analysis::nominal_decl(p, ty).is_some_and(|d| {
+                p.name(d) == "GeneratorResult" && temper_tmpl::qname::library_of(p, d) == "core"
+            });
+            p.types.is_nullable(ty) || result
+        });
         let failed = match nullable {
             true => {
                 let no = self.b.bool_lit(false);
@@ -2179,7 +2203,7 @@ impl Translator<'_> {
             owner: self.owner,
             caught: caught_held.map(|(_, held)| failures::Caught::Held(held)),
         });
-        let translated = self.jumping_fallback(fallback, target, held, nullable, node);
+        let translated = self.jumping_fallback(fallback, target, held, node);
         self.handling.pop();
         let (stmts, els) = translated?;
         let then = self.b.block(&stmts);
@@ -2207,7 +2231,6 @@ impl Translator<'_> {
         fallback: FNode,
         target: Option<(DeclId, TypeId)>,
         held: Option<DeclId>,
-        nullable: bool,
         node: FNode,
     ) -> Tx<(Vec<NodeId>, Option<NodeId>)> {
         let mut stmts = Vec::new();
@@ -2216,7 +2239,7 @@ impl Translator<'_> {
                 self.assign_branches(fallback, local, ty, &mut stmts)?;
                 let read = self.b.local(held);
                 let read = self.made(read, node);
-                let read = if nullable {
+                let read = if self.b.program().types.is_nullable(ty) {
                     read
                 } else {
                     let made = self.b.non_null(read);
@@ -3751,6 +3774,16 @@ impl Translator<'_> {
                 let owner = self.b.program().decls.get(member).owner;
                 if self.b.program().decls.type_params(owner).is_empty() {
                     receiver = self.fit(receiver, self.b.program().decls.get(owner).ty);
+                } else if !catalog().keys.contains_key(key) {
+                    // A generic one's, for a method core overrides that
+                    // tmpl leaves to it ([`catalog_decl`]): a
+                    // `SafeGenerator`'s `next()` is a `Generator`'s.
+                    let p = self.b.program();
+                    let have = p.types.non_null(p.nodes.ty(receiver));
+                    if let Some(args) = temper_tmpl::analysis::as_super(p, have, owner) {
+                        let want = self.b.applied(owner, &args);
+                        receiver = self.fit(receiver, want);
+                    }
                 }
                 let type_args = self.call_type_args(node, member)?;
                 let values = self.args_for_with(node, member, Some(receiver), &type_args, args)?;

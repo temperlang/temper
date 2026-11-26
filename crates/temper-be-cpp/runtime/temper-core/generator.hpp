@@ -3,6 +3,8 @@
 #include <memory>
 #include <utility>
 #include "base_types.hpp"
+#include "expected.hpp"
+#include "failure.hpp"
 #include "temper_bubble.hpp"
 
 namespace temper {
@@ -56,11 +58,12 @@ namespace temper {
             return DoneResultSentinel{};
         }
 
-        // A generator whose `next` may bubble (throw). Built from a step function that
-        // runs until the next yield or completion, returning the corresponding result.
+        // A generator whose body may throw any library's failure: a step gives
+        // its result, or the failure, which leaves it done, as an Expected.
         template<class T>
         struct Generator {
-            using Step = std::function<std::shared_ptr<GeneratorResult<T>>(std::shared_ptr<Generator<T>>)>;
+            using Result = Expected<std::shared_ptr<GeneratorResult<T>>, std::shared_ptr<Failure>>;
+            using Step = std::function<Result(std::shared_ptr<Generator<T>>)>;
             Step step;
             bool done = false;
             explicit Generator(Step step) : step(std::move(step)) {}
@@ -88,7 +91,7 @@ namespace temper {
         // so that T is deducible from the argument at the call site.
         template<class T>
         std::shared_ptr<Generator<T>> adapt_generator_fn(
-            std::function<std::shared_ptr<GeneratorResult<T>>(std::shared_ptr<Generator<T>>)> step
+            std::function<typename Generator<T>::Result(std::shared_ptr<Generator<T>>)> step
         ) {
             return std::make_shared<Generator<T>>(std::move(step));
         }
@@ -101,19 +104,21 @@ namespace temper {
         }
 
         template<class T>
-        std::shared_ptr<GeneratorResult<T>> next(const std::shared_ptr<Generator<T>>& generator) {
+        typename Generator<T>::Result next(const std::shared_ptr<Generator<T>>& generator) {
             if (generator->done) {
-                return std::make_shared<DoneResult<T>>();
+                return std::shared_ptr<GeneratorResult<T>>(std::make_shared<DoneResult<T>>());
             }
-            std::shared_ptr<GeneratorResult<T>> result;
-            try {
-                result = generator->step(generator);
-            } catch (...) {
-                // A step that fails leaves it done.
-                generator->done = true;
-                throw;
-            }
-            if (result->is_done()) {
+            typename Generator<T>::Result result = [&]() {
+                try {
+                    return generator->step(generator);
+                } catch (...) {
+                    // A step that panics leaves it done.
+                    generator->done = true;
+                    throw;
+                }
+            }();
+            // A step that fails, or ends, leaves it done.
+            if (!result || (*result)->is_done()) {
                 generator->done = true;
             }
             return result;
@@ -138,8 +143,18 @@ namespace temper {
             return result;
         }
 
+        // A generator that can't fail as one that may.
+        template<class T>
+        std::shared_ptr<Generator<T>> generator_of(std::shared_ptr<SafeGenerator<T>> safe) {
+            return std::make_shared<Generator<T>>(
+                [safe](std::shared_ptr<Generator<T>>) -> typename Generator<T>::Result {
+                    return next(safe);
+                }
+            );
+        }
+
         // A range-for over a generator steps it: `for (auto v : generator)`,
-        // where `generator` is a `shared_ptr` to a Generator or SafeGenerator,
+        // where `generator` is a `shared_ptr` to a SafeGenerator,
         // finds these by argument-dependent lookup. The begin and end
         // iterators are of one type, as C++14 needs. Every loop shares the
         // one generator, so looping again continues where the last left off.
@@ -165,16 +180,6 @@ namespace temper {
                 return !(*this == other);
             }
         };
-
-        template<class T>
-        GeneratorIterator<Generator<T>, T> begin(const std::shared_ptr<Generator<T>>& generator) {
-            return GeneratorIterator<Generator<T>, T>{generator, next(generator)};
-        }
-
-        template<class T>
-        GeneratorIterator<Generator<T>, T> end(const std::shared_ptr<Generator<T>>& generator) {
-            return GeneratorIterator<Generator<T>, T>{generator, nullptr};
-        }
 
         template<class T>
         GeneratorIterator<SafeGenerator<T>, T> begin(const std::shared_ptr<SafeGenerator<T>>& generator) {

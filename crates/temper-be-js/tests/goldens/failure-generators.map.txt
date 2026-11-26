@@ -1,0 +1,142 @@
+# generated line:column -> source:line:column, and the text at each
+8:1 -> ../failure-generators.temper.md:22:5  /** <- let generated<T>(make: fn ()
+13:1 -> ../failure-generators.temper.md:22:5  function generated(make) { <- let generated<T>(make: fn ()
+13:10 -> ../failure-generators.temper.md:22:9 (generated)  generated(make) { <- generated<T>(make: fn (): Ge
+13:19 -> ../failure-generators.temper.md:22:5  (make) { <- let generated<T>(make: fn ()
+14:3 -> ../failure-generators.temper.md:22:65  return make(); <- make() }
+17:1 -> ../failure-generators.temper.md:23:5  /** <- let safely<T>(make: fn (): S
+22:1 -> ../failure-generators.temper.md:23:5  function safely(make) { <- let safely<T>(make: fn (): S
+22:10 -> ../failure-generators.temper.md:23:9 (safely)  safely(make) { <- safely<T>(make: fn (): SafeG
+22:16 -> ../failure-generators.temper.md:23:5  (make) { <- let safely<T>(make: fn (): S
+23:3 -> ../failure-generators.temper.md:23:70  return make(); <- make() }
+26:1 -> ../failure-generators.temper.md:25:5  /** <- let take(g: Generator<Int>,
+31:1 -> ../failure-generators.temper.md:25:5  function take(g, n) { <- let take(g: Generator<Int>,
+31:10 -> ../failure-generators.temper.md:25:9 (take)  take(g, n) { <- take(g: Generator<Int>, n: I
+31:14 -> ../failure-generators.temper.md:25:5  (g, n) { <- let take(g: Generator<Int>,
+32:3 -> ../failure-generators.temper.md:26:7  /** @type {string[]} */ <- let taken = new ListBuilder<
+33:3 -> ../failure-generators.temper.md:26:7  const taken = []; <- let taken = new ListBuilder<
+34:3 -> ../failure-generators.temper.md:27:7  while (taken.length < n) { <- while (taken.length < n) {
+35:5 -> ../failure-generators.temper.md:28:9  /** @type {IteratorResult<nu <- let r = g.next() catch (e) {
+36:5 -> ../failure-generators.temper.md:28:9  let r; <- let r = g.next() catch (e) {
+37:5 -> ../failure-generators.temper.md:28:17  let failed = false; <- g.next() catch (e) {
+38:5 -> ../failure-generators.temper.md:28:17  /** @type {Error | null} */ <- g.next() catch (e) {
+39:5 -> ../failure-generators.temper.md:28:17  let caught = null; <- g.next() catch (e) {
+40:5 -> ../failure-generators.temper.md:28:17  /** @type {IteratorResult<nu <- g.next() catch (e) {
+41:5 -> ../failure-generators.temper.md:28:17  let held = null; <- g.next() catch (e) {
+42:5 -> ../failure-generators.temper.md:28:17  try { <- g.next() catch (e) {
+43:7 -> ../failure-generators.temper.md:28:17  held = g.next(); <- g.next() catch (e) {
+46:7 -> ../failure-generators.temper.md:28:17  caught = failure; <- g.next() catch (e) {
+47:7 -> ../failure-generators.temper.md:28:17  failed = true; <- g.next() catch (e) {
+49:5 -> ../failure-generators.temper.md:28:17  if (failed) { <- g.next() catch (e) {
+50:7 -> ../failure-generators.temper.md:28:33  const e = /** @type {Error} <- e) {
+51:7 -> ../failure-generators.temper.md:29:11  const why = e instanceof Too <- let why = when (e) {
+52:7 -> ../failure-generators.temper.md:33:11  return `${listedJoin(taken, <- return "${taken.join(" ") {
+54:7 -> ../failure-generators.temper.md:28:17  r = /** @type {IteratorResul <- g.next() catch (e) {
+56:5 -> ../failure-generators.temper.md:35:9  if (!r.done) { <- if (r is ValueResult<Int>) {
+57:7 -> ../failure-generators.temper.md:36:11  taken.push(/** @type {Iterat <- taken.add(r.value.toString()
+59:7 -> ../failure-generators.temper.md:38:11  taken.push("done"); <- taken.add("done");
+60:7 -> ../failure-generators.temper.md:39:11  break; <- break;
+63:3 -> ../failure-generators.temper.md:42:7  return listedJoin(taken, " " <- taken.join(" ") { s => s }
+66:1 -> ../failure-generators.temper.md:50:5  /** <- let upTo(limit: Int): Genera
+70:1 -> ../failure-generators.temper.md:50:5  function upTo(limit) { <- let upTo(limit: Int): Genera
+70:10 -> ../failure-generators.temper.md:50:9 (upTo)  upTo(limit) { <- upTo(limit: Int): Generator<
+70:14 -> ../failure-generators.temper.md:50:5  (limit) { <- let upTo(limit: Int): Genera
+71:3 -> ../failure-generators.temper.md:51:17  /** <- { (): GeneratorResult<Int> t
+75:3 -> ../failure-generators.temper.md:51:17  function* fn(doAwait) { <- { (): GeneratorResult<Int> t
+76:5 -> ../failure-generators.temper.md:52:9  let i = 1; <- var i = 1;
+77:5 -> ../failure-generators.temper.md:53:9  while (true) { <- while (true) {
+78:7 -> ../failure-generators.temper.md:54:11  if (i > limit) { <- if (i > limit) { throw new T
+79:9 -> ../failure-generators.temper.md:54:28  throw new TooBig(i); <- throw new TooBig(i); }
+81:7 -> ../failure-generators.temper.md:55:11  yield i; <- yield i;
+82:7 -> ../failure-generators.temper.md:56:11  i = (i + 1) | 0; <- i += 1;
+85:3 -> ../failure-generators.temper.md:51:7  return generated(adaptAwaite <- generated { (): GeneratorRes
+88:1 -> ../failure-generators.temper.md:76:5  /** <- let checked(n: Int, limit: I
+94:1 -> ../failure-generators.temper.md:76:5  function checked(n, limit) { <- let checked(n: Int, limit: I
+94:10 -> ../failure-generators.temper.md:76:9 (checked)  checked(n, limit) { <- checked(n: Int, limit: Int):
+94:17 -> ../failure-generators.temper.md:76:5  (n, limit) { <- let checked(n: Int, limit: I
+95:3 -> ../failure-generators.temper.md:77:7  if (n > limit) { <- if (n > limit) { throw new T
+96:5 -> ../failure-generators.temper.md:77:24  throw new TooBig(n); <- throw new TooBig(n); }
+98:3 -> ../failure-generators.temper.md:78:7  return n; <- n
+101:1 -> ../failure-generators.temper.md:81:5  /** <- let squares(limit: Int): Gen
+105:1 -> ../failure-generators.temper.md:81:5  function squares(limit) { <- let squares(limit: Int): Gen
+105:10 -> ../failure-generators.temper.md:81:9 (squares)  squares(limit) { <- squares(limit: Int): Generat
+105:17 -> ../failure-generators.temper.md:81:5  (limit) { <- let squares(limit: Int): Gen
+106:3 -> ../failure-generators.temper.md:82:17  /** <- { (): GeneratorResult<Int> t
+110:3 -> ../failure-generators.temper.md:82:17  function* fn(doAwait) { <- { (): GeneratorResult<Int> t
+111:5 -> ../failure-generators.temper.md:83:9  /** @type {number} */ <- yield (checked(50, limit) or
+112:5 -> ../failure-generators.temper.md:83:9  let t$0; <- yield (checked(50, limit) or
+113:5 -> ../failure-generators.temper.md:83:9  try { <- yield (checked(50, limit) or
+119:5 -> ../failure-generators.temper.md:83:9  yield t$0; <- yield (checked(50, limit) or
+120:5 -> ../failure-generators.temper.md:84:9  let i = 1; <- var i = 1;
+121:5 -> ../failure-generators.temper.md:85:9  while (true) { <- while (true) {
+122:7 -> ../failure-generators.temper.md:86:11  yield checked(Math.imul(i, i <- yield try checked(i * i, lim
+123:7 -> ../failure-generators.temper.md:87:11  i = (i + 1) | 0; <- i += 1;
+126:3 -> ../failure-generators.temper.md:82:7  return generated(adaptAwaite <- generated { (): GeneratorRes
+129:1 -> ../failure-generators.temper.md:102:5  /** <- let count(n: Int): SafeGener
+133:1 -> ../failure-generators.temper.md:102:5  function count(n) { <- let count(n: Int): SafeGener
+133:10 -> ../failure-generators.temper.md:102:9 (count)  count(n) { <- count(n: Int): SafeGenerator
+133:15 -> ../failure-generators.temper.md:102:5  (n) { <- let count(n: Int): SafeGener
+134:3 -> ../failure-generators.temper.md:103:14  /** <- { (): GeneratorResult<Int> e
+138:3 -> ../failure-generators.temper.md:103:14  function* fn(doAwait) { <- { (): GeneratorResult<Int> e
+139:5 -> ../failure-generators.temper.md:104:9  { <- for (var i = 1; i <= n; i +=
+140:7 -> ../failure-generators.temper.md:104:14  let i = 1; <- var i = 1; i <= n; i += 1) {
+141:7 -> ../failure-generators.temper.md:104:9  while (i <= n) { <- for (var i = 1; i <= n; i +=
+142:9 -> ../failure-generators.temper.md:104:43  yield i; <- yield i; }
+143:9 -> ../failure-generators.temper.md:104:33  i = (i + 1) | 0; <- i += 1) { yield i; }
+147:3 -> ../failure-generators.temper.md:103:7  return safely(adaptAwaiter(f <- safely { (): GeneratorResult
+150:1 -> ../failure-generators.temper.md:117:5  /** <- let shown(r: GeneratorResult
+154:1 -> ../failure-generators.temper.md:117:5  function shown(r) { <- let shown(r: GeneratorResult
+154:10 -> ../failure-generators.temper.md:117:9 (shown)  shown(r) { <- shown(r: GeneratorResult<Int
+154:15 -> ../failure-generators.temper.md:117:5  (r) { <- let shown(r: GeneratorResult
+155:3 -> ../failure-generators.temper.md:118:7  if (!r.done) { <- if (r is ValueResult<Int>) {
+156:5 -> ../failure-generators.temper.md:118:36  return /** @type {IteratorYi <- r.value.toString() } else {
+158:5 -> ../failure-generators.temper.md:118:64  return "done"; <- "done" }
+162:1 -> ../failure-generators.temper.md:121:5  /** <- let firstTwo(g: SafeGenerato
+166:1 -> ../failure-generators.temper.md:121:5  function firstTwo(g) { <- let firstTwo(g: SafeGenerato
+166:10 -> ../failure-generators.temper.md:121:9 (firstTwo)  firstTwo(g) { <- firstTwo(g: SafeGenerator<In
+166:18 -> ../failure-generators.temper.md:121:5  (g) { <- let firstTwo(g: SafeGenerato
+167:3 -> ../failure-generators.temper.md:122:7  const a = shown(g.next()); <- let a = shown(g.nextSafe());
+168:3 -> ../failure-generators.temper.md:123:7  /** @type {string} */ <- let b = shown(g.next()) orel
+169:3 -> ../failure-generators.temper.md:123:7  let b; <- let b = shown(g.next()) orel
+170:3 -> ../failure-generators.temper.md:123:7  try { <- let b = shown(g.next()) orel
+176:3 -> ../failure-generators.temper.md:124:7  return `${a} ${b}`; <- "${a} ${b}"
+179:1 -> ../failure-generators.temper.md:138:5  /** <- let doubled(inner: Generator
+183:1 -> ../failure-generators.temper.md:138:5  function doubled(inner) { <- let doubled(inner: Generator
+183:10 -> ../failure-generators.temper.md:138:9 (doubled)  doubled(inner) { <- doubled(inner: Generator<Int
+183:17 -> ../failure-generators.temper.md:138:5  (inner) { <- let doubled(inner: Generator
+184:3 -> ../failure-generators.temper.md:139:17  /** <- { (): GeneratorResult<Int> t
+188:3 -> ../failure-generators.temper.md:139:17  function* fn(doAwait) { <- { (): GeneratorResult<Int> t
+189:5 -> ../failure-generators.temper.md:140:9  while (true) { <- while (true) {
+190:7 -> ../failure-generators.temper.md:141:11  /** @type {IteratorResult<nu <- let r = try inner.next();
+191:7 -> ../failure-generators.temper.md:141:11  const r = inner.next(); <- let r = try inner.next();
+192:7 -> ../failure-generators.temper.md:142:11  if (!r.done) { <- if (r is ValueResult<Int>) {
+193:9 -> ../failure-generators.temper.md:142:40  yield Math.imul(/** @type {I <- yield r.value * 2; } else {
+195:9 -> ../failure-generators.temper.md:142:68  break; <- break; }
+199:3 -> ../failure-generators.temper.md:139:7  return generated(adaptAwaite <- generated { (): GeneratorRes
+202:1 -> ../failure-generators.temper.md:19:5  class FailureGeneratorsError <- sealed interface FailureGene
+202:7 -> ../failure-generators.temper.md:19:22 (FailureGeneratorsError)  FailureGeneratorsError exten <- FailureGeneratorsError exten
+202:29 -> ../failure-generators.temper.md:19:5   extends Error {} <- sealed interface FailureGene
+206:1 -> ../failure-generators.temper.md:20:5  class TooBig extends Failure <- class TooBig(public n: Int)
+206:7 -> ../failure-generators.temper.md:20:11 (TooBig)  TooBig extends FailureGenera <- TooBig(public n: Int) extend
+206:13 -> ../failure-generators.temper.md:20:5   extends FailureGeneratorsEr <- class TooBig(public n: Int)
+207:3 -> ../failure-generators.temper.md:20:25  /** @type {number} */ <- n: Int) extends FailureGener
+208:3 -> ../failure-generators.temper.md:20:25  #n; <- n: Int) extends FailureGener
+210:3 -> ../failure-generators.temper.md:20:5  /** @param {number} n */ <- class TooBig(public n: Int)
+211:3 -> ../failure-generators.temper.md:20:5  constructor(n) { <- class TooBig(public n: Int)
+213:5 -> ../failure-generators.temper.md:20:25  this.#n = n; <- n: Int) extends FailureGener
+216:3 -> ../failure-generators.temper.md:20:25  /** @returns {number} */ <- n: Int) extends FailureGener
+217:3 -> ../failure-generators.temper.md:20:25  get n() { <- n: Int) extends FailureGener
+217:7 -> ../failure-generators.temper.md:20:25 (n)  n() { <- n: Int) extends FailureGener
+221:3 -> ../failure-generators.temper.md:20:5  /** @returns {string} */ <- class TooBig(public n: Int)
+222:3 -> ../failure-generators.temper.md:20:5  get message() { <- class TooBig(public n: Int)
+223:5 -> ../failure-generators.temper.md:20:5  return `too big (n: ${this.# <- class TooBig(public n: Int)
+227:1 -> ../failure-generators.temper.md:61:5  console.log(take(upTo(3), 9) <- console.log(take(upTo(3), 9)
+228:1 -> ../failure-generators.temper.md:62:5  /** @type {Generator<number> <- let one = upTo(1);
+229:1 -> ../failure-generators.temper.md:62:5  const one = upTo(1); <- let one = upTo(1);
+230:1 -> ../failure-generators.temper.md:63:5  console.log(take(one, 9)); <- console.log(take(one, 9));
+231:1 -> ../failure-generators.temper.md:64:5  console.log(take(one, 9)); <- console.log(take(one, 9));
+232:1 -> ../failure-generators.temper.md:92:5  console.log(take(squares(10) <- console.log(take(squares(10)
+233:1 -> ../failure-generators.temper.md:108:5  console.log(take(/** @type { <- console.log(take(count(2), 9
+234:1 -> ../failure-generators.temper.md:127:5  console.log(firstTwo(count(1 <- console.log(firstTwo(count(1
+235:1 -> ../failure-generators.temper.md:147:5  console.log(take(doubled(upT <- console.log(take(doubled(upT
+236:1 -> ../failure-generators.temper.md:148:5  console.log(take(doubled(/** <- console.log(take(doubled(cou

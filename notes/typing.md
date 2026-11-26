@@ -1370,9 +1370,25 @@ one place each, as they may change.
   `BrokenPromise` declaration), and the state machines'
   `getPromiseResultSync` all name it in one place each, which `E` will
   replace.
-- **Not yet:** `error case`, promises and generators with `E`, failure
-  parameters on Rust and C++, and checks that a failure type's own `message` or
-  `cause` fits the root's.
+- **Generators** (2026-11-26): a generator body that declares `throws
+  E` (any failure type) makes a `Generator<Y>`, whose `next()` throws
+  `Error`, any error; one that declares nothing makes a
+  `SafeGenerator<Y>`, which can't fail, so "Expected subtype of fn:
+  SafeGenerator<Int32>, but got fn: Generator<Int32>" where a body that
+  throws meets a `SafeGenerator` place. As before (with `Error` for
+  `Bubble`), `SafeGenerator.next()` throws `Error` too, the same
+  signature, no covariant override; `nextSafe()` is the call that can't
+  fail. Callers handle `next()`'s `Error` with `orelse` or `catch`
+  (binding `Error`, which `when` narrows); only tests, std, and
+  generator bodies may pass it on: a generator literal may declare
+  `GeneratorResult<Y> throws Error` (`Settle::may_throw_root`), as its
+  `next()` throws `Error` anyway, so it can pass on an inner generator's
+  failure, as bubbles passed out of generators before. User code can't
+  write `throws Error` anywhere else. No `Generator<Y, E>`: that needs
+  default type arguments, a language change of its own. A failure ends
+  the generator.
+- **Not yet:** `error case`, promises with `E`, and checks that a
+  failure type's own `message` or `cause` fits the root's.
 
 ## What may bubble
 
@@ -1407,8 +1423,8 @@ where all are; an `orelse`'s body (its fallback is), functions
 inside (each is checked on its own), and the branches of an `if` whose condition Kotlin might fold, except
 the one a literal `true` or `false` leaves. A `for … of` body is part of
 the function around it. Functions checked: those that declare a return
-type, generators (as `async` blocks) too, unless it's `GeneratorResult<Y>
-throws Bubble`; constructors and setters, which return
+type, generators (as `async` blocks) too, by what their
+`GeneratorResult<Y> throws E` says; constructors and setters, which return
 `Void`; and function literals without a return type whose place wants a
 function type that doesn't `throw Bubble` ("Function literals and target
 typing", above). Module-level code and `test` bodies may bubble.

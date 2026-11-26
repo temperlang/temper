@@ -181,6 +181,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Float64.toString()",
         Connection::Runtime("float64_to_string"),
     ),
+    (
+        "core.type Generator.next()",
+        Connection::Translate(next_safe),
+    ),
     ("core.type Int32.max()", Connection::Builtin("max")),
     ("core.type Int32.min()", Connection::Builtin("min")),
     ("core.type Int32.toFloat64()", Connection::Builtin("float")),
@@ -621,7 +625,9 @@ fn int_to_string(mut args: Vec<Option<Expr>>, im: Import) -> Translated {
 /// `None` once the generator is done, as Kotlin annotates
 /// `GeneratorResult`, with the generator itself yielding bare values for
 /// Python's own loops. A bare `next`, as Kotlin's, raises `StopIteration`
-/// once the generator is done, where `nextSafe` says it's done.
+/// once the generator is done, where `nextSafe` says it's done. A
+/// `Generator`'s `next()` is the same: what its body raises comes out of
+/// it, and the generator is done after.
 fn next_safe(mut args: Vec<Option<Expr>>, _: Import) -> Translated {
     let g = arg(&mut args, 0).unwrap_or(Expr::None);
     let one = Expr::Lambda(

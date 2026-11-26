@@ -295,7 +295,11 @@ impl Translator<'_> {
             return None;
         };
         // A step whose result goes unused: `next(g, None)`, as Kotlin's.
-        if self.qname(method) == "core.type SafeGenerator.nextSafe()" {
+        let step = [
+            "core.type SafeGenerator.nextSafe()",
+            "core.type Generator.next()",
+        ];
+        if step.contains(&self.qname(method).as_str()) {
             return Some(
                 self.expr(receiver)
                     .map(|g| Stmt::Expr(Expr::builtin("next").call(vec![g, Expr::None]))),

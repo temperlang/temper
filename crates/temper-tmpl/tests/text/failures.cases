@@ -242,3 +242,57 @@ F4 @20: throw fails with NotFound#2, but narrow#5 takes only E#15
 T4 @30: type argument Bubble isn't within E#17's bound Error#41
 T4 @36: type argument String isn't within E#17's bound Error#41
 V1 @37: FunctionLiteral is fn (): Int32 throws String, but its signature is fn (): Int32
+
+=== generator failures (F4, F6)
+tmpl 1 model 1 library failures 0.1.0
+
+uses `temper-core`#40 0.1.0 {
+  interface Error#41 {
+    connected get message#42(): String;
+    connected get cause#43(): Error#41?;
+  }
+  interface GeneratorResult#44<YIELD#45> {}
+  interface Generator#46<YIELD#47> {
+    connected method next#48(): GeneratorResult#44<YIELD#47> throws Error#41;
+  }
+  interface SafeGenerator#49<YIELD#50> extends Generator#46<YIELD#50> {
+    connected method nextSafe#51(): GeneratorResult#44<YIELD#50>;
+  }
+}
+
+module failures#0 {
+  export interface FailuresError#1 extends Error#41 {}
+
+  export class TooBig#2 extends FailuresError#1 {
+    constructor constructor#10(): TooBig#2 {}
+  }
+
+  fn failing#3(): fn (): Generator#46<Int32> {
+    return (fn generator ~fn#11(): Generator#46<Int32> {
+      yield 1;
+      (throw(new constructor#10())^): Void;
+    }): fn (): Generator#46<Int32>;
+  }
+
+  fn safe#4(): fn (): SafeGenerator#49<Int32> {
+    return (fn generator ~fn#12(): SafeGenerator#49<Int32> {
+      yield 1;
+      (throw(new constructor#10())^): Void;
+    }): fn (): SafeGenerator#49<Int32>;
+  }
+
+  fn first#5(g#13: Generator#46<Int32>): GeneratorResult#44<Int32> throws TooBig#2 {
+    return g#13.next#48()^;
+  }
+
+  fn quiet#6(g#14: Generator#46<Int32>): Int32 {
+    let r#15: GeneratorResult#44<Int32> = (catch(g#14.next#48()^, e#16: Error#41, (throw(new constructor#10())^): GeneratorResult#44<Int32>)): GeneratorResult#44<Int32>;
+    return 0;
+  }
+
+  init {}
+}
+--- problems
+F4 @22: throw fails with TooBig#2, but ~fn#12 can't
+F4 @28: the call of next#48 may fail with Error#41, but first#5 takes only TooBig#2
+F4 @37: throw fails with TooBig#2, but quiet#6 can't

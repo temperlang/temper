@@ -163,6 +163,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Float64.toString()",
         Connection::Helper("float64_tostring"),
     ),
+    (
+        "core.type Generator.next()",
+        Connection::Translate(next_safe),
+    ),
     ("core.type Int32.max()", Connection::Math("max")),
     ("core.type Int32.min()", Connection::Math("min")),
     (
@@ -633,7 +637,8 @@ fn string_begin(_: &mut Translator<'_>, _: &[NodeId]) -> Result<Expr, NotYet> {
 
 /// `{ temper.generator_next(g) }`: a step's result as a table, `{ true,
 /// value }`, or `{}` once the generator is done, since the runtime's
-/// generators give Lua's `for` loops `true` and the value, or nothing.
+/// generators give Lua's `for` loops `true` and the value, or nothing;
+/// a `Generator`'s `next()` too, which raises what its body raises.
 fn next_safe(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let [g] = args else {
         return Err(NotYet {

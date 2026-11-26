@@ -173,7 +173,7 @@ impl Settle {
             overloads: HashMap::new(),
             tests: Vec::new(),
             test_runners: Vec::new(),
-            test_errors: HashSet::new(),
+            root_throws: HashSet::new(),
             assert_messages: Vec::new(),
             passed: Vec::new(),
             removed: HashSet::new(),
@@ -343,9 +343,11 @@ pub(crate) struct Settle {
     /// `runTestCases` is imported as (`testing`).
     pub(crate) tests: Vec<(ModuleId, NodeId)>,
     pub(crate) test_runners: Vec<(ModuleId, NodeId)>,
-    /// The `Error` of each test's result, `Void throws Error`, which only
-    /// the compiler and std may write ([`Settle::expand_test`]).
-    pub(crate) test_errors: HashSet<NodeId>,
+    /// Where `throws Error` may name the root, beyond std: each test's
+    /// result, `Void throws Error`, which the compiler writes
+    /// ([`Settle::expand_test`]), and each generator literal's, whose
+    /// `next()` throws `Error` anyway.
+    pub(crate) root_throws: HashSet<NodeId>,
     /// Each `assert(a == b)`'s message showing both values, with its
     /// plain one, `"expected a == b"`, to use where a value can't be
     /// shown ([`Settle::settle_assert_messages`]).

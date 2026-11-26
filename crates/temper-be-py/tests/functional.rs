@@ -63,8 +63,9 @@ use temper_be_py::{OutFile, PY, translate};
 use temper_be_testkit::{self as kit, Case, Goldens};
 
 /// The shared programs that Python's translation covers so far, and the
-/// testkit's specification `failure-params` (`kit::SPECS`).
-const PROGRAMS: [&str; 32] = [
+/// testkit's specifications `failure-params` and `failure-generators`
+/// (`kit::SPECS`).
+const PROGRAMS: [&str; 33] = [
     "classes",
     "nullables",
     "generics",
@@ -97,6 +98,7 @@ const PROGRAMS: [&str; 32] = [
     "failures-interop",
     "dead-handlers.tmpl",
     "failure-params",
+    "failure-generators",
 ];
 
 fn cases() -> Vec<Case> {

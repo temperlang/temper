@@ -266,12 +266,25 @@ Language and frontend:
 - **`await` of a broken promise throws core's `BrokenPromise`**
   (2026-11-26), a fieldless `CoreError`, where Kotlin's bubbles; host
   failures that break a promise (std `net`'s) give it too. An `async`
-  block, or a generator that says `throws Bubble`, handles it where it
-  awaits; a `catch` around an `await` works on every backend, state
+  block handles it where it awaits, and a generator handles it or
+  declares it; a `catch` around an `await` works on every backend, state
   machines (Rust, C++, Java) too. Test:
   settle/run.cases, "broken promises throw BrokenPromise, …",
   "BrokenPromise is a CoreError …", "an await that nothing handles";
   funtests control-flow/async, types/netresponse-not-found.
+- **Generators throw errors, not bubbles** (2026-11-26): a generator
+  body may declare `throws E`, any failure type, and its factory makes a
+  `Generator<Y>`, whose `next()` throws `Error` (Kotlin's `throws
+  Bubble`, any declared type standing for `Bubble`); a body that
+  declares nothing makes a `SafeGenerator<Y>` (Kotlin's too), whose
+  `next()` throws `Error` as Kotlin's bubbles, while `nextSafe()` can't
+  fail; a throwing body's factory doesn't fit a `SafeGenerator` place.
+  A generator body may declare `throws Error`, which user code can't
+  elsewhere, to pass any error on, as Kotlin's bodies pass bubbles.
+  Every backend translates them. Test: settle/failures.cases, "a
+  generator may throw any error, …" and "a generator that may throw is
+  no SafeGenerator, …"; testkit spec failure-generators on every
+  backend.
 - **An `internal` visibility** (module or library) between `public` and
   `private`, so module functions can use a class's hidden parts. Design it
   from what JS can express (only public and `#private`). Not planned yet.

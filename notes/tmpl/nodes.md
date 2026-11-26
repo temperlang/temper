@@ -645,7 +645,13 @@ Generators and `async`, as Kotlin's `CoroutineStrategy` has them:
 
 - **Nodes:** a generator literal is a `FunctionLiteral` whose
   declaration has the fact `GENERATOR` (text: `fn generator ~fn#8()`).
-  Its value is a factory, typed `fn (T): SafeGenerator<Y>`, and its
+  Its value is a factory, typed `fn (T): SafeGenerator<Y>`, whose body
+  can't fail, or `fn (T): Generator<Y>`, whose body may fail with any
+  error, as `Generator.next()` throws core's `Error` (F4, F6;
+  `failures::generator_failure`; 2026-11-26). A `SafeGenerator`'s
+  `next()`, which core overrides with that signature, is
+  `Generator.next()` on the receiver upcast; its `nextSafe()` can't
+  fail. Its
   body's `return`s have no value. In its own body (not a literal's in
   it, rule F6), `Await` (`(await(p)^): T`) waits for a `Promise<T>` and
   throws core's `BrokenPromise`, if the promise is broken
@@ -662,7 +668,8 @@ Generators and `async`, as Kotlin's `CoroutineStrategy` has them:
   `safeAdaptGeneratorFn(step)`. The step is a state machine: `while
   (true) { let s = caseIndex; caseIndex = -1; switch (s) { case 0 { … }
   … default { return doneResult(); } } }`, so a step that fails is
-  done, each state's code that may fail in the `orelse` or `catch` it's
+  done (for a `Generator<Y>`, `adaptGeneratorFn(step)`, whose step
+  fails with core's `Error`), each state's code that may fail in the `orelse` or `catch` it's
   in, whose fallback sets the handler's state; a `catch`'s keeps the
   failure in its local, made the factory's and nullable, which the
   handler's states read through `nonNull`, and an `await` in one, after
@@ -1020,7 +1027,7 @@ mixing; F8: a `Throw`'s value and cause are failure types, and a
 failure type above them, and one that's `Error` itself, a root, is an
 interface, never a class.
 
-Not yet: `throw` and `catch` in generators, checking a failure type's own
+Not yet: checking a failure type's own
 `message` against the root's, and a field named `message`, which gets
 no getter.
 

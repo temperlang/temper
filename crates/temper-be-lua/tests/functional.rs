@@ -481,8 +481,9 @@ fn cases() -> Vec<Case> {
 }
 
 /// The testkit's specifications (`kit::SPECS`) Lua runs, which other
-/// backends don't all yet: `failure-jumps` and `failure-params`.
-const SPECS: [&str; 2] = ["failure-jumps", "failure-params"];
+/// backends don't all yet: `failure-jumps`, `failure-params`, and
+/// `failure-generators`.
+const SPECS: [&str; 3] = ["failure-jumps", "failure-params", "failure-generators"];
 
 /// A library whose root module handles failures of a type only its
 /// module `a` names, which the root then requires for `temper.catch` to

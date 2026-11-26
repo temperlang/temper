@@ -179,7 +179,9 @@ uses `temper-core`#0 0.1.0 {
   }
   class DoneResult#178<YIELD#179> extends GeneratorResult#172<YIELD#179> {}
   connected fn doneResult#180<YIELD#181>(): DoneResult#178<YIELD#181>;
-  interface Generator#182<YIELD#183> {}
+  interface Generator#182<YIELD#183> {
+    connected method next#232(): GeneratorResult#172<YIELD#183> throws Error#202;
+  }
   interface SafeGenerator#184<YIELD#185> extends Generator#182<YIELD#185> {
     connected method nextSafe#186(): GeneratorResult#172<YIELD#185>;
   }
@@ -215,6 +217,7 @@ uses `temper-core`#0 0.1.0 {
   class BrokenPromise#221 extends CoreError#205 {
     connected constructor constructor#222(): BrokenPromise#221;
   }
+  connected fn adaptGeneratorFn#233<YIELD#234>(step: fn (Generator#182<YIELD#234>): GeneratorResult#172<YIELD#234> throws Error#202): Generator#182<YIELD#234>;
 }
 
 module fixture#116 {

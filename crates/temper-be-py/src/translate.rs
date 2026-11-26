@@ -2081,6 +2081,8 @@ impl<'a> Translator<'a> {
                     Some(v) => Some(Box::new(self.expr(v)?)),
                     None => None,
                 };
+                // What the value needs first, as an `orelse` in it.
+                self.flush(out);
                 out.push(Stmt::Expr(Expr::Yield(value)));
             }
             other => return not_yet(format!("a {} statement", other.kind().name())),

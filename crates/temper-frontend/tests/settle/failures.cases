@@ -1566,3 +1566,315 @@ log codes failed
 log entry a 1
 log entry x 2
 log entries failed
+
+=== a generator may throw any error, which next passes on
+// A generator body may declare what it throws; its factory then makes a
+// `Generator<Y>`, whose `next()` throws `Error`, any error, which
+// callers handle. One that can't fail makes a `SafeGenerator<Y>`, whose
+// `next()` throws `Error` too, as `Generator`'s, while `nextSafe()`
+// can't fail. A body that declares `throws Error` passes on an inner
+// generator's failure.
+sealed interface GenError extends Error {}
+class TooBig(public n: Int) extends GenError {}
+let make(body: fn (Int): Generator<Int>): Generator<Int> { body(3) }
+let g = make { (limit: Int): GeneratorResult<Int> throws TooBig extends GeneratorFn =>
+  var i = 1;
+  while (true) {
+    if (i > limit) { throw new TooBig(i); }
+    yield i;
+    i += 1;
+  }
+};
+let show(g: Generator<Int>): String {
+  let r = g.next() catch (e) {
+    return when (e) {
+      is TooBig -> "too big ${e.n}";
+      else -> e.message;
+    };
+  };
+  when (r) {
+    is ValueResult<Int> -> "value ${r.value}";
+    else -> "done";
+  }
+}
+for (var n = 0; n < 5; n += 1) { console.log(show(g)); }
+let safe(body: fn (): SafeGenerator<Int>): SafeGenerator<Int> { body() }
+let s = safe { (): GeneratorResult<Int> extends GeneratorFn => yield 7; };
+let first(g: SafeGenerator<Int>): Boolean { g.nextSafe() is ValueResult<Int> }
+console.log("${first(s)} ${show(s)}");
+let twice(inner: Generator<Int>): Generator<Int> {
+  make { (n: Int): GeneratorResult<Int> throws Error extends GeneratorFn =>
+    while (true) {
+      let r = try inner.next();
+      if (r is ValueResult<Int>) { yield r.value * n; } else { break; }
+    }
+  }
+}
+let t = twice(make { (limit: Int): GeneratorResult<Int> throws TooBig extends GeneratorFn =>
+  yield 1;
+  throw new TooBig(limit);
+});
+for (var n = 0; n < 3; n += 1) { console.log(show(t)); }
+--- settled
+(Block
+  (Interface ^GenError:0 Error)
+  (Class ^TooBig:1 GenError:0 (Param ^n:12 Int))
+  (Let
+    ^make:2
+    (Fn
+      (Let ^body:13 (Call FnType Int (Call <> Generator Int)))
+      (Call <> Generator Int)
+      (Block (Call body:13 3))))
+  (Let
+    ^g:3
+    (Call
+      make:2
+      (Fn
+        (Let ^limit:14 Int)
+        (Call throws (Call <> GeneratorResult Int) TooBig:1)
+        GeneratorFn
+        (Block
+          (Var ^i:15 1)
+          (Loop
+            (If
+              true
+              (Block
+                (If
+                  (Call > i:15 limit:14)
+                  (Block (Fail (Call new TooBig:1 i:15)) #void)
+                  (Block))
+                (Yield @549 i:15)
+                (Assign i:15 (Call + i:15 1))
+                #void)
+              (Break @638)))))))
+  (Let
+    ^show:4
+    (Fn
+      (Let ^g:16 (Call <> Generator Int))
+      String
+      (Block
+        (Let
+          ^r:17
+          (Orelse
+            (Call (Call . g:16 \next))
+            (Block
+              (Let ^e:18 (Call caught))
+              (Return @729
+                (Block
+                  (If
+                    (Call is e:18 TooBig:1)
+                    (Call cat "too big " (Call . e:18 \n))
+                    (Call . e:18 \message))))
+              #void)))
+        (Block
+          (If
+            (Call is r:17 (Call <> ValueResult Int))
+            (Call cat "value " (Call . r:17 \value))
+            "done")))))
+  (Block
+    (Var ^n:19 0)
+    (Loop
+      (If
+        (Call < n:19 5)
+        (Block (Call (Call . console \log) (Call show:4 g:3)) #void)
+        (Break @980))
+      (Assign n:19 (Call + n:19 1))))
+  (Let
+    ^safe:5
+    (Fn
+      (Let ^body:20 (Call FnType (Call <> SafeGenerator Int)))
+      (Call <> SafeGenerator Int)
+      (Block (Call body:20))))
+  (Let
+    ^s:6
+    (Call
+      safe:5
+      (Fn
+        (Call <> GeneratorResult Int)
+        GeneratorFn
+        (Block (Yield @1123 7) #void))))
+  (Let
+    ^first:7
+    (Fn
+      (Let ^g:21 (Call <> SafeGenerator Int))
+      Boolean
+      (Block (Call is (Call (Call . g:21 \nextSafe)) (Call <> ValueResult Int)))))
+  (Call
+    (Call . console \log)
+    (Call cat (Call first:7 s:6) " " (Call show:4 s:6)))
+  (Let
+    ^twice:8
+    (Fn
+      (Let ^inner:22 (Call <> Generator Int))
+      (Call <> Generator Int)
+      (Block
+        (Call
+          make:2
+          (Fn
+            (Let ^n:23 Int)
+            (Call throws (Call <> GeneratorResult Int) Error)
+            GeneratorFn
+            (Block
+              (Loop
+                (If
+                  true
+                  (Block
+                    (Let ^r:24 (Call (Call . inner:22 \next)))
+                    (If
+                      (Call is r:24 (Call <> ValueResult Int))
+                      (Block
+                        (Yield @1361 (Call * (Call . r:24 \value) n:23))
+                        #void)
+                      (Block (Break @1434) #void)))
+                  (Break @1434)))))))))
+  (Let
+    ^t:9
+    (Call
+      twice:8
+      (Call
+        make:2
+        (Fn
+          (Let ^limit:25 Int)
+          (Call throws (Call <> GeneratorResult Int) TooBig:1)
+          GeneratorFn
+          (Block (Yield @1584 1) (Fail (Call new TooBig:1 limit:25)) #void)))))
+  (Block
+    (Var ^n:26 0)
+    (Loop
+      (If
+        (Call < n:26 3)
+        (Block (Call (Call . console \log) (Call show:4 t:9)) #void)
+        (Break @1700))
+      (Assign n:26 (Call + n:26 1)))))
+log value 1
+log value 2
+log value 3
+log too big 4
+log done
+log true done
+log value 3
+log too big 3
+log done
+
+=== a generator that may throw is no SafeGenerator, and next needs handling, nextSafe not
+sealed interface GenError extends Error {}
+class TooBig(public n: Int) extends GenError {}
+let safe(body: fn (): SafeGenerator<Int>): SafeGenerator<Int> { body() }
+let a = safe { (): GeneratorResult<Int> throws TooBig extends GeneratorFn => yield 1; };
+let b = safe { (): GeneratorResult<Int> extends GeneratorFn => throw new TooBig(1); };
+let c(g: Generator<Int>): GeneratorResult<Int> { g.next() }
+let d(g: Generator<Int>): GeneratorResult<Int> throws TooBig { try g.next() }
+let e(g: Generator<Int>): Boolean { g.next() is ValueResult<Int> orelse false }
+let h(g: SafeGenerator<Int>): GeneratorResult<Int> { g.next() }
+let i(g: SafeGenerator<Int>): GeneratorResult<Int> { g.nextSafe() }
+let j(g: Generator<Int>): SafeGenerator<Int> {
+  safe { (): GeneratorResult<Int> extends GeneratorFn =>
+    if (try g.next() is ValueResult<Int>) { yield 1; }
+  }
+}
+let k(): Int throws Error { 1 }
+let f(): Void {
+  let make(body: fn (): Generator<Int>): Generator<Int> { body() }
+  make { (): GeneratorResult<Int> throws Error extends GeneratorFn => yield 1; };
+}
+--- settled
+(Block
+  (Interface ^GenError:0 Error)
+  (Class ^TooBig:1 GenError:0 (Param ^n:15 Int))
+  (Let
+    ^safe:2
+    (Fn
+      (Let ^body:16 (Call FnType (Call <> SafeGenerator Int)))
+      (Call <> SafeGenerator Int)
+      (Block (Call body:16))))
+  (Let
+    ^a:3
+    (Call
+      safe:2
+      (Fn
+        (Call throws (Call <> GeneratorResult Int) TooBig:1)
+        GeneratorFn
+        (Block (Yield @177 1) #void))))
+  (Let
+    ^b:4
+    (Call
+      safe:2
+      (Fn
+        (Call <> GeneratorResult Int)
+        GeneratorFn
+        (Block (Fail (Call new TooBig:1 1)) #void))))
+  (Let
+    ^c:5
+    (Fn
+      (Let ^g:17 (Call <> Generator Int))
+      (Call <> GeneratorResult Int)
+      (Block (Call (Call . g:17 \next)))))
+  (Let
+    ^d:6
+    (Fn
+      (Let ^g:18 (Call <> Generator Int))
+      (Call throws (Call <> GeneratorResult Int) TooBig:1)
+      (Block (Call (Call . g:18 \next)))))
+  (Let
+    ^e:7
+    (Fn
+      (Let ^g:19 (Call <> Generator Int))
+      Boolean
+      (Block
+        (Orelse
+          (Call is (Call (Call . g:19 \next)) (Call <> ValueResult Int))
+          false))))
+  (Let
+    ^h:8
+    (Fn
+      (Let ^g:20 (Call <> SafeGenerator Int))
+      (Call <> GeneratorResult Int)
+      (Block (Call (Call . g:20 \next)))))
+  (Let
+    ^i:9
+    (Fn
+      (Let ^g:21 (Call <> SafeGenerator Int))
+      (Call <> GeneratorResult Int)
+      (Block (Call (Call . g:21 \nextSafe)))))
+  (Let
+    ^j:10
+    (Fn
+      (Let ^g:22 (Call <> Generator Int))
+      (Call <> SafeGenerator Int)
+      (Block
+        (Call
+          safe:2
+          (Fn
+            (Call <> GeneratorResult Int)
+            GeneratorFn
+            (Block
+              (If
+                (Call is (Call (Call . g:22 \next)) (Call <> ValueResult Int))
+                (Block (Yield @744 1) #void)
+                (Block))))))))
+  (Let ^k:11 (Fn (Call throws Int Error) (Block 1)))
+  (Let
+    ^f:12
+    (Fn
+      Void
+      (Block
+        (Let
+          ^make:23
+          (Fn
+            (Let ^body:24 (Call FnType (Call <> Generator Int)))
+            (Call <> Generator Int)
+            (Block (Call body:24))))
+        (Call
+          make:23
+          (Fn
+            (Call throws (Call <> GeneratorResult Int) Error)
+            GeneratorFn
+            (Block (Yield @977 1) #void)))
+        #void))))
+error 177..251: Expected subtype of fn: SafeGenerator<Int32>, but got fn: Generator<Int32>
+error 316..335: Cannot throw TooBig from a function without TooBig in its return type
+error 389..397: Cannot throw Error, failures under different roots, from a function; handle them with orelse or catch
+error 463..475: Cannot throw Error from a function that throws TooBig; catch it, and throw a TooBig there if need be
+error 611..619: Cannot throw Error, failures under different roots, from a function; handle them with orelse or catch
+error 806..814: Cannot throw Error, failures under different roots, from a function; handle them with orelse or catch
+error 875..880: Error is the root of failure types; throws takes a class or sealed interface that extends it

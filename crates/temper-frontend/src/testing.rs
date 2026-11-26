@@ -124,7 +124,7 @@ impl Settle {
     }
 
     /// `Void throws Error`, a test function's result type, its `Error`
-    /// kept in [`Settle::test_errors`], as only std may write one.
+    /// kept in [`Settle::root_throws`], as only std may write one.
     fn test_result(&mut self, span: Span, like: NodeId) -> NodeId {
         let mut name = |b: Builtin| {
             let symbol = self.scopes.hidden(b);
@@ -133,7 +133,7 @@ impl Settle {
         let throws = name(Builtin::Function(Function::Throws));
         let void = name(Builtin::named("Void").unwrap());
         let error = name(Builtin::named(FAILURE_ROOT).unwrap());
-        self.test_errors.insert(error);
+        self.root_throws.insert(error);
         (self.lib).add(NodeKind::Call, span, 0, &[throws, void, error], like)
     }
 

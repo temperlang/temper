@@ -16,7 +16,7 @@ pub use failure::{
 };
 pub mod float64;
 pub mod generator;
-pub use generator::{SafeGenerator, SafeGeneratorTrait};
+pub use generator::{Generator, GeneratorTrait, SafeGenerator, SafeGeneratorTrait};
 pub mod listed;
 pub use listed::{List, ListBuilder, Listed, ListedTrait, ToList, ToListBuilder, ToListed};
 pub mod mapped;

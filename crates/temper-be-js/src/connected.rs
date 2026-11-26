@@ -135,6 +135,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Float64.toString()",
         Connection::Helper("float64ToString"),
     ),
+    (
+        "core.type Generator.next()",
+        Connection::Translate(next_safe),
+    ),
     ("core.type Int32.max()", Connection::Math("max")),
     ("core.type Int32.min()", Connection::Math("min")),
     ("core.type Int32.toFloat64()", Connection::Translate(same)),
@@ -625,7 +629,8 @@ fn promise(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     Ok(one(t, args, "promise")?.member("promise"))
 }
 
-/// `g.next()`: a JS generator's step, as Kotlin's.
+/// `g.next()`: a JS generator's step, as Kotlin's, for `nextSafe()` and
+/// a `Generator`'s `next()`, which throws what its body throws.
 fn next_safe(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     Ok(one(t, args, "nextSafe")?.method("next", Vec::new()))
 }

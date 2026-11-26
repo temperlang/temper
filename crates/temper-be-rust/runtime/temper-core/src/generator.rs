@@ -1,9 +1,84 @@
+use crate::failure::Failure;
 use crate::Result;
 use std::sync::{Arc, RwLock};
 
-// pub trait GeneratorTrait<T> {
-//     //
-// }
+/// What a step of a `Generator` gives: its next value, `None` once it's
+/// done, or the failure its body threw, any library's.
+pub type Step<T> = std::result::Result<Option<T>, Arc<dyn Failure>>;
+
+/// A generator whose body may throw, Temper's `Generator<T>`: each step
+/// gives its next value, `None` once it's done, or what the body threw,
+/// which leaves it done. A `SafeGenerator` becomes one by `From`.
+pub trait GeneratorTrait<T>: Send + Sync {
+    fn next_with(&self, selfish: &Generator<T>) -> Step<T>;
+}
+
+#[derive(Clone)]
+pub struct Generator<T>(Arc<dyn GeneratorTrait<T>>);
+
+impl<T> Generator<T>
+where
+    T: Clone + Send + Sync + 'static,
+{
+    /// A generator from a step function, which gets the generator.
+    pub fn from_fn(
+        generator_fn: Arc<dyn Fn(Generator<T>) -> Step<T> + Send + Sync>,
+    ) -> Generator<T> {
+        Generator::new(FnGenerator {
+            done: RwLock::new(false),
+            generator_fn,
+        })
+    }
+
+    pub fn new(selfish: impl GeneratorTrait<T> + 'static) -> Generator<T> {
+        Generator(Arc::new(selfish))
+    }
+
+    /// Runs the body to its next pause: its value, `None` once it's done,
+    /// or what it threw.
+    pub fn next(&self) -> Step<T> {
+        self.0.next_with(self)
+    }
+}
+
+struct FnGenerator<T> {
+    done: RwLock<bool>,
+    generator_fn: Arc<dyn Fn(Generator<T>) -> Step<T> + Send + Sync>,
+}
+
+impl<T> GeneratorTrait<T> for FnGenerator<T>
+where
+    T: Clone + Send + Sync + 'static,
+{
+    fn next_with(&self, selfish: &Generator<T>) -> Step<T> {
+        if *self.done.read().unwrap() {
+            return Ok(None);
+        }
+        let step = (self.generator_fn)(selfish.clone());
+        if !matches!(step, Ok(Some(_))) {
+            *self.done.write().unwrap() = true;
+        }
+        step
+    }
+}
+
+impl<T> GeneratorTrait<T> for SafeGenerator<T>
+where
+    T: Clone + Send + Sync + 'static,
+{
+    fn next_with(&self, _: &Generator<T>) -> Step<T> {
+        Ok(self.next_safe())
+    }
+}
+
+impl<T> From<SafeGenerator<T>> for Generator<T>
+where
+    T: Clone + Send + Sync + 'static,
+{
+    fn from(safe: SafeGenerator<T>) -> Generator<T> {
+        Generator::new(safe)
+    }
+}
 
 pub trait SafeGeneratorTrait<T>: Send + Sync {
     fn next_with(&self, selfish: &SafeGenerator<T>) -> Option<T>;

@@ -190,7 +190,7 @@ pub(super) struct Landing {
 /// `next()` passes on a failure from the body.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) enum GeneratorKind {
-    Bubbly,
+    Failing,
     Safe,
 }
 
@@ -399,7 +399,7 @@ fn generator_kind(s: &Settled, f: NodeId) -> Option<GeneratorKind> {
     if !core::fn_supers(tree, f).iter().any(|&t| is_generator_fn(t)) {
         return None;
     }
-    // `T throws Bubble`.
+    // `T throws E`, any failure type.
     let fails = |t: NodeId| {
         let callee = tree
             .children(t)
@@ -411,7 +411,7 @@ fn generator_kind(s: &Settled, f: NodeId) -> Option<GeneratorKind> {
     };
     match core::fn_parts(tree, f).1 {
         Some(out_type) if !fails(out_type) => Some(GeneratorKind::Safe),
-        _ => Some(GeneratorKind::Bubbly),
+        _ => Some(GeneratorKind::Failing),
     }
 }
 

@@ -29,6 +29,7 @@
 - [🚨Breaking change: std regex `find` gives null; tests may throw any error](#breaking-change-std-regex-find-gives-null-tests-may-throw-any-error)
 - [🚨Breaking change: `await` of a broken promise throws `BrokenPromise`](#breaking-change-await-of-a-broken-promise-throws-brokenpromise)
 - [Functions generic over their callbacks' failures](#functions-generic-over-their-callbacks-failures)
+- [🚨Breaking change: generators throw errors, not bubbles](#breaking-change-generators-throw-errors-not-bubbles)
 
 ## 🚨Breaking change: Rest parameter syntax removed.
 
@@ -682,8 +683,8 @@ let body = await response.bodyContent orelse null;
 let n = await count catch (e) { console.log(e.message); 0 };
 ```
 
-A generator that says `throws Bubble` can't pass a broken promise on
-either, so it handles its `await`s too. Each backend's runtime throws
+A generator may pass it on if it says `throws BrokenPromise` (see
+below). Each backend's runtime throws
 its own `BrokenPromise` (Python `temper_core.BrokenPromise`, Java
 `temper.core.BrokenPromise`, and so on), and a `catch` around an
 `await` works on every backend.
@@ -725,3 +726,36 @@ calls whose callbacks can't fail are as before. A bubbling callback is
 still not yet supported. Also fixed: a module's
 `let` of a `@fun` interface, `let inc: Mapper<Int, Int> = fn …`, and
 `let xs = f() orelse []`, which failed on every backend.
+
+## 🚨Breaking change: generators throw errors, not bubbles
+
+A generator body may throw what it declares, any failure type, and its
+factory then makes a `Generator<Y>`, whose `next()` throws `Error`, any
+error, instead of bubbling; the generator is done after. A body that
+declares nothing makes a `SafeGenerator<Y>`, which can't fail, as
+before; its `next()` throws `Error` too, as before it bubbled, and
+`nextSafe()` can't fail. Callers handle `next()` with `orelse` or
+`catch`, and `when` tells the errors apart. A body may declare `throws
+Error` to pass any error on, as an inner generator's:
+
+```temper inert
+let g = make { (): GeneratorResult<Int> throws TooBig extends GeneratorFn =>
+  yield 1;
+  throw new TooBig(2);
+};
+let r = g.next() catch (e) { when (e) { is TooBig -> …; else -> … } };
+let doubled = make { (): GeneratorResult<Int> throws Error extends GeneratorFn =>
+  while (true) {
+    let r = try g.next();
+    if (r is ValueResult<Int>) { yield r.value * 2; } else { break; }
+  }
+};
+```
+
+A body that throws where a `SafeGenerator` is wanted is an error. All
+seven backends translate generators that throw: Rust's
+`temper_core::Generator<T>`, whose `next()` gives `Result<Option<T>,
+Arc<dyn Failure>>`, and C++'s `core::Generator<T>`, whose `next` gives
+a `core::Expected<…, std::shared_ptr<core::Failure>>`; elsewhere, the
+host's exception comes out of the step, as before. Also fixed: Python's
+`yield` of a value with an `orelse` in it.

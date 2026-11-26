@@ -554,6 +554,7 @@ impl<'a> Translator<'a> {
                         "core.type Promise" => "temper_core::Promise".into(),
                         "core.type PromiseBuilder" => "temper_core::PromiseBuilder".into(),
                         "core.type SafeGenerator" => "temper_core::SafeGenerator".into(),
+                        "core.type Generator" => "temper_core::Generator".into(),
                         // A generator's step's result: `Some(value)`, or
                         // `None` when it's done, as Kotlin's.
                         "core.type GeneratorResult" => {
@@ -1490,6 +1491,26 @@ impl<'a> Translator<'a> {
                             continue;
                         }
                     }
+                    if let Some(j) = self.late_if_past(stmts, i, &grouped, &groups) {
+                        // The statements between first, which don't use
+                        // the local, as a handler's holders and the handler.
+                        let mut between = Vec::new();
+                        for &s in &stmts[i + 1..j] {
+                            self.stmt(s, &mut between)?;
+                        }
+                        let mut made = Vec::new();
+                        self.late_if(stmts[i], stmts[j], &mut made)?;
+                        if let Some(Stmt::Let { value: None, .. }) = made.first() {
+                            out.push(made.remove(0));
+                        }
+                        out.extend(between);
+                        out.extend(made);
+                        if crate::tree::diverges(out) {
+                            break;
+                        }
+                        i = j + 1;
+                        continue;
+                    }
                     self.stmt(stmts[i], out)?;
                     // What follows a `return` or `panic!()`, as a
                     // connected call may be written, can't run, and rustc
@@ -1579,6 +1600,39 @@ impl<'a> Translator<'a> {
             value: Some(value),
         });
         Ok(true)
+    }
+
+    /// Where a local `stmts[i]` declares without a value is first used,
+    /// past statements that don't use it, if that's an `if` that
+    /// [`Translator::late_if`] takes: a handler's `if failed { …; return
+    /// } else { x = held.unwrap() }`, after its holders and the handler.
+    fn late_if_past<T>(
+        &self,
+        stmts: &[NodeId],
+        i: usize,
+        grouped: &[NodeId],
+        groups: &std::collections::HashMap<NodeId, T>,
+    ) -> Option<usize> {
+        let p = self.p;
+        let Node::Let { local, init: None } = p.nodes.get(stmts[i]) else {
+            return None;
+        };
+        let uses = |s: NodeId| {
+            let mut found = false;
+            temper_tmpl::analysis::walk(p, s, &mut |n| {
+                found |= matches!(p.nodes.get(n), Node::Local { local: l } | Node::Assign { local: l, .. } if l == local);
+            });
+            found
+        };
+        let j = (i + 1..stmts.len()).find(|&j| uses(stmts[j]))?;
+        let plain = |s: &NodeId| !grouped.contains(s) && !groups.contains_key(s);
+        let fits = j > i + 1
+            && matches!(p.nodes.get(stmts[j]), Node::If { .. })
+            && stmts[i + 1..j].iter().all(plain)
+            && self.assigned(stmts[j], local) == 1
+            && !self.is_cell(local)
+            && !self.is_mut(local, false);
+        fits.then_some(j)
     }
 
     /// A local declared with its late initializer's value

@@ -2265,7 +2265,8 @@ impl<'a> Translator<'a> {
 /// An array's item type as `T[]` takes it: parenthesized if a union.
 impl Translator<'_> {
     /// Whether a node reads a compiler-made local holding a failure or
-    /// null: a `catch`'s `~caught`.
+    /// null: a `catch`'s `~caught`, or another local tsc can't narrow
+    /// (`failures::is_guarded_elsewhere`).
     fn is_kept_failure(&self, id: NodeId) -> bool {
         let p = self.p;
         let Node::Local { local } = p.nodes.get(id) else {
@@ -2274,6 +2275,7 @@ impl Translator<'_> {
         let d = p.decls.get(local);
         d.facts.contains(Facts::COMPILER_MADE)
             && nominal_decl(p, p.types.non_null(d.ty)).is_some_and(|c| self.is_failure_type(c))
+            || temper_tmpl::failures::is_guarded_elsewhere(p, id)
     }
 }
 

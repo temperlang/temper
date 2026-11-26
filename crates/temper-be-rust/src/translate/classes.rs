@@ -1987,6 +1987,11 @@ impl<'a> Translator<'a> {
             }
             // `Some(…)` and `None` are `Option`s already.
             "core.type GeneratorResult" => return self.expr(value, Want::Owned),
+            // A `SafeGenerator` as one that may fail.
+            "core.type Generator" => {
+                let v = self.expr(value, Want::Owned)?;
+                return Ok(Expr::path("temper_core::Generator::from").call(vec![v]));
+            }
             "core.type Mapped" => {
                 let v = self.expr(value, Want::Owned)?;
                 return Ok(Expr::path("temper_core::Mapped::new").call(vec![v]));

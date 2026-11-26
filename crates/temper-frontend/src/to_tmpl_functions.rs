@@ -36,7 +36,8 @@ impl Translator<'_> {
 
     /// A generator's literal, `{ (x: T): GeneratorResult<Y> extends
     /// GeneratorFn => … }`: a factory, typed `fn (T): SafeGenerator<Y>`
-    /// as typing gives it, marked [`Facts::GENERATOR`], whose body may
+    /// as typing gives it (`fn (T): Generator<Y>` where the body may
+    /// throw, which tmpl gives any error, as its `next()` throws), marked [`Facts::GENERATOR`], whose body may
     /// `await` and `yield`.
     pub(super) fn generator_literal(&mut self, f: FNode) -> Tx<NodeId> {
         let ty = self.expr_ty(f)?;
@@ -46,15 +47,28 @@ impl Translator<'_> {
             return self.not_yet(f, "a generator of unknown type");
         }
         // What backends that write generators as state machines call
-        // (`temper_tmpl::coroutines`), declared with it.
-        for helper in [
+        // (`temper_tmpl::coroutines`), declared with it: for a
+        // `Generator<Y>`, whose body may fail, `adaptGeneratorFn` and
+        // the `Error` its step fails with.
+        let generator = self.core_decl("Generator");
+        let fails = made.and_then(|m| temper_tmpl::analysis::nominal_decl(self.b.program(), m))
+            == generator;
+        let failing: &[&str] = if fails {
+            &["adaptGeneratorFn", "Error"]
+        } else {
+            &[]
+        };
+        for &helper in [
             "ValueResult.constructor",
             "doneResult",
             "empty",
             "safeAdaptGeneratorFn",
             "awakeUpon",
             "getPromiseResultSync",
-        ] {
+        ]
+        .iter()
+        .chain(failing)
+        {
             if self.core_decl(helper).is_none() {
                 return self.not_yet(f, format!("core's {helper}"));
             }

@@ -5,6 +5,7 @@
 //! tmpl never lists backends.
 //!
 //! A generator literal's value is a factory, `fn (): SafeGenerator<Y>`,
+//! or `fn (): Generator<Y>` where its body may fail, with any error,
 //! whose calls make a generator that runs its body a step at a time:
 //! each step resumes after the last pause and runs until the next, a
 //! `yield`, which gives the step's caller its value, or an `await` of a
@@ -32,7 +33,9 @@ pub enum CoroutineStrategy {
     /// step is next, and the promise awaited), and returns
     /// `safeAdaptGeneratorFn(step)`, where `step`, a state machine, runs
     /// one step each call, returning `ValueResult(x)` for a `yield(x)`
-    /// (or `ValueResult(empty())`), and `doneResult()` once it's done.
+    /// (or `ValueResult(empty())`), and `doneResult()` once it's done;
+    /// for a `Generator<Y>`, `adaptGeneratorFn(step)`, whose step fails
+    /// as the body does, with any error, leaving the generator done.
     /// An `await` stores its promise, sets the next
     /// state, calls `awakeUpon(promise, generator)`, which steps the
     /// generator again once the promise is resolved, and returns; the
@@ -106,6 +109,9 @@ struct Helpers {
     generator_result: DeclId,
     done_result: DeclId,
     adapt: DeclId,
+    /// `adaptGeneratorFn`, for a generator whose body may fail, if the
+    /// program has one.
+    adapt_failing: Option<DeclId>,
     awake_upon: DeclId,
     get_result: DeclId,
 }
@@ -130,6 +136,7 @@ impl Helpers {
             generator_result: find(None, "GeneratorResult")?,
             done_result: find(None, "doneResult")?,
             adapt: find(None, "safeAdaptGeneratorFn")?,
+            adapt_failing: find(None, "adaptGeneratorFn").ok(),
             awake_upon: find(None, "awakeUpon")?,
             get_result: find(None, "getPromiseResultSync")?,
         })
@@ -242,10 +249,22 @@ fn to_state_machine(b: &mut Builder, h: &Helpers, literal: NodeId) -> R<()> {
     };
     let made = sig.pass;
     let Some(&yields) = p.types.args(made).first() else {
-        return Err("a generator whose result isn't SafeGenerator<Y>".into());
+        return Err("a generator whose result isn't Generator<Y> or SafeGenerator<Y>".into());
     };
+    // A step fails as the body may, and so does the generator's `next()`.
+    let fail = failures::generator_failure(p, decl);
     let gen_result = b.applied(h.generator_result, &[yields]);
-    let step_ty = b.function_type(&[made], gen_result);
+    let adapt = match fail {
+        Some(_) => {
+            (h.adapt_failing).ok_or("core's adaptGeneratorFn, which a state machine needs")?
+        }
+        None => h.adapt,
+    };
+    let step_result = match fail {
+        Some(fail) => b.result(gen_result, fail),
+        None => gen_result,
+    };
+    let step_ty = b.function_type(&[made], step_result);
     let step = b.declare_made(DeclKind::Lambda, &["convertedCoroutine"], decl, step_ty);
     let generator = b.declare_made(DeclKind::Param, &["generator"], step, made);
     let state = b.declare_made(DeclKind::Local, &["caseIndex"], decl, TypeId::INT32);
@@ -298,7 +317,7 @@ fn to_state_machine(b: &mut Builder, h: &Helpers, literal: NodeId) -> R<()> {
     }
     let param = b.param(generator);
     let step_literal = b.function_literal(step_ty, step, &[param], step_body);
-    let adapted = b.call_generic(h.adapt, &[yields], &[step_literal]);
+    let adapted = b.call_generic(adapt, &[yields], &[step_literal]);
     let mut stmts = Vec::new();
     let zero_state = b.int32(0);
     stmts.push(b.let_stmt(state, Some(zero_state)));

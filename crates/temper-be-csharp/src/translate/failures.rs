@@ -70,7 +70,8 @@ pub(super) fn failure_class(p: &Program, decl: DeclId) -> bool {
 
 /// Whether a node reads a compiler-made local holding a failure or null,
 /// a `catch`'s `~caught`, which C# doesn't narrow, as its check is of
-/// another (`~held`), so takes `!`.
+/// another (`~held`), so takes `!`; and others alike
+/// (`failures::is_guarded_elsewhere`).
 pub(super) fn is_kept_failure(p: &Program, id: NodeId) -> bool {
     let Node::Local { local } = p.nodes.get(id) else {
         return false;
@@ -78,6 +79,7 @@ pub(super) fn is_kept_failure(p: &Program, id: NodeId) -> bool {
     let d = p.decls.get(local);
     d.facts.contains(Facts::COMPILER_MADE)
         && nominal_decl(p, p.types.non_null(d.ty)).is_some_and(|c| failure_class(p, c))
+        || temper_tmpl::failures::is_guarded_elsewhere(p, id)
 }
 
 impl Translator<'_> {

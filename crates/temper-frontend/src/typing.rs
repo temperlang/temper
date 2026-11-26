@@ -708,7 +708,8 @@ impl Settle {
 
     /// A function's signature, with its own type parameters as they're
     /// written. A generator's call makes a generator: `SafeGenerator<Y>`
-    /// for `GeneratorResult<Y>`, unless it has optional parameters.
+    /// for `GeneratorResult<Y>`, or `Generator<Y>` for one that throws,
+    /// unless it has optional parameters.
     fn fn_signature(&mut self, node: NodeId) -> TypeId {
         let tree = &self.lib.tree;
         let (params, out_type, _) = core::fn_parts(tree, node);
@@ -741,13 +742,19 @@ impl Settle {
         })
     }
 
-    /// What a generator's factory makes, `SafeGenerator<Y>`, for its
-    /// literal's `GeneratorResult<Y>`, or unknown for another type.
+    /// What a generator's factory makes for its literal's
+    /// `GeneratorResult<Y>`: a `SafeGenerator<Y>`, or where the body may
+    /// throw (`GeneratorResult<Y> throws E`), a `Generator<Y>`, whose
+    /// `next()` throws any `Error`; unknown for another type.
     fn generator_made(&mut self, out_type: NodeId) -> TypeId {
         let t = self.eval_type(out_type);
+        let made = match self.is_throws(out_type) {
+            true => "Generator",
+            false => "SafeGenerator",
+        };
         let types = &mut self.typing.types;
         let index = |name: &str| crate::builtins::TYPES.iter().position(|&t| t == name);
-        let (Some(result), Some(made)) = (index("GeneratorResult"), index("SafeGenerator")) else {
+        let (Some(result), Some(made)) = (index("GeneratorResult"), index(made)) else {
             return UNKNOWN;
         };
         let result = types.builtin(result as u8);
@@ -833,11 +840,14 @@ impl Settle {
     }
 
     /// Whether `throws Error`, any error, may name the root here, as
-    /// `name` does: in std, whose `testing` runs tests, and in a test's
-    /// result, which the compiler writes ([`Settle::test_errors`]). A test
-    /// may throw any error, which fails it.
+    /// `name` does: in std, whose `testing` runs tests, in a test's
+    /// result, which the compiler writes, and in a generator literal's,
+    /// as `GeneratorResult<Y> throws Error` ([`Settle::root_throws`]). A
+    /// test may throw any error, which fails it; a generator's `next()`
+    /// throws any error, so its body may pass any on, as an inner
+    /// generator's.
     fn may_throw_root(&self, name: NodeId) -> bool {
-        self.test_errors.contains(&name) || self.lib.in_std(self.lib.tree.span(name).start)
+        self.root_throws.contains(&name) || self.lib.in_std(self.lib.tree.span(name).start)
     }
 
     /// Whether `node` names builtin function `f`.
@@ -1327,12 +1337,30 @@ impl Settle {
     /// Checks a node after its children, as Kotlin Temper's `TypeChecker`
     /// does, so deeper errors come first.
     fn check(&mut self, node: NodeId) {
+        if self.lib.tree.kind(node) == NodeKind::Fn {
+            self.note_generator_throws(node);
+        }
         let count = self.lib.tree.children(node).len();
         for i in 0..count {
             let child = self.lib.tree.children(node)[i];
             self.check(child);
         }
         self.check_node(node);
+    }
+
+    /// Notes a generator literal's `throws Error`, which may name the root
+    /// ([`Settle::may_throw_root`]), before its children are checked.
+    fn note_generator_throws(&mut self, f: NodeId) {
+        let tree = &self.lib.tree;
+        if core::fn_supers(tree, f).is_empty() {
+            return;
+        }
+        let Some(out_type) = core::fn_parts(tree, f).1 else {
+            return;
+        };
+        if let (true, Some(&fail)) = (self.is_throws(out_type), tree.children(out_type).get(2)) {
+            self.root_throws.insert(fail);
+        }
     }
 
     /// Checks a node, its children already checked.

@@ -1378,3 +1378,40 @@ fn failure_parameters_in_tmpl() {
         }
     });
 }
+
+/// A generator whose body may throw makes a `Generator<Y>`, whose body
+/// may fail with any error, and whose `next()` throws core's `Error`; as
+/// a state machine, its step fails as its body does, adapted by
+/// `adaptGeneratorFn`. One that can't fail stays a `SafeGenerator<Y>`.
+#[test]
+fn failing_generators_in_tmpl() {
+    with_stack(|| {
+        let source = "
+    sealed interface AppError extends Error {}
+    class TooBig(public n: Int) extends AppError {}
+    let make(body: fn (): Generator<Int>): Generator<Int> { body() }
+    let g = make { (): GeneratorResult<Int> throws TooBig extends GeneratorFn =>
+      yield 1;
+      throw new TooBig(2);
+    };
+    let ok = g.next() is ValueResult<Int> catch (e) { e.message.isEmpty };
+    console.log(ok.toString());
+";
+        let program = translate_source("generators", source);
+        let written = text::write(&program);
+        assert!(
+            written.contains("(fn generator ~fn#") && written.contains("): Generator#"),
+            "{written}"
+        );
+        assert!(written.contains("method next#"), "{written}");
+        let lowered = lower(&program, CoroutineStrategy::TranslateToRegularFunction)
+            .unwrap()
+            .unwrap();
+        let problems = validate(&lowered, &Profile::full());
+        assert!(problems.is_empty(), "{problems:#?}");
+        let written = text::write(&lowered);
+        assert!(written.contains("adaptGeneratorFn#"), "{written}");
+        assert!(written.contains("): GeneratorResult#"), "{written}");
+        assert!(written.contains("throws Error#"), "{written}");
+    });
+}

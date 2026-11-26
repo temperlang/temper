@@ -45,6 +45,10 @@ pub enum Connection {
 
 /// Sorted by qname.
 pub const TABLE: &[(&str, Connection)] = &[
+    (
+        "core.adaptGeneratorFn()",
+        Connection::Making("adapt_generator_fn"),
+    ),
     ("core.async()", Connection::Call("async_run")),
     ("core.awakeUpon()", Connection::Call("awake_upon")),
     ("core.doneResult()", Connection::Call("doneResult")),
@@ -195,6 +199,7 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Float64.toString()",
         Connection::Call("Float64::toString"),
     ),
+    ("core.type Generator.next()", Connection::Call("next")),
     ("core.type Int32.max()", Connection::Call("std::max")),
     ("core.type Int32.min()", Connection::Call("std::min")),
     (

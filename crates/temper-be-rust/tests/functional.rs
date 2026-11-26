@@ -134,8 +134,9 @@ const UNUSED_KEYS: [&str; 5] = [
 /// `test-async`'s `async` blocks in tests; and `failure-params`' `let`
 /// of a call whose lone argument is a generic call, which rustfmt breaks
 /// after the `=`, and `Some(f::<E>(…)?)`, whose comma after the `?`
-/// rustfmt leaves out here, though it keeps it elsewhere.
-const LAYOUT_GAPS: [&str; 10] = [
+/// rustfmt leaves out here, though it keeps it elsewhere, as
+/// `failure-generators`' `Ok(Some(f(…)?))` too.
+const LAYOUT_GAPS: [&str; 11] = [
     "functions",
     "regex-match",
     "regex-zero-advance",
@@ -146,6 +147,7 @@ const LAYOUT_GAPS: [&str; 10] = [
     "test-fails",
     "test-async",
     "failure-params",
+    "failure-generators",
 ];
 
 /// This crate's own programs, in `tests/programs/`, which test what's
@@ -153,8 +155,8 @@ const LAYOUT_GAPS: [&str; 10] = [
 const OWN: [&str; 2] = ["class-edges", "nullable-edges"];
 
 /// The testkit's specifications (`kit::SPECS`) this backend runs, which
-/// others don't all yet: `failure-params`.
-const SPECS: [&str; 1] = ["failure-params"];
+/// others don't all yet: `failure-params` and `failure-generators`.
+const SPECS: [&str; 2] = ["failure-params", "failure-generators"];
 
 fn cases() -> Vec<Case> {
     let tests = [

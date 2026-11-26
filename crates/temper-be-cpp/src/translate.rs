@@ -574,6 +574,11 @@ impl<'a> Translator<'a> {
         }
     }
 
+    /// A nominal type's declaration's qname, or nothing.
+    fn nominal_qname(&self, ty: TypeId) -> String {
+        temper_tmpl::analysis::nominal_decl(self.p, ty).map_or(String::new(), |d| self.qname(d))
+    }
+
     fn qname(&self, decl: DeclId) -> String {
         self.qnames
             .get(decl)
@@ -3013,6 +3018,14 @@ impl<'a> Translator<'a> {
             {
                 let v = self.expr(value)?.str_value();
                 self.core("any_box").call(vec![v])
+            }
+            // A `SafeGenerator` as a `Generator`, which may fail.
+            Node::Upcast { value }
+                if self.nominal_qname(p.nodes.ty(id)) == "core.type Generator"
+                    && self.nominal_qname(p.nodes.ty(value)) == "core.type SafeGenerator" =>
+            {
+                let v = self.expr(value)?;
+                self.core("generator_of").call(vec![v])
             }
             Node::Upcast { value } => match self.base_of(value, id)? {
                 Some(base) => {

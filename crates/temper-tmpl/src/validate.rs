@@ -44,7 +44,9 @@
 //!   function failing with it, never mixing with `Bubble`, but for core's
 //!   `Error`, any error, which takes a bubble too, until `Bubble` goes; **F5** no reading a module `let`
 //!   before its initializer; **F6** `Await` and `Yield` only in a
-//!   generator literal's own body, a `Yield`'s value its `Y`; **F7** a
+//!   generator literal's own body, a `Yield`'s value its `Y`, and the
+//!   body failing only where its factory makes core's `Generator<Y>`,
+//!   with any error (F4), not a `SafeGenerator<Y>`; **F7** a
 //!   `Switch`'s scrutinee an `Int32` or `Int64`, its labels literals of
 //!   that type, all different, and its default, if any, one and last;
 //!   **F8** (declared failures) a `Throw`'s value and cause are failure
@@ -2430,10 +2432,14 @@ impl Validator {
             self.restore(outer);
             return;
         };
-        let fails = Fails::of(fail);
         let types = types.to_vec();
-        // A generator's body returns nothing: its value is the factory.
+        // A generator's body returns nothing: its value is the factory,
+        // and it fails as the generator's `next()` does.
         let generator = p.decls.get(decl).facts.contains(Facts::GENERATOR);
+        let fails = match generator {
+            true => Fails::of(crate::failures::generator_failure(p, decl)),
+            false => Fails::of(fail),
+        };
         let yields = match generator {
             true => p
                 .types

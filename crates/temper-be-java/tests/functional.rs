@@ -83,8 +83,8 @@ const RUNTIME_OPTIONS: &[&str] = &[
 ];
 
 /// The testkit's specifications (`kit::SPECS`) this backend runs, which
-/// others don't all yet: `failure-params`.
-const SPECS: [&str; 1] = ["failure-params"];
+/// others don't all yet: `failure-params` and `failure-generators`.
+const SPECS: [&str; 2] = ["failure-params", "failure-generators"];
 
 fn cases() -> Vec<Case> {
     let tests = [

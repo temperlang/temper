@@ -50,6 +50,10 @@ pub enum Connection {
 
 /// Sorted by qname.
 pub const TABLE: &[(&str, Connection)] = &[
+    (
+        "core.adaptGeneratorFn()",
+        Connection::Function("temper_core::Generator::from_fn"),
+    ),
     ("core.async()", Connection::Translate(run_async)),
     ("core.awakeUpon()", Connection::Translate(awake_upon)),
     ("core.doneResult()", Connection::Translate(none)),
@@ -155,6 +159,7 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Float64.toString()",
         Connection::Function("temper_core::float64::to_string"),
     ),
+    ("core.type Generator.next()", Connection::Method("next")),
     ("core.type Int32.max()", Connection::Method("max")),
     ("core.type Int32.min()", Connection::Method("min")),
     ("core.type Int32.toFloat64()", Connection::Cast("f64")),

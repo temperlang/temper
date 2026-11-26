@@ -34,6 +34,10 @@ pub enum Connection {
 
 /// Sorted by qname.
 pub const TABLE: &[(&str, Connection)] = &[
+    (
+        "core.adaptGeneratorFn()",
+        Connection::Translate(safe_adapt_generator_fn),
+    ),
     ("core.async()", Connection::Translate(run_async)),
     ("core.awakeUpon()", Connection::Translate(awake_upon)),
     ("core.doneResult()", Connection::Translate(done_result)),
@@ -177,6 +181,7 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Float64.toString()",
         Connection::Static("Core", "float64ToString"),
     ),
+    ("core.type Generator.next()", Connection::Method("get")),
     ("core.type Int32.max()", Connection::Static("Math", "max")),
     ("core.type Int32.min()", Connection::Static("Math", "min")),
     ("core.type Int32.toFloat64()", Connection::Cast("double")),
@@ -1216,7 +1221,9 @@ fn new_value_result(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, Not
     Ok(Expr::New("ValueResult<>".into(), vec![value]))
 }
 
-/// `Core.safeAdaptGeneratorFn(step::apply)`, a step function a generator.
+/// `Core.safeAdaptGeneratorFn(step::apply)`, a step function a generator,
+/// for `adaptGeneratorFn` too: Java's failures are unchecked, so a step
+/// that throws passes it out of `get()`, leaving the generator done.
 fn safe_adapt_generator_fn(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let step = one(t, args, "safeAdaptGeneratorFn")?;
     t.import("temper.core.Core");

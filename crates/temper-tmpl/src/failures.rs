@@ -41,6 +41,35 @@ pub fn broken_promise(p: &Program) -> Option<TypeId> {
     p.decls.ids().find(|&d| is_it(d)).map(|d| p.decls.get(d).ty)
 }
 
+/// What a generator literal's body may fail with, for its factory's
+/// signature: core's `Error`, any error, where the factory makes core's
+/// `Generator<Y>`, whose `next()` throws it; nothing where it makes a
+/// `SafeGenerator<Y>`, which can't fail.
+pub fn generator_failure(p: &Program, factory: DeclId) -> Option<TypeId> {
+    let made = p.signature(factory)?.pass;
+    let decl = nominal_decl(p, made)?;
+    let is_generator =
+        p.name(decl) == "Generator" && is_external(p, decl) && library_of(p, decl) == "core";
+    Some(p.decls.get(root(p).filter(|_| is_generator)?).ty)
+}
+
+/// Whether a node reads a compiler-made local that a handler sets and a
+/// check of another local guards, so a target's checker can't narrow it
+/// from null: a `catch`'s `~caught` of core's `Error`, and a `~held`
+/// `GeneratorResult`, which a flag guards, as some hosts write its
+/// `DoneResult` as null. Targets read either as not null (`!`, a cast),
+/// as they do their own failure types' `~caught`.
+pub fn is_guarded_elsewhere(p: &Program, id: NodeId) -> bool {
+    let Node::Local { local } = p.nodes.get(id) else {
+        return false;
+    };
+    let d = p.decls.get(local);
+    let core = |c: DeclId, name: &str| p.name(c) == name && library_of(p, c) == "core";
+    d.facts.contains(crate::decls::Facts::COMPILER_MADE)
+        && nominal_decl(p, p.types.non_null(d.ty))
+            .is_some_and(|c| core(c, "Error") || core(c, "GeneratorResult"))
+}
+
 /// Whether `ty` is core's `Error`, any error: a test's failure, and
 /// what std's `testing` takes, which may be a bubble too, until `Bubble`
 /// goes.

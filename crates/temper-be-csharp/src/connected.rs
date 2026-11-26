@@ -175,6 +175,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Float64.toString()",
         Connection::Translate(float_to_string),
     ),
+    (
+        "core.type Generator.next()",
+        Connection::Static("Core", "GeneratorNext"),
+    ),
     ("core.type Int32.max()", Connection::Static("Math", "Max")),
     ("core.type Int32.min()", Connection::Static("Math", "Min")),
     (

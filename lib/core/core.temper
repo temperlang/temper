@@ -255,8 +255,8 @@ export sealed interface GeneratorResult<@out YIELD extends AnyValue> {}
  * [snippet/type/Generator/method/next] method.
  *
  * Block lambdas that extend [snippet/type/GeneratorFn] specify factories
- * for *Generator*s, or if they don't [snippet/type/Bubble], for
- * [snippet/type/Generator]s.
+ * for *Generator*s whose bodies may throw what they declare, or if they
+ * declare nothing, for [snippet/type/SafeGenerator]s.
  *
  * Terminology note:
  * Coroutines may be represented as *Generator*s where
@@ -279,11 +279,11 @@ export interface Generator<@out YIELD extends AnyValue> {
    * If the computation pauses, returns the value associated with the
    * decision to pause.
    * For a [snippet/type/GeneratorFn], this is the value passed to
-   * [snippet/builtin/yield].  If a *GeneratorFn* bubbles, the call to
-   * next propagates it.
+   * [snippet/builtin/yield].  If a *GeneratorFn* throws, the call to
+   * next throws it, any [snippet/type/Error], and the generator is done.
    */
   @connected
-  public next(): GeneratorResult<YIELD> throws Bubble;
+  public next(): GeneratorResult<YIELD> throws Error;
   /**
    * True if subsequent calls to [snippet/type/Generator/method/next]
    * would do no work and return a [snippet/type/DoneResult].
@@ -309,8 +309,9 @@ export interface Generator<@out YIELD extends AnyValue> {
 }
 
 /**
- * A variant of [snippet/type/Generator] that does not bubble
- * when computing the next result.
+ * A variant of [snippet/type/Generator] that can't fail
+ * when computing the next result. Its *next* still throws, as
+ * *Generator*'s does; its *nextSafe* doesn't.
  */
 export interface SafeGenerator<@out YIELD extends AnyValue> extends Generator<YIELD> {
   /**
@@ -327,7 +328,7 @@ export interface SafeGenerator<@out YIELD extends AnyValue> extends Generator<YI
    * [snippet/builtin/yield].
    */
   @connected
-  public next(): GeneratorResult<YIELD> throws Bubble {
+  public next(): GeneratorResult<YIELD> throws Error {
     nextSafe()
   }
 
@@ -364,14 +365,14 @@ export let doneResult<YIELD extends AnyValue>(): DoneResult<YIELD> { new DoneRes
  */
 class GeneratorFnWrapper<@out YIELD extends AnyValue>
 extends Generator<YIELD> {
-  private let generatorFn: fn (): GeneratorResult<YIELD> throws Bubble;
+  private let generatorFn: fn (): GeneratorResult<YIELD> throws Error;
   private var _done: builtins.Boolean = false;
 
-  public constructor(generatorFn: fn (): GeneratorResult<YIELD> throws Bubble) {
+  public constructor(generatorFn: fn (): GeneratorResult<YIELD> throws Error) {
     this.generatorFn = generatorFn;
   }
 
-  public next(): GeneratorResult<YIELD> throws Bubble {
+  public next(): GeneratorResult<YIELD> throws Error {
     if (this._done) {
       return doneResult<YIELD>();
     }

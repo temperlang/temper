@@ -1,0 +1,182 @@
+tmpl 1 model 1 library `failure-generators` 0.0.0
+
+uses `temper-core`#3 0.0.0-alpha.0.0 {
+  interface Error#4 {
+    connected get message#50(): String;
+  }
+  interface Generator#9<YIELD#10> {
+    connected method next#43(): GeneratorResult#22<YIELD#10> throws Error#4;
+  }
+  interface SafeGenerator#13<YIELD#14> extends Generator#9<YIELD#14> {
+    connected method nextSafe#100(): GeneratorResult#22<YIELD#14>;
+  }
+  interface GeneratorResult#22<YIELD#23> {}
+  class Int32#28 {
+    connected method toString#29(radix?: Int32): String;
+  }
+  class ListBuilder#34<T#35> extends Listed#36<T#35> {
+    connected constructor constructor#39(): ListBuilder#34<T#35>;
+    connected get length#41(): Int32;
+    connected method add#57(newValue: T#35, at?: Int32): Void;
+  }
+  interface Listed#36<T#37> {
+    connected method join#51<E#52 extends Error#4>(separator: String, stringify: fn (T#37): String throws E#52): String throws E#52;
+  }
+  class ValueResult#55<YIELD#56> extends GeneratorResult#22<YIELD#56> {
+    let value#58: YIELD#56;
+    connected constructor constructor#62(value: YIELD#56): ValueResult#55<YIELD#56>;
+  }
+  connected fn doneResult#63<YIELD#64>(): DoneResult#65<YIELD#64>;
+  class DoneResult#65<YIELD#66> extends GeneratorResult#22<YIELD#66> {}
+  connected fn empty#67(): Empty#68;
+  class Empty#68 {}
+  connected fn safeAdaptGeneratorFn#69<YIELD#70>(step: fn (SafeGenerator#13<YIELD#70>): GeneratorResult#22<YIELD#70>): SafeGenerator#13<YIELD#70>;
+  connected fn awakeUpon#71<T#72>(promise: Promise#73<T#72>, generator: SafeGenerator#13<Empty#68>): Void;
+  class Promise#73<R#74> {}
+  connected fn getPromiseResultSync#75<T#76>(promise: Promise#73<T#76>): T#76 throws BrokenPromise#77;
+  class BrokenPromise#77 extends CoreError#78 {}
+  interface CoreError#78 extends Error#4 {}
+  connected fn adaptGeneratorFn#79<YIELD#80>(step: fn (Generator#9<YIELD#80>): GeneratorResult#22<YIELD#80> throws Error#4): Generator#9<YIELD#80>;
+  interface Console#84 {
+    connected method log#85(message: String): Void;
+  }
+  connected fn getConsole#106(name?: String): Console#84;
+}
+
+module `failure-generators`#0 {
+  let ~console#86: Console#84;
+
+  interface FailureGeneratorsError#1 extends Error#4 {}
+
+  class TooBig#2 extends FailureGeneratorsError#1 {
+    let n#5: Int32;
+    constructor constructor#6(n#26: Int32): TooBig#2 {
+      this.n#5 = n#26;
+    }
+    get message#27(): String {
+      return %String.cat(%String.cat("too big (n: ", this.n#5.toString#29(omitted)), ")");
+    }
+  }
+
+  fn generated#7<T#8>(make#30: fn (): Generator#9<T#8>): Generator#9<T#8> {
+    return make#30();
+  }
+
+  fn safely#11<T#12>(make#31: fn (): SafeGenerator#13<T#12>): SafeGenerator#13<T#12> {
+    return make#31();
+  }
+
+  fn take#15(g#32: Generator#9<Int32>, n#33: Int32): String {
+    let taken#38: ListBuilder#34<String> = new constructor#39<String>();
+    ~loop#40: while (%Int32.lt(taken#38.length#41(), n#33)) {
+      var r#42: GeneratorResult#22<Int32>;
+      var ~failed#44: Boolean = false;
+      var ~caught#45: Error#4? = (null): Error#4?;
+      var ~held#47: GeneratorResult#22<Int32>? = (null): GeneratorResult#22<Int32>?;
+      (catch((value { ~held#47 = (asNullable(g#32.next#43()^)): GeneratorResult#22<Int32>?; void }): Void, ~failure#46: Error#4, (value { ~caught#45 = (asNullable(~failure#46)): Error#4?; ~failed#44 = true; void }): Void)): Void;
+      if (~failed#44) {
+        let e#48: Error#4 = (nonNull(~caught#45)): Error#4;
+        let why#49: String = (if (is(e#48, TooBig#2)) %String.cat("too big ", ((downcast(e#48)): TooBig#2).n#5.toString#29(omitted)) else e#48.message#50()): String;
+        return %String.cat(%String.cat(taken#38.join#51<Never<Error#4>>(" ", (fn ~fn#53(s#54: String): String {
+          return s#54;
+        }): fn (String): String), " "), why#49);
+      } else {
+        r#42 = (nonNull(~held#47)): GeneratorResult#22<Int32>;
+      }
+      if (is(r#42, ValueResult#55<Int32>)) {
+        taken#38.add#57(((downcast(r#42)): ValueResult#55<Int32>).value#58.toString#29(omitted), omitted);
+      } else {
+        taken#38.add#57("done", omitted);
+        break ~loop#40;
+      }
+    }
+    return taken#38.join#51<Never<Error#4>>(" ", (fn ~fn#59(s#60: String): String {
+      return s#60;
+    }): fn (String): String);
+  }
+
+  fn upTo#16(limit#61: Int32): Generator#9<Int32> {
+    return generated#7<Int32>((fn generator ~fn#81(): Generator#9<Int32> [limit#61] {
+      var i#82: Int32 = 1;
+      ~loop#83: while (true) {
+        if (%Int32.gt(i#82, limit#61)) {
+          (throw(new constructor#6(i#82))^): Void;
+        }
+        yield i#82;
+        i#82 = %Int32.add(i#82, 1);
+      }
+    }): fn (): Generator#9<Int32>);
+  }
+
+  let one#17: Generator#9<Int32>;
+
+  fn checked#18(n#87: Int32, limit#88: Int32): Int32 throws TooBig#2 {
+    if (%Int32.gt(n#87, limit#88)) {
+      (throw(new constructor#6(n#87))^): Void;
+    }
+    return n#87;
+  }
+
+  fn squares#19(limit#89: Int32): Generator#9<Int32> {
+    return generated#7<Int32>((fn generator ~fn#90(): Generator#9<Int32> [limit#89] {
+      yield (orelse(checked#18(50, limit#89)^, 0)): Int32;
+      var i#91: Int32 = 1;
+      ~loop#92: while (true) {
+        yield checked#18(%Int32.mul(i#91, i#91), limit#89)^;
+        i#91 = %Int32.add(i#91, 1);
+      }
+    }): fn (): Generator#9<Int32>);
+  }
+
+  fn count#20(n#93: Int32): SafeGenerator#13<Int32> {
+    return safely#11<Int32>((fn generator ~fn#94(): SafeGenerator#13<Int32> [n#93] {
+      {
+        var i#95: Int32 = 1;
+        ~loop#96: while (%Int32.le(i#95, n#93)) {
+          yield i#95;
+          i#95 = %Int32.add(i#95, 1);
+        }
+      }
+    }): fn (): SafeGenerator#13<Int32>);
+  }
+
+  fn shown#21(r#97: GeneratorResult#22<Int32>): String {
+    if (is(r#97, ValueResult#55<Int32>)) {
+      return ((downcast(r#97)): ValueResult#55<Int32>).value#58.toString#29(omitted);
+    } else {
+      return "done";
+    }
+  }
+
+  fn firstTwo#24(g#98: SafeGenerator#13<Int32>): String {
+    let a#99: String = shown#21(g#98.nextSafe#100());
+    let b#101: String = (orelse(shown#21(((upcast(g#98)): Generator#9<Int32>).next#43()^), "failed")): String;
+    return %String.cat(%String.cat(a#99, " "), b#101);
+  }
+
+  fn doubled#25(inner#102: Generator#9<Int32>): Generator#9<Int32> {
+    return generated#7<Int32>((fn generator ~fn#103(): Generator#9<Int32> [inner#102] {
+      ~loop#104: while (true) {
+        let r#105: GeneratorResult#22<Int32> = inner#102.next#43()^;
+        if (is(r#105, ValueResult#55<Int32>)) {
+          yield %Int32.mul(((downcast(r#105)): ValueResult#55<Int32>).value#58, 2);
+        } else {
+          break ~loop#104;
+        }
+      }
+    }): fn (): Generator#9<Int32>);
+  }
+
+  init {
+    init ~console#86 = getConsole#106(omitted);
+    ~console#86.log#85(take#15(upTo#16(3), 9));
+    init one#17 = upTo#16(1);
+    ~console#86.log#85(take#15(one#17, 9));
+    ~console#86.log#85(take#15(one#17, 9));
+    ~console#86.log#85(take#15(squares#19(10), 9));
+    ~console#86.log#85(take#15((upcast(count#20(2))): Generator#9<Int32>, 9));
+    ~console#86.log#85(firstTwo#24(count#20(1)));
+    ~console#86.log#85(take#15(doubled#25(upTo#16(2)), 9));
+    ~console#86.log#85(take#15(doubled#25((upcast(count#20(2))): Generator#9<Int32>), 9));
+  }
+}

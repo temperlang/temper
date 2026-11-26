@@ -226,8 +226,9 @@ fn cases() -> Vec<Case> {
 
 /// The testkit's specifications (`kit::SPECS`) C# runs, which other
 /// backends don't all yet: `failure-causes`, whose failures
-/// `tests/host/FailuresHost.cs` reads too, and `failure-params`.
-const SPECS: [&str; 2] = ["failure-causes", "failure-params"];
+/// `tests/host/FailuresHost.cs` reads too, `failure-params`, and
+/// `failure-generators`.
+const SPECS: [&str; 3] = ["failure-causes", "failure-params", "failure-generators"];
 
 /// A run of a program in sections (`host-failures-cause`, of
 /// `host-failures`), a library of its own, with the program's host code
