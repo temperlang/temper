@@ -6,8 +6,10 @@ literals, `Listed`'s and `List`'s members, `ListBuilder`, `Pair`, `Map`,
 and `MapBuilder`, with nullables mixed in; and generic functions and a
 method with a type parameter that no parameter's type mentions, which
 the frontend binds to its bound unless the call says, and which Rust,
-C#, and C++ then spell out; and an exported generic function that calls
-a private one. The log is what the interpreter gives.
+C#, and C++ then spell out, as it binds one that only a result's type
+mentions and nothing at the call solves; and an exported generic
+function that calls a private one. The log is what the interpreter
+gives.
 
     export interface Holder<T> {
       public get held(): T;
@@ -39,6 +41,8 @@ a private one. The log is what the interpreter gives.
       b.length + n
     }
     let relayed<S extends Scene, T>(x: T): T { tagged<S, T>(x) }
+    // Nothing at a call solves `B`, so it's `AnyValue`.
+    let halfPair<A, B>(a: A): Pair<A, List<B>> { new Pair<A, List<B>>(a, []) }
 
     // A private function that an exported generic one calls, which C++
     // declares in the header that defines the generic one.
@@ -73,6 +77,9 @@ a private one. The log is what the interpreter gives.
     console.log(empty.firstName() ?? "none");
     let n = shelf.tally(1) + shelf.tally<Named>(2);
     console.log("${tagged(4)} ${tagged("t")} ${countOf(3)} ${relayed<Stage, Int>(5)} ${n}");
+    let half = halfPair<Int>(8);
+    let halfToo = halfPair("h");
+    console.log("${half.key} ${half.value.length} ${halfToo.key}");
     let builder = new ListBuilder<String>();
     builder.add("x");
     builder.add("y");
@@ -146,6 +153,7 @@ boxed 7
 ann
 none
 4 t 3 5 7
+8 0 h
 3 w y
 2 ? x
 2 -1 true 2

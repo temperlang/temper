@@ -301,8 +301,10 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   Tempest accepts `new P<Int>` and the method's, and reports the
   mismatch, keeping the type arguments as written. Kotlin should
   translate them and report it.
+  Where nothing gives the rest, both bind them to their bounds.
   Test: settle/types.cases, "leading type arguments with the rest
-  inferred" and "leading type arguments where nothing gives the rest".
+  inferred", "leading type arguments where nothing gives the rest", and
+  "a type parameter nothing solves takes its bound".
 
 - **A generic type written without type arguments,** `List`, or `Box`
   for `class Box<T>`: both infer it from a variable's value, `let xs:
@@ -2463,9 +2465,12 @@ copied Kotlin's:
     writes every call's. Where only the body mentions one (`new
     ListBuilder<T>()`), Python annotates the body with its bound, as
     mypy and pyright reject a type variable the signature doesn't bind.
-    2026-11-10.
-    Test: programs/generics.temper.md (`tagged`, `countOf`, `tally`)
-    on every backend.
+    2026-11-10. Any other type parameter nothing at a call solves takes
+    its bound the same way, as in Kotlin (`B` in `make<Int>(1)` for
+    `make<A, B>(a: A): P<A, B?>`; 2026-11-26, before which tempest's
+    backends failed on it).
+    Test: programs/generics.temper.md (`tagged`, `countOf`, `tally`,
+    `halfPair`) on every backend.
   - **Not compared:** the Kotlin layout test (`kotlin_layout.rs`)
     doesn't cover the generics tests yet.
 - **Core's other types in the backends** (2026-11-02):

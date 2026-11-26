@@ -4363,8 +4363,8 @@ log a b c d 1 6 2 10 10
 // a `let` without a value, a parameter, a return type, a field, a
 // supertype, a bound, `is`, and inside another type, as `P<Int>?`. Too
 // many are an error everywhere. A leading type argument that doesn't fit
-// a value is reported as such, and one the call can't solve is left as
-// it would be without type arguments.
+// a value is reported as such, and one the call can't solve takes its
+// bound, as it does with no type args.
 class P<A, B>(public a: A, public b: B) {}
 interface Two<A, B> {}
 class Q(public p: P<Int>) {}
@@ -4459,7 +4459,125 @@ error 949..979: Wrong number of type arguments.  Expected 2
 error 989..1020: Wrong number of type arguments.  Expected 2
 error 1044..1047: Actual arguments do not match signature: <A extends AnyValue, B extends AnyValue>(A, B) -> P<A, B> expected [Int32, String], but got [String, String]
 error 1090..1091: Actual arguments do not match signature: <A extends AnyValue, B extends AnyValue>(A, B) -> P<A, B> expected [Int32, Int32], but got [String, Int32]
+error 1142..1143: Cannot assign to P<Int32, Int32> from P<Int32, AnyValue?>
+error 1183..1184: Cannot assign to P<Int32, Int32> from P<Int32, AnyValue?>
 Failed: Wrong number of type arguments.  Expected 2
+
+=== a type parameter nothing solves takes its bound
+// As Kotlin Temper's solver binds it: its declared bound, `AnyValue` if
+// none, with the type parameters before it put in, with or without
+// leading type arguments. So `make<Int>(1)` and `make(1)` are a
+// `P<Int32, AnyValue?>`, `makeB(1)` a `P<Int32, Animal?>`, `none()` a
+// `List<AnyValue>`, `below(1)` a `List<Int32>`, and `fails`'s `E`
+// `AnyValue`; uses are then checked against that, as `n1` to `n5` are.
+// A type wanted that binds it binds it instead (`n6`, `n7`), and so do
+// type arguments where Kotlin would fold the call (`mf`).
+class P<A, B>(public a: A, public b: B) {}
+interface Animal {}
+let make<A, B>(a: A): P<A, B?> { new P<A, B?>(a, null) }
+let makeB<A, B extends Animal>(a: A): P<A, B?> { new P<A, B?>(a, null) }
+let none<T>(): List<T> { [] }
+let below<T, U extends T>(x: T): List<U> { [] }
+let fails<T, E>(x: T): T throws E { x }
+let m = make<Int>(1);
+let o = make(1);
+let q = makeB(1);
+let u = none();
+let w = below(1);
+let r = fails(1) orelse 0;
+let n1: P<Int, Int> = m;
+let n2: P<Int, Int> = o;
+let n3: P<Int, Int> = q;
+let n4: Int = u;
+let n5: Int = w;
+let n6: P<Int, Int?> = make(1);
+let n7: P<Int, Int> = make<Int>(1);
+let mf = make<Int, String>(1);
+let n8: P<Int, Int> = mf;
+console.log("${m.a} ${o.a} ${m.b == null} ${q.b == null} ${u.length} ${w.length} ${r}");
+--- settled
+(Block
+  (Class
+    ^P:0
+    (TypeParam ^A:22)
+    (TypeParam ^B:23)
+    (Param ^a:25 A:22)
+    (Param ^b:26 B:23))
+  (Interface ^Animal:1)
+  (Let
+    ^make:2
+    (Fn
+      (TypeParam ^A:28)
+      (TypeParam ^B:29)
+      (Let ^a:30 A:28)
+      (Call <> P:0 A:28 (Call ? B:29))
+      (Block (Call new (Call <> P:0 A:28 (Call ? B:29)) a:30 null))))
+  (Let
+    ^makeB:3
+    (Fn
+      (TypeParam ^A:31)
+      (TypeParam ^B:32 Animal:1)
+      (Let ^a:33 A:31)
+      (Call <> P:0 A:31 (Call ? B:32))
+      (Block (Call new (Call <> P:0 A:31 (Call ? B:32)) a:33 null))))
+  (Let ^none:4 (Fn (TypeParam ^T:34) (Call <> List T:34) (Block (Call list))))
+  (Let
+    ^below:5
+    (Fn
+      (TypeParam ^T:35)
+      (TypeParam ^U:36 T:35)
+      (Let ^x:37 T:35)
+      (Call <> List U:36)
+      (Block (Call list))))
+  (Let
+    ^fails:6
+    (Fn
+      (TypeParam ^T:38)
+      (TypeParam ^E:39)
+      (Let ^x:40 T:38)
+      (Call throws T:38 E:39)
+      (Block x:40)))
+  (Let ^m:7 (Call make:2 \typeArg Int 1))
+  (Let ^o:8 (Call make:2 1))
+  (Let ^q:9 (Call makeB:3 1))
+  (Let ^u:10 (Call none:4))
+  (Let ^w:11 (Call below:5 1))
+  (Let ^r:12 (Orelse (Call fails:6 1) 0))
+  (Let ^n1:13 (Call <> P:0 Int Int) m:7)
+  (Let ^n2:14 (Call <> P:0 Int Int) o:8)
+  (Let ^n3:15 (Call <> P:0 Int Int) q:9)
+  (Let ^n4:16 Int u:10)
+  (Let ^n5:17 Int w:11)
+  (Let ^n6:18 (Call <> P:0 Int (Call ? Int)) (Call make:2 1))
+  (Let ^n7:19 (Call <> P:0 Int Int) (Call make:2 \typeArg Int 1))
+  (Let ^mf:20 (Call make:2 \typeArg Int \typeArg String 1))
+  (Let ^n8:21 (Call <> P:0 Int Int) mf:20)
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call . m:7 \a)
+      " "
+      (Call . o:8 \a)
+      " "
+      (Call == (Call . m:7 \b) null)
+      " "
+      (Call == (Call . q:9 \b) null)
+      " "
+      (Call . u:10 \length)
+      " "
+      (Call . w:11 \length)
+      " "
+      r:12))
+  #void)
+error 998..999: Cannot assign to P<Int32, Int32> from P<Int32, AnyValue?>
+error 1023..1024: Cannot assign to P<Int32, Int32> from P<Int32, AnyValue?>
+error 1048..1049: Cannot assign to P<Int32, Int32> from P<Int32, Animal?>
+error 1065..1066: Cannot assign to Int32 from List<AnyValue>
+error 1082..1083: Cannot assign to Int32 from List<Int32>
+error 1139..1151: Cannot assign to P<Int32, Int32> from P<Int32, Int32?>
+error 1206..1208: Cannot assign to P<Int32, Int32> from P<Int32, String?>
+log 1 1 true true 0 0 1
 
 === a generic class's constructor arguments checked against its type arguments
 // From the type arguments written, or the type wanted, for a call and

@@ -48,7 +48,17 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 tagged::<Scene, i32>(4),
                 tagged::<Scene, Arc<String>>(Arc::new("t".to_string())),
                 count_of::<temper_core::AnyValue>(3),
-                relayed::<Scene, i32>(5)
+                relayed::<Stage, i32>(5)
+            );
+            let half: (i32, temper_core::List<temper_core::AnyValue>) =
+                half_pair::<i32, temper_core::AnyValue>(8);
+            let half_too: (Arc<String>, temper_core::List<temper_core::AnyValue>) =
+                half_pair::<Arc<String>, temper_core::AnyValue>(Arc::new("h".to_string()));
+            println!(
+                "{} {} {}",
+                half.0,
+                temper_core::ListedTrait::len(&half.1),
+                half_too.0
             );
             let builder: temper_core::ListBuilder<Arc<String>> = temper_core::listed::new_builder();
             temper_core::listed::add(&builder, Arc::new("x".to_string()), None);
@@ -360,6 +370,12 @@ pub(crate) fn relayed<
     x: T,
 ) -> T {
     tagged::<S, T>(x.clone())
+}
+
+pub(crate) fn half_pair<A: Clone + Send + Sync + 'static, B: Clone + Send + Sync + 'static>(
+    a: A,
+) -> (A, temper_core::List<B>) {
+    (a.clone(), Arc::new(vec![]))
 }
 
 pub(crate) fn none_in(length: i32) -> bool {

@@ -37,6 +37,8 @@ _T = _TypeVar('_T')
 _T_2 = _TypeVar('_T_2', bound='Named')
 _TName = _TypeVar('_TName', bound='Named')
 _S = _TypeVar('_S', bound='Scene')
+_A = _TypeVar('_A')
+_B = _TypeVar('_B')
 
 
 class Holder(_Generic[_T], metaclass=_ABCMeta):
@@ -135,6 +137,10 @@ def _count_of(n: int, /) -> int:
 
 def _relayed(x: _T, /) -> _T:
     return _tagged(x)
+
+
+def _half_pair(a: _A, /) -> _Pair[_A, _Sequence[_B]]:
+    return _Pair(a, ())
 
 
 def _none_in(length: int, /) -> bool:
@@ -254,6 +260,9 @@ _empty: Shelf[Named] = Shelf(_no_names)
 _console.log('none' if (_subject2 := _empty.first_name()) is None else _subject2)
 _n: int = _int_add(_shelf.tally(1), _shelf.tally(2))
 _console.log(f"{_tagged(4)} {_tagged('t')} {_count_of(3)} {_relayed(5)} {_n}")
+_half: _Pair[int, _Sequence[object]] = _half_pair(8)
+_half_too: _Pair[str, _Sequence[object]] = _half_pair('h')
+_console.log(f'{_half.key} {len(_half.value)} {_half_too.key}')
 _builder: _MutableSequence[str] = []
 _builder.append('x')
 _builder.append('y')

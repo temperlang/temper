@@ -30,6 +30,10 @@ public final class GenericsGlobal {
         return tagged(x);
     }
 
+    static <A, B> Entry<A, List<B>> halfPair(A a) {
+        return new SimpleImmutableEntry<>(a, Core.listOf());
+    }
+
     static boolean noneIn(int length) {
         return length == 0;
     }
@@ -160,6 +164,9 @@ public final class GenericsGlobal {
         console.log(subject2 == null ? "none" : subject2);
         int n = shelf.tally(1) + shelf.tally(2);
         console.log(tagged(4) + " " + tagged("t") + " " + countOf(3) + " " + relayed(5) + " " + n);
+        Entry<Integer, List<Object>> half = halfPair(8);
+        Entry<String, List<Object>> halfToo = halfPair("h");
+        console.log(half.getKey() + " " + half.getValue().size() + " " + halfToo.getKey());
         List<String> builder = new ArrayList<>();
         builder.add("x");
         builder.add("y");

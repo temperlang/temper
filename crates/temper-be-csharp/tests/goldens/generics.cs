@@ -27,6 +27,11 @@ public static class GenericsGlobal
         return Tagged<S, T>(x);
     }
 
+    internal static KeyValuePair<A, IReadOnlyList<B>> HalfPair<A, B>(A a)
+    {
+        return new KeyValuePair<A, IReadOnlyList<B>>(a, Listed.CreateReadOnlyList<B>());
+    }
+
     internal static bool NoneIn(int length)
     {
         return length == 0;
@@ -176,7 +181,10 @@ public static class GenericsGlobal
         string? subject2 = empty.FirstName();
         console.Log(subject2 == null ? "none" : subject2);
         int n = shelf.Tally<Named>(1) + shelf.Tally<Named>(2);
-        console.Log(string.Create(CultureInfo.InvariantCulture, $"{Tagged<IScene, int>(4)} {Tagged<IScene, string>("t")} {CountOf<object>(3)} {Relayed<IScene, int>(5)} {n}"));
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{Tagged<IScene, int>(4)} {Tagged<IScene, string>("t")} {CountOf<object>(3)} {Relayed<Stage, int>(5)} {n}"));
+        KeyValuePair<int, IReadOnlyList<object>> half = HalfPair<int, object>(8);
+        KeyValuePair<string, IReadOnlyList<object>> halfToo = HalfPair<string, object>("h");
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{half.Key} {half.Value.Count} {halfToo.Key}"));
         IList<string> builder = new List<string>();
         builder.Add("x");
         builder.Add("y");

@@ -186,6 +186,11 @@ static T relayed(T x) {
   return generics::tagged<S, T>(x);
 }
 
+template <class A, class B>
+static std::shared_ptr<core::Pair<A, std::shared_ptr<std::vector<B>>>> halfPair(A a) {
+  return core::PairFactory::make<A, std::shared_ptr<std::vector<B>>>(a, core::List::make<B>());
+}
+
 bool noneIn(int32_t length) {
   return length == 0;
 }
@@ -314,7 +319,10 @@ void global_init_init() {
     core::NullableParam<core::Str> subject2 = empty->firstName();
     core::Console::log(temper_globals::console.value, subject2 == nullptr ? TEMPER_STR("none") : subject2.value);
     int32_t n = core::Int::add(shelf->tally<std::shared_ptr<Named>>(1), shelf->tally<std::shared_ptr<Named>>(2));
-    core::Console::log(temper_globals::console.value, std::to_string(tagged<std::shared_ptr<Scene>, int32_t>(4)) + " " + generics::tagged<std::shared_ptr<Scene>, core::Str>(TEMPER_STR("t")) + " " + std::to_string(countOf<std::shared_ptr<core::AnyValueBase>>(3)) + " " + std::to_string(relayed<std::shared_ptr<Scene>, int32_t>(5)) + " " + std::to_string(n));
+    core::Console::log(temper_globals::console.value, std::to_string(tagged<std::shared_ptr<Scene>, int32_t>(4)) + " " + generics::tagged<std::shared_ptr<Scene>, core::Str>(TEMPER_STR("t")) + " " + std::to_string(countOf<std::shared_ptr<core::AnyValueBase>>(3)) + " " + std::to_string(relayed<std::shared_ptr<Stage>, int32_t>(5)) + " " + std::to_string(n));
+    std::shared_ptr<core::Pair<int32_t, std::shared_ptr<std::vector<std::shared_ptr<core::AnyValueBase>>>>> half = halfPair<int32_t, std::shared_ptr<core::AnyValueBase>>(8);
+    std::shared_ptr<core::Pair<core::Str, std::shared_ptr<std::vector<std::shared_ptr<core::AnyValueBase>>>>> halfToo = generics::halfPair<core::Str, std::shared_ptr<core::AnyValueBase>>(TEMPER_STR("h"));
+    core::Console::log(temper_globals::console.value, std::to_string(half->key) + " " + std::to_string(core::List::length<std::shared_ptr<core::AnyValueBase>>(half->value)) + " " + halfToo->key);
     std::shared_ptr<std::vector<core::Str>> builder = core::ListBuilder::make<core::Str>();
     core::ListBuilder::add<core::Str>(builder, TEMPER_STR("x"));
     core::ListBuilder::add<core::Str>(builder, TEMPER_STR("y"));

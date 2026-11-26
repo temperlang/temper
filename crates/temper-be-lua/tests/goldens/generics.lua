@@ -134,6 +134,14 @@ local function relayed(x)
   return tagged(x)
 end
 
+---@generic A
+---@generic B
+---@param a A
+---@return { key: A, value: B[] }
+local function halfPair(a)
+  return temper.pair_constructor(a, {})
+end
+
 ---@param length integer
 ---@return boolean
 local function noneIn(length)
@@ -274,6 +282,9 @@ local subject2 = empty:firstName()
 print(temper.is_null(subject2) and "none" or (subject2 --[[@as string]]))
 local n = temper.int32_add(shelf:tally(1), shelf:tally(2))
 print(tagged(4) .. " " .. tagged("t") .. " " .. countOf(3) .. " " .. relayed(5) .. " " .. n)
+local half = halfPair(8)
+local halfToo = halfPair("h")
+print(half.key .. " " .. temper.list_length(half.value) .. " " .. halfToo.key)
 local builder = temper.listbuilder_constructor()
 temper.listbuilder_add(builder, "x")
 temper.listbuilder_add(builder, "y")

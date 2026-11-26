@@ -352,8 +352,8 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
 - **Solving:** type arguments bind the leading type parameters, `T` to
   `Int32` in `id<Int>(x)`; those they leave, as `B` in `pair<Int>(1,
   "s")`, are solved as without any, from the arguments and the type
-  wanted, as Kotlin does, and one nothing binds is left as it would be
-  then. With too many, none binds, and the call is "Wrong number of
+  wanted, as Kotlin does, and one nothing binds takes its bound as it
+  would then ("Unsolved", below). With too many, none binds, and the call is "Wrong number of
   type arguments.  Expected 3", at the call, which Kotlin misses
   (2026-11-26). Without type
   arguments, each argument's type is matched against its parameter's,
@@ -388,13 +388,36 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   literals and target typing", below). A nullable type binds a bare `T`,
   as in Kotlin, so `pick(d)` for a `d: Dog?` and `pick<T extends
   Animal>` is "Type formal <T extends Animal> cannot bind to Dog?",
-  while it fits an `AnyValue` bound. What doesn't bind is unknown.
+  while it fits an `AnyValue` bound. What doesn't bind is solved as
+  "Unsolved", below, says.
 - **Folding:** Kotlin folds a call of constants (`may_fold`) to its
   value before checking it, so such a call with type arguments is solved
   from its arguments instead, as its value's type would be: `let s:
   String = id<Int>("a")` passes, and `let n: Int = id<Int>("a")` is
-  "Cannot assign to Int32 from String". A constructor's or method's call
-  isn't folded.
+  "Cannot assign to Int32 from String". The type arguments still bind
+  what the arguments leave, so `make<Int, String>(1)` for `make<A,
+  B>(a: A): P<A, B?>` is a `P<Int32, String?>`, as in Kotlin, and
+  `relayed<Stage, Int>(5)` passes `Stage` on (2026-11-26; before, tmpl
+  got `S`'s bound). A constructor's or method's call isn't folded.
+- **Unsolved:** a type parameter that nothing above binds takes its
+  bound, as Kotlin's solver binds it: the bound as declared, or
+  `AnyValue`, with what the others bind put in. So `make(1)` and
+  `make<Int>(1)` are a `P<Int32, AnyValue?>`, `B extends Animal` gives
+  `P<Int32, Animal?>`, `none()` for `none<T>(): List<T>` is a
+  `List<AnyValue>`, and `U` in `below<T, U extends T>(x: T): List<U>`
+  binds to what `T` does. Uses are then checked against that: `let o =
+  make(1); let p: P<Int, Int> = o;` is "Cannot assign to P<Int32,
+  Int32> from P<Int32, AnyValue?>", as in Kotlin (where the call's own
+  place wants a type, that binds it first). The same goes
+  for one nothing at the call can name (`CONTEXT` in
+  `combine<CONTEXT extends Context, T>(x: T): T`, or an unused `E` after
+  `throws`). Only where an argument's type isn't known (an error of
+  its own), with too many type arguments, or with a bound naming the
+  type parameter itself (`K extends MapKey<K>`), does one stay unknown
+  (`Settle::bind_unsolved`; 2026-11-26, t1191; before, it stayed
+  unknown, and every backend failed with "an expression of unknown
+  type"). Checks of the call's own arguments still see it as before
+  ("Errors", below).
 - **From the type wanted:** where a call's value is stored in a
   declaration with a type or a field, returned, given as a function's
   result, or assigned, and its type doesn't fit the type wanted there, the type

@@ -45,6 +45,16 @@ function relayed(x) {
 }
 
 /**
+ * @template A
+ * @template B
+ * @param {A} a
+ * @returns {import("@temperlang/core/pair.js").Pair<A, readonly B[]>}
+ */
+function halfPair(a) {
+  return pairConstructor(a, Object.freeze([]));
+}
+
+/**
  * @param {number} length
  * @returns {boolean}
  */
@@ -399,6 +409,11 @@ const empty_ = new Shelf(noNames);
 console.log(empty_.firstName() ?? "none");
 const n = (shelf.tally(1) + shelf.tally(2)) | 0;
 console.log(`${tagged(4)} ${tagged("t")} ${countOf(3)} ${relayed(5)} ${n}`);
+/** @type {import("@temperlang/core/pair.js").Pair<number, readonly unknown[]>} */
+const half = halfPair(8);
+/** @type {import("@temperlang/core/pair.js").Pair<string, readonly unknown[]>} */
+const halfToo = halfPair("h");
+console.log(`${half.key} ${half.value.length} ${halfToo.key}`);
 /** @type {string[]} */
 const builder = [];
 builder.push("x");

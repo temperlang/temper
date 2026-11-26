@@ -137,7 +137,9 @@ pub struct Typing {
     identity_eqs: HashMap<NodeId, &'static str>,
     /// What each call of a generic function, method, or class's
     /// constructor binds its type parameters to, by the call: the callee's
-    /// own, or for a constructor, its class's, unknown where unsolved.
+    /// own, or for a constructor, its class's, one nothing solves bound
+    /// to its bound ([`Settle::bind_unsolved`]); unknown only where an
+    /// error leaves it so.
     type_args: HashMap<NodeId, Vec<TypeId>>,
     /// The empty blocks standing for missing `else`s that are never
     /// reached, as `is` checks before them cover a sealed type
@@ -571,9 +573,10 @@ impl Settle {
             return self.list_of_type(node, forced);
         }
         if let Some(mut solved) = self.solve_call(node, forced)? {
-            let t = self.solved_type(&mut solved, forced)?;
-            let actuals = self.settled_type_args(&solved);
-            self.typing.type_args.insert(node, actuals);
+            self.bind_wanted(&mut solved, forced)?;
+            self.bind_unsolved(&mut solved);
+            let t = self.solved_result(&solved);
+            self.typing.type_args.insert(node, solved.actuals);
             return Ok(t);
         }
         match self.scopes.resolved_builtin(callee) {
