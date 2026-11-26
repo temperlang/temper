@@ -1,3 +1,5 @@
+import {indexOutOfBounds} from "./core.js";
+
 
 /**
  * Implements extension method core.type Listed.map()
@@ -17,6 +19,22 @@ export const listedMap = (ls, transform) => {
 }
 
 /**
+ * Implements extension method core.type Listed.reduce(), panicking if
+ * empty, as reading the first value does, where `Array.reduce` throws a
+ * `TypeError`.
+ * @template T
+ * @param {readonly T[]} ls
+ * @param {(prev: T, cur: T) => T} accumulate
+ * @returns {T}
+ */
+export const listedReduce = (ls, accumulate) => {
+  if (!ls.length) {
+    indexOutOfBounds(0, 0);
+  }
+  return ls.reduce(accumulate);
+}
+
+/**
  * Implements extension method core.type Listed.reduceFrom()
  * @template T, R
  * @param {readonly T[]} ls
@@ -26,6 +44,23 @@ export const listedMap = (ls, transform) => {
  */
 export const listedReduceFrom = (ls, initial, accumulate) => {
   return ls.reduce(accumulate, initial);
+}
+
+/**
+ * Implements extension method core.type Listed.reduceFromIndex(), from
+ * `index`, none past the end; a negative index fails as `listedGet` does.
+ * @template T, R
+ * @param {readonly T[]} ls
+ * @param {R} initial
+ * @param {number} index
+ * @param {(prev: R, cur: T) => R} accumulate
+ * @returns {R}
+ */
+export const listedReduceFromIndex = (ls, initial, index, accumulate) => {
+  if (index < 0) {
+    listedGet(ls, index);
+  }
+  return ls.slice(index).reduce(accumulate, initial);
 }
 
 /**
@@ -67,7 +102,7 @@ export const listBuilderAdd = (ls, newItem, at) => {
     ls.push(newItem);
   } else {
     if (at < 0 || at > ls.length) {
-      bubble();
+      indexOutOfBounds(at, ls.length);
     }
     ls.splice(at, 0, newItem);
   }
@@ -85,7 +120,7 @@ export const listBuilderAddAll = (ls, newItems, at) => {
     ls.push(...newItems);
   } else {
     if (at < 0 || at > ls.length) {
-      bubble();
+      indexOutOfBounds(at, ls.length);
     }
     ls.splice(at, 0, ...newItems);
   }
@@ -117,8 +152,12 @@ export const listedFilter = (ls, predicate) => {
   if (filtered) {
     filtered.push(...ls.slice(nFiltered, length));
     fullyFiltered = filtered;
-  } else {
+  } else if (Object.isFrozen(ls)) {
+    // An immutable list, kept as is.
     fullyFiltered = ls;
+  } else {
+    // A builder, which freezing would make immutable.
+    fullyFiltered = ls.slice();
   }
   return Object.freeze(fullyFiltered);
 }
@@ -135,7 +174,7 @@ export const listedGet = (ls, i) => {
   if (0 <= i && i < length) {
     return ls[i];
   }
-  bubble();
+  return indexOutOfBounds(i, length);
 }
 
 /**
@@ -201,9 +240,8 @@ export const listBuilderClear = (ls) => {
 export const listBuilderRemoveLast = (ls) => {
   if (ls.length) {
     return ls.pop();
-  } else {
-    bubble();
   }
+  return indexOutOfBounds(-1, 0);
 }
 
 /**
@@ -224,6 +262,22 @@ export const listBuilderReverse = (ls) => {
 }
 
 /**
+ * Implements extension method core.type ListBuilder.sort(): JS's sort is
+ * stable. A comparison that changes the builder's length panics, as Java's and
+ * Python's sorts fail, rather than leaving what it added among the items.
+ * @template T
+ * @param {T[]} ls
+ * @param {(a: T, b: T) => number} compare
+ */
+export const listBuilderSort = (ls, compare) => {
+  let { length } = ls;
+  ls.sort(compare);
+  if (ls.length !== length) {
+    throw new Error("ListBuilder changed length during sort");
+  }
+}
+
+/**
  * Implements extension method core.type ListBuilder.set()
  * @template T
  * @param {T[]} ls
@@ -233,6 +287,8 @@ export const listBuilderReverse = (ls) => {
 export const listBuilderSet = (ls, i, newValue) => {
   if (0 <= i && i < ls.length) {
     ls[i] = newValue;
+  } else {
+    indexOutOfBounds(i, ls.length);
   }
 }
 

@@ -1,0 +1,37 @@
+tmpl 1 model 1 library `bit-vector-negative-false` 0.0.0
+
+uses std#1 0.0.0-alpha.0.0 {
+  module collections#2 {
+    connected class BitVector#3 {
+      connected constructor constructor#5(capacity: Int32): BitVector#3;
+      connected method set#6(index: Int32, newValue: Boolean): Void;
+      connected method get#11(index: Int32): Boolean;
+    }
+  }
+}
+
+uses `temper-core`#7 0.0.0-alpha.0.0 {
+  interface Console#8 {
+    connected method log#9(message: String): Void;
+  }
+  class Boolean#12 {
+    connected method toString#13(): String;
+  }
+  connected fn getConsole#14(name?: String): Console#8;
+}
+
+module `bit-vector-negative-false`#0 {
+  let ~console#10: Console#8;
+
+  let v#4: BitVector#3;
+
+  init {
+    init ~console#10 = getConsole#14(omitted);
+    init v#4 = new constructor#5(2);
+    v#4.set#6(5, false);
+    ~console#10.log#9(%String.cat("v[5]=", v#4.get#11(5).toString#13()));
+    ~console#10.log#9("before");
+    v#4.set#6(%Int32.neg(1), false);
+    ~console#10.log#9("not reached");
+  }
+}

@@ -1,0 +1,15 @@
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../builder-set-negative.temper.md:11:5  /** <- let put(builder: ListBuilder
+8:1 -> ../builder-set-negative.temper.md:11:5  function put(builder, i, val <- let put(builder: ListBuilder
+8:10 -> ../builder-set-negative.temper.md:11:9 (put)  put(builder, i, value) { <- put(builder: ListBuilder<Int
+8:13 -> ../builder-set-negative.temper.md:11:5  (builder, i, value) { <- let put(builder: ListBuilder
+9:3 -> ../builder-set-negative.temper.md:12:7  listBuilderSet(builder, i, v <- builder.set(i, value);
+12:1 -> ../builder-set-negative.temper.md:15:5  /** @type {number[]} */ <- let builder = new ListBuilde
+13:1 -> ../builder-set-negative.temper.md:15:5  const builder = []; <- let builder = new ListBuilde
+14:1 -> ../builder-set-negative.temper.md:16:5  builder.push(1); <- builder.add(1);
+15:1 -> ../builder-set-negative.temper.md:17:5  builder.push(2); <- builder.add(2);
+16:1 -> ../builder-set-negative.temper.md:18:5  put(builder, 1, 5); <- put(builder, 1, 5);
+17:1 -> ../builder-set-negative.temper.md:19:5  console.log(listedJoin(build <- console.log(builder.join(",
+18:1 -> ../builder-set-negative.temper.md:20:5  console.log("before"); <- console.log("before");
+19:1 -> ../builder-set-negative.temper.md:21:5  put(builder, -1, 0); <- put(builder, -1, 0);
+20:1 -> ../builder-set-negative.temper.md:22:5  console.log("not reached"); <- console.log("not reached");

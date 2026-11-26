@@ -21,8 +21,14 @@
 //! `Date.today()`, `regex`'s ([`regexes`]) and `net`'s ([`net`]). A
 //! user's `@connected` class with a complete Temper implementation runs
 //! that, as an ordinary class, as Kotlin Temper's interpreter does.
+//! Core's own members are native here; their Temper bodies in
+//! `lib/core/` run only when a test asks, with the `core-bodies`
+//! feature, which only this crate's tests turn on, so the hooks are no
+//! part of other builds' hot paths (`core_bodies`).
 
 pub mod compile_time;
+#[cfg(feature = "core-bodies")]
+pub mod core_bodies;
 mod frame;
 mod lower;
 mod maps;
@@ -68,9 +74,6 @@ pub enum Val {
     /// An immutable `List`.
     List(Rc<[Val]>),
     ListBuilder(Rc<RefCell<Vec<Val>>>),
-    Deque(Rc<RefCell<VecDeque<Val>>>),
-    /// A `DenseBitVector`; bits past the end are false.
-    Bits(Rc<RefCell<Vec<bool>>>),
     Map(Rc<maps::Entries>),
     MapBuilder(Rc<RefCell<maps::Entries>>),
     /// A `Pair`'s key and value.
@@ -149,7 +152,6 @@ impl Val {
             self,
             Val::List(_)
                 | Val::ListBuilder(_)
-                | Val::Deque(_)
                 | Val::Map(_)
                 | Val::MapBuilder(_)
                 | Val::Pair(_)
@@ -175,8 +177,6 @@ fn take_containers(value: &mut Val, work: &mut Vec<Val>) {
     match value {
         Val::List(items) => Rc::get_mut(items).into_iter().flatten().for_each(take),
         Val::ListBuilder(items) => (Rc::get_mut(items).into_iter())
-            .for_each(|items| items.get_mut().iter_mut().for_each(&mut take)),
-        Val::Deque(items) => (Rc::get_mut(items).into_iter())
             .for_each(|items| items.get_mut().iter_mut().for_each(&mut take)),
         Val::Map(entries) => (Rc::get_mut(entries).into_iter())
             .flat_map(|e| e.pairs_mut().iter_mut())
@@ -337,13 +337,13 @@ pub const OUTPUT_LIMIT: usize = 64 << 10;
 /// evaluation steps if given. Without fuel, a program runs until it ends,
 /// as any language's would.
 pub fn run(settled: &Settled, fuel: Option<u64>) -> Run {
-    run_with(settled, fuel, false, None)
+    run_with(settled, fuel, false, None, None)
 }
 
 /// Runs a library's top-level code as [`run`] does, giving each line it
 /// logs to `out` as it's logged rather than keeping it.
 pub fn run_streaming(settled: &Settled, fuel: Option<u64>, out: &mut dyn FnMut(&str)) -> Run {
-    run_with(settled, fuel, false, Some(Box::new(out)))
+    run_with(settled, fuel, false, Some(Box::new(out)), None)
 }
 
 /// Runs a library as [`run`] does, then each module's tests, if it has
@@ -352,10 +352,31 @@ pub fn run_streaming(settled: &Settled, fuel: Option<u64>, out: &mut dyn FnMut(&
 /// steps; a test that runs out, or ends abruptly otherwise, fails alone,
 /// with a report of its own, and the others still run.
 pub fn run_tests(settled: &Settled, fuel: Option<u64>) -> Run {
-    run_with(settled, fuel, true, None)
+    run_with(settled, fuel, true, None, None)
 }
 
-fn run_with(settled: &Settled, fuel: Option<u64>, tests: bool, sink: Option<LineSink<'_>>) -> Run {
+#[cfg(feature = "core-bodies")]
+/// Runs a library's tests as [`run_tests`] does, but with core's Temper
+/// bodies in place of the interpreter's natives wherever core has them
+/// ([`core_bodies`]), for testing that the two agree. The library holds
+/// core's files, [`crate::corelib::SOURCES`], as a module, which runs first.
+/// Also gives the `Fn`s of core's that ran, to check against
+/// [`core_bodies::members`].
+pub fn run_tests_with_core_bodies(settled: &Settled, fuel: Option<u64>) -> (Run, Vec<NodeId>) {
+    let mut ran = Vec::new();
+    let run = run_with(settled, fuel, true, None, Some(&mut ran));
+    (run, ran)
+}
+
+fn run_with(
+    settled: &Settled,
+    fuel: Option<u64>,
+    tests: bool,
+    sink: Option<LineSink<'_>>,
+    #[cfg_attr(not(feature = "core-bodies"), allow(unused_mut))] mut core_bodies: Option<
+        &mut Vec<NodeId>,
+    >,
+) -> Run {
     // `u64::MAX` steps take centuries, so no fuel needs no check of its own.
     let budget = fuel.unwrap_or(u64::MAX);
     // Modules' declarations are globals, each module's in order.
@@ -365,7 +386,7 @@ fn run_with(settled: &Settled, fuel: Option<u64>, tests: bool, sink: Option<Line
         first_globals.insert(module.scope, globals);
         globals += settled.scopes.get(module.scope).names.len() as u32;
     }
-    let lowering = Lowering::new(first_globals);
+    let lowering = Lowering::new(first_globals.clone());
     let globals = vec![Val::Uninit; globals as usize];
     let mut interp = Interp {
         output: Output {
@@ -389,9 +410,25 @@ fn run_with(settled: &Settled, fuel: Option<u64>, tests: bool, sink: Option<Line
         host: None,
         inputs_parked: Vec::new(),
         inputs_failed: Vec::new(),
+        #[cfg(feature = "core-bodies")]
+        core: None,
     };
     let mut result = Ok(Val::Void);
-    for module in &settled.modules {
+    #[cfg_attr(not(feature = "core-bodies"), allow(unused_mut))]
+    let mut modules: Vec<_> = settled.modules.iter().collect();
+    // Core's module, if its bodies run, runs first.
+    #[cfg(feature = "core-bodies")]
+    let in_core = |m: &crate::settle::SettledModule| core_bodies::is_core(settled, m);
+    #[cfg(feature = "core-bodies")]
+    if core_bodies.is_some() {
+        modules.sort_by_key(|m| !in_core(m));
+    }
+    #[cfg(not(feature = "core-bodies"))]
+    assert!(
+        core_bodies.is_none(),
+        "core's bodies run only with the core-bodies feature"
+    );
+    for module in modules {
         let code = interp
             .lowering
             .module(settled, module.scope, &module.top_levels);
@@ -399,6 +436,21 @@ fn run_with(settled: &Settled, fuel: Option<u64>, tests: bool, sink: Option<Line
         if result.is_err() {
             break;
         }
+        #[cfg(feature = "core-bodies")]
+        if core_bodies.is_some() && interp.core.is_none() && in_core(module) {
+            let first = first_globals[&module.scope];
+            match core_bodies::CoreBodies::new(&mut interp, settled, module, first) {
+                Ok(core) => interp.core = Some(Rc::new(core)),
+                Err(abrupt) => {
+                    result = Err(abrupt);
+                    break;
+                }
+            }
+        }
+    }
+    #[cfg(feature = "core-bodies")]
+    if core_bodies.is_some() && result.is_ok() && interp.core.is_none() {
+        result = Err(fail("No core module to run the bodies of"));
     }
     let runs = settled.modules.iter().filter_map(|m| {
         m.tests
@@ -419,6 +471,11 @@ fn run_with(settled: &Settled, fuel: Option<u64>, tests: bool, sink: Option<Line
                 break;
             }
         }
+    }
+    #[cfg(feature = "core-bodies")]
+    if let (Some(ran), Some(core)) = (core_bodies.as_mut(), &interp.core) {
+        ran.extend(core.ran.borrow().iter().copied());
+        ran.sort();
     }
     let failure = result.err().map(|abrupt| match describe(abrupt) {
         why if why == OUT_OF_STEPS => format!("{why} (the top-level code may take {budget})"),
@@ -619,6 +676,10 @@ struct Interp<'a> {
     /// whatever ran the queue ([`repl`]).
     inputs_parked: Vec<(Rc<Generator>, usize)>,
     inputs_failed: Vec<(usize, Abrupt)>,
+    /// Core's bodies, run in place of natives where core has them, only
+    /// when asked for (`run_tests_with_core_bodies`).
+    #[cfg(feature = "core-bodies")]
+    core: Option<Rc<core_bodies::CoreBodies>>,
 }
 
 fn fail(message: impl Into<String>) -> Abrupt {
@@ -647,6 +708,10 @@ impl Interp<'_> {
         }
         if self.depth >= MAX_DEPTH {
             return Err(Abrupt::Panic("calls nested too deeply".into()));
+        }
+        #[cfg(feature = "core-bodies")]
+        if let Some(core) = &self.core {
+            core.ran.borrow_mut().insert(f);
         }
         let code = self.lowering.function(s, f).map_err(fail)?;
         if args.len() > code.params as usize {
@@ -711,7 +776,7 @@ impl Interp<'_> {
         }
     }
 
-    /// A generator's methods. `close()` ends it, as core.temper documents,
+    /// A generator's methods. `close()` ends it, as core documents,
     /// where Kotlin Temper's is still a TODO that does nothing.
     fn generator_method(
         &mut self,
@@ -745,6 +810,14 @@ impl Interp<'_> {
                 _ => {}
             }
         }
+        #[cfg(feature = "core-bodies")]
+        let (function, args) = match self.core.clone() {
+            Some(core) => match core.apply(self, s, function, args) {
+                Ok(result) => return result,
+                Err(not_taken) => not_taken,
+            },
+            None => (function, args),
+        };
         match function {
             Val::Fn(ref closure) => self.call(s, closure.node, closure.captures.clone(), args),
             Val::Builtin(Function::New) => match args.split_first() {
@@ -754,18 +827,6 @@ impl Interp<'_> {
                 }
                 Some((Val::BuiltinType(t), [])) if TYPES[*t as usize] == "StringBuilder" => {
                     Ok(Val::StringBuilder(Rc::new(RefCell::new(String::new()))))
-                }
-                Some((Val::BuiltinType(t), [])) if TYPES[*t as usize] == "Deque" => {
-                    Ok(Val::Deque(Rc::new(RefCell::new(VecDeque::new()))))
-                }
-                Some((Val::BuiltinType(t), [Val::Int(capacity)]))
-                    if TYPES[*t as usize] == "DenseBitVector" =>
-                {
-                    Ok(Val::Bits(Rc::new(RefCell::new(vec![
-                        false;
-                        (*capacity).max(0)
-                            as usize
-                    ]))))
                 }
                 Some((Val::BuiltinType(t), [Val::List(pairs)])) if TYPES[*t as usize] == "Map" => {
                     Ok(Val::Map(Rc::new(maps::Entries::from_pairs(pairs)?)))
@@ -875,7 +936,7 @@ impl Interp<'_> {
                     self.generator_method(s, generator.clone(), s.library.names.get(method.1), args)
                 }
                 Val::Str(text) if s.library.names.get(method.1) == "forEach" => {
-                    // As `core.temper`'s `String.forEach`.
+                    // As core's `String.forEach`.
                     let text = text.clone();
                     let [f] =
                         <[Val; 1]>::try_from(args).map_err(|_| fail("forEach takes a function"))?;
@@ -935,9 +996,6 @@ impl Interp<'_> {
             (Index, [Val::List(items), Val::Int(i)]) => list_get(items, *i),
             (Index, [Val::ListBuilder(items), Val::Int(i)]) => list_get(&items.borrow(), *i),
             (Index, [Val::Str(text), Val::StringIndex(i)]) => strings::get(text, *i),
-            (Index, [bits @ Val::Bits(_), i @ Val::Int(_)]) => {
-                self.method(bits, "get", vec![i.clone()])
-            }
             (Index, [map @ (Val::Map(_) | Val::MapBuilder(_)), key]) => maps::get(map, key),
             (Char, parts) => strings::char_tag(parts),
             (Raw, [Val::List(parts), Val::List(values)]) => {
@@ -953,6 +1011,8 @@ impl Interp<'_> {
             (Ignore, [_]) => Ok(Val::Void),
             (Empty, []) => Ok(Val::Empty),
             (DoneResult, []) => Ok(Val::DoneResult),
+            // Every console logs alike here, whatever its name.
+            (GetConsole, [] | [Val::Str(_)]) => Ok(Val::Console),
             (Cmp, [a, b]) => {
                 let ordering = compare(a, b).ok_or_else(|| fail("Can't compare these"))?;
                 Ok(Val::Int(ordering as i32))
@@ -1027,38 +1087,6 @@ impl Interp<'_> {
             }
             (Val::StringBuilder(builder), _, _) => strings::builder_method(builder, name, &args)
                 .unwrap_or_else(|| no_method(object, name)),
-            (Val::Deque(deque), "add", [value]) => {
-                deque.borrow_mut().push_back(value.clone());
-                Ok(Val::Void)
-            }
-            (Val::Deque(deque), "removeFirst", []) => deque
-                .borrow_mut()
-                .pop_front()
-                .ok_or_else(|| Abrupt::Panic("removeFirst on an empty Deque".into())),
-            // As `core.temper`'s `DenseBitVector`, which grows when a bit
-            // past the end is set.
-            (Val::Bits(bits), "get", [Val::Int(i)]) => Ok(Val::Bool(
-                usize::try_from(*i)
-                    .ok()
-                    .and_then(|i| bits.borrow().get(i).copied())
-                    .unwrap_or(false),
-            )),
-            (Val::Bits(bits), "set", [Val::Int(i), Val::Bool(value)]) => {
-                let mut bits = bits.borrow_mut();
-                let Ok(i) = usize::try_from(*i) else {
-                    return Err(Abrupt::Panic(format!(
-                        "index {i} out of bounds for length {}",
-                        bits.len()
-                    )));
-                };
-                if i >= bits.len() && *value {
-                    bits.resize(i + 1, false);
-                }
-                if let Some(bit) = bits.get_mut(i) {
-                    *bit = *value;
-                }
-                Ok(Val::Void)
-            }
             (_, "toString", []) => Ok(Val::Str(to_string(object).into())),
             (Val::Int(n), "toString", [radix]) => {
                 strings::int_to_string(*n as i64, radix_or_10(radix)?)
@@ -1078,6 +1106,11 @@ impl Interp<'_> {
             (Val::Int(a), "max", [Val::Int(b)]) => Ok(Val::Int(*a.max(b))),
             (Val::Int64(a), "min", [Val::Int64(b)]) => Ok(Val::Int64(*a.min(b))),
             (Val::Int64(a), "max", [Val::Int64(b)]) => Ok(Val::Int64(*a.max(b))),
+            // Wrapping, as `+` and `-` do.
+            (Val::Int(n), "succ", []) => Ok(Val::Int(n.wrapping_add(1))),
+            (Val::Int(n), "pred", []) => Ok(Val::Int(n.wrapping_sub(1))),
+            (Val::Int64(n), "succ", []) => Ok(Val::Int64(n.wrapping_add(1))),
+            (Val::Int64(n), "pred", []) => Ok(Val::Int64(n.wrapping_sub(1))),
             (Val::PromiseBuilder(promise), _, _) => self
                 .promise_builder_method(promise, name, &args)
                 .unwrap_or_else(|| no_method(object, name)),
@@ -1195,9 +1228,7 @@ fn is_builtin_type(value: &Val, ty: &str) -> bool {
         "NoStringIndex" => matches!(value, Val::NoStringIndex),
         "StringIndexOption" => matches!(value, Val::StringIndex(_) | Val::NoStringIndex),
         "StringBuilder" => matches!(value, Val::StringBuilder(_)),
-        "Deque" => matches!(value, Val::Deque(_)),
         "Empty" => matches!(value, Val::Empty),
-        "DenseBitVector" => matches!(value, Val::Bits(_)),
         "Map" => matches!(value, Val::Map(_)),
         "MapBuilder" => matches!(value, Val::MapBuilder(_)),
         "Mapped" => matches!(value, Val::Map(_) | Val::MapBuilder(_)),
@@ -1306,10 +1337,23 @@ impl Interp<'_> {
                 }
                 Ok(Val::Void)
             }
-            "reduce" | "reduceFrom" => {
+            "reduce" | "reduceFrom" | "reduceFromIndex" => {
                 let (mut result, start) = match name {
                     "reduce" => (list_get(&items, 0)?, 1),
-                    _ => (arg()?, 0),
+                    "reduceFrom" => (arg()?, 0),
+                    // Past the end gives the initial value, and a negative
+                    // index fails, as core's body reads `listed[-1]`.
+                    _ => {
+                        let initial = arg()?;
+                        let index = match arg()? {
+                            Val::Int(i) => i,
+                            _ => return Err(fail("reduceFromIndex's index isn't an Int")),
+                        };
+                        if index < 0 {
+                            list_get(&items, index)?;
+                        }
+                        (initial, (index as usize).min(items.len()))
+                    }
                 };
                 let f = arg()?;
                 for item in &items[start..] {
@@ -1362,7 +1406,7 @@ impl Interp<'_> {
             usize::try_from(at)
                 .ok()
                 .filter(|&at| at <= len)
-                .ok_or_else(|| Abrupt::Panic(format!("index {at} out of bounds for length {len}")))
+                .ok_or_else(|| out_of_bounds(at, len))
         };
         match (name, args) {
             ("add", [value, ..]) => {
@@ -1383,15 +1427,13 @@ impl Interp<'_> {
                         .map(|slot| *slot = value.clone())
                 }) {
                     Some(()) => Ok(Val::Void),
-                    None => Err(Abrupt::Panic(format!(
-                        "index {i} out of bounds for length {len}"
-                    ))),
+                    None => Err(out_of_bounds(i, len)),
                 }
             }
             ("removeLast", []) => builder
                 .borrow_mut()
                 .pop()
-                .ok_or_else(|| Abrupt::Panic("removeLast on an empty ListBuilder".into())),
+                .ok_or_else(|| out_of_bounds(-1, 0)),
             ("reverse", []) => {
                 builder.borrow_mut().reverse();
                 Ok(Val::Void)
@@ -1401,8 +1443,17 @@ impl Interp<'_> {
                 Ok(Val::Void)
             }
             ("sort", [f]) => {
+                // Sorts a copy, so the comparison may read the builder; one
+                // that changes its length panics, rather than losing what
+                // it added, as every backend's runtime does.
                 let items = builder.borrow().clone();
-                *builder.borrow_mut() = self.sort(s, items, f)?;
+                let sorted = self.sort(s, items, f)?;
+                if builder.borrow().len() != len {
+                    return Err(Abrupt::Panic(
+                        "ListBuilder changed length during sort".into(),
+                    ));
+                }
+                *builder.borrow_mut() = sorted;
                 Ok(Val::Void)
             }
             ("splice", _) => {
@@ -1780,6 +1831,12 @@ impl Interp<'_> {
         from: Option<&[NodeId]>,
     ) -> R {
         if !matches!(object, Val::Object(_) | Val::Class(_)) {
+            #[cfg(feature = "core-bodies")]
+            if let Some(result) =
+                (self.core.clone()).and_then(|core| core.get(self, s, &object, name))
+            {
+                return result;
+            }
             return property(object, name, s.library.names.get(name));
         }
         let class = class_of(&object);
@@ -1887,7 +1944,7 @@ fn check_access(
 fn in_std(s: &Settled, node: NodeId, module: &str) -> bool {
     let file = s.library.locate(s.library.tree.span(node).start).0;
     let path = &s.library.files[file.0 as usize].path;
-    path.starts_with(&format!("{}/{module}/", s.library.std_root()))
+    (s.library.std_path(path)).is_some_and(|rest| rest.starts_with(&format!("{module}/")))
 }
 
 fn class_name(s: &Settled, class: NodeId) -> &str {
@@ -1968,11 +2025,11 @@ fn property(object: Val, name: NameId, text: &str) -> R {
         (Val::BuiltinType(t), "pi") if TYPES[*t as usize] == "Float64" => {
             Ok(Val::Float(std::f64::consts::PI))
         }
+        (Val::Int(n), "signum") => Ok(Val::Int(n.signum())),
         (Val::List(items), "isEmpty") => Ok(Val::Bool(items.is_empty())),
         (Val::List(items), "length") => Ok(Val::Int(items.len() as i32)),
         (Val::ListBuilder(items), "isEmpty") => Ok(Val::Bool(items.borrow().is_empty())),
         (Val::ListBuilder(items), "length") => Ok(Val::Int(items.borrow().len() as i32)),
-        (Val::Deque(items), "isEmpty") => Ok(Val::Bool(items.borrow().is_empty())),
         (Val::Map(entries), "length") => Ok(Val::Int(entries.len() as i32)),
         (Val::MapBuilder(entries), "length") => Ok(Val::Int(entries.borrow().len() as i32)),
         (Val::Pair(pair), "key") => Ok(pair.0.clone()),
@@ -1994,11 +2051,14 @@ fn property(object: Val, name: NameId, text: &str) -> R {
 fn list_get(items: &[Val], i: i32) -> R {
     match usize::try_from(i).ok().and_then(|i| items.get(i)) {
         Some(item) => Ok(item.clone()),
-        None => Err(Abrupt::Panic(format!(
-            "index {i} out of bounds for length {}",
-            items.len()
-        ))),
+        None => Err(out_of_bounds(i, items.len())),
     }
+}
+
+/// The panic for an index out of bounds of a list or string of `length`,
+/// with the message each backend's runtime gives (`index_out_of_bounds`).
+fn out_of_bounds(index: impl std::fmt::Display, length: usize) -> Abrupt {
+    Abrupt::Panic(format!("index {index} out of bounds for length {length}"))
 }
 
 fn literal(value: &Value) -> Option<Val> {
@@ -2068,8 +2128,6 @@ fn equal(a: &Val, b: &Val) -> bool {
         (Val::Fn(a), Val::Fn(b)) => Rc::ptr_eq(a, b),
         (Val::Object(a), Val::Object(b)) => Rc::ptr_eq(a, b),
         (Val::ListBuilder(a), Val::ListBuilder(b)) => Rc::ptr_eq(a, b),
-        (Val::Deque(a), Val::Deque(b)) => Rc::ptr_eq(a, b),
-        (Val::Bits(a), Val::Bits(b)) => Rc::ptr_eq(a, b),
         (Val::Map(a), Val::Map(b)) => Rc::ptr_eq(a, b),
         (Val::MapBuilder(a), Val::MapBuilder(b)) => Rc::ptr_eq(a, b),
         (Val::Pair(a), Val::Pair(b)) => Rc::ptr_eq(a, b),
@@ -2111,7 +2169,7 @@ fn compare(a: &Val, b: &Val) -> Option<std::cmp::Ordering> {
 fn type_name(value: &Val) -> &'static str {
     match value {
         Val::Void => "Void",
-        Val::Null => "Null",
+        Val::Null => "null",
         Val::Bool(_) => "Boolean",
         Val::Int(_) => "Int",
         Val::Int64(_) => "Int64",
@@ -2122,8 +2180,6 @@ fn type_name(value: &Val) -> &'static str {
         Val::StringBuilder(_) => "StringBuilder",
         Val::List(_) => "List",
         Val::ListBuilder(_) => "ListBuilder",
-        Val::Deque(_) => "Deque",
-        Val::Bits(_) => "DenseBitVector",
         Val::Map(_) => "Map",
         Val::MapBuilder(_) => "MapBuilder",
         Val::Pair(_) => "Pair",

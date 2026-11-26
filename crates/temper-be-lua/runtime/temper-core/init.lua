@@ -56,6 +56,14 @@ local table_insert = table.insert
 local table_remove = table.remove
 local table_unpack = unpack or table.unpack
 
+-- Panics for a 0-based index out of bounds of a list or string of
+-- `length`, as core's docs say reading or writing there does, with the
+-- message every backend gives for a list; for a string, in its own units
+-- (here UTF-8 bytes). Unlike other backends', `orelse` still catches it,
+-- as it does `panic()` (notes/kotlin-differences.md).
+local function index_out_of_bounds(index, length)
+    error("index " .. tostring(index) .. " out of bounds for length " .. tostring(length), 2)
+end
 
 function temper.wrap_func(f)
     return f
@@ -801,8 +809,11 @@ function temper.float64_log1p(x)
 end
 
 function temper.float64_max(x, y)
-    if y ~= y then
-        -- Nan if either is nan
+    -- NaN if either is NaN. Lua 5.x's `math.max` keeps a NaN first
+    -- argument, but LuaJIT's drops it, so check both.
+    if x ~= x then
+        return x
+    elseif y ~= y then
         return y
     else
         return math_max(x, y)
@@ -810,8 +821,11 @@ function temper.float64_max(x, y)
 end
 
 function temper.float64_min(x, y)
-    if y ~= y then
-        -- Nan if either is nan
+    -- NaN if either is NaN. Lua 5.x's `math.min` keeps a NaN first
+    -- argument, but LuaJIT's drops it, so check both.
+    if x ~= x then
+        return x
+    elseif y ~= y then
         return y
     else
         return math_min(x, y)
@@ -821,8 +835,16 @@ end
 function temper.float64_near(x, y, rel_tol, abs_tol)
     rel_tol = temper.null_to_nil(rel_tol) or 1e-9
     abs_tol = temper.null_to_nil(abs_tol) or 0.0
+    -- Equal by Temper's `==`, so NaN is near NaN, or finite and within the
+    -- margin, which a NaN margin never is: `float64_max` keeps NaN.
     local scale = temper.float64_max(temper.float64_abs(x), temper.float64_abs(y))
     local margin = temper.float64_max(scale * rel_tol, abs_tol)
+    if temper.float_eq(x, y) then
+        return true
+    end
+    if x == math_huge or x == -math_huge or y == math_huge or y == -math_huge then
+        return false
+    end
     return temper.float64_abs(x - y) <= margin
 end
 
@@ -960,32 +982,33 @@ function temper.list_length(list)
     return #list
 end
 
-function temper.deque_constructor()
+function temper.queue_constructor()
     return {
         head = 1,
         tail = 1,
-        [temper.type_tag] = 'Deque'
+        [temper.type_tag] = 'Queue'
     }
 end
 
-function temper.deque_add(deque, obj)
-    local tail = deque.tail
-    deque[tail] = obj
-    deque.tail = tail + 1
+function temper.queue_add(queue, obj)
+    local tail = queue.tail
+    queue[tail] = obj
+    queue.tail = tail + 1
 end
 
-function temper.deque_isempty(deque)
-    return deque.head == deque.tail
+function temper.queue_isempty(queue)
+    return queue.head == queue.tail
 end
 
-function temper.deque_removefirst(deque)
-    local head = deque.head
-    if head == deque.tail then
-        return temper.bubble("core.type Deque.removeFirst() on empty deque")
+function temper.queue_removefirst(queue)
+    local head = queue.head
+    if head == queue.tail then
+        -- Panics, as reading a list out of bounds does.
+        index_out_of_bounds(0, 0)
     end
-    local first = deque[head]
-    deque.head = head + 1
-    deque[head] = nil
+    local first = queue[head]
+    queue.head = head + 1
+    queue[head] = nil
     return first
 end
 
@@ -1009,6 +1032,15 @@ do
 
     function temper.listed_reducefrom(list, initial, accumulate)
         return temper_reduce_from_index(list, initial, 1, accumulate)
+    end
+
+    -- From the 0-based `index`, none past the end; a negative index fails
+    -- as `listed_get` does.
+    function temper.listed_reducefromindex(list, initial, index, accumulate)
+        if index < 0 then
+            temper.listed_get(list, index)
+        end
+        return temper_reduce_from_index(list, initial, index + 1, accumulate)
     end
 end
 
@@ -1130,7 +1162,7 @@ do
     local function temper_get(list, index)
         local got = list[index + 1]
         if got == nil then
-            return temper.bubble("core.type Listed.get(" .. tostring(index) .. ") index out of bounds 0 .. " .. tostring(#list))
+            index_out_of_bounds(index, #list)
         end
         return got
     end
@@ -1238,16 +1270,33 @@ function temper.list_foreach(list, func)
 end
 
 function temper.listbuilder_set(list, index, value)
+    -- Only a present value's slot, since a list holds no `nil`s.
+    if list[index + 1] == nil then
+        index_out_of_bounds(index, #list)
+    end
     list[index + 1] = value
 end
 
 -- Defer loading powersort, because it also loads temper-core.
 local powersort
+-- Sorts a copy, as other backends do, so a comparison may read the
+-- builder and change it: the sorted copy replaces a change that keeps its
+-- length, and one that changes its length panics.
 function temper.listbuilder_sort(list, compare)
     if powersort == nil then
         powersort = require("temper-core/powersort").powersort
     end
-    powersort(list, compare)
+    local items = {}
+    for i = 1, #list do
+        items[i] = list[i]
+    end
+    powersort(items, compare)
+    if #list ~= #items then
+        error("ListBuilder changed length during sort")
+    end
+    for i = 1, #items do
+        list[i] = items[i]
+    end
 end
 
 function temper.import(mod, ent)
@@ -1259,6 +1308,10 @@ function temper.listbuilder_splice(builder, at, remove, new)
     at = temper.null_to_nil(at) or 0
     remove = temper.null_to_nil(remove) or len
     new = temper.null_to_nil(new) or {}
+    if new == builder then
+        -- Its values as they were, before the removal changes them.
+        new = temper.listbuilder_tolist(builder)
+    end
     if at < 0 or at > len then
         return temper.bubble("core.type ListBuilder.splice() index to high or too many to remove")
     end
@@ -1277,7 +1330,11 @@ function temper.listbuilder_addall(builder, from, at)
     local len = #builder
     at = temper.null_to_nil(at) or len
     if at < 0 or at > len then
-        return temper.bubble("core.type ListBuilder.addAll() index " .. tostring(at) .. "out of range 0 .. " .. tostring(len))
+        index_out_of_bounds(at, len)
+    end
+    if from == builder and at ~= len then
+        -- Its values as they were, before inserting moves them.
+        from = temper.listbuilder_tolist(builder)
     end
     if at == len then
         for read = 1, #from do
@@ -1296,7 +1353,7 @@ function temper.listbuilder_add(builder, obj, at)
     local len = #builder
     at = temper.null_to_nil(at) or len
     if at < 0 or at > len then
-        return temper.bubble("core.type ListBuilder.add() index " .. tostring(at) .. "out of range 0 .. " .. tostring(len))
+        index_out_of_bounds(at, len)
     end
     if at == len then
         builder[at + 1] = obj
@@ -1326,6 +1383,16 @@ function temper.int64_toint32(n)
         return result
     end
     return temper.bubble("core.type Int64.toInt32() failed")
+end
+
+-- -1, 0, or 1, by `n`'s sign.
+function temper.int32_signum(n)
+    if n > 0 then
+        return 1
+    elseif n < 0 then
+        return -1
+    end
+    return 0
 end
 
 function temper.int32_tofloat64(n)
@@ -1748,7 +1815,7 @@ end
 function temper.listbuilder_removelast(lb)
     local len = #lb
     if len == 0 then
-        return temper.bubble("core.type ListBuilder.removeLast() on empty list")
+        index_out_of_bounds(-1, 0)
     end
     local got = lb[len]
     lb[len] = nil
@@ -1857,7 +1924,8 @@ end
 
 function temper.string_get(str, i)
     if i > #str then
-        temper.bubble("core.type String.get() failed")
+        -- As a 0-based offset, as other backends give it.
+        index_out_of_bounds(i - 1, #str)
     end
     local ok, cp = pcall(temper_utf8.codepoint, str, i)
     if ok then return cp; end
@@ -2236,20 +2304,31 @@ function temper.date_yearsbetween(start, end_)
     return yearDelta + adj
 end
 
-function temper.densebitvector_constructor(size)
+function temper.bitvector_constructor(size)
     local vec = {
-        [temper.type_tag] = 'DenseBitVector'
+        [temper.type_tag] = 'BitVector'
     }
     return vec
 end
 
-function temper.densebitvector_get(vec, key)
-    return not not vec[key]
+function temper.bitvector_get(vec, key)
+    return vec[key] == true
 end
 
-function temper.densebitvector_set(vec, key, setto)
+function temper.bitvector_set(vec, key, setto)
+    if key < 0 then
+        -- Panics, even to set false, as a list's set out of bounds does,
+        -- for length 0: a bit vector has none.
+        index_out_of_bounds(key, 0)
+    end
     vec[key] = setto
 end
+
+-- Core's old names, which the regex engine's compiled runtime
+-- (`regex/runtime.lua`) calls.
+temper.densebitvector_constructor = temper.bitvector_constructor
+temper.densebitvector_get = temper.bitvector_get
+temper.densebitvector_set = temper.bitvector_set
 
 function temper.cast_to_boolean(thing)
     if type(thing) ~= 'boolean' then
@@ -2335,23 +2414,28 @@ function temper.cast_to_null(thing)
     return thing
 end
 
+-- Whether a value is of a class's or interface's type. Other values, as
+-- strings and core's tables, whose tags are names, as 'Pair', aren't.
+local function is_of(thing, want)
+    if type(thing) ~= "table" then
+        return false
+    end
+    local tag = thing[temper.type_tag]
+    return type(tag) == "table" and tag.super[want.typename] ~= nil
+end
+
 function temper.cast_to(thing, type)
-    if thing and thing[temper.type_tag].super[type.typename] then
+    if is_of(thing, type) then
         return thing
     else
-        return temper.bubble("cast to " .. tostring(type) .. " type (was a " .. tostring(thing[temper.type_tag]) .. ")")
+        return temper.bubble("cast to " .. tostring(type) .. " type")
     end
 end
 
 function temper.instance_of(thing, ...)
-    if type(thing) ~= "table" then
-        return false
-    end
     local n = select('#', ...)
-    local type_tag = temper.type_tag
     for i=1,n do
-        local tag = select(i, ...)
-        if thing[type_tag].super[tag.typename] then
+        if is_of(thing, select(i, ...)) then
             return true
         end
     end

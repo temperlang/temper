@@ -1,0 +1,30 @@
+tmpl 1 model 1 library `remove-last-empty` 0.0.0
+
+uses `temper-core`#1 0.0.0-alpha.0.0 {
+  class ListBuilder#2<T#3> extends Listed#4<T#3> {
+    connected constructor constructor#7(): ListBuilder#2<T#3>;
+    connected method add#8(newValue: T#3, at?: Int32): Void;
+    connected method removeLast#12(): T#3;
+  }
+  interface Listed#4<T#5> {}
+  interface Console#9 {
+    connected method log#10(message: String): Void;
+  }
+  connected fn getConsole#13(name?: String): Console#9;
+}
+
+module `remove-last-empty`#0 {
+  let ~console#11: Console#9;
+
+  let builder#6: ListBuilder#2<String>;
+
+  init {
+    init ~console#11 = getConsole#13(omitted);
+    init builder#6 = new constructor#7<String>();
+    builder#6.add#8("a", omitted);
+    ~console#11.log#10(builder#6.removeLast#12());
+    ~console#11.log#10("before");
+    ~console#11.log#10(builder#6.removeLast#12());
+    ~console#11.log#10("not reached");
+  }
+}

@@ -187,6 +187,41 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 string_padded("ab", 1, Some("*"))
             );
             println!("{} {}", gate.passed(4), gate_passed(gate.clone(), "gate"));
+            let tags: temper_core::List<Arc<String>> =
+                temper_core::listed::map(&ns, &(|n: i32| Arc::new(format!("<{n}>"))));
+            let digits = temper_core::listed::reduce_from(
+                &ns,
+                Arc::new(String::new()),
+                &(|s: Arc<String>, n: i32| Arc::new(format!("{s}{n}"))),
+            );
+            let named: temper_core::Map<Arc<String>, i32> = temper_core::Map::new(Arc::new(vec![
+                (Arc::new("a".to_string()), 1),
+                (Arc::new("b".to_string()), 2),
+            ]));
+            let entries: temper_core::List<Arc<String>> = temper_core::mapped_to_list_with(
+                &named,
+                &(|k: Arc<String>, v: i32| Arc::new(format!("{k}={v}"))),
+            );
+            println!(
+                "{}{} {digits} {}",
+                temper_core::ListedTrait::get(&tags, 0),
+                temper_core::ListedTrait::get(&tags, 4),
+                temper_core::listed::join(
+                    &entries,
+                    Arc::new(",".to_string()),
+                    &(|e: Arc<String>| e.clone()),
+                )
+            );
+            let hashed = list_first_through(
+                Arc::new(vec![3]),
+                Arc::new(move |n: i32| Arc::new(format!("#{n}"))),
+            );
+            let bumped =
+                list_first_through(Arc::new(vec![3]), Arc::new(move |n: i32| n.wrapping_add(1)));
+            println!(
+                "{hashed} {bumped} {}",
+                list_first_or(Arc::new(vec![4, 5]), 0)
+            );
             Ok(())
         })
         .clone()
@@ -448,4 +483,15 @@ pub(crate) fn string_padded(
 pub(crate) fn gate_passed(g: Gate, s: impl ToArcString) -> Arc<String> {
     let s = s.to_arc_string();
     Arc::new(format!("{s} {}", g.allows(1)))
+}
+
+pub(crate) fn list_first_through<
+    T: Clone + Send + Sync + 'static,
+    O: Clone + Send + Sync + 'static,
+>(
+    ls: impl temper_core::ToList<T>,
+    f: Arc<dyn Fn(T) -> O + Send + Sync>,
+) -> O {
+    let ls = ls.to_list();
+    f(temper_core::ListedTrait::get(&ls, 0))
 }

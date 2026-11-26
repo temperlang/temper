@@ -106,6 +106,8 @@ impl Runner {
                 host,
                 inputs_parked: Vec::new(),
                 inputs_failed: Vec::new(),
+                #[cfg(feature = "core-bodies")]
+                core: None,
             },
             first_globals: HashMap::new(),
             fuel,
@@ -313,10 +315,6 @@ impl Render<'_> {
             Val::ListBuilder(items) => {
                 self.within(Rc::as_ptr(items) as usize, |r| r.list(&items.borrow()))
             }
-            Val::Deque(items) => self.within(Rc::as_ptr(items) as usize, |r| {
-                let items: Vec<Val> = items.borrow().iter().cloned().collect();
-                r.list(&items)
-            }),
             Val::Map(entries) => {
                 self.within(Rc::as_ptr(entries) as usize, |r| r.map(entries.pairs()))
             }

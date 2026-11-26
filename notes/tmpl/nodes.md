@@ -381,7 +381,7 @@ block). Expressions:
 | `New` | arguments | `a`: a constructor; `MAY_BUBBLE` | its signature's result, the class |
 | `Upcast`, `Downcast` | the value | | written: a proper supertype, or (after an `is` check, unchecked) subtype |
 | `As` | the value | `MAY_BUBBLE`, always | written: a proper subtype, checked when run |
-| `Is` | the value | `a`: a class's or interface's type | `Boolean` |
+| `Is` | the value, of a class's or interface's type, or `AnyValue` | `a`: a class's or interface's type | `Boolean` |
 | `Identical` | left, right | | `Boolean` |
 
 Declarations: `Field`, `StaticField`, `Constructor` (named

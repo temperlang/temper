@@ -84,7 +84,7 @@ public static class ContentTagsGlobal
                     int i = 0;
                     while (i < length)
                     {
-                        string x = xs[i];
+                        string x = Listed.Get(xs, i);
                         i = i + 1;
                         collector.Append("'");
                         collector.Append(quoteEscaperInstance.ApplyString(textEscaperInstance.ApplyString(x)));
@@ -153,7 +153,7 @@ public static class ContentTagsGlobal
                     int i = 0;
                     while (i < length)
                     {
-                        string x = xs[i];
+                        string x = Listed.Get(xs, i);
                         i = i + 1;
                         accumulator.AppendSafe("'");
                         accumulator.Append(x);

@@ -1,0 +1,11 @@
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../index-at-end.temper.md:10:5  /** <- let codeAt(s: String, i: Str
+8:1 -> ../index-at-end.temper.md:10:5  function codeAt(s, i) { <- let codeAt(s: String, i: Str
+8:10 -> ../index-at-end.temper.md:10:9 (codeAt)  codeAt(s, i) { <- codeAt(s: String, i: StringI
+8:16 -> ../index-at-end.temper.md:10:5  (s, i) { <- let codeAt(s: String, i: Str
+9:3 -> ../index-at-end.temper.md:10:50  return stringGet(s, i); <- s[i] }
+12:1 -> ../index-at-end.temper.md:12:5  const text = "abc"; <- let text = "abc";
+13:1 -> ../index-at-end.temper.md:13:5  console.log(codeAt(text, 0). <- console.log(codeAt(text, Str
+14:1 -> ../index-at-end.temper.md:14:5  console.log("before"); <- console.log("before");
+15:1 -> ../index-at-end.temper.md:15:5  console.log(codeAt(text, tex <- console.log(codeAt(text, tex
+16:1 -> ../index-at-end.temper.md:16:5  console.log("not reached"); <- console.log("not reached");

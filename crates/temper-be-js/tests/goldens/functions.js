@@ -4,7 +4,11 @@ import {
   listedGet,
   listedJoin,
   listedMap,
+  listedReduceFrom,
   listedSorted,
+  mapConstructor,
+  mappedToListWith,
+  pairConstructor,
   stringGet,
   stringNext,
   stringPrev,
@@ -227,6 +231,17 @@ function gatePassed(g, s) {
   return `${s} ${g.allows(1)}`;
 }
 
+/**
+ * @template T
+ * @template O
+ * @param {readonly T[]} ls
+ * @param {(arg0: T) => O} f
+ * @returns {O}
+ */
+function listFirstThrough(ls, f) {
+  return f(listedGet(/** @type {T[]} */ (ls), 0));
+}
+
 class Scaler extends type() {
   /**
    * @param {number} x
@@ -400,3 +415,14 @@ console.log(`${stringIsPalindrome("step on no pets")} ${stringIsPalindrome("step
 console.log(`${intOrZero(none)} ${listFirstOr(Object.freeze([4, 5]), 0)} ${listFirstOr(Object.freeze(["x"]), "-")}`);
 console.log(`${stringPadded("ab", 2)} ${stringPadded("ab", 1, "*")}`);
 console.log(`${gate.passed(4)} ${gatePassed(gate, "gate")}`);
+/** @type {readonly string[]} */
+const tags = listedMap(/** @type {number[]} */ (ns), (n) => `<${n}>`);
+const digits = listedReduceFrom(/** @type {number[]} */ (ns), "", (s, n) => `${s}${n}`);
+/** @type {Map<string, number>} */
+const named = mapConstructor(/** @type {any} */ (Object.freeze([pairConstructor("a", 1), pairConstructor("b", 2)])));
+/** @type {readonly string[]} */
+const entries = mappedToListWith(named, (k, v) => `${k}=${v}`);
+console.log(`${listedGet(/** @type {string[]} */ (tags), 0)}${listedGet(/** @type {string[]} */ (tags), 4)} ${digits} ${listedJoin(/** @type {string[]} */ (entries), ",", (e) => e)}`);
+const hashed = listFirstThrough(Object.freeze([3]), (n) => `#${n}`);
+const bumped = listFirstThrough(Object.freeze([3]), (n) => (n + 1) | 0);
+console.log(`${hashed} ${bumped} ${listFirstOr(Object.freeze([4, 5]), 0)}`);

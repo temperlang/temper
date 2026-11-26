@@ -154,7 +154,7 @@ impl Settle {
         let is_eq = matches!(f, Function::Eq | Function::Ne);
         for (i, (&arg, &t)) in args.iter().zip(&types).enumerate() {
             let base = match *self.typing.types.get(t) {
-                TypeData::Nullable(inner) => inner,
+                TypeData::Nullable(inner) if t != NULL => inner,
                 _ => t,
             };
             // A class's value fits no variant, unless it's the first
@@ -275,7 +275,7 @@ impl Settle {
         let that = self.known_type(b);
         // Kotlin expands `==` with a nullable side to a null check first,
         // and folds a nullable constant to its value's type.
-        let nullable = matches!(self.typing.types.get(that), TypeData::Nullable(_));
+        let nullable = that != NULL && matches!(self.typing.types.get(that), TypeData::Nullable(_));
         let is_eq = matches!(f, Function::Eq | Function::Ne);
         let unfit = !((is_eq && (nullable || that == NULL))
             || (nullable && self.may_fold(b, 0))
@@ -415,14 +415,20 @@ impl Settle {
     }
 
     /// Checks `console.log(message)`, if the callee is that.
-    pub(super) fn check_console_call(&mut self, call: NodeId, callee: NodeId, args: &[NodeId]) {
+    pub(super) fn check_console_call(
+        &mut self,
+        call: NodeId,
+        callee: NodeId,
+        args: &[NodeId],
+    ) -> bool {
         let tree = &self.lib.tree;
-        if !self.is_console_log(callee)
-            || args.iter().any(|&a| {
-                tree.kind(a) == NodeKind::Fn || matches!(self.lib.value(a), Some(Value::Symbol(_)))
-            })
-        {
-            return;
+        if !self.is_console_log(callee) {
+            return false;
+        }
+        if args.iter().any(|&a| {
+            tree.kind(a) == NodeKind::Fn || matches!(self.lib.value(a), Some(Value::Symbol(_)))
+        }) {
+            return true;
         }
         // Kotlin counts `this`, saying "Expected 2".
         if args.len() != LOG.params.len() {
@@ -433,6 +439,7 @@ impl Settle {
         for (&arg, &param) in args.iter().zip(LOG.params) {
             self.check_value(param, arg, Site::Arg);
         }
+        true
     }
 
     fn show_list(&self, types: &[TypeId]) -> String {

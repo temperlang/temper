@@ -555,7 +555,12 @@ impl<'a> Translator<'a> {
                 let qname = self.qname(decl);
                 let args = self.template_args(self.p.types.list(args))?;
                 match connected::lookup_type(&qname) {
-                    Some(c) => c.to_string(),
+                    Some(c) => {
+                        let item = (args.strip_prefix('<'))
+                            .and_then(|a| a.strip_suffix('>'))
+                            .unwrap_or_default();
+                        c.replace("{item}", item)
+                    }
                     // Core's lists and maps, as Kotlin's.
                     None if qname == "core.type List"
                         || qname == "core.type Listed"
@@ -571,12 +576,6 @@ impl<'a> Translator<'a> {
                         || qname == "core.type MapBuilder" =>
                     {
                         format!("std::shared_ptr<{CORE}::Mapped::Ordered{args}>")
-                    }
-                    None if qname == "core.type Deque" => {
-                        let item = (args.strip_prefix('<'))
-                            .and_then(|a| a.strip_suffix('>'))
-                            .unwrap_or_default();
-                        format!("std::shared_ptr<std::deque<{item}>>")
                     }
                     None if qname == "core.type Pair" => {
                         format!("std::shared_ptr<{CORE}::Pair{args}>")
@@ -690,8 +689,17 @@ impl<'a> Translator<'a> {
         let mut accessors = Vec::new();
         let mut exported_variables = Vec::new();
         let mut init_locals = Vec::new();
+        // Not std's classes connected to a type of the runtime's (`Queue`,
+        // a `std::deque`), which aren't declared.
+        let connected = |i: NodeId| match p.nodes.get(i) {
+            Node::Class { decl, .. } => {
+                temper_tmpl::qname::connected_type(p, decl, crate::connected::connects_std)
+            }
+            _ => false,
+        };
         let parts: Vec<(NodeId, bool)> = (module.items.iter().map(|&i| (i, false)))
             .chain(module.test_items.iter().map(|&i| (i, true)))
+            .filter(|&(i, _)| !connected(i))
             .collect();
         for &(item, tests) in &parts {
             if let Node::ModuleLet { decl } = p.nodes.get(item) {
@@ -2861,9 +2869,12 @@ impl<'a> Translator<'a> {
             Node::Is { ty, value } => {
                 let class = self.pointee(ty)?;
                 let from = p.nodes.ty(value);
-                let polymorphic = temper_tmpl::analysis::nominal_decl(p, from).is_some_and(|d| {
-                    p.decls.get(d).kind == DeclKind::Interface || !p.decls.supers(d).is_empty()
-                });
+                // From an interface, a class with interfaces, or an
+                // `AnyValue`, which every class's struct is.
+                let polymorphic = p.types.non_null(from) == TypeId::ANY_VALUE
+                    || temper_tmpl::analysis::nominal_decl(p, from).is_some_and(|d| {
+                        p.decls.get(d).kind == DeclKind::Interface || !p.decls.supers(d).is_empty()
+                    });
                 if !polymorphic {
                     return not_yet("`is` on a class without interfaces");
                 }

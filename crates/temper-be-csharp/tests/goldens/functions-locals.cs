@@ -20,7 +20,7 @@ public static class LocalsGlobal
             while (i < x.Count)
             {
                 s.Add(c);
-                s.Add(x[i].ToString(CultureInfo.InvariantCulture));
+                s.Add(Listed.Get(x, i).ToString(CultureInfo.InvariantCulture));
                 c = ", ";
                 i = i + 1;
             }
@@ -102,7 +102,7 @@ public static class LocalsGlobal
         {
             if (i < x.Count)
             {
-                @out.Add(x[i] * 2);
+                @out.Add(Listed.Get(x, i) * 2);
                 mapper(i + 1, @out);
             }
         }
@@ -119,7 +119,7 @@ public static class LocalsGlobal
             {
                 if (i < x.Count)
                 {
-                    @out.Add(x[i] * 2);
+                    @out.Add(Listed.Get(x, i) * 2);
                     mapper(i + 1, @out);
                 }
             }
@@ -141,7 +141,7 @@ public static class LocalsGlobal
         }
         void putter(int i2, IList<int> @out2)
         {
-            @out2.Add(x[i2] * 2);
+            @out2.Add(Listed.Get(x, i2) * 2);
             walker(i2 + 1, @out2);
         }
         IList<int> @out3 = new List<int>();

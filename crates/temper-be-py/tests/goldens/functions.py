@@ -6,6 +6,7 @@ from collections.abc import (
 from concurrent.futures import Future as _Future
 from temper_core import (
     LoggingConsole as _LoggingConsole,
+    Pair as _Pair,
     adapt_generator_factory as _adapt_generator_factory,
     boolean_to_string as _boolean_to_string,
     int_add as _int_add,
@@ -15,16 +16,21 @@ from temper_core import (
     list_get as _list_get,
     list_join as _list_join,
     list_map as _list_map,
+    listed_reduce_from as _listed_reduce_from,
     listed_sorted as _listed_sorted,
+    map_constructor as _map_constructor,
+    mapped_to_list_with as _mapped_to_list_with,
     string_get as _string_get,
     string_next as _string_next,
     string_prev as _string_prev,
 )
+from types import MappingProxyType as _MappingProxyType
 from typing import Any as _Any, Generator as _Generator, TypeVar as _TypeVar
 
 __all__ = ()
 
 _T = _TypeVar('_T')
+_O = _TypeVar('_O')
 
 
 def _make_counter(start: int, /) -> _Callable[[], int]:
@@ -205,6 +211,10 @@ def _gate_passed(g: _Gate, s: str, /) -> str:
     return f'{s} {_boolean_to_string(g.allows(1))}'
 
 
+def _list_first_through(ls: _Sequence[_T], f: _Callable[[_T], _O], /) -> _O:
+    return f(_list_get(ls, 0))
+
+
 _console: _LoggingConsole = _LoggingConsole(__name__)
 _counter: _Callable[[], int] = _make_counter(10)
 _counter()
@@ -272,3 +282,11 @@ _console.log(f"{_boolean_to_string(_string_is_palindrome('step on no pets'))} {_
 _console.log(f"{_int_or_zero(_none)} {_list_first_or((4, 5), 0)} {_list_first_or(('x',), '-')}")
 _console.log(f"{_string_padded('ab', 2)} {_string_padded('ab', 1, '*')}")
 _console.log(f"{_gate.passed(4)} {_gate_passed(_gate, 'gate')}")
+_tags: _Sequence[str] = _list_map(_ns, lambda n: f'<{n}>')
+_digits: str = _listed_reduce_from(_ns, '', lambda s, n: s + str(n))
+_named: _MappingProxyType[str, int] = _map_constructor((_Pair('a', 1), _Pair('b', 2)))
+_entries: _Sequence[str] = _mapped_to_list_with(_named, lambda k, v: f'{k}={v}')
+_console.log(f"{_list_get(_tags, 0)}{_list_get(_tags, 4)} {_digits} {_list_join(_entries, ',', lambda e: e)}")
+_hashed: str = _list_first_through((3,), lambda n: f'#{n}')
+_bumped: int = _list_first_through((3,), lambda n: _int_add(n, 1))
+_console.log(f'{_hashed} {_bumped} {_list_first_or((4, 5), 0)}')

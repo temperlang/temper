@@ -58,6 +58,11 @@ namespace temper {
                 return result;
             }
 
+            // -1, 0, or 1, by `i`'s sign.
+            inline int32_t signum(int32_t i) {
+                return (i > 0) - (i < 0);
+            }
+
             inline double toFloat64(int32_t i) {
                 return static_cast<double>(i);
             }

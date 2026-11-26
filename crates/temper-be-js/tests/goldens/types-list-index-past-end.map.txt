@@ -1,0 +1,12 @@
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../index-past-end.temper.md:11:5  /** <- let at(listed: Listed<String
+8:1 -> ../index-past-end.temper.md:11:5  function at(listed, i) { <- let at(listed: Listed<String
+8:10 -> ../index-past-end.temper.md:11:9 (at)  at(listed, i) { <- at(listed: Listed<String>, i
+8:12 -> ../index-past-end.temper.md:11:5  (listed, i) { <- let at(listed: Listed<String
+9:3 -> ../index-past-end.temper.md:11:54  return listedGet(/** @type { <- listed[i] }
+12:1 -> ../index-past-end.temper.md:13:5  /** @type {readonly string[] <- let letters = ["a", "b", "c"
+13:1 -> ../index-past-end.temper.md:13:5  const letters = Object.freez <- let letters = ["a", "b", "c"
+14:1 -> ../index-past-end.temper.md:14:5  console.log(at(letters, 2)); <- console.log(at(letters, 2));
+15:1 -> ../index-past-end.temper.md:15:5  console.log("before"); <- console.log("before");
+16:1 -> ../index-past-end.temper.md:16:5  console.log(at(letters, 3)); <- console.log(at(letters, 3));
+17:1 -> ../index-past-end.temper.md:17:5  console.log("not reached"); <- console.log("not reached");

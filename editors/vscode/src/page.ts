@@ -8,7 +8,7 @@ const unescapes: Record<string, string> = { "&lt;": "<", "&gt;": ">", "&quot;": 
 const unescapeHtml = (html: string): string => html.replace(/&(?:lt|gt|quot|#39|amp);/g, (e) => unescapes[e]!);
 
 /** What an inert block's label says, in the editor and the preview. */
-export const INERT_TITLE = "Not compiled: shown for reading only";
+export const INERT_TITLE = "Not compiled as part of this file";
 
 /** A fenced code block tagged `temper inert`, which the literate split
  * doesn't compile: its opening and closing fence lines, from 0 (the

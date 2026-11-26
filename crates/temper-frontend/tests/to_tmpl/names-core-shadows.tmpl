@@ -1,0 +1,72 @@
+tmpl 1 model 1 library `core-shadows` 0.0.0
+
+uses `temper-core`#18 0.0.0-alpha.0.0 {
+  class List#19<T#20> extends Listed#21<T#20> {
+    connected get length#30(): Int32;
+  }
+  interface Listed#21<T#22> {}
+  interface Console#25 {
+    connected method log#26(message: String): Void;
+  }
+  class Int32#28 {
+    connected method toString#29(radix?: Int32): String;
+  }
+  connected fn getConsole#32(name?: String): Console#25;
+}
+
+module mine#0 in "mine" {
+  export class String#2 {
+    let text#4: Int32;
+    constructor constructor#6(text#12: Int32): String#2 {
+      this.text#4 = text#12;
+    }
+    get doubled#5(): Int32 {
+      return %Int32.mul(this.text#4, 2);
+    }
+  }
+
+  export class List#3 {
+    let n#7: Int32;
+    constructor constructor#8(n#13: Int32): List#3 {
+      this.n#7 = n#13;
+    }
+  }
+
+  export fn ignore#9(x#14: Int32): Int32 {
+    return %Int32.add(x#14, 1);
+  }
+
+  let Boolean#10: Int32;
+
+  export fn summary#11(): Int32 {
+    let s#15: String#2 = new constructor#6(3);
+    let l#16: List#3 = new constructor#8(4);
+    return %Int32.add(%Int32.add(%Int32.add(%Int32.add(s#15.text#4, s#15.doubled#5()), l#16.n#7), ignore#9(10)), Boolean#10);
+  }
+
+  init {
+    init Boolean#10 = 7;
+  }
+}
+
+module `core-shadows`#1 {
+  let ~console#27: Console#25;
+
+  let s#17: String;
+
+  let xs#23: List#19<Int32>;
+
+  fn bump#24(console#31: Int32): Int32 {
+    return %Int32.add(console#31, 1);
+  }
+
+  init {
+    init ~console#27 = getConsole#32(omitted);
+    ~console#27.log#26(summary#11().toString#29(omitted));
+    init s#17 = "core's string";
+    ~console#27.log#26(s#17);
+    init xs#23 = (list(1, 2)): List#19<Int32>;
+    ~console#27.log#26(xs#23.length#30().toString#29(omitted));
+    ~console#27.log#26(bump#24(5).toString#29(omitted));
+  }
+}

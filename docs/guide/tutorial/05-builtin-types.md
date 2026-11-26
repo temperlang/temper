@@ -11,7 +11,7 @@ We also diverge here from our example geometric shapes library, though it
 served us well for context to get started.
 
 For the types below, some of them can be found as class or interface definitions
-in the file [*core.temper*](../../../lib/core/core.temper) in the Temper source code. The
+in the files of [*lib/core*](../../../lib/core/) in the Temper source code. The
 interpreter uses much of the code here, but classes here are also separately
 redefined for each backend.
 
@@ -30,8 +30,9 @@ some of these types:
 - `AnyValue` - The supertype of all usable values. As for any type that
   isn't a sealed interface, you can't downcast from `AnyValue`. This allows
   type safety while still using appropriate backend values.
-- *Null* - Supports data interop with external systems. Can be used along with
-  other types, such as `String?`. There is only one *Null* value, `null`. For
+- `T?` - A nullable type: a `T`, or `null`, which supports data interop
+  with external systems, as `String?`. `null` has no type of its own, so
+  `let a = null;` is an error, but `let a: String? = null;` is fine. For
   functions that might fail, usually `Bubble` is a better choice than making
   the type nullable with `?`.
   And for functions whose result should be ignored, use `Void`.
@@ -71,7 +72,7 @@ function reference supports positional arguments only. Some examples include:
 
  | Example | Means |
  | ------- | ----- |
- | `fn (): Void` | Type for a function that takes no arguments and returns the `void` value |
+ | `fn (): Void` | Type for a function that takes no arguments and returns no value |
  | `fn (Int): Int` | Type for a function that takes one integer and returns an integer |
  | `fn<T> (T): List<T>` | Type for a generic function with a type parameter `<T>` |
  | `fn (...Int): Boolean` | Type for a function that takes any number of integers |
@@ -364,12 +365,13 @@ user-defined key types in the future (see [issue#29](https://github.com/temperla
 ## Other types
 
 Temper has additional built-in types, but above discussion highlights some of the
-most important ones. Also, some types currently in [*core.temper*](../../../lib/core/core.temper),
-such as `Deque<T>` and `DenseBitVector` might move to support libraries in the
-future (see [issue#30](https://github.com/temperlang/temper/issues/30)).
+most important ones. Collections beyond lists and maps, a first-in, first-out
+`Queue<T>` and a growable `BitVector`, are in the standard library's
+[`std/collections`](../../std/collections.md) (see
+[issue#30](https://github.com/temperlang/temper/issues/30)).
 
 There's also currently a standard library called `"std"` with modules
-`"std/regex"` and `"std/testing"`. These also are likely to see some
+such as `"std/regex"` and `"std/testing"`. These also are likely to see some
 reorgnization before 1.0 (see [issue#26](https://github.com/temperlang/temper/issues/26)). We already saw a bit of testing
 earlier. And we'll take a look at regular expressions soon, but first let's
 understand how Temper handles memory management.

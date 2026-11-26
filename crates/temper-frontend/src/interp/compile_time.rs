@@ -29,7 +29,7 @@ use temper_syntax::tree::NodeId;
 /// needs one is left to run time and nothing outside the interpreter
 /// happens. Add to these deliberately; `compile_time_allowlist` in
 /// this crate's tests prints them.
-pub const ALLOWED_STD_MODULES: &[&str] = &["regex", "json", "temporal"];
+pub const ALLOWED_STD_MODULES: &[&str] = &["regex", "json", "temporal", "collections"];
 
 /// Members of allowed std modules refused anyway, as (module, class,
 /// member): they read the clock or the like.
@@ -40,7 +40,7 @@ pub const DENIED_MEMBERS: &[(&str, &str, &str)] = &[("temporal", "Date", "today"
 fn std_module(s: &Settled, node: NodeId) -> Option<String> {
     let file = s.library.locate(s.library.tree.span(node).start).0;
     let path = &s.library.files[file.0 as usize].path;
-    let rest = path.strip_prefix(&format!("{}/", s.library.std_root()))?;
+    let rest = s.library.std_path(path)?;
     Some(rest.split('/').next().unwrap_or("").to_string())
 }
 
@@ -191,6 +191,8 @@ impl Session {
                 host: None,
                 inputs_parked: Vec::new(),
                 inputs_failed: Vec::new(),
+                #[cfg(feature = "core-bodies")]
+                core: None,
             },
             first_globals,
             ran: 0,

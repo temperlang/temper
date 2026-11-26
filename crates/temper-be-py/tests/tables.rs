@@ -20,7 +20,7 @@ fn connections_name_core_connected_declarations() {
     sorted.dedup();
     assert_eq!(keys, sorted, "sorted and unique, for lookup");
 
-    // temper-tmpl's core fixture, checked against core.temper there.
+    // temper-tmpl's core fixture, checked against core there.
     let path =
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../temper-tmpl/tests/fixtures/core.tmpl");
     let p = text::read(&fs::read_to_string(path).unwrap()).unwrap();

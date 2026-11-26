@@ -39,6 +39,19 @@ pub const TABLE: &[(&str, Connection)] = &[
     ("core.async()", Connection::Helper("async")),
     ("core.empty()", Connection::Helper("empty")),
     ("core.getConsole()", Connection::Erased),
+    ("core.listedMap()", Connection::Helper("listed_map")),
+    (
+        "core.listedReduceFrom()",
+        Connection::Helper("listed_reducefrom"),
+    ),
+    (
+        "core.listedReduceFromIndex()",
+        Connection::Helper("listed_reducefromindex"),
+    ),
+    (
+        "core.mappedToListWith()",
+        Connection::Helper("mapped_tolistwith"),
+    ),
     (
         "core.type Boolean.toString()",
         Connection::Translate(boolean_to_string),
@@ -46,31 +59,6 @@ pub const TABLE: &[(&str, Connection)] = &[
     (
         "core.type Console.log()",
         Connection::Translate(console_log),
-    ),
-    (
-        "core.type DenseBitVector.constructor()",
-        Connection::Helper("densebitvector_constructor"),
-    ),
-    (
-        "core.type DenseBitVector.get()",
-        Connection::Helper("densebitvector_get"),
-    ),
-    (
-        "core.type DenseBitVector.set()",
-        Connection::Helper("densebitvector_set"),
-    ),
-    ("core.type Deque.add()", Connection::Helper("deque_add")),
-    (
-        "core.type Deque.constructor()",
-        Connection::Helper("deque_constructor"),
-    ),
-    (
-        "core.type Deque.get isEmpty()",
-        Connection::Helper("deque_isempty"),
-    ),
-    (
-        "core.type Deque.removeFirst()",
-        Connection::Helper("deque_removefirst"),
     ),
     ("core.type Float64.abs()", Connection::Math("abs")),
     ("core.type Float64.acos()", Connection::Math("acos")),
@@ -147,6 +135,10 @@ pub const TABLE: &[(&str, Connection)] = &[
     (
         "core.type Float64.toString()",
         Connection::Helper("float64_tostring"),
+    ),
+    (
+        "core.type Int32.get signum()",
+        Connection::Helper("int32_signum"),
     ),
     ("core.type Int32.max()", Connection::Math("max")),
     ("core.type Int32.min()", Connection::Math("min")),
@@ -260,14 +252,9 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Helper("listed_getor"),
     ),
     ("core.type Listed.join()", Connection::Helper("listed_join")),
-    ("core.type Listed.map()", Connection::Helper("listed_map")),
     (
         "core.type Listed.reduce()",
         Connection::Helper("listed_reduce"),
-    ),
-    (
-        "core.type Listed.reduceFrom()",
-        Connection::Helper("listed_reducefrom"),
     ),
     (
         "core.type Listed.slice()",
@@ -323,10 +310,6 @@ pub const TABLE: &[(&str, Connection)] = &[
     (
         "core.type Mapped.toList()",
         Connection::Helper("mapped_tolist"),
-    ),
-    (
-        "core.type Mapped.toListWith()",
-        Connection::Helper("mapped_tolistwith"),
     ),
     (
         "core.type Mapped.toMap()",

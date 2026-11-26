@@ -1,0 +1,33 @@
+tmpl 1 model 1 library `reduce-empty` 0.0.0
+
+uses `temper-core`#2 0.0.0-alpha.0.0 {
+  interface Listed#3<T#4> {
+    connected method reduce#6(accumulate: fn (T#4, T#4): T#4): T#4;
+  }
+  interface Console#10 {
+    connected method log#11(message: String): Void;
+  }
+  class Int32#13 {
+    connected method toString#14(radix?: Int32): String;
+  }
+  class List#15<T#16> extends Listed#3<T#16> {}
+  connected fn getConsole#17(name?: String): Console#10;
+}
+
+module `reduce-empty`#0 {
+  let ~console#12: Console#10;
+
+  fn sum#1(values#5: Listed#3<Int32>): Int32 {
+    return values#5.reduce#6((fn ~fn#7(a#8: Int32, b#9: Int32): Int32 {
+      return %Int32.add(a#8, b#9);
+    }): fn (Int32, Int32): Int32);
+  }
+
+  init {
+    init ~console#12 = getConsole#17(omitted);
+    ~console#12.log#11(sum#1((upcast((list(1, 2, 3)): List#15<Int32>)): Listed#3<Int32>).toString#14(omitted));
+    ~console#12.log#11("before");
+    ~console#12.log#11(sum#1((upcast((list()): List#15<Int32>)): Listed#3<Int32>).toString#14(omitted));
+    ~console#12.log#11("not reached");
+  }
+}

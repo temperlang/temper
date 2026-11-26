@@ -435,7 +435,8 @@ jobs:
       - name: VS Code extension
         if: ${{ !cancelled() && steps.small.outcome == 'success' }}
         run: uv run editors/vscode/build.py --temper target/small/temper --test
-      # Each marked ```temper block in docs/ runs on the release build as its
+      # Each marked ```temper block in docs/, and each marked example in
+      # lib/'s literate Markdown, runs on the small-profile build as its
       # marker says, or as its `<!-- known: In -->` comment says.
       - name: Docs' examples
         if: ${{ !cancelled() && steps.small.outcome == 'success' }}

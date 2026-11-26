@@ -1,6 +1,9 @@
 # Builtin Functions and Constants
 
 You can use builtins in your Temper code without `import`ing anything.
+They're core's names, which a module may declare too, as its own `class
+String`; to reach core's there, import core as a [namespace](#import),
+under any name: `let core = import("core");` then `core.String`.
 
 Some definitions are marked *Infix*, *Prefix*, or *Postfix*.  These
 are operators: they are used like mathematical symbols:
@@ -45,6 +48,16 @@ The singleton value `null` which is admitted by any [Postfix `?`](#postfix-) typ
 - A temporary, not computed *yet*, intermediate value
 
 `null` is distinguishable, in translated Temper code, from any other value.
+
+`null` has no type of its own: it takes the nullable type its place
+wants, as `Int?` in `let n: Int? = null;`. So a declaration whose only
+value is `null` needs a type.
+
+```temper
+let a = null;
+// ❌
+```
+
 For example, in the context of the *Int32?* type, *0* is not equal to `null`.
 
 Backends may translate `null` and the concept of nullable types in various ways:
@@ -63,9 +76,9 @@ but the more clarity around `null` the better.
 The value `true` of type [*Boolean*](types.md#class-boolean).
 
 ### *void*
-The value `void` is the sole value in type [*Void*](types.md#class-void).
-
-`Void` is disjoint from `AnyValue` so no `void` value is directly usable.
+`void` does nothing, as a branch or fallback with nothing to do, as in
+`x orelse void`. It has type [*Void*](types.md#class-void), which is
+never a value's, so `void` can't be stored or passed.
 See also [issue#38](https://github.com/temperlang/temper/issues/38).
 
 ## Special functions
@@ -114,6 +127,12 @@ or objects it does not create and may not print or cause other side effects.
 
 ### `new`
 The `new` operator allows constructing new instances of types.
+
+It makes classes with a public constructor, not interfaces. Builtin
+types say so in core: `new StringBuilder()` and `new Map<String,
+Int>([])` work, but strings, numbers, booleans and lists come from
+literals and methods, so `new String()` and `new List<Int>()` are
+errors.
 
 ### `yield()`
 Called from the body of a generator function, to pause the body
@@ -438,7 +457,7 @@ let f<T extends A & B>(t: T): Void {
   b.b();
 }
 f<C>(c);
-// ✅ null
+// ✅
 ```
 
 ### Multiplication `*`
@@ -473,6 +492,7 @@ The builtin `+` operator has six variants:
 - *Infix* with two [*Float64*](types.md#class-float64)s: signed addition
 - *Prefix* with one [*Float64*](types.md#class-float64): numeric identity
 
+<!-- known: I10 -->
 ```temper
 1    + 2    == 3    &&
 1.0  + 2.0  == 3.0  &&
@@ -827,7 +847,9 @@ Unicode [scalar value]s, which exclude surrogate codes appearing by themselves.
 [*Float64*](types.md#class-float64)s are compared on a modified number line where
 `-0.0` precedes `+0.0` and all `NaN` values sort above +&infin;.
 This differs from the [IEEE-754 comparison predicate] which treats `NaN` as incomparable.
+[`Float64.near`](types.md#float64near) checks `==` by this order first, so `NaN` is near `NaN`.
 
+<!-- known: I10 -->
 ```temper
 -Infinity < -1.0     &&
      -1.0 <  0.0     &&
@@ -1767,6 +1789,26 @@ use a relative file path: `"."`, `".."`, or one starting with `"./"` or
 `"../"`.
 This allows multiple co-compiled libraries to link to one another.
 
+A module may also be imported whole, as a namespace: `let NAME =
+import(PATH);` binds `NAME`, and `NAME.member` is the module's export
+`member`, in code and in types, just as destructuring would import it:
+
+```temper
+let temporal = import("std/temporal");
+let d: temporal.Date = { year: 2024, month: 2, day: 29 };
+console.log(d.toString()); //!outputs "2024-02-29"
+// ✅
+```
+
+A namespace exists only while compiling: code that uses one translates
+exactly as code that destructures the same names. So it's an error to use
+`NAME` other than before `.member` (as a value, an argument, or a type),
+to name a member the module doesn't export, or to export, type, or
+`var` a namespace. A namespace is declared at a module's top level, and
+a local of the same name shadows it, as any name. A class is constructed
+through one as `new temporal.Date(2024, 2, 29)`; only a namespace may
+qualify the class after `new`.
+
 A bare `import("./tests");` statement, with nothing destructured, only
 makes that module part of the library, as for a module of tests that
 nothing else imports. It brings in no names, so the module it names may
@@ -1821,7 +1863,7 @@ class SubType extends SuperType {}
 // An instance of a subtype may be assigned to a variable
 // whose type is the supertype.
 let x: SuperType = new SubType();
-// ✅ null
+// ✅
 ```
 
 Second, when declaring a type variable.
@@ -1830,7 +1872,7 @@ that are subtypes of the upper bound.
 
 ```temper
 let f<T extends Listed<String>>(x: T): T { x }
-// ✅ null
+// ✅
 ```
 
 When more than one super-type is extended, use
@@ -1844,7 +1886,7 @@ class C extends I & J {}
 
 let f<T extends I & J>(x: T): T { x }
 // T extends I and T extends J
-// ✅ null
+// ✅
 ```
 
 ### `let`
@@ -1945,6 +1987,23 @@ console.log(f()); //!outputs "function-declaration"
 
 > **Note:** Temper doesn't support named function expressions yet ("Use of builtin fn is malformed") ([inconsistencies](../inconsistencies.md#i10-examples-that-dont-run-as-marked)).
 
+#### Optional parameters
+
+A parameter may have a default, as `greeting: String? = "Hello"`, which a
+call that leaves it out gets. A call that passes `null` for it gets the
+default too, even where its type is nullable, so such a parameter is
+never `null` inside the function:
+
+```temper
+let greet(name: String, greeting: String? = "Hello"): String {
+  "${greeting ?? "Hi"}, ${name}!"
+}
+console.log(greet("Ada")); //!outputs "Hello, Ada!"
+console.log(greet("Ada", "Howdy")); //!outputs "Howdy, Ada!"
+console.log(greet("Ada", null)); //!outputs "Hello, Ada!"
+// ✅
+```
+
 ### `orelse`
 The `orelse` infix operator allows recovering from
 [failure to produce a result](#bubble).
@@ -1976,6 +2035,7 @@ raw"foo\bar"
 You can have a raw string with quotes by putting it in a
 [multi-quoted string](types.md#multi-quoted-strings).
 
+<!-- known: I25 -->
 ```temper
 raw"""
    ""quo\ted"
@@ -2324,10 +2384,23 @@ Note that the extension function must have at least one required, positional
 parameter and that parameter is the *this* argument, the subject when
 called via `subject.methodName(other, args)` syntax.
 
+Type arguments in a method-style call, `subject.methodName<T>(args)`,
+are the function's type parameters that the subject's type doesn't
+name, as a method's own, or all of them, in order, as for a call of the
+function by its name.
+
 Backends translate these as if the *\@extension* decorator were
 ignored: an ordinary function, under its regular name, and a
 method-style call as a call of it, even in target languages that have
 extensions of their own, such as C#.
+
+Core's generic helpers for lists and maps are instance extensions, as
+an interface's methods, which implementations may override, can't be
+generic: `ls.map(f)` calls core's `listedMap`, and `ls.map<String>(f)`
+gives `map`'s own type parameter. So are `reduceFrom`,
+`reduceFromIndex`, `toListWith`, and `toListBuilderWith`. For now,
+these are called only method-style, given only their own type
+arguments.
 
 ### `@fun` decorator
 Marks an interface declaration as a [Functional interface](types.md#functional-interface).
@@ -2840,8 +2913,8 @@ See also [`private` visibility](#private-visibility).
 See also [`@private` visibility](#private-visibility)
 
 ### `sealed` type modifier
-Marks an interface type as sealed; only types declared in the same source file
-may [extend](#subtype-extends-supertype) it.
+Marks an interface type as sealed; only types declared in the same module
+(the same directory's source files) may [extend](#subtype-extends-supertype) it.
 
 Sealed types are important because the Temper translator can assume there are
 no direct subtypes that it does not know about.

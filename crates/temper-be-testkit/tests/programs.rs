@@ -3,9 +3,12 @@
 //!
 //! - `programs_log_as_the_interpreter_does`: each Temper program logs, on
 //!   the interpreter, what its log block says, so every backend that runs
-//!   it is checked against the interpreter.
+//!   it is checked against the interpreter; one expected to fail
+//!   (`expectRunFailure = true`) must end in a panic.
 //! - `programs_translate_to_tmpl`: each Temper program translates to
 //!   valid tmpl, as its golden shows.
+//! - `panics_on_the_interpreter`: each functional test whose run must
+//!   panic (its ` ```panic ` block) panics so on the interpreter.
 //! - `net_tests_on_the_interpreter`: std `net`'s functional tests
 //!   (`NET`) log what they expect on the interpreter, against the shared
 //!   test server.
@@ -23,10 +26,44 @@ fn programs_log_as_the_interpreter_does() {
                 continue;
             }
             let (failure, output) = kit::interpret(&case);
-            assert_eq!(failure, None, "{}", case.key);
+            // A run expected to fail (`callback-changes`) ends in its
+            // panic.
+            if case.fails {
+                let failure = failure.unwrap_or_else(|| panic!("{}: no failure", case.key));
+                let panicked = match &case.panic {
+                    Some(message) => kit::ends_line(&failure, "Panicked: ", message),
+                    None => failure.starts_with("Panicked"),
+                };
+                assert!(panicked, "{}: {failure}", case.key);
+            } else {
+                assert_eq!(failure, None, "{}", case.key);
+            }
             let expected = temper_funtests::expected_log(text, "interp");
             assert_eq!(output, expected, "{}", case.key);
         }
+    });
+}
+
+/// Each functional test whose run must end in a panic (its ` ```panic `
+/// block), as list and string indices out of bounds, panics on the
+/// interpreter too, with that message, after logging what's expected.
+#[test]
+fn panics_on_the_interpreter() {
+    kit::with_stack(|| {
+        let tests = [&kit::CORE_TYPES[..], &kit::WITH_STD[..]].concat();
+        let mut panics = 0;
+        for case in kit::functional_cases("interp", &tests) {
+            let Some(message) = &case.panic else {
+                continue;
+            };
+            panics += 1;
+            let (failure, output) = kit::interpret(&case);
+            let failure = failure.unwrap_or_else(|| panic!("{}: no failure", case.key));
+            let panicked = kit::ends_line(&failure, "Panicked: ", message);
+            assert!(panicked, "{}: {failure}", case.key);
+            assert_eq!(output, case.expected, "{}", case.key);
+        }
+        assert!(panics >= 8, "{panics} cases must panic");
     });
 }
 

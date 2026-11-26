@@ -535,6 +535,22 @@ fn built_in_std() {
     });
 }
 
+/// The checkout's `lib/std` builds as std, as a work root of its own,
+/// with every gap listed (`-v`), rather than beside the built-in std.
+#[cfg(feature = "py")]
+#[test]
+fn checkout_std_builds_as_std() {
+    let std = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../lib/std");
+    let out = std::env::temp_dir().join(format!("tempest-cli-{}-checkout-std", std::process::id()));
+    let _ = fs::remove_dir_all(&out);
+    let (std, out_dir) = (std.to_string_lossy(), out.to_string_lossy());
+    let (code, stdout, err) = tempest(&["build", "-w", &std, "-b", "py", "-v", "-o", &out_dir]);
+    let _ = fs::remove_dir_all(&out);
+    assert_eq!(err, "");
+    assert!(stdout.contains("Wrote"), "{stdout}");
+    assert_eq!(code, 0);
+}
+
 /// Fibonacci, from Kotlin's functional tests, as a library of its name.
 fn with_fibonacci(test: &str, f: impl FnOnce(&str)) {
     let fib = PathBuf::from(env!("CARGO_MANIFEST_DIR"))

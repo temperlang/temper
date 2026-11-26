@@ -1,0 +1,241 @@
+tmpl 1 model 1 library `callback-changes` 0.0.0
+
+uses `temper-core`#2 0.0.0-alpha.0.0 {
+  interface Listed#3<T#4> {
+    connected method join#40(separator: String, stringify: fn (T#4): String): String;
+    connected method filter#51(predicate: fn (T#4): Boolean): List#10<T#4>;
+    connected method reduce#81(accumulate: fn (T#4, T#4): T#4): T#4;
+  }
+  class ListBuilder#5<T#6> extends Listed#3<T#6> {
+    connected method addAll#46(newValues: Listed#3<T#6>, at?: Int32): Void;
+    connected method splice#47(index?: Int32, removeCount?: Int32, newValues?: Listed#3<T#6>): List#10<T#6>;
+    connected method add#54(newValue: T#6, at?: Int32): Void;
+    connected method sort#55(compare: fn (T#6, T#6): Int32): Void;
+    connected get length#59(): Int32;
+    connected constructor constructor#61(): ListBuilder#5<T#6>;
+    connected method removeLast#78(): T#6;
+    connected method set#122(index: Int32, newValue: T#6): Void;
+  }
+  class List#10<T#11> extends Listed#3<T#11> {
+    connected method toListBuilder#45(): ListBuilder#5<T#11>;
+    connected get length#72(): Int32;
+  }
+  class MapBuilder#24<K#25 extends MapKey#27<K#25>, V#26> extends Mapped#29<K#25, V#26> {
+    connected constructor constructor#95(): MapBuilder#24<K#25, V#26>;
+    connected method set#96(key: K#25, newValue: V#26): Void;
+    connected method remove#104(key: K#25): V#26 throws Bubble;
+  }
+  interface MapKey#27<EQ#28> {}
+  interface Mapped#29<K#30 extends MapKey#27<K#30>, V#31> {
+    connected method forEach#99(func: fn (K#30, V#31): Void): Void;
+    connected method has#103(key: K#30): Boolean;
+    connected get length#110(): Int32;
+  }
+  class Int32#43 {
+    connected method toString#44(radix?: Int32): String;
+  }
+  interface Console#48 {
+    connected method log#49(message: String): Void;
+  }
+  connected fn listedReduceFrom#65<T#66, O#67>(listed: Listed#3<T#66>, initial: O#67, accumulate: fn (O#67, T#66): O#67): O#67;
+  connected fn listedMap#73<T#74, O#75>(listed: Listed#3<T#74>, transform: fn (T#74): O#75): List#10<O#75>;
+  class String#85 {
+    connected get isEmpty#86(): Boolean;
+  }
+  connected fn mappedToListWith#112<K#113 extends MapKey#27<K#113>, V#114, T#115>(mapped: Mapped#29<K#113, V#114>, func: fn (K#113, V#114): T#115): List#10<T#115>;
+  connected fn getConsole#130(name?: String): Console#48;
+}
+
+module `callback-changes`#0 {
+  let ~console#50: Console#48;
+
+  fn show#1(ls#39: Listed#3<Int32>): String {
+    return ls#39.join#40(",", (fn ~fn#41(n#42: Int32): String {
+      return n#42.toString#44(omitted);
+    }): fn (Int32): String);
+  }
+
+  let b#7: ListBuilder#5<Int32>;
+
+  let c#8: ListBuilder#5<Int32>;
+
+  let d#9: ListBuilder#5<Int32>;
+
+  let removed#12: List#10<Int32>;
+
+  let e#13: ListBuilder#5<Int32>;
+
+  let kept#14: List#10<Int32>;
+
+  let f#15: ListBuilder#5<Int32>;
+
+  var peeks#16: Int32;
+
+  fn words#17(): ListBuilder#5<String> {
+    let w#60: ListBuilder#5<String> = new constructor#61<String>();
+    {
+      var i#62: Int32 = 0;
+      ~loop#63: while (%Int32.lt(i#62, 3)) {
+        w#60.add#54(%String.cat("w", i#62.toString#44(omitted)), omitted);
+        i#62 = %Int32.add(i#62, 1);
+      }
+    }
+    return w#60;
+  }
+
+  fn reduceFromGrowing#18(): Int32 throws Bubble {
+    let g#64: ListBuilder#5<Int32> = ((list(1, 2)): List#10<Int32>).toListBuilder#45();
+    return listedReduceFrom#65<Int32, Int32>((upcast(g#64)): Listed#3<Int32>, 0, (fn ~fn#68(sum#69: Int32, n#70: Int32): Int32 [g#64] {
+      if (%Int32.lt(g#64.length#59(), 4)) {
+        g#64.add#54(9, omitted);
+      }
+      return %Int32.add(%Int32.mul(sum#69, 10), n#70);
+    }): fn (Int32, Int32): Int32);
+  }
+
+  fn mapShrinking#19(): Int32 throws Bubble {
+    let w#71: ListBuilder#5<String> = words#17();
+    return listedMap#73<String, String>((upcast(w#71)): Listed#3<String>, (fn ~fn#76(s#77: String): String [w#71] {
+      if (%Int32.gt(w#71.length#59(), 1)) {
+        w#71.removeLast#78();
+      }
+      return s#77;
+    }): fn (String): String).length#72();
+  }
+
+  fn reduceShrinking#20(): Int32 throws Bubble {
+    let w#79: ListBuilder#5<String> = words#17();
+    let all#80: String = w#79.reduce#81((fn ~fn#82(all#83: String, s#84: String): String [w#79] {
+      if (%Int32.gt(w#79.length#59(), 1)) {
+        w#79.removeLast#78();
+      }
+      return all#83;
+    }): fn (String, String): String);
+    if (all#80.isEmpty#86()) {
+      return 0;
+    } else {
+      return 1;
+    }
+  }
+
+  fn filterGrowing#21(): Int32 throws Bubble {
+    let g#87: ListBuilder#5<Int32> = ((list(1, 2)): List#10<Int32>).toListBuilder#45();
+    return g#87.filter#51((fn ~fn#88(n#89: Int32): Boolean [g#87] {
+      if (%Int32.lt(g#87.length#59(), 4)) {
+        g#87.add#54(9, omitted);
+      }
+      return true;
+    }): fn (Int32): Boolean).length#72();
+  }
+
+  fn joinGrowing#22(): Int32 throws Bubble {
+    let g#90: ListBuilder#5<Int32> = ((list(1, 2)): List#10<Int32>).toListBuilder#45();
+    let joined#91: String = g#90.join#40(",", (fn ~fn#92(n#93: Int32): String [g#90] {
+      if (%Int32.lt(g#90.length#59(), 4)) {
+        g#90.add#54(9, omitted);
+      }
+      return n#93.toString#44(omitted);
+    }): fn (Int32): String);
+    if (joined#91.isEmpty#86()) {
+      return 0;
+    } else {
+      return 1;
+    }
+  }
+
+  fn letters#23(): MapBuilder#24<String, Int32> {
+    let m#94: MapBuilder#24<String, Int32> = new constructor#95<String, Int32>();
+    m#94.set#96(%String.cat("a", 1.toString#44(omitted)), 1);
+    m#94.set#96(%String.cat("b", 2.toString#44(omitted)), 2);
+    m#94.set#96(%String.cat("c", 3.toString#44(omitted)), 3);
+    return m#94;
+  }
+
+  fn forEachRemoving#32(): Int32 throws Bubble {
+    let m#97: MapBuilder#24<String, Int32> = letters#23();
+    var sum#98: Int32 = 0;
+    m#97.forEach#99((fn ~fn#100(k#101: String, v#102: Int32): Void [m#97, sum#98] {
+      if (m#97.has#103("c3")) {
+        (orelse(m#97.remove#104("c3")^, void)): Void;
+      }
+      sum#98 = %Int32.add(sum#98, v#102);
+    }): fn (String, Int32): Void);
+    return sum#98;
+  }
+
+  fn forEachAdding#33(): Int32 throws Bubble {
+    let m#105: MapBuilder#24<String, Int32> = letters#23();
+    var count#106: Int32 = 0;
+    m#105.forEach#99((fn ~fn#107(k#108: String, v#109: Int32): Void [m#105, count#106] {
+      count#106 = %Int32.add(count#106, 1);
+      if (%Int32.lt(m#105.length#110(), 30)) {
+        m#105.set#96(%String.cat("k", m#105.length#110().toString#44(omitted)), 1);
+      }
+    }): fn (String, Int32): Void);
+    return count#106;
+  }
+
+  fn toListWithRemoving#34(): Int32 throws Bubble {
+    let m#111: MapBuilder#24<String, Int32> = letters#23();
+    return mappedToListWith#112<String, Int32, Int32>((upcast(m#111)): Mapped#29<String, Int32>, (fn ~fn#116(k#117: String, v#118: Int32): Int32 [m#111] {
+      if (m#111.has#103("c3")) {
+        (orelse(m#111.remove#104("c3")^, void)): Void;
+      }
+      return v#118;
+    }): fn (String, Int32): Int32).length#72();
+  }
+
+  let walked#35: List#10<Int32>;
+
+  let t#36: ListBuilder#5<Int32>;
+
+  let u#37: ListBuilder#5<Int32>;
+
+  let s#38: ListBuilder#5<Int32>;
+
+  init {
+    init ~console#50 = getConsole#130(omitted);
+    init b#7 = ((list(1, 2)): List#10<Int32>).toListBuilder#45();
+    b#7.addAll#46((upcast(b#7)): Listed#3<Int32>, omitted);
+    init c#8 = ((list(1, 2)): List#10<Int32>).toListBuilder#45();
+    c#8.addAll#46((upcast(c#8)): Listed#3<Int32>, 1);
+    init d#9 = ((list(1, 2, 3)): List#10<Int32>).toListBuilder#45();
+    init removed#12 = d#9.splice#47(1, 1, (upcast(d#9)): Listed#3<Int32>);
+    ~console#50.log#49(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("self ", show#1((upcast(b#7)): Listed#3<Int32>)), " "), show#1((upcast(c#8)): Listed#3<Int32>)), " "), show#1((upcast(d#9)): Listed#3<Int32>)), " "), show#1((upcast(removed#12)): Listed#3<Int32>)));
+    init e#13 = ((list(1, 2)): List#10<Int32>).toListBuilder#45();
+    init kept#14 = e#13.filter#51((fn ~fn#52(n#53: Int32): Boolean {
+      return %Int32.gt(n#53, 0);
+    }): fn (Int32): Boolean);
+    e#13.add#54(3, omitted);
+    ~console#50.log#49(%String.cat(%String.cat(%String.cat("filter ", show#1((upcast(kept#14)): Listed#3<Int32>)), " "), show#1((upcast(e#13)): Listed#3<Int32>)));
+    init f#15 = ((list(3, 1, 2)): List#10<Int32>).toListBuilder#45();
+    init peeks#16 = 0;
+    f#15.sort#55((fn ~fn#56(a#57: Int32, z#58: Int32): Int32 {
+      peeks#16 = %Int32.add(peeks#16, f#15.length#59());
+      return %Int32.sub(a#57, z#58);
+    }): fn (Int32, Int32): Int32);
+    ~console#50.log#49(%String.cat("peeking ", show#1((upcast(f#15)): Listed#3<Int32>)));
+    init walked#35 = (list((orelse(reduceFromGrowing#18()^, %Int32.neg(1))): Int32, (orelse(mapShrinking#19()^, %Int32.neg(1))): Int32, (orelse(reduceShrinking#20()^, %Int32.neg(1))): Int32, (orelse(filterGrowing#21()^, %Int32.neg(1))): Int32, (orelse(joinGrowing#22()^, %Int32.neg(1))): Int32, (orelse(forEachRemoving#32()^, %Int32.neg(1))): Int32, (orelse(forEachAdding#33()^, %Int32.neg(1))): Int32, (orelse(toListWithRemoving#34()^, %Int32.neg(1))): Int32)): List#10<Int32>;
+    ~console#50.log#49(%String.cat("walks ", show#1((upcast(walked#35)): Listed#3<Int32>)));
+    init t#36 = ((list(3, 1, 2)): List#10<Int32>).toListBuilder#45();
+    t#36.sort#55((fn ~fn#119(a#120: Int32, z#121: Int32): Int32 {
+      t#36.set#122(0, 99);
+      return %Int32.sub(a#120, z#121);
+    }): fn (Int32, Int32): Int32);
+    init u#37 = ((list(3, 1, 2)): List#10<Int32>).toListBuilder#45();
+    u#37.sort#55((fn ~fn#123(a#124: Int32, z#125: Int32): Int32 {
+      let last#126: Int32 = u#37.removeLast#78();
+      u#37.add#54(%Int32.add(last#126, 10), omitted);
+      return %Int32.sub(a#124, z#125);
+    }): fn (Int32, Int32): Int32);
+    ~console#50.log#49(%String.cat(%String.cat(%String.cat("same length ", show#1((upcast(t#36)): Listed#3<Int32>)), " "), show#1((upcast(u#37)): Listed#3<Int32>)));
+    init s#38 = ((list(3, 1, 2)): List#10<Int32>).toListBuilder#45();
+    s#38.sort#55((fn ~fn#127(a#128: Int32, z#129: Int32): Int32 {
+      if (%Int32.lt(s#38.length#59(), 40)) {
+        s#38.add#54(0, omitted);
+      }
+      return %Int32.sub(a#128, z#129);
+    }): fn (Int32, Int32): Int32);
+    ~console#50.log#49(%String.cat("sorted ", s#38.length#59().toString#44(omitted)));
+  }
+}

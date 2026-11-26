@@ -1,0 +1,158 @@
+# Any value and special types
+
+The types that every value fits, and special types for failure, absence, and
+code that can't be compiled.
+
+## AnyValue
+
+*AnyValue* is the type for any successful value.
+
+All `class` and `interface` types, including builtin types like [snippet/type/Int32],
+are sub-types of this type, except the special types [snippet/type/Bubble] and
+[snippet/type/Void].
+
+    export interface AnyValue {}
+
+## Equatable
+
+*Equatable* indicates that values can be tested for equality using `==` and `!=`.
+User-defined types can't currently extend Equatable, but we expect to support
+this in the future.
+
+    export sealed interface Equatable<EQ extends AnyValue> {
+      @operator("==")
+      eq(other: EQ): Boolean;
+    }
+
+## Bubble
+
+*Bubble* is a type that represents failure to compute a value.
+
+A function declaration may declare it [*throws*][snippet/builtin/throws] *Bubble*
+following its return type to indicate that it can fail.
+When translating to backends that use exceptions, this indicates the function can throw.
+On other backends, the translation function's return type might be a *Result* type or a
+Go-lang [extra, error result](https://gobyexample.com/errors).
+
+See also [snippet/builtin/orelse].
+
+    export class Bubble {
+      private constructor();
+    }
+
+## Invalid
+
+*Invalid* is an untranslatable type that represents a failure to properly type an
+expression.  Some backends, notably dynamic language backends, might be able
+to produce a partially working translation and run tests even in the presence of type
+errors, allowing developers to narrow down errors, or guide complex refactorings, and
+the invalid type enables that.
+
+It may be used in meta-programming code, but is not meant for general use by user code.
+
+    export sealed interface Invalid {}
+
+## Never
+
+*Never* is a type for expressions that will never complete normally.
+
+For example, a loop that never exits, perhaps because it is supposed to process jobs
+until the end of the embedding program, may use type *Never*.
+
+*Never* should not be confused with [snippet/type/Empty]; *Empty* admits a valid value which
+has no content, but *Never* admits no value.
+
+Unlike [⊥ types][bottom type] in some programming language, there is not a single
+*Never* type in Temper.
+*Never&lt;Foo&gt;* is not a sub-type of every type; it is only a sub-type of itself and its
+*&lt;Foo&gt;*.
+
+*Never&lt;String?&gt;?* is a valid type and because of the `?` nullable notation, that type
+admits the special value, [snippet/builtin/null].
+
+Having *Never* types in Temper allows translating control flow constructs that do not
+produce "unreachable code" errors.
+
+Temper *Never* types can translate to bottom types in languages that support that, but
+*Never&lt;String&gt;*, for example, can translate to *String* in languages that do not.
+
+[bottom type]: https://en.wikipedia.org/wiki/Bottom_type
+
+    export sealed interface Never<@out T> {}
+
+## Empty
+
+*Empty* is the type for a stateless singleton value which may be used
+judiciously to work around some problems in generic programming.
+
+When not solving generic programming problems, prefer [snippet/type/Void].
+*Void* translates to the idiomatic no-usable-result concept which for many
+typed functional languages is the same as *Empty* but for many dynamic
+languages is the same as [snippet/builtin/null].
+
+*Empty* differs from [snippet/type/Void] in that it can be used as the type
+of a function input and of a local variable.
+
+Empty is like the "unit" type which is present in functional programming
+languages; a function may be effectively *Void* but can instead return
+*Empty* allowing its return type to bind to agree with a type parameter.
+
+As seen below, the empty value may be retrieved by calling the `empty()`
+function, and is distinct from [snippet/builtin/null].
+
+```temper inert
+let e: Empty? = empty();
+console.log("Empty is not null: ${e != null}");
+//!outputs  "Empty is not null: true"
+// ✅
+```
+
+    @imu
+    @connected
+    export class Empty extends Equatable<Empty> {
+      private constructor(): Void {}
+
+      @connected
+      @operator("==")
+      public eq(other: Empty): Boolean { true }
+    }
+    let emptySingleton: Empty = doPure { (): Empty => new Empty() };
+
+`empty` gives the [snippet/type/Empty] value.
+
+    @connected
+    export let empty(): Empty { emptySingleton }
+
+## Function
+
+    export interface Function {}
+
+## GeneratorFn
+
+*GeneratorFn* is a marker interface for functions that may yield control to their caller even
+if they do not lexically mention the [snippet/builtin/yield]
+pseudo-control-flow instruction.
+
+    export interface GeneratorFn extends Function {}
+
+## MapKey
+
+*MapKey* is limited at present to String and Int keys but expected to be
+user-implementable in the future. Until backends support other keys, it's
+sealed, so only core's types are keys. A `when` over a `MapKey` can't
+list its cases anyway, since `is Int32` and `is String` aren't allowed.
+
+    @imu
+    export sealed interface MapKey<EQ extends AnyValue> extends Equatable<EQ> {}
+
+## Problem
+
+*Problem* is an internal abstraction that represents code that
+cannot be compiled.
+
+Representing problems in a partially-processed library allows
+running some tests, giving developers more flexibility in how
+they investigate what they need to do to get their code
+production-ready.
+
+    export interface Problem {}

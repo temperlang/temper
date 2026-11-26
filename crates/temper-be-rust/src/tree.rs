@@ -948,8 +948,9 @@ fn links(e: &Expr) -> (&Expr, Vec<Link<'_>>) {
 }
 
 /// A chain's links as rustfmt groups them: those on the root's line (the
-/// links that join it, and the first other one, if the root is no wider
-/// than an indent), then each other link with those that join it.
+/// links that join it, and while the root's line is no wider than an
+/// indent, the next one, as `s.0.text`), then each other link with those
+/// that join it.
 fn chain_groups<'a>(root_width: usize, links: &[Link<'a>]) -> (Vec<Link<'a>>, Vec<Vec<Link<'a>>>) {
     let mut head = Vec::new();
     let mut rest = links.iter().copied().peekable();
@@ -957,12 +958,17 @@ fn chain_groups<'a>(root_width: usize, links: &[Link<'a>]) -> (Vec<Link<'a>>, Ve
     while let Some(l) = rest.next_if(|l| matches!(l, Link::Try)) {
         head.push(l);
     }
-    if root_width <= 4 && head.is_empty() {
-        if let Some(l) = rest.next() {
+    if head.is_empty() {
+        let mut width = root_width;
+        while width <= 4 {
+            let Some(l) = rest.next() else { break };
             head.push(l);
             while let Some(l) = rest.next_if(|l| l.joins(head.last().copied())) {
                 head.push(l);
             }
+            width = (head.iter().map(|l| l.flat().map(|t| t.len())))
+                .try_fold(root_width, |w, t| Some(w + t?))
+                .unwrap_or(usize::MAX);
         }
     }
     let mut groups: Vec<Vec<Link>> = Vec::new();

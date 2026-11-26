@@ -8,7 +8,7 @@
 //! [`Typing::resolved`](crate::typing::Typing::resolved); nothing is
 //! resolved again here. Core's members are copied, as used, from
 //! temper-tmpl's core fixture (`tests/fixtures/core.tmpl`, which its tests
-//! check against `core.temper`), so their signatures, connected marks, and
+//! check against core's files), so their signatures, connected marks, and
 //! parameter names have one source.
 //!
 //! A library's own modules translate in the order they run, each after
@@ -143,13 +143,13 @@ enum Home {
     Other { library: String, path: String },
 }
 
-/// Each module's home, by [`ModuleId`]: std's under [`stdlib::DIR`], other
+/// Each module's home, by [`ModuleId`]: std's under its root
+/// ([`Library::std_root`](crate::library::Library::std_root)), other
 /// libraries' under their roots, and the rest the library's own, whose
 /// root is the directory of its first file's module (or the library root
 /// holding it).
 fn homes(s: &Settled, library: &str) -> Vec<Home> {
     let lib = &s.library;
-    let std_root = lib.std_root();
     let main = lib
         .files
         .first()
@@ -170,7 +170,8 @@ fn homes(s: &Settled, library: &str) -> Vec<Home> {
         .to_string();
     (lib.modules.iter())
         .map(|m| {
-            if let Some(path) = under(&m.dir, std_root) {
+            if let Some(path) = lib.std_path(&m.dir) {
+                let path = path.trim_end_matches('/').to_string();
                 if library == "std" {
                     return Home::Own(path);
                 }
@@ -263,6 +264,7 @@ fn translate(
         class_order: Vec::new(),
         members: HashMap::new(),
         ctors: HashMap::new(),
+        undeclared: HashSet::new(),
         this_class: None,
         type_params: HashMap::new(),
         gaps: gaps.is_some().then(Vec::new),
@@ -304,8 +306,10 @@ fn translate_with(t: &mut Translator) -> Tx<()> {
         t.declare_classes(decl, &classes)?;
     }
     for class in t.class_order.clone() {
-        let declared = t.declare_members(class);
-        t.gap(declared)?;
+        let declared = t.declare_members(class).map(Some);
+        if t.gap(declared)?.is_none() {
+            t.undeclared.insert(class);
+        }
     }
     for (module, decl) in own {
         t.module(module, decl)?;
@@ -403,6 +407,9 @@ struct Translator<'a> {
     /// Each class's constructor, the `Let` of its own if it has one, and
     /// its parameters' `Let`s: its own's, or its header's fields.
     ctors: HashMap<DeclId, (DeclId, Option<FNode>, Vec<FNode>)>,
+    /// Classes whose members couldn't all be declared, when finding every
+    /// gap ([`gaps`]): each a gap already, left out of its module.
+    undeclared: HashSet<FNode>,
     /// The class or interface whose member is being translated.
     this_class: Option<(FNode, DeclId)>,
     /// Type parameters, by their symbols.
@@ -727,6 +734,9 @@ impl Translator<'_> {
             _ if self.has_errors() && matches!(self.s.typing.types.get(t), FTypeData::Unknown) => {
                 TypeId::ANY_VALUE
             }
+            // A bare null's `Never?` translates to no type: its place
+            // gives it one.
+            ft::NULL => return self.not_yet(at, "null"),
             _ if matches!(self.s.typing.types.get(t), FTypeData::Nullable(_)) => {
                 let &FTypeData::Nullable(inner) = self.s.typing.types.get(t) else {
                     unreachable!()
@@ -741,7 +751,6 @@ impl Translator<'_> {
                 let what = match self.s.typing.types.get(t) {
                     FTypeData::Unknown => "an expression of unknown type",
                     FTypeData::Never | FTypeData::NeverOf(_) => "type Never",
-                    FTypeData::Null => "null",
                     FTypeData::Builtin(_) => "a builtin type core's fixture lacks",
                     FTypeData::Class(_) => "a class or interface type",
                     FTypeData::Param(_) => "a type parameter",
@@ -1217,7 +1226,7 @@ impl Translator<'_> {
         let top_levels: Vec<FNode> = (top_levels.iter().copied())
             .filter(|&n| {
                 self.kind(n) != NodeKind::Let
-                    || !(self.is_import(n) || m.test_cases.contains(&n) || self.is_type_alias(n, 0))
+                    || !(self.is_import(n) || m.test_cases.contains(&n) || self.is_type_alias(n))
             })
             .collect();
         // Declare first, so a body may use what's declared after it.
@@ -1239,12 +1248,15 @@ impl Translator<'_> {
             self.catching.clear();
             // Classes declared in functions first, at the module's level.
             for &(class, top) in &local_classes {
-                if top == node {
+                if top == node && !self.undeclared.contains(&class) {
                     let item = self.class_item(class, &mut init).map(Some);
                     items.extend(self.gap(item)?);
                 }
             }
             if self.kind(node) == NodeKind::Class {
+                if self.undeclared.contains(&node) {
+                    continue;
+                }
                 let item = self.class_item(node, &mut init).map(Some);
                 items.extend(self.gap(item)?);
                 continue;
@@ -1512,10 +1524,12 @@ impl Translator<'_> {
             let decl = self
                 .b
                 .declare(DeclKind::Function, &name, self.module, TypeId::NONE);
-            let Some(&t) = self.s.typing.decls.get(&node) else {
-                return self.not_yet(node, "an expression of unknown type");
+            // Its `Fn`, a signature, declares its type parameters.
+            let Some(f) = init.filter(|&f| self.kind(f) == NodeKind::Fn) else {
+                return self.not_yet(node, "a connected function's form");
             };
-            let sig = self.signature_of(t, node)?;
+            self.declare_type_params(f, decl)?;
+            let sig = self.signature(f)?;
             self.b.set_decl_type(decl, sig);
             self.b.add_facts(decl, Facts::CONNECTED);
             if self.is_exported(node) {
@@ -1751,8 +1765,10 @@ impl Translator<'_> {
         }
         let children = self.children(node).to_vec();
         let stmt = match self.kind(node) {
-            // A value or a name read alone does nothing.
+            // A value or a name read alone does nothing, nor does a local
+            // type alias, which typing reads where it's used.
             NodeKind::Value | NodeKind::RightName => return Ok(()),
+            NodeKind::Let if self.is_type_alias(node) => return Ok(()),
             // `ignore(x)` is `x` alone, its value dropped.
             NodeKind::Call
                 if children.len() == 2
@@ -1969,7 +1985,7 @@ impl Translator<'_> {
         let ty = self.b.program().decls.get(local).ty;
         let init = match init {
             Some(init) => {
-                // An `if` or `when` typing types `Null` or `Never` is of
+                // An `if` or `when` typing types null or `Never` is of
                 // the type declared ([`Self::if_value_in`]).
                 let bottom = matches!(self.s.typing.expr(init), Some(ft::NULL | ft::NEVER));
                 let init = match self.kind(init) {
@@ -2384,45 +2400,36 @@ impl Translator<'_> {
         same(x, target) && reads_t
     }
 
-    /// Whether a top-level `let` is a type alias, as `let ChangeType =
-    /// String`, which typing reads where the alias is used and which has
-    /// no value to translate: as typing's `alias_type`, an immutable `let`
-    /// without a written type whose initializer names a type, or gives
-    /// one arguments, or is a nullable or function type. `depth` aliases
-    /// in, against cycles.
-    fn is_type_alias(&self, decl: FNode, depth: u32) -> bool {
-        let (name, ty, init) = core::let_parts(&self.s.library.tree, decl);
-        let (None, Some(init)) = (ty, init) else {
+    /// Whether a `let`, top-level or local, is a type alias, as `let
+    /// ChangeType = String`, which typing reads where the alias is used
+    /// and which has no value to translate: one `Scopes::alias_init`
+    /// finds, whose name, if it's only a name, ends at a type
+    /// (`Scopes::type_symbol`), not at a value, as `let g = f`.
+    fn is_type_alias(&self, decl: FNode) -> bool {
+        let (scopes, tree) = (&self.s.scopes, &self.s.library.tree);
+        let name = core::let_parts(tree, decl).0;
+        let Some(symbol) = scopes.resolved(name) else {
             return false;
         };
-        let top = (self.s.scopes.resolved(name)).is_some_and(|s| {
-            let s = self.s.scopes.symbol(s);
-            s.kind == crate::scope::SymbolKind::TopLevel && !s.mutable
-        });
-        if !top || depth > 8 {
+        let Some(init) = scopes.alias_init(tree, symbol) else {
             return false;
+        };
+        if self.kind(init) != NodeKind::RightName {
+            return true;
         }
-        match self.kind(init) {
-            NodeKind::RightName => {
-                let Some(symbol) = self.s.scopes.resolved(init) else {
-                    return false;
-                };
-                let s = self.s.scopes.symbol(symbol);
-                match (s.kind, s.decl) {
-                    (crate::scope::SymbolKind::Builtin(Builtin::Type(_)), _) => true,
-                    (_, Some(d)) if self.kind(d) == NodeKind::Class => true,
-                    (_, Some(d)) if self.kind(d) == NodeKind::Let => {
-                        self.is_type_alias(d, depth + 1)
-                    }
-                    _ => false,
-                }
-            }
-            NodeKind::Call => matches!(
-                self.s.scopes.resolved_builtin(self.children(init)[0]),
-                Some(Builtin::Function(
-                    Function::Angle | Function::Nullable | Function::FnType
-                ))
-            ),
+        let end = scopes.symbol(scopes.type_symbol(tree, symbol));
+        match (end.kind, end.decl) {
+            (crate::scope::SymbolKind::Builtin(Builtin::Type(_)), _) => true,
+            (crate::scope::SymbolKind::TypeParam, _) => true,
+            (_, Some(d)) => match self.kind(d) {
+                NodeKind::Class => true,
+                // An alias of something other than a name, as `let M =
+                // Map<String, Int>`.
+                NodeKind::Let => (scopes.resolved(core::let_parts(tree, d).0))
+                    .and_then(|b| scopes.alias_init(tree, b))
+                    .is_some_and(|i| self.kind(i) != NodeKind::RightName),
+                _ => false,
+            },
             _ => false,
         }
     }
@@ -2705,11 +2712,13 @@ impl Translator<'_> {
                         Constant::Infinity => self.b.float64(f64::INFINITY),
                         Constant::TestServerPort(port) => self.b.int32(port),
                         Constant::Null => self.b.null(TypeId::NONE),
-                        Constant::Console => return self.not_yet(node, "console as a value"),
+                        // The module's console, as `console.log` reads it.
+                        Constant::Console => return self.console(node, node),
                     };
                     return Ok(self.own(made, node));
                 }
-                if let Some(Builtin::Type(i)) = self.s.scopes.resolved_builtin(node) {
+                // A builtin type, or an alias of one, which tmpl leaves out.
+                if let Some(i) = (self.s.scopes).type_builtin(&self.s.library.tree, node) {
                     return self.type_value(node, i);
                 }
                 if self.is_this(node) {
@@ -2879,7 +2888,7 @@ impl Translator<'_> {
 
     /// [`Self::if_value`] for an `if` that's the value of a branch of
     /// another, whose type `outer` is, if it's given: an `if` typing types
-    /// `Null` or `Never`, as one of a `when`'s last branches, `2 -> null;
+    /// null or `Never`, as one of a `when`'s last branches, `2 -> null;
     /// else -> panic();`, is of the type of the `if` it's in, as Kotlin
     /// Temper's solver types it.
     fn if_value_in(&mut self, node: FNode, outer: TypeId) -> Tx<NodeId> {
@@ -3254,6 +3263,21 @@ impl Translator<'_> {
             let made = self.b.call(empty, &[]);
             return Ok(self.own(made, node));
         }
+        // `getConsole(name)`, or with no name, as `console` is got.
+        if key == "getConsole" && args.len() <= 1 {
+            let Some(get) = self.core_decl("getConsole") else {
+                return self.not_yet(node, "core's getConsole");
+            };
+            let name = match args.first() {
+                Some(&name) => self.expr(name)?,
+                None => {
+                    let omitted = self.b.omitted(TypeId::STRING);
+                    self.made(omitted, node)
+                }
+            };
+            let made = self.b.call(get, &[name]);
+            return Ok(self.own(made, node));
+        }
         // `List.of(…)` is a list literal, as Kotlin's unifies them.
         if key == "list" || key == "List.of" {
             let ty = self.expr_ty(node)?;
@@ -3361,6 +3385,11 @@ impl Translator<'_> {
             if let Some(op) = Op::named(key) {
                 return self.op(node, op, Some(object), &args);
             }
+            if args.is_empty() {
+                if let Some(made) = self.core_as_op(node, key, object)? {
+                    return Ok(made);
+                }
+            }
             return self.core_method(node, key, object, &args);
         }
         let Some(member) = self.core_decl(key) else {
@@ -3396,6 +3425,32 @@ impl Translator<'_> {
             }
             _ => self.not_yet(node, format!("core's {key} used so")),
         }
+    }
+
+    /// Core's integer methods that are operators on their receiver, as
+    /// their bodies are, written so: `n.succ()` as `n + 1` and `n.pred()`
+    /// as `n - 1`, which wrap. (Not `signum` as `n <=> 0`: `<=>` gives
+    /// only a sign, and some backends give `n` itself.)
+    fn core_as_op(&mut self, node: FNode, key: &str, object: FNode) -> Tx<Option<NodeId>> {
+        let (op, wide) = match key {
+            "Int32.succ" => ("Int32.add", false),
+            "Int32.pred" => ("Int32.sub", false),
+            "Int64.succ" => ("Int64.add", true),
+            "Int64.pred" => ("Int64.sub", true),
+            _ => return Ok(None),
+        };
+        let Some(op) = Op::named(op) else {
+            return Ok(None);
+        };
+        let receiver = self.expr(object)?;
+        let operand = if wide {
+            self.b.int64(1)
+        } else {
+            self.b.int32(1)
+        };
+        let operand = self.made(operand, node);
+        let made = self.b.op(op, &[receiver, operand]);
+        Ok(Some(self.own(made, node)))
     }
 
     /// `char'a'`, the code point of a single character, as an `Int32`
@@ -3450,12 +3505,19 @@ impl Translator<'_> {
     }
 
     /// A call of core's method `key` on `object`, with the type arguments
-    /// typing solved, or of a static function of its type.
+    /// typing solved, or of a static function of its type, or of an
+    /// instance extension, a top-level function, with `object` first.
     fn core_method(&mut self, node: FNode, key: &str, object: FNode, args: &[FNode]) -> Tx<NodeId> {
         let Some(member) = self.core_decl(key) else {
             return self.not_yet(node, format!("core's {key}"));
         };
-        match self.b.program().decls.get(member).kind {
+        let decl = *self.b.program().decls.get(member);
+        if decl.kind == DeclKind::Function
+            && self.b.program().decls.get(decl.owner).kind == DeclKind::Library
+        {
+            return self.core_extension(node, member, object, args);
+        }
+        match decl.kind {
             DeclKind::Method => {
                 let mut receiver = self.expr(object)?;
                 // A non-generic owner's type, a supertype's method as
@@ -3478,6 +3540,70 @@ impl Translator<'_> {
             }
             _ => self.not_yet(node, format!("core's {key} used so")),
         }
+    }
+
+    /// A call of core's instance extension `function`, as `listedMap` for
+    /// `xs.map(f)`: `object` first, as is, as a method's receiver is, and
+    /// the type arguments its type gives (`T` in `Listed<T>`) and typing
+    /// solved for the rest, as a method's own.
+    fn core_extension(
+        &mut self,
+        node: FNode,
+        function: DeclId,
+        object: FNode,
+        args: &[FNode],
+    ) -> Tx<NodeId> {
+        let receiver = self.expr(object)?;
+        let p = self.b.program();
+        let formals = temper_tmpl::analysis::type_param_types(p, function);
+        // The receiver's parameter's type, as `Listed<T>`, and what the
+        // receiver gives for its type arguments.
+        let first = p
+            .signature(function)
+            .and_then(|s| s.params.first().copied());
+        let named = first.map(|t| p.types.args(t).to_vec()).unwrap_or_default();
+        let given = (first.and_then(|t| temper_tmpl::analysis::nominal_decl(p, t)))
+            .and_then(|d| temper_tmpl::analysis::as_super(p, p.nodes.ty(receiver), d))
+            .filter(|g| g.len() == named.len());
+        let Some(given) = given else {
+            return self.not_yet(node, "an extension's receiver's type arguments");
+        };
+        let own_count = formals.iter().filter(|f| !named.contains(f)).count();
+        let own = match own_count {
+            0 => Vec::new(),
+            _ => match self.s.typing.type_args(node) {
+                Some(own) if own.len() == own_count => own.to_vec(),
+                _ => return self.not_yet(node, "a generic call's type arguments"),
+            },
+        };
+        let mut own = own.into_iter();
+        let mut type_args = Vec::new();
+        for f in &formals {
+            match named.iter().position(|n| n == f) {
+                Some(i) => type_args.push(given[i]),
+                None => {
+                    let t = own.next().unwrap_or(ft::UNKNOWN);
+                    if !self.s.typing.types.is_known(t) {
+                        return self.not_yet(node, "a generic call's type arguments");
+                    }
+                    type_args.push(self.ty(t, node)?);
+                }
+            }
+        }
+        // As the parameter's type, as tmpl wants: an upcast of a `List`
+        // to `Listed`, say.
+        let want = (first.unwrap_or(TypeId::NONE), formals, type_args.clone());
+        let want = self
+            .b
+            .program_mut()
+            .types
+            .substitute(want.0, &want.1, &want.2);
+        let receiver = self.fit(receiver, want);
+        let mut values = vec![receiver];
+        let rest = self.args_from(node, function, None, &type_args, args, 1)?;
+        values.extend(rest);
+        let made = self.b.call_generic(function, &type_args, &values);
+        Ok(self.own(made, node))
     }
 
     /// An operator applied to its operands, a receiver first if any.
@@ -3684,8 +3810,7 @@ impl Translator<'_> {
     fn value_type(&mut self, values: &[FNode]) -> Option<TypeId> {
         let null = values.iter().any(|&v| {
             let v = self.last_value(v);
-            (self.s.typing.expr(v))
-                .is_some_and(|t| matches!(self.s.typing.types.get(t), FTypeData::Null))
+            self.s.typing.expr(v) == Some(ft::NULL)
         });
         let found = self.known_value_type(values)?;
         let nullable = self.b.program().types.is_nullable(found);
@@ -3741,10 +3866,25 @@ impl Translator<'_> {
         type_args: &[TypeId],
         args: &[FNode],
     ) -> Tx<Vec<NodeId>> {
+        self.args_from(node, callee, receiver, type_args, args, 0)
+    }
+
+    /// [`Self::args_for_with`], for the parameters past the first
+    /// `skip`, as an instance extension's past its receiver's.
+    fn args_from(
+        &mut self,
+        node: FNode,
+        callee: DeclId,
+        receiver: Option<NodeId>,
+        type_args: &[TypeId],
+        args: &[FNode],
+        skip: usize,
+    ) -> Tx<Vec<NodeId>> {
         let Some(sig) = self.b.program().signature(callee) else {
             return self.not_yet(node, "a call without a signature");
         };
-        let (params, optional) = (sig.params.to_vec(), sig.optional.to_vec());
+        let params = sig.params.get(skip..).unwrap_or(&[]).to_vec();
+        let optional = sig.optional.get(skip..).unwrap_or(&[]).to_vec();
         let receiver = receiver.map(|r| self.b.program().nodes.ty(r));
         let (from, to) =
             temper_tmpl::analysis::bindings(self.b.program(), callee, receiver, type_args);

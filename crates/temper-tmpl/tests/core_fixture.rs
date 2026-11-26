@@ -2,20 +2,45 @@
 //! members that subset A's old key table had (48, plus `getConsole`), the
 //! generic types' (`Listed`, `List`, `ListBuilder`, `Pair`, `Mapped`,
 //! `Map`, and `MapBuilder`), those that take functions, and the string
-//! indices', `StringBuilder`'s, `Empty`'s, `Deque`'s, and
-//! `DenseBitVector`'s, checked against `core.temper`: each
+//! indices', `StringBuilder`'s, and `Empty`'s, checked against core's
+//! `lib/core/*.temper.md`: each
 //! member's name, kind, parameters (names, types, and which are optional),
 //! result, bubbling, and `@connected` mark. Like the frontend's
-//! `builtin_supertypes_are_cores`, it reads `core.temper` as text, so this
+//! `builtin_supertypes_are_cores`, it reads core's files as text, so this
 //! crate needn't depend on the frontend.
 
 use std::collections::HashMap;
 use temper_tmpl::{DeclKind, Facts, Profile, Program, text, validate};
 
 const FIXTURE: &str = include_str!("fixtures/core.tmpl");
-const CORE: &str = include_str!("../../../lib/core/core.temper");
+/// Core's Temper files' code, joined, in their paths' order: their
+/// indented code blocks' lines, without the indent, and blank lines.
+/// Core's config holds no members, and core's code is all in indented
+/// blocks, which this reads without a Markdown parser.
+fn core_text() -> String {
+    let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../lib/core");
+    let mut paths: Vec<_> = (std::fs::read_dir(dir).unwrap())
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.to_string_lossy().ends_with(".temper.md"))
+        .filter(|p| !p.ends_with("config.temper.md"))
+        .collect();
+    paths.sort();
+    let code = |text: String| -> String {
+        (text.lines())
+            .filter_map(|l| match l.trim().is_empty() {
+                true => Some(""),
+                false => l.strip_prefix("    "),
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    let texts: Vec<String> = (paths.iter())
+        .map(|p| code(std::fs::read_to_string(p).unwrap()))
+        .collect();
+    texts.join("\n")
+}
 
-/// A member as `core.temper` declares it.
+/// A member as core declares it.
 #[derive(Debug, PartialEq)]
 struct Member {
     kind: &'static str,
@@ -27,8 +52,8 @@ struct Member {
 
 /// Core's spelling of a type, as tmpl writes it.
 fn type_name(core: &str) -> String {
-    // Each word, `Int` as `Int32`, without `builtins.`; and `fn (` spaced.
-    let t = core.trim().replace("builtins.", "").replace("fn(", "fn (");
+    // Each word, `Int` as `Int32`; and `fn (` spaced.
+    let t = core.trim().replace("fn(", "fn (");
     let mut out = String::new();
     let mut word = String::new();
     for c in t.chars().chain([' ']) {
@@ -83,7 +108,7 @@ fn top_level_commas(text: &str) -> Vec<&str> {
 fn logical_lines() -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     let mut open = 0i32;
-    for line in CORE.lines() {
+    for line in core_text().lines() {
         let depth = |s: &str| s.matches('(').count() as i32 - s.matches(')').count() as i32;
         if open > 0 {
             let last = out.last_mut().unwrap();
@@ -269,7 +294,7 @@ fn fixture_members(p: &Program) -> HashMap<String, Member> {
     members
 }
 
-/// Builtins the compiler gives, which `core.temper` doesn't declare:
+/// Builtins the compiler gives, which core doesn't declare:
 /// `async`, Kotlin's `BuiltinOperatorId.Async`, and the state machines'
 /// helpers (Kotlin's `SafeAdaptGeneratorFn` and `CoroHelperSpecials`).
 const COMPILER_BUILTINS: [&str; 4] = [
@@ -293,8 +318,10 @@ fn the_fixture_matches_core_temper() {
     // The old key table's 48 members, `getConsole`, the generic types'
     // members without function types (subset B), those with them
     // (function values), and the core types and members that the
-    // functional tests use next (core's fixture gaps), and coroutines'.
-    assert_eq!(fixture.len(), 128);
+    // functional tests use next (core's fixture gaps), coroutines', and
+    // `Int32.signum` and `listedReduceFromIndex`, which core writes in
+    // Temper.
+    assert_eq!(fixture.len(), 125);
     let core = core_members();
     let mut names: Vec<&String> = fixture.keys().collect();
     names.sort();

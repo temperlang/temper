@@ -1,0 +1,40 @@
+# core-named/core.internal.js
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../core/core.temper:1:1  /** <- export let greet(who: String
+7:1 -> ../core/core.temper:1:1  export function greet(who) { <- export let greet(who: String
+7:17 -> ../core/core.temper:1:12 (greet)  greet(who) { <- greet(who: String): String {
+7:22 -> ../core/core.temper:1:1  (who) { <- export let greet(who: String
+8:3 -> ../core/core.temper:1:41  return `hello from ${who}`; <- "hello from ${who}" }
+11:1 -> ../core/core.temper:3:1  /** <- export let share(n: Int, d:
+16:1 -> ../core/core.temper:3:1  export function share(n, d) <- export let share(n: Int, d:
+16:17 -> ../core/core.temper:3:12 (share)  share(n, d) { <- share(n: Int, d: Int): Int {
+16:22 -> ../core/core.temper:3:1  (n, d) { <- export let share(n: Int, d:
+17:3 -> ../core/core.temper:3:41  try { <- n / d orelse 0 }
+# core-named/core_named.internal.js
+# generated line:column -> source:line:column, and the text at each
+4:1 -> ../core-named.temper.md:26:5  /** <- let twice(core: Int): Int {
+8:1 -> ../core-named.temper.md:26:5  function twice(core) { <- let twice(core: Int): Int {
+8:10 -> ../core-named.temper.md:26:9 (twice)  twice(core) { <- twice(core: Int): Int { core
+8:15 -> ../core-named.temper.md:26:5  (core) { <- let twice(core: Int): Int {
+9:3 -> ../core-named.temper.md:26:33  return Math.imul(core, 2); <- core * 2 }
+12:1 -> ../core-named.temper.md:19:5  class String_ extends type() <- class String(public n: Int)
+12:7 -> ../core-named.temper.md:19:11 (String)  String_ extends type() { <- String(public n: Int) {}
+12:14 -> ../core-named.temper.md:19:5   extends type() { <- class String(public n: Int)
+13:3 -> ../core-named.temper.md:19:25  /** @type {number} */ <- n: Int) {}
+14:3 -> ../core-named.temper.md:19:25  #n; <- n: Int) {}
+16:3 -> ../core-named.temper.md:19:5  /** @param {number} n */ <- class String(public n: Int)
+17:3 -> ../core-named.temper.md:19:5  constructor(n) { <- class String(public n: Int)
+19:5 -> ../core-named.temper.md:19:25  this.#n = n; <- n: Int) {}
+22:3 -> ../core-named.temper.md:19:25  /** @returns {number} */ <- n: Int) {}
+23:3 -> ../core-named.temper.md:19:25  get n() { <- n: Int) {}
+23:7 -> ../core-named.temper.md:19:25 (n)  n() { <- n: Int) {}
+28:1 -> ../core-named.temper.md:8:5  const core = greet("a module <- let core = greet("a module n
+29:1 -> ../core-named.temper.md:9:5  console.log(core); <- console.log(core);
+30:1 -> ../core-named.temper.md:10:5  console.log(`shares ${share( <- console.log("shares ${share(
+31:1 -> ../core-named.temper.md:11:5  let builtins = 1; <- var builtins = 1;
+32:1 -> ../core-named.temper.md:12:5  builtins = (builtins + 1) | <- builtins += 1;
+33:1 -> ../core-named.temper.md:13:5  console.log(`builtins is ${b <- console.log("builtins is ${b
+34:1 -> ../core-named.temper.md:20:5  const s = "core's String"; <- let s: temper.String = "core
+35:1 -> ../core-named.temper.md:21:5  const mine = new String_(3); <- let mine = new String(3);
+36:1 -> ../core-named.temper.md:22:5  console.log(`${s}, and mine <- console.log("${s}, and mine
+37:1 -> ../core-named.temper.md:27:5  console.log(twice(21).toStri <- console.log(twice(21).toStri

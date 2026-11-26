@@ -184,8 +184,8 @@ Temper plans to make all type parameters invariant, because C++ and Rust,
 among others, can't express variance well. Tempest doesn't support
 covariant or contravariant type parameters at all: `List<Sub>` is never a
 `List<Super>`. Kotlin Temper's `@out` and `@in` annotations (about a dozen,
-all in `core.temper`, as on `Generator<@out YIELD>`) parse as ordinary
-decorations and are ignored, with no error. When copying `core.temper` and
+all in core, `lib/core/`, as on `Generator<@out YIELD>`) parse as
+ordinary decorations and are ignored, with no error. When copying core and
 the `std` library from Kotlin Temper, keep them as they are, so the files
 stay easy to diff, and rely on this rule. Decided (2026-10-28): tempest
 stays invariant, and Kotlin Temper should change to match
@@ -208,19 +208,15 @@ invariant.
    overridable methods ("Overridable methods don't allow generics"), so the
    sugar would follow the same rule. Classic Temper's Rust runtime takes the
    same approach for `map<O>` and friends: a non-generic trait, plus generic
-   free functions over `&dyn ListedTrait<T>`. Core's own `Listed.map<O>`,
-   `reduceFrom<O>`, `reduceFromIndex<O>` and `Mapped.toListWith<T>` break
-   the rule (Kotlin exempts core). Tempest's typed core will declare them
-   as extensions instead, keeping the same call syntax with static
-   dispatch:
-   `@extension("reduceFrom") let listedReduceFrom<T, O>(listed: Listed<T>, initial: O, accumulate: fn (O, T): O): O`,
-   and `@connected` ones (`map`) as connected top-level functions. Then
-   the rule holds everywhere, with no exemption. Accepted: Java and C#
-   host code then sees these as free functions rather than methods,
-   unlike classic Temper's output, which may make the same breaking
-   change. Today the untyped
-   interpreter runs them as built-in list methods (`interp.rs`), exercised
-   by `types/list/reduce` and `imports/functions`.
+   free functions over `&dyn ListedTrait<T>`. Core's own `map<O>`,
+   `reduceFrom<O>`, `reduceFromIndex<O>`, `toListWith<T>`, and
+   `toListBuilderWith<T>` are extensions instead (2026-11-18),
+   `@extension("map") listedMap<T, O>(listed: Listed<T>, transform: fn
+   (T): O): List<O>` and the like, so the rule holds in core too, with
+   the same call syntax and static dispatch. Typing reads them as their
+   types' members (`typing::core_members`); tmpl calls the functions.
+   Java and C# host code sees free functions rather than methods, as
+   tempest's runtimes' helpers already were.
 2. **Adapters inserted at conversions,** for what's left: wrap a function
    value to accept a narrower argument (O(1), always valid); wrap an `@out`
    read-only interface in a view that upcasts elements on access, or an
@@ -252,11 +248,22 @@ milestone 4's generics slice; status in [milestone-4.md](history/milestone-4.md)
 - **Arguments:** one generic type given arguments is another only if
   they're the same type. Since Kotlin Temper honors `@out` and `@in`
   (`List<@out T>`), where tempest's parameters are invariant ("Type
-  parameters are invariant", above), a mismatch is reported only where
-  the bases are the same and some pair of arguments is unrelated, neither
-  a subtype of the other, which no variance accepts: `List<Int32>` isn't
-  a `List<String>`, nor `List<T>` a `List<Int32>`, but `List<Dog>` as a
+  parameters are invariant", above), a mismatch at a parameter so marked
+  is reported only where some pair of arguments is unrelated, neither a
+  subtype of the other, which no variance accepts: `List<Int32>` isn't a
+  `List<String>`, nor `List<T>` a `List<Int32>`, but `List<Dog>` as a
   `List<Animal>`, or `List<Int32?>` as a `List<Int32>`, isn't reported.
+  At a parameter without either, invariant in Kotlin too, arguments that
+  aren't the same known type are reported: `MapKey<String>` isn't a
+  `MapKey<MapKey<String>>`, nor `ListBuilder<Int32>` a
+  `ListBuilder<AnyValue>`.
+- **Bounds:** a type argument must fit its parameter's bound, with the
+  arguments put in for a bound naming them (`K extends MapKey<K>`),
+  wherever the type is written: a call's type arguments or bindings
+  (below), an annotation (`let m: Map<Boolean, Int>`), a type argument,
+  or a supertype. It's judged as a type, not a value (`Types::fits_bound`):
+  `AnyValue` fits only `AnyValue`, though a value of it may hold any
+  other; as Kotlin's check, a nullable type fits `AnyValue`.
 - **Builtin supertypes,** as core declares them: `List<T>` and
   `ListBuilder<T>` are `Listed<T>`s, `Map<K, V>` and `MapBuilder<K, V>`
   are `Mapped<K, V>`s, `SafeGenerator<T>` is a `Generator<T>`,
@@ -347,8 +354,10 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   value before checking it, so such a call with type arguments is solved
   from its arguments instead, as its value's type would be: `let s:
   String = id<Int>("a")` passes, and `let n: Int = id<Int>("a")` is
-  "Cannot assign to Int32 from String". A constructor's or method's call
-  isn't folded.
+  "Cannot assign to Int32 from String". Its type arguments still bind
+  the type parameters no parameter mentions, so `mk<Int>()` for `mk<T>():
+  List<T>` is a `List<Int32>`, and `relayed<Stage, Int>(5)` binds `S`
+  as `Stage`. A constructor's or method's call isn't folded.
 - **From the type wanted:** where a call's value is stored in a
   declaration with a type or a field, returned, given as a function's
   result, or assigned, and its type doesn't fit the type wanted there, the type
@@ -415,7 +424,7 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   parameters' bounds as core declares them, so `new Map<P, String>([])`
   for a class `P` is "Type formal <K extends MapKey<K>> cannot bind to P
   which does not fit upper bounds [MapKey<K>]", as in Kotlin; one core
-  doesn't declare, as `T` in `Deque<T>`, is unchecked: `new Pair(1,
+  doesn't declare, as `T` in `ListBuilder<T>`, is unchecked: `new Pair(1,
   "a")`, `new Map(pairs)`, `new ListBuilder<Int>()`, and through an
   alias, as std's `new TestResult(…)`. Bounds aren't checked in type
   expressions, as `let m: Map<P, String>`, as Kotlin doesn't either.
@@ -836,6 +845,44 @@ it has no values for variance to go wrong on, and a backend's fallback
 stays invariant, code relying on it would become an error that Kotlin
 doesn't report.
 
+## Null
+
+`null` has no type of its own, and core declares no `Null` (Kotlin
+Temper's core did; t955, 2026-11-23). It takes the nullable type its
+place wants: `Int?` in `let n: Int? = null;`, `String?` as an argument
+for an `s: String?`, a `List<Int?>`'s element type, or the other side's
+type in `x == null`.
+
+**Representation.** `T?` is `TypeData::Nullable(T)` (`types.rs`), with
+`T` never nullable itself. Where typing needs a type for a bare null, it
+uses `Never?`, `Nullable(Never)` (`NULL`), the nullable bottom: a
+subtype of every `T?`, and of nothing that isn't nullable. So joins need
+no special case (`Never?` joined with `Int` is `Int?`), and no other
+type stands for null. Two rules keep Kotlin's results: only null (and
+what never completes) is a `Never?`, and a type parameter isn't solved
+by null, so `or(null, 3)` for `or<T>(x: T?, d: T)` solves `T` as `Int32`.
+
+**Where its place is known,** checks note it (`Typing::in_place`): a
+declared type, an argument, a result, a field, a generic call's
+argument, or the other side of `==`. Hover shows that type, and never
+`Never?`; a null with no place, as a branch joined with a value
+(`if (c) { 1 } else { null }`) or an element of an unannotated list,
+shows no type, and messages never show `Never?` for it.
+
+**A declaration needs a type** if null is all it's given, as `let a =
+null;`, a local in a function, an unannotated field (`var x = null;`),
+or `let d; d = null;` with no other initializer: "Declare a nullable
+type for a: null alone has none". A join with a value, as `if
+(c) { 1 } else { null }` or `x ?? null`, has that value's type, made
+nullable. `Never?` can't be written (`Never` needs its type argument),
+so no declared type gives a value null's. Kotlin typed such a
+declaration `Null`, or from later uses.
+
+**Null alone has no members and is no condition**: `null.isEmpty` is
+"No member isEmpty in null", and `if (null)`, `while (null)`, or `null
+&& b` is "Expected value of type Boolean not null" (Kotlin: "No type
+for subject of .isEmpty", "… not Empty?").
+
 ## Inference
 
 - **Locals without annotations** take the type of their initializer, as
@@ -851,8 +898,9 @@ doesn't report.
   ListBuilder<Int> = new ListBuilder()` makes a `ListBuilder<Int32>`.
 - **Fields** without a declared type take their initializer's, as
   locals do, static ones too: `static srgb = new Space(…)`.
-- **Type aliases:** a top-level `let` naming a type, as `let TestCase =
-  Pair<TestName, TestFun>` or `let TestName = String`, is that type.
+- **Type aliases:** a `let` naming a type, as `let TestCase =
+  Pair<TestName, TestFun>` or `let TestName = String`, is that type
+  ("Type aliases", below).
 - **Function signatures** come from annotations, which Temper requires at
   module boundaries, so libraries typecheck independently. A function
   needs a return type unless its context gives it one, as a parameter
@@ -862,6 +910,32 @@ doesn't report.
   declared types need no waiting. Anything not worked out is unknown and
   causes no error, so typing can grow a piece at a time. Status and
   differences from Kotlin are in [milestone-4.md](history/milestone-4.md).
+
+## Type aliases
+
+An alias is an immutable `let`, top-level or local, without a declared
+type, whose initializer is a type's name, a type given arguments, a
+nullable type, or a function type: `let D = C`, `let U = T` for a type
+parameter `T`, `let M = Map<String, Int>`. Imports make aliases too:
+`let { C } = import(…)` declares one, and a namespace's `ns.C` becomes
+the exporting module's name, resolved before anything reads it as a
+type (in `new` and `extends` too). One path says what a name denotes as
+a type, in `Scopes` (scope.rs): `alias_init` finds an alias's
+initializer, and `type_symbol` follows aliases of names to the symbol
+they end at, a builtin type, a class, or a type parameter; `type_decl`,
+`type_builtin`, and typing's `eval_type` read names through it. So every
+rule sees a type the same however it's named, by name, imported,
+through a namespace, or by an alias, top-level or local: `new D()` (an
+interface, a private constructor, a type parameter: "Cannot instantiate
+type parameter T"), `extends` (concrete and sealed types), `is` and `as`
+(including the type-parameter and connected rules), annotations (`Void`
+as a value's type, a bare `Never`), static members, type arguments, and
+bounds (`let M = Map; M<Boolean, Int>` is refused). `core_capabilities.rs`
+checks each core type's capabilities through all five forms, and a
+library's sealed, private-constructor, and bounded types through the
+four another module has. A `var`, or a `let` with a declared type, is a
+value, not an alias. tmpl leaves aliases out, local ones too; typing has
+read them where they're used.
 
 ## Joins, and sealed types and `when`
 
@@ -1251,8 +1325,9 @@ backends read the unset field. Tempest checks it after typing
   there; otherwise "Property b not initialized in constructor", at the
   constructor. A class without a constructor reports each field with
   neither an initializer nor a header place, at the field, which is
-  Kotlin's one check of this, with its message. As in Kotlin, core's
-  `content: builtins.T` fields are exempt.
+  Kotlin's one check of this, with its message. Kotlin exempts core's
+  `content` fields, which describe a host's representation; core has
+  none (notes/core-bodies.md, "Fields").
 - **Messages** say what was done and which fields aren't set yet:
   "Calling this.sum() before b is set", "Reading this.b before b is
   set", "Calling getter this.twice before b is set", "Using this before
@@ -1370,8 +1445,19 @@ better written `c == null`. Backends, once tempest has them, translate
 Kotlin Temper's backends do.
 
 And `x` of type `Void` is also "Expected subtype of AnyValue?, but got
-Void", at `x`. Not yet: `@connected` types (core's, which tempest
-doesn't type yet; Kotlin fails on user code's).
+Void", at `x`.
+
+**Connected types**, as Kotlin's rule: a downcast to a `@connected`
+type, core's or a user's, is "Connected types cannot be targeted with
+is or as runtime type checks because multiple Temper types are allowed
+to connect to the same backend type: <[C]> from AnyValue", unless `S` is
+sealed and `T` reaches it through sealed supertypes only (`DoneResult<T>`
+from `GeneratorResult<T>`; not `E` from `S` where `E` extends a
+non-sealed `NS extends S`). Checked after rule 5's errors, and also
+where typing can't tell whether the check is a downcast (core's
+non-generic classes from `AnyValue`), as Kotlin checks it whenever it
+isn't an upcast. A type core marks `@mayDowncastTo` isn't checked by
+it.
 
 ## `Void` as a value
 
@@ -1386,6 +1472,16 @@ value, as `b()` for `b(): Void`, `void`, a `Void` parameter, a loop
 - an argument of any call, builtin operators', `console.log`'s and
   setters' included (`c(void)`, `b() == b()`, `"${b()}"`), at the
   argument.
+
+Decided (t854, Tom): `Void` is never a value. So a non-`Void` function's
+`Void` result (`let h(): AnyValue { b() }`) is reported likewise, `Void`
+is no other type's subtype, not even `AnyValue`'s, and naming `Void`
+where a value's type goes is "Void is only what a function returns":
+a parameter, local, or field (`x: Void`), a type argument (`List<Void>`,
+`r<Void>(…)`), `Void?`, a function type's parameter, or a bound. It may
+be a function's result type, a function type's, or `Never<Void>`'s
+argument, each maybe with `throws`; where it names a class (`new
+Void()`, `extends Void`, `is Void`) those report their own errors.
 
 Not where an error is reported at the same span already, as "Expected
 subtype of Int32, but got Void" for `g(b())`, since Kotlin reports one

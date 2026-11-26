@@ -38,6 +38,7 @@ mod classes;
 pub mod core;
 pub mod corelib;
 mod dead_branches;
+pub mod docs;
 pub mod engine;
 mod extensions;
 mod flow;

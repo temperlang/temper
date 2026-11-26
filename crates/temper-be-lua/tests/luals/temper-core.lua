@@ -215,6 +215,11 @@ function temper.float64_tostring(n) end
 ---@return number
 function temper.float64_sign(x) end
 
+---An `Int32`'s sign: -1, 0, or 1.
+---@param n integer
+---@return integer
+function temper.int32_signum(n) end
+
 ---@param n integer
 ---@return number
 function temper.int32_tofloat64(n) end
@@ -487,6 +492,15 @@ function temper.listed_reduce(list, accumulate) end
 ---@param accumulate fun(arg0: O, arg1: T): O
 ---@return O
 function temper.listed_reducefrom(list, initial, accumulate) end
+
+---Reduces from the 0-based index on, none past the end.
+---@generic T, O
+---@param list T[]
+---@param initial O
+---@param index integer
+---@param accumulate fun(arg0: O, arg1: T): O
+---@return O
+function temper.listed_reducefromindex(list, initial, index, accumulate) end
 
 ---Sorts a list builder in place, by a comparator, stably.
 ---@generic T
@@ -767,41 +781,42 @@ function temper.stringbuilder_end(b) end
 ---@return string
 function temper.stringbuilder_tostring(b) end
 
----A double-ended queue, items added at the end and removed at the front.
----@class temper.Deque
+---std's `Queue`: items added at the end and removed at the front.
+---@class temper.Queue
 
----@return temper.Deque
-function temper.deque_constructor() end
+---@return temper.Queue
+function temper.queue_constructor() end
 
----@param d temper.Deque
+---@param d temper.Queue
 ---@param item any
-function temper.deque_add(d, item) end
+function temper.queue_add(d, item) end
 
----@param d temper.Deque
+---@param d temper.Queue
 ---@return boolean
-function temper.deque_isempty(d) end
+function temper.queue_isempty(d) end
 
----The first item, removed; it bubbles if there's none.
----@param d temper.Deque
+---The first item, removed; it panics if there's none.
+---@param d temper.Queue
 ---@return any
-function temper.deque_removefirst(d) end
+function temper.queue_removefirst(d) end
 
----A vector of bits, all false at first.
----@class temper.DenseBitVector
+---std's `BitVector`: a vector of bits, all false at first.
+---@class temper.BitVector
 
 ---@param capacity integer
----@return temper.DenseBitVector
-function temper.densebitvector_constructor(capacity) end
+---@return temper.BitVector
+function temper.bitvector_constructor(capacity) end
 
----@param v temper.DenseBitVector
+---@param v temper.BitVector
 ---@param i integer
 ---@return boolean
-function temper.densebitvector_get(v, i) end
+function temper.bitvector_get(v, i) end
 
----@param v temper.DenseBitVector
+---It panics for a negative index.
+---@param v temper.BitVector
 ---@param i integer
 ---@param bit boolean
-function temper.densebitvector_set(v, i, bit) end
+function temper.bitvector_set(v, i, bit) end
 
 ---Core's `Empty`, a table of its own.
 ---@return table

@@ -7,6 +7,7 @@ import {
   listBuilderRemoveLast,
   listBuilderReverse,
   listBuilderSet,
+  listBuilderSort,
   listBuilderSplice,
   listBuilderToList,
   listedFilter,
@@ -89,7 +90,7 @@ reportSplit("🌍", "");
 function fn11(list) {
   /** @type {string[]} */
   const builder = list.slice();
-  builder.sort((a, b) => Math.sign(cmpString(a, b)));
+  listBuilderSort(builder, (a, b) => Math.sign(cmpString(a, b)));
   return builder;
 }
 

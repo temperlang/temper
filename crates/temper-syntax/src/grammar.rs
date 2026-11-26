@@ -145,7 +145,7 @@ const MAX_DEPTH: u32 = 1000;
 const CLOSE_BRACKETS: &[&str] = &[")", "}", "]", ">"];
 const CLOSE_OR_COMMA: &[&str] = &[")", "}", "]", ">", ","];
 const CLOSE_OR_SEMI: &[&str] = &[")", "}", "]", ">", ";"];
-const RESERVED: &[&str] = &["nym", "builtins", "this", "super"];
+const RESERVED: &[&str] = &["nym", "this", "super"];
 
 use Operator as O;
 const EXTENDS_LIKE: &[Operator] = &[
@@ -2078,6 +2078,7 @@ impl Grammar {
             Grammar::symbol_literal,
             Grammar::list,
             Grammar::new_expr,
+            Grammar::new_without_arguments,
             Grammar::prefix,
             Grammar::special_dot,
             Grammar::regular_dot,
@@ -2482,6 +2483,22 @@ impl Grammar {
         })
     }
 
+    /// `new` without its call, as `new C` or `new { k: v }`, as an error.
+    /// Ours: Kotlin reports the enclosing statement as unparsable. A `new`
+    /// that a call applies to, as in `new C(x) { block }`, is left for
+    /// [`new_expr`](Self::new_expr) at the call.
+    fn new_without_arguments(&mut self, p: usize) -> R {
+        self.check(p, self.is(p, O::New))?;
+        self.check(p, p == 0 || !self.is(p - 1, O::Paren))?;
+        let next = self.next_sibling(p);
+        self.events.push(Event::Error(
+            Message::NewWithoutArguments,
+            p as u32,
+            next as u32 - 1,
+        ));
+        Some(next)
+    }
+
     /// Member := Square y callTree(( y Expr y "[".rename([]) y shiftLeft y RawCommaOp y "]" y ))
     fn member(&mut self, p: usize) -> R {
         let p = self.check(p, self.is(p, O::Square))?;
@@ -2496,35 +2513,16 @@ impl Grammar {
         })
     }
 
-    /// SpecialDot := (Dot y ( y ( y "builtins" y ) y "." y ( y name(builtinName) y ) y ))
-    ///   / (Leaf y ( y callTree("this".revalue(this)) y ))
+    /// SpecialDot := (Leaf y ( y callTree("this".revalue(this)) y ))
     ///   / (Leaf y ( y lookahead "super" y Garbage("Word (not \"super\")") y ))
+    ///
+    /// Kotlin's `builtins.name` alternative is gone: `builtins` is an
+    /// ordinary name, and code qualifies core's names through a module
+    /// namespace, `let core = import("core")`.
     fn special_dot(&mut self, p: usize) -> R {
         first!(
             self,
             p,
-            |g, p| {
-                let p = g.open_op(p, O::Dot)?;
-                let p = g.open(p)?;
-                let p = g.tok(p, "builtins")?;
-                let p = g.close(p)?;
-                let p = g.tok(p, ".")?;
-                let p = g.open(p)?;
-                let p = g.tree(p, Fin::RightName, |g, p| {
-                    let (part, text) = g.token(p)?;
-                    if part.token != TokenKind::Word {
-                        return None;
-                    }
-                    let name = crate::unpack::decode_name(text)?;
-                    let span = part.span;
-                    let name = g.names.intern(&name);
-                    g.events
-                        .push(Event::Leaf(Leaf::Name(name, true), span, p as u32));
-                    Some(p + 1)
-                })?;
-                let p = g.close(p)?;
-                g.close(p)
-            },
             |g, p| {
                 let p = g.open_op(p, O::Leaf)?;
                 let p = g.tree(p, Fin::Call, |g, p| {

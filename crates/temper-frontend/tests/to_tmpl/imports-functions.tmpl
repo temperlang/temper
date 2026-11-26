@@ -3,7 +3,6 @@ tmpl 1 model 1 library functions 0.0.0
 uses `temper-core`#10 0.0.0-alpha.0.0 {
   interface Listed#11<T#12> {
     connected method join#17(separator: String, stringify: fn (T#12): String): String;
-    connected method reduceFrom#27<O#28>(initial: O#28, accumulate: fn (O#28, T#12): O#28): O#28;
   }
   class Float64#15 {
     connected method sqrt#16(): Float64;
@@ -13,7 +12,8 @@ uses `temper-core`#10 0.0.0-alpha.0.0 {
   interface Console#23 {
     connected method log#24(message: String): Void;
   }
-  connected fn getConsole#29(name?: String): Console#23;
+  connected fn listedReduceFrom#27<T#28, O#29>(listed: Listed#11<T#28>, initial: O#29, accumulate: fn (O#29, T#28): O#29): O#29;
+  connected fn getConsole#30(name?: String): Console#23;
 }
 
 module exporter#0 in "exporter" {
@@ -38,11 +38,11 @@ module functions#1 {
   let values#8: String;
 
   export fn something#9(vals#26: Listed#11<Float64>): Float64 {
-    return vals#26.reduceFrom#27<Float64>(0.0, (ref(normSquared#2)): fn (Float64, Float64): Float64);
+    return listedReduceFrom#27<Float64, Float64>(vals#26, 0.0, (ref(normSquared#2)): fn (Float64, Float64): Float64);
   }
 
   init {
-    init ~console#25 = getConsole#29(omitted);
+    init ~console#25 = getConsole#30(omitted);
     init a#6 = 3.0;
     a#6 = a#6;
     init b#7 = %Float64.add(a#6, 1.0);

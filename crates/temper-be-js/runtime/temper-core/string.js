@@ -1,5 +1,5 @@
 import {
-    bubble, INT32_MAX, INT32_MIN, INT64_MAX, INT64_MIN, parseBigInt
+    bubble, indexOutOfBounds, INT32_MAX, INT32_MIN, INT64_MAX, INT64_MIN, parseBigInt
 } from "./core.js";
 
 /**
@@ -121,7 +121,7 @@ export const stringCountBetween = (s, begin, end) => {
 export const stringGet = (s, i) => {
     const c = s.codePointAt(i);
     if (c === undefined) {
-        throw new Error();
+        return indexOutOfBounds(i, s.length);
     }
     return c;
 };

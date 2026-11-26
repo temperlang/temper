@@ -60,12 +60,11 @@ const PURE_HERE: &[&str] = &[
     "core.type StringIndexOption.eq()",
 ];
 
-/// Core's connected declarations that, in C++, read what calls could
-/// change but write nothing: lists', maps', and deques' reads, so two of
-/// them need no order kept between them, but one and a write do. Sorted.
+/// Core's and std's connected declarations that, in C++, read what calls
+/// could change but write nothing: lists', maps', queues', and bit
+/// vectors' reads, so two of them need no order kept between them, but
+/// one and a write do. Sorted.
 const READS_HERE: &[&str] = &[
-    "core.type DenseBitVector.get()",
-    "core.type Deque.get isEmpty()",
     "core.type List.get length()",
     "core.type List.get()",
     "core.type ListBuilder.get length()",
@@ -78,6 +77,8 @@ const READS_HERE: &[&str] = &[
     "core.type Mapped.get()",
     "core.type Mapped.getOr()",
     "core.type Mapped.has()",
+    "std/collections.type BitVector.get()",
+    "std/collections.type Queue.get isEmpty()",
 ];
 
 /// Every function-like item of a module, in order: its functions, and

@@ -40,11 +40,13 @@ pub fn min(x: f64, y: f64) -> f64 {
     x.min(y)
 }
 
+/// Equal by Temper's `==`, so NaN is near NaN, or finite and within the
+/// margin by IEEE's `<=`, which a NaN margin never is.
 pub fn near(x: f64, y: f64, rel_tol: Option<f64>, abs_tol: Option<f64>) -> bool {
     let rel_tol = rel_tol.unwrap_or(1e-9);
     let abs_tol = abs_tol.unwrap_or(0.0);
-    let margin = (x.abs().max(y.abs()) * rel_tol).max(abs_tol);
-    (x - y).abs() <= margin
+    let margin = max(max(x.abs(), y.abs()) * rel_tol, abs_tol);
+    cmp(x, y) == 0 || x.is_finite() && y.is_finite() && (x - y).abs() <= margin
 }
 
 pub fn rem(x: f64, y: f64) -> Result<f64> {

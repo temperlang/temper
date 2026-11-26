@@ -1,0 +1,89 @@
+tmpl 1 model 1 library queue 0.0.0
+
+uses std#1 0.0.0-alpha.0.0 {
+  module collections#2 {
+    connected class Queue#3<T#4> {
+      connected constructor constructor#11(): Queue#3<T#4>;
+      connected get isEmpty#16(): Boolean;
+      connected method removeFirst#17(): T#4;
+      connected method add#18(element: T#4): Void;
+    }
+  }
+}
+
+uses `temper-core`#12 0.0.0-alpha.0.0 {
+  interface Console#13 {
+    connected method log#14(message: String): Void;
+  }
+  class Int32#26 {
+    connected method toString#27(radix?: Int32): String;
+  }
+  class Boolean#28 {
+    connected method toString#29(): String;
+  }
+  connected fn getConsole#30(name?: String): Console#13;
+}
+
+module queue#0 {
+  let ~console#15: Console#13;
+
+  let queue#5: Queue#3<String>;
+
+  fn checkEmpty#6(): Void {
+    ~console#15.log#14((if (queue#5.isEmpty#16()) "Empty" else "Not empty"): String);
+  }
+
+  let numbers#7: Queue#3<Int32?>;
+
+  var sum#8: Int32;
+
+  var order#9: Boolean;
+
+  var expected#10: Int32;
+
+  init {
+    init ~console#15 = getConsole#30(omitted);
+    init queue#5 = new constructor#11<String>();
+    checkEmpty#6();
+    if (%Boolean.not(queue#5.isEmpty#16())) {
+      ~console#15.log#14(queue#5.removeFirst#17());
+    }
+    queue#5.add#18("foo");
+    queue#5.add#18("bar");
+    ~console#15.log#14(queue#5.removeFirst#17());
+    queue#5.add#18("baz");
+    ~console#15.log#14(queue#5.removeFirst#17());
+    queue#5.add#18("boo");
+    checkEmpty#6();
+    ~loop#19: while (%Boolean.not(queue#5.isEmpty#16())) {
+      ~console#15.log#14(queue#5.removeFirst#17());
+    }
+    checkEmpty#6();
+    init numbers#7 = new constructor#11<Int32?>();
+    init sum#8 = 0;
+    {
+      var i#20: Int32 = 0;
+      ~loop#21: while (%Int32.lt(i#20, 100)) {
+        numbers#7.add#18((asNullable(i#20)): Int32?);
+        numbers#7.add#18((null): Int32?);
+        if (%Int32.eq(%Int32.modSafe(i#20, 3), 0)) {
+          sum#8 = %Int32.add(sum#8, (value { let subject#22: Int32? = numbers#7.removeFirst#17(); (if (isNull(subject#22)) %Int32.neg(1000) else (nonNull(subject#22)): Int32): Int32 }): Int32);
+          sum#8 = %Int32.add(sum#8, (value { let subject#23: Int32? = numbers#7.removeFirst#17(); (if (isNull(subject#23)) 1 else (nonNull(subject#23)): Int32): Int32 }): Int32);
+        }
+        i#20 = %Int32.add(i#20, 1);
+      }
+    }
+    init order#9 = true;
+    init expected#10 = 34;
+    ~loop#24: while (%Boolean.not(numbers#7.isEmpty#16())) {
+      let n#25: Int32? = numbers#7.removeFirst#17();
+      if (%Boolean.not(isNull(n#25))) {
+        if (%Boolean.not(%Int32.eq((nonNull(n#25)): Int32, expected#10))) {
+          order#9 = false;
+        }
+        expected#10 = %Int32.add(expected#10, 1);
+      }
+    }
+    ~console#15.log#14(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("sum ", sum#8.toString#27(omitted)), ", in order "), order#9.toString#29()), ", through "), expected#10.toString#27(omitted)));
+  }
+}

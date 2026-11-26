@@ -17,8 +17,9 @@ from collections import deque
 from contextlib import contextmanager
 from concurrent.futures import Future, ThreadPoolExecutor
 from functools import cmp_to_key, reduce
+from itertools import islice
 from logging import getLogger, INFO
-from math import copysign, inf, isclose, isinf, isnan, nan
+from math import copysign, inf, isinf, isnan, nan
 import threading
 from traceback import print_exception
 from typing import (
@@ -374,14 +375,14 @@ class Symbol(object):
         return self._text
 
 
-class DenseBitVector(object):
+class BitVector(object):
     "An expandable bitvector backed by a bytearray."
 
     __slots__ = ("_bytearray",)
 
     def __init__(self, capacity: int):
-        "Capacity is in bits."
-        self._bytearray = bytearray((capacity + 7) >> 3)
+        "Capacity is in bits; a negative one is none."
+        self._bytearray = bytearray(max(capacity + 7, 0) >> 3)
 
     def __bool__(self) -> bool:
         "Test if any bit is set."
@@ -401,9 +402,11 @@ class DenseBitVector(object):
         return bool(self._bytearray[byte_index] & (1 << (idx & 7)))
 
     def set(self, idx: int, bit: bool) -> None:
-        "set a bit in the bit vector, expanding the vector as needed."
+        """Sets a bit in the bit vector, expanding the vector as needed; a
+        negative index panics, as `panic()` raises, past any `orelse`."""
         if idx < 0:
-            raise IndexError()
+            # For length 0: a bit vector has none.
+            index_out_of_bounds(idx, 0)
         byte_array = self._bytearray
         byte_size = len(byte_array)
         byte_index = idx >> 3
@@ -446,6 +449,11 @@ def int_negate(a: int) -> int:
     if a <= -0x8000_0000:
         return int_clamp(-a)
     return -a
+
+
+def int_signum(a: int) -> int:
+    "Implements connected getter core.type Int32.signum: -1, 0, or 1."
+    return (a > 0) - (a < 0)
 
 
 def int_sub(a: int, b: int) -> int:
@@ -552,14 +560,20 @@ def float64_near(
     abs_tol: Optional[float] = Unset,
 ) -> bool:
     "Implements connected method core.type Float64.near()."
-    # This exactly matches isclose behavior, but matching our forwarding our
-    # optionals to python named args is awkward, so duplicate the logic.
-    # TODO We could possibly inline usage of isclose instead of this logic.
+    # As isclose, except equal by Temper's ==, so nan is near nan; else
+    # finite and within the margin, which a nan margin never is (Python's
+    # max may drop nan, so not max).
     if rel_tol is Unset:
         rel_tol = 1e-9
     if abs_tol is Unset:
         abs_tol = 0.0
-    return isclose(x, y, rel_tol=rel_tol, abs_tol=abs_tol)
+    if float_eq(x, y):
+        return True
+    if isinf(x) or isinf(y):
+        return False
+    scale = max(abs(x), abs(y)) * rel_tol
+    margin = scale if isnan(scale) or scale >= abs_tol else abs_tol
+    return abs(x - y) <= margin
 
 
 def float64_sign(x: float) -> float:
@@ -661,10 +675,18 @@ def years_between(start: Date, end: Date) -> int:
     return year_delta
 
 
+def index_out_of_bounds(index: int, length: int) -> NoReturn:
+    """Panics for an index out of bounds of a list or string of `length`, as
+    core's docs say reading or writing there does, as `panic()` raises, past
+    any `orelse`, with the message every backend gives for a list; for a
+    string, in its own units (code points)."""
+    raise BaseException(f"index {index} out of bounds for length {length}")
+
+
 def string_get(s: str, i: int) -> int:
-    if i < 0:
-        raise IndexError()
-    return ord(s[i])
+    if 0 <= i < len(s):
+        return ord(s[i])
+    index_out_of_bounds(i, len(s))
 
 
 def string_count_between(s: str, left: int, right: int) -> int:
@@ -792,10 +814,15 @@ def list_for_each(lst: Sequence[T], action: Callable[[T], None]) -> None:
 
 
 def list_get(lst: Sequence[T], index: int) -> T:
-    "Get an item from a list by index."
-    if index < 0:  # Prohibit python index semantics
-        raise IndexError()
-    return lst[index]
+    """Get an item from a list by index, panicking out of bounds. Tries the
+    subscript, which is free on success from Python 3.11, rather than
+    calling `len()` first; not Python's negative indices."""
+    if index >= 0:
+        try:
+            return lst[index]
+        except IndexError:
+            pass
+    index_out_of_bounds(index, len(lst))
 
 
 def list_get_or(lst: Sequence[T], index: int, default: T) -> T:
@@ -818,7 +845,7 @@ def list_builder_add(
         lst.append(elem)
     else:
         if at < 0 or at > lst_len:
-            raise IndexError()
+            index_out_of_bounds(at, lst_len)
         lst.insert(at, elem)
 
 
@@ -831,7 +858,7 @@ def list_builder_add_all(
         lst.extend(elems)
     else:
         if at < 0 or at > lst_len:
-            raise IndexError()
+            index_out_of_bounds(at, lst_len)
         lst[at:at] = elems
 
 
@@ -846,6 +873,13 @@ def list_map(lst: Sequence[T], func: Callable[[T], U]) -> Sequence[U]:
 
 
 _lbrT = TypeVar("_lbrT")
+
+
+def list_builder_remove_last(lst: MutableSequence[_lbrT]) -> _lbrT:
+    "Removes and returns the last element, panicking if there's none."
+    if lst:
+        return lst.pop()
+    index_out_of_bounds(-1, 0)
 
 
 def list_builder_reverse(lst: MutableSequence[_lbrT]) -> None:
@@ -881,10 +915,14 @@ _lbsT = TypeVar("_lbsT")
 
 
 def list_builder_set(lst: MutableSequence[_lbsT], idx: int, val: _lbsT) -> None:
-    "set a list element, bubbling if out of bounds, or void on success."
-    if idx < 0:
-        raise IndexError()
-    lst[idx] = val
+    "Sets a list element, panicking out of bounds, as `list_get` reads one."
+    if idx >= 0:
+        try:
+            lst[idx] = val
+            return
+        except IndexError:
+            pass
+    index_out_of_bounds(idx, len(lst))
 
 
 _lbsoT = TypeVar("_lbsoT")
@@ -893,7 +931,14 @@ _lbsoT = TypeVar("_lbsoT")
 def list_builder_sort(
     lst: List[_lbsoT], compare: Callable[[_lbsoT, _lbsoT], int]
 ) -> None:
-    return lst.sort(key=cmp_to_key(compare))
+    """Sorts a copy, as other backends do, so a comparison may read the
+    builder and change it: the sorted copy replaces a change that keeps
+    its length, and one that changes its length panics, as `panic()`
+    raises, past any `orelse`."""
+    items = sorted(lst, key=cmp_to_key(compare))
+    if len(lst) != len(items):
+        raise BaseException("ListBuilder changed length during sort")
+    lst[:] = items
 
 
 _lbmdT = TypeVar("_lbmdT")
@@ -930,6 +975,9 @@ _lrT = TypeVar("_lrT")
 def listed_reduce(
     lst: Sequence[_lrT], accumulate: Callable[[_lrT, _lrT], _lrT]
 ) -> _lrT:
+    "Reduces from the first element, panicking if there's none."
+    if not lst:
+        index_out_of_bounds(0, 0)
     return reduce(accumulate, lst)
 
 
@@ -941,6 +989,21 @@ def listed_reduce_from(
     lst: Sequence[_lrfT], initial: _lrfU, accumulate: Callable[[_lrfU, _lrfT], _lrfU]
 ) -> _lrfU:
     return reduce(accumulate, lst, initial)
+
+
+def listed_reduce_from_index(
+    lst: Sequence[_lrfT],
+    initial: _lrfU,
+    index: int,
+    accumulate: Callable[[_lrfU, _lrfT], _lrfU],
+) -> _lrfU:
+    """
+    Implements core.listedReduceFromIndex: from `index`, none past the end;
+    a negative index fails as `list_get` does.
+    """
+    if index < 0:
+        list_get(lst, index)
+    return reduce(accumulate, islice(lst, index, None), initial)
 
 
 def listed_sorted(lst: Sequence[T], compare: Callable[[T, T], int]) -> Sequence[T]:
@@ -955,12 +1018,15 @@ def listed_to_list(lst: Sequence[T]) -> Sequence[T]:
 
 
 def deque_remove_first(deq: Deque[T]) -> T:
-    "Defer to deque.popleft, except bubbling when the deque is empty."
+    """Defer to deque.popleft, except panicking when the deque is empty, as
+    reading a list out of bounds does."""
+    if not deq:
+        index_out_of_bounds(0, 0)
     return deq.popleft()
 
 
-def dense_bit_vector_set(instance: DenseBitVector, idx: int, bit: bool) -> None:
-    "sets a bit within a dense bit vector."
+def dense_bit_vector_set(instance: BitVector, idx: int, bit: bool) -> None:
+    "Sets a bit within a BitVector."
     instance.set(idx, bit)
 
 

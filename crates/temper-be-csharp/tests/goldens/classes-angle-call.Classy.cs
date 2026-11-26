@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TemperLang.Core;
 
 namespace AngleCall;
 
@@ -21,13 +22,13 @@ internal class Classy
 
     public static T First<T>(IReadOnlyList<T> things)
     {
-        T thing = things[0];
+        T thing = Listed.Get(things, 0);
         return thing;
     }
 
     public T Indexed<T>(IReadOnlyList<T> things)
     {
-        T thing = things[this.index];
+        T thing = Listed.Get(things, this.index);
         return thing;
     }
 }

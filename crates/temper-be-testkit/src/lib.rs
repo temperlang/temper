@@ -84,6 +84,13 @@ pub const CLASSES: [&str; 14] = [
     "interfaces/pure-virtual",
 ];
 
+/// The functional tests of names: a module's own declarations of names
+/// core has too (`String`, `List`), and `core` and `builtins` as
+/// ordinary names, of a module and of variables, beside `import("core")`.
+/// Each backend runs them with [`cases_with`]; Kotlin Temper has no
+/// record of them, as it reserves `builtins`.
+pub const NAMES: [&str; 2] = ["names/core-named", "names/core-shadows"];
+
 /// The functional tests with nullable types, `orelse`, and `bubble()`
 /// that tmpl's translation covers (subset B's third step): each backend
 /// runs them as it covers nullables, with [`cases_with`].
@@ -95,10 +102,15 @@ pub const NULLABLES: [&str; 4] = [
 ];
 
 /// The functional tests with generic types and core's lists that tmpl's
-/// translation covers (subset B's third step, generics), and one with a
-/// cast from a nullable type: each backend runs them as it covers
-/// generics, with [`cases_with`].
-pub const GENERICS: [&str; 3] = ["casts/specific", "imports/values", "types/list/empty"];
+/// translation covers (subset B's third step, generics), one with a
+/// cast from a nullable type, and one importing a module as a namespace:
+/// each backend runs them as it covers generics, with [`cases_with`].
+pub const GENERICS: [&str; 4] = [
+    "casts/specific",
+    "imports/namespaces",
+    "imports/values",
+    "types/list/empty",
+];
 
 /// The functional tests with function values that tmpl's translation
 /// covers: function literals with their captures, references to
@@ -124,18 +136,23 @@ pub const DEFAULTS: [&str; 1] = ["classes/property-order"];
 
 /// The functional tests with core's other types and members that tmpl's
 /// translation covers: string indices and `StringIndexOption`,
-/// `StringBuilder`, `Empty`, `Deque`, `DenseBitVector`, and more of
+/// `StringBuilder`, `Empty`, and more of
 /// `String`'s and `Float64`'s members, as `split`, `countBetween`,
-/// `near`, and `pi`. Each backend runs them as it covers them, with
-/// [`cases_with`].
-pub const CORE_TYPES: [&str; 9] = [
+/// `near`, and `pi`; and list and string indices out of bounds and an
+/// empty list's `reduce`, whose runs end in each backend's panic
+/// ([`Case::panic`]). Each backend runs
+/// them as it covers them, with [`cases_with`].
+pub const CORE_TYPES: [&str; 12] = [
     "functions/defaulting",
     "functions/named-args",
     "regression/minimal-repro",
-    "types/dense-bit-vector",
-    "types/deque",
     "types/float/ops",
+    "types/list/builder-set-negative",
+    "types/list/index-past-end",
+    "types/list/reduce-empty",
+    "types/list/remove-last-empty",
     "types/string/build",
+    "types/string/index-at-end",
     "types/string/indices",
     "types/string/read",
 ];
@@ -179,6 +196,13 @@ pub const TYPING: [&str; 1] = ["semantics/constness"];
 /// [`cases_with`].
 pub const ANY_VALUES: [&str; 2] = ["casts/as-expr", "types/list/operations"];
 
+/// The functional tests with `is` and `as` checks from `AnyValue` for a
+/// class, given core's values, as `Pair`s, and std's, as `BitVector`s, and a
+/// class's without interfaces as `AnyValue`s. Each backend runs them with
+/// [`cases_with`] but C++ and Rust, which can't make those values
+/// `AnyValue`s yet.
+pub const CORE_CHECKS: [&str; 1] = ["casts/core-classes"];
+
 /// The functional tests of a library with errors, which translate with
 /// tmpl's `Error`s, each failing where it runs: `semantics/broken`, whose
 /// run fails ([`Case::fails`]), and `semantics/type-checked-locals`,
@@ -209,14 +233,18 @@ pub const ASYNC: [&str; 5] = [
 pub const TESTS: [&str; 1] = ["testing/asserts"];
 
 /// The functional tests that import std's modules (`std/regex`,
-/// `std/json`, `std/temporal`), which translate as part of std: each
-/// backend builds std's output beside them ([`Case::needs_std`]), with
-/// [`cases_with`].
-pub const WITH_STD: [&str; 4] = [
+/// `std/json`, `std/temporal`, `std/collections`), which translate as
+/// part of std: each backend builds std's output beside them
+/// ([`Case::needs_std`]), with [`cases_with`].
+pub const WITH_STD: [&str; 8] = [
     "regex/match",
     "regex/zero-advance",
+    "types/bit-vector",
+    "types/bit-vector-negative-false",
     "types/date",
     "types/json-syntax-tree",
+    "types/queue",
+    "types/queue-empty",
 ];
 
 /// The functional tests of std's `net`, which send requests to the test
@@ -272,8 +300,16 @@ pub fn without_net(cases: &mut [Case]) {
 /// example; `content-tags` tagged strings whose contexts are worked out
 /// at compile time, so their escapers are called directly, in branches
 /// and loops, and one left to run time; `reach` what only tests reach,
-/// and what nothing does, which runs as tests ([`AS_TESTS`]).
-pub const PROGRAMS: [&str; 20] = [
+/// and what nothing does, which runs as tests ([`AS_TESTS`]);
+/// `core-numbers` core's number members where hosts differ, `succ`,
+/// `pred`, `signum`, `Float64.near` on NaN and infinities, and
+/// `reduceFromIndex`; `callback-changes` builders added to and spliced
+/// into themselves, and callbacks that change the builder or map they
+/// walk, which must stay memory safe and never deadlock, ending with a
+/// sort whose comparison grows its builder, which panics, so the run
+/// fails (`expectRunFailure = true`, as functional tests say it), with
+/// the message its ` ```panic ` block gives ([`check_case`]).
+pub const PROGRAMS: [&str; 22] = [
     "classes",
     "nullables",
     "generics",
@@ -294,6 +330,8 @@ pub const PROGRAMS: [&str; 20] = [
     "content-tags",
     "json-adapters",
     "reach",
+    "core-numbers",
+    "callback-changes",
 ];
 
 /// The shared programs that run as tests, as a functional test with
@@ -403,6 +441,9 @@ pub struct Case {
     /// Whether its run fails (`expectRunFailure = true`), after logging
     /// what's expected ([`check_case`]).
     pub fails: bool,
+    /// For a run that must end in a panic, the panic's message, as its
+    /// ` ```panic ` block gives it ([`check_case`]).
+    pub panic: Option<String>,
 }
 
 impl Case {
@@ -446,6 +487,7 @@ impl Case {
             no_connected: false,
             tests: None,
             fails: false,
+            panic: None,
         }
     }
 }
@@ -522,6 +564,7 @@ pub fn functional_cases(backend: &str, tests: &[&str]) -> Vec<Case> {
             no_connected: false,
             tests: (test.runs_as_test()).then(|| test.expected_failures()),
             fails: test.expects_run_failure(),
+            panic: test.expected_panic(),
         };
         if !case.host_files.is_empty() {
             cases.push(case.clone());
@@ -551,6 +594,8 @@ fn cases_of(backend: &str, programs: &[&str]) -> Vec<Case> {
             None => (file, dir.join(format!("{file}.temper.md"))),
         };
         let text = fs::read_to_string(&path).unwrap();
+        let fails = text.contains("expectRunFailure = true");
+        let panic = temper_funtests::expected_panic(&text);
         let expected = if file.ends_with(".tmpl") {
             (text.lines())
                 .filter_map(|l| l.strip_prefix("// log: "))
@@ -576,7 +621,8 @@ fn cases_of(backend: &str, programs: &[&str]) -> Vec<Case> {
             host_files: Vec::new(),
             no_connected: false,
             tests: AS_TESTS.contains(&file).then(Vec::new),
-            fails: false,
+            fails,
+            panic,
         });
     }
     cases
@@ -1091,21 +1137,110 @@ pub fn check_log(failures: &mut Vec<String>, name: &str, out: &Output, expected:
     }
 }
 
-/// [`check_log`] for a case's run: one that's expected to fail
-/// ([`Case::fails`]) must fail, after logging what's expected.
-pub fn check_case(failures: &mut Vec<String>, name: &str, out: &Output, case: &Case) {
+/// [`check_log`] for a case's run on `backend`: one that's expected to
+/// fail ([`Case::fails`]) must fail, after logging what's expected, and
+/// not by crashing ([`crashed`]) or a sanitizer's report
+/// (AddressSanitizer's, say), which is a bug rather than the failure the
+/// case means. One that must panic ([`Case::panic`]) must end as the
+/// backend's panic does ([`panicked`]), not by a host exception.
+pub fn check_case(
+    failures: &mut Vec<String>,
+    backend: &str,
+    name: &str,
+    out: &Output,
+    case: &Case,
+) {
     if !case.fails {
         return check_log(failures, name, out, &case.expected);
     }
     let stdout = printed(&out.stdout);
     let actual: Vec<&str> = stdout.lines().collect();
-    if out.status.success() || actual != case.expected {
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    let sanitized = stderr.contains("Sanitizer");
+    let wrong_end = match &case.panic {
+        Some(message) => !panicked(backend, out, message),
+        None => crashed(&out.status),
+    };
+    if out.status.success() || actual != case.expected || sanitized || wrong_end {
+        let ending = match &case.panic {
+            Some(message) => format!("{backend}'s panic \"{message}\""),
+            None => "a failed run".into(),
+        };
         failures.push(format!(
-            "{name}: expected {:?} and a failed run, got {actual:?} ({})\n{}",
-            case.expected,
-            out.status,
-            String::from_utf8_lossy(&out.stderr)
+            "{name}: expected {:?} and {ending}, got {actual:?} ({})\n{stderr}",
+            case.expected, out.status,
         ));
+    }
+}
+
+/// Whether a run ended as `backend`'s `panic()`, or its runtime's, ends
+/// one, with `message` on stderr: how its exit looks, and the line that
+/// names what ended it. Not a host exception (Python's `IndexError`,
+/// JavaScript's `TypeError`, Java's other exceptions), a crash, or a
+/// sanitizer's report.
+pub fn panicked(backend: &str, out: &Output, message: &str) -> bool {
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    let code = out.status.code();
+    let line = |prefix: &str| ends_line(&stderr, prefix, message);
+    let ends = match backend {
+        // `panic!`, which exits with 101.
+        "rust" => code == Some(101) && stderr.contains("panicked at") && line(""),
+        // `raise BaseException(…)`, which no `except Exception` catches.
+        "py" => code == Some(1) && line("BaseException: "),
+        // `throw Error(…)`, the same as a bubble's.
+        "js" => code == Some(1) && (stderr.lines()).any(|l| l == format!("Error: {message}")),
+        // An `AssertionError`, maybe in a class's initializer.
+        "java" => code == Some(1) && line("java.lang.AssertionError: "),
+        // `std::terminate()` after the message, and
+        // `Environment.FailFast(…)`, which abort.
+        "cpp" => aborted(&out.status) && line(""),
+        "csharp" => aborted(&out.status) && line("Process terminated. "),
+        _ => false,
+    };
+    ends && !stderr.contains("Sanitizer")
+}
+
+/// Whether a line of `text` ends with all of `message`, after `prefix`
+/// (`BaseException: `), or, with none, at the line's start or after a
+/// space (Lua's `file:line: `), so neither a longer message nor a
+/// shorter one (one missing `for length N`) passes for it.
+pub fn ends_line(text: &str, prefix: &str, message: &str) -> bool {
+    text.lines().any(|l| {
+        l.strip_suffix(message).is_some_and(|rest| match prefix {
+            "" => rest.is_empty() || rest.ends_with(' '),
+            _ => rest.ends_with(prefix),
+        })
+    })
+}
+
+/// Whether a run was ended by a signal other than `SIGABRT`, which C++'s
+/// `std::terminate()` and C#'s `FailFast` send: a crash, as a
+/// segmentation fault, not a failure the program meant.
+pub fn crashed(status: &std::process::ExitStatus) -> bool {
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::ExitStatusExt;
+        status.signal().is_some_and(|s| s != 6)
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = status;
+        false
+    }
+}
+
+/// Whether a run aborted: by `SIGABRT` on Unix, or, elsewhere, any
+/// failing exit (Windows' `abort()` exits with 3, and `FailFast` with
+/// its own code).
+fn aborted(status: &std::process::ExitStatus) -> bool {
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::ExitStatusExt;
+        status.signal() == Some(6)
+    }
+    #[cfg(not(unix))]
+    {
+        !status.success()
     }
 }
 

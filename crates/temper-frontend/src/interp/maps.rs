@@ -1,4 +1,4 @@
-//! `Map`, `MapBuilder` and `Pair`, as in Kotlin Temper's `core.temper`,
+//! `Map`, `MapBuilder` and `Pair`, as core declares them (`lib/core/`),
 //! where `Mapped` is their common interface. Entries keep the order their
 //! keys were first added in. Keys are `Int` or `String` values
 //! (`MapKey`; Kotlin's core has a TODO about `Int64`). A missing key fails

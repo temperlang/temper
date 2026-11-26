@@ -9,6 +9,15 @@
 - [🆕 Bitwise operators](#-bitwise-operators)
 - [🚨Breaking change: Details of rules for `<` ambiguity have changed](#breaking-change-details-of-rules-for--ambiguity-have-changed)
 - [🚨Breaking change: Python parameters keep builtins' names](#breaking-change-python-parameters-keep-builtins-names)
+- [🚨Breaking change: `Deque` and `DenseBitVector` are std's `Queue` and `BitVector`](#breaking-change-deque-and-densebitvector-are-stds-queue-and-bitvector)
+- [Lists and strings out of bounds panic everywhere](#lists-and-strings-out-of-bounds-panic-everywhere)
+- [Explicit `null` for a parameter with a default gives the default](#explicit-null-for-a-parameter-with-a-default-gives-the-default)
+- [🚨Breaking change: private constructors, connected types, and member names](#breaking-change-private-constructors-connected-types-and-member-names)
+- [`Console`, `getConsole`, and `Equatable` are nameable again](#console-getconsole-and-equatable-are-nameable-again)
+- [🚨Breaking change: no `Null` type](#breaking-change-no-null-type)
+- [🆕 Module namespaces](#-module-namespaces)
+- [🚨Breaking change: `builtins.X` removed](#breaking-change-builtinsx-removed)
+- [🚨Breaking change: `Void` is never a value; type arguments fit their bounds](#breaking-change-void-is-never-a-value-type-arguments-fit-their-bounds)
 - [Rust crates depend on `temper-std` only when they use it](#rust-crates-depend-on-temper-std-only-when-they-use-it)
 - [`++ls[i]` gives the new value](#lsi-gives-the-new-value)
 - [Unassigned locals in `for … of` bodies are errors](#unassigned-locals-in-for--of-bodies-are-errors)
@@ -22,6 +31,123 @@
 - [C++: `Float64.toString` as on the JVM](#c-float64tostring-as-on-the-jvm)
 - [`temper` and its `TEMPER_*` settings](#temper-and-its-temper_-settings)
 - [Fixes on Windows](#fixes-on-windows)
+
+## 🚨Breaking change: `Deque` and `DenseBitVector` are std's `Queue` and `BitVector`
+
+Core's `Deque` and `DenseBitVector` moved to a new std module,
+`std/collections`, as `Queue` (it's first-in, first-out) and
+`BitVector`. Code that used them adds one import:
+
+```temper inert
+let { Queue, BitVector } = import("std/collections");
+```
+
+Without it, `Deque` or `Queue` is an error that names that import. Both
+are `@connected` to the same host types as before (`java.util.Deque`
+and `java.util.BitSet` in Java, `collections.deque` in Python, and so
+on); the runtimes' own types are renamed to match (`temper_core.BitVector`
+in Python, `temper_core::Queue` in Rust, `temper.Queue` in Lua). Every
+backend now agrees on the edges, as std's Temper body has them: `get` at
+a negative index is `false`, `set` at one panics (setting `false` too),
+`removeFirst` on an empty queue panics, as reading a list out of bounds
+does, with the same message everywhere, and a negative capacity is none,
+where each backend differed somewhere before (some threw a host
+exception, some bubbled); and JavaScript's `set` far past the end no
+longer drops the bit. See [`std/collections`](../std/collections.md).
+
+## Lists and strings out of bounds panic everywhere
+
+Reading or setting a list out of bounds (`ls[i]`, `set`, `add` at an
+index), `removeLast` on an empty builder, `reduce` on an empty list, and
+reading a string at or past its end panic on every backend, as core's
+docs say, with the same message, "index 3 out of bounds for length 3".
+Before, most backends raised a host exception or bubbled, which
+`orelse` could catch, and JavaScript and Lua let `set` at a negative
+index pass silently.
+
+## Explicit `null` for a parameter with a default gives the default
+
+As it always has, passing `null` for a parameter with a default, as
+`f(null)` for `let f(x: Int? = 0)`, gives the default, `0`, even where
+the parameter's type is nullable. It's now documented, under
+[optional parameters](../language/builtins.md#optional-parameters).
+
+## 🚨Breaking change: private constructors, connected types, and member names
+
+- A class's private constructor is its own, as private methods are:
+  `new C()` outside `C` is an error ("C is not a concrete type with a
+  public constructor"), through an alias or object literal too. Make
+  such values in a static method of the class instead.
+- `DoneResult`'s constructor is private; `doneResult()` makes one.
+- `MapKey` is sealed: only core's `Int32` and `String` are map keys.
+- `is` and `as` may target a `@connected` type, core's or yours, only
+  from a sealed supertype that tells its subtypes apart, as `r is
+  DoneResult<T>` for `r: GeneratorResult<T>`. `x is StringIndex` or `x is
+  StringBuilder` for `x: AnyValue` is an error, as in Kotlin Temper; JS
+  translated it wrongly.
+- `Pair`, `Listed`, `Mapped`, `SafeGenerator`, and `Console` (and std's
+  `Queue` and `BitVector`, above) are `@connected`, as the host supplies
+  them, so `x is Pair<K, V>` from `AnyValue` is an error too.
+- A class or interface may not have a static and an instance member
+  of the same name.
+- A local alias of a type, as `let D = C;` in a function, is the type:
+  checked as it is, and left out of generated code.
+
+## `Console`, `getConsole`, and `Equatable` are nameable again
+
+As in Temper 0.6.0, code may name `Console` (and implement it),
+`getConsole(name)`, and `Equatable<T>` (as a type or bound, as `T
+extends Equatable<T>`; it's sealed).
+
+## 🚨Breaking change: no `Null` type
+
+Core no longer declares `Null`. `null` has no type of its own: it takes
+the nullable type its place wants, so it still works wherever a `T?` is
+expected. A declaration whose only value is `null` now needs a type:
+
+```temper inert
+let a: String? = null; // not `let a = null;`
+```
+
+Code that named `Null` can use the nullable type it meant instead, and
+may declare its own `Null`.
+
+Null alone also has no members and is no condition: `null.isEmpty` and
+`if (null)` are errors.
+
+## 🆕 Module namespaces
+
+`let NAME = import(PATH);` imports a whole module as a namespace:
+`NAME.member` is its export `member`, in code and in types, and
+translates just as a destructuring import of it would.
+
+```temper inert
+let rx = import("std/regex");
+let pattern: rx.Regex = new rx.Regex(rx.oneOrMore(new rx.CodePoints("ab")));
+```
+
+In `new ns.C(x)`, the dots belong to the class, as `new (ns.C)(x)`.
+Only a namespace may qualify the class there, and `new` without
+arguments, as `new C` or `new { k: v }`, is an error.
+
+## 🚨Breaking change: `builtins.X` removed
+
+`builtins` is an ordinary name now, so a library's own `builtins` or
+`core` works on every backend. Where a module declares a name core has,
+as `class String`, it reaches core's through a namespace:
+`let core = import("core");` then `core.String`.
+
+## 🚨Breaking change: `Void` is never a value; type arguments fit their bounds
+
+`Void` is only what a function returns, as `f(): Void` or `fn (): Void`.
+A parameter, local, or field of type `Void`, a type argument like
+`List<Void>`, `Void?`, and a `Void` result where a value is wanted, as
+in `let f(): AnyValue { g() }` for `g(): Void`, are errors.
+
+A type argument must fit its parameter's bound wherever it's written,
+annotations included, so `let m: Map<Boolean, Int>` is an error: a map
+key must be a `MapKey` of itself. `AnyValue`, `MapKey<String>`, and
+`Never<Int>` aren't map keys.
 
 ## 🚨Breaking change: Rest parameter syntax removed.
 

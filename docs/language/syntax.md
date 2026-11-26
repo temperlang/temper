@@ -376,6 +376,11 @@ Ruby-style block functions (`f { ... }`) and flow-control like
 New := "new" Type "(" Args? ")"
 ```
 
+The dots and type arguments after `new` belong to its type, so
+`new ns.Box<Int>(x).m()` means `(new (ns.Box<Int>)(x)).m()`. Only a
+module namespace may qualify the class (`let ns = import(…)`); `new`
+without arguments, as `new C` or `new { k: v }`, is an error.
+
 ### Syntax for *StringExpr*
 
 ```ebnf
@@ -1020,13 +1025,13 @@ RegularDot := Expr ("." | "?.") SymbolValue?
 #### Syntax for *ReservedWord*
 
 ```ebnf
-ReservedWord := "nym" | "builtins" | "this" | "super"
+ReservedWord := "nym" | "this" | "super"
 ```
 
 #### Syntax for *SpecialDot*
 
 ```ebnf
-SpecialDot := "builtins" "." BuiltinName | "this" | (Lookahead: "super") Garbage
+SpecialDot := "this" | (Lookahead: "super") Garbage
 ```
 
 #### Syntax for *Specialize*

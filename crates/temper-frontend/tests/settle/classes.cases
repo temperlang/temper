@@ -969,11 +969,11 @@ console.log("${withBody(1)} ${nowhere(1)} ${notAList(1)}");
 --- settled
 (Block
   (Let ^withBody:0 (Fn (Let ^i:6 Int) Int (Block (Call + i:6 1))))
-  (Let connected ^everywhere:1 (Call FnType Int Int))
-  (Let ^nowhere:2 (Fn (Let ^i:7 Int) Int (Block (Call + i:7 3))))
-  (Let connected ^noBody:3 (Call FnType Int Int))
-  (Let ^notAList:4 (Fn (Let ^i:8 Int) Int (Block (Call + i:8 2))))
-  (Let ^notNames:5 (Fn (Let ^i:9 Int) Int (Block (Call + i:9 4))))
+  (Let connected ^everywhere:1 (Signature (Let ^i:7 Int) Int))
+  (Let ^nowhere:2 (Fn (Let ^i:8 Int) Int (Block (Call + i:8 3))))
+  (Let connected ^noBody:3 (Signature (Let ^i:9 Int) Int))
+  (Let ^notAList:4 (Fn (Let ^i:10 Int) Int (Block (Call + i:10 2))))
+  (Let ^notNames:5 (Fn (Let ^i:11 Int) Int (Block (Call + i:11 4))))
   (Call
     (Call . console \log)
     (Call
@@ -1022,3 +1022,225 @@ console.log(q.k());
   (Call (Call . console \log) (Call (Call . q:1 \k)))
   #void)
 log ok
+
+=== a type parameter can't be made or extended, though generic classes can
+interface I<T> extends T {}
+class C<T> extends I<T>, T {}
+let mk<T>(): T { new T() }
+interface J<T> {}
+class Box<T>(public x: T) extends J<T> {
+  public copy(): Box<T> { new Box<T>(x) }
+}
+let wrap<T>(x: T): Box<T> { new Box<T>(x) }
+console.log("${wrap<Int>(1).copy().x}");
+--- settled
+(Block
+  (Interface ^I:0 (TypeParam ^T:6) T:6)
+  (Class ^C:1 (TypeParam ^T:8) (Call <> I:0 T:8) T:8)
+  (Let ^mk:2 (Fn (TypeParam ^T:10) T:10 (Block (Call new (Error)))))
+  (Interface ^J:3 (TypeParam ^T:11))
+  (Class
+    ^Box:4
+    (TypeParam ^T:13)
+    (Call <> J:3 T:13)
+    (Param ^x:15 T:13)
+    (Method
+      ^copy:16
+      (Fn (Call <> Box:4 T:13) (Block (Call new (Call <> Box:4 T:13) x:15)))))
+  (Let
+    ^wrap:5
+    (Fn
+      (TypeParam ^T:17)
+      (Let ^x:18 T:17)
+      (Call <> Box:4 T:17)
+      (Block (Call new (Call <> Box:4 T:17) x:18))))
+  (Call
+    (Call . console \log)
+    (Call cat (Call . (Call (Call . (Call wrap:5 \typeArg Int 1) \copy)) \x)))
+  #void)
+error 23..24: Cannot extend type parameter T
+error 53..54: Cannot extend type parameter T
+error 79..80: Cannot instantiate type parameter T
+log 1
+
+=== private constructors are their class's own, as private methods are, which Kotlin doesn't check
+// In the class's methods, static or not, and functions in them, `new`
+// may call it; elsewhere, through an alias too, it's an error.
+class Token {
+  public text: String;
+  private constructor(text: String) { this.text = text; }
+  public static make(text: String): Token { new Token(text) }
+  public again(): Token {
+    let make(): Token { new Token(text) }
+    make()
+  }
+}
+class Box<T> {
+  public t: T;
+  private constructor(t: T) { this.t = t; }
+  public static make<U>(u: U): Box<U> { new Box<U>(u) }
+}
+let T2 = Token;
+let a = new Token("a");
+let b = new T2("b");
+let f(): Token { let T3 = Token; new T3("c") }
+let g(): Box<Int> { new Box<Int>(1) }
+let h(): Token { { text: "d" } }
+console.log(Token.make("x").again().text);
+console.log(Box.make(1).t.toString());
+--- settled
+(Block
+  (Class
+    ^Token:0
+    (Let ^text:9 String)
+    (Constructor private
+      ^constructor:10
+      (Fn
+        (Let ^text:13 String)
+        (Block (Assign (Call . this#8 \text) text:13) #void)))
+    (Method static
+      ^make:11
+      (Fn (Let ^text:14 String) Token:0 (Block (Call new Token:0 text:14))))
+    (Method
+      ^again:12
+      (Fn
+        Token:0
+        (Block
+          (Let ^make:15 (Fn Token:0 (Block (Call new Token:0 text:9))))
+          (Call make:15)))))
+  (Class
+    ^Box:1
+    (TypeParam ^T:16)
+    (Let ^t:18 T:16)
+    (Constructor private
+      ^constructor:19
+      (Fn (Let ^t:21 T:16) (Block (Assign (Call . this#17 \t) t:21) #void)))
+    (Method static
+      ^make:20
+      (Fn
+        (TypeParam ^U:22)
+        (Let ^u:23 U:22)
+        (Call <> Box:1 U:22)
+        (Block (Call new (Call <> Box:1 U:22) u:23)))))
+  (Let ^T2:2 Token:0)
+  (Let ^a:3 (Call new Token:0 "a"))
+  (Let ^b:4 (Call new T2:2 "b"))
+  (Let ^f:5 (Fn Token:0 (Block (Let ^T3:24 Token:0) (Call new T3:24 "c"))))
+  (Let ^g:6 (Fn (Call <> Box:1 Int) (Block (Call new (Call <> Box:1 Int) 1))))
+  (Let ^h:7 (Fn Token:0 (Block (Call new T2:2 "d"))))
+  (Call
+    (Call . console \log)
+    (Call . (Call (Call . (Call (Call . Token:0 \make) "x") \again)) \text))
+  (Call
+    (Call . console \log)
+    (Call (Call . (Call . (Call (Call . Box:1 \make) 1) \t) \toString)))
+  #void)
+error 537..542: Token is not a concrete type with a public constructor
+error 561..563: Token is not a concrete type with a public constructor
+error 607..609: Token is not a concrete type with a public constructor
+error 641..649: Box is not a concrete type with a public constructor
+error 672..685: Token is not a concrete type with a public constructor
+Failed: Token is not a concrete type with a public constructor
+
+=== a static member and an instance member can't share a name, as Java can't (t922)
+class C {
+  public x: Int = 1;
+  public static x: Int = 2;
+  public f(): Int { 1 }
+  public static f(): Int { 2 }
+  public get g(): Int { 3 }
+  public static g: Int = 4;
+  public static h(): Int { 5 }
+  public h: Int = 6;
+  public static ok: Int = 7;
+  public okay(): Int { 8 }
+}
+interface I {
+  public i(): Int;
+  public static i(): Int { 9 }
+}
+--- settled
+(Block
+  (Class
+    ^C:0
+    (Let ^x:3 Int 1)
+    (Let static ^x:4 Int 2)
+    (Method ^f:5 (Fn Int (Block 1)))
+    (Method static ^f:6 (Fn Int (Block 2)))
+    (Get ^g:7 (Fn Int (Block 3)))
+    (Let static ^g:8 Int 4)
+    (Method static ^h:9 (Fn Int (Block 5)))
+    (Let ^h:10 Int 6)
+    (Let static ^ok:11 Int 7)
+    (Method ^okay:12 (Fn Int (Block 8))))
+  (Interface
+    ^I:1
+    (Method ^i:14 (Signature Int))
+    (Method static ^i:15 (Fn Int (Block 9)))))
+error 47..48: Static property x and property x of C share a name; a static and an instance member need different names
+error 99..100: Static method f and method f of C share a name; a static and an instance member need different names
+error 158..159: Static property g and getter g of C share a name; a static and an instance member need different names
+error 210..211: Static method h and property h of C share a name; a static and an instance member need different names
+error 329..330: Static method i and method i of I share a name; a static and an instance member need different names
+
+=== a static member can't share a name with an inherited instance member, as Java can't hide one (t922); an interface's static beside a class's instance member is fine, as Java allows
+interface I {
+  public x(): Int { 1 }
+  public get g(): Int { 2 }
+  public static y(): Int { 3 }
+  private p(): Int { 4 }
+}
+interface J extends I {}
+class C extends J {
+  public static x(): Int { 5 }
+  public static g: Int = 6;
+  public y(): Int { 7 }
+  public static p(): Int { 8 }
+}
+--- settled
+(Block
+  (Interface
+    ^I:0
+    (Method ^x:4 (Fn Int (Block 1)))
+    (Get ^g:5 (Fn Int (Block 2)))
+    (Method static ^y:6 (Fn Int (Block 3)))
+    (Method private ^p:7 (Fn Int (Block 4))))
+  (Interface ^J:1 I:0)
+  (Class
+    ^C:2
+    J:1
+    (Method static ^x:12 (Fn Int (Block 5)))
+    (Let static ^g:13 Int 6)
+    (Method ^y:14 (Fn Int (Block 7)))
+    (Method static ^p:15 (Fn Int (Block 8)))))
+error 185..186: Static method x of C and method x of I share a name; a static and an instance member need different names
+error 216..217: Static property g of C and getter g of I share a name; a static and an instance member need different names
+
+=== a private constructor is its class's own: a static field's initializer may call it, and another class in its module may not
+class Token {
+  public text: String;
+  private constructor(text: String) { this.text = text; }
+  public static empty: Token = new Token("");
+}
+class Other {
+  public mk(): Token { new Token("x") }
+  public static made: Token = new Token("y");
+}
+--- settled
+(Block
+  (Class
+    ^Token:0
+    (Let ^text:3 String)
+    (Constructor private
+      ^constructor:4
+      (Fn
+        (Let ^text:6 String)
+        (Block (Assign (Call . this#2 \text) text:6) #void)))
+    (Let static ^empty:5 Token:0 (Call new Token:0 "")))
+  (Class
+    ^Other:1
+    (Method ^mk:8 (Fn Token:0 (Block (Call new Token:0 "x"))))
+    (Let static ^made:9 Token:0 (Call new Token:0 "y"))))
+error 184..189: Token is not a concrete type with a public constructor
+error 231..236: Token is not a concrete type with a public constructor
+Failed: Token is not a concrete type with a public constructor

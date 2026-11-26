@@ -7,7 +7,7 @@
 namespace temper {
     namespace core {
 
-        namespace Deque {
+        namespace Queue {
 
             template<class Elem>
             std::shared_ptr<std::deque<Elem>> make() {
@@ -27,7 +27,8 @@ namespace temper {
             template<class Elem>
             Elem removeFirst(const std::shared_ptr<std::deque<Elem>>& dq) {
                 if (dq->empty()) {
-                    bubble<Elem>("removeFirst on empty deque");
+                    // Panics, as reading a list out of bounds does.
+                    index_out_of_bounds<Elem>(0, 0);
                 }
                 Elem front = dq->front();
                 dq->pop_front();

@@ -42,33 +42,24 @@ pub const TABLE: &[(&str, Connection)] = &[
     ("core.async()", Connection::Runtime("async_launch")),
     ("core.empty()", Connection::Translate(empty)),
     ("core.getConsole()", Connection::Translate(get_console)),
+    ("core.listedMap()", Connection::Runtime("list_map")),
+    (
+        "core.listedReduceFrom()",
+        Connection::Runtime("listed_reduce_from"),
+    ),
+    (
+        "core.listedReduceFromIndex()",
+        Connection::Runtime("listed_reduce_from_index"),
+    ),
+    (
+        "core.mappedToListWith()",
+        Connection::Runtime("mapped_to_list_with"),
+    ),
     (
         "core.type Boolean.toString()",
         Connection::Translate(boolean_to_string),
     ),
     ("core.type Console.log()", Connection::Method("log")),
-    (
-        "core.type DenseBitVector.constructor()",
-        Connection::Runtime("DenseBitVector"),
-    ),
-    ("core.type DenseBitVector.get()", Connection::Method("get")),
-    (
-        "core.type DenseBitVector.set()",
-        Connection::Runtime("dense_bit_vector_set"),
-    ),
-    ("core.type Deque.add()", Connection::Method("append")),
-    (
-        "core.type Deque.constructor()",
-        Connection::Import("collections", "deque"),
-    ),
-    (
-        "core.type Deque.get isEmpty()",
-        Connection::Translate(is_empty),
-    ),
-    (
-        "core.type Deque.removeFirst()",
-        Connection::Runtime("deque_remove_first"),
-    ),
     ("core.type Float64.abs()", Connection::Builtin("abs")),
     (
         "core.type Float64.acos()",
@@ -166,6 +157,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Float64.toString()",
         Connection::Runtime("float64_to_string"),
     ),
+    (
+        "core.type Int32.get signum()",
+        Connection::Runtime("int_signum"),
+    ),
     ("core.type Int32.max()", Connection::Builtin("max")),
     ("core.type Int32.min()", Connection::Builtin("min")),
     ("core.type Int32.toFloat64()", Connection::Builtin("float")),
@@ -222,7 +217,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "core.type ListBuilder.removeLast()",
-        Connection::Method("pop"),
+        Connection::Runtime("list_builder_remove_last"),
     ),
     (
         "core.type ListBuilder.reverse()",
@@ -263,14 +258,9 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Runtime("list_get_or"),
     ),
     ("core.type Listed.join()", Connection::Runtime("list_join")),
-    ("core.type Listed.map()", Connection::Runtime("list_map")),
     (
         "core.type Listed.reduce()",
         Connection::Runtime("listed_reduce"),
-    ),
-    (
-        "core.type Listed.reduceFrom()",
-        Connection::Runtime("listed_reduce_from"),
     ),
     (
         "core.type Listed.slice()",
@@ -321,10 +311,6 @@ pub const TABLE: &[(&str, Connection)] = &[
     (
         "core.type Mapped.toListBuilder()",
         Connection::Runtime("mapped_to_list_builder"),
-    ),
-    (
-        "core.type Mapped.toListWith()",
-        Connection::Runtime("mapped_to_list_with"),
     ),
     (
         "core.type Mapped.toMap()",
@@ -463,6 +449,34 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type StringIndexOption.eq()",
         Connection::Translate(string_index_eq),
     ),
+    (
+        "std/collections.type BitVector.constructor()",
+        Connection::Runtime("BitVector"),
+    ),
+    (
+        "std/collections.type BitVector.get()",
+        Connection::Method("get"),
+    ),
+    (
+        "std/collections.type BitVector.set()",
+        Connection::Runtime("dense_bit_vector_set"),
+    ),
+    (
+        "std/collections.type Queue.add()",
+        Connection::Method("append"),
+    ),
+    (
+        "std/collections.type Queue.constructor()",
+        Connection::Import("collections", "deque"),
+    ),
+    (
+        "std/collections.type Queue.get isEmpty()",
+        Connection::Translate(is_empty),
+    ),
+    (
+        "std/collections.type Queue.removeFirst()",
+        Connection::Runtime("deque_remove_first"),
+    ),
     ("std/net.sendRequest()", Connection::Runtime("std_net_send")),
     (
         "std/net.type NetResponse.get bodyContent()",
@@ -534,6 +548,8 @@ pub const TABLE: &[(&str, Connection)] = &[
 /// its name there, as Kotlin's (`PySupportNetwork.kt`).
 pub fn std_type(key: &str) -> Option<(&'static str, &'static str)> {
     match key {
+        "std/collections.type BitVector" => Some(("temper_core", "BitVector")),
+        "std/collections.type Queue" => Some(("collections", "deque")),
         "std/net.type NetResponse" => Some(("temper_core", "NetResponse")),
         "std/temporal.type Date" => Some(("datetime", "date")),
         _ => None,
@@ -747,6 +763,15 @@ fn string_index_eq(mut args: Vec<Option<Expr>>, _: Import) -> Translated {
 /// `@connected` members use their Temper bodies. Which std keys a backend
 /// connects is its own (notes/tmpl/open-questions.md, 48).
 pub const STD: &[&str] = &[
+    "std/collections.type BitVector",
+    "std/collections.type BitVector.constructor()",
+    "std/collections.type BitVector.get()",
+    "std/collections.type BitVector.set()",
+    "std/collections.type Queue",
+    "std/collections.type Queue.add()",
+    "std/collections.type Queue.constructor()",
+    "std/collections.type Queue.get isEmpty()",
+    "std/collections.type Queue.removeFirst()",
     "std/net.sendRequest()",
     "std/net.type NetResponse",
     "std/net.type NetResponse.get bodyContent()",

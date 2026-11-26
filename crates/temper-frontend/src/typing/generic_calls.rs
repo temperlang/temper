@@ -134,13 +134,41 @@ impl Settle {
         // = id<Int>("a")` passes, as the value is a `String`. It doesn't
         // fold a constructor's call.
         let folds = foldable && self.may_fold(call, 0);
-        if !type_args.is_empty() && !folds {
+        // An instance extension's call, `x.name<A>(…)`, may give only the
+        // type parameters its receiver's type doesn't name, as a method's
+        // own; the receiver binds the rest.
+        let own: Vec<usize> = match params.first() {
+            Some(receiver) if self.typing.extension_calls.contains(&call) => (0..formals.len())
+                .filter(|&i| !self.typing.types.mentions(receiver.ty, &formals[i..=i]))
+                .collect(),
+            _ => Vec::new(),
+        };
+        let as_method = !type_args.is_empty()
+            && type_args.len() != formals.len()
+            && type_args.len() == own.len();
+        if !type_args.is_empty() && !folds && !as_method {
             if type_args.len() == formals.len() {
                 for (actual, &t) in actuals.iter_mut().zip(&type_args) {
                     *actual = self.eval_type(t);
                 }
             } else {
                 ambiguous.fill(true);
+            }
+        } else if as_method && !folds {
+            for (&i, &t) in own.iter().zip(&type_args) {
+                actuals[i] = self.eval_type(t);
+            }
+            let receiver = match args.first() {
+                Some(&first) => self.expr_type(first, forced)?,
+                None => UNKNOWN,
+            };
+            let mut bound = actuals.clone();
+            let types = &mut self.typing.types;
+            types.unify(params[0].ty, receiver, &formals, &mut bound, &mut ambiguous);
+            for (i, actual) in actuals.iter_mut().enumerate() {
+                if !own.contains(&i) {
+                    *actual = if ambiguous[i] { UNKNOWN } else { bound[i] };
+                }
             }
         } else {
             let placed = self.placed_params(&params, &args);
@@ -175,6 +203,18 @@ impl Settle {
             for (actual, &conflict) in actuals.iter_mut().zip(&ambiguous) {
                 if conflict {
                     *actual = UNKNOWN;
+                }
+            }
+            // A folded call's type arguments still bind those no
+            // parameter mentions, as `T` in `mk<Int>()`, which its value
+            // would show.
+            if folds && type_args.len() == formals.len() {
+                for (i, &t) in type_args.iter().enumerate() {
+                    let types = &self.typing.types;
+                    let mentioned = (params.iter()).any(|p| types.mentions(p.ty, &formals[i..=i]));
+                    if !mentioned {
+                        actuals[i] = self.eval_type(t);
+                    }
                 }
             }
         }
@@ -300,15 +340,10 @@ impl Settle {
             // extends MapKey<K>` does, so it's checked with what they're
             // bound to put in; the message shows it as declared.
             let wanted = types.substitute(bound, &solved.formals, &solved.actuals);
-            // Kotlin's check takes a nullable type as fitting `AnyValue`,
-            // so `new PromiseBuilder<String?>()` and `f<Int?>(null)` for
-            // `<T extends AnyValue>` (or `<T>`) pass.
-            let seen = match *types.get(actual) {
-                TypeData::Nullable(inner) if wanted == ANY_VALUE => inner,
-                _ => actual,
-            };
-            let fits = types.is_subtype(seen, wanted) != Some(false);
-            if fits || !types.is_known(wanted) {
+            // As Kotlin's check, a nullable type fits `AnyValue`, so `new
+            // PromiseBuilder<String?>()` and `f<Int?>(null)` for `<T
+            // extends AnyValue>` (or `<T>`) pass.
+            if types.fits_bound(actual, wanted) {
                 continue;
             }
             let message = Message::TypeFormalBound(
@@ -527,8 +562,18 @@ impl Settle {
                 types.substitute(p.ty, &solved.formals, &checked)
             })
             .collect();
+        for (i, &arg) in solved.args.iter().enumerate().take(wanted.len()) {
+            if arg_types[i] == NULL {
+                self.null_in_place(arg, wanted[i]);
+            }
+        }
+        // A `Void` argument is "Void expressions cannot be used as values"
+        // ([`Settle::check_not_void`]), not a mismatch too.
         let unfit: Vec<usize> = (0..wanted.len())
-            .filter(|&i| self.misfits(arg_types[i], wanted[i], solved.args[i]))
+            .filter(|&i| {
+                !self.typing.types.is_void_like(arg_types[i])
+                    && self.misfits(arg_types[i], wanted[i], solved.args[i])
+            })
             .collect();
         let (Some(&first), Some(&last)) = (unfit.first(), unfit.last()) else {
             return false;
@@ -697,7 +742,7 @@ impl Settle {
             }
         };
         let generic = !core::type_params(tree, class).is_empty();
-        let builtin = crate::builtins::TYPES.contains(&self.member_text(class));
+        let builtin = self.declares_builtin(class);
         (generic && !builtin && tree.data(class) & CLASS_INTERFACE == 0)
             .then_some((class, type_args))
     }
@@ -724,7 +769,7 @@ impl Settle {
 
     /// A type parameter with its bound, as Kotlin Temper writes it: `T
     /// extends AnyValue`.
-    fn show_formal(&mut self, formal: SymbolId) -> String {
+    pub(super) fn show_formal(&mut self, formal: SymbolId) -> String {
         let types = &mut self.typing.types;
         let param = types.param(formal);
         let bound = types.upper(param);

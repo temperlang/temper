@@ -17,6 +17,17 @@ impl Settle {
         decl: NodeId,
         forced: bool,
     ) -> Result<Option<TypeId>, Fact> {
+        let t = self.initializers_join(decl, forced)?;
+        Ok(t.filter(|&t| t != NULL && t != NEVER && t != UNKNOWN))
+    }
+
+    /// The join of the types of a declaration's initializers, as
+    /// [`Settle::initializers_type`] finds them, whatever it is.
+    pub(super) fn initializers_join(
+        &mut self,
+        decl: NodeId,
+        forced: bool,
+    ) -> Result<Option<TypeId>, Fact> {
         if !self.is_value_decl(decl) {
             return Ok(None);
         }
@@ -40,7 +51,7 @@ impl Settle {
         self.typing.initializing.push(decl);
         let t = self.join_values(&found, forced);
         self.typing.initializing.pop();
-        Ok(t?.filter(|&t| t != NULL && t != NEVER && t != UNKNOWN))
+        t
     }
 
     /// The join of the values' types, if any.

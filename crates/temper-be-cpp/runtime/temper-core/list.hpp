@@ -91,7 +91,7 @@ namespace temper {
             Elem get(const std::shared_ptr<std::vector<Elem>>& list, int32_t index) {
                 int32_t sz = static_cast<int32_t>(list->size());
                 if (index < 0 || index >= sz) {
-                    bubble<Elem>("list index out of bounds");
+                    index_out_of_bounds<Elem>(index, list->size());
                 }
                 return (*list)[index];
             }
@@ -119,14 +119,22 @@ namespace temper {
                 return std::make_shared<std::vector<Elem>>(*list);
             }
 
+            // Those that call back (`map`, `filter`, `join` with a function,
+            // `reduce`, and `reduceFrom`) walk a copy of the items, as the
+            // interpreter walks a snapshot: the callback may change a
+            // builder it walks, which would free or shrink the storage a
+            // walk of the vector itself reads.
+
             template<class Elem, class F>
             auto map(
                 const std::shared_ptr<std::vector<Elem>>& list,
                 F fn
             ) -> std::shared_ptr<std::vector<decltype(fn(std::declval<const Elem&>()))>> {
                 using R = decltype(fn(std::declval<const Elem&>()));
+                const std::vector<Elem> items(*list);
                 std::shared_ptr<std::vector<R>> result = std::make_shared<std::vector<R>>();
-                for (const Elem& elem : *list) {
+                result->reserve(items.size());
+                for (const Elem& elem : items) {
                     result->push_back(fn(elem));
                 }
                 return result;
@@ -134,8 +142,9 @@ namespace temper {
 
             template<class Elem, class F>
             std::shared_ptr<std::vector<Elem>> filter(const std::shared_ptr<std::vector<Elem>>& list, F fn) {
+                const std::vector<Elem> items(*list);
                 std::shared_ptr<std::vector<Elem>> result = std::make_shared<std::vector<Elem>>();
-                for (const Elem& elem : *list) {
+                for (const Elem& elem : items) {
                     if (fn(elem)) {
                         result->push_back(elem);
                     }
@@ -159,9 +168,10 @@ namespace temper {
 
             template<class Elem, class F>
             Str join(const std::shared_ptr<std::vector<Elem>>& list, const Str& separator, F fn) {
+                const std::vector<Elem> items(*list);
                 std::ostringstream oss;
                 bool first = true;
-                for (const Elem& elem : *list) {
+                for (const Elem& elem : items) {
                     if (!first) {
                         oss << separator;
                     }
@@ -219,22 +229,44 @@ namespace temper {
 
             template<class Elem, class F>
             Elem reduce(const std::shared_ptr<std::vector<Elem>>& list, F fn) {
-                if (list->empty()) {
-                    bubble<Elem>("reduce on empty list");
+                const std::vector<Elem> items(*list);
+                if (items.empty()) {
+                    // As reading its first value does.
+                    index_out_of_bounds<Elem>(0, 0);
                 }
-                Elem acc = (*list)[0];
-                int32_t sz = static_cast<int32_t>(list->size());
-                for (int32_t i = 1; i < sz; ++i) {
-                    acc = fn(acc, (*list)[i]);
+                Elem acc = items[0];
+                for (std::size_t i = 1; i < items.size(); ++i) {
+                    acc = fn(acc, items[i]);
                 }
                 return acc;
             }
 
             template<class Elem, class Acc, class F>
             Acc reduceFrom(const std::shared_ptr<std::vector<Elem>>& list, Acc init, F fn) {
+                const std::vector<Elem> items(*list);
                 Acc acc = init;
-                for (const Elem& elem : *list) {
+                for (const Elem& elem : items) {
                     acc = fn(acc, elem);
+                }
+                return acc;
+            }
+
+            // From `index`, none past the end; a negative index fails as
+            // `get` does.
+            template<class Elem, class Acc, class F>
+            Acc reduceFromIndex(
+                const std::shared_ptr<std::vector<Elem>>& list,
+                Acc init,
+                int32_t index,
+                F fn
+            ) {
+                if (index < 0) {
+                    get(list, index);
+                }
+                const std::vector<Elem> items(*list);
+                Acc acc = init;
+                for (size_t i = static_cast<size_t>(index); i < items.size(); ++i) {
+                    acc = fn(acc, items[i]);
                 }
                 return acc;
             }

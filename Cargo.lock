@@ -464,6 +464,7 @@ dependencies = [
 name = "temper-frontend"
 version = "0.7.0"
 dependencies = [
+ "temper-frontend",
  "temper-funtests",
  "temper-os",
  "temper-syntax",

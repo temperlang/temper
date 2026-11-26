@@ -250,7 +250,7 @@ module named as the library, at its root.
 Proposed:
 
 - **A fact on the declaration,** `connected: bool`, from `@connected`
-  (core.temper marks its members the same way). Decided (2026-10-29):
+  (core marks its members the same way). Decided (2026-10-29):
   how it resolves isn't stored; it's recognized from the declaration's
   library. Core's and std's go through the variant's connection table
   by qname ("by qname" below), and everything else by name ("by name"

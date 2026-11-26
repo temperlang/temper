@@ -1079,8 +1079,9 @@ fn can_nest(bracket: Option<Shape>, grand: Option<Shape>, parent: Shape, child: 
     if EXTENDS_COMMA.contains(&p) && c == O::Curly {
         return false;
     }
-    // In `new C<T>`, `<T>` applies to `C`.
-    if p == O::Angle && c == O::New && parent.count == 0 && child.count != 0 {
+    // In `new C<T>` and `new ns.C`, `<T>` and `.C` apply to what follows
+    // `new`, so `new a.b(c)` means `new (a.b)(c)`.
+    if matches!(p, O::Angle | O::Dot) && c == O::New && parent.count == 0 && child.count != 0 {
         return false;
     }
     let (pp, cp) = (p.info().precedence, c.info().precedence);

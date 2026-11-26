@@ -23,7 +23,7 @@ public static class DateGlobal
             int i = 0;
             while (i < length)
             {
-                int y = list[i];
+                int y = Listed.Get(list, i);
                 i = i + 1;
                 console.Log(string.Create(CultureInfo.InvariantCulture, $"{y}: Jan 1 weekday {(((int)new DateTime(y, 1, 1).DayOfWeek + 6) % 7) + 1}, Mar 1 weekday {(((int)new DateTime(y, 3, 1).DayOfWeek + 6) % 7) + 1}"));
             }

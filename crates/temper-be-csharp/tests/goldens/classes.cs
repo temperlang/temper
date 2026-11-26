@@ -35,14 +35,14 @@ public static class ClassesGlobal
             int i = 0;
             while (i < length)
             {
-                int a = ns[i];
+                int a = Listed.Get(ns, i);
                 i = i + 1;
                 {
                     int length2 = ns.Count;
                     int i2 = 0;
                     while (i2 < length2)
                     {
-                        int b = ns[i2];
+                        int b = Listed.Get(ns, i2);
                         i2 = i2 + 1;
                         @out.Add(eq(MaybeLoose(a), MaybeLoose(b)) ? "T" : "f");
                     }

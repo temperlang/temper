@@ -377,9 +377,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                     temper_core::ListedTrait::to_list(&a_list_builder);
                 temper_core::listed::add(&a_list_builder, Arc::new("second".to_string()), None);
                 let built_second: temper_core::List<Arc<String>> =
-                    temper_core::ListedTrait::to_list(&*temper_core::Listed::new(
-                        a_list_builder.clone(),
-                    ));
+                    temper_core::ListedTrait::to_list(&a_list_builder);
                 temper_core::listed::add(&a_list_builder, Arc::new("third".to_string()), None);
                 println!(
                     "builtFirst has {}",

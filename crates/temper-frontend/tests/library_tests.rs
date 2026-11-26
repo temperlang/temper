@@ -4,9 +4,10 @@
 
 use std::fs;
 use temper_frontend::library_tests::{TestOptions, parse_junit, test_dir, test_libraries};
-use temper_frontend::project::{Config, LibrarySources, find_libraries, work_root};
+use temper_frontend::project::{Config, LibrarySources, find_libraries, load_library, work_root};
 use temper_frontend::sources::Sources;
 use temper_frontend::stdlib;
+use temper_syntax::lex::SourceKind;
 
 /// A temporary directory, removed when dropped.
 struct TempTree {
@@ -522,6 +523,246 @@ fn duplicate_names() {
     let (passed, _, err) = test(root);
     assert_eq!(err, format!("Two libraries are named lib under {root}\n"));
     assert!(!passed);
+}
+
+/// Core's config, as `lib/core/config.temper.md` has it.
+const CORE_CONFIG: &str = "# Core\n\n    export let name = \"temper-core\";\n";
+
+/// `temper-core` is core's name: building another library of that name
+/// is an error, and its files have none of core's powers, as
+/// naming `_listify`. Only a Temper checkout's own `lib/core` is core,
+/// whatever its text, as an editor may have changed it.
+#[test]
+fn temper_core_is_reserved() {
+    let text = "export let xs: List<Int> = _listify(1);\n";
+    let files = [
+        ("user/config.temper.md", CORE_CONFIG),
+        ("user/core.temper", text),
+    ];
+    let (passed, _, err) = test_in("user", true, move || Sources::memory(&files));
+    assert!(
+        err.contains("temper-core is reserved for Temper's core library"),
+        "{err}"
+    );
+    assert!(!passed);
+    // Loaded anyway, it's no more core than any library.
+    let sources = Sources::memory(&files);
+    let libraries = find_libraries(&sources, "user");
+    let mut library = temper_frontend::library::Library::new();
+    library.libraries = vec![("temper-core".into(), "user".into())];
+    library.add_file("user/core.temper", text, SourceKind::Standalone);
+    assert!(!library.in_core(library.files[0].base));
+    assert!(load_library(&sources, &libraries[0], &libraries).is_err());
+    // A copy of the built-in core, as editors write, is core, by its
+    // files' texts, but not with another file or one missing.
+    let copy = |extra: &[(&'static str, &'static str)], skip: usize| {
+        let core = temper_frontend::corelib::SOURCES;
+        let files: Vec<(String, &str)> = std::iter::once(("config.temper.md", CORE_CONFIG))
+            .chain(core.iter().skip(skip).copied())
+            .chain(extra.iter().copied())
+            .map(|(path, text)| (format!("copy/{path}"), text))
+            .collect();
+        let files: Vec<(&str, &str)> = files.iter().map(|(p, t)| (p.as_str(), *t)).collect();
+        let sources = Sources::memory(&files);
+        let libraries = find_libraries(&sources, "copy");
+        load_library(&sources, &libraries[0], &libraries).is_ok()
+    };
+    assert!(copy(&[], 0));
+    assert!(!copy(&[("more.temper", "export let more = 1;\n")], 0));
+    assert!(!copy(&[], 1));
+    // A checkout's core at `root`, named `name`, its first file's text
+    // `first_text`, with `more` files, and the layout of a Temper checkout
+    // around it: a `Cargo.toml` and the compiler's `corelib.rs`.
+    let (first, text) = temper_frontend::corelib::SOURCES[0];
+    let edited = format!("{text}\nexport let edited = 1;\n");
+    let checkout_with = |root: &str, name: &str, first_text: &str, more: &[(&str, &str)]| {
+        let config = format!("# Core\n\n    export let name = \"{name}\";\n");
+        let repo = format!("{root}/../..");
+        let mut files: Vec<(String, String)> = vec![
+            (format!("{repo}/Cargo.toml"), "[workspace]\n".into()),
+            (
+                format!("{repo}/crates/temper-frontend/src/corelib.rs"),
+                "//! Core.\n".into(),
+            ),
+            (format!("{root}/config.temper.md"), config),
+        ];
+        for &(path, text) in temper_frontend::corelib::SOURCES {
+            let text = if path == first { first_text } else { text };
+            files.push((format!("{root}/{path}"), text.to_string()));
+        }
+        for &(path, text) in more {
+            files.push((format!("{root}/{path}"), text.to_string()));
+        }
+        let files: Vec<(&str, &str)> = files
+            .iter()
+            .map(|(p, t)| (p.as_str(), t.as_str()))
+            .collect();
+        let sources = Sources::memory(&files);
+        let libraries = find_libraries(&sources, root);
+        load_library(&sources, &libraries[0], &libraries)
+    };
+    let checkout = |root: &str, name: &str| checkout_with(root, name, &edited, &[]);
+    // Only this compiler's own checkout, by the path it was built from,
+    // is core whatever its text, not another directory laid out as one.
+    let own = own_checkout("core");
+    let library = checkout(&own, "temper-core").unwrap();
+    assert_eq!(library.files.len(), temper_frontend::corelib::SOURCES.len());
+    for file in &library.files {
+        assert!(library.in_core(file.base), "{}", file.path);
+    }
+    let reserved = "temper-core is reserved for Temper's core library";
+    for root in ["repo/lib/core", "lib/core", "/tmp/fake/lib/core"] {
+        let err = checkout(root, "temper-core").err();
+        assert!(err.is_some_and(|e| e.contains(reserved)), "{root}");
+    }
+    // Core's own code may `new` its own classes past their private
+    // constructors, but not another file's, even in its own checkout.
+    // Indented, as code in a literate file.
+    let uses = format!("{text}\n    let secret = new Secret();\n");
+    let secret = [(
+        "secret.temper",
+        "export class Secret { private constructor() {} }\n",
+    )];
+    let library = checkout_with(&own, "temper-core", &uses, &secret).unwrap();
+    let errors = settled_errors(library);
+    let refused = "Secret is not a concrete type with a public constructor";
+    assert!(errors.iter().any(|e| e.contains(refused)), "{errors:?}");
+    // Another library there isn't core: its edited file has no powers.
+    let library = checkout(&own, "other").unwrap();
+    let edited_file = (library.files.iter())
+        .find(|f| f.path.ends_with(first))
+        .unwrap();
+    assert!(!library.in_core(edited_file.base));
+    // A file whose text is exactly one of core's is core's in any
+    // library, as tests and editors settle core's files from other
+    // paths: it can do only what core's own text does. The library's
+    // other files have no powers.
+    let mut library = temper_frontend::library::Library::new();
+    library.add_file("other/copy.temper.md", text, SourceKind::Markdown);
+    library.add_file(
+        "other/mine.temper",
+        "export let xs = 1;\n",
+        SourceKind::Standalone,
+    );
+    assert!(library.in_core(library.files[0].base));
+    assert!(!library.in_core(library.files[1].base));
+}
+
+/// This compiler's own checkout's `lib/DIR`, by the path it was built
+/// from, as `project::load_library` recognizes it.
+fn own_checkout(dir: &str) -> String {
+    let lib = concat!(env!("CARGO_MANIFEST_DIR"), "/../../lib/");
+    let path = std::path::absolute(format!("{lib}{dir}")).unwrap();
+    let path = temper_frontend::project::slashed(&path.to_string_lossy());
+    let mut parts: Vec<&str> = Vec::new();
+    for part in path.split('/') {
+        match part {
+            ".." => {
+                parts.pop();
+            }
+            "." => {}
+            part => parts.push(part),
+        }
+    }
+    parts.join("/")
+}
+
+/// The error messages from settling `library`, on a thread with room for
+/// core's.
+fn settled_errors(library: temper_frontend::library::Library) -> Vec<String> {
+    std::thread::Builder::new()
+        .stack_size(64 << 20)
+        .spawn(move || {
+            let settled = temper_frontend::settle::settle(library);
+            (settled.library.diagnostics.iter())
+                .filter(|d| d.level == temper_frontend::library::Level::Error)
+                .map(|d| d.message.text())
+                .collect()
+        })
+        .unwrap()
+        .join()
+        .unwrap()
+}
+
+/// `std` is std's name, as `temper-core` is core's: another library of
+/// that name is an error. A Temper checkout's `lib/std`, edited or not,
+/// and the copy of the built-in std that editors write, are std: they
+/// settle and translate as std does, `@json` and `@connected` included,
+/// not as a library with a second std beside it.
+#[test]
+fn std_is_reserved() {
+    let config = "# Std\n\n    export let name = \"std\";\n";
+    let files = [
+        ("user/config.temper.md", config),
+        ("user/a.temper", "export let a = 1;\n"),
+    ];
+    let (passed, _, err) = test_in("user", true, move || Sources::memory(&files));
+    assert!(
+        err.contains("user: std is reserved for Temper's std library"),
+        "{err}"
+    );
+    assert!(!passed);
+    // Std's files under `root`, `json`'s edited if `edit`, with more.
+    let std_at = |root: &str, edit: bool, more: &[(&str, &'static str)]| {
+        let mut files: Vec<(String, String)> = (more.iter())
+            .map(|(p, t)| (p.to_string(), t.to_string()))
+            .collect();
+        for (path, text) in stdlib::FILES {
+            let text = match edit && path.starts_with("json/") {
+                true => format!("{text}\n    export let edited = 1;\n"),
+                false => text.to_string(),
+            };
+            files.push((format!("{root}/{path}"), text));
+        }
+        files
+    };
+    // Loads std from `files` at `root`, checks it's std, and settles and
+    // translates it without errors; or the error loading it.
+    let load = |files: Vec<(String, String)>, root: &'static str| {
+        std::thread::Builder::new()
+            .stack_size(64 << 20)
+            .spawn(move || {
+                let files: Vec<(&str, &str)> = files
+                    .iter()
+                    .map(|(p, t)| (p.as_str(), t.as_str()))
+                    .collect();
+                let sources = Sources::memory(&files);
+                let libraries = find_libraries(&sources, root);
+                let library = load_library(&sources, &libraries[0], &libraries)?;
+                for file in library.files.iter().filter(|f| f.path.starts_with(root)) {
+                    assert!(library.in_std(file.base), "{}", file.path);
+                }
+                let settled = temper_frontend::settle::settle(library);
+                let errors: Vec<String> = (settled.library.diagnostics.iter())
+                    .filter(|d| d.level == temper_frontend::library::Level::Error)
+                    .map(|d| d.message.text())
+                    .collect();
+                assert!(errors.is_empty(), "{errors:?}");
+                temper_frontend::to_tmpl::to_tmpl(&settled, "std").unwrap();
+                Ok::<(), String>(())
+            })
+            .unwrap()
+            .join()
+            .unwrap()
+    };
+    assert_eq!(load(std_at("copy", false, &[]), "copy"), Ok(()));
+    let more = [("copy/more/more.temper", "export let more = 1;\n")];
+    assert!(load(std_at("copy", false, &more), "copy").is_err());
+    assert!(load(std_at("copy", true, &[]), "copy").is_err());
+    // Only this compiler's own checkout is std whatever its text, not
+    // another directory laid out as one.
+    let repo = [
+        ("repo/Cargo.toml", "[workspace]\n"),
+        ("repo/crates/temper-frontend/src/stdlib.rs", "//! Std.\n"),
+    ];
+    let fake = std_at("repo/lib/std", true, &repo);
+    let err = load(fake, "repo/lib/std").unwrap_err();
+    assert!(
+        err.contains("std is reserved for Temper's std library"),
+        "{err}"
+    );
+    let own: &'static str = own_checkout("std").leak();
+    assert_eq!(load(std_at(own, true, &[]), own), Ok(()));
 }
 
 /// A test that loops forever runs out of its steps and fails alone; the

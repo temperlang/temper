@@ -100,18 +100,6 @@ namespace temper {
                 return std::min(a, b);
             }
 
-            inline bool near(
-            double a,
-            double b,
-            NullableParam<double> relTol_opt = NullableParam<double>(),
-            NullableParam<double> absTol_opt = NullableParam<double>()
-            ) {
-                double relTol = relTol_opt.has_value ? relTol_opt.value : 1e-9;
-                double absTol = absTol_opt.has_value ? absTol_opt.value : 0.0;
-                double margin = std::max(std::max(std::abs(a), std::abs(b)) * relTol, absTol);
-                return std::abs(a - b) <= margin;
-            }
-
             inline double sign(double f) {
                 if (f > 0) {
                     return 1.0;
@@ -308,6 +296,22 @@ namespace temper {
             }
             inline bool ne(double a, double b) {
                 return cmp(a, b) != 0;
+            }
+
+            // Equal by Temper's `==`, so NaN is near NaN, or finite and
+            // within the margin, which a NaN margin never is: `max` keeps
+            // NaN.
+            inline bool near(
+            double a,
+            double b,
+            NullableParam<double> relTol_opt = NullableParam<double>(),
+            NullableParam<double> absTol_opt = NullableParam<double>()
+            ) {
+                double relTol = relTol_opt.has_value ? relTol_opt.value : 1e-9;
+                double absTol = absTol_opt.has_value ? absTol_opt.value : 0.0;
+                double margin = max(max(std::abs(a), std::abs(b)) * relTol, absTol);
+                return eq(a, b)
+                    || (!std::isinf(a) && !std::isinf(b) && std::abs(a - b) <= margin);
             }
 
             template<class T>

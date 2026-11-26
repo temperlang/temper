@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace TemperLang.Core
 {
@@ -10,8 +11,13 @@ namespace TemperLang.Core
     {
         public static void Add<T>(this IList<T> list, T item, int? index = null)
         {
+            int at = index ?? list.Count;
+            if (at < 0 || at > list.Count)
+            {
+                Core.IndexOutOfBounds(at, list.Count);
+            }
             // Swap order.
-            list.Insert(index ?? list.Count, item);
+            list.Insert(at, item);
         }
 
         public static void AddAll<T>(
@@ -21,6 +27,10 @@ namespace TemperLang.Core
         )
         {
             int ind = index ?? list.Count;
+            if (ind < 0 || ind > list.Count)
+            {
+                Core.IndexOutOfBounds(ind, list.Count);
+            }
             if (ind == list.Count)
             {
                 // Customize in case `.Add` is more efficient then `.Insert` for
@@ -83,6 +93,89 @@ namespace TemperLang.Core
             }
         }
 
+        /// <summary>
+        /// The value at <paramref name="index"/>, panicking out of bounds,
+        /// where the indexer throws. Not an extension, as generated code
+        /// calls it statically, so consumers' lists gain no members. One
+        /// unsigned compare covers a negative index too.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static T Get<T>(IReadOnlyList<T> list, int index)
+        {
+            if ((uint)index >= (uint)list.Count)
+            {
+                Core.IndexOutOfBounds(index, list.Count);
+            }
+            return list[index];
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static T Get<T>(IList<T> list, int index)
+        {
+            if ((uint)index >= (uint)list.Count)
+            {
+                Core.IndexOutOfBounds(index, list.Count);
+            }
+            return list[index];
+        }
+
+        // Both of the others apply to a List, so neither would be chosen;
+        // this one calls it directly, not through an interface.
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static T Get<T>(List<T> list, int index)
+        {
+            if ((uint)index >= (uint)list.Count)
+            {
+                Core.IndexOutOfBounds(index, list.Count);
+            }
+            return list[index];
+        }
+
+        /// <summary>
+        /// Sets the value at <paramref name="index"/>, panicking out of
+        /// bounds, where the indexer throws, as <see cref="Get{T}(IList{T}, int)"/>.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Set<T>(IList<T> list, int index, T value)
+        {
+            if ((uint)index >= (uint)list.Count)
+            {
+                Core.IndexOutOfBounds(index, list.Count);
+            }
+            list[index] = value;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Set<T>(List<T> list, int index, T value)
+        {
+            if ((uint)index >= (uint)list.Count)
+            {
+                Core.IndexOutOfBounds(index, list.Count);
+            }
+            list[index] = value;
+        }
+
+        /// <summary>
+        /// Reduces from the first value, panicking if there's none, as
+        /// reading it does, where <c>Aggregate</c> throws.
+        /// </summary>
+        public static T Reduce<T>(IEnumerable<T> list, Func<T, T, T> accumulate)
+        {
+            using (IEnumerator<T> values = list.GetEnumerator())
+            {
+                if (!values.MoveNext())
+                {
+                    Core.IndexOutOfBounds(0, 0);
+                }
+                T result = values.Current;
+                while (values.MoveNext())
+                {
+                    result = accumulate(result, values.Current);
+                }
+                return result;
+            }
+        }
+
         public static T GetOr<T>(this IReadOnlyList<T> list, int index, T alternative)
         {
             if (index < 0 || index >= list.Count)
@@ -104,9 +197,30 @@ namespace TemperLang.Core
             Func<T, string> stringify
         ) => string.Join(separator, values.Select(stringify));
 
+        /// <summary>
+        /// Reduces from <paramref name="index"/>, none past the end. A
+        /// negative index panics as reading there does.
+        /// </summary>
+        public static TOut ReduceFromIndex<T, TOut>(
+            IEnumerable<T> list,
+            TOut initial,
+            int index,
+            Func<TOut, T, TOut> accumulate
+        )
+        {
+            if (index < 0)
+            {
+                Core.IndexOutOfBounds(index, list.Count());
+            }
+            return list.Skip(index).Aggregate(initial, accumulate);
+        }
+
         public static T RemoveLast<T>(this IList<T> list)
         {
-            // Let appropriate exceptions fly.
+            if (list.Count == 0)
+            {
+                Core.IndexOutOfBounds(-1, 0);
+            }
             T last = list[list.Count - 1];
             list.RemoveAt(list.Count - 1);
             return last;
@@ -150,12 +264,22 @@ namespace TemperLang.Core
         public static IReadOnlyList<T> Slice<T>(this IList<T> list, int start, int endExclusive) =>
             list.AsReadOnly().Slice(start, endExclusive);
 
+        /// <summary>
+        /// Sorts stably. A comparison that changes the list's length ends
+        /// the process, as <c>panic()</c> does, rather than losing what it
+        /// added.
+        /// </summary>
         public static void Sort<T>(this IList<T> list, Func<T, T, int> compare)
         {
             // TODO Implement stable in place sorting on IList<T>.
             // For now, this is still stable, but unhappily, it allocates.
             // Cache ordered result.
+            int count = list.Count;
             var sorted = list.Sorted(compare);
+            if (list.Count != count)
+            {
+                Environment.FailFast("ListBuilder changed length during sort");
+            }
             // If this is a plain List<T>, Clear promises to retain Capacity.
             list.Clear();
             AddAllAtBack(list, sorted);
@@ -195,7 +319,10 @@ namespace TemperLang.Core
             // Find defaults & bounds.
             int ind = (index ?? 0).Clamp(0, list.Count);
             int count = (removeCount ?? list.Count).Clamp(0, list.Count);
-            var values = newValues ?? Enumerable.Empty<T>();
+            // Given the list itself, its values as they were go in.
+            var values = ReferenceEquals(newValues, list)
+                ? list.ToList()
+                : newValues ?? Enumerable.Empty<T>();
             int endExclusive = (ind + count).Clamp(0, list.Count);
             count = endExclusive - ind;
             // Get result.

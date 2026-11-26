@@ -1,5 +1,5 @@
 //! Members of builtin types, with their signatures read from Kotlin
-//! Temper's `core.temper` (the repository's `lib/core/`): the final
+//! Temper's core (the repository's `lib/core/`): the final
 //! ones (`Boolean`, `Int32`, `Int64`, `Float64` and `String`), as
 //! `s.toInt32()`, `x.toString()`, `s.isEmpty` or `String.fromCodePoint(c)`,
 //! and the generic ones, as `ls.length`, `ls.get(i)` or `m.keys()`, whose
@@ -23,18 +23,17 @@ use temper_syntax::lex::SourceKind;
 use temper_syntax::parse::parse;
 use temper_syntax::tree::{NodeId, NodeKind};
 
-use crate::corelib::TEXT as CORE;
+use crate::corelib::code;
 
 /// The builtin types whose members are read: first the final ones, which
 /// no other type extends, then the generic ones, then the rest whose
 /// members are used.
-const READ_TYPES: [&str; 25] = [
+const READ_TYPES: [&str; 24] = [
     "Boolean",
     "Int32",
     "Int64",
     "Float64",
     "String",
-    "Deque",
     "DoneResult",
     "Generator",
     "GeneratorResult",
@@ -53,7 +52,7 @@ const READ_TYPES: [&str; 25] = [
     "StringIndex",
     "StringIndexOption",
     "NoStringIndex",
-    "DenseBitVector",
+    "Console",
 ];
 
 /// A type in a member's signature.
@@ -100,8 +99,12 @@ pub(super) struct CoreMember {
     pub operator: Option<String>,
     /// A method's parameters' names, `_` where not read.
     pub param_names: Vec<String>,
-    /// Where its name is in core's text.
+    /// Where its name is in core's text: an instance extension's
+    /// function's name.
     pub at: usize,
+    /// For an instance extension, the function it is, as `listedMap`
+    /// for `Listed`'s `map`.
+    pub function: Option<String>,
 }
 
 /// A builtin type's declaration: how many type parameters it has, and its
@@ -113,7 +116,7 @@ pub(super) struct CoreClass {
     pub type_param_names: Vec<String>,
     /// Its type parameters' bounds, as `MapKey<K>` for `K` and unknown for
     /// `V` in `Map<K extends MapKey<K>, V>`: unknown where none is
-    /// written, as `T` in `Deque<T>` may be nullable.
+    /// written, as `T` in `ListBuilder<T>` may be nullable.
     pub type_param_bounds: Vec<CoreType>,
     pub members: Vec<CoreMember>,
 }
@@ -135,30 +138,43 @@ pub(super) fn core_class(type_name: &str) -> &'static CoreClass {
     }
 }
 
-/// Where core declares an exported name at the start of a line, as
-/// `export class Name`, `export sealed interface Name<…>`, or `export let
-/// name(…)`: the line's offset in core, the line, and the name's offset.
+/// Where core declares an exported name at the start of a line's code,
+/// as `export class Name`, `export sealed interface Name<…>`, or `export
+/// let name(…)`: the line's offset in core, the line, and the name's
+/// offset.
 fn declaration(name: &str, lets: bool) -> Option<(usize, &'static str, usize)> {
     let declared = |line: &'static str| {
-        let rest = line.strip_prefix("export ")?;
-        let rest = (rest.strip_prefix("sealed "))
-            .or_else(|| rest.strip_prefix("/*sealed*/ "))
-            .unwrap_or(rest);
+        let rest = line.trim_start().strip_prefix("export ")?;
+        let rest = rest.strip_prefix("sealed ").unwrap_or(rest);
         let rest = (rest.strip_prefix("class "))
             .or_else(|| rest.strip_prefix("interface "))
             .or_else(|| rest.strip_prefix("let ").filter(|_| lets))?;
-        let after = rest.strip_prefix(name)?;
+        // The name, or quoted, as ``nym`true` ``.
+        let after = (rest.strip_prefix(name)).or_else(|| {
+            let quoted = rest.strip_prefix("nym`")?.strip_prefix(name)?;
+            quoted.strip_prefix('`')
+        })?;
         let ends = [' ', '<', '(', ':', ';', '\n'];
         after.starts_with(ends).then(|| line.len() - rest.len())
     };
     let mut offset = 0;
-    for line in CORE.split_inclusive('\n') {
+    for line in code().split_inclusive('\n') {
         if let Some(at) = declared(line) {
             return Some((offset, line, offset + at));
         }
         offset += line.len();
     }
     None
+}
+
+/// Where a declaration whose first line, `line`, starts at byte `start`
+/// of core's code ends: past the `}` alone on a line at `line`'s indent,
+/// or the end of core.
+fn closing_brace(start: usize, line: &str) -> usize {
+    let indent = &line[..line.len() - line.trim_start().len()];
+    let close = format!("\n{indent}}}\n");
+    let rest = &code()[start..];
+    (rest.find(&close)).map_or(code().len(), |e| start + e + close.len() - 1)
 }
 
 /// Reads one type's declaration, from the line `export class Name` or
@@ -170,9 +186,9 @@ fn read_class(name: &str) -> CoreClass {
     };
     let end = match line.trim_end().ends_with("{}") {
         true => start + line.len(),
-        false => (CORE[start..].find("\n}\n")).map_or(CORE.len(), |e| start + e + 2),
+        false => closing_brace(start, line),
     };
-    let ast = build(&parse(&CORE[start..end], SourceKind::Standalone));
+    let ast = build(&parse(&code()[start..end], SourceKind::Standalone));
     let mut reader = Reader {
         ast: &ast,
         base: start,
@@ -186,6 +202,7 @@ fn read_class(name: &str) -> CoreClass {
             reader.member(m, false, &mut members);
         }
     }
+    members.extend(read_extensions(name));
     CoreClass {
         type_params: reader.type_params.len(),
         type_param_names: reader.type_params,
@@ -194,10 +211,56 @@ fn read_class(name: &str) -> CoreClass {
     }
 }
 
+/// Core's instance extensions of a builtin type, the top-level functions
+/// marked `@extension("name")` whose first parameter is of that type, as
+/// `listedMap` for `Listed<T>`'s `map`, as members of the type: typing
+/// calls `xs.map(f)` as it would a method, with the extension's other
+/// type parameters as the member's own, and tmpl as a call of the
+/// function, `listedMap(xs, f)`. Each starts with a line of its own,
+/// `@extension("name")`, and ends with a `;` or a line `}` at its indent.
+fn read_extensions(type_name: &str) -> Vec<CoreMember> {
+    let mut out = Vec::new();
+    let mut offset = 0;
+    for line in code().split_inclusive('\n') {
+        let start = offset;
+        offset += line.len();
+        if !line.trim_start().starts_with("@extension(") {
+            continue;
+        }
+        let rest = &code()[start..];
+        let end = match (rest.find(';'), rest.find('{')) {
+            (Some(semi), Some(brace)) if semi < brace => semi + 1,
+            (Some(semi), None) => semi + 1,
+            _ => closing_brace(start, line) - start,
+        };
+        let ast = build(&parse(&rest[..end], SourceKind::Standalone));
+        let mut reader = Reader {
+            ast: &ast,
+            base: start,
+            type_params: Vec::new(),
+            type_param_bounds: Vec::new(),
+            own_params: Vec::new(),
+        };
+        // The declaration, or a block of it and the `;` after it.
+        let root = match ast.tree().kind(ast.root()) {
+            NodeKind::Block => *ast
+                .tree()
+                .children(ast.root())
+                .first()
+                .unwrap_or(&ast.root()),
+            _ => ast.root(),
+        };
+        reader.extension(root, None, type_name, &mut out);
+    }
+    out
+}
+
 /// Where core declares a builtin by name, as a byte offset of its name
-/// in [`crate::corelib::TEXT`]: a type (`String`, `Listed`, `Console`)
-/// or a function or value (`ignore`, `console`, `Int`). None for a
-/// builtin core doesn't declare, as `if` or `panic`.
+/// in [`crate::corelib::TEXT`]: a type (`String`, `Listed`, `Console`),
+/// a function or value (`ignore`, `console`, `Int`), or a builtin that
+/// only a bodiless `@connected` declaration documents (`if`, `panic`,
+/// ``nym`true` ``, whose offset is the `nym`'s). None for a builtin core
+/// doesn't declare, as `+` or `return`.
 pub fn core_declaration(name: &str) -> Option<usize> {
     declaration(name, true).map(|(_, _, at)| at)
 }
@@ -229,20 +292,197 @@ pub fn core_member_declarations(type_name: &str, member: &str) -> Vec<usize> {
     out
 }
 
-/// A type core declares that typing doesn't read, as `Console`, read the
-/// first time an editor wants one.
-fn other_class(name: &str) -> Option<&'static CoreClass> {
-    static OTHERS: std::sync::Mutex<Vec<(String, &'static CoreClass)>> =
-        std::sync::Mutex::new(Vec::new());
-    let mut others = OTHERS.lock().unwrap_or_else(|e| e.into_inner());
-    if let Some((_, class)) = others.iter().find(|(n, _)| n == name) {
-        return Some(class);
+/// What core's declaration of a builtin type lets other libraries do with
+/// it, read from its declaration, so that core alone says what's enabled
+/// (notes/core-capabilities.md).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CoreShape {
+    /// The name core declares it by, as `Int32` for `Int`.
+    pub name: &'static str,
+    /// An interface, which `new` can't make.
+    pub interface: bool,
+    /// A `sealed` interface, which only core extends.
+    pub sealed: bool,
+    /// A class with a public constructor, which `new` may call. Core
+    /// declares every class's constructor, `private` where only core
+    /// or the host makes its values.
+    pub public_constructor: bool,
+    /// What its `@mayDowncastTo(…)` says, if core marks it: `false`
+    /// where `is` and `as` may not target it, as for `Boolean`, whose
+    /// values some backends can't tell from numbers.
+    pub may_downcast: Option<bool>,
+    /// Marked `@connected`: the host supplies it, and other types may
+    /// connect to the same host type, so only a sealed supertype may
+    /// check for it, unless `@mayDowncastTo` says otherwise
+    /// (`typing/rtti.rs`).
+    pub connected: bool,
+}
+
+/// The shape of a type core declares, by name, following an alias, as
+/// `export let Int = Int32;`. None for a name core doesn't declare as a
+/// type. Core's text is parsed once, the first time it's wanted. It's
+/// the built-in core's, also while an editor changes a checkout's
+/// `lib/core/`.
+pub fn core_shape(type_name: &str) -> Option<CoreShape> {
+    static SHAPES: OnceLock<Vec<(&'static str, Declared)>> = OnceLock::new();
+    let shapes = SHAPES.get_or_init(read_shapes);
+    let mut name = type_name;
+    // Each alias once, so that aliases naming each other end.
+    let mut seen = Vec::new();
+    loop {
+        match &shapes.iter().find(|(n, _)| *n == name)?.1 {
+            Declared::Type(shape) => return Some(*shape),
+            Declared::Alias(target) if !seen.contains(target) => {
+                seen.push(target);
+                name = target;
+            }
+            Declared::Alias(_) => return None,
+        }
     }
-    declaration(name, false)?;
-    // A handful at most, kept for the process's life.
-    let class: &'static CoreClass = Box::leak(Box::new(read_class(name)));
+}
+
+/// What core's top level declares by a name.
+enum Declared {
+    Type(CoreShape),
+    /// An alias of the type it names, as `Int32` for `let Int = Int32`.
+    Alias(&'static str),
+}
+
+/// Each class, interface, and type alias core exports, by name, read from
+/// its text: `export class Name`, `export sealed interface Name<…>`, or
+/// `export let Name = Other;`, under its decorations, as
+/// `@mayDowncastTo(false)`.
+fn read_shapes() -> Vec<(&'static str, Declared)> {
+    let ast = build(&parse(code(), SourceKind::Standalone));
+    let tree = ast.tree();
+    // A name as written, or where it's in core, for the names kept.
+    let text = |node: NodeId| Some(ast.names().get(ast.name(node)?));
+    let in_core = |node: NodeId| -> &'static str {
+        let span = tree.span(node);
+        &code()[span.start as usize..span.end as usize]
+    };
+    let call = |node: NodeId| match tree.kind(node) {
+        NodeKind::Call => tree.children(node).split_first(),
+        _ => None,
+    };
+    // A declaration without its decorations, and theirs, each a name or
+    // a call, as `@export` or `@mayDowncastTo(false)`.
+    let undecorated = |mut node: NodeId| {
+        let mut decorations = Vec::new();
+        while let Some((&callee, &[decoration, target])) = call(node) {
+            if text(callee) != Some("@") {
+                break;
+            }
+            decorations.push(decoration);
+            node = target;
+        }
+        (decorations, node)
+    };
+    let named = |node: NodeId| call(node).map_or(text(node), |(&callee, _)| text(callee));
+    let mut out = Vec::new();
+    for &statement in tree.children(ast.root()) {
+        let (decorations, declaration) = undecorated(statement);
+        let has = |name: &str| decorations.iter().any(|&d| named(d) == Some(name));
+        if !has("export") {
+            continue;
+        }
+        // `export let Int = Int32;`, `(Decl ^Int \init Int32)`.
+        if tree.kind(declaration) == NodeKind::Decl {
+            let parts = tree.children(declaration);
+            let init = (parts.windows(2))
+                .find(|pair| {
+                    ast.value(pair[0])
+                        .is_some_and(|v| is_symbol(&ast, v, "init"))
+                })
+                .map(|pair| pair[1])
+                .filter(|&init| tree.kind(init) == NodeKind::RightName);
+            if let (Some(&name), Some(init)) = (parts.first(), init) {
+                out.push((in_core(name), Declared::Alias(in_core(init))));
+            }
+            continue;
+        }
+        let Some((&callee, args)) = call(declaration) else {
+            continue;
+        };
+        let interface = match text(callee) {
+            Some("class") => false,
+            Some("interface") => true,
+            _ => continue,
+        };
+        // `\word Name`.
+        let Some(name) = (args.windows(2))
+            .find(|pair| {
+                ast.value(pair[0])
+                    .is_some_and(|v| is_symbol(&ast, v, "word"))
+            })
+            .map(|pair| in_core(pair[1]))
+        else {
+            continue;
+        };
+        // `@mayDowncastTo(false)`.
+        let may_downcast = (decorations.iter())
+            .filter_map(|&d| call(d).filter(|(c, _)| text(**c) == Some("mayDowncastTo")))
+            .find_map(|(_, args)| match args.first().and_then(|&a| text(a)) {
+                Some("true") => Some(true),
+                Some("false") => Some(false),
+                _ => None,
+            });
+        // Its members, in the block of the function that ends it.
+        let body = (args.last())
+            .filter(|&&f| tree.kind(f) == NodeKind::Fun)
+            .and_then(|&f| tree.children(f).last().copied());
+        let members = body.map_or(&[][..], |b| tree.children(b));
+        let public_constructor = !interface
+            && members.iter().any(|&m| {
+                let (decorations, member) = undecorated(m);
+                let hidden = (decorations.iter())
+                    .any(|&d| matches!(named(d), Some("private" | "protected" | "static")));
+                !hidden && call(member).is_some_and(|(&c, _)| text(c) == Some("constructor"))
+            });
+        let shape = CoreShape {
+            name,
+            interface,
+            sealed: has("sealed"),
+            public_constructor,
+            may_downcast,
+            connected: has("connected"),
+        };
+        out.push((name, Declared::Type(shape)));
+    }
+    out
+}
+
+/// Whether a value is the symbol `\name`.
+fn is_symbol(ast: &Ast, value: &Value, name: &str) -> bool {
+    matches!(value, Value::Symbol(n) if ast.names().get(*n) == name)
+}
+
+/// Whether core declares a static member `name` of a builtin type, by
+/// its name in [`TYPES`], as `fromCodePoint` of `String`.
+pub(super) fn has_static(type_name: &str, name: &str) -> bool {
+    let declared = core_shape(type_name).map_or(type_name, |shape| shape.name);
+    let class = match READ_TYPES.contains(&declared) {
+        true => Some(core_class(declared)),
+        false => other_class(declared),
+    };
+    class.is_some_and(|c| (c.members.iter()).any(|m| m.is_static && m.name == name))
+}
+
+/// A type core declares that typing doesn't read, as `Console`, read the
+/// first time an editor wants one. A name core doesn't declare is kept
+/// too, so it's looked for once.
+fn other_class(name: &str) -> Option<&'static CoreClass> {
+    type Others = Vec<(String, Option<&'static CoreClass>)>;
+    static OTHERS: std::sync::Mutex<Others> = std::sync::Mutex::new(Vec::new());
+    let mut others = OTHERS.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(&(_, class)) = others.iter().find(|(n, _)| n == name) {
+        return class;
+    }
+    // A handful at most, core's and builtins' names, kept for the
+    // process's life.
+    let class = declaration(name, false).map(|_| &*Box::leak(Box::new(read_class(name))));
     others.push((name.to_string(), class));
-    Some(class)
+    class
 }
 
 /// A builtin type's public member, as editors show it.
@@ -277,7 +517,7 @@ pub fn builtin_members(type_name: &str, args: &[String]) -> Vec<BuiltinMember> {
             Some(&t) => (core_class(t), t),
             // A type core declares outside the builtins, as `Console`.
             None if !TYPES.contains(&ty) => match (other_class(ty), declaration(ty, false)) {
-                (Some(class), Some((_, _, at))) => (class, &CORE[at..at + ty.len()]),
+                (Some(class), Some((_, _, at))) => (class, &code()[at..at + ty.len()]),
                 _ => break,
             },
             None => break,
@@ -507,44 +747,169 @@ impl<'a> Reader<'a> {
             }
             // `name \typeArg O (Block param) … \outType R`.
             (Some(_), parts) => {
-                self.own_params = (parts.windows(2))
-                    .filter(|pair| self.symbol(pair[0]) == Some("typeArg"))
-                    .map(|pair| {
-                        let name = self.type_param_name(pair[1]).unwrap_or_default();
-                        let bounded = self.ast.tree().kind(pair[1]) == NodeKind::Block;
-                        (name.to_string(), bounded)
-                    })
-                    .collect();
-                let mut params = Vec::new();
-                let mut names = Vec::new();
-                let mut rest = parts;
-                while let [p, after @ ..] = rest {
-                    match self.symbol(*p) {
-                        Some("typeArg") => rest = after.get(1..).unwrap_or(&[]),
-                        Some(_) => break,
-                        None => {
-                            if tree.kind(*p) != NodeKind::Fun {
-                                params.push(self.param(*p));
-                                names.push(self.param_name(*p).unwrap_or("_").to_string());
-                            }
-                            rest = after;
-                        }
-                    }
-                }
-                let (ret, throws) = self.out_type(parts);
-                let own_params = std::mem::take(&mut self.own_params);
-                let kind = CoreMemberKind::Method {
-                    type_params: own_params.into_iter().map(|(name, _)| name).collect(),
-                    params,
-                    ret,
-                    throws,
-                };
-                self.push(tree.children(node)[0], is_static, kind, out);
-                if let Some(m) = out.last_mut() {
-                    m.param_names = names;
-                }
+                self.own_params = self.type_args(parts);
+                self.method(tree.children(node)[0], parts, 0, is_static, out);
             }
             _ => {}
+        }
+    }
+
+    /// The type parameters among a declaration's parts, `\typeArg O`,
+    /// each with whether it has a bound.
+    fn type_args(&self, parts: &[NodeId]) -> Vec<(String, bool)> {
+        (parts.windows(2))
+            .filter(|pair| self.symbol(pair[0]) == Some("typeArg"))
+            .map(|pair| {
+                let name = self.type_param_name(pair[1]).unwrap_or_default();
+                let bounded = self.ast.tree().kind(pair[1]) == NodeKind::Block;
+                (name.to_string(), bounded)
+            })
+            .collect()
+    }
+
+    /// Adds a method named at `name`, from its parts, `\typeArg O (Block
+    /// param) … \outType R`, with its own type parameters already noted,
+    /// past its first `skip` parameters.
+    fn method(
+        &mut self,
+        name: NodeId,
+        parts: &[NodeId],
+        skip: usize,
+        is_static: bool,
+        out: &mut Vec<CoreMember>,
+    ) {
+        let mut params = Vec::new();
+        let mut names = Vec::new();
+        for p in self.param_nodes(parts) {
+            params.push(self.param(p));
+            names.push(self.param_name(p).unwrap_or("_").to_string());
+        }
+        let (ret, throws) = self.out_type(parts);
+        let own_params = std::mem::take(&mut self.own_params);
+        let kind = CoreMemberKind::Method {
+            type_params: own_params.into_iter().map(|(name, _)| name).collect(),
+            params: params.split_off(skip.min(params.len())),
+            ret,
+            throws,
+        };
+        self.push(name, is_static, kind, out);
+        if let Some(m) = out.last_mut() {
+            m.param_names = names.split_off(skip.min(names.len()));
+        }
+    }
+
+    /// The parameters among a declaration's parts, after its type
+    /// parameters and before its result's type and its body.
+    fn param_nodes(&self, parts: &[NodeId]) -> Vec<NodeId> {
+        let tree = self.ast.tree();
+        let mut out = Vec::new();
+        let mut rest = parts;
+        while let [p, after @ ..] = rest {
+            match self.symbol(*p) {
+                Some("typeArg") => rest = after.get(1..).unwrap_or(&[]),
+                Some(_) => break,
+                None => {
+                    if tree.kind(*p) != NodeKind::Fun {
+                        out.push(*p);
+                    }
+                    rest = after;
+                }
+            }
+        }
+        out
+    }
+
+    /// Adds an instance extension of `type_name`, read under its
+    /// decorations, `@extension("name")` among them, as a member named
+    /// so, if its first parameter's type is `type_name` given the
+    /// function's own type parameters, as `Listed<T>`; those are the
+    /// type's, and the function's others the member's own.
+    fn extension(
+        &mut self,
+        node: NodeId,
+        named: Option<String>,
+        type_name: &str,
+        out: &mut Vec<CoreMember>,
+    ) {
+        let Some((callee, args)) = self.call_parts(node) else {
+            return;
+        };
+        let (word, name, parts) = match (callee, args) {
+            (Some("@"), [decorator, target]) => {
+                let named = match self.call_parts(*decorator) {
+                    Some((Some("extension"), [n])) => match self.ast.value(*n) {
+                        Some(Value::String(n)) => Some(n.to_string()),
+                        _ => None,
+                    },
+                    _ => named,
+                };
+                return self.extension(*target, named, type_name, out);
+            }
+            (Some("let"), [word, name, parts @ ..]) => (*word, *name, parts),
+            _ => return,
+        };
+        let Some(named) = named.filter(|_| self.symbol(word) == Some("word")) else {
+            return;
+        };
+        let all = self.type_args(parts);
+        // The first parameter's type, `Listed<T>`, its arguments each a
+        // type parameter of the function's.
+        let first = self.param_nodes(parts).first().copied();
+        let receiver = first.and_then(|p| self.param_type_node(p));
+        let Some((base, targs)) = receiver.and_then(|r| self.applied_parts(r)) else {
+            return;
+        };
+        if self.text(base) != Some(type_name) {
+            return;
+        }
+        let receiver_params: Option<Vec<String>> = (targs.iter())
+            .map(|&a| {
+                let n = self.text(a)?;
+                all.iter().any(|(p, _)| p == n).then(|| n.to_string())
+            })
+            .collect();
+        let Some(receiver_params) = receiver_params else {
+            return;
+        };
+        self.type_params = receiver_params;
+        self.own_params = (all.into_iter())
+            .filter(|(p, _)| !self.type_params.contains(p))
+            .collect();
+        let function = self.text(name).map(str::to_string);
+        self.method(name, parts, 1, false, out);
+        if let Some(m) = out.last_mut() {
+            m.name = named;
+            m.function = function;
+        }
+    }
+
+    /// A parameter's type, as written: `T` in `(Block \_complexArg_ x
+    /// \type T)`.
+    fn param_type_node(&self, node: NodeId) -> Option<NodeId> {
+        let tree = self.ast.tree();
+        let parts = tree.children(node);
+        (tree.kind(node) == NodeKind::Block).then_some(())?;
+        (parts.windows(2))
+            .find(|pair| self.symbol(pair[0]) == Some("type"))
+            .map(|pair| pair[1])
+    }
+
+    /// A type given arguments, `Listed<T>`: its base and its arguments;
+    /// a type without them has none.
+    fn applied_parts(&self, node: NodeId) -> Option<(NodeId, &'a [NodeId])> {
+        let tree = self.ast.tree();
+        match tree.kind(node) {
+            NodeKind::RightName => Some((node, &[])),
+            NodeKind::Call
+                if self.ast.value(tree.children(node)[0])
+                    == Some(&Value::Builtin(AstBuiltin::Angle)) =>
+            {
+                let (_, [base, args @ ..]) = self.call_parts(node)? else {
+                    return None;
+                };
+                Some((*base, args))
+            }
+            _ => None,
         }
     }
 
@@ -571,7 +936,10 @@ impl<'a> Reader<'a> {
         if let Some(text) = self.text(name) {
             // A name's node may span more than the name, as its type.
             let start = self.base + self.ast.tree().span(name).start as usize;
-            let at = start + (CORE[start..].find(text)).filter(|&i| i < 256).unwrap_or(0);
+            let at = start
+                + (code()[start..].find(text))
+                    .filter(|&i| i < 256)
+                    .unwrap_or(0);
             out.push(CoreMember {
                 name: text.to_string(),
                 is_static,
@@ -579,6 +947,7 @@ impl<'a> Reader<'a> {
                 operator: None,
                 param_names: Vec::new(),
                 at,
+                function: None,
             });
         }
     }
@@ -627,13 +996,13 @@ impl<'a> Reader<'a> {
         }
     }
 
-    /// A type: a builtin type named as `String` or `builtins.String`
-    /// (`%String`), maybe given arguments, as `List<T>`; the method's own
-    /// type parameter, or else the type's; `T?`; or `fn (A): R`.
+    /// A type: a builtin type by name, as `String`, maybe given
+    /// arguments, as `List<T>`; the method's own type parameter, or else
+    /// the type's; `T?`; or `fn (A): R`.
     fn type_of(&self, node: NodeId) -> CoreType {
         let tree = self.ast.tree();
         match tree.kind(node) {
-            NodeKind::RightName | NodeKind::BuiltinName => {
+            NodeKind::RightName => {
                 let Some(name) = self.text(node) else {
                     return CoreType::Unknown;
                 };
@@ -757,19 +1126,20 @@ mod tests {
         assert_eq!(*ret, CoreType::Applied(list, vec![string]));
         // Private fields aren't members to callers.
         assert!(
-            core_class("Boolean")
+            core_class("StringBuilder")
                 .members
                 .iter()
-                .all(|m| m.name != "content")
+                .all(|m| m.name != "substrings")
         );
-        // Each type is found, though some declare no members.
-        let empty = ["DoneResult", "GeneratorResult", "Promise", "NoStringIndex"];
+        // Each type is found, though some declare no members but a
+        // private constructor.
+        let empty = ["GeneratorResult", "Promise", "NoStringIndex", "DoneResult"];
         // The final types come first, the generic ones after, then the
         // rest.
         for (i, ty) in READ_TYPES.into_iter().enumerate() {
             let class = core_class(ty);
             assert_eq!(class.members.is_empty(), empty.contains(&ty), "{ty}");
-            assert_eq!(class.type_params > 0, (5..20).contains(&i), "{ty}");
+            assert_eq!(class.type_params > 0, (5..19).contains(&i), "{ty}");
         }
     }
 
@@ -795,7 +1165,10 @@ mod tests {
             core_class("PromiseBuilder").type_param_bounds,
             [builtin("AnyValue")]
         );
-        assert_eq!(core_class("Deque").type_param_bounds, [CoreType::Unknown]);
+        assert_eq!(
+            core_class("ListBuilder").type_param_bounds,
+            [CoreType::Unknown]
+        );
         assert_eq!(
             find("Listed", "length").kind,
             CoreMemberKind::Value(int.clone())
@@ -824,13 +1197,36 @@ mod tests {
                 throws: false,
             }
         );
+        assert_eq!(find("Listed", "map").function.as_deref(), Some("listedMap"));
+        assert_eq!(find("Listed", "map").param_names, ["transform"]);
         let CoreMemberKind::Method {
-            type_params, ret, ..
+            type_params,
+            params,
+            ret,
+            ..
         } = &find("Mapped", "toListWith").kind
         else {
             panic!("a method");
         };
         assert_eq!((&type_params[..], ret), (&["T".to_string()][..], &list(&o)));
+        // `fn (K, V): T`, `K` and `V` the type's, as `Mapped<K, V>` gives
+        // them to `mappedToListWith<K extends MapKey<K>, V, T>`.
+        let kv = vec![t.clone(), CoreType::Param(1)];
+        assert_eq!(params[..], [(CoreType::Fn(kv, Box::new(o.clone())), false)]);
+        let CoreMemberKind::Method { params, .. } = &find("Listed", "reduceFromIndex").kind else {
+            panic!("a method");
+        };
+        assert_eq!(params[1], (int.clone(), false));
+        // Every generic method is an extension: an interface's may be
+        // overridden, so it can't be generic.
+        for ty in ["Listed", "Mapped"] {
+            for m in &core_class(ty).members {
+                if let CoreMemberKind::Method { type_params, .. } = &m.kind {
+                    let generic = !type_params.is_empty();
+                    assert!(!generic || m.function.is_some(), "{ty}.{}", m.name);
+                }
+            }
+        }
         assert_eq!(
             find("Mapped", "get").kind,
             CoreMemberKind::Method {
@@ -849,21 +1245,22 @@ mod tests {
 
     #[test]
     fn members_and_builtins_are_located() {
-        // Each member's place is its name, in its type's declaration.
+        // Each member's place is its name, in its type's declaration,
+        // or an instance extension's function's name, after it.
         for ty in READ_TYPES {
             let decl = declaration(ty, false).expect(ty).0;
             for m in &core_class(ty).members {
                 assert!(m.at > decl, "{ty}.{}", m.name);
                 assert!(
-                    CORE[m.at..].starts_with(&m.name),
+                    code()[m.at..].starts_with(m.function.as_ref().unwrap_or(&m.name)),
                     "{ty}.{} at {}",
                     m.name,
                     m.at
                 );
             }
         }
-        let line = |at: usize| CORE[..at].lines().count();
-        let named = |at: usize, name: &str| CORE[at..].starts_with(name);
+        let line = |at: usize| code()[..at].lines().count();
+        let named = |at: usize, name: &str| code()[at..].starts_with(name);
         // Through supertypes, nearest first, and a type typing doesn't read.
         let length = core_member_declarations("List", "length");
         assert_eq!(length.len(), 2);
@@ -878,7 +1275,55 @@ mod tests {
             let at = core_declaration(name).expect(name);
             assert!(named(at, name), "{name}");
         }
-        assert_eq!(core_declaration("panic"), None);
+        // Bodiless `@connected` declarations, quoted where they must be,
+        // and none for operators or jumps.
+        assert!(named(core_declaration("panic").unwrap(), "panic;"));
+        assert!(named(core_declaration("true").unwrap(), "nym`true`;"));
+        assert_eq!(core_declaration("+"), None);
+        assert_eq!(core_declaration("return"), None);
         assert_eq!(core_declaration("Str"), None);
+    }
+
+    /// Every builtin type has core's declaration, read from its
+    /// decorations and members: one core is silent about would enable
+    /// nothing, so isn't a builtin type.
+    #[test]
+    fn shapes_are_cores() {
+        for &t in TYPES {
+            assert!(core_shape(t).is_some(), "{t}");
+        }
+        let shape = |t: &str| core_shape(t).unwrap();
+        // `Int` is an alias.
+        assert_eq!(shape("Int"), shape("Int32"));
+        assert_eq!(shape("Int").name, "Int32");
+        // `@mayDowncastTo(false)`, or nothing.
+        for t in [
+            "Boolean",
+            "Int32",
+            "Int64",
+            "Float64",
+            "String",
+            "List",
+            "MapBuilder",
+        ] {
+            assert_eq!(shape(t).may_downcast, Some(false), "{t}");
+        }
+        assert_eq!(shape("Void").may_downcast, None);
+        let listed = shape("Listed");
+        assert!(listed.interface && listed.sealed && !listed.public_constructor);
+        assert!(shape("MapKey").sealed);
+        // `@connected` classes and interfaces, not `@connected` members'.
+        assert!(shape("StringIndex").connected && shape("GeneratorResult").connected);
+        assert!(shape("Pair").connected && shape("SafeGenerator").connected);
+        assert!(!shape("AnyValue").connected && !shape("MapKey").connected);
+        assert!(shape("StringBuilder").public_constructor);
+        assert!(!shape("Empty").public_constructor);
+        assert_eq!(core_shape("ignore"), None);
+        assert_eq!(core_shape("Nope"), None);
+        // Core's no longer: null has no type of its own, and std has
+        // `Queue` and `BitVector`.
+        for gone in ["Null", "Deque", "DenseBitVector"] {
+            assert_eq!(core_shape(gone), None, "{gone}");
+        }
     }
 }

@@ -13,6 +13,7 @@ fn main() -> ExitCode {
                     let tags = match &block.kind {
                         temper_syntax::literate::Kind::Paragraph => "-".to_string(),
                         temper_syntax::literate::Kind::Code(tags) => tags.join(" "),
+                        _ => unreachable!("find_blocks has only paragraphs and code"),
                     };
                     let (b, e) = (&block.begin, &block.end);
                     println!("{tags}\t{}\t{}\t{}\t{}", b.start, b.end, e.start, e.end);

@@ -1,0 +1,31 @@
+# generated line:column -> source:line:column, and the text at each
+10:1 -> ../core-classes.temper.md:13:5  /** <- let describe(x: AnyValue): S
+14:1 -> ../core-classes.temper.md:13:5  function describe(x) { <- let describe(x: AnyValue): S
+14:10 -> ../core-classes.temper.md:13:9 (describe)  describe(x) { <- describe(x: AnyValue): Strin
+14:18 -> ../core-classes.temper.md:13:5  (x) { <- let describe(x: AnyValue): S
+15:3 -> ../core-classes.temper.md:14:7  if (x instanceof Thing) { <- if (x is Thing) {
+16:5 -> ../core-classes.temper.md:15:9  return "thing"; <- return "thing";
+18:3 -> ../core-classes.temper.md:17:7  try { <- do {
+19:5 -> ../core-classes.temper.md:18:9  requireInstanceOf(x, Thing); <- x as Thing;
+26:1 -> ../core-classes.temper.md:51:5  /** <- let isThing(x: AnyValue): Bo
+30:1 -> ../core-classes.temper.md:51:5  function isThing(x) { <- let isThing(x: AnyValue): Bo
+30:10 -> ../core-classes.temper.md:51:9 (isThing)  isThing(x) { <- isThing(x: AnyValue): Boolea
+30:17 -> ../core-classes.temper.md:51:5  (x) { <- let isThing(x: AnyValue): Bo
+31:3 -> ../core-classes.temper.md:53:7  return x instanceof Thing; <- x is T
+34:1 -> ../core-classes.temper.md:11:5  class Thing extends type() { <- class Thing {}
+34:7 -> ../core-classes.temper.md:11:11 (Thing)  Thing extends type() {} <- Thing {}
+34:12 -> ../core-classes.temper.md:11:5   extends type() {} <- class Thing {}
+36:1 -> ../core-classes.temper.md:23:5  const bits = denseBitVectorC <- let bits = new BitVector(8);
+37:1 -> ../core-classes.temper.md:24:5  /** @type {readonly number[] <- let ints: List<Int> = [1, 2]
+38:1 -> ../core-classes.temper.md:24:5  const ints = Object.freeze([ <- let ints: List<Int> = [1, 2]
+39:1 -> ../core-classes.temper.md:25:5  console.log(describe(new Thi <- console.log(describe(new Thi
+40:1 -> ../core-classes.temper.md:26:5  console.log(describe(pairCon <- console.log(describe(new Pai
+41:1 -> ../core-classes.temper.md:27:5  console.log(describe(bits)); <- console.log(describe(bits));
+42:1 -> ../core-classes.temper.md:28:5  console.log(describe("s")); <- console.log(describe("s"));
+43:1 -> ../core-classes.temper.md:29:5  console.log(describe(1)); <- console.log(describe(1));
+44:1 -> ../core-classes.temper.md:30:5  console.log(describe(ints)); <- console.log(describe(ints));
+45:1 -> ../core-classes.temper.md:31:5  console.log(describe(mapCons <- console.log(describe(new Map
+46:1 -> ../core-classes.temper.md:32:5  console.log(describe([])); <- console.log(describe(new Lis
+47:1 -> ../core-classes.temper.md:33:5  console.log(describe(dequeCo <- console.log(describe(new Que
+48:1 -> ../core-classes.temper.md:55:5  console.log(isThing(new Thin <- console.log(isThing(new Thin
+49:1 -> ../core-classes.temper.md:56:5  console.log(isThing(bits).to <- console.log(isThing(bits).to

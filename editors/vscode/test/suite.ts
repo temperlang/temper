@@ -124,14 +124,14 @@ export async function run(): Promise<void> {
     const [first] = found;
     const [uri, range] = first && "uri" in first ? [first.uri, first.range] : [first?.targetUri, first?.targetSelectionRange ?? first?.targetRange];
     assert.ok(uri && range, "a location");
-    assert.match(uri.path, /\/temper-std-[0-9a-f]+\/core\/core\.temper$/);
+    assert.match(uri.path, /\/temper-std-[0-9a-f]+\/core\/numbers\.temper\.md$/);
     // Read-only on disk, and to VS Code, as the extension marks it
     // (readonly.ts).
     assert.equal((statSync(uri.fsPath).mode & 0o222), 0, "no write permission");
     const editor = await vscode.window.showTextDocument(uri, { selection: range });
     const core = editor.document;
-    assert.equal(core.languageId, "temper");
-    assert.match(core.lineAt(range.start.line).text, /^export let Int = Int32;/);
+    assert.equal(core.languageId, "temper-markdown");
+    assert.match(core.lineAt(range.start.line).text, /^\s*export let Int = Int32;/);
     assert.equal(core.getText(range), "Int");
     assert.equal(editor.selection.start.line, range.start.line);
     // A read-only editor drops edits made in it (though `edit` still

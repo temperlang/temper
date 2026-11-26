@@ -1,6 +1,6 @@
 //! `String`, `StringIndex` and `StringBuilder` methods, matching Kotlin
-//! Temper's (`StringFns.kt`, and `core.temper` for those written in
-//! Temper there).
+//! Temper's (`StringFns.kt`, and core's Temper bodies, `lib/core/`, for
+//! those written in Temper).
 //!
 //! A string index is a UTF-8 byte offset here, where Kotlin's is a UTF-16
 //! one; Temper code can't tell, as indices are opaque. Indices out of
@@ -8,7 +8,7 @@
 //! inside a character here; such an index counts as the start of that
 //! character (Kotlin's would point at a trailing surrogate instead).
 
-use super::{Abrupt, R, Val};
+use super::{Abrupt, R, Val, out_of_bounds};
 use std::cell::RefCell;
 use std::rc::Rc;
 use temper_syntax::lex::is_kotlin_whitespace;
@@ -68,7 +68,7 @@ fn prev(text: &str, i: u32) -> usize {
 pub(super) fn get(text: &str, i: u32) -> R {
     match text[at(text, i)..].chars().next() {
         Some(c) if (i as usize) < text.len() => Ok(Val::Int(c as i32)),
-        _ => Err(Abrupt::Panic(format!("string index {i} out of bounds"))),
+        _ => Err(out_of_bounds(i, text.len())),
     }
 }
 
@@ -80,7 +80,7 @@ pub(super) fn string_method(text: &str, name: &str, args: &[Val]) -> Option<R> {
         ("hasIndex", [I(i)]) => Val::Bool((*i as usize) < text.len()),
         ("next", [I(i)]) => index(next(text, *i)),
         ("prev", [I(i)]) => index(prev(text, *i)),
-        // As `core.temper`'s, stopping at either end.
+        // As core's, stopping at either end.
         ("step", [I(i), Val::Int(by)]) => {
             let mut i = *i;
             for _ in 0..by.unsigned_abs() {
@@ -156,7 +156,7 @@ pub(super) fn string_method(text: &str, name: &str, args: &[Val]) -> Option<R> {
     }))
 }
 
-/// `s.indexOf(target, start)`, as `core.temper`'s: the first index from
+/// `s.indexOf(target, start)`, as core's: the first index from
 /// `start` where `target` is, or `StringIndex.none`. That finds an empty
 /// target at `start`, even past the end.
 fn index_of(text: &str, target: &str, start: u32) -> Val {
@@ -290,7 +290,7 @@ pub(super) fn builder_method(builder: &Rc<RefCell<String>>, name: &str, args: &[
             }
             Err(abrupt) => return Some(Err(abrupt)),
         },
-        // As `core.temper`'s, which appends the code points from `begin`
+        // As core's, which appends the code points from `begin`
         // up to `end` or the source's end.
         (
             "appendBetween",

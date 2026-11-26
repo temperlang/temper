@@ -15,7 +15,7 @@ fn every_operator_is_spelled() {
     assert_eq!(ops::unspelled(), Vec::<&str>::new());
 }
 
-/// temper-tmpl's core fixture, checked against core.temper there.
+/// temper-tmpl's core fixture, checked against core there.
 fn core() -> Program {
     let path =
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../temper-tmpl/tests/fixtures/core.tmpl");
@@ -132,6 +132,71 @@ fn helpers_are_the_runtimes_and_typed() {
             "{printed} isn't reserved"
         );
     }
+}
+
+/// Each function in `tests/luals/temper-core.lua` has, right above it,
+/// one `---@param` per parameter, in order, so LuaLS checks calls of it
+/// (an unannotated function is legal, so `--check` can't tell); and no
+/// `---@param` or `---@return` is stranded above anything else.
+#[test]
+fn stub_annotations_cover_each_parameter() {
+    let view = fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/luals/temper-core.lua"),
+    )
+    .unwrap();
+    assert_eq!(stub_problems(&view), Vec::<String>::new());
+    // As `int32_tofloat64`'s were once: stranded above another
+    // function's docs, leaving it unannotated.
+    let stranded = "---@param n integer\n---@return number\n---Its sign.\n\
+        ---@param n integer\n---@return integer\nfunction temper.int32_signum(n) end\n\n\
+        function temper.int32_tofloat64(n) end\n\n---@param x integer\n\n";
+    assert_eq!(
+        stub_problems(stranded),
+        [
+            "line 6: temper.int32_signum's ---@param lines name [\"n\", \"n\"], not [\"n\"]",
+            "line 8: temper.int32_tofloat64's ---@param lines name [], not [\"n\"]",
+            "line 10: ---@param or ---@return above no function",
+        ]
+    );
+}
+
+/// What [`stub_annotations_cover_each_parameter`] finds wrong in a stub.
+fn stub_problems(text: &str) -> Vec<String> {
+    let lines: Vec<&str> = text.lines().map(str::trim).collect();
+    let mut problems = Vec::new();
+    for (i, line) in lines.iter().enumerate() {
+        let block = || lines[..i].iter().rev().take_while(|l| l.starts_with("---"));
+        if let Some(rest) = line.strip_prefix("function ") {
+            let Some((name, params)) = rest.split_once('(') else {
+                continue;
+            };
+            let params = params.split_once(')').map_or("", |(p, _)| p);
+            let params: Vec<&str> = (params.split(',').map(str::trim))
+                .filter(|p| !p.is_empty())
+                .collect();
+            let mut named: Vec<&str> = (block())
+                .filter_map(|l| l.strip_prefix("---@param "))
+                .filter_map(|l| l.split_whitespace().next())
+                .map(|p| p.trim_end_matches('?'))
+                .collect();
+            named.reverse();
+            if named != params {
+                problems.push(format!(
+                    "line {}: {name}'s ---@param lines name {named:?}, not {params:?}",
+                    i + 1
+                ));
+            }
+        } else if line.starts_with("---@param ") || line.starts_with("---@return ") {
+            let next = lines[i..].iter().find(|l| !l.starts_with("---"));
+            if !next.is_some_and(|l| l.starts_with("function ")) {
+                problems.push(format!(
+                    "line {}: ---@param or ---@return above no function",
+                    i + 1
+                ));
+            }
+        }
+    }
+    problems
 }
 
 /// The rockspec `temper build` writes names the version generated

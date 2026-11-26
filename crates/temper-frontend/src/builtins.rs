@@ -119,6 +119,9 @@ pub enum Function {
     DoPure,
     /// `doneResult()`, a generator's `DoneResult`.
     DoneResult,
+    /// `getConsole(name)`, the `Console` for a name, or with none, the
+    /// module's, as `console` is.
+    GetConsole,
     /// `async { … }`: runs a generator block later, from the run queue.
     Async,
     /// `rgx(list(parts), list(values))`, a regex literal, `/a+/` or
@@ -146,10 +149,10 @@ pub const TYPES: &[&str] = &[
     "AnyValue",
     "Boolean",
     "Bubble",
-    "DenseBitVector",
-    "Deque",
+    "Console",
     "DoneResult",
     "Empty",
+    "Equatable",
     "Float64",
     "Generator",
     "GeneratorFn",
@@ -165,7 +168,6 @@ pub const TYPES: &[&str] = &[
     "MapKey",
     "Mapped",
     "Never",
-    "NoResult",
     "NoStringIndex",
     "Pair",
     "Promise",
@@ -244,6 +246,7 @@ pub const BUILTINS: &[(&str, Builtin)] = {
         ("empty", F(Function::Empty)),
         ("doPure", F(Function::DoPure)),
         ("doneResult", F(Function::DoneResult)),
+        ("getConsole", F(Function::GetConsole)),
         ("async", F(Function::Async)),
         ("rgx", F(Function::Rgx)),
         ("true", V(Constant::True)),
@@ -255,6 +258,11 @@ pub const BUILTINS: &[(&str, Builtin)] = {
         ("Infinity", V(Constant::Infinity)),
     ]
 };
+
+/// Names only core's own text has, as Kotlin Temper binds them in
+/// core's environment, after its own declarations and the builtins:
+/// `_listify`, the list-making function `List.of` is.
+pub const CORE_ONLY: &[(&str, Builtin)] = &[("_listify", Builtin::Function(Function::List))];
 
 impl Builtin {
     /// The builtin with a name, if any.

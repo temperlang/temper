@@ -43,6 +43,19 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.getPromiseResultSync()",
         Connection::Translate(get_promise_result),
     ),
+    ("core.listedMap()", Connection::Translate(list_map)),
+    (
+        "core.listedReduceFrom()",
+        Connection::Translate(listed_reduce_from),
+    ),
+    (
+        "core.listedReduceFromIndex()",
+        Connection::Translate(listed_reduce_from_index),
+    ),
+    (
+        "core.mappedToListWith()",
+        Connection::Translate(mapped_to_list_with),
+    ),
     (
         "core.safeAdaptGeneratorFn()",
         Connection::Translate(safe_adapt_generator_fn),
@@ -52,25 +65,6 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Static("Boolean", "toString"),
     ),
     ("core.type Console.log()", Connection::Method("log")),
-    (
-        "core.type DenseBitVector.constructor()",
-        Connection::Translate(new_bit_set),
-    ),
-    ("core.type DenseBitVector.get()", Connection::Method("get")),
-    ("core.type DenseBitVector.set()", Connection::Method("set")),
-    ("core.type Deque.add()", Connection::Method("addLast")),
-    (
-        "core.type Deque.constructor()",
-        Connection::Translate(new_deque),
-    ),
-    (
-        "core.type Deque.get isEmpty()",
-        Connection::Method("isEmpty"),
-    ),
-    (
-        "core.type Deque.removeFirst()",
-        Connection::Static("Core", "dequeRemoveFirst"),
-    ),
     ("core.type Float64.abs()", Connection::Static("Math", "abs")),
     (
         "core.type Float64.acos()",
@@ -162,6 +156,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Float64.toString()",
         Connection::Static("Core", "float64ToString"),
     ),
+    (
+        "core.type Int32.get signum()",
+        Connection::Static("Integer", "signum"),
+    ),
     ("core.type Int32.max()", Connection::Static("Math", "max")),
     ("core.type Int32.min()", Connection::Static("Math", "min")),
     ("core.type Int32.toFloat64()", Connection::Cast("double")),
@@ -224,7 +222,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type ListBuilder.reverse()",
         Connection::Static("Collections", "reverse"),
     ),
-    ("core.type ListBuilder.set()", Connection::Method("set")),
+    (
+        "core.type ListBuilder.set()",
+        Connection::Static("Core", "listSet"),
+    ),
     (
         "core.type ListBuilder.sort()",
         Connection::Translate(list_sort),
@@ -259,14 +260,9 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Static("Core", "listGetOr"),
     ),
     ("core.type Listed.join()", Connection::Translate(list_join)),
-    ("core.type Listed.map()", Connection::Translate(list_map)),
     (
         "core.type Listed.reduce()",
         Connection::Translate(listed_reduce),
-    ),
-    (
-        "core.type Listed.reduceFrom()",
-        Connection::Translate(listed_reduce_from),
     ),
     (
         "core.type Listed.slice()",
@@ -313,10 +309,6 @@ pub const TABLE: &[(&str, Connection)] = &[
     (
         "core.type Mapped.toList()",
         Connection::Static("Core", "mappedToList"),
-    ),
-    (
-        "core.type Mapped.toListWith()",
-        Connection::Translate(mapped_to_list_with),
     ),
     (
         "core.type Mapped.toMap()",
@@ -372,7 +364,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type String.get isEmpty()",
         Connection::Method("isEmpty"),
     ),
-    ("core.type String.get()", Connection::Method("codePointAt")),
+    (
+        "core.type String.get()",
+        Connection::Static("Core", "stringGet"),
+    ),
     (
         "core.type String.hasAtLeast()",
         Connection::Static("Core", "stringHasAtLeast"),
@@ -458,6 +453,34 @@ pub const TABLE: &[(&str, Connection)] = &[
     (
         "core.type ValueResult.constructor()",
         Connection::Translate(new_value_result),
+    ),
+    (
+        "std/collections.type BitVector.constructor()",
+        Connection::Translate(new_bit_set),
+    ),
+    (
+        "std/collections.type BitVector.get()",
+        Connection::Static("Core", "bitVectorGet"),
+    ),
+    (
+        "std/collections.type BitVector.set()",
+        Connection::Static("Core", "bitVectorSet"),
+    ),
+    (
+        "std/collections.type Queue.add()",
+        Connection::Method("addLast"),
+    ),
+    (
+        "std/collections.type Queue.constructor()",
+        Connection::Translate(new_deque),
+    ),
+    (
+        "std/collections.type Queue.get isEmpty()",
+        Connection::Method("isEmpty"),
+    ),
+    (
+        "std/collections.type Queue.removeFirst()",
+        Connection::Static("Core", "dequeRemoveFirst"),
     ),
     (
         "std/net.sendRequest()",
@@ -553,20 +576,6 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
         TypeConnection {
             name: "Console",
             import: "temper.core.Core.Console",
-        },
-    ),
-    (
-        "core.type DenseBitVector",
-        TypeConnection {
-            name: "BitSet",
-            import: "java.util.BitSet",
-        },
-    ),
-    (
-        "core.type Deque",
-        TypeConnection {
-            name: "Deque",
-            import: "java.util.Deque",
         },
     ),
     (
@@ -703,6 +712,20 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
         },
     ),
     (
+        "std/collections.type BitVector",
+        TypeConnection {
+            name: "BitSet",
+            import: "java.util.BitSet",
+        },
+    ),
+    (
+        "std/collections.type Queue",
+        TypeConnection {
+            name: "Deque",
+            import: "java.util.Deque",
+        },
+    ),
+    (
         "std/net.type NetResponse",
         TypeConnection {
             name: "NetResponse",
@@ -817,7 +840,8 @@ fn copy_of(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     })
 }
 
-/// `b.add(x)`, or with a place, `b.add(at, x)`.
+/// `b.add(x)`, or with a place, `Core.listAdd(b, x, at)`, which panics
+/// out of bounds.
 fn list_add(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let (b, x, at) = match args {
         [b, x] => (*b, *x, None),
@@ -835,7 +859,7 @@ fn list_add(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
         None => b.method("add", vec![x]),
         Some(at) => {
             let at = t.expr(at)?;
-            b.method("add", vec![at, x])
+            core_call(t, "listAdd".into(), vec![b, x, at])
         }
     })
 }
@@ -1017,6 +1041,30 @@ fn listed_reduce_from(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, N
             what: "`reduceFrom` with other than a list, a value, and a function".into(),
         });
     };
+    reduce_from(t, *ls, None, *initial, *f)
+}
+
+/// `reduceFromIndex` as `reduceFrom` of `Core.listFrom(ls, index)`, the
+/// items from `index`, none past the end.
+fn listed_reduce_from_index(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let [ls, initial, index, f] = args else {
+        return Err(NotYet {
+            what: "`reduceFromIndex` with other than a list, a value, an index, and a function"
+                .into(),
+        });
+    };
+    reduce_from(t, *ls, Some(*index), *initial, *f)
+}
+
+/// [`listed_reduce_from`], of the items from `index` if given.
+fn reduce_from(
+    t: &mut Translator<'_>,
+    ls: NodeId,
+    index: Option<NodeId>,
+    initial: NodeId,
+    f: NodeId,
+) -> Result<Expr, NotYet> {
+    let (ls, initial, f) = (&ls, &initial, &f);
     let item = kind_of(t, item_of(t, *ls));
     let to = kind_of(t, t.node_ty(*initial));
     if item == "Obj" && to == "Obj" && item_of(t, *ls) != t.node_ty(*initial) {
@@ -1031,7 +1079,11 @@ fn listed_reduce_from(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, N
         ("Bool", true) => Some("BooleanBiPredicate"),
         _ => None,
     };
-    let list = t.expr(*ls)?;
+    let mut list = t.expr(*ls)?;
+    if let Some(index) = index {
+        let index = t.expr(index)?;
+        list = core_call(t, "listFrom".into(), vec![list, index]);
+    }
     let initial = t.expr(*initial)?;
     let f = fn_arg(t, *f, want)?;
     Ok(core_call(
@@ -1137,9 +1189,15 @@ fn empty(t: &mut Translator<'_>, _: &[NodeId]) -> Result<Expr, NotYet> {
     Ok(Expr::name("Optional").method("empty", Vec::new()))
 }
 
-/// `new BitSet(capacity)`, as Kotlin's.
+/// `new BitSet(capacity)`, as Kotlin's; `Math.max(capacity, 0)` but for
+/// a literal, since a negative capacity is none, which `BitSet` rejects.
 fn new_bit_set(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
-    let capacity = one(t, args, "DenseBitVector")?;
+    let literal =
+        matches!(args, [x] if matches!(t.node(*x), Node::Int32Lit { value } if value >= 0));
+    let mut capacity = one(t, args, "BitVector")?;
+    if !literal {
+        capacity = Expr::name("Math").method("max", vec![capacity, Expr::Int(0)]);
+    }
     t.import("java.util.BitSet");
     Ok(Expr::New("BitSet".into(), vec![capacity]))
 }
@@ -1240,6 +1298,15 @@ fn string_builder_clear(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr,
 /// `@connected` members use their Temper bodies. Which std keys a backend
 /// connects is its own (notes/tmpl/open-questions.md, 48).
 pub const STD: &[&str] = &[
+    "std/collections.type BitVector",
+    "std/collections.type BitVector.constructor()",
+    "std/collections.type BitVector.get()",
+    "std/collections.type BitVector.set()",
+    "std/collections.type Queue",
+    "std/collections.type Queue.add()",
+    "std/collections.type Queue.constructor()",
+    "std/collections.type Queue.get isEmpty()",
+    "std/collections.type Queue.removeFirst()",
     "std/net.sendRequest()",
     "std/net.type NetResponse",
     "std/net.type NetResponse.get bodyContent()",

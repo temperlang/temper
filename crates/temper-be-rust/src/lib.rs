@@ -379,8 +379,14 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     // std's modules with support code that this crate imports, whose
     // features it turns on, as Kotlin's.
     let mut std_features: Vec<&str> = Vec::new();
+    // std's classes connected to the runtime's types (`Queue`) need
+    // nothing of `temper-std`.
+    let connected = |d| temper_tmpl::qname::connected_type(p, d, connected::connects_std);
     for module in &p.modules {
         for import in temper_tmpl::analysis::module_imports(p, module) {
+            if !import.decls.is_empty() && import.decls.iter().all(|&d| connected(d)) {
+                continue;
+            }
             if let Some(library) = library_decl(p, import.from) {
                 if !used.contains(&library) {
                     used.push(library);

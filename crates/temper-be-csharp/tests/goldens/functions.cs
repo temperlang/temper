@@ -57,7 +57,7 @@ public static class FunctionsGlobal
             int i = 0;
             while (i < length)
             {
-                int x = xs[i];
+                int x = Listed.Get(xs, i);
                 i = i + 1;
                 if (x < least)
                 {
@@ -174,7 +174,7 @@ public static class FunctionsGlobal
         }
         else
         {
-            return ls[0];
+            return Listed.Get(ls, 0);
         }
     }
 
@@ -196,6 +196,11 @@ public static class FunctionsGlobal
     internal static string GatePassed(Gate g, string s)
     {
         return s + " " + (g.Allows(1) ? "true" : "false");
+    }
+
+    internal static O ListFirstThrough<T, O>(IReadOnlyList<T> ls, Func<T, O> f)
+    {
+        return f(Listed.Get(ls, 0));
     }
 
     static FunctionsGlobal()
@@ -221,7 +226,7 @@ public static class FunctionsGlobal
             int i2 = 0;
             while (i2 < length)
             {
-                int n = ns[i2];
+                int n = Listed.Get(ns, i2);
                 i2 = i2 + 1;
                 total = total + n;
             }
@@ -274,5 +279,13 @@ public static class FunctionsGlobal
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{IntOrZero(none)} {ListFirstOr(Listed.CreateReadOnlyList<int>(4, 5), 0)} {ListFirstOr(Listed.CreateReadOnlyList<string>("x"), "-")}"));
         console.Log(StringPadded("ab", 2) + " " + StringPadded("ab", 1, "*"));
         console.Log(gate.Passed(4).ToString(CultureInfo.InvariantCulture) + " " + GatePassed(gate, "gate"));
+        IReadOnlyList<string> tags = Listed.ToReadOnlyList(Enumerable.Select(ns, (int n) => "<" + n.ToString(CultureInfo.InvariantCulture) + ">"));
+        string digits = Enumerable.Aggregate(ns, "", (string s, int n) => s + n.ToString(CultureInfo.InvariantCulture));
+        IReadOnlyDictionary<string, int> named = Mapped.ConstructMap(Listed.CreateReadOnlyList<KeyValuePair<string, int>>(new KeyValuePair<string, int>("a", 1), new KeyValuePair<string, int>("b", 2)));
+        IReadOnlyList<string> entries = Mapped.ToListWith(named, (string k, int v) => k + "=" + v.ToString(CultureInfo.InvariantCulture));
+        console.Log(Listed.Get(tags, 0) + Listed.Get(tags, 4) + " " + digits + " " + Listed.Join(entries, ",", (string e) => e));
+        string hashed = ListFirstThrough(Listed.CreateReadOnlyList<int>(3), (int n) => "#" + n.ToString(CultureInfo.InvariantCulture));
+        int bumped = ListFirstThrough(Listed.CreateReadOnlyList<int>(3), (int n) => n + 1);
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{hashed} {bumped} {ListFirstOr(Listed.CreateReadOnlyList<int>(4, 5), 0)}"));
     }
 }

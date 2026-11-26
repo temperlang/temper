@@ -33,7 +33,9 @@ Some facts about the Gregorian calendar.
      * Otherwise any sign for [num] followed by enough zeroes to bring the
      * whole length up to [minWidth].
      *
-     * ```temper
+     * (Inert, not run as an example, since `padTo` is private to this module.)
+     *
+     * ```temper inert
      * // When the width is greater than the decimal's length,
      * // we pad to that width.
      * "0123" == do {

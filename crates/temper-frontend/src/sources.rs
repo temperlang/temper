@@ -265,6 +265,7 @@ mod tests {
         assert_eq!(
             names(&sources, "-std-"),
             [
+                "collections/",
                 "config.temper.md",
                 "json/",
                 "net/",

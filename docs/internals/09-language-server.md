@@ -65,8 +65,11 @@ server goes on
   open. Go to definition into std, or to a builtin (`String`, `ignore`,
   a `ListBuilder`'s `add`), writes std's sources and core's once,
   read-only, to a directory in the system's temporary directory, and
-  points there; core's are under `core/`. Hover on a builtin shows its
-  doc comment from core.
+  points there; core's are under `core/`. Hover and signature help on
+  a builtin show its docs from core, by std's rule (a doc comment, or
+  the prose paragraphs from the one starting with its name), keywords
+  included (`if`, `orelse`), which core documents with bodiless
+  `@connected` declarations.
 
 What makes a unit stale, and the costs of settling it whole each time:
 [units and staying current](detail/09-language-server.md#units-and-staying-current)

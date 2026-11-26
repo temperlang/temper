@@ -1,0 +1,89 @@
+# namespaces/shapes.internal.js
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../shapes/shapes.temper:3:1  /** <- export let twice(x: Int): In
+7:1 -> ../shapes/shapes.temper:3:1  export function twice(x) { <- export let twice(x: Int): In
+7:17 -> ../shapes/shapes.temper:3:12 (twice)  twice(x) { <- twice(x: Int): Int { x * 2 }
+7:22 -> ../shapes/shapes.temper:3:1  (x) { <- export let twice(x: Int): In
+8:3 -> ../shapes/shapes.temper:3:33  return Math.imul(x, 2); <- x * 2 }
+11:1 -> ../shapes/shapes.temper:5:1  /** @template T */ <- export class Box<T>(public v
+12:14 -> ../shapes/shapes.temper:5:14 (Box)  Box extends type() { <- Box<T>(public value: T) {}
+12:17 -> ../shapes/shapes.temper:5:1   extends type() { <- export class Box<T>(public v
+13:3 -> ../shapes/shapes.temper:5:28  /** @type {T} */ <- value: T) {}
+14:3 -> ../shapes/shapes.temper:5:28  #value; <- value: T) {}
+16:3 -> ../shapes/shapes.temper:5:1  /** @param {T} value */ <- export class Box<T>(public v
+17:3 -> ../shapes/shapes.temper:5:1  constructor(value) { <- export class Box<T>(public v
+19:5 -> ../shapes/shapes.temper:5:28  this.#value = value; <- value: T) {}
+22:3 -> ../shapes/shapes.temper:5:28  /** @returns {T} */ <- value: T) {}
+23:3 -> ../shapes/shapes.temper:5:28  get value() { <- value: T) {}
+23:7 -> ../shapes/shapes.temper:5:28 (value)  value() { <- value: T) {}
+28:1 -> ../shapes/shapes.temper:7:1  export class Shape extends t <- export interface Shape {
+28:14 -> ../shapes/shapes.temper:7:18 (Shape)  Shape extends type() { <- Shape {
+28:19 -> ../shapes/shapes.temper:7:1   extends type() { <- export interface Shape {
+29:3 -> ../shapes/shapes.temper:8:10  /** @type {() => number} */ <- area(): Int;
+30:3 -> ../shapes/shapes.temper:8:10  area = /** @type {any} */ (u <- area(): Int;
+33:1 -> ../shapes/shapes.temper:11:1  export class Square extends <- export class Square(public s
+33:14 -> ../shapes/shapes.temper:11:14 (Square)  Square extends type(Shape) { <- Square(public side: Int) ext
+33:20 -> ../shapes/shapes.temper:11:1   extends type(Shape) { <- export class Square(public s
+34:3 -> ../shapes/shapes.temper:11:28  /** @type {number} */ <- side: Int) extends Shape {
+35:3 -> ../shapes/shapes.temper:11:28  #side; <- side: Int) extends Shape {
+37:3 -> ../shapes/shapes.temper:11:1  /** @param {number} side */ <- export class Square(public s
+38:3 -> ../shapes/shapes.temper:11:1  constructor(side) { <- export class Square(public s
+40:5 -> ../shapes/shapes.temper:11:28  this.#side = side; <- side: Int) extends Shape {
+43:3 -> ../shapes/shapes.temper:11:28  /** @returns {number} */ <- side: Int) extends Shape {
+44:3 -> ../shapes/shapes.temper:11:28  get side() { <- side: Int) extends Shape {
+44:7 -> ../shapes/shapes.temper:11:28 (side)  side() { <- side: Int) extends Shape {
+48:3 -> ../shapes/shapes.temper:12:10  /** @returns {number} */ <- area(): Int { side * side }
+49:3 -> ../shapes/shapes.temper:12:10 (area)  area() { <- area(): Int { side * side }
+50:5 -> ../shapes/shapes.temper:12:24  return Math.imul(this.#side, <- side * side }
+53:3 -> ../shapes/shapes.temper:13:17  /** <- sized(side: Int): Square { n
+57:3 -> ../shapes/shapes.temper:13:17  static sized(side) { <- sized(side: Int): Square { n
+57:10 -> ../shapes/shapes.temper:13:17 (sized)  sized(side) { <- sized(side: Int): Square { n
+58:5 -> ../shapes/shapes.temper:13:44  return new Square(side); <- new Square(side) }
+62:1 -> ../shapes/shapes.temper:1:1  export const unit = 1; <- export let unit = 1;
+# namespaces/namespaces.internal.js
+# generated line:column -> source:line:column, and the text at each
+4:1 -> ../namespaces.temper.md:42:5  /** <- let bump(shapes: Int): Int {
+8:1 -> ../namespaces.temper.md:42:5  function bump(shapes) { <- let bump(shapes: Int): Int {
+8:10 -> ../namespaces.temper.md:42:9 (bump)  bump(shapes) { <- bump(shapes: Int): Int { sha
+8:14 -> ../namespaces.temper.md:42:5  (shapes) { <- let bump(shapes: Int): Int {
+9:3 -> ../namespaces.temper.md:42:34  return (shapes + 1) | 0; <- shapes + 1 }
+12:1 -> ../namespaces.temper.md:29:5  class Circle extends type(Sh <- class Circle(public r: Int)
+12:7 -> ../namespaces.temper.md:29:11 (Circle)  Circle extends type(Shape) { <- Circle(public r: Int) extend
+12:13 -> ../namespaces.temper.md:29:5   extends type(Shape) { <- class Circle(public r: Int)
+13:3 -> ../namespaces.temper.md:29:25  /** @type {number} */ <- r: Int) extends shapes.Shape
+14:3 -> ../namespaces.temper.md:29:25  #r; <- r: Int) extends shapes.Shape
+16:3 -> ../namespaces.temper.md:29:5  /** @param {number} r */ <- class Circle(public r: Int)
+17:3 -> ../namespaces.temper.md:29:5  constructor(r) { <- class Circle(public r: Int)
+19:5 -> ../namespaces.temper.md:29:25  this.#r = r; <- r: Int) extends shapes.Shape
+22:3 -> ../namespaces.temper.md:29:25  /** @returns {number} */ <- r: Int) extends shapes.Shape
+23:3 -> ../namespaces.temper.md:29:25  get r() { <- r: Int) extends shapes.Shape
+23:7 -> ../namespaces.temper.md:29:25 (r)  r() { <- r: Int) extends shapes.Shape
+27:3 -> ../namespaces.temper.md:30:14  /** @returns {number} */ <- area(): Int { 3 * r * r }
+28:3 -> ../namespaces.temper.md:30:14 (area)  area() { <- area(): Int { 3 * r * r }
+29:5 -> ../namespaces.temper.md:30:28  return Math.imul(Math.imul(3 <- 3 * r * r }
+33:1 -> ../namespaces.temper.md:11:5  console.log(unit.toString()) <- console.log(shapes.unit.toSt
+34:1 -> ../namespaces.temper.md:12:5  console.log(twice(21).toStri <- console.log(shapes.twice(21)
+35:1 -> ../namespaces.temper.md:17:5  /** @type {Box<number>} */ <- let box: shapes.Box<Int> = n
+36:1 -> ../namespaces.temper.md:17:5  const box = new Box(3); <- let box: shapes.Box<Int> = n
+37:1 -> ../namespaces.temper.md:18:5  /** @type {readonly Shape[]} <- let squares: List<shapes.Sha
+38:1 -> ../namespaces.temper.md:18:5  const squares = Object.freez <- let squares: List<shapes.Sha
+39:1 -> ../namespaces.temper.md:23:5  { <- for (let s of squares) {
+40:3 -> ../namespaces.temper.md:23:5  const length = squares.lengt <- for (let s of squares) {
+41:3 -> ../namespaces.temper.md:23:5  let i = 0; <- for (let s of squares) {
+42:3 -> ../namespaces.temper.md:23:5  while (i < length) { <- for (let s of squares) {
+43:5 -> ../namespaces.temper.md:23:5  const s = listedGet(/** @typ <- for (let s of squares) {
+44:5 -> ../namespaces.temper.md:23:5  i = (i + 1) | 0; <- for (let s of squares) {
+45:5 -> ../namespaces.temper.md:24:7  console.log(`area ${s.area() <- console.log("area ${s.area()
+48:1 -> ../namespaces.temper.md:32:5  /** @type {readonly Shape[]} <- let mixed: List<shapes.Shape
+49:1 -> ../namespaces.temper.md:32:5  const mixed = Object.freeze( <- let mixed: List<shapes.Shape
+50:1 -> ../namespaces.temper.md:33:5  { <- for (let s of mixed) {
+51:3 -> ../namespaces.temper.md:33:5  const length2 = mixed.length <- for (let s of mixed) {
+52:3 -> ../namespaces.temper.md:33:5  let i2 = 0; <- for (let s of mixed) {
+53:3 -> ../namespaces.temper.md:33:5  while (i2 < length2) { <- for (let s of mixed) {
+54:5 -> ../namespaces.temper.md:33:5  const s2 = listedGet(/** @ty <- for (let s of mixed) {
+55:5 -> ../namespaces.temper.md:33:5  i2 = (i2 + 1) | 0; <- for (let s of mixed) {
+56:5 -> ../namespaces.temper.md:34:7  { <- when (s) {
+57:7 -> ../namespaces.temper.md:35:29  if (s2 instanceof Square) { <- console.log("a square of ${s
+58:9 -> ../namespaces.temper.md:35:29  console.log(`a square of ${/ <- console.log("a square of ${s
+60:9 -> ../namespaces.temper.md:36:17  console.log(`something else <- console.log("something else
+65:1 -> ../namespaces.temper.md:43:5  console.log(bump(box.value). <- console.log(bump(box.value).

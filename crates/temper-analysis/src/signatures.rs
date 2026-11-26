@@ -8,6 +8,7 @@
 
 use super::members::Receiver;
 use super::*;
+use temper_frontend::typing::core_member_declarations;
 
 /// A call's signature, while typing its arguments.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -85,10 +86,18 @@ impl Analysis<'_> {
     /// A member's signature, by name: a builtin type's, or a class's.
     pub(crate) fn member_callee(&self, receiver: &Receiver, name: &str) -> Option<Callee> {
         if let Some(m) = self.builtin_member(receiver, name) {
+            // Its docs from core, as hover's: an override's, or else
+            // what it overrides'.
+            let doc = match receiver {
+                Receiver::Builtin { name: owner, .. } => (core_member_declarations(owner, name))
+                    .into_iter()
+                    .find_map(builtins::core_doc),
+                Receiver::Class { .. } => None,
+            };
             return Some(Callee {
                 label: m.detail,
                 params: m.params.into_iter().map(|p| (p, None)).collect(),
-                doc: None,
+                doc,
                 subst: Subst::new(),
             });
         }

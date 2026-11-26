@@ -1,0 +1,28 @@
+# generated line:column -> source:line:column, and the text at each
+8:1 -> ../core-numbers.temper.md:32:5  /** <- let from(index: Int): Int {
+12:1 -> ../core-numbers.temper.md:32:5  function from_(index) { <- let from(index: Int): Int {
+12:10 -> ../core-numbers.temper.md:32:9 (from)  from_(index) { <- from(index: Int): Int {
+12:15 -> ../core-numbers.temper.md:32:5  (index) { <- let from(index: Int): Int {
+13:3 -> ../core-numbers.temper.md:33:7  return listedReduceFromIndex <- digits.reduceFromIndex(100,
+16:1 -> ../core-numbers.temper.md:20:5  const one = 1; <- let one = 1;
+17:1 -> ../core-numbers.temper.md:21:5  const big = Math.imul(214748 <- let big = 0x7fff_ffff * one;
+18:1 -> ../core-numbers.temper.md:22:5  const small = Math.imul(-214 <- let small = -0x8000_0000 * o
+19:1 -> ../core-numbers.temper.md:23:5  console.log(`${(big + 1) | 0 <- console.log("${big.succ()} $
+20:1 -> ../core-numbers.temper.md:24:5  const one64 = BigInt(one); <- let one64 = one.toInt64();
+21:1 -> ../core-numbers.temper.md:25:5  const big64 = clampInt64(922 <- let big64 = 9223372036854775
+22:1 -> ../core-numbers.temper.md:26:5  const small64 = clampInt64(c <- let small64 = -big64 - one64
+23:1 -> ../core-numbers.temper.md:27:5  console.log(`${clampInt64(bi <- console.log("${big64.succ().
+24:1 -> ../core-numbers.temper.md:28:5  const zero = (one - one) | 0 <- let zero = one - one;
+25:1 -> ../core-numbers.temper.md:29:5  console.log(`${Math.sign(big <- console.log("${big.signum} $
+26:1 -> ../core-numbers.temper.md:31:5  /** @type {readonly number[] <- let digits = [1, 2, 3];
+27:1 -> ../core-numbers.temper.md:31:5  const digits = Object.freeze <- let digits = [1, 2, 3];
+28:1 -> ../core-numbers.temper.md:35:5  console.log(`${from_(0)} ${f <- console.log("${from(0)} ${fr
+29:1 -> ../core-numbers.temper.md:37:5  const inf = 1e308 * 10.0; <- let inf = 1.0e308 * 10.0;
+30:1 -> ../core-numbers.temper.md:38:5  const nan = inf - inf; <- let nan = inf - inf;
+31:1 -> ../core-numbers.temper.md:39:5  const ninf = 0.0 - inf; <- let ninf = 0.0 - inf;
+32:1 -> ../core-numbers.temper.md:40:5  console.log(`${float64Near(n <- console.log("${nan.near(nan)
+33:1 -> ../core-numbers.temper.md:41:5  console.log(`${float64Near(i <- console.log("${inf.near(1.0)
+34:1 -> ../core-numbers.temper.md:42:5  console.log(`${float64Near(1 <- console.log("${1.0.near(1.5,
+35:1 -> ../core-numbers.temper.md:43:5  console.log(`${float64Near(1 <- console.log("${1.0.near(1.0
+36:1 -> ../core-numbers.temper.md:44:5  console.log(`${eqFloat64(Mat <- console.log("${nan.max(1.0)
+37:1 -> ../core-numbers.temper.md:50:5  console.log(listedReduceFrom <- console.log("${digits.reduce

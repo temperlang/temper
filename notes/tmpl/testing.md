@@ -48,7 +48,7 @@ and settle tests use:
   reader's. With core's declarations (2026-10-29), `tests/qname.rs`
   checks qnames against Kotlin's examples and their derivation, and
   `tests/core_fixture.rs` checks `tests/fixtures/core.tmpl`, a `uses`
-  section for core's members, against `lib/core/core.temper`. Beside them, `tests/model.rs` tests what text can't
+  section for core's members, against `lib/core/`. Beside them, `tests/model.rs` tests what text can't
   express (broken structure, spans), and `tests/round_trip.rs`
   generates random valid programs, which must validate without
   problems and round trip (`TMPL_FUZZ_SEED`, `TMPL_FUZZ_ROUNDS`).
@@ -332,9 +332,11 @@ As built with the Python backend (2026-10-30):
   backend runs both with goldens, under its checkers, as for function
   values; the text cases add `coalesce` and N2's problems.
 - **Core's other types** (2026-11-02): the testkit's `CORE_TYPES`
-  list, nine functional tests that use string indices and
+  list, functional tests that use string indices and
   `StringIndexOption` (`is`, `as`, and comparisons), `StringBuilder`,
-  `Empty`, `Deque`, `DenseBitVector`, and more of `String`'s and
+  `Empty`, `Deque`, `DenseBitVector` (std's `Queue` and `BitVector`
+  since 2026-11-23, whose tests, types/queue and types/bit-vector, are
+  in `WITH_STD`), and more of `String`'s and
   `Float64`'s members (`split`, `countBetween`, `near` with named
   tolerances, `pi`, and the math functions), with their to_tmpl goldens
   in the frontend's `tests/to_tmpl/`. Every backend runs them with

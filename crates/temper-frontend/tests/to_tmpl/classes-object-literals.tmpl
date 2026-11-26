@@ -7,15 +7,15 @@ uses `temper-core`#30 0.0.0-alpha.0.0 {
   class List#40<T#41> extends Listed#42<T#41> {}
   interface Listed#42<T#43> {
     connected method join#53(separator: String, stringify: fn (T#43): String): String;
-    connected method map#61<O#62>(transform: fn (T#43): O#62): List#40<O#62>;
   }
-  interface Console#65 {
-    connected method log#66(message: String): Void;
+  connected fn listedMap#61<T#62, O#63>(listed: Listed#42<T#62>, transform: fn (T#62): O#63): List#40<O#63>;
+  interface Console#66 {
+    connected method log#67(message: String): Void;
   }
-  class Boolean#78 {
-    connected method toString#79(): String;
+  class Boolean#79 {
+    connected method toString#80(): String;
   }
-  connected fn getConsole#80(name?: String): Console#65;
+  connected fn getConsole#81(name?: String): Console#66;
 }
 
 module `extra-class`#0 in "extra-class" {
@@ -46,7 +46,7 @@ module `extra-class`#0 in "extra-class" {
 }
 
 module `object-literals`#1 {
-  let ~console#67: Console#65;
+  let ~console#68: Console#66;
 
   export class Person#5 extends Stringable#2 {
     let name#16: String;
@@ -93,19 +93,19 @@ module `object-literals`#1 {
 
   class Whatever#7 {
     let blah#24: String;
-    constructor constructor#25(blech#68: Int32): Whatever#7 {
-      this.blah#24 = blech#68.toString#32(omitted);
+    constructor constructor#25(blech#69: Int32): Whatever#7 {
+      this.blah#24 = blech#69.toString#32(omitted);
     }
   }
 
   class Moreover#8 {
     let blech#26: Int32;
     let bling#27: Int32;
-    constructor constructor#29(blech#69?: Int32?, bling#70?: Int32?): Moreover#8 {
-      let blech#71: Int32 = (coalesce(blech#69, 0)): Int32;
-      let bling#72: Int32 = (coalesce(bling#70, 0)): Int32;
-      this.blech#26 = blech#71;
-      this.bling#27 = bling#72;
+    constructor constructor#29(blech#70?: Int32?, bling#71?: Int32?): Moreover#8 {
+      let blech#72: Int32 = (coalesce(blech#70, 0)): Int32;
+      let bling#73: Int32 = (coalesce(bling#71, 0)): Int32;
+      this.blech#26 = blech#72;
+      this.bling#27 = bling#73;
     }
     method toString#28(): String {
       return %String.cat(%String.cat(this.blech#26.toString#32(omitted), " "), this.bling#27.toString#32(omitted));
@@ -113,15 +113,15 @@ module `object-literals`#1 {
   }
 
   fn bother#45(): Void {
-    let whatIAm#73: Moreover#8 = new constructor#29((asNullable(1)): Int32?, omitted);
-    let moreover#74: Moreover#8 = new constructor#29((asNullable(2)): Int32?, (asNullable(3)): Int32?);
-    ~console#67.log#66(%String.cat("Moreover: ", moreover#74.toString#28()));
-    let moreover2#75: Moreover#8 = new constructor#29((asNullable(4)): Int32?, omitted);
-    ~console#67.log#66(%String.cat("Moreover again: ", moreover2#75.toString#28()));
-    let moreover3#76: Moreover#8 = new constructor#29((null): Int32?, (asNullable(7)): Int32?);
-    ~console#67.log#66(%String.cat("Moreover yet again: ", moreover3#76.toString#28()));
-    let whatever#77: Whatever#7 = new constructor#25(5);
-    ~console#67.log#66(%String.cat("Whatever: ", whatever#77.blah#24));
+    let whatIAm#74: Moreover#8 = new constructor#29((asNullable(1)): Int32?, omitted);
+    let moreover#75: Moreover#8 = new constructor#29((asNullable(2)): Int32?, (asNullable(3)): Int32?);
+    ~console#68.log#67(%String.cat("Moreover: ", moreover#75.toString#28()));
+    let moreover2#76: Moreover#8 = new constructor#29((asNullable(4)): Int32?, omitted);
+    ~console#68.log#67(%String.cat("Moreover again: ", moreover2#76.toString#28()));
+    let moreover3#77: Moreover#8 = new constructor#29((null): Int32?, (asNullable(7)): Int32?);
+    ~console#68.log#67(%String.cat("Moreover yet again: ", moreover3#77.toString#28()));
+    let whatever#78: Whatever#7 = new constructor#25(5);
+    ~console#68.log#67(%String.cat("Whatever: ", whatever#78.blah#24));
   }
 
   let whatever#46: Whatever#7;
@@ -137,14 +137,14 @@ module `object-literals`#1 {
   let twin#51: Person#5;
 
   init {
-    init ~console#67 = getConsole#80(omitted);
+    init ~console#68 = getConsole#81(omitted);
     init person1#36 = new constructor#20("Alice", (asNullable(50)): Int32?);
     init person2#37 = new constructor#20("Bob", (asNullable(45)): Int32?);
     init circle1#38 = new constructor#12(2);
     init circle2#39 = new constructor#12(1);
     init things#44 = (list((upcast(person1#36)): Stringable#2, (upcast(person2#37)): Stringable#2, (upcast(circle1#38)): Stringable#2, (upcast(circle2#39)): Stringable#2)): List#40<Stringable#2>;
-    things#44.map#61<Int32>((fn ~fn#63(thing#64: Stringable#2): Int32 {
-      ~console#67.log#66(thing#64.toString#9());
+    listedMap#61<Stringable#2, Int32>((upcast(things#44)): Listed#42<Stringable#2>, (fn ~fn#64(thing#65: Stringable#2): Int32 {
+      ~console#68.log#67(thing#65.toString#9());
       return 0;
     }): fn (Stringable#2): Int32);
     new constructor#25(456);
@@ -152,15 +152,15 @@ module `object-literals`#1 {
     new constructor#15(7, 8);
     bother#45();
     init whatever#46 = new constructor#25(6);
-    ~console#67.log#66(%String.cat("Whatever again: ", whatever#46.blah#24));
+    ~console#68.log#67(%String.cat("Whatever again: ", whatever#46.blah#24));
     init personAgain#47 = new constructor#20("Carrie", (asNullable(40)): Int32?);
     init name#48 = personAgain#47.name#16;
     init someAge#49 = personAgain#47.age#17;
-    ~console#67.log#66(%String.cat(%String.cat(%String.cat("name is ", name#48), " and age is "), someAge#49.toString#32(omitted)));
+    ~console#68.log#67(%String.cat(%String.cat(%String.cat("name is ", name#48), " and age is "), someAge#49.toString#32(omitted)));
     init personMore#50 = new constructor#20(name#48, (asNullable(35)): Int32?);
-    ~console#67.log#66(personMore#50.toString#18());
+    ~console#68.log#67(personMore#50.toString#18());
     init twin#51 = new constructor#20(person1#36.name#16, (asNullable(person1#36.age#17)): Int32?);
-    ~console#67.log#66(%String.cat("Some are twins: ", person1#36.eq#19(twin#51).toString#79()));
-    ~console#67.log#66(%String.cat("All are twins: ", person2#37.eq#19(twin#51).toString#79()));
+    ~console#68.log#67(%String.cat("Some are twins: ", person1#36.eq#19(twin#51).toString#80()));
+    ~console#68.log#67(%String.cat("All are twins: ", person2#37.eq#19(twin#51).toString#80()));
   }
 }

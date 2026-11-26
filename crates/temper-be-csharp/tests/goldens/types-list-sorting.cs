@@ -50,7 +50,7 @@ public static class SortingGlobal
         IList<Entry> entries = new List<Entry>(Listed.CreateReadOnlyList<Entry>(new Entry(0, 0), new Entry(1, 1), new Entry(2, 2), new Entry(3, 0), new Entry(4, 1), new Entry(5, 2), new Entry(6, 0), new Entry(7, 1), new Entry(8, 2)));
         IReadOnlyList<Entry> sortedEntries = Listed.Sorted(entries, (Entry a, Entry b) => a.Group - b.Group);
         console.Log(Listed.Join(sortedEntries, "\n", (Entry a) => a.ToString()));
-        console.Log(entries[1].ToString());
+        console.Log(Listed.Get(entries, 1).ToString());
         Listed.Sort(entries, (Entry a, Entry b) => a.Group - b.Group);
         console.Log(Listed.Join(entries, "\n", (Entry a) => a.ToString()));
         MungeInts(Listed.CreateReadOnlyList<int>(2, 1));

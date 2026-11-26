@@ -37,6 +37,11 @@ A patch is a list of [changes][Change].
 
 ## Finding differences
 
+It works through a breadth-first search, which takes std's `Queue` and
+`BitVector`.
+
+    let { BitVector, Queue } = import("std/collections");
+
 The diff function compares two inputs, and computes a [Patch]: the changes
 from [left] required to derive [right].
 
@@ -74,7 +79,7 @@ The reached array keeps track of which we've reached.
 
       let reachedRowLength = leftLength + 1;
       let reachedColLength = rightLength + 1;
-      let reached = new DenseBitVector(reachedRowLength * reachedColLength);
+      let reached = new BitVector(reachedRowLength * reachedColLength);
 
 This has a bit for each vertex in the edit graph.
 
@@ -86,9 +91,9 @@ This has a bit for each vertex in the edit graph.
 Keep track of paths that we need to examine and/or expand.
 Diagonals are free but right and down transitions cost one.
 
-      let costZeroEdges: Deque<DiffPath?> = new Deque<DiffPath?>();
+      let costZeroEdges: Queue<DiffPath?> = new Queue<DiffPath?>();
       costZeroEdges.add(null);
-      let costOneEdges: Deque<DiffPath> = new Deque<DiffPath>();
+      let costOneEdges: Queue<DiffPath> = new Queue<DiffPath>();
 
 > The problem of finding a longest common subsequence (LCS) is
 > equivalent to finding a path from (0,0) to (N,M) with the maximum

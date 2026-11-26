@@ -30,7 +30,7 @@ public final class ReadGlobal {
         {
             int i = 0;
             while (Core.stringHasIndex(s, i)) {
-                int cp = s.codePointAt(i);
+                int cp = Core.stringGet(s, i);
                 i = Core.stringNext(s, i);
                 console.log("  " + Integer.toString(cp, 16));
             }

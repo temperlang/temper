@@ -183,17 +183,16 @@ pub fn diff<T: Clone + Send + Sync + 'static>(
     let right_length = temper_core::ListedTrait::len(&right);
     let reached_row_length = left_length.wrapping_add(1);
     let reached_col_length = right_length.wrapping_add(1);
-    let reached = temper_core::DenseBitVector::with_capacity(
-        reached_row_length.wrapping_mul(reached_col_length),
-    );
-    let cost_zero_edges: temper_core::Deque<Option<DiffPath>> = temper_core::deque::new();
-    temper_core::deque::add(&cost_zero_edges, None);
-    let cost_one_edges: temper_core::Deque<DiffPath> = temper_core::deque::new();
+    let reached =
+        temper_core::BitVector::with_capacity(reached_row_length.wrapping_mul(reached_col_length));
+    let cost_zero_edges: temper_core::Queue<Option<DiffPath>> = temper_core::queue::new();
+    temper_core::queue::add(&cost_zero_edges, None);
+    let cost_one_edges: temper_core::Queue<DiffPath> = temper_core::queue::new();
     loop {
-        let diff_path = if !temper_core::deque::is_empty(&cost_zero_edges) {
-            temper_core::deque::remove_first(&cost_zero_edges)
-        } else if !temper_core::deque::is_empty(&cost_one_edges) {
-            Some(temper_core::deque::remove_first(&cost_one_edges))
+        let diff_path = if !temper_core::queue::is_empty(&cost_zero_edges) {
+            temper_core::queue::remove_first(&cost_zero_edges)
+        } else if !temper_core::queue::is_empty(&cost_one_edges) {
+            Some(temper_core::queue::remove_first(&cost_one_edges))
         } else {
             None
         };
@@ -289,7 +288,7 @@ pub fn diff<T: Clone + Send + Sync + 'static>(
                     )
                 {
                     reached.set(same_reached_index, true);
-                    temper_core::deque::add(
+                    temper_core::queue::add(
                         &cost_zero_edges,
                         Some(DiffPath::new(
                             left_index.wrapping_add(1),
@@ -305,7 +304,7 @@ pub fn diff<T: Clone + Send + Sync + 'static>(
                 .wrapping_add(right_index.wrapping_mul(reached_row_length));
             if !reached.get(del_reached_index) {
                 reached.set(del_reached_index, true);
-                temper_core::deque::add(
+                temper_core::queue::add(
                     &cost_one_edges,
                     DiffPath::new(
                         left_index.wrapping_add(1),
@@ -321,7 +320,7 @@ pub fn diff<T: Clone + Send + Sync + 'static>(
                 .wrapping_add(right_index.wrapping_add(1).wrapping_mul(reached_row_length));
             if !reached.get(add_reached_index) {
                 reached.set(add_reached_index, true);
-                temper_core::deque::add(
+                temper_core::queue::add(
                     &cost_one_edges,
                     DiffPath::new(
                         left_index,

@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.Deque;
 import java.util.LinkedHashMap;
@@ -331,8 +332,11 @@ public final class Core {
     public static boolean float64Near(double x, double y, Double relTol, Double absTol) {
         double rel = relTol == null ? 1e-9 : relTol;
         double abs = absTol == null ? 0.0 : absTol;
+        // Equal by Temper's `==`, so NaN is near NaN, or finite and within
+        // the margin, which a NaN margin never is: `Math.max` keeps NaN.
         double margin = Math.max(Math.max(Math.abs(x), Math.abs(y)) * rel, abs);
-        return Math.abs(x - y) <= margin;
+        return Double.compare(x, y) == 0
+            || (Double.isFinite(x) && Double.isFinite(y) && Math.abs(x - y) <= margin);
     }
 
     /**
@@ -509,6 +513,21 @@ public final class Core {
             builder.appendCodePoint(codePoint);
         }
         return builder.toString();
+    }
+
+    /**
+     * Implements {@code core.type String.get()}: the code point at
+     * {@code i}, panicking out of bounds, where
+     * {@link String#codePointAt} throws.
+     * @param s the string
+     * @param i the index
+     * @return the code point
+     */
+    public static int stringGet(String s, int i) {
+        if (i < 0 || i >= s.length()) {
+            throw indexOutOfBounds(i, s.length());
+        }
+        return s.codePointAt(i);
     }
 
     public static int stringCountBetween(String s, int begin, int end) {
@@ -743,7 +762,9 @@ public final class Core {
      * @param <E> the element type
      */
     public static <E> void listAdd(List<E> target, E elem, int at) {
-        // TODO Inline?
+        if (at < 0 || at > target.size()) {
+            throw indexOutOfBounds(at, target.size());
+        }
         target.add(at, elem);
     }
 
@@ -763,7 +784,9 @@ public final class Core {
      * @param <E> the element type
      */
     public static <E> void listAddAll(List<E> target, Collection<? extends E> source, int at) {
-        // TODO Inline?
+        if (at < 0 || at > target.size()) {
+            throw indexOutOfBounds(at, target.size());
+        }
         target.addAll(at, source);
     }
 
@@ -773,23 +796,75 @@ public final class Core {
      * @param <E> the element type
      */
     public static <E> E listRemoveLast(List<E> target) {
-        // TODO Inline?
+        if (target.isEmpty()) {
+            throw indexOutOfBounds(-1, 0);
+        }
         return target.remove(target.size() - 1);
     }
 
     /**
+     * Implements {@code core.type ListBuilder.set()}, panicking out of
+     * bounds, where {@link List#set} throws.
+     * @param target a ListBuilder instance
+     * @param index where to set the element
+     * @param elem the new element
+     * @param <E> the element type
+     */
+    public static <E> void listSet(List<E> target, int index, E elem) {
+        if (index < 0 || index >= target.size()) {
+            throw indexOutOfBounds(index, target.size());
+        }
+        target.set(index, elem);
+    }
+
+    /**
+     * A panic for an index out of bounds of a list or string of
+     * {@code length}, as core's docs say reading or writing there does: an
+     * {@code Error} that no {@code orelse} catches, as {@code panic()}
+     * throws, with the message every backend gives for a list; for a
+     * string, in its own units (UTF-16).
+     * @param index the index
+     * @param length the list's or string's length
+     * @return the error to throw
+     */
+    public static AssertionError indexOutOfBounds(int index, int length) {
+        return new AssertionError("index " + index + " out of bounds for length " + length);
+    }
+
+    /**
+     * Sorts a copy, as other backends do, so a comparison may read the
+     * builder and change it: the sorted copy replaces a change that keeps
+     * its length, and one that changes its length panics, as
+     * {@code panic()} does, with an {@code Error} that no {@code orelse}
+     * catches.
+     *
      * @param target a ListBuilder instance
      * @param <E> the element type
      */
     public static <E> void listSort(List<E> target, ToIntBiFunction<E, E> compare) {
-        target.sort((a, b) -> compare.applyAsInt(a, b));
+        List<E> items = new ArrayList<>(target);
+        items.sort((a, b) -> compare.applyAsInt(a, b));
+        replaceSorted(target, items);
     }
 
     /**
+     * As {@link #listSort}.
+     *
      * @param target a ListBuilder instance
      */
     public static void listSortInt(List<Integer> target, IntBinaryOperator compare) {
-        target.sort((a, b) -> compare.applyAsInt(a, b));
+        List<Integer> items = new ArrayList<>(target);
+        items.sort((a, b) -> compare.applyAsInt(a, b));
+        replaceSorted(target, items);
+    }
+
+    private static <E> void replaceSorted(List<E> target, List<E> sorted) {
+        if (target.size() != sorted.size()) {
+            throw new AssertionError("ListBuilder changed length during sort");
+        }
+        for (int i = 0; i < sorted.size(); i++) {
+            target.set(i, sorted.get(i));
+        }
     }
 
     /**
@@ -856,11 +931,13 @@ public final class Core {
         int sliceStart = index != null ? clamp(index, 0, size) : 0;
         int removeClamped = removeCount != null ? clamp(removeCount, 0, size) : size;
         int sliceEnd = Math.min(sliceStart + removeClamped, size);
+        // Given the builder itself, its elements as they were go in.
+        List<E> added = newElems == target ? listCopyOf(target) : newElems;
         List<E> slice = target.subList(sliceStart, sliceEnd);
         List<E> result = listCopyOf(slice);
         slice.clear();
-        if (newElems != null) {
-            slice.addAll(newElems);
+        if (added != null) {
+            slice.addAll(added);
         }
         return result;
     }
@@ -942,11 +1019,13 @@ public final class Core {
     /**
      * @param source accessed randomly for the element
      * @param index the index to the element
-     * @return the element, possibly throwing a RuntimeException if OOB
+     * @return the element, panicking out of bounds
      * @param <E> the element type
      */
     public static <E> E listGet(List<E> source, int index) {
-        // TODO Inline?
+        if (index < 0 || index >= source.size()) {
+            throw indexOutOfBounds(index, source.size());
+        }
         return source.get(index);
     }
 
@@ -1229,9 +1308,24 @@ public final class Core {
         boolean test(boolean left, boolean right);
     }
 
+    /**
+     * The items from {@code index}, none past the end, for
+     * {@code core.listedReduceFromIndex()}. A negative index fails as
+     * {@code list.get(index)} does, with an
+     * {@code IndexOutOfBoundsException}.
+     *
+     * @param list a Listed instance
+     * @param index where to start
+     * @return a view of the items from there
+     * @param <E> the element type
+     */
+    public static <E> List<E> listFrom(List<E> list, int index) {
+        return list.subList(Math.min(index, list.size()), list.size());
+    }
+
     /** <p>Implements {@code core.type Listed.reduce()}.</p> */
     public static boolean listedReduceBool(List<Boolean> source, BooleanBiPredicate reducer) {
-        return listedReduceBoolToBool(source, source.get(0), 1, (reduction, item) -> reducer.test(reduction, item));
+        return listedReduceBoolToBool(source, listGet(source, 0), 1, (reduction, item) -> reducer.test(reduction, item));
     }
 
     /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
@@ -1249,7 +1343,7 @@ public final class Core {
 
     /** <p>Implements {@code core.type Listed.reduce()}.</p> */
     public static double listedReduceDouble(List<Double> source, DoubleBinaryOperator reducer) {
-        return listedReduceDoubleToDouble(source, source.get(0), 1, (reduction, item) -> reducer.applyAsDouble(reduction, item));
+        return listedReduceDoubleToDouble(source, listGet(source, 0), 1, (reduction, item) -> reducer.applyAsDouble(reduction, item));
     }
 
     /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
@@ -1267,7 +1361,7 @@ public final class Core {
 
     /** <p>Implements {@code core.type Listed.reduce()}.</p> */
     public static int listedReduceInt(List<Integer> source, IntBinaryOperator reducer) {
-        return listedReduceIntToInt(source, source.get(0), 1, (reduction, item) -> reducer.applyAsInt(reduction, item));
+        return listedReduceIntToInt(source, listGet(source, 0), 1, (reduction, item) -> reducer.applyAsInt(reduction, item));
     }
 
     /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
@@ -1285,7 +1379,7 @@ public final class Core {
 
     /** <p>Implements {@code core.type Listed.reduce()}.</p> */
     public static <R> R listedReduceObj(List<R> source, BinaryOperator<R> reducer) {
-        return listedReduceObjToObj(source, source.get(0), 1, (reduction, item) -> reducer.apply(reduction, item));
+        return listedReduceObjToObj(source, listGet(source, 0), 1, (reduction, item) -> reducer.apply(reduction, item));
     }
 
     /** <p>Implements {@code core.type Listed.reduceFrom()}.</p> */
@@ -1522,13 +1616,44 @@ public final class Core {
     }
 
     /**
-     * Wraps the removeFirst method.
+     * std's {@code BitVector.get}: false for a negative index, which
+     * {@link BitSet#get} rejects.
+     * @param bits the bits
+     * @param index the bit's index
+     * @return whether the bit is set
+     */
+    public static boolean bitVectorGet(BitSet bits, int index) {
+        return index >= 0 && bits.get(index);
+    }
+
+    /**
+     * std's {@code BitVector.set}: panics for a negative index, even to
+     * set false, as a list's set out of bounds does, where
+     * {@link BitSet#set} throws.
+     * @param bits the bits
+     * @param index the bit's index
+     * @param value whether to set the bit
+     */
+    public static void bitVectorSet(BitSet bits, int index, boolean value) {
+        if (index < 0) {
+            // For length 0: a bit vector has none.
+            throw indexOutOfBounds(index, 0);
+        }
+        bits.set(index, value);
+    }
+
+    /**
+     * std's {@code Queue.removeFirst}: panics if empty, where
+     * {@link Deque#removeFirst} throws.
      * @param deque a deque instance
      * @return the first element removed from the deque
      * @param <E> the element type
      */
     public static <E> E dequeRemoveFirst(Deque<E> deque) {
-        // TODO Inline?
+        if (deque.isEmpty()) {
+            // Panics, as reading a list out of bounds does.
+            throw indexOutOfBounds(0, 0);
+        }
         return deque.removeFirst();
     }
 

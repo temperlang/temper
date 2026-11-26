@@ -13,7 +13,7 @@ fn every_operator_is_spelled() {
     assert_eq!(ops::unspelled(), Vec::<&str>::new());
 }
 
-/// temper-tmpl's core fixture, checked against core.temper there.
+/// temper-tmpl's core fixture, checked against core there.
 fn core() -> Program {
     let path =
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../temper-tmpl/tests/fixtures/core.tmpl");
@@ -67,7 +67,9 @@ fn type_connections_name_core_types() {
         })
         .filter_map(|d| qnames.get(d).map(|q| q.to_string()))
         .collect();
-    for key in keys {
+    // std's (`std/collections.type BitVector`), which temper-driver's
+    // `host_types` test checks against std.
+    for key in keys.into_iter().filter(|k| !k.starts_with("std/")) {
         assert!(types.iter().any(|q| q == key), "{key} isn't a type of core");
     }
 }

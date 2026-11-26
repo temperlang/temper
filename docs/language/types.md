@@ -191,16 +191,12 @@ If outside bounds, returns a backend-dependent value. Use fuzz testing.
 `:` `fn(`[*Int64*](#class-int64)`):` [*Int32*](#class-int32) `throws` [*Bubble*](#class-bubble)
 
 Bubbles if the result isn't within bounds.
-TODO Should this panic instead since this is an easy check?
-TODO But many others cost more to check the panic on fail.
 
 #### `Int64.toInt32Unsafe`
 
 `:` `fn(`[*Int64*](#class-int64)`):` [*Int32*](#class-int32)
 
 If outside bounds, returns a backend-dependent value. Use fuzz testing.
-TODO Ensure wrapping here since we do that elsewhere?
-TODO For symmetry, define consistent semantics for all lossy conversions?
 
 #### `Int64.toString`
 
@@ -288,13 +284,12 @@ An integer-like number with a decimal suffix is a Float64.
 
 Unlike in C, digits are required after a decimal point.
 
-<!-- known: I10 -->
 ```temper
 1.
 // ❌ Operator Dot expects at least 2 operands but got 1!
 ```
 
-> **Note:** Temper accepts `1.`, as a number followed by a dot ([inconsistencies](../inconsistencies.md#i10-examples-that-dont-run-as-marked)).
+> **Note:** Temper reads `1.` as a number followed by a dot, so it fails as it runs ("Malformed member access"), not as it's compiled.
 
 Which allows Temper to more flexibly combine numbers with class-use syntax.
 
@@ -424,7 +419,8 @@ Result is NaN if either is NaN.
 
 `:` `fn(`[*Float64*](#class-float64), [*Float64*](#class-float64), [*Float64*](#class-float64)&#63; \= \.\.\., [*Float64*](#class-float64)&#63; \= \.\.\.`):` [*Boolean*](#class-boolean)
 
-Matches semantics of Python's *math.isclose*.
+Like Python's *math.isclose*, except NaN is near NaN, since Temper's
+`==` treats NaN as equal to itself.
 
 #### `Float64.round`
 
@@ -552,7 +548,7 @@ Multi-quoted string content lines may be split across multiple lines.
 ~does not have a line feed at the end, until finally we get
 "to a line with a double-quote character in the margin, Phew!
 ;
-// ✅ null
+// ✅
 ```
 
 Statement fragment lines, which start with colon (`:`) allow
@@ -1307,7 +1303,8 @@ Panics for `at` less than 0 or greater than `length`.
 
 `:` `fn(`[*ListBuilder*](#class-listbuilder)&lt;[*T*](#listbuildert)&gt;, [*Listed*](#interface-listed)&lt;[*T*](#listbuildert)&gt;, [*Int32*](#class-int32)&#63; \= \.\.\.`):` [*Void*](#class-void)
 
-Panics for `at` less than 0 or greater than `length`.
+Panics for `at` less than 0 or greater than `length`. Given this
+builder, adds a copy of its values.
 
 #### `ListBuilder.clear`
 
@@ -1338,7 +1335,8 @@ Panics on index out of bounds.
 
 `:` `fn(`[*ListBuilder*](#class-listbuilder)&lt;[*T*](#listbuildert)&gt;, `fn(`[*T*](#listbuildert), [*T*](#listbuildert)`):` [*Int32*](#class-int32)`):` [*Void*](#class-void)
 
-Sorts in place. Uses stable sorting.
+Sorts in place. Uses stable sorting. Panics if `compare` adds or
+removes values.
 
 #### `ListBuilder.splice`
 
@@ -1346,7 +1344,8 @@ Sorts in place. Uses stable sorting.
 
 Removes `removeCount` items starting at `index`, or until the end of the
 current items. Returns the removed items, and `newValues` are put in their
-place. The `index` is clamped to current bounds.
+place, as they were before the call if they're this builder. The `index`
+is clamped to current bounds.
 
 #### `ListBuilder.toList`
 
@@ -1408,7 +1407,7 @@ True if this contains no elements.
 
 `:` `fn(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, [*Int32*](#class-int32)`):` [*T*](#listedt)
 
-The i<sup>th</sup> element, or [*Bubble*](builtins.md#bubble-1) if *i* is outside the range \[0, [length]\).
+The i<sup>th</sup> element; panics if *i* is outside the range \[0, [length]\).
 
 ```temper
 let ls = ["a", "b", "c"]; // List of length 3
@@ -1419,7 +1418,8 @@ console.log(ls[1]); //!outputs "b"
 // ✅
 ```
 
-Out of bounds results in panic. Check in advance when handling indices of
+Out of bounds results in panic, "index 3 out of bounds for length 3"
+on every backend. Check in advance when handling indices of
 uncertain origin. Panics can't be handled by code in Temper, although some
 backend languages can handle their particular implementations of panic.
 
@@ -1458,6 +1458,8 @@ Always creates a new object and backing buffer even if this is already a
 
 `:` `fn<`*O*`>(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, `fn(`[*T*](#listedt)`):` *O*`):` [*List*](#class-list)&lt;*O*&gt;
 
+An [instance extension](builtins.md#extension-decorator), core's `listedMap`, as an interface's methods can't be generic.
+
 Maps elements using [transform].
 
 #### `Listed.filter`
@@ -1475,11 +1477,15 @@ Panic if empty.
 
 `:` `fn<`*O*`>(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, *O*, `fn(`*O*, [*T*](#listedt)`):` *O*`):` *O*
 
+An [instance extension](builtins.md#extension-decorator), core's `listedReduceFrom`, as an interface's methods can't be generic.
+
 Reduce to a single value, starting from the given initial value.
 
 #### `Listed.reduceFromIndex`
 
 `:` `fn<`*O*`>(`[*Listed*](#interface-listed)&lt;[*T*](#listedt)&gt;, *O*, [*Int32*](#class-int32), `fn(`*O*, [*T*](#listedt)`):` *O*`):` *O*
+
+An [instance extension](builtins.md#extension-decorator), core's `listedReduceFromIndex`, as an interface's methods can't be generic.
 
 #### `Listed.join`
 
@@ -1649,6 +1655,8 @@ for each key and value in the [*Mapped*](#interface-mapped).
 
 `:` `fn<`*T*`>(`[*Mapped*](#interface-mapped)&lt;[*K*](#mappedk), [*V*](#mappedv)&gt;, `fn(`[*K*](#mappedk), [*V*](#mappedv)`):` *T*`):` [*List*](#class-list)&lt;*T*&gt;
 
+An [instance extension](builtins.md#extension-decorator), core's `mappedToListWith`, as an interface's methods can't be generic.
+
 Similar to [`Mapped.toListBuilderWith`](#mappedtolistbuilderwith).
 
 Calls [func] on each key and value in the [*Mapped*](#interface-mapped).
@@ -1656,6 +1664,8 @@ Calls [func] on each key and value in the [*Mapped*](#interface-mapped).
 #### `Mapped.toListBuilderWith`
 
 `:` `fn<`*T*`>(`[*Mapped*](#interface-mapped)&lt;[*K*](#mappedk), [*V*](#mappedv)&gt;, `fn(`[*K*](#mappedk), [*V*](#mappedv)`):` *T*`):` [*ListBuilder*](#class-listbuilder)&lt;*T*&gt;
+
+An [instance extension](builtins.md#extension-decorator), core's `mappedToListBuilderWith`, as an interface's methods can't be generic.
 
 Returns a [*ListBuilder*](#class-listbuilder)<*T*>.
 
@@ -1712,98 +1722,10 @@ user-implementable in the future.
 
 `extends` [*AnyValue*](#interface-anyvalue)
 
-## *class Deque*
+## Queues and bit vectors
 
-A *Deque* or double-ended queue allows for breadth-first processing via
-efficient adds at the end and efficient removal from the front.
-
-```temper
-let deque = new Deque<String>();
-deque.add("a");
-deque.add("b");
-
-console.log(deque.removeFirst()); //!outputs "a"
-
-deque.add("c");
-deque.add("d");
-
-while (!deque.isEmpty) {
-  console.log(deque.removeFirst()); //!outputs ["b", "c", "d"]
-}
-// ✅
-```
-
-*Deque* `<`[*T*](#dequet)`>` `extends` [*AnyValue*](#interface-anyvalue)
-
-### typeFormals
-
-#### `Deque.<T>`
-
-`extends` [*AnyValue*](#interface-anyvalue)
-
-### properties
-
-#### `Deque.isEmpty`
-
-`:` [*Boolean*](#class-boolean)
-
-True if this contains no elements.
-
-### methods
-
-#### `Deque.constructor`
-
-`:` `fn(`[*Deque*](#class-deque)&lt;[*T*](#dequet)&gt;`):` [*Void*](#class-void)
-
-#### `Deque.add`
-
-`:` `fn(`[*Deque*](#class-deque)&lt;[*T*](#dequet)&gt;, [*T*](#dequet)`):` [*Void*](#class-void)
-
-Add an element at the end.
-
-#### `Deque.removeFirst`
-
-`:` `fn(`[*Deque*](#class-deque)&lt;[*T*](#dequet)&gt;`):` [*T*](#dequet)
-
-Removes and returns the first element. Panics if empty.
-
-## *class DenseBitVector*
-
-A bit vector where the probability of any bit with index in \[0, capacity\]
-is high.  This does not assume that the probability of a bit being set
-depends on the probability of an adjacent bit being set.
-
-*DenseBitVector* `extends` [*AnyValue*](#interface-anyvalue)
-
-### methods
-
-#### `DenseBitVector.constructor`
-
-`:` `fn(`[*DenseBitVector*](#class-densebitvector), [*Int32*](#class-int32)`):` [*Void*](#class-void)
-
-#### `DenseBitVector.get`
-
-`:` `fn(`[*DenseBitVector*](#class-densebitvector), [*Int32*](#class-int32)`):` [*Boolean*](#class-boolean)
-
-The bit at the given [index].  If a bit has not previously been set then
-it is assumed to be [*false*](builtins.md#false).
-
-#### `DenseBitVector.set`
-
-`:` `fn(`[*DenseBitVector*](#class-densebitvector), [*Int32*](#class-int32), [*Boolean*](#class-boolean)`):` [*Void*](#class-void)
-
-Sets the bit at [index] to [newValue].
-After this, [get],  given [index], will return [newValue].
-
-```temper
-let bitVector = new DenseBitVector(16);
-console.log(bitVector.get(3).toString()); //!outputs "false"
-bitVector.set(3, true);
-console.log(bitVector.get(3).toString()); //!outputs "true"
-bitVector.set(3, false);
-console.log(bitVector.get(3).toString()); //!outputs "false"
-// ✅
-```
+`Queue` and `BitVector`, once core's `Deque` and `DenseBitVector`, are
+in std: see [`std/collections`](../std/collections.md).
 
 ## Function Types
 
@@ -1811,7 +1733,7 @@ The keyword `fn` is used to denote function values and types.
 
 | Example | Means |
 | ------- | ----- |
-| `fn (): Void` | Type for a function that takes no arguments and returns the `void` value |
+| `fn (): Void` | Type for a function that takes no arguments and returns no value |
 | `fn (Int): Int` | Type for a function that takes one integer and returns an integer |
 | `fn<T> (T): List<T>` | Type for a generic function with a type parameter `<T>` |
 | `fn (...Int): Boolean` | Type for a function that takes any number of integers |
@@ -1853,19 +1775,6 @@ this in the future.
 
 `:` `fn(`[*Equatable*](#interface-equatable)&lt;[*EQ*](#equatableeq)&gt;, [*EQ*](#equatableeq)`):` [*Boolean*](#class-boolean)
 
-## *class Null*
-
-The singleton [*null*](builtins.md#null) value represents
-the absence of a value of another type.
-
-In Temper, *null* is a valid value of any nullable type,
-any regular type followed by `?`.
-
-*String?* is a valid type for a local variable or function
-input that might refer to either *null* or a string value.
-
-*Null* `extends` [*AnyValue*](#interface-anyvalue)
-
 ## *class Empty*
 
 *Empty* is the type for a stateless singleton value which may be used
@@ -1874,7 +1783,7 @@ judiciously to work around some problems in generic programming.
 When not solving generic programming problems, prefer [*Void*](#class-void).
 *Void* translates to the idiomatic no-usable-result concept which for many
 typed functional languages is the same as *Empty* but for many dynamic
-languages is the same as [*Null*](#class-null).
+languages is the same as [*null*](builtins.md#null).
 
 *Empty* differs from [*Void*](#class-void) in that it can be used as the type
 of a function input and of a local variable.
@@ -1884,7 +1793,7 @@ languages; a function may be effectively *Void* but can instead return
 *Empty* allowing its return type to bind to agree with a type parameter.
 
 As seen below, the empty value may be retrieved by calling the `empty()`
-function, and is distinct from [*Null*](#class-null).
+function, and is distinct from [*null*](builtins.md#null).
 
 ```temper
 let e: Empty? = empty();

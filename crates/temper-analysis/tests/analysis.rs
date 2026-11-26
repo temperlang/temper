@@ -60,6 +60,105 @@ fn hover_on_a_local() {
     assert_eq!(h.ty.as_deref(), Some("Int32"));
 }
 
+/// Null has no type of its own (notes/typing.md, "Null"): hover shows
+/// the nullable type its place wants, and never a `Null` type.
+#[test]
+fn hover_on_null_shows_its_place() {
+    let source = r#"let a: Int? = null;
+let f(s: String?): Void {}
+f(null);
+let g(): Boolean? { null }
+let x: String? = "x";
+let c = x == null;
+let xs: List<Int?> = [1, null];
+class Box(public v: Float64?) {}
+let b = new Box(null);
+let id<T>(t: T): T { t }
+let i = id<String?>(null);
+"#;
+    let a = analyze(source);
+    for (nth, ty) in [
+        (0, "Int32?"),
+        (1, "String?"),
+        (2, "Boolean?"),
+        (3, "String?"),
+        (4, "Int32?"),
+        (5, "Float64?"),
+        (6, "String?"),
+    ] {
+        let h = a.hover(MAIN, at(source, "null", nth, 1)).unwrap();
+        assert_eq!(h.name.as_deref(), Some("null"), "null {nth}");
+        assert_eq!(h.ty.as_deref(), Some(ty), "null {nth}");
+    }
+}
+
+/// Hover never shows null's internal type (`Never?`), nor a `Null`,
+/// for a null in any place, annotated or not, nor for what's declared
+/// with only null (an error), in functions and classes too.
+#[test]
+fn hover_on_null_never_shows_never() {
+    let source = r#"class Box(public v: String?) {}
+let take(s: String?): String { s ?? "none" }
+let give(c: Boolean): Int? { if (c) { 1 } else { null } }
+let back(): String? { return null }
+let id<T>(x: T): T { x }
+let or<T>(x: T?, d: T): T { x ?? d }
+let n: Int? = null;
+var m: Int? = 1;
+m = null;
+let xs: List<Int?> = [1, null];
+let ys = [null, 2];
+let b = new Box(null);
+let g: String? = id<String?>(null);
+let h: Int? = give(true) ?? null;
+let e = if (n == null) { 1 } else { null };
+let k = give(true) ?? null;
+let o = or(null, 3);
+let a = null;
+let f(): Void { let z = null; console.log("${z == null}"); }
+class C { public var x = null; }
+"#;
+    let a = analyze(source);
+    // Each null's type is the place's, or none where no place gives one
+    // (`?`, as typing has no type, for a declaration of only null).
+    let mut shown = Vec::new();
+    for nth in 0..source.matches("null").count() {
+        let h = a.hover(MAIN, at(source, "null", nth, 1)).unwrap();
+        shown.push(h.ty);
+    }
+    let some = |t: &str| Some(t.to_string());
+    let expected = [
+        some("Int32?"),  // give's else
+        some("String?"), // return
+        some("Int32?"),  // n
+        some("Int32?"),  // m = null
+        some("Int32?"),  // [1, null] for a List<Int?>
+        None,            // [null, 2]
+        some("String?"), // new Box(null)
+        some("String?"), // id<String?>(null)
+        None,            // ?? null for an Int?
+        some("Int32?"),  // n == null
+        None,            // e's else
+        None,            // k's ?? null
+        some("Int32?"),  // or(null, 3)
+        None,            // let a = null
+        None,            // let z = null
+        None,            // z == null
+        None,            // var x = null
+    ];
+    assert_eq!(shown, expected);
+    for (needle, ty) in [
+        ("let a ", "?"),
+        ("let z ", "?"),
+        ("var x ", "?"),
+        ("let e ", "Int32?"),
+        ("let k ", "Int32?"),
+    ] {
+        let h = a.hover(MAIN, at(source, needle, 0, 4)).unwrap();
+        assert_eq!(h.ty.as_deref(), Some(ty), "{needle}");
+    }
+}
+
 #[test]
 fn hover_on_a_declaration() {
     let a = analyze(STACK);
@@ -331,6 +430,116 @@ fn definition_into_std() {
     assert!(path.starts_with("-std-/regex/"), "{path}");
 }
 
+const SHADOWS: &str = "class String(public text: Int) {}
+let s = new String(3);
+let t = s.text;
+";
+
+/// A module's own declaration of a name core declares too, as `String`,
+/// is what the name means there, to editors as to typing.
+#[test]
+fn own_names_shadow_cores() {
+    let a = analyze(SHADOWS);
+    assert!(a.diagnostics().is_empty(), "{:?}", a.diagnostics());
+    let d = a.definition(MAIN, at(SHADOWS, "String(3", 0, 1)).unwrap();
+    assert_eq!(
+        (d.file, d.span.start),
+        (MAIN, at(SHADOWS, "String(public", 0, 0))
+    );
+    let d = a.definition(MAIN, at(SHADOWS, "s.text", 0, 3)).unwrap();
+    assert_eq!(d.span.start, at(SHADOWS, "text: Int", 0, 0));
+    let h = a.hover(MAIN, at(SHADOWS, "String(3", 0, 1)).unwrap();
+    assert_eq!(h.kind, Some(DeclKind::Class));
+    let h = a.hover(MAIN, at(SHADOWS, "t =", 0, 0)).unwrap();
+    assert_eq!(h.headline(), "let t: Int32");
+}
+
+const CORE_NS: &str = "let core = import(\"core\");
+class String(public n: Int) {}
+let s: core.String = \"a\";
+let m: String = new String(1);
+";
+
+/// Core imported as a namespace: `core.String` is core's, which go to
+/// definition finds in core, where the module's own `String` is its
+/// class; and the namespace goes nowhere, as core is no module.
+#[test]
+fn core_namespace() {
+    let a = analyze(CORE_NS);
+    assert!(a.diagnostics().is_empty(), "{:?}", a.diagnostics());
+    let d = a
+        .core_definition(MAIN, at(CORE_NS, "core.String", 0, 6))
+        .unwrap();
+    assert_eq!(
+        &d.source[d.span.start as usize..d.span.end as usize],
+        "String"
+    );
+    assert_eq!(a.definition(MAIN, at(CORE_NS, "core.String", 0, 6)), None);
+    let h = a.hover(MAIN, at(CORE_NS, "core.String", 0, 6)).unwrap();
+    assert_eq!(h.kind, Some(DeclKind::Builtin));
+    let h = a.hover(MAIN, at(CORE_NS, "core.String", 0, 1)).unwrap();
+    assert_eq!(h.headline(), "let core = import(\"core\")");
+    assert_eq!(a.definition(MAIN, at(CORE_NS, "core.String", 0, 1)), None);
+    let d = a.definition(MAIN, at(CORE_NS, "String(1", 0, 1)).unwrap();
+    assert_eq!(d.span.start, at(CORE_NS, "String(public", 0, 0));
+    assert_eq!(a.core_definition(MAIN, at(CORE_NS, "String(1", 0, 1)), None);
+}
+
+const SPACES: &str = r#"let rx = import("std/regex");
+let pattern: rx.Regex = new rx.Regex(rx.Dot);
+let found = pattern.found("a");
+"#;
+
+/// A module namespace: hover shows its import, at its declaration and
+/// its uses; its members are their exports; go to definition opens its
+/// module, or a member's declaration; and completion after `rx.` lists
+/// its exports.
+#[test]
+fn namespaces() {
+    let a = analyze(SPACES);
+    let text = |span: Span| &SPACES[span.start as usize..span.end as usize];
+    for offset in [at(SPACES, "rx =", 0, 0), at(SPACES, "rx.Regex", 0, 1)] {
+        let h = a.hover(MAIN, offset).unwrap();
+        assert_eq!(h.headline(), "let rx = import(\"std/regex\")");
+        assert_eq!(h.kind, Some(DeclKind::Namespace));
+        assert_eq!(text(h.span), "rx");
+    }
+    let h = a.hover(MAIN, at(SPACES, "rx.Regex", 0, 4)).unwrap();
+    assert_eq!(h.headline(), "class Regex");
+    assert_eq!(text(h.span), "Regex");
+    let file_path =
+        |d: &temper_analysis::Location| a.settled.library.files[d.file.0 as usize].path.clone();
+    let d = a.definition(MAIN, at(SPACES, "rx.Dot", 0, 0)).unwrap();
+    assert!(file_path(&d).starts_with("-std-/regex/"), "{d:?}");
+    assert_eq!(d.span.start, 0);
+    let d = a.definition(MAIN, at(SPACES, "rx.Dot", 0, 4)).unwrap();
+    assert!(file_path(&d).starts_with("-std-/regex/"), "{d:?}");
+    let std_text = a.settled.library.files[d.file.0 as usize].parsed.source();
+    assert_eq!(&std_text[d.span.start as usize..d.span.end as usize], "Dot");
+
+    let source = format!("{SPACES}rx.");
+    let a = analyze(&source);
+    let found = a.completions(MAIN, source.len() as u32);
+    let names: Vec<&str> = found.iter().map(|c| c.name.as_str()).collect();
+    for name in ["Regex", "Dot", "oneOrMore", "CodePoints"] {
+        assert!(names.contains(&name), "{name} in {names:?}");
+    }
+    assert!(!names.contains(&"regexRefs"), "{names:?}");
+
+    // After `core.`, core's names, as `core.` reads them: its types and
+    // values, not its macros or internals.
+    let source = "let core = import(\"core\");\ncore.";
+    let a = analyze(source);
+    let found = a.completions(MAIN, source.len() as u32);
+    let names: Vec<&str> = found.iter().map(|c| c.name.as_str()).collect();
+    for name in ["String", "List", "console", "Int"] {
+        assert!(names.contains(&name), "{name} in {names:?}");
+    }
+    for name in ["if", "_listify", "class", "."] {
+        assert!(!names.contains(&name), "{name} in {names:?}");
+    }
+}
+
 #[test]
 fn references_across_uses() {
     let a = analyze(STACK);
@@ -554,7 +763,10 @@ if (blank) { panic(); }
 /// `ahead` bytes in, as the line in core and the name there.
 fn core_at(a: &Analysis, needle: &str, nth: usize, ahead: u32) -> Option<(String, String)> {
     let d = a.core_definition(MAIN, at(BUILTINS, needle, nth, ahead))?;
-    assert_eq!(d.path, "core.temper");
+    let source = temper_frontend::corelib::SOURCES
+        .iter()
+        .find(|(p, _)| *p == d.path);
+    assert_eq!(source.map(|(_, text)| *text), Some(d.source));
     let name = &d.source[d.span.start as usize..d.span.end as usize];
     let line_start = d.source[..d.span.start as usize]
         .rfind('\n')
@@ -582,16 +794,16 @@ fn definition_into_core() {
     assert!(line.starts_with("public add(newValue: T"), "{line}");
     // A getter on List<String>, its own, and one its supertype declares.
     let (line, _) = found("length;", 0, 0);
-    assert_eq!(line, "public get length(): builtins.Int;");
+    assert_eq!(line, "public get length(): Int;");
     let isempty_list = core_at(&a, "isEmpty;", 0, 0).unwrap().0;
     assert_eq!(
         isempty_list,
-        "public get isEmpty(): builtins.Boolean { length == 0 }"
+        "public get isEmpty(): Boolean { length == 0 }"
     );
     // String's own, and a static after the type's name.
     let (line, _) = found("isEmpty;", 1, 0);
     assert!(
-        line.starts_with("public get isEmpty(): builtins.Boolean { content"),
+        line.starts_with("public get isEmpty(): Boolean { this"),
         "{line}"
     );
     let (line, _) = found("fromCodePoint", 0, 0);
@@ -606,8 +818,10 @@ fn definition_into_core() {
     assert_eq!(line, "public log(message: String): Void;");
     let (line, _) = found("console.", 0, 0);
     assert!(line.starts_with("export let console: Console"), "{line}");
-    // Nothing for what core doesn't declare, or what's not a builtin.
-    assert_eq!(core_at(&a, "panic", 0, 0), None);
+    // What only a bodiless `@connected` declaration documents, as `panic`.
+    let (line, _) = found("panic", 0, 0);
+    assert_eq!(line, "export let panic;");
+    // Nothing for what's not a builtin.
     assert_eq!(core_at(&a, "count);", 0, 0), None);
     assert_eq!(a.definition(MAIN, at(BUILTINS, "add(\"a\")", 0, 0)), None);
 }
@@ -628,12 +842,18 @@ fn hover_core_docs() {
         doc("log(", 0, 0).as_deref(),
         Some("Log a message at default informational level to this console.")
     );
+    let log = a.hover(MAIN, at(BUILTINS, "log(", 0, 0)).unwrap();
+    assert_eq!(log.headline(), "method log(message: String): Void");
     assert!(doc("ignore(", 0, 0).is_some());
     assert!(doc("fromCodePoint", 0, 0).is_some());
+    assert_eq!(
+        doc("isEmpty;", 0, 0).as_deref(),
+        Some("True if this contains no elements.")
+    );
     // Doc lines lose their leading `*`, as user declarations' do.
     let console = doc("console.", 0, 0).unwrap();
     assert!(
-        console.starts_with("The global default `Console` instance."),
+        console.starts_with("`console` is the global default `Console` instance."),
         "{console}"
     );
     assert!(!console.contains("\n*"), "{console}");
@@ -646,7 +866,7 @@ fn hover_core_docs() {
         .doc;
     let string = string.unwrap();
     assert!(
-        string.starts_with("A *String* is a chunk of textual content.\n\nTo"),
+        string.starts_with("*String* is a chunk of textual content.\n\nTo"),
         "{string}"
     );
     assert!(
@@ -664,6 +884,19 @@ fn hover_core_docs() {
         .doc
         .unwrap();
     assert!(!int.contains('⎀') && !int.ends_with('\n'), "{int}");
+    // A bare link names what it links to.
+    let source = "let e = empty();\nlet f(g: Generator<Int>): Void {}\n";
+    let a = analyze(source);
+    let doc = |needle| a.hover(MAIN, at(source, needle, 0, 0)).unwrap().doc;
+    assert_eq!(
+        doc("empty").as_deref(),
+        Some("`empty` gives the *Empty* value.")
+    );
+    let generator = doc("Generator").unwrap();
+    assert!(
+        generator.contains("\n`Generator.next` method."),
+        "{generator}"
+    );
 }
 
 const TYPED: &str = r#"
@@ -723,4 +956,388 @@ fn definitions_and_references_from_signatures() {
     let uses = a.references(MAIN, at(TYPED, "T>", 0, 0), false);
     let starts: Vec<u32> = uses.iter().map(|l| l.span.start).collect();
     assert_eq!(starts, [at(TYPED, "T;", 0, 0), at(TYPED, "T): Void", 0, 0)]);
+}
+
+/// Each builtin but the types, by name, used: a source, and the text
+/// whose start hover and go to definition ask about. Those core leaves
+/// undeclared, [`UNDECLARED`], too, for hover's fallback.
+const BUILTIN_USES: &[(&str, &str, &str)] = &[
+    ("let", "let x = 1;", "let"),
+    ("@", "@connected let f(): Int { 1 }", "@"),
+    ("fn", "let f = fn (x: Int): Int { x };", "fn"),
+    ("if", "if (true) { ignore(1); }", "if"),
+    ("while", "while (false) { ignore(1); }", "while"),
+    ("for", "for (let x of [1]) { ignore(x); }", "for"),
+    ("do", "do { ignore(1); }", "do"),
+    ("return", "let f(): Int { return 1; }", "return"),
+    ("break", "while (true) { break; }", "break"),
+    ("continue", "while (false) { continue; }", "continue"),
+    (
+        "bubble",
+        "let f(): Int throws Bubble { bubble() }",
+        "bubble",
+    ),
+    ("=", "var x = 1; x = 2;", "= 2"),
+    ("&&", "let b = true && false;", "&&"),
+    ("||", "let b = true || false;", "||"),
+    (
+        "orelse",
+        "let f(): Int throws Bubble { bubble() }\nlet y = f() orelse 0;",
+        "orelse",
+    ),
+    (
+        "when",
+        "let w = when (1) { 1 -> \"a\"; else -> \"b\" };",
+        "when",
+    ),
+    ("??", "let n: Int? = null; let m = n ?? 1;", "??"),
+    ("?.", "let s: String? = null; let l = s?.isEmpty;", "?."),
+    ("class", "class C {}", "class"),
+    ("interface", "interface I {}", "interface"),
+    ("import", "let { x } = import(\"./nope\");", "import"),
+    ("test", "test(\"t\") { assert(true); }", "test"),
+    ("assert", "test(\"t\") { assert(true); }", "assert"),
+    (
+        "yield",
+        "let g = fn (): GeneratorResult<Int> extends GeneratorFn { yield(1); };",
+        "yield",
+    ),
+    (
+        "await",
+        "let a = new PromiseBuilder<Int>();\nasync { (): GeneratorResult<Empty> extends GeneratorFn =>\n  let x = await a.promise orelse -1;\n}",
+        "await",
+    ),
+    ("+", "let a = 1 + 2;", "+"),
+    ("-", "let a = 1 - 2;", "-"),
+    ("*", "let a = 1 * 2;", "*"),
+    ("/", "let a = 1 / 2 orelse 0;", "/"),
+    ("%", "let a = 1 % 2 orelse 0;", "%"),
+    ("**", "let a = 1.0 ** 2.0;", "**"),
+    ("<", "let a = 1 < 2;", "<"),
+    ("<=", "let a = 1 <= 2;", "<="),
+    (">", "let a = 1 > 2;", ">"),
+    (">=", "let a = 1 >= 2;", ">="),
+    ("==", "let a = 1 == 2;", "=="),
+    ("!=", "let a = 1 != 2;", "!="),
+    ("!", "let a = !true;", "!"),
+    ("&", "let a = 1 & 2;", "&"),
+    ("|", "let a = 1 | 2;", "|"),
+    ("^", "let a = 1 ^ 2;", "^"),
+    ("<<", "let a = 1 << 2;", "<<"),
+    (">>", "let a = 1 >> 2;", ">>"),
+    (">>>", "let a = 1 >>> 2;", ">>>"),
+    ("~", "let a = ~1;", "~"),
+    ("panic", "let f(): Int { panic() }", "panic"),
+    (".", "let a = \"x\".isEmpty;", "."),
+    ("[]", "let a = [1][0];", "[0"),
+    ("throws", "let f(): Int throws Bubble { 1 }", "throws"),
+    ("?", "let a: Int? = null;", "?"),
+    ("new", "let a = new ListBuilder<Int>();", "new"),
+    ("as", "let a = (1 as Int) orelse 0;", "as"),
+    ("is", "let a = 1 is Int;", "is"),
+    ("<=>", "let a = 1 <=> 2;", "<=>"),
+    ("ignore", "ignore(1);", "ignore"),
+    ("char", "let a = char'a';", "char"),
+    ("raw", "let a = raw\"a\\b\";", "raw"),
+    ("empty", "let a = empty();", "empty"),
+    ("doPure", "let a = doPure { (): Int => 1 };", "doPure"),
+    ("doneResult", "let a = doneResult<Int>();", "doneResult"),
+    ("getConsole", "let a = getConsole(\"mine\");", "getConsole"),
+    (
+        "async",
+        "async { (): GeneratorResult<Empty> extends GeneratorFn => ignore(1); }",
+        "async",
+    ),
+    ("rgx", "let a = rgx\"a\";", "rgx"),
+    ("cat", "let n = 1; let a = \"a${n}\";", "${"),
+    ("list", "let a = [1, 2];", "["),
+    ("<>", "let a = new ListBuilder<Int>();", "<"),
+    ("true", "let a = true;", "true"),
+    ("false", "let a = false;", "false"),
+    ("null", "let a: Int? = null;", "null"),
+    ("void", "let f(): Void { void }", "void"),
+    ("console", "console.log(\"a\");", "console"),
+    ("NaN", "let a = NaN;", "NaN"),
+    ("Infinity", "let a = Infinity;", "Infinity"),
+];
+
+/// The builtins core leaves undeclared, and why: operators wait on the
+/// operator design, and jumps are syntax, neither values nor macros.
+const UNDECLARED: &[(&str, &str)] = &[
+    ("=", "operator"),
+    ("&&", "operator"),
+    ("||", "operator"),
+    ("??", "operator"),
+    ("?.", "operator"),
+    ("@", "operator"),
+    ("+", "operator"),
+    ("-", "operator"),
+    ("*", "operator"),
+    ("/", "operator"),
+    ("%", "operator"),
+    ("**", "operator"),
+    ("<", "operator"),
+    ("<=", "operator"),
+    (">", "operator"),
+    (">=", "operator"),
+    ("==", "operator"),
+    ("!=", "operator"),
+    ("!", "operator"),
+    ("&", "operator"),
+    ("|", "operator"),
+    ("^", "operator"),
+    ("<<", "operator"),
+    (">>", "operator"),
+    (">>>", "operator"),
+    ("~", "operator"),
+    ("<=>", "operator"),
+    (".", "operator"),
+    ("[]", "operator"),
+    ("?", "operator"),
+    ("<>", "operator"),
+    ("new", "operator"),
+    ("as", "operator"),
+    ("is", "operator"),
+    ("throws", "operator"),
+    ("list", "operator: `[a, b]`, with no name to write"),
+    ("cat", "operator: interpolation, with no name to write"),
+    ("return", "jump"),
+    ("break", "jump"),
+    ("continue", "jump"),
+];
+
+/// Each builtin core declares has docs and a definition there; the
+/// others, [`UNDECLARED`], have neither, and hover still shows no `: ?`.
+#[test]
+fn every_builtin_has_core_docs() {
+    use temper_frontend::builtins::{BUILTINS, TYPES};
+    use temper_frontend::typing::core_declaration;
+    // Builtins that aren't in `BUILTINS` by name, as the tree names them:
+    // `"${a}"`'s `cat`, `[a]`'s `list`, and `List<T>`'s `<>`.
+    let mut names: Vec<&str> = BUILTINS.iter().map(|(n, _)| *n).collect();
+    names.extend(["cat", "list", "<>"]);
+    let mut missing = Vec::new();
+    for name in names {
+        let Some(&(_, source, needle)) = BUILTIN_USES.iter().find(|(n, _, _)| *n == name) else {
+            missing.push(format!("{name}: no use"));
+            continue;
+        };
+        let a = analyze(source);
+        let offset = at(source, needle, 0, 0);
+        let h = a.hover(MAIN, offset);
+        let undeclared = UNDECLARED.iter().any(|(n, _)| *n == name);
+        if undeclared {
+            if core_declaration(name).is_some() || a.core_definition(MAIN, offset).is_some() {
+                missing.push(format!("{name}: declared, but listed as undeclared"));
+            }
+            if let Some(h) = h.filter(|h| h.headline().ends_with(": ?")) {
+                missing.push(format!("{name}: {}", h.headline()));
+            }
+            continue;
+        }
+        let h = h.as_ref().filter(|h| h.name.as_deref() == Some(name));
+        match h {
+            None => missing.push(format!("{name}: hover names something else")),
+            Some(h) if h.doc.is_none() || h.headline().ends_with(": ?") => {
+                missing.push(format!("{name}: {}", h.headline()))
+            }
+            Some(_) => {}
+        }
+        if a.core_definition(MAIN, offset).is_none() {
+            missing.push(format!("{name}: no definition"));
+        }
+    }
+    for &t in TYPES {
+        let source = format!("let f(x: {t}): Void {{}}");
+        let h = analyze(&source).hover(MAIN, at(&source, t, 0, 0));
+        if core_declaration(t).is_none() || h.is_none_or(|h| h.doc.is_none()) {
+            missing.push(t.to_string());
+        }
+    }
+    assert_eq!(missing, Vec::<String>::new());
+}
+
+/// Core's declarations documented in prose, as std's are: hover,
+/// signature help, and so the REPL's help show the paragraphs from the
+/// one that starts with the declared name; a member's doc comment still
+/// wins.
+#[test]
+fn core_prose_docs() {
+    let typed = analyze(TYPED);
+    let doc = |source: &str, needle| {
+        let a = analyze(source);
+        a.hover(MAIN, at(source, needle, 0, 0))
+            .unwrap()
+            .doc
+            .unwrap()
+    };
+    let list_builder = doc(BUILTINS, "ListBuilder<String>");
+    assert!(
+        list_builder.starts_with("*ListBuilder* is a random-access, mutable, growable"),
+        "{list_builder}"
+    );
+    // `Int` aliases `Int32`, which documents it.
+    let int = typed
+        .hover(MAIN, at(TYPED, "Int { 1", 0, 0))
+        .unwrap()
+        .doc
+        .unwrap();
+    assert!(int.starts_with("*Int32* is the default"), "{int}");
+    assert_eq!(doc(BUILTINS, "ignore("), "Ignore any value.");
+    // An extension method's, documented by its function's name.
+    let source = "let n = [1, 2].reduceFrom(0, ";
+    let help = analyze(source)
+        .signature_help(MAIN, source.len() as u32)
+        .unwrap();
+    let reduce = help.doc.unwrap();
+    assert!(
+        reduce.starts_with("`listedReduceFrom` (`listed.reduceFrom(…)`) reduces"),
+        "{reduce}"
+    );
+    // A member's doc comment, inside its class's code.
+    assert_eq!(
+        doc(BUILTINS, "isEmpty;"),
+        "True if this contains no elements."
+    );
+}
+
+/// Core's prose docs carry what follows their naming paragraph up to the
+/// declaration: examples as written, with their ✅ and `//!outputs`
+/// lines, and link definitions, but no raw HTML.
+#[test]
+fn hover_core_prose_blocks() {
+    let source = r#"let e: Empty? = null;
+let { Queue } = import("std/collections");
+let d = new Queue<String>();
+let b = new StringBuilder();
+let f: Float64 = 1.0;
+let n: Never<String>? = null;
+let i: StringIndex = String.begin;
+"#;
+    let a = analyze(source);
+    let doc = |needle| {
+        a.hover(MAIN, at(source, needle, 0, 0))
+            .unwrap()
+            .doc
+            .unwrap()
+    };
+    for (needle, example) in [
+        ("Empty?", "```temper inert\nlet e: Empty? = empty();"),
+        (
+            "Queue<",
+            "```temper inert\nlet { Queue } = import(\"std/collections\");",
+        ),
+        (
+            "StringBuilder(",
+            "```temper inert\nlet stringBuilder = new StringBuilder();",
+        ),
+    ] {
+        let doc = doc(needle);
+        assert!(doc.contains(example), "{doc}");
+        assert!(
+            doc.contains("//!outputs") && doc.contains("// ✅\n```"),
+            "{doc}"
+        );
+    }
+    let float = doc("Float64 =");
+    assert!(float.contains("\n[FP64]: https://"), "{float}");
+    let never = doc("Never<");
+    assert!(never.contains("\n[bottom type]: https://"), "{never}");
+    let index = doc("StringIndex =");
+    assert!(
+        index.contains("| Glyph | UTF-8") && !index.contains("<t"),
+        "{index}"
+    );
+}
+
+/// A literate library documented in prose, as Kotlin Temper's
+/// `.temper.md` convention has it: a paragraph whose first word is a
+/// declaration's name, ignoring case, `` ` `` and `*`, documents it,
+/// with the paragraphs after it, up to the declaration.
+const PROSE: &str = r#"# Squares
+
+Here's how squares work.
+
+`area` is the area of a square.
+
+It's side times side.
+
+```temper
+export let area(side: Int): Int { side * side }
+```
+
+This paragraph mentions perimeter, but doesn't start with its name.
+
+```temper
+export let perimeter(side: Int): Int { side * 4 }
+```
+
+Square holds a side.
+
+```temper
+export class Square(public side: Int) {
+```
+
+**Scaled** makes a bigger square.
+
+```temper
+  public scaled(by: Int): Square { new Square(side * by) }
+```
+
+`rotated` is documented in prose, but a doc comment wins.
+
+```temper
+  /** Turns it. */
+  public rotated(): Square { this }
+}
+let a = area(2);
+let s = new Square(3).scaled(2);
+let r = s.rotated();
+let p = perimeter(1);
+```
+"#;
+
+fn analyze_md(source: &str) -> Analysis {
+    let mut library = Library::new();
+    library.add_file("main.temper.md", source, SourceKind::Markdown);
+    load_imports(&Sources::memory(&[]), &mut library);
+    Analysis::new(settle(library))
+}
+
+#[test]
+fn hover_on_prose_docs() {
+    let a = analyze_md(PROSE);
+    let doc = |needle, nth| {
+        let h = a.hover(MAIN, at(PROSE, needle, nth, 0)).unwrap();
+        assert_eq!(h.name.as_deref(), Some(needle), "{h:?}");
+        h.doc
+    };
+    let area = Some("`area` is the area of a square.\n\nIt's side times side.");
+    // At the declaration and at a use.
+    assert_eq!(doc("area", 2).as_deref(), area);
+    assert_eq!(doc("area", 3).as_deref(), area);
+    // A paragraph that doesn't start with the name isn't its doc.
+    assert_eq!(doc("perimeter", 1), None);
+    assert_eq!(doc("perimeter", 2), None);
+    // A class, and its members, across code blocks.
+    assert_eq!(doc("Square", 2).as_deref(), Some("Square holds a side."));
+    let scaled = Some("**Scaled** makes a bigger square.");
+    assert_eq!(doc("scaled", 0).as_deref(), scaled);
+    assert_eq!(doc("scaled", 1).as_deref(), scaled);
+    // A doc comment wins over prose.
+    assert_eq!(doc("rotated", 1).as_deref(), Some("Turns it."));
+    assert_eq!(doc("rotated", 2).as_deref(), Some("Turns it."));
+}
+
+#[test]
+fn signature_help_shows_prose_docs() {
+    let source = PROSE.replace("let p = perimeter(1);", "let z = area(");
+    let a = analyze_md(&source);
+    let offset = at(&source, "area(\n", 0, 5);
+    let help = a.signature_help(MAIN, offset).unwrap();
+    assert_eq!(help.label, "area(side: Int32): Int32");
+    assert_eq!(
+        help.doc.as_deref(),
+        Some("`area` is the area of a square.\n\nIt's side times side.")
+    );
 }

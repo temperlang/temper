@@ -11,7 +11,7 @@
 22:3 -> ../reduce.temper.md:40:7  return listedReduceFrom(/** <- items.reduceFrom(true) { (re
 25:1 -> ../reduce.temper.md:11:5  /** @type {readonly number[] <- let vals = [2, 3, 4];
 26:1 -> ../reduce.temper.md:11:5  const vals = Object.freeze([ <- let vals = [2, 3, 4];
-27:1 -> ../reduce.temper.md:12:5  const sum = vals.reduce((sum <- let sum = vals.reduce { sum,
+27:1 -> ../reduce.temper.md:12:5  const sum = listedReduce(/** <- let sum = vals.reduce { sum,
 28:1 -> ../reduce.temper.md:18:5  const poorReverseJoin = list <- let poorReverseJoin = vals.r
 29:1 -> ../reduce.temper.md:21:5  console.log(`Reductions: ${s <- console.log(
 30:1 -> ../reduce.temper.md:44:5  console.log(`All even: ${all <- console.log("All even: ${all

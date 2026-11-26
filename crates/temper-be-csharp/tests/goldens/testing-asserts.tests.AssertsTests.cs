@@ -17,14 +17,14 @@ public class AssertsTests
             {
                 {
                     int j = 0;
-                    while (j < strings[i].Count)
+                    while (j < Listed.Get(strings, i).Count)
                     {
                         {
                             int actual = helper.I;
                             int expected = helper.J;
                             t.Assert(actual == expected, () => string.Create(CultureInfo.InvariantCulture, $"expected helper.i == ({expected}) not ({actual})"));
                         }
-                        string s = strings[i][j];
+                        string s = Listed.Get(Listed.Get(strings, i), j);
                         {
                             string actual = s;
                             string expected = "hi";
@@ -126,7 +126,7 @@ public class AssertsTests
                 int i = 0;
                 while (i < length)
                 {
-                    Vec2 vec = AssertsGlobal.unitVecs[i];
+                    Vec2 vec = Listed.Get(AssertsGlobal.unitVecs, i);
                     i = i + 1;
                     {
                         double actual = AssertsGlobal.NormSquared(vec);

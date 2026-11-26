@@ -1,0 +1,31 @@
+tmpl 1 model 1 library `index-past-end` 0.0.0
+
+uses `temper-core`#2 0.0.0-alpha.0.0 {
+  interface Listed#3<T#4> {
+    connected method get#10(index: Int32): T#4;
+  }
+  class List#5<T#6> extends Listed#3<T#6> {}
+  interface Console#11 {
+    connected method log#12(message: String): Void;
+  }
+  connected fn getConsole#14(name?: String): Console#11;
+}
+
+module `index-past-end`#0 {
+  let ~console#13: Console#11;
+
+  fn at#1(listed#8: Listed#3<String>, i#9: Int32): String {
+    return listed#8.get#10(i#9);
+  }
+
+  let letters#7: List#5<String>;
+
+  init {
+    init ~console#13 = getConsole#14(omitted);
+    init letters#7 = (list("a", "b", "c")): List#5<String>;
+    ~console#13.log#12(at#1((upcast(letters#7)): Listed#3<String>, 2));
+    ~console#13.log#12("before");
+    ~console#13.log#12(at#1((upcast(letters#7)): Listed#3<String>, 3));
+    ~console#13.log#12("not reached");
+  }
+}

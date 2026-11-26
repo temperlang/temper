@@ -114,14 +114,16 @@ const UNUSED_KEYS: [&str; 2] = ["functions-connected", "functions-connected-no-c
 /// header past its width differently, and a generic type past it, as
 /// `functions`' generator has; and `json-adapters`' nested calls, whose `?`
 /// call rustfmt doesn't overflow there, and a `let` of a chain whose
-/// first line is just 100 wide, which rustfmt breaks inside the call.
-const LAYOUT_GAPS: [&str; 6] = [
+/// first line is just 100 wide, which rustfmt breaks inside the call;
+/// and `callback-changes`' nested calls ending in a `vec!` too.
+const LAYOUT_GAPS: [&str; 7] = [
     "functions",
     "regex-match",
     "regex-zero-advance",
     "control-flow-async",
     "control-flow-async-waiters",
     "json-adapters",
+    "callback-changes",
 ];
 
 /// This crate's own programs, in `tests/programs/`, which test what's
@@ -133,6 +135,7 @@ fn cases() -> Vec<Case> {
         &kit::CLASSES[..],
         &kit::NULLABLES[..],
         &kit::GENERICS[..],
+        &kit::NAMES[..],
         &kit::FUNCTIONS[..],
         &kit::DEFAULTS[..],
         &kit::CORE_TYPES[..],
@@ -663,7 +666,7 @@ fn runs_and_lints() {
         for case in cases.iter().filter(|c| c.tests.is_none()) {
             let name = temper_be_rust::bin_name(&case.library);
             let out = Command::new(bin(&name)).output().unwrap();
-            kit::check_case(&mut failures, &name, &out, case);
+            kit::check_case(&mut failures, "rust", &name, &out, case);
         }
         let mut run = |name: &str, expected: &[String]| {
             let out = Command::new(bin(name)).output().unwrap();

@@ -1,7 +1,9 @@
 package functions;
 
+import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.IntSupplier;
@@ -81,7 +83,7 @@ public final class FunctionsGlobal {
             int i = 0;
             int prev = i;
             while (Integer.compare(i, end) < 0) {
-                if (Integer.compare(prev, i) < 0 && s.codePointAt(prev) == s.codePointAt(i)) {
+                if (Integer.compare(prev, i) < 0 && Core.stringGet(s, prev) == Core.stringGet(s, i)) {
                     n = n + 1;
                 }
                 prev = i;
@@ -134,7 +136,7 @@ public final class FunctionsGlobal {
         int j = s.length();
         while (Integer.compare(i, j) < 0) {
             j = Core.stringPrev(s, j);
-            if (s.codePointAt(i) != s.codePointAt(j)) {
+            if (Core.stringGet(s, i) != Core.stringGet(s, j)) {
                 return false;
             }
             i = Core.stringNext(s, i);
@@ -177,6 +179,10 @@ public final class FunctionsGlobal {
 
     static String gatePassed(Gate g, String s) {
         return s + " " + g.allows(1);
+    }
+
+    static <T, O> O listFirstThrough(List<T> ls, Function<T, O> f) {
+        return f.apply(Core.listGet(ls, 0));
     }
 
     static {
@@ -304,5 +310,13 @@ public final class FunctionsGlobal {
         console.log(intOrZero(none) + " " + listFirstOr(List.of(4, 5), 0) + " " + listFirstOr(List.of("x"), "-"));
         console.log(stringPadded("ab", 2) + " " + stringPadded("ab", 1, "*"));
         console.log(gate.passed(4) + " " + gatePassed(gate, "gate"));
+        List<String> tags = Core.listMapIntToObj(ns, n -> "<" + n + ">");
+        String digits = Core.listedReduceIntToObj(ns, "", (s, n) -> s + n);
+        Map<String, Integer> named = Core.mapConstructor(List.of(new SimpleImmutableEntry<>("a", 1), new SimpleImmutableEntry<>("b", 2)));
+        List<String> entries = Core.mappedToListWith(named, (k, v) -> k + "=" + v);
+        console.log(Core.listGet(tags, 0) + Core.listGet(tags, 4) + " " + digits + " " + Core.listJoinObj(entries, ",", e -> e));
+        String hashed = listFirstThrough(List.of(3), n -> "#" + n);
+        int bumped = listFirstThrough(List.of(3), n -> n + 1);
+        console.log(hashed + " " + bumped + " " + listFirstOr(List.of(4, 5), 0));
     }
 }

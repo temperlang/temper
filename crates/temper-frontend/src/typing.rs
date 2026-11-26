@@ -18,8 +18,9 @@
 //! members', read from core, in
 //! [`core_members`], what may bubble where it can't, in [`bubbles`],
 //! classes' and their members' types, in [`members`], named `@fun`
-//! interfaces' rules, nominal, in [`fun_interfaces`], run-time type
-//! checks' errors, in [`rtti`], generic functions' calls, solved per
+//! interfaces' rules, nominal, in [`fun_interfaces`], what other
+//! libraries may do with builtin types, in [`builtin_uses`], run-time
+//! type checks' errors, in [`rtti`], generic functions' calls, solved per
 //! call, in [`generic_calls`], and the type a value's place wants, which
 //! types list literals, in [`targets`], and decides object literals'
 //! classes, in [`object_literals`], and which `@overload` method a call
@@ -60,6 +61,7 @@ const FULL_TYPES: [&str; 10] = [
 ];
 
 mod bubbles;
+mod builtin_uses;
 mod connected;
 mod core_members;
 mod definite;
@@ -82,7 +84,8 @@ mod targets;
 
 pub(crate) use bubbles::{fold_float, fold_int};
 pub use core_members::{
-    BuiltinMember, builtin_members, core_declaration, core_member_declarations,
+    BuiltinMember, CoreShape, builtin_members, core_declaration, core_member_declarations,
+    core_shape,
 };
 pub use exprs::{FileCoverage, coverage};
 pub use resolve::Resolved;
@@ -135,6 +138,9 @@ pub struct Typing {
     resolved: HashMap<NodeId, Resolved>,
     /// `==` and `!=` uses with nothing to call but identity, with why.
     identity_eqs: HashMap<NodeId, &'static str>,
+    /// Calls `x.name(…)` made calls of an instance extension, `f(x, …)`,
+    /// whose type arguments may be a method's ([`instance_extensions`]).
+    pub(crate) extension_calls: HashSet<NodeId>,
     /// What each call of a generic function, method, or class's
     /// constructor binds its type parameters to, by the call: the callee's
     /// own, or for a constructor, its class's, unknown where unsolved.
@@ -145,6 +151,12 @@ pub struct Typing {
     unreachable: HashSet<NodeId>,
     /// Each sealed interface's subtypes, by its symbol, once one's needed.
     sealed_subtypes: Option<HashMap<SymbolId, Vec<SymbolId>>>,
+    /// The nullable type each place wants of a null there, by the null
+    /// (or other expression typed [`NULL`]), as `String?` for `f(null)`
+    /// with `f(s: String?)`, where checks find one ([`Typing::in_place`]).
+    /// For analysis (hover) only: filled only where a check happens to
+    /// run, so code generation mustn't rely on it.
+    null_places: HashMap<NodeId, TypeId>,
 }
 
 const UNSET: TypeId = TypeId(u32::MAX);
@@ -157,6 +169,16 @@ impl Typing {
             .get(node.0 as usize)
             .copied()
             .filter(|&t| t != UNSET)
+    }
+
+    /// An expression's type as its place sees it: for null, which has no
+    /// type of its own, the nullable type its place wants, if typing
+    /// knows it (notes/typing.md, "Null"); else [`Typing::expr`]'s.
+    pub fn in_place(&self, node: NodeId) -> Option<TypeId> {
+        match self.expr(node)? {
+            NULL => self.null_places.get(&node).copied(),
+            t => Some(t),
+        }
     }
 
     /// What a generic call binds its callee's type parameters to (a
@@ -487,7 +509,13 @@ impl Settle {
                 Constant::Void => VOID,
                 Constant::NaN | Constant::Infinity => FLOAT64,
                 Constant::TestServerPort(_) => INT32,
-                Constant::Console => UNKNOWN,
+                // Core's `Console`.
+                Constant::Console => {
+                    match crate::builtins::TYPES.iter().position(|&t| t == "Console") {
+                        Some(i) => self.typing.types.builtin(i as u8),
+                        None => UNKNOWN,
+                    }
+                }
             },
             SymbolKind::TopLevel
             | SymbolKind::Local
@@ -609,10 +637,13 @@ impl Settle {
                 }
                 _ => UNKNOWN,
             },
-            Empty => match crate::builtins::TYPES.iter().position(|&t| t == "Empty") {
-                Some(i) => self.typing.types.builtin(i as u8),
-                None => UNKNOWN,
-            },
+            Empty | GetConsole => {
+                let name = if f == Empty { "Empty" } else { "Console" };
+                match crate::builtins::TYPES.iter().position(|&t| t == name) {
+                    Some(i) => self.typing.types.builtin(i as u8),
+                    None => UNKNOWN,
+                }
+            }
             Pow => FLOAT64,
             As if args.len() == 2 => self.eval_type(args[1]),
             New => match self.new_class(args) {
@@ -716,8 +747,8 @@ impl Settle {
     /// Whether a type expression is a builtin type's bare name that may
     /// be generic, as `List`: not final, `AnyValue`, or `Never`.
     fn bare_builtin(&mut self, node: NodeId) -> bool {
-        let Some(Builtin::Type(i)) = (self.lib.tree.kind(node) == NodeKind::RightName)
-            .then(|| self.scopes.resolved_builtin(node))
+        let Some(i) = (self.lib.tree.kind(node) == NodeKind::RightName)
+            .then(|| self.scopes.type_builtin(&self.lib.tree, node))
             .flatten()
         else {
             return false;
@@ -735,6 +766,7 @@ impl Settle {
                 let Some(b) = self.scopes.resolved(node) else {
                     return UNKNOWN;
                 };
+                let b = self.scopes.type_symbol(&self.lib.tree, b);
                 let symbol = self.scopes.symbol(b);
                 match symbol.kind {
                     // A bare `Never`, an error ([`Settle::check_bare_never`]),
@@ -790,9 +822,8 @@ impl Settle {
     }
 
     /// The type a type alias names, as `TestCase` in `export let TestCase
-    /// = Pair<TestName, TestFun>`: a top-level `let` whose initializer is
-    /// a type's name, or a type given arguments, nullable, or a function
-    /// type. Not one that names itself, even through others.
+    /// = Pair<TestName, TestFun>` ([`Settle::alias_init`]). Not one that
+    /// names itself, even through others.
     fn alias_type(&mut self, symbol: SymbolId) -> TypeId {
         let Some(init) = self.alias_init(symbol) else {
             return UNKNOWN;
@@ -805,28 +836,6 @@ impl Settle {
         let t = self.eval_type(init);
         self.typing.aliases.pop();
         t
-    }
-
-    /// The type expression a type alias names, as `C<Int>` for `let
-    /// Alias = C<Int>;`, if `symbol` is one.
-    pub(crate) fn alias_init(&self, symbol: SymbolId) -> Option<NodeId> {
-        let tree = &self.lib.tree;
-        let s = self.scopes.symbol(symbol);
-        let decl = s.decl.filter(|&d| {
-            s.kind == SymbolKind::TopLevel && !s.mutable && tree.kind(d) == NodeKind::Let
-        })?;
-        let (_, None, Some(init)) = core::let_parts(tree, decl) else {
-            return None;
-        };
-        let is_type = tree.kind(init) == NodeKind::RightName
-            || tree.kind(init) == NodeKind::Call
-                && matches!(
-                    self.scopes.resolved_builtin(tree.children(init)[0]),
-                    Some(Builtin::Function(
-                        Function::Angle | Function::Nullable | Function::FnType
-                    ))
-                );
-        is_type.then_some(init)
     }
 
     /// A type parameter's type, as `T` names it, with its bound: `AnyValue`
@@ -875,6 +884,7 @@ impl Settle {
         let Some(b) = self.scopes.resolved(base) else {
             return UNKNOWN;
         };
+        let b = self.scopes.type_symbol(&self.lib.tree, b);
         let base = match self.scopes.symbol(b).kind {
             SymbolKind::Builtin(Builtin::Type(i)) => {
                 let base = self.typing.types.builtin(i);
@@ -1022,6 +1032,7 @@ impl Settle {
             NodeKind::Call => {
                 self.check_nullable_member(node);
                 self.check_member_access(node, classes);
+                self.check_private_new(node, classes);
                 self.check_member_exists(node, scope);
             }
             NodeKind::RightName => self.check_bare_static(node),
@@ -1049,6 +1060,17 @@ impl Settle {
             d.level == Level::Error && d.span.start < span.end && span.start < d.span.end
         };
         if self.lib.diagnostics.iter().any(overlaps) {
+            return;
+        }
+        // A builtin type's static member that core doesn't declare, as
+        // `Int32.nope`, as for a class's.
+        if let Some(i) = self.builtin_type_named(object) {
+            let (type_name, text) = (crate::builtins::TYPES[i as usize], self.lib.names.get(name));
+            if !core_members::has_static(type_name, text) {
+                let shown = core_shape(type_name).map_or(type_name, |shape| shape.name);
+                let message = Message::NoMember(text.to_string(), shown.to_string());
+                self.lib.report(Level::Error, message, span);
+            }
             return;
         }
         let tree = &self.lib.tree;
@@ -1110,6 +1132,55 @@ impl Settle {
         }
         let message = Message::NotPubliclyAccessible(name, owner_text);
         self.lib.report(Level::Error, message, span);
+    }
+
+    /// Reports `new C(…)` outside `C`, and the classes inside it, where
+    /// `C`'s constructor is private, as a private method's use is
+    /// ([`Settle::check_member_access`]), for the class `new`'s type names,
+    /// through an alias too: "C is not a concrete type with a public
+    /// constructor", as for core's. Stricter than Kotlin Temper, which
+    /// doesn't check (kotlin-differences.md). Core's own code makes its
+    /// own classes' values, as `new` of a builtin type allows
+    /// ([`Settle::check_builtin_new`]), but not another file's.
+    fn check_private_new(&mut self, call: NodeId, classes: &[NodeId]) {
+        let tree = &self.lib.tree;
+        let (Some(&callee), Some(&target)) =
+            (tree.children(call).first(), tree.children(call).get(1))
+        else {
+            return;
+        };
+        if self.scopes.resolved_builtin(callee) != Some(Builtin::Function(Function::New)) {
+            return;
+        }
+        let t = self.eval_type(target);
+        let TypeData::Class(symbol) = *self.typing.types.get(self.typing.types.base(t)) else {
+            return;
+        };
+        let Some(class) = self.type_decl(symbol).filter(|c| !classes.contains(c)) else {
+            return;
+        };
+        let tree = &self.lib.tree;
+        if self.lib.in_core(tree.span(call).start) && self.lib.in_core(tree.span(class).start) {
+            return;
+        }
+        let private = (core::class_parts(tree, class).2.iter()).any(|&m| {
+            let data = tree.data(m);
+            data & ROLE_MASK == core::ROLE_CONSTRUCTOR
+                && data & core::MEMBER_STATIC == 0
+                && data & core::MEMBER_PRIVATE != 0
+        });
+        if private {
+            let name = self.member_text(class).to_string();
+            // At the class's name, or the whole of an object literal,
+            // whose class isn't written.
+            let tree = &self.lib.tree;
+            let span = match tree.span(target) {
+                span if span.start == span.end => tree.span(call),
+                span => span,
+            };
+            self.lib
+                .report(Level::Error, Message::NotConstructible(name), span);
+        }
     }
 
     /// Reports a static member named bare, as `count` for `C.count` in
@@ -1203,7 +1274,10 @@ impl Settle {
         let first = self.lib.tree.children(node).first().copied();
         let last = self.lib.tree.children(node).last().copied();
         match (self.lib.tree.kind(node), first, last) {
-            (NodeKind::RightName, ..) => self.check_bare_never(node),
+            (NodeKind::RightName, ..) => {
+                self.check_bare_never(node);
+                self.check_void_type(node);
+            }
             (NodeKind::Let, ..) => self.check_let(node),
             (NodeKind::Assign, Some(target), Some(value)) if count == 2 => {
                 if let Some(decl) = self.local_target(target) {
@@ -1237,11 +1311,16 @@ impl Settle {
                     // may never end.
                     let never = matches!(self.typing.types.get(t), TypeData::NeverOf(_));
                     for result in results {
-                        // Kotlin Temper reports a Void result where one is
-                        // wanted at odd positions; not yet here.
+                        // A `Void` result where a value is wanted is one used
+                        // as a value (t854); Kotlin Temper reports it at odd
+                        // positions. Not a loop, which may end only by
+                        // returning, nor the `void` after a jump.
                         let void = self.known_type(result) == VOID;
-                        if !void || (never && self.lib.tree.kind(result) != NodeKind::Loop) {
+                        let is_loop = self.lib.tree.kind(result) == NodeKind::Loop;
+                        if !void || (never && !is_loop) {
                             self.check_value(t, result, Site::Result);
+                        } else if !never && t != VOID && !is_loop && !self.is_void_value(result) {
+                            self.check_not_void(result, result);
                         }
                     }
                 }
@@ -1252,6 +1331,7 @@ impl Settle {
             }
             (NodeKind::Call, ..) => {
                 self.check_call(node);
+                self.check_type_args(node);
                 self.record_trailing_block(node);
                 let args = self
                     .lib
@@ -1265,6 +1345,7 @@ impl Settle {
                 }
             }
             (NodeKind::Class, ..) => {
+                self.check_builtin_supertypes(node);
                 self.check_overrides(node);
                 self.check_fun_interface(node);
                 self.check_connected_class(node);
@@ -1276,8 +1357,15 @@ impl Settle {
                     mismatch = !self.leaves_fit(&leaves, BOOLEAN);
                     t = self.unjoined_type(&leaves);
                 }
-                if mismatch && t != NULL {
-                    let (expected, got) = (self.show(BOOLEAN), self.show(t));
+                if mismatch {
+                    // A condition that's only null, as `if (null)` or
+                    // `while (null)`, shows as written.
+                    let got = if t == NULL {
+                        "null".into()
+                    } else {
+                        self.show(t)
+                    };
+                    let expected = self.show(BOOLEAN);
                     let span = self.lib.tree.span(condition);
                     let message = Message::ExpectedValueOfType(expected, got);
                     self.lib.report(Level::Error, message, span);
@@ -1294,6 +1382,15 @@ impl Settle {
         };
         let kind = self.scopes.symbol(b).kind;
         let role = self.lib.tree.data(node) & core::ROLE_MASK;
+        // A field (role 0) holds a value as a top-level or local does.
+        let is_value = matches!(kind, SymbolKind::TopLevel | SymbolKind::Local)
+            || (kind == SymbolKind::Member && role == 0);
+        if ty.is_none() && is_value && self.only_null(node, init) {
+            let shown = self.lib.names.get(self.scopes.symbol(b).name).to_string();
+            let span = self.lib.tree.span(name);
+            self.lib
+                .report(Level::Error, Message::NullNeedsType(shown), span);
+        }
         let wants_type = match kind {
             SymbolKind::TopLevel | SymbolKind::Local => ty.is_none(),
             SymbolKind::Member => role == core::ROLE_METHOD || role == core::ROLE_GETTER,
@@ -1333,6 +1430,25 @@ impl Settle {
             if is_void && is_fn && core::fn_parts(&self.lib.tree, init).1.is_none() {
                 self.check_bubbles(init);
             }
+        }
+    }
+
+    /// Notes the nullable type a place that wants a `t` gives a null
+    /// there ([`Typing::in_place`]).
+    pub(super) fn null_in_place(&mut self, null: NodeId, t: TypeId) {
+        if self.typing.types.is_known(t) && t != VOID {
+            let t = self.typing.types.nullable(t);
+            self.typing.null_places.insert(null, t);
+        }
+    }
+
+    /// Whether a declaration's only values are null, from its
+    /// initializer, or else what's assigned to it first, which leaves it
+    /// no type (notes/typing.md, "Null").
+    fn only_null(&mut self, decl: NodeId, init: Option<NodeId>) -> bool {
+        match init {
+            Some(init) => self.known_type(init) == NULL,
+            None => self.initializers_join(decl, true) == Ok(Some(NULL)),
         }
     }
 
@@ -1472,6 +1588,7 @@ impl Settle {
             Some(Builtin::Function(Function::New)) => match self.new_class(args) {
                 Some(class) => self.constructor_type(class),
                 None => {
+                    self.check_builtin_new(node);
                     self.check_generic_call(node);
                     return;
                 }
@@ -1492,7 +1609,11 @@ impl Settle {
             None if self.check_tie(node, callee, args) => return,
             None if self.check_generic_call(node) => return,
             None => {
-                self.check_console_call(node, callee, args);
+                // `console.log(…)`, checked as Kotlin checks it, not
+                // also as a `Console`'s method.
+                if self.check_console_call(node, callee, args) {
+                    return;
+                }
                 let mut callee_type = self.known_callee_type(callee);
                 // A function that may be null, as `act(i)` for `act: (fn
                 // (Int): Void)?`, as Kotlin Temper reports it; the
@@ -1546,8 +1667,10 @@ impl Settle {
     /// Counter?". Beside [`Settle::check_call`]'s nullable function value.
     /// `c?.n` is fine, and so is a value Kotlin might work out while
     /// compiling ([`Settle::may_fold`]), as `s.isEmpty` for `let s:
-    /// String? = "q"`. Code is still generated; the access fails where it
-    /// runs, as for a member that isn't there.
+    /// String? = "q"`. A value that's only null, as `null.length`, has no
+    /// members at all ("No member length in null"). Code is still
+    /// generated; the access fails where it runs, as for a member that
+    /// isn't there.
     fn check_nullable_member(&mut self, node: NodeId) {
         let Some((object, key)) = self.dot_parts(node) else {
             return;
@@ -1556,7 +1679,11 @@ impl Settle {
             return;
         };
         let t = self.known_type(object);
-        if !matches!(self.typing.types.get(t), TypeData::Nullable(_)) || self.may_fold(object, 0) {
+        // A value that's only null, as `null.length`, has no members,
+        // folded or not.
+        let only_null = t == NULL;
+        let nullable = matches!(self.typing.types.get(t), TypeData::Nullable(_));
+        if !only_null && (!nullable || self.may_fold(object, 0)) {
             return;
         }
         let span = self.lib.tree.span(node);
@@ -1566,7 +1693,12 @@ impl Settle {
         if self.lib.diagnostics.iter().any(overlaps) {
             return;
         }
-        let message = Message::NoMember(self.lib.names.get(name).to_string(), self.show(t));
+        let shown = if only_null {
+            "null".into()
+        } else {
+            self.show(t)
+        };
+        let message = Message::NoMember(self.lib.names.get(name).to_string(), shown);
         self.lib.report(Level::Error, message, span);
     }
 
@@ -1676,19 +1808,137 @@ impl Settle {
     /// Never`: only `Never<T>` is a type ([`Types::never_of`]), which
     /// says what its uses translate to.
     fn check_bare_never(&mut self, node: NodeId) {
-        let Some(Builtin::Type(i)) = self.scopes.resolved_builtin(node) else {
+        let tree = &self.lib.tree;
+        let Some(i) = self.scopes.type_builtin(tree, node) else {
             return;
         };
-        let tree = &self.lib.tree;
+        // An alias of it, as `let N = Never` or `let { Never } =
+        // import("core")` make, is checked where it's used.
         let applied = (self.typing.parent(node)).is_some_and(|p| {
             tree.kind(p) == NodeKind::Call
                 && tree.children(p).get(1) == Some(&node)
                 && (self.scopes.resolved_builtin(tree.children(p)[0]))
                     == Some(Builtin::Function(Function::Angle))
+                || tree.kind(p) == NodeKind::Let
+                    && (self.scopes.resolved(core::let_parts(tree, p).0))
+                        .and_then(|b| self.scopes.alias_init(tree, b))
+                        == Some(node)
         });
         if self.typing.types.builtin(i) == NEVER && !applied {
             let span = self.lib.tree.span(node);
             self.lib.report(Level::Error, Message::BareNever, span);
+        }
+    }
+
+    /// Reports a generic type's argument that doesn't fit its type
+    /// parameter's bound, as `Boolean` in `Map<Boolean, Int>`, wherever the
+    /// type is written: an annotation, a type argument, a supertype. Not
+    /// the class `new` makes, which its call reports as any generic call's
+    /// type arguments ([`Settle::check_generic_call`]).
+    fn check_type_args(&mut self, node: NodeId) {
+        let tree = &self.lib.tree;
+        let [angle, base, ref args @ ..] = *tree.children(node) else {
+            return;
+        };
+        if self.scopes.resolved_builtin(angle) != Some(Builtin::Function(Function::Angle)) {
+            return;
+        }
+        let made = (self.typing.parent(node)).is_some_and(|p| {
+            let children = tree.children(p);
+            tree.kind(p) == NodeKind::Call
+                && children.get(1) == Some(&node)
+                && self.scopes.resolved_builtin(children[0])
+                    == Some(Builtin::Function(Function::New))
+        });
+        if made {
+            return;
+        }
+        let args = args.to_vec();
+        let formals = match self.scopes.type_builtin(tree, base) {
+            Some(i) => self.core_type_formals(crate::builtins::TYPES[i as usize]),
+            None => (self.scopes.resolved(base))
+                .and_then(|b| self.type_decl(b))
+                .map(|class| self.own_formals(class)),
+        };
+        let Some(formals) = formals.filter(|f| f.len() == args.len()) else {
+            return;
+        };
+        let actuals: Vec<TypeId> = args.iter().map(|&a| self.eval_type(a)).collect();
+        for (&formal, &actual) in formals.iter().zip(&actuals) {
+            let bound = self.declared_bound(formal);
+            let types = &mut self.typing.types;
+            let wanted = types.substitute(bound, &formals, &actuals);
+            if !types.is_known(actual) || types.fits_bound(actual, wanted) {
+                continue;
+            }
+            let message = Message::TypeFormalBound(
+                self.show_formal(formal),
+                self.show(actual),
+                self.show(bound),
+            );
+            let span = self.lib.tree.span(node);
+            self.lib.report(Level::Error, message, span);
+            return;
+        }
+    }
+
+    /// Whether `node` is the `void` a block without a result ends with,
+    /// unreachable after a jump or reported as falling off its end.
+    fn is_void_value(&self, node: NodeId) -> bool {
+        self.lib.value(node) == Some(&Value::Void)
+    }
+
+    /// Reports `Void` named as a value's type: a declaration's (a
+    /// parameter, local, field, or a type parameter's bound, `x: Void`), a
+    /// type argument (`List<Void>`), `Void?`, or a function type's
+    /// parameter (`fn (Void): Int`), as no value is ever a `Void` (t854).
+    /// It may be what a function or function type returns, and
+    /// `Never<Void>`'s argument. An alias of it, as `let V = Void`, is
+    /// checked as it is. Where it names a class, as `new Void()`
+    /// or `x is Void`, or is a type value, other rules apply.
+    fn check_void_type(&mut self, node: NodeId) {
+        // `Void`, or an alias of it.
+        let void = match self.scopes.type_builtin(&self.lib.tree, node) {
+            Some(i) => self.typing.types.builtin(i) == VOID,
+            _ => {
+                (self.lib.tree.kind(node) == NodeKind::RightName)
+                    && (self.scopes.resolved(node)).is_some_and(|b| self.alias_init(b).is_some())
+                    && self.eval_type(node) == VOID
+            }
+        };
+        if !void {
+            return;
+        }
+        let tree = &self.lib.tree;
+        let Some(parent) = self.typing.parent(node) else {
+            return;
+        };
+        let value_type = match tree.kind(parent) {
+            NodeKind::Let => core::let_parts(tree, parent).1 == Some(node),
+            NodeKind::Call => {
+                let children = tree.children(parent);
+                match (self.scopes.resolved_builtin(children[0]), children) {
+                    (Some(Builtin::Function(Function::FnType)), [.., ret]) => *ret != node,
+                    (Some(Builtin::Function(Function::Nullable)), _) => true,
+                    (Some(Builtin::Function(Function::Angle)), [_, base, ..]) => {
+                        *base != node
+                            && !matches!(self.scopes.type_builtin(tree, *base),
+                                Some(b) if self.typing.types.builtin(b) == NEVER)
+                    }
+                    // A call's type argument, as `\typeArg Void` in `r<Void>(x)`.
+                    _ => (children.windows(2)).any(|pair| {
+                        pair[1] == node
+                            && (self.lib.symbol(pair[0]))
+                                .is_some_and(|k| self.lib.names.get(k) == "typeArg")
+                    }),
+                }
+            }
+            _ => false,
+        };
+        if value_type {
+            let span = self.lib.tree.span(node);
+            self.lib
+                .report(Level::Error, Message::VoidTypeNotValue, span);
         }
     }
 
@@ -1740,6 +1990,7 @@ impl Settle {
             return;
         }
         if s == NULL {
+            self.null_in_place(value, t);
             if self.is_mismatch(NULL, t) {
                 let t_or_null = self.typing.types.nullable(t);
                 let message = Message::ExpectedSubType(self.show(t), self.show(t_or_null));
@@ -1966,7 +2217,7 @@ pub(crate) fn never_returns(
     }
     is(out, Function::Angle)
         && matches!(
-            scopes.resolved_builtin(tree.children(out)[1]),
-            Some(Builtin::Type(i)) if crate::builtins::TYPES[i as usize] == "Never"
+            scopes.type_builtin(tree, tree.children(out)[1]),
+            Some(i) if crate::builtins::TYPES[i as usize] == "Never"
         )
 }

@@ -8,6 +8,9 @@
 //! [`Test::expected_log`] what a run on a given backend logs, as Kotlin's
 //! `MarkdownFileBasedFunctionalTestBase` reads the main file's ```` ```log ````
 //! blocks, honoring their backend selectors (```` ```log ~interp ~lua ````).
+//! A run expected to fail (`expectRunFailure = true`) may say, in a
+//! ```` ```panic ```` block, the message it must panic with
+//! ([`Test::expected_panic`]), which tempest's backend tests check.
 //!
 //! No dependencies, so the frontend and every backend can use it.
 
@@ -207,6 +210,12 @@ impl Test {
         self.main_text().contains("expectRunFailure = true")
     }
 
+    /// The message its run must panic with, if it must: its ` ```panic `
+    /// block's line ([`expected_panic`]).
+    pub fn expected_panic(&self) -> Option<String> {
+        expected_panic(&self.main_text())
+    }
+
     /// Whether it runs as tests rather than a program (`runAsTest = true`).
     pub fn runs_as_test(&self) -> bool {
         self.main_text().contains("runAsTest = true")
@@ -322,6 +331,15 @@ pub fn block_applies_run(selectors: &str, run: &[&str]) -> bool {
         .collect();
     let excluded = (words.iter()).any(|w| w.strip_prefix('~').is_some_and(|w| run.contains(&w)));
     (includes.is_empty() || includes.iter().any(|w| run.contains(w))) && !excluded
+}
+
+/// The message a main file's run must panic with, if it must: the line
+/// of its ` ```panic ` block, which each backend's panic shows, as a
+/// host exception's doesn't.
+pub fn expected_panic(main: &str) -> Option<String> {
+    let mut lines = main.lines().map(str::trim);
+    lines.find(|&l| l == "```panic")?;
+    lines.next().map(str::to_string)
 }
 
 /// The lines of a main file's log blocks that apply to `backend`.

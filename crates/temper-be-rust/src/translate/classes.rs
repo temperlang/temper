@@ -56,6 +56,14 @@ pub(crate) enum This {
 }
 
 /// Every class and interface node of the program, by declaration.
+/// The struct holding a class's fields, behind its type's `Arc`: its
+/// name with `Struct`, as `PointStruct`, without the trailing `_` an
+/// escaped name has, as `String_` (a class named `String`), so it stays
+/// UpperCamelCase.
+fn struct_name(class: &str) -> String {
+    format!("{}Struct", class.trim_end_matches('_'))
+}
+
 pub(crate) fn index(p: &Program) -> HashMap<DeclId, NodeId> {
     let mut out = HashMap::new();
     for module in &p.modules {
@@ -598,14 +606,14 @@ impl<'a> Translator<'a> {
             Item::Struct {
                 attrs: Vec::new(),
                 vis: "",
-                name: format!("{name}Struct{gdecl}"),
+                name: format!("{}{gdecl}", struct_name(&name)),
                 fields,
             },
             Item::TupleStruct {
                 attrs: vec!["#[derive(Clone)]".into()],
                 vis,
                 name: format!("{name}{gdecl}"),
-                types: vec![format!("Arc<{name}Struct{guse}>")],
+                types: vec![format!("Arc<{}{guse}>", struct_name(&name))],
             },
         ];
         items.extend(statics);
@@ -1266,7 +1274,7 @@ impl<'a> Translator<'a> {
         self.ctor_fields.clear();
         lits.extend(self.phantom_lits(class)?);
         let made = Expr::path(&name).call(vec![
-            Expr::path("Arc::new").call(vec![Expr::Struct(format!("{name}Struct"), lits)]),
+            Expr::path("Arc::new").call(vec![Expr::Struct(struct_name(&name), lits)]),
         ]);
         let tail = if rest == body_stmts.len() {
             made
@@ -1400,7 +1408,7 @@ impl<'a> Translator<'a> {
         done?;
         lits.extend(self.phantom_lits(class)?);
         Ok(Expr::path(name).call(vec![
-            Expr::path("Arc::new").call(vec![Expr::Struct(format!("{name}Struct"), lits)]),
+            Expr::path("Arc::new").call(vec![Expr::Struct(struct_name(name), lits)]),
         ]))
     }
 

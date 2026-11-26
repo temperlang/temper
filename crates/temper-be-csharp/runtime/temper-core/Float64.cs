@@ -72,8 +72,16 @@ namespace TemperLang.Core
         {
             var rel = relTol ?? 1e-9;
             var abs = absTol ?? 0.0;
+            // Equal by Temper's `==`, so NaN is near NaN, or finite and
+            // within the margin, which a NaN margin never is: `Math.Max`
+            // keeps NaN.
             var margin = Math.Max(Math.Max(Math.Abs(x), Math.Abs(y)) * rel, abs);
-            return Math.Abs(x - y) <= margin;
+            return x.Compare(y) == 0
+                || (
+                    !double.IsInfinity(x)
+                    && !double.IsInfinity(y)
+                    && Math.Abs(x - y) <= margin
+                );
         }
 
         public static double Sign(this double x)

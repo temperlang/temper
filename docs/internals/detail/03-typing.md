@@ -331,16 +331,17 @@ by name; a typo is found only when a backend can't translate it.
 ### Core's members read from core's source
 
 **Chosen:** builtin types' members' signatures come from
-`lib/core/core.temper`, begun as Kotlin's. [`core_class`](../../../crates/temper-frontend/src/typing/core_members.rs)
-finds a type's declaration by scanning core's text for its `export
-class` line and slicing to the next `}` on its own line, parses that
-alone, and keeps what it read, once per type.
+`lib/core/`, begun as Kotlin's `core.temper`. [`core_class`](../../../crates/temper-frontend/src/typing/core_members.rs)
+finds a type's declaration by scanning core's code (its literate files
+with the prose blanked, at the same offsets) for its `export class`
+line and slicing to the next `}` alone on a line at that line's indent,
+parses that alone, and keeps what it read, once per type.
 
 **Alternative:** load core as a library, settled like std, with its
 types' members as ordinary declarations.
 
-**Pros:** core stays Kotlin's file, easy to diff; no settle of core per
-build.
+**Pros:** core stays close to Kotlin's file, easy to diff; no settle of
+core per build.
 
 **Cons:** a text search over source is fragile; core's own semantics
 aren't checked; and core's types are special cases throughout typing

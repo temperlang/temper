@@ -219,6 +219,9 @@ impl Analysis<'_> {
     /// What hover shows of a symbol, as at its declaration: its kind,
     /// type or signature, and doc comment; for a builtin, core's.
     pub fn symbol_hover(&self, symbol: SymbolId) -> Hover {
+        if let Some(h) = self.namespace_hover(symbol) {
+            return h;
+        }
         let s = self.settled.scopes.symbol(symbol);
         let name = self.settled.library.names.get(s.name).to_string();
         let decl = s.decl.map(|d| self.imported(d));
@@ -226,8 +229,12 @@ impl Analysis<'_> {
             Some(d) if decl != s.decl => self.decl_kind(d, None),
             _ => self.kind(symbol),
         };
-        let ty =
-            type_name_shown(s, &name).or_else(|| decl.and_then(|d| self.decl_type(d, &name, d)));
+        let ty = type_name_shown(s, &name).or_else(|| match decl {
+            Some(d) => self.decl_type(d, &name, d),
+            // A builtin's, as core declares it: `console: Console`.
+            None => (self.core_target(Target::Symbol(symbol)))
+                .and_then(|(ats, _)| builtins::core_signature(*ats.first()?, &name)),
+        });
         let doc = match decl {
             Some(d) => self.doc(d),
             None => (self.core_target(Target::Symbol(symbol)))

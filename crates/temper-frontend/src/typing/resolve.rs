@@ -10,8 +10,9 @@
 //! operator's is its operands' type and its name, as `Int32.add`,
 //! `String.eq`, `Float64.pow` and `Boolean.not`; a builtin type's member's
 //! is the type declaring it in core and its name, as `String.toInt32`,
-//! `Listed.isEmpty` or `List.get`; then `String.cat` for templates and
-//! `console.log`. Other builtin functions have their own names, as
+//! `Listed.isEmpty` or `List.get`, or an instance extension's function's
+//! name, as `listedMap` for `xs.map(f)`; then `String.cat` for
+//! templates and `console.log`. Other builtin functions have their own names, as
 //! `panic` and `list`.
 //!
 //! `==` (and `!=`, the equality it negates) resolves to a class's or
@@ -104,6 +105,7 @@ fn function_key(f: Function) -> Option<&'static str> {
         Empty => "empty",
         DoPure => "doPure",
         DoneResult => "doneResult",
+        GetConsole => "getConsole",
         Async => "async",
         Rgx => "rgx",
         _ => return None,
@@ -187,10 +189,14 @@ impl Settle {
     }
 
     /// A builtin type's member `object.name`, by its key, as core declares
-    /// it, a method first if `callee`.
+    /// it, a method first if `callee`: an instance extension's is its
+    /// function's name, as `listedMap` for `Listed`'s `map`.
     fn core_key(&mut self, object: NodeId, name: &str, callee: bool) -> Option<Resolved> {
         let found = self.core_member_found(object, name, callee, false).ok()??;
-        let key = format!("{}.{}", found.type_name, found.member.name);
+        let key = match &found.member.function {
+            Some(function) => function.clone(),
+            None => format!("{}.{}", found.type_name, found.member.name),
+        };
         Some(Resolved::Builtin(key))
     }
 
@@ -285,6 +291,12 @@ impl Settle {
     fn resolve_eq(&mut self, call: NodeId, args: &[NodeId]) -> Option<Resolved> {
         let (a, b) = (self.known_type(args[0]), self.known_type(args[1]));
         if a == NULL || b == NULL {
+            // A null operand takes the other operand's type.
+            if a == NULL {
+                self.null_in_place(args[0], b)
+            } else {
+                self.null_in_place(args[1], a)
+            }
             return Some(Resolved::NullCheck);
         }
         let (a, b) = (self.operand(args[0]), self.operand(args[1]));

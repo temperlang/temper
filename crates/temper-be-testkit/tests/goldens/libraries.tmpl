@@ -6,36 +6,36 @@ uses `temper-core`#33 0.0.0-alpha.0.0 {
     connected get length#193(): Int32;
   }
   interface Listed#36<T#37> {
-    connected method map#197<O#198>(transform: fn (T#37): O#198): List#34<O#198>;
-    connected method join#245(separator: String, stringify: fn (T#37): String): String;
+    connected method join#246(separator: String, stringify: fn (T#37): String): String;
   }
   class ListBuilder#145<T#146> extends Listed#36<T#146> {
-    connected method add#284(newValue: T#146, at?: Int32): Void;
-    connected get length#285(): Int32;
-    connected constructor constructor#290(): ListBuilder#145<T#146>;
-    connected method toList#292(): List#34<T#146>;
+    connected method add#285(newValue: T#146, at?: Int32): Void;
+    connected get length#286(): Int32;
+    connected constructor constructor#291(): ListBuilder#145<T#146>;
+    connected method toList#293(): List#34<T#146>;
   }
   class String#170 {
     connected method toFloat64#171(): Float64 throws Bubble;
-    connected method toInt32#320(radix?: Int32): Int32 throws Bubble;
+    connected method toInt32#321(radix?: Int32): Int32 throws Bubble;
   }
-  interface Console#230 {
-    connected method log#231(message: String): Void;
+  connected fn listedMap#197<T#198, O#199>(listed: Listed#36<T#198>, transform: fn (T#198): O#199): List#34<O#199>;
+  interface Console#231 {
+    connected method log#232(message: String): Void;
   }
-  class Int32#233 {
-    connected method toString#234(radix?: Int32): String;
+  class Int32#234 {
+    connected method toString#235(radix?: Int32): String;
   }
-  class Float64#235 {
-    connected method toString#236(): String;
+  class Float64#236 {
+    connected method toString#237(): String;
   }
-  class Boolean#243 {
-    connected method toString#244(): String;
+  class Boolean#244 {
+    connected method toString#245(): String;
   }
-  connected fn getConsole#337(name?: String): Console#230;
+  connected fn getConsole#338(name?: String): Console#231;
 }
 
 module libraries#0 {
-  let ~console#232: Console#230;
+  let ~console#233: Console#231;
 
   export class Grid#1 {
     let ncols#32: Int32;
@@ -176,76 +176,76 @@ module libraries#0 {
   }
 
   fn cubes#112(grid#195: Grid#1): List#34<Float64> {
-    return (orelse((value { let more#196: List#34<Float64> = scaled#111(grid#195)^.values#38.map#197<Float64>((fn ~fn#199(x#200: Float64): Float64 { return %Float64.mul(%Float64.mul(x#200, x#200), x#200); }): fn (Float64): Float64); more#196 }): List#34<Float64>, (panic()): List#34<Float64>)): List#34<Float64>;
+    return (orelse((value { let more#196: List#34<Float64> = listedMap#197<Float64, Float64>((upcast(scaled#111(grid#195)^.values#38)): Listed#36<Float64>, (fn ~fn#200(x#201: Float64): Float64 { return %Float64.mul(%Float64.mul(x#201, x#201), x#201); }): fn (Float64): Float64); more#196 }): List#34<Float64>, (panic()): List#34<Float64>)): List#34<Float64>;
   }
 
-  fn each#113(values#201: List#34<Float64>, f#202: fn (Float64): Void): Void {
+  fn each#113(values#202: List#34<Float64>, f#203: fn (Float64): Void): Void {
     {
-      var i#203: Int32 = 0;
-      ~loop#204: while (%Int32.lt(i#203, values#201.length#193())) {
-        f#202(values#201.get#165(i#203));
-        i#203 = %Int32.add(i#203, 1);
+      var i#204: Int32 = 0;
+      ~loop#205: while (%Int32.lt(i#204, values#202.length#193())) {
+        f#203(values#202.get#165(i#204));
+        i#204 = %Int32.add(i#204, 1);
       }
     }
   }
 
-  fn total#114(values#205: List#34<Float64>): Float64 {
-    var sum#206: Float64 = 0.0;
-    each#113(values#205, (fn ~fn#207(x#208: Float64): Void [sum#206] {
-      (orelse((value { let part#209: Float64 = %Float64.div(x#208, 2.0)^; sum#206 = %Float64.add(sum#206, part#209); void }): Void, (panic()): Void)): Void;
+  fn total#114(values#206: List#34<Float64>): Float64 {
+    var sum#207: Float64 = 0.0;
+    each#113(values#206, (fn ~fn#208(x#209: Float64): Void [sum#207] {
+      (orelse((value { let part#210: Float64 = %Float64.div(x#209, 2.0)^; sum#207 = %Float64.add(sum#207, part#210); void }): Void, (panic()): Void)): Void;
     }): fn (Float64): Void);
-    return sum#206;
+    return sum#207;
   }
 
-  fn half#115(x#210: Float64): Float64 {
-    return (orelse(%Float64.div(x#210, 2.0)^, (panic()): Float64)): Float64;
+  fn half#115(x#211: Float64): Float64 {
+    return (orelse(%Float64.div(x#211, 2.0)^, (panic()): Float64)): Float64;
   }
 
-  fn cube#116(x#211: Float64): Float64 {
-    return %Float64.mul(x#211, 0.25);
+  fn cube#116(x#212: Float64): Float64 {
+    return %Float64.mul(x#212, 0.25);
   }
 
-  fn corner#117(grid#212: Grid#1): Float64 {
-    return (orelse(grid#212.get#39(1, 1)^, %Float64.neg(1.0))): Float64;
+  fn corner#117(grid#213: Grid#1): Float64 {
+    return (orelse(grid#213.get#39(1, 1)^, %Float64.neg(1.0))): Float64;
   }
 
-  fn maybe#118(n#213: Int32): Grid#1? {
-    if (%Int32.gt(n#213, 0)) {
-      return (asNullable(new constructor#41(n#213, (list(1.0)): List#34<Float64>))): Grid#1?;
+  fn maybe#118(n#214: Int32): Grid#1? {
+    if (%Int32.gt(n#214, 0)) {
+      return (asNullable(new constructor#41(n#214, (list(1.0)): List#34<Float64>))): Grid#1?;
     } else {
       return (null): Grid#1?;
     }
   }
 
-  fn mapped#119(grid#214: Grid#1): List#34<Float64> {
-    return ((orelse(scaled#111(grid#214)^, (panic()): Grid#1)): Grid#1).values#38.map#197<Float64>((fn ~fn#215(x#216: Float64): Float64 {
-      if (%Float64.gt(x#216, 1.5)) {
-        return %Float64.mul(x#216, 2.0);
+  fn mapped#119(grid#215: Grid#1): List#34<Float64> {
+    return listedMap#197<Float64, Float64>((upcast(((orelse(scaled#111(grid#215)^, (panic()): Grid#1)): Grid#1).values#38)): Listed#36<Float64>, (fn ~fn#216(x#217: Float64): Float64 {
+      if (%Float64.gt(x#217, 1.5)) {
+        return %Float64.mul(x#217, 2.0);
       } else {
-        return x#216;
+        return x#217;
       }
     }): fn (Float64): Float64);
   }
 
-  fn byteAt#120(digits#217: List#34<Int32>, short#218: Boolean, c#219: Int32): Int32 {
-    let byte#220: Int32 = (if (short#218) %Int32.mul(digits#217.get#165(c#219), 17) else %Int32.add(%Int32.mul(digits#217.get#165(%Int32.mul(2, c#219)), 16), digits#217.get#165(%Int32.add(%Int32.mul(2, c#219), 1)))): Int32;
-    return byte#220;
+  fn byteAt#120(digits#218: List#34<Int32>, short#219: Boolean, c#220: Int32): Int32 {
+    let byte#221: Int32 = (if (short#219) %Int32.mul(digits#218.get#165(c#220), 17) else %Int32.add(%Int32.mul(digits#218.get#165(%Int32.mul(2, c#220)), 16), digits#218.get#165(%Int32.add(%Int32.mul(2, c#220), 1)))): Int32;
+    return byte#221;
   }
 
-  fn ascending#121(digits#221: List#34<Int32>): Boolean {
-    if (%Int32.gt(digits#221.length#193(), 1)) {
-      return %Int32.eq(%Int32.add(digits#221.get#165(0), 1), digits#221.get#165(1));
+  fn ascending#121(digits#222: List#34<Int32>): Boolean {
+    if (%Int32.gt(digits#222.length#193(), 1)) {
+      return %Int32.eq(%Int32.add(digits#222.get#165(0), 1), digits#222.get#165(1));
     } else {
       return false;
     }
   }
 
-  fn firstDrop#122(digits#222: List#34<Int32>): Int32 {
-    var i#223: Int32 = 1;
-    ~loop#224: while (%Int32.lt(i#223, digits#222.length#193()) && %Int32.le(digits#222.get#165(%Int32.sub(i#223, 1)), digits#222.get#165(i#223))) {
-      i#223 = %Int32.add(i#223, 1);
+  fn firstDrop#122(digits#223: List#34<Int32>): Int32 {
+    var i#224: Int32 = 1;
+    ~loop#225: while (%Int32.lt(i#224, digits#223.length#193()) && %Int32.le(digits#223.get#165(%Int32.sub(i#224, 1)), digits#223.get#165(i#224))) {
+      i#224 = %Int32.add(i#224, 1);
     }
-    return i#223;
+    return i#224;
   }
 
   var ticks#123: Int32;
@@ -255,9 +255,9 @@ module libraries#0 {
     return ticks#123;
   }
 
-  fn tickIf#125(short#225: Boolean): Int32 {
-    let n#226: Int32 = (if (short#225) tick#124() else %Int32.add(%Int32.mul(tick#124(), 10), tick#124())): Int32;
-    return n#226;
+  fn tickIf#125(short#226: Boolean): Int32 {
+    let n#227: Int32 = (if (short#226) tick#124() else %Int32.add(%Int32.mul(tick#124(), 10), tick#124())): Int32;
+    return n#227;
   }
 
   fn ticked#126(): Boolean {
@@ -269,32 +269,32 @@ module libraries#0 {
   }
 
   fn tickWhile#127(): Int32 {
-    var i#227: Int32 = 0;
-    ~loop#228: while (%Int32.lt(i#227, 3) && %Int32.lt(tick#124(), tick#124())) {
-      i#227 = %Int32.add(i#227, 1);
+    var i#228: Int32 = 0;
+    ~loop#229: while (%Int32.lt(i#228, 3) && %Int32.lt(tick#124(), tick#124())) {
+      i#228 = %Int32.add(i#228, 1);
     }
-    return i#227;
+    return i#228;
   }
 
   let extras#128: List#34<Int32>;
 
-  export fn sizeWith#129<T#130>(items#229: List#34<T#130>): Int32 {
-    return %Int32.add(items#229.length#193(), extras#128.length#193());
+  export fn sizeWith#129<T#130>(items#230: List#34<T#130>): Int32 {
+    return %Int32.add(items#230.length#193(), extras#128.length#193());
   }
 
   let grid#131: Grid#1;
 
-  fn text#132(n#237: Int32): String? {
-    if (%Int32.gt(n#237, 0)) {
+  fn text#132(n#238: Int32): String? {
+    if (%Int32.gt(n#238, 0)) {
       return (asNullable("x")): String?;
     } else {
       return (null): String?;
     }
   }
 
-  fn count#133(n#238: Int32): Int32? {
-    if (%Int32.gt(n#238, 0)) {
-      return (asNullable(n#238)): Int32?;
+  fn count#133(n#239: Int32): Int32? {
+    if (%Int32.gt(n#239, 0)) {
+      return (asNullable(n#239)): Int32?;
     } else {
       return (null): Int32?;
     }
@@ -304,20 +304,20 @@ module libraries#0 {
 
   let some#135: Int32?;
 
-  fn casing#136(n#250: Int32): Casing#2? {
-    if (%Int32.gt(n#250, 0)) {
+  fn casing#136(n#251: Int32): Casing#2? {
+    if (%Int32.gt(n#251, 0)) {
       return (asNullable(first#45)): Casing#2?;
     } else {
       return (null): Casing#2?;
     }
   }
 
-  fn captured#137(s#255: String): String {
-    let found#256: Grid#1? = (orelse((asNullable(parseGrid#104(s#255)^)): Grid#1?, (null): Grid#1?)): Grid#1?;
-    return ((list(1, 2)): List#34<Int32>).map#197<Boolean>((fn ~fn#257(x#258: Int32): Boolean [found#256] {
-      return isNull(found#256);
-    }): fn (Int32): Boolean).join#245(",", (fn ~fn#259(b#260: Boolean): String {
-      return b#260.toString#244();
+  fn captured#137(s#256: String): String {
+    let found#257: Grid#1? = (orelse((asNullable(parseGrid#104(s#256)^)): Grid#1?, (null): Grid#1?)): Grid#1?;
+    return listedMap#197<Int32, Boolean>((upcast((list(1, 2)): List#34<Int32>)): Listed#36<Int32>, (fn ~fn#258(x#259: Int32): Boolean [found#257] {
+      return isNull(found#257);
+    }): fn (Int32): Boolean).join#246(",", (fn ~fn#260(b#261: Boolean): String {
+      return b#261.toString#245();
     }): fn (Boolean): String);
   }
 
@@ -325,8 +325,8 @@ module libraries#0 {
     return %String.cat(%String.cat("look", "‮"), "out");
   }
 
-  fn word#139(n#261: Int32): String {
-    if (%Int32.gt(n#261, 1)) {
+  fn word#139(n#262: Int32): String {
+    if (%Int32.gt(n#262, 1)) {
       return "b";
     } else {
       return "a";
@@ -341,8 +341,8 @@ module libraries#0 {
 
   export class Word#8 {
     let text#64: String;
-    constructor constructor#65(text#266: String): Word#8 {
-      this.text#64 = text#266;
+    constructor constructor#65(text#267: String): Word#8 {
+      this.text#64 = text#267;
     }
   }
 
@@ -351,17 +351,17 @@ module libraries#0 {
     constructor constructor#71(): Joiner#9 {
       this.out#66 = "";
     }
-    method addWord#67(w#267: Word#8): Void {
-      this.out#66 = %String.cat(%String.cat(this.out#66, "w"), w#267.text#64);
+    method addWord#67(w#268: Word#8): Void {
+      this.out#66 = %String.cat(%String.cat(this.out#66, "w"), w#268.text#64);
     }
-    method addFlags#68(x#268: List#34<Boolean>): Void {
-      this.out#66 = %String.cat(%String.cat(this.out#66, "f"), x#268.length#193().toString#234(omitted));
+    method addFlags#68(x#269: List#34<Boolean>): Void {
+      this.out#66 = %String.cat(%String.cat(this.out#66, "f"), x#269.length#193().toString#235(omitted));
     }
-    method addTexts#69(x#269: List#34<String>): Void {
-      this.out#66 = %String.cat(%String.cat(this.out#66, "t"), x#269.length#193().toString#234(omitted));
+    method addTexts#69(x#270: List#34<String>): Void {
+      this.out#66 = %String.cat(%String.cat(this.out#66, "t"), x#270.length#193().toString#235(omitted));
     }
-    method addMaybes#70(x#270: List#34<String?>): Void {
-      this.out#66 = %String.cat(%String.cat(this.out#66, "m"), x#270.length#193().toString#234(omitted));
+    method addMaybes#70(x#271: List#34<String?>): Void {
+      this.out#66 = %String.cat(%String.cat(this.out#66, "m"), x#271.length#193().toString#235(omitted));
     }
   }
 
@@ -371,8 +371,8 @@ module libraries#0 {
 
   export class Tag#11 extends Shown#10 {
     let name#73: String;
-    constructor constructor#75(name#271: String): Tag#11 {
-      this.name#73 = name#271;
+    constructor constructor#75(name#272: String): Tag#11 {
+      this.name#73 = name#272;
     }
     method toString#74(): String {
       return %String.cat(%String.cat("<", this.name#73), ">");
@@ -382,9 +382,9 @@ module libraries#0 {
   export class Held#12<T#24 extends Shown#10> {
     let item#76: T#24;
     let next#77: Held#12<T#24>?;
-    constructor constructor#79(item#272: T#24, next#273: Held#12<T#24>?): Held#12<T#24> {
-      this.item#76 = item#272;
-      this.next#77 = next#273;
+    constructor constructor#79(item#273: T#24, next#274: Held#12<T#24>?): Held#12<T#24> {
+      this.item#76 = item#273;
+      this.next#77 = next#274;
     }
     method toString#78(): String {
       return %String.cat(%String.cat("Held(", ((upcast(this.item#76)): Shown#10).toString#72()), ")");
@@ -395,65 +395,65 @@ module libraries#0 {
 
   export class Plain#14<T#26> extends Effect#13<T#26> {
     let text#80: String;
-    constructor constructor#81(text#274: String): Plain#14<T#26> {
-      this.text#80 = text#274;
+    constructor constructor#81(text#275: String): Plain#14<T#26> {
+      this.text#80 = text#275;
     }
   }
 
   export class Happened#15<T#27> extends Effect#13<T#27> {
     let event#82: T#27;
-    constructor constructor#83(event#275: T#27): Happened#15<T#27> {
-      this.event#82 = event#275;
+    constructor constructor#83(event#276: T#27): Happened#15<T#27> {
+      this.event#82 = event#276;
     }
   }
 
   export class Bundle#16<T#28> {
     let effects#84: List#34<Effect#13<T#28>>;
     let first#85: T#28;
-    constructor constructor#86(effects#276: List#34<Effect#13<T#28>>, first#277: T#28): Bundle#16<T#28> {
-      this.effects#84 = effects#276;
-      this.first#85 = first#277;
+    constructor constructor#86(effects#277: List#34<Effect#13<T#28>>, first#278: T#28): Bundle#16<T#28> {
+      this.effects#84 = effects#277;
+      this.first#85 = first#278;
     }
   }
 
-  fn joinEffects#143<T#144>(into#278: ListBuilder#145<Effect#13<T#144>>, more#279: List#34<Effect#13<T#144>>): Int32 {
+  fn joinEffects#143<T#144>(into#279: ListBuilder#145<Effect#13<T#144>>, more#280: List#34<Effect#13<T#144>>): Int32 {
     {
-      let ~length#280: Int32 = more#279.length#193();
-      var ~i#281: Int32 = 0;
-      ~loop#282: while (%Int32.lt(~i#281, ~length#280)) {
-        let e#283: Effect#13<T#144> = more#279.get#165(~i#281);
-        ~i#281 = %Int32.add(~i#281, 1);
-        into#278.add#284(e#283, omitted);
+      let ~length#281: Int32 = more#280.length#193();
+      var ~i#282: Int32 = 0;
+      ~loop#283: while (%Int32.lt(~i#282, ~length#281)) {
+        let e#284: Effect#13<T#144> = more#280.get#165(~i#282);
+        ~i#282 = %Int32.add(~i#282, 1);
+        into#279.add#285(e#284, omitted);
       }
     }
-    return into#278.length#285();
+    return into#279.length#286();
   }
 
-  export fn effectsOf#147<T#148>(text#286: String, event#287: T#148, other#288: T#148): String {
-    let into#289: ListBuilder#145<Effect#13<T#148>> = new constructor#290<Effect#13<T#148>>();
-    joinEffects#143<T#148>(into#289, (list()): List#34<Effect#13<T#148>>);
-    joinEffects#143<T#148>(into#289, (list((upcast(new constructor#81<T#148>(text#286))): Effect#13<T#148>)): List#34<Effect#13<T#148>>);
-    joinEffects#143<T#148>(into#289, (list((upcast(new constructor#83<T#148>(event#287))): Effect#13<T#148>, (upcast(new constructor#81<T#148>("!"))): Effect#13<T#148>, (upcast(new constructor#83<T#148>(other#288))): Effect#13<T#148>)): List#34<Effect#13<T#148>>);
-    var shown#291: String = "";
+  export fn effectsOf#147<T#148>(text#287: String, event#288: T#148, other#289: T#148): String {
+    let into#290: ListBuilder#145<Effect#13<T#148>> = new constructor#291<Effect#13<T#148>>();
+    joinEffects#143<T#148>(into#290, (list()): List#34<Effect#13<T#148>>);
+    joinEffects#143<T#148>(into#290, (list((upcast(new constructor#81<T#148>(text#287))): Effect#13<T#148>)): List#34<Effect#13<T#148>>);
+    joinEffects#143<T#148>(into#290, (list((upcast(new constructor#83<T#148>(event#288))): Effect#13<T#148>, (upcast(new constructor#81<T#148>("!"))): Effect#13<T#148>, (upcast(new constructor#83<T#148>(other#289))): Effect#13<T#148>)): List#34<Effect#13<T#148>>);
+    var shown#292: String = "";
     {
-      let ~list#293: List#34<Effect#13<T#148>> = into#289.toList#292();
-      let ~length#294: Int32 = ~list#293.length#193();
-      var ~i#295: Int32 = 0;
-      ~loop#296: while (%Int32.lt(~i#295, ~length#294)) {
-        let e#297: Effect#13<T#148> = ~list#293.get#165(~i#295);
-        ~i#295 = %Int32.add(~i#295, 1);
-        if (is(e#297, Plain#14<T#148>)) {
-          shown#291 = %String.cat(shown#291, ((downcast(e#297)): Plain#14<T#148>).text#80);
+      let ~list#294: List#34<Effect#13<T#148>> = into#290.toList#293();
+      let ~length#295: Int32 = ~list#294.length#193();
+      var ~i#296: Int32 = 0;
+      ~loop#297: while (%Int32.lt(~i#296, ~length#295)) {
+        let e#298: Effect#13<T#148> = ~list#294.get#165(~i#296);
+        ~i#296 = %Int32.add(~i#296, 1);
+        if (is(e#298, Plain#14<T#148>)) {
+          shown#292 = %String.cat(shown#292, ((downcast(e#298)): Plain#14<T#148>).text#80);
         } else {
-          shown#291 = %String.cat(shown#291, "*");
+          shown#292 = %String.cat(shown#292, "*");
         }
       }
     }
-    return shown#291;
+    return shown#292;
   }
 
-  export fn sameHeld#149<T#150 extends Shown#10>(a#298: Held#12<T#150>?, b#299: Held#12<T#150>?): Boolean {
-    return (value { let ~left#300: Held#12<T#150>? = a#298; let ~right#301: Held#12<T#150>? = b#299; (if (isNull(~left#300)) isNull(~right#301) else (if (isNull(~right#301)) false else identical((nonNull(~left#300)): Held#12<T#150>, (nonNull(~right#301)): Held#12<T#150>)): Boolean): Boolean }): Boolean;
+  export fn sameHeld#149<T#150 extends Shown#10>(a#299: Held#12<T#150>?, b#300: Held#12<T#150>?): Boolean {
+    return (value { let ~left#301: Held#12<T#150>? = a#299; let ~right#302: Held#12<T#150>? = b#300; (if (isNull(~left#301)) isNull(~right#302) else (if (isNull(~right#302)) false else identical((nonNull(~left#301)): Held#12<T#150>, (nonNull(~right#302)): Held#12<T#150>)): Boolean): Boolean }): Boolean;
   }
 
   export interface Stepper#17<T#29> {
@@ -462,7 +462,7 @@ module libraries#0 {
 
   export interface Counting#18<T#30> extends Stepper#17<T#30> {
     abstract get count#88(): Int32;
-    abstract set count#89(c#302: Int32): Void;
+    abstract set count#89(c#303: Int32): Void;
     abstract method made#90(): T#30;
     method step#91(): List#34<T#30> {
       this.count#89(%Int32.add(this.count#88(), 1));
@@ -478,22 +478,22 @@ module libraries#0 {
     get count#93(): Int32 {
       return this.n#92;
     }
-    set count#94(c#303: Int32): Void {
-      this.n#92 = c#303;
+    set count#94(c#304: Int32): Void {
+      this.n#92 = c#304;
     }
     method made#95(): String {
-      return %String.cat("tick", this.n#92.toString#234(omitted));
+      return %String.cat("tick", this.n#92.toString#235(omitted));
     }
   }
 
   export interface Sink#20<T#31> {
-    abstract method take#97(e#304: T#31): Int32;
+    abstract method take#97(e#305: T#31): Int32;
   }
 
   export class Names#21 extends Sink#20<Tag#11> {
     constructor constructor#99(): Names#21 {}
-    method take#98(e#305: Tag#11): Int32 {
-      if (%String.eq(e#305.name#73, "abc")) {
+    method take#98(e#306: Tag#11): Int32 {
+      if (%String.eq(e#306.name#73, "abc")) {
         return 3;
       } else {
         return 0;
@@ -502,81 +502,81 @@ module libraries#0 {
   }
 
   export interface Escapes#22 {
-    abstract method escape#100(s#306: String?): String;
-    method escapeFlag#101(b#307: Boolean): String {
-      return this.escape#100((asNullable((if (b#307) "T" else "F"): String)): String?);
+    abstract method escape#100(s#307: String?): String;
+    method escapeFlag#101(b#308: Boolean): String {
+      return this.escape#100((asNullable((if (b#308) "T" else "F"): String)): String?);
     }
   }
 
   export class Quoting#23 extends Escapes#22 {
     constructor constructor#103(): Quoting#23 {}
-    method escape#102(s#308: String?): String {
-      return %String.cat(%String.cat("'", (if (isNull(s#308)) "null" else (nonNull(s#308)): String): String), "'");
+    method escape#102(s#309: String?): String {
+      return %String.cat(%String.cat("'", (if (isNull(s#309)) "null" else (nonNull(s#309)): String): String), "'");
     }
   }
 
   let flags#151: List#34<Boolean>;
 
-  fn problem#152(n#310: Int32): String? {
-    let p#311: String? = (if (%Int32.eq(n#310, 0)) (null): String? else (panic()): String?): String?;
-    return p#311;
+  fn problem#152(n#311: Int32): String? {
+    let p#312: String? = (if (%Int32.eq(n#311, 0)) (null): String? else (panic()): String?): String?;
+    return p#312;
   }
 
-  fn message#153(n#312: Int32): String? {
-    let p#313: String? = (if (%Int32.eq(n#312, 0)) (null): String? else (if (%Int32.eq(n#312, 1)) (asNullable("one")): String? else (if (%Int32.eq(n#312, 2)) (null): String? else (panic()): String?): String?): String?): String?;
-    return p#313;
+  fn message#153(n#313: Int32): String? {
+    let p#314: String? = (if (%Int32.eq(n#313, 0)) (null): String? else (if (%Int32.eq(n#313, 1)) (asNullable("one")): String? else (if (%Int32.eq(n#313, 2)) (null): String? else (panic()): String?): String?): String?): String?;
+    return p#314;
   }
 
-  fn sumParsed#154(xs#314: List#34<String>): Int32 {
-    var total#315: Int32 = 0;
+  fn sumParsed#154(xs#315: List#34<String>): Int32 {
+    var total#316: Int32 = 0;
     {
-      var i#316: Int32 = 0;
-      ~loop#317: while (%Int32.lt(i#316, xs#314.length#193())) {
-        let x#318: String = xs#314.get#165(i#316);
-        var n#319: Int32;
-        var ~held#321: Int32? = (null): Int32?;
-        (orelse((value { ~held#321 = (asNullable(x#318.toInt32#320(omitted)^)): Int32?; void }): Void, void)): Void;
-        if (isNull(~held#321)) {
+      var i#317: Int32 = 0;
+      ~loop#318: while (%Int32.lt(i#317, xs#315.length#193())) {
+        let x#319: String = xs#315.get#165(i#317);
+        var n#320: Int32;
+        var ~held#322: Int32? = (null): Int32?;
+        (orelse((value { ~held#322 = (asNullable(x#319.toInt32#321(omitted)^)): Int32?; void }): Void, void)): Void;
+        if (isNull(~held#322)) {
           {
-            i#316 = %Int32.add(i#316, 1);
-            continue ~loop#317;
+            i#317 = %Int32.add(i#317, 1);
+            continue ~loop#318;
           }
         } else {
-          n#319 = (nonNull(~held#321)): Int32;
+          n#320 = (nonNull(~held#322)): Int32;
         }
-        total#315 = %Int32.add(total#315, n#319);
-        i#316 = %Int32.add(i#316, 1);
+        total#316 = %Int32.add(total#316, n#320);
+        i#317 = %Int32.add(i#317, 1);
       }
     }
     {
-      let ~length#322: Int32 = xs#314.length#193();
-      var ~i#323: Int32 = 0;
-      ~loop#324: while (%Int32.lt(~i#323, ~length#322)) {
-        let x#325: String = xs#314.get#165(~i#323);
-        ~i#323 = %Int32.add(~i#323, 1);
-        var m#326: Int32;
-        var ~held#327: Int32? = (null): Int32?;
-        (orelse((value { ~held#327 = (asNullable(x#325.toInt32#320(omitted)^)): Int32?; void }): Void, void)): Void;
-        if (isNull(~held#327)) {
-          continue ~loop#324;
+      let ~length#323: Int32 = xs#315.length#193();
+      var ~i#324: Int32 = 0;
+      ~loop#325: while (%Int32.lt(~i#324, ~length#323)) {
+        let x#326: String = xs#315.get#165(~i#324);
+        ~i#324 = %Int32.add(~i#324, 1);
+        var m#327: Int32;
+        var ~held#328: Int32? = (null): Int32?;
+        (orelse((value { ~held#328 = (asNullable(x#326.toInt32#321(omitted)^)): Int32?; void }): Void, void)): Void;
+        if (isNull(~held#328)) {
+          continue ~loop#325;
         } else {
-          m#326 = (nonNull(~held#327)): Int32;
+          m#327 = (nonNull(~held#328)): Int32;
         }
-        total#315 = %Int32.add(total#315, %Int32.mul(m#326, 10));
+        total#316 = %Int32.add(total#316, %Int32.mul(m#327, 10));
       }
     }
-    return total#315;
+    return total#316;
   }
 
-  fn backwards#155(xs#328: List#34<Int32>): Int32 {
-    var t#329: Int32 = 0;
+  fn backwards#155(xs#329: List#34<Int32>): Int32 {
+    var t#330: Int32 = 0;
     {
-      var i#330: Int32 = xs#328.length#193();
-      ~loop#331: while (%Int32.ge((value { i#330 = %Int32.sub(i#330, 1); i#330 }): Int32, 0)) {
-        t#329 = %Int32.add(%Int32.mul(t#329, 10), xs#328.get#165(i#330));
+      var i#331: Int32 = xs#329.length#193();
+      ~loop#332: while (%Int32.ge((value { i#331 = %Int32.sub(i#331, 1); i#331 }): Int32, 0)) {
+        t#330 = %Int32.add(%Int32.mul(t#330, 10), xs#329.get#165(i#331));
       }
     }
-    return t#329;
+    return t#330;
   }
 
   let joiner#156: Joiner#9;
@@ -594,56 +594,56 @@ module libraries#0 {
   let stepper#162: Counting#18<String>;
 
   init {
-    init ~console#232 = getConsole#337(omitted);
+    init ~console#233 = getConsole#338(omitted);
     init first#45 = new constructor#50("first");
     init last#47 = named#46("last");
     init mark#48 = "#";
     init ticks#123 = 0;
     init extras#128 = (list(1)): List#34<Int32>;
     init grid#131 = new constructor#41(2, (list(1.0, 2.0, 3.0, 4.0)): List#34<Float64>);
-    ~console#232.log#231(%String.cat(%String.cat(%String.cat(%String.cat(rows#110(grid#131.values#38, 2).toString#234(omitted), " "), half#115(3.0).toString#236()), " "), cube#116(8.0).toString#236()));
-    ~console#232.log#231(corner#117(grid#131).toString#236());
-    ~console#232.log#231(total#114(grid#131.values#38).toString#236());
+    ~console#233.log#232(%String.cat(%String.cat(%String.cat(%String.cat(rows#110(grid#131.values#38, 2).toString#235(omitted), " "), half#115(3.0).toString#237()), " "), cube#116(8.0).toString#237()));
+    ~console#233.log#232(corner#117(grid#131).toString#237());
+    ~console#233.log#232(total#114(grid#131.values#38).toString#237());
     init none#134 = text#132(0);
     init some#135 = count#133(3);
-    ~console#232.log#231(%String.cat(%String.cat(%String.cat(%String.cat((value { let ~part#239: String? = none#134; (if (isNull(~part#239)) "null" else (nonNull(~part#239)): String): String }): String, " "), (value { let ~part#240: Int32? = some#135; (if (isNull(~part#240)) "null" else ((nonNull(~part#240)): Int32).toString#234(omitted)): String }): String), " "), (value { let ~part#242: Int32? = (value { let subject#241: Grid#1? = maybe#118(0); (if (isNull(subject#241)) (null): Int32? else (asNullable(((nonNull(subject#241)): Grid#1).ncols#32)): Int32?): Int32? }): Int32?; (if (isNull(~part#242)) "null" else ((nonNull(~part#242)): Int32).toString#234(omitted)): String }): String));
-    ~console#232.log#231(%String.cat(%String.cat(%String.cat(%String.cat(%Boolean.not(isNull(maybe#118(1))).toString#244(), " "), %Boolean.not(isNull(maybe#118(0))).toString#244()), " "), isNull(parse#40("")).toString#244()));
-    ~console#232.log#231(first#45.toString#44());
-    ~console#232.log#231(mapped#119(grid#131).join#245(",", (fn ~fn#246(x#247: Float64): String {
-      return x#247.toString#236();
+    ~console#233.log#232(%String.cat(%String.cat(%String.cat(%String.cat((value { let ~part#240: String? = none#134; (if (isNull(~part#240)) "null" else (nonNull(~part#240)): String): String }): String, " "), (value { let ~part#241: Int32? = some#135; (if (isNull(~part#241)) "null" else ((nonNull(~part#241)): Int32).toString#235(omitted)): String }): String), " "), (value { let ~part#243: Int32? = (value { let subject#242: Grid#1? = maybe#118(0); (if (isNull(subject#242)) (null): Int32? else (asNullable(((nonNull(subject#242)): Grid#1).ncols#32)): Int32?): Int32? }): Int32?; (if (isNull(~part#243)) "null" else ((nonNull(~part#243)): Int32).toString#235(omitted)): String }): String));
+    ~console#233.log#232(%String.cat(%String.cat(%String.cat(%String.cat(%Boolean.not(isNull(maybe#118(1))).toString#245(), " "), %Boolean.not(isNull(maybe#118(0))).toString#245()), " "), isNull(parse#40("")).toString#245()));
+    ~console#233.log#232(first#45.toString#44());
+    ~console#233.log#232(mapped#119(grid#131).join#246(",", (fn ~fn#247(x#248: Float64): String {
+      return x#248.toString#237();
     }): fn (Float64): String));
-    ~console#232.log#231(cubes#112(grid#131).join#245(",", (fn ~fn#248(x#249: Float64): String {
-      return x#249.toString#236();
+    ~console#233.log#232(cubes#112(grid#131).join#246(",", (fn ~fn#249(x#250: Float64): String {
+      return x#250.toString#237();
     }): fn (Float64): String));
-    ~console#232.log#231(%String.cat(%String.cat(%String.cat(%String.cat(((value { let ~left#251: Casing#2? = casing#136(1); (if (isNull(~left#251)) false else ((nonNull(~left#251)): Casing#2).eq#43(first#45)): Boolean }): Boolean).toString#244(), " "), ((value { let ~left#252: Casing#2? = casing#136(0); (if (isNull(~left#252)) false else ((nonNull(~left#252)): Casing#2).eq#43(first#45)): Boolean }): Boolean).toString#244()), " "), %Boolean.not((value { let ~left#253: Casing#2? = casing#136(0); let ~right#254: Casing#2? = casing#136(0); (if (isNull(~left#253)) isNull(~right#254) else (if (isNull(~right#254)) false else ((nonNull(~left#253)): Casing#2).eq#43((nonNull(~right#254)): Casing#2)): Boolean): Boolean }): Boolean).toString#244()));
-    ~console#232.log#231(%String.cat(%String.cat(captured#137(""), " "), captured#137("2.5")));
-    ~console#232.log#231(%Boolean.not(%String.eq(bidi#138(), "lookout")).toString#244());
-    ~console#232.log#231(%String.cat(%String.cat(%String.cat(%String.cat(%String.cmp(word#139(1), word#139(2)).toString#234(omitted), " "), %String.cmp(word#139(2), word#139(1)).toString#234(omitted)), " "), %String.cmp(word#139(2), word#139(3)).toString#234(omitted)));
+    ~console#233.log#232(%String.cat(%String.cat(%String.cat(%String.cat(((value { let ~left#252: Casing#2? = casing#136(1); (if (isNull(~left#252)) false else ((nonNull(~left#252)): Casing#2).eq#43(first#45)): Boolean }): Boolean).toString#245(), " "), ((value { let ~left#253: Casing#2? = casing#136(0); (if (isNull(~left#253)) false else ((nonNull(~left#253)): Casing#2).eq#43(first#45)): Boolean }): Boolean).toString#245()), " "), %Boolean.not((value { let ~left#254: Casing#2? = casing#136(0); let ~right#255: Casing#2? = casing#136(0); (if (isNull(~left#254)) isNull(~right#255) else (if (isNull(~right#255)) false else ((nonNull(~left#254)): Casing#2).eq#43((nonNull(~right#255)): Casing#2)): Boolean): Boolean }): Boolean).toString#245()));
+    ~console#233.log#232(%String.cat(%String.cat(captured#137(""), " "), captured#137("2.5")));
+    ~console#233.log#232(%Boolean.not(%String.eq(bidi#138(), "lookout")).toString#245());
+    ~console#233.log#232(%String.cat(%String.cat(%String.cat(%String.cat(%String.cmp(word#139(1), word#139(2)).toString#235(omitted), " "), %String.cmp(word#139(2), word#139(1)).toString#235(omitted)), " "), %String.cmp(word#139(2), word#139(3)).toString#235(omitted)));
     init named#140 = word#139(2);
-    ~console#232.log#231((%String.eq(named#140, word#139(3)) && %Boolean.not(%String.eq(%String.cat(named#140, "!"), named#140))).toString#244());
+    ~console#233.log#232((%String.eq(named#140, word#139(3)) && %Boolean.not(%String.eq(%String.cat(named#140, "!"), named#140))).toString#245());
     init digits#141 = (list(1, 2, 4, 3)): List#34<Int32>;
-    ~console#232.log#231(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(byteAt#120(digits#141, true, 1).toString#234(omitted), " "), byteAt#120(digits#141, false, 0).toString#234(omitted)), " "), ascending#121(digits#141).toString#244()), " "), firstDrop#122(digits#141).toString#234(omitted)), " "), sizeWith#129<Int32>(digits#141).toString#234(omitted)));
-    ~console#232.log#231(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(tickIf#125(true).toString#234(omitted), " "), tickIf#125(false).toString#234(omitted)), " "), ticked#126().toString#244()), " "), tickWhile#127().toString#234(omitted)));
-    ~console#232.log#231(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(shapeName#107(shapeOf#108(1)), " "), shapeName#107(shapeOf#108(2))), " "), sizes#109(shapeOf#108(1)).length#193().toString#234(omitted)), " "), sizes#109(shapeOf#108(2)).length#193().toString#234(omitted)), " "), (value { let ~part#262: Int32? = new constructor#56(1).grown#54(); (if (isNull(~part#262)) "null" else ((nonNull(~part#262)): Int32).toString#234(omitted)): String }): String), " "), (value { let ~part#263: Int32? = new constructor#56(3).grown#54(); (if (isNull(~part#263)) "null" else ((nonNull(~part#263)): Int32).toString#234(omitted)): String }): String), " "), last#47.toString#44()), " "), first#45.marked#49()));
+    ~console#233.log#232(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(byteAt#120(digits#141, true, 1).toString#235(omitted), " "), byteAt#120(digits#141, false, 0).toString#235(omitted)), " "), ascending#121(digits#141).toString#245()), " "), firstDrop#122(digits#141).toString#235(omitted)), " "), sizeWith#129<Int32>(digits#141).toString#235(omitted)));
+    ~console#233.log#232(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(tickIf#125(true).toString#235(omitted), " "), tickIf#125(false).toString#235(omitted)), " "), ticked#126().toString#245()), " "), tickWhile#127().toString#235(omitted)));
+    ~console#233.log#232(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(shapeName#107(shapeOf#108(1)), " "), shapeName#107(shapeOf#108(2))), " "), sizes#109(shapeOf#108(1)).length#193().toString#235(omitted)), " "), sizes#109(shapeOf#108(2)).length#193().toString#235(omitted)), " "), (value { let ~part#263: Int32? = new constructor#56(1).grown#54(); (if (isNull(~part#263)) "null" else ((nonNull(~part#263)): Int32).toString#235(omitted)): String }): String), " "), (value { let ~part#264: Int32? = new constructor#56(3).grown#54(); (if (isNull(~part#264)) "null" else ((nonNull(~part#264)): Int32).toString#235(omitted)): String }): String), " "), last#47.toString#44()), " "), first#45.marked#49()));
     init carry#142 = new constructor#61(3);
-    ~console#232.log#231(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(carry#142.carrying#59.toString#244(), " "), carry#142.state#60.toString#234(omitted)), " "), new constructor#61(0).carrying#59.toString#244()), " "), (value { let ~part#264: String? = tagged#105(omitted).label#62; (if (isNull(~part#264)) "null" else (nonNull(~part#264)): String): String }): String), " "), (value { let ~part#265: String? = tagged#105((asNullable("x")): String?).label#62; (if (isNull(~part#265)) "null" else (nonNull(~part#265)): String): String }): String), " "), weight#106(42).toString#234(omitted)), " "), weight#106(60).toString#234(omitted)));
-    init flags#151 = (value { let b#309: ListBuilder#145<Boolean> = new constructor#290<Boolean>(); b#309.add#284(true, omitted); b#309.add#284(false, omitted); b#309.toList#292() }): List#34<Boolean>;
+    ~console#233.log#232(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(carry#142.carrying#59.toString#245(), " "), carry#142.state#60.toString#235(omitted)), " "), new constructor#61(0).carrying#59.toString#245()), " "), (value { let ~part#265: String? = tagged#105(omitted).label#62; (if (isNull(~part#265)) "null" else (nonNull(~part#265)): String): String }): String), " "), (value { let ~part#266: String? = tagged#105((asNullable("x")): String?).label#62; (if (isNull(~part#266)) "null" else (nonNull(~part#266)): String): String }): String), " "), weight#106(42).toString#235(omitted)), " "), weight#106(60).toString#235(omitted)));
+    init flags#151 = (value { let b#310: ListBuilder#145<Boolean> = new constructor#291<Boolean>(); b#310.add#285(true, omitted); b#310.add#285(false, omitted); b#310.toList#293() }): List#34<Boolean>;
     init joiner#156 = new constructor#71();
     joiner#156.addWord#67(new constructor#65("a"));
     joiner#156.addFlags#68((list(true)): List#34<Boolean>);
     joiner#156.addTexts#69((list("x", "y")): List#34<String>);
     init maybes#157 = (list((null): String?, (asNullable("z")): String?)): List#34<String?>;
     joiner#156.addMaybes#70(maybes#157);
-    ~console#232.log#231(joiner#156.out#66);
+    ~console#233.log#232(joiner#156.out#66);
     init held#158 = new constructor#79<Tag#11>(new constructor#75("a"), (null): Held#12<Tag#11>?);
     init other#159 = new constructor#79<Tag#11>(new constructor#75("b"), (asNullable(held#158)): Held#12<Tag#11>?);
     init nobody#160 = (null): Held#12<Tag#11>?;
-    ~console#232.log#231(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(held#158.toString#78(), " "), ((value { let subject#332: Tag#11? = (value { let subject#333: Held#12<Tag#11>? = other#159.next#77; (if (isNull(subject#333)) (null): Tag#11? else (asNullable(((nonNull(subject#333)): Held#12<Tag#11>).item#76)): Tag#11?): Tag#11? }): Tag#11?; (if (isNull(subject#332)) new constructor#75("none") else (nonNull(subject#332)): Tag#11): Tag#11 }): Tag#11).toString#74()), " "), sameHeld#149<Tag#11>((asNullable(held#158)): Held#12<Tag#11>?, (asNullable(held#158)): Held#12<Tag#11>?).toString#244()), " "), sameHeld#149<Tag#11>((asNullable(held#158)): Held#12<Tag#11>?, (asNullable(other#159)): Held#12<Tag#11>?).toString#244()), " "), sameHeld#149<Tag#11>(nobody#160, nobody#160).toString#244()), " "), sameHeld#149<Tag#11>(nobody#160, (asNullable(held#158)): Held#12<Tag#11>?).toString#244()));
-    ~console#232.log#231(%String.cat(%String.cat(%String.cat(%String.cat(effectsOf#147<Int32>("ab", 1, 2), " "), new constructor#86<String>((list()): List#34<Effect#13<String>>, "2").first#85), " "), flags#151.length#193().toString#234(omitted)));
+    ~console#233.log#232(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(held#158.toString#78(), " "), ((value { let subject#333: Tag#11? = (value { let subject#334: Held#12<Tag#11>? = other#159.next#77; (if (isNull(subject#334)) (null): Tag#11? else (asNullable(((nonNull(subject#334)): Held#12<Tag#11>).item#76)): Tag#11?): Tag#11? }): Tag#11?; (if (isNull(subject#333)) new constructor#75("none") else (nonNull(subject#333)): Tag#11): Tag#11 }): Tag#11).toString#74()), " "), sameHeld#149<Tag#11>((asNullable(held#158)): Held#12<Tag#11>?, (asNullable(held#158)): Held#12<Tag#11>?).toString#245()), " "), sameHeld#149<Tag#11>((asNullable(held#158)): Held#12<Tag#11>?, (asNullable(other#159)): Held#12<Tag#11>?).toString#245()), " "), sameHeld#149<Tag#11>(nobody#160, nobody#160).toString#245()), " "), sameHeld#149<Tag#11>(nobody#160, (asNullable(held#158)): Held#12<Tag#11>?).toString#245()));
+    ~console#233.log#232(%String.cat(%String.cat(%String.cat(%String.cat(effectsOf#147<Int32>("ab", 1, 2), " "), new constructor#86<String>((list()): List#34<Effect#13<String>>, "2").first#85), " "), flags#151.length#193().toString#235(omitted)));
     init counter#161 = new constructor#96();
     init stepper#162 = (upcast(counter#161)): Counting#18<String>;
     stepper#162.step#91();
-    ~console#232.log#231(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(stepper#162.step#91().get#165(0), " "), counter#161.count#93().toString#234(omitted)), " "), new constructor#99().take#98(new constructor#75("abc")).toString#234(omitted)), " "), ((upcast(new constructor#103())): Escapes#22).escapeFlag#101(true)));
-    ~console#232.log#231(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat((value { let subject#334: String? = problem#152(0); (if (isNull(subject#334)) "none" else (nonNull(subject#334)): String): String }): String, " "), (value { let subject#335: String? = message#153(1); (if (isNull(subject#335)) "none" else (nonNull(subject#335)): String): String }): String), " "), (value { let subject#336: String? = message#153(2); (if (isNull(subject#336)) "none" else (nonNull(subject#336)): String): String }): String), " "), sumParsed#154((list("1", "x", "2")): List#34<String>).toString#234(omitted)), " "), backwards#155((list(1, 2, 3)): List#34<Int32>).toString#234(omitted)));
+    ~console#233.log#232(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(stepper#162.step#91().get#165(0), " "), counter#161.count#93().toString#235(omitted)), " "), new constructor#99().take#98(new constructor#75("abc")).toString#235(omitted)), " "), ((upcast(new constructor#103())): Escapes#22).escapeFlag#101(true)));
+    ~console#233.log#232(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat((value { let subject#335: String? = problem#152(0); (if (isNull(subject#335)) "none" else (nonNull(subject#335)): String): String }): String, " "), (value { let subject#336: String? = message#153(1); (if (isNull(subject#336)) "none" else (nonNull(subject#336)): String): String }): String), " "), (value { let subject#337: String? = message#153(2); (if (isNull(subject#337)) "none" else (nonNull(subject#337)): String): String }): String), " "), sumParsed#154((list("1", "x", "2")): List#34<String>).toString#235(omitted)), " "), backwards#155((list(1, 2, 3)): List#34<Int32>).toString#235(omitted)));
   }
 }

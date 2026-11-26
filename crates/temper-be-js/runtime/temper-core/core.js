@@ -254,6 +254,21 @@ export const bubble = () => {
 export const panic = bubble;
 
 /**
+ * Panics for an index out of bounds of a list or string of `length`, as
+ * core's docs say reading or writing there does: an `Error` with the
+ * message every backend gives for a list; for a string, in its own units
+ * (UTF-16). Unlike other backends', `orelse` still catches it, as it does
+ * `panic()` (notes/kotlin-differences.md).
+ *
+ * @param {number} index
+ * @param {number} length
+ * @returns {never}
+ */
+export const indexOutOfBounds = (index, length) => {
+  throw new Error(`index ${index} out of bounds for length ${length}`);
+};
+
+/**
  * @template T
  * @param {T} a
  */

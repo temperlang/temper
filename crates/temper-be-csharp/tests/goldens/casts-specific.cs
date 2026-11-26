@@ -33,9 +33,9 @@ public static class SpecificGlobal
         CheckB(new BravoClass());
         CheckB(new CharlieClass());
         IReadOnlyList<IAlphaInterface> items = Listed.CreateReadOnlyList<IAlphaInterface>(new BravoClass(), new CharlieClass());
-        CheckB(items[0]);
-        CheckB(items[1]);
-        CheckIfB(items[0]);
-        CheckIfB(items[1]);
+        CheckB(Listed.Get(items, 0));
+        CheckB(Listed.Get(items, 1));
+        CheckIfB(Listed.Get(items, 0));
+        CheckIfB(Listed.Get(items, 1));
     }
 }

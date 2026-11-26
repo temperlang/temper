@@ -57,6 +57,22 @@ pub const TABLE: &[(&str, Connection)] = &[
     ("core.getConsole()", Connection::Erased),
     ("core.getPromiseResultSync()", Connection::Method("get")),
     (
+        "core.listedMap()",
+        Connection::Ufcs("temper_core::listed::map"),
+    ),
+    (
+        "core.listedReduceFrom()",
+        Connection::Ufcs("temper_core::listed::reduce_from"),
+    ),
+    (
+        "core.listedReduceFromIndex()",
+        Connection::Ufcs("temper_core::listed::reduce_from_index"),
+    ),
+    (
+        "core.mappedToListWith()",
+        Connection::Ufcs("temper_core::mapped_to_list_with"),
+    ),
+    (
         "core.safeAdaptGeneratorFn()",
         Connection::Function("temper_core::SafeGenerator::from_fn"),
     ),
@@ -67,28 +83,6 @@ pub const TABLE: &[(&str, Connection)] = &[
     (
         "core.type Console.log()",
         Connection::Translate(console_log),
-    ),
-    (
-        "core.type DenseBitVector.constructor()",
-        Connection::Function("temper_core::DenseBitVector::with_capacity"),
-    ),
-    ("core.type DenseBitVector.get()", Connection::Method("get")),
-    ("core.type DenseBitVector.set()", Connection::Method("set")),
-    (
-        "core.type Deque.add()",
-        Connection::Ufcs("temper_core::deque::add"),
-    ),
-    (
-        "core.type Deque.constructor()",
-        Connection::Translate(new_deque),
-    ),
-    (
-        "core.type Deque.get isEmpty()",
-        Connection::Ufcs("temper_core::deque::is_empty"),
-    ),
-    (
-        "core.type Deque.removeFirst()",
-        Connection::Ufcs("temper_core::deque::remove_first"),
     ),
     ("core.type Float64.abs()", Connection::Method("abs")),
     ("core.type Float64.acos()", Connection::Method("acos")),
@@ -142,6 +136,7 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Float64.toString()",
         Connection::Function("temper_core::float64::to_string"),
     ),
+    ("core.type Int32.get signum()", Connection::Method("signum")),
     ("core.type Int32.max()", Connection::Method("max")),
     ("core.type Int32.min()", Connection::Method("min")),
     ("core.type Int32.toFloat64()", Connection::Cast("f64")),
@@ -252,16 +247,8 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Ufcs("temper_core::listed::join"),
     ),
     (
-        "core.type Listed.map()",
-        Connection::Ufcs("temper_core::listed::map"),
-    ),
-    (
         "core.type Listed.reduce()",
         Connection::Ufcs("temper_core::listed::reduce"),
-    ),
-    (
-        "core.type Listed.reduceFrom()",
-        Connection::Ufcs("temper_core::listed::reduce_from"),
     ),
     (
         "core.type Listed.slice()",
@@ -326,10 +313,6 @@ pub const TABLE: &[(&str, Connection)] = &[
     (
         "core.type Mapped.toList()",
         Connection::Ufcs("temper_core::MappedTrait::to_list"),
-    ),
-    (
-        "core.type Mapped.toListWith()",
-        Connection::Ufcs("temper_core::mapped_to_list_with"),
     ),
     (
         "core.type Mapped.toMap()",
@@ -480,6 +463,34 @@ pub const TABLE: &[(&str, Connection)] = &[
     (
         "core.type ValueResult.constructor()",
         Connection::Translate(some),
+    ),
+    (
+        "std/collections.type BitVector.constructor()",
+        Connection::Function("temper_core::BitVector::with_capacity"),
+    ),
+    (
+        "std/collections.type BitVector.get()",
+        Connection::Method("get"),
+    ),
+    (
+        "std/collections.type BitVector.set()",
+        Connection::Method("set"),
+    ),
+    (
+        "std/collections.type Queue.add()",
+        Connection::Ufcs("temper_core::queue::add"),
+    ),
+    (
+        "std/collections.type Queue.constructor()",
+        Connection::Translate(new_queue),
+    ),
+    (
+        "std/collections.type Queue.get isEmpty()",
+        Connection::Ufcs("temper_core::queue::is_empty"),
+    ),
+    (
+        "std/collections.type Queue.removeFirst()",
+        Connection::Ufcs("temper_core::queue::remove_first"),
     ),
     ("std/net.sendRequest()", Connection::Support("send_request")),
     (
@@ -718,9 +729,9 @@ fn string_index_none(_: &mut Translator<'_>, _: &[NodeId], _: Want) -> Result<Ex
     Ok(Expr::tuple(Vec::new()))
 }
 
-/// `temper_core::deque::new()`, as Kotlin's.
-fn new_deque(_: &mut Translator<'_>, _: &[NodeId], _: Want) -> Result<Expr, NotYet> {
-    Ok(Expr::path("temper_core::deque::new").call(Vec::new()))
+/// `temper_core::queue::new()`, as Kotlin's.
+fn new_queue(_: &mut Translator<'_>, _: &[NodeId], _: Want) -> Result<Expr, NotYet> {
+    Ok(Expr::path("temper_core::queue::new").call(Vec::new()))
 }
 
 /// `Arc::new(RwLock::new(String::new()))`, as Kotlin's.
@@ -761,6 +772,15 @@ fn string_index_eq(t: &mut Translator<'_>, args: &[NodeId], _: Want) -> Result<E
 /// `@connected` members use their Temper bodies. Which std keys a backend
 /// connects is its own (notes/tmpl/open-questions.md, 48).
 pub const STD: &[&str] = &[
+    "std/collections.type BitVector",
+    "std/collections.type BitVector.constructor()",
+    "std/collections.type BitVector.get()",
+    "std/collections.type BitVector.set()",
+    "std/collections.type Queue",
+    "std/collections.type Queue.add()",
+    "std/collections.type Queue.constructor()",
+    "std/collections.type Queue.get isEmpty()",
+    "std/collections.type Queue.removeFirst()",
     "std/net.sendRequest()",
     "std/regex.type Regex.compiledFind()",
     "std/regex.type Regex.compiledFound()",
@@ -771,6 +791,16 @@ pub const STD: &[&str] = &[
     "std/temporal.type Date.today()",
     "std/testing.type Test.bail()",
 ];
+
+/// The runtime's type for a std class this backend connects, by its key
+/// (`temper_tmpl::qname::std_key`), as Python's `std_type`.
+pub fn std_type(key: &str) -> Option<&'static str> {
+    match key {
+        "std/collections.type BitVector" => Some("temper_core::BitVector"),
+        "std/collections.type Queue" => Some("temper_core::Queue"),
+        _ => None,
+    }
+}
 
 /// Whether this backend connects a std declaration, by its key
 /// (`temper_tmpl::qname::std_key`).

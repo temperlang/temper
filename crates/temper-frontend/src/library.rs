@@ -8,6 +8,7 @@
 //! it came from, also shifted, so the files' parse results stay usable for
 //! formatting and the language server.
 
+use crate::corelib;
 use crate::stdlib;
 use temper_syntax::ast::{self, Value};
 use temper_syntax::lex::SourceKind;
@@ -43,6 +44,9 @@ pub struct File {
     pub origin_base: u32,
     /// Its module code, a block.
     pub root: NodeId,
+    /// Whether it's core's own ([`Library::in_core`]), decided once, as
+    /// it's added.
+    pub core: bool,
 }
 
 /// A diagnostic's level. An error fails the build; a warning is for
@@ -104,8 +108,14 @@ pub enum Message {
     WildcardWithoutImport,
     /// `import` of a module that isn't there, or isn't supported yet.
     ImportFailed(String),
-    /// Importing a name the module doesn't export: the module, the name.
-    NotExported(String, String),
+    /// Importing a name the module doesn't export: the module, the name,
+    /// and an export of a similar name, if there's one.
+    NotExported(String, String, Option<String>),
+    /// Ours: a module namespace, `rx` after `let rx = import("std/regex")`,
+    /// used other than as `rx.member`, by its name.
+    NamespaceNotValue(String),
+    /// Ours: `new a.C()` where `a` isn't a module namespace, by `a`'s text.
+    NewQualifierNotNamespace(String),
     /// An object literal whose property names no visible constructor takes.
     NoSignatureMatches,
     /// An object literal that several classes' constructors match: their names.
@@ -117,6 +127,11 @@ pub enum Message {
     ObjectLiteralWantsOther(String, String),
     /// `class C extends D` where `D` is a class: their names.
     CannotExtendConcrete(String),
+    /// `class C extends S` where `S` is a sealed interface declared in
+    /// another module, as core's `Listed`: their names. Kotlin's
+    /// `CannotExtendSealed`, which names where `S` is declared where
+    /// this names `S`.
+    CannotExtendSealed(String, String),
     /// `interface I(x: Int)`.
     ConstructorArgumentInInterfaceType,
     /// Ours: `interface I { x: Int = 1 }`; interfaces may define only
@@ -144,6 +159,11 @@ pub enum Message {
     SealedSubtypeTypeParam(String),
     /// `static get p` or `static set p`: `get` or `set`, and the name.
     StaticAccessor(String, String),
+    /// A static member and an instance member of one name: the class or
+    /// interface declaring the static and its kind, the one declaring the
+    /// instance member, which it may inherit, and its kind (`property`,
+    /// `method`, `getter`, or `setter`), and the name (t922).
+    StaticAndInstanceMember(String, &'static str, String, &'static str, String),
     /// A class's constructor after its first, as a class has one.
     SeveralConstructors,
     /// A header parameter, `class C(x: Int)`, beside an explicit
@@ -162,6 +182,19 @@ pub enum Message {
     ThisOutsideClassBody,
     /// `new I()` for an interface `I`.
     CannotInstantiateAbstractType(String),
+    /// Ours: `new T()` for a type parameter `T`, which may stand for an
+    /// interface or a class without a fitting constructor: its name.
+    CannotInstantiateTypeParam(String),
+    /// Ours: `extends T` for a type parameter `T`, which isn't known to
+    /// be an unsealed interface: its name.
+    CannotExtendTypeParam(String),
+    /// Ours: core's bodiless `@connected` declaration of a name that no
+    /// builtin has, as a misspelled `export let pancik;`: its name.
+    ConnectedNotBuiltin(String),
+    /// `new T()` for a builtin class `T` that core gives no public
+    /// constructor, as `Int32` or `Empty`. Kotlin's `NotConstructible`,
+    /// which its interpreter reports.
+    NotConstructible(String),
     /// A use of `this` in a constructor, or a field's initializer, before
     /// every field is set (notes/typing.md, "Fields first"): what's done,
     /// as "Calling this.f()", and the fields not yet set.
@@ -189,6 +222,9 @@ pub enum Message {
     ExpectedValueOfType(String, String),
     /// A `Void` value stored or passed. Kotlin's `ExpectedNonVoid`.
     VoidAsValue,
+    /// Ours: `Void` named where a value's type goes, as `x: Void` or
+    /// `List<Void>`, rather than as what a function returns.
+    VoidTypeNotValue,
     /// `Never` without the type it stands for, which Kotlin Temper
     /// rejects only where it's used, with odd messages ("Cannot translate
     /// Never").
@@ -210,6 +246,10 @@ pub enum Message {
     CannotAssignStatic(String, String),
     /// A function without a return type where nothing gives it one.
     MissingReturnType,
+    /// A declaration without a type whose only values are null, as `let
+    /// a = null;`: null has no type of its own (notes/typing.md, "Null").
+    /// The declaration's name.
+    NullNeedsType(String),
     /// Arguments that don't fit the variant of a builtin that a call
     /// picks: the variant, the types it wants, and the arguments'. Kotlin's
     /// `SignatureInputMismatch`.
@@ -296,6 +336,9 @@ pub enum RttiProblem {
     /// Ours: `T` is a `@fun` interface, which Kotlin Temper documents as
     /// not allowed but doesn't report.
     FunInterface,
+    /// `T` is a `@connected` type, which only a sealed supertype may check
+    /// for, through sealed supertypes. `IllegalRttiCheckConnected`.
+    Connected,
 }
 
 /// How a `@fun` interface breaks the rules Kotlin Temper documents for
@@ -331,6 +374,7 @@ impl Message {
             self,
             Message::CannotAssign(..)
                 | Message::BareNever
+                | Message::VoidTypeNotValue
                 | Message::ExportNeedsNonExported(..)
                 | Message::ExpectedSubType(..)
                 | Message::ExpectedValueOfType(..)
@@ -343,7 +387,10 @@ impl Message {
     pub fn text(&self) -> String {
         match self {
             Message::Syntax(m) => m.text(),
-            Message::UndeclaredName(n) => format!("{n} has not been declared"),
+            Message::UndeclaredName(n) => match crate::stdlib::import_hint(n) {
+                Some(hint) => format!("{n} has not been declared; {hint}"),
+                None => format!("{n} has not been declared"),
+            },
             Message::MalformedSpecial(n) => format!("Use of builtin {n} is malformed"),
             Message::MalformedDeclaration => "Declaration is malformed".into(),
             Message::MalformedFunction => "Function is malformed".into(),
@@ -368,7 +415,21 @@ impl Message {
             Message::MultipleRenames => "Extra rename not allowed".into(),
             Message::WildcardWithoutImport => "Wildcard destructure allowed only for import".into(),
             Message::ImportFailed(path) => format!("Import of {path} failed"),
-            Message::NotExported(module, name) => format!("{module} does not export symbol {name}"),
+            Message::NotExported(module, name, similar) => match similar {
+                Some(similar) => {
+                    format!("{module} does not export symbol {name}; did you mean {similar}?")
+                }
+                None => format!("{module} does not export symbol {name}"),
+            },
+            Message::NamespaceNotValue(name) => {
+                format!(
+                    "{name} names a module, not a value; use {name}.name for one of its exports"
+                )
+            }
+            Message::NewQualifierNotNamespace(qualifier) => format!(
+                "new takes a class, or a module namespace's, as `new ns.C()`; \
+                 {qualifier} is not a module namespace"
+            ),
             Message::NoSignatureMatches => "No signature matches".into(),
             Message::MultipleConstructorsMatch(names) => {
                 format!("Multiple types have matching constructors: {names}")
@@ -380,6 +441,10 @@ impl Message {
             Message::CannotExtendConcrete(names) => {
                 format!("Cannot extend concrete type(s) {names}")
             }
+            Message::CannotExtendSealed(sealed, sub) => format!(
+                "Cannot extend sealed type {sealed} from {sub}. {sub} is not declared in the \
+                 same module."
+            ),
             Message::ConstructorArgumentInInterfaceType => {
                 "Constructor parameters are not allowed on interface types".into()
             }
@@ -411,6 +476,15 @@ impl Message {
             Message::StaticAccessor(kind, name) => {
                 format!("`static {kind} {name}` is not supported; use a static method instead")
             }
+            Message::StaticAndInstanceMember(class, st, from, inst, name) => {
+                let owners = match class == from {
+                    true => format!("Static {st} {name} and {inst} {name} of {class}"),
+                    false => format!("Static {st} {name} of {class} and {inst} {name} of {from}"),
+                };
+                format!(
+                    "{owners} share a name; a static and an instance member need different names"
+                )
+            }
             Message::SeveralConstructors => "A class can have only one constructor; \
                 for other ways to make instances, use a static method or an object literal"
                 .to_string(),
@@ -432,6 +506,16 @@ impl Message {
             }
             Message::CannotInstantiateAbstractType(name) => {
                 format!("Cannot instantiate abstract type {name}")
+            }
+            Message::CannotInstantiateTypeParam(name) => {
+                format!("Cannot instantiate type parameter {name}")
+            }
+            Message::CannotExtendTypeParam(name) => format!("Cannot extend type parameter {name}"),
+            Message::ConnectedNotBuiltin(name) => {
+                format!("Core's @connected {name} has no body, but no builtin is named {name}")
+            }
+            Message::NotConstructible(name) => {
+                format!("{name} is not a concrete type with a public constructor")
             }
             Message::ThisBeforeFieldsSet(what, fields) => {
                 let verb = if fields.len() == 1 { "is" } else { "are" };
@@ -464,6 +548,9 @@ impl Message {
                 format!("Expected value of type {expected} not {got}")
             }
             Message::VoidAsValue => "Void expressions cannot be used as values".into(),
+            Message::VoidTypeNotValue => "Void is only what a function returns, \
+                 as f(): Void or fn (): Void; it is never a value's type"
+                .into(),
             Message::BareNever => {
                 "Never needs the type it stands for, as Never<Int> or Never<Void>".into()
             }
@@ -477,6 +564,9 @@ impl Message {
                 "Cannot assign to static member {member} of {class}; static members are only initialized at their declaration"
             ),
             Message::MissingReturnType => "Explicit return type required".into(),
+            Message::NullNeedsType(name) => {
+                format!("Declare a nullable type for {name}: null alone has none")
+            }
             Message::SignatureMismatch(sig, expected, got) => format!(
                 "Actual arguments do not match signature: {sig} expected {expected}, but got {got}"
             ),
@@ -508,6 +598,11 @@ impl Message {
                     RttiProblem::FunInterface => (
                         "@fun interfaces cannot be targeted",
                         ", because backends may make them plain function types",
+                    ),
+                    RttiProblem::Connected => (
+                        "Connected types cannot be targeted",
+                        " because multiple Temper types are allowed to connect to the same \
+                         backend type",
                     ),
                 };
                 format!("{what} with is or as runtime type checks{why}: <[{target}]> from {from}")
@@ -603,6 +698,15 @@ pub struct Library {
     /// `import("other-lib/sub")`, each a name and its root directory
     /// ([`crate::project`]).
     pub libraries: Vec<(String, String)>,
+    /// The root of core's library in the compiler's own Temper checkout,
+    /// as `lib/core`, when it's loaded ([`crate::project::load_library`]):
+    /// its core sources, added after it's set, are core's
+    /// ([`Library::in_core`]).
+    pub core_root: Option<String>,
+    /// The root of std's library when it's the library loaded, from a
+    /// Temper checkout's `lib/std` or a copy of the built-in std
+    /// ([`crate::project::load_library`]): [`Library::std_root`].
+    pub std_dir: Option<String>,
     /// A module, by its directory, whose relative imports resolve from
     /// another directory: the REPL's inputs', from the current one.
     pub relative_from: Option<(String, String)>,
@@ -620,6 +724,10 @@ pub struct Library {
     /// ([`crate::interp`]): a compiled `Regex` can't change, so each run
     /// of one gives what the first did.
     pub constant_regexes: std::collections::HashSet<NodeId>,
+    /// The doc comments and prose paragraphs right before each statement
+    /// that has any, by the statement, then by the `Let` or `Class` it
+    /// becomes; [`Library::doc_string`] picks what documents it.
+    pub doc_comments: std::collections::HashMap<NodeId, Vec<crate::docs::Rem>>,
     next_base: u32,
     next_origin: u32,
 }
@@ -713,6 +821,8 @@ impl Library {
                 span,
             });
         }
+        let runs = crate::docs::collect(self, node_base..self.tree.len() as u32);
+        self.doc_comments.extend(runs);
         let mut root = NodeId(ast.root().0 + node_base);
         // Code that's one labeled statement is that statement's block;
         // wrap it, so the module's block holds the labeled one.
@@ -727,6 +837,7 @@ impl Library {
         // One past the end, so an empty span at a file's end is still its.
         self.next_base = base + source.len() as u32 + 1;
         self.next_origin = origin_base + parsed.tree().len() as u32;
+        let core = self.is_core_file(path, parsed.source());
         self.files.push(File {
             path: path.to_string(),
             module,
@@ -734,6 +845,7 @@ impl Library {
             base,
             origin_base,
             root,
+            core,
         });
         FileId(self.files.len() as u32 - 1)
     }
@@ -793,11 +905,30 @@ impl Library {
         Some(normalize(&format!("{dir}/{path}")))
     }
 
-    /// The directory std modules' directories are in, [`stdlib::DIR`],
+    /// The directory std modules' directories are in: [`stdlib::DIR`],
     /// whether built in or mounted from elsewhere
-    /// ([`Sources`](crate::sources::Sources)).
+    /// ([`Sources`](crate::sources::Sources)), or std's own root when
+    /// it's the library loaded ([`Library::std_dir`]).
     pub fn std_root(&self) -> &str {
-        stdlib::DIR
+        self.std_dir.as_deref().unwrap_or(stdlib::DIR)
+    }
+
+    /// A file's or directory's path from [`Library::std_root`], as
+    /// `json/json.temper.md` or `json`, `""` for the root itself, if it's
+    /// under it. A root of `.`, std's own as the work root, holds every
+    /// relative path but core's.
+    pub fn std_path<'p>(&self, path: &'p str) -> Option<&'p str> {
+        let root = self.std_root();
+        if path == root {
+            return Some("");
+        }
+        if root == "." {
+            let outside = std::path::Path::new(path).has_root()
+                || path.starts_with("../")
+                || path.starts_with(&format!("{}/", corelib::DIR));
+            return (!outside).then_some(path);
+        }
+        path.strip_prefix(root)?.strip_prefix('/')
     }
 
     /// Whether the source at `pos` is std's, whose `@connected`
@@ -805,7 +936,67 @@ impl Library {
     pub fn in_std(&self, pos: u32) -> bool {
         let file = self.locate(pos).0;
         let path = &self.files[file.0 as usize].path;
-        path.starts_with(&format!("{}/", self.std_root()))
+        self.std_path(path).is_some()
+    }
+
+    /// Whether the source at `pos` is core's own, read as a library, as
+    /// editors and core's checks read it: core declares the builtin
+    /// types, as no other library may ([`File::core`]).
+    pub fn in_core(&self, pos: u32) -> bool {
+        self.files[self.locate(pos).0.0 as usize].core
+    }
+
+    /// Whether a file is core's: if its text is one of
+    /// [`corelib::SOURCES`], or if it's one of their paths in
+    /// [`Library::core_root`], the compiler's own checkout's `lib/core`,
+    /// whose text an editor may have changed. No other library is core,
+    /// whatever its name or layout. A file with exactly core's text is
+    /// core's in any library, as tests and editors settle core's files
+    /// from other paths: it can do only what core's own text does, so
+    /// this grants nothing to code a user writes.
+    fn is_core_file(&self, path: &str, source: &str) -> bool {
+        let at_root = |root: &String| {
+            let path = std::path::Path::new(path);
+            path.parent() == Some(std::path::Path::new(root))
+                && (corelib::SOURCES.iter())
+                    .any(|(core, _)| path.file_name().is_some_and(|name| name == *core))
+        };
+        (corelib::SOURCES.iter()).any(|(_, text)| source == *text)
+            || self.core_root.as_ref().is_some_and(at_root)
+    }
+
+    /// The names declared as `let rx = import(…)` among `nodes`, which
+    /// may be module namespaces, or more: any declaration with an
+    /// `import(…)` call among its parts. A cheap superset, so settling
+    /// looks for `rx.member` only on these names.
+    pub fn namespace_names(
+        &self,
+        nodes: std::ops::Range<u32>,
+    ) -> std::collections::HashSet<NameId> {
+        let mut names = std::collections::HashSet::new();
+        let is_import = |node: NodeId| {
+            let tree = &self.tree;
+            tree.kind(node) == NodeKind::Call
+                && (tree.children(node).first()).is_some_and(|&callee| {
+                    tree.kind(callee) == NodeKind::RightName
+                        && self
+                            .name(callee)
+                            .is_some_and(|n| self.names.get(n) == "import")
+                })
+        };
+        for decl in nodes.map(NodeId) {
+            if self.tree.kind(decl) != NodeKind::Decl {
+                continue;
+            }
+            let children = self.tree.children(decl);
+            let Some((&name, rest)) = children.split_first() else {
+                continue;
+            };
+            if self.tree.kind(name) == NodeKind::LeftName && rest.iter().any(|&c| is_import(c)) {
+                names.extend(self.name(name));
+            }
+        }
+        names
     }
 
     /// The module for a directory, if it's loaded.

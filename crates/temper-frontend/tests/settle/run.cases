@@ -891,55 +891,6 @@ log 10 233 -1 -1
 log a||b\n 2
 log xé𐆊b
 
-=== Deque and DenseBitVector
-let q = new Deque<String>();
-q.add("a"); q.add("b");
-console.log("${q.removeFirst()} ${q.isEmpty} ${q.removeFirst()} ${q.isEmpty}");
-let v = new DenseBitVector(2);
-v.set(5, true); v[1] = true; v.set(9, false);
-console.log("${v[5]} ${v.get(1)} ${v[0]} ${v[-1]} ${v.get(9)}");
-q.removeFirst() orelse console.log("not caught");
---- settled
-(Block
-  (Let ^q:0 (Call new (Call <> Deque String)))
-  (Call (Call . q:0 \add) "a")
-  (Call (Call . q:0 \add) "b")
-  (Call
-    (Call . console \log)
-    (Call
-      cat
-      (Call (Call . q:0 \removeFirst))
-      " "
-      (Call . q:0 \isEmpty)
-      " "
-      (Call (Call . q:0 \removeFirst))
-      " "
-      (Call . q:0 \isEmpty)))
-  (Let ^v:1 (Call new DenseBitVector 2))
-  (Call (Call . v:1 \set) 5 true)
-  (Call (Call . v:1 \set) 1 true)
-  (Call (Call . v:1 \set) 9 false)
-  (Call
-    (Call . console \log)
-    (Call
-      cat
-      (Call [] v:1 5)
-      " "
-      (Call (Call . v:1 \get) 1)
-      " "
-      (Call [] v:1 0)
-      " "
-      (Call [] v:1 (Call - 1))
-      " "
-      (Call (Call . v:1 \get) 9)))
-  (Orelse
-    (Call (Call . q:0 \removeFirst))
-    (Call (Call . console \log) "not caught"))
-  #void)
-log a false b true
-log true true false false false
-Panicked: removeFirst on an empty Deque
-
 === a local's initializer reads the outer name it shadows
 let f(v: Int): Int { var v = v; v += 1; v }
 console.log(f(3).toString());
@@ -1618,6 +1569,8 @@ console.log("${p.key} ${p.value} ${p is Pair} ${b is Mapped} ${m is MapBuilder}"
       (Call is m:0 MapBuilder)))
   #void)
 error 326..329: Expected subtype of Int32, but got String
+error 543..552: Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: <[Pair]> from Pair<Int32, String>
+error 556..567: Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: <[Mapped]> from MapBuilder<Int32, String>
 error 571..586: Runtime type check from Map<Int32, String> to MapBuilder can never succeed
 log 2 deux false none ?
 log 2,1
@@ -1625,7 +1578,7 @@ log 2=deux 1=one
 log deux gone 2 2
 log 1: uno
 log a: x
-Failed: Runtime type check from Map<Int32, String> to MapBuilder can never succeed
+Failed: Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: <[Pair]> from Pair<Int32, String>
 
 === static extensions where visible
 @staticExtension(Int, "seven")
@@ -1656,8 +1609,9 @@ do {
       " "
       (Call stringEight:3)))
   (Block (Let ^stringEight:6 0) (Call (Call . String \eight)) #void))
+error 313..325: No member eight in String
 log 7 70 8
-Failed: No method eight for Type
+Failed: No member eight in String
 
 === instance extensions, as Kotlin Temper's tests use them
 // A member that fits wins; else the extension that fits best. Its
@@ -1858,7 +1812,7 @@ console.log("before");
 console.log(sum(1, 2).toString());
 --- settled
 (Block
-  (Let connected ^sum:0 (Call FnType Int Int Int))
+  (Let connected ^sum:0 (Signature (Let ^i:1 Int) (Let ^j:2 Int 0) Int))
   (Call (Call . console \log) "before")
   (Call (Call . console \log) (Call (Call . (Call sum:0 1 2) \toString)))
   #void)
@@ -2451,11 +2405,9 @@ g.nextSafe();
       (Call is (Call (Call . g:1 \next)) (Call <> DoneResult Int))))
   (Call (Call . g:1 \nextSafe))
   #void)
+error 194..217: Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: <[SafeGenerator<Int32>]> from Generator<Int32>
 error 266..311: Expected subtype of String, but got AnyValue
-log false true
-log bubbled
-log true true
-Failed: No method nextSafe for Generator
+Failed: Connected types cannot be targeted with is or as runtime type checks because multiple Temper types are allowed to connect to the same backend type: <[SafeGenerator<Int32>]> from Generator<Int32>
 
 === return ends a generator, and closures keep its locals
 let make(body: fn (): SafeGenerator<Int>): SafeGenerator<Int> { body() }
@@ -3167,7 +3119,7 @@ console.log((s[s.end] orelse -1).toString());
       (Call . (Orelse (Call [] s:0 (Call . s:0 \end)) (Call - 1)) \toString)))
   #void)
 log 62
-Panicked: string index 2 out of bounds
+Panicked: index 2 out of bounds for length 2
 
 === closures made in a generator's loop, each pass its own as in a function
 let plain(): String {

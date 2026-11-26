@@ -94,6 +94,9 @@ pub struct Translator<'a> {
     /// Nullable locals that a default set in place, which pyright then
     /// takes to be never null.
     defaulted: BTreeSet<DeclId>,
+    /// Constructions whose type arguments an annotated local gives
+    /// checkers, so [`Translator::with_type_args`] leaves them be.
+    annotated_news: BTreeSet<NodeId>,
     /// The `do_await` parameters of the generators being translated,
     /// innermost last, which an `await` yields a call of.
     awaiters: Vec<String>,
@@ -181,6 +184,7 @@ impl<'a> Translator<'a> {
             awaiters: Vec::new(),
             bindings: Bindings::default(),
             defaulted: BTreeSet::new(),
+            annotated_news: BTreeSet::new(),
         }
     }
 
@@ -955,16 +959,65 @@ impl<'a> Translator<'a> {
         self.bindings.rebound.get(&self.name(local)).copied()
     }
 
-    /// Whether a type is core's `ListBuilder`'s, `MapBuilder`'s, or
-    /// `Deque`'s, whose element types are invariant.
+    /// Whether a type is core's `ListBuilder`'s or `MapBuilder`'s, or
+    /// std's `Queue`'s, whose element types are invariant.
     fn mutable_collection(&self, ty: TypeId) -> bool {
         match self.p.types.get(ty) {
             TypeData::Nominal { decl, .. } => matches!(
                 self.qname(decl).as_str(),
-                "core.type ListBuilder" | "core.type MapBuilder" | "core.type Deque"
+                "core.type ListBuilder" | "core.type MapBuilder" | "std/collections.type Queue"
             ),
             _ => false,
         }
+    }
+
+    /// Whether a generic class's construction leaves checkers to take
+    /// its type arguments from where the value goes, as an empty
+    /// `Queue`'s: its constructor's parameters don't mention them all.
+    fn unmentioned_type_args(&self, new: NodeId) -> bool {
+        let p = self.p;
+        let Node::New { ctor, .. } = p.nodes.get(new) else {
+            return false;
+        };
+        let TypeData::Nominal { args, .. } = p.types.get(p.nodes.ty(new)) else {
+            return false;
+        };
+        let class = p.decls.get(ctor).owner;
+        let params = p.signature(ctor).map_or(&[][..], |s| s.params);
+        !p.types.list(args).is_empty()
+            && (p.decls.type_params(class).iter()).any(|&tp| {
+                let t = p.decls.get(tp).ty;
+                !params.iter().any(|&ty| p.types.mentions(ty, t))
+            })
+    }
+
+    /// A generic class's construction, `made`, whose type arguments
+    /// checkers can't take from its arguments
+    /// ([`Translator::unmentioned_type_args`]), as a cast to its type,
+    /// `cast('deque[int]', deque())`, as [`Translator::result_only_call`]
+    /// gives a call's: checkers would otherwise take them from where the
+    /// value goes, and see them as unknown where that doesn't name them,
+    /// as an `object` parameter or a generic function's. Not where an
+    /// annotated local gives them, and not at run time (`deque[int]()`),
+    /// which costs several times the construction. Only a call; a
+    /// literal (`[]`) stays.
+    fn with_type_args(&mut self, new: NodeId, made: Expr) -> R<Expr> {
+        let p = self.p;
+        let Node::New { ctor, .. } = p.nodes.get(new) else {
+            return Ok(made);
+        };
+        // Core's `PromiseBuilder` is made by a generic function
+        // (`new_unbound_promise()`), which checkers type as its context.
+        if !matches!(made, Expr::Call(..))
+            || self.qname(ctor) == "core.type PromiseBuilder.constructor()"
+            || self.annotated_news.contains(&new)
+            || !self.unmentioned_type_args(new)
+        {
+            return Ok(made);
+        }
+        let (ann, _) = self.ann_raw(p.nodes.ty(new))?;
+        let cast = self.import("typing", "cast");
+        Ok(Expr::name(cast).call(vec![Expr::Str(ann), made]))
     }
 
     /// Whether checkers may infer a value of a type, unannotated, as a
@@ -1298,7 +1351,36 @@ impl<'a> Translator<'a> {
         else {
             return not_yet("a function that isn't one");
         };
-        self.def(item, decl, params, Some(body), name, decorators)
+        let def = self.def(item, decl, params, Some(body), name, decorators)?;
+        Ok(self.result_only_def(decl, def))
+    }
+
+    /// A generic function's `def` whose signature names a type parameter
+    /// once, in its result (`def _empty() -> deque[_T]`), which pyright's
+    /// strict `reportInvalidTypeVarUse` flags; Temper means it, as each
+    /// call names it ([`Translator::result_only_call`]).
+    pub(crate) fn result_only_def(&self, decl: DeclId, def: Stmt) -> Stmt {
+        if result_only(self.p, decl).contains(&1) {
+            let rule = "pyright: ignore[reportInvalidTypeVarUse]".to_string();
+            Stmt::Commented(Box::new(def), rule)
+        } else {
+            def
+        }
+    }
+
+    /// A call, `call`, of a generic function whose result alone names a
+    /// type parameter ([`result_only`]), as a cast to the call's type,
+    /// `cast('deque[int]', _empty())`, which checkers would otherwise
+    /// take from where the value goes, unknown where that doesn't name it
+    /// (an `object` parameter), as [`Translator::with_type_args`] gives a
+    /// class's construction.
+    pub(crate) fn result_only_call(&mut self, id: NodeId, callee: DeclId, call: Expr) -> R<Expr> {
+        if result_only(self.p, callee).is_empty() {
+            return Ok(call);
+        }
+        let (ann, _) = self.ann_raw(self.p.nodes.ty(id))?;
+        let cast = self.import("typing", "cast");
+        Ok(Expr::name(cast).call(vec![Expr::Str(ann), call]))
     }
 
     /// Reaches the builtins a function's own names hide through
@@ -1677,9 +1759,11 @@ impl<'a> Translator<'a> {
                     Some(init) => {
                         // Nullable ones are annotated, so a later value
                         // fits, and those made empty by core's `ListBuilder`,
-                        // `MapBuilder`, `Deque`, or `PromiseBuilder`, `[]`,
-                        // `{}`, `deque()`, or `new_unbound_promise()`,
-                        // whose element types checkers can't infer, and
+                        // `MapBuilder`, or `PromiseBuilder`, `[]`, `{}`, or
+                        // `new_unbound_promise()`, whose element types
+                        // checkers can't infer, or a class's construction
+                        // that leaves them to where it goes, as std's
+                        // `Queue`'s (else `with_type_args` casts it), and
                         // casts, as `cast_by_type` gives its argument's type
                         // where that's a supertype, also under `orelse`.
                         let ty = p.decls.get(local).ty;
@@ -1688,13 +1772,15 @@ impl<'a> Translator<'a> {
                             value = body;
                         }
                         let empty = match p.nodes.get(value) {
-                            Node::New { ctor, .. } => matches!(
-                                self.qname(ctor).as_str(),
-                                "core.type ListBuilder.constructor()"
-                                    | "core.type MapBuilder.constructor()"
-                                    | "core.type Deque.constructor()"
-                                    | "core.type PromiseBuilder.constructor()"
-                            ),
+                            Node::New { ctor, .. } => {
+                                self.unmentioned_type_args(value)
+                                    || matches!(
+                                        self.qname(ctor).as_str(),
+                                        "core.type ListBuilder.constructor()"
+                                            | "core.type MapBuilder.constructor()"
+                                            | "core.type PromiseBuilder.constructor()"
+                                    )
+                            }
                             Node::As { .. } => true,
                             // Or a builder made from a list literal, which
                             // pyright may take for a list of its items'
@@ -1705,6 +1791,7 @@ impl<'a> Translator<'a> {
                                         .any(|&k| matches!(p.nodes.get(k), Node::ListLit { .. }))
                             }
                         };
+                        let mut declared = false;
                         let ann = match self.rebound(local) {
                             // A name bound more than once: annotated only
                             // where first bound, and there only where its
@@ -1725,6 +1812,7 @@ impl<'a> Translator<'a> {
                                             target: target.clone(),
                                             ann,
                                         });
+                                        declared = true;
                                         None
                                     }
                                     true => Some(self.ann(wide)?),
@@ -1735,6 +1823,10 @@ impl<'a> Translator<'a> {
                             None if p.types.is_nullable(ty) || empty => Some(self.ann(ty)?),
                             None => None,
                         };
+                        // A construction its annotation types.
+                        if ann.is_some() || declared {
+                            self.annotated_news.insert(value);
+                        }
                         self.value_into(init, Sink::Assign(Expr::name(target.clone()), ann), out)?;
                         // A local nothing reads, as `whatIAm` in
                         // `classes/object-literals`, which pyright's strict
@@ -1781,6 +1873,11 @@ impl<'a> Translator<'a> {
             }
             Node::InitLet { target, value } => {
                 let ann = Some(self.ann(p.decls.get(target).ty)?);
+                let mut made = value;
+                while let Node::OrElse { body, .. } = p.nodes.get(made) {
+                    made = body;
+                }
+                self.annotated_news.insert(made);
                 let target = Expr::name(self.name(target));
                 self.value_into(value, Sink::Assign(target, ann), out)?;
             }
@@ -2110,12 +2207,14 @@ impl<'a> Translator<'a> {
                     return self.connected(callee, args);
                 }
                 let present = present(args)?;
-                if self.is_member(callee) {
+                let call = if self.is_member(callee) {
                     let class = self.p.decls.get(callee).owner;
                     let name = self.member_name(callee);
-                    return Ok(self.class_ref(class).attr(name).call(present));
-                }
-                self.top(callee).call(present)
+                    self.class_ref(class).attr(name).call(present)
+                } else {
+                    self.top(callee).call(present)
+                };
+                self.result_only_call(id, callee, call)?
             }
             Node::CallMethod {
                 method,
@@ -2379,15 +2478,15 @@ impl<'a> Translator<'a> {
             }
             Node::New { ctor, args, .. } => {
                 let args = self.args(p.nodes.list(args))?;
-                if is_external(p, ctor) && library_of(p, ctor) == "core"
+                let made = if is_external(p, ctor) && library_of(p, ctor) == "core"
                     || self.connected_call(ctor)
                 {
-                    return self.connected(ctor, args);
-                }
-                let args = present(args)?;
-
-                let class = self.p.decls.get(ctor).owner;
-                self.class_ref(class).call(args)
+                    self.connected(ctor, args)?
+                } else {
+                    let class = self.p.decls.get(ctor).owner;
+                    self.class_ref(class).call(present(args)?)
+                };
+                self.with_type_args(id, made)?
             }
             // Python's checkers narrow by `isinstance` as Temper does.
             Node::Upcast { value } | Node::Downcast { value } => self.expr(value)?,
@@ -2766,8 +2865,6 @@ pub(crate) fn core_type(qname: &str) -> Option<(&'static str, &'static str)> {
             ("builtins", "int")
         }
         "core.type StringBuilder" => ("builtins", "list[str]"),
-        "core.type Deque" => ("collections", "deque"),
-        "core.type DenseBitVector" => ("temper_core", "DenseBitVector"),
         // `()`, its one value. Kotlin's `_empty` is undefined.
         "core.type Empty" => ("builtins", "tuple[()]"),
         // `temper_core`'s `concurrent.futures.Future`, which asyncio can
@@ -2777,34 +2874,53 @@ pub(crate) fn core_type(qname: &str) -> Option<(&'static str, &'static str)> {
     })
 }
 
+/// How many times `ty`'s annotation names the type parameter whose type
+/// is `param`, as checkers count them.
+fn count(p: &Program, ty: TypeId, param: TypeId) -> usize {
+    if ty == param {
+        return 1;
+    }
+    if !p.types.contains(ty) {
+        return 0;
+    }
+    match p.types.get(ty) {
+        TypeData::Nullable(t) => count(p, t, param),
+        // `NoReturn`, which names none.
+        TypeData::Never(_) => 0,
+        TypeData::Nominal { args, .. } => {
+            p.types.list(args).iter().map(|&a| count(p, a, param)).sum()
+        }
+        TypeData::Function { .. } => p.types.signature(ty).map_or(0, |sig| {
+            (sig.params.iter().chain([&sig.result]))
+                .map(|&t| count(p, t, param))
+                .sum()
+        }),
+        TypeData::Scalar(_) | TypeData::TypeParam { .. } => 0,
+    }
+}
+
 /// Whether a function's signature names the type parameter whose type
 /// is `param` only once, as one parameter's whole type, `T` or `T?`.
 fn only_as_a_parameter(p: &Program, decl: DeclId, param: TypeId) -> bool {
-    fn count(p: &Program, ty: TypeId, param: TypeId) -> usize {
-        if ty == param {
-            return 1;
-        }
-        if !p.types.contains(ty) {
-            return 0;
-        }
-        match p.types.get(ty) {
-            TypeData::Nullable(t) => count(p, t, param),
-            // `NoReturn`, which names none.
-            TypeData::Never(_) => 0,
-            TypeData::Nominal { args, .. } => {
-                p.types.list(args).iter().map(|&a| count(p, a, param)).sum()
-            }
-            TypeData::Function { .. } => p.types.signature(ty).map_or(0, |sig| {
-                (sig.params.iter().chain([&sig.result]))
-                    .map(|&t| count(p, t, param))
-                    .sum()
-            }),
-            TypeData::Scalar(_) | TypeData::TypeParam { .. } => 0,
-        }
-    }
     let Some(sig) = p.signature(decl) else {
         return false;
     };
     let bare = (sig.params.iter()).any(|&t| p.types.non_null(t) == param);
     bare && count(p, p.decls.get(decl).ty, param) == 1
+}
+
+/// A generic function's own type parameters that its result names and
+/// none of its parameters do, as `T` in `empty<T>(): Queue<T>`, with how
+/// many times the result names each: its callers can't learn them from
+/// their arguments.
+fn result_only(p: &Program, decl: DeclId) -> Vec<usize> {
+    let Some(sig) = p.signature(decl) else {
+        return Vec::new();
+    };
+    (p.decls.type_params(decl).iter())
+        .map(|&tp| p.decls.get(tp).ty)
+        .filter(|&t| !sig.params.iter().any(|&ty| p.types.mentions(ty, t)))
+        .map(|t| count(p, sig.result, t))
+        .filter(|&n| n > 0)
+        .collect()
 }

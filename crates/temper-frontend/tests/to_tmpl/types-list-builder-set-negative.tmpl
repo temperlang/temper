@@ -1,0 +1,43 @@
+tmpl 1 model 1 library `builder-set-negative` 0.0.0
+
+uses `temper-core`#2 0.0.0-alpha.0.0 {
+  class ListBuilder#3<T#4> extends Listed#5<T#4> {
+    connected method set#11(index: Int32, newValue: T#4): Void;
+    connected constructor constructor#12(): ListBuilder#3<T#4>;
+    connected method add#13(newValue: T#4, at?: Int32): Void;
+  }
+  interface Listed#5<T#6> {
+    connected method join#17(separator: String, stringify: fn (T#6): String): String;
+  }
+  interface Console#14 {
+    connected method log#15(message: String): Void;
+  }
+  class Int32#20 {
+    connected method toString#21(radix?: Int32): String;
+  }
+  connected fn getConsole#22(name?: String): Console#14;
+}
+
+module `builder-set-negative`#0 {
+  let ~console#16: Console#14;
+
+  fn put#1(builder#8: ListBuilder#3<Int32>, i#9: Int32, value#10: Int32): Void {
+    builder#8.set#11(i#9, value#10);
+  }
+
+  let builder#7: ListBuilder#3<Int32>;
+
+  init {
+    init ~console#16 = getConsole#22(omitted);
+    init builder#7 = new constructor#12<Int32>();
+    builder#7.add#13(1, omitted);
+    builder#7.add#13(2, omitted);
+    put#1(builder#7, 1, 5);
+    ~console#16.log#15(builder#7.join#17(", ", (fn ~fn#18(n#19: Int32): String {
+      return n#19.toString#21(omitted);
+    }): fn (Int32): String));
+    ~console#16.log#15("before");
+    put#1(builder#7, %Int32.neg(1), 0);
+    ~console#16.log#15("not reached");
+  }
+}

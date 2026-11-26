@@ -151,6 +151,221 @@ error 157..161: Expected subtype of String, but got String?
 error 196..200: Expected subtype of String, but got String?
 error 236..237: Cannot assign to String from String?
 
+=== null takes its type from where it goes
+// Null has no type of its own (notes/typing.md, "Null"): it fits any
+// nullable place, as an argument, a result, a field, a list element, a
+// fallback, a comparison, or a generic call's argument, which doesn't
+// solve a type parameter.
+class Box(public v: String?) {}
+let take(s: String?): String { s ?? "none" }
+let give(c: Boolean): Int? { if (c) { 1 } else { null } }
+let back(): String? { return null }
+let id<T>(x: T): T { x }
+let or<T>(x: T?, d: T): T { x ?? d }
+let n: Int? = null;
+var m: Int? = 1;
+m = null;
+let xs: List<Int?> = [1, null];
+let ys = [null, 2];
+let b = new Box(null);
+let g: String? = id<String?>(null);
+let h: Int? = give(true) ?? null;
+console.log("${take(null)} ${give(false) == null} ${back() == null} ${n == null} ${null == m}");
+console.log("${xs[1] == null} ${ys[0] == null} ${b.v == null} ${g ?? "g"} ${or(null, 3)} ${h ?? 0}");
+--- settled
+(Block
+  (Class ^Box:0 (Param ^v:14 (Call ? String)))
+  (Let
+    ^take:1
+    (Fn
+      (Let ^s:15 (Call ? String))
+      String
+      (Block (Block (If (Call == s:15 #null) "none" s:15)))))
+  (Let
+    ^give:2
+    (Fn
+      (Let ^c:16 Boolean)
+      (Call ? Int)
+      (Block (If c:16 (Block 1) (Block null)))))
+  (Let ^back:3 (Fn (Call ? String) (Block (Return @375 null))))
+  (Let ^id:4 (Fn (TypeParam ^T:17) (Let ^x:18 T:17) T:17 (Block x:18)))
+  (Let
+    ^or:5
+    (Fn
+      (TypeParam ^T:19)
+      (Let ^x:20 (Call ? T:19))
+      (Let ^d:21 T:19)
+      T:19
+      (Block (Block (If (Call == x:20 #null) d:21 x:20)))))
+  (Let ^n:6 (Call ? Int) null)
+  (Var ^m:7 (Call ? Int) 1)
+  (Assign m:7 null)
+  (Let ^xs:8 (Call <> List (Call ? Int)) (Call list 1 null))
+  (Let ^ys:9 (Call list null 2))
+  (Let ^b:10 (Call new Box:0 null))
+  (Let ^g:11 (Call ? String) (Call id:4 \typeArg (Call ? String) null))
+  (Let
+    ^h:12
+    (Call ? Int)
+    (Block
+      (Let ^subject#22 (Call give:2 true))
+      (If (Call == subject#22 #null) null subject#22)))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call take:1 null)
+      " "
+      (Call == (Call give:2 false) null)
+      " "
+      (Call == (Call back:3) null)
+      " "
+      (Call == n:6 null)
+      " "
+      (Call == null m:7)))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call == (Call [] xs:8 1) null)
+      " "
+      (Call == (Call [] ys:9 0) null)
+      " "
+      (Call == (Call . b:10 \v) null)
+      " "
+      (Block (If (Call == g:11 #null) "g" g:11))
+      " "
+      (Call or:5 null 3)
+      " "
+      (Block (If (Call == h:12 #null) 0 h:12))))
+  #void)
+log none true true true true
+log true true true g 3 1
+
+=== null alone gives a declaration no type
+// So one needs a declared type, as `let a: String? = null;`.
+let a = null;
+var b = null;
+let c = if (a == b) { null } else { null };
+let d;
+d = null;
+--- settled
+(Block
+  (Let ^a:0 null)
+  (Var ^b:1 null)
+  (Let ^c:2 (If (Call == a:0 b:1) (Block null) (Block null)))
+  (Let ^d:3)
+  (Assign d:3 null)
+  #void)
+error 66..67: Declare a nullable type for a: null alone has none
+error 80..81: Declare a nullable type for b: null alone has none
+error 94..95: Declare a nullable type for c: null alone has none
+error 138..139: Declare a nullable type for d: null alone has none
+
+=== null alone, in a function and a class, and its legal neighbors
+// A local in a function needs a type as a top-level one does. A null
+// joined with a value takes its type, nullable, and a value from a
+// typed place, even one typed `Never?`, isn't null alone.
+let give(c: Boolean): Int? { if (c) { 1 } else { null } }
+let f(): Void { let z = null; }
+class C { public var x = null; }
+let e = if (give(true) == null) { 1 } else { null };
+let k = give(true) ?? null;
+let zs = [null];
+let n: Never? = null;
+let m = n;
+--- settled
+(Block
+  (Let
+    ^give:0
+    (Fn (Let ^c:8 Boolean) (Call ? Int) (Block (If c:8 (Block 1) (Block null)))))
+  (Let ^f:1 (Fn Void (Block (Let ^z:9 null) #void)))
+  (Class ^C:2 (Var ^x:11 null))
+  (Let ^e:3 (If (Call == (Call give:0 true) null) (Block 1) (Block null)))
+  (Let
+    ^k:4
+    (Block
+      (Let ^subject#12 (Call give:0 true))
+      (If (Call == subject#12 #null) null subject#12)))
+  (Let ^zs:5 (Call list null))
+  (Let ^n:6 (Call ? Never) null)
+  (Let ^m:7 n:6)
+  #void)
+error 275..276: Declare a nullable type for z: null alone has none
+error 308..309: Declare a nullable type for x: null alone has none
+error 425..430: Never needs the type it stands for, as Never<Int> or Never<Void>
+
+=== messages about a null never show its internal type
+let a = null;
+let b: Int = a;
+let two(x: Int, y: Int): Int { 1 }
+two(null, 2);
+let c: Int = if (b == 1) { null } else { null };
+let d = null + 1;
+let e = null.length;
+let f: String = "${null}";
+let g: Boolean = null == null;
+if (null) { console.log("no"); }
+let h: List<Int> = [null];
+let one(): Int { null }
+--- settled
+(Block
+  (Let ^a:0 null)
+  (Let ^b:1 Int a:0)
+  (Let ^two:2 (Fn (Let ^x:10 Int) (Let ^y:11 Int) Int (Block 1)))
+  (Call two:2 null 2)
+  (Let ^c:3 Int (If (Call == b:1 1) (Block null) (Block null)))
+  (Let ^d:4 (Call + null 1))
+  (Let ^e:5 (Call . null \length))
+  (Let ^f:6 String (Call cat null))
+  (Let ^g:7 Boolean (Call == null null))
+  (If null (Block (Call (Call . console \log) "no") #void) (Block))
+  (Let ^h:8 (Call <> List Int) (Call list null))
+  (Let ^one:9 (Fn Int (Block null))))
+error 4..5: Declare a nullable type for a: null alone has none
+error 69..73: Expected subtype of Int32, but got Int32?
+error 92..126: Expected subtype of Int32, but got Int32?
+error 136..140: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32?, Int32]
+error 229..233: Expected value of type Boolean not null
+error 278..282: Actual arguments do not match signature: <listT extends AnyValue>(listT) -> List<listT> expected [Int32], but got [Int32?]
+error 302..306: Expected subtype of Int32, but got Int32?
+error 154..165: No member length in null
+Failed: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32?, Int32]
+
+=== a value that's only null has no members and is no condition
+let e = null.isEmpty;
+if (null) { console.log("no"); }
+while (null) { console.log("no"); }
+do { console.log("once"); } while (null);
+for (var i = 0; null; i++) { console.log("no"); }
+let f = null && true;
+let s: String? = null;
+let g = s?.isEmpty;
+--- settled
+(Block
+  (Let ^e:0 (Call . null \isEmpty))
+  (If null (Block (Call (Call . console \log) "no") #void) (Block))
+  (Loop (If null (Block (Call (Call . console \log) "no") #void) (Break @55)))
+  (Loop
+    (Block (Call (Call . console \log) "once") #void)
+    (If null (Block) (Break @91)))
+  (Block
+    (Var ^i:4 0)
+    (Loop
+      (If null (Block (Call (Call . console \log) "no") #void) (Break @133))
+      (Block (Let ^t#5 i:4) (Assign i:4 (Call + t#5 1)) t#5)))
+  (Let ^f:1 (If null true #false))
+  (Let ^s:2 (Call ? String) null)
+  (Let ^g:3 (Block (If (Call == s:2 #null) #null (Call . s:2 \isEmpty))))
+  #void)
+error 26..30: Expected value of type Boolean not null
+error 62..66: Expected value of type Boolean not null
+error 126..130: Expected value of type Boolean not null
+error 149..153: Expected value of type Boolean not null
+error 191..195: Expected value of type Boolean not null
+error 8..20: No member isEmpty in null
+Failed: No member isEmpty in null
+
 === function results
 let count(): Void { var n = 0; n += 1 }
 let bump(): Void { var n = 0; n++ }
@@ -631,15 +846,19 @@ let q2(x: Int): Void { let v = when (x) { 1 -> b(); else -> b() }; }
         (Let ^v:37 (Block (If (Call == x:36 1) (Call b:1) (Call b:1))))
         #void))))
 error 9..12: Void expressions cannot be used as values
+error 61..65: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
 error 89..96: Void expressions cannot be used as values
 error 100..104: Void expressions cannot be used as values
 error 133..136: Void expressions cannot be used as values
 error 166..193: Void expressions cannot be used as values
 error 226..229: Expected subtype of Int32, but got Void
+error 243..247: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
 error 260..261: Expected subtype of AnyValue?, but got Void
 error 260..268: Runtime type check from Void to Int32 can never succeed
+error 345..349: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
 error 352..355: Void expressions cannot be used as values
 error 441..471: Void expressions cannot be used as values
+error 521..525: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
 error 528..532: Void expressions cannot be used as values
 error 536..543: Void expressions cannot be used as values
 error 559..562: Expected subtype of String, but got Void
@@ -648,6 +867,7 @@ error 583..586: Void expressions cannot be used as values
 error 602..605: Void expressions cannot be used as values
 error 624..627: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Void]
 error 647..657: Cannot assign to Int32 from Void
+error 685..689: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
 error 692..696: Void expressions cannot be used as values
 error 784..812: Void expressions cannot be used as values
 error 847..881: Void expressions cannot be used as values
@@ -668,7 +888,7 @@ let g2(a: List<Int>): Listed<String> { a }
 let g3(a: Listed<Int>): List<Int> { a }
 let g4(a: Map<String, Int>): Mapped<String, String> { a }
 let g5(a: Generator<Int>): SafeGenerator<Int> { a }
-let g6(a: List<Int>): Deque<Int> { a }
+let g6(a: List<Int>): Promise<Int> { a }
 let k1(a: String): MapKey<String> { a }
 let k2(a: Int): MapKey<Int> { a }
 let k3(a: String): MapKey<Int> { a }
@@ -753,7 +973,7 @@ console.log(new Box<String>("a").get());
       (Block a:53)))
   (Let
     ^g6:14
-    (Fn (Let ^a:54 (Call <> List Int)) (Call <> Deque Int) (Block a:54)))
+    (Fn (Let ^a:54 (Call <> List Int)) (Call <> Promise Int) (Block a:54)))
   (Let ^k1:15 (Fn (Let ^a:55 String) (Call <> MapKey String) (Block a:55)))
   (Let ^k2:16 (Fn (Let ^a:56 Int) (Call <> MapKey Int) (Block a:56)))
   (Let ^k3:17 (Fn (Let ^a:57 String) (Call <> MapKey Int) (Block a:57)))
@@ -848,28 +1068,29 @@ error 456..457: Cannot assign to Listed<String> from List<Int32>
 error 496..497: Cannot assign to List<Int32> from Listed<Int32>
 error 554..555: Cannot assign to Mapped<String, String> from Map<String, Int32>
 error 606..607: Cannot assign to SafeGenerator<Int32> from Generator<Int32>
-error 645..646: Cannot assign to Deque<Int32> from List<Int32>
-error 756..757: Cannot assign to MapKey<Int32> from String
-error 840..844: Cannot assign to Int32 from T
-error 875..876: Cannot assign to T from U
-error 916..917: Cannot assign to Box<String> from Box<Int32>
-error 980..981: Cannot assign to Int32 from T
-error 1007..1008: Cannot assign to T from Int32
-error 1060..1064: Expected subtype of T, but got T?
-error 1089..1090: Cannot assign to T from T?
-error 1149..1150: Cannot assign to U from T
-error 1188..1189: Cannot assign to List<Int32> from List<T>
-error 1216..1217: Cannot assign to Void from T
-error 1351..1352: Cannot assign to Dog from T
-error 1393..1394: Cannot assign to T from Dog
-error 1735..1740: Cannot assign to String from Int32
+error 647..648: Cannot assign to Promise<Int32> from List<Int32>
+error 758..759: Cannot assign to MapKey<Int32> from String
+error 842..846: Cannot assign to Int32 from T
+error 877..878: Cannot assign to T from U
+error 918..919: Cannot assign to Box<String> from Box<Int32>
+error 982..983: Cannot assign to Int32 from T
+error 1009..1010: Cannot assign to T from Int32
+error 1062..1066: Expected subtype of T, but got T?
+error 1091..1092: Cannot assign to T from T?
+error 1151..1152: Cannot assign to U from T
+error 1190..1191: Cannot assign to List<Int32> from List<T>
+error 1218..1219: Cannot assign to Void from T
+error 1353..1354: Cannot assign to Dog from T
+error 1395..1396: Cannot assign to T from Dog
+error 1737..1742: Cannot assign to String from Int32
 log a
 
 === generic calls solved per call, as Kotlin Temper reports them
 // Each call binds the function's type parameters, from its type
 // arguments or else its arguments' types; a parameter bound two ways is
 // left unknown, as Kotlin may find a common supertype. Kotlin folds a
-// call of constants first, so `id<Int>("a")` then passes as a `String`.
+// call of constants first, so `id<Int>("a")` then passes as a `String`;
+// type arguments still bind what no argument does, as `none<Int>()`'s.
 interface Animal {}
 class Dog extends Animal {}
 let id<T>(x: T): T { x }
@@ -892,6 +1113,8 @@ let c9: String = both(1, 2);
 let d1: String = id<Int>(1);
 let d2: Animal = id(new Dog());
 let d3 = id<Int, Int>(1);
+let none<T>(): List<T> { [] }
+let d4 = none<Int>();
 let f(n: Int, s: String, xs: List<Int>): Void {
   g(n, s);
   g(n);
@@ -911,47 +1134,47 @@ console.log(id(1).toString());
 (Block
   (Interface ^Animal:0)
   (Class ^Dog:1 Animal:0)
-  (Let ^id:2 (Fn (TypeParam ^T:25) (Let ^x:26 T:25) T:25 (Block x:26)))
+  (Let ^id:2 (Fn (TypeParam ^T:27) (Let ^x:28 T:27) T:27 (Block x:28)))
   (Let
     ^pair:3
-    (Fn (TypeParam ^T:27) (Let ^a:28 T:27) (Let ^b:29 T:27) T:27 (Block a:28)))
+    (Fn (TypeParam ^T:29) (Let ^a:30 T:29) (Let ^b:31 T:29) T:29 (Block a:30)))
   (Let
     ^wrap:4
     (Fn
-      (TypeParam ^T:30)
-      (Let ^x:31 T:30)
-      (Call <> List T:30)
-      (Block (Call list x:31))))
+      (TypeParam ^T:32)
+      (Let ^x:33 T:32)
+      (Call <> List T:32)
+      (Block (Call list x:33))))
   (Let
     ^pick:5
-    (Fn (TypeParam ^T:32 Animal:0) (Let ^x:33 T:32) T:32 (Block x:33)))
+    (Fn (TypeParam ^T:34 Animal:0) (Let ^x:35 T:34) T:34 (Block x:35)))
   (Let
     ^opt:6
     (Fn
-      (TypeParam ^T:34)
-      (Let ^x:35 (Call ? T:34))
-      T:34
-      (Block (Orelse x:35 (Call panic)))))
+      (TypeParam ^T:36)
+      (Let ^x:37 (Call ? T:36))
+      T:36
+      (Block (Orelse x:37 (Call panic)))))
   (Let
     ^both:7
     (Fn
-      (TypeParam ^T:36)
-      (TypeParam ^U:37)
-      (Let ^a:38 T:36)
-      (Let ^b:39 U:37)
-      U:37
-      (Block b:39)))
+      (TypeParam ^T:38)
+      (TypeParam ^U:39)
+      (Let ^a:40 T:38)
+      (Let ^b:41 U:39)
+      U:39
+      (Block b:41)))
   (Let
     ^g:8
-    (Fn (TypeParam ^T:40) (Let ^x:41 T:40) (Let ^n:42 Int) T:40 (Block x:41)))
+    (Fn (TypeParam ^T:42) (Let ^x:43 T:42) (Let ^n:44 Int) T:42 (Block x:43)))
   (Let
     ^k:9
     (Fn
-      (TypeParam ^T:43)
-      (Let ^xs:44 (Call <> List T:43))
-      (Let ^x:45 T:43)
-      T:43
-      (Block x:45)))
+      (TypeParam ^T:45)
+      (Let ^xs:46 (Call <> List T:45))
+      (Let ^x:47 T:45)
+      T:45
+      (Block x:47)))
   (Let ^c1:10 String (Call id:2 1))
   (Let ^c2:11 Int (Call id:2 1))
   (Let ^c3:12 (Call pair:3 1 "a"))
@@ -964,46 +1187,122 @@ console.log(id(1).toString());
   (Let ^d1:19 String (Call id:2 \typeArg Int 1))
   (Let ^d2:20 Animal:0 (Call id:2 (Call new Dog:1)))
   (Let ^d3:21 (Call id:2 \typeArg Int \typeArg Int 1))
+  (Let ^none:22 (Fn (TypeParam ^T:48) (Call <> List T:48) (Block (Call list))))
+  (Let ^d4:23 (Call none:22 \typeArg Int))
   (Let
-    ^f:22
+    ^f:24
     (Fn
-      (Let ^n:46 Int)
-      (Let ^s:47 String)
-      (Let ^xs:48 (Call <> List Int))
+      (Let ^n:49 Int)
+      (Let ^s:50 String)
+      (Let ^xs:51 (Call <> List Int))
       Void
       (Block
-        (Call g:8 n:46 s:47)
-        (Call g:8 n:46)
-        (Call g:8 \typeArg String n:46 s:47)
-        (Call pick:5 n:46)
+        (Call g:8 n:49 s:50)
+        (Call g:8 n:49)
+        (Call g:8 \typeArg String n:49 s:50)
+        (Call pick:5 n:49)
         (Call pick:5 \typeArg Dog:1 (Call new Dog:1))
         (Call id:2 \typeArg Animal:0 (Call new Dog:1))
-        (Let ^a:49 String (Call g:8 n:46 1))
-        (Call k:9 xs:48 s:47)
-        (Let ^b:50 String (Call k:9 xs:48 n:46))
-        (Let ^c:51 Int (Call id:2 (Call id:2 s:47)))
-        (Let ^e:52 String (Call id:2 \typeArg Int n:46))
-        (Let ^h:53 Int (Call id:2 \typeArg Int n:46))
+        (Let ^a:52 String (Call g:8 n:49 1))
+        (Call k:9 xs:51 s:50)
+        (Let ^b:53 String (Call k:9 xs:51 n:49))
+        (Let ^c:54 Int (Call id:2 (Call id:2 s:50)))
+        (Let ^e:55 String (Call id:2 \typeArg Int n:49))
+        (Let ^h:56 Int (Call id:2 \typeArg Int n:49))
         #void)))
   (Call (Call . console \log) (Call (Call . (Call id:2 1) \toString)))
   #void)
-error 488..489: Cannot assign to T from T?
-error 629..634: Cannot assign to String from Int32
-error 694..706: Cannot assign to Int32 from String
-error 736..737: Actual arguments do not match signature: <T extends AnyValue>(T) -> List<T> expected [String], but got [Int32]
-error 749..756: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
-error 806..812: Cannot assign to String from Int32
-error 831..841: Cannot assign to String from Int32
-error 860..870: Cannot assign to String from Int32
-error 985..986: Actual arguments do not match signature: <T extends AnyValue>(T, Int32) -> T expected [Int32, Int32], but got [Int32, String]
-error 991..995: No callee matches inputs [Int32] among [<T extends AnyValue>(T, Int32) -> T]
-error 1009..1013: Actual arguments do not match signature: <T extends AnyValue>(T, Int32) -> T expected [String, Int32], but got [Int32, String]
-error 1018..1025: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
-error 1094..1101: Cannot assign to String from Int32
-error 1133..1141: Cannot assign to String from Int32
-error 1158..1167: Cannot assign to Int32 from String
-error 1187..1197: Cannot assign to String from Int32
+error 560..561: Cannot assign to T from T?
+error 701..706: Cannot assign to String from Int32
+error 766..778: Cannot assign to Int32 from String
+error 808..809: Actual arguments do not match signature: <T extends AnyValue>(T) -> List<T> expected [String], but got [Int32]
+error 821..828: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
+error 878..884: Cannot assign to String from Int32
+error 903..913: Cannot assign to String from Int32
+error 932..942: Cannot assign to String from Int32
+error 1109..1110: Actual arguments do not match signature: <T extends AnyValue>(T, Int32) -> T expected [Int32, Int32], but got [Int32, String]
+error 1115..1119: No callee matches inputs [Int32] among [<T extends AnyValue>(T, Int32) -> T]
+error 1133..1137: Actual arguments do not match signature: <T extends AnyValue>(T, Int32) -> T expected [String, Int32], but got [Int32, String]
+error 1142..1149: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
+error 1218..1225: Cannot assign to String from Int32
+error 1257..1265: Cannot assign to String from Int32
+error 1282..1291: Cannot assign to Int32 from String
+error 1311..1321: Cannot assign to String from Int32
 Failed: Actual arguments do not match signature: <T extends AnyValue>(T) -> List<T> expected [String], but got [Int32]
+
+=== generic functions without bodies declare their type parameters
+// A generic function without a body, as a @connected one host code
+// implements, declares its type parameters as one with a body does:
+// they're usable in its parameters, result, and bounds, and each call
+// is solved from its arguments, so these report what bodied ones would.
+export interface Animal {}
+export class Dog extends Animal {}
+@connected
+export let mapAll<T, O>(xs: List<T>, transform: fn (T): O): List<O>;
+@connected
+export let pick<T extends Animal>(x: T): T;
+@connected
+export let pair<T, U extends T>(a: T, b: U): T;
+let use(xs: List<Int>): Void {
+  let a: List<String> = mapAll(xs) { (x): String => x.toString() };
+  let b: List<Int> = mapAll(xs, fn (x: Int): String { x.toString() });
+  let c: Dog = pick(new Dog());
+  pick(1);
+  let d: Dog = pair(new Dog(), new Dog());
+}
+console.log("ok");
+--- settled
+(Block
+  (Interface ^Animal:0)
+  (Class ^Dog:1 Animal:0)
+  (Let connected
+    ^mapAll:2
+    (Signature
+      (TypeParam ^T:8)
+      (TypeParam ^O:9)
+      (Let ^xs:10 (Call <> List T:8))
+      (Let ^transform:11 (Call FnType T:8 O:9))
+      (Call <> List O:9)))
+  (Let connected
+    ^pick:3
+    (Signature (TypeParam ^T:12 Animal:0) (Let ^x:13 T:12) T:12))
+  (Let connected
+    ^pair:4
+    (Signature
+      (TypeParam ^T:14)
+      (TypeParam ^U:15 T:14)
+      (Let ^a:16 T:14)
+      (Let ^b:17 U:15)
+      T:14))
+  (Let
+    ^use:5
+    (Fn
+      (Let ^xs:18 (Call <> List Int))
+      Void
+      (Block
+        (Let
+          ^a:19
+          (Call <> List String)
+          (Call
+            mapAll:2
+            xs:18
+            (Fn (Let ^x:23) String (Block (Call (Call . x:23 \toString))))))
+        (Let
+          ^b:20
+          (Call <> List Int)
+          (Call
+            mapAll:2
+            xs:18
+            (Fn (Let ^x:24 Int) String (Block (Call (Call . x:24 \toString))))))
+        (Let ^c:21 Dog:1 (Call pick:3 (Call new Dog:1)))
+        (Call pick:3 1)
+        (Let ^d:22 Dog:1 (Call pair:4 (Call new Dog:1) (Call new Dog:1)))
+        #void)))
+  (Call (Call . console \log) "ok")
+  #void)
+error 668..704: Actual arguments do not match signature: <T extends AnyValue, O extends AnyValue>(List<T>, fn (T): O) -> List<O> expected [List<Int32>, fn (Int32): Int32], but got [List<Int32>, fn (Int32): String]
+error 741..748: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
+log ok
 
 === generic classes and methods, as Kotlin Temper reports them
 // `new Box(1)` is solved as a call of `<T>(T) -> Box<T>`, a `Box<Int>`'s
@@ -3135,7 +3434,6 @@ Failed: Can't apply / to these arguments
 let a: StringBuilder = 5;
 let b: StringBuilder = null;
 let i: StringIndex = "x";
-let d: DenseBitVector = 1;
 let e: StringIndexOption = "x";
 let g: NoStringIndex = String.begin;
 let f(n: Int): String {
@@ -3160,52 +3458,50 @@ console.log(f(4));
   (Let ^a:0 StringBuilder 5)
   (Let ^b:1 StringBuilder null)
   (Let ^i:2 StringIndex "x")
-  (Let ^d:3 DenseBitVector 1)
-  (Let ^e:4 StringIndexOption "x")
-  (Let ^g:5 NoStringIndex (Call . String \begin))
+  (Let ^e:3 StringIndexOption "x")
+  (Let ^g:4 NoStringIndex (Call . String \begin))
   (Let
-    ^f:6
+    ^f:5
     (Fn
-      (Let ^n:12 Int)
+      (Let ^n:11 Int)
       String
       (Block
-        (Var ^sbOrNull:13 StringBuilder null)
+        (Var ^sbOrNull:12 StringBuilder null)
         (If
-          (Call == (Call % n:12 2) 0)
+          (Call == (Call % n:11 2) 0)
           (Block
             (Let
-              ^sb:15
+              ^sb:14
               (Block
                 (If
-                  (Call == sbOrNull:13 #null)
+                  (Call == sbOrNull:12 #null)
                   (Call new StringBuilder)
-                  sbOrNull:13)))
-            (Call (Call . sb:15 \append) (Call cat n:12))
-            (Assign sbOrNull:13 sb:15)
+                  sbOrNull:12)))
+            (Call (Call . sb:14 \append) (Call cat n:11))
+            (Assign sbOrNull:12 sb:14)
             #void)
           (Block))
-        (Let ^finalSb:14 sbOrNull:13)
+        (Let ^finalSb:13 sbOrNull:12)
         (If
-          (Call == finalSb:14 null)
+          (Call == finalSb:13 null)
           (Block "")
-          (Block (Call (Call . finalSb:14 \toString)))))))
-  (Let ^s:7 "ab")
-  (Let ^o:8 StringIndexOption (Call (Call . s:7 \next) (Call . String \begin)))
-  (Let ^n:9 (Call ? StringIndexOption) null)
+          (Block (Call (Call . finalSb:13 \toString)))))))
+  (Let ^s:6 "ab")
+  (Let ^o:7 StringIndexOption (Call (Call . s:6 \next) (Call . String \begin)))
+  (Let ^n:8 (Call ? StringIndexOption) null)
   (Let
-    ^j:10
+    ^j:9
     StringIndex
-    (If (Call is o:8 StringIndex) (Block o:8) (Block (Call . String \begin))))
-  (Let ^k:11 AnyValue (Call new StringBuilder))
-  (Call (Call . console \log) (Call f:6 4))
+    (If (Call is o:7 StringIndex) (Block o:7) (Block (Call . String \begin))))
+  (Let ^k:10 AnyValue (Call new StringBuilder))
+  (Call (Call . console \log) (Call f:5 4))
   #void)
 error 23..24: Cannot assign to StringBuilder from Int32
 error 49..53: Expected subtype of StringBuilder, but got StringBuilder?
 error 76..79: Cannot assign to StringIndex from String
-error 105..106: Cannot assign to DenseBitVector from Int32
-error 135..138: Cannot assign to StringIndexOption from String
-error 163..175: Cannot assign to NoStringIndex from StringIndex
-error 233..237: Expected subtype of StringBuilder, but got StringBuilder?
+error 108..111: Cannot assign to StringIndexOption from String
+error 136..148: Cannot assign to NoStringIndex from StringIndex
+error 206..210: Expected subtype of StringBuilder, but got StringBuilder?
 log 4
 
 === calling a function value that may be null, as Kotlin Temper reports it
@@ -3262,7 +3558,7 @@ error 131..134: Expected subtype of fn (Int32): Void, but got (fn (Int32): Void)
 error 244..247: Expected subtype of Act, but got Act?
 log hi 1
 log hi 1
-Failed: Null is not a function
+Failed: null is not a function
 
 === Never<T> stands for its T
 // Valid: a Never<T> where its T fits, as a function, a generic one, a
@@ -3479,3 +3775,184 @@ error 903..924: Type GPlain has method fail with signature fail(): T, but it sho
 error 939..944: Never needs the type it stands for, as Never<Int> or Never<Void>
 error 974..979: Never needs the type it stands for, as Never<Int> or Never<Void>
 log 1
+
+=== type arguments fit their bounds, in calls and in annotations
+// A map key is a `MapKey` of itself: `AnyValue` isn't one, though a value
+// of it may hold one; `MapKey<String>` isn't a `MapKey<MapKey<String>>`,
+// as `MapKey`'s parameter has no variance; and `Never<Int>` isn't one.
+// Annotations and type arguments anywhere are checked as calls are.
+class Key(public k: Int) extends MapKey<Key> {}
+class Box<T extends MapKey<T>>(public t: T) {}
+let f(): Void {
+  let a = new MapBuilder<AnyValue, Int>();
+  let b = new MapBuilder<MapKey<String>, Int>();
+  let c = new MapBuilder<Never<Int>, Int>();
+  let d = new MapBuilder<String, Int>();
+  let e = new MapBuilder<Int, Int>();
+  let g = new MapBuilder<Key, Int>();
+  let m: Map<Boolean, Int> = new Map<String, Int>([]);
+  let n: Map<String, Int> = new Map<String, Int>([]);
+  let o: List<Map<Float64, Int>> = [];
+  let p: Box<Boolean>? = null;
+  let q: Box<Key>? = null;
+  let r: MapBuilder<AnyValue, Int>? = null;
+}
+let keys(m: Mapped<Boolean, Int>): Void {}
+let maker(): fn (): Map<Int64, Int> { fn (): Map<Int64, Int> { new Map<Int64, Int>([]) } }
+--- settled
+(Block
+  (Class ^Key:0 (Call <> MapKey Key:0) (Param ^k:6 Int))
+  (Class ^Box:1 (TypeParam ^T:7 (Call <> MapKey T:7)) (Param ^t:9 T:7))
+  (Let
+    ^f:2
+    (Fn
+      Void
+      (Block
+        (Let ^a:10 (Call new (Call <> MapBuilder AnyValue Int)))
+        (Let ^b:11 (Call new (Call <> MapBuilder (Call <> MapKey String) Int)))
+        (Let ^c:12 (Call new (Call <> MapBuilder (Call <> Never Int) Int)))
+        (Let ^d:13 (Call new (Call <> MapBuilder String Int)))
+        (Let ^e:14 (Call new (Call <> MapBuilder Int Int)))
+        (Let ^g:15 (Call new (Call <> MapBuilder Key:0 Int)))
+        (Let
+          ^m:16
+          (Call <> Map Boolean Int)
+          (Call new (Call <> Map String Int) (Call list)))
+        (Let
+          ^n:17
+          (Call <> Map String Int)
+          (Call new (Call <> Map String Int) (Call list)))
+        (Let ^o:18 (Call <> List (Call <> Map Float64 Int)) (Call list))
+        (Let ^p:19 (Call ? (Call <> Box:1 Boolean)) null)
+        (Let ^q:20 (Call ? (Call <> Box:1 Key:0)) null)
+        (Let ^r:21 (Call ? (Call <> MapBuilder AnyValue Int)) null)
+        #void)))
+  (Let ^keys:3 (Fn (Let ^m:22 (Call <> Mapped Boolean Int)) Void (Block)))
+  (Let
+    ^maker:4
+    (Fn
+      (Call FnType (Call <> Map Int64 Int))
+      (Block
+        (Fn
+          (Call <> Map Int64 Int)
+          (Block (Call new (Call <> Map Int64 Int) (Call list))))))))
+error 323..334: Cannot extend sealed type MapKey from Key. Key is not declared in the same module.
+error 411..442: Type formal <K extends MapKey<K>> cannot bind to AnyValue which does not fit upper bounds [MapKey<K>]
+error 454..491: Type formal <K extends MapKey<K>> cannot bind to MapKey<String> which does not fit upper bounds [MapKey<K>]
+error 503..536: Type formal <K extends MapKey<K>> cannot bind to Never<Int32> which does not fit upper bounds [MapKey<K>]
+error 664..681: Type formal <K extends MapKey<K>> cannot bind to Boolean which does not fit upper bounds [MapKey<K>]
+error 684..708: Cannot assign to Map<Boolean, Int32> from Map<String, Int32>
+error 778..795: Type formal <K extends MapKey<K>> cannot bind to Float64 which does not fit upper bounds [MapKey<K>]
+error 812..824: Type formal <T extends MapKey<T>> cannot bind to Boolean which does not fit upper bounds [MapKey<T>]
+error 870..895: Type formal <K extends MapKey<K>> cannot bind to AnyValue which does not fit upper bounds [MapKey<K>]
+error 919..939: Type formal <K extends MapKey<K>> cannot bind to Boolean which does not fit upper bounds [MapKey<K>]
+error 970..985: Type formal <K extends MapKey<K>> cannot bind to Int64 which does not fit upper bounds [MapKey<K>]
+error 995..1010: Type formal <K extends MapKey<K>> cannot bind to Int64 which does not fit upper bounds [MapKey<K>]
+error 1013..1036: Type formal <K extends MapKey<K>> cannot bind to Int64 which does not fit upper bounds [MapKey<K>]
+
+=== Void is never a value
+// Tom decided (t854): wherever a value goes, `Void` isn't one. A function
+// may return `Void`, and a function type may, as statements produce it.
+let f(x: Void): AnyValue { x }
+let g(): Void {}
+let h(): AnyValue { g() }
+let i(): Void { let v: Void = g(); let w = g(); }
+class C(public v: Void) {}
+let j(): List<Void> { [] }
+let k(): Boolean { g() == g() }
+let l(): List<AnyValue> { [g()] }
+let m(xs: ListBuilder<Int>): Void { xs.add(1); }
+let n(): fn (): Void { fn (): Void { g() } }
+let o(): Void { g(); return g(); }
+let p(b: Boolean): Void { if (b) { g() } else { g() } }
+let q(): String { "${g()}" }
+let r<T>(x: T): T { x }
+let s(): Void { r(g()); r<Void>(g()); }
+let t(f: fn (Void): Int, u: Void?): Void {}
+let w<T extends Void>(): Void {}
+let bail(): Never<Void> throws Bubble { bubble() }
+let v(): Void throws Bubble {}
+let y(f: fn (): Void throws Bubble, z: fn (Int, String): Void): Void { f() orelse void; }
+--- settled
+(Block
+  (Let ^f:0 (Fn (Let ^x:20 Void) AnyValue (Block x:20)))
+  (Let ^g:1 (Fn Void (Block)))
+  (Let ^h:2 (Fn AnyValue (Block (Call g:1))))
+  (Let
+    ^i:3
+    (Fn Void (Block (Let ^v:21 Void (Call g:1)) (Let ^w:22 (Call g:1)) #void)))
+  (Class ^C:4 (Param ^v:24 Void))
+  (Let ^j:5 (Fn (Call <> List Void) (Block (Call list))))
+  (Let ^k:6 (Fn Boolean (Block (Call == (Call g:1) (Call g:1)))))
+  (Let ^l:7 (Fn (Call <> List AnyValue) (Block (Call list (Call g:1)))))
+  (Let
+    ^m:8
+    (Fn
+      (Let ^xs:25 (Call <> ListBuilder Int))
+      Void
+      (Block (Call (Call . xs:25 \add) 1) #void)))
+  (Let ^n:9 (Fn (Call FnType Void) (Block (Fn Void (Block (Call g:1))))))
+  (Let ^o:10 (Fn Void (Block (Call g:1) (Return @486 (Call g:1)) #void)))
+  (Let
+    ^p:11
+    (Fn
+      (Let ^b:26 Boolean)
+      Void
+      (Block (If b:26 (Block (Call g:1)) (Block (Call g:1))))))
+  (Let ^q:12 (Fn String (Block (Call cat (Call g:1)))))
+  (Let ^r:13 (Fn (TypeParam ^T:27) (Let ^x:28 T:27) T:27 (Block x:28)))
+  (Let
+    ^s:14
+    (Fn
+      Void
+      (Block (Call r:13 (Call g:1)) (Call r:13 \typeArg Void (Call g:1)) #void)))
+  (Let
+    ^t:15
+    (Fn
+      (Let ^f:29 (Call FnType Void Int))
+      (Let ^u:30 (Call ? Void))
+      Void
+      (Block)))
+  (Let ^w:16 (Fn (TypeParam ^T:31 Void) Void (Block)))
+  (Let ^bail:17 (Fn (Call throws (Call <> Never Void) Bubble) (Block (Fail))))
+  (Let ^v:18 (Fn (Call throws Void Bubble) (Block)))
+  (Let
+    ^y:19
+    (Fn
+      (Let ^f:32 (Call FnType (Call throws Void Bubble)))
+      (Let ^z:33 (Call FnType Int String Void))
+      Void
+      (Block (Orelse (Call f:32) void) #void))))
+error 157..161: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
+error 175..176: Void expressions cannot be used as values
+error 216..219: Void expressions cannot be used as values
+error 245..249: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
+error 252..255: Void expressions cannot be used as values
+error 265..268: Void expressions cannot be used as values
+error 290..294: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
+error 313..317: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
+error 345..348: Void expressions cannot be used as values
+error 352..355: Void expressions cannot be used as values
+error 385..388: Void expressions cannot be used as values
+error 598..601: Void expressions cannot be used as values
+error 648..651: Void expressions cannot be used as values
+error 656..660: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
+error 662..665: Void expressions cannot be used as values
+error 683..687: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
+error 698..702: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
+error 730..734: Void is only what a function returns, as f(): Void or fn (): Void; it is never a value's type
+
+=== an operator's operand that's only null fits none of its variants, with Kotlin Temper's message for `null + 1`
+let d = null + 1;
+let e: Int = 2 * null;
+let f = -null;
+--- settled
+(Block
+  (Let ^d:0 (Call + null 1))
+  (Let ^e:1 Int (Call * 2 null))
+  (Let ^f:2 (Call - null))
+  #void)
+error 8..12: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32?, Int32]
+error 35..39: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32, Int32?]
+error 50..54: Actual arguments do not match signature: (Int32) -> Int32 expected [Int32], but got [Int32?]
+Failed: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32?, Int32]

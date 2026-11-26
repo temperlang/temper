@@ -1,13 +1,13 @@
 //! Kotlin Temper's errors for run-time type checks, `x is T` and `x as T`
 //! (its `TypeFuns.kt`, `problems`; notes/typing.md, "Run-time type
 //! checks"): checks that can never succeed, between unrelated types, to a
-//! type that may not be distinct on every backend, or to a type
-//! parameter, and, as information, checks that are unnecessary.
+//! type that may not be distinct on every backend, to a `@connected` type
+//! but from a sealed supertype, or to a type parameter, and, as
+//! information, checks that are unnecessary.
 
-use crate::builtins::{Builtin, Function};
-use crate::core::{self, CLASS_INTERFACE, ROLE_MASK, ROLE_TYPE_PARAM, TYPE_PARAM_VARIANT};
+use crate::builtins::{Builtin, Function, TYPES};
+use crate::core::{self, CLASS_CONNECTED, CLASS_INTERFACE, CLASS_SEALED, TYPE_PARAM_VARIANT};
 use crate::library::{Level, Message, RttiProblem};
-use crate::scope::SymbolKind;
 use crate::settle::Settle;
 use crate::types::{ANY_VALUE, NEVER, NULL, TypeData, TypeId, VOID};
 use temper_syntax::tree::{NodeId, NodeKind};
@@ -65,6 +65,14 @@ impl Settle {
             }
         }
         let t = self.eval_type(target);
+        // A `Never<T>` has no values (core's docs), so no check finds one,
+        // though Kotlin Temper allows it.
+        let never = matches!(self.typing.types.get(t), TypeData::NeverOf(_));
+        if never && !or_null && t != s_inner {
+            let message = Message::ImpossibleRttiCheck(self.show(s_inner), self.show(t));
+            self.lib.report(Level::Error, message, span);
+            return;
+        }
         if !self.is_nominal(t) && t != s_inner {
             return;
         }
@@ -81,7 +89,26 @@ impl Settle {
         if t == ANY_VALUE && s_judged != ANY_VALUE {
             return;
         }
-        let Some(is_up) = self.rtti_subtype(s_inner, t) else {
+        // Where typing can't tell whether it's a downcast, as for core's
+        // non-generic classes from `AnyValue`, a `@connected` type is
+        // still checked for, as Kotlin checks it whenever the check
+        // isn't an upcast.
+        let unknown = |this: &mut Self, is_up: Option<bool>| match is_up {
+            None => true,
+            Some(true) => false,
+            Some(false) => this.rtti_subtype(t, s_judged).is_none(),
+        };
+        let is_up = self.rtti_subtype(s_inner, t);
+        if unknown(self, is_up)
+            && !self.typing.types.no_downcast(t)
+            && self.connected_apart(s_judged, t)
+        {
+            let problem = RttiProblem::Connected;
+            let message = Message::IllegalRttiCheck(problem, self.show(t), self.show(s));
+            self.lib.report(Level::Error, message, span);
+            return;
+        }
+        let Some(is_up) = is_up else {
             return;
         };
         let is_down = match is_up {
@@ -96,6 +123,8 @@ impl Settle {
                 RttiProblem::MayDowncast
             } else if self.introduces_args(s_judged, t) {
                 RttiProblem::Actuals
+            } else if self.connected_apart(s_judged, t) {
+                RttiProblem::Connected
             } else {
                 return;
             }
@@ -154,7 +183,8 @@ impl Settle {
         let s_inner = self.non_null(s);
         let s_judged = self.typing.types.upper(s_inner);
         let t = self.eval_type(target);
-        if !self.is_nominal(s_judged) || !self.is_nominal(t) {
+        let never = matches!(self.typing.types.get(t), TypeData::NeverOf(_));
+        if never || !self.is_nominal(s_judged) || !self.is_nominal(t) {
             return false;
         }
         let types = &self.typing.types;
@@ -171,6 +201,80 @@ impl Settle {
         !self.typing.types.no_downcast(t)
             && self.rtti_subtype(t, s_judged) == Some(true)
             && !self.introduces_args(s_judged, t)
+            && !self.connected_apart(s_judged, t)
+    }
+
+    /// Whether `t` is a `@connected` type, core's or a user's, that a
+    /// downcast from `s` can't check for, as Kotlin Temper's
+    /// `IllegalRttiCheckConnected` finds them: several Temper types may
+    /// connect to one host type, so only a sealed `s`, which tells its
+    /// subtypes apart, may check for one, and only one that reaches it
+    /// through sealed supertypes, as `DoneResult<T>` from
+    /// `GeneratorResult<T>`. Not a type core marks `@mayDowncastTo`, which
+    /// says itself whether it may be checked for.
+    fn connected_apart(&mut self, s: TypeId, t: TypeId) -> bool {
+        let (s, t) = (self.typing.types.base(s), self.typing.types.base(t));
+        let Some((true, _, None)) = self.declared_as(t) else {
+            return false;
+        };
+        let sealed =
+            |this: &Self, t: TypeId| this.declared_as(t).is_some_and(|(_, sealed, _)| sealed);
+        if !sealed(self, s) {
+            return true;
+        }
+        // From `t` up to `s` through sealed supertypes only.
+        let mut stack = vec![t];
+        let mut seen = Vec::new();
+        while let Some(at) = stack.pop() {
+            if at == s {
+                return false;
+            }
+            if seen.contains(&at) {
+                continue;
+            }
+            seen.push(at);
+            let ups = self.direct_supers(at);
+            stack.extend(ups.into_iter().filter(|&up| sealed(self, up)));
+        }
+        true
+    }
+
+    /// What a class's, interface's, or builtin type's declaration says of
+    /// it: whether it's `@connected` and `sealed`, and what its
+    /// `@mayDowncastTo` says, if core marks it.
+    fn declared_as(&self, t: TypeId) -> Option<(bool, bool, Option<bool>)> {
+        let types = &self.typing.types;
+        match *types.get(t) {
+            TypeData::Class(symbol) => self.type_decl(symbol).map(|c| {
+                let data = self.lib.tree.data(c);
+                (data & CLASS_CONNECTED != 0, data & CLASS_SEALED != 0, None)
+            }),
+            _ => (types.builtin_name(t))
+                .and_then(super::core_shape)
+                .map(|shape| (shape.connected, shape.sealed, shape.may_downcast)),
+        }
+    }
+
+    /// The bases of the types a class, interface, or builtin type
+    /// directly extends, as `GeneratorResult` for `DoneResult`.
+    fn direct_supers(&mut self, t: TypeId) -> Vec<TypeId> {
+        let types = &mut self.typing.types;
+        match *types.get(t) {
+            TypeData::Class(symbol) => match types.class_info(symbol) {
+                Some(info) => info
+                    .supers
+                    .clone()
+                    .into_iter()
+                    .map(|up| types.base(up))
+                    .collect(),
+                None => Vec::new(),
+            },
+            _ => {
+                let up = (types.builtin_name(t)).and_then(crate::types::builtin_supertype);
+                let index = up.and_then(|up| TYPES.iter().position(|&n| n == up));
+                index.map(|i| types.builtin(i as u8)).into_iter().collect()
+            }
+        }
     }
 
     /// An expression's type, or for a name Kotlin Temper folds to a
@@ -241,7 +345,9 @@ impl Settle {
 
     /// Whether `a` is a subtype of `b`, by declarations only, as Kotlin
     /// Temper's checks see it: `AnyValue` is no other type's, nor `Void`
-    /// an `AnyValue`.
+    /// an `AnyValue`, nor `Bubble`, as core says
+    /// ([`crate::types::Types::is_subtype`]), though Kotlin's checks
+    /// allow `is Bubble`.
     fn rtti_subtype(&mut self, a: TypeId, b: TypeId) -> Option<bool> {
         match (a, b) {
             _ if a == b => Some(true),
@@ -251,23 +357,19 @@ impl Settle {
     }
 
     /// The name and bound of the type parameter a type expression names,
-    /// if it does: `AnyValue`, or the one type it `extends`, if typing
-    /// knows it.
+    /// itself or through an alias, if it does: `AnyValue`, or the one
+    /// type it `extends`, if typing knows it.
     fn type_param_bound(&mut self, node: NodeId) -> Option<(String, TypeId)> {
-        if self.lib.tree.kind(node) != NodeKind::RightName {
+        let t = self.eval_type(node);
+        let TypeData::Param(symbol) = *self.typing.types.get(t) else {
             return None;
-        }
-        let symbol = *self.scopes.symbol(self.scopes.resolved(node)?);
-        let decl = symbol.decl?;
-        let tree = &self.lib.tree;
-        if symbol.kind != SymbolKind::TypeParam || tree.data(decl) & ROLE_MASK != ROLE_TYPE_PARAM {
-            return None;
-        }
-        let bound = match core::let_parts(tree, decl).1 {
-            Some(bound) => self.eval_type(bound),
-            None => ANY_VALUE,
         };
-        let name = self.lib.names.get(symbol.name).to_string();
+        let bound = self.declared_bound(symbol);
+        let name = self
+            .lib
+            .names
+            .get(self.scopes.symbol(symbol).name)
+            .to_string();
         self.typing.types.is_known(bound).then_some((name, bound))
     }
 }

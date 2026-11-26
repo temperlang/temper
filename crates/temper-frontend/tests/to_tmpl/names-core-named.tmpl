@@ -1,0 +1,60 @@
+tmpl 1 model 1 library `core-named` 0.0.0
+
+uses `temper-core`#15 0.0.0-alpha.0.0 {
+  interface Console#16 {
+    connected method log#17(message: String): Void;
+  }
+  class Int32#19 {
+    connected method toString#20(radix?: Int32): String;
+  }
+  connected fn getConsole#23(name?: String): Console#16;
+}
+
+module core#0 in "core" {
+  export fn greet#5(who#7: String): String {
+    return %String.cat("hello from ", who#7);
+  }
+
+  export fn share#6(n#8: Int32, d#9: Int32): Int32 {
+    return (orelse(%Int32.div(n#8, d#9)^, 0)): Int32;
+  }
+
+  init {}
+}
+
+module `core-named`#1 {
+  let ~console#18: Console#16;
+
+  let core#10: String;
+
+  var builtins#11: Int32;
+
+  class String#2 {
+    let n#3: Int32;
+    constructor constructor#4(n#21: Int32): String#2 {
+      this.n#3 = n#21;
+    }
+  }
+
+  let s#12: String;
+
+  let mine#13: String#2;
+
+  fn twice#14(core#22: Int32): Int32 {
+    return %Int32.mul(core#22, 2);
+  }
+
+  init {
+    init ~console#18 = getConsole#23(omitted);
+    init core#10 = greet#5("a module named core");
+    ~console#18.log#17(core#10);
+    ~console#18.log#17(%String.cat(%String.cat(%String.cat("shares ", share#6(7, 2).toString#20(omitted)), " "), share#6(1, 0).toString#20(omitted)));
+    init builtins#11 = 1;
+    builtins#11 = %Int32.add(builtins#11, 1);
+    ~console#18.log#17(%String.cat("builtins is ", builtins#11.toString#20(omitted)));
+    init s#12 = "core's String";
+    init mine#13 = new constructor#4(3);
+    ~console#18.log#17(%String.cat(%String.cat(s#12, ", and mine holds "), mine#13.n#3.toString#20(omitted)));
+    ~console#18.log#17(twice#14(21).toString#20(omitted));
+  }
+}

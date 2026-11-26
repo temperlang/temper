@@ -180,6 +180,7 @@ fn cases() -> Vec<Case> {
         &kit::CLASSES[..],
         &kit::NULLABLES[..],
         &kit::GENERICS[..],
+        &kit::NAMES[..],
         &kit::FUNCTIONS[..],
         &kit::DEFAULTS[..],
         &kit::CORE_TYPES[..],
@@ -188,6 +189,7 @@ fn cases() -> Vec<Case> {
         &kit::LOOPS_AND_CLASSES[..],
         &kit::TYPING[..],
         &kit::ANY_VALUES[..],
+        &kit::CORE_CHECKS[..],
         &kit::ERRORS[..],
         &kit::TYPE_VALUES[..],
         &kit::ASYNC[..],
@@ -932,7 +934,7 @@ fn runs() {
         };
         for case in &cases {
             let out = dotnet_run(&runner_dll, &[&case.key]);
-            kit::check_case(&mut failures, &case.key, &out, case);
+            kit::check_case(&mut failures, "csharp", &case.key, &out, case);
         }
         let mut run = |name: &str, dll: &Path, args: &[&str], expected: &[String]| {
             let out = dotnet_run(dll, args);

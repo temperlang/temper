@@ -4,22 +4,22 @@ uses `temper-core`#1 0.0.0-alpha.0.0 {
   class List#2<T#3> extends Listed#4<T#3> {}
   interface Listed#4<T#5> {
     connected method reduce#11(accumulate: fn (T#5, T#5): T#5): T#5;
-    connected method reduceFrom#15<O#16>(initial: O#16, accumulate: fn (O#16, T#5): O#16): O#16;
   }
-  class Int32#20 {
-    connected method toString#21(radix?: Int32): String;
+  connected fn listedReduceFrom#15<T#16, O#17>(listed: Listed#4<T#16>, initial: O#17, accumulate: fn (O#17, T#16): O#17): O#17;
+  class Int32#21 {
+    connected method toString#22(radix?: Int32): String;
   }
-  interface Console#22 {
-    connected method log#23(message: String): Void;
+  interface Console#23 {
+    connected method log#24(message: String): Void;
   }
-  class Boolean#32 {
-    connected method toString#33(): String;
+  class Boolean#33 {
+    connected method toString#34(): String;
   }
-  connected fn getConsole#36(name?: String): Console#22;
+  connected fn getConsole#37(name?: String): Console#23;
 }
 
 module reduce#0 {
-  let ~console#24: Console#22;
+  let ~console#25: Console#23;
 
   let vals#6: List#2<Int32>;
 
@@ -27,10 +27,10 @@ module reduce#0 {
 
   let poorReverseJoin#8: String;
 
-  fn all#9<T#10>(items#25: Listed#4<T#10>, check#26: fn (T#10): Boolean): Boolean {
-    return items#25.reduceFrom#15<Boolean>(true, (fn ~fn#27(result#28: Boolean, it#29: T#10): Boolean [check#26] {
-      if (result#28) {
-        return check#26(it#29);
+  fn all#9<T#10>(items#26: Listed#4<T#10>, check#27: fn (T#10): Boolean): Boolean {
+    return listedReduceFrom#15<T#10, Boolean>(items#26, true, (fn ~fn#28(result#29: Boolean, it#30: T#10): Boolean [check#27] {
+      if (result#29) {
+        return check#27(it#30);
       } else {
         return false;
       }
@@ -38,20 +38,20 @@ module reduce#0 {
   }
 
   init {
-    init ~console#24 = getConsole#36(omitted);
+    init ~console#25 = getConsole#37(omitted);
     init vals#6 = (list(2, 3, 4)): List#2<Int32>;
     init sum#7 = vals#6.reduce#11((fn ~fn#12(sum#13: Int32, n#14: Int32): Int32 {
       return %Int32.add(sum#13, n#14);
     }): fn (Int32, Int32): Int32);
-    init poorReverseJoin#8 = vals#6.reduceFrom#15<String>("", (fn ~fn#17(text#18: String, n#19: Int32): String {
-      return %String.cat(n#19.toString#21(omitted), text#18);
+    init poorReverseJoin#8 = listedReduceFrom#15<Int32, String>((upcast(vals#6)): Listed#4<Int32>, "", (fn ~fn#18(text#19: String, n#20: Int32): String {
+      return %String.cat(n#20.toString#22(omitted), text#19);
     }): fn (String, Int32): String);
-    ~console#24.log#23(%String.cat(%String.cat(%String.cat("Reductions: ", sum#7.toString#21(omitted)), " "), poorReverseJoin#8));
-    ~console#24.log#23(%String.cat("All even: ", all#9<Int32>((upcast(vals#6)): Listed#4<Int32>, (fn ~fn#30(n#31: Int32): Boolean {
-      return %Int32.eq(%Int32.modSafe(n#31, 2), 0);
-    }): fn (Int32): Boolean).toString#33()));
-    ~console#24.log#23(%String.cat("All positive: ", all#9<Int32>((upcast(vals#6)): Listed#4<Int32>, (fn ~fn#34(n#35: Int32): Boolean {
-      return %Int32.gt(n#35, 0);
-    }): fn (Int32): Boolean).toString#33()));
+    ~console#25.log#24(%String.cat(%String.cat(%String.cat("Reductions: ", sum#7.toString#22(omitted)), " "), poorReverseJoin#8));
+    ~console#25.log#24(%String.cat("All even: ", all#9<Int32>((upcast(vals#6)): Listed#4<Int32>, (fn ~fn#31(n#32: Int32): Boolean {
+      return %Int32.eq(%Int32.modSafe(n#32, 2), 0);
+    }): fn (Int32): Boolean).toString#34()));
+    ~console#25.log#24(%String.cat("All positive: ", all#9<Int32>((upcast(vals#6)): Listed#4<Int32>, (fn ~fn#35(n#36: Int32): Boolean {
+      return %Int32.gt(n#36, 0);
+    }): fn (Int32): Boolean).toString#34()));
   }
 }

@@ -77,7 +77,7 @@ public static class MapGlobal
         IDictionary<string, IReadOnlyList<string>> builder2 = new TemperLang.Core.OrderedDictionary<string, IReadOnlyList<string>>();
         builder2["Honduras"] = Listed.CreateReadOnlyList<string>("El Salvador", "Guatemala", "Nicaragua");
         console.Log("From builder: " + Listed.Join(builder2["Honduras"], ", ", (string it) => it));
-        console.Log("Key so far: " + ListKeys(Mapped.AsReadOnly(builder2))[0]);
+        console.Log("Key so far: " + Listed.Get(ListKeys(Mapped.AsReadOnly(builder2)), 0));
         builder2["El Salvador"] = Listed.CreateReadOnlyList<string>("Guatemala", "Honduras");
         builder2["Nicaragua"] = Listed.CreateReadOnlyList<string>("Costa Rica", "Honduras");
         builder2["Panama"] = Listed.CreateReadOnlyList<string>("Colombia", "Costa Rica");
@@ -93,7 +93,7 @@ public static class MapGlobal
         string t2;
         try
         {
-            t2 = Core.RemoveGet(builder2, "El Salvador")[0];
+            t2 = Listed.Get(Core.RemoveGet(builder2, "El Salvador"), 0);
         }
         catch
         {

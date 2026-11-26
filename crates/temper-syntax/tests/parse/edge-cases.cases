@@ -59,3 +59,30 @@ comment Line 6..9
   "("
   (QuotedGroup ` "\n~" `)
   ")")
+
+=== qualified new: the dots name the type, as in `new (a.b)(c)`
+new a.b(c);
+new a.b.c();
+new ns.Box<Int>();
+new ns.C().m();
+new ns.C(1) { x => x };
+new (a.b)(c);
+--- tree
+(Semi
+  (Paren (New new (Dot a . b)) "(" c ")")
+  ;
+  (Paren (New new (Dot (Dot a . b) . c)) "(" ")")
+  ;
+  (Paren (New new (Angle (Dot ns . Box) < Int >)) "(" ")")
+  ;
+  (Paren (Dot (Paren (New new (Dot ns . C)) "(" ")") . m) "(" ")")
+  ;
+  (Curly (Paren (New new (Dot ns . C)) "(" 1 ")") { (Arrow x => x) })
+  ;
+  (Paren (New new (ParenGroup "(" (Dot a . b) ")")) "(" c ")")
+  ;)
+
+=== new of an object literal
+x = new { k: v }.k
+--- tree
+(Eq x = (New new (Dot (CurlyGroup { (LowColon k : v) }) . k)))

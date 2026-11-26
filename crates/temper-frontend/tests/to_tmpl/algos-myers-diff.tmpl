@@ -6,38 +6,43 @@ uses `temper-core`#9 0.0.0-alpha.0.0 {
     connected method get#42(index: Int32): T#11;
   }
   interface Listed#12<T#13> {
-    connected method get#96(index: Int32): T#13;
-    connected method slice#102(begin: Int32, end: Int32): List#10<T#13>;
+    connected method get#98(index: Int32): T#13;
+    connected method slice#104(begin: Int32, end: Int32): List#10<T#13>;
   }
-  class DenseBitVector#61 {
-    connected constructor constructor#63(capacity: Int32): DenseBitVector#61;
-    connected method get#105(index: Int32): Boolean;
-    connected method set#106(index: Int32, newValue: Boolean): Void;
+  class ListBuilder#80<T#81> extends Listed#12<T#81> {
+    connected constructor constructor#83(): ListBuilder#80<T#81>;
+    connected method add#87(newValue: T#81, at?: Int32): Void;
+    connected method reverse#88(): Void;
+    connected get length#93(): Int32;
+    connected method toList#105(): List#10<T#81>;
   }
-  class Deque#64<T#65> {
-    connected constructor constructor#67(): Deque#64<T#65>;
-    connected method add#68(element: T#65): Void;
-    connected get isEmpty#72(): Boolean;
-    connected method removeFirst#73(): T#65;
+  interface Console#111 {
+    connected method log#112(message: String): Void;
   }
-  class ListBuilder#78<T#79> extends Listed#12<T#79> {
-    connected constructor constructor#81(): ListBuilder#78<T#79>;
-    connected method add#85(newValue: T#79, at?: Int32): Void;
-    connected method reverse#86(): Void;
-    connected get length#91(): Int32;
-    connected method toList#103(): List#10<T#79>;
+  class String#114 {
+    connected method split#115(separator: String): List#10<String>;
   }
-  interface Console#109 {
-    connected method log#110(message: String): Void;
+  connected fn getConsole#119(name?: String): Console#111;
+}
+
+uses std#61 0.0.0-alpha.0.0 {
+  module collections#62 {
+    connected class BitVector#63 {
+      connected constructor constructor#65(capacity: Int32): BitVector#63;
+      connected method get#107(index: Int32): Boolean;
+      connected method set#108(index: Int32, newValue: Boolean): Void;
+    }
+    connected class Queue#66<T#67> {
+      connected constructor constructor#69(): Queue#66<T#67>;
+      connected method add#70(element: T#67): Void;
+      connected get isEmpty#74(): Boolean;
+      connected method removeFirst#75(): T#67;
+    }
   }
-  class String#112 {
-    connected method split#113(separator: String): List#10<String>;
-  }
-  connected fn getConsole#117(name?: String): Console#109;
 }
 
 module `myers-diff`#0 {
-  let ~console#111: Console#109;
+  let ~console#113: Console#111;
 
   export class Change#1<T#4> {
     let type#6: String;
@@ -109,91 +114,91 @@ module `myers-diff`#0 {
     let rightLength#58: Int32 = right#55.length#38();
     let reachedRowLength#59: Int32 = %Int32.add(leftLength#57, 1);
     let reachedColLength#60: Int32 = %Int32.add(rightLength#58, 1);
-    let reached#62: DenseBitVector#61 = new constructor#63(%Int32.mul(reachedRowLength#59, reachedColLength#60));
-    let costZeroEdges#66: Deque#64<DiffPath#3?> = new constructor#67<DiffPath#3?>();
-    costZeroEdges#66.add#68((null): DiffPath#3?);
-    let costOneEdges#69: Deque#64<DiffPath#3> = new constructor#67<DiffPath#3>();
-    ~loop#70: while (true) {
-      let diffPath#71: DiffPath#3? = (if (%Boolean.not(costZeroEdges#66.isEmpty#72())) costZeroEdges#66.removeFirst#73() else (if (%Boolean.not(costOneEdges#69.isEmpty#72())) (asNullable(costOneEdges#69.removeFirst#73())): DiffPath#3? else (null): DiffPath#3?): DiffPath#3?): DiffPath#3?;
-      let leftIndex#74: Int32 = (value { let subject#75: Int32? = (if (isNull(diffPath#71)) (null): Int32? else (asNullable(((nonNull(diffPath#71)): DiffPath#3).leftIndex#18)): Int32?): Int32?; (if (isNull(subject#75)) 0 else (nonNull(subject#75)): Int32): Int32 }): Int32;
-      let rightIndex#76: Int32 = (value { let subject#77: Int32? = (if (isNull(diffPath#71)) (null): Int32? else (asNullable(((nonNull(diffPath#71)): DiffPath#3).rightIndex#19)): Int32?): Int32?; (if (isNull(subject#77)) 0 else (nonNull(subject#77)): Int32): Int32 }): Int32;
-      if (%Int32.eq(leftIndex#74, leftLength#57) && %Int32.eq(rightIndex#76, rightLength#58)) {
-        let pathElements#80: ListBuilder#78<DiffPath#3> = new constructor#81<DiffPath#3>();
+    let reached#64: BitVector#63 = new constructor#65(%Int32.mul(reachedRowLength#59, reachedColLength#60));
+    let costZeroEdges#68: Queue#66<DiffPath#3?> = new constructor#69<DiffPath#3?>();
+    costZeroEdges#68.add#70((null): DiffPath#3?);
+    let costOneEdges#71: Queue#66<DiffPath#3> = new constructor#69<DiffPath#3>();
+    ~loop#72: while (true) {
+      let diffPath#73: DiffPath#3? = (if (%Boolean.not(costZeroEdges#68.isEmpty#74())) costZeroEdges#68.removeFirst#75() else (if (%Boolean.not(costOneEdges#71.isEmpty#74())) (asNullable(costOneEdges#71.removeFirst#75())): DiffPath#3? else (null): DiffPath#3?): DiffPath#3?): DiffPath#3?;
+      let leftIndex#76: Int32 = (value { let subject#77: Int32? = (if (isNull(diffPath#73)) (null): Int32? else (asNullable(((nonNull(diffPath#73)): DiffPath#3).leftIndex#18)): Int32?): Int32?; (if (isNull(subject#77)) 0 else (nonNull(subject#77)): Int32): Int32 }): Int32;
+      let rightIndex#78: Int32 = (value { let subject#79: Int32? = (if (isNull(diffPath#73)) (null): Int32? else (asNullable(((nonNull(diffPath#73)): DiffPath#3).rightIndex#19)): Int32?): Int32?; (if (isNull(subject#79)) 0 else (nonNull(subject#79)): Int32): Int32 }): Int32;
+      if (%Int32.eq(leftIndex#76, leftLength#57) && %Int32.eq(rightIndex#78, rightLength#58)) {
+        let pathElements#82: ListBuilder#80<DiffPath#3> = new constructor#83<DiffPath#3>();
         {
-          var pathElement#82: DiffPath#3? = diffPath#71;
-          ~loop#83: while (%Boolean.not(isNull(pathElement#82))) {
-            let path#84: DiffPath#3 = (as(pathElement#82)^): DiffPath#3;
-            pathElements#80.add#85(path#84, omitted);
-            pathElement#82 = path#84.previous#21;
+          var pathElement#84: DiffPath#3? = diffPath#73;
+          ~loop#85: while (%Boolean.not(isNull(pathElement#84))) {
+            let path#86: DiffPath#3 = (as(pathElement#84)^): DiffPath#3;
+            pathElements#82.add#87(path#86, omitted);
+            pathElement#84 = path#86.previous#21;
           }
         }
-        pathElements#80.reverse#86();
-        var leftPatchIndex#87: Int32 = 0;
-        var rightPatchIndex#88: Int32 = 0;
-        let changes#89: ListBuilder#78<Change#1<T#28>> = new constructor#81<Change#1<T#28>>();
-        let n#90: Int32 = pathElements#80.length#91();
+        pathElements#82.reverse#88();
+        var leftPatchIndex#89: Int32 = 0;
+        var rightPatchIndex#90: Int32 = 0;
+        let changes#91: ListBuilder#80<Change#1<T#28>> = new constructor#83<Change#1<T#28>>();
+        let n#92: Int32 = pathElements#82.length#93();
         {
-          var i#92: Int32 = 0;
-          var end#93: Int32;
-          ~loop#94: while (%Int32.lt(i#92, n#90)) {
-            let changeType#95: String = pathElements#80.get#96(i#92).changeType#20;
-            end#93 = %Int32.add(i#92, 1);
-            ~loop#97: while (%Int32.lt(end#93, n#90) && %String.eq(changeType#95, pathElements#80.get#96(end#93).changeType#20)) {
-              end#93 = %Int32.add(end#93, 1);
+          var i#94: Int32 = 0;
+          var end#95: Int32;
+          ~loop#96: while (%Int32.lt(i#94, n#92)) {
+            let changeType#97: String = pathElements#82.get#98(i#94).changeType#20;
+            end#95 = %Int32.add(i#94, 1);
+            ~loop#99: while (%Int32.lt(end#95, n#92) && %String.eq(changeType#97, pathElements#82.get#98(end#95).changeType#20)) {
+              end#95 = %Int32.add(end#95, 1);
             }
-            let nItems#98: Int32 = %Int32.sub(end#93, i#92);
-            let items#99: List#10<T#28>;
-            var nLeftItems#100: Int32 = 0;
-            var nRightItems#101: Int32 = 0;
-            if (%String.eq(changeType#95, ChangeTypeAddition#23)) {
-              items#99 = right#55.slice#102(rightPatchIndex#88, %Int32.add(rightPatchIndex#88, nItems#98));
-              nRightItems#101 = nItems#98;
+            let nItems#100: Int32 = %Int32.sub(end#95, i#94);
+            let items#101: List#10<T#28>;
+            var nLeftItems#102: Int32 = 0;
+            var nRightItems#103: Int32 = 0;
+            if (%String.eq(changeType#97, ChangeTypeAddition#23)) {
+              items#101 = right#55.slice#104(rightPatchIndex#90, %Int32.add(rightPatchIndex#90, nItems#100));
+              nRightItems#103 = nItems#100;
             } else {
-              items#99 = left#54.slice#102(leftPatchIndex#87, %Int32.add(leftPatchIndex#87, nItems#98));
-              if (%String.eq(changeType#95, ChangeTypeUnchanged#26)) {
-                nRightItems#101 = nItems#98;
+              items#101 = left#54.slice#104(leftPatchIndex#89, %Int32.add(leftPatchIndex#89, nItems#100));
+              if (%String.eq(changeType#97, ChangeTypeUnchanged#26)) {
+                nRightItems#103 = nItems#100;
               }
-              nLeftItems#100 = nItems#98;
+              nLeftItems#102 = nItems#100;
             }
-            changes#89.add#85(new constructor#15<T#28>(changeType#95, leftPatchIndex#87, rightPatchIndex#88, items#99), omitted);
-            leftPatchIndex#87 = %Int32.add(leftPatchIndex#87, nLeftItems#100);
-            rightPatchIndex#88 = %Int32.add(rightPatchIndex#88, nRightItems#101);
-            i#92 = end#93;
+            changes#91.add#87(new constructor#15<T#28>(changeType#97, leftPatchIndex#89, rightPatchIndex#90, items#101), omitted);
+            leftPatchIndex#89 = %Int32.add(leftPatchIndex#89, nLeftItems#102);
+            rightPatchIndex#90 = %Int32.add(rightPatchIndex#90, nRightItems#103);
+            i#94 = end#95;
           }
         }
-        return new constructor#17<T#28>(changes#89.toList#103());
+        return new constructor#17<T#28>(changes#91.toList#105());
       }
-      if (%Int32.lt(leftIndex#74, leftLength#57)) {
-        if (%Int32.lt(rightIndex#76, rightLength#58)) {
-          let sameReachedIndex#104: Int32 = %Int32.add(%Int32.add(leftIndex#74, 1), %Int32.mul(%Int32.add(rightIndex#76, 1), reachedRowLength#59));
-          if (%Boolean.not(reached#62.get#105(sameReachedIndex#104)) && eq#56(left#54.get#42(leftIndex#74), right#55.get#42(rightIndex#76))) {
-            reached#62.set#106(sameReachedIndex#104, true);
-            costZeroEdges#66.add#68((asNullable(new constructor#22(%Int32.add(leftIndex#74, 1), %Int32.add(rightIndex#76, 1), ChangeTypeUnchanged#26, diffPath#71))): DiffPath#3?);
+      if (%Int32.lt(leftIndex#76, leftLength#57)) {
+        if (%Int32.lt(rightIndex#78, rightLength#58)) {
+          let sameReachedIndex#106: Int32 = %Int32.add(%Int32.add(leftIndex#76, 1), %Int32.mul(%Int32.add(rightIndex#78, 1), reachedRowLength#59));
+          if (%Boolean.not(reached#64.get#107(sameReachedIndex#106)) && eq#56(left#54.get#42(leftIndex#76), right#55.get#42(rightIndex#78))) {
+            reached#64.set#108(sameReachedIndex#106, true);
+            costZeroEdges#68.add#70((asNullable(new constructor#22(%Int32.add(leftIndex#76, 1), %Int32.add(rightIndex#78, 1), ChangeTypeUnchanged#26, diffPath#73))): DiffPath#3?);
           }
         }
-        let delReachedIndex#107: Int32 = %Int32.add(%Int32.add(leftIndex#74, 1), %Int32.mul(rightIndex#76, reachedRowLength#59));
-        if (%Boolean.not(reached#62.get#105(delReachedIndex#107))) {
-          reached#62.set#106(delReachedIndex#107, true);
-          costOneEdges#69.add#68(new constructor#22(%Int32.add(leftIndex#74, 1), rightIndex#76, ChangeTypeDeletion#24, diffPath#71));
+        let delReachedIndex#109: Int32 = %Int32.add(%Int32.add(leftIndex#76, 1), %Int32.mul(rightIndex#78, reachedRowLength#59));
+        if (%Boolean.not(reached#64.get#107(delReachedIndex#109))) {
+          reached#64.set#108(delReachedIndex#109, true);
+          costOneEdges#71.add#70(new constructor#22(%Int32.add(leftIndex#76, 1), rightIndex#78, ChangeTypeDeletion#24, diffPath#73));
         }
       }
-      if (%Int32.lt(rightIndex#76, rightLength#58)) {
-        let addReachedIndex#108: Int32 = %Int32.add(leftIndex#74, %Int32.mul(%Int32.add(rightIndex#76, 1), reachedRowLength#59));
-        if (%Boolean.not(reached#62.get#105(addReachedIndex#108))) {
-          reached#62.set#106(addReachedIndex#108, true);
-          costOneEdges#69.add#68(new constructor#22(leftIndex#74, %Int32.add(rightIndex#76, 1), ChangeTypeAddition#23, diffPath#71));
+      if (%Int32.lt(rightIndex#78, rightLength#58)) {
+        let addReachedIndex#110: Int32 = %Int32.add(leftIndex#76, %Int32.mul(%Int32.add(rightIndex#78, 1), reachedRowLength#59));
+        if (%Boolean.not(reached#64.get#107(addReachedIndex#110))) {
+          reached#64.set#108(addReachedIndex#110, true);
+          costOneEdges#71.add#70(new constructor#22(leftIndex#76, %Int32.add(rightIndex#78, 1), ChangeTypeAddition#23, diffPath#73));
         }
       }
     }
   }
 
   init {
-    init ~console#111 = getConsole#117(omitted);
+    init ~console#113 = getConsole#119(omitted);
     init ChangeTypeAddition#23 = "Addition";
     init ChangeTypeDeletion#24 = "Deletion";
     init ChangeTypeUnchanged#26 = "Unchanged";
-    ~console#111.log#110(formatPatch#25(diff#27<String>(%String.cat(%String.cat("Hello,", "\n"), "World!").split#113("\n"), %String.cat(%String.cat("Hello,", "\n"), "Cosmos!").split#113("\n"), (fn ~fn#114(a#115: String, b#116: String): Boolean {
-      return %String.eq(a#115, b#116);
+    ~console#113.log#112(formatPatch#25(diff#27<String>(%String.cat(%String.cat("Hello,", "\n"), "World!").split#115("\n"), %String.cat(%String.cat("Hello,", "\n"), "Cosmos!").split#115("\n"), (fn ~fn#116(a#117: String, b#118: String): Boolean {
+      return %String.eq(a#117, b#118);
     }): fn (String, String): Boolean)^)^);
   }
 }

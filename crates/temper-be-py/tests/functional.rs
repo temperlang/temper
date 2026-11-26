@@ -61,7 +61,7 @@ use temper_be_py::{OutFile, PY, translate};
 use temper_be_testkit::{self as kit, Case, Goldens};
 
 /// The shared programs that Python's translation covers so far.
-const PROGRAMS: [&str; 16] = [
+const PROGRAMS: [&str; 18] = [
     "classes",
     "nullables",
     "generics",
@@ -78,6 +78,8 @@ const PROGRAMS: [&str; 16] = [
     "content-tags",
     "json-adapters",
     "reach",
+    "core-numbers",
+    "callback-changes",
 ];
 
 fn cases() -> Vec<Case> {
@@ -88,6 +90,7 @@ fn cases() -> Vec<Case> {
             &kit::CLASSES[..],
             &kit::NULLABLES[..],
             &kit::GENERICS[..],
+            &kit::NAMES[..],
             &kit::FUNCTIONS[..],
             &kit::DEFAULTS[..],
             &kit::CORE_TYPES[..],
@@ -96,6 +99,7 @@ fn cases() -> Vec<Case> {
             &kit::LOOPS_AND_CLASSES[..],
             &kit::TYPING[..],
             &kit::ANY_VALUES[..],
+            &kit::CORE_CHECKS[..],
             &kit::ERRORS[..],
             &kit::TYPE_VALUES[..],
             &kit::ASYNC[..],
@@ -122,7 +126,7 @@ fn cases() -> Vec<Case> {
 /// parameters named like Python's builtins, which keep their names
 /// (`host_interop` passes one by name), and names a function binds more
 /// than once, annotated once.
-const PY_PROGRAMS: [&str; 1] = ["py-builtin-params"];
+const PY_PROGRAMS: [&str; 2] = ["py-builtin-params", "py-unpinned-type-args"];
 
 /// The lines of a program's log blocks, in order.
 fn log_blocks(text: &str) -> Vec<String> {
@@ -864,7 +868,7 @@ fn runs() {
                 });
             } else {
                 let run = run_alone(&python, &root, &projects, &package);
-                kit::check_case(&mut failures, path, &run, &case);
+                kit::check_case(&mut failures, "py", path, &run, &case);
             }
             // Host code is the library's own, which its module's file
             // starts with, and the functional tests' isn't written for

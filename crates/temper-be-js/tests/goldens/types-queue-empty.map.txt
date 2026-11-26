@@ -1,0 +1,8 @@
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../queue-empty.temper.md:12:5  /** @type {string[]} */ <- let queue = new Queue<String
+4:1 -> ../queue-empty.temper.md:12:5  const queue = dequeConstruct <- let queue = new Queue<String
+5:1 -> ../queue-empty.temper.md:13:5  dequeAdd(queue, "a"); <- queue.add("a");
+6:1 -> ../queue-empty.temper.md:14:5  console.log(dequeRemoveFirst <- console.log(queue.removeFirs
+7:1 -> ../queue-empty.temper.md:15:5  console.log("before"); <- console.log("before");
+8:1 -> ../queue-empty.temper.md:16:5  console.log(dequeRemoveFirst <- console.log(queue.removeFirs
+9:1 -> ../queue-empty.temper.md:17:5  console.log("not reached"); <- console.log("not reached");

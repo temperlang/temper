@@ -139,8 +139,9 @@ a declaration's name, or a member after `.`. Then:
 - [`hover`](../../../crates/temper-analysis/src/lib.rs) shows a name's
   [`DeclKind`](../../../crates/temper-analysis/src/lib.rs), its type
   or signature with parameter names (a generic class's type arguments
-  filled in), and its doc comment, a builtin's from core; for other
-  code, the smallest typed expression's type.
+  filled in), and its docs, a doc comment or else the prose that
+  documents it in a `.temper.md` file (a builtin's from core); for
+  other code, the smallest typed expression's type.
 - [`definition`](../../../crates/temper-analysis/src/lib.rs) follows a
   name to its declaration, and through imports to what they import
   (`imported`, at most eight hops), into std's files too.
@@ -154,8 +155,18 @@ a declaration's name, or a member after `.`. Then:
   first ([`core_member_declarations`](../../../crates/temper-frontend/src/typing/core_members.rs),
   from the spans `core_members` already parses). Hover takes the
   nearest of these with a `/** … */` right before it, past decorators'
-  lines, so `List`'s undocumented `length` shows `Listed`'s doc. A
-  builtin core doesn't declare, as `panic`, has no location.
+  lines, so `List`'s undocumented `length` shows `Listed`'s doc.
+  Builtin values, functions, and macros with no Temper body, as
+  `true`, `panic`, or `if`, have bodiless `@connected` declarations
+  there, which document them and, in core, declare nothing (quoted
+  where the parser needs it, ``export let nym`true`;``). Operators and
+  jumps (`return`, `break`, `continue`) have none, so hover shows only
+  a headline, as `builtin +`. A keyword the tree has no name for, as
+  `if`, `orelse`, or a `for` whose expansion's `forEach` covers it, is
+  found by its token
+  ([`syntax_at`](../../../crates/temper-analysis/src/builtins.rs)).
+  Where typing has no type for a builtin, hover shows core's signature,
+  as `ignore(value: AnyValue): Void`.
 - [`completions`](../../../crates/temper-analysis/src/lib.rs) lists
   names in scope at the position, innermost first, builtins last; after
   `.`, the members of the expression's type
@@ -358,6 +369,15 @@ ignores file permissions unless `files.readonlyFromPermissions` is set,
 and `files.readonlyInclude` globs match only inside a workspace, so the
 extension marks these editors read-only for the session as they become
 active ([`readonly.ts`](../../../editors/vscode/src/readonly.ts)).
+Core's own sources, opened where the checkout the server was built from
+keeps them (`lib/core/`, found by its build path, so a copied layout
+gains nothing), are core whatever their text (`Library::in_core`,
+`project::is_checkout`), so each analyzes cleanly while edited; another
+library of that name is an error, and a server built elsewhere sees a
+checkout's edited core as such another library. Likewise std's, in `lib/std/` or the copy of std written for
+going to definitions: each settles as std (`Library::std_root`). What core enables other libraries to do with its types
+(`typing::core_shape`) is still read from the built-in core, not the
+edited text.
 
 **Alternatives:** a custom URI scheme, served by the extension as a
 virtual document.
@@ -522,12 +542,12 @@ which embeds Temper in fenced blocks (untagged or tagged `temper`) and
 indented blocks, as the
 [literate split](../../../crates/temper-syntax/src/literate.rs) reads
 them, and uses VS Code's Markdown grammar for the prose. Blocks tagged
-`temper inert`, which aren't compiled, are Temper too, scoped
-`meta.embedded.block.temper.inert`, with `inert` on the fence scoped
-`storage.modifier.inert.temper`; the extension
+`temper inert`, which aren't compiled as part of their file, are Temper
+too, scoped `meta.embedded.block.temper.inert`, with `inert` on the
+fence scoped `storage.modifier.inert.temper`; the extension
 ([`inert.ts`](../../../editors/vscode/src/inert.ts)) tints their lines
-and labels the fence "inert", with a hover, "Not compiled: shown for
-reading only", from the same fence scan the preview uses
+and labels the fence "inert", with a hover, "Not compiled as part of
+this file", from the same fence scan the preview uses
 ([`inertBlocks`](../../../editors/vscode/src/page.ts)); the theme colors
 are `temper.inertBlockBackground` and `temper.inertLabelForeground`. The
 language server doesn't analyze them, as the compiler doesn't. Nothing can run
@@ -631,7 +651,8 @@ line in view. The messages are typed in
   definition, completion, references, rename and its refusals, outlines,
   signature help, unknown requests); UTF-16 positions in a lone file;
   `exit` without `shutdown`; definition into std; definition and hover
-  into core, its file read-only; panics in an analysis
+  into core, its file read-only; core's source in a checkout
+  (`lib/core/`), edited, analyzed as core; panics in an analysis
   and a request becoming internal errors, with the server answering
   after them (`panics_become_internal_errors`). Unit tests in
   [`lib.rs`](../../../crates/temper-lsp/src/lib.rs): UTF-16 positions,

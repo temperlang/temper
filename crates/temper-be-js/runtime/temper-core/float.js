@@ -1,7 +1,7 @@
 // @ts-check
 
 // Implements extension method core.type Float64.near()
-import {bubble, INT32_MAX, INT32_MIN, INT64_MAX, INT64_MIN} from "./core.js";
+import {bubble, eqFloat64, INT32_MAX, INT32_MIN, INT64_MAX, INT64_MIN} from "./core.js";
 
 /**
  * Successor function.
@@ -32,8 +32,11 @@ export const float64Near = (x, y, relTol, absTol) => {
   if (absTol == null) {
     absTol = 0;
   }
+  // Equal by Temper's `==`, so NaN is near NaN, or finite and within the
+  // margin, which a NaN margin never is: `Math.max` keeps NaN.
   const margin = Math.max(Math.max(Math.abs(x), Math.abs(y)) * relTol, absTol);
-  return Math.abs(x - y) <= margin;
+  return eqFloat64(x, y) ||
+    (Number.isFinite(x) && Number.isFinite(y) && Math.abs(x - y) <= margin);
 }
 
 /**

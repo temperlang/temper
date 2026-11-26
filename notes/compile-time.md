@@ -293,8 +293,8 @@ only for `run` and `test` on the interpreter and for backends.
 
 - Allowed: a library's own Temper code; core (builtin types and the
   builtin functions `builtin_allowed` names one by one, not `async`);
-  of std, the pure modules `regex`, `json`, and `temporal`
-  (`ALLOWED_STD_MODULES`). Console output is dropped.
+  of std, the pure modules `regex`, `json`, `temporal`, and
+  `collections` (`ALLOWED_STD_MODULES`). Console output is dropped.
 - Denied: `temporal`'s `Date.today()` (`DENIED_MEMBERS`); every other
   std module, as `net` and `testing`, and any added later; every
   `@connected` function or class outside the allowed std modules, a

@@ -151,6 +151,7 @@ impl Settle {
         let scopes = Scopes::new(&mut library.names, library.test_server_port);
         let budget = 1000 + 100 * library.tree.len() as u64;
         Settle {
+            namespace_names: library.namespace_names(0..library.tree.len() as u32),
             lib: library,
             scopes,
             engine: Engine::new(budget),
@@ -297,6 +298,11 @@ impl Settle {
 pub(crate) struct Settle {
     pub lib: Library,
     pub scopes: Scopes,
+    /// The names that `let rx = import(…)` may declare as module
+    /// namespaces ([`Library::namespace_names`]), a REPL input's added
+    /// as it's settled: only these can be `rx` in `rx.member`, so other
+    /// calls skip looking for it.
+    pub(crate) namespace_names: HashSet<NameId>,
     engine: Engine<Fact>,
     work: Vec<Work>,
     /// Each module's scope, by [`ModuleId`].
@@ -495,6 +501,22 @@ impl Settle {
                 self.set_children(node, &children);
                 continue;
             }
+            // `let rx = import(…)` declares a namespace, and stands for
+            // nothing.
+            match self.namespace_import(statement, scope, forced) {
+                Ok(Some(statements)) => {
+                    forced = false;
+                    let mut children = self.lib.tree.children(node).to_vec();
+                    children.splice(next as usize..=next as usize, statements);
+                    self.set_children(node, &children);
+                    continue;
+                }
+                Ok(None) => {}
+                Err(fact) => {
+                    self.work[id.0 as usize] = Work::Block { node, scope, next };
+                    return Outcome::Wait(fact);
+                }
+            }
             // `let { a, b } = x` stands for several statements.
             if self.lib.tree.kind(statement) == NodeKind::Decl {
                 let imported = match self.import(statement, scope, forced) {
@@ -560,6 +582,21 @@ impl Settle {
                 NodeKind::Decl => {
                     self.lower_decl(statement);
                 }
+                NodeKind::Let if self.supplied_by_frontend(statement, scope) => {
+                    // Core documents a builtin; another name is a typo.
+                    let name = core::let_parts(&self.lib.tree, statement).0;
+                    let named = self.lib.name(name);
+                    if named.is_none_or(|n| self.scopes.builtin(n).is_none()) {
+                        let text = named.map_or("", |n| self.lib.names.get(n)).to_string();
+                        let span = self.lib.tree.span(name);
+                        let message = Message::ConnectedNotBuiltin(text);
+                        self.lib.report(Level::Error, message, span);
+                    }
+                    self.connected.remove(&statement);
+                    self.lib.connected.remove(&statement);
+                    self.removed.insert(statement);
+                    return Ok(());
+                }
                 NodeKind::Let | NodeKind::Class => {
                     self.declare(statement, scope);
                     self.visit(statement, scope);
@@ -611,6 +648,27 @@ impl Settle {
                 }
             }
         }
+    }
+
+    /// Whether a top-level `Let` is core's `@connected` declaration
+    /// without a body or initial value, as `export let if;` or `export
+    /// let panic;`, of a builtin: the frontend supplies what it connects
+    /// to, the builtin, so it declares nothing, and core's own code still
+    /// names the builtin. It's there for its doc comment, which editors
+    /// show. As core's class named as a builtin type is that type. One
+    /// whose name no builtin has is an error.
+    fn supplied_by_frontend(&self, let_node: NodeId, scope: ScopeId) -> bool {
+        let tree = &self.lib.tree;
+        let init = core::let_parts(tree, let_node).2;
+        let connected =
+            self.connected.contains(&let_node) || tree.data(let_node) & core::MEMBER_CONNECTED != 0;
+        let bodiless = init.is_none_or(|init| {
+            tree.kind(init) == NodeKind::Fn && tree.data(init) & core::FN_NO_BODY != 0
+        });
+        connected
+            && bodiless
+            && self.scopes.get(scope).kind == ScopeKind::Module
+            && self.lib.in_core(tree.span(let_node).start)
     }
 
     /// Declares a `Let`'s or `Class`'s name in a scope, unless it's
@@ -794,6 +852,11 @@ impl Settle {
                         let name = Builtin::Macro(m).name().to_string();
                         self.error(node, Message::MalformedSpecial(name));
                     }
+                    let symbol = self.scopes.resolved(node);
+                    if symbol.is_some_and(|b| self.scopes.namespace(b).is_some()) {
+                        let name = self.lib.names.get(self.lib.name(node).unwrap());
+                        self.error(node, Message::NamespaceNotValue(name.to_string()));
+                    }
                 }
                 NodeKind::BuiltinName => {
                     let name = self.lib.name(node).unwrap();
@@ -831,6 +894,12 @@ impl Settle {
                 }
                 NodeKind::Assign => {
                     let target = self.lib.tree.children(node)[0];
+                    // `rx.member = …` assigns the export, which may not be.
+                    match self.namespace_member(target, scope, forced) {
+                        Ok(true) => continue,
+                        Ok(false) => {}
+                        Err(fact) => return Outcome::Wait(fact),
+                    }
                     if self.lib.tree.kind(target) != NodeKind::RightName {
                         // `obj.name = value`, a field or setter; for `this`,
                         // checked as a bare member name is.
@@ -925,12 +994,24 @@ impl Settle {
         match self.lookup(scope, name, node, false, forced) {
             Lookup::Found(b) => self.scopes.resolve(node, b),
             Lookup::Wait(s) => return Err(Fact::ScopeComplete(s)),
-            Lookup::Missing => {
-                let text = self.lib.names.get(name).to_string();
-                self.error(node, Message::UndeclaredName(text));
-            }
+            Lookup::Missing => match self.core_binding(node, name) {
+                Some(b) => self.scopes.resolve(node, b),
+                None => {
+                    let text = self.lib.names.get(name).to_string();
+                    self.error(node, Message::UndeclaredName(text));
+                }
+            },
         }
         Ok(())
+    }
+
+    /// What a name means in core's own text alone, read as a library
+    /// ([`crate::builtins::CORE_ONLY`]).
+    fn core_binding(&self, node: NodeId, name: NameId) -> Option<SymbolId> {
+        let text = self.lib.names.get(name);
+        let (_, builtin) = (crate::builtins::CORE_ONLY.iter()).find(|(n, _)| *n == text)?;
+        let in_core = self.lib.in_core(self.lib.tree.span(node).start);
+        in_core.then(|| self.scopes.hidden(*builtin))
     }
 
     /// Visits a call: expands it if its callee is a macro, returning true,
@@ -941,6 +1022,21 @@ impl Settle {
             self.error(node, Message::Unsupported("a call without a callee".into()));
             return Ok(false);
         };
+        // `rx.member` is the export it names, and so is a callee or an
+        // argument that is, or a callee's object, before anything reads
+        // them as types or classes: `rx.f()`, `new (rx.C)()`,
+        // `rx.C.make()`.
+        if self.namespace_member(node, scope, forced)? {
+            return Ok(true);
+        }
+        for &child in &children {
+            if !self.namespace_member(child, scope, forced)? {
+                let tree = &self.lib.tree;
+                if let [_, object, _] = *tree.children(child) {
+                    self.namespace_member(object, scope, forced)?;
+                }
+            }
+        }
         // A sealed `@json` interface's decoder, once its module is read.
         if self.json_sealed_body(node, forced)? {
             return Ok(true);

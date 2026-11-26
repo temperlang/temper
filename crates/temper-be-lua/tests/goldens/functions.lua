@@ -274,6 +274,15 @@ local function gatePassed(g, s)
   return s .. " " .. tostring(g:allows(1))
 end
 
+---@generic T
+---@generic O
+---@param ls T[]
+---@param f fun(arg0: T): O
+---@return O
+local function listFirstThrough(ls, f)
+  return f(temper.list_get(ls, 0))
+end
+
 local counter = makeCounter(10)
 counter()
 print("count " .. counter())
@@ -341,5 +350,13 @@ print(tostring(stringIsPalindrome("step on no pets")) .. " " .. tostring(stringI
 print(intOrZero(none) .. " " .. listFirstOr({ 4, 5 }, 0) .. " " .. listFirstOr({ "x" }, "-"))
 print(stringPadded("ab", 2) .. " " .. stringPadded("ab", 1, "*"))
 print(gate:passed(4) .. " " .. gatePassed(gate, "gate"))
+local tags = temper.listed_map(ns, function(n) return "<" .. n .. ">" end)
+local digits = temper.listed_reducefrom(ns, "", function(s, n) return s .. n end)
+local named = temper.map_constructor({ temper.pair_constructor("a", 1), temper.pair_constructor("b", 2) })
+local entries = temper.mapped_tolistwith(named, function(k, v) return k .. "=" .. v end)
+print(temper.list_get(tags, 0) .. temper.list_get(tags, 4) .. " " .. digits .. " " .. temper.listed_join(entries, ",", function(e) return e end))
+local hashed = listFirstThrough({ 3 }, function(n) return "#" .. n end)
+local bumped = listFirstThrough({ 3 }, function(n) return temper.int32_add(n, 1) end)
+print(hashed .. " " .. bumped .. " " .. listFirstOr({ 4, 5 }, 0))
 
 return {}

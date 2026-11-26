@@ -445,7 +445,14 @@ impl<'a> Translator<'a> {
                 for &a in self.p.types.list(args) {
                     texts.push(self.ty(a)?);
                 }
-                let path = if self.elsewhere(decl) || self.own(decl) {
+                let path = if self.connected_type(decl) {
+                    // std's, connected to the runtime's own type.
+                    let key = temper_tmpl::qname::std_key(self.p, decl);
+                    match key.as_deref().and_then(connected::std_type) {
+                        Some(path) => path.into(),
+                        None => return not_yet(format!("a type for {key:?}")),
+                    }
+                } else if self.elsewhere(decl) || self.own(decl) {
                     self.top_path(decl)?
                 } else {
                     match self.qname(decl).as_str() {
@@ -466,7 +473,6 @@ impl<'a> Translator<'a> {
                             self.uses.insert("std::sync::Arc");
                             return Ok("Arc<std::sync::RwLock<String>>".into());
                         }
-                        "core.type Deque" => "temper_core::Deque".into(),
                         "core.type Promise" => "temper_core::Promise".into(),
                         "core.type PromiseBuilder" => "temper_core::PromiseBuilder".into(),
                         "core.type SafeGenerator" => "temper_core::SafeGenerator".into(),
@@ -479,7 +485,6 @@ impl<'a> Translator<'a> {
                         // nothing (`step_result`).
                         "core.type ValueResult" => return Ok(texts.join(", ")),
                         "core.type DoneResult" => return Ok("()".into()),
-                        "core.type DenseBitVector" => "temper_core::DenseBitVector".into(),
                         q => return not_yet(format!("a type for {q}")),
                     }
                 };
@@ -721,10 +726,18 @@ impl<'a> Translator<'a> {
             Node::Interface { decl, .. } if self.p.decls.get(decl).facts.contains(Facts::FUN) => {
                 Vec::new()
             }
+            // std's connected to the runtime's own type (`Queue`).
+            Node::Class { decl, .. } if self.connected_type(decl) => Vec::new(),
             Node::Class { .. } => self.class(item)?,
             Node::Interface { .. } => self.interface(item)?,
             _ => Vec::new(),
         })
+    }
+
+    /// Whether a class is std's, connected to a type of the runtime's
+    /// own (`qname::connected_type`), as `Queue` is `temper_core::Queue`.
+    fn connected_type(&self, decl: DeclId) -> bool {
+        temper_tmpl::qname::connected_type(self.p, decl, crate::connected::connects_std)
     }
 
     /// `f`'s result, translating what only tests build, whose `use`s
@@ -1897,6 +1910,13 @@ impl<'a> Translator<'a> {
                 let Some((&receiver, rest)) = args.split_first() else {
                     return not_yet(format!("a receiver for {qname}"));
                 };
+                // A list or map upcast to the handle, as an extension's
+                // receiver is (`listed::map(&ns, …)`), borrows as its
+                // trait object as it is, as a method's receiver does.
+                let receiver = match self.p.nodes.get(receiver) {
+                    Node::Upcast { value } => value,
+                    _ => receiver,
+                };
                 let mut fargs = vec![self.handle_ref(receiver)?];
                 self.connected_args(decl, rest, &mut fargs)?;
                 Ok(Expr::path(path).call(fargs))
@@ -2210,7 +2230,9 @@ impl<'a> Translator<'a> {
                 ..
             } => {
                 let class = p.decls.get(ctor).owner;
-                let call = if is_external(p, ctor) && library_of(p, ctor) == "core" {
+                let call = if is_external(p, ctor) && library_of(p, ctor) == "core"
+                    || temper_tmpl::qname::by_connection(p, ctor, crate::connected::connects_std)
+                {
                     self.connected(ctor, p.nodes.list(args), want)?
                 } else {
                     let args = self.args(ctor, p.nodes.list(args))?;

@@ -63,6 +63,10 @@ const CLASSES: [&str; 14] = [
     "interfaces/pure-virtual",
 ];
 
+/// The functional tests of names like core's, and `core` and `builtins`
+/// as ordinary names, as the backends' testkit lists them.
+const NAMES: [&str; 2] = ["names/core-named", "names/core-shadows"];
+
 /// The functional tests with nullable types, `orelse`, `bubble()`, and
 /// `panic()` that translate, as the backends' testkit lists them.
 const NULLABLES: [&str; 4] = [
@@ -74,7 +78,12 @@ const NULLABLES: [&str; 4] = [
 
 /// The functional tests with generic types and core's lists that
 /// translate, as the backends' testkit lists them.
-const GENERICS: [&str; 3] = ["casts/specific", "imports/values", "types/list/empty"];
+const GENERICS: [&str; 4] = [
+    "casts/specific",
+    "imports/namespaces",
+    "imports/values",
+    "types/list/empty",
+];
 
 /// The functional tests with function values (literals, references,
 /// calls of values, and core's members that take functions) that
@@ -94,17 +103,20 @@ const FUNCTIONS: [&str; 7] = [
 const DEFAULTS: [&str; 1] = ["classes/property-order"];
 
 /// The functional tests with core's other types and members (string
-/// indices, `StringBuilder`, `Empty`, `Deque`, `DenseBitVector`, and more
-/// of `String`'s and `Float64`'s members) that translate, as the
-/// backends' testkit lists them.
-const CORE_TYPES: [&str; 9] = [
+/// indices, `StringBuilder`, `Empty`, and more of `String`'s and
+/// `Float64`'s members, and list and string indices out of bounds) that
+/// translate, as the backends' testkit lists them.
+const CORE_TYPES: [&str; 12] = [
     "functions/defaulting",
     "functions/named-args",
     "regression/minimal-repro",
-    "types/dense-bit-vector",
-    "types/deque",
     "types/float/ops",
+    "types/list/builder-set-negative",
+    "types/list/index-past-end",
+    "types/list/reduce-empty",
+    "types/list/remove-last-empty",
     "types/string/build",
+    "types/string/index-at-end",
     "types/string/indices",
     "types/string/read",
 ];
@@ -137,6 +149,10 @@ const TYPING: [&str; 1] = ["semantics/constness"];
 /// that translate, as the backends' testkit lists them.
 const ANY_VALUES: [&str; 2] = ["casts/as-expr", "types/list/operations"];
 
+/// The functional tests with `is` and `as` checks from `AnyValue` among
+/// core's values, that translate, as the backends' testkit lists them.
+const CORE_CHECKS: [&str; 1] = ["casts/core-classes"];
+
 /// The functional tests of a library with errors, each a tmpl `Error`
 /// that fails when run, that translate, as the backends' testkit lists
 /// them.
@@ -163,12 +179,16 @@ const ASYNC: [&str; 5] = [
 /// The functional tests that use std's classes' members and
 /// constructors, declared in tmpl as another library's, that translate;
 /// the backends run them once std translates as a library of its own.
-const STD_MEMBERS: [&str; 5] = [
+const STD_MEMBERS: [&str; 9] = [
     "regex/match",
     "regex/zero-advance",
     "testing/asserts",
+    "types/bit-vector",
+    "types/bit-vector-negative-false",
     "types/date",
     "types/json-syntax-tree",
+    "types/queue",
+    "types/queue-empty",
 ];
 
 /// The functional tests new in the 2026-11-09 sync with Kotlin's `main`
@@ -229,6 +249,7 @@ fn subset_a_goldens() {
             .chain(&CLASSES)
             .chain(&NULLABLES)
             .chain(&GENERICS)
+            .chain(&NAMES)
             .chain(&FUNCTIONS)
             .chain(&DEFAULTS)
             .chain(&CORE_TYPES)
@@ -237,6 +258,7 @@ fn subset_a_goldens() {
             .chain(&LOOPS_AND_CLASSES)
             .chain(&TYPING)
             .chain(&ANY_VALUES)
+            .chain(&CORE_CHECKS)
             .chain(&ERRORS)
             .chain(&TYPE_VALUES)
             .chain(&NET)
@@ -323,6 +345,7 @@ fn every_functional_test_translates_or_says_why() {
             .chain(&CLASSES)
             .chain(&NULLABLES)
             .chain(&GENERICS)
+            .chain(&NAMES)
             .chain(&FUNCTIONS)
             .chain(&DEFAULTS)
             .chain(&CORE_TYPES)
@@ -331,6 +354,7 @@ fn every_functional_test_translates_or_says_why() {
             .chain(&LOOPS_AND_CLASSES)
             .chain(&TYPING)
             .chain(&ANY_VALUES)
+            .chain(&CORE_CHECKS)
             .chain(&ERRORS)
             .chain(&TYPE_VALUES)
             .chain(&NET)
@@ -560,6 +584,34 @@ fn gaps_lists_every_gap() {
     });
 }
 
+/// A class whose members can't all be declared, as one with a user's
+/// `@connected` member, is a gap once: `gaps` leaves the class out and
+/// goes on, rather than translating a class it only half declared.
+#[test]
+fn gaps_go_past_a_class_not_declared() {
+    with_stack(|| {
+        let source = "
+    export class C {
+      public x: Int;
+      public constructor(x: Int) { this.x = x; }
+      @connected public f(): Int;
+    }
+    export let a(): Int { new C(1).x }
+    export let c(): Void { let y = [].get(0) orelse panic(); }
+";
+        let mut library = Library::new();
+        library.add_file("half.temper.md", source, SourceKind::Markdown);
+        load_imports(&Sources::standard(), &mut library);
+        let settled = settle(library);
+        let first = to_tmpl(&settled, "half").unwrap_err();
+        assert_eq!(first.what, "a connected member", "{first}");
+        let found = gaps(&settled, "half");
+        assert_eq!(found[0], first);
+        let lines: Vec<&str> = (found.iter()).filter_map(|g| g.at.as_deref()).collect();
+        assert!(lines.iter().any(|at| at.contains(":8:")), "{found:?}");
+    });
+}
+
 /// Translates one source file, with std, into tmpl, validated.
 fn translate_source(name: &str, source: &str) -> Program {
     let (program, errors) = translate_with_errors(name, source);
@@ -630,6 +682,76 @@ fn joins_and_sealed_whens() {
         assert!(written.contains(": E#"), "{written}");
         // `next` held first, then called.
         assert!(written.contains("let subject#"), "{written}");
+    });
+}
+
+/// A module imported as a namespace, `let s = import("./shapes")`,
+/// translates exactly as it does imported by destructuring: each
+/// `s.member` is the export itself, and the namespace reaches no tmpl.
+/// So too std's modules, and in types, constructors, and statics.
+#[test]
+fn namespaces_translate_as_destructured_imports() {
+    with_stack(|| {
+        let shapes = "export let unit = 1;
+export let twice(x: Int): Int { x * 2 }
+export class Box<T>(public value: T) {}
+export interface Shape { public area(): Int; }
+export class Square(public side: Int) extends Shape {
+  public area(): Int { side * side }
+  public static sized(side: Int): Square { new Square(side) }
+}
+";
+        let uses = |prefix: &str, ns: &str, rx: &str, t: &str| {
+            format!(
+                "{prefix}
+export let f(n: Int): {ns}Box<Int> {{ new ({ns}Box<Int>)({ns}twice(n) + {ns}unit) }}
+export let area(x: {ns}Shape): Int {{ x.area() }}
+export let sq: {ns}Square = {ns}Square.sized(2);
+export class Circle(public r: Int) extends {ns}Shape {{ public area(): Int {{ r }} }}
+export let isSquare(x: {ns}Shape): Boolean {{ x is {ns}Square }}
+export let r: {rx}Regex = new ({rx}Regex)({rx}oneOrMore(new ({rx}CodePoints)(\"ab\")));
+export let day(): {t}Date throws Bubble {{ new ({t}Date)(2024, 2, 29) }}
+"
+            )
+        };
+        let namespaced = uses(
+            "let s = import(\"./shapes\");
+let rx = import(\"std/regex\");
+let t = import(\"std/temporal\");",
+            "s.",
+            "rx.",
+            "t.",
+        );
+        let destructured = uses(
+            "let { unit, twice, Box, Shape, Square } = import(\"./shapes\");
+let { Regex, oneOrMore, CodePoints } = import(\"std/regex\");
+let { Date } = import(\"std/temporal\");",
+            "",
+            "",
+            "",
+        );
+        let tmpl = |main: &str| {
+            let mut library = Library::new();
+            library.add_file("lib/main.temper", main, SourceKind::Standalone);
+            library.add_file("lib/shapes/shapes.temper", shapes, SourceKind::Standalone);
+            load_imports(&Sources::standard(), &mut library);
+            let settled = settle(library);
+            let errors: Vec<String> = (settled.library.diagnostics.iter())
+                .filter(|d| d.level == temper_frontend::library::Level::Error)
+                .map(|d| d.message.text())
+                .collect();
+            assert!(errors.is_empty(), "{errors:?}\n{main}");
+            let program = to_tmpl(&settled, "lib").unwrap_or_else(|e| panic!("{e}"));
+            let problems = validate(&program, &Profile::full());
+            assert!(problems.is_empty(), "{problems:#?}");
+            let written = text::write(&program);
+            match written.find("\nspans {") {
+                Some(at) => written[..at].to_string(),
+                None => written,
+            }
+        };
+        let (a, b) = (tmpl(&namespaced), tmpl(&destructured));
+        assert!(a == b, "namespaced:\n{a}\ndestructured:\n{b}");
     });
 }
 

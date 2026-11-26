@@ -793,6 +793,7 @@ fn doc_symbol(source: &str, s: &temper_analysis::DocSymbol) -> lsp::DocumentSymb
         DeclKind::Function => K::FUNCTION,
         DeclKind::Let | DeclKind::Var | DeclKind::Parameter | DeclKind::Builtin => K::VARIABLE,
         DeclKind::TypeParameter => K::TYPE_PARAMETER,
+        DeclKind::Namespace => K::NAMESPACE,
     };
     lsp::DocumentSymbol {
         name: s.name.clone(),
@@ -885,6 +886,7 @@ fn completion_kind(kind: DeclKind) -> lsp::CompletionItemKind {
         DeclKind::Getter | DeclKind::Setter => K::PROPERTY,
         DeclKind::Builtin => K::VALUE,
         DeclKind::TypeParameter => K::TYPE_PARAMETER,
+        DeclKind::Namespace => K::MODULE,
     }
 }
 

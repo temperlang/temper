@@ -48,8 +48,9 @@ styles:
 - **Temper examples** are ```` ```temper ```` blocks, and each ends
   with a marker comment saying what it does, as below. Literate Temper
   files are ```` ```tempermd ````, interactive sessions ```` ```console ````,
-  and Temper that's only shown, never compiled, ```` ```temper inert ````,
-  which the site highlights, tints, and labels "inert".
+  and Temper that isn't compiled as part of its file
+  ```` ```temper inert ```` (checked as an example when marked, as
+  below), which the site highlights, tints, and labels "inert".
 - Links are relative, to files in this repository, and never carry line
   numbers; link a file, and name what's in it.
 - Write "Temper" for the language, its compiler, and its tools, and
@@ -59,20 +60,30 @@ styles:
 ### Examples that are checked
 
 `compat/check_doc_examples.py` runs every ```` ```temper ```` block in
-the docs (all but `internals/` and `release-notes/`), each as its own
+the docs (all but `internals/` and `release-notes/`), and every example
+in core's and std's literate Markdown (`lib/`), each as its own
 one-file library, with `temper test -v`, on the interpreter. The
 marker on a block's last line says what should happen:
 
 | Marker | Means | Checked |
 |---|---|---|
-| `// ✅` or `// ✅ value` | It runs without errors | It runs cleanly, and logs what its `//!outputs` comments say |
-| `// ❌` or `// ❌ errors` | It's an error | It reports an error |
+| `// ✅` | It runs without errors | It runs cleanly, and logs what its `//!outputs` comments say |
+| `// ✅ value` | Its last expression is *value* | As `✅`, and the value, as `"${…}"` shows it, is *value* (`true`, `8`, or a JSON string such as `"a\\b"`) |
+| `// ❌` or `// ❌ errors` | It's an error | It reports an error, or panics or fails as it runs (`temper test` still exits 0 then, so the checker reads its report) |
 | `// ⏸️` | A fragment, or it needs context | Not run |
 | none | Usually part of a longer example | Run, but only counted |
 
 A `//!outputs "text"` comment (a JSON string, or a list of them) after
-a statement says what it logs. The values after `✅` and the errors
-after `❌` aren't compared yet.
+a statement says what it logs. The errors after `❌` aren't compared
+yet, nor is a value where none is given (the previous compiler took a
+bare `✅` to mean `true`).
+
+In a library's literate Markdown, a ```` ```temper ```` block is the
+library's own code, so an example in prose is ```` ```temper inert ````,
+which the library never runs, ending with a `✅` or `❌` marker, which
+the checker runs; an inert block with no such marker is only shown. An
+example in a doc comment is a ```` ```temper ```` block there, its lines
+starting with `*`, as in the first compiler's builtins.
 
     uv run compat/check_doc_examples.py [--verbose] [PATH...]
 
@@ -86,7 +97,7 @@ hidden on GitHub, on the line right before its fence, naming its
 [inconsistencies](../inconsistencies.md) entries, such as
 `<!-- known: I10 I20 -->`. It's then counted as known, not fatal, and
 the checker lists the known examples by entry. Once one agrees, the
-checker fails until you remove the comment and update the entry. Today, 14 are known
+checker fails until you remove the comment and update the entry. Today, 15 are known
 ([I10](../inconsistencies.md#i10-examples-that-dont-run-as-marked)).
 
 ## Where they came from
@@ -240,8 +251,8 @@ translations, made by `temper` at build time, in place of the old tabs.
 ## To do
 
 - Make the known examples zero, by fixing the compiler or the docs.
-- Compare the values after `✅` and the errors after `❌`, as Temper's
-  first doc generator did.
+- Compare the errors after `❌`, and give the bare `✅` examples that
+  are boolean their `true`, as Temper's first doc generator did.
 - Make tutorial steps checkable: mark fragments `⏸️`, or run a page's
   unmarked blocks together, in order, as one literate file.
 - Write the reference for what the old generator left as "TODO", such as

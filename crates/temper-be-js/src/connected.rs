@@ -41,6 +41,19 @@ pub const TABLE: &[(&str, Connection)] = &[
     ("core.async()", Connection::Helper("runAsync")),
     ("core.empty()", Connection::Helper("empty")),
     ("core.getConsole()", Connection::Erased),
+    ("core.listedMap()", Connection::ListHelper("listedMap")),
+    (
+        "core.listedReduceFrom()",
+        Connection::ListHelper("listedReduceFrom"),
+    ),
+    (
+        "core.listedReduceFromIndex()",
+        Connection::ListHelper("listedReduceFromIndex"),
+    ),
+    (
+        "core.mappedToListWith()",
+        Connection::Helper("mappedToListWith"),
+    ),
     (
         "core.type Boolean.toString()",
         Connection::Translate(to_string),
@@ -48,31 +61,6 @@ pub const TABLE: &[(&str, Connection)] = &[
     (
         "core.type Console.log()",
         Connection::Translate(console_log),
-    ),
-    (
-        "core.type DenseBitVector.constructor()",
-        Connection::Helper("denseBitVectorConstructor"),
-    ),
-    (
-        "core.type DenseBitVector.get()",
-        Connection::Helper("denseBitVectorGet"),
-    ),
-    (
-        "core.type DenseBitVector.set()",
-        Connection::Helper("denseBitVectorSet"),
-    ),
-    ("core.type Deque.add()", Connection::Helper("dequeAdd")),
-    (
-        "core.type Deque.constructor()",
-        Connection::Helper("dequeConstructor"),
-    ),
-    (
-        "core.type Deque.get isEmpty()",
-        Connection::Helper("dequeGetIsEmpty"),
-    ),
-    (
-        "core.type Deque.removeFirst()",
-        Connection::Helper("dequeRemoveFirst"),
     ),
     ("core.type Float64.abs()", Connection::Math("abs")),
     ("core.type Float64.acos()", Connection::Math("acos")),
@@ -120,6 +108,7 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Float64.toString()",
         Connection::Helper("float64ToString"),
     ),
+    ("core.type Int32.get signum()", Connection::Math("sign")),
     ("core.type Int32.max()", Connection::Math("max")),
     ("core.type Int32.min()", Connection::Math("min")),
     ("core.type Int32.toFloat64()", Connection::Translate(same)),
@@ -189,7 +178,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type ListBuilder.set()",
         Connection::Helper("listBuilderSet"),
     ),
-    ("core.type ListBuilder.sort()", Connection::Translate(sort)),
+    (
+        "core.type ListBuilder.sort()",
+        Connection::Helper("listBuilderSort"),
+    ),
     (
         "core.type ListBuilder.splice()",
         Connection::Helper("listBuilderSplice"),
@@ -227,13 +219,8 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::ListHelper("listedJoin"),
     ),
     (
-        "core.type Listed.map()",
-        Connection::ListHelper("listedMap"),
-    ),
-    ("core.type Listed.reduce()", Connection::Translate(reduce)),
-    (
-        "core.type Listed.reduceFrom()",
-        Connection::ListHelper("listedReduceFrom"),
+        "core.type Listed.reduce()",
+        Connection::ListHelper("listedReduce"),
     ),
     (
         "core.type Listed.slice()",
@@ -283,10 +270,6 @@ pub const TABLE: &[(&str, Connection)] = &[
     (
         "core.type Mapped.toList()",
         Connection::Helper("mappedToList"),
-    ),
-    (
-        "core.type Mapped.toListWith()",
-        Connection::Helper("mappedToListWith"),
     ),
     (
         "core.type Mapped.toMap()",
@@ -415,6 +398,34 @@ pub const TABLE: &[(&str, Connection)] = &[
     (
         "core.type StringIndexOption.eq()",
         Connection::Translate(index_eq),
+    ),
+    (
+        "std/collections.type BitVector.constructor()",
+        Connection::Helper("denseBitVectorConstructor"),
+    ),
+    (
+        "std/collections.type BitVector.get()",
+        Connection::Helper("denseBitVectorGet"),
+    ),
+    (
+        "std/collections.type BitVector.set()",
+        Connection::Helper("denseBitVectorSet"),
+    ),
+    (
+        "std/collections.type Queue.add()",
+        Connection::Helper("dequeAdd"),
+    ),
+    (
+        "std/collections.type Queue.constructor()",
+        Connection::Helper("dequeConstructor"),
+    ),
+    (
+        "std/collections.type Queue.get isEmpty()",
+        Connection::Helper("dequeGetIsEmpty"),
+    ),
+    (
+        "std/collections.type Queue.removeFirst()",
+        Connection::Helper("dequeRemoveFirst"),
     ),
     ("std/net.sendRequest()", Connection::Helper("sendRequest")),
     (
@@ -706,18 +717,6 @@ fn two(t: &mut Translator<'_>, args: &[NodeId], what: &str) -> Result<[Expr; 2],
             what: format!("`{what}` with other than its receiver and one argument"),
         }),
     }
-}
-
-/// `b.sort(compare)`, as Kotlin's: JS's sort is stable.
-fn sort(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
-    let [b, compare] = two(t, args, "sort")?;
-    Ok(b.method("sort", vec![compare]))
-}
-
-/// `ls.reduce(accumulate)`, as Kotlin's.
-fn reduce(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
-    let [ls, accumulate] = two(t, args, "reduce")?;
-    Ok(ls.method("reduce", vec![accumulate]))
 }
 
 /// `x.length`.
@@ -1036,6 +1035,15 @@ pub fn helpers() -> Vec<&'static str> {
 /// `@connected` members use their Temper bodies. Which std keys a backend
 /// connects is its own (notes/tmpl/open-questions.md, 48).
 pub const STD: &[&str] = &[
+    "std/collections.type BitVector",
+    "std/collections.type BitVector.constructor()",
+    "std/collections.type BitVector.get()",
+    "std/collections.type BitVector.set()",
+    "std/collections.type Queue",
+    "std/collections.type Queue.add()",
+    "std/collections.type Queue.constructor()",
+    "std/collections.type Queue.get isEmpty()",
+    "std/collections.type Queue.removeFirst()",
     "std/net.sendRequest()",
     "std/net.type NetResponse",
     "std/net.type NetResponse.get bodyContent()",

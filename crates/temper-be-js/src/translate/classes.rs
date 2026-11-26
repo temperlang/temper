@@ -497,6 +497,17 @@ impl Translator<'_> {
         let mut declared = HashSet::new();
         let mut all: Vec<(NodeId, Option<DeclId>)> =
             p.nodes.list(members).iter().map(|&m| (m, None)).collect();
+        // A class whose constructor this backend connects is made by the
+        // host, so its private fields, which only that constructor would
+        // set, aren't declared (tsc would find them never assigned).
+        let host_made = p.nodes.list(members).iter().any(|&m| {
+            let decl = match p.nodes.get(m) {
+                Node::Method { decl, .. } | Node::AbstractMethod { decl, .. } => decl,
+                _ => return false,
+            };
+            p.decls.get(decl).kind == DeclKind::Constructor
+                && temper_tmpl::qname::connected_member_node(p, m, crate::connected::connects_std)
+        });
         let mut supplied = HashMap::new();
         if interface {
             let inherited = self.inherited_members(class, members);
@@ -521,6 +532,7 @@ impl Translator<'_> {
                 p.nodes.span(m)
             };
             match p.nodes.get(m) {
+                Node::Field { decl } if host_made && self.hidden(decl) => {}
                 Node::Field { decl } => {
                     let d = p.decls.get(decl);
                     let name = self.name(decl);

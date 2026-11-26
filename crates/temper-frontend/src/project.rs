@@ -15,7 +15,10 @@
 //!   (`# Hi There!` gives `hi-there`), or else its root's path under the
 //!   work root, with `-` between directories, or else `unnamed`, as
 //!   Kotlin's `libraryNameFor` decides ([`Config`]). Two libraries of one
-//!   name are an error, as in Kotlin.
+//!   name are an error, as in Kotlin, and so is a library named
+//!   `temper-core`, core's name, or `std`, std's, but for that library
+//!   in the compiler's own Temper checkout ([`is_checkout`]), or the copy
+//!   of the built-in one that editors write, which they open.
 //! - An import's path may start with a library's name, as
 //!   `import("other-lib/sub")`, naming that library's `sub` directory,
 //!   as Kotlin resolves it; the library's modules then build with the
@@ -445,13 +448,36 @@ impl Scan<'_> {
 
 /// Reads a library's sources and the modules they import, from std, and
 /// from the libraries in `all` (those of its work root), which imports
-/// name by their names. The error names a file that can't be read.
+/// name by their names. The error names a file that can't be read, or a
+/// library that takes core's name, [`crate::corelib::NAME`], or std's,
+/// `std`, but isn't that library in the compiler's own Temper checkout
+/// ([`is_checkout`]) or a copy of the built-in one, as editors write. Std from either is
+/// std: its root is [`Library::std_root`].
 pub fn load_library(
     sources: &Sources,
     library: &LibrarySources,
     all: &[LibrarySources],
 ) -> Result<Library, String> {
     let mut loaded = Library::new();
+    let root = &library.root;
+    let reserved =
+        |name: &str, what: &str| format!("{root}: {name} is reserved for Temper's {what}");
+    if library.config.name == crate::corelib::NAME {
+        if is_checkout(root, "core") {
+            loaded.core_root = Some(root.clone());
+        } else if !is_copy(sources, library, crate::corelib::SOURCES) {
+            return Err(reserved(crate::corelib::NAME, "core library"));
+        }
+    }
+    if library.config.name == STD_NAME {
+        let std_sources: Vec<(&str, &str)> = (crate::stdlib::FILES.iter().copied())
+            .filter(|&(path, _)| path != "config.temper.md")
+            .collect();
+        if !is_checkout(root, "std") && !is_copy(sources, library, &std_sources) {
+            return Err(reserved(STD_NAME, "std library"));
+        }
+        loaded.std_dir = Some(root.clone());
+    }
     loaded.libraries = (all.iter())
         .map(|l| (l.config.name.clone(), l.root.clone()))
         .collect();
@@ -461,6 +487,51 @@ pub fn load_library(
     }
     load_imports(sources, &mut loaded);
     Ok(loaded)
+}
+
+/// std's name, which only std may take ([`load_library`]).
+const STD_NAME: &str = "std";
+
+/// Whether a library's root is `lib/DIR` in this compiler's own Temper
+/// checkout, the one it was built from (by `CARGO_MANIFEST_DIR`): core's
+/// sources there are core's whatever their text ([`Library::in_core`]),
+/// as std's are std's. Only the build's own path counts, so no library
+/// gains core's powers by copying a checkout's layout; a compiler built
+/// from another checkout, or a release, sees none, and its editors use
+/// the copy of the built-in one they write.
+pub fn is_checkout(root: &str, dir: &str) -> bool {
+    let own = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../lib")
+        .join(dir);
+    let root = Path::new(root);
+    // As written, `..` and all, or else through links, as on disk.
+    let lexical = |path: &Path| {
+        let path = std::path::absolute(path).ok()?;
+        Some(normalize(&slashed(&path.to_string_lossy())))
+    };
+    let canonical = |path: &Path| std::fs::canonicalize(path).ok();
+    let lexical_root = lexical(root);
+    let canonical_root = canonical(root);
+    (lexical_root.is_some() && lexical_root == lexical(&own))
+        || (canonical_root.is_some() && canonical_root == canonical(&own))
+}
+
+/// Whether a library is a copy of built-in core's or std's `files`, as
+/// editors write for going to their definitions: its source files are
+/// those, by path from its root, each with the built-in text.
+fn is_copy(sources: &Sources, library: &LibrarySources, files: &[(&str, &str)]) -> bool {
+    library.files.len() == files.len()
+        && (library.files.iter()).all(|file| {
+            let rest = match library.root.as_str() {
+                "." => Some(Path::new(file)),
+                root => Path::new(file).strip_prefix(root).ok(),
+            };
+            let built_in = rest.and_then(|rest| {
+                let rest = slashed(&rest.to_string_lossy());
+                files.iter().find(|(path, _)| *path == rest)
+            });
+            built_in.is_some_and(|(_, text)| sources.read(file).is_ok_and(|read| read == *text))
+        })
 }
 
 /// Adds the files of each module that an `import` names, and of those

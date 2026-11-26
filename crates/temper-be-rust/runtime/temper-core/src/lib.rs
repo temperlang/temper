@@ -393,30 +393,39 @@ impl ConfigBuilder {
     }
 }
 
-// DenseBitVector
+// BitVector, std's `std/collections`
 
 // TODO Could use bit-vec crate or other, but our current needs are small.
 // TODO And we might not want to expose some arbitrary 3rd-party crate for small needs.
 #[derive(Clone)]
-pub struct DenseBitVector(Arc<RwLock<Vec<BitChunk>>>);
+pub struct BitVector(Arc<RwLock<Vec<BitChunk>>>);
 type BitChunk = u32;
 const BIT_CHUNK_SIZE: usize = 8 * std::mem::size_of::<BitChunk>();
 
-impl DenseBitVector {
-    pub fn with_capacity(capacity: i32) -> DenseBitVector {
-        let capacity: usize = capacity.try_into().unwrap();
+impl BitVector {
+    /// Room for `capacity` bits, all false; a negative capacity is none.
+    pub fn with_capacity(capacity: i32) -> BitVector {
+        let capacity = usize::try_from(capacity).unwrap_or(0);
         let chunk_capacity = (capacity + BIT_CHUNK_SIZE - 1) / BIT_CHUNK_SIZE;
         let bits = Vec::with_capacity(chunk_capacity);
-        DenseBitVector(Arc::new(RwLock::new(bits)))
+        BitVector(Arc::new(RwLock::new(bits)))
     }
 
+    /// Panics for a negative index, as a list's set out of bounds does.
     fn split_index(index: i32) -> (usize, u32) {
-        let index: usize = index.try_into().unwrap();
+        let Ok(index) = usize::try_from(index) else {
+            // For length 0: a bit vector has none.
+            index_out_of_bounds(index, 0);
+        };
         (index / BIT_CHUNK_SIZE, 1 << (index % BIT_CHUNK_SIZE))
     }
 
+    /// False past the end and at a negative index.
     pub fn get(&self, index: i32) -> bool {
-        let (chunk_index, bit) = DenseBitVector::split_index(index);
+        if index < 0 {
+            return false;
+        }
+        let (chunk_index, bit) = BitVector::split_index(index);
         let chunks = self.0.read().unwrap();
         match chunks.get(chunk_index) {
             Some(chunk) => (chunk & bit) != 0,
@@ -424,8 +433,9 @@ impl DenseBitVector {
         }
     }
 
+    /// Grows to hold `index`; panics for a negative index.
     pub fn set(&self, index: i32, value: bool) {
-        let (chunk_index, bit) = DenseBitVector::split_index(index);
+        let (chunk_index, bit) = BitVector::split_index(index);
         let mut chunks = self.0.write().unwrap();
         if chunk_index >= chunks.len() {
             chunks.resize(chunk_index + 1, 0);
@@ -437,29 +447,31 @@ impl DenseBitVector {
     }
 }
 
-// Deque
+// Queue, std's `std/collections`
 
-pub type Deque<T> = Arc<RwLock<VecDeque<T>>>;
+pub type Queue<T> = Arc<RwLock<VecDeque<T>>>;
 
-pub mod deque {
-    use super::Deque;
+pub mod queue {
+    use super::Queue;
     use std::collections::VecDeque;
     use std::sync::{Arc, RwLock};
 
-    pub fn new<T>() -> Deque<T> {
+    pub fn new<T>() -> Queue<T> {
         Arc::new(RwLock::new(VecDeque::new()))
     }
 
-    pub fn add<T>(deque: &Deque<T>, value: T) {
-        deque.write().unwrap().push_back(value);
+    pub fn add<T>(queue: &Queue<T>, value: T) {
+        queue.write().unwrap().push_back(value);
     }
 
-    pub fn is_empty<T>(deque: &Deque<T>) -> bool {
-        deque.read().unwrap().is_empty()
+    pub fn is_empty<T>(queue: &Queue<T>) -> bool {
+        queue.read().unwrap().is_empty()
     }
 
-    pub fn remove_first<T>(deque: &Deque<T>) -> T {
-        deque.write().unwrap().pop_front().unwrap()
+    /// Panics if empty, as reading a list out of bounds does.
+    pub fn remove_first<T>(queue: &Queue<T>) -> T {
+        let first = queue.write().unwrap().pop_front();
+        first.unwrap_or_else(|| crate::index_out_of_bounds(0, 0))
     }
 }
 
@@ -520,6 +532,14 @@ pub fn i32_to_usize(i: i32) -> Result<usize> {
 
 pub fn usize_to_i32(u: usize) -> Result<i32> {
     u.try_into().map_err(|e| Error::with_source(Arc::new(e)))
+}
+
+/// Panics for an index out of bounds of a list or string of `length`, as
+/// core's docs say reading or writing there does, with the message every
+/// backend gives for a list; for a string, in its own units (UTF-8 bytes).
+#[track_caller]
+pub(crate) fn index_out_of_bounds(index: impl fmt::Display, length: usize) -> ! {
+    panic!("index {index} out of bounds for length {length}")
 }
 
 // Ignore

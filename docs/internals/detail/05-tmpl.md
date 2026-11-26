@@ -193,7 +193,7 @@ section. `to_tmpl` copies core's declarations, as used, from one
 hand-written fixture,
 [`core.tmpl`](../../../crates/temper-tmpl/tests/fixtures/core.tmpl)
 (through [`catalog`](../../../crates/temper-frontend/src/to_tmpl.rs)),
-which a test checks against Temper's `core.temper`. Only the 69
+which a test checks against Temper's core, `lib/core/`. Only the 69
 operators are built in, as [`Op`](../../../crates/temper-tmpl/src/ops.rs)
 with an [`OpInfo`](../../../crates/temper-tmpl/src/ops.rs) table each
 backend spells.
@@ -453,7 +453,7 @@ and the files for classes (`to_tmpl_classes.rs`), function values
 | Text cases | Hand-written tmpl: what the reader, writer, and validator make of it, with each problem's rule code | [`text.rs`](../../../crates/temper-tmpl/tests/text.rs), `tests/text/*.cases` |
 | Round trip | A property test: random valid programs validate, write, read back equal, and write the same again (seed and rounds by environment) | [`round_trip.rs`](../../../crates/temper-tmpl/tests/round_trip.rs) |
 | Model | The tables, spans, and the validator on programs text can't express | [`model.rs`](../../../crates/temper-tmpl/tests/model.rs) |
-| Core fixture | `core.tmpl` matches `core.temper`: names, kinds, parameters, results, bubbling, connected marks | [`core_fixture.rs`](../../../crates/temper-tmpl/tests/core_fixture.rs) |
+| Core fixture | `core.tmpl` matches core's `lib/core/`: names, kinds, parameters, results, bubbling, connected marks | [`core_fixture.rs`](../../../crates/temper-tmpl/tests/core_fixture.rs) |
 | Lowerings | Coroutines' state machines, switches, spill, each result validated | [`coroutines.rs`](../../../crates/temper-tmpl/tests/coroutines.rs), [`switches.rs`](../../../crates/temper-tmpl/tests/switches.rs), [`spill.rs`](../../../crates/temper-tmpl/tests/spill.rs) |
 | Naming, qnames, host | Kotlin's cases, sharing, prefixes, escapes, suffixes only on clashes; Kotlin's qname examples; Kotlin's connected choice | [`naming.rs`](../../../crates/temper-tmpl/tests/naming.rs), [`qname.rs`](../../../crates/temper-tmpl/tests/qname.rs), [`host.rs`](../../../crates/temper-tmpl/tests/host.rs) |
 | Analyses | Which operands' order shows, and temporaries' names | [`analysis.rs`](../../../crates/temper-tmpl/tests/analysis.rs) |

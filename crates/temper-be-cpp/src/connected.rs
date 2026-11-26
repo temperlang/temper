@@ -54,6 +54,19 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.getPromiseResultSync()",
         Connection::Call("get_promise_result_sync"),
     ),
+    ("core.listedMap()", Connection::Call("List::map")),
+    (
+        "core.listedReduceFrom()",
+        Connection::Call("List::reduceFrom"),
+    ),
+    (
+        "core.listedReduceFromIndex()",
+        Connection::Call("List::reduceFromIndex"),
+    ),
+    (
+        "core.mappedToListWith()",
+        Connection::Call("Mapped::toListWith"),
+    ),
     (
         "core.safeAdaptGeneratorFn()",
         Connection::Making("safe_adapt_generator_fn"),
@@ -63,31 +76,6 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Call("Boolean::toString"),
     ),
     ("core.type Console.log()", Connection::Call("Console::log")),
-    (
-        "core.type DenseBitVector.constructor()",
-        Connection::Call("DenseBitVector::make"),
-    ),
-    (
-        "core.type DenseBitVector.get()",
-        Connection::Call("DenseBitVector::get"),
-    ),
-    (
-        "core.type DenseBitVector.set()",
-        Connection::Call("DenseBitVector::set"),
-    ),
-    ("core.type Deque.add()", Connection::Templated("Deque::add")),
-    (
-        "core.type Deque.constructor()",
-        Connection::Making("Deque::make"),
-    ),
-    (
-        "core.type Deque.get isEmpty()",
-        Connection::Templated("Deque::isEmpty"),
-    ),
-    (
-        "core.type Deque.removeFirst()",
-        Connection::Templated("Deque::removeFirst"),
-    ),
     ("core.type Float64.abs()", Connection::Call("Float64::abs")),
     (
         "core.type Float64.acos()",
@@ -181,6 +169,10 @@ pub const TABLE: &[(&str, Connection)] = &[
     (
         "core.type Float64.toString()",
         Connection::Call("Float64::toString"),
+    ),
+    (
+        "core.type Int32.get signum()",
+        Connection::Call("Int::signum"),
     ),
     ("core.type Int32.max()", Connection::Call("std::max")),
     ("core.type Int32.min()", Connection::Call("std::min")),
@@ -294,14 +286,9 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Templated("List::getOr"),
     ),
     ("core.type Listed.join()", Connection::Call("List::join")),
-    ("core.type Listed.map()", Connection::Call("List::map")),
     (
         "core.type Listed.reduce()",
         Connection::Call("List::reduce"),
-    ),
-    (
-        "core.type Listed.reduceFrom()",
-        Connection::Call("List::reduceFrom"),
     ),
     (
         "core.type Listed.slice()",
@@ -366,10 +353,6 @@ pub const TABLE: &[(&str, Connection)] = &[
     (
         "core.type Mapped.toList()",
         Connection::Templated("Mapped::toList"),
-    ),
-    (
-        "core.type Mapped.toListWith()",
-        Connection::Call("Mapped::toListWith"),
     ),
     (
         "core.type Mapped.toMap()",
@@ -511,6 +494,34 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     // The runtime's `testBail(test)`, as Kotlin's: it throws.
     (
+        "std/collections.type BitVector.constructor()",
+        Connection::Call("BitVector::make"),
+    ),
+    (
+        "std/collections.type BitVector.get()",
+        Connection::Call("BitVector::get"),
+    ),
+    (
+        "std/collections.type BitVector.set()",
+        Connection::Call("BitVector::set"),
+    ),
+    (
+        "std/collections.type Queue.add()",
+        Connection::Templated("Queue::add"),
+    ),
+    (
+        "std/collections.type Queue.constructor()",
+        Connection::Making("Queue::make"),
+    ),
+    (
+        "std/collections.type Queue.get isEmpty()",
+        Connection::Templated("Queue::isEmpty"),
+    ),
+    (
+        "std/collections.type Queue.removeFirst()",
+        Connection::Templated("Queue::removeFirst"),
+    ),
+    (
         "std/regex.type Regex.compiledFind()",
         Connection::Call("Regex::compiledFind"),
     ),
@@ -566,15 +577,12 @@ pub const TABLE: &[(&str, Connection)] = &[
 ];
 
 /// How a connected type is written, relative to `temper::core` where it
-/// starts with `core::`, which the header spells out.
+/// starts with `core::`, which the header spells out, and with its one
+/// type argument for `{item}`.
 /// Sorted by qname. String indices are `int32_t`, and the others the
 /// runtime's, as Kotlin's.
 pub const TYPES: &[(&str, &str)] = &[
     ("core.type Console", "std::shared_ptr<core::Console::Type>"),
-    (
-        "core.type DenseBitVector",
-        "std::shared_ptr<std::vector<bool>>",
-    ),
     ("core.type Empty", "std::shared_ptr<core::Empty>"),
     ("core.type NoStringIndex", "int32_t"),
     (
@@ -583,6 +591,14 @@ pub const TYPES: &[(&str, &str)] = &[
     ),
     ("core.type StringIndex", "int32_t"),
     ("core.type StringIndexOption", "int32_t"),
+    (
+        "std/collections.type BitVector",
+        "std::shared_ptr<std::vector<bool>>",
+    ),
+    (
+        "std/collections.type Queue",
+        "std::shared_ptr<std::deque<{item}>>",
+    ),
 ];
 
 /// The connection for a declaration's qname.
@@ -736,6 +752,15 @@ fn date_day_of_week(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, Not
 /// `@connected` members use their Temper bodies. Which std keys a backend
 /// connects is its own (notes/tmpl/open-questions.md, 48).
 pub const STD: &[&str] = &[
+    "std/collections.type BitVector",
+    "std/collections.type BitVector.constructor()",
+    "std/collections.type BitVector.get()",
+    "std/collections.type BitVector.set()",
+    "std/collections.type Queue",
+    "std/collections.type Queue.add()",
+    "std/collections.type Queue.constructor()",
+    "std/collections.type Queue.get isEmpty()",
+    "std/collections.type Queue.removeFirst()",
     "std/regex.type Regex.compiledFind()",
     "std/regex.type Regex.compiledFound()",
     "std/regex.type Regex.compiledReplace()",

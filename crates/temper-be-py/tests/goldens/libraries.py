@@ -23,6 +23,7 @@ from typing import (
     ClassVar as _ClassVar,
     Generic as _Generic,
     TypeVar as _TypeVar,
+    cast as _cast,
 )
 
 __all__ = (
@@ -565,8 +566,8 @@ def _join_effects(into: _MutableSequence[Effect[_T]], more: _Sequence[Effect[_T]
 def effects_of(text: str, event: _T, other: _T, /) -> str:
     into: _MutableSequence[Effect[_T]] = []
     _join_effects(into, ())
-    _join_effects(into, (Plain(text),))
-    _join_effects(into, (Happened(event), Plain('!'), Happened(other)))
+    _join_effects(into, (_cast('Plain[_T]', Plain(text)),))
+    _join_effects(into, (Happened(event), _cast('Plain[_T]', Plain('!')), Happened(other)))
     shown = ''
     list_ = tuple(into)
     length = len(list_)

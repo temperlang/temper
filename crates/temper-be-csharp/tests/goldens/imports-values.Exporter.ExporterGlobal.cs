@@ -14,7 +14,7 @@ public static class ExporterGlobal
 
     static ExporterGlobal()
     {
-        int a = Foo()[0];
+        int a = Listed.Get(Foo(), 0);
         MagicNumber = a;
     }
 }

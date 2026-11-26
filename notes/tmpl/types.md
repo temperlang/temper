@@ -143,7 +143,7 @@ As built with generics (2026-10-31, Proposed):
   signature is, now also a value's type: a parameter's, a local's, a
   field's, a literal's. Core's members that take functions (`map`,
   `filter`, `join`, `sorted`, `reduce`, `reduceFrom`, `ListBuilder.sort`,
-  `Mapped.forEach`) take them, as core.temper declares.
+  `Mapped.forEach`) take them, as core declares.
 - **No implicit conversions between them:** `ToFun` takes a function
   type's value to a `@fun` interface of the same signature, `FromFun`
   the reverse; a literal or reference takes the type its place wants

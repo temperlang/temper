@@ -1,0 +1,15 @@
+export class String(public text: Int) {
+  public get doubled(): Int { text * 2 }
+}
+
+export class List(public n: Int) {}
+
+export let ignore(x: Int): Int { x + 1 }
+
+let Boolean = 7;
+
+export let summary(): Int {
+  let s = new String(3);
+  let l = new List(4);
+  s.text + s.doubled + l.n + ignore(10) + Boolean
+}

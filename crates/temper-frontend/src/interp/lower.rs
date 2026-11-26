@@ -842,11 +842,12 @@ impl Lowering {
             NodeKind::Let => {
                 let (name, _, init) = core::let_parts(tree, node);
                 let connected = tree.data(node) & MEMBER_CONNECTED != 0;
+                // A bodiless `@connected` function's init is its signature.
                 match init {
-                    Some(init) => self.store(s, name, false, |me| me.expr(s, init, true)),
-                    None if connected => self.store(s, name, false, |me| {
+                    _ if connected => self.store(s, name, false, |me| {
                         _ = me.emit(Op::Const(Val::Connected(node)))
                     }),
+                    Some(init) => self.store(s, name, false, |me| me.expr(s, init, true)),
                     None => self.store(s, name, false, |me| _ = me.emit(Op::Const(Val::Uninit))),
                 }
                 if keep {
@@ -1034,7 +1035,9 @@ impl Lowering {
                 NodeKind::Class => self.store(s, tree.children(statement)[0], false, |me| {
                     me.make_class(s, statement)
                 }),
-                NodeKind::Let if tree.data(statement) & LET_VAR == 0 => {
+                // Not a bodiless `@connected` function, whose `Fn` is only
+                // its signature.
+                NodeKind::Let if tree.data(statement) & (LET_VAR | MEMBER_CONNECTED) == 0 => {
                     let (name, _, init) = core::let_parts(tree, statement);
                     if let Some(init) = init.filter(|&i| tree.kind(i) == NodeKind::Fn) {
                         self.store(s, name, false, |me| me.make_fn(s, init));

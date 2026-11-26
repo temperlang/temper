@@ -34,20 +34,29 @@ pub(super) struct Receiver {
 
 impl Settle {
     /// The type of a class's or interface's values, unless it's generic.
-    /// One named as a builtin type is core's declaration of it, as in
-    /// Kotlin Temper's `core.temper`, so it's that type.
+    /// Core's declaration of a builtin type, in `lib/core/`, is that type
+    /// ([`Settle::declares_builtin`]).
     pub(super) fn class_type(&mut self, class: NodeId) -> TypeId {
         let tree = &self.lib.tree;
         if tree.kind(class) != NodeKind::Class || !core::type_params(tree, class).is_empty() {
             return UNKNOWN;
         }
-        if let Some(i) = TYPES.iter().position(|&t| t == self.member_text(class)) {
+        let builtin = TYPES.iter().position(|&t| t == self.member_text(class));
+        if let Some(i) = builtin.filter(|_| self.declares_builtin(class)) {
             return self.typing.types.builtin(i as u8);
         }
         match self.class_symbol(class) {
             Some(symbol) => self.typing.types.intern(TypeData::Class(symbol)),
             None => UNKNOWN,
         }
+    }
+
+    /// Whether a class or interface is core's declaration of a builtin
+    /// type, as `class Int32`: core's, named as one. Another library's
+    /// class of that name is its own.
+    pub(super) fn declares_builtin(&self, class: NodeId) -> bool {
+        TYPES.contains(&self.member_text(class))
+            && self.lib.in_core(self.lib.tree.span(class).start)
     }
 
     /// The symbol a class's or interface's declaration declares, once
@@ -68,11 +77,16 @@ impl Settle {
         let formals = self.own_formals(class);
         let supers = class_parts(&self.lib.tree, class).1.to_vec();
         let supers = supers.into_iter().map(|s| self.eval_type(s)).collect();
+        let tree = &self.lib.tree;
+        let variant = (core::type_params(tree, class).iter())
+            .map(|&p| tree.data(p) & core::TYPE_PARAM_VARIANT != 0)
+            .collect();
         let info = ClassInfo {
             ancestors,
             formals,
             supers,
             fun_sig: None,
+            variant,
         };
         self.typing.types.set_class(symbol, info.clone());
         // Once the rest is known, as `apply`'s signature may name the
@@ -125,8 +139,8 @@ impl Settle {
     /// `Box<Int32>`, unless it's unknown: core's builtin types aren't
     /// typed this way.
     pub(super) fn generic_class_type(&mut self, class: NodeId, args: Vec<TypeId>) -> TypeId {
+        let builtin = self.declares_builtin(class);
         let tree = &self.lib.tree;
-        let builtin = TYPES.contains(&self.member_text(class));
         if builtin || core::type_params(tree, class).len() != args.len() {
             return UNKNOWN;
         }
@@ -278,7 +292,7 @@ impl Settle {
             },
             _ => return UNKNOWN,
         };
-        let Some(Builtin::Type(i)) = self.scopes.resolved_builtin(base) else {
+        let Some(i) = self.scopes.type_builtin(tree, base) else {
             return UNKNOWN;
         };
         let class = core_class(TYPES[i as usize]);
@@ -385,10 +399,9 @@ impl Settle {
 
     /// The builtin type a name names, as `String`.
     pub(super) fn builtin_type_named(&self, node: NodeId) -> Option<u8> {
-        match self.scopes.resolved_builtin(node) {
-            Some(Builtin::Type(i)) if self.lib.tree.kind(node) == NodeKind::RightName => Some(i),
-            _ => None,
-        }
+        (self.lib.tree.kind(node) == NodeKind::RightName)
+            .then(|| self.scopes.type_builtin(&self.lib.tree, node))
+            .flatten()
     }
 
     /// Whether a node is `T.key` for a builtin type `T`, a static member.
@@ -483,7 +496,11 @@ impl Settle {
             "Int" => "Int32",
             other => other,
         };
-        let named = |m: &CoreMember| m.name == name && m.is_static == statics;
+        // An instance extension only as a callee: `xs.map` alone is no
+        // member, as for a library's extensions.
+        let named = |m: &CoreMember| {
+            m.name == name && m.is_static == statics && (callee || m.function.is_none())
+        };
         let is_method = |m: &CoreMember| matches!(m.kind, CoreMemberKind::Method { .. });
         let (class, index) = loop {
             let class = core_class(type_name);
@@ -582,7 +599,7 @@ impl Settle {
     /// Pair<K, V>`, with the call's type arguments. Their bounds are as
     /// core declares them, as `MapKey<K>` for `Map`'s `K`, so a call is
     /// checked against them, and unknown where it declares none: `T` in
-    /// `Deque<T>` may be nullable, as in `new Deque<D?>()`.
+    /// `ListBuilder<T>` may be nullable, as in `new ListBuilder<D?>()`.
     pub(super) fn core_generic_new(
         &mut self,
         args: &[NodeId],
@@ -590,15 +607,11 @@ impl Settle {
         let &(mut made) = args.first()?;
         let tree = &self.lib.tree;
         // Through an alias, as `TestResult` in `let TestResult = Pair<…>`.
-        for _ in 0..8 {
-            let alias = (self.scopes.resolved(made).map(|b| self.scopes.symbol(b)))
-                .filter(|s| s.kind == SymbolKind::TopLevel && !s.mutable)
-                .and_then(|s| s.decl)
-                .filter(|&d| {
-                    tree.kind(made) == NodeKind::RightName && tree.kind(d) == NodeKind::Let
-                })
-                .and_then(|d| core::let_parts(tree, d).2)
-                .filter(|&i| matches!(tree.kind(i), NodeKind::RightName | NodeKind::Call));
+        for _ in 0..self.scopes.symbols.len() {
+            let alias = (tree.kind(made) == NodeKind::RightName)
+                .then(|| self.scopes.resolved(made))
+                .flatten()
+                .and_then(|b| self.scopes.alias_init(tree, b));
             match alias {
                 Some(init) => made = init,
                 None => break,
@@ -617,38 +630,12 @@ impl Settle {
             },
             _ => return None,
         };
-        let Some(Builtin::Type(i)) = self.scopes.resolved_builtin(base) else {
-            return None;
-        };
+        let i = self.scopes.type_builtin(tree, base)?;
         let type_name = TYPES[i as usize];
         let class = core_class(type_name);
         let constructor =
             (class.members.iter()).find(|m| m.name == "constructor" && !m.is_static)?;
-        if class.type_params == 0 {
-            return None;
-        }
-        let key = (type_name, usize::MAX);
-        let formals = match self.typing.core_formals.get(&key) {
-            Some(formals) => formals.clone(),
-            None => {
-                let formals: Vec<SymbolId> = (class.type_param_names.iter())
-                    .map(|p| {
-                        let name = self.lib.names.intern(p);
-                        self.scopes.unnamed_type_param(name)
-                    })
-                    .collect();
-                // A bound may name the type's own type parameters, as
-                // `MapKey<K>` does.
-                let types = &mut self.typing.types;
-                let own: Vec<TypeId> = formals.iter().map(|&f| types.param(f)).collect();
-                for (&formal, bound) in formals.iter().zip(&class.type_param_bounds) {
-                    let bound = core_type(types, bound, &own, &[]);
-                    types.set_bound(formal, bound);
-                }
-                self.typing.core_formals.insert(key, formals.clone());
-                formals
-            }
-        };
+        let formals = self.core_type_formals(type_name)?;
         let types = &mut self.typing.types;
         let own: Vec<TypeId> = formals.iter().map(|&f| types.param(f)).collect();
         let sig = core_signature(types, &constructor.kind, &own, &[]);
@@ -668,6 +655,36 @@ impl Settle {
             this: None,
         };
         Some((method, type_args))
+    }
+
+    /// A builtin generic type's own type parameters, made once, with
+    /// their bounds as core declares them, as `MapKey<K>` for `Map`'s `K`,
+    /// and unknown where it declares none. `None` for a type without.
+    pub(super) fn core_type_formals(&mut self, type_name: &'static str) -> Option<Vec<SymbolId>> {
+        let class = core_class(type_name);
+        if class.type_params == 0 {
+            return None;
+        }
+        let key = (type_name, usize::MAX);
+        if let Some(formals) = self.typing.core_formals.get(&key) {
+            return Some(formals.clone());
+        }
+        let formals: Vec<SymbolId> = (class.type_param_names.iter())
+            .map(|p| {
+                let name = self.lib.names.intern(p);
+                self.scopes.unnamed_type_param(name)
+            })
+            .collect();
+        // A bound may name the type's own type parameters, as `MapKey<K>`
+        // does.
+        let types = &mut self.typing.types;
+        let own: Vec<TypeId> = formals.iter().map(|&f| types.param(f)).collect();
+        for (&formal, bound) in formals.iter().zip(&class.type_param_bounds) {
+            let bound = core_type(types, bound, &own, &[]);
+            types.set_bound(formal, bound);
+        }
+        self.typing.core_formals.insert(key, formals.clone());
+        Some(formals)
     }
 
     /// The type of the member a callee names, if it names one.

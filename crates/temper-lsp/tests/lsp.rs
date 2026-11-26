@@ -371,6 +371,35 @@ fn utf16_positions_and_a_lone_file() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// A `.temper.md` file's prose documents what it declares: hover in
+/// another file shows the paragraphs, from the one starting with the
+/// name, as Kotlin Temper's convention has it.
+#[test]
+fn hover_shows_prose_docs() {
+    let prose = "# Shapes\n\n`Area` is a square's area.\n\nSide times side.\n\n\
+```temper\nexport let area(side: Int): Int { side * side }\n```\n";
+    let dir = library(
+        "prose",
+        &[
+            ("shapes.temper.md", prose),
+            ("use.temper", "let a = area(3);\n"),
+        ],
+    );
+    let uses = uri(&dir, "use.temper");
+    let mut client = Client::start();
+    client.request("initialize", json!({"capabilities": {}}));
+    client.notify("initialized", json!({}));
+    open(&mut client, &uses, "let a = area(3);\n");
+    let hover = client.request("textDocument/hover", at(&uses, 0, 9));
+    let value = str_at(&hover, &["contents", "value"]);
+    assert!(
+        value.ends_with("`Area` is a square's area.\n\nSide times side."),
+        "{value}"
+    );
+    assert_eq!(client.finish(), 0);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// A panic, a bug in tempest, doesn't end the server: one in an analysis
 /// becomes an "internal error" diagnostic, one in a request an error
 /// response, and the next request is answered. The server's hidden hook
@@ -470,6 +499,9 @@ fn definition_and_hover_into_core() {
         "ignore(frozen.length);",
         "console.log(\"hi\");",
         "let shout(s: String): Int { 1 }",
+        "if (blank) { panic(); }",
+        "let yes = true;",
+        "let sum = 1 + 2;",
         "",
     ];
     open(&mut client, &file, &text.join("\n"));
@@ -478,7 +510,11 @@ fn definition_and_hover_into_core() {
         let def = client.request("textDocument/definition", at(&file, line, character));
         let target = str_at(&def, &["uri"]).to_string();
         assert!(target.contains("temper-std-"), "{def}");
-        assert!(target.ends_with("/core/core.temper"), "{def}");
+        let file = target.rsplit('/').next().unwrap();
+        let listed = temper_frontend::corelib::SOURCES
+            .iter()
+            .any(|(p, _)| *p == file);
+        assert!(target.contains("/core/") && listed, "{def}");
         let path = temper_lsp::uri_to_path(&target);
         let readonly = std::fs::metadata(&path).unwrap().permissions().readonly();
         assert!(readonly, "{path}");
@@ -499,18 +535,32 @@ fn definition_and_hover_into_core() {
     // `console.log`.
     let (line, _) = core_line(3, 17);
     assert!(
-        line.starts_with("public get isEmpty(): builtins.Boolean { content"),
+        line.starts_with("public get isEmpty(): Boolean { this"),
         "{line}"
     );
     let (line, _) = core_line(4, 2);
     assert!(line.starts_with("export let ignore("), "{line}");
     let (line, _) = core_line(4, 16);
-    assert_eq!(line, "public get length(): builtins.Int;");
+    assert_eq!(line, "public get length(): Int;");
     let (line, _) = core_line(5, 9);
     assert_eq!(line, "public log(message: String): Void;");
     // A parameter's type.
     let (line, _) = core_line(6, 13);
     assert!(line.starts_with("export class String "), "{line}");
+    // Builtins that only bodiless `@connected` declarations document: a
+    // macro, a function, and a value, quoted.
+    let (line, name) = core_line(7, 0);
+    assert_eq!((line.as_str(), name.as_str()), ("export let if;", "if;"));
+    let (line, _) = core_line(7, 13);
+    assert_eq!(line, "export let panic;");
+    let (line, name) = core_line(8, 10);
+    assert_eq!(
+        (line.as_str(), name.as_str()),
+        ("export let nym`true`;", "nym`true`;")
+    );
+    // Nothing for an operator, which core doesn't declare.
+    let def = client.request("textDocument/definition", at(&file, 9, 12));
+    assert_eq!(def, Json::Null);
     // Hover shows core's doc comment after the signature.
     let hover = client.request("textDocument/hover", at(&file, 1, 7));
     let value = str_at(&hover, &["contents", "value"]);
@@ -524,15 +574,12 @@ fn definition_and_hover_into_core() {
     assert!(value.contains("\n\nThe *length* of a listed"), "{value}");
     let hover = client.request("textDocument/hover", at(&file, 2, 13));
     let value = str_at(&hover, &["contents", "value"]);
-    assert!(
-        value.contains("The *List* type is a random-access"),
-        "{value}"
-    );
+    assert!(value.contains("*List* is a random-access"), "{value}");
     // A parameter's type and a result type, with core's docs.
     let hover = client.request("textDocument/hover", at(&file, 6, 13));
     let value = str_at(&hover, &["contents", "value"]);
     assert!(
-        value.starts_with("```temper\nbuiltin String\n```\n\nA *String*"),
+        value.starts_with("```temper\nbuiltin String\n```\n\n*String* is"),
         "{value}"
     );
     let hover = client.request("textDocument/hover", at(&file, 6, 22));
@@ -541,12 +588,196 @@ fn definition_and_hover_into_core() {
         value.starts_with("```temper\nbuiltin Int: Int32\n```\n\n*Int32*"),
         "{value}"
     );
+    // Their hovers, an operator's, and `console.log`'s.
+    let mut hover = |line: u32, character: u32| {
+        let hover = client.request("textDocument/hover", at(&file, line, character));
+        str_at(&hover, &["contents", "value"]).to_string()
+    };
+    let value = hover(7, 0);
+    assert!(
+        value.starts_with("```temper\nbuiltin if\n```\n\n`if (condition)"),
+        "{value}"
+    );
+    let value = hover(7, 13);
+    assert!(
+        value.starts_with("```temper\nbuiltin panic\n```\n\n`panic` immediately panics"),
+        "{value}"
+    );
+    let value = hover(8, 10);
+    assert!(
+        value.starts_with("```temper\nbuiltin true: Boolean\n```\n\n`true` is the true value"),
+        "{value}"
+    );
+    let value = hover(9, 12);
+    assert!(!value.contains(": ?"), "{value}");
+    let value = hover(5, 9);
+    assert!(
+        value.starts_with("```temper\nmethod log(message: String): Void\n```\n\nLog a"),
+        "{value}"
+    );
     // Nothing for a local.
     let def = client.request("textDocument/definition", at(&file, 4, 9));
     assert!(
         str_at(&def, &["uri"]).ends_with("uses-core.temper"),
         "{def}"
     );
+    assert_eq!(client.finish(), 0);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Opened from a definition, core's own (read-only) files navigate
+/// within themselves and to each other: builtin types, members, aliases,
+/// and locals.
+#[test]
+fn definition_and_hover_within_core() {
+    let dir = std::env::temp_dir().join(format!("tempest-lsp-{}-in-core", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let file = uri(&dir, "uses-core.temper");
+    let mut client = Client::start();
+    client.request("initialize", json!({"capabilities": {}}));
+    open(&mut client, &file, "let names: List<String> = [];\n");
+    let def = client.request("textDocument/definition", at(&file, 0, 12));
+    let core = str_at(&def, &["uri"]).to_string();
+    assert!(core.ends_with("/core/lists.temper.md"), "{def}");
+    // Core's files, each opened, by name, with its lines.
+    let core_dir = core.rsplit_once('/').unwrap().0.to_string();
+    let mut files = Vec::new();
+    for (name, _) in temper_frontend::corelib::SOURCES {
+        let uri = format!("{core_dir}/{name}");
+        let text = std::fs::read_to_string(temper_lsp::uri_to_path(&uri)).unwrap();
+        open(&mut client, &uri, &text);
+        files.push((uri, text));
+    }
+    let lines = |uri: &str| -> Vec<&str> {
+        let (_, text) = files.iter().find(|(u, _)| u == uri).unwrap();
+        text.lines().collect()
+    };
+    // The place of `name` after `after` on the line starting with
+    // `line`, in whichever of core's files has it.
+    let find = |line: &str, after: &str, name: &str| -> (String, u32, u32) {
+        for (uri, _) in &files {
+            let lines = lines(uri);
+            let Some(i) = (lines.iter()).position(|l| l.trim_start().starts_with(line)) else {
+                continue;
+            };
+            let from = lines[i].find(after).unwrap() + after.len();
+            let column = from + lines[i][from..].find(name).unwrap();
+            return (uri.clone(), i as u32, column as u32);
+        }
+        panic!("no line {line}")
+    };
+    // The definition of what's at a place, as its file's name and its
+    // line there, trimmed.
+    let mut target = |(uri, line, character): (String, u32, u32)| {
+        let def = client.request("textDocument/definition", at(&uri, line, character));
+        let found = str_at(&def, &["uri"]);
+        assert!(found.starts_with(&core_dir), "{def}");
+        let line = num_at(&def, &["range", "start", "line"]) as usize;
+        let name = found.rsplit('/').next().unwrap().to_string();
+        (name, lines(found)[line].trim().to_string())
+    };
+    let reduce = "export let listedReduceFromIndex<";
+    let append = "append(String.fromCodePoint(cp));";
+    // Builtin types, in a parameter, an `extends`, and a result type.
+    let (file, listed) = target(find(reduce, "(", "Listed"));
+    assert_eq!(file, "lists.temper.md");
+    assert!(
+        listed.starts_with("export sealed interface Listed<T>"),
+        "{listed}"
+    );
+    let (_, listed) = target(find("export class List<", "extends ", "Listed"));
+    assert!(
+        listed.starts_with("export sealed interface Listed<T>"),
+        "{listed}"
+    );
+    let (_, list) = target(find("public toList(): List<T> { this }", ":", "List"));
+    assert!(list.starts_with("export class List<"), "{list}");
+    // `Int`, an alias, in another of core's files.
+    let (file, int) = target(find(reduce, "index: ", "Int"));
+    assert_eq!(file, "numbers.temper.md");
+    assert!(int.starts_with("export let Int = Int32"), "{int}");
+    // `String`, a static member on it, and a method on `this`.
+    let (file, string) = target(find(append, "(", "String"));
+    assert_eq!(file, "strings.temper.md");
+    assert!(string.starts_with("export class String "), "{string}");
+    let (_, from) = target(find(append, ".", "fromCodePoint"));
+    assert!(from.starts_with("public static fromCodePoint("), "{from}");
+    let (_, method) = target(find(append, "", "append"));
+    assert!(
+        method.starts_with("public append(substring: String)"),
+        "{method}"
+    );
+    // A member of a parameter, and a local.
+    let (_, length) = target(find(
+        "for (var i = index; i < listed.length;",
+        ".",
+        "length",
+    ));
+    assert_eq!(length, "public get length(): Int;");
+    let (_, result) = target(find("result = accumulate(result,", "", "result"));
+    assert_eq!(result, "var result = initial;");
+    // Hover shows core's declarations and docs.
+    let mut hover = |(uri, line, character): (String, u32, u32)| {
+        let hover = client.request("textDocument/hover", at(&uri, line, character));
+        str_at(&hover, &["contents", "value"]).to_string()
+    };
+    let value = hover(find(reduce, "(", "Listed"));
+    assert!(value.contains("*Listed* is an immutable view"), "{value}");
+    let value = hover(find(append, ".", "fromCodePoint"));
+    assert!(value.contains("fromCodePoint(codePoint: Int"), "{value}");
+    // Core's own files analyze cleanly.
+    for (uri, _) in &files {
+        assert_eq!(client.diagnostics(uri), Vec::<Json>::new(), "{uri}");
+    }
+    assert_eq!(client.finish(), 0);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Core's sources opened where they live in a checkout, `lib/core/`, as
+/// one edits them, are core too: their bodiless `@connected` declarations
+/// of builtins, as `export let if;`, declare nothing there, and their
+/// classes named as builtins, as `AnyValue`, are those builtins, so each
+/// analyzes cleanly, in a workspace at the checkout's root, as it is and
+/// once edited, when it no longer matches the core built into the server,
+/// as it doesn't for a server built from another version. A copy of one
+/// alone, outside any library, is core while its text is; a lone file
+/// can't otherwise claim to be core.
+#[test]
+fn core_source_in_a_checkout_is_core() {
+    let repo = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
+    let repo = std::fs::canonicalize(repo).unwrap();
+    let mut client = Client::start();
+    let root = path_to_uri(&repo.to_string_lossy());
+    client.request("initialize", json!({"capabilities": {}, "rootUri": root}));
+    let edit = |text: &str| format!("{text}\n    /** An edit. */\n    export let edited = 1;\n");
+    for (name, _) in temper_frontend::corelib::SOURCES {
+        let path = repo.join("lib/core").join(name);
+        let core = path_to_uri(&path.to_string_lossy());
+        let text = std::fs::read_to_string(&path).unwrap();
+        open(&mut client, &core, &text);
+        assert_eq!(client.diagnostics(&core), Vec::<Json>::new(), "{name}");
+        change(&mut client, &core, 2, &edit(&text));
+        assert_eq!(client.diagnostics(&core), Vec::<Json>::new(), "{name}");
+    }
+    // A lone copy of the file that documents builtins, as it is, and
+    // edited. (A lone file sees no other file, so a lone copy of one that
+    // names a sibling's declaration, as `numbers.temper.md` does
+    // `Equatable`, reports it undeclared, as any lone file would.)
+    let dir = std::env::temp_dir().join(format!("tempest-lsp-{}-lone-core", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let (name, text) = (temper_frontend::corelib::SOURCES.iter())
+        .find(|(name, _)| *name == "language.temper.md")
+        .unwrap();
+    std::fs::write(dir.join(name), text).unwrap();
+    let lone = uri(&dir, name);
+    open(&mut client, &lone, text);
+    assert_eq!(client.diagnostics(&lone), Vec::<Json>::new());
+    change(&mut client, &lone, 2, &edit(text));
+    let shadows = (client.diagnostics(&lone).iter())
+        .any(|d| str_at(d, &["message"]).contains("declared after a use that it would shadow"));
+    assert!(shadows, "an edited lone copy isn't core");
     assert_eq!(client.finish(), 0);
     let _ = std::fs::remove_dir_all(&dir);
 }

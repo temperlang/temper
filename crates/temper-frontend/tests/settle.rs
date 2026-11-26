@@ -27,7 +27,7 @@ use common::{Rng, case_files, check_cases, env_number, mutate};
 use temper_frontend::interp::{run, run_tests};
 use temper_frontend::library::{Level, Library, Message};
 use temper_frontend::print::write_settled;
-use temper_frontend::project::load_imports;
+use temper_frontend::project::{load_imports, source_kind};
 use temper_frontend::settle::settle;
 use temper_frontend::sources::{Source, Sources};
 use temper_frontend::typing::{Resolved, coverage};
@@ -106,6 +106,75 @@ fn cases_with_std_settle_as_expected() {
     });
 }
 
+/// Core holds to the rules it sets for every library: an interface's
+/// methods, which implementations may override, aren't generic ("Illegal
+/// type parameter"). Kotlin Temper exempts core; tempest doesn't, so
+/// core's generic list and map helpers (`map<O>`, `reduceFrom<O>`,
+/// `toListWith<T>` and their kin) are `@extension` functions. And its
+/// fields are set, but for the `content` fields that backends' own code
+/// sets, which only core may leave unset. Settled as a library, as an
+/// editor reads core's file, core reports nothing at all. Its bodiless
+/// `@connected` declarations of builtins, as `if` or `panic`, declare
+/// nothing, so its own code names the builtins; only those with Temper
+/// bodies of their own are core's names.
+#[test]
+fn core_keeps_the_rules_it_sets() {
+    with_stack(|| {
+        let mut library = Library::new();
+        for (path, text) in temper_frontend::corelib::SOURCES {
+            library.add_file(&format!("core/{path}"), text, source_kind(path));
+        }
+        let settled = settle(library);
+        let found: Vec<String> = (settled.library.diagnostics.iter())
+            .map(|d| {
+                let (file, at) = settled.library.locate(d.span.start);
+                let file = &settled.library.files[file.0 as usize];
+                let line = file.parsed.source()[..at as usize].lines().count();
+                format!("{} line {line}: {}", file.path, d.message.text())
+            })
+            .collect();
+        assert_eq!(found, Vec::<String>::new());
+        let builtins = temper_frontend::builtins::BUILTINS;
+        let scope = settled.modules[0].scope;
+        let mut declared: Vec<&str> = (settled.scopes.get(scope).names.iter())
+            .map(|&(name, _)| settled.library.names.get(name))
+            .filter(|name| builtins.iter().any(|(n, _)| n == name))
+            .collect();
+        declared.sort();
+        assert_eq!(
+            declared,
+            ["console", "doneResult", "empty", "getConsole", "ignore"]
+        );
+    });
+}
+
+/// In core, a bodiless `@connected` declaration documents a builtin the
+/// frontend supplies, so one whose name is no builtin's is a mistake, as
+/// a misspelling, not a declaration of a value core never sets.
+#[test]
+fn core_connects_only_builtins() {
+    with_stack(|| {
+        let mut library = Library::new();
+        library.core_root = Some("lib/core".into());
+        let sources = temper_frontend::corelib::SOURCES;
+        for (i, (path, text)) in sources.iter().enumerate() {
+            let mut text = text.to_string();
+            if i + 1 == sources.len() {
+                text.push_str("\n    /** A typo. */\n    @connected\n    export let pancik;\n");
+            }
+            library.add_file(&format!("lib/core/{path}"), &text, source_kind(path));
+        }
+        let settled = settle(library);
+        let found: Vec<String> = (settled.library.diagnostics.iter())
+            .map(|d| d.message.text())
+            .collect();
+        assert_eq!(
+            found,
+            ["Core's @connected pancik has no body, but no builtin is named pancik"]
+        );
+    });
+}
+
 /// Imports between modules, which the cases' single files can't show.
 #[test]
 fn imports_across_modules() {
@@ -141,6 +210,37 @@ fn imports_across_modules() {
                 vec!["lib".to_string(), "2 3".into()],
                 Some("Failed: ./lib does not export symbol hidden")
             )
+        );
+    });
+}
+
+/// Namespaces of user modules: a module's top level that it doesn't
+/// export isn't a member, and two modules can't each be the other's
+/// namespace: a cycle of imports fails, as one of destructurings does
+/// (`imports.rs`).
+#[test]
+fn namespaces_across_modules() {
+    with_stack(|| {
+        let mut library = Library::new();
+        let a = "let b = import(\"../b\");\nlet hidden = 3;\n\
+                 export let fa(): Int { 1 }\nexport let ga(): Int { b.fb() + hidden }";
+        library.add_file("app/a/a.temper", a, SourceKind::Standalone);
+        let b = "let a = import(\"../a\");\nexport let fb(): Int { a.fa() + 10 }";
+        library.add_file("app/b/b.temper", b, SourceKind::Standalone);
+        let main = "let a = import(\"./a\");\nlet h = a.hidden;\nlet g = a.fa();";
+        library.add_file("app/main.temper", main, SourceKind::Standalone);
+        let settled = settle(library);
+        let messages: Vec<String> = (settled.library.diagnostics.iter())
+            .filter(|d| d.level == temper_frontend::library::Level::Error)
+            .map(|d| d.message.text())
+            .collect();
+        assert_eq!(
+            messages,
+            [
+                "Import of ../b failed",
+                "b has not been declared",
+                "./a does not export symbol hidden"
+            ]
         );
     });
 }
@@ -192,6 +292,56 @@ fn imported_extensions_called_where_imported() {
         assert!(text.contains("(Call pal:"), "{text}");
         let run = run(&settled, Some(1_000_000));
         assert!(run.output.contains(&"true".to_string()), "{:?}", run.output);
+    });
+}
+
+/// A generic function without a body, as host code implements a
+/// `@connected` one, declares its type parameters as a bodied one does,
+/// in std or another library module alike: they're usable in its
+/// parameters, result, and bounds, and a call from another module is
+/// solved from its arguments, reporting just what the bodied twin does.
+#[test]
+fn bodiless_generic_functions_across_modules() {
+    with_stack(|| {
+        let errors = |body: &str| {
+            let mut library = Library::new();
+            let main = "let { firstOf } = import(\"std/gen\");\n\
+                        let { mapAll, pick, Dog } = import(\"./lib/\");\n\
+                        export let f(xs: List<Int>): Void {\n\
+                        \x20 let a: Int = firstOf(xs);\n\
+                        \x20 let b: String = firstOf(xs);\n\
+                        \x20 let c: List<String> = mapAll(xs) { (x): String => x.toString() };\n\
+                        \x20 let d: Dog = pick(new Dog());\n\
+                        \x20 pick(1);\n\
+                        }";
+            library.add_file("app/main.temper", main, SourceKind::Standalone);
+            let std = format!("@connected\nexport let firstOf<T>(xs: List<T>): T{body}");
+            let lib = format!(
+                "export interface Animal {{}}\nexport class Dog extends Animal {{}}\n\
+                 @connected\nexport let mapAll<T, O>(xs: List<T>, transform: fn (T): O): List<O>{body}\n\
+                 @connected\nexport let pick<T extends Animal>(x: T): T{body}"
+            );
+            let std = [("gen/gen.temper", std.as_str())];
+            let app = [("app/lib/lib.temper", lib.as_str())];
+            let sources = Sources::new()
+                .mount("-std-", Source::memory(&std))
+                .mount("", Source::memory(&app));
+            load_imports(&sources, &mut library);
+            let settled = settle(library);
+            (settled.library.diagnostics.iter())
+                .map(|d| {
+                    let file = settled.library.locate(d.span.start).0;
+                    let path = &settled.library.files[file.0 as usize].path;
+                    format!("{path}: {}", d.message.text())
+                })
+                .collect::<Vec<_>>()
+        };
+        let expected = [
+            "app/main.temper: Cannot assign to String from Int32",
+            "app/main.temper: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]",
+        ];
+        assert_eq!(errors(" { panic() }"), expected, "with bodies");
+        assert_eq!(errors(";"), expected, "without bodies");
     });
 }
 
@@ -505,7 +655,8 @@ fn calls_resolve_to_what_they_call() {
 /// arguments, type arguments, or the type wanted, through an alias too,
 /// fields typed by their initializers, `for … of` variables, a type
 /// parameter's members, `i++`, `doPure`, a block that returns, `empty()`,
-/// string indices, a generic function, and tests, one asserting a
+/// string indices, a generic function, one called with only type
+/// arguments, and tests, one asserting a
 /// nullable list is null with its own message (the message `assert`
 /// makes would show the list, which has no `toString`).
 #[test]
@@ -532,6 +683,8 @@ fn every_expression_is_typed() {
                     console.log(\"${leastX(P.origin, new P(1)).x} ${digit(char'7')} ${raw\"\\d\"} ${p.key}\");\n\
                     console.log(\"${c.length} ${n.length} ${pure.length} ${e == e} ${j < s.end}\");\n\
                     let none: List<Int>? = null;\n\
+                    let mk<T>(): ListBuilder<T> { new ListBuilder<T>() }\n\
+                    let made = mk<String>();\n\
                     test(\"adds\") { assert(i == 2) }\n\
                     test(\"none\") { assert(none == null) { \"none isn't null\" } }";
         library.add_file("main.temper", main, SourceKind::Standalone);
@@ -995,7 +1148,7 @@ fn toy_settled(hook: &str, files: &[(&str, &str)]) -> (bool, temper_frontend::se
     let main = format!("{hook}\n{}", toy_tag());
     library.add_file("main.temper", &main, SourceKind::Standalone);
     for &(path, text) in files {
-        library.add_file(path, text, SourceKind::Standalone);
+        library.add_file(path, text, source_kind(path));
     }
     let settled = settle(library);
     let mut tree = String::new();
@@ -1029,6 +1182,28 @@ fn content_tags_reach_nothing_at_compile_time() {
         // Control: a pure hook folds.
         let (folded, _) = toy_settled("let hook(k: String?): Void {}", &[]);
         assert!(folded, "the control should fold");
+        // So does one using std's collections, on the allowlist, whose
+        // `@connected` classes the interpreter runs as their Temper bodies.
+        let collections = std::fs::read_to_string(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../lib/std/collections/collections.temper.md"),
+        )
+        .unwrap();
+        let hook = "let { Queue, BitVector } = import(\"std/collections\");\n\
+                    let hook(k: String?): Void {\n\
+                      let q = new Queue<String>(); q.add(k ?? \"\"); q.removeFirst();\n\
+                      let v = new BitVector(1); v[40] = true; if (!v[40]) { panic(); }\n\
+                    }";
+        let file = (
+            "-std-/collections/collections.temper.md",
+            collections.as_str(),
+        );
+        let (folded, settled) = toy_settled(hook, &[file]);
+        let errors: Vec<String> = (settled.library.diagnostics.iter())
+            .filter(|d| d.level == Level::Error)
+            .map(|d| d.message.text())
+            .collect();
+        assert!(folded && errors.is_empty(), "collections: {errors:?}");
         let cases: Vec<ReachCase> = vec![
             (
                 "a request in the propagation",
@@ -1134,7 +1309,10 @@ fn compile_time_allowlist() {
     };
     println!("std modules allowed: {ALLOWED_STD_MODULES:?}");
     println!("members denied: {DENIED_MEMBERS:?}");
-    assert_eq!(ALLOWED_STD_MODULES, ["regex", "json", "temporal"]);
+    assert_eq!(
+        ALLOWED_STD_MODULES,
+        ["regex", "json", "temporal", "collections"]
+    );
     assert_eq!(DENIED_MEMBERS, [("temporal", "Date", "today")]);
     let builtins: Vec<&str> = temper_frontend::builtins::BUILTINS
         .iter()
@@ -1146,4 +1324,223 @@ fn compile_time_allowlist() {
     println!("builtin functions allowed: {builtins:?}");
     assert!(!builtin_allowed(Function::Async), "async runs code later");
     assert!(builtin_allowed(Function::Cat));
+}
+
+/// What documents each declaration, as backends will read it: a doc
+/// comment, or in a `.temper.md` file, the paragraphs from the one that
+/// starts with its name, as Kotlin Temper's `@docString` metadata.
+#[test]
+fn doc_strings_from_comments_and_prose() {
+    let source = "# Points
+
+Some introduction.
+
+`Point` is a place on a plane.
+
+It has two coordinates.
+
+```temper
+export class Point(public x: Int, public y: Int) {
+```
+
+Distance is how far a point is from the origin.
+
+```temper
+  public distance(): Int { x + y }
+  /** Moves it. */
+  public moved(by: Int): Point { new Point(x + by, y + by) }
+}
+let origin = new Point(0, 0);
+```
+
+This paragraph doesn't start with `unnamed`.
+
+```temper
+let unnamed = 1;
+let scale(/** How much bigger. */ factor: Int): Int { factor }
+```
+";
+    let mut library = Library::new();
+    library.add_file("test.temper.md", source, SourceKind::Markdown);
+    let settled = settle(library);
+    let lib = &settled.library;
+    let decl = |name: &str| {
+        (0..lib.tree.len() as u32)
+            .map(NodeId)
+            .find(|&n| {
+                matches!(lib.tree.kind(n), NodeKind::Let | NodeKind::Class)
+                    && lib
+                        .name(lib.tree.children(n)[0])
+                        .map(|id| lib.names.get(id))
+                        == Some(name)
+            })
+            .unwrap_or_else(|| panic!("{name}"))
+    };
+    let point = lib.doc_string(decl("Point")).unwrap();
+    assert_eq!(point.brief, "`Point` is a place on a plane.");
+    assert_eq!(
+        point.long,
+        "`Point` is a place on a plane.\n\nIt has two coordinates."
+    );
+    assert!(point.prose);
+    let (start, end) = (point.span.start as usize, point.span.end as usize);
+    assert!(source[start..].starts_with("`Point` is"), "{point:?}");
+    assert!(
+        source[..end].trim_end().ends_with("coordinates."),
+        "{point:?}"
+    );
+    let distance = lib.doc_string(decl("distance")).unwrap();
+    assert_eq!(
+        distance.long,
+        "Distance is how far a point is from the origin."
+    );
+    assert_eq!(distance.brief, distance.long);
+    let moved = lib.doc_string(decl("moved")).unwrap();
+    assert_eq!((moved.long.as_str(), moved.prose), ("Moves it.", false));
+    assert_eq!(lib.doc_string(decl("unnamed")), None);
+    assert_eq!(lib.doc_string(decl("origin")), None);
+    assert_eq!(lib.doc_string(decl("x")), None);
+    // A parameter's doc comment.
+    let factor = lib.doc_string(decl("factor")).unwrap();
+    assert_eq!(factor.long, "How much bigger.");
+}
+
+/// Docs found by where a declaration's name is, without settling, as
+/// core's are for hover: by the same rules as [`Library::doc_string`].
+#[test]
+fn doc_strings_by_place() {
+    use temper_frontend::docs::DocsByPlace;
+    let first = "let skipped = 1;\n";
+    let source = "# Points
+
+Some introduction.
+
+`Point` is a place on a plane.
+
+It has two coordinates.
+
+    @connected
+    export class Point(public x: Int, public y: Int) {
+
+Distance is how far a point is from the origin.
+
+      public distance(): Int { x + y }
+      /** Moves it. */
+      public moved(by: Int): Point { new Point(x + by, y + by) }
+    }
+    let origin = new Point(0, 0);
+";
+    let docs = DocsByPlace::parse(&[("a.temper", first), ("b.temper.md", source)]);
+    // Offsets are library-wide: past the first file and a newline.
+    let base = first.len() + 1;
+    let at = |needle: &str| (base + source.find(needle).unwrap()) as u32;
+    let point = docs.doc_string(at("Point("), "Point").unwrap();
+    assert_eq!(
+        (point.long.as_str(), point.prose),
+        (
+            "`Point` is a place on a plane.\n\nIt has two coordinates.",
+            true
+        )
+    );
+    let distance = docs.doc_string(at("distance("), "distance").unwrap();
+    assert_eq!(
+        distance.long,
+        "Distance is how far a point is from the origin."
+    );
+    let moved = docs.doc_string(at("moved("), "moved").unwrap();
+    assert_eq!((moved.long.as_str(), moved.prose), ("Moves it.", false));
+    // A member without docs doesn't take its class's, nor a declaration
+    // the docs before another's.
+    assert_eq!(docs.doc_string(at("x: Int"), "x"), None);
+    assert_eq!(docs.doc_string(at("origin"), "origin"), None);
+    let skipped = first.find("skipped").unwrap() as u32;
+    assert_eq!(docs.doc_string(skipped, "skipped"), None);
+}
+
+/// Docs from prose with more than paragraphs are the same settled as by
+/// place: examples, lists, and link definitions as written, HTML left
+/// out, and nothing past a heading.
+#[test]
+fn rich_prose_docs_by_place_and_settled() {
+    use temper_frontend::docs::DocsByPlace;
+    let source = "# Shapes
+
+`Shape` is one of:
+
+- a square
+- a circle
+
+<div>Left out.</div>
+
+See [more].
+
+[more]: https://example.com
+
+```temper inert
+new Shape(); // ✅
+```
+
+```temper
+export class Shape() {
+```
+
+`area` is old.
+
+## Measures
+
+**Area** is [how big][more] it is.
+
+```temper
+  public area(): Int { 1 }
+}
+```
+";
+    let mut library = Library::new();
+    library.add_file("test.temper.md", source, SourceKind::Markdown);
+    let settled = settle(library);
+    let lib = &settled.library;
+    let docs = DocsByPlace::parse(&[("test.temper.md", source)]);
+    let shape = "`Shape` is one of:\n\n- a square\n- a circle\n\nSee [more].\n\n\
+        [more]: https://example.com\n\n```temper inert\nnew Shape(); // ✅\n```";
+    let cases = [
+        ("Shape", "class ", shape),
+        ("area", "public ", "**Area** is [how big][more] it is."),
+    ];
+    for (name, before, long) in cases {
+        let decl = (0..lib.tree.len() as u32)
+            .map(NodeId)
+            .find(|&n| {
+                matches!(lib.tree.kind(n), NodeKind::Let | NodeKind::Class)
+                    && lib
+                        .name(lib.tree.children(n)[0])
+                        .map(|id| lib.names.get(id))
+                        == Some(name)
+            })
+            .unwrap_or_else(|| panic!("{name}"));
+        let settled_doc = lib.doc_string(decl).unwrap();
+        assert_eq!(settled_doc.long, long);
+        let at = (source.find(&format!("{before}{name}(")).unwrap() + before.len()) as u32;
+        assert_eq!(docs.doc_string(at, name), Some(settled_doc));
+    }
+    // A thematic break ends a doc as a heading does, settled too.
+    let source = "`f` is old.\n\n---\n\n`f` is new.\n\n    export let f(): Int { 1 }\n";
+    let mut library = Library::new();
+    library.add_file("test.temper.md", source, SourceKind::Markdown);
+    let settled = settle(library);
+    let lib = &settled.library;
+    let decl = (0..lib.tree.len() as u32)
+        .map(NodeId)
+        .find(|&n| {
+            lib.tree.kind(n) == NodeKind::Let
+                && lib
+                    .name(lib.tree.children(n)[0])
+                    .map(|id| lib.names.get(id))
+                    == Some("f")
+        })
+        .unwrap();
+    let settled_doc = lib.doc_string(decl).unwrap();
+    assert_eq!(settled_doc.long, "`f` is new.");
+    let docs = DocsByPlace::parse(&[("test.temper.md", source)]);
+    let at = source.find("f(").unwrap() as u32;
+    assert_eq!(docs.doc_string(at, "f"), Some(settled_doc));
 }

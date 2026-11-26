@@ -1,0 +1,86 @@
+tmpl 1 model 1 library `core-numbers` 0.0.0
+
+uses `temper-core`#8 0.0.0-alpha.0.0 {
+  class List#9<T#10> extends Listed#11<T#10> {}
+  interface Listed#11<T#12> {}
+  interface Console#18 {
+    connected method log#19(message: String): Void;
+  }
+  class Int32#21 {
+    connected method toString#22(radix?: Int32): String;
+    connected method toInt64#23(): Int64;
+    connected get signum#26(): Int32;
+  }
+  class Int64#24 {
+    connected method toString#25(radix?: Int32): String;
+  }
+  connected fn listedReduceFromIndex#28<T#29, O#30>(listed: Listed#11<T#29>, initial: O#30, index: Int32, accumulate: fn (O#30, T#29): O#30): O#30;
+  class Float64#34 {
+    connected method near#35(other: Float64, relTol?: Float64, absTol?: Float64): Boolean;
+    connected method max#38(other: Float64): Float64;
+    connected method min#39(other: Float64): Float64;
+  }
+  class Boolean#36 {
+    connected method toString#37(): String;
+  }
+  connected fn getConsole#43(name?: String): Console#18;
+}
+
+module `core-numbers`#0 {
+  let ~console#20: Console#18;
+
+  let one#1: Int32;
+
+  let big#2: Int32;
+
+  let small#3: Int32;
+
+  let one64#4: Int64;
+
+  let big64#5: Int64;
+
+  let small64#6: Int64;
+
+  let zero#7: Int32;
+
+  let digits#13: List#9<Int32>;
+
+  fn from#14(index#27: Int32): Int32 {
+    return listedReduceFromIndex#28<Int32, Int32>((upcast(digits#13)): Listed#11<Int32>, 100, index#27, (fn ~fn#31(s#32: Int32, n#33: Int32): Int32 {
+      return %Int32.add(%Int32.mul(s#32, 10), n#33);
+    }): fn (Int32, Int32): Int32);
+  }
+
+  let inf#15: Float64;
+
+  let nan#16: Float64;
+
+  let ninf#17: Float64;
+
+  init {
+    init ~console#20 = getConsole#43(omitted);
+    init one#1 = 1;
+    init big#2 = %Int32.mul(2147483647, one#1);
+    init small#3 = %Int32.mul(%Int32.neg(-2147483648), one#1);
+    ~console#20.log#19(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%Int32.add(big#2, 1).toString#22(omitted), " "), %Int32.sub(small#3, 1).toString#22(omitted)), " "), %Int32.add(one#1, 1).toString#22(omitted)), " "), %Int32.sub(one#1, 1).toString#22(omitted)), " "), %Int32.add(small#3, 1).toString#22(omitted)), " "), %Int32.sub(big#2, 1).toString#22(omitted)));
+    init one64#4 = one#1.toInt64#23();
+    init big64#5 = %Int64.mul(9223372036854775807i64, one64#4);
+    init small64#6 = %Int64.sub(%Int64.neg(big64#5), one64#4);
+    ~console#20.log#19(%String.cat(%String.cat(%String.cat(%String.cat(%Int64.add(big64#5, 1i64).toString#25(omitted), " "), %Int64.sub(small64#6, 1i64).toString#25(omitted)), " "), %Int64.sub(one64#4, 1i64).toString#25(omitted)));
+    init zero#7 = %Int32.sub(one#1, one#1);
+    ~console#20.log#19(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(big#2.signum#26().toString#22(omitted), " "), small#3.signum#26().toString#22(omitted)), " "), zero#7.signum#26().toString#22(omitted)), " "), one#1.signum#26().toString#22(omitted)), " "), %Int32.sub(zero#7, one#1).signum#26().toString#22(omitted)), " "), %Int32.add(small#3, 1).signum#26().toString#22(omitted)));
+    init digits#13 = (list(1, 2, 3)): List#9<Int32>;
+    ~console#20.log#19(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(from#14(0).toString#22(omitted), " "), from#14(1).toString#22(omitted)), " "), from#14(3).toString#22(omitted)), " "), from#14(7).toString#22(omitted)));
+    init inf#15 = %Float64.mul(1.0e308, 10.0);
+    init nan#16 = %Float64.sub(inf#15, inf#15);
+    init ninf#17 = %Float64.sub(0.0, inf#15);
+    ~console#20.log#19(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(nan#16.near#35(nan#16, omitted, omitted).toString#37(), " "), inf#15.near#35(inf#15, omitted, omitted).toString#37()), " "), ninf#17.near#35(ninf#17, omitted, omitted).toString#37()), " "), nan#16.near#35(1.0, omitted, omitted).toString#37()), " "), (1.0).near#35(nan#16, omitted, omitted).toString#37()));
+    ~console#20.log#19(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(inf#15.near#35(1.0, omitted, omitted).toString#37(), " "), inf#15.near#35(ninf#17, omitted, omitted).toString#37()), " "), inf#15.near#35(1.0, 0.0, 0.0).toString#37()), " "), inf#15.near#35(inf#15, 0.0, 0.0).toString#37()), " "), inf#15.near#35(1.0, 1.0, inf#15).toString#37()), " "), (1.0).near#35(ninf#17, 1.0, inf#15).toString#37()));
+    ~console#20.log#19(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat((1.0).near#35(1.5, nan#16, 1.0).toString#37(), " "), (1.0).near#35(1.5, 1.0, nan#16).toString#37()), " "), (1.0).near#35(1.0, nan#16, nan#16).toString#37()), " "), %Float64.neg(0.0).near#35(0.0, 0.0, 0.0).toString#37()));
+    ~console#20.log#19(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat((1.0).near#35(%Float64.add(1.0, 1.0e-10), omitted, omitted).toString#37(), " "), (1.0).near#35(1.1, omitted, omitted).toString#37()), " "), (1.0).near#35(1.1, 0.2, omitted).toString#37()), " "), (0.0).near#35(1.0e-300, 1.0e-9, 1.0e-12).toString#37()));
+    ~console#20.log#19(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%Float64.eq(nan#16.max#38(1.0), nan#16).toString#37(), " "), %Float64.eq((1.0).max#38(nan#16), nan#16).toString#37()), " "), %Float64.eq(nan#16.min#39(1.0), nan#16).toString#37()), " "), %Float64.eq((1.0).min#39(nan#16), nan#16).toString#37()));
+    ~console#20.log#19(listedReduceFromIndex#28<Int32, Int32>((upcast(digits#13)): Listed#11<Int32>, 0, %Int32.neg(1), (fn ~fn#40(s#41: Int32, n#42: Int32): Int32 {
+      return %Int32.add(s#41, 1);
+    }): fn (Int32, Int32): Int32).toString#22(omitted));
+  }
+}

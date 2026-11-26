@@ -203,28 +203,14 @@ impl Settle {
     }
 
     /// The type a symbol names, a builtin type or a class or interface,
-    /// through `let` aliases such as imports make.
+    /// through aliases such as imports make ([`Scopes::type_symbol`]).
     fn type_symbol(&self, symbol: SymbolId) -> Option<SymbolId> {
         let tree = &self.lib.tree;
-        let mut symbol = symbol;
-        for _ in 0..8 {
-            if let SymbolKind::Builtin(Builtin::Type(_)) = self.scopes.symbol(symbol).kind {
-                return Some(symbol);
-            }
-            let decl = self.scopes.symbol(symbol).decl?;
-            match tree.kind(decl) {
-                NodeKind::Class => return Some(symbol),
-                NodeKind::Let if tree.data(decl) & core::ROLE_MASK == 0 => {
-                    let init = core::let_parts(tree, decl).2?;
-                    symbol = self
-                        .scopes
-                        .resolved(init)
-                        .filter(|_| tree.kind(init) == NodeKind::RightName)?;
-                }
-                _ => return None,
-            }
-        }
-        None
+        let symbol = self.scopes.type_symbol(tree, symbol);
+        let s = self.scopes.symbol(symbol);
+        let is_type = matches!(s.kind, SymbolKind::Builtin(Builtin::Type(_)))
+            || s.decl.is_some_and(|d| tree.kind(d) == NodeKind::Class);
+        is_type.then_some(symbol)
     }
 
     fn has_static_member(&self, ty: SymbolId, name: NameId) -> bool {

@@ -275,6 +275,14 @@ setting, or else the first line as a slug, or else the root's path, or
 else `unnamed`, as Kotlin's `libraryNameFor` decides; two libraries of
 one name stop the command
 ([`duplicate_names`](../../../crates/temper-frontend/src/project.rs)).
+`temper-core` is core's name, and `std` std's: a library taking one
+fails to load, but for that library's own source in the checkout the
+compiler was built from, recognized by its build path, not by a layout
+any library could copy
+([`is_checkout`](../../../crates/temper-frontend/src/project.rs)), or
+the copy of the built-in one that editors write, file for file, so no
+library gets core's or std's powers or writes over their output. Std from either builds and settles
+as std, under its own root (`Library::std_root`).
 
 **Alternatives:** Kotlin's way: settle and run the config as Temper.
 
@@ -801,7 +809,8 @@ What has to change first, found while writing this:
   passing and failing tests, quiet output, the work root and skipped
   directories, `.gitignore` files, not-run tests and errors, std built
   in or from a directory, a library in memory, library names, imports
-  between libraries, duplicate names, and runaway code
+  between libraries, duplicate names, core's reserved name, and runaway
+  code
   (`runaway_tests_fail_alone`, `runaway_top_level_is_cut_short`).
 - **JUnit reading**: unit tests in [`tools.rs`](../../../crates/temper-tmpl/src/tools.rs).
 - **Real libraries**, nightly: each library in

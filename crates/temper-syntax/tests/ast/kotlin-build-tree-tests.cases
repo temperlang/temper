@@ -1090,7 +1090,11 @@ this.foo, this, nym`this`
 === builtins
 builtins.foo, builtins.nym`bar-baz`, nym`builtins`.boo
 --- ast
-(Call #, %foo %bar-baz (Call %. builtins \boo))
+(Call
+  #,
+  (Call %. builtins \foo)
+  (Call %. builtins \bar-baz)
+  (Call %. builtins \boo))
 
 === superIsReservedSyntax
 super.f(nym`super`)

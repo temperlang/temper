@@ -34,8 +34,6 @@ pub enum TypeData {
     /// `U` (core's docs), and translates to `T`. Made by
     /// [`Types::never_of`], so `T` is neither nullable nor a `Never`.
     NeverOf(TypeId),
-    /// The type of `null`.
-    Null,
     /// A builtin type, by its index in [`TYPES`]. `Int` is `Int32`.
     Builtin(u8),
     /// A class or interface without type parameters, by the symbol its
@@ -47,7 +45,10 @@ pub enum TypeData {
     /// A generic type given arguments, as `List<Int>` or `Box<String>`:
     /// `base` is a [`TypeData::Builtin`] or [`TypeData::Class`].
     Applied { base: TypeId, args: Vec<TypeId> },
-    /// `T?`: a type or null. `T` isn't nullable itself.
+    /// `T?`: a type or null. `T` isn't nullable itself. `Never?` is
+    /// [`NULL`], null's type where one is needed: null has no type of its
+    /// own, but takes the nullable type its place wants (notes/typing.md,
+    /// "Null").
     Nullable(TypeId),
     /// `fn (A, B): R`, or `fn (A, B): R throws Bubble` if `throws`. A
     /// parameter with a default is optional.
@@ -66,6 +67,8 @@ pub struct Param {
 
 pub const UNKNOWN: TypeId = TypeId(0);
 pub const NEVER: TypeId = TypeId(1);
+/// `Never?`, the nullable bottom: a subtype of every `T?`, and the type
+/// typing gives a bare `null`, which has none of its own.
 pub const NULL: TypeId = TypeId(2);
 pub const VOID: TypeId = TypeId(3);
 pub const BOOLEAN: TypeId = TypeId(4);
@@ -95,6 +98,9 @@ pub struct ClassInfo {
     /// naming its type parameters, as `fn (A): B` for `@fun interface
     /// Mapper<A, B>(a: A): B;`.
     pub fun_sig: Option<TypeId>,
+    /// Which of its type parameters are marked `@out` or `@in`
+    /// ([`Types::is_variant`]).
+    pub variant: Vec<bool>,
 }
 
 /// The interner.
@@ -108,11 +114,18 @@ pub struct Types {
 }
 
 /// Builtin generic types and the generic types they extend, with the
-/// same type arguments, as `class List<T> extends Listed<T>` in core; and
-/// the final types that are `MapKey`s of themselves, as `class String
-/// extends MapKey<String>`; and `StringIndex` and `NoStringIndex`, which
-/// extend `StringIndexOption`. Core's `Equatable` isn't a builtin type yet.
-const BUILTIN_SUPERTYPES: [(&str, &str); 11] = [
+/// same type arguments, as `class List<T> extends Listed<T>` in core; the
+/// types that are `MapKey`s or `Equatable`s of themselves, as `class
+/// String extends MapKey<String>`; and `StringIndex` and `NoStringIndex`,
+/// which extend `StringIndexOption`. Each extends one, as core declares
+/// (`core_capabilities.rs`'s `builtin_supertypes_are_cores` checks).
+pub const BUILTIN_SUPERTYPES: [(&str, &str); 17] = [
+    ("Boolean", "Equatable"),
+    ("Int64", "Equatable"),
+    ("Float64", "Equatable"),
+    ("Empty", "Equatable"),
+    ("MapKey", "Equatable"),
+    ("StringIndexOption", "Equatable"),
     ("List", "Listed"),
     ("ListBuilder", "Listed"),
     ("Map", "Mapped"),
@@ -138,8 +151,7 @@ pub fn builtin_supertype(name: &str) -> Option<&'static str> {
 /// `StringIndex` and `NoStringIndex` extend the sealed `StringIndexOption`,
 /// and nothing else extends any of them, so each is a subtype of only
 /// itself and what core says it extends ([`Types::is_subtype`]).
-const CORE_NOMINAL: [&str; 5] = [
-    "DenseBitVector",
+const CORE_NOMINAL: [&str; 4] = [
     "NoStringIndex",
     "StringBuilder",
     "StringIndex",
@@ -147,22 +159,18 @@ const CORE_NOMINAL: [&str; 5] = [
 ];
 
 /// Builtin generic types that core declares as classes, which no class
-/// extends; core marks the first four `@mayDowncastTo(false)`.
-const BUILTIN_GENERIC_CLASSES: [&str; 10] = [
+/// extends.
+const BUILTIN_GENERIC_CLASSES: [&str; 9] = [
     "List",
     "ListBuilder",
     "Map",
     "MapBuilder",
-    "Deque",
     "DoneResult",
     "Pair",
     "Promise",
     "PromiseBuilder",
     "ValueResult",
 ];
-
-/// How many of [`BUILTIN_GENERIC_CLASSES`] are `@mayDowncastTo(false)`.
-const NO_DOWNCAST: usize = 4;
 
 /// The builtin generic types' type parameters, by index, that core marks
 /// `@out` or `@in`, which Kotlin Temper honors and tempest doesn't
@@ -201,7 +209,11 @@ impl Types {
             classes: HashMap::new(),
             bounds: HashMap::new(),
         };
-        for data in [TypeData::Unknown, TypeData::Never, TypeData::Null] {
+        for data in [
+            TypeData::Unknown,
+            TypeData::Never,
+            TypeData::Nullable(NEVER),
+        ] {
             types.intern(data);
         }
         for name in WELL_KNOWN {
@@ -376,7 +388,8 @@ impl Types {
                 let Some(i) = formals.iter().position(|&f| f == symbol) else {
                     return;
                 };
-                if matches!(self.get(actual), Never | Null)
+                if matches!(self.get(actual), Never)
+                    || actual == NULL
                     || actual == VOID
                     || !self.is_known(actual)
                 {
@@ -456,13 +469,30 @@ impl Types {
             return None;
         }
         match *self.get(own) {
-            TypeData::Builtin(_) if self.builtin_extends(own, base) => {
-                // `String` is a `MapKey<String>`; `List<T>`, a `Listed<T>`.
-                let args = match self.is_final(own) {
-                    true => vec![t],
-                    false => self.args(t).to_vec(),
+            TypeData::Builtin(i) => {
+                // `String` is a `MapKey<String>`, and so an
+                // `Equatable<String>`; `List<T>`, a `Listed<T>`; and
+                // `StringIndex`, a `StringIndexOption`.
+                let up = (BUILTIN_SUPERTYPES.iter())
+                    .find(|&&(sub, _)| sub == TYPES[i as usize])
+                    .map(|&(_, up)| up)?;
+                let index = TYPES.iter().position(|&n| n == up)?;
+                let up = self.builtin(index as u8);
+                let sup = match (self.is_core_nominal(up), self.args(t).is_empty()) {
+                    (true, _) => up,
+                    (false, true) => self.intern(TypeData::Applied {
+                        base: up,
+                        args: vec![t],
+                    }),
+                    (false, false) => {
+                        let args = self.args(t).to_vec();
+                        self.intern(TypeData::Applied { base: up, args })
+                    }
                 };
-                Some(self.intern(TypeData::Applied { base, args }))
+                match up == base {
+                    true => Some(sup),
+                    false => self.supertype_at(sup, base, depth + 1),
+                }
             }
             TypeData::Class(symbol) => {
                 let info = self.classes.get(&symbol)?;
@@ -509,20 +539,59 @@ impl Types {
             || (self.builtin_name(base)).is_some_and(|n| BUILTIN_GENERIC_CLASSES.contains(&n))
     }
 
-    /// Whether core marks `t`, or a generic type's base, `@mayDowncastTo(false)`:
-    /// the final builtin types other than `Void`, and `List`, `Map` and
-    /// their builders.
+    /// Whether core marks `t`, or a generic type's base,
+    /// `@mayDowncastTo(false)`, as it does the final builtin types other
+    /// than `Void`, and `List`, `Map` and their builders
+    /// ([`crate::typing::core_shape`]).
     pub fn no_downcast(&self, t: TypeId) -> bool {
-        let base = self.base(t);
-        (self.is_final(base) && base != VOID)
-            || (self.builtin_name(base))
-                .is_some_and(|n| BUILTIN_GENERIC_CLASSES[..NO_DOWNCAST].contains(&n))
+        (self.builtin_name(self.base(t)))
+            .and_then(crate::typing::core_shape)
+            .is_some_and(|shape| shape.may_downcast == Some(false))
+    }
+
+    /// Whether `t` is `Bubble`, which core says isn't an `AnyValue`.
+    fn is_bubble(&self, t: TypeId) -> bool {
+        self.builtin_name(t) == Some("Bubble")
     }
 
     /// Whether core marks a builtin generic type's `index`th type
     /// parameter `@out` or `@in`.
     pub fn is_builtin_variant(&self, base: TypeId, index: usize) -> bool {
         (self.builtin_name(base)).is_some_and(|n| BUILTIN_VARIANT_PARAMS.contains(&(n, index)))
+    }
+
+    /// Whether a generic type's `index`th type parameter is marked `@out`
+    /// or `@in`, by core for a builtin type, or where that isn't known.
+    /// Kotlin Temper honors those; one without is invariant there, as
+    /// all are in tempest.
+    fn is_variant(&self, base: TypeId, index: usize) -> bool {
+        match self.get(base) {
+            TypeData::Builtin(_) => self.is_builtin_variant(base, index),
+            TypeData::Class(symbol) => (self.classes.get(symbol))
+                .and_then(|c| c.variant.get(index).copied())
+                .unwrap_or(true),
+            _ => true,
+        }
+    }
+
+    /// Whether a type argument `x` sets one generic type apart from
+    /// another whose argument there is `y`: for a parameter marked `@out`
+    /// or `@in` ([`Types::is_variant`]), where neither is a subtype of the
+    /// other, which no variance accepts; for another, which is invariant,
+    /// where they aren't the same type, as far as that's known, so
+    /// `MapKey<String>` isn't a `MapKey<MapKey<String>>`.
+    fn args_apart(&mut self, base: TypeId, index: usize, x: TypeId, y: TypeId, depth: u32) -> bool {
+        if x == y {
+            return false;
+        }
+        if self.is_variant(base, index) {
+            return self.subtype(x, y, depth) == Some(false)
+                && self.subtype(y, x, depth) == Some(false);
+        }
+        let (down, up) = (self.subtype(x, y, depth), self.subtype(y, x, depth));
+        down == Some(false)
+            || up == Some(false)
+            || (self.is_known(x) && self.is_known(y) && (down, up) != (Some(true), Some(true)))
     }
 
     /// A generic type's base, as `List` for `List<Int>`, or `t` itself.
@@ -595,8 +664,7 @@ impl Types {
     /// `t?`.
     pub fn nullable(&mut self, t: TypeId) -> TypeId {
         match self.get(t) {
-            TypeData::Unknown | TypeData::Null | TypeData::Nullable(_) => t,
-            TypeData::Never => NULL,
+            TypeData::Unknown | TypeData::Nullable(_) => t,
             _ => self.intern(TypeData::Nullable(t)),
         }
     }
@@ -620,8 +688,6 @@ impl Types {
             },
             (TypeData::NeverOf(x), _) => self.join(x, b),
             (_, TypeData::NeverOf(y)) => self.join(a, y),
-            (TypeData::Null, _) => self.nullable(b),
-            (_, TypeData::Null) => self.nullable(a),
             (TypeData::Nullable(x), _) if x == b => a,
             (_, TypeData::Nullable(x)) if x == a => b,
             (TypeData::Nullable(x), _) => match self.join(x, b) {
@@ -703,6 +769,26 @@ impl Types {
         }
     }
 
+    /// Whether a type argument `actual` fits a type parameter's bound
+    /// `wanted`, a bound naming type parameters given theirs: as a type,
+    /// not a value, so `AnyValue`, though a value of it may hold any
+    /// other, fits `AnyValue` alone, and `MapKey<String>` doesn't fit
+    /// `MapKey<MapKey<String>>`; but, as Kotlin Temper's check does, a
+    /// nullable type fits `AnyValue`. What isn't known fits.
+    pub fn fits_bound(&mut self, actual: TypeId, wanted: TypeId) -> bool {
+        let actual = match *self.get(actual) {
+            TypeData::Nullable(inner) if wanted == ANY_VALUE => inner,
+            _ => actual,
+        };
+        if !self.is_known(wanted) {
+            return true;
+        }
+        if actual == ANY_VALUE {
+            return wanted == ANY_VALUE;
+        }
+        self.is_subtype(actual, wanted) != Some(false)
+    }
+
     /// Whether a value of type `s` may be used as a `t`, if that's known.
     /// One generic type given arguments is another's only if, as its
     /// supertype with the other's base sees it, they're the same, but
@@ -732,7 +818,22 @@ impl Types {
             _ if s == t => Some(true),
             (Unknown, _) | (_, Unknown) => None,
             (Never, _) => Some(true),
-            (Null, Nullable(_)) => Some(true),
+            // No value is a `Void`, so it's no other type, not even an
+            // `AnyValue` (t854).
+            _ if s == VOID => Some(false),
+            // Only null, and what never completes, is a `Never?`.
+            _ if t == NULL => match self.get(s) {
+                Nullable(_) => Some(false),
+                NeverOf(a) => self.subtype(*a, t, depth),
+                Param(_) => self.param_subtype(s, t, depth),
+                _ => (self.is_definite(s)
+                    || self.is_class_like(s)
+                    || self.is_core_nominal(s)
+                    || s == ANY_VALUE)
+                    .then_some(false),
+            },
+            // Null is every nullable type's value.
+            (_, Nullable(_)) if s == NULL => Some(true),
             (Nullable(a), Nullable(b)) => self.subtype(a, b, depth),
             (_, Nullable(b)) => self.subtype(s, b, depth),
             // `Never<A>` is what an `A` is, and is a `Never<B>` if `A` is a
@@ -742,27 +843,20 @@ impl Types {
             (NeverOf(a), _) => self.subtype(a, t, depth),
             (_, NeverOf(_)) => Some(false),
             // Unless its bound is nullable, `T` isn't.
-            (Null | Nullable(_), Param(_))
-                if self.subtype(NULL, self.upper(t), depth) != Some(false) =>
-            {
+            (Nullable(_), Param(_)) if self.subtype(NULL, self.upper(t), depth) != Some(false) => {
                 None
             }
-            (Null | Nullable(_), _) => (self.is_definite(t)
+            (Nullable(_), _) => (self.is_definite(t)
                 || self.is_class_like(t)
                 || self.is_core_nominal(t)
                 || t == ANY_VALUE)
                 .then_some(false),
             // A type parameter is a subtype of its bound only, and nothing
             // but itself and `Never` is a subtype of it.
-            (Param(_), _) => {
-                let upper = self.upper(s);
-                match (upper, self.subtype(upper, t, depth)) {
-                    // What an `AnyValue` may hold, a `T` needn't.
-                    (ANY_VALUE, None) => Some(false),
-                    (_, known) => known,
-                }
-            }
+            (Param(_), _) => self.param_subtype(s, t, depth),
             (_, Param(_)) => Some(false),
+            // Core's `AnyValue` docs: `Bubble` isn't one.
+            _ if t == ANY_VALUE && self.is_bubble(s) => Some(false),
             _ if t == ANY_VALUE => {
                 (s != VOID && (self.is_definite(s) || self.is_class_like(s))).then_some(true)
             }
@@ -780,6 +874,17 @@ impl Types {
             // A function and a class or interface that isn't `@fun`.
             (Fn { .. }, Class(_)) | (Class(_), Fn { .. }) => Some(false),
             _ => (self.is_definite(s) && self.is_definite(t)).then_some(false),
+        }
+    }
+
+    /// [`Types::subtype`] for a type parameter `s`: a subtype of its bound
+    /// only.
+    fn param_subtype(&mut self, s: TypeId, t: TypeId, depth: u32) -> Option<bool> {
+        let upper = self.upper(s);
+        match (upper, self.subtype(upper, t, depth)) {
+            // What an `AnyValue` may hold, a `T` needn't.
+            (ANY_VALUE, None) => Some(false),
+            (_, known) => known,
         }
     }
 
@@ -925,18 +1030,17 @@ impl Types {
             }
             let (x, y) = (self.args(seen).to_vec(), self.args(t).to_vec());
             let apart = x.len() == y.len()
-                && (x.iter().zip(&y)).any(|(&x, &y)| {
-                    self.subtype(x, y, depth) == Some(false)
-                        && self.subtype(y, x, depth) == Some(false)
-                });
+                && (x.iter().zip(&y).enumerate())
+                    .any(|(i, (&x, &y))| self.args_apart(t_base, i, x, y, depth));
             return apart.then_some(false);
         }
         let is_applied = |x: TypeId| matches!(self.get(x), TypeData::Applied { .. });
         match (self.get(s_base), self.get(t_base)) {
-            // A builtin generic type or final type is no other type than
-            // those core says it extends, and no user's class or interface.
+            // A builtin type is no other type than those core says it
+            // extends, and no user's class or interface. Not `AnyValue`,
+            // which may hold any value.
             (TypeData::Builtin(_), TypeData::Builtin(_) | TypeData::Class(_))
-                if (is_applied(s) || self.is_final(s))
+                if s != ANY_VALUE
                     && (is_applied(t) || matches!(self.get(t), TypeData::Class(_))) =>
             {
                 Some(false)
@@ -1012,7 +1116,6 @@ impl Types {
             TypeData::Unknown => "?".into(),
             TypeData::Never => "Never".into(),
             TypeData::NeverOf(t) => format!("Never<{}>", self.display(*t, class_name)),
-            TypeData::Null => "Null".into(),
             TypeData::Builtin(i) => TYPES[*i as usize].into(),
             TypeData::Class(symbol) | TypeData::Param(symbol) => class_name(*symbol),
             TypeData::Applied { base, args } => {
@@ -1181,10 +1284,10 @@ mod tests {
 
     #[test]
     fn builtin_supertypes_are_cores() {
-        let core = include_str!("../../../lib/core/core.temper");
+        let core = crate::corelib::code();
         for (sub, sup) in BUILTIN_SUPERTYPES {
             let declared = core.lines().any(|line| {
-                let line = line.trim_start_matches("export ");
+                let line = line.trim_start().trim_start_matches("export ");
                 let declares = ["class ", "interface ", "sealed interface "]
                     .iter()
                     .any(|kind| line.starts_with(&format!("{kind}{sub}")));
@@ -1197,30 +1300,22 @@ mod tests {
 
     #[test]
     fn builtin_generics_are_cores() {
-        let core = include_str!("../../../lib/core/core.temper");
+        let core = crate::corelib::code();
         let mut classes = Vec::new();
-        let mut no_downcast = Vec::new();
         let mut variant = Vec::new();
-        let mut previous = "";
-        for line in core.lines() {
+        for line in core.lines().map(str::trim_start) {
             let decl = line.trim_start_matches("export ");
-            let decl = decl.trim_start_matches("/*sealed*/ ");
             let decl = decl.trim_start_matches("sealed ");
             let (is_class, rest) =
                 match (decl.strip_prefix("class "), decl.strip_prefix("interface ")) {
                     (Some(rest), _) => (true, rest),
                     (_, Some(rest)) => (false, rest),
-                    _ => {
-                        previous = line;
-                        continue;
-                    }
+                    _ => continue,
                 };
             let Some((name, params)) = rest.split_once('<') else {
-                previous = line;
                 continue;
             };
             if !line.starts_with("export") || !name.chars().all(char::is_alphanumeric) {
-                previous = line;
                 continue;
             }
             // The parameters, split at commas outside nested `<…>`.
@@ -1243,21 +1338,13 @@ mod tests {
             }
             if is_class {
                 classes.push(name);
-                if previous.starts_with("@mayDowncastTo(false)") {
-                    no_downcast.push(name);
-                }
             }
-            previous = line;
         }
         let sorted = |mut v: Vec<&'static str>| {
             v.sort();
             v
         };
         assert_eq!(sorted(classes), sorted(BUILTIN_GENERIC_CLASSES.to_vec()));
-        assert_eq!(
-            sorted(no_downcast),
-            sorted(BUILTIN_GENERIC_CLASSES[..NO_DOWNCAST].to_vec())
-        );
         variant.sort();
         assert_eq!(variant, BUILTIN_VARIANT_PARAMS.to_vec());
     }
@@ -1374,6 +1461,7 @@ mod tests {
                 formals,
                 supers,
                 fun_sig: None,
+                variant: Vec::new(),
             };
             types.set_class(SymbolId(symbol), info);
         };

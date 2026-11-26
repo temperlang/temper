@@ -1,0 +1,64 @@
+tmpl 1 model 1 library `bit-vector` 0.0.0
+
+uses std#1 0.0.0-alpha.0.0 {
+  module collections#2 {
+    connected class BitVector#3 {
+      connected constructor constructor#7(capacity: Int32): BitVector#3;
+      connected method get#12(index: Int32): Boolean;
+      connected method set#15(index: Int32, newValue: Boolean): Void;
+    }
+  }
+}
+
+uses `temper-core`#8 0.0.0-alpha.0.0 {
+  interface Console#9 {
+    connected method log#10(message: String): Void;
+  }
+  class Boolean#13 {
+    connected method toString#14(): String;
+  }
+  connected fn getConsole#16(name?: String): Console#9;
+}
+
+module `bit-vector`#0 {
+  let ~console#11: Console#9;
+
+  let v#4: BitVector#3;
+
+  let u#5: BitVector#3;
+
+  let w#6: BitVector#3;
+
+  init {
+    init ~console#11 = getConsole#16(omitted);
+    init v#4 = new constructor#7(16);
+    ~console#11.log#10(%String.cat("v[2]=", v#4.get#12(2).toString#14()));
+    ~console#11.log#10(%String.cat("v[3]=", v#4.get#12(3).toString#14()));
+    ~console#11.log#10("v[3] <- true");
+    v#4.set#15(3, true);
+    ~console#11.log#10(%String.cat("v[2]=", v#4.get#12(2).toString#14()));
+    ~console#11.log#10(%String.cat("v[3]=", v#4.get#12(3).toString#14()));
+    ~console#11.log#10("v[3] <- false");
+    v#4.set#15(3, false);
+    ~console#11.log#10(%String.cat("v[2]=", v#4.get#12(2).toString#14()));
+    ~console#11.log#10(%String.cat("v[3]=", v#4.get#12(3).toString#14()));
+    v#4.set#15(100, true);
+    v#4.set#15(200, false);
+    ~console#11.log#10(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("v[99]=", v#4.get#12(99).toString#14()), " v[100]="), v#4.get#12(100).toString#14()), " v[101]="), v#4.get#12(101).toString#14()), " v[200]="), v#4.get#12(200).toString#14()), " v[-1]="), v#4.get#12(%Int32.neg(1)).toString#14()));
+    v#4.set#15(1000, true);
+    ~console#11.log#10(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("v[999]=", v#4.get#12(999).toString#14()), " v[1000]="), v#4.get#12(1000).toString#14()), " v[100]="), v#4.get#12(100).toString#14()));
+    init u#5 = new constructor#7(0);
+    u#5.set#15(8, true);
+    u#5.set#15(32, true);
+    u#5.set#15(64, true);
+    ~console#11.log#10(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(u#5.get#12(7).toString#14(), " "), u#5.get#12(8).toString#14()), " "), u#5.get#12(9).toString#14()), " "), u#5.get#12(31).toString#14()), " "), u#5.get#12(32).toString#14()), " "), u#5.get#12(33).toString#14()), " "), u#5.get#12(63).toString#14()), " "), u#5.get#12(64).toString#14()), " "), u#5.get#12(65).toString#14()));
+    v#4.set#15(1000, false);
+    ~console#11.log#10(%String.cat(%String.cat(%String.cat("v[1000]=", v#4.get#12(1000).toString#14()), " v[999]="), v#4.get#12(999).toString#14()));
+    init w#6 = new constructor#7(%Int32.neg(9));
+    w#6.set#15(1, true);
+    ~console#11.log#10(%String.cat(%String.cat(%String.cat("w[0]=", w#6.get#12(0).toString#14()), " w[1]="), w#6.get#12(1).toString#14()));
+    ~console#11.log#10("before");
+    v#4.set#15(%Int32.neg(1), true);
+    ~console#11.log#10("not reached");
+  }
+}

@@ -1,54 +1,54 @@
 # generated line:column -> source:line:column, and the text at each
-10:1 -> ../sorting.temper.md:87:5  /** @param {readonly number[ <- let mungeInts(ints: List<Int
-11:1 -> ../sorting.temper.md:87:5  function mungeInts(ints) { <- let mungeInts(ints: List<Int
-11:10 -> ../sorting.temper.md:87:9 (mungeInts)  mungeInts(ints) { <- mungeInts(ints: List<Int>):
-11:19 -> ../sorting.temper.md:87:5  (ints) { <- let mungeInts(ints: List<Int
-12:3 -> ../sorting.temper.md:88:7  /** @type {number[]} */ <- let builder = ints.toListBui
-13:3 -> ../sorting.temper.md:88:7  const builder = ints.slice() <- let builder = ints.toListBui
-14:3 -> ../sorting.temper.md:89:7  builder.sort((a, b) => (a - <- builder.sort { a, b => a - b
-15:3 -> ../sorting.temper.md:90:7  console.log(listedJoin(/** @ <- console.log(ints.sorted { a,
-16:3 -> ../sorting.temper.md:91:7  console.log(listedJoin(build <- console.log(builder.join(",
-19:1 -> ../sorting.temper.md:102:5  /** @param {readonly number[ <- let mungeFloats(floats: List
-20:1 -> ../sorting.temper.md:102:5  function mungeFloats(floats) <- let mungeFloats(floats: List
-20:10 -> ../sorting.temper.md:102:9 (mungeFloats)  mungeFloats(floats) { <- mungeFloats(floats: List<Flo
-20:21 -> ../sorting.temper.md:102:5  (floats) { <- let mungeFloats(floats: List
-21:3 -> ../sorting.temper.md:103:7  /** @type {number[]} */ <- let builder = floats.toListB
-22:3 -> ../sorting.temper.md:103:7  const builder = floats.slice <- let builder = floats.toListB
-23:3 -> ../sorting.temper.md:104:7  /** <- let compareFloats(a: Float64
-28:3 -> ../sorting.temper.md:104:7  function compareFloats(a, b) <- let compareFloats(a: Float64
-28:12 -> ../sorting.temper.md:104:11 (compareFloats)  compareFloats(a, b) { <- compareFloats(a: Float64, b:
-28:25 -> ../sorting.temper.md:104:7  (a, b) { <- let compareFloats(a: Float64
-29:5 -> ../sorting.temper.md:105:9  return float64ToInt32Unsafe( <- (a - b).sign().toInt32Unsafe
-31:3 -> ../sorting.temper.md:107:7  builder.sort(compareFloats); <- builder.sort(compareFloats);
-32:3 -> ../sorting.temper.md:108:7  console.log(listedJoin(/** @ <- console.log(floats.sorted(co
-33:3 -> ../sorting.temper.md:109:7  console.log(listedJoin(build <- console.log(builder.join(",
-36:1 -> ../sorting.temper.md:10:5  class Entry extends type() { <- class Entry(
-36:7 -> ../sorting.temper.md:10:11 (Entry)  Entry extends type() { <- Entry(
-36:12 -> ../sorting.temper.md:10:5   extends type() { <- class Entry(
-37:3 -> ../sorting.temper.md:11:14  /** @type {number} */ <- id: Int,
-38:3 -> ../sorting.temper.md:11:14  #id; <- id: Int,
-39:3 -> ../sorting.temper.md:12:14  /** @type {number} */ <- group: Int,
-40:3 -> ../sorting.temper.md:12:14  #group; <- group: Int,
-50:3 -> ../sorting.temper.md:10:5  /** <- class Entry(
-54:3 -> ../sorting.temper.md:10:5  constructor(id, group) { <- class Entry(
-56:5 -> ../sorting.temper.md:11:14  this.#id = id; <- id: Int,
-57:5 -> ../sorting.temper.md:12:14  this.#group = group; <- group: Int,
-60:3 -> ../sorting.temper.md:11:14  /** @returns {number} */ <- id: Int,
-61:3 -> ../sorting.temper.md:11:14  get id() { <- id: Int,
-61:7 -> ../sorting.temper.md:11:14 (id)  id() { <- id: Int,
-65:3 -> ../sorting.temper.md:12:14  /** @returns {number} */ <- group: Int,
-66:3 -> ../sorting.temper.md:12:14  get group() { <- group: Int,
-66:7 -> ../sorting.temper.md:12:14 (group)  group() { <- group: Int,
-70:3 -> ../sorting.temper.md:14:14  /** @returns {string} */ <- toString(): String {
-71:3 -> ../sorting.temper.md:14:14 (toString)  toString() { <- toString(): String {
-72:5 -> ../sorting.temper.md:15:9  return `{ id: ${this.#id}, g <- "{ id: ${id}, group: ${group
-76:1 -> ../sorting.temper.md:25:5  /** @type {Entry[]} */ <- let entries = [
-77:1 -> ../sorting.temper.md:25:5  const entries = Object.freez <- let entries = [
-78:1 -> ../sorting.temper.md:39:5  /** @type {readonly Entry[]} <- let sortedEntries = entries.
-79:1 -> ../sorting.temper.md:39:5  const sortedEntries = listed <- let sortedEntries = entries.
-80:1 -> ../sorting.temper.md:40:5  console.log(listedJoin(/** @ <- console.log(sortedEntries.jo
-81:1 -> ../sorting.temper.md:59:5  console.log(listedGet(entrie <- console.log(entries[1].toStr
-82:1 -> ../sorting.temper.md:67:5  entries.sort((a, b) => (a.gr <- entries.sort { a, b => a.gro
-83:1 -> ../sorting.temper.md:68:5  console.log(listedJoin(entri <- console.log(entries.join("\n
-84:1 -> ../sorting.temper.md:93:5  mungeInts(Object.freeze([2, <- mungeInts([2, 1]);
-85:1 -> ../sorting.temper.md:111:5  mungeFloats(Object.freeze([3 <- mungeFloats([3.4, 1.2]);
+11:1 -> ../sorting.temper.md:87:5  /** @param {readonly number[ <- let mungeInts(ints: List<Int
+12:1 -> ../sorting.temper.md:87:5  function mungeInts(ints) { <- let mungeInts(ints: List<Int
+12:10 -> ../sorting.temper.md:87:9 (mungeInts)  mungeInts(ints) { <- mungeInts(ints: List<Int>):
+12:19 -> ../sorting.temper.md:87:5  (ints) { <- let mungeInts(ints: List<Int
+13:3 -> ../sorting.temper.md:88:7  /** @type {number[]} */ <- let builder = ints.toListBui
+14:3 -> ../sorting.temper.md:88:7  const builder = ints.slice() <- let builder = ints.toListBui
+15:3 -> ../sorting.temper.md:89:7  listBuilderSort(builder, (a, <- builder.sort { a, b => a - b
+16:3 -> ../sorting.temper.md:90:7  console.log(listedJoin(/** @ <- console.log(ints.sorted { a,
+17:3 -> ../sorting.temper.md:91:7  console.log(listedJoin(build <- console.log(builder.join(",
+20:1 -> ../sorting.temper.md:102:5  /** @param {readonly number[ <- let mungeFloats(floats: List
+21:1 -> ../sorting.temper.md:102:5  function mungeFloats(floats) <- let mungeFloats(floats: List
+21:10 -> ../sorting.temper.md:102:9 (mungeFloats)  mungeFloats(floats) { <- mungeFloats(floats: List<Flo
+21:21 -> ../sorting.temper.md:102:5  (floats) { <- let mungeFloats(floats: List
+22:3 -> ../sorting.temper.md:103:7  /** @type {number[]} */ <- let builder = floats.toListB
+23:3 -> ../sorting.temper.md:103:7  const builder = floats.slice <- let builder = floats.toListB
+24:3 -> ../sorting.temper.md:104:7  /** <- let compareFloats(a: Float64
+29:3 -> ../sorting.temper.md:104:7  function compareFloats(a, b) <- let compareFloats(a: Float64
+29:12 -> ../sorting.temper.md:104:11 (compareFloats)  compareFloats(a, b) { <- compareFloats(a: Float64, b:
+29:25 -> ../sorting.temper.md:104:7  (a, b) { <- let compareFloats(a: Float64
+30:5 -> ../sorting.temper.md:105:9  return float64ToInt32Unsafe( <- (a - b).sign().toInt32Unsafe
+32:3 -> ../sorting.temper.md:107:7  listBuilderSort(builder, com <- builder.sort(compareFloats);
+33:3 -> ../sorting.temper.md:108:7  console.log(listedJoin(/** @ <- console.log(floats.sorted(co
+34:3 -> ../sorting.temper.md:109:7  console.log(listedJoin(build <- console.log(builder.join(",
+37:1 -> ../sorting.temper.md:10:5  class Entry extends type() { <- class Entry(
+37:7 -> ../sorting.temper.md:10:11 (Entry)  Entry extends type() { <- Entry(
+37:12 -> ../sorting.temper.md:10:5   extends type() { <- class Entry(
+38:3 -> ../sorting.temper.md:11:14  /** @type {number} */ <- id: Int,
+39:3 -> ../sorting.temper.md:11:14  #id; <- id: Int,
+40:3 -> ../sorting.temper.md:12:14  /** @type {number} */ <- group: Int,
+41:3 -> ../sorting.temper.md:12:14  #group; <- group: Int,
+51:3 -> ../sorting.temper.md:10:5  /** <- class Entry(
+55:3 -> ../sorting.temper.md:10:5  constructor(id, group) { <- class Entry(
+57:5 -> ../sorting.temper.md:11:14  this.#id = id; <- id: Int,
+58:5 -> ../sorting.temper.md:12:14  this.#group = group; <- group: Int,
+61:3 -> ../sorting.temper.md:11:14  /** @returns {number} */ <- id: Int,
+62:3 -> ../sorting.temper.md:11:14  get id() { <- id: Int,
+62:7 -> ../sorting.temper.md:11:14 (id)  id() { <- id: Int,
+66:3 -> ../sorting.temper.md:12:14  /** @returns {number} */ <- group: Int,
+67:3 -> ../sorting.temper.md:12:14  get group() { <- group: Int,
+67:7 -> ../sorting.temper.md:12:14 (group)  group() { <- group: Int,
+71:3 -> ../sorting.temper.md:14:14  /** @returns {string} */ <- toString(): String {
+72:3 -> ../sorting.temper.md:14:14 (toString)  toString() { <- toString(): String {
+73:5 -> ../sorting.temper.md:15:9  return `{ id: ${this.#id}, g <- "{ id: ${id}, group: ${group
+77:1 -> ../sorting.temper.md:25:5  /** @type {Entry[]} */ <- let entries = [
+78:1 -> ../sorting.temper.md:25:5  const entries = Object.freez <- let entries = [
+79:1 -> ../sorting.temper.md:39:5  /** @type {readonly Entry[]} <- let sortedEntries = entries.
+80:1 -> ../sorting.temper.md:39:5  const sortedEntries = listed <- let sortedEntries = entries.
+81:1 -> ../sorting.temper.md:40:5  console.log(listedJoin(/** @ <- console.log(sortedEntries.jo
+82:1 -> ../sorting.temper.md:59:5  console.log(listedGet(entrie <- console.log(entries[1].toStr
+83:1 -> ../sorting.temper.md:67:5  listBuilderSort(entries, (a, <- entries.sort { a, b => a.gro
+84:1 -> ../sorting.temper.md:68:5  console.log(listedJoin(entri <- console.log(entries.join("\n
+85:1 -> ../sorting.temper.md:93:5  mungeInts(Object.freeze([2, <- mungeInts([2, 1]);
+86:1 -> ../sorting.temper.md:111:5  mungeFloats(Object.freeze([3 <- mungeFloats([3.4, 1.2]);
