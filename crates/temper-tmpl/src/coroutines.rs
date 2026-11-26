@@ -13,7 +13,7 @@
 
 use crate::analysis::walk;
 use crate::decls::{DeclKind, Facts};
-use crate::failures::failures_under;
+use crate::failures;
 use crate::ids::{DeclId, NodeId, Span, TypeId};
 use crate::nodes::Flags;
 use crate::schema::{Kind, Node};
@@ -214,7 +214,7 @@ fn walk_own(p: &Program, id: NodeId, visit: &mut impl FnMut(NodeId)) {
 
 /// Whether any of `stmts` may fail.
 fn may_fail(p: &Program, stmts: &[NodeId]) -> bool {
-    stmts.iter().any(|&s| !failures_under(p, s).is_empty())
+    stmts.iter().any(|&s| failures::may_fail(p, s))
 }
 
 /// A local's first value where it's declared before it's set: its type's

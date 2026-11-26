@@ -205,6 +205,10 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     // (`temper_tmpl::nevers`).
     let nevered = temper_tmpl::nevers::lower(p, &variant.profile);
     let p = nevered.as_ref().unwrap_or(p);
+    // Handlers whose bodies can't fail as their bodies alone
+    // (`temper_tmpl::failures`).
+    let alive = temper_tmpl::failures::drop_dead_handlers(p);
+    let p = alive.as_ref().unwrap_or(p);
     // `Switch` as `if`s (`temper_tmpl::switches`); none comes here yet.
     let chained = (!variant.profile.native.contains(Features::SWITCH))
         .then(|| temper_tmpl::switches::to_if_chains(p))

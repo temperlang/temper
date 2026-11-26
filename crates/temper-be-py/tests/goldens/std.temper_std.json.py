@@ -4,7 +4,6 @@ from collections.abc import (
     Sequence as _Sequence,
 )
 from temper_core import (
-    Bubble as _Bubble,
     Failure as _Failure,
     InvalidCodePoint as _InvalidCodePoint,
     MissingKey as _MissingKey,
@@ -984,96 +983,93 @@ def _parse_json_null(source_text: str, i: int, out: JsonProducer, /) -> int:
 
 
 def _parse_json_number(source_text: str, i: int, out: JsonProducer, /) -> int:
-    try:
-        is_negative = False
-        start_of_number = i
-        if len(source_text) > i and _string_get(source_text, i) == 45:
-            is_negative = True
-            i = _string_next(source_text, i)
-        digit0 = _string_get(source_text, i) if len(source_text) > i else -1
-        if digit0 < 48 or 57 < digit0:
-            error = 'JSON value' if not is_negative and digit0 != 46 else 'digit'
-            _expected_token_error(source_text, i, out, error)
-            return -1
+    is_negative = False
+    start_of_number = i
+    if len(source_text) > i and _string_get(source_text, i) == 45:
+        is_negative = True
         i = _string_next(source_text, i)
-        n_digits = 1
-        tentative_float64 = float(_int_sub(digit0, 48))
-        tentative_int64 = _int_sub(digit0, 48)
-        overflow_int64 = False
-        if 48 != digit0:
-            while len(source_text) > i:
-                possible_digit = _string_get(source_text, i)
-                if 48 <= possible_digit and possible_digit <= 57:
-                    i = _string_next(source_text, i)
-                    n_digits = _int_add(n_digits, 1)
-                    next_digit = _int_sub(possible_digit, 48)
-                    tentative_float64 = tentative_float64 * 10.0 + float(next_digit)
-                    old_int64 = tentative_int64
-                    tentative_int64 = _int64_add(_int64_mul(tentative_int64, 10), next_digit)
-                    if tentative_int64 < old_int64:
-                        if _int64_sub(_min_int64, old_int64) == _int64_negate(next_digit) and (is_negative and old_int64 > 0):
-                            pass
-                        else:
-                            overflow_int64 = True
-                else:
-                    break
-        n_digits_after_point = 0
-        if len(source_text) > i and 46 == _string_get(source_text, i):
-            i = _string_next(source_text, i)
-            after_point = i
-            while len(source_text) > i:
-                possible_digit = _string_get(source_text, i)
-                if 48 <= possible_digit and possible_digit <= 57:
-                    i = _string_next(source_text, i)
-                    n_digits = _int_add(n_digits, 1)
-                    n_digits_after_point = _int_add(n_digits_after_point, 1)
-                    tentative_float64 = tentative_float64 * 10.0 + float(_int_sub(possible_digit, 48))
-                else:
-                    break
-            if i == after_point:
-                _expected_token_error(source_text, i, out, 'digit')
-                return -1
-        n_exponent_digits = 0
-        if len(source_text) > i and 101 == _string_get(source_text, i) | 32:
-            i = _string_next(source_text, i)
-            if not len(source_text) > i:
-                _expected_token_error(source_text, i, out, 'sign or digit')
-                return -1
-            after_e = _string_get(source_text, i)
-            if after_e == 43 or after_e == 45:
+    digit0 = _string_get(source_text, i) if len(source_text) > i else -1
+    if digit0 < 48 or 57 < digit0:
+        error = 'JSON value' if not is_negative and digit0 != 46 else 'digit'
+        _expected_token_error(source_text, i, out, error)
+        return -1
+    i = _string_next(source_text, i)
+    n_digits = 1
+    tentative_float64 = float(_int_sub(digit0, 48))
+    tentative_int64 = _int_sub(digit0, 48)
+    overflow_int64 = False
+    if 48 != digit0:
+        while len(source_text) > i:
+            possible_digit = _string_get(source_text, i)
+            if 48 <= possible_digit and possible_digit <= 57:
                 i = _string_next(source_text, i)
-            while len(source_text) > i:
-                possible_digit = _string_get(source_text, i)
-                if 48 <= possible_digit and possible_digit <= 57:
-                    i = _string_next(source_text, i)
-                    n_exponent_digits = _int_add(n_exponent_digits, 1)
-                else:
-                    break
-            if n_exponent_digits == 0:
-                _expected_token_error(source_text, i, out, 'exponent digit')
-                return -1
-        after_exponent = i  # pyright: ignore[reportUnusedVariable]
-        if n_exponent_digits == 0 and (n_digits_after_point == 0 and not overflow_int64):
-            value = _int64_negate(tentative_int64) if is_negative else tentative_int64
-            if -2147483648 <= value and value <= 2147483647:
-                out.int32_value(_int64_to_int32_unsafe(value))
+                n_digits = _int_add(n_digits, 1)
+                next_digit = _int_sub(possible_digit, 48)
+                tentative_float64 = tentative_float64 * 10.0 + float(next_digit)
+                old_int64 = tentative_int64
+                tentative_int64 = _int64_add(_int64_mul(tentative_int64, 10), next_digit)
+                if tentative_int64 < old_int64:
+                    if _int64_sub(_min_int64, old_int64) == _int64_negate(next_digit) and (is_negative and old_int64 > 0):
+                        pass
+                    else:
+                        overflow_int64 = True
             else:
-                out.int64_value(value)
-            return i
-        numeric_token_string = source_text[start_of_number : i]
-        double_value = float('nan')
-        if n_exponent_digits != 0 or n_digits_after_point != 0:
-            try:
-                double_value = _string_to_float64(numeric_token_string)
-            except _ParseError:
-                double_value = float('nan')
-        if not _float_eq(double_value, -float('inf')) and (not _float_eq(double_value, float('inf')) and not _float_eq(double_value, float('nan'))):
-            out.float64_value(double_value)
+                break
+    n_digits_after_point = 0
+    if len(source_text) > i and 46 == _string_get(source_text, i):
+        i = _string_next(source_text, i)
+        after_point = i
+        while len(source_text) > i:
+            possible_digit = _string_get(source_text, i)
+            if 48 <= possible_digit and possible_digit <= 57:
+                i = _string_next(source_text, i)
+                n_digits = _int_add(n_digits, 1)
+                n_digits_after_point = _int_add(n_digits_after_point, 1)
+                tentative_float64 = tentative_float64 * 10.0 + float(_int_sub(possible_digit, 48))
+            else:
+                break
+        if i == after_point:
+            _expected_token_error(source_text, i, out, 'digit')
+            return -1
+    n_exponent_digits = 0
+    if len(source_text) > i and 101 == _string_get(source_text, i) | 32:
+        i = _string_next(source_text, i)
+        if not len(source_text) > i:
+            _expected_token_error(source_text, i, out, 'sign or digit')
+            return -1
+        after_e = _string_get(source_text, i)
+        if after_e == 43 or after_e == 45:
+            i = _string_next(source_text, i)
+        while len(source_text) > i:
+            possible_digit = _string_get(source_text, i)
+            if 48 <= possible_digit and possible_digit <= 57:
+                i = _string_next(source_text, i)
+                n_exponent_digits = _int_add(n_exponent_digits, 1)
+            else:
+                break
+        if n_exponent_digits == 0:
+            _expected_token_error(source_text, i, out, 'exponent digit')
+            return -1
+    after_exponent = i  # pyright: ignore[reportUnusedVariable]
+    if n_exponent_digits == 0 and (n_digits_after_point == 0 and not overflow_int64):
+        value = _int64_negate(tentative_int64) if is_negative else tentative_int64
+        if -2147483648 <= value and value <= 2147483647:
+            out.int32_value(_int64_to_int32_unsafe(value))
         else:
-            out.numeric_token_value(numeric_token_string)
+            out.int64_value(value)
         return i
-    except _Bubble as t_0:
-        raise BaseException('panic') from t_0
+    numeric_token_string = source_text[start_of_number : i]
+    double_value = float('nan')
+    if n_exponent_digits != 0 or n_digits_after_point != 0:
+        try:
+            double_value = _string_to_float64(numeric_token_string)
+        except _ParseError:
+            double_value = float('nan')
+    if not _float_eq(double_value, -float('inf')) and (not _float_eq(double_value, float('inf')) and not _float_eq(double_value, float('nan'))):
+        out.float64_value(double_value)
+    else:
+        out.numeric_token_value(numeric_token_string)
+    return i
 
 
 def _parse_json_value(source_text: str, i: int, out: JsonProducer, /) -> int:

@@ -1998,8 +1998,11 @@ impl<'a> Translator<'a> {
         let p = self.p;
         let mut out = Vec::new();
         match p.nodes.get(id) {
-            // A handler of declared failures, as a branch on the result.
-            Node::OrElse { body, .. } | Node::Catch { body, .. } if self.handles_declared(body) => {
+            // A `catch`, and an `orelse` of declared failures, as a branch
+            // on the result. Every `catch` goes there, which says not yet
+            // where it can't, as `expr` would only deliver it here again.
+            Node::Catch { .. } => out.extend(self.handled(id, sink)?),
+            Node::OrElse { body, .. } if self.handles_declared(body) => {
                 out.extend(self.handled(id, sink)?);
             }
             Node::Throw { value, cause, .. } => out.extend(self.thrown(value, cause)?),

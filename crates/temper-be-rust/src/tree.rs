@@ -622,6 +622,11 @@ fn item_at(item: &Item, indent: usize) -> String {
             variants,
         } => {
             let mut out = attrs_text(attrs, &pad);
+            // No variants, as a failure root nothing implements: `{}`.
+            if variants.is_empty() {
+                out.push_str(&format!("{pad}{}enum {name} {{}}\n", vis_text(vis)));
+                return out;
+            }
             out.push_str(&format!("{pad}{}enum {name} {{\n", vis_text(vis)));
             for (variant, ty) in variants {
                 out.push_str(&format!("{pad}    {variant}({ty}),\n"));

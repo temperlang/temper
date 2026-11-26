@@ -302,8 +302,9 @@ pub fn without_net(cases: &mut [Case]) {
 /// ([`HOST_CODE`]); and `failures-interop` them as each backend's host
 /// code sees them, each backend running host code of its own beside it
 /// (its crate's `tests/host/`), what's particular to one language
-/// included.
-pub const PROGRAMS: [&str; 35] = [
+/// included; and `dead-handlers`, tmpl of a `catch` and an `orelse`
+/// whose bodies can't fail, which run their bodies alone.
+pub const PROGRAMS: [&str; 36] = [
     "classes",
     "nullables",
     "generics",
@@ -339,6 +340,7 @@ pub const PROGRAMS: [&str; 35] = [
     "failures",
     "host-failures",
     "failures-interop",
+    "dead-handlers.tmpl",
 ];
 
 /// The shared programs whose run fails, after logging what's expected

@@ -191,6 +191,10 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     // (`temper_tmpl::nevers`).
     let nevered = temper_tmpl::nevers::lower(p, &variant.profile);
     let p = nevered.as_ref().unwrap_or(p);
+    // Handlers whose bodies can't fail as their bodies alone
+    // (`temper_tmpl::failures`).
+    let alive = temper_tmpl::failures::drop_dead_handlers(p);
+    let p = alive.as_ref().unwrap_or(p);
     // Operands that run before an `orelse` or a block's value, which Lua
     // writes as statements before, held first (`temper_tmpl::spill`).
     // `Switch` as `if`s, which Lua has no other way to write.

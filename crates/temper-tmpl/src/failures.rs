@@ -145,6 +145,39 @@ pub fn failures_under(p: &Program, id: NodeId) -> Vec<(NodeId, TypeId)> {
     found
 }
 
+/// Whether anything may fail under `id` and pass out of it
+/// ([`failures_under`]).
+pub fn may_fail(p: &Program, id: NodeId) -> bool {
+    !failures_under(p, id).is_empty()
+}
+
+/// The program with each `orelse` and `catch` whose body can't fail
+/// ([`may_fail`]) as that body alone, its fallback dead, as `to_tmpl`
+/// writes one, so no backend sees one; `None` where there's none. A
+/// handler's body has its type, but in a `Void` one, whose place drops
+/// any value.
+pub fn drop_dead_handlers(p: &Program) -> Option<Program> {
+    let mut dead = Vec::new();
+    for root in p.modules.iter().flat_map(|m| m.roots()) {
+        walk(p, root, &mut |n| match p.nodes.get(n) {
+            Node::OrElse { body, .. } | Node::Catch { body, .. } if !may_fail(p, body) => {
+                dead.push((n, body));
+            }
+            _ => {}
+        });
+    }
+    if dead.is_empty() {
+        return None;
+    }
+    let mut b = crate::Builder::from_program(p.clone());
+    // Inner ones first, so an outer one copies its body as it ends up.
+    for &(handler, body) in dead.iter().rev() {
+        b.replace_with(handler, body);
+    }
+    b.renumber();
+    Some(b.finish())
+}
+
 fn find(p: &Program, id: NodeId, found: &mut Vec<(NodeId, TypeId)>) {
     if let Some(fail) = node_failure(p, id) {
         found.push((id, fail));

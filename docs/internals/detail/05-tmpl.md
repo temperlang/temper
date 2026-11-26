@@ -42,7 +42,8 @@ flowchart LR
   start --> validate["validate (Profile::full)"]
   validate --> be["A backend's translate"]
   subgraph tmpl["Called by each backend, by its profile"]
-    errors["errors::settle"] --> coroutines["coroutines::lower"]
+    errors["errors::settle"] --> dead["drop_dead_handlers"]
+    dead --> coroutines["coroutines::lower"]
     coroutines --> cells["copy_captured_params"]
     cells --> switches["switches"]
     switches --> spill["spill"]
@@ -381,6 +382,7 @@ already have errors).
 | Lowering | What it does | Why it's shared | Called by |
 |---|---|---|---|
 | [`errors::settle`](../../../crates/temper-tmpl/src/errors.rs) | Type-only errors run as written or fail there, by profile | One rule for "what runs after an error" | all seven |
+| [`drop_dead_handlers`](../../../crates/temper-tmpl/src/failures.rs) | An `orelse` or `catch` whose body can't fail is its body alone, as `to_tmpl` writes one | No translator handles a dead handler | all seven |
 | [`coroutines::lower`](../../../crates/temper-tmpl/src/coroutines.rs) | Generator literals as state machines: a factory whose step function is a `Switch` on the state, folded so no unreachable states remain | Kotlin's `CoroutineStrategy`, done once | C++, Java, Rust |
 | [`copy_captured_params`](../../../crates/temper-tmpl/src/cells.rs) | A parameter a closure captures and reassigns becomes a local, so it can be a cell | Targets whose closures copy captures | C++, Java, Rust |
 | [`to_if_chains`](../../../crates/temper-tmpl/src/switches.rs) and [`to_if_chains_where`](../../../crates/temper-tmpl/src/switches.rs) | A `Switch` as `if`s, its scrutinee held once | Targets without `switch`, or Java's without `long` | C#, JS, Lua, Python; Java for `Int64` |
@@ -454,7 +456,7 @@ and the files for classes (`to_tmpl_classes.rs`), function values
 | Round trip | A property test: random valid programs validate, write, read back equal, and write the same again (seed and rounds by environment) | [`round_trip.rs`](../../../crates/temper-tmpl/tests/round_trip.rs) |
 | Model | The tables, spans, and the validator on programs text can't express | [`model.rs`](../../../crates/temper-tmpl/tests/model.rs) |
 | Core fixture | `core.tmpl` matches `core.temper`: names, kinds, parameters, results, bubbling, connected marks | [`core_fixture.rs`](../../../crates/temper-tmpl/tests/core_fixture.rs) |
-| Lowerings | Coroutines' state machines, switches, spill, each result validated | [`coroutines.rs`](../../../crates/temper-tmpl/tests/coroutines.rs), [`switches.rs`](../../../crates/temper-tmpl/tests/switches.rs), [`spill.rs`](../../../crates/temper-tmpl/tests/spill.rs) |
+| Lowerings | Coroutines' state machines, switches, spill, dead handlers, each result validated | [`coroutines.rs`](../../../crates/temper-tmpl/tests/coroutines.rs), [`switches.rs`](../../../crates/temper-tmpl/tests/switches.rs), [`spill.rs`](../../../crates/temper-tmpl/tests/spill.rs), [`dead_handlers.rs`](../../../crates/temper-tmpl/tests/dead_handlers.rs) |
 | Naming, qnames, host | Kotlin's cases, sharing, prefixes, escapes, suffixes only on clashes; Kotlin's qname examples; Kotlin's connected choice | [`naming.rs`](../../../crates/temper-tmpl/tests/naming.rs), [`qname.rs`](../../../crates/temper-tmpl/tests/qname.rs), [`host.rs`](../../../crates/temper-tmpl/tests/host.rs) |
 | Analyses | Which operands' order shows, and temporaries' names | [`analysis.rs`](../../../crates/temper-tmpl/tests/analysis.rs) |
 | `to_tmpl` goldens | Covered functional tests translate, validate, round-trip with spans, and match goldens in `tests/to_tmpl/`; the state-machine goldens too | [`subset_a_goldens`](../../../crates/temper-frontend/tests/to_tmpl.rs) |

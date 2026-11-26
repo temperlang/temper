@@ -1,0 +1,44 @@
+// Handlers whose bodies can't fail, which the frontend doesn't make, as
+// it keeps such a body alone, but a lowering of tmpl may: a `catch` and
+// an `orelse`, as values and as statements. Each runs its body alone.
+// Each line after `log:` is a line the program logs.
+//
+// log: 2
+// log: 3
+// log: caught
+// log: or else
+
+tmpl 1 model 1 library `dead-handlers` 0.0.0
+
+uses `temper-core`#1 0.1.0 {
+  interface Error#2 {}
+  interface Console#3 {
+    connected method log#4(message: String): Void;
+  }
+  class Int32#5 {
+    connected method toString#6(radix?: Int32): String;
+  }
+  connected fn getConsole#7(name?: String): Console#3;
+}
+
+module `dead-handlers`#0 {
+  let ~console#8: Console#3;
+
+  interface DeadError#9 extends Error#2 {}
+
+  fn caught#10(n#11: Int32): Int32 {
+    return (catch(%Int32.add(n#11, 1), e#12: DeadError#9, 0)): Int32;
+  }
+
+  fn orElse#13(n#14: Int32): Int32 {
+    return (orelse(%Int32.add(n#14, 2), 0)): Int32;
+  }
+
+  init {
+    init ~console#8 = getConsole#7(omitted);
+    ~console#8.log#4(caught#10(1).toString#6(omitted));
+    ~console#8.log#4(orElse#13(1).toString#6(omitted));
+    (catch(~console#8.log#4("caught"), e#15: DeadError#9, ~console#8.log#4("fallback"))): Void;
+    (orelse(~console#8.log#4("or else"), ~console#8.log#4("fallback"))): Void;
+  }
+}
