@@ -3968,6 +3968,85 @@ error 468..486: Wrong number of type arguments.  Expected 1
 error 490..510: Wrong number of type arguments.  Expected 1
 error 514..535: Wrong number of type arguments.  Expected 1
 
+=== generic types written with the wrong number of type arguments
+// Wherever a type is written, for core's types and the library's alike,
+// as each declares its type parameters; the type is unknown, so nothing
+// else is reported. Not the type `new` makes, which its call reports.
+class Box<T>(public item: T) {}
+class Plain {}
+interface Two<A, B> {}
+interface Shelf<T> {}
+class Sub extends Shelf<Int, Int> {}
+let Alias = Two<Int>;
+let a: Box<Int, Int>? = null;
+let b: List<Int, Int> = [];
+let c: Map<Int>? = null;
+let d: Promise<Int, String>? = null;
+let e: Int<String> = 1;
+let f: Plain<Int>? = null;
+let g: List<Two<Int>> = [];
+let h: Never<Int, Int>? = null;
+let i(x: AnyValue): Boolean { x is Box<Int, Int> }
+let j(x: AnyValue): Listed<Int, Int> throws Bubble { x as Listed<Int, Int> }
+let k<T extends Two<T>>(x: fn (Mapped<T>): T): Void {}
+let l: Map<String, List<Int>> = new Map([]);
+let m = new Box<Int, Int>(1);
+--- settled
+(Block
+  (Class ^Box:0 (TypeParam ^T:19) (Param ^item:21 T:19))
+  (Class ^Plain:1)
+  (Interface ^Two:2 (TypeParam ^A:23) (TypeParam ^B:24))
+  (Interface ^Shelf:3 (TypeParam ^T:26))
+  (Class ^Sub:4 (Call <> Shelf:3 Int Int))
+  (Let ^Alias:5 (Call <> Two:2 Int))
+  (Let ^a:6 (Call ? (Call <> Box:0 Int Int)) null)
+  (Let ^b:7 (Call <> List Int Int) (Call list))
+  (Let ^c:8 (Call ? (Call <> Map Int)) null)
+  (Let ^d:9 (Call ? (Call <> Promise Int String)) null)
+  (Let ^e:10 (Call <> Int String) 1)
+  (Let ^f:11 (Call ? (Call <> Plain:1 Int)) null)
+  (Let ^g:12 (Call <> List (Call <> Two:2 Int)) (Call list))
+  (Let ^h:13 (Call ? (Call <> Never Int Int)) null)
+  (Let
+    ^i:14
+    (Fn
+      (Let ^x:29 AnyValue)
+      Boolean
+      (Block (Call is x:29 (Call <> Box:0 Int Int)))))
+  (Let
+    ^j:15
+    (Fn
+      (Let ^x:30 AnyValue)
+      (Call throws (Call <> Listed Int Int) Bubble)
+      (Block (Call as x:30 (Call <> Listed Int Int)))))
+  (Let
+    ^k:16
+    (Fn
+      (TypeParam ^T:31 (Call <> Two:2 T:31))
+      (Let ^x:32 (Call FnType (Call <> Mapped T:31) T:31))
+      Void
+      (Block)))
+  (Let ^l:17 (Call <> Map String (Call <> List Int)) (Call new Map (Call list)))
+  (Let ^m:18 (Call new (Call <> Box:0 Int Int) 1))
+  #void)
+error 327..342: Wrong number of type arguments.  Expected 1
+error 358..366: Wrong number of type arguments.  Expected 2
+error 375..388: Wrong number of type arguments.  Expected 1
+error 405..419: Wrong number of type arguments.  Expected 1
+error 433..441: Wrong number of type arguments.  Expected 2
+error 458..478: Wrong number of type arguments.  Expected 1
+error 495..506: Wrong number of type arguments.  Expected 0
+error 519..529: Wrong number of type arguments.  Expected 0
+error 551..559: Wrong number of type arguments.  Expected 2
+error 574..589: Wrong number of type arguments.  Expected 1
+error 634..647: Wrong number of type arguments.  Expected 1
+error 670..686: Wrong number of type arguments.  Expected 1
+error 708..724: Wrong number of type arguments.  Expected 1
+error 743..749: Wrong number of type arguments.  Expected 2
+error 758..767: Wrong number of type arguments.  Expected 2
+error 835..855: Wrong number of type arguments.  Expected 1
+Failed: Wrong number of type arguments.  Expected 2
+
 === a generic class's constructor arguments checked against its type arguments
 // From the type arguments written, or the type wanted, for a call and
 // for an object literal; for a class with a constructor, or with

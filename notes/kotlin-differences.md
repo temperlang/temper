@@ -278,11 +278,14 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   List<String>)` (for a constructor, Kotlin reports "Expected subtype
   of List<String>, but got List<AnyValue>"), and a generic call's
   number of type arguments, `apply<Int, Int>(n, f)` for `apply<T, R,
-  E>`, which Kotlin ignores. Tempest reports the elements as Kotlin
-  does a declaration's, and "Wrong number of type arguments.  Expected
-  3". Kotlin should report them.
+  E>`, which Kotlin ignores, as it does a written type's, `Map<Int>`,
+  `List<Int, Int>`, or `Box<Int, Int>` for `class Box<T>` (except in
+  `is` and `as`, "Expected value of type Type"). Tempest reports the
+  elements as Kotlin does a declaration's, and "Wrong number of type
+  arguments.  Expected 3". Kotlin should report them.
   Test: settle/types.cases, "list literal arguments checked against the
-  type wanted" and "generic calls with the wrong number of type
+  type wanted", "generic calls with the wrong number of type
+  arguments", and "generic types written with the wrong number of type
   arguments".
 
 - **A generic call binding a bare `T` to a value and null,** as

@@ -248,9 +248,13 @@ milestone 4's generics slice; status in [milestone-4.md](history/milestone-4.md)
 
 - **Written types:** `List<Int>`, `Map<String, Int>` and `Box<String>`
   for a user's `class Box<T>` are generic types given arguments, shown
-  in messages as written, `List<Int32>`. A class given the wrong number
-  of arguments, a final builtin type given any, and `Never<T>` are
-  unknown for now, as is a bare generic class, `Box`.
+  in messages as written, `List<Int32>`. A type given the wrong number
+  of arguments, as `Map<Int>`, `Int<String>`, or `Box<Int, Int>`, is
+  unknown, and "Wrong number of type arguments.  Expected 2" wherever
+  it's written (annotations, type arguments, supertypes, bounds, `is`
+  and `as`, aliases; for `new`, at the call, "Generic calls", below),
+  as many as core or the library declares, which Kotlin misses
+  (2026-11-26). A bare generic class, `Box`, is unknown for now.
 - **Type parameters:** `T`, in a function's or class's body, is a type
   of its own, a subtype of its bound only: `AnyValue` if it has none, or
   the type it `extends`. So a `T` is an `AnyValue` and a `T?`, but not an

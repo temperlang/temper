@@ -454,7 +454,10 @@ Code that relied on these going unchecked is now an error:
   where Temper 0.6.0 left alone those marked `@out` or `@in`.
 - A generic call with the wrong number of type arguments, as
   `apply<Int, Int>(n, f)` for `apply<T, R, E>`, is "Wrong number of
-  type arguments.  Expected 3".
+  type arguments.  Expected 3", as is a type written with the wrong
+  number, anywhere: `Map<Int>`, `Promise<Int, String>`, or `Box<Int,
+  Int>` for `class Box<T>`. To migrate, give as many as the type
+  declares.
 - A generic call's arguments are checked against the type arguments the
   type wanted gives: `let b: Box<List<String>> = new Box(["a", 3])`
   reports the `3`.

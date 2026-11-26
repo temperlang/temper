@@ -871,9 +871,12 @@ impl Settle {
     }
 
     /// A generic type given arguments, as `List<Int>`, `Never<Int>`
-    /// ([`Types::apply_builtin`]), or `Box<String>`; not a class given the
-    /// wrong number of them.
+    /// ([`Types::apply_builtin`]), or `Box<String>`; not a type given the
+    /// wrong number of them ([`Settle::check_type_args`]).
     fn applied_type(&mut self, base: NodeId, args: &[NodeId]) -> TypeId {
+        if self.type_arity(base) != Some(args.len()) {
+            return UNKNOWN;
+        }
         let Some(b) = self.scopes.resolved(base) else {
             return UNKNOWN;
         };
@@ -883,21 +886,30 @@ impl Settle {
                 let args = args.iter().map(|&a| self.eval_type(a)).collect();
                 return self.typing.types.apply_builtin(base, args);
             }
-            _ => {
-                let Some(class) = self.type_decl(b) else {
-                    return UNKNOWN;
-                };
-                if core::type_params(&self.lib.tree, class).len() != args.len() {
-                    return UNKNOWN;
-                }
-                match self.class_symbol(class) {
-                    Some(symbol) => self.typing.types.intern(TypeData::Class(symbol)),
-                    None => return UNKNOWN,
-                }
-            }
+            _ => match self.type_decl(b).and_then(|class| self.class_symbol(class)) {
+                Some(symbol) => self.typing.types.intern(TypeData::Class(symbol)),
+                None => return UNKNOWN,
+            },
         };
         let args = args.iter().map(|&a| self.eval_type(a)).collect();
         self.typing.types.intern(TypeData::Applied { base, args })
+    }
+
+    /// How many type parameters the type a type expression names declares,
+    /// as 2 for `Map` or for `Pair` in `class Pair<A, B>`, if it names one
+    /// core or a library declares.
+    fn type_arity(&mut self, base: NodeId) -> Option<usize> {
+        let b = self.scopes.resolved(base)?;
+        match self.scopes.symbol(b).kind {
+            SymbolKind::Builtin(Builtin::Type(i)) => {
+                // By what it stands for, as `Int32` for `Int`.
+                let types = &mut self.typing.types;
+                let t = types.builtin(i);
+                let name = (types.builtin_name(t)).unwrap_or(crate::builtins::TYPES[i as usize]);
+                core_members::core_type_arity(name)
+            }
+            _ => (self.type_decl(b)).map(|class| core::type_params(&self.lib.tree, class).len()),
+        }
     }
 
     // Checking.
@@ -1254,6 +1266,7 @@ impl Settle {
             }
             (NodeKind::Call, ..) => {
                 self.check_call(node);
+                self.check_type_args(node);
                 self.record_trailing_block(node);
                 let args = self
                     .lib
@@ -1691,6 +1704,38 @@ impl Settle {
         if self.typing.types.builtin(i) == NEVER && !applied {
             let span = self.lib.tree.span(node);
             self.lib.report(Level::Error, Message::BareNever, span);
+        }
+    }
+
+    /// Reports a type given the wrong number of type arguments, as `Map<Int>`
+    /// or `Box<Int, Int>` for `class Box<T>`, "Wrong number of type
+    /// arguments.  Expected 2", wherever it's written: an annotation, a type
+    /// argument, a supertype, `is` or `as`, an alias. Kotlin Temper misses
+    /// these. Not the type `new` makes, which its call reports as any
+    /// generic call's type arguments ([`Settle::check_generic_call`]).
+    fn check_type_args(&mut self, node: NodeId) {
+        let tree = &self.lib.tree;
+        let [angle, base, ref args @ ..] = *tree.children(node) else {
+            return;
+        };
+        if self.scopes.resolved_builtin(angle) != Some(Builtin::Function(Function::Angle)) {
+            return;
+        }
+        let made = (self.typing.parent(node)).is_some_and(|p| {
+            let children = tree.children(p);
+            tree.kind(p) == NodeKind::Call
+                && children.get(1) == Some(&node)
+                && self.scopes.resolved_builtin(children[0])
+                    == Some(Builtin::Function(Function::New))
+        });
+        if made {
+            return;
+        }
+        let count = args.len();
+        if let Some(n) = self.type_arity(base).filter(|&n| n != count) {
+            let span = self.lib.tree.span(node);
+            let message = Message::TypeArityMismatch(n);
+            self.lib.report(Level::Error, message, span);
         }
     }
 
