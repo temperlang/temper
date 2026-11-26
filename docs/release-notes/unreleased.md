@@ -19,6 +19,7 @@
 - [Fixes for code Temper 0.6.0 accepted](#fixes-for-code-temper-060-accepted)
 - [Classes' `==`](#classes-)
 - [Lua: `Int64` on LuaJIT and Lua 5.1](#lua-int64-on-luajit-and-lua-51)
+- [Lua: faster sorting](#lua-faster-sorting)
 - [C++: `Float64.toString` as on the JVM](#c-float64tostring-as-on-the-jvm)
 - [`temper` and its `TEMPER_*` settings](#temper-and-its-temper_-settings)
 - [Fixes on Windows](#fixes-on-windows)
@@ -444,6 +445,15 @@ there, as on Lua 5.3 and later, instead of giving NaN or an infinity;
 works, and base 36 writes `x`. Each `Int64` constant is made once, as
 its module loads, so a loop's `Int64` literals don't call the runtime
 each time round.
+
+## Lua: faster sorting
+
+`ListBuilder.sort` and `sorted` use a merge sort of the runtime's own,
+in place of the generated powersort: still stable, about 3 to 12 times as
+fast on Lua 5.4, and up to twice as fast on LuaJIT, with sorted and
+reversed input much faster still. A comparison that fails now leaves
+the list as it was, instead of partly sorted. The runtime no longer has
+a `temper-core/powersort` module.
 
 ## C++: `Float64.toString` as on the JVM
 

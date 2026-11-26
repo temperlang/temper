@@ -1241,13 +1241,100 @@ function temper.listbuilder_set(list, index, value)
     list[index + 1] = value
 end
 
--- Defer loading powersort, because it also loads temper-core.
-local powersort
-function temper.listbuilder_sort(list, compare)
-    if powersort == nil then
-        powersort = require("temper-core/powersort").powersort
+-- `ListBuilder.sort`, and so `sorted`: a stable merge sort. Not
+-- `table.sort`, which isn't stable, may raise "invalid order function"
+-- for a comparison that isn't consistent, and on LuaJIT calls back from C
+-- for every comparison, which is slow: in a benchmark of 100 to 100,000
+-- items, a stable `table.sort` over indices took 2.6 to 200 times as long
+-- as this on LuaJIT (1.1 to 65 on Lua 5.4), and the earlier, generated
+-- powersort 1 to 13 times (2.7 to 12).
+--
+-- Sorted input takes one pass, and strictly descending input is reversed
+-- (no two equal, so that's stable); other input is sorted in a copy,
+-- written back once every comparison has succeeded, so a comparison that
+-- fails leaves the list as it was.
+do
+    -- Ranges this short get insertion sort.
+    local LEAF = 12
+
+    -- Sorts `items[lo, hi)`, through `buf` for merging.
+    local function merge_sort(items, buf, compare, lo, hi)
+        if hi - lo <= LEAF then
+            for i = lo + 1, hi - 1 do
+                local v = items[i]
+                local j = i
+                while j > lo and compare(v, items[j - 1]) < 0 do
+                    items[j] = items[j - 1]
+                    j = j - 1
+                end
+                items[j] = v
+            end
+            return
+        end
+        local mid = math_floor((lo + hi) / 2)
+        merge_sort(items, buf, compare, lo, mid)
+        merge_sort(items, buf, compare, mid, hi)
+        if compare(items[mid - 1], items[mid]) <= 0 then
+            return -- Already in order.
+        end
+        -- Merge the left half, from `buf`, with the right, in place.
+        local n = mid - lo
+        for i = 1, n do
+            buf[i] = items[lo + i - 1]
+        end
+        local i, j, k = 1, mid, lo
+        while i <= n and j < hi do
+            local left, right = buf[i], items[j]
+            if compare(right, left) < 0 then
+                items[k] = right
+                j = j + 1
+            else -- Ties take the left, for stability.
+                items[k] = left
+                i = i + 1
+            end
+            k = k + 1
+        end
+        -- What's left of the right half is already in place.
+        while i <= n do
+            items[k] = buf[i]
+            i = i + 1
+            k = k + 1
+        end
     end
-    powersort(list, compare)
+
+    function temper.listbuilder_sort(list, compare)
+        local n = #list
+        if n < 2 then
+            return
+        end
+        local i = 3
+        if compare(list[1], list[2]) <= 0 then
+            while i <= n and compare(list[i - 1], list[i]) <= 0 do
+                i = i + 1
+            end
+            if i > n then
+                return
+            end
+        else
+            while i <= n and compare(list[i - 1], list[i]) > 0 do
+                i = i + 1
+            end
+            if i > n then
+                for j = 1, math_floor(n / 2) do
+                    list[j], list[n + 1 - j] = list[n + 1 - j], list[j]
+                end
+                return
+            end
+        end
+        local copy = {}
+        for j = 1, n do
+            copy[j] = list[j]
+        end
+        merge_sort(copy, {}, compare, 1, n + 1)
+        for j = 1, n do
+            list[j] = copy[j]
+        end
+    end
 end
 
 function temper.import(mod, ent)

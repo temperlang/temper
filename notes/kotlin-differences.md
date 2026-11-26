@@ -2157,7 +2157,8 @@ copied Kotlin's:
   (`temper-core`, without its dotfiles and own tests, Lua's rockspec named
   for the version), checked against Kotlin's for the functional tests
   (`crates/tempest/tests/kotlin_layout.rs`). Intended differences: source
-  maps only for JS's modules so far; no zip for LuaRocks; a
+  maps only for JS's modules so far; no zip for LuaRocks; no
+  `powersort/` in Lua's runtime, whose `init.lua` merge sorts (2026-11-26); a
   `CMakeLists.txt` per C++ library (decided 2026-10-30); a library's
   directory emptied before it's written, so no stale file survives (the
   bug above); and no `data` backend, so the default backends are

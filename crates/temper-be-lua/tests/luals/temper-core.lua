@@ -488,7 +488,8 @@ function temper.listed_reduce(list, accumulate) end
 ---@return O
 function temper.listed_reducefrom(list, initial, accumulate) end
 
----Sorts a list builder in place, by a comparator, stably.
+---Sorts a list builder in place, by a comparator, stably; a comparison
+---that fails leaves it as it was.
 ---@generic T
 ---@param list T[]
 ---@param compare fun(arg0: T, arg1: T): integer
