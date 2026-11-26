@@ -186,6 +186,10 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);
     let p = settled.as_ref().unwrap_or(p);
+    // Failure parameters as their bounds in code: exceptions are
+    // unchecked (`temper_tmpl::failures::erase_params`).
+    let erased = temper_tmpl::failures::erase_params(p).map_err(|what| NotYet { what })?;
+    let p = erased.as_ref().unwrap_or(p);
     // `Never<T>` as `T`, but where the profile keeps it
     // (`temper_tmpl::nevers`).
     let nevered = temper_tmpl::nevers::lower(p, &variant.profile);

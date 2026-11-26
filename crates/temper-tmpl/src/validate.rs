@@ -16,11 +16,12 @@
 //!   its method's owner's, and `Omitted` only for optional parameters;
 //!   **T4** (generics, subset B) a generic call's type arguments, as
 //!   many as its callee has type parameters (a constructor's class's),
-//!   each within its type parameter's bounds (but a builtin type's),
-//!   with each argument's and the result's type put in;
+//!   each within its type parameter's bounds (but a builtin type's,
+//!   unless it's a failure parameter's, and `Never<T>` as `T`), with
+//!   each argument's and the result's type put in;
 //!   **T5** types well formed, a result type (`T throws Bubble`) only as
 //!   a signature's result, failing with `Bubble`, a failure type, or a
-//!   type parameter, `Never<T>` only as a result or a value's
+//!   failure parameter (a type parameter bound by one), `Never<T>` only as a result or a value's
 //!   type, and only where the profile has
 //!   [`Features::NEVER`](crate::Features::NEVER). `Error` nodes are
 //!   exempt from T2 and T3, and a `Never<T>` child fits where its `T`
@@ -804,9 +805,7 @@ impl Validator {
             }
             // `Bubble`, a failure type, or a failure parameter.
             let failure = |f: TypeId| {
-                f == TypeId::BUBBLE
-                    || crate::failures::is_failure_type(p, self.root, f)
-                    || matches!(p.types.get(f), TypeData::TypeParam { .. })
+                f == TypeId::BUBBLE || crate::failures::is_failure_type(p, self.root, f)
             };
             if let Some(fail) = sig.fail.filter(|&f| !failure(f)) {
                 let message = format!(
@@ -2576,7 +2575,10 @@ impl Validator {
         }
         // Each within its type parameter's bounds, the others put in; a
         // builtin type's only as far as tmpl knows its supertypes, so not
-        // checked (`String` for `T extends MapKey`).
+        // checked (`String` for `T extends MapKey`), but a failure
+        // parameter's (RFC 164), which no builtin type fits, not even
+        // `Bubble`; `Never<T>` as the `T` it stands for, as
+        // `Never<Error>` for a failure parameter that can't fail.
         let generic = match p.decls.contains(generic).then(|| p.decls.get(generic).kind) {
             Some(DeclKind::Constructor) => p.decls.get(generic).owner,
             Some(_) => generic,
@@ -2587,14 +2589,16 @@ impl Validator {
             return args;
         }
         for (&tp, &a) in p.decls.type_params(generic).iter().zip(&args) {
-            if matches!(p.types.get(a), TypeData::Scalar(_)) {
+            let failure = crate::failures::is_failure_param(p, tp);
+            if matches!(p.types.get(a), TypeData::Scalar(_)) && !failure {
                 continue;
             }
+            let fits = p.types.fallback(a);
             for &bound in p.decls.supers(tp) {
                 let Some(bound) = p.types.substituted(bound, &formals, &args) else {
                     continue;
                 };
-                if !crate::analysis::is_subtype(p, a, bound) {
+                if !crate::analysis::is_subtype(p, fits, bound) {
                     let message = format!(
                         "type argument {} isn't within {}'s bound {}",
                         p.show_type(a),
@@ -2644,7 +2648,11 @@ impl Validator {
         (marked, args): (bool, Kids),
         (from, to): &(Vec<TypeId>, Vec<TypeId>),
     ) {
-        let (params, fail) = (sig.params, sig.fail);
+        let params = sig.params;
+        // A failure parameter given `Never<…>` can't fail.
+        let fail = (sig.fail)
+            .map(|f| p.types.substituted(f, from, to).unwrap_or(f))
+            .filter(|&f| !p.types.is_never(f));
         let bubbles = fail.is_some();
         let args = p.nodes.list(args);
         if args.len() != params.len() {
@@ -2674,7 +2682,6 @@ impl Validator {
             };
             self.node_problem(Rule::F3, id, message);
         } else if let Some(fail) = fail {
-            let fail = p.types.substituted(fail, from, to).unwrap_or(fail);
             let said = match fail {
                 TypeId::BUBBLE => format!("the call of {what} may bubble"),
                 _ => format!("the call of {what} may fail with {}", p.show_type(fail)),

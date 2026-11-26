@@ -4,30 +4,31 @@ uses `temper-core`#6 0.0.0-alpha.0.0 {
   class ListBuilder#7<T#8> extends Listed#9<T#8> {
     connected constructor constructor#35(): ListBuilder#7<T#8>;
     connected method add#36(newValue: T#8, at?: Int32): Void;
-    connected get length#120(): Int32;
+    connected get length#124(): Int32;
   }
   interface Listed#9<T#10> {
     connected get length#40(): Int32;
     connected method get#43(index: Int32): T#10;
-    connected method join#44(separator: String, stringify: fn (T#10): String): String;
-    connected method map#53<O#54>(transform: fn (T#10): O#54): List#26<O#54>;
-    connected method filter#81(predicate: fn (T#10): Boolean): List#26<T#10>;
+    connected method join#44<E#45 extends Error#46>(separator: String, stringify: fn (T#10): String throws E#45): String throws E#45;
+    connected method map#55<O#56, E#57 extends Error#46>(transform: fn (T#10): O#56 throws E#57): List#26<O#56> throws E#57;
+    connected method filter#84<E#85 extends Error#46>(predicate: fn (T#10): Boolean throws E#85): List#26<T#10> throws E#85;
   }
   class List#26<T#27> extends Listed#9<T#27> {
-    connected get length#84(): Int32;
-    connected method get#96(index: Int32): T#27;
+    connected get length#88(): Int32;
+    connected method get#100(index: Int32): T#27;
   }
   class Int32#41 {
     connected method toString#42(radix?: Int32): String;
   }
-  interface Console#57 {
-    connected method log#58(message: String): Void;
+  interface Error#46 {}
+  interface Console#60 {
+    connected method log#61(message: String): Void;
   }
-  connected fn getConsole#128(name?: String): Console#57;
+  connected fn getConsole#132(name?: String): Console#60;
 }
 
 module locals#0 {
-  let ~console#59: Console#57;
+  let ~console#62: Console#60;
 
   fn show#15(x#33: Listed#9<Int32>): String {
     let s#34: ListBuilder#7<String> = new constructor#35<String>();
@@ -43,117 +44,117 @@ module locals#0 {
       }
     }
     s#34.add#36("]", omitted);
-    return s#34.join#44("", (fn ~fn#45(v#46: String): String {
-      return v#46;
+    return s#34.join#44<Never<Error#46>>("", (fn ~fn#47(v#48: String): String {
+      return v#48;
     }): fn (String): String);
   }
 
-  fn nestBlock#16<T#17>(b#47: fn (): T#17): T#17 {
-    return b#47();
+  fn nestBlock#16<T#17>(b#49: fn (): T#17): T#17 {
+    return b#49();
   }
 
-  fn nestBlockVoid#18(b#48: fn (): Void): Void {
-    b#48();
+  fn nestBlockVoid#18(b#50: fn (): Void): Void {
+    b#50();
   }
 
-  fn constantCapture#19(x#49: Listed#9<Int32>, a#50: Int32): Void {
-    let b#51: Int32 = %Int32.mul(a#50, 1);
-    let out#52: List#26<Int32> = x#49.map#53<Int32>((fn ~fn#55(n#56: Int32): Int32 [b#51] {
-      return %Int32.add(n#56, b#51);
+  fn constantCapture#19(x#51: Listed#9<Int32>, a#52: Int32): Void {
+    let b#53: Int32 = %Int32.mul(a#52, 1);
+    let out#54: List#26<Int32> = x#51.map#55<Int32, Never<Error#46>>((fn ~fn#58(n#59: Int32): Int32 [b#53] {
+      return %Int32.add(n#59, b#53);
     }): fn (Int32): Int32);
-    ~console#59.log#58(%String.cat("constantCapture = ", show#15((upcast(out#52)): Listed#9<Int32>)));
+    ~console#62.log#61(%String.cat("constantCapture = ", show#15((upcast(out#54)): Listed#9<Int32>)));
   }
 
-  fn constantCaptureNested#20(x#60: Listed#9<Int32>, a#61: Int32): Void {
-    let b#62: Int32 = %Int32.mul(a#61, 1);
-    let out#63: List#26<Int32> = nestBlock#16<List#26<Int32>>((fn ~fn#64(): List#26<Int32> [x#60, b#62] {
-      return x#60.map#53<Int32>((fn ~fn#65(n#66: Int32): Int32 [b#62] {
-        return %Int32.add(n#66, b#62);
+  fn constantCaptureNested#20(x#63: Listed#9<Int32>, a#64: Int32): Void {
+    let b#65: Int32 = %Int32.mul(a#64, 1);
+    let out#66: List#26<Int32> = nestBlock#16<List#26<Int32>>((fn ~fn#67(): List#26<Int32> [x#63, b#65] {
+      return x#63.map#55<Int32, Never<Error#46>>((fn ~fn#68(n#69: Int32): Int32 [b#65] {
+        return %Int32.add(n#69, b#65);
       }): fn (Int32): Int32);
     }): fn (): List#26<Int32>);
-    ~console#59.log#58(%String.cat("constantCaptureNested = ", show#15((upcast(out#63)): Listed#9<Int32>)));
+    ~console#62.log#61(%String.cat("constantCaptureNested = ", show#15((upcast(out#66)): Listed#9<Int32>)));
   }
 
-  fn mutableCapture#21(x#67: Listed#9<Int32>): Void {
-    var sum#68: Int32 = 0;
-    let out#69: List#26<Int32> = x#67.map#53<Int32>((fn ~fn#70(n#71: Int32): Int32 [sum#68] {
-      sum#68 = %Int32.add(sum#68, n#71);
-      return sum#68;
+  fn mutableCapture#21(x#70: Listed#9<Int32>): Void {
+    var sum#71: Int32 = 0;
+    let out#72: List#26<Int32> = x#70.map#55<Int32, Never<Error#46>>((fn ~fn#73(n#74: Int32): Int32 [sum#71] {
+      sum#71 = %Int32.add(sum#71, n#74);
+      return sum#71;
     }): fn (Int32): Int32);
-    ~console#59.log#58(%String.cat(%String.cat(%String.cat("mutableCapture = ", show#15((upcast(out#69)): Listed#9<Int32>)), "; sum="), sum#68.toString#42(omitted)));
+    ~console#62.log#61(%String.cat(%String.cat(%String.cat("mutableCapture = ", show#15((upcast(out#72)): Listed#9<Int32>)), "; sum="), sum#71.toString#42(omitted)));
   }
 
-  fn mutableCaptureNested#22(x#72: Listed#9<Int32>): Void {
-    var sum#73: Int32 = 0;
-    let out#74: List#26<Int32> = nestBlock#16<List#26<Int32>>((fn ~fn#75(): List#26<Int32> [x#72, sum#73] {
-      return x#72.map#53<Int32>((fn ~fn#76(n#77: Int32): Int32 [sum#73] {
-        sum#73 = %Int32.add(sum#73, n#77);
-        return sum#73;
+  fn mutableCaptureNested#22(x#75: Listed#9<Int32>): Void {
+    var sum#76: Int32 = 0;
+    let out#77: List#26<Int32> = nestBlock#16<List#26<Int32>>((fn ~fn#78(): List#26<Int32> [x#75, sum#76] {
+      return x#75.map#55<Int32, Never<Error#46>>((fn ~fn#79(n#80: Int32): Int32 [sum#76] {
+        sum#76 = %Int32.add(sum#76, n#80);
+        return sum#76;
       }): fn (Int32): Int32);
     }): fn (): List#26<Int32>);
-    ~console#59.log#58(%String.cat(%String.cat(%String.cat("mutableCaptureNested = ", show#15((upcast(out#74)): Listed#9<Int32>)), "; sum="), sum#73.toString#42(omitted)));
+    ~console#62.log#61(%String.cat(%String.cat(%String.cat("mutableCaptureNested = ", show#15((upcast(out#77)): Listed#9<Int32>)), "; sum="), sum#76.toString#42(omitted)));
   }
 
-  export fn thresh#23(values#78: Listed#9<Int32>, var value#79: Int32): Void {
-    value#79 = %Int32.add(value#79, 1);
-    let result#80: List#26<Int32> = values#78.filter#81((fn ~fn#82(it#83: Int32): Boolean [value#79] {
-      return %Int32.gt(it#83, value#79);
+  export fn thresh#23(values#81: Listed#9<Int32>, var value#82: Int32): Void {
+    value#82 = %Int32.add(value#82, 1);
+    let result#83: List#26<Int32> = values#81.filter#84<Never<Error#46>>((fn ~fn#86(it#87: Int32): Boolean [value#82] {
+      return %Int32.gt(it#87, value#82);
     }): fn (Int32): Boolean);
-    ~console#59.log#58(%String.cat("thresh length = ", result#80.length#84().toString#42(omitted)));
+    ~console#62.log#61(%String.cat("thresh length = ", result#83.length#88().toString#42(omitted)));
   }
 
-  export fn thresh2#24(values#85: Listed#9<Int32>, value#86: Int32): Void {
-    var value#87: Int32 = value#86;
-    value#87 = %Int32.add(value#87, 1);
-    let result#88: List#26<Int32> = values#85.filter#81((fn ~fn#89(it#90: Int32): Boolean [value#87] {
-      return %Int32.gt(it#90, value#87);
+  export fn thresh2#24(values#89: Listed#9<Int32>, value#90: Int32): Void {
+    var value#91: Int32 = value#90;
+    value#91 = %Int32.add(value#91, 1);
+    let result#92: List#26<Int32> = values#89.filter#84<Never<Error#46>>((fn ~fn#93(it#94: Int32): Boolean [value#91] {
+      return %Int32.gt(it#94, value#91);
     }): fn (Int32): Boolean);
-    ~console#59.log#58(%String.cat("thresh2 length = ", result#88.length#84().toString#42(omitted)));
+    ~console#62.log#61(%String.cat("thresh2 length = ", result#92.length#88().toString#42(omitted)));
   }
 
-  fn selfRecursion#25(x#91: List#26<Int32>): Void {
-    let mapper#92: fn (Int32, ListBuilder#7<Int32>): Void = (fn ~fn#93(i#94: Int32, out#95: ListBuilder#7<Int32>): Void [x#91, mapper#92] {
-      if (%Int32.lt(i#94, x#91.length#84())) {
-        out#95.add#36(%Int32.mul(x#91.get#96(i#94), 2), omitted);
-        mapper#92(%Int32.add(i#94, 1), out#95);
+  fn selfRecursion#25(x#95: List#26<Int32>): Void {
+    let mapper#96: fn (Int32, ListBuilder#7<Int32>): Void = (fn ~fn#97(i#98: Int32, out#99: ListBuilder#7<Int32>): Void [x#95, mapper#96] {
+      if (%Int32.lt(i#98, x#95.length#88())) {
+        out#99.add#36(%Int32.mul(x#95.get#100(i#98), 2), omitted);
+        mapper#96(%Int32.add(i#98, 1), out#99);
       }
     }): fn (Int32, ListBuilder#7<Int32>): Void;
-    let out#97: ListBuilder#7<Int32> = new constructor#35<Int32>();
-    mapper#92(0, out#97);
-    ~console#59.log#58(%String.cat("selfRecursion = ", show#15((upcast(out#97)): Listed#9<Int32>)));
+    let out#101: ListBuilder#7<Int32> = new constructor#35<Int32>();
+    mapper#96(0, out#101);
+    ~console#62.log#61(%String.cat("selfRecursion = ", show#15((upcast(out#101)): Listed#9<Int32>)));
   }
 
-  fn selfRecursionNested#28(x#98: List#26<Int32>): Void {
-    let mapper#99: fn (Int32, ListBuilder#7<Int32>): Void = (fn ~fn#100(i#101: Int32, out#102: ListBuilder#7<Int32>): Void [x#98, mapper#99] {
-      nestBlockVoid#18((fn ~fn#103(): Void [x#98, mapper#99, i#101, out#102] {
-        if (%Int32.lt(i#101, x#98.length#84())) {
-          out#102.add#36(%Int32.mul(x#98.get#96(i#101), 2), omitted);
-          mapper#99(%Int32.add(i#101, 1), out#102);
+  fn selfRecursionNested#28(x#102: List#26<Int32>): Void {
+    let mapper#103: fn (Int32, ListBuilder#7<Int32>): Void = (fn ~fn#104(i#105: Int32, out#106: ListBuilder#7<Int32>): Void [x#102, mapper#103] {
+      nestBlockVoid#18((fn ~fn#107(): Void [x#102, mapper#103, i#105, out#106] {
+        if (%Int32.lt(i#105, x#102.length#88())) {
+          out#106.add#36(%Int32.mul(x#102.get#100(i#105), 2), omitted);
+          mapper#103(%Int32.add(i#105, 1), out#106);
         }
       }): fn (): Void);
     }): fn (Int32, ListBuilder#7<Int32>): Void;
-    let out#104: ListBuilder#7<Int32> = new constructor#35<Int32>();
-    mapper#99(0, out#104);
-    ~console#59.log#58(%String.cat("selfRecursionNested = ", show#15((upcast(out#104)): Listed#9<Int32>)));
+    let out#108: ListBuilder#7<Int32> = new constructor#35<Int32>();
+    mapper#103(0, out#108);
+    ~console#62.log#61(%String.cat("selfRecursionNested = ", show#15((upcast(out#108)): Listed#9<Int32>)));
   }
 
-  fn mutualRecursion#29(x#105: List#26<Int32>): Void {
-    let walker#107: fn (Int32, ListBuilder#7<Int32>): Void = (fn ~fn#108(i#109: Int32, out#110: ListBuilder#7<Int32>): Void [x#105, putter#106] {
-      if (%Int32.lt(i#109, x#105.length#84())) {
-        putter#106(i#109, out#110);
+  fn mutualRecursion#29(x#109: List#26<Int32>): Void {
+    let walker#111: fn (Int32, ListBuilder#7<Int32>): Void = (fn ~fn#112(i#113: Int32, out#114: ListBuilder#7<Int32>): Void [x#109, putter#110] {
+      if (%Int32.lt(i#113, x#109.length#88())) {
+        putter#110(i#113, out#114);
       }
     }): fn (Int32, ListBuilder#7<Int32>): Void;
-    let putter#106: fn (Int32, ListBuilder#7<Int32>): Void = (fn ~fn#111(i#112: Int32, out#113: ListBuilder#7<Int32>): Void [x#105, walker#107] {
-      out#113.add#36(%Int32.mul(x#105.get#96(i#112), 2), omitted);
-      walker#107(%Int32.add(i#112, 1), out#113);
+    let putter#110: fn (Int32, ListBuilder#7<Int32>): Void = (fn ~fn#115(i#116: Int32, out#117: ListBuilder#7<Int32>): Void [x#109, walker#111] {
+      out#117.add#36(%Int32.mul(x#109.get#100(i#116), 2), omitted);
+      walker#111(%Int32.add(i#116, 1), out#117);
     }): fn (Int32, ListBuilder#7<Int32>): Void;
-    let out#114: ListBuilder#7<Int32> = new constructor#35<Int32>();
-    walker#107(0, out#114);
-    ~console#59.log#58(%String.cat("mutualRecursion = ", show#15((upcast(out#114)): Listed#9<Int32>)));
+    let out#118: ListBuilder#7<Int32> = new constructor#35<Int32>();
+    walker#111(0, out#118);
+    ~console#62.log#61(%String.cat("mutualRecursion = ", show#15((upcast(out#118)): Listed#9<Int32>)));
   }
 
   fun interface Handler#1<T#3> {
-    abstract method apply#5(item#115: T#3): Void;
+    abstract method apply#5(item#119: T#3): Void;
   }
 
   class Hub#2<T#4> {
@@ -161,15 +162,15 @@ module locals#0 {
     constructor constructor#14(): Hub#2<T#4> {
       this.handlers#11 = new constructor#35<Handler#1<T#4>>();
     }
-    method onAction#12(handler#116: Handler#1<T#4>): Void {
-      this.handlers#11.add#36(handler#116, omitted);
+    method onAction#12(handler#120: Handler#1<T#4>): Void {
+      this.handlers#11.add#36(handler#120, omitted);
     }
-    method actionPerformed#13(item#117: T#4): Void {
+    method actionPerformed#13(item#121: T#4): Void {
       {
-        var i#118: Int32 = 0;
-        ~loop#119: while (%Int32.lt(i#118, this.handlers#11.length#120())) {
-          this.handlers#11.get#43(i#118)(item#117);
-          i#118 = %Int32.add(i#118, 1);
+        var i#122: Int32 = 0;
+        ~loop#123: while (%Int32.lt(i#122, this.handlers#11.length#124())) {
+          this.handlers#11.get#43(i#122)(item#121);
+          i#122 = %Int32.add(i#122, 1);
         }
       }
     }
@@ -177,25 +178,25 @@ module locals#0 {
 
   let hub#30: Hub#2<Int32>;
 
-  fn gatherHandlers#31(hub#121: Hub#2<Int32>): ListBuilder#7<Int32> {
-    let items#122: ListBuilder#7<Int32> = new constructor#35<Int32>();
+  fn gatherHandlers#31(hub#125: Hub#2<Int32>): ListBuilder#7<Int32> {
+    let items#126: ListBuilder#7<Int32> = new constructor#35<Int32>();
     {
-      var i#123: Int32 = 0;
-      ~loop#124: while (%Int32.lt(i#123, 3)) {
-        let i#125: Int32 = i#123;
-        hub#121.onAction#12((fn ~fn#126(item#127: Int32): Void [items#122, i#125] {
-          items#122.add#36(%Int32.add(item#127, i#125), omitted);
+      var i#127: Int32 = 0;
+      ~loop#128: while (%Int32.lt(i#127, 3)) {
+        let i#129: Int32 = i#127;
+        hub#125.onAction#12((fn ~fn#130(item#131: Int32): Void [items#126, i#129] {
+          items#126.add#36(%Int32.add(item#131, i#129), omitted);
         }): Handler#1<Int32>);
-        i#123 = %Int32.add(i#123, 1);
+        i#127 = %Int32.add(i#127, 1);
       }
     }
-    return items#122;
+    return items#126;
   }
 
   let items#32: ListBuilder#7<Int32>;
 
   init {
-    init ~console#59 = getConsole#128(omitted);
+    init ~console#62 = getConsole#132(omitted);
     constantCapture#19((upcast((list(1, 2, 3)): List#26<Int32>)): Listed#9<Int32>, 1);
     constantCaptureNested#20((upcast((list(1, 2, 3)): List#26<Int32>)): Listed#9<Int32>, 1);
     mutableCapture#21((upcast((list(1, 2, 3)): List#26<Int32>)): Listed#9<Int32>);

@@ -12,8 +12,8 @@ use crate::analysis::{ancestors, bindings, fun_signature, nominal_decl, walk};
 use crate::decls::DeclKind;
 use crate::ids::{DeclId, NodeId, TypeId};
 use crate::qname::{is_external, library_of};
-use crate::schema::Node;
-use crate::types::TypeArgs;
+use crate::schema::{Node, Payload, Slot};
+use crate::types::{TypeArgs, TypeData};
 
 /// Core's `Error`, the root of failure types, if the program has it.
 pub fn root(p: &Program) -> Option<DeclId> {
@@ -79,13 +79,66 @@ pub fn is_failure_decl(p: &Program, root: Option<DeclId>, decl: DeclId) -> bool 
 }
 
 /// Whether `ty` is a failure type's: a class's or interface's that's
-/// [`is_failure_decl`].
+/// [`is_failure_decl`], or a failure parameter ([`is_failure_param`]).
 pub fn is_failure_type(p: &Program, root: Option<DeclId>, ty: TypeId) -> bool {
-    nominal_decl(p, ty).is_some_and(|d| is_failure_decl(p, root, d))
+    match p.types.get(ty) {
+        TypeData::TypeParam { decl } => root.is_some() && is_failure_param(p, decl),
+        _ => nominal_decl(p, ty).is_some_and(|d| is_failure_decl(p, root, d)),
+    }
+}
+
+/// Whether a type parameter is a failure parameter (RFC 164): one bound
+/// by a failure type, as `E extends Error`, which the frontend gives one
+/// that a signature fails with.
+pub fn is_failure_param(p: &Program, decl: DeclId) -> bool {
+    p.decls.contains(decl)
+        && p.decls.get(decl).kind == DeclKind::TypeParam
+        && p.decls
+            .supers(decl)
+            .iter()
+            .any(|&b| is_nominal_failure(p, b))
+}
+
+/// Whether `ty` is a failure class's or interface's, core's `Error`
+/// among them, found without the root at hand.
+fn is_nominal_failure(p: &Program, ty: TypeId) -> bool {
+    nominal_decl(p, ty).is_some_and(|d| is_root(p, d) || is_below_root(p, d))
+}
+
+/// The failure type a function or method declares, as targets document
+/// it (a `throws` clause, a doc comment): a failure class's or
+/// interface's, never `Bubble` or a failure parameter, which exceptions
+/// leave unchecked.
+pub fn declared(p: &Program, decl: DeclId) -> Option<TypeId> {
+    let fail = p.signature(decl)?.fail?;
+    is_nominal_failure(p, fail).then_some(fail)
+}
+
+/// A generic declaration's type parameters as targets whose failures are
+/// unchecked exceptions write them, without failure parameters
+/// ([`erase_params`]).
+pub fn unchecked_type_params(p: &Program, decl: DeclId) -> Vec<DeclId> {
+    (p.decls.type_params(decl).iter().copied())
+        .filter(|&t| !is_failure_param(p, t))
+        .collect()
+}
+
+/// Type arguments for a generic declaration's type parameters, as
+/// [`unchecked_type_params`] leaves them: without failure parameters'.
+pub fn unchecked_args(p: &Program, decl: DeclId, args: &[TypeId]) -> Vec<TypeId> {
+    let params = p.decls.type_params(decl);
+    if params.len() != args.len() {
+        return args.to_vec();
+    }
+    (params.iter().zip(args))
+        .filter(|&(&t, _)| !is_failure_param(p, t))
+        .map(|(_, &a)| a)
+        .collect()
 }
 
 /// What a node may fail with, if anything: a failing call's callee's
-/// failure type, with its type arguments put in; a `throw`'s value's
+/// failure type, with its type arguments put in, so nothing where a
+/// failure parameter is given `Never<…>`; a `throw`'s value's
 /// type; core's `BrokenPromise` for an `await`; and `Bubble` for
 /// `bubble()` and for `Error` nodes, which fail as `bubble()` does.
 pub fn node_failure(p: &Program, id: NodeId) -> Option<TypeId> {
@@ -93,7 +146,9 @@ pub fn node_failure(p: &Program, id: NodeId) -> Option<TypeId> {
         let fail = p.signature(callee)?.fail?;
         let receiver = receiver.map(|r| p.nodes.ty(r));
         let (from, to) = bindings(p, callee, receiver, p.types.args_of(args));
-        Some(p.types.substituted(fail, &from, &to).unwrap_or(fail))
+        let fail = p.types.substituted(fail, &from, &to).unwrap_or(fail);
+        // A failure parameter given `Never<…>` can't fail.
+        (!p.types.is_never(fail)).then_some(fail)
     };
     match p.nodes.get(id) {
         Node::CallFunction {
@@ -217,6 +272,160 @@ pub fn join(p: &Program, root: Option<DeclId>, fails: &[TypeId]) -> Option<TypeI
     root.map(|r| p.decls.get(r).ty)
 }
 
+/// The program with failure parameters (RFC 164) erased to their bounds
+/// in code, for targets whose failures are unchecked exceptions, where a
+/// handler in generic code catches what its bound does, by the runtime's
+/// marker for core's `Error`; `None` where it has none. Every node's
+/// type, type argument, and type payload changes, and the types of what
+/// code declares (locals, a `catch`'s, function literals and their
+/// parameters), but not declarations' signatures, so calls of a generic
+/// function still fail with what they give it: outside it, nothing
+/// mentions its failure parameters, and inside it, they're their bounds.
+/// Targets leave failure parameters out of what they write
+/// ([`unchecked_type_params`], [`unchecked_args`]): exceptions are
+/// unchecked, so no host signature needs one. Not yet, so an error: a
+/// signature that names one other than as what something fails with, as
+/// `e: E`, which a host would need it for.
+pub fn erase_params(p: &Program) -> Result<Option<Program>, String> {
+    let Some(root) = root(p) else {
+        return Ok(None);
+    };
+    let (mut from, mut to) = (Vec::new(), Vec::new());
+    for d in p.decls.ids().filter(|&d| is_failure_param(p, d)) {
+        let bound =
+            (p.decls.supers(d).iter().copied()).find(|&b| is_failure_type(p, Some(root), b));
+        from.push(p.decls.get(d).ty);
+        to.push(bound.unwrap_or(p.decls.get(root).ty));
+    }
+    if from.is_empty() {
+        return Ok(None);
+    }
+    let signature = |d: DeclId| {
+        p.decls.contains(d)
+            && matches!(
+                p.decls.get(d).kind,
+                DeclKind::Function
+                    | DeclKind::Method
+                    | DeclKind::Getter
+                    | DeclKind::Setter
+                    | DeclKind::Constructor
+                    | DeclKind::Field
+                    | DeclKind::StaticField
+            )
+    };
+    if let Some(d) = p
+        .decls
+        .ids()
+        .find(|&d| signature(d) && names_as_value(p, p.decls.get(d).ty))
+    {
+        return Err(format!(
+            "failure parameters: {}'s signature names one other than as what it fails with",
+            p.name(d)
+        ));
+    }
+    let mut b = crate::Builder::from_program(p.clone());
+    let in_code = |d: DeclId| match p.decls.get(d).kind {
+        DeclKind::Local | DeclKind::Lambda => true,
+        DeclKind::Param => p.decls.get(p.decls.get(d).owner).kind == DeclKind::Lambda,
+        _ => false,
+    };
+    for d in p.decls.ids().filter(|&d| p.decls.contains(d) && in_code(d)) {
+        let ty = b
+            .program_mut()
+            .types
+            .substitute(p.decls.get(d).ty, &from, &to);
+        b.set_decl_type(d, ty);
+    }
+    for id in (0..p.nodes.len()).map(|i| NodeId(i as u32)) {
+        let types = &mut b.program_mut().types;
+        let ty = types.substitute(p.nodes.ty(id), &from, &to);
+        let kind = p.nodes.kind(id);
+        let (mut a, mut c) = p.nodes.slots(id);
+        for field in kind.fields() {
+            let erased = |types: &mut crate::TypeTable, slot: u32, payload: Payload| match payload {
+                Payload::Type => types.substitute(TypeId(slot), &from, &to).0,
+                Payload::Args => {
+                    let args = types.args_of(TypeArgs(slot)).to_vec();
+                    let args: Vec<TypeId> = args
+                        .iter()
+                        .map(|&t| types.substitute(t, &from, &to))
+                        .collect();
+                    types.type_args(&args).0
+                }
+                _ => slot,
+            };
+            match field.slot {
+                Slot::A(payload) => a = erased(types, a, payload),
+                Slot::B(payload) => c = erased(types, c, payload),
+                _ => {}
+            }
+        }
+        b.retype_lowered(id, ty, (a, c));
+    }
+    Ok(Some(b.finish()))
+}
+
+/// Whether a type names a failure parameter other than as what something
+/// fails with, or as another failure parameter's type argument.
+fn names_as_value(p: &Program, ty: TypeId) -> bool {
+    if !p.types.contains(ty) {
+        return false;
+    }
+    match p.types.get(ty) {
+        TypeData::TypeParam { decl } => is_failure_param(p, decl),
+        TypeData::Scalar(_) => false,
+        TypeData::Nullable(inner) | TypeData::Never(inner) => names_as_value(p, inner),
+        TypeData::Result { pass, .. } => names_as_value(p, pass),
+        TypeData::Nominal { decl, args } => {
+            let args = p.types.list(args);
+            unchecked_args(p, decl, args)
+                .iter()
+                .any(|&a| names_as_value(p, a))
+        }
+        TypeData::Function { .. } => p.types.signature(ty).is_some_and(|sig| {
+            (sig.params.iter().chain([&sig.returns])).any(|&t| names_as_value(p, t))
+        }),
+    }
+}
+
+/// For a target without failure parameters (RFC 164) yet, what it says
+/// of a program that uses them, as "failure parameters: E of mapAll": one
+/// the program declares, or a call that gives one of another library's
+/// (core's `map`) a failure type, as a failing callback does. Calls that
+/// give `Never<…>`, which can't fail by one, are fine.
+pub fn params_not_yet(p: &Program) -> Result<(), String> {
+    let own = |d: DeclId| !is_external(p, d) && is_failure_param(p, d);
+    if let Some(d) = p.decls.ids().find(|&d| own(d)) {
+        let owner = p.name(p.decls.get(d).owner);
+        return Err(format!("failure parameters: {} of {owner}", p.name(d)));
+    }
+    for id in (0..p.nodes.len()).map(|i| NodeId(i as u32)) {
+        let (generic, args) = match p.nodes.get(id) {
+            Node::CallFunction {
+                callee, type_args, ..
+            } => (callee, type_args),
+            Node::CallMethod {
+                method, type_args, ..
+            } => (method, type_args),
+            Node::New {
+                ctor, type_args, ..
+            } => (p.decls.get(ctor).owner, type_args),
+            _ => continue,
+        };
+        let params = p.decls.type_params(generic).iter();
+        let given = params
+            .zip(p.types.args_of(args))
+            .any(|(&t, &a)| is_failure_param(p, t) && !p.types.is_never(a));
+        if given {
+            return Err(format!(
+                "failure parameters: a call of {} that fails as its callback does",
+                p.name(generic)
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// For a target without declared failures yet, what it says of a program
 /// that uses them ([`first_use`]), as "declared failures: a throw".
 pub fn not_yet(p: &Program) -> Result<(), String> {
@@ -328,5 +537,80 @@ module t#0 {
         let failed: Vec<TypeId> = under.iter().map(|&(_, f)| f).collect();
         assert_eq!(failed, [ty(3)]);
         assert_eq!(first_use(&p).as_deref(), Some("the failure type TError"));
+    }
+
+    const GENERIC: &str = "tmpl 1 model 1 library t 0.1.0
+
+uses `temper-core`#20 0.1.0 {
+  interface Error#21 {
+    connected get message#22(): String;
+    connected get cause#23(): Error#21?;
+  }
+}
+
+module t#0 {
+  export interface TError#1 extends Error#21 {}
+
+  export class NotFound#2 extends TError#1 {
+    constructor constructor#5(): NotFound#2 {}
+  }
+
+  export fn again#3<E#6 extends Error#21>(f#7: fn (): Int32 throws E#6): Int32 throws E#6 {
+    return (catch(f#7()^, e#8: E#6, (throw(e#8)^): Int32)): Int32;
+  }
+
+  fn lookup#4(): Int32 throws NotFound#2 {
+    return (throw(new constructor#5())^): Int32;
+  }
+
+  init {
+    let a#9: Int32 = (orelse(again#3<NotFound#2>((fn ~fn#10(): Int32 throws NotFound#2 {
+      return lookup#4()^;
+    }): fn (): Int32 throws NotFound#2)^, 0)): Int32;
+  }
+}
+";
+
+    /// Erasing failure parameters changes code in generic functions, which
+    /// handles their bounds, but not signatures, so a call still fails
+    /// with what it gives the parameter.
+    #[test]
+    fn erased_failure_parameters() {
+        let p = crate::text::read(GENERIC).unwrap();
+        assert!(crate::validate(&p, &crate::Profile::full()).is_empty());
+        let root = root(&p);
+        assert!(is_failure_param(&p, DeclId(6)));
+        assert!(is_failure_type(&p, root, p.decls.get(DeclId(6)).ty));
+        let e = erase_params(&p).unwrap().unwrap();
+        let error = e.decls.get(DeclId(21)).ty;
+        assert_eq!(e.decls.get(DeclId(8)).ty, error);
+        assert_eq!(e.decls.get(DeclId(3)).ty, p.decls.get(DeclId(3)).ty);
+        let module = &e.modules[0];
+        let fails = |item: NodeId| -> Vec<TypeId> {
+            failures_under(&e, item).iter().map(|&(_, f)| f).collect()
+        };
+        // `again`'s `throw e`, now of `Error`; the call in the init block
+        // still fails with `NotFound`, and its handler's body too.
+        assert_eq!(fails(module.items[2]), [error]);
+        let calls: Vec<TypeId> = (0..e.nodes.len() as u32)
+            .map(NodeId)
+            .filter(|&n| matches!(e.nodes.get(n), Node::CallFunction { callee, .. } if callee == DeclId(3)))
+            .filter_map(|n| node_failure(&e, n))
+            .collect();
+        assert_eq!(calls, [p.decls.get(DeclId(2)).ty]);
+        assert_eq!(erase_params(&crate::text::read(PROGRAM).unwrap()), Ok(None));
+        // A failure parameter as a parameter's type: not yet.
+        let start = GENERIC.find("module t#0").unwrap();
+        let named = format!(
+            "{}module t#0 {{\n  fn keep#1<E#2 extends Error#21>(e#3: E#2): E#2 {{\n    \
+             return e#3;\n  }}\n\n  init {{}}\n}}\n",
+            &GENERIC[..start]
+        );
+        let named = crate::text::read(&named).unwrap();
+        assert!(
+            erase_params(&named)
+                .unwrap_err()
+                .contains("keep's signature")
+        );
     }
 }

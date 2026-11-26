@@ -728,8 +728,8 @@ the … backend: declared failures: …" for a program that uses them
 - **Failure types** are the classes and interfaces below core's
   `Error`, an external interface with connected getters `message` and
   `cause` (`failures::root`). A signature fails with `Bubble`, a
-  failure type, or a type parameter (a failure parameter, not made by
-  `to_tmpl` yet); failures are ordinary values, `Bubble` never is.
+  failure type, or a failure parameter (below); failures are ordinary
+  values, `Bubble` never is.
 - **Core's own failure types,** external like `Error`: the root
   `CoreError` and its classes `MissingKey` (`key`, an `AnyValue`; what
   `Mapped.get` and `MapBuilder.remove` fail with), `ParseError` (`input`
@@ -951,7 +951,45 @@ nothing handles: `temper run` and the tests' runner report it as
 `uncaught failure: LookupFailed: lookup failed (name: port)`, then
 `caused by: …` lines (`temper.failure_report`).
 
-Validator rules: T5 lets a signature fail with a failure type or a type
+**Failure parameters** (chunk 15; typing.md, "Failure parameters"): a
+type parameter bound by a failure type, `E extends Error`, which the
+frontend gives one a signature fails with (`failures::is_failure_param`),
+counts as a failure type, so generic code may `throw` one, a `catch` bind
+one, and a function or `@fun` interface fail with one: `fn
+mapAll#16<T#17, R#18, E#19 extends Error#9>(xs#48: List#20<T#17>, f#49:
+Mapper#3<T#17, R#18, E#19>): List#20<R#18> throws E#19`. A call gives it
+as a type argument, what its callbacks may fail with, or `Never<Error>`
+where it can't fail by one, which isn't marked then (the builder's flags
+come from the substituted result): `mapAll#16<String, Int32,
+Missing#2>(…)^`, `ns#79.join#69<Never<Error#9>>(…)`. Core's generic
+methods (`map`, `filter`, `join`, …) are as core declares them. Where a
+function that fails more narrowly is passed where a wider failure is
+wanted (`find`, throwing `Missing`, as `Mapper<String, Int32,
+FailureParamsError>`), `to_tmpl` passes a literal calling it, so every
+target widens it as a `throw` would. A bubble as `E` is not yet: handlers
+in generic code catch failures, which a bubble isn't.
+
+Targets whose failures are unchecked exceptions (Python, Java, JS, C#,
+Lua) erase them (`failures::erase_params`): in code, each is its bound,
+so a handler in generic code is one over core's `Error`, catching by the
+runtime's marker (Python's `Failure`, Java's `temper.core.Failure`, C#'s
+`IFailure`, JS's `isFailure`, Lua's `temper.Failure`), never a panic or
+host error, and a callback's failure passes through unchanged. Signatures
+keep them, so calls outside still fail with what they give, and handlers
+there catch exactly that. No host signature names one
+(`failures::unchecked_type_params`, `unchecked_args`): Java's `<T, R>
+List<R> mapAll(List<T> xs, Function<T, R> f)` has no `throws` clause for
+`E`, as Java's checked-exception idiom (`<E extends Exception> … throws
+E`) would only mislead for unchecked ones; docs (`throws`, `@throws`,
+`<exception>`) name only declared failure types (`failures::declared`).
+A signature naming one other than as a failure, as `e: E`, is not yet
+there. Rust and C++ say not yet for any failure parameter of the
+program's, or a call giving one a failure type
+(`failures::params_not_yet`; chunk 16).
+
+Validator rules: T4 checks a failure parameter's type argument against
+its bound, `Never<T>` as `T`, and builtin types (`Bubble`, `String`)
+fail it; T5 lets a signature fail with a failure type or a failure
 parameter; F3 marks every `Throw`; F4 checks the failure's type where it
 goes: anything in an `OrElse`'s body or an init block, only what the
 `Catch` binds (or below it) in its body, and elsewhere only the
@@ -961,8 +999,7 @@ mixing; F8: a `Throw`'s value and cause are failure types, and a
 failure type above them, and one that's `Error` itself, a root, is an
 interface, never a class.
 
-Not yet: failure parameters (generic `E`) in calls' type arguments,
-`throw` and `catch` in generators, checking a failure type's own
+Not yet: `throw` and `catch` in generators, checking a failure type's own
 `message` against the root's, and a field named `message`, which gets
 no getter.
 

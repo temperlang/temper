@@ -636,9 +636,10 @@ impl Translator<'_> {
                         // A generic class's builder takes its type
                         // parameters: `Builder<T>`, building `Change<T>`.
                         let generics = self.type_params(decl)?.trim_end().to_string();
-                        let uses: Vec<String> = (p.decls.type_params(decl).iter())
-                            .map(|&t| p.name(t).to_string())
-                            .collect();
+                        let uses: Vec<String> =
+                            (temper_tmpl::failures::unchecked_type_params(p, decl).iter())
+                                .map(|&t| p.name(t).to_string())
+                                .collect();
                         let uses = match uses.as_slice() {
                             [] => String::new(),
                             _ => format!("<{}>", uses.join(", ")),

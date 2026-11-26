@@ -670,21 +670,26 @@ impl Builder {
     }
 
     /// A call's result and flags, from its callee's signature, with the
-    /// type parameters it binds put in.
+    /// type parameters it binds put in, so a failure parameter given
+    /// `Never<…>` can't fail.
     fn call_type(
         &mut self,
         callee: DeclId,
         receiver: Option<NodeId>,
         type_args: &[TypeId],
     ) -> (TypeId, Flags) {
-        let (result, flags) = match self.p.types.signature(self.decl_type(callee)) {
-            Some(sig) if sig.bubbles() => (sig.pass, Flags::MAY_BUBBLE),
-            Some(sig) => (sig.pass, Flags::NONE),
-            None => return (TypeId::NONE, Flags::NONE),
+        let Some(sig) = self.p.types.signature(self.decl_type(callee)) else {
+            return (TypeId::NONE, Flags::NONE);
         };
+        let returns = sig.returns;
         let receiver = receiver.map(|r| self.p.nodes.ty(r));
         let (from, to) = crate::analysis::bindings(&self.p, callee, receiver, type_args);
-        (self.p.types.substitute(result, &from, &to), flags)
+        let returns = self.p.types.substitute(returns, &from, &to);
+        let flags = match self.p.types.fail(returns) {
+            Some(_) => Flags::MAY_BUBBLE,
+            None => Flags::NONE,
+        };
+        (self.p.types.pass(returns), flags)
     }
 
     /// Calls a function, marked if it may bubble.

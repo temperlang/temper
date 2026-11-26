@@ -141,3 +141,104 @@ F4 @39: the call of lookup#8 may fail with NotFound#3, but quiet#19 can't
 F4 @43: the call of lookup#8 may fail with NotFound#3, but bubbly#20 takes only Bubble
 F4 @45: throw fails with NotFound#3, but bubbly#20 takes only Bubble
 F8 @47: throw's cause is Int32, not a failure type
+
+=== failure parameters (RFC 164)
+tmpl 1 model 1 library failures 0.1.0
+
+uses `temper-core`#40 0.1.0 {
+  interface Error#41 {
+    connected get message#42(): String;
+    connected get cause#43(): Error#41?;
+  }
+}
+
+module failures#0 {
+  export interface FailuresError#1 extends Error#41 {}
+
+  export class NotFound#2 extends FailuresError#1 {
+    constructor constructor#10(): NotFound#2 {}
+  }
+
+  export fun interface Thunk#3<E#11 extends Error#41> {
+    abstract method apply#12(): Int32 throws E#11;
+  }
+
+  export fn apply#4<E#13 extends Error#41>(f#14: Thunk#3<E#13>): Int32 throws E#13 {
+    return f#14()^;
+  }
+
+  export fn again#5<E#15 extends Error#41>(f#16: fn (): Int32 throws E#15): Int32 throws E#15 {
+    return (catch(f#16()^, e#17: E#15, (throw(e#17, e#17)^): Int32)): Int32;
+  }
+
+  export fn count#6<E#18 extends Error#41>(f#19: fn (): Int32 throws E#18): Int32 {
+    return (orelse(f#19()^, 0)): Int32;
+  }
+
+  fn lookup#7(): Int32 throws NotFound#2 {
+    return (throw(new constructor#10())^): Int32;
+  }
+
+  init {
+    let a#20: Int32 = (orelse(apply#4<NotFound#2>((fn ~fn#21(): Int32 throws NotFound#2 {
+      return lookup#7()^;
+    }): Thunk#3<NotFound#2>)^, 0)): Int32;
+    let b#22: Int32 = apply#4<Never<Error#41>>((fn ~fn#23(): Int32 {
+      return 1;
+    }): Thunk#3<Never<Error#41>>);
+    let c#24: Int32 = count#6<NotFound#2>((fn ~fn#25(): Int32 throws NotFound#2 {
+      return lookup#7()^;
+    }): fn (): Int32 throws NotFound#2);
+  }
+}
+
+=== failure parameter problems (T4, T5, F4, F8)
+tmpl 1 model 1 library failures 0.1.0
+
+uses `temper-core`#40 0.1.0 {
+  interface Error#41 {
+    connected get message#42(): String;
+    connected get cause#43(): Error#41?;
+  }
+}
+
+module failures#0 {
+  export interface FailuresError#1 extends Error#41 {}
+
+  export class NotFound#2 extends FailuresError#1 {
+    constructor constructor#10(): NotFound#2 {}
+  }
+
+  fn loose#3<T#11>(f#12: fn (): Int32 throws T#11): Int32 throws T#11 {
+    return f#12()^;
+  }
+
+  fn quiet#4<E#13 extends Error#41>(f#14: fn (): Int32 throws E#13): Int32 {
+    return f#14()^;
+  }
+
+  fn narrow#5<E#15 extends Error#41>(f#16: fn (): Int32 throws E#15): Int32 throws E#15 {
+    return (throw(new constructor#10())^): Int32;
+  }
+
+  fn apply#6<E#17 extends Error#41>(f#18: fn (): Int32 throws E#17): Int32 throws E#17 {
+    return f#18()^;
+  }
+
+  init {
+    let a#19: Int32 = apply#6<Bubble>((fn ~fn#20(): Int32 throws Bubble {
+      return (bubble()^): Int32;
+    }): fn (): Int32 throws Bubble)^;
+    let b#21: Int32 = apply#6<String>((fn ~fn#22(): Int32 {
+      return 1;
+    }): fn (): Int32 throws String)^;
+  }
+}
+--- problems
+T5 #3: fn (fn (): Int32 throws T#11): Int32 throws T#11 fails with T#11, not Bubble or a failure type
+T5 #12: fn (): Int32 throws T#11 fails with T#11, not Bubble or a failure type
+F4 @14: the call of the function value may fail with E#13, but quiet#4 can't
+F4 @20: throw fails with NotFound#2, but narrow#5 takes only E#15
+T4 @30: type argument Bubble isn't within E#17's bound Error#41
+T4 @36: type argument String isn't within E#17's bound Error#41
+V1 @37: FunctionLiteral is fn (): Int32 throws String, but its signature is fn (): Int32

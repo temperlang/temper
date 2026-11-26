@@ -300,7 +300,8 @@ impl<'a> Translator<'a> {
             TypeData::Nominal { decl, args } => {
                 let qname = self.qname(decl);
                 let mut texts = Vec::new();
-                for &a in self.p.types.list(args) {
+                let args = self.p.types.list(args);
+                for a in temper_tmpl::failures::unchecked_args(self.p, decl, args) {
                     texts.push(self.type_arg(a)?);
                 }
                 // `Empty` in a generator's or its result's arguments is
@@ -370,10 +371,11 @@ impl<'a> Translator<'a> {
 
     /// A generic declaration's type parameters, `<T>` or `<T extends
     /// Named>`, with a space after, or nothing. `MapKey`, which Java's
-    /// maps need nothing for, isn't a bound.
+    /// maps need nothing for, isn't a bound. Not failure parameters:
+    /// exceptions are unchecked, so no `throws E` needs one.
     pub(crate) fn type_params(&mut self, decl: DeclId) -> R<String> {
         let p = self.p;
-        let params = p.decls.type_params(decl).to_vec();
+        let params = temper_tmpl::failures::unchecked_type_params(p, decl);
         if params.is_empty() {
             return Ok(String::new());
         }
@@ -689,13 +691,9 @@ impl<'a> Translator<'a> {
     /// documents it, as Java's own APIs list `IllegalArgumentException`;
     /// nothing for one that bubbles, or fails with a type parameter.
     pub(crate) fn throws_of(&mut self, decl: DeclId) -> R<Vec<String>> {
-        let p = self.p;
-        let root = temper_tmpl::failures::root(p);
-        match p.signature(decl).and_then(|s| s.fail) {
-            Some(fail) if temper_tmpl::failures::is_failure_type(p, root, fail) => {
-                Ok(vec![self.ty(fail)?])
-            }
-            _ => Ok(Vec::new()),
+        match temper_tmpl::failures::declared(self.p, decl) {
+            Some(fail) => Ok(vec![self.ty(fail)?]),
+            None => Ok(Vec::new()),
         }
     }
 

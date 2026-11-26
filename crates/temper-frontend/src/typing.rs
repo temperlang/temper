@@ -137,12 +137,14 @@ pub struct Typing {
     identity_eqs: HashMap<NodeId, &'static str>,
     /// What each call of a generic function, method, or class's
     /// constructor binds its type parameters to, by the call: the callee's
-    /// own, or for a constructor, its class's, unknown where unsolved.
+    /// own, or for a constructor, its class's, unknown where unsolved,
+    /// as the call's type needs them.
     type_args: HashMap<NodeId, Vec<TypeId>>,
     /// What each generic call of a function with failure parameters (RFC
-    /// 164) binds them to, in full, from its function literals' bodies
-    /// too: `Never<Error>` where the call can't fail by one.
-    failure_args: HashMap<NodeId, Vec<TypeId>>,
+    /// 164) binds them to, by their places among its type parameters,
+    /// solved in full when it's checked, from its function literals'
+    /// bodies too: `Never<Error>` where the call can't fail by one.
+    failure_args: HashMap<NodeId, Vec<(usize, TypeId)>>,
     /// The empty blocks standing for missing `else`s that are never
     /// reached, as `is` checks before them cover a sealed type
     /// ([`sealed`]): `Never`, and a panic in tmpl, as Kotlin's.
@@ -173,14 +175,15 @@ impl Typing {
 
     /// What a generic call binds its callee's type parameters to (a
     /// constructor's, its class's), if typing solved it.
-    pub fn type_args(&self, call: NodeId) -> Option<&[TypeId]> {
-        self.type_args.get(&call).map(Vec::as_slice)
-    }
-
-    /// What a generic call binds its callee's failure parameters to, if
-    /// it has any ([`Typing::type_args`] leaves them out).
-    pub fn failure_args(&self, call: NodeId) -> Option<&[TypeId]> {
-        self.failure_args.get(&call).map(Vec::as_slice)
+    /// Failure parameters among them as solved in full.
+    pub fn type_args(&self, call: NodeId) -> Option<Vec<TypeId>> {
+        let mut args = self.type_args.get(&call)?.clone();
+        for &(k, t) in self.failure_args.get(&call).into_iter().flatten() {
+            if let Some(arg) = args.get_mut(k) {
+                *arg = t;
+            }
+        }
+        Some(args)
     }
 
     /// What a call, operator or member read resolves to, if typing knows.

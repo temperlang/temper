@@ -1496,19 +1496,6 @@ impl Translator<'_> {
             DeclKind::Constructor => self.b.program().decls.get(callee).owner,
             _ => callee,
         };
-        // tmpl has no failure parameters yet (RFC 164's later chunks): a
-        // call can't fail by one, nor give one.
-        if let Some(fails) = self.s.typing.failure_args(call) {
-            let types = &self.s.typing.types;
-            let can_fail =
-                |&t: &ft::TypeId| !matches!(types.get(t), FTypeData::Never | FTypeData::NeverOf(_));
-            if fails.iter().any(can_fail) {
-                return self.not_yet(
-                    call,
-                    "a call that fails as its callback does (a failure parameter)",
-                );
-            }
-        }
         let wanted = self.b.program().decls.type_params(generic).len();
         if wanted == 0 {
             return Ok(Vec::new());
@@ -1525,9 +1512,11 @@ impl Translator<'_> {
         let Some(args) = self.s.typing.type_args(call) else {
             return self.not_yet(call, "a generic call's type arguments");
         };
-        let args = args.to_vec();
-        if args.len() != wanted && self.s.typing.failure_args(call).is_some() {
-            return self.not_yet(call, "a call of a function with a failure parameter");
+        // A failure parameter (RFC 164) that a bubble solves: handlers in
+        // generic code catch failures, which a bubble isn't, until Bubble
+        // goes.
+        if args.contains(&ft::BUBBLE) {
+            return self.not_yet(call, "a failure parameter that a bubble gives");
         }
         if args.len() != wanted {
             return self.not_yet(call, "a generic call's type arguments");

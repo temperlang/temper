@@ -2,12 +2,12 @@ tmpl 1 model 1 library sorting 0.0.0
 
 uses `temper-core`#6 0.0.0-alpha.0.0 {
   class ListBuilder#7<T#8> extends Listed#9<T#8> {
-    connected method sort#33(compare: fn (T#8, T#8): Int32): Void;
+    connected method sort#36<E#37 extends Error#24>(compare: fn (T#8, T#8): Int32 throws E#37): Void throws E#37;
   }
   interface Listed#9<T#10> {
-    connected method sorted#22(compare: fn (T#10, T#10): Int32): List#12<T#10>;
-    connected method join#29(separator: String, stringify: fn (T#10): String): String;
-    connected method get#32(index: Int32): T#10;
+    connected method sorted#22<E#23 extends Error#24>(compare: fn (T#10, T#10): Int32 throws E#23): List#12<T#10> throws E#23;
+    connected method join#31<E#32 extends Error#24>(separator: String, stringify: fn (T#10): String throws E#32): String throws E#32;
+    connected method get#35(index: Int32): T#10;
   }
   class List#12<T#13> extends Listed#9<T#13> {
     connected method toListBuilder#21(): ListBuilder#7<T#13>;
@@ -15,19 +15,20 @@ uses `temper-core`#6 0.0.0-alpha.0.0 {
   class Int32#17 {
     connected method toString#18(radix?: Int32): String;
   }
-  interface Console#26 {
-    connected method log#27(message: String): Void;
+  interface Error#24 {}
+  interface Console#28 {
+    connected method log#29(message: String): Void;
   }
-  class Float64#57 {
-    connected method toInt32Unsafe#58(): Int32;
-    connected method sign#59(): Float64;
-    connected method toString#62(): String;
+  class Float64#61 {
+    connected method toInt32Unsafe#62(): Int32;
+    connected method sign#63(): Float64;
+    connected method toString#66(): String;
   }
-  connected fn getConsole#65(name?: String): Console#26;
+  connected fn getConsole#69(name?: String): Console#28;
 }
 
 module sorting#0 {
-  let ~console#28: Console#26;
+  let ~console#30: Console#28;
 
   class Entry#1 {
     let id#2: Int32;
@@ -45,50 +46,50 @@ module sorting#0 {
 
   let sortedEntries#14: List#12<Entry#1>;
 
-  fn mungeInts#15(ints#39: List#12<Int32>): Void {
-    let builder#40: ListBuilder#7<Int32> = ints#39.toListBuilder#21();
-    builder#40.sort#33((fn ~fn#41(a#42: Int32, b#43: Int32): Int32 {
-      return %Int32.sub(a#42, b#43);
+  fn mungeInts#15(ints#43: List#12<Int32>): Void {
+    let builder#44: ListBuilder#7<Int32> = ints#43.toListBuilder#21();
+    builder#44.sort#36<Never<Error#24>>((fn ~fn#45(a#46: Int32, b#47: Int32): Int32 {
+      return %Int32.sub(a#46, b#47);
     }): fn (Int32, Int32): Int32);
-    ~console#28.log#27(ints#39.sorted#22((fn ~fn#44(a#45: Int32, b#46: Int32): Int32 {
-      return %Int32.sub(a#45, b#46);
-    }): fn (Int32, Int32): Int32).join#29(", ", (fn ~fn#47(a#48: Int32): String {
-      return a#48.toString#18(omitted);
+    ~console#30.log#29(ints#43.sorted#22<Never<Error#24>>((fn ~fn#48(a#49: Int32, b#50: Int32): Int32 {
+      return %Int32.sub(a#49, b#50);
+    }): fn (Int32, Int32): Int32).join#31<Never<Error#24>>(", ", (fn ~fn#51(a#52: Int32): String {
+      return a#52.toString#18(omitted);
     }): fn (Int32): String));
-    ~console#28.log#27(builder#40.join#29(", ", (fn ~fn#49(a#50: Int32): String {
-      return a#50.toString#18(omitted);
+    ~console#30.log#29(builder#44.join#31<Never<Error#24>>(", ", (fn ~fn#53(a#54: Int32): String {
+      return a#54.toString#18(omitted);
     }): fn (Int32): String));
   }
 
-  fn mungeFloats#16(floats#51: List#12<Float64>): Void {
-    let builder#52: ListBuilder#7<Float64> = floats#51.toListBuilder#21();
-    let compareFloats#53: fn (Float64, Float64): Int32 = (fn ~fn#54(a#55: Float64, b#56: Float64): Int32 {
-      return %Float64.sub(a#55, b#56).sign#59().toInt32Unsafe#58();
+  fn mungeFloats#16(floats#55: List#12<Float64>): Void {
+    let builder#56: ListBuilder#7<Float64> = floats#55.toListBuilder#21();
+    let compareFloats#57: fn (Float64, Float64): Int32 = (fn ~fn#58(a#59: Float64, b#60: Float64): Int32 {
+      return %Float64.sub(a#59, b#60).sign#63().toInt32Unsafe#62();
     }): fn (Float64, Float64): Int32;
-    builder#52.sort#33(compareFloats#53);
-    ~console#28.log#27(floats#51.sorted#22(compareFloats#53).join#29(", ", (fn ~fn#60(a#61: Float64): String {
-      return a#61.toString#62();
+    builder#56.sort#36<Never<Error#24>>(compareFloats#57);
+    ~console#30.log#29(floats#55.sorted#22<Never<Error#24>>(compareFloats#57).join#31<Never<Error#24>>(", ", (fn ~fn#64(a#65: Float64): String {
+      return a#65.toString#66();
     }): fn (Float64): String));
-    ~console#28.log#27(builder#52.join#29(", ", (fn ~fn#63(a#64: Float64): String {
-      return a#64.toString#62();
+    ~console#30.log#29(builder#56.join#31<Never<Error#24>>(", ", (fn ~fn#67(a#68: Float64): String {
+      return a#68.toString#66();
     }): fn (Float64): String));
   }
 
   init {
-    init ~console#28 = getConsole#65(omitted);
+    init ~console#30 = getConsole#69(omitted);
     init entries#11 = ((list(new constructor#5(0, 0), new constructor#5(1, 1), new constructor#5(2, 2), new constructor#5(3, 0), new constructor#5(4, 1), new constructor#5(5, 2), new constructor#5(6, 0), new constructor#5(7, 1), new constructor#5(8, 2))): List#12<Entry#1>).toListBuilder#21();
-    init sortedEntries#14 = entries#11.sorted#22((fn ~fn#23(a#24: Entry#1, b#25: Entry#1): Int32 {
-      return %Int32.sub(a#24.group#3, b#25.group#3);
+    init sortedEntries#14 = entries#11.sorted#22<Never<Error#24>>((fn ~fn#25(a#26: Entry#1, b#27: Entry#1): Int32 {
+      return %Int32.sub(a#26.group#3, b#27.group#3);
     }): fn (Entry#1, Entry#1): Int32);
-    ~console#28.log#27(sortedEntries#14.join#29("\n", (fn ~fn#30(a#31: Entry#1): String {
-      return a#31.toString#4();
+    ~console#30.log#29(sortedEntries#14.join#31<Never<Error#24>>("\n", (fn ~fn#33(a#34: Entry#1): String {
+      return a#34.toString#4();
     }): fn (Entry#1): String));
-    ~console#28.log#27(entries#11.get#32(1).toString#4());
-    entries#11.sort#33((fn ~fn#34(a#35: Entry#1, b#36: Entry#1): Int32 {
-      return %Int32.sub(a#35.group#3, b#36.group#3);
+    ~console#30.log#29(entries#11.get#35(1).toString#4());
+    entries#11.sort#36<Never<Error#24>>((fn ~fn#38(a#39: Entry#1, b#40: Entry#1): Int32 {
+      return %Int32.sub(a#39.group#3, b#40.group#3);
     }): fn (Entry#1, Entry#1): Int32);
-    ~console#28.log#27(entries#11.join#29("\n", (fn ~fn#37(a#38: Entry#1): String {
-      return a#38.toString#4();
+    ~console#30.log#29(entries#11.join#31<Never<Error#24>>("\n", (fn ~fn#41(a#42: Entry#1): String {
+      return a#42.toString#4();
     }): fn (Entry#1): String));
     mungeInts#15((list(2, 1)): List#12<Int32>);
     mungeFloats#16((list(3.4, 1.2)): List#12<Float64>);

@@ -296,6 +296,8 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);
     let p = settled.as_ref().unwrap_or(p);
+    // Generic failure parameters wait for their own chunk (RFC 164).
+    temper_tmpl::failures::params_not_yet(p).map_err(NotYet::new)?;
     // `Never<T>` as `T`, but where the profile keeps it
     // (`temper_tmpl::nevers`).
     let nevered = temper_tmpl::nevers::lower(p, &variant.profile);

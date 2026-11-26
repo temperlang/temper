@@ -18,7 +18,7 @@
 //! generators, `async`, and `await`, as state machines
 //! (`temper_be_testkit::ASYNC`), and tests run as tests with std (`temper_be_testkit::TESTS`);
 //! and declared failures, the testkit's `failures`, `host-failures`, and
-//! `failures-interop`;
+//! `failures-interop`, and its specification `failure-params` ([`SPECS`]);
 //! and on this crate's own programs, in `tests/programs/` ([`OWN`]).
 //!
 //! - `goldens`: each program's generated package, laid out as Kotlin's,
@@ -82,6 +82,10 @@ const RUNTIME_OPTIONS: &[&str] = &[
     "-Xlint:-options",
 ];
 
+/// The testkit's specifications (`kit::SPECS`) this backend runs, which
+/// others don't all yet: `failure-params`.
+const SPECS: [&str; 1] = ["failure-params"];
+
 fn cases() -> Vec<Case> {
     let tests = [
         &kit::CLASSES[..],
@@ -103,7 +107,8 @@ fn cases() -> Vec<Case> {
         &kit::NET[..],
     ]
     .concat();
-    let mut cases = kit::cases_with("java", &kit::PROGRAMS, &tests);
+    let programs = [&kit::PROGRAMS[..], &SPECS[..]].concat();
+    let mut cases = kit::cases_with("java", &programs, &tests);
     for case in &mut cases {
         rename_host_code(case);
     }

@@ -852,7 +852,7 @@ impl Translator<'_> {
         let mut ps: Vec<(String, String)> = (self.templates(class)?.into_iter())
             .map(|t| ("@template".to_string(), t))
             .collect();
-        let uses: Vec<String> = (p.decls.type_params(class).iter())
+        let uses: Vec<String> = (temper_tmpl::failures::unchecked_type_params(p, class).iter())
             .map(|&t| p.name(t).to_string())
             .collect();
         let result = match uses.as_slice() {

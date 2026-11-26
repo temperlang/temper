@@ -628,9 +628,11 @@ impl Settle {
         true
     }
 
-    /// Notes what a solved call's failure parameters are, solved in full
-    /// ([`Settle::solve_fully`]), if its function has any
-    /// ([`Typing::failure_args`](super::Typing::failure_args)).
+    /// Notes a solved call's failure parameters, solved in full
+    /// ([`Settle::solve_fully`]), if its function has any: what its
+    /// function literals' bodies may fail with counts there, which the
+    /// call's type doesn't need
+    /// ([`Typing::type_args`](super::Typing::type_args)).
     fn note_failure_args(&mut self, solved: &Solved) {
         let types = &mut self.typing.types;
         let failing: Vec<usize> = (0..solved.formals.len())
@@ -642,7 +644,7 @@ impl Settle {
         let Ok(Some(full)) = self.solve_fully(solved.call, false) else {
             return;
         };
-        let args = failing.iter().map(|&k| full.actuals[k]).collect();
+        let args = failing.into_iter().map(|k| (k, full.actuals[k])).collect();
         self.typing.failure_args.insert(solved.call, args);
     }
 
@@ -913,7 +915,8 @@ impl Settle {
     /// call can bind it (`CONTEXT` in `combine<CONTEXT extends Context,
     /// T>(x: T): T`), its bound, or `AnyValue` if it has none, as Kotlin
     /// Temper's solver binds it, with the other type parameters put in.
-    /// Others still unknown stay so. Failure parameters are left out.
+    /// Others still unknown stay so, as failure parameters may until the
+    /// call is checked ([`Settle::note_failure_args`]).
     pub(super) fn settled_type_args(&mut self, solved: &Solved) -> Vec<TypeId> {
         let TypeData::Fn { params, result } = self.typing.types.get(solved.sig).clone() else {
             return solved.actuals.clone();
@@ -934,13 +937,7 @@ impl Settle {
                 settled[k] = bound;
             }
         }
-        // tmpl has no failure parameters yet (RFC 164's later chunks), so
-        // a call's type arguments leave them out.
-        let types = &mut self.typing.types;
-        (settled.into_iter().enumerate())
-            .filter(|&(k, _)| !types.fails_with(solved.sig, &solved.formals[k..=k]))
-            .map(|(_, t)| t)
-            .collect()
+        settled
     }
 
     /// A solved call's function type, with the solution put in.

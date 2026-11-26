@@ -192,6 +192,19 @@ fn cases() -> Vec<Case> {
 }
 
 /// A case's generated files.
+/// Generic failure parameters (RFC 164; the specification
+/// `failure-params`) aren't translated yet (chunk 16), and say so,
+/// rather than giving code that doesn't build.
+#[test]
+fn failure_parameters_not_yet() {
+    kit::with_stack(|| {
+        for case in kit::spec_cases("rust", "failure-params") {
+            let error = translate(&kit::program_for(&case, &RUST.rules), &RUST).unwrap_err();
+            assert!(error.what.contains("failure parameters"), "{error}");
+        }
+    });
+}
+
 fn generate(case: &Case) -> Vec<OutFile> {
     translate(&kit::program_for(case, &RUST.rules), &RUST)
         .unwrap_or_else(|e| panic!("{}: {e}", case.key))

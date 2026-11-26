@@ -711,8 +711,12 @@ interface` may take an `E` too. Core's `Listed.map`, `filter`, `reduce`,
 `ListBuilder.sort`, and `Mapped.forEach`, `toListWith`, and
 `toListBuilderWith` are generic so, so a callback may now fail with a
 declared failure there: `keys.filter { k => m[k] > 0 }` throws
-`MissingKey`. For now this runs on the interpreter only: on the backends, a call that fails by its
-callback, and any call of a library's function with a failure
-parameter, is reported as not yet supported. Also fixed: a module's
+`MissingKey`. Python, Java, JS, C#, and Lua translate these: exceptions
+are unchecked there, so `E` appears in no host signature (Java's
+`mapAll` is `<T, R> List<R> mapAll(List<T> xs, Function<T, R> f)`), a
+callback's failure passes through unchanged, and a handler in generic
+code catches failures, never panics or the host's own errors. Rust and
+C++ report them as not yet supported, as does a bubbling callback
+there. Also fixed: a module's
 `let` of a `@fun` interface, `let inc: Mapper<Int, Int> = fn …`, and
 `let xs = f() orelse []`, which failed on every backend.

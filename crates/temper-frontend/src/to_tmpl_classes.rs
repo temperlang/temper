@@ -777,6 +777,11 @@ impl Translator<'_> {
         // with the same signature is wanted: a literal or reference takes
         // the type wanted, as typing gives it; else a conversion.
         let (have_sig, want_sig) = (self.b.fun_signature(have), self.b.fun_signature(want));
+        if let (Some(h), Some(w)) = (have_sig, want_sig) {
+            if let Some(made) = self.wider_failing_ref(value, h, w, want) {
+                return made;
+            }
+        }
         if let Some(plain) = have_sig.filter(|_| have_sig == want_sig) {
             let kind = self.b.program().nodes.kind(value);
             if matches!(
@@ -814,6 +819,60 @@ impl Translator<'_> {
         };
         self.b.set_span(made, span, true);
         made
+    }
+
+    /// A declared function, referenced, where a function value is wanted
+    /// that may fail more widely, as `find`, which throws `Missing`, where
+    /// `Mapper<String, Int, AppError>` is (RFC 164; typing checked that
+    /// it fits): a literal of the type wanted that calls it, `fn (x) {
+    /// find(x) }`, so every backend widens the failure as a `throw` would;
+    /// `None` for anything else.
+    fn wider_failing_ref(
+        &mut self,
+        value: NodeId,
+        have: TypeId,
+        want: TypeId,
+        ty: TypeId,
+    ) -> Option<NodeId> {
+        let Node::FunctionRef { target } = self.b.program().nodes.get(value) else {
+            return None;
+        };
+        let types = &self.b.program().types;
+        let (h, w) = (types.signature(have)?, types.signature(want)?);
+        if have == want || (h.params, h.optional, h.pass) != (w.params, w.optional, w.pass) {
+            return None;
+        }
+        let (params, pass) = (w.params.to_vec(), w.pass);
+        let span = self.b.program().nodes.span(value);
+        let decl = self
+            .b
+            .declare_made(DeclKind::Lambda, &["fn"], self.owner, want);
+        self.b.set_decl_spans(decl, span, span);
+        let mut made = Vec::new();
+        let (mut param_nodes, mut args) = (Vec::new(), Vec::new());
+        for t in params {
+            let param = self.b.declare_made(DeclKind::Param, &["x"], decl, t);
+            self.b.set_decl_spans(param, span, span);
+            param_nodes.push(self.b.param(param));
+            args.push(self.b.local(param));
+        }
+        let call = self.b.call(target, &args);
+        let stmt = match pass {
+            TypeId::VOID => self.b.expr_statement(call),
+            _ => self.b.return_stmt(Some(call)),
+        };
+        let body = self.b.block(&[stmt]);
+        let literal = self.b.function_literal(ty, decl, &param_nodes, body);
+        made.extend(
+            param_nodes
+                .iter()
+                .chain(&args)
+                .chain([&call, &stmt, &body, &literal]),
+        );
+        for node in made {
+            self.b.set_span(node, span, true);
+        }
+        Some(literal)
     }
 
     /// Each argument fit to its parameter's type.

@@ -22,7 +22,7 @@
 //! the testkit's test server; and for generators, `async`,
 //! and `await`, as Python's generators, the testkit's `ASYNC`; and for
 //! declared failures, the testkit's `failures`, `host-failures`, and
-//! `failures-interop`.
+//! `failures-interop`, and its specification `failure-params`.
 //!
 //! - `goldens`: each test's generated Python, laid out as Kotlin's, with
 //!   its root module matching the golden in `tests/goldens/`, named for
@@ -62,8 +62,9 @@ use std::{env, fs};
 use temper_be_py::{OutFile, PY, translate};
 use temper_be_testkit::{self as kit, Case, Goldens};
 
-/// The shared programs that Python's translation covers so far.
-const PROGRAMS: [&str; 31] = [
+/// The shared programs that Python's translation covers so far, and the
+/// testkit's specification `failure-params` (`kit::SPECS`).
+const PROGRAMS: [&str; 32] = [
     "classes",
     "nullables",
     "generics",
@@ -95,6 +96,7 @@ const PROGRAMS: [&str; 31] = [
     "host-failures",
     "failures-interop",
     "dead-handlers.tmpl",
+    "failure-params",
 ];
 
 fn cases() -> Vec<Case> {

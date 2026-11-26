@@ -21,26 +21,27 @@ uses `temper-core`#20 0.0.0-alpha.0.0 {
     connected method log#41(): Float64;
     connected method log10#42(): Float64;
     connected method log1p#43(): Float64;
-    connected method max#54(other: Float64): Float64;
-    connected method min#55(other: Float64): Float64;
-    connected method round#58(): Float64;
-    connected method sign#59(): Float64;
-    connected method sin#60(): Float64;
-    connected method sinh#61(): Float64;
-    connected method tan#62(): Float64;
-    connected method tanh#63(): Float64;
+    connected method max#56(other: Float64): Float64;
+    connected method min#57(other: Float64): Float64;
+    connected method round#60(): Float64;
+    connected method sign#61(): Float64;
+    connected method sin#62(): Float64;
+    connected method sinh#63(): Float64;
+    connected method tan#64(): Float64;
+    connected method tanh#65(): Float64;
   }
   interface Console#24 {
     connected method log#25(message: String): Void;
   }
   interface Listed#44<T#45> {
-    connected method join#46(separator: String, stringify: fn (T#45): String): String;
+    connected method join#46<E#47 extends Error#48>(separator: String, stringify: fn (T#45): String throws E#47): String throws E#47;
   }
-  class List#47<T#48> extends Listed#44<T#48> {}
-  class Boolean#64 {
-    connected method toString#65(): String;
+  interface Error#48 {}
+  class List#49<T#50> extends Listed#44<T#50> {}
+  class Boolean#66 {
+    connected method toString#67(): String;
   }
-  connected fn getConsole#66(name?: String): Console#24;
+  connected fn getConsole#68(name?: String): Console#24;
 }
 
 module ops#0 {
@@ -78,7 +79,7 @@ module ops#0 {
   let zero#14: Float64;
 
   init {
-    init ~console#26 = getConsole#66(omitted);
+    init ~console#26 = getConsole#68(omitted);
     init one#2 = 1.0;
     one#2 = one#2;
     init two#3 = %Float64.add(one#2, one#2);
@@ -107,12 +108,12 @@ module ops#0 {
     init ten#11 = %Float64.mul(two#3, five#10);
     near#1("ten.log10()", ten#11.log10#42(), one#2);
     near#1("(e - one).log1p()", %Float64.sub(e#9, one#2).log1p#43(), one#2);
-    init maxMinCombos#12 = ((list(nan, one#2)): List#47<Float64>).join#46(", ", (fn ~fn#49(x#50: Float64): String {
-      return ((list(nan, two#3)): List#47<Float64>).join#46(", ", (fn ~fn#51(y#52: Float64): String [x#50] {
-        let pair#53: String = ((list(x#50.max#54(y#52), x#50.min#55(y#52))): List#47<Float64>).join#46(", ", (fn ~fn#56(z#57: Float64): String {
-          return z#57.toString#23();
+    init maxMinCombos#12 = ((list(nan, one#2)): List#49<Float64>).join#46<Never<Error#48>>(", ", (fn ~fn#51(x#52: Float64): String {
+      return ((list(nan, two#3)): List#49<Float64>).join#46<Never<Error#48>>(", ", (fn ~fn#53(y#54: Float64): String [x#52] {
+        let pair#55: String = ((list(x#52.max#56(y#54), x#52.min#57(y#54))): List#49<Float64>).join#46<Never<Error#48>>(", ", (fn ~fn#58(z#59: Float64): String {
+          return z#59.toString#23();
         }): fn (Float64): String);
-        return %String.cat(%String.cat("(", pair#53), ")");
+        return %String.cat(%String.cat("(", pair#55), ")");
       }): fn (Float64): String);
     }): fn (Float64): String);
     ~console#26.log#25(%String.cat("maxMinCombos: ", maxMinCombos#12));
@@ -121,23 +122,23 @@ module ops#0 {
     near#1("2.25 % -2.0", %Float64.mod(%Float64.add(two#3, quarter#13), %Float64.neg(two#3)), 0.25);
     near#1("-2.25 % 2.0", %Float64.mod(%Float64.neg(%Float64.add(two#3, quarter#13)), two#3), %Float64.neg(0.25));
     near#1("-2.25 % -2.0", %Float64.mod(%Float64.neg(%Float64.add(two#3, quarter#13)), %Float64.neg(two#3)), %Float64.neg(0.25));
-    near#1("pi.round()", pi#6.round#58(), three#5);
-    near#1("(-pi).round()", %Float64.neg(pi#6).round#58(), %Float64.neg(three#5));
-    near#1("pi.sign()", pi#6.sign#59(), one#2);
-    near#1("(-pi).sign()", %Float64.neg(pi#6).sign#59(), %Float64.neg(one#2));
+    near#1("pi.round()", pi#6.round#60(), three#5);
+    near#1("(-pi).round()", %Float64.neg(pi#6).round#60(), %Float64.neg(three#5));
+    near#1("pi.sign()", pi#6.sign#61(), one#2);
+    near#1("(-pi).sign()", %Float64.neg(pi#6).sign#61(), %Float64.neg(one#2));
     init zero#14 = %Float64.sub(one#2, one#2);
-    ~console#26.log#25(%String.cat("zero.sign(): ", zero#14.sign#59().toString#23()));
-    ~console#26.log#25(%String.cat("(-zero).sign(): ", %Float64.neg(zero#14).sign#59().toString#23()));
-    near#1("(pi / six).sin()", %Float64.div(pi#6, six#7).sin#60(), half#4);
-    near#1("one.sinh()", one#2.sinh#61(), %Float64.div(%Float64.sub(e#9, %Float64.div(one#2, e#9)), two#3));
-    near#1("(-pi / four).tan()", %Float64.div(%Float64.neg(pi#6), four#8).tan#62(), %Float64.neg(one#2));
-    near#1("(three * pi / four).tan()", %Float64.div(%Float64.mul(three#5, pi#6), four#8).tan#62(), %Float64.neg(one#2));
-    near#1("one.tanh()", one#2.tanh#63(), %Float64.div(%Float64.sub(%Float64.pow(e#9, 2.0), 1.0), %Float64.add(%Float64.pow(e#9, 2.0), 1.0)));
-    ~console#26.log#25(%String.cat("one.near(one + 0.1): ", one#2.near#22(%Float64.add(one#2, 0.1), omitted, omitted).toString#65()));
-    ~console#26.log#25(%String.cat("one.near(one + 0.25, absTol = 0.25): ", one#2.near#22(%Float64.add(one#2, 0.25), omitted, 0.25).toString#65()));
-    ~console#26.log#25(%String.cat("one.near(one + 0.1 + 1e-9, absTol = 0.1): ", one#2.near#22(%Float64.add(%Float64.add(one#2, 0.1), 1.0e-9), omitted, 0.1).toString#65()));
-    ~console#26.log#25(%String.cat("one.near(one - 0.1, absTol = 0.11): ", one#2.near#22(%Float64.sub(one#2, 0.1), omitted, 0.11).toString#65()));
-    ~console#26.log#25(%String.cat("ten.near(ten + 0.1, absTol = 0.011): ", ten#11.near#22(%Float64.add(ten#11, 0.1), omitted, 0.011).toString#65()));
-    ~console#26.log#25(%String.cat("ten.near(ten + 0.1, relTol = 0.011): ", ten#11.near#22(%Float64.add(ten#11, 0.1), 0.011, omitted).toString#65()));
+    ~console#26.log#25(%String.cat("zero.sign(): ", zero#14.sign#61().toString#23()));
+    ~console#26.log#25(%String.cat("(-zero).sign(): ", %Float64.neg(zero#14).sign#61().toString#23()));
+    near#1("(pi / six).sin()", %Float64.div(pi#6, six#7).sin#62(), half#4);
+    near#1("one.sinh()", one#2.sinh#63(), %Float64.div(%Float64.sub(e#9, %Float64.div(one#2, e#9)), two#3));
+    near#1("(-pi / four).tan()", %Float64.div(%Float64.neg(pi#6), four#8).tan#64(), %Float64.neg(one#2));
+    near#1("(three * pi / four).tan()", %Float64.div(%Float64.mul(three#5, pi#6), four#8).tan#64(), %Float64.neg(one#2));
+    near#1("one.tanh()", one#2.tanh#65(), %Float64.div(%Float64.sub(%Float64.pow(e#9, 2.0), 1.0), %Float64.add(%Float64.pow(e#9, 2.0), 1.0)));
+    ~console#26.log#25(%String.cat("one.near(one + 0.1): ", one#2.near#22(%Float64.add(one#2, 0.1), omitted, omitted).toString#67()));
+    ~console#26.log#25(%String.cat("one.near(one + 0.25, absTol = 0.25): ", one#2.near#22(%Float64.add(one#2, 0.25), omitted, 0.25).toString#67()));
+    ~console#26.log#25(%String.cat("one.near(one + 0.1 + 1e-9, absTol = 0.1): ", one#2.near#22(%Float64.add(%Float64.add(one#2, 0.1), 1.0e-9), omitted, 0.1).toString#67()));
+    ~console#26.log#25(%String.cat("one.near(one - 0.1, absTol = 0.11): ", one#2.near#22(%Float64.sub(one#2, 0.1), omitted, 0.11).toString#67()));
+    ~console#26.log#25(%String.cat("ten.near(ten + 0.1, absTol = 0.011): ", ten#11.near#22(%Float64.add(ten#11, 0.1), omitted, 0.011).toString#67()));
+    ~console#26.log#25(%String.cat("ten.near(ten + 0.1, relTol = 0.011): ", ten#11.near#22(%Float64.add(ten#11, 0.1), 0.011, omitted).toString#67()));
   }
 }

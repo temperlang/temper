@@ -3,20 +3,21 @@ tmpl 1 model 1 library `minimal-repro` 0.0.0
 uses `temper-core`#1 0.0.0-alpha.0.0 {
   class List#2<T#3> extends Listed#4<T#3> {}
   interface Listed#4<T#5> {
-    connected method join#11(separator: String, stringify: fn (T#5): String): String;
-    connected method filter#16(predicate: fn (T#5): Boolean): List#2<T#5>;
-    connected method map#25<O#26>(transform: fn (T#5): O#26): List#2<O#26>;
+    connected method join#11<E#12 extends Error#13>(separator: String, stringify: fn (T#5): String throws E#12): String throws E#12;
+    connected method filter#18<E#19 extends Error#13>(predicate: fn (T#5): Boolean throws E#19): List#2<T#5> throws E#19;
+    connected method map#28<O#29, E#30 extends Error#13>(transform: fn (T#5): O#29 throws E#30): List#2<O#29> throws E#30;
   }
   interface Console#8 {
     connected method log#9(message: String): Void;
   }
-  class Int32#14 {
-    connected method toString#15(radix?: Int32): String;
+  interface Error#13 {}
+  class Int32#16 {
+    connected method toString#17(radix?: Int32): String;
   }
-  class String#31 {
-    connected method split#32(separator: String): List#2<String>;
+  class String#35 {
+    connected method split#36(separator: String): List#2<String>;
   }
-  connected fn getConsole#35(name?: String): Console#8;
+  connected fn getConsole#39(name?: String): Console#8;
 }
 
 module `minimal-repro`#0 {
@@ -27,29 +28,29 @@ module `minimal-repro`#0 {
   let strs#7: List#2<String>;
 
   init {
-    init ~console#10 = getConsole#35(omitted);
+    init ~console#10 = getConsole#39(omitted);
     init ls#6 = (list(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)): List#2<Int32>;
-    ~console#10.log#9(%String.cat("All  ", ls#6.join#11(", ", (fn ~fn#12(x#13: Int32): String {
-      return x#13.toString#15(omitted);
+    ~console#10.log#9(%String.cat("All  ", ls#6.join#11<Never<Error#13>>(", ", (fn ~fn#14(x#15: Int32): String {
+      return x#15.toString#17(omitted);
     }): fn (Int32): String)));
-    ~console#10.log#9(%String.cat("Even ", ls#6.filter#16((fn ~fn#17(x#18: Int32): Boolean {
-      return %Int32.eq(%Int32.bitAnd(x#18, 1), 0);
-    }): fn (Int32): Boolean).join#11(", ", (fn ~fn#19(x#20: Int32): String {
-      return x#20.toString#15(omitted);
+    ~console#10.log#9(%String.cat("Even ", ls#6.filter#18<Never<Error#13>>((fn ~fn#20(x#21: Int32): Boolean {
+      return %Int32.eq(%Int32.bitAnd(x#21, 1), 0);
+    }): fn (Int32): Boolean).join#11<Never<Error#13>>(", ", (fn ~fn#22(x#23: Int32): String {
+      return x#23.toString#17(omitted);
     }): fn (Int32): String)));
-    ~console#10.log#9(%String.cat("Odd  ", ls#6.filter#16((fn ~fn#21(x#22: Int32): Boolean {
-      return %Boolean.not(%Int32.eq(%Int32.bitAnd(x#22, 1), 0));
-    }): fn (Int32): Boolean).join#11(", ", (fn ~fn#23(x#24: Int32): String {
-      return x#24.toString#15(omitted);
+    ~console#10.log#9(%String.cat("Odd  ", ls#6.filter#18<Never<Error#13>>((fn ~fn#24(x#25: Int32): Boolean {
+      return %Boolean.not(%Int32.eq(%Int32.bitAnd(x#25, 1), 0));
+    }): fn (Int32): Boolean).join#11<Never<Error#13>>(", ", (fn ~fn#26(x#27: Int32): String {
+      return x#27.toString#17(omitted);
     }): fn (Int32): String)));
-    ~console#10.log#9(%String.cat("Neg  ", ls#6.map#25<Int32>((fn ~fn#27(x#28: Int32): Int32 {
-      return %Int32.neg(x#28);
-    }): fn (Int32): Int32).join#11(", ", (fn ~fn#29(x#30: Int32): String {
-      return x#30.toString#15(omitted);
+    ~console#10.log#9(%String.cat("Neg  ", ls#6.map#28<Int32, Never<Error#13>>((fn ~fn#31(x#32: Int32): Int32 {
+      return %Int32.neg(x#32);
+    }): fn (Int32): Int32).join#11<Never<Error#13>>(", ", (fn ~fn#33(x#34: Int32): String {
+      return x#34.toString#17(omitted);
     }): fn (Int32): String)));
-    init strs#7 = "1 ; 2 ; 3".split#32(" ; ");
-    ~console#10.log#9(%String.cat("Splt ", strs#7.join#11(", ", (fn ~fn#33(x#34: String): String {
-      return x#34;
+    init strs#7 = "1 ; 2 ; 3".split#36(" ; ");
+    ~console#10.log#9(%String.cat("Splt ", strs#7.join#11<Never<Error#13>>(", ", (fn ~fn#37(x#38: String): String {
+      return x#38;
     }): fn (String): String)));
   }
 }

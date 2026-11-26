@@ -668,7 +668,8 @@ impl<'a> Translator<'a> {
             TypeData::Nominal { decl, args } => {
                 let qname = self.qname(decl);
                 let mut texts = Vec::new();
-                for &a in self.p.types.list(args) {
+                let args = self.p.types.list(args);
+                for a in temper_tmpl::failures::unchecked_args(self.p, decl, args) {
                     texts.push(self.ty(a)?);
                 }
                 let name = match connected::lookup_type(&qname) {
@@ -719,7 +720,7 @@ impl<'a> Translator<'a> {
     /// `IHolder<T>` for `interface Holder<T>`.
     fn own_type(&mut self, decl: DeclId) -> R<String> {
         let name = self.simple_type_name(decl);
-        let params = self.p.decls.type_params(decl).to_vec();
+        let params = temper_tmpl::failures::unchecked_type_params(self.p, decl);
         if params.is_empty() {
             return Ok(name);
         }
@@ -739,7 +740,7 @@ impl<'a> Translator<'a> {
             return not_yet("a generic interface's member on another type");
         };
         let mut texts = Vec::new();
-        for a in args {
+        for a in temper_tmpl::failures::unchecked_args(self.p, owner, &args) {
             texts.push(self.ty(a)?);
         }
         Ok(format!("{name}<{}>", texts.join(", ")))
@@ -757,10 +758,10 @@ impl<'a> Translator<'a> {
 
     /// A generic declaration's type parameters, `<T>`, and their
     /// constraints, `where T : Named` (but `MapKey`, which C#'s maps need
-    /// nothing for).
+    /// nothing for). Not failure parameters: exceptions are unchecked.
     fn type_params(&mut self, decl: DeclId) -> R<(String, Vec<String>)> {
         let p = self.p;
-        let params = p.decls.type_params(decl).to_vec();
+        let params = temper_tmpl::failures::unchecked_type_params(p, decl);
         if params.is_empty() {
             return Ok((String::new(), Vec::new()));
         }
@@ -2907,7 +2908,8 @@ impl<'a> Translator<'a> {
             return Ok(String::new());
         }
         let mut texts = Vec::new();
-        for &a in self.p.types.args_of(type_args) {
+        let args = self.p.types.args_of(type_args);
+        for a in temper_tmpl::failures::unchecked_args(self.p, callee, args) {
             texts.push(self.ty(a)?);
         }
         if texts.is_empty() {

@@ -523,7 +523,8 @@ impl<'a> Translator<'a> {
             TypeData::Nominal { decl, .. } if self.is_program_type(decl) => self.lua_type(decl),
             TypeData::Nominal { decl, args } => {
                 let mut texts = Vec::new();
-                for &a in self.p.types.list(args) {
+                let args = self.p.types.list(args);
+                for a in temper_tmpl::failures::unchecked_args(self.p, decl, args) {
                     texts.push(self.ty(a)?);
                 }
                 match (self.qname(decl).as_str(), texts.as_slice()) {
@@ -1356,6 +1357,8 @@ impl<'a> Translator<'a> {
             if generics.is_empty() {
                 self.function_type_params(p.decls.get(decl).ty, &mut generics);
             }
+            // Not failure parameters: exceptions are unchecked.
+            generics.retain(|&t| !temper_tmpl::failures::is_failure_param(p, t));
             for t in generics {
                 // With its bound, `IT: lib.I`, so LuaLS knows its members.
                 let mut bounds = Vec::new();

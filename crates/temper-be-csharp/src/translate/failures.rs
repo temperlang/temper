@@ -279,10 +279,8 @@ impl Translator<'_> {
     /// `<exception cref="NotFound">`; nothing for one that bubbles, or
     /// fails with a type parameter.
     pub(super) fn throws_doc(&mut self, decl: DeclId) -> R<Vec<String>> {
-        let p = self.p;
-        let root = temper_tmpl::failures::root(p);
-        match p.signature(decl).and_then(|s| s.fail) {
-            Some(fail) if temper_tmpl::failures::is_failure_type(p, root, fail) => {
+        match temper_tmpl::failures::declared(self.p, decl) {
+            Some(fail) => {
                 let ty = self.ty(fail)?;
                 Ok(vec![format!(
                     "<exception cref=\"{ty}\">Where it fails with {ty}.</exception>"

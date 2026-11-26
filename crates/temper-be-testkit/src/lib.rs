@@ -364,7 +364,9 @@ pub const HOST_CODE: [&str; 3] = ["host-error-causes", "host-error-tests", "host
 /// The specifications in `programs/`: shared programs of behavior not
 /// built yet everywhere, written ahead with the logs they should give,
 /// which only backends that have it run: `failure-params` functions
-/// generic over their callbacks' failure types; `failure-async` promises
+/// generic over their callbacks' failure types, which the exception
+/// backends run (Python, Java, JS, C#, Lua), while Rust and C++ say not
+/// yet; `failure-async` promises
 /// broken with failures; `failure-jumps` a `catch` whose body jumps out
 /// of its loop, which Lua runs, while Rust and C++ say not yet; and
 /// `failure-causes` failures made among a thrown one's arguments, and a
@@ -391,9 +393,8 @@ pub const INTERP_SPECS: [&str; 3] = ["failure-params", "failure-jumps", "failure
 
 /// The specifications ([`INTERP_SPECS`]) that translate to tmpl already,
 /// whose tmpl is checked against goldens, as [`PROGRAMS`]' is, while
-/// not every backend runs them yet. `failure-params` waits for generic
-/// failure parameters in tmpl.
-pub const TMPL_SPECS: [&str; 2] = ["failure-jumps", "failure-causes"];
+/// not every backend runs them yet.
+pub const TMPL_SPECS: [&str; 3] = ["failure-params", "failure-jumps", "failure-causes"];
 
 /// A specification's path and text: `NAME.temper.md`, or in a directory
 /// of its own beside its host code.

@@ -9,7 +9,7 @@ uses `temper-core`#8 0.0.0-alpha.0.0 {
   class Empty#18 {}
   class List#25<T#26> extends Listed#27<T#26> {}
   interface Listed#27<T#28> {
-    connected method join#103(separator: String, stringify: fn (T#28): String): String;
+    connected method join#103<E#104 extends Error#59>(separator: String, stringify: fn (T#28): String throws E#104): String throws E#104;
   }
   class PromiseBuilder#32<R#33> {
     connected constructor constructor#39(): PromiseBuilder#32<R#33>;
@@ -43,7 +43,7 @@ uses `temper-core`#8 0.0.0-alpha.0.0 {
     connected method add#99(newValue: T#93, at?: Int32): Void;
     connected method toList#101(): List#25<T#93>;
   }
-  connected fn getConsole#117(name?: String): Console#72;
+  connected fn getConsole#118(name?: String): Console#72;
 }
 
 module `async-turns`#0 {
@@ -128,8 +128,8 @@ module `async-turns`#0 {
   }
 
   fn shown#29(ints#102: List#25<Int32>): String {
-    return ints#102.join#103(" ", (fn ~fn#104(i#105: Int32): String {
-      return i#105.toString#76(omitted);
+    return ints#102.join#103<Never<Error#59>>(" ", (fn ~fn#105(i#106: Int32): String {
+      return i#106.toString#76(omitted);
     }): fn (Int32): String);
   }
 
@@ -140,17 +140,17 @@ module `async-turns`#0 {
     constructor constructor#6(): Counter#2 {
       this.n#4 = 0;
     }
-    method bump#5(tag#106: String, times#107: Int32): Void {
-      ~console#74.log#73(%String.cat(tag#106, " start"));
+    method bump#5(tag#107: String, times#108: Int32): Void {
+      ~console#74.log#73(%String.cat(tag#107, " start"));
       {
-        var i#108: Int32 = 0;
-        ~loop#109: while (%Int32.lt(i#108, times#107)) {
-          let before#110: Int32 = this.n#4;
-          this.n#4 = %Int32.add(before#110, 1);
-          i#108 = %Int32.add(i#108, 1);
+        var i#109: Int32 = 0;
+        ~loop#110: while (%Int32.lt(i#109, times#108)) {
+          let before#111: Int32 = this.n#4;
+          this.n#4 = %Int32.add(before#111, 1);
+          i#109 = %Int32.add(i#109, 1);
         }
       }
-      ~console#74.log#73(%String.cat(%String.cat(tag#106, " done n="), this.n#4.toString#76(omitted)));
+      ~console#74.log#73(%String.cat(%String.cat(tag#107, " done n="), this.n#4.toString#76(omitted)));
     }
   }
 
@@ -160,15 +160,15 @@ module `async-turns`#0 {
 
   let gateB#35: PromiseBuilder#32<Int32>;
 
-  export fn halve#36(n#116: Int32): Int32 throws Bubble {
-    if (%Boolean.not(%Int32.eq(%Int32.modSafe(n#116, 2), 0))) {
+  export fn halve#36(n#117: Int32): Int32 throws Bubble {
+    if (%Boolean.not(%Int32.eq(%Int32.modSafe(n#117, 2), 0))) {
       (bubble()^): Void;
     }
-    return %Int32.divSafe(n#116, 2);
+    return %Int32.divSafe(n#117, 2);
   }
 
   init {
-    init ~console#74 = getConsole#117(omitted);
+    init ~console#74 = getConsole#118(omitted);
     init t#19 = ticks#17(2, (fn ~fn#70(i#71: Int32): Void {
       ~console#74.log#73(%String.cat("tick ", i#71.toString#76(omitted)));
     }): Tick#1);
@@ -183,17 +183,17 @@ module `async-turns`#0 {
     init c#31 = new constructor#6();
     init gateA#34 = new constructor#39<Int32>();
     init gateB#35 = new constructor#39<Int32>();
-    async#40((fn generator ~fn#111(): SafeGenerator#13<Empty#18> {
+    async#40((fn generator ~fn#112(): SafeGenerator#13<Empty#18> {
       c#31.bump#5("A", 10000);
-      let k#112: Int32 = (orelse((await(gateA#34.promise#62())^): Int32, %Int32.neg(1))): Int32;
-      c#31.bump#5(%String.cat("A", k#112.toString#76(omitted)), 10000);
+      let k#113: Int32 = (orelse((await(gateA#34.promise#62())^): Int32, %Int32.neg(1))): Int32;
+      c#31.bump#5(%String.cat("A", k#113.toString#76(omitted)), 10000);
     }): fn (): SafeGenerator#13<Empty#18>);
-    async#40((fn generator ~fn#113(): SafeGenerator#13<Empty#18> {
+    async#40((fn generator ~fn#114(): SafeGenerator#13<Empty#18> {
       c#31.bump#5("B", 10000);
-      let k#114: Int32 = (orelse((await(gateB#35.promise#62())^): Int32, %Int32.neg(1))): Int32;
-      c#31.bump#5(%String.cat("B", k#114.toString#76(omitted)), 10000);
+      let k#115: Int32 = (orelse((await(gateB#35.promise#62())^): Int32, %Int32.neg(1))): Int32;
+      c#31.bump#5(%String.cat("B", k#115.toString#76(omitted)), 10000);
     }): fn (): SafeGenerator#13<Empty#18>);
-    async#40((fn generator ~fn#115(): SafeGenerator#13<Empty#18> {
+    async#40((fn generator ~fn#116(): SafeGenerator#13<Empty#18> {
       ~console#74.log#73("opener: calling complete");
       gateA#34.complete#61(1);
       gateB#35.complete#61(2);

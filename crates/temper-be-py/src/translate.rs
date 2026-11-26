@@ -435,7 +435,8 @@ impl<'a> Translator<'a> {
             // Only a signature's result, never a value's (tmpl's T5).
             TypeData::Result { .. } => return not_yet("a result type as a value's"),
             TypeData::Nominal { decl, args } => {
-                let args = self.p.types.list(args).to_vec();
+                let args = self.p.types.list(args);
+                let args = temper_tmpl::failures::unchecked_args(self.p, decl, args);
                 let mut quote = false;
                 let mut texts = Vec::new();
                 for a in args {
@@ -577,7 +578,8 @@ impl<'a> Translator<'a> {
                     .collect()
             };
             for decl in decls {
-                for &tp in p.decls.type_params(decl) {
+                // Not failure parameters: exceptions are unchecked.
+                for tp in temper_tmpl::failures::unchecked_type_params(p, decl) {
                     let source = p.name(tp).to_string();
                     let bound = match p.decls.supers(tp) {
                         [] => None,
@@ -1004,7 +1006,7 @@ impl<'a> Translator<'a> {
         let Some(sig) = p.signature(decl) else {
             return Vec::new();
         };
-        (p.decls.type_params(decl).iter())
+        (temper_tmpl::failures::unchecked_type_params(p, decl).iter())
             .filter(|&&tp| {
                 let f = p.decls.get(tp).ty;
                 !p.types.mentions(sig.pass, f)

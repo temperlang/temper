@@ -26,7 +26,8 @@
 //! nullables beyond those tests, the testkit's programs of declared
 //! failures, `failures`, `host-failures`, and `failures-interop` (with
 //! host code that catches its failures, `tests/host/failures.lua`), and
-//! the specification `failure-jumps` ([`SPECS`]), and on
+//! the specifications `failure-jumps` and `failure-params` ([`SPECS`]),
+//! and on
 //! programs of Lua's own ([`HIDING`], [`HOISTING`], [`MEMBERS`],
 //! [`REPEATS`], [`locals`], and [`FAILURE_IMPORTS`]).
 //!
@@ -480,8 +481,8 @@ fn cases() -> Vec<Case> {
 }
 
 /// The testkit's specifications (`kit::SPECS`) Lua runs, which other
-/// backends don't all yet: `failure-jumps`.
-const SPECS: [&str; 1] = ["failure-jumps"];
+/// backends don't all yet: `failure-jumps` and `failure-params`.
+const SPECS: [&str; 2] = ["failure-jumps", "failure-params"];
 
 /// A library whose root module handles failures of a type only its
 /// module `a` names, which the root then requires for `temper.catch` to

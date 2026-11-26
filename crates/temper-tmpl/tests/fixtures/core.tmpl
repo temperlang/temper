@@ -86,12 +86,12 @@ uses `temper-core`#0 0.1.0 {
     connected method slice#63(begin: Int32, end: Int32): List#64<T#58>;
     connected method toList#65(): List#64<T#58>;
     connected method toListBuilder#66(): ListBuilder#67<T#58>;
-    connected method map#117<O#118>(transform: fn (T#58): O#118): List#64<O#118>;
-    connected method filter#119(predicate: fn (T#58): Boolean): List#64<T#58>;
-    connected method reduce#120(accumulate: fn (T#58, T#58): T#58): T#58;
-    connected method reduceFrom#121<O#122>(initial: O#122, accumulate: fn (O#122, T#58): O#122): O#122;
-    connected method join#123(separator: String, stringify: fn (T#58): String): String;
-    connected method sorted#124(compare: fn (T#58, T#58): Int32): List#64<T#58>;
+    connected method map#117<O#118, E#223 extends Error#202>(transform: fn (T#58): O#118 throws E#223): List#64<O#118> throws E#223;
+    connected method filter#119<E#224 extends Error#202>(predicate: fn (T#58): Boolean throws E#224): List#64<T#58> throws E#224;
+    connected method reduce#120<E#225 extends Error#202>(accumulate: fn (T#58, T#58): T#58 throws E#225): T#58 throws E#225;
+    connected method reduceFrom#121<O#122, E#226 extends Error#202>(initial: O#122, accumulate: fn (O#122, T#58): O#122 throws E#226): O#122 throws E#226;
+    connected method join#123<E#227 extends Error#202>(separator: String, stringify: fn (T#58): String throws E#227): String throws E#227;
+    connected method sorted#124<E#228 extends Error#202>(compare: fn (T#58, T#58): Int32 throws E#228): List#64<T#58> throws E#228;
   }
   class List#64<T#68> extends Listed#57<T#68> {
     connected get length#69(): Int32;
@@ -110,7 +110,7 @@ uses `temper-core`#0 0.1.0 {
     connected get length#81(): Int32;
     connected method toList#82(): List#64<T#73>;
     connected method toListBuilder#83(): ListBuilder#67<T#73>;
-    connected method sort#125(compare: fn (T#73, T#73): Int32): Void;
+    connected method sort#125<E#229 extends Error#202>(compare: fn (T#73, T#73): Int32 throws E#229): Void throws E#229;
     connected method splice#171(index?: Int32, removeCount?: Int32, newValues?: Listed#57<T#73>): List#64<T#73>;
   }
   class Pair#84<K#85, V#86> {
@@ -130,8 +130,8 @@ uses `temper-core`#0 0.1.0 {
     connected method toMapBuilder#103(): MapBuilder#104<K#93, V#94>;
     connected method toList#105(): List#64<Pair#84<K#93, V#94>>;
     connected method toListBuilder#106(): ListBuilder#67<Pair#84<K#93, V#94>>;
-    connected method forEach#126(func: fn (K#93, V#94): Void): Void;
-    connected method toListWith#156<T#157>(func: fn (K#93, V#94): T#157): List#64<T#157>;
+    connected method forEach#126<E#230 extends Error#202>(func: fn (K#93, V#94): Void throws E#230): Void throws E#230;
+    connected method toListWith#156<T#157, E#231 extends Error#202>(func: fn (K#93, V#94): T#157 throws E#231): List#64<T#157> throws E#231;
   }
   class Map#102<K#107 extends MapKey#90<K#107>, V#108> extends Mapped#92<K#107, V#108> {
     connected constructor constructor#109(entries: List#64<Pair#84<K#107, V#108>>): Map#102<K#107, V#108>;

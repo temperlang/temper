@@ -400,7 +400,7 @@ impl Translator<'_> {
             bases.push(self.ann(ty)?);
         }
         // A generic class names its type parameters, in order.
-        let params = p.decls.type_params(decl).to_vec();
+        let params = temper_tmpl::failures::unchecked_type_params(p, decl);
         if !params.is_empty() {
             let mut names = Vec::new();
             for t in params {

@@ -1258,13 +1258,12 @@ fails comes from its solved signature (`bubbles.rs`). As built
   failures. A `for
   … of` body solves nothing (`infers_result`): its failures are its
   function's, as before.
-- **tmpl** has no failure parameters yet (chunks 15 and 16), so calls'
-  type arguments leave them out (`settled_type_args`), and typing notes
-  what each call's are, solved in full (`Typing::failure_args`): a call
-  that fails by one is "not yet in tmpl: a call that fails as its
-  callback does (a failure parameter)", and a call of a library's
-  function with one, "a call of a function with a failure parameter".
-  Calls of core's that can't fail translate as before.
+- **tmpl** (chunk 15): a call's type arguments give its failure
+  parameters (`Typing::type_args`) as solved in full when the call is
+  checked, from its literals' bodies too (`Typing::failure_args`, by
+  their places), `Never<Error>` where it can't fail by one; a bubble as
+  one is "not yet in tmpl: a failure parameter that a bubble gives"
+  ([tmpl/nodes.md](tmpl/nodes.md), "Declared failures").
 
 ## Declared failures
 
@@ -1272,8 +1271,9 @@ In progress (RFC 164, chunks 4 to 13 and decision 17's rework of
 notes/error-custom-kinds-plan.md, 2026-11-25): typed in the frontend,
 run on the interpreter, and translated to tmpl
 ([tmpl/nodes.md](tmpl/nodes.md), "Declared failures") and to every
-backend; failure parameters ("Failure parameters", above) aren't in
-tmpl yet, and `error case` is still an error. The user-visible names, the root's (`FAILURE_ROOT` in
+backend, failure parameters ("Failure parameters", above) on the
+backends with exceptions (Rust and C++ say not yet), and `error case` is
+still an error. The user-visible names, the root's (`FAILURE_ROOT` in
 `builtins.rs`, and core's `interface Error`), the messages' wording,
 and the default message and reports (`interp/failures.rs`), are kept in
 one place each, as they may change.
@@ -1371,7 +1371,7 @@ one place each, as they may change.
   `getPromiseResultSync` all name it in one place each, which `E` will
   replace.
 - **Not yet:** `error case`, promises and generators with `E`, failure
-  parameters in tmpl, and checks that a failure type's own `message` or
+  parameters on Rust and C++, and checks that a failure type's own `message` or
   `cause` fits the root's.
 
 ## What may bubble

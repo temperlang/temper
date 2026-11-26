@@ -1,0 +1,213 @@
+tmpl 1 model 1 library `failure-params` 0.0.0
+
+uses `temper-core`#8 0.0.0-alpha.0.0 {
+  interface Error#9 {}
+  class List#20<T#21> extends Listed#22<T#21> {
+    connected get length#54(): Int32;
+    connected method get#55(index: Int32): T#21;
+  }
+  interface Listed#22<T#23> {
+    connected method join#69<E#70 extends Error#9>(separator: String, stringify: fn (T#23): String throws E#70): String throws E#70;
+    connected method filter#120<E#121 extends Error#9>(predicate: fn (T#23): Boolean throws E#121): List#20<T#23> throws E#121;
+    connected method reduceFrom#125<O#126, E#127 extends Error#9>(initial: O#126, accumulate: fn (O#126, T#23): O#126 throws E#127): O#126 throws E#127;
+    connected method sorted#136<E#137 extends Error#9>(compare: fn (T#23, T#23): Int32 throws E#137): List#20<T#23> throws E#137;
+  }
+  class ListBuilder#50<T#51> extends Listed#22<T#51> {
+    connected constructor constructor#53(): ListBuilder#50<T#51>;
+    connected method add#60(newValue: T#51, at?: Int32): Void;
+    connected method toList#61(): List#20<T#51>;
+  }
+  interface Console#66 {
+    connected method log#67(message: String): Void;
+  }
+  class Int32#73 {
+    connected method toString#74(radix?: Int32): String;
+  }
+  connected fn getConsole#143(name?: String): Console#66;
+}
+
+module `failure-params`#0 {
+  let ~console#68: Console#66;
+
+  interface FailureParamsError#1 extends Error#9 {}
+
+  class Missing#2 extends FailureParamsError#1 {
+    let key#10: String;
+    constructor constructor#11(key#44: String): Missing#2 {
+      this.key#10 = key#44;
+    }
+    get message#45(): String {
+      return %String.cat(%String.cat("missing (key: ", this.key#10), ")");
+    }
+  }
+
+  fn find#15(key#46: String): Int32 throws Missing#2 {
+    if (%String.eq(key#46, "one")) {
+      return 1;
+    }
+    if (%String.eq(key#46, "two")) {
+      return 2;
+    }
+    (throw(new constructor#11(key#46))^): Void;
+  }
+
+  fun interface Mapper#3<T#5, R#6, E#7 extends Error#9> {
+    abstract method apply#12(x#47: T#5): R#6 throws E#7;
+  }
+
+  fn mapAll#16<T#17, R#18, E#19 extends Error#9>(xs#48: List#20<T#17>, f#49: Mapper#3<T#17, R#18, E#19>): List#20<R#18> throws E#19 {
+    let out#52: ListBuilder#50<R#18> = new constructor#53<R#18>();
+    {
+      let ~length#56: Int32 = xs#48.length#54();
+      var ~i#57: Int32 = 0;
+      ~loop#58: while (%Int32.lt(~i#57, ~length#56)) {
+        let x#59: T#17 = xs#48.get#55(~i#57);
+        ~i#57 = %Int32.add(~i#57, 1);
+        out#52.add#60(f#49(x#59)^, omitted);
+      }
+    }
+    return out#52.toList#61();
+  }
+
+  let doubled#24: List#20<Int32>;
+
+  let safe#25: Mapper#3<Int32, Int32, Never<Error#9>>;
+
+  fn found#26(keys#75: List#20<String>): List#20<Int32> throws Missing#2 {
+    return mapAll#16<String, Int32, Missing#2>(keys#75, (fn ~fn#76(k#77: String): Int32 throws Missing#2 {
+      return find#15(k#77)^;
+    }): Mapper#3<String, Int32, Missing#2>)^;
+  }
+
+  fn shown#27(keys#78: List#20<String>): String {
+    var ns#79: List#20<Int32>;
+    var ~caught#80: Missing#2? = (null): Missing#2?;
+    var ~held#82: List#20<Int32>? = (null): List#20<Int32>?;
+    (catch((value { ~held#82 = (asNullable(found#26(keys#78)^)): List#20<Int32>?; void }): Void, ~failure#81: Missing#2, (value { ~caught#80 = (asNullable(~failure#81)): Missing#2?; void }): Void)): Void;
+    if (isNull(~held#82)) {
+      let e#83: Missing#2 = (nonNull(~caught#80)): Missing#2;
+      return %String.cat("missing ", e#83.key#10);
+    } else {
+      ns#79 = (nonNull(~held#82)): List#20<Int32>;
+    }
+    return ns#79.join#69<Never<Error#9>>(",", (fn ~fn#84(n#85: Int32): String {
+      return n#85.toString#74(omitted);
+    }): fn (Int32): String);
+  }
+
+  let named#28: List#20<Int32>;
+
+  fn applied#29(f#86: Mapper#3<Int32, Int32, Missing#2>, n#87: Int32): Int32 throws Missing#2 {
+    return f#86(n#87)^;
+  }
+
+  let six#30: Int32;
+
+  fn failures#31<T#32, R#33, E#34 extends Error#9>(xs#90: List#20<T#32>, f#91: Mapper#3<T#32, R#33, E#34>): Int32 {
+    var failed#92: Int32 = 0;
+    {
+      let ~length#93: Int32 = xs#90.length#54();
+      var ~i#94: Int32 = 0;
+      ~loop#95: while (%Int32.lt(~i#94, ~length#93)) {
+        let x#96: T#32 = xs#90.get#55(~i#94);
+        ~i#94 = %Int32.add(~i#94, 1);
+        (orelse((value { f#91(x#96)^; void }): Void, (value { failed#92 = %Int32.add(failed#92, 1); void }): Void)): Void;
+      }
+    }
+    return failed#92;
+  }
+
+  let some#35: Int32;
+
+  let none#36: Int32;
+
+  fn both#37<E#38 extends Error#9>(a#99: Mapper#3<String, Int32, E#38>, b#100: Mapper#3<String, Int32, E#38>, key#101: String): Int32 throws E#38 {
+    return %Int32.add(a#99(key#101)^, b#100(key#101)^);
+  }
+
+  let twelve#39: Int32;
+
+  let lost#40: Int32;
+
+  class Unknown#4 extends FailureParamsError#1 {
+    let word#13: String;
+    constructor constructor#14(word#105: String): Unknown#4 {
+      this.word#13 = word#105;
+    }
+    get message#106(): String {
+      return %String.cat(%String.cat("unknown (word: ", this.word#13), ")");
+    }
+  }
+
+  fn word#41(key#107: String): Int32 throws Unknown#4 {
+    if (%String.eq(key#107, "ten")) {
+      return 10;
+    }
+    (throw(new constructor#14(key#107))^): Void;
+  }
+
+  fn either#42(key#108: String): String {
+    var n#109: Int32;
+    var ~caught#114: FailureParamsError#1? = (null): FailureParamsError#1?;
+    var ~held#116: Int32? = (null): Int32?;
+    (catch((value { ~held#116 = (asNullable(both#37<FailureParamsError#1>((fn ~fn#110(~x#111: String): Int32 throws FailureParamsError#1 { return find#15(~x#111)^; }): Mapper#3<String, Int32, FailureParamsError#1>, (fn ~fn#112(~x#113: String): Int32 throws FailureParamsError#1 { return word#41(~x#113)^; }): Mapper#3<String, Int32, FailureParamsError#1>, key#108)^)): Int32?; void }): Void, ~failure#115: FailureParamsError#1, (value { ~caught#114 = (asNullable(~failure#115)): FailureParamsError#1?; void }): Void)): Void;
+    if (isNull(~held#116)) {
+      let e#117: FailureParamsError#1 = (nonNull(~caught#114)): FailureParamsError#1;
+      return (if (is(e#117, Missing#2)) %String.cat("no ", ((downcast(e#117)): Missing#2).key#10) else (if (is(e#117, Unknown#4)) %String.cat("unknown ", ((downcast(e#117)): Unknown#4).word#13) else (panic()): String): String): String;
+    } else {
+      n#109 = (nonNull(~held#116)): Int32;
+    }
+    return n#109.toString#74(omitted);
+  }
+
+  fn parts#43(keys#118: List#20<String>): String throws Missing#2 {
+    let found#119: List#20<String> = keys#118.filter#120<Missing#2>((fn ~fn#122(k#123: String): Boolean throws Missing#2 {
+      return %Int32.gt(find#15(k#123)^, 1);
+    }): fn (String): Boolean throws Missing#2)^;
+    let total#124: Int32 = keys#118.reduceFrom#125<Int32, Missing#2>(0, (fn ~fn#128(n#129: Int32, k#130: String): Int32 throws Missing#2 {
+      return %Int32.add(n#129, find#15(k#130)^);
+    }): fn (Int32, String): Int32 throws Missing#2)^;
+    return %String.cat(%String.cat(%String.cat(%String.cat(found#119.join#69<Never<Error#9>>(",", (fn ~fn#131(k#132: String): String {
+      return k#132;
+    }): fn (String): String), " "), total#124.toString#74(omitted)), " "), keys#118.join#69<Missing#2>("+", (fn ~fn#133(k#134: String): String throws Missing#2 {
+      return find#15(k#134)^.toString#74(omitted);
+    }): fn (String): String throws Missing#2)^);
+  }
+
+  init {
+    init ~console#68 = getConsole#143(omitted);
+    init doubled#24 = mapAll#16<Int32, Int32, Never<Error#9>>((list(1, 2, 3)): List#20<Int32>, (fn ~fn#62(n#63: Int32): Int32 {
+      return %Int32.mul(n#63, 2);
+    }): Mapper#3<Int32, Int32, Never<Error#9>>);
+    init safe#25 = (fn ~fn#64(n#65: Int32): Int32 {
+      return %Int32.add(n#65, 1);
+    }): Mapper#3<Int32, Int32, Never<Error#9>>;
+    ~console#68.log#67(%String.cat(%String.cat(doubled#24.join#69<Never<Error#9>>(",", (fn ~fn#71(n#72: Int32): String {
+      return n#72.toString#74(omitted);
+    }): fn (Int32): String), " "), safe#25(1).toString#74(omitted)));
+    init named#28 = (orelse(mapAll#16<String, Int32, Missing#2>((list("two", "one")): List#20<String>, (ref(find#15)): Mapper#3<String, Int32, Missing#2>)^, (list()): List#20<Int32>)): List#20<Int32>;
+    ~console#68.log#67(%String.cat(%String.cat(%String.cat(%String.cat(shown#27((list("one", "two")): List#20<String>), " "), shown#27((list("one", "six", "ten")): List#20<String>)), " "), named#28.length#54().toString#74(omitted)));
+    init six#30 = (orelse(applied#29((fn ~fn#88(n#89: Int32): Int32 throws Missing#2 {
+      return %Int32.mul(n#89, 3);
+    }): Mapper#3<Int32, Int32, Missing#2>, 2)^, %Int32.neg(1))): Int32;
+    ~console#68.log#67(six#30.toString#74(omitted));
+    init some#35 = failures#31<String, Int32, Missing#2>((list("one", "six", "two", "ten")): List#20<String>, (ref(find#15)): Mapper#3<String, Int32, Missing#2>);
+    init none#36 = failures#31<Int32, Int32, Never<Error#9>>((list(1, 2)): List#20<Int32>, (fn ~fn#97(n#98: Int32): Int32 {
+      return n#98;
+    }): Mapper#3<Int32, Int32, Never<Error#9>>);
+    ~console#68.log#67(%String.cat(%String.cat(some#35.toString#74(omitted), " "), none#36.toString#74(omitted)));
+    init twelve#39 = (orelse(both#37<Missing#2>((ref(find#15)): Mapper#3<String, Int32, Missing#2>, (fn ~fn#102(k#103: String): Int32 throws Missing#2 {
+      return 10;
+    }): Mapper#3<String, Int32, Missing#2>, "two")^, %Int32.neg(1))): Int32;
+    init lost#40 = (catch(both#37<Missing#2>((ref(find#15)): Mapper#3<String, Int32, Missing#2>, (ref(find#15)): Mapper#3<String, Int32, Missing#2>, "six")^, e#104: Missing#2, (value { ~console#68.log#67(%String.cat("lost ", e#104.key#10)); %Int32.neg(1) }): Int32)): Int32;
+    ~console#68.log#67(%String.cat(%String.cat(twelve#39.toString#74(omitted), " "), lost#40.toString#74(omitted)));
+    ~console#68.log#67(%String.cat(%String.cat(either#42("one"), " "), either#42("ten")));
+    ~console#68.log#67((orelse(parts#43((list("one", "two")): List#20<String>)^, "?")): String);
+    ~console#68.log#67((catch(parts#43((list("one", "six")): List#20<String>)^, e#135: Missing#2, %String.cat("missing ", e#135.key#10))): String);
+    ~console#68.log#67(((list(3, 1, 2)): List#20<Int32>).sorted#136<Never<Error#9>>((fn ~fn#138(a#139: Int32, b#140: Int32): Int32 {
+      return %Int32.sub(a#139, b#140);
+    }): fn (Int32, Int32): Int32).join#69<Never<Error#9>>(",", (fn ~fn#141(n#142: Int32): String {
+      return n#142.toString#74(omitted);
+    }): fn (Int32): String));
+  }
+}

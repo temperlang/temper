@@ -9,9 +9,9 @@ uses std#1 0.0.0-alpha.0.0 {
       connected let day#27: Int32;
       connected get dayOfWeek#28(): Int32;
       connected method toString#29(): String;
-      connected static fromIsoString#46(isoString: String): Date#3 throws TemporalError#17;
-      connected static today#50(): Date#3;
-      connected static yearsBetween#51(start: Date#3, end: Date#3): Int32;
+      connected static fromIsoString#47(isoString: String): Date#3 throws TemporalError#17;
+      connected static today#52(): Date#3;
+      connected static yearsBetween#53(start: Date#3, end: Date#3): Int32;
     }
     interface TemporalError#17 extends Error#18 {}
   }
@@ -23,8 +23,8 @@ uses `temper-core`#7 0.0.0-alpha.0.0 {
     connected method get#31(index: Int32): T#9;
   }
   interface Listed#10<T#11> {
-    connected method map#42<O#43>(transform: fn (T#11): O#43): List#8<O#43>;
-    connected method join#47(separator: String, stringify: fn (T#11): String): String;
+    connected method map#42<O#43, E#44 extends Error#18>(transform: fn (T#11): O#43 throws E#44): List#8<O#43> throws E#44;
+    connected method join#48<E#49 extends Error#18>(separator: String, stringify: fn (T#11): String throws E#49): String throws E#49;
   }
   interface Error#18 {
     connected get message#41(): String;
@@ -35,7 +35,7 @@ uses `temper-core`#7 0.0.0-alpha.0.0 {
   class Int32#23 {
     connected method toString#24(radix?: Int32): String;
   }
-  connected fn getConsole#52(name?: String): Console#20;
+  connected fn getConsole#54(name?: String): Console#20;
 }
 
 module date#0 {
@@ -60,7 +60,7 @@ module date#0 {
   let rdc#16: Date#3;
 
   init {
-    init ~console#22 = getConsole#52(omitted);
+    init ~console#22 = getConsole#54(omitted);
     init d#4 = new constructor#19(2023, 6, 29)^;
     ~console#22.log#21(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("year    = ", d#4.year#25.toString#24(omitted)), "\nmonth   = "), d#4.month#26.toString#24(omitted)), "\nday     = "), d#4.day#27.toString#24(omitted)), "\nweekday = "), d#4.dayOfWeek#28().toString#24(omitted)));
     ~console#22.log#21(%String.cat("ISO 8601: ", d#4.toString#29()));
@@ -78,19 +78,19 @@ module date#0 {
       }
     }
     ~console#22.log#21(%String.cat(%String.cat(checkDate#6(2024, 2, 29), " "), checkDate#6(2023, 2, 29)));
-    init parsed#12 = ((list("2024-02-29", "2023-02-29", "2023-2-1")): List#8<String>).map#42<String>((fn ~fn#44(s#45: String): String {
-      return (orelse(fromIsoString#46(s#45)^.toString#29(), "none")): String;
+    init parsed#12 = ((list("2024-02-29", "2023-02-29", "2023-2-1")): List#8<String>).map#42<String, Never<Error#18>>((fn ~fn#45(s#46: String): String {
+      return (orelse(fromIsoString#47(s#46)^.toString#29(), "none")): String;
     }): fn (String): String);
-    ~console#22.log#21(parsed#12.join#47(" ", (fn ~fn#48(it#49: String): String {
-      return it#49;
+    ~console#22.log#21(parsed#12.join#48<Never<Error#18>>(" ", (fn ~fn#50(it#51: String): String {
+      return it#51;
     }): fn (String): String));
-    today#50();
+    today#52();
     init start#13 = new constructor#19(2010, 3, 21)^;
-    init firstYears#14 = yearsBetween#51(start#13, new constructor#19(2012, 3, 20)^);
+    init firstYears#14 = yearsBetween#53(start#13, new constructor#19(2012, 3, 20)^);
     ~console#22.log#21(%String.cat("First years between: ", firstYears#14.toString#24(omitted)));
-    init secondYears#15 = yearsBetween#51(start#13, new constructor#19(2012, 3, 21)^);
+    init secondYears#15 = yearsBetween#53(start#13, new constructor#19(2012, 3, 21)^);
     ~console#22.log#21(%String.cat("Second years between: ", secondYears#15.toString#24(omitted)));
-    init rdc#16 = (orelse(fromIsoString#46("1596-03-31")^, (panic()): Date#3)): Date#3;
+    init rdc#16 = (orelse(fromIsoString#47("1596-03-31")^, (panic()): Date#3)): Date#3;
     ~console#22.log#21(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("Happy birthday, René: day=", rdc#16.day#27.toString#24(omitted)), ", month="), rdc#16.month#26.toString#24(omitted)), ", year="), rdc#16.year#25.toString#24(omitted)));
   }
 }

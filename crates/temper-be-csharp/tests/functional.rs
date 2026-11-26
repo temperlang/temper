@@ -15,7 +15,7 @@
 //! jumps, module state, string order, several modules, imports, tests,
 //! classes, and nullables beyond those tests; and declared failures, the
 //! testkit's `failures`, `host-failures`, and `failures-interop`, and its
-//! specification `failure-causes` ([`SPECS`]).
+//! specifications `failure-causes` and `failure-params` ([`SPECS`]).
 //!
 //! - `goldens`: each program's generated library, laid out as Kotlin's,
 //!   with its `ROOTGlobal.cs` matching the golden in `tests/goldens/`,
@@ -226,8 +226,8 @@ fn cases() -> Vec<Case> {
 
 /// The testkit's specifications (`kit::SPECS`) C# runs, which other
 /// backends don't all yet: `failure-causes`, whose failures
-/// `tests/host/FailuresHost.cs` reads too.
-const SPECS: [&str; 1] = ["failure-causes"];
+/// `tests/host/FailuresHost.cs` reads too, and `failure-params`.
+const SPECS: [&str; 2] = ["failure-causes", "failure-params"];
 
 /// A run of a program in sections (`host-failures-cause`, of
 /// `host-failures`), a library of its own, with the program's host code

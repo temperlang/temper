@@ -16,7 +16,8 @@
 //! (`temper_be_testkit::LOOPS_AND_CLASSES`), and of generators, `async`,
 //! and `await`, as `function*`s (`temper_be_testkit::ASYNC`), and
 //! declared failures, the testkit's `failures`, `host-failures`, and
-//! `failures-interop`, and this crate's own programs (`tests/programs/`,
+//! `failures-interop`, and its specification `failure-params` ([`SPECS`]),
+//! and this crate's own programs (`tests/programs/`,
 //! [`OWN`]).
 //!
 //! - `goldens`: each program's generated package, laid out as Kotlin's,
@@ -62,6 +63,10 @@ use temper_be_js::{JS, OutFile, names, translate, translate_with_source_maps};
 use temper_be_testkit::{self as kit, Case, Goldens};
 use temper_tmpl::source_map::{Segment, decode_mappings};
 
+/// The testkit's specifications (`kit::SPECS`) this backend runs, which
+/// others don't all yet: `failure-params`.
+const SPECS: [&str; 1] = ["failure-params"];
+
 fn cases() -> Vec<Case> {
     let tests = [
         &kit::CLASSES[..],
@@ -83,7 +88,8 @@ fn cases() -> Vec<Case> {
         &kit::NET[..],
     ]
     .concat();
-    let mut cases = kit::cases_with("js", &kit::PROGRAMS, &tests);
+    let programs = [&kit::PROGRAMS[..], &SPECS[..]].concat();
+    let mut cases = kit::cases_with("js", &programs, &tests);
     for case in &mut cases {
         rename_host_code(case);
     }

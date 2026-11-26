@@ -360,11 +360,12 @@ impl<'a> Translator<'a> {
 
     /// A declaration's type parameters, as JSDoc's `@template` takes them:
     /// `T`, or `{Named} T` with a bound (but `MapKey`, which JS's maps
-    /// need nothing for).
+    /// need nothing for); not failure parameters, as exceptions are
+    /// unchecked.
     pub(crate) fn templates(&mut self, decl: DeclId) -> R<Vec<String>> {
         let p = self.p;
         let mut out = Vec::new();
-        for &t in p.decls.type_params(decl) {
+        for t in temper_tmpl::failures::unchecked_type_params(p, decl) {
             let name = p.name(t).to_string();
             let mut bounds = Vec::new();
             for &b in p.decls.supers(t) {
@@ -401,7 +402,8 @@ impl<'a> Translator<'a> {
             TypeData::Result { .. } => return not_yet("a result type as a value's"),
             TypeData::Nominal { decl, args } => {
                 let mut texts = Vec::new();
-                for &a in self.p.types.list(args) {
+                let args = self.p.types.list(args);
+                for a in temper_tmpl::failures::unchecked_args(self.p, decl, args) {
                     texts.push(self.ty(a)?);
                 }
                 let applied = |name: String| {
@@ -929,13 +931,9 @@ impl<'a> Translator<'a> {
     /// for one; nothing for one that bubbles, or fails with a type
     /// parameter.
     fn throws(&mut self, decl: DeclId) -> R<Option<(String, String)>> {
-        let p = self.p;
-        let root = temper_tmpl::failures::root(p);
-        match p.signature(decl).and_then(|s| s.fail) {
-            Some(fail) if temper_tmpl::failures::is_failure_type(p, root, fail) => {
-                Ok(Some(("@throws".to_string(), self.ty(fail)?)))
-            }
-            _ => Ok(None),
+        match temper_tmpl::failures::declared(self.p, decl) {
+            Some(fail) => Ok(Some(("@throws".to_string(), self.ty(fail)?))),
+            None => Ok(None),
         }
     }
 

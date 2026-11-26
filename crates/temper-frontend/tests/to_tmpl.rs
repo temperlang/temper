@@ -1308,13 +1308,14 @@ fn empty_list_fallbacks_take_the_operands_type() {
     });
 }
 
-/// tmpl has no failure parameters yet (RFC 164's later chunks), so a call
-/// that fails as its callback does, of core's (`map`) or the library's,
-/// and a call of a function with a failure parameter, say not yet,
-/// rather than giving tmpl the validator rejects; calls of core's that
-/// can't fail translate as before.
+/// Failure parameters (RFC 164) in tmpl: a function generic on its
+/// callback's failure keeps `throws E`, and its calls, of core's (`map`)
+/// or the library's, give `E` as a type argument, what the callback may
+/// fail with, or `Never<Error>` where it can't, as the validator checks.
+/// A bubble as `E` says not yet: handlers in generic code catch failures,
+/// which a bubble isn't.
 #[test]
-fn failure_parameters_not_yet_in_tmpl() {
+fn failure_parameters_in_tmpl() {
     with_stack(|| {
         let outcome = |body: &str| -> String {
             let source = format!(
@@ -1323,6 +1324,7 @@ fn failure_parameters_not_yet_in_tmpl() {
     class Missing(public key: String) extends AppError {{}}
     let find(key: String): Int throws Missing {{ throw new Missing(key) }}
     let apply<E>(f: fn (): Int throws E): Int throws E {{ f() }}
+    let bubbly(n: Int): Int throws Bubble {{ if (n > 0) {{ bubble() }} else {{ n }} }}
     {body}
 "
             );
@@ -1337,26 +1339,38 @@ fn failure_parameters_not_yet_in_tmpl() {
             match to_tmpl(&settled, "params") {
                 Ok(program) => {
                     let problems = validate(&program, &Profile::full());
-                    assert!(problems.is_empty(), "{problems:#?}");
+                    assert!(
+                        problems.is_empty(),
+                        "{problems:#?}\n{}",
+                        text::write(&program)
+                    );
+                    let written = text::write(&program);
+                    assert!(written.contains(": Int32 throws E#"), "{written}");
                     "ok".to_string()
                 }
                 Err(e) => e.what,
             }
         };
-        const FAILS: &str = "a call that fails as its callback does (a failure parameter)";
-        const PARAM: &str = "a call of a function with a failure parameter";
         let cases = [
-            ("let xs = [\"a\"].map { k => find(k) } orelse [];", FAILS),
+            ("let xs = [\"a\"].map { k => find(k) } orelse [];", "ok"),
             (
                 "let n = [\"a\"].filter { k => find(k) > 0 }.length orelse 0;",
-                FAILS,
+                "ok",
             ),
-            ("let n = apply { find(\"a\") } orelse 0;", FAILS),
-            ("let n = apply { 1 };", PARAM),
+            ("let n = apply { find(\"a\") } orelse 0;", "ok"),
+            ("let n = apply { 1 };", "ok"),
             ("let xs = [\"a\"].map { k => k.end };", "ok"),
             (
                 "let s = [1, 2].filter { n => n > 1 }.join(\",\") { n => n.toString() };",
                 "ok",
+            ),
+            (
+                "console.log(\"${[1].join(\",\") { n => n.toString() }}\");",
+                "ok",
+            ),
+            (
+                "let xs = [1].map { n => bubbly(n) } orelse [];",
+                "a failure parameter that a bubble gives",
             ),
         ];
         for (body, expected) in cases {

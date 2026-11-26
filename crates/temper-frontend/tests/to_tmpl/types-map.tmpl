@@ -3,69 +3,69 @@ tmpl 1 model 1 library map 0.0.0
 uses `temper-core`#4 0.0.0-alpha.0.0 {
   interface MapKey#5<EQ#6> {}
   interface Mapped#7<K#8 extends MapKey#5<K#8>, V#9> {
-    connected method toList#50(): List#10<Pair#51<K#8, V#9>>;
-    connected method has#62(key: K#8): Boolean;
-    connected method get#63(key: K#8): V#9 throws MissingKey#23;
-    connected method getOr#68<R#69>(key: K#8, fallback: R#69): R#69;
-    connected method keys#75(): Listed#12<K#8>;
-    connected method values#78(): Listed#12<V#9>;
-    connected method toListWith#81<T#82>(func: fn (K#8, V#9): T#82): List#10<T#82>;
-    connected method toMap#100(): Map#14<K#8, V#9>;
-    connected get length#105(): Int32;
-    connected method forEach#110(func: fn (K#8, V#9): Void): Void;
-    connected method toMapBuilder#128(): MapBuilder#26<K#8, V#9>;
+    connected method toList#51(): List#10<Pair#52<K#8, V#9>>;
+    connected method has#63(key: K#8): Boolean;
+    connected method get#64(key: K#8): V#9 throws MissingKey#23;
+    connected method getOr#69<R#70>(key: K#8, fallback: R#70): R#70;
+    connected method keys#77(): Listed#12<K#8>;
+    connected method values#80(): Listed#12<V#9>;
+    connected method toListWith#83<T#84, E#85 extends Error#25>(func: fn (K#8, V#9): T#84 throws E#85): List#10<T#84> throws E#85;
+    connected method toMap#103(): Map#14<K#8, V#9>;
+    connected get length#108(): Int32;
+    connected method forEach#113<E#114 extends Error#25>(func: fn (K#8, V#9): Void throws E#114): Void throws E#114;
+    connected method toMapBuilder#132(): MapBuilder#26<K#8, V#9>;
   }
   class List#10<T#11> extends Listed#12<T#11> {
-    connected method get#93(index: Int32): T#11;
-    connected get length#115(): Int32;
+    connected method get#96(index: Int32): T#11;
+    connected get length#119(): Int32;
   }
   interface Listed#12<T#13> {
-    connected method map#48<O#49>(transform: fn (T#13): O#49): List#10<O#49>;
-    connected method join#70(separator: String, stringify: fn (T#13): String): String;
+    connected method map#48<O#49, E#50 extends Error#25>(transform: fn (T#13): O#49 throws E#50): List#10<O#49> throws E#50;
+    connected method join#71<E#72 extends Error#25>(separator: String, stringify: fn (T#13): String throws E#72): String throws E#72;
   }
   class Map#14<K#15 extends MapKey#5<K#15>, V#16> extends Mapped#7<K#15, V#16> {
-    connected constructor constructor#57(entries: List#10<Pair#51<K#15, V#16>>): Map#14<K#15, V#16>;
+    connected constructor constructor#58(entries: List#10<Pair#52<K#15, V#16>>): Map#14<K#15, V#16>;
   }
   class MissingKey#23 extends CoreError#24 {}
   interface CoreError#24 extends Error#25 {}
   interface Error#25 {
-    connected get message#99(): String;
+    connected get message#102(): String;
   }
   class MapBuilder#26<K#27 extends MapKey#5<K#27>, V#28> extends Mapped#7<K#27, V#28> {
-    connected constructor constructor#89(): MapBuilder#26<K#27, V#28>;
-    connected method set#90(key: K#27, newValue: V#28): Void;
-    connected method remove#94(key: K#27): V#28 throws MissingKey#23;
-    connected method clear#129(): Void;
+    connected constructor constructor#92(): MapBuilder#26<K#27, V#28>;
+    connected method set#93(key: K#27, newValue: V#28): Void;
+    connected method remove#97(key: K#27): V#28 throws MissingKey#23;
+    connected method clear#133(): Void;
   }
-  class Pair#51<K#52, V#53> {
-    let key#56: K#52;
-    connected constructor constructor#58(key: K#52, value: V#53): Pair#51<K#52, V#53>;
+  class Pair#52<K#53, V#54> {
+    let key#57: K#53;
+    connected constructor constructor#59(key: K#53, value: V#54): Pair#52<K#53, V#54>;
   }
-  class Boolean#60 {
-    connected method toString#61(): String;
+  class Boolean#61 {
+    connected method toString#62(): String;
   }
-  interface Console#64 {
-    connected method log#65(message: String): Void;
+  interface Console#65 {
+    connected method log#66(message: String): Void;
   }
-  class Int32#73 {
-    connected method toString#74(radix?: Int32): String;
+  class Int32#75 {
+    connected method toString#76(radix?: Int32): String;
   }
-  connected fn getConsole#130(name?: String): Console#64;
+  connected fn getConsole#134(name?: String): Console#65;
 }
 
 module map#0 {
-  let ~console#66: Console#64;
+  let ~console#67: Console#65;
 
   fn listKeys#1<K#2 extends MapKey#5<K#2>, V#3>(mapped#47: Mapped#7<K#2, V#3>): List#10<K#2> {
-    return mapped#47.toList#50().map#48<K#2>((fn ~fn#54(entry#55: Pair#51<K#2, V#3>): K#2 {
-      return entry#55.key#56;
-    }): fn (Pair#51<K#2, V#3>): K#2);
+    return mapped#47.toList#51().map#48<K#2, Never<Error#25>>((fn ~fn#55(entry#56: Pair#52<K#2, V#3>): K#2 {
+      return entry#56.key#57;
+    }): fn (Pair#52<K#2, V#3>): K#2);
   }
 
   let messages#17: Map#14<Int32, String>;
 
-  fn messageDefined#18(code#59: Int32): String {
-    return messages#17.has#62(code#59).toString#61();
+  fn messageDefined#18(code#60: Int32): String {
+    return messages#17.has#63(code#60).toString#62();
   }
 
   let message#19: String;
@@ -74,8 +74,8 @@ module map#0 {
 
   let neighbors#21: Map#14<String, List#10<String>>;
 
-  fn lookUp#22(code#103: Int32): String throws MissingKey#23 {
-    return messages#17.get#63(code#103)^;
+  fn lookUp#22(code#106: Int32): String throws MissingKey#23 {
+    return messages#17.get#64(code#106)^;
   }
 
   let fromBuilder#29: MapBuilder#26<String, Int32>;
@@ -86,30 +86,30 @@ module map#0 {
 
   let mapOfTwo#32: Map#14<Int32, String>;
 
-  fn colorToHex#33(color#106: List#10<Boolean>): String {
-    var c#107: String = color#106.join#70("", (fn ~fn#108(b#109: Boolean): String {
-      if (b#109) {
+  fn colorToHex#33(color#109: List#10<Boolean>): String {
+    var c#110: String = color#109.join#71<Never<Error#25>>("", (fn ~fn#111(b#112: Boolean): String {
+      if (b#112) {
         return "FF";
       } else {
         return "00";
       }
     }): fn (Boolean): String);
-    return %String.cat("#", c#107);
+    return %String.cat("#", c#110);
   }
 
   let eightColors#34: MapBuilder#26<String, List#10<Boolean>>;
 
-  fn printMap#35(name#118: String, map#119: Map#14<String, String>): Void {
-    ~console#66.log#65(%String.cat(%String.cat("--- ", name#118), " ---"));
-    map#119.forEach#110((fn ~fn#120(key#121: String, value#122: String): Void {
-      ~console#66.log#65(%String.cat(%String.cat(key#121, " = "), value#122));
+  fn printMap#35(name#122: String, map#123: Map#14<String, String>): Void {
+    ~console#67.log#66(%String.cat(%String.cat("--- ", name#122), " ---"));
+    map#123.forEach#113<Never<Error#25>>((fn ~fn#124(key#125: String, value#126: String): Void {
+      ~console#67.log#66(%String.cat(%String.cat(key#125, " = "), value#126));
     }): fn (String, String): Void);
   }
 
-  fn printMapBuilder#36(name#123: String, map#124: MapBuilder#26<String, String>): Void {
-    ~console#66.log#65(%String.cat(%String.cat("--- ", name#123), " ---"));
-    map#124.forEach#110((fn ~fn#125(key#126: String, value#127: String): Void {
-      ~console#66.log#65(%String.cat(%String.cat(key#126, " = "), value#127));
+  fn printMapBuilder#36(name#127: String, map#128: MapBuilder#26<String, String>): Void {
+    ~console#67.log#66(%String.cat(%String.cat("--- ", name#127), " ---"));
+    map#128.forEach#113<Never<Error#25>>((fn ~fn#129(key#130: String, value#131: String): Void {
+      ~console#67.log#66(%String.cat(%String.cat(key#130, " = "), value#131));
     }): fn (String, String): Void);
   }
 
@@ -134,88 +134,88 @@ module map#0 {
   var madeByAndJokes#46: MapBuilder#26<String, String>;
 
   init {
-    init ~console#66 = getConsole#130(omitted);
-    init messages#17 = new constructor#57<Int32, String>((list(new constructor#58<Int32, String>(200, "OK"), new constructor#58<Int32, String>(404, "Not Found"), new constructor#58<Int32, String>(500, "Internal Server Error"))): List#10<Pair#51<Int32, String>>);
-    init message#19 = messages#17.get#63(200)^;
-    ~console#66.log#65(%String.cat("Message: ", message#19));
-    ~console#66.log#65(%String.cat(%String.cat(%String.cat("Has 200: ", messageDefined#18(200)), ", 302: "), messageDefined#18(302)));
-    ~console#66.log#65(%String.cat("Fallback: ", (orelse(messages#17.get#63(302)^, "Found")): String));
-    ~console#66.log#65(%String.cat("Or null: ", (value { let subject#67: String? = messages#17.getOr#68<String?>(302, (null): String?); (if (isNull(subject#67)) "none" else (nonNull(subject#67)): String): String }): String));
-    ~console#66.log#65(%String.cat("Codes: ", listKeys#1<Int32, String>((upcast(messages#17)): Mapped#7<Int32, String>).join#70(" ", (fn ~fn#71(it#72: Int32): String {
-      return it#72.toString#74(omitted);
+    init ~console#67 = getConsole#134(omitted);
+    init messages#17 = new constructor#58<Int32, String>((list(new constructor#59<Int32, String>(200, "OK"), new constructor#59<Int32, String>(404, "Not Found"), new constructor#59<Int32, String>(500, "Internal Server Error"))): List#10<Pair#52<Int32, String>>);
+    init message#19 = messages#17.get#64(200)^;
+    ~console#67.log#66(%String.cat("Message: ", message#19));
+    ~console#67.log#66(%String.cat(%String.cat(%String.cat("Has 200: ", messageDefined#18(200)), ", 302: "), messageDefined#18(302)));
+    ~console#67.log#66(%String.cat("Fallback: ", (orelse(messages#17.get#64(302)^, "Found")): String));
+    ~console#67.log#66(%String.cat("Or null: ", (value { let subject#68: String? = messages#17.getOr#69<String?>(302, (null): String?); (if (isNull(subject#68)) "none" else (nonNull(subject#68)): String): String }): String));
+    ~console#67.log#66(%String.cat("Codes: ", listKeys#1<Int32, String>((upcast(messages#17)): Mapped#7<Int32, String>).join#71<Never<Error#25>>(" ", (fn ~fn#73(it#74: Int32): String {
+      return it#74.toString#76(omitted);
     }): fn (Int32): String)));
-    ~console#66.log#65(%String.cat("Again: ", messages#17.keys#75().join#70(" ", (fn ~fn#76(it#77: Int32): String {
-      return it#77.toString#74(omitted);
+    ~console#67.log#66(%String.cat("Again: ", messages#17.keys#77().join#71<Never<Error#25>>(" ", (fn ~fn#78(it#79: Int32): String {
+      return it#79.toString#76(omitted);
     }): fn (Int32): String)));
-    ~console#66.log#65(%String.cat("Messages: ", messages#17.values#78().join#70(", ", (fn ~fn#79(it#80: String): String {
-      return it#80;
+    ~console#67.log#66(%String.cat("Messages: ", messages#17.values#80().join#71<Never<Error#25>>(", ", (fn ~fn#81(it#82: String): String {
+      return it#82;
     }): fn (String): String)));
-    init groups#20 = messages#17.toListWith#81<Int32>((fn ~fn#83(key#84: Int32, value#85: String): Int32 {
-      return %Int32.divSafe(key#84, 100);
+    init groups#20 = messages#17.toListWith#83<Int32, Never<Error#25>>((fn ~fn#86(key#87: Int32, value#88: String): Int32 {
+      return %Int32.divSafe(key#87, 100);
     }): fn (Int32, String): Int32);
-    ~console#66.log#65(%String.cat("Groups: ", groups#20.join#70(" ", (fn ~fn#86(it#87: Int32): String {
-      return it#87.toString#74(omitted);
+    ~console#67.log#66(%String.cat("Groups: ", groups#20.join#71<Never<Error#25>>(" ", (fn ~fn#89(it#90: Int32): String {
+      return it#90.toString#76(omitted);
     }): fn (Int32): String)));
-    init neighbors#21 = (value { let builder#88: MapBuilder#26<String, List#10<String>> = new constructor#89<String, List#10<String>>(); builder#88.set#90("Honduras", (list("El Salvador", "Guatemala", "Nicaragua")): List#10<String>); ~console#66.log#65(%String.cat("From builder: ", builder#88.get#63("Honduras")^.join#70(", ", (fn ~fn#91(it#92: String): String { return it#92; }): fn (String): String))); ~console#66.log#65(%String.cat("Key so far: ", listKeys#1<String, List#10<String>>((upcast(builder#88)): Mapped#7<String, List#10<String>>).get#93(0))); builder#88.set#90("El Salvador", (list("Guatemala", "Honduras")): List#10<String>); builder#88.set#90("Nicaragua", (list("Costa Rica", "Honduras")): List#10<String>); builder#88.set#90("Panama", (list("Colombia", "Costa Rica")): List#10<String>); (orelse(builder#88.remove#94("Honduras")^, void)): Void; let was#95: List#10<String> = (orelse(builder#88.remove#94("El Salvador")^, (panic()): List#10<String>)): List#10<String>; ~console#66.log#65(%String.cat("Was there: ", was#95.join#70(", ", (fn ~fn#96(it#97: String): String { return it#97; }): fn (String): String))); ~console#66.log#65((orelse(builder#88.remove#94("El Salvador")^.get#93(0), "Gone")): String); ~console#66.log#65((catch((value { builder#88.remove#94("Belize")^; "removed" }): String, e#98: MissingKey#23, ((upcast(e#98)): Error#25).message#99())): String); builder#88.toMap#100() }): Map#14<String, List#10<String>>;
-    ~console#66.log#65(%String.cat("From built: ", neighbors#21.get#63("Nicaragua")^.join#70(", ", (fn ~fn#101(it#102: String): String {
-      return it#102;
+    init neighbors#21 = (value { let builder#91: MapBuilder#26<String, List#10<String>> = new constructor#92<String, List#10<String>>(); builder#91.set#93("Honduras", (list("El Salvador", "Guatemala", "Nicaragua")): List#10<String>); ~console#67.log#66(%String.cat("From builder: ", builder#91.get#64("Honduras")^.join#71<Never<Error#25>>(", ", (fn ~fn#94(it#95: String): String { return it#95; }): fn (String): String))); ~console#67.log#66(%String.cat("Key so far: ", listKeys#1<String, List#10<String>>((upcast(builder#91)): Mapped#7<String, List#10<String>>).get#96(0))); builder#91.set#93("El Salvador", (list("Guatemala", "Honduras")): List#10<String>); builder#91.set#93("Nicaragua", (list("Costa Rica", "Honduras")): List#10<String>); builder#91.set#93("Panama", (list("Colombia", "Costa Rica")): List#10<String>); (orelse(builder#91.remove#97("Honduras")^, void)): Void; let was#98: List#10<String> = (orelse(builder#91.remove#97("El Salvador")^, (panic()): List#10<String>)): List#10<String>; ~console#67.log#66(%String.cat("Was there: ", was#98.join#71<Never<Error#25>>(", ", (fn ~fn#99(it#100: String): String { return it#100; }): fn (String): String))); ~console#67.log#66((orelse(builder#91.remove#97("El Salvador")^.get#96(0), "Gone")): String); ~console#67.log#66((catch((value { builder#91.remove#97("Belize")^; "removed" }): String, e#101: MissingKey#23, ((upcast(e#101)): Error#25).message#102())): String); builder#91.toMap#103() }): Map#14<String, List#10<String>>;
+    ~console#67.log#66(%String.cat("From built: ", neighbors#21.get#64("Nicaragua")^.join#71<Never<Error#25>>(", ", (fn ~fn#104(it#105: String): String {
+      return it#105;
     }): fn (String): String)));
-    ~console#66.log#65((catch(lookUp#22(302)^, e#104: MissingKey#23, ((upcast(e#104)): Error#25).message#99())): String);
-    init fromBuilder#29 = new constructor#89<String, Int32>();
-    ~console#66.log#65(((orelse(fromBuilder#29.get#63("nope")^, %Int32.neg(1))): Int32).toString#74(omitted));
-    init mapOfNone#30 = new constructor#57<Int32, Int32>((list()): List#10<Pair#51<Int32, Int32>>);
-    init mapOfOne#31 = new constructor#57<String, String>((list(new constructor#58<String, String>("jack", "all trades"))): List#10<Pair#51<String, String>>);
-    init mapOfTwo#32 = new constructor#57<Int32, String>((list(new constructor#58<Int32, String>(1, "one"), new constructor#58<Int32, String>(2, "electric boogaloo"))): List#10<Pair#51<Int32, String>>);
-    ~console#66.log#65(%String.cat("mapOfNone: ", mapOfNone#30.length#105().toString#74(omitted)));
-    ~console#66.log#65(%String.cat("mapOfOne: ", mapOfOne#31.length#105().toString#74(omitted)));
-    ~console#66.log#65(%String.cat("mapOfTwo: ", mapOfTwo#32.length#105().toString#74(omitted)));
-    init eightColors#34 = new constructor#89<String, List#10<Boolean>>();
-    eightColors#34.set#90("black", (list(false, false, false)): List#10<Boolean>);
-    eightColors#34.set#90("red", (list(true, false, false)): List#10<Boolean>);
-    eightColors#34.set#90("green", (list(false, true, false)): List#10<Boolean>);
-    eightColors#34.set#90("blue", (list(false, false, true)): List#10<Boolean>);
-    eightColors#34.set#90("yellow", (list(true, true, false)): List#10<Boolean>);
-    eightColors#34.set#90("cyan", (list(false, true, true)): List#10<Boolean>);
-    eightColors#34.set#90("purple", (list(true, false, true)): List#10<Boolean>);
-    eightColors#34.set#90("white", (list(true, true, true)): List#10<Boolean>);
-    ~console#66.log#65(%String.cat(%String.cat("with 3 bits you can draw ", eightColors#34.length#105().toString#74(omitted)), " colors."));
-    eightColors#34.forEach#110((fn ~fn#111(color#112: String, bits#113: List#10<Boolean>): Void {
-      var foundByGetOr#114: List#10<Boolean> = eightColors#34.getOr#68<List#10<Boolean>>(color#112, (list()): List#10<Boolean>);
-      if (%Boolean.not(%Int32.eq(foundByGetOr#114.length#115(), 3))) {
-        ~console#66.log#65(%String.cat(%String.cat(%String.cat(%String.cat("getOr(", "\""), color#112), "\""), ") failed to find key"));
+    ~console#67.log#66((catch(lookUp#22(302)^, e#107: MissingKey#23, ((upcast(e#107)): Error#25).message#102())): String);
+    init fromBuilder#29 = new constructor#92<String, Int32>();
+    ~console#67.log#66(((orelse(fromBuilder#29.get#64("nope")^, %Int32.neg(1))): Int32).toString#76(omitted));
+    init mapOfNone#30 = new constructor#58<Int32, Int32>((list()): List#10<Pair#52<Int32, Int32>>);
+    init mapOfOne#31 = new constructor#58<String, String>((list(new constructor#59<String, String>("jack", "all trades"))): List#10<Pair#52<String, String>>);
+    init mapOfTwo#32 = new constructor#58<Int32, String>((list(new constructor#59<Int32, String>(1, "one"), new constructor#59<Int32, String>(2, "electric boogaloo"))): List#10<Pair#52<Int32, String>>);
+    ~console#67.log#66(%String.cat("mapOfNone: ", mapOfNone#30.length#108().toString#76(omitted)));
+    ~console#67.log#66(%String.cat("mapOfOne: ", mapOfOne#31.length#108().toString#76(omitted)));
+    ~console#67.log#66(%String.cat("mapOfTwo: ", mapOfTwo#32.length#108().toString#76(omitted)));
+    init eightColors#34 = new constructor#92<String, List#10<Boolean>>();
+    eightColors#34.set#93("black", (list(false, false, false)): List#10<Boolean>);
+    eightColors#34.set#93("red", (list(true, false, false)): List#10<Boolean>);
+    eightColors#34.set#93("green", (list(false, true, false)): List#10<Boolean>);
+    eightColors#34.set#93("blue", (list(false, false, true)): List#10<Boolean>);
+    eightColors#34.set#93("yellow", (list(true, true, false)): List#10<Boolean>);
+    eightColors#34.set#93("cyan", (list(false, true, true)): List#10<Boolean>);
+    eightColors#34.set#93("purple", (list(true, false, true)): List#10<Boolean>);
+    eightColors#34.set#93("white", (list(true, true, true)): List#10<Boolean>);
+    ~console#67.log#66(%String.cat(%String.cat("with 3 bits you can draw ", eightColors#34.length#108().toString#76(omitted)), " colors."));
+    eightColors#34.forEach#113<Never<Error#25>>((fn ~fn#115(color#116: String, bits#117: List#10<Boolean>): Void {
+      var foundByGetOr#118: List#10<Boolean> = eightColors#34.getOr#69<List#10<Boolean>>(color#116, (list()): List#10<Boolean>);
+      if (%Boolean.not(%Int32.eq(foundByGetOr#118.length#119(), 3))) {
+        ~console#67.log#66(%String.cat(%String.cat(%String.cat(%String.cat("getOr(", "\""), color#116), "\""), ") failed to find key"));
       }
-      var want#116: String = colorToHex#33(bits#113);
-      var got#117: String = colorToHex#33(foundByGetOr#114);
-      if (%Boolean.not(%String.eq(want#116, got#117))) {
-        ~console#66.log#65(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("getOr(", "\""), color#112), "\""), ") found "), got#117), " but wanted "), want#116));
+      var want#120: String = colorToHex#33(bits#117);
+      var got#121: String = colorToHex#33(foundByGetOr#118);
+      if (%Boolean.not(%String.eq(want#120, got#121))) {
+        ~console#67.log#66(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("getOr(", "\""), color#116), "\""), ") found "), got#121), " but wanted "), want#120));
       }
     }): fn (String, List#10<Boolean>): Void);
-    init map#37 = new constructor#57<String, String>((list(new constructor#58<String, String>("key", "value"), new constructor#58<String, String>("other key", "other value"))): List#10<Pair#51<String, String>>);
+    init map#37 = new constructor#58<String, String>((list(new constructor#59<String, String>("key", "value"), new constructor#59<String, String>("other key", "other value"))): List#10<Pair#52<String, String>>);
     printMap#35("map", map#37);
-    init builder#38 = map#37.toMapBuilder#128();
-    builder#38.set#90("added key", "added value");
-    builder#38.set#90("key", "replaced value");
+    init builder#38 = map#37.toMapBuilder#132();
+    builder#38.set#93("added key", "added value");
+    builder#38.set#93("key", "replaced value");
     printMapBuilder#36("builder", builder#38);
     printMap#35("map (same as above)", map#37);
-    init newMap#39 = builder#38.toMap#100();
+    init newMap#39 = builder#38.toMap#103();
     printMap#35("builder to map", newMap#39);
     init builderAsMapped#40 = (upcast(builder#38)): Mapped#7<String, String>;
-    init newMapFromMapped#41 = builderAsMapped#40.toMap#100();
-    builder#38.remove#94("other key")^;
-    builder#38.set#90("key", "double replaced value");
+    init newMapFromMapped#41 = builderAsMapped#40.toMap#103();
+    builder#38.remove#97("other key")^;
+    builder#38.set#93("key", "double replaced value");
     printMap#35("builder to map (same as above)", newMap#39);
     printMap#35("builder to map via mapped (same as above)", newMapFromMapped#41);
-    builder#38.clear#129();
-    builder#38.set#90("something", "alone");
+    builder#38.clear#133();
+    builder#38.set#93("something", "alone");
     printMapBuilder#36("recently cleared", builder#38);
-    init mayOrMayNotCopyMap#42 = map#37.toMap#100();
+    init mayOrMayNotCopyMap#42 = map#37.toMap#103();
     init mapped#43 = (upcast(map#37)): Mapped#7<String, String>;
-    init mayOrMayNotCopyMapped#44 = mapped#43.toMap#100();
-    init madeBy#45 = new constructor#89<String, String>();
-    madeBy#45.set#90("temper", "temper systems");
+    init mayOrMayNotCopyMapped#44 = mapped#43.toMap#103();
+    init madeBy#45 = new constructor#92<String, String>();
+    madeBy#45.set#93("temper", "temper systems");
     printMapBuilder#36("made by", madeBy#45);
-    init madeByAndJokes#46 = madeBy#45.toMapBuilder#128();
-    madeByAndJokes#46.set#90("milk", "milking a cow");
+    init madeByAndJokes#46 = madeBy#45.toMapBuilder#132();
+    madeByAndJokes#46.set#93("milk", "milking a cow");
     printMapBuilder#36("made by (and a joke about milk)", madeByAndJokes#46);
     printMapBuilder#36("made by (not changed from a change to a copy)", madeBy#45);
   }
