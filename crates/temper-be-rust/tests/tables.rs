@@ -70,3 +70,24 @@ fn type_connections_name_core_types() {
         assert!(types.iter().any(|q| q == key), "{key} isn't a type of core");
     }
 }
+
+/// Each of core's connected members that a callback's failure parameter
+/// makes fail (RFC 164) has a runtime function for calls whose callback
+/// may fail ([`connected::TRY`]), and only those.
+#[test]
+fn members_with_failure_parameters_have_try_forms() {
+    let keys: Vec<&str> = connected::TRY.iter().map(|(k, _)| *k).collect();
+    sorted_and_unique(&keys);
+    let p = core();
+    let qnames = QNames::derive(&p);
+    let mut generic: Vec<String> = (p.decls.ids())
+        .filter(|&d| p.decls.contains(d) && p.decls.get(d).facts.contains(Facts::CONNECTED))
+        .filter(|&d| {
+            (p.decls.type_params(d).iter()).any(|&t| temper_tmpl::failures::is_failure_param(&p, t))
+        })
+        .filter_map(|d| qnames.get(d).map(|q| q.to_string()))
+        .filter(|q| connected::lookup(q).is_some())
+        .collect();
+    generic.sort();
+    assert_eq!(keys, generic);
+}

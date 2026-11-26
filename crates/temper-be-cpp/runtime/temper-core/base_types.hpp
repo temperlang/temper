@@ -37,6 +37,10 @@ namespace temper {
         template<class T>
         using Param = typename std::conditional<IsIndirect<T>::value, T const &, T>::type;
 
+        // A value that's never made, so it converts to any type; and as a
+        // failure, "can't fail" (RFC 164): what a failure parameter is
+        // given where a callback can't fail, `Never<Error>` in Temper, so
+        // an `Expected<T, Never>` always holds its value.
         struct Never {
             template<class T>
             operator T() const {

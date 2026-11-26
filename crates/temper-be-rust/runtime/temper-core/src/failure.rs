@@ -15,6 +15,7 @@
 //! generated code returns it in an `Err`.
 
 use crate::{AnyValue, AnyValueTrait, AsAnyValue};
+use std::convert::Infallible;
 use std::fmt;
 use std::sync::{Arc, OnceLock};
 
@@ -77,6 +78,58 @@ impl AnyValueTrait for Arc<dyn Failure> {
 
     fn ptr_id(&self) -> usize {
         (**self).ptr_id()
+    }
+}
+
+/// "Can't fail" (RFC 164): what a failure parameter is given where a
+/// callback can't fail, `Never<Error>` in Temper. It's a failure as any
+/// other, so generic code takes it, but has no values, so a result that
+/// fails with it is its value ([`into_ok`]).
+impl Failure for Infallible {
+    fn message(&self) -> Arc<String> {
+        match *self {}
+    }
+
+    fn cause(&self) -> Option<Arc<dyn Failure>> {
+        match *self {}
+    }
+
+    fn set_cause(&self, _: Arc<dyn Failure>) {
+        match *self {}
+    }
+
+    fn as_error(&self) -> &(dyn std::error::Error + Send + Sync + 'static) {
+        match *self {}
+    }
+}
+
+impl AnyValueTrait for Infallible {
+    fn cast(&self, _: std::any::TypeId) -> Option<Box<dyn std::any::Any>> {
+        match *self {}
+    }
+
+    fn is(&self, _: std::any::TypeId) -> bool {
+        match *self {}
+    }
+
+    fn ptr_id(&self) -> usize {
+        match *self {}
+    }
+}
+
+impl AsAnyValue for Infallible {
+    fn as_any_value(&self) -> AnyValue {
+        match *self {}
+    }
+}
+
+/// A result that can't fail as its value, as std's unstable
+/// `Result::into_ok`: a call that gives a failure parameter
+/// [`Infallible`].
+pub fn into_ok<T>(result: Result<T, Infallible>) -> T {
+    match result {
+        Ok(value) => value,
+        Err(never) => match never {},
     }
 }
 
@@ -427,7 +480,10 @@ impl ParseError {
     }
 
     pub fn message(&self) -> Arc<String> {
-        Arc::new(format!("parse error (input: {}, reason: {})", self.0.input, self.0.reason))
+        Arc::new(format!(
+            "parse error (input: {}, reason: {})",
+            self.0.input, self.0.reason
+        ))
     }
 }
 
@@ -459,7 +515,10 @@ impl InvalidCodePoint {
     }
 
     pub fn message(&self) -> Arc<String> {
-        Arc::new(format!("invalid code point (codePoint: {})", self.0.code_point))
+        Arc::new(format!(
+            "invalid code point (codePoint: {})",
+            self.0.code_point
+        ))
     }
 }
 

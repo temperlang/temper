@@ -115,6 +115,9 @@ fn runtime_functions_are_the_runtimes() {
             );
         }
     }
+    for (_, path) in connected::TRY {
+        assert!(defines(&runtime, path), "{path} isn't in temper-core");
+    }
     for (_, path, header) in connected::BODILESS {
         assert!(defines(&runtime, path), "{path} isn't in temper-core");
         let file = header
@@ -126,4 +129,25 @@ fn runtime_functions_are_the_runtimes() {
         assert!(dir.exists(), "{header} isn't temper-core's");
     }
     assert!(runtime.contains("struct Type {"), "Console::Type");
+}
+
+/// Each of core's connected members that a callback's failure parameter
+/// makes fail (RFC 164) has a runtime function for calls whose callback
+/// returns an `Expected` ([`connected::TRY`]), and only those.
+#[test]
+fn members_with_failure_parameters_have_try_forms() {
+    let keys: Vec<&str> = connected::TRY.iter().map(|(k, _)| *k).collect();
+    sorted_and_unique(&keys);
+    let p = core();
+    let qnames = QNames::derive(&p);
+    let mut generic: Vec<String> = (p.decls.ids())
+        .filter(|&d| p.decls.contains(d) && p.decls.get(d).facts.contains(Facts::CONNECTED))
+        .filter(|&d| {
+            (p.decls.type_params(d).iter()).any(|&t| temper_tmpl::failures::is_failure_param(&p, t))
+        })
+        .filter_map(|d| qnames.get(d).map(|q| q.to_string()))
+        .filter(|q| connected::lookup(q).is_some())
+        .collect();
+    generic.sort();
+    assert_eq!(keys, generic);
 }

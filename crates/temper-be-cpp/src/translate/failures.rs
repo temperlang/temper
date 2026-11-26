@@ -67,15 +67,11 @@ impl Translator<'_> {
         }
     }
 
-    /// A signature's failure type, where it's a declared one.
+    /// A signature's failure type, where it's a declared one, or a
+    /// failure parameter (RFC 164), a template's type parameter, or
+    /// `core::Never` for one given `Never<…>`, "can't fail".
     fn declared_fail(&self, fail: Option<TypeId>) -> R<Option<TypeId>> {
-        match fail {
-            Some(f) if f == TypeId::BUBBLE => Ok(None),
-            Some(f) if matches!(self.p.types.get(f), TypeData::TypeParam { .. }) => {
-                not_yet("a failure parameter")
-            }
-            fail => Ok(fail),
-        }
+        Ok(fail.filter(|&f| f != TypeId::BUBBLE))
     }
 
     /// A declaration's result in C++ ([`result_type`](Self::result_type)).

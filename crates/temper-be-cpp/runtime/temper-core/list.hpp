@@ -11,6 +11,7 @@
 #include "temper_bubble.hpp"
 #include "base_types.hpp"
 #include "any_value.hpp"
+#include "expected.hpp"
 
 namespace temper {
     namespace core {
@@ -253,6 +254,148 @@ namespace temper {
                     acc = fn(acc, elem);
                 }
                 return acc;
+            }
+
+            // Each `try` form takes a callback that returns an `Expected`
+            // (RFC 164's failure parameters), stops at its first failure,
+            // and returns it, else what its plain form gives, in an
+            // `Expected` of the callback's failure type.
+
+            // The failure type of what `F` returns given `Args`.
+            template<class F, class... Args>
+            using FailureOf = typename decltype(std::declval<F&>()(std::declval<Args>()...))::error_type;
+
+            // The value type of what `F` returns given `Args`.
+            template<class F, class... Args>
+            using ValueOf = typename decltype(std::declval<F&>()(std::declval<Args>()...))::value_type;
+
+            template<class Elem, class F>
+            auto tryMap(const std::shared_ptr<std::vector<Elem>>& list, F fn)
+                -> Expected<std::shared_ptr<std::vector<ValueOf<F, const Elem&>>>, FailureOf<F, const Elem&>> {
+                auto result = std::make_shared<std::vector<ValueOf<F, const Elem&>>>();
+                for (const Elem& elem : *list) {
+                    auto r = fn(elem);
+                    if (!r.has_value()) {
+                        return unexpected(r.error());
+                    }
+                    result->push_back(std::move(*r));
+                }
+                return result;
+            }
+
+            template<class Elem, class F>
+            auto tryFilter(const std::shared_ptr<std::vector<Elem>>& list, F fn)
+                -> Expected<std::shared_ptr<std::vector<Elem>>, FailureOf<F, const Elem&>> {
+                auto result = std::make_shared<std::vector<Elem>>();
+                for (const Elem& elem : *list) {
+                    auto r = fn(elem);
+                    if (!r.has_value()) {
+                        return unexpected(r.error());
+                    }
+                    if (*r) {
+                        result->push_back(elem);
+                    }
+                }
+                return result;
+            }
+
+            template<class Elem, class F>
+            auto tryJoin(const std::shared_ptr<std::vector<Elem>>& list, const Str& separator, F fn)
+                -> Expected<Str, FailureOf<F, const Elem&>> {
+                std::ostringstream oss;
+                bool first = true;
+                for (const Elem& elem : *list) {
+                    auto r = fn(elem);
+                    if (!r.has_value()) {
+                        return unexpected(r.error());
+                    }
+                    if (!first) {
+                        oss << separator;
+                    }
+                    oss << *r;
+                    first = false;
+                }
+                return Str::written_to(oss.rdbuf());
+            }
+
+            template<class Elem, class Acc, class F>
+            auto tryReduceFrom(const std::shared_ptr<std::vector<Elem>>& list, Acc init, F fn)
+                -> Expected<Acc, FailureOf<F, const Acc&, const Elem&>> {
+                Acc acc = init;
+                for (const Elem& elem : *list) {
+                    auto r = fn(acc, elem);
+                    if (!r.has_value()) {
+                        return unexpected(r.error());
+                    }
+                    acc = *r;
+                }
+                return acc;
+            }
+
+            template<class Elem, class F>
+            auto tryReduce(const std::shared_ptr<std::vector<Elem>>& list, F fn)
+                -> Expected<Elem, FailureOf<F, const Elem&, const Elem&>> {
+                if (list->empty()) {
+                    // Core's reduce starts from `this[0]`.
+                    panic_out_of_bounds<Elem>(0, 0);
+                }
+                Elem acc = (*list)[0];
+                int32_t sz = static_cast<int32_t>(list->size());
+                for (int32_t i = 1; i < sz; ++i) {
+                    auto r = fn(acc, (*list)[i]);
+                    if (!r.has_value()) {
+                        return unexpected(r.error());
+                    }
+                    acc = *r;
+                }
+                return acc;
+            }
+
+            // A stable merge sort by a comparison that may fail, which
+            // stops at its first failure: `std::stable_sort`'s behavior is
+            // undefined where comparisons stop being consistent, as one
+            // that gives up partway would be.
+            template<class Elem, class F>
+            auto try_merge_sort(std::vector<Elem>& items, F& compare)
+                -> Expected<void, FailureOf<F, const Elem&, const Elem&>> {
+                if (items.size() < 2) {
+                    return {};
+                }
+                std::vector<Elem> right(items.begin() + items.size() / 2, items.end());
+                items.erase(items.begin() + items.size() / 2, items.end());
+                for (std::vector<Elem>* half : {&items, &right}) {
+                    auto sorted = try_merge_sort(*half, compare);
+                    if (!sorted.has_value()) {
+                        return unexpected(sorted.error());
+                    }
+                }
+                std::vector<Elem> merged;
+                merged.reserve(items.size() + right.size());
+                std::size_t i = 0;
+                std::size_t j = 0;
+                while (i < items.size() && j < right.size()) {
+                    auto c = compare(items[i], right[j]);
+                    if (!c.has_value()) {
+                        return unexpected(c.error());
+                    }
+                    // The left's first on ties, so it's stable.
+                    merged.push_back(*c > 0 ? right[j++] : items[i++]);
+                }
+                merged.insert(merged.end(), items.begin() + i, items.end());
+                merged.insert(merged.end(), right.begin() + j, right.end());
+                items = std::move(merged);
+                return {};
+            }
+
+            template<class Elem, class F>
+            auto trySorted(const std::shared_ptr<std::vector<Elem>>& list, F comparator)
+                -> Expected<std::shared_ptr<std::vector<Elem>>, FailureOf<F, const Elem&, const Elem&>> {
+                auto result = std::make_shared<std::vector<Elem>>(*list);
+                auto sorted = try_merge_sort(*result, comparator);
+                if (!sorted.has_value()) {
+                    return unexpected(sorted.error());
+                }
+                return result;
             }
 
         }

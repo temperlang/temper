@@ -226,3 +226,51 @@ fn never_takes_one_plain_type() {
         assert!(error.contains(why), "{ty}: {error}");
     }
 }
+
+/// A failure parameter's `Never<…>` argument says "can't fail" (RFC 164),
+/// which no value has, so it stays, in a call's type arguments and in a
+/// generic type's, for targets that write it (Rust's `Infallible`), while
+/// a value's `Never<T>` still lowers.
+#[test]
+fn failure_parameters_never_stays() {
+    let source = r#"tmpl 1 model 1 library n 0.0.0
+
+uses `temper-core`#1 0.0.0 {
+  interface Error#2 {}
+}
+
+module n#0 {
+  fun interface Mapper#3<T#4, E#5 extends Error#2> {
+    abstract method apply#6(x#7: T#4): T#4 throws E#5;
+  }
+
+  fn twice#8<T#9, E#10 extends Error#2>(x#11: T#9, f#12: Mapper#3<T#9, E#10>): T#9 throws E#10 {
+    return f#12(f#12(x#11)^)^;
+  }
+
+  fn stop#13(): Never<Int32> {
+    (panic()): Void;
+  }
+
+  let safe#14: Mapper#3<Int32, Never<Error#2>>;
+
+  init {
+    init safe#14 = (fn ~fn#15(n#16: Int32): Int32 {
+      return n#16;
+    }): Mapper#3<Int32, Never<Error#2>>;
+    twice#8<Int32, Never<Error#2>>(stop#13(), safe#14);
+  }
+}
+"#;
+    let program = text::read(source).unwrap();
+    let without = profile(Features::STATEMENT_EXPRESSIONS);
+    let lowered = lower(&program, &without).expect("nevers to lower");
+    assert_eq!(validate(&lowered, &without), []);
+    let text = text::write(&lowered);
+    assert!(text.contains("fn stop#13(): Int32 {"), "{text}");
+    assert!(
+        text.contains("let safe#14: Mapper#3<Int32, Never<Error#2>>;"),
+        "{text}"
+    );
+    assert!(text.contains("twice#8<Int32, Never<Error#2>>("), "{text}");
+}

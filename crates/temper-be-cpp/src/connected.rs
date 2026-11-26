@@ -629,6 +629,32 @@ pub fn lookup(qname: &str) -> Option<Connection> {
         .map(|i| TABLE[i].1)
 }
 
+/// Core's members that take a callback that may fail (RFC 164's failure
+/// parameters), where a call passes one that returns an `Expected`: each
+/// a runtime function, relative to `temper::core`, called as
+/// [`Connection::Call`] is, that stops at the first failure and returns
+/// it, else what the member's own connection gives, in an `Expected` of
+/// the callback's failure type. Sorted by qname.
+pub const TRY: &[(&str, &str)] = &[
+    ("core.type ListBuilder.sort()", "ListBuilder::trySort"),
+    ("core.type Listed.filter()", "List::tryFilter"),
+    ("core.type Listed.join()", "List::tryJoin"),
+    ("core.type Listed.map()", "List::tryMap"),
+    ("core.type Listed.reduce()", "List::tryReduce"),
+    ("core.type Listed.reduceFrom()", "List::tryReduceFrom"),
+    ("core.type Listed.sorted()", "List::trySorted"),
+    ("core.type Mapped.forEach()", "Mapped::tryForEach"),
+    ("core.type Mapped.toListWith()", "Mapped::tryToListWith"),
+];
+
+/// The runtime function for a call of core's `qname` whose callback
+/// returns an `Expected` ([`TRY`]).
+pub fn lookup_try(qname: &str) -> Option<&'static str> {
+    TRY.binary_search_by_key(&qname, |(k, _)| k)
+        .ok()
+        .map(|i| TRY[i].1)
+}
+
 /// The connection for a type's qname.
 pub fn lookup_type(qname: &str) -> Option<&'static str> {
     TYPES

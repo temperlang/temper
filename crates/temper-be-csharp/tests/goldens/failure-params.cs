@@ -98,6 +98,39 @@ public static class FailureParamsGlobal
         return failed;
     }
 
+    internal static int SumAll<T>(IReadOnlyList<T> xs, Func<T, int> f)
+    {
+        int total = 0;
+        IFailure? first = null;
+        {
+            int length = xs.Count;
+            int i = 0;
+            while (i < length)
+            {
+                T x = Listed.Get(xs, i);
+                i = i + 1;
+                try
+                {
+                    total = total + f(x);
+                }
+                catch (Exception caught1) when (caught1 is IFailure)
+                {
+                    IFailure e = (IFailure)caught1;
+                    if (first == null)
+                    {
+                        first = e;
+                    }
+                }
+            }
+        }
+        IFailure? failed = first;
+        if (failed != null)
+        {
+            throw (Exception)failed;
+        }
+        return total;
+    }
+
     internal static int Both(Func<string, int> a, Func<string, int> b, string key)
     {
         return a(key) + b(key);
@@ -164,6 +197,22 @@ public static class FailureParamsGlobal
         return Listed.Join(found, ",", (string k3) => k3) + " " + total.ToString(CultureInfo.InvariantCulture) + " " + Listed.Join(keys, "+", (string k4) => Find(k4).ToString(CultureInfo.InvariantCulture));
     }
 
+    internal static IReadOnlyList<T> MapTwice<T>(IReadOnlyList<T> xs, Func<T, T> f)
+    {
+        IReadOnlyList<T> once = MapAll(xs, f);
+        return Listed.ToReadOnlyList(Enumerable.Select(once, f));
+    }
+
+    /// <exception cref="Missing">Where it fails with Missing.</exception>
+    internal static int UpToTwo(int n)
+    {
+        if (n > 2)
+        {
+            throw new Missing(n.ToString(CultureInfo.InvariantCulture));
+        }
+        return n + 1;
+    }
+
     static FailureParamsGlobal()
     {
         ILoggingConsole console = Support.Logging.LoggingConsoleFactory.CreateConsole("FailureParams");
@@ -193,6 +242,26 @@ public static class FailureParamsGlobal
         int some = Failures(Listed.CreateReadOnlyList<string>("one", "six", "two", "ten"), (Func<string, int>)Find);
         int none = Failures(Listed.CreateReadOnlyList<int>(1, 2), (int n) => n);
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{some} {none}"));
+        int summed;
+        try
+        {
+            summed = SumAll(Listed.CreateReadOnlyList<string>("one", "two"), (Func<string, int>)Find);
+        }
+        catch (Missing)
+        {
+            summed = -1;
+        }
+        int unsummed;
+        try
+        {
+            unsummed = SumAll(Listed.CreateReadOnlyList<string>("six", "one", "ten"), (Func<string, int>)Find);
+        }
+        catch (Missing e)
+        {
+            console.Log("first missing " + e.Key);
+            unsummed = -1;
+        }
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{summed} {unsummed} {SumAll(Listed.CreateReadOnlyList<int>(1, 2), safe)}"));
         int twelve;
         try
         {
@@ -207,9 +276,9 @@ public static class FailureParamsGlobal
         {
             lost = Both((Func<string, int>)Find, (Func<string, int>)Find, "six");
         }
-        catch (Missing e)
+        catch (Missing e2)
         {
-            console.Log("lost " + e.Key);
+            console.Log("lost " + e2.Key);
             lost = -1;
         }
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{twelve} {lost}"));
@@ -229,11 +298,24 @@ public static class FailureParamsGlobal
         {
             t2 = Parts(Listed.CreateReadOnlyList<string>("one", "six"));
         }
-        catch (Missing e2)
+        catch (Missing e3)
         {
-            t2 = "missing " + e2.Key;
+            t2 = "missing " + e3.Key;
         }
         console.Log(t2);
         console.Log(Listed.Join(Listed.Sorted(Listed.CreateReadOnlyList<int>(3, 1, 2), (int a, int b) => a - b), ",", (int n) => n.ToString(CultureInfo.InvariantCulture)));
+        IReadOnlyList<int> bumped = Listed.ToReadOnlyList(Enumerable.Select(Listed.CreateReadOnlyList<int>(1, 2), safe));
+        IReadOnlyList<int> twice = MapTwice(Listed.CreateReadOnlyList<int>(1, 2), safe);
+        IReadOnlyList<int> failed;
+        try
+        {
+            failed = MapTwice(Listed.CreateReadOnlyList<int>(1, 2), (Func<int, int>)UpToTwo);
+        }
+        catch (Missing e4)
+        {
+            console.Log("missing " + e4.Key);
+            failed = Listed.CreateReadOnlyList<int>();
+        }
+        console.Log(Listed.Join(bumped, ",", (int n) => n.ToString(CultureInfo.InvariantCulture)) + " " + Listed.Join(twice, ",", (int n) => n.ToString(CultureInfo.InvariantCulture)) + " " + failed.Count.ToString(CultureInfo.InvariantCulture));
     }
 }

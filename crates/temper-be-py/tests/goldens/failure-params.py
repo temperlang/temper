@@ -12,6 +12,7 @@ from temper_core import (
     list_filter as _list_filter,
     list_get as _list_get,
     list_join as _list_join,
+    list_map as _list_map,
     listed_reduce_from as _listed_reduce_from,
     listed_sorted as _listed_sorted,
 )
@@ -103,6 +104,27 @@ def _failures(xs: _Sequence[_T], f: _Callable[[_T], _R], /) -> int:
     return failed
 
 
+def _sum_all(xs: _Sequence[_T], f: _Callable[[_T], int], /) -> int:
+    total = 0
+    first: _Failure | None = None
+    length = len(xs)
+    i = 0
+    while i < length:
+        x = _list_get(xs, i)
+        i = _int_add(i, 1)
+        try:
+            total = _int_add(total, f(x))
+        except Exception as e:
+            if not isinstance(e, _Failure):
+                raise e
+            if first is None:  # pyright: ignore[reportUnnecessaryComparison]
+                first = e
+    failed: _Failure | None = first
+    if failed is not None:
+        raise failed
+    return total
+
+
 def _both(a: _Callable[[str], int], b: _Callable[[str], int], key: str, /) -> int:
     return _int_add(a(key), b(key))
 
@@ -162,6 +184,17 @@ def _parts(keys: _Sequence[str], /) -> str:
     return f"{_list_join(found, ',', lambda k: k)} {total} {_list_join(keys, '+', lambda k: str(_find(k)))}"
 
 
+def _map_twice(xs: _Sequence[_T], f: _Callable[[_T], _T], /) -> _Sequence[_T]:
+    once = _map_all(xs, f)
+    return _list_map(once, f)
+
+
+def _up_to_two(n: int, /) -> int:
+    if n > 2:
+        raise _Missing(str(n))
+    return _int_add(n, 1)
+
+
 _console: _LoggingConsole = _LoggingConsole(__name__)
 _doubled: _Sequence[int] = _map_all((1, 2, 3), lambda n: _int_mul(n, 2))
 _safe: _Callable[[int], int] = lambda n: _int_add(n, 1)
@@ -181,6 +214,18 @@ _console.log(str(_six))
 _some: int = _failures(('one', 'six', 'two', 'ten'), _find)
 _none: int = _failures((1, 2), lambda n: n)
 _console.log(f'{_some} {_none}')
+_summed: int
+try:
+    _summed = _sum_all(('one', 'two'), _find)
+except _Missing:
+    _summed = -1
+_unsummed: int
+try:
+    _unsummed = _sum_all(('six', 'one', 'ten'), _find)
+except _Missing as _e:
+    _console.log(f'first missing {_e.key}')
+    _unsummed = -1
+_console.log(f'{_summed} {_unsummed} {_sum_all((1, 2), _safe)}')
 _twelve: int
 try:
     _twelve = _both(_find, lambda k: 10, 'two')
@@ -189,8 +234,8 @@ except _Missing:
 _lost: int
 try:
     _lost = _both(_find, _find, 'six')
-except _Missing as _e:
-    _console.log(f'lost {_e.key}')
+except _Missing as _e2:
+    _console.log(f'lost {_e2.key}')
     _lost = -1
 _console.log(f'{_twelve} {_lost}')
 _console.log(f"{_either('one')} {_either('ten')}")
@@ -203,7 +248,16 @@ _console.log(_t_0)
 _t_1: str
 try:
     _t_1 = _parts(('one', 'six'))
-except _Missing as _e2:
-    _t_1 = f'missing {_e2.key}'
+except _Missing as _e3:
+    _t_1 = f'missing {_e3.key}'
 _console.log(_t_1)
 _console.log(_list_join(_listed_sorted((3, 1, 2), lambda a, b: _int_sub(a, b)), ',', lambda n: str(n)))
+_bumped: _Sequence[int] = _list_map((1, 2), _safe)
+_twice: _Sequence[int] = _map_twice((1, 2), _safe)
+_failed: _Sequence[int]
+try:
+    _failed = _map_twice((1, 2), _up_to_two)
+except _Missing as _e4:
+    _console.log(f'missing {_e4.key}')
+    _failed = ()
+_console.log(f"{_list_join(_bumped, ',', lambda n: str(n))} {_list_join(_twice, ',', lambda n: str(n))} {len(_failed)}")

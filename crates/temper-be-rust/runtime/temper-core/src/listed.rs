@@ -199,6 +199,108 @@ mod listed {
         result
     }
 
+    // Each `try_` form takes a callback that may fail, stops at its
+    // first failure, and returns it (RFC 164's failure parameters). Its
+    // type parameters are the receiver's, then the method's, its failure
+    // type last, which generated code names.
+
+    pub fn try_filter<T, E>(
+        listed: &dyn ListedTrait<T>,
+        predicate: &dyn Fn(T) -> Result<bool, E>,
+    ) -> Result<List<T>, E>
+    where
+        T: Clone + Sync + Send,
+    {
+        let mut result = vec![];
+        for i in 0..listed.len() {
+            let value = listed.get(i);
+            if predicate(value.clone())? {
+                result.push(value);
+            }
+        }
+        Ok(Arc::new(result))
+    }
+
+    pub fn try_join<T, E>(
+        listed: &dyn ListedTrait<T>,
+        separator: impl ToArcString,
+        stringify: &dyn Fn(T) -> Result<Arc<String>, E>,
+    ) -> Result<Arc<String>, E>
+    where
+        T: Clone + Sync + Send,
+    {
+        let separator = separator.to_arc_string();
+        let mut result = String::new();
+        for i in 0..listed.len() {
+            if i > 0 {
+                result.push_str(separator.as_str());
+            }
+            result.push_str(&stringify(listed.get(i))?);
+        }
+        Ok(result.to_arc_string())
+    }
+
+    pub fn try_map<T, O, E>(
+        listed: &dyn ListedTrait<T>,
+        transform: &dyn Fn(T) -> Result<O, E>,
+    ) -> Result<List<O>, E>
+    where
+        T: Clone + Sync + Send,
+    {
+        let mut result = vec![];
+        for i in 0..listed.len() {
+            result.push(transform(listed.get(i))?);
+        }
+        Ok(Arc::new(result))
+    }
+
+    pub fn try_reduce<T, E>(
+        listed: &dyn ListedTrait<T>,
+        accumulate: &dyn Fn(T, T) -> Result<T, E>,
+    ) -> Result<T, E>
+    where
+        T: Clone + Sync + Send,
+    {
+        try_reduce_from_index(listed, listed.get(0), 1, accumulate)
+    }
+
+    pub fn try_reduce_from<T, O, E>(
+        listed: &dyn ListedTrait<T>,
+        initial: O,
+        accumulate: &dyn Fn(O, T) -> Result<O, E>,
+    ) -> Result<O, E>
+    where
+        T: Clone + Sync + Send,
+    {
+        try_reduce_from_index(listed, initial, 0, accumulate)
+    }
+
+    fn try_reduce_from_index<T, O, E>(
+        listed: &dyn ListedTrait<T>,
+        initial: O,
+        index: i32,
+        accumulate: &dyn Fn(O, T) -> Result<O, E>,
+    ) -> Result<O, E>
+    where
+        T: Clone + Sync + Send,
+    {
+        let mut result = initial;
+        for i in index..listed.len() {
+            result = accumulate(result, listed.get(i))?;
+        }
+        Ok(result)
+    }
+
+    pub fn try_sorted<T, E>(
+        listed: &dyn ListedTrait<T>,
+        compare: &dyn Fn(T, T) -> Result<i32, E>,
+    ) -> Result<List<T>, E>
+    where
+        T: Clone + Sync + Send,
+    {
+        Ok(Arc::new(super::try_merge_sort(listed.to_vec(), compare)?))
+    }
+
     pub fn slice<T>(listed: &dyn ListedTrait<T>, begin: i32, end: i32) -> List<T>
     where
         T: Clone + Sync + Send,
@@ -220,6 +322,36 @@ mod listed {
         result.sort_by(|a, b| compare(a.clone(), b.clone()).cmp(&0));
         Arc::new(result)
     }
+}
+
+/// A stable merge sort by a comparison that may fail, which stops at its
+/// first failure: std's sorts may panic, or worse, where a comparison
+/// stops being consistent, as one that gives up partway would be.
+fn try_merge_sort<T: Clone, E>(
+    mut items: Vec<T>,
+    compare: &dyn Fn(T, T) -> Result<i32, E>,
+) -> Result<Vec<T>, E> {
+    if items.len() < 2 {
+        return Ok(items);
+    }
+    let right = items.split_off(items.len() / 2);
+    let (left, right) = (
+        try_merge_sort(items, compare)?,
+        try_merge_sort(right, compare)?,
+    );
+    let mut merged = Vec::with_capacity(left.len() + right.len());
+    let (mut left, mut right) = (left.into_iter().peekable(), right.into_iter().peekable());
+    while let (Some(a), Some(b)) = (left.peek(), right.peek()) {
+        // The left's first on ties, so it's stable.
+        let next = match compare(a.clone(), b.clone())? > 0 {
+            true => right.next(),
+            false => left.next(),
+        };
+        merged.extend(next);
+    }
+    merged.extend(left);
+    merged.extend(right);
+    Ok(merged)
 }
 
 impl<T> Clone for Listed<T>
@@ -355,7 +487,10 @@ where
     }
 
     fn get(&self, index: i32) -> T {
-        match usize::try_from(index).ok().and_then(|i| <[T]>::get(self, i)) {
+        match usize::try_from(index)
+            .ok()
+            .and_then(|i| <[T]>::get(self, i))
+        {
             Some(item) => item.clone(),
             None => out_of_bounds(index, <[T]>::len(self)),
         }
@@ -393,7 +528,7 @@ where
 pub use list_builder::*;
 
 pub mod list_builder {
-    use super::{List, ListBuilder, Listed, ToListed, out_of_bounds, place};
+    use super::{out_of_bounds, place, List, ListBuilder, Listed, ToListed};
     use std::{
         cell::RefCell,
         sync::{Arc, RwLock},
@@ -463,6 +598,21 @@ pub mod list_builder {
             .write()
             .unwrap()
             .sort_by(|a, b| compare(a.clone(), b.clone()).cmp(&0));
+    }
+
+    /// [`sort`] with a comparison that may fail: on a failure, the
+    /// builder is as it was.
+    pub fn try_sort<T, E>(
+        builder: &ListBuilder<T>,
+        compare: &dyn Fn(T, T) -> Result<i32, E>,
+    ) -> Result<(), E>
+    where
+        T: Clone + Sync + Send,
+    {
+        let items = builder.read().unwrap().clone();
+        let sorted = super::try_merge_sort(items, compare)?;
+        *builder.write().unwrap() = sorted;
+        Ok(())
     }
 
     pub fn splice<T>(

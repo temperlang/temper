@@ -17,7 +17,8 @@
 //! `Float64.toString` across its range ([`FLOAT_FORMAT`]), and objects
 //! a call frees while it runs ([`LIFETIMES`]); and the testkit's programs
 //! of declared failures (`failures`, `host-failures`, whose host code
-//! returns its failures in `Expected`s, and `failures-interop`).
+//! returns its failures in `Expected`s, and `failures-interop`), and its specification
+//! `failure-params` ([`SPECS`]).
 //!
 //! - `goldens`: each program's generated library, laid out as Kotlin's,
 //!   with its `init.cpp` matching the golden in `tests/goldens/`, named
@@ -343,6 +344,10 @@ const STRICT: &[&str] = &[
 /// directory (`-I`).
 const RUNTIME_WARNINGS: usize = STRICT.len() - 4;
 
+/// The testkit's specifications (`kit::SPECS`) this backend runs, which
+/// others don't all yet: `failure-params`.
+const SPECS: [&str; 1] = ["failure-params"];
+
 fn cases() -> Vec<Case> {
     let tests = [
         &kit::CLASSES[..],
@@ -364,9 +369,10 @@ fn cases() -> Vec<Case> {
         &kit::NET[..],
     ]
     .concat();
-    let mut cases = kit::cases_with("cpp", &kit::PROGRAMS, &tests);
+    let programs = [&kit::PROGRAMS[..], &SPECS[..]].concat();
+    let mut cases = kit::cases_with("cpp", &programs, &tests);
     cases.iter_mut().for_each(rename_host_code);
-    let all = kit::all_libraries(&kit::PROGRAMS, &tests);
+    let all = kit::all_libraries(&programs, &tests);
     // Kotlin's suite expects std `net`'s tests to fail on C++, which has
     // no `net`; here they pass where libcurl's headers are.
     if !curl() {
@@ -478,19 +484,6 @@ fn rename_host_code(case: &mut Case) {
 }
 
 /// A case's generated files.
-/// Generic failure parameters (RFC 164; the specification
-/// `failure-params`) aren't translated yet (chunk 16), and say so,
-/// rather than giving code that doesn't build.
-#[test]
-fn failure_parameters_not_yet() {
-    kit::with_stack(|| {
-        for case in kit::spec_cases("cpp", "failure-params") {
-            let error = translate(&kit::program_for(&case, &CPP.rules), &CPP).unwrap_err();
-            assert!(error.what.contains("failure parameters"), "{error}");
-        }
-    });
-}
-
 fn generate(case: &Case) -> Vec<OutFile> {
     translate(&kit::program_for(case, &CPP.rules), &CPP)
         .unwrap_or_else(|e| panic!("{}: {e}", case.key))
@@ -1967,6 +1960,11 @@ const EXPECTED_LINES: &[&str] = &[
     "caused by: missing (key: second)",
     "caused by: missing (key: first) 1",
     "cast 1",
+    "try 62 3+1+2 6 16 13",
+    "try failed 0 2",
+    "try sort 00 0",
+    "try map 1 50 22",
+    "never 4",
 ];
 
 /// The standards [`expected_shim`] and [`failures_interop`] build with,

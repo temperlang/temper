@@ -716,7 +716,12 @@ are unchecked there, so `E` appears in no host signature (Java's
 `mapAll` is `<T, R> List<R> mapAll(List<T> xs, Function<T, R> f)`), a
 callback's failure passes through unchanged, and a handler in generic
 code catches failures, never panics or the host's own errors. Rust and
-C++ report them as not yet supported, as does a bubbling callback
-there. Also fixed: a module's
+C++ keep `E` generic: `fn map_all<T, R, E: temper_core::Failure>(…) ->
+Result<List<R>, E>` and a template's `core::Expected<…, E>`, with
+"can't fail" as `std::convert::Infallible` and `core::Never`, whose
+results are their values (`temper_core::into_ok`, `*`); core's members
+there have forms for failing callbacks (`try_map`, `List::tryMap`), and
+calls whose callbacks can't fail are as before. A bubbling callback is
+still not yet supported. Also fixed: a module's
 `let` of a `@fun` interface, `let inc: Mapper<Int, Int> = fn …`, and
 `let xs = f() orelse []`, which failed on every backend.

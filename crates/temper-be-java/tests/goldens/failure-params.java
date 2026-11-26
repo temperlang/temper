@@ -85,6 +85,35 @@ public final class FailureParamsGlobal {
         return failed;
     }
 
+    static <T> int sumAll(List<T> xs, ToIntFunction<T> f) {
+        int total = 0;
+        @Nullable Failure first = null;
+        {
+            int length = xs.size();
+            int i = 0;
+            while (i < length) {
+                T x = Core.listGet(xs, i);
+                i = i + 1;
+                try {
+                    total = total + f.applyAsInt(x);
+                } catch (RuntimeException caught) {
+                    if (!(caught instanceof Failure)) {
+                        throw caught;
+                    }
+                    Failure e = (Failure) caught;
+                    if (first == null) {
+                        first = e;
+                    }
+                }
+            }
+        }
+        @Nullable Failure failed = first;
+        if (failed != null) {
+            throw (RuntimeException) failed;
+        }
+        return total;
+    }
+
     static int both(ToIntFunction<String> a, ToIntFunction<String> b, String key) {
         return a.applyAsInt(key) + b.applyAsInt(key);
     }
@@ -120,6 +149,18 @@ public final class FailureParamsGlobal {
         return Core.listJoinObj(found, ",", k3 -> k3) + " " + total + " " + Core.listJoinObj(keys, "+", k4 -> Integer.toString(find(k4)));
     }
 
+    static <T> List<T> mapTwice(List<T> xs, Function<T, T> f) {
+        List<T> once = mapAll(xs, f);
+        return Core.listMapObjToObj(once, f);
+    }
+
+    static int upToTwo(int n) throws Missing {
+        if (n > 2) {
+            throw new Missing(Integer.toString(n));
+        }
+        return n + 1;
+    }
+
     static {
         Console console = Core.getConsole(Logger.getLogger("failure_params"));
         List<Integer> doubled = mapAll(List.of(1, 2, 3), n -> n * 2);
@@ -142,17 +183,31 @@ public final class FailureParamsGlobal {
         int some = failures(List.of("one", "six", "two", "ten"), FailureParamsGlobal::find);
         int none = failures(List.of(1, 2), n -> n);
         console.log(some + " " + none);
+        int summed;
+        try {
+            summed = sumAll(List.of("one", "two"), FailureParamsGlobal::find);
+        } catch (Missing ignored3) {
+            summed = -1;
+        }
+        int unsummed;
+        try {
+            unsummed = sumAll(List.of("six", "one", "ten"), FailureParamsGlobal::find);
+        } catch (Missing e) {
+            console.log("first missing " + e.key);
+            unsummed = -1;
+        }
+        console.log(summed + " " + unsummed + " " + sumAll(List.of(1, 2), safe::applyAsInt));
         int twelve;
         try {
             twelve = both(FailureParamsGlobal::find, k -> 10, "two");
-        } catch (Missing ignored3) {
+        } catch (Missing ignored4) {
             twelve = -1;
         }
         int lost;
         try {
             lost = both(FailureParamsGlobal::find, FailureParamsGlobal::find, "six");
-        } catch (Missing e) {
-            console.log("lost " + e.key);
+        } catch (Missing e2) {
+            console.log("lost " + e2.key);
             lost = -1;
         }
         console.log(twelve + " " + lost);
@@ -160,17 +215,27 @@ public final class FailureParamsGlobal {
         String t;
         try {
             t = parts(List.of("one", "two"));
-        } catch (Missing ignored4) {
+        } catch (Missing ignored5) {
             t = "?";
         }
         console.log(t);
         String t2;
         try {
             t2 = parts(List.of("one", "six"));
-        } catch (Missing e2) {
-            t2 = "missing " + e2.key;
+        } catch (Missing e3) {
+            t2 = "missing " + e3.key;
         }
         console.log(t2);
         console.log(Core.listJoinInt(Core.listSortedInt(List.of(3, 1, 2), (a, b) -> a - b), ",", n -> Integer.toString(n)));
+        List<Integer> bumped = Core.listMapIntToInt(List.of(1, 2), safe);
+        List<Integer> twice = mapTwice(List.of(1, 2), safe::applyAsInt);
+        List<Integer> failed;
+        try {
+            failed = mapTwice(List.of(1, 2), FailureParamsGlobal::upToTwo);
+        } catch (Missing e4) {
+            console.log("missing " + e4.key);
+            failed = List.of();
+        }
+        console.log(Core.listJoinInt(bumped, ",", n -> Integer.toString(n)) + " " + Core.listJoinInt(twice, ",", n -> Integer.toString(n)) + " " + failed.size());
     }
 }

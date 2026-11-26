@@ -1,170 +1,222 @@
 # generated line:column -> source:line:column, and the text at each
-13:1 -> ../failure-params.temper.md:22:5  /** <- let find(key: String): Int t
-18:1 -> ../failure-params.temper.md:22:5  function find(key) { <- let find(key: String): Int t
-18:10 -> ../failure-params.temper.md:22:9 (find)  find(key) { <- find(key: String): Int throw
-18:14 -> ../failure-params.temper.md:22:5  (key) { <- let find(key: String): Int t
-19:3 -> ../failure-params.temper.md:23:7  if (key === "one") { <- if (key == "one") { return 1
-20:5 -> ../failure-params.temper.md:23:27  return 1; <- return 1; }
-22:3 -> ../failure-params.temper.md:24:7  if (key === "two") { <- if (key == "two") { return 2
-23:5 -> ../failure-params.temper.md:24:27  return 2; <- return 2; }
-25:3 -> ../failure-params.temper.md:25:7  throw new Missing(key); <- throw new Missing(key);
-28:1 -> ../failure-params.temper.md:30:5  /** <- let mapAll<T, R, E extends E
-35:1 -> ../failure-params.temper.md:30:5  function mapAll(xs, f) { <- let mapAll<T, R, E extends E
-35:10 -> ../failure-params.temper.md:30:9 (mapAll)  mapAll(xs, f) { <- mapAll<T, R, E extends Error
-35:16 -> ../failure-params.temper.md:30:5  (xs, f) { <- let mapAll<T, R, E extends E
-36:3 -> ../failure-params.temper.md:31:7  /** @type {R[]} */ <- let out = new ListBuilder<R>
-37:3 -> ../failure-params.temper.md:31:7  const out = []; <- let out = new ListBuilder<R>
-38:3 -> ../failure-params.temper.md:32:7  { <- for (let x of xs) { out.add(
-39:5 -> ../failure-params.temper.md:32:7  const length = xs.length; <- for (let x of xs) { out.add(
-40:5 -> ../failure-params.temper.md:32:7  let i = 0; <- for (let x of xs) { out.add(
-41:5 -> ../failure-params.temper.md:32:7  while (i < length) { <- for (let x of xs) { out.add(
-42:7 -> ../failure-params.temper.md:32:7  const x = listedGet(/** @typ <- for (let x of xs) { out.add(
-43:7 -> ../failure-params.temper.md:32:7  i = (i + 1) | 0; <- for (let x of xs) { out.add(
-44:7 -> ../failure-params.temper.md:32:27  out.push(f(x)); <- out.add(try f(x)); }
-47:3 -> ../failure-params.temper.md:33:7  return listBuilderToList(out <- out.toList()
-50:1 -> ../failure-params.temper.md:54:5  /** <- let found(keys: List<String>
-55:1 -> ../failure-params.temper.md:54:5  function found(keys) { <- let found(keys: List<String>
-55:10 -> ../failure-params.temper.md:54:9 (found)  found(keys) { <- found(keys: List<String>): L
-55:15 -> ../failure-params.temper.md:54:5  (keys) { <- let found(keys: List<String>
-56:3 -> ../failure-params.temper.md:55:7  return mapAll(keys, (k) => f <- try mapAll(keys, fn (k: Stri
-59:1 -> ../failure-params.temper.md:58:5  /** <- let shown(keys: List<String>
-63:1 -> ../failure-params.temper.md:58:5  function shown(keys) { <- let shown(keys: List<String>
-63:10 -> ../failure-params.temper.md:58:9 (shown)  shown(keys) { <- shown(keys: List<String>): S
-63:15 -> ../failure-params.temper.md:58:5  (keys) { <- let shown(keys: List<String>
-64:3 -> ../failure-params.temper.md:59:7  /** @type {readonly number[] <- let ns = found(keys) catch (
-65:3 -> ../failure-params.temper.md:59:7  let ns; <- let ns = found(keys) catch (
-66:3 -> ../failure-params.temper.md:59:16  /** @type {Missing | null} * <- found(keys) catch (e) { retu
-67:3 -> ../failure-params.temper.md:59:16  let caught = null; <- found(keys) catch (e) { retu
-68:3 -> ../failure-params.temper.md:59:16  /** @type {readonly number[] <- found(keys) catch (e) { retu
-69:3 -> ../failure-params.temper.md:59:16  let held = null; <- found(keys) catch (e) { retu
-70:3 -> ../failure-params.temper.md:59:16  try { <- found(keys) catch (e) { retu
-71:5 -> ../failure-params.temper.md:59:16  held = found(keys); <- found(keys) catch (e) { retu
-74:5 -> ../failure-params.temper.md:59:16  caught = failure; <- found(keys) catch (e) { retu
-76:3 -> ../failure-params.temper.md:59:16  if (held == null) { <- found(keys) catch (e) { retu
-77:5 -> ../failure-params.temper.md:59:35  const e = /** @type {Missing <- e) { return "missing ${e.key
-78:5 -> ../failure-params.temper.md:59:40  return `missing ${e.key}`; <- return "missing ${e.key}"; }
-80:5 -> ../failure-params.temper.md:59:16  ns = held; <- found(keys) catch (e) { retu
-82:3 -> ../failure-params.temper.md:60:7  return listedJoin(/** @type <- ns.join(",") { n => n.toStri
-85:1 -> ../failure-params.temper.md:74:5  /** <- let applied(f: Mapper<Int, I
-91:1 -> ../failure-params.temper.md:74:5  function applied(f, n) { <- let applied(f: Mapper<Int, I
-91:10 -> ../failure-params.temper.md:74:9 (applied)  applied(f, n) { <- applied(f: Mapper<Int, Int,
-91:17 -> ../failure-params.temper.md:74:5  (f, n) { <- let applied(f: Mapper<Int, I
-92:3 -> ../failure-params.temper.md:74:77  return f(n); <- try f(n) }
-95:1 -> ../failure-params.temper.md:86:5  /** <- let failures<T, R, E extends
-102:1 -> ../failure-params.temper.md:86:5  function failures(xs, f) { <- let failures<T, R, E extends
-102:10 -> ../failure-params.temper.md:86:9 (failures)  failures(xs, f) { <- failures<T, R, E extends Err
-102:18 -> ../failure-params.temper.md:86:5  (xs, f) { <- let failures<T, R, E extends
-103:3 -> ../failure-params.temper.md:87:7  let failed = 0; <- var failed = 0;
-104:3 -> ../failure-params.temper.md:88:7  { <- for (let x of xs) {
-105:5 -> ../failure-params.temper.md:88:7  const length = xs.length; <- for (let x of xs) {
-106:5 -> ../failure-params.temper.md:88:7  let i = 0; <- for (let x of xs) {
-107:5 -> ../failure-params.temper.md:88:7  while (i < length) { <- for (let x of xs) {
-108:7 -> ../failure-params.temper.md:88:7  const x = listedGet(/** @typ <- for (let x of xs) {
-109:7 -> ../failure-params.temper.md:88:7  i = (i + 1) | 0; <- for (let x of xs) {
-110:7 -> ../failure-params.temper.md:89:9  try { <- do { try f(x); } catch { fai
-111:9 -> ../failure-params.temper.md:89:14  f(x); <- try f(x); } catch { failed +
-114:9 -> ../failure-params.temper.md:89:34  failed = (failed + 1) | 0; <- failed += 1; }
-118:3 -> ../failure-params.temper.md:91:7  return failed; <- failed
-121:1 -> ../failure-params.temper.md:107:5  /** <- let both<E extends Error>(a:
-127:1 -> ../failure-params.temper.md:107:5  function both(a, b, key) { <- let both<E extends Error>(a:
-127:10 -> ../failure-params.temper.md:107:9 (both)  both(a, b, key) { <- both<E extends Error>(a: Map
-127:14 -> ../failure-params.temper.md:107:5  (a, b, key) { <- let both<E extends Error>(a:
-128:3 -> ../failure-params.temper.md:108:7  return (a(key) + b(key)) | 0 <- (try a(key)) + (try b(key))
-131:1 -> ../failure-params.temper.md:126:5  /** <- let word(key: String): Int t
-136:1 -> ../failure-params.temper.md:126:5  function word(key) { <- let word(key: String): Int t
-136:10 -> ../failure-params.temper.md:126:9 (word)  word(key) { <- word(key: String): Int throw
-136:14 -> ../failure-params.temper.md:126:5  (key) { <- let word(key: String): Int t
-137:3 -> ../failure-params.temper.md:127:7  if (key === "ten") { <- if (key == "ten") { return 1
-138:5 -> ../failure-params.temper.md:127:27  return 10; <- return 10; }
-140:3 -> ../failure-params.temper.md:128:7  throw new Unknown(key); <- throw new Unknown(key);
-143:1 -> ../failure-params.temper.md:131:5  /** <- let either(key: String): Str
-147:1 -> ../failure-params.temper.md:131:5  function either(key) { <- let either(key: String): Str
-147:10 -> ../failure-params.temper.md:131:9 (either)  either(key) { <- either(key: String): String
-147:16 -> ../failure-params.temper.md:131:5  (key) { <- let either(key: String): Str
-148:3 -> ../failure-params.temper.md:132:7  /** @type {number} */ <- let n = both(find, word, key
-149:3 -> ../failure-params.temper.md:132:7  let n; <- let n = both(find, word, key
-150:3 -> ../failure-params.temper.md:132:15  /** @type {FailureParamsErro <- both(find, word, key) catch
-151:3 -> ../failure-params.temper.md:132:15  let caught = null; <- both(find, word, key) catch
-152:3 -> ../failure-params.temper.md:132:15  /** @type {number | null} */ <- both(find, word, key) catch
-153:3 -> ../failure-params.temper.md:132:15  let held = null; <- both(find, word, key) catch
-154:3 -> ../failure-params.temper.md:132:15  try { <- both(find, word, key) catch
-155:5 -> ../failure-params.temper.md:132:15  held = both((x) => find(x), <- both(find, word, key) catch
-158:5 -> ../failure-params.temper.md:132:15  caught = failure; <- both(find, word, key) catch
-160:3 -> ../failure-params.temper.md:132:15  if (held == null) { <- both(find, word, key) catch
-161:5 -> ../failure-params.temper.md:132:44  const e = /** @type {Failure <- e) {
-162:5 -> ../failure-params.temper.md:133:9  return e instanceof Missing <- return when (e) {
-164:5 -> ../failure-params.temper.md:132:15  n = held; <- both(find, word, key) catch
-166:3 -> ../failure-params.temper.md:138:7  return n.toString(); <- n.toString()
-169:1 -> ../failure-params.temper.md:151:5  /** <- let parts(keys: List<String>
-174:1 -> ../failure-params.temper.md:151:5  function parts(keys) { <- let parts(keys: List<String>
-174:10 -> ../failure-params.temper.md:151:9 (parts)  parts(keys) { <- parts(keys: List<String>): S
-174:15 -> ../failure-params.temper.md:151:5  (keys) { <- let parts(keys: List<String>
-175:3 -> ../failure-params.temper.md:152:7  /** @type {readonly string[] <- let found = keys.filter { k
-176:3 -> ../failure-params.temper.md:152:7  const found = listedFilter(/ <- let found = keys.filter { k
-177:3 -> ../failure-params.temper.md:153:7  const total = listedReduceFr <- let total = keys.reduceFrom(
-178:3 -> ../failure-params.temper.md:154:7  return `${listedJoin(/** @ty <- "${found.join(",") { k => k
-181:1 -> ../failure-params.temper.md:19:5  class FailureParamsError ext <- sealed interface FailurePara
-181:7 -> ../failure-params.temper.md:19:22 (FailureParamsError)  FailureParamsError extends E <- FailureParamsError extends E
-181:25 -> ../failure-params.temper.md:19:5   extends Error {} <- sealed interface FailurePara
-185:1 -> ../failure-params.temper.md:20:5  class Missing extends Failur <- class Missing(public key: St
-185:7 -> ../failure-params.temper.md:20:11 (Missing)  Missing extends FailureParam <- Missing(public key: String)
-185:14 -> ../failure-params.temper.md:20:5   extends FailureParamsError <- class Missing(public key: St
-186:3 -> ../failure-params.temper.md:20:26  /** @type {string} */ <- key: String) extends Failure
-187:3 -> ../failure-params.temper.md:20:26  #key; <- key: String) extends Failure
-189:3 -> ../failure-params.temper.md:20:5  /** @param {string} key */ <- class Missing(public key: St
-190:3 -> ../failure-params.temper.md:20:5  constructor(key) { <- class Missing(public key: St
-192:5 -> ../failure-params.temper.md:20:26  this.#key = key; <- key: String) extends Failure
-195:3 -> ../failure-params.temper.md:20:26  /** @returns {string} */ <- key: String) extends Failure
-196:3 -> ../failure-params.temper.md:20:26  get key() { <- key: String) extends Failure
-196:7 -> ../failure-params.temper.md:20:26 (key)  key() { <- key: String) extends Failure
-200:3 -> ../failure-params.temper.md:20:5  /** @returns {string} */ <- class Missing(public key: St
-201:3 -> ../failure-params.temper.md:20:5  get message() { <- class Missing(public key: St
-202:5 -> ../failure-params.temper.md:20:5  return `missing (key: ${this <- class Missing(public key: St
-206:1 -> ../failure-params.temper.md:124:5  class Unknown extends Failur <- class Unknown(public word: S
-206:7 -> ../failure-params.temper.md:124:11 (Unknown)  Unknown extends FailureParam <- Unknown(public word: String)
-206:14 -> ../failure-params.temper.md:124:5   extends FailureParamsError <- class Unknown(public word: S
-207:3 -> ../failure-params.temper.md:124:26  /** @type {string} */ <- word: String) extends Failur
-208:3 -> ../failure-params.temper.md:124:26  #word; <- word: String) extends Failur
-210:3 -> ../failure-params.temper.md:124:5  /** @param {string} word */ <- class Unknown(public word: S
-211:3 -> ../failure-params.temper.md:124:5  constructor(word) { <- class Unknown(public word: S
-213:5 -> ../failure-params.temper.md:124:26  this.#word = word; <- word: String) extends Failur
-216:3 -> ../failure-params.temper.md:124:26  /** @returns {string} */ <- word: String) extends Failur
-217:3 -> ../failure-params.temper.md:124:26  get word() { <- word: String) extends Failur
-217:7 -> ../failure-params.temper.md:124:26 (word)  word() { <- word: String) extends Failur
-221:3 -> ../failure-params.temper.md:124:5  /** @returns {string} */ <- class Unknown(public word: S
-222:3 -> ../failure-params.temper.md:124:5  get message() { <- class Unknown(public word: S
-223:5 -> ../failure-params.temper.md:124:5  return `unknown (word: ${thi <- class Unknown(public word: S
-227:1 -> ../failure-params.temper.md:41:5  /** @type {readonly number[] <- let doubled = mapAll([1, 2,
-228:1 -> ../failure-params.temper.md:41:5  const doubled = mapAll(Objec <- let doubled = mapAll([1, 2,
-229:1 -> ../failure-params.temper.md:42:5  /** @type {(arg0: number) => <- let safe: Mapper<Int, Int, N
-230:1 -> ../failure-params.temper.md:42:5  const safe = (n) => (n + 1) <- let safe: Mapper<Int, Int, N
-231:1 -> ../failure-params.temper.md:43:5  console.log(`${listedJoin(/* <- console.log("${doubled.join(
-232:1 -> ../failure-params.temper.md:63:5  /** @type {readonly number[] <- let named = mapAll(["two", "
-233:1 -> ../failure-params.temper.md:63:5  let named; <- let named = mapAll(["two", "
-234:1 -> ../failure-params.temper.md:63:5  try { <- let named = mapAll(["two", "
-240:1 -> ../failure-params.temper.md:64:5  console.log(`${shown(Object. <- console.log("${shown(["one",
-241:1 -> ../failure-params.temper.md:75:5  /** @type {number} */ <- let six = applied(fn (n: Int
-242:1 -> ../failure-params.temper.md:75:5  let six; <- let six = applied(fn (n: Int
-243:1 -> ../failure-params.temper.md:75:5  try { <- let six = applied(fn (n: Int
-249:1 -> ../failure-params.temper.md:76:5  console.log(six.toString()); <- console.log(six.toString());
-250:1 -> ../failure-params.temper.md:94:5  const some = failures(Object <- let some = failures(["one",
-251:1 -> ../failure-params.temper.md:95:5  const none = failures(Object <- let none = failures([1, 2],
-252:1 -> ../failure-params.temper.md:96:5  console.log(`${some} ${none} <- console.log("${some} ${none}
-253:1 -> ../failure-params.temper.md:111:5  /** @type {number} */ <- let twelve = both(find, fn (
-254:1 -> ../failure-params.temper.md:111:5  let twelve; <- let twelve = both(find, fn (
-255:1 -> ../failure-params.temper.md:111:5  try { <- let twelve = both(find, fn (
-261:1 -> ../failure-params.temper.md:112:5  /** @type {number} */ <- let lost = both(find, find,
-262:1 -> ../failure-params.temper.md:112:5  let lost; <- let lost = both(find, find,
-263:1 -> ../failure-params.temper.md:112:5  try { <- let lost = both(find, find,
-267:3 -> ../failure-params.temper.md:112:52  console.log(`lost ${e.key}`) <- console.log("lost ${e.key}")
-270:1 -> ../failure-params.temper.md:113:5  console.log(`${twelve} ${los <- console.log("${twelve} ${los
-271:1 -> ../failure-params.temper.md:140:5  console.log(`${either("one") <- console.log("${either("one")
-272:1 -> ../failure-params.temper.md:156:5  /** @type {string} */ <- console.log(parts(["one", "t
-273:1 -> ../failure-params.temper.md:156:5  let t$0; <- console.log(parts(["one", "t
-274:1 -> ../failure-params.temper.md:156:5  try { <- console.log(parts(["one", "t
-280:1 -> ../failure-params.temper.md:156:5  console.log(t$0); <- console.log(parts(["one", "t
-281:1 -> ../failure-params.temper.md:157:5  /** @type {string} */ <- console.log(parts(["one", "s
-282:1 -> ../failure-params.temper.md:157:5  let t$1; <- console.log(parts(["one", "s
-283:1 -> ../failure-params.temper.md:157:5  try { <- console.log(parts(["one", "s
-289:1 -> ../failure-params.temper.md:157:5  console.log(t$1); <- console.log(parts(["one", "s
-290:1 -> ../failure-params.temper.md:158:5  console.log(listedJoin(/** @ <- console.log([3, 1, 2].sorted
+14:1 -> ../failure-params.temper.md:22:5  /** <- let find(key: String): Int t
+19:1 -> ../failure-params.temper.md:22:5  function find(key) { <- let find(key: String): Int t
+19:10 -> ../failure-params.temper.md:22:9 (find)  find(key) { <- find(key: String): Int throw
+19:14 -> ../failure-params.temper.md:22:5  (key) { <- let find(key: String): Int t
+20:3 -> ../failure-params.temper.md:23:7  if (key === "one") { <- if (key == "one") { return 1
+21:5 -> ../failure-params.temper.md:23:27  return 1; <- return 1; }
+23:3 -> ../failure-params.temper.md:24:7  if (key === "two") { <- if (key == "two") { return 2
+24:5 -> ../failure-params.temper.md:24:27  return 2; <- return 2; }
+26:3 -> ../failure-params.temper.md:25:7  throw new Missing(key); <- throw new Missing(key);
+29:1 -> ../failure-params.temper.md:30:5  /** <- let mapAll<T, R, E extends E
+36:1 -> ../failure-params.temper.md:30:5  function mapAll(xs, f) { <- let mapAll<T, R, E extends E
+36:10 -> ../failure-params.temper.md:30:9 (mapAll)  mapAll(xs, f) { <- mapAll<T, R, E extends Error
+36:16 -> ../failure-params.temper.md:30:5  (xs, f) { <- let mapAll<T, R, E extends E
+37:3 -> ../failure-params.temper.md:31:7  /** @type {R[]} */ <- let out = new ListBuilder<R>
+38:3 -> ../failure-params.temper.md:31:7  const out = []; <- let out = new ListBuilder<R>
+39:3 -> ../failure-params.temper.md:32:7  { <- for (let x of xs) { out.add(
+40:5 -> ../failure-params.temper.md:32:7  const length = xs.length; <- for (let x of xs) { out.add(
+41:5 -> ../failure-params.temper.md:32:7  let i = 0; <- for (let x of xs) { out.add(
+42:5 -> ../failure-params.temper.md:32:7  while (i < length) { <- for (let x of xs) { out.add(
+43:7 -> ../failure-params.temper.md:32:7  const x = listedGet(/** @typ <- for (let x of xs) { out.add(
+44:7 -> ../failure-params.temper.md:32:7  i = (i + 1) | 0; <- for (let x of xs) { out.add(
+45:7 -> ../failure-params.temper.md:32:27  out.push(f(x)); <- out.add(try f(x)); }
+48:3 -> ../failure-params.temper.md:33:7  return listBuilderToList(out <- out.toList()
+51:1 -> ../failure-params.temper.md:54:5  /** <- let found(keys: List<String>
+56:1 -> ../failure-params.temper.md:54:5  function found(keys) { <- let found(keys: List<String>
+56:10 -> ../failure-params.temper.md:54:9 (found)  found(keys) { <- found(keys: List<String>): L
+56:15 -> ../failure-params.temper.md:54:5  (keys) { <- let found(keys: List<String>
+57:3 -> ../failure-params.temper.md:55:7  return mapAll(keys, (k) => f <- try mapAll(keys, fn (k: Stri
+60:1 -> ../failure-params.temper.md:58:5  /** <- let shown(keys: List<String>
+64:1 -> ../failure-params.temper.md:58:5  function shown(keys) { <- let shown(keys: List<String>
+64:10 -> ../failure-params.temper.md:58:9 (shown)  shown(keys) { <- shown(keys: List<String>): S
+64:15 -> ../failure-params.temper.md:58:5  (keys) { <- let shown(keys: List<String>
+65:3 -> ../failure-params.temper.md:59:7  /** @type {readonly number[] <- let ns = found(keys) catch (
+66:3 -> ../failure-params.temper.md:59:7  let ns; <- let ns = found(keys) catch (
+67:3 -> ../failure-params.temper.md:59:16  /** @type {Missing | null} * <- found(keys) catch (e) { retu
+68:3 -> ../failure-params.temper.md:59:16  let caught = null; <- found(keys) catch (e) { retu
+69:3 -> ../failure-params.temper.md:59:16  /** @type {readonly number[] <- found(keys) catch (e) { retu
+70:3 -> ../failure-params.temper.md:59:16  let held = null; <- found(keys) catch (e) { retu
+71:3 -> ../failure-params.temper.md:59:16  try { <- found(keys) catch (e) { retu
+72:5 -> ../failure-params.temper.md:59:16  held = found(keys); <- found(keys) catch (e) { retu
+75:5 -> ../failure-params.temper.md:59:16  caught = failure; <- found(keys) catch (e) { retu
+77:3 -> ../failure-params.temper.md:59:16  if (held == null) { <- found(keys) catch (e) { retu
+78:5 -> ../failure-params.temper.md:59:35  const e = /** @type {Missing <- e) { return "missing ${e.key
+79:5 -> ../failure-params.temper.md:59:40  return `missing ${e.key}`; <- return "missing ${e.key}"; }
+81:5 -> ../failure-params.temper.md:59:16  ns = held; <- found(keys) catch (e) { retu
+83:3 -> ../failure-params.temper.md:60:7  return listedJoin(/** @type <- ns.join(",") { n => n.toStri
+86:1 -> ../failure-params.temper.md:74:5  /** <- let applied(f: Mapper<Int, I
+92:1 -> ../failure-params.temper.md:74:5  function applied(f, n) { <- let applied(f: Mapper<Int, I
+92:10 -> ../failure-params.temper.md:74:9 (applied)  applied(f, n) { <- applied(f: Mapper<Int, Int,
+92:17 -> ../failure-params.temper.md:74:5  (f, n) { <- let applied(f: Mapper<Int, I
+93:3 -> ../failure-params.temper.md:74:77  return f(n); <- try f(n) }
+96:1 -> ../failure-params.temper.md:86:5  /** <- let failures<T, R, E extends
+103:1 -> ../failure-params.temper.md:86:5  function failures(xs, f) { <- let failures<T, R, E extends
+103:10 -> ../failure-params.temper.md:86:9 (failures)  failures(xs, f) { <- failures<T, R, E extends Err
+103:18 -> ../failure-params.temper.md:86:5  (xs, f) { <- let failures<T, R, E extends
+104:3 -> ../failure-params.temper.md:87:7  let failed = 0; <- var failed = 0;
+105:3 -> ../failure-params.temper.md:88:7  { <- for (let x of xs) {
+106:5 -> ../failure-params.temper.md:88:7  const length = xs.length; <- for (let x of xs) {
+107:5 -> ../failure-params.temper.md:88:7  let i = 0; <- for (let x of xs) {
+108:5 -> ../failure-params.temper.md:88:7  while (i < length) { <- for (let x of xs) {
+109:7 -> ../failure-params.temper.md:88:7  const x = listedGet(/** @typ <- for (let x of xs) {
+110:7 -> ../failure-params.temper.md:88:7  i = (i + 1) | 0; <- for (let x of xs) {
+111:7 -> ../failure-params.temper.md:89:9  try { <- do { try f(x); } catch { fai
+112:9 -> ../failure-params.temper.md:89:14  f(x); <- try f(x); } catch { failed +
+115:9 -> ../failure-params.temper.md:89:34  failed = (failed + 1) | 0; <- failed += 1; }
+119:3 -> ../failure-params.temper.md:91:7  return failed; <- failed
+122:1 -> ../failure-params.temper.md:104:5  /** <- let sumAll<T, E extends Erro
+128:1 -> ../failure-params.temper.md:104:5  function sumAll(xs, f) { <- let sumAll<T, E extends Erro
+128:10 -> ../failure-params.temper.md:104:9 (sumAll)  sumAll(xs, f) { <- sumAll<T, E extends Error>(x
+128:16 -> ../failure-params.temper.md:104:5  (xs, f) { <- let sumAll<T, E extends Erro
+129:3 -> ../failure-params.temper.md:105:7  let total = 0; <- var total = 0;
+130:3 -> ../failure-params.temper.md:106:7  /** @type {Error | null} */ <- var first: E? = null;
+131:3 -> ../failure-params.temper.md:106:7  let first = null; <- var first: E? = null;
+132:3 -> ../failure-params.temper.md:107:7  { <- for (let x of xs) {
+133:5 -> ../failure-params.temper.md:107:7  const length = xs.length; <- for (let x of xs) {
+134:5 -> ../failure-params.temper.md:107:7  let i = 0; <- for (let x of xs) {
+135:5 -> ../failure-params.temper.md:107:7  while (i < length) { <- for (let x of xs) {
+136:7 -> ../failure-params.temper.md:107:7  const x = listedGet(/** @typ <- for (let x of xs) {
+137:7 -> ../failure-params.temper.md:107:7  i = (i + 1) | 0; <- for (let x of xs) {
+138:7 -> ../failure-params.temper.md:108:9  try { <- do { total += try f(x); } ca
+139:9 -> ../failure-params.temper.md:108:14  total = (total + f(x)) | 0; <- total += try f(x); } catch (
+142:9 -> ../failure-params.temper.md:108:47  if (first == null) { <- if (first == null) { first =
+143:11 -> ../failure-params.temper.md:108:68  first = e; <- first = e; } }
+148:3 -> ../failure-params.temper.md:110:7  const failed = first; <- let failed = first;
+149:3 -> ../failure-params.temper.md:111:7  if (failed != null) { <- if (failed != null) { throw
+150:5 -> ../failure-params.temper.md:111:29  throw failed; <- throw failed; }
+152:3 -> ../failure-params.temper.md:112:7  return total; <- total
+155:1 -> ../failure-params.temper.md:129:5  /** <- let both<E extends Error>(a:
+161:1 -> ../failure-params.temper.md:129:5  function both(a, b, key) { <- let both<E extends Error>(a:
+161:10 -> ../failure-params.temper.md:129:9 (both)  both(a, b, key) { <- both<E extends Error>(a: Map
+161:14 -> ../failure-params.temper.md:129:5  (a, b, key) { <- let both<E extends Error>(a:
+162:3 -> ../failure-params.temper.md:130:7  return (a(key) + b(key)) | 0 <- (try a(key)) + (try b(key))
+165:1 -> ../failure-params.temper.md:148:5  /** <- let word(key: String): Int t
+170:1 -> ../failure-params.temper.md:148:5  function word(key) { <- let word(key: String): Int t
+170:10 -> ../failure-params.temper.md:148:9 (word)  word(key) { <- word(key: String): Int throw
+170:14 -> ../failure-params.temper.md:148:5  (key) { <- let word(key: String): Int t
+171:3 -> ../failure-params.temper.md:149:7  if (key === "ten") { <- if (key == "ten") { return 1
+172:5 -> ../failure-params.temper.md:149:27  return 10; <- return 10; }
+174:3 -> ../failure-params.temper.md:150:7  throw new Unknown(key); <- throw new Unknown(key);
+177:1 -> ../failure-params.temper.md:153:5  /** <- let either(key: String): Str
+181:1 -> ../failure-params.temper.md:153:5  function either(key) { <- let either(key: String): Str
+181:10 -> ../failure-params.temper.md:153:9 (either)  either(key) { <- either(key: String): String
+181:16 -> ../failure-params.temper.md:153:5  (key) { <- let either(key: String): Str
+182:3 -> ../failure-params.temper.md:154:7  /** @type {number} */ <- let n = both(find, word, key
+183:3 -> ../failure-params.temper.md:154:7  let n; <- let n = both(find, word, key
+184:3 -> ../failure-params.temper.md:154:15  /** @type {FailureParamsErro <- both(find, word, key) catch
+185:3 -> ../failure-params.temper.md:154:15  let caught = null; <- both(find, word, key) catch
+186:3 -> ../failure-params.temper.md:154:15  /** @type {number | null} */ <- both(find, word, key) catch
+187:3 -> ../failure-params.temper.md:154:15  let held = null; <- both(find, word, key) catch
+188:3 -> ../failure-params.temper.md:154:15  try { <- both(find, word, key) catch
+189:5 -> ../failure-params.temper.md:154:15  held = both((x) => find(x), <- both(find, word, key) catch
+192:5 -> ../failure-params.temper.md:154:15  caught = failure; <- both(find, word, key) catch
+194:3 -> ../failure-params.temper.md:154:15  if (held == null) { <- both(find, word, key) catch
+195:5 -> ../failure-params.temper.md:154:44  const e = /** @type {Failure <- e) {
+196:5 -> ../failure-params.temper.md:155:9  return e instanceof Missing <- return when (e) {
+198:5 -> ../failure-params.temper.md:154:15  n = held; <- both(find, word, key) catch
+200:3 -> ../failure-params.temper.md:160:7  return n.toString(); <- n.toString()
+203:1 -> ../failure-params.temper.md:173:5  /** <- let parts(keys: List<String>
+208:1 -> ../failure-params.temper.md:173:5  function parts(keys) { <- let parts(keys: List<String>
+208:10 -> ../failure-params.temper.md:173:9 (parts)  parts(keys) { <- parts(keys: List<String>): S
+208:15 -> ../failure-params.temper.md:173:5  (keys) { <- let parts(keys: List<String>
+209:3 -> ../failure-params.temper.md:174:7  /** @type {readonly string[] <- let found = keys.filter { k
+210:3 -> ../failure-params.temper.md:174:7  const found = listedFilter(/ <- let found = keys.filter { k
+211:3 -> ../failure-params.temper.md:175:7  const total = listedReduceFr <- let total = keys.reduceFrom(
+212:3 -> ../failure-params.temper.md:176:7  return `${listedJoin(/** @ty <- "${found.join(",") { k => k
+215:1 -> ../failure-params.temper.md:194:5  /** <- let mapTwice<T, E extends Er
+221:1 -> ../failure-params.temper.md:194:5  function mapTwice(xs, f) { <- let mapTwice<T, E extends Er
+221:10 -> ../failure-params.temper.md:194:9 (mapTwice)  mapTwice(xs, f) { <- mapTwice<T, E extends Error>
+221:18 -> ../failure-params.temper.md:194:5  (xs, f) { <- let mapTwice<T, E extends Er
+222:3 -> ../failure-params.temper.md:195:7  /** @type {readonly T[]} */ <- let once = try mapAll(xs, f)
+223:3 -> ../failure-params.temper.md:195:7  const once = mapAll(xs, f); <- let once = try mapAll(xs, f)
+224:3 -> ../failure-params.temper.md:196:7  return listedMap(/** @type { <- try once.map(f)
+227:1 -> ../failure-params.temper.md:199:5  /** <- let upToTwo(n: Int): Int thr
+232:1 -> ../failure-params.temper.md:199:5  function upToTwo(n) { <- let upToTwo(n: Int): Int thr
+232:10 -> ../failure-params.temper.md:199:9 (upToTwo)  upToTwo(n) { <- upToTwo(n: Int): Int throws
+232:17 -> ../failure-params.temper.md:199:5  (n) { <- let upToTwo(n: Int): Int thr
+233:3 -> ../failure-params.temper.md:200:7  if (n > 2) { <- if (n > 2) { throw new Missi
+234:5 -> ../failure-params.temper.md:200:20  throw new Missing(n.toString <- throw new Missing(n.toString
+236:3 -> ../failure-params.temper.md:201:7  return (n + 1) | 0; <- n + 1
+239:1 -> ../failure-params.temper.md:19:5  class FailureParamsError ext <- sealed interface FailurePara
+239:7 -> ../failure-params.temper.md:19:22 (FailureParamsError)  FailureParamsError extends E <- FailureParamsError extends E
+239:25 -> ../failure-params.temper.md:19:5   extends Error {} <- sealed interface FailurePara
+243:1 -> ../failure-params.temper.md:20:5  class Missing extends Failur <- class Missing(public key: St
+243:7 -> ../failure-params.temper.md:20:11 (Missing)  Missing extends FailureParam <- Missing(public key: String)
+243:14 -> ../failure-params.temper.md:20:5   extends FailureParamsError <- class Missing(public key: St
+244:3 -> ../failure-params.temper.md:20:26  /** @type {string} */ <- key: String) extends Failure
+245:3 -> ../failure-params.temper.md:20:26  #key; <- key: String) extends Failure
+247:3 -> ../failure-params.temper.md:20:5  /** @param {string} key */ <- class Missing(public key: St
+248:3 -> ../failure-params.temper.md:20:5  constructor(key) { <- class Missing(public key: St
+250:5 -> ../failure-params.temper.md:20:26  this.#key = key; <- key: String) extends Failure
+253:3 -> ../failure-params.temper.md:20:26  /** @returns {string} */ <- key: String) extends Failure
+254:3 -> ../failure-params.temper.md:20:26  get key() { <- key: String) extends Failure
+254:7 -> ../failure-params.temper.md:20:26 (key)  key() { <- key: String) extends Failure
+258:3 -> ../failure-params.temper.md:20:5  /** @returns {string} */ <- class Missing(public key: St
+259:3 -> ../failure-params.temper.md:20:5  get message() { <- class Missing(public key: St
+260:5 -> ../failure-params.temper.md:20:5  return `missing (key: ${this <- class Missing(public key: St
+264:1 -> ../failure-params.temper.md:146:5  class Unknown extends Failur <- class Unknown(public word: S
+264:7 -> ../failure-params.temper.md:146:11 (Unknown)  Unknown extends FailureParam <- Unknown(public word: String)
+264:14 -> ../failure-params.temper.md:146:5   extends FailureParamsError <- class Unknown(public word: S
+265:3 -> ../failure-params.temper.md:146:26  /** @type {string} */ <- word: String) extends Failur
+266:3 -> ../failure-params.temper.md:146:26  #word; <- word: String) extends Failur
+268:3 -> ../failure-params.temper.md:146:5  /** @param {string} word */ <- class Unknown(public word: S
+269:3 -> ../failure-params.temper.md:146:5  constructor(word) { <- class Unknown(public word: S
+271:5 -> ../failure-params.temper.md:146:26  this.#word = word; <- word: String) extends Failur
+274:3 -> ../failure-params.temper.md:146:26  /** @returns {string} */ <- word: String) extends Failur
+275:3 -> ../failure-params.temper.md:146:26  get word() { <- word: String) extends Failur
+275:7 -> ../failure-params.temper.md:146:26 (word)  word() { <- word: String) extends Failur
+279:3 -> ../failure-params.temper.md:146:5  /** @returns {string} */ <- class Unknown(public word: S
+280:3 -> ../failure-params.temper.md:146:5  get message() { <- class Unknown(public word: S
+281:5 -> ../failure-params.temper.md:146:5  return `unknown (word: ${thi <- class Unknown(public word: S
+285:1 -> ../failure-params.temper.md:41:5  /** @type {readonly number[] <- let doubled = mapAll([1, 2,
+286:1 -> ../failure-params.temper.md:41:5  const doubled = mapAll(Objec <- let doubled = mapAll([1, 2,
+287:1 -> ../failure-params.temper.md:42:5  /** @type {(arg0: number) => <- let safe: Mapper<Int, Int, N
+288:1 -> ../failure-params.temper.md:42:5  const safe = (n) => (n + 1) <- let safe: Mapper<Int, Int, N
+289:1 -> ../failure-params.temper.md:43:5  console.log(`${listedJoin(/* <- console.log("${doubled.join(
+290:1 -> ../failure-params.temper.md:63:5  /** @type {readonly number[] <- let named = mapAll(["two", "
+291:1 -> ../failure-params.temper.md:63:5  let named; <- let named = mapAll(["two", "
+292:1 -> ../failure-params.temper.md:63:5  try { <- let named = mapAll(["two", "
+298:1 -> ../failure-params.temper.md:64:5  console.log(`${shown(Object. <- console.log("${shown(["one",
+299:1 -> ../failure-params.temper.md:75:5  /** @type {number} */ <- let six = applied(fn (n: Int
+300:1 -> ../failure-params.temper.md:75:5  let six; <- let six = applied(fn (n: Int
+301:1 -> ../failure-params.temper.md:75:5  try { <- let six = applied(fn (n: Int
+307:1 -> ../failure-params.temper.md:76:5  console.log(six.toString()); <- console.log(six.toString());
+308:1 -> ../failure-params.temper.md:94:5  const some = failures(Object <- let some = failures(["one",
+309:1 -> ../failure-params.temper.md:95:5  const none = failures(Object <- let none = failures([1, 2],
+310:1 -> ../failure-params.temper.md:96:5  console.log(`${some} ${none} <- console.log("${some} ${none}
+311:1 -> ../failure-params.temper.md:115:5  /** @type {number} */ <- let summed = sumAll(["one",
+312:1 -> ../failure-params.temper.md:115:5  let summed; <- let summed = sumAll(["one",
+313:1 -> ../failure-params.temper.md:115:5  try { <- let summed = sumAll(["one",
+319:1 -> ../failure-params.temper.md:116:5  /** @type {number} */ <- let unsummed = sumAll(["six"
+320:1 -> ../failure-params.temper.md:116:5  let unsummed; <- let unsummed = sumAll(["six"
+321:1 -> ../failure-params.temper.md:116:5  try { <- let unsummed = sumAll(["six"
+325:3 -> ../failure-params.temper.md:116:68  console.log(`first missing $ <- console.log("first missing $
+328:1 -> ../failure-params.temper.md:117:5  console.log(`${summed} ${uns <- console.log("${summed} ${uns
+329:1 -> ../failure-params.temper.md:133:5  /** @type {number} */ <- let twelve = both(find, fn (
+330:1 -> ../failure-params.temper.md:133:5  let twelve; <- let twelve = both(find, fn (
+331:1 -> ../failure-params.temper.md:133:5  try { <- let twelve = both(find, fn (
+337:1 -> ../failure-params.temper.md:134:5  /** @type {number} */ <- let lost = both(find, find,
+338:1 -> ../failure-params.temper.md:134:5  let lost; <- let lost = both(find, find,
+339:1 -> ../failure-params.temper.md:134:5  try { <- let lost = both(find, find,
+343:3 -> ../failure-params.temper.md:134:52  console.log(`lost ${e2.key}` <- console.log("lost ${e.key}")
+346:1 -> ../failure-params.temper.md:135:5  console.log(`${twelve} ${los <- console.log("${twelve} ${los
+347:1 -> ../failure-params.temper.md:162:5  console.log(`${either("one") <- console.log("${either("one")
+348:1 -> ../failure-params.temper.md:178:5  /** @type {string} */ <- console.log(parts(["one", "t
+349:1 -> ../failure-params.temper.md:178:5  let t$0; <- console.log(parts(["one", "t
+350:1 -> ../failure-params.temper.md:178:5  try { <- console.log(parts(["one", "t
+356:1 -> ../failure-params.temper.md:178:5  console.log(t$0); <- console.log(parts(["one", "t
+357:1 -> ../failure-params.temper.md:179:5  /** @type {string} */ <- console.log(parts(["one", "s
+358:1 -> ../failure-params.temper.md:179:5  let t$1; <- console.log(parts(["one", "s
+359:1 -> ../failure-params.temper.md:179:5  try { <- console.log(parts(["one", "s
+365:1 -> ../failure-params.temper.md:179:5  console.log(t$1); <- console.log(parts(["one", "s
+366:1 -> ../failure-params.temper.md:180:5  console.log(listedJoin(/** @ <- console.log([3, 1, 2].sorted
+367:1 -> ../failure-params.temper.md:204:5  /** @type {readonly number[] <- let bumped = [1, 2].map(safe
+368:1 -> ../failure-params.temper.md:204:5  const bumped = listedMap(/** <- let bumped = [1, 2].map(safe
+369:1 -> ../failure-params.temper.md:205:5  /** @type {readonly number[] <- let twice = mapTwice([1, 2],
+370:1 -> ../failure-params.temper.md:205:5  const twice = mapTwice(Objec <- let twice = mapTwice([1, 2],
+371:1 -> ../failure-params.temper.md:206:5  /** @type {readonly number[] <- let failed = mapTwice([1, 2]
+372:1 -> ../failure-params.temper.md:206:5  let failed; <- let failed = mapTwice([1, 2]
+373:1 -> ../failure-params.temper.md:206:5  try { <- let failed = mapTwice([1, 2]
+377:3 -> ../failure-params.temper.md:206:56  console.log(`missing ${e4.ke <- console.log("missing ${e.key
+380:1 -> ../failure-params.temper.md:207:5  console.log(`${listedJoin(/* <- console.log("${bumped.join("

@@ -5,6 +5,7 @@ import {
   listedFilter,
   listedGet,
   listedJoin,
+  listedMap,
   listedReduceFrom,
   listedSorted,
   panic,
@@ -119,6 +120,39 @@ function failures(xs, f) {
 }
 
 /**
+ * @template T
+ * @param {readonly T[]} xs
+ * @param {(arg0: T) => number} f
+ * @returns {number}
+ */
+function sumAll(xs, f) {
+  let total = 0;
+  /** @type {Error | null} */
+  let first = null;
+  {
+    const length = xs.length;
+    let i = 0;
+    while (i < length) {
+      const x = listedGet(/** @type {T[]} */ (xs), i);
+      i = (i + 1) | 0;
+      try {
+        total = (total + f(x)) | 0;
+      } catch (e) {
+        if (!isFailure(e)) throw e;
+        if (first == null) {
+          first = e;
+        }
+      }
+    }
+  }
+  const failed = first;
+  if (failed != null) {
+    throw failed;
+  }
+  return total;
+}
+
+/**
  * @param {(arg0: string) => number} a
  * @param {(arg0: string) => number} b
  * @param {string} key
@@ -176,6 +210,30 @@ function parts(keys) {
   const found = listedFilter(/** @type {string[]} */ (keys), (k) => find(k) > 1);
   const total = listedReduceFrom(/** @type {string[]} */ (keys), 0, (n, k2) => (n + find(k2)) | 0);
   return `${listedJoin(/** @type {string[]} */ (found), ",", (k3) => k3)} ${total} ${listedJoin(/** @type {string[]} */ (keys), "+", (k4) => find(k4).toString())}`;
+}
+
+/**
+ * @template T
+ * @param {readonly T[]} xs
+ * @param {(arg0: T) => T} f
+ * @returns {readonly T[]}
+ */
+function mapTwice(xs, f) {
+  /** @type {readonly T[]} */
+  const once = mapAll(xs, f);
+  return listedMap(/** @type {T[]} */ (once), f);
+}
+
+/**
+ * @param {number} n
+ * @returns {number}
+ * @throws {Missing}
+ */
+function upToTwo(n) {
+  if (n > 2) {
+    throw new Missing(n.toString());
+  }
+  return (n + 1) | 0;
 }
 
 class FailureParamsError extends Error {}
@@ -251,6 +309,24 @@ const some = failures(Object.freeze(["one", "six", "two", "ten"]), find);
 const none = failures(Object.freeze([1, 2]), (n) => n);
 console.log(`${some} ${none}`);
 /** @type {number} */
+let summed;
+try {
+  summed = sumAll(Object.freeze(["one", "two"]), find);
+} catch (e$) {
+  if (!(e$ instanceof Missing)) throw e$;
+  summed = -1;
+}
+/** @type {number} */
+let unsummed;
+try {
+  unsummed = sumAll(Object.freeze(["six", "one", "ten"]), find);
+} catch (e) {
+  if (!(e instanceof Missing)) throw e;
+  console.log(`first missing ${e.key}`);
+  unsummed = -1;
+}
+console.log(`${summed} ${unsummed} ${sumAll(Object.freeze([1, 2]), safe)}`);
+/** @type {number} */
 let twelve;
 try {
   twelve = both(find, (k) => 10, "two");
@@ -262,9 +338,9 @@ try {
 let lost;
 try {
   lost = both(find, find, "six");
-} catch (e) {
-  if (!(e instanceof Missing)) throw e;
-  console.log(`lost ${e.key}`);
+} catch (e2) {
+  if (!(e2 instanceof Missing)) throw e2;
+  console.log(`lost ${e2.key}`);
   lost = -1;
 }
 console.log(`${twelve} ${lost}`);
@@ -282,9 +358,23 @@ console.log(t$0);
 let t$1;
 try {
   t$1 = parts(Object.freeze(["one", "six"]));
-} catch (e2) {
-  if (!(e2 instanceof Missing)) throw e2;
-  t$1 = `missing ${e2.key}`;
+} catch (e3) {
+  if (!(e3 instanceof Missing)) throw e3;
+  t$1 = `missing ${e3.key}`;
 }
 console.log(t$1);
 console.log(listedJoin(/** @type {number[]} */ (listedSorted(/** @type {number[]} */ (Object.freeze([3, 1, 2])), (a, b) => (a - b) | 0)), ",", (n) => n.toString()));
+/** @type {readonly number[]} */
+const bumped = listedMap(/** @type {number[]} */ (Object.freeze([1, 2])), safe);
+/** @type {readonly number[]} */
+const twice = mapTwice(Object.freeze([1, 2]), safe);
+/** @type {readonly number[]} */
+let failed;
+try {
+  failed = mapTwice(Object.freeze([1, 2]), upToTwo);
+} catch (e4) {
+  if (!(e4 instanceof Missing)) throw e4;
+  console.log(`missing ${e4.key}`);
+  failed = Object.freeze([]);
+}
+console.log(`${listedJoin(/** @type {number[]} */ (bumped), ",", (n) => n.toString())} ${listedJoin(/** @type {number[]} */ (twice), ",", (n) => n.toString())} ${failed.length}`);

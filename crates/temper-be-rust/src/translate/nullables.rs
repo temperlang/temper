@@ -185,17 +185,18 @@ impl Translator<'_> {
     }
 
     /// Whether anything under `id`, not `id` itself, may bubble, or
-    /// returns, outside a nested `orelse`'s body.
+    /// returns, but in a function literal, whose bubbles and returns are
+    /// its own.
     fn bubbles_below(&self, id: NodeId) -> bool {
         let p = self.p;
-        let mut found = false;
-        for &kid in p.nodes.kids(id) {
-            walk(p, kid, &mut |n| {
-                found |= p.nodes.flags(n).contains(Flags::MAY_BUBBLE)
-                    || matches!(p.nodes.get(n), Node::Return { .. } | Node::Error { .. });
-            });
-        }
-        found
+        let bubbles = |n: NodeId| {
+            p.nodes.flags(n).contains(Flags::MAY_BUBBLE)
+                || matches!(p.nodes.get(n), Node::Return { .. } | Node::Error { .. })
+        };
+        (p.nodes.kids(id).iter()).any(|&k| match p.nodes.get(k) {
+            Node::FunctionLiteral { .. } => false,
+            _ => bubbles(k) || self.bubbles_below(k),
+        })
     }
 
     /// Whether an `orelse`'s body may fail to its fallback: something in

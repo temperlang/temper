@@ -418,15 +418,22 @@ impl<'a> Translator<'a> {
 
     /// `::<A, B>`, a generic call's type arguments, all of them, where
     /// Rust can't infer them from the arguments, as when a type parameter
-    /// appears in no parameter's type (`analysis::infers_type_args`);
-    /// otherwise nothing, leaving them to Rust.
+    /// appears in no parameter's type (`analysis::infers_type_args`); its
+    /// failure parameters' (RFC 164) where it has any, `::<_, _, Missing>`,
+    /// as rustc can't infer one from a closure that `?`s; otherwise
+    /// nothing, leaving them to Rust.
     fn turbofish(&mut self, callee: DeclId, type_args: temper_tmpl::TypeArgs) -> R<String> {
-        if temper_tmpl::analysis::infers_type_args(self.p, callee) {
+        let p = self.p;
+        let params = p.decls.type_params(callee).to_vec();
+        let failure = |t: DeclId| temper_tmpl::failures::is_failure_param(p, t);
+        let infers = temper_tmpl::analysis::infers_type_args(p, callee);
+        if infers && !params.iter().any(|&t| failure(t)) {
             return Ok(String::new());
         }
         let mut texts = Vec::new();
-        for &a in self.p.types.args_of(type_args) {
-            texts.push(self.ty(a)?);
+        for (i, &a) in p.types.args_of(type_args).iter().enumerate() {
+            let named = params.get(i).is_none_or(|&t| !infers || failure(t));
+            texts.push(if named { self.ty(a)? } else { "_".into() });
         }
         if texts.is_empty() {
             return Ok(String::new());
@@ -434,12 +441,68 @@ impl<'a> Translator<'a> {
         Ok(format!("::<{}>", texts.join(", ")))
     }
 
+    /// A call as its place takes it: `call?` where it may fail; where it
+    /// can't only because a failure parameter (RFC 164) is given
+    /// `Never<…>`, its result's value, `temper_core::into_ok(call)`
+    /// (`failures::declared_failure`); else the call itself.
+    fn settled(&self, id: NodeId, call: Expr, may_bubble: bool) -> Expr {
+        let p = self.p;
+        let never =
+            temper_tmpl::failures::declared_failure(p, id).is_some_and(|f| p.types.is_never(f));
+        match (may_bubble, never) {
+            (true, _) => call.try_(),
+            (false, true) => Expr::path("temper_core::into_ok").call(vec![call]),
+            (false, false) => call,
+        }
+    }
+
+    /// A call of core's member whose callback returns a result
+    /// (`failures::passes_results`), as [`connected::TRY`] connects it,
+    /// its failure type named: `temper_core::listed::try_map::<_, _,
+    /// Missing>(&xs, &(|x| …))`.
+    fn connected_try(
+        &mut self,
+        decl: DeclId,
+        type_args: temper_tmpl::TypeArgs,
+        args: &[NodeId],
+    ) -> R<Expr> {
+        let p = self.p;
+        let qname = self.qname(decl);
+        let Some(path) = connected::lookup_try(&qname) else {
+            return not_yet(format!("{qname} with a callback that may fail"));
+        };
+        let Some((&receiver, rest)) = args.split_first() else {
+            return not_yet(format!("a receiver for {qname}"));
+        };
+        // The receiver's type parameters, then the member's.
+        let owner = p.decls.type_params(p.decls.get(decl).owner).len();
+        let mut texts = vec!["_".to_string(); owner];
+        for (&t, &a) in p
+            .decls
+            .type_params(decl)
+            .iter()
+            .zip(p.types.args_of(type_args))
+        {
+            texts.push(match temper_tmpl::failures::is_failure_param(p, t) {
+                true => self.ty(a)?,
+                false => "_".into(),
+            });
+        }
+        let mut fargs = vec![self.handle_ref(receiver)?];
+        self.connected_args(decl, rest, &mut fargs)?;
+        Ok(Expr::path(format!("{path}::<{}>", texts.join(", "))).call(fargs))
+    }
+
     /// A type as Rust writes it.
     fn ty(&mut self, ty: TypeId) -> R<String> {
         Ok(match self.p.types.get(ty) {
             // `temper_tmpl::nevers` made each `Never<T>` the `T` it stands
-            // for, as this profile has no bottom type.
-            TypeData::Never(t) => return self.ty(t),
+            // for, as this profile has no bottom type, but a failure
+            // parameter's argument, "can't fail" (RFC 164).
+            TypeData::Never(_) => {
+                self.uses.insert("std::convert::Infallible");
+                "Infallible".to_string()
+            }
             // Only a signature's result, never a value's (tmpl's T5).
             TypeData::Result { .. } => return not_yet("a result type as a value's"),
             TypeData::Scalar(s) => match s {
@@ -459,10 +522,7 @@ impl<'a> Translator<'a> {
             .to_string(),
             TypeData::Nominal { decl, .. } if self.p.decls.get(decl).facts.contains(Facts::FUN) => {
                 // A `@fun` interface is its function type, as Kotlin's.
-                match self.fun_sig(ty) {
-                    Some(sig) => self.fn_type(sig)?,
-                    None => return not_yet("a @fun interface's signature"),
-                }
+                self.fn_type(ty)?
             }
             TypeData::Nominal { decl, args } => {
                 let mut texts = Vec::new();
@@ -570,6 +630,11 @@ impl<'a> Translator<'a> {
                 if self.qname(bd) == "core.type MapKey" {
                     bounds.push("Eq".into());
                     bounds.push("std::hash::Hash".into());
+                    continue;
+                }
+                // A failure parameter's (RFC 164): any failure.
+                if self.qname(bd) == "core.type Error" {
+                    bounds.insert(0, "temper_core::Failure".into());
                     continue;
                 }
                 if !self.own(bd) && !self.elsewhere(bd) {
@@ -1127,12 +1192,13 @@ impl<'a> Translator<'a> {
     /// among them, or core's `Error`, `Arc<dyn temper_core::Failure>`, for
     /// a handler's body failing with several libraries' (only a handler's,
     /// as a signature can't fail with `Error`), which each failure type
-    /// converts into by `From`. Not yet a failure parameter.
+    /// converts into by `From`; a failure parameter (RFC 164), and
+    /// `Infallible` for one given `Never<…>`, "can't fail".
     pub(crate) fn failure_ty(&mut self, fail: TypeId) -> R<String> {
         let p = self.p;
         let root = temper_tmpl::failures::root(p);
-        if !temper_tmpl::failures::is_failure_type(p, root, fail) {
-            return not_yet("a failure parameter");
+        if !temper_tmpl::failures::is_failure_type(p, root, fail) && !p.types.is_never(fail) {
+            return not_yet(format!("{} as a failure type", p.show_type(fail)));
         }
         self.ty(fail)
     }
@@ -2278,20 +2344,18 @@ impl<'a> Translator<'a> {
                 args,
             } => {
                 let args = p.nodes.list(args);
-                let call =
-                    if temper_tmpl::qname::by_connection(p, callee, crate::connected::connects_std)
-                    {
-                        self.connected(callee, args, want)?
-                    } else {
-                        let args = self.args(callee, args)?;
-                        let path = match self.static_fn_path(callee)? {
-                            Some(path) => path,
-                            None => self.top_path(callee)?,
-                        };
-                        let fish = self.turbofish(callee, type_args)?;
-                        Expr::path(format!("{path}{fish}")).call(args)
-                    };
-                if may_bubble { call.try_() } else { call }
+                if temper_tmpl::qname::by_connection(p, callee, crate::connected::connects_std) {
+                    let call = self.connected(callee, args, want)?;
+                    return Ok(if may_bubble { call.try_() } else { call });
+                }
+                let args = self.args(callee, args)?;
+                let path = match self.static_fn_path(callee)? {
+                    Some(path) => path,
+                    None => self.top_path(callee)?,
+                };
+                let fish = self.turbofish(callee, type_args)?;
+                let call = Expr::path(format!("{path}{fish}")).call(args);
+                self.settled(id, call, may_bubble)
             }
             Node::CallMethod {
                 method,
@@ -2305,10 +2369,14 @@ impl<'a> Translator<'a> {
                 if !temper_tmpl::qname::by_connection(p, method, crate::connected::connects_std) {
                     let fish = self.turbofish(method, type_args)?;
                     let call = self.call_method(method, &fish, receiver, p.nodes.list(args))?;
-                    return Ok(if may_bubble { call.try_() } else { call });
+                    return Ok(self.settled(id, call, may_bubble));
                 }
                 let mut all = vec![receiver];
                 all.extend_from_slice(p.nodes.list(args));
+                if temper_tmpl::failures::passes_results(p, p.nodes.list(args)) {
+                    let call = self.connected_try(method, type_args, &all)?;
+                    return Ok(self.settled(id, call, may_bubble));
+                }
                 let call = self.connected(method, &all, want)?;
                 // A connection that returns (`Test.bail()`) bubbles itself.
                 let returns = matches!(call, Expr::Return(_));
@@ -2433,7 +2501,7 @@ impl<'a> Translator<'a> {
                     let args = self.args(ctor, p.nodes.list(args))?;
                     Expr::path(format!("{}::new", self.top_path(class)?)).call(args)
                 };
-                if may_bubble { call.try_() } else { call }
+                self.settled(id, call, may_bubble)
             }
             Node::Upcast { value } => self.upcast(id, value)?,
             Node::Downcast { value } if matches!(p.nodes.get(value), Node::Local { local } if self.narrowed.contains_key(&local)) =>
@@ -2507,14 +2575,14 @@ impl<'a> Translator<'a> {
                 self.arc(Expr::Macro("vec".into(), xs))
             }
             Node::FunctionLiteral { decl, params, body } => self.literal(id, decl, params, body)?,
-            Node::FunctionRef { target } => self.function_ref(target)?,
+            Node::FunctionRef { target } => self.function_ref(target, ty)?,
             Node::CallValue {
                 may_bubble,
                 callee,
                 args,
             } => {
                 let call = self.call_value(callee, args)?;
-                if may_bubble { call.try_() } else { call }
+                self.settled(id, call, may_bubble)
             }
             Node::ToFun { value } | Node::FromFun { value } => self.expr(value, want)?,
             other => return not_yet(format!("a {} expression", other.kind().name())),
@@ -2872,20 +2940,21 @@ fn attributed(attrs: &[&'static str], item: Item) -> Item {
     }
 }
 
-/// `use`s of `paths`, `std::sync`'s together.
+/// `use`s of `paths`, `std::sync`'s together, in order, as rustfmt
+/// sorts them.
 fn use_items(paths: &BTreeSet<&str>) -> Vec<Item> {
     let mut uses = Vec::new();
     let std_sync: Vec<&str> = (paths.iter())
         .filter_map(|u| u.strip_prefix("std::sync::"))
         .collect();
-    match std_sync[..] {
-        [] => {}
-        [one] => uses.push(Item::Use(format!("std::sync::{one}"))),
-        _ => uses.push(Item::Use(format!("std::sync::{{{}}}", std_sync.join(", ")))),
-    }
     for u in paths {
-        if !u.starts_with("std::sync::") {
-            uses.push(Item::Use(u.to_string()));
+        match u.strip_prefix("std::sync::") {
+            None => uses.push(Item::Use(u.to_string())),
+            Some(first) if first == std_sync[0] => uses.push(Item::Use(match std_sync[..] {
+                [one] => format!("std::sync::{one}"),
+                _ => format!("std::sync::{{{}}}", std_sync.join(", ")),
+            })),
+            Some(_) => {}
         }
     }
     uses

@@ -95,7 +95,8 @@ impl Translator<'_> {
                 if !p.decls.type_params(decl).is_empty() {
                     return not_yet("a generic local function in a group");
                 }
-                let (params, result, body) = self.literal_parts(decl, params, body)?;
+                let ty = p.nodes.ty(init);
+                let (params, result, body) = self.literal_parts(decl, params, body, ty)?;
                 methods.push(GroupMethod {
                     result,
                     name: self.name(local),

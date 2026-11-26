@@ -54,6 +54,41 @@ where
     result.into_inner().to_list()
 }
 
+/// [`mapped_to_list_with`] with a callback that may fail (RFC 164's
+/// failure parameters), stopping at its first failure. A free function,
+/// as [`MappedTrait`]'s methods can't be generic over the failure type
+/// and stay callable on its trait objects.
+pub fn mapped_try_to_list_with<K, V, T, E>(
+    mapped: &dyn MappedTrait<K, V>,
+    action: &dyn Fn(K, V) -> Result<T, E>,
+) -> Result<List<T>, E>
+where
+    K: Clone + Sync + Send + Eq + Hash,
+    V: Clone + Sync + Send,
+{
+    let mut result = vec![];
+    for (key, value) in mapped.to_list().iter().cloned() {
+        result.push(action(key, value)?);
+    }
+    Ok(result.to_list())
+}
+
+/// `MappedTrait::for_each` with a callback that may fail, as
+/// [`mapped_try_to_list_with`].
+pub fn mapped_try_for_each<K, V, E>(
+    mapped: &dyn MappedTrait<K, V>,
+    action: &dyn Fn(K, V) -> Result<(), E>,
+) -> Result<(), E>
+where
+    K: Clone + Sync + Send + Eq + Hash,
+    V: Clone + Sync + Send,
+{
+    for (key, value) in mapped.to_list().iter().cloned() {
+        action(key, value)?;
+    }
+    Ok(())
+}
+
 #[derive(Clone)]
 pub struct Mapped<K, V>(Arc<dyn MappedTrait<K, V>>);
 
@@ -106,7 +141,10 @@ where
     }
 
     fn get(&self, key: K) -> std::result::Result<V, MissingKey> {
-        self.0.get(&key).cloned().ok_or_else(|| MissingKey::of(&key))
+        self.0
+            .get(&key)
+            .cloned()
+            .ok_or_else(|| MissingKey::of(&key))
     }
 
     fn get_or(&self, key: K, fallback: V) -> V {

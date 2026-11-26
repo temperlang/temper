@@ -6,6 +6,8 @@
 #include "temper_bubble.hpp"
 #include "base_types.hpp"
 #include "nullable_param.hpp"
+#include "expected.hpp"
+#include "list.hpp"
 
 namespace temper {
     namespace core {
@@ -112,6 +114,20 @@ namespace temper {
                         return comparator(a, b) < 0;
                     }
                 );
+            }
+
+            // `sort` with a comparison that may fail (RFC 164's failure
+            // parameters): on a failure, the list is as it was.
+            template<class Elem, class F>
+            auto trySort(const std::shared_ptr<std::vector<Elem>>& list, F comparator)
+                -> Expected<void, List::FailureOf<F, const Elem&, const Elem&>> {
+                std::vector<Elem> items = *list;
+                auto sorted = List::try_merge_sort(items, comparator);
+                if (!sorted.has_value()) {
+                    return unexpected(sorted.error());
+                }
+                *list = std::move(items);
+                return {};
             }
 
             template<class Elem>

@@ -19,17 +19,22 @@ use crate::tree::{Block, Expr, Stmt, Unary};
 use temper_tmpl::{DeclId, DeclKind, Kids, Node, NodeId, TypeData, TypeId};
 
 impl Translator<'_> {
-    /// A function type, `Arc<dyn Fn(A, B) -> R + Send + Sync>`, from a
-    /// signature: `R` a `temper_core::Result` if it may bubble, and left
-    /// out if `Void` and it can't.
-    pub(crate) fn fn_type(&mut self, sig: TypeId) -> R<String> {
-        let Some(s) = self.p.types.signature(sig) else {
+    /// A function value's type, a function type's or a `@fun`
+    /// interface's, `Arc<dyn Fn(A, B) -> R + Send + Sync>`: `R` a
+    /// `Result` if it may fail, or if a failure parameter of its
+    /// interface is given `Never<…>`, `Result<R, Infallible>`, as generic
+    /// code calling it expects (`failures::value_failure`), and left out
+    /// if `Void` and it can't.
+    pub(crate) fn fn_type(&mut self, ty: TypeId) -> R<String> {
+        let s = self.fun_sig(ty).and_then(|sig| self.p.types.signature(sig));
+        let Some(s) = s else {
             return not_yet("a function type without a signature");
         };
         if s.optional.contains(&true) {
             return not_yet("a function type with optional parameters");
         }
-        let (params, result, fail) = (s.params.to_vec(), s.pass, s.fail);
+        let (params, result) = (s.params.to_vec(), s.pass);
+        let fail = temper_tmpl::failures::value_failure(self.p, ty);
         let mut texts = Vec::new();
         for t in params {
             texts.push(self.ty(t)?);
@@ -184,7 +189,12 @@ impl Translator<'_> {
         let Some(sig) = p.signature(decl) else {
             return not_yet("a function literal without a signature");
         };
-        let (fails, void, result) = (sig.fail, sig.pass == TypeId::VOID, sig.pass);
+        // A literal that can't fail, where its type's failure parameter
+        // is given `Never<…>`, returns `Ok`s of `Infallible` (`fn_type`).
+        let fails = sig
+            .fail
+            .or_else(|| temper_tmpl::failures::value_failure(p, p.nodes.ty(id)));
+        let (void, result) = (sig.pass == TypeId::VOID, sig.pass);
         // The function around it, which its body's own state replaces.
         let saved = (
             self.scope,
@@ -217,18 +227,22 @@ impl Translator<'_> {
         result
     }
 
-    /// A declared function or static method as a value: `Arc::new(f)`, or
-    /// `Arc::new(|a: Arc<String>| f(a))` where it takes its parameters
-    /// as Kotlin's do, `impl ToArcString` and the like, which a closure
-    /// gives concrete types.
-    pub(crate) fn function_ref(&mut self, target: DeclId) -> R<Expr> {
-        let f = self.function_value(target)?;
+    /// A declared function or static method as a value of type `ty`:
+    /// `Arc::new(f)`, or `Arc::new(|a: Arc<String>| f(a))` where it takes
+    /// its parameters as Kotlin's do, `impl ToArcString` and the like,
+    /// which a closure gives concrete types, or where it can't fail and
+    /// `ty` returns a result that can't (`fn_type`): `Arc::new(|a0: i32|
+    /// Ok(f(a0)))`.
+    pub(crate) fn function_ref(&mut self, target: DeclId, ty: TypeId) -> R<Expr> {
+        let fails = temper_tmpl::failures::value_failure(self.p, ty).is_some();
+        let f = self.function_value(target, fails)?;
         Ok(self.arc(f))
     }
 
     /// A function as what a value of its type calls: its path, or a
-    /// closure calling it where its parameters aren't concrete.
-    fn function_value(&mut self, target: DeclId) -> R<Expr> {
+    /// closure calling it where its parameters aren't concrete, or where
+    /// that value returns a result (`as_result`) and it doesn't.
+    fn function_value(&mut self, target: DeclId, as_result: bool) -> R<Expr> {
         let p = self.p;
         if is_core(p, target) {
             return not_yet("core's function as a value");
@@ -244,7 +258,8 @@ impl Translator<'_> {
         let concrete = params.iter().all(|&t| {
             t != TypeId::STRING && !self.is_nullable_string(t) && self.list_param(t).is_none()
         });
-        if concrete {
+        let ok = as_result && sig.fail.is_none();
+        if concrete && !ok {
             return Ok(Expr::path(path));
         }
         let mut names = Vec::new();
@@ -254,7 +269,13 @@ impl Translator<'_> {
             names.push(format!("{name}: {}", self.ty(t)?));
             args.push(Expr::path(name));
         }
-        Ok(Expr::Closure(names, Block::of(Expr::path(path).call(args))))
+        let call = Expr::path(path).call(args);
+        let call = if ok {
+            Expr::path("Ok").call(vec![call])
+        } else {
+            call
+        };
+        Ok(Expr::Closure(names, Block::of(call)))
     }
 
     /// A function value where core's member takes a `&dyn Fn`: a literal
@@ -272,7 +293,7 @@ impl Translator<'_> {
                 Ok(Expr::unary(Unary::Ref, closure))
             }
             Node::FunctionRef { target } => {
-                let f = self.function_value(target)?;
+                let f = self.function_value(target, false)?;
                 Ok(Expr::unary(Unary::Ref, f))
             }
             Node::ToFun { value } | Node::FromFun { value } => self.fn_arg(value),

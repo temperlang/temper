@@ -8,7 +8,7 @@
 //! a value's, and that no failure type is below.
 
 use crate::Program;
-use crate::analysis::{ancestors, bindings, fun_signature, nominal_decl, walk};
+use crate::analysis::{ancestors, bindings, nominal_decl, walk};
 use crate::decls::DeclKind;
 use crate::ids::{DeclId, NodeId, TypeId};
 use crate::qname::{is_external, library_of};
@@ -138,50 +138,24 @@ pub fn unchecked_args(p: &Program, decl: DeclId, args: &[TypeId]) -> Vec<TypeId>
 
 /// What a node may fail with, if anything: a failing call's callee's
 /// failure type, with its type arguments put in, so nothing where a
-/// failure parameter is given `Never<…>`; a `throw`'s value's
-/// type; core's `BrokenPromise` for an `await`; and `Bubble` for
-/// `bubble()` and for `Error` nodes, which fail as `bubble()` does.
+/// failure parameter is given `Never<…>` ([`declared_failure`]); a
+/// `throw`'s value's type; core's `BrokenPromise` for an `await`; and
+/// `Bubble` for `bubble()` and for `Error` nodes, which fail as
+/// `bubble()` does.
 pub fn node_failure(p: &Program, id: NodeId) -> Option<TypeId> {
-    let callee = |callee: DeclId, receiver: Option<NodeId>, args: TypeArgs| {
-        let fail = p.signature(callee)?.fail?;
-        let receiver = receiver.map(|r| p.nodes.ty(r));
-        let (from, to) = bindings(p, callee, receiver, p.types.args_of(args));
-        let fail = p.types.substituted(fail, &from, &to).unwrap_or(fail);
-        // A failure parameter given `Never<…>` can't fail.
-        (!p.types.is_never(fail)).then_some(fail)
-    };
     match p.nodes.get(id) {
         Node::CallFunction {
-            callee: f,
-            type_args,
-            may_bubble: true,
-            ..
-        } => callee(f, None, type_args),
-        Node::New {
-            ctor,
-            type_args,
-            may_bubble: true,
-            ..
-        } => callee(ctor, None, type_args),
-        Node::CallMethod {
-            method,
-            type_args,
-            may_bubble: true,
-            receiver,
-            ..
-        } => callee(method, Some(receiver), type_args),
-        Node::CallValue {
-            may_bubble: true,
-            callee,
-            ..
-        } => {
-            let ty = p.nodes.ty(callee);
-            let sig = match p.types.signature(ty) {
-                Some(_) => Some(ty),
-                None => fun_signature(p, ty),
-            };
-            sig.and_then(|s| p.types.signature(s)?.fail)
+            may_bubble: true, ..
         }
+        | Node::New {
+            may_bubble: true, ..
+        }
+        | Node::CallMethod {
+            may_bubble: true, ..
+        }
+        | Node::CallValue {
+            may_bubble: true, ..
+        } => declared_failure(p, id).filter(|&f| !p.types.is_never(f)),
         Node::Throw { value, .. } => Some(p.nodes.ty(value)),
         Node::Await {
             may_bubble: true, ..
@@ -189,6 +163,65 @@ pub fn node_failure(p: &Program, id: NodeId) -> Option<TypeId> {
         Node::Bubble { .. } | Node::Error { .. } => Some(TypeId::BUBBLE),
         _ => None,
     }
+}
+
+/// What a call's callee declares it fails with, its type arguments put
+/// in, or a function value's type ([`value_failure`]): `Never<…>` where
+/// a failure parameter is given it, so the call can't fail, but where
+/// targets whose failure parameters are generic (Rust, C++) still see a
+/// result, which can't be a failure.
+pub fn declared_failure(p: &Program, id: NodeId) -> Option<TypeId> {
+    if let Node::CallValue { callee, .. } = p.nodes.get(id) {
+        return value_failure(p, p.nodes.ty(callee));
+    }
+    let (callee, args) = call_generic(p, id)?;
+    let callee = match p.nodes.get(id) {
+        Node::New { ctor, .. } => ctor,
+        _ => callee,
+    };
+    let fail = p.signature(callee)?.fail?;
+    let receiver = match p.nodes.get(id) {
+        Node::CallMethod { receiver, .. } => Some(p.nodes.ty(receiver)),
+        _ => None,
+    };
+    let (from, to) = bindings(p, callee, receiver, p.types.args_of(args));
+    Some(p.types.substituted(fail, &from, &to).unwrap_or(fail))
+}
+
+/// What a function value of type `ty` declares it fails with: a function
+/// type's failure, or a `@fun` interface's `apply`'s with the
+/// interface's type arguments put in, as a failure parameter's
+/// `Never<…>`, "can't fail", which a function type leaves out. Targets
+/// whose failure parameters are generic (Rust, C++) write a value of
+/// `Mapper<Int, Int, Never<Error>>` as one that returns a result, as
+/// generic code calling it expects.
+pub fn value_failure(p: &Program, ty: TypeId) -> Option<TypeId> {
+    match p.types.contains(ty).then(|| p.types.get(ty))? {
+        TypeData::Function { .. } => p.types.signature(ty)?.fail,
+        TypeData::Nominal { decl, args } => {
+            let apply = crate::analysis::fun_apply(p, decl)?;
+            let fail = p.signature(apply)?.fail?;
+            let from = crate::analysis::type_param_types(p, decl);
+            let to = p.types.list(args).to_vec();
+            Some(p.types.substituted(fail, &from, &to).unwrap_or(fail))
+        }
+        _ => None,
+    }
+}
+
+/// Whether any of a call's arguments is a callback that returns a result
+/// where failure parameters are generic (Rust, C++): one that may fail,
+/// or a `@fun` interface's value that can't ([`value_failure`]), through
+/// a conversion to or from a function type. A call of core's member that
+/// takes callbacks is its form for callbacks that return results then.
+pub fn passes_results(p: &Program, args: &[NodeId]) -> bool {
+    args.iter().any(|&a| {
+        let a = match p.nodes.get(a) {
+            Node::ToFun { value } | Node::FromFun { value } => value,
+            _ => a,
+        };
+        value_failure(p, p.nodes.ty(a)).is_some()
+    })
 }
 
 /// What may fail under `id` and pass out of it, each node with what it
@@ -388,42 +421,21 @@ fn names_as_value(p: &Program, ty: TypeId) -> bool {
     }
 }
 
-/// For a target without failure parameters (RFC 164) yet, what it says
-/// of a program that uses them, as "failure parameters: E of mapAll": one
-/// the program declares, or a call that gives one of another library's
-/// (core's `map`) a failure type, as a failing callback does. Calls that
-/// give `Never<…>`, which can't fail by one, are fine.
-pub fn params_not_yet(p: &Program) -> Result<(), String> {
-    let own = |d: DeclId| !is_external(p, d) && is_failure_param(p, d);
-    if let Some(d) = p.decls.ids().find(|&d| own(d)) {
-        let owner = p.name(p.decls.get(d).owner);
-        return Err(format!("failure parameters: {} of {owner}", p.name(d)));
+/// A call's generic declaration, whose type parameters its type
+/// arguments are for (a constructor's class), with those arguments.
+pub fn call_generic(p: &Program, id: NodeId) -> Option<(DeclId, TypeArgs)> {
+    match p.nodes.get(id) {
+        Node::CallFunction {
+            callee, type_args, ..
+        } => Some((callee, type_args)),
+        Node::CallMethod {
+            method, type_args, ..
+        } => Some((method, type_args)),
+        Node::New {
+            ctor, type_args, ..
+        } => Some((p.decls.get(ctor).owner, type_args)),
+        _ => None,
     }
-    for id in (0..p.nodes.len()).map(|i| NodeId(i as u32)) {
-        let (generic, args) = match p.nodes.get(id) {
-            Node::CallFunction {
-                callee, type_args, ..
-            } => (callee, type_args),
-            Node::CallMethod {
-                method, type_args, ..
-            } => (method, type_args),
-            Node::New {
-                ctor, type_args, ..
-            } => (p.decls.get(ctor).owner, type_args),
-            _ => continue,
-        };
-        let params = p.decls.type_params(generic).iter();
-        let given = params
-            .zip(p.types.args_of(args))
-            .any(|(&t, &a)| is_failure_param(p, t) && !p.types.is_never(a));
-        if given {
-            return Err(format!(
-                "failure parameters: a call of {} that fails as its callback does",
-                p.name(generic)
-            ));
-        }
-    }
-    Ok(())
 }
 
 /// For a target without declared failures yet, what it says of a program

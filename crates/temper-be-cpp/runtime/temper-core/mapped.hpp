@@ -8,6 +8,7 @@
 #include "base_types.hpp"
 #include "expected.hpp"
 #include "failure.hpp"
+#include "list.hpp"
 #include "nullable_param.hpp"
 #include "pair.hpp"
 
@@ -132,6 +133,37 @@ namespace temper {
                 std::shared_ptr<std::vector<R>> result = std::make_shared<std::vector<R>>();
                 for (const Key& k : m->order) {
                     result->push_back(fn(k, m->data.at(k)));
+                }
+                return result;
+            }
+
+            // `forEach` and `toListWith` with a callback that may fail
+            // (RFC 164's failure parameters), as `List`'s `try` forms.
+            template<class Key, class Value, class F>
+            auto tryForEach(const std::shared_ptr<Ordered<Key, Value>>& m, F fn)
+                -> Expected<void, List::FailureOf<F, const Key&, const Value&>> {
+                for (const Key& k : m->order) {
+                    auto r = fn(k, m->data.at(k));
+                    if (!r.has_value()) {
+                        return unexpected(r.error());
+                    }
+                }
+                return {};
+            }
+
+            template<class Key, class Value, class F>
+            auto tryToListWith(const std::shared_ptr<Ordered<Key, Value>>& m, F fn)
+                -> Expected<
+                    std::shared_ptr<std::vector<List::ValueOf<F, const Key&, const Value&>>>,
+                    List::FailureOf<F, const Key&, const Value&>
+                > {
+                auto result = std::make_shared<std::vector<List::ValueOf<F, const Key&, const Value&>>>();
+                for (const Key& k : m->order) {
+                    auto r = fn(k, m->data.at(k));
+                    if (!r.has_value()) {
+                        return unexpected(r.error());
+                    }
+                    result->push_back(std::move(*r));
                 }
                 return result;
             }

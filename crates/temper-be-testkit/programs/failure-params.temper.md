@@ -99,6 +99,28 @@ Generic code handles `E` without knowing what it is:
 2 0
 ```
 
+A handler there may bind the failure, keep it, and throw it again:
+
+    let sumAll<T, E extends Error>(xs: List<T>, f: Mapper<T, Int, E>): Int throws E {
+      var total = 0;
+      var first: E? = null;
+      for (let x of xs) {
+        do { total += try f(x); } catch (e) { if (first == null) { first = e; } }
+      }
+      let failed = first;
+      if (failed != null) { throw failed; }
+      total
+    }
+
+    let summed = sumAll(["one", "two"], find) orelse -1;
+    let unsummed = sumAll(["six", "one", "ten"], find) catch (e) { console.log("first missing ${e.key}"); -1 };
+    console.log("${summed} ${unsummed} ${sumAll([1, 2], safe)}");
+
+```log
+first missing six
+3 -1 5
+```
+
 ## Two callbacks
 
 Two callbacks share `E`: one that can't fail fits beside one that may,
@@ -161,4 +183,30 @@ callbacks do, and can't where those can't:
 two 3 1+2
 missing six
 1,2,3
+```
+
+## Function values passed on
+
+A `@fun` interface's value goes where core's functions take a callback,
+and generic code passes its own callbacks on, to its functions and to
+core's:
+
+    let mapTwice<T, E extends Error>(xs: List<T>, f: Mapper<T, T, E>): List<T> throws E {
+      let once = try mapAll(xs, f);
+      try once.map(f)
+    }
+
+    let upToTwo(n: Int): Int throws Missing {
+      if (n > 2) { throw new Missing(n.toString()); }
+      n + 1
+    }
+
+    let bumped = [1, 2].map(safe);
+    let twice = mapTwice([1, 2], safe);
+    let failed = mapTwice([1, 2], upToTwo) catch (e) { console.log("missing ${e.key}"); [] };
+    console.log("${bumped.join(",") { n => n.toString() }} ${twice.join(",") { n => n.toString() }} ${failed.length}");
+
+```log
+missing 3
+2,3 3,4 0
 ```

@@ -565,6 +565,55 @@ pub fn lookup(qname: &str) -> Option<Connection> {
         .map(|i| TABLE[i].1)
 }
 
+/// Core's members that take a callback that may fail (RFC 164's failure
+/// parameters), where a call gives a failure parameter a failure type:
+/// each a runtime function, called as [`Connection::Ufcs`] is, whose type
+/// parameters are the receiver's, then the member's, so a call names its
+/// failure type (`try_filter::<_, Missing>`), which rustc can't infer
+/// from a closure that `?`s, and which stops at the first failure. A
+/// call whose callbacks can't fail is the member's own connection.
+/// Sorted by qname.
+pub const TRY: &[(&str, &str)] = &[
+    (
+        "core.type ListBuilder.sort()",
+        "temper_core::listed::try_sort",
+    ),
+    (
+        "core.type Listed.filter()",
+        "temper_core::listed::try_filter",
+    ),
+    ("core.type Listed.join()", "temper_core::listed::try_join"),
+    ("core.type Listed.map()", "temper_core::listed::try_map"),
+    (
+        "core.type Listed.reduce()",
+        "temper_core::listed::try_reduce",
+    ),
+    (
+        "core.type Listed.reduceFrom()",
+        "temper_core::listed::try_reduce_from",
+    ),
+    (
+        "core.type Listed.sorted()",
+        "temper_core::listed::try_sorted",
+    ),
+    (
+        "core.type Mapped.forEach()",
+        "temper_core::mapped_try_for_each",
+    ),
+    (
+        "core.type Mapped.toListWith()",
+        "temper_core::mapped_try_to_list_with",
+    ),
+];
+
+/// The runtime function for a call of core's `qname` whose callback may
+/// fail ([`TRY`]).
+pub fn lookup_try(qname: &str) -> Option<&'static str> {
+    TRY.binary_search_by_key(&qname, |(k, _)| k)
+        .ok()
+        .map(|i| TRY[i].1)
+}
+
 /// The connection for a type's qname.
 pub fn lookup_type(qname: &str) -> Option<TypeConnection> {
     TYPES

@@ -122,6 +122,37 @@ local function failures(xs, f)
   return failed
 end
 
+---@generic T
+---@param xs T[]
+---@param f fun(arg0: T): integer
+---@return integer
+local function sumAll(xs, f)
+  local total = 0
+  ---@type temper.Failure|temper.Null
+  local first = temper.null
+  do
+    local length = temper.list_length(xs)
+    local i = 0
+    while i < length do
+      local x = temper.list_get(xs, i)
+      i = temper.int32_add(i, 1)
+      local t, e = temper.catch(function()
+        total = temper.int32_add(total, f(x))
+      end, temper.Failure)
+      if not t then
+        if temper.is_null(first) then
+          first = e
+        end
+      end
+    end
+  end
+  local failed = first
+  if not temper.is_null(failed) then
+    error(failed --[[@as temper.Failure]])
+  end
+  return total
+end
+
 ---@param a fun(arg0: string): integer
 ---@param b fun(arg0: string): integer
 ---@param key string
@@ -191,6 +222,24 @@ local function parts(keys)
   return temper.listed_join(found, ",", function(k3) return k3 end) .. " " .. total .. " " .. temper.listed_join(keys, "+", function(k4) return tostring(find(k4)) end)
 end
 
+---@generic T
+---@param xs T[]
+---@param f fun(arg0: T): T
+---@return T[]
+local function mapTwice(xs, f)
+  local once = mapAll(xs, f)
+  return temper.listed_map(once, f)
+end
+
+---@param n integer
+---@return integer
+local function upToTwo(n)
+  if n > 2 then
+    error(Missing(tostring(n)))
+  end
+  return temper.int32_add(n, 1)
+end
+
 local doubled = mapAll({ 1, 2, 3 }, function(n) return temper.int32_mul(n, 2) end)
 local safe = function(n) return temper.int32_add(n, 1) end
 print(temper.listed_join(doubled, ",", function(n) return tostring(n) end) .. " " .. safe(1))
@@ -214,6 +263,23 @@ local some = failures({ "one", "six", "two", "ten" }, find)
 local none = failures({ 1, 2 }, function(n) return n end)
 print(some .. " " .. none)
 ---@type integer
+local summed
+if not temper.catch(function()
+  summed = sumAll({ "one", "two" }, find)
+end, Missing) then
+  summed = -1
+end
+---@type integer
+local unsummed
+local t, e = temper.catch(function()
+  unsummed = sumAll({ "six", "one", "ten" }, find)
+end, Missing)
+if not t then
+  print("first missing " .. e.key)
+  unsummed = -1
+end
+print(summed .. " " .. unsummed .. " " .. sumAll({ 1, 2 }, safe))
+---@type integer
 local twelve
 if not temper.catch(function()
   twelve = both(find, function(k) return 10 end, "two")
@@ -222,32 +288,44 @@ end, Missing) then
 end
 ---@type integer
 local lost
-local t, e = temper.catch(function()
+local t_1, e2 = temper.catch(function()
   lost = both(find, find, "six")
 end, Missing)
-if not t then
-  print("lost " .. e.key)
+if not t_1 then
+  print("lost " .. e2.key)
   lost = -1
 end
 print(twelve .. " " .. lost)
 print(either("one") .. " " .. either("ten"))
 ---@type string
-local t_1
-if not temper.catch(function()
-  t_1 = parts({ "one", "two" })
-end, Missing) then
-  t_1 = "?"
-end
-print(t_1)
----@type string
 local t_2
-local t_3, e2 = temper.catch(function()
-  t_2 = parts({ "one", "six" })
-end, Missing)
-if not t_3 then
-  t_2 = "missing " .. e2.key
+if not temper.catch(function()
+  t_2 = parts({ "one", "two" })
+end, Missing) then
+  t_2 = "?"
 end
 print(t_2)
+---@type string
+local t_3
+local t_4, e3 = temper.catch(function()
+  t_3 = parts({ "one", "six" })
+end, Missing)
+if not t_4 then
+  t_3 = "missing " .. e3.key
+end
+print(t_3)
 print(temper.listed_join(temper.listed_sorted({ 3, 1, 2 }, function(a, b) return temper.int32_sub(a, b) end), ",", function(n) return tostring(n) end))
+local bumped = temper.listed_map({ 1, 2 }, safe)
+local twice = mapTwice({ 1, 2 }, safe)
+---@type integer[]
+local failed
+local t_5, e4 = temper.catch(function()
+  failed = mapTwice({ 1, 2 }, upToTwo)
+end, Missing)
+if not t_5 then
+  print("missing " .. e4.key)
+  failed = {}
+end
+print(temper.listed_join(bumped, ",", function(n) return tostring(n) end) .. " " .. temper.listed_join(twice, ",", function(n) return tostring(n) end) .. " " .. temper.list_length(failed))
 
 return {}

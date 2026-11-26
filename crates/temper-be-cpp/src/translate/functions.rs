@@ -18,7 +18,11 @@ use temper_tmpl::Kids;
 use temper_tmpl::analysis::walk;
 
 impl Translator<'_> {
-    /// A `std::function` from a signature: `std::function<int32_t(int32_t)>`.
+    /// A function value's type, a function type's or a `@fun`
+    /// interface's, as a `std::function`: `std::function<int32_t(int32_t)>`,
+    /// or where a failure parameter of its interface is given `Never<…>`,
+    /// one returning `core::Expected<int32_t, core::Never>`, as generic
+    /// code calling it expects (`failures::value_failure`).
     pub(crate) fn function_type(&self, ty: TypeId) -> R<String> {
         let Some(sig) = temper_tmpl::analysis::fun_signature(self.p, ty) else {
             return not_yet("a std::function for another type");
@@ -33,9 +37,10 @@ impl Translator<'_> {
         for &t in s.params {
             texts.push(self.ty(t)?);
         }
+        let fail = temper_tmpl::failures::value_failure(self.p, ty);
         Ok(format!(
             "std::function<{}({})>",
-            self.result_type(s.pass, s.fail)?,
+            self.result_type(s.pass, fail)?,
             texts.join(", ")
         ))
     }
@@ -48,7 +53,13 @@ impl Translator<'_> {
     /// A function literal: a one-line lambda where its body is one
     /// statement but a loop, else an `auto` local of it declared before the
     /// statement it's in.
-    pub(crate) fn literal(&mut self, decl: DeclId, params: Kids, body: NodeId) -> R<Expr> {
+    pub(crate) fn literal(
+        &mut self,
+        decl: DeclId,
+        params: Kids,
+        body: NodeId,
+        ty: TypeId,
+    ) -> R<Expr> {
         let p = self.p;
         let mut captures = if p.decls.captures(decl).is_empty() && !uses_this(p, body) {
             String::new()
@@ -71,7 +82,7 @@ impl Translator<'_> {
             }
             self.group.as_mut().unwrap().top = false;
         }
-        let parts = self.literal_parts(decl, params, body);
+        let parts = self.literal_parts(decl, params, body, ty);
         self.group = group;
         let (ps, result, stmts) = parts?;
         // A loop gets lines of its own, as a state machine's step's does.
@@ -102,20 +113,26 @@ impl Translator<'_> {
     }
 
     /// A function literal's parameters (an unused one unnamed), result
-    /// type, and body.
+    /// type, and body, as a value of type `ty`: a literal that can't fail
+    /// returns an `Expected` of `core::Never` where `ty`'s failure
+    /// parameter is given `Never<…>` ([`function_type`](Self::function_type)).
     #[allow(clippy::type_complexity)]
     pub(crate) fn literal_parts(
         &mut self,
         decl: DeclId,
         params: Kids,
         body: NodeId,
+        ty: TypeId,
     ) -> R<(Vec<(String, String)>, String, Vec<Stmt>)> {
         let p = self.p;
         let Some(sig) = p.signature(decl) else {
             return not_yet("a function literal without a signature");
         };
-        let result = self.result_type(sig.pass, sig.fail)?;
-        let fail_to = self.fail_to_of(sig.pass, sig.fail)?;
+        let fail = sig
+            .fail
+            .or_else(|| temper_tmpl::failures::value_failure(p, ty));
+        let result = self.result_type(sig.pass, fail)?;
+        let fail_to = self.fail_to_of(sig.pass, fail)?;
         // What the body reads; a parameter it doesn't is unnamed.
         let mut used = std::collections::HashSet::new();
         walk(p, body, &mut |id| {

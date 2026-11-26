@@ -585,8 +585,10 @@ impl<'a> Translator<'a> {
     fn ty(&self, ty: TypeId) -> R<String> {
         Ok(match self.p.types.get(ty) {
             // `temper_tmpl::nevers` made each `Never<T>` the `T` it stands
-            // for, as this profile has no bottom type.
-            TypeData::Never(t) => return self.ty(t),
+            // for, as this profile has no bottom type, but a failure
+            // parameter's argument, "can't fail" (RFC 164), an empty
+            // struct that's never made.
+            TypeData::Never(_) => "core::Never".into(),
             // Only a signature's result, never a value's (tmpl's T5).
             TypeData::Result { .. } => return not_yet("a result type as a value's"),
             TypeData::Scalar(s) => match s {
@@ -2025,8 +2027,10 @@ impl<'a> Translator<'a> {
                 out.push(Stmt::Bubble(self.core("bubble").call(Vec::new())));
             }
             Node::Panic {} => out.push(Stmt::Bubble(self.core("panic").call(Vec::new()))),
-            // `void`, as an `orelse`'s fallback, does nothing.
+            // `void`, as an `orelse`'s fallback, does nothing, and as a
+            // handler's body's value, returns from its lambda.
             Node::VoidLit {} if matches!(sink, Sink::Discard) => {}
+            Node::VoidLit {} if matches!(sink, Sink::Return) => out.push(Stmt::Return(None)),
             _ => {
                 let e = self.expr(id)?;
                 out.append(&mut self.pending);
@@ -2461,6 +2465,38 @@ impl<'a> Translator<'a> {
         Ok(())
     }
 
+    /// A call of a connected declaration as [`Connection::Call`] writes
+    /// it, a function `f` of the runtime's given the arguments, a method's
+    /// receiver first.
+    fn call_connection(&mut self, decl: DeclId, f: &str, args: &[NodeId]) -> R<Expr> {
+        let mut values = self.args(args)?;
+        // A string made as a `std::string` where the runtime's template
+        // deduces a type parameter, as `reduceFrom`'s `initial`, is a
+        // `core::Str`, as Temper's strings are.
+        let p = self.p;
+        if let Some(sig) = p.types.signature(p.decls.get(decl).ty) {
+            let skip = values.len().saturating_sub(sig.params.len());
+            for (v, &t) in values.iter_mut().skip(skip).zip(sig.params) {
+                if v.is_std_string() && matches!(p.types.get(t), TypeData::TypeParam { .. }) {
+                    *v = v.clone().str_value();
+                }
+            }
+        }
+        Ok(self.core(f).call(values))
+    }
+
+    /// A call that can't fail only because a failure parameter (RFC 164)
+    /// is given `Never<…>`, as its result's value, `*f(…)`, which always
+    /// holds one (`failures::declared_failure`); else the call itself.
+    fn settled(&self, id: NodeId, call: Expr) -> Expr {
+        let p = self.p;
+        let fail = temper_tmpl::failures::declared_failure(p, id);
+        match fail.is_some_and(|f| p.types.is_never(f)) {
+            true => Expr::unary(Unary::Deref, call),
+            false => call,
+        }
+    }
+
     /// A call of a connected declaration, by the connection table; `args`
     /// has a method's receiver first.
     fn connected(&mut self, decl: DeclId, args: &[NodeId]) -> R<Expr> {
@@ -2469,23 +2505,7 @@ impl<'a> Translator<'a> {
             return not_yet(format!("a connection for {qname}"));
         };
         match connection {
-            Connection::Call(f) => {
-                let mut values = self.args(args)?;
-                // A string made as a `std::string` where the runtime's
-                // template deduces a type parameter, as `reduceFrom`'s
-                // `initial`, is a `core::Str`, as Temper's strings are.
-                let p = self.p;
-                if let Some(sig) = p.types.signature(p.decls.get(decl).ty) {
-                    let skip = values.len().saturating_sub(sig.params.len());
-                    for (v, &t) in values.iter_mut().skip(skip).zip(sig.params) {
-                        if v.is_std_string() && matches!(p.types.get(t), TypeData::TypeParam { .. })
-                        {
-                            *v = v.clone().str_value();
-                        }
-                    }
-                }
-                Ok(self.core(f).call(values))
-            }
+            Connection::Call(f) => self.call_connection(decl, f, args),
             Connection::Templated(f) => {
                 let Some(&receiver) = args.first() else {
                     return not_yet(format!("{qname} without its receiver"));
@@ -2908,7 +2928,7 @@ impl<'a> Translator<'a> {
                     name = format!("{}::{name}", self.namespace);
                 }
                 let args = self.program_args(args)?;
-                Expr::name(format!("{name}{targs}")).call(args)
+                self.settled(id, Expr::name(format!("{name}{targs}")).call(args))
             }
             Node::New { ctor, args, .. }
                 if is_external(p, ctor) && library_of(p, ctor) == "core"
@@ -2921,7 +2941,8 @@ impl<'a> Translator<'a> {
                 let class = p.decls.get(ctor).owner;
                 let targs = self.template_args(p.types.args(p.nodes.ty(id)))?;
                 let args = self.program_args(p.nodes.list(args))?;
-                Expr::name(format!("{}{targs}::make", self.top_name(class))).call(args)
+                let call = Expr::name(format!("{}{targs}::make", self.top_name(class))).call(args);
+                self.settled(id, call)
             }
             // `core::List::make<T>(…)`, as Kotlin's.
             Node::ListLit { items } => {
@@ -2941,10 +2962,19 @@ impl<'a> Translator<'a> {
                     let mut all = vec![receiver];
                     all.extend_from_slice(args);
                     self.call = id;
+                    if temper_tmpl::failures::passes_results(p, args) {
+                        let Some(f) = connected::lookup_try(&self.qname(method)) else {
+                            let qname = self.qname(method);
+                            return not_yet(format!("{qname} with a callback that may fail"));
+                        };
+                        let call = self.call_connection(method, f, &all)?;
+                        return Ok(self.settled(id, call));
+                    }
                     return self.connected(method, &all);
                 }
                 let type_args = p.types.args_of(type_args).to_vec();
-                self.call_method(method, &type_args, receiver, args)?
+                let call = self.call_method(method, &type_args, receiver, args)?;
+                self.settled(id, call)
             }
             Node::This {} => match &self.this_expr {
                 Some(e) => e.clone(),
@@ -3211,7 +3241,9 @@ impl<'a> Translator<'a> {
                 self.statement_value(id)?
             }
             Node::Throw { .. } => return not_yet("a throw inside an expression"),
-            Node::FunctionLiteral { decl, params, body } => self.literal(decl, params, body)?,
+            Node::FunctionLiteral { decl, params, body } => {
+                self.literal(decl, params, body, p.nodes.ty(id))?
+            }
             Node::FunctionRef { target } => self.function_ref(target)?,
             Node::CallValue { callee, args, .. } => {
                 let f = match p.nodes.get(callee) {
@@ -3227,7 +3259,7 @@ impl<'a> Translator<'a> {
                 for a in args {
                     out.push(self.expr(a)?);
                 }
-                f.call(out)
+                self.settled(id, f.call(out))
             }
             Node::ToFun { value } | Node::FromFun { value } => self.expr(value)?,
             other => return not_yet(format!("a {} expression", other.kind().name())),

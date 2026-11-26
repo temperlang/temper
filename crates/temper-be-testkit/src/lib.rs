@@ -364,9 +364,9 @@ pub const HOST_CODE: [&str; 3] = ["host-error-causes", "host-error-tests", "host
 /// The specifications in `programs/`: shared programs of behavior not
 /// built yet everywhere, written ahead with the logs they should give,
 /// which only backends that have it run: `failure-params` functions
-/// generic over their callbacks' failure types, which the exception
-/// backends run (Python, Java, JS, C#, Lua), while Rust and C++ say not
-/// yet; `failure-async` promises
+/// generic over their callbacks' failure types, which every backend
+/// runs, to join [`PROGRAMS`] in a change of its own; `failure-async`
+/// promises
 /// broken with failures; `failure-jumps` a `catch` whose body jumps out
 /// of its loop, which Lua runs, while Rust and C++ say not yet; and
 /// `failure-causes` failures made among a thrown one's arguments, and a

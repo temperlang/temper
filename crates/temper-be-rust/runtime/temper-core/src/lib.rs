@@ -11,7 +11,7 @@ extern crate self as temper_core;
 
 pub mod failure;
 pub use failure::{
-    with_cause, BrokenPromise, Cause, CoreError, Failure, InvalidCodePoint, MissingKey,
+    into_ok, with_cause, BrokenPromise, Cause, CoreError, Failure, InvalidCodePoint, MissingKey,
     ParseError,
 };
 pub mod float64;
@@ -20,7 +20,10 @@ pub use generator::{SafeGenerator, SafeGeneratorTrait};
 pub mod listed;
 pub use listed::{List, ListBuilder, Listed, ListedTrait, ToList, ToListBuilder, ToListed};
 pub mod mapped;
-pub use mapped::{mapped_to_list_with, Map, MapBuilder, Mapped, MappedTrait, Pair};
+pub use mapped::{
+    mapped_to_list_with, mapped_try_for_each, mapped_try_to_list_with, Map, MapBuilder, Mapped,
+    MappedTrait, Pair,
+};
 pub mod promise;
 pub use promise::{
     in_turn, AsyncRunner, AsyncRunnerTrait, Hold, Promise, PromiseBuilder, SingleThreadAsyncRunner,

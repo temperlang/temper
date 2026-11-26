@@ -1271,8 +1271,8 @@ In progress (RFC 164, chunks 4 to 13 and decision 17's rework of
 notes/error-custom-kinds-plan.md, 2026-11-25): typed in the frontend,
 run on the interpreter, and translated to tmpl
 ([tmpl/nodes.md](tmpl/nodes.md), "Declared failures") and to every
-backend, failure parameters ("Failure parameters", above) on the
-backends with exceptions (Rust and C++ say not yet), and `error case` is
+backend, failure parameters ("Failure parameters", above) too, and
+`error case` is
 still an error. The user-visible names, the root's (`FAILURE_ROOT` in
 `builtins.rs`, and core's `interface Error`), the messages' wording,
 and the default message and reports (`interp/failures.rs`), are kept in

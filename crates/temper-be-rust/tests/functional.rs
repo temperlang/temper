@@ -23,7 +23,8 @@
 //! this crate's own (`tests/programs/`), which cover what's particular
 //! to Rust ([`OWN`]), and the testkit's programs of declared failures
 //! (`failures`, `host-failures`, whose host code returns its failures in
-//! `Err`s, and `failures-interop`).
+//! `Err`s, and `failures-interop`), and its specification `failure-params`
+//! ([`SPECS`]).
 //! - `goldens`: each program's generated crate, laid out as Kotlin's,
 //!   with its `src/mod.rs` matching the golden in `tests/goldens/`, named
 //!   for the test's path (`algos-fibonacci.rs`), its other modules'
@@ -130,8 +131,11 @@ const UNUSED_KEYS: [&str; 5] = [
 /// and `test-panics`' and `test-fails`' assertion message closures, a
 /// call's last argument left on one line that's 100 wide before the `,`
 /// after the call, which the printer doesn't count there; and
-/// `test-async`'s `async` blocks in tests.
-const LAYOUT_GAPS: [&str; 9] = [
+/// `test-async`'s `async` blocks in tests; and `failure-params`' `let`
+/// of a call whose lone argument is a generic call, which rustfmt breaks
+/// after the `=`, and `Some(f::<E>(…)?)`, whose comma after the `?`
+/// rustfmt leaves out here, though it keeps it elsewhere.
+const LAYOUT_GAPS: [&str; 10] = [
     "functions",
     "regex-match",
     "regex-zero-advance",
@@ -141,11 +145,16 @@ const LAYOUT_GAPS: [&str; 9] = [
     "test-panics",
     "test-fails",
     "test-async",
+    "failure-params",
 ];
 
 /// This crate's own programs, in `tests/programs/`, which test what's
 /// particular to Rust.
 const OWN: [&str; 2] = ["class-edges", "nullable-edges"];
+
+/// The testkit's specifications (`kit::SPECS`) this backend runs, which
+/// others don't all yet: `failure-params`.
+const SPECS: [&str; 1] = ["failure-params"];
 
 fn cases() -> Vec<Case> {
     let tests = [
@@ -168,7 +177,8 @@ fn cases() -> Vec<Case> {
         &kit::NET[..],
     ]
     .concat();
-    let mut cases = kit::cases_with("rust", &kit::PROGRAMS, &tests);
+    let programs = [&kit::PROGRAMS[..], &SPECS[..]].concat();
+    let mut cases = kit::cases_with("rust", &programs, &tests);
     // A library named a Rust keyword (`regex/match`'s `match`), which
     // cargo refuses as a package's name, by its key (`regex-match`).
     for case in &mut cases {
@@ -192,19 +202,6 @@ fn cases() -> Vec<Case> {
 }
 
 /// A case's generated files.
-/// Generic failure parameters (RFC 164; the specification
-/// `failure-params`) aren't translated yet (chunk 16), and say so,
-/// rather than giving code that doesn't build.
-#[test]
-fn failure_parameters_not_yet() {
-    kit::with_stack(|| {
-        for case in kit::spec_cases("rust", "failure-params") {
-            let error = translate(&kit::program_for(&case, &RUST.rules), &RUST).unwrap_err();
-            assert!(error.what.contains("failure parameters"), "{error}");
-        }
-    });
-}
-
 fn generate(case: &Case) -> Vec<OutFile> {
     translate(&kit::program_for(case, &RUST.rules), &RUST)
         .unwrap_or_else(|e| panic!("{}: {e}", case.key))

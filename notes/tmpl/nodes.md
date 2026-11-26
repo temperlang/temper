@@ -983,9 +983,30 @@ List<R> mapAll(List<T> xs, Function<T, R> f)` has no `throws` clause for
 E`) would only mislead for unchecked ones; docs (`throws`, `@throws`,
 `<exception>`) name only declared failure types (`failures::declared`).
 A signature naming one other than as a failure, as `e: E`, is not yet
-there. Rust and C++ say not yet for any failure parameter of the
-program's, or a call giving one a failure type
-(`failures::params_not_yet`; chunk 16).
+there.
+
+Rust and C++ keep them generic (chunk 16): a template's or generic
+function's type parameter, `E: temper_core::Failure` in Rust, standing
+for the whole failure type (`Missing`, `std::shared_ptr<Missing>`), so
+`Result<List<R>, E>` and `core::Expected<…, E>`. "Can't fail",
+`Never<Error>`, is an uninhabited type, Rust's `std::convert::Infallible`
+(which the runtime makes a `Failure`) and C++'s `core::Never`, so
+`nevers` keeps a failure parameter's `Never<T>` argument
+(`lowered_list`). A function type normalizes a `Never` failure away, but
+a `@fun` interface's value given one still returns a result,
+`Result<i32, Infallible>`, as generic code calling it expects
+(`failures::value_failure`): a literal or function reference there
+returns `Ok`s, and a call that can't fail only by `Never` is its value,
+`temper_core::into_ok(…)` and `*f(…)` (`failures::declared_failure`).
+Rust names failure parameters' arguments, `map_all::<_, _, Missing>(…)`,
+as rustc can't infer one from a closure that `?`s. Core's members that
+take callbacks have runtime forms for callbacks that return results
+(`TRY` in each backend's connections: `try_map`, `List::tryMap`, …), taken
+where a call passes one (`failures::passes_results`); each stops at the
+first failure, and the sorts merge-sort, since std's sorts misbehave
+where comparisons stop being consistent. No dyn-dispatched method is
+generic over `E`: `Mapped.forEach` and `toListWith` are free functions in
+Rust's runtime, over `to_list()`, and Listed's members were already.
 
 Validator rules: T4 checks a failure parameter's type argument against
 its bound, `Never<T>` as `T`, and builtin types (`Bubble`, `String`)
