@@ -458,6 +458,11 @@ Code that relied on these going unchecked is now an error:
   number, anywhere: `Map<Int>`, `Promise<Int, String>`, or `Box<Int,
   Int>` for `class Box<T>`. To migrate, give as many as the type
   declares.
+- So is a generic type written without any where no value gives them,
+  as `x is Box`, `f(xs: List)`, or `class C extends Sup`, which Temper
+  0.6.0 failed on in other ways. To migrate, write the arguments. A
+  variable's value still gives them, as before: `let xs: List = [1]`
+  is a `List<Int>`, and `let b: Box = new Box(1)` a `Box<Int>`.
 - A generic call's arguments are checked against the type arguments the
   type wanted gives: `let b: Box<List<String>> = new Box(["a", 3])`
   reports the `3`.

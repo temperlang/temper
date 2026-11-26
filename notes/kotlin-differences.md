@@ -288,6 +288,21 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   arguments", and "generic types written with the wrong number of type
   arguments".
 
+- **A generic type written without type arguments,** `List`, or `Box`
+  for `class Box<T>`: both infer it from a variable's value, `let xs:
+  List = [1]`. Elsewhere Kotlin fails to translate it in a signature
+  or supertype ("Cannot translate", or a crash), and reports it in `is`
+  ("Could not infer type actuals"), checked 2026-11-26. Tempest reports
+  it wherever no value gives the arguments, through an alias too, as
+  "Wrong number of type arguments.  Expected 1", and the type is
+  unknown; that includes a field's initializer, which Kotlin may infer
+  from. Making a value (`new Box(1)`), a static member (`Box.make()`),
+  and an object literal's `class` name no type, so they're fine.
+  Kotlin should report the others too.
+  Test: settle/types.cases, "a generic type written without its type
+  arguments" (and "… inferred from a value"), and "bare generic names
+  where no type is written".
+
 - **A generic call binding a bare `T` to a value and null,** as
   `pick(i, null)` for `pick<T>(a: T, b: T): T` and `i: Int`, is an
   `Int32?` in Kotlin, which also reports the `null`: "Expected subtype

@@ -1619,14 +1619,16 @@ console.log("${p.key} ${p.value} ${p is Pair} ${b is Mapped} ${m is MapBuilder}"
   #void)
 error 291..293: Expected subtype of String, but got AnyValue
 error 326..329: Expected subtype of Int32, but got String
-error 571..586: Runtime type check from Map<Int32, String> to MapBuilder can never succeed
+error 548..552: Wrong number of type arguments.  Expected 2
+error 561..567: Wrong number of type arguments.  Expected 2
+error 576..586: Wrong number of type arguments.  Expected 2
 log 2 deux false none ?
 log 2,1
 log 2=deux 1=one
 log deux gone 2 2
 log 1: uno
 log a: x
-Failed: Runtime type check from Map<Int32, String> to MapBuilder can never succeed
+Failed: Wrong number of type arguments.  Expected 2
 
 === static extensions where visible
 @staticExtension(Int, "seven")

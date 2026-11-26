@@ -4047,6 +4047,187 @@ error 758..767: Wrong number of type arguments.  Expected 2
 error 835..855: Wrong number of type arguments.  Expected 1
 Failed: Wrong number of type arguments.  Expected 2
 
+=== a generic type written without its type arguments
+// Wherever a type is written and no value gives its arguments, for
+// core's types and the library's alike, through an alias too: a `let`
+// without a value, or whose value isn't one, a parameter (with a
+// default too), a field (with an initializer too), a return type, a
+// supertype, a bound, `is` and `as`, and inside another type, as `Box?`.
+// The type is unknown, so nothing else is reported.
+class Box<T>(public item: T) {
+  public static make(): Box<Int> { new Box<Int>(1) }
+}
+interface Sup<T> {}
+class Sub extends Sup {}
+class Holder(public box: Box) {
+  public xs: List = [1];
+}
+let Alias = Box;
+let a(): Void { var a: Box; a = new Box(1); }
+let b: List = "b";
+let c: Map<String, List>? = null;
+let d(x: AnyValue): Boolean { x is Box }
+let e(x: AnyValue): Box? throws Bubble { x as Box? }
+let f(x: fn (Listed): Int): Void {}
+let g<T extends Sup>(x: T): Void {}
+let h: Alias = 1;
+let i(xs: List = [1]): Int { xs.length }
+let j(): Box { new Box(1) }
+let k: Box? = new Box(1);
+--- settled
+(Block
+  (Class
+    ^Box:0
+    (TypeParam ^T:16)
+    (Param ^item:18 T:16)
+    (Method static
+      ^make:19
+      (Fn (Call <> Box:0 Int) (Block (Call new (Call <> Box:0 Int) 1)))))
+  (Interface ^Sup:1 (TypeParam ^T:20))
+  (Class ^Sub:2 Sup:1)
+  (Class ^Holder:3 (Param ^box:24 Box:0) (Let ^xs:25 List (Call list 1)))
+  (Let ^Alias:4 Box:0)
+  (Let
+    ^a:5
+    (Fn Void (Block (Var ^a:26 Box:0) (Assign a:26 (Call new Box:0 1)) #void)))
+  (Let ^b:6 List "b")
+  (Let ^c:7 (Call ? (Call <> Map String List)) null)
+  (Let ^d:8 (Fn (Let ^x:27 AnyValue) Boolean (Block (Call is x:27 Box:0))))
+  (Let
+    ^e:9
+    (Fn
+      (Let ^x:28 AnyValue)
+      (Call throws (Call ? Box:0) Bubble)
+      (Block (Call as x:28 (Call ? Box:0)))))
+  (Let ^f:10 (Fn (Let ^x:29 (Call FnType Listed Int)) Void (Block)))
+  (Let ^g:11 (Fn (TypeParam ^T:30 Sup:1) (Let ^x:31 T:30) Void (Block)))
+  (Let ^h:12 Alias:4 1)
+  (Let
+    ^i:13
+    (Fn (Let ^xs:32 List (Call list 1)) Int (Block (Call . xs:32 \length))))
+  (Let ^j:14 (Fn Box:0 (Block (Call new Box:0 1))))
+  (Let ^k:15 (Call ? Box:0) (Call new Box:0 1))
+  #void)
+error 525..528: Wrong number of type arguments.  Expected 1
+error 557..560: Wrong number of type arguments.  Expected 1
+error 577..581: Wrong number of type arguments.  Expected 1
+error 631..634: Wrong number of type arguments.  Expected 1
+error 661..665: Wrong number of type arguments.  Expected 1
+error 692..696: Wrong number of type arguments.  Expected 1
+error 742..745: Wrong number of type arguments.  Expected 1
+error 794..797: Wrong number of type arguments.  Expected 1
+error 768..771: Wrong number of type arguments.  Expected 1
+error 814..820: Wrong number of type arguments.  Expected 1
+error 853..856: Wrong number of type arguments.  Expected 1
+error 880..885: Wrong number of type arguments.  Expected 1
+error 901..905: Wrong number of type arguments.  Expected 1
+error 941..944: Wrong number of type arguments.  Expected 1
+error 967..970: Wrong number of type arguments.  Expected 1
+
+=== bare generic names where no type is written
+// Making a value, calling a static member, an object literal's class,
+// and an alias's own declaration name no type, so they're fine, as are
+// types that aren't generic.
+class Box<T>(public item: T) {
+  public static make(): Box<Int> { new Box<Int>(1) }
+}
+class Plain {}
+let Alias = Box;
+let a = new Box(1);
+let b = Box.make();
+let c = { class: Box, item: "c" };
+let d: Box<Box<Int>> = new Box(new Box(1));
+let e: Plain = new Plain();
+let f(x: AnyValue): Boolean { x is Plain }
+let g = new Alias(2);
+console.log("${a.item} ${b.item} ${c.item} ${d.item.item} ${g.item}");
+--- settled
+(Block
+  (Class
+    ^Box:0
+    (TypeParam ^T:10)
+    (Param ^item:12 T:10)
+    (Method static
+      ^make:13
+      (Fn (Call <> Box:0 Int) (Block (Call new (Call <> Box:0 Int) 1)))))
+  (Class ^Plain:1)
+  (Let ^Alias:2 Box:0)
+  (Let ^a:3 (Call new Box:0 1))
+  (Let ^b:4 (Call (Call . Box:0 \make)))
+  (Let ^c:5 (Call new Box:0 "c"))
+  (Let
+    ^d:6
+    (Call <> Box:0 (Call <> Box:0 Int))
+    (Call new Box:0 (Call new Box:0 1)))
+  (Let ^e:7 Plain:1 (Call new Plain:1))
+  (Let ^f:8 (Fn (Let ^x:15 AnyValue) Boolean (Block (Call is x:15 Plain:1))))
+  (Let ^g:9 (Call new Alias:2 2))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call . a:3 \item)
+      " "
+      (Call . b:4 \item)
+      " "
+      (Call . c:5 \item)
+      " "
+      (Call . (Call . d:6 \item) \item)
+      " "
+      (Call . g:9 \item)))
+  #void)
+log 1 1 c 1 2
+
+=== a generic type written without its type arguments inferred from a value
+// A `let`'s value gives them, as Kotlin Temper infers them: `Box<Int32>`
+// for `new Box(1)`, through an alias too, and `Listed<Int32>` for a
+// `List<Int32>`, its supertype's arguments; so `s` is checked against
+// an `Int32`.
+class Box<T>(public item: T) {}
+let Alias = Box;
+let a: Box = new Box(1);
+let b: List = [2];
+let c: Listed = [3, 4];
+let d: Alias = new Box("d");
+let e: List = do { [true] };
+let f(): Int {
+  let g: Box = new Box(5);
+  g.item
+}
+console.log("${a.item + 1} ${b[0] + 1} ${c.length} ${d.item} ${e[0]} ${f()}");
+let s: String = a.item;
+--- settled
+(Block
+  (Class ^Box:0 (TypeParam ^T:9) (Param ^item:11 T:9))
+  (Let ^Alias:1 Box:0)
+  (Let ^a:2 Box:0 (Call new Box:0 1))
+  (Let ^b:3 List (Call list 2))
+  (Let ^c:4 Listed (Call list 3 4))
+  (Let ^d:5 Alias:1 (Call new Box:0 "d"))
+  (Let ^e:6 List (Block (Call list true)))
+  (Let
+    ^f:7
+    (Fn Int (Block (Let ^g:12 Box:0 (Call new Box:0 5)) (Call . g:12 \item))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call + (Call . a:2 \item) 1)
+      " "
+      (Call + (Call [] b:3 0) 1)
+      " "
+      (Call . c:4 \length)
+      " "
+      (Call . d:5 \item)
+      " "
+      (Call [] e:6 0)
+      " "
+      (Call f:7)))
+  (Let ^s:8 String (Call . a:2 \item))
+  #void)
+error 552..558: Cannot assign to String from Int32
+log 2 3 2 d true 5
+
 === a generic class's constructor arguments checked against its type arguments
 // From the type arguments written, or the type wanted, for a call and
 // for an object literal; for a class with a constructor, or with

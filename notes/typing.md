@@ -254,7 +254,16 @@ milestone 4's generics slice; status in [milestone-4.md](history/milestone-4.md)
   it's written (annotations, type arguments, supertypes, bounds, `is`
   and `as`, aliases; for `new`, at the call, "Generic calls", below),
   as many as core or the library declares, which Kotlin misses
-  (2026-11-26). A bare generic class, `Box`, is unknown for now.
+  (2026-11-26). A generic type written without arguments, `List` or
+  `Box`, takes them from a variable's value, as Kotlin does: `let b:
+  Box = new Box(1)` is a `Box<Int32>`, and `let xs: Listed = [1]` a
+  `Listed<Int32>` (the value's type as that supertype). Elsewhere, and
+  where the value isn't one, it's "Expected 1": a `let` with no value,
+  a parameter (with a default too), a field (with an initializer too,
+  as fields are typed from their annotation alone), return types,
+  supertypes, bounds, `is` and `as`, and inside another type (`Box?`),
+  through an alias too (`let A = Box` used as a type). `new Box(1)`,
+  `Box.make()`, and `{ class: Box, … }` name no type.
 - **Type parameters:** `T`, in a function's or class's body, is a type
   of its own, a subtype of its bound only: `AnyValue` if it has none, or
   the type it `extends`. So a `T` is an `AnyValue` and a `T?`, but not an
@@ -312,10 +321,9 @@ milestone 4's generics slice; status in [milestone-4.md](history/milestone-4.md)
   `class StrHolder extends Holder<String>`, `sh.describe(x)`, declared
   in `Holder<T>` as `describe(x: T): String`, takes a `String`. A
   static member sees its class's type parameters as unknown, and a bare
-  member name in the class sees them as written. A bare generic class, `Box`, is still unknown, as
-  are core's generic classes declared in Temper, which are builtin
-  types, whose members are typed from core's signatures ("Builtin
-  types' members", below).
+  member name in the class sees them as written. Core's generic
+  classes declared in Temper are builtin types, whose members are
+  typed from core's signatures ("Builtin types' members", below).
 - **Narrowing:** `x is D` narrows a `T` to `D` where `D` is a subtype of
   `T`'s bound, as for a downcast of the bound.
 - **Run-time checks** of generic types and type parameters' values are
