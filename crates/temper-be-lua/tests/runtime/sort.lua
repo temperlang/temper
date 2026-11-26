@@ -54,6 +54,27 @@ local shapes = {
     random = function(n) local k = {}; for i = 1, n do k[i] = rand(n + 1) end; return k end,
     -- Sorted, then one out of place at the end.
     nearly = function(n) local k = {}; for i = 1, n do k[i] = i end; if n > 1 then k[n] = 0 end; return k end,
+    -- Sorted, then two swapped in the middle.
+    swapped = function(n)
+        local k = {}; for i = 1, n do k[i] = i end
+        local m = math.floor(n / 2)
+        if m > 0 then k[m], k[m + 1] = k[m + 1], k[m] end
+        return k
+    end,
+    -- Sorted, then a few in any order.
+    sorted_tail = function(n)
+        local k = {}; for i = 1, n do k[i] = i end
+        for i = math.max(1, n - 2), n do k[i] = rand(n + 1) end
+        return k
+    end,
+    -- Strictly descending, then one above them all.
+    descending_big = function(n) local k = {}; for i = 1, n do k[i] = n - i end; if n > 0 then k[n] = n end; return k end,
+    -- Strictly descending for two thirds, then any order.
+    descending_rest = function(n)
+        local k = {}; local m = math.floor(2 * n / 3)
+        for i = 1, n do k[i] = i <= m and n - i or rand(n + 1) end
+        return k
+    end,
 }
 local names = {}
 for name in pairs(shapes) do names[#names + 1] = name end
@@ -80,10 +101,40 @@ for _, name in ipairs(names) do
     end
 end
 
--- Sorted input takes one pass.
-compares = 0
-temper.listbuilder_sort(items(shapes.sorted(1000)), compare)
-assert(compares == 999, "sorted input: " .. compares .. " compares")
+-- Sorted and strictly reversed input take one pass.
+for _, name in ipairs({"sorted", "reversed"}) do
+    compares = 0
+    temper.listbuilder_sort(items(shapes[name](1000)), compare)
+    assert(compares == 999, name .. " input: " .. compares .. " compares")
+end
+
+-- Comparisons stay near n log2 n, and nearly sorted input, including a
+-- long strictly descending run, takes a few passes.
+local linear = {nearly = true, swapped = true, sorted_tail = true, descending_big = true}
+for _, name in ipairs(names) do
+    for _, n in ipairs({1000, 3001}) do
+        compares = 0
+        temper.listbuilder_sort(items(shapes[name](n)), compare)
+        local most = n * math.ceil(math.log(n) / math.log(2)) + n
+        if linear[name] then most = 3 * n end
+        assert(compares <= most, name .. " " .. n .. ": " .. compares .. " compares, over " .. most)
+    end
+end
+
+-- Only a comparison's sign matters, not its size.
+for _, scale in ipairs({1, 0.25, 1e6}) do
+    local function difference(a, b) return (a.k - b.k) * scale end
+    for _, name in ipairs(names) do
+        for _, n in ipairs({2, 13, 100, 1000}) do
+            local list = items(shapes[name](n))
+            local want = reference(list)
+            local what = name .. " " .. n .. " by difference * " .. scale
+            same(temper.listed_sorted(list, difference), want, what .. " sorted")
+            temper.listbuilder_sort(list, difference)
+            same(list, want, what)
+        end
+    end
+end
 
 -- A comparison that fails, at each call in turn: the error comes
 -- through as it was raised, and the list is as it was.

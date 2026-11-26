@@ -1131,9 +1131,10 @@ fn host_interop(lua: &str, dir: &Path, logged: &[String], failures: &mut Vec<Str
 }
 
 /// `tests/runtime/sort.lua`, on the runtime alone: `ListBuilder.sort`
-/// and `sorted` match a stable reference sort on sorted, reversed,
-/// duplicate, sawtooth, short, empty, and fuzzed inputs, and a failing
-/// comparison's error comes through with the list left as it was.
+/// and `sorted` match a stable reference sort on sorted, nearly sorted,
+/// reversed, duplicate, sawtooth, short, empty, and fuzzed inputs, within
+/// bounds on comparisons, and a failing comparison's error comes through
+/// with the list left as it was.
 /// Skipped without `lua` (or `LUA`).
 #[test]
 fn runtime_sorts() {

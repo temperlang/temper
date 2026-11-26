@@ -326,7 +326,7 @@ jobs:
           git -C "$RUNNER_TEMP/luajit-src" checkout -q 63c8f1a9
           make -C "$RUNNER_TEMP/luajit-src" -j4 -s PREFIX="$RUNNER_TEMP/luajit"
           make -C "$RUNNER_TEMP/luajit-src" -s install PREFIX="$RUNNER_TEMP/luajit"
-          LUA="$RUNNER_TEMP/luajit/bin/luajit" cargo test --locked -p temper-be-lua --test functional runs
+          LUA="$RUNNER_TEMP/luajit/bin/luajit" cargo test --locked -p temper-be-lua --test functional -- runs runtime_sorts
       # With the Rust runtime's own unit tests, which the workspace
       # (excluding crates/temper-be-rust/runtime/) leaves out.
       - name: Rust

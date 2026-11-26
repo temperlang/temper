@@ -449,9 +449,11 @@ each time round.
 ## Lua: faster sorting
 
 `ListBuilder.sort` and `sorted` use a merge sort of the runtime's own,
-in place of the generated powersort: still stable, about 3 to 12 times as
-fast on Lua 5.4, and up to twice as fast on LuaJIT, with sorted and
-reversed input much faster still. A comparison that fails now leaves
+in place of the generated powersort: still stable, 2 to 12 times as
+fast on Lua 5.4, and on LuaJIT 1 to 2 times as fast on shuffled input
+and up to 5 times on sorted or reversed input. Input already in a few
+long runs sorts about as fast as before on LuaJIT, at times a little
+slower. A comparison that fails now leaves
 the list as it was, instead of partly sorted. The runtime no longer has
 a `temper-core/powersort` module.
 
