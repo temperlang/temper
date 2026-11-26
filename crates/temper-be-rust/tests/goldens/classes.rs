@@ -122,21 +122,19 @@ pub(crate) fn init() -> temper_core::Result<()> {
             let plain = Theme::new("black", "white", None, None);
             let loud = {
                 let spread = plain.clone();
-                Theme::new(
-                    spread.0.fg.clone(),
-                    spread.0.bg.clone(),
-                    Some(20),
-                    Some(true),
-                )
+                Theme(Arc::new(ThemeStruct {
+                    size: 20,
+                    bold: true,
+                    ..(*spread.0).clone()
+                }))
             };
             let dark = {
                 let spread2 = loud.clone();
-                Theme::new(
-                    plain.0.bg.clone(),
-                    plain.0.fg.clone(),
-                    Some(spread2.0.size),
-                    Some(spread2.0.bold),
-                )
+                Theme(Arc::new(ThemeStruct {
+                    fg: plain.0.bg.clone(),
+                    bg: plain.0.fg.clone(),
+                    ..(*spread2.0).clone()
+                }))
             };
             println!("{plain} | {loud} | {dark}");
             let mixed = {
@@ -147,6 +145,20 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 Theme::new(arg2.clone(), arg.clone(), Some(9), Some(arg3))
             };
             println!("{mixed}");
+            let ordered = {
+                let spread4 = picked(plain.clone(), "first");
+                Theme(Arc::new(ThemeStruct {
+                    fg: noted("second"),
+                    bg: noted("third"),
+                    ..(*spread4.0).clone()
+                }))
+            };
+            println!("{ordered}");
+            let wide = {
+                let spread5 = Span::new(2, 5);
+                Span::new(spread5.0.start, 9)
+            };
+            println!("{} {} {}", wide.0.start, wide.0.end, wide.0.length);
             println!(
                 "{}",
                 compared(Arc::new(move |a: Option<Loose>, b: Option<Loose>| {
@@ -647,6 +659,7 @@ pub(crate) fn shape(x: Shape) -> Shape {
     x.clone()
 }
 
+#[derive(Clone)]
 struct ThemeStruct {
     fg: Arc<String>,
     bg: Arc<String>,
@@ -709,6 +722,29 @@ pub(crate) fn noted(s: impl ToArcString) -> Arc<String> {
     println!("{s}");
     s.clone()
 }
+
+struct SpanStruct {
+    start: i32,
+    end: i32,
+    length: i32,
+}
+
+#[derive(Clone)]
+pub(crate) struct Span(Arc<SpanStruct>);
+
+impl Span {
+    pub fn new(start: i32, end: i32) -> Span {
+        let start_ = start;
+        let end_ = end;
+        Span(Arc::new(SpanStruct {
+            start: start_,
+            end: end_,
+            length: end_.wrapping_sub(start_),
+        }))
+    }
+}
+
+temper_core::impl_any_value_trait!(Span, []);
 
 pub(crate) fn compared(
     eq: Arc<dyn Fn(Option<Loose>, Option<Loose>) -> bool + Send + Sync>,

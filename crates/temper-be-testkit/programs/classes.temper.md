@@ -174,12 +174,28 @@ runs first, then the given values, in the order written.
     let noted(s: String): String { console.log(s); s }
     let mixed = { ...picked(dark, "old"), size: 9, fg: noted("red") };
     console.log(mixed.toString());
+    let ordered = { ...picked(plain, "first"), fg: noted("second"), bg: noted("third") };
+    console.log(ordered.toString());
+
+A class whose constructor works out a field can't be copied field by
+field, so a target with its own copy form still calls the constructor:
+
+    class Span(public start: Int, public end: Int) {
+      public let length: Int = end - start;
+    }
+    let wide = { ...new Span(2, 5), end: 9 };
+    console.log("${wide.start} ${wide.end} ${wide.length}");
 
 ```log
 black/white 12 plain | black/white 20 bold | white/black 20 bold
 old
 red
 red/black 9 bold
+first
+second
+third
+second/third 12 plain
+2 9 7
 ```
 
 ## Equality, every way round

@@ -23,6 +23,7 @@ struct Holder;
 struct Version;
 struct Stock;
 struct Theme;
+struct Span;
 struct Sql;
 struct Limited;
 struct Stepper;
@@ -145,6 +146,16 @@ struct Theme : public std::enable_shared_from_this<Theme> {
   temper::core::Str get_bg() const;
   int32_t get_size() const;
   bool get_bold() const;
+};
+
+struct Span : public std::enable_shared_from_this<Span> {
+  int32_t start;
+  int32_t end;
+  int32_t length;
+  static std::shared_ptr<Span> make(int32_t start, int32_t end);
+  int32_t get_start() const;
+  int32_t get_end() const;
+  int32_t get_length() const;
 };
 
 struct Sql : public std::enable_shared_from_this<Sql> {
@@ -542,6 +553,26 @@ static core::Str noted(core::Str const & s) {
   return s;
 }
 
+std::shared_ptr<Span> Span::make(int32_t start, int32_t end) {
+  std::shared_ptr<Span> self = std::make_shared<Span>();
+  self->start = start;
+  self->end = end;
+  self->length = core::Int::sub(self->end, self->start);
+  return self;
+}
+
+int32_t Span::get_start() const {
+  return this->start;
+}
+
+int32_t Span::get_end() const {
+  return this->end;
+}
+
+int32_t Span::get_length() const {
+  return this->length;
+}
+
 static core::Str compared(std::function<bool(std::shared_ptr<Loose>, std::shared_ptr<Loose>)> const & eq) {
   std::shared_ptr<std::vector<int32_t>> ns = core::List::make<int32_t>(0, 1, -1, 2);
   std::shared_ptr<std::vector<core::Str>> out = core::ListBuilder::make<core::Str>();
@@ -727,6 +758,13 @@ void global_init_init() {
     bool arg3 = spread3->bold;
     std::shared_ptr<Theme> mixed = Theme::make(arg2, arg, 9, arg3);
     core::Console::log(temper_globals::console.value, mixed->toString());
+    std::shared_ptr<Theme> spread4 = classes::picked(plain, TEMPER_STR("first"));
+    core::Str value2 = classes::noted(TEMPER_STR("second"));
+    std::shared_ptr<Theme> ordered = Theme::make(value2, classes::noted(TEMPER_STR("third")), spread4->size, spread4->bold);
+    core::Console::log(temper_globals::console.value, ordered->toString());
+    std::shared_ptr<Span> spread5 = Span::make(2, 5);
+    std::shared_ptr<Span> wide = Span::make(spread5->start, 9);
+    core::Console::log(temper_globals::console.value, std::to_string(wide->start) + " " + std::to_string(wide->end) + " " + std::to_string(wide->length));
     core::Console::log(temper_globals::console.value, classes::compared([](std::shared_ptr<Loose> a, std::shared_ptr<Loose> b) -> bool { return a == nullptr ? b == nullptr : b == nullptr ? false : a->eq(b); }));
     core::Console::log(temper_globals::console.value, classes::compared([](std::shared_ptr<Loose> a, std::shared_ptr<Loose> b) -> bool { return !(a == nullptr ? b == nullptr : b == nullptr ? false : a->eq(b)); }));
     core::Console::log(temper_globals::console.value, classes::compared([](std::shared_ptr<Loose> a, std::shared_ptr<Loose> b) -> bool { return b == nullptr ? a == nullptr : a == nullptr ? false : b->eq(a); }));

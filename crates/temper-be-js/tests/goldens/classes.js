@@ -631,6 +631,49 @@ class Theme extends type() {
   }
 }
 
+class Span extends type() {
+  /** @type {number} */
+  #start;
+  /** @type {number} */
+  #end;
+  /** @type {number} */
+  #length;
+
+  /**
+   * @param {{ start: number, end: number }} props
+   * @returns {Span}
+   */
+  static new(props) {
+    return new Span(props.start, props.end);
+  }
+
+  /**
+   * @param {number} start
+   * @param {number} end
+   */
+  constructor(start, end) {
+    super();
+    this.#start = start;
+    this.#end = end;
+    this.#length = (this.#end - this.#start) | 0;
+  }
+
+  /** @returns {number} */
+  get start() {
+    return this.#start;
+  }
+
+  /** @returns {number} */
+  get end() {
+    return this.#end;
+  }
+
+  /** @returns {number} */
+  get length() {
+    return this.#length;
+  }
+}
+
 class Sql extends type() {
   /** @type {string[]} */
   #parts;
@@ -839,6 +882,22 @@ let t$8;
 }
 const mixed = t$8;
 console.log(mixed.toString());
+/** @type {Theme} */
+let t$9;
+{
+  const spread4 = picked(plain, "first");
+  t$9 = new Theme(noted("second"), noted("third"), spread4.size, spread4.bold);
+}
+const ordered = t$9;
+console.log(ordered.toString());
+/** @type {Span} */
+let t$10;
+{
+  const spread5 = new Span(2, 5);
+  t$10 = new Span(spread5.start, 9);
+}
+const wide = t$10;
+console.log(`${wide.start} ${wide.end} ${wide.length}`);
 console.log(compared((a, b) => a == null ? b == null : b == null ? false : a.eq(b)));
 console.log(compared((a, b) => !(a == null ? b == null : b == null ? false : a.eq(b))));
 console.log(compared((a, b) => b == null ? a == null : a == null ? false : b.eq(a)));
@@ -879,7 +938,7 @@ sql.appendRect(new Rect(1, 2));
 console.log(sql.accumulated);
 const seven = 7;
 /** @type {string} */
-let t$9;
+let t$11;
 {
   const accumulator = new Sql();
   {
@@ -890,9 +949,9 @@ let t$9;
     accumulator.appendSafe(" FROM ");
     accumulator.appendRect(new Rect(2, 2));
   }
-  t$9 = accumulator.accumulated;
+  t$11 = accumulator.accumulated;
 }
-console.log(t$9);
+console.log(t$11);
 const stepper = new Stepper(3);
 console.log(`next ${stepper.next(1)}`);
 console.log(`${orFail(true, 4, new IntFailing())} ${orFail(true, "s", new AnyFailing())}`);

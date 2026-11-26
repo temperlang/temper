@@ -399,6 +399,42 @@ C3 @39: the type checked is Int32, not a class or interface
 C3 @42: an operand of identical is Int32, not a class or interface
 C3 @48: shared#4 is another module's
 
+=== spreads' copies (C4)
+tmpl 1 model 1 library spread 0.1.0
+
+module spread#0 {
+  class P#1 {
+    let a#2: Int32;
+    let b#3: Int32;
+    constructor constructor#4(a#5: Int32, b#6?: Int32?): P#1 {
+      let b#7: Int32 = (coalesce(b#6, 3)): Int32;
+      this.a#2 = a#5;
+      this.b#3 = b#7;
+    }
+  }
+
+  fn copies#8(p#9: P#1, q#10: P#1): P#1 {
+    let ok#11: P#1 = new constructor#4(copy(p#9.a#2), (asNullable(copy(p#9.b#3))): Int32?);
+    let held#12: Int32 = copy(p#9.a#2);
+    let renamed#13: P#1 = new constructor#4(copy(p#9.b#3), omitted);
+    let two#14: P#1 = new constructor#4(copy(p#9.a#2), (asNullable(copy(q#10.b#3))): Int32?);
+    let made#15: P#1 = new constructor#4(copy(new constructor#4(1, omitted).a#2), omitted);
+    return ok#11;
+  }
+
+  init {}
+}
+--- problems
+C4 @33: a spread copies b#3 for parameter a
+C4 @41: a spread copies from p#9 and q#10, not one local
+C4 @45: a spread copies from a local, not New
+
+=== reading: a copy that isn't a field read
+tmpl 1 model 1 library e 0.1.0
+module e#0 { fn f#1(n#2: Int32): Int32 { return copy(n#2); } init {} }
+--- error
+2:57: a spread's copy is a field read, as `copy(x.f)`
+
 === reading: this outside a method, without its type
 tmpl 1 model 1 library e 0.1.0
 module e#0 { class C#1 { static fn f#2(): C#1 { return this; } } init {} }

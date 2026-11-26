@@ -686,6 +686,8 @@ constructor parameter, so it goes through the same constructor call:
   `old` once, first, then the given values in the order written, the
   copies among them in the parameters' order, placed as for any object
   literal (temporaries only where the given values aren't in order).
+  The copies passed as they are reach tmpl marked, `copy(spread#1.a)`,
+  for targets with their own copy forms (notes/tmpl/nodes.md, "Spreads").
 
 ## Function types
 

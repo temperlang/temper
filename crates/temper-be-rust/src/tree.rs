@@ -144,7 +144,8 @@ pub enum Expr {
     /// A field of a value: `self.0`, `self.0.w`.
     Field(Box<Expr>, String),
     /// A struct literal, each field with its value, or `None` for the
-    /// shorthand of a local of the field's name: `RectStruct { w, h: 2 }`.
+    /// shorthand of a local of the field's name: `RectStruct { w, h: 2 }`;
+    /// a last field named `..` is a struct update's base, `..old`.
     Struct(String, Vec<(String, Option<Expr>)>),
 }
 
@@ -1060,6 +1061,7 @@ fn flat_made(e: &Expr) -> Option<String> {
                 .iter()
                 .map(|(f, v)| match v {
                     None => Some(f.clone()),
+                    Some(v) if f == ".." => Some(format!("..{}", flat(v)?)),
                     Some(v) => Some(format!("{f}: {}", flat(v)?)),
                 })
                 .collect();
@@ -1193,6 +1195,11 @@ fn broken_made(e: &Expr, indent: usize, col: usize) -> String {
             for (f, v) in fields {
                 match v {
                     None => out.push_str(&format!("{}{f},\n", pad(at))),
+                    // A base takes no comma after it.
+                    Some(v) if f == ".." => {
+                        let text = layout_t(v, at, at + 2, 0);
+                        out.push_str(&format!("{}..{text}\n", pad(at)));
+                    }
                     Some(v) => {
                         let head = format!("{f}: ");
                         let text = layout_t(v, at, at + width(&head), 1);

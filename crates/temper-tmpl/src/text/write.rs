@@ -734,9 +734,16 @@ impl Writer {
                 self.written_type(p, id);
             }
             Node::GetField { field, object } => {
+                let copy = p.nodes.flags(id).contains(Flags::SPREAD_COPY);
+                if copy {
+                    self.out.push_str("copy(");
+                }
                 self.receiver(p, object);
                 self.out.push('.');
                 self.reference(p, field);
+                if copy {
+                    self.out.push(')');
+                }
             }
             Node::GetStatic { target } => self.reference(p, target),
             Node::New { ctor, args, .. } => {

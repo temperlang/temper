@@ -438,6 +438,24 @@ local function noted(s)
   return s
 end
 
+---@class classes.Span
+---@field start integer
+---@field end_ integer
+---@field length integer
+
+---@class classes.Span.type: temper.Type
+---@operator call: classes.Span
+local Span = temper.type("classes.Span")
+
+---@param this classes.Span
+---@param start integer
+---@param end_ integer
+function Span.constructor(this, start, end_)
+  this.start = start
+  this.end_ = end_
+  this.length = temper.int32_sub(this.end_, this.start)
+end
+
 ---@param eq fun(arg0: classes.Loose|temper.Null, arg1: classes.Loose|temper.Null): boolean
 ---@return string
 local function compared(eq)
@@ -694,6 +712,12 @@ local arg2 = noted("red")
 local arg3 = spread3.bold
 local mixed = Theme(arg2, arg, 9, arg3)
 print(mixed:toString())
+local spread4 = picked(plain, "first")
+local ordered = Theme(noted("second"), noted("third"), spread4.size, spread4.bold)
+print(ordered:toString())
+local spread5 = Span(2, 5)
+local wide = Span(spread5.start, 9)
+print(wide.start .. " " .. wide.end_ .. " " .. wide.length)
 print(compared(function(a, b) return temper.is_null(a) and temper.is_null(b) or not temper.is_null(a) and (not temper.is_null(b) and (a --[[@as classes.Loose]]):eq(b --[[@as classes.Loose]])) end))
 print(compared(function(a, b) return not (temper.is_null(a) and temper.is_null(b) or not temper.is_null(a) and (not temper.is_null(b) and (a --[[@as classes.Loose]]):eq(b --[[@as classes.Loose]]))) end))
 print(compared(function(a, b) return temper.is_null(b) and temper.is_null(a) or not temper.is_null(b) and (not temper.is_null(a) and (b --[[@as classes.Loose]]):eq(a --[[@as classes.Loose]])) end))

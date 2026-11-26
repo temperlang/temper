@@ -183,6 +183,14 @@ public static class ClassesGlobal
         bool arg3 = spread3.Bold;
         mixed = new Theme(arg2, arg, 9, arg3);
         console.Log(mixed.ToString());
+        Theme ordered;
+        Theme spread4 = Picked(plain, "first");
+        ordered = new Theme(Noted("second"), Noted("third"), spread4.Size, spread4.Bold);
+        console.Log(ordered.ToString());
+        Span wide;
+        Span spread5 = new Span(2, 5);
+        wide = new Span(spread5.Start, 9);
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{wide.Start} {wide.End} {wide.Length}"));
         console.Log(Compared((Loose? a, Loose? b) => a == null ? b == null : b == null ? false : a.Eq(b)));
         console.Log(Compared((Loose? a, Loose? b) => !(a == null ? b == null : b == null ? false : a.Eq(b))));
         console.Log(Compared((Loose? a, Loose? b) => b == null ? a == null : a == null ? false : b.Eq(a)));

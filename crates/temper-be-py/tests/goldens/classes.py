@@ -368,6 +368,30 @@ def _noted(s: str, /) -> str:
     return s
 
 
+class _Span:
+    __slots__ = ('_start', '_end', '_length')
+    _start: int
+    _end: int
+    _length: int
+
+    def __init__(self, /, start: int, end: int) -> None:
+        self._start = start
+        self._end = end
+        self._length = _int_sub(self._end, self._start)
+
+    @property
+    def start(self, /) -> int:
+        return self._start
+
+    @property
+    def end(self, /) -> int:
+        return self._end
+
+    @property
+    def length(self, /) -> int:
+        return self._length
+
+
 def _compared(eq: _Callable[[_Loose | None, _Loose | None], bool], /) -> str:
     ns = (0, 1, -1, 2)
     out: _MutableSequence[str] = []
@@ -553,6 +577,12 @@ _arg2 = _noted('red')
 _arg3 = _spread3.bold
 _mixed: _Theme = _Theme(_arg2, _arg, 9, _arg3)
 _console.log(_mixed.to_string())
+_spread4 = _picked(_plain, 'first')
+_ordered: _Theme = _Theme(_noted('second'), _noted('third'), _spread4.size, _spread4.bold)
+_console.log(_ordered.to_string())
+_spread5 = _Span(2, 5)
+_wide: _Span = _Span(_spread5.start, 9)
+_console.log(f'{_wide.start} {_wide.end} {_wide.length}')
 _console.log(_compared(lambda a, b: b is None if a is None else False if b is None else a == b))
 _console.log(_compared(lambda a, b: not (b is None if a is None else False if b is None else a == b)))
 _console.log(_compared(lambda a, b: a is None if b is None else False if a is None else b == a))

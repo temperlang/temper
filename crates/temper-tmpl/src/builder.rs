@@ -754,6 +754,11 @@ impl Builder {
         self.raw(Kind::New, result, (ctor.0, ta.0), flags, args)
     }
 
+    /// Marks a `GetField` as a spread's copy ([`Flags::SPREAD_COPY`]).
+    pub fn spread_copy(&mut self, read: NodeId) {
+        self.p.nodes.add_flags(read, Flags::SPREAD_COPY);
+    }
+
     /// The signature a function value of type `ty` has, as a function
     /// type, interning it if new: a function type's own, or a `@fun`
     /// interface's `apply`'s with its type arguments put in.

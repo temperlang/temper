@@ -424,6 +424,36 @@ Not yet checked: that a class implements every abstract member it
 inherits (the frontend reports it), and statics read before their
 initializer.
 
+### Spreads (As built, 2026-11-25)
+
+A spread, `{ ...old, a: e }`, arrives as the frontend lowers it:
+`value { let spread#1 = old; new C(copy(spread#1.a), e) }`. Each
+argument that copies `old`'s property as it is, or made nullable, is a
+`GetField` marked `SPREAD_COPY` (`copy(x.f)` in text); copies held in
+temporaries, where given values come out of order, aren't marked. Rule
+**C4**: a copy reads a field from a local, and as a `New`'s argument
+the field named as its parameter, one `New`'s copies all from one local.
+
+So a target with its own copy form (Rust's `..old`, C#'s `with`,
+Python's `dataclasses.replace`) may pass only the other arguments, where
+`analysis::copyable_classes` says the class allows it. That checks each
+class once, in time linear in its members: its constructor only stores
+each parameter, or its default, in the field of its name, in order (no
+checks, no computed fields); no field is a `var` (a copy form reads the
+fields after the given values run, which then can't change them); no
+getter or setter has a field's name; and no nullable parameter has a
+default other than null (a copied null would become the default).
+
+Rust resugars (2026-11-26): a spread of such a class of the module is a
+struct update, `Theme(Arc::new(ThemeStruct { size: 20,
+..(*spread.0).clone() }))`, whose struct alone derives `Clone`; given
+values run in order, then the base, the temporary already holding
+`old`. In another module, where the struct is private, or with a given
+value needing the constructor's conversion (a nullable one for an
+optional parameter), it calls the constructor. Other backends still
+call it: their generated classes don't have the shape their copy forms
+take.
+
 ### Subset B's next step: nullable types, `orelse`, `bubble()`, and `panic()` (As built, 2026-10-30, Proposed)
 
 Types gain `Nullable(T)` (`T?`, never of a nullable `T`;

@@ -174,6 +174,11 @@ pub struct Translator<'a> {
     constructed: HashSet<DeclId>,
     wrapped: HashSet<DeclId>,
     boxed: HashSet<DeclId>,
+    /// The classes a spread may copy natively (`copyable_classes`), and
+    /// those the module's spreads do, as struct updates, whose structs
+    /// are `Clone` ([`classes`]).
+    copyable: HashSet<DeclId>,
+    updated: HashSet<DeclId>,
     /// Nullable locals bound by `if let Some(x) = &x`, and whether
     /// they're `Copy`, so that `x` there is the value.
     narrowed: HashMap<DeclId, bool>,
@@ -233,6 +238,8 @@ impl<'a> Translator<'a> {
             constructed: HashSet::new(),
             wrapped: HashSet::new(),
             boxed: HashSet::new(),
+            copyable: temper_tmpl::analysis::copyable_classes(p),
+            updated: HashSet::new(),
             narrowed: HashMap::new(),
             subst: HashMap::new(),
             cells: temper_tmpl::analysis::assigned_captures(p),
@@ -630,6 +637,7 @@ impl<'a> Translator<'a> {
         self.constructed.clear();
         self.wrapped.clear();
         self.boxed.clear();
+        self.updated.clear();
         self.plan_accessors(module);
         for &test in &module.tests {
             for d in module_refs(p, test) {
@@ -2210,7 +2218,9 @@ impl<'a> Translator<'a> {
                 ..
             } => {
                 let class = p.decls.get(ctor).owner;
-                let call = if is_external(p, ctor) && library_of(p, ctor) == "core" {
+                let call = if let Some(base) = self.spread_base(ctor, p.nodes.list(args)) {
+                    self.struct_update(ctor, p.nodes.list(args), base)?
+                } else if is_external(p, ctor) && library_of(p, ctor) == "core" {
                     self.connected(ctor, p.nodes.list(args), want)?
                 } else {
                     let args = self.args(ctor, p.nodes.list(args))?;

@@ -28,6 +28,7 @@ use temper_frontend::settle::{Settled, settle};
 use temper_frontend::sources::Sources;
 use temper_frontend::to_tmpl::{NotYet, gaps, to_tmpl};
 use temper_syntax::lex::SourceKind;
+use temper_tmpl::analysis::copyable_classes;
 use temper_tmpl::coroutines::{CoroutineStrategy, lower};
 use temper_tmpl::reach::{Reach, partition, reach, reach_for};
 use temper_tmpl::version::current_as_sentinel;
@@ -630,6 +631,52 @@ fn joins_and_sealed_whens() {
         assert!(written.contains(": E#"), "{written}");
         // `next` held first, then called.
         assert!(written.contains("let subject#"), "{written}");
+    });
+}
+
+/// Which classes a spread may copy with a target's own copy form, one
+/// class for each rule `copyable_classes` checks, as the frontend writes
+/// them: only `Plain`, whose constructor just stores its parameters, a
+/// non-null one with a default and a nullable one defaulting to null
+/// among them; not a computed field, a checked parameter, a getter of a
+/// field's name, a nullable parameter with a default that isn't null, a
+/// `var` field, or parameters stored in fields of other names. And a
+/// spread's copies passed as they are, or made nullable, are marked; those
+/// held first, as values same out of order are, aren't.
+#[test]
+fn copyable_classes_and_spread_copies() {
+    with_stack(|| {
+        let source = "
+    class Plain(public a: Int, public b: Int = 3, public c: Int? = null) {}
+    class Computed(public a: Int) { public let twice: Int = a * 2; }
+    class Checked {
+      public a: Int;
+      public constructor(a: Int) { this.a = if (a < 0) { 0 } else { a }; }
+    }
+    class Custom(public a: Int) { public get a(): Int { 5 } }
+    class Swapping(public a: Int? = 5) {}
+    class Mutable(public var a: Int) {}
+    class Swapped {
+      public a: Int;
+      public b: Int;
+      public constructor(a: Int, b: Int) { this.a = b; this.b = a; }
+    }
+    let p: Plain = { a: 1 };
+    let same(n: Int): Int { n }
+    let q = { ...p, a: 2 };
+    let r = { ...p, c: same(1), a: same(2) };
+    console.log(\"${q.b} ${r.b}\");
+";
+        let program = translate_source("copyable", source);
+        let mut names: Vec<&str> = (copyable_classes(&program).into_iter())
+            .map(|d| program.name(d))
+            .collect();
+        names.sort();
+        assert_eq!(names, ["Plain"]);
+        let written = text::write(&program);
+        let marked = "(2, (asNullable(copy(spread#45.b#9))): Int32?, copy(spread#45.c#10))";
+        assert!(written.contains(marked), "{written}");
+        assert!(written.contains("= spread#46.b#9;"), "{written}");
     });
 }
 

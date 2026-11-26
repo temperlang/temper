@@ -150,6 +150,12 @@ public final class ClassesGlobal {
         boolean arg3 = spread3.bold;
         Theme mixed = new Theme(arg2, arg, 9, arg3);
         console.log(mixed.toString());
+        Theme spread4 = picked(plain, "first");
+        Theme ordered = new Theme(noted("second"), noted("third"), spread4.size, spread4.bold);
+        console.log(ordered.toString());
+        Span spread5 = new Span(2, 5);
+        Span wide = new Span(spread5.start, 9);
+        console.log(wide.start + " " + wide.end + " " + wide.length);
         console.log(compared((a, b) -> a == null ? b == null : b == null ? false : a.eq(b)));
         console.log(compared((a, b) -> !(a == null ? b == null : b == null ? false : a.eq(b))));
         console.log(compared((a, b) -> b == null ? a == null : a == null ? false : b.eq(a)));

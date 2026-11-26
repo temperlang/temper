@@ -17,6 +17,11 @@ impl Flags {
     pub const MAY_BUBBLE: Flags = Flags(1);
     /// The span points at what caused the node, not at its own source.
     pub const DERIVED: Flags = Flags(2);
+    /// A spread's copy, `copy(x.f)` in text: a `GetField` reading, from a
+    /// local, the field named as the constructor parameter it's passed to
+    /// (rule C4), which a target's own copy form may leave out
+    /// (notes/tmpl/nodes.md, "Spreads").
+    pub const SPREAD_COPY: Flags = Flags(4);
 
     pub fn contains(self, other: Flags) -> bool {
         self.0 & other.0 == other.0

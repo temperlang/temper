@@ -184,6 +184,7 @@ impl Settle {
             let key = self.lib.add_value(Value::Symbol(name), span, call);
             let dot = self.builtin_name(dot, span, call);
             let read = (self.lib).add(NodeKind::Call, span, 0, &[dot, used, key], call);
+            self.typing.spread_copies.insert(read);
             args.extend([key, read]);
         }
         args.extend(given.flatten());
