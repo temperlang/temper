@@ -302,6 +302,12 @@ only for `run` and `test` on the interpreter and for backends.
   `@connected` function or class outside the allowed std modules, a
   library's own included; native jobs (requests are queued as such,
   and never run), and `async` blocks.
+- Limits: steps, where each byte a call makes (a string's text, a
+  list's or a builder's items, by their size) takes a step too, so a
+  budget bounds memory as well as time (`compile_time::bytes`); and
+  call depth. Each content-tag use and module gets its own budget; each
+  config one budget in all (`CONFIG_FUEL`), and what's left when it's
+  spent doesn't run. Configs can't import anything yet.
 
 A new connected function or std module is refused until it's added
 on purpose; `compile_time_allowlist` in `tests/settle.rs` prints the

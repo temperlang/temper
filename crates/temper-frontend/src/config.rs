@@ -19,15 +19,21 @@
 //!   A string or the like under a class's key is a problem.
 //! - Anything else is an ordinary value, which nothing reads.
 //!
+//! A config runs with [`CONFIG_FUEL`] steps in all, where making a byte
+//! takes a step too, which bounds its time and memory; what's left when
+//! they're spent doesn't run, which is a problem. A config can't import
+//! anything yet: each `import(…)` is a problem. Problems quote values
+//! with control characters escaped ([`Problem::new`]), and a value with
+//! a problem isn't kept.
+//!
 //! This module never names a backend. Exports keyed to a backend this
 //! build lacks ([`Classes::elsewhere`]) are dropped before settling, as
-//! their classes aren't here, and so are the config's own `import(…)`
-//! statements, which name its library's modules, not loaded here.
+//! their classes aren't here.
 
 use crate::core::{class_parts, let_parts};
 use crate::interp::Val;
 use crate::interp::compile_time::{Session, class_node, field};
-use crate::library::{FileId, Level, Library};
+use crate::library::{FileId, Level, Library, Message};
 use crate::scope::SymbolId;
 use crate::settle::{Settled, settle};
 use temper_syntax::ast::{Builtin, Value};
@@ -41,6 +47,30 @@ pub struct Problem {
     pub span: Span,
     pub message: String,
 }
+
+impl Problem {
+    /// A problem, its message's control characters escaped, as `\n` or
+    /// `\u{1b}`, as it may quote a config's values, which shouldn't reach
+    /// a terminal or an editor as they are.
+    pub fn new(span: Span, message: &str) -> Problem {
+        let mut escaped = String::with_capacity(message.len());
+        for c in message.chars() {
+            match c.is_control() {
+                true => escaped.extend(c.escape_debug()),
+                false => escaped.push(c),
+            }
+        }
+        Problem {
+            span,
+            message: escaped,
+        }
+    }
+}
+
+/// The steps each config may take in all, as the compile-time interpreter
+/// counts them, a step for each byte made among them: far more than a
+/// config needs, and little enough that a runaway one costs a moment.
+pub const CONFIG_FUEL: u64 = 1_000_000;
 
 /// The config classes in a build's scope: those its backends give, and
 /// the keys of backends that configs may set but this build doesn't have
@@ -86,9 +116,46 @@ impl Place {
     }
 }
 
+#[cfg(test)]
+thread_local! {
+    static RUNS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// The configs last settled, with the classes they had, and what they
+/// said.
+type Settling = (Vec<String>, Vec<&'static str>, Vec<&'static str>, Vec<Said>);
+
+thread_local! {
+    static LAST: std::cell::RefCell<Option<Settling>> = const { std::cell::RefCell::new(None) };
+}
+
 /// Settles configs' texts, in one library, giving what each says, in
-/// order, with spans in its text.
+/// order, with spans in its text. What they say depends only on their
+/// texts and the classes, so settling the same again, as `temper test`
+/// does for each backend and the language server for each analysis,
+/// gives what they said last time without running them again.
 pub fn settle_configs(texts: &[&str], classes: &Classes) -> Vec<Said> {
+    let sources: Vec<&str> = classes.types.iter().map(|t| t.source).collect();
+    let last = LAST.with_borrow(|last| match last {
+        Some((t, c, e, said)) if *t == texts && *c == sources && *e == classes.elsewhere => {
+            Some(said.clone())
+        }
+        _ => None,
+    });
+    if let Some(said) = last {
+        return said;
+    }
+    let said = settle_anew(texts, classes);
+    let texts = texts.iter().map(|t| t.to_string()).collect();
+    let settling = (texts, sources, classes.elsewhere.clone(), said.clone());
+    LAST.set(Some(settling));
+    said
+}
+
+/// Settles configs' texts, as [`settle_configs`] does, running them.
+fn settle_anew(texts: &[&str], classes: &Classes) -> Vec<Said> {
+    #[cfg(test)]
+    RUNS.with(|runs| runs.set(runs.get() + 1));
     let mut lib = Library::new();
     let names: Vec<&str> = classes.types.iter().map(|t| t.class).collect();
     let prelude = (!names.is_empty()).then(|| {
@@ -153,28 +220,48 @@ pub fn settle_configs(texts: &[&str], classes: &Classes) -> Vec<Said> {
             debug_assert!(false, "a config class has an error: {}", d.message.text());
             continue;
         };
-        let message = d.message.text();
-        said[i].problems.push(Problem { span, message });
+        said[i].problems.push(Problem::new(span, &d.message.text()));
     }
     // Code with an error, which says what's wrong, isn't read.
     let has_error = |node: NodeId| {
         let span = s.library.tree.span(node);
         errors().any(|d| span.start <= d.span.start && d.span.end <= span.end)
     };
-    let (session, failed) = Session::new_each(&s, crate::interp::FUEL);
+    let (session, failed) = Session::new_each(&s, CONFIG_FUEL);
     let reader = Reader {
         s: &s,
         classes,
         prelude,
     };
+    let mut out_of_steps = vec![false; texts.len()];
     for (statement, why) in failed {
-        if let (false, Some((i, span))) = (
-            has_error(statement),
-            in_config(s.library.tree.span(statement)),
-        ) {
-            let message = format!("Running this config failed: {why}");
-            said[i].problems.push(Problem { span, message });
-        }
+        let Some((i, span)) = in_config(s.library.tree.span(statement)) else {
+            continue;
+        };
+        let message = match why {
+            // Failing in code with an error, or at one, which is said
+            // already.
+            Some(why)
+                if has_error(statement)
+                    || errors().any(|d| why == format!("Failed: {}", d.message.text())) =>
+            {
+                continue;
+            }
+            Some(why) => format!("Running this config failed: {why}"),
+            // Of the statements left unrun, the config's own first, not
+            // a constant, as a code block's ending `;`, which needs no run.
+            None if span == Span::default()
+                || s.library.tree.kind(statement) == NodeKind::Value
+                || out_of_steps[i] =>
+            {
+                continue;
+            }
+            None => {
+                out_of_steps[i] = true;
+                "Not run, nor what follows, as this config ran out of steps".to_string()
+            }
+        };
+        said[i].problems.push(Problem::new(span, &message));
     }
     for (i, (file, places)) in configs.iter().enumerate() {
         let Some(m) = s.modules.iter().find(|m| m.id == module_of(*file)) else {
@@ -220,7 +307,7 @@ pub fn settle_configs(texts: &[&str], classes: &Classes) -> Vec<Said> {
     said
 }
 
-/// Drops a config's top-level `import(…)` statements, and its exports
+/// Makes each `import(…)` in a config an error, and drops its exports
 /// keyed to a backend `elsewhere`; gives the places of its other exports.
 fn prepare(lib: &mut Library, file: FileId, elsewhere: &[&str]) -> Vec<Place> {
     let root = lib.files[file.0 as usize].root;
@@ -228,6 +315,25 @@ fn prepare(lib: &mut Library, file: FileId, elsewhere: &[&str]) -> Vec<Place> {
     let named = |lib: &Library, id: NodeId, text: &str| {
         lib.name(id).is_some_and(|n| lib.names.get(n) == text)
     };
+    let mut imports = Vec::new();
+    let mut nodes = vec![root];
+    while let Some(node) = nodes.pop() {
+        let children = lib.tree.children(node);
+        match children {
+            [callee, ..]
+                if lib.tree.kind(node) == NodeKind::Call && named(lib, *callee, "import") =>
+            {
+                imports.push(node)
+            }
+            _ => nodes.extend_from_slice(children),
+        }
+    }
+    for import in imports {
+        lib.error(
+            import,
+            Message::Unsupported("imports in config files".into()),
+        );
+    }
     let in_file = |span: Span| Span {
         start: span.start - base,
         end: span.end - base,
@@ -238,9 +344,6 @@ fn prepare(lib: &mut Library, file: FileId, elsewhere: &[&str]) -> Vec<Place> {
     for statement in statements {
         let children = lib.tree.children(statement).to_vec();
         let drop = match children[..] {
-            [callee, _] if lib.tree.kind(statement) == NodeKind::Call => {
-                named(lib, callee, "import")
-            }
             // `@export` applied to a declaration: `(Call @ export (Decl …))`.
             [at, export, decl]
                 if lib.tree.kind(statement) == NodeKind::Call
@@ -339,7 +442,7 @@ impl Reader<'_> {
             prelude,
         } = *self;
         let mut problem =
-            |span: Span, message: String| said.problems.push(Problem { span, message });
+            |span: Span, message: String| said.problems.push(Problem::new(span, &message));
         let due = classes.types.iter().find(|t| t.key == key);
         let is_for = |t: &ConfigType| {
             let (key, class) = (t.key, t.class);
@@ -401,13 +504,16 @@ impl Reader<'_> {
                 said.configs.push((key.to_string(), kept));
             }
             (Some(Val::Str(text)), _) => {
-                if let Some(message) = string_problem(key, text) {
+                let problems: Vec<String> = (string_problem(key, text)
+                    .into_iter()
+                    .chain(due.map(|t| is_for(t))))
+                .collect();
+                if problems.is_empty() {
+                    said.exports.push((key.to_string(), text.to_string()));
+                }
+                for message in problems {
                     problem(place.key, message);
                 }
-                if let Some(t) = due {
-                    problem(place.key, is_for(t));
-                }
-                said.exports.push((key.to_string(), text.to_string()));
             }
             (Some(_), None) => {
                 if let Some(t) = due {
@@ -421,14 +527,20 @@ impl Reader<'_> {
 /// What's wrong with a string the config exports, if anything. Package
 /// files take them all as metadata, and a library's version goes into
 /// each using library's files too: a version is SemVer, as
-/// [`temper_tmpl::version::Version::parse`] takes it, and text holds no
-/// control characters but tabs and line breaks, which no package file
-/// needs and some (XML's) can't hold.
+/// [`temper_tmpl::version::Version::parse`] takes it; a name, which
+/// names directories and packages, is a dashed identifier, as
+/// [`crate::project::dashed`] takes it; and text holds no control
+/// characters but tabs and line breaks, which no package file needs and
+/// some (XML's) can't hold.
 fn string_problem(key: &str, s: &str) -> Option<String> {
     if key == "version" && temper_tmpl::version::Version::parse(s).is_none() {
-        let s = s.escape_debug();
         return Some(format!(
             "`version` is a version, as `1.2.3` or `1.2.3-beta.1`, not `{s}`"
+        ));
+    }
+    if key == "name" && crate::project::dashed(s).is_none() {
+        return Some(format!(
+            "`name` is a dashed identifier, as `my-lib`, not `{s}`"
         ));
     }
     let control = s
@@ -693,10 +805,11 @@ mod tests {
         assert_eq!(configs, [("toy".to_string(), toy)]);
     }
 
-    /// A version is SemVer, as package files take it, and metadata holds
-    /// no control characters but tabs and line breaks: both go into
+    /// A version is SemVer, as package files take it, a name is a dashed
+    /// identifier, as directories and packages take it, and metadata
+    /// holds no control characters but tabs and line breaks: all go into
     /// package files' markup, and a library's version into those of each
-    /// library using it.
+    /// library using it. A value with a problem isn't kept.
     #[test]
     fn versions_and_metadata_text() {
         let text = "    export let version = \"1.2.3-beta.1\";
@@ -705,36 +818,55 @@ mod tests {
     export let version = \"1.0\";
     export let version = \"\";
     export let authors = \"A\\u{1}B\";
-    export let license = \"MIT\\u{0}\";
+    export var license = \"MIT\";
+    license = \"MIT\\u{0}\";
+    export let name = \"${\"..\"}/pwned\";
+    export let name = \"a b\\n\";
+    export let name = \"my-lib_2\";
 ";
-        let (_, problems) = said(text);
+        let said = settle_configs(&[text], &both()).remove(0);
         assert_eq!(
-            problems,
+            problems_in(text, &said),
             [
                 "version: `version` is a version, as `1.2.3` or `1.2.3-beta.1`, not \
-                 `0.1.0\\\"<x>\\'\\n`",
+                 `0.1.0\"<x>'\\n`",
                 "version: `version` is a version, as `1.2.3` or `1.2.3-beta.1`, not `1.0`",
                 "version: `version` is a version, as `1.2.3` or `1.2.3-beta.1`, not ``",
                 "authors: `authors` holds a control character, U+0001; only tabs and line \
                  breaks may be in config text",
                 "license: `license` holds a control character, U+0000; only tabs and line \
                  breaks may be in config text",
+                "name: `name` is a dashed identifier, as `my-lib`, not `../pwned`",
+                "name: `name` is a dashed identifier, as `my-lib`, not `a b\\n`",
             ]
         );
+        let kept: Vec<&str> = said.exports.iter().map(|(k, _)| k.as_str()).collect();
+        assert_eq!(kept, ["version", "description", "name"]);
     }
 
-    /// Code that fails when run is a problem where it is, unless settling
-    /// found why; the config's own imports aren't loaded, so they're left
-    /// out.
+    /// Problems quote values with their control characters escaped, so
+    /// none reaches a terminal or an editor as it is.
     #[test]
-    fn failures_when_run() {
-        let text = "    import(\"./elsewhere\");
-    export let name = panic();
-    export let license = \"MIT\";
-    export let toy = { class: ToyConfg };
+    fn problems_escape_control_characters() {
+        let text = "    export let toy: ToyConfig = { name: \"a\\u{1b}]0;t\\u{7}\\u{1b}[31m\" };
+    export let version = \"1\\u{1b}[2J\";
 ";
-        let said = settle_configs(&[text], &both()).remove(0);
-        let problems: Vec<String> = (said.problems.iter())
+        let (configs, problems) = said(text);
+        assert_eq!(
+            problems,
+            [
+                "\"a\\u{1b}]0;t\\u{7}\\u{1b}[31m\": ToyConfig's `name` is a word, as `toy`, \
+                 not `a\\u{1b}]0;t\\u{7}\\u{1b}[31m`",
+                "version: `version` is a version, as `1.2.3` or `1.2.3-beta.1`, not \
+                 `1\\u{1b}[2J`",
+            ]
+        );
+        assert_eq!(configs, [("toy".to_string(), vec![])]);
+    }
+
+    /// Each problem as the text it's at and its message.
+    fn problems_in(text: &str, said: &Said) -> Vec<String> {
+        (said.problems.iter())
             .map(|p| {
                 format!(
                     "{}: {}",
@@ -742,15 +874,140 @@ mod tests {
                     p.message
                 )
             })
-            .collect();
+            .collect()
+    }
+
+    /// Code that fails when run is a problem where it is, unless settling
+    /// found why, as for an error in a function that several statements
+    /// call, which is said once, where it is; and code that fails for
+    /// want of a value that failed isn't one again.
+    #[test]
+    fn failures_when_run() {
+        let text = "    let base(): String { undefinedThing }
+    export let name = panic();
+    export let license = \"MIT\";
+    export let toy = { class: ToyConfg };
+    export let description = base();
+    export let homepage = base();
+    let lost = panic();
+    export let authors = lost;
+    export let repository = \"${lost}\";
+";
+        let said = settle_configs(&[text], &both()).remove(0);
         assert_eq!(
-            problems,
+            problems_in(text, &said),
             [
+                "undefinedThing: undefinedThing has not been declared",
                 "export let name = panic(): Running this config failed: Panicked: panic()",
                 "ToyConfg: ToyConfg has not been declared",
+                "let lost = panic(): Running this config failed: Panicked: panic()",
             ]
         );
         assert_eq!(said.exports, [("license".to_string(), "MIT".to_string())]);
+    }
+
+    /// A config's imports, of whatever and wherever, are problems where
+    /// they are, not loaded, so a config can't read another's values;
+    /// the rest of the config is read.
+    #[test]
+    fn imports_are_problems() {
+        let a = "    export let secret = \"s3cret\";\n";
+        let b = "    import(\"./elsewhere\");
+    let { secret } = import(\"../config0\");
+    let f(): Void { import(\"std/net\"); }
+    export let name = \"b\";
+    export let description = secret;
+";
+        let said = settle_configs(&[a, b], &both());
+        assert_eq!(said[0].problems, []);
+        let unsupported = "Not supported yet: imports in config files";
+        assert_eq!(
+            problems_in(b, &said[1]),
+            [
+                format!("import(\"./elsewhere\"): {unsupported}"),
+                format!("import(\"../config0\"): {unsupported}"),
+                format!("import(\"std/net\"): {unsupported}"),
+            ]
+        );
+        assert_eq!(said[1].exports, [("name".to_string(), "b".to_string())]);
+    }
+
+    /// A config's statements share one step budget, so a runaway one
+    /// fails, and those after it are said once not to have run; another
+    /// config has its own budget.
+    #[test]
+    fn one_budget_per_config() {
+        let spin = "    let spin(): String {
+      var i = 0;
+      while (i >= 0) { i += 1; }
+      \"\"
+    }
+    export let name = \"spun\";
+    export let description = spin();
+    export let license = \"MIT\";
+    export let homepage = \"h\";
+";
+        let other = "    export let name = \"other\";\n";
+        let said = settle_configs(&[spin, other], &both());
+        assert_eq!(
+            problems_in(spin, &said[0]),
+            [
+                "export let description = spin(): Running this config failed: Panicked: ran \
+                 out of steps",
+                "export let license = \"MIT\": Not run, nor what follows, as this config ran \
+                 out of steps",
+            ]
+        );
+        assert_eq!(said[0].exports, [("name".to_string(), "spun".to_string())]);
+        assert_eq!(said[1].exports, [("name".to_string(), "other".to_string())]);
+    }
+
+    /// Compile-time code takes a step for each byte it makes, so making
+    /// too much, by doubling a string or a list, joining, or growing a
+    /// bit vector, fails as running out of steps does, before memory
+    /// runs out.
+    #[test]
+    fn data_takes_steps() {
+        let texts = [
+            "    var s = \"x\";
+    for (var i = 0; i < 40; i += 1) { s = \"${s}${s}\"; }
+",
+            "    let b = new ListBuilder<String>();
+    b.add(\"x\");
+    for (var i = 0; i < 40; i += 1) { b.addAll(b.toList()); }
+",
+            "    let b = new StringBuilder();
+    for (var i = 0; i < 40; i += 1) { b.append(b.toString()); b.append(\"x\"); }
+",
+            "    var s = \"x\";
+    for (var i = 0; i < 12; i += 1) { s = \"${s}${s}\"; }
+    let parts = new ListBuilder<String>();
+    for (var i = 0; i < 1000; i += 1) { parts.add(s); }
+    export let description = parts.join(\"\", fn (p: String): String { p });
+",
+            "    let bits = new DenseBitVector(2000000000);
+    bits.set(2000000000, true);
+",
+        ];
+        for (text, said) in texts.iter().zip(settle_configs(&texts, &both())) {
+            let problems = problems_in(text, &said);
+            assert_eq!(problems.len(), 1, "{problems:?}");
+            assert!(problems[0].contains("ran out of steps"), "{problems:?}");
+        }
+    }
+
+    /// What configs said is kept, so settling the same configs again, as
+    /// `temper test` does for each backend, and the language server for
+    /// each analysis, doesn't run them again.
+    #[test]
+    fn settling_again_reuses() {
+        let text = "    export let name = \"again\";\n";
+        let before = RUNS.with(|runs| runs.get());
+        let first = settle_configs(&[text], &both());
+        assert_eq!(settle_configs(&[text], &both()), first);
+        assert_eq!(RUNS.with(|runs| runs.get()), before + 1);
+        settle_configs(&[text, ""], &both());
+        assert_eq!(RUNS.with(|runs| runs.get()), before + 2);
     }
 
     /// A build without a backend drops what configs set for it, whatever

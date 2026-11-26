@@ -738,19 +738,34 @@ impl Interp<'_> {
     }
 
     fn apply(&mut self, s: &Settled, function: Val, args: Vec<Val>) -> R {
-        if self.compile_time {
-            match &function {
-                Val::Builtin(f) if !compile_time::builtin_allowed(*f) => {
-                    return Err(compile_time::refused(Builtin::Function(*f).name()));
-                }
-                Val::Connected(decl) => {
-                    let name = core::let_parts(&s.library.tree, *decl).0;
-                    let name = s.library.name(name).map_or("?", |n| s.library.names.get(n));
-                    return Err(compile_time::refused(name));
-                }
-                _ => {}
-            }
+        if !self.compile_time {
+            return self.apply_now(s, function, args);
         }
+        match &function {
+            Val::Builtin(f) if !compile_time::builtin_allowed(*f) => {
+                return Err(compile_time::refused(Builtin::Function(*f).name()));
+            }
+            Val::Connected(decl) => {
+                let name = core::let_parts(&s.library.tree, *decl).0;
+                let name = s.library.name(name).map_or("?", |n| s.library.names.get(n));
+                return Err(compile_time::refused(name));
+            }
+            _ => {}
+        }
+        // What a call makes takes steps ([`compile_time::bytes`]): its
+        // result, and how much a method's builder grew.
+        let this = match &function {
+            Val::Method(method) => method.0.clone(),
+            _ => Val::Void,
+        };
+        let before = compile_time::bytes(&this);
+        let result = self.apply_now(s, function, args)?;
+        let grown = compile_time::bytes(&this).saturating_sub(before);
+        self.charge(compile_time::bytes(&result) + grown)?;
+        Ok(result)
+    }
+
+    fn apply_now(&mut self, s: &Settled, function: Val, args: Vec<Val>) -> R {
         match function {
             Val::Fn(ref closure) => self.call(s, closure.node, closure.captures.clone(), args),
             Val::Builtin(Function::New) => match args.split_first() {
@@ -764,14 +779,12 @@ impl Interp<'_> {
                 Some((Val::BuiltinType(t), [])) if TYPES[*t as usize] == "Deque" => {
                     Ok(Val::Deque(Rc::new(RefCell::new(VecDeque::new()))))
                 }
-                Some((Val::BuiltinType(t), [Val::Int(capacity)]))
+                // The capacity is a hint, as bits past the end are false;
+                // they're made as they're set.
+                Some((Val::BuiltinType(t), [Val::Int(_)]))
                     if TYPES[*t as usize] == "DenseBitVector" =>
                 {
-                    Ok(Val::Bits(Rc::new(RefCell::new(vec![
-                        false;
-                        (*capacity).max(0)
-                            as usize
-                    ]))))
+                    Ok(Val::Bits(Rc::default()))
                 }
                 Some((Val::BuiltinType(t), [Val::List(pairs)])) if TYPES[*t as usize] == "Map" => {
                     Ok(Val::Map(Rc::new(maps::Entries::from_pairs(pairs)?)))
@@ -1058,6 +1071,10 @@ impl Interp<'_> {
                     )));
                 };
                 if i >= bits.len() && *value {
+                    // Steps first, as an index, not what's given, sizes it.
+                    if self.compile_time {
+                        self.afford(i + 1 - bits.len())?;
+                    }
                     bits.resize(i + 1, false);
                 }
                 if let Some(bit) = bits.get_mut(i) {

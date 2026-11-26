@@ -950,6 +950,7 @@ fn hostile_config_names_are_errors() {
     export let py: PyConfig = { name: \"../../escape\" };
     export let rust: RustConfig = { name: \"..\" };
     export let csharp: CSharpConfig = { rootNamespace: \"A</RootNamespace><Import Project=x/>\" };
+    export let name = \"${\"..\"}/\\u{1b}[31mescape\";
 ";
     let files = [
         ("config.temper.md", config),
@@ -971,6 +972,8 @@ fn hostile_config_names_are_errors() {
             "6:43: error: RustConfig's `name` is a crate's name, as `geometry-rs`, not `..`",
             "7:56: error: CSharpConfig's `rootNamespace` is a C# namespace, as \
              `Example.Geometry`, not `A</RootNamespace><Import Project=x/>`",
+            "8:16: error: `name` is a dashed identifier, as `my-lib`, not \
+             `../\\u{1b}[31mescape`",
         ];
         let before = |d: &Path| {
             let mut names: Vec<_> = (fs::read_dir(d).unwrap().flatten())
@@ -988,6 +991,7 @@ fn hostile_config_names_are_errors() {
                 let line = format!("{path}:{line}\n");
                 assert!(err.contains(&line), "{command}: {line}{err}");
             }
+            assert!(!err.contains('\u{1b}'), "{command}: {err:?}");
             let mut now = before(here);
             now.retain(|n| n != "temper.out");
             assert_eq!(now, in_dir, "{command}");
@@ -1026,7 +1030,7 @@ fn hostile_versions_and_metadata_are_errors() {
         let expected = [
             format!(
                 "{path}:2:16: error: `version` is a version, as `1.2.3` or `1.2.3-beta.1`, \
-                 not `0.1.0\\\"<x>\\'\\n`\n"
+                 not `0.1.0\"<x>'\\n`\n"
             ),
             format!(
                 "{path}:4:16: error: `authors` holds a control character, U+0001; only tabs \
@@ -1867,7 +1871,8 @@ fn init_writes_kotlins_skeleton() {
             real.display()
         )
     );
-    // As Kotlin's `temper init -o my-Proj` writes them (2026-11-09).
+    // As Kotlin's `temper init -o my-Proj` writes them (2026-11-09), but
+    // for the line on modules, as configs can't import yet.
     let config = "# My Proj\n\
                   \n\
                   This file is used for library configuration.\n\
@@ -1876,9 +1881,8 @@ fn init_writes_kotlins_skeleton() {
                   \n\
                   \x20   export let name = \"my-proj\";\n\
                   \n\
-                  By default, the current directory is imported as a module. It can import\n\
-                  other module directories. See Temper documentation for additional config\n\
-                  options.\n";
+                  Every module under this directory is part of the library. See Temper\n\
+                  documentation for additional config options.\n";
     let module = "# Implementation for My Proj\n\
                   \n\
                   Library discussion goes here.\n\

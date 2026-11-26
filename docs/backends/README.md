@@ -65,8 +65,11 @@ Each setting is unset by default. A config is ordinary Temper, which
 `temper` type-checks and runs, so values may be computed; a setting the
 class doesn't have or a value of another type is an ordinary error,
 and a class set twice, or under another backend's name, is a config
-error. A build of `temper` without some backend leaves out that
-backend's config, unchecked.
+error. A config can't import anything yet, and it runs with a small
+budget of steps, where each byte it makes takes a step too, so a
+runaway config fails quickly; what's left when the budget runs out
+doesn't run, which is an error too. A build of `temper` without some
+backend leaves out that backend's config, unchecked.
 
 Each backend checks the forms of its own settings. Names are spelled
 as each language's tools allow, ASCII only: C#

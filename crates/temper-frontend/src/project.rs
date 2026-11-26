@@ -225,7 +225,7 @@ pub fn settle_configs<'a>(
         }
         for (i, message) in found {
             let span = configs[i].span_for(t.key);
-            let problem = crate::config::Problem { span, message };
+            let problem = crate::config::Problem::new(span, &message);
             configs[i].problems.push(problem);
         }
     }
@@ -302,7 +302,7 @@ pub fn dashed_from(text: &str) -> Option<String> {
 /// A name, if it's a dashed identifier as Kotlin's `DashedIdentifier`
 /// allows: ASCII letters, digits, and `-` or `_` between them, starting
 /// with a letter.
-fn dashed(name: &str) -> Option<String> {
+pub(crate) fn dashed(name: &str) -> Option<String> {
     let name = name.to_ascii_lowercase();
     let ok = name.starts_with(|c: char| c.is_ascii_lowercase())
         && !name.ends_with(['-', '_'])

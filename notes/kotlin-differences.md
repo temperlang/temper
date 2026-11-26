@@ -1318,8 +1318,9 @@ Other differences we won't copy:
   Configs are settled and run as Temper, as Kotlin's are, so values may
   be computed, but all of a build's at once, with the classes in one
   shared module that each config imports unseen, where Kotlin plants
-  them in each config module; a config's own `import(…)`s aren't
-  loaded for this. The object takes its class from the declared type
+  them in each config module; a config's own `import(…)`s are errors
+  for now (Kotlin's include modules, and tempest includes every module
+  anyway), and a `name` that isn't a dashed identifier is an error. The object takes its class from the declared type
   (`export let java: JavaConfig = { … }`), as Kotlin's target typing
   does, or names it (`class:`); mistakes are ordinary type errors. `dependencies` lists packages for host code, as Kotlin's,
   in the same spellings, and malformed ones are errors where Kotlin

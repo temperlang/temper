@@ -278,8 +278,18 @@ each on its own, with the compile-time interpreter, and its exports are
 read: strings are metadata, objects of config classes are each
 backend's settings, which the backend checks
 ([`ConfigType::validate`](../../../crates/temper-tmpl/src/config.rs)).
-A config's own `import(…)` statements, and exports for backends this
-build lacks, are left out, as their modules and classes aren't loaded.
+A value with a problem isn't kept, and a `name` is a dashed identifier.
+Each config has one budget of steps in all
+([`CONFIG_FUEL`](../../../crates/temper-frontend/src/config.rs), a
+million), where making a byte takes a step too, so it bounds memory as
+well as time; once spent, the statements left don't run, which is one
+problem. Every `import(…)` in a config is a problem, not loaded, until
+the improved-config RFC settles what configs may import; std can't be
+reached, and what a config logs is dropped. Exports for backends this
+build lacks are left out, as their classes aren't loaded. What configs
+say depends only on their texts and the classes, so settling the same
+configs again (`temper test` for each backend, the language server for
+each analysis) reuses the last result.
 The name is the `name` export, or else the first line as a slug, or
 else the root's path, or else `unnamed`, as Kotlin's `libraryNameFor`
 decides; two libraries of one name stop the command
@@ -290,12 +300,12 @@ compiler once did, with a checker of its own; or inject the classes'
 declarations into each config, as Kotlin does.
 
 **Pros:** configs are ordinary code, with the type checker's messages,
-and values may be computed; one settle for all configs costs about 1 to
-2 ms for a work root, and about 0.3 ms for each library more; the
+and values may be computed; one settle for all configs costs a few
+milliseconds for a work root, and under a millisecond for each library more; the
 shared prelude settles the classes once, not per config.
 
-**Cons:** a config's imports aren't loaded while finding libraries, so
-a value can't come from another module.
+**Cons:** a config can't import, so a value can't come from another
+module.
 
 **Status:** Kotlin's way, but for the prelude, which is shared.
 

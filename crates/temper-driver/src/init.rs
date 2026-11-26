@@ -65,7 +65,8 @@ pub fn library_name(dir_name: &str) -> String {
     }
 }
 
-/// The config file, as Kotlin's `initConfigContent`.
+/// The config file, as Kotlin's `initConfigContent`, but for the line on
+/// modules, as configs can't import yet.
 fn config(title: &str, name: &str) -> String {
     format!(
         "# {title}\n\
@@ -76,9 +77,8 @@ fn config(title: &str, name: &str) -> String {
          \n\
          \x20   export let name = \"{name}\";\n\
          \n\
-         By default, the current directory is imported as a module. It can import\n\
-         other module directories. See Temper documentation for additional config\n\
-         options.\n"
+         Every module under this directory is part of the library. See Temper\n\
+         documentation for additional config options.\n"
     )
 }
 
