@@ -421,6 +421,7 @@ fn describe<'a>(case: &'a Case, module: &'a str, map: &Map) -> (String, Vec<Stri
                     // statement it's in.
                     let arm = js.starts_with("if (")
                         && (source_line.contains("->")
+                            || temper.contains("when (")
                             || temper.contains("??")
                             || temper.contains("?.")
                             || temper.contains("if (")
