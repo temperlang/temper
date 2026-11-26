@@ -10,6 +10,7 @@ import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.InvalidCodePoint;
 import temper.core.MissingKey;
+import temper.core.Nullable;
 import temper.core.ParseError;
 import temper.std.json.JsonException;
 import temper.std.json.JsonGlobal;
@@ -17,6 +18,8 @@ import temper.std.json.JsonSyntaxException;
 import temper.std.json.JsonTextProducer;
 import temper.std.regex.CodeRange;
 import temper.std.regex.CodeSet;
+import temper.std.regex.Group;
+import temper.std.regex.Match;
 import temper.std.regex.Regex;
 import temper.std.regex.Repeat;
 import temper.std.temporal.TemporalException;
@@ -119,36 +122,34 @@ public final class PanicsGlobal {
             g = "?";
         }
         Regex digits = new Repeat(new CodeSet(List.of(new CodeRange(48, 57)), false), 1, null, false).compiled();
-        String h;
-        try {
-            h = digits.find("none").full.value;
-        } catch (Bubble ignored7) {
-            h = "no digits";
-        }
+        @Nullable Match subject3 = digits.find("none");
+        @Nullable Group subject2 = subject3 == null ? null : subject3.full;
+        @Nullable String subject = subject2 == null ? null : subject2.value;
+        String h = subject == null ? "no digits" : subject;
         int i = calling(() -> failing(2));
         console.log(a + " " + b + " " + e + " " + (Double.compare(f, -6.0) == 0) + " " + g + " " + h + " " + i);
         long k;
         try {
             k = Core.stringToInt64("zz");
-        } catch (ParseError ignored8) {
+        } catch (ParseError ignored7) {
             k = -7L;
         }
         int l;
         try {
             l = Core.stringToInt("99999999999");
-        } catch (ParseError ignored9) {
+        } catch (ParseError ignored8) {
             l = -8;
         }
         int m;
         try {
             m = Core.float64ToInt(1e20);
-        } catch (ParseError ignored10) {
+        } catch (ParseError ignored9) {
             m = -9;
         }
         int n;
         try {
             n = Core.int64ToInt(5000000000L);
-        } catch (ParseError ignored11) {
+        } catch (ParseError ignored10) {
             n = -10;
         }
         List<Integer> points = List.of(65, 1114112);
@@ -168,7 +169,7 @@ public final class PanicsGlobal {
         int r;
         try {
             r = Core.mappedGet(builder, "x");
-        } catch (MissingKey ignored12) {
+        } catch (MissingKey ignored11) {
             r = -11;
         }
         String r2;
@@ -180,19 +181,19 @@ public final class PanicsGlobal {
         String s;
         try {
             s = temper.std.temporal.Core.dateOf(2023, 2, 30).toString();
-        } catch (TemporalException ignored13) {
+        } catch (TemporalException ignored12) {
             s = "no date";
         }
         String t;
         try {
             t = temper.std.temporal.Core.dateFromIsoString("2023-13-01").toString();
-        } catch (TemporalException ignored14) {
+        } catch (TemporalException ignored13) {
             t = "bad date";
         }
         String u;
         try {
             u = parsing("[1,");
-        } catch (JsonException ignored15) {
+        } catch (JsonException ignored14) {
             u = "bad json";
         }
         JsonTextProducer partial = new JsonTextProducer();
@@ -209,7 +210,7 @@ public final class PanicsGlobal {
         int p;
         try {
             p = inner();
-        } catch (Bubble ignored16) {
+        } catch (Bubble ignored15) {
             p = -1;
         }
         console.log("after the panic " + p);

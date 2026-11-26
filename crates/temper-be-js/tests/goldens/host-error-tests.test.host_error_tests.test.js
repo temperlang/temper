@@ -7,6 +7,7 @@ it("host errors are panics", async function () {
   const test = new Test();
   let failure;
   try {
+    /** @throws {Error} */
     function fn() {
       /** @type {number} */
       let r;
@@ -19,6 +20,7 @@ it("host errors are panics", async function () {
       test.assert(r !== -1, () => "expected r != -1");
     }
     test.assertPanics(fn, "host error 1");
+    /** @throws {Error} */
     function fn3() {
       /** @type {number} */
       let r;
@@ -31,6 +33,7 @@ it("host errors are panics", async function () {
       test.assert(r !== -1, () => "expected r != -1");
     }
     test.assertPanics(fn3, "host error 2");
+    /** @throws {Error} */
     function fn4() {
       /** @type {number} */
       let r;
@@ -55,6 +58,7 @@ it("host test failure is no panic", async function () {
   const test = new Test();
   let failure;
   try {
+    /** @throws {Error} */
     function fn() {
       hostFailsTest();
     }

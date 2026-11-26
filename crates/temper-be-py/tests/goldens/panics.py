@@ -140,11 +140,7 @@ try:
 except _InvalidCodePoint:
     _g = '?'
 _digits: _Regex = _Repeat(_CodeSet((_CodeRange(48, 57),), False), 1, None, False).compiled()
-_h: str
-try:
-    _h = _digits.find('none').full.value
-except _Bubble:
-    _h = 'no digits'
+_h: str = 'no digits' if (_subject := None if (_subject2 := None if (_subject3 := _digits.find('none')) is None else _subject3.full) is None else _subject2.value) is None else _subject
 _i: int = _calling(lambda: _failing(2))
 _console.log(f'{_a} {_b} {_e} {_boolean_to_string(_float_eq(_f, -6.0))} {_g} {_h} {_i}')
 _k: int

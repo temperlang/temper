@@ -7,6 +7,8 @@ local Repeat = require("std/regex").Repeat
 local CodeSet = require("std/regex").CodeSet
 local CodePart = require("std/regex").CodePart
 local CodeRange = require("std/regex").CodeRange
+local Group = require("std/regex").Group
+local Match = require("std/regex").Match
 local JsonError = require("std/json").JsonError
 local JsonTextProducer = require("std/json").JsonTextProducer
 local JsonSyntaxError = require("std/json").JsonSyntaxError
@@ -160,13 +162,10 @@ end, temper.InvalidCodePoint) then
   g = "?"
 end
 local digits = Repeat(CodeSet({ CodeRange(48, 57) }, false), 1, temper.null, false):compiled()
----@type string
-local h
-if not temper.pcall(function()
-  h = digits:find("none").full.value
-end) then
-  h = "no digits"
-end
+local subject3 = digits:find("none")
+local subject2 = temper.is_null(subject3) and temper.null or (subject3 --[[@as std.regex.Match]]).full
+local subject = temper.is_null(subject2) and temper.null or (subject2 --[[@as std.regex.Group]]).value
+local h = temper.is_null(subject) and "no digits" or (subject --[[@as string]])
 local i = calling(function() return failing(2) end)
 print(a .. " " .. b .. " " .. e .. " " .. tostring(temper.float_eq(f, -6.0)) .. " " .. g .. " " .. h .. " " .. i)
 ---@type integer

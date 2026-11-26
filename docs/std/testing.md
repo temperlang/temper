@@ -25,11 +25,15 @@ test("lookup") { test =>
 }
 ```
 
+A test may throw any error, unhandled, as a call that throws a declared
+failure does (`s.toInt32()`, `new Date(y, m, d)`): the error fails the
+test, saying its message.
+
 To check that something panics, put it in an `assertPanics` block,
 which passes if the block panics. If the block returns, the test fails,
-saying "expected a panic", or the message given before the block; a
-bubble is no panic, so if the block bubbles, the test fails too, saying
-so. Like `assert`, it lets the test go on:
+saying "expected a panic", or the message given before the block; an
+error is no panic, so if the block throws one, the test fails too,
+saying "but it threw". Like `assert`, it lets the test go on:
 
 ```temper
 test("reads past the end") { test =>
@@ -40,7 +44,7 @@ test("reads past the end") { test =>
 ```
 
 Only a failure in the block is caught, and a panic there is any failure
-but a bubble or a test's failure, the same on every backend, so a host's
+but an error or a test's failure, the same on every backend, so a host's
 own error, as connected code throws, counts too. A test's failure, a
 `fail` in the block or a host test framework's failed assertion (JUnit's,
 unittest's, Node's `assert`, …), still ends the test; on Rust, where a

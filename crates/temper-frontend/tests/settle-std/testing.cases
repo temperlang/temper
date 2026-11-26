@@ -63,3 +63,19 @@ test.assertPanics { deep(0); };
 console.log("went on ${test.passing}");
 --- settled
 Panicked: calls nested too deeply
+
+=== assertPanics fails, saying so, when its block throws an error
+let { Test } = import("std/testing");
+let parse(s: String): Int throws ParseError { s.toInt32() }
+let test = new Test();
+test.assertPanics { parse("x"); };
+test.assertPanics { parse("1"); };
+test.assertPanics { [1][2]; };
+console.log(test.messages().join(" / ") { it => it });
+--- settled
+log expected a panic, but it threw / expected a panic
+
+=== a function may throw Error only in std and tests
+let f(): Void throws Error {}
+--- settled
+error 21..26: Error is the root of failure types; throws takes a class or sealed interface that extends it

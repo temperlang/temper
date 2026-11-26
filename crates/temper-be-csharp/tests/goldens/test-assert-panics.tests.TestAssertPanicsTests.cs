@@ -9,11 +9,12 @@ namespace TestAssertPanics;
 [TestClass]
 public class TestAssertPanicsTests
 {
+    /// <exception cref="Unlucky">Where it fails with Unlucky.</exception>
     internal static int At(IReadOnlyList<int> ls, int i)
     {
         if (i == 99)
         {
-            return Core.Bubble<int>();
+            throw new Unlucky();
         }
         return Listed.Get(ls, i);
     }
@@ -124,7 +125,7 @@ public class TestAssertPanicsTests
                 {
                     n = At(Listed.CreateReadOnlyList<int>(1, 2), 5);
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (Unlucky)
                 {
                     n = -1;
                 }
@@ -184,7 +185,7 @@ public class TestAssertPanicsTests
     }
 
     [TestMethod]
-    public void FailsWhenTheBlockBubbles()
+    public void FailsWhenTheBlockThrows()
     {
         Test test = new Test();
         global::System.Exception? failure7 = null;
@@ -204,7 +205,7 @@ public class TestAssertPanicsTests
     }
 
     [TestMethod]
-    public void FailsWithItsMessageWhenTheBlockBubbles()
+    public void FailsWithItsMessageWhenTheBlockThrows()
     {
         Test test = new Test();
         global::System.Exception? failure8 = null;
@@ -354,17 +355,13 @@ public class TestAssertPanicsTests
     }
 
     [TestMethod]
-    public void PassesAfter()
+    public void FailsWhenItsBodyThrows()
     {
         Test test = new Test();
         global::System.Exception? failure14 = null;
         try
         {
-            {
-                int actual = At(Listed.CreateReadOnlyList<int>(1, 2), 0);
-                int expected = 1;
-                test.Assert(actual == expected, () => string.Create(CultureInfo.InvariantCulture, $"expected at([1, 2], 0) == ({expected}) not ({actual})"));
-            }
+            At(Listed.CreateReadOnlyList<int>(1, 2), 99);
         }
         catch (global::System.Exception e14)
         {
@@ -374,6 +371,30 @@ public class TestAssertPanicsTests
         finally
         {
             global::TemperLang.Core.Async.EndTest(failure14, test.SoftFailToHard);
+        }
+    }
+
+    [TestMethod]
+    public void PassesAfter()
+    {
+        Test test = new Test();
+        global::System.Exception? failure15 = null;
+        try
+        {
+            {
+                int actual = At(Listed.CreateReadOnlyList<int>(1, 2), 0);
+                int expected = 1;
+                test.Assert(actual == expected, () => string.Create(CultureInfo.InvariantCulture, $"expected at([1, 2], 0) == ({expected}) not ({actual})"));
+            }
+        }
+        catch (global::System.Exception e15)
+        {
+            failure15 = e15;
+            throw;
+        }
+        finally
+        {
+            global::TemperLang.Core.Async.EndTest(failure15, test.SoftFailToHard);
         }
     }
 }

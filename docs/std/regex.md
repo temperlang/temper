@@ -12,8 +12,9 @@ from `RegexNode`s; either way, it compiles to a `Regex`:
 let { Regex } = import("std/regex");
 
 let word = /(?first=[a-z]+)-(?second=[a-z]+)/;
-let m = word.find("well-known") orelse panic();
+let m = word.find("well-known") ?? panic();
 console.log(m.groups["second"].value); //!outputs "known"
+console.log(word.find("nothing")?.full?.value ?? "none"); //!outputs "none"
 console.log(word.replace("hi-there") { m => "[${m.full.value}]" }); //!outputs "[hi-there]"
 // ✅
 ```
@@ -29,7 +30,7 @@ through the dialect and the data model. A named group is `(?name=…)`.
 | Member | What it does |
 |---|---|
 | `found(text)` | Whether the pattern matches anywhere in `text` |
-| `find(text, begin)` | The first `Match` from `begin`, or bubbles if none |
+| `find(text, begin)` | The first `Match` from `begin`, or `null` if none |
 | `replace(text, format)` | Replaces each match with `format(match)` |
 | `split(text)` | The parts between matches |
 | `Match.full`, `Match.groups` | The whole match, and named groups, each a `Group` |

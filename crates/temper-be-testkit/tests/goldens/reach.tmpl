@@ -7,13 +7,14 @@ uses `temper-core`#24 0.0.0-alpha.0.0 {
   class Int32#28 {
     connected method toString#29(radix?: Int32): String;
   }
-  connected fn getConsole#49(name?: String): Console#25;
+  interface Error#33 {}
+  connected fn getConsole#50(name?: String): Console#25;
 }
 
 uses std#30 0.0.0-alpha.0.0 {
   module testing#31 {
     class Test#32 {
-      connected method assert#38(success: Boolean, message: fn (): String): Void;
+      connected method assert#39(success: Boolean, message: fn (): String): Void;
     }
   }
 }
@@ -71,7 +72,7 @@ module reach#0 {
   let unreachedValue#19: Int32;
 
   init {
-    init ~console#27 = getConsole#49(omitted);
+    init ~console#27 = getConsole#50(omitted);
     init shownCount#10 = 0;
     init base#11 = 1;
     init testFactor#12 = %Int32.mul(base#11, 2);
@@ -81,38 +82,38 @@ module reach#0 {
     ~console#27.log#26(%String.cat("shown ", shown#17(1).toString#29(omitted)));
   }
 
-  test "test parts" ~test#33(test#34: Test#32): Void throws Bubble {
-    let shape#35: TestShape#1 = (upcast(new constructor#8(forTests#13(2)))): TestShape#1;
-    addArea#15(shape#35);
-    testCount#14 = %Int32.add(testCount#14, shape#35.area#5());
+  test "test parts" ~test#34(test#35: Test#32): Void throws Error#33 {
+    let shape#36: TestShape#1 = (upcast(new constructor#8(forTests#13(2)))): TestShape#1;
+    addArea#15(shape#36);
+    testCount#14 = %Int32.add(testCount#14, shape#36.area#5());
     {
-      let actual#36: Int32 = testCount#14;
-      let expected#37: Int32 = 32;
-      test#34.assert#38(%Int32.eq(actual#36, expected#37), (fn ~fn#39(): String [actual#36, expected#37] {
-        return %String.cat(%String.cat(%String.cat(%String.cat("expected testCount == (", expected#37.toString#29(omitted)), ") not ("), actual#36.toString#29(omitted)), ")");
+      let actual#37: Int32 = testCount#14;
+      let expected#38: Int32 = 32;
+      test#35.assert#39(%Int32.eq(actual#37, expected#38), (fn ~fn#40(): String [actual#37, expected#38] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected testCount == (", expected#38.toString#29(omitted)), ") not ("), actual#37.toString#29(omitted)), ")");
       }): fn (): String);
     }
     {
-      let actual#40: Int32 = checked#16;
-      let expected#41: Int32 = 3;
-      test#34.assert#38(%Int32.eq(actual#40, expected#41), (fn ~fn#42(): String [actual#40, expected#41] {
-        return %String.cat(%String.cat(%String.cat(%String.cat("expected checked == (", expected#41.toString#29(omitted)), ") not ("), actual#40.toString#29(omitted)), ")");
+      let actual#41: Int32 = checked#16;
+      let expected#42: Int32 = 3;
+      test#35.assert#39(%Int32.eq(actual#41, expected#42), (fn ~fn#43(): String [actual#41, expected#42] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected checked == (", expected#42.toString#29(omitted)), ") not ("), actual#41.toString#29(omitted)), ")");
       }): fn (): String);
     }
     {
-      let actual#43: Int32 = shownCount#10;
-      let expected#44: Int32 = 2;
-      test#34.assert#38(%Int32.eq(actual#43, expected#44), (fn ~fn#45(): String [actual#43, expected#44] {
-        return %String.cat(%String.cat(%String.cat(%String.cat("expected shownCount == (", expected#44.toString#29(omitted)), ") not ("), actual#43.toString#29(omitted)), ")");
+      let actual#44: Int32 = shownCount#10;
+      let expected#45: Int32 = 2;
+      test#35.assert#39(%Int32.eq(actual#44, expected#45), (fn ~fn#46(): String [actual#44, expected#45] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected shownCount == (", expected#45.toString#29(omitted)), ") not ("), actual#44.toString#29(omitted)), ")");
       }): fn (): String);
     }
     shownCount#10 = 0;
     shown#17(0);
     {
-      let actual#46: Int32 = shownCount#10;
-      let expected#47: Int32 = 1;
-      test#34.assert#38(%Int32.eq(actual#46, expected#47), (fn ~fn#48(): String [actual#46, expected#47] {
-        return %String.cat(%String.cat(%String.cat(%String.cat("expected shownCount == (", expected#47.toString#29(omitted)), ") not ("), actual#46.toString#29(omitted)), ")");
+      let actual#47: Int32 = shownCount#10;
+      let expected#48: Int32 = 1;
+      test#35.assert#39(%Int32.eq(actual#47, expected#48), (fn ~fn#49(): String [actual#47, expected#48] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected shownCount == (", expected#48.toString#29(omitted)), ") not ("), actual#47.toString#29(omitted)), ")");
       }): fn (): String);
     }
   }

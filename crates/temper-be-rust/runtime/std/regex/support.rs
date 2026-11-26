@@ -4,7 +4,7 @@ use std::{
     fmt::Write,
     sync::{Arc, RwLock},
 };
-use temper_core::{cast, mapped::Map, AnyValue, AsAnyValue, Error, Result};
+use temper_core::{cast, mapped::Map, AnyValue, AsAnyValue};
 
 #[cfg(feature = "regex")]
 pub use with_regex::*;
@@ -62,12 +62,10 @@ mod with_regex {
         text: Arc<String>,
         begin: usize,
         _regex_refs: RegexRefs,
-    ) -> Result<Match> {
+    ) -> Option<Match> {
         let compiled = cast::<Compiled>(compiled).unwrap().0;
-        let captures = compiled
-            .captures(&text[begin..])
-            .ok_or_else(|| Error::new())?;
-        Ok(captures_to_match(&compiled, &captures))
+        let captures = compiled.captures(&text[begin..])?;
+        Some(captures_to_match(&compiled, &captures))
     }
 
     pub(crate) fn compiled_found(_regex: &Regex, compiled: AnyValue, text: Arc<String>) -> bool {
@@ -139,7 +137,7 @@ mod without_regex {
         text: Arc<String>,
         begin: usize,
         _regex_refs: RegexRefs,
-    ) -> Result<Match> {
+    ) -> Option<Match> {
         panic!()
     }
 

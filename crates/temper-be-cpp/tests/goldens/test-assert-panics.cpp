@@ -15,9 +15,18 @@ void global_init_init();
 
 
 #ifdef TEMPER_TESTS
+struct AtError;
+struct Unlucky;
 struct Shape;
 struct Square;
 struct Circle;
+
+struct AtError : public virtual temper::core::Failure {};
+
+struct Unlucky : public virtual AtError {
+  static std::shared_ptr<Unlucky> make();
+  temper::core::Str get_message() const override;
+};
 
 struct Shape : public virtual temper::core::AnyValueBase {};
 
@@ -36,13 +45,14 @@ void passesWhenDivisionByZeroOrACastPanics(std::shared_ptr<temper_std::Test> con
 void passesPastAnOrelse(std::shared_ptr<temper_std::Test> const & test);
 void failsWhenTheBlockReturns(std::shared_ptr<temper_std::Test> const & test);
 void failsWithItsMessage(std::shared_ptr<temper_std::Test> const & test);
-void failsWhenTheBlockBubbles(std::shared_ptr<temper_std::Test> const & test);
-void failsWithItsMessageWhenTheBlockBubbles(std::shared_ptr<temper_std::Test> const & test);
+void failsWhenTheBlockThrows(std::shared_ptr<temper_std::Test> const & test);
+void failsWithItsMessageWhenTheBlockThrows(std::shared_ptr<temper_std::Test> const & test);
 void goesOnAfterFailing(std::shared_ptr<temper_std::Test> const & test);
 void nests(std::shared_ptr<temper_std::Test> const & test);
 void keepsWhatTheBlockChanged(std::shared_ptr<temper_std::Test> const & test);
 void failsOnAPanicAfterTheBlock(std::shared_ptr<temper_std::Test> const & test);
 void endsOnAFailInTheBlock(std::shared_ptr<temper_std::Test> const & test);
+void failsWhenItsBodyThrows(std::shared_ptr<temper_std::Test> const &);
 void passesAfter(std::shared_ptr<temper_std::Test> const & test);
 #endif
 
@@ -56,9 +66,18 @@ namespace test_assert_panics {
 namespace core = temper::core;
 
 #ifdef TEMPER_TESTS
-static int32_t at(std::shared_ptr<std::vector<int32_t>> const & ls, int32_t i) {
+std::shared_ptr<Unlucky> Unlucky::make() {
+  std::shared_ptr<Unlucky> self = std::make_shared<Unlucky>();
+  return self;
+}
+
+core::Str Unlucky::get_message() const {
+  return TEMPER_STR("unlucky");
+}
+
+static core::Expected<int32_t, std::shared_ptr<Unlucky>> at(std::shared_ptr<std::vector<int32_t>> const & ls, int32_t i) {
   if (i == 99) {
-    core::bubble();
+    return core::unexpected(Unlucky::make());
   }
   return core::List::get<int32_t>(ls, i);
 }
@@ -96,21 +115,44 @@ namespace test_assert_panics {
 
 void passesBefore(std::shared_ptr<temper_std::Test> const & test) {
   {
-    int32_t actual = test_assert_panics::at(core::List::make<int32_t>(1, 2), 1);
+    auto atResult = test_assert_panics::at(core::List::make<int32_t>(1, 2), 1);
+    if (!atResult.has_value()) {
+      core::uncaught_failure(atResult.error());
+    }
+    int32_t actual = *atResult;
     int32_t expected = 2;
     test->assert_(actual == expected, [=]() -> core::Str { return "expected at([1, 2], 1) == (" + std::to_string(expected) + ") not (" + std::to_string(actual) + ")"; });
   }
 }
 
 void passesWhenTheBlockPanics(std::shared_ptr<temper_std::Test> const & test) {
-  test->assertPanics([]() -> void { test_assert_panics::at(core::List::make<int32_t>(1, 2), 5); });
-  test->assertPanics([]() -> void { core::panic(); });
+  auto fn = []() -> core::Expected<void, std::shared_ptr<core::Failure>> {
+    auto atResult = test_assert_panics::at(core::List::make<int32_t>(1, 2), 5);
+    if (!atResult.has_value()) {
+      return core::unexpected(atResult.error());
+    }
+    return {};
+  };
+  test->assertPanics(fn);
+  test->assertPanics([]() -> core::Expected<void, std::shared_ptr<core::Failure>> { core::panic(); });
 }
 
 void passesWhenDivisionByZeroOrACastPanics(std::shared_ptr<temper_std::Test> const & test) {
-  test->assertPanics([]() -> void { divide(1, 0); });
-  test->assertPanics([]() -> void { remainder(int64_t{1}, int64_t{0}); });
-  test->assertPanics([]() -> void { test_assert_panics::squared(core::to_base<Shape>(Circle::make())); });
+  auto fn = []() -> core::Expected<void, std::shared_ptr<core::Failure>> {
+    divide(1, 0);
+    return {};
+  };
+  test->assertPanics(fn);
+  auto fn2 = []() -> core::Expected<void, std::shared_ptr<core::Failure>> {
+    remainder(int64_t{1}, int64_t{0});
+    return {};
+  };
+  test->assertPanics(fn2);
+  auto fn3 = []() -> core::Expected<void, std::shared_ptr<core::Failure>> {
+    test_assert_panics::squared(core::to_base<Shape>(Circle::make()));
+    return {};
+  };
+  test->assertPanics(fn3);
   test_assert_panics::squared(core::to_base<Shape>(Square::make()));
   {
     int32_t actual = divide(-7, 2);
@@ -120,43 +162,87 @@ void passesWhenDivisionByZeroOrACastPanics(std::shared_ptr<temper_std::Test> con
 }
 
 void passesPastAnOrelse(std::shared_ptr<temper_std::Test> const & test) {
-  auto fn = [=]() -> void {
+  auto fn = [=]() -> core::Expected<void, std::shared_ptr<core::Failure>> {
     int32_t n;
-    try {
-      n = test_assert_panics::at(core::List::make<int32_t>(1, 2), 5);
-    } catch (core::TemperBubble const &) {
+    auto atResult = test_assert_panics::at(core::List::make<int32_t>(1, 2), 5);
+    if (atResult.has_value()) {
+      n = *atResult;
+    } else {
       n = -1;
     }
     test->assert_(n == -1, []() -> core::Str { return TEMPER_STR("caught by an orelse"); });
+    return {};
   };
   test->assertPanics(fn);
 }
 
 void failsWhenTheBlockReturns(std::shared_ptr<temper_std::Test> const & test) {
-  test->assertPanics([]() -> void { test_assert_panics::at(core::List::make<int32_t>(1, 2), 0); });
+  auto fn = []() -> core::Expected<void, std::shared_ptr<core::Failure>> {
+    auto atResult = test_assert_panics::at(core::List::make<int32_t>(1, 2), 0);
+    if (!atResult.has_value()) {
+      return core::unexpected(atResult.error());
+    }
+    return {};
+  };
+  test->assertPanics(fn);
 }
 
 void failsWithItsMessage(std::shared_ptr<temper_std::Test> const & test) {
-  test->assertPanics([]() -> void { test_assert_panics::at(core::List::make<int32_t>(1, 2), 1); }, TEMPER_STR("reading index 1 panics"));
+  auto fn = []() -> core::Expected<void, std::shared_ptr<core::Failure>> {
+    auto atResult = test_assert_panics::at(core::List::make<int32_t>(1, 2), 1);
+    if (!atResult.has_value()) {
+      return core::unexpected(atResult.error());
+    }
+    return {};
+  };
+  test->assertPanics(fn, TEMPER_STR("reading index 1 panics"));
 }
 
-void failsWhenTheBlockBubbles(std::shared_ptr<temper_std::Test> const & test) {
-  test->assertPanics([]() -> void { test_assert_panics::at(core::List::make<int32_t>(1, 2), 99); });
+void failsWhenTheBlockThrows(std::shared_ptr<temper_std::Test> const & test) {
+  auto fn = []() -> core::Expected<void, std::shared_ptr<core::Failure>> {
+    auto atResult = test_assert_panics::at(core::List::make<int32_t>(1, 2), 99);
+    if (!atResult.has_value()) {
+      return core::unexpected(atResult.error());
+    }
+    return {};
+  };
+  test->assertPanics(fn);
 }
 
-void failsWithItsMessageWhenTheBlockBubbles(std::shared_ptr<temper_std::Test> const & test) {
-  test->assertPanics([]() -> void { test_assert_panics::at(core::List::make<int32_t>(1, 2), 99); }, TEMPER_STR("reading index 99 panics"));
+void failsWithItsMessageWhenTheBlockThrows(std::shared_ptr<temper_std::Test> const & test) {
+  auto fn = []() -> core::Expected<void, std::shared_ptr<core::Failure>> {
+    auto atResult = test_assert_panics::at(core::List::make<int32_t>(1, 2), 99);
+    if (!atResult.has_value()) {
+      return core::unexpected(atResult.error());
+    }
+    return {};
+  };
+  test->assertPanics(fn, TEMPER_STR("reading index 99 panics"));
 }
 
 void goesOnAfterFailing(std::shared_ptr<temper_std::Test> const & test) {
-  test->assertPanics([]() -> void { test_assert_panics::at(core::List::make<int32_t>(1, 2), 0); });
+  auto fn = []() -> core::Expected<void, std::shared_ptr<core::Failure>> {
+    auto atResult = test_assert_panics::at(core::List::make<int32_t>(1, 2), 0);
+    if (!atResult.has_value()) {
+      return core::unexpected(atResult.error());
+    }
+    return {};
+  };
+  test->assertPanics(fn);
   test->assert_(false, []() -> core::Str { return TEMPER_STR("went on"); });
 }
 
 void nests(std::shared_ptr<temper_std::Test> const & test) {
-  auto fn = [=]() -> void {
-    test->assertPanics([]() -> void { core::panic(); });
-    test->assertPanics([]() -> void { test_assert_panics::at(core::List::make<int32_t>(1, 2), 0); }, TEMPER_STR("inner returns"));
+  auto fn = [=]() -> core::Expected<void, std::shared_ptr<core::Failure>> {
+    test->assertPanics([]() -> core::Expected<void, std::shared_ptr<core::Failure>> { core::panic(); });
+    auto fn3 = []() -> core::Expected<void, std::shared_ptr<core::Failure>> {
+      auto atResult = test_assert_panics::at(core::List::make<int32_t>(1, 2), 0);
+      if (!atResult.has_value()) {
+        return core::unexpected(atResult.error());
+      }
+      return {};
+    };
+    test->assertPanics(fn3, TEMPER_STR("inner returns"));
     core::panic();
   };
   test->assertPanics(fn);
@@ -164,7 +250,7 @@ void nests(std::shared_ptr<temper_std::Test> const & test) {
 
 void keepsWhatTheBlockChanged(std::shared_ptr<temper_std::Test> const & test) {
   std::shared_ptr<int32_t> n = std::make_shared<int32_t>(0);
-  auto fn = [=]() -> void {
+  auto fn = [=]() -> core::Expected<void, std::shared_ptr<core::Failure>> {
     *n = core::Int::add((*n), 1);
     core::panic();
   };
@@ -173,12 +259,15 @@ void keepsWhatTheBlockChanged(std::shared_ptr<temper_std::Test> const & test) {
 }
 
 void failsOnAPanicAfterTheBlock(std::shared_ptr<temper_std::Test> const & test) {
-  test->assertPanics([]() -> void { core::panic(); });
-  test_assert_panics::at(core::List::make<int32_t>(1, 2), 7);
+  test->assertPanics([]() -> core::Expected<void, std::shared_ptr<core::Failure>> { core::panic(); });
+  auto atResult = test_assert_panics::at(core::List::make<int32_t>(1, 2), 7);
+  if (!atResult.has_value()) {
+    core::uncaught_failure(atResult.error());
+  }
 }
 
 void endsOnAFailInTheBlock(std::shared_ptr<temper_std::Test> const & test) {
-  auto fn = [=]() -> void {
+  auto fn = [=]() -> core::Expected<void, std::shared_ptr<core::Failure>> {
     test->fail(TEMPER_STR("failed inside"));
     core::panic();
   };
@@ -187,9 +276,20 @@ void endsOnAFailInTheBlock(std::shared_ptr<temper_std::Test> const & test) {
   core::panic();
 }
 
+void failsWhenItsBodyThrows(std::shared_ptr<temper_std::Test> const &) {
+  auto atResult = test_assert_panics::at(core::List::make<int32_t>(1, 2), 99);
+  if (!atResult.has_value()) {
+    core::uncaught_failure(atResult.error());
+  }
+}
+
 void passesAfter(std::shared_ptr<temper_std::Test> const & test) {
   {
-    int32_t actual = test_assert_panics::at(core::List::make<int32_t>(1, 2), 0);
+    auto atResult = test_assert_panics::at(core::List::make<int32_t>(1, 2), 0);
+    if (!atResult.has_value()) {
+      core::uncaught_failure(atResult.error());
+    }
+    int32_t actual = *atResult;
     int32_t expected = 1;
     test->assert_(actual == expected, [=]() -> core::Str { return "expected at([1, 2], 0) == (" + std::to_string(expected) + ") not (" + std::to_string(actual) + ")"; });
   }
@@ -265,17 +365,17 @@ int main() {
             test->get_passing(),
             temper::core::is_null(messages) ? std::string() : temper::core::Str(messages).str()};
       }},
-      {"fails when the block bubbles", [] {
+      {"fails when the block throws", [] {
         auto test = temper_std::Test::make();
-        test_assert_panics::failsWhenTheBlockBubbles(test);
+        test_assert_panics::failsWhenTheBlockThrows(test);
         auto messages = test->messagesCombined();
         return temper::core::TestOutcome{
             test->get_passing(),
             temper::core::is_null(messages) ? std::string() : temper::core::Str(messages).str()};
       }},
-      {"fails with its message when the block bubbles", [] {
+      {"fails with its message when the block throws", [] {
         auto test = temper_std::Test::make();
-        test_assert_panics::failsWithItsMessageWhenTheBlockBubbles(test);
+        test_assert_panics::failsWithItsMessageWhenTheBlockThrows(test);
         auto messages = test->messagesCombined();
         return temper::core::TestOutcome{
             test->get_passing(),
@@ -316,6 +416,14 @@ int main() {
       {"ends on a fail in the block", [] {
         auto test = temper_std::Test::make();
         test_assert_panics::endsOnAFailInTheBlock(test);
+        auto messages = test->messagesCombined();
+        return temper::core::TestOutcome{
+            test->get_passing(),
+            temper::core::is_null(messages) ? std::string() : temper::core::Str(messages).str()};
+      }},
+      {"fails when its body throws", [] {
+        auto test = temper_std::Test::make();
+        test_assert_panics::failsWhenItsBodyThrows(test);
         auto messages = test->messagesCombined();
         return temper::core::TestOutcome{
             test->get_passing(),

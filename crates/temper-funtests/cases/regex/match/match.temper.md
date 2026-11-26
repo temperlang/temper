@@ -80,7 +80,7 @@ Now capture and print everything out.
 Also, use supplemental plane code point to start out, and leave a suffix.
 
     let text = "🌍aaabbceef";
-    let match = catcher.find(text);
+    let match = catcher.find(text) ?? panic();
     let checkGroup(group: Group): Void {
       let { name, value, begin, end } = group;
       let size = text.countBetween(begin, end).toString();
@@ -103,12 +103,13 @@ match group 'alphaOption2': 'e' at 8 size 1
 
 ### Find from index
 
-Picking up where we leave off is useful for parsing richer text.
+Picking up where we leave off is useful for parsing richer text. `find`
+gives null where there's no match, so `?? panic()` says there is one.
 
     let thing = /[a-z]+/;
     let multiText = "---abc---xyz---";
-    let first = thing.find(multiText);
-    let second = thing.find(multiText, first.full.end);
+    let first = thing.find(multiText) ?? panic();
+    let second = thing.find(multiText, first.full.end) ?? panic();
     console.log("Found both ${first.full.value} and ${second.full.value}.");
 
 ```log
@@ -148,9 +149,10 @@ not replaced: nope
 
 ### No match
 
-And when we have no match, can use `orelse` for a default result.
+And when we have no match, `find` gives null, so `?.` and `??` give a
+default result.
 
-    let noMatch = catcher.find("not here").full.value orelse "sorry";
+    let noMatch = catcher.find("not here")?.full?.value ?? "sorry";
     console.log("No match says ${noMatch}");
 
 ```log
@@ -223,18 +225,18 @@ This should match everything, including newlines.
       "It was the best of times.
       ~It was the worst of times.
     ;
-    console.log(/[^]+/.find(simplerLines).full.value);
+    console.log(/[^]+/.find(simplerLines)?.full?.value ?? "-");
 
 And this should match nothing.
 
-    console.log(/[]+/.find(simplerLines).full.value orelse "-");
+    console.log(/[]+/.find(simplerLines)?.full?.value ?? "-");
 
 But this should match a different kind of nothing, the empty string.
 
 ```temper inert
     // Ignore this case, because it fails on Lua.
     // If enabled, we need a blank line added to the next log block.
-    console.log(/[]*/.find(simplerLines).full.value);
+    console.log(/[]*/.find(simplerLines)?.full?.value ?? "-");
 ```
 
 ```log
@@ -251,8 +253,8 @@ keeps the codes after. Regex literals don't take `\u{…}` escapes, so
 build the former. More code sets are in the regex code sets test.
 
     let notLow = oneOrMore(new CodeSet([new CodeRange(0, 0x2f)], true)).compiled();
-    console.log("not low: ${notLow.find("-/a🌍-").full.value}");
-    console.log("not space or >: ${/[^\t\n >]+/.find("ab>c").full.value}");
+    console.log("not low: ${notLow.find("-/a🌍-")?.full?.value ?? "-"}");
+    console.log("not space or >: ${/[^\t\n >]+/.find("ab>c")?.full?.value ?? "-"}");
 
 ```log
 not low: a🌍
@@ -281,7 +283,7 @@ a specific case we had trouble with in Lua. This whole thing ends up exercising
 more than the Lua issue, and that's ok. Helped find an issue in JS also.
 
     let expected = "def_456";
-    let found = word.find("123_abc ${expected} ghi_789").full.value;
+    let found = word.find("123_abc ${expected} ghi_789")?.full?.value ?? "-";
     console.log("Found id: ${found}");
 
 ```log
@@ -302,7 +304,7 @@ This name might change in the future.
 
     let regexWithInterpolatedString = rgx".${stringToEscape}+.";
     let stringToEscapeAndMore = "a${stringToEscape}${stringToEscape}b";
-    let escapedMatch = regexWithInterpolatedString.find(stringToEscapeAndMore);
+    let escapedMatch = regexWithInterpolatedString.find(stringToEscapeAndMore) ?? panic();
     console.log(escapedMatch.full.value);
 
 ```log
@@ -317,7 +319,7 @@ full match that goes directly under the `full` property.
 This behavior isn't really surprising, but we used to have different semantics
 for "full", so this test evaluates the transition somewhat.
 
-    let ownFullMatch = /.(?full=.)/.find("ab");
+    let ownFullMatch = /.(?full=.)/.find("ab") ?? panic();
     let ownFull = ownFullMatch.groups["full"].value;
     console.log("Own full: ${ownFull} vs ${ownFullMatch.full.value}");
 

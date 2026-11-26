@@ -3,10 +3,14 @@ tmpl 1 model 1 library `host-error-tests` 0.0.0
 uses std#4 0.0.0-alpha.0.0 {
   module testing#5 {
     class Test#6 {
-      connected method assertPanics#9(block: fn (): Void throws Bubble, message?: String?): Void;
-      connected method assert#12(success: Boolean, message: fn (): String): Void;
+      connected method assertPanics#11(block: fn (): Void throws Error#8, message?: String?): Void;
+      connected method assert#14(success: Boolean, message: fn (): String): Void;
     }
   }
+}
+
+uses `temper-core`#7 0.0.0-alpha.0.0 {
+  interface Error#8 {}
 }
 
 module `host-error-tests`#0 {
@@ -23,30 +27,30 @@ module `host-error-tests`#0 {
 
   init {}
 
-  test "host errors are panics" ~test#7(test#8: Test#6): Void throws Bubble {
-    test#8.assertPanics#9((fn ~fn#10(): Void throws Bubble [test#8] {
-      let r#11: Int32 = (orelse(hostFails#1(1)^, %Int32.neg(1))): Int32;
-      test#8.assert#12(%Boolean.not(%Int32.eq(r#11, %Int32.neg(1))), (fn ~fn#13(): String {
+  test "host errors are panics" ~test#9(test#10: Test#6): Void throws Error#8 {
+    test#10.assertPanics#11((fn ~fn#12(): Void throws Error#8 [test#10] {
+      let r#13: Int32 = (orelse(hostFails#1(1)^, %Int32.neg(1))): Int32;
+      test#10.assert#14(%Boolean.not(%Int32.eq(r#13, %Int32.neg(1))), (fn ~fn#15(): String {
         return "expected r != -1";
       }): fn (): String);
-    }): fn (): Void throws Bubble, (asNullable("host error 1")): String?);
-    test#8.assertPanics#9((fn ~fn#14(): Void throws Bubble [test#8] {
-      let r#15: Int32 = (orelse(hostFails#1(2)^, %Int32.neg(1))): Int32;
-      test#8.assert#12(%Boolean.not(%Int32.eq(r#15, %Int32.neg(1))), (fn ~fn#16(): String {
+    }): fn (): Void throws Error#8, (asNullable("host error 1")): String?);
+    test#10.assertPanics#11((fn ~fn#16(): Void throws Error#8 [test#10] {
+      let r#17: Int32 = (orelse(hostFails#1(2)^, %Int32.neg(1))): Int32;
+      test#10.assert#14(%Boolean.not(%Int32.eq(r#17, %Int32.neg(1))), (fn ~fn#18(): String {
         return "expected r != -1";
       }): fn (): String);
-    }): fn (): Void throws Bubble, (asNullable("host error 2")): String?);
-    test#8.assertPanics#9((fn ~fn#17(): Void throws Bubble [test#8] {
-      let r#18: Int32 = (orelse(hostFails#1(3)^, %Int32.neg(1))): Int32;
-      test#8.assert#12(%Boolean.not(%Int32.eq(r#18, %Int32.neg(1))), (fn ~fn#19(): String {
+    }): fn (): Void throws Error#8, (asNullable("host error 2")): String?);
+    test#10.assertPanics#11((fn ~fn#19(): Void throws Error#8 [test#10] {
+      let r#20: Int32 = (orelse(hostFails#1(3)^, %Int32.neg(1))): Int32;
+      test#10.assert#14(%Boolean.not(%Int32.eq(r#20, %Int32.neg(1))), (fn ~fn#21(): String {
         return "expected r != -1";
       }): fn (): String);
-    }): fn (): Void throws Bubble, (asNullable("host error 3")): String?);
+    }): fn (): Void throws Error#8, (asNullable("host error 3")): String?);
   }
 
-  test "host test failure is no panic" ~test#20(test#21: Test#6): Void throws Bubble {
-    test#21.assertPanics#9((fn ~fn#22(): Void throws Bubble {
+  test "host test failure is no panic" ~test#22(test#23: Test#6): Void throws Error#8 {
+    test#23.assertPanics#11((fn ~fn#24(): Void throws Error#8 {
       hostFailsTest#2();
-    }): fn (): Void throws Bubble, omitted);
+    }): fn (): Void throws Error#8, omitted);
   }
 }

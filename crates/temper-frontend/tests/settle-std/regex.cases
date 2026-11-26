@@ -1,0 +1,19 @@
+# std's `regex` with std loaded: input, then diagnostics and what
+# running it logs.
+=== find gives the first match, or null where there's none
+let word = /(?first=[a-z]+)-(?second=[a-z]+)/;
+let m = word.find("a well-known fact");
+if (m != null) { console.log("${m.full.value} ${m.groups["second"].value}"); }
+console.log(word.find("nothing here")?.full?.value ?? "none");
+console.log(word.data.find("ab-cd ef-gh")?.full?.value ?? "none");
+--- settled
+log well-known known
+log none
+log ab-cd
+
+=== find's match isn't there without a null check
+let word = /[a-z]+/;
+console.log(word.find("abc").full.value);
+--- settled
+error 33..54: No member full in Match?
+Failed: No member full in Match?

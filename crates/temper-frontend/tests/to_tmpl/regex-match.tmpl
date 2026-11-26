@@ -5,23 +5,23 @@ uses std#1 0.0.0-alpha.0.0 {
     class Regex#3 {
       let data#67: RegexNode#26;
       method found#77(text: String): Boolean;
-      method find#93(text: String, begin?: StringIndex#91?): Match#14 throws Bubble;
-      method replace#128(text: String, format: fn (Match#14): String): String;
-      method split#142(text: String): List#7<String>;
+      method find#94(text: String, begin?: StringIndex#92?): Match#14?;
+      method replace#131(text: String, format: fn (Match#14): String): String;
+      method split#165(text: String): List#7<String>;
     }
     class Match#14 {
-      let full#110: Group#17;
-      let groups#123: Map#120<String, Group#17>;
+      let full#111: Group#17;
+      let groups#124: Map#121<String, Group#17>;
     }
     class Group#17 {
-      let name#96: String;
-      let value#98: String;
-      let begin#100: StringIndex#91;
-      let end#102: StringIndex#91;
+      let name#97: String;
+      let value#99: String;
+      let begin#101: StringIndex#92;
+      let end#103: StringIndex#92;
     }
     interface RegexNode#26 {
       method compiled#52(): Regex#3;
-      method found#137(text: String): Boolean;
+      method found#143(text: String): Boolean;
     }
     class Or#40 extends RegexNode#26 {
       let items#89: List#7<RegexNode#26>;
@@ -55,15 +55,15 @@ uses std#1 0.0.0-alpha.0.0 {
       let item#87: RegexNode#26;
       constructor constructor#88(name: String, item: RegexNode#26): Capture#85;
     }
-    class CodeRange#124 extends CodePart#59 {
-      let min#125: Int32;
-      let max#126: Int32;
-      constructor constructor#127(min: Int32, max: Int32): CodeRange#124;
+    class CodeRange#125 extends CodePart#59 {
+      let min#126: Int32;
+      let max#127: Int32;
+      constructor constructor#128(min: Int32, max: Int32): CodeRange#125;
     }
-    interface Special#138 extends RegexNode#26 {}
-    let Begin#139: Special#138;
-    let WordBoundary#140: Special#138;
-    let Dot#141: Special#138;
+    interface Special#144 extends RegexNode#26 {}
+    let Begin#145: Special#144;
+    let WordBoundary#158: Special#144;
+    let Dot#162: Special#144;
   }
 }
 
@@ -79,24 +79,24 @@ uses `temper-core`#6 0.0.0-alpha.0.0 {
   class Boolean#78 {
     connected method toString#79(): String;
   }
-  class StringIndex#91 extends StringIndexOption#92 {}
-  interface StringIndexOption#92 {}
-  class Int32#104 {
-    connected method toString#105(radix?: Int32): String;
+  class StringIndex#92 extends StringIndexOption#93 {}
+  interface StringIndexOption#93 {}
+  class Int32#105 {
+    connected method toString#106(radix?: Int32): String;
   }
-  class String#106 {
-    connected method countBetween#107(begin: StringIndex#91, end: StringIndex#91): Int32;
-    connected static let begin#109: StringIndex#91;
+  class String#107 {
+    connected method countBetween#108(begin: StringIndex#92, end: StringIndex#92): Int32;
+    connected static let begin#110: StringIndex#92;
   }
-  interface Mapped#111<K#112 extends MapKey#114<K#112>, V#113> {
-    connected method get#116(key: K#112): V#113 throws MissingKey#117;
+  interface Mapped#112<K#113 extends MapKey#115<K#113>, V#114> {
+    connected method get#117(key: K#113): V#114 throws MissingKey#118;
   }
-  interface MapKey#114<EQ#115> {}
-  class MissingKey#117 extends CoreError#118 {}
-  interface CoreError#118 extends Error#119 {}
-  interface Error#119 {}
-  class Map#120<K#121 extends MapKey#114<K#121>, V#122> extends Mapped#111<K#121, V#122> {}
-  connected fn getConsole#148(name?: String): Console#74;
+  interface MapKey#115<EQ#116> {}
+  class MissingKey#118 extends CoreError#119 {}
+  interface CoreError#119 extends Error#120 {}
+  interface Error#120 {}
+  class Map#121<K#122 extends MapKey#115<K#122>, V#123> extends Mapped#112<K#122, V#123> {}
+  connected fn getConsole#171(name?: String): Console#74;
 }
 
 module match#0 {
@@ -114,14 +114,14 @@ module match#0 {
 
   let match#15: Match#14;
 
-  fn checkGroup#16(group#94: Group#17): Void {
-    let name#95: String = group#94.name#96;
-    let value#97: String = group#94.value#98;
-    let begin#99: StringIndex#91 = group#94.begin#100;
-    let end#101: StringIndex#91 = group#94.end#102;
-    let size#103: String = text#13.countBetween#107(begin#99, end#101).toString#105(omitted);
-    let begin#108: String = text#13.countBetween#107(begin#109, begin#99).toString#105(omitted);
-    ~console#76.log#75(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("match group '", name#95), "': '"), value#97), "' at "), begin#108), " size "), size#103));
+  fn checkGroup#16(group#95: Group#17): Void {
+    let name#96: String = group#95.name#97;
+    let value#98: String = group#95.value#99;
+    let begin#100: StringIndex#92 = group#95.begin#101;
+    let end#102: StringIndex#92 = group#95.end#103;
+    let size#104: String = text#13.countBetween#108(begin#100, end#102).toString#106(omitted);
+    let begin#109: String = text#13.countBetween#108(begin#110, begin#100).toString#106(omitted);
+    ~console#76.log#75(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("match group '", name#96), "': '"), value#98), "' at "), begin#109), " size "), size#104));
   }
 
   let thing#18: Regex#3;
@@ -189,7 +189,7 @@ module match#0 {
   let comboLines#51: String;
 
   init {
-    init ~console#76 = getConsole#148(omitted);
+    init ~console#76 = getConsole#171(omitted);
     init regex#4 = ((upcast(new constructor#55((list((upcast(oneOrMore#57((upcast(new constructor#62((list((upcast(new constructor#65("ab"))): CodePart#59)): List#7<CodePart#59>, omitted))): RegexNode#26, omitted))): RegexNode#26, (upcast(new constructor#65("c"))): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26).compiled#52();
     init full#5 = entire#66(regex#4.data#67).compiled#52();
     init strings#11 = (list("abc", "ac", "bbabac", "ab", "dc", "acc", "cbc")): List#7<String>;
@@ -205,76 +205,76 @@ module match#0 {
     }
     init catcher#12 = ((upcast(new constructor#55((list((upcast(new constructor#84((upcast(new constructor#65("a"))): RegexNode#26, 1, (null): Int32?, (asNullable(false)): Boolean?))): RegexNode#26, (upcast(new constructor#88("intro", (upcast(new constructor#84((upcast(new constructor#65("b"))): RegexNode#26, 1, (null): Int32?, (asNullable(false)): Boolean?))): RegexNode#26))): RegexNode#26, (upcast(new constructor#65("c"))): RegexNode#26, (upcast(new constructor#84((upcast(new constructor#90((list((upcast(new constructor#88("option1", (upcast(new constructor#65("d"))): RegexNode#26))): RegexNode#26, (upcast(new constructor#88("alphaOption2", (upcast(new constructor#65("e"))): RegexNode#26))): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26, 1, (null): Int32?, (asNullable(false)): Boolean?))): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26).compiled#52();
     init text#13 = "🌍aaabbceef";
-    init match#15 = catcher#12.find#93(text#13, omitted)^;
-    checkGroup#16(match#15.full#110);
-    checkGroup#16(match#15.groups#123.get#116("intro")^);
-    checkGroup#16(match#15.groups#123.get#116("alphaOption2")^);
-    init thing#18 = ((upcast(new constructor#84((upcast(new constructor#62((list((upcast(new constructor#127(97, 122))): CodePart#59)): List#7<CodePart#59>, (asNullable(false)): Boolean?))): RegexNode#26, 1, (null): Int32?, (asNullable(false)): Boolean?))): RegexNode#26).compiled#52();
+    init match#15 = (value { let subject#91: Match#14? = catcher#12.find#94(text#13, omitted); (if (isNull(subject#91)) (panic()): Match#14 else (nonNull(subject#91)): Match#14): Match#14 }): Match#14;
+    checkGroup#16(match#15.full#111);
+    checkGroup#16(match#15.groups#124.get#117("intro")^);
+    checkGroup#16(match#15.groups#124.get#117("alphaOption2")^);
+    init thing#18 = ((upcast(new constructor#84((upcast(new constructor#62((list((upcast(new constructor#128(97, 122))): CodePart#59)): List#7<CodePart#59>, (asNullable(false)): Boolean?))): RegexNode#26, 1, (null): Int32?, (asNullable(false)): Boolean?))): RegexNode#26).compiled#52();
     init multiText#19 = "---abc---xyz---";
-    init first#20 = thing#18.find#93(multiText#19, omitted)^;
-    init second#21 = thing#18.find#93(multiText#19, (asNullable(first#20.full#110.end#102)): StringIndex#91?)^;
-    ~console#76.log#75(%String.cat(%String.cat(%String.cat(%String.cat("Found both ", first#20.full#110.value#98), " and "), second#21.full#110.value#98), "."));
+    init first#20 = (value { let subject#129: Match#14? = thing#18.find#94(multiText#19, omitted); (if (isNull(subject#129)) (panic()): Match#14 else (nonNull(subject#129)): Match#14): Match#14 }): Match#14;
+    init second#21 = (value { let subject#130: Match#14? = thing#18.find#94(multiText#19, (asNullable(first#20.full#111.end#103)): StringIndex#92?); (if (isNull(subject#130)) (panic()): Match#14 else (nonNull(subject#130)): Match#14): Match#14 }): Match#14;
+    ~console#76.log#75(%String.cat(%String.cat(%String.cat(%String.cat("Found both ", first#20.full#111.value#99), " and "), second#21.full#111.value#99), "."));
     init moreText#22 = "🌍aaabbcee🌎abcd🌏";
-    init replaced#23 = catcher#12.replace#128(moreText#22, (fn ~fn#129(match#130: Match#14): String {
-      let groups#131: Map#120<String, Group#17> = match#130.groups#123;
-      let option1#132: String = (orelse(groups#131.get#116("option1")^.value#98, "")): String;
-      let alphaOption2#133: String = (orelse(groups#131.get#116("alphaOption2")^.value#98, "")): String;
-      let begin#134: Int32 = moreText#22.countBetween#107(begin#109, match#130.full#110.begin#100);
-      return %String.cat(%String.cat(%String.cat(%String.cat("-", option1#132), alphaOption2#133), begin#134.toString#105(omitted)), "-");
+    init replaced#23 = catcher#12.replace#131(moreText#22, (fn ~fn#132(match#133: Match#14): String {
+      let groups#134: Map#121<String, Group#17> = match#133.groups#124;
+      let option1#135: String = (orelse(groups#134.get#117("option1")^.value#99, "")): String;
+      let alphaOption2#136: String = (orelse(groups#134.get#117("alphaOption2")^.value#99, "")): String;
+      let begin#137: Int32 = moreText#22.countBetween#108(begin#110, match#133.full#111.begin#101);
+      return %String.cat(%String.cat(%String.cat(%String.cat("-", option1#135), alphaOption2#136), begin#137.toString#106(omitted)), "-");
     }): fn (Match#14): String);
     ~console#76.log#75(%String.cat("replaced: ", replaced#23));
-    init notReplaced#24 = catcher#12.replace#128("nope", (fn ~fn#135(match#136: Match#14): String {
+    init notReplaced#24 = catcher#12.replace#131("nope", (fn ~fn#138(match#139: Match#14): String {
       return "hi";
     }): fn (Match#14): String);
     ~console#76.log#75(%String.cat("not replaced: ", notReplaced#24));
-    init noMatch#25 = (orelse(catcher#12.find#93("not here", omitted)^.full#110.value#98, "sorry")): String;
+    init noMatch#25 = (value { let subject#140: String? = (value { let subject#141: Group#17? = (value { let subject#142: Match#14? = catcher#12.find#94("not here", omitted); (if (isNull(subject#142)) (null): Group#17? else (asNullable(((nonNull(subject#142)): Match#14).full#111)): Group#17?): Group#17? }): Group#17?; (if (isNull(subject#141)) (null): String? else (asNullable(((nonNull(subject#141)): Group#17).value#99)): String?): String? }): String?; (if (isNull(subject#140)) "sorry" else (nonNull(subject#140)): String): String }): String;
     ~console#76.log#75(%String.cat("No match says ", noMatch#25));
     init or#27 = ((upcast(new constructor#90((list((upcast(new constructor#65("ab"))): RegexNode#26, (upcast(new constructor#65("bc"))): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26).compiled#52().data#67;
     init option1#28 = "ab";
     init option2#29 = "bc";
     init optionNone#30 = "cb";
-    ~console#76.log#75(%String.cat("or option 1: ", or#27.found#137(option1#28).toString#79()));
-    ~console#76.log#75(%String.cat("or option 2: ", or#27.found#137(option2#29).toString#79()));
-    ~console#76.log#75(%String.cat("or option none: ", or#27.found#137(optionNone#30).toString#79()));
-    init begin#31 = ((upcast(new constructor#55((list((upcast(Begin#139)): RegexNode#26, (upcast(new constructor#65("a"))): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26).compiled#52();
+    ~console#76.log#75(%String.cat("or option 1: ", or#27.found#143(option1#28).toString#79()));
+    ~console#76.log#75(%String.cat("or option 2: ", or#27.found#143(option2#29).toString#79()));
+    ~console#76.log#75(%String.cat("or option none: ", or#27.found#143(optionNone#30).toString#79()));
+    init begin#31 = ((upcast(new constructor#55((list((upcast(Begin#145)): RegexNode#26, (upcast(new constructor#65("a"))): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26).compiled#52();
     init beginsWithATrue#32 = "ab";
     init beginsWithAFalse#33 = "bab";
     ~console#76.log#75(%String.cat("begin true: ", begin#31.found#77(beginsWithATrue#32).toString#79()));
     ~console#76.log#75(%String.cat("begin false: ", begin#31.found#77(beginsWithAFalse#33).toString#79()));
-    init negatedBasic#34 = entire#66(((upcast(new constructor#55((list((upcast(new constructor#65("a"))): RegexNode#26, (upcast(new constructor#62((list((upcast(new constructor#127(97, 99))): CodePart#59)): List#7<CodePart#59>, (asNullable(true)): Boolean?))): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26).compiled#52().data#67).compiled#52();
+    init negatedBasic#34 = entire#66(((upcast(new constructor#55((list((upcast(new constructor#65("a"))): RegexNode#26, (upcast(new constructor#62((list((upcast(new constructor#128(97, 99))): CodePart#59)): List#7<CodePart#59>, (asNullable(true)): Boolean?))): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26).compiled#52().data#67).compiled#52();
     init nbTrue#35 = "a🌍";
     init nbFalse#36 = "ac";
     ~console#76.log#75(%String.cat("negated basic true: ", negatedBasic#34.found#77(nbTrue#35).toString#79()));
     ~console#76.log#75(%String.cat("negated basic false: ", negatedBasic#34.found#77(nbFalse#36).toString#79()));
     init simplerLines#37 = "It was the best of times.\nIt was the worst of times.";
-    ~console#76.log#75(((upcast(new constructor#84((upcast(new constructor#62((list()): List#7<CodePart#59>, (asNullable(true)): Boolean?))): RegexNode#26, 1, (null): Int32?, (asNullable(false)): Boolean?))): RegexNode#26).compiled#52().find#93(simplerLines#37, omitted)^.full#110.value#98);
-    ~console#76.log#75((orelse(((upcast(new constructor#84((upcast(new constructor#62((list()): List#7<CodePart#59>, (asNullable(false)): Boolean?))): RegexNode#26, 1, (null): Int32?, (asNullable(false)): Boolean?))): RegexNode#26).compiled#52().find#93(simplerLines#37, omitted)^.full#110.value#98, "-")): String);
-    init notLow#38 = ((upcast(oneOrMore#57((upcast(new constructor#62((list((upcast(new constructor#127(0, 47))): CodePart#59)): List#7<CodePart#59>, (asNullable(true)): Boolean?))): RegexNode#26, omitted))): RegexNode#26).compiled#52();
-    ~console#76.log#75(%String.cat("not low: ", notLow#38.find#93("-/a🌍-", omitted)^.full#110.value#98));
-    ~console#76.log#75(%String.cat("not space or >: ", ((upcast(new constructor#84((upcast(new constructor#62((list((upcast(new constructor#65("\t"))): CodePart#59, (upcast(new constructor#65("\n"))): CodePart#59, (upcast(new constructor#65(" "))): CodePart#59, (upcast(new constructor#65(">"))): CodePart#59)): List#7<CodePart#59>, (asNullable(true)): Boolean?))): RegexNode#26, 1, (null): Int32?, (asNullable(false)): Boolean?))): RegexNode#26).compiled#52().find#93("ab>c", omitted)^.full#110.value#98));
-    init idStart#39 = ((upcast(new constructor#62((list((upcast(new constructor#127(97, 122))): CodePart#59, (upcast(new constructor#127(65, 90))): CodePart#59, (upcast(new constructor#65("_"))): CodePart#59)): List#7<CodePart#59>, (asNullable(false)): Boolean?))): RegexNode#26).compiled#52().data#67;
-    init idContinue#41 = new constructor#90((list(idStart#39, ((upcast(new constructor#62((list((upcast(new constructor#127(48, 57))): CodePart#59)): List#7<CodePart#59>, (asNullable(false)): Boolean?))): RegexNode#26).compiled#52().data#67)): List#7<RegexNode#26>);
-    init word#42 = ((upcast(new constructor#55((list((upcast(WordBoundary#140)): RegexNode#26, idStart#39, (upcast(new constructor#84((upcast(idContinue#41)): RegexNode#26, 0, (null): Int32?, omitted))): RegexNode#26, (upcast(WordBoundary#140)): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26).compiled#52();
+    ~console#76.log#75((value { let subject#146: String? = (value { let subject#147: Group#17? = (value { let subject#148: Match#14? = ((upcast(new constructor#84((upcast(new constructor#62((list()): List#7<CodePart#59>, (asNullable(true)): Boolean?))): RegexNode#26, 1, (null): Int32?, (asNullable(false)): Boolean?))): RegexNode#26).compiled#52().find#94(simplerLines#37, omitted); (if (isNull(subject#148)) (null): Group#17? else (asNullable(((nonNull(subject#148)): Match#14).full#111)): Group#17?): Group#17? }): Group#17?; (if (isNull(subject#147)) (null): String? else (asNullable(((nonNull(subject#147)): Group#17).value#99)): String?): String? }): String?; (if (isNull(subject#146)) "-" else (nonNull(subject#146)): String): String }): String);
+    ~console#76.log#75((value { let subject#149: String? = (value { let subject#150: Group#17? = (value { let subject#151: Match#14? = ((upcast(new constructor#84((upcast(new constructor#62((list()): List#7<CodePart#59>, (asNullable(false)): Boolean?))): RegexNode#26, 1, (null): Int32?, (asNullable(false)): Boolean?))): RegexNode#26).compiled#52().find#94(simplerLines#37, omitted); (if (isNull(subject#151)) (null): Group#17? else (asNullable(((nonNull(subject#151)): Match#14).full#111)): Group#17?): Group#17? }): Group#17?; (if (isNull(subject#150)) (null): String? else (asNullable(((nonNull(subject#150)): Group#17).value#99)): String?): String? }): String?; (if (isNull(subject#149)) "-" else (nonNull(subject#149)): String): String }): String);
+    init notLow#38 = ((upcast(oneOrMore#57((upcast(new constructor#62((list((upcast(new constructor#128(0, 47))): CodePart#59)): List#7<CodePart#59>, (asNullable(true)): Boolean?))): RegexNode#26, omitted))): RegexNode#26).compiled#52();
+    ~console#76.log#75(%String.cat("not low: ", (value { let subject#152: String? = (value { let subject#153: Group#17? = (value { let subject#154: Match#14? = notLow#38.find#94("-/a🌍-", omitted); (if (isNull(subject#154)) (null): Group#17? else (asNullable(((nonNull(subject#154)): Match#14).full#111)): Group#17?): Group#17? }): Group#17?; (if (isNull(subject#153)) (null): String? else (asNullable(((nonNull(subject#153)): Group#17).value#99)): String?): String? }): String?; (if (isNull(subject#152)) "-" else (nonNull(subject#152)): String): String }): String));
+    ~console#76.log#75(%String.cat("not space or >: ", (value { let subject#155: String? = (value { let subject#156: Group#17? = (value { let subject#157: Match#14? = ((upcast(new constructor#84((upcast(new constructor#62((list((upcast(new constructor#65("\t"))): CodePart#59, (upcast(new constructor#65("\n"))): CodePart#59, (upcast(new constructor#65(" "))): CodePart#59, (upcast(new constructor#65(">"))): CodePart#59)): List#7<CodePart#59>, (asNullable(true)): Boolean?))): RegexNode#26, 1, (null): Int32?, (asNullable(false)): Boolean?))): RegexNode#26).compiled#52().find#94("ab>c", omitted); (if (isNull(subject#157)) (null): Group#17? else (asNullable(((nonNull(subject#157)): Match#14).full#111)): Group#17?): Group#17? }): Group#17?; (if (isNull(subject#156)) (null): String? else (asNullable(((nonNull(subject#156)): Group#17).value#99)): String?): String? }): String?; (if (isNull(subject#155)) "-" else (nonNull(subject#155)): String): String }): String));
+    init idStart#39 = ((upcast(new constructor#62((list((upcast(new constructor#128(97, 122))): CodePart#59, (upcast(new constructor#128(65, 90))): CodePart#59, (upcast(new constructor#65("_"))): CodePart#59)): List#7<CodePart#59>, (asNullable(false)): Boolean?))): RegexNode#26).compiled#52().data#67;
+    init idContinue#41 = new constructor#90((list(idStart#39, ((upcast(new constructor#62((list((upcast(new constructor#128(48, 57))): CodePart#59)): List#7<CodePart#59>, (asNullable(false)): Boolean?))): RegexNode#26).compiled#52().data#67)): List#7<RegexNode#26>);
+    init word#42 = ((upcast(new constructor#55((list((upcast(WordBoundary#158)): RegexNode#26, idStart#39, (upcast(new constructor#84((upcast(idContinue#41)): RegexNode#26, 0, (null): Int32?, omitted))): RegexNode#26, (upcast(WordBoundary#158)): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26).compiled#52();
     init expected#43 = "def_456";
-    init found#44 = word#42.find#93(%String.cat(%String.cat("123_abc ", expected#43), " ghi_789"), omitted)^.full#110.value#98;
+    init found#44 = (value { let subject#159: String? = (value { let subject#160: Group#17? = (value { let subject#161: Match#14? = word#42.find#94(%String.cat(%String.cat("123_abc ", expected#43), " ghi_789"), omitted); (if (isNull(subject#161)) (null): Group#17? else (asNullable(((nonNull(subject#161)): Match#14).full#111)): Group#17?): Group#17? }): Group#17?; (if (isNull(subject#160)) (null): String? else (asNullable(((nonNull(subject#160)): Group#17).value#99)): String?): String? }): String?; (if (isNull(subject#159)) "-" else (nonNull(subject#159)): String): String }): String;
     ~console#76.log#75(%String.cat("Found id: ", found#44));
     init stringToEscape#45 = "$(*^";
-    init regexWithInterpolatedString#46 = ((upcast(new constructor#55((list((upcast(Dot#141)): RegexNode#26, (upcast(new constructor#84((upcast(new constructor#65(stringToEscape#45))): RegexNode#26, 1, (null): Int32?, (asNullable(false)): Boolean?))): RegexNode#26, (upcast(Dot#141)): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26).compiled#52();
+    init regexWithInterpolatedString#46 = ((upcast(new constructor#55((list((upcast(Dot#162)): RegexNode#26, (upcast(new constructor#84((upcast(new constructor#65(stringToEscape#45))): RegexNode#26, 1, (null): Int32?, (asNullable(false)): Boolean?))): RegexNode#26, (upcast(Dot#162)): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26).compiled#52();
     init stringToEscapeAndMore#47 = %String.cat(%String.cat(%String.cat("a", stringToEscape#45), stringToEscape#45), "b");
-    init escapedMatch#48 = regexWithInterpolatedString#46.find#93(stringToEscapeAndMore#47, omitted)^;
-    ~console#76.log#75(escapedMatch#48.full#110.value#98);
-    init ownFullMatch#49 = ((upcast(new constructor#55((list((upcast(Dot#141)): RegexNode#26, (upcast(new constructor#88("full", (upcast(Dot#141)): RegexNode#26))): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26).compiled#52().find#93("ab", omitted)^;
-    init ownFull#50 = ownFullMatch#49.groups#123.get#116("full")^.value#98;
-    ~console#76.log#75(%String.cat(%String.cat(%String.cat("Own full: ", ownFull#50), " vs "), ownFullMatch#49.full#110.value#98));
+    init escapedMatch#48 = (value { let subject#163: Match#14? = regexWithInterpolatedString#46.find#94(stringToEscapeAndMore#47, omitted); (if (isNull(subject#163)) (panic()): Match#14 else (nonNull(subject#163)): Match#14): Match#14 }): Match#14;
+    ~console#76.log#75(escapedMatch#48.full#111.value#99);
+    init ownFullMatch#49 = (value { let subject#164: Match#14? = ((upcast(new constructor#55((list((upcast(Dot#162)): RegexNode#26, (upcast(new constructor#88("full", (upcast(Dot#162)): RegexNode#26))): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26).compiled#52().find#94("ab", omitted); (if (isNull(subject#164)) (panic()): Match#14 else (nonNull(subject#164)): Match#14): Match#14 }): Match#14;
+    init ownFull#50 = ownFullMatch#49.groups#124.get#117("full")^.value#99;
+    ~console#76.log#75(%String.cat(%String.cat(%String.cat("Own full: ", ownFull#50), " vs "), ownFullMatch#49.full#111.value#99));
     init comboLines#51 = %String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("It was the best", "\n"), "of times."), "\r"), "\n"), "\r"), "It was the worst of times.");
     {
-      let ~list#143: List#7<String> = ((upcast(new constructor#90((list((upcast(new constructor#65("\n"))): RegexNode#26, (upcast(new constructor#55((list((upcast(new constructor#65("\r"))): RegexNode#26, (upcast(new constructor#84((upcast(new constructor#65("\n"))): RegexNode#26, 0, (asNullable(1)): Int32?, (asNullable(false)): Boolean?))): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26).compiled#52().split#142(comboLines#51);
-      let ~length#144: Int32 = ~list#143.length#68();
-      var ~i#145: Int32 = 0;
-      ~loop#146: while (%Int32.lt(~i#145, ~length#144)) {
-        let line#147: String = ~list#143.get#69(~i#145);
-        ~i#145 = %Int32.add(~i#145, 1);
-        ~console#76.log#75(%String.cat(line#147, ";"));
+      let ~list#166: List#7<String> = ((upcast(new constructor#90((list((upcast(new constructor#65("\n"))): RegexNode#26, (upcast(new constructor#55((list((upcast(new constructor#65("\r"))): RegexNode#26, (upcast(new constructor#84((upcast(new constructor#65("\n"))): RegexNode#26, 0, (asNullable(1)): Int32?, (asNullable(false)): Boolean?))): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26)): List#7<RegexNode#26>))): RegexNode#26).compiled#52().split#165(comboLines#51);
+      let ~length#167: Int32 = ~list#166.length#68();
+      var ~i#168: Int32 = 0;
+      ~loop#169: while (%Int32.lt(~i#168, ~length#167)) {
+        let line#170: String = ~list#166.get#69(~i#168);
+        ~i#168 = %Int32.add(~i#168, 1);
+        ~console#76.log#75(%String.cat(line#170, ";"));
       }
     }
   }

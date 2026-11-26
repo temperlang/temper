@@ -51,7 +51,7 @@ void global_init_init() {}
 namespace host_error_tests {
 
 void hostErrorsArePanics(std::shared_ptr<temper_std::Test> const & test) {
-  auto fn = [=]() -> void {
+  auto fn = [=]() -> core::Expected<void, std::shared_ptr<core::Failure>> {
     int32_t r;
     try {
       r = hostFails(1);
@@ -59,9 +59,10 @@ void hostErrorsArePanics(std::shared_ptr<temper_std::Test> const & test) {
       r = -1;
     }
     test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("expected r != -1"); });
+    return {};
   };
   test->assertPanics(fn, TEMPER_STR("host error 1"));
-  auto fn3 = [=]() -> void {
+  auto fn3 = [=]() -> core::Expected<void, std::shared_ptr<core::Failure>> {
     int32_t r;
     try {
       r = hostFails(2);
@@ -69,9 +70,10 @@ void hostErrorsArePanics(std::shared_ptr<temper_std::Test> const & test) {
       r = -1;
     }
     test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("expected r != -1"); });
+    return {};
   };
   test->assertPanics(fn3, TEMPER_STR("host error 2"));
-  auto fn4 = [=]() -> void {
+  auto fn4 = [=]() -> core::Expected<void, std::shared_ptr<core::Failure>> {
     int32_t r;
     try {
       r = hostFails(3);
@@ -79,12 +81,17 @@ void hostErrorsArePanics(std::shared_ptr<temper_std::Test> const & test) {
       r = -1;
     }
     test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("expected r != -1"); });
+    return {};
   };
   test->assertPanics(fn4, TEMPER_STR("host error 3"));
 }
 
 void hostTestFailureIsNoPanic(std::shared_ptr<temper_std::Test> const & test) {
-  test->assertPanics([]() -> void { hostFailsTest(); });
+  auto fn = []() -> core::Expected<void, std::shared_ptr<core::Failure>> {
+    hostFailsTest();
+    return {};
+  };
+  test->assertPanics(fn);
 }
 
 }  // namespace host_error_tests

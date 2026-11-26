@@ -267,6 +267,43 @@ fn gitignore_files_skip_what_they_list() {
     assert!(passed);
 }
 
+/// A test may throw any error, unhandled, as a call's declared failure or
+/// a bubble: the test fails, saying the error's message.
+#[test]
+fn tests_may_throw_any_error() {
+    let tree = write_tree(
+        "throwing",
+        &[
+            ("config.temper.md", CONFIG),
+            (
+                "a.temper",
+                "let { Date } = import(\"std/temporal\");\n\
+                 let parse(s: String): Int throws ParseError { s.toInt32() }\n\
+                 let bubbly(): Int throws Bubble { bubble() }\n\
+                 test(\"parses\") { assert(parse(\"12\") + new Date(2024, 3, 5).year == 2036) }\n\
+                 test(\"throws\") { assert(false) { \"soft\" }; assert(parse(\"x\") == 0) }\n\
+                 test(\"bubbles\") { bubbly(); }\n\
+                 test(\"block throws\") { test => test.assertPanics { parse(\"x\"); } }\n",
+            ),
+        ],
+    );
+    let root = &tree.root;
+    let (passed, out, err) = test(root);
+    assert_eq!(err, "");
+    assert_eq!(
+        out,
+        format!(
+            "Testing {root}\n  \
+             ok      parses\n  \
+             failed  throws - soft, parse error (input: x, reason: not an Int32)\n  \
+             failed  bubbles - bubble\n  \
+             failed  block throws - expected a panic, but it threw\n\
+             Tests passed: 1 of 4\n"
+        )
+    );
+    assert!(!passed);
+}
+
 #[test]
 fn tests_not_run_and_errors() {
     let tree = write_tree(

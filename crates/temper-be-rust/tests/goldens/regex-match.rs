@@ -83,7 +83,10 @@ pub(crate) fn init() -> temper_core::Result<()> {
             );
             TEXT.set(Arc::new("🌍aaabbceef".to_string()))
                 .unwrap_or_else(|_| panic!());
-            let r#match = catcher.find(text(), None)?;
+            let r#match = {
+                let subject = catcher.find(text(), None);
+                subject.clone().unwrap_or_else(|| panic!())
+            };
             check_group(r#match.full());
             check_group(
                 temper_core::MappedTrait::get(&r#match.groups(), Arc::new("intro".to_string()))?,
@@ -104,8 +107,14 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 Some(false),
             ));
             let multi_text = Arc::new("---abc---xyz---".to_string());
-            let first = thing.find(multi_text.clone(), None)?;
-            let second = thing.find(multi_text.clone(), Some(first.full().end()))?;
+            let first = {
+                let subject2 = thing.find(multi_text.clone(), None);
+                subject2.clone().unwrap_or_else(|| panic!())
+            };
+            let second = {
+                let subject3 = thing.find(multi_text.clone(), Some(first.full().end()));
+                subject3.clone().unwrap_or_else(|| panic!())
+            };
             println!(
                 "Found both {} and {}.",
                 first.full().value(),
@@ -150,9 +159,18 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 Arc::new(move |_match: temper_std::regex::Match| Arc::new("hi".to_string())),
             );
             println!("not replaced: {not_replaced}");
-            let no_match =
-                (|| Ok::<_, temper_core::Error>(catcher.find("not here", None)?.full().value()))()
-                    .unwrap_or_else(|_| Arc::new("sorry".to_string()));
+            let no_match = {
+                let subject4 = {
+                    let subject5 = {
+                        let subject6 = catcher.find("not here", None);
+                        subject6.as_ref().map(|subject6| subject6.full())
+                    };
+                    subject5.as_ref().map(|subject5| subject5.value())
+                };
+                subject4
+                    .clone()
+                    .unwrap_or_else(|| Arc::new("sorry".to_string()))
+            };
             println!("No match says {no_match}");
             let or = temper_std::regex::RegexNodeTrait::compiled(&temper_std::regex::Or::new(
                 Arc::new(vec![
@@ -215,41 +233,52 @@ pub(crate) fn init() -> temper_core::Result<()> {
             );
             let simpler_lines =
                 Arc::new("It was the best of times.\nIt was the worst of times.".to_string());
-            println!(
-                "{}",
-                temper_std::regex::RegexNodeTrait::compiled(&temper_std::regex::Repeat::new(
-                    temper_std::regex::RegexNode::new(temper_std::regex::CodeSet::new(
-                        Arc::new(vec![]),
-                        Some(true),
-                    )),
-                    1,
-                    None,
-                    Some(false),
-                ))
-                .find(simpler_lines.clone(), None)?
-                .full()
-                .value()
-            );
-            println!(
-                "{}",
-                (|| {
-                    Ok::<_, temper_core::Error>(
-                        temper_std::regex::RegexNodeTrait::compiled(&temper_std::regex::Repeat::new(
-                            temper_std::regex::RegexNode::new(temper_std::regex::CodeSet::new(
-                                Arc::new(vec![]),
+            println!("{}", {
+                let subject7 = {
+                    let subject8 = {
+                        let subject9 = temper_std::regex::RegexNodeTrait::compiled(
+                            &temper_std::regex::Repeat::new(
+                                temper_std::regex::RegexNode::new(temper_std::regex::CodeSet::new(
+                                    Arc::new(vec![]),
+                                    Some(true),
+                                )),
+                                1,
+                                None,
                                 Some(false),
-                            )),
-                            1,
-                            None,
-                            Some(false),
-                        ))
-                        .find(simpler_lines.clone(), None)?
-                        .full()
-                        .value(),
-                    )
-                })()
-                .unwrap_or_else(|_| Arc::new("-".to_string()))
-            );
+                            ),
+                        )
+                        .find(simpler_lines.clone(), None);
+                        subject9.as_ref().map(|subject9| subject9.full())
+                    };
+                    subject8.as_ref().map(|subject8| subject8.value())
+                };
+                subject7
+                    .clone()
+                    .unwrap_or_else(|| Arc::new("-".to_string()))
+            });
+            println!("{}", {
+                let subject10 = {
+                    let subject11 = {
+                        let subject12 = temper_std::regex::RegexNodeTrait::compiled(
+                            &temper_std::regex::Repeat::new(
+                                temper_std::regex::RegexNode::new(temper_std::regex::CodeSet::new(
+                                    Arc::new(vec![]),
+                                    Some(false),
+                                )),
+                                1,
+                                None,
+                                Some(false),
+                            ),
+                        )
+                        .find(simpler_lines.clone(), None);
+                        subject12.as_ref().map(|subject12| subject12.full())
+                    };
+                    subject11.as_ref().map(|subject11| subject11.value())
+                };
+                subject10
+                    .clone()
+                    .unwrap_or_else(|| Arc::new("-".to_string()))
+            });
             let not_low =
                 temper_std::regex::RegexNodeTrait::compiled(&temper_std::regex::one_or_more(
                     temper_std::regex::RegexNode::new(temper_std::regex::CodeSet::new(
@@ -260,35 +289,54 @@ pub(crate) fn init() -> temper_core::Result<()> {
                     )),
                     None,
                 ));
-            println!("not low: {}", not_low.find("-/a🌍-", None)?.full().value());
-            println!(
-                "not space or >: {}",
-                temper_std::regex::RegexNodeTrait::compiled(&temper_std::regex::Repeat::new(
-                    temper_std::regex::RegexNode::new(temper_std::regex::CodeSet::new(
-                        Arc::new(vec![
-                            temper_std::regex::CodePart::new(temper_std::regex::CodePoints::new(
-                                "\t",
-                            )),
-                            temper_std::regex::CodePart::new(temper_std::regex::CodePoints::new(
-                                "\n",
-                            )),
-                            temper_std::regex::CodePart::new(temper_std::regex::CodePoints::new(
-                                " ",
-                            )),
-                            temper_std::regex::CodePart::new(temper_std::regex::CodePoints::new(
-                                ">",
-                            )),
-                        ]),
-                        Some(true),
-                    )),
-                    1,
-                    None,
-                    Some(false),
-                ))
-                .find("ab>c", None)?
-                .full()
-                .value()
-            );
+            println!("not low: {}", {
+                let subject13 = {
+                    let subject14 = {
+                        let subject15 = not_low.find("-/a🌍-", None);
+                        subject15.as_ref().map(|subject15| subject15.full())
+                    };
+                    subject14.as_ref().map(|subject14| subject14.value())
+                };
+                subject13
+                    .clone()
+                    .unwrap_or_else(|| Arc::new("-".to_string()))
+            });
+            println!("not space or >: {}", {
+                let subject16 = {
+                    let subject17 = {
+                        let subject18 = temper_std::regex::RegexNodeTrait::compiled(
+                            &temper_std::regex::Repeat::new(
+                                temper_std::regex::RegexNode::new(temper_std::regex::CodeSet::new(
+                                    Arc::new(vec![
+                                        temper_std::regex::CodePart::new(
+                                            temper_std::regex::CodePoints::new("\t"),
+                                        ),
+                                        temper_std::regex::CodePart::new(
+                                            temper_std::regex::CodePoints::new("\n"),
+                                        ),
+                                        temper_std::regex::CodePart::new(
+                                            temper_std::regex::CodePoints::new(" "),
+                                        ),
+                                        temper_std::regex::CodePart::new(
+                                            temper_std::regex::CodePoints::new(">"),
+                                        ),
+                                    ]),
+                                    Some(true),
+                                )),
+                                1,
+                                None,
+                                Some(false),
+                            ),
+                        )
+                        .find("ab>c", None);
+                        subject18.as_ref().map(|subject18| subject18.full())
+                    };
+                    subject17.as_ref().map(|subject17| subject17.value())
+                };
+                subject16
+                    .clone()
+                    .unwrap_or_else(|| Arc::new("-".to_string()))
+            });
             let id_start =
                 temper_std::regex::RegexNodeTrait::compiled(&temper_std::regex::CodeSet::new(
                     Arc::new(vec![
@@ -326,10 +374,19 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 ])),
             );
             let expected = Arc::new("def_456".to_string());
-            let found = word
-                .find(Arc::new(format!("123_abc {expected} ghi_789")), None)?
-                .full()
-                .value();
+            let found = {
+                let subject19 = {
+                    let subject20 = {
+                        let subject21 =
+                            word.find(Arc::new(format!("123_abc {expected} ghi_789")), None);
+                        subject21.as_ref().map(|subject21| subject21.full())
+                    };
+                    subject20.as_ref().map(|subject20| subject20.value())
+                };
+                subject19
+                    .clone()
+                    .unwrap_or_else(|| Arc::new("-".to_string()))
+            };
             println!("Found id: {found}");
             let string_to_escape = Arc::new("$(*^".to_string());
             let regex_with_interpolated_string = temper_std::regex::RegexNodeTrait::compiled(
@@ -348,19 +405,25 @@ pub(crate) fn init() -> temper_core::Result<()> {
             );
             let string_to_escape_and_more =
                 Arc::new(format!("a{string_to_escape}{string_to_escape}b"));
-            let escaped_match =
-                regex_with_interpolated_string.find(string_to_escape_and_more.clone(), None)?;
+            let escaped_match = {
+                let subject22 =
+                    regex_with_interpolated_string.find(string_to_escape_and_more.clone(), None);
+                subject22.clone().unwrap_or_else(|| panic!())
+            };
             println!("{}", escaped_match.full().value());
-            let own_full_match = temper_std::regex::RegexNodeTrait::compiled(
-                &temper_std::regex::Sequence::new(Arc::new(vec![
-                    temper_std::regex::RegexNode::new(temper_std::regex::dot()),
-                    temper_std::regex::RegexNode::new(temper_std::regex::Capture::new(
-                        "full",
+            let own_full_match = {
+                let subject23 = temper_std::regex::RegexNodeTrait::compiled(
+                    &temper_std::regex::Sequence::new(Arc::new(vec![
                         temper_std::regex::RegexNode::new(temper_std::regex::dot()),
-                    )),
-                ])),
-            )
-            .find("ab", None)?;
+                        temper_std::regex::RegexNode::new(temper_std::regex::Capture::new(
+                            "full",
+                            temper_std::regex::RegexNode::new(temper_std::regex::dot()),
+                        )),
+                    ])),
+                )
+                .find("ab", None);
+                subject23.clone().unwrap_or_else(|| panic!())
+            };
             let own_full = temper_core::MappedTrait::get(
                 &own_full_match.groups(),
                 Arc::new("full".to_string()),

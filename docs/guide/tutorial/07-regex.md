@@ -45,9 +45,11 @@ $ let { ... } = import("std/regex");
 interactive#0: void
 $ let regex = /a(?thing=.)c/;
 interactive#1: void
-$ regex.find("abc").groups["thing"].value
+$ (regex.find("abc") ?? panic()).groups["thing"].value
 interactive#2: "b"
 ```
+
+`find` gives `null` where nothing matches, so `?? panic()` says something does.
 
 From this regex, we can also get its structured representation:
 
@@ -65,7 +67,7 @@ $ let regex2 = new Sequence([
     new CodePoints("c"),
   ]).compiled();
 interactive#4: void
-$ regex2.find("abc").groups["thing"].value
+$ (regex2.find("abc") ?? panic()).groups["thing"].value
 interactive#5: "b"
 ```
 

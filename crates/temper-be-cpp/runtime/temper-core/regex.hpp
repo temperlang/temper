@@ -493,7 +493,7 @@ namespace temper {
                 std::pair<bool, decltype(regexRefs->get_match())> result =
                 compiledFindImpl(self, compiled, text, beginIdx, regexRefs);
                 if (!result.first) {
-                    throw TemperBubble();
+                    return nullptr;
                 }
                 return result.second;
             }

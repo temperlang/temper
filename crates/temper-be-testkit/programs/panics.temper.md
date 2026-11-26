@@ -3,9 +3,9 @@
 `orelse` handles a failure, wherever it comes from, and never a panic.
 Failures here come from `bubble()`, from builtins (a failed number
 parse throws a `ParseError`, and a code point out of range an
-`InvalidCodePoint`), from std (a regex that finds nothing), and
-from inside a function value an `orelse` calls. Each `orelse` gives its
-fallback:
+`InvalidCodePoint`), and from inside a function value an `orelse` calls.
+Each `orelse` gives its fallback, and `??` gives one for a regex that
+finds nothing, as `find` gives null:
 
     let { Regex } = import("std/regex");
     let { Date } = import("std/temporal");
@@ -31,7 +31,7 @@ fallback:
     let f = "x".toFloat64() orelse -6.0;
     let g = String.fromCodePoint(0x110000) orelse "?";
     let digits: Regex = /[0-9]+/;
-    let h = digits.find("none").full.value orelse "no digits";
+    let h = digits.find("none")?.full?.value ?? "no digits";
     let i = calling(fn (): Int throws Bubble { failing(2) });
     console.log("${a} ${b} ${e} ${(f == -6.0).toString()} ${g} ${h} ${i}");
 

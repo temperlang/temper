@@ -9,10 +9,47 @@ pub(crate) fn init() -> temper_core::Result<()> {
 }
 
 #[cfg(test)]
-pub(crate) fn at(ls: impl temper_core::ToList<i32>, i: i32) -> temper_core::Result<i32> {
+#[derive(Clone, Debug)]
+pub(crate) enum AtError {
+    Unlucky(Unlucky),
+}
+
+#[cfg(test)]
+temper_core::impl_failure_enum!(AtError, Unlucky(Unlucky));
+
+#[cfg(test)]
+struct UnluckyStruct {
+    cause: temper_core::Cause,
+}
+
+#[cfg(test)]
+#[derive(Clone)]
+pub(crate) struct Unlucky(Arc<UnluckyStruct>);
+
+#[cfg(test)]
+impl Unlucky {
+    pub fn new() -> Unlucky {
+        Unlucky(Arc::new(UnluckyStruct {
+            cause: temper_core::Cause::new(),
+        }))
+    }
+
+    pub fn message(&self) -> Arc<String> {
+        Arc::new("unlucky".to_string())
+    }
+}
+
+#[cfg(test)]
+temper_core::impl_failure!(Unlucky, message, cause);
+
+#[cfg(test)]
+temper_core::impl_any_value_trait!(Unlucky, [AtError]);
+
+#[cfg(test)]
+pub(crate) fn at(ls: impl temper_core::ToList<i32>, i: i32) -> Result<i32, Unlucky> {
     let ls = ls.to_list();
     if i == 99 {
-        return Err(temper_core::Error::new());
+        return Err(Unlucky::new());
     }
     Ok(temper_core::ListedTrait::get(&ls, i))
 }
@@ -277,7 +314,7 @@ mod tests {
     }
 
     #[test]
-    fn fails_when_the_block_bubbles() -> temper_core::Result<()> {
+    fn fails_when_the_block_throws() -> temper_core::Result<()> {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
@@ -295,7 +332,7 @@ mod tests {
     }
 
     #[test]
-    fn fails_with_its_message_when_the_block_bubbles() -> temper_core::Result<()> {
+    fn fails_with_its_message_when_the_block_throws() -> temper_core::Result<()> {
         crate::init(None)?;
         temper_std::init(None)?;
         let test = temper_std::testing::Test::new();
@@ -426,6 +463,18 @@ mod tests {
         );
         test.fail("swallowed");
         panic!();
+    }
+
+    #[test]
+    fn fails_when_its_body_throws() -> temper_core::Result<()> {
+        crate::init(None)?;
+        temper_std::init(None)?;
+        let test = temper_std::testing::Test::new();
+        let work = temper_core::TestWork::begin(crate::support::config().runner());
+        super::at(Arc::new(vec![1, 2]), 99)?;
+        work.finish();
+        test.soft_fail_to_hard();
+        Ok(())
     }
 
     #[test]

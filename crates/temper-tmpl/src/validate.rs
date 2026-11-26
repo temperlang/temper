@@ -40,7 +40,8 @@
 //!   block, where it fails the module's initialization), and what may
 //!   fail with a declared failure type only where that type (or one above
 //!   it) may: an `OrElse`'s body, a `Catch`'s of its local's type, or a
-//!   function failing with it, never mixing with `Bubble`; **F5** no reading a module `let`
+//!   function failing with it, never mixing with `Bubble`, but for core's
+//!   `Error`, any error, which takes a bubble too, until `Bubble` goes; **F5** no reading a module `let`
 //!   before its initializer; **F6** `Await` and `Yield` only in a
 //!   generator literal's own body, a `Yield`'s value its `Y`; **F7** a
 //!   `Switch`'s scrutinee an `Int32` or `Int64`, its labels literals of
@@ -61,7 +62,7 @@
 //!   `Program::modules` (imports are acyclic, so that's dependency
 //!   order); it assigns or initializes only its own module `let`s; **M2**
 //!   a test takes one parameter, a `Test` of std's `testing` module, and
-//!   returns `Void`, and may bubble.
+//!   returns `Void`, and may fail with core's `Error`, any error.
 //! - **C1** (classes, subset B) a class's or interface's members fit it:
 //!   fields only in classes, bodiless methods only in interfaces, a
 //!   constructor's result its class, a setter's one parameter and `Void`
@@ -1017,8 +1018,8 @@ impl Validator {
         }
     }
 
-    /// M2: a test's signature, `fn (Test): Void throws Bubble`, with
-    /// std's `Test`.
+    /// M2: a test's signature, `fn (Test): Void throws Error`, with
+    /// std's `Test` and core's `Error`.
     fn test_signature(&mut self, p: &Program, test: NodeId, decl: DeclId) {
         let Some(sig) = p.signature(decl) else { return };
         let is_test = |t: TypeId| match p.types.get(t) {
@@ -1032,10 +1033,12 @@ impl Validator {
         };
         let fits = matches!(sig.params[..], [t] if p.types.contains(t) && is_test(t))
             && sig.pass == TypeId::VOID
-            && sig.fail == Some(TypeId::BUBBLE);
+            && sig
+                .fail
+                .is_some_and(|f| crate::failures::is_root_type(p, f));
         if !fits {
             let message =
-                "a test's signature is fn (Test): Void throws Bubble, with std's Test".into();
+                "a test's signature is fn (Test): Void throws Error, with std's Test".into();
             self.node_problem(Rule::M2, test, message);
         }
     }
@@ -2679,7 +2682,8 @@ impl Validator {
     /// an `orelse`'s body or an init block; else what the function, or the
     /// `catch` whose body it's in, may fail with, the same type, or for a
     /// failure type, one below it, as `Bubble` and failure types never
-    /// mix. `said` says what fails, as "the call of f#1 may bubble".
+    /// mix, but core's `Error`, any error, takes a bubble too. `said`
+    /// says what fails, as "the call of f#1 may bubble".
     fn passes(&mut self, p: &Program, id: NodeId, said: &str, fail: TypeId) {
         let why = match self.body.fails {
             Fails::Any => return,
@@ -2689,6 +2693,7 @@ impl Validator {
                 catch,
             } => {
                 let fits = fail == allowed
+                    || crate::failures::is_root_type(p, allowed)
                     || (fail != TypeId::BUBBLE
                         && allowed != TypeId::BUBBLE
                         && crate::analysis::is_subtype(p, fail, allowed));

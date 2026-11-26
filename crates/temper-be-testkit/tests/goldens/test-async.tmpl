@@ -3,129 +3,130 @@ tmpl 1 model 1 library `test-async` 0.0.0
 uses std#1 0.0.0-alpha.0.0 {
   module testing#2 {
     class Test#3 {
-      connected method assert#32(success: Boolean, message: fn (): String): Void;
-      connected method fail#60(message: String): Never<Void>;
+      connected method assert#33(success: Boolean, message: fn (): String): Void;
+      connected method fail#61(message: String): Never<Void>;
     }
   }
 }
 
-uses `temper-core`#6 0.0.0-alpha.0.0 {
-  connected fn async#7(generatorFactory: fn (): SafeGenerator#8<Empty#12>): Void;
-  interface SafeGenerator#8<YIELD#9> extends Generator#10<YIELD#9> {}
-  interface Generator#10<YIELD#11> {}
-  class Empty#12 {}
-  class ValueResult#13<YIELD#14> extends GeneratorResult#15<YIELD#14> {
-    connected constructor constructor#17(value: YIELD#14): ValueResult#13<YIELD#14>;
+uses `temper-core`#4 0.0.0-alpha.0.0 {
+  interface Error#5 {}
+  connected fn async#8(generatorFactory: fn (): SafeGenerator#9<Empty#13>): Void;
+  interface SafeGenerator#9<YIELD#10> extends Generator#11<YIELD#10> {}
+  interface Generator#11<YIELD#12> {}
+  class Empty#13 {}
+  class ValueResult#14<YIELD#15> extends GeneratorResult#16<YIELD#15> {
+    connected constructor constructor#18(value: YIELD#15): ValueResult#14<YIELD#15>;
   }
-  interface GeneratorResult#15<YIELD#16> {}
-  connected fn doneResult#18<YIELD#19>(): DoneResult#20<YIELD#19>;
-  class DoneResult#20<YIELD#21> extends GeneratorResult#15<YIELD#21> {}
-  connected fn empty#22(): Empty#12;
-  connected fn safeAdaptGeneratorFn#23<YIELD#24>(step: fn (SafeGenerator#8<YIELD#24>): GeneratorResult#15<YIELD#24>): SafeGenerator#8<YIELD#24>;
-  connected fn awakeUpon#25<T#26>(promise: Promise#27<T#26>, generator: SafeGenerator#8<Empty#12>): Void;
-  class Promise#27<R#28> {}
-  connected fn getPromiseResultSync#29<T#30>(promise: Promise#27<T#30>): T#30 throws Bubble;
-  class PromiseBuilder#40<R#41> {
-    connected constructor constructor#43(): PromiseBuilder#40<R#41>;
-    connected get promise#46(): Promise#27<R#41>;
-    connected method complete#51(completion: R#41): Void;
+  interface GeneratorResult#16<YIELD#17> {}
+  connected fn doneResult#19<YIELD#20>(): DoneResult#21<YIELD#20>;
+  class DoneResult#21<YIELD#22> extends GeneratorResult#16<YIELD#22> {}
+  connected fn empty#23(): Empty#13;
+  connected fn safeAdaptGeneratorFn#24<YIELD#25>(step: fn (SafeGenerator#9<YIELD#25>): GeneratorResult#16<YIELD#25>): SafeGenerator#9<YIELD#25>;
+  connected fn awakeUpon#26<T#27>(promise: Promise#28<T#27>, generator: SafeGenerator#9<Empty#13>): Void;
+  class Promise#28<R#29> {}
+  connected fn getPromiseResultSync#30<T#31>(promise: Promise#28<T#31>): T#31 throws Bubble;
+  class PromiseBuilder#41<R#42> {
+    connected constructor constructor#44(): PromiseBuilder#41<R#42>;
+    connected get promise#47(): Promise#28<R#42>;
+    connected method complete#52(completion: R#42): Void;
   }
-  class Int32#48 {
-    connected method toString#49(radix?: Int32): String;
+  class Int32#49 {
+    connected method toString#50(radix?: Int32): String;
   }
-  class List#79<T#80> extends Listed#81<T#80> {
-    connected method get#85(index: Int32): T#80;
+  class List#80<T#81> extends Listed#82<T#81> {
+    connected method get#86(index: Int32): T#81;
   }
-  interface Listed#81<T#82> {}
+  interface Listed#82<T#83> {}
 }
 
 module `test-async`#0 {
   init {}
 
-  test "fails in an async block" ~test#4(test#5: Test#3): Void throws Bubble {
-    async#7((fn generator ~fn#31(): SafeGenerator#8<Empty#12> [test#5] {
-      test#5.assert#32(%Int32.eq(%Int32.add(1, 1), 3), (fn ~fn#33(): String {
+  test "fails in an async block" ~test#6(test#7: Test#3): Void throws Error#5 {
+    async#8((fn generator ~fn#32(): SafeGenerator#9<Empty#13> [test#7] {
+      test#7.assert#33(%Int32.eq(%Int32.add(1, 1), 3), (fn ~fn#34(): String {
         return "failed in async";
       }): fn (): String);
-    }): fn (): SafeGenerator#8<Empty#12>);
+    }): fn (): SafeGenerator#9<Empty#13>);
   }
 
-  test "passes in an async block" ~test#34(test#35: Test#3): Void throws Bubble {
-    async#7((fn generator ~fn#36(): SafeGenerator#8<Empty#12> [test#35] {
-      test#35.assert#32(%Int32.eq(%Int32.add(1, 1), 2), (fn ~fn#37(): String {
+  test "passes in an async block" ~test#35(test#36: Test#3): Void throws Error#5 {
+    async#8((fn generator ~fn#37(): SafeGenerator#9<Empty#13> [test#36] {
+      test#36.assert#33(%Int32.eq(%Int32.add(1, 1), 2), (fn ~fn#38(): String {
         return "not shown";
       }): fn (): String);
-    }): fn (): SafeGenerator#8<Empty#12>);
+    }): fn (): SafeGenerator#9<Empty#13>);
   }
 
-  test "fails in a later turn" ~test#38(test#39: Test#3): Void throws Bubble {
-    let pb#42: PromiseBuilder#40<Int32> = new constructor#43<Int32>();
-    async#7((fn generator ~fn#44(): SafeGenerator#8<Empty#12> [test#39, pb#42] {
-      let n#45: Int32 = (orelse((await(pb#42.promise#46())^): Int32, %Int32.neg(1))): Int32;
-      test#39.assert#32(%Int32.eq(n#45, 2), (fn ~fn#47(): String [n#45] {
-        return %String.cat("later turn got ", n#45.toString#49(omitted));
+  test "fails in a later turn" ~test#39(test#40: Test#3): Void throws Error#5 {
+    let pb#43: PromiseBuilder#41<Int32> = new constructor#44<Int32>();
+    async#8((fn generator ~fn#45(): SafeGenerator#9<Empty#13> [test#40, pb#43] {
+      let n#46: Int32 = (orelse((await(pb#43.promise#47())^): Int32, %Int32.neg(1))): Int32;
+      test#40.assert#33(%Int32.eq(n#46, 2), (fn ~fn#48(): String [n#46] {
+        return %String.cat("later turn got ", n#46.toString#50(omitted));
       }): fn (): String);
-    }): fn (): SafeGenerator#8<Empty#12>);
-    async#7((fn generator ~fn#50(): SafeGenerator#8<Empty#12> [pb#42] {
-      pb#42.complete#51(1);
-    }): fn (): SafeGenerator#8<Empty#12>);
+    }): fn (): SafeGenerator#9<Empty#13>);
+    async#8((fn generator ~fn#51(): SafeGenerator#9<Empty#13> [pb#43] {
+      pb#43.complete#52(1);
+    }): fn (): SafeGenerator#9<Empty#13>);
   }
 
-  test "passes after a later turn" ~test#52(test#53: Test#3): Void throws Bubble {
+  test "passes after a later turn" ~test#53(test#54: Test#3): Void throws Error#5 {
     {
-      let actual#54: Int32 = %Int32.add(1, 1);
-      let expected#55: Int32 = 2;
-      test#53.assert#32(%Int32.eq(actual#54, expected#55), (fn ~fn#56(): String [actual#54, expected#55] {
-        return %String.cat(%String.cat(%String.cat(%String.cat("expected 1 + 1 == (", expected#55.toString#49(omitted)), ") not ("), actual#54.toString#49(omitted)), ")");
+      let actual#55: Int32 = %Int32.add(1, 1);
+      let expected#56: Int32 = 2;
+      test#54.assert#33(%Int32.eq(actual#55, expected#56), (fn ~fn#57(): String [actual#55, expected#56] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected 1 + 1 == (", expected#56.toString#50(omitted)), ") not ("), actual#55.toString#50(omitted)), ")");
       }): fn (): String);
     }
   }
 
-  test "fails hard in an async block" ~test#57(test#58: Test#3): Void throws Bubble {
-    async#7((fn generator ~fn#59(): SafeGenerator#8<Empty#12> [test#58] {
-      test#58.fail#60("failed hard in async");
-    }): fn (): SafeGenerator#8<Empty#12>);
+  test "fails hard in an async block" ~test#58(test#59: Test#3): Void throws Error#5 {
+    async#8((fn generator ~fn#60(): SafeGenerator#9<Empty#13> [test#59] {
+      test#59.fail#61("failed hard in async");
+    }): fn (): SafeGenerator#9<Empty#13>);
   }
 
-  test "dies in an async block" ~test#61(test#62: Test#3): Void throws Bubble {
-    async#7((fn generator ~fn#63(): SafeGenerator#8<Empty#12> {
+  test "dies in an async block" ~test#62(test#63: Test#3): Void throws Error#5 {
+    async#8((fn generator ~fn#64(): SafeGenerator#9<Empty#13> {
       (panic()): Void;
-    }): fn (): SafeGenerator#8<Empty#12>);
+    }): fn (): SafeGenerator#9<Empty#13>);
   }
 
-  test "passes after" ~test#64(test#65: Test#3): Void throws Bubble {
+  test "passes after" ~test#65(test#66: Test#3): Void throws Error#5 {
     {
-      let actual#66: Int32 = %Int32.add(1, 1);
-      let expected#67: Int32 = 2;
-      test#65.assert#32(%Int32.eq(actual#66, expected#67), (fn ~fn#68(): String [actual#66, expected#67] {
-        return %String.cat(%String.cat(%String.cat(%String.cat("expected 1 + 1 == (", expected#67.toString#49(omitted)), ") not ("), actual#66.toString#49(omitted)), ")");
+      let actual#67: Int32 = %Int32.add(1, 1);
+      let expected#68: Int32 = 2;
+      test#66.assert#33(%Int32.eq(actual#67, expected#68), (fn ~fn#69(): String [actual#67, expected#68] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected 1 + 1 == (", expected#68.toString#50(omitted)), ") not ("), actual#67.toString#50(omitted)), ")");
       }): fn (): String);
     }
   }
 
-  test "waits on nothing" ~test#69(test#70: Test#3): Void throws Bubble {
-    let never#71: PromiseBuilder#40<Int32> = new constructor#43<Int32>();
-    async#7((fn generator ~fn#72(): SafeGenerator#8<Empty#12> [test#70, never#71] {
-      let n#73: Int32 = (orelse((await(never#71.promise#46())^): Int32, %Int32.neg(1))): Int32;
-      test#70.assert#32(false, (fn ~fn#74(): String [n#73] {
-        return %String.cat("ran ", n#73.toString#49(omitted));
+  test "waits on nothing" ~test#70(test#71: Test#3): Void throws Error#5 {
+    let never#72: PromiseBuilder#41<Int32> = new constructor#44<Int32>();
+    async#8((fn generator ~fn#73(): SafeGenerator#9<Empty#13> [test#71, never#72] {
+      let n#74: Int32 = (orelse((await(never#72.promise#47())^): Int32, %Int32.neg(1))): Int32;
+      test#71.assert#33(false, (fn ~fn#75(): String [n#74] {
+        return %String.cat("ran ", n#74.toString#50(omitted));
       }): fn (): String);
-    }): fn (): SafeGenerator#8<Empty#12>);
+    }): fn (): SafeGenerator#9<Empty#13>);
   }
 
-  test "own failure wins" ~test#75(test#76: Test#3): Void throws Bubble {
-    test#76.assert#32(false, (fn ~fn#77(): String {
+  test "own failure wins" ~test#76(test#77: Test#3): Void throws Error#5 {
+    test#77.assert#33(false, (fn ~fn#78(): String {
       return "soft failure";
     }): fn (): String);
-    async#7((fn generator ~fn#78(): SafeGenerator#8<Empty#12> [test#76] {
-      test#76.fail#60("async failure");
-    }): fn (): SafeGenerator#8<Empty#12>);
-    let ls#83: List#79<Int32> = (list(1)): List#79<Int32>;
+    async#8((fn generator ~fn#79(): SafeGenerator#9<Empty#13> [test#77] {
+      test#77.fail#61("async failure");
+    }): fn (): SafeGenerator#9<Empty#13>);
+    let ls#84: List#80<Int32> = (list(1)): List#80<Int32>;
     {
-      let actual#84: Int32 = ls#83.get#85(5);
-      let expected#86: Int32 = 1;
-      test#76.assert#32(%Int32.eq(actual#84, expected#86), (fn ~fn#87(): String [actual#84, expected#86] {
-        return %String.cat(%String.cat(%String.cat(%String.cat("expected ls[5] == (", expected#86.toString#49(omitted)), ") not ("), actual#84.toString#49(omitted)), ")");
+      let actual#85: Int32 = ls#84.get#86(5);
+      let expected#87: Int32 = 1;
+      test#77.assert#33(%Int32.eq(actual#85, expected#87), (fn ~fn#88(): String [actual#85, expected#87] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected ls[5] == (", expected#87.toString#50(omitted)), ") not ("), actual#85.toString#50(omitted)), ")");
       }): fn (): String);
     }
   }

@@ -55,7 +55,8 @@ now?
   public found(text: String): Boolean { compiled().found(text) }
 ```
 
-You can also return match details. The returned groups map contains an entry for
+You can also return match details, or `null` where the pattern isn't found, as
+`find(text) ?? fallback` handles. The returned groups map contains an entry for
 each key in the order defined in the regex pattern. If no "full" group is
 defined, one is added automatically to capture the full matched text.
 
@@ -65,7 +66,7 @@ capture groups, statically checked where possible.
 ```
   // TODO(tjp, regex): Also macro because reification.
 
-  public find(text: String): Match throws Bubble {
+  public find(text: String): Match? {
     compiled().find(text)
   }
 ```
@@ -422,7 +423,7 @@ are more efficient to use repeatedly.
     compiledFound(compiled, text)
   }
 
-  public find(text: String, begin: StringIndex = String.begin): Match throws Bubble {
+  public find(text: String, begin: StringIndex = String.begin): Match? {
     compiledFind(compiled, text, begin, regexRefs)
   }
 
@@ -450,7 +451,7 @@ TODO(tjp, regex): Any static checking for stable frontend regex values?
   @connected
   private compiledFind(
     compiled: AnyValue, text: String, begin: StringIndex, regexRefs: RegexRefs
-  ): Match throws Bubble;
+  ): Match?;
 
   @connected
   private compiledReplace(

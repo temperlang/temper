@@ -1408,7 +1408,7 @@ impl Translator<'_> {
     }
 
     /// A test, from its `let t# = new Pair(name, fn (test: Test): Void
-    /// throws Bubble { … })`.
+    /// throws Error { … })`.
     fn test(&mut self, case: FNode) -> Tx<NodeId> {
         let init = core::let_parts(&self.s.library.tree, case).2;
         let parts = init.map(|i| self.children(i).to_vec()).unwrap_or_default();
@@ -1421,7 +1421,7 @@ impl Translator<'_> {
         if self.kind(f) != NodeKind::Fn {
             return self.not_yet(f, "a test's form");
         }
-        // `fn (test: Test): Void throws Bubble`, as `testing` makes it.
+        // `fn (test: Test): Void throws Error`, as `testing` makes it.
         let mut types = Vec::new();
         for p in core::fn_parts(&self.s.library.tree, f).0 {
             let ty = match self.s.typing.decls.get(&p) {
@@ -1430,7 +1430,8 @@ impl Translator<'_> {
             };
             types.push(ty);
         }
-        let result = self.b.result(TypeId::VOID, TypeId::BUBBLE);
+        let error = self.ty(ft::ERROR, f)?;
+        let result = self.b.result(TypeId::VOID, error);
         let sig = self.b.function_type(&types, result);
         let decl = self
             .b

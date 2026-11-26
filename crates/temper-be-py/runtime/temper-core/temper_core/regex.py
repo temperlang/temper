@@ -1,14 +1,10 @@
 import re
 import typing
 
-from temper_core import Bubble
-
 
 def regex_compiled_find(_, compiled: re.Pattern, text: str, begin: int, regex_refs):
     match = compiled.search(text, begin)
-    if match is None:
-        raise Bubble()
-    return _convert_match(match, regex_refs)
+    return None if match is None else _convert_match(match, regex_refs)
 
 
 def _convert_match(match, regex_refs):

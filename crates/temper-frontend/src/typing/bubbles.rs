@@ -225,9 +225,11 @@ impl Settle {
     }
 
     /// Why a failure of type `fail` can't pass through a function that
-    /// may fail with `allowed`, if it can't.
+    /// may fail with `allowed`, if it can't. `Error`, any error, which
+    /// only tests and std may throw, takes a bubble too, until `Bubble`
+    /// goes.
     fn misfit_failure(&mut self, fail: TypeId, allowed: TypeId) -> Option<Message> {
-        if fail == UNKNOWN || allowed == UNKNOWN || fail == allowed {
+        if fail == UNKNOWN || allowed == UNKNOWN || fail == allowed || allowed == ERROR {
             return None;
         }
         Some(match (fail, allowed) {

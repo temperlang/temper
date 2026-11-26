@@ -4,7 +4,7 @@ from collections.abc import (
     Sequence as _Sequence,
 )
 from temper_core import (
-    Bubble as _Bubble,
+    Failure as _Failure,
     Pair as _Pair,
     block_panics as _block_panics,
     int_add as _int_add,
@@ -56,19 +56,21 @@ class Test:
     def assert_panics(self, block: _Callable[[], None], message: str | None = None, /) -> None:
         if message is None:
             message = 'expected a panic'
-        bubbled = False
+        threw = False
         def fn() -> None:
-            nonlocal bubbled
+            nonlocal threw
             try:
                 block()
-            except _Bubble:
-                bubbled = True
+            except Exception as t_0:
+                if not isinstance(t_0, _Failure):
+                    raise t_0
+                threw = True
         panicked = _block_panics(fn)
         if self._failed_on_assert:
             raise AssertionError(str(self.messages_combined()))
         if not panicked:
             self._passing = False
-            self._messages.append(f'{message}, but it bubbled' if bubbled else message)
+            self._messages.append(f'{message}, but it threw' if threw else message)
 
     def soft_fail_to_hard(self, /) -> None:
         if self.has_unhandled_fail:
@@ -106,21 +108,24 @@ def process_test_cases(test_cases: _Sequence[_Pair[str, _Callable[[Test], None]]
         key = test_case.key
         fun = test_case.value
         test = Test()
-        had_bubble = False
+        thrown: str | None
         try:
             fun(test)
-        except _Bubble:
-            had_bubble = True
+            thrown = None
+        except Exception as e:
+            if not isinstance(e, _Failure):
+                raise e
+            thrown = e.message
         _finish_async_work()
         messages = test.messages()
         t_1: _Sequence[str]
-        if test.passing and not had_bubble:
+        if test.passing and thrown is None:
             t_1 = ()
         else:
             t_0: _Sequence[str]
-            if had_bubble and not test.failed_on_assert:
+            if thrown is not None and not test.failed_on_assert:
                 all_messages = list(messages)
-                all_messages.append('Bubble')
+                all_messages.append(thrown)
                 t_0 = tuple(all_messages)
             else:
                 t_0 = messages
@@ -205,6 +210,8 @@ def run_test(test_fun: _Callable[[Test], None], /) -> None:
     test = Test()
     try:
         test_fun(test)
-    except _Bubble:
-        test.assert_(False, lambda: 'bubble during test running')
+    except Exception as t_0:
+        if not isinstance(t_0, _Failure):
+            raise t_0
+        test.assert_(False, lambda: 'error during test running')
     test.soft_fail_to_hard()

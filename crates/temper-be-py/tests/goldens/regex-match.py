@@ -1,6 +1,5 @@
 from collections.abc import Sequence as _Sequence_
 from temper_core import (
-    Bubble as _Bubble,
     LoggingConsole as _LoggingConsole,
     MissingKey as _MissingKey,
     boolean_to_string as _boolean_to_string,
@@ -54,14 +53,29 @@ while _i < _length:
     _console.log(f'matches {_string}: {_boolean_to_string(_full.found(_string))}')
 _catcher: _Regex = _Sequence((_Repeat(_CodePoints('a'), 1, None, False), _Capture('intro', _Repeat(_CodePoints('b'), 1, None, False)), _CodePoints('c'), _Repeat(_Or((_Capture('option1', _CodePoints('d')), _Capture('alphaOption2', _CodePoints('e')))), 1, None, False))).compiled()
 _text: str = '🌍aaabbceef'
-_match: _Match = _catcher.find(_text)
+_t_0: _Match
+if (_subject := _catcher.find(_text)) is None:
+    raise BaseException('panic')
+else:
+    _t_0 = _subject
+_match: _Match = _t_0
 _check_group(_match.full)
 _check_group(_mapped_get(_match.groups, 'intro'))
 _check_group(_mapped_get(_match.groups, 'alphaOption2'))
 _thing: _Regex = _Repeat(_CodeSet((_CodeRange(97, 122),), False), 1, None, False).compiled()
 _multi_text: str = '---abc---xyz---'
-_first: _Match = _thing.find(_multi_text)
-_second: _Match = _thing.find(_multi_text, _first.full.end)
+_t_1: _Match
+if (_subject2 := _thing.find(_multi_text)) is None:
+    raise BaseException('panic')
+else:
+    _t_1 = _subject2
+_first: _Match = _t_1
+_t_2: _Match
+if (_subject3 := _thing.find(_multi_text, _first.full.end)) is None:
+    raise BaseException('panic')
+else:
+    _t_2 = _subject3
+_second: _Match = _t_2
 _console.log(f'Found both {_first.full.value} and {_second.full.value}.')
 _more_text: str = '🌍aaabbcee🌎abcd🌏'
 
@@ -84,11 +98,7 @@ _replaced: str = _catcher.replace(_more_text, _fn)
 _console.log(f'replaced: {_replaced}')
 _not_replaced: str = _catcher.replace('nope', lambda match: 'hi')
 _console.log(f'not replaced: {_not_replaced}')
-_no_match: str
-try:
-    _no_match = _catcher.find('not here').full.value
-except _Bubble:
-    _no_match = 'sorry'
+_no_match: str = 'sorry' if (_subject4 := None if (_subject5 := None if (_subject6 := _catcher.find('not here')) is None else _subject6.full) is None else _subject5.value) is None else _subject4
 _console.log(f'No match says {_no_match}')
 _or: _RegexNode = _Or((_CodePoints('ab'), _CodePoints('bc'))).compiled().data
 _option1: str = 'ab'
@@ -108,28 +118,33 @@ _nb_false: str = 'ac'
 _console.log(f'negated basic true: {_boolean_to_string(_negated_basic.found(_nb_true))}')
 _console.log(f'negated basic false: {_boolean_to_string(_negated_basic.found(_nb_false))}')
 _simpler_lines: str = 'It was the best of times.\nIt was the worst of times.'
-_console.log(_Repeat(_CodeSet((), True), 1, None, False).compiled().find(_simpler_lines).full.value)
-_t_0: str
-try:
-    _t_0 = _Repeat(_CodeSet((), False), 1, None, False).compiled().find(_simpler_lines).full.value
-except _Bubble:
-    _t_0 = '-'
-_console.log(_t_0)
+_console.log('-' if (_subject7 := None if (_subject8 := None if (_subject9 := _Repeat(_CodeSet((), True), 1, None, False).compiled().find(_simpler_lines)) is None else _subject9.full) is None else _subject8.value) is None else _subject7)
+_console.log('-' if (_subject10 := None if (_subject11 := None if (_subject12 := _Repeat(_CodeSet((), False), 1, None, False).compiled().find(_simpler_lines)) is None else _subject12.full) is None else _subject11.value) is None else _subject10)
 _not_low: _Regex = _one_or_more(_CodeSet((_CodeRange(0, 47),), True)).compiled()
-_console.log(f"not low: {_not_low.find('-/a🌍-').full.value}")
-_console.log('not space or >: ' + _Repeat(_CodeSet((_CodePoints('\t'), _CodePoints('\n'), _CodePoints(' '), _CodePoints('>')), True), 1, None, False).compiled().find('ab>c').full.value)
+_console.log(f"not low: {'-' if (_subject13 := None if (_subject14 := None if (_subject15 := _not_low.find('-/a🌍-')) is None else _subject15.full) is None else _subject14.value) is None else _subject13}")
+_console.log('not space or >: ' + ('-' if (_subject16 := None if (_subject17 := None if (_subject18 := _Repeat(_CodeSet((_CodePoints('\t'), _CodePoints('\n'), _CodePoints(' '), _CodePoints('>')), True), 1, None, False).compiled().find('ab>c')) is None else _subject18.full) is None else _subject17.value) is None else _subject16))
 _id_start: _RegexNode = _CodeSet((_CodeRange(97, 122), _CodeRange(65, 90), _CodePoints('_')), False).compiled().data
 _id_continue: _Or = _Or((_id_start, _CodeSet((_CodeRange(48, 57),), False).compiled().data))
 _word: _Regex = _Sequence((_word_boundary, _id_start, _Repeat(_id_continue, 0, None), _word_boundary)).compiled()
 _expected: str = 'def_456'
-_found: str = _word.find(f'123_abc {_expected} ghi_789').full.value
+_found: str = '-' if (_subject19 := None if (_subject20 := None if (_subject21 := _word.find(f'123_abc {_expected} ghi_789')) is None else _subject21.full) is None else _subject20.value) is None else _subject19
 _console.log(f'Found id: {_found}')
 _string_to_escape: str = '$(*^'
 _regex_with_interpolated_string: _Regex = _Sequence((_dot, _Repeat(_CodePoints(_string_to_escape), 1, None, False), _dot)).compiled()
 _string_to_escape_and_more: str = f'a{_string_to_escape}{_string_to_escape}b'
-_escaped_match: _Match = _regex_with_interpolated_string.find(_string_to_escape_and_more)
+_t_3: _Match
+if (_subject22 := _regex_with_interpolated_string.find(_string_to_escape_and_more)) is None:
+    raise BaseException('panic')
+else:
+    _t_3 = _subject22
+_escaped_match: _Match = _t_3
 _console.log(_escaped_match.full.value)
-_own_full_match: _Match = _Sequence((_dot, _Capture('full', _dot))).compiled().find('ab')
+_t_4: _Match
+if (_subject23 := _Sequence((_dot, _Capture('full', _dot))).compiled().find('ab')) is None:
+    raise BaseException('panic')
+else:
+    _t_4 = _subject23
+_own_full_match: _Match = _t_4
 _own_full: str = _mapped_get(_own_full_match.groups, 'full').value
 _console.log(f'Own full: {_own_full} vs {_own_full_match.full.value}')
 _combo_lines: str = 'It was the best\nof times.\r\n\rIt was the worst of times.'

@@ -1,8 +1,8 @@
 //! std's `regex` connecteds, as Kotlin Temper's `RegexExec.kt` has them.
 //! `RegexFormatter.regexCompileFormatted` compiles a `RegexNode`'s objects
 //! into a [`Regex`], not its formatted text, which goes unused; `Regex`'s
-//! `compiledFound`, `compiledFind`, `compiledReplace` and `compiledSplit`
-//! match with it, making `Match` and `Group` objects of the classes of
+//! `compiledFound`, `compiledFind` (null for no match), `compiledReplace`
+//! and `compiledSplit` match with it, making `Match` and `Group` objects of the classes of
 //! `regexRefs`' examples. `replace` and `split` go through matches as
 //! Kotlin's `Regex` does, a char past an empty match. A match's `groups`
 //! has the captures that took part, in the pattern's order.
@@ -44,7 +44,7 @@ impl Interp<'_> {
                 }
                 match regex.find(text, begin) {
                     Some(found) => self.regex_match(s, regex, text, &found, refs),
-                    None => Err(Abrupt::Fail(None)),
+                    None => Ok(Val::Null),
                 }
             }
             ("compiledReplace", [Val::Regex(regex), Val::Str(text), format, refs]) => {

@@ -13,7 +13,7 @@
 //!   (!lookupResult.has_value()) { return
 //!   core::unexpected(lookupResult.error()); }`, then `*lookupResult` where
 //!   the call was ([`FailTo`] says where the failure goes: returned, or
-//!   out of a module's init as `core::uncaught_failure(…)`). One whose
+//!   out of a module's init or a test as `core::uncaught_failure(…)`). One whose
 //!   value and failure types are the function's is returned as it is,
 //!   `return sign(text);`. `temper_tmpl::spill` makes a choice's part or a
 //!   loop's condition that holds one statements first.

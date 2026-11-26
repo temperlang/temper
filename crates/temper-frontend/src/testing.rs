@@ -3,10 +3,11 @@
 //! `AssertMacro` do, over std's `testing` module.
 //!
 //! - `test(name, block)` is a top-level `let t#test = new Pair(name, fn
-//!   (test#: Test): Void throws Bubble { block })`, as `processTestCases`
+//!   (test#: Test): Void throws Error { block })`, as `processTestCases`
 //!   takes them. A block with a parameter, `{ t => … }`, keeps it, typed
-//!   `Test` if untyped, and its result type, `Void throws Bubble` if it
-//!   has none, as Kotlin gives them.
+//!   `Test` if untyped, and its result type, `Void throws Error` if it
+//!   has none: a test may throw any error, which fails it. No source
+//!   but std's may write `throws Error`.
 //!   The first test in a module also adds `let { Test, runTestCases as
 //!   r# } = import("std/testing")` to its file, as Kotlin does, so `Test`
 //!   is in scope there.
@@ -20,7 +21,7 @@
 //!   `r#([t#test, …])`, a JUnit XML report ([`crate::settle::SettledModule::tests`]),
 //!   which [`crate::interp::run_tests`] evaluates after the program runs.
 
-use crate::builtins::{Builtin, Function};
+use crate::builtins::{Builtin, FAILURE_ROOT, Function};
 use crate::core::{self, FN_OUT_TYPE, LET_INIT, LET_TYPE};
 use crate::library::{Message, ModuleId};
 use crate::scope::{ScopeId, ScopeKind, SymbolId};
@@ -122,8 +123,8 @@ impl Settle {
         true
     }
 
-    /// `Void throws Bubble`, a test function's result type, as Kotlin
-    /// gives it.
+    /// `Void throws Error`, a test function's result type, its `Error`
+    /// kept in [`Settle::test_errors`], as only std may write one.
     fn test_result(&mut self, span: Span, like: NodeId) -> NodeId {
         let mut name = |b: Builtin| {
             let symbol = self.scopes.hidden(b);
@@ -131,8 +132,9 @@ impl Settle {
         };
         let throws = name(Builtin::Function(Function::Throws));
         let void = name(Builtin::named("Void").unwrap());
-        let bubble = name(Builtin::named("Bubble").unwrap());
-        (self.lib).add(NodeKind::Call, span, 0, &[throws, void, bubble], like)
+        let error = name(Builtin::named(FAILURE_ROOT).unwrap());
+        self.test_errors.insert(error);
+        (self.lib).add(NodeKind::Call, span, 0, &[throws, void, error], like)
     }
 
     fn test_type(&mut self, span: Span, like: NodeId) -> NodeId {

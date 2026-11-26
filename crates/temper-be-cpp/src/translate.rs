@@ -334,7 +334,7 @@ pub(crate) enum FailTo {
     /// Returned, `return core::unexpected(e);`, from a function or lambda
     /// giving a `core::Expected` of these, its value and failure types.
     Return(TypeId, TypeId),
-    /// Out of the module's init, `core::uncaught_failure(e);`.
+    /// Out of the module's init, or a test, `core::uncaught_failure(e);`.
     Init,
 }
 
@@ -1439,8 +1439,17 @@ impl<'a> Translator<'a> {
             Some(sig) => (sig.pass, sig.fail),
             None => (TypeId::VOID, None),
         };
-        let result_ty = self.result_type(result, fail)?;
-        self.fail_to = self.fail_to_of(result, fail)?;
+        // A test is `void`, and an error it throws fails it as one out of
+        // a module's init does, by `core::uncaught_failure`, which
+        // `test.cpp`'s runner reports.
+        let (result_ty, fail_to) = match test {
+            true => ("void".to_string(), FailTo::Init),
+            false => (
+                self.result_type(result, fail)?,
+                self.fail_to_of(result, fail)?,
+            ),
+        };
+        self.fail_to = fail_to;
         self.in_function = true;
         self.begin(&[item]);
         // What `this` is: in a constructor, the object it makes; in a
@@ -1493,7 +1502,7 @@ impl<'a> Translator<'a> {
             }
         }
         let mut stmts = reachable(self.stmts(body)?);
-        let expected = self.fail_to != FailTo::Nowhere;
+        let expected = matches!(self.fail_to, FailTo::Return(..));
         self.fail_to = FailTo::Nowhere;
         // A `return` without a value that ends a function says nothing,
         // but where it gives a `core::Expected<void, F>`.

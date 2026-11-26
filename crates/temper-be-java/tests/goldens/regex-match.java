@@ -4,10 +4,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.logging.Logger;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.MissingKey;
+import temper.core.Nullable;
 import temper.std.regex.Capture;
 import temper.std.regex.CodePoints;
 import temper.std.regex.CodeRange;
@@ -55,14 +55,17 @@ public final class MatchGlobal {
         }
         Regex catcher = new Sequence(List.of(new Repeat(new CodePoints("a"), 1, null, false), new Capture("intro", new Repeat(new CodePoints("b"), 1, null, false)), new CodePoints("c"), new Repeat(new Or(List.of(new Capture("option1", new CodePoints("d")), new Capture("alphaOption2", new CodePoints("e")))), 1, null, false))).compiled();
         text = "🌍aaabbceef";
-        Match match = catcher.find(text);
+        @Nullable Match subject = catcher.find(text);
+        Match match = subject == null ? Core.throwAssertionError("panic") : subject;
         checkGroup(match.full);
         checkGroup(Core.mappedGet(match.groups, "intro"));
         checkGroup(Core.mappedGet(match.groups, "alphaOption2"));
         Regex thing = new Repeat(new CodeSet(List.of(new CodeRange(97, 122)), false), 1, null, false).compiled();
         String multiText = "---abc---xyz---";
-        Match first = thing.find(multiText);
-        Match second = thing.find(multiText, first.full.end);
+        @Nullable Match subject2 = thing.find(multiText);
+        Match first = subject2 == null ? Core.throwAssertionError("panic") : subject2;
+        @Nullable Match subject3 = thing.find(multiText, first.full.end);
+        Match second = subject3 == null ? Core.throwAssertionError("panic") : subject3;
         console.log("Found both " + first.full.value + " and " + second.full.value + ".");
         moreText = "🌍aaabbcee🌎abcd🌏";
         Function<Match, String> fn = match2 -> {
@@ -86,12 +89,10 @@ public final class MatchGlobal {
         console.log("replaced: " + replaced);
         String notReplaced = catcher.replace("nope", match2 -> "hi");
         console.log("not replaced: " + notReplaced);
-        String noMatch;
-        try {
-            noMatch = catcher.find("not here").full.value;
-        } catch (Bubble ignored3) {
-            noMatch = "sorry";
-        }
+        @Nullable Match subject6 = catcher.find("not here");
+        @Nullable Group subject5 = subject6 == null ? null : subject6.full;
+        @Nullable String subject4 = subject5 == null ? null : subject5.value;
+        String noMatch = subject4 == null ? "sorry" : subject4;
         console.log("No match says " + noMatch);
         RegexNode or = new Or(List.of(new CodePoints("ab"), new CodePoints("bc"))).compiled().data;
         String option1 = "ab";
@@ -111,29 +112,40 @@ public final class MatchGlobal {
         console.log("negated basic true: " + negatedBasic.found(nbTrue));
         console.log("negated basic false: " + negatedBasic.found(nbFalse));
         String simplerLines = "It was the best of times.\nIt was the worst of times.";
-        console.log(new Repeat(new CodeSet(List.of(), true), 1, null, false).compiled().find(simplerLines).full.value);
-        String t;
-        try {
-            t = new Repeat(new CodeSet(List.of(), false), 1, null, false).compiled().find(simplerLines).full.value;
-        } catch (Bubble ignored4) {
-            t = "-";
-        }
-        console.log(t);
+        @Nullable Match subject9 = new Repeat(new CodeSet(List.of(), true), 1, null, false).compiled().find(simplerLines);
+        @Nullable Group subject8 = subject9 == null ? null : subject9.full;
+        @Nullable String subject7 = subject8 == null ? null : subject8.value;
+        console.log(subject7 == null ? "-" : subject7);
+        @Nullable Match subject12 = new Repeat(new CodeSet(List.of(), false), 1, null, false).compiled().find(simplerLines);
+        @Nullable Group subject11 = subject12 == null ? null : subject12.full;
+        @Nullable String subject10 = subject11 == null ? null : subject11.value;
+        console.log(subject10 == null ? "-" : subject10);
         Regex notLow = RegexGlobal.oneOrMore(new CodeSet(List.of(new CodeRange(0, 47)), true)).compiled();
-        console.log("not low: " + notLow.find("-/a🌍-").full.value);
-        console.log("not space or >: " + new Repeat(new CodeSet(List.of(new CodePoints("\t"), new CodePoints("\n"), new CodePoints(" "), new CodePoints(">")), true), 1, null, false).compiled().find("ab>c").full.value);
+        @Nullable Match subject15 = notLow.find("-/a🌍-");
+        @Nullable Group subject14 = subject15 == null ? null : subject15.full;
+        @Nullable String subject13 = subject14 == null ? null : subject14.value;
+        console.log("not low: " + (subject13 == null ? "-" : subject13));
+        @Nullable Match subject18 = new Repeat(new CodeSet(List.of(new CodePoints("\t"), new CodePoints("\n"), new CodePoints(" "), new CodePoints(">")), true), 1, null, false).compiled().find("ab>c");
+        @Nullable Group subject17 = subject18 == null ? null : subject18.full;
+        @Nullable String subject16 = subject17 == null ? null : subject17.value;
+        console.log("not space or >: " + (subject16 == null ? "-" : subject16));
         RegexNode idStart = new CodeSet(List.of(new CodeRange(97, 122), new CodeRange(65, 90), new CodePoints("_")), false).compiled().data;
         Or idContinue = new Or(List.of(idStart, new CodeSet(List.of(new CodeRange(48, 57)), false).compiled().data));
         Regex word = new Sequence(List.of(RegexGlobal.WordBoundary, idStart, new Repeat(idContinue, 0, null), RegexGlobal.WordBoundary)).compiled();
         String expected = "def_456";
-        String found = word.find("123_abc " + expected + " ghi_789").full.value;
+        @Nullable Match subject21 = word.find("123_abc " + expected + " ghi_789");
+        @Nullable Group subject20 = subject21 == null ? null : subject21.full;
+        @Nullable String subject19 = subject20 == null ? null : subject20.value;
+        String found = subject19 == null ? "-" : subject19;
         console.log("Found id: " + found);
         String stringToEscape = "$(*^";
         Regex regexWithInterpolatedString = new Sequence(List.of(RegexGlobal.Dot, new Repeat(new CodePoints(stringToEscape), 1, null, false), RegexGlobal.Dot)).compiled();
         String stringToEscapeAndMore = "a" + stringToEscape + stringToEscape + "b";
-        Match escapedMatch = regexWithInterpolatedString.find(stringToEscapeAndMore);
+        @Nullable Match subject22 = regexWithInterpolatedString.find(stringToEscapeAndMore);
+        Match escapedMatch = subject22 == null ? Core.throwAssertionError("panic") : subject22;
         console.log(escapedMatch.full.value);
-        Match ownFullMatch = new Sequence(List.of(RegexGlobal.Dot, new Capture("full", RegexGlobal.Dot))).compiled().find("ab");
+        @Nullable Match subject23 = new Sequence(List.of(RegexGlobal.Dot, new Capture("full", RegexGlobal.Dot))).compiled().find("ab");
+        Match ownFullMatch = subject23 == null ? Core.throwAssertionError("panic") : subject23;
         String ownFull = Core.mappedGet(ownFullMatch.groups, "full").value;
         console.log("Own full: " + ownFull + " vs " + ownFullMatch.full.value);
         String comboLines = "It was the best\nof times.\r\n\rIt was the worst of times.";

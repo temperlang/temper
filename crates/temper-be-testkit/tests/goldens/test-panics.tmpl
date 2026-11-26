@@ -5,15 +5,16 @@ uses `temper-core`#2 0.0.0-alpha.0.0 {
     connected method get#9(index: Int32): T#4;
   }
   interface Listed#5<T#6> {}
-  class Int32#19 {
-    connected method toString#20(radix?: Int32): String;
+  interface Error#13 {}
+  class Int32#20 {
+    connected method toString#21(radix?: Int32): String;
   }
 }
 
 uses std#10 0.0.0-alpha.0.0 {
   module testing#11 {
     class Test#12 {
-      connected method assert#17(success: Boolean, message: fn (): String): Void;
+      connected method assert#18(success: Boolean, message: fn (): String): Void;
     }
   }
 }
@@ -28,49 +29,49 @@ module `test-panics`#0 {
 
   init {}
 
-  test "passes before" ~test#13(test#14: Test#12): Void throws Bubble {
+  test "passes before" ~test#14(test#15: Test#12): Void throws Error#13 {
     {
-      let actual#15: Int32 = %Int32.add(1, 1);
-      let expected#16: Int32 = 2;
-      test#14.assert#17(%Int32.eq(actual#15, expected#16), (fn ~fn#18(): String [actual#15, expected#16] {
-        return %String.cat(%String.cat(%String.cat(%String.cat("expected 1 + 1 == (", expected#16.toString#20(omitted)), ") not ("), actual#15.toString#20(omitted)), ")");
+      let actual#16: Int32 = %Int32.add(1, 1);
+      let expected#17: Int32 = 2;
+      test#15.assert#18(%Int32.eq(actual#16, expected#17), (fn ~fn#19(): String [actual#16, expected#17] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected 1 + 1 == (", expected#17.toString#21(omitted)), ") not ("), actual#16.toString#21(omitted)), ")");
       }): fn (): String);
     }
   }
 
-  test "panics reading past the end" ~test#21(test#22: Test#12): Void throws Bubble {
-    let n#23: Int32 = (orelse(at#1((list(1, 2)): List#3<Int32>, 5)^, %Int32.neg(1))): Int32;
+  test "panics reading past the end" ~test#22(test#23: Test#12): Void throws Error#13 {
+    let n#24: Int32 = (orelse(at#1((list(1, 2)): List#3<Int32>, 5)^, %Int32.neg(1))): Int32;
     {
-      let actual#24: Int32 = n#23;
-      let expected#25: Int32 = %Int32.neg(1);
-      test#22.assert#17(%Int32.eq(actual#24, expected#25), (fn ~fn#26(): String [actual#24, expected#25] {
-        return %String.cat(%String.cat(%String.cat(%String.cat("expected n == (", expected#25.toString#20(omitted)), ") not ("), actual#24.toString#20(omitted)), ")");
+      let actual#25: Int32 = n#24;
+      let expected#26: Int32 = %Int32.neg(1);
+      test#23.assert#18(%Int32.eq(actual#25, expected#26), (fn ~fn#27(): String [actual#25, expected#26] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected n == (", expected#26.toString#21(omitted)), ") not ("), actual#25.toString#21(omitted)), ")");
       }): fn (): String);
     }
   }
 
-  test "dies outright" ~test#27(test#28: Test#12): Void throws Bubble {
+  test "dies outright" ~test#28(test#29: Test#12): Void throws Error#13 {
     (panic()): Void;
   }
 
-  test "fails an assertion" ~test#29(test#30: Test#12): Void throws Bubble {
-    test#30.assert#17(%Int32.eq(%Int32.add(1, 1), 3), (fn ~fn#31(): String {
+  test "fails an assertion" ~test#30(test#31: Test#12): Void throws Error#13 {
+    test#31.assert#18(%Int32.eq(%Int32.add(1, 1), 3), (fn ~fn#32(): String {
       return "wrong on purpose";
     }): fn (): String);
   }
 
-  test "passes after" ~test#32(test#33: Test#12): Void throws Bubble {
+  test "passes after" ~test#33(test#34: Test#12): Void throws Error#13 {
     {
-      let actual#34: Int32 = at#1((list(1, 2)): List#3<Int32>, 1)^;
-      let expected#35: Int32 = 2;
-      test#33.assert#17(%Int32.eq(actual#34, expected#35), (fn ~fn#36(): String [actual#34, expected#35] {
-        return %String.cat(%String.cat(%String.cat(%String.cat("expected at([1, 2], 1) == (", expected#35.toString#20(omitted)), ") not ("), actual#34.toString#20(omitted)), ")");
+      let actual#35: Int32 = at#1((list(1, 2)): List#3<Int32>, 1)^;
+      let expected#36: Int32 = 2;
+      test#34.assert#18(%Int32.eq(actual#35, expected#36), (fn ~fn#37(): String [actual#35, expected#36] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected at([1, 2], 1) == (", expected#36.toString#21(omitted)), ") not ("), actual#35.toString#21(omitted)), ")");
       }): fn (): String);
     }
   }
 
-  test "dies after failing" ~test#37(test#38: Test#12): Void throws Bubble {
-    test#38.assert#17(%Int32.eq(%Int32.add(1, 1), 3), (fn ~fn#39(): String {
+  test "dies after failing" ~test#38(test#39: Test#12): Void throws Error#13 {
+    test#39.assert#18(%Int32.eq(%Int32.add(1, 1), 3), (fn ~fn#40(): String {
       return "failed before";
     }): fn (): String);
     (panic()): Void;

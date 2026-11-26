@@ -166,14 +166,12 @@ public static class PanicsGlobal
         }
         Regex digits = ((IRegexNode)new Repeat(new CodeSet(Listed.CreateReadOnlyList<ICodePart>(new CodeRange(48, 57)), false), 1, null, false)).Compiled();
         string h;
-        try
-        {
-            h = digits.Find("none").Full.Value;
-        }
-        catch (global::TemperLang.Core.Bubble)
-        {
-            h = "no digits";
-        }
+        string? subject;
+        Group? subject2;
+        Match? subject3 = digits.Find("none");
+        subject2 = subject3 == null ? null : subject3.Full;
+        subject = subject2 == null ? null : subject2.Value;
+        h = subject == null ? "no digits" : subject;
         int i = Calling(() => Failing(2));
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{a} {b} {e} {(Float64.Compare(f, -6.0) == 0 ? "true" : "false")} {g} {h} {i}"));
         long k;

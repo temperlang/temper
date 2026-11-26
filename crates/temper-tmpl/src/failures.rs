@@ -29,6 +29,13 @@ fn is_root(p: &Program, d: DeclId) -> bool {
         && library_of(p, d) == "core"
 }
 
+/// Whether `ty` is core's `Error`, any error: a test's failure, and
+/// what std's `testing` takes, which may be a bubble too, until `Bubble`
+/// goes.
+pub fn is_root_type(p: &Program, ty: TypeId) -> bool {
+    nominal_decl(p, ty).is_some_and(|d| is_root(p, d))
+}
+
 /// Whether a class or interface is a failure type below the root, found
 /// through its supertypes alone, without the root at hand.
 pub fn is_below_root(p: &Program, decl: DeclId) -> bool {

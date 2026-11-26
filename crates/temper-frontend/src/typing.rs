@@ -799,21 +799,32 @@ impl Settle {
     }
 
     /// Reports `T throws E` where `E` isn't `Bubble`, a declared failure
-    /// type, a failure parameter, or a `Never`, or is the root itself.
+    /// type, a failure parameter, or a `Never`, or is the root itself,
+    /// where it may not be ([`Settle::may_throw_root`]).
     fn check_throws(&mut self, node: NodeId) {
         let Some(&fail) = self.lib.tree.children(node).get(2) else {
             return;
         };
         let t = self.eval_type(fail);
+        let may_throw_root = self.may_throw_root(fail);
         let types = &self.typing.types;
         let message = match types.get(t) {
             TypeData::Unknown | TypeData::Param(_) | TypeData::NeverOf(_) => return,
             _ if t == BUBBLE || types.is_failure(t) => return,
+            _ if t == ERROR && may_throw_root => return,
             _ if t == ERROR => Message::ThrowsRoot,
             _ => Message::NotAFailureType(self.show(t)),
         };
         let span = self.lib.tree.span(fail);
         self.lib.report(Level::Error, message, span);
+    }
+
+    /// Whether `throws Error`, any error, may name the root here, as
+    /// `name` does: in std, whose `testing` runs tests, and in a test's
+    /// result, which the compiler writes ([`Settle::test_errors`]). A test
+    /// may throw any error, which fails it.
+    fn may_throw_root(&self, name: NodeId) -> bool {
+        self.test_errors.contains(&name) || self.lib.in_std(self.lib.tree.span(name).start)
     }
 
     /// Whether `node` names builtin function `f`.

@@ -408,10 +408,13 @@ impl Interp<'_> {
                         return Err(Abrupt::Panic(format!("panic(), caused by {why}")));
                     }
                     frame.truncate(h.depth);
+                    // A bubble has no value, but where `Error`, any error,
+                    // takes one (tests' and std's), its handler may bind
+                    // it, as a `Bubble`, until `Bubble` goes.
                     if let Some(slot) = h.slot {
                         frame.values[slot as usize] = match abrupt {
                             Abrupt::Throw(failure) => failure,
-                            _ => Val::Null,
+                            _ => super::CoreFailure::value("Bubble", Vec::new()),
                         };
                     }
                     frame.pc = h.to;

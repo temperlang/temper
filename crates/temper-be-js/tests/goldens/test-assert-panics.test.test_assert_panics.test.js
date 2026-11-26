@@ -1,8 +1,7 @@
 import {
-  bubble,
   divIntInt,
   endTest,
-  isBubble,
+  failureBase,
   listedGet,
   modInt64,
   panic,
@@ -16,10 +15,11 @@ import { Test } from "@temperlang/std/testing";
  * @param {readonly number[]} ls
  * @param {number} i
  * @returns {number}
+ * @throws {Unlucky}
  */
 function at(ls, i) {
   if (i === 99) {
-    bubble();
+    throw new Unlucky();
   }
   return listedGet(/** @type {number[]} */ (ls), i);
 }
@@ -50,6 +50,17 @@ function squared(s) {
   return requireInstanceOf(s, Square);
 }
 
+class AtError extends Error {}
+
+failureBase(AtError);
+
+class Unlucky extends AtError {
+  /** @returns {string} */
+  get message() {
+    return "unlucky";
+  }
+}
+
 class Shape extends type() {}
 
 class Square extends type(Shape) {}
@@ -77,10 +88,12 @@ it("passes when the block panics", async function () {
   const test = new Test();
   let failure;
   try {
+    /** @throws {Error} */
     function fn() {
       at(Object.freeze([1, 2]), 5);
     }
     test.assertPanics(fn);
+    /** @throws {Error} */
     function fn2() {
       panic();
     }
@@ -97,14 +110,17 @@ it("passes when division by zero or a cast panics", async function () {
   const test = new Test();
   let failure;
   try {
+    /** @throws {Error} */
     function fn() {
       divide(1, 0);
     }
     test.assertPanics(fn);
+    /** @throws {Error} */
     function fn2() {
       remainder(1n, 0n);
     }
     test.assertPanics(fn2);
+    /** @throws {Error} */
     function fn3() {
       squared(new Circle());
     }
@@ -127,13 +143,14 @@ it("passes past an orelse", async function () {
   const test = new Test();
   let failure;
   try {
+    /** @throws {Error} */
     function fn() {
       /** @type {number} */
       let n;
       try {
         n = at(Object.freeze([1, 2]), 5);
       } catch (e$) {
-        if (!isBubble(e$)) throw e$;
+        if (!(e$ instanceof Unlucky)) throw e$;
         n = -1;
       }
       test.assert(n === -1, () => "caught by an orelse");
@@ -151,6 +168,7 @@ it("fails when the block returns", async function () {
   const test = new Test();
   let failure;
   try {
+    /** @throws {Error} */
     function fn() {
       at(Object.freeze([1, 2]), 0);
     }
@@ -167,6 +185,7 @@ it("fails with its message", async function () {
   const test = new Test();
   let failure;
   try {
+    /** @throws {Error} */
     function fn() {
       at(Object.freeze([1, 2]), 1);
     }
@@ -179,10 +198,11 @@ it("fails with its message", async function () {
   }
 });
 
-it("fails when the block bubbles", async function () {
+it("fails when the block throws", async function () {
   const test = new Test();
   let failure;
   try {
+    /** @throws {Error} */
     function fn() {
       at(Object.freeze([1, 2]), 99);
     }
@@ -195,10 +215,11 @@ it("fails when the block bubbles", async function () {
   }
 });
 
-it("fails with its message when the block bubbles", async function () {
+it("fails with its message when the block throws", async function () {
   const test = new Test();
   let failure;
   try {
+    /** @throws {Error} */
     function fn() {
       at(Object.freeze([1, 2]), 99);
     }
@@ -215,6 +236,7 @@ it("goes on after failing", async function () {
   const test = new Test();
   let failure;
   try {
+    /** @throws {Error} */
     function fn() {
       at(Object.freeze([1, 2]), 0);
     }
@@ -232,11 +254,14 @@ it("nests", async function () {
   const test = new Test();
   let failure;
   try {
+    /** @throws {Error} */
     function fn() {
+      /** @throws {Error} */
       function fn2() {
         panic();
       }
       test.assertPanics(fn2);
+      /** @throws {Error} */
       function fn3() {
         at(Object.freeze([1, 2]), 0);
       }
@@ -257,6 +282,7 @@ it("keeps what the block changed", async function () {
   let failure;
   try {
     let n = 0;
+    /** @throws {Error} */
     function fn() {
       n = (n + 1) | 0;
       panic();
@@ -275,6 +301,7 @@ it("fails on a panic after the block", async function () {
   const test = new Test();
   let failure;
   try {
+    /** @throws {Error} */
     function fn() {
       panic();
     }
@@ -292,11 +319,25 @@ it("ends on a fail in the block", async function () {
   const test = new Test();
   let failure;
   try {
+    /** @throws {Error} */
     function fn() {
       test.fail("failed inside");
     }
     test.assertPanics(fn);
     test.fail("swallowed");
+  } catch (e) {
+    failure = e;
+    throw e;
+  } finally {
+    await endTest(test, failure);
+  }
+});
+
+it("fails when its body throws", async function () {
+  const test = new Test();
+  let failure;
+  try {
+    at(Object.freeze([1, 2]), 99);
   } catch (e) {
     failure = e;
     throw e;

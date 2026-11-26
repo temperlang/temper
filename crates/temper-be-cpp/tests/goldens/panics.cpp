@@ -167,12 +167,10 @@ void global_init_init() {
       g = TEMPER_STR("?");
     }
     std::shared_ptr<temper_std::Regex> digits = temper_std::Repeat::make(core::to_base<temper_std::RegexNode>(temper_std::CodeSet::make(core::List::make<std::shared_ptr<temper_std::CodePart>>(core::to_base<temper_std::CodePart>(temper_std::CodeRange::make(48, 57))), false)), 1, nullptr, false)->compiled();
-    core::Str h;
-    try {
-      h = digits->find(TEMPER_STR("none"))->full->value;
-    } catch (core::TemperBubble const &) {
-      h = TEMPER_STR("no digits");
-    }
+    std::shared_ptr<temper_std::Match> subject3 = digits->find(TEMPER_STR("none"));
+    std::shared_ptr<temper_std::Group> subject2 = subject3 == nullptr ? nullptr : subject3->full;
+    core::NullableParam<core::Str> subject = subject2 == nullptr ? nullptr : core::NullableParam<core::Str>(subject2->value);
+    core::Str h = subject == nullptr ? TEMPER_STR("no digits") : subject.value;
     int32_t i = panics::calling([]() -> int32_t { return failing(2); });
     core::Console::log(temper_globals::console.value, std::to_string(a) + " " + std::to_string(b) + " " + std::to_string(e) + " " + core::Boolean::toString(core::Float64::eq(f, -6.0)) + " " + g + " " + h + " " + std::to_string(i));
     int64_t k;

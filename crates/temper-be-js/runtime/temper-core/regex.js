@@ -1,7 +1,5 @@
 // @ts-check
 
-import { bubble } from "./core.js";
-
 export const regexCompiledFound = (_, compiled, text) => {
   compiled.lastIndex = 0;
   return compiled.test(text);
@@ -14,15 +12,10 @@ export const regexCompiledFound = (_, compiled, text) => {
  * @param {string} text
  * @param {number} begin
  * @param {{ readonly match: M }} regexRefs
- * @returns {M}
+ * @returns {M | null}
  */
-export const regexCompiledFind = (_, compiled, text, begin, regexRefs) => {
-  const match = regexCompiledFindEx(_, /** @type {RegExp} */ (compiled), text, begin, regexRefs);
-  if (match === undefined) {
-    bubble();
-  }
-  return match;
-};
+export const regexCompiledFind = (_, compiled, text, begin, regexRefs) =>
+  regexCompiledFindEx(_, /** @type {RegExp} */ (compiled), text, begin, regexRefs);
 
 /**
  * @param {RegExp} compiled
@@ -33,7 +26,7 @@ function regexCompiledFindEx(_, compiled, text, begin, regexRefs) {
   compiled.lastIndex = begin;
   const match = compiled.exec(text);
   if (match === null) {
-    return undefined;
+    return null;
   }
   const {
     // @ts-ignore
@@ -89,7 +82,7 @@ export const regexCompiledReplace = (_, compiled, text, format, regexRefs) => {
   let keepBegin = begin;
   do {
     let match = regexCompiledFindEx(_, /** @type {RegExp} */ (compiled), text, begin, regexRefs);
-    if (match === undefined) {
+    if (match === null) {
       if (result == "") {
         // Manually handle no match case for our manual replace logic.
         return text;

@@ -96,7 +96,7 @@ class Core {
         Matcher matcher = internal.pattern.matcher(text);
         matcher.region(begin, text.length());
         if (!matcher.find()) {
-            throw temper.core.Core.bubble();
+            return null;
         }
         return new ConvertGroups(internal, text).convertGroups(matcher);
     }

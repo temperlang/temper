@@ -7,7 +7,8 @@ uses `temper-core`#5 0.0.0-alpha.0.0 {
   class Int32#9 {
     connected method toString#10(radix?: Int32): String;
   }
-  connected fn getConsole#24(name?: String): Console#6;
+  interface Error#14 {}
+  connected fn getConsole#25(name?: String): Console#6;
 }
 
 uses std#11 0.0.0-alpha.0.0 {
@@ -28,30 +29,30 @@ module testing#0 {
   let base#3: Int32;
 
   init {
-    init ~console#8 = getConsole#24(omitted);
+    init ~console#8 = getConsole#25(omitted);
     init runs#2 = 0;
     init base#3 = 10;
     ~console#8.log#7(%String.cat("init ", twice#1(1).toString#10(omitted)));
   }
 
-  test "twice works" ~test#14(test#15: Test#13): Void throws Bubble {
-    let x#16: Int32 = twice#1(2);
-    runs#2 = %Int32.add(%Int32.add(runs#2, x#16), base#3);
+  test "twice works" ~test#15(test#16: Test#13): Void throws Error#14 {
+    let x#17: Int32 = twice#1(2);
+    runs#2 = %Int32.add(%Int32.add(runs#2, x#17), base#3);
   }
 
-  test "names: punctuation, 'quotes', and ünïcode" ~test#17(t#18: Test#13): Void throws Bubble {
+  test "names: punctuation, 'quotes', and ünïcode" ~test#18(t#19: Test#13): Void throws Error#14 {
     twice#1(runs#2);
   }
 
-  test "locals a test assigns" ~test#19(test#20: Test#13): Void throws Bubble {
-    var n#21: Int32 = 0;
+  test "locals a test assigns" ~test#20(test#21: Test#13): Void throws Error#14 {
+    var n#22: Int32 = 0;
     {
-      var i#22: Int32 = 0;
-      ~loop#23: while (%Int32.lt(i#22, 3)) {
-        n#21 = %Int32.add(n#21, twice#1(i#22));
-        i#22 = %Int32.add(i#22, 1);
+      var i#23: Int32 = 0;
+      ~loop#24: while (%Int32.lt(i#23, 3)) {
+        n#22 = %Int32.add(n#22, twice#1(i#23));
+        i#23 = %Int32.add(i#23, 1);
       }
     }
-    runs#2 = n#21;
+    runs#2 = n#22;
   }
 }

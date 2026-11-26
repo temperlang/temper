@@ -30,6 +30,7 @@ import {
   CodePart,
   CodeRange,
   CodeSet,
+  Group,
   RegexNode,
   Repeat,
 } from "@temperlang/std/regex";
@@ -195,14 +196,19 @@ try {
   g = "?";
 }
 const digits = /** @type {RegexNode} */ (/** @type {unknown} */ (new Repeat(/** @type {RegexNode} */ (/** @type {unknown} */ (new CodeSet(Object.freeze([/** @type {CodePart} */ (/** @type {unknown} */ (new CodeRange(48, 57)))]), false))), 1, null, false))).compiled();
-/** @type {string} */
-let h;
-try {
-  h = digits.find("none").full.value;
-} catch (e$) {
-  if (!isBubble(e$)) throw e$;
-  h = "no digits";
+/** @type {string | null} */
+let t$0;
+{
+  /** @type {Group | null} */
+  let t$1;
+  {
+    const subject3 = digits.find("none");
+    t$1 = subject3 == null ? null : subject3.full;
+  }
+  const subject2 = t$1;
+  t$0 = subject2 == null ? null : subject2.value;
 }
+const h = t$0 ?? "no digits";
 const i = calling(() => failing(2));
 console.log(`${a} ${b} ${e} ${eqFloat64(f, -6.0)} ${g} ${h} ${i}`);
 /** @type {bigint} */

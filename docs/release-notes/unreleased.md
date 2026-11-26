@@ -643,3 +643,24 @@ A bad radix to `toInt32` or `toInt64`, outside 2 through 36, throws
 mapping them to hosts' own exceptions, as Python's `KeyError`, Java's
 `NoSuchElementException`, and C#'s `KeyNotFoundException` for
 `MissingKey`, may come later.
+
+## 🚨Breaking change: std regex `find` gives null; tests may throw any error
+
+std `regex`'s `find` gives `Match?`, `null` where nothing matches, as
+Python's `re.search` and JavaScript's `match` do, instead of bubbling:
+
+```temper inert
+// Before
+let word = r.find(text).full.value orelse "none";
+// After
+let word = r.find(text)?.full?.value ?? "none";
+let m = r.find(text) ?? panic(); // where a match is certain
+```
+
+A test may now throw any error, unhandled: a call that throws a
+declared failure, as `s.toInt32()` or `new Date(y, m, d)`, needs no
+`orelse panic()` in a test, and the error fails the test, saying its
+message. `test.assertPanics { … }` fails, saying "expected a panic, but
+it threw", where its block throws an error (it said "but it bubbled").
+Tests' functions, and std `testing`'s `TestFun` and `assertPanics`'s
+block, are `throws Error`, which only the compiler and std may write.

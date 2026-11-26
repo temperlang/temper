@@ -113,21 +113,13 @@ namespace TemperLang.Std.Regex
 
         internal static object CompileFormatted(IRegexNode data, string text) => new R::Regex(text);
 
-        internal static Match CompiledFind(
+        internal static Match? CompiledFind(
             Regex regex,
             object compiled,
             string text,
             int begin,
             RegexRefs regexRefs
-        )
-        {
-            var match = CompiledFindEx((R::Regex)compiled, text, begin);
-            if (match == null)
-            {
-                throw new Bubble();
-            }
-            return match;
-        }
+        ) => CompiledFindEx((R::Regex)compiled, text, begin);
 
         static Match? CompiledFindEx(R::Regex regex, string text, int offset = 0)
         {

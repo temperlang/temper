@@ -63,7 +63,7 @@ class RegexNode(metaclass=_ABCMeta):
     def found(self, text: str, /) -> bool:
         return self.compiled().found(text)
 
-    def find(self, text: str, /) -> 'Match':
+    def find(self, text: str, /) -> 'Match | None':
         return self.compiled().find(text)
 
     def replace(self, text: str, format: '_Callable[[Match], str]', /) -> str:
@@ -734,7 +734,7 @@ class Regex:
     def found(self, text: str, /) -> bool:
         return _regex_compiled_found(self, self._compiled, text)
 
-    def find(self, text: str, begin: int | None = None, /) -> Match:
+    def find(self, text: str, begin: int | None = None, /) -> Match | None:
         if begin is None:
             begin = 0
         return _regex_compiled_find(self, self._compiled, text, begin, _regex_refs)

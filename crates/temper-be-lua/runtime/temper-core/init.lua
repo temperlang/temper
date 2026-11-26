@@ -2679,18 +2679,17 @@ function temper.test_softfailtohard(test)
 end
 
 -- std's `Test.assertPanics`: passes if the block panics, which is any
--- error but a bubble or a test's failure, Temper's or LuaUnit's, as on
--- every backend; a test's failure still ends the test, and a block that
--- returns or bubbles fails the test, which goes on.
+-- error but a Temper one (a failure or a bubble) or a test's failure,
+-- Temper's or LuaUnit's, as on every backend; a test's failure still
+-- ends the test, and a block that returns or throws fails the test,
+-- which goes on.
 function temper.test_assertpanics(test, block, msg)
     msg = msg or 'expected a panic'
     local ok, err = pcall(block)
     if ok then
         test.failures[#test.failures + 1] = msg
-    elseif temper.is_bubble(err) then
-        test.failures[#test.failures + 1] = msg .. ', but it bubbled'
-    elseif temper.is_failure(err) then
-        test.failures[#test.failures + 1] = msg .. ', but it failed: ' .. tostring(err)
+    elseif temper.is_bubble(err) or temper.is_failure(err) then
+        test.failures[#test.failures + 1] = msg .. ', but it threw'
     elseif temper.is_test_failure(err) then
         error(err, 0)
     end
@@ -2775,7 +2774,7 @@ do
         if got.full.name ~= "" then
             return got
         end
-        return temper.bubble('could not text in pattern')
+        return nil
     end
 
     function temper.regex_compiledfound(self, pat, text)

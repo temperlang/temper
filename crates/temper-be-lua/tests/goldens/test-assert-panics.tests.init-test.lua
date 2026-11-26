@@ -5,12 +5,34 @@ local tested = require("test-assert-panics")["$test"]
 local luaunit = require("luaunit")
 luaunit.FAILURE_PREFIX = temper.test_failure_prefix
 
+---@class test-assert-panics.AtError: temper.Failure
+
+---@class test-assert-panics.AtError.type: temper.Type
+local AtError = temper.type("test-assert-panics.AtError", temper.Failure)
+
+---@class test-assert-panics.Unlucky: test-assert-panics.AtError
+---@field message string
+
+---@class test-assert-panics.Unlucky.type: temper.Type
+---@operator call: test-assert-panics.Unlucky
+local Unlucky = temper.type("test-assert-panics.Unlucky", AtError)
+
+---@param this test-assert-panics.Unlucky
+function Unlucky.constructor(this)
+end
+
+---@param this test-assert-panics.Unlucky
+---@return string
+function Unlucky.get.message(this)
+  return "unlucky"
+end
+
 ---@param ls integer[]
 ---@param i integer
 ---@return integer
 local function at(ls, i)
   if i == 99 then
-    return temper.bubble()
+    error(Unlucky())
   end
   return temper.list_get(ls, i)
 end
@@ -98,9 +120,9 @@ function Test_.test_passes_past_an_orelse()
     local function fn()
       ---@type integer
       local n
-      if not temper.pcall(function()
+      if not temper.catch(function()
         n = at({ 1, 2 }, 5)
-      end) then
+      end, Unlucky) then
         n = -1
       end
       temper.test_assert(test, n == -1, function() return "caught by an orelse" end)
@@ -121,14 +143,14 @@ function Test_.test_fails_with_its_message()
   end)
 end
 
-function Test_.test_fails_when_the_block_bubbles()
-  temper.test("fails when the block bubbles", function(test)
+function Test_.test_fails_when_the_block_throws()
+  temper.test("fails when the block throws", function(test)
     temper.test_assertpanics(test, function() at({ 1, 2 }, 99) end)
   end)
 end
 
-function Test_.test_fails_with_its_message_when_the_block_bubbles()
-  temper.test("fails with its message when the block bubbles", function(test)
+function Test_.test_fails_with_its_message_when_the_block_throws()
+  temper.test("fails with its message when the block throws", function(test)
     temper.test_assertpanics(test, function() at({ 1, 2 }, 99) end, "reading index 99 panics")
   end)
 end
@@ -179,6 +201,12 @@ function Test_.test_ends_on_a_fail_in_the_block()
     temper.test_assertpanics(test, fn)
     temper.test_fail(test, "swallowed")
     error("panic")
+  end)
+end
+
+function Test_.test_fails_when_its_body_throws()
+  temper.test("fails when its body throws", function(test)
+    at({ 1, 2 }, 99)
   end)
 end
 

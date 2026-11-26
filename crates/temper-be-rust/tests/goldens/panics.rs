@@ -25,8 +25,18 @@ pub(crate) fn init() -> temper_core::Result<()> {
                     None,
                     Some(false),
                 ));
-            let h = (|| Ok::<_, temper_core::Error>(digits.find("none", None)?.full().value()))()
-                .unwrap_or_else(|_| Arc::new("no digits".to_string()));
+            let h = {
+                let subject = {
+                    let subject2 = {
+                        let subject3 = digits.find("none", None);
+                        subject3.as_ref().map(|subject3| subject3.full())
+                    };
+                    subject2.as_ref().map(|subject2| subject2.value())
+                };
+                subject
+                    .clone()
+                    .unwrap_or_else(|| Arc::new("no digits".to_string()))
+            };
             let i = calling(Arc::new(move || failing(2)));
             println!(
                 "{a} {b} {e} {} {g} {h} {i}",

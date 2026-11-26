@@ -50,11 +50,12 @@ a block: `test.assertPanics { ls[5]; }` passes if the block panics. If the
 block returns, the test fails, saying "expected a panic", or the message given
 before the block, as in `test.assertPanics("past the end") { ls[5]; }` (a
 trailing block goes to the last function parameter, so the message can be
-last among the parameters, and left out). A bubble is no panic, so if the block bubbles, the test fails too, saying
-so. Like `assert`, a failing `assertPanics` lets the test go on.
+last among the parameters, and left out). An error is no panic, so if the
+block throws one, the test fails too, saying so. Like `assert`, a failing
+`assertPanics` lets the test go on.
 
 Only a panic in the block is caught, never one before or after it. A panic
-here is any failure but a bubble or a test's failure, on every backend, so a
+here is any failure but an error or a test's failure, on every backend, so a
 host's own error counts too, and a `test.fail` in the block, or a host test
 framework's failed assertion, still ends the test (on Rust, a host's
 `assert!` is a panic). This is for tests alone: what
@@ -62,22 +63,22 @@ the block changed before it panicked stays changed, maybe half done.
 
       @connected
       public assertPanics(
-        block: fn (): Void throws Bubble,
+        block: fn (): Void throws Error,
         message: String = "expected a panic",
       ): Void {
-        var bubbled = false;
-        let panicked = panics { block() orelse do { bubbled = true } };
+        var threw = false;
+        let panicked = panics { block() orelse do { threw = true } };
         // The block ended the test, by `fail` or a hard assertion, which some
         // backends end the test by panicking.
         if (_failedOnAssert) { bail() }
         if (!panicked) {
           _passing = false;
-          _messages.add(if (bubbled) { "${message}, but it bubbled" } else { message });
+          _messages.add(if (threw) { "${message}, but it threw" } else { message });
         }
       }
 
-Run a block, giving whether it panicked: whether it failed by anything but a
-bubble or a test's failure, which pass through, except where a test failure
+Run a block, giving whether it panicked: whether it failed by anything but an
+error or a test's failure, which pass through, except where a test failure
 is a panic, as `bail` ends a test by panicking on some.
 
       @connected
@@ -153,9 +154,13 @@ fancier things in the future, but this can simplify backends for now.
 NOTICE: Don't directly use anything in this section. It just exists for the
 implementation of testing within the interpreter.
 
+A test may throw any error, which fails it, saying the error's message after
+any of its own. Only tests, which the compiler makes, and std may declare
+`throws Error`.
+
     export let TestCase = Pair<TestName, TestFun>;
     export let TestFailureMessage = String;
-    export let TestFun = fn (Test): Void throws Bubble;
+    export let TestFun = fn (Test): Void throws Error;
     export let TestName = String;
     export let TestResult = Pair<TestName, List<TestFailureMessage>>;
 
@@ -166,18 +171,16 @@ implementation of testing within the interpreter.
         let test = new Test();
         // Actually call the test, then run the async work it started, so
         // what fails there fails it.
-        var hadBubble = false;
-        fun(test) orelse do { hadBubble = true };
+        let thrown: String? = do { fun(test); null } catch (e) { e.message };
         finishAsyncWork();
         // Now get the messages.
         let messages = test.messages();
-        let failures: List<TestFailureMessage> = if (test.passing && !hadBubble) {
+        let failures: List<TestFailureMessage> = if (test.passing && thrown == null) {
           []
-        } else if (hadBubble && !test.failedOnAssert) {
-          // Despite having 1+ failure messages, we seem to have failed on some
-          // Bubble separate from asserts, so add that on.
+        } else if (thrown != null && !test.failedOnAssert) {
+          // The test threw an error, apart from its asserts, so add that on.
           let allMessages = messages.toListBuilder();
-          allMessages.add("Bubble");
+          allMessages.add(thrown);
           allMessages.toList()
         } else {
           messages
@@ -244,9 +247,9 @@ implements this function, which does nothing elsewhere.
 TODO Is this a better idea than inlining each case? We'd need to generate
 `fn testFunction() { runTest(originalFunctionAsCallback) }` or some such.
 
-    export let runTest(testFun: TestFun): Void throws Bubble {
+    export let runTest(testFun: TestFun): Void {
       let test = new Test();
-      testFun(test) orelse test.assert(false) { "bubble during test running" };
+      testFun(test) orelse test.assert(false) { "error during test running" };
       test.softFailToHard();
     }
 

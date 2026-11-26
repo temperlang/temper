@@ -48,14 +48,17 @@ do
 end
 local catcher = Sequence({ Repeat(CodePoints("a"), 1, temper.null, false), Capture("intro", Repeat(CodePoints("b"), 1, temper.null, false)), CodePoints("c"), Repeat(Or({ Capture("option1", CodePoints("d")), Capture("alphaOption2", CodePoints("e")) }), 1, temper.null, false) }):compiled()
 text = "🌍aaabbceef"
-local match = catcher:find(text)
+local subject = catcher:find(text)
+local match = temper.is_null(subject) and error("panic") or (subject --[[@as std.regex.Match]])
 checkGroup(match.full)
 checkGroup(temper.mapped_get(match.groups, "intro"))
 checkGroup(temper.mapped_get(match.groups, "alphaOption2"))
 local thing = Repeat(CodeSet({ CodeRange(97, 122) }, false), 1, temper.null, false):compiled()
 local multiText = "---abc---xyz---"
-local first = thing:find(multiText)
-local second = thing:find(multiText, first.full.end_)
+local subject2 = thing:find(multiText)
+local first = temper.is_null(subject2) and error("panic") or (subject2 --[[@as std.regex.Match]])
+local subject3 = thing:find(multiText, first.full.end_)
+local second = temper.is_null(subject3) and error("panic") or (subject3 --[[@as std.regex.Match]])
 print("Found both " .. first.full.value .. " and " .. second.full.value .. ".")
 moreText = "🌍aaabbcee🌎abcd🌏"
 
@@ -85,13 +88,10 @@ local replaced = catcher:replace(moreText, fn)
 print("replaced: " .. replaced)
 local notReplaced = catcher:replace("nope", function(match) return "hi" end)
 print("not replaced: " .. notReplaced)
----@type string
-local noMatch
-if not temper.pcall(function()
-  noMatch = catcher:find("not here").full.value
-end) then
-  noMatch = "sorry"
-end
+local subject6 = catcher:find("not here")
+local subject5 = temper.is_null(subject6) and temper.null or (subject6 --[[@as std.regex.Match]]).full
+local subject4 = temper.is_null(subject5) and temper.null or (subject5 --[[@as std.regex.Group]]).value
+local noMatch = temper.is_null(subject4) and "sorry" or (subject4 --[[@as string]])
 print("No match says " .. noMatch)
 local or_ = Or({ CodePoints("ab"), CodePoints("bc") }):compiled().data
 local option1 = "ab"
@@ -111,30 +111,40 @@ local nbFalse = "ac"
 print("negated basic true: " .. tostring(negatedBasic:found(nbTrue)))
 print("negated basic false: " .. tostring(negatedBasic:found(nbFalse)))
 local simplerLines = "It was the best of times.\nIt was the worst of times."
-print(Repeat(CodeSet({}, true), 1, temper.null, false):compiled():find(simplerLines).full.value)
----@type string
-local t
-if not temper.pcall(function()
-  t = Repeat(CodeSet({}, false), 1, temper.null, false):compiled():find(simplerLines).full.value
-end) then
-  t = "-"
-end
-print(t)
+local subject9 = Repeat(CodeSet({}, true), 1, temper.null, false):compiled():find(simplerLines)
+local subject8 = temper.is_null(subject9) and temper.null or (subject9 --[[@as std.regex.Match]]).full
+local subject7 = temper.is_null(subject8) and temper.null or (subject8 --[[@as std.regex.Group]]).value
+print(temper.is_null(subject7) and "-" or (subject7 --[[@as string]]))
+local subject12 = Repeat(CodeSet({}, false), 1, temper.null, false):compiled():find(simplerLines)
+local subject11 = temper.is_null(subject12) and temper.null or (subject12 --[[@as std.regex.Match]]).full
+local subject10 = temper.is_null(subject11) and temper.null or (subject11 --[[@as std.regex.Group]]).value
+print(temper.is_null(subject10) and "-" or (subject10 --[[@as string]]))
 local notLow = oneOrMore(CodeSet({ CodeRange(0, 47) }, true)):compiled()
-print("not low: " .. notLow:find("-/a🌍-").full.value)
-print("not space or >: " .. Repeat(CodeSet({ CodePoints("\t"), CodePoints("\n"), CodePoints(" "), CodePoints(">") }, true), 1, temper.null, false):compiled():find("ab>c").full.value)
+local subject15 = notLow:find("-/a🌍-")
+local subject14 = temper.is_null(subject15) and temper.null or (subject15 --[[@as std.regex.Match]]).full
+local subject13 = temper.is_null(subject14) and temper.null or (subject14 --[[@as std.regex.Group]]).value
+print("not low: " .. (temper.is_null(subject13) and "-" or (subject13 --[[@as string]])))
+local subject18 = Repeat(CodeSet({ CodePoints("\t"), CodePoints("\n"), CodePoints(" "), CodePoints(">") }, true), 1, temper.null, false):compiled():find("ab>c")
+local subject17 = temper.is_null(subject18) and temper.null or (subject18 --[[@as std.regex.Match]]).full
+local subject16 = temper.is_null(subject17) and temper.null or (subject17 --[[@as std.regex.Group]]).value
+print("not space or >: " .. (temper.is_null(subject16) and "-" or (subject16 --[[@as string]])))
 local idStart = CodeSet({ CodeRange(97, 122), CodeRange(65, 90), CodePoints("_") }, false):compiled().data
 local idContinue = Or({ idStart, CodeSet({ CodeRange(48, 57) }, false):compiled().data })
 local word = Sequence({ WordBoundary, idStart, Repeat(idContinue, 0, temper.null), WordBoundary }):compiled()
 local expected = "def_456"
-local found = word:find("123_abc " .. expected .. " ghi_789").full.value
+local subject21 = word:find("123_abc " .. expected .. " ghi_789")
+local subject20 = temper.is_null(subject21) and temper.null or (subject21 --[[@as std.regex.Match]]).full
+local subject19 = temper.is_null(subject20) and temper.null or (subject20 --[[@as std.regex.Group]]).value
+local found = temper.is_null(subject19) and "-" or (subject19 --[[@as string]])
 print("Found id: " .. found)
 local stringToEscape = "$(*^"
 local regexWithInterpolatedString = Sequence({ Dot, Repeat(CodePoints(stringToEscape), 1, temper.null, false), Dot }):compiled()
 local stringToEscapeAndMore = "a" .. stringToEscape .. stringToEscape .. "b"
-local escapedMatch = regexWithInterpolatedString:find(stringToEscapeAndMore)
+local subject22 = regexWithInterpolatedString:find(stringToEscapeAndMore)
+local escapedMatch = temper.is_null(subject22) and error("panic") or (subject22 --[[@as std.regex.Match]])
 print(escapedMatch.full.value)
-local ownFullMatch = Sequence({ Dot, Capture("full", Dot) }):compiled():find("ab")
+local subject23 = Sequence({ Dot, Capture("full", Dot) }):compiled():find("ab")
+local ownFullMatch = temper.is_null(subject23) and error("panic") or (subject23 --[[@as std.regex.Match]])
 local ownFull = temper.mapped_get(ownFullMatch.groups, "full").value
 print("Own full: " .. ownFull .. " vs " .. ownFullMatch.full.value)
 local comboLines = "It was the best\nof times.\r\n\rIt was the worst of times."

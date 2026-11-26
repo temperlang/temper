@@ -12,7 +12,7 @@ interactive#3: void
 
 === regex literals
 let r = /a(?thing=.)c/;
-r.find("abc").groups["thing"].value
+(r.find("abc") ?? panic()).groups["thing"].value
 --- transcript
 interactive#0: void
 interactive#1: "b"

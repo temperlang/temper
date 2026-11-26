@@ -6,9 +6,9 @@ import temper.core.Core;
 import temper.std.testing.Test;
 
 public final class TestAssertPanicsTest {
-    static int at(List<Integer> ls, int i) {
+    static int at(List<Integer> ls, int i) throws Unlucky {
         if (i == 99) {
-            throw Core.bubble();
+            throw new Unlucky();
         }
         return Core.listGet(ls, i);
     }
@@ -93,7 +93,7 @@ public final class TestAssertPanicsTest {
                 int n;
                 try {
                     n = at(List.of(1, 2), 5);
-                } catch (Bubble ignored) {
+                } catch (Unlucky ignored) {
                     n = -1;
                 }
                 test.assert_(n == -1, () -> "caught by an orelse");
@@ -136,7 +136,7 @@ public final class TestAssertPanicsTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void failsWhenTheBlockBubbles() {
+    public void failsWhenTheBlockThrows() {
         Test test = new Test();
         Throwable failure = null;
         try {
@@ -150,7 +150,7 @@ public final class TestAssertPanicsTest {
     }
 
     @org.junit.jupiter.api.Test
-    public void failsWithItsMessageWhenTheBlockBubbles() {
+    public void failsWithItsMessageWhenTheBlockThrows() {
         Test test = new Test();
         Throwable failure = null;
         try {
@@ -248,6 +248,20 @@ public final class TestAssertPanicsTest {
             test.assertPanics(fn);
             test.fail("swallowed");
             throw new AssertionError("panic");
+        } catch (Throwable e) {
+            failure = e;
+            throw e;
+        } finally {
+            Core.endTest(failure, test::softFailToHard);
+        }
+    }
+
+    @org.junit.jupiter.api.Test
+    public void failsWhenItsBodyThrows() {
+        Test test = new Test();
+        Throwable failure = null;
+        try {
+            at(List.of(1, 2), 99);
         } catch (Throwable e) {
             failure = e;
             throw e;

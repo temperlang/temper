@@ -1,7 +1,7 @@
 from abc import ABCMeta
 from collections.abc import Sequence
 from temper_core import (
-    Bubble,
+    Failure,
     arith_int_mod,
     cast_by_type,
     end_test,
@@ -13,9 +13,21 @@ from temper_std.testing import Test
 from unittest import TestCase
 
 
+class _AtError(Failure, Exception):
+    __slots__ = ()
+
+
+class _Unlucky(_AtError):
+    __slots__ = ()
+
+    @property
+    def message(self, /) -> str:
+        return 'unlucky'
+
+
 def _at(ls: Sequence[int], i: int, /) -> int:
     if i == 99:
-        raise Bubble()
+        raise _Unlucky()
     return list_get(ls, i)
 
 
@@ -88,7 +100,7 @@ class TestTestAssertPanics(TestCase):
             def fn() -> None:
                 try:
                     n = _at((1, 2), 5)
-                except Bubble:
+                except _Unlucky:
                     n = -1
                 test.assert_(n == -1, lambda: 'caught by an orelse')
             test.assert_panics(fn)
@@ -109,16 +121,16 @@ class TestTestAssertPanics(TestCase):
                 _at((1, 2), 1)
             test.assert_panics(fn, 'reading index 1 panics')
 
-    def test_fails_when_the_block_bubbles(self, /) -> None:
-        'fails when the block bubbles'
+    def test_fails_when_the_block_throws(self, /) -> None:
+        'fails when the block throws'
         test: Test = Test()
         with end_test(test):
             def fn() -> None:
                 _at((1, 2), 99)
             test.assert_panics(fn)
 
-    def test_fails_with_its_message_when_the_block_bubbles(self, /) -> None:
-        'fails with its message when the block bubbles'
+    def test_fails_with_its_message_when_the_block_throws(self, /) -> None:
+        'fails with its message when the block throws'
         test: Test = Test()
         with end_test(test):
             def fn() -> None:
@@ -177,6 +189,12 @@ class TestTestAssertPanics(TestCase):
                 test.fail('failed inside')
             test.assert_panics(fn)
             test.fail('swallowed')
+
+    def test_fails_when_its_body_throws(self, /) -> None:
+        'fails when its body throws'
+        test: Test = Test()
+        with end_test(test):
+            _at((1, 2), 99)
 
     def test_passes_after(self, /) -> None:
         'passes after'

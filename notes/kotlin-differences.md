@@ -253,6 +253,16 @@ Language and frontend:
   code points throw InvalidCodePoint"; settle/failures.cases, "core's
   failure types: …"; testkit programs/panics.temper.md; funtests
   types/string/read (bad radix too), types/string/build, types/map.
+- **std regex's `find` gives `Match?`, and tests may throw any error**
+  (2026-11-26, stage 3 of replacing `Bubble`): `find` gives `null` where
+  Kotlin's bubbled. A test's function is `Void throws Error` (Kotlin's
+  `throws Bubble`), so a declared failure in a test needs no handler and
+  fails it with its message; `assertPanics`'s block is `throws Error`
+  too ("but it threw", Kotlin's "but it bubbled"). Only the compiler (a
+  test's result) and std may write `throws Error`; until `Bubble` goes,
+  `Error` there takes a bubble too. Test: settle-std regex.cases and
+  testing.cases; library_tests `tests_may_throw_any_error`; testkit
+  test-assert-panics; funtests regex/match, regex/code-sets.
 - **An `internal` visibility** (module or library) between `public` and
   `private`, so module functions can use a class's hidden parts. Design it
   from what JS can express (only public and `#private`). Not planned yet.

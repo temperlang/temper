@@ -1,181 +1,195 @@
 tmpl 1 model 1 library `test-assert-panics` 0.0.0
 
-uses `temper-core`#7 0.0.0-alpha.0.0 {
-  class List#8<T#9> extends Listed#10<T#9> {
-    connected method get#17(index: Int32): T#9;
+uses `temper-core`#6 0.0.0-alpha.0.0 {
+  interface Error#7 {}
+  class List#12<T#13> extends Listed#14<T#13> {
+    connected method get#22(index: Int32): T#13;
   }
-  interface Listed#10<T#11> {}
-  class Int32#32 {
-    connected method toString#33(radix?: Int32): String;
+  interface Listed#14<T#15> {}
+  class Int32#37 {
+    connected method toString#38(radix?: Int32): String;
   }
 }
 
-uses std#23 0.0.0-alpha.0.0 {
-  module testing#24 {
-    class Test#25 {
-      connected method assert#30(success: Boolean, message: fn (): String): Void;
-      connected method assertPanics#36(block: fn (): Void throws Bubble, message?: String?): Void;
-      connected method fail#84(message: String): Never<Void>;
+uses std#28 0.0.0-alpha.0.0 {
+  module testing#29 {
+    class Test#30 {
+      connected method assert#35(success: Boolean, message: fn (): String): Void;
+      connected method assertPanics#41(block: fn (): Void throws Error#7, message?: String?): Void;
+      connected method fail#89(message: String): Never<Void>;
     }
   }
 }
 
 module `test-assert-panics`#0 {
-  fn at#6(ls#15: List#8<Int32>, i#16: Int32): Int32 throws Bubble {
-    if (%Int32.eq(i#16, 99)) {
-      (bubble()^): Void;
+  interface AtError#1 extends Error#7 {}
+
+  class Unlucky#2 extends AtError#1 {
+    constructor constructor#8(): Unlucky#2 {}
+    get message#19(): String {
+      return "unlucky";
     }
-    return ls#15.get#17(i#16);
   }
 
-  interface Shape#1 {}
-
-  class Square#2 extends Shape#1 {
-    constructor constructor#4(): Square#2 {}
+  fn at#11(ls#20: List#12<Int32>, i#21: Int32): Int32 throws Unlucky#2 {
+    if (%Int32.eq(i#21, 99)) {
+      (throw(new constructor#8())^): Void;
+    }
+    return ls#20.get#22(i#21);
   }
 
-  class Circle#3 extends Shape#1 {
-    constructor constructor#5(): Circle#3 {}
+  interface Shape#3 {}
+
+  class Square#4 extends Shape#3 {
+    constructor constructor#9(): Square#4 {}
   }
 
-  fn divide#12(a#18: Int32, b#19: Int32): Int32 {
-    return %Int32.div(a#18, b#19);
+  class Circle#5 extends Shape#3 {
+    constructor constructor#10(): Circle#5 {}
   }
 
-  fn remainder#13(a#20: Int64, b#21: Int64): Int64 {
-    return %Int64.mod(a#20, b#21);
+  fn divide#16(a#23: Int32, b#24: Int32): Int32 {
+    return %Int32.div(a#23, b#24);
   }
 
-  fn squared#14(s#22: Shape#1): Square#2 {
-    return (as(s#22)): Square#2;
+  fn remainder#17(a#25: Int64, b#26: Int64): Int64 {
+    return %Int64.mod(a#25, b#26);
+  }
+
+  fn squared#18(s#27: Shape#3): Square#4 {
+    return (as(s#27)): Square#4;
   }
 
   init {}
 
-  test "passes before" ~test#26(test#27: Test#25): Void throws Bubble {
+  test "passes before" ~test#31(test#32: Test#30): Void throws Error#7 {
     {
-      let actual#28: Int32 = at#6((list(1, 2)): List#8<Int32>, 1)^;
-      let expected#29: Int32 = 2;
-      test#27.assert#30(%Int32.eq(actual#28, expected#29), (fn ~fn#31(): String [actual#28, expected#29] {
-        return %String.cat(%String.cat(%String.cat(%String.cat("expected at([1, 2], 1) == (", expected#29.toString#33(omitted)), ") not ("), actual#28.toString#33(omitted)), ")");
+      let actual#33: Int32 = at#11((list(1, 2)): List#12<Int32>, 1)^;
+      let expected#34: Int32 = 2;
+      test#32.assert#35(%Int32.eq(actual#33, expected#34), (fn ~fn#36(): String [actual#33, expected#34] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected at([1, 2], 1) == (", expected#34.toString#38(omitted)), ") not ("), actual#33.toString#38(omitted)), ")");
       }): fn (): String);
     }
   }
 
-  test "passes when the block panics" ~test#34(test#35: Test#25): Void throws Bubble {
-    test#35.assertPanics#36((fn ~fn#37(): Void throws Bubble {
-      at#6((list(1, 2)): List#8<Int32>, 5)^;
-    }): fn (): Void throws Bubble, omitted);
-    test#35.assertPanics#36((fn ~fn#38(): Void throws Bubble {
+  test "passes when the block panics" ~test#39(test#40: Test#30): Void throws Error#7 {
+    test#40.assertPanics#41((fn ~fn#42(): Void throws Error#7 {
+      at#11((list(1, 2)): List#12<Int32>, 5)^;
+    }): fn (): Void throws Error#7, omitted);
+    test#40.assertPanics#41((fn ~fn#43(): Void throws Error#7 {
       (panic()): Void;
-    }): fn (): Void throws Bubble, omitted);
+    }): fn (): Void throws Error#7, omitted);
   }
 
-  test "passes when division by zero or a cast panics" ~test#39(test#40: Test#25): Void throws Bubble {
-    test#40.assertPanics#36((fn ~fn#41(): Void throws Bubble {
-      divide#12(1, 0);
-    }): fn (): Void throws Bubble, omitted);
-    test#40.assertPanics#36((fn ~fn#42(): Void throws Bubble {
-      remainder#13(1i64, 0i64);
-    }): fn (): Void throws Bubble, omitted);
-    test#40.assertPanics#36((fn ~fn#43(): Void throws Bubble {
-      squared#14((upcast(new constructor#5())): Shape#1);
-    }): fn (): Void throws Bubble, omitted);
-    squared#14((upcast(new constructor#4())): Shape#1);
+  test "passes when division by zero or a cast panics" ~test#44(test#45: Test#30): Void throws Error#7 {
+    test#45.assertPanics#41((fn ~fn#46(): Void throws Error#7 {
+      divide#16(1, 0);
+    }): fn (): Void throws Error#7, omitted);
+    test#45.assertPanics#41((fn ~fn#47(): Void throws Error#7 {
+      remainder#17(1i64, 0i64);
+    }): fn (): Void throws Error#7, omitted);
+    test#45.assertPanics#41((fn ~fn#48(): Void throws Error#7 {
+      squared#18((upcast(new constructor#10())): Shape#3);
+    }): fn (): Void throws Error#7, omitted);
+    squared#18((upcast(new constructor#9())): Shape#3);
     {
-      let actual#44: Int32 = divide#12(%Int32.neg(7), 2);
-      let expected#45: Int32 = %Int32.neg(3);
-      test#40.assert#30(%Int32.eq(actual#44, expected#45), (fn ~fn#46(): String [actual#44, expected#45] {
-        return %String.cat(%String.cat(%String.cat(%String.cat("expected divide(-7, 2) == (", expected#45.toString#33(omitted)), ") not ("), actual#44.toString#33(omitted)), ")");
+      let actual#49: Int32 = divide#16(%Int32.neg(7), 2);
+      let expected#50: Int32 = %Int32.neg(3);
+      test#45.assert#35(%Int32.eq(actual#49, expected#50), (fn ~fn#51(): String [actual#49, expected#50] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected divide(-7, 2) == (", expected#50.toString#38(omitted)), ") not ("), actual#49.toString#38(omitted)), ")");
       }): fn (): String);
     }
   }
 
-  test "passes past an orelse" ~test#47(test#48: Test#25): Void throws Bubble {
-    test#48.assertPanics#36((fn ~fn#49(): Void throws Bubble [test#48] {
-      let n#50: Int32 = (orelse(at#6((list(1, 2)): List#8<Int32>, 5)^, %Int32.neg(1))): Int32;
-      test#48.assert#30(%Int32.eq(n#50, %Int32.neg(1)), (fn ~fn#51(): String {
+  test "passes past an orelse" ~test#52(test#53: Test#30): Void throws Error#7 {
+    test#53.assertPanics#41((fn ~fn#54(): Void throws Error#7 [test#53] {
+      let n#55: Int32 = (orelse(at#11((list(1, 2)): List#12<Int32>, 5)^, %Int32.neg(1))): Int32;
+      test#53.assert#35(%Int32.eq(n#55, %Int32.neg(1)), (fn ~fn#56(): String {
         return "caught by an orelse";
       }): fn (): String);
-    }): fn (): Void throws Bubble, omitted);
+    }): fn (): Void throws Error#7, omitted);
   }
 
-  test "fails when the block returns" ~test#52(test#53: Test#25): Void throws Bubble {
-    test#53.assertPanics#36((fn ~fn#54(): Void throws Bubble {
-      at#6((list(1, 2)): List#8<Int32>, 0)^;
-    }): fn (): Void throws Bubble, omitted);
+  test "fails when the block returns" ~test#57(test#58: Test#30): Void throws Error#7 {
+    test#58.assertPanics#41((fn ~fn#59(): Void throws Error#7 {
+      at#11((list(1, 2)): List#12<Int32>, 0)^;
+    }): fn (): Void throws Error#7, omitted);
   }
 
-  test "fails with its message" ~test#55(test#56: Test#25): Void throws Bubble {
-    test#56.assertPanics#36((fn ~fn#57(): Void throws Bubble {
-      at#6((list(1, 2)): List#8<Int32>, 1)^;
-    }): fn (): Void throws Bubble, (asNullable("reading index 1 panics")): String?);
+  test "fails with its message" ~test#60(test#61: Test#30): Void throws Error#7 {
+    test#61.assertPanics#41((fn ~fn#62(): Void throws Error#7 {
+      at#11((list(1, 2)): List#12<Int32>, 1)^;
+    }): fn (): Void throws Error#7, (asNullable("reading index 1 panics")): String?);
   }
 
-  test "fails when the block bubbles" ~test#58(test#59: Test#25): Void throws Bubble {
-    test#59.assertPanics#36((fn ~fn#60(): Void throws Bubble {
-      at#6((list(1, 2)): List#8<Int32>, 99)^;
-    }): fn (): Void throws Bubble, omitted);
+  test "fails when the block throws" ~test#63(test#64: Test#30): Void throws Error#7 {
+    test#64.assertPanics#41((fn ~fn#65(): Void throws Error#7 {
+      at#11((list(1, 2)): List#12<Int32>, 99)^;
+    }): fn (): Void throws Error#7, omitted);
   }
 
-  test "fails with its message when the block bubbles" ~test#61(test#62: Test#25): Void throws Bubble {
-    test#62.assertPanics#36((fn ~fn#63(): Void throws Bubble {
-      at#6((list(1, 2)): List#8<Int32>, 99)^;
-    }): fn (): Void throws Bubble, (asNullable("reading index 99 panics")): String?);
+  test "fails with its message when the block throws" ~test#66(test#67: Test#30): Void throws Error#7 {
+    test#67.assertPanics#41((fn ~fn#68(): Void throws Error#7 {
+      at#11((list(1, 2)): List#12<Int32>, 99)^;
+    }): fn (): Void throws Error#7, (asNullable("reading index 99 panics")): String?);
   }
 
-  test "goes on after failing" ~test#64(test#65: Test#25): Void throws Bubble {
-    test#65.assertPanics#36((fn ~fn#66(): Void throws Bubble {
-      at#6((list(1, 2)): List#8<Int32>, 0)^;
-    }): fn (): Void throws Bubble, omitted);
-    test#65.assert#30(false, (fn ~fn#67(): String {
+  test "goes on after failing" ~test#69(test#70: Test#30): Void throws Error#7 {
+    test#70.assertPanics#41((fn ~fn#71(): Void throws Error#7 {
+      at#11((list(1, 2)): List#12<Int32>, 0)^;
+    }): fn (): Void throws Error#7, omitted);
+    test#70.assert#35(false, (fn ~fn#72(): String {
       return "went on";
     }): fn (): String);
   }
 
-  test "nests" ~test#68(test#69: Test#25): Void throws Bubble {
-    test#69.assertPanics#36((fn ~fn#70(): Void throws Bubble [test#69] {
-      test#69.assertPanics#36((fn ~fn#71(): Void throws Bubble {
+  test "nests" ~test#73(test#74: Test#30): Void throws Error#7 {
+    test#74.assertPanics#41((fn ~fn#75(): Void throws Error#7 [test#74] {
+      test#74.assertPanics#41((fn ~fn#76(): Void throws Error#7 {
         (panic()): Void;
-      }): fn (): Void throws Bubble, omitted);
-      test#69.assertPanics#36((fn ~fn#72(): Void throws Bubble {
-        at#6((list(1, 2)): List#8<Int32>, 0)^;
-      }): fn (): Void throws Bubble, (asNullable("inner returns")): String?);
+      }): fn (): Void throws Error#7, omitted);
+      test#74.assertPanics#41((fn ~fn#77(): Void throws Error#7 {
+        at#11((list(1, 2)): List#12<Int32>, 0)^;
+      }): fn (): Void throws Error#7, (asNullable("inner returns")): String?);
       (panic()): Void;
-    }): fn (): Void throws Bubble, omitted);
+    }): fn (): Void throws Error#7, omitted);
   }
 
-  test "keeps what the block changed" ~test#73(test#74: Test#25): Void throws Bubble {
-    var n#75: Int32 = 0;
-    test#74.assertPanics#36((fn ~fn#76(): Void throws Bubble [n#75] {
-      n#75 = %Int32.add(n#75, 1);
+  test "keeps what the block changed" ~test#78(test#79: Test#30): Void throws Error#7 {
+    var n#80: Int32 = 0;
+    test#79.assertPanics#41((fn ~fn#81(): Void throws Error#7 [n#80] {
+      n#80 = %Int32.add(n#80, 1);
       (panic()): Void;
-    }): fn (): Void throws Bubble, omitted);
-    test#74.assert#30(%Int32.eq(n#75, 1), (fn ~fn#77(): String {
+    }): fn (): Void throws Error#7, omitted);
+    test#79.assert#35(%Int32.eq(n#80, 1), (fn ~fn#82(): String {
       return "lost the change";
     }): fn (): String);
   }
 
-  test "fails on a panic after the block" ~test#78(test#79: Test#25): Void throws Bubble {
-    test#79.assertPanics#36((fn ~fn#80(): Void throws Bubble {
+  test "fails on a panic after the block" ~test#83(test#84: Test#30): Void throws Error#7 {
+    test#84.assertPanics#41((fn ~fn#85(): Void throws Error#7 {
       (panic()): Void;
-    }): fn (): Void throws Bubble, omitted);
-    at#6((list(1, 2)): List#8<Int32>, 7)^;
+    }): fn (): Void throws Error#7, omitted);
+    at#11((list(1, 2)): List#12<Int32>, 7)^;
   }
 
-  test "ends on a fail in the block" ~test#81(test#82: Test#25): Void throws Bubble {
-    test#82.assertPanics#36((fn ~fn#83(): Void throws Bubble [test#82] {
-      test#82.fail#84("failed inside");
-    }): fn (): Void throws Bubble, omitted);
-    test#82.fail#84("swallowed");
+  test "ends on a fail in the block" ~test#86(test#87: Test#30): Void throws Error#7 {
+    test#87.assertPanics#41((fn ~fn#88(): Void throws Error#7 [test#87] {
+      test#87.fail#89("failed inside");
+    }): fn (): Void throws Error#7, omitted);
+    test#87.fail#89("swallowed");
   }
 
-  test "passes after" ~test#85(test#86: Test#25): Void throws Bubble {
+  test "fails when its body throws" ~test#90(test#91: Test#30): Void throws Error#7 {
+    at#11((list(1, 2)): List#12<Int32>, 99)^;
+  }
+
+  test "passes after" ~test#92(test#93: Test#30): Void throws Error#7 {
     {
-      let actual#87: Int32 = at#6((list(1, 2)): List#8<Int32>, 0)^;
-      let expected#88: Int32 = 1;
-      test#86.assert#30(%Int32.eq(actual#87, expected#88), (fn ~fn#89(): String [actual#87, expected#88] {
-        return %String.cat(%String.cat(%String.cat(%String.cat("expected at([1, 2], 0) == (", expected#88.toString#33(omitted)), ") not ("), actual#87.toString#33(omitted)), ")");
+      let actual#94: Int32 = at#11((list(1, 2)): List#12<Int32>, 0)^;
+      let expected#95: Int32 = 1;
+      test#93.assert#35(%Int32.eq(actual#94, expected#95), (fn ~fn#96(): String [actual#94, expected#95] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected at([1, 2], 0) == (", expected#95.toString#38(omitted)), ") not ("), actual#94.toString#38(omitted)), ")");
       }): fn (): String);
     }
   }
