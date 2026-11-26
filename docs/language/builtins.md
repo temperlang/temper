@@ -2282,7 +2282,8 @@ methods need an explicit visibility, as every class's do.
 Object spreads, `{ ...old, a: e }`, need a `@data` class. A spread
 means the constructor call with each property not given read from
 `old`; some backends may copy such an object natively instead, as an
-optimization.
+optimization. The copy is shallow, as that call is: a property holding
+a `ListBuilder` holds the same one in both objects.
 
 ```temper
 @data class Point(x: Int, y: Int, label: String? = null) {

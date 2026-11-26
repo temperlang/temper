@@ -442,8 +442,10 @@ Python's `dataclasses.replace`) may pass only the other arguments, where
 `data` class (`Facts::DATA`, from `@data`, whose rules the frontend
 checks: its constructor only stores its parameters, all public fields,
 with no accessors and no default but null; notes/typing.md, "`@data`
-classes") with no `var` field, as a copy form reads the fields after
-the given values run, which then can't change them. Spreads need
+classes"; rule **C5** checks the tmpl, as C++ and Rust copy on its
+word) with no `var` field and a field for each parameter, as a copy
+form reads the fields after the given values run, which then can't
+change them. Spreads need
 `@data`, so a class's own copy form is only an optimization; the meaning
 stays the constructor call. A `data` mark comes after `fun` in text.
 

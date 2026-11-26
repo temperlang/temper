@@ -890,6 +890,8 @@ impl Settle {
     /// Reports each `@data` left on what isn't a class or interface, as a
     /// `let` or a function, once expansion settles.
     pub(crate) fn report_data_not_classes(&mut self) {
+        // `@imu` on what isn't a class matters no more either.
+        self.imu.clear();
         let mut spans: Vec<_> = (self.data_classes.drain())
             .map(|(_, decorator)| self.lib.tree.span(decorator))
             .collect();

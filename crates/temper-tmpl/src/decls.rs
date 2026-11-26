@@ -157,8 +157,8 @@ impl Facts {
     pub const KEEP_TEST: Facts = Facts(8192);
     /// A `@data` class: plain data, whose fields are its constructor's
     /// parameters, all public, which its constructor only stores, with no
-    /// accessors and no default but null, as the frontend checks
-    /// (notes/tmpl/nodes.md, "Spreads").
+    /// accessors and no default but null, as the frontend checks and
+    /// rule C5 validates (notes/tmpl/nodes.md, "Spreads").
     pub const DATA: Facts = Facts(16384);
 
     pub fn contains(self, other: Facts) -> bool {

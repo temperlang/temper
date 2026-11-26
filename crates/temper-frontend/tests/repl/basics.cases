@@ -180,3 +180,12 @@ interactive#0: Pt
 interactive#1: void
 interactive#2: void
 interactive#3: "1 5 2"
+
+=== several declarations in one let or var inside blocks
+let f(): Int { let x: Int, y: Int; x = 1; y = 2; x + y }
+let g(): Int { do { var a: Int, b: Int = 3; a = 4; a * b } }
+f() + g()
+--- transcript
+interactive#0: void
+interactive#1: void
+interactive#2: 15

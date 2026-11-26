@@ -864,7 +864,10 @@ impl Translator<'_> {
             Some(Node::Class { members, .. }) => p.nodes.list(members),
             _ => &[],
         };
-        for (&a, field) in args.iter().zip(spread_fields(p, members, ctor)) {
+        let Some(fields) = spread_fields(p, members, ctor) else {
+            return not_yet("a spread's copy of a class without a field per parameter");
+        };
+        for (&a, field) in args.iter().zip(fields) {
             if spread_copy_of(p, a).is_none() {
                 let value = self.expr(a)?;
                 let target = format!("{name}->{}", self.name(field));

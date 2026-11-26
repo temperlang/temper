@@ -297,7 +297,8 @@ console.log("${q.x} ${q.y} ${q.label}"); //!outputs "3 2 a"
 ```
 
 It's the object literal that gives every constructor parameter, those
-not written read from the old object, so the constructor runs. For now,
+not written read from the old object, so the constructor runs, and the
+copy is shallow: a `ListBuilder` property is shared, not copied. For now,
 there's one spread, written first, of a `@data` class's value, building
 that same class.
 

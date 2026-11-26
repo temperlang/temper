@@ -675,8 +675,12 @@ constructor parameter, so it goes through the same constructor call:
   spread needs a value of a class type, not Shape"), and `@data` (below;
   "Spreads need a @data class; Square isn't one"); `class: C` must name
   it ("A spread of Sq builds Sq, so class: may name only Sq, not
-  Other"). The type wanted is checked against it as for any value. A
-  value whose type is unknown has its error reported already, which the
+  Other"). The type wanted is checked against it as for the written-out
+  literal, through the block to its `new`, so a generic class's type
+  arguments are solved from it and mismatches report the arguments. Not
+  yet where a type parameter binds two ways, `{ ...ints, second: "s" }`,
+  which generic calls in general miss (branch `instantiated-argument-checks`).
+  A value whose type is unknown has its error reported already, which the
   spread fails with too.
 - **What it copies:** each constructor parameter not given, from
   `old`'s property of that name, which `@data` makes public. A null

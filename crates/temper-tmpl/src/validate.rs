@@ -68,7 +68,11 @@
 //!   interfaces; **C4** a spread's copy (`Flags::SPREAD_COPY`) reads a
 //!   field from a local, and as a `New`'s argument, as it is or made
 //!   nullable, the field named as its parameter, of the class constructed,
-//!   one `New`'s copies all from one local of that class.
+//!   one `New`'s copies all from one local of that class; **C5** a
+//!   `data` class (`Facts::DATA`) is plain data, as C++ and Rust copy it
+//!   without its constructor: no getters or setters, and one constructor
+//!   that only stores each parameter, in order, in the field of its
+//!   name, an optional one's default `null`, with no other fields.
 //! - **N1** (nullable types, subset B) `Null` typed nullable; `IsNull`
 //!   and `NonNull` only on nullable values; `NonNull` from `T?` to `T`
 //!   and `AsNullable` from `T` to `T?`, exactly; `EqNullable` an
@@ -147,6 +151,7 @@ pub enum Rule {
     C2,
     C3,
     C4,
+    C5,
     N1,
     N2,
     V1,
@@ -950,6 +955,11 @@ impl Validator {
                 let message = "a @fun interface's one member is its abstract apply method".into();
                 self.node_problem(Rule::V1, id, message);
             }
+        }
+        if p.decls.get(decl).facts.contains(Facts::DATA) && !is_plain_data(p, members) {
+            let message =
+                "a data class only stores its parameters, in fields of their names".into();
+            self.node_problem(Rule::C5, id, message);
         }
         for &member in p.nodes.list(members) {
             match p.nodes.get(member) {
@@ -2574,6 +2584,81 @@ fn body_lets(p: &Program, body: NodeId, out: &mut Vec<DeclId>) {
         }
         stack.extend(p.nodes.kids(id));
     }
+}
+
+/// C5: whether a `data` class's `members` are the plain data its fact
+/// promises: no getters or setters, and one constructor whose body only
+/// stores each parameter, in order, in the field of its name, after
+/// `let b2 = coalesce(b, null)` for an optional one, with no other fields.
+fn is_plain_data(p: &Program, members: Kids) -> bool {
+    let (mut fields, mut ctors) = (Vec::new(), Vec::new());
+    for &m in p.nodes.list(members) {
+        match p.nodes.get(m) {
+            Node::Field { decl } => fields.push(decl),
+            Node::Method { decl, params, body } if p.decls.contains(decl) => {
+                match p.decls.get(decl).kind {
+                    DeclKind::Getter | DeclKind::Setter => return false,
+                    DeclKind::Constructor => ctors.push((params, body)),
+                    _ => {}
+                }
+            }
+            Node::AbstractMethod { .. } => return false,
+            _ => {}
+        }
+    }
+    let [(params, body)] = ctors[..] else {
+        return false;
+    };
+    let Node::Block { stmts } = p.nodes.get(body) else {
+        return false;
+    };
+    let (params, stmts) = (p.nodes.list(params), p.nodes.list(stmts));
+    // First, each optional parameter or its default, null, in a local.
+    let lets = (stmts.iter())
+        .take_while(|&&s| matches!(p.nodes.get(s), Node::Let { .. }))
+        .count();
+    let mut held = HashMap::new();
+    for &s in &stmts[..lets] {
+        let Node::Let {
+            local,
+            init: Some(init),
+        } = p.nodes.get(s)
+        else {
+            return false;
+        };
+        let Node::Coalesce { left, right } = p.nodes.get(init) else {
+            return false;
+        };
+        let (Node::Local { local: param }, Node::Null {}) = (p.nodes.get(left), p.nodes.get(right))
+        else {
+            return false;
+        };
+        held.insert(local, param);
+    }
+    let stores = &stmts[lets..];
+    let stores_param = |((&param, &field), &store): ((&NodeId, &DeclId), &NodeId)| {
+        let (
+            Node::Param { decl: param },
+            Node::SetField {
+                field: f,
+                object,
+                value,
+            },
+        ) = (p.nodes.get(param), p.nodes.get(store))
+        else {
+            return false;
+        };
+        let Node::Local { local } = p.nodes.get(value) else {
+            return false;
+        };
+        f == field
+            && p.name(f) == p.name(param)
+            && matches!(p.nodes.get(object), Node::This {})
+            && held.get(&local).copied().unwrap_or(local) == param
+    };
+    params.len() == fields.len()
+        && stores.len() == fields.len()
+        && (params.iter().zip(&fields).zip(stores)).all(stores_param)
 }
 
 /// `name#id`, for messages.

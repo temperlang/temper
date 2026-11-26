@@ -1754,7 +1754,14 @@ impl Settle {
         if !self.is_mismatch(s, t) {
             return;
         }
-        if solves_wanted && self.check_generic_wanted(value, t) {
+        // A spread's value is a block whose result is the `new`.
+        let mut results = Vec::new();
+        self.results(value, &mut results);
+        let call = match results[..] {
+            [call] => call,
+            _ => value,
+        };
+        if solves_wanted && self.check_generic_wanted(call, t) {
             return;
         }
         // Kotlin Temper lets a nullable value be an `AnyValue`, and folds

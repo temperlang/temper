@@ -3111,6 +3111,29 @@ hint 947..956: Unnecessary type check to E from expression with type E which is 
 log true 15 51 - set 2 true
 Failed: No signature matches
 
+=== a spread that doesn't fit the type wanted reports as its literal does
+// Spread or written out, `T` is bound from the type wanted, and the
+// arguments are what don't fit. (Where `T` would be bound two ways, as in
+// `{ ...words, second: 1 }`, generic calls in general miss the error.)
+@data class Two<T>(public first: T, public second: T) {}
+let words: Two<String> = { first: "a", second: "b" };
+let a: Two<Int> = { ...words, second: "c" };
+let b: Two<Int> = { first: words.first, second: "c" };
+--- settled
+(Block
+  (Class ^Two:0 (TypeParam ^T:4) (Param ^first:6 T:4) (Param ^second:7 T:4))
+  (Let ^words:1 (Call <> Two:0 String) (Call new Two:0 "a" "b"))
+  (Let
+    ^a:2
+    (Call <> Two:0 Int)
+    (Block
+      (Let ^spread#8 words:1)
+      (Call new Two:0 (Call . spread#8 \first) "c")))
+  (Let ^b:3 (Call <> Two:0 Int) (Call new Two:0 (Call . words:1 \first) "c"))
+  #void)
+error 345..368: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> Two<T> expected [Int32, Int32], but got [String, String]
+error 399..423: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> Two<T> expected [Int32, Int32], but got [String, String]
+
 === a spread names its class only as old's
 // `class: G<Int>` isn't old's class's name, which is all `class:` may
 // be in a spread. (Nor does `{ class: G<Int>, t: 1 }` work for now.)

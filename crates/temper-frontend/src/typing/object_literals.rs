@@ -118,8 +118,9 @@ impl Settle {
     /// with a default takes `old`'s value. The class is `old`'s, which must
     /// be a `@data` class, whose constructor's parameters are all public
     /// properties; `class: C`, if given, must name it. Copied properties go
-    /// among the given ones in the parameters' order, so placing them needs
-    /// no more temporaries than the given ones do.
+    /// among the given ones in the parameters' order. Given ones out of
+    /// order put every argument but literals in a temporary, copies too,
+    /// so no target copies natively there.
     fn place_spread(&mut self, call: NodeId, scope: ScopeId, t: TypeId) -> Result<(), Message> {
         let children = self.lib.tree.children(call).to_vec();
         let &[callee, target, _, old, ref given @ ..] = &children[..] else {

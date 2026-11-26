@@ -1654,7 +1654,7 @@ impl<'a> Translator<'a> {
             return None;
         }
         let mut base = None;
-        for (&a, field) in args.iter().zip(self.spread_fields(class, ctor)) {
+        for (&a, field) in args.iter().zip(self.spread_fields(class, ctor)?) {
             match spread_copy_of(p, a) {
                 Some(old) => base = Some(old),
                 None if p.nodes.ty(a) == p.decls.get(field).ty => {}
@@ -1665,7 +1665,7 @@ impl<'a> Translator<'a> {
     }
 
     /// A copyable class's fields, by its constructor's parameters.
-    fn spread_fields(&self, class: DeclId, ctor: DeclId) -> Vec<DeclId> {
+    fn spread_fields(&self, class: DeclId, ctor: DeclId) -> Option<Vec<DeclId>> {
         spread_fields(self.p, self.member_nodes(class), ctor)
     }
 
@@ -1679,8 +1679,11 @@ impl<'a> Translator<'a> {
     pub(crate) fn struct_update(&mut self, ctor: DeclId, args: &[NodeId], base: NodeId) -> R<Expr> {
         let p = self.p;
         let class = p.decls.get(ctor).owner;
+        let Some(fields) = self.spread_fields(class, ctor) else {
+            return not_yet("a spread's copy of a class without a field per parameter");
+        };
         let mut lits = Vec::new();
-        for (&a, field) in args.iter().zip(self.spread_fields(class, ctor)) {
+        for (&a, field) in args.iter().zip(fields) {
             if spread_copy_of(p, a).is_some() {
                 continue;
             }

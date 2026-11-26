@@ -1249,18 +1249,21 @@ fn param_decls(p: &Program, params: crate::nodes::Kids) -> Vec<DeclId> {
 /// with a target's own copy form, skipping the constructor, by their
 /// declarations (notes/tmpl/nodes.md, "Spreads"): the `data` ones, whose
 /// constructor only stores its parameters, with no `var` field, so the
-/// given values, which run first, can't change what a copy then reads.
+/// given values, which run first, can't change what a copy then reads,
+/// and each constructor parameter has its field ([`spread_fields`]).
 pub fn copyable_classes(p: &Program) -> HashSet<DeclId> {
     let mut found = HashSet::new();
     for item in p.modules.iter().flat_map(|m| m.all_items()) {
         if let Node::Class { decl, members } = p.nodes.get(item) {
-            let var = |&m: &NodeId| match p.nodes.get(m) {
+            let members = p.nodes.list(members);
+            let unfit = |&m: &NodeId| match p.nodes.get(m) {
                 Node::Field { decl } => p.decls.get(decl).facts.contains(Facts::VAR),
+                Node::Method { decl, .. } if p.decls.get(decl).kind == DeclKind::Constructor => {
+                    spread_fields(p, members, decl).is_none()
+                }
                 _ => false,
             };
-            if p.decls.get(decl).facts.contains(Facts::DATA)
-                && !p.nodes.list(members).iter().any(var)
-            {
+            if p.decls.get(decl).facts.contains(Facts::DATA) && !members.iter().any(unfit) {
                 found.insert(decl);
             }
         }
@@ -1285,20 +1288,21 @@ pub fn spread_copy_of(p: &Program, arg: NodeId) -> Option<NodeId> {
 
 /// The fields a copyable class's constructor `ctor` sets, by its
 /// parameters, each the field of its name, as a `data` class's
-/// constructor only stores them; `members` are the class's.
-pub fn spread_fields(p: &Program, members: &[NodeId], ctor: DeclId) -> Vec<DeclId> {
+/// constructor only stores them; `members` are the class's. None if a
+/// parameter has no such field.
+pub fn spread_fields(p: &Program, members: &[NodeId], ctor: DeclId) -> Option<Vec<DeclId>> {
     let params = members.iter().find_map(|&m| match p.nodes.get(m) {
         Node::Method { decl, params, .. } if decl == ctor => Some(p.nodes.list(params)),
         _ => None,
-    });
+    })?;
     let field_named = |name: &str| {
         members.iter().find_map(|&m| match p.nodes.get(m) {
             Node::Field { decl } if p.name(decl) == name => Some(decl),
             _ => None,
         })
     };
-    (params.unwrap_or_default().iter())
-        .filter_map(|&n| match p.nodes.get(n) {
+    (params.iter())
+        .map(|&n| match p.nodes.get(n) {
             Node::Param { decl } => field_named(p.name(decl)),
             _ => None,
         })

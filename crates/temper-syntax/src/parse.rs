@@ -195,6 +195,10 @@ struct Shape {
     open: bool,
     /// For `Paren`, whether it's `mixin(...)`.
     mixin: bool,
+    /// For a `Comma` right inside an open `{`, whether its first operand
+    /// looks like an object property: `{ a: b, `, `{ ...p, `, or `{ a, `.
+    /// Not a declaration like `{ let a: B, ` or one after `;` or `@A`.
+    properties: bool,
 }
 
 struct Parser {
@@ -266,6 +270,7 @@ impl Parser {
             eventual,
             open: self.needs_close(op, children),
             mixin: self.is_mixin(op, children),
+            properties: false,
         }
     }
 
@@ -280,7 +285,21 @@ impl Parser {
             eventual: count + usize::from(!top),
             open: self.element_needs_close(i),
             mixin: self.is_mixin(el.op, &el.children),
+            properties: self.is_property_list(i),
         }
+    }
+
+    fn is_property_list(&self, i: usize) -> bool {
+        let el = &self.stack[i];
+        let in_curly = i > 0
+            && matches!(self.stack[i - 1].op, Operator::Curly | Operator::CurlyGroup)
+            && self.element_needs_close(i - 1);
+        let property = |c: NodeId| match self.tree.op(c) {
+            Some(Operator::LowColon | Operator::Ellipsis) => true,
+            Some(Operator::Leaf) => self.tree.children(c).len() == 1,
+            _ => false,
+        };
+        el.op == Operator::Comma && in_curly && el.children.first().is_some_and(|&c| property(c))
     }
 
     fn at_opt(&self, i: Option<usize>) -> Option<Shape> {
@@ -310,6 +329,7 @@ impl Parser {
             eventual: count,
             open,
             mixin: false,
+            properties: false,
         }
     }
 
@@ -673,6 +693,7 @@ impl Parser {
                 eventual: count,
                 open: self.needs_close(below.op, &below.children[..count]),
                 mixin: self.is_mixin(below.op, &below.children[..count]),
+                properties: false,
             };
             let parent = Shape {
                 op,
@@ -680,6 +701,7 @@ impl Parser {
                 eventual: adopt + 1,
                 open: false,
                 mixin: false,
+                properties: false,
             };
             if can_nest(bracket, Some(without), parent, self.node_shape(sibling)) {
                 adopt += 1;
@@ -1024,10 +1046,9 @@ fn can_nest(bracket: Option<Shape>, grand: Option<Shape>, parent: Shape, child: 
         return p == O::SelectivePostColon;
     }
     // Labels only in blocks and at the top level, and so properties too,
-    // which a comma in `{ }` separates: `{ a: b, c: d orelse e }`.
-    let in_curly_list = grand.is_some_and(|g| g.op == O::Comma)
-        && bracket.is_some_and(|b| matches!(b.op, O::Curly | O::CurlyGroup));
-    if p == O::LowColon && !in_curly_list && !is_block_like(grand.map(|g| g.op)) {
+    // including later ones: `{ a: b, c: d orelse e }`.
+    let in_properties = grand.is_some_and(|g| g.properties);
+    if p == O::LowColon && !in_properties && !is_block_like(grand.map(|g| g.op)) {
         return false;
     }
     // `label:` but not `let x:`, which becomes a type annotation.
