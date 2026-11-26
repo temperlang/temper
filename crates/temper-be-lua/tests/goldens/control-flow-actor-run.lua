@@ -3,19 +3,19 @@ local temper = require("temper-core")
 ---@param body fun(): temper.Generator
 local function f(body)
   local generator = body()
-  print("f0")
+  temper.log("f0")
   temper.generator_next(generator)
-  print("f1")
+  temper.log("f1")
   temper.generator_next(generator)
-  print("f2")
+  temper.log("f2")
   temper.generator_next(generator)
-  print("f3")
+  temper.log("f3")
 end
 
 local function fn()
   local i = 0
   while true do
-    print("generated " .. i)
+    temper.log("generated " .. i)
     i = temper.int32_add(i, 1)
     temper.yield()
   end

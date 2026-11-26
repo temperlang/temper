@@ -1,0 +1,10 @@
+// What a library's config may set for the Java backend, as
+// `export let java: JavaConfig = { … };`, each unset by default.
+// The backend checks the values' forms (src/lib.rs, `CONFIG`).
+export class JavaConfig(
+  public name: String? = null,
+  public package: String? = null,
+  public group: String? = null,
+  public artifact: String? = null,
+  public dependencies: List<String>? = null,
+) {}

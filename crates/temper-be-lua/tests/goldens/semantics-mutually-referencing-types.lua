@@ -31,7 +31,7 @@ local emptyBar = Bar(temper.null)
 local nonEmptyFoo = Foo(emptyBar)
 local nonEmptyBar = Bar(emptyFoo)
 local stuffedBar = Bar(nonEmptyFoo)
-print("emptyFoo.x has Foo -> " .. tostring(not temper.is_null(emptyFoo.x)))
-print("nonEmptyFoo.x has Foo -> " .. tostring(not temper.is_null(nonEmptyFoo.x)))
+temper.log("emptyFoo.x has Foo -> " .. tostring(not temper.is_null(emptyFoo.x)))
+temper.log("nonEmptyFoo.x has Foo -> " .. tostring(not temper.is_null(nonEmptyFoo.x)))
 
 return {}

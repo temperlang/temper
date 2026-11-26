@@ -22,7 +22,7 @@ run takes about as long as its slowest job:
 | --- | --- |
 | `lint, core` | formatting; clippy, with and without default features; the workflows parse as YAML; the docs' links; Temper's functional tests on the interpreter; the size and speed charts, drawn from the `stats` branch's data, and the tests of the scripts that write its rows and commit them, with stats.yml's permissions; the rules for release tags; then every crate's tests but the backends' and `tempest`'s, and again without default features, `tempest`'s included |
 | `cli` | The `tempest` crate's tests with every backend, so every toolchain |
-| `py, js, lua, rust` | those backends' tests, with mypy, pyright, TypeScript, Mocha, LuaLS, Lua 5.4.6 and LuaSocket, and again on LuaJIT; the Rust runtime's own; and the version's spellings, sorted by each ecosystem's comparator |
+| `py, js, lua, rust` | those backends' tests, with mypy, pyright, TypeScript, Mocha, LuaLS, Lua 5.4.6 and LuaSocket, and again on LuaJIT and on Lua 5.1.5 with LuaSocket; the Rust runtime's own; and the version's spellings, sorted by each ecosystem's comparator |
 | `java, csharp, cpp` | those backends' tests, with Java 21 and JUnit, .NET 6, and g++ 13, sanitized too, and libcurl; and `strict`: all generated C++ at -O2 by g++ 12 and 14 and clang++ |
 | `release, playground` | `temper`'s release build, the VS Code extension (tested in a real VS Code), the docs' examples, and the docs site; the wasm build, the playground, and its smoke test in headless Chromium |
 
@@ -81,15 +81,17 @@ they're the cue to fix a platform before release.
 
 A scheduled run skips what an earlier one already tested on the same
 code: a first job, `recent`, reads the date of `main`'s latest commit,
-and the nightly `cpp` and `platforms-quick` jobs run only if it's under
+and the nightly `cpp`, `connecteds`, and `platforms-quick` jobs run only if it's under
 26 hours old (a day, with room for GitHub's delays in starting
 scheduled runs), and the weekly `platforms` only if it's under 8 days.
 `libraries` and `latest-checkers` run every night regardless, since
 they test other repositories' `main` and the checkers' latest
 releases. Run by hand, everything runs.
 
-Besides its Linux jobs (more C++ compilers, real libraries, and the
-checkers' latest releases; below), it tests, natively, each other
+Besides its Linux jobs (more C++ compilers, real libraries, the CLI's
+tests that fetch real packages from five registries, `connecteds_*`,
+which run only with `TEMPER_NETWORK_TESTS` set, and the checkers'
+latest releases; below), it tests, natively, each other
 platform [binaries.yml](../../.github/workflows/binaries.yml) releases
 for, one job each from one definition, in two tiers:
 
@@ -175,7 +177,7 @@ What's left out, and why:
   there through CMake, as users build it, by `temper`'s tests
   (`temper test -b cpp` and CMake's build of `temper build`'s
   output); the C++ backend's goldens and other tests still run.
-- **LuaJIT** runs on Linux x64 only, in `ci.yml`.
+- **LuaJIT** and **Lua 5.1** run on Linux x64 only, in `ci.yml`.
 
 `TEMPER_ALLOW_MISSING` takes comma-separated words, each matched in a
 missing tool's message; the test still says what it skipped.

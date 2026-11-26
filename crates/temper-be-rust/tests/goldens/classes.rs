@@ -379,16 +379,24 @@ impl Counter {
     }
 
     pub fn set_doubled(&self, value: i32) {
-        *self.0.count.write().unwrap() = value.wrapping_sub(self.count());
+        let mut count = self.0.count.write().unwrap();
+        *count = value.wrapping_sub(*count);
     }
 
     pub fn set_added(&self, value: i32) {
-        *self.0.count.write().unwrap() = self.count().wrapping_add(value);
+        let mut count = self.0.count.write().unwrap();
+        *count = (*count).wrapping_add(value);
     }
 
     pub fn bump(&self) -> Counter {
-        *self.0.count.write().unwrap() = self.count().wrapping_add(1);
-        *self.0.hidden.write().unwrap() = self.hidden().wrapping_add(1);
+        {
+            let mut count = self.0.count.write().unwrap();
+            *count = (*count).wrapping_add(1);
+        }
+        {
+            let mut hidden = self.0.hidden.write().unwrap();
+            *hidden = (*hidden).wrapping_add(1);
+        }
         self.clone()
     }
 

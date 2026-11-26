@@ -30,7 +30,7 @@ do
     end) then
       jsonValue = temper.null
     end
-    print("`" .. s .. "` is empty array: " .. tostring(not temper.is_null(jsonValue) and temper.instance_of(jsonValue --[[@as std.json.JsonSyntaxTree]], JsonArray) and temper.listed_isempty((jsonValue --[[@as std.json.JsonArray]]).elements)))
+    temper.log("`" .. s .. "` is empty array: " .. tostring(not temper.is_null(jsonValue) and temper.instance_of(jsonValue --[[@as std.json.JsonSyntaxTree]], JsonArray) and temper.listed_isempty((jsonValue --[[@as std.json.JsonArray]]).elements)))
   end
 end
 do
@@ -49,7 +49,7 @@ do
       bubbled = true
     end
     local error_ = p.jsonError
-    print("`" .. s2 .. "` has" .. (bubbled and "" or " no") .. " error: " .. (temper.is_null(error_) and "MISSING ERROR" or (error_ --[[@as string]])))
+    temper.log("`" .. s2 .. "` has" .. (bubbled and "" or " no") .. " error: " .. (temper.is_null(error_) and "MISSING ERROR" or (error_ --[[@as string]])))
   end
 end
 local selectCodePoints = "\000\001\002\003\004\005\006\007\008\t\n\011\012\r\014\015\016\017\018\019\020\021\022\023\024\025\026\027\028\029\030\031 -𐀀--퟿\226\128\168\226\128\169\194\133"
@@ -63,7 +63,7 @@ do
   end) then
     t = "?!"
   end
-  print("string with select code points: " .. t)
+  temper.log("string with select code points: " .. t)
 end
 do
   local p3 = JsonTextProducer(NullInterchangeContext.instance)
@@ -78,7 +78,7 @@ do
   p3:objectKey("y")
   intOrNullAdapter:encodeToJson(y, p3)
   p3:endObject()
-  print(p3:toJsonString())
+  temper.log(p3:toJsonString())
 end
 do
   local s3 = '{"x":null,"y":123,"z":123456789012}'
@@ -86,21 +86,21 @@ do
   local obj = temper.cast_to(ast, JsonObject)
   local xAst = obj:propertyValueOrBubble("x")
   local yAst = obj:propertyValueOrBubble("y")
-  print("for x, got JSON null: " .. tostring(temper.instance_of(xAst, JsonNull)))
-  print("for y, got JSON numeric: " .. tostring(temper.instance_of(yAst, JsonNumeric)))
+  temper.log("for x, got JSON null: " .. tostring(temper.instance_of(xAst, JsonNull)))
+  temper.log("for y, got JSON numeric: " .. tostring(temper.instance_of(yAst, JsonNumeric)))
   local intOrNullAdapter2 = OrNullJsonAdapter(int32JsonAdapter())
   local x2 = intOrNullAdapter2:decodeFromJson(xAst, NullInterchangeContext.instance)
   local y2 = intOrNullAdapter2:decodeFromJson(yAst, NullInterchangeContext.instance)
-  print("x ?? -1 -> " .. (temper.is_null(x2) and -1 or (x2 --[[@as integer]])))
-  print("y ?? -1 -> " .. (temper.is_null(y2) and -1 or (y2 --[[@as integer]])))
+  temper.log("x ?? -1 -> " .. (temper.is_null(x2) and -1 or (x2 --[[@as integer]])))
+  temper.log("y ?? -1 -> " .. (temper.is_null(y2) and -1 or (y2 --[[@as integer]])))
   local zAst = obj:propertyValueOrBubble("z")
   local int64OrNullAdapter = OrNullJsonAdapter(int64JsonAdapter())
   local z = int64OrNullAdapter:decodeFromJson(zAst, NullInterchangeContext.instance)
-  print("z ?? -1 -> " .. temper.int64_tostring(temper.is_null(z) and int64_neg1 or (z --[[@as integer]])))
+  temper.log("z ?? -1 -> " .. temper.int64_tostring(temper.is_null(z) and int64_neg1 or (z --[[@as integer]])))
 end
 local normalJson = JsonTextProducer()
 parseJsonToProducer('{\n  "foo": "bar",\n  "baz": [\n    "boo",\n    { "f": 1, "a": null, "r": 123.0 }\n  ]\n}\n', normalJson)
-print("Normalized:")
-print(normalJson:toJsonString())
+temper.log("Normalized:")
+temper.log(normalJson:toJsonString())
 
 return {}

@@ -79,6 +79,9 @@
 //!   failed step leaves done, and `host/interop.cpp` does the same with
 //!   the `async-turns` program's generated library; skipped where `g++`
 //!   has no coroutines.
+//! - `list_builder_self`: `host/list_builder.cpp` adds a list to itself
+//!   with the runtime's `addAll` and `splice`, under libstdc++'s checked
+//!   debug mode.
 
 use std::fmt::Write;
 use std::path::{Path, PathBuf};
@@ -1049,7 +1052,8 @@ struct FirstUse {
 
 /// [`FirstUse`] runs. `first-use-order` enters a module that another
 /// imports, then that one, which initializes the first only once, before
-/// it.
+/// it. `first-use-palette` reads `module-state`'s `Palette.warm` first,
+/// whose init sets it and `favorite`, which reads it, in order.
 const FIRST_USE: &[FirstUse] = &[
     FirstUse {
         name: "first-use-function",
@@ -1081,6 +1085,14 @@ const FIRST_USE: &[FirstUse] = &[
         name: "first-use-static",
         logs: &["classes-static-properties"],
         prints: &[("static_properties::Simple::other()", "22")],
+    },
+    FirstUse {
+        name: "first-use-palette",
+        logs: &["module-state"],
+        prints: &[(
+            "module_state::Palette::warm()->name << \" \" << module_state::favorite()->name",
+            "p-warm p-warm",
+        )],
     },
 ];
 
@@ -1794,6 +1806,92 @@ fn co_await_interop() {
         );
         kit::assert_none(&failures);
     });
+}
+
+/// A static's accessor and an instance method of its name don't clash:
+/// the method takes another name (`unit2()`), as the naming pass gives
+/// it, so the class compiles.
+#[test]
+fn static_accessor_and_method_of_its_name() {
+    kit::with_stack(|| {
+        let text = "    export class Rect {\n      public static unit = 1;\n      \
+                    public unit(): Int { 2 }\n    }\n"
+            .to_string();
+        let case = Case::inline("clash", "clash.temper.md", text, Vec::new());
+        let files = generate(&case);
+        let header = (files.iter())
+            .find(|f| f.path.ends_with("init.hpp"))
+            .map(|f| f.text.as_str())
+            .unwrap_or_default();
+        assert!(
+            header.contains("static int32_t const & unit();"),
+            "{header}"
+        );
+        assert!(header.contains("int32_t unit2() const;"), "{header}");
+    });
+}
+
+/// `tests/host/statics.cpp`, host code against the `classes` program's
+/// headers, checks that a class's static storage, `temper_statics`, is
+/// private, so host code reads static fields only through their
+/// accessors (`Rect::unit()`) and can't reassign them.
+#[test]
+fn statics_private() {
+    let Some((gxx, _)) = find_gxx() else {
+        kit::missing("no g++ (on PATH, or named by CXX)");
+        return;
+    };
+    kit::with_stack(move || {
+        let case = cases().into_iter().find(|c| c.key == "classes").unwrap();
+        let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("be-cpp-statics");
+        let src = out.join("src");
+        for file in generate(&case) {
+            let path = src.join(&file.path);
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::write(&path, &file.text).unwrap();
+        }
+        let mut command = Command::new(&gxx);
+        command
+            .args(STRICT)
+            .arg("-fsyntax-only")
+            .arg("-isystem")
+            .arg(runtime_dir())
+            .arg("-I")
+            .arg(&src)
+            .arg(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/statics.cpp"));
+        check("g++, host/statics.cpp", command);
+    });
+}
+
+/// `tests/host/list_builder.cpp`: the runtime's `addAll` and `splice`
+/// of a list into itself, under libstdc++'s debug mode
+/// (`-D_GLIBCXX_DEBUG`), which aborts on an insert from the vector's own
+/// range, as the standard leaves that undefined.
+#[test]
+fn list_builder_self() {
+    let Some((gxx, _)) = find_gxx() else {
+        kit::missing("no g++ (on PATH, or named by CXX)");
+        return;
+    };
+    let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("be-cpp-list-builder");
+    fs::create_dir_all(&out).unwrap();
+    let exe = out.join("list_builder");
+    let mut command = Command::new(&gxx);
+    command
+        .args(STRICT)
+        .args(["-O1", "-D_GLIBCXX_DEBUG"])
+        .arg("-isystem")
+        .arg(runtime_dir())
+        .arg(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/list_builder.cpp"))
+        .arg("-o")
+        .arg(&exe);
+    check("g++, host/list_builder.cpp", command);
+    let mut failures = Vec::new();
+    // [1, 2], then [1, 2, 1, 2], then [1, 1, 2, 1, 2, 2, 1, 2], then
+    // its items 1 and 2 replaced by the whole list as it was.
+    let expected = vec!["1 1 1 2 1 2 2 1 2 1 2 2 1 2 ".to_string()];
+    run(&mut failures, "list builder (debug)", &exe, &[], &expected);
+    kit::assert_none(&failures);
 }
 
 /// `tests/host/net.cpp` plugs a client of its own into std `net` from

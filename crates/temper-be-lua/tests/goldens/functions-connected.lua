@@ -121,17 +121,17 @@ function Hider.methods.times(this, j)
   return prod(this.hidden, j)
 end
 
-print("sum(1, 2): " .. sum(1, 2))
-print('length "" vs null vs (): ' .. length("") .. " vs " .. length(temper.null) .. " vs " .. length())
-print("twice(5): " .. twice(5))
+temper.log("sum(1, 2): " .. sum(1, 2))
+temper.log('length "" vs null vs (): ' .. length("") .. " vs " .. length(temper.null) .. " vs " .. length())
+temper.log("twice(5): " .. twice(5))
 local isConnected = sum(1, 2) == 3
 if isConnected then
-  print("prod(new Hidden(1), 2): " .. prod(Hidden(1), 2))
+  temper.log("prod(new Hidden(1), 2): " .. prod(Hidden(1), 2))
 end
 local hider = Hider(3)
-print("new Hider(3).plus(4): " .. hider:plus(4))
+temper.log("new Hider(3).plus(4): " .. hider:plus(4))
 if isConnected then
-  print("new Hider(3).times(4): " .. hider:times(4))
+  temper.log("new Hider(3).times(4): " .. hider:times(4))
 end
 
 return { sum = sum, length = length, twice = twice, Hider = Hider }

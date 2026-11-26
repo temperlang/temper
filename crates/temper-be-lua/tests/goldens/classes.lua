@@ -570,56 +570,56 @@ end
 
 Rect.unit = Rect(1, 1)
 local r = Rect(2, 3)
-print(r:toString())
-print(tostring(r.area))
+temper.log(r:toString())
+temper.log(tostring(r.area))
 local s = shape(r)
-print(s:describe())
+temper.log(s:describe())
 local q = shape(Square(4))
-print(q:describe())
-print(tostring(q.area))
-print(tostring(r:scaled(2):scaled(3).area))
-print(Rect.unit:scaled(5):toString())
+temper.log(q:describe())
+temper.log(tostring(q.area))
+temper.log(tostring(r:scaled(2):scaled(3).area))
+temper.log(Rect.unit:scaled(5):toString())
 local c = Counter.zero()
 c:bump():bump()
-print(tostring(c.count))
+temper.log(tostring(c.count))
 c.doubled = 10
-print(tostring(c.doubled))
-print(tostring(c:same(Counter():bump():bump())))
+temper.log(tostring(c.doubled))
+temper.log(tostring(c:same(Counter():bump():bump())))
 c.added = 5
 local t = 2
 c.added = t
 local t2 = t
 c.added = t2
 local added = t2
-print(added .. " " .. c.count)
-print(tostring(Point(1, 2):eq(Point(1, 2))) .. " " .. tostring(not Point(1, 2):eq(Point(2, 1))))
-print(tostring(Holder(Loose(3), "a"):eq(Holder(Loose(-3), "a"))))
+temper.log(added .. " " .. c.count)
+temper.log(tostring(Point(1, 2):eq(Point(1, 2))) .. " " .. tostring(not Point(1, 2):eq(Point(2, 1))))
+temper.log(tostring(Holder(Loose(3), "a"):eq(Holder(Loose(-3), "a"))))
 local loose = Loose(2)
 local string_ = tostring(loose:mirrors(Loose(-2))) .. " "
 local left = maybeLoose(-2)
 local left2 = loose
 local right = maybeLoose(0)
 local left3 = maybeLoose(0)
-print(string_ .. tostring(not temper.is_null(left) and (left --[[@as classes.Loose]]):eq(loose)) .. " " .. tostring(not temper.is_null(right) and left2:eq(right --[[@as classes.Loose]])) .. " " .. tostring(not (not temper.is_null(left3) and (left3 --[[@as classes.Loose]]):eq(loose))))
+temper.log(string_ .. tostring(not temper.is_null(left) and (left --[[@as classes.Loose]]):eq(loose)) .. " " .. tostring(not temper.is_null(right) and left2:eq(right --[[@as classes.Loose]])) .. " " .. tostring(not (not temper.is_null(left3) and (left3 --[[@as classes.Loose]]):eq(loose))))
 local subject = maybeLoose(-2)
 local matched = not temper.is_null(subject) and (subject --[[@as classes.Loose]]):eq(loose) and "loose" or "other"
-print(matched)
+temper.log(matched)
 local b1 = Boxed("x", 1)
 local b3 = Boxed("z", 2)
-print(b1.value .. " " .. tostring(b1:eq(Boxed("y", 1))) .. " " .. tostring(not b1:eq(b3)) .. " " .. tostring(b1:sameAs(Boxed("y", 1))) .. " " .. tostring(b3:sameAs(b1)))
-print(tostring(Version(1, 2):compareTo(Version(1, 3)) < 0) .. " " .. tostring(Version(2, 0):compareTo(Version(1, 9)) >= 0))
-print(tostring(temper.instance_of(q, Square)) .. " " .. tostring(temper.instance_of(s, Square)))
+temper.log(b1.value .. " " .. tostring(b1:eq(Boxed("y", 1))) .. " " .. tostring(not b1:eq(b3)) .. " " .. tostring(b1:sameAs(Boxed("y", 1))) .. " " .. tostring(b3:sameAs(b1)))
+temper.log(tostring(Version(1, 2):compareTo(Version(1, 3)) < 0) .. " " .. tostring(Version(2, 0):compareTo(Version(1, 9)) >= 0))
+temper.log(tostring(temper.instance_of(q, Square)) .. " " .. tostring(temper.instance_of(s, Square)))
 local sq = temper.cast_to(q, Square)
-print(tostring(sq.area))
+temper.log(tostring(sq.area))
 if temper.instance_of(s, Rect) then
-  print(tostring((s --[[@as classes.Rect]]).w))
+  temper.log(tostring((s --[[@as classes.Rect]]).w))
 end
 local st = Stock({ 4, 5 })
 st.items = { 1, 2, 3 }
-print(st.count .. " " .. st.size .. " " .. st:sizeNow() .. " " .. temper.list_length(st.items))
-print(compared(function(a, b) return temper.is_null(a) and temper.is_null(b) or not temper.is_null(a) and (not temper.is_null(b) and (a --[[@as classes.Loose]]):eq(b --[[@as classes.Loose]])) end))
-print(compared(function(a, b) return not (temper.is_null(a) and temper.is_null(b) or not temper.is_null(a) and (not temper.is_null(b) and (a --[[@as classes.Loose]]):eq(b --[[@as classes.Loose]]))) end))
-print(compared(function(a, b) return temper.is_null(b) and temper.is_null(a) or not temper.is_null(b) and (not temper.is_null(a) and (b --[[@as classes.Loose]]):eq(a --[[@as classes.Loose]])) end))
+temper.log(st.count .. " " .. st.size .. " " .. st:sizeNow() .. " " .. temper.list_length(st.items))
+temper.log(compared(function(a, b) return temper.is_null(a) and temper.is_null(b) or not temper.is_null(a) and (not temper.is_null(b) and (a --[[@as classes.Loose]]):eq(b --[[@as classes.Loose]])) end))
+temper.log(compared(function(a, b) return not (temper.is_null(a) and temper.is_null(b) or not temper.is_null(a) and (not temper.is_null(b) and (a --[[@as classes.Loose]]):eq(b --[[@as classes.Loose]]))) end))
+temper.log(compared(function(a, b) return temper.is_null(b) and temper.is_null(a) or not temper.is_null(b) and (not temper.is_null(a) and (b --[[@as classes.Loose]]):eq(a --[[@as classes.Loose]])) end))
 
 ---@param a classes.Loose|temper.Null
 ---@param b classes.Loose|temper.Null
@@ -634,7 +634,7 @@ local function fn4(a, b)
   return (a --[[@as classes.Loose]]):mirrors(b --[[@as classes.Loose]])
 end
 
-print(compared(fn4))
+temper.log(compared(fn4))
 local favorite = same("number")
 local named = 0
 do
@@ -645,14 +645,14 @@ do
     i = temper.int32_add(i, 1)
   end
 end
-print(named .. " types")
+temper.log(named .. " types")
 local sql = Sql()
 sql:appendString("it")
 sql:appendString(temper.null)
 sql:appendInt(3)
 sql:appendShape(Square(2))
 sql:appendRect(Rect(1, 2))
-print(sql.accumulated)
+temper.log(sql.accumulated)
 local seven = 7
 local accumulator = Sql()
 accumulator:appendSafe("SELECT ")
@@ -661,10 +661,10 @@ accumulator:appendSafe(", ")
 accumulator:appendString("x")
 accumulator:appendSafe(" FROM ")
 accumulator:appendRect(Rect(2, 2))
-print(accumulator.accumulated)
+temper.log(accumulator.accumulated)
 local stepper = Stepper(3)
-print("next " .. stepper:next(1))
-print(orFail(true, 4, IntFailing()) .. " " .. orFail(true, "s", AnyFailing()))
+temper.log("next " .. stepper:next(1))
+temper.log(orFail(true, 4, IntFailing()) .. " " .. orFail(true, "s", AnyFailing()))
 
 return {
   Shape = Shape,

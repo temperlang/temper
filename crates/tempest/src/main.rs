@@ -477,6 +477,7 @@ fn test_command(args: &[String]) -> u8 {
         ignore: ignore.as_ref(),
         log: flags.log,
         fuel,
+        config_classes: registry().config_classes(),
     };
     let build_options = build::Options {
         verbose: false,
@@ -683,7 +684,13 @@ fn serve(name: &str, args: &[String]) -> u8 {
         );
         return NOT_YET_CODE;
     }
-    temper_lsp::serve(io::stdin(), io::stdout().lock(), flags.std_dir)
+    // Configs may use every backend's config class, as `temper build`'s.
+    temper_lsp::serve(
+        io::stdin(),
+        io::stdout().lock(),
+        flags.std_dir,
+        registry().config_classes(),
+    )
 }
 
 /// `temper version`: its version and the commit it was built from, with

@@ -124,8 +124,8 @@ use crate::tree::{self, Bin, Expr, Item, Labels, Stmt, Unary};
 use crate::{NAMES, NotYet};
 use std::collections::{HashMap, HashSet};
 use temper_tmpl::analysis::{
-    self, Effect, Import, calls_nothing, module_imports, module_refs, module_state, module_writes,
-    test_imports,
+    self, Effect, Import, calls_nothing, checks_type_param, module_imports, module_refs,
+    module_state, module_writes, test_imports,
 };
 use temper_tmpl::host::uses_host;
 use temper_tmpl::naming::{self, NameMap};
@@ -283,6 +283,8 @@ pub struct Translator<'a> {
     pub mutating: HashSet<String>,
     /// The library's namespace.
     namespace: String,
+    /// The module translated.
+    here: DeclId,
     /// Each class's and interface's node, by its declaration.
     class_nodes: HashMap<DeclId, NodeId>,
     /// The class or interface whose member is being translated.
@@ -383,6 +385,7 @@ impl<'a> Translator<'a> {
             test_names: HashMap::new(),
             mutating: HashSet::new(),
             namespace: names::namespace(&p.library.name),
+            here: DeclId::NONE,
             class_nodes,
             class: None,
             this_expr: None,
@@ -395,6 +398,17 @@ impl<'a> Translator<'a> {
             call: NodeId(0),
             cells: temper_tmpl::analysis::assigned_captures(p),
         }
+    }
+
+    /// A generic declaration's own type parameters as arguments, `<T,
+    /// U>`, or nothing.
+    pub(crate) fn own_type_args(&self, decl: DeclId) -> String {
+        let params = self.p.decls.type_params(decl);
+        if params.is_empty() {
+            return String::new();
+        }
+        let names: Vec<&str> = params.iter().map(|&t| self.p.name(t)).collect();
+        format!("<{}>", names.join(", "))
     }
 
     /// A generic declaration's `template <class T>` line, or nothing.
@@ -439,6 +453,21 @@ impl<'a> Translator<'a> {
         self.effects.node_with(self.p, id, self.names)
     }
 
+    /// Whether code here may read a static field's storage, private to
+    /// its class ([`classes`]): in the class's members, the module's init
+    /// (its friend), or for a private field, wherever Temper reads it.
+    fn reaches_statics(&self, field: DeclId) -> bool {
+        let p = self.p;
+        let owner = p.decls.get(field).owner;
+        let in_group = self.group.as_ref().is_some_and(|g| g.top);
+        p.decls.get(field).facts.contains(Facts::PRIVATE)
+            || !in_group
+                && (self.class.as_ref().is_some_and(|c| c.decl == owner)
+                    || !self.in_function
+                        && !is_external(p, field)
+                        && temper_tmpl::analysis::home(p, owner) == Some(self.here))
+    }
+
     /// A module-level declaration: its name, or another library's,
     /// qualified by its namespace.
     fn top(&self, decl: DeclId) -> Expr {
@@ -449,7 +478,7 @@ impl<'a> Translator<'a> {
     /// namespace, and a class's static member or constructor with its
     /// class's name (`Rect::make`). Module values kept past the init and
     /// static fields are their storage (`temper_globals::x.value`,
-    /// `Rect::temper_statics::unit.value`). Inside a class's member, a
+    /// `Rect::temper_statics::unit.value`; [`Self::reaches_statics`]). Inside a class's member, a
     /// name that one of its members takes, which would hide it, is
     /// qualified too.
     fn top_name(&self, decl: DeclId) -> String {
@@ -660,6 +689,7 @@ impl<'a> Translator<'a> {
     /// Translates a module.
     pub fn module(&mut self, module: &Module) -> R<Translated> {
         let p = self.p;
+        self.here = module.decl;
         for d in p.decls.ids().filter(|&d| p.decls.contains(d)) {
             let name = self.names.get(d);
             if !is_external(p, d) && names::reserved_for_implementation(name) {
@@ -884,7 +914,7 @@ impl<'a> Translator<'a> {
                     let any = arities.contains(&(decl, usize::MAX));
                     let live_any = live_arities.contains(&(decl, usize::MAX));
                     made.extend(
-                        (overloads(&f, k).into_iter())
+                        (overloads(&f, k, &self.own_type_args(decl)).into_iter())
                             .filter(|o| {
                                 f.exported || any || arities.contains(&(decl, o.params.len()))
                             })
@@ -2791,6 +2821,12 @@ impl<'a> Translator<'a> {
                 self.call = id;
                 return self.connected(target, &[]);
             }
+            // A class's members, and the module's init, read its storage;
+            // other code, the public accessor, as host code does.
+            Node::GetStatic { target } if !self.reaches_statics(target) => {
+                let class = self.top_name(p.decls.get(target).owner);
+                Expr::name(format!("{class}::{}", self.name(target))).call(Vec::new())
+            }
             Node::GetStatic { target } => self.top(target),
             // A class's `shared_ptr` converts to its interfaces' through
             // the runtime's `to_base` where it's never null (`base_of`),
@@ -2997,6 +3033,14 @@ impl<'a> Translator<'a> {
                 self.core(&format!("panic<{ty}>")).call(Vec::new())
             }
             Node::Null {} => Expr::name("nullptr"),
+            // A bare `T`'s, which may be bound to a type that `nullptr`
+            // doesn't compare with (`int32_t`): `core::is_null(x)`.
+            Node::IsNull { value } if checks_type_param(p, value) => {
+                let Node::AsNullable { value: v } = p.nodes.get(value) else {
+                    return not_yet("a type parameter's null check");
+                };
+                Expr::name(format!("{CORE}::is_null")).call(vec![self.expr(v)?])
+            }
             Node::IsNull { value } => Expr::bin(Bin::Eq, self.expr(value)?, Expr::name("nullptr")),
             Node::NonNull { value } => {
                 let pointer = self.ty(p.nodes.ty(id))?.starts_with("std::shared_ptr<");
@@ -3462,9 +3506,12 @@ pub(crate) fn trailing_optional(p: &Program, params: temper_tmpl::Kids) -> usize
 
 /// Overloads of a function whose last `k` parameters are optional, as
 /// Kotlin's: each leaves out one more, passing null for it, which gives
-/// its default. A member's calls the member by its own name.
-pub(crate) fn overloads(f: &tree::Function, k: usize) -> Vec<tree::Function> {
-    let callee = f.name.rsplit("::").next().unwrap_or(&f.name).to_string();
+/// its default. A member's calls the member by its own name, and a
+/// generic one's with its type parameters, `type_args` (`<T>`), which
+/// C++ can't deduce from a `nullptr` for a `NullableParam<T>`.
+pub(crate) fn overloads(f: &tree::Function, k: usize, type_args: &str) -> Vec<tree::Function> {
+    let callee = f.name.rsplit("::").next().unwrap_or(&f.name);
+    let callee = format!("{callee}{type_args}");
     (1..=k)
         .map(|j| {
             let n = f.params.len() - j;

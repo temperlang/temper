@@ -8,7 +8,11 @@
 //! its place wants one of its own, else borrowed (`x.as_ref().unwrap()`);
 //! an `if` on a null check of a local that reads it only narrowed is
 //! `if let Some(x) = &x`, and one picking it or a fallback
-//! `x.unwrap_or(d)`, as clippy wants.
+//! `x.unwrap_or(d)`, as clippy wants. A call that binds a type parameter
+//! `T` to a nullable type flattens its `T?`s, `Option<Option<A>>`s
+//! (`.flatten()`, `.map(Some)`), and a null check on a bare `T` is
+//! refused, as Rust can't tell whether a `T` is an `Option`
+//! (notes/tmpl/nodes.md, "Nullable type parameters").
 //! `==` with a side that may be null compares the `Option`s, which Rust
 //! does by value, or `x.is_none()` against `null`; `Float64`'s, which
 //! orders NaN as Temper does, zips them.
@@ -25,10 +29,60 @@
 use super::{R, Translator, Want, not_yet};
 use crate::ops::{self, Spelling};
 use crate::tree::{Bin, Block, Expr, Stmt, Unary};
-use temper_tmpl::analysis::walk;
+use temper_tmpl::analysis::{binds_nullable, checks_type_param, walk};
 use temper_tmpl::{DeclId, Flags, Node, NodeId, TypeId};
 
 impl Translator<'_> {
+    /// An argument `e` (node `a`) of `call` for a parameter typed `T?`,
+    /// where the call binds `T` to a nullable type, so the parameter is
+    /// an `Option<Option<A>>` (`analysis::binds_nullable`): a value
+    /// wrapped as it's made, `Some(Some(x))`, else `e.map(Some)`, so a
+    /// `null` is the parameter's `None`, as Temper's `A??` is `A?`; and
+    /// `None` as it is.
+    pub(crate) fn nested_arg(
+        &self,
+        call: NodeId,
+        param: Option<TypeId>,
+        a: NodeId,
+        e: Expr,
+    ) -> Expr {
+        if !param.is_some_and(|t| binds_nullable(self.p, call, t)) {
+            return e;
+        }
+        match self.p.nodes.get(a) {
+            Node::Null {} | Node::Omitted {} => e,
+            Node::AsNullable { .. } => Expr::path("Some").call(vec![e]),
+            _ => e.method("map", vec![Expr::path("Some")]),
+        }
+    }
+
+    /// A call `e` of `callee` whose result is a `T?` where the call binds
+    /// `T` to a nullable type, an `Option<Option<A>>`, flattened to the
+    /// `Option<A>` that the call's type is (`analysis::binds_nullable`).
+    pub(crate) fn flattened(&self, call: NodeId, callee: DeclId, e: Expr) -> Expr {
+        let result = self.p.signature(callee).map(|s| s.result);
+        if result.is_some_and(|t| binds_nullable(self.p, call, t)) {
+            e.method("flatten", Vec::new())
+        } else {
+            e
+        }
+    }
+
+    /// Refuses a null check of a value of a bare type parameter, as `x ==
+    /// null` for `x: T` (`analysis::checks_type_param`): whether it's
+    /// null depends on whether `T` is bound to an `Option`, which a
+    /// generic function can't tell, where `Some(x).is_none()` was always
+    /// false.
+    pub(crate) fn checkable(&self, value: NodeId) -> R<()> {
+        if checks_type_param(self.p, value) {
+            return not_yet(
+                "a null check of a value of a type parameter, which Rust can't make, as `T` may be \
+                 bound to a nullable type or not; take a `T?` instead (RFC 684, \"Flat options\")",
+            );
+        }
+        Ok(())
+    }
+
     /// A nullable value narrowed to its type.
     pub(crate) fn non_null(&mut self, id: NodeId, value: NodeId, want: Want) -> R<Expr> {
         let ty = self.p.nodes.ty(id);
@@ -78,6 +132,7 @@ impl Translator<'_> {
     /// for a nullable default, `x.or(d)` and so on, and `x` alone for
     /// null. A parameter's value is moved, its only read.
     pub(crate) fn coalesce(&mut self, left: NodeId, right: NodeId) -> R<Expr> {
+        self.checkable(left)?;
         let p = self.p;
         let x = match p.nodes.get(left) {
             Node::Local { local } if p.decls.get(local).kind == temper_tmpl::DeclKind::Param => {
@@ -133,6 +188,8 @@ impl Translator<'_> {
         if null(left) && null(right) {
             return Ok(Expr::path("true"));
         }
+        self.checkable(left)?;
+        self.checkable(right)?;
         if null(right) {
             return Ok(self
                 .expr(left, Want::Borrowed)?
@@ -602,6 +659,7 @@ impl Translator<'_> {
     pub(crate) fn is_some(&mut self, args: &[NodeId]) -> R<Option<Expr>> {
         if let [arg] = args {
             if let Node::IsNull { value } = self.p.nodes.get(*arg) {
+                self.checkable(value)?;
                 let v = self.expr(value, Want::Borrowed)?;
                 return Ok(Some(v.method("is_some", Vec::new())));
             }

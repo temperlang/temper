@@ -24,7 +24,7 @@ page doesn't repeat those.
 | [I10](#i10-examples-that-dont-run-as-marked) | builtins, types | 9 examples | Fix the compiler, one by one |
 | [I11](#i11-playground-addresses) | terms, previous README | Old playground addresses | Links done here; terms left |
 | [I12](#i12-the-functional-test-matrix) | `functional-test-matrix.md` | Failures this compiler doesn't have | Regenerate, or retire |
-| [I13](#i13-lua-versions) | target languages | "Lua 5.1" | State what's tested |
+| [I13](#i13-lua-versions) | target languages | "Lua 5.1" | Done here |
 | [I14](#i14-python-named-arguments) | target languages | Named arguments | Done here |
 | [I15](#i15-contributor-toolchains) | CONTRIBUTING | Toolchain versions | Keep one list per repository |
 | [I16](#i16-a-function-expression-used-as-a-declaration) | modules | `fn greet` then `greet()` | Done here |
@@ -107,10 +107,10 @@ page doesn't repeat those.
 ### I13: Lua versions
 
 - **Docs:** "Supported version: Lua 5.1".
-- **This compiler:** rockspecs declare `lua >= 5.1`; tests run on Lua 5.4 and
-  LuaJIT, not PUC Lua 5.1; a few functional tests need 5.3 or later.
-- **Suggested:** say "5.1 and later, tested on 5.4 and LuaJIT", and
-  list what needs 5.3.
+- **This compiler:** rockspecs declare `lua >= 5.1`; tests run on Lua
+  5.1, 5.4, and LuaJIT; a few functional tests need 5.3 or later.
+- **Here:** the docs say "5.1 and later, tested on 5.1, 5.4, and
+  LuaJIT", and list what needs 5.3.
 
 ### I14: Python named arguments
 

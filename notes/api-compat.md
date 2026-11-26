@@ -174,6 +174,11 @@ initializer), one file per type, synthetic functional interfaces in
   `public final class`; interfaces `public interface`.
 - Public properties are a public field **and** a getter (`getX()`, or `isX()`
   for Booleans), plus `setX(v)` when settable.
+- Static properties: Kotlin's are `public static` fields, not `final`
+  where the module's initializer sets them, so callers could reassign
+  them. Tempest's are read through a `public static` getter named as
+  above; their fields are private (the package's where the module's
+  class sets them).
 - Interfaces: `default` methods; multiple inheritance forwards with
   `A.super.m()`.
 - Optional parameters: telescoping overloads plus boxed `@Nullable` types;
@@ -392,7 +397,7 @@ Ordered by value; each needs the team's sign-off.
    - **Tempest (2026-10-31):** both backends match it. C++: each header
      declares `global_init_<module>()` first, through `init_once`;
      module values in `temper_globals` and statics in a class's
-     `temper_statics`, as `GlobalSlot`s, which the init constructs, then
+     private `temper_statics` (the init its friend), as `GlobalSlot`s, which the init constructs, then
      runs its imports' inits, then the rest in source order; `x()` and
      `Type::x()` accessors, giving `const &`s; and exported functions,
      public constructors and static functions of exported types, and

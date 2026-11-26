@@ -35,12 +35,12 @@ local function checkB(instance)
   end) then
     t = "nope"
   end
-  print(t)
+  temper.log(t)
 end
 
 ---@param instance specific.AlphaInterface
 local function checkIfB(instance)
-  print(temper.instance_of(instance, BravoClass) and "yep" or "nope")
+  temper.log(temper.instance_of(instance, BravoClass) and "yep" or "nope")
 end
 
 checkB(BravoClass())

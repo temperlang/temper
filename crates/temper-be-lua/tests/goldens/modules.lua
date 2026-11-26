@@ -35,19 +35,19 @@ end
 
 local calls2 = require("modules/helpers").calls
 base2 = 1
-print(greet("modules"))
-print("sum " .. sum(3))
-print("share " .. share(7, 2) .. " " .. intDoubled(21))
-print(Engine("own").name .. ", " .. describe())
+temper.log(greet("modules"))
+temper.log("sum " .. sum(3))
+temper.log("share " .. share(7, 2) .. " " .. intDoubled(21))
+temper.log(Engine("own").name .. ", " .. describe())
 bump()
 bump()
-print("calls " .. calls2)
-print("calls now " .. bump())
+temper.log("calls " .. calls2)
+temper.log("calls now " .. bump())
 local half = Ratio(1, 2)
 local string_ = tostring(half:eq(Ratio(2, 4))) .. " "
 local left = ratioOf(3, 6)
 local left2 = half
 local right = ratioOf(1, 0)
-print(string_ .. tostring(not temper.is_null(left) and (left --[[@as modules.core.Ratio]]):eq(half)) .. " " .. tostring(not (not temper.is_null(right) and left2:eq(right --[[@as modules.core.Ratio]]))))
+temper.log(string_ .. tostring(not temper.is_null(left) and (left --[[@as modules.core.Ratio]]):eq(half)) .. " " .. tostring(not (not temper.is_null(right) and left2:eq(right --[[@as modules.core.Ratio]]))))
 
 return { sum = sum }

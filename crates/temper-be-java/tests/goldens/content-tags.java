@@ -41,9 +41,9 @@ public final class ContentTagsGlobal {
         {
             Buffer collector = Quoting.newCollector();
             collector.append("say 'hi ");
-            collector.append(QuoteEscaper.instance.applyString(TextEscaper.instance.applyString(name)));
+            collector.append(QuoteEscaper.getInstance().applyString(TextEscaper.getInstance().applyString(name)));
             collector.append("' to ");
-            collector.append(TextEscaper.instance.applyString(who));
+            collector.append(TextEscaper.getInstance().applyString(who));
             Quoting.enact(new Mark("bang"), collector);
             return Quoting.fromCollector(collector);
         }
@@ -52,12 +52,12 @@ public final class ContentTagsGlobal {
     static String branch(boolean c, String x) {
         {
             Buffer collector = Quoting.newCollector();
-            collector.append(TextEscaper.instance.applyString(x));
+            collector.append(TextEscaper.getInstance().applyString(x));
             if (c) {
                 collector.append("''");
             }
             collector.append(" '");
-            collector.append(QuoteEscaper.instance.applyString(TextEscaper.instance.applyString(x)));
+            collector.append(QuoteEscaper.getInstance().applyString(TextEscaper.getInstance().applyString(x)));
             collector.append("'");
             return Quoting.fromCollector(collector);
         }
@@ -73,9 +73,9 @@ public final class ContentTagsGlobal {
                     String x = Core.listGet(xs, i);
                     i = i + 1;
                     collector.append("'");
-                    collector.append(QuoteEscaper.instance.applyString(TextEscaper.instance.applyString(x)));
+                    collector.append(QuoteEscaper.getInstance().applyString(TextEscaper.getInstance().applyString(x)));
                     collector.append("' ");
-                    collector.append(TextEscaper.instance.applyString(x));
+                    collector.append(TextEscaper.getInstance().applyString(x));
                     collector.append(";");
                 }
             }
@@ -94,12 +94,12 @@ public final class ContentTagsGlobal {
                         continue;
                     }
                     collector.append("'");
-                    collector.append(QuoteEscaper.instance.applyString(TextEscaper.instance.applyString(x)));
+                    collector.append(QuoteEscaper.getInstance().applyString(TextEscaper.getInstance().applyString(x)));
                     collector.append("'");
                     if (i == 4) {
                         break;
                     }
-                    collector.append(TextEscaper.instance.applyString(x));
+                    collector.append(TextEscaper.getInstance().applyString(x));
                     collector.append(",");
                 }
             }
@@ -114,7 +114,7 @@ public final class ContentTagsGlobal {
             if (c) {
                 return "none";
             }
-            collector.append(QuoteEscaper.instance.applyString(TextEscaper.instance.applyString(x)));
+            collector.append(QuoteEscaper.getInstance().applyString(TextEscaper.getInstance().applyString(x)));
             collector.append("'");
             return Quoting.fromCollector(collector);
         }

@@ -6,7 +6,7 @@
 //! (notes/tmpl/names.md, "Connected declarations").
 //!
 //! - A connected declaration without a Temper implementation (a bodiless
-//!   function) always uses host code.
+//!   function, or a class of bodiless methods) always uses host code.
 //! - With one, `--no-connected` ([`Host::no_connected`]) uses it on every
 //!   backend; otherwise a declaration that lists no backends uses host
 //!   code everywhere, and one that lists some uses it on those, and its
@@ -20,7 +20,7 @@
 //! Host files are given by the build, beside the program; tmpl's text form
 //! doesn't carry them.
 
-use crate::{DeclId, DeclKind, Facts, Kind, Program, qname};
+use crate::{DeclId, DeclKind, Facts, Kind, Node, Program, qname};
 
 /// A file of host code: its path relative to the library's root, as
 /// `_connected.rs` or `sub/__connected__.py`, and its text.
@@ -49,12 +49,19 @@ pub fn is_user_connected(p: &Program, decl: DeclId) -> bool {
 }
 
 /// Whether a user's connected declaration has a Temper implementation: a
-/// class always does in tmpl (the frontend doesn't translate one without),
-/// and a function unless it's a `BodilessFunction`.
+/// class unless its methods are `AbstractMethod`s (all are, or the
+/// frontend reported an error), and a function unless it's a
+/// `BodilessFunction`.
 pub fn has_temper_implementation(p: &Program, decl: DeclId) -> bool {
+    let items = || (p.modules.iter()).flat_map(|m| m.all_items());
     match p.decls.get(decl).kind {
-        DeclKind::Class => true,
-        _ => !(p.modules.iter()).flat_map(|m| m.all_items()).any(|item| {
+        DeclKind::Class => !items().any(|item| match p.nodes.get(item) {
+            Node::Class { decl: d, members } if d == decl => {
+                (p.nodes.list(members).iter()).any(|&m| p.nodes.kind(m) == Kind::AbstractMethod)
+            }
+            _ => false,
+        }),
+        _ => !items().any(|item| {
             p.nodes.kind(item) == Kind::BodilessFunction && p.nodes.slots(item).0 == decl.0
         }),
     }

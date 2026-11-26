@@ -23,7 +23,9 @@
 //! - [`print`](mod@print): settled trees as text, for tests.
 //! - [`sources`]: where a build reads files: the disk, std built in, or
 //!   memory, in layers.
-//! - [`project`]: libraries on disk, found as `temper test` finds them.
+//! - [`project`]: libraries on disk, found as `temper test` finds them,
+//!   with their [`config`] files, checked against the config classes
+//!   backends inject.
 //! - [`repl`]: a REPL session, settling and running one input at a time.
 //! - [`library_tests`]: running libraries' tests, for `temper test`.
 //! - [`log`]: commands' reports as text or JSON records
@@ -35,6 +37,7 @@
 mod autoescape;
 pub mod builtins;
 mod classes;
+pub mod config;
 pub mod core;
 pub mod corelib;
 mod dead_branches;

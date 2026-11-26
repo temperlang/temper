@@ -217,12 +217,10 @@ export let squaredExtent(shape: Shape): Float64 {
 }
 ```
 
-In "config.temper.md", you can also explicitly `import("./extras");` to ensure
-the submodule is included in the library. In this case, it's unneeded, because
-the submodule is already imported in "shapes.temper.md". But in unusual cases,
-you might have submodules that aren't used in other parts of the library. If you
-do add explicit imports to "config.temper.md", you also need to `import(".");`
-explicitly if you want to include the top-level module.
+Every module under the library's directory is part of the library, whether
+other modules import it or not, so "config.temper.md" doesn't need to list them.
+(Kotlin Temper's configs could import modules to include them; configs can't
+import anything yet.)
 
 If you made all changes correctly, the following test run should still pass:
 
@@ -237,25 +235,24 @@ Feel free to add more tests for additional library features.
 Temper currently supports a small set of library configuration options. Let's
 add these to the config to try them out. These include the following:
 
-- `version`: The version of your library. We recommend following
-  [Semver](https://semver.org/).
+- `name`: Your library's name, a dashed identifier: letters, digits, `-`, and
+  `_`, starting with a letter, as `geometry` or `geo-shapes`. Without one, the
+  config's first line, as `# Geometry`, names it.
+- `version`: The version of your library, in [SemVer](https://semver.org/)'s
+  spelling, as `1.2.3`, or `1.2.3-alpha.1`, `-beta.1`, or `-rc.1` for a
+  pre-release. Each backend respells it as its package tools want it.
 - `license`: The license of your library. Where possible, we recommend using a
   [SPDX identifier](https://spdx.org/licenses/).
 - `description`, `authors`, `homepage`, and `repository`: A line about your
   library, who wrote it (such as `"Jo Doe <jo@example.com>"`), and links to its
   home page and source, for the package files.
-- `csharpRootNamespace`: The root namespace and assembly name of the generated
-  C\# library. The default comes from your Temper library name. Further
-  configuration may be provided in the future.
-- `javaName`: The name of the generated Java library, such as the Maven
-  `artifactId`. Again, the default is based on the Temper name of your library.
-  You can also configure the root Java package with `javaPackage`.
-- `jsName`: The name of the generated JS library. Again, the default comes from
-  your Temper library name.
-- `pyName`: The name of the generated Python library. Again, the default comes
-  from your Temper library name.
-- `rustName`: The name of the generated Rust package. Again, the default comes
-  from your Temper library name.
+- Each backend's own settings, such as its package name, in its config class:
+  `CSharpConfig`, `JavaConfig`, `JsConfig`, `PyConfig`, and `RustConfig`
+  (`CppConfig` and `LuaConfig` have no settings yet). By default, each
+  backend names its package after your library's `name`, so you only need
+  these to pick another name, or to list packages that your `@connected`
+  host code uses (`dependencies`). [Backends](../../backends/README.md#configuration)
+  lists every setting.
 
 You need to `export` these values for them to be used. After adding them, your
 "config.temper.md" file might look something like this:
@@ -273,31 +270,27 @@ A library for geometric shapes and calculations.
     // Just go with a common license for our geometry library here.
     export let license = "MIT";
 
-## Included modules
-
-    import(".");
-    // Not needed: import("./extras");
-
 ## Backend configuration
 
-Just examples here. You should choose available package names. Some additional
-options are available on some backends, and we may add more options in the
-future.
+Just examples here. You should choose available package names. Each backend's
+settings go in an object of its config class, exported under the backend's
+name, with the class as its type.
 
-    export let csharpRootNamespace = "GeometryNet";
-    export let javaName = "geometry-java";
-    export let jsName = "geometry-js";
-    export let pyName = "geometry-py";
-    export let rustName = "geometry-rs";
-
-Lua naming configuration isn't yet supported.
-
-    // Has no effect yet.
-    export let luaName = "geometry-lua";
+    export let csharp: CSharpConfig = { rootNamespace: "GeometryNet" };
+    export let java: JavaConfig = { name: "geometry-java" };
+    export let js: JsConfig = { name: "geometry-js" };
+    export let py: PyConfig = { name: "geometry-py" };
+    export let rust: RustConfig = { name: "geometry-rs" };
 ````
 
-We'll likely change some of the structure and introduce more configuration
-options in future Temper releases.
+(`{ class: JavaConfig, name: "geometry-java" }` works too.) The config is
+ordinary Temper code, so a value may be computed, as `"${name}-java"`, though
+it can't import anything yet, and it runs with a small budget of steps, where
+each byte it makes takes a step too. A setting the class doesn't have, or a
+value of the wrong type, is an error when you build, so a typo can't go
+unnoticed. Temper's earlier releases read
+flat names such as `javaName` and `pyName` instead; those are now ordinary
+values with no effect.
 
 ## Library use
 

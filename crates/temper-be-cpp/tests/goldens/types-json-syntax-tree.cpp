@@ -61,7 +61,7 @@ void global_init_init() {
     }
     core::Str selectCodePoints = TEMPER_STR("\000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\u0008\t\n\u000B\u000C\r\u000E\u000F\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001A\u001B\u001C\u001D\u001E\u001F -𐀀-\uE000-퟿\u2028\u2029\u0085", 54);
     {
-      std::shared_ptr<temper_std::JsonTextProducer> p2 = temper_std::JsonTextProducer::make(core::to_base<temper_std::InterchangeContext>(temper_std::NullInterchangeContext::temper_statics::instance.value));
+      std::shared_ptr<temper_std::JsonTextProducer> p2 = temper_std::JsonTextProducer::make(core::to_base<temper_std::InterchangeContext>(temper_std::NullInterchangeContext::instance()));
       p2->stringValue(selectCodePoints);
       core::Str value;
       try {
@@ -72,7 +72,7 @@ void global_init_init() {
       core::Console::log(console, "string with select code points: " + value);
     }
     {
-      std::shared_ptr<temper_std::JsonTextProducer> p3 = temper_std::JsonTextProducer::make(core::to_base<temper_std::InterchangeContext>(temper_std::NullInterchangeContext::temper_statics::instance.value));
+      std::shared_ptr<temper_std::JsonTextProducer> p3 = temper_std::JsonTextProducer::make(core::to_base<temper_std::InterchangeContext>(temper_std::NullInterchangeContext::instance()));
       p3->startObject();
       std::shared_ptr<temper_std::OrNullJsonAdapter<int32_t>> intOrNullAdapter = temper_std::OrNullJsonAdapter<int32_t>::make(temper_std::int32JsonAdapter());
       core::NullableParam<int32_t> x = nullptr;
@@ -93,13 +93,13 @@ void global_init_init() {
       core::Console::log(console, "for x, got JSON null: " + core::Boolean::toString(dynamic_cast<temper_std::JsonNull const *>(xAst.get()) != nullptr));
       core::Console::log(console, "for y, got JSON numeric: " + core::Boolean::toString(dynamic_cast<temper_std::JsonNumeric const *>(yAst.get()) != nullptr));
       std::shared_ptr<temper_std::OrNullJsonAdapter<int32_t>> intOrNullAdapter2 = temper_std::OrNullJsonAdapter<int32_t>::make(temper_std::int32JsonAdapter());
-      core::NullableParam<int32_t> x2 = intOrNullAdapter2->decodeFromJson(xAst, core::to_base<temper_std::InterchangeContext>(temper_std::NullInterchangeContext::temper_statics::instance.value));
-      core::NullableParam<int32_t> y2 = intOrNullAdapter2->decodeFromJson(yAst, core::to_base<temper_std::InterchangeContext>(temper_std::NullInterchangeContext::temper_statics::instance.value));
+      core::NullableParam<int32_t> x2 = intOrNullAdapter2->decodeFromJson(xAst, core::to_base<temper_std::InterchangeContext>(temper_std::NullInterchangeContext::instance()));
+      core::NullableParam<int32_t> y2 = intOrNullAdapter2->decodeFromJson(yAst, core::to_base<temper_std::InterchangeContext>(temper_std::NullInterchangeContext::instance()));
       core::Console::log(console, "x ?\? -1 -> " + std::to_string(x2 == nullptr ? -1 : x2.value));
       core::Console::log(console, "y ?\? -1 -> " + std::to_string(y2 == nullptr ? -1 : y2.value));
       std::shared_ptr<temper_std::JsonSyntaxTree> zAst = obj->propertyValueOrBubble(TEMPER_STR("z"));
       std::shared_ptr<temper_std::OrNullJsonAdapter<int64_t>> int64OrNullAdapter = temper_std::OrNullJsonAdapter<int64_t>::make(temper_std::int64JsonAdapter());
-      core::NullableParam<int64_t> z = int64OrNullAdapter->decodeFromJson(zAst, core::to_base<temper_std::InterchangeContext>(temper_std::NullInterchangeContext::temper_statics::instance.value));
+      core::NullableParam<int64_t> z = int64OrNullAdapter->decodeFromJson(zAst, core::to_base<temper_std::InterchangeContext>(temper_std::NullInterchangeContext::instance()));
       core::Console::log(console, "z ?\? -1 -> " + std::to_string(z == nullptr ? int64_t{-1} : z.value));
     }
     std::shared_ptr<temper_std::JsonTextProducer> normalJson = temper_std::JsonTextProducer::make();

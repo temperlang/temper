@@ -272,8 +272,15 @@ pub fn without_net(cases: &mut [Case]) {
 /// example; `content-tags` tagged strings whose contexts are worked out
 /// at compile time, so their escapers are called directly, in branches
 /// and loops, and one left to run time; `reach` what only tests reach,
-/// and what nothing does, which runs as tests ([`AS_TESTS`]).
-pub const PROGRAMS: [&str; 20] = [
+/// and what nothing does, which runs as tests ([`AS_TESTS`]); `big-lists`
+/// list builders and functions given 200,000 values at once, more than
+/// JS's arguments or Lua's unpacked values can hold; `nullable-generics`
+/// type parameters bound to nullable types, whose `T?` is no more
+/// nullable, where a backend's `T?` may wrap a `T` that already does
+/// (Rust's `Option`, C++'s `NullableParam`), and parameters of type `T`
+/// with defaults; `generic-null-checks` null checks on a bare `T`, which
+/// Rust refuses.
+pub const PROGRAMS: [&str; 23] = [
     "classes",
     "nullables",
     "generics",
@@ -294,6 +301,9 @@ pub const PROGRAMS: [&str; 20] = [
     "content-tags",
     "json-adapters",
     "reach",
+    "big-lists",
+    "nullable-generics",
+    "generic-null-checks",
 ];
 
 /// The shared programs that run as tests, as a functional test with

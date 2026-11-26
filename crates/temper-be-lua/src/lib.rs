@@ -10,9 +10,9 @@
 //! chunk returns), names, and `temper-core` runtime, required as
 //! `temper-core`, as Kotlin Temper's `lua` backend, with prettier bodies:
 //! no numbered names, local functions and locals declared where they're
-//! first given a value, `..` for concatenation, `print` for logging,
-//! natural control flow, with `goto` only for `continue` and jumps out of
-//! inner loops, and blank lines between functions. LuaCATS annotations
+//! first given a value, `..` for concatenation, `temper.log` for logging,
+//! natural control flow, without `goto`, which Lua 5.1 lacks
+//! ([`translate`], "Jumps"), and blank lines between functions. LuaCATS annotations
 //! (`---@param i integer`) type parameters, results, and locals declared
 //! without a value, for LuaLS's checker.
 //!
@@ -35,7 +35,8 @@
 //! and pairs the runtime's, as Kotlin's, with `---@generic` for a
 //! generic function, `T[]`, `table<K, V>`, and `{ key: K, value: V }` for
 //! LuaLS, and `any` for a generic class's type parameters, which LuaLS's
-//! classes don't take.
+//! classes don't take, and for a function's in its body's `---@type`s
+//! and casts, which can't name them.
 //!
 //! Where Kotlin's isn't right, it differs ([`translate`], [`classes`]):
 //! exported `var`s that functions or methods write stay current in the
@@ -79,7 +80,7 @@ pub struct Variant {
     pub profile: Profile,
     pub rules: NamingRules,
     /// The oldest Lua its rockspec accepts, as Kotlin's says (`lua >=
-    /// 5.1`), though `goto` needs 5.2 or LuaJIT.
+    /// 5.1`), which LuaJIT counts as; the output parses on 5.1.
     pub lua_version: &'static str,
 }
 
@@ -115,6 +116,49 @@ impl std::error::Error for NotYet {}
 
 pub use temper_tmpl::OutFile;
 
+/// What a library's config may set for this backend, `export let lua:
+/// LuaConfig = { … };`, as Kotlin's `LuaConfig`. It has no properties
+/// yet, as Kotlin's had none.
+pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
+    key: "lua",
+    class: "LuaConfig",
+    source: include_str!("config.temper"),
+    properties: &[],
+    std: &[],
+    names: temper_tmpl::no_names,
+    runtime: &[],
+};
+
+/// Each Lua file of a library's rock, by its path in the library's
+/// directory, with the name `require` takes for it (`LIBRARY.a.b` for
+/// `a/b.lua` and `a/b/init.lua`, `LIBRARY` for `init.lua`); `NotYet`
+/// where two files take one name, or a name's `.` would be read as a
+/// directory (`a.b.lua`).
+fn rock_modules<'a>(
+    library: &str,
+    paths: impl Iterator<Item = &'a str>,
+) -> Result<Vec<(String, &'a str)>, NotYet> {
+    let mut out: Vec<(String, &str)> = Vec::new();
+    for path in paths {
+        let stem = path.strip_suffix(".lua").unwrap_or(path);
+        if stem.contains('.') {
+            let what =
+                format!("a Lua module with `.` in its path, {path}, which `require` reads as `/`");
+            return Err(NotYet { what });
+        }
+        let name = match stem.strip_suffix("/init").unwrap_or(stem) {
+            "init" => library.to_string(),
+            stem => format!("{library}.{}", stem.replace('/', ".")),
+        };
+        if let Some((_, other)) = out.iter().find(|(n, _)| *n == name) {
+            let what = format!("Lua modules {other} and {path}, which `require` both names {name}");
+            return Err(NotYet { what });
+        }
+        out.push((name, path));
+    }
+    Ok(out)
+}
+
 /// This backend, as tools list it ([`temper_tmpl::Backend`]).
 pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     name: "lua",
@@ -127,6 +171,7 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     runtime_version: &runtime::VERSION,
     rules: &LUA.rules,
     translate: |p, _| translate(p, &LUA).map_err(|e| e.to_string()),
+    config: &CONFIG,
     default: true,
     #[cfg(any(unix, windows))]
     tools: Some(&tools::TOOLS),
@@ -165,10 +210,14 @@ pub fn rock_version(p: &Program) -> String {
 /// `init-test.lua`: each module's tests are in their own file, which
 /// `temper test` runs in turn.
 ///
-/// Kotlin also zips the library beside the rockspec, for LuaRocks, whose
-/// `source.url` names the zip by its absolute path; this names it
-/// relative, as Kotlin does when it has no path, and writes no zip:
-/// `luarocks make` in the library's directory needs none.
+/// The rockspec lists each module in `build.modules`, by the name
+/// `require` takes (`fibonacci.helpers.deep`), so `luarocks make` in the
+/// library's directory installs them where `require` finds them; the
+/// tests aren't installed. (Kotlin's copies the directory into the rock's
+/// own, where `require` doesn't look.) Kotlin also zips the library
+/// beside the rockspec, for LuaRocks, whose `source.url` names the zip by
+/// its absolute path; this names it relative, as Kotlin does when it has
+/// no path, and writes no zip: `luarocks make` needs none.
 pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet> {
     // Type-only errors run as written, or fail where they are
     // (`temper_tmpl::errors`), by the profile.
@@ -244,7 +293,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     );
     let version = rock_version(p);
     let tests_only = temper_tmpl::analysis::test_only_libraries(p);
-    let quoted = |s: &str| format!("'{}'", s.replace('\\', "\\\\").replace('\'', "\\'"));
+    let quoted = tree::single_quoted;
     let dependency_lines = |tests: bool| {
         (p.dependencies().iter())
             .filter(|(name, _)| tests_only.iter().any(|t| t == name) == tests)
@@ -257,6 +306,20 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
             })
             .collect::<String>()
     };
+    // Each module, by the name `require` takes, from the file beside the
+    // rockspec, which `luarocks make` installs where `require` finds it;
+    // the tests aren't installed.
+    let mut modules = String::new();
+    let paths = (files.iter())
+        .filter_map(|f| f.path.strip_prefix(&format!("{library}/")))
+        .filter(|path| !path.starts_with("tests/"));
+    for (name, path) in rock_modules(library, paths)? {
+        modules.push_str(&format!(
+            "        [{}] = {},\n",
+            quoted(&name),
+            quoted(path)
+        ));
+    }
     let rockspec = format!(
         "package = {package}
 version = {version_q}
@@ -265,8 +328,8 @@ description = {{
 {description}}}
 build = {{
     type = 'builtin',
-    copy_directories = {{'.'}},
-    modules = {{}},
+    modules = {{
+{modules}    }},
 }}
 dependencies = {{
     'lua >= {lua}',
@@ -278,6 +341,7 @@ dependencies = {{
 ",
         package = quoted(library),
         version_q = quoted(&version),
+        modules = modules,
         // The config's metadata, as Kotlin's: the description as the
         // summary, and the authors, for want of a field, in `detailed`;
         // the homepage, or else the repository; and the license.
@@ -310,4 +374,35 @@ dependencies = {{
         text: rockspec,
     });
     Ok(files)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::rock_modules;
+
+    /// Each file's name for `require`, and the files that would share
+    /// one, or whose `.` `require` would read as a directory.
+    #[test]
+    fn rock_module_names() {
+        let names = |paths: &[&'static str]| match rock_modules("lib", paths.iter().copied()) {
+            Ok(found) => found
+                .into_iter()
+                .map(|(n, _)| n)
+                .collect::<Vec<_>>()
+                .join(" "),
+            Err(e) => e.what,
+        };
+        assert_eq!(
+            names(&["init.lua", "a.lua", "a/b/init.lua", "_support.lua"]),
+            "lib lib.a lib.a.b lib._support"
+        );
+        assert_eq!(
+            names(&["a.lua", "a/init.lua"]),
+            "Lua modules a.lua and a/init.lua, which `require` both names lib.a"
+        );
+        assert_eq!(
+            names(&["a.b/c.lua"]),
+            "a Lua module with `.` in its path, a.b/c.lua, which `require` reads as `/`"
+        );
+    }
 }

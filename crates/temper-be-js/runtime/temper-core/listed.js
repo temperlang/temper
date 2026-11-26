@@ -74,6 +74,39 @@ export const listBuilderAdd = (ls, newItem, at) => {
 }
 
 /**
+ * Pushes `items[from..to]` onto `ls` one at a time, as `push(...items)`
+ * overflows the stack past about 120,000 arguments.
+ * @template T
+ * @param {T[]} ls
+ * @param {readonly T[]} items
+ * @param {number} [from]
+ * @param {number} [to]
+ */
+const pushAll = (ls, items, from = 0, to = items.length) => {
+  for (let i = from; i < to; ++i) {
+    ls.push(items[i]);
+  }
+}
+
+/**
+ * Inserts `items` into `ls` at `at`, with `ls` itself copied first.
+ * @template T
+ * @param {T[]} ls
+ * @param {number} at
+ * @param {readonly T[]} items
+ */
+const insertAll = (ls, at, items) => {
+  if (at === ls.length) {
+    pushAll(ls, items);
+  } else if (items.length) {
+    const inserted = items === ls ? ls.slice() : items;
+    const tail = ls.splice(at);
+    pushAll(ls, inserted);
+    pushAll(ls, tail);
+  }
+}
+
+/**
  * Implements extension method core.type ListBuilder.addAll()
  * @template T
  * @param {T[]} ls
@@ -82,12 +115,12 @@ export const listBuilderAdd = (ls, newItem, at) => {
  */
 export const listBuilderAddAll = (ls, newItems, at) => {
   if (at == null) {
-    ls.push(...newItems);
+    pushAll(ls, newItems);
   } else {
     if (at < 0 || at > ls.length) {
       bubble();
     }
-    ls.splice(at, 0, ...newItems);
+    insertAll(ls, at, newItems);
   }
 }
 
@@ -109,13 +142,13 @@ export const listedFilter = (ls, predicate) => {
       if (!filtered) {
         filtered = [];
       }
-      filtered.push(...ls.slice(nFiltered, i));
+      pushAll(filtered, ls, nFiltered, i);
       nFiltered = i + 1;
     }
   }
   let fullyFiltered;
   if (filtered) {
-    filtered.push(...ls.slice(nFiltered, length));
+    pushAll(filtered, ls, nFiltered, length);
     fullyFiltered = filtered;
   } else {
     fullyFiltered = ls;
@@ -250,7 +283,17 @@ export const listBuilderSplice = (ls, index, removeCount, newValues) => {
   if (removeCount == null) {
     removeCount = ls.length;
   }
-  return Object.freeze(ls.splice(index, removeCount, ...(newValues || [])));
+  // Where splice starts, which the new values go in at: clamped to the
+  // bounds, as core says, so a negative index is the start, not counted
+  // from the end, as JS's own `splice` takes it.
+  const start = Math.min(Math.max(Math.trunc(index ?? 0), 0), ls.length);
+  // Copied first if it's the builder itself, as splice changes it.
+  const values = newValues === ls ? ls.slice() : newValues;
+  const removed = ls.splice(start, removeCount);
+  if (values) {
+    insertAll(ls, start, values);
+  }
+  return Object.freeze(removed);
 }
 
 /**

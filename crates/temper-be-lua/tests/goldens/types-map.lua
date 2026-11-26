@@ -38,21 +38,21 @@ end
 ---@param name string
 ---@param map table<string, string>
 local function printMap(name, map)
-  print("--- " .. name .. " ---")
-  temper.mapped_foreach(map, function(key, value) print(key .. " = " .. value) end)
+  temper.log("--- " .. name .. " ---")
+  temper.mapped_foreach(map, function(key, value) temper.log(key .. " = " .. value) end)
 end
 
 ---@param name string
 ---@param map table<string, string>
 local function printMapBuilder(name, map)
-  print("--- " .. name .. " ---")
-  temper.mapped_foreach(map, function(key, value) print(key .. " = " .. value) end)
+  temper.log("--- " .. name .. " ---")
+  temper.mapped_foreach(map, function(key, value) temper.log(key .. " = " .. value) end)
 end
 
 messages = temper.map_constructor({ temper.pair_constructor(200, "OK"), temper.pair_constructor(404, "Not Found"), temper.pair_constructor(500, "Internal Server Error") })
 local message = temper.mapped_get(messages, 200)
-print("Message: " .. message)
-print("Has 200: " .. messageDefined(200) .. ", 302: " .. messageDefined(302))
+temper.log("Message: " .. message)
+temper.log("Has 200: " .. messageDefined(200) .. ", 302: " .. messageDefined(302))
 ---@type string
 local t
 if not temper.pcall(function()
@@ -60,16 +60,16 @@ if not temper.pcall(function()
 end) then
   t = "Found"
 end
-print("Fallback: " .. t)
-print("Codes: " .. temper.listed_join(listKeys(messages), " ", function(it) return tostring(it) end))
-print("Again: " .. temper.listed_join(temper.mapped_keys(messages), " ", function(it) return tostring(it) end))
-print("Messages: " .. temper.listed_join(temper.mapped_values(messages), ", ", function(it) return it end))
+temper.log("Fallback: " .. t)
+temper.log("Codes: " .. temper.listed_join(listKeys(messages), " ", function(it) return tostring(it) end))
+temper.log("Again: " .. temper.listed_join(temper.mapped_keys(messages), " ", function(it) return tostring(it) end))
+temper.log("Messages: " .. temper.listed_join(temper.mapped_values(messages), ", ", function(it) return it end))
 local groups = temper.mapped_tolistwith(messages, function(key, value) return temper.int32_div(key, 100) end)
-print("Groups: " .. temper.listed_join(groups, " ", function(it) return tostring(it) end))
+temper.log("Groups: " .. temper.listed_join(groups, " ", function(it) return tostring(it) end))
 local builder2 = temper.mapbuilder_constructor()
 temper.mapbuilder_set(builder2, "Honduras", { "El Salvador", "Guatemala", "Nicaragua" })
-print("From builder: " .. temper.listed_join(temper.mapped_get(builder2, "Honduras"), ", ", function(it) return it end))
-print("Key so far: " .. temper.list_get(listKeys(builder2), 0))
+temper.log("From builder: " .. temper.listed_join(temper.mapped_get(builder2, "Honduras"), ", ", function(it) return it end))
+temper.log("Key so far: " .. temper.list_get(listKeys(builder2), 0))
 temper.mapbuilder_set(builder2, "El Salvador", { "Guatemala", "Honduras" })
 temper.mapbuilder_set(builder2, "Nicaragua", { "Costa Rica", "Honduras" })
 temper.mapbuilder_set(builder2, "Panama", { "Colombia", "Costa Rica" })
@@ -78,7 +78,7 @@ if not temper.pcall(function()
 end) then
 end
 local was = temper.mapbuilder_remove(builder2, "El Salvador")
-print("Was there: " .. temper.listed_join(was, ", ", function(it) return it end))
+temper.log("Was there: " .. temper.listed_join(was, ", ", function(it) return it end))
 ---@type string
 local t_1
 if not temper.pcall(function()
@@ -86,15 +86,15 @@ if not temper.pcall(function()
 end) then
   t_1 = "Gone"
 end
-print(t_1)
+temper.log(t_1)
 local neighbors = temper.mapped_tomap(builder2)
-print("From built: " .. temper.listed_join(temper.mapped_get(neighbors, "Nicaragua"), ", ", function(it) return it end))
+temper.log("From built: " .. temper.listed_join(temper.mapped_get(neighbors, "Nicaragua"), ", ", function(it) return it end))
 local mapOfNone = temper.map_constructor({})
 local mapOfOne = temper.map_constructor({ temper.pair_constructor("jack", "all trades") })
 local mapOfTwo = temper.map_constructor({ temper.pair_constructor(1, "one"), temper.pair_constructor(2, "electric boogaloo") })
-print("mapOfNone: " .. temper.mapped_length(mapOfNone))
-print("mapOfOne: " .. temper.mapped_length(mapOfOne))
-print("mapOfTwo: " .. temper.mapped_length(mapOfTwo))
+temper.log("mapOfNone: " .. temper.mapped_length(mapOfNone))
+temper.log("mapOfOne: " .. temper.mapped_length(mapOfOne))
+temper.log("mapOfTwo: " .. temper.mapped_length(mapOfTwo))
 eightColors = temper.mapbuilder_constructor()
 temper.mapbuilder_set(eightColors, "black", { false, false, false })
 temper.mapbuilder_set(eightColors, "red", { true, false, false })
@@ -104,19 +104,19 @@ temper.mapbuilder_set(eightColors, "yellow", { true, true, false })
 temper.mapbuilder_set(eightColors, "cyan", { false, true, true })
 temper.mapbuilder_set(eightColors, "purple", { true, false, true })
 temper.mapbuilder_set(eightColors, "white", { true, true, true })
-print("with 3 bits you can draw " .. temper.mapped_length(eightColors) .. " colors.")
+temper.log("with 3 bits you can draw " .. temper.mapped_length(eightColors) .. " colors.")
 
 ---@param color string
 ---@param bits boolean[]
 local function fn9(color, bits)
   local foundByGetOr = temper.mapped_getor(eightColors, color, {})
   if temper.list_length(foundByGetOr) ~= 3 then
-    print('getOr("' .. color .. '") failed to find key')
+    temper.log('getOr("' .. color .. '") failed to find key')
   end
   local want = colorToHex(bits)
   local got = colorToHex(foundByGetOr)
   if want ~= got then
-    print('getOr("' .. color .. '") found ' .. got .. " but wanted " .. want)
+    temper.log('getOr("' .. color .. '") found ' .. got .. " but wanted " .. want)
   end
 end
 

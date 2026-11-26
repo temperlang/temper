@@ -283,9 +283,11 @@ run time, path by path, and is always safe:
 
 ### What runs at compile time
 
-The content-tag session is the only place tempest runs the
-interpreter before run time (constant folding and macros are Rust
-code), and it runs only what an allowlist in one place,
+The content-tag session, and reading libraries' configs (each
+config's top-level statements run once, each on its own, as finding
+libraries settles them; `crate::config`), are the only places tempest
+runs the interpreter before run time (constant folding and macros are
+Rust code), and they run only what an allowlist in one place,
 `interp::compile_time`, permits; anything else is refused as "not
 yet", so the use it was for is left to run time and nothing outside
 the interpreter happens. Effects (network, clock, randomness, I/O) are
@@ -300,6 +302,12 @@ only for `run` and `test` on the interpreter and for backends.
   `@connected` function or class outside the allowed std modules, a
   library's own included; native jobs (requests are queued as such,
   and never run), and `async` blocks.
+- Limits: steps, where each byte a call makes (a string's text, a
+  list's or a builder's items, by their size) takes a step too, so a
+  budget bounds memory as well as time (`compile_time::bytes`); and
+  call depth. Each content-tag use and module gets its own budget; each
+  config one budget in all (`CONFIG_FUEL`), and what's left when it's
+  spent doesn't run. Configs can't import anything yet.
 
 A new connected function or std module is refused until it's added
 on purpose; `compile_time_allowlist` in `tests/settle.rs` prints the

@@ -659,7 +659,9 @@ fn std_options(
 /// The runner: runs each library named on its command line, by its
 /// generated `Program.cs`'s `Main` (renamed, so they can share one
 /// program), in a culture whose minus sign is U+2212; then, for
-/// `threads`, `module-state`'s `Tick` and `Report` from 8 threads.
+/// `threads`, `module-state`'s `Tick` and `Report` from 8 threads, and
+/// for `palette`, its `Palette.Warm` before anything else of it, whose
+/// init sets it and `Favorite`, which reads it, in order.
 fn runner(mains: &[(String, String)]) -> String {
     let mut cases = String::new();
     for (key, class) in mains {
@@ -690,7 +692,15 @@ static class Runner
         switch (args[0])
         {{
 {cases}                case "threads": Threads(); break;
+                case "palette": PaletteFirst(); break;
         }}
+    }}
+
+    static void PaletteFirst()
+    {{
+        Core.InitSimpleLogging();
+        string warm = ModuleState.Palette.Warm.Name;
+        Console.WriteLine(warm + " " + ModuleState.ModuleStateGlobal.Favorite.Name);
     }}
 
     static void Threads()
@@ -942,6 +952,10 @@ fn runs() {
         // Init logs as `module-state` does, then the threads tick.
         let expected = kit::threads_expected(&cases);
         run("module-state-threads", &runner_dll, &["threads"], &expected);
+        // Init logs as `module-state` does, on `Palette.Warm`'s first read.
+        let state = cases.iter().find(|c| c.library == "module-state").unwrap();
+        let expected = [&state.expected[..], &["p-warm p-warm".to_string()]].concat();
+        run("module-state-palette", &runner_dll, &["palette"], &expected);
         // `tests/host/Interop.cs`, host code that uses `async-turns` the
         // standard way: it `await`s generated promises, resuming outside
         // any turn, also with a runner of its own, blocks on one inside a

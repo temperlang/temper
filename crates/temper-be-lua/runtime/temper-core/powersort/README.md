@@ -4,6 +4,9 @@ WARNING: Do not edit code here! Comes from this source:
 
 - https://github.com/temperlang/sorting/tree/main/algos/powersort
 
+as Kotlin Temper translated it, with one change since: its `goto`s, early
+returns, are `return`s, so it loads on Lua 5.1, which has no `goto`.
+
 We may want to pull this in automatically from LuaRocks in the future while
 building Temper.
 

@@ -591,7 +591,7 @@ console.log(new Counter().total().toString());
     (Call . console \log)
     (Call (Call . (Call (Call . (Call new Counter:0) \total)) \toString)))
   #void)
-Failed: No connected implementation of Counter.total
+Panicked: No connected implementation of Counter.total
 
 === a connected class's constructor can't have defaults either
 @connected

@@ -20,11 +20,11 @@ end
 ---@param this hello-world-object.C
 ---@param input string
 function C.methods.echo(this, input)
-  print(input)
+  temper.log(input)
 end
 
 local c = C("Hello", "World")
-print(c.x .. ", " .. c.y .. "!")
+temper.log(c.x .. ", " .. c.y .. "!")
 c:echo("Hello World, again!")
 
 return {}

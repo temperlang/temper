@@ -5,7 +5,8 @@
 //! This crate depends only on `temper-os`, for the processes its tools
 //! start, and never lists backends:
 //!
-//! - [`Backend`], what tools need of a backend, and [`OutFile`]; with
+//! - [`Backend`], what tools need of a backend, and [`OutFile`], with
+//!   its [`ConfigType`] ([`config`]); with
 //!   [`Tools`], how a backend's language runs tests, natively, which
 //!   [`tools`]'s helpers (tool lookup, commands, and JUnit XML) serve;
 //! - [`Program`], with its tables: [`Nodes`], [`TypeTable`],
@@ -37,6 +38,7 @@ pub mod builder;
 pub mod cells;
 #[cfg(any(unix, windows))]
 mod children;
+pub mod config;
 pub mod coroutines;
 mod decls;
 pub mod errors;
@@ -62,8 +64,12 @@ mod types;
 pub mod validate;
 pub mod version;
 
-pub use backend::{Backend, OutFile, Run, TestResults, Tested, Tools};
+pub use backend::{Backend, OutFile, Run, TestResults, Tested, Tools, clashing_paths};
 pub use builder::Builder;
+pub use config::{
+    ConfigType, Kind as ConfigKind, Problem as ConfigProblem, Property, Value as ConfigValue,
+    dependency_parts, dotted_identifier, no_names, spelled,
+};
 pub use decls::{Decl, DeclKind, DeclTable, Facts, Strings};
 pub use ids::{DeclId, FileId, NodeId, SourceFile, Span, StrId, TypeId};
 pub use nodes::{Flags, Kids, Nodes};
@@ -92,12 +98,17 @@ pub fn version_or_default(version: &str) -> &str {
 
 /// What a library's config file says about it besides its name and
 /// version, for package files: the string values it exports, by key, as
-/// `license`, `description`, `authors`, `homepage`, and `repository`, and
-/// each backend's names for it (`pyName`, `javaPackage`, …). Given by the
-/// build; not in tmpl's text, and not compared.
+/// `license`, `description`, `authors`, `homepage`, and `repository`; and
+/// what it sets for each backend in that backend's config class, as
+/// `export let py: PyConfig = { name: "geometry-py" };`, which backends
+/// read with [`ConfigType::get`] and [`ConfigType::strings`]. Given by the build; not in
+/// tmpl's text, and not compared.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Metadata {
     pub exports: Vec<(String, String)>,
+    /// Each backend's config, by its key (`py`), with the properties set
+    /// and their values, as checked against its [`ConfigType`].
+    pub configs: Vec<(String, Vec<(String, ConfigValue)>)>,
 }
 
 impl Metadata {
@@ -149,6 +160,7 @@ pub fn xml_text(s: &str) -> String {
 /// No metadata, for a library whose config the build didn't give.
 static NO_METADATA: Metadata = Metadata {
     exports: Vec::new(),
+    configs: Vec::new(),
 };
 
 /// A library this one uses: its declaration, of kind

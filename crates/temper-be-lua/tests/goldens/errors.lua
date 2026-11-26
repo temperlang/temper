@@ -141,8 +141,8 @@ if not temper.pcall(function()
 end) then
   f = "caught"
 end
-print(good(1) .. " " .. a .. " " .. b .. " " .. c .. " " .. d .. " " .. e)
-print(unknownType(1) .. " " .. afterUnclosed(2) .. " " .. box:get() .. " " .. f)
+temper.log(good(1) .. " " .. a .. " " .. b .. " " .. c .. " " .. d .. " " .. e)
+temper.log(unknownType(1) .. " " .. afterUnclosed(2) .. " " .. box:get() .. " " .. f)
 ---@type string
 local g
 if not temper.pcall(function()
@@ -171,6 +171,6 @@ if not temper.pcall(function()
 end) then
   j = "dropped"
 end
-print(g .. " " .. h .. " " .. i .. " " .. j)
+temper.log(g .. " " .. h .. " " .. i .. " " .. j)
 
 return { good = good }

@@ -150,6 +150,9 @@ fn cases() -> Vec<Case> {
     ]
     .concat();
     let mut cases = kit::cases_with("rust", &kit::PROGRAMS, &tests);
+    // Null checks on a bare type parameter's value, which Rust refuses
+    // (`refuses_type_param_null_checks`).
+    cases.retain(|c| c.key != "generic-null-checks");
     // A library named a Rust keyword (`regex/match`'s `match`), which
     // cargo refuses as a package's name, by its key (`regex-match`).
     for case in &mut cases {
@@ -294,6 +297,38 @@ fn goldens() {
             }
         }
         goldens.finish();
+    });
+}
+
+/// A null check of a bare type parameter's value, `x == null` for `x:
+/// T`, which Rust can't make, as `T` may be bound to an `Option` or not,
+/// fails to translate, saying where, where it was always false; the
+/// shared `generic-null-checks` program has such checks.
+#[test]
+fn refuses_type_param_null_checks() {
+    let texts = [
+        "export let isNull<T>(x: T): Boolean { x == null }\n",
+        "export let isSome<T>(x: T): Boolean { x != null }\n",
+        "export let orElse<T>(x: T, y: T): T { x ?? y }\n",
+    ];
+    kit::with_stack(move || {
+        for text in texts {
+            let case = Case::inline("checks", "checks.temper", text, Vec::new());
+            let error = translate(&kit::program_for(&case, &RUST.rules), &RUST).unwrap_err();
+            assert!(
+                error
+                    .what
+                    .contains("null check of a value of a type parameter"),
+                "{error}"
+            );
+            assert!(
+                error
+                    .at
+                    .as_ref()
+                    .is_some_and(|at| at.contains("checks.temper:1")),
+                "{error}"
+            );
+        }
     });
 }
 
@@ -450,7 +485,9 @@ const THREADS_MAIN: &str = "fn main() {
 /// A harness that calls libraries with no `init` first, which they run
 /// on the first read of a module-level value: `twice` reads none, so it
 /// runs no init, and `sum` initializes its library whole, each module
-/// after those it imports, as `magic_number` does its own.
+/// after those it imports, as `magic_number` does its own; reading
+/// `module-state`'s `Palette::warm` first runs its init, which sets it
+/// and `favorite`, which reads it, in order.
 const FIRST_USE: &str = "[package]
 name = \"first-use\"
 version = \"0.0.0\"
@@ -458,6 +495,7 @@ edition = \"2021\"
 
 [dependencies]
 modules = { path = \"../modules\" }
+module-state = { path = \"../module-state\" }
 values = { path = \"../values\" }
 ";
 
@@ -479,6 +517,8 @@ const FIRST_USE_MAIN: &str = "fn main() {
     println!(\"{}\", modules::sum(3));
     println!(\"{}\", values::exporter::magic_number());
     println!(\"{}\", values::times_magic(2));
+    let warm = module_state::Palette::warm().name();
+    println!(\"{warm} {}\", module_state::favorite().name());
 }
 ";
 
@@ -493,6 +533,8 @@ fn first_use_expected(cases: &[Case]) -> Vec<String> {
     out.push("17".into());
     out.extend(log("values"));
     out.extend(["42".to_string(), "84".to_string()]);
+    out.extend(log("module-state"));
+    out.push("p-warm p-warm".into());
     out
 }
 
@@ -677,7 +719,9 @@ fn runs_and_lints() {
         // standard way: it `.await`s a generated promise on a std-only
         // executor, blocks on one inside a turn, which fails clearly, and
         // loops over a generated generator with `for`, which a failed step
-        // leaves done; then it builds a generic class with its builder.
+        // leaves done; then it builds a generic class with its builder,
+        // updates a class's `var` from four threads at once, and fails an
+        // update under the lock, and reads one through another reference.
         if let Some(case) = cases.iter().find(|c| c.key == "async-turns") {
             let expected: Vec<String> = (case.expected.iter().cloned())
                 .chain(
@@ -691,6 +735,8 @@ fn runs_and_lints() {
                         "collatz 7,22,11,34,17,52,26,13,40,20,10,5,16,8,4,2,1",
                         "builder Ann",
                         "options Ann + Cy",
+                        "tally 400000",
+                        "split true 6",
                     ]
                     .map(String::from),
                 )

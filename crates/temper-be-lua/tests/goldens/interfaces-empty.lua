@@ -18,7 +18,7 @@ end
 
 ---@param this empty.HiGreeter
 function HiGreeter.methods.greet(this)
-  print("Hi!")
+  temper.log("Hi!")
 end
 
 local greeter = HiGreeter()

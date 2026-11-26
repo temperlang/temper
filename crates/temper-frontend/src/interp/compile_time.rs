@@ -2,8 +2,9 @@
 //! modules' top-level code once, then lets a pass call functions and
 //! members on the values they made, each call under a step budget, as
 //! Kotlin Temper's frontend interprets a module before its passes use the
-//! values. So far only the contextual autoescaping pass uses it
-//! ([`crate::autoescape`]).
+//! values. The contextual autoescaping pass uses it
+//! ([`crate::autoescape`]), and so does reading libraries' configs
+//! ([`crate::config`]).
 //!
 //! What a pass learns comes back as owned data, never as live values: a
 //! value to be rebuilt in code is a [`Construction`].
@@ -113,6 +114,54 @@ pub fn builtin_allowed(f: Function) -> bool {
     )
 }
 
+/// How many bytes a value holds itself, which compile-time code takes a
+/// step for each of as it makes them ([`Interp::charge`]): a string's or
+/// a builder's text, and a list's, a map's, or a builder's items, by
+/// their size, not what's in them, which took steps of their own. So
+/// the steps a run may take bound its memory, as they bound its time,
+/// and code that doubles a string or a list in a loop runs out of steps
+/// long before it runs out of memory.
+pub(super) fn bytes(value: &Val) -> usize {
+    let item = std::mem::size_of::<Val>();
+    match value {
+        Val::Str(text) => text.len(),
+        Val::StringBuilder(text) => text.borrow().len(),
+        Val::List(items) => items.len() * item,
+        Val::ListBuilder(items) => items.borrow().len() * item,
+        Val::Deque(items) => items.borrow().len() * item,
+        Val::Map(entries) => entries.len() * 2 * item,
+        Val::MapBuilder(entries) => entries.borrow().len() * 2 * item,
+        Val::Bits(bits) => bits.borrow().len(),
+        _ => 0,
+    }
+}
+
+impl Interp<'_> {
+    /// Takes a step for each byte a call made ([`bytes`]), or fails as
+    /// running out of steps does ([`Interp::afford`]).
+    pub(super) fn charge(&mut self, bytes: usize) -> Result<(), Abrupt> {
+        self.afford(bytes)?;
+        let bytes = bytes as u64;
+        let from_fuel = bytes.min(self.fuel);
+        self.fuel -= from_fuel;
+        self.reserve -= bytes - from_fuel;
+        Ok(())
+    }
+
+    /// Fails, spending every step left, unless `bytes` steps are left,
+    /// before making that many bytes.
+    pub(super) fn afford(&mut self, bytes: usize) -> Result<(), Abrupt> {
+        if bytes as u64 <= self.fuel + self.reserve {
+            return Ok(());
+        }
+        (self.fuel, self.reserve) = (0, 0);
+        Err(Abrupt::Panic(format!(
+            "ran out of steps making {bytes} bytes, as compile-time code takes a step for \
+             each byte it makes"
+        )))
+    }
+}
+
 /// Why a compile-time run stopped: it reached something not on the
 /// allowlist, so its result isn't known yet, as Kotlin's `NotYet`.
 pub(super) fn refused(what: &str) -> Abrupt {
@@ -199,6 +248,52 @@ impl Session {
         };
         session.run_modules(s, modules, fuel);
         session
+    }
+
+    /// Runs every module's top-level statements, as [`Session::new`]
+    /// runs modules, but each on its own, going on past one that fails,
+    /// as later ones may not need it, so what they declare has its
+    /// value; each module with `fuel` steps in all. Gives each statement
+    /// that failed, and why, but not one that failed only for want of a
+    /// value an earlier one left unset; and those left once a module's
+    /// steps are spent, which didn't run, with no why.
+    pub(crate) fn new_each(s: &Settled, fuel: u64) -> (Session, Vec<(NodeId, Option<String>)>) {
+        let mut session = Session::new(s, 0, fuel);
+        let mut failed = Vec::new();
+        for module in &s.modules {
+            session.interp.fuel = fuel;
+            for &statement in &module.top_levels {
+                if session.interp.fuel == 0 {
+                    failed.push((statement, None));
+                    continue;
+                }
+                let code = (session.interp.lowering).module(s, module.scope, &[statement]);
+                session.interp.depth = 0;
+                let result = session.interp.run_code(s, code, Rc::from([]), Vec::new());
+                session.interp.ready.clear();
+                session.interp.output.lines.clear();
+                let Err(abrupt) = result else { continue };
+                // For want of a value one that failed left unset, which
+                // that one's failure explains.
+                let unset = &session.interp.unset_why;
+                if matches!(&abrupt, Abrupt::Fail(Some(m)) if unset.values().any(|w| **w == **m)) {
+                    continue;
+                }
+                let why = describe(abrupt);
+                // What's left unset reads as failing, for want of it.
+                let first = session.first_globals[&module.scope];
+                for (i, &(name, _)) in s.scopes.get(module.scope).names.iter().enumerate() {
+                    let index = first + i as u32;
+                    if matches!(session.interp.globals[index as usize], Val::Uninit) {
+                        let name = s.library.names.get(name);
+                        let text: Rc<str> = format!("{name} has no value: {why}").into();
+                        session.interp.unset_why.entry(index).or_insert(text);
+                    }
+                }
+                failed.push((statement, Some(why)));
+            }
+        }
+        (session, failed)
     }
 
     /// Starts again, after a call failed: module state is dropped, then

@@ -1,27 +1,52 @@
 # generated line:column -> source:line:column, and the text at each
-1:1 -> ../module-state.temper.md:16:5  /** @returns {number} */ <- let bump(): Int {
-2:1 -> ../module-state.temper.md:16:5  function bump() { <- let bump(): Int {
-2:10 -> ../module-state.temper.md:16:9 (bump)  bump() { <- bump(): Int {
-2:14 -> ../module-state.temper.md:16:5  () { <- let bump(): Int {
-3:3 -> ../module-state.temper.md:17:7  count = (count + 1) | 0; <- count = count + 1;
-4:3 -> ../module-state.temper.md:18:7  total = (total + count) | 0; <- total = total + count;
-5:3 -> ../module-state.temper.md:19:7  return count; <- count
-8:1 -> ../module-state.temper.md:22:5  export function tick() { <- export let tick(): Void {
-8:17 -> ../module-state.temper.md:22:16 (tick)  tick() { <- tick(): Void {
-8:21 -> ../module-state.temper.md:22:5  () { <- export let tick(): Void {
-9:3 -> ../module-state.temper.md:23:7  ticks = (ticks + 1) | 0; <- ticks = ticks + 1;
-12:1 -> ../module-state.temper.md:26:5  /** @returns {string} */ <- export let report(): String
-13:1 -> ../module-state.temper.md:26:5  export function report() { <- export let report(): String
-13:17 -> ../module-state.temper.md:26:16 (report)  report() { <- report(): String {
-13:23 -> ../module-state.temper.md:26:5  () { <- export let report(): String
-14:3 -> ../module-state.temper.md:27:7  return `${greeting} ${bump() <- "${greeting} ${bump().toStri
-17:1 -> ../module-state.temper.md:9:5  export const greeting = "hi" <- export let greeting = "hi";
-18:1 -> ../module-state.temper.md:10:5  let count = 0; <- var count = 0;
-19:1 -> ../module-state.temper.md:11:5  const limit = 3; <- let limit = 3;
-20:1 -> ../module-state.temper.md:12:5  export let total = 10; <- export var total = 10;
-21:1 -> ../module-state.temper.md:13:5  export let ticks = 0; <- export var ticks = 0;
-22:1 -> ../module-state.temper.md:14:5  let local = 1; <- var local = 1;
-23:1 -> ../module-state.temper.md:30:5  local = (local + limit) | 0; <- local = local + limit;
-24:1 -> ../module-state.temper.md:31:5  console.log(report()); <- console.log(report());
-25:1 -> ../module-state.temper.md:32:5  console.log(report()); <- console.log(report());
-26:1 -> ../module-state.temper.md:33:5  console.log(`local ${local}` <- console.log("local ${local.t
+3:1 -> ../module-state.temper.md:28:5  /** @returns {number} */ <- let bump(): Int {
+4:1 -> ../module-state.temper.md:28:5  function bump() { <- let bump(): Int {
+4:10 -> ../module-state.temper.md:28:9 (bump)  bump() { <- bump(): Int {
+4:14 -> ../module-state.temper.md:28:5  () { <- let bump(): Int {
+5:3 -> ../module-state.temper.md:29:7  count = (count + 1) | 0; <- count = count + 1;
+6:3 -> ../module-state.temper.md:30:7  total = (total + count) | 0; <- total = total + count;
+7:3 -> ../module-state.temper.md:31:7  return count; <- count
+10:1 -> ../module-state.temper.md:34:5  export function tick() { <- export let tick(): Void {
+10:17 -> ../module-state.temper.md:34:16 (tick)  tick() { <- tick(): Void {
+10:21 -> ../module-state.temper.md:34:5  () { <- export let tick(): Void {
+11:3 -> ../module-state.temper.md:35:7  ticks = (ticks + 1) | 0; <- ticks = ticks + 1;
+14:1 -> ../module-state.temper.md:38:5  /** @returns {string} */ <- export let report(): String
+15:1 -> ../module-state.temper.md:38:5  export function report() { <- export let report(): String
+15:17 -> ../module-state.temper.md:38:16 (report)  report() { <- report(): String {
+15:23 -> ../module-state.temper.md:38:5  () { <- export let report(): String
+16:3 -> ../module-state.temper.md:39:7  return `${greeting} ${bump() <- "${greeting} ${bump().toStri
+19:1 -> ../module-state.temper.md:22:21  /** @type {Palette} */ <- warm: Palette = Palette.name
+20:1 -> ../module-state.temper.md:22:21  let Palette$warm; <- warm: Palette = Palette.name
+22:1 -> ../module-state.temper.md:21:5  export class Palette extends <- export class Palette(public
+22:14 -> ../module-state.temper.md:21:18 (Palette)  Palette extends type() { <- Palette(public name: String)
+22:21 -> ../module-state.temper.md:21:5   extends type() { <- export class Palette(public
+23:3 -> ../module-state.temper.md:21:33  /** @type {string} */ <- name: String) {
+24:3 -> ../module-state.temper.md:21:33  #name; <- name: String) {
+26:3 -> ../module-state.temper.md:22:21  /** @returns {Palette} */ <- warm: Palette = Palette.name
+27:3 -> ../module-state.temper.md:22:21  static get warm() { <- warm: Palette = Palette.name
+27:14 -> ../module-state.temper.md:22:21 (warm)  warm() { <- warm: Palette = Palette.name
+31:3 -> ../module-state.temper.md:21:5  /** @param {string} name */ <- export class Palette(public
+32:3 -> ../module-state.temper.md:21:5  constructor(name) { <- export class Palette(public
+34:5 -> ../module-state.temper.md:21:33  this.#name = name; <- name: String) {
+37:3 -> ../module-state.temper.md:21:33  /** @returns {string} */ <- name: String) {
+38:3 -> ../module-state.temper.md:21:33  get name() { <- name: String) {
+38:7 -> ../module-state.temper.md:21:33 (name)  name() { <- name: String) {
+42:3 -> ../module-state.temper.md:23:21  /** <- named(n: String): Palette {
+46:3 -> ../module-state.temper.md:23:21  static named(n) { <- named(n: String): Palette {
+46:10 -> ../module-state.temper.md:23:21 (named)  named(n) { <- named(n: String): Palette {
+47:5 -> ../module-state.temper.md:23:49  return new Palette(listedGet <- new Palette("${prefixes[0]}$
+51:1 -> ../module-state.temper.md:13:5  export const greeting = "hi" <- export let greeting = "hi";
+52:1 -> ../module-state.temper.md:14:5  let count = 0; <- var count = 0;
+53:1 -> ../module-state.temper.md:15:5  const limit = 3; <- let limit = 3;
+54:1 -> ../module-state.temper.md:16:5  export let total = 10; <- export var total = 10;
+55:1 -> ../module-state.temper.md:17:5  export let ticks = 0; <- export var ticks = 0;
+56:1 -> ../module-state.temper.md:18:5  let local = 1; <- var local = 1;
+57:1 -> ../module-state.temper.md:19:5  /** @type {readonly string[] <- let prefixes = ["p-"];
+58:1 -> ../module-state.temper.md:19:5  const prefixes = Object.free <- let prefixes = ["p-"];
+59:1 -> ../module-state.temper.md:22:21  Palette$warm = Palette.named <- warm: Palette = Palette.name
+60:1 -> ../module-state.temper.md:26:5  export const favorite = Pale <- export let favorite = Palett
+61:1 -> ../module-state.temper.md:42:5  local = (local + limit) | 0; <- local = local + limit;
+62:1 -> ../module-state.temper.md:43:5  console.log(report()); <- console.log(report());
+63:1 -> ../module-state.temper.md:44:5  console.log(report()); <- console.log(report());
+64:1 -> ../module-state.temper.md:45:5  console.log(`local ${local}` <- console.log("local ${local.t
+65:1 -> ../module-state.temper.md:46:5  console.log(`${Palette.warm. <- console.log("${Palette.warm.

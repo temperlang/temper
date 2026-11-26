@@ -40,14 +40,14 @@ local function report(x)
   end) then
     suffix = ""
   end
-  print(message .. suffix)
+  temper.log(message .. suffix)
 end
 
 ---@param cols integer
 ---@param total integer
 ---@return integer
 local function calcRows(cols, total)
-  print("calcRows(" .. cols .. ", " .. total .. ")")
+  temper.log("calcRows(" .. cols .. ", " .. total .. ")")
   if temper.int32_mod(total, cols) ~= 0 then
     return temper.bubble()
   end
@@ -84,13 +84,14 @@ local function sumSkipping(n)
   do
     local i = 0
     while i < 5 do
-      if i == n then
+      repeat
+        if i == n then
+          i = temper.int32_add(i, 1)
+          break
+        end
+        sum = temper.int32_add(sum, i)
         i = temper.int32_add(i, 1)
-        goto continue
-      end
-      sum = temper.int32_add(sum, i)
-      i = temper.int32_add(i, 1)
-      ::continue::
+      until true
     end
   end
   return sum
@@ -210,7 +211,7 @@ local function chosen(b)
   local x
   if b then
     x = 3
-    print("chosen")
+    temper.log("chosen")
   else
     unreachableInt()
     error("panic")
@@ -233,12 +234,12 @@ end
 ---@param b integer
 local function branch(a, b)
   local c = a == 0 and (b == 0 and "00" or (b == 1 and "01" or (b == 2 and "02" or "0x"))) or (a == 1 and "1x" or (a == 2 and "2x" or (a == 3 and "3x" or "xx")))
-  print("branch(" .. a .. ", " .. b .. ") -> " .. c)
+  temper.log("branch(" .. a .. ", " .. b .. ") -> " .. c)
 end
 
 report("hi")
 report(temper.null)
-print(tostring(calcRows(3, 6)))
+temper.log(tostring(calcRows(3, 6)))
 ---@type integer
 local t_1
 if not temper.pcall(function()
@@ -246,7 +247,7 @@ if not temper.pcall(function()
 end) then
   t_1 = -1
 end
-print(tostring(t_1))
+temper.log(tostring(t_1))
 ---@type integer
 local t_2
 if not temper.pcall(function()
@@ -261,13 +262,13 @@ if not temper.pcall(function()
 end) then
   t_3 = temper.null
 end
-print(t_2 .. " " .. tostring(isNone(t_3)))
-print(viaOrElse(2))
-print(viaOrElse(12))
+temper.log(t_2 .. " " .. tostring(isNone(t_3)))
+temper.log(viaOrElse(2))
+temper.log(viaOrElse(12))
 local string_ = pick(true) .. " "
 local subject = named(true)
 local subject2 = named(false)
-print(string_ .. (temper.is_null(subject) and "-" or (subject --[[@as string]])) .. " " .. (temper.is_null(subject2) and "null" or (subject2 --[[@as string]])))
+temper.log(string_ .. (temper.is_null(subject) and "-" or (subject --[[@as string]])) .. " " .. (temper.is_null(subject2) and "null" or (subject2 --[[@as string]])))
 ---@type integer
 local t_4
 if not temper.pcall(function()
@@ -289,8 +290,8 @@ if not temper.pcall(function()
 end) then
   t_6 = -1
 end
-print(t_4 .. " " .. t_5 .. " " .. t_6)
-print(chosen(true) .. " " .. shout("hey"))
+temper.log(t_4 .. " " .. t_5 .. " " .. t_6)
+temper.log(chosen(true) .. " " .. shout("hey"))
 branch(0, 2)
 branch(2, 0)
 

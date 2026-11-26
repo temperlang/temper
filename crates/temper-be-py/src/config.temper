@@ -1,0 +1,7 @@
+// What a library's config may set for the Python backend, as
+// `export let py: PyConfig = { … };`, each unset by default.
+// The backend checks the values' forms (src/lib.rs, `CONFIG`).
+export class PyConfig(
+  public name: String? = null,
+  public dependencies: List<String>? = null,
+) {}

@@ -257,8 +257,10 @@ impl Translator<'_> {
         };
         let mut ids = vec![receiver];
         ids.extend_from_slice(self.p.nodes.list(args));
-        let mut args = present(self.ordered(&ids)?)?;
-        let receiver = args.remove(0);
+        let mut args = self.ordered(&ids)?;
+        let receiver = args.remove(0).unwrap_or(Expr::None);
+        self.widen_args(id, &mut args)?;
+        let mut args = present(args)?;
         let name = self.member_name(method);
         Ok(match self.p.decls.get(method).kind {
             DeclKind::Getter if args.is_empty() => receiver.attr(name),

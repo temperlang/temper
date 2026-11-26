@@ -2801,6 +2801,34 @@ log second
 log A 1 B 1 0 A 5 Square 2 A 1 B 1 0 A 7 B 8 0 1 B 2 0 A 3 B 4 0 A 9
 Failed: A is wanted here, but these properties fit Mark's constructor
 
+=== object literals say which property the class wanted lacks, and guess no class for an undeclared type
+class Point(public x: Int, public y: Int = 0) {}
+class Spot(public x: Int, public y: Int = 0) {}
+let p: Point = { x: 1, yy: 2 };
+let q: Point = { x: 1, color: 2 };
+let r = { class: Spot, x: 1, Y: 2 };
+let u: Pointt = { x: 1 };
+let w = { class: Spott, x: 1 };
+let v = { x: 1, y: 2 };
+--- settled
+(Block
+  (Class ^Point:0 (Param ^x:9 Int) (Param ^y:10 Int 0))
+  (Class ^Spot:1 (Param ^x:12 Int) (Param ^y:13 Int 0))
+  (Let ^p:2 Point:0 (Error))
+  (Let ^q:3 Point:0 (Error))
+  (Let ^r:4 (Error))
+  (Let ^u:5 (Error) (Error))
+  (Let ^w:6 (Error))
+  (Let ^v:7 (Error))
+  #void)
+error 193..194: Spot has no property `Y`; did you mean `y`?
+error 208..214: Pointt has not been declared
+error 244..249: Spott has not been declared
+error 120..122: Point has no property `yy`; did you mean `y`?
+error 152..157: Point has no property `color`; it has `x` and `y`
+error 267..281: Multiple types have matching constructors: Point, Spot
+Failed: Point has no property `yy`; did you mean `y`?
+
 === where Kotlin Temper's errors are missing, misplaced, or wrong
 // Pins of Kotlin Temper bugs (notes/kotlin-differences.md, "Bugs in
 // Kotlin Temper"): an `if` value that doesn't fit is reported at the

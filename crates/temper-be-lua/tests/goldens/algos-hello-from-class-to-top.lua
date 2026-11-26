@@ -2,7 +2,7 @@ local temper = require("temper-core")
 
 ---@param message string
 local function say(message)
-  print(message)
+  temper.log(message)
 end
 
 ---@class hello-from-class-to-top.Something

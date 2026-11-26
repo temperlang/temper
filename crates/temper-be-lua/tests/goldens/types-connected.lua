@@ -50,7 +50,7 @@ end
 local counter = Counter()
 counter:add(2)
 counter:add(3)
-print("counter.total(): " .. counter:total())
-print("new Doubler().twice(5): " .. Doubler():twice(5))
+temper.log("counter.total(): " .. counter:total())
+temper.log("new Doubler().twice(5): " .. Doubler():twice(5))
 
 return { Counter = Counter, Doubler = Doubler }

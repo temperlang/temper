@@ -99,6 +99,65 @@ impl std::error::Error for NotYet {}
 
 pub use temper_tmpl::OutFile;
 
+/// What a library's config may set for this backend, `export let py:
+/// PyConfig = { … };`, as Kotlin's `PyConfig`; and std's, as Kotlin's
+/// backends inject it.
+pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
+    key: "py",
+    class: "PyConfig",
+    source: include_str!("config.temper"),
+    properties: &[
+        temper_tmpl::Property {
+            name: "name",
+            doc: "The Python project's name, which, as a Python name, also names its package; else the library's name.",
+            kind: temper_tmpl::ConfigKind::String {
+                form: "a PyPI project's name, as `geometry-py`",
+                valid: pypi_name,
+            },
+        },
+        temper_tmpl::Property {
+            name: "dependencies",
+            doc: "PyPI packages that the library's host code uses, each `\"name==version\"`.",
+            kind: temper_tmpl::ConfigKind::Strings {
+                form: "name==version",
+                package: |d| pypi_dependency(d).map(|(name, _)| names::project_name(name)),
+            },
+        },
+    ],
+    std: &[("name", "temper-std")],
+    names: |library, metadata| vec![names::project_name(&translate::py_name(library, metadata))],
+    runtime: &["temper-core"],
+};
+
+/// A package that a config's `dependencies` lists, as `"name==version"`:
+/// its name ([`pypi_name`]) and version, PEP 440's characters, as
+/// `1.0.post1`, `2!1.0`, `1.*`, or `1.0+local`: no extras, URLs, or
+/// requirement file options.
+pub fn pypi_dependency(text: &str) -> Option<(&str, &str)> {
+    match temper_tmpl::dependency_parts(text, "==", 2)?.as_slice() {
+        &[name, version] if pypi_name(name) && temper_tmpl::spelled(version, ".*+!_-") => {
+            Some((name, version))
+        }
+        _ => None,
+    }
+}
+
+/// Whether a name is a PyPI project's, as PEP 508 has them: ASCII
+/// letters, digits, `.`, `_`, and `-`, starting and ending with a letter
+/// or digit.
+pub fn pypi_name(text: &str) -> bool {
+    temper_tmpl::spelled(text, "._-") && text.ends_with(|c: char| c.is_ascii_alphanumeric())
+}
+
+/// The packages a library's host code uses, as its config lists them,
+/// each as pip takes it, `name==version`.
+pub fn pypi_dependencies(metadata: &temper_tmpl::Metadata) -> Vec<String> {
+    (CONFIG.strings(metadata, "dependencies").iter())
+        .filter_map(|d| pypi_dependency(d))
+        .map(|(name, version)| format!("{name}=={version}"))
+        .collect()
+}
+
 /// This backend, as tools list it ([`temper_tmpl::Backend`]).
 pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     name: "py",
@@ -111,6 +170,7 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     runtime_version: &runtime::VERSION,
     rules: &PY.rules,
     translate: |p, _| translate(p, &PY).map_err(|e| e.to_string()),
+    config: &CONFIG,
     default: true,
     #[cfg(any(unix, windows))]
     tools: Some(&tools::TOOLS),
@@ -118,9 +178,10 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     tools: None,
 };
 
-/// `pyproject.toml`'s dependencies, as Kotlin writes them: the runtime
-/// and each library used, by its name, with `==` its version where it
-/// sets one, in PEP 440's spelling, a quoted line each, sorted; with
+/// `pyproject.toml`'s dependencies, as Kotlin writes them: the runtime,
+/// each library used, by its name, with `==` its version where it sets
+/// one, in PEP 440's spelling, and the packages its config lists, a
+/// quoted line each, sorted; with
 /// `tests`, instead those only the tests use
 /// ([`temper_tmpl::analysis::test_only_libraries`]), for the `test`
 /// dependency group, which installing the package skips.
@@ -130,6 +191,7 @@ fn dependencies(p: &Program, tests: bool) -> String {
     if !tests {
         let runtime = version::current().spell(Spelling::Python);
         lines.push(format!("temper-core=={runtime}"));
+        lines.extend(pypi_dependencies(p.metadata()));
     }
     for (name, version) in p.dependencies() {
         if tests_only.iter().any(|t| t == name) != tests {
@@ -143,7 +205,8 @@ fn dependencies(p: &Program, tests: bool) -> String {
         });
     }
     lines.sort();
-    let quoted: Vec<String> = lines.iter().map(|l| format!("    \"{l}\"")).collect();
+    let quoted = (lines.iter()).map(|l| format!("    {}", temper_tmpl::json_string(l)));
+    let quoted: Vec<String> = quoted.collect();
     quoted.join(",\n")
 }
 
@@ -174,6 +237,7 @@ fn author(authors: &str) -> String {
 /// mods/pyproject.toml
 /// mods/mods/__init__.py            imports each module, then
 ///                                  from .mods import *
+/// mods/mods/py.typed               empty: the package is typed (PEP 561)
 /// mods/mods/mods.py                the library's root module
 /// mods/mods/helpers/__init__.py    a module with modules under it
 /// mods/mods/helpers/deep.py        one without
@@ -209,7 +273,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     let p = &parted;
     let names = assign_checked(p, &variant.rules).map_err(|what| NotYet { what })?;
     // std's is `temper-std`, its package `temper_std`, as Kotlin's; a
-    // config's `pyName` names the project and its package, but not its
+    // config's `PyConfig` name names the project and its package, but not its
     // directory, which has the library's name.
     let project = translate::library_name(p, &p.library.name);
     let package = names::library_package(&project);
@@ -306,7 +370,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     let pyproject = format!(
         r#"[project]
 name = "{project}"
-version = "{version}"
+version = {version}
 description = {description}
 readme = {{text = "n/a", content-type = "text/plain"}}
 requires-python = ">=3.11"
@@ -322,7 +386,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 "#,
         project = names::project_name(&project),
-        version = version::respell(p.version_or_default(), Spelling::Python),
+        version = quoted(&version::respell(p.version_or_default(), Spelling::Python)),
         description = quoted(meta.get("description").unwrap_or("")),
         license = quoted(license),
         dependencies = dependencies(p, false),
@@ -348,10 +412,60 @@ build-backend = "hatchling.build"
             path: format!("{library}/{package}/__init__.py"),
             text: init,
         },
+        // PEP 561's marker, so checkers read an installed package's
+        // annotations.
+        OutFile {
+            path: format!("{library}/{package}/py.typed"),
+            text: String::new(),
+        },
     ]
     .into_iter()
     .chain(sources)
     .chain(host)
     .chain(tests)
     .collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pypi_spellings() {
+        let good = [
+            ("pyroaring==1.1.0", ("pyroaring", "1.1.0")),
+            ("Zope.Interface==5.0", ("Zope.Interface", "5.0")),
+            ("a_b-c==1.0.post1", ("a_b-c", "1.0.post1")),
+            ("x==2!1.0rc1+local.7", ("x", "2!1.0rc1+local.7")),
+            ("x==1.*", ("x", "1.*")),
+        ];
+        for (text, parts) in good {
+            assert_eq!(pypi_dependency(text), Some(parts), "{text}");
+        }
+        let hostile = [
+            "pyroaring",
+            "--index-url=https://evil/${GITHUB_TOKEN}/simple==1",
+            "-egit+https://evil/x#egg=x==1",
+            "x==${TOKEN}",
+            "x==1;python_version>'3'",
+            "x[extra]==1",
+            "x==1 --hash=sha256:0",
+            "x==1\n-i https://evil",
+            "x===1",
+            "x==1==2",
+            "x>=1",
+            "x-==1",
+            "../x==1",
+            "x==/tmp/x",
+            "x==\"1\"",
+            "x @ file:///tmp/x==1",
+        ];
+        for text in hostile {
+            assert_eq!(pypi_dependency(text), None, "{text}");
+        }
+        assert!(pypi_name("geometry-py"));
+        for bad in ["", "-x", "x-", "../x", "/abs", "a/b", "a b", "<x>", "a\"b"] {
+            assert!(!pypi_name(bad), "{bad}");
+        }
+    }
 }

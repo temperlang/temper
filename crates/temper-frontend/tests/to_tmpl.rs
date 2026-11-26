@@ -20,6 +20,8 @@
 //!   ([`check_partition`]).
 //! - `reach_as_kotlins_*`: Kotlin Temper's own reachability tests, nearly
 //!   as written, reached as Kotlin marks them.
+//! - `connected_class_without_temper_implementation`: a user's connected
+//!   class of bodiless methods, taken from host code everywhere.
 
 use std::{env, fs, path::PathBuf};
 use temper_frontend::library::Library;
@@ -630,6 +632,52 @@ fn joins_and_sealed_whens() {
         assert!(written.contains(": E#"), "{written}");
         // `next` held first, then called.
         assert!(written.contains("let subject#"), "{written}");
+    });
+}
+
+/// A user's connected class without a Temper implementation, as Kotlin's
+/// `connecteds` test's `Bitset`, gets its bodiless methods from host code
+/// (Kotlin's `TypeDeclChecker`): each is a connected `AbstractMethod`,
+/// and every backend takes the class from host code, under
+/// `--no-connected` too, having nothing else.
+#[test]
+fn connected_class_without_temper_implementation() {
+    with_stack(|| {
+        let source = "
+    @connected
+    export class Bitset {
+      public add(i: Int): Void;
+      public contains(i: Int): Boolean;
+    }
+    export let has(b: Bitset, i: Int): Boolean { b.add(i); b.contains(i) }
+";
+        let mut program = translate_source("bitset", source);
+        let class = (program.decls.ids())
+            .find(|&d| program.name(d) == "Bitset")
+            .unwrap();
+        let abstract_methods: Vec<&str> = (program.modules.iter())
+            .flat_map(|m| m.all_items())
+            .filter_map(|item| match program.nodes.get(item) {
+                Node::Class { members, .. } => Some(members),
+                _ => None,
+            })
+            .flat_map(|members| program.nodes.list(members).to_vec())
+            .filter_map(|m| match program.nodes.get(m) {
+                Node::AbstractMethod { decl, .. } => {
+                    assert!(program.decls.get(decl).facts.contains(Facts::CONNECTED));
+                    Some(program.name(decl))
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(abstract_methods, ["add", "contains"]);
+        assert!(!temper_tmpl::host::has_temper_implementation(
+            &program, class
+        ));
+        program.host.no_connected = true;
+        for backend in ["cpp", "csharp", "java", "js", "lua", "py", "rust"] {
+            assert!(temper_tmpl::host::uses_host(&program, class, &[backend]));
+        }
     });
 }
 

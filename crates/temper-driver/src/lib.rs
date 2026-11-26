@@ -69,9 +69,27 @@ impl Registry {
         Registry { backends }
     }
 
+    /// A registry of the backends given, as one that loads them while it
+    /// runs would have.
+    pub fn new(backends: Vec<&'static Backend>) -> Registry {
+        Registry { backends }
+    }
+
     /// Every backend it has.
     pub fn all(&self) -> &[&'static Backend] {
         &self.backends
+    }
+
+    /// Each backend's config class, which a library's config may use
+    /// whichever backends a build is for ([`temper_tmpl::config`]); and
+    /// the keys of the backends it lacks ([`KNOWN`]), whose config
+    /// classes configs may use too, unchecked here. A backend's key is
+    /// its name.
+    pub fn config_classes(&self) -> temper_frontend::config::Classes {
+        temper_frontend::config::Classes {
+            types: self.backends.iter().map(|b| b.config).collect(),
+            elsewhere: KNOWN.into_iter().filter(|n| self.lacks(n)).collect(),
+        }
     }
 
     /// A backend it has, by name.
@@ -133,15 +151,20 @@ pub fn with_std<'s>(
 }
 
 /// A program's files from a backend, each a path and its text, or what
-/// isn't covered yet. With `maps`, a prefix that leads from the
-/// library's output directory to its sources, a backend that writes
-/// source maps writes them.
+/// isn't covered yet, or that one would leave its library's place or two
+/// would be one file ([`temper_tmpl::clashing_paths`]). With `maps`, a prefix that leads
+/// from the library's output directory to its sources, a backend that
+/// writes source maps writes them.
 pub fn translate(
     p: &Program,
     backend: &Backend,
     maps: Option<&str>,
 ) -> Result<Vec<(String, String)>, String> {
     let files = (backend.translate)(p, maps)?;
+    let dirs = backend.tools.map_or(&[][..], |t| t.dirs);
+    if let Some(why) = temper_tmpl::clashing_paths(&files, dirs) {
+        return Err(why);
+    }
     Ok(files.into_iter().map(|f| (f.path, f.text)).collect())
 }
 

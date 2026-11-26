@@ -1,6 +1,7 @@
+local temper = require("temper-core")
 local ExportedClass = require("types/exporter").ExportedClass
 
 local x = ExportedClass(42)
-print("foo = " .. x.foo)
+temper.log("foo = " .. x.foo)
 
 return {}

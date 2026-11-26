@@ -78,9 +78,9 @@ function Pong.methods.bump(this, a, by)
 end
 
 local p = Ping(Pong())
-print("ping=" .. p:ping())
-print("pass=" .. p:pass())
-print("record=" .. tostring(p:record()) .. " most=" .. p.most)
-print("around=" .. p:around() .. " n=" .. p.n)
+temper.log("ping=" .. p:ping())
+temper.log("pass=" .. p:pass())
+temper.log("record=" .. tostring(p:record()) .. " most=" .. p.most)
+temper.log("around=" .. p:around() .. " n=" .. p.n)
 
 return {}

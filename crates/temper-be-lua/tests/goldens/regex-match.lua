@@ -30,7 +30,7 @@ local function checkGroup(group)
   local end_ = group.end_
   local size = tostring(temper.string_countbetween(text, begin, end_))
   local begin2 = tostring(temper.string_countbetween(text, 1, begin))
-  print("match group '" .. name .. "': '" .. value .. "' at " .. begin2 .. " size " .. size)
+  temper.log("match group '" .. name .. "': '" .. value .. "' at " .. begin2 .. " size " .. size)
 end
 
 local regex = Sequence({ oneOrMore(CodeSet({ CodePoints("ab") })), CodePoints("c") }):compiled()
@@ -42,8 +42,8 @@ do
   while i < length do
     local string_ = temper.list_get(strings, i)
     i = temper.int32_add(i, 1)
-    print("found " .. string_ .. ": " .. tostring(regex:found(string_)))
-    print("matches " .. string_ .. ": " .. tostring(full:found(string_)))
+    temper.log("found " .. string_ .. ": " .. tostring(regex:found(string_)))
+    temper.log("matches " .. string_ .. ": " .. tostring(full:found(string_)))
   end
 end
 local catcher = Sequence({ Repeat(CodePoints("a"), 1, temper.null, false), Capture("intro", Repeat(CodePoints("b"), 1, temper.null, false)), CodePoints("c"), Repeat(Or({ Capture("option1", CodePoints("d")), Capture("alphaOption2", CodePoints("e")) }), 1, temper.null, false) }):compiled()
@@ -56,7 +56,7 @@ local thing = Repeat(CodeSet({ CodeRange(97, 122) }, false), 1, temper.null, fal
 local multiText = "---abc---xyz---"
 local first = thing:find(multiText)
 local second = thing:find(multiText, first.full.end_)
-print("Found both " .. first.full.value .. " and " .. second.full.value .. ".")
+temper.log("Found both " .. first.full.value .. " and " .. second.full.value .. ".")
 moreText = "🌍aaabbcee🌎abcd🌏"
 
 ---@param match std.regex.Match
@@ -82,9 +82,9 @@ local function fn(match)
 end
 
 local replaced = catcher:replace(moreText, fn)
-print("replaced: " .. replaced)
+temper.log("replaced: " .. replaced)
 local notReplaced = catcher:replace("nope", function(match) return "hi" end)
-print("not replaced: " .. notReplaced)
+temper.log("not replaced: " .. notReplaced)
 ---@type string
 local noMatch
 if not temper.pcall(function()
@@ -92,26 +92,26 @@ if not temper.pcall(function()
 end) then
   noMatch = "sorry"
 end
-print("No match says " .. noMatch)
+temper.log("No match says " .. noMatch)
 local or_ = Or({ CodePoints("ab"), CodePoints("bc") }):compiled().data
 local option1 = "ab"
 local option2 = "bc"
 local optionNone = "cb"
-print("or option 1: " .. tostring(or_:found(option1)))
-print("or option 2: " .. tostring(or_:found(option2)))
-print("or option none: " .. tostring(or_:found(optionNone)))
+temper.log("or option 1: " .. tostring(or_:found(option1)))
+temper.log("or option 2: " .. tostring(or_:found(option2)))
+temper.log("or option none: " .. tostring(or_:found(optionNone)))
 local begin = Sequence({ Begin, CodePoints("a") }):compiled()
 local beginsWithATrue = "ab"
 local beginsWithAFalse = "bab"
-print("begin true: " .. tostring(begin:found(beginsWithATrue)))
-print("begin false: " .. tostring(begin:found(beginsWithAFalse)))
+temper.log("begin true: " .. tostring(begin:found(beginsWithATrue)))
+temper.log("begin false: " .. tostring(begin:found(beginsWithAFalse)))
 local negatedBasic = entire(Sequence({ CodePoints("a"), CodeSet({ CodeRange(97, 99) }, true) }):compiled().data):compiled()
 local nbTrue = "a🌍"
 local nbFalse = "ac"
-print("negated basic true: " .. tostring(negatedBasic:found(nbTrue)))
-print("negated basic false: " .. tostring(negatedBasic:found(nbFalse)))
+temper.log("negated basic true: " .. tostring(negatedBasic:found(nbTrue)))
+temper.log("negated basic false: " .. tostring(negatedBasic:found(nbFalse)))
 local simplerLines = "It was the best of times.\nIt was the worst of times."
-print(Repeat(CodeSet({}, true), 1, temper.null, false):compiled():find(simplerLines).full.value)
+temper.log(Repeat(CodeSet({}, true), 1, temper.null, false):compiled():find(simplerLines).full.value)
 ---@type string
 local t
 if not temper.pcall(function()
@@ -119,24 +119,24 @@ if not temper.pcall(function()
 end) then
   t = "-"
 end
-print(t)
+temper.log(t)
 local notLow = oneOrMore(CodeSet({ CodeRange(0, 47) }, true)):compiled()
-print("not low: " .. notLow:find("-/a🌍-").full.value)
-print("not space or >: " .. Repeat(CodeSet({ CodePoints("\t"), CodePoints("\n"), CodePoints(" "), CodePoints(">") }, true), 1, temper.null, false):compiled():find("ab>c").full.value)
+temper.log("not low: " .. notLow:find("-/a🌍-").full.value)
+temper.log("not space or >: " .. Repeat(CodeSet({ CodePoints("\t"), CodePoints("\n"), CodePoints(" "), CodePoints(">") }, true), 1, temper.null, false):compiled():find("ab>c").full.value)
 local idStart = CodeSet({ CodeRange(97, 122), CodeRange(65, 90), CodePoints("_") }, false):compiled().data
 local idContinue = Or({ idStart, CodeSet({ CodeRange(48, 57) }, false):compiled().data })
 local word = Sequence({ WordBoundary, idStart, Repeat(idContinue, 0, temper.null), WordBoundary }):compiled()
 local expected = "def_456"
 local found = word:find("123_abc " .. expected .. " ghi_789").full.value
-print("Found id: " .. found)
+temper.log("Found id: " .. found)
 local stringToEscape = "$(*^"
 local regexWithInterpolatedString = Sequence({ Dot, Repeat(CodePoints(stringToEscape), 1, temper.null, false), Dot }):compiled()
 local stringToEscapeAndMore = "a" .. stringToEscape .. stringToEscape .. "b"
 local escapedMatch = regexWithInterpolatedString:find(stringToEscapeAndMore)
-print(escapedMatch.full.value)
+temper.log(escapedMatch.full.value)
 local ownFullMatch = Sequence({ Dot, Capture("full", Dot) }):compiled():find("ab")
 local ownFull = temper.mapped_get(ownFullMatch.groups, "full").value
-print("Own full: " .. ownFull .. " vs " .. ownFullMatch.full.value)
+temper.log("Own full: " .. ownFull .. " vs " .. ownFullMatch.full.value)
 local comboLines = "It was the best\nof times.\r\n\rIt was the worst of times."
 do
   local list = Or({ CodePoints("\n"), Sequence({ CodePoints("\r"), Repeat(CodePoints("\n"), 0, 1, false) }) }):compiled():split(comboLines)
@@ -145,7 +145,7 @@ do
   while i2 < length2 do
     local line = temper.list_get(list, i2)
     i2 = temper.int32_add(i2, 1)
-    print(line .. ";")
+    temper.log(line .. ";")
   end
 end
 

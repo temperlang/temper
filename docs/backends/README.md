@@ -46,12 +46,87 @@ Getting started with each language is in the
 > `data` backends, and an experimental `cppv`; they aren't available
 > yet ([inconsistencies](../inconsistencies.md#i4-backends-not-available-yet)).
 
+## Configuration
+
+Each backend has a config class for its own settings, which a
+library's `config.temper.md` sets in an object of that class, exported
+under the backend's ID, the object taking its class from the declared
+type, as any object literal does:
+
+```temper
+export let java: JavaConfig = {
+  package: "com.example.geometry",
+  dependencies: ["org.roaringbitmap:RoaringBitmap:1.6.20"],
+};
+```
+
+`{ class: JavaConfig, … }` or `new JavaConfig(…)` names the class too.
+Each setting is unset by default. A config is ordinary Temper, which
+`temper` type-checks and runs, so values may be computed; a setting the
+class doesn't have or a value of another type is an ordinary error,
+and a class set twice, or under another backend's name, is a config
+error. A config can't import anything yet, and it runs with a small
+budget of steps, where each byte it makes takes a step too, so a
+runaway config fails quickly; what's left when the budget runs out
+doesn't run, which is an error too. A build of `temper` without some
+backend leaves out that backend's config, unchecked.
+
+Each backend checks the forms of its own settings. Names are spelled
+as each language's tools allow, ASCII only: C#
+namespaces and Java packages are identifiers joined by `.`; Maven IDs
+and NuGet IDs are letters, digits, `.`, `_`, and `-`; npm names are
+those and `~`, maybe under an `@scope/`; PyPI names are letters,
+digits, `.`, `_`, and `-`, ending in a letter or digit; and crate names
+are letters, digits, `_`, and `-`, starting with a letter. Each starts
+with a letter or digit and has no `..`, so a name never leaves its
+directory or breaks out of a package file.
+
+`dependencies` lists packages that the library's host code (its
+`@connected` classes and functions) uses, in the language's own
+registry's spelling, names as above and versions plain: an exact
+version, or for npm, NuGet, and PyPI a simple wildcard or range
+(`^1.2.0`, `~1.2`, `1.*`), but no URLs, paths, ranges with spaces or
+brackets, extras, or tool options. They go in the package files, and
+`temper test` and `temper run` fetch them with the language's tools:
+pip and npm into `temper.out/py/.deps` and `temper.out/js/.deps`, and
+Cargo, Maven, and NuGet into their usual caches in your home directory.
+They come from the public registries (PyPI, npm, crates.io, Maven
+Central, and NuGet) with the tools' defaults, so pip and npm may run a
+package's install scripts. A package listed twice, or one that a
+library of the build, std, or `temper-core` is, is a config error, as
+are two libraries whose packages share a name, ignoring case (a Python
+project, an npm package, a crate, a Java package or Maven artifact, or
+a C# namespace).
+[Library configuration](../guide/tutorial/04-modules-and-libraries.md#library-configuration)
+has a whole config file.
+
+<!-- Generated from each backend's config class by crates/temper-driver/tests/config_classes.rs. -->
+| Class | Export | Property | Type | Sets |
+|---|---|---|---|---|
+| `CppConfig` | `cpp` | | | Nothing yet |
+| `CSharpConfig` | `csharp` | `rootNamespace` | `String` | The root namespace, which also names the project, the assembly, and the NuGet package ID; else the library's name in Pascal case. |
+|  |  | `dependencies` | `List<String>` | NuGet packages that the library's host code uses, each `"Name:version"`. |
+| `JavaConfig` | `java` | `name` | `String` | The library's Java name, which the package and the Maven artifact ID default to; else the library's name. |
+|  |  | `package` | `String` | The Java package, as `com.example.geometry`; else the Java name, as a package. |
+|  |  | `group` | `String` | The Maven group ID; else the package. |
+|  |  | `artifact` | `String` | The Maven artifact ID; else the Java name. |
+|  |  | `dependencies` | `List<String>` | Maven packages that the library's host code uses, each `"group:artifact:version"`. |
+| `JsConfig` | `js` | `name` | `String` | The npm package's name, which code that uses the library imports, as `@example/geometry`; else the library's name. |
+|  |  | `dependencies` | `List<String>` | npm packages that the library's host code uses, each `"name@version"`, as `"@scope/name@^1.0.0"`. |
+| `LuaConfig` | `lua` | | | Nothing yet |
+| `PyConfig` | `py` | `name` | `String` | The Python project's name, which, as a Python name, also names its package; else the library's name. |
+|  |  | `dependencies` | `List<String>` | PyPI packages that the library's host code uses, each `"name==version"`. |
+| `RustConfig` | `rust` | `name` | `String` | The crate's name, which code that uses the library names with `_` for `-`; else the library's name. |
+|  |  | `dependencies` | `List<String>` | Crates that the library's host code uses, each `"name@version"`, for exactly that version. |
+<!-- End of generated table. -->
+
 ## C++ (`cpp`)
 
 Translates Temper to C++14: a header and a source file per module
 (`LIBRARY/init.hpp` and `init.cpp`), a `main.cpp` that runs the
 library, and a CMake project. Objects are `std::shared_ptr`s, and a
-library's namespace is its name.
+library's namespace is its name. A class's static properties are read
+through accessor functions (`Rect::unit()`), read-only.
 
 Generated code compiles without warnings under `-Wall -Wextra
 -Wpedantic -Werror`, and is tested under AddressSanitizer, UBSan, and
@@ -113,9 +188,10 @@ its `ILogger`. Without one, generated libraries log through
 Each Temper library gets a [`.csproj` file][CsCsProj], so each builds
 to its own .NET assembly.
 
-The only .NET naming setting in [`config.temper.md`][CsConfig] today is
-`csharpRootNamespace`. It sets the project's root namespace, the
-assembly's name, and the presumed NuGet [package ID][CsPackageId].
+The only .NET setting in [`config.temper.md`][CsConfig] today is
+`CSharpConfig`'s `rootNamespace` ([Configuration](#configuration)). It
+sets the project's root namespace, the assembly's name, and the
+presumed NuGet [package ID][CsPackageId].
 Microsoft has advice on [choosing a namespace][CsNamespaceSelection].
 
 Temper [`test` blocks][CsTestBlocks] translate to the
@@ -152,12 +228,16 @@ method per test. Temper provides soft assertions within tests.
 Translates Temper to Java 17 source, and a Maven project
 ([Java 17]). A module's top level goes in a `…Global` class, with a
 `…Main` class to run it, and each type gets its own file. Classes also
-get a `Builder`, since Java has no named arguments.
+get a `Builder`, since Java has no named arguments. A class's public
+static properties are read through static getters
+(`Policy.getStandard()`, `isX()` for a `Boolean`), never fields, so host
+code can't reassign them.
 
 Still to write up: how function types translate to single-method
 interfaces, how nullable types translate, primitive and boxed types,
 overloads for optional arguments, picking a Java package and Maven
-identifiers (`javaName`, `javaPackage`), and the generated POM.
+identifiers (`JavaConfig`, [Configuration](#configuration)), and the
+generated POM.
 
 [Java 17]: https://docs.oracle.com/javase/specs/jls/se17/html/index.html
 
@@ -195,12 +275,16 @@ makes `npm test` run them.
 ## Lua (`lua`)
 
 Translates Temper to Lua: an `init.lua` per library, a rockspec, and
-LuaCATS type annotations, checked with LuaLS. Generated code is
-declared for Lua 5.1 and later; it's tested on Lua 5.4 and LuaJIT.
+LuaCATS type annotations, checked with LuaLS. Generated code runs on
+Lua 5.1 and later, and on LuaJIT; it's tested on Lua 5.1, 5.4, and
+LuaJIT 2.1.
 
-> **Note:** a few features need Lua 5.3 or later, such as some string
-> and integer operations; Lua 5.1 itself isn't tested
-> ([inconsistencies](../inconsistencies.md#i13-lua-versions)).
+> **Note:** a few features need Lua 5.3 or later: std `regex` (Lua's
+> `utf8`), and on 5.1 and LuaJIT, `String.toInt32()` takes `"2.0"`, and
+> `Float64.max` and `min` miss a NaN first argument
+> ([inconsistencies](../inconsistencies.md#i13-lua-versions)). On 5.1
+> and LuaJIT, std `net`'s LuaSocket client sends one request at a time,
+> each blocking until it's done, as LuaSocket can't yield there.
 
 ## Python (`py`)
 

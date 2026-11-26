@@ -482,6 +482,28 @@ Types gain type arguments and type parameters ([types.md](types.md)).
   as Kotlin binds it. Backends whose target infers only from arguments
   (Rust, C#) write them where `analysis::infers_type_args` says it
   can't, all of them, as neither allows some; C++ writes them always.
+  They also write them where a parameter whose type mentions a type
+  parameter is given `null`, which tells them nothing, or misleads them
+  (`orElse<Int?>(null, 2)`; `analysis::infers_type_args_at`).
+- **Nullable type parameters:** a type parameter may be bound to a
+  nullable type (`firstOrNull<String?>`), and tmpl's types never nest,
+  so the call's `T?` is `String?`. Where a backend's `T?` wraps a `T`
+  that may itself be nullable, its options nest: Rust's `Option<T>` is
+  `Option<Option<Arc<String>>>` there, and C++'s `NullableParam<T>` a
+  `NullableParam<NullableParam<Str>>`. C++'s runtime flattens that type
+  itself (a null inside is null). Rust flattens at the call
+  (`analysis::binds_nullable`): a `T?` result with `.flatten()`, and a
+  `T?` argument with `.map(Some)`, so `null` is null on both sides; in
+  the generic function itself, a `T?` that holds a null `T` is
+  `Some(None)`, not null. Rust also refuses a null check on a bare `T`
+  (`x == null` for `x: T`, `analysis::checks_type_param`), which it
+  can't make, where it was always false. C#'s `Optional<T>` is flat
+  already: converting a `T` that's null gives none. Python's checkers
+  infer `T` only from the arguments, so where no argument shows the
+  binding's null (`withDefault<String?>("a")`), Python casts one,
+  `cast('str | None', 'a')`, or pyright calls a null check of the
+  result always false. RFC 684 ("Flat options") would keep nested
+  options out of the language.
 - **Text:** `(list(a, b)): List#64<Int32>`.
 
 Validator rule T4: a call has as many type arguments as its callee has
@@ -756,7 +778,8 @@ many times. Golden tests list problems as `RULE @node: message`.
   library. Q2: every declaration but compiler-made ones has one. Q3: a
   function or method without a body is connected or external (or,
   from subset B, abstract). Q4: a connected declaration with a backend
-  list has a body, its fallback.
+  list has a body, its fallback; a connected class, on every method
+  (one without, all its methods abstract, is host code's alone).
 - **P, positions.** P1: in a program with spans, every node and
   declaration has a known span inside its file.
 - **M, modules** (Proposed 2026-10-30, built; [modules.md](modules.md)).

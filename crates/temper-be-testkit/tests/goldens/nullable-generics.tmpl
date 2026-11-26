@@ -1,0 +1,108 @@
+tmpl 1 model 1 library `nullable-generics` 0.0.0
+
+uses `temper-core`#11 0.0.0-alpha.0.0 {
+  class List#12<T#13> extends Listed#14<T#13> {
+    connected method get#31(index: Int32): T#13;
+  }
+  interface Listed#14<T#15> {
+    connected get isEmpty#30(): Boolean;
+    connected method slice#42(begin: Int32, end: Int32): List#12<T#15>;
+  }
+  interface Console#35 {
+    connected method log#36(message: String): Void;
+  }
+  class Boolean#38 {
+    connected method toString#39(): String;
+  }
+  class Int32#43 {
+    connected method toString#44(radix?: Int32): String;
+  }
+  connected fn getConsole#57(name?: String): Console#35;
+}
+
+module `nullable-generics`#0 {
+  let ~console#37: Console#35;
+
+  export fn firstOrNull#9<T#10>(ls#29: List#12<T#10>): T#10? {
+    if (ls#29.isEmpty#30()) {
+      return (null): T#10?;
+    } else {
+      return (asNullable(ls#29.get#31(0))): T#10?;
+    }
+  }
+
+  export class Slot#1<T#3> {
+    let value#4: T#3;
+    constructor constructor#6(value#33: T#3): Slot#1<T#3> {
+      this.value#4 = value#33;
+    }
+    method kept#5(keep#32: Boolean): T#3? {
+      if (keep#32) {
+        return (asNullable(this.value#4)): T#3?;
+      } else {
+        return (null): T#3?;
+      }
+    }
+  }
+
+  export class Named#2 {
+    let name#7: String;
+    constructor constructor#8(name#34: String): Named#2 {
+      this.name#7 = name#34;
+    }
+  }
+
+  let strings#16: List#12<String?>;
+
+  let noStrings#17: List#12<String?>;
+
+  let ints#18: List#12<Int32?>;
+
+  let a#19: String?;
+
+  let b#20: String?;
+
+  let c#21: Int32?;
+
+  let slot#22: Slot#1<String?>;
+
+  let nameds#23: List#12<Named#2?>;
+
+  let noNameds#24: List#12<Named#2>;
+
+  let n#25: Named#2?;
+
+  export fn withDefault#26<T#27>(x#50: T#27, y#51?: T#27?): T#27 {
+    let y#52: T#27 = (coalesce(y#51, x#50)): T#27;
+    return y#52;
+  }
+
+  let none#28: String?;
+
+  init {
+    init ~console#37 = getConsole#57(omitted);
+    init strings#16 = (list((null): String?, (asNullable("b")): String?)): List#12<String?>;
+    init noStrings#17 = (list()): List#12<String?>;
+    init ints#18 = (list((null): Int32?, (asNullable(2)): Int32?)): List#12<Int32?>;
+    init a#19 = firstOrNull#9<String?>(strings#16);
+    init b#20 = firstOrNull#9<String?>(noStrings#17);
+    init c#21 = firstOrNull#9<Int32?>(ints#18);
+    ~console#37.log#36(%String.cat(%String.cat(%String.cat(%String.cat(isNull(a#19).toString#39(), " "), isNull(b#20).toString#39()), " "), isNull(c#21).toString#39()));
+    ~console#37.log#36((value { let subject#40: String? = firstOrNull#9<String>((list("x")): List#12<String>); (if (isNull(subject#40)) "none" else (nonNull(subject#40)): String): String }): String);
+    ~console#37.log#36(%String.cat(%String.cat(((value { let subject#41: Int32? = firstOrNull#9<Int32?>(ints#18.slice#42(1, 2)); (if (isNull(subject#41)) %Int32.neg(1) else (nonNull(subject#41)): Int32): Int32 }): Int32).toString#44(omitted), " "), ((value { let subject#45: Int32? = firstOrNull#9<Int32>((list(3)): List#12<Int32>); (if (isNull(subject#45)) %Int32.neg(1) else (nonNull(subject#45)): Int32): Int32 }): Int32).toString#44(omitted)));
+    init slot#22 = new constructor#6<String?>((null): String?);
+    ~console#37.log#36(%String.cat(%String.cat(isNull(slot#22.kept#5(true)).toString#39(), " "), isNull(slot#22.kept#5(false)).toString#39()));
+    ~console#37.log#36((value { let subject#46: String? = new constructor#6<String?>((asNullable("s")): String?).kept#5(true); (if (isNull(subject#46)) "none" else (nonNull(subject#46)): String): String }): String);
+    init nameds#23 = (list((null): Named#2?)): List#12<Named#2?>;
+    init noNameds#24 = (list()): List#12<Named#2>;
+    init n#25 = firstOrNull#9<Named#2>((list(new constructor#8("n"))): List#12<Named#2>);
+    ~console#37.log#36(%String.cat(%String.cat(%String.cat(%String.cat(isNull(firstOrNull#9<Named#2?>(nameds#23)).toString#39(), " "), isNull(firstOrNull#9<Named#2>(noNameds#24)).toString#39()), " "), (value { let subject#47: String? = (if (isNull(n#25)) (null): String? else (asNullable(((nonNull(n#25)): Named#2).name#7)): String?): String?; (if (isNull(subject#47)) "none" else (nonNull(subject#47)): String): String }): String));
+    ~console#37.log#36((value { let subject#48: String? = (value { let subject#49: Named#2? = firstOrNull#9<Named#2>(noNameds#24); (if (isNull(subject#49)) (null): String? else (asNullable(((nonNull(subject#49)): Named#2).name#7)): String?): String? }): String?; (if (isNull(subject#48)) "none" else (nonNull(subject#48)): String): String }): String);
+    init none#28 = (null): String?;
+    ~console#37.log#36((value { let subject#53: String? = withDefault#26<String?>((asNullable("a")): String?, none#28); (if (isNull(subject#53)) "null" else (nonNull(subject#53)): String): String }): String);
+    ~console#37.log#36((value { let subject#54: String? = withDefault#26<String?>((asNullable("a")): String?, (asNullable("b")): String?); (if (isNull(subject#54)) "null" else (nonNull(subject#54)): String): String }): String);
+    ~console#37.log#36((value { let subject#55: String? = withDefault#26<String?>((asNullable("a")): String?, omitted); (if (isNull(subject#55)) "null" else (nonNull(subject#55)): String): String }): String);
+    ~console#37.log#36(((value { let subject#56: Int32? = withDefault#26<Int32?>((asNullable(1)): Int32?, (null): Int32?); (if (isNull(subject#56)) %Int32.neg(1) else (nonNull(subject#56)): Int32): Int32 }): Int32).toString#44(omitted));
+    ~console#37.log#36(%String.cat(%String.cat(withDefault#26<String>("c", omitted), " "), withDefault#26<Int32>(4, (asNullable(5)): Int32?).toString#44(omitted)));
+  }
+}

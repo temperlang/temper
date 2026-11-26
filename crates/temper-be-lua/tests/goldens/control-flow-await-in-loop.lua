@@ -20,7 +20,7 @@ local function fn()
       end) then
         s = "?"
       end
-      print(s .. " " .. i)
+      temper.log(s .. " " .. i)
       i = temper.int32_add(i, 1)
     end
   end
@@ -33,7 +33,7 @@ local function fn()
     end) then
       s = "?"
     end
-    print(s .. " " .. j)
+    temper.log(s .. " " .. j)
     j = temper.int32_add(j, 1)
   end
   ---@type string
@@ -43,7 +43,7 @@ local function fn()
   end) then
     t = "?"
   end
-  print(t .. " after the loops")
+  temper.log(t .. " after the loops")
 end
 
 temper.async(temper.adapt_generator_fn(fn))

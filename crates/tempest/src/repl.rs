@@ -21,7 +21,7 @@ mod color;
 mod history;
 mod line;
 
-use crate::{Flags, NOT_YET_CODE, USAGE, parse, parse_fuel};
+use crate::{Flags, NOT_YET_CODE, USAGE, parse, parse_fuel, registry};
 use history::History;
 use rustyline::error::ReadlineError;
 use rustyline::history::MemHistory;
@@ -327,7 +327,8 @@ fn libraries(flags: &Flags, sources: &Sources) -> Result<Vec<(String, String)>, 
         }
     };
     let ignore = flags.ignore(sources, &root)?;
-    let found = find_libraries_ignoring(sources, &root, ignore.as_ref());
+    let classes = registry().config_classes();
+    let found = find_libraries_ignoring(sources, &root, ignore.as_ref(), &classes);
     Ok((found.into_iter())
         .map(|l| (l.config.name, l.root))
         .collect())

@@ -8,7 +8,9 @@ setters show; and a constructor that reads fields it has set, then
 changes one and passes `this` on after it makes the instance. Then a
 generic class with a bound and optional constructor parameters, one of
 its type parameter's type, made with and without them, whose builder
-takes its type parameters.
+takes its type parameters. And a `var` that host threads update at
+once, through `this` and through a parameter, each update read and
+written under one lock, so none is lost.
 
     export interface Named {
       public get name(): String;
@@ -67,6 +69,30 @@ takes its type parameters.
     console.log(new Duo<Person>(p).names());
     console.log(new Duo(p, new Person("Cy", "Mr")).names());
     console.log(new Duo<Person>(p, q, " + ").names());
+
+    export class Tally {
+      public var count: Int = 0;
+      public var other: Int = 0;
+      public add(n: Int): Void { count += n; }
+      public bump(): Void { count = count + 1; }
+      // Under the lock too: only its field, locals, and operators.
+      public clampAdd(n: Int): Void {
+        count = if (count > 10 && n > 0) { count } else { count + n };
+      }
+      // Under the lock, `/` bubbling with no panic, so no poisoned lock.
+      public split(n: Int): Void throws Bubble { count = count / n; }
+      // Not under the lock: another object's field, which may be this
+      // one's (no deadlock), another field, a call, and this one's field
+      // set on another object.
+      public copyFrom(t: Tally): Void { count = t.count + 1; }
+      public fromOther(): Void { count = other + count; }
+      public plusTwice(): Void { count = count + twice(count); }
+      public copyInto(t: Tally): Void { t.count = count + 1; }
+    }
+
+    let twice(n: Int): Int { n * 2 }
+
+    export let bumpTwice(tally: Tally): Void { tally.count = 2 + tally.count; }
 
 ```log
 Dr Ann

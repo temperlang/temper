@@ -78,15 +78,15 @@ function ConcreteWhatever.constructor(this, something)
   this.something = something
 end
 
-print(Foo("initial").bar)
+temper.log(Foo("initial").bar)
 local foo = Foo("initial")
 foo.bar = "next"
-print(foo.bar)
+temper.log(foo.bar)
 local bar = Bar("initial")
 bar:usingSet("next")
-print(bar.bar)
+temper.log(bar.bar)
 local what = ConcreteWhatever(4)
 what.something = 5
-print("something set to " .. what.something)
+temper.log("something set to " .. what.something)
 
 return { Whatever = Whatever, ConcreteWhatever = ConcreteWhatever }

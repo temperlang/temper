@@ -103,6 +103,38 @@ impl std::error::Error for NotYet {}
 
 pub use temper_tmpl::OutFile;
 
+/// What a library's config may set for this backend, `export let csharp:
+/// CSharpConfig = { … };`, as Kotlin's `CSharpConfig`; and std's, as
+/// Kotlin's backends inject it.
+pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
+    key: "csharp",
+    class: "CSharpConfig",
+    source: include_str!("config.temper"),
+    properties: &[
+        temper_tmpl::Property {
+            name: "rootNamespace",
+            doc: "The root namespace, which also names the project, the assembly, and the NuGet package ID; else the library's name in Pascal case.",
+            kind: temper_tmpl::ConfigKind::String {
+                form: "a C# namespace, as `Example.Geometry`",
+                valid: temper_tmpl::dotted_identifier,
+            },
+        },
+        temper_tmpl::Property {
+            name: "dependencies",
+            doc: "NuGet packages that the library's host code uses, each `\"Name:version\"`.",
+            kind: temper_tmpl::ConfigKind::Strings {
+                form: "Name:version",
+                package: |d| nuget_dependency(d).map(|(name, _)| name.to_lowercase()),
+            },
+        },
+    ],
+    std: &[("rootNamespace", "TemperLang.Std")],
+    // The root namespace is also the NuGet package's ID, which NuGet
+    // compares ignoring case.
+    names: |library, metadata| vec![translate::root_namespace_of(library, metadata).to_lowercase()],
+    runtime: &["temperlang.core"],
+};
+
 /// This backend, as tools list it ([`temper_tmpl::Backend`]).
 pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     name: "csharp",
@@ -115,6 +147,7 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     runtime_version: &runtime::VERSION,
     rules: &CSHARP.rules,
     translate: |p, _| translate(p, &CSHARP).map_err(|e| e.to_string()),
+    config: &CONFIG,
     default: true,
     #[cfg(any(unix, windows))]
     tools: Some(&tools::TOOLS),
@@ -330,16 +363,49 @@ fn loads(p: &Program, module: &temper_tmpl::Module) -> Vec<String> {
     external.into_iter().chain(order).map(class).collect()
 }
 
+/// A package that a config's `dependencies` lists, as `"Name:version"`:
+/// its ID, ASCII letters, digits, `.`, `_`, and `-`, starting with a
+/// letter or digit, as NuGet allows, and its version, as `1.4.1`,
+/// `1.0.0-beta.2+b`, or `1.*`, but no range or MSBuild property
+/// (`$(…)`).
+pub fn nuget_dependency(text: &str) -> Option<(&str, &str)> {
+    let spelled = temper_tmpl::spelled;
+    match temper_tmpl::dependency_parts(text, ":", 2)?.as_slice() {
+        &[name, version] if spelled(name, "._-") && spelled(version, ".*+-") => {
+            Some((name, version))
+        }
+        _ => None,
+    }
+}
+
+/// Text for a project file, where MSBuild reads XML and then evaluates
+/// what it finds: `$(…)` and `@(…)` expand, `;` splits items, `'`
+/// quotes conditions, and `%XX` unescapes. Each of these is escaped as
+/// `%XX`, which MSBuild gives back literally, and then the whole as
+/// XML's text ([`temper_tmpl::xml_text`]).
+fn msbuild_text(text: &str) -> String {
+    let mut escaped = String::new();
+    for c in text.chars() {
+        match c {
+            '%' | '$' | '@' | ';' | '\'' => escaped.push_str(&format!("%{:02X}", c as u32)),
+            c => escaped.push(c),
+        }
+    }
+    temper_tmpl::xml_text(&escaped)
+}
+
 /// A reference to a library's project beside this one's: std's as
 /// Kotlin's, `../../std/src/TemperLang.Std.csproj`.
 fn project_reference(p: &Program, name: &str) -> String {
-    let project = translate::library_namespace(p, name);
+    let project = msbuild_text(&translate::library_namespace(p, name));
+    let name = msbuild_text(name);
     format!("\n    <ProjectReference Include=\"../../{name}/src/{project}.csproj\"/>")
 }
 
 /// The tests' project, as Kotlin's: on the library's project, MSTest,
 /// and a JUnit logger, and on what only the tests use.
 fn test_project(p: &Program, root: &str, variant: &Variant) -> String {
+    let root = msbuild_text(root);
     let framework = variant.target_framework;
     let version = version_line(&p.library.version);
     let tests_only = temper_tmpl::analysis::test_only_libraries(p);
@@ -375,7 +441,7 @@ fn version_line(version: &str) -> String {
     if version == "0.0.0" {
         String::new()
     } else {
-        format!("    <Version>{version}</Version>\n")
+        format!("    <Version>{}</Version>\n", msbuild_text(version))
     }
 }
 
@@ -387,7 +453,7 @@ fn version_line(version: &str) -> String {
 fn package_metadata(p: &Program) -> (String, String) {
     let meta = p.metadata();
     let line = |tag: &str, value: Option<&str>| match value {
-        Some(value) => format!("    <{tag}>{}</{tag}>\n", temper_tmpl::xml_text(value)),
+        Some(value) => format!("    <{tag}>{}</{tag}>\n", msbuild_text(value)),
         None => String::new(),
     };
     let about =
@@ -407,6 +473,7 @@ fn package_metadata(p: &Program) -> (String, String) {
 /// internals, and it refers to the runtime's project beside it, which
 /// packing turns into a package reference.
 fn library_project(p: &Program, root: &str, variant: &Variant) -> String {
+    let root = msbuild_text(root);
     let framework = variant.target_framework;
     let version = version_line(&p.library.version);
     let (about, links) = package_metadata(p);
@@ -419,15 +486,31 @@ fn library_project(p: &Program, root: &str, variant: &Variant) -> String {
         .collect();
     // std's `testing` throws MSTest's `AssertFailedException`, so std has
     // the packages its C# configuration lists.
-    let packages = match p.library.name.as_str() {
-        "std" => {
-            r#"
-  <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0"/>
-    <PackageReference Include="MSTest.TestFramework" Version="3.1.1"/>
-  </ItemGroup>"#
+    let mut packages: Vec<(&str, &str)> = match p.library.name.as_str() {
+        "std" => vec![
+            ("Microsoft.NET.Test.Sdk", "17.8.0"),
+            ("MSTest.TestFramework", "3.1.1"),
+        ],
+        _ => Vec::new(),
+    };
+    // The packages its host code uses, as its config lists them.
+    let listed = CONFIG.strings(p.metadata(), "dependencies");
+    packages.extend(listed.iter().filter_map(|d| nuget_dependency(d)));
+    let packages = match packages.is_empty() {
+        true => String::new(),
+        false => {
+            let lines = (packages.iter())
+                .map(|(name, version)| {
+                    format!(
+                        "\n    <PackageReference Include=\"{}\" Version=\"{}\"/>",
+                        msbuild_text(name),
+                        msbuild_text(version)
+                    )
+                })
+                .collect::<Vec<_>>()
+                .concat();
+            format!("\n  <ItemGroup>{lines}\n  </ItemGroup>")
         }
-        _ => "",
     };
     format!(
         r#"<Project Sdk="Microsoft.NET.Sdk">
@@ -450,6 +533,7 @@ fn library_project(p: &Program, root: &str, variant: &Variant) -> String {
 
 /// The program's project, as Kotlin's.
 fn program_project(root: &str, version: &str, variant: &Variant) -> String {
+    let root = msbuild_text(root);
     let framework = variant.target_framework;
     let version = version_line(version);
     format!(
@@ -593,4 +677,41 @@ fn logging(root: &str) -> String {
     LOGGING_TEMPLATE
         .replace("RootNamespaceSpot", root)
         .replace("SupportNamespaceSpot", "Support")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn nuget_spellings() {
+        let good = [
+            ("Roaring.Net:1.4.1", ("Roaring.Net", "1.4.1")),
+            ("A_b-C:1.0.0-beta.2+b", ("A_b-C", "1.0.0-beta.2+b")),
+            ("X:1.*", ("X", "1.*")),
+        ];
+        for (text, parts) in good {
+            assert_eq!(nuget_dependency(text), Some(parts), "{text}");
+        }
+        let hostile = [
+            "Roaring.Net",
+            "Foo:$(GITHUB_TOKEN)",
+            "A;B:1",
+            "A:1;B",
+            "@(Items):1",
+            "%(X):1",
+            "A:[1.0,2.0)",
+            "-A:1",
+            "A:-1",
+            "../A:1",
+            "A/B:1",
+            "A:1\"/><Import Project=\"x",
+            "A:1&amp;",
+            "A B:1",
+            "A:1:2",
+        ];
+        for text in hostile {
+            assert_eq!(nuget_dependency(text), None, "{text}");
+        }
+    }
 }

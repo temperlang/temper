@@ -138,7 +138,18 @@ pub fn build(
     out: &mut dyn Write,
     err: &mut dyn Write,
 ) -> Option<Built> {
-    let libraries = libraries_to_test(sources, root, options.ignore, None, options.log, err)?;
+    // Configs may use every backend's config class, not only those of the
+    // backends built for.
+    let classes = crate::Registry::built_in().config_classes();
+    let libraries = libraries_to_test(
+        sources,
+        root,
+        options.ignore,
+        None,
+        &classes,
+        options.log,
+        err,
+    )?;
     let temper_out = options.out(root);
     let mut results = Vec::new();
     let mut programs = Vec::new();
@@ -249,10 +260,7 @@ pub fn build(
         }
     }
     let metadata = (libraries.iter())
-        .map(|l| {
-            let exports = l.config.exports.clone();
-            (l.config.name.clone(), temper_tmpl::Metadata { exports })
-        })
+        .map(|l| (l.config.name.clone(), l.config.metadata()))
         .collect();
     Some(Built {
         results,
@@ -345,10 +353,7 @@ fn program(
     // files' dependencies.
     // Their configs' metadata, and its own, for package files and each
     // backend's names for them.
-    let metadata = |config: &temper_frontend::project::Config| temper_tmpl::Metadata {
-        exports: config.exports.clone(),
-    };
-    program.metadata = vec![(library.config.name.clone(), metadata(&library.config))];
+    program.metadata = vec![(library.config.name.clone(), library.config.metadata())];
     for uses in &mut program.uses {
         let name = program.decls.get(uses.decl).name;
         let name = program.strings.get(name);
@@ -359,7 +364,7 @@ fn program(
         if let Some(config) = config {
             program
                 .metadata
-                .push((name.to_string(), metadata(&config.config)));
+                .push((name.to_string(), config.config.metadata()));
         }
     }
     // Its host code, by paths relative to its root.

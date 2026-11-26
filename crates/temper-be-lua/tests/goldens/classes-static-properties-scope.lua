@@ -24,7 +24,7 @@ end
 
 Simple.value = "foo"
 Simple.other = "bar"
-print("Simple.value is " .. readSimpleValue())
-print("Simple.other is " .. readSimpleOther())
+temper.log("Simple.value is " .. readSimpleValue())
+temper.log("Simple.other is " .. readSimpleOther())
 
 return {}

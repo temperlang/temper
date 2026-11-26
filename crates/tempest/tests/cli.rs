@@ -357,7 +357,7 @@ fn another_librarys_fun_interface() {
     let dir = std::env::temp_dir().join(format!("tempest-cli-{}-fun", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     let files = [
-        ("a/config.temper.md", "export let name = \"a\";\n"),
+        ("a/config.temper.md", "    export let name = \"a\";\n"),
         (
             "a/a.temper",
             "export @fun interface Pred(x: Int): Boolean;\n\
@@ -367,7 +367,7 @@ fn another_librarys_fun_interface() {
              n\n\
              }\n",
         ),
-        ("b/config.temper.md", "export let name = \"b\";\n"),
+        ("b/config.temper.md", "    export let name = \"b\";\n"),
         (
             "b/b.temper",
             "let { Pred, countIf } = import(\"a\");\n\
@@ -403,12 +403,12 @@ fn imported_errors_are_reported_once() {
     let dir = std::env::temp_dir().join(format!("tempest-cli-{}-deps", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     let files = [
-        ("a/config.temper.md", "export let name = \"a\";\n"),
+        ("a/config.temper.md", "    export let name = \"a\";\n"),
         (
             "a/a.temper",
             "export let one(): Int { 1 }\nlet bad: String = 5;\n",
         ),
-        ("b/config.temper.md", "export let name = \"b\";\n"),
+        ("b/config.temper.md", "    export let name = \"b\";\n"),
         (
             "b/b.temper",
             "let { one } = import(\"a\");\nexport let two(): Int { one() + 1 }\n",
@@ -788,6 +788,426 @@ fn build_needs_libraries_with_names_of_their_own() {
     let _ = fs::remove_dir_all(&empty);
 }
 
+/// Each backend's config class names its packages, whichever backends
+/// a build is for; flat keys (`pyName`) are ordinary values.
+#[test]
+#[cfg(all(
+    feature = "csharp",
+    feature = "java",
+    feature = "js",
+    feature = "py",
+    feature = "rust"
+))]
+fn typed_config_names_packages() {
+    let config = "# Geo
+
+    export let name = \"geo\";
+    export let csharp = { class: CSharpConfig, rootNamespace: \"GeometryNet\" };
+    export let java = {
+      class: JavaConfig,
+      package: \"com.example.geo\",
+
+The group and artifact, for Maven:
+
+      group: \"com.example\",
+      artifact: \"geo-java\",
+    };
+    export let js = { class: JsConfig, name: \"@example/geo\" };
+    export let py = { class: PyConfig, name: \"geo-py\" };
+    export let rust = { class: RustConfig, name: \"geo-rs\" };
+    export let cpp = { class: CppConfig };
+    export let lua = { class: LuaConfig };
+    export let pyName = \"flat-py\";
+";
+    let files = [
+        ("config.temper.md", config),
+        ("g.temper", "export let g = 1;\n"),
+    ];
+    with_library("typed-config", &files, |dir| {
+        let (code, out, err) = tempest(&["build", "-w", dir]);
+        assert_eq!((code, out.as_str(), err.as_str()), (0, "", ""));
+        let out = Path::new(dir).join("temper.out");
+        let read = |path: &str| fs::read_to_string(out.join(path)).unwrap();
+        assert!(read("py/geo/pyproject.toml").contains("name = \"geo-py\"\n"));
+        assert!(read("js/geo/package.json").contains("\"name\": \"@example/geo\",\n"));
+        assert!(read("rust/geo/Cargo.toml").contains("name = \"geo-rs\"\n"));
+        let pom = read("java/geo/pom.xml");
+        assert!(
+            pom.contains("  <groupId>com.example</groupId>\n  <artifactId>geo-java</artifactId>\n"),
+            "{pom}"
+        );
+        assert!(
+            out.join("java/geo/src/main/java/com/example/geo/GeoGlobal.java")
+                .is_file()
+        );
+        assert!(out.join("csharp/geo/src/GeometryNet.csproj").is_file());
+    });
+}
+
+/// A typo or a wrong type in a backend's config class is an error, at
+/// its place in the config file, for `build` and `test` alike.
+// Config classes come from the backends, so these need them built in.
+#[cfg(all(
+    feature = "csharp",
+    feature = "java",
+    feature = "js",
+    feature = "py",
+    feature = "rust"
+))]
+#[test]
+fn typed_config_errors() {
+    let config = "    export let name = \"a\";
+    export let java = { class: JavaConfig, pacakge: \"com.example\" };
+    export let py = { class: PyConfig, name: 3 };
+    export let js = { class: JsConf, name: \"j\" };
+    export let rs = { class: RustConfig, name: \"r\" };
+    export let csharp = \"Example\";
+    export let lua: CppConfig = {};
+    export let cpp: CppConfig = { class: LuaConfig };
+    export let rust: RustConfig = { dependencies: [\"roaring\"] };
+    export let java: JavaConfg = {};
+    export let csharp: CSharpConfig = { dependencies: [\"Foo:$(GITHUB_TOKEN)\"] };
+    export let java: JavaConfig = { dependencies: [\"g:a:1</version>\"] };
+    export let js: JsConfig = { dependencies: [\"x@git+https://evil/x.git\"] };
+    export let py: PyConfig = { dependencies: [\"--index-url=https://evil/simple==1\"] };
+    export let rust: RustConfig = { dependencies: [\"x@1\\\", path = \\\"/x\"] };
+";
+    let files = [
+        ("config.temper.md", config),
+        ("a.temper", "export let a = 1;\n"),
+    ];
+    with_library("typed-config-errors", &files, |dir| {
+        let path = format!("{dir}/config.temper.md");
+        let expected = [
+            format!(
+                "{path}:2:44: error: JavaConfig has no property `pacakge`; did you mean \
+                 `package`?\n"
+            ),
+            format!("{path}:3:46: error: Expected subtype of String?, but got Int32\n"),
+            format!("{path}:4:30: error: JsConf has not been declared\n"),
+            format!("{path}:5:16: error: RustConfig goes in `export let rust`, not `rs`\n"),
+            format!(
+                "{path}:6:16: error: `csharp` is for CSharpConfig, as \
+                 `export let csharp: CSharpConfig = {{ … }}`\n"
+            ),
+            format!("{path}:7:16: error: CppConfig goes in `export let cpp`, not `lua`\n"),
+            format!("{path}:8:33: error: Cannot assign to CppConfig from LuaConfig\n"),
+            format!(
+                "{path}:9:52: error: RustConfig's `dependencies` are each `name@version`, \
+                 not `roaring`\n"
+            ),
+            format!("{path}:10:22: error: JavaConfg has not been declared\n"),
+            format!(
+                "{path}:11:56: error: CSharpConfig's `dependencies` are each `Name:version`, \
+                 not `Foo:$(GITHUB_TOKEN)`\n"
+            ),
+            format!(
+                "{path}:12:52: error: JavaConfig's `dependencies` are each \
+                 `group:artifact:version`, not `g:a:1</version>`\n"
+            ),
+            format!("{path}:12:16: error: `java` is set twice; set each config class once\n"),
+            format!(
+                "{path}:13:48: error: JsConfig's `dependencies` are each `name@version`, \
+                 not `x@git+https://evil/x.git`\n"
+            ),
+            format!(
+                "{path}:14:48: error: PyConfig's `dependencies` are each `name==version`, \
+                 not `--index-url=https://evil/simple==1`\n"
+            ),
+            format!(
+                "{path}:15:52: error: RustConfig's `dependencies` are each `name@version`, \
+                 not `x@1\", path = \"/x`\n"
+            ),
+        ];
+        for command in ["build", "test"] {
+            let (code, _, err) = tempest(&[command, "-w", dir]);
+            assert_eq!(code, 1, "{command}: {err}");
+            for line in &expected {
+                assert!(err.contains(line.as_str()), "{command}: {line}{err}");
+            }
+        }
+    });
+}
+
+/// Config names that would leave `temper.out`, or break out of a package
+/// file's markup, are config errors, and nothing is written or removed:
+/// names reach paths (`ROOT.csproj`, `node_modules/NAME`) and package
+/// files, so each backend allows only its tools' spellings.
+// Config classes come from the backends, so these need them built in.
+#[cfg(all(
+    feature = "csharp",
+    feature = "java",
+    feature = "js",
+    feature = "py",
+    feature = "rust"
+))]
+#[test]
+fn hostile_config_names_are_errors() {
+    let config = "    export let name = \"a\";
+    export let csharp: CSharpConfig = { rootNamespace: \"../../../escape\" };
+    export let js: JsConfig = { name: \"/tmp\" };
+    export let java: JavaConfig = { package: \"../p\", group: \"g/h\", artifact: \"a<b>\" };
+    export let py: PyConfig = { name: \"../../escape\" };
+    export let rust: RustConfig = { name: \"..\" };
+    export let csharp: CSharpConfig = { rootNamespace: \"A</RootNamespace><Import Project=x/>\" };
+    export let name = \"${\"..\"}/\\u{1b}[31mescape\";
+";
+    let files = [
+        ("config.temper.md", config),
+        ("a.temper", "export let a = 1;\n"),
+    ];
+    with_library("hostile-config-names", &files, |dir| {
+        let path = format!("{dir}/config.temper.md");
+        let expected = [
+            "2:56: error: CSharpConfig's `rootNamespace` is a C# namespace, as \
+             `Example.Geometry`, not `../../../escape`",
+            "3:39: error: JsConfig's `name` is an npm package's name, as `geometry` or \
+             `@example/geometry`, not `/tmp`",
+            "4:46: error: JavaConfig's `package` is a Java package, as \
+             `com.example.geometry`, not `../p`",
+            "4:61: error: JavaConfig's `group` is a Maven ID, as `com.example`, not `g/h`",
+            "4:78: error: JavaConfig's `artifact` is a Maven ID, as `geometry`, not `a<b>`",
+            "5:39: error: PyConfig's `name` is a PyPI project's name, as `geometry-py`, \
+             not `../../escape`",
+            "6:43: error: RustConfig's `name` is a crate's name, as `geometry-rs`, not `..`",
+            "7:56: error: CSharpConfig's `rootNamespace` is a C# namespace, as \
+             `Example.Geometry`, not `A</RootNamespace><Import Project=x/>`",
+            "8:16: error: `name` is a dashed identifier, as `my-lib`, not \
+             `../\\u{1b}[31mescape`",
+        ];
+        let before = |d: &Path| {
+            let mut names: Vec<_> = (fs::read_dir(d).unwrap().flatten())
+                .map(|e| e.file_name())
+                .collect();
+            names.sort();
+            names
+        };
+        let (here, parent) = (Path::new(dir), Path::new(dir).parent().unwrap());
+        let in_dir = before(here);
+        for command in ["build", "test"] {
+            let (code, _, err) = tempest(&[command, "-w", dir]);
+            assert_eq!(code, 1, "{command}: {err}");
+            for line in &expected {
+                let line = format!("{path}:{line}\n");
+                assert!(err.contains(&line), "{command}: {line}{err}");
+            }
+            assert!(!err.contains('\u{1b}'), "{command}: {err:?}");
+            let mut now = before(here);
+            now.retain(|n| n != "temper.out");
+            assert_eq!(now, in_dir, "{command}");
+            let escaped =
+                |d: &Path| (before(d).iter()).any(|n| n.to_string_lossy().starts_with("escape"));
+            assert!(!escaped(parent) && !escaped(here), "{command}");
+            let mut written = Vec::new();
+            files_under(&here.join("temper.out"), &mut written);
+            assert!(
+                !written
+                    .iter()
+                    .any(|p| p.contains("escape") || p.contains("RootNamespace")),
+                "{command}: {written:?}"
+            );
+        }
+    });
+}
+
+/// A version that isn't SemVer, or metadata holding control characters,
+/// is a config error, as both go into package files (a library's version
+/// into those of each library using it too), for `build` and `test`
+/// alike.
+#[test]
+fn hostile_versions_and_metadata_are_errors() {
+    let config = "    export let name = \"a\";
+    export let version = \"0.1.0\\\"<x>'\\n\";
+    export let description = \"ok\\nnext line\";
+    export let authors = \"A\\u{1}\";
+";
+    let files = [
+        ("config.temper.md", config),
+        ("a.temper", "export let a = 1;\n"),
+    ];
+    with_library("hostile-versions", &files, |dir| {
+        let path = format!("{dir}/config.temper.md");
+        let expected = [
+            format!(
+                "{path}:2:16: error: `version` is a version, as `1.2.3` or `1.2.3-beta.1`, \
+                 not `0.1.0\"<x>'\\n`\n"
+            ),
+            format!(
+                "{path}:4:16: error: `authors` holds a control character, U+0001; only tabs \
+                 and line breaks may be in config text\n"
+            ),
+        ];
+        for command in ["build", "test"] {
+            let (code, _, err) = tempest(&[command, "-w", dir]);
+            assert_eq!(code, 1, "{command}: {err}");
+            for line in &expected {
+                assert!(err.contains(line.as_str()), "{command}: {line}{err}");
+            }
+            assert!(!err.contains("description"), "{command}: {err}");
+        }
+    });
+}
+
+/// Every file's path under a directory, if it's there.
+#[allow(dead_code)] // Unless every backend is left out.
+fn files_under(dir: &Path, out: &mut Vec<String>) {
+    for entry in fs::read_dir(dir).into_iter().flatten().flatten() {
+        let path = entry.path();
+        match path.is_dir() {
+            true => files_under(&path, out),
+            false => out.push(path.to_string_lossy().into_owned()),
+        }
+    }
+}
+
+/// The annotated form, `export let java: JavaConfig = { … }`, whose
+/// object takes its class from the declared type, and each backend's
+/// `dependencies`, the packages host code uses, in its package files as
+/// Kotlin writes them.
+#[test]
+#[cfg(all(
+    feature = "csharp",
+    feature = "java",
+    feature = "js",
+    feature = "py",
+    feature = "rust"
+))]
+fn config_dependencies_in_package_files() {
+    let config = "    export let name = \"deps\";
+    export let csharp: CSharpConfig = { dependencies: [\"Roaring.Net:1.4.1\"] };
+    export let java: JavaConfig = {
+      package: \"com.example.deps\",
+      dependencies: [\"org.roaringbitmap:RoaringBitmap:1.6.20\"],
+    };
+    export let js: JsConfig = { dependencies: [\"roaring-wasm@1.1.0\", \"@scope/x@^2.0.0\"] };
+    export let py: PyConfig = { name: \"deps-py\", dependencies: [\"pyroaring==1.1.0\"] };
+    export let rust: RustConfig = { class: RustConfig, dependencies: [\"roaring@0.11.1\"] };
+";
+    let files = [
+        ("config.temper.md", config),
+        ("d.temper", "export let d = 1;\n"),
+    ];
+    with_library("config-dependencies", &files, |dir| {
+        let (code, out, err) = tempest(&["build", "-w", dir]);
+        assert_eq!((code, out.as_str(), err.as_str()), (0, "", ""));
+        let out = Path::new(dir).join("temper.out");
+        let read = |path: &str| fs::read_to_string(out.join(path)).unwrap();
+        let pyproject = read("py/deps/pyproject.toml");
+        assert!(
+            pyproject.contains("    \"pyroaring==1.1.0\",\n"),
+            "{pyproject}"
+        );
+        let package = read("js/deps/package.json");
+        assert!(
+            package.contains(
+                "        \"@scope/x\": \"^2.0.0\",\n        \"roaring-wasm\": \"1.1.0\"\n"
+            ),
+            "{package}"
+        );
+        let cargo = read("rust/deps/Cargo.toml");
+        assert!(
+            cargo.contains("\nroaring = { version = \"=0.11.1\" }\n"),
+            "{cargo}"
+        );
+        let pom = read("java/deps/pom.xml");
+        let dependency = "    <dependency>
+      <groupId>org.roaringbitmap</groupId>
+      <artifactId>RoaringBitmap</artifactId>
+      <version>1.6.20</version>
+      <type>jar</type>
+      <scope>compile</scope>
+    </dependency>
+";
+        assert!(pom.contains(dependency), "{pom}");
+        let csproj = read("csharp/deps/src/Deps.csproj");
+        let reference = "  <ItemGroup>
+    <PackageReference Include=\"Roaring.Net\" Version=\"1.4.1\"/>
+  </ItemGroup>
+";
+        assert!(csproj.contains(reference), "{csproj}");
+    });
+}
+
+/// A declaration named like a file a backend generates is an error, not
+/// a silent replacement of that file: a class named like the module's
+/// class (`AGlobal`, on Java and C#), whose functions it would drop, or
+/// like C#'s `Logging.cs`; and so are two classes named alike but for
+/// case, which a case-insensitive file system takes as one file.
+#[test]
+fn generated_name_clashes_are_errors() {
+    let cases = [
+        (
+            "java",
+            "export class AGlobal {}\n",
+            "two generated files would be a/src/main/java/a/AGlobal.java",
+        ),
+        (
+            "csharp",
+            "export class AGlobal {}\n",
+            "two generated files would be a/src/AGlobal.cs",
+        ),
+        (
+            "csharp",
+            "export class Logging {}\n",
+            "two generated files would be a/src/Logging.cs",
+        ),
+        (
+            "java",
+            "export class Point {}\nexport class POINT {}\n",
+            "generated files a/src/main/java/a/Point.java and a/src/main/java/a/POINT.java would be one file",
+        ),
+    ];
+    for (i, (backend, class, expected)) in cases.into_iter().enumerate() {
+        if !built_in(backend) {
+            continue;
+        }
+        let text = format!("export let a(): Int {{ 1 }}\n{class}");
+        let files = [("a.temper", text.as_str())];
+        with_library(&format!("clash-{i}"), &files, |dir| {
+            let out = Path::new(dir).join("out");
+            let (code, _, err) = tempest(&[
+                "build",
+                "-w",
+                dir,
+                "-b",
+                backend,
+                "-o",
+                &out.to_string_lossy(),
+            ]);
+            assert_eq!(code, 1, "{backend} {class}: {err}");
+            assert!(err.contains(&format!("a: {backend}: {expected}")), "{err}");
+        });
+    }
+}
+
+/// A library named like a directory that a backend's tools make beside
+/// the libraries' (Cargo's `target`, Node's `node_modules`), which
+/// building would empty and the tools would write into, is an error on
+/// that backend.
+#[test]
+fn libraries_named_like_tool_directories_are_errors() {
+    for (backend, name) in [
+        ("rust", "target"),
+        ("js", "node_modules"),
+        ("lua", "luaunit"),
+    ] {
+        if !built_in(backend) {
+            continue;
+        }
+        let config = format!("    export let name = \"{name}\";\n");
+        let files = [
+            ("config.temper.md", config.as_str()),
+            ("a.temper", "export let a = 1;\n"),
+        ];
+        with_library(&format!("tool-dir-{backend}"), &files, |dir| {
+            let (code, _, err) = tempest(&["build", "-w", dir, "-b", backend]);
+            assert_eq!(code, 1, "{backend}: {err}");
+            let said = format!("would be in {name}, which the backend's tools use");
+            assert!(err.contains(&said), "{backend}: {err}");
+        });
+    }
+}
+
 /// A C++ library's generated CMake project builds and runs, with g++,
 /// where CMake is installed (skipped, with a message, otherwise; required
 /// with `TEMPER_REQUIRE_CHECKERS`).
@@ -925,6 +1345,142 @@ fn test_a_library_on_each_backend() {
             assert_eq!(code, 1, "{backend}");
         });
     }
+}
+
+/// Kotlin's `connecteds` test: a connected class, `Bitset`, with no
+/// Temper implementation, whose host code wraps a package that the
+/// config's `dependencies` list for each backend (a Roaring bitmap),
+/// tested with `temper test -b BACKEND`, which fetches the real package
+/// with the language's own tools. The generated code defines `Bitset`
+/// once, `defines` as written in the backend's language, in host code
+/// that uses the package, `uses`. They fetch from five registries, so
+/// they run only with `TEMPER_NETWORK_TESTS` set, as nightly.yml's
+/// `connecteds` job sets it, not on every push; there, a backend whose
+/// tools are missing is skipped, with a message, unless
+/// `TEMPER_REQUIRE_CHECKERS` is set.
+#[allow(dead_code)] // Unless every backend is left out.
+fn connecteds(backend: &str, defines: &str, uses: &str) {
+    let files = connecteds_files();
+    let files: Vec<(&str, &str)> = (files.iter())
+        .map(|(n, t)| (n.as_str(), t.as_str()))
+        .collect();
+    let skip = |why: &str| {
+        assert!(
+            std::env::var_os("TEMPER_REQUIRE_CHECKERS").is_none(),
+            "connecteds on {backend}: {why} (needed with TEMPER_REQUIRE_CHECKERS)"
+        );
+        eprintln!("skipped connecteds on {backend}: {why}");
+    };
+    if std::env::var_os("TEMPER_NETWORK_TESTS").is_none() {
+        eprintln!("skipped connecteds on {backend}: set TEMPER_NETWORK_TESTS to fetch packages");
+        return;
+    }
+    with_library(&format!("connecteds-{backend}"), &files, |dir| {
+        let (code, out, err) = tempest(&["test", "-b", backend, dir]);
+        if out.contains("couldn't run") || err.contains("couldn't run") {
+            return skip(&format!("its tools are missing\n{out}{err}"));
+        }
+        assert!(
+            out.ends_with("Tests passed: 1 of 1\n"),
+            "{backend}:\n{out}{err}"
+        );
+        assert_eq!(code, 0, "{backend}:\n{out}{err}");
+        let out_dir = Path::new(dir).join("temper.out").join(backend);
+        let generated = sources(&out_dir.join("connecteds"));
+        let defining: Vec<_> = (generated.iter())
+            .flat_map(|(path, text)| text.matches(defines).map(move |_| (path, text)))
+            .collect();
+        let [(path, text)] = defining[..] else {
+            let paths: Vec<_> = defining.iter().map(|(p, _)| p).collect();
+            panic!("{backend}: {defines:?} once, not in {paths:?}");
+        };
+        assert!(
+            text.contains(uses),
+            "{backend}: {}:\n{text}",
+            path.display()
+        );
+    });
+}
+
+/// The `connecteds` test's files, by name, and their text.
+fn connecteds_files() -> Vec<(String, String)> {
+    let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/connecteds");
+    let mut files = Vec::new();
+    for entry in fs::read_dir(dir).unwrap() {
+        let path = entry.unwrap().path();
+        let name = path.file_name().unwrap().to_string_lossy().to_string();
+        files.push((name, fs::read_to_string(&path).unwrap()));
+    }
+    files
+}
+
+/// The files under a backend's output for the `connecteds` library, but
+/// not its packages and builds (`node_modules`, `target`, `bin`, `obj`).
+#[allow(dead_code)] // Unless every backend is left out.
+fn sources(dir: &Path) -> Vec<(PathBuf, String)> {
+    let mut found = Vec::new();
+    for entry in fs::read_dir(dir).unwrap() {
+        let path = entry.unwrap().path();
+        let name = path.file_name().unwrap().to_string_lossy();
+        if path.is_dir() {
+            if !["node_modules", "target", "bin", "obj"].contains(&name.as_ref()) {
+                found.extend(sources(&path));
+            }
+        } else if let Ok(text) = fs::read_to_string(&path) {
+            found.push((path, text));
+        }
+    }
+    found
+}
+
+/// The `connecteds` test in the interpreter, where `Bitset` has no
+/// implementation: its test panics, naming the method, as Kotlin's
+/// `AbstractPanic` does.
+#[test]
+fn connecteds_interpreter() {
+    let files = connecteds_files();
+    let files: Vec<(&str, &str)> = (files.iter())
+        .map(|(n, t)| (n.as_str(), t.as_str()))
+        .collect();
+    with_library("connecteds-interp", &files, |dir| {
+        let (code, out, err) = tempest(&["test", dir]);
+        assert!(
+            out.contains("Panicked: No connected implementation of Bitset.add"),
+            "{out}{err}"
+        );
+        assert!(out.ends_with("Tests passed: 0 of 1\n"), "{out}{err}");
+        assert_eq!(code, 1, "{out}{err}");
+    });
+}
+
+#[test]
+#[cfg(feature = "csharp")]
+fn connecteds_csharp() {
+    connecteds("csharp", "class Bitset", "Roaring.Net");
+}
+
+#[test]
+#[cfg(feature = "java")]
+fn connecteds_java() {
+    connecteds("java", "class Bitset", "org.roaringbitmap");
+}
+
+#[test]
+#[cfg(feature = "js")]
+fn connecteds_js() {
+    connecteds("js", "class Bitset", "roaring-wasm");
+}
+
+#[test]
+#[cfg(feature = "py")]
+fn connecteds_py() {
+    connecteds("py", "class Bitset", "pyroaring");
+}
+
+#[test]
+#[cfg(feature = "rust")]
+fn connecteds_rust() {
+    connecteds("rust", "struct Bitset", "roaring::RoaringBitmap");
 }
 
 /// A library with no root module, only `x/`, `y/`, and `z/`, as some
@@ -1315,7 +1871,8 @@ fn init_writes_kotlins_skeleton() {
             real.display()
         )
     );
-    // As Kotlin's `temper init -o my-Proj` writes them (2026-11-09).
+    // As Kotlin's `temper init -o my-Proj` writes them (2026-11-09), but
+    // for the line on modules, as configs can't import yet.
     let config = "# My Proj\n\
                   \n\
                   This file is used for library configuration.\n\
@@ -1324,9 +1881,8 @@ fn init_writes_kotlins_skeleton() {
                   \n\
                   \x20   export let name = \"my-proj\";\n\
                   \n\
-                  By default, the current directory is imported as a module. It can import\n\
-                  other module directories. See Temper documentation for additional config\n\
-                  options.\n";
+                  Every module under this directory is part of the library. See Temper\n\
+                  documentation for additional config options.\n";
     let module = "# Implementation for My Proj\n\
                   \n\
                   Library discussion goes here.\n\

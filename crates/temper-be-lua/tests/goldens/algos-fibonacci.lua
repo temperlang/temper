@@ -15,8 +15,8 @@ local function fib(i)
 end
 
 local zero = 0
-print("fib(1)=" .. fib(temper.int32_add(zero, 1)))
-print("fib(10)=" .. fib(temper.int32_add(zero, 10)))
-print("fib(20)=" .. fib(temper.int32_add(zero, 20)))
+temper.log("fib(1)=" .. fib(temper.int32_add(zero, 1)))
+temper.log("fib(10)=" .. fib(temper.int32_add(zero, 10)))
+temper.log("fib(20)=" .. fib(temper.int32_add(zero, 20)))
 
 return {}

@@ -648,11 +648,18 @@ the names together (language.md, "Object literals, not named arguments"):
   found fits it, and exactly one other class was found, "A is wanted
   here, but these properties fit Mark's constructor", at the literal,
   rather than silently making the other class; Kotlin reports "Cannot
-  assign to A from Mark" there. Otherwise, as Kotlin does: "No signature
-  matches" where nothing fits, and "Multiple types have matching
-  constructors: A, B" where several classes do and the type wanted
-  picks none of them; then, for the class decided, "No value passed for
-  x" for a skipped parameter without a default.
+  assign to A from Mark" there. Where a class is wanted, or named with
+  `class:`, and it doesn't take a name, the literal is placed against
+  it anyway, which says, at the property, "Point has no property `yy`;
+  did you mean `y`?" (a name the same but for case, or within two
+  edits) or "…; it has `x` and `y`", where Kotlin says "No signature
+  matches". Where the declared type or the class named isn't declared,
+  that's the only error, and the literal fails as it did, rather than
+  taking a class guessed from its names. Otherwise, as Kotlin does: "No
+  signature matches" where nothing fits, and "Multiple types have
+  matching constructors: A, B" where several classes do and the type
+  wanted picks none of them; then, for the class decided, "No value
+  passed for x" for a skipped parameter without a default.
 - **What it becomes:** a plain constructor call, `new C(1, null, y)`,
   its arguments placed, null for skipped ones (so their defaults), and
   where values run in an order other than the parameters', through

@@ -2156,19 +2156,18 @@ fn is_constant(e: &Expr) -> bool {
     )
 }
 
-/// A library's npm package, as imports name it: std's is
-/// `@temperlang/std`, as Kotlin's, and another's is its config's
-/// `jsName`, or else its own name.
+/// A library's npm package, as imports name it: its config's `JsConfig`
+/// name ([`crate::CONFIG`]; std's is `@temperlang/std`, as Kotlin's), or
+/// else its own name.
 pub fn package_of(p: &Program, library: &str) -> String {
     js_name(library, p.metadata_of(library))
 }
 
 /// [`package_of`], given what the library's config says.
 pub fn js_name(library: &str, metadata: &temper_tmpl::Metadata) -> String {
-    match library {
-        "std" => "@temperlang/std".into(),
-        _ => metadata.get("jsName").unwrap_or(library).into(),
-    }
+    (crate::CONFIG.get(library, metadata, "name"))
+        .unwrap_or(library)
+        .into()
 }
 
 /// The names by which a connected declaration's backend list can mean this

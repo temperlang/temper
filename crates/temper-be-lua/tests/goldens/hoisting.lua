@@ -99,27 +99,33 @@ local function firstHalf(ns)
   do
     local i = 0
     while i < temper.list_length(ns) do
-      local t, t_1, t_2 = temper.pcall(function()
-        if temper.list_get(ns, i) < 0 then
-          i = temper.int32_add(i, 1)
-          return "continue", "flow"
+      local jump
+      repeat
+        local t, t_1, t_2 = temper.pcall(function()
+          if temper.list_get(ns, i) < 0 then
+            i = temper.int32_add(i, 1)
+            return "continue", "flow"
+          end
+          if temper.list_get(ns, i) == 0 then
+            return "break", "flow"
+          end
+          return half(temper.list_get(ns, i)), "return"
+        end)
+        if not t then
+          temper.log("odd " .. temper.list_get(ns, i))
+        elseif t_2 == "return" then
+          return t_1
+        elseif t_1 == "continue" then
+          break
+        elseif t_1 == "break" then
+          jump = "break"
+          break
         end
-        if temper.list_get(ns, i) == 0 then
-          return "break", "flow"
-        end
-        return half(temper.list_get(ns, i)), "return"
-      end)
-      if not t then
-        print("odd " .. temper.list_get(ns, i))
-      elseif t_2 == "return" then
-        return t_1
-      elseif t_1 == "continue" then
-        goto continue
-      elseif t_1 == "break" then
+        i = temper.int32_add(i, 1)
+      until true
+      if jump == "break" then
         break
       end
-      i = temper.int32_add(i, 1)
-      ::continue::
     end
   end
   return -1
@@ -150,55 +156,68 @@ local function pairsUpTo(n)
   do
     local i = 0
     while i < n do
-      do
-        local j = 0
-        while j < n do
-          local t_3, t_4, t_5 = temper.pcall(function()
-            if j > temper.int32_sub(temper.int32_add(i, half(2)), 1) then
-              i = temper.int32_add(i, 1)
-              return "continue_outer", "flow"
-            end
-            if i == 3 then
-              return "break_outer", "flow"
-            end
-            local t, t_1, t_2 = temper.pcall(function()
-              if j == 1 then
-                j = temper.int32_add(j, 1)
-                return "continue", "flow"
+      local jump
+      repeat
+        do
+          local j = 0
+          while j < n do
+            repeat
+              local t_3, t_4, t_5 = temper.pcall(function()
+                if j > temper.int32_sub(temper.int32_add(i, half(2)), 1) then
+                  i = temper.int32_add(i, 1)
+                  return "continue_outer", "flow"
+                end
+                if i == 3 then
+                  return "break_outer", "flow"
+                end
+                local t, t_1, t_2 = temper.pcall(function()
+                  if j == 1 then
+                    j = temper.int32_add(j, 1)
+                    return "continue", "flow"
+                  end
+                  count = temper.int32_add(count, temper.int32_add(1, half(0)))
+                end)
+                if not t then
+                  count = temper.int32_add(count, 100)
+                elseif t_1 == "continue" then
+                  return "continue", "flow"
+                end
+              end)
+              if not t_3 then
+                count = temper.int32_add(count, 1000)
+              elseif t_4 == "continue_outer" then
+                jump = "continue"
+                break
+              elseif t_4 == "break_outer" then
+                jump = "break"
+                break
+              elseif t_4 == "continue" then
+                break
               end
-              count = temper.int32_add(count, temper.int32_add(1, half(0)))
-            end)
-            if not t then
-              count = temper.int32_add(count, 100)
-            elseif t_1 == "continue" then
-              return "continue", "flow"
+              j = temper.int32_add(j, 1)
+            until true
+            if jump then
+              break
             end
-          end)
-          if not t_3 then
-            count = temper.int32_add(count, 1000)
-          elseif t_4 == "continue_outer" then
-            goto continue_outer
-          elseif t_4 == "break_outer" then
-            goto break_outer
-          elseif t_4 == "continue" then
-            goto continue
           end
-          j = temper.int32_add(j, 1)
-          ::continue::
+          if jump then
+            break
+          end
         end
+        i = temper.int32_add(i, 1)
+      until true
+      if jump == "break" then
+        break
       end
-      i = temper.int32_add(i, 1)
-      ::continue_outer::
     end
-    ::break_outer::
   end
   return count
 end
 
 calls = 0
-print(tostring(pick(true, false, true)) .. " " .. tostring(pick(false, false, true)) .. " " .. calls)
-print(tostring(both(true, 4)) .. " " .. tostring(both(true, 3)) .. " " .. tostring(both(false, 4)))
-print(tostring(either(false, 4)) .. " " .. tostring(either(false, 3)) .. " " .. tostring(either(true, 3)))
+temper.log(tostring(pick(true, false, true)) .. " " .. tostring(pick(false, false, true)) .. " " .. calls)
+temper.log(tostring(both(true, 4)) .. " " .. tostring(both(true, 3)) .. " " .. tostring(both(false, 4)))
+temper.log(tostring(either(false, 4)) .. " " .. tostring(either(false, 3)) .. " " .. tostring(either(true, 3)))
 ---@type integer
 local t
 if not temper.pcall(function()
@@ -213,12 +232,12 @@ if not temper.pcall(function()
 end) then
   t_1 = 100
 end
-print(tostring(sum(t, t_1)))
-print(label(temper.null))
-print(label("x"))
-print(tostring(firstHalf({ 3, -2, 8 })))
-print(tostring(firstHalf({ 5, 0, 8 })))
-print(halfOr(-1) .. " " .. halfOr(4) .. " " .. halfOr(3))
-print(tostring(pairsUpTo(5)))
+temper.log(tostring(sum(t, t_1)))
+temper.log(label(temper.null))
+temper.log(label("x"))
+temper.log(tostring(firstHalf({ 3, -2, 8 })))
+temper.log(tostring(firstHalf({ 5, 0, 8 })))
+temper.log(halfOr(-1) .. " " .. halfOr(4) .. " " .. halfOr(3))
+temper.log(tostring(pairsUpTo(5)))
 
 return {}

@@ -57,13 +57,18 @@
 //! 100 and puts the rest in a table (`env_t1`); a function with more than
 //! 200 locals alive at once is not yet.
 //!
-//! **Jumps:** `break` is Lua's own for the innermost loop. A `continue` is
-//! `goto continue`, to a label ending the loop's body (`::continue::`),
-//! which runs a `repeat`'s condition, as Temper's `do … while` does; a
-//! jump from an inner loop to an outer one is a `goto` to a label named
-//! for the loop, ending its body (`continue_outer`) or after it
-//! (`break_outer`). Labels are printed only where a jump needs one, and
-//! `goto` needs Lua 5.2 or later, or LuaJIT, as Kotlin's output does.
+//! **Jumps:** `break` is Lua's own for the innermost loop. Without
+//! `goto`, which Lua 5.1 lacks (Kotlin's output uses it), a loop that a
+//! `continue` jumps to has its body in a `repeat … until true` of its
+//! own, which the `continue` leaves by `break`, running a `repeat`'s
+//! condition next, as Temper's `do … while` does. A jump that must leave
+//! more than one of these (a `break` from inside that `repeat`, or any
+//! jump from an inner loop to an outer one) sets the outer loop's flag, a
+//! local its body declares first (`jump`, or `jump_outer` for a loop
+//! labeled `outer`), to `"break"` or `"continue"`, and breaks; after each
+//! loop and `repeat` it leaves, `if jump then break end` goes on, and
+//! after the outer loop's `repeat`, `if jump == "break" then break end`.
+//! The next turn's `local` clears it.
 //!
 //! **Hoisting:** what Lua can't write inline goes before the statement
 //! it's in, leaving a temporary (`t`, `t_1`, …, named unlike anything
@@ -153,13 +158,38 @@ struct Int64s {
     taken: HashSet<String>,
 }
 
-/// Labels a loop needs, by what jumps to it.
+/// What a loop needs, by what jumps to it ([`Translator::begin`]).
 #[derive(Clone, Debug, Default)]
 struct Labels {
-    /// Ending its body, for a `continue`.
+    /// The signal naming a `continue` of it out of an `orelse` body.
     next: Option<String>,
-    /// After it, for a `break` from an inner loop.
+    /// The signal naming a `break` of it from an inner loop out of one.
     end: Option<String>,
+    /// Whether its body is in a `repeat … until true` of its own, which a
+    /// `continue` leaves by `break`.
+    wrap: bool,
+    /// Its jump flag, a local its body declares first, where a jump to it
+    /// leaves more than one `break` can: `"break"` or `"continue"`.
+    flag: Option<String>,
+    /// Whether a `break` sets the flag, which then breaks it after its
+    /// body's `repeat`.
+    flag_breaks: bool,
+    /// The loops enclosing it whose flags a jump from inside it sets, each
+    /// checked after it, and after its body's `repeat`, to `break` on.
+    checks: Vec<DeclId>,
+}
+
+/// How many `break`s a jump to `target` from inside the loops `inner`
+/// (those it encloses, outermost first) takes: one for each loop it
+/// leaves, and each one's `repeat`, and then its own `repeat`, or for a
+/// `break` (`brk`), the loop itself and its `repeat`.
+fn hops(labels: &HashMap<DeclId, Labels>, inner: &[DeclId], target: DeclId, brk: bool) -> usize {
+    let wrapped = |l: &DeclId| usize::from(labels.get(l).is_some_and(|l| l.wrap));
+    let own = match brk {
+        true => 1 + wrapped(&target),
+        false => 1,
+    };
+    inner.iter().map(|m| 1 + wrapped(m)).sum::<usize>() + own
 }
 
 /// What a chunk declares and runs ([`Translator::part`]), in the order
@@ -197,7 +227,7 @@ pub struct Translator<'a> {
     /// The enclosing `orelse` bodies, innermost last, in the function
     /// being translated ([`Self::or_else`]).
     tries: Vec<TryBody>,
-    /// Labels printed, by loop.
+    /// What each loop needs for the jumps to it, by loop.
     labels: HashMap<DeclId, Labels>,
     /// Whether translating a function with a result, where a bubble is
     /// `return temper.bubble()`, so LuaLS sees every path return.
@@ -236,7 +266,7 @@ pub struct Translator<'a> {
 /// An `orelse` body, which `temper.pcall` runs as a function of its own,
 /// so a jump out of it returns a signal: `return v, "return"`, or
 /// `return "break", "flow"` naming the jump by what it is just outside
-/// (`break`, or the label it goes to), as Kotlin's.
+/// (`break`, or a name [`Translator::begin`] gives it), as Kotlin's.
 struct TryBody {
     /// How many loops enclose it.
     loops: usize,
@@ -596,9 +626,10 @@ impl<'a> Translator<'a> {
         })
     }
 
-    /// A local's type, in its `---@type`: as [`ty`](Self::ty), but any for
-    /// a function's type parameter, whose `---@generic` name LuaLS knows
-    /// only in the function's own annotations.
+    /// A local's type, in its `---@type`, or a cast's, `---@cast` or
+    /// `--[[@as T]]`: as [`ty`](Self::ty), but any for a function's type
+    /// parameter, whose `---@generic` name LuaLS knows only in the
+    /// function's own annotations.
     fn local_ty(&self, ty: TypeId) -> R<String> {
         let saved = self.local_types.replace(true);
         let out = self.ty(ty);
@@ -1554,39 +1585,59 @@ impl<'a> Translator<'a> {
         result
     }
 
-    /// Starts translating a function or the init block: plans which loops
-    /// need labels. A `continue` of the innermost loop goes to
-    /// `continue`, ending its body; a jump from an inner loop, to a label
-    /// named for the loop it leaves or continues: its source name, or for
-    /// a compiler-made one, `outer`, numbered only if another label in the
-    /// function has it.
+    /// Starts translating a function or the init block: plans what each
+    /// loop needs for the jumps to it (the module docs' "Jumps"): a
+    /// `repeat` around its body where a `continue` jumps to it, a flag
+    /// where a jump leaves more than one `break` can, and the checks of
+    /// enclosing loops' flags after it; and the signals naming jumps out of
+    /// an `orelse` body: `continue`, or one named for the loop it leaves or
+    /// continues, its source name, or for a compiler-made one, `outer`,
+    /// numbered only if another in the function has it.
     fn begin(&mut self, scope: NodeId) {
-        /// Jumps to each loop: (loop, whether a `break`, whether from an
-        /// inner loop).
+        /// Jumps to each loop: (loop, whether a `break`, the loops it
+        /// leaves first, outermost first, and whether it's from an inner
+        /// loop). A jump out of an `orelse` body is done again after it
+        /// ([`TryBody`]), so it leaves only those outside the outermost
+        /// such body inside its loop.
         fn visit(
             p: &Program,
             id: NodeId,
             loops: &mut Vec<DeclId>,
-            jumps: &mut Vec<(DeclId, bool, bool)>,
+            tries: &mut Vec<usize>,
+            jumps: &mut Vec<(DeclId, bool, Vec<DeclId>, bool)>,
         ) {
             match p.nodes.get(id) {
                 Node::While { label, .. } | Node::DoWhile { label, .. } => {
                     loops.push(label);
                     for &kid in p.nodes.kids(id) {
-                        visit(p, kid, loops, jumps);
+                        visit(p, kid, loops, tries, jumps);
                     }
                     loops.pop();
                 }
+                Node::OrElse { body, fallback } => {
+                    tries.push(loops.len());
+                    visit(p, body, loops, tries, jumps);
+                    tries.pop();
+                    visit(p, fallback, loops, tries, jumps);
+                }
                 Node::Break { label } | Node::Continue { label } => {
                     let brk = matches!(p.nodes.get(id), Node::Break { .. });
-                    let inner = loops.last() != Some(&label);
-                    if (inner || !brk) && !jumps.contains(&(label, brk, inner)) {
-                        jumps.push((label, brk, inner));
+                    let Some(i) = loops.iter().rposition(|&l| l == label) else {
+                        return;
+                    };
+                    let end = (tries.iter().copied())
+                        .filter(|&t| t > i)
+                        .min()
+                        .unwrap_or(loops.len());
+                    let nested = loops.last() != Some(&label);
+                    let jump = (label, brk, loops[i + 1..end].to_vec(), nested);
+                    if !jumps.contains(&jump) {
+                        jumps.push(jump);
                     }
                 }
                 _ => {
                     for &kid in p.nodes.kids(id) {
-                        visit(p, kid, loops, jumps);
+                        visit(p, kid, loops, tries, jumps);
                     }
                 }
             }
@@ -1594,45 +1645,79 @@ impl<'a> Translator<'a> {
         let p = self.p;
         self.temps = 0;
         let mut jumps = Vec::new();
-        visit(p, scope, &mut Vec::new(), &mut jumps);
+        visit(p, scope, &mut Vec::new(), &mut Vec::new(), &mut jumps);
         self.loops.clear();
         self.labels.clear();
         self.tries.clear();
-        let mut taken: HashSet<String> = HashSet::new();
-        for &(l, brk, inner) in &jumps {
-            let labels = self.labels.entry(l).or_default();
-            if brk || inner || labels.next.is_some() {
-                continue;
-            }
-            // A `continue` only from the loop itself.
-            if !jumps.contains(&(l, false, true)) {
-                labels.next = Some("continue".into());
+        for &(l, brk, ..) in &jumps {
+            if !brk {
+                self.labels.entry(l).or_default().wrap = true;
             }
         }
-        for (l, brk, inner) in jumps {
-            if !inner {
-                continue;
-            }
+        // A name for a loop: its source name, or `outer`.
+        let base = |l: DeclId| {
             let d = p.decls.get(l);
-            let base = if d.facts.contains(Facts::COMPILER_MADE) || p.name(l).is_empty() {
+            if d.facts.contains(Facts::COMPILER_MADE) || p.name(l).is_empty() {
                 "outer".to_string()
             } else {
                 p.name(l)
                     .chars()
                     .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
                     .collect()
-            };
-            let base = format!("{}_{base}", if brk { "break" } else { "continue" });
-            let name = (1..)
+            }
+        };
+        let fresh = |base: String, taken: &HashSet<String>| {
+            (1..)
                 .map(|n| match n {
                     1 => base.clone(),
                     n => format!("{base}{n}"),
                 })
                 .find(|n| !taken.contains(n))
-                .unwrap_or_default();
-            taken.insert(name.clone());
-            let labels = self.labels.entry(l).or_default();
-            if brk {
+                .unwrap_or_default()
+        };
+        let mut flags: HashSet<String> = self.taken.clone();
+        for (l, brk, inner, _) in &jumps {
+            if hops(&self.labels, inner, *l, *brk) == 1 {
+                continue;
+            }
+            for &m in inner {
+                let checks = &mut self.labels.entry(m).or_default().checks;
+                if !checks.contains(l) {
+                    checks.push(*l);
+                }
+            }
+            let labels = self.labels.entry(*l).or_default();
+            labels.flag_breaks |= brk;
+            if labels.flag.is_none() {
+                let name = match base(*l).as_str() {
+                    "outer" => "jump".to_string(),
+                    b => format!("jump_{b}"),
+                };
+                let name = fresh(name, &flags);
+                flags.insert(name.clone());
+                labels.flag = Some(name);
+            }
+        }
+        // The signals: `continue` for a `continue` only from the loop
+        // itself, else named for the loop; a `break` from the loop itself
+        // is `break` ([`Self::jump`]).
+        let mut signals: HashSet<String> = HashSet::new();
+        for (l, brk, _, nested) in &jumps {
+            let labels = self.labels.entry(*l).or_default();
+            let named = if *brk { &labels.end } else { &labels.next };
+            if named.is_some() || (*brk && !nested) {
+                continue;
+            }
+            let from_inner = (jumps.iter()).any(|(m, k, _, n)| m == l && !*k && *n);
+            let name = match *brk || from_inner {
+                false => "continue".to_string(),
+                true => {
+                    let kind = if *brk { "break" } else { "continue" };
+                    fresh(format!("{kind}_{}", base(*l)), &signals)
+                }
+            };
+            signals.insert(name.clone());
+            if *brk {
                 labels.end = Some(name);
             } else {
                 labels.next = Some(name);
@@ -1789,11 +1874,20 @@ impl<'a> Translator<'a> {
                         then,
                         els: Vec::new(),
                     });
+                    // Not null from here on: its type, or where that names
+                    // a function's type parameter, which a body's
+                    // annotations can't, its parameter's type less
+                    // `temper.Null`, so `T|temper.Null` is still a `T`.
                     let ty = p.decls.get(local).ty;
                     if !p.types.is_nullable(ty) {
+                        let full = self.ty(ty)?;
+                        let ty = match self.local_ty(ty)? {
+                            local if local == full => full,
+                            _ => "-temper.Null".to_string(),
+                        };
                         out.push(Stmt::Cast {
                             name: self.name(param),
-                            ty: self.ty(ty)?,
+                            ty,
                         });
                     }
                 }
@@ -1859,28 +1953,20 @@ impl<'a> Translator<'a> {
             Node::While { label, cond, body } => {
                 let cond = self.expr(cond)?;
                 let body = self.loop_body(label, body)?;
-                let labels = self.labels.get(&label).cloned().unwrap_or_default();
-                out.push(Stmt::While {
-                    cond,
-                    body,
-                    next: labels.next,
-                });
-                out.extend(labels.end.map(Stmt::Label));
+                let (body, after) = self.jumped(label, body);
+                out.push(Stmt::While { cond, body });
+                out.extend(after);
             }
             Node::DoWhile { label, body, cond } => {
                 let body = self.loop_body(label, body)?;
                 let cond = self.expr(cond)?.negate();
-                let labels = self.labels.get(&label).cloned().unwrap_or_default();
-                out.push(Stmt::Repeat {
-                    body,
-                    cond,
-                    next: labels.next,
-                });
-                out.extend(labels.end.map(Stmt::Label));
+                let (body, after) = self.jumped(label, body);
+                out.push(Stmt::Repeat { body, cond });
+                out.extend(after);
             }
             Node::Break { label } | Node::Continue { label } => {
                 let brk = matches!(p.nodes.get(id), Node::Break { .. });
-                out.push(self.jump(label, brk)?);
+                out.extend(self.jump(label, brk)?);
             }
             Node::Return { value } => match value.map(|v| (v, p.nodes.get(v))) {
                 None | Some((_, Node::VoidLit {})) => out.push(self.return_stmt(None)),
@@ -1973,11 +2059,60 @@ impl<'a> Translator<'a> {
             if !by_connection(p, method, crate::connected::connects_std) && p.decls.get(method).kind == DeclKind::Setter)
     }
 
-    /// A `break` or a `continue` of the loop `label`: Lua's `break` for
-    /// the innermost loop's, a `goto` to the label [`Self::begin`] planned
-    /// otherwise, or out of an `orelse` body the loop encloses, a signal
-    /// ([`TryBody`]).
-    fn jump(&mut self, label: DeclId, brk: bool) -> R<Stmt> {
+    /// A loop's body, and what follows the loop, for the jumps to it and
+    /// out of it that [`Self::begin`] planned: the body in a `repeat …
+    /// until true` where a `continue` jumps to it, then checks of the
+    /// flags of the loops enclosing it that a jump from inside sets, and
+    /// of its own where a `break` sets it; its flag declared first; and the
+    /// enclosing loops' checks again after it.
+    fn jumped(&self, label: DeclId, body: Vec<Stmt>) -> (Vec<Stmt>, Vec<Stmt>) {
+        let labels = self.labels.get(&label).cloned().unwrap_or_default();
+        // One `if`, of every flag: `if jump or jump_outer then break end`.
+        let checks: Vec<Stmt> = (labels.checks.iter())
+            .filter_map(|l| self.labels.get(l).and_then(|l| l.flag.as_deref()))
+            .map(Expr::name)
+            .reduce(|a, b| Expr::bin(Bin::Or, a, b))
+            .map(|cond| Stmt::If {
+                cond,
+                then: vec![Stmt::Break],
+                els: Vec::new(),
+            })
+            .into_iter()
+            .collect();
+        let mut body = body;
+        if labels.wrap {
+            body = vec![Stmt::Repeat {
+                body,
+                cond: Expr::Bool(true),
+            }];
+            body.extend(checks.iter().cloned());
+        }
+        if let Some(flag) = &labels.flag {
+            if labels.wrap && labels.flag_breaks {
+                body.push(Stmt::If {
+                    cond: Expr::bin(Bin::Eq, Expr::name(flag), Expr::Str("break".into())),
+                    then: vec![Stmt::Break],
+                    els: Vec::new(),
+                });
+            }
+            body.insert(
+                0,
+                Stmt::Local {
+                    name: flag.clone(),
+                    ty: None,
+                    value: None,
+                },
+            );
+        }
+        (body, checks)
+    }
+
+    /// A `break` or a `continue` of the loop `label`: Lua's `break` where
+    /// that leaves just what it must (the loop, or for a `continue`, its
+    /// body's `repeat`), else setting the loop's flag first
+    /// ([`Self::jumped`]), or out of an `orelse` body the loop encloses, a
+    /// signal ([`TryBody`]).
+    fn jump(&mut self, label: DeclId, brk: bool) -> R<Vec<Stmt>> {
         let target = |me: &Self| {
             let labels = me.labels.get(&label);
             match brk {
@@ -2005,17 +2140,26 @@ impl<'a> Translator<'a> {
             if !t.jumps.contains(&jump) {
                 t.jumps.push(jump);
             }
-            return Ok(Stmt::Returns(vec![
+            return Ok(vec![Stmt::Returns(vec![
                 Expr::Str(name),
                 Expr::Str("flow".into()),
-            ]));
+            ])]);
         }
-        if brk && self.loops.last() == Some(&label) {
-            return Ok(Stmt::Break);
+        let Some(i) = self.loops.iter().rposition(|&l| l == label) else {
+            return not_yet("a jump to a loop that doesn't enclose it");
+        };
+        if hops(&self.labels, &self.loops[i + 1..], label, brk) == 1 {
+            return Ok(vec![Stmt::Break]);
         }
-        match target(self) {
-            Some(l) => Ok(Stmt::Goto(l)),
-            None => not_yet("a jump to a loop that doesn't enclose it"),
+        match self.labels.get(&label).and_then(|l| l.flag.clone()) {
+            Some(flag) => Ok(vec![
+                Stmt::Assign {
+                    target: Expr::name(&flag),
+                    value: Expr::Str(if brk { "break" } else { "continue" }.into()),
+                },
+                Stmt::Break,
+            ]),
+            None => not_yet("a jump that needs a flag its loop hasn't"),
         }
     }
 
@@ -2358,7 +2502,7 @@ impl<'a> Translator<'a> {
             Node::Upcast { value } => self.expr(value)?,
             // Lua doesn't check it; LuaLS takes it as the type.
             Node::Downcast { value } => {
-                Expr::Cast(Box::new(self.expr(value)?), self.ty(p.nodes.ty(id))?)
+                Expr::Cast(Box::new(self.expr(value)?), self.local_ty(p.nodes.ty(id))?)
             }
             Node::As { value, .. } => self.cast(id, value)?,
             Node::Is { ty, value } => self.is_type(ty, value)?,
@@ -2376,7 +2520,7 @@ impl<'a> Translator<'a> {
             }
             // Lua doesn't check it; LuaLS takes it as the type.
             Node::NonNull { value } => {
-                Expr::Cast(Box::new(self.expr(value)?), self.ty(p.nodes.ty(id))?)
+                Expr::Cast(Box::new(self.expr(value)?), self.local_ty(p.nodes.ty(id))?)
             }
             Node::AsNullable { value } => self.expr(value)?,
             // Null is always `temper.null`, which the type's own equality
@@ -2706,7 +2850,7 @@ impl<'a> Translator<'a> {
                 Jump::Return => {
                     let cond = Expr::bin(Bin::Eq, kind.clone(), Expr::Str("return".into()));
                     let value = (self.returns || !self.tries.is_empty()).then(|| value.clone());
-                    (cond, self.return_stmt(value))
+                    (cond, vec![self.return_stmt(value)])
                 }
                 Jump::Loop { label, brk, name } => {
                     let cond = Expr::bin(Bin::Eq, value.clone(), Expr::Str(name));
@@ -2715,7 +2859,7 @@ impl<'a> Translator<'a> {
             };
             chain = vec![Stmt::If {
                 cond,
-                then: vec![redo],
+                then: redo,
                 els: chain,
             }];
         }

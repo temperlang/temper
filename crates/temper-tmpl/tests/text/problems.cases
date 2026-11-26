@@ -232,6 +232,14 @@ module q#0 {
 
   connected fn fine#8(): Void;
 
+  connected class Hosted#9 {
+    connected abstract method add#10(): Void;
+  }
+
+  connected("py") class Listed#11 {
+    connected abstract method add#12(): Void;
+  }
+
   init {}
 }
 --- problems
@@ -240,6 +248,7 @@ Q1 #4: its qname q.f() is also #3's
 Q2 #5: its qname override doesn't parse: can't tell the kind of `f(` at offset 0 in `f(`
 Q3 @4: bare#6 has no body, but isn't connected
 Q4 @5: listed#7 lists backends, so it needs a body as their fallback
+Q4 @10: Listed#11 lists backends, so add#12 needs a body as their fallback
 
 === methods and omitted arguments (T3)
 tmpl 1 model 1 library calls 0.1.0

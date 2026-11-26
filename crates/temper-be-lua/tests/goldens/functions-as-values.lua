@@ -4,7 +4,7 @@ local isEven
 
 ---@param how string
 local function hello(how)
-  print("Called " .. how .. "!")
+  temper.log("Called " .. how .. "!")
 end
 
 ---@class as-values.StringSink
@@ -60,7 +60,7 @@ end
 hello("directly")
 callIt(hello)
 DelayedFunction(hello):callIt()
-print("Is 5 even? " .. tostring(isEven(5)))
-print("Is 6 even? " .. tostring(isEven(6)))
+temper.log("Is 5 even? " .. tostring(isEven(5)))
+temper.log("Is 6 even? " .. tostring(isEven(6)))
 
 return {}

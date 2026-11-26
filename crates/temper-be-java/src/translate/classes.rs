@@ -21,14 +21,20 @@
 //!   `IllegalStateException` naming those not set. Kotlin's checks only
 //!   primitive ones; this checks every one, a nullable one by a flag, as
 //!   null is a value it may be given.
-//! - Static fields are `public static final` with their values given by
-//!   the class's own initializer, as Kotlin's, where the value can't tell
+//! - Static fields are `static final` with their values given by the
+//!   class's own initializer, as Kotlin's, where the value can't tell
 //!   when it runs: it reads no module state, calls nothing that could,
 //!   and reads only its own class's statics given before it
-//!   ([`Translator::plan_statics`]). Any other is a `public static`
-//!   field that the module's static initializer assigns in Temper's
-//!   order, and the class's static block calls the module class's
-//!   `initStatics()`, so reading one from elsewhere runs that first.
+//!   ([`Translator::plan_statics`]). Any other is a `static` field that
+//!   the module's static initializer assigns in Temper's order, and the
+//!   class's static block calls the module class's `initStatics()`, so
+//!   reading one from elsewhere runs that first. Each public one of an
+//!   exported class is read through a public static getter, named as an
+//!   instance field's (`getStandard()`), and its field is private, or
+//!   the package's where the module's class sets it, so host code can't
+//!   reassign it; Kotlin's are public fields. Code reads a field itself
+//!   where Java lets it, else through its getter, as another library's
+//!   always does.
 //!   Static functions are static methods.
 //! - An interface's members with bodies are `default` methods, and those
 //!   without, abstract. Where Java wouldn't pick the method Temper does
@@ -288,6 +294,42 @@ fn box_adjustments(p: &Program, ty: DeclId, method: DeclId, n: usize) -> (Vec<bo
 }
 
 impl Translator<'_> {
+    /// A static field's public getter's name, if it has one: every
+    /// public static of an exported class, or another library's, but
+    /// core's, has one, named as an instance field's (`getStandard()`,
+    /// `isStrict()`).
+    pub(super) fn static_getter(&self, field: DeclId) -> Option<String> {
+        let p = self.p;
+        let d = p.decls.get(field);
+        let owner = p.decls.get(d.owner);
+        let hidden = d.facts.contains(Facts::PRIVATE) || d.facts.contains(Facts::PROTECTED);
+        let reached = match is_external(p, field) {
+            true => library_of(p, field) != "core",
+            false => owner.facts.contains(Facts::EXPORTED),
+        };
+        (!hidden && reached && owner.kind == DeclKind::Class)
+            .then(|| getter_name(p.name(field), d.ty == TypeId::BOOLEAN))
+    }
+
+    /// Whether code here reads a static field itself, not through its
+    /// getter: in its class (a planned one, private), or its package
+    /// (one the module's initializer sets).
+    pub(super) fn reads_static(&mut self, field: DeclId) -> bool {
+        let p = self.p;
+        if self.static_getter(field).is_none() {
+            return true;
+        } else if is_external(p, field) {
+            return false;
+        }
+        let owner = p.decls.get(field).owner;
+        let module = temper_tmpl::analysis::home(p, owner).unwrap_or(DeclId::NONE);
+        let same_package = super::module_package(p, module) == self.package;
+        match self.in_class(field) {
+            true => same_package && self.class == self.name(owner),
+            false => same_package,
+        }
+    }
+
     /// Whether a static field's value is given by its class's initializer.
     pub(super) fn in_class(&self, field: DeclId) -> bool {
         let owner = self.p.decls.get(field).owner;
@@ -576,8 +618,13 @@ impl Translator<'_> {
                 Node::StaticField { .. } if interface => {
                     return not_yet("an interface's static field that must wait for the module");
                 }
+                // Set by the module's class, in the package; host code
+                // reads a public one through its getter.
                 Node::StaticField { .. } => fields.push(MemberField {
-                    vis: if private { Vis::Package } else { Vis::Public },
+                    vis: match private || self.static_getter(m).is_some() {
+                        true => Vis::Package,
+                        false => Vis::Public,
+                    },
                     is_static: true,
                     is_final: false,
                     ty: self.ty(d.ty)?,
@@ -719,8 +766,12 @@ impl Translator<'_> {
             let private = d.facts.contains(Facts::PRIVATE) || d.facts.contains(Facts::PROTECTED);
             self.in_function = false;
             self.begin(value);
+            let getter = self.static_getter(field).is_some();
             fields.push(MemberField {
-                vis: if private { Vis::Private } else { Vis::Public },
+                vis: match private || getter {
+                    true => Vis::Private,
+                    false => Vis::Public,
+                },
                 is_static: true,
                 is_final: true,
                 ty: self.ty(d.ty)?,
@@ -729,9 +780,13 @@ impl Translator<'_> {
             });
         }
         members.extend(accessors);
+        let mut forwarded = Vec::new();
         for (method, through) in forwards(p, decl) {
-            members.push(self.forward(interface, method, through)?);
+            forwarded.push(self.forward(interface, method, through)?);
         }
+        let getters = self.static_getters(decl, &own, &members, &forwarded)?;
+        members.extend(getters);
+        members.extend(forwarded);
         let mut helpers = Vec::new();
         // Static fields the module's initializer assigns: reading one
         // runs it first, as code elsewhere, another library's tests
@@ -766,6 +821,70 @@ impl Translator<'_> {
             members,
             helpers,
         })
+    }
+
+    /// The getters of a class's static fields ([`Translator::static_getter`]):
+    /// `public static Policy getStandard() { return Policy.standard; }`;
+    /// `NotYet` for one named as a method that takes nothing, among
+    /// `members`, those `forwarded`, or those it inherits.
+    fn static_getters(
+        &mut self,
+        class: DeclId,
+        own: &[(DeclId, NodeId)],
+        members: &[Member],
+        forwarded: &[Member],
+    ) -> R<Vec<Member>> {
+        let p = self.p;
+        let class_name = self.name(class);
+        let mut out = Vec::new();
+        // What takes nothing among its own members, and those it
+        // inherits, whose names a static may not hide.
+        let mut taken: HashSet<String> = (members.iter().chain(forwarded))
+            .filter(|m| m.params.is_empty())
+            .map(|m| m.name.clone())
+            .collect();
+        for up in ancestors(p, class) {
+            for (d, node) in self::members(p, up) {
+                let nullary = match p.nodes.get(node) {
+                    Node::Method { params, .. } | Node::AbstractMethod { params, .. } => {
+                        param_decls(p, params).is_empty()
+                    }
+                    _ => false,
+                };
+                let decl = p.decls.get(d);
+                if decl.facts.contains(Facts::PRIVATE) {
+                    continue;
+                } else if matches!(decl.kind, DeclKind::Field) {
+                    taken.insert(getter_name(p.name(d), decl.ty == TypeId::BOOLEAN));
+                } else if nullary {
+                    taken.insert(self.method_name(d));
+                }
+            }
+        }
+        for &(field, node) in own {
+            let Node::StaticField { .. } = p.nodes.get(node) else {
+                continue;
+            };
+            let Some(name) = self.static_getter(field) else {
+                continue;
+            };
+            if taken.contains(&name) {
+                return not_yet(format!(
+                    "a static getter, {name}(), that a method's name takes"
+                ));
+            }
+            out.push(Member {
+                vis: Vis::Public,
+                kind: MemberKind::Static,
+                result: self.ty(p.decls.get(field).ty)?,
+                name,
+                params: Vec::new(),
+                body: vec![Stmt::Return(Some(
+                    Expr::name(class_name.clone()).member(self.name(field)),
+                ))],
+            });
+        }
+        Ok(out)
     }
 
     /// A public field's getter, and for a `var`, setter, but those the

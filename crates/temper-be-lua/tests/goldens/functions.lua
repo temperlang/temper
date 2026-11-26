@@ -104,13 +104,14 @@ local function sumFrom(xs, least)
     local length = temper.list_length(xs)
     local i = 0
     while i < length do
-      local x = temper.list_get(xs, i)
-      i = temper.int32_add(i, 1)
-      if x < least then
-        goto continue
-      end
-      sum = temper.int32_add(sum, x)
-      ::continue::
+      repeat
+        local x = temper.list_get(xs, i)
+        i = temper.int32_add(i, 1)
+        if x < least then
+          break
+        end
+        sum = temper.int32_add(sum, x)
+      until true
     end
   end
   return sum
@@ -276,18 +277,18 @@ end
 
 local counter = makeCounter(10)
 counter()
-print("count " .. counter())
+temper.log("count " .. counter())
 local other = makeCounter(0)
-print("other " .. other() .. " count " .. counter())
+temper.log("other " .. other() .. " count " .. counter())
 local addTwo = twice(addOne)
-print("twice " .. addTwo(5) .. " " .. applyTo(addOne, 1))
-print("triple " .. applyTo(Scaler.triple, 4) .. " " .. twice(Scaler.triple)(2))
+temper.log("twice " .. addTwo(5) .. " " .. applyTo(addOne, 1))
+temper.log("triple " .. applyTo(Scaler.triple, 4) .. " " .. twice(Scaler.triple)(2))
 local ns = { 5, 2, 8, 1, 4 }
 local doubled = temper.listed_map(ns, function(n) return temper.int32_mul(n, 2) end)
 local big = temper.listed_filter(doubled, function(n) return n > 4 end)
-print(temper.listed_join(big, ", ", function(n) return tostring(n) end))
+temper.log(temper.listed_join(big, ", ", function(n) return tostring(n) end))
 local order = temper.listed_sorted(ns, function(a, b) return temper.int32_sub(a, b) end)
-print(temper.listed_join(order, " ", function(n) return tostring(n) end))
+temper.log(temper.listed_join(order, " ", function(n) return tostring(n) end))
 local total = 0
 do
   local length = temper.list_length(ns)
@@ -298,10 +299,10 @@ do
     total = temper.int32_add(total, n)
   end
 end
-print("total " .. total)
+temper.log("total " .. total)
 local button = Button("hits", makeCounter(0))
 button:press()
-print(button:press())
+temper.log(button:press())
 local makers = temper.listbuilder_constructor()
 do
   local i = 0
@@ -311,7 +312,7 @@ do
     i = temper.int32_add(i, 1)
   end
 end
-print(temper.listed_join(makers, " ", function(c) return tostring(c()) end))
+temper.log(temper.listed_join(makers, " ", function(c) return tostring(c()) end))
 
 local function fn8()
   local fs = temper.listbuilder_constructor()
@@ -325,21 +326,21 @@ local function fn8()
       i = temper.int32_add(i, 1)
     end
   end
-  print(temper.listed_join(fs, " ", function(c) return tostring(c()) end))
+  temper.log(temper.listed_join(fs, " ", function(c) return tostring(c()) end))
   temper.yield()
 end
 
 drive(5, temper.adapt_generator_fn(fn8))
-print("sum " .. sumFrom(ns, 4) .. " doubles " .. doubles("bookkeeper"))
-print("climb " .. climb(0) .. " " .. climb(1))
+temper.log("sum " .. sumFrom(ns, 4) .. " doubles " .. doubles("bookkeeper"))
+temper.log("climb " .. climb(0) .. " " .. climb(1))
 local gate = Gate()
-print("gate " .. tostring(gate:allows(0)) .. " " .. gate:passed(4))
+temper.log("gate " .. tostring(gate:allows(0)) .. " " .. gate:passed(4))
 gate.check = function(x) return temper.int32_sub(x, 1) end
-print("gate " .. tostring(gate:allows(1)) .. " " .. tostring(gate:allows(2)) .. " " .. gate:passed(4))
+temper.log("gate " .. tostring(gate:allows(1)) .. " " .. tostring(gate:allows(2)) .. " " .. gate:passed(4))
 local none = gate:allows(0) and 3 or temper.null
-print(tostring(stringIsPalindrome("step on no pets")) .. " " .. tostring(stringIsPalindrome("steps")))
-print(intOrZero(none) .. " " .. listFirstOr({ 4, 5 }, 0) .. " " .. listFirstOr({ "x" }, "-"))
-print(stringPadded("ab", 2) .. " " .. stringPadded("ab", 1, "*"))
-print(gate:passed(4) .. " " .. gatePassed(gate, "gate"))
+temper.log(tostring(stringIsPalindrome("step on no pets")) .. " " .. tostring(stringIsPalindrome("steps")))
+temper.log(intOrZero(none) .. " " .. listFirstOr({ 4, 5 }, 0) .. " " .. listFirstOr({ "x" }, "-"))
+temper.log(stringPadded("ab", 2) .. " " .. stringPadded("ab", 1, "*"))
+temper.log(gate:passed(4) .. " " .. gatePassed(gate, "gate"))
 
 return {}

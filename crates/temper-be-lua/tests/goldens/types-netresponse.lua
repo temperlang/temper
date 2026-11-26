@@ -15,12 +15,12 @@ local function fn()
     if temper.netresponse_status(resp) == 200 then
       local subject = temper.netresponse_bodycontent(resp):await()
       local body = temper.is_null(subject) and "missing" or (subject --[[@as string]])
-      print("Thanks, server.  I got " .. body .. ".")
+      temper.log("Thanks, server.  I got " .. body .. ".")
     else
-      print("HTTP status was not 200: " .. temper.netresponse_status(resp) .. "!")
+      temper.log("HTTP status was not 200: " .. temper.netresponse_status(resp) .. "!")
     end
   end) then
-    print("failed")
+    temper.log("failed")
   end
 end
 

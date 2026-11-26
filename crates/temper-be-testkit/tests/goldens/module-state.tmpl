@@ -1,55 +1,78 @@
 tmpl 1 model 1 library `module-state` 0.0.0
 
-uses `temper-core`#10 0.0.0-alpha.0.0 {
-  class Int32#11 {
-    connected method toString#12(radix?: Int32): String;
+uses `temper-core`#12 0.0.0-alpha.0.0 {
+  class List#13<T#14> extends Listed#15<T#14> {
+    connected method get#23(index: Int32): T#14;
   }
-  interface Console#13 {
-    connected method log#14(message: String): Void;
+  interface Listed#15<T#16> {}
+  class Int32#25 {
+    connected method toString#26(radix?: Int32): String;
   }
-  connected fn getConsole#16(name?: String): Console#13;
+  interface Console#27 {
+    connected method log#28(message: String): Void;
+  }
+  connected fn getConsole#30(name?: String): Console#27;
 }
 
 module `module-state`#0 {
-  let ~console#15: Console#13;
+  let ~console#29: Console#27;
 
-  export let greeting#1: String;
+  export let greeting#6: String;
 
-  var count#2: Int32;
+  var count#7: Int32;
 
-  let limit#3: Int32;
+  let limit#8: Int32;
 
-  export var total#4: Int32;
+  export var total#9: Int32;
 
-  export var ticks#5: Int32;
+  export var ticks#10: Int32;
 
-  var local#6: Int32;
+  var local#11: Int32;
 
-  fn bump#7(): Int32 {
-    count#2 = %Int32.add(count#2, 1);
-    total#4 = %Int32.add(total#4, count#2);
-    return count#2;
+  let prefixes#17: List#13<String>;
+
+  export class Palette#1 {
+    let name#2: String;
+    constructor constructor#5(name#24: String): Palette#1 {
+      this.name#2 = name#24;
+    }
+    static let warm#3: Palette#1;
+    static fn named#4(n#22: String): Palette#1 {
+      return new constructor#5(%String.cat(prefixes#17.get#23(0), n#22));
+    }
   }
 
-  export fn tick#8(): Void {
-    ticks#5 = %Int32.add(ticks#5, 1);
+  export let favorite#18: Palette#1;
+
+  fn bump#19(): Int32 {
+    count#7 = %Int32.add(count#7, 1);
+    total#9 = %Int32.add(total#9, count#7);
+    return count#7;
   }
 
-  export fn report#9(): String {
-    return %String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(greeting#1, " "), bump#7().toString#12(omitted)), " of "), limit#3.toString#12(omitted)), " "), total#4.toString#12(omitted));
+  export fn tick#20(): Void {
+    ticks#10 = %Int32.add(ticks#10, 1);
+  }
+
+  export fn report#21(): String {
+    return %String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(greeting#6, " "), bump#19().toString#26(omitted)), " of "), limit#8.toString#26(omitted)), " "), total#9.toString#26(omitted));
   }
 
   init {
-    init ~console#15 = getConsole#16(omitted);
-    init greeting#1 = "hi";
-    init count#2 = 0;
-    init limit#3 = 3;
-    init total#4 = 10;
-    init ticks#5 = 0;
-    init local#6 = 1;
-    local#6 = %Int32.add(local#6, limit#3);
-    ~console#15.log#14(report#9());
-    ~console#15.log#14(report#9());
-    ~console#15.log#14(%String.cat("local ", local#6.toString#12(omitted)));
+    init ~console#29 = getConsole#30(omitted);
+    init greeting#6 = "hi";
+    init count#7 = 0;
+    init limit#8 = 3;
+    init total#9 = 10;
+    init ticks#10 = 0;
+    init local#11 = 1;
+    init prefixes#17 = (list("p-")): List#13<String>;
+    init warm#3 = named#4("warm");
+    init favorite#18 = warm#3;
+    local#11 = %Int32.add(local#11, limit#8);
+    ~console#29.log#28(report#21());
+    ~console#29.log#28(report#21());
+    ~console#29.log#28(%String.cat("local ", local#11.toString#26(omitted)));
+    ~console#29.log#28(%String.cat(%String.cat(warm#3.name#2, " "), favorite#18.name#2));
   }
 }

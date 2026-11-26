@@ -161,6 +161,62 @@ pub struct StdSupport {
 
 pub use temper_tmpl::OutFile;
 
+/// What a library's config may set for this backend, `export let rust:
+/// RustConfig = { … };`, as Kotlin's `RustConfig`; and std's, as Kotlin's
+/// backends inject it.
+pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
+    key: "rust",
+    class: "RustConfig",
+    source: include_str!("config.temper"),
+    properties: &[
+        temper_tmpl::Property {
+            name: "name",
+            doc: "The crate's name, which code that uses the library names with `_` for `-`; else the library's name.",
+            kind: temper_tmpl::ConfigKind::String {
+                form: "a crate's name, as `geometry-rs`",
+                valid: crate_name,
+            },
+        },
+        temper_tmpl::Property {
+            name: "dependencies",
+            doc: "Crates that the library's host code uses, each `\"name@version\"`, for exactly that version.",
+            kind: temper_tmpl::ConfigKind::Strings {
+                form: "name@version",
+                package: |d| crate_dependency(d).map(|(name, _)| crate_key(name)),
+            },
+        },
+    ],
+    std: &[("name", "temper-std")],
+    names: |library, metadata| vec![crate_key(&translate::rust_name(library, metadata))],
+    runtime: &["temper_core"],
+};
+
+/// A crate's name as crates.io compares names: lowercase, with `_` for
+/// `-`.
+fn crate_key(name: &str) -> String {
+    name.to_lowercase().replace('-', "_")
+}
+
+/// A crate that a config's `dependencies` lists, as `"name@version"`:
+/// its name ([`crate_name`]) and its version, an exact one, as
+/// `0.11.1` or `1.0.0-rc.1`, which the crate pins (`=0.11.1`).
+pub fn crate_dependency(text: &str) -> Option<(&str, &str)> {
+    let exact =
+        |v: &str| v.starts_with(|c: char| c.is_ascii_digit()) && temper_tmpl::spelled(v, ".+-");
+    match temper_tmpl::dependency_parts(text, "@", 2)?.as_slice() {
+        &[name, version] if crate_name(name) && exact(version) => Some((name, version)),
+        _ => None,
+    }
+}
+
+/// Whether a name is a crate's, as crates.io allows: ASCII letters,
+/// digits, `_`, and `-`, starting with a letter, at most 64 characters.
+pub fn crate_name(text: &str) -> bool {
+    text.starts_with(|c: char| c.is_ascii_alphabetic())
+        && temper_tmpl::spelled(text, "_-")
+        && text.len() <= 64
+}
+
 /// This backend, as tools list it ([`temper_tmpl::Backend`]).
 pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     name: "rust",
@@ -173,6 +229,7 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     runtime_version: &runtime::VERSION,
     rules: &RUST.rules,
     translate: |p, _| translate(p, &RUST).map_err(|e| e.to_string()),
+    config: &CONFIG,
     default: true,
     #[cfg(any(unix, windows))]
     tools: Some(&tools::TOOLS),
@@ -282,7 +339,8 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     let names = assign_checked(p, &variant.rules).map_err(NotYet::new)?;
     let package = &p.library.name;
     // std's package is `temper-std`, as Kotlin's, in `std/`; a config's
-    // `rustName` names another's, in the library's directory still.
+    // `RustConfig` name names another's, in the library's directory
+    // still.
     let cargo_name = &translate::rust_name(package, p.metadata());
     let krate = names::crate_name(cargo_name);
     let mut translator = translate::Translator::new(p, &names);
@@ -400,7 +458,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     let dependency = |name: &str, version: &str| {
         let package = translate::rust_name(name, p.metadata_of(name));
         let path = name;
-        let version = temper_tmpl::version_or_default(version);
+        let version = temper_tmpl::json_string(temper_tmpl::version_or_default(version));
         let features = match name {
             "std" if !std_features.is_empty() => {
                 let list: Vec<String> = std_features.iter().map(|f| format!("\"{f}\"")).collect();
@@ -408,7 +466,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
             }
             _ => String::new(),
         };
-        format!("{package} = {{ path = \"../{path}\", version = \"{version}\"{features} }}\n")
+        format!("{package} = {{ path = \"../{path}\", version = {version}{features} }}\n")
     };
     let (mut dependencies, mut dev_dependencies) = (String::new(), String::new());
     for (name, version) in p.dependencies() {
@@ -416,6 +474,14 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
             dependencies.push_str(&dependency(name, version));
         } else {
             dev_dependencies.push_str(&dependency(name, version));
+        }
+    }
+    // The crates its host code uses, as its config lists them, each at
+    // exactly its version, as Kotlin's.
+    for dependency in CONFIG.strings(p.metadata(), "dependencies") {
+        if let Some((name, version)) = crate_dependency(dependency) {
+            let version = temper_tmpl::json_string(&format!("={version}"));
+            dependencies.push_str(&format!("{name} = {{ version = {version} }}\n"));
         }
     }
     // std's support code's optional dependencies, each turning on its
@@ -436,7 +502,7 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     let cargo = format!(
         r#"[package]
 name = "{name}"
-version = "{version}"
+version = {version}
 {metadata}edition = "2021"
 rust-version = "{rust}"
 
@@ -445,7 +511,7 @@ temper-core = {{ path = "../temper-core", version = "={runtime}" }}
 {dependencies}{dev_dependencies}{bin}"#,
         bin = bin_section(cargo_name),
         name = cargo_name,
-        version = p.version_or_default(),
+        version = temper_tmpl::json_string(p.version_or_default()),
         metadata = package_metadata(p),
         rust = variant.rust_version,
         runtime = temper_tmpl::version::current(),
@@ -719,4 +785,41 @@ fn library_decl(p: &Program, from: temper_tmpl::DeclId) -> Option<&str> {
     };
     let name = p.name(library);
     (name != "temper-core").then_some(name)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn crate_spellings() {
+        let good = [
+            ("roaring@0.11.1", ("roaring", "0.11.1")),
+            ("serde_json@1.0.0-rc.1+b", ("serde_json", "1.0.0-rc.1+b")),
+        ];
+        for (text, parts) in good {
+            assert_eq!(crate_dependency(text), Some(parts), "{text}");
+        }
+        let hostile = [
+            "roaring",
+            "roaring@^1",
+            "roaring@=1",
+            "roaring@*",
+            "roaring@1\", path = \"/x",
+            "roaring@1 }\n[x]",
+            "-roaring@1",
+            "1roaring@1",
+            "../x@1",
+            "x@${V}",
+            "x@1@2",
+            "x/y@1",
+        ];
+        for text in hostile {
+            assert_eq!(crate_dependency(text), None, "{text}");
+        }
+        assert!(crate_name("geometry-rs") && crate_name("temper_std"));
+        for bad in ["", "-x", "_x", "1x", "a.b", "../x", "/abs", "a b", "a\"b"] {
+            assert!(!crate_name(bad), "{bad}");
+        }
+    }
 }

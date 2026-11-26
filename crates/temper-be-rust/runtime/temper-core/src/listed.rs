@@ -395,17 +395,16 @@ pub mod list_builder {
     where
         T: Clone + Sync + Send,
     {
-        let values = values.to_listed();
-        let builder = RefCell::new(builder.write().unwrap());
+        // The values as a list first (a builder's copied, a list's shared),
+        // so a builder can take its own values: reading them under its write
+        // lock would deadlock.
+        let values = values.to_listed().to_list();
+        let mut builder = builder.write().unwrap();
         let index = match index {
             Some(index) => index.try_into().unwrap(),
-            None => builder.borrow().len(),
+            None => builder.len(),
         };
-        values.with_vec(&|values: &Vec<T>| {
-            builder
-                .borrow_mut()
-                .splice(index..index, values.iter().cloned());
-        });
+        builder.splice(index..index, values.iter().cloned());
     }
 
     pub fn clear<T>(builder: &ListBuilder<T>) {
@@ -448,27 +447,21 @@ pub mod list_builder {
     where
         T: 'static + Clone + Sync + Send,
     {
+        // As in `add_all`, the values as a list before the lock.
         let values = match values {
-            Some(values) => values.to_listed(),
-            None => Listed::new(Arc::new(vec![])),
+            Some(values) => values.to_listed().to_list(),
+            None => Arc::new(vec![]),
         };
-        let builder = RefCell::new(builder.write().unwrap());
-        let begin = index.unwrap_or(0).max(0) as usize;
-        let remove_count: usize = match remove_count {
-            Some(remove_count) => remove_count.max(0).try_into().unwrap(),
-            None => builder.borrow().len(),
+        let mut builder = builder.write().unwrap();
+        // Clamped to the bounds, as core says.
+        let len = builder.len();
+        let begin = (index.unwrap_or(0).max(0) as usize).min(len);
+        let remove_count = match remove_count {
+            Some(remove_count) => remove_count.max(0) as usize,
+            None => len,
         };
-        let end = begin + remove_count.min(builder.borrow().len() - begin);
-        let result: RefCell<Vec<T>> = RefCell::new(vec![]);
-        values.with_vec(&|values: &Vec<T>| {
-            result.replace(
-                builder
-                    .borrow_mut()
-                    .splice(begin..end, values.iter().cloned())
-                    .collect(),
-            );
-        });
-        Arc::new(result.into_inner())
+        let end = begin + remove_count.min(len - begin);
+        Arc::new(builder.splice(begin..end, values.iter().cloned()).collect())
     }
 }
 

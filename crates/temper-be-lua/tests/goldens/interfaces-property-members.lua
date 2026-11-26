@@ -239,19 +239,19 @@ with_tostring(Low3)
 
 local a = C("foo")
 local b = C("bar")
-print("leastX of " .. a.x .. " and " .. b.x .. " is " .. leastX(a, b).x .. ".")
+temper.log("leastX of " .. a.x .. " and " .. b.x .. " is " .. leastX(a, b).x .. ".")
 local i = a
-print("As an I, a.x is " .. i.x .. ".")
+temper.log("As an I, a.x is " .. i.x .. ".")
 local di = D(a)
 local dj = D(a)
-print("Generically, x is " .. di.thing.x .. ".")
-print("Genericallier, x is still " .. dj.thing.x .. ".")
+temper.log("Generically, x is " .. di.thing.x .. ".")
+temper.log("Genericallier, x is still " .. dj.thing.x .. ".")
 local si = SSub(a)
-print("Sealed thing is " .. si.thing.x .. ".")
+temper.log("Sealed thing is " .. si.thing.x .. ".")
 local labeled = LabeledSub(a)
 local heldAnd = labeled:heldAnd(b)
-print("Labeled thing is " .. labeled:label("first") .. ".")
-print("Held are " .. labeled.held.x .. " and " .. temper.list_get(heldAnd, 1).x .. ".")
+temper.log("Labeled thing is " .. labeled:label("first") .. ".")
+temper.log("Held are " .. labeled.held.x .. " and " .. temper.list_get(heldAnd, 1).x .. ".")
 local high1 = Low1(11)
 local high1b = Low1(12)
 local high1c = Low1(12)
@@ -267,7 +267,7 @@ do
   while i2 < length do
     local pair = temper.list_get(pairs_, i2)
     i2 = temper.int32_add(i2, 1)
-    print(pair.key:toString() .. " == " .. pair.value:toString() .. ": " .. tostring(pair.key:eq(pair.value)))
+    temper.log(pair.key:toString() .. " == " .. pair.value:toString() .. ": " .. tostring(pair.key:eq(pair.value)))
   end
 end
 

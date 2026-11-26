@@ -19,7 +19,7 @@ end
 
 ---@param this pure-virtual.HiGreeter
 function HiGreeter.methods.greet(this)
-  print("Hi, virtually!")
+  temper.log("Hi, virtually!")
 end
 
 ---@class pure-virtual.Wrapper
@@ -82,7 +82,7 @@ local greeter = HiGreeter()
 greeter:greet()
 local boxWrapper = BoxWrapper()
 local intWrapper = IntWrapper()
-print(boxWrapper:wrap(Box("box")).label)
-print(tostring(intWrapper:wrap(41)))
+temper.log(boxWrapper:wrap(Box("box")).label)
+temper.log(tostring(intWrapper:wrap(41)))
 
 return {}

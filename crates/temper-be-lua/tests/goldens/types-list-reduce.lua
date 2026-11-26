@@ -22,8 +22,8 @@ end
 local vals = { 2, 3, 4 }
 local sum = temper.listed_reduce(vals, function(sum, n) return temper.int32_add(sum, n) end)
 local poorReverseJoin = temper.listed_reducefrom(vals, "", function(text, n) return n .. text end)
-print("Reductions: " .. sum .. " " .. poorReverseJoin)
-print("All even: " .. tostring(all(vals, function(n) return temper.int32_mod(n, 2) == 0 end)))
-print("All positive: " .. tostring(all(vals, function(n) return n > 0 end)))
+temper.log("Reductions: " .. sum .. " " .. poorReverseJoin)
+temper.log("All even: " .. tostring(all(vals, function(n) return temper.int32_mod(n, 2) == 0 end)))
+temper.log("All positive: " .. tostring(all(vals, function(n) return n > 0 end)))
 
 return {}

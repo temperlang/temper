@@ -96,6 +96,66 @@ impl std::error::Error for NotYet {}
 
 pub use temper_tmpl::OutFile;
 
+/// What a library's config may set for this backend, `export let java:
+/// JavaConfig = { … };`, as Kotlin's `JavaConfig`; and std's, as Kotlin's
+/// backends inject it.
+pub const CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
+    key: "java",
+    class: "JavaConfig",
+    source: include_str!("config.temper"),
+    properties: &[
+        temper_tmpl::Property {
+            name: "name",
+            doc: "The library's Java name, which the package and the Maven artifact ID default to; else the library's name.",
+            kind: temper_tmpl::ConfigKind::String {
+                form: "a Maven ID, as `geometry-java`",
+                valid: maven_id,
+            },
+        },
+        temper_tmpl::Property {
+            name: "package",
+            doc: "The Java package, as `com.example.geometry`; else the Java name, as a package.",
+            kind: temper_tmpl::ConfigKind::String {
+                form: "a Java package, as `com.example.geometry`",
+                valid: temper_tmpl::dotted_identifier,
+            },
+        },
+        temper_tmpl::Property {
+            name: "group",
+            doc: "The Maven group ID; else the package.",
+            kind: temper_tmpl::ConfigKind::String {
+                form: "a Maven ID, as `com.example`",
+                valid: maven_id,
+            },
+        },
+        temper_tmpl::Property {
+            name: "artifact",
+            doc: "The Maven artifact ID; else the Java name.",
+            kind: temper_tmpl::ConfigKind::String {
+                form: "a Maven ID, as `geometry`",
+                valid: maven_id,
+            },
+        },
+        temper_tmpl::Property {
+            name: "dependencies",
+            doc: "Maven packages that the library's host code uses, each `\"group:artifact:version\"`.",
+            kind: temper_tmpl::ConfigKind::Strings {
+                form: "group:artifact:version",
+                package: |d| {
+                    maven_dependency(d).map(|(group, artifact, _)| maven_key(group, artifact))
+                },
+            },
+        },
+    ],
+    std: &[
+        ("group", "dev.temperlang"),
+        ("artifact", "temper-std"),
+        ("package", "temper.std"),
+    ],
+    names: java_names,
+    runtime: &["package temper.core", "dev.temperlang:temper-core"],
+};
+
 /// This backend, as tools list it ([`temper_tmpl::Backend`]).
 pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     name: "java",
@@ -108,6 +168,7 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
     runtime_version: &runtime::VERSION,
     rules: &JAVA.rules,
     translate: |p, _| translate(p, &JAVA).map_err(|e| e.to_string()),
+    config: &CONFIG,
     default: true,
     #[cfg(any(unix, windows))]
     tools: Some(&tools::TOOLS),
@@ -352,22 +413,64 @@ public final class {main} {{
     )
 }
 
-/// A library's Maven group and artifact, as Kotlin's configuration has
-/// them: its config's `javaGroup`, or else its `javaPackage`, or else its
-/// Java name (its `javaName`, or else its own) as Java names a package;
-/// and its `javaArtifact`, or else its Java name. std's Java
-/// configuration sets them (`dev.temperlang` and `temper-std`).
+/// A library's Maven group and artifact, as Kotlin's `JavaConfig` has
+/// them ([`CONFIG`]): its group, or else its package, or else its Java
+/// name (its `name`, or else its own) as Java names a package; and its
+/// artifact, or else its Java name. std's Java configuration sets them
+/// (`dev.temperlang` and `temper-std`).
 fn coordinates(p: &Program, library: &str) -> (String, String) {
-    let meta = p.metadata_of(library);
-    let name = meta.get("javaName").unwrap_or(library);
-    match library {
-        "std" => ("dev.temperlang".to_string(), "temper-std".to_string()),
-        _ => (
-            (meta.get("javaGroup").or(meta.get("javaPackage")))
-                .map_or_else(|| names::package(name), temper_tmpl::xml_text),
-            temper_tmpl::xml_text(meta.get("javaArtifact").unwrap_or(name)),
-        ),
+    let (group, artifact) = coordinates_of(library, p.metadata_of(library));
+    (
+        temper_tmpl::xml_text(&group),
+        temper_tmpl::xml_text(&artifact),
+    )
+}
+
+/// [`coordinates`], given what the library's config says, unescaped.
+fn coordinates_of(library: &str, meta: &temper_tmpl::Metadata) -> (String, String) {
+    let config = |property| CONFIG.get(library, meta, property);
+    let name = config("name").unwrap_or(library);
+    (
+        (config("group").or(config("package"))).map_or_else(|| names::package(name), String::from),
+        config("artifact").unwrap_or(name).to_string(),
+    )
+}
+
+/// What a library takes among Java's packages and Maven's
+/// ([`temper_tmpl::ConfigType::names`]): its package, and its Maven
+/// coordinates, each lowercase.
+fn java_names(library: &str, meta: &temper_tmpl::Metadata) -> Vec<String> {
+    let (group, artifact) = coordinates_of(library, meta);
+    vec![
+        format!("package {}", translate::package_of(library, meta)).to_lowercase(),
+        maven_key(&group, &artifact),
+    ]
+}
+
+/// A Maven group and artifact as [`java_names`] gives them.
+fn maven_key(group: &str, artifact: &str) -> String {
+    format!("{group}:{artifact}").to_lowercase()
+}
+
+/// A package that a config's `dependencies` lists, as
+/// `"group:artifact:version"`: its group and artifact ([`maven_id`]), and
+/// its version, ASCII letters, digits, `.`, `_`, `+`, and `-`, as
+/// `1.6.20` or `2.0-SNAPSHOT`, but no range or property (`${…}`).
+pub fn maven_dependency(text: &str) -> Option<(&str, &str, &str)> {
+    match temper_tmpl::dependency_parts(text, ":", 3)?.as_slice() {
+        &[group, artifact, version]
+            if maven_id(group) && maven_id(artifact) && temper_tmpl::spelled(version, "._+-") =>
+        {
+            Some((group, artifact, version))
+        }
+        _ => None,
     }
+}
+
+/// Whether a name is a Maven group or artifact ID: ASCII letters, digits,
+/// `.`, `_`, and `-`, starting with a letter or digit, without `..`.
+pub fn maven_id(text: &str) -> bool {
+    temper_tmpl::spelled(text, "._-")
 }
 
 /// The config's metadata, as Kotlin's `pomXml` writes it after the name:
@@ -412,7 +515,7 @@ fn pom(
     tests: &[String],
     variant: &Variant,
 ) -> String {
-    let version = p.version_or_default();
+    let version = temper_tmpl::xml_text(p.version_or_default());
     let (group, artifact) = coordinates(p, library);
     // Each library used, by its coordinates; for the tests alone, in
     // their scope.
@@ -433,11 +536,31 @@ fn pom(
       <type>jar</type>
       <scope>{scope}</scope>
     </dependency>"#,
-                temper_tmpl::version_or_default(version),
+                temper_tmpl::xml_text(temper_tmpl::version_or_default(version)),
             )
         })
         .collect::<Vec<_>>()
         .concat();
+    // The packages its host code uses, as its config lists them.
+    for dependency in CONFIG.strings(p.metadata(), "dependencies") {
+        let Some((group, artifact, version)) = maven_dependency(dependency) else {
+            continue;
+        };
+        let xml = temper_tmpl::xml_text;
+        dependencies.push_str(&format!(
+            r#"
+    <dependency>
+      <groupId>{}</groupId>
+      <artifactId>{}</artifactId>
+      <version>{}</version>
+      <type>jar</type>
+      <scope>compile</scope>
+    </dependency>"#,
+            xml(group),
+            xml(artifact),
+            xml(version),
+        ));
+    }
     // JUnit for the tests, and for std's `testing` in its code, as std's
     // Java configuration has it.
     let junit = match library {
@@ -626,4 +749,46 @@ fn pom(
 </project>
 "#
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn maven_spellings() {
+        let good = [
+            (
+                "org.roaringbitmap:RoaringBitmap:1.6.20",
+                ("org.roaringbitmap", "RoaringBitmap", "1.6.20"),
+            ),
+            ("a_b:c-d:2.0-SNAPSHOT", ("a_b", "c-d", "2.0-SNAPSHOT")),
+        ];
+        for (text, parts) in good {
+            assert_eq!(maven_dependency(text), Some(parts), "{text}");
+        }
+        let hostile = [
+            "g:a",
+            "g:a:1:jar",
+            "g:a:${env.SECRET}",
+            "g:a:[1.0,2.0)",
+            "-Dx=y:a:1",
+            "g:-a:1",
+            "g:a:-1",
+            "../g:a:1",
+            "g/x:a:1",
+            "g:a:1</version><x>",
+            "g:a:1&amp;",
+            "g:a:\"1\"",
+            "g:a b:1",
+            "g;h:a:1",
+            ".g:a:1",
+        ];
+        for text in hostile {
+            assert_eq!(maven_dependency(text), None, "{text}");
+        }
+        for bad in ["", "..", "../x", "/abs", "a/b", "a\\b", "a<b", "a b", "-x"] {
+            assert!(!maven_id(bad), "{bad}");
+        }
+    }
 }

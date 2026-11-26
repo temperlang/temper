@@ -1592,9 +1592,16 @@ impl<'a> Translator<'a> {
             {
                 self.connected(target, &[])?
             }
+            // Through its getter where its field is out of reach.
             Node::GetStatic { target } => {
                 let class = self.class_name(p.decls.get(target).owner);
-                Expr::name(class).member(self.name(target))
+                match self.reads_static(target) {
+                    true => Expr::name(class).member(self.name(target)),
+                    false => {
+                        let getter = self.static_getter(target).unwrap_or_default();
+                        Expr::name(class).method(getter, Vec::new())
+                    }
+                }
             }
             Node::New { ctor, args, .. }
                 if is_external(p, ctor) && library_of(p, ctor) == "core"
@@ -1621,10 +1628,17 @@ impl<'a> Translator<'a> {
                 Expr::New(class, args)
             }
             // `List.of(…)`, or where an item may be null, which `List.of`
-            // rejects, `Core.listOf(…)`.
+            // rejects, `Core.listOf(…)`, with a lone `null` cast to the
+            // item's type, as it would be the varargs array itself.
             Node::ListLit { items } => {
-                let items = self.member_args(p.nodes.list(items))?;
+                let lone_null =
+                    matches!(p.nodes.list(items), [n] if matches!(p.nodes.get(*n), Node::Null {}));
+                let mut items = self.member_args(p.nodes.list(items))?;
                 let item = p.types.args(p.nodes.ty(id)).first().copied();
+                if let (true, Some(t)) = (lone_null, item) {
+                    let ty = self.type_arg(p.types.non_null(t))?;
+                    items = vec![Expr::Cast(ty, Box::new(Expr::name("null")))];
+                }
                 if item.is_some_and(|t| may_be_null(p, t)) {
                     self.import("temper.core.Core");
                     Expr::name("Core").method("listOf", items)
@@ -2195,18 +2209,23 @@ fn jumps(body: &[Stmt], label: Option<&str>, innermost: bool, brk: bool) -> bool
     })
 }
 
-/// A library's package: std's is `temper.std`, as Kotlin's; another's is
-/// its config's `javaPackage`, each part as [`crate::names::package`]
-/// gives it, or else its `javaName` or its own name, as that gives it.
+/// A library's package: its config's `JavaConfig` package
+/// ([`crate::CONFIG`]; std's is `temper.std`, as Kotlin's), each part as
+/// [`crate::names::package`] gives it, or else its Java name or its own
+/// name, as that gives it.
 pub fn library_package(p: &Program, library: &str) -> String {
-    let meta = p.metadata_of(library);
-    match (library, meta.get("javaPackage")) {
-        ("std", _) => "temper.std".into(),
-        (_, Some(package)) => (package.split('.'))
+    package_of(library, p.metadata_of(library))
+}
+
+/// [`library_package`], given what the library's config says.
+pub fn package_of(library: &str, meta: &temper_tmpl::Metadata) -> String {
+    let config = |property| crate::CONFIG.get(library, meta, property);
+    match config("package") {
+        Some(package) => (package.split('.'))
             .map(crate::names::package)
             .collect::<Vec<_>>()
             .join("."),
-        _ => crate::names::package(meta.get("javaName").unwrap_or(library)),
+        None => crate::names::package(config("name").unwrap_or(library)),
     }
 }
 

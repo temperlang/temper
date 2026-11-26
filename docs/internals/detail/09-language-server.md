@@ -294,7 +294,11 @@ file, found as `temper build` finds libraries
 [`find_libraries`](../../../crates/temper-frontend/src/project.rs),
 [`library_of`](../../../crates/temper-frontend/src/project.rs)), or the
 file alone if it's in none. One `Analysis` answers for all the unit's
-files.
+files. A library's `config.temper.md`, which finding libraries settles
+apart from its library, stands alone, and its diagnostics are the
+build's config problems
+([`settle_configs`](../../../crates/temper-frontend/src/project.rs),
+with the config classes `serve` is given), not its analysis's.
 
 ```mermaid
 stateDiagram-v2

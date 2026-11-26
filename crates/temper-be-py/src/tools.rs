@@ -5,17 +5,22 @@
 //! the JUnit XML it writes. `temper run -b py` imports the library's
 //! package as Kotlin's `top.py` does, with logging to standard output,
 //! then waits for its async blocks. Both run Python in UTF-8 mode
-//! ([`python`]).
+//! ([`python`]). Packages that libraries' configs list are installed
+//! first, with pip, into `temper.out/py/.deps` ([`install`]), as
+//! Kotlin's `pip install --target`.
 
 use std::path::Path;
 use std::process::Command;
-use temper_tmpl::tools::{junit_file, limit_memory, output, program, tool};
+use temper_tmpl::tools::{
+    identity, install_once, junit_file, limit_memory, output, program, step, tool,
+};
 use temper_tmpl::{TestResults, Tested, Tools};
 
 pub const TOOLS: Tools = Tools {
-    prepare: None,
+    prepare: Some(install),
     test,
     run,
+    dirs: &[".deps"],
 };
 
 /// Python (`PYTHON`, or `python3`) in UTF-8 mode (`PYTHONUTF8=1`), as
@@ -28,10 +33,51 @@ fn python() -> Command {
     command
 }
 
-/// `PYTHONPATH` for the runtime, std, and every library.
+/// Where the packages that libraries' configs list go.
+const DEPS: &str = ".deps";
+
+/// Installs the packages that libraries' configs list, with `pip install
+/// --target`, once for each list of them and Python ([`install_once`]),
+/// as pip installs compiled packages for the Python it runs under.
+fn install(dir: &Path, all: &[Tested]) -> Result<(), String> {
+    let mut packages: Vec<String> = (all.iter())
+        .flat_map(|l| crate::pypi_dependencies(&l.metadata))
+        .collect();
+    packages.sort();
+    packages.dedup();
+    let manifest: String = packages.iter().map(|p| p.clone() + "\n").collect();
+    let python_id = || {
+        let python = tool("PYTHON", "python3");
+        identity(
+            &python,
+            &["-c", "import sys; print(sys.executable, sys.version)"],
+        )
+    };
+    install_once(
+        &dir.join(DEPS),
+        "requirements.txt",
+        &manifest,
+        python_id,
+        |deps| {
+            step(
+                python()
+                    .args(["-m", "pip", "install", "--disable-pip-version-check"])
+                    .args(["--no-input", "--quiet", "--target", ".", "-r"])
+                    .arg("requirements.txt")
+                    .current_dir(deps),
+                "pip install",
+            )
+        },
+    )?;
+    Ok(())
+}
+
+/// `PYTHONPATH` for the runtime, std, every library, and the packages
+/// their configs list.
 fn python_path(dir: &Path, all: &[Tested]) -> Result<std::ffi::OsString, String> {
     let mut path = vec![dir.join("temper-core"), dir.join("std")];
     path.extend(all.iter().map(|l| dir.join(&l.name)));
+    path.push(dir.join(DEPS));
     std::env::join_paths(path).map_err(|e| e.to_string())
 }
 

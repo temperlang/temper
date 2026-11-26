@@ -1849,7 +1849,7 @@ Date.today();
   (Class ^Date:0 (Method static connected ^today:2 (Signature Date:0)))
   (Call (Call . Date:0 \today))
   #void)
-Failed: No connected implementation of Date.today
+Panicked: No connected implementation of Date.today
 
 === a bodiless connected function runs only if the interpreter has it
 @connected
@@ -1863,7 +1863,7 @@ console.log(sum(1, 2).toString());
   (Call (Call . console \log) (Call (Call . (Call sum:0 1 2) \toString)))
   #void)
 log before
-Failed: No connected implementation of sum
+Panicked: No connected implementation of sum
 
 === a function without a body must be connected
 let more(): Int;

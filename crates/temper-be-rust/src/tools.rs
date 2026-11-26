@@ -1,5 +1,6 @@
 //! How Rust runs built libraries' tests, for `temper test -b rust`:
-//! `cargo test` in each library's crate (`CARGO`), offline, with one
+//! `cargo test` in each library's crate (`CARGO`), offline unless a
+//! library's config lists crates to fetch ([`offline`]), with one
 //! target directory, `temper.out/rust/target`, for them all, reading
 //! what it prints. `temper run -b rust` builds the library's crate the
 //! same way, quietly, then runs its program (`src/main.rs`), as
@@ -14,9 +15,24 @@ pub const TOOLS: Tools = Tools {
     prepare: None,
     test,
     run,
+    dirs: &["target"],
 };
 
-fn run(dir: &Path, library: &Tested, _: &[Tested]) -> Result<bool, String> {
+/// `--offline`, unless a library's config lists crates
+/// (`dependencies`), which cargo fetches, as Kotlin's runs always may.
+fn offline(all: &[Tested]) -> &'static [&'static str] {
+    let listed = |l: &Tested| {
+        !crate::CONFIG
+            .strings(&l.metadata, "dependencies")
+            .is_empty()
+    };
+    match all.iter().any(listed) {
+        true => &[],
+        false => &["--offline"],
+    }
+}
+
+fn run(dir: &Path, library: &Tested, all: &[Tested]) -> Result<bool, String> {
     let target = std::path::absolute(dir.join("target")).map_err(|e| e.to_string())?;
     // The package's binary, as its config may name it ([`crate::bin_name`]).
     let bin = crate::bin_name(&crate::translate::rust_name(
@@ -25,7 +41,8 @@ fn run(dir: &Path, library: &Tested, _: &[Tested]) -> Result<bool, String> {
     ));
     step(
         Command::new(tool("CARGO", "cargo"))
-            .args(["build", "--offline", "--bin", &bin])
+            .args(["build", "--bin", &bin])
+            .args(offline(all))
             .env("CARGO_TARGET_DIR", &target)
             .current_dir(dir.join(&library.name)),
         "cargo build",
@@ -36,11 +53,12 @@ fn run(dir: &Path, library: &Tested, _: &[Tested]) -> Result<bool, String> {
     program(&mut Command::new(exe), &library.name)
 }
 
-fn test(dir: &Path, library: &Tested, _: &[Tested]) -> TestResults {
+fn test(dir: &Path, library: &Tested, all: &[Tested]) -> TestResults {
     let target = std::path::absolute(dir.join("target")).map_err(|e| e.to_string())?;
     let run = output(
         Command::new(tool("CARGO", "cargo"))
-            .args(["test", "--offline"])
+            .arg("test")
+            .args(offline(all))
             .env("CARGO_TARGET_DIR", target)
             .current_dir(dir.join(&library.name)),
         "cargo",
@@ -96,7 +114,7 @@ fn failure(stdout: &str, name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::failure;
+    use super::{failure, offline};
 
     /// A Rust test's failure, from what `cargo test` prints.
     #[test]
@@ -109,5 +127,31 @@ mod tests {
             "expected 1 + 1 == (3) not (2)"
         );
         assert_eq!(failure(out, "r#mod::tests::c"), "failed");
+    }
+    use temper_tmpl::{ConfigValue, Metadata, Tested};
+
+    /// Offline unless a library's config lists crates.
+    #[test]
+    fn offline_unless_crates_are_listed() {
+        let tested = |dependencies: &[&str]| Tested {
+            name: "a".into(),
+            tests: 0,
+            metadata: Metadata {
+                configs: vec![(
+                    "rust".into(),
+                    vec![(
+                        "dependencies".into(),
+                        ConfigValue::Strings(dependencies.iter().map(|d| d.to_string()).collect()),
+                    )],
+                )],
+                ..Metadata::default()
+            },
+        };
+        assert_eq!(offline(&[]), ["--offline"]);
+        assert_eq!(offline(&[tested(&[])]), ["--offline"]);
+        assert_eq!(
+            offline(&[tested(&[]), tested(&["roaring@0.11.1"])]),
+            [] as [&str; 0]
+        );
     }
 }

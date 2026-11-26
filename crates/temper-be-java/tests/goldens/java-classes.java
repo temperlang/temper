@@ -18,7 +18,7 @@ public final class JavaClassesGlobal {
         Person p = new Person("Ann", true);
         p.setVolume(7);
         console.log(p.greet(2));
-        console.log(p.loud + " " + p.level + " " + Person.banner + " " + Person.twice + " " + Named.zero);
+        console.log(p.loud + " " + p.level + " " + Person.banner + " " + Person.getTwice() + " " + Named.zero);
         Named n = p;
         console.log(n.greet(1));
     }

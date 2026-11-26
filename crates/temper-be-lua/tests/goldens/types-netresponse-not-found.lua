@@ -10,18 +10,18 @@ url = "http://127.0.0.1:" .. 28461 .. "/missing"
 local function fn()
   if not temper.pcall(function()
     local resp = NetRequest(url):send():await()
-    print("status " .. temper.netresponse_status(resp))
+    temper.log("status " .. temper.netresponse_status(resp))
     local subject = temper.netresponse_bodycontent(resp):await()
     local body = temper.is_null(subject) and "missing" or (subject --[[@as string]])
-    print("body " .. body)
+    temper.log("body " .. body)
   end) then
-    print("broken promise")
+    temper.log("broken promise")
   end
   if not temper.pcall(function()
     NetRequest("http://127.0.0.1:1/"):send():await()
-    print("port 1 answered")
+    temper.log("port 1 answered")
   end) then
-    print("no response from port 1")
+    temper.log("no response from port 1")
   end
 end
 

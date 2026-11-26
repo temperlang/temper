@@ -1,0 +1,7 @@
+// What a library's config may set for the JavaScript backend, as
+// `export let js: JsConfig = { … };`, each unset by default.
+// The backend checks the values' forms (src/lib.rs, `CONFIG`).
+export class JsConfig(
+  public name: String? = null,
+  public dependencies: List<String>? = null,
+) {}

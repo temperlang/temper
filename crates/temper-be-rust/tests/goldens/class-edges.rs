@@ -317,6 +317,92 @@ impl<T: NamedTrait + Clone + Send + Sync + 'static> Duo<T> {
 
 temper_core::impl_any_value_trait!(Duo<T>, [] where T: NamedTrait);
 
+pub(crate) fn twice(n: i32) -> i32 {
+    n.wrapping_mul(2)
+}
+
+struct TallyStruct {
+    count: RwLock<i32>,
+    other: RwLock<i32>,
+}
+
+#[derive(Clone)]
+pub struct Tally(Arc<TallyStruct>);
+
+impl Tally {
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Tally {
+        Tally(Arc::new(TallyStruct {
+            count: RwLock::new(0),
+            other: RwLock::new(0),
+        }))
+    }
+
+    pub fn add(&self, n: i32) {
+        let mut count = self.0.count.write().unwrap();
+        *count = (*count).wrapping_add(n);
+    }
+
+    pub fn bump(&self) {
+        let mut count = self.0.count.write().unwrap();
+        *count = (*count).wrapping_add(1);
+    }
+
+    pub fn clamp_add(&self, n: i32) {
+        let mut count = self.0.count.write().unwrap();
+        *count = if *count > 10 && n > 0 {
+            *count
+        } else {
+            (*count).wrapping_add(n)
+        };
+    }
+
+    pub fn split(&self, n: i32) -> temper_core::Result<()> {
+        let mut count = self.0.count.write().unwrap();
+        *count = temper_core::int_div(*count, n)?;
+        Ok(())
+    }
+
+    pub fn copy_from(&self, t: Tally) {
+        *self.0.count.write().unwrap() = t.count().wrapping_add(1);
+    }
+
+    pub fn from_other(&self) {
+        *self.0.count.write().unwrap() = self.other().wrapping_add(self.count());
+    }
+
+    pub fn plus_twice(&self) {
+        *self.0.count.write().unwrap() = self.count().wrapping_add(twice(self.count()));
+    }
+
+    pub fn copy_into(&self, t: Tally) {
+        *t.0.count.write().unwrap() = self.count().wrapping_add(1);
+    }
+
+    pub fn count(&self) -> i32 {
+        *self.0.count.read().unwrap()
+    }
+
+    pub fn set_count(&self, value: i32) {
+        *self.0.count.write().unwrap() = value;
+    }
+
+    pub fn other(&self) -> i32 {
+        *self.0.other.read().unwrap()
+    }
+
+    pub fn set_other(&self, value: i32) {
+        *self.0.other.write().unwrap() = value;
+    }
+}
+
+temper_core::impl_any_value_trait!(Tally, []);
+
+pub fn bump_twice(tally: Tally) {
+    let mut count = tally.0.count.write().unwrap();
+    *count = 2i32.wrapping_add(*count);
+}
+
 pub mod builders {
     use super::*;
 

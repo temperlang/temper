@@ -36,7 +36,13 @@ impl Client {
         let reader = stream.try_clone().unwrap();
         let server = std::thread::Builder::new()
             .stack_size(64 << 20)
-            .spawn(move || temper_lsp::serve_with_hook(reader, stream, None, panic_on))
+            .spawn(move || {
+                let classes = temper_frontend::config::Classes {
+                    types: vec![&TOY_CONFIG],
+                    elsewhere: Vec::new(),
+                };
+                temper_lsp::serve_with_hook(reader, stream, None, classes, panic_on)
+            })
             .unwrap();
         let output = BufReader::new(input.try_clone().unwrap());
         Client {
@@ -185,6 +191,24 @@ fn num_at(value: &Json, path: &[&str]) -> u32 {
         .map(|n| n as u32)
         .unwrap_or_else(|| panic!("{path:?} in {value}"))
 }
+
+/// A config class, as a backend gives the server one.
+const TOY_CONFIG: temper_tmpl::ConfigType = temper_tmpl::ConfigType {
+    key: "toy",
+    class: "ToyConfig",
+    source: "export class ToyConfig(public name: String? = null) {}\n",
+    properties: &[temper_tmpl::Property {
+        name: "name",
+        doc: "The toy's name.",
+        kind: temper_tmpl::ConfigKind::String {
+            form: "anything",
+            valid: |_| true,
+        },
+    }],
+    std: &[],
+    names: temper_tmpl::no_names,
+    runtime: &[],
+};
 
 const SHAPES: &str = "/** A square's area. */
 export let area(side: Int): Int { side * side }
@@ -344,6 +368,53 @@ let b: Int = area(",
         at_path(&reply, &["error", "code"]).and_then(Json::as_i64),
         Some(-32601)
     );
+    assert_eq!(client.finish(), 0);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A library's `config.temper.md` shows its problems as `temper build`
+/// reports them, settled with the config classes the server was given:
+/// here a property its class doesn't have, at the property's name, with
+/// the one meant, and then a class it doesn't have. Fixed, as typed, it
+/// has none.
+#[test]
+fn config_problems() {
+    let dir = library("config", &[("a.temper", "export let a = 1;\n")]);
+    let config = uri(&dir, "config.temper.md");
+    let mut client = Client::start();
+    client.request("initialize", json!({"capabilities": {}}));
+    let text = "# Shapes\n\n    export let toy: ToyConfig = { nme: \"x\" };\n";
+    open(&mut client, &config, text);
+    let found = client.diagnostics(&config);
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(
+        str_at(&found[0], &["message"]),
+        "ToyConfig has no property `nme`; did you mean `name`?"
+    );
+    assert_eq!(num_at(&found[0], &["severity"]), 1);
+    assert_eq!(num_at(&found[0], &["range", "start", "line"]), 2);
+    assert_eq!(num_at(&found[0], &["range", "start", "character"]), 34);
+    assert_eq!(num_at(&found[0], &["range", "end", "character"]), 37);
+    // A class the server doesn't have.
+    change(
+        &mut client,
+        &config,
+        2,
+        "# Shapes\n\n    export let toy: ToyConfg = {};\n",
+    );
+    let found = client.diagnostics(&config);
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert_eq!(
+        str_at(&found[0], &["message"]),
+        "ToyConfg has not been declared"
+    );
+    change(
+        &mut client,
+        &config,
+        3,
+        "# Shapes\n\n    export let toy: ToyConfig = { name: \"x\" };\n",
+    );
+    assert_eq!(client.diagnostics(&config), Vec::<Json>::new());
     assert_eq!(client.finish(), 0);
     let _ = std::fs::remove_dir_all(&dir);
 }

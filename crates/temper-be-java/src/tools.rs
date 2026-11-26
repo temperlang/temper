@@ -6,6 +6,9 @@
 //! instead, which needs its network. `temper run -b java` compiles the
 //! runtime, std, and the libraries the same way, quietly, and runs the
 //! library's `…Main` class under `java`, as Kotlin runs it by exec.
+//! Packages that libraries' configs list are found with Maven (`mvn`,
+//! or `MVN`), which fetches them, with what they need, into its local
+//! repository, and their jars join the class path ([`resolve`]).
 //!
 //! javac's warnings are hidden, as in Kotlin, unless
 //! `TEMPER_STRICT_WARNINGS` is set ([`strict_warnings`]): then the
@@ -15,13 +18,16 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use temper_tmpl::tools::{files_with, output, program, strict_warnings, tool, tool_output};
+use temper_tmpl::tools::{
+    files_with, install_once, output, program, step, strict_warnings, tool, tool_output,
+};
 use temper_tmpl::{TestResults, Tested, Tools};
 
 pub const TOOLS: Tools = Tools {
-    prepare: None,
+    prepare: Some(resolve),
     test,
     run,
+    dirs: &[".deps"],
 };
 
 /// Compiles the runtime, std, and the libraries' main sources with
@@ -127,6 +133,76 @@ pub fn argfile(path: &Path, args: &[PathBuf]) -> std::io::Result<std::ffi::OsStr
 /// earlier ones by the system's code page.
 pub const ARGFILE_ENCODING: &str = "-J-Dfile.encoding=UTF-8";
 
+/// Finds the jars of the packages that libraries' configs list, and of
+/// what they need, as Maven's dependency plugin resolves them from a POM
+/// of just them in `temper.out/java/.deps`, into `classpath.txt` there,
+/// once for each list of them and Maven ([`install_once`]);
+/// [`dependency_jars`] reads it.
+fn resolve(dir: &Path, all: &[Tested]) -> Result<(), String> {
+    let mut packages: Vec<(&str, &str, &str)> = (all.iter())
+        .flat_map(|l| crate::CONFIG.strings(&l.metadata, "dependencies"))
+        .filter_map(|d| crate::maven_dependency(d))
+        .collect();
+    packages.sort();
+    packages.dedup();
+    let pom = deps_pom(&packages);
+    let deps = dir.join(".deps");
+    install_once(
+        &deps,
+        "pom.xml",
+        &pom,
+        || tool("MVN", "mvn"),
+        |deps| {
+            step(
+                Command::new(tool("MVN", "mvn"))
+                    .args(["-q", "-B", "-f", "pom.xml"])
+                    .arg("org.apache.maven.plugins:maven-dependency-plugin:3.8.1:build-classpath")
+                    .arg("-Dmdep.outputFile=classpath.txt")
+                    .current_dir(deps),
+                "mvn",
+            )
+        },
+    )?;
+    Ok(())
+}
+
+/// The jars that [`resolve`] found; none without packages to find.
+fn dependency_jars(dir: &Path) -> Vec<PathBuf> {
+    let listed = dir.join(".deps/classpath.txt");
+    let text = std::fs::read_to_string(listed).unwrap_or_default();
+    match text.trim() {
+        "" => Vec::new(),
+        paths => std::env::split_paths(paths).collect(),
+    }
+}
+
+/// A POM of just the packages that configs list, for Maven's dependency
+/// plugin, each value escaped; none without packages.
+fn deps_pom(packages: &[(&str, &str, &str)]) -> String {
+    if packages.is_empty() {
+        return String::new();
+    }
+    let xml = temper_tmpl::xml_text;
+    let dependencies = (packages.iter())
+        .map(|(group, artifact, version)| {
+            format!(
+                "    <dependency><groupId>{}</groupId><artifactId>{}</artifactId>\
+                 <version>{}</version></dependency>\n",
+                xml(group),
+                xml(artifact),
+                xml(version)
+            )
+        })
+        .collect::<Vec<_>>()
+        .concat();
+    format!(
+        "<project xmlns=\"http://maven.apache.org/POM/4.0.0\">\n  \
+         <modelVersion>4.0.0</modelVersion>\n  <groupId>temper</groupId>\n  \
+         <artifactId>deps</artifactId>\n  <version>0</version>\n  \
+         <dependencies>\n{dependencies}  </dependencies>\n</project>\n"
+    )
+}
+
 /// Compiles as [`test`] does, without JUnit, into
 /// `temper.out/java/LIBRARY/target/temper/classes`, and runs the
 /// library's main class, the one its `…Main.java` declares.
@@ -148,11 +224,15 @@ fn run(dir: &Path, library: &Tested, all: &[Tested]) -> Result<bool, String> {
         .ok_or_else(|| format!("no main class in {}", here.display()))?;
     let classes = here.join("target/temper/classes");
     let _ = std::fs::remove_dir_all(&classes);
-    compile_main(dir, all, &classes, &[], std::ffi::OsStr::new(""), false)?;
+    let jars = dependency_jars(dir);
+    let classpath = std::env::join_paths(&jars).map_err(|e| e.to_string())?;
+    compile_main(dir, all, &classes, &[], &classpath, false)?;
+    let everything =
+        std::env::join_paths(std::iter::once(classes).chain(jars)).map_err(|e| e.to_string())?;
     program(
         Command::new(tool("JAVA", "java"))
             .args(["-XX:TieredStopAtLevel=1", "-XX:+UseSerialGC", "-cp"])
-            .arg(&classes)
+            .arg(everything)
             .arg(main),
         "java",
     )
@@ -232,12 +312,13 @@ public final class RunTests {
 /// into `temper.out/java/LIBRARY/target/temper`, and runs them with
 /// `java` (`JAVA`) through JUnit's launcher ([`RUN_TESTS`]).
 fn test(dir: &Path, library: &Tested, all: &[Tested]) -> TestResults {
-    let jars = junit_jars().map_err(|missing| {
+    let mut jars = junit_jars().map_err(|missing| {
         format!(
             "no {} (JUnit, as the generated pom.xml names it)",
             missing.display()
         )
     })?;
+    jars.extend(dependency_jars(dir));
     let out = dir.join(&library.name).join("target/temper");
     let _ = std::fs::remove_dir_all(&out);
     let (main, tests) = (out.join("classes"), out.join("test-classes"));
@@ -294,4 +375,25 @@ pub fn results(stdout: &str) -> Vec<(String, Option<String>)> {
             }
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::deps_pom;
+
+    /// The dependencies' POM, for `temper test` and `temper run`, each
+    /// value escaped, though configs' spellings allow no markup.
+    #[test]
+    fn deps_pom_lists_packages() {
+        assert_eq!(deps_pom(&[]), "");
+        let pom = deps_pom(&[("org.x", "y", "1.0"), ("a&b", "<c>", "\"1'")]);
+        assert!(
+            pom.contains(
+                "    <dependency><groupId>org.x</groupId><artifactId>y</artifactId>\
+             <version>1.0</version></dependency>\n    <dependency><groupId>a&amp;b</groupId>\
+             <artifactId>&lt;c&gt;</artifactId><version>&quot;1&apos;</version></dependency>\n"
+            ),
+            "{pom}"
+        );
+    }
 }

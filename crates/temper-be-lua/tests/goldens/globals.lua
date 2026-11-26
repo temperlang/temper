@@ -52,7 +52,7 @@ local table_ = { 1, 2, 3 }
 local string_ = "s"
 exports.pairs = 0
 string_ = type_(2, 3) .. " " .. select_(4, table_)
-print(string_ .. " " .. temper.float64_tostring(huge(2.0)) .. " " .. tostring(type_(1, 1) == select_(2, {})) .. " " .. exports.pairs)
+temper.log(string_ .. " " .. temper.float64_tostring(huge(2.0)) .. " " .. tostring(type_(1, 1) == select_(2, {})) .. " " .. exports.pairs)
 do
   local list = { "ab", "c" }
   local length = temper.list_length(list)
@@ -60,7 +60,7 @@ do
   while i < length do
     local string_2 = temper.list_get(list, i)
     i = temper.int32_add(i, 1)
-    print(string_2 .. "!")
+    temper.log(string_2 .. "!")
   end
 end
 

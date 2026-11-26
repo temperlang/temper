@@ -667,7 +667,7 @@ local function roundTrip(adapter, value)
     error("panic")
   end
   local again = encode(adapter, back)
-  print(again == text and text or text .. " became " .. again)
+  temper.log(again == text and text or text .. " became " .. again)
 end
 
 roundTrip(Point.jsonAdapter(), Point(1, -2))
@@ -685,9 +685,9 @@ end) then
   error("panic")
 end
 if temper.instance_of(shape, Rect) then
-  print("rect " .. (shape --[[@as json-adapters.Rect]]).width .. "x" .. (shape --[[@as json-adapters.Rect]]).height)
+  temper.log("rect " .. (shape --[[@as json-adapters.Rect]]).width .. "x" .. (shape --[[@as json-adapters.Rect]]).height)
 else
-  print("not a rect")
+  temper.log("not a rect")
 end
 ---@type json-adapters.Record
 local record
@@ -698,7 +698,7 @@ end) then
 end
 local string_ = record.name .. " " .. tostring(record.active) .. " "
 local subject = record.nickname
-print(string_ .. (temper.is_null(subject) and "none" or (subject --[[@as string]])) .. " " .. temper.list_length(record.points))
+temper.log(string_ .. (temper.is_null(subject) and "none" or (subject --[[@as string]])) .. " " .. temper.list_length(record.points))
 ---@type string
 local t_1
 if not temper.pcall(function()
@@ -707,7 +707,7 @@ if not temper.pcall(function()
 end) then
   t_1 = "no y"
 end
-print(t_1)
+temper.log(t_1)
 ---@type string
 local t_2
 if not temper.pcall(function()
@@ -716,6 +716,6 @@ if not temper.pcall(function()
 end) then
   t_2 = "no such kind"
 end
-print(t_2)
+temper.log(t_2)
 
 return {}

@@ -12,13 +12,15 @@
 //! file, and JSON records, leaving the summary to the caller, which may
 //! sum several backends' tallies.
 
+use crate::config::Classes;
 use crate::ignore::IgnoreFile;
 use crate::interp::{TEST_FUEL, run_tests};
 use crate::library::Diagnostic;
 use crate::library::Level;
-use crate::log::{LogFormat, Value, record, write_json_diagnostic, write_json_diagnostics};
+use crate::log::{LogFormat, Pos, Value, record, write_json_diagnostic, write_json_diagnostics};
 use crate::project::{
-    LibrarySources, duplicate_names, find_libraries_ignoring, library_of, load_library, work_root,
+    CONFIG_FILE, LibrarySources, duplicate_names, find_libraries_ignoring, library_of,
+    load_library, work_root,
 };
 use crate::settle::{Settled, settle};
 use crate::sources::Sources;
@@ -65,6 +67,9 @@ pub struct TestOptions<'a> {
     /// its top-level code before them; `None` for no limit. The CLI's
     /// default is [`TEST_FUEL`].
     pub fuel: Option<u64>,
+    /// The config classes in the build's scope, which configs are
+    /// settled with ([`crate::project::settle_configs`]).
+    pub config_classes: Classes,
 }
 
 /// Tests the libraries under a work root on the interpreter, as
@@ -87,6 +92,7 @@ pub fn test_libraries(
         root,
         options.ignore,
         options.library,
+        &options.config_classes,
         options.log,
         err,
     )?;
@@ -173,17 +179,19 @@ pub fn test_libraries(
     Some((ok && tally.all_passed(), tally))
 }
 
-/// The libraries under a work root, or `None`, having said why: there
-/// are none, two share a name, or none has the name asked for.
+/// The libraries under a work root, their configs settled with
+/// `classes`, or `None`, having said why: there are none, two share a
+/// name, or none has the name asked for.
 pub fn libraries_to_test(
     sources: &Sources,
     root: &str,
     ignore: Option<&IgnoreFile>,
     library: Option<&str>,
+    classes: &Classes,
     log: LogFormat,
     err: &mut dyn Write,
 ) -> Option<Vec<LibrarySources>> {
-    let libraries = find_libraries_ignoring(sources, root, ignore);
+    let libraries = find_libraries_ignoring(sources, root, ignore, classes);
     if libraries.is_empty() {
         let message = format!("No Temper library (config.temper.md) under {root}");
         problem(log, err, "NoLibraries", &message, &[root.into()]);
@@ -419,7 +427,8 @@ impl Reported {
     /// `settled`'s diagnostics that aren't reported yet, as text or JSON
     /// records, a line each, counting their errors under the libraries
     /// among `all` that hold their files, or else under `library`, the
-    /// one settled.
+    /// one settled; its config's problems first, where configs are
+    /// checked.
     pub fn new_diagnostics(
         &mut self,
         settled: &Settled,
@@ -427,7 +436,7 @@ impl Reported {
         all: &[LibrarySources],
         log: LogFormat,
     ) -> String {
-        let mut text = String::new();
+        let mut text = self.config_problems(library, log);
         let lib = &settled.library;
         for d in &lib.diagnostics {
             if d.level == Level::Hint && !self.hints {
@@ -455,6 +464,50 @@ impl Reported {
             }
         }
         text
+    }
+
+    /// A library's config problems that aren't reported yet, as
+    /// [`Reported::new_diagnostics`] reports diagnostics, as
+    /// `ConfigError`s: those settling its config found
+    /// ([`crate::project::settle_configs`]).
+    fn config_problems(&mut self, library: &LibrarySources, log: LogFormat) -> String {
+        let config = &library.config;
+        let path = format!("{}/{CONFIG_FILE}", library.root);
+        let mut out = String::new();
+        for problem in &config.problems {
+            let span = problem.span;
+            let key = (path.clone(), span.start, span.end, problem.message.clone());
+            if !self.seen.insert(key) {
+                continue;
+            }
+            let text = &config.text;
+            let before = |offset: u32| text.get(..offset as usize).unwrap_or(text);
+            match log {
+                LogFormat::Text => {
+                    let before = before(span.start);
+                    let line = before.matches('\n').count() + 1;
+                    let column = before.rsplit('\n').next().unwrap_or("").chars().count() + 1;
+                    let message = &problem.message;
+                    out.push_str(&format!("{path}:{line}:{column}: error: {message}\n"));
+                }
+                LogFormat::Json => {
+                    let pos = Pos {
+                        loc: path.clone(),
+                        left: before(span.start).encode_utf16().count(),
+                        right: before(span.end).encode_utf16().count(),
+                    };
+                    let message = &problem.message;
+                    out.push_str(&record("error", "ConfigError", Some(&pos), &[], message));
+                    out.push('\n');
+                }
+            }
+            let owner = &config.name;
+            match self.errors.iter_mut().find(|(name, _)| name == owner) {
+                Some((_, count)) => *count += 1,
+                None => self.errors.push((owner.clone(), 1)),
+            }
+        }
+        out
     }
 
     /// The errors reported in a library's own files.

@@ -6,6 +6,6 @@ local function triple(n)
   return temper.int32_mul(n, 3)
 end
 
-print("triple(14) = " .. triple(14))
+temper.log("triple(14) = " .. triple(14))
 
 return {}

@@ -218,7 +218,7 @@ public final class LibrariesGlobal {
 
     static @Nullable Casing casing(int n) {
         if (n > 0) {
-            return Casing.first;
+            return Casing.getFirst();
         } else {
             return null;
         }
@@ -394,13 +394,13 @@ public final class LibrariesGlobal {
         @Nullable Integer part3 = subject == null ? null : Integer.valueOf(subject.ncols);
         console.log(t2 + (part3 == null ? "null" : Integer.toString(part3)));
         console.log((maybe(1) != null) + " " + (maybe(0) != null) + " " + (Grid.parse("") == null));
-        console.log(Casing.first.toString());
+        console.log(Casing.getFirst().toString());
         console.log(Core.listJoinDouble(mapped(grid), ",", x -> Core.float64ToString(x)));
         console.log(Core.listJoinDouble(cubes(grid), ",", x -> Core.float64ToString(x)));
         @Nullable Casing left = casing(1);
-        String t3 = (left == null ? false : left.eq(Casing.first)) + " ";
+        String t3 = (left == null ? false : left.eq(Casing.getFirst())) + " ";
         @Nullable Casing left2 = casing(0);
-        String t4 = t3 + (left2 == null ? false : left2.eq(Casing.first)) + " ";
+        String t4 = t3 + (left2 == null ? false : left2.eq(Casing.getFirst())) + " ";
         @Nullable Casing left3 = casing(0);
         @Nullable Casing right = casing(0);
         console.log(t4 + !(left3 == null ? right == null : right == null ? false : left3.eq(right)));
@@ -416,7 +416,7 @@ public final class LibrariesGlobal {
         @Nullable Integer part4 = new Dot(1).getGrown();
         String t6 = t5 + (part4 == null ? "null" : Integer.toString(part4)) + " ";
         @Nullable Integer part5 = new Dot(3).getGrown();
-        console.log(t6 + (part5 == null ? "null" : Integer.toString(part5)) + " " + Casing.last.toString() + " " + Casing.first.getMarked());
+        console.log(t6 + (part5 == null ? "null" : Integer.toString(part5)) + " " + Casing.getLast().toString() + " " + Casing.getFirst().getMarked());
         Carry carry = new Carry(3);
         String t7 = carry.carrying + " " + carry.state + " " + new Carry(0).carrying + " ";
         @Nullable String part6 = tagged().label;

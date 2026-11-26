@@ -153,7 +153,10 @@ impl Counter {
 
     pub fn add(&self, by: Option<i32>) -> i32 {
         let by = by.unwrap_or(1);
-        *self.0.count.write().unwrap() = self.count().wrapping_add(by);
+        {
+            let mut count = self.0.count.write().unwrap();
+            *count = (*count).wrapping_add(by);
+        }
         self.count()
     }
 

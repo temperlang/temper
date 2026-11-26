@@ -9,7 +9,7 @@
 //! `RegexFormatter.pushCodeTo`, for codes the formatter has no plainer form
 //! for, appends `\u{…}`.
 
-use super::{Abrupt, Interp, R, Val, fail, maps};
+use super::{Abrupt, Interp, R, Val, fail, maps, no_connected};
 use crate::regex::{Found, Node, Regex, Special};
 use crate::settle::Settled;
 use std::rc::Rc;
@@ -79,9 +79,7 @@ impl Interp<'_> {
                 out.borrow_mut().push_str(&format!("\\u{{{code:x}}}"));
                 Ok(Val::Void)
             }
-            _ => Err(fail(format!(
-                "No connected implementation of {class}.{name}"
-            ))),
+            _ => Err(no_connected(&format!("{class}.{name}"))),
         }
     }
 

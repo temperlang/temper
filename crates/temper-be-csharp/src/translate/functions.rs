@@ -173,7 +173,9 @@ impl Translator<'_> {
             true => Expr::name(steps),
             false => {
                 let args = (ps.iter())
-                    .map(|(_, n)| Expr::name(n.trim_end_matches(" = null")))
+                    .map(|(_, n)| {
+                        Expr::name(n.trim_end_matches(" = null").trim_end_matches(" = default"))
+                    })
                     .collect();
                 Expr::Lambda(vec!["()".into()], Box::new(Expr::name(steps).call(args)))
             }

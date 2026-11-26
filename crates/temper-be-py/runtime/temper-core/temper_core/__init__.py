@@ -982,7 +982,7 @@ class Pair(Generic[Key, Value]):
         self.key = key
         self.value = value
 
-    def __subscript__(self, index: int) -> Union[Key, Value]:
+    def __getitem__(self, index: int) -> Union[Key, Value]:
         if index == 0:
             return self.key
         elif index == 1:

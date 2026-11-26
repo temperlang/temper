@@ -5,8 +5,9 @@
 //! module, which `let`s and `var`s functions use and which the init block
 //! initializes at its top level ([`module_state`]); and whether a `var`'s
 //! new value reads only itself, so the update may run under one lock
-//! ([`reads_only_itself`]); whether an expression calls nothing, so it may
-//! run under a lock ([`calls_nothing`]); and what evaluating an
+//! ([`reads_only_itself`], and a field's, [`reads_only_its_field`]);
+//! whether an expression calls nothing, so it may run under a lock
+//! ([`calls_nothing`]); and what evaluating an
 //! expression may do that the order of evaluation would show, for
 //! targets that don't evaluate operands left to right ([`Effects`]).
 //! And what a subtree names ([`named`]), and what a module imports: the
@@ -506,6 +507,42 @@ pub fn reads_only_itself(p: &Program, target: DeclId, value: NodeId) -> bool {
     reads && !other
 }
 
+/// Whether a `var` field's new value reads that field of the same
+/// object, `this` or one local, and else only locals and literals,
+/// through operators: an update such as `count += n`, which may be
+/// computed and stored under the field's one lock, as
+/// [`reads_only_itself`] for a module `var` (Rust's locked fields).
+pub fn reads_only_its_field(p: &Program, field: DeclId, object: NodeId, value: NodeId) -> bool {
+    let same = |o: NodeId| match (p.nodes.get(o), p.nodes.get(object)) {
+        (Node::This {}, Node::This {}) => true,
+        (Node::Local { local: a }, Node::Local { local: b }) => a == b,
+        _ => false,
+    };
+    let mut reads = false;
+    let mut other = false;
+    walk(p, value, &mut |id| match p.nodes.get(id) {
+        Node::GetField {
+            field: f,
+            object: o,
+        } if f == field && same(o) => reads = true,
+        Node::This {}
+        | Node::BoolLit { .. }
+        | Node::Int32Lit { .. }
+        | Node::Int64Lit { .. }
+        | Node::Float64Lit { .. }
+        | Node::StringLit { .. }
+        | Node::VoidLit {}
+        | Node::TypeValue { .. }
+        | Node::Local { .. }
+        | Node::Op { .. }
+        | Node::And { .. }
+        | Node::Or { .. }
+        | Node::IfValue { .. } => {}
+        _ => other = true,
+    });
+    reads && !other
+}
+
 /// Whether an expression calls nothing: only literals, locals, module
 /// `let`s, and operators, so it may run while a lock is held, as no call
 /// in it could take the lock again (C++'s module `var`s).
@@ -827,6 +864,54 @@ pub fn bindings(
     (from, to)
 }
 
+/// Whether `declared`, a type in the signature of what `call` calls (a
+/// parameter's or its result), is `T?` of a type parameter `T` that the
+/// call binds to a nullable type, as `firstOrNull<String?>`'s `T?`.
+/// tmpl's types never nest (`String??` is `String?`), but a target
+/// whose `T?` wraps a `T` (Rust's `Option<T>`) nests there, so its calls
+/// flatten at such places (notes/tmpl/nodes.md, "Nullable type
+/// parameters"). False for what isn't a call of a declaration.
+pub fn binds_nullable(p: &Program, call: NodeId, declared: TypeId) -> bool {
+    let TypeData::Nullable(inner) = p.types.get(declared) else {
+        return false;
+    };
+    if !matches!(p.types.get(inner), TypeData::TypeParam { .. }) {
+        return false;
+    }
+    let (callee, receiver, type_args) = match p.nodes.get(call) {
+        Node::CallFunction {
+            callee, type_args, ..
+        } => (callee, None, type_args),
+        Node::CallMethod {
+            method,
+            receiver,
+            type_args,
+            ..
+        } => (method, Some(p.nodes.ty(receiver)), type_args),
+        Node::New {
+            ctor, type_args, ..
+        } => (ctor, None, type_args),
+        _ => return false,
+    };
+    let (from, to) = bindings(p, callee, receiver, p.types.args_of(type_args));
+    (from.iter().position(|&f| f == inner))
+        .and_then(|i| to.get(i))
+        .is_some_and(|&t| p.types.is_nullable(t))
+}
+
+/// Whether `value`, an operand of a null check (`IsNull`, `Coalesce`'s
+/// left, or `EqNullable`'s), is a value of a bare type parameter made
+/// nullable, as `x` in `x == null` for `x: T`: whether it's null depends
+/// on what `T` is bound to, which a target that erases bindings, and
+/// whose `T?` wraps a `T` (Rust's `Option<T>`), can't tell.
+pub fn checks_type_param(p: &Program, value: NodeId) -> bool {
+    let Node::AsNullable { value } = p.nodes.get(value) else {
+        return false;
+    };
+    let ty = p.types.fallback(p.nodes.ty(value));
+    matches!(p.types.get(ty), TypeData::TypeParam { .. })
+}
+
 /// Whether a call of `callee`, a generic function or method, could leave
 /// out its own type arguments in a target that infers them only from
 /// the arguments (Rust, C#, C++): whether each of its type parameters
@@ -842,6 +927,24 @@ pub fn infers_type_args(p: &Program, callee: DeclId) -> bool {
     }
     let params = p.signature(callee).map_or(&[][..], |s| s.params);
     (formals.iter()).all(|&f| params.iter().any(|&t| p.types.mentions(t, f)))
+}
+
+/// [`infers_type_args`] for a call with these arguments (aligned with
+/// the callee's last parameters, as a method's receiver isn't one): not
+/// where a `null` is given for a parameter whose type mentions a type
+/// parameter, which tells nothing of it, as `isNull<String?>(null)`, or
+/// worse, where another argument does, as `orElse<Int?>(null, 2)`, which
+/// C# would take for an `int`.
+pub fn infers_type_args_at(p: &Program, callee: DeclId, args: &[NodeId]) -> bool {
+    if !infers_type_args(p, callee) {
+        return false;
+    }
+    let formals = type_param_types(p, callee);
+    let params = p.signature(callee).map_or(&[][..], |s| s.params);
+    let skip = params.len().saturating_sub(args.len());
+    !(params.iter().skip(skip).zip(args)).any(|(&t, &a)| {
+        matches!(p.nodes.get(a), Node::Null {}) && formals.iter().any(|&f| p.types.mentions(t, f))
+    })
 }
 
 /// The class or interface a type names, if it's one.

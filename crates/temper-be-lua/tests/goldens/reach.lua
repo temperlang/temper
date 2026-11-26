@@ -15,7 +15,7 @@ end
 shownCount = 0
 base = 1
 local checked = shown(2)
-print("shown " .. shown(1))
+temper.log("shown " .. shown(1))
 
 ---@return integer
 local function shownCount__get()

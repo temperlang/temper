@@ -10,13 +10,13 @@
 //! type, and the types its values' places want, wait for that fact.
 
 use crate::classes::Placed;
-use crate::core::{CLASS_INTERFACE, class_parts};
+use crate::core::{CLASS_INTERFACE, class_parts, let_parts};
 use crate::library::Message;
 use crate::scope::{ScopeId, ScopeKind, SymbolId};
 use crate::settle::{Fact, Settle};
 use crate::types::{TypeData, TypeId};
 use temper_syntax::names::NameId;
-use temper_syntax::tree::NodeId;
+use temper_syntax::tree::{NodeId, NodeKind};
 
 impl Settle {
     /// Queues deciding each object literal's class, as typing starts.
@@ -52,6 +52,15 @@ impl Settle {
             Err(_) => None,
         };
         self.object_literals.remove(&call);
+        // A declared type that's an error, already reported, gives no
+        // class, rather than one guessed from the names: the literal
+        // fails as the type did.
+        if let Some(failed) = self.failed_declared_type(call) {
+            let index = self.lib.tree.data(failed);
+            self.rewrite(call, NodeKind::Error, index, &[]);
+            self.publish(Fact::ObjectLiteral(call));
+            return Ok(());
+        }
         let names: Vec<NameId> = (self.literal_props(call).unwrap_or_default().iter())
             .map(|&(name, _)| name)
             .collect();
@@ -90,7 +99,8 @@ impl Settle {
     ///   arguments, `C`, if its constructor takes every name; if not, and
     ///   one other class's does, that's an error rather than a silent
     ///   pick: "Point is wanted here, but these properties fit Line's
-    ///   constructor".
+    ///   constructor"; else `C` anyway, so placing the names says which
+    ///   it lacks: "Point has no property `z`; it has `x` and `y`".
     /// - Where an interface `I` is wanted, the one class found that
     ///   implements it, or as for a class wanted, the error if exactly one
     ///   other was found.
@@ -112,11 +122,11 @@ impl Settle {
             };
         };
         let is_interface = self.lib.tree.data(decl) & CLASS_INTERFACE != 0;
+        // The nearest symbol for it, else its own, if it's not visible
+        // here by name.
+        let symbol = (found.iter().find(|&&(_, c)| c == decl).map(|&(b, _)| b))
+            .or_else(|| self.scopes.resolved(class_parts(&self.lib.tree, decl).0));
         if !is_interface && self.takes_names(decl, names) {
-            // The nearest symbol for it, else its own, if it's not visible
-            // here by name.
-            let symbol = (found.iter().find(|&&(_, c)| c == decl).map(|&(b, _)| b))
-                .or_else(|| self.scopes.resolved(class_parts(&self.lib.tree, decl).0));
             if let Some(symbol) = symbol {
                 return Ok((symbol, decl));
             }
@@ -137,8 +147,29 @@ impl Settle {
                     .to_string();
                 Err(Message::ObjectLiteralWantsOther(self.show(wanted), other))
             }
+            // The class wanted, though it doesn't take the names, so
+            // placing them says which it lacks ([`Settle::place_literal`]).
+            ([], _) if !is_interface => symbol
+                .map(|s| (s, decl))
+                .ok_or_else(|| self.matching_error(found)),
             ([], _) => Err(self.matching_error(found)),
             (_, _) => Err(self.matching_error(&fits)),
+        }
+    }
+
+    /// The declared type of the `let` an object literal initializes, if
+    /// it's an error.
+    fn failed_declared_type(&self, call: NodeId) -> Option<NodeId> {
+        let tree = &self.lib.tree;
+        let parent = self
+            .typing
+            .parent(call)
+            .filter(|&p| tree.kind(p) == NodeKind::Let)?;
+        match let_parts(tree, parent) {
+            (_, Some(ty), Some(init)) if init == call && tree.kind(ty) == NodeKind::Error => {
+                Some(ty)
+            }
+            _ => None,
         }
     }
 

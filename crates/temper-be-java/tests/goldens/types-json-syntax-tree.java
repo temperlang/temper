@@ -58,7 +58,7 @@ public final class JsonSyntaxTreeGlobal {
         }
         String selectCodePoints = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d\u001e\u001f -𐀀--퟿\u2028\u2029\u0085";
         {
-            JsonTextProducer p2 = new JsonTextProducer(NullInterchangeContext.instance);
+            JsonTextProducer p2 = new JsonTextProducer(NullInterchangeContext.getInstance());
             p2.stringValue(selectCodePoints);
             String t;
             try {
@@ -69,7 +69,7 @@ public final class JsonSyntaxTreeGlobal {
             console.log("string with select code points: " + t);
         }
         {
-            JsonTextProducer p3 = new JsonTextProducer(NullInterchangeContext.instance);
+            JsonTextProducer p3 = new JsonTextProducer(NullInterchangeContext.getInstance());
             p3.startObject();
             OrNullJsonAdapter<Integer> intOrNullAdapter = new OrNullJsonAdapter<Integer>(JsonGlobal.int32JsonAdapter());
             @Nullable Integer x = null;
@@ -90,13 +90,13 @@ public final class JsonSyntaxTreeGlobal {
             console.log("for x, got JSON null: " + (xAst instanceof JsonNull));
             console.log("for y, got JSON numeric: " + (yAst instanceof JsonNumeric));
             OrNullJsonAdapter<Integer> intOrNullAdapter2 = new OrNullJsonAdapter<Integer>(JsonGlobal.int32JsonAdapter());
-            @Nullable Integer x2 = intOrNullAdapter2.decodeFromJson(xAst, NullInterchangeContext.instance);
-            @Nullable Integer y2 = intOrNullAdapter2.decodeFromJson(yAst, NullInterchangeContext.instance);
+            @Nullable Integer x2 = intOrNullAdapter2.decodeFromJson(xAst, NullInterchangeContext.getInstance());
+            @Nullable Integer y2 = intOrNullAdapter2.decodeFromJson(yAst, NullInterchangeContext.getInstance());
             console.log("x ?? -1 -> " + (x2 == null ? -1 : x2));
             console.log("y ?? -1 -> " + (y2 == null ? -1 : y2));
             JsonSyntaxTree zAst = obj.propertyValueOrBubble("z");
             OrNullJsonAdapter<Long> int64OrNullAdapter = new OrNullJsonAdapter<Long>(JsonGlobal.int64JsonAdapter());
-            @Nullable Long z = int64OrNullAdapter.decodeFromJson(zAst, NullInterchangeContext.instance);
+            @Nullable Long z = int64OrNullAdapter.decodeFromJson(zAst, NullInterchangeContext.getInstance());
             console.log("z ?? -1 -> " + Long.toString(z == null ? -1L : z));
         }
         JsonTextProducer normalJson = new JsonTextProducer();

@@ -3,9 +3,9 @@ local temper = require("temper-core")
 ---@param b integer[]
 local function f(b)
   if temper.listed_isempty(b) then
-    print("empty")
+    temper.log("empty")
   else
-    print("not empty")
+    temper.log("not empty")
   end
 end
 

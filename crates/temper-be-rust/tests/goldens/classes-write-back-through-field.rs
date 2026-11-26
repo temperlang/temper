@@ -42,7 +42,10 @@ impl Ping {
     }
 
     pub fn record(&self) -> bool {
-        *self.0.n.write().unwrap() = self.n().wrapping_add(1);
+        {
+            let mut n = self.0.n.write().unwrap();
+            *n = (*n).wrapping_add(1);
+        }
         if self.n() > self.most() {
             *self.0.most.write().unwrap() = self.n();
         }
@@ -77,12 +80,18 @@ impl Pong {
     }
 
     pub fn pong(&self, a: Ping) {
-        *a.0.n.write().unwrap() = a.n().wrapping_add(1);
+        {
+            let mut n = a.0.n.write().unwrap();
+            *n = (*n).wrapping_add(1);
+        }
     }
 
     pub fn bump(&self, a: Ping, by: i32) -> i32 {
         {
-            *a.0.n.write().unwrap() = a.n().wrapping_add(by);
+            {
+                let mut n = a.0.n.write().unwrap();
+                *n = (*n).wrapping_add(by);
+            }
         }
         a.n()
     }

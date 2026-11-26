@@ -142,6 +142,10 @@ function temper.bool_cmp(a, b) end
 ---@return string
 function temper.int32_tostring(n, radix) end
 
+---Logs a message, as `print` does.
+---@param msg string
+function temper.log(msg) end
+
 ---Raises Temper's bubble, as an error; it never returns.
 ---@return any
 function temper.bubble() end

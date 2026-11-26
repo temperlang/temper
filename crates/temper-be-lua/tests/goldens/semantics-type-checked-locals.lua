@@ -1,15 +1,15 @@
 local temper = require("temper-core")
 
 local function yay()
-  print("yay")
+  temper.log("yay")
 end
 
 local function meh()
-  print("meh")
+  temper.log("meh")
 end
 
 local function boo()
-  print("boo")
+  temper.log("boo")
 end
 
 ---@param x integer
@@ -30,7 +30,7 @@ local function i(x)
   return x
 end
 
-print("Checkpoint 0")
+temper.log("Checkpoint 0")
 if not temper.pcall(function()
   ---@type integer
   local a
@@ -39,11 +39,11 @@ if not temper.pcall(function()
 end) then
   yay()
 end
-print("Checkpoint 1")
+temper.log("Checkpoint 1")
 local a2 = 1
 yay()
 local _ = nil
-print("Checkpoint 2")
+temper.log("Checkpoint 2")
 do
   local a3 = 1
   if not temper.pcall(function()
@@ -59,11 +59,11 @@ do
     meh()
   end
 end
-print("Checkpoint 3")
+temper.log("Checkpoint 3")
 local a4 = 1
 a4 = 2
 yay()
-print("Checkpoint 4")
+temper.log("Checkpoint 4")
 if not temper.pcall(function()
   f(0)
   yay()
@@ -76,7 +76,7 @@ if not temper.pcall(function()
 end) then
   meh()
 end
-print("Checkpoint 5")
+temper.log("Checkpoint 5")
 if not temper.pcall(function()
   g(0)
   yay()
@@ -89,7 +89,7 @@ if not temper.pcall(function()
 end) then
   meh()
 end
-print("Checkpoint 6")
+temper.log("Checkpoint 6")
 if not temper.pcall(function()
   i(0)
   yay()

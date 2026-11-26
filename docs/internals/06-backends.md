@@ -30,6 +30,7 @@ Every backend crate has much the same files:
 | `tree.rs` | The output tree and its printer, which adds parentheses only where precedence needs them, and lays out code in the language's usual style |
 | `runtime.rs` | The runtime's files, copied beside the output by `temper build` |
 | `tools.rs` | Natively, how the language runs built libraries' tests, for `temper test -b`, and a library's top level, for `temper run -b`: finding its tools, their command lines, and reading their results |
+| `config.temper` | Its config class, as Temper (`export class RustConfig(public name: String? = null, …) {}`), which `lib.rs`'s `CONFIG` gives |
 
 Which lowerings each backend runs, in what order, and how the seven
 differ: [the pipeline](detail/06-backends.md#the-pipeline-each-backend-runs)
@@ -38,8 +39,16 @@ and [per-backend choices](detail/06-backends.md#per-backend-choices).
 A crate's `BACKEND`, a [`Backend`](../../crates/temper-tmpl/src/backend.rs), is all
 that tools see of it: its name, its comment syntax, its runtime's
 files, its naming rules, its `translate` function, whether `build`
-writes it by default, and its `tools.rs`'s
-[`Tools`](../../crates/temper-tmpl/src/backend.rs) (`None` in wasm).
+writes it by default, its `tools.rs`'s
+[`Tools`](../../crates/temper-tmpl/src/backend.rs) (`None` in wasm),
+and its config class, a [`ConfigType`](../../crates/temper-tmpl/src/config.rs).
+That gives the class's Temper source, which every library's config is
+settled with (the frontend never names a backend), and each property's
+form, which the backend checks values against
+([`ConfigType::validate`](../../crates/temper-tmpl/src/config.rs)),
+saying where each problem is by property and list item; it also says
+what names a library's packages take, so libraries that would clash
+are found.
 `temper-driver`'s registry keeps the one list of them, so adding a
 backend means one crate, one line there, and its name among the known
 ones ([the command](07-cli.md#one-compile-path)).
@@ -77,7 +86,7 @@ The same two lines of Temper, in each language:
 | [C#](../../crates/temper-be-csharp/tests/goldens/triple.cs) | `n * 3` | `console.Log("triple(14) = " + Triple(14).ToString(CultureInfo.InvariantCulture));` |
 | [Java](../../crates/temper-be-java/tests/goldens/triple.java) | `n * 3` | `console.log("triple(14) = " + triple(14));` |
 | [JavaScript](../../crates/temper-be-js/tests/goldens/triple.js) | `Math.imul(n, 3)` | ``console.log(`triple(14) = ${triple(14)}`);`` |
-| [Lua](../../crates/temper-be-lua/tests/goldens/triple.lua) | `temper.int32_mul(n, 3)` | `print("triple(14) = " .. triple(14))` |
+| [Lua](../../crates/temper-be-lua/tests/goldens/triple.lua) | `temper.int32_mul(n, 3)` | `temper.log("triple(14) = " .. triple(14))` |
 | [Python](../../crates/temper-be-py/tests/goldens/triple.py) | `_int_mul(n, 3)` | `_console.log(f'triple(14) = {_triple(14)}')` |
 | [Rust](../../crates/temper-be-rust/tests/goldens/triple.rs) | `n.wrapping_mul(3)` | `println!("triple(14) = {}", triple(14));` |
 

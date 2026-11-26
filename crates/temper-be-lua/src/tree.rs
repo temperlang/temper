@@ -195,8 +195,8 @@ impl Expr {
     fn prec(&self) -> u8 {
         match self {
             Expr::Int(n) if *n < 0 => UNARY,
-            Expr::Float(f) if f.is_sign_negative() && !f.is_nan() => UNARY,
-            Expr::Float(f) if f.is_nan() => MUL,
+            Expr::Float(f) if f.is_nan() || *f == 0.0 && f.is_sign_negative() => MUL,
+            Expr::Float(f) if f.is_sign_negative() => UNARY,
             Expr::Name(_)
             | Expr::Int(_)
             | Expr::Float(_)
@@ -240,7 +240,7 @@ pub enum Stmt {
     /// `local a, b`: names declared before what refers to them.
     Locals(Vec<String>),
     /// `---@cast name type`: what LuaLS takes a local to be from here on,
-    /// as after a parameter's default.
+    /// as after a parameter's default; `-type` takes `type` out of it.
     Cast {
         name: String,
         ty: String,
@@ -254,21 +254,15 @@ pub enum Stmt {
         then: Vec<Stmt>,
         els: Vec<Stmt>,
     },
-    /// `while cond do … end`, with `::label::` ending the body when a
-    /// `continue` needs one.
+    /// `while cond do … end`.
     While {
         cond: Expr,
         body: Vec<Stmt>,
-        next: Option<String>,
     },
-    /// `repeat … until cond`, with `::label::` before `until` when a
-    /// `continue` needs one. Lua's `until` sees the body's locals, so a
-    /// jump to the label would enter their scope: a body that declares any
-    /// is put in a `do … end` of its own first.
+    /// `repeat … until cond`.
     Repeat {
         body: Vec<Stmt>,
         cond: Expr,
-        next: Option<String>,
     },
     /// `do … end`.
     Do(Vec<Stmt>),
@@ -288,8 +282,6 @@ pub enum Stmt {
         body: Vec<Stmt>,
     },
     Break,
-    Goto(String),
-    Label(String),
     Return(Option<Expr>),
     /// `return a, b`: a jump's signal out of a function `temper.pcall`
     /// runs ([`Stmt::PCall`]).
@@ -324,10 +316,7 @@ pub enum Stmt {
 impl Stmt {
     /// Whether nothing after it in its block can run.
     pub fn ends(&self) -> bool {
-        matches!(
-            self,
-            Stmt::Return(_) | Stmt::Returns(_) | Stmt::Break | Stmt::Goto(_)
-        )
+        matches!(self, Stmt::Return(_) | Stmt::Returns(_) | Stmt::Break)
     }
 }
 
@@ -376,9 +365,22 @@ pub fn string_literal(text: &str) -> String {
     out
 }
 
+/// A string literal in single quotes, as rockspecs have them, escaped as
+/// [`string_literal`] escapes one.
+pub fn single_quoted(text: &str) -> String {
+    let mut out = String::from('\'');
+    escape_into(&mut out, text, '\'');
+    out.push('\'');
+    out
+}
+
 fn float_literal(f: f64) -> String {
     if f.is_nan() {
         "0.0 / 0.0".into()
+    } else if f == 0.0 && f.is_sign_negative() {
+        // Not `-0.0`: Lua 5.1 keeps one constant per function for equal
+        // numbers, so `-0.0` and `0.0` there would be the same.
+        "-1 / math.huge".into()
     } else if f.is_infinite() {
         if f > 0.0 {
             "math.huge".into()
@@ -553,27 +555,14 @@ fn indent(out: &mut String, depth: usize) {
 
 fn block(out: &mut String, body: &[Stmt], depth: usize) {
     for (i, s) in body.iter().enumerate() {
-        // `return` ends a block in every Lua; elsewhere, `do return end`.
-        if matches!(s, Stmt::Return(_) | Stmt::Returns(_)) && i + 1 < body.len() {
+        // `return` ends a block in every Lua, and `break` in 5.1;
+        // elsewhere, `do return end` and `do break end`.
+        if matches!(s, Stmt::Return(_) | Stmt::Returns(_) | Stmt::Break) && i + 1 < body.len() {
             stmt(out, &Stmt::Do(vec![s.clone()]), depth);
         } else {
             stmt(out, s, depth);
         }
     }
-}
-
-/// A loop's body with the label a `continue` jumps to, if any, ending
-/// it; in a `repeat` whose body declares locals, after a `do … end` of
-/// the body, so the jump doesn't enter their scope, which `until` shares.
-fn labeled(mut body: Vec<Stmt>, next: &Option<String>, repeat: bool) -> Vec<Stmt> {
-    let Some(next) = next else {
-        return body;
-    };
-    if repeat && body.iter().any(|s| matches!(s, Stmt::Local { .. })) {
-        body = vec![Stmt::Do(body)];
-    }
-    body.push(Stmt::Label(next.clone()));
-    body
 }
 
 fn stmt(out: &mut String, s: &Stmt, depth: usize) {
@@ -585,9 +574,12 @@ fn stmt(out: &mut String, s: &Stmt, depth: usize) {
     let start = out.len();
     stmt_text(out, s, depth);
     // A statement starting with `(` would continue the last one as a
-    // call (`f(x)\n(t).a = 1` is `f(x)(t).a = 1`), so `;` ends that.
+    // call (`f(x)\n(t).a = 1` is `f(x)(t).a = 1`), so it goes in a `do …
+    // end`: Lua 5.1 takes `;` only after a statement, not before one.
     if out[start..].starts_with('(') {
-        out.insert(start, ';');
+        out.insert_str(start, "do ");
+        out.truncate(out.len() - 1);
+        out.push_str(" end\n");
     }
 }
 
@@ -656,15 +648,15 @@ fn stmt_text(out: &mut String, s: &Stmt, depth: usize) {
             indent(out, depth);
             out.push_str("end\n");
         }
-        Stmt::While { cond, body, next } => {
+        Stmt::While { cond, body } => {
             let _ = writeln!(out, "while {} do", expr(cond, TOP));
-            block(out, &labeled(body.clone(), next, false), depth + 1);
+            block(out, body, depth + 1);
             indent(out, depth);
             out.push_str("end\n");
         }
-        Stmt::Repeat { body, cond, next } => {
+        Stmt::Repeat { body, cond } => {
             out.push_str("repeat\n");
-            block(out, &labeled(body.clone(), next, true), depth + 1);
+            block(out, body, depth + 1);
             indent(out, depth);
             let _ = writeln!(out, "until {}", expr(cond, TOP));
         }
@@ -677,6 +669,10 @@ fn stmt_text(out: &mut String, s: &Stmt, depth: usize) {
                         .map(|v| format!(" {}", expr(v, TOP)))
                         .unwrap_or_default();
                     let _ = writeln!(out, "do return{value} end");
+                    return;
+                }
+                [Stmt::Break] => {
+                    out.push_str("do break end\n");
                     return;
                 }
                 _ => out.push_str("do\n"),
@@ -705,12 +701,6 @@ fn stmt_text(out: &mut String, s: &Stmt, depth: usize) {
             let _ = writeln!(out, "return {}", values.join(", "));
         }
         Stmt::Break => out.push_str("break\n"),
-        Stmt::Goto(label) => {
-            let _ = writeln!(out, "goto {label}");
-        }
-        Stmt::Label(label) => {
-            let _ = writeln!(out, "::{label}::");
-        }
         Stmt::Return(None) => out.push_str("return\n"),
         Stmt::Return(Some(Expr::Table(entries))) => {
             let line = format!("return {}", expr(&Expr::Table(entries.clone()), TOP));
@@ -861,6 +851,11 @@ mod tests {
             expr(&Expr::bin(Bin::Div, n("x"), Expr::Float(f64::NAN)), 0),
             "x / (0.0 / 0.0)"
         );
+        assert_eq!(
+            expr(&Expr::bin(Bin::Div, n("x"), Expr::Float(-0.0)), 0),
+            "x / (-1 / math.huge)"
+        );
+        assert_eq!(expr(&Expr::Float(-0.5), 0), "-0.5");
     }
 
     #[test]
@@ -886,17 +881,19 @@ mod tests {
         ];
         let mut out = String::new();
         block(&mut out, &body, 1);
-        assert_eq!(out, "  f()\n  ;(log --[[@as Log]]).hostEnd = 1\n");
+        assert_eq!(out, "  f()\n  do (log --[[@as Log]]).hostEnd = 1 end\n");
     }
 
+    /// `return` ends a block in every Lua, and `break` in 5.1.
     #[test]
-    fn returns_end_blocks() {
+    fn returns_and_breaks_end_blocks() {
         let body = vec![
             Stmt::Return(Some(Expr::Int(1))),
-            Stmt::Label("continue".into()),
+            Stmt::Break,
+            Stmt::Expr(Expr::name("f").call(vec![])),
         ];
         let mut out = String::new();
         block(&mut out, &body, 0);
-        assert_eq!(out, "do return 1 end\n::continue::\n");
+        assert_eq!(out, "do return 1 end\ndo break end\nf()\n");
     }
 }

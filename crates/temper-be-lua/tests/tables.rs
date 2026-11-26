@@ -157,3 +157,24 @@ fn runtime_version_is_the_rockspecs() {
         "{spec}"
     );
 }
+
+/// The runtime's rockspec installs each of its Lua files by the name
+/// generated code and the runtime require it by (`temper-core/intold`
+/// as `temper-core.intold`), so `require` finds them after `luarocks
+/// make`.
+#[test]
+fn runtime_rockspec_lists_each_module() {
+    let spec = fs::read_to_string(runtime().join("temper-core-dev-1.rockspec")).unwrap();
+    let lua = (temper_be_lua::runtime::FILES.iter()).filter(|(p, _)| p.ends_with(".lua"));
+    for (path, _) in lua {
+        let name = path.strip_suffix(".lua").unwrap();
+        let name = name.strip_suffix("/init").unwrap_or(name);
+        let name = match name {
+            "init" => "temper-core".to_string(),
+            name => format!("temper-core.{}", name.replace('/', ".")),
+        };
+        let line = format!("[\"{name}\"] = \"{path}\"");
+        assert!(spec.contains(&line), "{line} in\n{spec}");
+    }
+    assert!(!spec.contains("copy_directories"), "{spec}");
+}

@@ -64,10 +64,19 @@ Language and frontend:
   makes a `Mark` and says "Cannot assign to A from Mark", at the same
   position. Kotlin also reports "Void expressions cannot be used as
   values" after "No signature matches" for an object literal no class
-  fits, a follow-on error tempest doesn't report.
+  fits, a follow-on error tempest doesn't report. Where the class
+  wanted, or named with `class:`, doesn't take a property, tempest says
+  so at the property, with what was likely meant ("Point has no
+  property `yy`; did you mean `y`?"), where Kotlin says "No signature
+  matches" of the whole literal (2026-11-25); and where the declared or
+  named class isn't declared, tempest reports only that, where Kotlin
+  also guesses a class from the names, as "Multiple types have matching
+  constructors".
   Test: settle/types.cases, "list literals typed from the type wanted",
-  "function literals typed from the type wanted", and "object literals
-  take their class from the type wanted".
+  "function literals typed from the type wanted", "object literals
+  take their class from the type wanted", and "object literals say
+  which property the class wanted lacks, and guess no class for an
+  undeclared type".
 - **Named `@fun` interfaces are nominal** (decided 2026-10-29, done;
   [typing.md](typing.md), "Fun interfaces"): a `Pred` isn't a `Check`,
   even where their `apply`s' signatures match, and the error suggests
@@ -445,10 +454,14 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   @connected function that lists backends needs a Temper body …"), at
   its name where Kotlin's position is empty, after its signature. Kotlin reports these only while generating code; tempest
   reports them while typing, in every module, skipping std's
-  connected classes and core-style ones that connect members. A bodiless
-  method of a user's connected class fails in the interpreter as "No
-  connected implementation of Counter.add", where it said "Abstract
-  method". Every backend reads a library's host files and chooses host
+  connected classes and core-style ones that connect members. A user's
+  connected class without a Temper implementation, every method bodiless,
+  takes host code on every backend, under `--no-connected` too, as
+  Kotlin's `TypeDeclChecker` counts its methods implemented (2026-11-20).
+  A bodiless method of a user's connected class, or a bodiless connected
+  function, panics in the interpreter as "No connected implementation of
+  Counter.add", as Kotlin's `AbstractPanic` does, so `temper test` reports
+  that rather than a bubble; tempest once failed with it instead. Every backend reads a library's host files and chooses host
   code or the Temper implementation as Kotlin's `ConnectedChoice.kt`
   does, with `--no-connected`, and Java and C# leave out a replaced
   `Counter.java` or `Counter.cs`. Where a backend needs host code that
@@ -460,7 +473,8 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   defaults either", and "connected functions that list backends need
   a body, as Kotlin's connected-backends"; each backend's
   `missing_host_code` and `kit::CONNECTED` runs, as is and under
-  `--no-connected`.
+  `--no-connected`; to_tmpl.rs `connected_class_without_temper_implementation`;
+  cli.rs `connecteds_*`.
 - **Declaration errors' positions** (2026-11-13): tempest reports
   Kotlin's "Constructor input s specified but there is already a
   constructor" without the constructors' positions Kotlin appends ("at
@@ -1183,6 +1197,28 @@ Other differences we won't copy:
   lists every library under `dependencies`. Lua's rockspec lists them
   under `test_dependencies`, as Kotlin's does. Test: Python's
   tests/functional.rs, `test_only_libraries_grouped`.
+- **Generated files that would be one** (2026-11-20): a declaration
+  named like a file a backend generates (a class `AGlobal` in a module
+  whose functions Java and C# put in `AGlobal`, or a class `Logging`
+  beside C#'s `Logging.cs`), or two named alike but for case, which a
+  case-insensitive file system takes as one, is an error naming the
+  file (`temper_tmpl::clashing_paths`, which `temper_driver::translate`
+  checks for every backend). Kotlin's writes both, and the last
+  silently replaces the other, dropping the module's functions.
+  Test: tempest's tests/cli.rs, `generated_name_clashes_are_errors`.
+- **Python's `py.typed`** (2026-11-20): each library's package, std's
+  too, has an empty `py.typed` (PEP 561), as the runtime's always had,
+  so mypy and pyright read an installed library's annotations; Kotlin's
+  libraries have none, so checkers treat them as `Any`. Test: Python's
+  tests/functional.rs, `packages_marked_typed`.
+- **Lua's rockspecs install their modules** (2026-11-20): each rockspec,
+  the runtime's too, lists its modules in `build.modules` by the names
+  `require` takes (`fibonacci.helpers.deep`), and installs no tests;
+  Kotlin's lists none and copies the directory into the rock's own,
+  where `require` doesn't look, so `luarocks make` installed nothing
+  usable. Test: Lua's tests/functional.rs, `rockspecs_install` (where
+  LuaRocks is installed), and tests/tables.rs,
+  `runtime_rockspec_lists_each_module`.
 - **`@keepTest` in C++** (2026-11-17): a function marked `@keepTest`,
   kept for tests' host code, and the private functions only it and tests
   call, are defined, and it's declared in the header, only where
@@ -1262,12 +1298,53 @@ Other differences we won't copy:
   repository, which also goes in `RepositoryUrl` (Kotlin's is the
   repository). The rockspec's homepage, as the pom's URL, falls back to
   the repository. CMakeLists.txt's `project` has the description, where
-  Kotlin writes none. Each backend's names for a library (`pyName`,
-  `jsName`, `rustName`, `javaName`, `javaPackage`, `javaGroup`,
-  `javaArtifact`, and `csharpRootNamespace`) name its package and what
-  code that uses it imports, as Kotlin's, but an empty `javaPackage`,
-  which Kotlin takes as no package at all, counts as unset.
-  Test: crates/temper-driver/tests/metadata.rs.
+  Kotlin writes none. Each backend's names for a library, in its config
+  class (`PyConfig`'s `name`, `JavaConfig`'s `package`, …), name its
+  package and what code that uses it imports, as Kotlin's, but an empty
+  Java package, which Kotlin takes as no package at all, counts as
+  unset. Kotlin writes the version and metadata into package files as
+  given; tempest escapes them for each format (MSBuild's `$(…)`, `@(…)`,
+  `;`, `'`, and `%` too, as `%XX`), and a `version` that isn't SemVer
+  (`1.2.3`, `1.2.3-beta.1`, …), or config text holding control
+  characters other than tabs and line breaks, is a config error. Tests:
+  crates/temper-driver/tests/metadata.rs, crates/temper-frontend/src/config.rs,
+  and `hostile_versions_and_metadata_are_errors` in
+  crates/tempest/tests/cli.rs.
+
+- **Backend config classes** (2026-11-20, settled since 2026-11-25):
+  each backend gives its config class (`CSharpConfig`, `JavaConfig`,
+  …) as Temper source, with Kotlin's names and properties, and
+  `CppConfig` and `LuaConfig` with none, as Kotlin's placeholders.
+  Configs are settled and run as Temper, as Kotlin's are, so values may
+  be computed, but all of a build's at once, with the classes in one
+  shared module that each config imports unseen, where Kotlin plants
+  them in each config module; a config's own `import(…)`s are errors
+  for now (Kotlin's include modules, and tempest includes every module
+  anyway), and a `name` that isn't a dashed identifier is an error. The object takes its class from the declared type
+  (`export let java: JavaConfig = { … }`), as Kotlin's target typing
+  does, or names it (`class:`); mistakes are ordinary type errors. `dependencies` lists packages for host code, as Kotlin's,
+  in the same spellings, and malformed ones are errors where Kotlin
+  printed one and skipped them; npm names may be scoped
+  (`"@scope/name@1.0.0"`), which Kotlin's split at `@` rejected. Where
+  Kotlin's tools always fetch packages, tempest's fetch only those
+  listed: pip into `temper.out/py/.deps`, npm into `temper.out/js/.deps`
+  linked into `node_modules`, Cargo then not `--offline`, and Maven's
+  dependency plugin for Java's class path (no Maven otherwise).
+  Kotlin also read the older flat keys (`pyName`, `javaPackage`, …) where
+  a config class didn't set a value; tempest doesn't, so they're
+  ordinary values. An instance under another backend's name, a class
+  set twice, or a value not in its backend's form (each backend checks
+  its own) is a config error at its place in the file, where Kotlin
+  printed a console error and went on, or dropped the value. A config
+  file's code is only its code blocks, as in Kotlin; tempest once also
+  read `export let` lines in its prose. Tests:
+  crates/temper-frontend/src/config.rs,
+  crates/temper-driver/tests/config_classes.rs, crates/tempest/tests/cli.rs
+  (`typed_config_*`, `config_dependencies_in_package_files`, and
+  `connecteds_*`, Kotlin's `connecteds` test with real packages, as
+  written, each checking the generated code defines Bitset once, in host
+  code using the package; they fetch packages, so they run only with
+  `TEMPER_NETWORK_TESTS` set, as nightly.yml does).
 
 - **Ignore files** (2026-11-06): Kotlin reads one, the nearest
   `.temperignore` or `.gitignore` at or above where it starts (its
@@ -1807,13 +1884,14 @@ copied Kotlin's:
   `n` under one lock and writes it under another, so two threads can
   both write the same value. Safe in Rust's sense, but not what a
   counter wants. Tempest's Rust backend reads and writes such an update
-  under one write lock (done 2026-10-30; [tmpl/profiles.md](tmpl/profiles.md#as-built-rust)).
+  under one write lock (done 2026-10-30; [tmpl/profiles.md](tmpl/profiles.md#as-built-rust)),
+  and a class `var`'s, `count += n` (2026-11-21).
   Kotlin's Rust output also fails clippy's deny-level
   `self_assignment` on `zero = zero` despite its `#![allow(warnings)]`,
   which allows only warn-level lints; tempest's too, being faithful,
   so its test allows that lint.
   Test: temper-be-rust/tests/functional.rs, `runs_and_lints`
-  (`THREADS`).
+  (`THREADS`, and `host-interop`'s tally).
 - **JS source maps that tools don't find:** Kotlin writes a `.js.map`
   beside each module but no `//# sourceMappingURL=` comment, so Node's
   `--enable-source-maps` and browsers never load it; its `sourceRoot`
@@ -2111,11 +2189,17 @@ copied Kotlin's:
   doesn't parse; tempest reserves it. And Kotlin says it supports Lua
   5.1 (its docs, and `lua >= 5.1` in its rockspecs, which tempest keeps
   for compatibility), but its output uses `goto` for every early return
-  and loop exit, which 5.1 can't parse (LuaJIT can). Tempest's uses
-  `goto` only for `continue` and for leaving an outer loop, so a program
-  without those parses on 5.1 too.
+  and loop exit, which 5.1 can't parse (LuaJIT can), and starts some
+  lines with `;`, which 5.1 takes only after a statement. Tempest's
+  parses on 5.1 (2026-11-20): no `goto` (a `continue`'s loop body is in
+  a `repeat … until true` that it leaves by `break`, and a jump leaving
+  more than one loop sets a flag, the module docs' "Jumps"), and a
+  statement starting with `(` in a `do … end`; the runtime's powersort
+  returns where it had `goto`s. On PUC 5.1, async code still fails (5.1
+  can't yield across `pcall`), as do negative zero and a few parses.
   Test: temper-be-lua/tests/functional.rs, `HIDING` (`end(goto: Int)`),
-  for the name; Lua 5.1 isn't tested.
+  for the name, and `parses_on_lua51`, where Lua 5.1's `luac` is
+  installed.
 - **Lua names hiding standard globals:** Kotlin's Lua escapes only
   keywords, so a local, parameter, or module value named `string`,
   `table`, `type`, `error`, or another of Lua's standard globals hides
@@ -2725,6 +2809,21 @@ copied Kotlin's:
   - **Lua** bounds `---@generic IT: lib.I`, and types a local of a
     function's type parameter `any`, since LuaLS knows the `---@generic`
     name only in the function's own annotations.
+- **Type parameters bound to nullable types** (2026-11-23):
+  `firstOrNull<T>(ls: List<T>): T?` on a `List<String?>` holding
+  `null` gives null everywhere, where Rust's and C++'s `T?` nested
+  (`Some(None)`, which isn't null, and a `NullableParam` of one, which
+  threw when read): Rust flattens at the call, C++'s runtime flattens
+  the type (notes/tmpl/nodes.md, "Nullable type parameters"). A
+  parameter of type `T` with a default compiles on Rust, C#
+  (`Optional<T> y = default`), and C++ (its overload names `<T>`). A
+  null check on a bare `T` compiles on C# (`x == null`) and C++
+  (`core::is_null`); Rust refuses it, as it can't make it, where it was
+  always false. A lone `null` in a list literal no longer passes a null
+  `params`/varargs array (C#, Java). Not yet: inside a generic function,
+  Rust's `T?` of a nullable `T` still nests (RFC 684 would rule it out).
+  Test: programs/nullable-generics.temper.md and
+  generic-null-checks.temper.md.
 - **Parameters' defaults in the backends** (2026-11-01):
   Kotlin's surface for optional parameters (nullable, defaulting to null
   where the language can say so, overloads in Java and C++), with

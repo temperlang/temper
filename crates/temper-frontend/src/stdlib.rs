@@ -87,6 +87,7 @@ pub fn program_of(
         let config = crate::project::Config::read(&text, DIR);
         let metadata = temper_tmpl::Metadata {
             exports: config.exports,
+            ..Default::default()
         };
         program.metadata = vec![("std".to_string(), metadata)];
     }

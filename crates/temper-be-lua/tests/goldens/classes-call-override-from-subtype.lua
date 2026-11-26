@@ -197,15 +197,15 @@ end
 
 local slippy = Slippy()
 local slappy = slippy
-print(tostring(slippy.thingums))
-print(tostring(slappy.thingums))
-print(tostring(slippy.thingumses))
-print(tostring(slippy:checkOverridden()))
-print(tostring(slippy:checkOwn()))
-print(D():a())
-print(D().thing)
-print(DSplit():a())
-print(DDeep():a())
-print(EDeep():a())
+temper.log(tostring(slippy.thingums))
+temper.log(tostring(slappy.thingums))
+temper.log(tostring(slippy.thingumses))
+temper.log(tostring(slippy:checkOverridden()))
+temper.log(tostring(slippy:checkOwn()))
+temper.log(D():a())
+temper.log(D().thing)
+temper.log(DSplit():a())
+temper.log(DDeep():a())
+temper.log(EDeep():a())
 
 return {}

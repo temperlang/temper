@@ -1,0 +1,48 @@
+tmpl 1 model 1 library `generic-null-checks` 0.0.0
+
+uses `temper-core`#10 0.0.0-alpha.0.0 {
+  interface Console#11 {
+    connected method log#12(message: String): Void;
+  }
+  class Boolean#14 {
+    connected method toString#15(): String;
+  }
+  class Int32#20 {
+    connected method toString#21(radix?: Int32): String;
+  }
+  connected fn getConsole#22(name?: String): Console#11;
+}
+
+module `generic-null-checks`#0 {
+  let ~console#13: Console#11;
+
+  export class Named#1 {
+    let name#2: String;
+    constructor constructor#3(name#8: String): Named#1 {
+      this.name#2 = name#8;
+    }
+  }
+
+  export fn isNull#4<T#5>(x#9: T#5): Boolean {
+    return isNull((asNullable(x#9)): T#5?);
+  }
+
+  export fn orElse#6<T#7>(x#16: T#7, y#17: T#7): T#7 {
+    {
+      if (isNull((asNullable(x#16)): T#7?)) {
+        return y#17;
+      } else {
+        return x#16;
+      }
+    }
+  }
+
+  init {
+    init ~console#13 = getConsole#22(omitted);
+    ~console#13.log#12(%String.cat(%String.cat(%String.cat(%String.cat(isNull#4<String?>((null): String?).toString#15(), " "), isNull#4<String?>((asNullable("a")): String?).toString#15()), " "), isNull#4<String>("a").toString#15()));
+    ~console#13.log#12(%String.cat(%String.cat(%String.cat(%String.cat(isNull#4<Int32?>((null): Int32?).toString#15(), " "), isNull#4<Int32?>((asNullable(1)): Int32?).toString#15()), " "), isNull#4<Int32>(1).toString#15()));
+    ~console#13.log#12(%String.cat(%String.cat(isNull#4<Named#1?>((null): Named#1?).toString#15(), " "), isNull#4<Named#1>(new constructor#3("n")).toString#15()));
+    ~console#13.log#12((value { let subject#18: String? = orElse#6<String?>((null): String?, (asNullable("y")): String?); (if (isNull(subject#18)) "null" else (nonNull(subject#18)): String): String }): String);
+    ~console#13.log#12(%String.cat(%String.cat(orElse#6<String>("x", "y"), " "), ((value { let subject#19: Int32? = orElse#6<Int32?>((null): Int32?, (asNullable(2)): Int32?); (if (isNull(subject#19)) %Int32.neg(1) else (nonNull(subject#19)): Int32): Int32 }): Int32).toString#21(omitted)));
+  }
+}

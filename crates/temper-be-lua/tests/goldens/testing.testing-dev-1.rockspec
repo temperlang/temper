@@ -5,8 +5,9 @@ description = {
 }
 build = {
     type = 'builtin',
-    copy_directories = {'.'},
-    modules = {},
+    modules = {
+        ['testing'] = 'init.lua',
+    },
 }
 dependencies = {
     'lua >= 5.1',

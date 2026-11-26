@@ -115,13 +115,13 @@ with_tostring(Moreover)
 local function bother()
   local whatIAm = Moreover(1)
   local moreover = Moreover(2, 3)
-  print("Moreover: " .. moreover:toString())
+  temper.log("Moreover: " .. moreover:toString())
   local moreover2 = Moreover(4)
-  print("Moreover again: " .. moreover2:toString())
+  temper.log("Moreover again: " .. moreover2:toString())
   local moreover3 = Moreover(temper.null, 7)
-  print("Moreover yet again: " .. moreover3:toString())
+  temper.log("Moreover yet again: " .. moreover3:toString())
   local whatever = Whatever(5)
-  print("Whatever: " .. whatever.blah)
+  temper.log("Whatever: " .. whatever.blah)
 end
 
 local person1 = Person("Alice", 50)
@@ -133,7 +133,7 @@ local things = { person1, person2, circle1, circle2 }
 ---@param thing object-literals.extra-class.Stringable
 ---@return integer
 local function fn(thing)
-  print(thing:toString())
+  temper.log(thing:toString())
   return 0
 end
 
@@ -143,15 +143,15 @@ Whatever(321)
 Rectangle(7, 8)
 bother()
 local whatever = Whatever(6)
-print("Whatever again: " .. whatever.blah)
+temper.log("Whatever again: " .. whatever.blah)
 local personAgain = Person("Carrie", 40)
 local name = personAgain.name
 local someAge = personAgain.age
-print("name is " .. name .. " and age is " .. someAge)
+temper.log("name is " .. name .. " and age is " .. someAge)
 local personMore = Person(name, 35)
-print(personMore:toString())
+temper.log(personMore:toString())
 local twin = Person(person1.name, person1.age)
-print("Some are twins: " .. tostring(person1:eq(twin)))
-print("All are twins: " .. tostring(person2:eq(twin)))
+temper.log("Some are twins: " .. tostring(person1:eq(twin)))
+temper.log("All are twins: " .. tostring(person2:eq(twin)))
 
 return { Person = Person }

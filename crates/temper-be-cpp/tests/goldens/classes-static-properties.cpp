@@ -15,11 +15,15 @@ struct C;
 struct I;
 
 struct Simple : public std::enable_shared_from_this<Simple> {
+ private:
   struct temper_statics {
     static temper::core::GlobalSlot<std::shared_ptr<Simple>> simon;
     static temper::core::GlobalSlot<temper::core::Str> value;
     static temper::core::GlobalSlot<int32_t> other;
   };
+  friend void global_init_init();
+
+ public:
   temper::core::Str name;
   static std::shared_ptr<Simple> const & simon();
   static temper::core::Str const & value();

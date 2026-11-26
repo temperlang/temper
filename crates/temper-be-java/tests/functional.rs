@@ -31,8 +31,9 @@
 //! - `runs`: without Maven, `javac` (or `JAVAC`) compiles
 //!   `temper-core` (`crates/temper-be-java/runtime/temper-core`) once, for Java 8
 //!   as its `pom.xml` says, into `CARGO_TARGET_TMPDIR`, reused until its
-//!   sources or the JDK change; then every generated package, and a
-//!   harness that runs `module-state` from 8 threads, in one more `javac`,
+//!   sources or the JDK change; then every generated package, a
+//!   harness that runs `module-state` from 8 threads, and host code
+//!   (`tests/host/`) using `async-turns`, `java-statics`, and `module-state`, in one more `javac`,
 //!   for Java 17, with every lint as an error ([`LINTS`]), or one per
 //!   batch where two libraries share a name; then `java` (or
 //!   `JAVA`) runs each program's main class, which logs what the test
@@ -116,7 +117,12 @@ fn cases() -> Vec<Case> {
 
 /// This crate's own programs, in `tests/programs/`: Temper, with what
 /// each logs in a log block.
-const OWN: &[&str] = &["java-classes", "java-nullables", "java-generics"];
+const OWN: &[&str] = &[
+    "java-classes",
+    "java-nullables",
+    "java-generics",
+    "java-statics",
+];
 
 /// The lines of a program's log block.
 fn log_block(text: &str) -> Vec<String> {
@@ -413,6 +419,7 @@ fn runs() {
         let mut batches: Vec<(Vec<String>, Vec<PathBuf>)> = Vec::new();
         let mut mains = Vec::new();
         let mut interop = None;
+        let mut statics = None;
         // std's main sources, for each batch with a case that imports
         // std's modules.
         let mut std_sources = Vec::new();
@@ -455,6 +462,18 @@ fn runs() {
                 fs::copy(source, &host).unwrap();
                 batches[at].1.push(host);
                 interop = Some((case, at));
+            }
+            // Host code that uses `java-statics`' statics from outside,
+            // and `module-state`'s, in the first batch with it.
+            if case.key == "java-statics" {
+                assert_eq!(at, 0, "java-statics must share module-state's batch");
+                let host = out.join("src/statics/Statics.java");
+                fs::create_dir_all(host.parent().unwrap()).unwrap();
+                let source =
+                    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/Statics.java");
+                fs::copy(source, &host).unwrap();
+                batches[at].1.push(host);
+                statics = Some((case, at));
             }
         }
         let threads = out.join("src/threads/ModuleStateThreads.java");
@@ -515,6 +534,29 @@ fn runs() {
                 .collect();
             run("host interop", at, "interop.Interop", &expected);
         }
+        // `tests/host/Statics.java`: loading `module-state`'s `Palette`
+        // first, then `Policy`, runs each module's init, whose logs come
+        // first; their statics read right through getters, and none is a
+        // field it reaches.
+        if let Some((case, at)) = statics {
+            let state = cases.iter().find(|c| c.library == "module-state").unwrap();
+            let expected: Vec<String> = (state.expected.iter().cloned())
+                .chain(case.expected.iter().cloned())
+                .chain(
+                    [
+                        "palette p-warm p-warm",
+                        "standard a b",
+                        "default [a b]",
+                        "textOnly []",
+                        "strict false",
+                        "literals 3 policy true",
+                        "public static fields []",
+                    ]
+                    .map(String::from),
+                )
+                .collect();
+            run("host statics", at, "statics.Statics", &expected);
+        }
         // Init logs as `module-state` does, then the threads tick.
         run(
             "module-state-threads",
@@ -561,6 +603,61 @@ fn missing_host_code() {
             case.host_files.retain(|(path, _)| path != file);
             let error = translate(&kit::program_for(&case, &JAVA.rules), &JAVA).unwrap_err();
             assert!(error.what.contains(file), "{key}: {error}");
+        }
+    });
+}
+
+/// A static's getter named as a method that takes nothing is `NotYet`,
+/// naming the getter, where it would be a duplicate method in `javac`:
+/// a method `getLimit()` beside a static `limit`, `isStrict()` beside a
+/// `Boolean` static `strict`, and an instance property's getter beside
+/// a static of its name; and the same inherited from an interface,
+/// where `javac` rejects a static method hiding an instance one.
+#[test]
+fn static_getters_named_as_methods() {
+    kit::with_stack(|| {
+        let class = |members: &str| format!("export class Policy {{\n  {members}\n}}");
+        let cases = [
+            (
+                class("public static limit = 3;\n  public getLimit(): Int { 4 }"),
+                "getLimit()",
+            ),
+            (
+                class("public static strict = true;\n  public isStrict(): Boolean { false }"),
+                "isStrict()",
+            ),
+            (
+                class("public static standard = 1;\n  public get standard(): Int { 2 }"),
+                "getStandard()",
+            ),
+            (
+                "export interface Limited {\n  public getLimit(): Int { 1 }\n}\n\
+                 export class Policy extends Limited {\n  public static limit = 3;\n}"
+                    .to_string(),
+                "getLimit()",
+            ),
+            (
+                "export interface Sized {\n  public get size(): Int { 1 }\n}\n\
+                 export interface Measured extends Sized {}\n\
+                 export class Policy extends Measured {\n  public static size = 3;\n}"
+                    .to_string(),
+                "getSize()",
+            ),
+        ];
+        for (text, getter) in cases {
+            let text = format!("    {}\n", text.replace('\n', "\n    "));
+            let case = Case::inline("clash", "clash.temper.md", text, Vec::new());
+            let program = kit::program_for(&case, &JAVA.rules);
+            let said = match translate(&program, &JAVA) {
+                Ok(_) => "translated".to_string(),
+                Err(e) => e.to_string(),
+            };
+            assert!(
+                said.contains(&format!(
+                    "a static getter, {getter}, that a method's name takes"
+                )),
+                "{getter}: {said}"
+            );
         }
     });
 }

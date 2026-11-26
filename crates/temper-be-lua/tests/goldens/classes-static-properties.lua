@@ -27,7 +27,7 @@ function C.constructor(this)
 end
 
 function C.sayHi()
-  print(C.compose("C", "'hi.'"))
+  temper.log(C.compose("C", "'hi.'"))
 end
 
 ---@param subject string
@@ -43,15 +43,15 @@ end
 local I = temper.type("static-properties.I")
 
 function I.sayBye()
-  print("I says 'bye.'")
+  temper.log("I says 'bye.'")
 end
 
 Simple.simon = Simple("foo")
 Simple.value = Simple.simon.name
 Simple.other = 22
-print("Simple.simon.name is " .. Simple.simon.name)
-print("Simple.value is " .. Simple.value)
-print("Simple.other is " .. Simple.other)
+temper.log("Simple.simon.name is " .. Simple.simon.name)
+temper.log("Simple.value is " .. Simple.value)
+temper.log("Simple.other is " .. Simple.other)
 C.sayHi()
 I.sayBye()
 

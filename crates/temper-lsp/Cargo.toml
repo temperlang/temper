@@ -17,3 +17,4 @@ serde_json = "1"
 temper-analysis = { path = "../temper-analysis" }
 temper-frontend = { path = "../temper-frontend", default-features = false }
 temper-syntax = { path = "../temper-syntax" }
+temper-tmpl = { path = "../temper-tmpl" }
