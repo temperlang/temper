@@ -436,13 +436,14 @@ the field named as its parameter, one `New`'s copies all from one local.
 
 So a target with its own copy form (Rust's `..old`, C#'s `with`,
 Python's `dataclasses.replace`) may pass only the other arguments, where
-`analysis::copyable_classes` says the class allows it. That checks each
-class once, in time linear in its members: its constructor only stores
-each parameter, or its default, in the field of its name, in order (no
-checks, no computed fields); no field is a `var` (a copy form reads the
-fields after the given values run, which then can't change them); no
-getter or setter has a field's name; and no nullable parameter has a
-default other than null (a copied null would become the default).
+`analysis::copyable_classes` says the class allows it (2026-11-26): a
+`data` class (`Facts::DATA`, from `@data`, whose rules the frontend
+checks: its constructor only stores its parameters, all public fields,
+with no accessors and no default but null; notes/typing.md, "`@data`
+classes") with no `var` field, as a copy form reads the fields after
+the given values run, which then can't change them. Spreads need
+`@data`, so a class's own copy form is only an optimization; the meaning
+stays the constructor call. A `data` mark comes after `fun` in text.
 
 Rust resugars (2026-11-26): a spread of such a class of the module is a
 struct update, `Theme(Arc::new(ThemeStruct { size: 20,

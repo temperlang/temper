@@ -634,38 +634,25 @@ fn joins_and_sealed_whens() {
     });
 }
 
-/// Which classes a spread may copy with a target's own copy form, one
-/// class for each rule `copyable_classes` checks, as the frontend writes
-/// them: only `Plain`, whose constructor just stores its parameters, a
-/// non-null one with a default and a nullable one defaulting to null
-/// among them; not a computed field, a checked parameter, a getter of a
-/// field's name, a nullable parameter with a default that isn't null, a
-/// `var` field, or parameters stored in fields of other names. And a
-/// spread's copies passed as they are, or made nullable, are marked; those
-/// held first, as values same out of order are, aren't.
+/// Which classes a spread may copy with a target's own copy form: the
+/// `@data` ones without a `var` property, marked `data` in tmpl, so
+/// `Plain`, a nullable property defaulting to null among its own; not
+/// `Mutable`, with a `var`, though it's `data` too, nor a class without
+/// `@data`. And a spread's copies passed as they are are marked; those
+/// held first, as values out of order are, aren't.
 #[test]
 fn copyable_classes_and_spread_copies() {
     with_stack(|| {
         let source = "
-    class Plain(public a: Int, public b: Int = 3, public c: Int? = null) {}
-    class Computed(public a: Int) { public let twice: Int = a * 2; }
-    class Checked {
-      public a: Int;
-      public constructor(a: Int) { this.a = if (a < 0) { 0 } else { a }; }
-    }
-    class Custom(public a: Int) { public get a(): Int { 5 } }
-    class Swapping(public a: Int? = 5) {}
-    class Mutable(public var a: Int) {}
-    class Swapped {
-      public a: Int;
-      public b: Int;
-      public constructor(a: Int, b: Int) { this.a = b; this.b = a; }
-    }
-    let p: Plain = { a: 1 };
+    @data class Plain(public a: Int, public b: Int, public c: Int? = null) {}
+    @data class Mutable(public a: Int, public var b: Int) {}
+    class Undecorated(public a: Int) {}
+    let p: Plain = { a: 1, b: 3 };
     let same(n: Int): Int { n }
     let q = { ...p, a: 2 };
     let r = { ...p, c: same(1), a: same(2) };
-    console.log(\"${q.b} ${r.b}\");
+    let m = { ...new Mutable(1, 2), a: 3 };
+    console.log(\"${q.b} ${r.b} ${m.b}\");
 ";
         let program = translate_source("copyable", source);
         let mut names: Vec<&str> = (copyable_classes(&program).into_iter())
@@ -674,9 +661,12 @@ fn copyable_classes_and_spread_copies() {
         names.sort();
         assert_eq!(names, ["Plain"]);
         let written = text::write(&program);
-        let marked = "(2, (asNullable(copy(spread#45.b#9))): Int32?, copy(spread#45.c#10))";
+        assert!(written.contains("data class Plain#"), "{written}");
+        assert!(written.contains("data class Mutable#"), "{written}");
+        assert!(written.contains("\n  class Undecorated#"), "{written}");
+        let marked = "(2, copy(spread#26.b#5), copy(spread#26.c#6))";
         assert!(written.contains(marked), "{written}");
-        assert!(written.contains("= spread#46.b#9;"), "{written}");
+        assert!(written.contains("= spread#27.b#5;"), "{written}");
     });
 }
 

@@ -41,12 +41,15 @@ it:
 
 <!-- repl: paste -->
 ```temper
-class Rectangle(
+@data class Rectangle(
   // Currently, the only float type in Temper is Float64.
   public width: Float64,
   public height: Float64,
 ) {}
 ```
+
+`@data` promises that the class is plain data: its properties are just
+its constructor's, all public. We'll use that below.
 
 Hitting enter evaluates the class definition in the Temper interpreter, which
 is separate from any backend language (such as Java, JS, or Python). You should
@@ -146,8 +149,9 @@ interactive#12: [1.5,0.5]
 
 To copy an object with a few properties changed, spread the old one first.
 It's an object literal like the others, so the constructor runs, with each
-property not given taken from the old object. For now, there's one spread,
-written first, of a value of the class being made.
+property not given taken from the old object. Spreads need a `@data` class,
+as `Rectangle` is. For now, there's one spread, written first, of a value of
+the class being made.
 
 ```console
 $ { ...box, height: 2.0 }

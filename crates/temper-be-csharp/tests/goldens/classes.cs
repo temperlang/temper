@@ -39,6 +39,12 @@ public static class ClassesGlobal
         return s;
     }
 
+    internal static string Renamed(Tally t, string name)
+    {
+        t.Count = t.Count + 10;
+        return name;
+    }
+
     internal static string Compared(Func<Loose?, Loose?, bool> eq)
     {
         IReadOnlyList<int> ns = Listed.CreateReadOnlyList<int>(0, 1, -1, 2);
@@ -144,12 +150,12 @@ public static class ClassesGlobal
         console.Log((new Point(1, 2).Eq(new Point(1, 2)) ? "true" : "false") + " " + (!new Point(1, 2).Eq(new Point(2, 1)) ? "true" : "false"));
         console.Log(new Holder(new Loose(3), "a").Eq(new Holder(new Loose(-3), "a")) ? "true" : "false");
         Loose loose = new Loose(2);
-        string @string = (loose.Mirrors(new Loose(-2)) ? "true" : "false") + " ";
+        string @string2 = (loose.Mirrors(new Loose(-2)) ? "true" : "false") + " ";
         Loose? left = MaybeLoose(-2);
         Loose left2 = loose;
         Loose? right = MaybeLoose(0);
         Loose? left3 = MaybeLoose(0);
-        console.Log(@string + ((left == null ? false : left.Eq(loose)) ? "true" : "false") + " " + ((right == null ? false : left2.Eq(right)) ? "true" : "false") + " " + (!(left3 == null ? false : left3.Eq(loose)) ? "true" : "false"));
+        console.Log(@string2 + ((left == null ? false : left.Eq(loose)) ? "true" : "false") + " " + ((right == null ? false : left2.Eq(right)) ? "true" : "false") + " " + (!(left3 == null ? false : left3.Eq(loose)) ? "true" : "false"));
         string matched;
         Loose? subject = MaybeLoose(-2);
         matched = (subject == null ? false : subject.Eq(loose)) ? "loose" : "other";
@@ -168,29 +174,31 @@ public static class ClassesGlobal
         Stock st = new Stock(Listed.CreateReadOnlyList<int>(4, 5));
         st.Items = Listed.CreateReadOnlyList<int>(1, 2, 3);
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{st.Count} {st.Size} {st.SizeNow()} {st.Items.Count}"));
-        Theme plain = new Theme("black", "white");
+        Theme plain = new Theme("black", "white", 12, false);
         Theme loud;
         Theme spread = plain;
-        loud = new Theme(spread.Fg, spread.Bg, 20, true);
+        loud = new Theme(spread.Fg, spread.Bg, 20, true, "!");
         Theme dark;
         Theme spread2 = loud;
-        dark = new Theme(plain.Bg, plain.Fg, spread2.Size, spread2.Bold);
+        dark = new Theme(plain.Bg, plain.Fg, spread2.Size, spread2.Bold, spread2.Note);
         console.Log(plain.ToString() + " | " + loud.ToString() + " | " + dark.ToString());
         Theme mixed;
         Theme spread3 = Picked(dark, "old");
         string arg = spread3.Bg;
         string arg2 = Noted("red");
         bool arg3 = spread3.Bold;
-        mixed = new Theme(arg2, arg, 9, arg3);
+        string? arg4 = spread3.Note;
+        mixed = new Theme(arg2, arg, 9, arg3, arg4);
         console.Log(mixed.ToString());
         Theme ordered;
         Theme spread4 = Picked(plain, "first");
-        ordered = new Theme(Noted("second"), Noted("third"), spread4.Size, spread4.Bold);
+        ordered = new Theme(Noted("second"), Noted("third"), spread4.Size, spread4.Bold, spread4.Note);
         console.Log(ordered.ToString());
-        Span wide;
-        Span spread5 = new Span(2, 5);
-        wide = new Span(spread5.Start, 9);
-        console.Log(string.Create(CultureInfo.InvariantCulture, $"{wide.Start} {wide.End} {wide.Length}"));
+        Tally first = new Tally(1, "a");
+        Tally second;
+        Tally spread5 = first;
+        second = new Tally(spread5.Count, Renamed(first, "b"));
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{first.Count} {second.Count} {second.Name}"));
         console.Log(Compared((Loose? a, Loose? b) => a == null ? b == null : b == null ? false : a.Eq(b)));
         console.Log(Compared((Loose? a, Loose? b) => !(a == null ? b == null : b == null ? false : a.Eq(b))));
         console.Log(Compared((Loose? a, Loose? b) => b == null ? a == null : a == null ? false : b.Eq(a)));

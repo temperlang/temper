@@ -791,6 +791,7 @@ impl Reader {
             ("protected", Facts::PROTECTED),
             ("auto", Facts::AUTO),
             ("fun", Facts::FUN),
+            ("data", Facts::DATA),
         ] {
             if self.eat_word(word) {
                 marks.member = marks.member | fact;

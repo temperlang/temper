@@ -20,8 +20,8 @@ program it came from; stored facts are rechecked by recomputing them.
   print in place or as a local, and which their surfaces read.
 - **Copyable classes** (As built, 2026-11-25):
   `analysis::copyable_classes` gives the classes a spread may copy with
-  a target's own copy form, each checked once ([nodes.md](nodes.md),
-  "Spreads").
+  a target's own copy form: `data` ones without a `var` field
+  ([nodes.md](nodes.md), "Spreads").
 - **Purity:** whether an expression may have side effects or bubble,
   for evaluation-order temporaries.
 - **Bubbling:** may-bubble calls and their handlers.

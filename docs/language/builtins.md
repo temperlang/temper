@@ -2269,6 +2269,27 @@ readers of other languages.
 
 Contrast `@const` with [`@var`](#var-decorator).
 
+### `@data` decorator
+`@data` marks a class as plain data, a promise the compiler checks:
+each constructor parameter is a public property, with no default but
+`null`; the class has no other properties (fields, getters, or setters)
+and no constructor of its own; and if it's also [`@imu`](#imu-decorator),
+no `var` properties. Methods are fine.
+
+Object spreads, `{ ...old, a: e }`, need a `@data` class. A spread
+means the constructor call with each property not given read from
+`old`; some backends may copy such an object natively instead, as an
+optimization.
+
+```temper
+@data class Point(public x: Int, public y: Int, public label: String? = null) {
+  public moved(dx: Int): Point { { ...this, x: x + dx } }
+}
+let p = new Point(1, 2, "a").moved(3);
+console.log("${p.x} ${p.y} ${p.label}"); //!outputs "4 2 a"
+// ✅
+```
+
 ### `@export`
 The `@export` decorator keyword makes the declaration available outside the module.
 Exported declarations may be linked to via [`import`](#import).
@@ -2340,7 +2361,9 @@ For example:
 ```
 
 ### `@imu` decorator
-Marker for types that must be deeply immutable.
+Marker for types that must be deeply immutable. A
+[`@data`](#data-decorator) class that's `@imu` can't have `var`
+properties.
 
 ### `@in` deprecated variance notation
 `@in` may decorate a type formal declaration to specify covariant (input) variance.

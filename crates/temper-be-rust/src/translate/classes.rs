@@ -28,8 +28,8 @@
 //! method an interface gives a class is called by its trait
 //! (`CTrait::a(&d)`), where Kotlin also gives the class a private method
 //! that does; the constructor builds its instance in one expression where
-//! it can; a spread, `{ ...old, size: 20 }`, of a class whose constructor
-//! only stores its parameters (`copyable_classes`) is a struct update,
+//! it can; a spread, `{ ...old, size: 20 }`, of a `@data` class with no
+//! `var` property (`copyable_classes`) is a struct update,
 //! `Theme(Arc::new(ThemeStruct { size: 20, ..(*spread.0).clone() }))`,
 //! its struct then `Clone` (Kotlin Temper has no spreads); and what Kotlin always writes but a type that isn't exported
 //! may not use (`new`, `clone_boxed`) is `#[allow(dead_code)]`, where
@@ -1702,8 +1702,9 @@ impl<'a> Translator<'a> {
     }
 
     /// A spread of a copyable class ([`Translator::spread_base`]) as a
-    /// struct update, which skips the constructor, as it only stores its
-    /// parameters: `C(Arc::new(CStruct { a: e, ..(*spread.0).clone() }))`.
+    /// struct update, which skips the constructor, as a `@data` class's
+    /// only stores its parameters: `C(Arc::new(CStruct { a: e,
+    /// ..(*spread.0).clone() }))`.
     /// Rust runs the given values in order, then the base, a local that
     /// already holds `old`, whose fields, none of them `var`, the values
     /// can't change: the lowering's order.

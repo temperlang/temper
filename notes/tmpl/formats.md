@@ -486,7 +486,7 @@ class-member:= doc* marks ("static"? ("let" | "var") decl ":" type ";"     // Fi
              | "abstract"? ("method" | "get" | "set" | "constructor")
                decl params ":" type bubbles? (block | ";"))                // Method, AbstractMethod
 marks       := ("qname" STRING)? "keep"? "keepTest"? connected? "export"? "private"? "protected"?
-               "auto"? ("operator" "(" "\"==\"" ")")? ("operator" "(" "\"<=>\"" ")")?
+               "auto"? "fun"? "data"? ("operator" "(" "\"==\"" ")")? ("operator" "(" "\"<=>\"" ")")?
 stmt        := … | postfix "." ref "=" expr ";"   // SetField
              | "init" ref "=" expr ";"           // InitStatic, for a static field
 primary     := … | "this" | "(" "this" ")" ":" type | "new" ref "(" args? ")" "^"?

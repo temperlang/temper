@@ -8,15 +8,15 @@ internal class Theme
     private readonly string bg;
     private readonly int size;
     private readonly bool bold;
+    private readonly string? note;
 
-    public Theme(string fg, string bg, int? size = null, bool? bold = null)
+    public Theme(string fg, string bg, int size, bool bold, string? note = null)
     {
-        int size2 = size ?? 12;
-        bool bold2 = bold ?? false;
         this.fg = fg;
         this.bg = bg;
-        this.size = size2;
-        this.bold = bold2;
+        this.size = size;
+        this.bold = bold;
+        this.note = note;
     }
 
     public string Fg
@@ -51,23 +51,30 @@ internal class Theme
         }
     }
 
-    public string Weight
+    public string? Note
     {
         get
         {
-            if (this.bold)
-            {
-                return "bold";
-            }
-            else
-            {
-                return "plain";
-            }
+            return this.note;
+        }
+    }
+
+    public string Weight()
+    {
+        if (this.bold)
+        {
+            return "bold";
+        }
+        else
+        {
+            return "plain";
         }
     }
 
     public override string ToString()
     {
-        return this.fg + "/" + this.bg + " " + this.size.ToString(CultureInfo.InvariantCulture) + " " + this.Weight;
+        string @string1 = this.fg + "/" + this.bg + " " + this.size.ToString(CultureInfo.InvariantCulture) + " " + this.Weight();
+        string? subject1 = this.note;
+        return @string1 + (subject1 == null ? "" : subject1);
     }
 }

@@ -163,6 +163,8 @@ impl Settle {
             auto_eq: HashMap::new(),
             fun_interfaces: HashSet::new(),
             sealed: HashSet::new(),
+            data_classes: HashSet::new(),
+            imu: HashSet::new(),
             json_decorated: HashSet::new(),
             json: crate::json::JsonState::default(),
             static_extension_marks: HashMap::new(),
@@ -317,6 +319,11 @@ pub(crate) struct Settle {
     pub(crate) fun_interfaces: HashSet<NodeId>,
     /// Declarations marked `sealed`, until they're interfaces.
     pub(crate) sealed: HashSet<NodeId>,
+    /// Declarations marked `@data`, until they're classes.
+    pub(crate) data_classes: HashSet<NodeId>,
+    /// Declarations marked `@imu`, until they're classes, where only
+    /// `@data` checks it (a `@data` class's `var`).
+    pub(crate) imu: HashSet<NodeId>,
     /// Declarations marked `@json`, until they're classes, which get
     /// members to encode and decode JSON ([`crate::json`]).
     pub(crate) json_decorated: HashSet<NodeId>,

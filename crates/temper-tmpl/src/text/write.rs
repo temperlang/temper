@@ -281,6 +281,9 @@ impl Writer {
         if d.facts.contains(Facts::FUN) {
             self.out.push_str("fun ");
         }
+        if d.facts.contains(Facts::DATA) {
+            self.out.push_str("data ");
+        }
         if d.facts.contains(Facts::OPERATOR_EQ) {
             self.out.push_str("operator(\"==\") ");
         }

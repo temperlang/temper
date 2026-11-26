@@ -155,6 +155,11 @@ impl Facts {
     /// Marked `@keepTest`: kept for tests' host code, as `KEEP` is for the
     /// library's, so its name is claimed first too, and tests reach it.
     pub const KEEP_TEST: Facts = Facts(8192);
+    /// A `@data` class: plain data, whose fields are its constructor's
+    /// parameters, all public, which its constructor only stores, with no
+    /// accessors and no default but null, as the frontend checks
+    /// (notes/tmpl/nodes.md, "Spreads").
+    pub const DATA: Facts = Facts(16384);
 
     pub fn contains(self, other: Facts) -> bool {
         self.0 & other.0 == other.0

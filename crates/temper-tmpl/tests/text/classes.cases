@@ -403,7 +403,7 @@ C3 @48: shared#4 is another module's
 tmpl 1 model 1 library spread 0.1.0
 
 module spread#0 {
-  class P#1 {
+  data class P#1 {
     let a#2: Int32;
     let b#3: Int32;
     constructor constructor#4(a#5: Int32, b#6?: Int32?): P#1 {

@@ -35,6 +35,11 @@ public final class ClassesGlobal {
         return s;
     }
 
+    static String renamed(Tally t, String name) {
+        t.count = t.count + 10;
+        return name;
+    }
+
     static String compared(BiPredicate<@Nullable Loose, @Nullable Loose> eq) {
         List<Integer> ns = List.of(0, 1, -1, 2);
         List<String> out = new ArrayList<>();
@@ -138,24 +143,26 @@ public final class ClassesGlobal {
         Stock st = new Stock(List.of(4, 5));
         st.setItems(List.of(1, 2, 3));
         console.log(st.count + " " + st.size + " " + st.sizeNow() + " " + st.getItems().size());
-        Theme plain = new Theme("black", "white");
+        Theme plain = new Theme("black", "white", 12, false);
         Theme spread = plain;
-        Theme loud = new Theme(spread.fg, spread.bg, 20, true);
+        Theme loud = new Theme(spread.fg, spread.bg, 20, true, "!");
         Theme spread2 = loud;
-        Theme dark = new Theme(plain.bg, plain.fg, spread2.size, spread2.bold);
+        Theme dark = new Theme(plain.bg, plain.fg, spread2.size, spread2.bold, spread2.note);
         console.log(plain.toString() + " | " + loud.toString() + " | " + dark.toString());
         Theme spread3 = picked(dark, "old");
         String arg = spread3.bg;
         String arg2 = noted("red");
         boolean arg3 = spread3.bold;
-        Theme mixed = new Theme(arg2, arg, 9, arg3);
+        @Nullable String arg4 = spread3.note;
+        Theme mixed = new Theme(arg2, arg, 9, arg3, arg4);
         console.log(mixed.toString());
         Theme spread4 = picked(plain, "first");
-        Theme ordered = new Theme(noted("second"), noted("third"), spread4.size, spread4.bold);
+        Theme ordered = new Theme(noted("second"), noted("third"), spread4.size, spread4.bold, spread4.note);
         console.log(ordered.toString());
-        Span spread5 = new Span(2, 5);
-        Span wide = new Span(spread5.start, 9);
-        console.log(wide.start + " " + wide.end + " " + wide.length);
+        Tally first = new Tally(1, "a");
+        Tally spread5 = first;
+        Tally second = new Tally(spread5.count, renamed(first, "b"));
+        console.log(first.count + " " + second.count + " " + second.name);
         console.log(compared((a, b) -> a == null ? b == null : b == null ? false : a.eq(b)));
         console.log(compared((a, b) -> !(a == null ? b == null : b == null ? false : a.eq(b))));
         console.log(compared((a, b) -> b == null ? a == null : a == null ? false : b.eq(a)));

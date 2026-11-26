@@ -14,10 +14,7 @@
 
 use crate::builtins::{Builtin, Function};
 use crate::classes::Placed;
-use crate::core::{
-    CLASS_INTERFACE, MEMBER_PRIVATE, MEMBER_STATIC, ROLE_GETTER, ROLE_MASK, ROLE_PARAM,
-    class_parts, constructor_params,
-};
+use crate::core::{CLASS_DATA, CLASS_INTERFACE, class_parts, constructor_params};
 use crate::library::Message;
 use crate::scope::{ScopeId, ScopeKind, SymbolId};
 use crate::settle::{Fact, Settle};
@@ -114,10 +111,10 @@ impl Settle {
     /// = old; new C(spread#1.a, e) }`. So the class's constructor runs, as
     /// for any object literal ([`Settle::place_literal`]), and a parameter
     /// with a default takes `old`'s value. The class is `old`'s, which must
-    /// be a class; `class: C`, if given, must name it; and each property
-    /// copied must be readable here. Copied properties go among the given
-    /// ones in the parameters' order, so placing them needs no more
-    /// temporaries than the given ones do.
+    /// be a `@data` class, whose constructor's parameters are all public
+    /// properties; `class: C`, if given, must name it. Copied properties go
+    /// among the given ones in the parameters' order, so placing them needs
+    /// no more temporaries than the given ones do.
     fn place_spread(&mut self, call: NodeId, scope: ScopeId, t: TypeId) -> Result<(), Message> {
         let children = self.lib.tree.children(call).to_vec();
         let &[callee, target, _, old, ref given @ ..] = &children[..] else {
@@ -130,6 +127,9 @@ impl Settle {
         let Some((symbol, class)) = symbol.and_then(|b| Some((b, self.class_of(b)?))) else {
             return Err(Message::SpreadNeedsClass(self.show(t)));
         };
+        if self.lib.tree.data(class) & CLASS_DATA == 0 {
+            return Err(Message::SpreadNeedsData(self.member_text(class).into()));
+        }
         let span = self.lib.tree.span(call);
         let class_name = if self.lib.value(target) == Some(&Value::Void) {
             self.builtin_name(symbol, span, target)
@@ -152,17 +152,9 @@ impl Settle {
             .collect();
         let mut copied = Vec::new();
         for (i, &name) in param_names.iter().enumerate() {
-            let Some(name) = name.filter(|n| !given_names.contains(&Some(*n))) else {
-                continue;
-            };
-            if !self.readable_here(class, name, scope) {
-                let text = self.lib.names.get(name).to_string();
-                return Err(Message::SpreadCannotCopy(
-                    text,
-                    self.member_text(class).into(),
-                ));
+            if let Some(name) = name.filter(|n| !given_names.contains(&Some(*n))) {
+                copied.push((i, name));
             }
-            copied.push((i, name));
         }
         let held = self.lib.names.temporary("spread");
         let old_span = self.lib.tree.span(old);
@@ -207,30 +199,6 @@ impl Settle {
         self.declare_temporary(block_scope, decl, &uses);
         self.declare_temporaries(block_scope, &temporaries);
         Ok(())
-    }
-
-    /// Whether code in `scope` may read a class's instance property
-    /// `name`, a field or getter: if it's private, only in the class that
-    /// declares it.
-    fn readable_here(&self, class: NodeId, name: NameId, scope: ScopeId) -> bool {
-        let tree = &self.lib.tree;
-        let inside = |owner: NodeId| {
-            let mut at = Some(scope);
-            while let Some(id) = at {
-                let s = self.scopes.get(id);
-                if s.kind == ScopeKind::Class && s.node == owner {
-                    return true;
-                }
-                at = s.parent;
-            }
-            false
-        };
-        (self.members_named(class, name, false).into_iter()).any(|m| {
-            let data = tree.data(m);
-            matches!(data & ROLE_MASK, 0 | ROLE_PARAM | ROLE_GETTER)
-                && data & MEMBER_STATIC == 0
-                && (data & MEMBER_PRIVATE == 0 || self.member_owner(m).is_some_and(inside))
-        })
     }
 
     /// Decides the object literals left undecided, as when the step budget

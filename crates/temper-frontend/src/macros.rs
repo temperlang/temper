@@ -1848,10 +1848,12 @@ impl Settle {
         }
         // `@keep`, which keeps a declaration that only host code uses, and
         // `@keepTest`, only tests' host code; the `Let` or `Class` it
-        // becomes keeps this node's id.
+        // becomes keeps this node's id. And a class's `@data` and `@imu`.
         match (self.lib.name(decorator)).map(|n| self.lib.names.get(n)) {
             Some("keep") => _ = self.lib.kept.insert(call),
             Some("keepTest") => _ = self.lib.kept_for_tests.insert(call),
+            Some("data") => _ = self.data_classes.insert(call),
+            Some("imu") => _ = self.imu.insert(call),
             _ => {}
         }
         if (self.lib.name(decorator)).is_some_and(|n| self.lib.names.get(n) == "json") {

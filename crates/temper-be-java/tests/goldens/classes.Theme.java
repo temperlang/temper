@@ -7,25 +7,21 @@ final class Theme {
     public final String bg;
     public final int size;
     public final boolean bold;
+    public final @Nullable String note;
 
-    public Theme(String fg, String bg, @Nullable Integer size, @Nullable Boolean bold) {
-        int size2 = size != null ? size : 12;
-        boolean bold2 = bold != null ? bold : false;
+    public Theme(String fg, String bg, int size, boolean bold, @Nullable String note) {
         this.fg = fg;
         this.bg = bg;
-        this.size = size2;
-        this.bold = bold2;
+        this.size = size;
+        this.bold = bold;
+        this.note = note;
     }
 
-    public Theme(String fg, String bg, @Nullable Integer size) {
-        this(fg, bg, size, null);
+    public Theme(String fg, String bg, int size, boolean bold) {
+        this(fg, bg, size, bold, null);
     }
 
-    public Theme(String fg, String bg) {
-        this(fg, bg, null, null);
-    }
-
-    public String getWeight() {
+    public String weight() {
         if (this.bold) {
             return "bold";
         } else {
@@ -34,7 +30,9 @@ final class Theme {
     }
 
     public String toString() {
-        return this.fg + "/" + this.bg + " " + this.size + " " + this.getWeight();
+        String t = this.fg + "/" + this.bg + " " + this.size + " " + this.weight();
+        @Nullable String subject = this.note;
+        return t + (subject == null ? "" : subject);
     }
 
     public String getFg() {
@@ -53,6 +51,10 @@ final class Theme {
         return this.bold;
     }
 
+    public @Nullable String getNote() {
+        return this.note;
+    }
+
     public static final class Builder {
         String fg;
 
@@ -68,22 +70,33 @@ final class Theme {
             return this;
         }
 
-        @Nullable Integer size;
+        int size;
+        boolean size__set;
 
-        public Builder size(@Nullable Integer size) {
+        public Builder size(int size) {
+            size__set = true;
             this.size = size;
             return this;
         }
 
-        @Nullable Boolean bold;
+        boolean bold;
+        boolean bold__set;
 
-        public Builder bold(@Nullable Boolean bold) {
+        public Builder bold(boolean bold) {
+            bold__set = true;
             this.bold = bold;
             return this;
         }
 
+        @Nullable String note;
+
+        public Builder note(@Nullable String note) {
+            this.note = note;
+            return this;
+        }
+
         public Theme build() {
-            if (fg == null || bg == null) {
+            if (fg == null || bg == null || !size__set || !bold__set) {
                 StringBuilder _message = new StringBuilder("Missing required fields:");
                 if (fg == null) {
                     _message.append(" fg");
@@ -91,9 +104,15 @@ final class Theme {
                 if (bg == null) {
                     _message.append(" bg");
                 }
+                if (!size__set) {
+                    _message.append(" size");
+                }
+                if (!bold__set) {
+                    _message.append(" bold");
+                }
                 throw new IllegalStateException(_message.toString());
             }
-            return new Theme(fg, bg, size, bold);
+            return new Theme(fg, bg, size, bold, note);
         }
     }
 }

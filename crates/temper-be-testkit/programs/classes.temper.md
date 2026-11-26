@@ -152,22 +152,23 @@ true false
 
 ## Spreads
 
-`{ ...old, a: e }` copies an `@imu` object with some properties changed:
+`{ ...old, a: e }` copies a `@data` object with some properties changed:
 the constructor runs, each property not given read from `old`, which
 runs first, then the given values, in the order written.
 
-    @imu
+    @imu @data
     class Theme(
       public fg: String,
       public bg: String,
-      public size: Int = 12,
-      public bold: Boolean = false,
+      public size: Int,
+      public bold: Boolean,
+      public note: String? = null,
     ) {
-      public get weight(): String { if (bold) { "bold" } else { "plain" } }
-      public toString(): String { "${fg}/${bg} ${size} ${weight}" }
+      public weight(): String { if (bold) { "bold" } else { "plain" } }
+      public toString(): String { "${fg}/${bg} ${size} ${weight()}${note ?? ""}" }
     }
-    let plain: Theme = { fg: "black", bg: "white" };
-    let loud = { ...plain, size: 20, bold: true };
+    let plain: Theme = { fg: "black", bg: "white", size: 12, bold: false };
+    let loud = { ...plain, size: 20, bold: true, note: "!" };
     let dark = { ...loud, fg: plain.bg, bg: plain.fg };
     console.log("${plain} | ${loud} | ${dark}");
     let picked(t: Theme, why: String): Theme { console.log(why); t }
@@ -177,25 +178,29 @@ runs first, then the given values, in the order written.
     let ordered = { ...picked(plain, "first"), fg: noted("second"), bg: noted("third") };
     console.log(ordered.toString());
 
-A class whose constructor works out a field can't be copied field by
-field, so a target with its own copy form still calls the constructor:
+A `@data` class that isn't `@imu` may have `var` properties. Its copies
+read `old`'s properties in the constructor's order, among the given
+values, so `count` here is read before `renamed` changes it; a target
+with its own copy form, which would read it after, calls the
+constructor instead:
 
-    class Span(public start: Int, public end: Int) {
-      public let length: Int = end - start;
-    }
-    let wide = { ...new Span(2, 5), end: 9 };
-    console.log("${wide.start} ${wide.end} ${wide.length}");
+    @data
+    class Tally(public var count: Int, public name: String) {}
+    let first = new Tally(1, "a");
+    let renamed(t: Tally, name: String): String { t.count = t.count + 10; name }
+    let second = { ...first, name: renamed(first, "b") };
+    console.log("${first.count} ${second.count} ${second.name}");
 
 ```log
-black/white 12 plain | black/white 20 bold | white/black 20 bold
+black/white 12 plain | black/white 20 bold! | white/black 20 bold!
 old
 red
-red/black 9 bold
+red/black 9 bold!
 first
 second
 third
 second/third 12 plain
-2 9 7
+11 1 b
 ```
 
 ## Equality, every way round

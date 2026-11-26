@@ -47,6 +47,16 @@ function noted(s) {
 }
 
 /**
+ * @param {Tally} t
+ * @param {string} name
+ * @returns {string}
+ */
+function renamed(t, name) {
+  t.count = (t.count + 10) | 0;
+  return name;
+}
+
+/**
  * @param {(arg0: Loose | null, arg1: Loose | null) => boolean} eq
  * @returns {string}
  */
@@ -571,29 +581,32 @@ class Theme extends type() {
   #size;
   /** @type {boolean} */
   #bold;
+  /** @type {string | null} */
+  #note;
 
   /**
-   * @param {{ fg: string, bg: string, size?: number | null, bold?: boolean | null }} props
+   * @param {{ fg: string, bg: string, size: number, bold: boolean, note?: string | null }} props
    * @returns {Theme}
    */
   static new(props) {
-    return new Theme(props.fg, props.bg, props.size, props.bold);
+    return new Theme(props.fg, props.bg, props.size, props.bold, props.note);
   }
 
   /**
    * @param {string} fg
    * @param {string} bg
-   * @param {number | null} [size]
-   * @param {boolean | null} [bold]
+   * @param {number} size
+   * @param {boolean} bold
+   * @param {string | null} [note]
    */
-  constructor(fg, bg, size, bold) {
+  constructor(fg, bg, size, bold, note) {
     super();
-    size ??= 12;
-    bold ??= false;
+    note ??= null;
     this.#fg = fg;
     this.#bg = bg;
     this.#size = size;
     this.#bold = bold;
+    this.#note = note;
   }
 
   /** @returns {string} */
@@ -616,8 +629,13 @@ class Theme extends type() {
     return this.#bold;
   }
 
+  /** @returns {string | null} */
+  get note() {
+    return this.#note;
+  }
+
   /** @returns {string} */
-  get weight() {
+  weight() {
     if (this.#bold) {
       return "bold";
     } else {
@@ -627,50 +645,47 @@ class Theme extends type() {
 
   /** @returns {string} */
   toString() {
-    return `${this.#fg}/${this.#bg} ${this.#size} ${this.weight}`;
+    return `${this.#fg}/${this.#bg} ${this.#size} ${this.weight()}${this.#note ?? ""}`;
   }
 }
 
-class Span extends type() {
+class Tally extends type() {
   /** @type {number} */
-  #start;
-  /** @type {number} */
-  #end;
-  /** @type {number} */
-  #length;
+  #count;
+  /** @type {string} */
+  #name;
 
   /**
-   * @param {{ start: number, end: number }} props
-   * @returns {Span}
+   * @param {{ count: number, name: string }} props
+   * @returns {Tally}
    */
   static new(props) {
-    return new Span(props.start, props.end);
+    return new Tally(props.count, props.name);
   }
 
   /**
-   * @param {number} start
-   * @param {number} end
+   * @param {number} count
+   * @param {string} name
    */
-  constructor(start, end) {
+  constructor(count, name) {
     super();
-    this.#start = start;
-    this.#end = end;
-    this.#length = (this.#end - this.#start) | 0;
+    this.#count = count;
+    this.#name = name;
   }
 
   /** @returns {number} */
-  get start() {
-    return this.#start;
+  get count() {
+    return this.#count;
   }
 
-  /** @returns {number} */
-  get end() {
-    return this.#end;
+  /** @param {number} value */
+  set count(value) {
+    this.#count = value;
   }
 
-  /** @returns {number} */
-  get length() {
-    return this.#length;
+  /** @returns {string} */
+  get name() {
+    return this.#name;
   }
 }
 
@@ -855,19 +870,19 @@ if (s instanceof Rect) {
 const st = new Stock(Object.freeze([4, 5]));
 st.items = Object.freeze([1, 2, 3]);
 console.log(`${st.count} ${st.size} ${st.sizeNow()} ${st.items.length}`);
-const plain = new Theme("black", "white");
+const plain = new Theme("black", "white", 12, false);
 /** @type {Theme} */
 let t$6;
 {
   const spread = plain;
-  t$6 = new Theme(spread.fg, spread.bg, 20, true);
+  t$6 = new Theme(spread.fg, spread.bg, 20, true, "!");
 }
 const loud = t$6;
 /** @type {Theme} */
 let t$7;
 {
   const spread2 = loud;
-  t$7 = new Theme(plain.bg, plain.fg, spread2.size, spread2.bold);
+  t$7 = new Theme(plain.bg, plain.fg, spread2.size, spread2.bold, spread2.note);
 }
 const dark = t$7;
 console.log(`${plain.toString()} | ${loud.toString()} | ${dark.toString()}`);
@@ -878,7 +893,8 @@ let t$8;
   const arg = spread3.bg;
   const arg2 = noted("red");
   const arg3 = spread3.bold;
-  t$8 = new Theme(arg2, arg, 9, arg3);
+  const arg4 = spread3.note;
+  t$8 = new Theme(arg2, arg, 9, arg3, arg4);
 }
 const mixed = t$8;
 console.log(mixed.toString());
@@ -886,18 +902,19 @@ console.log(mixed.toString());
 let t$9;
 {
   const spread4 = picked(plain, "first");
-  t$9 = new Theme(noted("second"), noted("third"), spread4.size, spread4.bold);
+  t$9 = new Theme(noted("second"), noted("third"), spread4.size, spread4.bold, spread4.note);
 }
 const ordered = t$9;
 console.log(ordered.toString());
-/** @type {Span} */
+const first = new Tally(1, "a");
+/** @type {Tally} */
 let t$10;
 {
-  const spread5 = new Span(2, 5);
-  t$10 = new Span(spread5.start, 9);
+  const spread5 = first;
+  t$10 = new Tally(spread5.count, renamed(first, "b"));
 }
-const wide = t$10;
-console.log(`${wide.start} ${wide.end} ${wide.length}`);
+const second = t$10;
+console.log(`${first.count} ${second.count} ${second.name}`);
 console.log(compared((a, b) => a == null ? b == null : b == null ? false : a.eq(b)));
 console.log(compared((a, b) => !(a == null ? b == null : b == null ? false : a.eq(b))));
 console.log(compared((a, b) => b == null ? a == null : a == null ? false : b.eq(a)));

@@ -123,9 +123,9 @@ pub enum Message {
     /// Ours: `{ class: D, ...c }` where `c` isn't a `D`: the classes,
     /// spread and named, which may differ later.
     SpreadOtherClass(String, String),
-    /// Ours: a constructor parameter that a spread copies with no property
-    /// of its name readable there: the name and the class.
-    SpreadCannotCopy(String, String),
+    /// Ours: a spread of a class that isn't `@data`, or breaks its rules:
+    /// the class.
+    SpreadNeedsData(String),
     /// `class C extends D` where `D` is a class: their names.
     CannotExtendConcrete(String),
     /// `interface I(x: Int)`.
@@ -262,6 +262,9 @@ pub enum Message {
     /// Ours: a `@fun` interface that breaks Kotlin Temper's documented
     /// rules for one: the interface, and how.
     FunInterfaceRule(String, FunRule),
+    /// Ours: a `@data` declaration that breaks a rule of `@data`'s: its
+    /// name, and the rule.
+    DataRule(String, DataRule),
     /// A user's `@connected` class's method with a default argument,
     /// which host code can't share: the method's name.
     ConnectedMethodDefaults(String),
@@ -324,6 +327,26 @@ pub enum FunRule {
     NoApply,
     /// `@json`, which adds members.
     Json,
+}
+
+/// A rule of `@data`'s that a declaration breaks ([`Message::DataRule`]).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DataRule {
+    /// It's an interface.
+    Interface,
+    /// It's `@connected`.
+    Connected,
+    /// A constructor parameter that's no property (`@noProperty`).
+    NotProperty(String),
+    /// A property that's private or protected.
+    NotPublic(String),
+    /// A property with a default other than `null`.
+    Default(String),
+    /// A `var` property of an `@imu` class.
+    ImuVar(String),
+    /// A member other than a constructor property or a method,
+    /// described, as `property n`, `getter g`, or `a constructor`.
+    Member(String),
 }
 
 impl Message {
@@ -399,8 +422,8 @@ impl Message {
                     "A spread from {from} can't build {to}; spreading across classes isn't supported yet"
                 )
             }
-            Message::SpreadCannotCopy(name, class) => {
-                format!("A spread can't copy {name}: {class} has no property {name} readable here")
+            Message::SpreadNeedsData(class) => {
+                format!("Spreads need a @data class; {class} isn't one")
             }
             Message::CannotExtendConcrete(names) => {
                 format!("Cannot extend concrete type(s) {names}")
@@ -549,6 +572,29 @@ impl Message {
                 "{name} needs a declared type, such as a @fun interface, since a function \
                  literal takes its type from the type wanted"
             ),
+            Message::DataRule(name, rule) => match rule {
+                DataRule::Interface => {
+                    format!("@data applies only to classes, not interface {name}")
+                }
+                DataRule::Connected => format!("@data class {name} can't be @connected"),
+                DataRule::NotProperty(p) => {
+                    format!("@data class {name}'s constructor parameter {p} must be a property")
+                }
+                DataRule::NotPublic(p) => {
+                    format!("@data class {name}'s property {p} must be public")
+                }
+                DataRule::Default(p) => {
+                    format!("@data class {name}'s property {p} may default only to null")
+                }
+                DataRule::ImuVar(p) => {
+                    format!(
+                        "@data class {name}'s property {p} can't be a var, as the class is @imu"
+                    )
+                }
+                DataRule::Member(m) => format!(
+                    "@data class {name} may declare only its constructor's properties and methods, not {m}"
+                ),
+            },
             Message::FunInterfaceRule(name, rule) => match rule {
                 FunRule::Supertype(t) => {
                     format!("@fun interface {name} may extend only AnyValue, not {t}")

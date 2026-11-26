@@ -71,10 +71,16 @@ Language and frontend:
 - **Object spread** (#694, 2026-11-25; [typing.md](typing.md), "Object
   spread"): `{ ...old, x: 2 }` is the object literal of `old`'s class
   with each constructor parameter not given read from `old`, so the
-  constructor runs; one spread, written first, of a class's value, and
-  only to build that class, for now. Kotlin doesn't parse it.
+  constructor runs; one spread, written first, of a `@data` class's
+  value, and only to build that class, for now. Kotlin doesn't parse it.
   Test: settle/types.cases, "a spread copies the properties it doesn't
   give" and "spreads report what they can't copy".
+- **`@data` classes** (#694, 2026-11-26; [typing.md](typing.md),
+  "`@data` classes"): a checked promise that a class is plain data (each
+  constructor parameter a public property, defaulting only to null; no
+  other properties and no constructor of its own; no `var` if `@imu`),
+  which spreads need. Kotlin has no `@data`.
+  Test: settle/types.cases, "@data classes keep to their rules".
 - **Named `@fun` interfaces are nominal** (decided 2026-10-29, done;
   [typing.md](typing.md), "Fun interfaces"): a `Pred` isn't a `Check`,
   even where their `apply`s' signatures match, and the error suggests

@@ -672,22 +672,43 @@ constructor parameter, so it goes through the same constructor call:
 - **When:** in typing's round, even with `class: C`, once `old`'s type
   is known.
 - **Which class:** `old`'s, which must be a class, not nullable ("A
-  spread needs a value of a class type, not Shape"); `class: C` must name
+  spread needs a value of a class type, not Shape"), and `@data` (below;
+  "Spreads need a @data class; Square isn't one"); `class: C` must name
   it ("A spread from Sq can't build Other; …"). The type wanted is
   checked against it as for any value.
 - **What it copies:** each constructor parameter not given, from
-  `old`'s property of that name, which must be readable there, a field
-  or getter, private only in its class ("A spread can't copy code: Secret
-  has no property code readable here"). A defaulted parameter takes
-  `old`'s value, except that a null there, as for any null passed to a
-  defaulted parameter, takes the default; a property no parameter sets,
-  as a getter's, isn't copied, as the constructor works it out again.
+  `old`'s property of that name, which `@data` makes public. A null
+  there, as for any null passed to a defaulted parameter, takes the
+  default, which `@data` allows only as null.
 - **What it becomes:** `do { let spread#1 = old; new C(spread#1.a, e) }`:
   `old` once, first, then the given values in the order written, the
   copies among them in the parameters' order, placed as for any object
   literal (temporaries only where the given values aren't in order).
   The copies passed as they are reach tmpl marked, `copy(spread#1.a)`,
   for targets with their own copy forms (notes/tmpl/nodes.md, "Spreads").
+
+## `@data` classes
+
+`@data` (#694, 2026-11-26; `classes.rs`, `check_data`) is a checked
+promise that a class is plain data, so a spread can copy it by its
+constructor's parameters. Its rules, each broken one an error naming it
+("@data class Field may declare only its constructor's properties and
+methods, not property twice"), kept conservative, as loosening later is
+compatible and tightening isn't:
+
+- It's a class, not an interface, and not `@connected`.
+- Each constructor parameter is a property (no `@noProperty`), public,
+  with no default but `null`, and not a `var` if the class is `@imu`.
+- No other property: no field, getter, or setter, static or not; and no
+  constructor of its own, so the implied one only stores its
+  parameters.
+- Methods, static or not, and supertypes are fine.
+
+It's checked as the class is made, by its members' syntax, a default by
+being the word `null`; a class that keeps to the rules is marked
+`CLASS_DATA`, and `data` in tmpl (`Facts::DATA`). One that breaks a rule
+isn't `@data` to a spread. `@imu` is read only for this check; tempest
+doesn't otherwise check it yet.
 
 ## Function types
 

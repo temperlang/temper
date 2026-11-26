@@ -22,13 +22,13 @@
 
 use crate::builtins::{Builtin, Function, Macro};
 use crate::core::{
-    CLASS_AUTO_EQ, CLASS_CONNECTED, CLASS_CONNECTED_LIST, CLASS_FUN, CLASS_INTERFACE, CLASS_SEALED,
-    FN_NO_BODY, FN_OUT_TYPE, LET_INIT, LET_VAR, MEMBER_CONNECTED, MEMBER_NO_PROPERTY,
+    CLASS_AUTO_EQ, CLASS_CONNECTED, CLASS_CONNECTED_LIST, CLASS_DATA, CLASS_FUN, CLASS_INTERFACE,
+    CLASS_SEALED, FN_NO_BODY, FN_OUT_TYPE, LET_INIT, LET_VAR, MEMBER_CONNECTED, MEMBER_NO_PROPERTY,
     MEMBER_OPERATOR_CMP, MEMBER_OPERATOR_EQ, MEMBER_PRIVATE, MEMBER_PROTECTED, MEMBER_PUBLIC,
     MEMBER_STATIC, ROLE_CONSTRUCTOR, ROLE_GETTER, ROLE_MASK, ROLE_METHOD, ROLE_PARAM, ROLE_SETTER,
     TYPE_PARAMS_SHIFT, class_parts, fn_parts, let_parts, member_fn, type_params,
 };
-use crate::library::{FunRule, Level, Message};
+use crate::library::{DataRule, FunRule, Level, Message};
 use crate::scope::{ScopeId, ScopeKind, SymbolId, SymbolKind};
 use crate::settle::{Fact, Settle};
 use temper_syntax::ast::{Builtin as SyntaxBuiltin, Value};
@@ -156,6 +156,11 @@ impl Settle {
                 children.push(self.lib.add(NodeKind::Let, span, data, &parts, call));
             }
         }
+        let imu = self.imu.remove(&call);
+        let data = self.data_classes.remove(&call) && {
+            let members = children[1 + type_params.len() + supers.len()..].to_vec();
+            self.check_data(call, *name, &members, interface, imu)
+        };
         let auto_eq = self.auto_eq.remove(&call);
         if let (Some(decorator), Some(_), true) = (auto_eq, block, type_params.is_empty()) {
             let members = children[1 + supers.len()..].to_vec();
@@ -204,7 +209,8 @@ impl Settle {
             | if is_fun { CLASS_FUN } else { 0 }
             | if connected { CLASS_CONNECTED } else { 0 }
             | if lists { CLASS_CONNECTED_LIST } else { 0 }
-            | if sealed { CLASS_SEALED } else { 0 };
+            | if sealed { CLASS_SEALED } else { 0 }
+            | if data { CLASS_DATA } else { 0 };
         self.rewrite(call, NodeKind::Class, data, &children);
         true
     }
@@ -811,6 +817,68 @@ impl Settle {
         let span = self.lib.tree.span(first);
         let message = Message::MissingMemberVisibility(class, format!("[{}]", listed.join(", ")));
         self.lib.report(Level::Error, message, span);
+    }
+
+    /// Whether a class marked `@data` keeps to its rules, reporting each
+    /// one broken (notes/typing.md, "`@data` classes"): it's a class, not
+    /// `@connected`; each constructor parameter is a property, public,
+    /// with no default but `null`, and no `var` if the class is `@imu`;
+    /// and it declares no other property (a field, getter, or setter,
+    /// static or not) and no constructor. Methods, static or not, are
+    /// fine.
+    fn check_data(
+        &mut self,
+        call: NodeId,
+        name: NodeId,
+        members: &[NodeId],
+        interface: bool,
+        imu: bool,
+    ) -> bool {
+        let class = self.lib.names.get(self.lib.name(name).unwrap()).to_string();
+        let mut broken = Vec::new();
+        if interface {
+            broken.push((DataRule::Interface, name));
+        } else if self.connected.contains(&call) {
+            broken.push((DataRule::Connected, name));
+        }
+        for &m in members.iter().filter(|_| !interface) {
+            let tree = &self.lib.tree;
+            let data = tree.data(m);
+            let member = self.member_text(m).to_string();
+            let default = let_parts(tree, m).2;
+            let rule = match data & ROLE_MASK {
+                ROLE_METHOD => continue,
+                ROLE_PARAM if data & MEMBER_NO_PROPERTY != 0 => DataRule::NotProperty(member),
+                ROLE_PARAM if data & (MEMBER_PRIVATE | MEMBER_PROTECTED) != 0 => {
+                    DataRule::NotPublic(member)
+                }
+                ROLE_PARAM if default.is_some_and(|d| !self.is_null_literal(d)) => {
+                    DataRule::Default(member)
+                }
+                ROLE_PARAM if imu && data & LET_VAR != 0 => DataRule::ImuVar(member),
+                ROLE_PARAM => continue,
+                _ if data & MEMBER_STATIC != 0 => DataRule::Member(format!("static {member}")),
+                ROLE_GETTER => DataRule::Member(format!("getter {member}")),
+                ROLE_SETTER => DataRule::Member(format!("setter {member}")),
+                ROLE_CONSTRUCTOR => DataRule::Member("a constructor".into()),
+                _ => DataRule::Member(format!("property {member}")),
+            };
+            broken.push((rule, tree.children(m)[0]));
+        }
+        let ok = broken.is_empty();
+        for (rule, at) in broken {
+            let span = self.lib.tree.span(at);
+            let message = Message::DataRule(class.clone(), rule);
+            self.lib.report(Level::Error, message, span);
+        }
+        ok
+    }
+
+    /// Whether a node, not yet resolved, is `null`, as JSON's literals are
+    /// read.
+    fn is_null_literal(&self, node: NodeId) -> bool {
+        self.lib.value(node) == Some(&Value::Null)
+            || (self.lib.name(node)).is_some_and(|n| self.lib.names.get(n) == "null")
     }
 
     /// A member's or class's name.

@@ -23,7 +23,7 @@ struct Holder;
 struct Version;
 struct Stock;
 struct Theme;
-struct Span;
+struct Tally;
 struct Sql;
 struct Limited;
 struct Stepper;
@@ -137,25 +137,24 @@ struct Theme : public std::enable_shared_from_this<Theme> {
   temper::core::Str bg;
   int32_t size;
   bool bold;
-  static std::shared_ptr<Theme> make(temper::core::Str const & fg, temper::core::Str const & bg, temper::core::NullableParam<int32_t> size, temper::core::NullableParam<bool> bold);
-  static std::shared_ptr<Theme> make(temper::core::Str const & fg, temper::core::Str const & bg, temper::core::NullableParam<int32_t> size);
-  static std::shared_ptr<Theme> make(temper::core::Str const & fg, temper::core::Str const & bg);
-  temper::core::Str get_weight() const;
+  temper::core::NullableParam<temper::core::Str> note;
+  static std::shared_ptr<Theme> make(temper::core::Str const & fg, temper::core::Str const & bg, int32_t size, bool bold, temper::core::NullableParam<temper::core::Str> note);
+  static std::shared_ptr<Theme> make(temper::core::Str const & fg, temper::core::Str const & bg, int32_t size, bool bold);
+  temper::core::Str weight() const;
   temper::core::Str toString() const;
   temper::core::Str get_fg() const;
   temper::core::Str get_bg() const;
   int32_t get_size() const;
   bool get_bold() const;
+  temper::core::NullableParam<temper::core::Str> get_note() const;
 };
 
-struct Span : public std::enable_shared_from_this<Span> {
-  int32_t start;
-  int32_t end;
-  int32_t length;
-  static std::shared_ptr<Span> make(int32_t start, int32_t end);
-  int32_t get_start() const;
-  int32_t get_end() const;
-  int32_t get_length() const;
+struct Tally : public std::enable_shared_from_this<Tally> {
+  int32_t count;
+  temper::core::Str name;
+  static std::shared_ptr<Tally> make(int32_t count, temper::core::Str const & name);
+  int32_t get_count();
+  temper::core::Str get_name() const;
 };
 
 struct Sql : public std::enable_shared_from_this<Sql> {
@@ -495,26 +494,21 @@ static std::shared_ptr<Shape> shape(std::shared_ptr<Shape> const & x) {
   return x;
 }
 
-std::shared_ptr<Theme> Theme::make(core::Str const & fg, core::Str const & bg, core::NullableParam<int32_t> size, core::NullableParam<bool> bold) {
+std::shared_ptr<Theme> Theme::make(core::Str const & fg, core::Str const & bg, int32_t size, bool bold, core::NullableParam<core::Str> note) {
   std::shared_ptr<Theme> self = std::make_shared<Theme>();
-  int32_t size2 = size == nullptr ? 12 : size.value;
-  bool bold2 = bold == nullptr ? false : bold.value;
   self->fg = fg;
   self->bg = bg;
-  self->size = size2;
-  self->bold = bold2;
+  self->size = size;
+  self->bold = bold;
+  self->note = note;
   return self;
 }
 
-std::shared_ptr<Theme> Theme::make(core::Str const & fg, core::Str const & bg, core::NullableParam<int32_t> size) {
-  return make(fg, bg, size, nullptr);
+std::shared_ptr<Theme> Theme::make(core::Str const & fg, core::Str const & bg, int32_t size, bool bold) {
+  return make(fg, bg, size, bold, nullptr);
 }
 
-std::shared_ptr<Theme> Theme::make(core::Str const & fg, core::Str const & bg) {
-  return make(fg, bg, nullptr, nullptr);
-}
-
-core::Str Theme::get_weight() const {
+core::Str Theme::weight() const {
   if (this->bold) {
     return TEMPER_STR("bold");
   } else {
@@ -524,7 +518,9 @@ core::Str Theme::get_weight() const {
 
 core::Str Theme::toString() const {
   std::shared_ptr<Theme const> self = shared_from_this();
-  return self->fg + "/" + self->bg + " " + std::to_string(self->size) + " " + self->get_weight();
+  core::Str string = self->fg + "/" + self->bg + " " + std::to_string(self->size) + " " + self->weight();
+  core::NullableParam<core::Str> subject = self->note;
+  return string + (subject == nullptr ? core::Str() : subject.value);
 }
 
 core::Str Theme::get_fg() const {
@@ -543,6 +539,10 @@ bool Theme::get_bold() const {
   return this->bold;
 }
 
+core::NullableParam<core::Str> Theme::get_note() const {
+  return this->note;
+}
+
 static std::shared_ptr<Theme> picked(std::shared_ptr<Theme> const & t, core::Str const & why) {
   core::Console::log(temper_globals::console.value, why);
   return t;
@@ -553,24 +553,24 @@ static core::Str noted(core::Str const & s) {
   return s;
 }
 
-std::shared_ptr<Span> Span::make(int32_t start, int32_t end) {
-  std::shared_ptr<Span> self = std::make_shared<Span>();
-  self->start = start;
-  self->end = end;
-  self->length = core::Int::sub(self->end, self->start);
+std::shared_ptr<Tally> Tally::make(int32_t count, core::Str const & name) {
+  std::shared_ptr<Tally> self = std::make_shared<Tally>();
+  self->count = count;
+  self->name = name;
   return self;
 }
 
-int32_t Span::get_start() const {
-  return this->start;
+int32_t Tally::get_count() {
+  return this->count;
 }
 
-int32_t Span::get_end() const {
-  return this->end;
+core::Str Tally::get_name() const {
+  return this->name;
 }
 
-int32_t Span::get_length() const {
-  return this->length;
+static core::Str renamed(std::shared_ptr<Tally> const & t, core::Str const & name) {
+  t->count = core::Int::add(t->count, 10);
+  return name;
 }
 
 static core::Str compared(std::function<bool(std::shared_ptr<Loose>, std::shared_ptr<Loose>)> const & eq) {
@@ -746,25 +746,28 @@ void global_init_init() {
     std::shared_ptr<Stock> st = Stock::make(core::List::make<int32_t>(4, 5));
     st->set_items(core::List::make<int32_t>(1, 2, 3));
     core::Console::log(temper_globals::console.value, std::to_string(st->count) + " " + std::to_string(st->size) + " " + std::to_string(st->sizeNow()) + " " + std::to_string(core::List::length<int32_t>(st->get_items())));
-    std::shared_ptr<Theme> plain = Theme::make(TEMPER_STR("black"), TEMPER_STR("white"));
+    std::shared_ptr<Theme> plain = Theme::make(TEMPER_STR("black"), TEMPER_STR("white"), 12, false);
     std::shared_ptr<Theme> spread = plain;
-    std::shared_ptr<Theme> loud = Theme::make(spread->fg, spread->bg, 20, true);
+    std::shared_ptr<Theme> loud = Theme::make(spread->fg, spread->bg, 20, true, TEMPER_STR("!"));
     std::shared_ptr<Theme> spread2 = loud;
-    std::shared_ptr<Theme> dark = Theme::make(plain->bg, plain->fg, spread2->size, spread2->bold);
+    std::shared_ptr<Theme> dark = Theme::make(plain->bg, plain->fg, spread2->size, spread2->bold, spread2->note);
     core::Console::log(temper_globals::console.value, plain->toString() + " | " + loud->toString() + " | " + dark->toString());
     std::shared_ptr<Theme> spread3 = classes::picked(dark, TEMPER_STR("old"));
     core::Str arg = spread3->bg;
     core::Str arg2 = classes::noted(TEMPER_STR("red"));
     bool arg3 = spread3->bold;
-    std::shared_ptr<Theme> mixed = Theme::make(arg2, arg, 9, arg3);
+    core::NullableParam<core::Str> arg4 = spread3->note;
+    std::shared_ptr<Theme> mixed = Theme::make(arg2, arg, 9, arg3, arg4);
     core::Console::log(temper_globals::console.value, mixed->toString());
     std::shared_ptr<Theme> spread4 = classes::picked(plain, TEMPER_STR("first"));
     core::Str value2 = classes::noted(TEMPER_STR("second"));
-    std::shared_ptr<Theme> ordered = Theme::make(value2, classes::noted(TEMPER_STR("third")), spread4->size, spread4->bold);
+    std::shared_ptr<Theme> ordered = Theme::make(value2, classes::noted(TEMPER_STR("third")), spread4->size, spread4->bold, spread4->note);
     core::Console::log(temper_globals::console.value, ordered->toString());
-    std::shared_ptr<Span> spread5 = Span::make(2, 5);
-    std::shared_ptr<Span> wide = Span::make(spread5->start, 9);
-    core::Console::log(temper_globals::console.value, std::to_string(wide->start) + " " + std::to_string(wide->end) + " " + std::to_string(wide->length));
+    std::shared_ptr<Tally> first = Tally::make(1, TEMPER_STR("a"));
+    std::shared_ptr<Tally> spread5 = first;
+    int32_t int32 = spread5->count;
+    std::shared_ptr<Tally> second = Tally::make(int32, classes::renamed(first, TEMPER_STR("b")));
+    core::Console::log(temper_globals::console.value, std::to_string(first->count) + " " + std::to_string(second->count) + " " + second->name);
     core::Console::log(temper_globals::console.value, classes::compared([](std::shared_ptr<Loose> a, std::shared_ptr<Loose> b) -> bool { return a == nullptr ? b == nullptr : b == nullptr ? false : a->eq(b); }));
     core::Console::log(temper_globals::console.value, classes::compared([](std::shared_ptr<Loose> a, std::shared_ptr<Loose> b) -> bool { return !(a == nullptr ? b == nullptr : b == nullptr ? false : a->eq(b)); }));
     core::Console::log(temper_globals::console.value, classes::compared([](std::shared_ptr<Loose> a, std::shared_ptr<Loose> b) -> bool { return b == nullptr ? a == nullptr : a == nullptr ? false : b->eq(a); }));
@@ -810,8 +813,8 @@ void global_init_init() {
     core::Console::log(temper_globals::console.value, accumulator->get_accumulated());
     std::shared_ptr<Limited> stepper = core::to_base<Limited>(Stepper::make(3));
     core::Console::log(temper_globals::console.value, "next " + std::to_string(stepper->next(1)));
-    int32_t int32 = classes::orFail<int32_t>(true, 4, core::to_base<Failing<int32_t>>(IntFailing::make()));
-    core::Console::log(temper_globals::console.value, std::to_string(int32) + " " + classes::orFail<core::Str>(true, TEMPER_STR("s"), core::to_base<Failing<core::Str>>(AnyFailing<core::Str>::make())));
+    int32_t value3 = classes::orFail<int32_t>(true, 4, core::to_base<Failing<int32_t>>(IntFailing::make()));
+    core::Console::log(temper_globals::console.value, std::to_string(value3) + " " + classes::orFail<core::Str>(true, TEMPER_STR("s"), core::to_base<Failing<core::Str>>(AnyFailing<core::Str>::make())));
   });
 }
 

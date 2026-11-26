@@ -1244,78 +1244,23 @@ fn param_decls(p: &Program, params: crate::nodes::Kids) -> Vec<DeclId> {
 
 /// The program's own classes that a spread, `{ ...old, a: e }`, may copy
 /// with a target's own copy form, skipping the constructor, by their
-/// declarations (notes/tmpl/nodes.md, "Spreads"): those whose constructor
-/// only stores each parameter, or its default, in the field of its name,
-/// in order, which leaves no field it computes; with no `var` field, so a
-/// field read later reads the same; no getter or setter of a field's
-/// name; and no nullable parameter whose default isn't null, which would
-/// turn a copied null into the default. Each class is checked once, in
-/// time linear in its members; a backend asks once per program.
+/// declarations (notes/tmpl/nodes.md, "Spreads"): the `data` ones, whose
+/// constructor only stores its parameters, with no `var` field, so the
+/// given values, which run first, can't change what a copy then reads.
 pub fn copyable_classes(p: &Program) -> HashSet<DeclId> {
     let mut found = HashSet::new();
     for item in p.modules.iter().flat_map(|m| m.all_items()) {
         if let Node::Class { decl, members } = p.nodes.get(item) {
-            if copyable(p, p.nodes.list(members)) {
+            let var = |&m: &NodeId| match p.nodes.get(m) {
+                Node::Field { decl } => p.decls.get(decl).facts.contains(Facts::VAR),
+                _ => false,
+            };
+            if p.decls.get(decl).facts.contains(Facts::DATA)
+                && !p.nodes.list(members).iter().any(var)
+            {
                 found.insert(decl);
             }
         }
     }
     found
-}
-
-fn copyable(p: &Program, members: &[NodeId]) -> bool {
-    let (mut fields, mut accessors, mut ctor) = (Vec::new(), Vec::new(), None);
-    for &m in members {
-        let (decl, body) = match p.nodes.get(m) {
-            Node::Field { decl } => {
-                fields.push(decl);
-                continue;
-            }
-            Node::Method { decl, params, body } => (decl, Some((params, body))),
-            Node::AbstractMethod { decl, .. } => (decl, None),
-            _ => continue,
-        };
-        match p.decls.get(decl).kind {
-            DeclKind::Constructor => ctor = body,
-            DeclKind::Getter | DeclKind::Setter => accessors.push(p.name(decl)),
-            _ => {}
-        }
-    }
-    let Some((params, body)) = ctor else {
-        return false;
-    };
-    let Node::Block { stmts } = p.nodes.get(body) else {
-        return false;
-    };
-    let params = param_decls(p, params);
-    let defaults = defaults(p, body);
-    let sets = &p.nodes.list(stmts)[defaults.len()..];
-    let swaps = |d: &ParamDefault| {
-        p.types.is_nullable(p.decls.get(d.local).ty)
-            && !matches!(p.nodes.get(d.value), Node::Null {})
-    };
-    if sets.len() != params.len() || fields.len() != params.len() || defaults.iter().any(swaps) {
-        return false;
-    }
-    params.iter().zip(sets).all(|(&param, &set)| {
-        let Node::SetField {
-            field,
-            object,
-            value,
-        } = p.nodes.get(set)
-        else {
-            return false;
-        };
-        let Node::Local { local } = p.nodes.get(value) else {
-            return false;
-        };
-        let stored = (defaults.iter().find(|d| d.local == local)).map_or(local, |d| d.param);
-        let name = p.name(field);
-        matches!(p.nodes.get(object), Node::This {})
-            && stored == param
-            && name == p.name(param)
-            && fields.contains(&field)
-            && !p.decls.get(field).facts.contains(Facts::VAR)
-            && !accessors.contains(&name)
-    })
 }
