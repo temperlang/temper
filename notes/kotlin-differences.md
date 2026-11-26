@@ -277,16 +277,32 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   argument's elements, as `take(["a", 3])` or `take([1])` for `take(xs:
   List<String>)` (for a constructor, Kotlin reports "Expected subtype
   of List<String>, but got List<AnyValue>"), and a generic call's
-  number of type arguments, `apply<Int, Int>(n, f)` for `apply<T, R,
-  E>`, which Kotlin ignores, as it does a written type's, `Map<Int>`,
+  number of type arguments, too many, `id<Int, Int>(n)` for `id<T>`,
+  which Kotlin ignores, as it does a written type's, `Map<Int>`,
   `List<Int, Int>`, or `Box<Int, Int>` for `class Box<T>` (except in
   `is` and `as`, "Expected value of type Type"). Tempest reports the
   elements as Kotlin does a declaration's, and "Wrong number of type
-  arguments.  Expected 3". Kotlin should report them.
+  arguments.  Expected 1". Kotlin should report them. Too few are
+  fine in both where a value gives the rest ("Leading type arguments",
+  below).
   Test: settle/types.cases, "list literal arguments checked against the
   type wanted", "generic calls with the wrong number of type
   arguments", and "generic types written with the wrong number of type
   arguments".
+
+- **Leading type arguments** with the rest inferred, `pair<Int>(1,
+  "s")` for `pair<A, B>(a: A, b: B)`, and `let p: P<Int> = new P(1,
+  "s")` for `class P<A, B>`, are fine in both, but `new P<Int>(1, "s")`
+  fails in Kotlin, "Cannot translate Invalid", and a method's,
+  `o.both<Int>(1, "s")`, is "Member both defined in Order incompatible
+  with usage" ("A method's explicit type arguments", below); and
+  Kotlin's `let p: P<Int> = new P("a", "s")` takes the value's type
+  whole, `P<String, String>`, ignoring the `Int`, checked 2026-11-26.
+  Tempest accepts `new P<Int>` and the method's, and reports the
+  mismatch, keeping the type arguments as written. Kotlin should
+  translate them and report it.
+  Test: settle/types.cases, "leading type arguments with the rest
+  inferred" and "leading type arguments where nothing gives the rest".
 
 - **A generic type written without type arguments,** `List`, or `Box`
   for `class Box<T>`: both infer it from a variable's value, `let xs:

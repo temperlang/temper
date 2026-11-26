@@ -3882,8 +3882,10 @@ error 598..610: Cannot assign to Dog from Never<Animal>
 error 645..655: Cannot assign to Never<List<Animal>> from Never<List<Dog>>
 
 === generic calls with the wrong number of type arguments
-// Reported at the call, for functions, methods and constructors; the
-// call's type parameters stay unknown, so nothing else is reported.
+// Too many are reported at the call, for functions, methods and
+// constructors; the call's type parameters stay unknown, so nothing else
+// is reported. Too few are fine, the rest inferred, as `E`, which nothing
+// binds, is its bound for `apply<Int, Int>`.
 class Box<T>(public item: T) {}
 class Order {
   public first<T>(items: List<T>): T { items[0] }
@@ -3961,12 +3963,10 @@ let f(n: Int, o: Order, xs: List<Int>): Void {
           n:19
           (Fn (Let ^x:24) (Block x:24)))
         #void))))
-error 362..396: Wrong number of type arguments.  Expected 3
-error 400..442: Wrong number of type arguments.  Expected 3
-error 446..464: Wrong number of type arguments.  Expected 1
-error 468..486: Wrong number of type arguments.  Expected 1
-error 490..510: Wrong number of type arguments.  Expected 1
-error 514..535: Wrong number of type arguments.  Expected 1
+error 567..585: Wrong number of type arguments.  Expected 1
+error 589..607: Wrong number of type arguments.  Expected 1
+error 611..631: Wrong number of type arguments.  Expected 1
+error 635..656: Wrong number of type arguments.  Expected 1
 
 === generic types written with the wrong number of type arguments
 // Wherever a type is written, for core's types and the library's alike,
@@ -4227,6 +4227,239 @@ let s: String = a.item;
   #void)
 error 552..558: Cannot assign to String from Int32
 log 2 3 2 d true 5
+
+=== leading type arguments with the rest inferred
+// As Kotlin Temper allows them: the rest from a call's arguments and the
+// type wanted, for functions, methods and constructors, core's and the
+// library's, and for a `let` from its value, as without type arguments,
+// the leading ones as written; so `s` is checked against a `String`.
+class P<A, B>(public a: A, public b: B) {}
+class Order {
+  public both<A, B>(a: A, b: B): P<A, B> { new P(a, b) }
+}
+let pair<A, B>(a: A, b: B): P<A, B> { new P(a, b) }
+let make<A, B>(a: A): P<A, B?> { new P<A, B?>(a, null) }
+let apply<T, R, E>(x: T, f: fn (T): R): R { f(x) }
+let a = pair<Int>(1, "a");
+let b = new P<Int>(2, "b");
+let c = new Order().both<Int>(3, "c");
+let d: P<Int> = new P(4, "d");
+let e: Map<String> = new Map([new Pair("e", 5)]);
+let f: P<Int, String?> = make<Int>(6);
+let g = new Map<String>([new Pair("g", 7), new Pair("h", 8)]);
+let h = apply<Int, Int>(9) { x => x + 1 };
+let i(): Int {
+  let j: P<Int> = pair(10, "j");
+  j.a
+}
+console.log("${a.b} ${b.b} ${c.b} ${d.b} ${e.length} ${f.a} ${g.length} ${h} ${i()}");
+let s: Int = a.b;
+--- settled
+(Block
+  (Class
+    ^P:0
+    (TypeParam ^A:15)
+    (TypeParam ^B:16)
+    (Param ^a:18 A:15)
+    (Param ^b:19 B:16))
+  (Class
+    ^Order:1
+    (Method
+      ^both:21
+      (Fn
+        (TypeParam ^A:22)
+        (TypeParam ^B:23)
+        (Let ^a:24 A:22)
+        (Let ^b:25 B:23)
+        (Call <> P:0 A:22 B:23)
+        (Block (Call new P:0 a:24 b:25)))))
+  (Let
+    ^pair:2
+    (Fn
+      (TypeParam ^A:26)
+      (TypeParam ^B:27)
+      (Let ^a:28 A:26)
+      (Let ^b:29 B:27)
+      (Call <> P:0 A:26 B:27)
+      (Block (Call new P:0 a:28 b:29))))
+  (Let
+    ^make:3
+    (Fn
+      (TypeParam ^A:30)
+      (TypeParam ^B:31)
+      (Let ^a:32 A:30)
+      (Call <> P:0 A:30 (Call ? B:31))
+      (Block (Call new (Call <> P:0 A:30 (Call ? B:31)) a:32 null))))
+  (Let
+    ^apply:4
+    (Fn
+      (TypeParam ^T:33)
+      (TypeParam ^R:34)
+      (TypeParam ^E:35)
+      (Let ^x:36 T:33)
+      (Let ^f:37 (Call FnType T:33 R:34))
+      R:34
+      (Block (Call f:37 x:36))))
+  (Let ^a:5 (Call pair:2 \typeArg Int 1 "a"))
+  (Let ^b:6 (Call new (Call <> P:0 Int) 2 "b"))
+  (Let ^c:7 (Call (Call . (Call new Order:1) \both) \typeArg Int 3 "c"))
+  (Let ^d:8 (Call <> P:0 Int) (Call new P:0 4 "d"))
+  (Let
+    ^e:9
+    (Call <> Map String)
+    (Call new Map (Call list (Call new Pair "e" 5))))
+  (Let ^f:10 (Call <> P:0 Int (Call ? String)) (Call make:3 \typeArg Int 6))
+  (Let
+    ^g:11
+    (Call
+      new
+      (Call <> Map String)
+      (Call list (Call new Pair "g" 7) (Call new Pair "h" 8))))
+  (Let
+    ^h:12
+    (Call
+      apply:4
+      \typeArg
+      Int
+      \typeArg
+      Int
+      9
+      (Fn (Let ^x:38) (Block (Call + x:38 1)))))
+  (Let
+    ^i:13
+    (Fn
+      Int
+      (Block
+        (Let ^j:39 (Call <> P:0 Int) (Call pair:2 10 "j"))
+        (Call . j:39 \a))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call . a:5 \b)
+      " "
+      (Call . b:6 \b)
+      " "
+      (Call . c:7 \b)
+      " "
+      (Call . d:8 \b)
+      " "
+      (Call . e:9 \length)
+      " "
+      (Call . f:10 \a)
+      " "
+      (Call . g:11 \length)
+      " "
+      h:12
+      " "
+      (Call i:13)))
+  (Let ^s:14 Int (Call . a:5 \b))
+  #void)
+error 1041..1044: Cannot assign to Int32 from String
+log a b c d 1 6 2 10 10
+
+=== leading type arguments where nothing gives the rest
+// Too few type arguments are an error wherever no value gives the rest:
+// a `let` without a value, a parameter, a return type, a field, a
+// supertype, a bound, `is`, and inside another type, as `P<Int>?`. Too
+// many are an error everywhere. A leading type argument that doesn't fit
+// a value is reported as such, and one the call can't solve is left as
+// it would be without type arguments.
+class P<A, B>(public a: A, public b: B) {}
+interface Two<A, B> {}
+class Q(public p: P<Int>) {}
+class R extends Two<Int> {}
+let pair<A, B>(a: A, b: B): P<A, B> { new P(a, b) }
+let make<A, B>(a: A): P<A, B?> { new P<A, B?>(a, null) }
+let a(): Void { var a: P<Int>; a = new P(1, "a"); }
+let b(x: P<Int>): Void {}
+let c(): P<Int> { new P(1, "c") }
+let d<T extends Two<Int>>(x: T): Void {}
+let e(x: AnyValue): Boolean { x is P<Int> }
+let f: P<Int>? = new P(1, "f");
+let g: List<P<Int>> = [new P(1, "g")];
+let h: P<Int, String, Int> = new P(1, "h");
+let i = pair<Int, String, Int>(1, "i");
+let j = new P<Int, String, Int>(1, "j");
+let k: P<Int> = new P("k", "k");
+let l(x: String): Void { pair<Int>(x, 1); }
+let m = make<Int>(1);
+let n: P<Int, Int> = m;
+let o = make(1);
+let p: P<Int, Int> = o;
+--- settled
+(Block
+  (Class
+    ^P:0
+    (TypeParam ^A:22)
+    (TypeParam ^B:23)
+    (Param ^a:25 A:22)
+    (Param ^b:26 B:23))
+  (Interface ^Two:1 (TypeParam ^A:27) (TypeParam ^B:28))
+  (Class ^Q:2 (Param ^p:31 (Call <> P:0 Int)))
+  (Class ^R:3 (Call <> Two:1 Int))
+  (Let
+    ^pair:4
+    (Fn
+      (TypeParam ^A:33)
+      (TypeParam ^B:34)
+      (Let ^a:35 A:33)
+      (Let ^b:36 B:34)
+      (Call <> P:0 A:33 B:34)
+      (Block (Call new P:0 a:35 b:36))))
+  (Let
+    ^make:5
+    (Fn
+      (TypeParam ^A:37)
+      (TypeParam ^B:38)
+      (Let ^a:39 A:37)
+      (Call <> P:0 A:37 (Call ? B:38))
+      (Block (Call new (Call <> P:0 A:37 (Call ? B:38)) a:39 null))))
+  (Let
+    ^a:6
+    (Fn
+      Void
+      (Block
+        (Var ^a:40 (Call <> P:0 Int))
+        (Assign a:40 (Call new P:0 1 "a"))
+        #void)))
+  (Let ^b:7 (Fn (Let ^x:41 (Call <> P:0 Int)) Void (Block)))
+  (Let ^c:8 (Fn (Call <> P:0 Int) (Block (Call new P:0 1 "c"))))
+  (Let
+    ^d:9
+    (Fn (TypeParam ^T:42 (Call <> Two:1 Int)) (Let ^x:43 T:42) Void (Block)))
+  (Let
+    ^e:10
+    (Fn (Let ^x:44 AnyValue) Boolean (Block (Call is x:44 (Call <> P:0 Int)))))
+  (Let ^f:11 (Call ? (Call <> P:0 Int)) (Call new P:0 1 "f"))
+  (Let ^g:12 (Call <> List (Call <> P:0 Int)) (Call list (Call new P:0 1 "g")))
+  (Let ^h:13 (Call <> P:0 Int String Int) (Call new P:0 1 "h"))
+  (Let ^i:14 (Call pair:4 \typeArg Int \typeArg String \typeArg Int 1 "i"))
+  (Let ^j:15 (Call new (Call <> P:0 Int String Int) 1 "j"))
+  (Let ^k:16 (Call <> P:0 Int) (Call new P:0 "k" "k"))
+  (Let
+    ^l:17
+    (Fn (Let ^x:45 String) Void (Block (Call pair:4 \typeArg Int x:45 1) #void)))
+  (Let ^m:18 (Call make:5 \typeArg Int 1))
+  (Let ^n:19 (Call <> P:0 Int Int) m:18)
+  (Let ^o:20 (Call make:5 1))
+  (Let ^p:21 (Call <> P:0 Int Int) o:20)
+  #void)
+error 481..487: Wrong number of type arguments.  Expected 2
+error 508..516: Wrong number of type arguments.  Expected 2
+error 652..658: Wrong number of type arguments.  Expected 2
+error 690..696: Wrong number of type arguments.  Expected 2
+error 716..722: Wrong number of type arguments.  Expected 2
+error 757..765: Wrong number of type arguments.  Expected 2
+error 817..823: Wrong number of type arguments.  Expected 2
+error 833..839: Wrong number of type arguments.  Expected 2
+error 870..876: Wrong number of type arguments.  Expected 2
+error 904..923: Wrong number of type arguments.  Expected 2
+error 949..979: Wrong number of type arguments.  Expected 2
+error 989..1020: Wrong number of type arguments.  Expected 2
+error 1044..1047: Actual arguments do not match signature: <A extends AnyValue, B extends AnyValue>(A, B) -> P<A, B> expected [Int32, String], but got [String, String]
+error 1090..1091: Actual arguments do not match signature: <A extends AnyValue, B extends AnyValue>(A, B) -> P<A, B> expected [Int32, Int32], but got [String, Int32]
+Failed: Wrong number of type arguments.  Expected 2
 
 === a generic class's constructor arguments checked against its type arguments
 // From the type arguments written, or the type wanted, for a call and

@@ -255,14 +255,19 @@ milestone 4's generics slice; status in [milestone-4.md](history/milestone-4.md)
   and `as`, aliases; for `new`, at the call, "Generic calls", below),
   as many as core or the library declares, which Kotlin misses
   (2026-11-26). A generic type written without arguments, `List` or
-  `Box`, takes them from a variable's value, as Kotlin does: `let b:
-  Box = new Box(1)` is a `Box<Int32>`, and `let xs: Listed = [1]` a
-  `Listed<Int32>` (the value's type as that supertype). Elsewhere, and
-  where the value isn't one, it's "Expected 1": a `let` with no value,
+  `Box`, or with only the leading ones, `P<Int>` for `class P<A, B>`,
+  takes the rest from a variable's value, as Kotlin does: `let b: Box =
+  new Box(1)` is a `Box<Int32>`, `let xs: Listed = [1]` a
+  `Listed<Int32>` (the value's type as that supertype), and `let p:
+  P<Int> = new P(1, "s")` a `P<Int32, String>`, those written as
+  written, so `new P("a", "s")` doesn't fit (Kotlin takes the value's
+  type whole). Elsewhere, and where the value isn't one, it's "Expected
+  1": a `let` with no value,
   a parameter (with a default too), a field (with an initializer too,
   as fields are typed from their annotation alone), return types,
-  supertypes, bounds, `is` and `as`, and inside another type (`Box?`),
-  through an alias too (`let A = Box` used as a type). `new Box(1)`,
+  supertypes, bounds, `is` and `as`, and inside another type (`Box?`,
+  `P<Int>?`), through an alias too (`let A = Box` used as a type). Too
+  many is an error everywhere. `new Box(1)`,
   `Box.make()`, and `{ class: Box, … }` name no type.
 - **Type parameters:** `T`, in a function's or class's body, is a type
   of its own, a subtype of its bound only: `AnyValue` if it has none, or
@@ -344,11 +349,13 @@ for core's `Listed.map<O>(transform: fn (T): O): List<O>`, likewise,
 with the method inherited as the receiver's type sees it ("Builtin
 types' members", below); status in [milestone-4.md](history/milestone-4.md).
 
-- **Solving:** with as many type arguments as the function has type
-  parameters, each binds to its argument, `T` to `Int32` in
-  `id<Int>(x)`; with another number of them, none binds, and the call
-  is "Wrong number of type arguments.  Expected 3", at the call, which
-  Kotlin misses (2026-11-26). Without type
+- **Solving:** type arguments bind the leading type parameters, `T` to
+  `Int32` in `id<Int>(x)`; those they leave, as `B` in `pair<Int>(1,
+  "s")`, are solved as without any, from the arguments and the type
+  wanted, as Kotlin does, and one nothing binds is left as it would be
+  then. With too many, none binds, and the call is "Wrong number of
+  type arguments.  Expected 3", at the call, which Kotlin misses
+  (2026-11-26). Without type
   arguments, each argument's type is matched against its parameter's,
   part by part: `T` from `Int32`, `List<T>` from `List<Int32>`, or from
   a subtype as it sees that supertype ("Users' supertypes", above), as

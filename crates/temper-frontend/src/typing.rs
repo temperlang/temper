@@ -327,14 +327,24 @@ impl Settle {
             return Ok(UNKNOWN);
         }
         let (_, ty, init) = core::let_parts(&self.lib.tree, decl);
-        if let (Some(base), Some(init)) = (self.inferred_base(decl), init) {
+        if let (Some((base, given)), Some(init)) = (self.inferred_base(decl), init) {
             // `let xs: List = …` is the `List` its value is, as
-            // `List<Boolean>`, as Kotlin Temper's solver finds it; unknown
-            // meanwhile, against a value that reads it.
+            // `List<Boolean>`, as Kotlin Temper's solver finds it, with the
+            // type arguments written put in, as `Int` in `let p: Pair<Int>
+            // = …`; unknown meanwhile, against a value that reads it.
             self.typing.decls.insert(decl, UNKNOWN);
             let made = self.expr_type(init, forced);
             self.typing.decls.remove(&decl);
-            let t = (self.typing.types.supertype_as(made?, base)).unwrap_or(UNKNOWN);
+            let t = match self.typing.types.supertype_as(made?, base) {
+                Some(t) if !given.is_empty() => {
+                    let mut args = self.typing.types.args(t).to_vec();
+                    for (arg, &g) in args.iter_mut().zip(&given) {
+                        *arg = self.eval_type(g);
+                    }
+                    self.typing.types.intern(TypeData::Applied { base, args })
+                }
+                t => t.unwrap_or(UNKNOWN),
+            };
             self.typing.decls.insert(decl, t);
             return Ok(t);
         }
@@ -1216,7 +1226,10 @@ impl Settle {
             (NodeKind::RightName, ..) => self.check_bare_never(node),
             (NodeKind::Let, ..) => {
                 if let Some(ty) = core::let_parts(&self.lib.tree, node).1 {
-                    if !self.infers_bare(node) {
+                    // A type its value completes still has the type
+                    // arguments written checked, as `List` in `Pair<List>`.
+                    let bare = self.lib.tree.kind(ty) == NodeKind::RightName;
+                    if !bare || !self.infers_type_args(node) {
                         self.check_bare_generics(ty);
                     }
                 }
@@ -1731,6 +1744,8 @@ impl Settle {
     /// argument, a supertype, `is` or `as`, an alias. Kotlin Temper misses
     /// these. Not the type `new` makes, which its call reports as any
     /// generic call's type arguments ([`Settle::check_generic_call`]).
+    /// Nor too few in a variable's type that its value gives the rest of
+    /// ([`Settle::infers_type_args`]), as `let p: Pair<Int> = …`.
     fn check_type_args(&mut self, node: NodeId) {
         let tree = &self.lib.tree;
         let [angle, base, ref args @ ..] = *tree.children(node) else {
@@ -1739,17 +1754,20 @@ impl Settle {
         if self.scopes.resolved_builtin(angle) != Some(Builtin::Function(Function::Angle)) {
             return;
         }
-        let made = (self.typing.parent(node)).is_some_and(|p| {
+        let parent = self.typing.parent(node);
+        let made = parent.is_some_and(|p| {
             let children = tree.children(p);
             tree.kind(p) == NodeKind::Call
                 && children.get(1) == Some(&node)
                 && self.scopes.resolved_builtin(children[0])
                     == Some(Builtin::Function(Function::New))
         });
-        if made {
+        let typed = parent
+            .filter(|&p| tree.kind(p) == NodeKind::Let && core::let_parts(tree, p).1 == Some(node));
+        let count = args.len();
+        if made || typed.is_some_and(|p| self.infers_type_args(p)) {
             return;
         }
-        let count = args.len();
         if let Some(n) = self.type_arity(base).filter(|&n| n != count) {
             let span = self.lib.tree.span(node);
             let message = Message::TypeArityMismatch(n);
@@ -1763,7 +1781,7 @@ impl Settle {
     /// supertype, a bound, `is` or `as`, and the types in those; through an
     /// alias too, at its use, as `A` for `let A = Box`. Such a type is
     /// unknown. Not a variable's that its value gives
-    /// ([`Settle::infers_bare`]), as Kotlin Temper infers it too.
+    /// ([`Settle::infers_type_args`]), as Kotlin Temper infers it too.
     /// Not where a name makes a value or reads a static member, as `new
     /// Box(1)` or `Box.make()`, which name no type.
     fn check_bare_generics(&mut self, ty: NodeId) {
@@ -1826,10 +1844,10 @@ impl Settle {
         self.type_arity(name)
     }
 
-    /// Whether a variable's type, written without type arguments, was
-    /// inferred from its value ([`Settle::inferred_base`]), or the value is
-    /// unknown, as an error there says why.
-    fn infers_bare(&mut self, decl: NodeId) -> bool {
+    /// Whether a variable's type, written without all its type arguments,
+    /// was inferred from its value ([`Settle::inferred_base`]), or the
+    /// value is unknown, as an error there says why.
+    fn infers_type_args(&mut self, decl: NodeId) -> bool {
         let init = core::let_parts(&self.lib.tree, decl).2;
         match (self.inferred_base(decl), init) {
             (Some(_), Some(init)) => {
@@ -1839,13 +1857,24 @@ impl Settle {
         }
     }
 
-    /// The generic type a variable's type names without type arguments,
-    /// as `List` in `let xs: List = [1]`, whose value gives them
-    /// ([`Settle::decl_type`]); none for a parameter, a field, or a `let`
-    /// with no value.
-    fn inferred_base(&mut self, decl: NodeId) -> Option<TypeId> {
-        let (name, Some(ty), Some(_)) = core::let_parts(&self.lib.tree, decl) else {
+    /// The generic type a variable's type names without all its type
+    /// arguments, as `List` in `let xs: List = [1]`, or `Pair` in `let p:
+    /// Pair<Int> = …`, with those it's given, the leading ones, whose value
+    /// gives the rest ([`Settle::decl_type`]); none for a parameter, a
+    /// field, or a `let` with no value.
+    fn inferred_base(&mut self, decl: NodeId) -> Option<(TypeId, Vec<NodeId>)> {
+        let tree = &self.lib.tree;
+        let (name, Some(ty), Some(_)) = core::let_parts(tree, decl) else {
             return None;
+        };
+        let (ty, given) = match *tree.children(ty) {
+            [angle, base, ref given @ ..]
+                if self.scopes.resolved_builtin(angle)
+                    == Some(Builtin::Function(Function::Angle)) =>
+            {
+                (base, given.to_vec())
+            }
+            _ => (ty, Vec::new()),
         };
         let b = self.scopes.resolved(name)?;
         if !matches!(
@@ -1855,10 +1884,10 @@ impl Settle {
             return None;
         }
         let name = self.bare_name(ty)?;
-        if self.type_arity(name)? == 0 {
+        if self.type_arity(name)? <= given.len() {
             return None;
         }
-        self.named_base(self.scopes.resolved(name)?)
+        Some((self.named_base(self.scopes.resolved(name)?)?, given))
     }
 
     /// Reports a `Void` value stored in a declaration or passed as an

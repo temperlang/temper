@@ -28,7 +28,7 @@ pub(super) struct Solved {
     /// Its type parameters.
     formals: Vec<SymbolId>,
     /// What each type parameter binds to at this call, unknown where the
-    /// call doesn't say, or has the wrong number of type arguments.
+    /// call doesn't say, or has too many type arguments.
     actuals: Vec<TypeId>,
     /// A type parameter its arguments bind two ways whose join goes above
     /// a type core marks `@mayDowncastTo(false)`, with those two types
@@ -46,23 +46,24 @@ pub(super) struct Solved {
 }
 
 impl Solved {
-    /// Whether the call has type arguments, as `id<Int>(x)`.
+    /// Whether the call's type arguments give each of its type
+    /// parameters, as `id<Int>(x)`, or there are too many.
     fn has_type_args(&self) -> bool {
-        self.type_args > 0
+        self.type_args >= self.formals.len() && self.type_args > 0
     }
 
-    /// Whether the call has type arguments, but not one for each type
-    /// parameter.
+    /// Whether the call has more type arguments than type parameters.
     fn wrong_type_arity(&self) -> bool {
-        self.has_type_args() && self.type_args != self.formals.len()
+        self.type_args > self.formals.len()
     }
 }
 
 impl Settle {
     /// Solves a call of a generic function declared by `let`, as `id(1)`
-    /// or `id<Int>(x)`: from its type arguments, if there are as many as
+    /// or `id<Int>(x)`: from its type arguments, if there are no more than
     /// the function has type parameters (else not at all), unless Kotlin
-    /// Temper would fold the call; otherwise from its arguments' types
+    /// Temper would fold the call; those they leave, the trailing ones, as
+    /// `B` in `pair<Int>(1, "s")`, from its arguments' types
     /// ([`crate::types::Types::unify`]), one solved two different ways
     /// bound to their common supertype, as Kotlin's solver binds it, so
     /// `new Two(1, "s")` for `class Two<T>(a: T, b: T)` is a
@@ -148,13 +149,8 @@ impl Settle {
         // = id<Int>("a")` passes, as the value is a `String`. It doesn't
         // fold a constructor's call.
         let folds = foldable && self.may_fold(call, 0);
-        if !type_args.is_empty() && !folds {
-            if type_args.len() == formals.len() {
-                for (actual, &t) in actuals.iter_mut().zip(&type_args) {
-                    *actual = self.eval_type(t);
-                }
-            }
-        } else {
+        let given = if folds { &[][..] } else { &type_args[..] };
+        if given.len() < formals.len() {
             let placed = self.placed_params(&params, &args);
             for (&arg, &i) in args.iter().zip(&placed) {
                 let Some(param) = params.get(i) else {
@@ -189,6 +185,12 @@ impl Settle {
                 *actual = UNKNOWN;
             }
         }
+        if given.len() <= formals.len() {
+            for (actual, &t) in actuals.iter_mut().zip(given) {
+                *actual = self.eval_type(t);
+            }
+            clash = clash.filter(|&(k, ..)| k >= given.len());
+        }
         Ok(Some(Solved {
             sig,
             formals,
@@ -220,9 +222,10 @@ impl Settle {
 
     /// A solved call's type, with the type parameters its arguments leave
     /// unknown, or bind in a clash, bound by the type its place wants,
-    /// where the call has no type arguments, as Kotlin Temper's solver
-    /// binds them: `new ListBuilder()` where a `ListBuilder<Int>` is wanted
-    /// is one, and so is `new Two(1, "s")` where a `Two<AnyValue>` is.
+    /// where the call's type arguments don't give them, as Kotlin
+    /// Temper's solver binds them: `new ListBuilder()` where a
+    /// `ListBuilder<Int>` is wanted is one, and so is `new Two(1, "s")`
+    /// where a `Two<AnyValue>` is.
     pub(super) fn solved_type(
         &mut self,
         solved: &mut Solved,
@@ -306,9 +309,9 @@ impl Settle {
     /// that don't fit the solved signature, "Actual arguments do not match
     /// signature: <T extends AnyValue>(T, Int32) -> T expected [String,
     /// Int32], but got [Int32, String]", from the first that doesn't to
-    /// the last. And type arguments that aren't one for each type
-    /// parameter, "Wrong number of type arguments.  Expected 3", at the
-    /// call, which Kotlin misses; its type parameters stay unknown. Returns
+    /// the last. And more type arguments than type parameters, "Wrong
+    /// number of type arguments.  Expected 3", at the call, which Kotlin
+    /// misses; its type parameters stay unknown. Returns
     /// whether the call was of a generic function.
     pub(super) fn check_generic_call(&mut self, call: NodeId) -> bool {
         let Ok(Some(mut solved)) = self.solve_call(call, false) else {
@@ -321,7 +324,7 @@ impl Settle {
             return true;
         }
         let span = self.lib.tree.span(call);
-        if solved.has_type_args() && solved.type_args != solved.formals.len() {
+        if solved.wrong_type_arity() {
             let message = Message::TypeArityMismatch(solved.formals.len());
             self.lib.report(Level::Error, message, span);
             return true;
@@ -369,8 +372,9 @@ impl Settle {
     /// signature: <T extends AnyValue>(T) -> List<T> expected [String],
     /// but got [Int32]", at the argument, rather than an error at the
     /// place. Only where the call's result isn't a bare type parameter
-    /// (`T` or `T?`), which Kotlin solves from the arguments, and the call
-    /// has no type arguments. Returns whether it reported an error.
+    /// (`T` or `T?`), which Kotlin solves from the arguments, and for the
+    /// type parameters the call's type arguments don't give. Returns
+    /// whether it reported an error.
     pub(super) fn check_generic_wanted(&mut self, call: NodeId, wanted: TypeId) -> bool {
         let Ok(Some(mut solved)) = self.solve_call(call, false) else {
             return false;
@@ -389,7 +393,8 @@ impl Settle {
         }
         let mut any = false;
         let bindings = self.wanted_bindings(ret, wanted, &solved.formals);
-        for (actual, b) in solved.actuals.iter_mut().zip(bindings) {
+        let given = solved.type_args;
+        for (actual, b) in solved.actuals.iter_mut().zip(bindings).skip(given) {
             if b != UNKNOWN {
                 *actual = b;
                 any = true;
@@ -419,7 +424,7 @@ impl Settle {
     /// argument, with what's solved put in, as Kotlin Temper types the
     /// literal once it has solved the call: each type parameter from the
     /// other arguments and type arguments ([`Settle::solve_call`]), and
-    /// what they leave unknown, where the call has no type arguments, from
+    /// what they leave unknown, but for those type arguments give, from
     /// the type its place wants, which binds first where the call's
     /// result isn't a bare type parameter, as for
     /// [`Settle::check_generic_wanted`]; unknown where none of them says.
@@ -443,7 +448,8 @@ impl Settle {
             let types = &self.typing.types;
             let bare = matches!(types.get(self.non_null(ret)), TypeData::Param(_));
             let bindings = self.wanted_bindings(ret, wanted, &solved.formals);
-            for (actual, b) in solved.actuals.iter_mut().zip(bindings) {
+            let given = solved.type_args;
+            for (actual, b) in solved.actuals.iter_mut().zip(bindings).skip(given) {
                 if b != UNKNOWN && (*actual == UNKNOWN || !bare) {
                     *actual = b;
                 }

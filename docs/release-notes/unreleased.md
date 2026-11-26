@@ -452,17 +452,21 @@ Code that relied on these going unchecked is now an error:
 - A run-time check that would introduce a type argument is an error for
   every generic type, as `x is Generator<Int>` for an `x: AnyValue`,
   where Temper 0.6.0 left alone those marked `@out` or `@in`.
-- A generic call with the wrong number of type arguments, as
-  `apply<Int, Int>(n, f)` for `apply<T, R, E>`, is "Wrong number of
-  type arguments.  Expected 3", as is a type written with the wrong
-  number, anywhere: `Map<Int>`, `Promise<Int, String>`, or `Box<Int,
+- A generic call with too many type arguments, as `id<Int, Int>(n)`
+  for `id<T>`, is "Wrong number of type arguments.  Expected 1", as is
+  a type written with the wrong number where no value gives the rest:
+  `Map<Int>` in `f(m: Map<Int>)`, `Promise<Int, String>`, or `Box<Int,
   Int>` for `class Box<T>`. To migrate, give as many as the type
   declares.
 - So is a generic type written without any where no value gives them,
   as `x is Box`, `f(xs: List)`, or `class C extends Sup`, which Temper
-  0.6.0 failed on in other ways. To migrate, write the arguments. A
-  variable's value still gives them, as before: `let xs: List = [1]`
-  is a `List<Int>`, and `let b: Box = new Box(1)` a `Box<Int>`.
+  0.6.0 failed on in other ways. To migrate, write the arguments.
+- Leading type arguments may be given with the rest inferred, as
+  before: `pair<Int>(1, "s")`, `new P<Int>(1, "s")` (which Temper 0.6.0
+  failed to translate), and `let p: P<Int> = new P(1, "s")`, a `P<Int,
+  String>`; so may none, for a variable: `let xs: List = [1]` is a
+  `List<Int>`. The type arguments written must fit the value: `let p:
+  P<Int> = new P("a", "s")` is now an error.
 - A generic call's arguments are checked against the type arguments the
   type wanted gives: `let b: Box<List<String>> = new Box(["a", 3])`
   reports the `3`.
