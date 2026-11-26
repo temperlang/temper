@@ -1617,6 +1617,7 @@ console.log("${p.key} ${p.value} ${p is Pair} ${b is Mapped} ${m is MapBuilder}"
       " "
       (Call is m:0 MapBuilder)))
   #void)
+error 291..293: Expected subtype of String, but got AnyValue
 error 326..329: Expected subtype of Int32, but got String
 error 571..586: Runtime type check from Map<Int32, String> to MapBuilder can never succeed
 log 2 deux false none ?

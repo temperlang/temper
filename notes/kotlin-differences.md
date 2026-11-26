@@ -68,6 +68,20 @@ Language and frontend:
   Test: settle/types.cases, "list literals typed from the type wanted",
   "function literals typed from the type wanted", and "object literals
   take their class from the type wanted".
+- **No inferred join above `@mayDowncastTo(false)` types** (Tom,
+  2026-11-26; [typing.md](typing.md), "Generic calls"): where a generic
+  call's arguments bind a type parameter two ways, Kotlin binds it to
+  their join, `AnyValue` for `new Two(1, "s")` (`class Two<T>(a: T, b:
+  T)`), `List<Int32>` and `List<String>`, or `Int32` and `Float64`, whose
+  values some backends can't tell apart once joined. Tempest reports it
+  when the join would go above a type core marks `@mayDowncastTo(false)`:
+  "T is bound to both Int32 and String, which can't be told apart once
+  joined; give T explicitly". Joins of other types (`Dog` and `Cat` to
+  `Animal`), nullability (`Int32` and null), type arguments, and a type
+  wanted that binds `T` are unaffected. Recommended: Kotlin Temper
+  reports it too.
+  Test: settle/types.cases, "a type parameter bound two ways is the
+  arguments' common supertype".
 - **Named `@fun` interfaces are nominal** (decided 2026-10-29, done;
   [typing.md](typing.md), "Fun interfaces"): a `Pred` isn't a `Check`,
   even where their `apply`s' signatures match, and the error suggests
@@ -270,6 +284,16 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   Test: settle/types.cases, "list literal arguments checked against the
   type wanted" and "generic calls with the wrong number of type
   arguments".
+
+- **A generic call binding a bare `T` to a value and null,** as
+  `pick(i, null)` for `pick<T>(a: T, b: T): T` and `i: Int`, is an
+  `Int32?` in Kotlin, which also reports the `null`: "Expected subtype
+  of Int32, but got Int32?" (2026-11-26). It accepts `new Two(i,
+  null)`, for `class Two<T>(a: T, b: T)`, as a `Two<Int32?>`. Tempest
+  binds `T` to `Int32?` in both and reports neither. Kotlin should
+  accept the first too.
+  Test: settle/types.cases, "a type parameter bound two ways is the
+  arguments' common supertype".
 
 - **An undeclared name in a branch that never runs,** `if (DEBUG) {
   console.log("${missing}"); }` with `let DEBUG = false;`, isn't
@@ -2219,7 +2243,11 @@ copied Kotlin's:
   since C++ and Rust, among others, can't express variance well
   ([typing.md](typing.md), "Type parameters are invariant"): it reports
   "Cannot assign to List<Animal> from List<Dog>" (2026-11-26), and
-  `@out` and `@in` are gone, core's too. `Never<Sub>` is still a
+  `@out` and `@in` are gone, core's too. So a generic call whose
+  arguments bind a type parameter two ways, joined as Kotlin joins them,
+  may fail in tempest where Kotlin passes it: `k(dogs, cat)`, for
+  `k<T>(xs: List<T>, x: T)` and `dogs: List<Dog>`, binds `T` to
+  `Animal`, and a `List<Dog>` isn't a `List<Animal>`. `Never<Sub>` is still a
   `Never<Super>`, by `Never`'s own rule. Nothing in core, std, the tests, or the six
   showcase libraries relied on variance. Recommended: Kotlin Temper
   drops variance too, keeping `Never`'s rule.

@@ -28,12 +28,12 @@ pub(super) struct Solved {
     /// Its type parameters.
     formals: Vec<SymbolId>,
     /// What each type parameter binds to at this call, unknown where the
-    /// call doesn't say.
+    /// call doesn't say, or has the wrong number of type arguments.
     actuals: Vec<TypeId>,
-    /// Whether each type parameter is unknown as the call says too much:
-    /// arguments bind it two ways, or it has the wrong number of type
-    /// arguments.
-    ambiguous: Vec<bool>,
+    /// A type parameter its arguments bind two ways whose join goes above
+    /// a type core marks `@mayDowncastTo(false)`, with those two types
+    /// ([`crate::types::Types::unify`]).
+    clash: Option<(usize, TypeId, TypeId)>,
     /// The call.
     call: NodeId,
     /// The call's arguments, without type arguments.
@@ -50,6 +50,12 @@ impl Solved {
     fn has_type_args(&self) -> bool {
         self.type_args > 0
     }
+
+    /// Whether the call has type arguments, but not one for each type
+    /// parameter.
+    fn wrong_type_arity(&self) -> bool {
+        self.has_type_args() && self.type_args != self.formals.len()
+    }
 }
 
 impl Settle {
@@ -57,9 +63,10 @@ impl Settle {
     /// or `id<Int>(x)`: from its type arguments, if there are as many as
     /// the function has type parameters (else not at all), unless Kotlin
     /// Temper would fold the call; otherwise from its arguments' types
-    /// ([`crate::types::Types::unify`]), leaving a type parameter that's
-    /// solved two different ways unknown, as Kotlin may find a common
-    /// supertype. A function literal argument binds by the types it
+    /// ([`crate::types::Types::unify`]), one solved two different ways
+    /// bound to their common supertype, as Kotlin's solver binds it, so
+    /// `new Two(1, "s")` for `class Two<T>(a: T, b: T)` is a
+    /// `Two<AnyValue>`. A function literal argument binds by the types it
     /// declares, if it declares its result's, as `ls.map { (x): Int => -x
     /// }` binds `O` to `Int32` (one that doesn't isn't used yet); the
     /// arguments are matched against the parameters they're placed at, as a
@@ -135,7 +142,7 @@ impl Settle {
             return Ok(None);
         };
         let mut actuals = vec![UNKNOWN; formals.len()];
-        let mut ambiguous = vec![false; formals.len()];
+        let mut clash = None;
         // Kotlin Temper folds a call of constants to its value before
         // checking it, so its type arguments go unchecked: `let s: String
         // = id<Int>("a")` passes, as the value is a `String`. It doesn't
@@ -146,8 +153,6 @@ impl Settle {
                 for (actual, &t) in actuals.iter_mut().zip(&type_args) {
                     *actual = self.eval_type(t);
                 }
-            } else {
-                ambiguous.fill(true);
             }
         } else {
             let placed = self.placed_params(&params, &args);
@@ -177,19 +182,18 @@ impl Settle {
                     _ => self.expr_type(arg, forced)?,
                 };
                 let types = &mut self.typing.types;
-                types.unify(param.ty, t, &formals, &mut actuals, &mut ambiguous);
+                types.unify(param.ty, t, &formals, &mut actuals, &mut clash);
             }
-            for (actual, &conflict) in actuals.iter_mut().zip(&ambiguous) {
-                if conflict {
-                    *actual = UNKNOWN;
-                }
+            // Null alone doesn't bind one, which Kotlin reports.
+            for actual in actuals.iter_mut().filter(|a| **a == NULL) {
+                *actual = UNKNOWN;
             }
         }
         Ok(Some(Solved {
             sig,
             formals,
             actuals,
-            ambiguous,
+            clash,
             call,
             args,
             this,
@@ -215,16 +219,17 @@ impl Settle {
     }
 
     /// A solved call's type, with the type parameters its arguments leave
-    /// unknown bound by the type its place wants, where the call has no
-    /// type arguments, as Kotlin Temper's solver binds them: `new
-    /// ListBuilder()` where a `ListBuilder<Int>` is wanted is one.
+    /// unknown, or bind in a clash, bound by the type its place wants,
+    /// where the call has no type arguments, as Kotlin Temper's solver
+    /// binds them: `new ListBuilder()` where a `ListBuilder<Int>` is wanted
+    /// is one, and so is `new Two(1, "s")` where a `Two<AnyValue>` is.
     pub(super) fn solved_type(
         &mut self,
         solved: &mut Solved,
         forced: bool,
     ) -> Result<TypeId, Fact> {
         let t = self.solved_result(solved);
-        if self.typing.types.is_known(t) || solved.has_type_args() {
+        if (self.typing.types.is_known(t) && solved.clash.is_none()) || solved.has_type_args() {
             return Ok(t);
         }
         let Some(wanted) = self.wanted_type(solved.call, forced)? else {
@@ -239,6 +244,10 @@ impl Settle {
             _ => wanted,
         };
         let bindings = self.wanted_bindings(ret, wanted, &solved.formals);
+        if let Some((k, ..)) = solved.clash.filter(|&(k, ..)| bindings[k] != UNKNOWN) {
+            solved.actuals[k] = UNKNOWN;
+            solved.clash = None;
+        }
         for (actual, b) in solved.actuals.iter_mut().zip(bindings) {
             if *actual == UNKNOWN {
                 *actual = b;
@@ -278,14 +287,18 @@ impl Settle {
         }
         let bounds = self.unsolved_as_bounds(solved);
         for (k, bound) in bounds.into_iter().enumerate() {
-            if open[k] && solved.actuals[k] == UNKNOWN && !solved.ambiguous[k] {
+            if open[k] && solved.actuals[k] == UNKNOWN {
                 solved.actuals[k] = bound;
             }
         }
     }
 
     /// Checks a call of a generic function, as Kotlin Temper's solver
-    /// does, at its positions: a type parameter bound to a type outside
+    /// does, at its positions: a type parameter its arguments bind two
+    /// ways whose join would go above a type core marks
+    /// `@mayDowncastTo(false)`, "T is bound to both Int32 and String, which
+    /// can't be told apart once joined; give T explicitly", at the call,
+    /// which Kotlin accepts; a type parameter bound to a type outside
     /// its bound, "Type formal <T extends Animal> cannot bind to Int32
     /// which does not fit upper bounds [Animal]", at the call; the wrong
     /// number of arguments, "No callee matches inputs [Int32] among [<T
@@ -310,6 +323,12 @@ impl Settle {
         let span = self.lib.tree.span(call);
         if solved.has_type_args() && solved.type_args != solved.formals.len() {
             let message = Message::TypeArityMismatch(solved.formals.len());
+            self.lib.report(Level::Error, message, span);
+            return true;
+        }
+        if let Some((k, a, b)) = solved.clash {
+            let formal = self.formal_type(solved.formals[k]);
+            let message = Message::JoinedApart(self.show(formal), self.show(a), self.show(b));
             self.lib.report(Level::Error, message, span);
             return true;
         }
@@ -381,7 +400,7 @@ impl Settle {
 
     /// What the type wanted where a generic call's value goes binds each
     /// of its type parameters to, its result `ret` matched against it part
-    /// by part, unknown where it binds none or two ways.
+    /// by part, unknown where it binds none.
     fn wanted_bindings(
         &mut self,
         ret: TypeId,
@@ -391,12 +410,9 @@ impl Settle {
         let types = &mut self.typing.types;
         // `List<T>` where a `Listed<String>` is wanted is a `Listed<T>`.
         let ret = types.as_supertype(ret, wanted);
-        let n = formals.len();
-        let (mut bound, mut conflicts) = (vec![UNKNOWN; n], vec![false; n]);
-        types.unify(ret, wanted, formals, &mut bound, &mut conflicts);
-        (bound.into_iter().zip(conflicts))
-            .map(|(b, conflict)| if conflict { UNKNOWN } else { b })
-            .collect()
+        let mut bound = vec![UNKNOWN; formals.len()];
+        types.unify(ret, wanted, formals, &mut bound, &mut None);
+        bound
     }
 
     /// The parameters of a generic call that has a function literal
@@ -427,10 +443,8 @@ impl Settle {
             let types = &self.typing.types;
             let bare = matches!(types.get(self.non_null(ret)), TypeData::Param(_));
             let bindings = self.wanted_bindings(ret, wanted, &solved.formals);
-            for ((actual, b), &ambiguous) in
-                (solved.actuals.iter_mut().zip(bindings)).zip(&solved.ambiguous)
-            {
-                if b != UNKNOWN && !ambiguous && (*actual == UNKNOWN || !bare) {
+            for (actual, b) in solved.actuals.iter_mut().zip(bindings) {
+                if b != UNKNOWN && (*actual == UNKNOWN || !bare) {
                     *actual = b;
                 }
             }
@@ -488,7 +502,7 @@ impl Settle {
             sig,
             formals: vec![formal],
             actuals: vec![element],
-            ambiguous: vec![false],
+            clash: None,
             call: list,
             args,
             this: None,
@@ -538,7 +552,7 @@ impl Settle {
             (arg_types.iter()).all(|&t| self.typing.types.is_known(t) && t != NULL && t != VOID);
         let checked: Vec<TypeId> = (0..bounds.len())
             .map(|i| match solved.actuals[i] {
-                UNKNOWN if plain && !solved.ambiguous[i] => bounds[i],
+                UNKNOWN if plain => bounds[i],
                 actual => actual,
             })
             .collect();
@@ -633,7 +647,7 @@ impl Settle {
             let types = &self.typing.types;
             let used =
                 types.mentions(ret, only) || params.iter().any(|p| types.mentions(p.ty, only));
-            if settled[k] != UNKNOWN || solved.ambiguous[k] || used {
+            if settled[k] != UNKNOWN || solved.wrong_type_arity() || used {
                 continue;
             }
             let bound = self.declared_bound(formal);

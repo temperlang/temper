@@ -329,11 +329,18 @@ impl Types {
     /// wanted, `T?` from `Int32?` or `Int32`, and function types'
     /// parameters and results, with a `@fun` interface's type as the
     /// function type it stands for, unless both are of one interface.
-    /// Each solution goes into `actuals` at the formal's index, `Dog` and
-    /// `Dog?` joined; one solved two different ways goes into `conflicts`
-    /// too. Only fully known types are solutions, and not null, `Never`,
-    /// or `Void`; a nullable type is one for a bare `T`, as for Kotlin
-    /// Temper, whose bound check takes it as fitting only `AnyValue`. A
+    /// Each solution goes into `actuals` at the formal's index, joined
+    /// with what's there as Kotlin Temper's solver joins them
+    /// ([`Types::join_or_any`]): `Dog?` for `Dog` and `Dog?` or null,
+    /// `Animal` for `Dog` and `Cat`, `AnyValue` for `Int32` and `String`.
+    /// The first join that goes above a type core marks
+    /// `@mayDowncastTo(false)` ([`Types::no_downcast`]), as that `AnyValue`
+    /// does, whose values may not be told apart once joined, goes into
+    /// `clash` as the formal's index and the two types joined.
+    /// Only fully known types are solutions, and not `Never` or `Void`;
+    /// null alone solves as null, which callers drop; a nullable type is
+    /// one for a bare `T`, as for Kotlin Temper, whose bound check takes
+    /// it as fitting only `AnyValue`. A
     /// `Never<A>` passed where no `Never` is wanted solves as its `A`, as
     /// Kotlin's reconciliation unpacks it.
     pub fn unify(
@@ -342,36 +349,35 @@ impl Types {
         actual: TypeId,
         formals: &[SymbolId],
         actuals: &mut [TypeId],
-        conflicts: &mut [bool],
+        clash: &mut Option<(usize, TypeId, TypeId)>,
     ) {
         use TypeData::*;
         match (self.get(pattern).clone(), self.get(actual).clone()) {
-            (NeverOf(p), NeverOf(a)) => self.unify(p, a, formals, actuals, conflicts),
-            (_, NeverOf(a)) => self.unify(pattern, a, formals, actuals, conflicts),
+            (NeverOf(p), NeverOf(a)) => self.unify(p, a, formals, actuals, clash),
+            (_, NeverOf(a)) => self.unify(pattern, a, formals, actuals, clash),
             (Param(symbol), _) => {
                 let Some(i) = formals.iter().position(|&f| f == symbol) else {
                     return;
                 };
-                if matches!(self.get(actual), Never | Null)
-                    || actual == VOID
-                    || !self.is_known(actual)
-                {
+                if matches!(self.get(actual), Never) || actual == VOID || !self.is_known(actual) {
                     return;
                 }
-                match actuals[i] {
-                    UNKNOWN => actuals[i] = actual,
-                    // `Dog` and `Dog?` solve it as `Dog?`, as in Kotlin.
-                    solved if self.nullable(solved) == self.nullable(actual) => {
-                        actuals[i] = self.join(solved, actual);
+                actuals[i] = match actuals[i] {
+                    UNKNOWN => actual,
+                    solved => {
+                        let joined = self.join_or_any(solved, actual);
+                        if self.widens(solved, joined) || self.widens(actual, joined) {
+                            clash.get_or_insert((i, solved, actual));
+                        }
+                        joined
                     }
-                    _ => conflicts[i] = true,
-                }
+                };
             }
-            (Nullable(p), Nullable(a)) => self.unify(p, a, formals, actuals, conflicts),
-            (Nullable(p), _) => self.unify(p, actual, formals, actuals, conflicts),
+            (Nullable(p), Nullable(a)) => self.unify(p, a, formals, actuals, clash),
+            (Nullable(p), _) => self.unify(p, actual, formals, actuals, clash),
             _ if self.base(pattern) != self.base(actual) && self.is_fun_pair(pattern, actual) => {
                 if let (Some(p), Some(a)) = (self.as_fn(pattern), self.as_fn(actual)) {
-                    self.unify(p, a, formals, actuals, conflicts);
+                    self.unify(p, a, formals, actuals, clash);
                 }
             }
             (Applied { base, args: x }, _) => {
@@ -381,7 +387,7 @@ impl Types {
                 let y = self.args(seen).to_vec();
                 if x.len() == y.len() {
                     for (&x, &y) in x.iter().zip(&y) {
-                        self.unify(x, y, formals, actuals, conflicts);
+                        self.unify(x, y, formals, actuals, clash);
                     }
                 }
             }
@@ -394,9 +400,9 @@ impl Types {
                 },
             ) if x.len() == y.len() => {
                 for (x, y) in x.iter().zip(&y) {
-                    self.unify(x.ty, y.ty, formals, actuals, conflicts);
+                    self.unify(x.ty, y.ty, formals, actuals, clash);
                 }
-                self.unify(p, a, formals, actuals, conflicts);
+                self.unify(p, a, formals, actuals, clash);
             }
             _ => {}
         }
@@ -606,6 +612,33 @@ impl Types {
         }
     }
 
+    /// [`Types::join`], or where that finds no common type, `AnyValue`,
+    /// nullable if either is, as Kotlin Temper's least upper bound gives
+    /// for `Int32` and `String`.
+    pub fn join_or_any(&mut self, a: TypeId, b: TypeId) -> TypeId {
+        match self.join(a, b) {
+            UNKNOWN
+                if [a, b]
+                    .iter()
+                    .any(|&t| matches!(self.get(t), TypeData::Nullable(_))) =>
+            {
+                self.nullable(ANY_VALUE)
+            }
+            UNKNOWN => ANY_VALUE,
+            t => t,
+        }
+    }
+
+    /// Whether `joined` is above `t`, other than as `t?`, and core marks
+    /// `t` `@mayDowncastTo(false)`.
+    fn widens(&self, t: TypeId, joined: TypeId) -> bool {
+        let inner = |t| match *self.get(t) {
+            TypeData::Nullable(inner) => inner,
+            _ => t,
+        };
+        inner(t) != inner(joined) && self.no_downcast(inner(t))
+    }
+
     /// The least common supertype of two class, interface, or builtin
     /// types, if there's exactly one ([`Types::join`]).
     fn common_supertype(&mut self, a: TypeId, b: TypeId) -> Option<TypeId> {
@@ -687,7 +720,8 @@ impl Types {
     /// function is a `@fun` interface's value, and such a value a function,
     /// where the function types they are fit, but no other `@fun`
     /// interface's value ([`Types::fun_subtype`]); a function is no other
-    /// class's or interface's value, nor theirs a function.
+    /// class's or interface's value, nor theirs a function. An `AnyValue`
+    /// is no narrower type, though it may hold one.
     pub fn is_subtype(&mut self, s: TypeId, t: TypeId) -> Option<bool> {
         self.subtype(s, t, 0)
     }
@@ -737,6 +771,12 @@ impl Types {
             (_, Param(_)) => Some(false),
             _ if t == ANY_VALUE => {
                 (s != VOID && (self.is_definite(s) || self.is_class_like(s))).then_some(true)
+            }
+            // Nor is an `AnyValue` a narrower type, as for Kotlin Temper:
+            // "Cannot assign to Int32 from AnyValue".
+            _ if s == ANY_VALUE => {
+                (self.is_definite(t) || self.is_class_like(t) || self.is_core_nominal(t))
+                    .then_some(false)
             }
             _ if self.is_fun_pair(s, t) => self.fun_subtype(s, t, depth),
             // Core's non-generic classes, as `StringBuilder`, are only what
@@ -1058,8 +1098,8 @@ mod tests {
         assert_eq!(types.is_subtype(NEVER, STRING), Some(true));
         assert_eq!(types.is_subtype(STRING, ANY_VALUE), Some(true));
         assert_eq!(types.is_subtype(NULL, ANY_VALUE), Some(false));
-        // AnyValue may hold an Int32.
-        assert_eq!(types.is_subtype(ANY_VALUE, INT32), None);
+        // AnyValue may hold an Int32, but isn't one without a cast.
+        assert_eq!(types.is_subtype(ANY_VALUE, INT32), Some(false));
         assert_eq!(types.is_subtype(UNKNOWN, STRING), None);
         // A class or interface is only what it extends.
         let interface = class(&mut types, 2, Vec::new());
@@ -1374,14 +1414,8 @@ mod tests {
         assert_eq!(types.supertype_as(sub2_t, sup_base), Some(sup_string));
         assert_eq!(types.supertype_as(sup_string, sub_base), None);
         // `T` is solved from a `Sub4` where a `Sup<T>` is wanted.
-        let (mut actuals, mut conflicts) = (vec![UNKNOWN], vec![false]);
-        types.unify(
-            sup_t,
-            sub4_type,
-            &[SymbolId(t)],
-            &mut actuals,
-            &mut conflicts,
-        );
+        let mut actuals = vec![UNKNOWN];
+        types.unify(sup_t, sub4_type, &[SymbolId(t)], &mut actuals, &mut None);
         assert_eq!(actuals, [STRING]);
     }
 }

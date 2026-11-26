@@ -231,6 +231,10 @@ pub enum Message {
     /// A generic call's type parameter, written with its bound, solved to
     /// a type that doesn't fit the bound.
     TypeFormalBound(String, String, String),
+    /// A generic call whose arguments bind a type parameter two ways that
+    /// joining would blur, one of a type marked `@mayDowncastTo(false)`:
+    /// the type parameter and the two types. Kotlin Temper accepts it.
+    JoinedApart(String, String, String),
     /// What may bubble, in a function whose return type doesn't say it
     /// may. Kotlin's `ExpectedNoBubble`.
     ExpectedNoBubble,
@@ -491,6 +495,9 @@ impl Message {
             ),
             Message::TypeFormalBound(formal, actual, bound) => format!(
                 "Type formal <{formal}> cannot bind to {actual} which does not fit upper bounds [{bound}]"
+            ),
+            Message::JoinedApart(formal, a, b) => format!(
+                "{formal} is bound to both {a} and {b}, which can't be told apart once joined; give {formal} explicitly"
             ),
             Message::NoCalleeMatches(inputs, among) => {
                 format!("No callee matches inputs [{inputs}] among [{among}]")

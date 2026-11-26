@@ -345,10 +345,26 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   non-generic class's supertype, a bug:
   [kotlin-differences.md](kotlin-differences.md#bugs-in-kotlin-temper)), `T?`
   from `Int32?` or `Int32`, and function types' parameters and results.
-  A type parameter matched to two different types is left unknown,
-  since Kotlin may find a common supertype (`pair(1, "a")` passes there),
-  unless one is the other made nullable, as `Dog` and `Dog?` bind `Dog?`.
-  Only fully known types bind: not null, `Never`, `Void`, or a function
+  A type parameter matched to two different types binds to their join
+  ("Joins", below), or `AnyValue` (made nullable if either is) where
+  they have none, as Kotlin's least upper bound: `Dog` and `Dog?` bind
+  `Dog?`, `Dog` and `Cat` bind `Animal`, `Int32` and null `Int32?`, and
+  `Two<Int32>` and `Two<String>` `AnyValue`, so a call's type is never
+  left unknown by this (2026-11-26; before, it was, and backends failed
+  on it). But a join may not go above a type core marks
+  `@mayDowncastTo(false)` (`Types::no_downcast`, as for `is`; "Run-time
+  type checks", below), whose values may not be told apart once joined:
+  `Int32` and `String` (or `Float64`), `List<Int32>` and
+  `List<String>`, and even `List<Int32>` and `Listed<Int32>` are an
+  error at the call ("Errors", below), as are `c3 = pair(1, "a")` and
+  `k(xs, s)` for `k<T>(xs: List<T>, x: T)` and `xs: List<Int>`. Being
+  nullable isn't a step up (`Int32` and `Int32?`). Kotlin accepts them
+  all, as `AnyValue` (or the join). Type arguments are never limited
+  (`new Two<AnyValue>(1, "s")`), nor is a type wanted that binds the
+  type parameter (`let t: Two<AnyValue> = new Two(1, "s")`; "From the
+  type wanted", below). A user's type's own `@mayDowncastTo(false)`
+  isn't read yet, for `is` either. Only fully known
+  types bind: not null alone, `Never`, `Void`, or a function
   literal's type, which takes its own from the solved call ("Function
   literals and target typing", below). A nullable type binds a bare `T`,
   as in Kotlin, so `pick(d)` for a `d: Dog?` and `pick<T extends
@@ -379,7 +395,11 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   as before. The call's arguments are always checked against what
   types the call: where they leave a type parameter unknown, what the
   type wanted binds, at an argument too, so `let b: Box<List<String>> =
-  new Box(["a", 3])` reports the `3` (2026-11-26).
+  new Box(["a", 3])` reports the `3` (2026-11-26). So does a type
+  parameter whose arguments' join would go above a
+  `@mayDowncastTo(false)` type, bare or not: `let t: Two<AnyValue> =
+  new Two(1, "s")` and `let a: AnyValue = pair(1, "s")` pass, and `let
+  w: Two<Int> = new Two(1, "s")` reports the `"s"`.
 - **The call's type** is the function's result with the bindings put
   in, so `let c: String = id(1)` is "Cannot assign to String from
   Int32".
@@ -398,7 +418,11 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   <T extends AnyValue>(T, Int32) -> T expected [String, Int32], but got
   [Int32, String]", from the first argument that doesn't fit to the
   last, judged as other calls' arguments are (null shown as the wanted
-  type made nullable). A function literal argument is checked so only
+  type made nullable). Before the bound and the arguments, a join
+  above a `@mayDowncastTo(false)` type ("Generic calls", above): "T is
+  bound to both Int32 and String, which can't be told apart once
+  joined; give T explicitly", at the call, and then nothing else for
+  the call; Kotlin has no such error. A function literal argument is checked so only
   where it declares its result type and isn't a trailing block that
   moves, as Kotlin checks it: `let b: List<Int> = ls.map(fn (x: Int):
   String { … })` is "… expected [Listed<Int32>, fn (Int32): Int32], but
@@ -415,8 +439,8 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   a `fn (Int32): AnyValue`, and an expected list shows it so; but it's
   checked so only where every argument's type is known and none is
   `null` or `Void`, which Kotlin reports otherwise, and not where
-  arguments bind it two ways or the call gives the wrong number of type
-  arguments, nor where its bound names the function's type parameters.
+  the call gives the wrong number of type arguments, nor where its
+  bound names the function's type parameters.
   A method's explicit type arguments bind
   as a function's do, where Kotlin fails
   ([kotlin-differences.md](kotlin-differences.md#bugs-in-kotlin-temper)).
@@ -436,7 +460,9 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
 - **Not yet:** Kotlin's choice among two ways arguments bind a type
   parameter, as `ls.reduceFrom(0, addS)` for `addS(a: String, x: Int):
   String`, where Kotlin binds `O` to `String` and reports the `0`;
-  tempest binds it from the type wanted, if any, and reports `addS`.
+  tempest's join of `Int32` and `String` would go above
+  `@mayDowncastTo(false)` types, so it binds `O` from the type wanted, if
+  any, and reports `addS`, or else reports the join.
 
 ## Target typing: where it applies
 
@@ -887,7 +913,10 @@ where one is null or nullable; and for two classes or interfaces (or
 builtin types, as `List` and `ListBuilder`), the one supertype of both
 that's below every other, with the same type arguments for both, as
 `E` for an `A` and a `B` that both extend `E` (2026-11-06). Where there's
-no such one, or two, it's unknown, a gap rather than a guess.
+no such one, or two, it's unknown, a gap rather than a guess, except
+for a generic call's type parameter, which binds to `AnyValue` then
+(`Types::join_or_any`), an error where that's above a
+`@mayDowncastTo(false)` type ("Generic calls", above).
 
 With nothing wanted, a branch that's `[]` takes the other branch's list
 type, as Kotlin's solver finds it: `when (b) { is H -> b.kids; else ->
@@ -1119,7 +1148,10 @@ extends, theirs and so on, and nothing else. An interface's values may
 be of a class that also extends something else, but as in Kotlin, using
 one as that needs an `is` check to narrow it first (`if (i is D) {
 takeD(i) }`), so `let d: D = i` and `let j: J = i` are errors. Neither is a final builtin type's value an instance
-of a class, nor null a non-nullable one's. A function is a `@fun`
+of a class, nor null a non-nullable one's. Nor is an `AnyValue` any
+narrower type's value, though it may hold one: `let n: Int = a`, for
+`a: AnyValue`, is "Cannot assign to Int32 from AnyValue", as in Kotlin
+(2026-11-26; before, tempest let it pass). A function is a `@fun`
 interface's value where its type fits, and no other class's or
 interface's ("Fun interfaces", above).
 

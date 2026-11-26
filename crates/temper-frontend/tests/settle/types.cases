@@ -869,8 +869,10 @@ log a
 === generic calls solved per call, as Kotlin Temper reports them
 // Each call binds the function's type parameters, from its type
 // arguments or else its arguments' types; a parameter bound two ways is
-// left unknown, as Kotlin may find a common supertype. Kotlin folds a
-// call of constants first, so `id<Int>("a")` then passes as a `String`.
+// their common supertype, as in Kotlin, but not above `Int32` or
+// `String` (`@mayDowncastTo(false)`), so c3 and `k(xs, s)` are errors
+// (see "a type parameter bound two ways …", below). Kotlin folds a call
+// of constants first, so `id<Int>("a")` then passes as a `String`.
 interface Animal {}
 class Dog extends Animal {}
 let id<T>(x: T): T { x }
@@ -988,24 +990,26 @@ console.log(id(1).toString());
         #void)))
   (Call (Call . console \log) (Call (Call . (Call id:2 1) \toString)))
   #void)
-error 488..489: Cannot assign to T from T?
-error 629..634: Cannot assign to String from Int32
-error 694..706: Cannot assign to Int32 from String
-error 736..737: Actual arguments do not match signature: <T extends AnyValue>(T) -> List<T> expected [String], but got [Int32]
-error 749..756: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
-error 806..812: Cannot assign to String from Int32
-error 831..841: Cannot assign to String from Int32
-error 860..870: Cannot assign to String from Int32
-error 913..928: Wrong number of type arguments.  Expected 1
-error 985..986: Actual arguments do not match signature: <T extends AnyValue>(T, Int32) -> T expected [Int32, Int32], but got [Int32, String]
-error 991..995: No callee matches inputs [Int32] among [<T extends AnyValue>(T, Int32) -> T]
-error 1009..1013: Actual arguments do not match signature: <T extends AnyValue>(T, Int32) -> T expected [String, Int32], but got [Int32, String]
-error 1018..1025: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
-error 1094..1101: Cannot assign to String from Int32
-error 1133..1141: Cannot assign to String from Int32
-error 1158..1167: Cannot assign to Int32 from String
-error 1187..1197: Cannot assign to String from Int32
-Failed: Actual arguments do not match signature: <T extends AnyValue>(T) -> List<T> expected [String], but got [Int32]
+error 624..625: Cannot assign to T from T?
+error 765..770: Cannot assign to String from Int32
+error 802..814: T is bound to both Int32 and String, which can't be told apart once joined; give T explicitly
+error 830..842: Cannot assign to Int32 from String
+error 872..873: Actual arguments do not match signature: <T extends AnyValue>(T) -> List<T> expected [String], but got [Int32]
+error 885..892: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
+error 942..948: Cannot assign to String from Int32
+error 967..977: Cannot assign to String from Int32
+error 996..1006: Cannot assign to String from Int32
+error 1049..1064: Wrong number of type arguments.  Expected 1
+error 1121..1122: Actual arguments do not match signature: <T extends AnyValue>(T, Int32) -> T expected [Int32, Int32], but got [Int32, String]
+error 1127..1131: No callee matches inputs [Int32] among [<T extends AnyValue>(T, Int32) -> T]
+error 1145..1149: Actual arguments do not match signature: <T extends AnyValue>(T, Int32) -> T expected [String, Int32], but got [Int32, String]
+error 1154..1161: Type formal <T extends Animal> cannot bind to Int32 which does not fit upper bounds [Animal]
+error 1230..1237: Cannot assign to String from Int32
+error 1241..1249: T is bound to both Int32 and String, which can't be told apart once joined; give T explicitly
+error 1269..1277: Cannot assign to String from Int32
+error 1294..1303: Cannot assign to Int32 from String
+error 1323..1333: Cannot assign to String from Int32
+Failed: T is bound to both Int32 and String, which can't be told apart once joined; give T explicitly
 
 === generic classes and methods, as Kotlin Temper reports them
 // `new Box(1)` is solved as a call of `<T>(T) -> Box<T>`, a `Box<Int>`'s
@@ -4031,3 +4035,219 @@ error 481..484: Actual arguments do not match signature: <T extends AnyValue>(In
 error 524..527: Actual arguments do not match signature: <T extends AnyValue>(Int32, T) -> Three<T> expected [Int32, Int32], but got [Int32, String]
 error 537..552: Expected subtype of Two<Int32>?, but got Two<String>
 error 562..578: Expected subtype of Two<Int32>?, but got Two<String>
+
+=== a type parameter bound two ways is the arguments' common supertype
+// As Kotlin Temper's solver binds it: `Animal` for a `Dog` and a `Cat`,
+// `AnyValue` for a `Two<Int32>` and a `Two<String>`, and `Int32?` for an
+// `Int32` and `null`, for constructors, functions, methods, and object
+// literals (`Boolean` places show what it is). But not above a type core
+// marks `@mayDowncastTo(false)`, as `Int32`, `String`, or `List`, whose
+// values may not be told apart once joined: `Int32` and `String`, `List<Int32>`
+// and `List<String>`, or a `List<Int32>` and a `Listed<Int32>` are an
+// error at the call, which Kotlin accepts. Type arguments, or a type
+// wanted that binds the type parameter, bind it instead. A user's type's
+// own `@mayDowncastTo(false)` isn't read yet, as for `is`.
+interface Animal {}
+class Dog extends Animal {}
+class Cat extends Animal {}
+@mayDowncastTo(false) class Opaque {}
+class Two<T>(public first: T, public second: T) {}
+class Box<T>(public item: T) {
+  public both<U>(a: U, b: U): List<U> { [a, b] }
+}
+let pick<T>(a: T, b: T): T { a }
+let wrap<T>(a: T, b: T): List<T> { [a, b] }
+let pet<T extends Animal>(a: T, b: T): T { a }
+let k<T>(xs: List<T>, x: T): T { x }
+let r = new Two(1, "s");
+let consts(): Void {
+  let rw: Two<Int> = new Two(1, "s");
+  let rl: Two<Int> = { first: 1, second: "s" };
+}
+let f(i: Int, s: String, o: Int?, x: Float64, b: Box<Int>, xs: List<Int>, ld: Listed<Int>): Void {
+  let a1: Boolean = new Two(i, s);
+  let a2: Boolean = pick(i, s);
+  let a3: Boolean = wrap(i, s);
+  let a4: Boolean = b.both(i, s);
+  let a5: Boolean = { class: Two, first: i, second: s };
+  let a6: Boolean = new Two(new Dog(), new Cat());
+  let a7: Boolean = new Two(i, x);
+  let a8: Boolean = new Two(new Two(i, i), new Two(s, s));
+  let a9: Boolean = new Two([i], [s]);
+  let a10: Boolean = pick(xs, ld);
+  let a11: Boolean = new Two(new Opaque(), new Dog());
+  let n1: Boolean = new Two(i, null);
+  let n2: Boolean = new Two(null, i);
+  let n3: Boolean = new Two(o, s);
+  let n4: Boolean = pick(i, null);
+  let w1: Two<Int> = new Two(i, s);
+  let w2: Two<Int> = { first: i, second: s };
+  let w3: List<Int> = wrap(i, s);
+  let w4: List<Int> = b.both(s, i);
+  let w5: Two<Float64> = new Two(i, x);
+  let w6: Two<Two<Int>> = new Two(new Two(i, i), new Two(s, s));
+  let ok1: Two<Int?> = new Two(i, null);
+  let ok2: Two<Animal> = new Two(new Dog(), new Cat());
+  let ok3: Two<AnyValue> = new Two(i, s);
+  let ok4: AnyValue = pick(i, s);
+  let ok5: Listed<Int> = pick(xs, ld);
+  let e1: Boolean = new Two<AnyValue>(i, s);
+  let e2: Boolean = pick<AnyValue>(i, s);
+  pet(new Dog(), i);
+  k(xs, s);
+}
+let rs: Two<AnyValue> = r;
+console.log("ran");
+--- settled
+(Block
+  (Interface ^Animal:0)
+  (Class ^Dog:1 Animal:0)
+  (Class ^Cat:2 Animal:0)
+  (Class ^Opaque:3)
+  (Class
+    ^Two:4
+    (TypeParam ^T:18)
+    (Param ^first:20 T:18)
+    (Param ^second:21 T:18))
+  (Class
+    ^Box:5
+    (TypeParam ^T:22)
+    (Param ^item:24 T:22)
+    (Method
+      ^both:25
+      (Fn
+        (TypeParam ^U:26)
+        (Let ^a:27 U:26)
+        (Let ^b:28 U:26)
+        (Call <> List U:26)
+        (Block (Call list a:27 b:28)))))
+  (Let
+    ^pick:6
+    (Fn (TypeParam ^T:29) (Let ^a:30 T:29) (Let ^b:31 T:29) T:29 (Block a:30)))
+  (Let
+    ^wrap:7
+    (Fn
+      (TypeParam ^T:32)
+      (Let ^a:33 T:32)
+      (Let ^b:34 T:32)
+      (Call <> List T:32)
+      (Block (Call list a:33 b:34))))
+  (Let
+    ^pet:8
+    (Fn
+      (TypeParam ^T:35 Animal:0)
+      (Let ^a:36 T:35)
+      (Let ^b:37 T:35)
+      T:35
+      (Block a:36)))
+  (Let
+    ^k:9
+    (Fn
+      (TypeParam ^T:38)
+      (Let ^xs:39 (Call <> List T:38))
+      (Let ^x:40 T:38)
+      T:38
+      (Block x:40)))
+  (Let ^r:10 (Call new Two:4 1 "s"))
+  (Let
+    ^consts:11
+    (Fn
+      Void
+      (Block
+        (Let ^rw:41 (Call <> Two:4 Int) (Call new Two:4 1 "s"))
+        (Let ^rl:42 (Call <> Two:4 Int) (Call new Two:4 1 "s"))
+        #void)))
+  (Let
+    ^f:12
+    (Fn
+      (Let ^i:43 Int)
+      (Let ^s:44 String)
+      (Let ^o:45 (Call ? Int))
+      (Let ^x:46 Float64)
+      (Let ^b:47 (Call <> Box:5 Int))
+      (Let ^xs:48 (Call <> List Int))
+      (Let ^ld:49 (Call <> Listed Int))
+      Void
+      (Block
+        (Let ^a1:50 Boolean (Call new Two:4 i:43 s:44))
+        (Let ^a2:51 Boolean (Call pick:6 i:43 s:44))
+        (Let ^a3:52 Boolean (Call wrap:7 i:43 s:44))
+        (Let ^a4:53 Boolean (Call (Call . b:47 \both) i:43 s:44))
+        (Let ^a5:54 Boolean (Call new Two:4 i:43 s:44))
+        (Let ^a6:55 Boolean (Call new Two:4 (Call new Dog:1) (Call new Cat:2)))
+        (Let ^a7:56 Boolean (Call new Two:4 i:43 x:46))
+        (Let
+          ^a8:57
+          Boolean
+          (Call new Two:4 (Call new Two:4 i:43 i:43) (Call new Two:4 s:44 s:44)))
+        (Let ^a9:58 Boolean (Call new Two:4 (Call list i:43) (Call list s:44)))
+        (Let ^a10:59 Boolean (Call pick:6 xs:48 ld:49))
+        (Let
+          ^a11:60
+          Boolean
+          (Call new Two:4 (Call new Opaque:3) (Call new Dog:1)))
+        (Let ^n1:61 Boolean (Call new Two:4 i:43 null))
+        (Let ^n2:62 Boolean (Call new Two:4 null i:43))
+        (Let ^n3:63 Boolean (Call new Two:4 o:45 s:44))
+        (Let ^n4:64 Boolean (Call pick:6 i:43 null))
+        (Let ^w1:65 (Call <> Two:4 Int) (Call new Two:4 i:43 s:44))
+        (Let ^w2:66 (Call <> Two:4 Int) (Call new Two:4 i:43 s:44))
+        (Let ^w3:67 (Call <> List Int) (Call wrap:7 i:43 s:44))
+        (Let ^w4:68 (Call <> List Int) (Call (Call . b:47 \both) s:44 i:43))
+        (Let ^w5:69 (Call <> Two:4 Float64) (Call new Two:4 i:43 x:46))
+        (Let
+          ^w6:70
+          (Call <> Two:4 (Call <> Two:4 Int))
+          (Call new Two:4 (Call new Two:4 i:43 i:43) (Call new Two:4 s:44 s:44)))
+        (Let ^ok1:71 (Call <> Two:4 (Call ? Int)) (Call new Two:4 i:43 null))
+        (Let
+          ^ok2:72
+          (Call <> Two:4 Animal:0)
+          (Call new Two:4 (Call new Dog:1) (Call new Cat:2)))
+        (Let ^ok3:73 (Call <> Two:4 AnyValue) (Call new Two:4 i:43 s:44))
+        (Let ^ok4:74 AnyValue (Call pick:6 i:43 s:44))
+        (Let ^ok5:75 (Call <> Listed Int) (Call pick:6 xs:48 ld:49))
+        (Let ^e1:76 Boolean (Call new (Call <> Two:4 AnyValue) i:43 s:44))
+        (Let ^e2:77 Boolean (Call pick:6 \typeArg AnyValue i:43 s:44))
+        (Call pet:8 (Call new Dog:1) i:43)
+        (Call k:9 xs:48 s:44)
+        #void)))
+  (Let ^rs:13 (Call <> Two:4 AnyValue) r:10)
+  (Call (Call . console \log) "ran")
+  #void)
+error 1138..1153: T is bound to both Int32 and String, which can't be told apart once joined; give T explicitly
+error 1208..1211: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> Two<T> expected [Int32, Int32], but got [Int32, String]
+error 1255..1258: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> Two<T> expected [Int32, Int32], but got [Int32, String]
+error 1383..1396: T is bound to both Int32 and String, which can't be told apart once joined; give T explicitly
+error 1383..1396: Cannot assign to Boolean from Two<AnyValue>
+error 1423..1427: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> T expected [Boolean, Boolean], but got [Int32, String]
+error 1450..1460: T is bound to both Int32 and String, which can't be told apart once joined; give T explicitly
+error 1450..1460: Cannot assign to Boolean from List<AnyValue>
+error 1482..1494: U is bound to both Int32 and String, which can't be told apart once joined; give U explicitly
+error 1482..1494: Cannot assign to Boolean from List<AnyValue>
+error 1516..1551: T is bound to both Int32 and String, which can't be told apart once joined; give T explicitly
+error 1516..1551: Cannot assign to Boolean from Two<AnyValue>
+error 1573..1602: Cannot assign to Boolean from Two<Animal>
+error 1624..1637: T is bound to both Int32 and Float64, which can't be told apart once joined; give T explicitly
+error 1624..1637: Cannot assign to Boolean from Two<AnyValue>
+error 1659..1696: Cannot assign to Boolean from Two<AnyValue>
+error 1718..1735: T is bound to both List<Int32> and List<String>, which can't be told apart once joined; give T explicitly
+error 1718..1735: Cannot assign to Boolean from Two<AnyValue>
+error 1763..1769: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> T expected [Boolean, Boolean], but got [List<Int32>, Listed<Int32>]
+error 1793..1825: Cannot assign to Boolean from Two<AnyValue>
+error 1847..1863: Cannot assign to Boolean from Two<Int32?>
+error 1885..1901: Cannot assign to Boolean from Two<Int32?>
+error 1923..1936: T is bound to both Int32? and String, which can't be told apart once joined; give T explicitly
+error 1923..1936: Cannot assign to Boolean from Two<AnyValue?>
+error 1958..1971: Cannot assign to Boolean from Int32?
+error 2005..2006: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> Two<T> expected [Int32, Int32], but got [Int32, String]
+error 2050..2051: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> Two<T> expected [Int32, Int32], but got [Int32, String]
+error 2085..2086: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> List<T> expected [Int32, Int32], but got [Int32, String]
+error 2118..2119: Actual arguments do not match signature: <U extends AnyValue>(Box<Int32>, U, U) -> List<U> expected [Box<Int32>, Int32, Int32], but got [Box<Int32>, String, Int32]
+error 2158..2159: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> Two<T> expected [Float64, Float64], but got [Int32, Float64]
+error 2214..2227: Actual arguments do not match signature: <T extends AnyValue>(T, T) -> Two<T> expected [Two<Int32>, Two<Int32>], but got [Two<Int32>, Two<String>]
+error 2462..2485: Cannot assign to Boolean from Two<AnyValue>
+error 2507..2527: Cannot assign to Boolean from AnyValue
+error 2531..2548: T is bound to both Dog and Int32, which can't be told apart once joined; give T explicitly
+error 2552..2560: T is bound to both Int32 and String, which can't be told apart once joined; give T explicitly
+Failed: T is bound to both Int32 and String, which can't be told apart once joined; give T explicitly

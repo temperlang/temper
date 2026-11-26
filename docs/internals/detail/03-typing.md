@@ -78,9 +78,10 @@ is local and cheap: one declaration, one initializer. Typing can grow a
 piece at a time, since what isn't worked out is just unknown.
 
 **Cons:** inference is weaker than a solver's: a type parameter that
-arguments bind two ways is left unknown, where Kotlin finds a common
-supertype; a local's type comes from its initializer alone, never its
-later uses. Forced results aren't memoized, since they may lack what
+arguments bind two ways is their join, or `AnyValue`, an error above a
+`@mayDowncastTo(false)` type unless the type wanted binds it, where
+Kotlin's solver weighs every constraint; a local's type comes from its
+initializer alone, never its later uses. Forced results aren't memoized, since they may lack what
 they didn't wait for, so a forced chain is worked out again on each
 read. Most typing runs after the loop, not in it
 ([settle loop, two rounds](02-settle-loop.md#two-rounds-and-passes-between-and-after)).
@@ -206,9 +207,11 @@ module (`type2/TypeSolver.kt`, `InferBounds.kt`).
 **Pros:** small and predictable; each call is solved once its arguments'
 types are known, so it fits the loop.
 
-**Cons:** a parameter bound two ways is unknown rather than joined; a
-function literal binds a type parameter only if it declares its result
-type; what Kotlin's solver infers from later uses isn't.
+**Cons:** a parameter bound two ways is joined (`AnyValue` where nothing
+closer fits) and the type wanted binds it only where that join would go
+above a `@mayDowncastTo(false)` type, an error otherwise; a function
+literal binds a type parameter only if it declares its result type;
+what Kotlin's solver infers from later uses isn't.
 
 ### Invariant type parameters
 
@@ -445,9 +448,9 @@ it testable on its own.
 - **`Never` without its `T`:** a backend can't get the fallback type, and
   a `Never<A>` used as an unrelated `B` isn't reported. Planned before
   more of code generation relies on it.
-- **Weaker inference than Kotlin's solver** in places: type parameters
-  bound two ways, results of function literals that don't declare them,
-  generators and `async` blocks, and list literals without a common
+- **Weaker inference than Kotlin's solver** in places: results of
+  function literals that don't declare them, generators and `async`
+  blocks, and list literals without a common
   type (notes/typing.md, "Every expression typed", "Left").
 - **Flow facts are narrower than their design:** no `var` narrowing,
   ranges, or definite assignment yet.

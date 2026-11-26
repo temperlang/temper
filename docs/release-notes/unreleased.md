@@ -433,7 +433,21 @@ Code that relied on these going unchecked is now an error:
   literal takes its element type from the type wanted, so `let xs:
   List<Animal> = [new Dog()]` works, and `[new A(1)]`, a `List<A>`, isn't
   a `Listed<P>` for `class A extends P` either. A `Never<Dog>` is still a
-  `Never<Animal>`, as `Never` has no values.
+  `Never<Animal>`, as `Never` has no values. A generic call whose
+  arguments bind a type parameter two ways binds it to their common
+  supertype, as before, so `k(dogs, cat)` for `k<T>(xs: List<T>, x: T)`
+  and `dogs: List<Dog>` is an error: `T` is `Animal`, and a `List<Dog>`
+  isn't a `List<Animal>`.
+- A generic call whose arguments bind a type parameter two ways whose
+  common supertype is above a type marked `@mayDowncastTo(false)`
+  (`String`, `Boolean`, the number types, `List`, `ListBuilder`, `Map`,
+  and `MapBuilder`), as `new Two(1, "s")` for `class Two<T>(a: T, b:
+  T)`, or `List<Int>` and `List<String>`, is an error: "T is bound to
+  both Int32 and String, which can't be told apart once joined; give T
+  explicitly". Temper 0.6.0 bound `T` to `AnyValue`. To migrate, give
+  the type arguments, `new Two<AnyValue>(1, "s")`, or declare the type
+  wanted, `let t: Two<AnyValue> = new Two(1, "s")`. A value and null
+  still bind `T?`.
 - `@out` and `@in` are gone: remove them from type parameters.
 - A run-time check that would introduce a type argument is an error for
   every generic type, as `x is Generator<Int>` for an `x: AnyValue`,
