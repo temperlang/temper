@@ -2342,11 +2342,6 @@ For example:
 ### `@imu` decorator
 Marker for types that must be deeply immutable.
 
-### `@in` unsupported variance notation
-Temper 0.6.0 let `@in` mark a type parameter contravariant (input).
-Type parameters are invariant, as many target languages can't
-express variance, so `@in` is an error.
-
 ### `@inlineUnrealizedGoal` decorator
 `@inlineUnrealizedGoal` may decorate a function parameter declaration.
 
@@ -2745,11 +2740,6 @@ where `+` is the sample operator.
 - Prefix: `+_`, the operator appears before its operand, like `-` for negation.
 - Postfix: `_+`, the operator appears after its operand, like `++` for post-increment
   or superscript `T` for matrix transpose.
-
-### `@out` unsupported variance notation
-Temper 0.6.0 let `@out` mark a type parameter covariant (output).
-Type parameters are invariant, as many target languages can't
-express variance, so `@out` is an error.
 
 ### `@overload` decorator
 Gives an overload name to a function or class member. Temper respects

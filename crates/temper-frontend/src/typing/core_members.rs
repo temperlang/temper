@@ -425,7 +425,7 @@ impl<'a> Reader<'a> {
         }
     }
 
-    /// A type parameter's name: `T`, `@out T`, or `K extends MapKey<K>`
+    /// A type parameter's name: `T`, a decorated `T`, or `K extends MapKey<K>`
     /// (`(Block \typeArg K \super …)`).
     fn type_param_name(&self, node: NodeId) -> Option<&'a str> {
         let tree = self.ast.tree();

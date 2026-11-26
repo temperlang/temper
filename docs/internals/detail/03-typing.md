@@ -215,9 +215,9 @@ type; what Kotlin's solver infers from later uses isn't.
 **Chosen:** type parameters are invariant: `List<Sub>` is never a
 `List<Super>`, as
 [`is_subtype`](../../../crates/temper-frontend/src/types.rs) reports.
-Kotlin's `@out` and `@in` are errors in user code, and core's are
-ignored. `Never<Sub>` is a `Never<Super>` by `Never`'s own rule: it has
-no values, and a backend's fallback type upcasts.
+Kotlin's `@out` and `@in` are gone, core's too. `Never<Sub>` is a
+`Never<Super>` by `Never`'s own rule: it has no values, and a backend's
+fallback type upcasts.
 
 **Status:** decided by the team (2026-10-28), since C++ and Rust can't
 express variance well; reported since 2026-11-26, once nothing in core,
@@ -264,7 +264,7 @@ Kotlin Temper on purpose, each with tests. Where they stand
 | Named `@fun` interfaces are nominal, and a function literal needs a type wanted ([`fun_interfaces`](../../../crates/temper-frontend/src/typing/fun_interfaces.rs)) | This compiler's decision (2026-10-29); proposed to the team |
 | Object literals take their class from the type wanted | Proposed |
 | Narrowing through `&&`, `\|\|`, `!`, `while`, and after an early exit | Proposed; accepts more than Kotlin |
-| Invariance, with `@out` and `@in` errors | Decided by the Temper team, 2026-10-28; reported since 2026-11-26 |
+| Invariance, without `@out` and `@in` | Decided by the Temper team, 2026-10-28; reported since 2026-11-26 |
 
 The ones that reject what Kotlin accepts (nominal `@fun` interfaces,
 fields first) mean a library can pass one compiler and fail the other

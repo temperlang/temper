@@ -163,17 +163,14 @@ class NoCommitment {}
 This is just a sampling of the rules which enforce `@imu` and `@partialImu`
 tagging.
 
-## 🚨Breaking change: type parameter variance now requires `@`.
+## 🚨Breaking change: type parameter variance removed
 
-Previously, a type parameter could be declared like `<out T>`.
-Now you need to declare it `<@out T>` using decoration/annotation syntax.
-Similarly for contravariant syntax `<@in T>`.
-Invariant remains the default.
-
-Also, both covariance and contravariance are deprecated.  It's not
-clear that explicit variance is translatable to languages that infer
-variance or to language's that are very aggressive about
-monomorphization.
+Temper 0.6.0 let a type parameter be declared covariant, `<out T>` or
+`<@out T>`, or contravariant, `<in T>` or `<@in T>`. Variance is gone:
+every type parameter is invariant, core's too, as many target languages
+can't express variance well. Remove `@out` and `@in` from your code;
+"Stricter checks of generic types and arguments", below, shows how to
+migrate code that relied on them.
 
 ## 🚨Breaking change: Multiline string syntax (yes, again)
 
@@ -437,8 +434,7 @@ Code that relied on these going unchecked is now an error:
   List<Animal> = [new Dog()]` works, and `[new A(1)]`, a `List<A>`, isn't
   a `Listed<P>` for `class A extends P` either. A `Never<Dog>` is still a
   `Never<Animal>`, as `Never` has no values.
-- `@out` and `@in` on a type parameter are errors: "Variance annotations
-  aren't supported; type parameters are invariant". Remove them.
+- `@out` and `@in` are gone: remove them from type parameters.
 - A run-time check that would introduce a type argument is an error for
   every generic type, as `x is Generator<Int>` for an `x: AnyValue`,
   where Temper 0.6.0 left alone those marked `@out` or `@in`.

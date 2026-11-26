@@ -188,13 +188,9 @@ the supertype with the other's base, it has the same arguments
 once a census found nothing in core, std, the tests, or the showcase
 libraries that relied on variance.
 
-- **`@out` and `@in` in user code** are errors, "Variance annotations
-  aren't supported; type parameters are invariant", at the annotation,
-  and otherwise ignored. A type-only error: the code still runs.
-- **Core's** annotations (about a dozen, as on `Generator<@out YIELD>`)
-  stay in `core.temper`'s text, so it stays easy to diff with Kotlin
-  Temper's, and are ignored: core isn't lowered as user code is, and
-  nothing reads them.
+- **`@out` and `@in`** are gone, core's included: nothing gives them a
+  meaning, and on a type parameter they're ignored, as any other
+  decorator there is.
 - **`Never<T>`** has its own rule, not variance: a `Never<A>` is a
   `Never<B>` where an `A` is a `B` ("Never", below).
 - **Migrating** code that relied on variance: take a `List<T>` for `<T
@@ -234,9 +230,10 @@ invariant.
    interpreter runs them as built-in list methods (`interp.rs`), exercised
    by `types/list/reduce` and `imports/functions`.
 2. **Adapters inserted at conversions,** for what's left: wrap a function
-   value to accept a narrower argument (O(1), always valid); wrap an `@out`
-   read-only interface in a view that upcasts elements on access, or an
-   `@in` one in a view that upcasts inputs. The compiler knows each concrete
+   value to accept a narrower argument (O(1), always valid); wrap a
+   read-only (covariant) interface in a view that upcasts elements on
+   access, or a write-only (contravariant) one in a view that upcasts
+   inputs. The compiler knows each concrete
    cast, so it can emit it as a closure, which works in stable Rust; C++ can
    use converting constructors like `shared_ptr`'s. Costs: an allocation per
    conversion, dynamic dispatch on every access, and a view that isn't the
@@ -811,7 +808,7 @@ P(x: Int): Boolean;`: `@fun` is metadata plus the `apply` convention.
 ## `Never<T>`: bottom with a fallback
 
 Temper has no single bottom type. `core.temper` declares
-`sealed interface Never<@out T>`, and the `T` says what a backend
+`sealed interface Never<T>`, and the `T` says what a backend
 without a bottom type (Java, C#, C++, …) should write in its place:
 `Never<String>` becomes `String` there, and a bottom type where there is
 one. These are Kotlin Temper's rules (`type2/TypeContext2.kt`,
@@ -850,7 +847,7 @@ completes, as `return`.
 variance, which tempest doesn't have ("Type parameters are invariant",
 above): it has no values for anything to go wrong on, and a backend's
 fallback `Sub` to `Super` is an ordinary upcast (2026-11-26). Kotlin
-gets the same from `Never`'s `@out`. A `Never<Super>` isn't a
+gets the same from its core's `Never<@out T>`. A `Never<Super>` isn't a
 `Never<Sub>`, and a `Never<List<Dog>>` isn't a `Never<List<Animal>>`, as
 a `List<Dog>` isn't a `List<Animal>`.
 
@@ -1355,8 +1352,8 @@ In order, the first that applies:
    `Box<T>` from `Sup<T>`: "Type arguments cannot be introduced with is
    or as runtime type checks, because a type argument's run-time type
    can't be checked: <[Box<Int32>]> from AnyValue", also for a
-   parameter Kotlin marks `@out` or `@in`, as `Generator<@out YIELD>`,
-   whose arguments Kotlin doesn't count, as type parameters are
+   parameter Kotlin's core marks `@out` or `@in`, as
+   `Generator<@out YIELD>`, whose arguments Kotlin doesn't count, as type parameters are
    invariant ("Type parameters are invariant", above). Other downcasts
    are fine. Kotlin's wording ends at "checks" for
    both erasure errors; tempest says why

@@ -102,7 +102,7 @@ pub(crate) fn builtin_type_shown(name: &str) -> String {
     let Some(rest) = rest.strip_prefix('<') else {
         return name.to_string();
     };
-    // Each parameter's name, past `@out` and before `extends …`.
+    // Each parameter's name, past any decorator and before `extends …`.
     let (mut depth, mut params, mut param) = (1, Vec::new(), String::new());
     for c in rest.chars() {
         match c {

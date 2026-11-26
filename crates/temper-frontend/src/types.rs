@@ -1234,8 +1234,7 @@ mod tests {
         let strings = applied(&mut types, STRING);
         let values = applied(&mut types, ANY_VALUE);
         assert_eq!(types.is_subtype(ints, strings), Some(false));
-        // Type parameters are invariant, even those core marks `@out`,
-        // as `List`'s.
+        // Type parameters are invariant, `List`'s too.
         assert_eq!(types.is_subtype(ints, values), Some(false));
         assert_eq!(types.is_subtype(ints, ANY_VALUE), Some(true));
         assert_eq!(types.is_subtype(ints, STRING), Some(false));

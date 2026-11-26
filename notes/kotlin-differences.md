@@ -2218,15 +2218,14 @@ copied Kotlin's:
   argument is one of them. Every type parameter is invariant in tempest,
   since C++ and Rust, among others, can't express variance well
   ([typing.md](typing.md), "Type parameters are invariant"): it reports
-  "Cannot assign to List<Animal> from List<Dog>", and `@out` or `@in` in
-  user code is "Variance annotations aren't supported; type parameters
-  are invariant" (2026-11-26). `Never<Sub>` is still a `Never<Super>`,
-  by `Never`'s own rule. Nothing in core, std, the tests, or the six
+  "Cannot assign to List<Animal> from List<Dog>" (2026-11-26), and
+  `@out` and `@in` are gone, core's too. `Never<Sub>` is still a
+  `Never<Super>`, by `Never`'s own rule. Nothing in core, std, the tests, or the six
   showcase libraries relied on variance. Recommended: Kotlin Temper
   drops variance too, keeping `Never`'s rule.
-  Test: settle/types.cases, "type parameters are invariant, and @out and
-  @in are errors" and "Never<A> is a Never<B> where A is a B, by its own
-  rule"; settle/class-types.cases, "is and as checks of type parameters'
+  Test: settle/types.cases, "type parameters are invariant", "@out and
+  @in are ordinary decorators on type parameters", and "Never<A> is a
+  Never<B> where A is a B, by its own rule"; settle/class-types.cases, "is and as checks of type parameters'
   values and generic types".
 
 - **Kotlin Temper's move to its newer types** (PR #500, in review

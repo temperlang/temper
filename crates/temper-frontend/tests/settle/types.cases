@@ -3626,37 +3626,32 @@ error 674..684: Expected subtype of Listed<P>, but got List<A>
 error 709..719: Cannot assign to Listed<P> from List<A>
 error 749..750: Actual arguments do not match signature: <listT extends AnyValue>(listT) -> List<listT> expected [String], but got [Int32]
 
-=== type parameters are invariant, and @out and @in are errors
+=== type parameters are invariant
 // A `Box<Dog>` is no `Box<Animal>`, nor a `List<Dog>` a `List<Animal>`
 // or a `Listed<Animal>`, and so for core's generic types that Kotlin
 // Temper marks `@out` or `@in` (`Map`, `Mapped`, `Pair`, the generators,
 // their results, and `Promise`). A `SafeGenerator<Dog>` is a
 // `Generator<Dog>`, and a `DoneResult<Dog>` a `GeneratorResult<Dog>`, by
-// what they extend. Marking a type parameter `@out` or `@in` is an
-// error, and changes nothing.
+// what they extend.
 interface Animal {}
 class Dog extends Animal {}
 class Box<T>(public item: T) {}
-class Crate<@out T>(public item: T) {}
-class Sink<@in T> {}
-let f(b: Box<Dog>, c: Crate<Dog>, lb: ListBuilder<Dog>, ls: List<Dog>): Void {
+let f(b: Box<Dog>, lb: ListBuilder<Dog>, ls: List<Dog>): Void {
   let b1: Box<Animal> = b;
   let b2: Box<Dog?> = b;
-  let c1: Crate<Animal> = c;
   let l1: Listed<Animal> = lb;
   let l2: Listed<Animal> = ls;
   let l3: List<Animal> = ls;
   let l4: Listed<Dog> = ls;
   let l5: List<Dog?> = ls;
 }
-let g(m: Map<String, Dog>, p: Pair<String, Dog>, gen: Generator<Dog>, sg: SafeGenerator<Dog>, s: Sink<Animal>): Void {
+let g(m: Map<String, Dog>, p: Pair<String, Dog>, gen: Generator<Dog>, sg: SafeGenerator<Dog>): Void {
   let m1: Map<String, Animal> = m;
   let m2: Mapped<String, Animal> = m;
   let p1: Pair<String, Animal> = p;
   let g1: Generator<Animal> = gen;
   let g2: Generator<Animal> = sg;
   let g3: Generator<Dog> = sg;
-  let s1: Sink<Dog> = s;
 }
 let h(r: GeneratorResult<Dog>, v: ValueResult<Dog>, d: DoneResult<Dog>, pr: Promise<Dog>): Void {
   let r1: GeneratorResult<Animal> = r;
@@ -3669,79 +3664,106 @@ let h(r: GeneratorResult<Dog>, v: ValueResult<Dog>, d: DoneResult<Dog>, pr: Prom
 (Block
   (Interface ^Animal:0)
   (Class ^Dog:1 Animal:0)
-  (Class ^Box:2 (TypeParam ^T:10) (Param ^item:12 T:10))
-  (Class ^Crate:3 (TypeParam ^T:13) (Param ^item:15 T:13))
-  (Class ^Sink:4 (TypeParam ^T:16))
+  (Class ^Box:2 (TypeParam ^T:8) (Param ^item:10 T:8))
+  (Let
+    ^f:3
+    (Fn
+      (Let ^b:11 (Call <> Box:2 Dog:1))
+      (Let ^lb:12 (Call <> ListBuilder Dog:1))
+      (Let ^ls:13 (Call <> List Dog:1))
+      Void
+      (Block
+        (Let ^b1:14 (Call <> Box:2 Animal:0) b:11)
+        (Let ^b2:15 (Call <> Box:2 (Call ? Dog:1)) b:11)
+        (Let ^l1:16 (Call <> Listed Animal:0) lb:12)
+        (Let ^l2:17 (Call <> Listed Animal:0) ls:13)
+        (Let ^l3:18 (Call <> List Animal:0) ls:13)
+        (Let ^l4:19 (Call <> Listed Dog:1) ls:13)
+        (Let ^l5:20 (Call <> List (Call ? Dog:1)) ls:13)
+        #void)))
+  (Let
+    ^g:4
+    (Fn
+      (Let ^m:21 (Call <> Map String Dog:1))
+      (Let ^p:22 (Call <> Pair String Dog:1))
+      (Let ^gen:23 (Call <> Generator Dog:1))
+      (Let ^sg:24 (Call <> SafeGenerator Dog:1))
+      Void
+      (Block
+        (Let ^m1:25 (Call <> Map String Animal:0) m:21)
+        (Let ^m2:26 (Call <> Mapped String Animal:0) m:21)
+        (Let ^p1:27 (Call <> Pair String Animal:0) p:22)
+        (Let ^g1:28 (Call <> Generator Animal:0) gen:23)
+        (Let ^g2:29 (Call <> Generator Animal:0) sg:24)
+        (Let ^g3:30 (Call <> Generator Dog:1) sg:24)
+        #void)))
+  (Let
+    ^h:5
+    (Fn
+      (Let ^r:31 (Call <> GeneratorResult Dog:1))
+      (Let ^v:32 (Call <> ValueResult Dog:1))
+      (Let ^d:33 (Call <> DoneResult Dog:1))
+      (Let ^pr:34 (Call <> Promise Dog:1))
+      Void
+      (Block
+        (Let ^r1:35 (Call <> GeneratorResult Animal:0) r:31)
+        (Let ^r2:36 (Call <> GeneratorResult Animal:0) v:32)
+        (Let ^r3:37 (Call <> GeneratorResult Animal:0) d:33)
+        (Let ^r4:38 (Call <> GeneratorResult Dog:1) d:33)
+        (Let ^pr1:39 (Call <> Promise Animal:0) pr:34)
+        #void))))
+error 541..542: Cannot assign to Box<Animal> from Box<Dog>
+error 566..567: Cannot assign to Box<Dog?> from Box<Dog>
+error 596..598: Cannot assign to Listed<Animal> from ListBuilder<Dog>
+error 627..629: Cannot assign to Listed<Animal> from List<Dog>
+error 656..658: Cannot assign to List<Animal> from List<Dog>
+error 711..713: Cannot assign to List<Dog?> from List<Dog>
+error 851..852: Cannot assign to Map<String, Animal> from Map<String, Dog>
+error 889..890: Cannot assign to Mapped<String, Animal> from Map<String, Dog>
+error 925..926: Cannot assign to Pair<String, Animal> from Pair<String, Dog>
+error 958..961: Cannot assign to Generator<Animal> from Generator<Dog>
+error 993..995: Cannot assign to Generator<Animal> from SafeGenerator<Dog>
+error 1164..1165: Cannot assign to GeneratorResult<Animal> from GeneratorResult<Dog>
+error 1203..1204: Cannot assign to GeneratorResult<Animal> from ValueResult<Dog>
+error 1242..1243: Cannot assign to GeneratorResult<Animal> from DoneResult<Dog>
+error 1310..1312: Cannot assign to Promise<Animal> from Promise<Dog>
+
+=== @out and @in are ordinary decorators on type parameters
+// Temper 0.6.0's variance markers no longer mean anything: like any other
+// decorator on a type parameter, they change nothing, and a `Crate<Dog>`
+// is no `Crate<Animal>`.
+interface Animal {}
+class Dog extends Animal {}
+class Crate<@out T>(public item: T) {}
+class Sink<@in T> {}
+class Tagged<@other T> {}
+let f(c: Crate<Dog>, s: Sink<Animal>, t: Tagged<Dog>): Void {
+  let c1: Crate<Animal> = c;
+  let s1: Sink<Dog> = s;
+  let t1: Tagged<Animal> = t;
+}
+--- settled
+(Block
+  (Interface ^Animal:0)
+  (Class ^Dog:1 Animal:0)
+  (Class ^Crate:2 (TypeParam ^T:8) (Param ^item:10 T:8))
+  (Class ^Sink:3 (TypeParam ^T:11))
+  (Class ^Tagged:4 (TypeParam ^T:13))
   (Let
     ^f:5
     (Fn
-      (Let ^b:18 (Call <> Box:2 Dog:1))
-      (Let ^c:19 (Call <> Crate:3 Dog:1))
-      (Let ^lb:20 (Call <> ListBuilder Dog:1))
-      (Let ^ls:21 (Call <> List Dog:1))
+      (Let ^c:15 (Call <> Crate:2 Dog:1))
+      (Let ^s:16 (Call <> Sink:3 Animal:0))
+      (Let ^t:17 (Call <> Tagged:4 Dog:1))
       Void
       (Block
-        (Let ^b1:22 (Call <> Box:2 Animal:0) b:18)
-        (Let ^b2:23 (Call <> Box:2 (Call ? Dog:1)) b:18)
-        (Let ^c1:24 (Call <> Crate:3 Animal:0) c:19)
-        (Let ^l1:25 (Call <> Listed Animal:0) lb:20)
-        (Let ^l2:26 (Call <> Listed Animal:0) ls:21)
-        (Let ^l3:27 (Call <> List Animal:0) ls:21)
-        (Let ^l4:28 (Call <> Listed Dog:1) ls:21)
-        (Let ^l5:29 (Call <> List (Call ? Dog:1)) ls:21)
-        #void)))
-  (Let
-    ^g:6
-    (Fn
-      (Let ^m:30 (Call <> Map String Dog:1))
-      (Let ^p:31 (Call <> Pair String Dog:1))
-      (Let ^gen:32 (Call <> Generator Dog:1))
-      (Let ^sg:33 (Call <> SafeGenerator Dog:1))
-      (Let ^s:34 (Call <> Sink:4 Animal:0))
-      Void
-      (Block
-        (Let ^m1:35 (Call <> Map String Animal:0) m:30)
-        (Let ^m2:36 (Call <> Mapped String Animal:0) m:30)
-        (Let ^p1:37 (Call <> Pair String Animal:0) p:31)
-        (Let ^g1:38 (Call <> Generator Animal:0) gen:32)
-        (Let ^g2:39 (Call <> Generator Animal:0) sg:33)
-        (Let ^g3:40 (Call <> Generator Dog:1) sg:33)
-        (Let ^s1:41 (Call <> Sink:4 Dog:1) s:34)
-        #void)))
-  (Let
-    ^h:7
-    (Fn
-      (Let ^r:42 (Call <> GeneratorResult Dog:1))
-      (Let ^v:43 (Call <> ValueResult Dog:1))
-      (Let ^d:44 (Call <> DoneResult Dog:1))
-      (Let ^pr:45 (Call <> Promise Dog:1))
-      Void
-      (Block
-        (Let ^r1:46 (Call <> GeneratorResult Animal:0) r:42)
-        (Let ^r2:47 (Call <> GeneratorResult Animal:0) v:43)
-        (Let ^r3:48 (Call <> GeneratorResult Animal:0) d:44)
-        (Let ^r4:49 (Call <> GeneratorResult Dog:1) d:44)
-        (Let ^pr1:50 (Call <> Promise Animal:0) pr:45)
+        (Let ^c1:18 (Call <> Crate:2 Animal:0) c:15)
+        (Let ^s1:19 (Call <> Sink:3 Dog:1) s:16)
+        (Let ^t1:20 (Call <> Tagged:4 Animal:0) t:17)
         #void))))
-error 543..547: Variance annotations aren't supported; type parameters are invariant
-error 581..584: Variance annotations aren't supported; type parameters are invariant
-error 694..695: Cannot assign to Box<Animal> from Box<Dog>
-error 719..720: Cannot assign to Box<Dog?> from Box<Dog>
-error 748..749: Cannot assign to Crate<Animal> from Crate<Dog>
-error 778..780: Cannot assign to Listed<Animal> from ListBuilder<Dog>
-error 809..811: Cannot assign to Listed<Animal> from List<Dog>
-error 838..840: Cannot assign to List<Animal> from List<Dog>
-error 893..895: Cannot assign to List<Dog?> from List<Dog>
-error 1050..1051: Cannot assign to Map<String, Animal> from Map<String, Dog>
-error 1088..1089: Cannot assign to Mapped<String, Animal> from Map<String, Dog>
-error 1124..1125: Cannot assign to Pair<String, Animal> from Pair<String, Dog>
-error 1157..1160: Cannot assign to Generator<Animal> from Generator<Dog>
-error 1192..1194: Cannot assign to Generator<Animal> from SafeGenerator<Dog>
-error 1249..1250: Cannot assign to Sink<Dog> from Sink<Animal>
-error 1388..1389: Cannot assign to GeneratorResult<Animal> from GeneratorResult<Dog>
-error 1427..1428: Cannot assign to GeneratorResult<Animal> from ValueResult<Dog>
-error 1466..1467: Cannot assign to GeneratorResult<Animal> from DoneResult<Dog>
-error 1534..1536: Cannot assign to Promise<Animal> from Promise<Dog>
+error 397..398: Cannot assign to Crate<Animal> from Crate<Dog>
+error 422..423: Cannot assign to Sink<Dog> from Sink<Animal>
+error 452..453: Cannot assign to Tagged<Animal> from Tagged<Dog>
 
 === core's generators and results work without variance
 // What core's generators and their results need: `doneResult()`, `new

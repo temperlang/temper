@@ -1339,8 +1339,7 @@ impl Settle {
 
     /// A type parameter, as `T`, `T extends Bound` or with decorators,
     /// becomes a `Let` whose type is its bound. Type parameters are
-    /// invariant, so Kotlin Temper's `@out` and `@in` are errors, and
-    /// otherwise ignored, as other decorators are.
+    /// invariant, and decorators on them are ignored.
     pub(crate) fn lower_type_param(&mut self, node: NodeId) -> Option<NodeId> {
         let children = self.lib.tree.children(node).to_vec();
         let span = self.lib.tree.span(node);
@@ -1357,20 +1356,12 @@ impl Settle {
                     _ => return None,
                 }
             }
-            (NodeKind::Call, [callee, decorator, target])
+            (NodeKind::Call, [callee, _, target])
                 if self
                     .lib
                     .name(*callee)
                     .is_some_and(|n| self.lib.names.get(n) == "@") =>
             {
-                if (self.lib.name(*decorator))
-                    .is_some_and(|n| matches!(self.lib.names.get(n), "out" | "in"))
-                {
-                    let end = self.lib.tree.span(*decorator).end;
-                    let span = Span { end, ..span };
-                    self.lib
-                        .report(Level::Error, Message::VarianceUnsupported, span);
-                }
                 return self.lower_type_param(*target);
             }
             _ => return None,

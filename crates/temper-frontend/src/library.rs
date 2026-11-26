@@ -198,9 +198,6 @@ pub enum Message {
     /// A generic call with too few or too many type arguments: how many
     /// type parameters. Kotlin Temper reports nothing.
     TypeArityMismatch(usize),
-    /// `@out` or `@in` on a type parameter, which Kotlin Temper honors;
-    /// type parameters are invariant.
-    VarianceUnsupported,
     /// `object.key` where `object`'s type has no member `key`: the key
     /// and the type. Kotlin's `BecauseNoSuchMember`.
     NoMember(String, String),
@@ -337,7 +334,6 @@ impl Message {
             self,
             Message::CannotAssign(..)
                 | Message::BareNever
-                | Message::VarianceUnsupported
                 | Message::ExportNeedsNonExported(..)
                 | Message::ExpectedSubType(..)
                 | Message::ExpectedValueOfType(..)
@@ -477,9 +473,6 @@ impl Message {
             Message::ArityMismatch(n) => format!("Wrong number of arguments.  Expected {n}"),
             Message::TypeArityMismatch(n) => {
                 format!("Wrong number of type arguments.  Expected {n}")
-            }
-            Message::VarianceUnsupported => {
-                "Variance annotations aren't supported; type parameters are invariant".into()
             }
             Message::NoMember(key, t) => format!("No member {key} in {t}"),
             Message::NotPubliclyAccessible(key, class) => {
