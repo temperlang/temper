@@ -2276,13 +2276,16 @@ each constructor parameter is a public property, with no default but
 and no constructor of its own; and if it's also [`@imu`](#imu-decorator),
 no `var` properties. Methods are fine.
 
+Its properties are public by default, as interface members are; its
+methods need an explicit visibility, as every class's do.
+
 Object spreads, `{ ...old, a: e }`, need a `@data` class. A spread
 means the constructor call with each property not given read from
 `old`; some backends may copy such an object natively instead, as an
 optimization.
 
 ```temper
-@data class Point(public x: Int, public y: Int, public label: String? = null) {
+@data class Point(x: Int, y: Int, label: String? = null) {
   public moved(dx: Int): Point { { ...this, x: x + dx } }
 }
 let p = new Point(1, 2, "a").moved(3);

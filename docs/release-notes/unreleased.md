@@ -289,7 +289,7 @@ An object literal may start with a spread, to copy an object with a few
 properties changed:
 
 ```temper
-@data class Point(public x: Int, public y: Int, public label: String) {}
+@data class Point(x: Int, y: Int, label: String) {}
 let p = new Point(1, 2, "a");
 let q = { ...p, x: 3 };
 console.log("${q.x} ${q.y} ${q.label}"); //!outputs "3 2 a"
@@ -304,7 +304,9 @@ that same class.
 `@data` is new too: a checked promise that a class is plain data. Each
 constructor parameter is a public property with no default but `null`,
 and the class has no other properties and no constructor of its own
-(and no `var` properties if it's `@imu`); methods are fine. Some
+(and no `var` properties if it's `@imu`); methods are fine. Its
+properties are public by default, as interface members are, so they
+need no `public`; its methods still need a visibility. Some
 backends may copy a `@data` object natively for a spread, as an
 optimization.
 

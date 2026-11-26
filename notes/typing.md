@@ -699,6 +699,10 @@ compatible and tightening isn't:
 - It's a class, not an interface, and not `@connected`.
 - Each constructor parameter is a property (no `@noProperty`), public,
   with no default but `null`, and not a `var` if the class is `@imu`.
+  One without a visibility is public (2026-11-26), as interface
+  members need none: `@data` marks it `MEMBER_PUBLIC` as the class is
+  lowered, before the visibility check, which still needs one on
+  methods. An explicit `public` stays legal.
 - No other property: no field, getter, or setter, static or not; and no
   constructor of its own, so the implied one only stores its
   parameters.

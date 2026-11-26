@@ -154,15 +154,16 @@ true false
 
 `{ ...old, a: e }` copies a `@data` object with some properties changed:
 the constructor runs, each property not given read from `old`, which
-runs first, then the given values, in the order written.
+runs first, then the given values, in the order written. A `@data`
+class's properties are public without saying so.
 
     @imu @data
     class Theme(
-      public fg: String,
-      public bg: String,
-      public size: Int,
-      public bold: Boolean,
-      public note: String? = null,
+      fg: String,
+      bg: String,
+      size: Int,
+      bold: Boolean,
+      note: String? = null,
     ) {
       public weight(): String { if (bold) { "bold" } else { "plain" } }
       public toString(): String { "${fg}/${bg} ${size} ${weight()}${note ?? ""}" }
@@ -185,7 +186,7 @@ with its own copy form, which would read it after, calls the
 constructor instead:
 
     @data
-    class Tally(public var count: Int, public name: String) {}
+    class Tally(var count: Int, public name: String) {}
     let first = new Tally(1, "a");
     let renamed(t: Tally, name: String): String { t.count = t.count + 10; name }
     let second = { ...first, name: renamed(first, "b") };

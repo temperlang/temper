@@ -2900,6 +2900,78 @@ error 1299..1305: @data class Hosted can't be @connected
 error 1373..1392: Spreads need a @data class; Field isn't one
 Failed: Spreads need a @data class; Field isn't one
 
+=== @data properties are public by default
+// A `@data` class's constructor parameters without a visibility are
+// public properties, as interface members need none; an explicit
+// `public` is fine too. They read and spread from outside the class.
+@data class Point(x: Int, y: Int) {
+  public sum(): Int { x + y }
+}
+@imu @data class Tag(public name: String, count: Int, note: String? = null) {}
+let p = new Point(1, 2);
+let q = { ...p, y: 5 };
+let t: Tag = { name: "a", count: 3 };
+let u = { ...t, note: "n" };
+console.log("${p.x} ${q.y} ${q.sum()} ${t.name} ${u.count} ${u.note ?? "-"}");
+--- settled
+(Block
+  (Class
+    ^Point:0
+    (Param ^x:7 Int)
+    (Param ^y:8 Int)
+    (Method ^sum:9 (Fn Int (Block (Call + x:7 y:8)))))
+  (Class
+    ^Tag:1
+    (Param ^name:11 String)
+    (Param ^count:12 Int)
+    (Param ^note:13 (Call ? String) null))
+  (Let ^p:2 (Call new Point:0 1 2))
+  (Let
+    ^q:3
+    (Block (Let ^spread#15 p:2) (Call new Point:0 (Call . spread#15 \x) 5)))
+  (Let ^t:4 Tag:1 (Call new Tag:1 "a" 3))
+  (Let
+    ^u:5
+    (Block
+      (Let ^spread#16 t:4)
+      (Call new Tag:1 (Call . spread#16 \name) (Call . spread#16 \count) "n")))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call . p:2 \x)
+      " "
+      (Call . q:3 \y)
+      " "
+      (Call (Call . q:3 \sum))
+      " "
+      (Call . t:4 \name)
+      " "
+      (Call . u:5 \count)
+      " "
+      (Block
+        (Let ^subject#14 (Call . u:5 \note))
+        (If (Call == subject#14 #null) "-" subject#14))))
+  #void)
+log 1 5 6 a 3 n
+
+=== @data methods and hidden properties still need their visibility
+// Only a `@data` class's constructor parameters default to public: its
+// methods need a visibility, as every class's do, and a `private` or
+// `protected` property is still an error.
+@data class Loose(n: Int, private m: Int) {
+  twice(): Int { n * 2 }
+}
+--- settled
+(Block
+  (Class
+    ^Loose:0
+    (Param ^n:2 Int)
+    (Param private ^m:3 Int)
+    (Method ^twice:4 (Fn Int (Block (Call * n:2 2))))))
+error 231..253: Members of class Loose require explicit visibility: [.twice(...)]
+error 219..220: @data class Loose's property m must be public
+
 === a function literal needs a type wanted
 // A function literal takes its type from the type wanted, so one that
 // initializes a `let` or `var` without a declared type is an error (f,

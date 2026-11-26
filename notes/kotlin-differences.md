@@ -79,8 +79,10 @@ Language and frontend:
   "`@data` classes"): a checked promise that a class is plain data (each
   constructor parameter a public property, defaulting only to null; no
   other properties and no constructor of its own; no `var` if `@imu`),
-  which spreads need. Kotlin has no `@data`.
-  Test: settle/types.cases, "@data classes keep to their rules".
+  which spreads need; its properties are public without saying so.
+  Kotlin has no `@data`.
+  Test: settle/types.cases, "@data classes keep to their rules" and
+  "@data properties are public by default".
 - **Named `@fun` interfaces are nominal** (decided 2026-10-29, done;
   [typing.md](typing.md), "Fun interfaces"): a `Pred` isn't a `Check`,
   even where their `apply`s' signatures match, and the error suggests

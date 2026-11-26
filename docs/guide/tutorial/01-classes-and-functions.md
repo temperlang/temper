@@ -43,13 +43,14 @@ it:
 ```temper
 @data class Rectangle(
   // Currently, the only float type in Temper is Float64.
-  public width: Float64,
-  public height: Float64,
+  width: Float64,
+  height: Float64,
 ) {}
 ```
 
 `@data` promises that the class is plain data: its properties are just
-its constructor's, all public. We'll use that below.
+its constructor's, all public, so they need no `public`. We'll use that
+below.
 
 Hitting enter evaluates the class definition in the Temper interpreter, which
 is separate from any backend language (such as Java, JS, or Python). You should

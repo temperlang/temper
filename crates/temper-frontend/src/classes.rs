@@ -109,8 +109,21 @@ impl Settle {
                     params.clear();
                 }
                 let first_member = children.len();
+                // A `@data` class's properties are public by default, as
+                // interface members are.
+                let data = self.data_classes.contains(&call);
+                let visibility = MEMBER_PUBLIC | MEMBER_PROTECTED | MEMBER_PRIVATE;
                 for param in params {
-                    children.extend(self.lower_member(param, 0, true));
+                    let Some(m) = self.lower_member(param, 0, true) else {
+                        continue;
+                    };
+                    let unmarked = self.lib.tree.data(m) & visibility == 0;
+                    let m = if data && unmarked {
+                        self.add_flags(m, MEMBER_PUBLIC)
+                    } else {
+                        m
+                    };
+                    children.push(m);
                 }
                 let statements = self.lib.tree.children(block).to_vec();
                 for statement in statements {
