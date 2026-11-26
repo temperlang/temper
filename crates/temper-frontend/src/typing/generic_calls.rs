@@ -41,8 +41,15 @@ pub(super) struct Solved {
     /// For an instance's method, the receiver's type, as
     /// [`super::members::GenericMethod::this`] says.
     this: Option<(TypeId, TypeId)>,
+    /// How many type arguments the call has, as one in `id<Int>(x)`.
+    type_args: usize,
+}
+
+impl Solved {
     /// Whether the call has type arguments, as `id<Int>(x)`.
-    has_type_args: bool,
+    fn has_type_args(&self) -> bool {
+        self.type_args > 0
+    }
 }
 
 impl Settle {
@@ -186,7 +193,7 @@ impl Settle {
             call,
             args,
             this,
-            has_type_args: !type_args.is_empty(),
+            type_args: type_args.len(),
         }))
     }
 
@@ -217,7 +224,7 @@ impl Settle {
         forced: bool,
     ) -> Result<TypeId, Fact> {
         let t = self.solved_result(solved);
-        if self.typing.types.is_known(t) || solved.has_type_args {
+        if self.typing.types.is_known(t) || solved.has_type_args() {
             return Ok(t);
         }
         let Some(wanted) = self.wanted_type(solved.call, forced)? else {
@@ -248,7 +255,7 @@ impl Settle {
     /// `fn (Int32): AnyValue` (notes/typing.md, "Function literals and
     /// target typing").
     fn literal_results_as_bounds(&mut self, solved: &mut Solved) {
-        if solved.has_type_args {
+        if solved.has_type_args() {
             return;
         }
         let TypeData::Fn { params, .. } = self.typing.types.get(solved.sig).clone() else {
@@ -286,15 +293,29 @@ impl Settle {
     /// that don't fit the solved signature, "Actual arguments do not match
     /// signature: <T extends AnyValue>(T, Int32) -> T expected [String,
     /// Int32], but got [Int32, String]", from the first that doesn't to
-    /// the last. Returns whether the call was of a generic function.
+    /// the last. And type arguments that aren't one for each type
+    /// parameter, "Wrong number of type arguments.  Expected 3", at the
+    /// call, which Kotlin misses; its type parameters stay unknown. Returns
+    /// whether the call was of a generic function.
     pub(super) fn check_generic_call(&mut self, call: NodeId) -> bool {
-        let Ok(Some(solved)) = self.solve_call(call, false) else {
+        let Ok(Some(mut solved)) = self.solve_call(call, false) else {
             return false;
         };
+        // Checked against the solution that types the call, with what its
+        // arguments leave unknown bound by the type wanted, as `T` in `let
+        // b: Box<List<String>> = new Box(["a", 3])`.
+        if self.solved_type(&mut solved, false).is_err() {
+            return true;
+        }
         let span = self.lib.tree.span(call);
+        if solved.has_type_args() && solved.type_args != solved.formals.len() {
+            let message = Message::TypeArityMismatch(solved.formals.len());
+            self.lib.report(Level::Error, message, span);
+            return true;
+        }
         for (&formal, &actual) in solved.formals.iter().zip(&solved.actuals) {
+            let param = self.formal_type(formal);
             let types = &mut self.typing.types;
-            let param = types.param(formal);
             let bound = types.upper(param);
             // A bound may name the call's own type parameters, as `K
             // extends MapKey<K>` does, so it's checked with what they're
@@ -344,7 +365,7 @@ impl Settle {
             TypeData::Param(_) => true,
             _ => false,
         };
-        if bare || solved.has_type_args {
+        if bare || solved.has_type_args() {
             return false;
         }
         let mut any = false;
@@ -398,7 +419,7 @@ impl Settle {
         let TypeData::Fn { params, ret, .. } = self.typing.types.get(solved.sig).clone() else {
             return Ok(None);
         };
-        let wanted = match solved.has_type_args {
+        let wanted = match solved.has_type_args() {
             true => None,
             false => self.wanted_type(call, forced)?,
         };
@@ -471,7 +492,7 @@ impl Settle {
             call: list,
             args,
             this: None,
-            has_type_args: false,
+            type_args: 0,
         })
     }
 
@@ -527,11 +548,20 @@ impl Settle {
                 types.substitute(p.ty, &solved.formals, &checked)
             })
             .collect();
+        // A list literal whose elements have no common type, as `["a",
+        // 3]`, is checked element by element ([`Settle::check_list_wanted`]).
+        let mut reported = false;
+        for (i, &arg) in solved.args.iter().enumerate().take(wanted.len()) {
+            let unknown = !self.typing.types.is_known(arg_types[i]);
+            if unknown && self.is_list_literal(arg) {
+                reported |= self.check_list_wanted(arg, wanted[i]);
+            }
+        }
         let unfit: Vec<usize> = (0..wanted.len())
             .filter(|&i| self.misfits(arg_types[i], wanted[i], solved.args[i]))
             .collect();
         let (Some(&first), Some(&last)) = (unfit.first(), unfit.last()) else {
-            return false;
+            return reported;
         };
         // A `@fun` interface's value where another's is wanted, alone.
         if let [i] = unfit[..] {
@@ -572,10 +602,10 @@ impl Settle {
     /// unknown bound to its bound, where that's known and doesn't name the
     /// function's type parameters.
     fn unsolved_as_bounds(&mut self, solved: &Solved) -> Vec<TypeId> {
-        let types = &mut self.typing.types;
         (solved.formals.iter().zip(&solved.actuals))
             .map(|(&formal, &actual)| {
-                let param = types.param(formal);
+                let param = self.formal_type(formal);
+                let types = &mut self.typing.types;
                 let bound = types.upper(param);
                 let usable = types.is_known(bound) && !types.mentions(bound, &solved.formals);
                 match (actual, usable) {
@@ -722,12 +752,18 @@ impl Settle {
         Some((type_args, values))
     }
 
+    /// A generic function's type parameter's type, with its bound set
+    /// ([`Settle::type_param_type`]), whatever was typed first.
+    fn formal_type(&mut self, formal: SymbolId) -> TypeId {
+        self.type_param_type(formal);
+        self.typing.types.param(formal)
+    }
+
     /// A type parameter with its bound, as Kotlin Temper writes it: `T
     /// extends AnyValue`.
     fn show_formal(&mut self, formal: SymbolId) -> String {
-        let types = &mut self.typing.types;
-        let param = types.param(formal);
-        let bound = types.upper(param);
+        let param = self.formal_type(formal);
+        let bound = self.typing.types.upper(param);
         format!("{} extends {}", self.show(param), self.show(bound))
     }
 

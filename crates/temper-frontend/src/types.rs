@@ -87,6 +87,8 @@ pub struct ClassInfo {
     pub ancestors: Vec<SymbolId>,
     /// Its type parameters, as `T` in `class Sub<T>`.
     pub formals: Vec<SymbolId>,
+    /// Which of them are marked `@out` or `@in`.
+    pub variant: Vec<bool>,
     /// The types it extends, as written, naming its type parameters, as
     /// `Sup<T>` in `class Sub<T> extends Sup<T>`; [`UNKNOWN`] where not
     /// worked out.
@@ -242,15 +244,10 @@ impl Types {
     }
 
     /// A type parameter's type. Its bound is set by
-    /// [`Types::set_bound`], unknown until then.
+    /// [`Types::set_bound`], unknown until then, however early the type is
+    /// made.
     pub fn param(&mut self, symbol: SymbolId) -> TypeId {
-        self.bounds.entry(symbol).or_insert(UNKNOWN);
         self.intern(TypeData::Param(symbol))
-    }
-
-    /// Whether [`Types::param`] has been asked for a type parameter.
-    pub fn knows_param(&self, symbol: SymbolId) -> bool {
-        self.bounds.contains_key(&symbol)
     }
 
     /// Sets a type parameter's bound: `AnyValue` if it has none. A bound
@@ -523,6 +520,18 @@ impl Types {
     /// parameter `@out` or `@in`.
     pub fn is_builtin_variant(&self, base: TypeId, index: usize) -> bool {
         (self.builtin_name(base)).is_some_and(|n| BUILTIN_VARIANT_PARAMS.contains(&(n, index)))
+    }
+
+    /// Whether a generic type's `index`th type parameter is marked `@out`
+    /// or `@in`, or isn't known to be invariant, as a class's whose
+    /// parameters aren't worked out yet.
+    fn is_variant(&self, base: TypeId, index: usize) -> bool {
+        match self.get(base) {
+            TypeData::Class(symbol) => (self.classes.get(symbol))
+                .and_then(|info| info.variant.get(index).copied())
+                .unwrap_or(true),
+            _ => self.is_builtin_variant(base, index),
+        }
     }
 
     /// A generic type's base, as `List` for `List<Int>`, or `t` itself.
@@ -925,9 +934,12 @@ impl Types {
             }
             let (x, y) = (self.args(seen).to_vec(), self.args(t).to_vec());
             let apart = x.len() == y.len()
-                && (x.iter().zip(&y)).any(|(&x, &y)| {
-                    self.subtype(x, y, depth) == Some(false)
-                        && self.subtype(y, x, depth) == Some(false)
+                && (x.iter().zip(&y).enumerate()).any(|(i, (&x, &y))| {
+                    let (up, down) = (self.subtype(x, y, depth), self.subtype(y, x, depth));
+                    match self.is_variant(t_base, i) {
+                        true => up == Some(false) && down == Some(false),
+                        false => up == Some(false) || down == Some(false),
+                    }
                 });
             return apart.then_some(false);
         }
@@ -1319,6 +1331,19 @@ mod tests {
         assert_eq!(types.is_subtype(ints, listed_strings), Some(false));
         assert_eq!(types.is_subtype(built_ints, ints), Some(false));
         assert_eq!(types.is_subtype(listed_ints, ints), Some(false));
+        // `Listed`'s parameter isn't `@out`, so, as in Kotlin Temper, a
+        // `List<Int32>` is no `Listed<Int32?>`, though it may be a
+        // `List<Int32?>`.
+        let int_or_null = types.nullable(INT32);
+        let (listed_maybe, maybe) = (
+            types.intern(TypeData::Applied {
+                base: listed,
+                args: vec![int_or_null],
+            }),
+            applied(&mut types, int_or_null),
+        );
+        assert_eq!(types.is_subtype(ints, listed_maybe), Some(false));
+        assert_eq!(types.is_subtype(ints, maybe), None);
         let string_key = types.intern(TypeData::Applied {
             base: map_key,
             args: vec![STRING],
@@ -1373,7 +1398,7 @@ mod tests {
                 ancestors,
                 formals,
                 supers,
-                fun_sig: None,
+                ..ClassInfo::default()
             };
             types.set_class(SymbolId(symbol), info);
         };

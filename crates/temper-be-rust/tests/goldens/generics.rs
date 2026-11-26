@@ -276,7 +276,7 @@ impl<T: Clone + Send + Sync + 'static + Into<Named>> Shelf<T> {
     }
 
     #[allow(clippy::extra_unused_type_parameters)]
-    pub fn tally<TName: Clone + Send + Sync + 'static>(&self, extra: i32) -> i32 {
+    pub fn tally<TName: Clone + Send + Sync + 'static + Into<Named>>(&self, extra: i32) -> i32 {
         temper_core::ListedTrait::len(&self.0.items).wrapping_add(extra)
     }
 
@@ -337,7 +337,10 @@ impl SceneTrait for Stage {
 temper_core::impl_any_value_trait!(Stage, [Scene]);
 
 #[allow(clippy::extra_unused_type_parameters)]
-pub(crate) fn tagged<S: Clone + Send + Sync + 'static, T: Clone + Send + Sync + 'static>(
+pub(crate) fn tagged<
+    S: SceneTrait + Clone + Send + Sync + 'static,
+    T: Clone + Send + Sync + 'static,
+>(
     x: T,
 ) -> T {
     x.clone()

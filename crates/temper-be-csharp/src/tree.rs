@@ -819,6 +819,9 @@ pub enum Member {
         result: String,
         name: String,
         params: Vec<(String, String)>,
+        /// Its type parameters' constraints, `where T : I`, each on a
+        /// line of its own after the parameters.
+        constraints: Vec<String>,
         body: Option<Vec<Stmt>>,
     },
     /// A property: a getter, a setter, or both; or a static property.
@@ -891,12 +894,16 @@ pub fn type_decl(t: &TypeDecl) -> String {
                 result,
                 name,
                 params,
+                constraints,
                 body,
             } => {
                 if let Some(a) = access {
                     out.push_str(a.text());
                 }
                 let _ = write!(out, "{modifiers}{result} {name}({})", params_text(params));
+                for c in constraints {
+                    let _ = write!(out, "\n        {c}");
+                }
                 match body {
                     Some(body) => {
                         out.push('\n');

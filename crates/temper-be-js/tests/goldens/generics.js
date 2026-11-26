@@ -14,7 +14,7 @@ import {
 } from "@temperlang/core";
 
 /**
- * @template S
+ * @template {Scene} S
  * @template T
  * @param {T} x
  * @returns {T}
@@ -364,7 +364,7 @@ export class Shelf extends type() {
   }
 
   /**
-   * @template TName
+   * @template {Named} TName
    * @param {number} extra
    * @returns {number}
    */

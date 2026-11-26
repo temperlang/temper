@@ -838,12 +838,13 @@ impl Settle {
         }) else {
             return UNKNOWN;
         };
-        if self.typing.types.knows_param(symbol) {
-            return self.typing.types.param(symbol);
-        }
-        // Known before its bound, which may name it, as in `<T extends
-        // MapKey<T>>`.
         let t = self.typing.types.param(symbol);
+        if self.typing.types.bound_of(symbol).is_some() {
+            return t;
+        }
+        // Its bound is unknown while it's worked out, as it may name the
+        // parameter, as in `<T extends MapKey<T>>`.
+        self.typing.types.set_bound(symbol, UNKNOWN);
         let bound = match core::let_parts(tree, decl).1 {
             Some(bound) => self.eval_type(bound),
             None => ANY_VALUE,
@@ -854,8 +855,9 @@ impl Settle {
 
     /// A type parameter's bound as declared: the type it `extends`, or
     /// `AnyValue`; for one not declared by a `let` (core's), as
-    /// [`Types::bound_of`] has it, `AnyValue` if unset. Evaluated here, as
-    /// [`Types::param`] may have made its type before its bound was set.
+    /// [`Types::bound_of`] has it, `AnyValue` if unset. Unlike
+    /// [`Types::upper`], a bound that's another type parameter, as `T` in
+    /// `<T, U extends T>`, is kept, for a call to put in what it binds.
     pub(crate) fn declared_bound(&mut self, symbol: SymbolId) -> TypeId {
         let tree = &self.lib.tree;
         let decl = (self.scopes.symbol(symbol).decl).filter(|&d| {
@@ -1732,13 +1734,14 @@ impl Settle {
             return;
         }
         let value_span = self.lib.tree.span(value);
-        // Kotlin Temper solves a generic call or a list literal from the
-        // type wanted, and reports its arguments instead; not for a call's
-        // argument, where it misses the error.
-        let solves_wanted = !matches!(site, Site::Arg);
-        if solves_wanted && self.is_list_literal(value) && self.check_list_wanted(value, t) {
+        // Kotlin Temper solves a list literal from the type wanted, and
+        // reports its elements instead, as tempest does for an argument's
+        // too, which Kotlin misses or reports as a list of `AnyValue`.
+        if self.is_list_literal(value) && self.check_list_wanted(value, t) {
             return;
         }
+        // And so for a generic call, but not for a call's argument.
+        let solves_wanted = !matches!(site, Site::Arg);
         if s == NULL {
             if self.is_mismatch(NULL, t) {
                 let t_or_null = self.typing.types.nullable(t);

@@ -110,7 +110,7 @@ local Stage = temper.type("generics.Stage", Scene)
 function Stage.constructor(this)
 end
 
----@generic S
+---@generic S: generics.Scene
 ---@generic T
 ---@param x T
 ---@return T

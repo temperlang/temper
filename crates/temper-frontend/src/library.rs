@@ -195,6 +195,9 @@ pub enum Message {
     BareNever,
     /// A call with too few or too many arguments: how many parameters.
     ArityMismatch(usize),
+    /// A generic call with too few or too many type arguments: how many
+    /// type parameters. Kotlin Temper reports nothing.
+    TypeArityMismatch(usize),
     /// `object.key` where `object`'s type has no member `key`: the key
     /// and the type. Kotlin's `BecauseNoSuchMember`.
     NoMember(String, String),
@@ -468,6 +471,9 @@ impl Message {
                 "Never needs the type it stands for, as Never<Int> or Never<Void>".into()
             }
             Message::ArityMismatch(n) => format!("Wrong number of arguments.  Expected {n}"),
+            Message::TypeArityMismatch(n) => {
+                format!("Wrong number of type arguments.  Expected {n}")
+            }
             Message::NoMember(key, t) => format!("No member {key} in {t}"),
             Message::NotPubliclyAccessible(key, class) => {
                 format!("Member {key} defined in {class} not publicly accessible")

@@ -35,9 +35,8 @@ __all__ = (
 
 _T = _TypeVar('_T')
 _T_2 = _TypeVar('_T_2', bound='Named')
-_TName = _TypeVar('_TName')
-_S = _TypeVar('_S')
-_S_2 = _TypeVar('_S_2', bound='Scene')
+_TName = _TypeVar('_TName', bound='Named')
+_S = _TypeVar('_S', bound='Scene')
 
 
 class Holder(_Generic[_T], metaclass=_ABCMeta):

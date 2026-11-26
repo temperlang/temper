@@ -192,6 +192,8 @@ stays invariant, and Kotlin Temper should change to match
 ([kotlin-differences.md](kotlin-differences.md)). Until then, tempest
 doesn't report what only variance accepts (below), so it gives no false
 errors; once it's known what code relies on `@out` and `@in`, it can.
+A parameter not marked either is invariant in Kotlin too, so there
+tempest reports what Kotlin does (2026-11-26).
 
 ### To explore later: variance without runtime variance
 
@@ -257,6 +259,10 @@ milestone 4's generics slice; status in [milestone-4.md](history/milestone-4.md)
   a subtype of the other, which no variance accepts: `List<Int32>` isn't
   a `List<String>`, nor `List<T>` a `List<Int32>`, but `List<Dog>` as a
   `List<Animal>`, or `List<Int32?>` as a `List<Int32>`, isn't reported.
+  For a parameter not marked `@out` or `@in` (a user's, or core's, as
+  `Listed<T>`), one argument not known to be the other is enough, as in
+  Kotlin: a `Box<Dog>` isn't a `Box<Animal>`, nor a `List<Dog>` (seen as
+  a `Listed<Dog>`) a `Listed<Animal>` (2026-11-26).
 - **Builtin supertypes,** as core declares them: `List<T>` and
   `ListBuilder<T>` are `Listed<T>`s, `Map<K, V>` and `MapBuilder<K, V>`
   are `Mapped<K, V>`s, `SafeGenerator<T>` is a `Generator<T>`,
@@ -325,7 +331,9 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
 
 - **Solving:** with as many type arguments as the function has type
   parameters, each binds to its argument, `T` to `Int32` in
-  `id<Int>(x)`; with another number of them, none binds. Without type
+  `id<Int>(x)`; with another number of them, none binds, and the call
+  is "Wrong number of type arguments.  Expected 3", at the call, which
+  Kotlin misses (2026-11-26). Without type
   arguments, each argument's type is matched against its parameter's,
   part by part: `T` from `Int32`, `List<T>` from `List<Int32>`, or from
   a subtype as it sees that supertype ("Users' supertypes", above), as
@@ -365,7 +373,10 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   that's an argument, where Kotlin misses the error and tempest reports
   the argument as for any call ("Expected subtype of List<String>, but
   got List<Int32>"). If no argument is reported, the place's error is,
-  as before.
+  as before. The call's arguments are always checked against what
+  types the call: where they leave a type parameter unknown, what the
+  type wanted binds, at an argument too, so `let b: Box<List<String>> =
+  new Box(["a", 3])` reports the `3` (2026-11-26).
 - **The call's type** is the function's result with the bindings put
   in, so `let c: String = id(1)` is "Cannot assign to String from
   Int32".
@@ -421,7 +432,8 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   expressions, as `let m: Map<P, String>`, as Kotlin doesn't either.
 - **Not yet:** Kotlin's choice among two ways arguments bind a type
   parameter, as `ls.reduceFrom(0, addS)` for `addS(a: String, x: Int):
-  String`, where Kotlin binds `O` to `String` and reports the `0`.
+  String`, where Kotlin binds `O` to `String` and reports the `0`;
+  tempest binds it from the type wanted, if any, and reports `addS`.
 
 ## Target typing: where it applies
 
@@ -466,11 +478,15 @@ listT, …) -> List<listT>`, solved per call.
   for an undeclared local's initializer or a builtin operator's
   operand, none.
 - **A list literal's type** is a `List<E>`. Where the type wanted is a
-  `List<X>` or `Listed<X>`, maybe nullable, with `X` fully known, and
-  every element is known to be an `X`, `E` is `X`: so `[]` is a
+  `List<X>`, maybe nullable, with `X` fully known, and every element is
+  known to be an `X`, `E` is `X`: so `[]` is a
   `List<Int32>` in `let xs: List<Int> = []`, and `[d]`, for a `d: Dog`,
   a `List<Animal>` in `let xs: List<Animal> = [d]`, as backends need
-  where lists aren't covariant. Otherwise `E` is the elements' common
+  where lists aren't covariant. A `Listed<X>` wanted gives `E` only for
+  `[]`: as in Kotlin, by design, `[new A(1)]` where a `Listed<P>` is
+  wanted is a `List<A>`, which isn't a `Listed<P>` ("Generic types",
+  above): "Expected subtype of Listed<P>, but got List<A>" (2026-11-26).
+  Otherwise `E` is the elements' common
   type: their type, if they're all of one; made nullable if any is null
   or nullable (`[n, 1]`, for `n: Int?`, is a `List<Int32?>`); the type
   the others are subtypes of (`[d, a]`, for `a: Animal`, is a
@@ -480,8 +496,8 @@ listT, …) -> List<listT>`, solved per call.
   unknown, where Kotlin finds a common supertype, or `AnyValue`.
 - **Errors,** in Kotlin's words and at its positions: where a
   declaration's or field's initializer, a value assigned, a value
-  returned, or a function's result is a list literal and the type wanted
-  there is a `List<X>` or `Listed<X>`, elements that can't be an `X`,
+  returned, a function's result, or an argument is a list literal and the type wanted
+  there is a `List<X>` or `Listed<X>`, maybe nullable, elements that can't be an `X`,
   judged as arguments are (null shown as `X?`), are "Actual arguments do
   not match signature: <listT extends AnyValue>(listT, listT) ->
   List<listT> expected [String, String], but got [Int32, String]", from
@@ -489,11 +505,14 @@ listT, …) -> List<listT>`, solved per call.
   lists, only the outer one is checked so, as Kotlin does: `let xss:
   List<List<String>> = [["a"], [1]]` reports `[1]`, "expected
   [List<String>, List<String>], but got [List<String>, List<Int32>]".
-  Elsewhere a list literal is checked as any value is, by its type:
-  "Cannot assign to Int32 from List<Int32>" for `let n: Int = [1]`, and
-  as an argument, "Expected subtype of List<String>, but got
-  List<Int32>" for `g([1])`, which Kotlin misses, as for generic calls
-  that are arguments.
+  A generic call's list literal argument is checked so where its
+  elements have no common type (`["a", 3]`), else as a whole, by the
+  call. Elsewhere a list literal is checked as any value is, by its
+  type: "Cannot assign to Int32 from List<Int32>" for `let n: Int =
+  [1]`. Kotlin misses an argument's elements, as in `g([1])` or
+  `g(["a", 3])`, or for a constructor's reports "Expected subtype of
+  List<String>, but got List<AnyValue>"; tempest reports the elements
+  (2026-11-26).
 
 ## Function literals and target typing
 

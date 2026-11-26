@@ -19,7 +19,7 @@ public final class Shelf<T extends Named> {
         }
     }
 
-    public <TName> int tally(int extra) {
+    public <TName extends Named> int tally(int extra) {
         return this.items.size() + extra;
     }
 

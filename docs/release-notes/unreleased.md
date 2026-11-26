@@ -17,6 +17,7 @@
 - [Extension methods](#extension-methods)
 - [Generated packages need the matching runtimes](#generated-packages-need-the-matching-runtimes)
 - [Fixes for code Temper 0.6.0 accepted](#fixes-for-code-temper-060-accepted)
+- [🚨Breaking change: stricter checks of generic types and arguments](#breaking-change-stricter-checks-of-generic-types-and-arguments)
 - [Classes' `==`](#classes-)
 - [Lua: `Int64` on LuaJIT and Lua 5.1](#lua-int64-on-luajit-and-lua-51)
 - [C++: `Float64.toString` as on the JVM](#c-float64tostring-as-on-the-jvm)
@@ -416,6 +417,29 @@ writes them, or from a release's packages
   as a parameter of an undeclared type, fails where it runs when it's
   in a string template or has a method called, instead of keeping the
   module from being translated.
+
+## 🚨Breaking change: stricter checks of generic types and arguments
+
+Code that relied on these going unchecked is now an error:
+
+- A list literal's elements are checked against the element type its
+  place wants, an argument's too, nullable or not: `take(["a", 3])` for
+  `take(xs: List<String>?)` reports the `3`.
+- A type parameter not marked `@out` or `@in` is invariant, as Temper
+  0.6.0 has it: a `Box<Dog>` isn't a `Box<Animal>`, and `[new A(1)]`,
+  a `List<A>`, isn't a `Listed<P>` for `class A extends P`. Pass `[a]`
+  for an `a: P`, or want a `List<P>`, which a list literal takes its
+  element type from.
+- A generic call with the wrong number of type arguments, as
+  `apply<Int, Int>(n, f)` for `apply<T, R, E>`, is "Wrong number of
+  type arguments.  Expected 3".
+- A generic call's arguments are checked against the type arguments the
+  type wanted gives: `let b: Box<List<String>> = new Box(["a", 3])`
+  reports the `3`.
+
+A generic method's or function's type parameter keeps its bound in
+every backend, as `where TName : Named` in C#, even where no parameter's
+type names it.
 
 ## Classes' `==`
 

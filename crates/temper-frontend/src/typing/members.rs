@@ -66,11 +66,16 @@ impl Settle {
             .filter_map(|c| self.scopes.resolved(class_parts(&self.lib.tree, c).0))
             .collect();
         let formals = self.own_formals(class);
+        let tree = &self.lib.tree;
+        let variant = (core::type_params(tree, class).iter())
+            .map(|&p| tree.data(p) & core::TYPE_PARAM_VARIANT != 0)
+            .collect();
         let supers = class_parts(&self.lib.tree, class).1.to_vec();
         let supers = supers.into_iter().map(|s| self.eval_type(s)).collect();
         let info = ClassInfo {
             ancestors,
             formals,
+            variant,
             supers,
             fun_sig: None,
         };

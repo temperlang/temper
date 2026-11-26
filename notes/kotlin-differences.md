@@ -259,6 +259,18 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
 
 ### Language and types
 
+- **Arguments Kotlin doesn't check** (2026-11-26): a list literal
+  argument's elements, as `take(["a", 3])` or `take([1])` for `take(xs:
+  List<String>)` (for a constructor, Kotlin reports "Expected subtype
+  of List<String>, but got List<AnyValue>"), and a generic call's
+  number of type arguments, `apply<Int, Int>(n, f)` for `apply<T, R,
+  E>`, which Kotlin ignores. Tempest reports the elements as Kotlin
+  does a declaration's, and "Wrong number of type arguments.  Expected
+  3". Kotlin should report them.
+  Test: settle/types.cases, "list literal arguments checked against the
+  type wanted" and "generic calls with the wrong number of type
+  arguments".
+
 - **An undeclared name in a branch that never runs,** `if (DEBUG) {
   console.log("${missing}"); }` with `let DEBUG = false;`, isn't
   reported by Kotlin, which folds the `if` away before it looks names

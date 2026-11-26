@@ -32,8 +32,11 @@ impl Settle {
     }
 
     /// A list literal's type: a `List` of the element type its place
-    /// wants, if every element is one, else of its elements' common type
-    /// ([`Settle::common_type`]), unknown if they have none.
+    /// wants, if that's a `List` (a `Listed` only for `[]`, which has
+    /// nothing else to go by), as Kotlin Temper has it, and every element
+    /// is one, else of
+    /// its elements' common type ([`Settle::common_type`]), unknown if
+    /// they have none.
     pub(super) fn list_type(&mut self, list: NodeId, forced: bool) -> Result<TypeId, Fact> {
         let elements = self.lib.tree.children(list)[1..].to_vec();
         self.list_type_of(list, &elements, forced)
@@ -88,6 +91,11 @@ impl Settle {
             types.push(self.expr_type(element, forced)?);
         }
         let wanted = self.wanted_type(list, forced)?;
+        // Where a `Listed<P>` is wanted, `[a]` is a `List<A>`, no `Listed<P>`.
+        let wanted = wanted.filter(|&t| {
+            let types = &self.typing.types;
+            elements.is_empty() || types.builtin_name(types.base(self.non_null(t))) == Some("List")
+        });
         let element = match wanted.and_then(|t| self.wanted_element(t)) {
             Some(x)
                 if (types.iter()).all(|&t| self.typing.types.is_subtype(t, x) == Some(true)) =>

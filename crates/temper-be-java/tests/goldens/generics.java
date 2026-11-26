@@ -17,7 +17,7 @@ public final class GenericsGlobal {
     static final Console console;
     static final Map<String, Integer> tally;
 
-    static <S, T> T tagged(T x) {
+    static <S extends Scene, T> T tagged(T x) {
         return x;
     }
 

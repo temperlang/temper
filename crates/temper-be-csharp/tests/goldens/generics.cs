@@ -10,6 +10,7 @@ public static class GenericsGlobal
     internal static readonly IDictionary<string, int> tally;
 
     internal static T Tagged<S, T>(T x)
+        where S : IScene
     {
         return x;
     }

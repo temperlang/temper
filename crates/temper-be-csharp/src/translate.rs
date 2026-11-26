@@ -759,13 +759,10 @@ impl<'a> Translator<'a> {
     }
 
     /// A method's or function's name with its type parameters,
-    /// `First<T>`; one with constraints isn't written yet.
-    fn generic_name(&mut self, decl: DeclId, name: String) -> R<String> {
+    /// `First<T>`, and their constraints, `where T : Named`.
+    fn generic_name(&mut self, decl: DeclId, name: String) -> R<(String, Vec<String>)> {
         let (generics, constraints) = self.type_params(decl)?;
-        if !constraints.is_empty() {
-            return not_yet("a generic method with a constraint");
-        }
-        Ok(format!("{name}{generics}"))
+        Ok((format!("{name}{generics}"), constraints))
     }
 
     /// The qname of a type's class or interface, if it has one.
@@ -1385,6 +1382,7 @@ impl<'a> Translator<'a> {
                         result: result.clone(),
                         name: self.member_name(md),
                         params: params.clone(),
+                        constraints: Vec::new(),
                         body: Some(vec![returning(&result, call)]),
                     });
                     let mut helper_params = vec![(self.own_type(decl)?, "@this".to_string())];
@@ -1395,6 +1393,7 @@ impl<'a> Translator<'a> {
                         result,
                         name: helper,
                         params: helper_params,
+                        constraints: Vec::new(),
                         body,
                     });
                 }
@@ -1411,25 +1410,27 @@ impl<'a> Translator<'a> {
                     } else {
                         (self.member_name(md), "")
                     };
-                    let name = self.generic_name(md, name)?;
+                    let (name, constraints) = self.generic_name(md, name)?;
                     out.push(Member::Method {
                         access: self.member_access(md, interface),
                         modifiers,
                         result,
                         name,
                         params,
+                        constraints,
                         body,
                     });
                 }
                 Node::AbstractMethod { decl: md, params } => {
                     let (result, params, _) = self.callable(m, md, params, None)?;
-                    let name = self.generic_name(md, self.member_name(md))?;
+                    let (name, constraints) = self.generic_name(md, self.member_name(md))?;
                     out.push(Member::Method {
                         access: self.member_access(md, interface),
                         modifiers: if self.hides(decl, md) { "new " } else { "" },
                         result,
                         name,
                         params,
+                        constraints,
                         body: None,
                     });
                 }
@@ -1439,7 +1440,7 @@ impl<'a> Translator<'a> {
                     body,
                 } => {
                     let (result, params, body) = self.callable(m, f, params, Some(body))?;
-                    let name = self.generic_name(f, self.member_name(f))?;
+                    let (name, constraints) = self.generic_name(f, self.member_name(f))?;
                     // A private one is `internal`, as the module's class,
                     // whose static constructor sets static fields, may
                     // call it (`last = Named("last")`).
@@ -1453,6 +1454,7 @@ impl<'a> Translator<'a> {
                         result,
                         name,
                         params,
+                        constraints,
                         body,
                     });
                 }
@@ -1529,6 +1531,7 @@ impl<'a> Translator<'a> {
                         result: "void".into(),
                         name,
                         params: vec![this, ps[0].clone()],
+                        constraints: Vec::new(),
                         body: body.take(),
                     });
                     body = Some(vec![Stmt::Expr(call)]);
@@ -1549,6 +1552,7 @@ impl<'a> Translator<'a> {
                         result: result.clone(),
                         name,
                         params: vec![this],
+                        constraints: Vec::new(),
                         body: body.take(),
                     });
                     body = Some(vec![Stmt::Return(Some(call))]);
@@ -1739,6 +1743,7 @@ impl<'a> Translator<'a> {
             result: result.clone(),
             name: self.member_name(chosen),
             params,
+            constraints: Vec::new(),
             body: Some(vec![returning(&result, call)]),
         })
     }
