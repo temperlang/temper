@@ -606,8 +606,9 @@ milestone 4's target typing slice; status in
   [kotlin-differences.md](kotlin-differences.md#bugs-in-kotlin-temper)).
   Any function literal last counts, in parentheses too, as in Kotlin.
   Typing places the arguments of every call it checks so: functions',
-  methods', and constructors', and generic ones, but not a call with
-  named or type arguments. The interpreter passes them as typing placed
+  methods', and constructors', and generic ones, past any type
+  arguments, all or leading (`calc<Int>(2) { … }`), but not a call with
+  named arguments. The interpreter passes them as typing placed
   them (`Typing::trailing_blocks`), null for those skipped; a call
   typing can't place, as of a callee whose type it doesn't know, passes
   them as written.
@@ -628,7 +629,9 @@ milestone 4's target typing slice; status in
   the call's result is a bare `T` or `T?`; a type parameter that none
   of these binds stays unknown. So in `ls.map { x => … }`, for `ls:
   List<Int>`, `x` is an `Int32`, and in `let ys: List<String> =
-  ls.map { x => … }` the result wanted is a `String`. A nullable type
+  ls.map { x => … }` the result wanted is a `String`; in `each<Int>(1)
+  { y => … }`, for `let each<T>(x: T, f: fn (T): Int)`, `y` is an
+  `Int32`, with or without the `1`'s help. A nullable type
   wanted counts as its non-null type, and a `@fun` interface as the
   function type it stands for ("Fun interfaces", below). Not a
   generator's factory. A `for … of` body is typed as `forEach`'s block,

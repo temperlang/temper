@@ -77,6 +77,15 @@ pub(crate) fn init() -> temper_core::Result<()> {
                         .unwrap_or_else(|| Arc::new("-".to_string()))
                 }
             );
+            let one = scaled(2, Arc::new(move |y: i32| y.wrapping_add(1)), None);
+            let two = scaled(2, Arc::new(move |y: i32| y.wrapping_mul(2)), Some(10));
+            let three = joined(
+                3,
+                Arc::new("s".to_string()),
+                Arc::new(move |a: i32, b: Arc<String>| Arc::new(format!("{a}{b}"))),
+            );
+            let four = r#box.applied(Arc::new(move |s: Arc<String>| Arc::new(format!("{s}!"))));
+            println!("{one} {two} {three} {four}");
             let builder: temper_core::ListBuilder<Arc<String>> = temper_core::listed::new_builder();
             temper_core::listed::add(&builder, Arc::new("x".to_string()), None);
             temper_core::listed::add(&builder, Arc::new("y".to_string()), None);
@@ -214,6 +223,13 @@ impl<T: Clone + Send + Sync + 'static> Box<T> {
 
     pub fn pair_with(&self, other: i32) -> (T, i32) {
         (self.0.value.clone(), other)
+    }
+
+    pub fn applied<TOut: Clone + Send + Sync + 'static>(
+        &self,
+        f: Arc<dyn Fn(T) -> TOut + Send + Sync>,
+    ) -> TOut {
+        f(self.0.value.clone())
     }
 
     pub fn value(&self) -> T {
@@ -397,6 +413,23 @@ pub(crate) fn half_pair<A: Clone + Send + Sync + 'static, B: Clone + Send + Sync
 
 pub(crate) fn opt<T: Clone + Send + Sync + 'static>(x: Option<T>) -> Option<T> {
     x.clone()
+}
+
+pub(crate) fn scaled<T: Clone + Send + Sync + 'static>(
+    x: T,
+    f: Arc<dyn Fn(T) -> i32 + Send + Sync>,
+    scale: Option<i32>,
+) -> i32 {
+    let scale = scale.unwrap_or(1);
+    f(x.clone()).wrapping_mul(scale)
+}
+
+pub(crate) fn joined<A: Clone + Send + Sync + 'static, B: Clone + Send + Sync + 'static>(
+    a: A,
+    b: B,
+    f: Arc<dyn Fn(A, B) -> Arc<String> + Send + Sync>,
+) -> Arc<String> {
+    f(a.clone(), b.clone())
 }
 
 pub(crate) fn none_in(length: i32) -> bool {

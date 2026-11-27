@@ -19,6 +19,7 @@ gives.
     export class Box<T>(public value: T) extends Holder<T> {
       public get held(): T { value }
       public pairWith(other: Int): Pair<T, Int> { new Pair(value, other) }
+      public applied<TOut>(f: fn (T): TOut): TOut { f(value) }
     }
 
     export class Named(public name: String) {}
@@ -47,6 +48,10 @@ gives.
     let halfPair<A, B>(a: A): Pair<A, List<B>> { new Pair<A, List<B>>(a, []) }
     // A `null` argument doesn't tell Rust `T`, so it's spelled out.
     let opt<T>(x: T?): T? { x }
+    // A trailing block after type arguments, all or leading ones, takes
+    // its parameters' types from them, placed before `scale`.
+    let scaled<T>(x: T, f: fn (T): Int, scale: Int = 1): Int { f(x) * scale }
+    let joined<A, B>(a: A, b: B, f: fn (A, B): String): String { f(a, b) }
 
     // A private function that an exported generic one calls, which C++
     // declares in the header that defines the generic one.
@@ -87,6 +92,11 @@ gives.
     let optNone = opt(null);
     let optSome = opt(6);
     console.log("${optNone == null} ${optSome ?? 0} ${opt<String>(null) ?? "-"}");
+    let one = scaled<Int>(2) { y => y + 1 };
+    let two = scaled<Int>(2, 10) { y => y * 2 };
+    let three = joined<Int>(3, "s") { a, b => "${a}${b}" };
+    let four = box.applied<String> { s => "${s}!" };
+    console.log("${one} ${two} ${three} ${four}");
     let builder = new ListBuilder<String>();
     builder.add("x");
     builder.add("y");
@@ -162,6 +172,7 @@ none
 4 t 3 5 7
 8 0 h
 true 6 -
+3 40 3s boxed!
 3 w y
 2 ? x
 2 -1 true 2

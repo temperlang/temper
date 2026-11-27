@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using TemperLang.Core;
@@ -35,6 +36,17 @@ public static class GenericsGlobal
     internal static Optional<T> Opt<T>(Optional<T> x)
     {
         return x;
+    }
+
+    internal static int Scaled<T>(T x, Func<T, int> f, int? scale = null)
+    {
+        int scale2 = scale ?? 1;
+        return f(x) * scale2;
+    }
+
+    internal static string Joined<A, B>(A a, B b, Func<A, B, string> f)
+    {
+        return f(a, b);
     }
 
     internal static bool NoneIn(int length)
@@ -195,6 +207,11 @@ public static class GenericsGlobal
         string @string = (optNone == null ? "true" : "false") + " " + (optSome == null ? 0 : optSome.Value).ToString(CultureInfo.InvariantCulture) + " ";
         string? subject3 = Optional.OrNull<string>(Opt(Optional<string>.None));
         console.Log(@string + (subject3 == null ? "-" : subject3));
+        int one = Scaled(2, (int y) => y + 1);
+        int two = Scaled(2, (int y) => y * 2, 10);
+        string three = Joined(3, "s", (int a, string b) => a.ToString(CultureInfo.InvariantCulture) + b);
+        string four = box.Applied((string s) => s + "!");
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{one} {two} {three} {four}"));
         IList<string> builder = new List<string>();
         builder.Add("x");
         builder.Add("y");

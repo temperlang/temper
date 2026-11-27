@@ -1316,6 +1316,138 @@ log block 6
 log 7
 log block 7
 
+=== a trailing block after explicit type arguments goes where typing places it
+// Past the type arguments, all or leading ones, the block goes to the
+// last function parameter, before `scale`, which takes its default, and
+// takes its parameters' types from them.
+let calc<T>(n: T, f: fn (T): Int, scale: Int = 1): Int { f(n) * scale }
+let pairUp<A, B>(a: A, b: B, f: fn (A, B): Int, scale: Int = 1): Int { f(a, b) * scale }
+class Holder<T>(public v: T) {
+  public apply<U>(f: fn (T): U, n: Int = 0): Pair<U, Int> { new Pair(f(v), n) }
+}
+console.log(calc<Int>(2) { n => n + 1 }.toString());
+console.log(calc<Int>(2, 3) { n => n + 1 }.toString());
+console.log(pairUp<Int>(2, [1, 2, 3]) { a, b => a + b.length }.toString());
+console.log(pairUp<Int, List<Int>>(2, [1, 2, 3], 10) { a, b => a * b.length }.toString());
+let p = new Holder(4).apply<String> { x => (x + 1).toString() };
+let q = new Holder(4).apply<String>(2) { x => x.toString() };
+console.log("${p.key} ${p.value} ${q.key} ${q.value}");
+--- settled
+(Block
+  (Let
+    ^calc:0
+    (Fn
+      (TypeParam ^T:5)
+      (Let ^n:6 T:5)
+      (Let ^f:7 (Call FnType T:5 Int))
+      (Let ^scale:8 Int 1)
+      Int
+      (Block (Call * (Call f:7 n:6) scale:8))))
+  (Let
+    ^pairUp:1
+    (Fn
+      (TypeParam ^A:9)
+      (TypeParam ^B:10)
+      (Let ^a:11 A:9)
+      (Let ^b:12 B:10)
+      (Let ^f:13 (Call FnType A:9 B:10 Int))
+      (Let ^scale:14 Int 1)
+      Int
+      (Block (Call * (Call f:13 a:11 b:12) scale:14))))
+  (Class
+    ^Holder:2
+    (TypeParam ^T:15)
+    (Param ^v:17 T:15)
+    (Method
+      ^apply:18
+      (Fn
+        (TypeParam ^U:19)
+        (Let ^f:20 (Call FnType T:15 U:19))
+        (Let ^n:21 Int 0)
+        (Call <> Pair U:19 Int)
+        (Block (Call new Pair (Call f:20 v:17) n:21)))))
+  (Call
+    (Call . console \log)
+    (Call
+      (Call
+        .
+        (Call calc:0 \typeArg Int 2 (Fn (Let ^n:22) (Block (Call + n:22 1))))
+        \toString)))
+  (Call
+    (Call . console \log)
+    (Call
+      (Call
+        .
+        (Call calc:0 \typeArg Int 2 3 (Fn (Let ^n:23) (Block (Call + n:23 1))))
+        \toString)))
+  (Call
+    (Call . console \log)
+    (Call
+      (Call
+        .
+        (Call
+          pairUp:1
+          \typeArg
+          Int
+          2
+          (Call list 1 2 3)
+          (Fn
+            (Let ^a:24)
+            (Let ^b:25)
+            (Block (Call + a:24 (Call . b:25 \length)))))
+        \toString)))
+  (Call
+    (Call . console \log)
+    (Call
+      (Call
+        .
+        (Call
+          pairUp:1
+          \typeArg
+          Int
+          \typeArg
+          (Call <> List Int)
+          2
+          (Call list 1 2 3)
+          10
+          (Fn
+            (Let ^a:26)
+            (Let ^b:27)
+            (Block (Call * a:26 (Call . b:27 \length)))))
+        \toString)))
+  (Let
+    ^p:3
+    (Call
+      (Call . (Call new Holder:2 4) \apply)
+      \typeArg
+      String
+      (Fn (Let ^x:28) (Block (Call (Call . (Call + x:28 1) \toString))))))
+  (Let
+    ^q:4
+    (Call
+      (Call . (Call new Holder:2 4) \apply)
+      \typeArg
+      String
+      2
+      (Fn (Let ^x:29) (Block (Call (Call . x:29 \toString))))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call . p:3 \key)
+      " "
+      (Call . p:3 \value)
+      " "
+      (Call . q:4 \key)
+      " "
+      (Call . q:4 \value)))
+  #void)
+log 3
+log 9
+log 5
+log 60
+log 5 0 4 2
+
 === a trailing block goes to a @fun interface's parameter
 // As Kotlin Temper places it, which also ran this on its JS backend with
 // the same output: `check("") { … }` passes the block as `p` and `""` as

@@ -3963,6 +3963,7 @@ let f(n: Int, o: Order, xs: List<Int>): Void {
           n:19
           (Fn (Let ^x:24) (Block x:24)))
         #void))))
+error 509..515: Cannot bubble from a function without Bubble in its return type
 error 567..585: Wrong number of type arguments.  Expected 1
 error 589..607: Wrong number of type arguments.  Expected 1
 error 611..631: Wrong number of type arguments.  Expected 1
@@ -4357,6 +4358,115 @@ let s: Int = a.b;
   #void)
 error 1041..1044: Cannot assign to Int32 from String
 log a b c d 1 6 2 10 10
+
+=== explicit type arguments type a function literal argument
+// A trailing block or function literal after explicit type arguments,
+// all or leading ones, takes its parameters' types and its wanted result
+// from them, for functions and methods, and a constructor's literal, as
+// without them: so each `let s: String` is checked against an `Int32`
+// and each `"r"` and `3` against the result wanted. (`new C(…) { … }` calls
+// what `new` makes, so constructors take no trailing block.)
+class Applied<A>(public a: A, public f: fn (A): Int) {}
+class Holder<T>(public v: T) {
+  public map<U>(f: fn (T): U): U { f(v) }
+}
+let each<T>(x: T, f: fn (T): Int): Int { f(x) }
+let pairUp<A, B>(a: A, b: B, f: fn (A, B): Int): Int { f(a, b) }
+each<Int>(1) { y => let s: String = y; 0 };
+each<Int>(1, fn (y) { let s: String = y; 0 });
+each<Int>(1) { y => "r" };
+pairUp<Int>(1, [2]) { a, b => let s: String = a; b.length };
+new Holder(2).map<String> { x => let s: String = x; "m" };
+new Holder(2).map<String> { x => 3 };
+new Applied<Int>(3, fn (x) { let s: String = x; 0 });
+new Applied(3, fn (x) { let s: String = x; 0 });
+new Applied<Int>(3, fn (x) { "r" });
+--- settled
+(Block
+  (Class
+    ^Applied:0
+    (TypeParam ^A:4)
+    (Param ^a:6 A:4)
+    (Param ^f:7 (Call FnType A:4 Int)))
+  (Class
+    ^Holder:1
+    (TypeParam ^T:8)
+    (Param ^v:10 T:8)
+    (Method
+      ^map:11
+      (Fn
+        (TypeParam ^U:12)
+        (Let ^f:13 (Call FnType T:8 U:12))
+        U:12
+        (Block (Call f:13 v:10)))))
+  (Let
+    ^each:2
+    (Fn
+      (TypeParam ^T:14)
+      (Let ^x:15 T:14)
+      (Let ^f:16 (Call FnType T:14 Int))
+      Int
+      (Block (Call f:16 x:15))))
+  (Let
+    ^pairUp:3
+    (Fn
+      (TypeParam ^A:17)
+      (TypeParam ^B:18)
+      (Let ^a:19 A:17)
+      (Let ^b:20 B:18)
+      (Let ^f:21 (Call FnType A:17 B:18 Int))
+      Int
+      (Block (Call f:21 a:19 b:20))))
+  (Call
+    each:2
+    \typeArg
+    Int
+    1
+    (Fn (Let ^y:22) (Block (Let ^s:23 String y:22) 0)))
+  (Call
+    each:2
+    \typeArg
+    Int
+    1
+    (Fn (Let ^y:24) (Block (Let ^s:25 String y:24) 0)))
+  (Call each:2 \typeArg Int 1 (Fn (Let ^y:26) (Block "r")))
+  (Call
+    pairUp:3
+    \typeArg
+    Int
+    1
+    (Call list 2)
+    (Fn
+      (Let ^a:27)
+      (Let ^b:28)
+      (Block (Let ^s:29 String a:27) (Call . b:28 \length))))
+  (Call
+    (Call . (Call new Holder:1 2) \map)
+    \typeArg
+    String
+    (Fn (Let ^x:30) (Block (Let ^s:31 String x:30) "m")))
+  (Call
+    (Call . (Call new Holder:1 2) \map)
+    \typeArg
+    String
+    (Fn (Let ^x:32) (Block 3)))
+  (Call
+    new
+    (Call <> Applied:0 Int)
+    3
+    (Fn (Let ^x:33) (Block (Let ^s:34 String x:33) 0)))
+  (Call new Applied:0 3 (Fn (Let ^x:35) (Block (Let ^s:36 String x:35) 0)))
+  (Call new (Call <> Applied:0 Int) 3 (Fn (Let ^x:37) (Block "r")))
+  #void)
+error 712..713: Cannot assign to String from Int32
+error 758..759: Cannot assign to String from Int32
+error 787..790: Expected subtype of Int32, but got String
+error 840..841: Cannot assign to String from Int32
+error 904..905: Cannot assign to String from Int32
+error 947..948: Expected subtype of String, but got Int32
+error 997..998: Cannot assign to String from Int32
+error 1046..1047: Cannot assign to String from Int32
+error 1084..1087: Expected subtype of Int32, but got String
 
 === leading type arguments where nothing gives the rest
 // Too few type arguments are an error wherever no value gives the rest:

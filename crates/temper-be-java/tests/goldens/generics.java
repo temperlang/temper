@@ -6,6 +6,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.BiFunction;
+import java.util.function.ToIntFunction;
 import java.util.logging.Logger;
 import temper.core.Core;
 import temper.core.Core.Console;
@@ -36,6 +38,19 @@ public final class GenericsGlobal {
 
     static <T> @Nullable T opt(@Nullable T x) {
         return x;
+    }
+
+    static <T> int scaled(T x, ToIntFunction<T> f, @Nullable Integer scale) {
+        int scale2 = scale != null ? scale : 1;
+        return f.applyAsInt(x) * scale2;
+    }
+
+    static <T> int scaled(T x, ToIntFunction<T> f) {
+        return scaled(x, f, null);
+    }
+
+    static <A, B> String joined(A a, B b, BiFunction<A, B, String> f) {
+        return f.apply(a, b);
     }
 
     static boolean noneIn(int length) {
@@ -176,6 +191,11 @@ public final class GenericsGlobal {
         String t = (optNone == null) + " " + (optSome == null ? 0 : optSome) + " ";
         @Nullable String subject3 = opt(null);
         console.log(t + (subject3 == null ? "-" : subject3));
+        int one = scaled(2, y -> y + 1);
+        int two = scaled(2, y -> y * 2, 10);
+        String three = joined(3, "s", (a, b) -> a + b);
+        String four = box.applied(s -> s + "!");
+        console.log(one + " " + two + " " + three + " " + four);
         List<String> builder = new ArrayList<>();
         builder.add("x");
         builder.add("y");

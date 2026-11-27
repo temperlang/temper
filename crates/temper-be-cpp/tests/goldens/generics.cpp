@@ -32,6 +32,8 @@ struct Box : public virtual Holder<T> {
   static std::shared_ptr<Box<T>> make(T value);
   T get_held() const override;
   std::shared_ptr<temper::core::Pair<T, int32_t>> pairWith(int32_t other) const;
+  template <class TOut>
+  TOut applied(std::function<TOut(T)> const & f) const;
   T get_value() const;
 };
 
@@ -81,6 +83,12 @@ T Box<T>::get_held() const {
 template <class T>
 std::shared_ptr<temper::core::Pair<T, int32_t>> Box<T>::pairWith(int32_t other) const {
   return temper::core::PairFactory::make<T, int32_t>(this->value, other);
+}
+
+template <class T>
+template <class TOut>
+TOut Box<T>::applied(std::function<TOut(T)> const & f) const {
+  return f(this->value);
 }
 
 template <class T>
@@ -194,6 +202,22 @@ static std::shared_ptr<core::Pair<A, std::shared_ptr<std::vector<B>>>> halfPair(
 template <class T>
 static core::Nullable<T> opt(core::Nullable<T> x) {
   return x;
+}
+
+template <class T>
+static int32_t scaled(T x, std::function<int32_t(T)> const & f, core::NullableParam<int32_t> scale) {
+  int32_t scale2 = scale == nullptr ? 1 : scale.value;
+  return core::Int::mul(f(x), scale2);
+}
+
+template <class T>
+static int32_t scaled(T x, std::function<int32_t(T)> const & f) {
+  return scaled(x, f, nullptr);
+}
+
+template <class A, class B>
+static core::Str joined(A a, B b, std::function<core::Str(A, B)> const & f) {
+  return f(a, b);
 }
 
 bool noneIn(int32_t length) {
@@ -333,6 +357,11 @@ void global_init_init() {
     core::Str string = core::Boolean::toString(optNone == nullptr) + " " + std::to_string(optSome == nullptr ? 0 : optSome.value) + " ";
     core::NullableParam<core::Str> subject3 = generics::opt<core::Str>(nullptr);
     core::Console::log(temper_globals::console.value, string + (subject3 == nullptr ? TEMPER_STR("-") : subject3.value));
+    int32_t one = generics::scaled<int32_t>(2, [](int32_t y) -> int32_t { return core::Int::add(y, 1); });
+    int32_t two = generics::scaled<int32_t>(2, [](int32_t y) -> int32_t { return core::Int::mul(y, 2); }, 10);
+    core::Str three = generics::joined<int32_t, core::Str>(3, TEMPER_STR("s"), [](int32_t a, core::Str b) -> core::Str { return std::to_string(a) + b; });
+    core::Str four = box->applied<core::Str>([](core::Str s) -> core::Str { return s + "!"; });
+    core::Console::log(temper_globals::console.value, std::to_string(one) + " " + std::to_string(two) + " " + three + " " + four);
     std::shared_ptr<std::vector<core::Str>> builder = core::ListBuilder::make<core::Str>();
     core::ListBuilder::add<core::Str>(builder, TEMPER_STR("x"));
     core::ListBuilder::add<core::Str>(builder, TEMPER_STR("y"));

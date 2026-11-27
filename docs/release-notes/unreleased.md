@@ -415,6 +415,9 @@ writes them, or from a release's packages
   as a parameter of an undeclared type, fails where it runs when it's
   in a string template or has a method called, instead of keeping the
   module from being translated.
+- A trailing block or function literal after type arguments, as
+  `each<Int>(1) { y => y + 1 }`, takes its parameters' types from them
+  and translates for every backend; it stopped translation.
 
 ## 🚨Breaking change: stricter checks of generic types and arguments
 

@@ -64,6 +64,30 @@ function opt(x) {
 }
 
 /**
+ * @template T
+ * @param {T} x
+ * @param {(arg0: T) => number} f
+ * @param {number | null} [scale]
+ * @returns {number}
+ */
+function scaled(x, f, scale) {
+  scale ??= 1;
+  return Math.imul(f(x), scale);
+}
+
+/**
+ * @template A
+ * @template B
+ * @param {A} a
+ * @param {B} b
+ * @param {(arg0: A, arg1: B) => string} f
+ * @returns {string}
+ */
+function joined(a, b, f) {
+  return f(a, b);
+}
+
+/**
  * @param {number} length
  * @returns {boolean}
  */
@@ -318,6 +342,15 @@ export class Box extends type(Holder) {
   pairWith(other) {
     return pairConstructor(this.#value, other);
   }
+
+  /**
+   * @template TOut
+   * @param {(arg0: T) => TOut} f
+   * @returns {TOut}
+   */
+  applied(f) {
+    return f(this.#value);
+  }
 }
 
 export class Named extends type() {
@@ -426,6 +459,11 @@ console.log(`${half.key} ${half.value.length} ${halfToo.key}`);
 const optNone = opt(null);
 const optSome = opt(6);
 console.log(`${optNone == null} ${optSome == null ? 0 : optSome} ${opt(null) ?? "-"}`);
+const one = scaled(2, (y) => (y + 1) | 0);
+const two = scaled(2, (y) => Math.imul(y, 2), 10);
+const three = joined(3, "s", (a, b) => `${a}${b}`);
+const four = box.applied((s) => `${s}!`);
+console.log(`${one} ${two} ${three} ${four}`);
 /** @type {string[]} */
 const builder = [];
 builder.push("x");

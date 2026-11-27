@@ -3057,16 +3057,37 @@ impl Translator<'_> {
         Ok(values)
     }
 
+    /// Where a call's `at`th value is among its children, its callee
+    /// first, past type arguments' `\typeArg T` pairs, if it has one.
+    fn value_place(&self, children: &[FNode], at: usize) -> Option<usize> {
+        let mut values = 0;
+        let mut place = 1;
+        while place < children.len() {
+            let name = self.s.library.symbol(children[place]);
+            if name.is_some_and(|n| self.s.library.names.get(n) == "typeArg") {
+                place += 2;
+                continue;
+            }
+            if values == at {
+                return Some(place);
+            }
+            values += 1;
+            place += 1;
+        }
+        None
+    }
+
     fn call(&mut self, node: FNode) -> Tx<NodeId> {
         let mut children = self.children(node).to_vec();
-        // A trailing block goes where typing placed it: before arguments
-        // for parameters after it, which are optional.
+        // A trailing block goes where typing placed it, among the values
+        // passed, past any type arguments: before arguments for
+        // parameters after it, which are optional.
         if let Some(&at) = self.s.typing.trailing_blocks.get(&node) {
-            if at + 2 > children.len() {
-                return self.not_yet(node, "a trailing block after parameters left out");
-            }
             let block = children.pop().unwrap();
-            children.insert(1 + at, block);
+            let Some(place) = self.value_place(&children, at) else {
+                return self.not_yet(node, "a trailing block after parameters left out");
+            };
+            children.insert(place, block);
         }
         let (callee, args) = (children[0], &children[1..]);
         let f = self.function_of(callee);

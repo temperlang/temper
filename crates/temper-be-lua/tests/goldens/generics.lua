@@ -13,6 +13,7 @@ local Holder = temper.type("generics.Holder")
 ---@field value any
 ---@field held any
 ---@field pairWith fun(self: generics.Box, other: integer): { key: any, value: integer }
+---@field applied fun(self: generics.Box, f: fun(arg0: any): any): any
 
 ---@class generics.Box.type: temper.Type
 ---@operator call: generics.Box
@@ -35,6 +36,13 @@ end
 ---@return { key: any, value: integer }
 function Box.methods.pairWith(this, other)
   return temper.pair_constructor(this.value, other)
+end
+
+---@param this generics.Box
+---@param f fun(arg0: any): any
+---@return any
+function Box.methods.applied(this, f)
+  return f(this.value)
 end
 
 ---@class generics.Named
@@ -147,6 +155,29 @@ end
 ---@return T|temper.Null
 local function opt(x)
   return x
+end
+
+---@generic T
+---@param x T
+---@param f fun(arg0: T): integer
+---@param scale? integer|temper.Null
+---@return integer
+local function scaled(x, f, scale)
+  if temper.is_null(scale) then
+    scale = 1
+  end
+  ---@cast scale integer
+  return temper.int32_mul(f(x), scale)
+end
+
+---@generic A
+---@generic B
+---@param a A
+---@param b B
+---@param f fun(arg0: A, arg1: B): string
+---@return string
+local function joined(a, b, f)
+  return f(a, b)
 end
 
 ---@param length integer
@@ -297,6 +328,11 @@ local optSome = opt(6)
 local string_ = tostring(temper.is_null(optNone)) .. " " .. (temper.is_null(optSome) and 0 or (optSome --[[@as integer]])) .. " "
 local subject3 = opt(temper.null)
 print(string_ .. (temper.is_null(subject3) and "-" or (subject3 --[[@as string]])))
+local one = scaled(2, function(y) return temper.int32_add(y, 1) end)
+local two = scaled(2, function(y) return temper.int32_mul(y, 2) end, 10)
+local three = joined(3, "s", function(a, b) return a .. b end)
+local four = box:applied(function(s) return s .. "!" end)
+print(one .. " " .. two .. " " .. three .. " " .. four)
 local builder = temper.listbuilder_constructor()
 temper.listbuilder_add(builder, "x")
 temper.listbuilder_add(builder, "y")

@@ -1,5 +1,6 @@
 from abc import ABCMeta as _ABCMeta, abstractmethod as _abstractmethod
 from collections.abc import (
+    Callable as _Callable,
     MutableSequence as _MutableSequence,
     Sequence as _Sequence,
 )
@@ -34,6 +35,7 @@ __all__ = (
 )
 
 _T = _TypeVar('_T')
+_TOut = _TypeVar('_TOut')
 _T_2 = _TypeVar('_T_2', bound='Named')
 _TName = _TypeVar('_TName', bound='Named')
 _S = _TypeVar('_S', bound='Scene')
@@ -67,6 +69,9 @@ class Box(Holder[_T], _Generic[_T]):
 
     def pair_with(self, other: int, /) -> _Pair[_T, int]:
         return _Pair(self._value, other)
+
+    def applied(self, f: _Callable[[_T], _TOut], /) -> _TOut:
+        return f(self._value)
 
 
 class Named:
@@ -145,6 +150,16 @@ def _half_pair(a: _A, /) -> _Pair[_A, _Sequence[_B]]:
 
 def _opt(x: _T | None, /) -> _T | None:
     return x
+
+
+def _scaled(x: _T, f: _Callable[[_T], int], scale: int | None = None, /) -> int:
+    if scale is None:
+        scale = 1
+    return _int_mul(f(x), scale)
+
+
+def _joined(a: _A, b: _B, f: _Callable[[_A, _B], str], /) -> str:
+    return f(a, b)
 
 
 def _none_in(length: int, /) -> bool:
@@ -270,6 +285,11 @@ _console.log(f'{_half.key} {len(_half.value)} {_half_too.key}')
 _opt_none: object | None = _opt(None)
 _opt_some: int | None = _opt(6)
 _console.log(f"{_boolean_to_string(_opt_none is None)} {0 if _opt_some is None else _opt_some} {'-' if (_subject3 := _opt(None)) is None else _subject3}")
+_one: int = _scaled(2, lambda y: _int_add(y, 1))
+_two: int = _scaled(2, lambda y: _int_mul(y, 2), 10)
+_three: str = _joined(3, 's', lambda a, b: str(a) + b)
+_four: str = _box.applied(lambda s: f'{s}!')
+_console.log(f'{_one} {_two} {_three} {_four}')
 _builder: _MutableSequence[str] = []
 _builder.append('x')
 _builder.append('y')
