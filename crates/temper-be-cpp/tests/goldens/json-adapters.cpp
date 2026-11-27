@@ -225,11 +225,11 @@ core::Expected<std::shared_ptr<Point>, std::shared_ptr<temper_std::JsonError>> P
     return core::unexpected(temper_std::JsonShapeError::make(TEMPER_STR("expected Point JSON object")));
   }
   std::shared_ptr<temper_std::JsonObject> obj = jsonObject;
-  auto propertyValueOrBubbleResult = obj->propertyValueOrBubble(TEMPER_STR("x"));
-  if (!propertyValueOrBubbleResult.has_value()) {
-    return core::unexpected(propertyValueOrBubbleResult.error());
+  auto propertyValueOrThrowResult = obj->propertyValueOrThrow(TEMPER_STR("x"));
+  if (!propertyValueOrThrowResult.has_value()) {
+    return core::unexpected(propertyValueOrThrowResult.error());
   }
-  std::shared_ptr<temper_std::JsonSyntaxTree> xTree = *propertyValueOrBubbleResult;
+  std::shared_ptr<temper_std::JsonSyntaxTree> xTree = *propertyValueOrThrowResult;
   std::shared_ptr<temper_std::JsonNumeric> jsonNumeric;
   if (dynamic_cast<temper_std::JsonNumeric const *>(xTree.get()) != nullptr) {
     jsonNumeric = core::checked_cast<temper_std::JsonNumeric>(xTree);
@@ -245,11 +245,11 @@ core::Expected<std::shared_ptr<Point>, std::shared_ptr<temper_std::JsonError>> P
     std::shared_ptr<core::ParseError> failure = asInt32Result.error();
     return core::unexpected(core::with_cause(temper_std::JsonShapeError::make(TEMPER_STR("expected Int for x")), failure));
   }
-  auto propertyValueOrBubbleResult2 = obj->propertyValueOrBubble(TEMPER_STR("y"));
-  if (!propertyValueOrBubbleResult2.has_value()) {
-    return core::unexpected(propertyValueOrBubbleResult2.error());
+  auto propertyValueOrThrowResult2 = obj->propertyValueOrThrow(TEMPER_STR("y"));
+  if (!propertyValueOrThrowResult2.has_value()) {
+    return core::unexpected(propertyValueOrThrowResult2.error());
   }
-  std::shared_ptr<temper_std::JsonSyntaxTree> yTree = *propertyValueOrBubbleResult2;
+  std::shared_ptr<temper_std::JsonSyntaxTree> yTree = *propertyValueOrThrowResult2;
   std::shared_ptr<temper_std::JsonNumeric> value;
   if (dynamic_cast<temper_std::JsonNumeric const *>(yTree.get()) != nullptr) {
     value = core::checked_cast<temper_std::JsonNumeric>(yTree);
@@ -330,11 +330,11 @@ core::Expected<std::shared_ptr<Record>, std::shared_ptr<temper_std::JsonError>> 
     return core::unexpected(temper_std::JsonShapeError::make(TEMPER_STR("expected Record JSON object")));
   }
   std::shared_ptr<temper_std::JsonObject> obj = jsonObject;
-  auto propertyValueOrBubbleResult = obj->propertyValueOrBubble(TEMPER_STR("name"));
-  if (!propertyValueOrBubbleResult.has_value()) {
-    return core::unexpected(propertyValueOrBubbleResult.error());
+  auto propertyValueOrThrowResult = obj->propertyValueOrThrow(TEMPER_STR("name"));
+  if (!propertyValueOrThrowResult.has_value()) {
+    return core::unexpected(propertyValueOrThrowResult.error());
   }
-  std::shared_ptr<temper_std::JsonSyntaxTree> nameTree = *propertyValueOrBubbleResult;
+  std::shared_ptr<temper_std::JsonSyntaxTree> nameTree = *propertyValueOrThrowResult;
   std::shared_ptr<temper_std::JsonString> jsonString;
   if (dynamic_cast<temper_std::JsonString const *>(nameTree.get()) != nullptr) {
     jsonString = core::checked_cast<temper_std::JsonString>(nameTree);
@@ -343,11 +343,11 @@ core::Expected<std::shared_ptr<Record>, std::shared_ptr<temper_std::JsonError>> 
   }
   std::shared_ptr<temper_std::JsonString> nameJson = jsonString;
   core::Str name = nameJson->content;
-  auto propertyValueOrBubbleResult2 = obj->propertyValueOrBubble(TEMPER_STR("is-active"));
-  if (!propertyValueOrBubbleResult2.has_value()) {
-    return core::unexpected(propertyValueOrBubbleResult2.error());
+  auto propertyValueOrThrowResult2 = obj->propertyValueOrThrow(TEMPER_STR("is-active"));
+  if (!propertyValueOrThrowResult2.has_value()) {
+    return core::unexpected(propertyValueOrThrowResult2.error());
   }
-  std::shared_ptr<temper_std::JsonSyntaxTree> activeTree = *propertyValueOrBubbleResult2;
+  std::shared_ptr<temper_std::JsonSyntaxTree> activeTree = *propertyValueOrThrowResult2;
   std::shared_ptr<temper_std::JsonBoolean> jsonBoolean;
   if (dynamic_cast<temper_std::JsonBoolean const *>(activeTree.get()) != nullptr) {
     jsonBoolean = core::checked_cast<temper_std::JsonBoolean>(activeTree);
@@ -356,11 +356,11 @@ core::Expected<std::shared_ptr<Record>, std::shared_ptr<temper_std::JsonError>> 
   }
   std::shared_ptr<temper_std::JsonBoolean> activeJson = jsonBoolean;
   bool active = activeJson->content;
-  auto propertyValueOrBubbleResult3 = obj->propertyValueOrBubble(TEMPER_STR("score"));
-  if (!propertyValueOrBubbleResult3.has_value()) {
-    return core::unexpected(propertyValueOrBubbleResult3.error());
+  auto propertyValueOrThrowResult3 = obj->propertyValueOrThrow(TEMPER_STR("score"));
+  if (!propertyValueOrThrowResult3.has_value()) {
+    return core::unexpected(propertyValueOrThrowResult3.error());
   }
-  std::shared_ptr<temper_std::JsonSyntaxTree> scoreTree = *propertyValueOrBubbleResult3;
+  std::shared_ptr<temper_std::JsonSyntaxTree> scoreTree = *propertyValueOrThrowResult3;
   std::shared_ptr<temper_std::JsonNumeric> jsonNumeric;
   if (dynamic_cast<temper_std::JsonNumeric const *>(scoreTree.get()) != nullptr) {
     jsonNumeric = core::checked_cast<temper_std::JsonNumeric>(scoreTree);
@@ -376,11 +376,11 @@ core::Expected<std::shared_ptr<Record>, std::shared_ptr<temper_std::JsonError>> 
     std::shared_ptr<core::ParseError> failure = asFloat64Result.error();
     return core::unexpected(core::with_cause(temper_std::JsonShapeError::make(TEMPER_STR("expected Float64 for score")), failure));
   }
-  auto propertyValueOrBubbleResult4 = obj->propertyValueOrBubble(TEMPER_STR("big"));
-  if (!propertyValueOrBubbleResult4.has_value()) {
-    return core::unexpected(propertyValueOrBubbleResult4.error());
+  auto propertyValueOrThrowResult4 = obj->propertyValueOrThrow(TEMPER_STR("big"));
+  if (!propertyValueOrThrowResult4.has_value()) {
+    return core::unexpected(propertyValueOrThrowResult4.error());
   }
-  std::shared_ptr<temper_std::JsonSyntaxTree> bigTree = *propertyValueOrBubbleResult4;
+  std::shared_ptr<temper_std::JsonSyntaxTree> bigTree = *propertyValueOrThrowResult4;
   std::shared_ptr<temper_std::JsonNumeric> value;
   if (dynamic_cast<temper_std::JsonNumeric const *>(bigTree.get()) != nullptr) {
     value = core::checked_cast<temper_std::JsonNumeric>(bigTree);
@@ -397,21 +397,21 @@ core::Expected<std::shared_ptr<Record>, std::shared_ptr<temper_std::JsonError>> 
     return core::unexpected(core::with_cause(temper_std::JsonShapeError::make(TEMPER_STR("expected Int64 for big")), failure2));
   }
   std::shared_ptr<temper_std::OrNullJsonAdapter<core::Str>> orNullJsonAdapter = temper_std::OrNullJsonAdapter<core::Str>::make(temper_std::stringJsonAdapter());
-  auto propertyValueOrBubbleResult5 = obj->propertyValueOrBubble(TEMPER_STR("nickname"));
-  if (!propertyValueOrBubbleResult5.has_value()) {
-    return core::unexpected(propertyValueOrBubbleResult5.error());
+  auto propertyValueOrThrowResult5 = obj->propertyValueOrThrow(TEMPER_STR("nickname"));
+  if (!propertyValueOrThrowResult5.has_value()) {
+    return core::unexpected(propertyValueOrThrowResult5.error());
   }
-  auto decodeFromJsonResult = orNullJsonAdapter->decodeFromJson(*propertyValueOrBubbleResult5, ic);
+  auto decodeFromJsonResult = orNullJsonAdapter->decodeFromJson(*propertyValueOrThrowResult5, ic);
   if (!decodeFromJsonResult.has_value()) {
     return core::unexpected(decodeFromJsonResult.error());
   }
   core::NullableParam<core::Str> nickname = *decodeFromJsonResult;
   std::shared_ptr<temper_std::JsonAdapter<std::shared_ptr<std::vector<std::shared_ptr<Point>>>>> value2 = temper_std::listJsonAdapter<std::shared_ptr<Point>>(Point::jsonAdapter());
-  auto propertyValueOrBubbleResult6 = obj->propertyValueOrBubble(TEMPER_STR("points"));
-  if (!propertyValueOrBubbleResult6.has_value()) {
-    return core::unexpected(propertyValueOrBubbleResult6.error());
+  auto propertyValueOrThrowResult6 = obj->propertyValueOrThrow(TEMPER_STR("points"));
+  if (!propertyValueOrThrowResult6.has_value()) {
+    return core::unexpected(propertyValueOrThrowResult6.error());
   }
-  auto decodeFromJsonResult2 = value2->decodeFromJson(*propertyValueOrBubbleResult6, ic);
+  auto decodeFromJsonResult2 = value2->decodeFromJson(*propertyValueOrThrowResult6, ic);
   if (!decodeFromJsonResult2.has_value()) {
     return core::unexpected(decodeFromJsonResult2.error());
   }
@@ -481,11 +481,11 @@ core::Expected<std::shared_ptr<Circle>, std::shared_ptr<temper_std::JsonError>> 
     return core::unexpected(temper_std::JsonShapeError::make(TEMPER_STR("expected Circle JSON object")));
   }
   std::shared_ptr<temper_std::JsonObject> obj = jsonObject;
-  auto propertyValueOrBubbleResult = obj->propertyValueOrBubble(TEMPER_STR("radius"));
-  if (!propertyValueOrBubbleResult.has_value()) {
-    return core::unexpected(propertyValueOrBubbleResult.error());
+  auto propertyValueOrThrowResult = obj->propertyValueOrThrow(TEMPER_STR("radius"));
+  if (!propertyValueOrThrowResult.has_value()) {
+    return core::unexpected(propertyValueOrThrowResult.error());
   }
-  std::shared_ptr<temper_std::JsonSyntaxTree> radiusTree = *propertyValueOrBubbleResult;
+  std::shared_ptr<temper_std::JsonSyntaxTree> radiusTree = *propertyValueOrThrowResult;
   std::shared_ptr<temper_std::JsonNumeric> jsonNumeric;
   if (dynamic_cast<temper_std::JsonNumeric const *>(radiusTree.get()) != nullptr) {
     jsonNumeric = core::checked_cast<temper_std::JsonNumeric>(radiusTree);
@@ -549,11 +549,11 @@ core::Expected<std::shared_ptr<Rect>, std::shared_ptr<temper_std::JsonError>> Re
     return core::unexpected(temper_std::JsonShapeError::make(TEMPER_STR("expected Rect JSON object")));
   }
   std::shared_ptr<temper_std::JsonObject> obj = jsonObject;
-  auto propertyValueOrBubbleResult = obj->propertyValueOrBubble(TEMPER_STR("width"));
-  if (!propertyValueOrBubbleResult.has_value()) {
-    return core::unexpected(propertyValueOrBubbleResult.error());
+  auto propertyValueOrThrowResult = obj->propertyValueOrThrow(TEMPER_STR("width"));
+  if (!propertyValueOrThrowResult.has_value()) {
+    return core::unexpected(propertyValueOrThrowResult.error());
   }
-  std::shared_ptr<temper_std::JsonSyntaxTree> widthTree = *propertyValueOrBubbleResult;
+  std::shared_ptr<temper_std::JsonSyntaxTree> widthTree = *propertyValueOrThrowResult;
   std::shared_ptr<temper_std::JsonNumeric> jsonNumeric;
   if (dynamic_cast<temper_std::JsonNumeric const *>(widthTree.get()) != nullptr) {
     jsonNumeric = core::checked_cast<temper_std::JsonNumeric>(widthTree);
@@ -569,11 +569,11 @@ core::Expected<std::shared_ptr<Rect>, std::shared_ptr<temper_std::JsonError>> Re
     std::shared_ptr<core::ParseError> failure = asInt32Result.error();
     return core::unexpected(core::with_cause(temper_std::JsonShapeError::make(TEMPER_STR("expected Int for width")), failure));
   }
-  auto propertyValueOrBubbleResult2 = obj->propertyValueOrBubble(TEMPER_STR("height"));
-  if (!propertyValueOrBubbleResult2.has_value()) {
-    return core::unexpected(propertyValueOrBubbleResult2.error());
+  auto propertyValueOrThrowResult2 = obj->propertyValueOrThrow(TEMPER_STR("height"));
+  if (!propertyValueOrThrowResult2.has_value()) {
+    return core::unexpected(propertyValueOrThrowResult2.error());
   }
-  std::shared_ptr<temper_std::JsonSyntaxTree> heightTree = *propertyValueOrBubbleResult2;
+  std::shared_ptr<temper_std::JsonSyntaxTree> heightTree = *propertyValueOrThrowResult2;
   std::shared_ptr<temper_std::JsonNumeric> value;
   if (dynamic_cast<temper_std::JsonNumeric const *>(heightTree.get()) != nullptr) {
     value = core::checked_cast<temper_std::JsonNumeric>(heightTree);
@@ -687,11 +687,11 @@ core::Expected<std::shared_ptr<Hello>, std::shared_ptr<temper_std::JsonError>> H
     return core::unexpected(temper_std::JsonShapeError::make(TEMPER_STR("expected Hello JSON object")));
   }
   std::shared_ptr<temper_std::JsonObject> obj = jsonObject;
-  auto propertyValueOrBubbleResult = obj->propertyValueOrBubble(TEMPER_STR("text"));
-  if (!propertyValueOrBubbleResult.has_value()) {
-    return core::unexpected(propertyValueOrBubbleResult.error());
+  auto propertyValueOrThrowResult = obj->propertyValueOrThrow(TEMPER_STR("text"));
+  if (!propertyValueOrThrowResult.has_value()) {
+    return core::unexpected(propertyValueOrThrowResult.error());
   }
-  std::shared_ptr<temper_std::JsonSyntaxTree> textTree = *propertyValueOrBubbleResult;
+  std::shared_ptr<temper_std::JsonSyntaxTree> textTree = *propertyValueOrThrowResult;
   std::shared_ptr<temper_std::JsonString> jsonString;
   if (dynamic_cast<temper_std::JsonString const *>(textTree.get()) != nullptr) {
     jsonString = core::checked_cast<temper_std::JsonString>(textTree);
@@ -747,11 +747,11 @@ core::Expected<std::shared_ptr<Bye>, std::shared_ptr<temper_std::JsonError>> Bye
     return core::unexpected(temper_std::JsonShapeError::make(TEMPER_STR("expected Bye JSON object")));
   }
   std::shared_ptr<temper_std::JsonObject> obj = jsonObject;
-  auto propertyValueOrBubbleResult = obj->propertyValueOrBubble(TEMPER_STR("text"));
-  if (!propertyValueOrBubbleResult.has_value()) {
-    return core::unexpected(propertyValueOrBubbleResult.error());
+  auto propertyValueOrThrowResult = obj->propertyValueOrThrow(TEMPER_STR("text"));
+  if (!propertyValueOrThrowResult.has_value()) {
+    return core::unexpected(propertyValueOrThrowResult.error());
   }
-  std::shared_ptr<temper_std::JsonSyntaxTree> textTree = *propertyValueOrBubbleResult;
+  std::shared_ptr<temper_std::JsonSyntaxTree> textTree = *propertyValueOrThrowResult;
   std::shared_ptr<temper_std::JsonString> jsonString;
   if (dynamic_cast<temper_std::JsonString const *>(textTree.get()) != nullptr) {
     jsonString = core::checked_cast<temper_std::JsonString>(textTree);

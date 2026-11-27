@@ -1917,7 +1917,7 @@ fn rust_uncaught_failures() {
              class Big(public n: Int) extends Problem {}\n\
              class Small(public n: Int) extends Problem {}\n\
              let small(n: Int): Int throws Small { throw new Small(n) }\n\
-             let f(n: Int): Int throws Big {\n  small(n) catch { throw new Big(n) }\n}\n\
+             let f(n: Int): Int throws Big {\n  small(n) orelse throw new Big(n)\n}\n\
              console.log(\"b\");\ntry f(5);\n",
         ),
     ];

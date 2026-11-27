@@ -101,7 +101,7 @@ internal class Record
         {
             throw new JsonShapeException("expected Record JSON object");
         }
-        IJsonSyntaxTree nameTree = obj.PropertyValueOrBubble("name");
+        IJsonSyntaxTree nameTree = obj.PropertyValueOrThrow("name");
         JsonString nameJson;
         if (nameTree is JsonString)
         {
@@ -112,7 +112,7 @@ internal class Record
             throw new JsonShapeException("expected String for name");
         }
         string name = nameJson.Content;
-        IJsonSyntaxTree activeTree = obj.PropertyValueOrBubble("is-active");
+        IJsonSyntaxTree activeTree = obj.PropertyValueOrThrow("is-active");
         JsonBoolean activeJson;
         if (activeTree is JsonBoolean)
         {
@@ -123,7 +123,7 @@ internal class Record
             throw new JsonShapeException("expected Boolean for is-active");
         }
         bool active = activeJson.Content;
-        IJsonSyntaxTree scoreTree = obj.PropertyValueOrBubble("score");
+        IJsonSyntaxTree scoreTree = obj.PropertyValueOrThrow("score");
         IJsonNumeric scoreJson;
         if (scoreTree is IJsonNumeric)
         {
@@ -142,7 +142,7 @@ internal class Record
         {
             throw Core.WithCause(new JsonShapeException("expected Float64 for score"), failure);
         }
-        IJsonSyntaxTree bigTree = obj.PropertyValueOrBubble("big");
+        IJsonSyntaxTree bigTree = obj.PropertyValueOrThrow("big");
         IJsonNumeric bigJson;
         if (bigTree is IJsonNumeric)
         {
@@ -161,8 +161,8 @@ internal class Record
         {
             throw Core.WithCause(new JsonShapeException("expected Int64 for big"), failure2);
         }
-        string? nickname = Optional.OrNull<string>(new OrNullJsonAdapter<string>(JsonGlobal.StringJsonAdapter()).DecodeFromJson(obj.PropertyValueOrBubble("nickname"), ic));
-        IReadOnlyList<Point> points = JsonGlobal.ListJsonAdapter(Point.JsonAdapter()).DecodeFromJson(obj.PropertyValueOrBubble("points"), ic);
+        string? nickname = Optional.OrNull<string>(new OrNullJsonAdapter<string>(JsonGlobal.StringJsonAdapter()).DecodeFromJson(obj.PropertyValueOrThrow("nickname"), ic));
+        IReadOnlyList<Point> points = JsonGlobal.ListJsonAdapter(Point.JsonAdapter()).DecodeFromJson(obj.PropertyValueOrThrow("points"), ic);
         return new Record(name, active, score, big, nickname, points);
     }
 

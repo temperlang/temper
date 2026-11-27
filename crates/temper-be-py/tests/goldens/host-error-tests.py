@@ -18,7 +18,7 @@ class _connected:
         TestCase().fail("host test failure")
 
 
-class OopsError(_Failure, Exception):
+class OopsError(_Failure):
     __slots__ = ()
 
 

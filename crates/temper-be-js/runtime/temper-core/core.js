@@ -296,8 +296,8 @@ export const failureBase = (base) => {
 
 /**
  * The root of core's own declared failures, `MissingKey`, `ParseError`,
- * `InvalidCodePoint`, and `BrokenPromise`, as each library's roots are
- * its failures'.
+ * `InvalidCodePoint`, `BrokenPromise`, and `BrokenGenerator`, as each
+ * library's roots are its failures'.
  */
 export class CoreError extends Error {}
 
@@ -400,6 +400,37 @@ export class BrokenPromise extends CoreError {
     return "broken promise";
   }
 }
+
+/**
+ * What a generator's `next()` throws when its body throws a declared
+ * failure, which is its `cause`; the generator is done after.
+ */
+export class BrokenGenerator extends CoreError {
+  /** @returns {string} */
+  get message() {
+    return "broken generator";
+  }
+}
+
+/**
+ * A `Generator`'s `next()`: its step, or a `BrokenGenerator` thrown with
+ * the declared failure its body threw as the cause, which leaves it done.
+ * Anything else, a panic or a host's error, passes as it is.
+ *
+ * @template T
+ * @param {Generator<T>} generator
+ * @returns {IteratorResult<T>}
+ */
+export const generatorNext = (generator) => {
+  try {
+    return generator.next();
+  } catch (e) {
+    if (!isFailure(e)) {
+      throw e;
+    }
+    throw withCause(new BrokenGenerator(), e);
+  }
+};
 
 /**
  * Whether `e` is a declared failure, made by any copy of this runtime:

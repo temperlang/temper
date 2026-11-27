@@ -18,7 +18,7 @@ let sum(a: String, b: String): Int throws NotFound {
   x + y
 }
 let found = lookup("a") orelse -1;
-let m = lookup("b") catch { -1 };
+let m = lookup("b") orelse -1;
 let n = lookup("q") catch (e) { console.log(e.key); 0 };
 let total = sum("a", "a") catch (e) { console.log(e.key); 0 };
 console.log("${found} ${total}");
@@ -47,7 +47,7 @@ let k: Int = lookup("q") catch (e) { e };
         (Let ^y:16 (Call lookup:2 b:14))
         (Call + x:15 y:16))))
   (Let ^found:4 (Orelse (Call lookup:2 "a") (Call - 1)))
-  (Let ^m:5 (Orelse (Call lookup:2 "b") (Block (Call - 1))))
+  (Let ^m:5 (Orelse (Call lookup:2 "b") (Call - 1)))
   (Let
     ^n:6
     (Orelse
@@ -70,7 +70,7 @@ let k: Int = lookup("q") catch (e) { e };
     Int
     (Orelse (Call lookup:2 "q") (Block (Let ^e:19 (Call caught)) e:19)))
   #void)
-error 573..578: Cannot assign to Int32 from NotFound
+error 570..575: Cannot assign to Int32 from NotFound
 log q
 log 1 2
 
@@ -134,9 +134,9 @@ let b(): Int { throw new NotFound("b") }
 let c(): Int throws Other { lookup("c") }
 let d(): Int throws Other { throw new NotFound("d") }
 let e(): Int { lookup("e") orelse 0 }
-let f(): Int throws Other { lookup("f") catch { throw new Other() } }
+let f(): Int throws Other { lookup("f") orelse throw new Other() }
 let g(): Int throws Other { lookup("g") catch (x) { console.log(x.key); throw new Other() } }
-let h(): Int { do { lookup("h") } catch { 0 } }
+let h(): Int { do { lookup("h") } orelse 0 }
 --- settled
 (Block
   (Interface ^AppError:0 Error)
@@ -159,7 +159,7 @@ let h(): Int { do { lookup("h") } catch { 0 } }
     ^f:9
     (Fn
       (Call throws Int Other:2)
-      (Block (Orelse (Call lookup:3 "f") (Block (Fail (Call new Other:2)))))))
+      (Block (Orelse (Call lookup:3 "f") (Fail (Call new Other:2))))))
   (Let
     ^g:10
     (Fn
@@ -171,7 +171,7 @@ let h(): Int { do { lookup("h") } catch { 0 } }
             (Let ^x:17 (Call caught))
             (Call (Call . console \log) (Call . x:17 \key))
             (Fail (Call new Other:2)))))))
-  (Let ^h:11 (Fn Int (Block (Orelse (Block (Call lookup:3 "h")) (Block 0))))))
+  (Let ^h:11 (Fn Int (Block (Orelse (Block (Call lookup:3 "h")) 0)))))
 error 218..229: Cannot throw NotFound from a function without NotFound in its return type
 error 247..270: Cannot throw NotFound from a function without NotFound in its return type
 error 301..312: Cannot throw NotFound from a function that throws Other; catch it, and throw an Other there if need be
@@ -749,20 +749,20 @@ class NotFound(public key: String) extends AppError {}
 class LookupFailed(public name: String) extends AppError {}
 let lookup(key: String): Int throws NotFound { throw new NotFound(key) }
 let setting(name: String): Int throws LookupFailed {
-  lookup(name) catch { throw new LookupFailed(name) }
+  lookup(name) orelse throw new LookupFailed(name)
 }
 let parsed(text: String): Int throws LookupFailed {
   text.toInt32() orelse throw new LookupFailed(text)
 }
 let looped(names: List<String>): Int throws LookupFailed {
-  lookup("x") catch {
+  lookup("x") orelse do {
     for (let n of names) { throw new LookupFailed(n); }
     -1
   }
 }
 let called(): Int throws LookupFailed {
   let thrower(): Int throws LookupFailed { throw new LookupFailed("f") }
-  lookup("c") catch { thrower() }
+  lookup("c") orelse thrower()
 }
 let again(): Int throws NotFound { lookup("k") catch (e) { throw e } }
 let show(e: Error): String { "${e.message} <- ${e.cause?.message ?? "nothing"}" }
@@ -791,7 +791,7 @@ console.log(show(new NotFound("new")));
       (Block
         (Orelse
           (Call lookup:3 name:16)
-          (Block (Fail (Call new LookupFailed:2 name:16)))))))
+          (Fail (Call new LookupFailed:2 name:16))))))
   (Let
     ^parsed:5
     (Fn
@@ -817,7 +817,7 @@ console.log(show(new NotFound("new")));
                   (Fn
                     (Let ^n:19)
                     (Block (Fail (Call new LookupFailed:2 n:19)) #void)))
-                (Break @532)))
+                (Break @533)))
             (Call - 1))))))
   (Let
     ^called:7
@@ -829,7 +829,7 @@ console.log(show(new NotFound("new")));
           (Fn
             (Call throws Int LookupFailed:2)
             (Block (Fail (Call new LookupFailed:2 "f")))))
-        (Orelse (Call lookup:3 "c") (Block (Call thrower:20))))))
+        (Orelse (Call lookup:3 "c") (Call thrower:20)))))
   (Let
     ^again:8
     (Fn
@@ -903,7 +903,7 @@ class NotFound(public key: String) extends AppError {}
 class LookupFailed(public name: String) extends AppError {}
 let lookup(key: String): Int throws NotFound { throw new NotFound(key) }
 let setting(name: String): Int throws LookupFailed {
-  lookup(name) catch { throw new LookupFailed(name) }
+  lookup(name) orelse throw new LookupFailed(name)
 }
 console.log("before");
 setting("port");
@@ -927,13 +927,13 @@ console.log("after");
       (Block
         (Orelse
           (Call lookup:3 name:11)
-          (Block (Fail (Call new LookupFailed:2 name:11)))))))
+          (Fail (Call new LookupFailed:2 name:11))))))
   (Call (Call . console \log) "before")
   (Call setting:4 "port")
   (Call (Call . console \log) "after")
   #void)
 log before
-Failed with LookupFailed: lookup failed (name: port), at test.temper:6:24
+Failed with LookupFailed: lookup failed (name: port), at test.temper:6:23
 caused by NotFound: not found (key: port), at test.temper:4:48
 
 === an uncaught failure says what caused it
@@ -969,8 +969,8 @@ let risky(n: Int): Int throws NotFound {
   if (n > 0) { throw new NotFound("n"); }
   n
 }
-console.log("${risky(1) catch { -1 }}");
-let r = risky(2) catch { -1 };
+console.log("${risky(1) orelse -1}");
+let r = risky(2) orelse -1;
 console.log("after ${r}");
 --- settled
 (Block
@@ -988,10 +988,8 @@ console.log("after ${r}");
           (Block (Fail (Call new NotFound:1 "n")) #void)
           (Block))
         n:7)))
-  (Call
-    (Call . console \log)
-    (Call cat (Orelse (Call risky:2 1) (Block (Call - 1)))))
-  (Let ^r:3 (Orelse (Call risky:2 2) (Block (Call - 1))))
+  (Call (Call . console \log) (Call cat (Orelse (Call risky:2 1) (Call - 1))))
+  (Let ^r:3 (Orelse (Call risky:2 2) (Call - 1)))
   (Call (Call . console \log) (Call cat "after " r:3))
   #void)
 log -1
@@ -1487,13 +1485,14 @@ log entry a 1
 log entry x 2
 log entries failed
 
-=== a generator may throw any error, which next passes on
+=== a generator may throw any error, which next passes on as a BrokenGenerator's cause
 // A generator body may declare what it throws; its factory then makes a
-// `Generator<Y>`, whose `next()` throws `Error`, any error, which
-// callers handle. One that can't fail makes a `SafeGenerator<Y>`, whose
-// `next()` throws `Error` too, as `Generator`'s, while `nextSafe()`
-// can't fail. A body that declares `throws Error` passes on an inner
-// generator's failure.
+// `Generator<Y>`, whose `next()` throws core's `BrokenGenerator`, with
+// the body's error as its cause, which callers handle. One that can't
+// fail makes a `SafeGenerator<Y>`, whose `next()` throws
+// `BrokenGenerator` too, as `Generator`'s, while `nextSafe()` can't
+// fail. A body that declares `throws BrokenGenerator` passes on an
+// inner generator's.
 sealed interface GenError extends Error {}
 class TooBig(public n: Int) extends GenError {}
 let make(body: fn (Int): Generator<Int>): Generator<Int> { body(3) }
@@ -1507,9 +1506,10 @@ let g = make { (limit: Int): GeneratorResult<Int> throws TooBig extends Generato
 };
 let show(g: Generator<Int>): String {
   let r = g.next() catch (e) {
-    return when (e) {
-      is TooBig -> "too big ${e.n}";
-      else -> e.message;
+    let cause = e.cause;
+    return when (cause) {
+      is TooBig -> "${e.message}: too big ${cause.n}";
+      else -> "${e.message}: ${cause?.message ?? "nothing"}";
     };
   };
   when (r) {
@@ -1523,7 +1523,7 @@ let s = safe { (): GeneratorResult<Int> extends GeneratorFn => yield 7; };
 let first(g: SafeGenerator<Int>): Boolean { g.nextSafe() is ValueResult<Int> }
 console.log("${first(s)} ${show(s)}");
 let twice(inner: Generator<Int>): Generator<Int> {
-  make { (n: Int): GeneratorResult<Int> throws Error extends GeneratorFn =>
+  make { (n: Int): GeneratorResult<Int> throws BrokenGenerator extends GeneratorFn =>
     while (true) {
       let r = try inner.next();
       if (r is ValueResult<Int>) { yield r.value * n; } else { break; }
@@ -1563,10 +1563,10 @@ for (var n = 0; n < 3; n += 1) { console.log(show(t)); }
                   (Call > i:15 limit:14)
                   (Block (Fail (Call new TooBig:1 i:15)) #void)
                   (Block))
-                (Yield @549 i:15)
+                (Yield @606 i:15)
                 (Assign i:15 (Call + i:15 1))
                 #void)
-              (Break @638)))))))
+              (Break @695)))))))
   (Let
     ^show:4
     (Fn
@@ -1579,12 +1579,29 @@ for (var n = 0; n < 3; n += 1) { console.log(show(t)); }
             (Call (Call . g:16 \next))
             (Block
               (Let ^e:18 (Call caught))
-              (Return @729
+              (Let ^cause:19 (Call . e:18 \cause))
+              (Return @786
                 (Block
                   (If
-                    (Call is e:18 TooBig:1)
-                    (Call cat "too big " (Call . e:18 \n))
-                    (Call . e:18 \message))))
+                    (Call is cause:19 TooBig:1)
+                    (Call
+                      cat
+                      (Call . e:18 \message)
+                      ": too big "
+                      (Call . cause:19 \n))
+                    (Call
+                      cat
+                      (Call . e:18 \message)
+                      ": "
+                      (Block
+                        (Let
+                          ^subject#20
+                          (Block
+                            (If
+                              (Call == cause:19 #null)
+                              #null
+                              (Call . cause:19 \message))))
+                        (If (Call == subject#20 #null) "nothing" subject#20))))))
               #void)))
         (Block
           (If
@@ -1592,19 +1609,19 @@ for (var n = 0; n < 3; n += 1) { console.log(show(t)); }
             (Call cat "value " (Call . r:17 \value))
             "done")))))
   (Block
-    (Var ^n:19 0)
+    (Var ^n:21 0)
     (Loop
       (If
-        (Call < n:19 5)
+        (Call < n:21 5)
         (Block (Call (Call . console \log) (Call show:4 g:3)) #void)
-        (Break @980))
-      (Assign n:19 (Call + n:19 1))))
+        (Break @1121))
+      (Assign n:21 (Call + n:21 1))))
   (Let
     ^safe:5
     (Fn
-      (Let ^body:20 (Call FnType (Call <> SafeGenerator Int)))
+      (Let ^body:22 (Call FnType (Call <> SafeGenerator Int)))
       (Call <> SafeGenerator Int)
-      (Block (Call body:20))))
+      (Block (Call body:22))))
   (Let
     ^s:6
     (Call
@@ -1612,41 +1629,41 @@ for (var n = 0; n < 3; n += 1) { console.log(show(t)); }
       (Fn
         (Call <> GeneratorResult Int)
         GeneratorFn
-        (Block (Yield @1123 7) #void))))
+        (Block (Yield @1264 7) #void))))
   (Let
     ^first:7
     (Fn
-      (Let ^g:21 (Call <> SafeGenerator Int))
+      (Let ^g:23 (Call <> SafeGenerator Int))
       Boolean
-      (Block (Call is (Call (Call . g:21 \nextSafe)) (Call <> ValueResult Int)))))
+      (Block (Call is (Call (Call . g:23 \nextSafe)) (Call <> ValueResult Int)))))
   (Call
     (Call . console \log)
     (Call cat (Call first:7 s:6) " " (Call show:4 s:6)))
   (Let
     ^twice:8
     (Fn
-      (Let ^inner:22 (Call <> Generator Int))
+      (Let ^inner:24 (Call <> Generator Int))
       (Call <> Generator Int)
       (Block
         (Call
           make:2
           (Fn
-            (Let ^n:23 Int)
-            (Call throws (Call <> GeneratorResult Int) Error)
+            (Let ^n:25 Int)
+            (Call throws (Call <> GeneratorResult Int) BrokenGenerator)
             GeneratorFn
             (Block
               (Loop
                 (If
                   true
                   (Block
-                    (Let ^r:24 (Call (Call . inner:22 \next)))
+                    (Let ^r:26 (Call (Call . inner:24 \next)))
                     (If
-                      (Call is r:24 (Call <> ValueResult Int))
+                      (Call is r:26 (Call <> ValueResult Int))
                       (Block
-                        (Yield @1361 (Call * (Call . r:24 \value) n:23))
+                        (Yield @1502 (Call * (Call . r:26 \value) n:25))
                         #void)
-                      (Block (Break @1434) #void)))
-                  (Break @1434)))))))))
+                      (Block (Break @1585) #void)))
+                  (Break @1585)))))))))
   (Let
     ^t:9
     (Call
@@ -1654,29 +1671,29 @@ for (var n = 0; n < 3; n += 1) { console.log(show(t)); }
       (Call
         make:2
         (Fn
-          (Let ^limit:25 Int)
+          (Let ^limit:27 Int)
           (Call throws (Call <> GeneratorResult Int) TooBig:1)
           GeneratorFn
-          (Block (Yield @1584 1) (Fail (Call new TooBig:1 limit:25)) #void)))))
+          (Block (Yield @1735 1) (Fail (Call new TooBig:1 limit:27)) #void)))))
   (Block
-    (Var ^n:26 0)
+    (Var ^n:28 0)
     (Loop
       (If
-        (Call < n:26 3)
+        (Call < n:28 3)
         (Block (Call (Call . console \log) (Call show:4 t:9)) #void)
-        (Break @1700))
-      (Assign n:26 (Call + n:26 1)))))
+        (Break @1851))
+      (Assign n:28 (Call + n:28 1)))))
 log value 1
 log value 2
 log value 3
-log too big 4
+log broken generator: too big 4
 log done
 log true done
 log value 3
-log too big 3
+log broken generator: broken generator
 log done
 
-=== a generator that may throw is no SafeGenerator, and next needs handling, nextSafe not
+=== a generator that may throw is no SafeGenerator, next needs handling, nextSafe not, and a body may not throw Error
 sealed interface GenError extends Error {}
 class TooBig(public n: Int) extends GenError {}
 let safe(body: fn (): SafeGenerator<Int>): SafeGenerator<Int> { body() }
@@ -1793,11 +1810,12 @@ let f(): Void {
         #void))))
 error 177..251: Expected subtype of fn: SafeGenerator<Int32>, but got fn: Generator<Int32>
 error 316..335: Cannot throw TooBig from a function without TooBig in its return type
-error 389..397: Cannot throw Error, failures under different roots, from a function; handle them with orelse or catch
-error 463..475: Cannot throw Error from a function that throws TooBig; catch it, and throw a TooBig there if need be
-error 611..619: Cannot throw Error, failures under different roots, from a function; handle them with orelse or catch
-error 806..814: Cannot throw Error, failures under different roots, from a function; handle them with orelse or catch
+error 389..397: Cannot throw BrokenGenerator from a function without BrokenGenerator in its return type
+error 463..475: Cannot throw BrokenGenerator from a function that throws TooBig; catch it, and throw a TooBig there if need be
+error 611..619: Cannot throw BrokenGenerator from a function without BrokenGenerator in its return type
+error 806..814: Cannot throw BrokenGenerator from a function without BrokenGenerator in its return type
 error 875..880: Error is the root of failure types; throws takes a class or sealed interface that extends it
+error 1011..1016: Error is the root of failure types; throws takes a class or sealed interface that extends it
 
 === Bubble and bubble() are gone, with a message on how to migrate
 // Kotlin Temper 0.6 code: each use says what to write instead, and

@@ -4,9 +4,12 @@ from collections.abc import (
 )
 from concurrent.futures import Future as _Future
 from temper_core import (
+    BrokenGenerator as _BrokenGenerator,
     Failure as _Failure,
     LoggingConsole as _LoggingConsole,
     adapt_generator_factory as _adapt_generator_factory,
+    failure_cause as _failure_cause,
+    generator_next as _generator_next,
     int_add as _int_add,
     int_mul as _int_mul,
     list_join as _list_join,
@@ -18,7 +21,7 @@ __all__ = ()
 _T = _TypeVar('_T')
 
 
-class _FailureGeneratorsError(_Failure, Exception):
+class _FailureGeneratorsError(_Failure):
     __slots__ = ()
 
 
@@ -46,25 +49,31 @@ def _safely(make: _Callable[[], _Generator[_Any, _Any, None]], /) -> _Generator[
     return make()
 
 
+def _why(e: _Failure, /) -> str:
+    mine = f'too big {e.n}' if isinstance(e, _TooBig) else e.message
+    cause: _Failure | None = _failure_cause(e)
+    if cause is None:
+        return mine
+    else:
+        return f'{mine}: {_why(cause)}'
+
+
 def _take(g: _Generator[_Any, _Any, None], n: int, /) -> str:
     taken: _MutableSequence[str] = []
     while len(taken) < n:
         r: tuple[int] | None
         failed = False
-        caught: _Failure | None = None
+        caught: _BrokenGenerator | None = None
         held: tuple[int] | None | None = None
         try:
-            held = next(map(lambda v: (v,), g), None)
-        except Exception as failure:
-            if not isinstance(failure, _Failure):
-                raise failure
+            held = _generator_next(g)
+        except _BrokenGenerator as failure:
             caught = failure
             failed = True
         if failed:
             assert caught is not None
             e = caught
-            why = f'too big {e.n}' if isinstance(e, _TooBig) else e.message
-            return f"{_list_join(taken, ' ', lambda s: s)} {why}"
+            return f"{_list_join(taken, ' ', lambda s: s)} {_why(e)}"
         else:
             r = held
         if isinstance(r, tuple):
@@ -129,10 +138,8 @@ def _shown(r: tuple[int] | None, /) -> str:
 def _first_two(g: _Generator[_Any, _Any, None], /) -> str:
     a = _shown(next(map(lambda v: (v,), g), None))
     try:
-        b = _shown(next(map(lambda v: (v,), g), None))
-    except Exception as t_0:
-        if not isinstance(t_0, _Failure):
-            raise t_0
+        b = _shown(_generator_next(g))
+    except _BrokenGenerator:
         b = 'failed'
     return f'{a} {b}'
 
@@ -141,7 +148,7 @@ def _doubled(inner: _Generator[_Any, _Any, None], /) -> _Generator[_Any, _Any, N
     @_adapt_generator_factory
     def fn(do_await: _Callable[[_Future[_Any]], _Any], /) -> _Generator[_Any, _Any, None]:
         while True:
-            r = next(map(lambda v: (v,), inner), None)
+            r = _generator_next(inner)
             if isinstance(r, tuple):
                 yield _int_mul(r[0], 2)
             else:

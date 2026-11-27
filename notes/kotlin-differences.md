@@ -3017,7 +3017,8 @@ copied Kotlin's:
   Kotlin's switches on `this`'s class to call its adapter, as each
   `@json` subtype has its own (C++'s `const` methods can't give `this`
   out); a decoder casts each built-in field's tree into a local of its
-  own (`let xJson = obj.propertyValueOrBubble("x") as JsonNumeric;`),
+  own (`let xJson = obj.propertyValueOrThrow("x") as JsonNumeric;`,
+  Kotlin's `propertyValueOrBubble`, renamed with `Bubble`'s removal),
   where Kotlin's reads from the cast, which pyright types as its
   argument; locals are declared with their values, where Kotlin's
   assigns them after; a field outside the constructor is encoded but

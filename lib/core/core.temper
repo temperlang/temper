@@ -56,7 +56,9 @@ export interface Error {
 /**
  * *CoreError* is the root of core's own failure types,
  * [snippet/type/MissingKey], [snippet/type/ParseError],
- * [snippet/type/InvalidCodePoint], and [snippet/type/BrokenPromise].
+ * [snippet/type/InvalidCodePoint], [snippet/type/BrokenPromise], and
+ * [snippet/type/BrokenGenerator]. They're for core's own operations: a
+ * library declares its own error roots for its own conditions.
  */
 export sealed interface CoreError extends Error {}
 
@@ -121,6 +123,17 @@ export class InvalidCodePoint extends CoreError {
  * no fields: a broken promise doesn't say why.
  */
 export class BrokenPromise extends CoreError {
+  @connected
+  public constructor() {}
+}
+
+/**
+ * *BrokenGenerator* is what [snippet/type/Generator/method/next] throws
+ * when the generator's body throws: its [snippet/type/Error/property/cause]
+ * is the error the body threw, and the generator is done. It has no
+ * other fields.
+ */
+export class BrokenGenerator extends CoreError {
   @connected
   public constructor() {}
 }
@@ -263,10 +276,11 @@ export interface Generator<@out YIELD extends AnyValue> {
    * decision to pause.
    * For a [snippet/type/GeneratorFn], this is the value passed to
    * [snippet/builtin/yield].  If a *GeneratorFn* throws, the call to
-   * next throws it, any [snippet/type/Error], and the generator is done.
+   * next throws a [snippet/type/BrokenGenerator] whose cause is what it
+   * threw, and the generator is done.
    */
   @connected
-  public next(): GeneratorResult<YIELD> throws Error;
+  public next(): GeneratorResult<YIELD> throws BrokenGenerator;
   /**
    * True if subsequent calls to [snippet/type/Generator/method/next]
    * would do no work and return a [snippet/type/DoneResult].
@@ -311,7 +325,7 @@ export interface SafeGenerator<@out YIELD extends AnyValue> extends Generator<YI
    * [snippet/builtin/yield].
    */
   @connected
-  public next(): GeneratorResult<YIELD> throws Error {
+  public next(): GeneratorResult<YIELD> throws BrokenGenerator {
     nextSafe()
   }
 
@@ -355,12 +369,14 @@ extends Generator<YIELD> {
     this.generatorFn = generatorFn;
   }
 
-  public next(): GeneratorResult<YIELD> throws Error {
+  public next(): GeneratorResult<YIELD> throws BrokenGenerator {
     if (this._done) {
       return doneResult<YIELD>();
     }
     this._done = true; // GeneratorFns are not re-entrant.
-    let result: GeneratorResult<YIELD> = generatorFn();
+    // What the body threw is the BrokenGenerator's cause.
+    let result: GeneratorResult<YIELD> =
+      generatorFn() orelse throw new BrokenGenerator();
     when (result) {
       is ValueResult<YIELD> -> do { this._done = false }
       is DoneResult<YIELD> -> void

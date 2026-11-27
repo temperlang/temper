@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
+import temper.core.BrokenGenerator;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Failure;
@@ -25,27 +26,32 @@ public final class FailureGeneratorsGlobal {
         return make.get();
     }
 
+    static String why(Failure e) {
+        String mine = e instanceof TooBig ? "too big " + ((TooBig) e).n : e.getMessage();
+        @Nullable Failure cause = Core.failureCause(e);
+        if (cause == null) {
+            return mine;
+        } else {
+            return mine + ": " + why(cause);
+        }
+    }
+
     static String take(Generator<Integer> g, int n) {
         List<String> taken = new ArrayList<>();
         while (taken.size() < n) {
             Result<Integer> r;
             boolean failed = false;
-            @Nullable Failure caught = null;
+            @Nullable BrokenGenerator caught = null;
             @Nullable Result<Integer> held = null;
             try {
                 held = g.get();
-            } catch (RuntimeException caught2) {
-                if (!(caught2 instanceof Failure)) {
-                    throw caught2;
-                }
-                Failure failure = (Failure) caught2;
+            } catch (BrokenGenerator failure) {
                 caught = failure;
                 failed = true;
             }
             if (failed) {
-                Failure e = caught;
-                String why = e instanceof TooBig ? "too big " + ((TooBig) e).n : e.getMessage();
-                return Core.listJoinObj(taken, " ", s -> s) + " " + why;
+                BrokenGenerator e = caught;
+                return Core.listJoinObj(taken, " ", s -> s) + " " + why(e);
             } else {
                 r = held;
             }
@@ -213,10 +219,7 @@ public final class FailureGeneratorsGlobal {
         String b;
         try {
             b = shown(g.get());
-        } catch (RuntimeException caught) {
-            if (!(caught instanceof Failure)) {
-                throw caught;
-            }
+        } catch (BrokenGenerator ignored) {
             b = "failed";
         }
         return a + " " + b;

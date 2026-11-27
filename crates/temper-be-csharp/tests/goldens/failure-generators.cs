@@ -17,6 +17,20 @@ public static class FailureGeneratorsGlobal
         return make();
     }
 
+    internal static string Why(IFailure e)
+    {
+        string mine = e is TooBig ? "too big " + ((TooBig)e).N.ToString(CultureInfo.InvariantCulture) : e.Message;
+        IFailure? cause = Core.FailureCause(e);
+        if (cause == null)
+        {
+            return mine;
+        }
+        else
+        {
+            return mine + ": " + Why(cause);
+        }
+    }
+
     internal static string Take(IEnumerable<int> g, int n)
     {
         IList<string> taken = new List<string>();
@@ -24,23 +38,21 @@ public static class FailureGeneratorsGlobal
         {
             IGeneratorResult<int> r;
             bool failed = false;
-            IFailure? caught = null;
+            BrokenGenerator? caught = null;
             IGeneratorResult<int>? held = null;
             try
             {
                 held = Core.GeneratorNext(g);
             }
-            catch (Exception caught1) when (caught1 is IFailure)
+            catch (BrokenGenerator failure)
             {
-                IFailure failure = (IFailure)caught1;
                 caught = failure;
                 failed = true;
             }
             if (failed)
             {
-                IFailure e = caught!;
-                string why = e is TooBig ? "too big " + ((TooBig)e).N.ToString(CultureInfo.InvariantCulture) : e.Message;
-                return Listed.Join(taken, " ", (string s) => s) + " " + why;
+                BrokenGenerator e = caught!;
+                return Listed.Join(taken, " ", (string s) => s) + " " + Why(e);
             }
             else
             {
@@ -159,7 +171,7 @@ public static class FailureGeneratorsGlobal
         {
             b = Shown(Core.GeneratorNext(g));
         }
-        catch (Exception failure1) when (failure1 is IFailure)
+        catch (BrokenGenerator)
         {
             b = "failed";
         }

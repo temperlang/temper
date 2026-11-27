@@ -4,7 +4,7 @@ from temper_std.testing import Test
 from unittest import TestCase
 
 
-class _Problem(Failure, Exception):
+class _Problem(Failure):
     __slots__ = ()
 
 

@@ -52,7 +52,7 @@ internal class Point
         {
             throw new JsonShapeException("expected Point JSON object");
         }
-        IJsonSyntaxTree xTree = obj.PropertyValueOrBubble("x");
+        IJsonSyntaxTree xTree = obj.PropertyValueOrThrow("x");
         IJsonNumeric xJson;
         if (xTree is IJsonNumeric)
         {
@@ -71,7 +71,7 @@ internal class Point
         {
             throw Core.WithCause(new JsonShapeException("expected Int for x"), failure);
         }
-        IJsonSyntaxTree yTree = obj.PropertyValueOrBubble("y");
+        IJsonSyntaxTree yTree = obj.PropertyValueOrThrow("y");
         IJsonNumeric yJson;
         if (yTree is IJsonNumeric)
         {

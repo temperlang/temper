@@ -143,8 +143,8 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 let s4 = Arc::new("{\"x\":null,\"y\":123,\"z\":123456789012}".to_string());
                 let ast = temper_std::json::parse_json(s4.clone())?;
                 let obj = temper_core::cast::<temper_std::json::JsonObject>(ast.clone()).unwrap();
-                let x_ast = obj.property_value_or_bubble("x")?;
-                let y_ast = obj.property_value_or_bubble("y")?;
+                let x_ast = obj.property_value_or_throw("x")?;
+                let y_ast = obj.property_value_or_throw("y")?;
                 println!(
                     "for x, got JSON null: {}",
                     temper_core::is::<temper_std::json::JsonNull>(x_ast.clone())
@@ -171,7 +171,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 )?;
                 println!("x ?? -1 -> {}", x2.unwrap_or(-1));
                 println!("y ?? -1 -> {}", y2.unwrap_or(-1));
-                let z_ast = obj.property_value_or_bubble("z")?;
+                let z_ast = obj.property_value_or_throw("z")?;
                 let int64_or_null_adapter: temper_std::json::OrNullJsonAdapter<i64> =
                     temper_std::json::OrNullJsonAdapter::new(
                         temper_std::json::int64_json_adapter(),

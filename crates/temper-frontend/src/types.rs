@@ -126,9 +126,10 @@ pub struct Types {
 /// the final types that are `MapKey`s of themselves, as `class String
 /// extends MapKey<String>`; and `StringIndex` and `NoStringIndex`, which
 /// extend `StringIndexOption`; and core's failure types, `CoreError` under
-/// the root and `MissingKey`, `ParseError`, `InvalidCodePoint`, and
-/// `BrokenPromise` under it. Core's `Equatable` isn't a builtin type yet.
-const BUILTIN_SUPERTYPES: [(&str, &str); 16] = [
+/// the root and `MissingKey`, `ParseError`, `InvalidCodePoint`,
+/// `BrokenPromise`, and `BrokenGenerator` under it. Core's `Equatable`
+/// isn't a builtin type yet.
+const BUILTIN_SUPERTYPES: [(&str, &str); 17] = [
     ("List", "Listed"),
     ("ListBuilder", "Listed"),
     ("Map", "Mapped"),
@@ -145,6 +146,7 @@ const BUILTIN_SUPERTYPES: [(&str, &str); 16] = [
     ("ParseError", "CoreError"),
     ("InvalidCodePoint", "CoreError"),
     ("BrokenPromise", "CoreError"),
+    ("BrokenGenerator", "CoreError"),
 ];
 
 /// What builtin type `name` extends, then what that extends, and so on,
@@ -178,11 +180,12 @@ const BUILTIN_SEALED: [&str; 6] = [
 
 /// Core's non-generic classes and interface beyond the final types:
 /// `StringIndex` and `NoStringIndex` extend the sealed `StringIndexOption`,
-/// `MissingKey`, `ParseError`, `InvalidCodePoint`, and `BrokenPromise` the
-/// sealed `CoreError`, and nothing else extends any of them, so each is a
-/// subtype of only itself and what core says it extends
-/// ([`Types::is_subtype`]).
-const CORE_NOMINAL: [&str; 10] = [
+/// `MissingKey`, `ParseError`, `InvalidCodePoint`, `BrokenPromise`, and
+/// `BrokenGenerator` the sealed `CoreError`, and nothing else extends any
+/// of them, so each is a subtype of only itself and what core says it
+/// extends ([`Types::is_subtype`]).
+const CORE_NOMINAL: [&str; 11] = [
+    "BrokenGenerator",
     "BrokenPromise",
     "CoreError",
     "DenseBitVector",

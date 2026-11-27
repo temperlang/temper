@@ -211,8 +211,11 @@ pub enum Message {
     /// Ours: what follows `catch` isn't a block, or a name in parentheses
     /// and a block.
     CatchWithoutBlock,
+    /// Ours: a block after `catch` without a name, `f() catch { 0 }`,
+    /// which is `orelse`'s: `f() orelse 0`.
+    CatchWithoutName,
     /// Ours: an operator after a `catch` block, which would be in the
-    /// handler, as in `f() catch { 0 } + 1`.
+    /// handler, as in `f() catch (e) { 0 } + 1`.
     CatchBlockNotLast,
 }
 
@@ -242,6 +245,7 @@ impl Message {
             Message::MissingOperator(..) => "MissingOperator",
             Message::JumpBeforeComma(_) => "JumpBeforeComma",
             Message::CatchWithoutBlock => "CatchWithoutBlock",
+            Message::CatchWithoutName => "CatchWithoutName",
             Message::CatchBlockNotLast => "CatchBlockNotLast",
         }
     }
@@ -294,6 +298,9 @@ impl Message {
             Message::JumpBeforeComma(op) => jump_before_comma(*op),
             Message::CatchWithoutBlock => {
                 "Expected a block after `catch`, or a name in parentheses and a block, as in `catch (e) { … }`".into()
+            }
+            Message::CatchWithoutName => {
+                "`catch` needs a name in parentheses, as in `catch (e) { … }`; without one, use `orelse`, as in `f() orelse 0`".into()
             }
             Message::CatchBlockNotLast => {
                 "A `catch` block ends its expression; put the `catch` in parentheses to use its value".into()

@@ -19,7 +19,7 @@ class _connected:
         raise NotFound(key)  # noqa: F821
 
 
-class HostFailuresError(_Failure, Exception):
+class HostFailuresError(_Failure):
     __slots__ = ()
 
 
@@ -48,9 +48,7 @@ _console.log('before')
 _h: int
 try:
     _h = _int_add(_parse_count('two'), host_lookup('bug'))
-except Exception as _e:
-    if not isinstance(_e, _Failure):
-        raise _e
+except _Failure as _e:
     _console.log(f'caught {_e.message}')
     _h = -1
 _console.log(f'after {_h}')

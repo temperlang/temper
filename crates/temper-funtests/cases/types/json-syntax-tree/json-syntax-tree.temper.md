@@ -144,8 +144,8 @@ Now to decode:
       let ast = parseJson(s);
 
       let obj = ast as JsonObject;
-      let xAst = obj.propertyValueOrBubble("x");
-      let yAst = obj.propertyValueOrBubble("y");
+      let xAst = obj.propertyValueOrThrow("x");
+      let yAst = obj.propertyValueOrThrow("y");
 
       console.log("for x, got JSON null: ${xAst is JsonNull}");
       console.log("for y, got JSON numeric: ${yAst is JsonNumeric}");
@@ -159,7 +159,7 @@ Now to decode:
 
 Also prove that Int64 works.
 
-      let zAst = obj.propertyValueOrBubble("z");
+      let zAst = obj.propertyValueOrThrow("z");
       let int64OrNullAdapter = new OrNullJsonAdapter<Int64>(Int64.jsonAdapter());
       let z: Int64? = int64OrNullAdapter.decodeFromJson(zAst, NullInterchangeContext.instance);
       console.log("z ?? -1 -> ${z ?? -1i64}");

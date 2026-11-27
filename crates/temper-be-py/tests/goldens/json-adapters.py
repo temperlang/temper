@@ -65,7 +65,7 @@ class _Point:
         else:
             raise _JsonShapeError('expected Point JSON object')
         obj = t_0
-        x_tree = obj.property_value_or_bubble('x')
+        x_tree = obj.property_value_or_throw('x')
         t_1: _JsonNumeric
         if isinstance(x_tree, _JsonNumeric):
             t_1 = x_tree
@@ -76,7 +76,7 @@ class _Point:
             x = x_json.as_int32()
         except _ParseError as failure:
             raise _JsonShapeError('expected Int for x') from failure
-        y_tree = obj.property_value_or_bubble('y')
+        y_tree = obj.property_value_or_throw('y')
         t_2: _JsonNumeric
         if isinstance(y_tree, _JsonNumeric):
             t_2 = y_tree
@@ -169,7 +169,7 @@ class _Record:
         else:
             raise _JsonShapeError('expected Record JSON object')
         obj = t_0
-        name_tree = obj.property_value_or_bubble('name')
+        name_tree = obj.property_value_or_throw('name')
         t_1: _JsonString
         if isinstance(name_tree, _JsonString):
             t_1 = name_tree
@@ -177,7 +177,7 @@ class _Record:
             raise _JsonShapeError('expected String for name')
         name_json = t_1
         name = name_json.content
-        active_tree = obj.property_value_or_bubble('is-active')
+        active_tree = obj.property_value_or_throw('is-active')
         t_2: _JsonBoolean
         if isinstance(active_tree, _JsonBoolean):
             t_2 = active_tree
@@ -185,7 +185,7 @@ class _Record:
             raise _JsonShapeError('expected Boolean for is-active')
         active_json = t_2
         active = active_json.content
-        score_tree = obj.property_value_or_bubble('score')
+        score_tree = obj.property_value_or_throw('score')
         t_3: _JsonNumeric
         if isinstance(score_tree, _JsonNumeric):
             t_3 = score_tree
@@ -196,7 +196,7 @@ class _Record:
             score = score_json.as_float64()
         except _ParseError as failure:
             raise _JsonShapeError('expected Float64 for score') from failure
-        big_tree = obj.property_value_or_bubble('big')
+        big_tree = obj.property_value_or_throw('big')
         t_4: _JsonNumeric
         if isinstance(big_tree, _JsonNumeric):
             t_4 = big_tree
@@ -207,8 +207,8 @@ class _Record:
             big = big_json.as_int64()
         except _ParseError as failure:
             raise _JsonShapeError('expected Int64 for big') from failure
-        nickname: str | None = _OrNullJsonAdapter(_string_json_adapter()).decode_from_json(obj.property_value_or_bubble('nickname'), ic)
-        points = _list_json_adapter(_Point.json_adapter()).decode_from_json(obj.property_value_or_bubble('points'), ic)
+        nickname: str | None = _OrNullJsonAdapter(_string_json_adapter()).decode_from_json(obj.property_value_or_throw('nickname'), ic)
+        points = _list_json_adapter(_Point.json_adapter()).decode_from_json(obj.property_value_or_throw('points'), ic)
         return _Record(name, active, score, big, nickname, points)
 
     @staticmethod
@@ -278,7 +278,7 @@ class _Circle(_Shape):
         else:
             raise _JsonShapeError('expected Circle JSON object')
         obj = t_0
-        radius_tree = obj.property_value_or_bubble('radius')
+        radius_tree = obj.property_value_or_throw('radius')
         t_1: _JsonNumeric
         if isinstance(radius_tree, _JsonNumeric):
             t_1 = radius_tree
@@ -339,7 +339,7 @@ class _Rect(_Shape):
         else:
             raise _JsonShapeError('expected Rect JSON object')
         obj = t_0
-        width_tree = obj.property_value_or_bubble('width')
+        width_tree = obj.property_value_or_throw('width')
         t_1: _JsonNumeric
         if isinstance(width_tree, _JsonNumeric):
             t_1 = width_tree
@@ -350,7 +350,7 @@ class _Rect(_Shape):
             width = width_json.as_int32()
         except _ParseError as failure:
             raise _JsonShapeError('expected Int for width') from failure
-        height_tree = obj.property_value_or_bubble('height')
+        height_tree = obj.property_value_or_throw('height')
         t_2: _JsonNumeric
         if isinstance(height_tree, _JsonNumeric):
             t_2 = height_tree
@@ -444,7 +444,7 @@ class _Hello(_Message):
         else:
             raise _JsonShapeError('expected Hello JSON object')
         obj = t_0
-        text_tree = obj.property_value_or_bubble('text')
+        text_tree = obj.property_value_or_throw('text')
         t_1: _JsonString
         if isinstance(text_tree, _JsonString):
             t_1 = text_tree
@@ -496,7 +496,7 @@ class _Bye(_Message):
         else:
             raise _JsonShapeError('expected Bye JSON object')
         obj = t_0
-        text_tree = obj.property_value_or_bubble('text')
+        text_tree = obj.property_value_or_throw('text')
         t_1: _JsonString
         if isinstance(text_tree, _JsonString):
             t_1 = text_tree

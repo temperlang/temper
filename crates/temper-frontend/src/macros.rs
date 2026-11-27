@@ -187,20 +187,21 @@ impl Settle {
         }
     }
 
-    /// `x catch { … }` is `Orelse(x, { … })`, and `x catch (e) { … }`
-    /// binds the failure first, `Orelse(x, { let e = caught(); … })`,
+    /// `x catch (e) { … }` is `Orelse(x, { let e = caught(); … })`,
     /// where the hidden `caught()` is the failure the `Orelse` handles.
     /// The block is the handler's, not a function's, so `return`,
-    /// `break`, and `continue` in it leave what's around it. A `catch`
-    /// with nothing before it, as `catch (e) { … }`, which parses as
-    /// `e catch { … }`, is malformed.
+    /// `break`, and `continue` in it leave what's around it. Without a
+    /// name it's malformed (the grammar says to use `orelse`), so is a
+    /// `catch` with nothing before it, as `catch (e) { … }`, which parses
+    /// as `catch(e, { … })`.
     fn expand_catch(&mut self, call: NodeId, args: &[NodeId]) -> bool {
         let tree = &self.lib.tree;
-        let (x, binding, fun) = match *args {
-            [x, fun] => (x, None, fun),
-            [x, e, fun] if tree.kind(e) == NodeKind::LeftName => (x, Some(e), fun),
-            _ => return false,
+        let [x, e, fun] = *args else {
+            return false;
         };
+        if tree.kind(e) != NodeKind::LeftName {
+            return false;
+        }
         let callee = tree.children(call)[0];
         if tree.span(callee).start <= tree.span(x).start {
             return false;
@@ -208,23 +209,21 @@ impl Settle {
         let Some(block) = self.block_of(fun) else {
             return false;
         };
-        if let Some(e) = binding {
-            let span = self.lib.tree.span(e);
-            // Empty, after the name, so editors find the name there.
-            let after = Span {
-                start: span.end,
-                end: span.end,
-            };
-            let hidden = self.scopes.hidden(Builtin::Function(Function::Caught));
-            let caught_name = self.builtin_name(hidden, after, e);
-            let caught = self.lib.add(NodeKind::Call, after, 0, &[caught_name], e);
-            let bind = self
-                .lib
-                .add(NodeKind::Let, span, crate::core::LET_INIT, &[e, caught], e);
-            let mut statements = vec![bind];
-            statements.extend_from_slice(self.lib.tree.children(block));
-            self.set_children(block, &statements);
-        }
+        let span = self.lib.tree.span(e);
+        // Empty, after the name, so editors find the name there.
+        let after = Span {
+            start: span.end,
+            end: span.end,
+        };
+        let hidden = self.scopes.hidden(Builtin::Function(Function::Caught));
+        let caught_name = self.builtin_name(hidden, after, e);
+        let caught = self.lib.add(NodeKind::Call, after, 0, &[caught_name], e);
+        let bind = self
+            .lib
+            .add(NodeKind::Let, span, crate::core::LET_INIT, &[e, caught], e);
+        let mut statements = vec![bind];
+        statements.extend_from_slice(self.lib.tree.children(block));
+        self.set_children(block, &statements);
         self.rewrite(call, NodeKind::Orelse, 0, &[x, block]);
         true
     }

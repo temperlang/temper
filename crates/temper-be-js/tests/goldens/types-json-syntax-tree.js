@@ -112,8 +112,8 @@ const selectCodePoints = "\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e
   const s4 = '{"x":null,"y":123,"z":123456789012}';
   const ast = parseJson(s4);
   const obj = requireInstanceOf(ast, JsonObject);
-  const xAst = obj.propertyValueOrBubble("x");
-  const yAst = obj.propertyValueOrBubble("y");
+  const xAst = obj.propertyValueOrThrow("x");
+  const yAst = obj.propertyValueOrThrow("y");
   console.log(`for x, got JSON null: ${xAst instanceof JsonNull}`);
   console.log(`for y, got JSON numeric: ${yAst instanceof JsonNumeric}`);
   /** @type {OrNullJsonAdapter<number>} */
@@ -122,7 +122,7 @@ const selectCodePoints = "\x00\x01\x02\x03\x04\x05\x06\x07\x08\t\n\x0b\x0c\r\x0e
   const y2 = intOrNullAdapter2.decodeFromJson(yAst, /** @type {InterchangeContext} */ (/** @type {unknown} */ (NullInterchangeContext.instance)));
   console.log(`x ?? -1 -> ${x2 == null ? -1 : x2}`);
   console.log(`y ?? -1 -> ${y2 == null ? -1 : y2}`);
-  const zAst = obj.propertyValueOrBubble("z");
+  const zAst = obj.propertyValueOrThrow("z");
   /** @type {OrNullJsonAdapter<bigint>} */
   const int64OrNullAdapter = new OrNullJsonAdapter(int64JsonAdapter());
   const z = int64OrNullAdapter.decodeFromJson(zAst, /** @type {InterchangeContext} */ (/** @type {unknown} */ (NullInterchangeContext.instance)));

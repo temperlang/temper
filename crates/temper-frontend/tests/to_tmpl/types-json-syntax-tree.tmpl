@@ -40,7 +40,7 @@ uses std#2 0.0.0-alpha.0.0 {
       method decodeFromJson#93(t: JsonSyntaxTree#19, ic: InterchangeContext#58): T#72? throws JsonError#22;
     }
     class JsonObject#83 extends JsonSyntaxTree#19 {
-      method propertyValueOrBubble#87(propertyKey: String): JsonSyntaxTree#19 throws JsonShapeError#86;
+      method propertyValueOrThrow#87(propertyKey: String): JsonSyntaxTree#19 throws JsonShapeError#86;
     }
     class JsonShapeError#86 extends JsonError#22 {}
     class JsonNull#89 extends JsonSyntaxTree#19 {}
@@ -144,8 +144,8 @@ module `json-syntax-tree`#0 {
       let s#81: String = "{\"x\":null,\"y\":123,\"z\":123456789012}";
       let ast#82: JsonSyntaxTree#19 = parseJson#24(s#81)^;
       let obj#84: JsonObject#83 = (as(ast#82)): JsonObject#83;
-      let xAst#85: JsonSyntaxTree#19 = obj#84.propertyValueOrBubble#87("x")^;
-      let yAst#88: JsonSyntaxTree#19 = obj#84.propertyValueOrBubble#87("y")^;
+      let xAst#85: JsonSyntaxTree#19 = obj#84.propertyValueOrThrow#87("x")^;
+      let yAst#88: JsonSyntaxTree#19 = obj#84.propertyValueOrThrow#87("y")^;
       ~console#27.log#26(%String.cat("for x, got JSON null: ", is(xAst#85, JsonNull#89).toString#29()));
       ~console#27.log#26(%String.cat("for y, got JSON numeric: ", is(yAst#88, JsonNumeric#90).toString#29()));
       let intOrNullAdapter#91: OrNullJsonAdapter#71<Int32> = new constructor#75<Int32>(int32JsonAdapter#60());
@@ -153,7 +153,7 @@ module `json-syntax-tree`#0 {
       let y#94: Int32? = intOrNullAdapter#91.decodeFromJson#93(yAst#88, (upcast(instance#62)): InterchangeContext#58)^;
       ~console#27.log#26(%String.cat("x ?? -1 -> ", ((if (isNull(x#92)) %Int32.neg(1) else (nonNull(x#92)): Int32): Int32).toString#55(omitted)));
       ~console#27.log#26(%String.cat("y ?? -1 -> ", ((if (isNull(y#94)) %Int32.neg(1) else (nonNull(y#94)): Int32): Int32).toString#55(omitted)));
-      let zAst#95: JsonSyntaxTree#19 = obj#84.propertyValueOrBubble#87("z")^;
+      let zAst#95: JsonSyntaxTree#19 = obj#84.propertyValueOrThrow#87("z")^;
       let int64OrNullAdapter#96: OrNullJsonAdapter#71<Int64> = new constructor#75<Int64>(int64JsonAdapter#97());
       let z#98: Int64? = int64OrNullAdapter#96.decodeFromJson#93(zAst#95, (upcast(instance#62)): InterchangeContext#58)^;
       ~console#27.log#26(%String.cat("z ?? -1 -> ", ((if (isNull(z#98)) %Int64.neg(1i64) else (nonNull(z#98)): Int64): Int64).toString#100(omitted)));

@@ -86,7 +86,7 @@ __all__ = (
 _T = _TypeVar('_T')
 
 
-class JsonError(_Failure, Exception):
+class JsonError(_Failure):
     __slots__ = ()
 
 
@@ -234,7 +234,7 @@ class JsonObject(JsonSyntaxTree):
         else:
             return None
 
-    def property_value_or_bubble(self, property_key: str, /) -> JsonSyntaxTree:
+    def property_value_or_throw(self, property_key: str, /) -> JsonSyntaxTree:
         subject: JsonSyntaxTree | None = self.property_value_or_null(property_key)
         if subject is None:
             raise JsonShapeError(f'expected property {property_key}')

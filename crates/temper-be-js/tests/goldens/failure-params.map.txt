@@ -61,9 +61,9 @@
 117:5 -> ../failure-params.temper.md:88:7  while (i < length) { <- for (let x of xs) {
 118:7 -> ../failure-params.temper.md:88:7  const x = listedGet(/** @typ <- for (let x of xs) {
 119:7 -> ../failure-params.temper.md:88:7  i = (i + 1) | 0; <- for (let x of xs) {
-120:7 -> ../failure-params.temper.md:89:9  try { <- do { try f(x); } catch { fai
-121:9 -> ../failure-params.temper.md:89:14  f(x); <- try f(x); } catch { failed +
-124:9 -> ../failure-params.temper.md:89:34  failed = (failed + 1) | 0; <- failed += 1; }
+120:7 -> ../failure-params.temper.md:89:9  try { <- do { try f(x); } orelse do {
+121:9 -> ../failure-params.temper.md:89:14  f(x); <- try f(x); } orelse do { fail
+124:9 -> ../failure-params.temper.md:89:38  failed = (failed + 1) | 0; <- failed += 1; }
 128:3 -> ../failure-params.temper.md:91:7  return failed; <- failed
 131:1 -> ../failure-params.temper.md:104:5  /** <- let sumAll<T, E extends Erro
 137:1 -> ../failure-params.temper.md:104:5  function sumAll(xs, f) { <- let sumAll<T, E extends Erro

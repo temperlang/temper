@@ -31,7 +31,7 @@ final class Point {
 
     public static Point decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) throws JsonException {
         JsonObject obj = t instanceof JsonObject ? (JsonObject) t : Core.throwFailure(new JsonShapeException("expected Point JSON object"));
-        JsonSyntaxTree xTree = obj.propertyValueOrBubble("x");
+        JsonSyntaxTree xTree = obj.propertyValueOrThrow("x");
         JsonNumeric xJson = xTree instanceof JsonNumeric ? (JsonNumeric) xTree : Core.throwFailure(new JsonShapeException("expected Int for x"));
         int x;
         try {
@@ -39,7 +39,7 @@ final class Point {
         } catch (ParseError failure) {
             throw Core.withCause(new JsonShapeException("expected Int for x"), failure);
         }
-        JsonSyntaxTree yTree = obj.propertyValueOrBubble("y");
+        JsonSyntaxTree yTree = obj.propertyValueOrThrow("y");
         JsonNumeric yJson = yTree instanceof JsonNumeric ? (JsonNumeric) yTree : Core.throwFailure(new JsonShapeException("expected Int for y"));
         int y;
         try {

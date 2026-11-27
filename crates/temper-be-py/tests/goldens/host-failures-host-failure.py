@@ -14,7 +14,7 @@ class _connected:
         raise NotFound(key)  # noqa: F821
 
 
-class HostFailuresError(_Failure, Exception):
+class HostFailuresError(_Failure):
     __slots__ = ()
 
 

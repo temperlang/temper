@@ -250,7 +250,7 @@ def _rows(values: _Sequence[float], ncols: int, /) -> int:
     return _int_div(len(values), ncols)
 
 
-class _Problem(_Failure, Exception):
+class _Problem(_Failure):
     __slots__ = ()
 
 

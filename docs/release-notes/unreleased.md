@@ -532,9 +532,9 @@ that extend core's `Error` (`export sealed interface WherewithError
 extends Error {}`), which each backend makes the host's own exception
 type; classes extend a root, never `Error` itself. In Python, a
 library's failure types are exception classes under its roots, as
-`WherewithError(Failure, Exception)`
-with `temper_core`'s `Failure` marker, which host code catches by those
-types, never a `temper_core` one; `str(e)` is the message, and the
+`WherewithError(Failure)`, where `temper_core`'s `Failure`, core's
+`Error`, is an `Exception`; host code catches them by those types,
+never a `temper_core` one; `str(e)` is the message, and the
 cause is `__cause__`. In Java, they're unchecked exceptions under the
 roots, as `WherewithException extends RuntimeException`
 (a type named `…Error` is `…Exception`), implementing the
@@ -577,7 +577,11 @@ handles ends the run saying its message, where it was thrown, and its
 causes.
 
 Core gains an `Error` interface, the root of declared failure types. A
-library's own type named `Error` still takes its place there.
+library's own type named `Error` still takes its place there. Each
+library should declare its own roots and throw its own types for its
+own conditions, not core's: core's errors (`CoreError`'s) are for
+core's own operations, and how a backend maps core's types to the
+host's is that backend's own, which may change.
 `throws X` for an `X` that isn't a failure type or a type parameter,
 which Temper 0.6.0 took as `throws Bubble`, is an error.
 
@@ -622,7 +626,9 @@ say what went wrong:
   `Date.fromIsoString` `InvalidIsoDate`, both under `TemporalError`.
 - std `json`: `parseJson` throws `JsonSyntaxError`, and decoding JSON of
   another shape, by an adapter or `@json`'s, `JsonShapeError`, both under
-  `JsonError`; `JsonNumeric.asInt32()` and its siblings throw
+  `JsonError`; `JsonObject.propertyValueOrBubble` is now
+  `propertyValueOrThrow`, throwing `JsonShapeError` for a missing
+  property; `JsonNumeric.asInt32()` and its siblings throw
   `ParseError`; `JsonTextProducer.toJsonString()` throws
   `JsonSyntaxError` unless one whole value was produced.
 
@@ -680,8 +686,8 @@ let body = await response.bodyContent orelse null;
 let n = await count catch (e) { console.log(e.message); 0 };
 ```
 
-A generator may pass it on if it says `throws BrokenPromise` (see
-below). Each backend's runtime throws
+A generator may pass it on if it says `throws BrokenPromise`, as its
+`next()` then throws a `BrokenGenerator` caused by it (see below). Each backend's runtime throws
 its own `BrokenPromise` (Python `temper_core.BrokenPromise`, Java
 `temper.core.BrokenPromise`, and so on), and a `catch` around an
 `await` works on every backend.
@@ -733,21 +739,23 @@ fail", now returns `Ok`s; such calls didn't build before. Also fixed: a module's
 ## 🚨Breaking change: generators throw errors, not bubbles
 
 A generator body may throw what it declares, any failure type, and its
-factory then makes a `Generator<Y>`, whose `next()` throws `Error`, any
-error, instead of bubbling; the generator is done after. A body that
+factory then makes a `Generator<Y>`, whose `next()` throws core's new
+`BrokenGenerator`, under `CoreError`, instead of bubbling: its `cause` is
+the error the body threw, and the generator is done after. A body that
 declares nothing makes a `SafeGenerator<Y>`, which can't fail, as
-before; its `next()` throws `Error` too, as before it bubbled, and
-`nextSafe()` can't fail. Callers handle `next()` with `orelse` or
-`catch`, and `when` tells the errors apart. A body may declare `throws
-Error` to pass any error on, as an inner generator's:
+before; its `next()` throws `BrokenGenerator` too, as before it bubbled,
+and `nextSafe()` can't fail. Callers handle `next()` with `orelse` or
+`catch`, and `when` over `e.cause` tells the body's errors apart. A body
+passing on an inner generator's error declares `throws BrokenGenerator`,
+as any other error (`throws Error` stays only for tests and std):
 
 ```temper inert
 let g = make { (): GeneratorResult<Int> throws TooBig extends GeneratorFn =>
   yield 1;
   throw new TooBig(2);
 };
-let r = g.next() catch (e) { when (e) { is TooBig -> …; else -> … } };
-let doubled = make { (): GeneratorResult<Int> throws Error extends GeneratorFn =>
+let r = g.next() catch (e) { when (e.cause) { is TooBig -> …; else -> … } };
+let doubled = make { (): GeneratorResult<Int> throws BrokenGenerator extends GeneratorFn =>
   while (true) {
     let r = try g.next();
     if (r is ValueResult<Int>) { yield r.value * 2; } else { break; }
@@ -758,9 +766,11 @@ let doubled = make { (): GeneratorResult<Int> throws Error extends GeneratorFn =
 A body that throws where a `SafeGenerator` is wanted is an error. All
 seven backends translate generators that throw: Rust's
 `temper_core::Generator<T>`, whose `next()` gives `Result<Option<T>,
-Arc<dyn Failure>>`, and C++'s `core::Generator<T>`, whose `next` gives
-a `core::Expected<…, std::shared_ptr<core::Failure>>`; elsewhere, the
-host's exception comes out of the step, as before. Also fixed: Python's
+BrokenGenerator>`, and C++'s `core::Generator<T>`, whose `next` gives
+a `core::Expected<…, std::shared_ptr<core::BrokenGenerator>>`;
+elsewhere, each runtime raises its `BrokenGenerator` from the body's
+error (Python `temper_core.generator_next`, JavaScript
+`generatorNext`), and a panic or a host's error passes as it is. Also fixed: Python's
 `yield` of a value with an `orelse` in it.
 
 ## 🚨Breaking change: `Bubble` and `bubble()` are gone
@@ -789,7 +799,9 @@ let parseOrNull(s: String): Int? { s.toInt32() orelse null }
 let parseOrPanic(s: String): Int { s.toInt32() orelse panic() }
 ```
 
-`orelse` and `catch` stay, handling any error. With no bubbles, there
+`orelse` and `catch (e)` stay, handling any error. `catch` without a
+binding, `f() catch { 0 }`, is gone, an error saying to write `f()
+orelse 0`, which is the same. With no bubbles, there
 are no rules about mixing them with declared failures, and a call that
 may fail where nothing handles it is reported wherever it is: Temper
 0.6.0 folded a call of constants first and reported it only if the

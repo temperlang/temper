@@ -5,12 +5,13 @@ throw, as RFC 164 proposes for now, without a failure type argument.
 It assumes what `failures` does, and, of what's still open:
 
 - A generator body that declares `throws E` makes a `Generator<Y>`,
-  whose `next()` throws `Error`, any error, which callers handle; a
-  body that declares nothing makes a `SafeGenerator<Y>`, which can't
-  fail, and fits where a `Generator<Y>` is wanted. Its `next()` throws
-  `Error` too, as `Generator`'s does; its `nextSafe()` doesn't.
-- A generator body may declare `throws Error`, so it can pass on any
-  error, as an inner generator's.
+  whose `next()` throws core's `BrokenGenerator`, whose `cause` is the
+  error the body threw, which callers handle; a body that declares
+  nothing makes a `SafeGenerator<Y>`, which can't fail, and fits where
+  a `Generator<Y>` is wanted. Its `next()` throws `BrokenGenerator` too,
+  as `Generator`'s does; its `nextSafe()` doesn't.
+- A body passing on an inner generator's error declares `throws
+  BrokenGenerator`, as any other error.
 - A failure ends the generator: later calls of `next()` give a
   `DoneResult`.
 
@@ -22,15 +23,20 @@ What every section uses:
     let generated<T>(make: fn (): Generator<T>): Generator<T> { make() }
     let safely<T>(make: fn (): SafeGenerator<T>): SafeGenerator<T> { make() }
 
+    let why(e: Error): String {
+      let mine = when (e) {
+        is TooBig -> "too big ${e.n}";
+        else -> e.message;
+      };
+      let cause = e.cause;
+      if (cause == null) { mine } else { "${mine}: ${why(cause)}" }
+    }
+
     let take(g: Generator<Int>, n: Int): String {
       let taken = new ListBuilder<String>();
       while (taken.length < n) {
         let r = g.next() catch (e) {
-          let why = when (e) {
-            is TooBig -> "too big ${e.n}";
-            else -> e.message;
-          };
-          return "${taken.join(" ") { s => s }} ${why}";
+          return "${taken.join(" ") { s => s }} ${why(e)}";
         };
         if (r is ValueResult<Int>) {
           taken.add(r.value.toString());
@@ -44,8 +50,9 @@ What every section uses:
 
 ## A body that throws
 
-`upTo` counts until it passes its limit, and throws there; the
-generator is done after that:
+`upTo` counts until it passes its limit, and throws there, which
+`next()` throws as a `BrokenGenerator`'s cause; the generator is done
+after that:
 
     let upTo(limit: Int): Generator<Int> {
       generated { (): GeneratorResult<Int> throws TooBig extends GeneratorFn =>
@@ -64,8 +71,8 @@ generator is done after that:
     console.log(take(one, 9));
 
 ```log
-1 2 3 too big 4
-1 too big 2
+1 2 3 broken generator: too big 4
+1 broken generator: too big 2
 done
 ```
 
@@ -92,7 +99,7 @@ A body handles one failure itself and passes another on with `try`:
     console.log(take(squares(10), 9));
 
 ```log
-0 1 4 9 too big 16
+0 1 4 9 broken generator: too big 16
 ```
 
 ## A generator that can't fail
@@ -132,11 +139,11 @@ Its `nextSafe()` needs no handling; its `next()` does, as
 
 ## An inner generator's failure, passed on
 
-A body that declares `throws Error` passes on whatever an inner
-generator's `next()` throws:
+A body that declares `throws BrokenGenerator` passes on what an inner
+generator's `next()` throws, which is then the cause of the outer's:
 
     let doubled(inner: Generator<Int>): Generator<Int> {
-      generated { (): GeneratorResult<Int> throws Error extends GeneratorFn =>
+      generated { (): GeneratorResult<Int> throws BrokenGenerator extends GeneratorFn =>
         while (true) {
           let r = try inner.next();
           if (r is ValueResult<Int>) { yield r.value * 2; } else { break; }
@@ -148,6 +155,6 @@ generator's `next()` throws:
     console.log(take(doubled(count(2)), 9));
 
 ```log
-2 4 too big 3
+2 4 broken generator: broken generator: too big 3
 2 4 done
 ```

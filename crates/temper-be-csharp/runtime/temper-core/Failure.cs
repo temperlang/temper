@@ -30,9 +30,9 @@ namespace TemperLang.Core
 
     /// <summary>
     /// The root of core's own declared failures, <see cref="MissingKey"/>,
-    /// <see cref="ParseError"/>, <see cref="InvalidCodePoint"/>, and
-    /// <see cref="BrokenPromise"/>, as each library's roots are its
-    /// failures' (Temper's <c>CoreError</c>).
+    /// <see cref="ParseError"/>, <see cref="InvalidCodePoint"/>,
+    /// <see cref="BrokenPromise"/>, and <see cref="BrokenGenerator"/>, as
+    /// each library's roots are its failures' (Temper's <c>CoreError</c>).
     /// </summary>
     public abstract class CoreException : Exception, IFailure
     {
@@ -140,6 +140,26 @@ namespace TemperLang.Core
         }
 
         public override string Message => "broken promise";
+    }
+
+    /// <summary>
+    /// What a generator's <c>next()</c> throws when its body throws a
+    /// declared failure, which is its cause; the generator is done after.
+    /// It has no other fields.
+    /// </summary>
+    public sealed class BrokenGenerator : CoreException
+    {
+        public BrokenGenerator()
+            : this(null)
+        {
+        }
+
+        public BrokenGenerator(Exception? cause)
+            : base(cause)
+        {
+        }
+
+        public override string Message => "broken generator";
     }
 
     // Declared failures' causes. C# sets an exception's `InnerException`

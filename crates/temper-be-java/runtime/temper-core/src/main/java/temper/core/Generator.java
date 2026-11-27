@@ -21,7 +21,9 @@ public abstract class Generator<T> implements AutoCloseable, Iterable<T>, Suppli
     protected abstract Result<T> getNext();
 
     /**
-     * Computes the next result.
+     * Computes the next result. A declared failure the body throws comes
+     * out as a {@link BrokenGenerator}'s cause, and the generator is done
+     * after; anything else, a panic or a host's exception, as it is.
      *
      * @return {@link DoneResult} if {@link #getDone}() is true.
      */
@@ -35,6 +37,11 @@ public abstract class Generator<T> implements AutoCloseable, Iterable<T>, Suppli
                 Result<T> result = getNext();
                 gotValueResult = result instanceof ValueResult;
                 return result;
+            } catch (RuntimeException e) {
+                if (e instanceof Failure) {
+                    throw Core.withCause(new BrokenGenerator(), e);
+                }
+                throw e;
             } finally {
                 if (!gotValueResult) {
                     done = true;

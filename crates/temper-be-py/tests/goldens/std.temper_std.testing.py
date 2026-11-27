@@ -61,9 +61,7 @@ class Test:
             nonlocal threw
             try:
                 block()
-            except Exception as t_0:
-                if not isinstance(t_0, _Failure):
-                    raise t_0
+            except _Failure:
                 threw = True
         panicked = _block_panics(fn)
         if self._failed_on_assert:
@@ -112,9 +110,7 @@ def process_test_cases(test_cases: _Sequence[_Pair[str, _Callable[[Test], None]]
         try:
             fun(test)
             thrown = None
-        except Exception as e:
-            if not isinstance(e, _Failure):
-                raise e
+        except _Failure as e:
             thrown = e.message
         _finish_async_work()
         messages = test.messages()
@@ -210,8 +206,6 @@ def run_test(test_fun: _Callable[[Test], None], /) -> None:
     test = Test()
     try:
         test_fun(test)
-    except Exception as t_0:
-        if not isinstance(t_0, _Failure):
-            raise t_0
+    except _Failure:
         test.assert_(False, lambda: 'error during test running')
     test.soft_fail_to_hard()

@@ -1304,15 +1304,16 @@ one place each, as they may change.
 - **Core's failure types** are builtin types (`types.rs`,
   `BUILTIN_SUPERTYPES`): `CoreError`, a sealed root under `Error`, and
   `MissingKey` (`Mapped.get`, `MapBuilder.remove`), `ParseError`
-  (conversions), `InvalidCodePoint` (code points), and `BrokenPromise`
-  (`await`) under it,
+  (conversions), `InvalidCodePoint` (code points), `BrokenPromise`
+  (`await`), and `BrokenGenerator` (`Generator.next()`) under it,
   failure types as a library's are (`Types::is_failure`), and checkable
   with `is` from any failure type (`typing/rtti.rs`). The interpreter
   holds their values as `Val::CoreFailure`.
 - **`try x`** is `x` for now (RFC 164's option B): failures propagate
   with or without it. Requiring it is a later chunk.
-- **`x catch { b }`** is `Orelse(x, b)`, and **`x catch (e) { b }`**
-  binds the failure first, `Orelse(x, { let e = caught(); b })`, where
+- **`x catch (e) { b }`** is `Orelse(x, { let e = caught(); b })`
+  (`x orelse b` without a binding; a bare `catch { b }` is a syntax
+  error pointing to `orelse`), where
   the hidden builtin `caught()` has the type of what `x` may fail with
   (`caught_type`), the join of its failures (`join_failures`), so a
   `when (e)` over a sealed type needs no `else`. `catch (e) { … }` with
@@ -1360,23 +1361,21 @@ one place each, as they may change.
   `BrokenPromise` declaration), and the state machines'
   `getPromiseResultSync` all name it in one place each, which `E` will
   replace.
-- **Generators** (2026-11-26): a generator body that declares `throws
-  E` (any failure type) makes a `Generator<Y>`, whose `next()` throws
-  `Error`, any error; one that declares nothing makes a
-  `SafeGenerator<Y>`, which can't fail, so "Expected subtype of fn:
+- **Generators** (2026-11-26; t1211 2026-11-27): a generator body that
+  declares `throws E` (any failure type) makes a `Generator<Y>`, whose
+  `next()` throws core's `BrokenGenerator` (under `CoreError`), whose
+  `cause` is the error the body threw; one that declares nothing makes
+  a `SafeGenerator<Y>`, which can't fail, so "Expected subtype of fn:
   SafeGenerator<Int32>, but got fn: Generator<Int32>" where a body that
-  throws meets a `SafeGenerator` place. As Kotlin's bubbles,
-  `SafeGenerator.next()` throws `Error` too, the same
-  signature, no covariant override; `nextSafe()` is the call that can't
-  fail. Callers handle `next()`'s `Error` with `orelse` or `catch`
-  (binding `Error`, which `when` narrows); only tests, std, and
-  generator bodies may pass it on: a generator literal may declare
-  `GeneratorResult<Y> throws Error` (`Settle::may_throw_root`), as its
-  `next()` throws `Error` anyway, so it can pass on an inner generator's
-  failure. User code can't
-  write `throws Error` anywhere else. No `Generator<Y, E>`: that needs
-  default type arguments, a language change of its own. A failure ends
-  the generator.
+  throws meets a `SafeGenerator` place. `SafeGenerator.next()` throws
+  `BrokenGenerator` too, the same signature, no covariant override;
+  `nextSafe()` is the call that can't fail. Callers handle `next()` with
+  `orelse` or `catch`, and `when (e.cause)` tells the body's errors
+  apart. A body passing on an inner generator's error declares `throws
+  BrokenGenerator`, as any other: generator bodies have no `throws
+  Error` exception (only tests and std, `Settle::may_throw_root`). No
+  `Generator<Y, E>`: that needs default type arguments, a language
+  change of its own. A failure ends the generator.
 - **Not yet:** `error case`, promises with `E`, and checks that a
   failure type's own `message` or `cause` fits the root's.
 

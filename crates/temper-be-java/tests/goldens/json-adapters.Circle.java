@@ -27,7 +27,7 @@ final class Circle implements Shape {
 
     public static Circle decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) throws JsonException {
         JsonObject obj = t instanceof JsonObject ? (JsonObject) t : Core.throwFailure(new JsonShapeException("expected Circle JSON object"));
-        JsonSyntaxTree radiusTree = obj.propertyValueOrBubble("radius");
+        JsonSyntaxTree radiusTree = obj.propertyValueOrThrow("radius");
         JsonNumeric radiusJson = radiusTree instanceof JsonNumeric ? (JsonNumeric) radiusTree : Core.throwFailure(new JsonShapeException("expected Int for radius"));
         int radius;
         try {

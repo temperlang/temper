@@ -126,16 +126,16 @@ void global_init_init() {
       }
       std::shared_ptr<temper_std::JsonSyntaxTree> ast = *parseJsonResult3;
       std::shared_ptr<temper_std::JsonObject> obj = core::checked_cast<temper_std::JsonObject>(ast);
-      auto propertyValueOrBubbleResult = obj->propertyValueOrBubble(TEMPER_STR("x"));
-      if (!propertyValueOrBubbleResult.has_value()) {
-        core::uncaught_failure(propertyValueOrBubbleResult.error());
+      auto propertyValueOrThrowResult = obj->propertyValueOrThrow(TEMPER_STR("x"));
+      if (!propertyValueOrThrowResult.has_value()) {
+        core::uncaught_failure(propertyValueOrThrowResult.error());
       }
-      std::shared_ptr<temper_std::JsonSyntaxTree> xAst = *propertyValueOrBubbleResult;
-      auto propertyValueOrBubbleResult2 = obj->propertyValueOrBubble(TEMPER_STR("y"));
-      if (!propertyValueOrBubbleResult2.has_value()) {
-        core::uncaught_failure(propertyValueOrBubbleResult2.error());
+      std::shared_ptr<temper_std::JsonSyntaxTree> xAst = *propertyValueOrThrowResult;
+      auto propertyValueOrThrowResult2 = obj->propertyValueOrThrow(TEMPER_STR("y"));
+      if (!propertyValueOrThrowResult2.has_value()) {
+        core::uncaught_failure(propertyValueOrThrowResult2.error());
       }
-      std::shared_ptr<temper_std::JsonSyntaxTree> yAst = *propertyValueOrBubbleResult2;
+      std::shared_ptr<temper_std::JsonSyntaxTree> yAst = *propertyValueOrThrowResult2;
       core::Console::log(console, "for x, got JSON null: " + core::Boolean::toString(dynamic_cast<temper_std::JsonNull const *>(xAst.get()) != nullptr));
       core::Console::log(console, "for y, got JSON numeric: " + core::Boolean::toString(dynamic_cast<temper_std::JsonNumeric const *>(yAst.get()) != nullptr));
       std::shared_ptr<temper_std::OrNullJsonAdapter<int32_t>> intOrNullAdapter2 = temper_std::OrNullJsonAdapter<int32_t>::make(temper_std::int32JsonAdapter());
@@ -151,11 +151,11 @@ void global_init_init() {
       core::NullableParam<int32_t> y2 = *decodeFromJsonResult3;
       core::Console::log(console, "x ?\? -1 -> " + std::to_string(x2 == nullptr ? -1 : x2.value));
       core::Console::log(console, "y ?\? -1 -> " + std::to_string(y2 == nullptr ? -1 : y2.value));
-      auto propertyValueOrBubbleResult3 = obj->propertyValueOrBubble(TEMPER_STR("z"));
-      if (!propertyValueOrBubbleResult3.has_value()) {
-        core::uncaught_failure(propertyValueOrBubbleResult3.error());
+      auto propertyValueOrThrowResult3 = obj->propertyValueOrThrow(TEMPER_STR("z"));
+      if (!propertyValueOrThrowResult3.has_value()) {
+        core::uncaught_failure(propertyValueOrThrowResult3.error());
       }
-      std::shared_ptr<temper_std::JsonSyntaxTree> zAst = *propertyValueOrBubbleResult3;
+      std::shared_ptr<temper_std::JsonSyntaxTree> zAst = *propertyValueOrThrowResult3;
       std::shared_ptr<temper_std::OrNullJsonAdapter<int64_t>> int64OrNullAdapter = temper_std::OrNullJsonAdapter<int64_t>::make(temper_std::int64JsonAdapter());
       auto decodeFromJsonResult4 = int64OrNullAdapter->decodeFromJson(zAst, core::to_base<temper_std::InterchangeContext>(temper_std::NullInterchangeContext::temper_statics::instance.value));
       if (!decodeFromJsonResult4.has_value()) {

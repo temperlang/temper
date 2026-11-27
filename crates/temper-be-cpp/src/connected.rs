@@ -67,6 +67,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Call("Boolean::toString"),
     ),
     (
+        "core.type BrokenGenerator.constructor()",
+        Connection::Static("BrokenGenerator", "make"),
+    ),
+    (
         "core.type BrokenPromise.constructor()",
         Connection::Static("BrokenPromise", "make"),
     ),
@@ -599,6 +603,10 @@ pub const TABLE: &[(&str, Connection)] = &[
 /// Sorted by qname. String indices are `int32_t`, and the others the
 /// runtime's, as Kotlin's.
 pub const TYPES: &[(&str, &str)] = &[
+    (
+        "core.type BrokenGenerator",
+        "std::shared_ptr<core::BrokenGenerator>",
+    ),
     (
         "core.type BrokenPromise",
         "std::shared_ptr<core::BrokenPromise>",

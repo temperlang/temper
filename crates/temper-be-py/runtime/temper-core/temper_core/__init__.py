@@ -145,14 +145,14 @@ def string_builder_end(string_builder: list[str]) -> int:
     return len(compacted)
 
 
-class Failure(metaclass=ABCMeta):
+class Failure(Exception, metaclass=ABCMeta):
     """
-    Marks a Temper library's declared failures (RFC 164): each of a
-    library's root failure classes, as `WherewithError`, extends it beside
-    `Exception` (`class WherewithError(Failure, Exception)`), and its
-    failure types extend those. Host code catches those, never this: it
-    isn't an exception itself. It gives each failure `str(e)`, its
-    `message`; its cause is Python's own `__cause__`.
+    Core's `Error`, the root of every Temper library's declared failures
+    (RFC 164): each library's root failure classes, as `WherewithError`,
+    extend it (`class WherewithError(Failure)`), and its failure types
+    extend those. Host code catches a library's roots, not this, which
+    stands for failures of any library. It gives each failure `str(e)`,
+    its `message`; its cause is Python's own `__cause__`.
     """
 
     __slots__ = ()
@@ -170,11 +170,11 @@ class Failure(metaclass=ABCMeta):
 _Raised = TypeVar("_Raised", bound=BaseException)
 
 
-class CoreError(Failure, Exception):
+class CoreError(Failure):
     """
     The root of core's own declared failures, `MissingKey`, `ParseError`,
-    `InvalidCodePoint`, and `BrokenPromise`, as each library's roots are
-    its failures'.
+    `InvalidCodePoint`, `BrokenPromise`, and `BrokenGenerator`, as each
+    library's roots are its failures'.
     """
 
     __slots__ = ()
@@ -246,6 +246,34 @@ class BrokenPromise(CoreError):
     @property
     def message(self, /) -> str:
         return "broken promise"
+
+
+class BrokenGenerator(CoreError):
+    """
+    What a generator's `next()` raises when its body raises a declared
+    failure, which is its `__cause__`; the generator is done after.
+    """
+
+    __slots__ = ()
+
+    @property
+    def message(self, /) -> str:
+        return "broken generator"
+
+
+def generator_next(generator: Iterator[T], /) -> tuple[T] | None:
+    """
+    A `Generator`'s `next()`: its next value as a 1-tuple, `None` once
+    it's done, or a `BrokenGenerator` raised from the declared failure its
+    body raised, which leaves it done. Anything else, a panic or a host's
+    error, passes as it is.
+    """
+    try:
+        return (next(generator),)
+    except StopIteration:
+        return None
+    except Failure as e:
+        raise BrokenGenerator() from e
 
 
 def failure_cause(failure: Failure, /) -> Failure | None:

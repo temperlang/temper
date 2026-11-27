@@ -645,8 +645,10 @@ Generators and `async`, as Kotlin's `CoroutineStrategy` has them:
   declaration has the fact `GENERATOR` (text: `fn generator ~fn#8()`).
   Its value is a factory, typed `fn (T): SafeGenerator<Y>`, whose body
   can't fail, or `fn (T): Generator<Y>`, whose body may fail with any
-  error, as `Generator.next()` throws core's `Error` (F4, F6;
-  `failures::generator_failure`; 2026-11-26). A `SafeGenerator`'s
+  error (F4, F6; `failures::generator_failure`; 2026-11-26), and whose
+  `next()` throws core's `BrokenGenerator` with that error as its cause:
+  each backend's runtime wraps it at the generator's boundary (its
+  `next`, or the host generator's step; t1211). A `SafeGenerator`'s
   `next()`, which core overrides with that signature, is
   `Generator.next()` on the receiver upcast; its `nextSafe()` can't
   fail. Its
@@ -776,17 +778,16 @@ program that uses them (`temper_tmpl::failures::not_yet`).
   e#4)^): Int32`, `(catch(f#5()^, e#6: NotFound#1, 0)): Int32`, and
   `interface FailuresError#7 extends Error#8 {}`.
 
-**In Python** (chunk 7): core's `Error` is `temper_core.Failure`, a
-marker that isn't an exception, giving `__str__` from `message`; a
-root is `class FailuresError(Failure, Exception)`, the failure types
+**In Python** (chunk 7; t1169): core's `Error` is `temper_core.Failure`,
+an `Exception` giving `__str__` from `message`; a
+root is `class FailuresError(Failure)`, the failure types
 classes under it (a sealed interface abstract, by `Failure`'s
 `ABCMeta`). `Throw` is `raise`, `raise X(…) from cause` where it makes
 the failure, else `raise with_cause(x, cause)`, which keeps a cause it
 has. `OrElse` and `Catch` are `try`/`except` of exactly what the body
 may fail with: the join of its failures (`failures::failures_under`,
 `join`), so panics and hosts' errors pass; where the join is core's
-`Error`, `except Exception as e:` then `if not isinstance(e, Failure):
-raise e`, which checkers narrow. `cause` is `failure_cause(e)`, `__cause__` where it's a
+`Error`, `except Failure as e:`. `cause` is `failure_cause(e)`, `__cause__` where it's a
 `Failure`; `~caught` read after a jumping fallback is asserted not
 null for checkers.
 

@@ -21,7 +21,7 @@ class _connected:
         raise NotFound(key)  # noqa: F821
 
 
-class HostFailuresError(_Failure, Exception):
+class HostFailuresError(_Failure):
     __slots__ = ()
 
 
@@ -54,8 +54,6 @@ try:
     if _int_add(_n, _m) > 2:
         raise BaseException('panic')
     _p = _int_div(10, _int_sub(_n, _m))
-except Exception as _t_0:
-    if not isinstance(_t_0, _Failure):
-        raise _t_0
+except _Failure:
     _p = -1
 _console.log(f'after {_p}')

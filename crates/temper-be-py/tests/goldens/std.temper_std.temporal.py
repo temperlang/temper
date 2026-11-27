@@ -3,7 +3,7 @@ from temper_core import Failure as _Failure
 __all__ = ('TemporalError', 'InvalidDate', 'InvalidIsoDate')
 
 
-class TemporalError(_Failure, Exception):
+class TemporalError(_Failure):
     __slots__ = ()
 
 

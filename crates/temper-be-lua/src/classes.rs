@@ -244,6 +244,7 @@ impl Translator<'_> {
             "core.type ParseError" => Some("ParseError"),
             "core.type InvalidCodePoint" => Some("InvalidCodePoint"),
             "core.type BrokenPromise" => Some("BrokenPromise"),
+            "core.type BrokenGenerator" => Some("BrokenGenerator"),
             _ => None,
         }
     }

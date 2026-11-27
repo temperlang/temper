@@ -20,7 +20,7 @@ uses std#19 0.0.0-alpha.0.0 {
     interface InterchangeContext#26 {}
     interface JsonError#27 extends Error#29 {}
     class JsonObject#131 extends JsonSyntaxTree#25 {
-      method propertyValueOrBubble#137(propertyKey: String): JsonSyntaxTree#25 throws JsonShapeError#133;
+      method propertyValueOrThrow#137(propertyKey: String): JsonSyntaxTree#25 throws JsonShapeError#133;
       method propertyValueOrNull#240(propertyKey: String): JsonSyntaxTree#25?;
     }
     class JsonShapeError#133 extends JsonError#27 {
@@ -110,10 +110,10 @@ module `json-adapters`#0 {
     }
     static fn decodeFromJson#37(t#129: JsonSyntaxTree#25, ic#130: InterchangeContext#26): Point#2 throws JsonError#27 {
       let obj#132: JsonObject#131 = (if (is(t#129, JsonObject#131)) (downcast(t#129)): JsonObject#131 else (throw(new constructor#135("expected Point JSON object"))^): JsonObject#131): JsonObject#131;
-      let xTree#136: JsonSyntaxTree#25 = obj#132.propertyValueOrBubble#137("x")^;
+      let xTree#136: JsonSyntaxTree#25 = obj#132.propertyValueOrThrow#137("x")^;
       let xJson#139: JsonNumeric#138 = (if (is(xTree#136, JsonNumeric#138)) (downcast(xTree#136)): JsonNumeric#138 else (throw(new constructor#135("expected Int for x"))^): JsonNumeric#138): JsonNumeric#138;
       let x#140: Int32 = (catch(xJson#139.asInt32#143()^, ~failure#144: ParseError#141, (throw(new constructor#135("expected Int for x"), ~failure#144)^): Int32)): Int32;
-      let yTree#145: JsonSyntaxTree#25 = obj#132.propertyValueOrBubble#137("y")^;
+      let yTree#145: JsonSyntaxTree#25 = obj#132.propertyValueOrThrow#137("y")^;
       let yJson#146: JsonNumeric#138 = (if (is(yTree#145, JsonNumeric#138)) (downcast(yTree#145)): JsonNumeric#138 else (throw(new constructor#135("expected Int for y"))^): JsonNumeric#138): JsonNumeric#138;
       let y#147: Int32 = (catch(yJson#146.asInt32#143()^, ~failure#148: ParseError#141, (throw(new constructor#135("expected Int for y"), ~failure#148)^): Int32)): Int32;
       return new constructor#39(x#140, y#147);
@@ -166,20 +166,20 @@ module `json-adapters`#0 {
     }
     static fn decodeFromJson#54(t#168: JsonSyntaxTree#25, ic#169: InterchangeContext#26): Record#4 throws JsonError#27 {
       let obj#170: JsonObject#131 = (if (is(t#168, JsonObject#131)) (downcast(t#168)): JsonObject#131 else (throw(new constructor#135("expected Record JSON object"))^): JsonObject#131): JsonObject#131;
-      let nameTree#171: JsonSyntaxTree#25 = obj#170.propertyValueOrBubble#137("name")^;
+      let nameTree#171: JsonSyntaxTree#25 = obj#170.propertyValueOrThrow#137("name")^;
       let nameJson#173: JsonString#172 = (if (is(nameTree#171, JsonString#172)) (downcast(nameTree#171)): JsonString#172 else (throw(new constructor#135("expected String for name"))^): JsonString#172): JsonString#172;
       let name#174: String = nameJson#173.content#175;
-      let activeTree#176: JsonSyntaxTree#25 = obj#170.propertyValueOrBubble#137("is-active")^;
+      let activeTree#176: JsonSyntaxTree#25 = obj#170.propertyValueOrThrow#137("is-active")^;
       let activeJson#178: JsonBoolean#177 = (if (is(activeTree#176, JsonBoolean#177)) (downcast(activeTree#176)): JsonBoolean#177 else (throw(new constructor#135("expected Boolean for is-active"))^): JsonBoolean#177): JsonBoolean#177;
       let active#179: Boolean = activeJson#178.content#180;
-      let scoreTree#181: JsonSyntaxTree#25 = obj#170.propertyValueOrBubble#137("score")^;
+      let scoreTree#181: JsonSyntaxTree#25 = obj#170.propertyValueOrThrow#137("score")^;
       let scoreJson#182: JsonNumeric#138 = (if (is(scoreTree#181, JsonNumeric#138)) (downcast(scoreTree#181)): JsonNumeric#138 else (throw(new constructor#135("expected Float64 for score"))^): JsonNumeric#138): JsonNumeric#138;
       let score#183: Float64 = (catch(scoreJson#182.asFloat64#184()^, ~failure#185: ParseError#141, (throw(new constructor#135("expected Float64 for score"), ~failure#185)^): Float64)): Float64;
-      let bigTree#186: JsonSyntaxTree#25 = obj#170.propertyValueOrBubble#137("big")^;
+      let bigTree#186: JsonSyntaxTree#25 = obj#170.propertyValueOrThrow#137("big")^;
       let bigJson#187: JsonNumeric#138 = (if (is(bigTree#186, JsonNumeric#138)) (downcast(bigTree#186)): JsonNumeric#138 else (throw(new constructor#135("expected Int64 for big"))^): JsonNumeric#138): JsonNumeric#138;
       let big#188: Int64 = (catch(bigJson#187.asInt64#189()^, ~failure#190: ParseError#141, (throw(new constructor#135("expected Int64 for big"), ~failure#190)^): Int64)): Int64;
-      let nickname#191: String? = new constructor#164<String>(stringJsonAdapter#165()).decodeFromJson#192(obj#170.propertyValueOrBubble#137("nickname")^, ic#169)^;
-      let points#193: List#48<Point#2> = listJsonAdapter#166<Point#2>(jsonAdapter#38()).decodeFromJson#30(obj#170.propertyValueOrBubble#137("points")^, ic#169)^;
+      let nickname#191: String? = new constructor#164<String>(stringJsonAdapter#165()).decodeFromJson#192(obj#170.propertyValueOrThrow#137("nickname")^, ic#169)^;
+      let points#193: List#48<Point#2> = listJsonAdapter#166<Point#2>(jsonAdapter#38()).decodeFromJson#30(obj#170.propertyValueOrThrow#137("points")^, ic#169)^;
       return new constructor#56(name#174, active#179, score#183, big#188, nickname#191, points#193);
     }
     static fn jsonAdapter#55(): JsonAdapter#21<Record#4> {
@@ -210,7 +210,7 @@ module `json-adapters`#0 {
     }
     static fn decodeFromJson#62(t#205: JsonSyntaxTree#25, ic#206: InterchangeContext#26): Circle#6 throws JsonError#27 {
       let obj#207: JsonObject#131 = (if (is(t#205, JsonObject#131)) (downcast(t#205)): JsonObject#131 else (throw(new constructor#135("expected Circle JSON object"))^): JsonObject#131): JsonObject#131;
-      let radiusTree#208: JsonSyntaxTree#25 = obj#207.propertyValueOrBubble#137("radius")^;
+      let radiusTree#208: JsonSyntaxTree#25 = obj#207.propertyValueOrThrow#137("radius")^;
       let radiusJson#209: JsonNumeric#138 = (if (is(radiusTree#208, JsonNumeric#138)) (downcast(radiusTree#208)): JsonNumeric#138 else (throw(new constructor#135("expected Int for radius"))^): JsonNumeric#138): JsonNumeric#138;
       let radius#210: Int32 = (catch(radiusJson#209.asInt32#143()^, ~failure#211: ParseError#141, (throw(new constructor#135("expected Int for radius"), ~failure#211)^): Int32)): Int32;
       return new constructor#64(radius#210);
@@ -247,10 +247,10 @@ module `json-adapters`#0 {
     }
     static fn decodeFromJson#71(t#218: JsonSyntaxTree#25, ic#219: InterchangeContext#26): Rect#8 throws JsonError#27 {
       let obj#220: JsonObject#131 = (if (is(t#218, JsonObject#131)) (downcast(t#218)): JsonObject#131 else (throw(new constructor#135("expected Rect JSON object"))^): JsonObject#131): JsonObject#131;
-      let widthTree#221: JsonSyntaxTree#25 = obj#220.propertyValueOrBubble#137("width")^;
+      let widthTree#221: JsonSyntaxTree#25 = obj#220.propertyValueOrThrow#137("width")^;
       let widthJson#222: JsonNumeric#138 = (if (is(widthTree#221, JsonNumeric#138)) (downcast(widthTree#221)): JsonNumeric#138 else (throw(new constructor#135("expected Int for width"))^): JsonNumeric#138): JsonNumeric#138;
       let width#223: Int32 = (catch(widthJson#222.asInt32#143()^, ~failure#224: ParseError#141, (throw(new constructor#135("expected Int for width"), ~failure#224)^): Int32)): Int32;
-      let heightTree#225: JsonSyntaxTree#25 = obj#220.propertyValueOrBubble#137("height")^;
+      let heightTree#225: JsonSyntaxTree#25 = obj#220.propertyValueOrThrow#137("height")^;
       let heightJson#226: JsonNumeric#138 = (if (is(heightTree#225, JsonNumeric#138)) (downcast(heightTree#225)): JsonNumeric#138 else (throw(new constructor#135("expected Int for height"))^): JsonNumeric#138): JsonNumeric#138;
       let height#227: Int32 = (catch(heightJson#226.asInt32#143()^, ~failure#228: ParseError#141, (throw(new constructor#135("expected Int for height"), ~failure#228)^): Int32)): Int32;
       return new constructor#73(width#223, height#227);
@@ -317,7 +317,7 @@ module `json-adapters`#0 {
     }
     static fn decodeFromJson#85(t#246: JsonSyntaxTree#25, ic#247: InterchangeContext#26): Hello#12 throws JsonError#27 {
       let obj#248: JsonObject#131 = (if (is(t#246, JsonObject#131)) (downcast(t#246)): JsonObject#131 else (throw(new constructor#135("expected Hello JSON object"))^): JsonObject#131): JsonObject#131;
-      let textTree#249: JsonSyntaxTree#25 = obj#248.propertyValueOrBubble#137("text")^;
+      let textTree#249: JsonSyntaxTree#25 = obj#248.propertyValueOrThrow#137("text")^;
       let textJson#250: JsonString#172 = (if (is(textTree#249, JsonString#172)) (downcast(textTree#249)): JsonString#172 else (throw(new constructor#135("expected String for text"))^): JsonString#172): JsonString#172;
       let text#251: String = textJson#250.content#175;
       return new constructor#87(text#251);
@@ -352,7 +352,7 @@ module `json-adapters`#0 {
     }
     static fn decodeFromJson#93(t#258: JsonSyntaxTree#25, ic#259: InterchangeContext#26): Bye#14 throws JsonError#27 {
       let obj#260: JsonObject#131 = (if (is(t#258, JsonObject#131)) (downcast(t#258)): JsonObject#131 else (throw(new constructor#135("expected Bye JSON object"))^): JsonObject#131): JsonObject#131;
-      let textTree#261: JsonSyntaxTree#25 = obj#260.propertyValueOrBubble#137("text")^;
+      let textTree#261: JsonSyntaxTree#25 = obj#260.propertyValueOrThrow#137("text")^;
       let textJson#262: JsonString#172 = (if (is(textTree#261, JsonString#172)) (downcast(textTree#261)): JsonString#172 else (throw(new constructor#135("expected String for text"))^): JsonString#172): JsonString#172;
       let text#263: String = textJson#262.content#175;
       return new constructor#95(text#263);

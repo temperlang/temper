@@ -1510,28 +1510,20 @@ impl<'a> Translator<'a> {
     }
 
     /// What a handler around `body` catches, the `except` clause's
-    /// class: the failure class nearest above all its declared failures,
-    /// never what else Python raises, so panics and hosts' errors pass.
-    /// Where that's core's `Error`, the runtime's `Failure` marker, for
-    /// failures of several libraries' roots, which isn't an exception,
-    /// the clause catches `Exception`, and the classes come second, for
-    /// the handler to raise again what isn't one of them.
-    fn handled(&mut self, body: NodeId) -> R<(Expr, Option<Expr>)> {
+    /// class: the failure class nearest above all its declared failures
+    /// (the runtime's `Failure` for core's `Error`, failures of several
+    /// libraries), never what else Python raises, so panics and hosts'
+    /// errors pass.
+    fn handled(&mut self, body: NodeId) -> R<Expr> {
         let p = self.p;
         let fails: Vec<TypeId> = (temper_tmpl::failures::failures_under(p, body).into_iter())
             .map(|(_, f)| f)
             .collect();
         let root = temper_tmpl::failures::root(p);
-        let join = temper_tmpl::failures::join(p, root, &fails);
-        let marker = join.is_some_and(|ty| nominal_decl(p, ty) == root);
-        let classes = match join {
+        Ok(match temper_tmpl::failures::join(p, root, &fails) {
             Some(ty) => self.type_ref(ty)?,
             // A body that can't fail, which backends drop first: nothing.
             None => Expr::Tuple(Vec::new()),
-        };
-        Ok(match marker {
-            true => (Expr::builtin("Exception"), Some(classes)),
-            false => (classes, None),
         })
     }
 
@@ -1615,18 +1607,8 @@ impl<'a> Translator<'a> {
                     Sink::Discard => Sink::Discard,
                 };
                 self.value_into(body, sink, &mut tried)?;
-                let (class, only) = self.handled(body)?;
+                let class = self.handled(body)?;
                 let mut bound = local.map(|l| self.name(l));
-                // Of all it catches, only failures, raising the rest again.
-                if let Some(only) = only {
-                    let name = Expr::name(bound.get_or_insert_with(|| self.temp()).clone());
-                    let test = Expr::builtin("isinstance").call(vec![name.clone(), only]);
-                    caught.push(Stmt::If {
-                        cond: Expr::unary(tree::Unary::Not, test),
-                        then: vec![Stmt::Raise(name)],
-                        els: Vec::new(),
-                    });
-                }
                 // `orelse panic()` panics with the failure as its cause.
                 match self.p.nodes.get(fallback) {
                     Node::Panic {} => {
@@ -2902,8 +2884,8 @@ pub(crate) fn core_type(qname: &str) -> Option<(&'static str, &'static str)> {
         "core.type StringBuilder" => ("builtins", "list[str]"),
         "core.type Deque" => ("collections", "deque"),
         "core.type DenseBitVector" => ("temper_core", "DenseBitVector"),
-        // Core's root of declared failures, the runtime's marker, which
-        // each library's failure roots extend beside `Exception`.
+        // Core's root of declared failures, which each library's
+        // failure roots extend.
         "core.type Error" => ("temper_core", "Failure"),
         // Core's own failures, the runtime's classes.
         "core.type CoreError" => ("temper_core", "CoreError"),
@@ -2911,6 +2893,7 @@ pub(crate) fn core_type(qname: &str) -> Option<(&'static str, &'static str)> {
         "core.type ParseError" => ("temper_core", "ParseError"),
         "core.type InvalidCodePoint" => ("temper_core", "InvalidCodePoint"),
         "core.type BrokenPromise" => ("temper_core", "BrokenPromise"),
+        "core.type BrokenGenerator" => ("temper_core", "BrokenGenerator"),
         // `()`, its one value. Kotlin's `_empty` is undefined.
         "core.type Empty" => ("builtins", "tuple[()]"),
         // `temper_core`'s `concurrent.futures.Future`, which asyncio can

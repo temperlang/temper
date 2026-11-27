@@ -9,7 +9,7 @@ from temper_core import (
 __all__ = ()
 
 
-class _Problem(_Failure, Exception):
+class _Problem(_Failure):
     __slots__ = ()
 
 

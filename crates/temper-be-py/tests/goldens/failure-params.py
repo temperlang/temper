@@ -31,7 +31,7 @@ _T = _TypeVar('_T')
 _R = _TypeVar('_R')
 
 
-class _FailureParamsError(_Failure, Exception):
+class _FailureParamsError(_Failure):
     __slots__ = ()
 
 
@@ -104,9 +104,7 @@ def _failures(xs: _Sequence[_T], f: _Callable[[_T], _R], /) -> int:
         i = _int_add(i, 1)
         try:
             f(x)
-        except Exception as t_0:
-            if not isinstance(t_0, _Failure):
-                raise t_0
+        except _Failure:
             failed = _int_add(failed, 1)
     return failed
 
@@ -121,9 +119,7 @@ def _sum_all(xs: _Sequence[_T], f: _Callable[[_T], int], /) -> int:
         i = _int_add(i, 1)
         try:
             total = _int_add(total, f(x))
-        except Exception as e:
-            if not isinstance(e, _Failure):
-                raise e
+        except _Failure as e:
             if first is None:  # pyright: ignore[reportUnnecessaryComparison]
                 first = e
     failed: _Failure | None = first

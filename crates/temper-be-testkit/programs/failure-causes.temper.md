@@ -21,7 +21,7 @@ code that reads them too (`failures-interop`'s); Rust doesn't yet.
     export class Wrapped(public label: String, public first: Wrapped?) extends FailureCausesError {}
 
     export let wrapLookup(name: String): Int throws Wrapped {
-      lookup(name) catch { throw new Wrapped("outer", new Wrapped("inner", null)); }
+      lookup(name) orelse throw new Wrapped("outer", new Wrapped("inner", null))
     }
 
     export class Retry extends FailureCausesError {
@@ -34,7 +34,7 @@ code that reads them too (`failures-interop`'s); Rust doesn't yet.
     }
 
     export let retried(name: String, n: Int): Int throws Retry {
-      lookup(name) catch {
+      lookup(name) orelse do {
         if (n > 1) { throw new Retry(name, n); }
         throw new Retry(name);
       }

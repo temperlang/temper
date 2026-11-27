@@ -32,7 +32,7 @@ __all__ = (
 )
 
 
-class FailuresInteropError(_Failure, Exception):
+class FailuresInteropError(_Failure):
     __slots__ = ()
 
 

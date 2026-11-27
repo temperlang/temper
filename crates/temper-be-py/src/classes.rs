@@ -389,15 +389,13 @@ impl Translator<'_> {
             }
             // Another library's is imported as its other names are; core's
             // types aren't classes to extend, but for `Error`, which only
-            // a library's failure roots extend: it's an
-            // `Exception`, with the runtime's `Failure` as its marker, and
-            // that first, for its `__str__`.
+            // a library's failure roots extend: the runtime's `Failure`,
+            // an `Exception`.
             if is_external(p, s) && temper_tmpl::qname::library_of(p, s) == "core" {
                 if temper_tmpl::failures::root(p) != Some(s) {
                     return not_yet("a class extending a core type");
                 }
                 bases.push(self.import("temper_core", "Failure"));
-                bases.push("Exception".into());
                 continue;
             }
             // With its type arguments, as `Holder[T]`.

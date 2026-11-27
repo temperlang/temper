@@ -173,8 +173,8 @@ package `__init__.py` does `from .<root> import *` and imports every module.
   a promise argument now needs a cast for strict checkers).
 - Declared failures (RFC 164, in progress): each failure type is an
   exception class under one of the library's roots, sealed interfaces it
-  declares, `WherewithError(Failure, Exception)`, with `temper_core.Failure` only as a marker (not an
-  exception); `str(e)` is its message, its cause `__cause__`.
+  declares, `WherewithError(Failure)`, where `temper_core.Failure`, core's `Error`, is an
+  `Exception`; `str(e)` is its message, its cause `__cause__`.
 
 **Naming.** Values, functions, methods and properties are snake_case; types
 keep their case. Reserved words get `_` (`from_`; `to` stays `to`). Internal

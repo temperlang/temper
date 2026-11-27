@@ -41,7 +41,7 @@ code reads too, and `failure-jumps`.
     }
 
     export let setting(name: String): Int throws LookupFailed {
-      lookup(name) catch { throw new LookupFailed(name); }
+      lookup(name) orelse throw new LookupFailed(name)
     }
 
 A failure made before it's thrown in a handler takes the handled one as
@@ -51,11 +51,11 @@ the first is Temper's `cause` alone there:
 
     export let madeBefore(name: String): Int throws LookupFailed {
       let failure = new LookupFailed(name);
-      lookup(name) catch { throw failure; }
+      lookup(name) orelse throw failure
     }
 
     export let thrownAgain(name: String): Int throws LookupFailed {
-      setting(name) catch (e) { lookup("q") catch { throw e; } }
+      setting(name) catch (e) { lookup("q") orelse throw e }
     }
 
 And a panic, which no handler catches:

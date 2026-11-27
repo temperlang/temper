@@ -23,7 +23,16 @@ namespace TemperLang.Core
             // are their own IEnumerators so this should be the same object.
             // Cast instead of calling GetEnumerator() to avoid any reset.
             IEnumerator<T> enumerator = generator.GetEnumerator();
-            bool hasNext = enumerator.MoveNext();
+            bool hasNext;
+            try
+            {
+                hasNext = enumerator.MoveNext();
+            }
+            catch (Exception e) when (e is IFailure)
+            {
+                // A declared failure of the body's, which leaves it done.
+                throw new BrokenGenerator(e);
+            }
             if (hasNext)
             {
                 return new ValueResult<T>(enumerator.Current);

@@ -21,7 +21,7 @@
 33:3 -> ../host-failures.temper.md:29:5  get message() { <- export class NotFound(public
 34:5 -> ../host-failures.temper.md:29:5  return `not found (key: ${th <- export class NotFound(public
 38:1 -> ../host-failures.temper.md:38:5  console.log("before"); <- console.log("before");
-39:1 -> ../host-failures.temper.md:65:5  /** @type {number} */ <- let h = hostLookup("bug") ca
-40:1 -> ../host-failures.temper.md:65:5  export let h; <- let h = hostLookup("bug") ca
-41:1 -> ../host-failures.temper.md:65:5  try { <- let h = hostLookup("bug") ca
+39:1 -> ../host-failures.temper.md:65:5  /** @type {number} */ <- let h = hostLookup("bug") or
+40:1 -> ../host-failures.temper.md:65:5  export let h; <- let h = hostLookup("bug") or
+41:1 -> ../host-failures.temper.md:65:5  try { <- let h = hostLookup("bug") or
 47:1 -> ../host-failures.temper.md:66:5  console.log(`after ${h}`); <- console.log("after ${h}");

@@ -39,6 +39,18 @@ local function safely(make)
   return make()
 end
 
+---@param e temper.Failure
+---@return string
+local function why(e)
+  local mine = temper.instance_of(e, TooBig) and "too big " .. (e --[[@as failure-generators.TooBig]]).n or e.message
+  local cause = temper.failure_cause(e)
+  if temper.is_null(cause) then
+    return mine
+  else
+    return mine .. ": " .. why(cause --[[@as temper.Failure]])
+  end
+end
+
 ---@param g temper.Generator
 ---@param n integer
 ---@return string
@@ -48,21 +60,20 @@ local function take(g, n)
     ---@type table
     local r
     local failed = false
-    ---@type temper.Failure|temper.Null
+    ---@type temper.BrokenGenerator|temper.Null
     local caught = temper.null
     ---@type table|temper.Null
     local held = temper.null
     local t, failure = temper.catch(function()
       held = { temper.generator_next(g) }
-    end, temper.Failure)
+    end, temper.BrokenGenerator)
     if not t then
       caught = failure
       failed = true
     end
     if failed then
-      local e = caught --[[@as temper.Failure]]
-      local why = temper.instance_of(e, TooBig) and "too big " .. (e --[[@as failure-generators.TooBig]]).n or e.message
-      return temper.listed_join(taken, " ", function(s) return s end) .. " " .. why
+      local e = caught --[[@as temper.BrokenGenerator]]
+      return temper.listed_join(taken, " ", function(s) return s end) .. " " .. why(e)
     else
       r = held --[[@as table]]
     end
@@ -156,7 +167,7 @@ local function firstTwo(g)
   local b
   if not temper.catch(function()
     b = shown({ temper.generator_next(g) })
-  end, temper.Failure) then
+  end, temper.BrokenGenerator) then
     b = "failed"
   end
   return a .. " " .. b

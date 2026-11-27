@@ -55,25 +55,35 @@ static std::shared_ptr<core::SafeGenerator<T>> safely(std::function<std::shared_
   return make_();
 }
 
+static core::Str why(std::shared_ptr<core::Failure> const & e) {
+  core::Str mine = dynamic_cast<TooBig const *>(e.get()) != nullptr ? core::Str("too big " + std::to_string(core::checked_cast<TooBig>(e)->n)) : e->get_message();
+  std::shared_ptr<core::Failure> cause = e->get_cause();
+  if (cause == nullptr) {
+    return mine;
+  } else {
+    return mine + ": " + failure_generators::why(cause);
+  }
+}
+
 static core::Str take(std::shared_ptr<core::Generator<int32_t>> const & g, int32_t n) {
   std::shared_ptr<std::vector<core::Str>> taken = core::ListBuilder::make<core::Str>();
   while (core::List::length<core::Str>(taken) < n) {
     std::shared_ptr<core::GeneratorResult<int32_t>> r;
     bool failed = false;
-    std::shared_ptr<core::Failure> caught = nullptr;
+    std::shared_ptr<core::BrokenGenerator> caught = nullptr;
     std::shared_ptr<core::GeneratorResult<int32_t>> held = nullptr;
     auto Result = core::next(g);
     if (Result.has_value()) {
       held = *Result;
     } else {
-      std::shared_ptr<core::Failure> failure = Result.error();
+      std::shared_ptr<core::BrokenGenerator> failure = Result.error();
       caught = failure;
       failed = true;
     }
     if (failed) {
-      std::shared_ptr<core::Failure> e = caught;
-      core::Str why = dynamic_cast<TooBig const *>(e.get()) != nullptr ? core::Str("too big " + std::to_string(core::checked_cast<TooBig>(e)->n)) : e->get_message();
-      return core::List::join(taken, TEMPER_STR(" "), [](core::Str s) -> core::Str { return s; }) + " " + why;
+      std::shared_ptr<core::BrokenGenerator> e = caught;
+      core::Str join = core::List::join(taken, TEMPER_STR(" "), [](core::Str s) -> core::Str { return s; });
+      return join + " " + failure_generators::why(core::to_base<core::Failure>(e));
     } else {
       r = held;
     }

@@ -41,7 +41,7 @@ internal class Hello : IMessage
         {
             throw new JsonShapeException("expected Hello JSON object");
         }
-        IJsonSyntaxTree textTree = obj.PropertyValueOrBubble("text");
+        IJsonSyntaxTree textTree = obj.PropertyValueOrThrow("text");
         JsonString textJson;
         if (textTree is JsonString)
         {

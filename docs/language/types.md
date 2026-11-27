@@ -1705,9 +1705,12 @@ This method is more likely to change or be removed before Temper 1.0 than most
 
 The root of core's own failure types, [*MissingKey*](#class-missingkey),
 [*ParseError*](#class-parseerror),
-[*InvalidCodePoint*](#class-invalidcodepoint), and
-[*BrokenPromise*](#class-brokenpromise), as a library's roots are its
-failures'.
+[*InvalidCodePoint*](#class-invalidcodepoint),
+[*BrokenPromise*](#class-brokenpromise), and
+[*BrokenGenerator*](#class-brokengenerator), as a library's roots are its
+failures'. They're for core's own operations: a library declares its
+own roots for its own conditions and throws those, not core's (how each
+backend maps core's types to the host's is the backend's own).
 
 ## *class MissingKey*
 
@@ -1754,6 +1757,16 @@ something a program can recover from, so it's declared, not a panic. It
 has no fields, as a broken promise doesn't say why; its message is
 `broken promise`. Each `await` of a broken promise throws one, so async
 code handles it, with `orelse` or `catch`, where it awaits.
+
+## *class BrokenGenerator*
+
+`class BrokenGenerator extends CoreError`
+
+What [`Generator.next`](#generatornext) throws when the generator's body
+throws: its `cause` is the error the body threw, and the generator is
+done. It has no other fields; its message is `broken generator`. A body
+passing on an inner generator's error declares `throws BrokenGenerator`,
+as any other error.
 
 ## *class Pair*
 
@@ -2106,7 +2119,7 @@ would get [*true*](builtins.md#true).
 
 ##### `Generator.next`
 
-`:` `fn(`[*Generator*](#interface-generator)&lt;[*YIELD*](#generatoryield)&gt;`):` [*GeneratorResult*](#interface-generatorresult)&lt;[*YIELD*](#generatoryield)&gt; `throws` [*Error*](#interface-error)
+`:` `fn(`[*Generator*](#interface-generator)&lt;[*YIELD*](#generatoryield)&gt;`):` [*GeneratorResult*](#interface-generatorresult)&lt;[*YIELD*](#generatoryield)&gt; `throws` [*BrokenGenerator*](#class-brokengenerator)
 
 Starts/resumes the computation and runs until it pauses or completes.
 
@@ -2119,7 +2132,8 @@ If the computation pauses, returns the value associated with the
 decision to pause.
 For a [*GeneratorFn*](#interface-generatorfn), this is the value passed to
 [# `yield()` builtin](builtins.md#yield).  If a *GeneratorFn* throws, the call to
-next throws it, any [*Error*](#interface-error), and the generator is done.
+next throws a [*BrokenGenerator*](#class-brokengenerator) whose cause is what
+it threw, and the generator is done.
 
 ##### `Generator.close`
 
@@ -2150,7 +2164,7 @@ when computing the next result. Its *next* still throws, as
 
 ##### `SafeGenerator.next`
 
-`:` `fn(`[*SafeGenerator*](#interface-safegenerator)&lt;[*YIELD*](#safegeneratoryield)&gt;`):` [*GeneratorResult*](#interface-generatorresult)&lt;[*YIELD*](#safegeneratoryield)&gt; `throws` [*Error*](#interface-error)
+`:` `fn(`[*SafeGenerator*](#interface-safegenerator)&lt;[*YIELD*](#safegeneratoryield)&gt;`):` [*GeneratorResult*](#interface-generatorresult)&lt;[*YIELD*](#safegeneratoryield)&gt; `throws` [*BrokenGenerator*](#class-brokengenerator)
 
 Starts/resumes the computation and runs until it pauses or completes.
 
@@ -2270,7 +2284,11 @@ handles.
 Each failure type is under one of its library's roots, sealed interfaces
 that extend *Error* itself, as `sealed interface LookupError extends
 Error {}`; classes extend a root, or a sealed interface under one, never
-*Error* itself. *Error* itself isn't one a function may throw.
+*Error* itself. *Error* itself isn't one a function may throw. Each
+library should declare its own roots, and throw its own types for its
+own conditions, not core's ([*CoreError*](#interface-coreerror)'s are
+for core's operations, and how a backend maps them to the host's types
+is its own).
 
 *Error* `extends` [*AnyValue*](#interface-anyvalue)
 

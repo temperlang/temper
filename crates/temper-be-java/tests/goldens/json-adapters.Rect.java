@@ -31,7 +31,7 @@ final class Rect implements Shape {
 
     public static Rect decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) throws JsonException {
         JsonObject obj = t instanceof JsonObject ? (JsonObject) t : Core.throwFailure(new JsonShapeException("expected Rect JSON object"));
-        JsonSyntaxTree widthTree = obj.propertyValueOrBubble("width");
+        JsonSyntaxTree widthTree = obj.propertyValueOrThrow("width");
         JsonNumeric widthJson = widthTree instanceof JsonNumeric ? (JsonNumeric) widthTree : Core.throwFailure(new JsonShapeException("expected Int for width"));
         int width;
         try {
@@ -39,7 +39,7 @@ final class Rect implements Shape {
         } catch (ParseError failure) {
             throw Core.withCause(new JsonShapeException("expected Int for width"), failure);
         }
-        JsonSyntaxTree heightTree = obj.propertyValueOrBubble("height");
+        JsonSyntaxTree heightTree = obj.propertyValueOrThrow("height");
         JsonNumeric heightJson = heightTree instanceof JsonNumeric ? (JsonNumeric) heightTree : Core.throwFailure(new JsonShapeException("expected Int for height"));
         int height;
         try {

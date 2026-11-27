@@ -15,7 +15,7 @@ def _boo() -> None:
     _console.log('boo')
 
 
-class _Problem(_Failure, Exception):
+class _Problem(_Failure):
     __slots__ = ()
 
 

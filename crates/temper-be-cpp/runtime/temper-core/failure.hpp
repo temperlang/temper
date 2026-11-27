@@ -212,6 +212,19 @@ namespace temper {
             }
         };
 
+        // What a generator's `next` gives when its body fails, with that
+        // failure as its cause; the generator is done after. It has no
+        // other fields.
+        struct BrokenGenerator : public virtual CoreError {
+            static std::shared_ptr<BrokenGenerator> make() {
+                return std::make_shared<BrokenGenerator>();
+            }
+
+            Str get_message() const override {
+                return Str("broken generator");
+            }
+        };
+
         // A promise's result once settled: its value, or a `BrokenPromise`.
         template<class T>
         using Awaited = Expected<T, std::shared_ptr<BrokenPromise>>;

@@ -10,9 +10,8 @@ on every backend. The log is what the interpreter gives. It assumed:
 - `try` is written wherever a failure propagates, which is right
   whether `try` ends up optional or required. Nothing leaves it out, and
   nothing checks what leaving it out does.
-- `throw x`, `f() catch (e) { … }`, `f() catch { … }`, `do { … } catch
-  (e) { … }`, and `orelse`, with parentheses wherever precedence might
-  matter.
+- `throw x`, `f() catch (e) { … }`, `do { … } catch (e) { … }`, and
+  `orelse`, with parentheses wherever precedence might matter.
 - Nothing reads a failure's message or cause (`host-failures` shows
   those), nor depends on how the compiler holds `T throws E`.
 - A `for … of` body passes failures through, as one would expect of a
@@ -50,7 +49,7 @@ doesn't. The block's value is the expression's when it fails:
       console.log("not found: ${e.key}");
       0
     };
-    let m = lookup("b") catch { -1 };
+    let m = lookup("b") orelse -1;
     console.log("${n} ${m}");
 
 ```log
@@ -174,7 +173,7 @@ a loop, a handler's block may `break` or `continue`:
     let pair(a: String, b: String): String {
       do {
         let x = try lookup(a);
-        let y = lookup(b) catch { 0 };
+        let y = lookup(b) orelse 0;
         "${x}+${y}"
       } catch (e) {
         "outer ${e.key}"
@@ -184,7 +183,7 @@ a loop, a handler's block may `break` or `continue`:
 
     var total = 0;
     for (let k of ["a", "b", "c", "a"]) {
-      total += lookup(k) catch { break; };
+      total += lookup(k) orelse break;
     }
     console.log(total.toString());
 

@@ -205,7 +205,7 @@ def resized(more: bool, /) -> int:
     return len(sizes)
 
 
-class OptionError(_Failure, Exception):
+class OptionError(_Failure):
     __slots__ = ()
 
 

@@ -56,6 +56,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Static("Boolean", "toString"),
     ),
     (
+        "core.type BrokenGenerator.constructor()",
+        Connection::Translate(new_broken_generator),
+    ),
+    (
         "core.type BrokenPromise.constructor()",
         Connection::Translate(new_broken_promise),
     ),
@@ -590,6 +594,13 @@ pub struct TypeConnection {
 
 /// Sorted by qname.
 pub const TYPES: &[(&str, TypeConnection)] = &[
+    (
+        "core.type BrokenGenerator",
+        TypeConnection {
+            name: "BrokenGenerator",
+            import: "temper.core.BrokenGenerator",
+        },
+    ),
     (
         "core.type BrokenPromise",
         TypeConnection {
@@ -1223,7 +1234,8 @@ fn new_value_result(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, Not
 
 /// `Core.safeAdaptGeneratorFn(step::apply)`, a step function a generator,
 /// for `adaptGeneratorFn` too: Java's failures are unchecked, so a step
-/// that throws passes it out of `get()`, leaving the generator done.
+/// that throws passes it out of `get()` as a `BrokenGenerator`'s cause,
+/// leaving the generator done.
 fn safe_adapt_generator_fn(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let step = one(t, args, "safeAdaptGeneratorFn")?;
     t.import("temper.core.Core");
@@ -1254,6 +1266,17 @@ fn break_promise(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet
     t.import("temper.core.BrokenPromise");
     let broken = Expr::New("BrokenPromise".into(), Vec::new());
     Ok(b.method("completeExceptionally", vec![broken]))
+}
+
+/// `new BrokenGenerator()`, the runtime's class.
+fn new_broken_generator(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    if !args.is_empty() {
+        return Err(NotYet {
+            what: "`BrokenGenerator` with arguments".into(),
+        });
+    }
+    t.import("temper.core.BrokenGenerator");
+    Ok(Expr::New("BrokenGenerator".into(), Vec::new()))
 }
 
 /// `new BrokenPromise()`, the runtime's class.

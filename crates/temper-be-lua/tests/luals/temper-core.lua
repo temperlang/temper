@@ -418,6 +418,18 @@ temper.BrokenPromise = {}
 ---@return temper.BrokenPromise
 function temper.brokenpromise_constructor() end
 
+---What a generator's step raises for its body's declared failure, which
+---is its cause. It has no fields.
+---@class temper.BrokenGenerator: temper.CoreError
+
+---Its type, whose call makes one.
+---@type temper.Type
+temper.BrokenGenerator = {}
+
+---A `BrokenGenerator`.
+---@return temper.BrokenGenerator
+function temper.brokengenerator_constructor() end
+
 ---Raises a `ParseError` of `input`, as text, and why.
 ---@param input string
 ---@param reason string

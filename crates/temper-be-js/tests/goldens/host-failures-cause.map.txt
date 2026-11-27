@@ -7,7 +7,7 @@
 18:1 -> ../host-failures.temper.md:87:5  export function setting(name <- let setting(name: String): I
 18:17 -> ../host-failures.temper.md:87:9 (setting)  setting(name) { <- setting(name: String): Int t
 18:24 -> ../host-failures.temper.md:87:5  (name) { <- let setting(name: String): I
-19:3 -> ../host-failures.temper.md:88:7  try { <- hostLookup(name) catch { thr
+19:3 -> ../host-failures.temper.md:88:7  try { <- hostLookup(name) orelse thro
 27:1 -> ../host-failures.temper.md:28:5  export class HostFailuresErr <- export sealed interface Host
 27:14 -> ../host-failures.temper.md:28:29 (HostFailuresError)  HostFailuresError extends Er <- HostFailuresError extends Er
 27:31 -> ../host-failures.temper.md:28:5   extends Error {} <- export sealed interface Host

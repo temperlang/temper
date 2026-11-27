@@ -8,7 +8,7 @@ class _connected:
         raise RuntimeError(f"host bug {n}")
 
 
-class OopsError(_Failure, Exception):
+class OopsError(_Failure):
     __slots__ = ()
 
 

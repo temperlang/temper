@@ -377,6 +377,7 @@ pub enum CoreError {
     ParseError(ParseError),
     InvalidCodePoint(InvalidCodePoint),
     BrokenPromise(BrokenPromise),
+    BrokenGenerator(BrokenGenerator),
 }
 
 crate::impl_failure_enum!(
@@ -384,7 +385,8 @@ crate::impl_failure_enum!(
     MissingKey(MissingKey),
     ParseError(ParseError),
     InvalidCodePoint(InvalidCodePoint),
-    BrokenPromise(BrokenPromise)
+    BrokenPromise(BrokenPromise),
+    BrokenGenerator(BrokenGenerator)
 );
 
 pub struct MissingKeyStruct {
@@ -556,3 +558,35 @@ impl Default for BrokenPromise {
 crate::impl_failure!(BrokenPromise, message, cause);
 
 crate::impl_any_value_trait!(BrokenPromise, [CoreError]);
+
+pub struct BrokenGeneratorStruct {
+    cause: Cause,
+}
+
+/// What a generator's `next()` gives when its body fails, with that
+/// failure as its cause; the generator is done after. It has no other
+/// fields.
+#[derive(Clone)]
+pub struct BrokenGenerator(Arc<BrokenGeneratorStruct>);
+
+impl BrokenGenerator {
+    pub fn new() -> BrokenGenerator {
+        BrokenGenerator(Arc::new(BrokenGeneratorStruct {
+            cause: Cause::new(),
+        }))
+    }
+
+    pub fn message(&self) -> Arc<String> {
+        Arc::new("broken generator".to_string())
+    }
+}
+
+impl Default for BrokenGenerator {
+    fn default() -> BrokenGenerator {
+        BrokenGenerator::new()
+    }
+}
+
+crate::impl_failure!(BrokenGenerator, message, cause);
+
+crate::impl_any_value_trait!(BrokenGenerator, [CoreError]);

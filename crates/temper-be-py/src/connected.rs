@@ -47,6 +47,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Translate(boolean_to_string),
     ),
     (
+        "core.type BrokenGenerator.constructor()",
+        Connection::Runtime("BrokenGenerator"),
+    ),
+    (
         "core.type BrokenPromise.constructor()",
         Connection::Runtime("BrokenPromise"),
     ),
@@ -183,7 +187,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "core.type Generator.next()",
-        Connection::Translate(next_safe),
+        Connection::Runtime("generator_next"),
     ),
     ("core.type Int32.max()", Connection::Builtin("max")),
     ("core.type Int32.min()", Connection::Builtin("min")),
@@ -626,8 +630,8 @@ fn int_to_string(mut args: Vec<Option<Expr>>, im: Import) -> Translated {
 /// `GeneratorResult`, with the generator itself yielding bare values for
 /// Python's own loops. A bare `next`, as Kotlin's, raises `StopIteration`
 /// once the generator is done, where `nextSafe` says it's done. A
-/// `Generator`'s `next()` is the same: what its body raises comes out of
-/// it, and the generator is done after.
+/// `Generator`'s `next()` is the runtime's `generator_next`, the same but
+/// raising a `BrokenGenerator` from what the body raises.
 fn next_safe(mut args: Vec<Option<Expr>>, _: Import) -> Translated {
     let g = arg(&mut args, 0).unwrap_or(Expr::None);
     let one = Expr::Lambda(

@@ -8,8 +8,8 @@ extern crate self as temper_core;
 
 pub mod failure;
 pub use failure::{
-    into_ok, with_cause, BrokenPromise, Cause, CoreError, Failure, InvalidCodePoint, MissingKey,
-    ParseError,
+    into_ok, with_cause, BrokenGenerator, BrokenPromise, Cause, CoreError, Failure,
+    InvalidCodePoint, MissingKey, ParseError,
 };
 pub mod float64;
 pub mod generator;

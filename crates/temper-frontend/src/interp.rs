@@ -293,6 +293,25 @@ impl CoreFailure {
         }))
     }
 
+    /// A fieldless `type_name` thrown with `cause`, where `cause` was
+    /// first thrown, as a generator's `next()` throws a `BrokenGenerator`
+    /// for what its body threw.
+    fn caused(type_name: &'static str, cause: Val) -> Val {
+        let at = thrown_cell(&cause)
+            .and_then(|c| c.get())
+            .map_or(0, |t| t.at);
+        let thrown = OnceCell::new();
+        _ = thrown.set(Box::new(Thrown {
+            at,
+            cause: Some(Cause(cause)),
+        }));
+        Val::CoreFailure(Rc::new(CoreFailure {
+            type_name,
+            fields: Vec::new(),
+            thrown,
+        }))
+    }
+
     /// Thrown as a `ParseError` of `input`, the text or number converted,
     /// and `reason`, as `not an Int32`.
     fn parse_error(input: String, reason: &str) -> Abrupt {
@@ -825,8 +844,9 @@ impl Interp<'_> {
     /// `next()`, or `nextSafe()`: runs a generator's body on to its next
     /// `yield`, giving a `ValueResult`, or to its end, giving a
     /// `DoneResult`, as do later calls. A failure in the body comes out of
-    /// `next()`. Only the run queue resumes a body paused at an `await`,
-    /// so one that pauses there under `next()` panics.
+    /// `next()` as a `BrokenGenerator`'s cause. Only the run queue resumes
+    /// a body paused at an `await`, so one that pauses there under
+    /// `next()` panics.
     fn resume(&mut self, s: &Settled, generator: &Generator) -> R {
         match self.step(s, generator) {
             Err(Abrupt::Yield(value)) => Ok(Val::ValueResult(Rc::new(value))),
@@ -837,6 +857,9 @@ impl Interp<'_> {
                 ))
             }
             Ok(_) => Ok(Val::DoneResult),
+            Err(Abrupt::Throw(cause)) => {
+                Err(Abrupt::Throw(CoreFailure::caused("BrokenGenerator", cause)))
+            }
             Err(abrupt) => Err(abrupt),
         }
     }
@@ -917,6 +940,9 @@ impl Interp<'_> {
                 }
                 Some((Val::BuiltinType(t), [])) if TYPES[*t as usize] == "BrokenPromise" => {
                     Ok(CoreFailure::value("BrokenPromise", Vec::new()))
+                }
+                Some((Val::BuiltinType(t), [])) if TYPES[*t as usize] == "BrokenGenerator" => {
+                    Ok(CoreFailure::value("BrokenGenerator", Vec::new()))
                 }
                 Some((Val::BuiltinType(t), [key])) if TYPES[*t as usize] == "MissingKey" => {
                     Ok(CoreFailure::value("MissingKey", vec![("key", key.clone())]))
@@ -1358,7 +1384,7 @@ fn is_builtin_type(value: &Val, ty: &str) -> bool {
         "Promise" => matches!(value, Val::Promise(_)),
         "PromiseBuilder" => matches!(value, Val::PromiseBuilder(_)),
         "CoreError" => matches!(value, Val::CoreFailure(_)),
-        "MissingKey" | "ParseError" | "InvalidCodePoint" | "BrokenPromise" => {
+        "MissingKey" | "ParseError" | "InvalidCodePoint" | "BrokenPromise" | "BrokenGenerator" => {
             matches!(value, Val::CoreFailure(f) if f.type_name == ty)
         }
         "AnyValue" => !matches!(value, Val::Null),

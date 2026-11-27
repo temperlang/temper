@@ -41,7 +41,7 @@ internal class Bye : IMessage
         {
             throw new JsonShapeException("expected Bye JSON object");
         }
-        IJsonSyntaxTree textTree = obj.PropertyValueOrBubble("text");
+        IJsonSyntaxTree textTree = obj.PropertyValueOrThrow("text");
         JsonString textJson;
         if (textTree is JsonString)
         {

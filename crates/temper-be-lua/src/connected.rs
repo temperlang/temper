@@ -44,6 +44,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Translate(boolean_to_string),
     ),
     (
+        "core.type BrokenGenerator.constructor()",
+        Connection::Helper("brokengenerator_constructor"),
+    ),
+    (
         "core.type BrokenPromise.constructor()",
         Connection::Helper("brokenpromise_constructor"),
     ),
@@ -638,7 +642,8 @@ fn string_begin(_: &mut Translator<'_>, _: &[NodeId]) -> Result<Expr, NotYet> {
 /// `{ temper.generator_next(g) }`: a step's result as a table, `{ true,
 /// value }`, or `{}` once the generator is done, since the runtime's
 /// generators give Lua's `for` loops `true` and the value, or nothing;
-/// a `Generator`'s `next()` too, which raises what its body raises.
+/// a `Generator`'s `next()` too, which raises a `BrokenGenerator` for
+/// what its body raises (the runtime's generators do).
 fn next_safe(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let [g] = args else {
         return Err(NotYet {

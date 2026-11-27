@@ -13,7 +13,7 @@ from temper_std.testing import Test
 from unittest import TestCase
 
 
-class _AtError(Failure, Exception):
+class _AtError(Failure):
     __slots__ = ()
 
 

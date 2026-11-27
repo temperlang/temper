@@ -65,36 +65,46 @@ pub(crate) fn safely<T: Clone + Send + Sync + 'static>(
     make()
 }
 
+pub(crate) fn why(e: Arc<dyn temper_core::Failure>) -> Arc<String> {
+    let mine = if temper_core::is::<TooBig>(e.clone()) {
+        Arc::new(format!(
+            "too big {}",
+            temper_core::cast::<TooBig>(e.clone()).unwrap().0.n
+        ))
+    } else {
+        e.message()
+    };
+    let cause = temper_core::Failure::cause(&*e);
+    if let Some(cause) = &cause {
+        Arc::new(format!("{mine}: {}", why(cause.clone())))
+    } else {
+        mine.clone()
+    }
+}
+
 pub(crate) fn take(g: temper_core::Generator<i32>, n: i32) -> Arc<String> {
     let taken: temper_core::ListBuilder<Arc<String>> = temper_core::listed::new_builder();
     while temper_core::ListedTrait::len(&taken) < n {
         let mut failed = false;
-        let mut caught: Option<Arc<dyn temper_core::Failure>> = None;
+        let mut caught: Option<temper_core::BrokenGenerator> = None;
         let mut held: Option<Option<i32>> = None;
         if let Err(failure) = (|| {
             held = Some(g.next()?);
-            Ok::<_, Arc<dyn temper_core::Failure>>(())
+            Ok::<_, temper_core::BrokenGenerator>(())
         })() {
             caught = Some(failure.clone());
             failed = true;
         }
         let r: Option<i32> = if failed {
             let e = caught.clone().unwrap();
-            let why = if temper_core::is::<TooBig>(e.clone()) {
-                Arc::new(format!(
-                    "too big {}",
-                    temper_core::cast::<TooBig>(e.clone()).unwrap().0.n
-                ))
-            } else {
-                e.message()
-            };
             return Arc::new(format!(
-                "{} {why}",
+                "{} {}",
                 temper_core::listed::join(
                     &taken,
                     Arc::new(" ".to_string()),
                     &(|s: Arc<String>| s.clone()),
-                )
+                ),
+                why(temper_core::failure::failure(e.clone()))
             ));
         } else {
             held.unwrap()
@@ -244,7 +254,7 @@ pub(crate) fn shown(r: Option<i32>) -> Arc<String> {
 pub(crate) fn first_two(g: temper_core::SafeGenerator<i32>) -> Arc<String> {
     let a = shown(g.next_safe());
     let b = (|| {
-        Ok::<_, Arc<dyn temper_core::Failure>>(shown(
+        Ok::<_, temper_core::BrokenGenerator>(shown(
             temper_core::Generator::from(g.clone()).next()?,
         ))
     })()

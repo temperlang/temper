@@ -384,15 +384,15 @@ error.
   looser than any binary operator but `orelse`, `catch`, and assignment,
   so a comma, `orelse`, or `catch` ends it: `f(try a(), try b())`, and
   `try f() orelse 0` is `(try f()) orelse 0`.
-- `catch` handles failures of the expression on its left with a block,
-  which may bind the failure first. `do { … } catch` is `catch` after a
-  `do` block.
+- `catch (e)` handles failures of the expression on its left with a
+  block, binding the failure as `e`. `do { … } catch (e)` is `catch`
+  after a `do` block. Without a binding, use `orelse`: `f() orelse 0`.
 - `error case Name(…)` declares a failure type. `error` and `case` stay
   names everywhere else.
 
 ```temper
 let n = parse(s) catch (e) { log(e); 0 };
-let m = parse(s) catch { 0 };
+let m = parse(s) orelse 0;
 let v = do { try a(); try b() } catch (e) { fallback };
 error case NotFound;
 error case BadWord(public text: String);
@@ -402,12 +402,14 @@ error case BadWord(public text: String);
 The handler is always a block, as an `if`'s is, so `break`, `continue`,
 and `return` in it leave the loop or function around it. `catch` binds a
 little tighter than `orelse` and chains to the left, so
-`f() catch { a } orelse b` is `(f() catch { a }) orelse b`. A `catch`
-block ends its expression: `f() catch { 0 } + 1` is an error, and needs
-parentheses, `(f() catch { 0 }) + 1`.
+`f() catch (e) { a } orelse b` is `(f() catch (e) { a }) orelse b`. A
+`catch` block ends its expression: `f() catch (e) { 0 } + 1` is an
+error, and needs parentheses, `(f() catch (e) { 0 }) + 1`. `catch`
+without a binding, `f() catch { 0 }`, is an error that points to
+`orelse`.
 
 ```ebnf
-Catch := Expr "catch" ("(" LeftName ")")? StmtBlock
+Catch := Expr "catch" "(" LeftName ")" StmtBlock
 ErrorCase := "error" "case" LeftName CallArgs?
 ```
 
@@ -423,14 +425,17 @@ How they're typed, for now:
   may have several. Classes extend a root, or a sealed interface under
   one, whose classes are its variants, never *Error* itself. A failure
   type has no type parameters and extends one failure type. `throws E`
-  takes one or a type parameter; `throw` takes a value of one.
+  takes one or a type parameter; `throw` takes a value of one. A
+  library throws its own types for its own conditions, not core's,
+  which are for core's operations (how a backend maps core's types to
+  the host's is its own).
 - A function passes on a failure of its own failure type, or of one of
   its variants, with `try` or, for now, without it. Any other failure
   must be handled there, and converting one is explicit: `f() catch (e)
   { throw new Mine(e.key) }`.
 - `catch (e)` binds what its left side may fail with, the closest type
   of all of it, so a `when (e)` over a sealed failure type needs no
-  `else`. `orelse` and `catch` without a binding handle any failure.
+  `else`. `orelse` handles any failure.
 - Failures are for what a caller may handle, as text that doesn't
   parse; a bug is a [`panic()`](builtins.md#panic), which no handler
   catches. Temper 0.6's `bubble()` and `throws Bubble` are gone: declare

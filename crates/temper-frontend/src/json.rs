@@ -733,7 +733,7 @@ impl Settle {
             let local_ph = g.ph(Sub::Name(local_name));
             let ty_ph = g.ph(Sub::Copy(ty));
             let key = g.string(&f.key);
-            let tree_expr = format!("obj.propertyValueOrBubble({key})");
+            let tree_expr = format!("obj.propertyValueOrThrow({key})");
             let value = match self.prim(ty) {
                 Some(prim) => {
                     // The cast in a local of its own, where Kotlin reads

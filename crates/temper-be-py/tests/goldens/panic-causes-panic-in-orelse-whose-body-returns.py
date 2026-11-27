@@ -3,7 +3,7 @@ from temper_core import Failure as _Failure, LoggingConsole as _LoggingConsole
 __all__ = ()
 
 
-class _Problem(_Failure, Exception):
+class _Problem(_Failure):
     __slots__ = ()
 
 

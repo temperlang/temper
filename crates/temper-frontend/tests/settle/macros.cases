@@ -848,7 +848,7 @@ console.log("runs");
 let f(): Int { 1 }
 let a = try f();
 let b = f() catch (e) { 0 };
-let c = do { f() } catch { 0 };
+let c = do { f() } orelse 0;
 error case NotFound;
 let g(): Int { throw 1 }
 --- settled
@@ -857,10 +857,10 @@ let g(): Int { throw 1 }
   (Let ^f:0 (Fn Int (Block 1)))
   (Let ^a:1 (Call f:0))
   (Let ^b:2 (Orelse (Call f:0) (Block (Let ^e:5 (Call caught)) 0)))
-  (Let ^c:3 (Orelse (Block (Call f:0)) (Block 0)))
+  (Let ^c:3 (Orelse (Block (Call f:0)) 0))
   (Error)
   (Let ^g:4 (Fn Int (Block (Fail 1)))))
-error 118..137: Not supported yet: `error case`, part of declared failures
-error 160..161: Expected subtype of Error, but got Int32
+error 115..134: Not supported yet: `error case`, part of declared failures
+error 157..158: Expected subtype of Error, but got Int32
 log runs
 Panicked: Not supported yet: `error case`, part of declared failures

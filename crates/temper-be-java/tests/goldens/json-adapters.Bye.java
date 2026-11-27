@@ -28,7 +28,7 @@ final class Bye implements Message {
 
     public static Bye decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) throws JsonException {
         JsonObject obj = t instanceof JsonObject ? (JsonObject) t : Core.throwFailure(new JsonShapeException("expected Bye JSON object"));
-        JsonSyntaxTree textTree = obj.propertyValueOrBubble("text");
+        JsonSyntaxTree textTree = obj.propertyValueOrThrow("text");
         JsonString textJson = textTree instanceof JsonString ? (JsonString) textTree : Core.throwFailure(new JsonShapeException("expected String for text"));
         String text = textJson.content;
         return new Bye(text);

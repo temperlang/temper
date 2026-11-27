@@ -304,7 +304,7 @@ pub enum Stmt {
     /// ignore[…]`, where a checker's rule doesn't fit the code.
     Commented(Box<Stmt>, String),
     /// `try: …`, then `except Name: …` if `except` gives the class to
-    /// catch (a failure class, `Exception` for failures under several
+    /// catch (a failure class, `Failure` for failures under several
     /// roots, or a tuple), with `as name` if it names what's
     /// caught, then `finally: …` if it isn't empty.
     Try {

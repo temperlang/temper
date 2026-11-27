@@ -129,6 +129,7 @@ pub const PRINTED: &[&str] = &[
     "float64ToInt64",
     "float64ToInt64Unsafe",
     "float64ToString",
+    "generatorNext",
     "int64Max",
     "int64Min",
     "int64ToFloat64",

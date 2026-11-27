@@ -22,13 +22,13 @@
 46:1 -> ../failures-interop.temper.md:43:5  export function setting(name <- export let setting(name: Str
 46:17 -> ../failures-interop.temper.md:43:16 (setting)  setting(name) { <- setting(name: String): Int t
 46:24 -> ../failures-interop.temper.md:43:5  (name) { <- export let setting(name: Str
-47:3 -> ../failures-interop.temper.md:44:7  try { <- lookup(name) catch { throw n
+47:3 -> ../failures-interop.temper.md:44:7  try { <- lookup(name) orelse throw ne
 55:1 -> ../failures-interop.temper.md:52:5  /** <- export let madeBefore(name:
 60:1 -> ../failures-interop.temper.md:52:5  export function madeBefore(n <- export let madeBefore(name:
 60:17 -> ../failures-interop.temper.md:52:16 (madeBefore)  madeBefore(name) { <- madeBefore(name: String): In
 60:27 -> ../failures-interop.temper.md:52:5  (name) { <- export let madeBefore(name:
 61:3 -> ../failures-interop.temper.md:53:7  const failure = new LookupFa <- let failure = new LookupFail
-62:3 -> ../failures-interop.temper.md:54:7  try { <- lookup(name) catch { throw f
+62:3 -> ../failures-interop.temper.md:54:7  try { <- lookup(name) orelse throw fa
 70:1 -> ../failures-interop.temper.md:57:5  /** <- export let thrownAgain(name:
 75:1 -> ../failures-interop.temper.md:57:5  export function thrownAgain( <- export let thrownAgain(name:
 75:17 -> ../failures-interop.temper.md:57:16 (thrownAgain)  thrownAgain(name) { <- thrownAgain(name: String): I

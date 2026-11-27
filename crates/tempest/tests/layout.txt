@@ -332,6 +332,7 @@ csharp types/string/is-empty is-empty/src/IsEmpty.csproj
 csharp types/string/is-empty is-empty/src/IsEmptyGlobal.cs
 csharp types/string/is-empty is-empty/src/Logging.cs
 java * temper-core/pom.xml
+java * temper-core/src/main/java/temper/core/BrokenGenerator.java
 java * temper-core/src/main/java/temper/core/BrokenPromise.java
 java * temper-core/src/main/java/temper/core/Core.java
 java * temper-core/src/main/java/temper/core/CoreException.java

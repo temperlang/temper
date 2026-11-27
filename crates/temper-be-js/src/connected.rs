@@ -46,6 +46,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Translate(to_string),
     ),
     (
+        "core.type BrokenGenerator.constructor()",
+        Connection::Translate(broken_generator),
+    ),
+    (
         "core.type BrokenPromise.constructor()",
         Connection::Translate(broken_promise),
     ),
@@ -137,7 +141,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "core.type Generator.next()",
-        Connection::Translate(next_safe),
+        Connection::Helper("generatorNext"),
     ),
     ("core.type Int32.max()", Connection::Math("max")),
     ("core.type Int32.min()", Connection::Math("min")),
@@ -629,8 +633,9 @@ fn promise(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     Ok(one(t, args, "promise")?.member("promise"))
 }
 
-/// `g.next()`: a JS generator's step, as Kotlin's, for `nextSafe()` and
-/// a `Generator`'s `next()`, which throws what its body throws.
+/// `g.next()`: a JS generator's step, as Kotlin's, for `nextSafe()`. A
+/// `Generator`'s `next()` is the runtime's `generatorNext(g)`, which
+/// throws a `BrokenGenerator` for what its body throws.
 fn next_safe(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     Ok(one(t, args, "nextSafe")?.method("next", Vec::new()))
 }
@@ -747,6 +752,13 @@ fn date_from_iso_string(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr,
     args.push(Expr::name(t.import_std("temporal", "InvalidIsoDate")));
     t.import("dateFromIsoString");
     Ok(Expr::name("dateFromIsoString").call(args))
+}
+
+/// `new BrokenGenerator()`, the runtime's class.
+fn broken_generator(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let args = t.in_order(args)?;
+    t.import("BrokenGenerator");
+    Ok(Expr::New(Box::new(Expr::name("BrokenGenerator")), args))
 }
 
 /// `new BrokenPromise()`, the runtime's class.

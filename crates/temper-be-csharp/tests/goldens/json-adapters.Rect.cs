@@ -52,7 +52,7 @@ internal class Rect : IShape
         {
             throw new JsonShapeException("expected Rect JSON object");
         }
-        IJsonSyntaxTree widthTree = obj.PropertyValueOrBubble("width");
+        IJsonSyntaxTree widthTree = obj.PropertyValueOrThrow("width");
         IJsonNumeric widthJson;
         if (widthTree is IJsonNumeric)
         {
@@ -71,7 +71,7 @@ internal class Rect : IShape
         {
             throw Core.WithCause(new JsonShapeException("expected Int for width"), failure);
         }
-        IJsonSyntaxTree heightTree = obj.PropertyValueOrBubble("height");
+        IJsonSyntaxTree heightTree = obj.PropertyValueOrThrow("height");
         IJsonNumeric heightJson;
         if (heightTree is IJsonNumeric)
         {

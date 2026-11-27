@@ -300,13 +300,19 @@ end
 -- the coroutine to its next yield, giving `true` and what it yielded, or
 -- nothing once it's done, so Lua's generic `for` loops over it:
 -- `for _ in generator do ... end`. A step that fails leaves it done, and
--- stepping it when done gives nothing again, rather than an error.
+-- stepping it when done gives nothing again, rather than an error. A
+-- declared failure of the body's is raised as a `BrokenGenerator`'s
+-- cause; anything else, a panic or a host's error, as it is.
 local generator_meta = {}
 
 local function generator_stepped(self, co, ok, ...)
     if not ok then
         self.co = nil
-        error((...), 0)
+        local err = (...)
+        if temper.is_failure(err) then
+            err = temper.with_cause(temper.BrokenGenerator(), err)
+        end
+        error(err, 0)
     end
     if coroutine.status(co) == "dead" then
         self.co = nil
@@ -836,8 +842,9 @@ do
     -- root `CoreError`; `MissingKey`, what a map's `get` raises for a key
     -- it doesn't have; `ParseError`, what a conversion raises; and
     -- `InvalidCodePoint`, what making a string from a code point raises
-    -- for one that isn't a Unicode scalar value; and `BrokenPromise`, what
-    -- awaiting a broken promise raises.
+    -- for one that isn't a Unicode scalar value; `BrokenPromise`, what
+    -- awaiting a broken promise raises; and `BrokenGenerator`, what a
+    -- generator's step raises for its body's failure, its cause.
     temper.CoreError = temper.type("temper.CoreError", temper.Failure)
     temper.MissingKey = temper.type("temper.MissingKey", temper.CoreError)
     function temper.MissingKey.constructor(this, key)
@@ -865,6 +872,10 @@ do
     function temper.BrokenPromise.get.message()
         return "broken promise"
     end
+    temper.BrokenGenerator = temper.type("temper.BrokenGenerator", temper.CoreError)
+    function temper.BrokenGenerator.get.message()
+        return "broken generator"
+    end
 end
 
 function temper.missingkey_constructor(key)
@@ -881,6 +892,10 @@ end
 
 function temper.brokenpromise_constructor()
     return temper.BrokenPromise()
+end
+
+function temper.brokengenerator_constructor()
+    return temper.BrokenGenerator()
 end
 
 -- Raises a `ParseError` of `input`, as text, and why.

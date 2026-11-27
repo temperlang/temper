@@ -40,7 +40,7 @@ internal class Circle : IShape
         {
             throw new JsonShapeException("expected Circle JSON object");
         }
-        IJsonSyntaxTree radiusTree = obj.PropertyValueOrBubble("radius");
+        IJsonSyntaxTree radiusTree = obj.PropertyValueOrThrow("radius");
         IJsonNumeric radiusJson;
         if (radiusTree is IJsonNumeric)
         {

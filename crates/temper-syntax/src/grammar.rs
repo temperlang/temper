@@ -1117,15 +1117,15 @@ impl Grammar {
     }
 
     /// Catch := Catch y callTree(( y Expr y "catch".rename(catch) y shiftLeft y
-    ///     ((Curly y ( y (ParenGroup y ( y "(" y (Leaf y ( y leftName(unreservedWordMatcher) y ))
+    ///     (Curly y ( y (ParenGroup y ( y "(" y (Leaf y ( y leftName(unreservedWordMatcher) y ))
     ///       y ")" y )) y
-    ///       funTree(RawBlock) y ))
-    ///     / (CurlyGroup y ( y funTree(RawBlock) y ))) y ))
+    ///       funTree(RawBlock) y )) y ))
     ///
-    /// Ours (RFC 164): `f() catch (e) { … }` or `f() catch { … }`, as
-    /// `catch(f(), ^e, fn { … })`. The block is a function's only as an
-    /// `if`'s is: jumps in it leave the enclosing function or loop. Anything
-    /// else after `catch` is an error over the whole expression.
+    /// Ours (RFC 164): `f() catch (e) { … }`, as `catch(f(), ^e, fn { … })`.
+    /// The block is a function's only as an `if`'s is: jumps in it leave
+    /// the enclosing function or loop. Anything else after `catch` is an
+    /// error over the whole expression, a block without a name too, which
+    /// is `orelse`'s.
     fn catch(&mut self, p: usize) -> R {
         let p = self.check(p, self.is(p, O::Catch))?;
         first!(
@@ -1137,27 +1137,16 @@ impl Grammar {
                     let p = g.expr(p)?;
                     let p = g.rename(p, "catch", "catch", false)?;
                     let p = g.shift_left(p)?;
-                    let p = first!(
-                        g,
-                        p,
-                        |g, p| {
-                            let p = g.open_op(p, O::Curly)?;
-                            let p = g.open_op(p, O::ParenGroup)?;
-                            let p = g.tok(p, "(")?;
-                            let p = g.open_op(p, O::Leaf)?;
-                            let p = g.unreserved(p, Fin::LeftName)?;
-                            let p = g.close(p)?;
-                            let p = g.tok(p, ")")?;
-                            let p = g.close(p)?;
-                            let p = g.tree(p, Fin::Fun, Grammar::raw_block)?;
-                            g.close(p)
-                        },
-                        |g, p| {
-                            let p = g.open_op(p, O::CurlyGroup)?;
-                            let p = g.tree(p, Fin::Fun, Grammar::raw_block)?;
-                            g.close(p)
-                        },
-                    )?;
+                    let p = g.open_op(p, O::Curly)?;
+                    let p = g.open_op(p, O::ParenGroup)?;
+                    let p = g.tok(p, "(")?;
+                    let p = g.open_op(p, O::Leaf)?;
+                    let p = g.unreserved(p, Fin::LeftName)?;
+                    let p = g.close(p)?;
+                    let p = g.tok(p, ")")?;
+                    let p = g.close(p)?;
+                    let p = g.tree(p, Fin::Fun, Grammar::raw_block)?;
+                    let p = g.close(p)?;
                     g.close(p)
                 })
             },
@@ -1169,9 +1158,10 @@ impl Grammar {
                 g.events.truncate(mark);
                 let q = g.tok(q?, "catch")?;
                 let close = g.parts[p].close as usize;
-                let message = match g.block_before_operator(q) {
-                    true => Message::CatchBlockNotLast,
-                    false => Message::CatchWithoutBlock,
+                let message = match g.leftmost_block(q) {
+                    Some((O::CurlyGroup, _)) => Message::CatchWithoutName,
+                    Some((_, true)) => Message::CatchBlockNotLast,
+                    _ => Message::CatchWithoutBlock,
                 };
                 g.events.push(Event::Error(message, p as u32, close as u32));
                 Some(close + 1)
@@ -1179,21 +1169,22 @@ impl Grammar {
         )
     }
 
-    /// Whether the node at `p` is an infix or postfix operator whose
-    /// leftmost operand, however deep, is a block or a call ending in one:
-    /// what follows a `catch` block, wrongly in its handler.
-    fn block_before_operator(&self, p: usize) -> bool {
+    /// The block at `p`, or leftmost under infix and postfix operators
+    /// there, however deep (a bare one, `CurlyGroup`, or a call ending in
+    /// one, `Curly`), and whether it's under an operator: what follows
+    /// `catch`, wrongly, if not a name and a block alone.
+    fn leftmost_block(&self, p: usize) -> Option<(O, bool)> {
         let mut q = p;
         while let Some(part) = self.part(q).filter(|part| part.kind == PartKind::Open) {
             if matches!(part.op, O::Curly | O::CurlyGroup) {
-                return q != p;
+                return Some((part.op, q != p));
             }
             if !matches!(part.op.op_type(), OpType::Infix | OpType::Postfix) {
-                return false;
+                return None;
             }
             q += 1;
         }
-        false
+        None
     }
 
     /// CallArgs := "(" y !QuotedGroup y (ForArgs / opt(Args)) y ")"

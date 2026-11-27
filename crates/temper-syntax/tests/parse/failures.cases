@@ -73,10 +73,15 @@ let n = f() catch (e) { g(e) };
       (Curly (ParenGroup "(" e ")") { (Paren g "(" e ")") })))
   ;)
 
-=== catch without a binding
+=== catch without a binding is an error: orelse is that
 let n = f() catch { 0 };
+let m = f() catch { 0 } + 1;
 --- tree
-(Semi (Eq [let n] = (Catch (Paren f "(" ")") catch (CurlyGroup { 0 }))) ;)
+(Semi
+  (Eq [let n] = (Catch (Paren f "(" ")") catch (CurlyGroup { 0 })))
+  ;
+  (Eq [let m] = (Catch (Paren f "(" ")") catch (Plus (CurlyGroup { 0 }) + 1)))
+  ;)
 
 === do catch is catch after a do block
 do { try a(); try b() } catch (e) { c(e) }
@@ -109,8 +114,8 @@ x
 
 === catch binds tighter than orelse, and chains to the left
 let a = f() catch (e) { g() } orelse 0;
-let b = f() orelse g() catch { 1 };
-let c = f() catch { 1 } catch { 2 };
+let b = f() orelse g() catch (e) { 1 };
+let c = f() catch (e) { 1 } catch (e) { 2 };
 --- tree
 (Semi
   (Eq
@@ -130,15 +135,15 @@ let c = f() catch { 1 } catch { 2 };
     (OrElse
       (Paren f "(" ")")
       orelse
-      (Catch (Paren g "(" ")") catch (CurlyGroup { 1 }))))
+      (Catch (Paren g "(" ")") catch (Curly (ParenGroup "(" e ")") { 1 }))))
   ;
   (Eq
     [let c]
     =
     (Catch
-      (Catch (Paren f "(" ")") catch (CurlyGroup { 1 }))
+      (Catch (Paren f "(" ")") catch (Curly (ParenGroup "(" e ")") { 1 }))
       catch
-      (CurlyGroup { 2 })))
+      (Curly (ParenGroup "(" e ")") { 2 })))
   ;)
 
 === try then catch
@@ -156,7 +161,7 @@ let n = try f() catch (e) { 0 };
 
 === nested do catch
 do {
-  do { try a() } catch { try b() }
+  do { try a() } catch (e) { try b() }
 } catch (e) { c }
 --- tree
 (Catch
@@ -166,30 +171,39 @@ do {
     (Catch
       (Curly do { (Try try (Paren a "(" ")")) })
       catch
-      (CurlyGroup { (Try try (Paren b "(" ")")) }))
+      (Curly (ParenGroup "(" e ")") { (Try try (Paren b "(" ")")) }))
     })
   catch
   (Curly (ParenGroup "(" e ")") { c }))
 
 === jumps in handlers
 for (let x of xs) {
-  let a = f(x) catch { continue };
+  let a = f(x) catch (e) { continue };
   let b = g(x) catch (e) { break };
-  h(x) catch { return 0 };
+  h(x) catch (e) { return 0 };
 }
 --- tree
 (Curly
   (Paren for "(" (Of [let x] of xs) ")")
   {
   (Semi
-    (Eq [let a] = (Catch (Paren f "(" x ")") catch (CurlyGroup { continue })))
+    (Eq
+      [let a]
+      =
+      (Catch
+        (Paren f "(" x ")")
+        catch
+        (Curly (ParenGroup "(" e ")") { continue })))
     ;
     (Eq
       [let b]
       =
       (Catch (Paren g "(" x ")") catch (Curly (ParenGroup "(" e ")") { break })))
     ;
-    (Catch (Paren h "(" x ")") catch (CurlyGroup { (Return return 0) }))
+    (Catch
+      (Paren h "(" x ")")
+      catch
+      (Curly (ParenGroup "(" e ")") { (Return return 0) }))
     ;)
   })
 

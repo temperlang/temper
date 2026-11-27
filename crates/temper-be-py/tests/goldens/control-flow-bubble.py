@@ -14,7 +14,7 @@ from typing import NoReturn as _NoReturn
 __all__ = ()
 
 
-class _Problem(_Failure, Exception):
+class _Problem(_Failure):
     __slots__ = ()
 
 

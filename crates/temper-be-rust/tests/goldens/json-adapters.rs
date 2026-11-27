@@ -162,7 +162,7 @@ impl Point {
         } else {
             return Err(temper_std::json::JsonShapeError::new("expected Point JSON object").into());
         };
-        let x_tree = obj.property_value_or_bubble("x")?;
+        let x_tree = obj.property_value_or_throw("x")?;
         let x_json = if temper_core::is::<temper_std::json::JsonNumeric>(x_tree.clone()) {
             temper_core::cast::<temper_std::json::JsonNumeric>(x_tree.clone()).unwrap()
         } else {
@@ -174,7 +174,7 @@ impl Point {
                 failure.clone(),
             )
         })?;
-        let y_tree = obj.property_value_or_bubble("y")?;
+        let y_tree = obj.property_value_or_throw("y")?;
         let y_json = if temper_core::is::<temper_std::json::JsonNumeric>(y_tree.clone()) {
             temper_core::cast::<temper_std::json::JsonNumeric>(y_tree.clone()).unwrap()
         } else {
@@ -304,14 +304,14 @@ impl Record {
         } else {
             return Err(temper_std::json::JsonShapeError::new("expected Record JSON object").into());
         };
-        let name_tree = obj.property_value_or_bubble("name")?;
+        let name_tree = obj.property_value_or_throw("name")?;
         let name_json = if temper_core::is::<temper_std::json::JsonString>(name_tree.clone()) {
             temper_core::cast::<temper_std::json::JsonString>(name_tree.clone()).unwrap()
         } else {
             return Err(temper_std::json::JsonShapeError::new("expected String for name").into());
         };
         let name = name_json.content();
-        let active_tree = obj.property_value_or_bubble("is-active")?;
+        let active_tree = obj.property_value_or_throw("is-active")?;
         let active_json = if temper_core::is::<temper_std::json::JsonBoolean>(active_tree.clone()) {
             temper_core::cast::<temper_std::json::JsonBoolean>(active_tree.clone()).unwrap()
         } else {
@@ -320,7 +320,7 @@ impl Record {
             );
         };
         let active = active_json.content();
-        let score_tree = obj.property_value_or_bubble("score")?;
+        let score_tree = obj.property_value_or_throw("score")?;
         let score_json = if temper_core::is::<temper_std::json::JsonNumeric>(score_tree.clone()) {
             temper_core::cast::<temper_std::json::JsonNumeric>(score_tree.clone()).unwrap()
         } else {
@@ -332,7 +332,7 @@ impl Record {
                 failure.clone(),
             )
         })?;
-        let big_tree = obj.property_value_or_bubble("big")?;
+        let big_tree = obj.property_value_or_throw("big")?;
         let big_json = if temper_core::is::<temper_std::json::JsonNumeric>(big_tree.clone()) {
             temper_core::cast::<temper_std::json::JsonNumeric>(big_tree.clone()).unwrap()
         } else {
@@ -346,10 +346,10 @@ impl Record {
         })?;
         let nickname =
             temper_std::json::OrNullJsonAdapter::new(temper_std::json::string_json_adapter())
-                .decode_from_json(obj.property_value_or_bubble("nickname")?, ic.clone())?;
+                .decode_from_json(obj.property_value_or_throw("nickname")?, ic.clone())?;
         let points: temper_core::List<Point> = temper_std::json::JsonAdapterTrait::decode_from_json(
             &temper_std::json::list_json_adapter(Point::json_adapter()),
-            obj.property_value_or_bubble("points")?,
+            obj.property_value_or_throw("points")?,
             ic.clone(),
         )?;
         Ok(Record::new(
@@ -440,7 +440,7 @@ impl Circle {
         } else {
             return Err(temper_std::json::JsonShapeError::new("expected Circle JSON object").into());
         };
-        let radius_tree = obj.property_value_or_bubble("radius")?;
+        let radius_tree = obj.property_value_or_throw("radius")?;
         let radius_json = if temper_core::is::<temper_std::json::JsonNumeric>(radius_tree.clone()) {
             temper_core::cast::<temper_std::json::JsonNumeric>(radius_tree.clone()).unwrap()
         } else {
@@ -546,7 +546,7 @@ impl Rect {
         } else {
             return Err(temper_std::json::JsonShapeError::new("expected Rect JSON object").into());
         };
-        let width_tree = obj.property_value_or_bubble("width")?;
+        let width_tree = obj.property_value_or_throw("width")?;
         let width_json = if temper_core::is::<temper_std::json::JsonNumeric>(width_tree.clone()) {
             temper_core::cast::<temper_std::json::JsonNumeric>(width_tree.clone()).unwrap()
         } else {
@@ -558,7 +558,7 @@ impl Rect {
                 failure.clone(),
             )
         })?;
-        let height_tree = obj.property_value_or_bubble("height")?;
+        let height_tree = obj.property_value_or_throw("height")?;
         let height_json = if temper_core::is::<temper_std::json::JsonNumeric>(height_tree.clone()) {
             temper_core::cast::<temper_std::json::JsonNumeric>(height_tree.clone()).unwrap()
         } else {
@@ -778,7 +778,7 @@ impl Hello {
         } else {
             return Err(temper_std::json::JsonShapeError::new("expected Hello JSON object").into());
         };
-        let text_tree = obj.property_value_or_bubble("text")?;
+        let text_tree = obj.property_value_or_throw("text")?;
         let text_json = if temper_core::is::<temper_std::json::JsonString>(text_tree.clone()) {
             temper_core::cast::<temper_std::json::JsonString>(text_tree.clone()).unwrap()
         } else {
@@ -879,7 +879,7 @@ impl Bye {
         } else {
             return Err(temper_std::json::JsonShapeError::new("expected Bye JSON object").into());
         };
-        let text_tree = obj.property_value_or_bubble("text")?;
+        let text_tree = obj.property_value_or_throw("text")?;
         let text_json = if temper_core::is::<temper_std::json::JsonString>(text_tree.clone()) {
             temper_core::cast::<temper_std::json::JsonString>(text_tree.clone()).unwrap()
         } else {

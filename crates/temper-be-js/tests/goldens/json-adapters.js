@@ -144,7 +144,7 @@ class Point extends type() {
    */
   static decodeFromJson(t, ic) {
     const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : (() => { throw new JsonShapeError("expected Point JSON object"); })();
-    const xTree = obj.propertyValueOrBubble("x");
+    const xTree = obj.propertyValueOrThrow("x");
     const xJson = xTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (xTree)) : (() => { throw new JsonShapeError("expected Int for x"); })();
     /** @type {number} */
     let x;
@@ -154,7 +154,7 @@ class Point extends type() {
       if (!(failure instanceof ParseError)) throw failure;
       throw withCause(new JsonShapeError("expected Int for x"), failure);
     }
-    const yTree = obj.propertyValueOrBubble("y");
+    const yTree = obj.propertyValueOrThrow("y");
     const yJson = yTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (yTree)) : (() => { throw new JsonShapeError("expected Int for y"); })();
     /** @type {number} */
     let y;
@@ -289,13 +289,13 @@ class Record extends type() {
    */
   static decodeFromJson(t, ic) {
     const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : (() => { throw new JsonShapeError("expected Record JSON object"); })();
-    const nameTree = obj.propertyValueOrBubble("name");
+    const nameTree = obj.propertyValueOrThrow("name");
     const nameJson = nameTree instanceof JsonString ? /** @type {JsonString} */ (/** @type {unknown} */ (nameTree)) : (() => { throw new JsonShapeError("expected String for name"); })();
     const name = nameJson.content;
-    const activeTree = obj.propertyValueOrBubble("is-active");
+    const activeTree = obj.propertyValueOrThrow("is-active");
     const activeJson = activeTree instanceof JsonBoolean ? /** @type {JsonBoolean} */ (/** @type {unknown} */ (activeTree)) : (() => { throw new JsonShapeError("expected Boolean for is-active"); })();
     const active = activeJson.content;
-    const scoreTree = obj.propertyValueOrBubble("score");
+    const scoreTree = obj.propertyValueOrThrow("score");
     const scoreJson = scoreTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (scoreTree)) : (() => { throw new JsonShapeError("expected Float64 for score"); })();
     /** @type {number} */
     let score;
@@ -305,7 +305,7 @@ class Record extends type() {
       if (!(failure instanceof ParseError)) throw failure;
       throw withCause(new JsonShapeError("expected Float64 for score"), failure);
     }
-    const bigTree = obj.propertyValueOrBubble("big");
+    const bigTree = obj.propertyValueOrThrow("big");
     const bigJson = bigTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (bigTree)) : (() => { throw new JsonShapeError("expected Int64 for big"); })();
     /** @type {bigint} */
     let big;
@@ -315,9 +315,9 @@ class Record extends type() {
       if (!(failure2 instanceof ParseError)) throw failure2;
       throw withCause(new JsonShapeError("expected Int64 for big"), failure2);
     }
-    const nickname = new OrNullJsonAdapter(stringJsonAdapter()).decodeFromJson(obj.propertyValueOrBubble("nickname"), ic);
+    const nickname = new OrNullJsonAdapter(stringJsonAdapter()).decodeFromJson(obj.propertyValueOrThrow("nickname"), ic);
     /** @type {readonly Point[]} */
-    const points = listJsonAdapter(Point.jsonAdapter()).decodeFromJson(obj.propertyValueOrBubble("points"), ic);
+    const points = listJsonAdapter(Point.jsonAdapter()).decodeFromJson(obj.propertyValueOrThrow("points"), ic);
     return new Record(name, active, score, big, nickname, points);
   }
 
@@ -410,7 +410,7 @@ class Circle extends type(Shape) {
    */
   static decodeFromJson(t, ic) {
     const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : (() => { throw new JsonShapeError("expected Circle JSON object"); })();
-    const radiusTree = obj.propertyValueOrBubble("radius");
+    const radiusTree = obj.propertyValueOrThrow("radius");
     const radiusJson = radiusTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (radiusTree)) : (() => { throw new JsonShapeError("expected Int for radius"); })();
     /** @type {number} */
     let radius;
@@ -501,7 +501,7 @@ class Rect extends type(Shape) {
    */
   static decodeFromJson(t, ic) {
     const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : (() => { throw new JsonShapeError("expected Rect JSON object"); })();
-    const widthTree = obj.propertyValueOrBubble("width");
+    const widthTree = obj.propertyValueOrThrow("width");
     const widthJson = widthTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (widthTree)) : (() => { throw new JsonShapeError("expected Int for width"); })();
     /** @type {number} */
     let width;
@@ -511,7 +511,7 @@ class Rect extends type(Shape) {
       if (!(failure instanceof ParseError)) throw failure;
       throw withCause(new JsonShapeError("expected Int for width"), failure);
     }
-    const heightTree = obj.propertyValueOrBubble("height");
+    const heightTree = obj.propertyValueOrThrow("height");
     const heightJson = heightTree instanceof JsonNumeric ? /** @type {JsonNumeric} */ (/** @type {unknown} */ (heightTree)) : (() => { throw new JsonShapeError("expected Int for height"); })();
     /** @type {number} */
     let height;
@@ -637,7 +637,7 @@ class Hello extends type(Message) {
    */
   static decodeFromJson(t, ic) {
     const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : (() => { throw new JsonShapeError("expected Hello JSON object"); })();
-    const textTree = obj.propertyValueOrBubble("text");
+    const textTree = obj.propertyValueOrThrow("text");
     const textJson = textTree instanceof JsonString ? /** @type {JsonString} */ (/** @type {unknown} */ (textTree)) : (() => { throw new JsonShapeError("expected String for text"); })();
     const text = textJson.content;
     return new Hello(text);
@@ -702,7 +702,7 @@ class Bye extends type(Message) {
    */
   static decodeFromJson(t, ic) {
     const obj = t instanceof JsonObject ? /** @type {JsonObject} */ (/** @type {unknown} */ (t)) : (() => { throw new JsonShapeError("expected Bye JSON object"); })();
-    const textTree = obj.propertyValueOrBubble("text");
+    const textTree = obj.propertyValueOrThrow("text");
     const textJson = textTree instanceof JsonString ? /** @type {JsonString} */ (/** @type {unknown} */ (textTree)) : (() => { throw new JsonShapeError("expected String for text"); })();
     const text = textJson.content;
     return new Bye(text);

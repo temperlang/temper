@@ -43,6 +43,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Translate(boolean_to_string),
     ),
     (
+        "core.type BrokenGenerator.constructor()",
+        Connection::Translate(new_broken_generator),
+    ),
+    (
         "core.type BrokenPromise.constructor()",
         Connection::Translate(new_broken_promise),
     ),
@@ -676,6 +680,13 @@ pub struct TypeConnection {
 /// Sorted by qname.
 pub const TYPES: &[(&str, TypeConnection)] = &[
     (
+        "core.type BrokenGenerator",
+        TypeConnection {
+            name: "BrokenGenerator",
+            namespace: "TemperLang.Core",
+        },
+    ),
+    (
         "core.type BrokenPromise",
         TypeConnection {
             name: "BrokenPromise",
@@ -1192,6 +1203,12 @@ fn new_map_builder(t: &mut Translator<'_>, _: &[NodeId]) -> Result<Expr, NotYet>
 fn new_missing_key(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let key = one(t, args, "MissingKey")?;
     Ok(t.construct("MissingKey", vec![key]))
+}
+
+/// `new BrokenGenerator()`, the runtime's class.
+fn new_broken_generator(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    let args = t.connected_args(args)?;
+    Ok(t.construct("BrokenGenerator", args))
 }
 
 /// `new BrokenPromise()`, the runtime's class.

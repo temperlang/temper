@@ -345,8 +345,7 @@ pub(crate) struct Settle {
     pub(crate) test_runners: Vec<(ModuleId, NodeId)>,
     /// Where `throws Error` may name the root, beyond std: each test's
     /// result, `Void throws Error`, which the compiler writes
-    /// ([`Settle::expand_test`]), and each generator literal's, whose
-    /// `next()` throws `Error` anyway.
+    /// ([`Settle::expand_test`]).
     pub(crate) root_throws: HashSet<NodeId>,
     /// Each `assert(a == b)`'s message showing both values, with its
     /// plain one, `"expected a == b"`, to use where a value can't be

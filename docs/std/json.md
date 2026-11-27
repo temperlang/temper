@@ -38,7 +38,7 @@ write to any producer, so the same code can build a syntax tree
 
 `parseJson(text)` gives a `JsonSyntaxTree`, or throws a
 `JsonSyntaxError` for malformed input: a `JsonObject`
-(`propertyValueOrNull(key)`, and `propertyValueOrBubble(key)`, which
+(`propertyValueOrNull(key)`, and `propertyValueOrThrow(key)`, which
 throws a `JsonShapeError` for a missing property), `JsonArray`
 (`elements`), `JsonString`, `JsonBoolean`, `JsonNull`, or a number:
 `JsonInt32` (also `JsonInt`), `JsonInt64`, `JsonFloat64`, or

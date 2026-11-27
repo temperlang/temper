@@ -1,7 +1,9 @@
 import {
+  BrokenGenerator,
   adaptAwaiter,
   failureBase,
-  isFailure,
+  failureCause,
+  generatorNext,
   listedJoin,
 } from "@temperlang/core";
 
@@ -24,6 +26,20 @@ function safely(make) {
 }
 
 /**
+ * @param {Error} e
+ * @returns {string}
+ */
+function why(e) {
+  const mine = e instanceof TooBig ? `too big ${/** @type {TooBig} */ (/** @type {unknown} */ (e)).n}` : e.message;
+  const cause = failureCause(e);
+  if (cause == null) {
+    return mine;
+  } else {
+    return `${mine}: ${why(cause)}`;
+  }
+}
+
+/**
  * @param {Generator<number>} g
  * @param {number} n
  * @returns {string}
@@ -35,21 +51,20 @@ function take(g, n) {
     /** @type {IteratorResult<number, void>} */
     let r;
     let failed = false;
-    /** @type {Error | null} */
+    /** @type {BrokenGenerator | null} */
     let caught = null;
     /** @type {IteratorResult<number, void> | null} */
     let held = null;
     try {
-      held = g.next();
+      held = generatorNext(g);
     } catch (failure) {
-      if (!isFailure(failure)) throw failure;
+      if (!(failure instanceof BrokenGenerator)) throw failure;
       caught = failure;
       failed = true;
     }
     if (failed) {
-      const e = /** @type {Error} */ (caught);
-      const why = e instanceof TooBig ? `too big ${/** @type {TooBig} */ (/** @type {unknown} */ (e)).n}` : e.message;
-      return `${listedJoin(taken, " ", (s) => s)} ${why}`;
+      const e = /** @type {BrokenGenerator} */ (caught);
+      return `${listedJoin(taken, " ", (s) => s)} ${why(/** @type {Error} */ (/** @type {unknown} */ (e)))}`;
     } else {
       r = /** @type {IteratorResult<number, void>} */ (held);
     }
@@ -168,9 +183,9 @@ function firstTwo(g) {
   /** @type {string} */
   let b;
   try {
-    b = shown(/** @type {Generator<number>} */ (/** @type {unknown} */ (g)).next());
+    b = shown(generatorNext(/** @type {Generator<number>} */ (/** @type {unknown} */ (g))));
   } catch (e$) {
-    if (!isFailure(e$)) throw e$;
+    if (!(e$ instanceof BrokenGenerator)) throw e$;
     b = "failed";
   }
   return `${a} ${b}`;
@@ -188,7 +203,7 @@ function doubled(inner) {
   function* fn(doAwait) {
     while (true) {
       /** @type {IteratorResult<number, void>} */
-      const r = inner.next();
+      const r = generatorNext(inner);
       if (!r.done) {
         yield Math.imul(/** @type {IteratorYieldResult<number>} */ (/** @type {unknown} */ (r)).value, 2);
       } else {

@@ -104,8 +104,8 @@ public final class JsonSyntaxTreeGlobal {
             String s4 = "{\"x\":null,\"y\":123,\"z\":123456789012}";
             JsonSyntaxTree ast = JsonGlobal.parseJson(s4);
             JsonObject obj = Core.cast(JsonObject.class, ast);
-            JsonSyntaxTree xAst = obj.propertyValueOrBubble("x");
-            JsonSyntaxTree yAst = obj.propertyValueOrBubble("y");
+            JsonSyntaxTree xAst = obj.propertyValueOrThrow("x");
+            JsonSyntaxTree yAst = obj.propertyValueOrThrow("y");
             console.log("for x, got JSON null: " + (xAst instanceof JsonNull));
             console.log("for y, got JSON numeric: " + (yAst instanceof JsonNumeric));
             OrNullJsonAdapter<Integer> intOrNullAdapter2 = new OrNullJsonAdapter<Integer>(JsonGlobal.int32JsonAdapter());
@@ -113,7 +113,7 @@ public final class JsonSyntaxTreeGlobal {
             @Nullable Integer y2 = intOrNullAdapter2.decodeFromJson(yAst, NullInterchangeContext.instance);
             console.log("x ?? -1 -> " + (x2 == null ? -1 : x2));
             console.log("y ?? -1 -> " + (y2 == null ? -1 : y2));
-            JsonSyntaxTree zAst = obj.propertyValueOrBubble("z");
+            JsonSyntaxTree zAst = obj.propertyValueOrThrow("z");
             OrNullJsonAdapter<Long> int64OrNullAdapter = new OrNullJsonAdapter<Long>(JsonGlobal.int64JsonAdapter());
             @Nullable Long z = int64OrNullAdapter.decodeFromJson(zAst, NullInterchangeContext.instance);
             console.log("z ?? -1 -> " + Long.toString(z == null ? -1L : z));

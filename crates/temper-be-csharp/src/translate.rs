@@ -129,6 +129,7 @@ const NAMESPACES: &[(&str, &str)] = &[
     ("ParseError", "TemperLang.Core"),
     ("InvalidCodePoint", "TemperLang.Core"),
     ("BrokenPromise", "TemperLang.Core"),
+    ("BrokenGenerator", "TemperLang.Core"),
     ("Optional", "TemperLang.Core"),
     ("Math", "System"),
     ("BitArray", "System.Collections"),

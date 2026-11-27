@@ -71,7 +71,7 @@ def _halved(s: str, d: int, /) -> int:
         return -1
 
 
-class _Problem(_Failure, Exception):
+class _Problem(_Failure):
     __slots__ = ()
 
 

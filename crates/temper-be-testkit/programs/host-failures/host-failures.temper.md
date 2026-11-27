@@ -62,7 +62,7 @@ not found (key: y)
 Host code's own error isn't a failure, so no handler catches it, and it
 ends the run saying what it said:
 
-    let h = hostLookup("bug") catch { -1 };
+    let h = hostLookup("bug") orelse -1;
     console.log("after ${h}");
 
 ```log
@@ -85,7 +85,7 @@ and the report says both:
     class LookupFailed(public name: String) extends HostFailuresError {}
 
     let setting(name: String): Int throws LookupFailed {
-      hostLookup(name) catch { throw new LookupFailed(name); }
+      hostLookup(name) orelse throw new LookupFailed(name)
     }
 
     try setting("port");
@@ -138,7 +138,7 @@ A panic isn't a failure either, so it passes every handler:
       n
     }
 
-    let r = risky(2) catch { -1 };
+    let r = risky(2) orelse -1;
     console.log("after ${r}");
 
 ```log
@@ -179,7 +179,7 @@ handles ends the run too:
     class Unreadable(public key: String) extends HostFailuresError {}
 
     let reading(key: String, count: String): Int throws Unreadable {
-      (hostLookup(key) + parseCount(count)) catch { throw new Unreadable(key); }
+      (hostLookup(key) + parseCount(count)) orelse throw new Unreadable(key)
     }
 
     let r = reading("a", "x") catch (e) {

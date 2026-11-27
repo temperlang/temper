@@ -80,7 +80,7 @@ end
 ---@return json-adapters.Point
 function Point.decodeFromJson(t, ic)
   local obj = temper.instance_of(t, JsonObject) and (t --[[@as std.json.JsonObject]]) or error(JsonShapeError("expected Point JSON object"))
-  local xTree = obj:propertyValueOrBubble("x")
+  local xTree = obj:propertyValueOrThrow("x")
   local xJson = temper.instance_of(xTree, JsonNumeric) and (xTree --[[@as std.json.JsonNumeric]]) or error(JsonShapeError("expected Int for x"))
   ---@type integer
   local x
@@ -90,7 +90,7 @@ function Point.decodeFromJson(t, ic)
   if not t_1 then
     error(temper.with_cause(JsonShapeError("expected Int for x"), failure))
   end
-  local yTree = obj:propertyValueOrBubble("y")
+  local yTree = obj:propertyValueOrThrow("y")
   local yJson = temper.instance_of(yTree, JsonNumeric) and (yTree --[[@as std.json.JsonNumeric]]) or error(JsonShapeError("expected Int for y"))
   ---@type integer
   local y
@@ -188,13 +188,13 @@ end
 ---@return json-adapters.Record
 function Record.decodeFromJson(t, ic)
   local obj = temper.instance_of(t, JsonObject) and (t --[[@as std.json.JsonObject]]) or error(JsonShapeError("expected Record JSON object"))
-  local nameTree = obj:propertyValueOrBubble("name")
+  local nameTree = obj:propertyValueOrThrow("name")
   local nameJson = temper.instance_of(nameTree, JsonString) and (nameTree --[[@as std.json.JsonString]]) or error(JsonShapeError("expected String for name"))
   local name = nameJson.content
-  local activeTree = obj:propertyValueOrBubble("is-active")
+  local activeTree = obj:propertyValueOrThrow("is-active")
   local activeJson = temper.instance_of(activeTree, JsonBoolean) and (activeTree --[[@as std.json.JsonBoolean]]) or error(JsonShapeError("expected Boolean for is-active"))
   local active = activeJson.content
-  local scoreTree = obj:propertyValueOrBubble("score")
+  local scoreTree = obj:propertyValueOrThrow("score")
   local scoreJson = temper.instance_of(scoreTree, JsonNumeric) and (scoreTree --[[@as std.json.JsonNumeric]]) or error(JsonShapeError("expected Float64 for score"))
   ---@type number
   local score
@@ -204,7 +204,7 @@ function Record.decodeFromJson(t, ic)
   if not t_1 then
     error(temper.with_cause(JsonShapeError("expected Float64 for score"), failure))
   end
-  local bigTree = obj:propertyValueOrBubble("big")
+  local bigTree = obj:propertyValueOrThrow("big")
   local bigJson = temper.instance_of(bigTree, JsonNumeric) and (bigTree --[[@as std.json.JsonNumeric]]) or error(JsonShapeError("expected Int64 for big"))
   ---@type integer
   local big
@@ -214,8 +214,8 @@ function Record.decodeFromJson(t, ic)
   if not t_2 then
     error(temper.with_cause(JsonShapeError("expected Int64 for big"), failure2))
   end
-  local nickname = OrNullJsonAdapter(stringJsonAdapter()):decodeFromJson(obj:propertyValueOrBubble("nickname"), ic)
-  local points = listJsonAdapter(Point.jsonAdapter()):decodeFromJson(obj:propertyValueOrBubble("points"), ic)
+  local nickname = OrNullJsonAdapter(stringJsonAdapter()):decodeFromJson(obj:propertyValueOrThrow("nickname"), ic)
+  local points = listJsonAdapter(Point.jsonAdapter()):decodeFromJson(obj:propertyValueOrThrow("points"), ic)
   return Record(name, active, score, big, nickname, points)
 end
 
@@ -307,7 +307,7 @@ end
 ---@return json-adapters.Circle
 function Circle.decodeFromJson(t, ic)
   local obj = temper.instance_of(t, JsonObject) and (t --[[@as std.json.JsonObject]]) or error(JsonShapeError("expected Circle JSON object"))
-  local radiusTree = obj:propertyValueOrBubble("radius")
+  local radiusTree = obj:propertyValueOrThrow("radius")
   local radiusJson = temper.instance_of(radiusTree, JsonNumeric) and (radiusTree --[[@as std.json.JsonNumeric]]) or error(JsonShapeError("expected Int for radius"))
   ---@type integer
   local radius
@@ -385,7 +385,7 @@ end
 ---@return json-adapters.Rect
 function Rect.decodeFromJson(t, ic)
   local obj = temper.instance_of(t, JsonObject) and (t --[[@as std.json.JsonObject]]) or error(JsonShapeError("expected Rect JSON object"))
-  local widthTree = obj:propertyValueOrBubble("width")
+  local widthTree = obj:propertyValueOrThrow("width")
   local widthJson = temper.instance_of(widthTree, JsonNumeric) and (widthTree --[[@as std.json.JsonNumeric]]) or error(JsonShapeError("expected Int for width"))
   ---@type integer
   local width
@@ -395,7 +395,7 @@ function Rect.decodeFromJson(t, ic)
   if not t_1 then
     error(temper.with_cause(JsonShapeError("expected Int for width"), failure))
   end
-  local heightTree = obj:propertyValueOrBubble("height")
+  local heightTree = obj:propertyValueOrThrow("height")
   local heightJson = temper.instance_of(heightTree, JsonNumeric) and (heightTree --[[@as std.json.JsonNumeric]]) or error(JsonShapeError("expected Int for height"))
   ---@type integer
   local height
@@ -527,7 +527,7 @@ end
 ---@return json-adapters.Hello
 function Hello.decodeFromJson(t, ic)
   local obj = temper.instance_of(t, JsonObject) and (t --[[@as std.json.JsonObject]]) or error(JsonShapeError("expected Hello JSON object"))
-  local textTree = obj:propertyValueOrBubble("text")
+  local textTree = obj:propertyValueOrThrow("text")
   local textJson = temper.instance_of(textTree, JsonString) and (textTree --[[@as std.json.JsonString]]) or error(JsonShapeError("expected String for text"))
   local text = textJson.content
   return Hello(text)
@@ -595,7 +595,7 @@ end
 ---@return json-adapters.Bye
 function Bye.decodeFromJson(t, ic)
   local obj = temper.instance_of(t, JsonObject) and (t --[[@as std.json.JsonObject]]) or error(JsonShapeError("expected Bye JSON object"))
-  local textTree = obj:propertyValueOrBubble("text")
+  local textTree = obj:propertyValueOrThrow("text")
   local textJson = temper.instance_of(textTree, JsonString) and (textTree --[[@as std.json.JsonString]]) or error(JsonShapeError("expected String for text"))
   local text = textJson.content
   return Bye(text)

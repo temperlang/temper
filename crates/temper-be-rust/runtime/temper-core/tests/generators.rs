@@ -1,6 +1,7 @@
 //! Generators whose bodies may throw (`Generator`): a step gives its
-//! value, `None` once done, or the failure, which leaves it done; and a
-//! `SafeGenerator` as one, which never fails.
+//! value, `None` once done, or a `BrokenGenerator` whose cause is the
+//! body's failure, which leaves it done; and a `SafeGenerator` as one,
+//! which never fails.
 
 use std::sync::{Arc, RwLock};
 use temper_core::failure::failure;
@@ -19,7 +20,8 @@ fn a_failing_step_leaves_it_done() {
     }));
     assert_eq!(g.next().ok(), Some(Some(1)));
     let e = g.next().err().unwrap();
-    assert_eq!(*e.message(), "broken promise");
+    assert_eq!(*e.message(), "broken generator");
+    assert_eq!(*Failure::cause(&e).unwrap().message(), "broken promise");
     // Done: the step doesn't run again.
     assert_eq!(g.next().ok(), Some(None));
     assert_eq!(g.next().ok(), Some(None));

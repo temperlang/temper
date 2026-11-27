@@ -1029,7 +1029,7 @@ module json#2 in "json" {
         return (null): JsonSyntaxTree#37?;
       }
     }
-    method propertyValueOrBubble#257(propertyKey#711: String): JsonSyntaxTree#37 throws JsonShapeError#32 {
+    method propertyValueOrThrow#257(propertyKey#711: String): JsonSyntaxTree#37 throws JsonShapeError#32 {
       {
         let subject#712: JsonSyntaxTree#37? = this.propertyValueOrNull#256(propertyKey#711);
         if (isNull(subject#712)) {

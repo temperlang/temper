@@ -21,7 +21,7 @@ class _connected:
         raise NotFound(key)  # noqa: F821
 
 
-class HostFailuresError(_Failure, Exception):
+class HostFailuresError(_Failure):
     __slots__ = ()
 
 
@@ -48,9 +48,7 @@ def host_lookup(key: str, /) -> int:
 def _total(key: str, count: str, /) -> int:
     try:
         return _int_add(host_lookup(key), _parse_count(count))
-    except Exception as e:
-        if not isinstance(e, _Failure):
-            raise e
+    except _Failure as e:
         _console.log(f'caught {e.message}')
         return -1 if isinstance(e, NotFound) else -2
 
@@ -74,13 +72,11 @@ class _Unreadable(HostFailuresError):
 def _reading(key: str, count: str, /) -> int:
     try:
         return _int_add(host_lookup(key), _parse_count(count))
-    except Exception as failure:
-        if not isinstance(failure, _Failure):
-            raise failure
+    except _Failure as failure:
         raise _Unreadable(key) from failure
 
 
-class _Problem(_Failure, Exception):
+class _Problem(_Failure):
     __slots__ = ()
 
 
@@ -102,9 +98,7 @@ def _nonzero(n: int, /) -> int:
 def _ratio(key: str, count: str, /) -> int:
     try:
         return _int_div(host_lookup(key), _nonzero(_parse_count(count)))
-    except Exception as t_0:
-        if not isinstance(t_0, _Failure):
-            raise t_0
+    except _Failure:
         return -9
 
 

@@ -1,10 +1,13 @@
-use crate::failure::Failure;
-use crate::Result;
+use crate::failure::{BrokenGenerator, Failure};
 use std::sync::{Arc, RwLock};
 
-/// What a step of a `Generator` gives: its next value, `None` once it's
-/// done, or the failure its body threw, any library's.
+/// What a step of a `Generator`'s body gives: its next value, `None` once
+/// it's done, or the failure its body threw, any library's.
 pub type Step<T> = std::result::Result<Option<T>, Arc<dyn Failure>>;
+
+/// What a `Generator`'s `next()` gives: its next value, `None` once it's
+/// done, or a `BrokenGenerator` whose cause is what its body threw.
+pub type Next<T> = std::result::Result<Option<T>, BrokenGenerator>;
 
 /// A generator whose body may throw, Temper's `Generator<T>`: each step
 /// gives its next value, `None` once it's done, or what the body threw,
@@ -35,9 +38,13 @@ where
     }
 
     /// Runs the body to its next pause: its value, `None` once it's done,
-    /// or what it threw.
-    pub fn next(&self) -> Step<T> {
-        self.0.next_with(self)
+    /// or a `BrokenGenerator` whose cause is what it threw.
+    pub fn next(&self) -> Next<T> {
+        self.0.next_with(self).map_err(|e| {
+            let broken = BrokenGenerator::new();
+            broken.set_cause(e);
+            broken
+        })
     }
 }
 
@@ -110,7 +117,7 @@ where
         SafeGenerator(Arc::new(selfish))
     }
 
-    pub fn next(&self) -> Result<Option<T>> {
+    pub fn next(&self) -> Next<T> {
         Ok(self.next_safe())
     }
 

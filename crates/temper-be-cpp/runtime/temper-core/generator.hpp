@@ -59,10 +59,12 @@ namespace temper {
         }
 
         // A generator whose body may throw any library's failure: a step gives
-        // its result, or the failure, which leaves it done, as an Expected.
+        // its result, or the failure, which leaves it done, as an Expected;
+        // `next` gives a `BrokenGenerator` with that failure as its cause.
         template<class T>
         struct Generator {
             using Result = Expected<std::shared_ptr<GeneratorResult<T>>, std::shared_ptr<Failure>>;
+            using Next = Expected<std::shared_ptr<GeneratorResult<T>>, std::shared_ptr<BrokenGenerator>>;
             using Step = std::function<Result(std::shared_ptr<Generator<T>>)>;
             Step step;
             bool done = false;
@@ -104,7 +106,7 @@ namespace temper {
         }
 
         template<class T>
-        typename Generator<T>::Result next(const std::shared_ptr<Generator<T>>& generator) {
+        typename Generator<T>::Next next(const std::shared_ptr<Generator<T>>& generator) {
             if (generator->done) {
                 return std::shared_ptr<GeneratorResult<T>>(std::make_shared<DoneResult<T>>());
             }
@@ -118,10 +120,14 @@ namespace temper {
                 }
             }();
             // A step that fails, or ends, leaves it done.
-            if (!result || (*result)->is_done()) {
+            if (!result) {
+                generator->done = true;
+                return unexpected(with_cause(BrokenGenerator::make(), result.error()));
+            }
+            if ((*result)->is_done()) {
                 generator->done = true;
             }
-            return result;
+            return *result;
         }
 
         template<class T>

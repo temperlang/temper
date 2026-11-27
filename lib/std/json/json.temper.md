@@ -221,7 +221,7 @@ key order would lead to brittle unmarshalling.
         }
       }
 
-      public propertyValueOrBubble(propertyKey: String): JsonSyntaxTree throws JsonShapeError {
+      public propertyValueOrThrow(propertyKey: String): JsonSyntaxTree throws JsonShapeError {
         propertyValueOrNull(propertyKey) ??
           throw new JsonShapeError("expected property ${propertyKey}")
       }

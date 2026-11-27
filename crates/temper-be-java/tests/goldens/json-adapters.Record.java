@@ -53,13 +53,13 @@ final class Record {
 
     public static Record decodeFromJson(JsonSyntaxTree t, InterchangeContext ic) throws JsonException {
         JsonObject obj = t instanceof JsonObject ? (JsonObject) t : Core.throwFailure(new JsonShapeException("expected Record JSON object"));
-        JsonSyntaxTree nameTree = obj.propertyValueOrBubble("name");
+        JsonSyntaxTree nameTree = obj.propertyValueOrThrow("name");
         JsonString nameJson = nameTree instanceof JsonString ? (JsonString) nameTree : Core.throwFailure(new JsonShapeException("expected String for name"));
         String name = nameJson.content;
-        JsonSyntaxTree activeTree = obj.propertyValueOrBubble("is-active");
+        JsonSyntaxTree activeTree = obj.propertyValueOrThrow("is-active");
         JsonBoolean activeJson = activeTree instanceof JsonBoolean ? (JsonBoolean) activeTree : Core.throwFailure(new JsonShapeException("expected Boolean for is-active"));
         boolean active = activeJson.content;
-        JsonSyntaxTree scoreTree = obj.propertyValueOrBubble("score");
+        JsonSyntaxTree scoreTree = obj.propertyValueOrThrow("score");
         JsonNumeric scoreJson = scoreTree instanceof JsonNumeric ? (JsonNumeric) scoreTree : Core.throwFailure(new JsonShapeException("expected Float64 for score"));
         double score;
         try {
@@ -67,7 +67,7 @@ final class Record {
         } catch (ParseError failure) {
             throw Core.withCause(new JsonShapeException("expected Float64 for score"), failure);
         }
-        JsonSyntaxTree bigTree = obj.propertyValueOrBubble("big");
+        JsonSyntaxTree bigTree = obj.propertyValueOrThrow("big");
         JsonNumeric bigJson = bigTree instanceof JsonNumeric ? (JsonNumeric) bigTree : Core.throwFailure(new JsonShapeException("expected Int64 for big"));
         long big;
         try {
@@ -75,8 +75,8 @@ final class Record {
         } catch (ParseError failure2) {
             throw Core.withCause(new JsonShapeException("expected Int64 for big"), failure2);
         }
-        @Nullable String nickname = new OrNullJsonAdapter<String>(JsonGlobal.stringJsonAdapter()).decodeFromJson(obj.propertyValueOrBubble("nickname"), ic);
-        List<Point> points = JsonGlobal.listJsonAdapter(Point.jsonAdapter()).decodeFromJson(obj.propertyValueOrBubble("points"), ic);
+        @Nullable String nickname = new OrNullJsonAdapter<String>(JsonGlobal.stringJsonAdapter()).decodeFromJson(obj.propertyValueOrThrow("nickname"), ic);
+        List<Point> points = JsonGlobal.listJsonAdapter(Point.jsonAdapter()).decodeFromJson(obj.propertyValueOrThrow("points"), ic);
         return new Record(name, active, score, big, nickname, points);
     }
 

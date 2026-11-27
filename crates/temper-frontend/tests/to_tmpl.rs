@@ -1293,7 +1293,7 @@ fn empty_list_fallbacks_take_the_operands_type() {
       throw new Missing(key);
     }
     let named = find(\"x\") orelse [];
-    let caught = find(\"one\") catch { [] };
+    let caught = find(\"one\") orelse [];
     let fallen = [] orelse find(\"one\");
     let local(): Int { let found = find(\"y\") orelse []; found.length }
     let branch(c: Boolean): Int {

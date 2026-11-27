@@ -586,6 +586,7 @@ impl<'a> Translator<'a> {
                         "core.type ParseError" => "temper_core::ParseError".into(),
                         "core.type InvalidCodePoint" => "temper_core::InvalidCodePoint".into(),
                         "core.type BrokenPromise" => "temper_core::BrokenPromise".into(),
+                        "core.type BrokenGenerator" => "temper_core::BrokenGenerator".into(),
                         // Core's root of declared failures, any library's
                         // failure, as a failure's cause is.
                         "core.type Error" => {

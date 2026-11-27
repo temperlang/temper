@@ -106,8 +106,8 @@ public static class JsonSyntaxTreeGlobal
             string s4 = "{\"x\":null,\"y\":123,\"z\":123456789012}";
             IJsonSyntaxTree ast = JsonGlobal.ParseJson(s4);
             JsonObject obj = Core.Cast<JsonObject>(ast);
-            IJsonSyntaxTree xAst = obj.PropertyValueOrBubble("x");
-            IJsonSyntaxTree yAst = obj.PropertyValueOrBubble("y");
+            IJsonSyntaxTree xAst = obj.PropertyValueOrThrow("x");
+            IJsonSyntaxTree yAst = obj.PropertyValueOrThrow("y");
             console.Log("for x, got JSON null: " + (xAst is JsonNull ? "true" : "false"));
             console.Log("for y, got JSON numeric: " + (yAst is IJsonNumeric ? "true" : "false"));
             OrNullJsonAdapter<int> intOrNullAdapter2 = new OrNullJsonAdapter<int>(JsonGlobal.Int32_JsonAdapter());
@@ -115,7 +115,7 @@ public static class JsonSyntaxTreeGlobal
             int? y2 = Optional.ToNullable<int>(intOrNullAdapter2.DecodeFromJson(yAst, NullInterchangeContext.Instance));
             console.Log("x ?? -1 -> " + (x2 == null ? -1 : x2.Value).ToString(CultureInfo.InvariantCulture));
             console.Log("y ?? -1 -> " + (y2 == null ? -1 : y2.Value).ToString(CultureInfo.InvariantCulture));
-            IJsonSyntaxTree zAst = obj.PropertyValueOrBubble("z");
+            IJsonSyntaxTree zAst = obj.PropertyValueOrThrow("z");
             OrNullJsonAdapter<long> int64OrNullAdapter = new OrNullJsonAdapter<long>(JsonGlobal.Int64_JsonAdapter());
             long? z = Optional.ToNullable<long>(int64OrNullAdapter.DecodeFromJson(zAst, NullInterchangeContext.Instance));
             console.Log("z ?? -1 -> " + (z == null ? -1L : z.Value).ToString(CultureInfo.InvariantCulture));

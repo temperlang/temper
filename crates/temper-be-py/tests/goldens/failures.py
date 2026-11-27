@@ -10,7 +10,7 @@ from temper_core import (
 __all__ = ()
 
 
-class _FailuresError(_Failure, Exception):
+class _FailuresError(_Failure):
     __slots__ = ()
 
 
@@ -61,7 +61,7 @@ def _shown(a: str, b: str, /) -> str:
     return str(total)
 
 
-class _SignError(_Failure, Exception):
+class _SignError(_Failure):
     __slots__ = ()
 
 

@@ -132,7 +132,7 @@ class _Counter:
         _console.log(f'{tag} done n={self._n}')
 
 
-class HalveError(_Failure, Exception):
+class HalveError(_Failure):
     __slots__ = ()
 
 

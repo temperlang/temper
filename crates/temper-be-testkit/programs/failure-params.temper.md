@@ -60,7 +60,7 @@ handles, from a function literal or a function's name:
       ns.join(",") { n => n.toString() }
     }
 
-    let named = mapAll(["two", "one"], find) catch { [] };
+    let named = mapAll(["two", "one"], find) orelse [];
     console.log("${shown(["one", "two"])} ${shown(["one", "six", "ten"])} ${named.length}");
 
 ```log
@@ -86,7 +86,7 @@ Generic code handles `E` without knowing what it is:
     let failures<T, R, E extends Error>(xs: List<T>, f: Mapper<T, R, E>): Int {
       var failed = 0;
       for (let x of xs) {
-        do { try f(x); } catch { failed += 1; }
+        do { try f(x); } orelse do { failed += 1; }
       }
       failed
     }
