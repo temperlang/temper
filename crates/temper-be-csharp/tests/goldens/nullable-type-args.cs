@@ -42,6 +42,12 @@ public static class NullableTypeArgsGlobal
         return Core.CastToNonNull<T>(x);
     }
 
+    internal static IReadOnlyList<T?> WrapShown<T>(T? x = null)
+        where T : class, IShown
+    {
+        return Listed.CreateReadOnlyList<T?>(x);
+    }
+
     static NullableTypeArgsGlobal()
     {
         ILoggingConsole console = Support.Logging.LoggingConsoleFactory.CreateConsole("NullableTypeArgs");
@@ -83,5 +89,18 @@ public static class NullableTypeArgsGlobal
             minus = -1;
         }
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{Known(Optional.Of<Named>(new Named("n"))).Name} {got.Name} {Known(Optional.Of<int>(2))} {minus} {KnownShown(new Tag("k")).Shown} {missing.Shown}"));
+        KeyValuePair<int, Tag?> halfNull = HalfShown<int, Tag>(4, null);
+        IReadOnlyList<Tag?> wrappedNull = WrapShown<Tag>(null);
+        IReadOnlyList<Tag?> wrappedNone = WrapShown<Tag>();
+        Tag lost;
+        try
+        {
+            lost = KnownShown<Tag>(null);
+        }
+        catch
+        {
+            lost = new Tag("lost");
+        }
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{halfNull.Key} {ShownOr(halfNull.Value)} {wrappedNull.Count} {ShownOr(wrappedNone[0])} {lost.Shown}"));
     }
 }

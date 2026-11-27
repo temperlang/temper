@@ -329,7 +329,7 @@ impl Settle {
             return Ok(UNKNOWN);
         }
         let (_, ty, init) = core::let_parts(&self.lib.tree, decl);
-        if let (Some((base, given)), Some(init)) = (self.inferred_base(decl), init) {
+        if let (Some((base, given, _)), Some(init)) = (self.inferred_base(decl), init) {
             // `let xs: List = …` is the `List` its value is, as
             // `List<Boolean>`, as Kotlin Temper's solver finds it, with the
             // type arguments written put in, as `Int` in `let p: Pair<Int>
@@ -1513,6 +1513,9 @@ impl Settle {
     fn check_call(&mut self, node: NodeId) {
         let _ = self.resolve_overload(node, false);
         let _ = self.resolve_extension(node, false, true);
+        if self.is_list_literal(node) {
+            self.check_list(node);
+        }
         let children = self.lib.tree.children(node).to_vec();
         let Some((&callee, args)) = children.split_first() else {
             return;
@@ -1863,9 +1866,9 @@ impl Settle {
     /// The generic type a variable's type names without all its type
     /// arguments, as `List` in `let xs: List = [1]`, or `Pair` in `let p:
     /// Pair<Int> = …`, with those it's given, the leading ones, whose value
-    /// gives the rest ([`Settle::decl_type`]); none for a parameter, a
-    /// field, or a `let` with no value.
-    fn inferred_base(&mut self, decl: NodeId) -> Option<(TypeId, Vec<NodeId>)> {
+    /// gives the rest ([`Settle::decl_type`]), and how many it has; none
+    /// for a parameter, a field, or a `let` with no value.
+    fn inferred_base(&mut self, decl: NodeId) -> Option<(TypeId, Vec<NodeId>, usize)> {
         let tree = &self.lib.tree;
         let (name, Some(ty), Some(_)) = core::let_parts(tree, decl) else {
             return None;
@@ -1887,10 +1890,11 @@ impl Settle {
             return None;
         }
         let name = self.bare_name(ty)?;
-        if self.type_arity(name)? <= given.len() {
+        let arity = self.type_arity(name)?;
+        if arity <= given.len() {
             return None;
         }
-        Some((self.named_base(self.scopes.resolved(name)?)?, given))
+        Some((self.named_base(self.scopes.resolved(name)?)?, given, arity))
     }
 
     /// Reports a `Void` value stored in a declaration or passed as an

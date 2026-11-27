@@ -79,9 +79,24 @@ Language and frontend:
   joined; give T explicitly". Joins of other types (`Dog` and `Cat` to
   `Animal`), nullability (`Int32` and null), type arguments, and a type
   wanted that binds `T` are unaffected. Recommended: Kotlin Temper
-  reports it too.
+  reports it too. A list literal's elements, as `[1, "s"]` with no
+  element type wanted, are the same, as Kotlin's `listT` (2026-11-27).
+  And as type parameters are invariant, tempest joins only where a
+  parameter's whole type is `T` or `T?`: inside `List<T>` or `fn (): T`
+  the first binding stays, so `lst(dogs, cats)` for `lst<T>(a: List<T>,
+  b: List<T>)` misfits, where Kotlin, whose `List` is covariant, binds
+  `Animal`.
   Test: settle/types.cases, "a type parameter bound two ways is the
-  arguments' common supertype".
+  arguments' common supertype", "… inside another type isn't joined",
+  and "list literals' types, as Kotlin Temper reports them".
+- **The type wanted binds only what a call's arguments leave**
+  ([typing.md](typing.md), "From the type wanted"): `let b: Box<Animal>
+  = new Box(new Dog())` is a `Box<Dog>`, an error under invariance,
+  where Kotlin lets the type wanted bind `T`, checked 2026-11-27. Write
+  `new Box<Animal>(…)`. Letting the type wanted win where the arguments
+  fit it is possible later work.
+  Test: settle/types.cases, "leading type arguments with the rest
+  inferred" (`pn`).
 - **Named `@fun` interfaces are nominal** (decided 2026-10-29, done;
   [typing.md](typing.md), "Fun interfaces"): a `Pred` isn't a `Check`,
   even where their `apply`s' signatures match, and the error suggests
@@ -2473,9 +2488,11 @@ copied Kotlin's:
     `halfPair`) on every backend.
     Rust can't infer one from a `null` argument either (`opt(None)` for
     `opt<T>(x: T?): T?`, E0283), so it spells the call's there too
-    (`opt::<AnyValue>(None)`; `analysis::infers_type_args_from`); C#'s
-    `Optional<T>.None` says its type. 2026-11-27.
-    Test: programs/generics.temper.md (`opt`).
+    (`opt::<AnyValue>(None)`; `analysis::infers_type_args_from`), and
+    so does C#, whose class-bounded `T?` is its own `T?`
+    (`Wrap<Tag>(null)`; 2026-11-27).
+    Test: programs/generics.temper.md (`opt`); C#'s
+    nullable-type-args case (`wrapShown<Tag>(null)`).
   - **C++ `T?` for a type parameter** is the runtime's
     `core::Nullable<T>`: a `shared_ptr` as it is, a nullable as it is,
     else `NullableParam<T>`, so a generic call's `Pair<A, B?>` with `B` a

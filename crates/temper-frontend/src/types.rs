@@ -166,6 +166,31 @@ const NO_DOWNCAST: usize = 4;
 
 /// How deep [`Types::is_subtype`] looks, through type parameters' bounds
 /// and type arguments, before giving up.
+/// What a call's arguments bind its type parameters to, so far
+/// ([`Types::unify`]).
+#[derive(Clone, Debug)]
+pub struct Solution {
+    /// Each type parameter's solution, unknown where none.
+    pub actuals: Vec<TypeId>,
+    /// A type parameter bound two ways whose join goes above a type core
+    /// marks `@mayDowncastTo(false)`, with those two types.
+    pub clash: Option<(usize, TypeId, TypeId)>,
+    /// Whether each was bound inside another type, as in `List<T>`, so a
+    /// solution that differs isn't joined with it.
+    nested: Vec<bool>,
+}
+
+impl Solution {
+    /// No type parameter of `n` solved.
+    pub fn new(n: usize) -> Self {
+        Solution {
+            actuals: vec![UNKNOWN; n],
+            clash: None,
+            nested: vec![false; n],
+        }
+    }
+}
+
 const MAX_SUBTYPE_DEPTH: u32 = 16;
 
 impl Default for Types {
@@ -329,14 +354,18 @@ impl Types {
     /// wanted, `T?` from `Int32?` or `Int32`, and function types'
     /// parameters and results, with a `@fun` interface's type as the
     /// function type it stands for, unless both are of one interface.
-    /// Each solution goes into `actuals` at the formal's index, joined
-    /// with what's there as Kotlin Temper's solver joins them
+    /// Each solution goes into `solution`'s actuals at the formal's index.
+    /// Where the pattern's whole type is the formal (`T` or `T?`), it's
+    /// joined with what's there as Kotlin Temper's solver joins them
     /// ([`Types::join_or_any`]): `Dog?` for `Dog` and `Dog?` or null,
     /// `Animal` for `Dog` and `Cat`, `AnyValue` for `Int32` and `String`.
     /// The first join that goes above a type core marks
     /// `@mayDowncastTo(false)` ([`Types::no_downcast`]), as that `AnyValue`
     /// does, whose values may not be told apart once joined, goes into
-    /// `clash` as the formal's index and the two types joined.
+    /// the clash as the formal's index and the two types joined. Inside
+    /// another type, as `List<T>` or `fn (): T`, where type parameters are
+    /// invariant, a solution isn't joined: the first stays, and so does it
+    /// against a later whole one, so the other arguments don't fit it.
     /// Only fully known types are solutions, and not `Never` or `Void`;
     /// null alone solves as null, which callers drop; a nullable type is
     /// one for a bare `T`, as for Kotlin Temper, whose bound check takes
@@ -348,13 +377,41 @@ impl Types {
         pattern: TypeId,
         actual: TypeId,
         formals: &[SymbolId],
-        actuals: &mut [TypeId],
-        clash: &mut Option<(usize, TypeId, TypeId)>,
+        solution: &mut Solution,
+    ) {
+        self.unify_at(pattern, actual, formals, solution, true, false);
+    }
+
+    /// [`Types::unify`] for a list literal's type, `actual`, whose element
+    /// type is as a whole type, as the literal is typed as it's wanted:
+    /// `[new Dog()]` and `[new Cat()]` where `List<T>`s are wanted bind
+    /// `T` to `Animal`.
+    pub fn unify_list_literal(
+        &mut self,
+        pattern: TypeId,
+        actual: TypeId,
+        formals: &[SymbolId],
+        solution: &mut Solution,
+    ) {
+        self.unify_at(pattern, actual, formals, solution, true, true);
+    }
+
+    /// [`Types::unify`] at a part of the pattern that's the whole of it,
+    /// or of a list literal's elements (`whole`), or one inside another
+    /// type; `literal` while `actual` is a list literal's type.
+    fn unify_at(
+        &mut self,
+        pattern: TypeId,
+        actual: TypeId,
+        formals: &[SymbolId],
+        solution: &mut Solution,
+        whole: bool,
+        literal: bool,
     ) {
         use TypeData::*;
         match (self.get(pattern).clone(), self.get(actual).clone()) {
-            (NeverOf(p), NeverOf(a)) => self.unify(p, a, formals, actuals, clash),
-            (_, NeverOf(a)) => self.unify(pattern, a, formals, actuals, clash),
+            (NeverOf(p), NeverOf(a)) => self.unify_at(p, a, formals, solution, whole, literal),
+            (_, NeverOf(a)) => self.unify_at(pattern, a, formals, solution, whole, literal),
             (Param(symbol), _) => {
                 let Some(i) = formals.iter().position(|&f| f == symbol) else {
                     return;
@@ -362,22 +419,25 @@ impl Types {
                 if matches!(self.get(actual), Never) || actual == VOID || !self.is_known(actual) {
                     return;
                 }
-                actuals[i] = match actuals[i] {
-                    UNKNOWN => actual,
-                    solved => {
-                        let joined = self.join_or_any(solved, actual);
-                        if self.widens(solved, joined) || self.widens(actual, joined) {
-                            clash.get_or_insert((i, solved, actual));
-                        }
-                        joined
+                let solved = solution.actuals[i];
+                if solved == UNKNOWN {
+                    solution.actuals[i] = actual;
+                    solution.nested[i] = !whole;
+                } else if solved == actual || !whole || solution.nested[i] {
+                    solution.nested[i] |= !whole;
+                } else {
+                    let (joined, widens) = self.join_apart(solved, actual);
+                    if widens {
+                        solution.clash.get_or_insert((i, solved, actual));
                     }
-                };
+                    solution.actuals[i] = joined;
+                }
             }
-            (Nullable(p), Nullable(a)) => self.unify(p, a, formals, actuals, clash),
-            (Nullable(p), _) => self.unify(p, actual, formals, actuals, clash),
+            (Nullable(p), Nullable(a)) => self.unify_at(p, a, formals, solution, whole, literal),
+            (Nullable(p), _) => self.unify_at(p, actual, formals, solution, whole, literal),
             _ if self.base(pattern) != self.base(actual) && self.is_fun_pair(pattern, actual) => {
                 if let (Some(p), Some(a)) = (self.as_fn(pattern), self.as_fn(actual)) {
-                    self.unify(p, a, formals, actuals, clash);
+                    self.unify_at(p, a, formals, solution, false, false);
                 }
             }
             (Applied { base, args: x }, _) => {
@@ -387,7 +447,7 @@ impl Types {
                 let y = self.args(seen).to_vec();
                 if x.len() == y.len() {
                     for (&x, &y) in x.iter().zip(&y) {
-                        self.unify(x, y, formals, actuals, clash);
+                        self.unify_at(x, y, formals, solution, literal, false);
                     }
                 }
             }
@@ -400,9 +460,9 @@ impl Types {
                 },
             ) if x.len() == y.len() => {
                 for (x, y) in x.iter().zip(&y) {
-                    self.unify(x.ty, y.ty, formals, actuals, clash);
+                    self.unify_at(x.ty, y.ty, formals, solution, false, false);
                 }
-                self.unify(p, a, formals, actuals, clash);
+                self.unify_at(p, a, formals, solution, false, false);
             }
             _ => {}
         }
@@ -627,6 +687,15 @@ impl Types {
             UNKNOWN => ANY_VALUE,
             t => t,
         }
+    }
+
+    /// Two types joined ([`Types::join_or_any`]), and whether that goes
+    /// above one that core marks `@mayDowncastTo(false)`, other than as
+    /// its nullable type, as `AnyValue` for `Int32` and `String` does,
+    /// whose values can't be told apart once joined.
+    pub fn join_apart(&mut self, a: TypeId, b: TypeId) -> (TypeId, bool) {
+        let joined = self.join_or_any(a, b);
+        (joined, self.widens(a, joined) || self.widens(b, joined))
     }
 
     /// Whether `joined` is above `t`, other than as `t?`, and core marks
@@ -1414,8 +1483,8 @@ mod tests {
         assert_eq!(types.supertype_as(sub2_t, sup_base), Some(sup_string));
         assert_eq!(types.supertype_as(sup_string, sub_base), None);
         // `T` is solved from a `Sub4` where a `Sup<T>` is wanted.
-        let mut actuals = vec![UNKNOWN];
-        types.unify(sup_t, sub4_type, &[SymbolId(t)], &mut actuals, &mut None);
-        assert_eq!(actuals, [STRING]);
+        let mut solution = Solution::new(1);
+        types.unify(sup_t, sub4_type, &[SymbolId(t)], &mut solution);
+        assert_eq!(solution.actuals, [STRING]);
     }
 }

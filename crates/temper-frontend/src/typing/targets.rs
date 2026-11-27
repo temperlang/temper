@@ -16,6 +16,7 @@
 
 use crate::builtins::{Builtin, Function};
 use crate::core::{self, ROLE_MASK, ROLE_TYPE_PARAM};
+use crate::library::{Level, Message};
 use crate::settle::{Fact, Settle};
 use crate::types::{ANY_VALUE, NEVER, NULL, Param, TypeData, TypeId, UNKNOWN, VOID};
 use temper_syntax::tree::{NodeId, NodeKind};
@@ -136,6 +137,68 @@ impl Settle {
         common
     }
 
+    /// Reports a list literal typed from its elements, nothing wanting an
+    /// element type, as Kotlin Temper's solver sees a call of `<listT
+    /// extends AnyValue>(listT, …) -> List<listT>`: elements that can't be
+    /// told apart once joined ([`Settle::common_type_apart`]), "listT is
+    /// bound to both Int32 and String, which can't be told apart once
+    /// joined; give listT explicitly", at the list, which Kotlin accepts;
+    /// and only null, "Expected subtype of AnyValue, but got AnyValue?",
+    /// at each, as Kotlin reports it. Not an argument of a generic call,
+    /// which reports its own ([`Settle::solve_call`]).
+    pub(super) fn check_list(&mut self, list: NodeId) {
+        let elements = self.lib.tree.children(list)[1..].to_vec();
+        let wanted = match self.wanted_type(list, false) {
+            Ok(wanted) => wanted.filter(|&t| {
+                let types = &self.typing.types;
+                types.builtin_name(types.base(self.non_null(t))) == Some("List")
+            }),
+            Err(_) => return,
+        };
+        if elements.is_empty() || wanted.and_then(|t| self.wanted_element(t)).is_some() {
+            return;
+        }
+        let parent = self.typing.parent(list);
+        if let Some(call) = parent.filter(|&p| self.lib.tree.kind(p) == NodeKind::Call) {
+            if matches!(self.solve_call(call, false), Ok(Some(_))) {
+                return;
+            }
+        }
+        let types = self.element_types(list);
+        let span = self.lib.tree.span(list);
+        match self.common_type_apart(&types) {
+            (_, Some((a, b))) => {
+                let message = Message::JoinedApart("listT".into(), self.show(a), self.show(b));
+                self.lib.report(Level::Error, message, span);
+            }
+            _ if !types.is_empty() && types.iter().all(|&t| t == NULL) => {
+                for &e in &elements {
+                    let message = Message::ExpectedSubType("AnyValue".into(), "AnyValue?".into());
+                    let span = self.lib.tree.span(e);
+                    self.lib.report(Level::Error, message, span);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// A list literal's elements' types, as typed, but for `[]`s, which
+    /// take the others' type ([`Settle::common_element`]).
+    fn element_types(&mut self, list: NodeId) -> Vec<TypeId> {
+        let elements = self.lib.tree.children(list)[1..].to_vec();
+        let full: Vec<NodeId> = (elements.into_iter())
+            .filter(|&e| !self.is_empty_list(e))
+            .collect();
+        full.iter().map(|&e| self.known_type(e)).collect()
+    }
+
+    /// Whether a list literal's elements can't be told apart once joined
+    /// ([`Settle::common_type_apart`]), as `["a", 3]`'s.
+    pub(super) fn list_apart(&mut self, list: NodeId) -> bool {
+        let types = self.element_types(list);
+        self.common_type_apart(&types).1.is_some()
+    }
+
     /// Whether a node is `[]`, a list literal without elements.
     pub(super) fn is_empty_list(&self, node: NodeId) -> bool {
         self.is_list_literal(node) && self.lib.tree.children(node).len() == 1
@@ -165,19 +228,34 @@ impl Settle {
     }
 
     /// List elements' common type, as Kotlin Temper's solver finds one
-    /// where tempest can be sure it's the same: their type if they're all
-    /// one, made nullable for null or a nullable one, or the one the
-    /// others are subtypes of, as `Animal` for a `Dog` and an `Animal`, or
-    /// their one least common supertype ([`crate::types::Types::join`]),
-    /// as `Animal` for a `Dog` and a `Cat`. A `Never`, as `panic()`,
-    /// counts for nothing. Unknown where it's anything else, for elements
-    /// that are only null or `Never`, or none (Kotlin: `AnyValue`), and
-    /// for a `Void` element, an error itself.
+    /// ([`Settle::common_type_apart`]), unknown for a `Void` element, an
+    /// error itself, or one whose type isn't known.
     fn common_type(&mut self, elements: &[TypeId]) -> TypeId {
+        self.common_type_apart(elements).0
+    }
+
+    /// List elements' common type, as Kotlin Temper's solver finds it for
+    /// `listT` in `<listT>(listT, …) -> List<listT>`: their type if they're
+    /// all one, made nullable for null or a nullable one, or the one the
+    /// others are subtypes of, as `Animal` for a `Dog` and an `Animal`, or
+    /// their join ([`crate::types::Types::join_or_any`]), as `Animal` for a
+    /// `Dog` and a `Cat`, `AnyValue` for two classes with nothing else in
+    /// common. A `Never`, as `panic()`, counts for nothing, and with no
+    /// other elements, or none, it's `listT`'s bound, `AnyValue`; for only
+    /// null, `AnyValue?`, which Kotlin reports ([`Settle::check_list`]).
+    /// Unknown for a `Void` element, an error itself, or one whose type
+    /// isn't known. With the first two types joined above a type core
+    /// marks `@mayDowncastTo(false)`, as `Int32` and `String` are, whose
+    /// values can't be told apart once joined.
+    pub(super) fn common_type_apart(
+        &mut self,
+        elements: &[TypeId],
+    ) -> (TypeId, Option<(TypeId, TypeId)>) {
         let mut common = NEVER;
+        let mut apart = None;
         for &t in elements {
             if t == VOID || !self.typing.types.is_known(t) {
-                return UNKNOWN;
+                return (UNKNOWN, None);
             }
             let joined = self.typing.types.join(common, t);
             common = match joined {
@@ -189,7 +267,12 @@ impl Settle {
                     } else if types.is_subtype(b, a) == Some(true) {
                         a
                     } else {
-                        return UNKNOWN;
+                        let (joined, widens) = types.join_apart(common, t);
+                        if widens {
+                            apart.get_or_insert((common, t));
+                        }
+                        common = joined;
+                        continue;
                     };
                     match a != common || b != t {
                         true => types.nullable(wider),
@@ -199,10 +282,12 @@ impl Settle {
                 _ => joined,
             };
         }
-        match common {
-            NEVER | NULL => UNKNOWN,
+        let common = match common {
+            NEVER => ANY_VALUE,
+            NULL => self.typing.types.nullable(ANY_VALUE),
             _ => common,
-        }
+        };
+        (common, apart)
     }
 
     /// The type a value's place wants, if it says: a declaration's,
@@ -267,7 +352,21 @@ impl Settle {
                     return self.wanted_type(used, forced);
                 }
                 let is_type_param = tree.data(parent) & ROLE_MASK == ROLE_TYPE_PARAM;
-                (ty.filter(|_| init == Some(node) && !is_type_param)).map(|ty| self.eval_type(ty))
+                let Some(ty) = ty.filter(|_| init == Some(node) && !is_type_param) else {
+                    return Ok(None);
+                };
+                // Leading type arguments, as `Int?` in `let p: P<Int?> =
+                // new P(…)`, want the value to be a `P<Int?, …>`, the rest
+                // unknown, which its value gives ([`Settle::decl_type`]).
+                match self.inferred_base(parent) {
+                    Some((base, given, arity)) if !given.is_empty() => {
+                        let mut args: Vec<TypeId> =
+                            given.iter().map(|&g| self.eval_type(g)).collect();
+                        args.resize(arity, UNKNOWN);
+                        Some(self.typing.types.intern(TypeData::Applied { base, args }))
+                    }
+                    _ => Some(self.eval_type(ty)),
+                }
             }
             NodeKind::Assign if is_last && children.len() == 2 => {
                 let target = children[0];

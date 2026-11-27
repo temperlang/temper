@@ -202,10 +202,10 @@ public static class GenericsGlobal
         KeyValuePair<int, IReadOnlyList<object>> half = HalfPair<int, object>(8);
         KeyValuePair<string, IReadOnlyList<object>> halfToo = HalfPair<string, object>("h");
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{half.Key} {half.Value.Count} {halfToo.Key}"));
-        object? optNone = Optional.OrNull<object>(Opt(Optional<object>.None));
+        object? optNone = Optional.OrNull<object>(Opt<object>(Optional<object>.None));
         int? optSome = Optional.ToNullable<int>(Opt(Optional.Of<int>(6)));
         string @string = (optNone == null ? "true" : "false") + " " + (optSome == null ? 0 : optSome.Value).ToString(CultureInfo.InvariantCulture) + " ";
-        string? subject3 = Optional.OrNull<string>(Opt(Optional<string>.None));
+        string? subject3 = Optional.OrNull<string>(Opt<string>(Optional<string>.None));
         console.Log(@string + (subject3 == null ? "-" : subject3));
         int one = Scaled(2, (int y) => y + 1);
         int two = Scaled(2, (int y) => y * 2, 10);

@@ -547,12 +547,14 @@ fn constant_divisors_fold_as_typing_does() {
 #[test]
 fn gaps_lists_every_gap() {
     with_stack(|| {
-        // Two locals whose types typing leaves unknown, in two functions,
-        // and a function between them that translates.
+        // Two generic functions as values, which tmpl has no form for
+        // yet, in two functions, and a function between them that
+        // translates.
         let source = "
-    export let a(): Void { let x = [].get(0) orelse panic(); }
+    export let a(): Void { let x = same; }
     export let b(): Int { 1 }
-    export let c(): Void { let y = [].get(0) orelse panic(); }
+    export let c(): Void { let y = same; }
+    export let same<T>(t: T): T { t }
 ";
         let mut library = Library::new();
         library.add_file("gaps.temper.md", source, SourceKind::Markdown);
@@ -649,6 +651,58 @@ fn joins_and_sealed_whens() {
         assert!(written.contains(": E#"), "{written}");
         // `next` held first, then called.
         assert!(written.contains("let subject#"), "{written}");
+    });
+}
+
+/// Generic calls typing reports errors for still translate to tmpl the
+/// validator accepts, as backends run what they can: null alone where a
+/// bare `T` is wanted, which binds `T` to its bound, made nullable (but
+/// for a bound other than `AnyValue`, which a nullable type doesn't fit); a
+/// type parameter bound two ways inside a function type or a `List`,
+/// which isn't joined; and list literals whose elements can't be told
+/// apart once joined, or that are only null, which are `List<AnyValue>`
+/// and `List<AnyValue?>`. And `[]` with nothing wanted is a
+/// `List<AnyValue>`, with no error.
+#[test]
+fn generic_call_errors_still_translate() {
+    with_stack(|| {
+        let source = "
+    export interface Animal {}
+    export class Dog extends Animal {}
+    export class Cat extends Animal {}
+    export class Box<T>(public item: T) {}
+    export let id<T>(x: T): T { x }
+    export let fnj<T>(a: fn (): T, b: fn (): T): T { a() }
+    export let lst<T>(a: List<T>, b: List<T>): T { a[0] }
+    export let fd(): Dog { new Dog() }
+    export let fc(): Cat { new Cat() }
+    export let f(dogs: List<Dog>, cats: List<Cat>): Void {
+      id(null);
+      let a = id(null);
+      let c: Int? = id(null);
+      let d = new Box(null);
+      fnj(fd, fc);
+      lst(dogs, cats);
+      let e = [1, \"s\"];
+      let g = new Box([\"a\", 3]);
+      let h = [null];
+      let i = [];
+      let j: List = [];
+    }
+";
+        let (_, errors) = translate_with_errors("generic_errors", source);
+        let expected = [
+            "Expected subtype of AnyValue, but got AnyValue?",
+            "Expected subtype of AnyValue, but got AnyValue?",
+            "Expected subtype of Int32, but got Int32?",
+            "Expected subtype of AnyValue, but got AnyValue?",
+            "Actual arguments do not match signature: <T extends AnyValue>(fn: T, fn: T) -> T expected [fn: Dog, fn: Dog], but got [fn: Dog, fn: Cat]",
+            "Actual arguments do not match signature: <T extends AnyValue>(List<T>, List<T>) -> T expected [List<Dog>, List<Dog>], but got [List<Dog>, List<Cat>]",
+            "listT is bound to both Int32 and String, which can't be told apart once joined; give listT explicitly",
+            "T is bound to both List<String> and List<Int32>, which can't be told apart once joined; give T explicitly",
+            "Expected subtype of AnyValue, but got AnyValue?",
+        ];
+        assert_eq!(errors, expected);
     });
 }
 

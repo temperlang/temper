@@ -375,17 +375,36 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   type checks", below), whose values may not be told apart once joined:
   `Int32` and `String` (or `Float64`), `List<Int32>` and
   `List<String>`, and even `List<Int32>` and `Listed<Int32>` are an
-  error at the call ("Errors", below), as are `c3 = pair(1, "a")` and
-  `k(xs, s)` for `k<T>(xs: List<T>, x: T)` and `xs: List<Int>`. Being
+  error at the call ("Errors", below), as is `c3 = pair(1, "a")`. Being
   nullable isn't a step up (`Int32` and `Int32?`). Kotlin accepts them
   all, as `AnyValue` (or the join). Type arguments are never limited
-  (`new Two<AnyValue>(1, "s")`), nor is a type wanted that binds the
+  (`new Two<AnyValue>(1, "s")`, and `pick<AnyValue>(1, "s")` where
+  Kotlin would fold the call), nor is a type wanted that binds the
   type parameter (`let t: Two<AnyValue> = new Two(1, "s")`; "From the
   type wanted", below). A user's type's own `@mayDowncastTo(false)`
-  isn't read yet, for `is` either. Only fully known
+  isn't read yet, for `is` either. Only where a parameter's whole type
+  is `T` or `T?` are bindings joined: inside another type (`List<T>`,
+  `fn (): T`, `Box<T>`), where type parameters are invariant, the first
+  binding stays, so `lst(dogs, cats)` for `lst<T>(a: List<T>, b:
+  List<T>)` is "… expected [List<Dog>, List<Dog>], but got [List<Dog>,
+  List<Cat>]", and `k(xs, s)` for `k<T>(xs: List<T>, x: T)` and `xs:
+  List<Int>` reports the `s` (2026-11-27; before, `T` bound `Animal`,
+  and tmpl rejected the call). A list literal argument's element type
+  is as a whole `T`, as the literal takes the type it's wanted as
+  (`lst([new Dog()], [new Cat()])` binds `Animal`); its elements that
+  can't be told apart once joined (`["a", 3]`) are a clash of what each
+  would bind, so `new Box(["a", 3])` is "T is bound to both
+  List<String> and List<Int32>, …". Only fully known
   types bind: not null alone, `Never`, `Void`, or a function
   literal's type, which takes its own from the solved call ("Function
-  literals and target typing", below). A nullable type binds a bare `T`,
+  literals and target typing", below). Null passed alone for a bare `T`
+  (not `T?`) is checked against what `T` is solved as, its bound if
+  nothing else binds it, so `id(null)` is "Expected subtype of
+  AnyValue, but got AnyValue?" at the null, as in Kotlin, and `let n:
+  Int? = id(null)` is "Expected subtype of Int32, but got Int32?"; `T`
+  is then that made nullable, so the call still translates
+  (2026-11-27; before, tmpl rejected `id(null)` with no error). With
+  type arguments, null misfits as any argument does. A nullable type binds a bare `T`,
   as in Kotlin, so `pick(d)` for a `d: Dog?` and `pick<T extends
   Animal>` is "Type formal <T extends Animal> cannot bind to Dog?",
   while it fits an `AnyValue` bound. What doesn't bind is solved as
@@ -416,7 +435,10 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   type parameter itself (`K extends MapKey<K>`), does one stay unknown
   (`Settle::bind_unsolved`; 2026-11-26, t1191; before, it stayed
   unknown, and every backend failed with "an expression of unknown
-  type"). Checks of the call's own arguments still see it as before
+  type"). The last is an error, "Could not infer type actuals for <T
+  extends Ord<T>>() -> List<T> given [] in context unknown", at the
+  call, as in Kotlin, with the type wanted as the context (2026-11-27).
+  Checks of the call's own arguments still see it as before
   ("Errors", below).
 - **From the type wanted:** where a call's value is stored in a
   declaration with a type or a field, returned, given as a function's
@@ -441,7 +463,13 @@ types' members", below); status in [milestone-4.md](history/milestone-4.md).
   parameter whose arguments' join would go above a
   `@mayDowncastTo(false)` type, bare or not: `let t: Two<AnyValue> =
   new Two(1, "s")` and `let a: AnyValue = pair(1, "s")` pass, and `let
-  w: Two<Int> = new Two(1, "s")` reports the `"s"`.
+  w: Two<Int> = new Two(1, "s")` reports the `"s"`. A `let`'s leading
+  type arguments are a type wanted with the rest unknown, so `let p:
+  P<Int?> = new P(null, "s")` binds `A` to `Int32?` (2026-11-27). The
+  type wanted binds only what the arguments leave, so `let b:
+  Box<Animal> = new Box(new Dog())` is "Cannot assign to Box<Animal>
+  from Box<Dog>" under invariance, where Kotlin lets the type wanted
+  bind it; write `new Box<Animal>(…)`.
 - **The call's type** is the function's result with the bindings put
   in, so `let c: String = id(1)` is "Cannot assign to String from
   Int32".
@@ -562,9 +590,19 @@ listT, …) -> List<listT>`, solved per call.
   or nullable (`[n, 1]`, for `n: Int?`, is a `List<Int32?>`); the type
   the others are subtypes of (`[d, a]`, for `a: Animal`, is a
   `List<Animal>`); with an element that never returns, as `panic()`,
-  counting for nothing. Where there's none of these, as for `[d, c]`
-  with `c: Cat`, `[1, "a"]`, an empty list, or a `Void` element, `E` is
-  unknown, where Kotlin finds a common supertype, or `AnyValue`.
+  counting for nothing; else their join (`[d, c]` with `c: Cat` is a
+  `List<Animal>`), or `AnyValue`, as for a call of `<listT>(listT, …) ->
+  List<listT>` ("Generic calls", above), so `[1, "a"]` is a
+  `List<AnyValue>` and "listT is bound to both Int32 and String, which
+  can't be told apart once joined; give listT explicitly", at the list,
+  where Kotlin accepts it, but for an argument of a generic call, which
+  reports it, and `[d, new Rock()]` is a `List<AnyValue>`. With
+  nothing else, as for `[]`, `E` is its bound, `AnyValue`, as in Kotlin,
+  so `let xs: List = []` is a `List<AnyValue>`; for only null, as
+  `[null]`, `AnyValue?`, and "Expected subtype of AnyValue, but got
+  AnyValue?" at each null, as Kotlin reports it (2026-11-27; before,
+  these were unknown, and backends failed). A `Void` element, an error
+  itself, leaves `E` unknown.
 - **Errors,** in Kotlin's words and at its positions: where a
   declaration's or field's initializer, a value assigned, a value
   returned, a function's result, or an argument is a list literal and the type wanted
@@ -959,9 +997,9 @@ builtin types, as `List` and `ListBuilder`), the one supertype of both
 that's below every other, with the same type arguments for both, as
 `E` for an `A` and a `B` that both extend `E` (2026-11-06). Where there's
 no such one, or two, it's unknown, a gap rather than a guess, except
-for a generic call's type parameter, which binds to `AnyValue` then
-(`Types::join_or_any`), an error where that's above a
-`@mayDowncastTo(false)` type ("Generic calls", above).
+for a generic call's type parameter and a list literal's elements,
+which join to `AnyValue` then (`Types::join_or_any`), an error where
+that's above a `@mayDowncastTo(false)` type ("Generic calls", above).
 
 With nothing wanted, a branch that's `[]` takes the other branch's list
 type, as Kotlin's solver finds it: `when (b) { is H -> b.kids; else ->

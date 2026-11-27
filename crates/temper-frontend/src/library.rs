@@ -235,6 +235,11 @@ pub enum Message {
     /// joining would blur, one of a type marked `@mayDowncastTo(false)`:
     /// the type parameter and the two types. Kotlin Temper accepts it.
     JoinedApart(String, String, String),
+    /// A generic call with a type parameter nothing binds and that can't
+    /// take its bound, which names it: the signature, the arguments'
+    /// types, and the type wanted, or "unknown". Kotlin's
+    /// `TypeActualsUnavailable`.
+    CouldNotInfer(String, String, String),
     /// What may bubble, in a function whose return type doesn't say it
     /// may. Kotlin's `ExpectedNoBubble`.
     ExpectedNoBubble,
@@ -499,6 +504,9 @@ impl Message {
             Message::JoinedApart(formal, a, b) => format!(
                 "{formal} is bound to both {a} and {b}, which can't be told apart once joined; give {formal} explicitly"
             ),
+            Message::CouldNotInfer(sig, given, context) => {
+                format!("Could not infer type actuals for {sig} given {given} in context {context}")
+            }
             Message::NoCalleeMatches(inputs, among) => {
                 format!("No callee matches inputs [{inputs}] among [{among}]")
             }

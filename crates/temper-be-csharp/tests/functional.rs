@@ -162,6 +162,7 @@ const NULLABLE_TYPE_ARGS: &str = "# Nullable type arguments
     let shownOr<T extends Shown>(x: T?): String { if (x == null) { \"-\" } else { x.shown } }
     let known<T>(x: T?): T throws Bubble { x as T }
     let knownShown<T extends Shown>(x: T?): T throws Bubble { x as T }
+    let wrapShown<T extends Shown>(x: T? = null): List<T?> { [x] }
     let halfThree = halfNamed(3);
     let halfTag: Pair<Int, Tag?> = halfShown(1, new Tag(\"t\"));
     let shelf = new Shelf<Tag>(null);
@@ -176,6 +177,11 @@ const NULLABLE_TYPE_ARGS: &str = "# Nullable type arguments
     let missing = knownShown(tag) orelse new Tag(\"absent\");
     let minus = known(none) orelse -1;
     console.log(\"${known(new Named(\"n\")).name} ${got.name} ${known<Int>(2)} ${minus} ${knownShown(new Tag(\"k\")).shown} ${missing.shown}\");
+    let halfNull = halfShown<Int, Tag>(4, null);
+    let wrappedNull = wrapShown<Tag>(null);
+    let wrappedNone = wrapShown<Tag>();
+    let lost = knownShown<Tag>(null) orelse new Tag(\"lost\");
+    console.log(\"${halfNull.key} ${shownOr(halfNull.value)} ${wrappedNull.length} ${shownOr(wrappedNone[0])} ${lost.shown}\");
 ";
 
 /// The .NET analyzers' rules allowed in generated code, each with why;
@@ -256,7 +262,11 @@ fn cases() -> Vec<Case> {
         "nullable-type-args",
         "nullable-type-args.temper.md",
         NULLABLE_TYPE_ARGS,
-        vec!["3 true t - u 2".into(), "n bubbled 2 -1 k absent".into()],
+        vec![
+            "3 true t - u 2".into(),
+            "n bubbled 2 -1 k absent".into(),
+            "4 - 1 - lost".into(),
+        ],
     ));
     cases
 }

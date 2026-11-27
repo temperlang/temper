@@ -2729,11 +2729,17 @@ impl<'a> Translator<'a> {
 
     /// `<A, B>`, a generic call's type arguments, all of them, as C#
     /// can't leave some out, where C# can't infer them from the
-    /// arguments, as when a type parameter appears in no parameter's type
-    /// (`analysis::infers_type_args`); otherwise nothing, leaving them to
-    /// C#.
-    fn spelled_type_args(&mut self, callee: DeclId, type_args: temper_tmpl::TypeArgs) -> R<String> {
-        if temper_tmpl::analysis::infers_type_args(self.p, callee) {
+    /// arguments `args`, as when a type parameter appears in no
+    /// parameter's type, or only where the argument is `null` or left out
+    /// (`analysis::infers_type_args_from`), as for a class-bounded `T?`,
+    /// which is C#'s own `T?`; otherwise nothing, leaving them to C#.
+    fn spelled_type_args(
+        &mut self,
+        callee: DeclId,
+        type_args: temper_tmpl::TypeArgs,
+        args: &[NodeId],
+    ) -> R<String> {
+        if temper_tmpl::analysis::infers_type_args_from(self.p, callee, args) {
             return Ok(String::new());
         }
         let mut texts = Vec::new();
@@ -2919,7 +2925,7 @@ impl<'a> Translator<'a> {
                     return self.connected(callee, args);
                 }
                 self.check_call(callee, id, args)?;
-                let spelled = self.spelled_type_args(callee, type_args)?;
+                let spelled = self.spelled_type_args(callee, type_args, args)?;
                 let exprs = self.args(args)?;
                 let exprs = self.optional_args(callee, args, exprs)?;
                 // A generic function can't infer from a method group.
@@ -2959,8 +2965,9 @@ impl<'a> Translator<'a> {
                 ..
             } => {
                 if !by_connection(p, method, crate::connected::connects_std) {
-                    let spelled = self.spelled_type_args(method, type_args)?;
-                    return self.call_method(id, method, &spelled, receiver, p.nodes.list(args));
+                    let args = p.nodes.list(args);
+                    let spelled = self.spelled_type_args(method, type_args, args)?;
+                    return self.call_method(id, method, &spelled, receiver, args);
                 }
                 let mut all = vec![receiver];
                 all.extend_from_slice(p.nodes.list(args));

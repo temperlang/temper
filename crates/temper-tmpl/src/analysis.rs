@@ -827,40 +827,24 @@ pub fn bindings(
     (from, to)
 }
 
-/// Whether a call of `callee`, a generic function or method, could leave
-/// out its own type arguments in a target that infers them only from
-/// the arguments (Rust, C#, C++): whether each of its type parameters
-/// appears in some parameter's type. Where one doesn't (`CONTEXT` in
-/// `combine<CONTEXT extends Context, T>(x: T): T`), those backends print
-/// the call's type arguments, all of them, as `combine::<Context, i32>(1)`
-/// (notes/tmpl/nodes.md, "Generic calls"). True for a callee that isn't
-/// generic.
-pub fn infers_type_args(p: &Program, callee: DeclId) -> bool {
-    infers_type_args_with(p, callee, &[], |_| true)
-}
-
-/// [`infers_type_args`] for a call with `args` (not a method's receiver),
-/// in a target whose `null` doesn't say its type (Rust's `None`): only
-/// parameters whose arguments aren't `null` or left out count, so `T` in
-/// `opt(null)` for `opt<T>(x: T?): T?` is spelled (`opt::<i32>(None)`).
+/// Whether a call of `callee`, a generic function or method, with `args`
+/// (not a method's receiver), could leave out its own type arguments in a
+/// target that infers them only from the arguments (Rust, C#): whether
+/// each of its type parameters appears in some parameter's type whose
+/// argument isn't `null` or left out, as those don't say their type in
+/// such targets (Rust's `None`, C#'s `null` for a `T?`). Where one doesn't
+/// (`CONTEXT` in `combine<CONTEXT extends Context, T>(x: T): T`, or `T` in
+/// `opt(null)` for `opt<T>(x: T?): T?`), those backends print the call's
+/// type arguments, all of them, as `combine::<Context, i32>(1)` and
+/// `opt::<i32>(None)` (notes/tmpl/nodes.md, "Generic calls"). True for a
+/// callee that isn't generic.
 pub fn infers_type_args_from(p: &Program, callee: DeclId, args: &[NodeId]) -> bool {
-    let typed = |a: NodeId| !matches!(p.nodes.get(a), Node::Null {} | Node::Omitted {});
-    infers_type_args_with(p, callee, args, typed)
-}
-
-/// Whether each of `callee`'s type parameters appears in some parameter's
-/// type whose argument `typed` keeps; with no `args`, any parameter's.
-fn infers_type_args_with(
-    p: &Program,
-    callee: DeclId,
-    args: &[NodeId],
-    typed: impl Fn(NodeId) -> bool,
-) -> bool {
     let formals = type_param_types(p, callee);
     if formals.is_empty() {
         return true;
     }
     let params = p.signature(callee).map_or(&[][..], |s| s.params);
+    let typed = |a: NodeId| !matches!(p.nodes.get(a), Node::Null {} | Node::Omitted {});
     let told = |i: usize| args.get(i).is_none_or(|&a| typed(a));
     (formals.iter())
         .all(|&f| (params.iter().enumerate()).any(|(i, &t)| p.types.mentions(t, f) && told(i)))

@@ -437,11 +437,14 @@ Code that relied on these going unchecked is now an error:
   literal takes its element type from the type wanted, so `let xs:
   List<Animal> = [new Dog()]` works, and `[new A(1)]`, a `List<A>`, isn't
   a `Listed<P>` for `class A extends P` either. A `Never<Dog>` is still a
-  `Never<Animal>`, as `Never` has no values. A generic call whose
-  arguments bind a type parameter two ways binds it to their common
-  supertype, as before, so `k(dogs, cat)` for `k<T>(xs: List<T>, x: T)`
-  and `dogs: List<Dog>` is an error: `T` is `Animal`, and a `List<Dog>`
-  isn't a `List<Animal>`.
+  `Never<Animal>`, as `Never` has no values. The type wanted binds only
+  what a call's arguments leave, so `let b: Box<Animal> = new Box(new
+  Dog())` is an error, a `Box<Dog>`; write `new Box<Animal>(new Dog())`,
+  or keep the `Box<Dog>`. A generic call whose arguments bind a type
+  parameter two ways binds it to their common supertype, as before,
+  where the parameter's whole type is `T` or `T?`; inside another type,
+  as `List<T>`, the first binding stays, so `k(dogs, cat)` for
+  `k<T>(xs: List<T>, x: T)` and `dogs: List<Dog>` reports the `cat`.
 - A generic call whose arguments bind a type parameter two ways whose
   common supertype is above a type marked `@mayDowncastTo(false)`
   (`String`, `Boolean`, the number types, `List`, `ListBuilder`, `Map`,
@@ -451,7 +454,19 @@ Code that relied on these going unchecked is now an error:
   explicitly". Temper 0.6.0 bound `T` to `AnyValue`. To migrate, give
   the type arguments, `new Two<AnyValue>(1, "s")`, or declare the type
   wanted, `let t: Two<AnyValue> = new Two(1, "s")`. A value and null
-  still bind `T?`.
+  still bind `T?`. List literals are the same: `[1, "s"]`, with no
+  element type wanted, is "listT is bound to both Int32 and String, …";
+  declare the type wanted, `let xs: List<AnyValue> = [1, "s"]`.
+- Null alone binds no type parameter, so where it's passed for a bare
+  `T`, as `id(null)` for `id<T>(x: T): T`, it's checked against `T`'s
+  bound: "Expected subtype of AnyValue, but got AnyValue?", as Temper
+  0.6.0 reports it, and so is `[null]`. To migrate, give the type
+  argument, `id<Int?>(null)`.
+- A generic call whose type parameter nothing binds and whose bound
+  names it, as `none()` for `none<T extends Ord<T>>(): List<T>`, is
+  "Could not infer type actuals …", as in Temper 0.6.0, where the
+  backends failed instead. To migrate, give the type argument or the
+  type wanted.
 - `@out` and `@in` are gone: remove them from type parameters.
 - A run-time check that would introduce a type argument is an error for
   every generic type, as `x is Generator<Int>` for an `x: AnyValue`,
@@ -477,7 +492,8 @@ Code that relied on these going unchecked is now an error:
 
 A generic method's or function's type parameter keeps its bound in
 every backend, as `where TName : Named` in C#, even where no parameter's
-type names it.
+type names it. `[]` with no element type wanted is a `List<AnyValue>`,
+as in Temper 0.6.0, where the backends failed on it.
 
 ## Classes' `==`
 
@@ -526,6 +542,14 @@ such a `T` may be a C# value type like `int`. Where that `T?` sits
 inside a type argument or function type (`Pair<A, B?>`, `List<T?>`)
 and a call gives it another type, the C# backend now says it's not yet
 supported, suggesting a bound, where C#'s compiler failed before.
+
+C# also writes every generic method's and function's bounds as `where`
+constraints, as `where T : class, IShown`, where it wrote none before,
+so exported C# signatures change: host C# code calling them must meet
+the constraints, and a host struct implementing a Temper interface no
+longer satisfies a `T` bounded by it. A call whose type parameter only
+`null` or a left-out argument would give, as `Wrap<Tag>(null)` for
+`wrap<T extends Shown>(x: T? = null)`, names its type arguments.
 
 ## `temper` and its `TEMPER_*` settings
 
