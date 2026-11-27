@@ -1,14 +1,20 @@
 // A class with a generic
 
+/** What a stack's methods throw. */
+export sealed interface StackError extends Error {}
+
+/** What popping an empty stack throws. */
+export class EmptyStack extends StackError {}
+
 /** A last-in, first-out stack of any type. */
 export class Stack<T> {
   private items: ListBuilder<T> = new ListBuilder<T>();
 
   public push(item: T): Void { items.add(item); }
 
-  /** The newest item, removed, or a failure if there's none. */
-  public pop(): T throws Bubble {
-    if (items.length == 0) { bubble() }
+  /** The newest item, removed; an `EmptyStack` failure if there's none. */
+  public pop(): T throws EmptyStack {
+    if (items.length == 0) { throw new EmptyStack() }
     items.removeLast()
   }
 

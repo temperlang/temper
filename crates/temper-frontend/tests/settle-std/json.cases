@@ -176,7 +176,7 @@ let { Date } = import("std/temporal");
 Date.jsonAdapter();
 --- settled
 error 39..55: No member jsonAdapter in Date
-Failed: No member jsonAdapter in Date
+Panicked: No member jsonAdapter in Date
 
 === Date.decodeFromJson's shape error has the InvalidIsoDate as its cause
 let { Date, InvalidIsoDate } = import("std/temporal");

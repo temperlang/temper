@@ -7,19 +7,19 @@
 //! `NullableParam` defines too), a value known not to be null is `x.value`
 //! (or the pointer itself), and `==` with a side that may be null is
 //! `NullableParam`'s `==`, which compares as Temper's does, where the
-//! type's own `==` is C++'s. `as` from `T?` checks, bubbling on null
+//! type's own `==` is C++'s. `as` from `T?` checks, panicking on null
 //! (`core::not_null`, or `checked_cast` for a class).
 //!
-//! **Bubbling** is the runtime's `TemperBubble` exception: `bubble()` is
-//! `core::bubble()`, and `orelse` is `try`/`catch`, each side giving its
-//! value where the `orelse`'s goes (returned, assigned, or dropped). An
-//! `orelse` or a `BlockValue` (`??`) inside an expression puts its
+//! **Handlers**, `orelse` and `catch`, branch on their body's result
+//! ([`failures`]), each side giving its value where the handler's goes
+//! (returned, assigned, or dropped). An `orelse` or a `BlockValue` (`??`)
+//! inside an expression puts its
 //! statements before the statement it's in, those before it that do
 //! anything computed first; where nothing may run first (the right of
 //! `&&`, a branch of `?:`, a loop's condition), it's a lambda called at
-//! once. `panic()` is `core::panic()`, which stops the program: Kotlin's
-//! turns `f() orelse panic()` into a bubble rethrown, which an `orelse`
-//! further out would catch.
+//! once. `panic()` is `core::panic()`, which stops the program, as code
+//! with an error does: Kotlin's turned `f() orelse panic()` into a bubble
+//! rethrown, which an `orelse` further out would catch.
 //!
 //! A module is a namespace, the library's (Kotlin puts every module of a
 //! library in it), with its `.cpp` and its header. Its header includes
@@ -87,7 +87,7 @@
 //! operands, unspecified (g++ often goes right to left), where Temper's
 //! is left to right. Where the order would show ([`Effects`]: one
 //! operand writes module state or a field, or logs, and another
-//! writes too, reads what may be written, or may bubble), each operand
+//! writes too, reads what may be written, or may fail), each operand
 //! before the last such one is computed first into a local named by
 //! [`naming::hints`] (`int32_t int32 = bump();`), in order. Kotlin's C++
 //! (at 69f1a5b0) leaves the order to the compiler, so
@@ -329,7 +329,7 @@ pub struct Translator<'a> {
 /// [`failures`] says.
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) enum FailTo {
-    /// Nowhere: the code fails with `Bubble`, if at all.
+    /// Nowhere: the code can't fail.
     Nowhere,
     /// Returned, `return core::unexpected(e);`, from a function or lambda
     /// giving a `core::Expected` of these, its value and failure types.
@@ -605,7 +605,6 @@ impl<'a> Translator<'a> {
                 Scalar::String => "core::Str",
                 Scalar::AnyValue => "std::shared_ptr<core::AnyValueBase>",
                 Scalar::Type => "std::type_index",
-                Scalar::Bubble => return not_yet("Bubble as a value's type"),
             }
             .to_string(),
             // A `@fun` interface is its function type's `std::function`.
@@ -1985,7 +1984,7 @@ impl<'a> Translator<'a> {
         let result = self.deliver_in(id, sink);
         self.pending = outer;
         let mut out = result?;
-        // Nothing runs after a `return` or a bubble.
+        // Nothing runs after a `return` or a panic.
         if let Some(i) = out.iter().position(|s| !completes(s)) {
             out.truncate(i + 1);
         }
@@ -2005,22 +2004,13 @@ impl<'a> Translator<'a> {
         let p = self.p;
         let mut out = Vec::new();
         match p.nodes.get(id) {
-            // A `catch`, and an `orelse` of declared failures, as a branch
-            // on the result. Every `catch` goes there, which says not yet
-            // where it can't, as `expr` would only deliver it here again.
-            Node::Catch { .. } => out.extend(self.handled(id, sink)?),
-            Node::OrElse { body, .. } if self.handles_declared(body) => {
-                out.extend(self.handled(id, sink)?);
-            }
+            // A `catch` or an `orelse`, as a branch on the result, which
+            // says not yet where it can't, as `expr` would only deliver it
+            // here again.
+            Node::Catch { .. } | Node::OrElse { .. } => out.extend(self.handled(id, sink)?),
             Node::Throw { value, cause, .. } => out.extend(self.thrown(value, cause)?),
             _ if matches!(sink, Sink::Return) && self.returned_as_is(id) => {
                 out.extend(self.returned_call(id)?);
-            }
-            // Each side where it comes from, as the `try` spans lines.
-            Node::OrElse { body, fallback } => {
-                let body = self.deliver_marked(body, sink)?;
-                let fallback = self.deliver_marked(fallback, sink)?;
-                out.push(Stmt::Try { body, fallback });
             }
             Node::BlockValue { stmts, value } => {
                 for &s in p.nodes.list(stmts) {
@@ -2028,10 +2018,9 @@ impl<'a> Translator<'a> {
                 }
                 out.extend(self.deliver(value, sink)?);
             }
-            Node::Bubble { .. } | Node::Error { .. } => {
-                out.push(Stmt::Bubble(self.core("bubble").call(Vec::new())));
+            Node::Panic {} | Node::Error { .. } => {
+                out.push(Stmt::Never(self.core("panic").call(Vec::new())));
             }
-            Node::Panic {} => out.push(Stmt::Bubble(self.core("panic").call(Vec::new()))),
             // `void`, as an `orelse`'s fallback, does nothing, and as a
             // handler's body's value, returns from its lambda.
             Node::VoidLit {} if matches!(sink, Sink::Discard) => {}
@@ -2067,13 +2056,6 @@ impl<'a> Translator<'a> {
             }),
         }
         out
-    }
-
-    /// Whether a handler's body may fail with a declared failure type,
-    /// which [`handled`](Self::handled) branches on.
-    fn handles_declared(&self, body: NodeId) -> bool {
-        (temper_tmpl::failures::failures_under(self.p, body).iter())
-            .any(|&(_, f)| f != TypeId::BUBBLE)
     }
 
     /// A value that needs statements, an `orelse` or a `BlockValue`, as an
@@ -2396,10 +2378,9 @@ impl<'a> Translator<'a> {
                     Stmt::Return(self.this_expr.clone())
                 }
                 None | Some((_, Node::VoidLit {})) => Stmt::Return(None),
-                Some((_, Node::Error { .. } | Node::Bubble { .. })) => {
-                    Stmt::Bubble(self.core("bubble").call(Vec::new()))
+                Some((_, Node::Panic {} | Node::Error { .. })) => {
+                    Stmt::Never(self.core("panic").call(Vec::new()))
                 }
-                Some((_, Node::Panic {})) => Stmt::Bubble(self.core("panic").call(Vec::new())),
                 Some((v, Node::OrElse { .. } | Node::Catch { .. } | Node::Throw { .. })) => {
                     out.extend(self.deliver(v, &Sink::Return)?);
                     return Ok(());
@@ -2428,10 +2409,8 @@ impl<'a> Translator<'a> {
                 value: self.expr(value)?,
             },
             Node::ExprStatement { expr } => {
-                if let Node::Error { .. } | Node::Bubble { .. } = p.nodes.get(expr) {
-                    Stmt::Bubble(self.core("bubble").call(Vec::new()))
-                } else if let Node::Panic {} = p.nodes.get(expr) {
-                    Stmt::Bubble(self.core("panic").call(Vec::new()))
+                if let Node::Panic {} | Node::Error { .. } = p.nodes.get(expr) {
+                    Stmt::Never(self.core("panic").call(Vec::new()))
                 } else if let Node::OrElse { .. }
                 | Node::Catch { .. }
                 | Node::BlockValue { .. }
@@ -2611,7 +2590,7 @@ impl<'a> Translator<'a> {
             }
             // A core type kept in a `shared_ptr` (a `MapBuilder`'s
             // `Mapped::Ordered`), checked as a class is: `multis as
-            // MapBuilder<…>` bubbles only on null; and a generic class
+            // MapBuilder<…>` panics only on null; and a generic class
             // with its type arguments, as `x is Append<E>`.
             Some(_) => {
                 let text = self.ty(p.types.non_null(ty))?;
@@ -3213,11 +3192,7 @@ impl<'a> Translator<'a> {
                     els: Box::new(els),
                 }
             }
-            Node::Error { .. } | Node::Bubble { .. } => {
-                let ty = self.ty(p.nodes.ty(id))?;
-                self.core(&format!("bubble<{ty}>")).call(Vec::new())
-            }
-            Node::Panic {} => {
+            Node::Panic {} | Node::Error { .. } => {
                 let ty = self.ty(p.nodes.ty(id))?;
                 self.core(&format!("panic<{ty}>")).call(Vec::new())
             }
@@ -3591,7 +3566,7 @@ fn header_signature(f: &tree::Function) -> String {
 }
 
 /// Statements up to the first that can't complete normally, and the
-/// statements after a bubble, which never returns.
+/// statements after a panic, which never returns.
 fn reachable(mut stmts: Vec<Stmt>) -> Vec<Stmt> {
     if let Some(i) = stmts.iter().position(|s| !completes(s)) {
         stmts.truncate(i + 1);
@@ -3617,7 +3592,7 @@ pub(crate) fn completes(s: &Stmt) -> bool {
             !cases.iter().any(|(labels, _)| labels.is_empty())
                 || cases.iter().any(|(_, body)| body.iter().all(completes))
         }
-        Stmt::Break | Stmt::Continue | Stmt::Goto(_) | Stmt::Return(_) | Stmt::Bubble(_) => false,
+        Stmt::Break | Stmt::Continue | Stmt::Goto(_) | Stmt::Return(_) | Stmt::Never(_) => false,
         Stmt::Block(body) | Stmt::TestsOnly(body) => body.iter().all(completes),
         Stmt::If { then, els, .. } => {
             els.is_empty() || then.iter().all(completes) || els.iter().all(completes)
@@ -3631,9 +3606,6 @@ pub(crate) fn completes(s: &Stmt) -> bool {
                 || labels.end.is_some()
                 || (*cond != Expr::Bool(true)
                     && (body.iter().all(completes) || continues(body) || labels.next.is_some()))
-        }
-        Stmt::Try { body, fallback } => {
-            body.iter().all(completes) || fallback.iter().all(completes)
         }
         Stmt::Expr(_)
         | Stmt::Local { .. }
@@ -3663,7 +3635,6 @@ fn jumps(body: &[Stmt], brk: bool) -> bool {
         Stmt::If { then, els, .. } => jumps(then, brk) || jumps(els, brk),
         // Its own `break`s are written only when it's printed.
         Stmt::Switch { cases, .. } => cases.iter().any(|(_, body)| jumps(body, brk)),
-        Stmt::Try { body, fallback } => jumps(body, brk) || jumps(fallback, brk),
         _ => false,
     })
 }

@@ -87,8 +87,8 @@ public final class MapGlobal {
         List<String> was;
         try {
             was = Core.mapBuilderRemove(builder2, "El Salvador");
-        } catch (MissingKey bubble) {
-            throw new AssertionError("panic", bubble);
+        } catch (MissingKey failure) {
+            throw new AssertionError("panic", failure);
         }
         console.log("Was there: " + Core.listJoinObj(was, ", ", it -> it));
         String t2;

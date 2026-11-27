@@ -150,7 +150,7 @@ else
             return string_char(b0, b1, b2, b3)
         end
 
-        temper.bubble("temper_utf8.char > 0x10FFFF")
+        error("temper_utf8.char > 0x10FFFF", 2)
     end
 
     -- Counts the bytes from `i` to `j` that start a character.
@@ -199,40 +199,23 @@ local function utf8len(str, index)
 end
 
 do
-    local bubble_meta = {
-        __tostring = function(self)
-            return tostring(self.msg or "Bubble")
-        end
-    }
-
-    local bubble_object = setmetatable({
-        msg = "Bubble"
-    }, bubble_meta)
-
-    -- Whether an error is a bubble, which `temper.bubble` raises, rather
-    -- than a panic or a host error.
-    local function is_bubble(err)
-        return getmetatable(err) == bubble_meta
-    end
-    temper.is_bubble = is_bubble
-
-    -- Where errors that passed an `orelse` were first raised: a table's
+    -- Where errors that passed a handler were first raised: a table's
     -- by the table, forgotten with it, and the latest string's, since
     -- strings can't be told apart from equal ones (`raised_trace`).
     local table_traces = setmetatable({}, { __mode = 'k' })
     local string_trace = nil
-    -- The error `caught` is raising again, for the next `traced`.
+    -- The error `caught_by` is raising again, for the next `traced`.
     local again = nil
 
-    -- An `orelse`'s handler, run where an error is raised: anything but a
-    -- bubble, raised here first, not again by `caught`, has its stack
-    -- trace kept, which a handler of the program's, as `temper run`'s,
-    -- shows (`temper.raised_trace`), as `caught` raising it again starts
-    -- a stack of its own.
+    -- A handler's handler, run where an error is raised: anything but a
+    -- declared failure, raised here first, not again by `caught_by`, has
+    -- its stack trace kept, which a handler of the program's, as `temper
+    -- run`'s, shows (`temper.raised_trace`), as `caught_by` raising it
+    -- again starts a stack of its own.
     local function traced(err)
         local raised_again = again ~= nil and rawequal(again, err)
         again = nil
-        if raised_again or is_bubble(err) or temper.is_failure(err) then
+        if raised_again or temper.is_failure(err) then
             return err
         end
         local trace = debug.traceback(tostring(err), 2)
@@ -244,7 +227,7 @@ do
         return err
     end
 
-    -- Where `err`, which passed an `orelse`, was first raised, if known.
+    -- Where `err`, which passed a handler, was first raised, if known.
     function temper.raised_trace(err)
         if type(err) == 'table' then
             return table_traces[err]
@@ -254,43 +237,10 @@ do
         return nil
     end
 
-    local function caught(ok, ...)
-        if ok or is_bubble((...)) then
-            return ok, ...
-        end
-        again = (...)
-        error((...), 0)
-    end
-
-    -- `orelse`: `pcall`, but catching only a bubble, raising anything
-    -- else (a panic, a host error) again, so it passes every `orelse`.
-    -- Generated code passes only `f`; arguments after it are passed to
-    -- `f`, as Kotlin's took them, as `pcall` does.
-    function temper.pcall(f, ...)
-        if select('#', ...) == 0 then
-            return caught(xpcall(f, traced))
-        end
-        local args = { n = select('#', ...), ... }
-        return caught(xpcall(function()
-            return f(table_unpack(args, 1, args.n))
-        end, traced))
-    end
-
-    -- What a handler of declared failures (RFC 164) catches besides
-    -- failure types: bubbles, as `temper.catch`'s argument.
-    local Bubble = setmetatable({}, {
-        __tostring = function()
-            return "temper.Bubble"
-        end
-    })
-    temper.Bubble = Bubble
-
-    -- Whether a handler that catches `caught`, a failure type,
-    -- `Bubble`, or a list of them, catches `err`.
+    -- Whether a handler that catches `caught`, a failure type or a list
+    -- of them, catches `err`.
     local function catches(caught, err)
-        if caught == Bubble then
-            return is_bubble(err)
-        elseif rawget(caught, "typename") ~= nil then
+        if rawget(caught, "typename") ~= nil then
             return temper.instance_of(err, caught)
         end
         for i = 1, #caught do
@@ -311,27 +261,35 @@ do
 
     -- A handler of declared failures, `orelse` or `catch`: `pcall`, but
     -- catching only what follows `f`, each a failure type, whose
-    -- subtypes' failures it catches too, or `temper.Bubble`, raising
-    -- anything else (a panic, a host error, another failure) again,
-    -- unchanged, as `temper.pcall` does.
+    -- subtypes' failures it catches too, raising anything else (a panic,
+    -- a host error, another failure) again, unchanged.
     function temper.catch(f, ...)
         local caught = select('#', ...) == 1 and ... or { ... }
         return caught_by(caught, xpcall(f, traced))
     end
 
-    -- Bubbles, as every builtin that bubbles does; host code bubbles by
-    -- calling it, as anything else it raises passes every `orelse`.
-    function temper.bubble(msg)
-        if msg ~= nil then
-            error(setmetatable({
-                msg = msg
-            }, bubble_meta))
-        else
-            error(bubble_object)
+    -- Only for the regex runtime (`regex/runtime.lua`), which Kotlin
+    -- Temper generated before Temper's bubbles were replaced by declared
+    -- failures: its bubbles are errors of their own, which only its
+    -- `temper.pcall` catches. Generated code doesn't use them.
+    local bubble_meta = {
+        __tostring = function(self)
+            return tostring(self.msg or "Bubble")
         end
+    }
+    local bubble_object = setmetatable({ msg = "Bubble" }, bubble_meta)
+    function temper.bubble()
+        error(bubble_object)
     end
-    -- The integer module's own failures bubble too.
-    temper_int.bubble = temper.bubble
+    local function bubbled(ok, ...)
+        if ok or getmetatable((...)) == bubble_meta then
+            return ok, ...
+        end
+        error((...), 0)
+    end
+    function temper.pcall(f)
+        return bubbled(pcall(f))
+    end
 end
 
 function temper.yield(...)
@@ -768,7 +726,7 @@ do
             if value ~= nil then
                 return value
             end
-            temper.bubble("no such key, getter, or method on " .. tab.typename .. ": " .. k)
+            error("no such key, getter, or method on " .. tab.typename .. ": " .. k, 2)
         end,
         __newindex = function(self, k, v)
             local tab = rawget(self, temper.type_tag)
@@ -959,7 +917,7 @@ end
 
 -- A failure's cause, as Temper's `Error.cause` gives it: the failure that
 -- was being handled where it was thrown, or `temper.null`, also where that
--- was something else, such as a bubble.
+-- was something else, such as a host's error.
 function temper.failure_cause(failure)
     local cause = rawget(failure, "cause")
     if temper.is_failure(cause) then
@@ -982,7 +940,6 @@ function temper.failure_report(err)
     while type(e) == "table" and not seen[e] do
         seen[e] = true
         if not temper.is_failure(e) then
-            lines[#lines + 1] = "caused by a bubble"
             break
         end
         local typename = rawget(e, temper.type_tag).typename
@@ -1238,7 +1195,7 @@ function temper.deque_isempty(deque)
 end
 
 -- Panics with a message, as core's docs say an operation does: an
--- error that isn't a bubble, so it passes every `orelse`, raised at the
+-- error that isn't a failure, so it passes every handler, raised at the
 -- level of the generated code that called the runtime.
 local function panic(message)
     error(message, 3)
@@ -2634,7 +2591,7 @@ function temper.cast_to_null(thing)
     return thing
 end
 
--- `thing as T`, for a class or interface `T`, which bubbles for anything
+-- `thing as T`, for a class or interface `T`, which panics for anything
 -- else: a value of another type, `temper.null`, or a builtin's value.
 function temper.cast_to(thing, to)
     local tag = type(thing) == "table" and thing[temper.type_tag] or nil
@@ -2646,7 +2603,7 @@ function temper.cast_to(thing, to)
 end
 
 -- `thing is T`, for a class or interface `T`: false for a value of a
--- builtin type or none, as a bubble, a panic's string, or a host's error.
+-- builtin type or none, as a panic's string or a host's error.
 function temper.instance_of(thing, ...)
     if type(thing) ~= "table" then
         return false
@@ -2665,8 +2622,8 @@ function temper.instance_of(thing, ...)
     return false
 end
 
--- Ends a test with its failures, by an error that's no bubble, so no
--- `orelse` catches it, and `temper.test` reports them.
+-- Ends a test with its failures, by an error that's no failure, so no
+-- handler catches it, and `temper.test` reports them.
 function temper.test_bail(test)
     error(temper.test_failure_prefix .. table_concat(test.failures, ", "), 2)
 end
@@ -2689,7 +2646,7 @@ function temper.test_softfailtohard(test)
 end
 
 -- std's `Test.assertPanics`: passes if the block panics, which is any
--- error but a Temper one (a failure or a bubble) or a test's failure,
+-- error but a declared failure or a test's failure,
 -- Temper's or LuaUnit's, as on every backend; a test's failure still
 -- ends the test, and a block that returns or throws fails the test,
 -- which goes on.
@@ -2698,7 +2655,7 @@ function temper.test_assertpanics(test, block, msg)
     local ok, err = pcall(block)
     if ok then
         test.failures[#test.failures + 1] = msg
-    elseif temper.is_bubble(err) or temper.is_failure(err) then
+    elseif temper.is_failure(err) then
         test.failures[#test.failures + 1] = msg .. ', but it threw'
     elseif temper.is_test_failure(err) then
         error(err, 0)

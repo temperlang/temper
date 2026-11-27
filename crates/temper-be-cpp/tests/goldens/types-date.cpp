@@ -102,7 +102,7 @@ void global_init_init() {
     if (fromIsoStringResult2.has_value()) {
       rdc = *fromIsoStringResult2;
     } else {
-      core::panic();
+      core::panic_caused_by(fromIsoStringResult2.error());
     }
     core::Console::log(console, "Happy birthday, René: day=" + std::to_string(rdc->day) + ", month=" + std::to_string(rdc->month) + ", year=" + std::to_string(rdc->year));
   });

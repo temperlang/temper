@@ -199,6 +199,7 @@ patches that made them (other docs cite these numbers):
 | C++ | 0028 | `panic()` calls `panic_hook()` first, which a test build's `run_tests` sets to throw `TemperPanic` and catches test by test, so a test that panics fails alone (`Panicked: MESSAGE`), where the whole run ended |
 | C++ | 0029 | Stack traces (`stack_trace.hpp`): `install_stack_traces()`, which only generated programs call, sets a terminate handler printing an uncaught exception and the stack of generated functions (C++23 `std::stacktrace` where `stack_trace.cmake` finds it, else `backtrace()`, else none); a test's panic carries its trace (`TemperPanic::trace`); `init_once` resets its flag by a guard, not a `catch (...)` that unwound the stack before an uncaught bubble ended the process |
 | C++ | 0030 | A panic while a failure is being handled, as `orelse panic()`'s, adds `caused by: WHAT` to its message (`panic_cause`), and the terminate handler no longer reports the bubble it replaced as uncaught (`panicking()`), where it printed `panic` and then `uncaught bubble: bubble` |
+| C++ | 0031 | No bubble (2026-11-27): `TemperBubble` and `bubble<T>()` are gone; failures are `Expected` values alone, handlers branch on them, runtime errors that bubbled now panic, and `orelse panic()` names the failure as its cause (`panic_caused_by`) |
 | C# | 0009 | Run async steps one at a time on one thread, and hold top-level code in a turn |
 | C# | 0014 | Let host code swap the runner, block on a promise only where that can't deadlock, and resume after an await outside any turn |
 | C# | 0026 | A distinct bubble, `TemperLang.Core.Bubble`, which `Core.Bubble()`, `Core.Cast<T>` (`as`), and `CastToNonNull` throw; builtins that threw host exceptions bubble (number parses and conversions, code points, string index casts, `Mapped.Get` and `RemoveGet` for a missing key, `Date` and `FromIsoString`, a regex that finds nothing), and `GetPromiseResult` turns a broken promise's exception into one |
@@ -206,12 +207,14 @@ patches that made them (other docs cite these numbers):
 | C# | 0028 | A panic throws `TemperLang.Core.Panic` (no `Bubble`), where `Environment.FailFast` ended the process, test runs too; an async step's panic passes the runner, and an await doesn't bubble it |
 | C# | 0030 | `Core.Panic(message, cause)`, a panic with the bubble an `orelse panic()` replaces as its inner exception |
 | C# | 0032 | An async step's failure, a panic or a host's error, is reported on stderr, not in what the program logs, and `WaitUntilSafeToExit` rethrows any, where only a panic ended the run |
+| C# | 0033 | No bubble (2026-11-27): `Bubble` and `Core.Bubble()` are gone, so a handler catches only its failure types; `Core.ThrowPanic<T>` panics where C# needs a value |
 | Java | 0008 | Run async steps one at a time on one runner; add `Core.awakeUpon` and the top-level turn; make `Generator` `Iterable` |
 | Java | 0026 | A distinct bubble, `temper.core.Bubble` (unchecked, no stack trace), which `Core.bubble()` makes; `Core.cast`, `castToNonNull`, `check`, and `requireNonNull` bubble for `as`; builtins that threw host exceptions bubble (number parses, code points, string index casts, std's `Date` through `temper.std.temporal.Core`, a regex that finds nothing), `getPromiseResult` bubbles for a broken promise (a panic's `Error` passes), and regex `replace` no longer swallows its callback's exceptions |
 | Java | 0027 | Index errors panic (an `AssertionError`), as core's docs say, where host exceptions flew: `listGet`, new `listSet` and `stringGet`, `listAdd` and `listAddAll` at a place, `listRemoveLast`, `dequeRemoveFirst`, and `listedReduce*` |
 | Java | 0030 | `Bubble.keepStackTraces()`, which a program's generated main method calls, so a bubble that escapes it has a stack trace; library code's stay stackless |
 | Java | 0016 | Connect and send std/net requests on the common pool, never in the async step that calls `stdNetSend` |
 | Java | 0032 | `Core.finishProgram`, which generated `main`s call after the top level, waits as `waitUntilTasksComplete` does, then exits with status 1 if a failure escaped an async step, where the run passed |
+| Java | 0033 | No bubble (2026-11-27): `Bubble`, `Core.bubble()`, and `Core.throwBubble()` are gone, so a handler is one `catch` of its failure type; `Core.keepStackTraces()` replaces `Bubble.keepStackTraces()`, for core's failures |
 | JS | 0001 | Fix the JSDoc types of eight helpers, so strict `tsc` takes generated calls without casts |
 | JS | 0002 | Fix `listBuilderSplice`'s JSDoc types, likewise |
 | JS | 0004 | Make `breakPromise`'s reason optional in its JSDoc |
@@ -220,6 +223,7 @@ patches that made them (other docs cite these numbers):
 | JS | 0026 | `Date`'s constructor and `dateFromIsoString` bubble for no such date, where JS rolled it over or gave an invalid `Date`; `requireNotNull` returns `NonNullable<T>`, so a value TypeScript narrowed to `null` checks |
 | JS | 0027 | Index errors panic (`panic(message)`, an `Error`), as core's docs say: list reads, `set` (which ignored the index), inserts, and `removeLast` (which called a `bubble` they didn't import), `dequeRemoveFirst` (which bubbled), new `listedReduce`, and `stringGet` |
 | JS | 0030 | `panic(message, cause)`, an `Error` with `cause`, for the bubble an `orelse panic()` replaces |
+| JS | 0031 | No bubble (2026-11-27): `Bubble`, `isBubble`, and `bubble` are gone; handlers check failures by `instanceof` (`isFailure` for any) |
 | Lua | 0006 | Add promises and async blocks, which Kotlin's Lua calls but its runtime lacks |
 | Lua | 0011 | Queue promise waiters behind one drain loop; make generators callable tables that `for`-`in` steps and a failed step leaves done |
 | Lua | 0018 | std/net through a pluggable client (`temper.set_net_client`), by default LuaSocket's `socket.http`, on sockets that never block a turn |
@@ -228,6 +232,7 @@ patches that made them (other docs cite these numbers):
 | Lua | 0025 | `temper.pcall` catches only a bubble (`temper.is_bubble`, a table `temper.bubble` raises), raising anything else again; integer division by zero, failed `Float64` and `Int64` conversions, `String.toInt32` with a bad radix, and `as` on a value with no class (`temper.null`, a builtin's) bubble, where they raised strings or host errors |
 | Lua | 0027 | Index errors panic (`error`), as core's docs say, where they bubbled: list reads, `set` (which grew the list), inserts, `removeLast`, `removeFirst`, `reduce`, and `string_get`; `listbuilder_splice` clamps its index, where it bubbled |
 | Lua | 0032 | `temper.pcall` runs its function under `xpcall`, keeping where an error that passes it was first raised (`temper.raised_trace(err)`), which `temper run`'s handler shows, where the trace began at the `orelse` that raised it again |
+| Lua | 0033 | No bubble in generated code (2026-11-27): handlers use `temper.catch` alone; `temper.pcall` and `temper.bubble` stay only for the regex runtime that Kotlin generated |
 | Python | 0007 | Run async steps one at a time on one runner, settle promises by queueing waiters, and make promises awaitable from asyncio |
 | Python | 0013 | Annotate promises and std/net's futures as `TemperFuture`, so strict checkers take a bare `await` of them |
 | Python | 0026 | A distinct bubble, `temper_core.Bubble`, which `bubble()` raises, a `RuntimeError` as Kotlin's bubble is, so host code catches it as before; builtins that raised host errors raise it (casts, `Int` and `Float64` division by zero through `int_div`, `float64_div`, and the like, number parses and conversions, code points, string index casts, `mapped_get` and `map_builder_remove` for a missing key, `date_of` and `date_from_iso_string`, a regex that finds nothing), an awaited promise broken by any `Exception` bubbles, `list_map_dropping` drops only bubbles, and settling a settled promise catches only `InvalidStateError` |
@@ -235,11 +240,13 @@ patches that made them (other docs cite these numbers):
 | Python | 0028 | `temper_core.testing` gives an error's message (a panic's), where it left it empty |
 | Python | 0029 | A label's `break_` and `continue_` return `NoReturn`, so strict checkers see a labeled jump end its branch, as `x ?? break outer` from an inner loop has it |
 | Python | 0032 | `await_safe_to_exit` waits for async steps too, not only promises, and exits with status 1 if a failure escaped one, where the run ended before a failing step's report and passed |
+| Python | 0033 | No bubble (2026-11-27): `Bubble` and `bubble()` are gone, so handlers `except` failure classes alone |
 | Rust | 0003 | Make `Promise` a std `Future`, so Rust code can `.await` Temper promises on any executor |
 | Rust | 0010 | Queue resumes on the runner (`AsyncRunner::awake_upon`), guard turns, and make `SafeGenerator` an `Iterator` |
 | Rust | 0017 | Let work outside any turn hold the runner (`AsyncRunner::hold`), so `run_all_blocking` waits for the tasks it will queue |
 | Rust | 0027 | Index errors panic with core's messages (`index 5 out of bounds for length 2`), where they unwrapped or panicked bare; `list_builder::splice` clamps its index, where it panicked past the end |
 | Rust | 0031 | A bubble keeps the stack where it was made when `std::backtrace` captures one (`RUST_BACKTRACE` or `RUST_LIB_BACKTRACE` set; `Error::backtrace`), and `uncaught`, which a program's generated `main` calls, panics with it; a bubble without a cause or trace allocates nothing |
+| Rust | 0032 | No bubble (2026-11-27): `temper_core::Error` is `Arc<dyn Failure>`, any failure, and `temper_core::Result<T>` its alias, which module init and tests fail with; bubble traces and `keep_bubble_traces` are gone |
 
 ### Versions: one version, spelled for each ecosystem
 
@@ -420,7 +427,7 @@ spills nor fails; its translator hoists and orders operands itself.
 |---|---|---|---|---|---|---|---|
 | **Target** | C++14, as Kotlin | .NET 6 (`net6.0`) | Java 17 | ES modules, Node | Lua 5.1 declared; tested on 5.4.6 and LuaJIT | Python 3.11+ | `rust-version` 1.71.1, as Kotlin; tested on 1.85.0 |
 | **Package** | `init.hpp`/`.cpp` per module, `main.cpp`, `test.cpp`, plus a CMake project (Kotlin writes none) | `src` and `program` projects, `ROOTGlobal` class, a file per type | Maven `pom.xml`, `NAMEGlobal` and `NAMEMain`, a file per type | `package.json`, `.internal.js` modules re-exported by public ones | `init.lua` per library, a rockspec | `pyproject.toml`, a package, `__all__` | a crate, `Cargo.toml` |
-| **Failure (`orelse`)** | `try`/`catch` of `TemperBubble` | `try`/`catch (Bubble)`; `panic()` a `Panic` | `try`/`catch (Bubble)`; `panic()` an `AssertionError` | `try`/`catch` of a `Bubble` (`isBubble`), rethrowing anything else | `temper.pcall`, which catches only `temper.bubble`'s | `try`/`except Bubble`; `panic()` a `BaseException` | `Result` and `?`, closures for complex bodies |
+| **Failure (`orelse`)** | `core::Expected` values, branched on; never thrown | `try`/`catch` of the failure's class; `panic()` a `Panic` | `try`/`catch` of the failure's class; `panic()` an `AssertionError` | `try`/`catch`, rethrowing all but the failure's class (`instanceof`) | `temper.catch`, which catches only the failure's type | `try`/`except` of the failure's class; `panic()` a `BaseException` | `Result` and `?`, closures for complex bodies |
 | **Null** | null `shared_ptr` or `NullableParam` | `T?` | `@Nullable`, boxed | `T \| null` (JSDoc) | `temper.null` (Lua's `nil` can't be a table value) | `T \| None` | `Option<T>` |
 | **Statements in expressions** | translator, after `spill_with` | translator (`hoist`, `sink`), after `spill_with` | translator (`spilled`) | translator (`pre`, `t$0`) | translator, after `spill` | translator (`:=` for `??`) | native block expressions |
 | **Order of evaluation** | its own analysis ([`effects`](../../../crates/temper-be-cpp/src/effects.rs)), since C++ leaves argument order open | left to right | left to right | left to right | left to right | left to right | left to right |

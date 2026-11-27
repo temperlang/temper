@@ -105,7 +105,7 @@ void global_init_init() {
     if (Result5.has_value()) {
       was = *Result5;
     } else {
-      core::panic();
+      core::panic_caused_by(Result5.error());
     }
     core::Console::log(temper_globals::console.value, "Was there: " + core::List::join(was, TEMPER_STR(", "), [](core::Str it) -> core::Str { return it; }));
     core::Str value4;

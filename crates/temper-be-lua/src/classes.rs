@@ -822,12 +822,11 @@ pub fn caught_type(p: &Program, handler: NodeId) -> Option<DeclId> {
     let (Node::OrElse { body, .. } | Node::Catch { body, .. }) = p.nodes.get(handler) else {
         return None;
     };
-    let declared: Vec<TypeId> = (temper_tmpl::failures::failures_under(p, body).into_iter())
+    let fails: Vec<TypeId> = (temper_tmpl::failures::failures_under(p, body).into_iter())
         .map(|(_, f)| f)
-        .filter(|&f| f != TypeId::BUBBLE)
         .collect();
     let root = temper_tmpl::failures::root(p);
-    nominal_decl(p, temper_tmpl::failures::join(p, root, &declared)?)
+    nominal_decl(p, temper_tmpl::failures::join(p, root, &fails)?)
 }
 
 /// What `roots` import ([`temper_tmpl::analysis::imports`]), with the

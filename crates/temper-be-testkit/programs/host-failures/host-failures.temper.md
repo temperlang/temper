@@ -162,9 +162,9 @@ not found
 One handler catches failures of two libraries, each under a root of its
 own, `count-failures`' beside this one's: what it catches is core's
 `Error`, whose message it reads, and which `when` tells apart. A
-`throw` there takes it as its cause, and an `orelse` catches a bubble
-beside both. Another library's failure that nothing handles ends the
-run too:
+`throw` there takes it as its cause, and an `orelse` catches a failure
+of a third root beside both. Another library's failure that nothing
+handles ends the run too:
 
     let { parseCount } = import("count-failures");
 
@@ -187,7 +187,9 @@ run too:
       0
     };
 
-    let nonzero(n: Int): Int throws Bubble { if (n == 0) { bubble() } else { n } }
+    sealed interface Problem extends Error {}
+    class Zero extends Problem {}
+    let nonzero(n: Int): Int throws Zero { if (n == 0) { throw new Zero() } else { n } }
     let ratio(key: String, count: String): Int {
       (hostLookup(key) / nonzero(parseCount(count))) orelse -9
     }
@@ -236,7 +238,7 @@ host bug
 
 ## Panic passes several libraries' handler
 
-So does a panic, where the handler catches a bubble too:
+So does a panic:
 
     let { parseCount } = import("count-failures");
 

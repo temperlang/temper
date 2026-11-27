@@ -230,7 +230,8 @@ The `as` operator allows safe type-casting.
 
 - If `x`'s [type tag](types.md#type-tags) is [compatible](types.md#type-compatibility)
   with `Type` then the result is `x`,
-- otherwise [`bubble()`](#bubble).
+- otherwise it [panics](#panic): a cast that fails is a bug. Where `x`
+  may be of another type, check with [`is`](#is) first.
 
 ```temper
 sealed interface I {
@@ -239,28 +240,15 @@ sealed interface I {
 class A(public s: String) extends I {}
 class B(public s: String) extends I {}
 
-for (let x: I of [new A("an A"), new B("a B")]) {
-  console.log((x as A).s orelse "cast failed");
-}
-//!outputs "an A"
-//!outputs "cast failed"
+let x: I = new A("an A");
+console.log((x as A).s);          //!outputs "an A"
+console.log((x is B).toString()); //!outputs "false"
 // ✅
 ```
 
 Note that `as` renames rather than casts in deconstructing
 assignment context such as in
 `let { exportedName as localName } = import("...");`.
-
-### `bubble()`
-A function that immediately bubbles.  Typically, this will result in execution
-of the right argument to the closest containing [`orelse`](#orelse).
-
-#### Failure
-Expressions either evaluate to a value or fail to produce a usable result.
-See also:
-
-- [*Bubble*](#bubble-1) which provides type system support for tracking failure.
-- [`orelse`](#orelse) which allows recovering from failure.
 
 ### `char`
 A string tag that requires a single code-point string and returns that
@@ -302,26 +290,46 @@ console.log(isAFoo(new Bar()).toString());  //!outputs "false"
 A function that immediately panics, which is unrecoverable inside Temper.
 It might be recoverable in backend code.
 
-An `orelse panic()` keeps the bubble it replaces as the panic's cause, so
-the report says what the bubble said. A bubble from a builtin or host code
-may say what it failed on, as a failed number parse does on Java and
-Python (`invalid literal for int() with base 10: 'abc'`), so that text can
-reach a log with the panic.
+An `orelse panic()` keeps the error it replaces as the panic's cause, so
+the report says what the error said, as `caused by ParseError: parse
+error (input: x, reason: not an Int32)`.
+
+### `throw`
+`throw x` fails with `x`, an [error](types.md#interface-error): a value
+of a declared failure type, a class under a sealed interface that
+extends *Error*. The function says what it may throw with
+[`throws`](#type-operator-throws), and the closest enclosing
+[`orelse`](#orelse) or `catch` handles it.
+
+#### Failure
+An expression either evaluates to a value or fails, in one of two ways:
+
+- An error, which a function declares and its callers handle: a reason
+  worth handling, as text that isn't a number.
+- A [panic](#panic), for a bug, as a list index out of range, which
+  nothing in Temper handles.
+
+Where there's simply no value, a nullable result (`Int?`) and
+[`null`](#null) say so more cheaply than an error.
 
 ### Type operator `throws`
 
 The infix `throws` operator can be used on a return type to indicate that a function
-can fail in one of several ways.
+can fail, and with what.
 
 ```ebnf
 Throws Syntax
 ```
 
-A call that throws may be used within [`orelse`](#orelse).
+A call that throws may be used within [`orelse`](#orelse) or `catch`,
+or in a function that throws the same.
 
 ```temper
-let parseZero(s: String): Int throws Bubble {
-  if (s != "0") { bubble() }
+sealed interface ZeroError extends Error {}
+class NotZero(public text: String) extends ZeroError {}
+
+let parseZero(s: String): Int throws NotZero {
+  if (s != "0") { throw new NotZero(s) }
   return 0
 }
 
@@ -392,11 +400,11 @@ and given two [*Float64*](types.md#class-float64)s it produces a *Float64*.
 // ✅
 ```
 
-Modulus by Zero [bubbles](types.md#class-bubble)
+Integer modulus by zero [panics](#panic); *Float64* modulus by zero gives
+NaN, as [IEEE-754] says.
 
 ```temper
-(1 % 0) orelse console.log("mod by zero");
-//!outputs "mod by zero"
+console.log((1.0 % 0.0).toString()); //!outputs "NaN"
 // ✅
 ```
 
@@ -627,20 +635,14 @@ Integer division [rounds towards zero].
 // ✅
 ```
 
-Division by zero has [*Bubble*](types.md#class-bubble).
+Integer division by zero [panics](#panic): check a divisor that may be
+zero first. *Float64* division by zero gives [IEEE-754]'s infinities and
+NaN.
 
 ```temper
-(1 / 0) orelse console.log("div by zero");
-//!outputs "div by zero"
-// ✅
-```
-
-Float64 division by zero is a *Bubble* too.
-
-```temper
-console.log("${ (0.0 /  0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
-console.log("${ (1.0 /  0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
-console.log("${ (1.0 / -0.0).toString() orelse "Bubble" }"); //!outputs "Bubble"
+console.log((0.0 /  0.0).toString()); //!outputs "NaN"
+console.log((1.0 /  0.0).toString()); //!outputs "Infinity"
+console.log((1.0 / -0.0).toString()); //!outputs "-Infinity"
 // ✅
 ```
 
@@ -1119,9 +1121,6 @@ It has only two values:
 ```ebnf
 BooleanLiteral := "false" | "true"
 ```
-
-### *Bubble*
-A name that may be used to reference the special [*Bubble*](types.md#class-bubble) type.
 
 ### *Float64*
 The name `Float64` refers to the builtin type, [*Float64*](types.md#class-float64).
@@ -1964,15 +1963,16 @@ console.log(f()); //!outputs "function-declaration"
 
 ### `orelse`
 The `orelse` infix operator allows recovering from
-[failure to produce a result](#bubble).
+[an error](#throw).
 
-The left is executed and if it [does not produce a result](types.md#class-bubble),
-then the right is executed and its result is used instead.
+The left is executed and if it throws an error, then the right is
+executed and its result is used instead. A [panic](#panic) passes it.
+`x catch (e) { … }` does the same, with the error bound to `e`.
 
 ```temper
-let f(n: Int, d: Int): Int { n / d orelse -1 }
-console.log("f(3, 0)=${f(3, 0).toString()}"); //!outputs "f(3, 0)=-1"
-console.log("f(6, 2)=${f(6, 2).toString()}"); //!outputs "f(6, 2)=3"
+let f(s: String): Int { s.toInt32() orelse -1 }
+console.log("f(\"x\")=${f("x").toString()}"); //!outputs "f(\"x\")=-1"
+console.log("f(\"6\")=${f("6").toString()}"); //!outputs "f(\"6\")=6"
 // ✅
 ```
 
@@ -2368,7 +2368,7 @@ It is going away.
 `@inlineUnrealizedGoal` may decorate a function parameter declaration.
 
 An *unrealized goal* is a jump like a [`break` statement](#break-statement), [`continue` statement](#continue-statement),
-[`return`](#return), or [`bubble()`](#bubble) that crosses from a
+or [`return`](#return) that crosses from a
 [block lambda](syntax.md#syntax-for-blocklambda) into the containing function.
 
 Inlining a call is the act of taking the called function's body and ensuring that names

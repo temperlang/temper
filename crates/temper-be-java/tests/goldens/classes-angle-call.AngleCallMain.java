@@ -1,6 +1,5 @@
 package angle_call;
 
-import temper.core.Bubble;
 import temper.core.Core;
 
 public final class AngleCallMain {
@@ -8,7 +7,7 @@ public final class AngleCallMain {
 
     public static void main(String[] args) throws ClassNotFoundException {
         Core.initSimpleLogging();
-        Bubble.keepStackTraces();
+        Core.keepStackTraces();
         Core.beginTopLevel();
         try {
             Class.forName("angle_call.AngleCallGlobal");

@@ -11,6 +11,8 @@ namespace nullables {
 void global_init_init();
 
 struct Node;
+struct Problem;
+struct Negative;
 
 struct Node : public std::enable_shared_from_this<Node> {
   int32_t value;
@@ -19,6 +21,15 @@ struct Node : public std::enable_shared_from_this<Node> {
   int32_t last() const;
   int32_t get_value() const;
   std::shared_ptr<Node> get_next() const;
+};
+
+struct Problem : public virtual temper::core::Failure {};
+
+struct Negative : public virtual Problem {
+  int32_t n;
+  static std::shared_ptr<Negative> make(int32_t n);
+  temper::core::Str get_message() const override;
+  int32_t get_n() const;
 };
 
 temper::core::Str describe(temper::core::NullableParam<int32_t> x);
@@ -109,18 +120,33 @@ static int32_t halved(core::Str const & s, int32_t d) {
   }
 }
 
-static int32_t positive(int32_t n) {
+std::shared_ptr<Negative> Negative::make(int32_t n) {
+  std::shared_ptr<Negative> self = std::make_shared<Negative>();
+  self->n = n;
+  return self;
+}
+
+core::Str Negative::get_message() const {
+  return "negative (n: " + std::to_string(this->n) + ")";
+}
+
+int32_t Negative::get_n() const {
+  return this->n;
+}
+
+static core::Expected<int32_t, std::shared_ptr<Negative>> positive(int32_t n) {
   if (n < 0) {
-    core::bubble();
+    return core::unexpected(Negative::make(n));
   }
   return n;
 }
 
 static int32_t checked(int32_t n) {
-  try {
-    return positive(n);
-  } catch (core::TemperBubble const &) {
-    core::panic();
+  auto positiveResult = positive(n);
+  if (positiveResult.has_value()) {
+    return *positiveResult;
+  } else {
+    core::panic_caused_by(positiveResult.error());
   }
 }
 
@@ -140,10 +166,10 @@ static int32_t orZero(core::NullableParam<int32_t> x) {
 }
 
 static core::Str reason(int32_t n, core::NullableParam<core::Str> why) {
-  try {
-    positive(n);
+  auto positiveResult = positive(n);
+  if (positiveResult.has_value()) {
     return TEMPER_STR("ok");
-  } catch (core::TemperBubble const &) {
+  } else {
     return why == nullptr ? TEMPER_STR("fails") : why.value;
   }
 }
@@ -180,15 +206,15 @@ void global_init_init() {
     if (tail != nullptr) {
       core::Console::log(temper_globals::console.value, std::to_string(tail->value));
     }
-    try {
-      positive(-1);
-    } catch (core::TemperBubble const &) {
+    auto positiveResult = positive(-1);
+    if (!positiveResult.has_value()) {
       core::Console::log(temper_globals::console.value, TEMPER_STR("negative"));
     }
     int32_t fallback;
-    try {
-      fallback = positive(-2);
-    } catch (core::TemperBubble const &) {
+    auto positiveResult2 = positive(-2);
+    if (positiveResult2.has_value()) {
+      fallback = *positiveResult2;
+    } else {
       fallback = 0;
     }
     core::Console::log(temper_globals::console.value, std::to_string(fallback));

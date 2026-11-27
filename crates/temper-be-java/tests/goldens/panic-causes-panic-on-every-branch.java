@@ -1,16 +1,15 @@
 package panic_causes_panic_on_every_branch;
 
 import java.util.logging.Logger;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 
 public final class PanicCausesPanicOnEveryBranchGlobal {
     private PanicCausesPanicOnEveryBranchGlobal() {}
 
-    static int positive(int n) {
+    static int positive(int n) throws NotPositive {
         if (n <= 0) {
-            throw Core.bubble();
+            throw new NotPositive(n);
         }
         return n;
     }
@@ -21,7 +20,7 @@ public final class PanicCausesPanicOnEveryBranchGlobal {
         int k;
         try {
             k = positive(1);
-        } catch (Bubble ignored) {
+        } catch (NotPositive ignored) {
             k = 0;
         }
         if (true) {
@@ -30,8 +29,8 @@ public final class PanicCausesPanicOnEveryBranchGlobal {
             } else {
                 try {
                     positive(-1);
-                } catch (Bubble bubble) {
-                    throw new AssertionError("panic", bubble);
+                } catch (NotPositive failure) {
+                    throw new AssertionError("panic", failure);
                 }
                 throw new AssertionError("panic");
             }

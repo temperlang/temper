@@ -18,7 +18,7 @@ use crate::core::{self, CLASS_INTERFACE};
 use crate::library::{Level, Message};
 use crate::scope::{SymbolId, SymbolKind};
 use crate::settle::{Fact, Settle};
-use crate::types::{ANY_VALUE, BUBBLE, ERROR, NULL, Param, TypeData, TypeId, UNKNOWN, VOID};
+use crate::types::{ANY_VALUE, NULL, Param, TypeData, TypeId, UNKNOWN, VOID};
 use temper_syntax::tree::{NodeId, NodeKind, Span};
 
 /// A call of a generic function, solved.
@@ -361,7 +361,7 @@ impl Settle {
     /// parameter, can't fail, so a literal whose body may fail is an
     /// error there, at the literal: the call's type arguments give it as
     /// a `Never` ([`Message::FailureGivenNever`]), as `E` in
-    /// `apply<Int, Int, Never<Bubble>>(n) { x => 10 / x }`; or else its body
+    /// `apply<Int, Int, Never<Oops>>(n) { x => f(x) }`; or else its body
     /// can't give it, as the literal's parameters' types need it too
     /// ([`Settle::literal_formals`]), as `E` for `retry { again => … }`
     /// and `retry<E>(f: fn (Thunk<E>): Int throws E)`, so it's `Never<…>`
@@ -413,15 +413,11 @@ impl Settle {
     /// Whether `actual` fits a type parameter's bound, `wanted`, as
     /// Kotlin's check takes it: a nullable type fits `AnyValue`, so `new
     /// PromiseBuilder<String?>()` and `f<Int?>(null)` for `<T extends
-    /// AnyValue>` (or `<T>`) pass. A bubble fits `Error`, as a failure
-    /// parameter's bound, until `Bubble` goes, as `throws Error` takes
-    /// one too.
+    /// AnyValue>` (or `<T>`) pass.
     fn fits_param_bound(&mut self, actual: TypeId, wanted: TypeId) -> bool {
         let types = &mut self.typing.types;
         let seen = match *types.get(actual) {
             TypeData::Nullable(inner) if wanted == ANY_VALUE => inner,
-            TypeData::NeverOf(BUBBLE) if wanted == ERROR => return true,
-            _ if actual == BUBBLE && wanted == ERROR => return true,
             _ => actual,
         };
         types.is_subtype(seen, wanted) != Some(false)

@@ -1,6 +1,5 @@
 from collections.abc import Sequence as _Sequence
 from temper_core import (
-    Bubble as _Bubble,
     LabelPair as _LabelPair,
     LoggingConsole as _LoggingConsole,
     ParseError as _ParseError,
@@ -27,10 +26,7 @@ def _pair(a: int, b: int, /) -> int:
 
 
 def _parse(s: str, /) -> int:
-    try:
-        return _string_to_int32(s)
-    except _ParseError:
-        raise _Bubble()
+    return _string_to_int32(s)
 
 
 def _next(y: int | None, /) -> int | None:
@@ -66,7 +62,7 @@ def _sum_until_bad(words: _Sequence[str], /) -> int:
         held: int | None = None
         try:
             held = _parse(_list_get(words, i))
-        except _Bubble:
+        except _ParseError:
             pass
         if held is None:  # pyright: ignore[reportUnnecessaryComparison]
             break
@@ -82,7 +78,7 @@ def _parsed_or(s: str, /) -> int:
     held: int | None = None
     try:
         held = _parse(s)
-    except _Bubble:
+    except _ParseError:
         pass
     if held is None:  # pyright: ignore[reportUnnecessaryComparison]
         return -1
@@ -328,7 +324,7 @@ def _via_orelse(words: _Sequence[str], /) -> str:
         held: int | None = None
         try:
             held = _parse(_list_get(words, i))
-        except _Bubble:
+        except _ParseError:
             pass
         if held is None:  # pyright: ignore[reportUnnecessaryComparison]
             seen = f'{seen}!'

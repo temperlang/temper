@@ -363,8 +363,6 @@ Outside fallback: 123
 
 Out of bounds otherwise would panic, so don't do that.
 
-    // console.log("Bubble fallback: ${ls[ls.length] orelse 456}");
-
 ## Operations on List<Boolean>
 
 This shows lists of booleans being operated on

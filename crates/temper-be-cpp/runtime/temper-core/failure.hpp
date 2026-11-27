@@ -8,13 +8,14 @@
 // its cause. A failure is never thrown: a function that declares one
 // returns it in an `Expected` (`expected.hpp`), and callers branch on
 // `has_value()`. Only a failure nothing handles at a module's top level
-// is thrown, as an `UncaughtFailure`, as a bubble there would be.
+// is thrown, as an `UncaughtFailure`.
 
 #include <exception>
 #include <memory>
 #include <mutex>
 #include <string>
 #include "any_value.hpp"
+#include "base_types.hpp"
 #include "expected.hpp"
 #include "str.hpp"
 
@@ -79,8 +80,17 @@ namespace temper {
             return out;
         }
 
+        // `orelse panic()`'s panic, in place of the failure it handles,
+        // which stays its cause: `panic`, then `caused by: …` lines, the
+        // failure's and its causes'. C++ exceptions have no cause, so the
+        // message says it.
+        template<class F>
+        [[noreturn]] void panic_caused_by(const F& failure) {
+            panic("panic\ncaused by: " + failure_report(*failure));
+        }
+
         // A failure nothing handled at a module's top level, thrown out of
-        // its init function as a bubble there is: so a program ends saying
+        // its init function: so a program ends saying
         // it (`stack_trace.hpp`), and host code that runs the init can
         // catch it. `what()` is its report (`failure_report`).
         struct UncaughtFailure : std::exception {

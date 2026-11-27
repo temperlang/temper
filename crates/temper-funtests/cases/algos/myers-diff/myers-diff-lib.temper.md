@@ -45,7 +45,7 @@ from [left] required to derive [right].
       right: List<T>,
       /** Are two items the same? */
       eq: fn (T, T): Boolean,
-    ): Patch<T> throws Bubble {
+    ): Patch<T> {
 
 <details><summary>implementation of Myers's diff algorithm</summary>
 
@@ -209,7 +209,6 @@ or unchanged transition where possible.
           }
         }
       }
-      // bubble(); // Actually unreachable.
     }
 
 </details>
@@ -218,7 +217,7 @@ or unchanged transition where possible.
 
 Once you've got a diff you can format it.
 
-    export let formatPatch(patch: Patch<String>): String throws Bubble {
+    export let formatPatch(patch: Patch<String>): String {
 
 <details><summary>implementation of unified diff format</summary>
 

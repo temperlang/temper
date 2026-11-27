@@ -6,7 +6,13 @@
 === a closure counter, a fun interface passed and returned, and references
 tmpl 1 model 1 library functions 0.1.0
 
+uses `temper-core`#40 0.1.0 {
+  interface Error#41 {}
+}
+
 module functions#0 {
+  interface FnError#42 extends Error#41 {}
+
   fun interface Counter#1 {
     abstract method apply#2(): Int32;
   }
@@ -39,7 +45,7 @@ module functions#0 {
     return %Int32.add(x#15, 1);
   }
 
-  fn plain#16(f#17: fn (Int32): Int32, g#18: (fn (): Void throws Bubble)?): Int32 throws Bubble {
+  fn plain#16(f#17: fn (Int32): Int32, g#18: (fn (): Void throws FnError#42)?): Int32 throws FnError#42 {
     let op#19: IntOp#3 = (toFun(f#17)): IntOp#3;
     let back#20: fn (Int32): Int32 = (fromFun(op#19)): fn (Int32): Int32;
     return back#20(op#19(1));

@@ -51,7 +51,7 @@ module asserts#0 {
     }
   }
 
-  fn assertMoreThings#15(t#34: Test#18, helper#35: TestHelper#2, strings#36: List#20<List#20<String>>): Void throws Bubble {
+  fn assertMoreThings#15(t#34: Test#18, helper#35: TestHelper#2, strings#36: List#20<List#20<String>>): Void {
     {
       var i#37: Int32 = 0;
       ~loop#38: while (%Int32.lt(i#37, strings#36.length#39())) {
@@ -114,7 +114,7 @@ module asserts#0 {
       return "because it's wrong";
     }): fn (): String);
     let helper#63: TestHelper#2 = new constructor#10(3, 2);
-    assertMoreThings#15(test#61, helper#63, (list((list("bye")): List#20<String>)): List#20<List#20<String>>)^;
+    assertMoreThings#15(test#61, helper#63, (list((list("bye")): List#20<String>)): List#20<List#20<String>>);
   }
 
   test "exported" ~test#64(test#65: Test#18): Void throws Error#56 {

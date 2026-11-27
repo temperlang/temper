@@ -104,11 +104,33 @@ local function reading(key, count)
   return t
 end
 
+---@class host-failures-several-libraries.Problem: temper.Failure
+
+---@class host-failures-several-libraries.Problem.type: temper.Type
+local Problem = temper.type("host-failures-several-libraries.Problem", temper.Failure)
+
+---@class host-failures-several-libraries.Zero: host-failures-several-libraries.Problem
+---@field message string
+
+---@class host-failures-several-libraries.Zero.type: temper.Type
+---@operator call: host-failures-several-libraries.Zero
+local Zero = temper.type("host-failures-several-libraries.Zero", Problem)
+
+---@param this host-failures-several-libraries.Zero
+function Zero.constructor(this)
+end
+
+---@param this host-failures-several-libraries.Zero
+---@return string
+function Zero.get.message(this)
+  return "zero"
+end
+
 ---@param n integer
 ---@return integer
 local function nonzero(n)
   if n == 0 then
-    return temper.bubble()
+    error(Zero())
   else
     return n
   end
@@ -122,7 +144,7 @@ local function ratio(key, count)
   local t
   if not temper.catch(function()
     t = temper.int32_div(hostLookup(key), nonzero(parseCount(count)))
-  end, temper.Bubble, temper.Failure) then
+  end, temper.Failure) then
     t = -9
   end
   return t

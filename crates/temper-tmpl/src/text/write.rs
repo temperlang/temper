@@ -204,7 +204,7 @@ impl Writer {
         }
     }
 
-    /// `: Result`, as `: Int32 throws Bubble` if it may bubble.
+    /// `: Result`, as `: Int32 throws E` if it may fail.
     fn result(&mut self, p: &Program, decl: DeclId) {
         let result = p.signature(decl).map_or(TypeId::NONE, |sig| sig.returns);
         self.out.push_str(": ");
@@ -896,13 +896,6 @@ impl Writer {
                     self.expr(p, cause);
                 }
                 self.out.push(')');
-                if p.nodes.flags(id).contains(Flags::MAY_BUBBLE) {
-                    self.out.push('^');
-                }
-                self.written_type(p, id);
-            }
-            Node::Bubble { .. } => {
-                self.out.push_str("(bubble()");
                 if p.nodes.flags(id).contains(Flags::MAY_BUBBLE) {
                     self.out.push('^');
                 }

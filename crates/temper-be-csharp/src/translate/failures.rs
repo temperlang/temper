@@ -25,11 +25,10 @@
 //!   Temper's `cause` (`Core.FailureCause`) alone, as a failure thrown
 //!   again keeps its first.
 //! - **Handlers:** an `orelse` or `catch` catches exactly what its body
-//!   may fail with, `Bubble` and the failure class nearest above its
-//!   declared failures, `catch (NotFound e)`, or where both, `catch
-//!   (Exception e) when (e is Bubble || e is NotFound)`, a filter, which
-//!   leaves the rest unhandled, never caught and thrown again: panics
-//!   and hosts' exceptions pass.
+//!   may fail with, the failure class nearest above its failures, `catch
+//!   (NotFound e)`, or for core's `Error`, `catch (Exception e) when (e
+//!   is IFailure)`, a filter, which leaves the rest unhandled, never
+//!   caught and thrown again: panics and hosts' exceptions pass.
 //! - **Docs:** a function or method that fails with a failure type says
 //!   so in an XML doc comment, `/// <exception cref="NotFound">…`.
 
@@ -278,8 +277,8 @@ impl Translator<'_> {
 
     /// What a function or method says it throws, for its XML doc comment:
     /// the declared failure type its signature fails with, as
-    /// `<exception cref="NotFound">`; nothing for one that bubbles, or
-    /// fails with a type parameter.
+    /// `<exception cref="NotFound">`; nothing for one that fails with a
+    /// type parameter.
     pub(super) fn throws_doc(&mut self, decl: DeclId) -> R<Vec<String>> {
         match temper_tmpl::failures::declared(self.p, decl) {
             Some(fail) => {
@@ -292,34 +291,24 @@ impl Translator<'_> {
         }
     }
 
-    /// What a handler around `body` catches, its `catch` clause's
-    /// classes: `Bubble`, from the runtime, if `body` may bubble, and the
-    /// failure class nearest above all its declared failures, never what
-    /// else C# throws, so panics and hosts' exceptions pass. Where that's
+    /// What a handler around `body` catches, its `catch` clause's class:
+    /// the failure class nearest above all its failures, never what else
+    /// C# throws, so panics and hosts' exceptions pass. Where that's
     /// core's `Error`, for failures of several libraries' roots, it's the
     /// runtime's `IFailure` marker, which isn't an exception, so the
     /// clause catches `Exception` and filters by it (and whether it's
     /// one, the second result).
-    pub(super) fn handled(&mut self, body: NodeId) -> R<(Vec<String>, bool)> {
+    pub(super) fn handled(&mut self, body: NodeId) -> R<(String, bool)> {
         let p = self.p;
         let fails: Vec<TypeId> = (temper_tmpl::failures::failures_under(p, body).into_iter())
             .map(|(_, f)| f)
             .collect();
-        let mut classes = Vec::new();
-        // A body that can't fail, as one `to_tmpl` kept: `Bubble`'s.
-        if fails.contains(&TypeId::BUBBLE) || fails.is_empty() {
-            let Expr::Name(bubble) = self.class("Bubble") else {
-                unreachable!()
-            };
-            classes.push(bubble);
-        }
-        let declared: Vec<TypeId> = fails.into_iter().filter(|&f| f != TypeId::BUBBLE).collect();
         let root = temper_tmpl::failures::root(p);
-        let join = temper_tmpl::failures::join(p, root, &declared);
-        if let Some(ty) = join {
-            classes.push(self.ty(ty)?);
-        }
-        Ok((classes, join.is_some_and(|ty| nominal_decl(p, ty) == root)))
+        let Some(join) = temper_tmpl::failures::join(p, root, &fails) else {
+            // Backends drop handlers whose bodies can't fail first.
+            return not_yet("a handler whose body can't fail");
+        };
+        Ok((self.ty(join)?, nominal_decl(p, join) == root))
     }
 
     /// A failure as an `Exception`, where it's core's `Error`, the

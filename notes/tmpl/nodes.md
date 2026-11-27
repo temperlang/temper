@@ -5,8 +5,8 @@ Part of the [tmpl design](README.md).
 ## Level 1: Errors stay values
 
 Unresolved code arrives as a typed `Error` node with its message, as in
-design.md section 6; every backend turns it into a run-time failure, as
-`bubble()`'s, which an `orelse` catches. The validator treats it as
+design.md section 6; every backend turns it into a panic, which no
+`orelse` catches. The validator treats it as
 valid in any profile, and as never completing. `to_tmpl` makes one of
 each error node, value that doesn't fit its place, call of an
 undeclared name or of a member that isn't there, and `let` or
@@ -20,7 +20,7 @@ of its own type, and nothing around it is dropped. The shared pass
 `temper_tmpl::errors::settle` settles it by the backend's profile: with
 `RUNS_TYPE_ERRORS` (dynamically typed targets), it's its value, so the
 code runs as written; without, a plain `Error`, and what can't run after
-it goes, as above, so statically typed targets fail there.
+it goes, as above, so statically typed targets panic there.
 
 ## Level 2: Node families
 
@@ -75,7 +75,7 @@ and labels are declared by the statements below.
   body, typed by its `@fun` interface or bare function type (as built,
   2026-10-31: "Subset B's next step: function values", below).
 - Control expressions: `IfValue`, `BlockValue`, `And`, `Or`, `OrElse`
-  (a body and a fallback), `Bubble`, and `Panic`.
+  (a body and a fallback), `Catch`, `Throw`, and `Panic`.
 - Generators and async: `Yield` and `Await`, in functions marked
   generator or `async`.
 - `Error`, valid anywhere (Level 1, above).
@@ -85,7 +85,7 @@ introduced by one pass:
 
 - Exceptions: `Try` (a body and a handler) and `Throw`.
 - Results: the `Result<T>` builtin type for lowered signatures; `Ok`,
-  `Fail`, `Propagate` (Rust's `?`), and `ResultOr` (a single bubbling
+  `Fail`, `Propagate` (Rust's `?`), and `ResultOr` (a single failing
   call's `orelse`); a general `orelse` becomes a labeled block whose
   checks break to the fallback.
 - Statements from expressions: compiler-made `Let`s with role hints;
@@ -105,14 +105,14 @@ introduced by one pass:
   (an argument's its parameter's, maybe through an explicit
   conversion; there are no implicit ones).
 - Every reference names a declaration in scope or an external one.
-  Every `Break` and `Continue` names an enclosing label. Every
-  may-bubble call is marked and has a handler; only marked calls may
-  bubble.
+  Every `Break` and `Continue` names an enclosing label. Every call
+  that may fail is marked and has a handler; only marked calls may
+  fail.
 - Children are in evaluation order. A node has one parent: the tree is
   a tree, not a DAG.
 - Starting tmpl has no lowered-family node; a lowered program has only
   kinds its profile allows.
-- Stored facts (captures, may-bubble marks, the init list) match their
+- Stored facts (captures, may-fail marks, the init list) match their
   recomputation.
 
 ### Equality
@@ -285,10 +285,10 @@ Invariants, per kind (the validator's rule codes are below):
 - **Calls** have one argument per parameter, each of exactly the
   parameter's type after substituting the type arguments (subset A has
   no conversions, since it has no subtypes), or `Omitted` for an
-  optional one. `MAY_BUBBLE` is set exactly when the callee may bubble
+  optional one. `MAY_BUBBLE` is set exactly when the callee may fail
   (no operator does: integer division by zero panics).
-- **Bubbling:** in subset A, a call that may bubble has no handler
-  (`orelse` comes with B), so its function must be marked may-bubble.
+- **Failing:** in subset A, a call that may fail has no handler
+  (`orelse` comes with B), so its function must fail with its type.
   In an init block, it fails the module's initialization
   ([question 35](open-questions.md)).
 - **`IfValue`'s branches** and **`BlockValue`'s value** have the
@@ -380,7 +380,7 @@ block). Expressions:
 | `GetStatic` | none | `a`: a static field | its declaration's |
 | `New` | arguments | `a`: a constructor; `MAY_BUBBLE` | its signature's result, the class |
 | `Upcast`, `Downcast` | the value | | written: a proper supertype, or (after an `is` check, unchecked) subtype |
-| `As` | the value | `MAY_BUBBLE`, always | written: checked when run, by `Is`'s rule (C3), or the value's type without null |
+| `As` | the value | | written: checked when run, by `Is`'s rule (C3), panicking where it fails, or the value's type without null |
 | `Is` | the value, not null | `a`: a class's or interface's type | `Boolean` |
 | `Identical` | left, right | | `Boolean` |
 
@@ -429,7 +429,7 @@ Not yet checked: that a class implements every abstract member it
 inherits (the frontend reports it), and statics read before their
 initializer.
 
-### Subset B's next step: nullable types, `orelse`, `bubble()`, and `panic()` (As built, 2026-10-30, Proposed)
+### Subset B's next step: nullable types, `orelse`, and `panic()` (As built, 2026-10-30, Proposed; `Bubble` removed 2026-11-27)
 
 Types gain `Nullable(T)` (`T?`, never of a nullable `T`;
 [types.md](types.md)). Expressions:
@@ -441,29 +441,27 @@ Types gain `Nullable(T)` (`T?`, never of a nullable `T`;
 | `NonNull` | the value, `T?` | | written: `T`; unchecked, where flow facts (a null check) prove it isn't null |
 | `AsNullable` | the value, `T` | | written: `T?` |
 | `EqNullable` | left, right, both `T?` | `a`: `T`'s equality `Op` | `Boolean`: true if both are null, false if one is, else the `Op` |
-| `OrElse` | the body, then the fallback | | written: the fallback's value if the body bubbles |
-| `Bubble` | none | `MAY_BUBBLE`, always | written: as its place wants |
+| `OrElse` | the body, then the fallback | | written: the fallback's value if the body fails |
 | `Panic` | none | | written: as its place wants; no `OrElse` catches it |
 
 - **`??`** has no node: `to_tmpl` writes it as a `BlockValue` with a
   `let`, an `IfValue` on `IsNull`, and `NonNull`.
-- **Calls in an `OrElse`'s body may bubble** wherever the `OrElse` is
+- **Calls in an `OrElse`'s body may fail** wherever the `OrElse` is
   (F4). One typed `Void`, where it stands as a statement, drops its
   parts' values, whatever their types. Bodies may be `BlockValue`s, as
   `do { x as String; 1 } orelse 0`.
 - **`As`** may also take `T?` to `T` (a checked null check, which
-  bubbles if null), or `I?` to a class `C`, checking null first.
+  panics if null), or `I?` to a class `C`, checking null first.
 - **Text:** `(null): T?`, `isNull(e)`, `(nonNull(e)): T`,
   `(asNullable(e)): T?`, `eqNullable(%String.eq, a, b)`,
-  `(orelse(body, fallback)): T`, `(bubble()^): T`, `(panic()): T`; types
+  `(orelse(body, fallback)): T`, `(panic()): T`; types
   `Int32?` and `Node#1?`.
 
 Validator rule N1: `Null` is typed nullable; `IsNull` and `NonNull` take
 only nullable values; `NonNull` goes from `T?` to `T` and `AsNullable`
 from `T` to `T?`, exactly; `EqNullable`'s `Op` is an equality on `T`,
 with both sides `T?`; an `OrElse`'s body and fallback have its type
-unless it's `Void`; and `Bubble` is marked may-bubble (F3), where its
-function may bubble or an `OrElse` encloses it (F4).
+unless it's `Void`.
 
 ### Subset B's next step: generics (As built, 2026-10-31, Proposed)
 
@@ -538,7 +536,7 @@ values, and the conversions between `@fun` interfaces and function types
   captures in brackets (left out if none); `(ref(addOne#4)): IntOp#1`;
   `f#3(x)` and `twice#2(f#3)(2)` for calls of values (a postfix `(`);
   `(toFun(e)): IntOp#1` and `(fromFun(e)): fn (Int32): Int32`; and the
-  function type `fn (A, _?: B): R throws Bubble`, which reads back.
+  function type `fn (A, _?: B): R throws E`, which reads back.
 
 Validator rules: **V1** a `@fun` interface's one member is its abstract
 `apply` method; a literal's or reference's type has its declaration's
@@ -720,12 +718,11 @@ then).
 
 ### Declared failures (As built, 2026-11-25, Proposed)
 
-RFC 164's failure types, beside `Bubble`, which stays as it was
-([types.md](types.md#results); typing.md, "Declared failures"). Every
-backend has them (below); a backend without them would say "not yet in
-the … backend: declared failures: …" for a program that uses them
-(`temper_tmpl::failures::not_yet`), and a program that uses only
-`Bubble` is unchanged, node for node.
+RFC 164's failure types, tmpl's one kind of failure since `Bubble` went
+(2026-11-27; [types.md](types.md#results); typing.md, "Declared
+failures"). Every backend has them (below); a backend without them
+would say "not yet in the … backend: declared failures: …" for a
+program that uses them (`temper_tmpl::failures::not_yet`).
 
 | Kind | Children | Payload and flags | Type |
 |---|---|---|---|
@@ -734,9 +731,8 @@ the … backend: declared failures: …" for a program that uses them
 
 - **Failure types** are the classes and interfaces below core's
   `Error`, an external interface with connected getters `message` and
-  `cause` (`failures::root`). A signature fails with `Bubble`, a
-  failure type, or a failure parameter (below); failures are ordinary
-  values, `Bubble` never is.
+  `cause` (`failures::root`). A signature fails with a failure type or
+  a failure parameter (below); failures are ordinary values.
 - **Core's own failure types,** external like `Error`: the root
   `CoreError` and its classes `MissingKey` (`key`, an `AnyValue`; what
   `Mapped.get` and `MapBuilder.remove` fail with), `ParseError` (`input`
@@ -787,11 +783,10 @@ classes under it (a sealed interface abstract, by `Failure`'s
 `ABCMeta`). `Throw` is `raise`, `raise X(…) from cause` where it makes
 the failure, else `raise with_cause(x, cause)`, which keeps a cause it
 has. `OrElse` and `Catch` are `try`/`except` of exactly what the body
-may fail with: `Bubble` and the join of its declared failures
-(`failures::failures_under`, `join`), so panics and hosts' errors pass;
-where the join is core's `Error`, `except Exception as e:` then `if not
-isinstance(e, Failure): raise e` (with `Bubble` in a tuple where the body
-bubbles too), which checkers narrow. `cause` is `failure_cause(e)`, `__cause__` where it's a
+may fail with: the join of its failures (`failures::failures_under`,
+`join`), so panics and hosts' errors pass; where the join is core's
+`Error`, `except Exception as e:` then `if not isinstance(e, Failure):
+raise e`, which checkers narrow. `cause` is `failure_cause(e)`, `__cause__` where it's a
 `Failure`; `~caught` read after a jumping fallback is asserted not
 null for checkers.
 
@@ -807,20 +802,19 @@ all `@SuppressWarnings("serial")`. `message` is `getMessage()`; `cause`
 named as another of `Throwable`'s methods is "not yet". `Throw` is
 `throw`, `throw Core.withCause(x, cause)` in a handler (keeps a cause
 it has), `Core.throwFailure(x)` where Java needs a value. `OrElse` and
-`Catch` are `try`/`catch` of exactly `Bubble` and/or the join, a
-multi-catch where both, so panics (`AssertionError`) and host
-exceptions pass; where the join is core's `Error`, `catch
-(RuntimeException caught)`, what every root and `Bubble` extend, then
-`if (!(caught instanceof Failure)) { throw caught; }` (`Bubble ||` too
-where the body bubbles), and a `catch` binding `Failure e = (Failure)
+`Catch` are `try`/`catch` of exactly the join, so panics
+(`AssertionError`) and host exceptions pass; where the join is core's
+`Error`, `catch (RuntimeException caught)`, what every root extends,
+then `if (!(caught instanceof Failure)) { throw caught; }`, and a
+`catch` binding `Failure e = (Failure)
 caught;`; an `Error` thrown or taken as a cause is cast back to
 `RuntimeException`. A function failing with a failure type lists it in
 a `throws` clause. Stack traces are kept (made where the failure is
-constructed), unlike `Bubble`'s.
+constructed), unlike core's `BrokenPromise`'s, which has one only after
+`Core.keepStackTraces()`, as a program's generated main calls.
 
 **In Rust** (chunk 9): values, not unwinding. A signature failing with
-a failure type returns `Result<T, F>` (`Bubble`'s stays
-`temper_core::Result<T>`); a failure class is a class handle with a
+a failure type returns `Result<T, F>`; a failure class is a class handle with a
 `temper_core::Cause` field and `impl_failure!` (`Display` its message,
 `Debug`, `std::error::Error` with `source()` its cause, and
 `temper_core::Failure`, which core's `Error` is, `Arc<dyn Failure>`); a
@@ -833,27 +827,25 @@ own; `is` and `as`
 see through it (`AnyValueTrait` by the variant). `Throw` is `return
 Err(x)`, `.into()` where the code fails with a type above, through
 `temper_core::with_cause(x, cause)` in a handler. `OrElse` and `Catch`
-run the body as a `Result` of exactly what it may fail with (the join,
-or `temper_core::Error` with a bubble, which failures convert into); a
-join that's core's `Error` is `Arc<dyn Failure>`, which each failure
+run the body as a `Result` of exactly what it may fail with, the join;
+a join that's core's `Error` is `Arc<dyn Failure>` (`temper_core::Error`), which each failure
 type and enum converts into by `From` (in `impl_failure!` and
 `impl_failure_enum!`, so `?` does) and which is a `Failure` itself, so a
 `throw` there takes it as a cause;
 `Catch` is `unwrap_or_else(|e| …)`, `map_err(|e| thrown)?` for a
 throwing fallback, `or_else(|e| …)?` for another failing one, and as a
 statement `if let Err(e) = …`. `?` converts by `From`; `Ok(e?)` is `e`
-only where the types match. A module's init takes any failure as a
-bubble; `uncaught` names it a failure and lists causes. No
-`catch_unwind`: a panic passes every handler. Not yet: a `catch` whose
-body jumps, or binding a failure beside a bubble; failure interfaces
-with members.
+only where the types match. A module's init and a test fail with
+`temper_core::Result<T>`, any failure as `temper_core::Error`;
+`uncaught` names it a failure and lists causes. No `catch_unwind`: a
+panic passes every handler. Not yet: a `catch` whose body jumps;
+failure interfaces with members.
 
 **In C++** (chunk 10): values, never thrown. A signature failing with a
 failure type returns `core::Expected<T, F>`, `F` the failure's
 `shared_ptr`: C++23's `std::expected` where `__cpp_lib_expected` says
 it's there, else the runtime's C++14 shim with the same API for what it
-has (`expected.hpp`, with its own tests on both); `Bubble`'s signatures
-are unchanged. Core's `Error` is the runtime's `core::Failure`, a
+has (`expected.hpp`, with its own tests on both). Core's `Error` is the runtime's `core::Failure`, a
 `std::exception` (`what()` its message, made once when first asked)
 with `get_message()`, pure virtual, and a cause set once
 (`get_cause()`, `set_cause`, never itself or a loop); a root is
@@ -873,13 +865,12 @@ first in it, `if (r.has_value()) { …body with *r… } else { …fallback… }`
 else the body is a lambda called at once giving `core::Expected` of the
 join, `std::shared_ptr<core::Failure>` where that's core's `Error`
 (each library's failure's `shared_ptr` converts into it, as its root is
-a `core::Failure`). A body that also bubbles is in a `try`, its failure bubbled to
-the `catch` (an exception on that path only). Panics and host
-exceptions pass every handler. Not yet: a `catch` binding a failure
-beside a bubble, a lambda body that jumps out, a failing call where
-nothing can go before it, local function groups that fail, `orelse
-panic()` naming a declared failure as the panic's cause, and failure
-parameters.
+a `core::Failure`). Handlers branch on `Expected` alone; runtime
+errors that bubbled now panic. Panics and host exceptions pass every
+handler. `orelse panic()` names the failure as the panic's cause
+(`core::panic_caused_by`). Not yet: a lambda body that jumps out, a
+failing call where nothing can go before it, and local function groups
+that fail.
 
 **In JS** (chunk 11): classes extending JS's `Error`, natively rather
 than through the runtime's `type()` mixin, so `instanceof`, `stack`,
@@ -898,9 +889,8 @@ is `throw`, `throw withCause(x, cause)` in a handler (keeps a cause it
 has, never itself or a loop; the `{ cause }` option can't go through a
 generated constructor), and where JS needs a value, `(() => { throw x;
 })()`. `OrElse` and `Catch` are `try`/`catch` rethrowing all but what
-the body may fail with: `if (!(isBubble(e$) || e$ instanceof NotFound))
-throw e$;`, a `catch`'s binding the variable, so TypeScript narrows it
-(not yet beside a bubble, which it can't); where the join is core's
+the body may fail with: `if (!(e$ instanceof NotFound)) throw e$;`, a
+`catch`'s binding the variable, so TypeScript narrows it; where the join is core's
 `Error`, the runtime's `isFailure(e$)`, a type predicate (`e is
 Error`). A `~caught` read after a
 jumping fallback is cast to its failure type. A function failing with
@@ -927,9 +917,8 @@ A failure made before and thrown in a handler, or another library's
 e)`, keeping the cause beside it (a `ConditionalWeakTable`) for
 Temper's `cause` (`Core.FailureCause`) alone, unless it has one. `Throw` is `throw`,
 `Core.ThrowFailure<T>(x)` where C# needs a value. `OrElse` and `Catch`
-catch exactly `Bubble` or the join, `catch (NotFound e)`, or both,
-`catch (Exception e) when (e is Bubble || e is NotFound)`, so panics
-and host exceptions pass; where the join is core's `Error`, `catch
+catch exactly the join, `catch (NotFound e)`, so panics and host
+exceptions pass; where the join is core's `Error`, `catch
 (Exception caught) when (caught is IFailure)`, and a `catch` binding
 `IFailure e = (IFailure)caught;`; an `Error` thrown or taken as a cause
 is cast back to `Exception`. A `~caught` read takes `!`. A function
@@ -948,9 +937,8 @@ the key `cause` where it's a failure. `Throw` is `error(x)`,
 `error(temper.with_cause(x, cause))` in a handler (keeps a cause it
 has). `OrElse` and `Catch` are `temper.catch(function() … end,
 NotFound)`, catching exactly the join, by `temper.instance_of`
-(`temper.Failure` where it's core's `Error`), and
-`temper.Bubble` where the body may bubble too, raising anything else
-again unchanged; a body that only bubbles keeps `temper.pcall`. A
+(`temper.Failure` where it's core's `Error`), raising anything else
+again unchanged. A
 `catch`'s binding is its second result, `local ok, e =
 temper.catch(…)`, or where the body jumps, a local of the fallback.
 `orelse panic()` names a failure as its cause by its message. A failure
@@ -973,8 +961,7 @@ methods (`map`, `filter`, `join`, …) are as core declares them. Where a
 function that fails more narrowly is passed where a wider failure is
 wanted (`find`, throwing `Missing`, as `Mapper<String, Int32,
 FailureParamsError>`), `to_tmpl` passes a literal calling it, so every
-target widens it as a `throw` would. A bubble as `E` is not yet: handlers
-in generic code catch failures, which a bubble isn't.
+target widens it as a `throw` would.
 
 Targets whose failures are unchecked exceptions (Python, Java, JS, C#,
 Lua) erase them (`failures::erase_params`): in code, each is its bound,
@@ -1016,13 +1003,11 @@ generic over `E`: `Mapped.forEach` and `toListWith` are free functions in
 Rust's runtime, over `to_list()`, and Listed's members were already.
 
 Validator rules: T4 checks a failure parameter's type argument against
-its bound, `Never<T>` as `T`, and builtin types (`Bubble`, `String`)
-fail it; T5 lets a signature fail with a failure type or a failure
+its bound, `Never<T>` as `T`, and builtin types (`String`) fail it; T5 lets a signature fail with a failure type or a failure
 parameter; F3 marks every `Throw`; F4 checks the failure's type where it
 goes: anything in an `OrElse`'s body or an init block, only what the
 `Catch` binds (or below it) in its body, and elsewhere only the
-function's failure type or below, `Bubble` and failure types never
-mixing; F8: a `Throw`'s value and cause are failure types, and a
+function's failure type or below; F8: a `Throw`'s value and cause are failure types, and a
 `Catch` binds one; D6: failure types aren't generic and have one
 failure type above them, and one that's `Error` itself, a root, is an
 interface, never a class.
@@ -1102,15 +1087,14 @@ many times. Golden tests list problems as `RULE @node: message`.
 - **F, flow.** F1: a function whose result isn't `Void` never falls
   off its end. F2: a `Return` has a value exactly when the result
   isn't `Void`. F3: `MAY_BUBBLE` is set exactly when the callee may
-  bubble. F4: a call that may bubble has a handler, or its function
-  may bubble (with declared failures, of a type that fits; F8 for
-  `Throw` and `Catch`). F5: an initializer doesn't read a module `let` that's
+  fail. F4: a call that may fail has a handler, or its function fails
+  with a type that fits (F8 for `Throw` and `Catch`). F5: an initializer doesn't read a module `let` that's
   initialized later (through a call, it's a warning, [question 19](open-questions.md)).
 - **D, declarations.** D1: every compiler-made declaration has a hint
   with at least one candidate. D2: owners form a tree rooted at
   modules. D3: every type an export mentions is exported or external.
   D4: `@imu` and `@partialImu` marks hold (subset B,
-  [mutability.md](mutability.md)). D5: stored facts (may-bubble marks,
+  [mutability.md](mutability.md)). D5: stored facts (may-fail marks,
   and from subset B captures) match their recomputation. D6: failure
   types and the library's base are well formed ("Declared failures").
 - **Q, qnames and connected** (Proposed 2026-10-29, built;
@@ -1125,7 +1109,7 @@ many times. Golden tests list problems as `RULE @node: message`.
   M1: a module refers to another of the program's modules only for its
   exported top-level declarations, of a module before it in
   `Program::modules`, and assigns or initializes only its own module
-  `let`s. M2: a test's signature is `fn (Test): Void throws Bubble`, with
+  `let`s. M2: a test's signature is `fn (Test): Void throws Error`, with
   std's `testing` module's `Test`. M3 (2026-11-18): a module's library
   parts, its items and init block, use nothing of its test parts, its
   test items and test init.

@@ -1,65 +1,75 @@
 tmpl 1 model 1 library `type-checked-locals` 0.0.0
 
-uses `temper-core`#7 0.0.0-alpha.0.0 {
-  interface Console#8 {
-    connected method log#9(message: String): Void;
+uses `temper-core`#3 0.0.0-alpha.0.0 {
+  interface Error#4 {}
+  interface Console#12 {
+    connected method log#13(message: String): Void;
   }
-  connected fn getConsole#18(name?: String): Console#8;
+  connected fn getConsole#23(name?: String): Console#12;
 }
 
 module `type-checked-locals`#0 {
-  let ~console#10: Console#8;
+  let ~console#14: Console#12;
 
-  fn yay#1(): Void {
-    ~console#10.log#9("yay");
+  fn yay#6(): Void {
+    ~console#14.log#13("yay");
   }
 
-  fn meh#2(): Void {
-    ~console#10.log#9("meh");
+  fn meh#7(): Void {
+    ~console#14.log#13("meh");
   }
 
-  fn boo#3(): Void {
-    ~console#10.log#9("boo");
+  fn boo#8(): Void {
+    ~console#14.log#13("boo");
   }
 
-  fn f#4(x#15: Int32): Int32 throws Bubble {
-    return x#15;
+  interface Problem#1 extends Error#4 {}
+
+  class Oops#2 extends Problem#1 {
+    constructor constructor#5(): Oops#2 {}
+    get message#15(): String {
+      return "oops";
+    }
   }
 
-  fn g#5(x#16: Int32): Int32 throws Bubble {
-    return x#16;
+  fn f#9(x#20: Int32): Int32 throws Oops#2 {
+    return x#20;
   }
 
-  fn i#6(x#17: Int32): Int32 throws Bubble {
-    return x#17;
+  fn g#10(x#21: Int32): Int32 throws Oops#2 {
+    return x#21;
+  }
+
+  fn i#11(x#22: Int32): Int32 throws Oops#2 {
+    return x#22;
   }
 
   init {
-    init ~console#10 = getConsole#18(omitted);
-    ~console#10.log#9("Checkpoint 0");
-    (orelse((value { let a#11: Int32; a#11 = (error("Cannot assign to Int32 from String", "1")): Int32; (bubble()^): Void; void }): Void, yay#1())): Void;
-    ~console#10.log#9("Checkpoint 1");
-    (value { let a#12: Int32 = 1; yay#1(); void }): Void;
-    ~console#10.log#9("Checkpoint 2");
+    init ~console#14 = getConsole#23(omitted);
+    ~console#14.log#13("Checkpoint 0");
+    (orelse((value { let a#16: Int32; a#16 = (error("Cannot assign to Int32 from String", "1")): Int32; (throw(new constructor#5())^): Void }): Void, yay#6())): Void;
+    ~console#14.log#13("Checkpoint 1");
+    (value { let a#17: Int32 = 1; yay#6(); void }): Void;
+    ~console#14.log#13("Checkpoint 2");
     {
-      var a#13: Int32 = 1;
-      (orelse((value { a#13 = (error("Cannot assign to Int32 from String", "2")): Int32; (bubble()^): Void; boo#3(); void }): Void, meh#2())): Void;
-      if (%Int32.eq(a#13, 1)) {
-        meh#2();
+      var a#18: Int32 = 1;
+      (orelse((value { a#18 = (error("Cannot assign to Int32 from String", "2")): Int32; (throw(new constructor#5())^): Void }): Void, meh#7())): Void;
+      if (%Int32.eq(a#18, 1)) {
+        meh#7();
       } else {
-        meh#2();
+        meh#7();
       }
     }
-    ~console#10.log#9("Checkpoint 3");
-    (value { var a#14: Int32 = 1; a#14 = 2; yay#1() }): Void;
-    ~console#10.log#9("Checkpoint 4");
-    (orelse((value { f#4(0)^; yay#1() }): Void, boo#3())): Void;
-    (orelse((value { f#4((error("Expected subtype of Int32, but got String", "0")): Int32)^; meh#2() }): Void, meh#2())): Void;
-    ~console#10.log#9("Checkpoint 5");
-    (orelse((value { g#5(0)^; yay#1() }): Void, boo#3())): Void;
-    (orelse((value { g#5((error("Expected subtype of Int32, but got String", "0")): Int32)^; meh#2() }): Void, meh#2())): Void;
-    ~console#10.log#9("Checkpoint 6");
-    (orelse((value { i#6(0)^; yay#1() }): Void, boo#3())): Void;
-    (orelse((value { i#6((error("Expected subtype of Int32, but got String", "0")): Int32)^; meh#2() }): Void, meh#2())): Void;
+    ~console#14.log#13("Checkpoint 3");
+    (value { var a#19: Int32 = 1; a#19 = 2; yay#6() }): Void;
+    ~console#14.log#13("Checkpoint 4");
+    (orelse((value { f#9(0)^; yay#6() }): Void, boo#8())): Void;
+    (orelse((value { f#9((error("Expected subtype of Int32, but got String", "0")): Int32)^; meh#7() }): Void, meh#7())): Void;
+    ~console#14.log#13("Checkpoint 5");
+    (orelse((value { g#10(0)^; yay#6() }): Void, boo#8())): Void;
+    (orelse((value { g#10((error("Expected subtype of Int32, but got String", "0")): Int32)^; meh#7() }): Void, meh#7())): Void;
+    ~console#14.log#13("Checkpoint 6");
+    (orelse((value { i#11(0)^; yay#6() }): Void, boo#8())): Void;
+    (orelse((value { i#11((error("Expected subtype of Int32, but got String", "0")): Int32)^; meh#7() }): Void, meh#7())): Void;
   }
 }

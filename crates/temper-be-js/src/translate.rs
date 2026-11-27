@@ -395,7 +395,6 @@ impl<'a> Translator<'a> {
                 Scalar::AnyValue => "unknown",
                 // A type as a value is its `typeof` name.
                 Scalar::Type => "string",
-                Scalar::Bubble => return not_yet("Bubble as a value's type"),
             }
             .to_string(),
             // Only a signature's result, never a value's (tmpl's T5).
@@ -928,8 +927,7 @@ impl<'a> Translator<'a> {
 
     /// The declared failure type a function or method fails with, for
     /// JSDoc's `@throws`, as a parameter named `@throws` the printer takes
-    /// for one; nothing for one that bubbles, or fails with a type
-    /// parameter.
+    /// for one; nothing for one that fails with a type parameter.
     fn throws(&mut self, decl: DeclId) -> R<Option<(String, String)>> {
         match temper_tmpl::failures::declared(self.p, decl) {
             Some(fail) => Ok(Some(("@throws".to_string(), self.ty(fail)?))),
@@ -1552,16 +1550,13 @@ impl<'a> Translator<'a> {
     }
 
     /// A handler's `try` ([`Stmt::Try`]), an `orelse`'s or a `catch`'s,
-    /// catching exactly what its body may fail with: a bubble, by
-    /// `isBubble(e$)`, and the failure class nearest above its declared
-    /// failures, by `instanceof` (a `catch`'s binding, narrowed so for
-    /// TypeScript), or where that's core's `Error`, for failures of
-    /// several libraries' roots, by the runtime's `isFailure(e$)`.
-    /// Anything else, a panic or a host's error, passes it, even where
-    /// the fallback only panics, whose panic then has what it caught as
-    /// its `cause`, `panic("panic", e$)`. Not yet for a `catch` binding a
-    /// failure beside a bubble, which TypeScript can't narrow to the
-    /// failure's type.
+    /// catching exactly what its body may fail with: the failure class
+    /// nearest above its failures, by `instanceof` (a `catch`'s binding,
+    /// narrowed so for TypeScript), or where that's core's `Error`, for
+    /// failures of several libraries' roots, by the runtime's
+    /// `isFailure(e$)`. Anything else, a panic or a host's error, passes
+    /// it, even where the fallback only panics, whose panic then has what
+    /// it caught as its `cause`, `panic("panic", e$)`.
     fn try_catch(&mut self, body: Vec<Stmt>, mut catch: Vec<Stmt>, handler: NodeId) -> R<Stmt> {
         let p = self.p;
         let (body_node, fallback, local) = handler_parts(p, handler);
@@ -1572,33 +1567,22 @@ impl<'a> Translator<'a> {
         let fails: Vec<TypeId> = (temper_tmpl::failures::failures_under(p, body_node).into_iter())
             .map(|(_, f)| f)
             .collect();
-        let mut tests = Vec::new();
-        // A body that can't fail, as one `to_tmpl` kept: `Bubble`'s.
-        if fails.is_empty() || fails.contains(&TypeId::BUBBLE) {
-            self.imports.insert("isBubble");
-            tests.push(Expr::name("isBubble").call(vec![Expr::name(var.clone())]));
-        }
-        let declared: Vec<TypeId> = fails.into_iter().filter(|&f| f != TypeId::BUBBLE).collect();
         let root = temper_tmpl::failures::root(p);
-        if let Some(ty) = temper_tmpl::failures::join(p, root, &declared) {
-            let class = nominal_decl(p, ty);
-            if class == root {
+        let caught = match temper_tmpl::failures::join(p, root, &fails) {
+            Some(ty) if nominal_decl(p, ty) == root => {
                 self.imports.insert("isFailure");
-                tests.push(Expr::name("isFailure").call(vec![Expr::name(var.clone())]));
-            } else {
-                let Some(class) = class else {
+                Expr::name("isFailure").call(vec![Expr::name(var.clone())])
+            }
+            Some(ty) => {
+                let Some(class) = nominal_decl(p, ty) else {
                     return not_yet("a handler of a failure that isn't a class's");
                 };
                 let class = self.class_ref(class);
-                tests.push(Expr::bin(Bin::InstanceOf, Expr::name(var.clone()), class));
+                Expr::bin(Bin::InstanceOf, Expr::name(var.clone()), class)
             }
-        }
-        if local.is_some() && tests.len() > 1 {
-            return not_yet("a catch that binds a failure beside a bubble");
-        }
-        let caught = (tests.into_iter())
-            .reduce(|a, b| Expr::bin(Bin::Or, a, b))
-            .unwrap();
+            // A body that can't fail, which backends drop first: nothing.
+            None => Expr::Bool(false),
+        };
         if matches!(p.nodes.get(fallback), Node::Panic {}) {
             let caused =
                 Expr::name("panic").call(vec![Expr::Str("panic".into()), Expr::name(var.clone())]);
@@ -2061,11 +2045,7 @@ impl<'a> Translator<'a> {
                     )),
                 }
             }
-            Node::Bubble { .. } => {
-                self.imports.insert("bubble");
-                Expr::name("bubble").call(Vec::new())
-            }
-            Node::Panic {} => {
+            Node::Panic {} | Node::Error { .. } => {
                 self.imports.insert("panic");
                 Expr::name("panic").call(Vec::new())
             }
@@ -2152,10 +2132,6 @@ impl<'a> Translator<'a> {
             }
             Node::Identical { left, right } => {
                 Expr::bin(Bin::Eq, self.expr(left)?, self.expr(right)?)
-            }
-            Node::Error { .. } => {
-                self.imports.insert("bubble");
-                Expr::name("bubble").call(Vec::new())
             }
             Node::FunctionLiteral { decl, params, body } => self.literal(id, decl, params, body)?,
             Node::Await { promise, .. } => {

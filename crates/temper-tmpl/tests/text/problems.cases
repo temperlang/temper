@@ -112,11 +112,17 @@ R5 @20: a#3 may be read before it's assigned
 R6 @23: b#4 isn't a var, but may be assigned twice
 R6 @29: c#5 isn't a var, but may be assigned twice
 
-=== returns and bubbling (F1, F2, F4)
+=== returns and failures (F1, F2, F4)
 tmpl 1 model 1 library flow 0.1.0
 
+uses `temper-core`#90 0.1.0 {
+  interface Error#91 {}
+}
+
 module flow#0 {
-  fn int#97(s#94: String): Int32 throws Bubble {
+  interface FlowError#92 extends Error#91 {}
+
+  fn int#97(s#94: String): Int32 throws FlowError#92 {
     return 0;
   }
 
@@ -153,12 +159,12 @@ module flow#0 {
   }
 }
 --- problems
-F1 @5: falls#1 can reach its end without returning
-F1 @18: breaks#5 can reach its end without returning
-F2 @26: a Void function's return has no value
-F2 @30: the return needs a String
-F4 @35: the call of int#97 may bubble, but quiet#9 can't
-F2 @38: a return outside a function
+F1 @6: falls#1 can reach its end without returning
+F1 @19: breaks#5 can reach its end without returning
+F2 @27: a Void function's return has no value
+F2 @31: the return needs a String
+F4 @36: the call of int#97 may fail with FlowError#92, but quiet#9 can't
+F2 @39: a return outside a function
 
 === module init order (F5, R6)
 tmpl 1 model 1 library init 0.1.0
@@ -245,16 +251,42 @@ Q4 @5: listed#7 lists backends, so it needs a body as their fallback
 tmpl 1 model 1 library calls 0.1.0
 
 uses `temper-core`#1 0.1.0 {
+  interface Error#20 {}
+  class ParseError#21 extends Error#20 {}
   class Int32#2 {
     connected method toString#3(radix?: Int32): String;
   }
   class String#4 {
-    connected method toInt32#5(radix?: Int32): Int32 throws Bubble;
+    connected method toInt32#5(radix?: Int32): Int32 throws ParseError#21;
   }
 }
 
 module calls#0 {
-  fn f#6(a#7: Int32, b#8?: Int32): String throws Bubble {
+  fn f#6(a#7: Int32, b#8?: Int32): String throws ParseError#21 {
+    let s#9: String = "1".toString#3(omitted);
+    let n#10: Int32 = s#9.toInt32#5(omitted, omitted)^;
+    let t#11: String = f#6(omitted, omitted)^;
+    return a#7.toString#3("2");
+  }
+
+  init {}
+}
+--- canonical
+tmpl 1 model 1 library calls 0.1.0
+
+uses `temper-core`#1 0.1.0 {
+  class Int32#2 {
+    connected method toString#3(radix?: Int32): String;
+  }
+  class String#4 {
+    connected method toInt32#5(radix?: Int32): Int32 throws ParseError#21;
+  }
+  interface Error#20 {}
+  class ParseError#21 extends Error#20 {}
+}
+
+module calls#0 {
+  fn f#6(a#7: Int32, b#8?: Int32): String throws ParseError#21 {
     let s#9: String = "1".toString#3(omitted);
     let n#10: Int32 = s#9.toInt32#5(omitted, omitted)^;
     let t#11: String = f#6(omitted, omitted)^;
@@ -360,21 +392,23 @@ R5 @33: s#4 may be read before it's assigned
 === results only as signatures' results (T5)
 tmpl 1 model 1 library results 0.1.0
 
+uses `temper-core`#20 0.1.0 {
+  interface Error#21 {}
+}
+
 module results#0 {
-  fn ok#1(f#2: fn (): Int32 throws Bubble): Int32 throws Bubble {
+  interface ResultsError#22 extends Error#21 {}
+
+  fn ok#1(f#2: fn (): Int32 throws ResultsError#22): Int32 throws ResultsError#22 {
     return 1;
   }
 
-  fn odd#3(b#4: Bubble): Int32 throws Int32 {
-    let c#5: Bubble = b#4;
+  fn odd#3(b#4: Int32): Int32 throws Int32 {
+    let c#5: Int32 = b#4;
     return 1;
   }
 
   init {}
 }
 --- problems
-T5 #3: fn (Bubble): Int32 throws Int32 has a failure where a value goes
-T5 #3: fn (Bubble): Int32 throws Int32 fails with Int32, not Bubble or a failure type
-T5 #4: Bubble isn't a value's type
-T5 #5: Bubble isn't a value's type
-T5 @9: Bubble isn't a value's type
+T5 #3: fn (Int32): Int32 throws Int32 fails with Int32, not a failure type

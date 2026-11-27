@@ -36,8 +36,8 @@ public final class JsonAdaptersGlobal {
         T back;
         try {
             back = decode(adapter, text);
-        } catch (JsonException bubble) {
-            throw new AssertionError("panic", bubble);
+        } catch (JsonException failure) {
+            throw new AssertionError("panic", failure);
         }
         String again = encode(adapter, back);
         console.log(again.equals(text) ? text : text + " became " + again);
@@ -55,8 +55,8 @@ public final class JsonAdaptersGlobal {
         Shape shape;
         try {
             shape = decode(Shape.jsonAdapter(), "{\"height\": 6, \"width\": 5}");
-        } catch (JsonException bubble) {
-            throw new AssertionError("panic", bubble);
+        } catch (JsonException failure) {
+            throw new AssertionError("panic", failure);
         }
         if (shape instanceof Rect) {
             console.log("rect " + ((Rect) shape).width + "x" + ((Rect) shape).height);
@@ -66,8 +66,8 @@ public final class JsonAdaptersGlobal {
         Record record_;
         try {
             record_ = decode(Record.jsonAdapter(), "{\"name\": \"Bo\", \"is-active\": false, \"score\": 2, \"big\": 7, \"nickname\": \"B\", \"points\": []}");
-        } catch (JsonException bubble2) {
-            throw new AssertionError("panic", bubble2);
+        } catch (JsonException failure2) {
+            throw new AssertionError("panic", failure2);
         }
         String t = record_.name + " " + record_.active + " ";
         @Nullable String subject = record_.nickname;

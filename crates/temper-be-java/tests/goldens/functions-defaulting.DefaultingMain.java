@@ -1,6 +1,5 @@
 package defaulting;
 
-import temper.core.Bubble;
 import temper.core.Core;
 
 public final class DefaultingMain {
@@ -8,7 +7,7 @@ public final class DefaultingMain {
 
     public static void main(String[] args) throws ClassNotFoundException {
         Core.initSimpleLogging();
-        Bubble.keepStackTraces();
+        Core.keepStackTraces();
         Core.beginTopLevel();
         try {
             Class.forName("defaulting.DefaultingGlobal");

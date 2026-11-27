@@ -44,11 +44,53 @@ local Circle = temper.type("panics.Circle", Shape)
 function Circle.constructor(this)
 end
 
+---@class panics.Problem: temper.Failure
+
+---@class panics.Problem.type: temper.Type
+local Problem = temper.type("panics.Problem", temper.Failure)
+
+---@class panics.Positive: panics.Problem
+---@field n integer
+---@field message string
+
+---@class panics.Positive.type: temper.Type
+---@operator call: panics.Positive
+local Positive = temper.type("panics.Positive", Problem)
+
+---@param this panics.Positive
+---@param n integer
+function Positive.constructor(this, n)
+  this.n = n
+end
+
+---@param this panics.Positive
+---@return string
+function Positive.get.message(this)
+  return "positive (n: " .. this.n .. ")"
+end
+
+---@class panics.NotSquare: panics.Problem
+---@field message string
+
+---@class panics.NotSquare.type: temper.Type
+---@operator call: panics.NotSquare
+local NotSquare = temper.type("panics.NotSquare", Problem)
+
+---@param this panics.NotSquare
+function NotSquare.constructor(this)
+end
+
+---@param this panics.NotSquare
+---@return string
+function NotSquare.get.message(this)
+  return "not square"
+end
+
 ---@param n integer
 ---@return integer
 local function failing(n)
   if n > 0 then
-    return temper.bubble()
+    error(Positive(n))
   end
   return n
 end
@@ -59,7 +101,7 @@ local function downcast(s)
   if temper.instance_of(s, Square) then
     return s --[[@as panics.Square]]
   else
-    return temper.bubble()
+    error(NotSquare())
   end
 end
 
@@ -68,9 +110,9 @@ end
 local function calling(f)
   ---@type integer
   local t_1
-  if not temper.pcall(function()
+  if not temper.catch(function()
     t_1 = f()
-  end) then
+  end, Problem) then
     t_1 = -9
   end
   return t_1
@@ -97,7 +139,7 @@ local function explode(n)
   if n > 0 then
     error("panic")
   end
-  return temper.bubble()
+  error(Positive(n))
 end
 
 ---@param name string
@@ -111,9 +153,9 @@ end
 local function inner()
   ---@type integer
   local t_1
-  if not temper.pcall(function()
+  if not temper.catch(function()
     t_1 = explode(1)
-  end) then
+  end, Positive) then
     t_1 = noted("inner")
   end
   return t_1
@@ -121,23 +163,23 @@ end
 
 ---@type integer
 local zero
-if not temper.pcall(function()
+if not temper.catch(function()
   zero = failing(0)
-end) then
+end, Positive) then
   zero = -1
 end
 ---@type integer
 local a
-if not temper.pcall(function()
+if not temper.catch(function()
   a = failing(1)
-end) then
+end, Positive) then
   a = -1
 end
 ---@type integer
 local b
-if not temper.pcall(function()
+if not temper.catch(function()
   b = downcast(Circle()).side
-end) then
+end, NotSquare) then
   b = -2
 end
 ---@type integer
@@ -265,9 +307,9 @@ print(v)
 print("panicking")
 ---@type integer
 local p
-if not temper.pcall(function()
+if not temper.catch(function()
   p = inner()
-end) then
+end, Positive) then
   p = -1
 end
 print("after the panic " .. p)

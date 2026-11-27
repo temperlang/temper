@@ -1,7 +1,7 @@
 from collections import deque
 from collections.abc import MutableSequence, Sequence
 from temper_core import (
-    Bubble,
+    Failure,
     deque_remove_first,
     end_test,
     int_add,
@@ -17,9 +17,21 @@ from temper_std.testing import Test
 from unittest import TestCase
 
 
+class _Problem(Failure, Exception):
+    __slots__ = ()
+
+
+class _Oops(_Problem):
+    __slots__ = ()
+
+    @property
+    def message(self, /) -> str:
+        return 'oops'
+
+
 def _at(i: int, /) -> int:
     if i == 99:
-        raise Bubble()
+        raise _Oops()
     return i
 
 
@@ -77,7 +89,7 @@ class TestHostErrors(TestCase):
         with end_test(test):
             try:
                 r = _read((1, 2), 5)
-            except Bubble:
+            except _Oops:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
 
@@ -88,7 +100,7 @@ class TestHostErrors(TestCase):
             ls = (1, 2)
             try:
                 r = _read(ls, len(ls))
-            except Bubble:
+            except _Oops:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
 
@@ -98,7 +110,7 @@ class TestHostErrors(TestCase):
         with end_test(test):
             try:
                 r = _read(_built(), -1)
-            except Bubble:
+            except _Oops:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
 
@@ -108,7 +120,7 @@ class TestHostErrors(TestCase):
         with end_test(test):
             try:
                 r = _write(_built(), 5)
-            except Bubble:
+            except _Oops:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
 
@@ -119,7 +131,7 @@ class TestHostErrors(TestCase):
             lb = _built()
             try:
                 r = _write(lb, len(lb))
-            except Bubble:
+            except _Oops:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
 
@@ -129,7 +141,7 @@ class TestHostErrors(TestCase):
         with end_test(test):
             try:
                 r = _insert(_built(), 5)
-            except Bubble:
+            except _Oops:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
 
@@ -140,7 +152,7 @@ class TestHostErrors(TestCase):
             lb = _built()
             try:
                 r = _insert(lb, int_add(len(lb), 1))
-            except Bubble:
+            except _Oops:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
 
@@ -151,7 +163,7 @@ class TestHostErrors(TestCase):
             lb = _built()
             try:
                 n = _insert(lb, len(lb))
-            except Bubble:
+            except _Oops:
                 n = -1
             test.assert_(n == 2 and list_get(lb, 1) == 2, lambda: "didn't append")
 
@@ -161,7 +173,7 @@ class TestHostErrors(TestCase):
         with end_test(test):
             try:
                 r = _remove_last([], 0)
-            except Bubble:
+            except _Oops:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
 
@@ -171,7 +183,7 @@ class TestHostErrors(TestCase):
         with end_test(test):
             try:
                 r = _remove_first(deque(), 0)
-            except Bubble:
+            except _Oops:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
 
@@ -181,7 +193,7 @@ class TestHostErrors(TestCase):
         with end_test(test):
             try:
                 r = _sum((), 0)
-            except Bubble:
+            except _Oops:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
 
@@ -191,7 +203,7 @@ class TestHostErrors(TestCase):
         with end_test(test):
             try:
                 r = _code_at('ab', 0)
-            except Bubble:
+            except _Oops:
                 r = -1
             test.assert_(r != -1, lambda: 'caught')
 
@@ -201,6 +213,6 @@ class TestHostErrors(TestCase):
         with end_test(test):
             try:
                 r = _replaced(3)
-            except Bubble:
+            except _Oops:
                 r = ''
             test.assert_(r != '', lambda: 'caught')

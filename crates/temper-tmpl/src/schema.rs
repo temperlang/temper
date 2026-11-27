@@ -339,7 +339,7 @@ schema! {
     }
     /// A test: a function, named by `decl` (compiler-made), that takes a
     /// fresh `Test` of std's `testing` module and may throw any error
-    /// (core's `Error`, a bubble too), run after the module's init, and
+    /// (core's `Error`), run after the module's init, and
     /// passing if it throws none and its `Test` has no failures when it
     /// ends. `name` is how it's reported.
     Test(Decl, Untyped) {
@@ -534,13 +534,10 @@ schema! {
     /// "Parameters' defaults").
     Coalesce(Expr, Written) { left: NodeId = one Expr, right: NodeId = one Expr }
     /// Temper's `orelse`: `body`'s value, or `fallback`'s if `body`
-    /// bubbles. Calls in `body` may bubble wherever the `OrElse` is. One
+    /// fails. Calls in `body` may fail wherever the `OrElse` is. One
     /// typed `Void` drops its parts' values, whatever their types, as
     /// where it stands alone.
     OrElse(Expr, Written) { body: NodeId = one Expr, fallback: NodeId = one Expr }
-    /// `bubble()`: fails, to the nearest `orelse` or the function's
-    /// caller; typed as its place wants, since it never completes.
-    Bubble(Expr, Written) { may_bubble: bool = flag }
     /// `throw value`: fails with `value`, an object of a failure type (a
     /// class below core's `Error`), to the nearest handler or the
     /// function's caller, which must take its type; typed as its place
@@ -556,7 +553,7 @@ schema! {
     /// `catch (e)`: `body`'s value, or if it fails, `fallback`'s, with
     /// `local`, declared here and in scope only in `fallback`, holding the
     /// failure. Everything `body` may fail with is of `local`'s type, a
-    /// failure type, so never `Bubble`. Typed as `OrElse` is.
+    /// failure type. Typed as `OrElse` is.
     Catch(Expr, Written) {
         local: DeclId = a,
         body: NodeId = one Expr,
@@ -610,7 +607,7 @@ schema! {
     /// `BrokenPromise` if the promise is broken. Typed as the promise's
     /// value.
     Await(Expr, Written) { may_bubble: bool = flag, promise: NodeId = one Expr }
-    /// Code the frontend couldn't settle; fails when run. Valid anywhere,
+    /// Code the frontend couldn't settle; panics when run. Valid anywhere,
     /// with any type. Code that's only ill-typed, as a value that doesn't
     /// fit its place, keeps its value as written, of its own type, which
     /// a target whose profile has [`Features::RUNS_TYPE_ERRORS`] runs

@@ -1,0 +1,65 @@
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../errors.temper.md:11:5  /** <- export let good(x: Int): Int
+7:1 -> ../errors.temper.md:11:5  export function good(x) { <- export let good(x: Int): Int
+7:17 -> ../errors.temper.md:11:16 (good)  good(x) { <- good(x: Int): Int { x + 1 }
+7:21 -> ../errors.temper.md:11:5  (x) { <- export let good(x: Int): Int
+8:3 -> ../errors.temper.md:11:36  return (x + 1) | 0; <- x + 1 }
+11:1 -> ../errors.temper.md:17:5  /** <- let mismatched(x: Int): Int
+15:1 -> ../errors.temper.md:17:5  function mismatched(x) { <- let mismatched(x: Int): Int
+15:10 -> ../errors.temper.md:17:9 (mismatched)  mismatched(x) { <- mismatched(x: Int): Int { le
+15:20 -> ../errors.temper.md:17:5  (x) { <- let mismatched(x: Int): Int
+16:3 -> ../errors.temper.md:17:35  const s = x; <- let s: String = x; 1 }
+17:3 -> ../errors.temper.md:17:54  return 1; <- 1 }
+20:1 -> ../errors.temper.md:19:5  /** <- let misspelled(s: String): I
+24:1 -> ../errors.temper.md:19:5  function misspelled(s) { <- let misspelled(s: String): I
+24:10 -> ../errors.temper.md:19:9 (misspelled)  misspelled(s) { <- misspelled(s: String): Int {
+24:20 -> ../errors.temper.md:19:5  (s) { <- let misspelled(s: String): I
+25:3 -> ../errors.temper.md:19:38  return panic(); <- s.lenght }
+28:1 -> ../errors.temper.md:27:5  /** <- let unknownType(x: Nope): In
+32:1 -> ../errors.temper.md:27:5  function unknownType(x) { <- let unknownType(x: Nope): In
+32:10 -> ../errors.temper.md:27:9 (unknownType)  unknownType(x) { <- unknownType(x: Nope): Int {
+32:21 -> ../errors.temper.md:27:5  (x) { <- let unknownType(x: Nope): In
+33:3 -> ../errors.temper.md:27:37  return 1; <- 1 }
+36:1 -> ../errors.temper.md:32:5  /** <- let afterUnclosed(x: Int): I
+40:1 -> ../errors.temper.md:32:5  function afterUnclosed(x) { <- let afterUnclosed(x: Int): I
+40:10 -> ../errors.temper.md:32:9 (afterUnclosed)  afterUnclosed(x) { <- afterUnclosed(x: Int): Int {
+40:23 -> ../errors.temper.md:32:5  (x) { <- let afterUnclosed(x: Int): I
+41:3 -> ../errors.temper.md:32:38  return Math.imul(x, 3); <- x * 3 }
+44:1 -> ../errors.temper.md:45:5  /** <- let stored(x: Int): String {
+48:1 -> ../errors.temper.md:45:5  function stored(x) { <- let stored(x: Int): String {
+48:10 -> ../errors.temper.md:45:9 (stored)  stored(x) { <- stored(x: Int): String { let
+48:16 -> ../errors.temper.md:45:5  (x) { <- let stored(x: Int): String {
+49:3 -> ../errors.temper.md:45:34  const s = x; <- let s: String = x; "${s}!" }
+50:3 -> ../errors.temper.md:45:53  return `${s}!`; <- "${s}!" }
+53:1 -> ../errors.temper.md:46:5  /** @returns {number} */ <- let returned(): Int { "text"
+54:1 -> ../errors.temper.md:46:5  function returned() { <- let returned(): Int { "text"
+54:10 -> ../errors.temper.md:46:9 (returned)  returned() { <- returned(): Int { "text" }
+54:18 -> ../errors.temper.md:46:5  () { <- let returned(): Int { "text"
+55:3 -> ../errors.temper.md:46:27  return "text"; <- "text" }
+58:1 -> ../errors.temper.md:47:5  /** <- let passedOn(x: Int): Int {
+62:1 -> ../errors.temper.md:47:5  function passedOn(x) { <- let passedOn(x: Int): Int {
+62:10 -> ../errors.temper.md:47:9 (passedOn)  passedOn(x) { <- passedOn(x: Int): Int { x }
+62:18 -> ../errors.temper.md:47:5  (x) { <- let passedOn(x: Int): Int {
+63:3 -> ../errors.temper.md:47:33  return x; <- x }
+66:1 -> ../errors.temper.md:51:5  class Box extends type() { <- class Box(public value: Int)
+66:7 -> ../errors.temper.md:51:11 (Box)  Box extends type() { <- Box(public value: Int) {
+66:10 -> ../errors.temper.md:51:5   extends type() { <- class Box(public value: Int)
+67:3 -> ../errors.temper.md:51:22  /** @type {number} */ <- value: Int) {
+68:3 -> ../errors.temper.md:51:22  #value; <- value: Int) {
+70:3 -> ../errors.temper.md:51:5  /** @param {number} value */ <- class Box(public value: Int)
+71:3 -> ../errors.temper.md:51:5  constructor(value) { <- class Box(public value: Int)
+73:5 -> ../errors.temper.md:51:22  this.#value = value; <- value: Int) {
+76:3 -> ../errors.temper.md:51:22  /** @returns {number} */ <- value: Int) {
+77:3 -> ../errors.temper.md:51:22  get value() { <- value: Int) {
+77:7 -> ../errors.temper.md:51:22 (value)  value() { <- value: Int) {
+81:3 -> ../errors.temper.md:52:14  /** @returns {number} */ <- get(): Int { value }
+82:3 -> ../errors.temper.md:52:14 (get)  get() { <- get(): Int { value }
+83:5 -> ../errors.temper.md:52:27  return this.#value; <- value }
+86:3 -> ../errors.temper.md:53:14  /** @returns {string} */ <- bad(): String { value }
+87:3 -> ../errors.temper.md:53:14 (bad)  bad() { <- bad(): String { value }
+88:5 -> ../errors.temper.md:53:30  return this.#value; <- value }
+92:1 -> ../errors.temper.md:56:5  const box = new Box(3); <- let box = new Box(3);
+93:1 -> ../errors.temper.md:57:5  console.log(`${good(1)} ${un <- console.log("${good(1)} ${un
+94:1 -> ../errors.temper.md:64:5  console.log(`${mismatched(1) <- console.log("${mismatched(1)
+95:1 -> ../errors.temper.md:65:5  misspelled("a"); <- misspelled("a");
+96:1 -> ../errors.temper.md:66:5  console.log("after"); <- console.log("after");

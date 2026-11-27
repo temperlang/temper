@@ -9,11 +9,12 @@ namespace HostErrors;
 [TestClass]
 public class HostErrorsTests
 {
+    /// <exception cref="Oops">Where it fails with Oops.</exception>
     internal static int At(int i)
     {
         if (i == 99)
         {
-            return Core.Bubble<int>();
+            throw new Oops();
         }
         return i;
     }
@@ -25,47 +26,55 @@ public class HostErrorsTests
         return lb;
     }
 
+    /// <exception cref="Oops">Where it fails with Oops.</exception>
     internal static int Read(IReadOnlyList<int> ls, int i)
     {
         return Listed.Get(ls, At(i));
     }
 
+    /// <exception cref="Oops">Where it fails with Oops.</exception>
     internal static int Write(IList<int> lb, int i)
     {
         Listed.Set(lb, At(i), 3);
         return lb.Count;
     }
 
+    /// <exception cref="Oops">Where it fails with Oops.</exception>
     internal static int Insert(IList<int> lb, int i)
     {
         Listed.Add(lb, 2, At(i));
         return lb.Count;
     }
 
+    /// <exception cref="Oops">Where it fails with Oops.</exception>
     internal static int RemoveLast(IList<int> lb, int i)
     {
         At(i);
         return Listed.RemoveLast(lb);
     }
 
+    /// <exception cref="Oops">Where it fails with Oops.</exception>
     internal static int RemoveFirst(Queue<int> d, int i)
     {
         At(i);
         return Listed.RemoveFirst(d);
     }
 
+    /// <exception cref="Oops">Where it fails with Oops.</exception>
     internal static int Sum(IReadOnlyList<int> ls, int i)
     {
         At(i);
         return Listed.Reduce(ls, (int a, int b) => a + b);
     }
 
+    /// <exception cref="Oops">Where it fails with Oops.</exception>
     internal static int CodeAt(string s, int i)
     {
         At(i);
         return StringUtil.Get(s, s.Length);
     }
 
+    /// <exception cref="Oops">Where it fails with Oops.</exception>
     internal static string Replaced(int i)
     {
         At(i);
@@ -84,7 +93,7 @@ public class HostErrorsTests
             {
                 r = Read(Listed.CreateReadOnlyList<int>(1, 2), 5);
             }
-            catch (global::TemperLang.Core.Bubble)
+            catch (Oops)
             {
                 r = -1;
             }
@@ -114,7 +123,7 @@ public class HostErrorsTests
             {
                 r = Read(ls, ls.Count);
             }
-            catch (global::TemperLang.Core.Bubble)
+            catch (Oops)
             {
                 r = -1;
             }
@@ -143,7 +152,7 @@ public class HostErrorsTests
             {
                 r = Read(Listed.AsReadOnly(Built()), -1);
             }
-            catch (global::TemperLang.Core.Bubble)
+            catch (Oops)
             {
                 r = -1;
             }
@@ -172,7 +181,7 @@ public class HostErrorsTests
             {
                 r = Write(Built(), 5);
             }
-            catch (global::TemperLang.Core.Bubble)
+            catch (Oops)
             {
                 r = -1;
             }
@@ -202,7 +211,7 @@ public class HostErrorsTests
             {
                 r = Write(lb, lb.Count);
             }
-            catch (global::TemperLang.Core.Bubble)
+            catch (Oops)
             {
                 r = -1;
             }
@@ -231,7 +240,7 @@ public class HostErrorsTests
             {
                 r = Insert(Built(), 5);
             }
-            catch (global::TemperLang.Core.Bubble)
+            catch (Oops)
             {
                 r = -1;
             }
@@ -261,7 +270,7 @@ public class HostErrorsTests
             {
                 r = Insert(lb, lb.Count + 1);
             }
-            catch (global::TemperLang.Core.Bubble)
+            catch (Oops)
             {
                 r = -1;
             }
@@ -291,7 +300,7 @@ public class HostErrorsTests
             {
                 n = Insert(lb, lb.Count);
             }
-            catch (global::TemperLang.Core.Bubble)
+            catch (Oops)
             {
                 n = -1;
             }
@@ -320,7 +329,7 @@ public class HostErrorsTests
             {
                 r = RemoveLast(new List<int>(), 0);
             }
-            catch (global::TemperLang.Core.Bubble)
+            catch (Oops)
             {
                 r = -1;
             }
@@ -349,7 +358,7 @@ public class HostErrorsTests
             {
                 r = RemoveFirst(new Queue<int>(), 0);
             }
-            catch (global::TemperLang.Core.Bubble)
+            catch (Oops)
             {
                 r = -1;
             }
@@ -378,7 +387,7 @@ public class HostErrorsTests
             {
                 r = Sum(Listed.CreateReadOnlyList<int>(), 0);
             }
-            catch (global::TemperLang.Core.Bubble)
+            catch (Oops)
             {
                 r = -1;
             }
@@ -407,7 +416,7 @@ public class HostErrorsTests
             {
                 r = CodeAt("ab", 0);
             }
-            catch (global::TemperLang.Core.Bubble)
+            catch (Oops)
             {
                 r = -1;
             }
@@ -436,7 +445,7 @@ public class HostErrorsTests
             {
                 r = Replaced(3);
             }
-            catch (global::TemperLang.Core.Bubble)
+            catch (Oops)
             {
                 r = "";
             }

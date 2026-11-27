@@ -1,6 +1,5 @@
 package sealed_whens;
 
-import temper.core.Bubble;
 import temper.core.Core;
 
 public final class SealedWhensMain {
@@ -8,7 +7,7 @@ public final class SealedWhensMain {
 
     public static void main(String[] args) throws ClassNotFoundException {
         Core.initSimpleLogging();
-        Bubble.keepStackTraces();
+        Core.keepStackTraces();
         Core.beginTopLevel();
         try {
             Class.forName("sealed_whens.SealedWhensGlobal");

@@ -45,7 +45,7 @@ macro expects a parameter either named `test` or typed `Test`.
 
     let assertMoreThings(
       t: Test, helper: TestHelper, strings: List<List<String>>
-    ): Void throws Bubble {
+    ): Void {
       for (var i = 0; i < strings.length; i += 1) {
         for (var j = 0; j < strings[i].length; j += 1) {
           assert(helper.i == helper.j);

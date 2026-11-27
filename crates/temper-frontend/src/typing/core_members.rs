@@ -625,7 +625,7 @@ impl<'a> Reader<'a> {
     }
 
     /// What follows `\outType`: the result type, [`CoreType::Throws`]
-    /// for `T throws Bubble` ([`Reader::type_of`]).
+    /// for `T throws E` ([`Reader::type_of`]).
     fn out_type(&self, parts: &[NodeId]) -> CoreType {
         let Some(i) = parts
             .iter()

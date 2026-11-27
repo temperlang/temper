@@ -273,13 +273,14 @@ type tag information in all cases. For example, `Float64` and `Int` are
 mostly indistinguishable on JS. Such cases are marked `@mayDowncastTo(false)` in
 their definitions.
 
-## Handling cases that bubble
+## Handling errors
 
 There's one other important form of control flow in Temper that we should
 discuss, and that's Temper's variation on error handling. Temper needs
 to support languages whose standard idioms use either return values or exception
-handling. To support this, it has a simple `Bubble` type. When unhandled, it
-manifests in the REPL with a simple `fail` message:
+handling. To support this, a function declares the errors it may throw, and
+its callers handle them. When nothing handles a failure, or a program panics,
+the REPL shows a simple `fail` message:
 
 ```temper
 $ shapes[0]
@@ -292,13 +293,13 @@ interactive#18: fail
 ```
 
 That last one failed because there are only 2 shapes in our array. And using bad
-indices causes a panic that can't be recovered in Temper. Backend languages
-might be able to recover, depending on the idiomatic representation of panic in
-each.
+indices causes a panic that can't be recovered in Temper, as a bug shouldn't
+be. Backend languages might be able to recover, depending on the idiomatic
+representation of panic in each.
 
 However, Temper does have a way to handle failures that a program can't
 easily or efficiently check in advance, as text that isn't a number, or a
-map's missing key. Those throw declared failures, `ParseError` and
+map's missing key. Those throw declared errors, `ParseError` and
 `MissingKey`, which `orelse` handles:
 
 ```temper
@@ -312,34 +313,37 @@ interactive#20: -1
 (A cast, `shapes[0] as Circle`, that fails panics, so check with `is` first
 where a value may be of another type.)
 
-We can use this in our own functions as well. For example, we adjust our length
+We can use this in our own functions as well. An error type is a class under
+a sealed interface that extends `Error`. For example, we adjust our length
 suffix function from earlier:
 
 <!-- repl: paste -->
 ```temper
-// Note the `throws Bubble` on the type here.
-let lengthSuffix(length: Int): String throws Bubble {
+sealed interface LengthError extends Error {}
+class NegativeLength(public length: Int) extends LengthError {}
+// Note the `throws NegativeLength` on the type here.
+let lengthSuffix(length: Int): String throws NegativeLength {
   when (length) {
     1 -> "";
     0, 2 -> "s";
     // Just weird out because we're expecting lengths here.
-    else -> bubble();
+    else -> throw new NegativeLength(length);
   }
 }
 [0, 1, 2, -1].map { (n): String => lengthSuffix(n) }
 // Result: fail
 ```
 
-In this case, the whole map call fails because of a single `Bubble` inside of
+In this case, the whole map call fails because of a single error inside of
 it. Let's handle that case:
 
 ```console
 $ [0, 1, 2, -1].map { (n): String => lengthSuffix(n) orelse "s???" }
-interactive#23: ["s","","s","s???"]
+interactive#25: ["s","","s","s???"]
 ```
 
-Some details on `Bubble` propagation still need to be worked out on backends,
-and some of the handling can be improved, but the basic mechanism is in place.
+A `catch (e)` binds the error, so a handler can read its fields:
+`lengthSuffix(-1) catch (e) { "${e.length}" }`.
 
 Also, we currently have no capabilities to handle resources other than memory,
 so we don't yet have a way to manage automatic closing of resources (see

@@ -1,9 +1,9 @@
 package libraries;
 
 import java.util.List;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Nullable;
+import temper.core.ParseError;
 
 public final class Grid {
     public final int ncols;
@@ -21,7 +21,7 @@ public final class Grid {
     public static @Nullable Grid parse(String s) {
         try {
             return LibrariesGlobal.parseGrid(s);
-        } catch (Bubble ignored) {
+        } catch (ParseError ignored) {
             return null;
         }
     }

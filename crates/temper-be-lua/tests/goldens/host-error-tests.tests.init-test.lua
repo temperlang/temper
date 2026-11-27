@@ -10,9 +10,9 @@ function Test_.test_host_errors_are_panics()
     local function fn()
       ---@type integer
       local r
-      if not temper.pcall(function()
+      if not temper.catch(function()
         r = tested.hostFails(1)
-      end) then
+      end, tested.Oops) then
         r = -1
       end
       temper.test_assert(test, r ~= -1, function() return "expected r != -1" end)
@@ -21,9 +21,9 @@ function Test_.test_host_errors_are_panics()
     local function fn3()
       ---@type integer
       local r
-      if not temper.pcall(function()
+      if not temper.catch(function()
         r = tested.hostFails(2)
-      end) then
+      end, tested.Oops) then
         r = -1
       end
       temper.test_assert(test, r ~= -1, function() return "expected r != -1" end)
@@ -32,9 +32,9 @@ function Test_.test_host_errors_are_panics()
     local function fn4()
       ---@type integer
       local r
-      if not temper.pcall(function()
+      if not temper.catch(function()
         r = tested.hostFails(3)
-      end) then
+      end, tested.Oops) then
         r = -1
       end
       temper.test_assert(test, r ~= -1, function() return "expected r != -1" end)

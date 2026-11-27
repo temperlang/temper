@@ -7,7 +7,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
         .get_or_init(|| {
             let _zero = failing(0).unwrap_or(-1);
             let a = failing(1).unwrap_or(-1);
-            let b = (|| Ok::<_, temper_core::Error>(downcast(Shape::new(Circle::new()))?.0.side))()
+            let b = (|| Ok::<_, NotSquare>(downcast(Shape::new(Circle::new()))?.0.side))()
                 .unwrap_or(-2);
             let e = temper_core::string::to_int("nope", None).unwrap_or(-5);
             let f = temper_core::string::to_float64("x").unwrap_or(-6.0);
@@ -37,7 +37,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                     .clone()
                     .unwrap_or_else(|| Arc::new("no digits".to_string()))
             };
-            let i = calling(Arc::new(move || failing(2)));
+            let i = calling(Arc::new(move || Ok(failing(2)?)));
             println!(
                 "{a} {b} {e} {} {g} {h} {i}",
                 temper_core::float64::cmp(f, -6.0) == 0
@@ -160,22 +160,78 @@ impl ShapeTrait for Circle {
 
 temper_core::impl_any_value_trait!(Circle, [Shape]);
 
-pub(crate) fn failing(n: i32) -> temper_core::Result<i32> {
+#[derive(Clone, Debug)]
+pub(crate) enum Problem {
+    Positive(Positive),
+    NotSquare(NotSquare),
+}
+
+temper_core::impl_failure_enum!(Problem, Positive(Positive), NotSquare(NotSquare));
+
+struct PositiveStruct {
+    n: i32,
+    cause: temper_core::Cause,
+}
+
+#[derive(Clone)]
+pub(crate) struct Positive(Arc<PositiveStruct>);
+
+impl Positive {
+    pub fn new(n: i32) -> Positive {
+        Positive(Arc::new(PositiveStruct {
+            n,
+            cause: temper_core::Cause::new(),
+        }))
+    }
+
+    pub fn message(&self) -> Arc<String> {
+        Arc::new(format!("positive (n: {})", self.0.n))
+    }
+}
+
+temper_core::impl_failure!(Positive, message, cause);
+
+temper_core::impl_any_value_trait!(Positive, [Problem]);
+
+struct NotSquareStruct {
+    cause: temper_core::Cause,
+}
+
+#[derive(Clone)]
+pub(crate) struct NotSquare(Arc<NotSquareStruct>);
+
+impl NotSquare {
+    pub fn new() -> NotSquare {
+        NotSquare(Arc::new(NotSquareStruct {
+            cause: temper_core::Cause::new(),
+        }))
+    }
+
+    pub fn message(&self) -> Arc<String> {
+        Arc::new("not square".to_string())
+    }
+}
+
+temper_core::impl_failure!(NotSquare, message, cause);
+
+temper_core::impl_any_value_trait!(NotSquare, [Problem]);
+
+pub(crate) fn failing(n: i32) -> Result<i32, Positive> {
     if n > 0 {
-        return Err(temper_core::Error::new());
+        return Err(Positive::new(n));
     }
     Ok(n)
 }
 
-pub(crate) fn downcast(s: Shape) -> temper_core::Result<Square> {
+pub(crate) fn downcast(s: Shape) -> Result<Square, NotSquare> {
     if temper_core::is::<Square>(s.clone()) {
         Ok(temper_core::cast::<Square>(s.clone()).unwrap())
     } else {
-        Err(temper_core::Error::new())
+        Err(NotSquare::new())
     }
 }
 
-pub(crate) fn calling(f: Arc<dyn Fn() -> temper_core::Result<i32> + Send + Sync>) -> i32 {
+pub(crate) fn calling(f: Arc<dyn Fn() -> Result<i32, Problem> + Send + Sync>) -> i32 {
     f().unwrap_or(-9)
 }
 
@@ -191,11 +247,11 @@ pub(crate) fn parsing(text: impl ToArcString) -> Result<Arc<String>, temper_std:
     Ok(Arc::new("parsed".to_string()))
 }
 
-pub(crate) fn explode(n: i32) -> temper_core::Result<i32> {
+pub(crate) fn explode(n: i32) -> Result<i32, Positive> {
     if n > 0 {
         panic!();
     }
-    Err(temper_core::Error::new())
+    Err(Positive::new(n))
 }
 
 pub(crate) fn noted(name: impl ToArcString) -> i32 {
@@ -204,6 +260,6 @@ pub(crate) fn noted(name: impl ToArcString) -> i32 {
     -2
 }
 
-pub(crate) fn inner() -> temper_core::Result<i32> {
+pub(crate) fn inner() -> Result<i32, Positive> {
     Ok(explode(1).unwrap_or_else(|_| noted("inner")))
 }

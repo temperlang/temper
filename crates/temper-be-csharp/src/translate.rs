@@ -47,12 +47,12 @@
 //! one it inherits hides it (`new`), which Kotlin's leaves to a warning.
 //! A call of an interface's member casts its receiver to that interface
 //! where it's of another type (`((IShape)r).Describe()`); `as` and a
-//! narrowing are casts, which throw, as a bubble does.
+//! narrowing are casts, which throw, as a panic does.
 //!
 //! A nullable type is C#'s `T?`: `Nullable<T>` for `int`, `long`,
 //! `double`, and `bool`, whose value is `x.Value`, and a nullable
 //! reference otherwise, which C# narrows by itself after a null check of
-//! a local, as Temper does (`x!` elsewhere). A bubble is an exception, so
+//! a local, as Temper does (`x!` elsewhere). A failure is an exception, so
 //! `orelse` is a `try` and `catch`: where it's a statement, or gives a
 //! `let`, an assignment, or a `return`, it's written so, each part given
 //! to the same place ([`Translator::sink`]); inside an expression, it
@@ -108,7 +108,6 @@ const NAMESPACES: &[(&str, &str)] = &[
         "Microsoft.VisualStudio.TestTools.UnitTesting",
     ),
     ("Async", "TemperLang.Core"),
-    ("Bubble", "TemperLang.Core"),
     ("Core", "TemperLang.Core"),
     ("CoreException", "TemperLang.Core"),
     ("CultureInfo", "System.Globalization"),
@@ -352,10 +351,10 @@ impl<'a> Translator<'a> {
             .iter()
             .find(|(n, _)| *n == name)
             .map_or("System", |(_, ns)| ns);
-        // `Async` and `Bubble` always in full: a library or module named
-        // `async` or `bubble` is likely, and its namespace, which other
-        // libraries' code sees too, hides the class.
-        let full = matches!(name, "Async" | "Bubble");
+        // `Async` always in full: a library or module named `async` is
+        // likely, and its namespace, which other libraries' code sees
+        // too, hides the class.
+        let full = name == "Async";
         if self.taken.contains(name) || self.namespace_hides(name) || full {
             Expr::name(format!("global::{namespace}.{name}"))
         } else {
@@ -658,7 +657,6 @@ impl<'a> Translator<'a> {
                 Scalar::String => "string",
                 Scalar::AnyValue => "object",
                 Scalar::Type => return Ok(self.other_class("System", "Type")),
-                Scalar::Bubble => return not_yet("Bubble as a value's type"),
             }
             .to_string(),
             // A `@fun` interface is its function type's delegate.
@@ -2228,9 +2226,8 @@ impl<'a> Translator<'a> {
             // Each side after where it comes from, as the `try` spans
             // lines.
             Node::OrElse { body, fallback } | Node::Catch { body, fallback, .. } => {
-                // What it catches: `Bubble`, a declared failure's class,
-                // or both ([`Self::handled`]).
-                let (classes, marker) = self.handled(body)?;
+                // What it catches ([`Self::handled`]).
+                let (class, marker) = self.handled(body)?;
                 let local = match p.nodes.get(id) {
                     Node::Catch { local, .. } => Some(local),
                     _ => None,
@@ -2262,9 +2259,6 @@ impl<'a> Translator<'a> {
                 self.mark(fallback, &mut caught);
                 self.sink(fallback, place, &mut caught)?;
                 if yields(&tried) || yields(&caught) {
-                    let [class] = &classes[..] else {
-                        return not_yet("a handler of several failure types that awaits");
-                    };
                     if marker {
                         return not_yet("a handler of any error that awaits");
                     }
@@ -2272,7 +2266,7 @@ impl<'a> Translator<'a> {
                         (Some(decl), Some(name)) => Some((self.ty(p.decls.get(decl).ty)?, name)),
                         _ => None,
                     };
-                    let class = Expr::name(class.clone());
+                    let class = Expr::name(class);
                     out.push(self.try_around_yields(class, bound, tried, caught)?);
                     return Ok(());
                 }
@@ -2280,7 +2274,7 @@ impl<'a> Translator<'a> {
                 // exception.
                 let mut var = local;
                 if matches!(p.nodes.get(fallback), Node::Panic {}) {
-                    let failure = var.get_or_insert_with(|| self.temporary("bubble")).clone();
+                    let failure = var.get_or_insert_with(|| self.temporary("failure")).clone();
                     let message = Expr::Str("panic".into());
                     let panic = self
                         .class("Core")
@@ -2289,16 +2283,13 @@ impl<'a> Translator<'a> {
                     caught.retain(|s| matches!(s, Stmt::Line(_)));
                     caught.push(Stmt::Throw(panic));
                 }
-                // Several, or core's `Error`: `catch (Exception e) when (e
-                // is A || e is B)`, which leaves the rest unhandled.
-                let (class, filter) = match &classes[..] {
-                    [class] if !marker => (Expr::name(class.clone()), None),
-                    _ => {
+                // Core's `Error`: `catch (Exception e) when (e is
+                // IFailure)`, which leaves the rest unhandled.
+                let (class, filter) = match marker {
+                    false => (Expr::name(class), None),
+                    true => {
                         let failure = var.get_or_insert_with(|| self.temporary("failure")).clone();
-                        let filter = (classes.iter())
-                            .map(|c| Expr::Is(Box::new(Expr::name(failure.clone())), c.clone()))
-                            .reduce(|a, b| Expr::bin(Bin::Or, a, b))
-                            .expect("a class");
+                        let filter = Expr::Is(Box::new(Expr::name(failure)), class);
                         (self.class("Exception"), Some(filter))
                     }
                 };
@@ -2327,8 +2318,8 @@ impl<'a> Translator<'a> {
                 out.extend(self.panic());
                 return Ok(());
             }
-            Node::Bubble { .. } | Node::Error { .. } if matches!(place, Sink::Drop) => {
-                out.push(self.bubble());
+            Node::Error { .. } if matches!(place, Sink::Drop) => {
+                out.extend(self.panic());
                 return Ok(());
             }
             // `void`, as an `orelse`'s fallback, does nothing, as does any
@@ -2498,8 +2489,9 @@ impl<'a> Translator<'a> {
         Ok(())
     }
 
-    /// `panic()`: throws the runtime's `Panic`, which no `orelse` catches,
-    /// as it's no `Bubble`; Kotlin's throws what an `orelse` catches.
+    /// `panic()`, and code with an error: throws the runtime's `Panic`,
+    /// which no handler catches, as it's no failure; Kotlin's threw what
+    /// an `orelse` caught.
     fn panic(&mut self) -> Vec<Stmt> {
         let message = Expr::Str("panic".into());
         vec![Stmt::Throw(
@@ -2568,9 +2560,6 @@ impl<'a> Translator<'a> {
             }
             Node::ExprStatement { expr } if self.needs_statements(expr) => {
                 self.sink(expr, &Sink::Drop, out)?;
-            }
-            Node::ExprStatement { expr } if matches!(p.nodes.get(expr), Node::Bubble { .. }) => {
-                out.push(self.bubble());
             }
             // A block inside a block keeps its braces: its locals may
             // share names with another block's (names::RULES).
@@ -2739,7 +2728,7 @@ impl<'a> Translator<'a> {
             }
             Node::Return { value } => match value.map(|v| (v, p.nodes.get(v))) {
                 None | Some((_, Node::VoidLit {})) => out.push(Stmt::Return(None)),
-                Some((_, Node::Error { .. }) | (_, Node::Bubble { .. })) => out.push(self.bubble()),
+                Some((_, Node::Error { .. })) => out.extend(self.panic()),
                 Some((v, _)) => {
                     let e = self.expr(v)?;
                     out.push(Stmt::Return(Some(e)));
@@ -2747,7 +2736,7 @@ impl<'a> Translator<'a> {
             },
             Node::ExprStatement { expr } => {
                 if let Node::Error { .. } = p.nodes.get(expr) {
-                    out.push(self.bubble());
+                    out.extend(self.panic());
                     return Ok(());
                 }
                 let expr = unconverted(p, expr);
@@ -2992,16 +2981,6 @@ impl<'a> Translator<'a> {
         Ok(Expr::name(optional).method(format!("{method}<{inner}>"), vec![e]))
     }
 
-    /// A bubble as a statement: `Core.Bubble();`, or in a function with a
-    /// result, `return Core.Bubble<T>();`, so C# sees the function end.
-    fn bubble(&mut self) -> Stmt {
-        let core = self.class("Core");
-        match self.result.clone() {
-            Some(ty) => Stmt::Return(Some(core.method(format!("Bubble<{ty}>"), Vec::new()))),
-            None => Stmt::Bubble(core.method("Bubble", Vec::new())),
-        }
-    }
-
     /// A call of a connected declaration, by the connection table; `args`
     /// has a method's receiver first.
     fn connected(&mut self, decl: DeclId, args: &[NodeId]) -> R<Expr> {
@@ -3196,10 +3175,11 @@ impl<'a> Translator<'a> {
                 then: Box::new(self.expr(then)?),
                 els: Box::new(self.expr(els)?),
             },
+            // Code with an error, where C# needs a value: it panics.
             Node::Error { .. } => {
                 let ty = self.ty(p.nodes.ty(id))?;
-                self.class("Core")
-                    .method(format!("Bubble<{ty}>"), Vec::new())
+                let message = Expr::Str("panic".into());
+                (self.class("Core")).method(format!("ThrowPanic<{ty}>"), vec![message])
             }
             Node::This {} => Expr::name(self.this_name),
             Node::GetField { field, object } => self.field(field, object)?,
@@ -3370,16 +3350,6 @@ impl<'a> Translator<'a> {
                 let ty = self.ty(p.nodes.ty(id))?;
                 (self.class("Core")).method(format!("ThrowFailure<{ty}>"), vec![thrown])
             }
-            Node::Bubble { .. } => {
-                let ty = p.nodes.ty(id);
-                let core = self.class("Core");
-                if ty == TypeId::VOID {
-                    core.method("Bubble", Vec::new())
-                } else {
-                    let ty = self.ty(ty)?;
-                    core.method(format!("Bubble<{ty}>"), Vec::new())
-                }
-            }
             Node::FunctionLiteral { decl, params, body } => {
                 self.literal(id, decl, params, body, None)?
             }
@@ -3387,7 +3357,7 @@ impl<'a> Translator<'a> {
             // before its statement, which reads
             // `Async.GetPromiseResult(promise)`, where Kotlin's reads
             // `promise.Result`: the runtime steps the generator again once
-            // the task is done, and a broken one bubbles, where `Result`
+            // the task is done, and a broken one throws `BrokenPromise`, where `Result`
             // throws an `AggregateException`.
             Node::Await { promise, .. } => {
                 if !self.in_generator {
@@ -3737,7 +3707,7 @@ fn returning(result: &str, call: Expr) -> Stmt {
 
 /// Statements up to the first that can't complete normally, by C#'s rules
 /// (ECMA-334 13.2), since C# warns of a statement after one, and the
-/// statements after a bubble, which never return.
+/// statements after a `throw`, which never complete.
 fn reachable(mut stmts: Vec<Stmt>) -> Vec<Stmt> {
     if let Some(i) = stmts.iter().position(|s| !completes(s)) {
         stmts.truncate(i + 1);
@@ -3765,7 +3735,6 @@ pub(crate) fn completes(s: &Stmt) -> bool {
         | Stmt::Goto(_)
         | Stmt::Return(_)
         | Stmt::YieldBreak
-        | Stmt::Bubble(_)
         | Stmt::Throw(_)
         | Stmt::Expr(Expr::Throw(_)) => false,
         Stmt::TryCatch { body, catch, .. } => {

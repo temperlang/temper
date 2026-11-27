@@ -11,8 +11,10 @@ time round; earlier arguments still run first. Also `==` on `Float64?`.
       console.log("noted ${n}");
       n
     }
-    let failing(n: Int): Int throws Bubble {
-      if (n > 2) { bubble() }
+    sealed interface Problem extends Error {}
+    class TooBig extends Problem {}
+    let failing(n: Int): Int throws TooBig {
+      if (n > 2) { throw new TooBig() }
       n
     }
     let pair(a: Int, b: Int): String { "${a},${b}" }

@@ -20,7 +20,7 @@ entry:
   visibility, exported, static, abstract, `var`, connected (and how
   it resolves, [below](#level-3-connected-declarations)), `@keep`,
   `@fun`, `@operator` marks, `@auto("==")`, optional (for
-  parameters with defaults), generator, `async`, may bubble, `@imu`
+  parameters with defaults), generator, `async`, what it throws, `@imu`
   and `@partialImu` (on types and type parameters), and compiler-made.
 - **Type,** span, and docs.
 

@@ -21,13 +21,10 @@ pub enum Scalar {
     /// A type as a value: what `TypeValue` gives (notes/tmpl/types.md,
     /// "Types as values").
     Type,
-    /// What a function that may bubble fails with: only ever a
-    /// [`TypeData::Result`]'s failure type, never a value's type.
-    Bubble,
 }
 
 impl Scalar {
-    pub const ALL: [Scalar; 9] = [
+    pub const ALL: [Scalar; 8] = [
         Scalar::Void,
         Scalar::Boolean,
         Scalar::Int32,
@@ -36,7 +33,6 @@ impl Scalar {
         Scalar::String,
         Scalar::AnyValue,
         Scalar::Type,
-        Scalar::Bubble,
     ];
 
     /// Its name, as text writes it.
@@ -50,7 +46,6 @@ impl Scalar {
             Scalar::String => "String",
             Scalar::AnyValue => "AnyValue",
             Scalar::Type => "Type",
-            Scalar::Bubble => "Bubble",
         }
     }
 }
@@ -64,7 +59,6 @@ impl TypeId {
     pub const STRING: TypeId = TypeId(5);
     pub const ANY_VALUE: TypeId = TypeId(6);
     pub const TYPE: TypeId = TypeId(7);
-    pub const BUBBLE: TypeId = TypeId(8);
 }
 
 /// A run of types in [`TypeTable::list`].
@@ -88,8 +82,7 @@ pub enum TypeData {
     /// type of the call's node, when it doesn't. Only ever a
     /// [`TypeData::Function`]'s result, never a value's or a node's type.
     /// Made by [`TypeTable::result`], so `pass` isn't a result and `fail`
-    /// isn't a `Never`; `fail` is `Bubble`, a failure type, or a type
-    /// parameter ([`crate::failures`]).
+    /// isn't a `Never`; `fail` is a failure type or a type parameter ([`crate::failures`]).
     Result {
         pass: TypeId,
         fail: TypeId,
@@ -136,8 +129,8 @@ pub struct Signature<'a> {
 }
 
 impl Signature<'_> {
-    /// Whether a call may bubble.
-    pub fn bubbles(&self) -> bool {
+    /// Whether a call may fail.
+    pub fn fails(&self) -> bool {
         self.fail.is_some()
     }
 }

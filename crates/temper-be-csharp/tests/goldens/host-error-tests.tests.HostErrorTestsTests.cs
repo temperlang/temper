@@ -20,7 +20,7 @@ public class HostErrorTestsTests
                 {
                     r = HostErrorTestsGlobal.HostFails(1);
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (Oops)
                 {
                     r = -1;
                 }
@@ -34,7 +34,7 @@ public class HostErrorTestsTests
                 {
                     r = HostErrorTestsGlobal.HostFails(2);
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (Oops)
                 {
                     r = -1;
                 }
@@ -48,7 +48,7 @@ public class HostErrorTestsTests
                 {
                     r = HostErrorTestsGlobal.HostFails(3);
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (Oops)
                 {
                     r = -1;
                 }

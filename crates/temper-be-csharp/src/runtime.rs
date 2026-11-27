@@ -13,10 +13,6 @@ use temper_tmpl::version::{RuntimeVersion, Spelling, Unpublished, VersionSpot};
 /// Each file, by path from the runtime's directory, with its text.
 pub const FILES: &[(&str, &str)] = &[
     ("Async.cs", include_str!("../runtime/temper-core/Async.cs")),
-    (
-        "Bubble.cs",
-        include_str!("../runtime/temper-core/Bubble.cs"),
-    ),
     ("Core.cs", include_str!("../runtime/temper-core/Core.cs")),
     (
         "Failure.cs",

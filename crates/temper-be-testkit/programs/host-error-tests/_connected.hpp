@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -8,7 +9,8 @@
 namespace host_error_tests {
 namespace _connected {
 
-inline std::int32_t hostFails(std::int32_t n) {
+inline temper::core::Expected<std::int32_t, std::shared_ptr<Oops>> hostFails(
+    std::int32_t n) {
     switch (n) {
     case 1:
         throw std::runtime_error("host bug " + std::to_string(n));

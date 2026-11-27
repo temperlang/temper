@@ -6,7 +6,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
     INIT_ONCE
         .get_or_init(|| {
             println!("{} {} {}", lookup("a")?, sign("-")?, setting("a")?);
-            println!("{} {} {}", mixed("a", 0), mixed("z", 1), mixed("a", 5));
+            println!("{} {} {}", mixed("a", ""), mixed("z", "+"), mixed("a", "-"));
             println!(
                 "{}; {}; {}",
                 explained("port"),
@@ -271,19 +271,12 @@ pub fn sign_name(e: SignError) -> Arc<String> {
     }
 }
 
-pub(crate) fn nonzero(n: i32) -> temper_core::Result<i32> {
-    if n == 0 {
-        Err(temper_core::Error::new())
-    } else {
-        Ok(n)
-    }
-}
-
-pub fn mixed(key: impl ToArcString, n: i32) -> i32 {
+pub fn mixed(key: impl ToArcString, text: impl ToArcString) -> i32 {
     let key = key.to_arc_string();
+    let text = text.to_arc_string();
     (|| {
-        Ok::<_, temper_core::Error>(
-            lookup(key.clone())?.wrapping_add(10i32.wrapping_div(nonzero(n)?)),
+        Ok::<_, FailuresInteropError>(
+            lookup(key.clone())?.wrapping_add(10i32.wrapping_div(sign(text.clone())?)),
         )
     })()
     .unwrap_or(-1)

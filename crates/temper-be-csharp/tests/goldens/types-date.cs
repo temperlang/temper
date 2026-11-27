@@ -66,9 +66,9 @@ public static class DateGlobal
         {
             rdc = TemporalSupport.FromIsoString("1596-03-31");
         }
-        catch (TemporalException bubble1)
+        catch (TemporalException failure1)
         {
-            throw Core.Panic("panic", bubble1);
+            throw Core.Panic("panic", failure1);
         }
         console.Log(string.Create(CultureInfo.InvariantCulture, $"Happy birthday, René: day={rdc.Day}, month={rdc.Month}, year={rdc.Year}"));
     }

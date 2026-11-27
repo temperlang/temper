@@ -68,8 +68,8 @@
 //! **Hoisting:** what Lua can't write inline goes before the statement
 //! it's in, leaving a temporary (`t`, `t_1`, …, named unlike anything
 //! the program names): an `orelse`, as `---@type T local t` and `if not
-//! temper.pcall(function() t = body end) then t = fallback end`, as
-//! Kotlin's, or straight into the local or module `let` it initializes;
+//! temper.catch(function() t = body end, E) then t = fallback end`, as
+//! Kotlin's `temper.pcall`, or straight into the local or module `let` it initializes;
 //! a `BlockValue`'s statements, in place; and an `if` value, `&&`, or
 //! `||` that has such a part where it runs only sometimes, or an `if`
 //! value that `and` and `or` can't choose, as an `if` statement. What
@@ -77,8 +77,9 @@
 //! and a loop's condition hoists nothing; otherwise it's not yet. An
 //! `orelse`'s body is a function of its own, so a `return`, `break`, or
 //! `continue` out of it returns a signal that an `if` after the
-//! `temper.pcall` redoes, as Kotlin's ([`TryBody`]). `orelse panic()`
-//! keeps `pcall`'s error, the bubble, and panics saying `caused by:` it.
+//! `temper.catch` redoes, as Kotlin's ([`TryBody`]). `orelse panic()`
+//! keeps the failure `temper.catch` caught, and panics saying `caused
+//! by:` it.
 //!
 //! **Order of evaluation:** Lua evaluates operands and arguments left to
 //! right (its reference implementation and LuaJIT; the manual leaves only
@@ -200,8 +201,8 @@ pub struct Translator<'a> {
     tries: Vec<TryBody>,
     /// Labels printed, by loop.
     labels: HashMap<DeclId, Labels>,
-    /// Whether translating a function with a result, where a bubble is
-    /// `return temper.bubble()`, so LuaLS sees every path return.
+    /// Whether translating a function with a result, where a `return`
+    /// out of a handler's body passes its value on.
     pub(crate) returns: bool,
     /// The module whose chunk this is; `NONE` for a tests file.
     pub(crate) here: DeclId,
@@ -234,7 +235,7 @@ pub struct Translator<'a> {
     int64s: Int64s,
 }
 
-/// An `orelse` body, which `temper.pcall` runs as a function of its own,
+/// An `orelse` body, which `temper.catch` runs as a function of its own,
 /// so a jump out of it returns a signal: `return v, "return"`, or
 /// `return "break", "flow"` naming the jump by what it is just outside
 /// (`break`, or the label it goes to), as Kotlin's.
@@ -511,7 +512,6 @@ impl<'a> Translator<'a> {
                 Scalar::AnyValue => "any",
                 // A type as a value is its `type()` name.
                 Scalar::Type => "string",
-                Scalar::Bubble => return not_yet("Bubble as a value's type"),
             }
             .to_string(),
             // A `@fun` interface is its function type, as Kotlin's.
@@ -1902,11 +1902,10 @@ impl<'a> Translator<'a> {
             }
             Node::Return { value } => match value.map(|v| (v, p.nodes.get(v))) {
                 None | Some((_, Node::VoidLit {})) => out.push(self.return_stmt(None)),
-                Some((_, Node::Error { .. } | Node::Bubble { .. })) => out.push(self.bubble_stmt()),
                 // `error("panic")` alone, which LuaLS knows doesn't return,
                 // where `return error(…)` returns its `nil` to it; a
                 // declared failure's `error(x)` likewise.
-                Some((v, Node::Panic {} | Node::Throw { .. })) => {
+                Some((v, Node::Panic {} | Node::Error { .. } | Node::Throw { .. })) => {
                     let e = self.expr(v)?;
                     out.push(Stmt::Expr(e));
                 }
@@ -1915,26 +1914,18 @@ impl<'a> Translator<'a> {
                     out.push(self.return_stmt(Some(v)));
                 }
             },
-            Node::ExprStatement { expr } if matches!(p.nodes.get(expr), Node::Error { .. }) => {
-                out.push(self.bubble_stmt());
-            }
             Node::ExprStatement { expr } if is_handler(p, expr) => {
                 let t = self.or_else_stmt(expr)?;
                 out.extend(t);
             }
+            // LuaLS knows `error(…)` alone doesn't return.
             Node::ExprStatement { expr }
                 if matches!(
                     p.nodes.get(expr),
-                    Node::Bubble { .. } | Node::Panic {} | Node::Throw { .. }
+                    Node::Panic {} | Node::Error { .. } | Node::Throw { .. }
                 ) =>
             {
-                let panics = matches!(p.nodes.get(expr), Node::Panic {} | Node::Throw { .. });
-                let e = self.expr(expr)?;
-                out.push(match e {
-                    // LuaLS knows `error(…)` alone doesn't return.
-                    e if self.returns && !panics => Stmt::Return(Some(e)),
-                    e => Stmt::Expr(e),
-                });
+                out.push(Stmt::Expr(self.expr(expr)?));
             }
             Node::ExprStatement { expr } if self.setter_stmt_of(expr) => {
                 out.extend(self.setter_stmt(expr)?);
@@ -2051,23 +2042,6 @@ impl<'a> Translator<'a> {
                 Stmt::Returns(vec![value.unwrap_or(Expr::Nil), Expr::Str("return".into())])
             }
             None => Stmt::Return(value),
-        }
-    }
-
-    fn bubble(&mut self) -> Expr {
-        self.uses_temper = true;
-        ops::temper().method("bubble", Vec::new())
-    }
-
-    /// A bubble as a statement: `return temper.bubble()` in a function
-    /// with a result, which never returns, but LuaLS then sees every path
-    /// end in a `return`; elsewhere, the call.
-    fn bubble_stmt(&mut self) -> Stmt {
-        let bubble = self.bubble();
-        if self.returns {
-            Stmt::Return(Some(bubble))
-        } else {
-            Stmt::Expr(bubble)
         }
     }
 
@@ -2332,7 +2306,6 @@ impl<'a> Translator<'a> {
                 self.hoist(id)?
             }
             Node::IfValue { cond, then, els } => self.if_value(cond, then, els)?,
-            Node::Error { .. } => self.bubble(),
             Node::This {} => Expr::name("this"),
             // std's, as `Date.year`'s `temper.date_year(d)`, as Kotlin's.
             Node::GetField { field, object }
@@ -2414,10 +2387,12 @@ impl<'a> Translator<'a> {
                 }
                 ops::apply(spelling, args)
             }
-            Node::Bubble { .. } => self.bubble(),
             // Kotlin's is `temper.bubble()`; this says what happened, and
-            // likewise stops the program if nothing catches it.
-            Node::Panic {} => Expr::name("error").call(vec![Expr::Str("panic".into())]),
+            // stops the program, as nothing catches it. Code with an error
+            // panics likewise.
+            Node::Panic {} | Node::Error { .. } => {
+                Expr::name("error").call(vec![Expr::Str("panic".into())])
+            }
             // A declared failure's `throw`, Lua's `error(x)`, with its
             // cause, the failure a handler around it handles, where it's
             // thrown there: through the runtime's `with_cause`, which
@@ -2571,10 +2546,10 @@ impl<'a> Translator<'a> {
     /// An expression as statements assigning `target`.
     fn assigning(&mut self, target: &Expr, id: NodeId) -> R<Vec<Stmt>> {
         let (mut stmts, value) = self.parts(id)?;
-        // `bubble()`, `panic()`, and `throw` give nothing to assign.
+        // `panic()`, an error, and `throw` give nothing to assign.
         if matches!(
             self.p.nodes.get(id),
-            Node::Bubble { .. } | Node::Panic {} | Node::Throw { .. }
+            Node::Panic {} | Node::Error { .. } | Node::Throw { .. }
         ) {
             stmts.push(Stmt::Expr(value));
         } else if &value != target {
@@ -2606,7 +2581,7 @@ impl<'a> Translator<'a> {
     /// What Lua can't write inline, as statements before the statement
     /// it's in (`self.pre`), leaving a temporary holding its value:
     ///
-    /// - `orelse`, as Kotlin's, by `temper.pcall` of a function assigning
+    /// - `orelse`, as Kotlin's, by `temper.catch` of a function assigning
     ///   the temporary, and the fallback where it fails;
     /// - statements before a value, in place;
     /// - an `if` value, `&&`, or `||` with such parts, or an `if` value
@@ -2692,10 +2667,10 @@ impl<'a> Translator<'a> {
         self.or_else(id, None)
     }
 
-    /// `body orelse fallback`, as Kotlin's: `if not temper.pcall(function()
-    /// … end) then … end`; or where the body jumps out of itself (a
+    /// `body orelse fallback`, as Kotlin's: `if not temper.catch(function()
+    /// … end, E) then … end`; or where the body jumps out of itself (a
     /// `return`, `break`, or `continue`), which it can't from a function of
-    /// its own, `local ok, value, kind = temper.pcall(…)`, the body
+    /// its own, `local ok, value, kind = temper.catch(…)`, the body
     /// returning a signal for each jump ([`TryBody`]), and the jump redone
     /// after it:
     ///
@@ -2709,8 +2684,7 @@ impl<'a> Translator<'a> {
     /// end
     /// ```
     ///
-    /// A handler of declared failures, or a `catch`, is the runtime's
-    /// `temper.catch` instead, given what it catches ([`Self::caught`]);
+    /// `temper.catch` is given what it catches ([`Self::caught`]);
     /// a `catch`'s binding is the second name, `local ok, e =
     /// temper.catch(…)`, or where the body jumps, a local of the fallback.
     fn or_else(&mut self, id: NodeId, target: Option<&Expr>) -> R<Vec<Stmt>> {
@@ -2719,9 +2693,6 @@ impl<'a> Translator<'a> {
         }
         let (body, fallback, local) = handler_parts(self.p, id);
         let caught = self.caught(id)?;
-        if local.is_some() && caught.len() > 1 {
-            return not_yet("a catch that binds a failure beside a bubble");
-        }
         let returns = std::mem::replace(&mut self.returns, false);
         self.tries.push(TryBody {
             loops: self.loops.len(),
@@ -2734,8 +2705,8 @@ impl<'a> Translator<'a> {
         let jumps = self.tries.pop().map(|t| t.jumps).unwrap_or_default();
         self.returns = returns;
         let body = body?;
-        // `orelse panic()` panics saying what it replaces, the bubble,
-        // `pcall`'s second result, as Lua's errors have no cause.
+        // `orelse panic()` panics saying what it replaces, the failure,
+        // `temper.catch`'s second result, as Lua's errors have no cause.
         let caused = matches!(self.p.nodes.get(fallback), Node::Panic {});
         let fallback = match target {
             Some(target) => self.assigning(target, fallback)?,
@@ -2832,27 +2803,17 @@ impl<'a> Translator<'a> {
         ])
     }
 
-    /// What a handler catches, as `temper.catch`'s arguments:
-    /// `temper.Bubble`, where it may bubble, and the failure type nearest
-    /// above its declared failures, `temper.Failure` for several
-    /// libraries'; nothing for a body that only bubbles, or can't fail,
-    /// as one `to_tmpl` kept, whose handler is `temper.pcall`, as before
-    /// declared failures.
-    fn caught(&mut self, handler: NodeId) -> R<Vec<Expr>> {
+    /// What a handler catches, as `temper.catch`'s argument: the failure
+    /// type nearest above its body's failures, `temper.Failure` for
+    /// several libraries'; nothing for a body that can't fail, which
+    /// backends drop first.
+    fn caught(&mut self, handler: NodeId) -> R<Option<Expr>> {
         let p = self.p;
         let Some(class) = classes::caught_type(p, handler) else {
-            return Ok(Vec::new());
+            return Ok(None);
         };
-        let (body, ..) = handler_parts(p, handler);
-        let bubbles = (temper_tmpl::failures::failures_under(p, body).iter())
-            .any(|&(_, f)| f == TypeId::BUBBLE);
         self.uses_temper = true;
-        let mut caught = Vec::new();
-        if bubbles {
-            caught.push(ops::temper().member("Bubble"));
-        }
-        caught.push(self.type_ref(class));
-        Ok(caught)
+        Ok(Some(self.type_ref(class)))
     }
 
     /// An `if` value, as `c and a or b`, which is right when `a` can't be

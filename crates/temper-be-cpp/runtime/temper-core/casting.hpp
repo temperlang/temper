@@ -78,7 +78,7 @@ namespace temper {
             }
             Target* raw = dynamic_cast<Target*>(src.get());
             if (raw == nullptr) {
-                throw TemperBubble("bad upcast");
+                panic("bad upcast");
             }
             return std::shared_ptr<Target>(src, raw);
         }

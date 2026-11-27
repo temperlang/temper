@@ -23,8 +23,11 @@ null `Integer` with an `int` would unbox it and throw.
       n
     }
 
-    let half(n: Int): Int throws Bubble {
-      if (n % 2 != 0) { bubble() }
+    sealed interface Problem extends Error {}
+    class Odd extends Problem {}
+
+    let half(n: Int): Int throws Odd {
+      if (n % 2 != 0) { throw new Odd() }
       n / 2
     }
 

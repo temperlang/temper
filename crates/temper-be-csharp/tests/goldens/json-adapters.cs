@@ -37,9 +37,9 @@ public static class JsonAdaptersGlobal
         {
             back = Decode(adapter, text);
         }
-        catch (JsonException bubble1)
+        catch (JsonException failure1)
         {
-            throw Core.Panic("panic", bubble1);
+            throw Core.Panic("panic", failure1);
         }
         string again = Encode(adapter, back);
         console.Log(again == text ? text : text + " became " + again);
@@ -60,9 +60,9 @@ public static class JsonAdaptersGlobal
         {
             shape = Decode(IShape.JsonAdapter(), "{\"height\": 6, \"width\": 5}");
         }
-        catch (JsonException bubble2)
+        catch (JsonException failure3)
         {
-            throw Core.Panic("panic", bubble2);
+            throw Core.Panic("panic", failure3);
         }
         {
             if (shape is Rect)
@@ -79,9 +79,9 @@ public static class JsonAdaptersGlobal
         {
             record = Decode(Record.JsonAdapter(), "{\"name\": \"Bo\", \"is-active\": false, \"score\": 2, \"big\": 7, \"nickname\": \"B\", \"points\": []}");
         }
-        catch (JsonException bubble3)
+        catch (JsonException failure4)
         {
-            throw Core.Panic("panic", bubble3);
+            throw Core.Panic("panic", failure4);
         }
         string @string = record.Name + " " + (record.Active ? "true" : "false") + " ";
         string? subject1 = record.Nickname;

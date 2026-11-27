@@ -12,7 +12,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
             println!(
                 "{} {}",
                 first_over(1).unwrap_or(-1),
-                is_none((|| Ok::<_, temper_core::Error>(Some(first_over(1)?)))().unwrap_or(None))
+                is_none((|| Ok::<_, Missing>(Some(first_over(1)?)))().unwrap_or(None))
             );
             println!("{}", via_or_else(2));
             println!("{}", via_or_else(12));
@@ -44,16 +44,46 @@ pub(crate) fn init() -> temper_core::Result<()> {
         .clone()
 }
 
-pub(crate) fn more(x: Option<i32>) -> temper_core::Result<i32> {
-    Err(temper_core::Error::new())
+#[derive(Clone, Debug)]
+pub(crate) enum Problem {
+    Missing(Missing),
 }
 
-pub(crate) fn something(x: Option<impl ToArcString>) -> temper_core::Result<Arc<String>> {
+temper_core::impl_failure_enum!(Problem, Missing(Missing));
+
+struct MissingStruct {
+    cause: temper_core::Cause,
+}
+
+#[derive(Clone)]
+pub(crate) struct Missing(Arc<MissingStruct>);
+
+impl Missing {
+    pub fn new() -> Missing {
+        Missing(Arc::new(MissingStruct {
+            cause: temper_core::Cause::new(),
+        }))
+    }
+
+    pub fn message(&self) -> Arc<String> {
+        Arc::new("missing".to_string())
+    }
+}
+
+temper_core::impl_failure!(Missing, message, cause);
+
+temper_core::impl_any_value_trait!(Missing, [Problem]);
+
+pub(crate) fn more(x: Option<i32>) -> Result<i32, Missing> {
+    Err(Missing::new())
+}
+
+pub(crate) fn something(x: Option<impl ToArcString>) -> Result<Arc<String>, Missing> {
     let x = x.map(|x| x.to_arc_string());
     if let Some(x) = &x {
         Ok(x.clone())
     } else {
-        Err(temper_core::Error::new())
+        Err(Missing::new())
     }
 }
 
@@ -61,7 +91,7 @@ pub(crate) fn report(x: Option<impl ToArcString>) {
     let x = x.map(|x| x.to_arc_string());
     let message = something(x.clone()).unwrap_or_else(|_| Arc::new("null".to_string()));
     let suffix = (|| {
-        Ok::<_, temper_core::Error>(Arc::new(
+        Ok::<_, Missing>(Arc::new(
             more(Some(if x.is_some() { 1 } else { 0 }))?.to_string(),
         ))
     })()
@@ -69,24 +99,20 @@ pub(crate) fn report(x: Option<impl ToArcString>) {
     println!("{message}{suffix}");
 }
 
-pub(crate) fn calc_rows(cols: i32, total: i32) -> temper_core::Result<i32> {
+pub(crate) fn calc_rows(cols: i32, total: i32) -> Result<i32, Missing> {
     println!("calcRows({cols}, {total})");
     if total.wrapping_rem(cols) != 0 {
-        return Err(temper_core::Error::new());
+        return Err(Missing::new());
     }
     Ok(total.wrapping_div(cols))
 }
 
-pub(crate) fn parsed(s: impl ToArcString) -> temper_core::Result<i32> {
+pub(crate) fn parsed(s: impl ToArcString) -> Result<i32, temper_core::ParseError> {
     let s = s.to_arc_string();
-    Ok(if let Ok(v) = temper_core::string::to_int(&s, None) {
-        v
-    } else {
-        return Err(temper_core::Error::new());
-    })
+    temper_core::string::to_int(&s, None)
 }
 
-pub(crate) fn count_below(s: impl ToArcString) -> temper_core::Result<i32> {
+pub(crate) fn count_below(s: impl ToArcString) -> Result<i32, temper_core::ParseError> {
     let s = s.to_arc_string();
     let mut i: i32 = 0;
     while i < parsed(s.clone())? {
@@ -95,7 +121,7 @@ pub(crate) fn count_below(s: impl ToArcString) -> temper_core::Result<i32> {
     Ok(i)
 }
 
-pub(crate) fn first_over(n: i32) -> temper_core::Result<i32> {
+pub(crate) fn first_over(n: i32) -> Result<i32, Missing> {
     let mut i: i32 = 0;
     while i < 9 {
         i = i.wrapping_add(1);
@@ -106,7 +132,7 @@ pub(crate) fn first_over(n: i32) -> temper_core::Result<i32> {
     Ok(i)
 }
 
-pub(crate) fn sum_skipping(n: i32) -> temper_core::Result<i32> {
+pub(crate) fn sum_skipping(n: i32) -> Result<i32, Missing> {
     let mut sum: i32 = 0;
     {
         let mut i: i32 = 0;
@@ -124,7 +150,7 @@ pub(crate) fn sum_skipping(n: i32) -> temper_core::Result<i32> {
     Ok(sum)
 }
 
-pub(crate) fn ten_times(n: i32) -> temper_core::Result<i32> {
+pub(crate) fn ten_times(n: i32) -> Result<i32, Missing> {
     {
         let mut i: i32 = 0;
         while i < 9 {
@@ -134,7 +160,7 @@ pub(crate) fn ten_times(n: i32) -> temper_core::Result<i32> {
             i = i.wrapping_add(1);
         }
     }
-    Err(temper_core::Error::new())
+    Err(Missing::new())
 }
 
 pub(crate) fn is_none(r: Option<i32>) -> bool {
@@ -154,12 +180,12 @@ pub(crate) fn unreachable_int() -> i32 {
     panic!();
 }
 
-pub(crate) fn fail_as<T: Clone + Send + Sync + 'static>(fallback: T) -> temper_core::Result<T> {
-    Err(temper_core::Error::new())
+pub(crate) fn fail_as<T: Clone + Send + Sync + 'static>(fallback: T) -> Result<T, Missing> {
+    Err(Missing::new())
 }
 
-pub(crate) fn bail() -> temper_core::Result<()> {
-    Err(temper_core::Error::new())
+pub(crate) fn bail() -> Result<(), Missing> {
+    Err(Missing::new())
 }
 
 pub(crate) fn no_name() -> Option<Arc<String>> {
@@ -170,7 +196,7 @@ pub(crate) fn stop() {
     panic!();
 }
 
-pub(crate) fn half(n: i32) -> temper_core::Result<i32> {
+pub(crate) fn half(n: i32) -> Result<i32, Missing> {
     if n.wrapping_rem(2) != 0 {
         bail()?;
         panic!();

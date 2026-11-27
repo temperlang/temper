@@ -21,11 +21,11 @@
 34:3 -> ../host-failures.temper.md:29:5  get message() { <- export class NotFound(public
 35:5 -> ../host-failures.temper.md:29:5  return `not found (key: ${th <- export class NotFound(public
 39:1 -> ../host-failures.temper.md:38:5  console.log("before"); <- console.log("before");
-40:1 -> ../host-failures.temper.md:243:5  /** @type {number} */ <- let p = do {
-41:1 -> ../host-failures.temper.md:243:5  export let p; <- let p = do {
-42:1 -> ../host-failures.temper.md:243:5  try { <- let p = do {
-43:3 -> ../host-failures.temper.md:244:7  const n = parseCount("two"); <- let n = try parseCount("two"
-44:3 -> ../host-failures.temper.md:245:7  const m = hostLookup("a"); <- let m = try hostLookup("a");
-45:3 -> ../host-failures.temper.md:246:7  if (((n + m) | 0) > 2) { <- if (n + m > 2) { panic() }
-46:5 -> ../host-failures.temper.md:246:24  panic(); <- panic() }
-53:1 -> ../host-failures.temper.md:249:5  console.log(`after ${p}`); <- console.log("after ${p}");
+40:1 -> ../host-failures.temper.md:245:5  /** @type {number} */ <- let p = do {
+41:1 -> ../host-failures.temper.md:245:5  export let p; <- let p = do {
+42:1 -> ../host-failures.temper.md:245:5  try { <- let p = do {
+43:3 -> ../host-failures.temper.md:246:7  const n = parseCount("two"); <- let n = try parseCount("two"
+44:3 -> ../host-failures.temper.md:247:7  const m = hostLookup("a"); <- let m = try hostLookup("a");
+45:3 -> ../host-failures.temper.md:248:7  if (((n + m) | 0) > 2) { <- if (n + m > 2) { panic() }
+46:5 -> ../host-failures.temper.md:248:24  panic(); <- panic() }
+53:1 -> ../host-failures.temper.md:251:5  console.log(`after ${p}`); <- console.log("after ${p}");

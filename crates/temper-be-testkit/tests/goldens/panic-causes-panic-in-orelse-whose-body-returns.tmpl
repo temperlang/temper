@@ -1,33 +1,46 @@
 tmpl 1 model 1 library `panic-causes-panic-in-orelse-whose-body-returns` 0.0.0
 
-uses `temper-core`#4 0.0.0-alpha.0.0 {
-  interface Console#5 {
-    connected method log#6(message: String): Void;
+uses `temper-core`#3 0.0.0-alpha.0.0 {
+  interface Error#4 {}
+  class Int32#11 {
+    connected method toString#12(radix?: Int32): String;
   }
-  class Int32#9 {
-    connected method toString#10(radix?: Int32): String;
+  interface Console#14 {
+    connected method log#15(message: String): Void;
   }
-  connected fn getConsole#11(name?: String): Console#5;
+  connected fn getConsole#19(name?: String): Console#14;
 }
 
 module `panic-causes-panic-in-orelse-whose-body-returns`#0 {
-  let ~console#7: Console#5;
+  let ~console#16: Console#14;
 
-  fn positive#1(n#3: Int32): Int32 throws Bubble {
-    if (%Int32.le(n#3, 0)) {
-      (bubble()^): Void;
+  interface Problem#1 extends Error#4 {}
+
+  class NotPositive#2 extends Problem#1 {
+    let n#5: Int32;
+    constructor constructor#6(n#9: Int32): NotPositive#2 {
+      this.n#5 = n#9;
     }
-    return n#3;
+    get message#10(): String {
+      return %String.cat(%String.cat("not positive (n: ", this.n#5.toString#12(omitted)), ")");
+    }
   }
 
-  fn checked#2(n#8: Int32): Int32 {
-    (orelse((value { if (%Int32.eq(n#8, 0)) { return 0; } positive#1(n#8)^; void }): Void, (panic()): Void)): Void;
-    return n#8;
+  fn positive#7(n#13: Int32): Int32 throws NotPositive#2 {
+    if (%Int32.le(n#13, 0)) {
+      (throw(new constructor#6(n#13))^): Void;
+    }
+    return n#13;
+  }
+
+  fn checked#8(n#17: Int32): Int32 {
+    (orelse((value { let p#18: Int32 = positive#7(n#17)^; if (%Int32.eq(p#18, 1)) { return 0; } void }): Void, (panic()): Void)): Void;
+    return n#17;
   }
 
   init {
-    init ~console#7 = getConsole#11(omitted);
-    ~console#7.log#6("before");
-    ~console#7.log#6(%String.cat("after ", checked#2(%Int32.neg(1)).toString#10(omitted)));
+    init ~console#16 = getConsole#19(omitted);
+    ~console#16.log#15("before");
+    ~console#16.log#15(%String.cat("after ", checked#8(%Int32.neg(1)).toString#12(omitted)));
   }
 }

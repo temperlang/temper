@@ -2,7 +2,7 @@
 
 Subset A's operators and control flow, beyond what the functional tests
 that translate so far use: `Int32` wrapping, shifts, bitwise and
-three-way comparisons, functions that bubble, string comparisons,
+three-way comparisons, integer division and remainder, string comparisons,
 `Boolean`s' equality and order (which Kotlin's Lua, JS, and C++ don't
 translate), and `do … while`. The log is what the interpreter gives.
 
@@ -15,8 +15,8 @@ translate), and `do … while`. The log is what the interpreter gives.
     let same(a: Boolean, b: Boolean): String { "${a == b} ${a != b} ${(a <=> b).toString()}" }
     console.log("${same(true, true)} ${same(true, false)} ${same(false, true)}");
 
-    let quot(a: Int, b: Int): Int throws Bubble { a / b }
-    let rem(a: Int, b: Int): Int throws Bubble { a % b }
+    let quot(a: Int, b: Int): Int { a / b }
+    let rem(a: Int, b: Int): Int { a % b }
     console.log("${quot(-7, 2)} ${rem(-7, 2)} ${quot(small, -1)}");
 
     let words(a: String, b: String): String {

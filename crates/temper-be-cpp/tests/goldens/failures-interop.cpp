@@ -57,7 +57,7 @@ temper::core::Str explained(temper::core::Str const & name);
 temper::core::Str signMessage(temper::core::Str const & text);
 temper::core::Str earlyCause(temper::core::Str const & name);
 temper::core::Str signName(std::shared_ptr<SignError> const & e);
-int32_t mixed(temper::core::Str const & key, int32_t n);
+int32_t mixed(temper::core::Str const & key, temper::core::Str const & text);
 temper::core::Str firstSign(std::shared_ptr<std::vector<temper::core::Str>> const & texts);
 temper::core::Str firstMissing(std::shared_ptr<std::vector<temper::core::Str>> const & keys);
 
@@ -245,25 +245,23 @@ core::Str signName(std::shared_ptr<SignError> const & e) {
   }
 }
 
-static int32_t nonzero(int32_t n) {
-  if (n == 0) {
-    core::bubble();
-  } else {
-    return n;
-  }
-}
-
-int32_t mixed(core::Str const & key, int32_t n) {
+int32_t mixed(core::Str const & key, core::Str const & text) {
   global_init_init();
-  try {
+  auto result = [&]() -> core::Expected<int32_t, std::shared_ptr<FailuresInteropError>> {
     auto lookupResult = failures_interop::lookup(key);
-    if (lookupResult.has_value()) {
-      int32_t int32 = *lookupResult;
-      return core::Int::add(int32, core::Int::div_wrap(10, nonzero(n)));
-    } else {
-      core::bubble();
+    if (!lookupResult.has_value()) {
+      return core::unexpected(lookupResult.error());
     }
-  } catch (core::TemperBubble const &) {
+    int32_t int32 = *lookupResult;
+    auto signResult = failures_interop::sign(text);
+    if (!signResult.has_value()) {
+      return core::unexpected(signResult.error());
+    }
+    return core::Int::add(int32, core::Int::div_wrap(10, *signResult));
+  }();
+  if (result.has_value()) {
+    return *result;
+  } else {
     return -1;
   }
 }
@@ -349,9 +347,9 @@ void global_init_init() {
       core::uncaught_failure(settingResult.error());
     }
     core::Console::log(console, std::to_string(*lookupResult) + " " + std::to_string(*signResult) + " " + std::to_string(*settingResult));
-    int32_t int32 = failures_interop::mixed(TEMPER_STR("a"), 0);
-    int32_t value = failures_interop::mixed(TEMPER_STR("z"), 1);
-    core::Console::log(console, std::to_string(int32) + " " + std::to_string(value) + " " + std::to_string(failures_interop::mixed(TEMPER_STR("a"), 5)));
+    int32_t int32 = failures_interop::mixed(TEMPER_STR("a"), core::Str());
+    int32_t value = failures_interop::mixed(TEMPER_STR("z"), TEMPER_STR("+"));
+    core::Console::log(console, std::to_string(int32) + " " + std::to_string(value) + " " + std::to_string(failures_interop::mixed(TEMPER_STR("a"), TEMPER_STR("-"))));
     core::Str string = failures_interop::explained(TEMPER_STR("port"));
     core::Str value2 = failures_interop::explained(TEMPER_STR("a"));
     core::Console::log(console, string + "; " + value2 + "; " + failures_interop::signMessage(TEMPER_STR("x")));

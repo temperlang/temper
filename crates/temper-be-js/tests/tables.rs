@@ -86,7 +86,7 @@ fn helpers_are_the_runtimes_and_reserved() {
     let mut helpers: Vec<&str> = (0..OPS.len() as u32)
         .filter_map(|i| ops::spelling(Op(i)).and_then(ops::helper))
         .collect();
-    helpers.extend(["bubble", "panic", "requireInstanceOf", "requireNotNull"]);
+    helpers.extend(["panic", "requireInstanceOf", "requireNotNull"]);
     helpers.extend(connected::helpers());
     for helper in helpers {
         assert!(

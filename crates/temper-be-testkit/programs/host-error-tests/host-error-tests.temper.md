@@ -1,17 +1,21 @@
 # Host error tests
 
-`test.assertPanics` passes on a panic, which is any failure but a bubble
-or a test's failure, on every backend, so a host's own error passes it,
+`test.assertPanics` passes on a panic, which is any failure but a
+declared one or a test's failure, on every backend, so a host's own
+error passes it,
 as it passes every `orelse`. Here connected functions' host code throws
 errors of several kinds (each backend's own, such as a thrown error of
 its runtime's and one from a bad index or a null), and fails the way
 its test framework does; the interpreter, which has no host, runs the
 Temper bodies, which panic:
 
+    export sealed interface OopsError extends Error {}
+    export class Oops extends OopsError {}
+
     @connected
-    export let hostFails(n: Int): Int throws Bubble {
+    export let hostFails(n: Int): Int throws Oops {
       if (n > 0) { panic() }
-      bubble()
+      throw new Oops()
     }
 
     @connected

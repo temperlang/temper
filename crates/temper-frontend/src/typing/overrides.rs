@@ -19,7 +19,7 @@ use temper_syntax::tree::{NodeId, NodeKind};
 /// What an override must match: its own type parameters, by count; its
 /// parameters' types, with a default making one nullable, as Kotlin
 /// Temper compares them; and its result, which says whether it may
-/// bubble.
+/// fail.
 #[derive(PartialEq)]
 struct OverrideSig {
     formals: Vec<SymbolId>,
@@ -208,7 +208,7 @@ impl Settle {
 
     /// A signature as Kotlin Temper writes it in messages: `f(x: Int32):
     /// Void`, with a getter's or setter's bare name, and a result that may
-    /// bubble as `Int32 throws Bubble` (Kotlin: `Result<Int32, Bubble>`).
+    /// fail as `Int32 throws E`.
     fn describe_sig(&self, member: NodeId, sig: &OverrideSig) -> String {
         let tree = &self.lib.tree;
         let role = tree.data(member) & ROLE_MASK;

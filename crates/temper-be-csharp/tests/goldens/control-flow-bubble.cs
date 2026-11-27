@@ -7,11 +7,13 @@ public static class BubbleGlobal
 {
     internal static readonly ILoggingConsole console;
 
+    /// <exception cref="Missing">Where it fails with Missing.</exception>
     internal static int More(int? x)
     {
-        return Core.Bubble<int>();
+        throw new Missing();
     }
 
+    /// <exception cref="Missing">Where it fails with Missing.</exception>
     internal static string Something(string? x)
     {
         {
@@ -21,7 +23,7 @@ public static class BubbleGlobal
             }
             else
             {
-                return Core.Bubble<string>();
+                throw new Missing();
             }
         }
     }
@@ -33,7 +35,7 @@ public static class BubbleGlobal
         {
             message = Something(x);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (Missing)
         {
             message = "null";
         }
@@ -42,35 +44,31 @@ public static class BubbleGlobal
         {
             suffix = More(x != null ? 1 : 0).ToString(CultureInfo.InvariantCulture);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (Missing)
         {
             suffix = "";
         }
         console.Log(message + suffix);
     }
 
+    /// <exception cref="Missing">Where it fails with Missing.</exception>
     internal static int CalcRows(int cols, int total)
     {
         console.Log(string.Create(CultureInfo.InvariantCulture, $"calcRows({cols}, {total})"));
         if (Core.Mod(total, cols) != 0)
         {
-            return Core.Bubble<int>();
+            throw new Missing();
         }
         return Core.Div(total, cols);
     }
 
+    /// <exception cref="ParseError">Where it fails with ParseError.</exception>
     internal static int Parsed(string s)
     {
-        try
-        {
-            return Core.ToInt(s);
-        }
-        catch (ParseError)
-        {
-            return Core.Bubble<int>();
-        }
+        return Core.ToInt(s);
     }
 
+    /// <exception cref="ParseError">Where it fails with ParseError.</exception>
     internal static int CountBelow(string s)
     {
         int i = 0;
@@ -81,6 +79,7 @@ public static class BubbleGlobal
         return i;
     }
 
+    /// <exception cref="Missing">Where it fails with Missing.</exception>
     internal static int FirstOver(int n)
     {
         int i = 0;
@@ -95,6 +94,7 @@ public static class BubbleGlobal
         return i;
     }
 
+    /// <exception cref="Missing">Where it fails with Missing.</exception>
     internal static int SumSkipping(int n)
     {
         int sum = 0;
@@ -116,6 +116,7 @@ public static class BubbleGlobal
         return sum;
     }
 
+    /// <exception cref="Missing">Where it fails with Missing.</exception>
     internal static int TenTimes(int n)
     {
         {
@@ -129,7 +130,7 @@ public static class BubbleGlobal
                 i = i + 1;
             }
         }
-        return Core.Bubble<int>();
+        throw new Missing();
     }
 
     internal static bool IsNone(int? r)
@@ -144,7 +145,7 @@ public static class BubbleGlobal
         {
             t1 = FirstOver(n);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (Missing)
         {
             t1 = -1;
         }
@@ -153,7 +154,7 @@ public static class BubbleGlobal
         {
             t2 = SumSkipping(n);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (Missing)
         {
             t2 = -1;
         }
@@ -162,7 +163,7 @@ public static class BubbleGlobal
         {
             t3 = TenTimes(n);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (Missing)
         {
             t3 = -1;
         }
@@ -174,14 +175,16 @@ public static class BubbleGlobal
         throw Core.Panic("panic");
     }
 
+    /// <exception cref="Missing">Where it fails with Missing.</exception>
     internal static T FailAs<T>(T fallback)
     {
-        return Core.Bubble<T>();
+        throw new Missing();
     }
 
+    /// <exception cref="Missing">Where it fails with Missing.</exception>
     internal static void Bail()
     {
-        Core.Bubble();
+        throw new Missing();
     }
 
     internal static string? NoName()
@@ -194,6 +197,7 @@ public static class BubbleGlobal
         throw Core.Panic("panic");
     }
 
+    /// <exception cref="Missing">Where it fails with Missing.</exception>
     internal static int Half(int n)
     {
         if (Core.Mod(n, 2) != 0)
@@ -279,7 +283,7 @@ public static class BubbleGlobal
         {
             t4 = CountBelow("abc");
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             t4 = -1;
         }
@@ -289,7 +293,7 @@ public static class BubbleGlobal
         {
             t5 = FirstOver(1);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (Missing)
         {
             t5 = -1;
         }
@@ -298,7 +302,7 @@ public static class BubbleGlobal
         {
             t6 = FirstOver(1);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (Missing)
         {
             t6 = null;
         }
@@ -314,7 +318,7 @@ public static class BubbleGlobal
         {
             t7 = Half(4);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (Missing)
         {
             t7 = -1;
         }
@@ -323,7 +327,7 @@ public static class BubbleGlobal
         {
             t8 = Half(3);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (Missing)
         {
             t8 = -1;
         }
@@ -332,7 +336,7 @@ public static class BubbleGlobal
         {
             t9 = Half(-2);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (Missing)
         {
             t9 = -1;
         }

@@ -1,7 +1,7 @@
 # Panics
 
 `orelse` handles a failure, wherever it comes from, and never a panic.
-Failures here come from `bubble()`, from builtins (a failed number
+Failures here come from `throw`, from builtins (a failed number
 parse throws a `ParseError`, and a code point out of range an
 `InvalidCodePoint`), and from inside a function value an `orelse` calls.
 Each `orelse` gives its fallback, and `??` gives one for a regex that
@@ -15,14 +15,18 @@ finds nothing, as `find` gives null:
     class Square(public side: Int) extends Shape {}
     class Circle extends Shape {}
 
-    let failing(n: Int): Int throws Bubble {
-      if (n > 0) { bubble() }
+    sealed interface Problem extends Error {}
+    class Positive(public n: Int) extends Problem {}
+    class NotSquare extends Problem {}
+
+    let failing(n: Int): Int throws Positive {
+      if (n > 0) { throw new Positive(n) }
       n
     }
-    let downcast(s: Shape): Square throws Bubble {
-      if (s is Square) { s } else { bubble() }
+    let downcast(s: Shape): Square throws NotSquare {
+      if (s is Square) { s } else { throw new NotSquare() }
     }
-    let calling(f: fn (): Int throws Bubble): Int { f() orelse -9 }
+    let calling(f: fn (): Int throws Problem): Int { f() orelse -9 }
 
     let zero = failing(0) orelse -1;
     let a = failing(1) orelse -1;
@@ -32,14 +36,14 @@ finds nothing, as `find` gives null:
     let g = String.fromCodePoint(0x110000) orelse "?";
     let digits: Regex = /[0-9]+/;
     let h = digits.find("none")?.full?.value ?? "no digits";
-    let i = calling(fn (): Int throws Bubble { failing(2) });
+    let i = calling(fn (): Int throws Problem { failing(2) });
     console.log("${a} ${b} ${e} ${(f == -6.0).toString()} ${g} ${h} ${i}");
 
 The other builtins and std functions that fail, each where a host
 library fails for it on some backend: other number parses and
 conversions, code points out of range, a missing key, an invalid date,
 and malformed or partial JSON throw declared failures, which `orelse`
-handles as it does a bubble, and `catch` binds:
+handles as it does any other, and `catch` binds:
 
     let appending(codePoint: Int): String throws InvalidCodePoint {
       let sb = new StringBuilder();
@@ -73,15 +77,15 @@ A panic passes every `orelse` untouched: the one in `inner` around the
 call that panics, and the one around `inner()`. So the run fails right
 after `panicking`, and neither the fallback nor the line after logs:
 
-    let explode(n: Int): Int throws Bubble {
+    let explode(n: Int): Int throws Positive {
       if (n > 0) { panic() }
-      bubble()
+      throw new Positive(n)
     }
     let noted(name: String): Int {
       console.log("${name} fallback");
       -2
     }
-    let inner(): Int throws Bubble { explode(1) orelse noted("inner") }
+    let inner(): Int throws Positive { explode(1) orelse noted("inner") }
     console.log("panicking");
     let p = inner() orelse -1;
     console.log("after the panic ${p}");

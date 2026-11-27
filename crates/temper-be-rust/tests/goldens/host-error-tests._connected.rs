@@ -1,4 +1,4 @@
-pub(crate) fn host_fails(n: i32) -> temper_core::Result<i32> {
+pub(crate) fn host_fails(n: i32) -> Result<i32, crate::Oops> {
     match n {
         1 => panic!("host bug {n}"),
         2 => Ok(Vec::<i32>::new()[n as usize]),

@@ -3,8 +3,8 @@ package temper.core;
 /**
  * What awaiting a broken promise throws. It has no fields: a broken
  * promise doesn't say why, though what broke it, a host's exception, is
- * its cause. Like a {@link Bubble}, it has no stack trace unless
- * {@link Bubble#keepStackTraces} was called.
+ * its cause. It has no stack trace unless {@link Core#keepStackTraces}
+ * was called.
  */
 @SuppressWarnings("serial")
 public final class BrokenPromise extends CoreException {
@@ -17,6 +17,6 @@ public final class BrokenPromise extends CoreException {
 
     @Override
     public synchronized Throwable fillInStackTrace() {
-        return Bubble.keepsStackTraces() ? super.fillInStackTrace() : this;
+        return Core.keepsStackTraces() ? super.fillInStackTrace() : this;
     }
 }

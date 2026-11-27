@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.function.DoubleConsumer;
 import java.util.function.DoubleUnaryOperator;
 import java.util.logging.Logger;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Nullable;
@@ -17,17 +16,8 @@ public final class LibrariesGlobal {
     static volatile int ticks;
     static final List<Integer> extras;
 
-    public static Grid parseGrid(String s) {
-        if (s.equals("")) {
-            throw Core.bubble();
-        }
-        double t;
-        try {
-            t = Core.stringToFloat64(s);
-        } catch (ParseError ignored) {
-            throw Core.bubble();
-        }
-        return new Grid(1, List.of(t));
+    public static Grid parseGrid(String s) throws ParseError {
+        return new Grid(1, List.of(Core.stringToFloat64(s)));
     }
 
     static Tagged tagged(@Nullable String label) {
@@ -62,9 +52,9 @@ public final class LibrariesGlobal {
         return values.size() / ncols;
     }
 
-    static Grid scaled(Grid grid) {
+    static Grid scaled(Grid grid) throws NoColumns {
         if (grid.ncols == 0) {
-            throw Core.bubble();
+            throw new NoColumns();
         }
         return grid;
     }
@@ -73,8 +63,8 @@ public final class LibrariesGlobal {
         try {
             List<Double> more = Core.listMapDoubleToDouble(scaled(grid).values, x -> x * x * x);
             return more;
-        } catch (Bubble bubble) {
-            throw new AssertionError("panic", bubble);
+        } catch (NoColumns failure) {
+            throw new AssertionError("panic", failure);
         }
     }
 
@@ -111,11 +101,7 @@ public final class LibrariesGlobal {
     }
 
     static double corner(Grid grid) {
-        try {
-            return grid.get(1, 1);
-        } catch (Bubble ignored) {
-            return -1.0;
-        }
+        return grid.get(1, 1);
     }
 
     static @Nullable Grid maybe(int n) {
@@ -130,8 +116,8 @@ public final class LibrariesGlobal {
         Grid t;
         try {
             t = scaled(grid);
-        } catch (Bubble bubble) {
-            throw new AssertionError("panic", bubble);
+        } catch (NoColumns failure) {
+            throw new AssertionError("panic", failure);
         }
         DoubleUnaryOperator fn = x -> {
             if (Double.compare(x, 1.5) > 0) {
@@ -224,7 +210,7 @@ public final class LibrariesGlobal {
         @Nullable Grid found_;
         try {
             found_ = parseGrid(s);
-        } catch (Bubble ignored) {
+        } catch (ParseError ignored) {
             found_ = null;
         }
         @Nullable Grid found = found_;

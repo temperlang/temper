@@ -272,19 +272,18 @@ pub enum Stmt {
     },
     /// `do … end`.
     Do(Vec<Stmt>),
-    /// Temper's `orelse`, as Kotlin's: `body` in a function that
-    /// `temper.pcall` runs, then `fallback` if it bubbled (anything
-    /// else it raises, `temper.pcall` raises again):
-    /// `if not temper.pcall(function() … end) then … end`. A handler of
-    /// declared failures is `temper.catch(function() … end, NotFound)`,
-    /// catching what `caught` lists ([`Stmt::PCall`] too).
+    /// Temper's `orelse` or `catch`: `body` in a function that
+    /// `temper.catch` runs, then `fallback` if it failed with what
+    /// `caught` is (anything else it raises, `temper.catch` raises
+    /// again): `if not temper.catch(function() … end, NotFound) then …
+    /// end`.
     Try {
         body: Vec<Stmt>,
         fallback: Vec<Stmt>,
-        caught: Vec<Expr>,
+        caught: Option<Expr>,
     },
-    /// Temper's `orelse` whose body jumps out of it, as Kotlin's: `local
-    /// ok, value, kind = temper.pcall(function() … end)`, the body
+    /// A handler whose body jumps out of it, as Kotlin's: `local
+    /// ok, value, kind = temper.catch(function() … end, NotFound)`, the body
     /// returning a signal for each jump (`return v, "return"`, `return
     /// "break", "flow"`), and an `if` after it redoing the jump; or whose
     /// fallback uses what it caught, its second result, as a `catch`'s
@@ -292,13 +291,13 @@ pub enum Stmt {
     PCall {
         names: Vec<String>,
         body: Vec<Stmt>,
-        caught: Vec<Expr>,
+        caught: Option<Expr>,
     },
     Break,
     Goto(String),
     Label(String),
     Return(Option<Expr>),
-    /// `return a, b`: a jump's signal out of a function `temper.pcall`
+    /// `return a, b`: a jump's signal out of a function `temper.catch`
     /// runs ([`Stmt::PCall`]).
     Returns(Vec<Expr>),
     /// `local function name(…)`, or `function name(…)` for a name declared
@@ -558,23 +557,11 @@ fn indent(out: &mut String, depth: usize) {
     }
 }
 
-/// A handler's runtime function: `temper.pcall`, which catches only
-/// bubbles, or `temper.catch`, which catches what follows its function.
-fn handler(caught: &[Expr]) -> &'static str {
-    match caught.is_empty() {
-        true => "temper.pcall",
-        false => "temper.catch",
-    }
-}
-
-/// What `temper.catch` catches, as the arguments after its function.
-fn caught_args(caught: &[Expr]) -> String {
-    let mut out = String::new();
-    for c in caught {
-        out.push_str(", ");
-        out.push_str(&expr(c, TOP));
-    }
-    out
+/// What `temper.catch` catches, as the argument after its function.
+fn caught_args(caught: &Option<Expr>) -> String {
+    caught
+        .as_ref()
+        .map_or(String::new(), |c| format!(", {}", expr(c, TOP)))
 }
 
 fn block(out: &mut String, body: &[Stmt], depth: usize) {
@@ -716,7 +703,7 @@ fn stmt_text(out: &mut String, s: &Stmt, depth: usize) {
             fallback,
             caught,
         } => {
-            let _ = writeln!(out, "if not {}(function()", handler(caught));
+            out.push_str("if not temper.catch(function()\n");
             block(out, body, depth + 1);
             indent(out, depth);
             let _ = writeln!(out, "end{}) then", caught_args(caught));
@@ -730,7 +717,7 @@ fn stmt_text(out: &mut String, s: &Stmt, depth: usize) {
             caught,
         } => {
             let names = names.join(", ");
-            let _ = writeln!(out, "local {names} = {}(function()", handler(caught));
+            let _ = writeln!(out, "local {names} = temper.catch(function()");
             block(out, body, depth + 1);
             indent(out, depth);
             let _ = writeln!(out, "end{})", caught_args(caught));

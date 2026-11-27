@@ -1,6 +1,5 @@
 package named_args;
 
-import temper.core.Bubble;
 import temper.core.Core;
 
 public final class NamedArgsMain {
@@ -8,7 +7,7 @@ public final class NamedArgsMain {
 
     public static void main(String[] args) throws ClassNotFoundException {
         Core.initSimpleLogging();
-        Bubble.keepStackTraces();
+        Core.keepStackTraces();
         Core.beginTopLevel();
         try {
             Class.forName("named_args.NamedArgsGlobal");

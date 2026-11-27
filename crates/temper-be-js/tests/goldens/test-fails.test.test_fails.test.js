@@ -1,4 +1,4 @@
-import { endTest, isBubble } from "@temperlang/core";
+import { endTest, failureBase } from "@temperlang/core";
 import { it } from "node:test";
 import { Test } from "@temperlang/std/testing";
 
@@ -11,7 +11,7 @@ function tries(f) {
   try {
     f();
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof Oops)) throw e$;
     finished = false;
   }
   return finished;
@@ -29,10 +29,22 @@ function find(key) {
   }
 }
 
+class Problem extends Error {}
+
+failureBase(Problem);
+
+class Oops extends Problem {
+  /** @returns {string} */
+  get message() {
+    return "oops";
+  }
+}
+
 it("passes before", async function () {
   const test = new Test();
   let failure;
   try {
+    /** @throws {Oops} */
     function fn() {
       {
         const actual = find("one");
@@ -53,6 +65,7 @@ it("fails past an orelse", async function () {
   const test = new Test();
   let failure;
   try {
+    /** @throws {Oops} */
     function fn() {
       test.fail("failed on purpose");
     }
@@ -137,6 +150,7 @@ it("fails a hard assertion past an orelse", async function () {
   const test = new Test();
   let failure;
   try {
+    /** @throws {Oops} */
     function fn() {
       test.assertHard(((1 + 1) | 0) === 3, () => "hard assertion");
     }
@@ -155,6 +169,7 @@ it("hardens soft failures past an orelse", async function () {
   let failure;
   try {
     test.assert(false, () => "soft only");
+    /** @throws {Oops} */
     function fn2() {
       test.softFailToHard();
     }

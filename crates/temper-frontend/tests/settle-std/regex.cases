@@ -16,7 +16,7 @@ let word = /[a-z]+/;
 console.log(word.find("abc").full.value);
 --- settled
 error 33..54: No member full in Match?
-Failed: No member full in Match?
+Panicked: No member full in Match?
 
 === replace passes on what its callback throws, and can't fail where its callback can't
 // RFC 164: `Regex.replace` is generic over its callback's failure type,

@@ -33,8 +33,8 @@ answered once, so every backend agrees.
 **Stored** (Decided 2026-10-29: only what the source says), on
 declarations: exported and visibility; source names and kinds; docs;
 fields versus getters and setters, and which are computed; constructor
-parameters and which have defaults; `@fun` interfaces by name; may
-bubble; generator and `async`; `@operator`, `@auto("==")`, and `@imu`
+parameters and which have defaults; `@fun` interfaces by name; what
+they throw; generator and `async`; `@operator`, `@auto("==")`, and `@imu`
 marks;
 connected marks and qnames; abstract, sealed, and type parameters with bounds.
 

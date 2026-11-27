@@ -27,7 +27,7 @@
 //! `==` where either may be null is
 //! `Objects.equals`, and `c ? x : 1` for an `Integer` `x` boxes the `1`
 //! (else Java unboxes `x`). `x as T` for `x: T?` is
-//! `Core.requireNonNull(x)`, which bubbles for null, and `x as C` is
+//! `Core.requireNonNull(x)`, which panics for null, and `x as C` is
 //! `Core.cast(C.class, x)` (`Translator::checked_cast`).
 //!
 //! What an expression needs first, an `orelse`'s `try` or a block's
@@ -37,11 +37,10 @@
 //! need statements become `if` statements, and a `while` condition that
 //! does a `while (true)` with a test first. Where the statement puts the
 //! value somewhere, the `try` puts it there itself, as Kotlin's do:
-//! `String converted; try { converted = …; } catch (Bubble ignored) {
-//! converted = "failed"; }`. A bubble is the runtime's `Bubble`;
-//! `panic()` throws an `AssertionError`, which no `orelse` catches, where
-//! Kotlin's throws a bubble; `orelse panic()`'s has the bubble as its
-//! cause.
+//! `String converted; try { converted = …; } catch (ParseError ignored) {
+//! converted = "failed"; }`. `panic()`, and code with an error, throw an
+//! `AssertionError`, which no handler catches, where Kotlin's threw a
+//! bubble; `orelse panic()`'s has the failure as its cause.
 //!
 //! Declared failures (RFC 164; notes/tmpl/nodes.md, "Declared failures")
 //! are unchecked exceptions, each library's failure types classes under
@@ -49,13 +48,13 @@
 //! Failure` ([`classes`] says how), so callbacks and generic code need
 //! nothing of them. `throw` is Java's, its cause, in a handler, set by
 //! `Core.withCause`; an `orelse` or `catch` catches exactly what its body
-//! may fail with, `Bubble` and the failure class above its declared
-//! failures, a multi-catch where both ([`Translator::handled`]); and a
+//! may fail with, the failure class above its failures
+//! ([`Translator::handled`]); and a
 //! function that fails with a failure type says so in a `throws` clause,
 //! which Java doesn't check, for its readers. Failures keep their stack
 //! traces, which Java fills where one is constructed: a cost on the
-//! failure path only, which `Bubble` avoids, being thrown and handled
-//! within generated code.
+//! failure path only (core's `BrokenPromise` has none unless
+//! `Core.keepStackTraces()` was called).
 
 mod classes;
 mod functions;
@@ -290,7 +289,6 @@ impl<'a> Translator<'a> {
                 Scalar::AnyValue => "Object",
                 // Not raw `Class`, which `-Xlint` warns of.
                 Scalar::Type => "Class<?>",
-                Scalar::Bubble => return not_yet("Bubble as a value's type"),
             }
             .to_string(),
             // A `@fun` interface is its function type's interface.
@@ -689,7 +687,7 @@ impl<'a> Translator<'a> {
     /// What a function or method says it throws: the declared failure
     /// type its signature fails with, unchecked, so a `throws` clause that
     /// documents it, as Java's own APIs list `IllegalArgumentException`;
-    /// nothing for one that bubbles, or fails with a type parameter.
+    /// nothing for one that fails with a type parameter.
     pub(crate) fn throws_of(&mut self, decl: DeclId) -> R<Vec<String>> {
         match temper_tmpl::failures::declared(self.p, decl) {
             Some(fail) => Ok(vec![self.ty(fail)?]),
@@ -697,37 +695,28 @@ impl<'a> Translator<'a> {
         }
     }
 
-    /// What a handler around `body` catches, its `catch` clause's
-    /// classes: `Bubble`, imported from the runtime, if `body` may bubble,
-    /// and the failure class nearest above all its declared failures,
-    /// never what else Java throws, so panics (`AssertionError`s) and
-    /// hosts' exceptions pass. Where that's core's `Error`, the runtime's
-    /// `Failure` marker, for failures of several libraries' roots, which
-    /// isn't an exception, the clause catches `RuntimeException`, what
-    /// every root and `Bubble` extend, and the classes come second, for
-    /// the handler to throw again what isn't one of them.
-    fn handled(&mut self, body: NodeId) -> R<(Vec<String>, Option<Vec<String>>)> {
+    /// What a handler around `body` catches, its `catch` clause's class:
+    /// the failure class nearest above all its failures, never what else
+    /// Java throws, so panics (`AssertionError`s) and hosts' exceptions
+    /// pass. Where that's core's `Error`, the runtime's `Failure` marker,
+    /// for failures of several libraries' roots, which isn't an
+    /// exception, the clause catches `RuntimeException`, what every root
+    /// extends, and the marker comes second, for the handler to throw
+    /// again what isn't one.
+    fn handled(&mut self, body: NodeId) -> R<(String, Option<String>)> {
         let p = self.p;
         let fails: Vec<TypeId> = (temper_tmpl::failures::failures_under(p, body).into_iter())
             .map(|(_, f)| f)
             .collect();
-        let mut classes = Vec::new();
-        let bubbles = fails.contains(&TypeId::BUBBLE);
-        // A body that can't fail, as one `to_tmpl` kept: `Bubble`'s.
-        if bubbles || fails.is_empty() {
-            self.import("temper.core.Bubble");
-            classes.push("Bubble".to_string());
-        }
-        let declared: Vec<TypeId> = fails.into_iter().filter(|&f| f != TypeId::BUBBLE).collect();
         let root = temper_tmpl::failures::root(p);
-        let join = temper_tmpl::failures::join(p, root, &declared);
-        let marker = join.is_some_and(|ty| analysis::nominal_decl(p, ty) == root);
-        if let Some(ty) = join {
-            classes.push(self.ty(ty)?);
-        }
-        Ok(match marker {
-            true => (vec!["RuntimeException".into()], Some(classes)),
-            false => (classes, None),
+        let Some(join) = temper_tmpl::failures::join(p, root, &fails) else {
+            // Backends drop handlers whose bodies can't fail first.
+            return not_yet("a handler whose body can't fail");
+        };
+        let class = self.ty(join)?;
+        Ok(match analysis::nominal_decl(p, join) == root {
+            true => ("RuntimeException".into(), Some(class)),
+            false => (class, None),
         })
     }
 
@@ -1189,16 +1178,12 @@ impl<'a> Translator<'a> {
             }
             Node::Return { value } => match value.map(|v| (v, p.nodes.get(v))) {
                 None | Some((_, Node::VoidLit {})) => self.emit(out, Stmt::Return(None)),
-                Some((_, Node::Error { .. })) => {
-                    let throw = self.throw();
-                    self.emit(out, throw);
-                }
+                Some((_, Node::Error { .. })) => self.emit(out, panic()),
                 Some((v, _)) => self.into(&Place::Return, v, out)?,
             },
             Node::ExprStatement { expr } => {
                 if let Node::Error { .. } = p.nodes.get(expr) {
-                    let throw = self.throw();
-                    self.emit(out, throw);
+                    self.emit(out, panic());
                     return Ok(());
                 }
                 self.into(&Place::Discard, expr, out)?;
@@ -1225,16 +1210,11 @@ impl<'a> Translator<'a> {
                 self.into(&Place::Assign(Expr::name(name.clone())), value, out)
             }
             (_, Node::OrElse { body, fallback } | Node::Catch { body, fallback, .. }) => {
-                let (classes, only) = self.handled(body)?;
+                let (class, only) = self.handled(body)?;
                 let local = match p.nodes.get(value) {
                     Node::Catch { local, .. } => Some(local),
                     _ => None,
                 };
-                // A multi-catch's variable is the classes' join, which
-                // Java can't read a failure's members from.
-                if local.is_some() && classes.len() > 1 {
-                    return not_yet("a catch that binds a failure and a bubble");
-                }
                 let body = self.sub(|t, o| t.into(into, body, o))?;
                 // What it catches: the binding, where there's one Java
                 // catches by type.
@@ -1242,7 +1222,7 @@ impl<'a> Translator<'a> {
                     (Some(local), None) => self.name(local),
                     (_, Some(_)) => self.fresh("caught"),
                     (None, None) if matches!(p.nodes.get(fallback), Node::Panic {}) => {
-                        self.fresh("bubble")
+                        self.fresh("failure")
                     }
                     (None, None) => self.fresh("ignored"),
                 };
@@ -1251,10 +1231,7 @@ impl<'a> Translator<'a> {
                 // Of all it catches, only failures, throwing the rest
                 // again, then the binding as the failure it is.
                 if let Some(only) = only {
-                    let test = (only.iter())
-                        .map(|class| Expr::InstanceOf(Box::new(caught.clone()), class.clone()))
-                        .reduce(|a, b| Expr::bin(Bin::Or, a, b))
-                        .unwrap();
+                    let test = Expr::InstanceOf(Box::new(caught.clone()), only);
                     handler.push(Stmt::If {
                         cond: Expr::unary(Unary::Not, test),
                         then: vec![Stmt::Throw(caught.clone())],
@@ -1279,7 +1256,7 @@ impl<'a> Translator<'a> {
                 }
                 let stmt = Stmt::TryCatch {
                     body,
-                    classes,
+                    class,
                     var,
                     handler,
                 };
@@ -1334,12 +1311,7 @@ impl<'a> Translator<'a> {
                 self.emit(out, Stmt::If { cond, then, els });
                 Ok(())
             }
-            (_, Node::Bubble { .. }) => {
-                let throw = self.throw();
-                self.emit(out, throw);
-                Ok(())
-            }
-            (_, Node::Panic {}) => {
+            (_, Node::Panic {} | Node::Error { .. }) => {
                 self.emit(out, panic());
                 Ok(())
             }
@@ -1490,8 +1462,8 @@ impl<'a> Translator<'a> {
     /// A module's test class, `NAMETest`, in its package, under
     /// `src/test/java`: what only its tests reach, as statics
     /// ([`Translator::statics_class`]) whose initializer runs the module
-    /// class's first, after keeping bubbles' stack traces
-    /// (`Bubble.keepStackTraces()`), then continues it, and its tests, as JUnit 5 tests:
+    /// class's first, after keeping core's failures' stack traces
+    /// (`Core.keepStackTraces()`), then continues it, and its tests, as JUnit 5 tests:
     /// each a method named for it in camel case (`twice10` for "twice
     /// ${base}" made "twice 10"), which makes std's `Test`, runs the body,
     /// and then, even if the body threw, ends the test (`Core.endTest`):
@@ -1528,11 +1500,11 @@ impl<'a> Translator<'a> {
         }
         let mut statics =
             self.statics_class(module, &module.test_items, module.test_init, &outside)?;
-        // Tests' bubbles keep stack traces, as a program's do, so one
-        // that fails a test says where it came from.
+        // Tests' core failures keep stack traces, as a program's do, so
+        // one that fails a test says where it came from.
         if !module.tests.is_empty() {
-            self.import("temper.core.Bubble");
-            let keep = Expr::name("Bubble").method("keepStackTraces", Vec::new());
+            self.import("temper.core.Core");
+            let keep = Expr::name("Core").method("keepStackTraces", Vec::new());
             statics.init.insert(0, Stmt::Expr(keep));
         }
         self.in_function = true;
@@ -1603,14 +1575,7 @@ impl<'a> Translator<'a> {
         }))
     }
 
-    /// `throw Core.bubble();`.
-    fn throw(&mut self) -> Stmt {
-        self.import("temper.core.Core");
-        Stmt::Throw(Expr::name("Core").method("bubble", Vec::new()))
-    }
-
-    /// `value as ty`, bubbling where it fails, as a `Bubble`, never a
-    /// host exception: `Core.requireNonNull(x)` where only null fails,
+    /// `value as ty`, panicking where it fails: `Core.requireNonNull(x)` where only null fails,
     /// `Core.cast(C.class, x)` to a class without type arguments, and
     /// `(C<A>) Core.check(C.class, x)` to one with them, javac checking
     /// that cast from `x`'s own type; to a type parameter, which Java
@@ -1917,11 +1882,7 @@ impl<'a> Translator<'a> {
                 let (left, right) = (self.expr(left)?, self.expr(right)?);
                 Expr::name("Objects").method("equals", vec![left, right])
             }
-            Node::Bubble { .. } => {
-                self.import("temper.core.Core");
-                Expr::name("Core").method("throwBubble", Vec::new())
-            }
-            Node::Panic {} => {
+            Node::Panic {} | Node::Error { .. } => {
                 self.import("temper.core.Core");
                 Expr::name("Core").method("throwAssertionError", vec![Expr::Str("panic".into())])
             }
@@ -2050,10 +2011,6 @@ impl<'a> Translator<'a> {
                     then: Box::new(then),
                     els: Box::new(els),
                 }
-            }
-            Node::Error { .. } => {
-                self.import("temper.core.Core");
-                Expr::name("Core").method("throwBubble", Vec::new())
             }
             Node::FunctionLiteral { decl, params, body } => {
                 self.literal(id, decl, params, body, None)?
@@ -2266,8 +2223,8 @@ fn negate(cond: Expr) -> Expr {
     ops::apply(Spelling::Unary(Unary::Not), vec![cond])
 }
 
-/// `panic()`: an `AssertionError`, which no `orelse`'s `catch (Bubble …)`
-/// catches, where Kotlin's throws a bubble, which one does.
+/// `panic()`, and code with an error: an `AssertionError`, which no
+/// handler catches, where Kotlin's threw a bubble, which one did.
 fn panic() -> Stmt {
     Stmt::Throw(Expr::New(
         "AssertionError".into(),

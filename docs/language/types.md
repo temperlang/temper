@@ -1915,8 +1915,6 @@ The type for any successful value.
 All `class` and `interface` types, including builtin types like [*Int32*](#class-int32),
 are sub-types of this type.
 
-The special type [*Bubble*](#class-bubble) is not.
-
 *AnyValue*
 
 ## *interface Equatable*
@@ -2070,8 +2068,8 @@ A multi-step computation that may be scheduled for a step by calling the
 [`Generator.next`](#generatornext) method.
 
 Block lambdas that extend [*GeneratorFn*](#interface-generatorfn) specify factories
-for *Generator*s, or if they don't [*Bubble*](#class-bubble), for
-[*Generator*](#interface-generator)s.
+for *Generator*s whose bodies may throw what they declare, or if they
+declare nothing, for [*SafeGenerator*](#interface-safegenerator)s.
 
 Terminology note:
 Coroutines may be represented as *Generator*s where
@@ -2108,7 +2106,7 @@ would get [*true*](builtins.md#true).
 
 ##### `Generator.next`
 
-`:` `fn(`[*Generator*](#interface-generator)&lt;[*YIELD*](#generatoryield)&gt;`):` [*GeneratorResult*](#interface-generatorresult)&lt;[*YIELD*](#generatoryield)&gt; `throws` [*Bubble*](#class-bubble)
+`:` `fn(`[*Generator*](#interface-generator)&lt;[*YIELD*](#generatoryield)&gt;`):` [*GeneratorResult*](#interface-generatorresult)&lt;[*YIELD*](#generatoryield)&gt; `throws` [*Error*](#interface-error)
 
 Starts/resumes the computation and runs until it pauses or completes.
 
@@ -2120,8 +2118,8 @@ This is the case for a [*GeneratorFn*](#interface-generatorfn) that
 If the computation pauses, returns the value associated with the
 decision to pause.
 For a [*GeneratorFn*](#interface-generatorfn), this is the value passed to
-[# `yield()` builtin](builtins.md#yield).  If a *GeneratorFn* bubbles, the call to
-next propagates it.
+[# `yield()` builtin](builtins.md#yield).  If a *GeneratorFn* throws, the call to
+next throws it, any [*Error*](#interface-error), and the generator is done.
 
 ##### `Generator.close`
 
@@ -2136,8 +2134,9 @@ will be [*true*](builtins.md#true).
 
 ### *interface SafeGenerator*
 
-A variant of [*Generator*](#interface-generator) that does not bubble
-when computing the next result.
+A variant of [*Generator*](#interface-generator) that can't fail
+when computing the next result. Its *next* still throws, as
+*Generator*'s does; its *nextSafe* doesn't.
 
 *SafeGenerator* `<`[*YIELD*](#safegeneratoryield)`>` `extends` [*AnyValue*](#interface-anyvalue), [*Generator*](#interface-generator)&lt;[*YIELD*](#safegeneratoryield)&gt;
 
@@ -2151,7 +2150,7 @@ when computing the next result.
 
 ##### `SafeGenerator.next`
 
-`:` `fn(`[*SafeGenerator*](#interface-safegenerator)&lt;[*YIELD*](#safegeneratoryield)&gt;`):` [*GeneratorResult*](#interface-generatorresult)&lt;[*YIELD*](#safegeneratoryield)&gt; `throws` [*Bubble*](#class-bubble)
+`:` `fn(`[*SafeGenerator*](#interface-safegenerator)&lt;[*YIELD*](#safegeneratoryield)&gt;`):` [*GeneratorResult*](#interface-generatorresult)&lt;[*YIELD*](#safegeneratoryield)&gt; `throws` [*Error*](#interface-error)
 
 Starts/resumes the computation and runs until it pauses or completes.
 
@@ -2261,14 +2260,13 @@ Temper *Never* types can translate to bottom types in languages that support tha
 
 `out` `extends` [*AnyValue*](#interface-anyvalue)
 
-### *class Bubble*
-
-*Bubble* `extends` [*AnyValue*](#interface-anyvalue)
-
 ### *interface Error*
 
-*Error* is the root of declared failure types (RFC 164, in progress):
-what `throws` declares and `throw` throws ([failures](syntax.md#failures)).
+*Error* is the root of declared failure types, Temper's errors: what
+`throws` declares, `throw` throws, and `orelse` and `catch` handle
+([failures](syntax.md#failures)). A failure that's a bug, not a case to
+handle, is a [`panic()`](builtins.md#panic) instead, which nothing
+handles.
 Each failure type is under one of its library's roots, sealed interfaces
 that extend *Error* itself, as `sealed interface LookupError extends
 Error {}`; classes extend a root, or a sealed interface under one, never
@@ -2294,13 +2292,12 @@ extends LookupError {}`.
 
 The failure that was being handled where this one was thrown, by a
 `throw` in a `catch` block or an [*orelse*](builtins.md#orelse) fallback,
-or [*null*](builtins.md#null): none, or a [*Bubble*](#class-bubble),
-which has no value. A failure thrown again keeps the cause it was first
+or [*null*](builtins.md#null). A failure thrown again keeps the cause it was first
 thrown with.
 
 ### *Top*
 *Top* is a super-type of every type, including [*AnyValue*](#interface-anyvalue) and
-[*Bubble*](#class-bubble).
+[*Void*](#class-void).
 
 ### *interface Invalid*
 
@@ -2338,7 +2335,6 @@ production-ready.
 graph TD
 Top --> AnyValue
 Top --> Void
-Top --> Bubble
 AnyValue --> Union["A | B"]
 subgraph nominals [Nominals]
   direction LR
@@ -2351,7 +2347,6 @@ A --> Intersection["A & B"]
 B --> Intersection
 Intersection --> Never
 Void --> Never
-Bubble --> Never
 Invalid
 ```
 
@@ -2375,12 +2370,15 @@ The *Invalid* type, off to the right, is a type marker for constructs
 that the compiler cannot make sense of.  It is outside the type hierarchy; not
 a subtype of any other nor vice versa.
 
-*Top* branches into *AnyValue*, *Void*, and *Bubble*.  This represents the
-three ways a computation can complete, either by
+*Top* branches into *AnyValue* and *Void*.  This represents the
+two ways a computation can complete normally, either by
 
-- producing an actual value (it produces a subtype of *AnyValue*),
-- finishing normally but without a usable value, or
-- bubbling up the call stack until replaced with a value by `orelse`.
+- producing an actual value (it produces a subtype of *AnyValue*), or
+- finishing without a usable value.
+
+A computation may also fail, by throwing an [*Error*](#interface-error),
+which a function declares in its result type (`Int throws ParseError`)
+rather than as a type of its own.
 
 Below any value we have `A | B`, a union type.
 Values of type `A | B` can be of type `A` or[^1] of type `B`.
@@ -2401,11 +2399,10 @@ In that, `C` is a declared sub-type of both `A` and `B`, so it's a
 sub-type of `A & B`.
 
 (Union and intersection types are actually more general.
-`A | Bubble` is an expressible type as is `(A?) & D`, so
+`(A?) & D` is an expressible type, so
 this diagram does not imply that all union/intersection types fit
 neatly in a region on one side of nominal types. `Void` has
-constraints here, however. `Void | Bubble` makes sense, but
-`A | Void` doesn't.)
+constraints here, however: `A | Void` doesn't make sense.)
 
 In the middle are *NominalType*s.  These are types declared with a name
 and parameters.  *NominalTypes* include all these:

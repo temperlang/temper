@@ -2,7 +2,6 @@ package host_failures_several_libraries;
 
 import count_failures.CountFailuresGlobal;
 import java.util.logging.Logger;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Failure;
@@ -42,9 +41,9 @@ public final class HostFailuresSeveralLibrariesGlobal {
         }
     }
 
-    static int nonzero(int n) {
+    static int nonzero(int n) throws Zero {
         if (n == 0) {
-            throw Core.bubble();
+            throw new Zero();
         } else {
             return n;
         }
@@ -54,7 +53,7 @@ public final class HostFailuresSeveralLibrariesGlobal {
         try {
             return hostLookup(key) / nonzero(CountFailuresGlobal.parseCount(count));
         } catch (RuntimeException caught) {
-            if (!(caught instanceof Bubble || caught instanceof Failure)) {
+            if (!(caught instanceof Failure)) {
                 throw caught;
             }
             return -9;

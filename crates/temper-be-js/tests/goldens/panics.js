@@ -2,13 +2,12 @@ import {
   InvalidCodePoint,
   MissingKey,
   ParseError,
-  bubble,
   dateConstructor,
   dateFromIsoString,
   eqFloat64,
+  failureBase,
   float64ToInt32,
   int64ToInt32,
-  isBubble,
   mapBuilderRemove,
   mappedGet,
   panic,
@@ -43,10 +42,11 @@ import {
 /**
  * @param {number} n
  * @returns {number}
+ * @throws {Positive}
  */
 function failing(n) {
   if (n > 0) {
-    bubble();
+    throw new Positive(n);
   }
   return n;
 }
@@ -54,12 +54,13 @@ function failing(n) {
 /**
  * @param {Shape} s
  * @returns {Square}
+ * @throws {NotSquare}
  */
 function downcast(s) {
   if (s instanceof Square) {
     return /** @type {Square} */ (/** @type {unknown} */ (s));
   } else {
-    bubble();
+    throw new NotSquare();
   }
 }
 
@@ -71,7 +72,7 @@ function calling(f) {
   try {
     return f();
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof Problem)) throw e$;
     return -9;
   }
 }
@@ -100,12 +101,13 @@ function parsing(text) {
 /**
  * @param {number} n
  * @returns {number}
+ * @throws {Positive}
  */
 function explode(n) {
   if (n > 0) {
     panic();
   }
-  bubble();
+  throw new Positive(n);
 }
 
 /**
@@ -117,12 +119,15 @@ function noted(name) {
   return -2;
 }
 
-/** @returns {number} */
+/**
+ * @returns {number}
+ * @throws {Positive}
+ */
 function inner() {
   try {
     return explode(1);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof Positive)) throw e$;
     return noted("inner");
   }
 }
@@ -147,12 +152,44 @@ class Square extends type(Shape) {
 
 class Circle extends type(Shape) {}
 
+class Problem extends Error {}
+
+failureBase(Problem);
+
+class Positive extends Problem {
+  /** @type {number} */
+  #n;
+
+  /** @param {number} n */
+  constructor(n) {
+    super();
+    this.#n = n;
+  }
+
+  /** @returns {number} */
+  get n() {
+    return this.#n;
+  }
+
+  /** @returns {string} */
+  get message() {
+    return `positive (n: ${this.#n})`;
+  }
+}
+
+class NotSquare extends Problem {
+  /** @returns {string} */
+  get message() {
+    return "not square";
+  }
+}
+
 /** @type {number} */
 let zero;
 try {
   zero = failing(0);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof Positive)) throw e$;
   zero = -1;
 }
 /** @type {number} */
@@ -160,7 +197,7 @@ let a;
 try {
   a = failing(1);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof Positive)) throw e$;
   a = -1;
 }
 /** @type {number} */
@@ -168,7 +205,7 @@ let b;
 try {
   b = downcast(new Circle()).side;
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof NotSquare)) throw e$;
   b = -2;
 }
 /** @type {number} */
@@ -321,7 +358,7 @@ let p;
 try {
   p = inner();
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof Positive)) throw e$;
   p = -1;
 }
 console.log(`after the panic ${p}`);

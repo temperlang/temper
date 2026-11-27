@@ -1,2 +1,2 @@
 # generated line:column -> source:line:column, and the text at each
-3:1 -> ../broken.temper.md:53:5  bubble(); <- export something() {}
+3:1 -> ../broken.temper.md:53:5  panic(); <- export something() {}

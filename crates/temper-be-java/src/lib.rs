@@ -24,18 +24,16 @@
 //! imports between them and from other libraries, and tests, and classes
 //! and interfaces, each a file of its own as Kotlin's
 //! (`translate::classes` says how); and nullable types, as Kotlin's,
-//! `@Nullable` and boxed (`@Nullable Integer`), with `orelse` as a `try`
-//! and `catch (Bubble …)`, `bubble()` as `throw Core.bubble()`, and
-//! `panic()` as an `AssertionError`, which no `orelse` catches; unlike
-//! Kotlin's, `catch (RuntimeException …)`, a handler catches only the
-//! runtime's `temper.core.Bubble` (unchecked, without a stack trace), which
-//! `as` and every builtin that bubbles throw, the runtime turning host
-//! failures (`NumberFormatException`, `DateTimeException`, a broken
-//! promise's `ExecutionException`) into one; so anything else, a host
-//! exception from a builtin not declared to bubble or from a callback,
-//! passes every `orelse`, and a library's host code (its `.java` files)
-//! bubbles only by throwing a `Bubble` (`throw Core.bubble()`); and
-//! declared failures (RFC 164) as unchecked exceptions, each library's
+//! `@Nullable` and boxed (`@Nullable Integer`), with `orelse` and `catch`
+//! as a `try` and a `catch` of the failure class above what the body may
+//! throw, and `panic()` (and code with an error) as an `AssertionError`,
+//! which no handler catches; unlike Kotlin's, `catch (RuntimeException
+//! …)`, a handler catches only declared failures, which builtins that
+//! may fail throw, the runtime turning host failures
+//! (`NumberFormatException`, `DateTimeException`, a broken promise's
+//! `ExecutionException`) into core's; so anything else, a host exception
+//! from a builtin not declared to fail or from a callback, passes every
+//! handler; and declared failures (RFC 164) as unchecked exceptions, each library's
 //! failure types under its roots, `WherewithException extends
 //! RuntimeException implements temper.core.Failure`, `throw` as Java's,
 //! and handlers that catch exactly what their bodies may fail with
@@ -347,8 +345,8 @@ fn loads(p: &Program, module: &temper_tmpl::Module) -> Vec<String> {
     external.into_iter().chain(order).map(class).collect()
 }
 
-/// The entry point, as Kotlin's: logging to stdout, bubbles with stack
-/// traces (so one that escapes says where), then the module's
+/// The entry point, as Kotlin's: logging to stdout, core's failures with
+/// stack traces (so one that escapes says where), then the module's
 /// class loaded, after those of the modules it imports
 /// ([`loads`]), which runs their static initializers, in a top-level turn,
 /// so async blocks start after them (as Temper PR #532 has Kotlin's), then
@@ -362,7 +360,6 @@ fn main_class(package: &str, main: &str, loads: &[String]) -> String {
     format!(
         "package {package};
 
-import temper.core.Bubble;
 import temper.core.Core;
 
 public final class {main} {{
@@ -370,7 +367,7 @@ public final class {main} {{
 
     public static void main(String[] args) throws ClassNotFoundException {{
         Core.initSimpleLogging();
-        Bubble.keepStackTraces();
+        Core.keepStackTraces();
         Core.beginTopLevel();
         try {{
 {loads}        }} finally {{

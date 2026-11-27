@@ -33,7 +33,11 @@ module dead#0 {
   }
 
   fn live#12(): Int32 {
-    return (orelse((bubble()^): Int32, 4)): Int32;
+    return (orelse((throw(new constructor#14())^): Int32, 4)): Int32;
+  }
+
+  class Dead#13 extends DeadError#3 {
+    constructor constructor#14(): Dead#13 {}
   }
 
   init {}
@@ -66,7 +70,11 @@ module dead#0 {
   }
 
   fn live#12(): Int32 {
-    return (orelse((bubble()^): Int32, 4)): Int32;
+    return (orelse((throw(new constructor#14())^): Int32, 4)): Int32;
+  }
+
+  class Dead#13 extends DeadError#3 {
+    constructor constructor#14(): Dead#13 {}
   }
 
   init {}

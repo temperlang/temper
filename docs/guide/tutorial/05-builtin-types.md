@@ -21,10 +21,10 @@ Temper has a number of special types, some of which you'll see more than others.
 See also [additional discussion and a diagram](../../language/types.md#type-relationships) of
 some of these types:
 
-- `Top` - The supertype of all other types, equivalent to `AnyValue throws Bubble`.
-- `Bubble` - Unusable as an ordinary value. Handled via `orelse`. It's used
-  in conjunction with other types as function return types, such as
-  `Int throws Bubble`.
+- `Top` - The supertype of all other types.
+- `Error` - The root of declared error types: a function that may fail says
+  so in its return type, as `Int throws ParseError`, and its callers handle
+  the error with `orelse` or `catch`, or pass it on.
 - `Void` - Indicates that a function return value must be ignored, allowing
   for better compatibility with type expectations of some backends.
 - `AnyValue` - The supertype of all usable values. As for any type that
@@ -32,14 +32,14 @@ some of these types:
   type safety while still using appropriate backend values.
 - *Null* - Supports data interop with external systems. Can be used along with
   other types, such as `String?`. There is only one *Null* value, `null`. For
-  functions that might fail, usually `Bubble` is a better choice than making
-  the type nullable with `?`.
+  functions that might fail, where the reason matters, a declared error is a
+  better choice than making the type nullable with `?`.
   And for functions whose result should be ignored, use `Void`.
 - `Never<T>` - The type of computations that never complete, such as infinite
   loops or a function that always panics. It stands for `T`, and is a subtype
   only of `T` and what `T` is, so a `Never<Int>` call fits where an `Int` is
   wanted, and translates to `T` in languages without a bottom type.
-  Computations that exit abnormally use `Bubble`, not `Never`.
+  Computations that fail throw a declared error, not `Never`.
 - `Invalid` - A type for when a type can't be computed.
 
 As suggested above, sometimes we can distinguish types at runtime, but this
@@ -143,7 +143,7 @@ $ if (1) { console.log("hi"); }
 interactive#5:1:5: error: Expected value of type Boolean not Int32
     if (1) { console.log("hi"); }
         ^
-Failed: Expected a Boolean, not Int
+Panicked: Expected a Boolean, not Int
 interactive#5: fail
 $ if (true) { console.log("hi"); }
 hi

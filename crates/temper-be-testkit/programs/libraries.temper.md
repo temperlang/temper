@@ -1,8 +1,8 @@
 # Libraries
 
 What real libraries (Chromarite, Ordable, Hrefine, and Kelpto) use that
-the other programs don't, each as small as it can be: a division that
-may fail inside an `orelse` in a function that can't bubble, a float
+the other programs don't, each as small as it can be: a division
+inside an `orelse` in a function that can't fail, a float
 division of constants, which folds, `m[i, j]` by a class's `get`,
 nullable values in templates, an `is` check of a call's nullable
 result, a private constructor that a static field calls, a function
@@ -37,13 +37,12 @@ of a method that takes a type parameter's value, a trait method's
 `orelse continue`, and `--i` in a loop's condition. The log is what
 the interpreter gives.
 
-    export let parseGrid(s: String): Grid throws Bubble {
-      if (s == "") { bubble() }
-      new Grid(1, [s.toFloat64() orelse bubble()])
+    export let parseGrid(s: String): Grid throws ParseError {
+      new Grid(1, [s.toFloat64()])
     }
 
     export class Grid(public ncols: Int, public values: List<Float64>) {
-      public get(i: Int, j: Int): Float64 throws Bubble {
+      public get(i: Int, j: Int): Float64 {
         values[i * ncols + j]
       }
 
@@ -156,12 +155,15 @@ the interpreter gives.
 
     let cube(x: Float64): Float64 { x * (1.0 / 4.0) }
 
-    let corner(grid: Grid): Float64 { grid[1, 1] orelse -1.0 }
+    let corner(grid: Grid): Float64 { grid[1, 1] }
 
     let maybe(n: Int): Grid? { if (n > 0) { new Grid(n, [1.0]) } else { null } }
 
-    let scaled(grid: Grid): Grid throws Bubble {
-      if (grid.ncols == 0) { bubble() }
+    sealed interface Problem extends Error {}
+    class NoColumns extends Problem {}
+
+    let scaled(grid: Grid): Grid throws NoColumns {
+      if (grid.ncols == 0) { throw new NoColumns() }
       grid
     }
 

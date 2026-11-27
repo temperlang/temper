@@ -19,6 +19,8 @@ First, set up some sophisticated commentary.
     let yay(): Void { console.log("yay") };
     let meh(): Void { console.log("meh") };
     let boo(): Void { console.log("boo") };
+    sealed interface Problem extends Error {}
+    class Oops() extends Problem {}
 
 Test a static type error:
 
@@ -26,12 +28,23 @@ Test a static type error:
     do {
       let a: Int;
       a = "1"; // Static error, but not fatal
-      bubble();
+      throw new Oops();
     } orelse yay();
 
 ```log
 Checkpoint 0
+```
+
+On dynamically typed backends, ill-typed code runs as written, as in
+Kotlin's interpreter. On statically typed ones, whose compilers would
+reject it, each type error panics where it runs, so the run ends there:
+
+```log interp js lua py
 yay
+```
+
+```stderr cpp csharp java rust
+panic
 ```
 
 Then with the correct type:
@@ -42,7 +55,7 @@ Then with the correct type:
       yay();
     } orelse boo();
 
-```log
+```log interp js lua py
 Checkpoint 1
 yay
 ```
@@ -54,7 +67,7 @@ Test an incorrect type in an inner scope.
       var a: Int = 1;
       do {
         a = "2"; // Static error, but not fatal
-        bubble();
+        throw new Oops();
         boo();
       } orelse meh();
       if (a == 1) {
@@ -64,7 +77,7 @@ Test an incorrect type in an inner scope.
       }
     }
 
-```log
+```log interp js lua py
 Checkpoint 2
 meh
 meh
@@ -79,7 +92,7 @@ Verify updating a value with a correct type.
       yay()
     } orelse boo();
 
-```log
+```log interp js lua py
 Checkpoint 3
 yay
 ```
@@ -87,11 +100,11 @@ yay
 Check calling with an invalid argument type.
 
     console.log("Checkpoint 4");
-    let f(x: Int): (Int throws Bubble) { x }
+    let f(x: Int): (Int throws Oops) { x }
     do { f(0); yay() } orelse boo();
     do { f("0"); meh() } orelse meh();
 
-```log
+```log interp js lua py
 Checkpoint 4
 yay
 meh
@@ -100,11 +113,11 @@ meh
 Check calling with an invalid argument type, given inference through a return statement.
 
     console.log("Checkpoint 5");
-    let g(x: Int): (Int throws Bubble) { return x }
+    let g(x: Int): (Int throws Oops) { return x }
     do { g(0); yay() } orelse boo();
     do { g("0"); meh() } orelse meh();
 
-```log
+```log interp js lua py
 Checkpoint 5
 yay
 meh
@@ -113,11 +126,11 @@ meh
 Same as checkpoint 4, except return type isn't in parens.
 
     console.log("Checkpoint 6");
-    let i(x: Int): Int throws Bubble { x }
+    let i(x: Int): Int throws Oops { x }
     do { i(0); yay() } orelse boo();
     do { i("0"); meh() } orelse meh();
 
-```log
+```log interp js lua py
 Checkpoint 6
 yay
 meh

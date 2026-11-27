@@ -65,7 +65,7 @@ const CLASSES: [&str; 14] = [
     "interfaces/pure-virtual",
 ];
 
-/// The functional tests with nullable types, `orelse`, `bubble()`, and
+/// The functional tests with nullable types, `orelse`, `throw`, and
 /// `panic()` that translate, as the backends' testkit lists them.
 const NULLABLES: [&str; 4] = [
     "control-flow/bubble",
@@ -117,7 +117,7 @@ const CORE_TYPES: [&str; 9] = [
 const CONNECTED: [&str; 2] = ["functions/connected", "types/connected"];
 
 /// The functional tests that divide by a constant that can't fail them,
-/// where nothing may bubble, that translate, as the backends' testkit
+/// which skip the zero check, that translate, as the backends' testkit
 /// lists them.
 const DIVISIONS: [&str; 3] = ["types/int/shifty", "types/list/reduce", "types/map"];
 
@@ -140,7 +140,7 @@ const TYPING: [&str; 1] = ["semantics/constness"];
 const ANY_VALUES: [&str; 2] = ["casts/as-expr", "types/list/operations"];
 
 /// The functional tests of a library with errors, each a tmpl `Error`
-/// that fails when run, that translate, as the backends' testkit lists
+/// that panics when run, that translate, as the backends' testkit lists
 /// them.
 const ERRORS: [&str; 2] = ["semantics/broken", "semantics/type-checked-locals"];
 
@@ -383,7 +383,7 @@ fn std_library() {
 /// Each state machine's step reads its state, then sets it to `-1`
 /// before anything else runs, so a step that fails stays failed: stepped
 /// again, it reads `-1` and says it's done, rather than running again.
-/// No Temper program can show it, since a generator's body can't bubble
+/// No Temper program can show it, since a generator's body can't throw
 /// (rule F4) and `panic()` ends the program on every backend; host code
 /// stepping it again could.
 #[test]
@@ -1312,8 +1312,6 @@ fn empty_list_fallbacks_take_the_operands_type() {
 /// callback's failure keeps `throws E`, and its calls, of core's (`map`)
 /// or the library's, give `E` as a type argument, what the callback may
 /// fail with, or `Never<Error>` where it can't, as the validator checks.
-/// A bubble as `E` says not yet: handlers in generic code catch failures,
-/// which a bubble isn't.
 #[test]
 fn failure_parameters_in_tmpl() {
     with_stack(|| {
@@ -1324,7 +1322,6 @@ fn failure_parameters_in_tmpl() {
     class Missing(public key: String) extends AppError {{}}
     let find(key: String): Int throws Missing {{ throw new Missing(key) }}
     let apply<E>(f: fn (): Int throws E): Int throws E {{ f() }}
-    let bubbly(n: Int): Int throws Bubble {{ if (n > 0) {{ bubble() }} else {{ n }} }}
     {body}
 "
             );
@@ -1367,10 +1364,6 @@ fn failure_parameters_in_tmpl() {
             (
                 "console.log(\"${[1].join(\",\") { n => n.toString() }}\");",
                 "ok",
-            ),
-            (
-                "let xs = [1].map { n => bubbly(n) } orelse [];",
-                "a failure parameter that a bubble gives",
             ),
         ];
         for (body, expected) in cases {

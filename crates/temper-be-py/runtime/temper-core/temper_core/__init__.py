@@ -145,19 +145,6 @@ def string_builder_end(string_builder: list[str]) -> int:
     return len(compacted)
 
 
-class Bubble(RuntimeError):
-    """
-    A Temper bubble: a failure that Temper declares (`throws Bubble`), and
-    all that generated `orelse` handlers catch, so any other exception, a
-    panic or a host failure, passes them. Host code (a library's
-    `@connected` code) bubbles by raising one or calling `bubble()`, and
-    catches one as a `RuntimeError`, what Temper's failures have always
-    been in Python, though an `orelse` catches no other `RuntimeError`.
-    """
-
-    __slots__ = ()
-
-
 class Failure(metaclass=ABCMeta):
     """
     Marks a Temper library's declared failures (RFC 164): each of a
@@ -265,7 +252,7 @@ def failure_cause(failure: Failure, /) -> Failure | None:
     """
     A declared failure's cause, as Temper's `Error.cause` gives it: the
     failure that was being handled where it was thrown, or `None`, also
-    where that was something else, as a bubble.
+    where that was something else, as a host's error.
     """
     cause = getattr(failure, "__cause__", None)
     return cause if isinstance(cause, Failure) else None
@@ -282,15 +269,6 @@ def with_cause(failure: _Raised, cause: BaseException, /) -> _Raised:
     return failure
 
 
-def make_bubble_exception() -> Exception:
-    return Bubble()
-
-
-def bubble() -> Any:
-    """Raises an exception for Temper bubbling."""
-    raise make_bubble_exception()
-
-
 def panic(message: str = "panic") -> NoReturn:
     """
     Raises a Temper panic: a `BaseException`, which no `orelse` and no
@@ -302,10 +280,9 @@ def panic(message: str = "panic") -> NoReturn:
 def block_panics(block: Callable[[], None]) -> bool:
     """
     Runs `block`, giving whether it panicked, for std's
-    `Test.assertPanics`: whether it raised anything but a bubble or a test
-    framework's failure (an `AssertionError`, as unittest's are), as on
-    every backend, so `panic`'s plain `BaseException` or a host's error;
-    a declared failure (a `Failure`) is a failure too, not a panic.
+    `Test.assertPanics`: whether it raised anything but a declared failure
+    or a test framework's failure (an `AssertionError`, as unittest's are), as on
+    every backend, so `panic`'s plain `BaseException` or a host's error.
     Other `BaseException`s, which aren't `Exception`s, such as
     `KeyboardInterrupt`, `SystemExit`, and pytest's outcomes, aren't
     failures but exits, and pass through too.
@@ -313,7 +290,7 @@ def block_panics(block: Callable[[], None]) -> bool:
     try:
         block()
     except Exception as e:
-        if isinstance(e, (Bubble, Failure, AssertionError)):
+        if isinstance(e, (Failure, AssertionError)):
             raise
         return True
     except BaseException as e:
@@ -1147,23 +1124,6 @@ def list_builder_sort(
     lst: List[_lbsoT], compare: Callable[[_lbsoT, _lbsoT], int]
 ) -> None:
     return lst.sort(key=cmp_to_key(compare))
-
-
-_lbmdT = TypeVar("_lbmdT")
-
-
-def list_map_dropping(
-    lst: Sequence[_lbmdT], func: Callable[[_lbmdT], Union[_lbmdT, NoReturn]]
-) -> Sequence[_lbmdT]:
-    "Map a list of elements, omitting any for which func bubbles."
-    results = []
-    for entry in lst:
-        try:
-            value = func(entry)
-        except Bubble:
-            continue
-        results.append(value)
-    return tuple(results)
 
 
 _lbslT = TypeVar("_lbslT")

@@ -92,7 +92,7 @@ Its style, so it's never mistaken for Temper:
   ordinary calls of the external declarations their `uses` section
   lists, with qnames (Proposed 2026-10-29: `%` is only for operators,
   [nodes.md](nodes.md#level-3-ops-and-core-as-declarations)).
-- A call that may bubble is marked `^`.
+- A call that may fail is marked `^`.
 - Bodies are explicit: constructors assign their fields, and a
   function's last value is a `return`.
 - Spans follow in a trailing `spans { … }` section, keyed by each
@@ -139,7 +139,8 @@ Starting tmpl (canonical text, spans left out):
 tmpl 1 model 1 library example 0.1.0
 uses `temper-core` 0.1.0 {
   class List#90<T#91>;
-  class String#92 { connected method toInt32#93(radix?: Int32): Int32 throws Bubble; }
+  class ParseError#94;
+  class String#92 { connected method toInt32#93(radix?: Int32): Int32 throws ParseError#94; }
 }
 
 module example#1 {
@@ -209,7 +210,7 @@ out overflow.
 `toInt32#93` now has the lowered signature, returning
 `Result<Int32>`, so the call needs no `^`; `ResultOr` replaces the
 `orelse` over one call, and the translator may print `.unwrap_or(0)`.
-`firstIndex` doesn't bubble, so its signature is unchanged. No
+`firstIndex` can't fail, so its signature is unchanged. No
 temporary is added, so Rust's locals are the source's: `points`,
 `text`, `wanted`, `i`, and `p`. The module
 has no state, so first-use init adds no guard. `Point`'s `x` and `y`
@@ -258,10 +259,10 @@ file        := header module* spans?
 header      := "tmpl" INT "model" INT "library" name VERSION ("profile" name)?
 module      := "module" decl "{" item* "init" block "}"
 item        := function | module-let
-function    := "export"? "fn" decl "(" (param ("," param)*)? ")" ":" type bubbles? block
+function    := "export"? "fn" decl "(" (param ("," param)*)? ")" ":" type throws? block
 param       := decl ":" type
 module-let  := "export"? ("let" | "var") decl ":" type ";"
-bubbles     := "throws" "Bubble"
+throws      := "throws" type               // a failure type or failure parameter
 type        := "Void" | "Boolean" | "Int32" | "Int64" | "Float64" | "String" | "AnyValue"
 
 block       := "{" stmt* "}"
@@ -281,7 +282,7 @@ primary     := literal | ref | call | builtin | error
              | "(" expr ")" (":" type)?      // grouping, or a written type
              | "(" "if" "(" expr ")" expr "else" expr ")" ":" type   // IfValue
              | "(" "value" "{" stmt* expr "}" ")" ":" type           // BlockValue
-call        := ref "(" args? ")" "^"?        // CallFunction; "^" when it may bubble
+call        := ref "(" args? ")" "^"?        // CallFunction; "^" when it may fail
 builtin     := OP "(" args? ")" "^"?         // Op
 args        := expr ("," expr)*
 error       := "(" "error" "(" STRING ")" ")" ":" type
@@ -329,7 +330,7 @@ Proposed, settled while building `text::write` and `text::read`:
   first pass, so a body may use any of them); a reference's name and
   `~` matching its declaration; only functions called; written types
   matching the local rules; and `^` on exactly the calls that may
-  bubble. Everything else, such as argument types, scopes, and
+  fail. Everything else, such as argument types, scopes, and
   definite assignment, is the validator's, so it can be tested on text.
 
 ### Qnames, connected marks, and core's declarations
@@ -344,10 +345,10 @@ uses        := "uses" name VERSION "{" external* "}"
 external    := "connected"? ("class" | "interface") decl "{" member* "}"
              | "connected"? "fn" decl ext-sig ";"
 member      := "connected"? ("method" | "get" | "static") decl ext-sig ";"
-ext-sig     := "(" (name "?"? ":" type ("," name "?"? ":" type)*)? ")" ":" type bubbles?
+ext-sig     := "(" (name "?"? ":" type ("," name "?"? ":" type)*)? ")" ":" type throws?
 module      := "module" decl ("in" STRING)? "{" item* "init" block "}"
 item        := ("qname" STRING)? "connected"? (function | module-let)
-function    := "export"? "fn" decl "(" (param ("," param)*)? ")" ":" type bubbles? (block | ";")
+function    := "export"? "fn" decl "(" (param ("," param)*)? ")" ":" type throws? (block | ";")
 type        := … | ref                      // a non-generic class or interface
 primary     := … | primary "." ref "(" args? ")" "^"?   // CallMethod
              | "omitted"                    // Omitted
@@ -444,7 +445,7 @@ As built (2026-10-30), with modules and tests:
   ```text
     init {}
 
-    test "twice" ~test#14(~test#15: Test#7): Void throws Bubble {
+    test "twice" ~test#14(~test#15: Test#7): Void throws Error#18 {
       addTwice#12(1);
     }
   ```
@@ -482,9 +483,9 @@ As built (2026-10-30), with classes and interfaces (subset B):
 item        := … | doc* marks ("class" | "interface") decl supers? "{" class-member* "}"
 supers      := "extends" type ("," type)*
 class-member:= doc* marks ("static"? ("let" | "var") decl ":" type ";"     // Field, StaticField
-             | "static" "fn" decl params ":" type bubbles? block           // a static Function
+             | "static" "fn" decl params ":" type throws? block            // a static Function
              | "abstract"? ("method" | "get" | "set" | "constructor")
-               decl params ":" type bubbles? (block | ";"))                // Method, AbstractMethod
+               decl params ":" type throws? (block | ";"))                 // Method, AbstractMethod
 marks       := ("qname" STRING)? "keep"? "keepTest"? connected? "export"? "private"? "protected"?
                "auto"? ("operator" "(" "\"==\"" ")")? ("operator" "(" "\"<=>\"" ")")?
 stmt        := … | postfix "." ref "=" expr ";"   // SetField

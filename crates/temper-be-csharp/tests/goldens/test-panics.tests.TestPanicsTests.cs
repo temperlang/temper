@@ -9,11 +9,12 @@ namespace TestPanics;
 [TestClass]
 public class TestPanicsTests
 {
+    /// <exception cref="Oops">Where it fails with Oops.</exception>
     internal static int At(IReadOnlyList<int> ls, int i)
     {
         if (i == 99)
         {
-            return Core.Bubble<int>();
+            throw new Oops();
         }
         return Listed.Get(ls, i);
     }
@@ -54,7 +55,7 @@ public class TestPanicsTests
             {
                 n = At(Listed.CreateReadOnlyList<int>(1, 2), 5);
             }
-            catch (global::TemperLang.Core.Bubble)
+            catch (Oops)
             {
                 n = -1;
             }

@@ -23,14 +23,12 @@
 //! Null is the runtime's `temper.null`, as Kotlin's, since Lua's `nil`
 //! can't be a table's value or tell an argument left out, checked by
 //! `temper.is_null`, which takes `nil` too; nullable types are
-//! `T|temper.Null` for LuaLS. `orelse` is Kotlin's `temper.pcall` of a
-//! function, which an `if` then follows with the fallback (and redoes
-//! a jump out of the body, which returns a signal saying which), and
-//! `bubble()` the runtime's `temper.bubble()`, which raises a table
-//! marked as a bubble; unlike Kotlin's, `temper.pcall` catches only
-//! that, raising anything else again, so a panic (`error("panic")`) or
-//! a host error passes every `orelse`. Every builtin that bubbles calls
-//! `temper.bubble`, as host code (`_connected.lua`) must to bubble.
+//! `T|temper.Null` for LuaLS. `orelse` and `catch` are the runtime's
+//! `temper.catch` of a function, which an `if` then follows with the
+//! fallback (and redoes a jump out of the body, which returns a signal
+//! saying which); it catches only declared failures, raising anything
+//! else again, so a panic (`error("panic")`, as code with an error
+//! raises too) or a host error passes every handler.
 //! Declared failures (RFC 164) are instances of the runtime's types too,
 //! under each library's roots, `temper.type("lib.LibError",
 //! temper.Failure)`, `__tostring` giving their `message`, and `cause` a

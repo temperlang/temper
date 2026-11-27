@@ -29,11 +29,11 @@ module operators#0 {
     return %String.cat(%String.cat(%String.cat(%String.cat(%Boolean.eq(a#20, b#21).toString#23(), " "), %Boolean.not(%Boolean.eq(a#20, b#21)).toString#23()), " "), %Boolean.cmp(a#20, b#21).toString#19(omitted));
   }
 
-  fn quot#5(a#24: Int32, b#25: Int32): Int32 throws Bubble {
+  fn quot#5(a#24: Int32, b#25: Int32): Int32 {
     return %Int32.div(a#24, b#25);
   }
 
-  fn rem#6(a#26: Int32, b#27: Int32): Int32 throws Bubble {
+  fn rem#6(a#26: Int32, b#27: Int32): Int32 {
     return %Int32.mod(a#26, b#27);
   }
 
@@ -69,7 +69,7 @@ module operators#0 {
     ~console#17.log#16(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%Int32.shr(%Int32.mul(%Int32.neg(7), one#1), 1).toString#19(omitted), " "), %Int32.ushr(%Int32.mul(%Int32.neg(7), one#1), 28).toString#19(omitted)), " "), %Int32.shl(one#1, 33).toString#19(omitted)), " "), %Int32.bitNot(one#1).toString#19(omitted)), " "), %Int32.bitAnd(5, 3).toString#19(omitted)), " "), %Int32.bitOr(5, 3).toString#19(omitted)), " "), %Int32.bitXor(5, 3).toString#19(omitted)));
     ~console#17.log#16(%String.cat(%String.cat(%Int32.cmp(3, 5).toString#19(omitted), " "), %String.cmp("b", "a").toString#19(omitted)));
     ~console#17.log#16(%String.cat(%String.cat(%String.cat(%String.cat(same#4(true, true), " "), same#4(true, false)), " "), same#4(false, true)));
-    ~console#17.log#16(%String.cat(%String.cat(%String.cat(%String.cat(quot#5(%Int32.neg(7), 2)^.toString#19(omitted), " "), rem#6(%Int32.neg(7), 2)^.toString#19(omitted)), " "), quot#5(small#3, %Int32.neg(1))^.toString#19(omitted)));
+    ~console#17.log#16(%String.cat(%String.cat(%String.cat(%String.cat(quot#5(%Int32.neg(7), 2).toString#19(omitted), " "), rem#6(%Int32.neg(7), 2).toString#19(omitted)), " "), quot#5(small#3, %Int32.neg(1)).toString#19(omitted)));
     ~console#17.log#16(words#7("apple", "banana"));
     ~console#17.log#16(words#7("pear", "pear"));
     ~console#17.log#16(words#7("zoo", "yak"));

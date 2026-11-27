@@ -121,7 +121,7 @@ error 473..476: Expected subtype of Int32?, but got String
 error 485..486: Expected subtype of String, but got Int32
 error 505..513: Cannot assign to String from C
 error 535..542: Wrong number of arguments.  Expected 2
-Failed: Can't apply + to these arguments
+Panicked: Can't apply + to these arguments
 
 === constructors and field initializers
 class E {
@@ -174,7 +174,9 @@ error 321..324: Expected subtype of Int32, but got String
 error 326..327: Expected subtype of String?, but got Int32
 error 332..348: Wrong number of arguments.  Expected 2
 
-=== members of interfaces, and methods that bubble
+=== members of interfaces, and methods that may fail
+sealed interface Problem extends Error {}
+class Oops() extends Problem {}
 interface Shape {
   public area(): Float64;
   public get name(): String { "shape" }
@@ -184,41 +186,44 @@ let s1(s: Shape): Int { s.area() }
 let s2(s: Shape): Int { s.name }
 let s3(s: Shape): Float64 { s.scaled("x") }
 class P(public x: Int) {
-  public risky(): Int throws Bubble { if (x == 0) { bubble() } else { x } }
+  public risky(): Int throws Oops { if (x == 0) { throw new Oops() } else { x } }
   public bad(): Int { risky() }
   public safe(): Int { risky() orelse 0 }
 }
 let g(p: P): Int { p.risky() }
 --- settled
 (Block
+  (Interface ^Problem:0 Error)
+  (Class ^Oops:1 Problem:0)
   (Interface
-    ^Shape:0
-    (Method ^area:7 (Signature Float64))
-    (Get ^name:8 (Fn String (Block "shape")))
+    ^Shape:2
+    (Method ^area:11 (Signature Float64))
+    (Get ^name:12 (Fn String (Block "shape")))
     (Method
-      ^scaled:9
-      (Fn (Let ^k:10 Float64) Float64 (Block (Call * (Call area:7) k:10)))))
-  (Let ^s1:1 (Fn (Let ^s:11 Shape:0) Int (Block (Call (Call . s:11 \area)))))
-  (Let ^s2:2 (Fn (Let ^s:12 Shape:0) Int (Block (Call . s:12 \name))))
+      ^scaled:13
+      (Fn (Let ^k:14 Float64) Float64 (Block (Call * (Call area:11) k:14)))))
+  (Let ^s1:3 (Fn (Let ^s:15 Shape:2) Int (Block (Call (Call . s:15 \area)))))
+  (Let ^s2:4 (Fn (Let ^s:16 Shape:2) Int (Block (Call . s:16 \name))))
   (Let
-    ^s3:3
-    (Fn (Let ^s:13 Shape:0) Float64 (Block (Call (Call . s:13 \scaled) "x"))))
+    ^s3:5
+    (Fn (Let ^s:17 Shape:2) Float64 (Block (Call (Call . s:17 \scaled) "x"))))
   (Class
-    ^P:4
-    (Param ^x:15 Int)
+    ^P:6
+    (Param ^x:19 Int)
     (Method
-      ^risky:16
+      ^risky:20
       (Fn
-        (Call throws Int Bubble)
-        (Block (If (Call == x:15 0) (Block (Fail)) (Block x:15)))))
-    (Method ^bad:17 (Fn Int (Block (Call risky:16))))
-    (Method ^safe:18 (Fn Int (Block (Orelse (Call risky:16) 0)))))
-  (Let ^g:5 (Fn (Let ^p:19 P:4) Int (Block (Call (Call . p:19 \risky))))))
-error 162..170: Cannot assign to Int32 from Float64
-error 197..203: Cannot assign to Int32 from String
-error 243..246: Expected subtype of Float64, but got String
-error 373..380: Cannot bubble from a function without Bubble in its return type
-error 446..455: Cannot bubble from a function without Bubble in its return type
+        (Call throws Int Oops:1)
+        (Block
+          (If (Call == x:19 0) (Block (Fail (Call new Oops:1))) (Block x:19)))))
+    (Method ^bad:21 (Fn Int (Block (Call risky:20))))
+    (Method ^safe:22 (Fn Int (Block (Orelse (Call risky:20) 0)))))
+  (Let ^g:7 (Fn (Let ^p:23 P:6) Int (Block (Call (Call . p:23 \risky))))))
+error 236..244: Cannot assign to Int32 from Float64
+error 271..277: Cannot assign to Int32 from String
+error 317..320: Expected subtype of Float64, but got String
+error 453..460: Cannot throw Oops from a function without Oops in its return type
+error 526..535: Cannot throw Oops from a function without Oops in its return type
 
 === a function in a field, called as a method
 class Holder {
@@ -289,7 +294,7 @@ error 359..371: No callee matches inputs [T, Int32] among [(A, Int32) -> Int32, 
 error 373..384: No callee matches inputs [U] among [(A1) -> Void, (C1) -> String]
 error 425..431: No callee matches inputs [W, Int32] among [(A, Int32) -> Int32, (B, Int32) -> Int32]
 error 447..459: No callee matches inputs [T, Int32] among [(A, Int32) -> Int32, (B, Int32) -> Int32]
-Failed: No callee matches inputs [T, Int32] among [(A, Int32) -> Int32, (B, Int32) -> Int32]
+Panicked: No callee matches inputs [T, Int32] among [(A, Int32) -> Int32, (B, Int32) -> Int32]
 
 === operators defined by methods
 interface I {}
@@ -457,7 +462,7 @@ error 1092..1093: K does not support infix `==`; give it a method marked `@opera
 error 1337..1355: K does not support infix `==`; give it a method marked `@operator("==")`
 log true false false
 log true false 1
-Failed: K does not support infix `==`; give it a method marked `@operator("==")`
+Panicked: K does not support infix `==`; give it a method marked `@operator("==")`
 
 === class values as builtin operators' operands
 interface I {}
@@ -520,11 +525,13 @@ error 398..403: Actual arguments do not match signature: (Int32, Int32) -> Int32
 error 437..442: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [C?, C]
 
 === abstract and functional interfaces' members, called and assigned
+sealed interface Problem extends Error {}
+class Oops() extends Problem {}
 interface I {
   f(x: Int, y: String = ""): Int;
   get p(): Int;
   set p(v: Int): Void;
-  g(): Int throws Bubble;
+  g(): Int throws Oops;
   @operator("==") eq(other: I): Boolean;
 }
 interface D extends I {}
@@ -542,44 +549,48 @@ interface F(x: Int): String;
 let callF(f: F): String { f.apply("x") }
 --- settled
 (Block
+  (Interface ^Problem:0 Error)
+  (Class ^Oops:1 Problem:0)
   (Interface
-    ^I:0
-    (Method ^f:7 (Signature (Let ^x:12 Int) (Let ^y:13 String "") Int))
-    (Get ^p:8 (Signature Int))
-    (Set ^p:9 (Signature (Let ^v:14 Int) Void))
-    (Method ^g:10 (Signature (Call throws Int Bubble)))
-    (Method ^eq:11 (Signature (Let ^other:15 I:0) Boolean)))
-  (Interface ^D:1 I:0)
-  (Class ^H:2 (Param ^n:23 Int))
+    ^I:2
+    (Method ^f:11 (Signature (Let ^x:16 Int) (Let ^y:17 String "") Int))
+    (Get ^p:12 (Signature Int))
+    (Set ^p:13 (Signature (Let ^v:18 Int) Void))
+    (Method ^g:14 (Signature (Call throws Int Oops:1)))
+    (Method ^eq:15 (Signature (Let ^other:19 I:2) Boolean)))
+  (Interface ^D:3 I:2)
+  (Class ^H:4 (Param ^n:27 Int))
   (Let
-    ^use:3
+    ^use:5
     (Fn
-      (Let ^i:24 I:0)
-      (Let ^d:25 D:1)
-      (Let ^h:26 H:2)
+      (Let ^i:28 I:2)
+      (Let ^d:29 D:3)
+      (Let ^h:30 H:4)
       Int
       (Block
-        (Call (Call . i:24 \f) "a")
-        (Call (Call . i:24 \f) 1 2)
-        (Call (Call . i:24 \f))
-        (Assign (Call . i:24 \p) "s")
-        (Let ^s:27 String (Call (Call . i:24 \f) 1))
-        (Let ^b:28 (Call == d:25 h:26))
-        (Call (Call . i:24 \g)))))
-  (Interface ^F:4 (Method ^apply:30 (Signature (Let ^x:31 Int) String)))
+        (Call (Call . i:28 \f) "a")
+        (Call (Call . i:28 \f) 1 2)
+        (Call (Call . i:28 \f))
+        (Assign (Call . i:28 \p) "s")
+        (Let ^s:31 String (Call (Call . i:28 \f) 1))
+        (Let ^b:32 (Call == d:29 h:30))
+        (Call (Call . i:28 \g)))))
+  (Interface ^F:6 (Method ^apply:34 (Signature (Let ^x:35 Int) String)))
   (Let
-    ^callF:5
-    (Fn (Let ^f:32 F:4) String (Block (Call (Call . f:32 \apply) "x")))))
-error 246..249: Expected subtype of Int32, but got String
-error 261..262: Expected subtype of String?, but got Int32
-error 267..272: Wrong number of arguments.  Expected 2
-error 282..285: Expected subtype of Int32, but got String
-error 305..311: Cannot assign to String from Int32
-error 328..329: Actual arguments do not match signature: (I, I) -> Boolean expected [I, I], but got [D, H]
-error 333..338: Cannot bubble from a function without Bubble in its return type
-error 404..407: Expected subtype of Int32, but got String
+    ^callF:7
+    (Fn (Let ^f:36 F:6) String (Block (Call (Call . f:36 \apply) "x")))))
+error 318..321: Expected subtype of Int32, but got String
+error 333..334: Expected subtype of String?, but got Int32
+error 339..344: Wrong number of arguments.  Expected 2
+error 354..357: Expected subtype of Int32, but got String
+error 377..383: Cannot assign to String from Int32
+error 400..401: Actual arguments do not match signature: (I, I) -> Boolean expected [I, I], but got [D, H]
+error 405..410: Cannot throw Oops from a function without Oops in its return type
+error 476..479: Expected subtype of Int32, but got String
 
 === overrides' signatures
+sealed interface Problem extends Error {}
+class Oops() extends Problem {}
 interface I { f(x: String): Void; get p(): Int; set p(v: Int): Void; }
 class A extends I {
   public f(x: String): Void {}
@@ -605,11 +616,11 @@ class F extends I {
   public var p: Int = 1;
 }
 interface G extends I { f(x: Int): Void; }
-interface J { g(x: Int = 1): Int; h(): Int throws Bubble; m(): Int; n(): J; }
+interface J { g(x: Int = 1): Int; h(): Int throws Oops; m(): Int; n(): J; }
 class K extends J {
   public g(y: Int?): Int { 1 }
   public h(): Int { 1 }
-  public m(): Int throws Bubble { 1 }
+  public m(): Int throws Oops { 1 }
   public n(): K { this }
 }
 interface L {
@@ -624,86 +635,90 @@ class N extends L { private n(x: String): Int { 1 } }
 interface P extends G, I { f(x: Boolean): Void; }
 --- settled
 (Block
+  (Interface ^Problem:0 Error)
+  (Class ^Oops:1 Problem:0)
   (Interface
-    ^I:0
-    (Method ^f:15 (Signature (Let ^x:18 String) Void))
-    (Get ^p:16 (Signature Int))
-    (Set ^p:17 (Signature (Let ^v:19 Int) Void)))
+    ^I:2
+    (Method ^f:19 (Signature (Let ^x:22 String) Void))
+    (Get ^p:20 (Signature Int))
+    (Set ^p:21 (Signature (Let ^v:23 Int) Void)))
   (Class
-    ^A:1
-    I:0
-    (Method ^f:21 (Fn (Let ^x:24 String) Void (Block)))
-    (Get ^p:22 (Fn Int (Block 1)))
-    (Set ^p:23 (Fn (Let ^v:25 Int) Void (Block))))
+    ^A:3
+    I:2
+    (Method ^f:25 (Fn (Let ^x:28 String) Void (Block)))
+    (Get ^p:26 (Fn Int (Block 1)))
+    (Set ^p:27 (Fn (Let ^v:29 Int) Void (Block))))
   (Class
-    ^B:2
-    I:0
-    (Method ^f:27 (Fn (Let ^x:30 Int) Void (Block)))
-    (Get ^p:28 (Fn String (Block "")))
-    (Set ^p:29 (Fn (Let ^v:31 String) Void (Block))))
+    ^B:4
+    I:2
+    (Method ^f:31 (Fn (Let ^x:34 Int) Void (Block)))
+    (Get ^p:32 (Fn String (Block "")))
+    (Set ^p:33 (Fn (Let ^v:35 String) Void (Block))))
   (Class
-    ^C:3
-    I:0
-    (Param var ^p:33 String)
-    (Method ^f:34 (Fn (Let ^x:35 (Call ? String)) Void (Block))))
+    ^C:5
+    I:2
+    (Param var ^p:37 String)
+    (Method ^f:38 (Fn (Let ^x:39 (Call ? String)) Void (Block))))
   (Class
-    ^D:4
-    I:0
-    (Method ^f:37 (Fn (Let ^x:39 String) String (Block x:39)))
-    (Var ^p:38 Int 1))
-  (Class ^E:5 I:0 (Method ^f:41 (Fn Void (Block))) (Var ^p:42 Int 1))
+    ^D:6
+    I:2
+    (Method ^f:41 (Fn (Let ^x:43 String) String (Block x:43)))
+    (Var ^p:42 Int 1))
+  (Class ^E:7 I:2 (Method ^f:45 (Fn Void (Block))) (Var ^p:46 Int 1))
   (Class
-    ^F:6
-    I:0
-    (Method ^f:44 (Fn (Let ^x:46 String) (Let ^y:47 String) Void (Block)))
-    (Var ^p:45 Int 1))
-  (Interface ^G:7 I:0 (Method ^f:49 (Signature (Let ^x:52 Int) Void)))
+    ^F:8
+    I:2
+    (Method ^f:48 (Fn (Let ^x:50 String) (Let ^y:51 String) Void (Block)))
+    (Var ^p:49 Int 1))
+  (Interface ^G:9 I:2 (Method ^f:53 (Signature (Let ^x:56 Int) Void)))
   (Interface
-    ^J:8
-    (Method ^g:54 (Signature (Let ^x:58 Int 1) Int))
-    (Method ^h:55 (Signature (Call throws Int Bubble)))
-    (Method ^m:56 (Signature Int))
-    (Method ^n:57 (Signature J:8)))
+    ^J:10
+    (Method ^g:58 (Signature (Let ^x:62 Int 1) Int))
+    (Method ^h:59 (Signature (Call throws Int Oops:1)))
+    (Method ^m:60 (Signature Int))
+    (Method ^n:61 (Signature J:10)))
   (Class
-    ^K:9
-    J:8
-    (Method ^g:60 (Fn (Let ^y:64 (Call ? Int)) Int (Block 1)))
-    (Method ^h:61 (Fn Int (Block 1)))
-    (Method ^m:62 (Fn (Call throws Int Bubble) (Block 1)))
-    (Method ^n:63 (Fn K:9 (Block this#59))))
+    ^K:11
+    J:10
+    (Method ^g:64 (Fn (Let ^y:68 (Call ? Int)) Int (Block 1)))
+    (Method ^h:65 (Fn Int (Block 1)))
+    (Method ^m:66 (Fn (Call throws Int Oops:1) (Block 1)))
+    (Method ^n:67 (Fn K:11 (Block this#63))))
   (Interface
-    ^L:10
-    (Method ^n:66 (Fn (Let ^x:68 Int) Int (Block x:68)))
-    (Method static ^s:67 (Fn Int (Block 1))))
+    ^L:12
+    (Method ^n:70 (Fn (Let ^x:72 Int) Int (Block x:72)))
+    (Method static ^s:71 (Fn Int (Block 1))))
   (Class
-    ^M:11
-    L:10
-    (Method ^n:70 (Fn (Let ^x:72 String) Int (Block 1)))
-    (Method static ^s:71 (Fn String (Block ""))))
+    ^M:13
+    L:12
+    (Method ^n:74 (Fn (Let ^x:76 String) Int (Block 1)))
+    (Method static ^s:75 (Fn String (Block ""))))
   (Class
-    ^N:12
-    L:10
-    (Method private ^n:74 (Fn (Let ^x:75 String) Int (Block 1))))
-  (Interface ^P:13 G:7 I:0 (Method ^f:77 (Signature (Let ^x:80 Boolean) Void))))
-error 1058..1081: Type N has method n but its visibility is private which is narrower than the method it overrides in L
-error 213..231: Type B has method f with signature f(x: Int32): Void, but it should be f(x: String): Void to correctly override from I
-error 241..263: Type B has method get p with signature p(): String, but it should be p(): Int32 to correctly override from I
-error 273..298: Type B has method set p with signature p(v: String): Void, but it should be p(v: Int32): Void to correctly override from I
-error 319..329: Type C has method get p with signature p(): String, but it should be p(): Int32 to correctly override from I
-error 350..372: Type C has method f with signature f(x: String?): Void, but it should be f(x: String): Void to correctly override from I
-error 404..430: Type D has method f with signature f(x: String): String, but it should be f(x: String): Void to correctly override from I
-error 487..499: Type E has method f with signature f(): Void, but it should be f(x: String): Void to correctly override from I
-error 556..588: Type F has method f with signature f(x: String, y: String): Void, but it should be f(x: String): Void to correctly override from I
-error 640..655: Type G has method f with signature f(x: Int32): Void, but it should be f(x: String): Void to correctly override from I
-error 797..811: Type K has method h with signature h(): Int32, but it should be h(): Int32 throws Bubble to correctly override from J
-error 821..849: Type K has method m with signature m(): Int32 throws Bubble, but it should be m(): Int32 to correctly override from J
-error 859..874: Type K has method n with signature n(): K, but it should be n(): J to correctly override from J
-error 969..992: Type M has method n with signature n(x: String): Int32, but it should be n(x: Int32): Int32 to correctly override from L
-error 1111..1130: Type P has method f with signature f(x: Boolean): Void, but it should be f(x: Int32): Void to correctly override from G
+    ^N:14
+    L:12
+    (Method private ^n:78 (Fn (Let ^x:79 String) Int (Block 1))))
+  (Interface ^P:15 G:9 I:2 (Method ^f:81 (Signature (Let ^x:84 Boolean) Void))))
+error 1128..1151: Type N has method n but its visibility is private which is narrower than the method it overrides in L
+error 287..305: Type B has method f with signature f(x: Int32): Void, but it should be f(x: String): Void to correctly override from I
+error 315..337: Type B has method get p with signature p(): String, but it should be p(): Int32 to correctly override from I
+error 347..372: Type B has method set p with signature p(v: String): Void, but it should be p(v: Int32): Void to correctly override from I
+error 393..403: Type C has method get p with signature p(): String, but it should be p(): Int32 to correctly override from I
+error 424..446: Type C has method f with signature f(x: String?): Void, but it should be f(x: String): Void to correctly override from I
+error 478..504: Type D has method f with signature f(x: String): String, but it should be f(x: String): Void to correctly override from I
+error 561..573: Type E has method f with signature f(): Void, but it should be f(x: String): Void to correctly override from I
+error 630..662: Type F has method f with signature f(x: String, y: String): Void, but it should be f(x: String): Void to correctly override from I
+error 714..729: Type G has method f with signature f(x: Int32): Void, but it should be f(x: String): Void to correctly override from I
+error 869..883: Type K has method h with signature h(): Int32, but it should be h(): Int32 throws Oops to correctly override from J
+error 893..919: Type K has method m with signature m(): Int32 throws Oops, but it should be m(): Int32 to correctly override from J
+error 929..944: Type K has method n with signature n(): K, but it should be n(): J to correctly override from J
+error 1039..1062: Type M has method n with signature n(x: String): Int32, but it should be n(x: Int32): Int32 to correctly override from L
+error 1181..1200: Type P has method f with signature f(x: Boolean): Void, but it should be f(x: Int32): Void to correctly override from G
 
 === overrides of generic supertypes' members, as Kotlin Temper reports them
 // A supertype's member as the class sees it, with the arguments it gives
 // that supertype, through what it extends, put in.
+sealed interface Problem extends Error {}
+class Oops() extends Problem {}
 interface I<T> { f(x: T): Void; }
 class A extends I<String> { public f(x: String): Void {} }
 class B extends I<String> { public f(x: Int32): Void {} }
@@ -728,9 +743,9 @@ class N<U> extends J<List<U>> {
 interface Q<T> { get v(): T; }
 class R extends Q<Int> { public v: Int = 1; }
 class S extends Q<Int> { public v: String = ""; }
-interface T1<T> { t(x: T): T throws Bubble; }
+interface T1<T> { t(x: T): T throws Oops; }
 class T2 extends T1<Int> { public t(x: Int): Int { x } }
-class T3 extends T1<Int> { public t(x: Int): Int throws Bubble { x } }
+class T3 extends T1<Int> { public t(x: Int): Int throws Oops { x } }
 interface Z1<T> { z(x: T): Void; }
 interface Z2<U> extends Z1<List<U>> {}
 class Z3 extends Z2<Int> { public z(x: List<Int>): Void {} }
@@ -742,106 +757,108 @@ class W1 extends W<Int> {
 }
 --- settled
 (Block
+  (Interface ^Problem:0 Error)
+  (Class ^Oops:1 Problem:0)
   (Interface
-    ^I:0
-    (TypeParam ^T:21)
-    (Method ^f:23 (Signature (Let ^x:24 T:21) Void)))
+    ^I:2
+    (TypeParam ^T:25)
+    (Method ^f:27 (Signature (Let ^x:28 T:25) Void)))
   (Class
-    ^A:1
-    (Call <> I:0 String)
-    (Method ^f:26 (Fn (Let ^x:27 String) Void (Block))))
+    ^A:3
+    (Call <> I:2 String)
+    (Method ^f:30 (Fn (Let ^x:31 String) Void (Block))))
   (Class
-    ^B:2
-    (Call <> I:0 String)
-    (Method ^f:29 (Fn (Let ^x:30 Int32) Void (Block))))
+    ^B:4
+    (Call <> I:2 String)
+    (Method ^f:33 (Fn (Let ^x:34 Int32) Void (Block))))
   (Class
-    ^C:3
-    (Call <> I:0 String)
-    (Method ^f:32 (Fn (Let ^x:33 (Call ? String)) Void (Block))))
+    ^C:5
+    (Call <> I:2 String)
+    (Method ^f:36 (Fn (Let ^x:37 (Call ? String)) Void (Block))))
   (Interface
-    ^J:4
-    (TypeParam ^T:34)
-    (Method ^g:36 (Signature (Let ^x:38 T:34) T:34))
-    (Get ^p:37 (Signature T:34)))
+    ^J:6
+    (TypeParam ^T:38)
+    (Method ^g:40 (Signature (Let ^x:42 T:38) T:38))
+    (Get ^p:41 (Signature T:38)))
   (Class
-    ^K:5
-    (TypeParam ^U:39)
-    (Call <> J:4 U:39)
-    (Method ^g:41 (Fn (Let ^x:43 U:39) U:39 (Block x:43)))
-    (Get ^p:42 (Fn U:39 (Block (Call panic)))))
+    ^K:7
+    (TypeParam ^U:43)
+    (Call <> J:6 U:43)
+    (Method ^g:45 (Fn (Let ^x:47 U:43) U:43 (Block x:47)))
+    (Get ^p:46 (Fn U:43 (Block (Call panic)))))
   (Class
-    ^L:6
-    (TypeParam ^U:44)
-    (Call <> J:4 U:44)
-    (Method ^g:46 (Fn (Let ^x:48 String) U:44 (Block (Call panic))))
-    (Get ^p:47 (Fn String (Block ""))))
+    ^L:8
+    (TypeParam ^U:48)
+    (Call <> J:6 U:48)
+    (Method ^g:50 (Fn (Let ^x:52 String) U:48 (Block (Call panic))))
+    (Get ^p:51 (Fn String (Block ""))))
   (Class
-    ^M:7
-    (TypeParam ^U:49)
-    (Call <> J:4 (Call <> List U:49))
+    ^M:9
+    (TypeParam ^U:53)
+    (Call <> J:6 (Call <> List U:53))
     (Method
-      ^g:51
-      (Fn (Let ^x:53 (Call <> List U:49)) (Call <> List U:49) (Block x:53)))
-    (Get ^p:52 (Fn (Call <> List U:49) (Block (Call panic)))))
+      ^g:55
+      (Fn (Let ^x:57 (Call <> List U:53)) (Call <> List U:53) (Block x:57)))
+    (Get ^p:56 (Fn (Call <> List U:53) (Block (Call panic)))))
   (Class
-    ^N:8
-    (TypeParam ^U:54)
-    (Call <> J:4 (Call <> List U:54))
+    ^N:10
+    (TypeParam ^U:58)
+    (Call <> J:6 (Call <> List U:58))
     (Method
-      ^g:56
+      ^g:60
       (Fn
-        (Let ^x:58 (Call <> List String))
-        (Call <> List U:54)
+        (Let ^x:62 (Call <> List String))
+        (Call <> List U:58)
         (Block (Call panic))))
-    (Get ^p:57 (Fn U:54 (Block (Call panic)))))
-  (Interface ^Q:9 (TypeParam ^T:59) (Get ^v:61 (Signature T:59)))
-  (Class ^R:10 (Call <> Q:9 Int) (Let ^v:63 Int 1))
-  (Class ^S:11 (Call <> Q:9 Int) (Let ^v:65 String ""))
+    (Get ^p:61 (Fn U:58 (Block (Call panic)))))
+  (Interface ^Q:11 (TypeParam ^T:63) (Get ^v:65 (Signature T:63)))
+  (Class ^R:12 (Call <> Q:11 Int) (Let ^v:67 Int 1))
+  (Class ^S:13 (Call <> Q:11 Int) (Let ^v:69 String ""))
   (Interface
-    ^T1:12
-    (TypeParam ^T:66)
-    (Method ^t:68 (Signature (Let ^x:69 T:66) (Call throws T:66 Bubble))))
+    ^T1:14
+    (TypeParam ^T:70)
+    (Method ^t:72 (Signature (Let ^x:73 T:70) (Call throws T:70 Oops:1))))
   (Class
-    ^T2:13
-    (Call <> T1:12 Int)
-    (Method ^t:71 (Fn (Let ^x:72 Int) Int (Block x:72))))
+    ^T2:15
+    (Call <> T1:14 Int)
+    (Method ^t:75 (Fn (Let ^x:76 Int) Int (Block x:76))))
   (Class
-    ^T3:14
-    (Call <> T1:12 Int)
-    (Method ^t:74 (Fn (Let ^x:75 Int) (Call throws Int Bubble) (Block x:75))))
+    ^T3:16
+    (Call <> T1:14 Int)
+    (Method ^t:78 (Fn (Let ^x:79 Int) (Call throws Int Oops:1) (Block x:79))))
   (Interface
-    ^Z1:15
-    (TypeParam ^T:76)
-    (Method ^z:78 (Signature (Let ^x:79 T:76) Void)))
-  (Interface ^Z2:16 (TypeParam ^U:80) (Call <> Z1:15 (Call <> List U:80)))
+    ^Z1:17
+    (TypeParam ^T:80)
+    (Method ^z:82 (Signature (Let ^x:83 T:80) Void)))
+  (Interface ^Z2:18 (TypeParam ^U:84) (Call <> Z1:17 (Call <> List U:84)))
   (Class
-    ^Z3:17
-    (Call <> Z2:16 Int)
-    (Method ^z:84 (Fn (Let ^x:85 (Call <> List Int)) Void (Block))))
+    ^Z3:19
+    (Call <> Z2:18 Int)
+    (Method ^z:88 (Fn (Let ^x:89 (Call <> List Int)) Void (Block))))
   (Class
-    ^Z4:18
-    (Call <> Z2:16 Int)
-    (Method ^z:87 (Fn (Let ^x:88 (Call <> List String)) Void (Block))))
+    ^Z4:20
+    (Call <> Z2:18 Int)
+    (Method ^z:91 (Fn (Let ^x:92 (Call <> List String)) Void (Block))))
   (Interface
-    ^W:19
-    (TypeParam ^T:89)
-    (Set ^w:91 (Signature (Let ^x:93 T:89) Void))
-    (Get ^w:92 (Signature T:89)))
+    ^W:21
+    (TypeParam ^T:93)
+    (Set ^w:95 (Signature (Let ^x:97 T:93) Void))
+    (Get ^w:96 (Signature T:93)))
   (Class
-    ^W1:20
-    (Call <> W:19 Int)
-    (Set ^w:95 (Fn (Let ^x:97 String) Void (Block)))
-    (Get ^w:96 (Fn Int (Block 1)))))
-error 254..274: Type B has method f with signature f(x: Int32): Void, but it should be f(x: String): Void to correctly override from I
-error 312..334: Type C has method f with signature f(x: String?): Void, but it should be f(x: String): Void to correctly override from I
-error 501..528: Type L has method g with signature g(x: String): U, but it should be g(x: U): U to correctly override from J
-error 538..560: Type L has method get p with signature p(): String, but it should be p(): U to correctly override from J
-error 714..753: Type N has method g with signature g(x: List<String>): List<U>, but it should be g(x: List<U>): List<U> to correctly override from J
-error 763..785: Type N has method get p with signature p(): U, but it should be p(): List<U> to correctly override from J
-error 897..911: Type S has method get v with signature v(): String, but it should be v(): Int32 to correctly override from Q
-error 995..1015: Type T2 has method t with signature t(x: Int32): Int32, but it should be t(x: Int32): Int32 throws Bubble to correctly override from T1
-error 1258..1285: Type Z4 has method z with signature z(x: List<String>): Void, but it should be z(x: List<Int32>): Void to correctly override from Z1
-error 1373..1398: Type W1 has method set w with signature w(x: String): Void, but it should be w(x: Int32): Void to correctly override from W
+    ^W1:22
+    (Call <> W:21 Int)
+    (Set ^w:99 (Fn (Let ^x:101 String) Void (Block)))
+    (Get ^w:100 (Fn Int (Block 1)))))
+error 328..348: Type B has method f with signature f(x: Int32): Void, but it should be f(x: String): Void to correctly override from I
+error 386..408: Type C has method f with signature f(x: String?): Void, but it should be f(x: String): Void to correctly override from I
+error 575..602: Type L has method g with signature g(x: String): U, but it should be g(x: U): U to correctly override from J
+error 612..634: Type L has method get p with signature p(): String, but it should be p(): U to correctly override from J
+error 788..827: Type N has method g with signature g(x: List<String>): List<U>, but it should be g(x: List<U>): List<U> to correctly override from J
+error 837..859: Type N has method get p with signature p(): U, but it should be p(): List<U> to correctly override from J
+error 971..985: Type S has method get v with signature v(): String, but it should be v(): Int32 to correctly override from Q
+error 1067..1087: Type T2 has method t with signature t(x: Int32): Int32, but it should be t(x: Int32): Int32 throws Oops to correctly override from T1
+error 1328..1355: Type Z4 has method z with signature z(x: List<String>): Void, but it should be z(x: List<Int32>): Void to correctly override from Z1
+error 1443..1468: Type W1 has method set w with signature w(x: String): Void, but it should be w(x: Int32): Void to correctly override from W
 
 === interfaces' generic methods, which Kotlin Temper doesn't allow
 // Overrides match a generic method's type parameters by position.
@@ -1124,6 +1141,8 @@ error 2279..2287: Types marked @mayDowncastTo(false) cannot be targeted with is 
 error 2395..2401: Unrelated types cannot be targeted with is or as runtime type checks: <[J]> from I
 
 === as checks, which panic where they fail
+sealed interface Problem extends Error {}
+class Oops() extends Problem {}
 interface I {}
 class D extends I {}
 class C {}
@@ -1138,7 +1157,7 @@ let a8(d: D): I { d as I }
 let a9(x: Int): String { x as String }
 let b1(c: C): D { c as D }
 let b2(i: I): Boolean { if (i is D) { i as D; true } else { false } }
-let b3(i: I): D throws Bubble { i as D }
+let b3(i: I): D throws Oops { i as D }
 let b4(i: I): D { (i as D) orelse panic() }
 let b5(i: I): Void { let f(): D { i as D }; }
 let b6<T>(x: AnyValue): Void { x as T; }
@@ -1146,61 +1165,63 @@ let b7(i: I): Void { i as C; }
 let b8(i: I?): I? { i as I? }
 --- settled
 (Block
-  (Interface ^I:0)
-  (Class ^D:1 I:0)
-  (Class ^C:2)
-  (Let ^a1:3 (Fn (Let ^i:23 I:0) D:1 (Block (Call as i:23 D:1))))
-  (Let ^a2:4 (Fn (Let ^x:24 (Call ? Int)) Int (Block (Call as x:24 Int))))
-  (Let ^a3:5 (Fn (Let ^i:25 (Call ? I:0)) I:0 (Block (Call as i:25 I:0))))
-  (Let ^a4:6 (Fn (Let ^i:26 (Call ? I:0)) D:1 (Block (Call as i:26 D:1))))
-  (Let ^a5:7 (Fn (Let ^x:27 AnyValue) D:1 (Block (Call as x:27 D:1))))
+  (Interface ^Problem:0 Error)
+  (Class ^Oops:1 Problem:0)
+  (Interface ^I:2)
+  (Class ^D:3 I:2)
+  (Class ^C:4)
+  (Let ^a1:5 (Fn (Let ^i:27 I:2) D:3 (Block (Call as i:27 D:3))))
+  (Let ^a2:6 (Fn (Let ^x:28 (Call ? Int)) Int (Block (Call as x:28 Int))))
+  (Let ^a3:7 (Fn (Let ^i:29 (Call ? I:2)) I:2 (Block (Call as i:29 I:2))))
+  (Let ^a4:8 (Fn (Let ^i:30 (Call ? I:2)) D:3 (Block (Call as i:30 D:3))))
+  (Let ^a5:9 (Fn (Let ^x:31 AnyValue) D:3 (Block (Call as x:31 D:3))))
   (Let
-    ^a6:8
-    (Fn (Let ^x:28 AnyValue) Int (Block (Orelse (Call as x:28 Int) 0))))
-  (Let ^a7:9 (Fn (Let ^x:29 Int) Int (Block (Call as x:29 Int))))
-  (Let ^a8:10 (Fn (Let ^d:30 D:1) I:0 (Block (Call as d:30 I:0))))
-  (Let ^a9:11 (Fn (Let ^x:31 Int) String (Block (Call as x:31 String))))
-  (Let ^b1:12 (Fn (Let ^c:32 C:2) D:1 (Block (Call as c:32 D:1))))
+    ^a6:10
+    (Fn (Let ^x:32 AnyValue) Int (Block (Orelse (Call as x:32 Int) 0))))
+  (Let ^a7:11 (Fn (Let ^x:33 Int) Int (Block (Call as x:33 Int))))
+  (Let ^a8:12 (Fn (Let ^d:34 D:3) I:2 (Block (Call as d:34 I:2))))
+  (Let ^a9:13 (Fn (Let ^x:35 Int) String (Block (Call as x:35 String))))
+  (Let ^b1:14 (Fn (Let ^c:36 C:4) D:3 (Block (Call as c:36 D:3))))
   (Let
-    ^b2:13
+    ^b2:15
     (Fn
-      (Let ^i:33 I:0)
+      (Let ^i:37 I:2)
       Boolean
       (Block
-        (If (Call is i:33 D:1) (Block (Call as i:33 D:1) true) (Block false)))))
+        (If (Call is i:37 D:3) (Block (Call as i:37 D:3) true) (Block false)))))
   (Let
-    ^b3:14
-    (Fn (Let ^i:34 I:0) (Call throws D:1 Bubble) (Block (Call as i:34 D:1))))
+    ^b3:16
+    (Fn (Let ^i:38 I:2) (Call throws D:3 Oops:1) (Block (Call as i:38 D:3))))
   (Let
-    ^b4:15
-    (Fn (Let ^i:35 I:0) D:1 (Block (Orelse (Call as i:35 D:1) (Call panic)))))
+    ^b4:17
+    (Fn (Let ^i:39 I:2) D:3 (Block (Orelse (Call as i:39 D:3) (Call panic)))))
   (Let
-    ^b5:16
+    ^b5:18
     (Fn
-      (Let ^i:36 I:0)
+      (Let ^i:40 I:2)
       Void
-      (Block (Let ^f:37 (Fn D:1 (Block (Call as i:36 D:1)))) #void)))
+      (Block (Let ^f:41 (Fn D:3 (Block (Call as i:40 D:3)))) #void)))
   (Let
-    ^b6:17
+    ^b6:19
     (Fn
-      (TypeParam ^T:38)
-      (Let ^x:39 AnyValue)
+      (TypeParam ^T:42)
+      (Let ^x:43 AnyValue)
       Void
-      (Block (Call as x:39 T:38) #void)))
-  (Let ^b7:18 (Fn (Let ^i:40 I:0) Void (Block (Call as i:40 C:2) #void)))
+      (Block (Call as x:43 T:42) #void)))
+  (Let ^b7:20 (Fn (Let ^i:44 I:2) Void (Block (Call as i:44 C:4) #void)))
   (Let
-    ^b8:19
+    ^b8:21
     (Fn
-      (Let ^i:41 (Call ? I:0))
-      (Call ? I:0)
-      (Block (Call as i:41 (Call ? I:0))))))
-error 226..234: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from AnyValue
-hint 269..277: Unnecessary type check to Int32 from expression with type Int32 which is a subtype
-error 332..343: Runtime type check from Int32 to String can never succeed
-error 364..370: Runtime type check from C to D can never succeed
-error 605..611: Type parameters cannot be targeted with is or as runtime type checks, because a type argument's run-time type can't be checked: <[T]> from AnyValue
-error 636..642: Unrelated types cannot be targeted with is or as runtime type checks: <[C]> from I
-hint 666..673: Unnecessary type check to I? from expression with type I? which is a subtype
+      (Let ^i:45 (Call ? I:2))
+      (Call ? I:2)
+      (Block (Call as i:45 (Call ? I:2))))))
+error 300..308: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from AnyValue
+hint 343..351: Unnecessary type check to Int32 from expression with type Int32 which is a subtype
+error 406..417: Runtime type check from Int32 to String can never succeed
+error 438..444: Runtime type check from C to D can never succeed
+error 677..683: Type parameters cannot be targeted with is or as runtime type checks, because a type argument's run-time type can't be checked: <[T]> from AnyValue
+error 708..714: Unrelated types cannot be targeted with is or as runtime type checks: <[C]> from I
+hint 738..745: Unnecessary type check to I? from expression with type I? which is a subtype
 
 === is and as checks with nullable targets, which null passes
 interface I {}
@@ -1331,6 +1352,8 @@ Panicked: failed cast
 // where Kotlin Temper says the types are unrelated; and a check can't
 // introduce a type argument, which erasure leaves no way to check. Kotlin
 // leaves alone parameters marked `@out` or `@in`, as `Out`'s.
+sealed interface Problem extends Error {}
+class Oops() extends Problem {}
 interface Animal {}
 class Dog extends Animal {}
 class Cat {}
@@ -1350,7 +1373,7 @@ let b3(x: AnyValue): Boolean { x is Box<String>? }
 let b4<T>(x: Box<T>): Boolean { x is Box<T> }
 let b5<T>(x: AnyValue): Boolean { x is Box<T> }
 let b6(x: Listed<Int>): Boolean { x is List<Int> }
-let b7(x: AnyValue): Box<Int> throws Bubble { x as Box<Int> }
+let b7(x: AnyValue): Box<Int> throws Oops { x as Box<Int> }
 let b8(x: AnyValue): Boolean { x is Out<Int> }
 let b9(x: AnyValue): Out<Int> { x as Out<Int> }
 let c1(x: Box<Int>): Boolean { x is Box<String> }
@@ -1361,267 +1384,273 @@ let pet<T extends Animal>(x: T): String { if (x is Dog) { "dog" } else { "other"
 console.log(pet(new Dog()));
 --- settled
 (Block
-  (Interface ^Animal:0)
-  (Class ^Dog:1 Animal:0)
-  (Class ^Cat:2)
-  (Class ^Box:3 (TypeParam ^T:30))
-  (Class ^Out:4 (TypeParam ^T:32))
+  (Interface ^Problem:0 Error)
+  (Class ^Oops:1 Problem:0)
+  (Interface ^Animal:2)
+  (Class ^Dog:3 Animal:2)
+  (Class ^Cat:4)
+  (Class ^Box:5 (TypeParam ^T:34))
+  (Class ^Out:6 (TypeParam ^T:36))
   (Let
-    ^a1:5
+    ^a1:7
     (Fn
-      (TypeParam ^T:34 Animal:0)
-      (Let ^x:35 T:34)
+      (TypeParam ^T:38 Animal:2)
+      (Let ^x:39 T:38)
       Boolean
-      (Block (Call is x:35 Dog:1))))
+      (Block (Call is x:39 Dog:3))))
   (Let
-    ^a2:6
-    (Fn (TypeParam ^T:36) (Let ^x:37 T:36) Boolean (Block (Call is x:37 Dog:1))))
+    ^a2:8
+    (Fn (TypeParam ^T:40) (Let ^x:41 T:40) Boolean (Block (Call is x:41 Dog:3))))
   (Let
-    ^a3:7
-    (Fn (TypeParam ^T:38) (Let ^x:39 T:38) Boolean (Block (Call is x:39 Int))))
+    ^a3:9
+    (Fn (TypeParam ^T:42) (Let ^x:43 T:42) Boolean (Block (Call is x:43 Int))))
   (Let
-    ^a4:8
+    ^a4:10
     (Fn
-      (TypeParam ^T:40 Animal:0)
-      (Let ^x:41 T:40)
+      (TypeParam ^T:44 Animal:2)
+      (Let ^x:45 T:44)
       Boolean
-      (Block (Call is x:41 Cat:2))))
+      (Block (Call is x:45 Cat:4))))
   (Let
-    ^a5:9
+    ^a5:11
     (Fn
-      (TypeParam ^T:42 Animal:0)
-      (Let ^x:43 T:42)
-      Boolean
-      (Block (Call is x:43 Animal:0))))
-  (Let
-    ^a6:10
-    (Fn
-      (TypeParam ^T:44 Animal:0)
-      (Let ^x:45 (Call ? T:44))
-      Boolean
-      (Block (Call is x:45 Dog:1))))
-  (Let
-    ^a7:11
-    (Fn
-      (TypeParam ^T:46 Animal:0)
+      (TypeParam ^T:46 Animal:2)
       (Let ^x:47 T:46)
-      Dog:1
-      (Block (Call as x:47 Dog:1))))
-  (Let
-    ^a8:12
-    (Fn (TypeParam ^T:48) (Let ^x:49 T:48) Boolean (Block (Call is x:49 T:48))))
-  (Let
-    ^b1:13
-    (Fn (Let ^x:50 AnyValue) Boolean (Block (Call is x:50 (Call <> List Int)))))
-  (Let
-    ^b2:14
-    (Fn (Let ^x:51 AnyValue) Boolean (Block (Call is x:51 (Call <> Box:3 Int)))))
-  (Let
-    ^b3:15
-    (Fn
-      (Let ^x:52 AnyValue)
       Boolean
-      (Block (Call is x:52 (Call ? (Call <> Box:3 String))))))
+      (Block (Call is x:47 Animal:2))))
   (Let
-    ^b4:16
+    ^a6:12
     (Fn
-      (TypeParam ^T:53)
-      (Let ^x:54 (Call <> Box:3 T:53))
+      (TypeParam ^T:48 Animal:2)
+      (Let ^x:49 (Call ? T:48))
       Boolean
-      (Block (Call is x:54 (Call <> Box:3 T:53)))))
+      (Block (Call is x:49 Dog:3))))
   (Let
-    ^b5:17
+    ^a7:13
     (Fn
-      (TypeParam ^T:55)
+      (TypeParam ^T:50 Animal:2)
+      (Let ^x:51 T:50)
+      Dog:3
+      (Block (Call as x:51 Dog:3))))
+  (Let
+    ^a8:14
+    (Fn (TypeParam ^T:52) (Let ^x:53 T:52) Boolean (Block (Call is x:53 T:52))))
+  (Let
+    ^b1:15
+    (Fn (Let ^x:54 AnyValue) Boolean (Block (Call is x:54 (Call <> List Int)))))
+  (Let
+    ^b2:16
+    (Fn (Let ^x:55 AnyValue) Boolean (Block (Call is x:55 (Call <> Box:5 Int)))))
+  (Let
+    ^b3:17
+    (Fn
       (Let ^x:56 AnyValue)
       Boolean
-      (Block (Call is x:56 (Call <> Box:3 T:55)))))
+      (Block (Call is x:56 (Call ? (Call <> Box:5 String))))))
   (Let
-    ^b6:18
+    ^b4:18
     (Fn
-      (Let ^x:57 (Call <> Listed Int))
+      (TypeParam ^T:57)
+      (Let ^x:58 (Call <> Box:5 T:57))
       Boolean
-      (Block (Call is x:57 (Call <> List Int)))))
+      (Block (Call is x:58 (Call <> Box:5 T:57)))))
   (Let
-    ^b7:19
+    ^b5:19
     (Fn
-      (Let ^x:58 AnyValue)
-      (Call throws (Call <> Box:3 Int) Bubble)
-      (Block (Call as x:58 (Call <> Box:3 Int)))))
-  (Let
-    ^b8:20
-    (Fn (Let ^x:59 AnyValue) Boolean (Block (Call is x:59 (Call <> Out:4 Int)))))
-  (Let
-    ^b9:21
-    (Fn
+      (TypeParam ^T:59)
       (Let ^x:60 AnyValue)
-      (Call <> Out:4 Int)
-      (Block (Call as x:60 (Call <> Out:4 Int)))))
-  (Let
-    ^c1:22
-    (Fn
-      (Let ^x:61 (Call <> Box:3 Int))
       Boolean
-      (Block (Call is x:61 (Call <> Box:3 String)))))
+      (Block (Call is x:60 (Call <> Box:5 T:59)))))
   (Let
-    ^c2:23
+    ^b6:20
     (Fn
-      (Let ^x:62 String)
+      (Let ^x:61 (Call <> Listed Int))
       Boolean
-      (Block (Call is x:62 (Call <> Box:3 String)))))
+      (Block (Call is x:61 (Call <> List Int)))))
   (Let
-    ^c3:24
-    (Fn (Let ^k:63 (Call <> MapKey Int)) Boolean (Block (Call is k:63 Int))))
-  (Let
-    ^c4:25
-    (Fn (Let ^k:64 (Call <> MapKey Int)) Boolean (Block (Call is k:64 String))))
-  (Let
-    ^pet:26
+    ^b7:21
     (Fn
-      (TypeParam ^T:65 Animal:0)
-      (Let ^x:66 T:65)
+      (Let ^x:62 AnyValue)
+      (Call throws (Call <> Box:5 Int) Oops:1)
+      (Block (Call as x:62 (Call <> Box:5 Int)))))
+  (Let
+    ^b8:22
+    (Fn (Let ^x:63 AnyValue) Boolean (Block (Call is x:63 (Call <> Out:6 Int)))))
+  (Let
+    ^b9:23
+    (Fn
+      (Let ^x:64 AnyValue)
+      (Call <> Out:6 Int)
+      (Block (Call as x:64 (Call <> Out:6 Int)))))
+  (Let
+    ^c1:24
+    (Fn
+      (Let ^x:65 (Call <> Box:5 Int))
+      Boolean
+      (Block (Call is x:65 (Call <> Box:5 String)))))
+  (Let
+    ^c2:25
+    (Fn
+      (Let ^x:66 String)
+      Boolean
+      (Block (Call is x:66 (Call <> Box:5 String)))))
+  (Let
+    ^c3:26
+    (Fn (Let ^k:67 (Call <> MapKey Int)) Boolean (Block (Call is k:67 Int))))
+  (Let
+    ^c4:27
+    (Fn (Let ^k:68 (Call <> MapKey Int)) Boolean (Block (Call is k:68 String))))
+  (Let
+    ^pet:28
+    (Fn
+      (TypeParam ^T:69 Animal:2)
+      (Let ^x:70 T:69)
       String
-      (Block (If (Call is x:66 Dog:1) (Block "dog") (Block "other")))))
-  (Call (Call . console \log) (Call pet:26 (Call new Dog:1)))
+      (Block (If (Call is x:70 Dog:3) (Block "dog") (Block "other")))))
+  (Call (Call . console \log) (Call pet:28 (Call new Dog:3)))
   #void)
-error 571..579: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from T
-error 624..632: Unrelated types cannot be targeted with is or as runtime type checks: <[Cat]> from T
-hint 677..688: Unnecessary type check to Animal from expression with type T which is a subtype
-hint 821..827: Unnecessary type check to T from expression with type T which is a subtype
-error 861..875: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[List<Int32>]> from AnyValue
-error 909..922: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Box<Int32>]> from AnyValue
-error 956..973: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Box<String>]> from AnyValue
-hint 1008..1019: Unnecessary type check to Box<T> from expression with type Box<T> which is a subtype
-error 1056..1067: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Box<T>]> from AnyValue
-error 1104..1118: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[List<Int32>]> from Listed<Int32>
-error 1167..1180: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Box<Int32>]> from AnyValue
-error 1309..1325: Unrelated types cannot be targeted with is or as runtime type checks: <[Box<String>]> from Box<Int32>
-error 1357..1373: Runtime type check from String to Box<String> can never succeed
-error 1410..1418: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from MapKey<Int32>
-error 1455..1466: Unrelated types cannot be targeted with is or as runtime type checks: <[String]> from MapKey<Int32>
+error 645..653: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from T
+error 698..706: Unrelated types cannot be targeted with is or as runtime type checks: <[Cat]> from T
+hint 751..762: Unnecessary type check to Animal from expression with type T which is a subtype
+hint 895..901: Unnecessary type check to T from expression with type T which is a subtype
+error 935..949: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[List<Int32>]> from AnyValue
+error 983..996: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Box<Int32>]> from AnyValue
+error 1030..1047: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Box<String>]> from AnyValue
+hint 1082..1093: Unnecessary type check to Box<T> from expression with type Box<T> which is a subtype
+error 1130..1141: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Box<T>]> from AnyValue
+error 1178..1192: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[List<Int32>]> from Listed<Int32>
+error 1239..1252: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Box<Int32>]> from AnyValue
+error 1381..1397: Unrelated types cannot be targeted with is or as runtime type checks: <[Box<String>]> from Box<Int32>
+error 1429..1445: Runtime type check from String to Box<String> can never succeed
+error 1482..1490: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from MapKey<Int32>
+error 1527..1538: Unrelated types cannot be targeted with is or as runtime type checks: <[String]> from MapKey<Int32>
 log dog
 
 === is and as checks through users' generic supertypes
 // Kotlin Temper's stage test `generate-code/invalid-rtti-type-args`: a
 // check's target is related to the checked type through the types it
 // extends, with their type arguments put in.
+sealed interface Problem extends Error {}
+class Oops() extends Problem {}
 interface Sup<T> {}
 class Sub<T> extends Sup<T> {}
 interface Sup2<T, U> extends Sup<U> {}
 class Sub2<T> extends Sup2<T, String> {} // sneak swap the meaning of T
 class Sub3<T> extends Sup2<String, T> {} // weaves T through
 class Sub4 extends Sup<String> {}
-let badCast(value: AnyValue): Sub<String> throws Bubble {
+let badCast(value: AnyValue): Sub<String> throws Oops {
   // Introduces String.
   value as Sub<String>
 }
-let alsoBad<T>(value: Sup<T>): Sub<String> throws Bubble {
+let alsoBad<T>(value: Sup<T>): Sub<String> throws Oops {
   // Presumes known type arg for T.
   value as Sub<String>
 }
-let goodCast(value: Sup<String>): Sub<String> throws Bubble {
+let goodCast(value: Sup<String>): Sub<String> throws Oops {
   // Keeps the known type arg.
   value as Sub<String>
 }
-let alsoGood<T>(value: Sup<T>): Sub<T> throws Bubble {
+let alsoGood<T>(value: Sup<T>): Sub<T> throws Oops {
   // Also keeps the known type arg, which is also a type param.
   value as Sub<T>
 }
-let butThisIsBad<T>(value: Sup<T>): Sub2<T> throws Bubble {
+let butThisIsBad<T>(value: Sup<T>): Sub2<T> throws Oops {
   // The T args here aren't actually related. Presumes String as an arg for U.
   value as Sub2<T>
 }
-let alsoBadBecauseExtra<T, U>(value: Sup<U>): Sup2<T, U> throws Bubble {
+let alsoBadBecauseExtra<T, U>(value: Sup<U>): Sup2<T, U> throws Oops {
   // Introduces T.
   value as Sup2<T, U>
 }
-let butThisIsGood<U>(value: Sup<U>): Sup2<U, U> throws Bubble {
+let butThisIsGood<U>(value: Sup<U>): Sup2<U, U> throws Oops {
   // Uses known U for both cases.
   value as Sup2<U, U>
 }
-let goodDespiteMiddle<T>(value: Sup<T>): Sub3<T> throws Bubble {
+let goodDespiteMiddle<T>(value: Sup<T>): Sub3<T> throws Oops {
   // Invents String for Sup2 T, but that doesn't matter because it's not represented.
   value as Sub3<T>
 }
-let badNonGeneric<T>(value: Sup<T>): Sub4 throws Bubble {
+let badNonGeneric<T>(value: Sup<T>): Sub4 throws Oops {
   // Invents String for Sup T without any generics in Sub4 at all.
   value as Sub4
 }
 --- settled
 (Block
-  (Interface ^Sup:0 (TypeParam ^T:15))
-  (Class ^Sub:1 (TypeParam ^T:17) (Call <> Sup:0 T:17))
-  (Interface ^Sup2:2 (TypeParam ^T:19) (TypeParam ^U:20) (Call <> Sup:0 U:20))
-  (Class ^Sub2:3 (TypeParam ^T:22) (Call <> Sup2:2 T:22 String))
-  (Class ^Sub3:4 (TypeParam ^T:24) (Call <> Sup2:2 String T:24))
-  (Class ^Sub4:5 (Call <> Sup:0 String))
+  (Interface ^Problem:0 Error)
+  (Class ^Oops:1 Problem:0)
+  (Interface ^Sup:2 (TypeParam ^T:19))
+  (Class ^Sub:3 (TypeParam ^T:21) (Call <> Sup:2 T:21))
+  (Interface ^Sup2:4 (TypeParam ^T:23) (TypeParam ^U:24) (Call <> Sup:2 U:24))
+  (Class ^Sub2:5 (TypeParam ^T:26) (Call <> Sup2:4 T:26 String))
+  (Class ^Sub3:6 (TypeParam ^T:28) (Call <> Sup2:4 String T:28))
+  (Class ^Sub4:7 (Call <> Sup:2 String))
   (Let
-    ^badCast:6
+    ^badCast:8
     (Fn
-      (Let ^value:27 AnyValue)
-      (Call throws (Call <> Sub:1 String) Bubble)
-      (Block (Call as value:27 (Call <> Sub:1 String)))))
+      (Let ^value:31 AnyValue)
+      (Call throws (Call <> Sub:3 String) Oops:1)
+      (Block (Call as value:31 (Call <> Sub:3 String)))))
   (Let
-    ^alsoBad:7
+    ^alsoBad:9
     (Fn
-      (TypeParam ^T:28)
-      (Let ^value:29 (Call <> Sup:0 T:28))
-      (Call throws (Call <> Sub:1 String) Bubble)
-      (Block (Call as value:29 (Call <> Sub:1 String)))))
+      (TypeParam ^T:32)
+      (Let ^value:33 (Call <> Sup:2 T:32))
+      (Call throws (Call <> Sub:3 String) Oops:1)
+      (Block (Call as value:33 (Call <> Sub:3 String)))))
   (Let
-    ^goodCast:8
+    ^goodCast:10
     (Fn
-      (Let ^value:30 (Call <> Sup:0 String))
-      (Call throws (Call <> Sub:1 String) Bubble)
-      (Block (Call as value:30 (Call <> Sub:1 String)))))
+      (Let ^value:34 (Call <> Sup:2 String))
+      (Call throws (Call <> Sub:3 String) Oops:1)
+      (Block (Call as value:34 (Call <> Sub:3 String)))))
   (Let
-    ^alsoGood:9
-    (Fn
-      (TypeParam ^T:31)
-      (Let ^value:32 (Call <> Sup:0 T:31))
-      (Call throws (Call <> Sub:1 T:31) Bubble)
-      (Block (Call as value:32 (Call <> Sub:1 T:31)))))
-  (Let
-    ^butThisIsBad:10
-    (Fn
-      (TypeParam ^T:33)
-      (Let ^value:34 (Call <> Sup:0 T:33))
-      (Call throws (Call <> Sub2:3 T:33) Bubble)
-      (Block (Call as value:34 (Call <> Sub2:3 T:33)))))
-  (Let
-    ^alsoBadBecauseExtra:11
+    ^alsoGood:11
     (Fn
       (TypeParam ^T:35)
-      (TypeParam ^U:36)
-      (Let ^value:37 (Call <> Sup:0 U:36))
-      (Call throws (Call <> Sup2:2 T:35 U:36) Bubble)
-      (Block (Call as value:37 (Call <> Sup2:2 T:35 U:36)))))
+      (Let ^value:36 (Call <> Sup:2 T:35))
+      (Call throws (Call <> Sub:3 T:35) Oops:1)
+      (Block (Call as value:36 (Call <> Sub:3 T:35)))))
   (Let
-    ^butThisIsGood:12
+    ^butThisIsBad:12
     (Fn
-      (TypeParam ^U:38)
-      (Let ^value:39 (Call <> Sup:0 U:38))
-      (Call throws (Call <> Sup2:2 U:38 U:38) Bubble)
-      (Block (Call as value:39 (Call <> Sup2:2 U:38 U:38)))))
+      (TypeParam ^T:37)
+      (Let ^value:38 (Call <> Sup:2 T:37))
+      (Call throws (Call <> Sub2:5 T:37) Oops:1)
+      (Block (Call as value:38 (Call <> Sub2:5 T:37)))))
   (Let
-    ^goodDespiteMiddle:13
+    ^alsoBadBecauseExtra:13
     (Fn
-      (TypeParam ^T:40)
-      (Let ^value:41 (Call <> Sup:0 T:40))
-      (Call throws (Call <> Sub3:4 T:40) Bubble)
-      (Block (Call as value:41 (Call <> Sub3:4 T:40)))))
+      (TypeParam ^T:39)
+      (TypeParam ^U:40)
+      (Let ^value:41 (Call <> Sup:2 U:40))
+      (Call throws (Call <> Sup2:4 T:39 U:40) Oops:1)
+      (Block (Call as value:41 (Call <> Sup2:4 T:39 U:40)))))
   (Let
-    ^badNonGeneric:14
+    ^butThisIsGood:14
     (Fn
-      (TypeParam ^T:42)
-      (Let ^value:43 (Call <> Sup:0 T:42))
-      (Call throws Sub4:5 Bubble)
-      (Block (Call as value:43 Sub4:5)))))
-error 529..549: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Sub<String>]> from AnyValue
-error 649..669: Unrelated types cannot be targeted with is or as runtime type checks: <[Sub<String>]> from Sup<T>
-error 1070..1086: Unrelated types cannot be targeted with is or as runtime type checks: <[Sub2<T>]> from Sup<T>
-error 1183..1202: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Sup2<T, U>]> from Sup<U>
-error 1626..1639: Unrelated types cannot be targeted with is or as runtime type checks: <[Sub4]> from Sup<T>
+      (TypeParam ^U:42)
+      (Let ^value:43 (Call <> Sup:2 U:42))
+      (Call throws (Call <> Sup2:4 U:42 U:42) Oops:1)
+      (Block (Call as value:43 (Call <> Sup2:4 U:42 U:42)))))
+  (Let
+    ^goodDespiteMiddle:15
+    (Fn
+      (TypeParam ^T:44)
+      (Let ^value:45 (Call <> Sup:2 T:44))
+      (Call throws (Call <> Sub3:6 T:44) Oops:1)
+      (Block (Call as value:45 (Call <> Sub3:6 T:44)))))
+  (Let
+    ^badNonGeneric:16
+    (Fn
+      (TypeParam ^T:46)
+      (Let ^value:47 (Call <> Sup:2 T:46))
+      (Call throws Sub4:7 Oops:1)
+      (Block (Call as value:47 Sub4:7)))))
+error 601..621: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Sub<String>]> from AnyValue
+error 719..739: Unrelated types cannot be targeted with is or as runtime type checks: <[Sub<String>]> from Sup<T>
+error 1134..1150: Unrelated types cannot be targeted with is or as runtime type checks: <[Sub2<T>]> from Sup<T>
+error 1245..1264: Type arguments cannot be introduced with is or as runtime type checks, because a type argument's run-time type can't be checked: <[Sup2<T, U>]> from Sup<U>
+error 1682..1695: Unrelated types cannot be targeted with is or as runtime type checks: <[Sub4]> from Sup<T>
 
 === a property narrower than what it overrides, as Kotlin's hide-override-property
 // Kotlin's TypeChecker words it otherwise than for methods. A field is a
@@ -1807,4 +1836,4 @@ keyed(1);
   #void)
 error 321..346: Type formal <K extends MapKey<K>> cannot bind to I? which does not fit upper bounds [MapKey<K>]
 error 434..449: Type formal <T extends MapKey<T>> cannot bind to K which does not fit upper bounds [MapKey<T>]
-Failed: Type formal <K extends MapKey<K>> cannot bind to I? which does not fit upper bounds [MapKey<K>]
+Panicked: Type formal <K extends MapKey<K>> cannot bind to I? which does not fit upper bounds [MapKey<K>]

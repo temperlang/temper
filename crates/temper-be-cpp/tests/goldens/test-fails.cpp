@@ -15,6 +15,16 @@ void global_init_init();
 
 
 #ifdef TEMPER_TESTS
+struct Problem;
+struct Oops;
+
+struct Problem : public virtual temper::core::Failure {};
+
+struct Oops : public virtual Problem {
+  static std::shared_ptr<Oops> make();
+  temper::core::Str get_message() const override;
+};
+
 // Tests, which `test.cpp` runs.
 void passesBefore(std::shared_ptr<temper_std::Test> const & test);
 void failsPastAnOrelse(std::shared_ptr<temper_std::Test> const & test);
@@ -37,11 +47,19 @@ namespace test_fails {
 namespace core = temper::core;
 
 #ifdef TEMPER_TESTS
-static bool tries(std::function<void()> const & f) {
+std::shared_ptr<Oops> Oops::make() {
+  std::shared_ptr<Oops> self = std::make_shared<Oops>();
+  return self;
+}
+
+core::Str Oops::get_message() const {
+  return TEMPER_STR("oops");
+}
+
+static bool tries(std::function<core::Expected<void, std::shared_ptr<Oops>>()> const & f) {
   bool finished = true;
-  try {
-    f();
-  } catch (core::TemperBubble const &) {
+  auto result = f();
+  if (!result.has_value()) {
     finished = false;
   }
   return finished;
@@ -65,11 +83,19 @@ void global_init_init() {}
 namespace test_fails {
 
 void passesBefore(std::shared_ptr<temper_std::Test> const & test) {
-  test->assert_(test_fails::tries([=]() -> void { { core::NullableParam<int32_t> actual = test_fails::find(TEMPER_STR("one")); int32_t expected = 1; test->assert_(actual == expected, [=]() -> core::Str { return "expected find(\"one\") == (" + std::to_string(expected) + ") not (" + (actual == nullptr ? TEMPER_STR("null") : core::Str(std::to_string(actual.value))) + ")"; }); } }), []() -> core::Str { return TEMPER_STR("expected tries { assert(find(\"one\") == 1); }"); });
+  auto fn = [=]() -> core::Expected<void, std::shared_ptr<Oops>> {
+    {
+      core::NullableParam<int32_t> actual = test_fails::find(TEMPER_STR("one"));
+      int32_t expected = 1;
+      test->assert_(actual == expected, [=]() -> core::Str { return "expected find(\"one\") == (" + std::to_string(expected) + ") not (" + (actual == nullptr ? TEMPER_STR("null") : core::Str(std::to_string(actual.value))) + ")"; });
+    }
+    return {};
+  };
+  test->assert_(test_fails::tries(fn), []() -> core::Str { return TEMPER_STR("expected tries { assert(find(\"one\") == 1); }"); });
 }
 
 void failsPastAnOrelse(std::shared_ptr<temper_std::Test> const & test) {
-  auto fn = [=]() -> void {
+  auto fn = [=]() -> core::Expected<void, std::shared_ptr<Oops>> {
     test->fail(TEMPER_STR("failed on purpose"));
     core::panic();
   };
@@ -113,14 +139,22 @@ void failsHardAfterSoftFailures(std::shared_ptr<temper_std::Test> const & test) 
 }
 
 void failsAHardAssertionPastAnOrelse(std::shared_ptr<temper_std::Test> const & test) {
-  test_fails::tries([=]() -> void { test->assertHard(core::Int::add(1, 1) == 3, []() -> core::Str { return TEMPER_STR("hard assertion"); }); });
+  auto fn = [=]() -> core::Expected<void, std::shared_ptr<Oops>> {
+    test->assertHard(core::Int::add(1, 1) == 3, []() -> core::Str { return TEMPER_STR("hard assertion"); });
+    return {};
+  };
+  test_fails::tries(fn);
   test->fail(TEMPER_STR("swallowed"));
   core::panic();
 }
 
 void hardensSoftFailuresPastAnOrelse(std::shared_ptr<temper_std::Test> const & test) {
   test->assert_(false, []() -> core::Str { return TEMPER_STR("soft only"); });
-  test_fails::tries([=]() -> void { test->softFailToHard(); });
+  auto fn2 = [=]() -> core::Expected<void, std::shared_ptr<Oops>> {
+    test->softFailToHard();
+    return {};
+  };
+  test_fails::tries(fn2);
   test->fail(TEMPER_STR("swallowed"));
   core::panic();
 }

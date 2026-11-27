@@ -21,6 +21,28 @@ do
   end
 end
 
+---@class host-error-tests.OopsError: temper.Failure
+
+---@class host-error-tests.OopsError.type: temper.Type
+local OopsError = temper.type("host-error-tests.OopsError", temper.Failure)
+
+---@class host-error-tests.Oops: host-error-tests.OopsError
+---@field message string
+
+---@class host-error-tests.Oops.type: temper.Type
+---@operator call: host-error-tests.Oops
+local Oops = temper.type("host-error-tests.Oops", OopsError)
+
+---@param this host-error-tests.Oops
+function Oops.constructor(this)
+end
+
+---@param this host-error-tests.Oops
+---@return string
+function Oops.get.message(this)
+  return "oops"
+end
+
 ---@param n integer
 ---@return integer
 local function hostFails(n)
@@ -32,6 +54,8 @@ local function hostFailsTest()
 end
 
 return {
+  OopsError = OopsError,
+  Oops = Oops,
   hostFails = hostFails,
   hostFailsTest = hostFailsTest,
   ["$test"] = { hostFails = hostFails, hostFailsTest = hostFailsTest },

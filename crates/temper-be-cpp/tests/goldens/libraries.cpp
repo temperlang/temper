@@ -17,6 +17,8 @@ struct Dot;
 struct Line;
 struct Carry;
 struct Tagged;
+struct Problem;
+struct NoColumns;
 struct Word;
 struct Joiner;
 struct Shown;
@@ -100,6 +102,13 @@ struct Tagged : public std::enable_shared_from_this<Tagged> {
   temper::core::NullableParam<temper::core::Str> label;
   static std::shared_ptr<Tagged> make(temper::core::NullableParam<temper::core::Str> label);
   temper::core::NullableParam<temper::core::Str> get_label() const;
+};
+
+struct Problem : public virtual temper::core::Failure {};
+
+struct NoColumns : public virtual Problem {
+  static std::shared_ptr<NoColumns> make();
+  temper::core::Str get_message() const override;
 };
 
 struct Word : public std::enable_shared_from_this<Word> {
@@ -212,7 +221,7 @@ namespace temper_globals {
 extern temper::core::GlobalSlot<std::shared_ptr<std::vector<int32_t>>> extras;
 }  // namespace temper_globals
 
-std::shared_ptr<Grid> parseGrid(temper::core::Str const & s);
+temper::core::Expected<std::shared_ptr<Grid>, std::shared_ptr<temper::core::ParseError>> parseGrid(temper::core::Str const & s);
 
 template <class T>
 int32_t sizeWith(std::shared_ptr<std::vector<T>> const & items) {
@@ -385,9 +394,10 @@ double Grid::get(int32_t i, int32_t j) const {
 
 std::shared_ptr<Grid> Grid::parse(core::Str const & s) {
   global_init_init();
-  try {
-    return libraries::parseGrid(s);
-  } catch (core::TemperBubble const &) {
+  auto parseGridResult = libraries::parseGrid(s);
+  if (parseGridResult.has_value()) {
+    return *parseGridResult;
+  } else {
     return nullptr;
   }
 }
@@ -400,19 +410,13 @@ std::shared_ptr<std::vector<double>> Grid::get_values() const {
   return this->values;
 }
 
-std::shared_ptr<Grid> parseGrid(core::Str const & s) {
+core::Expected<std::shared_ptr<Grid>, std::shared_ptr<core::ParseError>> parseGrid(core::Str const & s) {
   global_init_init();
-  if (s == core::Str()) {
-    core::bubble();
-  }
-  double value2;
   auto Result = core::String::toFloat64(s);
-  if (Result.has_value()) {
-    value2 = *Result;
-  } else {
-    core::bubble();
+  if (!Result.has_value()) {
+    return core::unexpected(Result.error());
   }
-  return Grid::make(1, core::List::make<double>(value2));
+  return Grid::make(1, core::List::make<double>(*Result));
 }
 
 core::GlobalSlot<std::shared_ptr<Casing>> Casing::temper_statics::first;
@@ -567,19 +571,35 @@ static int32_t rows(std::shared_ptr<std::vector<double>> const & values, int32_t
   return core::Int::div_wrap(core::List::length<double>(values), ncols);
 }
 
-static std::shared_ptr<Grid> scaled(std::shared_ptr<Grid> const & grid) {
+std::shared_ptr<NoColumns> NoColumns::make() {
+  std::shared_ptr<NoColumns> self = std::make_shared<NoColumns>();
+  return self;
+}
+
+core::Str NoColumns::get_message() const {
+  return TEMPER_STR("no columns");
+}
+
+static core::Expected<std::shared_ptr<Grid>, std::shared_ptr<NoColumns>> scaled(std::shared_ptr<Grid> const & grid) {
   if (grid->ncols == 0) {
-    core::bubble();
+    return core::unexpected(NoColumns::make());
   }
   return grid;
 }
 
 static std::shared_ptr<std::vector<double>> cubes(std::shared_ptr<Grid> const & grid) {
-  try {
-    std::shared_ptr<std::vector<double>> more = core::List::map(libraries::scaled(grid)->values, [](double x) -> double { return x * x * x; });
+  auto result = [&]() -> core::Expected<std::shared_ptr<std::vector<double>>, std::shared_ptr<NoColumns>> {
+    auto scaledResult = libraries::scaled(grid);
+    if (!scaledResult.has_value()) {
+      return core::unexpected(scaledResult.error());
+    }
+    std::shared_ptr<std::vector<double>> more = core::List::map((*scaledResult)->values, [](double x) -> double { return x * x * x; });
     return more;
-  } catch (core::TemperBubble const &) {
-    core::panic();
+  }();
+  if (result.has_value()) {
+    return *result;
+  } else {
+    core::panic_caused_by(result.error());
   }
 }
 
@@ -612,11 +632,7 @@ static double cube(double x) {
 }
 
 static double corner(std::shared_ptr<Grid> const & grid) {
-  try {
-    return grid->get(1, 1);
-  } catch (core::TemperBubble const &) {
-    return -1.0;
-  }
+  return grid->get(1, 1);
 }
 
 static std::shared_ptr<Grid> maybe(int32_t n) {
@@ -629,10 +645,11 @@ static std::shared_ptr<Grid> maybe(int32_t n) {
 
 static std::shared_ptr<std::vector<double>> mapped(std::shared_ptr<Grid> const & grid) {
   std::shared_ptr<Grid> value2;
-  try {
-    value2 = libraries::scaled(grid);
-  } catch (core::TemperBubble const &) {
-    core::panic();
+  auto scaledResult = libraries::scaled(grid);
+  if (scaledResult.has_value()) {
+    value2 = *scaledResult;
+  } else {
+    core::panic_caused_by(scaledResult.error());
   }
   return core::List::map(value2->values, [](double x) -> double { if (core::Float64::gt(x, 1.5)) { return x * 2.0; } else { return x; } });
 }
@@ -727,9 +744,10 @@ static std::shared_ptr<Casing> casing(int32_t n) {
 
 static core::Str captured(core::Str const & s) {
   std::shared_ptr<Grid> found;
-  try {
-    found = libraries::parseGrid(s);
-  } catch (core::TemperBubble const &) {
+  auto parseGridResult = libraries::parseGrid(s);
+  if (parseGridResult.has_value()) {
+    found = *parseGridResult;
+  } else {
     found = nullptr;
   }
   return core::List::join(core::List::map(core::List::make<int32_t>(1, 2), [=](int32_t) -> bool { return found == nullptr; }), TEMPER_STR(","), [](bool b) -> core::Str { return core::Boolean::toString(b); });

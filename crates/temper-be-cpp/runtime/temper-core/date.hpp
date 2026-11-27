@@ -34,7 +34,7 @@ namespace temper {
                 int64_t y = d->year;
                 int64_t m = d->month;
                 if (m < 1 || m > 12) {
-                    bubble<int32_t>("month out of range");
+                    panic<int32_t>("month out of range");
                 }
                 if (m < 3) {
                     y = y - 1;

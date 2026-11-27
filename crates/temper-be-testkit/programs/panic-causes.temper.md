@@ -1,23 +1,26 @@
 # Panic causes
 
 When something goes wrong, the report says what, and why where it
-knows: a panic that replaces a bubble keeps the bubble as its cause,
+knows: a panic that replaces a failure keeps the failure as its cause,
 in each language's own way where it has one (a Java or JavaScript
 cause, Python's `raise … from`, a C# inner exception) and in the
 message where it hasn't (C++, Lua, and Rust say `caused by: …`). A
-failure that nothing handles, a bubble or a panic, ends the run saying
-what it was, with a stack trace where the language gives one. Each
-section here is a run of its own, as each ends at its failure:
+failure that nothing handles, or a panic, ends the run saying what it
+was, with a stack trace where the language gives one. Each section
+here is a run of its own, as each ends at its failure:
 
-    let positive(n: Int): Int throws Bubble {
-      if (n <= 0) { bubble() }
+    sealed interface Problem extends Error {}
+    class NotPositive(public n: Int) extends Problem {}
+
+    let positive(n: Int): Int throws NotPositive {
+      if (n <= 0) { throw new NotPositive(n) }
       n
     }
     console.log("before");
 
 ## Panic in orelse
 
-`orelse panic()` panics in place of the bubble, which stays its cause:
+`orelse panic()` panics in place of the failure, which stays its cause:
 
     let p = positive(-1) orelse panic();
     console.log("after ${p}");
@@ -27,15 +30,15 @@ before
 ```
 
 ```stderr interp
-Panicked: panic(), caused by a bubble
+Panicked: panic(), caused by NotPositive: not positive (n: -1)
 ```
 
 ```stderr cpp
 panic
-caused by: bubble
+caused by: not positive (n: -1)
 ```
 
-The bubble it replaced isn't reported as uncaught too:
+The failure it replaced isn't reported as uncaught too:
 
 ```stderr-absent cpp
 uncaught
@@ -43,32 +46,34 @@ uncaught
 
 ```stderr csharp
 TemperLang.Core.Panic: panic
----> TemperLang.Core.Bubble
+.NotPositive: not positive (n: -1)
 ```
 
 ```stderr java
 java.lang.AssertionError: panic
-Caused by: temper.core.Bubble
+Caused by:
+.NotPositive: not positive (n: -1)
 ```
 
 ```stderr js
 Error: panic
-[cause]: Bubble
+[cause]: NotPositive
 ```
 
 ```stderr lua
 panic
-caused by: Bubble
+caused by: not positive (n: -1)
 ```
 
 ```stderr py
+not positive (n: -1)
 The above exception was the direct cause of the following exception:
 BaseException: panic
 ```
 
 ```stderr rust
 panic
-caused by: bubble
+caused by: not positive (n: -1)
 ```
 
 ## Panic passing orelse panic
@@ -76,7 +81,7 @@ caused by: bubble
 A panic in the body passes `orelse panic()` untouched, as it passes any
 `orelse`, saying what it said, not "panic":
 
-    let read(ls: List<Int>, i: Int): Int throws Bubble {
+    let read(ls: List<Int>, i: Int): Int throws NotPositive {
       positive(i + 1);
       ls[i]
     }
@@ -101,12 +106,12 @@ direct cause
 
 ```stderr-absent csharp
 Panic: panic
----> TemperLang.Core.Bubble
+NotPositive
 ```
 
 ```stderr-absent java
 AssertionError: panic
-Caused by: temper.core.Bubble
+NotPositive
 ```
 
 ```stderr-absent js
@@ -119,13 +124,14 @@ BaseException: panic
 
 ## Panic in orelse whose body returns
 
-A body that may `return` runs in place, where it can, and its bubble
-stays the panic's cause there too:
+A body that may `return` runs in place, where it can, and its failure
+stays the panic's cause there too. Its call comes first, as C++ can't
+yet run a body that jumps out of itself otherwise:
 
     let checked(n: Int): Int {
       do {
-        if (n == 0) { return 0 }
-        positive(n);
+        let p = positive(n);
+        if (p == 1) { return 0 }
       } orelse panic();
       n
     }
@@ -136,12 +142,12 @@ before
 ```
 
 ```stderr interp
-Panicked: panic(), caused by a bubble
+Panicked: panic(), caused by NotPositive: not positive (n: -1)
 ```
 
 ```stderr cpp
 panic
-caused by: bubble
+caused by: not positive (n: -1)
 ```
 
 ```stderr-absent cpp
@@ -150,47 +156,54 @@ uncaught
 
 ```stderr csharp
 TemperLang.Core.Panic: panic
----> TemperLang.Core.Bubble
+.NotPositive: not positive (n: -1)
 ```
 
 ```stderr java
 java.lang.AssertionError: panic
-Caused by: temper.core.Bubble
+Caused by:
+.NotPositive: not positive (n: -1)
 ```
 
 ```stderr js
 Error: panic
-[cause]: Bubble
+[cause]: NotPositive
 ```
 
 ```stderr lua
 panic
-caused by: Bubble
+caused by: not positive (n: -1)
 ```
 
 ```stderr py
+not positive (n: -1)
 The above exception was the direct cause of the following exception:
 BaseException: panic
 ```
 
 ```stderr rust
 panic
-caused by: bubble
+caused by: not positive (n: -1)
 ```
 
-## Uncaught bubble
+## Uncaught failure
 
-A bubble nothing handles ends the run, saying it bubbled:
+A failure that top-level code passes on with `try` ends the run, saying
+what it was:
 
-    positive(-1);
+    try positive(-1);
     console.log("after");
 
 ```log
 before
 ```
 
+```stderr
+not positive (n: -1)
+```
+
 ```stderr interp
-Failed
+Failed with NotPositive
 ```
 
 ```stderr-absent interp
@@ -198,36 +211,32 @@ Panicked
 ```
 
 ```stderr cpp
-uncaught bubble: bubble
+uncaught failure: not positive (n: -1)
 ```
 
 ```stderr csharp
-TemperLang.Core.Bubble
+NotPositive
 Global.Positive(Int32 n)
 ```
 
 ```stderr java
-temper.core.Bubble
+NotPositive
 Global.positive(
 ```
 
 ```stderr js
-Bubble
+NotPositive
 at positive (
-```
-
-```stderr lua
-Bubble
 ```
 
 ```stderr py
 Traceback
 in _positive
-temper_core.Bubble
+NotPositive
 ```
 
 ```stderr rust
-uncaught bubble: bubble
+uncaught failure: not positive (n: -1)
 ```
 
 ## Uncaught panic

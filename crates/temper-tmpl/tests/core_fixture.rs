@@ -261,7 +261,7 @@ fn fixture_members(p: &Program) -> HashMap<String, Member> {
                 kind,
                 params,
                 result: unnumbered(&result),
-                bubbles: sig.bubbles(),
+                bubbles: sig.fails(),
                 connected: d.facts.contains(Facts::CONNECTED),
             },
         );

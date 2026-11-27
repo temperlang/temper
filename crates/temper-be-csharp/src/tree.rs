@@ -265,9 +265,6 @@ pub enum Stmt {
         params: Vec<(String, String)>,
         body: Vec<Stmt>,
     },
-    /// A call that always throws, `Core.Bubble();`, after which nothing
-    /// runs.
-    Bubble(Expr),
     /// A block of its own, which scopes its locals.
     Block(Vec<Stmt>),
     /// `ty name = value;`, or `ty name;`.
@@ -319,11 +316,11 @@ pub enum Stmt {
     Throw(Expr),
     /// Lines of code as written, each indented in place: a helper's body.
     Raw(String),
-    /// `try { … } catch (Bubble) { … }`: Temper's `orelse` or `catch`,
-    /// catching only what its body may fail with, the runtime's `Bubble`
-    /// or a declared failure's class (`class`, as the translator names
-    /// it), `catch (Bubble name)` where `var` names it, and `catch
-    /// (Exception name) when (filter)` where it's several.
+    /// `try { … } catch (NotFound) { … }`: Temper's `orelse` or `catch`,
+    /// catching only what its body may fail with, a declared failure's
+    /// class (`class`, as the translator names it), `catch (NotFound
+    /// name)` where `var` names it, and `catch (Exception name) when
+    /// (filter)` for any error, core's `Error`.
     TryCatch {
         body: Vec<Stmt>,
         class: Expr,
@@ -664,7 +661,7 @@ fn stmt(out: &mut Printed, s: &Stmt, depth: usize) {
     }
     indent(out, depth);
     match s {
-        Stmt::Expr(e) | Stmt::Bubble(e) => {
+        Stmt::Expr(e) => {
             let _ = writeln!(out, "{};", expr(e, TOP));
         }
         Stmt::Block(_) => {}

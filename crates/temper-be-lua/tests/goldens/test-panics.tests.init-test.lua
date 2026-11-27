@@ -3,12 +3,34 @@ local tested = require("test-panics")["$test"]
 local luaunit = require("luaunit")
 luaunit.FAILURE_PREFIX = temper.test_failure_prefix
 
+---@class test-panics.Problem: temper.Failure
+
+---@class test-panics.Problem.type: temper.Type
+local Problem = temper.type("test-panics.Problem", temper.Failure)
+
+---@class test-panics.Oops: test-panics.Problem
+---@field message string
+
+---@class test-panics.Oops.type: temper.Type
+---@operator call: test-panics.Oops
+local Oops = temper.type("test-panics.Oops", Problem)
+
+---@param this test-panics.Oops
+function Oops.constructor(this)
+end
+
+---@param this test-panics.Oops
+---@return string
+function Oops.get.message(this)
+  return "oops"
+end
+
 ---@param ls integer[]
 ---@param i integer
 ---@return integer
 local function at(ls, i)
   if i == 99 then
-    return temper.bubble()
+    error(Oops())
   end
   return temper.list_get(ls, i)
 end
@@ -29,9 +51,9 @@ function Test_.test_panics_reading_past_the_end()
   temper.test("panics reading past the end", function(test)
     ---@type integer
     local n
-    if not temper.pcall(function()
+    if not temper.catch(function()
       n = at({ 1, 2 }, 5)
-    end) then
+    end, Oops) then
       n = -1
     end
     do

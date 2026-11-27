@@ -565,7 +565,7 @@ impl<'a> Translator<'a> {
                 }
                 Node::Method { decl, .. } => {
                     // A failure's `Display` is its message.
-                    if is_plain_to_string(p, decl) && !self.bubbles_decl(decl) && !failure {
+                    if is_plain_to_string(p, decl) && !self.fails_decl(decl) && !failure {
                         display = true;
                     }
                     let mut member = self.method_member(m, This::Class, Params::Method)?;
@@ -722,8 +722,8 @@ impl<'a> Translator<'a> {
         let Some(message) = message else {
             return not_yet("a failure class without a message getter");
         };
-        if self.bubbles_decl(message) {
-            return not_yet("a failure's message that bubbles");
+        if self.fails_decl(message) {
+            return not_yet("a failure's message that may fail");
         }
         let cause = self.cause_field(class).unwrap_or_default();
         Ok(Item::Macro(Expr::Macro(
@@ -813,8 +813,8 @@ impl<'a> Translator<'a> {
         Ok(items)
     }
 
-    fn bubbles_decl(&self, decl: DeclId) -> bool {
-        self.p.signature(decl).is_some_and(|s| s.bubbles())
+    fn fails_decl(&self, decl: DeclId) -> bool {
+        self.p.signature(decl).is_some_and(|s| s.fails())
     }
 
     /// Whether a class's method is its `==`, which Rust's `PartialEq`
@@ -826,7 +826,7 @@ impl<'a> Translator<'a> {
             && d.facts.contains(Facts::OPERATOR_EQ)
             && !self.is_private(decl)
             && self.p.signature(decl).is_some_and(|s| {
-                !s.bubbles()
+                !s.fails()
                     && s.pass == TypeId::BOOLEAN
                     && s.params.len() == 1
                     && nominal_decl(self.p, s.params[0]) == Some(class)
@@ -845,7 +845,7 @@ impl<'a> Translator<'a> {
     /// Whether a method is a plain `toString()` that's its class's
     /// `Display`.
     pub(crate) fn display_hook(&self, method: DeclId) -> bool {
-        self.own(method) && is_plain_to_string(self.p, method) && !self.bubbles_decl(method)
+        self.own(method) && is_plain_to_string(self.p, method) && !self.fails_decl(method)
     }
 
     /// `impl ShapeTrait for Rect`: `clone_boxed`, and each of the
@@ -1455,7 +1455,7 @@ impl<'a> Translator<'a> {
     }
 
     /// A constructor's `new`, from its statements and the instance it
-    /// makes, `Ok(…)` where it bubbles.
+    /// makes, `Ok(…)` where it may fail.
     fn constructor_member(
         &mut self,
         class: DeclId,

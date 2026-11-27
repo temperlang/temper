@@ -97,15 +97,14 @@ where host code passes a value of a type of its own under it:
       }
     }
 
-An `orelse` handles a bubble and a declared failure alike (a
-multi-catch in Java, a `catch` with a filter in C#), and a `catch`
+An `orelse` handles failures of different types alike (catching their
+nearest common type, here the library's root), and a `catch`
 whose handler jumps out keeps the failure for it (a `catch` whose body
 jumps out of its loop is `failure-jumps`, which Rust and C++ don't have
 yet):
 
-    let nonzero(n: Int): Int throws Bubble { if (n == 0) { bubble() } else { n } }
-    export let mixed(key: String, n: Int): Int {
-      (lookup(key) + 10 / nonzero(n)) orelse -1
+    export let mixed(key: String, text: String): Int {
+      (lookup(key) + 10 / sign(text)) orelse -1
     }
 
     export let firstSign(texts: List<String>): String {
@@ -128,14 +127,14 @@ yet):
     }
 
     console.log("${lookup("a")} ${sign("-")} ${setting("a")}");
-    console.log("${mixed("a", 0)} ${mixed("z", 1)} ${mixed("a", 5)}");
+    console.log("${mixed("a", "")} ${mixed("z", "+")} ${mixed("a", "-")}");
     console.log("${explained("port")}; ${explained("a")}; ${signMessage("x")}");
     console.log("${earlyCause("soon")}; ${firstMissing(["a", "b", "c"])} ${firstMissing(["a"])}");
     console.log("${firstSign(["", "+"])} ${firstSign(["", "?"])} ${firstSign([])}");
 
 ```log
 1 -1 1
--1 -1 3
+-1 -1 -9
 lookup failed (name: port) for port, from not found (key: port); 1; bad sign (text: x)
 not found (key: soon); b none
 1 bad ? none

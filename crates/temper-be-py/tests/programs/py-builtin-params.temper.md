@@ -133,8 +133,10 @@ list of its items' literal types (`list[Literal[0]]`).
       if (more) { sizes = [3]; }
       sizes.length
     }
-    export let helpOf(d: Described): String throws Bubble {
-      let option = if (d is Option) { d } else { bubble() };
+    export sealed interface OptionError extends Error {}
+    export class NotAnOption extends OptionError {}
+    export let helpOf(d: Described): String throws NotAnOption {
+      let option = if (d is Option) { d } else { throw new NotAnOption() };
       option.help
     }
     export let pieces(n: Int): List<Int> {

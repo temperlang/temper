@@ -1,8 +1,7 @@
 import {
   ParseError,
-  bubble,
   divIntInt,
-  isBubble,
+  failureBase,
   panic,
   stringToInt32,
   type,
@@ -79,10 +78,11 @@ function halved(s, d) {
 /**
  * @param {number} n
  * @returns {number}
+ * @throws {Negative}
  */
 function positive(n) {
   if (n < 0) {
-    bubble();
+    throw new Negative(n);
   }
   return n;
 }
@@ -95,7 +95,7 @@ function checked(n) {
   try {
     return positive(n);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof Negative)) throw e$;
     return panic("panic", e$);
   }
 }
@@ -135,7 +135,7 @@ function reason(n, why) {
     positive(n);
     return "ok";
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof Negative)) throw e$;
     return why == null ? "fails" : why;
   }
 }
@@ -193,6 +193,31 @@ export class Node extends type() {
   }
 }
 
+class Problem extends Error {}
+
+failureBase(Problem);
+
+class Negative extends Problem {
+  /** @type {number} */
+  #n;
+
+  /** @param {number} n */
+  constructor(n) {
+    super();
+    this.#n = n;
+  }
+
+  /** @returns {number} */
+  get n() {
+    return this.#n;
+  }
+
+  /** @returns {string} */
+  get message() {
+    return `negative (n: ${this.#n})`;
+  }
+}
+
 console.log(describe(null));
 console.log(describe(41));
 console.log(firstWord("hi") ?? "nothing");
@@ -213,7 +238,7 @@ if (tail != null) {
 try {
   positive(-1);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof Negative)) throw e$;
   console.log("negative");
 }
 /** @type {number} */
@@ -221,7 +246,7 @@ let fallback;
 try {
   fallback = positive(-2);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof Negative)) throw e$;
   fallback = 0;
 }
 console.log(fallback.toString());

@@ -1,54 +1,69 @@
 tmpl 1 model 1 library `panic-causes-panic-in-an-async-block` 0.0.0
 
 uses `temper-core`#3 0.0.0-alpha.0.0 {
-  class List#4<T#5> extends Listed#6<T#5> {
-    connected method get#13(index: Int32): T#5;
+  interface Error#4 {}
+  class List#9<T#10> extends Listed#11<T#10> {
+    connected method get#22(index: Int32): T#10;
   }
-  interface Listed#6<T#7> {}
-  interface Console#9 {
-    connected method log#10(message: String): Void;
+  interface Listed#11<T#12> {}
+  class Int32#15 {
+    connected method toString#16(radix?: Int32): String;
   }
-  connected fn async#14(generatorFactory: fn (): SafeGenerator#15<Empty#19>): Void;
-  interface SafeGenerator#15<YIELD#16> extends Generator#17<YIELD#16> {}
-  interface Generator#17<YIELD#18> {}
-  class Empty#19 {}
-  class ValueResult#20<YIELD#21> extends GeneratorResult#22<YIELD#21> {
-    connected constructor constructor#24(value: YIELD#21): ValueResult#20<YIELD#21>;
+  interface Console#18 {
+    connected method log#19(message: String): Void;
   }
-  interface GeneratorResult#22<YIELD#23> {}
-  connected fn doneResult#25<YIELD#26>(): DoneResult#27<YIELD#26>;
-  class DoneResult#27<YIELD#28> extends GeneratorResult#22<YIELD#28> {}
-  connected fn empty#29(): Empty#19;
-  connected fn safeAdaptGeneratorFn#30<YIELD#31>(step: fn (SafeGenerator#15<YIELD#31>): GeneratorResult#22<YIELD#31>): SafeGenerator#15<YIELD#31>;
-  connected fn awakeUpon#32<T#33>(promise: Promise#34<T#33>, generator: SafeGenerator#15<Empty#19>): Void;
-  class Promise#34<R#35> {}
-  connected fn getPromiseResultSync#36<T#37>(promise: Promise#34<T#37>): T#37 throws BrokenPromise#38;
-  class BrokenPromise#38 extends CoreError#39 {}
-  interface CoreError#39 extends Error#40 {}
-  interface Error#40 {}
-  connected fn getConsole#42(name?: String): Console#9;
+  connected fn async#23(generatorFactory: fn (): SafeGenerator#24<Empty#28>): Void;
+  interface SafeGenerator#24<YIELD#25> extends Generator#26<YIELD#25> {}
+  interface Generator#26<YIELD#27> {}
+  class Empty#28 {}
+  class ValueResult#29<YIELD#30> extends GeneratorResult#31<YIELD#30> {
+    connected constructor constructor#33(value: YIELD#30): ValueResult#29<YIELD#30>;
+  }
+  interface GeneratorResult#31<YIELD#32> {}
+  connected fn doneResult#34<YIELD#35>(): DoneResult#36<YIELD#35>;
+  class DoneResult#36<YIELD#37> extends GeneratorResult#31<YIELD#37> {}
+  connected fn empty#38(): Empty#28;
+  connected fn safeAdaptGeneratorFn#39<YIELD#40>(step: fn (SafeGenerator#24<YIELD#40>): GeneratorResult#31<YIELD#40>): SafeGenerator#24<YIELD#40>;
+  connected fn awakeUpon#41<T#42>(promise: Promise#43<T#42>, generator: SafeGenerator#24<Empty#28>): Void;
+  class Promise#43<R#44> {}
+  connected fn getPromiseResultSync#45<T#46>(promise: Promise#43<T#46>): T#46 throws BrokenPromise#47;
+  class BrokenPromise#47 extends CoreError#48 {}
+  interface CoreError#48 extends Error#4 {}
+  connected fn getConsole#50(name?: String): Console#18;
 }
 
 module `panic-causes-panic-in-an-async-block`#0 {
-  let ~console#11: Console#9;
+  let ~console#20: Console#18;
 
-  fn positive#1(n#8: Int32): Int32 throws Bubble {
-    if (%Int32.le(n#8, 0)) {
-      (bubble()^): Void;
+  interface Problem#1 extends Error#4 {}
+
+  class NotPositive#2 extends Problem#1 {
+    let n#5: Int32;
+    constructor constructor#6(n#13: Int32): NotPositive#2 {
+      this.n#5 = n#13;
     }
-    return n#8;
+    get message#14(): String {
+      return %String.cat(%String.cat("not positive (n: ", this.n#5.toString#16(omitted)), ")");
+    }
   }
 
-  fn third#2(ls#12: List#4<Int32>): Int32 {
-    return ls#12.get#13(2);
+  fn positive#7(n#17: Int32): Int32 throws NotPositive#2 {
+    if (%Int32.le(n#17, 0)) {
+      (throw(new constructor#6(n#17))^): Void;
+    }
+    return n#17;
+  }
+
+  fn third#8(ls#21: List#9<Int32>): Int32 {
+    return ls#21.get#22(2);
   }
 
   init {
-    init ~console#11 = getConsole#42(omitted);
-    ~console#11.log#10("before");
-    async#14((fn generator ~fn#41(): SafeGenerator#15<Empty#19> {
-      ~console#11.log#10("in async");
-      third#2((list(1, 2)): List#4<Int32>);
-    }): fn (): SafeGenerator#15<Empty#19>);
+    init ~console#20 = getConsole#50(omitted);
+    ~console#20.log#19("before");
+    async#23((fn generator ~fn#49(): SafeGenerator#24<Empty#28> {
+      ~console#20.log#19("in async");
+      third#8((list(1, 2)): List#9<Int32>);
+    }): fn (): SafeGenerator#24<Empty#28>);
   }
 }

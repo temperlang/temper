@@ -63,7 +63,7 @@ module `myers-diff`#0 {
 
   export let ChangeTypeDeletion#24: String;
 
-  export fn formatPatch#25(patch#34: Patch#2<String>): String throws Bubble {
+  export fn formatPatch#25(patch#34: Patch#2<String>): String {
     var formatted#35: String = "";
     let changes#36: List#10<Change#1<String>> = patch#34.changes#16;
     let n#37: Int32 = changes#36.length#38();
@@ -104,7 +104,7 @@ module `myers-diff`#0 {
     }
   }
 
-  export fn diff#27<T#28>(left#54: List#10<T#28>, right#55: List#10<T#28>, eq#56: fn (T#28, T#28): Boolean): Patch#2<T#28> throws Bubble {
+  export fn diff#27<T#28>(left#54: List#10<T#28>, right#55: List#10<T#28>, eq#56: fn (T#28, T#28): Boolean): Patch#2<T#28> {
     let leftLength#57: Int32 = left#54.length#38();
     let rightLength#58: Int32 = right#55.length#38();
     let reachedRowLength#59: Int32 = %Int32.add(leftLength#57, 1);
@@ -194,6 +194,6 @@ module `myers-diff`#0 {
     init ChangeTypeUnchanged#26 = "Unchanged";
     ~console#111.log#110(formatPatch#25(diff#27<String>(%String.cat(%String.cat("Hello,", "\n"), "World!").split#113("\n"), %String.cat(%String.cat("Hello,", "\n"), "Cosmos!").split#113("\n"), (fn ~fn#114(a#115: String, b#116: String): Boolean {
       return %String.eq(a#115, b#116);
-    }): fn (String, String): Boolean)^)^);
+    }): fn (String, String): Boolean)));
   }
 }

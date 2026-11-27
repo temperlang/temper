@@ -103,7 +103,7 @@ const x = 1;
 const x__2 = (x + 1) | 0;
 twice(x__2);
 interactive#5: void
-Failed: translate: the language is cpp, csharp, java, js, lua, py, or rust
+Panicked: translate: the language is cpp, csharp, java, js, lua, py, or rust
 interactive#6: fail
 
 === translate into each language
@@ -413,7 +413,7 @@ interactive#7:1:22: error: missing has not been declared
     let more = p.sum() + missing
                          ^^^^^^^
 interactive#7: fail
-Failed: translate: the module has errors, so it isn't translated:
+Panicked: translate: the module has errors, so it isn't translated:
 interactive.temper:8:22: error: missing has not been declared
 interactive#8: fail
 
@@ -477,15 +477,15 @@ translate(5, "js")
 interactive#0: void
 1 promise is unresolved.
 interactive#1: fail
-Failed: translate: the module has errors, so it isn't translated:
+Panicked: translate: the module has errors, so it isn't translated:
 interactive.temper:4:11: error: await outside generator function body
 A top-level await runs only in the REPL; to translate it, put it in an async block, as async { (): GeneratorResult<Empty> extends GeneratorFn => … }
 interactive#2: fail
-Failed: translate: the module has errors, so it isn't translated:
+Panicked: translate: the module has errors, so it isn't translated:
 interactive.temper:4:11: error: await outside generator function body
 A top-level await runs only in the REPL; to translate it, put it in an async block, as async { (): GeneratorResult<Empty> extends GeneratorFn => … }
 interactive#3: fail
-Failed: describe: the module has errors, so it isn't translated:
+Panicked: describe: the module has errors, so it isn't translated:
 interactive.temper:4:11: error: await outside generator function body
 A top-level await runs only in the REPL; to translate it, put it in an async block, as async { (): GeneratorResult<Empty> extends GeneratorFn => … }
 interactive#4: fail
@@ -493,7 +493,7 @@ interactive#5:1:16: error: Cannot assign to Int32 from String
     let bad: Int = "many"
                    ^^^^^^
 interactive#5: void
-Failed: translate: the module has errors, so it isn't translated:
+Panicked: translate: the module has errors, so it isn't translated:
 interactive.temper:2:16: error: Cannot assign to Int32 from String
 interactive#6: fail
 

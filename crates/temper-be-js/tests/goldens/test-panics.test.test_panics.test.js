@@ -1,4 +1,4 @@
-import { bubble, endTest, isBubble, listedGet, panic } from "@temperlang/core";
+import { endTest, failureBase, listedGet, panic } from "@temperlang/core";
 import { it } from "node:test";
 import { Test } from "@temperlang/std/testing";
 
@@ -6,12 +6,24 @@ import { Test } from "@temperlang/std/testing";
  * @param {readonly number[]} ls
  * @param {number} i
  * @returns {number}
+ * @throws {Oops}
  */
 function at(ls, i) {
   if (i === 99) {
-    bubble();
+    throw new Oops();
   }
   return listedGet(/** @type {number[]} */ (ls), i);
+}
+
+class Problem extends Error {}
+
+failureBase(Problem);
+
+class Oops extends Problem {
+  /** @returns {string} */
+  get message() {
+    return "oops";
+  }
 }
 
 it("passes before", async function () {
@@ -40,7 +52,7 @@ it("panics reading past the end", async function () {
     try {
       n = at(Object.freeze([1, 2]), 5);
     } catch (e$) {
-      if (!isBubble(e$)) throw e$;
+      if (!(e$ instanceof Oops)) throw e$;
       n = -1;
     }
     {

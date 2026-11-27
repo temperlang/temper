@@ -32,8 +32,10 @@ log true 0
 === Test.fail records its message and ends the test, past any orelse
 // Outside a test runner, its failure ends the run, saying the test's
 // messages, the soft ones before it too.
+sealed interface Problem extends Error {}
+class Oops() extends Problem {}
 let { Test } = import("std/testing");
-let tries(f: fn (): Void throws Bubble): Void { f() orelse console.log("swallowed"); }
+let tries(f: fn (): Void throws Oops): Void { f() orelse console.log("swallowed"); }
 let test = new Test();
 test.assert(false) { "soft" };
 tries { test.fail("hard") };

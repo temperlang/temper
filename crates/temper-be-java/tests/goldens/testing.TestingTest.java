@@ -1,6 +1,5 @@
 package testing;
 
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.std.testing.Test;
 
@@ -9,7 +8,7 @@ public final class TestingTest {
     static final int base;
 
     static {
-        Bubble.keepStackTraces();
+        Core.keepStackTraces();
         TestingGlobal.initStatics();
         runs = 0;
         base = 10;

@@ -106,7 +106,7 @@ pub(crate) fn assert_more_things(
     t: temper_std::testing::Test,
     helper: TestHelper,
     strings: impl temper_core::ToList<temper_core::List<Arc<String>>>,
-) -> temper_core::Result<()> {
+) {
     let strings = strings.to_list();
     let mut i: i32 = 0;
     while i < temper_core::ListedTrait::len(&strings) {
@@ -141,7 +141,6 @@ pub(crate) fn assert_more_things(
         }
         i = i.wrapping_add(1);
     }
-    Ok(())
 }
 
 #[cfg(test)]
@@ -205,7 +204,7 @@ mod tests {
             test.clone(),
             helper.clone(),
             Arc::new(vec![Arc::new(vec![Arc::new("bye".to_string())])]),
-        )?;
+        );
         work.finish();
         test.soft_fail_to_hard();
         Ok(())

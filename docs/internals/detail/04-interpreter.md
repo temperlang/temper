@@ -207,8 +207,8 @@ by position; a jump from a `for … of` body goes to a
 [`Landing`](../../../crates/temper-frontend/src/interp/lower.rs).
 Anything else returns to the caller.
 
-A declared failure (RFC 164) is an `Abrupt::Throw` with its object,
-handled as a bubble is. A handler whose fallback needs the failure, for
+A failure, always a declared one (RFC 164), is an `Abrupt::Throw` with
+its object: one of a failure type, or a core failure from a builtin. A handler whose fallback needs the failure, for
 a `catch (e)` binding or as the cause of a `throw` there, keeps it in a
 slot of its own; a `for … of` body made there captures it after its
 variables. A failure keeps where it was first thrown and its cause, for
@@ -245,11 +245,13 @@ classes, objects, generators, promises, and a few of std's connected
 values. Types are mostly ignored at run time; they matter for `is`,
 `as`, and picking a generator's kind.
 
-An error node fails where it runs, with its message, as each backend's
-generated code does. An error that's only about a value's type
-(*type-only*) runs as written, as in the dynamically typed backends:
+An error node panics where it runs, with its message (`Panicked: …`),
+as each backend's generated code does, so no `orelse` catches it; so
+do the interpreter's own errors, as a value of the wrong kind. An error
+that's only about a value's type (*type-only*) runs as written, as in
+the dynamically typed backends:
 [`error_at`](../../../crates/temper-frontend/src/interp/lower.rs)
-emits a failing op only for errors that aren't type-only.
+emits a panicking op only for errors that aren't type-only.
 
 **Pros:** keeps the interpreter small and lets it run ill-typed code,
 so one mistake never hides a library's other test results.

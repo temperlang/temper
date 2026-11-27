@@ -862,7 +862,7 @@ impl<'a> Analysis<'a> {
     /// outside it carries that state there ([`Analysis::exit`]), as do
     /// those in `for … of` bodies, whose jumps leave the function; other
     /// functions' can't reach out. It completes with the state, unless
-    /// it's a jump, `return`, `bubble()`, `panic()`, or a call whose result
+    /// it's a jump, `return`, `throw`, `panic()`, or a call whose result
     /// is `Never<T>` itself, which never complete
     /// ([`crate::typing::never_returns`]). Anything else is taken to
     /// complete, which can only add a state to the joins after it.

@@ -24,7 +24,7 @@
 //! branches merge by intersection; a loop starts each pass with what held
 //! on entry, since nothing unsets a field, and what follows it is what
 //! its `break`s carry; an `orelse`'s fallback starts with what held before
-//! its body; and a path that bubbles or panics needs nothing set. Each
+//! its body; and a path that throws or panics needs nothing set. Each
 //! offending use of `this` gets one error, naming the fields not yet set.
 
 use crate::core::{

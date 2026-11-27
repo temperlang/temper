@@ -654,7 +654,7 @@ fn test_bail(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
 }
 
 /// `blockPanics(block)`, core's, which catches a panic, anything but a
-/// bubble or a test's failure, for std's `Test.assertPanics`.
+/// declared failure or a test's failure, for std's `Test.assertPanics`.
 fn test_panics(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let [_, block] = args else {
         return Err(NotYet {

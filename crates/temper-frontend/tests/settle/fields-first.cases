@@ -426,12 +426,14 @@ class BadInit {
 error 80..86: Reading this.b before b is set
 error 133..134: Reading this.b before b is set
 
-=== a bubbling path
+=== a failing path
+sealed interface Problem extends Error {}
+class Oops() extends Problem {}
 class Ok {
   public a: Int;
-  public constructor(x: Int): Void throws Bubble {
+  public constructor(x: Int): Void throws Oops {
     if (x < 0) {
-      bubble();
+      throw new Oops();
     }
     if (x > 9) {
       panic();
@@ -444,7 +446,7 @@ class Ok {
 }
 class Bad {
   public a: Int;
-  public constructor(x: Int): Void throws Bubble {
+  public constructor(x: Int): Void throws Oops {
     this.a = (x / 2) orelse this.text().size;
   }
   public text(): String { "" }
@@ -452,42 +454,46 @@ class Bad {
 console.log(new Ok(5).a.toString());
 --- settled
 (Block
+  (Interface ^Problem:0 Error)
+  (Class ^Oops:1 Problem:0)
   (Class
-    ^Ok:0
-    (Let ^a:3 Int)
+    ^Ok:2
+    (Let ^a:7 Int)
     (Constructor
-      ^constructor:4
+      ^constructor:8
       (Fn
-        (Let ^x:6 Int)
-        (Call throws Void Bubble)
+        (Let ^x:10 Int)
+        (Call throws Void Oops:1)
         (Block
-          (If (Call < x:6 0) (Block (Fail) #void) (Block))
+          (If (Call < x:10 0) (Block (Fail (Call new Oops:1)) #void) (Block))
           (If
-            (Call > x:6 9)
+            (Call > x:10 9)
             (Block (Call panic) #void)
-            (Block (Assign (Call . this#2 \a) x:6) #void))
-          (Call (Call . console \log) (Call (Call . this#2 \text)))
+            (Block (Assign (Call . this#6 \a) x:10) #void))
+          (Call (Call . console \log) (Call (Call . this#6 \text)))
           #void)))
-    (Method ^text:5 (Fn String (Block (Call (Call . a:3 \toString))))))
+    (Method ^text:9 (Fn String (Block (Call (Call . a:7 \toString))))))
   (Class
-    ^Bad:1
-    (Let ^a:8 Int)
+    ^Bad:3
+    (Let ^a:12 Int)
     (Constructor
-      ^constructor:9
+      ^constructor:13
       (Fn
-        (Let ^x:11 Int)
-        (Call throws Void Bubble)
+        (Let ^x:15 Int)
+        (Call throws Void Oops:1)
         (Block
           (Assign
-            (Call . this#7 \a)
-            (Orelse (Call / x:11 2) (Call . (Call (Call . this#7 \text)) \size)))
+            (Call . this#11 \a)
+            (Orelse
+              (Call / x:15 2)
+              (Call . (Call (Call . this#11 \text)) \size)))
           #void)))
-    (Method ^text:10 (Fn String (Block ""))))
+    (Method ^text:14 (Fn String (Block ""))))
   (Call
     (Call . console \log)
-    (Call (Call . (Call . (Call new Ok:0 5) \a) \toString)))
+    (Call (Call . (Call . (Call new Ok:2 5) \a) \toString)))
   #void)
-error 372..381: Calling this.text() before a is set
+error 450..459: Calling this.text() before a is set
 log 5
 log 5
 

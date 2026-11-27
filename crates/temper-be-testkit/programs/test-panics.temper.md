@@ -6,8 +6,11 @@ panic, test by test, never an `orelse`, as the one here around a read
 past a list's end. A failing assertion fails its own test, as ever, and
 the others pass:
 
-    let at(ls: List<Int>, i: Int): Int throws Bubble {
-      if (i == 99) { bubble() }
+    sealed interface Problem extends Error {}
+    class Oops extends Problem {}
+
+    let at(ls: List<Int>, i: Int): Int throws Oops {
+      if (i == 99) { throw new Oops() }
       ls[i]
     }
 

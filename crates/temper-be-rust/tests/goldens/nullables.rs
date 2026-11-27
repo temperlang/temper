@@ -129,9 +129,41 @@ pub(crate) fn halved(s: impl ToArcString, d: i32) -> i32 {
         .unwrap_or(-1)
 }
 
-pub(crate) fn positive(n: i32) -> temper_core::Result<i32> {
+#[derive(Clone, Debug)]
+pub(crate) enum Problem {
+    Negative(Negative),
+}
+
+temper_core::impl_failure_enum!(Problem, Negative(Negative));
+
+struct NegativeStruct {
+    n: i32,
+    cause: temper_core::Cause,
+}
+
+#[derive(Clone)]
+pub(crate) struct Negative(Arc<NegativeStruct>);
+
+impl Negative {
+    pub fn new(n: i32) -> Negative {
+        Negative(Arc::new(NegativeStruct {
+            n,
+            cause: temper_core::Cause::new(),
+        }))
+    }
+
+    pub fn message(&self) -> Arc<String> {
+        Arc::new(format!("negative (n: {})", self.0.n))
+    }
+}
+
+temper_core::impl_failure!(Negative, message, cause);
+
+temper_core::impl_any_value_trait!(Negative, [Problem]);
+
+pub(crate) fn positive(n: i32) -> Result<i32, Negative> {
     if n < 0 {
-        return Err(temper_core::Error::new());
+        return Err(Negative::new(n));
     }
     Ok(n)
 }
@@ -154,7 +186,7 @@ pub(crate) fn reason(n: i32, why: Option<impl ToArcString>) -> Arc<String> {
     let why = why.map(|x| x.to_arc_string());
     (|| {
         positive(n)?;
-        Ok::<_, temper_core::Error>(Arc::new("ok".to_string()))
+        Ok::<_, Negative>(Arc::new("ok".to_string()))
     })()
     .unwrap_or_else(|_| why.clone().unwrap_or_else(|| Arc::new("fails".to_string())))
 }

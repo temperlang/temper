@@ -1,6 +1,5 @@
 package host_failures_panic_passes_catch;
 
-import temper.core.Bubble;
 import temper.core.Core;
 
 public final class HostFailuresPanicPassesCatchMain {
@@ -8,7 +7,7 @@ public final class HostFailuresPanicPassesCatchMain {
 
     public static void main(String[] args) throws ClassNotFoundException {
         Core.initSimpleLogging();
-        Bubble.keepStackTraces();
+        Core.keepStackTraces();
         Core.beginTopLevel();
         try {
             Class.forName("host_failures_panic_passes_catch.HostFailuresPanicPassesCatchGlobal");

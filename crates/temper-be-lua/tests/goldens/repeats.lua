@@ -43,7 +43,7 @@ end
 ---@return integer
 local function positive(n)
   if n < 0 then
-    return temper.bubble()
+    error("panic")
   end
   return n
 end

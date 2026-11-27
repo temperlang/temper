@@ -30,6 +30,7 @@
 - [🚨Breaking change: `await` of a broken promise throws `BrokenPromise`](#breaking-change-await-of-a-broken-promise-throws-brokenpromise)
 - [Functions generic over their callbacks' failures](#functions-generic-over-their-callbacks-failures)
 - [🚨Breaking change: generators throw errors, not bubbles](#breaking-change-generators-throw-errors-not-bubbles)
+- [🚨Breaking change: `Bubble` and `bubble()` are gone](#breaking-change-bubble-and-bubble-are-gone)
 
 ## 🚨Breaking change: Rest parameter syntax removed.
 
@@ -447,15 +448,10 @@ writes them, or from a release's packages
 
 ## Fixes for code Temper 0.6.0 accepted
 
-- `new C(…)`, where `C`'s constructor `throws Bubble`, in a function
-  that can't bubble is reported as "Cannot bubble from a function
-  without Bubble in its return type", as Temper 0.6.0 reports it,
-  instead of stopping translation.
 - An `await` in an `async` block or other generator with no `orelse`
   or `catch` is reported where it is (now "Cannot throw BrokenPromise
   …", [below](#breaking-change-await-of-a-broken-promise-throws-brokenpromise)),
-  instead of stopping translation; so is `bubble()` in a generator that
-  can't bubble.
+  instead of stopping translation.
 - `x ?? d`, where `x` is a nullable member named bare in its class, is
   a non-null value, as `this.x ?? d` is; it was an error.
 - A function literal or function reference where another library's
@@ -463,7 +459,8 @@ writes them, or from a release's packages
 - In a library with errors, a value whose type an error left unknown,
   as a parameter of an undeclared type, fails where it runs when it's
   in a string template or has a method called, instead of keeping the
-  module from being translated.
+  module from being translated (it panics there; see
+  [below](#breaking-change-bubble-and-bubble-are-gone)).
 
 ## Classes' `==`
 
@@ -581,8 +578,8 @@ causes.
 
 Core gains an `Error` interface, the root of declared failure types. A
 library's own type named `Error` still takes its place there.
-`throws X` for an `X` that isn't `Bubble`, a type parameter, or a
-failure type, which until now meant `throws Bubble`, is an error.
+`throws X` for an `X` that isn't a failure type or a type parameter,
+which Temper 0.6.0 took as `throws Bubble`, is an error.
 
 ## 🚨Breaking change: division by zero and failed casts panic
 
@@ -602,8 +599,8 @@ let side(s: Shape): Int? { if (s is Square) { s.side } else { null } }
 their own division, whose zero-divisor error (`ArithmeticException`,
 `DivideByZeroException`, a Rust panic) is the panic. `@json` decoding
 and std's adapters check a tree's shape with `is`, so decoding JSON of
-another shape still fails as before. This is a first step toward
-replacing `Bubble`.
+another shape still fails as before. This was a first step toward
+[removing `Bubble`](#breaking-change-bubble-and-bubble-are-gone).
 
 ## 🚨Breaking change: core and std throw declared failures
 
@@ -729,8 +726,7 @@ calls whose callbacks can't fail are as before, but for
 `into_ok(r.replace::<Infallible>(…))` and `*r->replace<core::Never>(…)`.
 Also on Rust, a plain function value that can't fail, passed where a
 generic function's parameter `fn (…): R throws E` gets `E` as "can't
-fail", now returns `Ok`s; such calls didn't build before. A bubbling callback is
-still not yet supported. Also fixed: a module's
+fail", now returns `Ok`s; such calls didn't build before. Also fixed: a module's
 `let` of a `@fun` interface, `let inc: Mapper<Int, Int> = fn …`, and
 `let xs = f() orelse []`, which failed on every backend.
 
@@ -766,3 +762,61 @@ Arc<dyn Failure>>`, and C++'s `core::Generator<T>`, whose `next` gives
 a `core::Expected<…, std::shared_ptr<core::Failure>>`; elsewhere, the
 host's exception comes out of the step, as before. Also fixed: Python's
 `yield` of a value with an `orelse` in it.
+
+## 🚨Breaking change: `Bubble` and `bubble()` are gone
+
+Temper has one error mechanism now: declared errors. `bubble()`,
+`throws Bubble`, and `Bubble` are undeclared names, each reported with
+how to migrate. Pick by what the failure means:
+
+- A reason matters: declare an error type and throw it.
+- There's simply no value: return `null` (`?? return null` passes one
+  on).
+- It's a bug: `panic()`.
+
+```temper inert
+// Before
+let parse(s: String): Int throws Bubble {
+  s.toInt32() orelse bubble()
+}
+// After: an error type, null, or a panic
+export sealed interface ConfigError extends Error {}
+export class BadNumber(public text: String) extends ConfigError {}
+let parse(s: String): Int throws ConfigError {
+  s.toInt32() orelse throw new BadNumber(s)
+}
+let parseOrNull(s: String): Int? { s.toInt32() orelse null }
+let parseOrPanic(s: String): Int { s.toInt32() orelse panic() }
+```
+
+`orelse` and `catch` stay, handling any error. With no bubbles, there
+are no rules about mixing them with declared failures, and a call that
+may fail where nothing handles it is reported wherever it is: Temper
+0.6.0 folded a call of constants first and reported it only if the
+folded call failed.
+
+Code with a compile error now **panics** where it runs, in the
+interpreter (`Panicked: …`, where it said `Failed: …`) and on every
+backend, so no `orelse` catches it; the interpreter's own errors, as a
+value of the wrong kind, panic too. Temper still translates past
+errors, but C++, C#, Java, and Rust stop at the first one where a type
+error alone used to run on; the interpreter, JavaScript, Lua, and
+Python run such code as written.
+
+Each backend's runtime has one error mechanism, the failures' own
+types, and loses its bubble:
+
+- Python: `temper_core.Bubble` and `bubble()`; handlers are `except`
+  of the failure classes.
+- JavaScript: `Bubble`, `isBubble`, and `bubble`; handlers check with
+  `instanceof`.
+- Java: `temper.core.Bubble`, `Core.bubble()`, and `Core.throwBubble()`;
+  `Bubble.keepStackTraces()` is now `Core.keepStackTraces()`.
+- C#: `TemperLang.Core.Bubble` and `Core.Bubble()`.
+- Lua: handlers use `temper.catch` alone.
+- Rust: `temper_core::Error` is now `Arc<dyn Failure>`, any failure,
+  and `temper_core::Result<T>` its alias, which module init and tests
+  fail with; `keep_bubble_traces` is gone.
+- C++: `temper::core::TemperBubble` and `bubble<T>()`; handlers branch
+  on `Expected` alone, and runtime errors that bubbled now panic. An
+  `orelse panic()` reports the failure it replaces as its cause.

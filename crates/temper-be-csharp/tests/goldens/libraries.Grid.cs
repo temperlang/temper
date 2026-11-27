@@ -41,7 +41,7 @@ public class Grid
         {
             return LibrariesGlobal.ParseGrid(s);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             return null;
         }

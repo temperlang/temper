@@ -57,16 +57,18 @@ Generated code compiles without warnings under `-Wall -Wextra
 -Wpedantic -Werror`, and is tested under AddressSanitizer, UBSan, and
 TSan. C++ leaves the order of evaluation of arguments open, so the
 backend keeps Temper's left-to-right order wherever it would show.
-C++20 code can `co_await` a Temper promise. A Temper failure throws
-`temper::core::TemperBubble`, a `std::exception`.
+C++20 code can `co_await` a Temper promise. A function that may fail
+returns `temper::core::Expected<T, std::shared_ptr<F>>`
+(`std::expected` from C++23), its failure a `temper::core::Failure`, a
+`std::exception`; failures are values, never thrown.
 
-When a program built by `temper run -b cpp` panics or lets a bubble
-escape, it prints a stack trace of the generated functions, from where
-it happened out to the top level, and a test that panics under
-`temper test -b cpp` has one in its failure:
+When a program built by `temper run -b cpp` panics or lets a failure
+reach its top level, it prints a stack trace of the generated
+functions, from where it happened out to the top level, and a test that
+panics under `temper test -b cpp` has one in its failure:
 
 ```
-uncaught bubble: bubble
+panic
   at b::f(int) (../../../b/b.temper:2)
   at operator() (../../../b/b.temper:6)
   at b::global_init_init() (/work/temper.out/cpp/b/init.cpp:20)
@@ -133,8 +135,9 @@ subnamespace. Each type defined in Temper gets its own C# file, and a
 module's top level goes in a static `…Global` class. Parameter names
 are part of a C# API, so they're never renamed.
 
-A Temper failure throws `TemperLang.Core.Bubble`, an `Exception`, and
-an `orelse` catches only that, so other exceptions pass it.
+A Temper failure throws its own exception class, under its library's
+root, an `Exception`, and an `orelse` catches only what it handles, so
+other exceptions, and panics (`TemperLang.Core.Panic`), pass it.
 
 Temper's [logging `console`][CsConsole] translates to the
 [`Microsoft.Extensions.Logging` framework][CsMsLogging] on modern .NET.
@@ -196,8 +199,9 @@ Translates Temper to Java 17 source, and a Maven project
 ([Java 17]). A module's top level goes in a `…Global` class, with a
 `…Main` class to run it, and each type gets its own file. Classes also
 get a `Builder`, since Java has no named arguments. A Temper failure
-throws `temper.core.Bubble`, an unchecked `RuntimeException`, and an
-`orelse` catches only that.
+throws its own exception class, under its library's root, an unchecked
+`RuntimeException`, and an `orelse` catches only what it handles; a
+panic is an `AssertionError`.
 
 Still to write up: how function types translate to single-method
 interfaces, how nullable types translate, primitive and boxed types,
@@ -221,8 +225,9 @@ that implement Temper interfaces.
 `temper.out/js` has a [source map] for each generated file, so a
 JavaScript debugger shows the Temper code it came from.
 
-A Temper failure throws `@temperlang/core`'s `Bubble`, an `Error`, and
-an `orelse` catches only that.
+A Temper failure throws its own class, under its library's root, an
+`Error`, and an `orelse` catches only what it handles (by
+`instanceof`); a panic is a plain `Error`.
 
 ### Tooling notes
 
@@ -296,8 +301,9 @@ returning Python's `None`.
 Temper default expressions are evaluated as needed, so they don't
 suffer the [singly evaluated default expression pitfall][default-pitfall].
 
-A Temper failure raises `temper_core.Bubble`, a `RuntimeError`, and an
-`orelse` catches only that, so other exceptions pass it. A panic raises
+A Temper failure raises its own exception class, under its library's
+root, an `Exception`, and an `orelse` catches only what it handles, so
+other exceptions pass it. A panic raises
 a plain `BaseException`, which `except Exception` doesn't catch.
 
 Names translate to Python's conventions: `snake_case` for functions,

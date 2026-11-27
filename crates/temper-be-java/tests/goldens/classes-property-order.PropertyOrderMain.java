@@ -1,6 +1,5 @@
 package property_order;
 
-import temper.core.Bubble;
 import temper.core.Core;
 
 public final class PropertyOrderMain {
@@ -8,7 +7,7 @@ public final class PropertyOrderMain {
 
     public static void main(String[] args) throws ClassNotFoundException {
         Core.initSimpleLogging();
-        Bubble.keepStackTraces();
+        Core.keepStackTraces();
         Core.beginTopLevel();
         try {
             Class.forName("property_order.PropertyOrderGlobal");

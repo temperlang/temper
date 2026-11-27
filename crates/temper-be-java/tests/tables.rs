@@ -94,10 +94,10 @@ fn runtime_helpers_are_the_runtimes() {
     }
     // What the translator and the main class call besides.
     for method in [
-        "bubble",
         "getConsole",
         "initSimpleLogging",
-        "throwBubble",
+        "keepStackTraces",
+        "throwAssertionError",
         "waitUntilTasksComplete",
     ] {
         assert!(

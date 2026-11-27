@@ -37,17 +37,18 @@ module e#0 { fn log#99(s#96: String): Void {} init { log#99((1): String); } }
 --- error
 2:66: the type here is Int32, by the local rules
 
-=== a call that may bubble, without ^
+=== a call that may fail, without ^
 tmpl 1 model 1 library e 0.1.0
-module e#0 { fn log#99(s#96: String): Void {} fn str#98(n#95: Int32): String { return "n"; } fn int#97(s#94: String): Int32 throws Bubble { return 0; } init { log#99(str#98(int#97("1"))); } }
+uses `temper-core`#90 0.1.0 { interface Error#91 {} }
+module e#0 { interface EError#92 extends Error#91 {} fn log#99(s#96: String): Void {} fn str#98(n#95: Int32): String { return "n"; } fn int#97(s#94: String): Int32 throws EError#92 { return 0; } init { log#99(str#98(int#97("1"))); } }
 --- error
-2:185: a call that may bubble needs `^`
+3:228: a call that may fail needs `^`
 
-=== ^ on a call that can't bubble
+=== ^ on a call that can't fail
 tmpl 1 model 1 library e 0.1.0
 module e#0 { fn log#99(s#96: String): Void {} init { log#99("x")^; } }
 --- error
-2:65: `^` marks a call that can't bubble
+2:65: `^` marks a call that can't fail
 
 === an unknown operator
 tmpl 1 model 1 library e 0.1.0

@@ -80,8 +80,8 @@ fn step_of(kept: &Option<Kept>, step: impl FnOnce()) {
 /// [`finish`](TestWork::finish), after it. Tests run on several threads
 /// at once, any of which may run another's steps, so each block belongs
 /// to the test that started it, as do the blocks it starts. A body that
-/// bubbles skips `finish`, but its work still runs when this is dropped,
-/// what fails there written to stderr, as the bubble fails the test
+/// fails skips `finish`, but its work still runs when this is dropped,
+/// what fails there written to stderr, as the failure fails the test
 /// (not while a panic unwinds, as a panic then would abort).
 pub struct TestWork {
     kept: Kept,
@@ -91,10 +91,8 @@ pub struct TestWork {
 
 impl TestWork {
     /// Starts the work of the test running on this thread, queued on
-    /// `runner`, whose bubbles keep where they're made
-    /// ([`crate::keep_bubble_traces`]).
+    /// `runner`.
     pub fn begin(runner: &AsyncRunner) -> TestWork {
-        crate::keep_bubble_traces();
         let kept = Kept::default();
         let outer = KEEPER.with(|k| k.replace(Some(kept.clone())));
         TestWork {
@@ -561,9 +559,9 @@ mod tests {
 
     fn assert_send_static<F: Future + Send + 'static>(_: &F) {}
 
-    /// A test whose body bubbles, so never calls `finish`, still runs
+    /// A test whose body fails, so never calls `finish`, still runs
     /// its async work when its `TestWork` drops, a panic there reported
-    /// but not raised, as the bubble already fails the test.
+    /// but not raised, as the failure already fails the test.
     #[test]
     fn dropped_work_still_runs() {
         let runner = SingleThreadAsyncRunner::new();

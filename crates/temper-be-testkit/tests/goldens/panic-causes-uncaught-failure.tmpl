@@ -1,0 +1,42 @@
+tmpl 1 model 1 library `panic-causes-uncaught-failure` 0.0.0
+
+uses `temper-core`#3 0.0.0-alpha.0.0 {
+  interface Error#4 {}
+  class Int32#10 {
+    connected method toString#11(radix?: Int32): String;
+  }
+  interface Console#13 {
+    connected method log#14(message: String): Void;
+  }
+  connected fn getConsole#16(name?: String): Console#13;
+}
+
+module `panic-causes-uncaught-failure`#0 {
+  let ~console#15: Console#13;
+
+  interface Problem#1 extends Error#4 {}
+
+  class NotPositive#2 extends Problem#1 {
+    let n#5: Int32;
+    constructor constructor#6(n#8: Int32): NotPositive#2 {
+      this.n#5 = n#8;
+    }
+    get message#9(): String {
+      return %String.cat(%String.cat("not positive (n: ", this.n#5.toString#11(omitted)), ")");
+    }
+  }
+
+  fn positive#7(n#12: Int32): Int32 throws NotPositive#2 {
+    if (%Int32.le(n#12, 0)) {
+      (throw(new constructor#6(n#12))^): Void;
+    }
+    return n#12;
+  }
+
+  init {
+    init ~console#15 = getConsole#16(omitted);
+    ~console#15.log#14("before");
+    positive#7(%Int32.neg(1))^;
+    ~console#15.log#14("after");
+  }
+}

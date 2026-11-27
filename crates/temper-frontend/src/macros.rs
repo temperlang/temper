@@ -70,10 +70,6 @@ impl Settle {
             Macro::Await => self.expand_pause(call, scope, &args, NodeKind::Await),
             Macro::Break => self.expand_jump(call, scope, &args, true),
             Macro::Continue => self.expand_jump(call, scope, &args, false),
-            Macro::Bubble => {
-                self.rewrite(call, NodeKind::Fail, 0, &[]);
-                true
-            }
             Macro::Assign => match *args {
                 [target, value] if self.lib.tree.kind(target) == NodeKind::RightName => {
                     self.rewrite(call, NodeKind::Assign, 0, &[target, value]);
@@ -164,7 +160,7 @@ impl Settle {
                 }
                 _ => false,
             },
-            // `throw x` is a `Fail` with the failure; `bubble()`'s has none.
+            // `throw x` is a `Fail` with the failure.
             Macro::Throw => match *args {
                 [x] => {
                     self.rewrite(call, NodeKind::Fail, 0, &[x]);

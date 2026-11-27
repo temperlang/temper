@@ -4,7 +4,7 @@
 //! beside the libraries, as Kotlin copies it, and `LUA_PATH` of
 //! `?.lua;?/init.lua`, writing JUnit XML. `temper run -b lua` runs the
 //! library's `init.lua` the same way, as Kotlin's `Lua51Specifics` does,
-//! under `xpcall`, so an uncaught bubble shows a stack trace too.
+//! under `xpcall`, so an uncaught failure shows a stack trace too.
 //! Each file runs with a time and a memory limit (`limit_memory`), so a
 //! runaway file fails alone.
 
@@ -20,9 +20,9 @@ pub const TOOLS: Tools = Tools {
 };
 
 fn run(dir: &Path, library: &Tested, _: &[Tested]) -> Result<bool, String> {
-    // Under `xpcall`, so an error that isn't a string, as a bubble, gets
+    // Under `xpcall`, so an error that isn't a string, as a table, gets
     // a stack trace too, which `lua`'s own handler gives only strings;
-    // one that passed an `orelse`, from where it was first raised
+    // one that passed a handler, from where it was first raised
     // (`temper.raised_trace`); and a declared failure, its report, with
     // its causes (`temper.failure_report`).
     let init = format!("{}/init.lua", library.name);

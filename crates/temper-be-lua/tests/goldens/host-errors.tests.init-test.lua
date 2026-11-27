@@ -6,11 +6,33 @@ local CodePoints = require("std/regex").CodePoints
 local luaunit = require("luaunit")
 luaunit.FAILURE_PREFIX = temper.test_failure_prefix
 
+---@class host-errors.Problem: temper.Failure
+
+---@class host-errors.Problem.type: temper.Type
+local Problem = temper.type("host-errors.Problem", temper.Failure)
+
+---@class host-errors.Oops: host-errors.Problem
+---@field message string
+
+---@class host-errors.Oops.type: temper.Type
+---@operator call: host-errors.Oops
+local Oops = temper.type("host-errors.Oops", Problem)
+
+---@param this host-errors.Oops
+function Oops.constructor(this)
+end
+
+---@param this host-errors.Oops
+---@return string
+function Oops.get.message(this)
+  return "oops"
+end
+
 ---@param i integer
 ---@return integer
 local function at(i)
   if i == 99 then
-    return temper.bubble()
+    error(Oops())
   end
   return i
 end
@@ -90,9 +112,9 @@ function Test_.test_list_read()
   temper.test("list read", function(test)
     ---@type integer
     local r
-    if not temper.pcall(function()
+    if not temper.catch(function()
       r = read({ 1, 2 }, 5)
-    end) then
+    end, Oops) then
       r = -1
     end
     temper.test_assert(test, r ~= -1, function() return "caught" end)
@@ -104,9 +126,9 @@ function Test_.test_list_read_at_the_end()
     local ls = { 1, 2 }
     ---@type integer
     local r
-    if not temper.pcall(function()
+    if not temper.catch(function()
       r = read(ls, temper.list_length(ls))
-    end) then
+    end, Oops) then
       r = -1
     end
     temper.test_assert(test, r ~= -1, function() return "caught" end)
@@ -117,9 +139,9 @@ function Test_.test_negative_index()
   temper.test("negative index", function(test)
     ---@type integer
     local r
-    if not temper.pcall(function()
+    if not temper.catch(function()
       r = read(built(), -1)
-    end) then
+    end, Oops) then
       r = -1
     end
     temper.test_assert(test, r ~= -1, function() return "caught" end)
@@ -130,9 +152,9 @@ function Test_.test_set()
   temper.test("set", function(test)
     ---@type integer
     local r
-    if not temper.pcall(function()
+    if not temper.catch(function()
       r = write(built(), 5)
-    end) then
+    end, Oops) then
       r = -1
     end
     temper.test_assert(test, r ~= -1, function() return "caught" end)
@@ -144,9 +166,9 @@ function Test_.test_set_at_the_end()
     local lb = built()
     ---@type integer
     local r
-    if not temper.pcall(function()
+    if not temper.catch(function()
       r = write(lb, temper.listbuilder_length(lb))
-    end) then
+    end, Oops) then
       r = -1
     end
     temper.test_assert(test, r ~= -1, function() return "caught" end)
@@ -157,9 +179,9 @@ function Test_.test_insert()
   temper.test("insert", function(test)
     ---@type integer
     local r
-    if not temper.pcall(function()
+    if not temper.catch(function()
       r = insert(built(), 5)
-    end) then
+    end, Oops) then
       r = -1
     end
     temper.test_assert(test, r ~= -1, function() return "caught" end)
@@ -171,9 +193,9 @@ function Test_.test_insert_past_the_end()
     local lb = built()
     ---@type integer
     local r
-    if not temper.pcall(function()
+    if not temper.catch(function()
       r = insert(lb, temper.int32_add(temper.listbuilder_length(lb), 1))
-    end) then
+    end, Oops) then
       r = -1
     end
     temper.test_assert(test, r ~= -1, function() return "caught" end)
@@ -185,9 +207,9 @@ function Test_.test_insert_at_the_end_appends()
     local lb = built()
     ---@type integer
     local n
-    if not temper.pcall(function()
+    if not temper.catch(function()
       n = insert(lb, temper.listbuilder_length(lb))
-    end) then
+    end, Oops) then
       n = -1
     end
     temper.test_assert(test, n == 2 and temper.listed_get(lb, 1) == 2, function() return "didn't append" end)
@@ -198,9 +220,9 @@ function Test_.test_remove_last()
   temper.test("remove last", function(test)
     ---@type integer
     local r
-    if not temper.pcall(function()
+    if not temper.catch(function()
       r = removeLast(temper.listbuilder_constructor(), 0)
-    end) then
+    end, Oops) then
       r = -1
     end
     temper.test_assert(test, r ~= -1, function() return "caught" end)
@@ -211,9 +233,9 @@ function Test_.test_remove_first()
   temper.test("remove first", function(test)
     ---@type integer
     local r
-    if not temper.pcall(function()
+    if not temper.catch(function()
       r = removeFirst(temper.deque_constructor(), 0)
-    end) then
+    end, Oops) then
       r = -1
     end
     temper.test_assert(test, r ~= -1, function() return "caught" end)
@@ -224,9 +246,9 @@ function Test_.test_reduce()
   temper.test("reduce", function(test)
     ---@type integer
     local r
-    if not temper.pcall(function()
+    if not temper.catch(function()
       r = sum({}, 0)
-    end) then
+    end, Oops) then
       r = -1
     end
     temper.test_assert(test, r ~= -1, function() return "caught" end)
@@ -237,9 +259,9 @@ function Test_.test_string_read()
   temper.test("string read", function(test)
     ---@type integer
     local r
-    if not temper.pcall(function()
+    if not temper.catch(function()
       r = codeAt("ab", 0)
-    end) then
+    end, Oops) then
       r = -1
     end
     temper.test_assert(test, r ~= -1, function() return "caught" end)
@@ -250,9 +272,9 @@ function Test_.test_replace_callback()
   temper.test("replace callback", function(test)
     ---@type string
     local r
-    if not temper.pcall(function()
+    if not temper.catch(function()
       r = replaced(3)
-    end) then
+    end, Oops) then
       r = ""
     end
     temper.test_assert(test, r ~= "", function() return "caught" end)

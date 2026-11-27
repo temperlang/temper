@@ -1,13 +1,15 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <stdexcept>
 #include <string>
 
 namespace host_error_causes {
 namespace _connected {
 
-inline std::int32_t hostFails(std::int32_t n) {
+inline temper::core::Expected<std::int32_t, std::shared_ptr<Oops>> hostFails(
+    std::int32_t n) {
     throw std::runtime_error("host bug " + std::to_string(n));
 }
 

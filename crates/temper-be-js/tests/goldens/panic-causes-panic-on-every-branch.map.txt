@@ -1,17 +1,34 @@
 # generated line:column -> source:line:column, and the text at each
-3:1 -> ../panic-causes.temper.md:12:5  /** <- let positive(n: Int): Int th
-7:1 -> ../panic-causes.temper.md:12:5  function positive(n) { <- let positive(n: Int): Int th
-7:10 -> ../panic-causes.temper.md:12:9 (positive)  positive(n) { <- positive(n: Int): Int throws
-7:18 -> ../panic-causes.temper.md:12:5  (n) { <- let positive(n: Int): Int th
-8:3 -> ../panic-causes.temper.md:13:7  if (n <= 0) { <- if (n <= 0) { bubble() }
-9:5 -> ../panic-causes.temper.md:13:21  bubble(); <- bubble() }
-11:3 -> ../panic-causes.temper.md:14:7  return n; <- n
-14:1 -> ../panic-causes.temper.md:16:5  console.log("before"); <- console.log("before");
-15:1 -> ../panic-causes.temper.md:313:5  /** @type {number} */ <- let k = positive(1) orelse 0
-16:1 -> ../panic-causes.temper.md:313:5  let k; <- let k = positive(1) orelse 0
-17:1 -> ../panic-causes.temper.md:313:5  try { <- let k = positive(1) orelse 0
-23:1 -> ../panic-causes.temper.md:314:5  if (k > 0) { <- if (k > 0) { panic() } else
-24:3 -> ../panic-causes.temper.md:314:18  panic(); <- panic() } else { positive(-1
-26:3 -> ../panic-causes.temper.md:314:35  try { <- positive(-1) orelse panic();
-32:3 -> ../panic-causes.temper.md:314:64  panic(); <- panic() }
-34:1 -> ../panic-causes.temper.md:315:5  console.log("after"); <- console.log("after");
+3:1 -> ../panic-causes.temper.md:15:5  /** <- let positive(n: Int): Int th
+8:1 -> ../panic-causes.temper.md:15:5  function positive(n) { <- let positive(n: Int): Int th
+8:10 -> ../panic-causes.temper.md:15:9 (positive)  positive(n) { <- positive(n: Int): Int throws
+8:18 -> ../panic-causes.temper.md:15:5  (n) { <- let positive(n: Int): Int th
+9:3 -> ../panic-causes.temper.md:16:7  if (n <= 0) { <- if (n <= 0) { throw new NotP
+10:5 -> ../panic-causes.temper.md:16:21  throw new NotPositive(n); <- throw new NotPositive(n) }
+12:3 -> ../panic-causes.temper.md:17:7  return n; <- n
+15:1 -> ../panic-causes.temper.md:12:5  class Problem extends Error <- sealed interface Problem ext
+15:7 -> ../panic-causes.temper.md:12:22 (Problem)  Problem extends Error {} <- Problem extends Error {}
+15:14 -> ../panic-causes.temper.md:12:5   extends Error {} <- sealed interface Problem ext
+19:1 -> ../panic-causes.temper.md:13:5  class NotPositive extends Pr <- class NotPositive(public n:
+19:7 -> ../panic-causes.temper.md:13:11 (NotPositive)  NotPositive extends Problem <- NotPositive(public n: Int) e
+19:18 -> ../panic-causes.temper.md:13:5   extends Problem { <- class NotPositive(public n:
+20:3 -> ../panic-causes.temper.md:13:30  /** @type {number} */ <- n: Int) extends Problem {}
+21:3 -> ../panic-causes.temper.md:13:30  #n; <- n: Int) extends Problem {}
+23:3 -> ../panic-causes.temper.md:13:5  /** @param {number} n */ <- class NotPositive(public n:
+24:3 -> ../panic-causes.temper.md:13:5  constructor(n) { <- class NotPositive(public n:
+26:5 -> ../panic-causes.temper.md:13:30  this.#n = n; <- n: Int) extends Problem {}
+29:3 -> ../panic-causes.temper.md:13:30  /** @returns {number} */ <- n: Int) extends Problem {}
+30:3 -> ../panic-causes.temper.md:13:30  get n() { <- n: Int) extends Problem {}
+30:7 -> ../panic-causes.temper.md:13:30 (n)  n() { <- n: Int) extends Problem {}
+34:3 -> ../panic-causes.temper.md:13:5  /** @returns {string} */ <- class NotPositive(public n:
+35:3 -> ../panic-causes.temper.md:13:5  get message() { <- class NotPositive(public n:
+36:5 -> ../panic-causes.temper.md:13:5  return `not positive (n: ${t <- class NotPositive(public n:
+40:1 -> ../panic-causes.temper.md:19:5  console.log("before"); <- console.log("before");
+41:1 -> ../panic-causes.temper.md:322:5  /** @type {number} */ <- let k = positive(1) orelse 0
+42:1 -> ../panic-causes.temper.md:322:5  let k; <- let k = positive(1) orelse 0
+43:1 -> ../panic-causes.temper.md:322:5  try { <- let k = positive(1) orelse 0
+49:1 -> ../panic-causes.temper.md:323:5  if (k > 0) { <- if (k > 0) { panic() } else
+50:3 -> ../panic-causes.temper.md:323:18  panic(); <- panic() } else { positive(-1
+52:3 -> ../panic-causes.temper.md:323:35  try { <- positive(-1) orelse panic();
+58:3 -> ../panic-causes.temper.md:323:64  panic(); <- panic() }
+60:1 -> ../panic-causes.temper.md:324:5  console.log("after"); <- console.log("after");

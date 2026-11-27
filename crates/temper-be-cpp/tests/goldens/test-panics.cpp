@@ -15,6 +15,16 @@ void global_init_init();
 
 
 #ifdef TEMPER_TESTS
+struct Problem;
+struct Oops;
+
+struct Problem : public virtual temper::core::Failure {};
+
+struct Oops : public virtual Problem {
+  static std::shared_ptr<Oops> make();
+  temper::core::Str get_message() const override;
+};
+
 // Tests, which `test.cpp` runs.
 void passesBefore(std::shared_ptr<temper_std::Test> const & test);
 void panicsReadingPastTheEnd(std::shared_ptr<temper_std::Test> const & test);
@@ -34,9 +44,18 @@ namespace test_panics {
 namespace core = temper::core;
 
 #ifdef TEMPER_TESTS
-static int32_t at(std::shared_ptr<std::vector<int32_t>> const & ls, int32_t i) {
+std::shared_ptr<Oops> Oops::make() {
+  std::shared_ptr<Oops> self = std::make_shared<Oops>();
+  return self;
+}
+
+core::Str Oops::get_message() const {
+  return TEMPER_STR("oops");
+}
+
+static core::Expected<int32_t, std::shared_ptr<Oops>> at(std::shared_ptr<std::vector<int32_t>> const & ls, int32_t i) {
   if (i == 99) {
-    core::bubble();
+    return core::unexpected(Oops::make());
   }
   return core::List::get<int32_t>(ls, i);
 }
@@ -60,9 +79,10 @@ void passesBefore(std::shared_ptr<temper_std::Test> const & test) {
 
 void panicsReadingPastTheEnd(std::shared_ptr<temper_std::Test> const & test) {
   int32_t n;
-  try {
-    n = test_panics::at(core::List::make<int32_t>(1, 2), 5);
-  } catch (core::TemperBubble const &) {
+  auto atResult = test_panics::at(core::List::make<int32_t>(1, 2), 5);
+  if (atResult.has_value()) {
+    n = *atResult;
+  } else {
     n = -1;
   }
   {
@@ -82,7 +102,11 @@ void failsAnAssertion(std::shared_ptr<temper_std::Test> const & test) {
 
 void passesAfter(std::shared_ptr<temper_std::Test> const & test) {
   {
-    int32_t actual = test_panics::at(core::List::make<int32_t>(1, 2), 1);
+    auto atResult = test_panics::at(core::List::make<int32_t>(1, 2), 1);
+    if (!atResult.has_value()) {
+      core::uncaught_failure(atResult.error());
+    }
+    int32_t actual = *atResult;
     int32_t expected = 2;
     test->assert_(actual == expected, [=]() -> core::Str { return "expected at([1, 2], 1) == (" + std::to_string(expected) + ") not (" + std::to_string(actual) + ")"; });
   }

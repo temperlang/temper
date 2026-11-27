@@ -110,8 +110,7 @@ fn runtime_methods_are_the_runtimes() {
     }
     // What the translator, connections, and `Program.cs` call besides.
     for (file, method) in [
-        ("Core.cs", "Bubble"),
-        ("Core.cs", "Bubble<T>"),
+        ("Core.cs", "ThrowPanic<T>"),
         ("Core.cs", "ConvertToString"),
         ("Core.cs", "InitSimpleLogging"),
         ("Async.cs", "WaitUntilSafeToExit"),

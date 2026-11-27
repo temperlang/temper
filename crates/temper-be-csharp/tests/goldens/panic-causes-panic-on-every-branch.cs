@@ -4,11 +4,12 @@ namespace PanicCausesPanicOnEveryBranch;
 
 public static class PanicCausesPanicOnEveryBranchGlobal
 {
+    /// <exception cref="NotPositive">Where it fails with NotPositive.</exception>
     internal static int Positive(int n)
     {
         if (n <= 0)
         {
-            return Core.Bubble<int>();
+            throw new NotPositive(n);
         }
         return n;
     }
@@ -22,7 +23,7 @@ public static class PanicCausesPanicOnEveryBranchGlobal
         {
             k = Positive(1);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (NotPositive)
         {
             k = 0;
         }
@@ -36,9 +37,9 @@ public static class PanicCausesPanicOnEveryBranchGlobal
             {
                 Positive(-1);
             }
-            catch (global::TemperLang.Core.Bubble bubble1)
+            catch (NotPositive failure1)
             {
-                throw Core.Panic("panic", bubble1);
+                throw Core.Panic("panic", failure1);
             }
             throw Core.Panic("panic");
         }

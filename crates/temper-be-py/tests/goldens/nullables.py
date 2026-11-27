@@ -1,5 +1,5 @@
 from temper_core import (
-    Bubble as _Bubble,
+    Failure as _Failure,
     LoggingConsole as _LoggingConsole,
     ParseError as _ParseError,
     boolean_to_string as _boolean_to_string,
@@ -71,16 +71,36 @@ def _halved(s: str, d: int, /) -> int:
         return -1
 
 
+class _Problem(_Failure, Exception):
+    __slots__ = ()
+
+
+class _Negative(_Problem):
+    __slots__ = ('_n',)
+    _n: int
+
+    def __init__(self, /, n: int) -> None:
+        self._n = n
+
+    @property
+    def n(self, /) -> int:
+        return self._n
+
+    @property
+    def message(self, /) -> str:
+        return f'negative (n: {self._n})'
+
+
 def _positive(n: int, /) -> int:
     if n < 0:
-        raise _Bubble()
+        raise _Negative(n)
     return n
 
 
 def _checked(n: int, /) -> int:
     try:
         return _positive(n)
-    except _Bubble as t_0:
+    except _Negative as t_0:
         raise BaseException('panic') from t_0
 
 
@@ -100,7 +120,7 @@ def _reason(n: int, why: str | None, /) -> str:
     try:
         _positive(n)
         return 'ok'
-    except _Bubble:
+    except _Negative:
         return 'fails' if why is None else why
 
 
@@ -130,12 +150,12 @@ if _tail is not None:
     _console.log(str(_tail.value))
 try:
     _positive(-1)
-except _Bubble:
+except _Negative:
     _console.log('negative')
 _fallback: int
 try:
     _fallback = _positive(-2)
-except _Bubble:
+except _Negative:
     _fallback = 0
 _console.log(str(_fallback))
 _console.log(f"{_reason(1, None)} {_reason(-1, None)} {_reason(-1, 'bad')}")

@@ -1187,7 +1187,7 @@ fn missing_operator_is_one_error() {
         }
         let (code, out, err) = tempest(&["run", "-w", dir, "--library", "a", "-b", "interp"]);
         assert!(
-            err.contains("Failed: Expected an operator or `;` before `100`"),
+            err.contains("Panicked: Expected an operator or `;` before `100`"),
             "{out}{err}"
         );
         assert_eq!(code, 1);
@@ -1472,7 +1472,7 @@ fn run_a_library() {
 /// panics in a library function, or whose assertion fails, has a stack
 /// trace in its JUnit results naming the `.temper.md` file and the line
 /// of the panic, the call, and the assertion; and `run`'s uncaught
-/// bubble or panic names the `.temper` lines where it was raised and
+/// failure or panic names the `.temper` lines where it was raised and
 /// called from. Skipped without Node, unless `TEMPER_REQUIRE_CHECKERS`
 /// is set.
 #[test]
@@ -1488,8 +1488,8 @@ fn js_stack_traces_point_at_temper() {
         ("b/config.temper.md", "    export let name = \"b\";\n"),
         (
             "b/b.temper",
-            "let f(n: Int): Int throws Bubble {\n  if (n > 1) { bubble() }\n  n\n}\n\
-             console.log(\"b\");\nf(5);\n",
+            "let f(n: Int): Int throws Big {\n  if (n > 1) { throw new Big() }\n  n\n}\n\
+             console.log(\"b\");\ntry f(5);\nsealed interface Problem extends Error {}\nclass Big extends Problem {}\n",
         ),
         ("c/config.temper.md", "    export let name = \"c\";\n"),
         (
@@ -1521,7 +1521,7 @@ fn js_stack_traces_point_at_temper() {
         assert!(at(panics, "a.temper.md", 9), "{xml}");
         // `assert(x == 3)`.
         assert!(at(fails, "a.temper.md", 14), "{xml}");
-        for (library, raised) in [("b", "Bubble"), ("c", "Error: panic")] {
+        for (library, raised) in [("b", "Big"), ("c", "Error: panic")] {
             let (code, out, err) = tempest(&["run", "-w", dir, "--library", library, "-b", "js"]);
             assert_eq!((code, out.trim_end()), (1, library), "{err}");
             assert!(err.contains(raised), "{library}: {err}");
@@ -1538,8 +1538,9 @@ fn js_stack_traces_point_at_temper() {
 /// `std::stacktrace` or, without it, `backtrace()`; `runtime/README.md`
 /// in the C++ backend): a test that panics in a library function has
 /// the trace in its JUnit results, from the panic up to the test, and
-/// `run`'s uncaught bubble or panic prints one from where it was raised
-/// up to the top level, none starting in the runtime. Only those
+/// `run`'s uncaught panic prints one from where it was raised up to the
+/// top level, none starting in the runtime (an uncaught failure, from
+/// where it reached the top level). Only those
 /// programs install the handler; the libraries never do. With
 /// `std::stacktrace`, the frames name the Temper files and lines, by
 /// the `#line` directives that `run` and `test` give the generated code
@@ -1560,8 +1561,8 @@ fn cpp_stack_traces() {
         ("b/config.temper.md", "    export let name = \"b\";\n"),
         (
             "b/b.temper",
-            "export let f(n: Int): Int throws Bubble {\n  if (n > 1) { bubble() }\n  n\n}\n\
-             console.log(\"b\");\nf(5);\n",
+            "export let f(n: Int): Int throws Big {\n  if (n > 1) { throw new Big() }\n  n\n}\n\
+             console.log(\"b\");\ntry f(5);\nexport sealed interface Problem extends Error {}\nexport class Big extends Problem {}\n",
         ),
         ("c/config.temper.md", "    export let name = \"c\";\n"),
         (
@@ -1616,7 +1617,19 @@ fn cpp_stack_traces() {
             assert_eq!(source("a", &panics[boom]), (a.clone(), "4".into()), "{xml}");
             assert_eq!(source("a", &panics[test]), (a, "9".into()), "{xml}");
         }
-        for (library, raised, at) in [("b", "uncaught bubble", "f"), ("c", "panic", "g")] {
+        // An uncaught failure, a value that keeps no trace of where it was
+        // thrown, says what it was, from where it reached the top level.
+        let (code, out, err) = tempest(&["run", "-w", dir, "--library", "b", "-b", "cpp"]);
+        assert_eq!((code, out.trim_end()), (1, "b"), "{err}");
+        assert!(err.contains("uncaught failure: big"), "{err}");
+        let failed = frames(&err);
+        assert_eq!(
+            failed.last().map(|f| function(f)),
+            Some("global_init_init"),
+            "{err}"
+        );
+        {
+            let (library, raised, at) = ("c", "panic", "g");
             let (code, out, err) = tempest(&["run", "-w", dir, "--library", library, "-b", "cpp"]);
             assert_eq!((code, out.trim_end()), (1, library), "{err}");
             assert!(err.contains(raised), "{library}: {err}");
@@ -1752,7 +1765,7 @@ fn assert_relative_lines(path: &Path, text: &str) {
 
 /// What sets a process-wide handler for failures, which only the
 /// programs and tests Temper generates may, as a library's user's
-/// process is theirs: Java's `Bubble.keepStackTraces`, Rust's panic hook
+/// process is theirs: Java's `Core.keepStackTraces`, Rust's panic hook
 /// (`set_hook`, which `catch_quietly`, `block_panics`, and `TestWork`
 /// set), C++'s `set_terminate` (`install_stack_traces`), and C#'s
 /// `UnhandledException`. After `build`, on every backend, no library
@@ -1762,7 +1775,8 @@ fn assert_relative_lines(path: &Path, text: &str) {
 fn failure_handlers_only_in_harnesses() {
     let files = [(
         "a.temper",
-        "export let f(n: Int): Int throws Bubble {\n  if (n < 0) { bubble() }\n  n\n}\n\
+        "export let f(n: Int): Int throws Negative {\n  if (n < 0) { throw new Negative() }\n  n\n}\n\
+         export sealed interface NegativeError extends Error {}\nexport class Negative extends NegativeError {}\n\
          console.log(\"a ${f(1) orelse 0}\");\n\
          async { (): GeneratorResult<Empty> extends GeneratorFn => console.log(\"x\"); }\n\
          test(\"t\") { assert(f(1) == 1) }\n",
@@ -1823,11 +1837,12 @@ fn failure_handlers_only_in_harnesses() {
 /// A program whose `orelse`s panic, in a function's `let` (line 6) and
 /// in an init `let`'s value (line 10), for the stack-trace tests.
 #[cfg(any(feature = "cpp", feature = "csharp"))]
-const ORELSE_PANICS: &str = "let positive(n: Int): Int throws Bubble {\n  if (n <= 0) { bubble() }\n  n\n}\n\
+const ORELSE_PANICS: &str = "let positive(n: Int): Int throws NotPositive {\n  if (n <= 0) { throw new NotPositive() }\n  n\n}\n\
     let checked(n: Int): Int {\n  let q = positive(n) orelse panic();\n  q + 1\n}\n\
-    console.log(\"d\");\nlet p = positive(checked(-1)) orelse panic();\nconsole.log(\"after ${p}\");\n";
+    console.log(\"d\");\nlet p = positive(checked(-1)) orelse panic();\nconsole.log(\"after ${p}\");\n\
+    sealed interface Problem extends Error {}\nclass NotPositive extends Problem {}\n";
 
-/// On Lua, `run`'s uncaught bubble, an error that isn't a string, shows
+/// On Lua, `run`'s uncaught failure, an error that isn't a string, shows
 /// a stack trace, as an uncaught panic's does, which `lua`'s own handler
 /// gives only strings. A panic that passed an `orelse`, which raises it
 /// again, shows the trace from where it was first raised. Skipped
@@ -1839,8 +1854,8 @@ fn lua_stack_traces() {
         ("b/config.temper.md", "    export let name = \"b\";\n"),
         (
             "b/b.temper",
-            "let f(n: Int): Int throws Bubble {\n  if (n > 1) { bubble() }\n  n\n}\n\
-             console.log(\"b\");\nf(5);\n",
+            "let f(n: Int): Int throws Big {\n  if (n > 1) { throw new Big() }\n  n\n}\n\
+             console.log(\"b\");\ntry f(5);\nsealed interface Problem extends Error {}\nclass Big extends Problem {}\n",
         ),
         ("c/config.temper.md", "    export let name = \"c\";\n"),
         (
@@ -1851,12 +1866,17 @@ fn lua_stack_traces() {
         ("e/config.temper.md", "    export let name = \"e\";\n"),
         (
             "e/e.temper",
-            "let g(n: Int): Int throws Bubble {\n  if (n > 1) { panic() }\n  if (n < 0) { bubble() }\n  n\n}\n\
-             console.log(\"e\");\nlet x = g(5) orelse 0;\nconsole.log(\"after ${x}\");\n",
+            "let g(n: Int): Int throws Negative {\n  if (n > 1) { panic() }\n  if (n < 0) { throw new Negative() }\n  n\n}\n\
+             console.log(\"e\");\nlet x = g(5) orelse 0;\nconsole.log(\"after ${x}\");\n\
+             sealed interface Problem extends Error {}\nclass Negative extends Problem {}\n",
         ),
     ];
     with_library("lua-traces", &files, |dir| {
-        for (library, raised) in [("b", "lua: Bubble"), ("c", "panic"), ("e", "panic")] {
+        for (library, raised) in [
+            ("b", "lua: uncaught failure: Big: big"),
+            ("c", "panic"),
+            ("e", "panic"),
+        ] {
             let (code, out, err) = tempest(&["run", "-w", dir, "--library", library, "-b", "lua"]);
             if tools_missing("lua", &format!("{out}{err}")) {
                 return;
@@ -1881,60 +1901,47 @@ fn lua_stack_traces() {
     });
 }
 
-/// On Rust, `run`'s uncaught bubble panics saying so, and, as any panic
-/// does, shows a stack trace with `RUST_BACKTRACE` set: the bubble's
-/// own, captured where it was made, from the function that bubbled up
-/// to `main`. Without it, there's none, and Rust's note says how to get
-/// one. Skipped without cargo, unless `TEMPER_REQUIRE_CHECKERS` is set.
+/// On Rust, `run`'s uncaught failure panics saying so, with its causes,
+/// and no trace of where it was thrown, which a failure, a value, doesn't
+/// keep; with `RUST_BACKTRACE` unset, Rust's note says how to get the
+/// panic's own. Skipped without cargo, unless `TEMPER_REQUIRE_CHECKERS`
+/// is set.
 #[test]
 #[cfg(feature = "rust")]
-fn rust_stack_traces() {
+fn rust_uncaught_failures() {
     let files = [
         ("b/config.temper.md", "    export let name = \"b\";\n"),
         (
             "b/b.temper",
-            "let f(n: Int): Int throws Bubble {\n  if (n > 1) { bubble() }\n  n\n}\n\
-             console.log(\"b\");\nf(5);\n",
+            "sealed interface Problem extends Error {}\n\
+             class Big(public n: Int) extends Problem {}\n\
+             class Small(public n: Int) extends Problem {}\n\
+             let small(n: Int): Int throws Small { throw new Small(n) }\n\
+             let f(n: Int): Int throws Big {\n  small(n) catch { throw new Big(n) }\n}\n\
+             console.log(\"b\");\ntry f(5);\n",
         ),
     ];
-    with_library("rust-traces", &files, |dir| {
-        let run = |trace: bool| {
-            let mut command = Command::new(env!("CARGO_BIN_EXE_temper"));
-            command.args(["run", "-w", dir, "--library", "b", "-b", "rust"]);
-            command.env_remove("RUST_LIB_BACKTRACE");
-            match trace {
-                true => command.env("RUST_BACKTRACE", "1"),
-                false => command.env_remove("RUST_BACKTRACE"),
-            };
-            let output = command.output().unwrap();
-            let text = |b: Vec<u8>| String::from_utf8(b).unwrap();
-            (
-                output.status.code().unwrap(),
-                text(output.stdout),
-                text(output.stderr),
-            )
-        };
-        let (code, out, err) = run(false);
+    with_library("rust-failures", &files, |dir| {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_temper"));
+        command.args(["run", "-w", dir, "--library", "b", "-b", "rust"]);
+        command.env_remove("RUST_LIB_BACKTRACE");
+        command.env_remove("RUST_BACKTRACE");
+        let output = command.output().unwrap();
+        let text = |b: Vec<u8>| String::from_utf8(b).unwrap();
+        let (code, out, err) = (
+            output.status.code().unwrap(),
+            text(output.stdout),
+            text(output.stderr),
+        );
         if tools_missing("rust", &format!("{out}{err}")) {
             return;
         }
         assert_eq!((code, out.trim_end()), (1, "b"), "{err}");
-        assert!(err.contains("uncaught bubble: bubble"), "{err}");
-        assert!(!err.contains("bubbled at"), "{err}");
+        assert!(
+            err.contains("uncaught failure: big (n: 5)\ncaused by: small (n: 5)"),
+            "{err}"
+        );
         assert!(err.contains("RUST_BACKTRACE=1"), "{err}");
-        let (code, out, err) = run(true);
-        assert_eq!((code, out.trim_end()), (1, "b"), "{err}");
-        // The bubble's trace, from `f` (`b::mod::f`, in `mod.rs`) to
-        // `main`, before the panic's own.
-        let (_, bubbled) = err.split_once("bubbled at:\n").expect(&err);
-        let frames: Vec<&str> = (bubbled.lines())
-            .take_while(|l| !l.starts_with("stack backtrace:"))
-            .collect();
-        let f = frames.iter().position(|l| l.ends_with("::mod::f"));
-        let main = frames.iter().position(|l| l.ends_with(" b::main"));
-        assert!(f.is_some() && main.is_some() && f < main, "{err}");
-        let at = frames[f.unwrap() + 1].replace('\\', "/");
-        assert!(at.contains("/b/src/mod.rs:"), "{err}");
     });
 }
 

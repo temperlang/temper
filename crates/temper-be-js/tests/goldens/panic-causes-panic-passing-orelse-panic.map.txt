@@ -1,19 +1,36 @@
 # generated line:column -> source:line:column, and the text at each
-3:1 -> ../panic-causes.temper.md:12:5  /** <- let positive(n: Int): Int th
-7:1 -> ../panic-causes.temper.md:12:5  function positive(n) { <- let positive(n: Int): Int th
-7:10 -> ../panic-causes.temper.md:12:9 (positive)  positive(n) { <- positive(n: Int): Int throws
-7:18 -> ../panic-causes.temper.md:12:5  (n) { <- let positive(n: Int): Int th
-8:3 -> ../panic-causes.temper.md:13:7  if (n <= 0) { <- if (n <= 0) { bubble() }
-9:5 -> ../panic-causes.temper.md:13:21  bubble(); <- bubble() }
-11:3 -> ../panic-causes.temper.md:14:7  return n; <- n
-14:1 -> ../panic-causes.temper.md:79:5  /** <- let read(ls: List<Int>, i: I
-19:1 -> ../panic-causes.temper.md:79:5  function read(ls, i) { <- let read(ls: List<Int>, i: I
-19:10 -> ../panic-causes.temper.md:79:9 (read)  read(ls, i) { <- read(ls: List<Int>, i: Int):
-19:14 -> ../panic-causes.temper.md:79:5  (ls, i) { <- let read(ls: List<Int>, i: I
-20:3 -> ../panic-causes.temper.md:80:7  positive((i + 1) | 0); <- positive(i + 1);
-21:3 -> ../panic-causes.temper.md:81:7  return listedGet(/** @type { <- ls[i]
-24:1 -> ../panic-causes.temper.md:16:5  console.log("before"); <- console.log("before");
-25:1 -> ../panic-causes.temper.md:83:5  /** @type {number} */ <- let r = read([1, 2], 5) orel
-26:1 -> ../panic-causes.temper.md:83:5  let r; <- let r = read([1, 2], 5) orel
-27:1 -> ../panic-causes.temper.md:83:5  try { <- let r = read([1, 2], 5) orel
-33:1 -> ../panic-causes.temper.md:84:5  console.log(`after ${r}`); <- console.log("after ${r}");
+3:1 -> ../panic-causes.temper.md:15:5  /** <- let positive(n: Int): Int th
+8:1 -> ../panic-causes.temper.md:15:5  function positive(n) { <- let positive(n: Int): Int th
+8:10 -> ../panic-causes.temper.md:15:9 (positive)  positive(n) { <- positive(n: Int): Int throws
+8:18 -> ../panic-causes.temper.md:15:5  (n) { <- let positive(n: Int): Int th
+9:3 -> ../panic-causes.temper.md:16:7  if (n <= 0) { <- if (n <= 0) { throw new NotP
+10:5 -> ../panic-causes.temper.md:16:21  throw new NotPositive(n); <- throw new NotPositive(n) }
+12:3 -> ../panic-causes.temper.md:17:7  return n; <- n
+15:1 -> ../panic-causes.temper.md:84:5  /** <- let read(ls: List<Int>, i: I
+21:1 -> ../panic-causes.temper.md:84:5  function read(ls, i) { <- let read(ls: List<Int>, i: I
+21:10 -> ../panic-causes.temper.md:84:9 (read)  read(ls, i) { <- read(ls: List<Int>, i: Int):
+21:14 -> ../panic-causes.temper.md:84:5  (ls, i) { <- let read(ls: List<Int>, i: I
+22:3 -> ../panic-causes.temper.md:85:7  positive((i + 1) | 0); <- positive(i + 1);
+23:3 -> ../panic-causes.temper.md:86:7  return listedGet(/** @type { <- ls[i]
+26:1 -> ../panic-causes.temper.md:12:5  class Problem extends Error <- sealed interface Problem ext
+26:7 -> ../panic-causes.temper.md:12:22 (Problem)  Problem extends Error {} <- Problem extends Error {}
+26:14 -> ../panic-causes.temper.md:12:5   extends Error {} <- sealed interface Problem ext
+30:1 -> ../panic-causes.temper.md:13:5  class NotPositive extends Pr <- class NotPositive(public n:
+30:7 -> ../panic-causes.temper.md:13:11 (NotPositive)  NotPositive extends Problem <- NotPositive(public n: Int) e
+30:18 -> ../panic-causes.temper.md:13:5   extends Problem { <- class NotPositive(public n:
+31:3 -> ../panic-causes.temper.md:13:30  /** @type {number} */ <- n: Int) extends Problem {}
+32:3 -> ../panic-causes.temper.md:13:30  #n; <- n: Int) extends Problem {}
+34:3 -> ../panic-causes.temper.md:13:5  /** @param {number} n */ <- class NotPositive(public n:
+35:3 -> ../panic-causes.temper.md:13:5  constructor(n) { <- class NotPositive(public n:
+37:5 -> ../panic-causes.temper.md:13:30  this.#n = n; <- n: Int) extends Problem {}
+40:3 -> ../panic-causes.temper.md:13:30  /** @returns {number} */ <- n: Int) extends Problem {}
+41:3 -> ../panic-causes.temper.md:13:30  get n() { <- n: Int) extends Problem {}
+41:7 -> ../panic-causes.temper.md:13:30 (n)  n() { <- n: Int) extends Problem {}
+45:3 -> ../panic-causes.temper.md:13:5  /** @returns {string} */ <- class NotPositive(public n:
+46:3 -> ../panic-causes.temper.md:13:5  get message() { <- class NotPositive(public n:
+47:5 -> ../panic-causes.temper.md:13:5  return `not positive (n: ${t <- class NotPositive(public n:
+51:1 -> ../panic-causes.temper.md:19:5  console.log("before"); <- console.log("before");
+52:1 -> ../panic-causes.temper.md:88:5  /** @type {number} */ <- let r = read([1, 2], 5) orel
+53:1 -> ../panic-causes.temper.md:88:5  let r; <- let r = read([1, 2], 5) orel
+54:1 -> ../panic-causes.temper.md:88:5  try { <- let r = read([1, 2], 5) orel
+60:1 -> ../panic-causes.temper.md:89:5  console.log(`after ${r}`); <- console.log("after ${r}");

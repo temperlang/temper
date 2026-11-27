@@ -1,4 +1,6 @@
-__all__ = ('host_fails', 'host_fails_test')
+from temper_core import Failure as _Failure
+
+__all__ = ('OopsError', 'Oops', 'host_fails', 'host_fails_test')
 
 
 class _connected:
@@ -14,6 +16,18 @@ class _connected:
         from unittest import TestCase
 
         TestCase().fail("host test failure")
+
+
+class OopsError(_Failure, Exception):
+    __slots__ = ()
+
+
+class Oops(OopsError):
+    __slots__ = ()
+
+    @property
+    def message(self, /) -> str:
+        return 'oops'
 
 
 def host_fails(n: int, /) -> int:

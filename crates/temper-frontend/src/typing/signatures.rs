@@ -425,7 +425,7 @@ impl Settle {
     }
 
     /// A signature as Kotlin Temper writes it, `(Int32, Int32) -> Int32`,
-    /// but with a result that may bubble as `Int32 throws Bubble`.
+    /// but with a result that may fail as `Int32 throws E`.
     fn show_sig(&self, sig: &Sig) -> String {
         let ret = match sig.fail {
             NEVER => self.show(sig.pass),

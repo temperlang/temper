@@ -102,7 +102,8 @@ fn runtime_functions_are_the_runtimes() {
         "Console::get_console",
         "Console::log",
         "Int::toString",
-        "bubble",
+        "panic",
+        "panic_caused_by",
     ]);
     for path in called {
         assert!(defines(&runtime, path), "{path} isn't in temper-core");

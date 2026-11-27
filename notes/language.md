@@ -34,7 +34,7 @@ What Kotlin Temper does, as a hint at the non-sugar meaning (2026-10-24):
 - **Old function types become fun interfaces.** The newer type system
   (`type2`) represents each bare `fn (A): R` as a synthesized fun
   interface `Fn<I…, O>`, one per shape (count of required and optional
-  inputs, type formals, whether it can bubble), with contravariant inputs,
+  inputs, type formals, whether it can fail), with contravariant inputs,
   a covariant output and a `Function` supertype. So structurally, a
   function type is just an anonymous fun interface, which is the direction
   the language is going.

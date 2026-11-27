@@ -40,7 +40,7 @@ namespace temper {
                 return true;
             }
             T value() const override {
-                return bubble<T>("generator is exhausted");
+                return panic<T>("generator is exhausted");
             }
         };
 
@@ -72,9 +72,9 @@ namespace temper {
             }
         };
 
-        // A generator whose `next` does not bubble. This is deliberately a separate struct from
+        // A generator whose `next` can't fail. This is deliberately a separate struct from
         // [Generator] rather than a shared template specialized on a flag: the two are distinct C++
-        // types so the `next` overloads below resolve statically to the bubbling or non-bubbling
+        // types so the `next` overloads below resolve statically to the failing or non-failing
         // variant at each call site (the `Step` self-type also differs accordingly).
         template<class T>
         struct SafeGenerator {

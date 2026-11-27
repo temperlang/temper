@@ -8,12 +8,18 @@ use temper_tmpl::{Profile, text, validate};
 
 const PROGRAM: &str = "tmpl 1 model 1 library spilled 0.1.0
 
+uses `temper-core`#10 0.1.0 {
+  interface Error#11 {}
+}
+
 module spilled#0 {
+  interface SpillError#12 extends Error#11 {}
+
   fn next#1(): Int32 {
     return 1;
   }
 
-  fn risky#2(n#3: Int32): Int32 throws Bubble {
+  fn risky#2(n#3: Int32): Int32 throws SpillError#12 {
     return n#3;
   }
 

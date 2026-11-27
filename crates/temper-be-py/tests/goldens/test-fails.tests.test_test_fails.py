@@ -1,14 +1,26 @@
 from collections.abc import Callable
-from temper_core import Bubble, end_test, int_add
+from temper_core import Failure, end_test, int_add
 from temper_std.testing import Test
 from unittest import TestCase
+
+
+class _Problem(Failure, Exception):
+    __slots__ = ()
+
+
+class _Oops(_Problem):
+    __slots__ = ()
+
+    @property
+    def message(self, /) -> str:
+        return 'oops'
 
 
 def _tries(f: Callable[[], None], /) -> bool:
     finished = True
     try:
         f()
-    except Bubble:
+    except _Oops:
         finished = False
     return finished
 

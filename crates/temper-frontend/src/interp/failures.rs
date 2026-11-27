@@ -29,8 +29,7 @@ impl Interp<'_> {
 
     /// A failure, then each of its causes on a line of its own: its type,
     /// its message, and where it was first thrown, as `NotFound: not found
-    /// (key: y), at lib/a.temper:3:5`, then `caused by …`, or `caused by
-    /// a bubble`.
+    /// (key: y), at lib/a.temper:3:5`, then `caused by …`.
     pub(super) fn failure_report(&mut self, s: &Settled, failure: &Val) -> String {
         let mut out = String::new();
         let mut next = Some(failure.clone());
@@ -50,10 +49,8 @@ impl Interp<'_> {
             if let Some(thrown) = thrown_cell(&failure).and_then(|t| t.get()) {
                 let (path, line, column) = s.library.position(thrown.at);
                 out.push_str(&format!(", at {path}:{line}:{column}"));
-                match &thrown.cause {
-                    Some(Cause::Failure(cause)) => next = Some(cause.clone()),
-                    Some(Cause::Bubble) => out.push_str("\ncaused by a bubble"),
-                    None => {}
+                if let Some(Cause(cause)) = &thrown.cause {
+                    next = Some(cause.clone());
                 }
             }
         }
@@ -92,7 +89,7 @@ impl Interp<'_> {
         Ok(Some(match member {
             "message" => Val::Str(default_message(s, failure).into()),
             _ => match failure.thrown.get().and_then(|t| t.cause.as_ref()) {
-                Some(Cause::Failure(cause)) => cause.clone(),
+                Some(Cause(cause)) => cause.clone(),
                 _ => Val::Null,
             },
         }))

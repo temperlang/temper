@@ -2,7 +2,6 @@ package failures_interop;
 
 import java.util.List;
 import java.util.logging.Logger;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Failure;
@@ -103,18 +102,10 @@ public final class FailuresInteropGlobal {
         }
     }
 
-    static int nonzero(int n) {
-        if (n == 0) {
-            throw Core.bubble();
-        } else {
-            return n;
-        }
-    }
-
-    public static int mixed(String key, int n) {
+    public static int mixed(String key, String text) {
         try {
-            return lookup(key) + 10 / nonzero(n);
-        } catch (Bubble | NotFound ignored) {
+            return lookup(key) + 10 / sign(text);
+        } catch (FailuresInteropException ignored) {
             return -1;
         }
     }
@@ -181,7 +172,7 @@ public final class FailuresInteropGlobal {
     static {
         Console console = Core.getConsole(Logger.getLogger("failures_interop"));
         console.log(lookup("a") + " " + sign("-") + " " + setting("a"));
-        console.log(mixed("a", 0) + " " + mixed("z", 1) + " " + mixed("a", 5));
+        console.log(mixed("a", "") + " " + mixed("z", "+") + " " + mixed("a", "-"));
         console.log(explained("port") + "; " + explained("a") + "; " + signMessage("x"));
         console.log(earlyCause("soon") + "; " + firstMissing(List.of("a", "b", "c")) + " " + firstMissing(List.of("a")));
         console.log(firstSign(List.of("", "+")) + " " + firstSign(List.of("", "?")) + " " + firstSign(List.of()));

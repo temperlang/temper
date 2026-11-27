@@ -20,7 +20,7 @@ interpreter runs the result.
 ## Flow facts without a CFG
 
 Temper's settled tree has structured control flow: blocks, `if`, loops,
-labeled `break`/`continue`, `return`, and failure (`bubble` with `orelse`).
+labeled `break`/`continue`, `return`, and failure (`throw` with `orelse`).
 So a pass can walk a function body in evaluation order and carry an
 *environment* of facts, merging at the points where control flow merges,
 instead of first building a graph.
@@ -73,10 +73,10 @@ itself doesn't change.
 
 - **A small core of control constructs.** After macro expansion, everything
   must reduce to forms the flow pass knows: block, `if`, loop, `break` and
-  `continue`, `return`, `bubble`/`orelse`, and function. Macros that leave
+  `continue`, `return`, `throw`/`orelse`, and function. Macros that leave
   other shapes behind would make the flow pass complicated. This is the main
   commitment of the design.
-- **`orelse` merges many exits.** Every call that can bubble is an implicit
+- **`orelse` merges many exits.** Every call that can fail is an implicit
   exit, so the facts at `orelse` are the merge of the facts at each such
   call. Easy to get subtly wrong; test it well.
 - **Flow facts and macros affect each other within a function.** A narrowed
@@ -131,7 +131,7 @@ false ones; after it, what holds at the end of both branches
 (intersection), with a type only where both give the same one, written
 alike (`is D` in each, `D` the same declaration); otherwise just not
 null. A branch that always leaves, by `return`, `break`,
-`continue`, or `bubble()`, counts as holding everything, so after `if (a
+`continue`, or `throw`, counts as holding everything, so after `if (a
 == null) { return; }`, `a` isn't null. `panic()` doesn't count yet. Uses
 after a statement that always leaves aren't narrowed. `when` and `??`
 expand to `if` and `==`, so `when (a) { null -> …; else -> take(a) }`
@@ -175,7 +175,7 @@ with `is` checks (`if (!(i is D)) { return; }; takeD(i)`):
 - double negation: `if (!(a != null)) { return; }; take(a)`
 - early exits: `if (a == null || a == "") { return; }; take(a)`
 - `while`: `while (a != null) { take(a); break; }`
-- `bubble()`: `if (a == null) { bubble() }; take(a)`
+- `throw`: `if (a == null) { throw new Missing() }; take(a)`
 - functions and closures after an early exit:
   `run(fn (): String { a })`
 
@@ -444,7 +444,7 @@ Decided 2026-10-29:
 
 - **Wherever an expected type could help,** a value takes it: object,
   list, and function literals at least, and also `new Box()` with
-  nothing to solve its type arguments from, `[]`, `null`, `bubble()`,
+  nothing to solve its type arguments from, `[]`, `null`,
   `panic()`, and other places where it fits. What's done so far is in
   the sections below.
 - **The expected type never chooses between overloads,** for now, and
@@ -562,7 +562,7 @@ milestone 4's target typing slice; status in
 - **A function literal's type:** a parameter without a declared type is
   the wanted function type's parameter in its place, or `AnyValue` past
   its last; without a declared return type, the literal gives the wanted
-  type's result, and may bubble if it may. What's declared stays. Its
+  type's result, and may fail as it may. What's declared stays. Its
   parameters are typed so in its body, so `{ x => x + "a" }` where a `fn
   (Int32): Int32` is wanted is "Actual arguments do not match signature:
   (Int32, Int32) -> Int32 expected [Int32, Int32], but got [Int32,
@@ -616,23 +616,18 @@ milestone 4's target typing slice; status in
   `@inlineUnrealizedGoal` parameter, as `forEach`'s, and is "Expected
   function type, but got Function" elsewhere
   ([kotlin-differences.md](kotlin-differences.md#language-and-types)).
-- **Bubbling in a literal** without a declared return type: where its
+- **Failing in a literal** without a declared return type: where its
   place is a generic call's failure parameter, the literal fails as its
   body does, and so does the call ("Function literals' results from
-  their bodies", below). Elsewhere, where the
-  function type wanted doesn't `throw Bubble`, what may bubble in its
-  body is "Cannot bubble from a function without Bubble in its return
-  type", as for a function that declares its return type ("What may
-  bubble", below), so `apply { x => bubble() }`, `apply { x => x / 0
-  }`, and `eat { x => s.toInt32(); }`, for `eat(f: fn (Int): Void)`, are
-  reported, wherever the call is, even in a function that may bubble;
-  where it does, as for `applyB(f: fn (Int): Int throws Bubble)`, they
-  aren't. A literal with no function type wanted isn't checked.
-  Core's `forEach` takes its block at an `@inlineUnrealizedGoal`
-  parameter, whose type tempest reads, but `ls.forEach { x => bubble();
-  }` isn't reported yet, as `forEach` wants a `Void` result; Kotlin
-  inlines it, so it's reported where the function around it doesn't
-  `throw Bubble`, as in a `for … of` body.
+  their bodies", below). Elsewhere, where the function type wanted
+  doesn't `throw` what its body may, that's "Cannot throw Oops from a
+  function without Oops in its return type", as for a function that
+  declares its return type ("What may fail", below), so `apply { x =>
+  d(x, 0) }` and `eat { x => s.toInt32(); }`, for `eat(f: fn (Int):
+  Void)`, are reported, wherever the call is, even in a function that
+  may fail; where it does, as for `applyO(f: fn (Int): Int throws
+  Oops)`, they aren't. A literal with no function type wanted isn't
+  checked.
 
 ## Function literals' results from their bodies
 
@@ -643,10 +638,10 @@ gives the callee's type parameters what its body gives:
 
 - **What it gives:** its result type, its body's value joined with what
   each `return` from it gives (`literal_pass`), and what it may fail
-  with, as "What may bubble" finds it (`literal_failure`): `Bubble` if
-  anything in it may bubble, else the join of its declared failures
-  ("Declared failures", below). So `ls.map { x => 10 / x }`
-  solves `O` to `Int32` and `E` to `Bubble`, and the call fails, so it
+  with, as "What may fail" finds it (`literal_failure`): the join of its
+  declared failures ("Declared failures", below). So `ls.map { x =>
+  s.toInt32() }` solves `O` to `Int32` and `E` to `ParseError`, and the
+  call fails, so it
   must be handled where it's called; `ls.map { x => x + 1 }` leaves `E`
   unsolved, `Never<…>`, and can't fail.
 - **Which type parameters:** those in the result of the function type
@@ -685,12 +680,12 @@ gives the callee's type parameters what its body gives:
   literal.
 - **Type arguments:** a call with them gives its literals everything
   from them, as a non-generic call does from its parameters (t993,
-  2026-11-24): `apply<Int, String, Never<Bubble>>(n) { x => x + 1 }`
+  2026-11-24): `apply<Int, String, Never<Oops>>(n) { x => x + 1 }`
   types `x` as an `Int32` and wants a `String` result ("Expected subtype
   of String, but got Int32"). Where it gives a failure parameter as a
   `Never`, a literal whose body may fail is an error at the literal:
-  `apply<Int, Int, Never<Bubble>>(n) { x => 10 / x }` is "This function
-  literal may fail, but its call gives E as Never<Bubble>; give E a
+  `apply<Int, Int, Never<Oops>>(n) { x => d(10, x) }` is "This function
+  literal may fail, but its call gives E as Never<Oops>; give E a
   failure type, or handle the failure in the literal". Its list and
   object literal arguments take their types from them too, so
   `count<Int>([])` passes a `List<Int32>`. The wrong number of type
@@ -753,7 +748,7 @@ Kotlin's words and at its positions, wherever a value's type is checked
 ("Cannot assign to fn (Int32): Boolean from fn (String): Boolean";
 "Expected subtype of …" as an argument):
 
-- `S` may bubble and `T` doesn't: a `fn (Int32): Int32 throws Bubble`
+- `S` may fail and `T` doesn't: a `fn (Int32): Int32 throws Oops`
   isn't a `fn (Int32): Int32`. The reverse passes. (Recheck against a
   nightly once Kotlin Temper's move to its newer types lands, PR #500:
   its assignment check may then reject the reverse too, matching
@@ -772,7 +767,7 @@ Kotlin's words and at its positions, wherever a value's type is checked
   `fn (Int32): List<String>`.
 
 What only that variance accepts, as `fn (Animal): Dog` for a `fn (Dog):
-Animal`, or `fn (Int32): Int32` for a `fn (Int32): Int32 throws Bubble`,
+Animal`, or `fn (Int32): Int32` for a `fn (Int32): Int32 throws Oops`,
 isn't reported, but isn't known to be a subtype either, as for generic
 types ("Type parameters are invariant", above), until it's settled
 whether function types are invariant too; adapters could keep it working
@@ -886,9 +881,8 @@ one. These are Kotlin Temper's rules (`type2/TypeContext2.kt`,
   and `B` is the join of `A` and `B`, and the meet is `Never<` the meet of
   `A` and `B` `>`. So an `if` whose one branch returns and the other is a
   `String` gives `String`.
-- **Calls that never return:** `panic()` and `bubble()` have two
-  signatures, `(): Never<Void>` (`bubble`'s with `throws Bubble`) and
-  `<T>(): Never<T>`, so `T` is inferred from what the call's place
+- **Calls that never return:** `panic()` (and Kotlin's `bubble()`) has
+  two signatures, `(): Never<Void>` and `<T>(): Never<T>`, so `T` is inferred from what the call's place
   wants, as in `let x: Int = panic()`. Kotlin's inserted
   `voidishPanic` (a missing `else` of a `when`) works the same way.
 - **Inference prefers the plain type:** a type variable with lower
@@ -904,7 +898,7 @@ one. These are Kotlin Temper's rules (`type2/TypeContext2.kt`,
 **Tempest today** has one bottom, `TypeData::Never` (`types.rs`), a
 subtype of every type, used for `return`, `panic()`, and the like and
 for a bare `Never`. A written `Never<String>` is `Never` for now, as
-std's `bail(): Never<Void> throws Bubble`. Both accept everything Kotlin accepts,
+std's `bail(): Never<Void>`. Both accept everything Kotlin accepts,
 since Kotlin's `Never<T>` is a subtype of fewer types, but a backend
 can't get its fallback type, and a `Never<A>` used as an unrelated `B`
 isn't reported. Before code generation (milestone 5), or reporting that,
@@ -985,7 +979,8 @@ this order (Kotlin's `BuiltinOperatorSpecs.kt`):
 - `+`, `-` and `*`: `(Int32, Int32) -> Int32`, then `Int64` and
   `Float64` likewise; `+` and `-` with one operand, `(Int32) -> Int32`
   and so on.
-- `/` and `%`: the same three, each returning `T throws Bubble`.
+- `/` and `%`: the same three, each returning `T` (Kotlin's `T throws
+  Bubble`): integers' panic on a zero divisor.
 - `&`, `|` and `^`: `Int32` and `Int64`; `~`: `(Int32) -> Int32` and
   `(Int64) -> Int64`; `<<`, `>>` and `>>>`: `(Int32, Int32) -> Int32` and
   `(Int64, Int32) -> Int64`.
@@ -1133,7 +1128,7 @@ arity doesn't count `this`. `Int.m` is `Int32.m`, as core's `Int` is
   `StringIndex`'s and `NoStringIndex`'s in `StringIndexOption`.
 - **Indexing:** `a[i]` is a call of `a.get(i)`, as Kotlin Temper
   desugars it, for a builtin type's value or a class's (`m[k]` for a
-  `Map` may bubble, as `Mapped.get` `throws Bubble`; `ls[i]` doesn't);
+  `Map` may fail, as `Mapped.get` `throws MissingKey`; `ls[i]` panics);
   `a[i] = v` is already `a.set(i, v)` by then.
 - **Not typed:** a member core doesn't declare (`x.foo()`), a nullable
   receiver's (`xs.length` for `xs: List<Int>?`, where Kotlin says "No
@@ -1148,8 +1143,8 @@ arity doesn't count `this`. `Int.m` is `Int32.m`, as core's `Int` is
 
 As built (2026-11-23): a function that may fail has a result type, `T
 throws E` (`TypeData::Result { pass, fail }` in `types.rs`), as its
-function type's result; `E` is `Bubble`, a declared failure type
-("Declared failures", below), or a type parameter (a failure parameter,
+function type's result; `E` is a declared failure type
+("Declared failures", below) or a type parameter (a failure parameter,
 below). Results
 are internal (RFC 164's "results can't be held"):
 
@@ -1200,7 +1195,7 @@ frontend tests and the Python and JS goldens, but it saved nothing:
   compiler find every one.
 - **tmpl would cost more.** A `Nominal` needs a declaration: a hidden
   class in core's fixture, which then shows up as an external in nearly
-  every program's `uses` (tests fail with `Bubble`). Backends' imports,
+  every program's `uses`. Backends' imports,
   dependency walks (C++, Rust groups), and type naming would all see it
   as a class. The ~16 structural arms it would remove (types.rs, nevers,
   analysis, naming, backends' walks) are one line each. The seven
@@ -1226,9 +1221,9 @@ A type parameter used after `throws` is a failure parameter, `E` in
 core's `Listed.map<O, E>(transform: fn (T): O throws E): List<O> throws
 E` (RFC 164; `Types::fails_with`). It's solved per call as any type
 parameter is, from what the arguments declare: a callback `fn (Int): Int
-throws Bubble` makes it `Bubble`, so the call may fail; a function
-literal without a declared result, from its body, so `ls.map { x => 10
-/ x }` fails at the call ("Function literals' results from their
+throws Oops` makes it `Oops`, so the call may fail; a function literal
+without a declared result, from its body, so `ls.map { x => s.toInt32()
+}` fails at the call ("Function literals' results from their
 bodies", above). One that nothing solves is `Never<Error>`
 (`Types::no_failure`), which `Types::result` drops, so the call can't
 fail; a `Never<Error>` argument solves nothing either. Whether a call
@@ -1238,19 +1233,15 @@ fails comes from its solved signature (`bubbles.rs`). As built
 - **Bound:** one declared without a bound is bound by `Error`, so
   generic code may `throw` it, read its `message`, and check it with
   `is` (`Settle::unwritten_bound`, for core's methods from their
-  signatures); writing `E extends Error` is allowed too. A bubble fits
-  that bound until `Bubble` goes (`fits_param_bound`), as `throws Error`
-  takes one; anything else that isn't a failure is "Type formal <E
-  extends Error> cannot bind to String …".
+  signatures); writing `E extends Error` is allowed too. Anything that
+  isn't a failure is "Type formal <E extends Error> cannot bind to
+  String …".
 - **Joins:** arguments that solve it two ways give their join
   (`Types::join_failures`, in `solve_call`): `both(find, check)` for
   callbacks failing with `Missing` and `Bad` under `AppError` fails with
   `AppError`; under different roots, with `Error`, which only a handler
   takes ("Cannot throw Error, failures under different roots, from a
-  function; handle them with orelse or catch"). `Bubble` beside a
-  declared failure is `Bubble`, so the declared one's argument doesn't
-  fit: they never mix, and `Bubble` is a subtype of nothing else
-  (`Types::subtype`).
+  function; handle them with orelse or catch").
 - **Core:** `Listed`'s `map`, `filter`, `reduce`, `reduceFrom`,
   `reduceFromIndex`, `join`, and `sorted`, `List.forEach`,
   `String.forEach`, `ListBuilder.sort`, and `Mapped`'s `forEach`,
@@ -1261,8 +1252,7 @@ fails comes from its solved signature (`bubbles.rs`). As built
 - **tmpl** (chunk 15): a call's type arguments give its failure
   parameters (`Typing::type_args`) as solved in full when the call is
   checked, from its literals' bodies too (`Typing::failure_args`, by
-  their places), `Never<Error>` where it can't fail by one; a bubble as
-  one is "not yet in tmpl: a failure parameter that a bubble gives"
+  their places), `Never<Error>` where it can't fail by one
   ([tmpl/nodes.md](tmpl/nodes.md), "Declared failures").
 
 ## Declared failures
@@ -1299,10 +1289,16 @@ one place each, as they may change.
   is an `Error`; joins of two failure types with no closer common type
   (two roots' types) are `Error`.
 - **`throws E`** (`eval_result`, `check_throws`): `E` is a failure type,
-  `Bubble`, a type parameter, or a `Never`. Anything else is "String
-  isn't a failure type; …", and the root, "Error is the root of failure
-  types; …"; both stand for what they did before, `Bubble` and the root.
-- **`throw x`** is a `Fail` node with `x` (`bubble()`'s has none), of
+  a type parameter, or a `Never`. Anything else is "String isn't a
+  failure type; …", and the root, "Error is the root of failure types;
+  …"; the function's failure is then unknown, so nothing more is
+  reported for it. Kotlin Temper 0.6 code's `Bubble` and `bubble()` are
+  undeclared names, each saying how to migrate (`Library`'s message for
+  `UndeclaredName`): "Bubble has not been declared; Bubble is gone:
+  declare an error type and throw it (sealed interface MyError extends
+  Error {}; throws MyError; throw new MyError()), return null, or
+  panic() for a bug".
+- **`throw x`** is a `Fail` node with `x`, of
   type `Never`; `x` must be an `Error` ("Expected subtype of Error, but
   got Int32").
 - **Core's failure types** are builtin types (`types.rs`,
@@ -1319,24 +1315,19 @@ one place each, as they may change.
   binds the failure first, `Orelse(x, { let e = caught(); b })`, where
   the hidden builtin `caught()` has the type of what `x` may fail with
   (`caught_type`), the join of its failures (`join_failures`), so a
-  `when (e)` over a sealed type needs no `else`. Where `x` may bubble,
-  that's "A Bubble has no value to bind; catch it without (e), or with
-  orelse". `catch (e) { … }` with nothing before it is malformed.
+  `when (e)` over a sealed type needs no `else`. `catch (e) { … }` with
+  nothing before it is malformed.
 - **What a function may fail with** (`allowed_failure`) is its declared
   result's failure type, or a function literal's, as before. Each
-  failing place in it ("What may bubble", below) has a failure type:
-  `Bubble` for `bubble()`; core's `BrokenPromise` for `await`; the
+  failing place in it ("What may fail", below) has a failure type:
+  core's `BrokenPromise` for `await`; the
   value's type for `throw`; and a call's callee's result's, solved
   (`call_failure`). A place passes if its type is the function's or a
   subtype (`check_failures`). Otherwise, where the function can't fail,
-  "Cannot bubble …" as before, or "Cannot throw NotFound from a
-  function without NotFound in its return type"; and where it may, but
-  not with that: "Cannot throw NotFound from a function that throws
-  Other; catch it, and throw an Other there if need be", and for
-  `Bubble`, never mixed either way, "Cannot throw NotFound from a
-  function that throws Bubble; …" and "Cannot bubble from a function
-  that throws NotFound; …". Conversion is only explicit, by `throw` in
-  a handler.
+  "Cannot throw NotFound from a function without NotFound in its return
+  type"; and where it may, but not with that: "Cannot throw NotFound
+  from a function that throws Other; catch it, and throw an Other there
+  if need be". Conversion is only explicit, by `throw` in a handler.
 - **Exports** fail only with exported types (Tom, 2026-11-24): an
   exported function's or public method's failure type is part of its
   result type expression, so the check against exported signatures
@@ -1344,9 +1335,9 @@ one place each, as they may change.
   "Export depends publicly on non-exported symbol Hidden". Private
   functions may fail with unexported types, and an exported sealed
   failure type may have unexported classes under it.
-- **Calls Kotlin might fold** count only for `Bubble`: a call that may
-  fail with a declared type is always a failing place, as Kotlin has
-  none.
+- **No folding first:** a call that may fail is always a failing
+  place, where Kotlin folds a bubbling call of constants and reports it
+  only if the folded call bubbles.
 - **Messages and causes:** core's `Error` has two getters, which a
   failure type's values have unless it declares its own
   (`core_member_found` looks there for a failure class's): `message:
@@ -1354,8 +1345,7 @@ one place each, as they may change.
   public fields, `not found (key: y)`; and `cause: Error?`, the failure
   being handled where it was first thrown, by a `throw` in a `catch`
   block or `orelse` fallback (or a `for … of` body in one, but not
-  another function), or null: none, or a bubble, which reports still
-  say. A failure thrown again keeps its first cause and place, so causes
+  another function), or null. A failure thrown again keeps its first cause and place, so causes
   never loop. A report of one nothing handles says its type, message,
   and place, then each cause's: `Failed with LookupFailed: lookup failed
   (name: port), at a.temper:5:24`, `caused by NotFound: …`. A panic of
@@ -1366,7 +1356,7 @@ one place each, as they may change.
   type. That keeps it compatible with a later `Promise<T, E>`, whose
   `await` throws its `E`: a one-argument `Promise<T>` will be
   `Promise<T, BrokenPromise>`, so code written now keeps its meaning.
-  Typing (`find_bubbles`), tmpl (`failures::node_failure`, by core's
+  Typing (`find_failures`), tmpl (`failures::node_failure`, by core's
   `BrokenPromise` declaration), and the state machines'
   `getPromiseResultSync` all name it in one place each, which `E` will
   replace.
@@ -1375,59 +1365,53 @@ one place each, as they may change.
   `Error`, any error; one that declares nothing makes a
   `SafeGenerator<Y>`, which can't fail, so "Expected subtype of fn:
   SafeGenerator<Int32>, but got fn: Generator<Int32>" where a body that
-  throws meets a `SafeGenerator` place. As before (with `Error` for
-  `Bubble`), `SafeGenerator.next()` throws `Error` too, the same
+  throws meets a `SafeGenerator` place. As Kotlin's bubbles,
+  `SafeGenerator.next()` throws `Error` too, the same
   signature, no covariant override; `nextSafe()` is the call that can't
   fail. Callers handle `next()`'s `Error` with `orelse` or `catch`
   (binding `Error`, which `when` narrows); only tests, std, and
   generator bodies may pass it on: a generator literal may declare
   `GeneratorResult<Y> throws Error` (`Settle::may_throw_root`), as its
   `next()` throws `Error` anyway, so it can pass on an inner generator's
-  failure, as bubbles passed out of generators before. User code can't
+  failure. User code can't
   write `throws Error` anywhere else. No `Generator<Y, E>`: that needs
   default type arguments, a language change of its own. A failure ends
   the generator.
 - **Not yet:** `error case`, promises with `E`, and checks that a
   failure type's own `message` or `cause` fits the root's.
 
-## What may bubble
+## What may fail
 
-A function whose declared return type doesn't `throw Bubble` mustn't
-bubble (`typing/bubbles.rs`, Kotlin's `BubblesAreNotFree`); one that
-throws a declared failure type mustn't either ("Declared failures",
-above). In its body and parameters' defaults, each of these is "Cannot
-bubble from a function without Bubble in its return type", at the
-call:
+A function fails only with what its declared result `throws`
+(`typing/bubbles.rs`; "Declared failures", above). In its body and
+parameters' defaults, each of these is a failing place, reported where
+the function can't fail with it ("Cannot throw Oops from a function
+without Oops in its return type"):
 
-- `bubble()`.
-- A call of a function value whose type `throws Bubble`: a parameter,
-  local, function, or method. A call Kotlin might fold, as `g(1)`, isn't
-  reported, but Kotlin never folds a method of a value, nor a call with
-  an argument that doesn't fit its parameter. Core's methods no longer
-  bubble (2026-11-25): conversions throw `ParseError`, `Mapped.get` and
-  `MapBuilder.remove` `MissingKey`, and code points `InvalidCodePoint`. A call with the wrong number of arguments isn't reported,
-  as Kotlin can't pick its callee.
-- Not `x as T` that fails, nor `a / b` or `a % b` by zero: they panic
-  (2026-11-25; Kotlin bubbles), and dividing `Float64`s gives IEEE 754's
-  results. Nor `await p`, which throws core's `BrokenPromise`
-  (2026-11-26), "Cannot throw BrokenPromise from a function without
-  BrokenPromise in its return type" where nothing handles it; it fails
-  there when run, on every target, even for a promise that's kept.
+- `throw x`.
+- A call of a function value whose type `throws`: a parameter, local,
+  function, or method, with its failure parameters as the call solves
+  them. Core's methods that fail throw `ParseError` (conversions),
+  `MissingKey` (`Mapped.get`, `MapBuilder.remove`), and
+  `InvalidCodePoint` (code points). A call with the wrong number of
+  arguments isn't reported, as its callee is unknown.
+- `await p`, which throws core's `BrokenPromise` (2026-11-26); where
+  nothing handles it, it panics there when run, on every target, even
+  for a promise that's kept.
+- Not `x as T` that fails, nor `a / b` or `a % b` of integers by zero:
+  they panic (2026-11-25; Kotlin bubbles), and dividing `Float64`s gives
+  IEEE 754's results.
 
-Not looked into: the arguments of an operator that don't fit the
-signature it picks, as `h(y)` in `1.0 + h(y)` or `mk(n)` in `h == mk(n)`,
-unless the
-operator has several variants and its first argument fits none, as in
-`"a" - h(y)` or `k == mk(n)` for a class without `@operator("==")`,
-where all are; an `orelse`'s body (its fallback is), functions
-inside (each is checked on its own), and the branches of an `if` whose condition Kotlin might fold, except
-the one a literal `true` or `false` leaves. A `for … of` body is part of
-the function around it. Functions checked: those that declare a return
-type, generators (as `async` blocks) too, by what their
-`GeneratorResult<Y> throws E` says; constructors and setters, which return
-`Void`; and function literals without a return type whose place wants a
-function type that doesn't `throw Bubble` ("Function literals and target
-typing", above). Module-level code and `test` bodies may bubble.
+Not looked into: an `orelse`'s body (its fallback is), functions inside
+(each is checked on its own), and the branch of an `if` that a literal
+`true` or `false` leaves out, as Kotlin drops it. A `for … of` body is
+part of the function around it. Functions checked: those that declare a
+return type, generators (as `async` blocks) too, by what their
+`GeneratorResult<Y> throws E` says; constructors and setters, which
+return `Void`; and function literals without a return type whose place
+wants a function type ("Function literals and target typing", above).
+Module-level code may fail where nothing handles it, and `test` bodies
+with any error, which fails the test.
 
 ## Classes' types
 
@@ -1473,8 +1457,7 @@ written rather than Kotlin's `C__0`:
 - Assigning a member, `c.x = v`, `this.x = v` or a bare `x = v`, and a
   field's initializer: "Expected subtype of Int32, but got String" at
   the value, as for a setter's argument.
-- Calling a method that bubbles, in a function that can't (a bare call
-  reads `this`, so is never folded).
+- Calling a method that may fail, in a function that can't.
 - **Ties:** a method a class inherits from more than one supertype, as
   `class T extends A & B` with both defining `a`, is "No callee matches
   inputs [T, Int32] among [(A, Int32) -> Int32, (B, Int32) -> Int32]",
@@ -1492,8 +1475,8 @@ written rather than Kotlin's `C__0`:
   it should be f(x: String): Void to correctly override from I" (`get p`
   or `set p` for an accessor, written `p(): Int32`). Signatures are
   equal when their parameters' types, with a default making one
-  nullable, their results, and whether they bubble (written `Int32
-  throws Bubble`) are; parameters' names don't matter, and
+  nullable, their results, and what they throw (written `Int32
+  throws Oops`) are; parameters' names don't matter, and
   nothing is covariant, so `f(): C` doesn't override `f(): I`. It
   spans the member. As Kotlin reports one error per position, a member
   is reported once, for the first supertype it differs from, depth-first
@@ -1582,7 +1565,7 @@ backends read the unset field. Tempest checks it after typing
   constant condition (`while (true)`) has only one branch; a loop
   starts each pass with what held on entry, since nothing unsets a
   field, and is followed by what its `break`s carry; an `orelse`'s
-  fallback starts with what held before its body; `bubble()`,
+  fallback starts with what held before its body; `throw`,
   `panic()`, `continue`, and `return` end a path. A local function
   captures what held where it's declared, or on entry to its block if
   something before uses it.
@@ -1708,7 +1691,7 @@ In order, the first that applies:
 **Nullable targets.** `x is T?` is true for null and for a `T`, and `x
 as T?` lets null through, as it reads, in the interpreter and in typing:
 `s is String?` for `s: String?` is unnecessary, `x as D?` for `x: I?`
-may bubble (a `D` check remains) but for `x: D?` is unnecessary, and
+may panic (a `D` check remains) but for `x: D?` is unnecessary, and
 where `a is T?` is false, `a` isn't null. This is what Kotlin Temper's
 interpreter and generated code do (its `SeparateNullBranches` splits
 `x is T?` into a null check and a `T` check), but its type checker drops
@@ -1838,11 +1821,11 @@ question 13). `is` and `as` aren't calls to resolve.
 **Types in messages** are written as Kotlin Temper writes them
 (`Int32`, `String?`, `fn (Int32): Boolean`, `fn: Int32` with no
 parameters, `fn (Int32, _?: Int32): Int32` with an optional one, classes
-as named), except that one that may bubble is
-written as Temper's syntax does, `Int32 throws Bubble`, in function
-types (`fn (Int32): Int32 throws Bubble`), operators' signatures
-(`(Int32, Int32) -> Int32 throws Bubble`) and overrides' signatures
-(`f(): Int32 throws Bubble`) alike, where Kotlin writes its internal
+as named), except that one that may fail is
+written as Temper's syntax does, `Int32 throws Oops`, in function
+types (`fn (Int32): Int32 throws Oops`), operators' signatures
+(`(Int32, Int32) -> Int32 throws Oops`) and overrides' signatures
+(`f(): Int32 throws Oops`) alike, where Kotlin writes its internal
 `(Int32 | Bubble)` or `Result<Int32, Bubble>` (`show_result` in
 `types.rs`).
 

@@ -57,9 +57,9 @@ end
 function Grid.parse(s)
   ---@type libraries.Grid|temper.Null
   local t_1
-  if not temper.pcall(function()
+  if not temper.catch(function()
     t_1 = parseGrid(s)
-  end) then
+  end, temper.ParseError) then
     t_1 = temper.null
   end
   return t_1
@@ -68,17 +68,7 @@ end
 ---@param s string
 ---@return libraries.Grid
 function parseGrid(s)
-  if s == "" then
-    return temper.bubble()
-  end
-  ---@type number
-  local t_1
-  if not temper.catch(function()
-    t_1 = temper.string_tofloat64(s)
-  end, temper.ParseError) then
-    temper.bubble()
-  end
-  return Grid(1, { t_1 })
+  return Grid(1, { temper.string_tofloat64(s) })
 end
 
 ---@class libraries.Casing
@@ -268,11 +258,33 @@ local function rows(values, ncols)
   return temper.int32_div(temper.list_length(values), ncols)
 end
 
+---@class libraries.Problem: temper.Failure
+
+---@class libraries.Problem.type: temper.Type
+local Problem = temper.type("libraries.Problem", temper.Failure)
+
+---@class libraries.NoColumns: libraries.Problem
+---@field message string
+
+---@class libraries.NoColumns.type: temper.Type
+---@operator call: libraries.NoColumns
+local NoColumns = temper.type("libraries.NoColumns", Problem)
+
+---@param this libraries.NoColumns
+function NoColumns.constructor(this)
+end
+
+---@param this libraries.NoColumns
+---@return string
+function NoColumns.get.message(this)
+  return "no columns"
+end
+
 ---@param grid libraries.Grid
 ---@return libraries.Grid
 local function scaled(grid)
   if grid.ncols == 0 then
-    return temper.bubble()
+    error(NoColumns())
   end
   return grid
 end
@@ -282,10 +294,10 @@ end
 local function cubes(grid)
   ---@type number[]
   local t_1
-  local t_2, t_3 = temper.pcall(function()
+  local t_2, t_3 = temper.catch(function()
     local more = temper.listed_map(scaled(grid).values, function(x) return x * x * x end)
     t_1 = more
-  end)
+  end, NoColumns)
   if not t_2 then
     error("panic\ncaused by: " .. tostring(t_3))
   end
@@ -333,14 +345,7 @@ end
 ---@param grid libraries.Grid
 ---@return number
 local function corner(grid)
-  ---@type number
-  local t_1
-  if not temper.pcall(function()
-    t_1 = grid:get(1, 1)
-  end) then
-    t_1 = -1.0
-  end
-  return t_1
+  return grid:get(1, 1)
 end
 
 ---@param n integer
@@ -358,9 +363,9 @@ end
 local function mapped(grid)
   ---@type libraries.Grid
   local t_1
-  local t_2, t_3 = temper.pcall(function()
+  local t_2, t_3 = temper.catch(function()
     t_1 = scaled(grid)
-  end)
+  end, NoColumns)
   if not t_2 then
     error("panic\ncaused by: " .. tostring(t_3))
   end
@@ -478,9 +483,9 @@ end
 local function captured(s)
   ---@type libraries.Grid|temper.Null
   local found
-  if not temper.pcall(function()
+  if not temper.catch(function()
     found = parseGrid(s)
-  end) then
+  end, temper.ParseError) then
     found = temper.null
   end
   return temper.listed_join(temper.listed_map({ 1, 2 }, function(x) return temper.is_null(found) end), ",", function(b) return tostring(b) end)

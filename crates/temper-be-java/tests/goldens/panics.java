@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.IntSupplier;
 import java.util.logging.Logger;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.InvalidCodePoint;
@@ -29,25 +28,25 @@ public final class PanicsGlobal {
 
     static final Console console;
 
-    static int failing(int n) {
+    static int failing(int n) throws Positive {
         if (n > 0) {
-            throw Core.bubble();
+            throw new Positive(n);
         }
         return n;
     }
 
-    static Square downcast(Shape s) {
+    static Square downcast(Shape s) throws NotSquare {
         if (s instanceof Square) {
             return (Square) s;
         } else {
-            throw Core.bubble();
+            throw new NotSquare();
         }
     }
 
     static int calling(IntSupplier f) {
         try {
             return f.getAsInt();
-        } catch (Bubble ignored) {
+        } catch (Problem ignored) {
             return -9;
         }
     }
@@ -63,11 +62,11 @@ public final class PanicsGlobal {
         return "parsed";
     }
 
-    static int explode(int n) {
+    static int explode(int n) throws Positive {
         if (n > 0) {
             throw new AssertionError("panic");
         }
-        throw Core.bubble();
+        throw new Positive(n);
     }
 
     static int noted(String name) {
@@ -75,10 +74,10 @@ public final class PanicsGlobal {
         return -2;
     }
 
-    static int inner() {
+    static int inner() throws Positive {
         try {
             return explode(1);
-        } catch (Bubble ignored) {
+        } catch (Positive ignored) {
             return noted("inner");
         }
     }
@@ -88,19 +87,19 @@ public final class PanicsGlobal {
         int zero;
         try {
             zero = failing(0);
-        } catch (Bubble ignored) {
+        } catch (Positive ignored) {
             zero = -1;
         }
         int a;
         try {
             a = failing(1);
-        } catch (Bubble ignored2) {
+        } catch (Positive ignored2) {
             a = -1;
         }
         int b;
         try {
             b = downcast(new Circle()).side;
-        } catch (Bubble ignored3) {
+        } catch (NotSquare ignored3) {
             b = -2;
         }
         int e;
@@ -210,7 +209,7 @@ public final class PanicsGlobal {
         int p;
         try {
             p = inner();
-        } catch (Bubble ignored15) {
+        } catch (Positive ignored15) {
             p = -1;
         }
         console.log("after the panic " + p);

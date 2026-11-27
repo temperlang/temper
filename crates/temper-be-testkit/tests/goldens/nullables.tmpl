@@ -1,139 +1,151 @@
 tmpl 1 model 1 library nullables 0.0.0
 
-uses `temper-core`#25 0.0.0-alpha.0.0 {
-  class Int32#26 {
-    connected method toString#27(radix?: Int32): String;
+uses `temper-core`#8 0.0.0-alpha.0.0 {
+  interface Error#9 {}
+  class Int32#31 {
+    connected method toString#32(radix?: Int32): String;
   }
-  class String#34 {
-    connected method toInt32#35(radix?: Int32): Int32 throws ParseError#36;
+  class String#39 {
+    connected method toInt32#40(radix?: Int32): Int32 throws ParseError#41;
   }
-  class ParseError#36 extends CoreError#37 {}
-  interface CoreError#37 extends Error#38 {}
-  interface Error#38 {}
-  interface Console#47 {
-    connected method log#48(message: String): Void;
+  class ParseError#41 extends CoreError#42 {}
+  interface CoreError#42 extends Error#9 {}
+  interface Console#53 {
+    connected method log#54(message: String): Void;
   }
-  class Boolean#50 {
-    connected method toString#51(): String;
+  class Boolean#56 {
+    connected method toString#57(): String;
   }
-  connected fn getConsole#54(name?: String): Console#47;
+  connected fn getConsole#60(name?: String): Console#53;
 }
 
 module nullables#0 {
-  let ~console#49: Console#47;
+  let ~console#55: Console#53;
 
   export class Node#1 {
-    let value#2: Int32;
-    let next#3: Node#1?;
-    constructor constructor#5(value#22: Int32, next#23: Node#1?): Node#1 {
-      this.value#2 = value#22;
-      this.next#3 = next#23;
+    let value#4: Int32;
+    let next#5: Node#1?;
+    constructor constructor#7(value#28: Int32, next#29: Node#1?): Node#1 {
+      this.value#4 = value#28;
+      this.next#5 = next#29;
     }
-    method last#4(): Int32 {
-      let n#21: Node#1? = this.next#3;
-      if (isNull(n#21)) {
-        return this.value#2;
+    method last#6(): Int32 {
+      let n#27: Node#1? = this.next#5;
+      if (isNull(n#27)) {
+        return this.value#4;
       } else {
-        return ((nonNull(n#21)): Node#1).last#4();
+        return ((nonNull(n#27)): Node#1).last#6();
       }
     }
   }
 
-  export fn describe#6(x#24: Int32?): String {
-    if (isNull(x#24)) {
+  export fn describe#12(x#30: Int32?): String {
+    if (isNull(x#30)) {
       return "none";
     }
-    return %String.cat("some ", %Int32.add((nonNull(x#24)): Int32, 1).toString#27(omitted));
+    return %String.cat("some ", %Int32.add((nonNull(x#30)): Int32, 1).toString#32(omitted));
   }
 
-  export fn firstWord#7(s#28: String?): String? {
-    if (%Boolean.not(isNull(s#28)) && %Boolean.not(%String.eq((nonNull(s#28)): String, ""))) {
-      return s#28;
+  export fn firstWord#13(s#33: String?): String? {
+    if (%Boolean.not(isNull(s#33)) && %Boolean.not(%String.eq((nonNull(s#33)): String, ""))) {
+      return s#33;
     } else {
       return (null): String?;
     }
   }
 
-  fn same#8(a#29: String?, b#30: String?): Boolean {
-    return eqNullable(%String.eq, a#29, b#30);
+  fn same#14(a#34: String?, b#35: String?): Boolean {
+    return eqNullable(%String.eq, a#34, b#35);
   }
 
-  fn sameInt#9(a#31: Int32?, b#32: Int32?): Boolean {
-    return eqNullable(%Int32.eq, a#31, b#32);
+  fn sameInt#15(a#36: Int32?, b#37: Int32?): Boolean {
+    return eqNullable(%Int32.eq, a#36, b#37);
   }
 
-  fn parse#10(s#33: String): Int32 {
-    return (orelse(s#33.toInt32#35(omitted)^, %Int32.neg(1))): Int32;
+  fn parse#16(s#38: String): Int32 {
+    return (orelse(s#38.toInt32#40(omitted)^, %Int32.neg(1))): Int32;
   }
 
-  fn halved#11(s#39: String, d#40: Int32): Int32 {
-    return (orelse(%Int32.div(s#39.toInt32#35(omitted)^, d#40), %Int32.neg(1))): Int32;
+  fn halved#17(s#43: String, d#44: Int32): Int32 {
+    return (orelse(%Int32.div(s#43.toInt32#40(omitted)^, d#44), %Int32.neg(1))): Int32;
   }
 
-  fn positive#12(n#41: Int32): Int32 throws Bubble {
-    if (%Int32.lt(n#41, 0)) {
-      (bubble()^): Void;
+  interface Problem#2 extends Error#9 {}
+
+  class Negative#3 extends Problem#2 {
+    let n#10: Int32;
+    constructor constructor#11(n#45: Int32): Negative#3 {
+      this.n#10 = n#45;
     }
-    return n#41;
+    get message#46(): String {
+      return %String.cat(%String.cat("negative (n: ", this.n#10.toString#32(omitted)), ")");
+    }
   }
 
-  fn checked#13(n#42: Int32): Int32 {
-    return (orelse(positive#12(n#42)^, (panic()): Int32)): Int32;
+  fn positive#18(n#47: Int32): Int32 throws Negative#3 {
+    if (%Int32.lt(n#47, 0)) {
+      (throw(new constructor#11(n#47))^): Void;
+    }
+    return n#47;
   }
 
-  export fn stops#14(): Int32 {
+  fn checked#19(n#48: Int32): Int32 {
+    return (orelse(positive#18(n#48)^, (panic()): Int32)): Int32;
+  }
+
+  export fn stops#20(): Int32 {
     return (value { (panic()): Void; 1 }): Int32;
   }
 
-  fn orZero#15(x#43: Int32?): Int32 {
+  fn orZero#21(x#49: Int32?): Int32 {
     {
-      if (isNull(x#43)) {
+      if (isNull(x#49)) {
         return 0;
       } else {
-        return (nonNull(x#43)): Int32;
+        return (nonNull(x#49)): Int32;
       }
     }
   }
 
-  fn reason#16(n#44: Int32, why#45: String?): String {
-    return (orelse((value { positive#12(n#44)^; "ok" }): String, (if (isNull(why#45)) "fails" else (nonNull(why#45)): String): String)): String;
+  fn reason#22(n#50: Int32, why#51: String?): String {
+    return (orelse((value { positive#18(n#50)^; "ok" }): String, (if (isNull(why#51)) "fails" else (nonNull(why#51)): String): String)): String;
   }
 
-  fn varying#17(): Void {
-    var maybe#46: Int32? = (null): Int32?;
-    ~console#49.log#48(isNull(maybe#46).toString#51());
-    maybe#46 = (asNullable(3)): Int32?;
-    ~console#49.log#48(%Boolean.not(isNull(maybe#46)).toString#51());
+  fn varying#23(): Void {
+    var maybe#52: Int32? = (null): Int32?;
+    ~console#55.log#54(isNull(maybe#52).toString#57());
+    maybe#52 = (asNullable(3)): Int32?;
+    ~console#55.log#54(%Boolean.not(isNull(maybe#52)).toString#57());
   }
 
-  let list#18: Node#1;
+  let list#24: Node#1;
 
-  let tail#19: Node#1?;
+  let tail#25: Node#1?;
 
-  let fallback#20: Int32;
+  let fallback#26: Int32;
 
   init {
-    init ~console#49 = getConsole#54(omitted);
-    ~console#49.log#48(describe#6((null): Int32?));
-    ~console#49.log#48(describe#6((asNullable(41)): Int32?));
-    ~console#49.log#48((value { let subject#52: String? = firstWord#7((asNullable("hi")): String?); (if (isNull(subject#52)) "nothing" else (nonNull(subject#52)): String): String }): String);
-    ~console#49.log#48((value { let subject#53: String? = firstWord#7((asNullable("")): String?); (if (isNull(subject#53)) "nothing" else (nonNull(subject#53)): String): String }): String);
-    ~console#49.log#48(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(same#8((null): String?, (null): String?).toString#51(), " "), same#8((asNullable("a")): String?, (null): String?).toString#51()), " "), same#8((null): String?, (asNullable("a")): String?).toString#51()), " "), same#8((asNullable("a")): String?, (asNullable("a")): String?).toString#51()));
-    ~console#49.log#48(%String.cat(%String.cat(%String.cat(%String.cat(sameInt#9((asNullable(1)): Int32?, (asNullable(2)): Int32?).toString#51(), " "), sameInt#9((asNullable(3)): Int32?, (asNullable(3)): Int32?).toString#51()), " "), sameInt#9((null): Int32?, (asNullable(3)): Int32?).toString#51()));
-    ~console#49.log#48(%String.cat(%String.cat(parse#10("12").toString#27(omitted), " "), parse#10("x").toString#27(omitted)));
-    ~console#49.log#48(%String.cat(%String.cat(halved#11("12", 2).toString#27(omitted), " "), halved#11("x", 2).toString#27(omitted)));
-    ~console#49.log#48(checked#13(7).toString#27(omitted));
-    ~console#49.log#48(%String.cat(%String.cat(orZero#15((null): Int32?).toString#27(omitted), " "), orZero#15((asNullable(5)): Int32?).toString#27(omitted)));
-    varying#17();
-    init list#18 = new constructor#5(1, (asNullable(new constructor#5(2, (asNullable(new constructor#5(3, (null): Node#1?))): Node#1?))): Node#1?);
-    ~console#49.log#48(list#18.last#4().toString#27(omitted));
-    init tail#19 = list#18.next#3;
-    if (%Boolean.not(isNull(tail#19))) {
-      ~console#49.log#48(((nonNull(tail#19)): Node#1).value#2.toString#27(omitted));
+    init ~console#55 = getConsole#60(omitted);
+    ~console#55.log#54(describe#12((null): Int32?));
+    ~console#55.log#54(describe#12((asNullable(41)): Int32?));
+    ~console#55.log#54((value { let subject#58: String? = firstWord#13((asNullable("hi")): String?); (if (isNull(subject#58)) "nothing" else (nonNull(subject#58)): String): String }): String);
+    ~console#55.log#54((value { let subject#59: String? = firstWord#13((asNullable("")): String?); (if (isNull(subject#59)) "nothing" else (nonNull(subject#59)): String): String }): String);
+    ~console#55.log#54(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(same#14((null): String?, (null): String?).toString#57(), " "), same#14((asNullable("a")): String?, (null): String?).toString#57()), " "), same#14((null): String?, (asNullable("a")): String?).toString#57()), " "), same#14((asNullable("a")): String?, (asNullable("a")): String?).toString#57()));
+    ~console#55.log#54(%String.cat(%String.cat(%String.cat(%String.cat(sameInt#15((asNullable(1)): Int32?, (asNullable(2)): Int32?).toString#57(), " "), sameInt#15((asNullable(3)): Int32?, (asNullable(3)): Int32?).toString#57()), " "), sameInt#15((null): Int32?, (asNullable(3)): Int32?).toString#57()));
+    ~console#55.log#54(%String.cat(%String.cat(parse#16("12").toString#32(omitted), " "), parse#16("x").toString#32(omitted)));
+    ~console#55.log#54(%String.cat(%String.cat(halved#17("12", 2).toString#32(omitted), " "), halved#17("x", 2).toString#32(omitted)));
+    ~console#55.log#54(checked#19(7).toString#32(omitted));
+    ~console#55.log#54(%String.cat(%String.cat(orZero#21((null): Int32?).toString#32(omitted), " "), orZero#21((asNullable(5)): Int32?).toString#32(omitted)));
+    varying#23();
+    init list#24 = new constructor#7(1, (asNullable(new constructor#7(2, (asNullable(new constructor#7(3, (null): Node#1?))): Node#1?))): Node#1?);
+    ~console#55.log#54(list#24.last#6().toString#32(omitted));
+    init tail#25 = list#24.next#5;
+    if (%Boolean.not(isNull(tail#25))) {
+      ~console#55.log#54(((nonNull(tail#25)): Node#1).value#4.toString#32(omitted));
     }
-    (orelse(positive#12(%Int32.neg(1))^, ~console#49.log#48("negative"))): Void;
-    init fallback#20 = (orelse(positive#12(%Int32.neg(2))^, 0)): Int32;
-    ~console#49.log#48(fallback#20.toString#27(omitted));
-    ~console#49.log#48(%String.cat(%String.cat(%String.cat(%String.cat(reason#16(1, (null): String?), " "), reason#16(%Int32.neg(1), (null): String?)), " "), reason#16(%Int32.neg(1), (asNullable("bad")): String?)));
+    (orelse(positive#18(%Int32.neg(1))^, ~console#55.log#54("negative"))): Void;
+    init fallback#26 = (orelse(positive#18(%Int32.neg(2))^, 0)): Int32;
+    ~console#55.log#54(fallback#26.toString#32(omitted));
+    ~console#55.log#54(%String.cat(%String.cat(%String.cat(%String.cat(reason#22(1, (null): String?), " "), reason#22(%Int32.neg(1), (null): String?)), " "), reason#22(%Int32.neg(1), (asNullable("bad")): String?)));
   }
 }

@@ -122,7 +122,7 @@ $ let half = 1 / 0
 Panicked: division by zero
 interactive#2: fail
 $ half + 1
-Failed: half has no value: interactive#2 failed
+Panicked: half has no value: interactive#2 failed
 interactive#3: fail
 ```
 

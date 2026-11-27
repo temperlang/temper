@@ -119,8 +119,10 @@ const GLOBALS: &str = r#"# Globals
     export var string = "s";
     export var pairs = 0;
     export let type(next: Int, math: Int): Int { pairs += 1; next * math }
-    let half(error: Int): Int throws Bubble {
-      if (error % 2 != 0) { bubble(); }
+    sealed interface Problem extends Error {}
+    class Odd extends Problem {}
+    let half(error: Int): Int throws Odd {
+      if (error % 2 != 0) { throw new Odd(); }
       error / 2
     }
     let select(error: Int, table: List<Int>): Int {
@@ -194,8 +196,10 @@ const HOISTING: &str = r#"# Hoisting
 
     var calls = 0;
     let noisy(b: Boolean): Boolean { calls += 1; b }
-    let half(n: Int): Int throws Bubble {
-      if (n % 2 != 0) { bubble(); }
+    sealed interface Problem extends Error {}
+    class Odd extends Problem {}
+    let half(n: Int): Int throws Odd {
+      if (n % 2 != 0) { throw new Odd(); }
       n / 2
     }
     let pick(c: Boolean, a: Boolean, b: Boolean): Boolean { if (noisy(c)) { a } else { b } }
@@ -211,7 +215,7 @@ const HOISTING: &str = r#"# Hoisting
     console.log(label(null));
     console.log(label("x"));
 
-Jumps out of an `orelse` body, which `temper.pcall` runs as a function of
+Jumps out of an `orelse` body, which `temper.catch` runs as a function of
 its own: a `return`, a `break`, and a `continue`, of an outer loop too,
 and from an `orelse` in another.
 
@@ -275,7 +279,7 @@ const HOISTING_LOG: [&str; 12] = [
 /// `continue` in a `do … while` whose body declares a local, which Lua's
 /// `goto` can't jump past to `until`, so the body takes a `do … end` of
 /// its own; a `continue` of an outer loop from an inner one; and a
-/// bubble in a function with a result, which `return`s it.
+/// compile error in a function with a result, which `return`s its panic.
 const REPEATS: &str = "tmpl 1 model 1 library repeats 0.0.0
 
 uses `temper-core`#1 0.1.0 {
@@ -322,7 +326,7 @@ module repeats#0 {
     return count#16;
   }
 
-  fn positive#21(n#22: Int32): Int32 throws Bubble {
+  fn positive#21(n#22: Int32): Int32 {
     if (%Int32.lt(n#22, 0)) {
       return (error(\"negative\")): Int32;
     }
@@ -333,7 +337,7 @@ module repeats#0 {
     init ~console#7 = getConsole#6(omitted);
     ~console#7.log#3(odds#8(9).toString#5(omitted));
     ~console#7.log#3(pairs#14(4).toString#5(omitted));
-    ~console#7.log#3(positive#21(3)^.toString#5(omitted));
+    ~console#7.log#3(positive#21(3).toString#5(omitted));
   }
 }
 ";
@@ -698,8 +702,7 @@ fn luarc(libraries: &[&Path]) -> String {
 /// for NaN, where LuaJIT's `math.max(nan, 2)` gives 2
 /// (`types/float/ops`).
 /// The runtime's regex engine needs Lua 5.3's `utf8` too (`regex/match`
-/// and `regex/zero-advance`, the shared `panics`, whose bubbles from
-/// integer division are checked on LuaJIT by hand, and `host-errors`).
+/// and `regex/zero-advance`, and the shared `panics` and `host-errors`).
 const NEEDS_LUA53: [&str; 6] = [
     "types-float-ops",
     "types-string-read",

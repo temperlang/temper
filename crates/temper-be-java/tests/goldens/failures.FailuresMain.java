@@ -1,6 +1,5 @@
 package failures;
 
-import temper.core.Bubble;
 import temper.core.Core;
 
 public final class FailuresMain {
@@ -8,7 +7,7 @@ public final class FailuresMain {
 
     public static void main(String[] args) throws ClassNotFoundException {
         Core.initSimpleLogging();
-        Bubble.keepStackTraces();
+        Core.keepStackTraces();
         Core.beginTopLevel();
         try {
             Class.forName("failures.FailuresGlobal");

@@ -1,0 +1,93 @@
+tmpl 1 model 1 library `errors-type-only-errors` 0.0.0
+
+uses `temper-core`#33 0.0.0-alpha.0.0 {
+  interface Console#34 {
+    connected method log#35(message: String): Void;
+  }
+  class Int32#37 {
+    connected method toString#38(radix?: Int32): String;
+  }
+  connected fn getConsole#39(name?: String): Console#34;
+}
+
+module `errors-type-only-errors`#0 {
+  let ~console#36: Console#34;
+
+  export fn good#6(x#20: Int32): Int32 {
+    return %Int32.add(x#20, 1);
+  }
+
+  fn mismatched#7(x#21: Int32): Int32 {
+    let s#22: String = (error("Cannot assign to String from Int32", x#21)): String;
+    return 1;
+  }
+
+  fn undeclared#8(): Int32 {
+    return (error("missing has not been declared")): Int32;
+  }
+
+  fn misspelled#9(s#23: String): Int32 {
+    return (error("No member lenght in String")): Int32;
+  }
+
+  fn misspelledMethod#10(s#24: String): Int32 {
+    return (error("No member lengthy in String")): Int32;
+  }
+
+  fn wrongArity#11(): Int32 {
+    return (error("Wrong number of arguments.  Expected 1")): Int32;
+  }
+
+  fn unknownType#12(x#25: AnyValue): Int32 {
+    return 1;
+  }
+
+  fn unclosed#13(x#26: Int32): Int32 {
+    return %Int32.mul(x#26, 2);
+  }
+
+  fn afterUnclosed#14(x#27: Int32): Int32 {
+    return %Int32.mul(x#27, 3);
+  }
+
+  fn dropped#15(cents#28: Int32): String {
+    (error("Expected an operator or `;` before `100`")): Void;
+  }
+
+  fn stored#16(x#29: Int32): String {
+    let s#30: String = (error("Cannot assign to String from Int32", x#29)): String;
+    return %String.cat(s#30, "!");
+  }
+
+  fn returned#17(): Int32 {
+    return (error("Cannot assign to Int32 from String", "text")): Int32;
+  }
+
+  fn passedOn#18(x#31: Int32): Int32 {
+    return x#31;
+  }
+
+  class Box#1 {
+    let value#2: Int32;
+    constructor constructor#5(value#32: Int32): Box#1 {
+      this.value#2 = value#32;
+    }
+    method get#3(): Int32 {
+      return this.value#2;
+    }
+    method bad#4(): String {
+      return (error("Cannot assign to String from Int32", this.value#2)): String;
+    }
+  }
+
+  let box#19: Box#1;
+
+  init {
+    init ~console#36 = getConsole#39(omitted);
+    init box#19 = new constructor#5(3);
+    ~console#36.log#35(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(good#6(1).toString#38(omitted), " "), unknownType#12((upcast(1)): AnyValue).toString#38(omitted)), " "), afterUnclosed#14(2).toString#38(omitted)), " "), box#19.get#3().toString#38(omitted)));
+    ~console#36.log#35(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(mismatched#7(1).toString#38(omitted), " "), stored#16(1)), " "), returned#17().toString#38(omitted)), " "), passedOn#18((error("Expected subtype of Int32, but got String", "in")): Int32).toString#38(omitted)), " "), box#19.bad#4()));
+    misspelled#9("a");
+    ~console#36.log#35("after");
+  }
+}

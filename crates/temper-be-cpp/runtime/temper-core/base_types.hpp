@@ -117,16 +117,6 @@ namespace temper {
             return Str::written_to(ss.rdbuf());
         }
 
-        template<class T = void>
-        [[noreturn]] T bubble(std::string message) {
-            throw TemperBubble(std::move(message));
-        }
-
-        template<class T = void>
-        [[noreturn]] T bubble() {
-            throw TemperBubble();
-        }
-
         // What a panic does before the process ends, if anything: none
         // but in a test build, whose runner (`run_tests`) sets one that
         // throws a `TemperPanic`, which it catches test by test. One for
@@ -206,7 +196,7 @@ namespace temper {
         }
 
         [[noreturn]] inline void pure_virtual() {
-            throw TemperBubble("pure virtual call");
+            panic("pure virtual call");
         }
 
         // std's `Test.bail()`: ends the test with its messages, by a
@@ -219,7 +209,7 @@ namespace temper {
         }
 
         // std's `Test.panics(block)`, for `Test.assertPanics`: whether the
-        // block threw anything but a bubble or a test's failure, as on
+        // block threw anything but a test's failure, as on
         // every backend: a panic, which in a test build throws a
         // `TemperPanic` (`run_tests` sets the hook), or a host's
         // exception. What isn't passes through.
@@ -227,8 +217,6 @@ namespace temper {
         bool testPanics(const T&, const F& block) {
             try {
                 block();
-            } catch (const TemperBubble&) {
-                throw;
             } catch (const TemperTestFailure&) {
                 throw;
             } catch (...) {

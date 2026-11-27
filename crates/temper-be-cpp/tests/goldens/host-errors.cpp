@@ -16,6 +16,16 @@ void global_init_init();
 
 
 #ifdef TEMPER_TESTS
+struct Problem;
+struct Oops;
+
+struct Problem : public virtual temper::core::Failure {};
+
+struct Oops : public virtual Problem {
+  static std::shared_ptr<Oops> make();
+  temper::core::Str get_message() const override;
+};
+
 // Tests, which `test.cpp` runs.
 void listRead(std::shared_ptr<temper_std::Test> const & test);
 void listReadAtTheEnd(std::shared_ptr<temper_std::Test> const & test);
@@ -42,9 +52,18 @@ namespace host_errors {
 namespace core = temper::core;
 
 #ifdef TEMPER_TESTS
-static int32_t at(int32_t i) {
+std::shared_ptr<Oops> Oops::make() {
+  std::shared_ptr<Oops> self = std::make_shared<Oops>();
+  return self;
+}
+
+core::Str Oops::get_message() const {
+  return TEMPER_STR("oops");
+}
+
+static core::Expected<int32_t, std::shared_ptr<Oops>> at(int32_t i) {
   if (i == 99) {
-    core::bubble();
+    return core::unexpected(Oops::make());
   }
   return i;
 }
@@ -55,42 +74,69 @@ static std::shared_ptr<std::vector<int32_t>> built() {
   return lb;
 }
 
-static int32_t read(std::shared_ptr<std::vector<int32_t>> const & ls, int32_t i) {
-  return core::List::get<int32_t>(ls, at(i));
+static core::Expected<int32_t, std::shared_ptr<Oops>> read(std::shared_ptr<std::vector<int32_t>> const & ls, int32_t i) {
+  auto atResult = at(i);
+  if (!atResult.has_value()) {
+    return core::unexpected(atResult.error());
+  }
+  return core::List::get<int32_t>(ls, *atResult);
 }
 
-static int32_t write(std::shared_ptr<std::vector<int32_t>> const & lb, int32_t i) {
-  core::ListBuilder::set<int32_t>(lb, at(i), 3);
+static core::Expected<int32_t, std::shared_ptr<Oops>> write(std::shared_ptr<std::vector<int32_t>> const & lb, int32_t i) {
+  auto atResult = at(i);
+  if (!atResult.has_value()) {
+    return core::unexpected(atResult.error());
+  }
+  core::ListBuilder::set<int32_t>(lb, *atResult, 3);
   return core::List::length<int32_t>(lb);
 }
 
-static int32_t insert(std::shared_ptr<std::vector<int32_t>> const & lb, int32_t i) {
-  core::ListBuilder::add<int32_t>(lb, 2, at(i));
+static core::Expected<int32_t, std::shared_ptr<Oops>> insert(std::shared_ptr<std::vector<int32_t>> const & lb, int32_t i) {
+  auto atResult = at(i);
+  if (!atResult.has_value()) {
+    return core::unexpected(atResult.error());
+  }
+  core::ListBuilder::add<int32_t>(lb, 2, *atResult);
   return core::List::length<int32_t>(lb);
 }
 
-static int32_t removeLast(std::shared_ptr<std::vector<int32_t>> const & lb, int32_t i) {
-  at(i);
+static core::Expected<int32_t, std::shared_ptr<Oops>> removeLast(std::shared_ptr<std::vector<int32_t>> const & lb, int32_t i) {
+  auto atResult = at(i);
+  if (!atResult.has_value()) {
+    return core::unexpected(atResult.error());
+  }
   return core::ListBuilder::removeLast<int32_t>(lb);
 }
 
-static int32_t removeFirst(std::shared_ptr<std::deque<int32_t>> const & d, int32_t i) {
-  at(i);
+static core::Expected<int32_t, std::shared_ptr<Oops>> removeFirst(std::shared_ptr<std::deque<int32_t>> const & d, int32_t i) {
+  auto atResult = at(i);
+  if (!atResult.has_value()) {
+    return core::unexpected(atResult.error());
+  }
   return core::Deque::removeFirst<int32_t>(d);
 }
 
-static int32_t sum(std::shared_ptr<std::vector<int32_t>> const & ls, int32_t i) {
-  at(i);
+static core::Expected<int32_t, std::shared_ptr<Oops>> sum(std::shared_ptr<std::vector<int32_t>> const & ls, int32_t i) {
+  auto atResult = at(i);
+  if (!atResult.has_value()) {
+    return core::unexpected(atResult.error());
+  }
   return core::List::reduce(ls, [](int32_t a, int32_t b) -> int32_t { return core::Int::add(a, b); });
 }
 
-static int32_t codeAt(core::Str const & s, int32_t i) {
-  at(i);
+static core::Expected<int32_t, std::shared_ptr<Oops>> codeAt(core::Str const & s, int32_t i) {
+  auto atResult = at(i);
+  if (!atResult.has_value()) {
+    return core::unexpected(atResult.error());
+  }
   return core::String::get(s, core::String::end(s));
 }
 
-static core::Str replaced(int32_t i) {
-  at(i);
+static core::Expected<core::Str, std::shared_ptr<Oops>> replaced(int32_t i) {
+  auto atResult = at(i);
+  if (!atResult.has_value()) {
+    return core::unexpected(atResult.error());
+  }
   return *temper_std::CodePoints::make(TEMPER_STR("b"))->compiled()->replace<core::Never>(TEMPER_STR("abc"), [=](std::shared_ptr<temper_std::Match>) -> core::Str { return core::List::get<core::Str>(core::List::make<core::Str>(TEMPER_STR("x")), i); });
 }
 #endif  // TEMPER_TESTS
@@ -105,9 +151,10 @@ namespace host_errors {
 
 void listRead(std::shared_ptr<temper_std::Test> const & test) {
   int32_t r;
-  try {
-    r = host_errors::read(core::List::make<int32_t>(1, 2), 5);
-  } catch (core::TemperBubble const &) {
+  auto readResult = host_errors::read(core::List::make<int32_t>(1, 2), 5);
+  if (readResult.has_value()) {
+    r = *readResult;
+  } else {
     r = -1;
   }
   test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("caught"); });
@@ -116,9 +163,10 @@ void listRead(std::shared_ptr<temper_std::Test> const & test) {
 void listReadAtTheEnd(std::shared_ptr<temper_std::Test> const & test) {
   std::shared_ptr<std::vector<int32_t>> ls = core::List::make<int32_t>(1, 2);
   int32_t r;
-  try {
-    r = host_errors::read(ls, core::List::length<int32_t>(ls));
-  } catch (core::TemperBubble const &) {
+  auto readResult = host_errors::read(ls, core::List::length<int32_t>(ls));
+  if (readResult.has_value()) {
+    r = *readResult;
+  } else {
     r = -1;
   }
   test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("caught"); });
@@ -126,9 +174,10 @@ void listReadAtTheEnd(std::shared_ptr<temper_std::Test> const & test) {
 
 void negativeIndex(std::shared_ptr<temper_std::Test> const & test) {
   int32_t r;
-  try {
-    r = host_errors::read(built(), -1);
-  } catch (core::TemperBubble const &) {
+  auto readResult = host_errors::read(built(), -1);
+  if (readResult.has_value()) {
+    r = *readResult;
+  } else {
     r = -1;
   }
   test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("caught"); });
@@ -136,9 +185,10 @@ void negativeIndex(std::shared_ptr<temper_std::Test> const & test) {
 
 void set(std::shared_ptr<temper_std::Test> const & test) {
   int32_t r;
-  try {
-    r = host_errors::write(built(), 5);
-  } catch (core::TemperBubble const &) {
+  auto writeResult = host_errors::write(built(), 5);
+  if (writeResult.has_value()) {
+    r = *writeResult;
+  } else {
     r = -1;
   }
   test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("caught"); });
@@ -147,9 +197,10 @@ void set(std::shared_ptr<temper_std::Test> const & test) {
 void setAtTheEnd(std::shared_ptr<temper_std::Test> const & test) {
   std::shared_ptr<std::vector<int32_t>> lb = built();
   int32_t r;
-  try {
-    r = host_errors::write(lb, core::List::length<int32_t>(lb));
-  } catch (core::TemperBubble const &) {
+  auto writeResult = host_errors::write(lb, core::List::length<int32_t>(lb));
+  if (writeResult.has_value()) {
+    r = *writeResult;
+  } else {
     r = -1;
   }
   test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("caught"); });
@@ -157,9 +208,10 @@ void setAtTheEnd(std::shared_ptr<temper_std::Test> const & test) {
 
 void insert2(std::shared_ptr<temper_std::Test> const & test) {
   int32_t r;
-  try {
-    r = host_errors::insert(built(), 5);
-  } catch (core::TemperBubble const &) {
+  auto insertResult = host_errors::insert(built(), 5);
+  if (insertResult.has_value()) {
+    r = *insertResult;
+  } else {
     r = -1;
   }
   test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("caught"); });
@@ -168,9 +220,10 @@ void insert2(std::shared_ptr<temper_std::Test> const & test) {
 void insertPastTheEnd(std::shared_ptr<temper_std::Test> const & test) {
   std::shared_ptr<std::vector<int32_t>> lb = built();
   int32_t r;
-  try {
-    r = host_errors::insert(lb, core::Int::add(core::List::length<int32_t>(lb), 1));
-  } catch (core::TemperBubble const &) {
+  auto insertResult = host_errors::insert(lb, core::Int::add(core::List::length<int32_t>(lb), 1));
+  if (insertResult.has_value()) {
+    r = *insertResult;
+  } else {
     r = -1;
   }
   test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("caught"); });
@@ -179,9 +232,10 @@ void insertPastTheEnd(std::shared_ptr<temper_std::Test> const & test) {
 void insertAtTheEndAppends(std::shared_ptr<temper_std::Test> const & test) {
   std::shared_ptr<std::vector<int32_t>> lb = built();
   int32_t n;
-  try {
-    n = host_errors::insert(lb, core::List::length<int32_t>(lb));
-  } catch (core::TemperBubble const &) {
+  auto insertResult = host_errors::insert(lb, core::List::length<int32_t>(lb));
+  if (insertResult.has_value()) {
+    n = *insertResult;
+  } else {
     n = -1;
   }
   test->assert_(n == 2 && core::List::get<int32_t>(lb, 1) == 2, []() -> core::Str { return TEMPER_STR("didn't append"); });
@@ -189,9 +243,10 @@ void insertAtTheEndAppends(std::shared_ptr<temper_std::Test> const & test) {
 
 void removeLast2(std::shared_ptr<temper_std::Test> const & test) {
   int32_t r;
-  try {
-    r = host_errors::removeLast(core::ListBuilder::make<int32_t>(), 0);
-  } catch (core::TemperBubble const &) {
+  auto removeLastResult = host_errors::removeLast(core::ListBuilder::make<int32_t>(), 0);
+  if (removeLastResult.has_value()) {
+    r = *removeLastResult;
+  } else {
     r = -1;
   }
   test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("caught"); });
@@ -199,9 +254,10 @@ void removeLast2(std::shared_ptr<temper_std::Test> const & test) {
 
 void removeFirst2(std::shared_ptr<temper_std::Test> const & test) {
   int32_t r;
-  try {
-    r = host_errors::removeFirst(core::Deque::make<int32_t>(), 0);
-  } catch (core::TemperBubble const &) {
+  auto removeFirstResult = host_errors::removeFirst(core::Deque::make<int32_t>(), 0);
+  if (removeFirstResult.has_value()) {
+    r = *removeFirstResult;
+  } else {
     r = -1;
   }
   test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("caught"); });
@@ -209,9 +265,10 @@ void removeFirst2(std::shared_ptr<temper_std::Test> const & test) {
 
 void reduce(std::shared_ptr<temper_std::Test> const & test) {
   int32_t r;
-  try {
-    r = host_errors::sum(core::List::make<int32_t>(), 0);
-  } catch (core::TemperBubble const &) {
+  auto sumResult = host_errors::sum(core::List::make<int32_t>(), 0);
+  if (sumResult.has_value()) {
+    r = *sumResult;
+  } else {
     r = -1;
   }
   test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("caught"); });
@@ -219,9 +276,10 @@ void reduce(std::shared_ptr<temper_std::Test> const & test) {
 
 void stringRead(std::shared_ptr<temper_std::Test> const & test) {
   int32_t r;
-  try {
-    r = host_errors::codeAt(TEMPER_STR("ab"), 0);
-  } catch (core::TemperBubble const &) {
+  auto codeAtResult = host_errors::codeAt(TEMPER_STR("ab"), 0);
+  if (codeAtResult.has_value()) {
+    r = *codeAtResult;
+  } else {
     r = -1;
   }
   test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("caught"); });
@@ -229,9 +287,10 @@ void stringRead(std::shared_ptr<temper_std::Test> const & test) {
 
 void replaceCallback(std::shared_ptr<temper_std::Test> const & test) {
   core::Str r;
-  try {
-    r = replaced(3);
-  } catch (core::TemperBubble const &) {
+  auto replacedResult = replaced(3);
+  if (replacedResult.has_value()) {
+    r = *replacedResult;
+  } else {
     r = core::Str();
   }
   test->assert_(r != core::Str(), []() -> core::Str { return TEMPER_STR("caught"); });

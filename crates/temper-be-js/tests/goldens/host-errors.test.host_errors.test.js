@@ -1,9 +1,8 @@
 import {
-  bubble,
   dequeConstructor,
   dequeRemoveFirst,
   endTest,
-  isBubble,
+  failureBase,
   listBuilderAdd,
   listBuilderRemoveLast,
   listBuilderSet,
@@ -18,10 +17,11 @@ import { Test } from "@temperlang/std/testing";
 /**
  * @param {number} i
  * @returns {number}
+ * @throws {Oops}
  */
 function at(i) {
   if (i === 99) {
-    bubble();
+    throw new Oops();
   }
   return i;
 }
@@ -38,6 +38,7 @@ function built() {
  * @param {readonly number[]} ls
  * @param {number} i
  * @returns {number}
+ * @throws {Oops}
  */
 function read(ls, i) {
   return listedGet(/** @type {number[]} */ (ls), at(i));
@@ -47,6 +48,7 @@ function read(ls, i) {
  * @param {number[]} lb
  * @param {number} i
  * @returns {number}
+ * @throws {Oops}
  */
 function write(lb, i) {
   listBuilderSet(lb, at(i), 3);
@@ -57,6 +59,7 @@ function write(lb, i) {
  * @param {number[]} lb
  * @param {number} i
  * @returns {number}
+ * @throws {Oops}
  */
 function insert(lb, i) {
   listBuilderAdd(lb, 2, at(i));
@@ -67,6 +70,7 @@ function insert(lb, i) {
  * @param {number[]} lb
  * @param {number} i
  * @returns {number}
+ * @throws {Oops}
  */
 function removeLast(lb, i) {
   at(i);
@@ -77,6 +81,7 @@ function removeLast(lb, i) {
  * @param {number[]} d
  * @param {number} i
  * @returns {number}
+ * @throws {Oops}
  */
 function removeFirst(d, i) {
   at(i);
@@ -87,6 +92,7 @@ function removeFirst(d, i) {
  * @param {readonly number[]} ls
  * @param {number} i
  * @returns {number}
+ * @throws {Oops}
  */
 function sum(ls, i) {
   at(i);
@@ -97,6 +103,7 @@ function sum(ls, i) {
  * @param {string} s
  * @param {number} i
  * @returns {number}
+ * @throws {Oops}
  */
 function codeAt(s, i) {
   at(i);
@@ -106,10 +113,22 @@ function codeAt(s, i) {
 /**
  * @param {number} i
  * @returns {string}
+ * @throws {Oops}
  */
 function replaced(i) {
   at(i);
   return /** @type {RegexNode} */ (/** @type {unknown} */ (new CodePoints("b"))).compiled().replace("abc", (match) => listedGet(/** @type {string[]} */ (Object.freeze(["x"])), i));
+}
+
+class Problem extends Error {}
+
+failureBase(Problem);
+
+class Oops extends Problem {
+  /** @returns {string} */
+  get message() {
+    return "oops";
+  }
 }
 
 it("list read", async function () {
@@ -121,7 +140,7 @@ it("list read", async function () {
     try {
       r = read(Object.freeze([1, 2]), 5);
     } catch (e$) {
-      if (!isBubble(e$)) throw e$;
+      if (!(e$ instanceof Oops)) throw e$;
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
@@ -144,7 +163,7 @@ it("list read at the end", async function () {
     try {
       r = read(ls, ls.length);
     } catch (e$) {
-      if (!isBubble(e$)) throw e$;
+      if (!(e$ instanceof Oops)) throw e$;
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
@@ -165,7 +184,7 @@ it("negative index", async function () {
     try {
       r = read(built(), -1);
     } catch (e$) {
-      if (!isBubble(e$)) throw e$;
+      if (!(e$ instanceof Oops)) throw e$;
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
@@ -186,7 +205,7 @@ it("set", async function () {
     try {
       r = write(built(), 5);
     } catch (e$) {
-      if (!isBubble(e$)) throw e$;
+      if (!(e$ instanceof Oops)) throw e$;
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
@@ -209,7 +228,7 @@ it("set at the end", async function () {
     try {
       r = write(lb, lb.length);
     } catch (e$) {
-      if (!isBubble(e$)) throw e$;
+      if (!(e$ instanceof Oops)) throw e$;
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
@@ -230,7 +249,7 @@ it("insert", async function () {
     try {
       r = insert(built(), 5);
     } catch (e$) {
-      if (!isBubble(e$)) throw e$;
+      if (!(e$ instanceof Oops)) throw e$;
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
@@ -253,7 +272,7 @@ it("insert past the end", async function () {
     try {
       r = insert(lb, (lb.length + 1) | 0);
     } catch (e$) {
-      if (!isBubble(e$)) throw e$;
+      if (!(e$ instanceof Oops)) throw e$;
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
@@ -276,7 +295,7 @@ it("insert at the end appends", async function () {
     try {
       n = insert(lb, lb.length);
     } catch (e$) {
-      if (!isBubble(e$)) throw e$;
+      if (!(e$ instanceof Oops)) throw e$;
       n = -1;
     }
     test.assert(n === 2 && listedGet(lb, 1) === 2, () => "didn't append");
@@ -297,7 +316,7 @@ it("remove last", async function () {
     try {
       r = removeLast([], 0);
     } catch (e$) {
-      if (!isBubble(e$)) throw e$;
+      if (!(e$ instanceof Oops)) throw e$;
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
@@ -318,7 +337,7 @@ it("remove first", async function () {
     try {
       r = removeFirst(dequeConstructor(), 0);
     } catch (e$) {
-      if (!isBubble(e$)) throw e$;
+      if (!(e$ instanceof Oops)) throw e$;
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
@@ -339,7 +358,7 @@ it("reduce", async function () {
     try {
       r = sum(Object.freeze([]), 0);
     } catch (e$) {
-      if (!isBubble(e$)) throw e$;
+      if (!(e$ instanceof Oops)) throw e$;
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
@@ -360,7 +379,7 @@ it("string read", async function () {
     try {
       r = codeAt("ab", 0);
     } catch (e$) {
-      if (!isBubble(e$)) throw e$;
+      if (!(e$ instanceof Oops)) throw e$;
       r = -1;
     }
     test.assert(r !== -1, () => "caught");
@@ -381,7 +400,7 @@ it("replace callback", async function () {
     try {
       r = replaced(3);
     } catch (e$) {
-      if (!isBubble(e$)) throw e$;
+      if (!(e$ instanceof Oops)) throw e$;
       r = "";
     }
     test.assert(r !== "", () => "caught");

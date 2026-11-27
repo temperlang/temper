@@ -199,7 +199,7 @@ error 199..210: Type K must implement set g from J.  Maybe add `public set g(v: 
 error 199..210: Type K must implement get h from J.  Maybe add `public get h(): Int`
 error 392..403: Type P must implement set g from J.  Maybe add `public set g(v: Int): Void`
 error 501..502: Cannot instantiate abstract type J
-Failed: Cannot instantiate abstract type J
+Panicked: Cannot instantiate abstract type J
 
 === an override may not narrow its visibility
 interface L { public f(): Int; public g(): Int; }
@@ -328,7 +328,7 @@ console.log(C.secret.toString());
 error 321..329: Member secret defined in C not publicly accessible
 log 14
 log 38
-Failed: Member secret defined in C not publicly accessible
+Panicked: Member secret defined in C not publicly accessible
 
 === private members aren't usable outside their class
 class C(private x: Int) { private twice(): Int { x * 2 } }
@@ -351,7 +351,7 @@ console.log(new D().peek(new C(3)).toString());
       (Call . (Call (Call . (Call new D:2) \peek) (Call new C:0 3)) \toString)))
   #void)
 error 98..105: Member twice defined in C not publicly accessible
-Failed: Member twice defined in C not publicly accessible
+Panicked: Member twice defined in C not publicly accessible
 
 === private and static members outside their class are errors, as Kotlin's typer reports them
 class Private(private b: Int) {
@@ -402,7 +402,7 @@ error 422..434: No member nope in Private
 error 460..470: Member b defined in Private not publicly accessible
 log 18
 log 2
-Failed: No member nope in Private
+Panicked: No member nope in Private
 
 === a method that isn't there on a private property, as Kotlin's noMatchingMemberUsage
 class Something(private b: Int) {}
@@ -415,7 +415,7 @@ something.b();
   (Call (Call . something:1 \b))
   #void)
 error 69..80: Member b defined in Something incompatible with usage
-Failed: Member b defined in Something incompatible with usage
+Panicked: Member b defined in Something incompatible with usage
 
 === static members need their type's name, as Kotlin's static-access-good-and-bad
 class C {
@@ -453,7 +453,7 @@ console.log("${C.f(1)} ${new C().h(1)} ${C.a}");
 error 65..67: Type name required for accessing static member
 error 113..114: Type name required for accessing static member
 error 153..154: Type name required for accessing static member
-Failed: Type name required for accessing static member
+Panicked: Type name required for accessing static member
 
 === static members can't be assigned, even a `var`, as Kotlin reports
 class C {
@@ -507,7 +507,7 @@ error 175..186: Cannot assign to static member count of C; static members are on
 error 188..197: Cannot assign to static member count of C; static members are only initialized at their declaration
 error 142..147: Type name required for accessing static member
 log before 0
-Failed: Cannot assign to static member count of C; static members are only initialized at their declaration
+Panicked: Cannot assign to static member count of C; static members are only initialized at their declaration
 
 === this outside a class
 let f(): Int { this.x }
@@ -591,7 +591,7 @@ console.log(new Counter().total().toString());
     (Call . console \log)
     (Call (Call . (Call (Call . (Call new Counter:0) \total)) \toString)))
   #void)
-Failed: No connected implementation of Counter.total
+Panicked: No connected implementation of Counter.total
 
 === a connected class's constructor can't have defaults either
 @connected

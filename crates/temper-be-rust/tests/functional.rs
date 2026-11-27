@@ -88,18 +88,24 @@ const ALLOWED_LINTS: [&str; 8] = [
 /// The tests that declare what they never use, on purpose: a default
 /// method that every class overrides (`call-override-from-subtype`'s),
 /// a field (`mutually-referencing-types`'), or parameters
-/// (`bubble`'s, `errors`' functions whose errors leave them unread, and
-/// `json-adapters`' decoders, which read their `ic` only to pass it to
-/// another adapter, as Kotlin's `@json` writes them), so rustc's
-/// `dead_code` and `unused_variables` are allowed in them. What nothing
+/// (`bubble`'s, and `json-adapters`' decoders, which read their `ic` only
+/// to pass it to another adapter, as Kotlin's `@json` writes them), so
+/// rustc's `dead_code` and `unused_variables` are allowed in them; and
+/// code with errors (`errors`, a run per section, and
+/// `type-checked-locals`), each a `panic!()` where it runs, which leaves
+/// what reads around it unread or unreachable, so `unreachable_code` and
+/// clippy's `diverging_sub_expression` are allowed there too. What nothing
 /// reaches isn't written (`temper_tmpl::reach`), and what only tests
 /// reach is `#[cfg(test)]`, so unused functions, classes, and module
 /// values are no reason to be here.
-const UNUSED: [&str; 5] = [
+const UNUSED: [&str; 8] = [
     "call-override-from-subtype",
     "mutually-referencing-types",
     "bubble",
-    "errors",
+    "errors-type-only-errors",
+    "errors-undeclared-name",
+    "errors-missing-operator",
+    "type-checked-locals",
     "json-adapters",
 ];
 
@@ -282,9 +288,7 @@ fn goldens() {
             let krate = library.replace('-', "_");
             let main = &files[2].text;
             assert!(
-                main.starts_with(&format!(
-                    "fn main() {{\n    temper_core::keep_bubble_traces();\n    {krate}::init(None)"
-                )),
+                main.starts_with(&format!("fn main() {{\n    {krate}::init(None)")),
                 "{main}"
             );
             let core = temper_tmpl::version::current();
@@ -764,7 +768,12 @@ fn runs_and_lints() {
             for &package in &unused {
                 lax.extend(["-p", package]);
             }
-            let lints = ["dead_code", "unused_variables"];
+            let lints = [
+                "dead_code",
+                "unused_variables",
+                "unreachable_code",
+                "clippy::diverging_sub_expression",
+            ];
             for (mut args, extra) in [(strict, &[][..]), (lax, &lints[..])] {
                 args.extend(["--", "-D", "warnings"]);
                 for lint in ALLOWED_LINTS.iter().chain(extra) {

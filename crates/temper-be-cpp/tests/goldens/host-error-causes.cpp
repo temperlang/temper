@@ -10,7 +10,17 @@ namespace host_error_causes {
 // optional.
 void global_init_init();
 
-int32_t hostFails(int32_t n);
+struct OopsError;
+struct Oops;
+
+struct OopsError : public virtual temper::core::Failure {};
+
+struct Oops : public virtual OopsError {
+  static std::shared_ptr<Oops> make();
+  temper::core::Str get_message() const override;
+};
+
+temper::core::Expected<int32_t, std::shared_ptr<Oops>> hostFails(int32_t n);
 
 }  // namespace host_error_causes
 
@@ -23,7 +33,17 @@ namespace host_error_causes {
 
 namespace core = temper::core;
 
-int32_t hostFails(int32_t n) {
+std::shared_ptr<Oops> Oops::make() {
+  global_init_init();
+  std::shared_ptr<Oops> self = std::make_shared<Oops>();
+  return self;
+}
+
+core::Str Oops::get_message() const {
+  return TEMPER_STR("oops");
+}
+
+core::Expected<int32_t, std::shared_ptr<Oops>> hostFails(int32_t n) {
   global_init_init();
   return _connected::hostFails(n);
 }
@@ -33,10 +53,11 @@ void global_init_init() {
     std::shared_ptr<core::Console::Type> console = core::Console::get_console();
     core::Console::log(console, TEMPER_STR("before"));
     int32_t h;
-    try {
-      h = hostFails(1);
-    } catch (core::TemperBubble const &) {
-      core::panic();
+    auto hostFailsResult = hostFails(1);
+    if (hostFailsResult.has_value()) {
+      h = *hostFailsResult;
+    } else {
+      core::panic_caused_by(hostFailsResult.error());
     }
     core::Console::log(console, "after " + std::to_string(h));
   });

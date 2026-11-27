@@ -1,11 +1,12 @@
 # Errors
 
-Code with errors still translates and runs: each error fails where it
-runs, as `bubble()` does, so an `orelse` catches it, and everything
-else runs as written (tmpl's `Error`). Code that's only ill-typed runs
-on as written on the interpreter and dynamically typed backends, as in
-Kotlin's interpreter, and fails there on statically typed ones, whose
-compilers would reject it.
+Code with errors still translates and runs: each error panics where it
+runs (tmpl's `Error`), so nothing handles it, and everything else runs
+as written. Code that's only ill-typed runs on as written on the
+interpreter and dynamically typed backends, as in Kotlin's
+interpreter, and panics there on statically typed ones, whose compilers
+would reject it. Each section here is a run of its own, as each ends
+at its error's panic:
 
     export let good(x: Int): Int { x + 1 }
 
@@ -13,11 +14,13 @@ A value that doesn't fit its place (a type-only error), an undeclared
 name, a misspelled member and method, and the wrong number of
 arguments:
 
-    let mismatched(x: Int): Int throws Bubble { let s: String = x; 1 }
-    let undeclared(): Int throws Bubble { missing(1) }
-    let misspelled(s: String): Int throws Bubble { s.lenght }
-    let misspelledMethod(s: String): Int throws Bubble { s.lengthy() }
-    let wrongArity(): Int throws Bubble { good(1, 2) }
+    let mismatched(x: Int): Int { let s: String = x; 1 }
+    let undeclared(): Int { missing(1) }
+    let misspelled(s: String): Int { s.lenght }
+    let misspelledMethod(s: String): Int { s.lengthy() }
+    let wrongArity(): Int { good(1, 2) }
+
+Each panics as the others do, so the runs below call only some.
 
 An undeclared type leaves the declaration usable, its type unknown:
 
@@ -29,9 +32,9 @@ A missing bracket stays local, so what follows still parses:
     let afterUnclosed(x: Int): Int { x * 3 }
 
 A missing operator is one error, and `part` is still declared, with
-`cents`'s type, so only its `let` fails, where it runs:
+`cents`'s type, so only its `let` panics, where it runs:
 
-    let dropped(cents: Int): String throws Bubble {
+    let dropped(cents: Int): String {
       let part = cents  100;
       "${part.toString()}"
     }
@@ -39,52 +42,64 @@ A missing operator is one error, and `part` is still declared, with
 More type-only errors: a value stored, returned, or passed where
 another type is wanted:
 
-    let stored(x: Int): String throws Bubble { let s: String = x; "${s}!" }
-    let returned(): Int throws Bubble { "text" }
-    let passedOn(x: Int): Int throws Bubble { x }
+    let stored(x: Int): String { let s: String = x; "${s}!" }
+    let returned(): Int { "text" }
+    let passedOn(x: Int): Int { x }
 
-A method with an error fails, but not its class's others:
+A method with an error panics, but not its class's others:
 
     class Box(public value: Int) {
       public get(): Int { value }
-      public bad(): String throws Bubble { value }
+      public bad(): String { value }
     }
 
-    let a = mismatched(1) orelse -1;
-    let b = undeclared() orelse -1;
-    let c = misspelled("a") orelse -1;
-    let d = misspelledMethod("a") orelse -1;
-    let e = wrongArity() orelse -1;
     let box = new Box(3);
-    let f = box.bad() orelse "caught";
-    console.log("${good(1)} ${a} ${b} ${c} ${d} ${e}");
-    console.log("${unknownType(1)} ${afterUnclosed(2)} ${box.get()} ${f}");
+    console.log("${good(1)} ${unknownType(1)} ${afterUnclosed(2)} ${box.get()}");
 
-`mismatched` and `bad` have type-only errors, which run on where
-ill-typed code runs:
+## Type-only errors
+
+The type-only errors run on where ill-typed code runs, and panic
+elsewhere; a misspelled member panics everywhere:
+
+    console.log("${mismatched(1)} ${stored(1)} ${returned()} ${passedOn("in")} ${box.bad()}");
+    misspelled("a");
+    console.log("after");
 
 ```log interp js lua py
-2 1 -1 -1 -1 -1
-1 6 3 3
+2 1 6 3
+1 1! text in 3
 ```
 
 ```log cpp csharp java rust
-2 -1 -1 -1 -1 -1
-1 6 3 caught
+2 1 6 3
 ```
 
-The type-only errors, which run on where ill-typed code runs:
-
-    let g = stored(1) orelse "caught";
-    let h = returned() orelse -1;
-    let i = passedOn("in") orelse -1;
-    let j = dropped(1) orelse "dropped";
-    console.log("${g} ${h} ${i} ${j}");
-
-```log interp js lua py
-1! text in dropped
+```stderr cpp csharp java js lua py rust
+panic
 ```
 
-```log cpp csharp java rust
-caught -1 -1 dropped
+## Undeclared name
+
+    undeclared();
+    console.log("after");
+
+```log
+2 1 6 3
+```
+
+```stderr cpp csharp java js lua py rust
+panic
+```
+
+## Missing operator
+
+    dropped(1);
+    console.log("after");
+
+```log
+2 1 6 3
+```
+
+```stderr cpp csharp java js lua py rust
+panic
 ```

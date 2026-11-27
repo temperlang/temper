@@ -1,6 +1,5 @@
 package inherited_getter;
 
-import temper.core.Bubble;
 import temper.core.Core;
 
 public final class InheritedGetterMain {
@@ -8,7 +7,7 @@ public final class InheritedGetterMain {
 
     public static void main(String[] args) throws ClassNotFoundException {
         Core.initSimpleLogging();
-        Bubble.keepStackTraces();
+        Core.keepStackTraces();
         Core.beginTopLevel();
         try {
             Class.forName("inherited_getter.InheritedGetterGlobal");

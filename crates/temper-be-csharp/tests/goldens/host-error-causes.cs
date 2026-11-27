@@ -5,6 +5,7 @@ namespace HostErrorCauses;
 
 public static class HostErrorCausesGlobal
 {
+    /// <exception cref="Oops">Where it fails with Oops.</exception>
     public static int HostFails(int n)
     {
         return HostErrorCausesConnected.HostFails(n);
@@ -19,9 +20,9 @@ public static class HostErrorCausesGlobal
         {
             h = HostFails(1);
         }
-        catch (global::TemperLang.Core.Bubble bubble1)
+        catch (Oops failure1)
         {
-            throw Core.Panic("panic", bubble1);
+            throw Core.Panic("panic", failure1);
         }
         console.Log("after " + h.ToString(CultureInfo.InvariantCulture));
     }

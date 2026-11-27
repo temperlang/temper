@@ -47,8 +47,8 @@
 //! from other libraries, and tests; classes and interfaces, as Kotlin's structs, with their
 //! fields, constructors (`make`), methods, getters and setters, statics,
 //! conversions, `is`, and identity; nullable types (`NullableParam`, or a
-//! null `shared_ptr`), null checks, `??`, and `orelse`, `bubble()`, and
-//! `panic()` (`try`/`catch` of the runtime's `TemperBubble`); declared
+//! null `shared_ptr`), null checks, `??`, and `panic()` (`core::panic()`,
+//! as code with an error panics too); declared
 //! failures (RFC 164) as values in `core::Expected` results, never thrown
 //! (`translate`'s failures); and
 //! generics, as templates, defined in the header where others may
@@ -86,7 +86,7 @@ use temper_tmpl::analysis;
 use temper_tmpl::coroutines::CoroutineStrategy;
 use temper_tmpl::naming::{NameMap, NamingRules, assign, assign_checked};
 use temper_tmpl::version::Spelling;
-use temper_tmpl::{DeclId, Facts, Features, Node, NodeId, Profile, Program, TypeId};
+use temper_tmpl::{DeclId, Facts, Features, Node, NodeId, Profile, Program};
 
 /// A named set of translation choices for C++.
 pub struct Variant {
@@ -255,9 +255,7 @@ pub fn translate_with_lines(
         let marked = effects::needing_temporaries(p, &effects, &names);
         // A call that may fail with a declared failure type, or a `throw`,
         // puts its check before the statement it's in.
-        let failing = |n: NodeId| {
-            temper_tmpl::failures::node_failure(p, n).is_some_and(|f| f != TypeId::BUBBLE)
-        };
+        let failing = |n: NodeId| temper_tmpl::failures::node_failure(p, n).is_some();
         temper_tmpl::spill::spill_with(p, &|n| marked.contains(&n) || failing(n))
     };
     let p = spilled.as_ref().unwrap_or(p);
@@ -802,7 +800,7 @@ fn header(namespace: &str, t: &translate::Translated, init: &str) -> String {
 
 /// The program: runs every module's init, in order, as Kotlin's
 /// `main.cpp` does, first installing the runtime's stack traces, so a
-/// panic or an uncaught bubble says where it happened, which only a
+/// panic or an uncaught failure says where it happened, which only a
 /// program does, never a library (`stack_trace.hpp`).
 fn main(p: &Program, namespace: &str) -> String {
     let library = &p.library.name;

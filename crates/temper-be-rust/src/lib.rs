@@ -22,7 +22,7 @@
 //!
 //! It covers functions, modules, classes and interfaces
 //! (`translate::classes` says how they're written), nullable types,
-//! `orelse`, `bubble()`, and `panic()` (`translate::nullables`),
+//! `orelse`, `catch`, and `panic()` (`translate::nullables`),
 //! declared failures (RFC 164) as Rust errors returned in `Result`s
 //! (`translate::classes` and `temper_core::failure` say how), and
 //! generics: type parameters bounded `Clone + Send + Sync + 'static` as
@@ -597,10 +597,7 @@ pub fn init(config: Option<temper_core::Config>) -> temper_core::Result<temper_c
 }}
 {first_use}"#
     );
-    // A bubble out of init panics, saying so, and where it was made,
-    // where that's known: the program keeps bubbles' traces, which a
-    // library alone never does.
-    let keep = tree::Expr::path("temper_core::keep_bubble_traces").call(Vec::new());
+    // A failure out of init panics, saying so, and its causes.
     let run = tree::Expr::path(format!("{krate}::init"))
         .call(vec![tree::Expr::path("None")])
         .method(
@@ -613,7 +610,7 @@ pub fn init(config: Option<temper_core::Config>) -> temper_core::Result<temper_c
         name: "main".into(),
         params: Vec::new(),
         result: None,
-        body: tree::Block::new(vec![tree::Stmt::Expr(keep), tree::Stmt::Expr(run)], None),
+        body: tree::Block::new(vec![tree::Stmt::Expr(run)], None),
     }]);
     let mut support = String::from(match cfg {
         Some(_) => SUPPORT_USES_FIRST,

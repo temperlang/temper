@@ -1,10 +1,19 @@
 # generated line:column -> source:line:column, and the text at each
-4:1 -> ../host-error-causes.temper.md:9:5  /** <- @connected
-8:1 -> ../host-error-causes.temper.md:9:5  export function hostFails(n) <- @connected
-8:17 -> ../host-error-causes.temper.md:10:16 (hostFails)  hostFails(n) { <- hostFails(n: Int): Int throw
-8:26 -> ../host-error-causes.temper.md:9:5  (n) { <- @connected
-12:1 -> ../host-error-causes.temper.md:15:5  console.log("before"); <- console.log("before");
-13:1 -> ../host-error-causes.temper.md:16:5  /** @type {number} */ <- let h = hostFails(1) orelse
-14:1 -> ../host-error-causes.temper.md:16:5  export let h; <- let h = hostFails(1) orelse
-15:1 -> ../host-error-causes.temper.md:16:5  try { <- let h = hostFails(1) orelse
-21:1 -> ../host-error-causes.temper.md:17:5  console.log(`after ${h}`); <- console.log("after ${h}");
+4:1 -> ../host-error-causes.temper.md:13:5  /** <- @connected
+9:1 -> ../host-error-causes.temper.md:13:5  export function hostFails(n) <- @connected
+9:17 -> ../host-error-causes.temper.md:14:16 (hostFails)  hostFails(n) { <- hostFails(n: Int): Int throw
+9:26 -> ../host-error-causes.temper.md:13:5  (n) { <- @connected
+13:1 -> ../host-error-causes.temper.md:10:5  export class OopsError exten <- export sealed interface Oops
+13:14 -> ../host-error-causes.temper.md:10:29 (OopsError)  OopsError extends Error {} <- OopsError extends Error {}
+13:23 -> ../host-error-causes.temper.md:10:5   extends Error {} <- export sealed interface Oops
+17:1 -> ../host-error-causes.temper.md:11:5  export class Oops extends Oo <- export class Oops extends Oo
+17:14 -> ../host-error-causes.temper.md:11:18 (Oops)  Oops extends OopsError { <- Oops extends OopsError {}
+17:18 -> ../host-error-causes.temper.md:11:5   extends OopsError { <- export class Oops extends Oo
+18:3 -> ../host-error-causes.temper.md:11:5  /** @returns {string} */ <- export class Oops extends Oo
+19:3 -> ../host-error-causes.temper.md:11:5  get message() { <- export class Oops extends Oo
+20:5 -> ../host-error-causes.temper.md:11:5  return "oops"; <- export class Oops extends Oo
+24:1 -> ../host-error-causes.temper.md:19:5  console.log("before"); <- console.log("before");
+25:1 -> ../host-error-causes.temper.md:20:5  /** @type {number} */ <- let h = hostFails(1) orelse
+26:1 -> ../host-error-causes.temper.md:20:5  export let h; <- let h = hostFails(1) orelse
+27:1 -> ../host-error-causes.temper.md:20:5  try { <- let h = hostFails(1) orelse
+33:1 -> ../host-error-causes.temper.md:21:5  console.log(`after ${h}`); <- console.log("after ${h}");

@@ -112,7 +112,7 @@ module failures#0 {
   fn wrong#9(n#14: Int32): Int32 throws String {
     (throw("no")^): Void;
     let a#15: Int32 = (catch(lookup#8()^, e#16: String, 0)): Int32;
-    let b#17: Int32 = (catch((bubble()^): Int32, e#18: NotFound#3, 0)): Int32;
+    let b#17: Int32 = (catch((throw(new constructor#13())^): Int32, e#18: NotFound#3, 0)): Int32;
     return 0;
   }
 
@@ -120,7 +120,7 @@ module failures#0 {
     return lookup#8()^;
   }
 
-  fn bubbly#20(): Int32 throws Bubble {
+  fn other#20(): Int32 throws OtherError#2 {
     let c#21: Int32 = lookup#8()^;
     return (throw(new constructor#10(), 1)^): Int32;
   }
@@ -132,15 +132,15 @@ D6 #4: a failure class extends a root, not Error itself
 D6 #5: a failure type can't be generic
 D6 #7: a failure type has more than one failure type above it
 F3 @16: throw fails, but isn't marked
-T5 #9: fn (Int32): Int32 throws String fails with String, not Bubble or a failure type
+T5 #9: fn (Int32): Int32 throws String fails with String, not a failure type
 F8 @25: throw's value is String, not a failure type
 F8 @27: a catch binds String, not a failure type
 F4 @28: the call of lookup#8 may fail with NotFound#3, but its catch takes only String
-F4 @32: bubble() bubbles, but its catch takes only NotFound#3
-F4 @39: the call of lookup#8 may fail with NotFound#3, but quiet#19 can't
-F4 @43: the call of lookup#8 may fail with NotFound#3, but bubbly#20 takes only Bubble
-F4 @45: throw fails with NotFound#3, but bubbly#20 takes only Bubble
-F8 @47: throw's cause is Int32, not a failure type
+F4 @32: throw fails with Both#7, but its catch takes only NotFound#3
+F4 @40: the call of lookup#8 may fail with NotFound#3, but quiet#19 can't
+F4 @44: the call of lookup#8 may fail with NotFound#3, but other#20 takes only OtherError#2
+F4 @46: throw fails with NotFound#3, but other#20 takes only OtherError#2
+F8 @48: throw's cause is Int32, not a failure type
 
 === failure parameters (RFC 164)
 tmpl 1 model 1 library failures 0.1.0
@@ -226,22 +226,18 @@ module failures#0 {
   }
 
   init {
-    let a#19: Int32 = apply#6<Bubble>((fn ~fn#20(): Int32 throws Bubble {
-      return (bubble()^): Int32;
-    }): fn (): Int32 throws Bubble)^;
     let b#21: Int32 = apply#6<String>((fn ~fn#22(): Int32 {
       return 1;
     }): fn (): Int32 throws String)^;
   }
 }
 --- problems
-T5 #3: fn (fn (): Int32 throws T#11): Int32 throws T#11 fails with T#11, not Bubble or a failure type
-T5 #12: fn (): Int32 throws T#11 fails with T#11, not Bubble or a failure type
+T5 #3: fn (fn (): Int32 throws T#11): Int32 throws T#11 fails with T#11, not a failure type
+T5 #12: fn (): Int32 throws T#11 fails with T#11, not a failure type
 F4 @14: the call of the function value may fail with E#13, but quiet#4 can't
 F4 @20: throw fails with NotFound#2, but narrow#5 takes only E#15
-T4 @30: type argument Bubble isn't within E#17's bound Error#41
-T4 @36: type argument String isn't within E#17's bound Error#41
-V1 @37: FunctionLiteral is fn (): Int32 throws String, but its signature is fn (): Int32
+T4 @30: type argument String isn't within E#17's bound Error#41
+V1 @31: FunctionLiteral is fn (): Int32 throws String, but its signature is fn (): Int32
 
 === generator failures (F4, F6)
 tmpl 1 model 1 library failures 0.1.0

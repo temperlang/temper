@@ -30,14 +30,11 @@
 //! with `is`, `as`, casts, and identity (`translate::classes`); and
 //! nullable types (`T | null`, `null`, `== null` checks, `??` for its
 //! tmpl form, and `===` or a null-safe helper call for `==` with a side
-//! that may be null), `orelse` as `try { … } catch { … }`, `bubble()`,
-//! and `panic()`, as Kotlin's, but catching only a bubble: `bubble()`
-//! and every builtin that bubbles throw the runtime's `Bubble`, and
-//! `catch (e$) { if (!isBubble(e$)) throw e$; … }` rethrows anything
-//! else (a panic, a plain `Error`; a host error), as host code
-//! (`_connected.js`) does unless it throws a `Bubble` or calls
-//! `bubble()`, and `orelse panic()` panics with the bubble as its
-//! `cause`; declared failures (RFC 164) as classes extending JS's `Error`
+//! that may be null), `orelse` as `try { … } catch { … }` and `panic()`
+//! (and code with an error) as the runtime's `panic()`, as Kotlin's, but
+//! catching only declared failures, so anything else (a panic, a plain
+//! `Error`; a host error) passes, and `orelse panic()` panics with the
+//! failure as its `cause`; declared failures (RFC 164) as classes extending JS's `Error`
 //! under each library's roots, `throw` as JS's, with the standard `cause`
 //! in a handler, and handlers that rethrow all but what their bodies may
 //! fail with, by `instanceof` (`translate::classes` and

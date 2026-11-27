@@ -1,9 +1,6 @@
 use std::any::{Any, TypeId};
-use std::backtrace::{Backtrace, BacktraceStatus};
 use std::collections::VecDeque;
-use std::fmt;
 use std::mem::forget;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 
 // The failure macros name the crate's items by its name, here too.
@@ -479,165 +476,29 @@ pub mod deque {
 
 // Error
 
-/// A bubble: what failed, where it says (a message or a host's error),
-/// and, once a program or a test asked for them ([`keep_bubble_traces`])
-/// and as `std::backtrace` captures one (with `RUST_BACKTRACE` or
-/// `RUST_LIB_BACKTRACE` set), the stack where it was made, which an
-/// uncaught bubble shows ([`uncaught`], and a test's report). A plain
-/// bubble without a trace is no allocation.
-///
-/// A library's declared failure (RFC 164; [`Failure`]) converts into
-/// one, `From` it, as its source, where it may also bubble: a module's
-/// init, and an `orelse` handling both.
-#[derive(Clone)]
-pub struct Error(Option<Arc<Bubbled>>);
+/// Core's `Error`: any library's declared failure, what a module's init
+/// and a test may fail with ([`Failure`]).
+pub type Error = Arc<dyn Failure>;
 
-struct Bubbled {
-    source: Option<Arc<dyn std::error::Error + Send + Sync>>,
-    trace: Backtrace,
-    /// Whether the source is a declared failure.
-    declared: bool,
-}
-
-impl Error {
-    pub fn new() -> Self {
-        Error::of(None)
-    }
-
-    pub fn with_optional_message(message: Option<Arc<String>>) -> Self {
-        Error::of(message.map(|message| {
-            Arc::new(MessageError(message)) as Arc<dyn std::error::Error + Send + Sync>
-        }))
-    }
-
-    pub fn with_source(source: Arc<dyn std::error::Error + Send + Sync>) -> Self {
-        Error::of(Some(source))
-    }
-
-    fn of(source: Option<Arc<dyn std::error::Error + Send + Sync>>) -> Self {
-        Error::made(source, false)
-    }
-
-    fn made(source: Option<Arc<dyn std::error::Error + Send + Sync>>, declared: bool) -> Self {
-        let trace = match KEEP_TRACES.load(Ordering::Relaxed) {
-            true => Backtrace::capture(),
-            false => Backtrace::disabled(),
-        };
-        if source.is_none() && trace.status() != BacktraceStatus::Captured {
-            return Error(None);
-        }
-        Error(Some(Arc::new(Bubbled {
-            source,
-            trace,
-            declared,
-        })))
-    }
-
-    /// Whether its source is a declared failure.
-    fn declared(&self) -> bool {
-        self.0.as_ref().is_some_and(|b| b.declared)
-    }
-
-    fn cause(&self) -> Option<&Arc<dyn std::error::Error + Send + Sync>> {
-        self.0.as_ref()?.source.as_ref()
-    }
-
-    /// The stack where the bubble was made, where one was captured.
-    pub fn backtrace(&self) -> Option<&Backtrace> {
-        let trace = &self.0.as_ref()?.trace;
-        (trace.status() == BacktraceStatus::Captured).then_some(trace)
-    }
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // Show the cause's message where there is one.
-        match self.cause() {
-            Some(source) => fmt::Display::fmt(source, f),
-            None => f.write_str("bubble"),
-        }
-    }
-}
-
-impl fmt::Debug for Error {
-    /// `Error(Some(MessageError("…")))` or `Error(None)`, as when it was
-    /// derived, since test reports parse it, then where it was made, where
-    /// that's known, as a test's uncaught bubble shows it.
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("Error").field(&self.cause()).finish()?;
-        match self.backtrace() {
-            Some(trace) => write!(f, "\nbubbled at:\n{trace}"),
-            None => Ok(()),
-        }
-    }
-}
-
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        self.cause()
-            .map(|e| e.as_ref() as &(dyn std::error::Error + 'static))
-    }
-}
-
-impl<F: Failure> From<F> for Error {
-    fn from(failure: F) -> Error {
-        Error::made(Some(Arc::new(failure)), true)
-    }
-}
-
-/// Whether bubbles capture where they're made ([`keep_bubble_traces`]).
-static KEEP_TRACES: AtomicBool = AtomicBool::new(false);
-
-/// Makes later bubbles keep the stack where they're made, where
-/// `std::backtrace` captures one (`RUST_BACKTRACE` or
-/// `RUST_LIB_BACKTRACE`), so an uncaught one can say where it came from.
-/// A generated program's `main` and each generated test call it; a
-/// library in a host's app never does, so its bubbles, often handled at
-/// once, cost no stack walk even with `RUST_BACKTRACE` set.
-pub fn keep_bubble_traces() {
-    KEEP_TRACES.store(true, Ordering::Relaxed);
-}
-
-/// A program's bubble that nothing handled, from its `main`: a panic,
-/// saying so, and where the bubble was made, where that's known
-/// ([`Error::backtrace`]); for a declared failure, its message, then each
-/// cause's on a line of its own, `caused by: …`.
+/// A failure that nothing handled, from a program's `main`: a panic,
+/// saying the failure's message, then each cause's on a line of its own,
+/// `caused by: …`.
 pub fn uncaught<T>(error: Error) -> T {
     let mut said = error.to_string();
-    let what = match error.declared() {
-        true => "failure",
-        false => "bubble",
-    };
-    if error.declared() {
-        let mut cause = std::error::Error::source(&error).and_then(|f| f.source());
-        while let Some(c) = cause {
-            said.push_str(&format!("\ncaused by: {c}"));
-            cause = c.source();
-        }
+    let mut cause = error.as_error().source();
+    while let Some(c) = cause {
+        said.push_str(&format!("\ncaused by: {c}"));
+        cause = c.source();
     }
-    match error.backtrace() {
-        Some(trace) => panic!("uncaught {what}: {said}\nbubbled at:\n{trace}"),
-        None => panic!("uncaught {what}: {said}"),
-    }
+    panic!("uncaught failure: {said}")
 }
 
-#[derive(Debug)]
-struct MessageError(Arc<String>);
-
-impl fmt::Display for MessageError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
+pub fn i32_to_usize(i: i32) -> std::result::Result<usize, std::num::TryFromIntError> {
+    i.try_into()
 }
 
-impl std::error::Error for MessageError {}
-
-pub fn i32_to_usize(i: i32) -> Result<usize> {
-    i.try_into().map_err(|e| Error::with_source(Arc::new(e)))
-}
-
-pub fn usize_to_i32(u: usize) -> Result<i32> {
-    u.try_into().map_err(|e| Error::with_source(Arc::new(e)))
+pub fn usize_to_i32(u: usize) -> std::result::Result<i32, std::num::TryFromIntError> {
+    u.try_into()
 }
 
 // Ignore
@@ -793,25 +654,5 @@ mod tests {
         }));
         assert!(outer);
         assert_eq!(*inner.lock().unwrap(), [true, false]);
-    }
-
-    #[test]
-    fn error_display_shows_message_or_bubble() {
-        assert_eq!(Error::new().to_string(), "bubble");
-        assert_eq!(Error::with_optional_message(None).to_string(), "bubble");
-        let message = Some(Arc::new("bad input".to_string()));
-        let error = Error::with_optional_message(message);
-        assert_eq!(format!("{error}"), "bad input");
-        let source = i32_to_usize(-1).unwrap_err();
-        let expected = usize::try_from(-1i32).unwrap_err().to_string();
-        assert_eq!(source.to_string(), expected);
-    }
-
-    #[test]
-    fn error_debug_keeps_message_error_form() {
-        // RunRust.kt parses this form out of failing test output.
-        let error = Error::with_optional_message(Some(Arc::new("x".to_string())));
-        assert_eq!(format!("{error:?}"), r#"Error(Some(MessageError("x")))"#);
-        assert_eq!(format!("{:?}", Error::new()), "Error(None)");
     }
 }

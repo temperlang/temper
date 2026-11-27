@@ -1,31 +1,44 @@
 tmpl 1 model 1 library `panic-causes-panic-in-orelse` 0.0.0
 
-uses `temper-core`#4 0.0.0-alpha.0.0 {
-  interface Console#5 {
-    connected method log#6(message: String): Void;
+uses `temper-core`#3 0.0.0-alpha.0.0 {
+  interface Error#4 {}
+  class Int32#11 {
+    connected method toString#12(radix?: Int32): String;
   }
-  class Int32#8 {
-    connected method toString#9(radix?: Int32): String;
+  interface Console#14 {
+    connected method log#15(message: String): Void;
   }
-  connected fn getConsole#10(name?: String): Console#5;
+  connected fn getConsole#17(name?: String): Console#14;
 }
 
 module `panic-causes-panic-in-orelse`#0 {
-  let ~console#7: Console#5;
+  let ~console#16: Console#14;
 
-  fn positive#1(n#3: Int32): Int32 throws Bubble {
-    if (%Int32.le(n#3, 0)) {
-      (bubble()^): Void;
+  interface Problem#1 extends Error#4 {}
+
+  class NotPositive#2 extends Problem#1 {
+    let n#5: Int32;
+    constructor constructor#6(n#9: Int32): NotPositive#2 {
+      this.n#5 = n#9;
     }
-    return n#3;
+    get message#10(): String {
+      return %String.cat(%String.cat("not positive (n: ", this.n#5.toString#12(omitted)), ")");
+    }
   }
 
-  let p#2: Int32;
+  fn positive#7(n#13: Int32): Int32 throws NotPositive#2 {
+    if (%Int32.le(n#13, 0)) {
+      (throw(new constructor#6(n#13))^): Void;
+    }
+    return n#13;
+  }
+
+  let p#8: Int32;
 
   init {
-    init ~console#7 = getConsole#10(omitted);
-    ~console#7.log#6("before");
-    init p#2 = (orelse(positive#1(%Int32.neg(1))^, (panic()): Int32)): Int32;
-    ~console#7.log#6(%String.cat("after ", p#2.toString#9(omitted)));
+    init ~console#16 = getConsole#17(omitted);
+    ~console#16.log#15("before");
+    init p#8 = (orelse(positive#7(%Int32.neg(1))^, (panic()): Int32)): Int32;
+    ~console#16.log#15(%String.cat("after ", p#8.toString#12(omitted)));
   }
 }

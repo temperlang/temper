@@ -43,11 +43,12 @@ public static class HostFailuresSeveralLibrariesGlobal
         }
     }
 
+    /// <exception cref="Zero">Where it fails with Zero.</exception>
     internal static int Nonzero(int n)
     {
         if (n == 0)
         {
-            return Core.Bubble<int>();
+            throw new Zero();
         }
         else
         {
@@ -61,7 +62,7 @@ public static class HostFailuresSeveralLibrariesGlobal
         {
             return Core.Div(HostLookup(key), Nonzero(CountFailuresGlobal.ParseCount(count)));
         }
-        catch (Exception failure1) when (failure1 is global::TemperLang.Core.Bubble || failure1 is IFailure)
+        catch (Exception failure1) when (failure1 is IFailure)
         {
             return -9;
         }

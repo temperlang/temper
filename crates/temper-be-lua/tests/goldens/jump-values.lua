@@ -21,14 +21,7 @@ end
 ---@param s string
 ---@return integer
 local function parse(s)
-  ---@type integer
-  local t_1
-  if not temper.catch(function()
-    t_1 = temper.string_toint32(s)
-  end, temper.ParseError) then
-    temper.bubble()
-  end
-  return t_1
+  return temper.string_toint32(s)
 end
 
 ---@param y integer|temper.Null
@@ -78,9 +71,9 @@ local function sumUntilBad(words)
     local t
     ---@type integer|temper.Null
     local held = temper.null
-    if not temper.pcall(function()
+    if not temper.catch(function()
       held = parse(temper.list_get(words, i))
-    end) then
+    end, temper.ParseError) then
     end
     if temper.is_null(held) then
       break
@@ -100,9 +93,9 @@ local function parsedOr(s)
   local t
   ---@type integer|temper.Null
   local held = temper.null
-  if not temper.pcall(function()
+  if not temper.catch(function()
     held = parse(s)
-  end) then
+  end, temper.ParseError) then
   end
   if temper.is_null(held) then
     return -1
@@ -457,9 +450,9 @@ local function viaOrelse(words)
       local n
       ---@type integer|temper.Null
       local held = temper.null
-      if not temper.pcall(function()
+      if not temper.catch(function()
         held = parse(temper.list_get(words, i))
-      end) then
+      end, temper.ParseError) then
       end
       if temper.is_null(held) then
         seen = seen .. "!"

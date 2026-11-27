@@ -1,38 +1,47 @@
 # host-error-tests/host_error_tests.internal.js
 # generated line:column -> source:line:column, and the text at each
-3:1 -> ../host-error-tests.temper.md:11:5  /** <- @connected
-7:1 -> ../host-error-tests.temper.md:11:5  export function hostFails(n) <- @connected
-7:17 -> ../host-error-tests.temper.md:12:16 (hostFails)  hostFails(n) { <- hostFails(n: Int): Int throw
-7:26 -> ../host-error-tests.temper.md:11:5  (n) { <- @connected
-11:1 -> ../host-error-tests.temper.md:17:5  export function hostFailsTes <- @connected
-11:17 -> ../host-error-tests.temper.md:18:16 (hostFailsTest)  hostFailsTest() { <- hostFailsTest(): Void { pani
-11:30 -> ../host-error-tests.temper.md:17:5  () { <- @connected
+4:1 -> ../host-error-tests.temper.md:15:5  /** <- @connected
+9:1 -> ../host-error-tests.temper.md:15:5  export function hostFails(n) <- @connected
+9:17 -> ../host-error-tests.temper.md:16:16 (hostFails)  hostFails(n) { <- hostFails(n: Int): Int throw
+9:26 -> ../host-error-tests.temper.md:15:5  (n) { <- @connected
+13:1 -> ../host-error-tests.temper.md:21:5  export function hostFailsTes <- @connected
+13:17 -> ../host-error-tests.temper.md:22:16 (hostFailsTest)  hostFailsTest() { <- hostFailsTest(): Void { pani
+13:30 -> ../host-error-tests.temper.md:21:5  () { <- @connected
+17:1 -> ../host-error-tests.temper.md:12:5  export class OopsError exten <- export sealed interface Oops
+17:14 -> ../host-error-tests.temper.md:12:29 (OopsError)  OopsError extends Error {} <- OopsError extends Error {}
+17:23 -> ../host-error-tests.temper.md:12:5   extends Error {} <- export sealed interface Oops
+21:1 -> ../host-error-tests.temper.md:13:5  export class Oops extends Oo <- export class Oops extends Oo
+21:14 -> ../host-error-tests.temper.md:13:18 (Oops)  Oops extends OopsError { <- Oops extends OopsError {}
+21:18 -> ../host-error-tests.temper.md:13:5   extends OopsError { <- export class Oops extends Oo
+22:3 -> ../host-error-tests.temper.md:13:5  /** @returns {string} */ <- export class Oops extends Oo
+23:3 -> ../host-error-tests.temper.md:13:5  get message() { <- export class Oops extends Oo
+24:5 -> ../host-error-tests.temper.md:13:5  return "oops"; <- export class Oops extends Oo
 # host-error-tests/test/host_error_tests.test.js
 # generated line:column -> source:line:column, and the text at each
-6:1 -> ../../host-error-tests.temper.md:20:5  it("host errors are panics", <- test("host errors are panics
-10:5 -> ../../host-error-tests.temper.md:21:41  /** @throws {Error} */ <- { let r = hostFails(1) orels
-11:5 -> ../../host-error-tests.temper.md:21:41  function fn() { <- { let r = hostFails(1) orels
-12:7 -> ../../host-error-tests.temper.md:21:43  /** @type {number} */ <- let r = hostFails(1) orelse
-13:7 -> ../../host-error-tests.temper.md:21:43  let r; <- let r = hostFails(1) orelse
-14:7 -> ../../host-error-tests.temper.md:21:43  try { <- let r = hostFails(1) orelse
-20:7 -> ../../host-error-tests.temper.md:21:75  test.assert(r !== -1, () => <- assert(r != -1); };
-22:5 -> ../../host-error-tests.temper.md:21:7  test.assertPanics(fn, "host <- test.assertPanics("host erro
-23:5 -> ../../host-error-tests.temper.md:22:41  /** @throws {Error} */ <- { let r = hostFails(2) orels
-24:5 -> ../../host-error-tests.temper.md:22:41  function fn3() { <- { let r = hostFails(2) orels
-25:7 -> ../../host-error-tests.temper.md:22:43  /** @type {number} */ <- let r = hostFails(2) orelse
-26:7 -> ../../host-error-tests.temper.md:22:43  let r; <- let r = hostFails(2) orelse
-27:7 -> ../../host-error-tests.temper.md:22:43  try { <- let r = hostFails(2) orelse
-33:7 -> ../../host-error-tests.temper.md:22:75  test.assert(r !== -1, () => <- assert(r != -1); };
-35:5 -> ../../host-error-tests.temper.md:22:7  test.assertPanics(fn3, "host <- test.assertPanics("host erro
-36:5 -> ../../host-error-tests.temper.md:23:41  /** @throws {Error} */ <- { let r = hostFails(3) orels
-37:5 -> ../../host-error-tests.temper.md:23:41  function fn4() { <- { let r = hostFails(3) orels
-38:7 -> ../../host-error-tests.temper.md:23:43  /** @type {number} */ <- let r = hostFails(3) orelse
-39:7 -> ../../host-error-tests.temper.md:23:43  let r; <- let r = hostFails(3) orelse
-40:7 -> ../../host-error-tests.temper.md:23:43  try { <- let r = hostFails(3) orelse
-46:7 -> ../../host-error-tests.temper.md:23:75  test.assert(r !== -1, () => <- assert(r != -1); };
-48:5 -> ../../host-error-tests.temper.md:23:7  test.assertPanics(fn4, "host <- test.assertPanics("host erro
-57:1 -> ../../host-error-tests.temper.md:30:5  it("host test failure is no <- test("host test failure is n
-61:5 -> ../../host-error-tests.temper.md:31:25  /** @throws {Error} */ <- { hostFailsTest(); };
-62:5 -> ../../host-error-tests.temper.md:31:25  function fn() { <- { hostFailsTest(); };
-63:7 -> ../../host-error-tests.temper.md:31:27  hostFailsTest(); <- hostFailsTest(); };
-65:5 -> ../../host-error-tests.temper.md:31:7  test.assertPanics(fn); <- test.assertPanics { hostFail
+10:1 -> ../../host-error-tests.temper.md:24:5  it("host errors are panics", <- test("host errors are panics
+14:5 -> ../../host-error-tests.temper.md:25:41  /** @throws {Error} */ <- { let r = hostFails(1) orels
+15:5 -> ../../host-error-tests.temper.md:25:41  function fn() { <- { let r = hostFails(1) orels
+16:7 -> ../../host-error-tests.temper.md:25:43  /** @type {number} */ <- let r = hostFails(1) orelse
+17:7 -> ../../host-error-tests.temper.md:25:43  let r; <- let r = hostFails(1) orelse
+18:7 -> ../../host-error-tests.temper.md:25:43  try { <- let r = hostFails(1) orelse
+24:7 -> ../../host-error-tests.temper.md:25:75  test.assert(r !== -1, () => <- assert(r != -1); };
+26:5 -> ../../host-error-tests.temper.md:25:7  test.assertPanics(fn, "host <- test.assertPanics("host erro
+27:5 -> ../../host-error-tests.temper.md:26:41  /** @throws {Error} */ <- { let r = hostFails(2) orels
+28:5 -> ../../host-error-tests.temper.md:26:41  function fn3() { <- { let r = hostFails(2) orels
+29:7 -> ../../host-error-tests.temper.md:26:43  /** @type {number} */ <- let r = hostFails(2) orelse
+30:7 -> ../../host-error-tests.temper.md:26:43  let r; <- let r = hostFails(2) orelse
+31:7 -> ../../host-error-tests.temper.md:26:43  try { <- let r = hostFails(2) orelse
+37:7 -> ../../host-error-tests.temper.md:26:75  test.assert(r !== -1, () => <- assert(r != -1); };
+39:5 -> ../../host-error-tests.temper.md:26:7  test.assertPanics(fn3, "host <- test.assertPanics("host erro
+40:5 -> ../../host-error-tests.temper.md:27:41  /** @throws {Error} */ <- { let r = hostFails(3) orels
+41:5 -> ../../host-error-tests.temper.md:27:41  function fn4() { <- { let r = hostFails(3) orels
+42:7 -> ../../host-error-tests.temper.md:27:43  /** @type {number} */ <- let r = hostFails(3) orelse
+43:7 -> ../../host-error-tests.temper.md:27:43  let r; <- let r = hostFails(3) orelse
+44:7 -> ../../host-error-tests.temper.md:27:43  try { <- let r = hostFails(3) orelse
+50:7 -> ../../host-error-tests.temper.md:27:75  test.assert(r !== -1, () => <- assert(r != -1); };
+52:5 -> ../../host-error-tests.temper.md:27:7  test.assertPanics(fn4, "host <- test.assertPanics("host erro
+61:1 -> ../../host-error-tests.temper.md:34:5  it("host test failure is no <- test("host test failure is n
+65:5 -> ../../host-error-tests.temper.md:35:25  /** @throws {Error} */ <- { hostFailsTest(); };
+66:5 -> ../../host-error-tests.temper.md:35:25  function fn() { <- { hostFailsTest(); };
+67:7 -> ../../host-error-tests.temper.md:35:27  hostFailsTest(); <- hostFailsTest(); };
+69:5 -> ../../host-error-tests.temper.md:35:7  test.assertPanics(fn); <- test.assertPanics { hostFail

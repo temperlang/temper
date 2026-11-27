@@ -281,9 +281,9 @@ pub enum Stmt {
         body: Vec<Stmt>,
         called: bool,
     },
-    /// A call that always throws, `core::bubble();`, after which nothing
+    /// A call that never returns, `core::panic();`, after which nothing
     /// runs.
-    Bubble(Expr),
+    Never(Expr),
     /// `struct Name { T x; R f(A a) const { … } };`: a group of local
     /// functions that use each other or themselves, its captures members.
     GroupStruct {
@@ -342,12 +342,6 @@ pub enum Stmt {
     Guard {
         name: String,
         mutex: String,
-    },
-    /// Temper's `orelse`: `try { body } catch (core::TemperBubble const &)
-    /// { fallback }`, as Kotlin's.
-    Try {
-        body: Vec<Stmt>,
-        fallback: Vec<Stmt>,
     },
     /// Statements only where `TEMPER_TESTS` is defined, in the same
     /// scope: the init's for what only tests reach.
@@ -798,7 +792,7 @@ fn stmt(out: &mut Printed, s: &Stmt, depth: usize) {
             indent(out, depth);
             out.push_str("};\n");
         }
-        Stmt::Expr(e) | Stmt::Bubble(e) => {
+        Stmt::Expr(e) | Stmt::Never(e) => {
             let _ = writeln!(out, "{};", expr(e, TOP));
         }
         Stmt::Block(stmts) => {
@@ -917,16 +911,6 @@ fn stmt(out: &mut Printed, s: &Stmt, depth: usize) {
         }
         Stmt::Guard { name, mutex } => {
             let _ = writeln!(out, "std::lock_guard<std::mutex> {name}({mutex});");
-        }
-        Stmt::Try {
-            body: stmts,
-            fallback,
-        } => {
-            out.push_str("try ");
-            body(out, stmts, depth);
-            out.push_str(" catch (core::TemperBubble const &) ");
-            body(out, fallback, depth);
-            out.push('\n');
         }
         // Written above, without the indent.
         Stmt::TestsOnly(_) | Stmt::Line(_) => {}

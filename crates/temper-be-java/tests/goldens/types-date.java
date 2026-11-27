@@ -59,8 +59,8 @@ public final class DateGlobal {
         LocalDate rdc;
         try {
             rdc = temper.std.temporal.Core.dateFromIsoString("1596-03-31");
-        } catch (TemporalException bubble) {
-            throw new AssertionError("panic", bubble);
+        } catch (TemporalException failure) {
+            throw new AssertionError("panic", failure);
         }
         console.log("Happy birthday, René: day=" + rdc.getDayOfMonth() + ", month=" + rdc.getMonthValue() + ", year=" + rdc.getYear());
     }

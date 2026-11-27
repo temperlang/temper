@@ -142,15 +142,14 @@ class Graph<T>(
   // Here's an example higher level convenience method.
   public mapNeighbors<O>(
     node: Node<T>, transform: fn (Node<T>): O
-  ): List<O> throws Bubble {
+  ): List<O> {
     let outputs = new ListBuilder<O>();
     for (var n = 0; n < node.neighbors.length; n += 1) {
-      // Accessing the `nodes` list could fail if bad `NodeRef` indices.
+      // Accessing the `nodes` list panics for bad `NodeRef` indices.
       outputs.add(transform(nodes[node.neighbors[n]]));
     }
     outputs.toList()
-    // Alternative implementation, but `map` currently doesn't propagate
-    // Bubble. We want Bubble polymorphism for that.
+    // Alternatively, with `map`:
     // node.neighbors.map { (n): O => transform(nodes[node.neighbors[n]]) }
   }
 }

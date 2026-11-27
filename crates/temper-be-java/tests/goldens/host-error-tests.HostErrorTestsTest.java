@@ -1,12 +1,11 @@
 package host_error_tests;
 
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.std.testing.Test;
 
 public final class HostErrorTestsTest {
     static {
-        Bubble.keepStackTraces();
+        Core.keepStackTraces();
     }
 
     @org.junit.jupiter.api.Test
@@ -18,7 +17,7 @@ public final class HostErrorTestsTest {
                 int r;
                 try {
                     r = HostErrorTestsGlobal.hostFails(1);
-                } catch (Bubble ignored) {
+                } catch (Oops ignored) {
                     r = -1;
                 }
                 test.assert_(r != -1, () -> "expected r != -1");
@@ -28,7 +27,7 @@ public final class HostErrorTestsTest {
                 int r;
                 try {
                     r = HostErrorTestsGlobal.hostFails(2);
-                } catch (Bubble ignored2) {
+                } catch (Oops ignored2) {
                     r = -1;
                 }
                 test.assert_(r != -1, () -> "expected r != -1");
@@ -38,7 +37,7 @@ public final class HostErrorTestsTest {
                 int r;
                 try {
                     r = HostErrorTestsGlobal.hostFails(3);
-                } catch (Bubble ignored3) {
+                } catch (Oops ignored3) {
                     r = -1;
                 }
                 test.assert_(r != -1, () -> "expected r != -1");

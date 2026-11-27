@@ -411,11 +411,9 @@ impl ReplSession {
                 let scope = (segments.iter())
                     .find(|&(_, &i)| i == input)
                     .map(|(&scope, _)| scope);
-                emit(ReplEvent::Failure(match why.strip_prefix("Failed: ") {
-                    _ if why == "Failed" => format!("interactive#{input} failed"),
-                    Some(why) => format!("interactive#{input} failed: {why}"),
-                    None => format!("interactive#{input} failed: {why}"),
-                }));
+                emit(ReplEvent::Failure(format!(
+                    "interactive#{input} failed: {why}"
+                )));
                 if let Some(scope) = scope {
                     runner.note_unset(s, scope, &format!("interactive#{input} failed"));
                 }
@@ -447,12 +445,11 @@ impl ReplSession {
                 Outcome::Value(value) if keep => Some(render(s, &value, &label)),
                 Outcome::Value(_) => Some(class.map_or("void".into(), label)),
                 Outcome::Failed(why) => {
-                    // Not again if a diagnostic of the input said it; nor
-                    // a bare `Failed`, a bubble's, which `fail` says.
+                    // Not again if a diagnostic of the input said it.
                     let said = why
-                        .strip_prefix("Failed: ")
+                        .strip_prefix("Panicked: ")
                         .is_some_and(|m| errors.contains(m));
-                    if !said && why != "Failed" {
+                    if !said {
                         emit(ReplEvent::Failure(why));
                     }
                     runner.note_unset(s, latest, &format!("interactive#{input} failed"));
@@ -1353,14 +1350,14 @@ mod tests {
                 "interactive#2: 3",
                 "// interactive#0\nlet x = 1;\n// interactive#2\nx + 2;",
                 "interactive#3: void",
-                "Failed: input 1 failed as it was settled, a bug in Temper, so it has nothing \
+                "Panicked: input 1 failed as it was settled, a bug in Temper, so it has nothing \
                  to show",
                 "interactive#4: fail",
                 "interactive#5:1:1: error: y has not been declared\n    y\n    ^",
                 "interactive#5: fail",
-                "Failed: Date has no value: loading it failed in interactive#1",
+                "Panicked: Date has no value: loading it failed in interactive#1",
                 "interactive#6: fail",
-                "Failed: Date has no value: interactive#6 failed",
+                "Panicked: Date has no value: interactive#6 failed",
                 "interactive#7: fail",
                 "interactive#8: void",
                 "interactive#9: 3",

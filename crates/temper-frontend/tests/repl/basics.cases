@@ -152,7 +152,7 @@ interactive#0:1:41: error: isOdd has not been declared
 interactive#0: void
 Note: interactive#0 used isOdd before this input declared it. An input sees only what earlier inputs declared, so declarations that use each other go in one input: on one line, or with --separator semisemi, ended by ;;
 interactive#1: void
-Failed: isOdd has not been declared
+Panicked: isOdd has not been declared
 interactive#2: fail
 interactive#3: void
 interactive#4: true

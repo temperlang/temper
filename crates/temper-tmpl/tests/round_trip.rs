@@ -117,6 +117,10 @@ struct Core {
     list: DeclId,
     /// Core's `Error`, what a test may throw.
     error: TypeId,
+    /// Core's `ParseError`, what failing functions throw, and its
+    /// constructor.
+    fail: TypeId,
+    fail_ctor: DeclId,
 }
 
 struct Gen {
@@ -175,6 +179,18 @@ impl Gen {
     fn core(&mut self) {
         let b = &mut self.b;
         let core = b.uses("temper-core", "0.1.0");
+        // Core's `Error`, and a failure class below it, `ParseError`.
+        let error = b.declare_type(DeclKind::Interface, "Error", core);
+        let error = b.program().decls.get(error).ty;
+        let core_error = b.declare_type(DeclKind::Interface, "CoreError", core);
+        b.set_supers(core_error, &[error]);
+        let core_error_ty = b.program().decls.get(core_error).ty;
+        let parse_error = b.declare_type(DeclKind::Class, "ParseError", core);
+        b.set_supers(parse_error, &[core_error_ty]);
+        let fail = b.program().decls.get(parse_error).ty;
+        let sig = b.function_type(&[], fail);
+        let fail_ctor = b.declare(DeclKind::Constructor, "constructor", parse_error, sig);
+        b.set_connected(fail_ctor, &[]);
         let member = |b: &mut Builder,
                       kind: DeclKind,
                       name: &str,
@@ -185,7 +201,7 @@ impl Gen {
             let types: Vec<TypeId> = params.iter().map(|p| p.1).collect();
             let optional: Vec<bool> = params.iter().map(|p| p.2).collect();
             let returns = match bubbles {
-                true => b.result(result, TypeId::BUBBLE),
+                true => b.result(result, fail),
                 false => result,
             };
             let sig = b.function_type_with(&types, &optional, returns);
@@ -285,10 +301,10 @@ impl Gen {
         let list = b.declare_type(DeclKind::Class, "List", core);
         let t = b.declare_type_param("T", list, &[]);
         b.set_type_params(list, &[t]);
-        let error = b.declare_type(DeclKind::Interface, "Error", core);
-        let error = b.program().decls.get(error).ty;
         self.core = Some(Core {
             error,
+            fail,
+            fail_ctor,
             console: console_ty,
             log: log.decl,
             get_console: get_console.decl,
@@ -414,7 +430,7 @@ impl Gen {
     }
 
     /// A test: a compiler-made function of std's `Test`, which may throw
-    /// any error, core's `Error`, a bubble too.
+    /// any error, core's `Error`.
     fn test(&mut self, module: DeclId, lets: &[Value]) {
         let test_type = match self.test_type {
             Some(t) => t,
@@ -493,7 +509,10 @@ impl Gen {
         };
         let bubbles = self.rng.chance(30);
         let returns = match bubbles {
-            true => self.b.result(result, TypeId::BUBBLE),
+            true => {
+                let fail = self.core.as_ref().unwrap().fail;
+                self.b.result(result, fail)
+            }
             false => result,
         };
         let sig = self.b.function_type_with(&params, &optional, returns);
@@ -574,6 +593,13 @@ impl Gen {
         let body = self.b.block(&stmts);
         let node = self.b.function(decl, &param_nodes, body);
         self.b.add_item(module, node);
+    }
+
+    /// `throw new ParseError()`, typed `ty`.
+    fn throw(&mut self, ty: TypeId) -> NodeId {
+        let ctor = self.core.as_ref().unwrap().fail_ctor;
+        let value = self.b.new_object(ctor, &[]);
+        self.b.throw(ty, value, None)
     }
 
     fn block(&mut self, depth: usize) -> NodeId {
@@ -809,7 +835,7 @@ impl Gen {
             12 => {
                 let may_bubble = std::mem::replace(&mut self.may_bubble, true);
                 let body = if self.rng.chance(20) {
-                    self.b.bubble(ty)
+                    self.throw(ty)
                 } else {
                     self.expr(ty, depth - 1)
                 };
@@ -821,7 +847,7 @@ impl Gen {
                 };
                 self.b.or_else(ty, body, fallback)
             }
-            13 if self.may_bubble && self.rng.chance(30) => self.b.bubble(ty),
+            13 if self.may_bubble && self.rng.chance(30) => self.throw(ty),
             13 if self.rng.chance(30) => {
                 // A list's literal, its value dropped.
                 let item = self.rng.pick(&[TypeId::INT32, TypeId::STRING]);
@@ -1425,7 +1451,7 @@ fn random_programs_validate_and_round_trip() {
             Kind::EqNullable,
             Kind::Coalesce,
             Kind::OrElse,
-            Kind::Bubble,
+            Kind::Throw,
             Kind::Panic,
             Kind::ListLit,
             Kind::FunctionLiteral,

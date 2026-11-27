@@ -37,7 +37,7 @@ namespace temper {
                 // already false, and a true one grows the vector.
                 int32_t sz = static_cast<int32_t>(bv->size());
                 if (index < 0) {
-                    bubble("DenseBitVector set index out of bounds");
+                    panic("DenseBitVector set index out of bounds");
                 }
                 if (index >= sz) {
                     if (!value) {

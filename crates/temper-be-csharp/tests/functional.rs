@@ -75,7 +75,7 @@ const HIDING: &str = "# Hiding
     export let support = \"s\";
     let math(a: Int, b: Int): Int { a.min(b) }
     let twice(object: Int): Int { object + object }
-    let core(a: Int, b: Int): Int throws Bubble { a / b }
+    let core(a: Int, b: Int): Int { a / b }
     let before(a: Boolean, b: Boolean): Boolean { a < b }
     console.log(\"${math(3, 2).toString()} ${twice(2).toString()} ${core(7, 2).toString()} ${support}\");
     console.log(before(false, true).toString());
@@ -126,7 +126,10 @@ const DROPPED: &str = "# Dropped
       public scan(text: String): String? { n += 1; if (text == \"x\") { null } else { text } }
       public get count(): Int { n += 10; n }
     }
-    let go(lexer: Lexer, b: Boolean, d: Int): Int throws Bubble {
+    sealed interface Problem extends Error {}
+    class Zero extends Problem {}
+    let go(lexer: Lexer, b: Boolean, d: Int): Int throws Zero {
+      if (d == 0) { throw new Zero(); }
       if (b) { lexer.scan(\"x\"); }
       if (b) { lexer.count; }
       if (b) { lexer.scan(\"y\") ?? \"z\"; }

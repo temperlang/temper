@@ -10,6 +10,28 @@ do
   end
 end
 
+---@class host-error-causes.OopsError: temper.Failure
+
+---@class host-error-causes.OopsError.type: temper.Type
+local OopsError = temper.type("host-error-causes.OopsError", temper.Failure)
+
+---@class host-error-causes.Oops: host-error-causes.OopsError
+---@field message string
+
+---@class host-error-causes.Oops.type: temper.Type
+---@operator call: host-error-causes.Oops
+local Oops = temper.type("host-error-causes.Oops", OopsError)
+
+---@param this host-error-causes.Oops
+function Oops.constructor(this)
+end
+
+---@param this host-error-causes.Oops
+---@return string
+function Oops.get.message(this)
+  return "oops"
+end
+
 ---@param n integer
 ---@return integer
 local function hostFails(n)
@@ -19,12 +41,12 @@ end
 print("before")
 ---@type integer
 local h
-local t, t_1 = temper.pcall(function()
+local t, t_1 = temper.catch(function()
   h = hostFails(1)
-end)
+end, Oops)
 if not t then
   error("panic\ncaused by: " .. tostring(t_1))
 end
 print("after " .. h)
 
-return { hostFails = hostFails }
+return { OopsError = OopsError, Oops = Oops, hostFails = hostFails }

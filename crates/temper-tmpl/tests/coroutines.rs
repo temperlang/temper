@@ -28,7 +28,9 @@ uses `temper-core`#2 0.1.0 {
   connected fn safeAdaptGeneratorFn#24<YIELD#25>(step: fn (SafeGenerator#3<YIELD#25>): GeneratorResult#14<YIELD#25>): SafeGenerator#3<YIELD#25>;
   connected fn awakeUpon#26<T#27>(promise: Promise#28<T#27>, generator: SafeGenerator#3<Empty#7>): Void;
   class Promise#28<R#29> {}
-  connected fn getPromiseResultSync#30<T#31>(promise: Promise#28<T#31>): T#31 throws Bubble;
+  interface Error#8 {}
+  class BrokenPromise#9 extends Error#8 {}
+  connected fn getPromiseResultSync#30<T#31>(promise: Promise#28<T#31>): T#31 throws BrokenPromise#9;
   class Int32#35 {
     connected method toString#36(radix?: Int32): String;
   }

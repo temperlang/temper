@@ -140,7 +140,6 @@ cpp types/string/is-empty is-empty/init.cpp
 cpp types/string/is-empty is-empty/init.hpp
 cpp types/string/is-empty is-empty/main.cpp
 csharp * temper-core/Async.cs
-csharp * temper-core/Bubble.cs
 csharp * temper-core/Core.cs
 csharp * temper-core/Failure.cs
 csharp * temper-core/Float64.cs
@@ -263,6 +262,8 @@ csharp control-flow/bubble bubble/program/Program.cs
 csharp control-flow/bubble bubble/src/Bubble.csproj
 csharp control-flow/bubble bubble/src/BubbleGlobal.cs
 csharp control-flow/bubble bubble/src/Logging.cs
+csharp control-flow/bubble bubble/src/Missing.cs
+csharp control-flow/bubble bubble/src/Problem.cs
 csharp control-flow/if-return if-return/program/IfReturnProgram.csproj
 csharp control-flow/if-return if-return/program/Program.cs
 csharp control-flow/if-return if-return/src/IfReturn.csproj
@@ -331,12 +332,16 @@ csharp types/string/is-empty is-empty/src/IsEmpty.csproj
 csharp types/string/is-empty is-empty/src/IsEmptyGlobal.cs
 csharp types/string/is-empty is-empty/src/Logging.cs
 java * temper-core/pom.xml
-java * temper-core/src/main/java/temper/core/Bubble.java
+java * temper-core/src/main/java/temper/core/BrokenPromise.java
 java * temper-core/src/main/java/temper/core/Core.java
+java * temper-core/src/main/java/temper/core/CoreException.java
 java * temper-core/src/main/java/temper/core/Failure.java
 java * temper-core/src/main/java/temper/core/Generator.java
+java * temper-core/src/main/java/temper/core/InvalidCodePoint.java
+java * temper-core/src/main/java/temper/core/MissingKey.java
 java * temper-core/src/main/java/temper/core/NonNull.java
 java * temper-core/src/main/java/temper/core/Nullable.java
+java * temper-core/src/main/java/temper/core/ParseError.java
 java * temper-core/src/main/java/temper/core/Stub.java
 java * temper-core/src/main/java/temper/core/Util.java
 java * temper-core/src/main/java/temper/core/net/Core.java
@@ -424,6 +429,8 @@ java classes/write-back-through-field write-back-through-field/src/main/java/wri
 java control-flow/bubble bubble/pom.xml
 java control-flow/bubble bubble/src/main/java/bubble/BubbleGlobal.java
 java control-flow/bubble bubble/src/main/java/bubble/BubbleMain.java
+java control-flow/bubble bubble/src/main/java/bubble/Missing.java
+java control-flow/bubble bubble/src/main/java/bubble/Problem.java
 java control-flow/if-return if-return/pom.xml
 java control-flow/if-return if-return/src/main/java/if_return/IfReturnGlobal.java
 java control-flow/if-return if-return/src/main/java/if_return/IfReturnMain.java

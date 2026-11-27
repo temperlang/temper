@@ -227,7 +227,7 @@ impl Translator<'_> {
     }
 
     /// What a translated handler's body passes to its handler, as one
-    /// type, if that's a failure type a `catch` binds, not `Bubble`
+    /// type, if that's a failure type a `catch` binds
     /// ([`temper_tmpl::failures::join`]).
     pub(super) fn handled_type(&self, body: NodeId) -> Option<TypeId> {
         let p = self.b.program();

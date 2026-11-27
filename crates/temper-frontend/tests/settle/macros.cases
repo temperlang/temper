@@ -98,14 +98,14 @@ continue nowhere;
 (Block (Error) (Error) #void)
 error 0..5: No enclosing loop or label for break
 error 7..23: No enclosing loop or label for continue
-Failed: No enclosing loop or label for break
+Panicked: No enclosing loop or label for break
 
 === return outside a function
 return 1;
 --- settled
 (Block (Error) #void)
 error 0..8: return outside a function
-Failed: return outside a function
+Panicked: return outside a function
 
 === early return
 let f(n: Int): String {
@@ -130,24 +130,28 @@ console.log(f(0));
 log positive
 log not
 
-=== orelse and bubble
-let check(n: Int): Int throws Bubble { if (n < 0) { bubble() } else { n } }
+=== orelse and throw
+sealed interface Problem extends Error {}
+class Oops() extends Problem {}
+let check(n: Int): Int throws Oops { if (n < 0) { throw new Oops() } else { n } }
 console.log((check(1) orelse -1).toString());
 console.log((check(-1) orelse -1).toString());
 --- settled
 (Block
+  (Interface ^Problem:0 Error)
+  (Class ^Oops:1 Problem:0)
   (Let
-    ^check:0
+    ^check:2
     (Fn
-      (Let ^n:1 Int)
-      (Call throws Int Bubble)
-      (Block (If (Call < n:1 0) (Block (Fail)) (Block n:1)))))
+      (Let ^n:5 Int)
+      (Call throws Int Oops:1)
+      (Block (If (Call < n:5 0) (Block (Fail (Call new Oops:1))) (Block n:5)))))
   (Call
     (Call . console \log)
-    (Call (Call . (Orelse (Call check:0 1) (Call - 1)) \toString)))
+    (Call (Call . (Orelse (Call check:2 1) (Call - 1)) \toString)))
   (Call
     (Call . console \log)
-    (Call (Call . (Orelse (Call check:0 (Call - 1)) (Call - 1)) \toString)))
+    (Call (Call . (Orelse (Call check:2 (Call - 1)) (Call - 1)) \toString)))
   #void)
 log 1
 log -1
@@ -330,7 +334,7 @@ ls[0] += 1;
   (Block (Call (Call . ls:0 \set) 0 (Call + (Call [] ls:0 0) 1)))
   #void)
 error 17..27: No member set in List<Int32>
-Failed: No member set in List<Int32>
+Panicked: No member set in List<Int32>
 
 === string interpolation
 let name = "World";
@@ -403,7 +407,7 @@ let;
 error 0..9: Use of builtin if is malformed
 error 11..23: Use of builtin while is malformed
 error 25..28: Use of builtin let is malformed
-Failed: Use of builtin if is malformed
+Panicked: Use of builtin if is malformed
 
 === type parameters, scoped around their class or function, erased at run time
 interface I<T> { get(): T; }
@@ -564,7 +568,7 @@ var { a as d } = new C(5, "six");
   #void)
 error 260..292: Malformed assignment
 log 2 two four!
-Failed: Malformed assignment
+Panicked: Malformed assignment
 
 === do … while: the body runs before the check, and continue goes to the check
 var i = 1;
@@ -628,7 +632,7 @@ log Done -1
 log Done once
 log n 1
 log n 3
-Failed: Void expressions cannot be used as values
+Panicked: Void expressions cannot be used as values
 
 === when with case patterns, which need types, and invalid cases
 let f(x: Int): String {
@@ -658,7 +662,7 @@ console.log(f(1));
   #void)
 error 58..70: Not supported yet: case patterns, which need types
 log zero
-Failed: Not supported yet: case patterns, which need types
+Panicked: Not supported yet: case patterns, which need types
 
 === statements in strings, appended to a StringBuilder, as Kotlin's StringExprMacro
 let guests = ["Hilo, HI", "you"];
@@ -837,7 +841,7 @@ log safe
 log safe F\our: 
 log 10
 log a|b
-Failed: Not supported yet: statements in strings with a function tag
+Panicked: Not supported yet: statements in strings with a function tag
 
 === declared failures' syntax isn't supported yet, each an error where it is
 console.log("runs");
@@ -859,4 +863,4 @@ let g(): Int { throw 1 }
 error 118..137: Not supported yet: `error case`, part of declared failures
 error 160..161: Expected subtype of Error, but got Int32
 log runs
-Failed: Not supported yet: `error case`, part of declared failures
+Panicked: Not supported yet: `error case`, part of declared failures

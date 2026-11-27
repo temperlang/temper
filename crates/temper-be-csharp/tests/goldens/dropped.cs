@@ -5,8 +5,13 @@ namespace Dropped;
 
 public static class DroppedGlobal
 {
+    /// <exception cref="Zero">Where it fails with Zero.</exception>
     internal static int Go(ILexer lexer, bool b, int d)
     {
+        if (d == 0)
+        {
+            throw new Zero();
+        }
         if (b)
         {
             lexer.Scan("x");
@@ -46,9 +51,9 @@ public static class DroppedGlobal
         {
             Go(l, true, 1);
         }
-        catch (global::TemperLang.Core.Bubble bubble1)
+        catch (Zero failure1)
         {
-            throw Core.Panic("panic", bubble1);
+            throw Core.Panic("panic", failure1);
         }
         console.Log(l.N.ToString(CultureInfo.InvariantCulture));
         int t1;
@@ -56,7 +61,7 @@ public static class DroppedGlobal
         {
             t1 = Go(l, true, 2);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (Zero)
         {
             t1 = -1;
         }

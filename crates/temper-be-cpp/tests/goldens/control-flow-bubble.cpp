@@ -10,6 +10,16 @@ namespace bubble {
 // optional.
 void global_init_init();
 
+struct Problem;
+struct Missing;
+
+struct Problem : public virtual temper::core::Failure {};
+
+struct Missing : public virtual Problem {
+  static std::shared_ptr<Missing> make();
+  temper::core::Str get_message() const override;
+};
+
 }  // namespace bubble
 
 // init.cpp
@@ -25,62 +35,75 @@ static core::GlobalSlot<std::shared_ptr<core::Console::Type>> console;
 
 }  // namespace temper_globals
 
-static int32_t more(core::NullableParam<int32_t>) {
-  core::bubble();
+std::shared_ptr<Missing> Missing::make() {
+  std::shared_ptr<Missing> self = std::make_shared<Missing>();
+  return self;
 }
 
-static core::Str something(core::NullableParam<core::Str> x) {
+core::Str Missing::get_message() const {
+  return TEMPER_STR("missing");
+}
+
+static core::Expected<int32_t, std::shared_ptr<Missing>> more(core::NullableParam<int32_t>) {
+  return core::unexpected(Missing::make());
+}
+
+static core::Expected<core::Str, std::shared_ptr<Missing>> something(core::NullableParam<core::Str> x) {
   {
     if (x != nullptr) {
       return x.value;
     } else {
-      core::bubble();
+      return core::unexpected(Missing::make());
     }
   }
 }
 
 static void report(core::NullableParam<core::Str> x) {
   core::Str message;
-  try {
-    message = bubble::something(x);
-  } catch (core::TemperBubble const &) {
+  auto somethingResult = bubble::something(x);
+  if (somethingResult.has_value()) {
+    message = *somethingResult;
+  } else {
     message = TEMPER_STR("null");
   }
   core::Str suffix;
-  try {
-    suffix = std::to_string(bubble::more(x != nullptr ? 1 : 0));
-  } catch (core::TemperBubble const &) {
+  auto moreResult = bubble::more(x != nullptr ? 1 : 0);
+  if (moreResult.has_value()) {
+    suffix = std::to_string(*moreResult);
+  } else {
     suffix = core::Str();
   }
   core::Console::log(temper_globals::console.value, message + suffix);
 }
 
-static int32_t calcRows(int32_t cols, int32_t total) {
+static core::Expected<int32_t, std::shared_ptr<Missing>> calcRows(int32_t cols, int32_t total) {
   core::Console::log(temper_globals::console.value, "calcRows(" + std::to_string(cols) + ", " + std::to_string(total) + ")");
   if (core::Int::mod_wrap(total, cols) != 0) {
-    core::bubble();
+    return core::unexpected(Missing::make());
   }
   return core::Int::div_wrap(total, cols);
 }
 
-static int32_t parsed(core::Str const & s) {
-  auto Result = core::String::toInt32(s);
-  if (Result.has_value()) {
-    return *Result;
-  } else {
-    core::bubble();
-  }
+static core::Expected<int32_t, std::shared_ptr<core::ParseError>> parsed(core::Str const & s) {
+  return core::String::toInt32(s);
 }
 
-static int32_t countBelow(core::Str const & s) {
+static core::Expected<int32_t, std::shared_ptr<core::ParseError>> countBelow(core::Str const & s) {
   int32_t i = 0;
-  while (i < bubble::parsed(s)) {
+  while (true) {
+    auto parsedResult = bubble::parsed(s);
+    if (!parsedResult.has_value()) {
+      return core::unexpected(parsedResult.error());
+    }
+    if (i >= *parsedResult) {
+      break;
+    }
     i = core::Int::add(i, 1);
   }
   return i;
 }
 
-static int32_t firstOver(int32_t n) {
+static core::Expected<int32_t, std::shared_ptr<Missing>> firstOver(int32_t n) {
   int32_t i = 0;
   while (i < 9) {
     i = core::Int::add(i, 1);
@@ -91,7 +114,7 @@ static int32_t firstOver(int32_t n) {
   return i;
 }
 
-static int32_t sumSkipping(int32_t n) {
+static core::Expected<int32_t, std::shared_ptr<Missing>> sumSkipping(int32_t n) {
   int32_t sum = 0;
   {
     int32_t i = 0;
@@ -109,7 +132,7 @@ static int32_t sumSkipping(int32_t n) {
   return sum;
 }
 
-static int32_t tenTimes(int32_t n) {
+static core::Expected<int32_t, std::shared_ptr<Missing>> tenTimes(int32_t n) {
   {
     int32_t i = 0;
     while (i < 9) {
@@ -119,7 +142,7 @@ static int32_t tenTimes(int32_t n) {
       i = core::Int::add(i, 1);
     }
   }
-  core::bubble();
+  return core::unexpected(Missing::make());
 }
 
 static bool isNone(core::NullableParam<int32_t> r) {
@@ -128,21 +151,24 @@ static bool isNone(core::NullableParam<int32_t> r) {
 
 static core::Str viaOrElse(int32_t n) {
   int32_t value;
-  try {
-    value = firstOver(n);
-  } catch (core::TemperBubble const &) {
+  auto firstOverResult = firstOver(n);
+  if (firstOverResult.has_value()) {
+    value = *firstOverResult;
+  } else {
     value = -1;
   }
   int32_t value2;
-  try {
-    value2 = sumSkipping(n);
-  } catch (core::TemperBubble const &) {
+  auto sumSkippingResult = sumSkipping(n);
+  if (sumSkippingResult.has_value()) {
+    value2 = *sumSkippingResult;
+  } else {
     value2 = -1;
   }
   int32_t value3;
-  try {
-    value3 = tenTimes(n);
-  } catch (core::TemperBubble const &) {
+  auto tenTimesResult = tenTimes(n);
+  if (tenTimesResult.has_value()) {
+    value3 = *tenTimesResult;
+  } else {
     value3 = -1;
   }
   return std::to_string(value) + " " + std::to_string(value2) + " " + std::to_string(value3);
@@ -153,12 +179,12 @@ static int32_t unreachableInt() {
 }
 
 template <class T>
-static T failAs(T) {
-  core::bubble();
+static core::Expected<T, std::shared_ptr<Missing>> failAs(T) {
+  return core::unexpected(Missing::make());
 }
 
-static void bail() {
-  core::bubble();
+static core::Expected<void, std::shared_ptr<Missing>> bail() {
+  return core::unexpected(Missing::make());
 }
 
 static core::NullableParam<core::Str> noName() {
@@ -169,9 +195,12 @@ static void stop() {
   core::panic();
 }
 
-static int32_t half(int32_t n) {
+static core::Expected<int32_t, std::shared_ptr<Missing>> half(int32_t n) {
   if (n % 2 != 0) {
-    bail();
+    auto bailResult = bail();
+    if (!bailResult.has_value()) {
+      return core::unexpected(bailResult.error());
+    }
     core::panic();
   }
   if (n < 0) {
@@ -229,24 +258,31 @@ void global_init_init() {
     temper_globals::console.value = core::Console::get_console();
     bubble::report(TEMPER_STR("hi"));
     bubble::report(nullptr);
-    core::Console::log(temper_globals::console.value, std::to_string(calcRows(3, 6)));
+    auto calcRowsResult = calcRows(3, 6);
+    if (!calcRowsResult.has_value()) {
+      core::uncaught_failure(calcRowsResult.error());
+    }
+    core::Console::log(temper_globals::console.value, std::to_string(*calcRowsResult));
     int32_t value;
-    try {
-      value = bubble::countBelow(TEMPER_STR("abc"));
-    } catch (core::TemperBubble const &) {
+    auto countBelowResult = bubble::countBelow(TEMPER_STR("abc"));
+    if (countBelowResult.has_value()) {
+      value = *countBelowResult;
+    } else {
       value = -1;
     }
     core::Console::log(temper_globals::console.value, std::to_string(value));
     int32_t value2;
-    try {
-      value2 = firstOver(1);
-    } catch (core::TemperBubble const &) {
+    auto firstOverResult = firstOver(1);
+    if (firstOverResult.has_value()) {
+      value2 = *firstOverResult;
+    } else {
       value2 = -1;
     }
     core::NullableParam<int32_t> value3;
-    try {
-      value3 = firstOver(1);
-    } catch (core::TemperBubble const &) {
+    auto firstOverResult2 = firstOver(1);
+    if (firstOverResult2.has_value()) {
+      value3 = *firstOverResult2;
+    } else {
       value3 = nullptr;
     }
     core::Console::log(temper_globals::console.value, std::to_string(value2) + " " + core::Boolean::toString(bubble::isNone(value3)));
@@ -257,23 +293,26 @@ void global_init_init() {
     core::NullableParam<core::Str> subject2 = named(false);
     core::Console::log(temper_globals::console.value, string + (subject == nullptr ? TEMPER_STR("-") : subject.value) + " " + (subject2 == nullptr ? TEMPER_STR("null") : subject2.value));
     int32_t value4;
-    try {
-      value4 = half(4);
-    } catch (core::TemperBubble const &) {
+    auto halfResult = half(4);
+    if (halfResult.has_value()) {
+      value4 = *halfResult;
+    } else {
       value4 = -1;
     }
     int32_t int32 = value4;
     int32_t value5;
-    try {
-      value5 = half(3);
-    } catch (core::TemperBubble const &) {
+    auto halfResult2 = half(3);
+    if (halfResult2.has_value()) {
+      value5 = *halfResult2;
+    } else {
       value5 = -1;
     }
     int32_t value6 = value5;
     int32_t value7;
-    try {
-      value7 = half(-2);
-    } catch (core::TemperBubble const &) {
+    auto halfResult3 = half(-2);
+    if (halfResult3.has_value()) {
+      value7 = *halfResult3;
+    } else {
       value7 = -1;
     }
     core::Console::log(temper_globals::console.value, std::to_string(int32) + " " + std::to_string(value6) + " " + std::to_string(value7));

@@ -16,7 +16,7 @@
 //! function literals' types, just goes unchecked. Builtin operators' and
 //! `console.log`'s signatures are in [`signatures`], builtin types'
 //! members', read from core, in
-//! [`core_members`], what may bubble where it can't, in [`bubbles`],
+//! [`core_members`], what may fail where it can't, in [`bubbles`],
 //! classes' and their members' types, in [`members`], named `@fun`
 //! interfaces' rules, nominal, in [`fun_interfaces`], run-time type
 //! checks' errors, in [`rtti`], generic functions' calls, solved per
@@ -36,8 +36,8 @@ use crate::library::{Level, Message};
 use crate::scope::{ScopeId, SymbolId, SymbolKind};
 use crate::settle::{Fact, Settle};
 use crate::types::{
-    ANY_VALUE, BOOLEAN, BUBBLE, ERROR, FLOAT64, INT32, INT64, NEVER, NULL, Param, STRING, TypeData,
-    TypeId, Types, UNKNOWN, VOID,
+    ANY_VALUE, BOOLEAN, ERROR, FLOAT64, INT32, INT64, NEVER, NULL, Param, STRING, TypeData, TypeId,
+    Types, UNKNOWN, VOID,
 };
 use std::collections::{HashMap, HashSet};
 use temper_syntax::ast::Value;
@@ -794,10 +794,10 @@ impl Settle {
 
     /// A function's result, from its declared return type: `T throws E`
     /// for a type parameter `E` is the result `T throws E`
-    /// ([`Types::result`]), with a failure parameter (RFC 164), and `T
-    /// throws X` for any other `X` is `T throws Bubble`, as `Bubble` is
-    /// the only failure type for now; any other type as
-    /// [`Settle::eval_type`] gives it.
+    /// ([`Types::result`]), with a failure parameter (RFC 164), as for a
+    /// failure type, and `T throws X` for any other `X` fails with what's
+    /// unknown, as it's reported ([`Settle::check_throws`]); any other
+    /// type as [`Settle::eval_type`] gives it.
     fn eval_result(&mut self, node: NodeId) -> TypeId {
         let pass = self.eval_type(node);
         if !self.is_throws(node) {
@@ -807,19 +807,16 @@ impl Settle {
             Some(&fail) => self.eval_type(fail),
             None => UNKNOWN,
         };
-        // What isn't a failure type is reported ([`Settle::check_throws`])
-        // and stands for `Bubble`, as it did before declared failures.
         let types = &self.typing.types;
         let fail = match types.get(fail) {
             TypeData::Param(_) | TypeData::NeverOf(_) => fail,
             _ if fail == ERROR || types.is_failure(fail) => fail,
-            _ => BUBBLE,
+            _ => UNKNOWN,
         };
         self.typing.types.result(pass, fail)
     }
 
-    /// Reports `T throws E` where `E` isn't `Bubble`, a declared failure
-    /// type, a failure parameter, or a `Never`, or is the root itself,
+    /// Reports `T throws E` where `E` isn't a declared failure type, a failure parameter, or a `Never`, or is the root itself,
     /// where it may not be ([`Settle::may_throw_root`]).
     fn check_throws(&mut self, node: NodeId) {
         let Some(&fail) = self.lib.tree.children(node).get(2) else {
@@ -830,7 +827,7 @@ impl Settle {
         let types = &self.typing.types;
         let message = match types.get(t) {
             TypeData::Unknown | TypeData::Param(_) | TypeData::NeverOf(_) => return,
-            _ if t == BUBBLE || types.is_failure(t) => return,
+            _ if types.is_failure(t) => return,
             _ if t == ERROR && may_throw_root => return,
             _ if t == ERROR => Message::ThrowsRoot,
             _ => Message::NotAFailureType(self.show(t)),
@@ -856,7 +853,7 @@ impl Settle {
     }
 
     /// The type a type expression names, as `Int`, `String?` or `fn
-    /// (Int): Boolean`. `T throws Bubble` is `T` but as a function's
+    /// (Int): Boolean`. `T throws E` is `T` but as a function's
     /// result ([`Settle::eval_result`]).
     fn eval_type(&mut self, node: NodeId) -> TypeId {
         let tree = &self.lib.tree;
@@ -1415,9 +1412,6 @@ impl Settle {
                 self.check_failures(node);
             }
             (NodeKind::Fail, Some(value), _) => self.check_value(ERROR, value, Site::Arg),
-            (NodeKind::Call, Some(callee), _) if self.is_builtin(callee, Function::Caught) => {
-                self.check_caught(node)
-            }
             (NodeKind::Call, Some(callee), _) if self.is_builtin(callee, Function::Throws) => {
                 self.check_throws(node)
             }
@@ -1503,7 +1497,7 @@ impl Settle {
             // These return `Void` without saying so.
             let is_void = role == core::ROLE_CONSTRUCTOR || role == core::ROLE_SETTER;
             if is_void && is_fn && core::fn_parts(&self.lib.tree, init).1.is_none() {
-                self.check_bubbles(init);
+                self.check_no_failures(init);
             }
         }
     }
@@ -2038,50 +2032,6 @@ impl Settle {
             self.typing.types.nullable(ANY_VALUE)
         } else {
             ANY_VALUE
-        }
-    }
-
-    /// Whether Kotlin Temper might work out an expression's value while
-    /// compiling, as it does for literals, `let`s of them, and calls of
-    /// functions with such arguments, when it can: anything that doesn't
-    /// read a parameter, an instance's member, or a `var` that's assigned,
-    /// may be.
-    fn may_fold(&self, node: NodeId, depth: u32) -> bool {
-        let tree = &self.lib.tree;
-        if depth > 8 {
-            return true;
-        }
-        match tree.kind(node) {
-            NodeKind::Value | NodeKind::Fn => true,
-            NodeKind::RightName => {
-                let Some(b) = self.scopes.resolved(node) else {
-                    return true;
-                };
-                let symbol = self.scopes.symbol(b);
-                match (symbol.kind, symbol.decl) {
-                    (SymbolKind::Parameter, _) => false,
-                    // An instance's member reads `this`.
-                    (SymbolKind::Member, Some(decl)) => tree.data(decl) & core::MEMBER_STATIC != 0,
-                    (_, Some(decl)) if tree.kind(decl) == NodeKind::Let => {
-                        match core::let_parts(tree, decl).2 {
-                            _ if symbol.mutable && self.typing.assigned.contains(&decl) => false,
-                            Some(init) => self.may_fold(init, depth + 1),
-                            None => true,
-                        }
-                    }
-                    _ => true,
-                }
-            }
-            // A builtin type's static member, as `String.fromCodePoint`.
-            NodeKind::Call if self.names_builtin_static(node) => true,
-            NodeKind::Call | NodeKind::Block | NodeKind::If | NodeKind::Orelse => tree
-                .children(node)
-                .iter()
-                .all(|&child| self.may_fold(child, depth + 1)),
-            NodeKind::Let => core::let_parts(tree, node)
-                .2
-                .is_none_or(|init| self.may_fold(init, depth + 1)),
-            _ => false,
         }
     }
 

@@ -92,12 +92,11 @@ let h(p: NotFound): Int throws NotFound { throw p }
 error 135..136: Expected subtype of Error, but got Int32
 error 176..179: Expected subtype of Error, but got String
 
-=== throws takes a failure type, Bubble, or a failure parameter
+=== throws takes a failure type or a failure parameter
 sealed interface AppError extends Error {}
 class NotFound(public key: String) extends AppError {}
 class Plain {}
 let a(): Int throws NotFound { 1 }
-let b(): Int throws Bubble { 1 }
 let c(): Int throws String { 1 }
 let d(): Int throws Plain { 1 }
 let e(): Int throws Error { 1 }
@@ -106,25 +105,24 @@ let h<E extends Error>(g: fn (): Int throws E): Int throws E { g() }
 --- settled
 (Block
   (Interface ^AppError:0 Error)
-  (Class ^NotFound:1 AppError:0 (Param ^key:12 String))
+  (Class ^NotFound:1 AppError:0 (Param ^key:11 String))
   (Class ^Plain:2)
   (Let ^a:3 (Fn (Call throws Int NotFound:1) (Block 1)))
-  (Let ^b:4 (Fn (Call throws Int Bubble) (Block 1)))
-  (Let ^c:5 (Fn (Call throws Int String) (Block 1)))
-  (Let ^d:6 (Fn (Call throws Int Plain:2) (Block 1)))
-  (Let ^e:7 (Fn (Call throws Int Error) (Block 1)))
-  (Let ^f:8 (Fn (Let ^g:14 (Call FnType (Call throws Int Int))) Int (Block 1)))
+  (Let ^c:4 (Fn (Call throws Int String) (Block 1)))
+  (Let ^d:5 (Fn (Call throws Int Plain:2) (Block 1)))
+  (Let ^e:6 (Fn (Call throws Int Error) (Block 1)))
+  (Let ^f:7 (Fn (Let ^g:13 (Call FnType (Call throws Int Int))) Int (Block 1)))
   (Let
-    ^h:9
+    ^h:8
     (Fn
-      (TypeParam ^E:15 Error)
-      (Let ^g:16 (Call FnType (Call throws Int E:15)))
-      (Call throws Int E:15)
-      (Block (Call g:16)))))
-error 201..207: String isn't a failure type; throws takes a class or sealed interface that extends Error, or Bubble
-error 234..239: Plain isn't a failure type; throws takes a class or sealed interface that extends Error, or Bubble
-error 266..271: Error is the root of failure types; throws takes a class or sealed interface that extends it
-error 305..308: Int32 isn't a failure type; throws takes a class or sealed interface that extends Error, or Bubble
+      (TypeParam ^E:14 Error)
+      (Let ^g:15 (Call FnType (Call throws Int E:14)))
+      (Call throws Int E:14)
+      (Block (Call g:15)))))
+error 168..174: String isn't a failure type; throws takes a class or sealed interface that extends Error
+error 201..206: Plain isn't a failure type; throws takes a class or sealed interface that extends Error
+error 233..238: Error is the root of failure types; throws takes a class or sealed interface that extends it
+error 272..275: Int32 isn't a failure type; throws takes a class or sealed interface that extends Error
 
 === a failure needs its type in the function's
 sealed interface AppError extends Error {}
@@ -422,69 +420,6 @@ error 597..632: Cannot assign to NotFound? from MissingKey?
 log not found a true missing key (key: q)
 Failed with MissingKey: missing key (key: y), at test.temper:5:48
 
-=== Bubble and declared failures don't mix
-sealed interface AppError extends Error {}
-class NotFound(public key: String) extends AppError {}
-let lookup(key: String): Int throws NotFound { throw new NotFound(key) }
-let a(): Int throws Bubble { lookup("a") }
-let b(): Int throws NotFound { bubble() }
-let c(s: String): Int throws NotFound { s.toInt32() orelse bubble() }
-let d(): Int throws Bubble { lookup("d") catch { bubble() } }
-let e(s: String): Int throws NotFound { (s.toInt32() orelse bubble()) catch { throw new NotFound(s) } }
-let f(s: String): Int { (s.toInt32() orelse bubble()) catch (x) { 0 } }
-let g(s: String): Int { (s.toInt32() orelse bubble()) catch { 0 } }
---- settled
-(Block
-  (Interface ^AppError:0 Error)
-  (Class ^NotFound:1 AppError:0 (Param ^key:12 String))
-  (Let
-    ^lookup:2
-    (Fn
-      (Let ^key:13 String)
-      (Call throws Int NotFound:1)
-      (Block (Fail (Call new NotFound:1 key:13)))))
-  (Let ^a:3 (Fn (Call throws Int Bubble) (Block (Call lookup:2 "a"))))
-  (Let ^b:4 (Fn (Call throws Int NotFound:1) (Block (Fail))))
-  (Let
-    ^c:5
-    (Fn
-      (Let ^s:14 String)
-      (Call throws Int NotFound:1)
-      (Block (Orelse (Call (Call . s:14 \toInt32)) (Fail)))))
-  (Let
-    ^d:6
-    (Fn
-      (Call throws Int Bubble)
-      (Block (Orelse (Call lookup:2 "d") (Block (Fail))))))
-  (Let
-    ^e:7
-    (Fn
-      (Let ^s:15 String)
-      (Call throws Int NotFound:1)
-      (Block
-        (Orelse
-          (Orelse (Call (Call . s:15 \toInt32)) (Fail))
-          (Block (Fail (Call new NotFound:1 s:15)))))))
-  (Let
-    ^f:8
-    (Fn
-      (Let ^s:16 String)
-      Int
-      (Block
-        (Orelse
-          (Orelse (Call (Call . s:16 \toInt32)) (Fail))
-          (Block (Let ^x:17 (Call caught)) 0)))))
-  (Let
-    ^g:9
-    (Fn
-      (Let ^s:18 String)
-      Int
-      (Block (Orelse (Orelse (Call (Call . s:18 \toInt32)) (Fail)) (Block 0))))))
-error 200..211: Cannot throw NotFound from a function that throws Bubble; catch it, and bubble() there if need be
-error 245..253: Cannot bubble from a function that throws NotFound; handle it with orelse or catch, and throw a NotFound there if need be
-error 315..323: Cannot bubble from a function that throws NotFound; handle it with orelse or catch, and throw a NotFound there if need be
-error 553..554: A Bubble has no value to bind; catch it without (x), or with orelse
-
 === failure types: non-generic, sealed interfaces, one root each
 // A root is a sealed interface that extends Error itself; a library may
 // have several, and members. Every failure type is under one.
@@ -544,6 +479,8 @@ error 581..586: Under extends two failure types, Error and A1; a failure type ex
 log 4
 
 === failure parameters solve to declared failures
+sealed interface Problem extends Error {}
+class Oops() extends Problem {}
 sealed interface AppError extends Error {}
 class NotFound(public key: String) extends AppError {}
 let lookup(key: String): Int throws NotFound { throw new NotFound(key) }
@@ -557,61 +494,65 @@ let e(): Int { run { lookup("e") } }
 let runs(f: fn (): Int throws NotFound): Int throws NotFound { f() }
 let g(): Int throws NotFound { runs { lookup("g") } }
 let h(): Int throws NotFound { runs { 1 } }
-let i(): Int throws NotFound { runs { bubble() } }
+let i(): Int throws NotFound { runs { throw new Oops() } }
 --- settled
 (Block
-  (Interface ^AppError:0 Error)
-  (Class ^NotFound:1 AppError:0 (Param ^key:16 String))
+  (Interface ^Problem:0 Error)
+  (Class ^Oops:1 Problem:0)
+  (Interface ^AppError:2 Error)
+  (Class ^NotFound:3 AppError:2 (Param ^key:20 String))
   (Let
-    ^lookup:2
+    ^lookup:4
     (Fn
-      (Let ^key:17 String)
-      (Call throws Int NotFound:1)
-      (Block (Fail (Call new NotFound:1 key:17)))))
+      (Let ^key:21 String)
+      (Call throws Int NotFound:3)
+      (Block (Fail (Call new NotFound:3 key:21)))))
   (Let
-    ^apply:3
+    ^apply:5
     (Fn
-      (TypeParam ^E:18 Error)
-      (Let ^f:19 (Call FnType (Call throws Int E:18)))
-      (Call throws Int E:18)
-      (Block (Call f:19))))
+      (TypeParam ^E:22 Error)
+      (Let ^f:23 (Call FnType (Call throws Int E:22)))
+      (Call throws Int E:22)
+      (Block (Call f:23))))
   (Let
-    ^a:4
+    ^a:6
     (Fn
-      (Call throws Int NotFound:1)
+      (Call throws Int NotFound:3)
       (Block
         (Call
-          apply:3
-          (Fn (Call throws Int NotFound:1) (Block (Call lookup:2 "a")))))))
+          apply:5
+          (Fn (Call throws Int NotFound:3) (Block (Call lookup:4 "a")))))))
   (Let
-    ^b:5
+    ^b:7
     (Fn
-      (Call throws Int NotFound:1)
-      (Block (Call apply:3 (Fn (Block (Call lookup:2 "b")))))))
-  (Let ^c:6 (Fn Int (Block (Call apply:3 (Fn (Block 1))))))
-  (Let ^d:7 (Fn Int (Block (Call apply:3 (Fn (Block (Call lookup:2 "d")))))))
-  (Let ^run:8 (Fn (Let ^f:20 (Call FnType Int)) Int (Block (Call f:20))))
-  (Let ^e:9 (Fn Int (Block (Call run:8 (Fn (Block (Call lookup:2 "e")))))))
+      (Call throws Int NotFound:3)
+      (Block (Call apply:5 (Fn (Block (Call lookup:4 "b")))))))
+  (Let ^c:8 (Fn Int (Block (Call apply:5 (Fn (Block 1))))))
+  (Let ^d:9 (Fn Int (Block (Call apply:5 (Fn (Block (Call lookup:4 "d")))))))
+  (Let ^run:10 (Fn (Let ^f:24 (Call FnType Int)) Int (Block (Call f:24))))
+  (Let ^e:11 (Fn Int (Block (Call run:10 (Fn (Block (Call lookup:4 "e")))))))
   (Let
-    ^runs:10
+    ^runs:12
     (Fn
-      (Let ^f:21 (Call FnType (Call throws Int NotFound:1)))
-      (Call throws Int NotFound:1)
-      (Block (Call f:21))))
+      (Let ^f:25 (Call FnType (Call throws Int NotFound:3)))
+      (Call throws Int NotFound:3)
+      (Block (Call f:25))))
   (Let
-    ^g:11
+    ^g:13
     (Fn
-      (Call throws Int NotFound:1)
-      (Block (Call runs:10 (Fn (Block (Call lookup:2 "g")))))))
+      (Call throws Int NotFound:3)
+      (Block (Call runs:12 (Fn (Block (Call lookup:4 "g")))))))
   (Let
-    ^h:12
-    (Fn (Call throws Int NotFound:1) (Block (Call runs:10 (Fn (Block 1))))))
+    ^h:14
+    (Fn (Call throws Int NotFound:3) (Block (Call runs:12 (Fn (Block 1))))))
   (Let
-    ^i:13
-    (Fn (Call throws Int NotFound:1) (Block (Call runs:10 (Fn (Block (Fail))))))))
-error 426..447: Cannot throw NotFound from a function without NotFound in its return type
-error 507..518: Cannot throw NotFound from a function without NotFound in its return type
-error 728..736: Cannot bubble from a function that throws NotFound; handle it with orelse or catch, and throw a NotFound there if need be
+    ^i:15
+    (Fn
+      (Call throws Int NotFound:3)
+      (Block (Call runs:12 (Fn (Block (Fail (Call new Oops:1)))))))))
+error 500..521: Cannot throw NotFound from a function without NotFound in its return type
+error 581..592: Cannot throw NotFound from a function without NotFound in its return type
+error 802..818: Cannot throw Oops from a function that throws NotFound; catch it, and throw a NotFound there if need be
 
 === an export's failure type must be exported too
 // As any type in an exported signature (classes.cases, "exports that
@@ -719,7 +660,7 @@ catch (e) { 1 };
 --- settled
 (Block (Error) #void)
 error 0..15: Use of builtin catch is malformed
-Failed: Use of builtin catch is malformed
+Panicked: Use of builtin catch is malformed
 
 === a failure's message: its type's words and public fields, or its own
 sealed interface AppError extends Error {}
@@ -995,7 +936,7 @@ log before
 Failed with LookupFailed: lookup failed (name: port), at test.temper:6:24
 caused by NotFound: not found (key: port), at test.temper:4:48
 
-=== an uncaught failure caused by a bubble says so
+=== an uncaught failure says what caused it
 sealed interface AppError extends Error {}
 class ParseFailed(public text: String) extends AppError {}
 let parsed(text: String): Int throws ParseFailed {
@@ -1080,9 +1021,8 @@ Panicked: panic(), caused by NotFound: not found (key: q), at test.temper:3:48
 // `E` in `fn (): Int throws E`, is a failure parameter, bound by
 // `Error` without saying so, so generic code may throw it, read its
 // message, and check it against failure types. A `@fun` interface's
-// and a class's alike. What isn't a failure can't bind it (s1); a
-// bubble can, until `Bubble` goes (b1). A type parameter not after
-// `throws` is bound by `AnyValue` as before (v1).
+// and a class's alike. What isn't a failure can't bind it (s1). A type
+// parameter not after `throws` is bound by `AnyValue` as before (v1).
 sealed interface AppError extends Error {}
 class Missing(public key: String) extends AppError {}
 let find(key: String): Int throws Missing { throw new Missing(key) }
@@ -1098,83 +1038,77 @@ class Holder<E>(public t: Thunk<E>) {
   public get(): Int throws E { t() catch (e) { throw e } }
 }
 let s1(): Int { again<String> { 1 } }
-let b1(): Int { again { bubble() } orelse -2 }
 let v1<T>(x: T): Int { throw x }
-console.log("${again { find("a") } orelse -1} ${named { find("b") }} ${b1()}");
+console.log("${again { find("a") } orelse -1} ${named { find("b") }}");
 console.log("${run(fn (): Int throws Missing { find("c") }) orelse -3} ${new Holder<Missing>(fn (): Int throws Missing { 4 }).get() orelse -4}");
 --- settled
 (Block
   (Interface ^AppError:0 Error)
-  (Class ^Missing:1 AppError:0 (Param ^key:13 String))
+  (Class ^Missing:1 AppError:0 (Param ^key:12 String))
   (Let
     ^find:2
     (Fn
-      (Let ^key:14 String)
+      (Let ^key:13 String)
       (Call throws Int Missing:1)
-      (Block (Fail (Call new Missing:1 key:14)))))
+      (Block (Fail (Call new Missing:1 key:13)))))
   (Let
     ^again:3
     (Fn
-      (TypeParam ^E:15)
-      (Let ^f:16 (Call FnType (Call throws Int E:15)))
-      (Call throws Int E:15)
+      (TypeParam ^E:14)
+      (Let ^f:15 (Call FnType (Call throws Int E:14)))
+      (Call throws Int E:14)
       (Block
         (Orelse
-          (Call f:16)
+          (Call f:15)
           (Block
-            (Let ^e:17 (Call caught))
+            (Let ^e:16 (Call caught))
             (Call
               (Call . console \log)
-              (Call cat "again " (Call . e:17 \message)))
-            (Fail e:17))))))
+              (Call cat "again " (Call . e:16 \message)))
+            (Fail e:16))))))
   (Let
     ^named:4
     (Fn
-      (TypeParam ^E:18)
-      (Let ^f:19 (Call FnType (Call throws Int E:18)))
+      (TypeParam ^E:17)
+      (Let ^f:18 (Call FnType (Call throws Int E:17)))
       String
       (Block
         (Orelse
-          (Call (Call . (Call f:19) \toString))
+          (Call (Call . (Call f:18) \toString))
           (Block
-            (Let ^e:20 (Call caught))
+            (Let ^e:19 (Call caught))
             (Block
-              (If (Call is e:20 Missing:1) "missing" (Call . e:20 \message))))))))
+              (If (Call is e:19 Missing:1) "missing" (Call . e:19 \message))))))))
   (Interface
     ^Thunk:5
-    (TypeParam ^E:21)
-    (Method ^apply:23 (Signature (Call throws Int E:21))))
+    (TypeParam ^E:20)
+    (Method ^apply:22 (Signature (Call throws Int E:20))))
   (Let
     ^run:6
     (Fn
-      (TypeParam ^E:24)
-      (Let ^t:25 (Call <> Thunk:5 E:24))
-      (Call throws Int E:24)
-      (Block (Orelse (Call t:25) (Block (Let ^e:26 (Call caught)) (Fail e:26))))))
+      (TypeParam ^E:23)
+      (Let ^t:24 (Call <> Thunk:5 E:23))
+      (Call throws Int E:23)
+      (Block (Orelse (Call t:24) (Block (Let ^e:25 (Call caught)) (Fail e:25))))))
   (Class
     ^Holder:7
-    (TypeParam ^E:27)
-    (Param ^t:29 (Call <> Thunk:5 E:27))
+    (TypeParam ^E:26)
+    (Param ^t:28 (Call <> Thunk:5 E:26))
     (Method
-      ^get:30
+      ^get:29
       (Fn
-        (Call throws Int E:27)
+        (Call throws Int E:26)
         (Block
-          (Orelse (Call t:29) (Block (Let ^e:31 (Call caught)) (Fail e:31)))))))
+          (Orelse (Call t:28) (Block (Let ^e:30 (Call caught)) (Fail e:30)))))))
   (Let ^s1:8 (Fn Int (Block (Call again:3 \typeArg String (Fn (Block 1))))))
-  (Let
-    ^b1:9
-    (Fn Int (Block (Orelse (Call again:3 (Fn (Block (Fail)))) (Call - 2)))))
-  (Let ^v1:10 (Fn (TypeParam ^T:32) (Let ^x:33 T:32) Int (Block (Fail x:33))))
+  (Let ^v1:9 (Fn (TypeParam ^T:31) (Let ^x:32 T:31) Int (Block (Fail x:32))))
   (Call
     (Call . console \log)
     (Call
       cat
       (Orelse (Call again:3 (Fn (Block (Call find:2 "a")))) (Call - 1))
       " "
-      (Call named:4 (Fn (Block (Call find:2 "b"))))
-      " "
-      (Call b1:9)))
+      (Call named:4 (Fn (Block (Call find:2 "b"))))))
   (Call
     (Call . console \log)
     (Call
@@ -1194,18 +1128,16 @@ console.log("${run(fn (): Int throws Missing { find("c") }) orelse -3} ${new Hol
             \get))
         (Call - 4))))
   #void)
-error 1106..1125: Type formal <E extends Error> cannot bind to String which does not fit upper bounds [Error]
-error 1204..1205: Expected subtype of Error, but got T
+error 1063..1082: Type formal <E extends Error> cannot bind to String which does not fit upper bounds [Error]
+error 1114..1115: Expected subtype of Error, but got T
 log again missing (key: a)
-log again bubble
-log -1 missing -2
+log -1 missing
 log -3 4
 
 === a failure parameter solved two ways is their join
 // Two arguments that fail differently solve one failure parameter as
 // their join: the sealed type both are under (j1), or else the root,
-// `Error`, which only a handler takes (j3, j4). A bubble beside a
-// declared failure is a mismatch, as they never mix (k1).
+// `Error`, which only a handler takes (j3, j4).
 sealed interface AppError extends Error {}
 class Missing(public key: String) extends AppError {}
 class Bad(public why: String) extends AppError {}
@@ -1220,7 +1152,6 @@ let check(key: String): Int throws Bad {
   1
 }
 let other(key: String): Int throws Other { throw new Other() }
-let bubbles(key: String): Int throws Bubble { bubble() }
 let both<E>(a: fn (String): Int throws E, b: fn (String): Int throws E, key: String): Int throws E {
   a(key) + b(key)
 }
@@ -1229,113 +1160,102 @@ let j2(key: String): Int throws Missing { both(find, check, key) }
 let j3(key: String): Int { both(find, other, key) catch (e) { when (e) { is Missing -> -1; else -> -2 } } }
 let j4(key: String): Int { both(find, other, key) }
 let j5(key: String): Int { both(find, fn (k: String): Int { 2 }, key) orelse -3 }
-let k1(key: String): Int { both(find, bubbles, key) orelse -4 }
 console.log("${j1("one")} ${j1("two") orelse -5} ${j3("two")} ${j3("one")} ${j5("one")}");
 --- settled
 (Block
   (Interface ^AppError:0 Error)
-  (Class ^Missing:1 AppError:0 (Param ^key:18 String))
-  (Class ^Bad:2 AppError:0 (Param ^why:20 String))
+  (Class ^Missing:1 AppError:0 (Param ^key:16 String))
+  (Class ^Bad:2 AppError:0 (Param ^why:18 String))
   (Interface ^OtherError:3 Error)
   (Class ^Other:4 OtherError:3)
   (Let
     ^find:5
     (Fn
-      (Let ^key:23 String)
+      (Let ^key:21 String)
       (Call throws Int Missing:1)
       (Block
         (If
-          (Call != key:23 "one")
-          (Block (Fail (Call new Missing:1 key:23)))
+          (Call != key:21 "one")
+          (Block (Fail (Call new Missing:1 key:21)))
           (Block))
         1)))
   (Let
     ^check:6
     (Fn
-      (Let ^key:24 String)
+      (Let ^key:22 String)
       (Call throws Int Bad:2)
       (Block
         (If
-          (Call != key:24 "one")
-          (Block (Fail (Call new Bad:2 key:24)))
+          (Call != key:22 "one")
+          (Block (Fail (Call new Bad:2 key:22)))
           (Block))
         1)))
   (Let
     ^other:7
     (Fn
-      (Let ^key:25 String)
+      (Let ^key:23 String)
       (Call throws Int Other:4)
       (Block (Fail (Call new Other:4)))))
   (Let
-    ^bubbles:8
-    (Fn (Let ^key:26 String) (Call throws Int Bubble) (Block (Fail))))
-  (Let
-    ^both:9
+    ^both:8
     (Fn
-      (TypeParam ^E:27)
-      (Let ^a:28 (Call FnType String (Call throws Int E:27)))
-      (Let ^b:29 (Call FnType String (Call throws Int E:27)))
-      (Let ^key:30 String)
-      (Call throws Int E:27)
-      (Block (Call + (Call a:28 key:30) (Call b:29 key:30)))))
+      (TypeParam ^E:24)
+      (Let ^a:25 (Call FnType String (Call throws Int E:24)))
+      (Let ^b:26 (Call FnType String (Call throws Int E:24)))
+      (Let ^key:27 String)
+      (Call throws Int E:24)
+      (Block (Call + (Call a:25 key:27) (Call b:26 key:27)))))
   (Let
-    ^j1:10
+    ^j1:9
     (Fn
-      (Let ^key:31 String)
+      (Let ^key:28 String)
       (Call throws Int AppError:0)
-      (Block (Call both:9 find:5 check:6 key:31))))
+      (Block (Call both:8 find:5 check:6 key:28))))
   (Let
-    ^j2:11
+    ^j2:10
     (Fn
-      (Let ^key:32 String)
+      (Let ^key:29 String)
       (Call throws Int Missing:1)
-      (Block (Call both:9 find:5 check:6 key:32))))
+      (Block (Call both:8 find:5 check:6 key:29))))
   (Let
-    ^j3:12
+    ^j3:11
+    (Fn
+      (Let ^key:30 String)
+      Int
+      (Block
+        (Orelse
+          (Call both:8 find:5 other:7 key:30)
+          (Block
+            (Let ^e:31 (Call caught))
+            (Block (If (Call is e:31 Missing:1) (Call - 1) (Call - 2))))))))
+  (Let
+    ^j4:12
+    (Fn (Let ^key:32 String) Int (Block (Call both:8 find:5 other:7 key:32))))
+  (Let
+    ^j5:13
     (Fn
       (Let ^key:33 String)
       Int
       (Block
         (Orelse
-          (Call both:9 find:5 other:7 key:33)
-          (Block
-            (Let ^e:34 (Call caught))
-            (Block (If (Call is e:34 Missing:1) (Call - 1) (Call - 2))))))))
-  (Let
-    ^j4:13
-    (Fn (Let ^key:35 String) Int (Block (Call both:9 find:5 other:7 key:35))))
-  (Let
-    ^j5:14
-    (Fn
-      (Let ^key:36 String)
-      Int
-      (Block
-        (Orelse
-          (Call both:9 find:5 (Fn (Let ^k:37 String) Int (Block 2)) key:36)
+          (Call both:8 find:5 (Fn (Let ^k:34 String) Int (Block 2)) key:33)
           (Call - 3)))))
-  (Let
-    ^k1:15
-    (Fn
-      (Let ^key:38 String)
-      Int
-      (Block (Orelse (Call both:9 find:5 bubbles:8 key:38) (Call - 4)))))
   (Call
     (Call . console \log)
     (Call
       cat
-      (Call j1:10 "one")
+      (Call j1:9 "one")
       " "
-      (Orelse (Call j1:10 "two") (Call - 5))
+      (Orelse (Call j1:9 "two") (Call - 5))
       " "
-      (Call j3:12 "two")
+      (Call j3:11 "two")
       " "
-      (Call j3:12 "one")
+      (Call j3:11 "one")
       " "
-      (Call j5:14 "one")))
+      (Call j5:13 "one")))
   #void)
-error 1032..1054: Cannot throw AppError from a function that throws Missing; catch it, and throw a Missing there if need be
-error 1192..1214: Cannot throw Error, failures under different roots, from a function; handle them with orelse or catch
-error 1331..1335: Actual arguments do not match signature: <E extends Error>(fn (String): Int32 throws E, fn (String): Int32 throws E, String) -> Int32 throws E expected [fn (String): Int32 throws Bubble, fn (String): Int32 throws Bubble, String], but got [fn (String): Int32 throws Missing, fn (String): Int32 throws Bubble, String]
+error 898..920: Cannot throw AppError from a function that throws Missing; catch it, and throw a Missing there if need be
+error 1058..1080: Cannot throw Error, failures under different roots, from a function; handle them with orelse or catch
 log 2 -5 -1 -2 3
 
 === core's functions that take callbacks fail as their callbacks do
@@ -1878,3 +1798,29 @@ error 463..475: Cannot throw Error from a function that throws TooBig; catch it,
 error 611..619: Cannot throw Error, failures under different roots, from a function; handle them with orelse or catch
 error 806..814: Cannot throw Error, failures under different roots, from a function; handle them with orelse or catch
 error 875..880: Error is the root of failure types; throws takes a class or sealed interface that extends it
+
+=== Bubble and bubble() are gone, with a message on how to migrate
+// Kotlin Temper 0.6 code: each use says what to write instead, and
+// nothing else is reported, as the function's failure is unknown.
+let parse(s: String): Int throws Bubble {
+  if (s == "") { bubble() }
+  s.toInt32() orelse bubble()
+}
+let n = parse("1") orelse 0;
+let m: Int = parse("2");
+--- settled
+(Block
+  (Let
+    ^parse:0
+    (Fn
+      (Let ^s:3 String)
+      (Call throws Int (Error))
+      (Block
+        (If (Call == s:3 "") (Block (Call (Error))) (Block))
+        (Orelse (Call (Call . s:3 \toInt32)) (Call (Error))))))
+  (Let ^n:1 (Orelse (Call parse:0 "1") 0))
+  (Let ^m:2 Int (Call parse:0 "2"))
+  #void)
+error 168..174: Bubble has not been declared; Bubble is gone: declare an error type and throw it (sealed interface MyError extends Error {}; throws MyError; throw new MyError()), return null, or panic() for a bug
+error 194..200: bubble has not been declared; Bubble is gone: declare an error type and throw it (sealed interface MyError extends Error {}; throws MyError; throw new MyError()), return null, or panic() for a bug
+error 226..232: bubble has not been declared; Bubble is gone: declare an error type and throw it (sealed interface MyError extends Error {}; throws MyError; throw new MyError()), return null, or panic() for a bug

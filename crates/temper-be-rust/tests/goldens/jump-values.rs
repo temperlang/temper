@@ -123,13 +123,9 @@ pub(crate) fn pair(a: i32, b: i32) -> i32 {
     a.wrapping_mul(10).wrapping_add(b)
 }
 
-pub(crate) fn parse(s: impl ToArcString) -> temper_core::Result<i32> {
+pub(crate) fn parse(s: impl ToArcString) -> Result<i32, temper_core::ParseError> {
     let s = s.to_arc_string();
-    Ok(if let Ok(v) = temper_core::string::to_int(&s, None) {
-        v
-    } else {
-        return Err(temper_core::Error::new());
-    })
+    temper_core::string::to_int(&s, None)
 }
 
 pub(crate) fn next(y: Option<i32>) -> Option<i32> {
@@ -177,7 +173,7 @@ pub(crate) fn sum_until_bad(words: impl temper_core::ToList<Arc<String>>) -> i32
             let mut held: Option<i32> = None;
             let _ = (|| {
                 held = Some(parse(temper_core::ListedTrait::get(&words, i))?);
-                Ok::<_, temper_core::Error>(())
+                Ok::<_, temper_core::ParseError>(())
             })();
             if let Some(held) = held {
                 t = held;
@@ -198,7 +194,7 @@ pub(crate) fn parsed_or(s: impl ToArcString) -> i32 {
         let mut held: Option<i32> = None;
         let _ = (|| {
             held = Some(parse(s.clone())?);
-            Ok::<_, temper_core::Error>(())
+            Ok::<_, temper_core::ParseError>(())
         })();
         if let Some(held) = held {
             t = held;
@@ -556,7 +552,7 @@ pub(crate) fn via_orelse(words: impl temper_core::ToList<Arc<String>>) -> Arc<St
             let mut held: Option<i32> = None;
             let _ = (|| {
                 held = Some(parse(temper_core::ListedTrait::get(&words, i))?);
-                Ok::<_, temper_core::Error>(())
+                Ok::<_, temper_core::ParseError>(())
             })();
             if let Some(held) = held {
                 n = held;

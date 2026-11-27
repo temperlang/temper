@@ -395,8 +395,8 @@ impl Translator<'_> {
         params: Vec<FNode>,
     ) -> Tx<DeclId> {
         let class_ty = self.b.program().decls.get(decl).ty;
-        // An explicit constructor may bubble (std's `Date`'s `throws
-        // Bubble`), as its function's type says.
+        // An explicit constructor may fail (std's `Date`'s `throws
+        // InvalidDate`), as its function's type says.
         let mut result = class_ty;
         let params = match explicit {
             Some(c) => {
@@ -739,7 +739,7 @@ impl Translator<'_> {
             return value;
         }
         if have.is_none() && !want.is_none() {
-            // `null`, `bubble()`, or `panic()`, typed by its place.
+            // `null`, `throw`, or `panic()`, typed by its place.
             self.b.retype(value, want);
             return value;
         }

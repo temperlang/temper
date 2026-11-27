@@ -1,31 +1,41 @@
 tmpl 1 model 1 library `host-error-causes` 0.0.0
 
-uses `temper-core`#4 0.0.0-alpha.0.0 {
-  interface Console#5 {
-    connected method log#6(message: String): Void;
+uses `temper-core`#3 0.0.0-alpha.0.0 {
+  interface Error#4 {}
+  interface Console#10 {
+    connected method log#11(message: String): Void;
   }
-  class Int32#8 {
-    connected method toString#9(radix?: Int32): String;
+  class Int32#13 {
+    connected method toString#14(radix?: Int32): String;
   }
-  connected fn getConsole#10(name?: String): Console#5;
+  connected fn getConsole#15(name?: String): Console#10;
 }
 
 module `host-error-causes`#0 {
-  let ~console#7: Console#5;
+  let ~console#12: Console#10;
 
-  connected export fn hostFails#1(n#3: Int32): Int32 throws Bubble {
-    if (%Int32.gt(n#3, 0)) {
-      (panic()): Void;
+  export interface OopsError#1 extends Error#4 {}
+
+  export class Oops#2 extends OopsError#1 {
+    constructor constructor#5(): Oops#2 {}
+    get message#8(): String {
+      return "oops";
     }
-    (bubble()^): Void;
   }
 
-  let h#2: Int32;
+  connected export fn hostFails#6(n#9: Int32): Int32 throws Oops#2 {
+    if (%Int32.gt(n#9, 0)) {
+      (panic()): Void;
+    }
+    (throw(new constructor#5())^): Void;
+  }
+
+  let h#7: Int32;
 
   init {
-    init ~console#7 = getConsole#10(omitted);
-    ~console#7.log#6("before");
-    init h#2 = (orelse(hostFails#1(1)^, (panic()): Int32)): Int32;
-    ~console#7.log#6(%String.cat("after ", h#2.toString#9(omitted)));
+    init ~console#12 = getConsole#15(omitted);
+    ~console#12.log#11("before");
+    init h#7 = (orelse(hostFails#6(1)^, (panic()): Int32)): Int32;
+    ~console#12.log#11(%String.cat("after ", h#7.toString#14(omitted)));
   }
 }

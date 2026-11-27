@@ -51,7 +51,7 @@ pub enum TypeData {
     Nullable(TypeId),
     /// `fn (A, B): R`. A parameter with a default is optional. `result`
     /// is a [`TypeData::Result`] if the function may fail, as `fn (A, B):
-    /// R throws Bubble`.
+    /// R throws E`.
     Fn { params: Vec<Param>, result: TypeId },
     /// `T throws E`, a function's result where it may fail with an `E`
     /// (notes/typing.md, "Results"): `pass` is what a call gives when it
@@ -77,15 +77,13 @@ pub const INT64: TypeId = TypeId(6);
 pub const FLOAT64: TypeId = TypeId(7);
 pub const STRING: TypeId = TypeId(8);
 pub const ANY_VALUE: TypeId = TypeId(9);
-/// `Bubble`, the failure without detail (notes/typing.md, "Results").
-pub const BUBBLE: TypeId = TypeId(10);
 /// Core's root of declared failure types ([`FAILURE_ROOT`], `Error`),
 /// which failure classes and sealed failure interfaces extend
 /// (notes/typing.md, "Declared failures").
-pub const ERROR: TypeId = TypeId(11);
+pub const ERROR: TypeId = TypeId(10);
 
 /// The builtin types with fixed ids, from [`VOID`] to [`ERROR`].
-const WELL_KNOWN: [&str; 9] = [
+const WELL_KNOWN: [&str; 8] = [
     "Void",
     "Boolean",
     "Int32",
@@ -93,7 +91,6 @@ const WELL_KNOWN: [&str; 9] = [
     "Float64",
     "String",
     "AnyValue",
-    "Bubble",
     FAILURE_ROOT,
 ];
 
@@ -698,12 +695,11 @@ impl Types {
         }
     }
 
-    /// One type for what two places may fail with: `Bubble` if either may
-    /// bubble, unknown if either is, else their join, or the root,
-    /// `Error`, where they have no closer common type.
+    /// One type for what two places may fail with: unknown if either is,
+    /// else their join, or the root, `Error`, where they have no closer
+    /// common type.
     pub fn join_failures(&mut self, a: TypeId, b: TypeId) -> TypeId {
         match (a, b) {
-            (BUBBLE, _) | (_, BUBBLE) => BUBBLE,
             (UNKNOWN, _) | (_, UNKNOWN) => UNKNOWN,
             _ => match self.join(a, b) {
                 UNKNOWN => ERROR,
@@ -983,9 +979,6 @@ impl Types {
                 (None, _) => Some(false),
             },
             _ if s == ERROR => Some(false),
-            // A bubble and declared failures never mix (RFC 164), so
-            // `Bubble` is only itself.
-            _ if s == BUBBLE || t == BUBBLE => Some(false),
             _ if self.is_fun_pair(s, t) => self.fun_subtype(s, t, depth),
             // Core's non-generic classes, as `StringBuilder`, are only what
             // core says they extend, and no other type is one of them.
@@ -1005,7 +998,7 @@ impl Types {
 
     /// [`Types::subtype`] for two different function types, compared part
     /// by part as Kotlin Temper does, with parameters contravariant and
-    /// results covariant: `s` isn't a `t` if it may bubble and `t` doesn't,
+    /// results covariant: `s` isn't a `t` if it may fail and `t` doesn't,
     /// if they take different numbers of parameters (counting `s`'s
     /// optional ones), or if a parameter of `t` isn't one of `s`'s, or
     /// `s`'s result isn't `t`'s. Otherwise it may be, under that variance,
@@ -1226,9 +1219,8 @@ impl Types {
 
     /// A type as Kotlin Temper writes it in messages: `Int32`, `String?`,
     /// `fn (Int32): Boolean`, and `fn: Int32` with no parameters, but one
-    /// that throws as Temper's syntax does, `fn (Int32): Int32 throws
-    /// Bubble`, where Kotlin Temper writes its internal `Result<Int32,
-    /// Bubble>` or `(Int32 | Bubble)`. Classes are named by `class_name`.
+    /// that throws as Temper's syntax does, `fn (Int32): Int32 throws E`.
+    /// Classes are named by `class_name`.
     pub fn display(&self, t: TypeId, class_name: &dyn Fn(SymbolId) -> String) -> String {
         match self.get(t) {
             TypeData::Unknown => "?".into(),
@@ -1366,14 +1358,14 @@ mod tests {
         });
         assert_eq!(types.is_subtype(f, INT32), Some(false));
         assert_eq!(types.display(f, &|_| String::new()), "fn (Int32): Boolean");
-        let result = types.result(INT32, BUBBLE);
+        let result = types.result(INT32, ERROR);
         let g = types.intern(TypeData::Fn {
             params: Vec::new(),
             result,
         });
         assert_eq!(
             types.display(g, &|_| String::new()),
-            "fn: Int32 throws Bubble"
+            "fn: Int32 throws Error"
         );
         assert_eq!(types.join(NULL, INT32), int_or_null);
         assert_eq!(types.join(NEVER, STRING), STRING);
@@ -1386,7 +1378,7 @@ mod tests {
         fn fn_type(types: &mut Types, param: TypeId, optional: bool, ret: TypeId) -> TypeId {
             fn_throws(types, param, optional, ret, false)
         }
-        /// The same, ending `throws Bubble` if `throws`.
+        /// The same, ending `throws Error` if `throws`.
         fn fn_throws(
             types: &mut Types,
             param: TypeId,
@@ -1399,7 +1391,7 @@ mod tests {
                 optional,
             }];
             let result = match throws {
-                true => types.result(ret, BUBBLE),
+                true => types.result(ret, ERROR),
                 false => ret,
             };
             types.intern(TypeData::Fn { params, result })
@@ -1439,7 +1431,7 @@ mod tests {
             "fn (_?: Int32): Boolean"
         );
         // Even where a result's pass type isn't worked out, a function
-        // that may bubble isn't one that doesn't.
+        // that may fail isn't one that doesn't.
         let unknown_throws = fn_throws(types, INT32, false, UNKNOWN, true);
         let int_to_unknown = fn_type(types, INT32, false, UNKNOWN);
         assert_eq!(
@@ -1457,19 +1449,19 @@ mod tests {
     fn results() {
         let mut types = Types::new();
         let types = &mut types;
-        let int_throws = types.result(INT32, BUBBLE);
-        assert_eq!(types.result(INT32, BUBBLE), int_throws);
+        let int_throws = types.result(INT32, ERROR);
+        assert_eq!(types.result(INT32, ERROR), int_throws);
         assert_eq!(types.pass(int_throws), INT32);
-        assert_eq!(types.fail(int_throws), Some(BUBBLE));
+        assert_eq!(types.fail(int_throws), Some(ERROR));
         assert_eq!((types.pass(INT32), types.fail(INT32)), (INT32, None));
         assert_eq!(
             types.display(int_throws, &|_| String::new()),
-            "Int32 throws Bubble"
+            "Int32 throws Error"
         );
         // A failure that can't happen goes: `T throws Never<Error>` is `T`.
         assert_eq!(types.result(INT32, NEVER), INT32);
-        let never_bubble = types.never_of(BUBBLE);
-        assert_eq!(types.result(INT32, never_bubble), INT32);
+        let never_error = types.never_of(ERROR);
+        assert_eq!(types.result(INT32, never_error), INT32);
 
         // What a result's pass type takes fits it; a result is no value's
         // type, so it fits nothing but a result.
@@ -1480,11 +1472,11 @@ mod tests {
         assert_eq!(types.is_subtype(int_throws, ANY_VALUE), Some(false));
         let int_or_null = types.nullable(INT32);
         assert_eq!(types.is_subtype(int_throws, int_or_null), Some(false));
-        let maybe_throws = types.result(int_or_null, BUBBLE);
+        let maybe_throws = types.result(int_or_null, ERROR);
         assert_eq!(types.is_subtype(NULL, maybe_throws), Some(true));
         assert_eq!(types.is_subtype(int_throws, maybe_throws), Some(true));
         assert_eq!(types.is_subtype(maybe_throws, int_throws), Some(false));
-        let string_throws = types.result(STRING, BUBBLE);
+        let string_throws = types.result(STRING, ERROR);
         assert_eq!(types.join(INT32, int_throws), UNKNOWN);
         assert_eq!(types.is_subtype(string_throws, int_throws), Some(false));
 
@@ -1494,7 +1486,7 @@ mod tests {
             result: int_throws,
         });
         assert!(!types.is_generic(f) && types.is_known(f));
-        let unknown_throws = types.result(UNKNOWN, BUBBLE);
+        let unknown_throws = types.result(UNKNOWN, ERROR);
         assert!(!types.is_known(unknown_throws));
 
         // Type parameters inside results: `T throws E`.
@@ -1504,7 +1496,7 @@ mod tests {
         assert!(types.is_generic(t_throws_e));
         assert!(types.mentions(t_throws_e, &[t]) && types.mentions(t_throws_e, &[e]));
         assert_eq!(
-            types.substitute(t_throws_e, &[t, e], &[INT32, BUBBLE]),
+            types.substitute(t_throws_e, &[t, e], &[INT32, ERROR]),
             int_throws
         );
         // An `E` that can't happen leaves the pass type alone.
@@ -1515,7 +1507,7 @@ mod tests {
             assert_eq!(conflicts, [false; 2]);
             actuals
         };
-        assert_eq!(solve(types, t_throws_e, int_throws), [INT32, BUBBLE]);
+        assert_eq!(solve(types, t_throws_e, int_throws), [INT32, ERROR]);
         assert_eq!(solve(types, t_throws_e, INT32), [INT32, UNKNOWN]);
         // A result never solves an ordinary type parameter; its pass type
         // does.

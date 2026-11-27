@@ -32,7 +32,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 same(true, false),
                 same(false, true)
             );
-            println!("{} {} {}", quot(-7, 2)?, rem(-7, 2)?, quot(small, -1)?);
+            println!("{} {} {}", quot(-7, 2), rem(-7, 2), quot(small, -1));
             println!("{}", words("apple", "banana"));
             println!("{}", words("pear", "pear"));
             println!("{}", words("zoo", "yak"));
@@ -75,12 +75,12 @@ pub(crate) fn same(a: bool, b: bool) -> Arc<String> {
     Arc::new(format!("{} {} {}", a == b, a != b, a.cmp(&b) as i32))
 }
 
-pub(crate) fn quot(a: i32, b: i32) -> temper_core::Result<i32> {
-    Ok(a.wrapping_div(b))
+pub(crate) fn quot(a: i32, b: i32) -> i32 {
+    a.wrapping_div(b)
 }
 
-pub(crate) fn rem(a: i32, b: i32) -> temper_core::Result<i32> {
-    Ok(a.wrapping_rem(b))
+pub(crate) fn rem(a: i32, b: i32) -> i32 {
+    a.wrapping_rem(b)
 }
 
 pub(crate) fn words(a: impl ToArcString, b: impl ToArcString) -> Arc<String> {

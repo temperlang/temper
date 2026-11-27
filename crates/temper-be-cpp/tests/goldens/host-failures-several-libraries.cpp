@@ -14,6 +14,8 @@ void global_init_init();
 struct HostFailuresError;
 struct NotFound;
 struct Unreadable;
+struct Problem;
+struct Zero;
 
 struct HostFailuresError : public virtual temper::core::Failure {};
 
@@ -29,6 +31,13 @@ struct Unreadable : public virtual HostFailuresError {
   static std::shared_ptr<Unreadable> make(temper::core::Str const & key);
   temper::core::Str get_message() const override;
   temper::core::Str get_key() const;
+};
+
+struct Problem : public virtual temper::core::Failure {};
+
+struct Zero : public virtual Problem {
+  static std::shared_ptr<Zero> make();
+  temper::core::Str get_message() const override;
 };
 
 temper::core::Expected<int32_t, std::shared_ptr<NotFound>> hostLookup(temper::core::Str const & key);
@@ -127,34 +136,43 @@ static core::Expected<int32_t, std::shared_ptr<Unreadable>> reading(core::Str co
   }
 }
 
-static int32_t nonzero(int32_t n) {
+std::shared_ptr<Zero> Zero::make() {
+  std::shared_ptr<Zero> self = std::make_shared<Zero>();
+  return self;
+}
+
+core::Str Zero::get_message() const {
+  return TEMPER_STR("zero");
+}
+
+static core::Expected<int32_t, std::shared_ptr<Zero>> nonzero(int32_t n) {
   if (n == 0) {
-    core::bubble();
+    return core::unexpected(Zero::make());
   } else {
     return n;
   }
 }
 
 static int32_t ratio(core::Str const & key, core::Str const & count) {
-  try {
-    auto result = [&]() -> core::Expected<int32_t, std::shared_ptr<core::Failure>> {
-      auto hostLookupResult = host_failures_several_libraries::hostLookup(key);
-      if (!hostLookupResult.has_value()) {
-        return core::unexpected(hostLookupResult.error());
-      }
-      int32_t int32 = *hostLookupResult;
-      auto parseCountResult = count_failures::parseCount(count);
-      if (!parseCountResult.has_value()) {
-        return core::unexpected(parseCountResult.error());
-      }
-      return core::Int::div_wrap(int32, nonzero(*parseCountResult));
-    }();
-    if (result.has_value()) {
-      return *result;
-    } else {
-      core::bubble();
+  auto result = [&]() -> core::Expected<int32_t, std::shared_ptr<core::Failure>> {
+    auto hostLookupResult = host_failures_several_libraries::hostLookup(key);
+    if (!hostLookupResult.has_value()) {
+      return core::unexpected(hostLookupResult.error());
     }
-  } catch (core::TemperBubble const &) {
+    int32_t int32 = *hostLookupResult;
+    auto parseCountResult = count_failures::parseCount(count);
+    if (!parseCountResult.has_value()) {
+      return core::unexpected(parseCountResult.error());
+    }
+    auto nonzeroResult = nonzero(*parseCountResult);
+    if (!nonzeroResult.has_value()) {
+      return core::unexpected(nonzeroResult.error());
+    }
+    return core::Int::div_wrap(int32, *nonzeroResult);
+  }();
+  if (result.has_value()) {
+    return *result;
+  } else {
     return -9;
   }
 }

@@ -21,7 +21,7 @@ namespace core = temper::core;
 
 void global_init_init() {
   core::init_once([] {
-    core::bubble();
+    core::panic();
   });
 }
 

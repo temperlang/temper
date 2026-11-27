@@ -5,10 +5,9 @@ from collections.abc import (
     Sequence as _Sequence,
 )
 from temper_core import (
-    Bubble as _Bubble,
+    Failure as _Failure,
     LoggingConsole as _LoggingConsole,
     boolean_to_string as _boolean_to_string,
-    bubble as _bubble,
     int_add as _int_add,
     int_mul as _int_mul,
     int_sub as _int_sub,
@@ -35,6 +34,8 @@ __all__ = (
     'found',
     'last',
     'resized',
+    'OptionError',
+    'NotAnOption',
     'help_of',
     'pieces',
     'either',
@@ -204,8 +205,25 @@ def resized(more: bool, /) -> int:
     return len(sizes)
 
 
+class OptionError(_Failure, Exception):
+    __slots__ = ()
+
+
+class NotAnOption(OptionError):
+    __slots__ = ()
+
+    @property
+    def message(self, /) -> str:
+        return 'not an option'
+
+
 def help_of(d: Described, /) -> str:
-    option = d if isinstance(d, Option) else _bubble()
+    t_0: Option
+    if isinstance(d, Option):
+        t_0 = d
+    else:
+        raise NotAnOption()
+    option = t_0
     return option.help
 
 
@@ -243,12 +261,12 @@ _console.log(f'{resized(False)} {resized(True)}')
 _t_0: str
 try:
     _t_0 = help_of(_o)
-except _Bubble:
+except NotAnOption:
     _t_0 = '-'
 _t_1: str
 try:
     _t_1 = help_of(_Plain())
-except _Bubble:
+except NotAnOption:
     _t_1 = '-'
 _console.log(f'{_t_0} {_t_1}')
 _console.log(_list_join(pieces(7), ',', lambda i: str(i)))

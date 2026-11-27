@@ -85,11 +85,11 @@ int main() {
     }
     std::printf("collatz %s\n", steps.c_str());
 
-    // A Temper failure is a `TemperBubble`, as notes/api-compat.md
-    // promises.
-    try {
-        std::printf("halve returned %d\n", async_turns::halve(3));
-    } catch (const core::TemperBubble&) {
-        std::printf("halve %d caught\n", async_turns::halve(8));
+    // A declared failure is an `Expected`'s error, of its own type.
+    auto odd = async_turns::halve(3);
+    if (odd.has_value()) {
+        std::printf("halve returned %d\n", *odd);
+    } else if (std::shared_ptr<async_turns::Odd> failure = odd.error()) {
+        std::printf("halve %d caught\n", *async_turns::halve(8));
     }
 }

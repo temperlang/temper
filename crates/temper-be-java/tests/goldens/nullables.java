@@ -2,7 +2,6 @@ package nullables;
 
 import java.util.Objects;
 import java.util.logging.Logger;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Nullable;
@@ -52,9 +51,9 @@ public final class NullablesGlobal {
         }
     }
 
-    static int positive(int n) {
+    static int positive(int n) throws Negative {
         if (n < 0) {
-            throw Core.bubble();
+            throw new Negative(n);
         }
         return n;
     }
@@ -62,8 +61,8 @@ public final class NullablesGlobal {
     static int checked(int n) {
         try {
             return positive(n);
-        } catch (Bubble bubble) {
-            throw new AssertionError("panic", bubble);
+        } catch (Negative failure) {
+            throw new AssertionError("panic", failure);
         }
     }
 
@@ -83,7 +82,7 @@ public final class NullablesGlobal {
         try {
             positive(n);
             return "ok";
-        } catch (Bubble ignored) {
+        } catch (Negative ignored) {
             return why == null ? "fails" : why;
         }
     }
@@ -118,13 +117,13 @@ public final class NullablesGlobal {
         }
         try {
             positive(-1);
-        } catch (Bubble ignored) {
+        } catch (Negative ignored) {
             console.log("negative");
         }
         int fallback;
         try {
             fallback = positive(-2);
-        } catch (Bubble ignored2) {
+        } catch (Negative ignored2) {
             fallback = 0;
         }
         console.log(Integer.toString(fallback));

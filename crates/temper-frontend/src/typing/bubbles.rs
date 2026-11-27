@@ -1,27 +1,24 @@
-//! "Cannot bubble from a function without Bubble in its return type", as
-//! Kotlin Temper's `BubblesAreNotFree` reports it: each call that may
-//! bubble in the body of a function whose return type doesn't say `throws
-//! Bubble`, other than in an `orelse`'s body. A `for … of` body counts as
-//! part of the function around it; other functions are checked on their
-//! own, if they declare a return type, or, for a function literal without
-//! one, if its place wants a function type, which gives it its own.
+//! What may fail where it can't: each call that may fail, `throw`, and
+//! `await` in the body of a function whose return type doesn't let it,
+//! other than in an `orelse`'s body. A `for … of` body counts as part of
+//! the function around it; other functions are checked on their own, if
+//! they declare a return type, or, for a function literal without one, if
+//! its place wants a function type, which gives it its own.
 //!
-//! What may bubble: `bubble()` and a call of a function whose type
-//! `throws Bubble`. (`await` of a broken promise throws core's
-//! `BrokenPromise`, a declared failure; `x as T` that fails and `/` or
-//! `%` of integers by zero panic; floats' give IEEE 754's infinities and
-//! NaN.) Kotlin folds constants first, so as for
-//! the other type errors, a call it might work out while compiling isn't
-//! reported (`may_fold`), nor is a branch of an `if` whose condition it
-//! might.
+//! What may fail: `throw`, a call of a function whose type `throws` (with
+//! failure parameters as the call solves them), and `await` of a broken
+//! promise, which throws core's `BrokenPromise`. (`x as T` that fails and
+//! `/` or `%` of integers by zero panic; floats' give IEEE 754's
+//! infinities and NaN.) As Kotlin Temper drops a branch of an `if` whose
+//! condition is `true` or `false`, that branch's failures aren't
+//! reported.
 
-use super::signatures;
 use crate::builtins::{Builtin, Constant, Function};
 use crate::core;
 use crate::library::{Level, Library, Message};
 use crate::scope::{Scopes, SymbolKind};
 use crate::settle::{Fact, Settle};
-use crate::types::{BUBBLE, ERROR, TypeData, TypeId, UNKNOWN};
+use crate::types::{ERROR, TypeData, TypeId, UNKNOWN};
 use temper_syntax::ast::Value;
 use temper_syntax::tree::{NodeId, NodeKind};
 
@@ -173,8 +170,8 @@ pub(super) enum Allowed {
     Unchecked,
     /// It can't fail.
     Nothing,
-    /// It may fail with this: `Bubble`, a declared failure type, or a
-    /// failure parameter.
+    /// It may fail with this: a declared failure type, or a failure
+    /// parameter.
     Only(TypeId),
 }
 
@@ -182,9 +179,8 @@ impl Settle {
     /// Reports what may fail in a function, in its parameters' defaults
     /// and its body, but its result type doesn't let it
     /// ([`Settle::allowed_failure`]): any failure where it can't fail,
-    /// and otherwise one that isn't of its failure type, as `Bubble` and
-    /// declared failures never mix (notes/typing.md, "Declared
-    /// failures").
+    /// and otherwise one that isn't of its failure type (notes/typing.md,
+    /// "Declared failures").
     pub(super) fn check_failures(&mut self, f: NodeId) {
         match self.allowed_failure(f) {
             Allowed::Unchecked => {}
@@ -195,7 +191,7 @@ impl Settle {
                         self.lib.report(Level::Error, message, span);
                     }
                 }
-                None => self.check_bubbles(f),
+                None => self.check_no_failures(f),
             },
             Allowed::Only(allowed) => {
                 for (node, fail) in self.failures_in(f) {
@@ -209,15 +205,13 @@ impl Settle {
     }
 
     /// Reports what may fail in a function that can't, in its parameters'
-    /// defaults and its body: "Cannot bubble …" for what may bubble, as
-    /// Kotlin Temper reports it, and "Cannot throw …" for a declared
-    /// failure. A `throw` of what isn't a failure is reported there.
-    pub(super) fn check_bubbles(&mut self, f: NodeId) {
+    /// defaults and its body: "Cannot throw …". What fails with what's
+    /// unknown is reported where that's worked out: a `throw` of what
+    /// isn't a failure, or a callee's `throws` of what isn't one.
+    pub(super) fn check_no_failures(&mut self, f: NodeId) {
         for (node, fail) in self.failures_in(f) {
             let message = match fail {
-                BUBBLE => Message::ExpectedNoBubble,
-                UNKNOWN if self.lib.tree.kind(node) == NodeKind::Fail => continue,
-                UNKNOWN => Message::ExpectedNoBubble,
+                UNKNOWN => continue,
                 ERROR => Message::UnhandledRootFailure,
                 _ => Message::UndeclaredFailure(self.show(fail)),
             };
@@ -227,21 +221,13 @@ impl Settle {
     }
 
     /// Why a failure of type `fail` can't pass through a function that
-    /// may fail with `allowed`, if it can't. `Error`, any error, which
-    /// only tests and std may throw, takes a bubble too, until `Bubble`
-    /// goes.
+    /// may fail with `allowed`, if it can't.
     fn misfit_failure(&mut self, fail: TypeId, allowed: TypeId) -> Option<Message> {
         if fail == UNKNOWN || allowed == UNKNOWN || fail == allowed || allowed == ERROR {
             return None;
         }
-        Some(match (fail, allowed) {
-            (_, BUBBLE) => Message::FailureIntoBubble(self.show(fail)),
-            (BUBBLE, _) => Message::BubbleIntoFailure(self.show(allowed)),
-            _ if self.typing.types.is_subtype(fail, allowed) == Some(false) => {
-                Message::FailureMismatch(self.show(fail), self.show(allowed))
-            }
-            _ => return None,
-        })
+        let misfit = self.typing.types.is_subtype(fail, allowed) == Some(false);
+        misfit.then(|| Message::FailureMismatch(self.show(fail), self.show(allowed)))
     }
 
     /// What may fail in a function's parameters' defaults and body, each
@@ -252,12 +238,12 @@ impl Settle {
         for param in params {
             if self.lib.tree.kind(param) == NodeKind::Let {
                 if let Some(default) = core::let_parts(&self.lib.tree, param).2 {
-                    self.find_bubbles(default, &mut found);
+                    self.find_failures(default, &mut found);
                 }
             }
         }
         if let Some(body) = body {
-            self.find_bubbles(body, &mut found);
+            self.find_failures(body, &mut found);
         }
         found
     }
@@ -266,12 +252,12 @@ impl Settle {
     /// `catch`'s operand: each place, with what it may fail with.
     pub(super) fn failures_under(&mut self, node: NodeId) -> Vec<(NodeId, TypeId)> {
         let mut found = Vec::new();
-        self.find_bubbles(node, &mut found);
+        self.find_failures(node, &mut found);
         found
     }
 
-    /// One type for what several places may fail with: `Bubble` if any
-    /// may bubble; else declared failures' join, or the root where they
+    /// One type for what several places may fail with: declared
+    /// failures' join, or the root where they
     /// have no closer common type; unknown if one is; `None` for none.
     pub(super) fn join_failures(&mut self, fails: &[(NodeId, TypeId)]) -> Option<TypeId> {
         let mut joined: Option<TypeId> = None;
@@ -330,41 +316,15 @@ impl Settle {
 
     /// The failure a `catch (e)` binds, the hidden `caught()` call in the
     /// `let e = caught();` that starts its block: what the `Orelse`'s
-    /// body may fail with ([`Settle::join_failures`]); unknown where that
-    /// may bubble, as a `Bubble` has no value ([`Settle::check_caught`]),
-    /// or nothing may fail.
+    /// body may fail with ([`Settle::join_failures`]); unknown where
+    /// nothing may fail.
     pub(super) fn caught_type(&mut self, caught: NodeId, forced: bool) -> Result<TypeId, Fact> {
         let Some(body) = self.caught_from(caught) else {
             return Ok(UNKNOWN);
         };
         self.wait_for_failures(body, forced)?;
         let failures = self.failures_under(body);
-        Ok(match self.join_failures(&failures) {
-            Some(BUBBLE) | None => UNKNOWN,
-            Some(t) => t,
-        })
-    }
-
-    /// Reports a `catch (e)` whose operand may bubble, as a `Bubble`
-    /// has no value to bind.
-    pub(super) fn check_caught(&mut self, caught: NodeId) {
-        let Some(body) = self.caught_from(caught) else {
-            return;
-        };
-        let failures = self.failures_under(body);
-        if self.join_failures(&failures) == Some(BUBBLE) {
-            let tree = &self.lib.tree;
-            let Some(name) =
-                (self.typing.parent(caught)).and_then(|bind| tree.children(bind).first().copied())
-            else {
-                return;
-            };
-            let span = tree.span(name);
-            let name =
-                (self.lib.name(name)).map_or(String::new(), |n| self.lib.names.get(n).to_string());
-            let message = Message::CatchBindsBubble(name);
-            self.lib.report(Level::Error, message, span);
-        }
+        Ok(self.join_failures(&failures).unwrap_or(UNKNOWN))
     }
 
     /// The operand of the `Orelse` whose failure a `caught()` call binds:
@@ -388,9 +348,8 @@ impl Settle {
     /// one, its type's ([`Settle::literal_type`]), from the function type
     /// its place wants, as Kotlin Temper types the literal, or where its
     /// place is a generic call's failure parameter, from its body. A
-    /// generator, as an `async` block, can't fail, as
-    /// `GeneratorResult<Y>` doesn't say `throws Bubble`; a `for … of`
-    /// body isn't checked on its own.
+    /// generator, as an `async` block, can't fail unless its result says
+    /// `throws`; a `for … of` body isn't checked on its own.
     pub(super) fn allowed_failure(&mut self, f: NodeId) -> Allowed {
         let tree = &self.lib.tree;
         if tree.data(f) & core::FN_LOOP_BODY != 0 {
@@ -488,35 +447,33 @@ impl Settle {
             })
     }
 
-    fn find_bubbles(&mut self, node: NodeId, found: &mut Vec<(NodeId, TypeId)>) {
+    fn find_failures(&mut self, node: NodeId, found: &mut Vec<(NodeId, TypeId)>) {
         let tree = &self.lib.tree;
         let children = tree.children(node).to_vec();
         match (tree.kind(node), children.as_slice()) {
             (NodeKind::Fn, _) if tree.data(node) & core::FN_LOOP_BODY != 0 => {
                 if let Some(body) = core::fn_parts(tree, node).2 {
-                    self.find_bubbles(body, found);
+                    self.find_failures(body, found);
                 }
             }
             (NodeKind::Fn, _) => {}
             // What fails in the body goes to the fallback.
-            (NodeKind::Orelse, [_, fallback]) => self.find_bubbles(*fallback, found),
+            (NodeKind::Orelse, [_, fallback]) => self.find_failures(*fallback, found),
             // Kotlin drops a branch that a constant condition rules out.
             (NodeKind::If, [condition, then, otherwise]) => {
-                self.find_bubbles(*condition, found);
+                self.find_failures(*condition, found);
                 match self.constant_bool(*condition) {
-                    Some(true) => self.find_bubbles(*then, found),
-                    Some(false) => self.find_bubbles(*otherwise, found),
-                    None if self.may_fold(*condition, 0) => {}
+                    Some(true) => self.find_failures(*then, found),
+                    Some(false) => self.find_failures(*otherwise, found),
                     None => {
-                        self.find_bubbles(*then, found);
-                        self.find_bubbles(*otherwise, found);
+                        self.find_failures(*then, found);
+                        self.find_failures(*otherwise, found);
                     }
                 }
             }
-            (NodeKind::Fail, []) => found.push((node, BUBBLE)),
             // `throw x` fails with `x`, if it's a failure.
             (NodeKind::Fail, [value]) => {
-                self.find_bubbles(*value, found);
+                self.find_failures(*value, found);
                 let t = self.known_type(*value);
                 let is_failure = self.typing.types.is_subtype(t, ERROR) == Some(true);
                 found.push((node, if is_failure { t } else { UNKNOWN }));
@@ -524,35 +481,26 @@ impl Settle {
             // `await` of a broken promise throws core's `BrokenPromise`.
             (NodeKind::Await, _) => {
                 for child in children {
-                    self.find_bubbles(child, found);
+                    self.find_failures(child, found);
                 }
                 found.push((node, self.typing.types.broken_promise()));
             }
-            // Kotlin doesn't look into the arguments of an operator that
-            // don't fit it.
-            (NodeKind::Call, [callee, args @ ..]) => {
-                if let Some(fail) = self.call_failure(node) {
-                    found.push((node, fail));
-                    return;
-                }
-                let unfit = self.unfit_operator_args(*callee, args);
-                for &child in &children {
-                    if !unfit.contains(&child) {
-                        self.find_bubbles(child, found);
+            _ => {
+                if tree.kind(node) == NodeKind::Call {
+                    if let Some(fail) = self.call_failure(node) {
+                        found.push((node, fail));
+                        return;
                     }
                 }
-            }
-            _ => {
                 for child in children {
-                    self.find_bubbles(child, found);
+                    self.find_failures(child, found);
                 }
             }
         }
     }
 
-    /// Whether a call may bubble, or fail otherwise, other than through
-    /// its arguments.
-    pub(super) fn call_bubbles(&mut self, call: NodeId) -> bool {
+    /// Whether a call may fail, other than through its arguments.
+    pub(super) fn call_fails(&mut self, call: NodeId) -> bool {
         self.call_failure(call).is_some()
     }
 
@@ -565,7 +513,7 @@ impl Settle {
             // `a[i]` calls `a.get(i)`.
             Some(Builtin::Function(Function::Index)) if !args.is_empty() => {
                 let t = self.known_index_callee_type(args[0]);
-                self.fn_call_failure(call, t, &args[1..])
+                self.fn_call_failure(t, &args[1..])
             }
             Some(_) => None,
             // A generic function's as the call solves it, so it fails as
@@ -576,34 +524,22 @@ impl Settle {
                     Ok(Some(solved)) => self.solved_sig(&solved),
                     _ => self.known_callee_type(callee),
                 };
-                self.fn_call_failure(call, t, args)
+                self.fn_call_failure(t, args)
             }
         }
     }
 
     /// What a call of a function of type `t` with `args` may fail with.
-    fn fn_call_failure(&mut self, call: NodeId, t: TypeId, args: &[NodeId]) -> Option<TypeId> {
+    fn fn_call_failure(&mut self, t: TypeId, args: &[NodeId]) -> Option<TypeId> {
         let TypeData::Fn { params, result } = self.typing.types.get(t) else {
             return None;
         };
         let fail = self.typing.types.fail(*result)?;
-        // Kotlin can't pick a callee for the wrong number of arguments,
-        // nor fold a call with an argument that doesn't fit.
-        let params = params.clone();
+        // Kotlin can't pick a callee for the wrong number of arguments.
         let required = params.iter().filter(|p| !p.optional).count();
-        if !(required..=params.len()).contains(&args.len()) {
-            return None;
-        }
-        // Kotlin might fold a call that bubbles; it has no declared
-        // failures.
-        if fail != BUBBLE {
-            return Some(fail);
-        }
-        let misfit = (args.iter().zip(&params)).any(|(&arg, param)| {
-            let t = self.known_type(arg);
-            self.is_mismatch(t, param.ty)
-        });
-        (misfit || !self.may_fold(call, 0)).then_some(fail)
+        (required..=params.len())
+            .contains(&args.len())
+            .then_some(fail)
     }
 
     /// What `new C(…)` may fail with: what `C`'s constructor says it
@@ -641,37 +577,6 @@ impl Settle {
         }
         let result = self.eval_result(out_type);
         self.typing.types.fail(result)
-    }
-
-    /// The arguments of a call of a builtin operator that don't fit the
-    /// signature it picks, which Kotlin doesn't look into for bubbling.
-    /// But where an operator has several variants and its first argument
-    /// fits none, Kotlin looks into them all.
-    fn unfit_operator_args(&mut self, callee: NodeId, args: &[NodeId]) -> Vec<NodeId> {
-        let Some(Builtin::Function(f)) = self.scopes.resolved_builtin(callee) else {
-            return Vec::new();
-        };
-        if let [only] = signatures::variants(f, args.len()) {
-            let params = only.params;
-            return (args.iter().zip(params))
-                .filter(|&(&arg, &param)| {
-                    let t = self.known_type(arg);
-                    self.is_mismatch(t, param)
-                })
-                .map(|(&arg, _)| arg)
-                .collect();
-        }
-        if let Some((_, unfit)) = self.class_operator_call(f, args) {
-            return if unfit { vec![args[1]] } else { Vec::new() };
-        }
-        match self.builtin_variant(f, args, false) {
-            Ok(Some((sig, types))) if types[0] == sig.params[0] => (args.iter().zip(types))
-                .zip(sig.params)
-                .filter(|&((_, t), p)| t != *p)
-                .map(|((&arg, _), _)| arg)
-                .collect(),
-            _ => Vec::new(),
-        }
     }
 
     /// `true` or `false`, written as such.

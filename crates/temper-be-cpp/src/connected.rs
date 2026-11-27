@@ -584,10 +584,10 @@ pub const TABLE: &[(&str, Connection)] = &[
         Connection::Call("Date::yearsBetween"),
     ),
     // The runtime's `testBail(test)`, as Kotlin's, which throws a
-    // `TemperTestFailure`, where Kotlin's throws a bubble.
+    // `TemperTestFailure`, where Kotlin's threw a bubble.
     ("std/testing.type Test.bail()", Connection::Call("testBail")),
     // The runtime's `testPanics(test, block)`, which catches a panic,
-    // anything but a bubble or a test's failure.
+    // anything but a test's failure.
     (
         "std/testing.type Test.panics()",
         Connection::Call("testPanics"),

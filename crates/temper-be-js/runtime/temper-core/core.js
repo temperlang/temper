@@ -270,35 +270,6 @@ export const cmpInt64 = (a, b) =>
  */
 export const cmpBoolean = (a, b) => +a - +b;
 
-/** What marks a bubble, the same in every copy of this runtime. */
-const bubbleMark = Symbol.for("@temperlang/core.Bubble");
-
-/**
- * A Temper bubble: what `bubble()` and every builtin that bubbles throw,
- * and the only thing an `orelse` catches. Host code bubbles by throwing
- * one (or calling `bubble()`); anything else it throws passes every
- * `orelse`, as a panic does.
- */
-export class Bubble extends Error {
-  /** @param {string} [message] */
-  constructor(message) {
-    super(message);
-    this.name = "Bubble";
-  }
-}
-Object.defineProperty(Bubble.prototype, bubbleMark, { value: true });
-
-/**
- * Whether `e` is a bubble, made by this copy of the runtime or another,
- * as two libraries built against different versions of it each have
- * their own.
- *
- * @param {unknown} e
- * @returns {boolean}
- */
-export const isBubble = (e) =>
-  typeof e === "object" && e !== null && bubbleMark in e;
-
 /** What marks a declared failure, the same in every copy of this runtime. */
 const failureMark = Symbol.for("@temperlang/core.Failure");
 
@@ -443,7 +414,7 @@ export const isFailure = (e) =>
 /**
  * A declared failure's cause, as Temper's `Error.cause` gives it: the
  * failure that was being handled where it was thrown, or `null`, also
- * where that was something else, such as a bubble.
+ * where that was something else, such as a host's error.
  *
  * @param {Error} failure
  * @returns {Error | null}
@@ -486,16 +457,8 @@ export const withCause = (failure, cause) => {
 };
 
 /**
- * @param {string} [message]
- * @returns {never}
- */
-export const bubble = (message) => {
-  throw new Bubble(message);
-};
-
-/**
  * Throws a plain `Error`, which no `orelse` catches, with `cause` as its
- * cause if given: the bubble an `orelse panic()` replaces.
+ * cause if given: the failure an `orelse panic()` replaces.
  *
  * @param {string} [message]
  * @param {unknown} [cause]
@@ -507,7 +470,7 @@ export const panic = (message = "panic", cause = undefined) => {
 
 /**
  * Runs `block`, giving whether it panicked, for std's `Test.assertPanics`:
- * whether it threw anything but a bubble, a declared failure, or a test
+ * whether it threw anything but a declared failure or a test
  * framework's failure (an `AssertionError`, as Node's `assert` and Chai
  * throw), as on every backend, so `panic`'s `Error` or a host's error,
  * such as a `TypeError`. What isn't passes through.
@@ -519,7 +482,7 @@ export const blockPanics = (block) => {
   try {
     block();
   } catch (e) {
-    if (isBubble(e) || isFailure(e) || (e instanceof Error && e.name === "AssertionError")) {
+    if (isFailure(e) || (e instanceof Error && e.name === "AssertionError")) {
       throw e;
     }
     return true;

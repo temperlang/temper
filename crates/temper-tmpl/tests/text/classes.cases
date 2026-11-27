@@ -196,7 +196,12 @@ module classes#0 {
 === used classes' members, supertypes, docs, and conversions
 tmpl 1 model 1 library more 0.1.0
 
+uses `temper-core`#40 0.1.0 {
+  interface Error#41 {}
+}
+
 uses lib#1 1.0.0 {
+  interface LibError#42 extends Error#41 {}
   interface Named#2 {
     get name#3(): String;
     set name#4(value: String): Void;
@@ -206,7 +211,7 @@ uses lib#1 1.0.0 {
     var label#7: String;
     static let empty#8: Box#5;
     constructor constructor#9(item: Int32): Box#5;
-    static make#10(): Box#5 throws Bubble;
+    static make#10(): Box#5 throws LibError#42;
   }
 }
 
@@ -236,7 +241,73 @@ module more#0 {
     }
   }
 
-  fn check#23(b#24: Box#5, t#25: Tag#15): Boolean throws Bubble {
+  fn check#23(b#24: Box#5, t#25: Tag#15): Boolean throws LibError#42 {
+    b#24.label#7 = "x";
+    t#25.name#19("y");
+    let n#26: Named#2 = (upcast(t#25)): Named#2;
+    let again#27: Tag#15 = (as(n#26)): Tag#15;
+    let made#28: Box#5 = make#10()^;
+    let s#29: String = ((upcast(t#25)): Named#2).name#3();
+    if (is(n#26, Tag#15)) {
+      ((downcast(n#26)): Tag#15).text#16 = s#29;
+    }
+    return identical(again#27, t#25) && is((upcast(b#24)): Named#2, Box#5) && %Int32.eq(empty#8.item#6, made#28.item#6);
+  }
+
+  init {
+    let box#30: Box#5 = new constructor#9(1);
+    box#30.label#7 = new constructor#17().text#16;
+  }
+}
+--- canonical
+tmpl 1 model 1 library more 0.1.0
+
+uses `temper-core`#40 0.1.0 {
+  interface Error#41 {}
+}
+
+uses lib#1 1.0.0 {
+  interface Named#2 {
+    get name#3(): String;
+    set name#4(value: String): Void;
+  }
+  class Box#5 extends Named#2 {
+    let item#6: Int32;
+    var label#7: String;
+    static let empty#8: Box#5;
+    constructor constructor#9(item: Int32): Box#5;
+    static make#10(): Box#5 throws LibError#42;
+  }
+  interface LibError#42 extends Error#41 {}
+}
+
+module more#0 {
+  /// Something with a name.
+  interface Tagged#11 extends Named#2 {
+    abstract set tag#12(value#13: String): Void;
+    protected method shout#14(): String {
+      return %String.cat(((upcast(this)): Named#2).name#3(), "!");
+    }
+  }
+
+  export class Tag#15 extends Tagged#11, Named#2 {
+    /// The tag's text.
+    var text#16: String;
+    constructor constructor#17(): Tag#15 {
+      this.text#16 = "";
+    }
+    get name#18(): String {
+      return this.text#16;
+    }
+    set name#19(value#20: String): Void {
+      this.text#16 = value#20;
+    }
+    set tag#21(value#22: String): Void {
+      this.text#16 = (value { this.text#16 = value#22; ((upcast(this)): Tagged#11).shout#14() }): String;
+    }
+  }
+
+  fn check#23(b#24: Box#5, t#25: Tag#15): Boolean throws LibError#42 {
     b#24.label#7 = "x";
     t#25.name#19("y");
     let n#26: Named#2 = (upcast(t#25)): Named#2;
@@ -369,7 +440,7 @@ module conv#0 {
     }
   }
 
-  fn f#8(c#9: C#2, i#10: I#1): Boolean throws Bubble {
+  fn f#8(c#9: C#2, i#10: I#1): Boolean {
     let same#11: C#2 = (upcast(c#9)): C#2;
     let down#12: C#2 = (downcast(c#9)): C#2;
     let up#13: I#1 = (as(c#9)): I#1;

@@ -111,7 +111,7 @@ const HIDING: &str = "# Hiding
 
     let std = \"s\";
     let explicit(int32_t: Int): Int { int32_t + 1 }
-    let core(a: Int, b: Int): Int throws Bubble { a / b }
+    let core(a: Int, b: Int): Int { a / b }
     let before(a: Boolean, b: Boolean): Boolean { a < b }
     let M_PI = 3;
     let shifts(n: Int): String { \"${1 << n} ${-8 >> n} ${-8 >>> (n - 4)}\" }
@@ -187,7 +187,7 @@ const FLOAT_FORMAT: &str = "# Float format
 /// nullable object a call returns, used after `??` and a null check.
 /// ASan checks it with the rest.
 /// `DenseBitVector` past its end, as core's Temper body has it: `get`
-/// gives false, and `set` grows it for a true bit (the runtime bubbled,
+/// gives false, and `set` grows it for a true bit (the runtime failed,
 /// as Kotlin's does, failing the regex engine's `ctype`).
 const BIT_VECTOR: &str = "# Bit vector
 
@@ -871,8 +871,17 @@ fn parallel<T: Sync, R: Send>(items: &[T], work: impl Fn(&T) -> R + Sync) -> Vec
 }
 
 /// Warnings that a test's own code trips on purpose, off for its library:
-/// `semantics/type-checked-locals`' `if` whose branches do the same.
-const ALLOWED_WARNINGS: [(&str, &str); 1] = [("type-checked-locals", "-Wno-duplicated-branches")];
+/// `semantics/type-checked-locals`' `if` whose branches do the same, and
+/// its functions, which only code after its first error's panic calls,
+/// which isn't written, so they're unused.
+const ALLOWED_WARNINGS: [(&str, &str); 2] = [
+    ("type-checked-locals", "-Wno-duplicated-branches"),
+    ("type-checked-locals", "-Wno-unused-function"),
+];
+
+/// Warnings that `-Wall` turns on in g++ and clang++ alike, which
+/// [`ALLOWED_WARNINGS`] may turn off where a set has `-Wall`.
+const IN_WALL: [&str; 1] = ["-Wunused-function"];
 
 /// Compiles one `.cpp` (or a bulk group's) to `object`, with the
 /// generated libraries' root (`src`) as an include directory, giving
@@ -895,8 +904,13 @@ fn compile_one(
             source.to_string_lossy().contains(&format!("/{dir}")) || text.contains(&dir)
         })
         .map(|&(_, flag)| flag)
-        // Of warnings the set has: clang++ has no `-Wduplicated-branches`.
-        .filter(|flag| warnings.contains(&flag.replacen("-Wno-", "-W", 1).as_str()));
+        // Of warnings the set has, itself or by `-Wall`: clang++ has no
+        // `-Wduplicated-branches`.
+        .filter(|flag| {
+            let on = flag.replacen("-Wno-", "-W", 1);
+            warnings.contains(&on.as_str())
+                || (warnings.contains(&"-Wall") && IN_WALL.contains(&on.as_str()))
+        });
     let out = Command::new(gxx)
         .args(warnings)
         .args(allowed)

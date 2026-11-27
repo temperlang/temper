@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Globalization;
 using TemperLang.Core;
@@ -154,25 +153,13 @@ public static class FailuresInteropGlobal
         }
     }
 
-    internal static int Nonzero(int n)
-    {
-        if (n == 0)
-        {
-            return Core.Bubble<int>();
-        }
-        else
-        {
-            return n;
-        }
-    }
-
-    public static int Mixed(string key, int n)
+    public static int Mixed(string key, string text)
     {
         try
         {
-            return Lookup(key) + Core.Div(10, Nonzero(n));
+            return Lookup(key) + Core.Div(10, Sign(text));
         }
-        catch (Exception failure1) when (failure1 is global::TemperLang.Core.Bubble || failure1 is NotFound)
+        catch (FailuresInteropException)
         {
             return -1;
         }
@@ -259,7 +246,7 @@ public static class FailuresInteropGlobal
     {
         ILoggingConsole console = Support.Logging.LoggingConsoleFactory.CreateConsole("FailuresInterop");
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{Lookup("a")} {Sign("-")} {Setting("a")}"));
-        console.Log(string.Create(CultureInfo.InvariantCulture, $"{Mixed("a", 0)} {Mixed("z", 1)} {Mixed("a", 5)}"));
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{Mixed("a", "")} {Mixed("z", "+")} {Mixed("a", "-")}"));
         console.Log(Explained("port") + "; " + Explained("a") + "; " + SignMessage("x"));
         console.Log(EarlyCause("soon") + "; " + FirstMissing(Listed.CreateReadOnlyList<string>("a", "b", "c")) + " " + FirstMissing(Listed.CreateReadOnlyList<string>("a")));
         console.Log(FirstSign(Listed.CreateReadOnlyList<string>("", "+")) + " " + FirstSign(Listed.CreateReadOnlyList<string>("", "?")) + " " + FirstSign(Listed.CreateReadOnlyList<string>()));

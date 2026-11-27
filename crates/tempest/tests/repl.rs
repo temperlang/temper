@@ -381,16 +381,16 @@ fn ctrl_break_stops_the_input_not_the_session() {
 /// plain; `always` colors it whatever `NO_COLOR` says; `never` doesn't.
 #[test]
 fn color() {
-    let colored =
-        "\x1b[2minteractive#0:\x1b[0m 1\n\x1b[2minteractive#1:\x1b[0m \x1b[31mfail\x1b[0m\n";
-    let plain = "interactive#0: 1\ninteractive#1: fail\n";
+    let colored = "\x1b[2minteractive#0:\x1b[0m 1\n\x1b[31mPanicked: panic()\x1b[0m\n\
+                   \x1b[2minteractive#1:\x1b[0m \x1b[31mfail\x1b[0m\n";
+    let plain = "interactive#0: 1\nPanicked: panic()\ninteractive#1: fail\n";
     for (args, expected) in [
         (&[][..], plain),
         (&["--color", "auto"], plain),
         (&["--color", "never"], plain),
         (&["--color", "always"], colored),
     ] {
-        let (code, out, _) = repl(args, None, "1\nbubble()\n");
+        let (code, out, _) = repl(args, None, "1\npanic()\n");
         assert_eq!((code, out.as_str()), (0, expected), "{args:?}");
     }
     let mut child = Command::new(env!("CARGO_BIN_EXE_temper"))
@@ -404,7 +404,7 @@ fn color() {
         .stdin
         .take()
         .unwrap()
-        .write_all(b"1\nbubble()\n")
+        .write_all(b"1\npanic()\n")
         .unwrap();
     let output = child.wait_with_output().unwrap();
     assert_eq!(String::from_utf8(output.stdout).unwrap(), colored);

@@ -80,7 +80,7 @@ namespace temper {
 
             operator T() const {
                 if (!has_value) {
-                    throw TemperBubble("accessing null NullableParam");
+                    throw TemperPanic("accessing null NullableParam");
                 }
                 return value;
             }

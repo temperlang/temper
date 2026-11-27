@@ -1,3 +1,3 @@
-import { bubble } from "@temperlang/core";
+import { panic } from "@temperlang/core";
 
-bubble();
+panic();

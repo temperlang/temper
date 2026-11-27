@@ -163,7 +163,7 @@ New from Level 3 (subset A), all Proposed:
 34. **Source map columns:** UTF-16 units, converted with stored text
     of non-ASCII lines only? Recommend yes. Built so (2026-10-30;
     nodes.md, "Source positions").
-35. **Bubbling in module init:** a may-bubble call in an init block,
+35. **Failing in module init:** a call that may fail in an init block,
     with no handler, fails the module's initialization. Check against
     Kotlin Temper's behavior before `to_tmpl` relies on it.
 
@@ -239,7 +239,8 @@ New with that round, all Proposed:
     stays the only failure, and nothing in subset A's layout should
     rule this out. **In progress (2026-11-24):** RFC 164's declared
     failures reach tmpl as failure types, `Throw`, and `Catch`
-    ([nodes.md](nodes.md), "Declared failures"), beside `Bubble`.
+    ([nodes.md](nodes.md), "Declared failures"), and since 2026-11-27
+    they're the only failures: `Bubble` is gone.
 45. **Where `x++` as a statement simplifies:** the frontend's macro
     expands `x++` to `do { let t = x; x = t + 1; t }`, since expansion
     can't know whether the value is used; `to_tmpl` drops the

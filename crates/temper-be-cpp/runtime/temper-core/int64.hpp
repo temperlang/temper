@@ -26,7 +26,7 @@ namespace temper {
 
             inline Str toString(int64_t i, int32_t radix) {
                 if (radix < 2 || radix > 36) {
-                    bubble<Str>("radix must be between 2 and 36");
+                    panic<Str>("radix must be between 2 and 36");
                 }
                 if (radix == 10) {
                     return std::to_string(i);

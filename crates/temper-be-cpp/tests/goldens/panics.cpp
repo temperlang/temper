@@ -16,6 +16,9 @@ void global_init_init();
 struct Shape;
 struct Square;
 struct Circle;
+struct Problem;
+struct Positive;
+struct NotSquare;
 
 struct Shape : public virtual temper::core::AnyValueBase {};
 
@@ -27,6 +30,20 @@ struct Square : public virtual Shape {
 
 struct Circle : public virtual Shape {
   static std::shared_ptr<Circle> make();
+};
+
+struct Problem : public virtual temper::core::Failure {};
+
+struct Positive : public virtual Problem {
+  int32_t n;
+  static std::shared_ptr<Positive> make(int32_t n);
+  temper::core::Str get_message() const override;
+  int32_t get_n() const;
+};
+
+struct NotSquare : public virtual Problem {
+  static std::shared_ptr<NotSquare> make();
+  temper::core::Str get_message() const override;
 };
 
 }  // namespace panics
@@ -59,25 +76,49 @@ std::shared_ptr<Circle> Circle::make() {
   return self;
 }
 
-static int32_t failing(int32_t n) {
+std::shared_ptr<Positive> Positive::make(int32_t n) {
+  std::shared_ptr<Positive> self = std::make_shared<Positive>();
+  self->n = n;
+  return self;
+}
+
+core::Str Positive::get_message() const {
+  return "positive (n: " + std::to_string(this->n) + ")";
+}
+
+int32_t Positive::get_n() const {
+  return this->n;
+}
+
+std::shared_ptr<NotSquare> NotSquare::make() {
+  std::shared_ptr<NotSquare> self = std::make_shared<NotSquare>();
+  return self;
+}
+
+core::Str NotSquare::get_message() const {
+  return TEMPER_STR("not square");
+}
+
+static core::Expected<int32_t, std::shared_ptr<Positive>> failing(int32_t n) {
   if (n > 0) {
-    core::bubble();
+    return core::unexpected(Positive::make(n));
   }
   return n;
 }
 
-static std::shared_ptr<Square> downcast(std::shared_ptr<Shape> const & s) {
+static core::Expected<std::shared_ptr<Square>, std::shared_ptr<NotSquare>> downcast(std::shared_ptr<Shape> const & s) {
   if (dynamic_cast<Square const *>(s.get()) != nullptr) {
     return core::checked_cast<Square>(s);
   } else {
-    core::bubble();
+    return core::unexpected(NotSquare::make());
   }
 }
 
-static int32_t calling(std::function<int32_t()> const & f) {
-  try {
-    return f();
-  } catch (core::TemperBubble const &) {
+static int32_t calling(std::function<core::Expected<int32_t, std::shared_ptr<Problem>>()> const & f) {
+  auto result = f();
+  if (result.has_value()) {
+    return *result;
+  } else {
     return -9;
   }
 }
@@ -99,11 +140,11 @@ static core::Expected<core::Str, std::shared_ptr<temper_std::JsonError>> parsing
   return TEMPER_STR("parsed");
 }
 
-static int32_t explode(int32_t n) {
+static core::Expected<int32_t, std::shared_ptr<Positive>> explode(int32_t n) {
   if (n > 0) {
     core::panic();
   }
-  core::bubble();
+  return core::unexpected(Positive::make(n));
 }
 
 static int32_t noted(core::Str const & name) {
@@ -111,10 +152,11 @@ static int32_t noted(core::Str const & name) {
   return -2;
 }
 
-static int32_t inner() {
-  try {
-    return explode(1);
-  } catch (core::TemperBubble const &) {
+static core::Expected<int32_t, std::shared_ptr<Positive>> inner() {
+  auto explodeResult = explode(1);
+  if (explodeResult.has_value()) {
+    return *explodeResult;
+  } else {
     return panics::noted(TEMPER_STR("inner"));
   }
 }
@@ -127,22 +169,31 @@ void global_init_init() {
     temper_std::global_init_temporal();
     temper_globals::console.value = core::Console::get_console();
     int32_t zero;
-    try {
-      zero = failing(0);
-    } catch (core::TemperBubble const &) {
+    auto failingResult = failing(0);
+    if (failingResult.has_value()) {
+      zero = *failingResult;
+    } else {
       zero = -1;
     }
     static_cast<void>(zero);
     int32_t a;
-    try {
-      a = failing(1);
-    } catch (core::TemperBubble const &) {
+    auto failingResult2 = failing(1);
+    if (failingResult2.has_value()) {
+      a = *failingResult2;
+    } else {
       a = -1;
     }
     int32_t b;
-    try {
-      b = panics::downcast(core::to_base<Shape>(Circle::make()))->side;
-    } catch (core::TemperBubble const &) {
+    auto result = [&]() -> core::Expected<int32_t, std::shared_ptr<NotSquare>> {
+      auto downcastResult = panics::downcast(core::to_base<Shape>(Circle::make()));
+      if (!downcastResult.has_value()) {
+        return core::unexpected(downcastResult.error());
+      }
+      return (*downcastResult)->side;
+    }();
+    if (result.has_value()) {
+      b = *result;
+    } else {
       b = -2;
     }
     int32_t e;
@@ -171,7 +222,14 @@ void global_init_init() {
     std::shared_ptr<temper_std::Group> subject2 = subject3 == nullptr ? nullptr : subject3->full;
     core::NullableParam<core::Str> subject = subject2 == nullptr ? nullptr : core::NullableParam<core::Str>(subject2->value);
     core::Str h = subject == nullptr ? TEMPER_STR("no digits") : subject.value;
-    int32_t i = panics::calling([]() -> int32_t { return failing(2); });
+    auto fn = []() -> core::Expected<int32_t, std::shared_ptr<Problem>> {
+      auto failingResult3 = failing(2);
+      if (!failingResult3.has_value()) {
+        return core::unexpected(failingResult3.error());
+      }
+      return *failingResult3;
+    };
+    int32_t i = panics::calling(fn);
     core::Console::log(temper_globals::console.value, std::to_string(a) + " " + std::to_string(b) + " " + std::to_string(e) + " " + core::Boolean::toString(core::Float64::eq(f, -6.0)) + " " + g + " " + h + " " + std::to_string(i));
     int64_t k;
     auto Result4 = core::String::toInt64(TEMPER_STR("zz"));
@@ -269,9 +327,10 @@ void global_init_init() {
     core::Console::log(temper_globals::console.value, v);
     core::Console::log(temper_globals::console.value, TEMPER_STR("panicking"));
     int32_t p;
-    try {
-      p = inner();
-    } catch (core::TemperBubble const &) {
+    auto innerResult = inner();
+    if (innerResult.has_value()) {
+      p = *innerResult;
+    } else {
       p = -1;
     }
     core::Console::log(temper_globals::console.value, "after the panic " + std::to_string(p));

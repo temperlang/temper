@@ -331,9 +331,9 @@ pub(super) fn call_callout(callouts: &Callouts, args: Vec<Val>) -> R {
             callouts.borrow_mut().push((problem.to_string(), *is_error));
             Ok(Val::Void)
         }
-        _ => Err(Abrupt::Fail(Some(
+        _ => Err(Abrupt::Panic(
             "A callout takes a String and a Boolean".into(),
-        ))),
+        )),
     }
 }
 

@@ -19,8 +19,8 @@
 //!   each within its type parameter's bounds (but a builtin type's,
 //!   unless it's a failure parameter's, and `Never<T>` as `T`), with
 //!   each argument's and the result's type put in;
-//!   **T5** types well formed, a result type (`T throws Bubble`) only as
-//!   a signature's result, failing with `Bubble`, a failure type, or a
+//!   **T5** types well formed, a result type (`T throws E`) only as
+//!   a signature's result, failing with a failure type or a
 //!   failure parameter (a type parameter bound by one), `Never<T>` only as a result or a value's
 //!   type, and only where the profile has
 //!   [`Features::NEVER`](crate::Features::NEVER). `Error` nodes are
@@ -33,16 +33,14 @@
 //!   **R6** only a `var` assigned twice, a parameter only if `var`, and a
 //!   module `let` initialized once.
 //! - **F1** no falling off the end of a function with a result (nothing
-//!   after a `return`, jump, `bubble()`, `panic()`, or a `Never<T>`
+//!   after a `return`, jump, `throw`, `panic()`, or a `Never<T>`
 //!   value runs); **F2**
 //!   `return` has a value exactly when the result isn't `Void`; **F3**
-//!   `MAY_BUBBLE` exactly on calls that may bubble, and on `Throw`; **F4**
-//!   a call that may bubble only in a function that may (or in an init
-//!   block, where it fails the module's initialization), and what may
-//!   fail with a declared failure type only where that type (or one above
-//!   it) may: an `OrElse`'s body, a `Catch`'s of its local's type, or a
-//!   function failing with it, never mixing with `Bubble`, but for core's
-//!   `Error`, any error, which takes a bubble too, until `Bubble` goes; **F5** no reading a module `let`
+//!   `MAY_BUBBLE` exactly on calls that may fail, and on `Throw` and
+//!   `Await`; **F4** what may fail with a failure type only where that
+//!   type (or one above it) may: an `OrElse`'s body, a `Catch`'s of its
+//!   local's type, a function failing with it, or an init block, where it
+//!   fails the module's initialization; **F5** no reading a module `let`
 //!   before its initializer; **F6** `Await` and `Yield` only in a
 //!   generator literal's own body, a `Yield`'s value its `Y`, and the
 //!   body failing only where its factory makes core's `Generator<Y>`,
@@ -88,8 +86,7 @@
 //!   equality operator on `T`, with both sides `T?`; `Coalesce` of a
 //!   `T?` typed `T` or `T?`, as its fallback is. `OrElse`'s body
 //!   and fallback have its type, unless it's `Void`, which drops their
-//!   values, and calls in its body may bubble anywhere (F4); `Bubble` is
-//!   marked may-bubble (F3).
+//!   values, and calls in its body may fail anywhere (F4).
 //! - **N2** (parameters' defaults, subset B) an optional parameter of a
 //!   function with a body is nullable, and the body starts with its
 //!   default, in parameter order: `let x = coalesce(x', default)`.
@@ -116,7 +113,7 @@ use crate::profile::Profile;
 use crate::qname::{QNames, core_scalar, is_external, library_of};
 use crate::schema::{Family, Kind, Node, Place, Slot, TypeRule};
 use crate::text::writing_order;
-use crate::types::{Scalar, Signature, TypeData};
+use crate::types::{Signature, TypeData};
 use crate::{Module, Program};
 use std::collections::HashSet;
 use std::fmt;
@@ -541,7 +538,7 @@ impl Validator {
         }
         let has_flag = kind.fields().iter().any(|f| f.slot == Slot::Flag);
         if p.nodes.flags(id).contains(Flags::MAY_BUBBLE) && !has_flag {
-            let message = format!("{} can't be marked may-bubble", kind.name());
+            let message = format!("{} can't be marked may-fail", kind.name());
             self.node_problem(Rule::S1, id, message);
         }
         let Some(parts) = p.nodes.parts(id) else {
@@ -694,7 +691,7 @@ impl Validator {
                     let message = format!("a {}'s type is its signature", d.kind.name());
                     self.decl_problem(Rule::T1, decl, message)
                 }
-                (_, Some(TypeData::Result { .. } | TypeData::Scalar(Scalar::Bubble))) => {
+                (_, Some(TypeData::Result { .. })) => {
                     // Reported by `results`.
                 }
                 (_, Some(TypeData::Scalar(_) | TypeData::Function { .. })) => {}
@@ -781,17 +778,12 @@ impl Validator {
         }
     }
 
-    /// T5: a result type only as a signature's result, and `Bubble` only
-    /// as its failure type, so no value, declaration, or parameter has
-    /// either (notes/tmpl/types.md, "Results").
+    /// T5: a result type only as a signature's result, so no value,
+    /// declaration, or parameter has one, and its failure type a failure
+    /// type (notes/tmpl/types.md, "Results").
     fn results(&mut self, p: &Program) {
-        let failing = |ty: TypeId| {
-            p.types.contains(ty)
-                && matches!(
-                    p.types.get(ty),
-                    TypeData::Result { .. } | TypeData::Scalar(Scalar::Bubble)
-                )
-        };
+        let failing =
+            |ty: TypeId| p.types.contains(ty) && matches!(p.types.get(ty), TypeData::Result { .. });
         for decl in p.decls.ids().filter(|&d| p.decls.contains(d)) {
             let ty = p.decls.get(decl).ty;
             if failing(ty) {
@@ -805,13 +797,11 @@ impl Validator {
                 let message = format!("{} has a failure where a value goes", p.show_type(ty));
                 self.decl_problem(Rule::T5, decl, message);
             }
-            // `Bubble`, a failure type, or a failure parameter.
-            let failure = |f: TypeId| {
-                f == TypeId::BUBBLE || crate::failures::is_failure_type(p, self.root, f)
-            };
+            // A failure type, or a failure parameter.
+            let failure = |f: TypeId| crate::failures::is_failure_type(p, self.root, f);
             if let Some(fail) = sig.fail.filter(|&f| !failure(f)) {
                 let message = format!(
-                    "{} fails with {}, not Bubble or a failure type",
+                    "{} fails with {}, not a failure type",
                     p.show_type(ty),
                     p.show_type(fail)
                 );
@@ -2156,16 +2146,6 @@ impl Validator {
                 // Nothing after it runs.
                 flow.live = false;
             }
-            Node::Bubble { may_bubble } => {
-                if !may_bubble {
-                    let message = "bubble() bubbles, but isn't marked".into();
-                    self.node_problem(Rule::F3, id, message);
-                } else {
-                    self.passes(p, id, "bubble() bubbles", TypeId::BUBBLE);
-                }
-                // Nothing after it runs.
-                flow.live = false;
-            }
             Node::Panic {} => flow.live = false,
             Node::Await {
                 may_bubble,
@@ -2582,8 +2562,7 @@ impl Validator {
         // Each within its type parameter's bounds, the others put in; a
         // builtin type's only as far as tmpl knows its supertypes, so not
         // checked (`String` for `T extends MapKey`), but a failure
-        // parameter's (RFC 164), which no builtin type fits, not even
-        // `Bubble`; `Never<T>` as the `T` it stands for, as
+        // parameter's (RFC 164), which no builtin type fits; `Never<T>` as the `T` it stands for, as
         // `Never<Error>` for a failure parameter that can't fail.
         let generic = match p.decls.contains(generic).then(|| p.decls.get(generic).kind) {
             Some(DeclKind::Constructor) => p.decls.get(generic).owner,
@@ -2643,7 +2622,7 @@ impl Validator {
         }
     }
 
-    /// A call's arguments and bubbling, against its callee's signature,
+    /// A call's arguments and failure, against its callee's signature,
     /// with the type parameters it binds put in.
     fn call(
         &mut self,
@@ -2659,7 +2638,6 @@ impl Validator {
         let fail = (sig.fail)
             .map(|f| p.types.substituted(f, from, to).unwrap_or(f))
             .filter(|&f| !p.types.is_never(f));
-        let bubbles = fail.is_some();
         let args = p.nodes.list(args);
         if args.len() != params.len() {
             let message = format!(
@@ -2680,28 +2658,24 @@ impl Validator {
                 }
             }
         }
-        if marked != bubbles {
-            let message = if bubbles {
-                format!("the call of {what} may bubble, but isn't marked")
+        if marked != fail.is_some() {
+            let message = if marked {
+                format!("the call of {what} can't fail, but is marked")
             } else {
-                format!("the call of {what} can't bubble, but is marked")
+                format!("the call of {what} may fail, but isn't marked")
             };
             self.node_problem(Rule::F3, id, message);
         } else if let Some(fail) = fail {
-            let said = match fail {
-                TypeId::BUBBLE => format!("the call of {what} may bubble"),
-                _ => format!("the call of {what} may fail with {}", p.show_type(fail)),
-            };
+            let said = format!("the call of {what} may fail with {}", p.show_type(fail));
             self.passes(p, id, &said, fail);
         }
     }
 
     /// F4: whether what may fail with `fail` may where it is: anything in
     /// an `orelse`'s body or an init block; else what the function, or the
-    /// `catch` whose body it's in, may fail with, the same type, or for a
-    /// failure type, one below it, as `Bubble` and failure types never
-    /// mix, but core's `Error`, any error, takes a bubble too. `said`
-    /// says what fails, as "the call of f#1 may bubble".
+    /// `catch` whose body it's in, may fail with, the same type, or one
+    /// below it. `said` says what fails, as "the call of f#1 may fail
+    /// with E".
     fn passes(&mut self, p: &Program, id: NodeId, said: &str, fail: TypeId) {
         let why = match self.body.fails {
             Fails::Any => return,
@@ -2712,9 +2686,7 @@ impl Validator {
             } => {
                 let fits = fail == allowed
                     || crate::failures::is_root_type(p, allowed)
-                    || (fail != TypeId::BUBBLE
-                        && allowed != TypeId::BUBBLE
-                        && crate::analysis::is_subtype(p, fail, allowed));
+                    || crate::analysis::is_subtype(p, fail, allowed);
                 if fits {
                     return;
                 }
@@ -2757,7 +2729,7 @@ impl Validator {
 }
 
 /// What [`Validator::call`] checks a call against: its callee's or
-/// operator's parameters, which are optional, and whether it may bubble.
+/// operator's parameters, which are optional, and whether it may fail.
 struct Callee<'a> {
     params: &'a [TypeId],
     optional: &'a [bool],

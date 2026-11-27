@@ -1,6 +1,7 @@
 package interop;
 
 import async_turns.AsyncTurnsGlobal;
+import async_turns.Odd;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -87,11 +88,10 @@ public final class Interop {
         }
         System.out.println("collatz " + String.join(",", steps));
 
-        // A Temper failure is a RuntimeException, as notes/api-compat.md
-        // promises.
+        // A declared failure is an exception of its own class.
         try {
             System.out.println("halve returned " + AsyncTurnsGlobal.halve(3));
-        } catch (RuntimeException e) {
+        } catch (Odd e) {
             System.out.println("halve " + AsyncTurnsGlobal.halve(8) + " caught");
         }
         Core.waitUntilTasksComplete();

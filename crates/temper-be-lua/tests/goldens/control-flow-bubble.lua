@@ -1,9 +1,31 @@
 local temper = require("temper-core")
 
+---@class bubble.Problem: temper.Failure
+
+---@class bubble.Problem.type: temper.Type
+local Problem = temper.type("bubble.Problem", temper.Failure)
+
+---@class bubble.Missing: bubble.Problem
+---@field message string
+
+---@class bubble.Missing.type: temper.Type
+---@operator call: bubble.Missing
+local Missing = temper.type("bubble.Missing", Problem)
+
+---@param this bubble.Missing
+function Missing.constructor(this)
+end
+
+---@param this bubble.Missing
+---@return string
+function Missing.get.message(this)
+  return "missing"
+end
+
 ---@param x integer|temper.Null
 ---@return integer
 local function more(x)
-  return temper.bubble()
+  error(Missing())
 end
 
 ---@param x string|temper.Null
@@ -12,7 +34,7 @@ local function something(x)
   if not temper.is_null(x) then
     return x --[[@as string]]
   else
-    return temper.bubble()
+    error(Missing())
   end
 end
 
@@ -20,16 +42,16 @@ end
 local function report(x)
   ---@type string
   local message
-  if not temper.pcall(function()
+  if not temper.catch(function()
     message = something(x)
-  end) then
+  end, Missing) then
     message = "null"
   end
   ---@type string
   local suffix
-  if not temper.pcall(function()
+  if not temper.catch(function()
     suffix = tostring(more(not temper.is_null(x) and 1 or 0))
-  end) then
+  end, Missing) then
     suffix = ""
   end
   print(message .. suffix)
@@ -41,7 +63,7 @@ end
 local function calcRows(cols, total)
   print("calcRows(" .. cols .. ", " .. total .. ")")
   if temper.int32_mod(total, cols) ~= 0 then
-    return temper.bubble()
+    error(Missing())
   end
   return temper.int32_div(total, cols)
 end
@@ -49,14 +71,7 @@ end
 ---@param s string
 ---@return integer
 local function parsed(s)
-  ---@type integer
-  local t_1
-  if not temper.catch(function()
-    t_1 = temper.string_toint32(s)
-  end, temper.ParseError) then
-    temper.bubble()
-  end
-  return t_1
+  return temper.string_toint32(s)
 end
 
 ---@param s string
@@ -113,7 +128,7 @@ local function tenTimes(n)
       i = temper.int32_add(i, 1)
     end
   end
-  return temper.bubble()
+  error(Missing())
 end
 
 ---@param r integer|temper.Null
@@ -127,23 +142,23 @@ end
 local function viaOrElse(n)
   ---@type integer
   local t_1
-  if not temper.pcall(function()
+  if not temper.catch(function()
     t_1 = firstOver(n)
-  end) then
+  end, Missing) then
     t_1 = -1
   end
   ---@type integer
   local t_2
-  if not temper.pcall(function()
+  if not temper.catch(function()
     t_2 = sumSkipping(n)
-  end) then
+  end, Missing) then
     t_2 = -1
   end
   ---@type integer
   local t_3
-  if not temper.pcall(function()
+  if not temper.catch(function()
     t_3 = tenTimes(n)
-  end) then
+  end, Missing) then
     t_3 = -1
   end
   return t_1 .. " " .. t_2 .. " " .. t_3
@@ -158,11 +173,11 @@ end
 ---@param fallback T
 ---@return T
 local function failAs(fallback)
-  return temper.bubble()
+  error(Missing())
 end
 
 local function bail()
-  temper.bubble()
+  error(Missing())
 end
 
 ---@return string|temper.Null
@@ -246,24 +261,24 @@ report(temper.null)
 print(tostring(calcRows(3, 6)))
 ---@type integer
 local t_1
-if not temper.pcall(function()
+if not temper.catch(function()
   t_1 = countBelow("abc")
-end) then
+end, temper.ParseError) then
   t_1 = -1
 end
 print(tostring(t_1))
 ---@type integer
 local t_2
-if not temper.pcall(function()
+if not temper.catch(function()
   t_2 = firstOver(1)
-end) then
+end, Missing) then
   t_2 = -1
 end
 ---@type integer|temper.Null
 local t_3
-if not temper.pcall(function()
+if not temper.catch(function()
   t_3 = firstOver(1)
-end) then
+end, Missing) then
   t_3 = temper.null
 end
 print(t_2 .. " " .. tostring(isNone(t_3)))
@@ -275,23 +290,23 @@ local subject2 = named(false)
 print(string_ .. (temper.is_null(subject) and "-" or (subject --[[@as string]])) .. " " .. (temper.is_null(subject2) and "null" or (subject2 --[[@as string]])))
 ---@type integer
 local t_4
-if not temper.pcall(function()
+if not temper.catch(function()
   t_4 = half(4)
-end) then
+end, Missing) then
   t_4 = -1
 end
 ---@type integer
 local t_5
-if not temper.pcall(function()
+if not temper.catch(function()
   t_5 = half(3)
-end) then
+end, Missing) then
   t_5 = -1
 end
 ---@type integer
 local t_6
-if not temper.pcall(function()
+if not temper.catch(function()
   t_6 = half(-2)
-end) then
+end, Missing) then
   t_6 = -1
 end
 print(t_4 .. " " .. t_5 .. " " .. t_6)

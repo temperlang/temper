@@ -5,7 +5,7 @@
 //! jumps, module state, several modules, imports, tests, classes, and
 //! nullables beyond those tests; with the class tests
 //! (`temper_be_testkit::CLASSES`), those of nullables, `orelse`, and
-//! `bubble()` (`temper_be_testkit::NULLABLES`), those of generics
+//! `throw` (`temper_be_testkit::NULLABLES`), those of generics
 //! (`temper_be_testkit::GENERICS`), function values
 //! (`temper_be_testkit::FUNCTIONS`), parameters' defaults
 //! (`temper_be_testkit::DEFAULTS`), core's other types and members

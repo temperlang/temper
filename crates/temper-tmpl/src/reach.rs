@@ -17,7 +17,7 @@
 //!   no unit (calls, assignments, `if`s, …), and those that set one with a value
 //!   that may do something, as Kotlin's are any but a value, a name, or
 //!   a function: anything but literals, names, function values, and list
-//!   literals, conversions, operators that can't bubble, and core's pure
+//!   literals, conversions, operators that can't fail, and core's pure
 //!   functions' calls (`getConsole()`) of those.
 //! - **The tests' roots** are tests and `keepTest`s.
 //! - **Tracing** follows what a unit's nodes name ([`crate::analysis::named`]: calls,
@@ -380,8 +380,8 @@ fn sets(p: &Program, stmt: NodeId) -> Option<(DeclId, Option<NodeId>)> {
 /// a root: what does nothing but give a value, as Kotlin's values, names,
 /// and functions don't. Literals, names, and function values (whose bodies
 /// don't run here); and list literals, conversions, operators that can't
-/// bubble, `&&`, `||`, and `?:`, and calls of core's pure functions
-/// (`getConsole()`) that can't bubble, of simple values. Not constructors,
+/// fail, `&&`, `||`, and `?:`, and calls of core's pure functions
+/// (`getConsole()`) that can't fail, of simple values. Not constructors,
 /// which run code.
 fn is_simple(p: &Program, pure: &HashSet<DeclId>, value: NodeId) -> bool {
     let simple = |v: &NodeId| is_simple(p, pure, *v);

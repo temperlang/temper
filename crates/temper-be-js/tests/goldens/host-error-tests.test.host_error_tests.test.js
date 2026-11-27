@@ -1,6 +1,10 @@
-import { endTest, isBubble } from "@temperlang/core";
+import { endTest } from "@temperlang/core";
 import { it } from "node:test";
-import { hostFails, hostFailsTest } from "../host_error_tests.internal.js";
+import {
+  Oops,
+  hostFails,
+  hostFailsTest,
+} from "../host_error_tests.internal.js";
 import { Test } from "@temperlang/std/testing";
 
 it("host errors are panics", async function () {
@@ -14,7 +18,7 @@ it("host errors are panics", async function () {
       try {
         r = hostFails(1);
       } catch (e$) {
-        if (!isBubble(e$)) throw e$;
+        if (!(e$ instanceof Oops)) throw e$;
         r = -1;
       }
       test.assert(r !== -1, () => "expected r != -1");
@@ -27,7 +31,7 @@ it("host errors are panics", async function () {
       try {
         r = hostFails(2);
       } catch (e$) {
-        if (!isBubble(e$)) throw e$;
+        if (!(e$ instanceof Oops)) throw e$;
         r = -1;
       }
       test.assert(r !== -1, () => "expected r != -1");
@@ -40,7 +44,7 @@ it("host errors are panics", async function () {
       try {
         r = hostFails(3);
       } catch (e$) {
-        if (!isBubble(e$)) throw e$;
+        if (!(e$ instanceof Oops)) throw e$;
         r = -1;
       }
       test.assert(r !== -1, () => "expected r != -1");

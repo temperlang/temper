@@ -90,7 +90,7 @@ uses `temper-core`#20 0.1.0 {
     connected method toString#22(radix?: Int32): String;
   }
   class String#23 {
-    connected static fromCodePoint#24(codePoint: Int32): String throws Bubble;
+    connected static fromCodePoint#24(codePoint: Int32): String;
     connected get isEmpty#25(): Boolean;
   }
   interface Console#26 {

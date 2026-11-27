@@ -1,0 +1,42 @@
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../errors.temper.md:11:5  /** <- export let good(x: Int): Int
+7:1 -> ../errors.temper.md:11:5  export function good(x) { <- export let good(x: Int): Int
+7:17 -> ../errors.temper.md:11:16 (good)  good(x) { <- good(x: Int): Int { x + 1 }
+7:21 -> ../errors.temper.md:11:5  (x) { <- export let good(x: Int): Int
+8:3 -> ../errors.temper.md:11:36  return (x + 1) | 0; <- x + 1 }
+11:1 -> ../errors.temper.md:27:5  /** <- let unknownType(x: Nope): In
+15:1 -> ../errors.temper.md:27:5  function unknownType(x) { <- let unknownType(x: Nope): In
+15:10 -> ../errors.temper.md:27:9 (unknownType)  unknownType(x) { <- unknownType(x: Nope): Int {
+15:21 -> ../errors.temper.md:27:5  (x) { <- let unknownType(x: Nope): In
+16:3 -> ../errors.temper.md:27:37  return 1; <- 1 }
+19:1 -> ../errors.temper.md:32:5  /** <- let afterUnclosed(x: Int): I
+23:1 -> ../errors.temper.md:32:5  function afterUnclosed(x) { <- let afterUnclosed(x: Int): I
+23:10 -> ../errors.temper.md:32:9 (afterUnclosed)  afterUnclosed(x) { <- afterUnclosed(x: Int): Int {
+23:23 -> ../errors.temper.md:32:5  (x) { <- let afterUnclosed(x: Int): I
+24:3 -> ../errors.temper.md:32:38  return Math.imul(x, 3); <- x * 3 }
+27:1 -> ../errors.temper.md:37:5  /** <- let dropped(cents: Int): Str
+31:1 -> ../errors.temper.md:37:5  function dropped(cents) { <- let dropped(cents: Int): Str
+31:10 -> ../errors.temper.md:37:9 (dropped)  dropped(cents) { <- dropped(cents: Int): String
+31:17 -> ../errors.temper.md:37:5  (cents) { <- let dropped(cents: Int): Str
+32:3 -> ../errors.temper.md:38:7  panic(); <- let part = cents  100;
+35:1 -> ../errors.temper.md:51:5  class Box extends type() { <- class Box(public value: Int)
+35:7 -> ../errors.temper.md:51:11 (Box)  Box extends type() { <- Box(public value: Int) {
+35:10 -> ../errors.temper.md:51:5   extends type() { <- class Box(public value: Int)
+36:3 -> ../errors.temper.md:51:22  /** @type {number} */ <- value: Int) {
+37:3 -> ../errors.temper.md:51:22  #value; <- value: Int) {
+39:3 -> ../errors.temper.md:51:5  /** @param {number} value */ <- class Box(public value: Int)
+40:3 -> ../errors.temper.md:51:5  constructor(value) { <- class Box(public value: Int)
+42:5 -> ../errors.temper.md:51:22  this.#value = value; <- value: Int) {
+45:3 -> ../errors.temper.md:51:22  /** @returns {number} */ <- value: Int) {
+46:3 -> ../errors.temper.md:51:22  get value() { <- value: Int) {
+46:7 -> ../errors.temper.md:51:22 (value)  value() { <- value: Int) {
+50:3 -> ../errors.temper.md:52:14  /** @returns {number} */ <- get(): Int { value }
+51:3 -> ../errors.temper.md:52:14 (get)  get() { <- get(): Int { value }
+52:5 -> ../errors.temper.md:52:27  return this.#value; <- value }
+55:3 -> ../errors.temper.md:53:14  /** @returns {string} */ <- bad(): String { value }
+56:3 -> ../errors.temper.md:53:14 (bad)  bad() { <- bad(): String { value }
+57:5 -> ../errors.temper.md:53:30  return this.#value; <- value }
+61:1 -> ../errors.temper.md:56:5  const box = new Box(3); <- let box = new Box(3);
+62:1 -> ../errors.temper.md:57:5  console.log(`${good(1)} ${un <- console.log("${good(1)} ${un
+63:1 -> ../errors.temper.md:96:5  dropped(1); <- dropped(1);
+64:1 -> ../errors.temper.md:97:5  console.log("after"); <- console.log("after");

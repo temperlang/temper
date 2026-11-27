@@ -43,13 +43,8 @@ static int32_t pair(int32_t a, int32_t b) {
   return core::Int::add(core::Int::mul(a, 10), b);
 }
 
-static int32_t parse(core::Str const & s) {
-  auto Result = core::String::toInt32(s);
-  if (Result.has_value()) {
-    return *Result;
-  } else {
-    core::bubble();
-  }
+static core::Expected<int32_t, std::shared_ptr<core::ParseError>> parse(core::Str const & s) {
+  return core::String::toInt32(s);
 }
 
 static core::NullableParam<int32_t> next(core::NullableParam<int32_t> y) {
@@ -90,9 +85,9 @@ static int32_t sumUntilBad(std::shared_ptr<std::vector<core::Str>> const & words
   while (i < core::List::length<core::Str>(words)) {
     int32_t t;
     core::NullableParam<int32_t> held = nullptr;
-    try {
-      held = jump_values::parse(core::List::get<core::Str>(words, i));
-    } catch (core::TemperBubble const &) {
+    auto parseResult = jump_values::parse(core::List::get<core::Str>(words, i));
+    if (parseResult.has_value()) {
+      held = *parseResult;
     }
     if (held == nullptr) {
       break;
@@ -108,9 +103,9 @@ static int32_t sumUntilBad(std::shared_ptr<std::vector<core::Str>> const & words
 static int32_t parsedOr(core::Str const & s) {
   int32_t t;
   core::NullableParam<int32_t> held = nullptr;
-  try {
-    held = jump_values::parse(s);
-  } catch (core::TemperBubble const &) {
+  auto parseResult = jump_values::parse(s);
+  if (parseResult.has_value()) {
+    held = *parseResult;
   }
   if (held == nullptr) {
     return -1;
@@ -429,9 +424,9 @@ static core::Str viaOrelse(std::shared_ptr<std::vector<core::Str>> const & words
     while (i < core::List::length<core::Str>(words)) {
       int32_t n;
       core::NullableParam<int32_t> held = nullptr;
-      try {
-        held = jump_values::parse(core::List::get<core::Str>(words, i));
-      } catch (core::TemperBubble const &) {
+      auto parseResult = jump_values::parse(core::List::get<core::Str>(words, i));
+      if (parseResult.has_value()) {
+        held = *parseResult;
       }
       if (held == nullptr) {
         seen = seen + "!";

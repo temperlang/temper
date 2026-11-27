@@ -1,7 +1,6 @@
 package test_assert_panics;
 
 import java.util.List;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.std.testing.Test;
 
@@ -26,7 +25,7 @@ public final class TestAssertPanicsTest {
     }
 
     static {
-        Bubble.keepStackTraces();
+        Core.keepStackTraces();
     }
 
     @org.junit.jupiter.api.Test

@@ -423,8 +423,7 @@ How they're typed, for now:
   may have several. Classes extend a root, or a sealed interface under
   one, whose classes are its variants, never *Error* itself. A failure
   type has no type parameters and extends one failure type. `throws E`
-  takes one, `Bubble`, or a type parameter; `throw` takes a value of
-  one.
+  takes one or a type parameter; `throw` takes a value of one.
 - A function passes on a failure of its own failure type, or of one of
   its variants, with `try` or, for now, without it. Any other failure
   must be handled there, and converting one is explicit: `f() catch (e)
@@ -432,9 +431,10 @@ How they're typed, for now:
 - `catch (e)` binds what its left side may fail with, the closest type
   of all of it, so a `when (e)` over a sealed failure type needs no
   `else`. `orelse` and `catch` without a binding handle any failure.
-- `Bubble` and declared failures never mix: a `throws Bubble` function
-  can't pass a declared failure on, nor one that throws a declared type
-  bubble, and a bubble has no value for `catch (e)` to bind.
+- Failures are for what a caller may handle, as text that doesn't
+  parse; a bug is a [`panic()`](builtins.md#panic), which no handler
+  catches. Temper 0.6's `bubble()` and `throws Bubble` are gone: declare
+  an error type instead, or return `null` where there's simply no value.
 - A function may be generic over what its callbacks fail with, by a
   type parameter after `throws`, bound by *Error* without saying so:
   `let mapAll<T, R, E>(xs: List<T>, f: fn (T): R throws E): List<R>
@@ -444,8 +444,7 @@ How they're typed, for now:
   `mapAll(keys) { k => k.length }` can't fail. Two callbacks of one `E`
   give their failures' closest common type. Core's functions that take
   callbacks, as `map`, `filter`, `join`, `sorted`, and `forEach`, are
-  generic so. On the backends, a call that fails by its callback isn't
-  built yet.
+  generic so.
 
 ### Syntax for *StmtBlock*
 

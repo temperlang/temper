@@ -210,7 +210,7 @@ namespace TemperLang.Core
         /// <summary>
         /// A declared failure's cause, as Temper's <c>Error.cause</c> gives
         /// it: the failure that was being handled where it was thrown, or
-        /// null, also where that was something else, as a bubble.
+        /// null, also where that was something else, as a host's exception.
         /// </summary>
         public static IFailure? FailureCause(IFailure failure) =>
             failure is Exception e ? Cause(e) as IFailure : null;

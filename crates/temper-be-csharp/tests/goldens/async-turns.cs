@@ -133,11 +133,12 @@ public static class AsyncTurnsGlobal
         return Listed.Join(ints, " ", (int i) => i.ToString(CultureInfo.InvariantCulture));
     }
 
+    /// <exception cref="Odd">Where it fails with Odd.</exception>
     public static int Halve(int n)
     {
         if (Core.Mod(n, 2) != 0)
         {
-            return Core.Bubble<int>();
+            throw new Odd(n);
         }
         return Core.Div(n, 2);
     }

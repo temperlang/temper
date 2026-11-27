@@ -1,6 +1,5 @@
 package modules.parts.regex;
 
-import temper.core.Bubble;
 import temper.core.Core;
 
 public final class RegexMain {
@@ -8,7 +7,7 @@ public final class RegexMain {
 
     public static void main(String[] args) throws ClassNotFoundException {
         Core.initSimpleLogging();
-        Bubble.keepStackTraces();
+        Core.keepStackTraces();
         Core.beginTopLevel();
         try {
             Class.forName("modules.parts.regex.RegexGlobal");

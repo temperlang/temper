@@ -89,14 +89,13 @@ fn helpers_are_the_runtimes_and_typed() {
         .filter_map(|i| ops::spelling(Op(i)).and_then(ops::helper))
         .collect();
     helpers.extend([
-        "bubble",
         "int32_tostring",
         "int64_constructor",
         "type",
         "instance_of",
         "cast_to",
         "is_null",
-        "pcall",
+        "catch",
         "cast_to_string",
         "cast_to_int",
         "cast_to_float64",

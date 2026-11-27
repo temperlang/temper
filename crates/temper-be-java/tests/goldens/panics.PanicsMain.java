@@ -1,6 +1,5 @@
 package panics;
 
-import temper.core.Bubble;
 import temper.core.Core;
 
 public final class PanicsMain {
@@ -8,7 +7,7 @@ public final class PanicsMain {
 
     public static void main(String[] args) throws ClassNotFoundException {
         Core.initSimpleLogging();
-        Bubble.keepStackTraces();
+        Core.keepStackTraces();
         Core.beginTopLevel();
         try {
             Class.forName("temper.std.regex.RegexGlobal");

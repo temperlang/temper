@@ -97,7 +97,7 @@ more plainly than Kotlin's `if`/`else` into a fresh local:
 | Backend | Optional parameter | Callers leave out | Default |
 |---|---|---|---|
 | Python | `end: int \| None = None` (trailing ones), positional-only | trailing ones; `None` before one given | `if end is None: end = …`, in place |
-| Rust | `end: Option<i32>`, `Option<impl ToArcString>` for a string | none: `None`, `None::<Arc<String>>` | `let end = end.unwrap_or(…)`, `unwrap_or_else(…)`, or `if let Some(end) = end { end } else { … }` where it may bubble |
+| Rust | `end: Option<i32>`, `Option<impl ToArcString>` for a string | none: `None`, `None::<Arc<String>>` | `let end = end.unwrap_or(…)`, `unwrap_or_else(…)`, or `if let Some(end) = end { end } else { … }` where it may fail |
 | JS | JSDoc `@param {number \| null} [end]` (trailing ones) | trailing ones; `undefined` before one given | `end ??= …`, in place, or `if (end == null) { … }` |
 | Java | `@Nullable Integer end`, with an overload per trailing one left out, passing `null` | trailing ones, by overloads | `int end2 = end != null ? end : …`, or an `if` with statements |
 | C# | `int? end = null` (trailing ones) | trailing ones; `null` before one given | `int end2 = end ?? …`, or an `if` with statements |
@@ -188,11 +188,12 @@ Kotlin's), with statements inside expressions native (as Rust blocks),
 so subset A needs no lowering. Its choices, as Level 2's table has
 them, are made by the translator for now, since no pass reads them yet:
 
-- **Failure: results,** without a pass. In subset A only operators and
-  calls bubble, and nothing catches, so a function that may bubble
-  returns `temper_core::Result<T>`, each call or operator that may
-  bubble takes `?`, and `Error` returns `Err`. The results pass waits
-  for `orelse` (subset B and C).
+- **Failure: results,** without a pass. A function that may fail
+  returns `Result<T, F>` for its failure type `F`
+  ([nodes.md](nodes.md), "Declared failures"; `temper_core::Result<T>`
+  for any failure), each call that may fail takes `?`, and an `Error`
+  node is `panic!()`. The results pass waits for `orelse` (subset B and
+  C).
 - **Module init: once, on `init` or first use,** as Kotlin's since
   #636: `lib.rs`'s `init` calls the module's, inside
   `temper_core::initializing`, which runs the init block in a
@@ -234,9 +235,10 @@ JS keeps natively everything else subset A has: labeled `break` and
 Its choices, made by the translator for now, as Level 2's table has
 them:
 
-- **Failure: exceptions.** A bubble is a thrown error: the runtime's
-  `bubble()` for `Error`, and its `divIntInt` and `modIntInt`, or
-  BigInt's own `/` and `%`, for a zero divisor.
+- **Failure: exceptions.** A failure is a thrown `Error` subclass, its
+  own class ([nodes.md](nodes.md), "Declared failures"). An `Error`
+  node is the runtime's `panic()`, as are `divIntInt` and `modIntInt`
+  for a zero divisor.
 - **Module init: eager,** as Kotlin's: a module's code runs once, when
   it's first imported. A module `let` or `var` that the init block
   initializes at its top level is declared there (`const` or `let`,
@@ -279,11 +281,11 @@ labeled `break` and `continue`, `do … while` with `continue`, and `?:`
 for `IfValue`. Its choices, made by the translator for now, as Level 2's
 table has them:
 
-- **Failure: exceptions.** A bubble is an unchecked `RuntimeException`
-  from the runtime's `Core.bubble()`, thrown by `throw Core.bubble();`
-  where `Error` is a statement or a `return`'s value, or by
-  `Core.throwBubble()` in an expression; `Core.divIntInt` and
-  `Core.modIntInt` throw it for a zero divisor.
+- **Failure: exceptions.** A failure is an unchecked exception of its
+  own class ([nodes.md](nodes.md), "Declared failures"). An `Error`
+  node throws an `AssertionError`, as `panic()` does; division is
+  Java's own, whose `ArithmeticException` for a zero divisor is the
+  panic.
 - **Module init: class init,** as Kotlin's: a module is a final class of
   statics, and its init block the class's static initializer, which the
   JVM runs once, on one thread, when the class is first used (the main
@@ -335,10 +337,10 @@ innermost is a `goto` to a label after the loop (`outerEnd: ;`) or at
 the end of its body (`outerNext: ;`), as Level 2's table has it. Its
 choices, made by the translator for now:
 
-- **Failure: exceptions.** A bubble is the runtime's `Core.Bubble()`,
-  which throws; in a function with a result, `return Core.Bubble<T>();`,
-  so C# sees the function end, and in an expression `Core.Bubble<T>()`.
-  `Core.Div` and `Core.Mod` bubble on a zero divisor.
+- **Failure: exceptions.** A failure is an exception of its own class
+  ([nodes.md](nodes.md), "Declared failures"). An `Error` node is
+  `throw Core.Panic(…)`, and `Core.ThrowPanic<T>(…)` in an expression;
+  division is C#'s own, whose `DivideByZeroException` is the panic.
 - **Module init: class init,** as Kotlin's: a module is a static class,
   and its init block the class's static constructor, which .NET runs
   once, on one thread, before the class is first used (the program runs
@@ -405,9 +407,10 @@ C#'s, to a label after the loop or after a block holding its body) and
 left-to-right evaluation, which the translator keeps itself (below). Its
 choices, made by the translator for now:
 
-- **Failure: exceptions.** A bubble is the runtime's `core::bubble()`,
-  which throws `TemperBubble`; in an expression, `core::bubble<T>()`.
-  `Int::div_wrap` and `Int::mod_wrap` bubble on a zero divisor; a
+- **Failure: values.** A function that may fail returns
+  `core::Expected<T, F>`, never throwing ([nodes.md](nodes.md),
+  "Declared failures"). An `Error` node is `core::panic()`.
+  `Int::div_wrap` and `Int::mod_wrap` panic on a zero divisor; a
   literal divisor other than 0 and -1 takes C++'s own `/` and `%`.
 - **Module init: on first use,** as Kotlin's since #636:
   `global_init_init()`, declared first in the header, runs its body
@@ -437,7 +440,7 @@ choices, made by the translator for now:
   most operands unspecified, so where it would show
   (`analysis::Effects`: an operand writes module state or calls
   something that may, and another does too, reads such a `var`, or may
-  bubble), each operand before the last such one is computed first into
+  fail), each operand before the last such one is computed first into
   a local named by `naming::hints` (`int32_t int32 = bump();`). A
   temporary needed where none can go before its statement (the right of
   `&&`, a branch of `?:`, a loop's condition) is not yet. This is the
@@ -514,9 +517,11 @@ to a label ending the loop's body, which a `repeat`'s condition follows
 from an inner loop to a label named for the outer one. Its choices,
 made by the translator for now:
 
-- **Failure: exceptions.** A bubble is the runtime's `temper.bubble()`,
-  which raises an error; `temper.int32_div` and `int32_mod` raise on a
-  zero divisor (Lua's integer `//` does).
+- **Failure: errors.** A failure is raised with `error(x)`, a value of
+  its type under `temper.Failure`, and handled by `temper.catch`
+  ([nodes.md](nodes.md), "Declared failures"). An `Error` node is
+  `error("panic")`, as `panic()` is; `temper.int32_div` and `int32_mod`
+  panic on a zero divisor.
 - **Module init: eager,** as Kotlin's: a module's chunk runs once, at
   its first `require`, which keeps what it returns in `package.loaded`.
   Module `let`s and `var`s are locals of the chunk, which functions use

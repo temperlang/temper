@@ -49,7 +49,7 @@ if (1) { console.log("no") }
 --- settled
 (Block (If 1 (Block (Call (Call . console \log) "no")) (Block)))
 error 4..5: Expected value of type Boolean not Int32
-Failed: Expected a Boolean, not Int
+Panicked: Expected a Boolean, not Int
 
 === deep recursion stops
 let f(n: Int): Int { f(n + 1) }
@@ -100,7 +100,7 @@ do {
     (Let ^x:1 "x")
     #void))
 error 35..36: x has not been declared
-Failed: x has not been declared
+Panicked: x has not been declared
 
 === top-level statements run in dependency order
 console.log("first");
@@ -125,7 +125,7 @@ let b = a + 1;
 --- settled
 (Block (Let ^b:1 (Call + a:0 1)) (Let ^a:0 (Call + b:1 1)) #void)
 error 23..24: a is not initialized along branches
-Failed: a is not initialized along branches
+Panicked: a is not initialized along branches
 
 === top-level assignments order what reads the variable
 var n = 5;
@@ -238,7 +238,7 @@ log 20
 log 7
 log Hi, q
 log true
-Failed: Runtime type check from Q to P can never succeed
+Panicked: Runtime type check from Q to P can never succeed
 
 === static members, member operators and field assignment
 interface A { a(): String { "A" } }
@@ -557,7 +557,7 @@ console.log("${name(0)} ${name(2)} ${name(9)} ${kind(new A())} ${kind(1)} ${kind
       (Call kind:2 "s")))
   #void)
 error 178..181: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from AnyValue
-Failed: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from AnyValue
+Panicked: Types marked @mayDowncastTo(false) cannot be targeted with is or as runtime type checks because they may not be distinct on all backends: <[Int32]> from AnyValue
 
 === an exhaustive when is a value wherever one is wanted
 // A `when` whose `is` checks cover a sealed interface needs no `else` as
@@ -871,8 +871,8 @@ console.log("${s.indexOf("b") is StringIndex} ${s.indexOf("x") is NoStringIndex}
 console.log("${"+12".toInt32()} ${" -7f ".toInt32(16)} ${"7fffffff".toInt64(16)} ${"2147483648".toInt32() orelse -1} ${"1".toInt32(37) orelse -1} ${"-".toInt32() orelse -1}");
 // ASCII digits only, where Kotlin's backends differ.
 console.log("${"\u{661}\u{662}".toInt32() orelse -1} ${"\u{FF11}".toInt64() orelse -1i64}");
-console.log("${(-255).toString(16)} ${255.toString(2)} ${5.toString(1) orelse "bad radix"}");
-console.log("${char'\n'} ${char'é'} ${char'ab' orelse -1} ${char'' orelse -1}");
+console.log("${(-255).toString(16)} ${255.toString(2)}");
+console.log("${char'\n'} ${char'é'}");
 let tag(parts: List<String>, values: List<Int>): String { "${parts.join("|") { (x: String): String => x }} ${values.length}" }
 console.log(tag"a${1}${2}b\n");
 let b = new StringBuilder();
@@ -961,20 +961,14 @@ console.log(b.toString());
       cat
       (Call (Call . (Call - 255) \toString) 16)
       " "
-      (Call (Call . 255 \toString) 2)
-      " "
-      (Orelse (Call (Call . 5 \toString) 1) "bad radix")))
+      (Call (Call . 255 \toString) 2)))
   (Call
     (Call . console \log)
     (Call
       cat
       (Call char (Call list "\\n") (Call list))
       " "
-      (Call char (Call list "é") (Call list))
-      " "
-      (Orelse (Call char (Call list "ab") (Call list)) (Call - 1))
-      " "
-      (Orelse (Call char (Call list "") (Call list)) (Call - 1))))
+      (Call char (Call list "é") (Call list))))
   (Let
     ^tag:4
     (Fn
@@ -1008,8 +1002,8 @@ log aé𐆊b true true false
 log true true true true
 log 12 -127 2147483647 -1 -1 -1
 log -1 -1
-log -ff 11111111 bad radix
-log 10 233 -1 -1
+log -ff 11111111
+log 10 233
 log a||b\n 2
 log xé𐆊b
 
@@ -1186,7 +1180,7 @@ log B 1 5
 log 8
 log B 2 0
 log 3
-Failed: Multiple types have matching constructors: A, B
+Panicked: Multiple types have matching constructors: A, B
 
 === object literals are ambiguous across nested scopes, as Kotlin's object-literal-multiple-matches-nested
 // A private property still names a constructor parameter.
@@ -1212,7 +1206,7 @@ nest();
   (Call nest:1)
   #void)
 error 167..176: Multiple types have matching constructors: Apple, Banana
-Failed: Multiple types have matching constructors: Apple, Banana
+Panicked: Multiple types have matching constructors: Apple, Banana
 
 === object literal values run in the order written
 class P(public a: String = "a", public b: String = "b") {
@@ -1550,7 +1544,7 @@ console.log("${e == empty()} ${e is Empty}");
   #void)
 error 155..175: R does not support infix `==`; give it a method marked `@operator("==")`
 hint 228..238: Unnecessary type check to Empty from expression with type Empty which is a subtype
-Failed: R does not support infix `==`; give it a method marked `@operator("==")`
+Panicked: R does not support infix `==`; give it a method marked `@operator("==")`
 
 === auto equality from a sealed supertype
 @auto("==")
@@ -1587,7 +1581,7 @@ console.log("${new L(1) == new L(1)} ${new L(1) == new L(2)} ${new M(1) == new M
       (Call == (Call new M:2 1) (Call new M:2 1))))
   #void)
 error 159..179: M does not support infix `==`; give it a method marked `@operator("==")`
-Failed: M does not support infix `==`; give it a method marked `@operator("==")`
+Panicked: M does not support infix `==`; give it a method marked `@operator("==")`
 
 === auto equality calls each field's own ==
 class Loose(public n: Int) {
@@ -1747,7 +1741,7 @@ log 2=deux 1=one
 log deux false 2 2
 log 1: uno
 log a: x
-Failed: Runtime type check from Map<Int32, String> to MapBuilder can never succeed
+Panicked: Runtime type check from Map<Int32, String> to MapBuilder can never succeed
 
 === conversions throw ParseError, saying the input and why
 let a: Int? = "x".toInt32() orelse null;
@@ -2027,7 +2021,7 @@ do {
       (Call stringEight:3)))
   (Block (Let ^stringEight:6 0) (Call (Call . String \eight)) #void))
 log 7 70 8
-Failed: No method eight for Type
+Panicked: No method eight for Type
 
 === instance extensions, as Kotlin Temper's tests use them
 // A member that fits wins; else the extension that fits best. Its
@@ -2206,7 +2200,7 @@ console.log("${raw"a\tb${x}\n"} ${x} ${void == void}");
   #void)
 error 66..70: Void expressions cannot be used as values
 error 74..78: Void expressions cannot be used as values
-Failed: Void expressions cannot be used as values
+Panicked: Void expressions cannot be used as values
 
 === a bodiless connected method runs only if the interpreter has it
 class Date {
@@ -2219,7 +2213,7 @@ Date.today();
   (Class ^Date:0 (Method static connected ^today:2 (Signature Date:0)))
   (Call (Call . Date:0 \today))
   #void)
-Failed: No connected implementation of Date.today
+Panicked: No connected implementation of Date.today
 
 === a bodiless connected function runs only if the interpreter has it
 @connected
@@ -2233,14 +2227,14 @@ console.log(sum(1, 2).toString());
   (Call (Call . console \log) (Call (Call . (Call sum:0 1 2) \toString)))
   #void)
 log before
-Failed: No connected implementation of sum
+Panicked: No connected implementation of sum
 
 === a function without a body must be connected
 let more(): Int;
 --- settled
 (Block (Error) #void)
 error 0..15: Not supported yet: a function without a body
-Failed: Not supported yet: a function without a body
+Panicked: Not supported yet: a function without a body
 
 === closures capture variables, each pass of a loop its own
 let fs = new ListBuilder<fn (): Int>();
@@ -2338,10 +2332,12 @@ error 600..606: Capturing this in a function before f is set
 log 0 10 20
 log 7 1
 log 3 2
-Failed: Capturing this in a function before f is set
+Panicked: Capturing this in a function before f is set
 
 === jumps out of expressions, orelse and for … of bodies
-let d(a: Int, b: Int): Int throws Bubble { if (b == 0) { bubble() } else { a / b } }
+sealed interface Problem extends Error {}
+class Oops() extends Problem {}
+let d(a: Int, b: Int): Int throws Oops { if (b == 0) { throw new Oops() } else { a / b } }
 var total = 0;
 for (var k = 0; k < 10; ++k) {
   if (k == 2) { continue; }
@@ -2372,35 +2368,41 @@ for (var m = 3; m >= 0; --m) {
 console.log("fails ${fails}");
 --- settled
 (Block
+  (Interface ^Problem:0 Error)
+  (Class ^Oops:1 Problem:0)
   (Let
-    ^d:0
+    ^d:2
     (Fn
-      (Let ^a:5 Int)
-      (Let ^b:6 Int)
-      (Call throws Int Bubble)
-      (Block (If (Call == b:6 0) (Block (Fail)) (Block (Call / a:5 b:6))))))
-  (Var ^total:1 0)
+      (Let ^a:9 Int)
+      (Let ^b:10 Int)
+      (Call throws Int Oops:1)
+      (Block
+        (If
+          (Call == b:10 0)
+          (Block (Fail (Call new Oops:1)))
+          (Block (Call / a:9 b:10))))))
+  (Var ^total:3 0)
   (Block
-    (Var ^k:7 0)
+    (Var ^k:11 0)
     (Loop
       (If
-        (Call < k:7 10)
+        (Call < k:11 10)
         (Block
-          (If (Call == k:7 2) (Block (Continue @100) #void) (Block))
+          (If (Call == k:11 2) (Block (Continue @180) #void) (Block))
           (Assign
-            total:1
+            total:3
             (Call
               +
-              total:1
-              (Call + k:7 (If (Call == k:7 5) (Block (Break @100)) (Block 0)))))
+              total:3
+              (Call + k:11 (If (Call == k:11 5) (Block (Break @180)) (Block 0)))))
           #void)
-        (Break @100))
-      (Assign k:7 (Call + k:7 1))))
-  (Call (Call . console \log) (Call cat "total " total:1))
+        (Break @180))
+      (Assign k:11 (Call + k:11 1))))
+  (Call (Call . console \log) (Call cat "total " total:3))
   (Let
-    ^found:2
+    ^found:4
     (Block
-      (Var ^r:8 (Call - 1))
+      (Var ^r:12 (Call - 1))
       (Block
         (Loop
           (Block
@@ -2410,70 +2412,70 @@ console.log("fails ${fails}");
                 (Call list (Call list 1 2) (Call list 3 4) (Call list 5))
                 \forEach)
               (Fn
-                (Let ^xs:9)
+                (Let ^xs:13)
                 (Block
                   (Loop
                     (Block
                       (Call
-                        (Call . xs:9 \forEach)
+                        (Call . xs:13 \forEach)
                         (Fn
-                          (Let ^x:10)
+                          (Let ^x:14)
                           (Block
                             (If
-                              (Call == x:10 2)
-                              (Block (Continue @283) #void)
+                              (Call == x:14 2)
+                              (Block (Continue @363) #void)
                               (Block))
                             (If
-                              (Call == x:10 4)
-                              (Block (Assign r:8 x:10) (Break @276) #void)
+                              (Call == x:14 4)
+                              (Block (Assign r:12 x:14) (Break @356) #void)
                               (Block)))))
-                      (Break @327))))))
-            (Break @283))))
-      r:8))
-  (Call (Call . console \log) (Call cat "found " found:2))
+                      (Break @407))))))
+            (Break @363))))
+      r:12))
+  (Call (Call . console \log) (Call cat "found " found:4))
   (Let
-    ^first:3
+    ^first:5
     (Fn
-      (Let ^xs:11 (Call <> List Int))
+      (Let ^xs:15 (Call <> List Int))
       Int
       (Block
         (Loop
           (Block
             (Call
-              (Call . xs:11 \forEach)
+              (Call . xs:15 \forEach)
               (Fn
-                (Let ^x:12)
+                (Let ^x:16)
                 (Block
-                  (If (Call > x:12 1) (Block (Return @475 x:12) #void) (Block)))))
-            (Break @509)))
+                  (If (Call > x:16 1) (Block (Return @555 x:16) #void) (Block)))))
+            (Break @589)))
         (Call - 1))))
   (Call
     (Call . console \log)
     (Call
       cat
       "first "
-      (Call first:3 (Call list 1 5 7))
+      (Call first:5 (Call list 1 5 7))
       " "
-      (Call first:3 (Call list))))
-  (Var ^fails:4 0)
+      (Call first:5 (Call list))))
+  (Var ^fails:6 0)
   (Block
-    (Var ^m:13 3)
+    (Var ^m:17 3)
     (Loop
       (If
-        (Call >= m:13 0)
+        (Call >= m:17 0)
         (Block
           (Let
-            ^q:14
+            ^q:18
             (Orelse
-              (Call d:0 10 (Call - m:13 2))
+              (Call d:2 10 (Call - m:17 2))
               (Block
-                (Assign fails:4 (Call + fails:4 1))
-                (If (Call == m:13 3) (Block 0) (Block (Break @633))))))
-          (Call (Call . console \log) (Call cat "q " q:14))
+                (Assign fails:6 (Call + fails:6 1))
+                (If (Call == m:17 3) (Block 0) (Block (Break @713))))))
+          (Call (Call . console \log) (Call cat "q " q:18))
           #void)
-        (Break @633))
-      (Assign m:13 (Call - m:13 1))))
-  (Call (Call . console \log) (Call cat "fails " fails:4))
+        (Break @713))
+      (Assign m:17 (Call - m:17 1))))
+  (Call (Call . console \log) (Call cat "fails " fails:6))
   #void)
 log total 8
 log found 4
@@ -2691,9 +2693,11 @@ log step 2 false done true
 log step 3 false done true
 
 === yield in nested orelse
-let d(a: Int, b: Int): Int throws Bubble { if (b == 0) { bubble() } else { a / b } }
+sealed interface Problem extends Error {}
+class Oops() extends Problem {}
+let d(a: Int, b: Int): Int throws Oops { if (b == 0) { throw new Oops() } else { a / b } }
 let make(body: fn (Int, Int): Generator<Boolean>): Generator<Boolean> { body(6, 2) }
-let g = make { (x: Int, y: Int): GeneratorResult<Boolean> throws Bubble extends GeneratorFn =>
+let g = make { (x: Int, y: Int): GeneratorResult<Boolean> throws Oops extends GeneratorFn =>
   do {
     console.log("x / (y + 1) = ${d(x, (y + 1))}");
     do {
@@ -2716,70 +2720,79 @@ let r2 = g.next();
 console.log("r2 ${r2 is ValueResult<Boolean>} done ${g.done}");
 --- settled
 (Block
+  (Interface ^Problem:0 Error)
+  (Class ^Oops:1 Problem:0)
   (Let
-    ^d:0
+    ^d:2
     (Fn
-      (Let ^a:5 Int)
-      (Let ^b:6 Int)
-      (Call throws Int Bubble)
-      (Block (If (Call == b:6 0) (Block (Fail)) (Block (Call / a:5 b:6))))))
+      (Let ^a:9 Int)
+      (Let ^b:10 Int)
+      (Call throws Int Oops:1)
+      (Block
+        (If
+          (Call == b:10 0)
+          (Block (Fail (Call new Oops:1)))
+          (Block (Call / a:9 b:10))))))
   (Let
-    ^make:1
+    ^make:3
     (Fn
-      (Let ^body:7 (Call FnType Int Int (Call <> Generator Boolean)))
+      (Let ^body:11 (Call FnType Int Int (Call <> Generator Boolean)))
       (Call <> Generator Boolean)
-      (Block (Call body:7 6 2))))
+      (Block (Call body:11 6 2))))
   (Let
-    ^g:2
+    ^g:4
     (Call
-      make:1
+      make:3
       (Fn
-        (Let ^x:8 Int)
-        (Let ^y:9 Int)
-        (Call throws (Call <> GeneratorResult Boolean) Bubble)
+        (Let ^x:12 Int)
+        (Let ^y:13 Int)
+        (Call throws (Call <> GeneratorResult Boolean) Oops:1)
         GeneratorFn
         (Block
           (Orelse
             (Block
               (Call
                 (Call . console \log)
-                (Call cat "x / (y + 1) = " (Call d:0 x:8 (Call + y:9 1))))
+                (Call cat "x / (y + 1) = " (Call d:2 x:12 (Call + y:13 1))))
               (Orelse
                 (Block
                   (Call
                     (Call . console \log)
-                    (Call cat "d(x, (y - 2)) = " (Call d:0 x:8 (Call - y:9 2))))
-                  (Yield @183 true)
+                    (Call
+                      cat
+                      "d(x, (y - 2)) = "
+                      (Call d:2 x:12 (Call - y:13 2))))
+                  (Yield @263 true)
                   #void)
                 (Block
                   (Call
                     (Call . console \log)
-                    (Call cat "cannot divide by " (Call - y:9 2)))
-                  (Yield @183 false)
+                    (Call cat "cannot divide by " (Call - y:13 2)))
+                  (Yield @263 false)
                   #void))
               (Call (Call . console \log) "after")
-              (Call d:0 x:8 (Call - y:9 2))
+              (Call d:2 x:12 (Call - y:13 2))
               #void)
             (Block (Call (Call . console \log) "outer orelse") #void))))))
   (Call (Call . console \log) "made")
-  (Let ^r1:3 (Call (Call . g:2 \next)))
+  (Let ^r1:5 (Call (Call . g:4 \next)))
   (Call
     (Call . console \log)
     (Call
       cat
       "r1 "
-      (Call is r1:3 (Call <> ValueResult Boolean))
+      (Call is r1:5 (Call <> ValueResult Boolean))
       " done "
-      (Call . g:2 \done)))
-  (Let ^r2:4 (Call (Call . g:2 \next)))
+      (Call . g:4 \done)))
+  (Let ^r2:6 (Call (Call . g:4 \next)))
   (Call
     (Call . console \log)
     (Call
       cat
       "r2 "
-      (Call is r2:4 (Call <> ValueResult Boolean))
+      (Call is r2:6 (Call <> ValueResult Boolean))
       " done "
-      (Call . g:2 \done)))
+      (Call . g:4 \done)))
   #void)
 log made
 log x / (y + 1) = 2
@@ -2790,10 +2803,12 @@ log outer orelse
 log r2 false done true
 
 === a failure in a generator comes out of next and ends it
+sealed interface Problem extends Error {}
+class Oops() extends Problem {}
 let make(body: fn (): Generator<Int>): Generator<Int> { body() }
-let g = make { (): GeneratorResult<Int> throws Bubble extends GeneratorFn =>
+let g = make { (): GeneratorResult<Int> throws Oops extends GeneratorFn =>
   yield 1;
-  bubble();
+  throw new Oops();
   yield 2;
 };
 console.log("${g.next() is ValueResult<Int>}");
@@ -2802,42 +2817,44 @@ console.log("${g.done} ${g.next() is DoneResult<Int>}");
 g.nextSafe();
 --- settled
 (Block
+  (Interface ^Problem:0 Error)
+  (Class ^Oops:1 Problem:0)
   (Let
-    ^make:0
+    ^make:2
     (Fn
-      (Let ^body:2 (Call FnType (Call <> Generator Int)))
+      (Let ^body:6 (Call FnType (Call <> Generator Int)))
       (Call <> Generator Int)
-      (Block (Call body:2))))
+      (Block (Call body:6))))
   (Let
-    ^g:1
+    ^g:3
     (Call
-      make:0
+      make:2
       (Fn
-        (Call throws (Call <> GeneratorResult Int) Bubble)
+        (Call throws (Call <> GeneratorResult Int) Oops:1)
         GeneratorFn
-        (Block (Yield @78 1) (Fail) (Yield @78 2) #void))))
+        (Block (Yield @152 1) (Fail (Call new Oops:1)) (Yield @152 2) #void))))
   (Call
     (Call . console \log)
-    (Call cat (Call is (Call (Call . g:1 \next)) (Call <> ValueResult Int))))
+    (Call cat (Call is (Call (Call . g:3 \next)) (Call <> ValueResult Int))))
   (Call
     (Call . console \log)
     (Orelse
-      (Call is (Call (Call . g:1 \next)) (Call <> ValueResult Int))
+      (Call is (Call (Call . g:3 \next)) (Call <> ValueResult Int))
       "bubbled"))
   (Call
     (Call . console \log)
     (Call
       cat
-      (Call . g:1 \done)
+      (Call . g:3 \done)
       " "
-      (Call is (Call (Call . g:1 \next)) (Call <> DoneResult Int))))
-  (Call (Call . g:1 \nextSafe))
+      (Call is (Call (Call . g:3 \next)) (Call <> DoneResult Int))))
+  (Call (Call . g:3 \nextSafe))
   #void)
-error 239..284: Expected subtype of String, but got AnyValue
+error 319..364: Expected subtype of String, but got AnyValue
 log true
 log bubbled
 log true true
-Failed: No method nextSafe for Generator
+Panicked: No method nextSafe for Generator
 
 === return ends a generator, and closures keep its locals
 let make(body: fn (): SafeGenerator<Int>): SafeGenerator<Int> { body() }
@@ -2953,7 +2970,7 @@ error 180..184: Cannot assign to fn: SafeGenerator<Int32> from fn (Int32): SafeG
 log made
 log body
 log 2
-Failed: Too few arguments
+Panicked: Too few arguments
 
 === next from within a running generator, and close
 // In a function: at top level, the temporary `g?.` holds `g` in moves
@@ -3035,7 +3052,9 @@ log true false
 log true true
 
 === generators from named functions and methods, which Kotlin Temper lacks
-let d(a: Int, b: Int): Int throws Bubble { if (b == 0) { bubble() } else { a / b } }
+sealed interface Problem extends Error {}
+class Oops() extends Problem {}
+let d(a: Int, b: Int): Int throws Oops { if (b == 0) { throw new Oops() } else { a / b } }
 let count(n: Int): GeneratorResult<Int> extends GeneratorFn {
   yield n;
 }
@@ -3050,53 +3069,59 @@ let first(g: SafeGenerator<Int>): String { "${(g.nextSafe() as ValueResult<Int>)
 console.log("${first(count(1))} ${first(g)} ${first(g)} ${g.nextSafe() is DoneResult<Int>}");
 --- settled
 (Block
+  (Interface ^Problem:0 Error)
+  (Class ^Oops:1 Problem:0)
   (Let
-    ^d:0
+    ^d:2
     (Fn
-      (Let ^a:5 Int)
-      (Let ^b:6 Int)
-      (Call throws Int Bubble)
-      (Block (If (Call == b:6 0) (Block (Fail)) (Block (Call / a:5 b:6))))))
+      (Let ^a:9 Int)
+      (Let ^b:10 Int)
+      (Call throws Int Oops:1)
+      (Block
+        (If
+          (Call == b:10 0)
+          (Block (Fail (Call new Oops:1)))
+          (Block (Call / a:9 b:10))))))
   (Let
-    ^count:1
+    ^count:3
     (Fn
-      (Let ^n:7 Int)
+      (Let ^n:11 Int)
       (Call <> GeneratorResult Int)
       GeneratorFn
-      (Block (Yield @85 n:7) #void)))
+      (Block (Yield @165 n:11) #void)))
   (Class
-    ^C:2
-    (Param ^n:9 Int)
+    ^C:4
+    (Param ^n:13 Int)
     (Method
-      ^gen:10
+      ^gen:14
       (Fn
         (Call <> GeneratorResult Int)
         GeneratorFn
-        (Block (Yield @194 n:9) (Yield @194 (Call + n:9 1)) #void))))
-  (Let ^g:3 (Call (Call . (Call new C:2 5) \gen)))
+        (Block (Yield @274 n:13) (Yield @274 (Call + n:13 1)) #void))))
+  (Let ^g:5 (Call (Call . (Call new C:4 5) \gen)))
   (Let
-    ^first:4
+    ^first:6
     (Fn
-      (Let ^g:11 (Call <> SafeGenerator Int))
+      (Let ^g:15 (Call <> SafeGenerator Int))
       String
       (Block
         (Call
           cat
           (Call
             .
-            (Call as (Call (Call . g:11 \nextSafe)) (Call <> ValueResult Int))
+            (Call as (Call (Call . g:15 \nextSafe)) (Call <> ValueResult Int))
             \value)))))
   (Call
     (Call . console \log)
     (Call
       cat
-      (Call first:4 (Call count:1 1))
+      (Call first:6 (Call count:3 1))
       " "
-      (Call first:4 g:3)
+      (Call first:6 g:5)
       " "
-      (Call first:4 g:3)
+      (Call first:6 g:5)
       " "
-      (Call is (Call (Call . g:3 \nextSafe)) (Call <> DoneResult Int))))
+      (Call is (Call (Call . g:5 \nextSafe)) (Call <> DoneResult Int))))
   #void)
 log 1 5 6 true
 
@@ -3114,7 +3139,7 @@ f();
   #void)
 error 41..48: yield outside generator function body
 log start
-Failed: yield outside generator function body
+Panicked: yield outside generator function body
 
 === yield in a for … of body isn't supported yet
 let make(body: fn (): SafeGenerator<Int>): SafeGenerator<Int> { body() }
@@ -3149,7 +3174,7 @@ g.nextSafe();
   (Call (Call . g:1 \nextSafe))
   #void)
 error 166..173: Not supported yet: yield in a for … of body
-Failed: Not supported yet: yield in a for … of body
+Panicked: Not supported yet: yield in a for … of body
 
 === async blocks run after the top level, in order
 let b = new PromiseBuilder<String>();
@@ -3468,8 +3493,6 @@ let gen = make { (): GeneratorResult<Int> extends GeneratorFn =>
   await new PromiseBuilder<Int>().promise orelse 0;
 };
 async { (): GeneratorResult<Empty> extends GeneratorFn =>
-  console.log((await 1).toString()) orelse console.log("not a promise");
-  f(new PromiseBuilder<Int>().promise) orelse console.log("f failed");
   gen.nextSafe();
   console.log("not here");
 }
@@ -3519,20 +3542,12 @@ async { (): GeneratorResult<Empty> extends GeneratorFn =>
       (Call <> GeneratorResult Empty)
       GeneratorFn
       (Block
-        (Orelse
-          (Call (Call . console \log) (Call (Call . (Await @445 1) \toString)))
-          (Call (Call . console \log) "not a promise"))
-        (Orelse
-          (Call f:0 (Call . (Call new (Call <> PromiseBuilder Int)) \promise))
-          (Call (Call . console \log) "f failed"))
         (Call (Call . gen:3 \nextSafe))
         (Call (Call . console \log) "not here")
         #void))))
 error 13..52: await outside generator function body
 error 197..236: Not supported yet: await in a for … of body
 error 86..93: Cannot throw BrokenPromise from a function without BrokenPromise in its return type
-log not a promise
-log f failed
 Panicked: await of an unresolved promise outside an async block
 
 === an await that nothing handles
@@ -3540,6 +3555,8 @@ Panicked: await of an unresolved promise outside an async block
 // a `throws BrokenPromise` around one doesn't let a broken promise out.
 // The await fails where it's reached, as other code that may throw where
 // it can't does.
+sealed interface Problem extends Error {}
+class Oops() extends Problem {}
 let b = new PromiseBuilder<String>();
 b.complete("done");
 async { (): GeneratorResult<Empty> extends GeneratorFn =>
@@ -3555,31 +3572,33 @@ let launch(): Void throws BrokenPromise {
   }
 }
 launch() orelse void;
-let fails(): GeneratorResult<Empty> extends GeneratorFn { bubble(); }
+let fails(): GeneratorResult<Empty> extends GeneratorFn { throw new Oops(); }
 console.log("top level");
 --- settled
 (Block
-  (Let ^b:0 (Call new (Call <> PromiseBuilder String)))
-  (Call (Call . b:0 \complete) "done")
+  (Interface ^Problem:0 Error)
+  (Class ^Oops:1 Problem:0)
+  (Let ^b:2 (Call new (Call <> PromiseBuilder String)))
+  (Call (Call . b:2 \complete) "done")
   (Call
     async
     (Fn
       (Call <> GeneratorResult Empty)
       GeneratorFn
       (Block
-        (Call (Call . console \log) (Await @301 (Call . b:0 \promise)))
+        (Call (Call . console \log) (Await @375 (Call . b:2 \promise)))
         #void)))
   (Let
-    ^work:1
+    ^work:3
     (Fn
       (Call <> GeneratorResult Empty)
       GeneratorFn
       (Block
-        (Call (Call . console \log) (Await @387 (Call . b:0 \promise)))
+        (Call (Call . console \log) (Await @461 (Call . b:2 \promise)))
         #void)))
-  (Call async work:1)
+  (Call async work:3)
   (Let
-    ^launch:2
+    ^launch:4
     (Fn
       (Call throws Void BrokenPromise)
       (Block
@@ -3589,25 +3608,28 @@ console.log("top level");
             (Call <> GeneratorResult Empty)
             GeneratorFn
             (Block
-              (Call (Call . console \log) (Await @541 (Call . b:0 \promise)))
+              (Call (Call . console \log) (Await @615 (Call . b:2 \promise)))
               #void))))))
-  (Orelse (Call launch:2) void)
+  (Orelse (Call launch:4) void)
   (Let
-    ^fails:3
-    (Fn (Call <> GeneratorResult Empty) GeneratorFn (Block (Fail) #void)))
+    ^fails:5
+    (Fn
+      (Call <> GeneratorResult Empty)
+      GeneratorFn
+      (Block (Fail (Call new Oops:1)) #void)))
   (Call (Call . console \log) "top level")
   #void)
-error 367..382: Cannot throw BrokenPromise from a function without BrokenPromise in its return type
-error 458..473: Cannot throw BrokenPromise from a function without BrokenPromise in its return type
-error 609..624: Cannot throw BrokenPromise from a function without BrokenPromise in its return type
-error 713..721: Cannot bubble from a function without Bubble in its return type
+error 441..456: Cannot throw BrokenPromise from a function without BrokenPromise in its return type
+error 532..547: Cannot throw BrokenPromise from a function without BrokenPromise in its return type
+error 683..698: Cannot throw BrokenPromise from a function without BrokenPromise in its return type
+error 787..803: Cannot throw Oops from a function without Oops in its return type
 log top level
-Failed: Cannot throw BrokenPromise from a function without BrokenPromise in its return type
+Panicked: Cannot throw BrokenPromise from a function without BrokenPromise in its return type
 
 === an await that something handles
-// An `orelse` or a `catch` around it. A generator that may bubble can't
-// pass a broken promise on: generators stay `throws Bubble` until they
-// get a failure type of their own.
+// An `orelse` or a `catch` around it.
+sealed interface Problem extends Error {}
+class Oops() extends Problem {}
 let b = new PromiseBuilder<String>();
 b.breakPromise();
 async { (): GeneratorResult<Empty> extends GeneratorFn =>
@@ -3619,10 +3641,10 @@ let work(): GeneratorResult<Empty> extends GeneratorFn {
 }
 async(work);
 let make(body: fn (): Generator<String>): Generator<String> { body() }
-let g = make { (): GeneratorResult<String> throws Bubble extends GeneratorFn =>
+let g = make { (): GeneratorResult<String> throws Oops extends GeneratorFn =>
   yield await b.promise catch (e) { e.message };
 };
-let h = make { (): GeneratorResult<String> throws Bubble extends GeneratorFn =>
+let h = make { (): GeneratorResult<String> throws Oops extends GeneratorFn =>
   yield await b.promise;
 };
 when (g.next() orelse panic()) {
@@ -3631,8 +3653,10 @@ when (g.next() orelse panic()) {
 }
 --- settled
 (Block
-  (Let ^b:0 (Call new (Call <> PromiseBuilder String)))
-  (Call (Call . b:0 \breakPromise))
+  (Interface ^Problem:0 Error)
+  (Class ^Oops:1 Problem:0)
+  (Let ^b:2 (Call new (Call <> PromiseBuilder String)))
+  (Call (Call . b:2 \breakPromise))
   (Call
     async
     (Fn
@@ -3641,58 +3665,58 @@ when (g.next() orelse panic()) {
       (Block
         (Call
           (Call . console \log)
-          (Orelse (Await @243 (Call . b:0 \promise)) "broken"))
+          (Orelse (Await @175 (Call . b:2 \promise)) "broken"))
         (Orelse
           (Block
-            (Call (Call . console \log) (Await @243 (Call . b:0 \promise)))
+            (Call (Call . console \log) (Await @175 (Call . b:2 \promise)))
             #void)
           (Call (Call . console \log) "caught"))
         #void)))
   (Let
-    ^work:1
+    ^work:3
     (Fn
       (Call <> GeneratorResult Empty)
       GeneratorFn
       (Block
         (Call
           (Call . console \log)
-          (Orelse (Await @414 (Call . b:0 \promise)) "named"))
+          (Orelse (Await @346 (Call . b:2 \promise)) "named"))
         #void)))
-  (Call async work:1)
+  (Call async work:3)
   (Let
-    ^make:2
+    ^make:4
     (Fn
-      (Let ^body:5 (Call FnType (Call <> Generator String)))
+      (Let ^body:9 (Call FnType (Call <> Generator String)))
       (Call <> Generator String)
-      (Block (Call body:5))))
+      (Block (Call body:9))))
   (Let
-    ^g:3
+    ^g:5
     (Call
-      make:2
+      make:4
       (Fn
-        (Call throws (Call <> GeneratorResult String) Bubble)
+        (Call throws (Call <> GeneratorResult String) Oops:1)
         GeneratorFn
         (Block
-          (Yield @617
+          (Yield @549
             (Orelse
-              (Await @617 (Call . b:0 \promise))
-              (Block (Let ^e:6 (Call caught)) (Call . e:6 \message))))
+              (Await @549 (Call . b:2 \promise))
+              (Block (Let ^e:10 (Call caught)) (Call . e:10 \message))))
           #void))))
   (Let
-    ^h:4
+    ^h:6
     (Call
-      make:2
+      make:4
       (Fn
-        (Call throws (Call <> GeneratorResult String) Bubble)
+        (Call throws (Call <> GeneratorResult String) Oops:1)
         GeneratorFn
-        (Block (Yield @749 (Await @749 (Call . b:0 \promise))) #void))))
+        (Block (Yield @679 (Await @679 (Call . b:2 \promise))) #void))))
   (Block
-    (Let ^subject#7 (Orelse (Call (Call . g:3 \next)) (Call panic)))
+    (Let ^subject#11 (Orelse (Call (Call . g:5 \next)) (Call panic)))
     (If
-      (Call is subject#7 (Call <> ValueResult String))
+      (Call is subject#11 (Call <> ValueResult String))
       (Call (Call . console \log) "yielded")
       (Call (Call . console \log) "done"))))
-error 824..839: Cannot throw BrokenPromise from a function that throws Bubble; catch it, and bubble() there if need be
+error 752..767: Cannot throw BrokenPromise from a function that throws Oops; catch it, and throw an Oops there if need be
 log yielded
 log broken
 log caught
@@ -3719,9 +3743,11 @@ console.log(apply(fn (a: Int, b: Int): Int { a + b }).toString());
 log 3
 
 === indexing an object calls its get
+sealed interface Problem extends Error {}
+class Oops() extends Problem {}
 class Grid(public ncols: Int, private values: List<Int>) {
-  public get(i: Int, j: Int): Int throws Bubble {
-    if (j >= ncols) { bubble() }
+  public get(i: Int, j: Int): Int throws Oops {
+    if (j >= ncols) { throw new Oops() }
     values[i * ncols + j]
   }
 }
@@ -3730,26 +3756,28 @@ console.log((g[1, 0] orelse -1).toString());
 console.log((g[0, 2] orelse -1).toString());
 --- settled
 (Block
+  (Interface ^Problem:0 Error)
+  (Class ^Oops:1 Problem:0)
   (Class
-    ^Grid:0
-    (Param ^ncols:3 Int)
-    (Param private ^values:4 (Call <> List Int))
+    ^Grid:2
+    (Param ^ncols:7 Int)
+    (Param private ^values:8 (Call <> List Int))
     (Method
-      ^get:5
+      ^get:9
       (Fn
-        (Let ^i:6 Int)
-        (Let ^j:7 Int)
-        (Call throws Int Bubble)
+        (Let ^i:10 Int)
+        (Let ^j:11 Int)
+        (Call throws Int Oops:1)
         (Block
-          (If (Call >= j:7 ncols:3) (Block (Fail)) (Block))
-          (Call [] values:4 (Call + (Call * i:6 ncols:3) j:7))))))
-  (Let ^g:1 (Call new Grid:0 2 (Call list 1 2 3 4)))
+          (If (Call >= j:11 ncols:7) (Block (Fail (Call new Oops:1))) (Block))
+          (Call [] values:8 (Call + (Call * i:10 ncols:7) j:11))))))
+  (Let ^g:3 (Call new Grid:2 2 (Call list 1 2 3 4)))
   (Call
     (Call . console \log)
-    (Call (Call . (Orelse (Call [] g:1 1 0) (Call - 1)) \toString)))
+    (Call (Call . (Orelse (Call [] g:3 1 0) (Call - 1)) \toString)))
   (Call
     (Call . console \log)
-    (Call (Call . (Orelse (Call [] g:1 0 2) (Call - 1)) \toString)))
+    (Call (Call . (Orelse (Call [] g:3 0 2) (Call - 1)) \toString)))
   #void)
 log 3
 log -1

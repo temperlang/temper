@@ -18,10 +18,6 @@ pub const FILES: &[(&str, &str)] = &[
         include_str!("../runtime/temper-core/src/main/java/temper/core/BrokenPromise.java"),
     ),
     (
-        "src/main/java/temper/core/Bubble.java",
-        include_str!("../runtime/temper-core/src/main/java/temper/core/Bubble.java"),
-    ),
-    (
         "src/main/java/temper/core/Core.java",
         include_str!("../runtime/temper-core/src/main/java/temper/core/Core.java"),
     ),

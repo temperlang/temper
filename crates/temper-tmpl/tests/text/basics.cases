@@ -48,6 +48,9 @@ module empty#0 in "std/empty" {
 tmpl 1 model 1 library members 0.1.0
 
 uses `temper-core`#1 0.1.0 {
+  interface Error#20 {}
+  class ParseError#21 extends Error#20 {}
+  class InvalidCodePoint#22 extends Error#20 {}
   class Int32#2 {
     connected method toString#3(radix?: Int32): String;
     connected method max#4(other: Int32): Int32;
@@ -57,21 +60,58 @@ uses `temper-core`#1 0.1.0 {
     connected method toString#7(): String;
   }
   class String#8 {
-    connected static fromCodePoint#9(codePoint: Int32): String throws Bubble;
+    connected static fromCodePoint#9(codePoint: Int32): String throws InvalidCodePoint#22;
     connected get isEmpty#10(): Boolean;
-    connected method toInt32#11(radix?: Int32): Int32 throws Bubble;
+    connected method toInt32#11(radix?: Int32): Int32 throws ParseError#21;
   }
 }
 
 module members#0 {
-  fn parse#12(text#13: String): Int32 throws Bubble {
+  fn parse#12(text#13: String): Int32 throws ParseError#21 {
     if (text#13.isEmpty#10()) {
       return 0;
     }
     return text#13.toInt32#11(16)^.max#4(text#13.toInt32#11(omitted)^);
   }
 
-  fn show#14(x#15: Float64): String throws Bubble {
+  fn show#14(x#15: Float64): String throws InvalidCodePoint#22 {
+    let r#16: Float64 = %Float64.add(x#15, 1.0).sqrt#6();
+    return %String.cat((1.5).sqrt#6().toString#7(), %String.cat(r#16.toString#7(), fromCodePoint#9(65)^));
+  }
+
+  init {}
+}
+--- canonical
+tmpl 1 model 1 library members 0.1.0
+
+uses `temper-core`#1 0.1.0 {
+  class Int32#2 {
+    connected method toString#3(radix?: Int32): String;
+    connected method max#4(other: Int32): Int32;
+  }
+  class Float64#5 {
+    connected method sqrt#6(): Float64;
+    connected method toString#7(): String;
+  }
+  class String#8 {
+    connected static fromCodePoint#9(codePoint: Int32): String throws InvalidCodePoint#22;
+    connected get isEmpty#10(): Boolean;
+    connected method toInt32#11(radix?: Int32): Int32 throws ParseError#21;
+  }
+  interface Error#20 {}
+  class ParseError#21 extends Error#20 {}
+  class InvalidCodePoint#22 extends Error#20 {}
+}
+
+module members#0 {
+  fn parse#12(text#13: String): Int32 throws ParseError#21 {
+    if (text#13.isEmpty#10()) {
+      return 0;
+    }
+    return text#13.toInt32#11(16)^.max#4(text#13.toInt32#11(omitted)^);
+  }
+
+  fn show#14(x#15: Float64): String throws InvalidCodePoint#22 {
     let r#16: Float64 = %Float64.add(x#15, 1.0).sqrt#6();
     return %String.cat((1.5).sqrt#6().toString#7(), %String.cat(r#16.toString#7(), fromCodePoint#9(65)^));
   }
@@ -95,7 +135,7 @@ uses `temper-core`#11 0.1.0 {
 module loops#0 {
   let ~console#17: Console#14;
 
-  fn sum#1(limit#2: Int32): Int32 throws Bubble {
+  fn sum#1(limit#2: Int32): Int32 {
     var total#3: Int32 = 0;
     var i#4: Int32 = 0;
     outer#5: while (true) {
@@ -131,6 +171,8 @@ module loops#0 {
 tmpl 1 model 1 library literals 0.1.0
 
 uses `temper-core`#6 0.1.0 {
+  interface Error#21 {}
+  class ParseError#22 extends Error#21 {}
   class Boolean#7 {
     connected method toString#8(): String;
   }
@@ -141,13 +183,71 @@ uses `temper-core`#6 0.1.0 {
     connected method toString#12(radix?: Int32): String;
   }
   class Float64#13 {
-    connected method toInt32#14(): Int32 throws Bubble;
+    connected method toInt32#14(): Int32 throws ParseError#22;
     connected method toString#15(): String;
   }
   interface Console#16 {
     connected method log#17(message: String): Void;
   }
   connected fn getConsole#18(name?: String): Console#16;
+}
+
+module literals#0 {
+  let ~console#19: Console#16;
+
+  let small#1: Int32;
+
+  let big#2: Int64;
+
+  let x#3: Float64;
+
+  let text#4: String;
+
+  let yes#5: Boolean;
+
+  let kind#20: Type;
+
+  init {
+    init ~console#19 = getConsole#18(omitted);
+    init small#1 = -2147483648;
+    init big#2 = -9223372036854775808i64;
+    init x#3 = %Float64.add(%Float64.add(1.5, -0.0), %Float64.add(1.0e16, 1.0e-7));
+    ~console#19.log#17(%Float64.add(nan, %Float64.add(inf, -inf)).toString#15());
+    init text#4 = "quote \" backslash \\ newline \n tab \t bell \u{7} é 😀";
+    init yes#5 = %Boolean.not(false) || true && false;
+    ~console#19.log#17(%Boolean.eq(%Boolean.not(yes#5), true).toString#8());
+    ~console#19.log#17(%String.cat(text#4, big#2.toString#12(omitted)));
+    ~console#19.log#17(x#3.toInt32#14()^.toString#10(omitted));
+    ~console#19.log#17((-0.5).toString#15());
+    ~console#19.log#17(-1.toString#10(2));
+    ~console#19.log#17(5i64.toString#12(omitted));
+    ~console#19.log#17((true || false).toString#8());
+    init kind#20 = typeValue(Void);
+  }
+}
+--- canonical
+tmpl 1 model 1 library literals 0.1.0
+
+uses `temper-core`#6 0.1.0 {
+  class Boolean#7 {
+    connected method toString#8(): String;
+  }
+  class Int32#9 {
+    connected method toString#10(radix?: Int32): String;
+  }
+  class Int64#11 {
+    connected method toString#12(radix?: Int32): String;
+  }
+  class Float64#13 {
+    connected method toInt32#14(): Int32 throws ParseError#22;
+    connected method toString#15(): String;
+  }
+  interface Console#16 {
+    connected method log#17(message: String): Void;
+  }
+  connected fn getConsole#18(name?: String): Console#16;
+  interface Error#21 {}
+  class ParseError#22 extends Error#21 {}
 }
 
 module literals#0 {
@@ -209,15 +309,17 @@ module logic#0 {
   init {}
 }
 
-=== bubbling calls
+=== failing calls
 tmpl 1 model 1 library bubbles 0.1.0
 
 uses `temper-core`#5 0.1.0 {
+  interface Error#14 {}
+  class ParseError#15 extends Error#14 {}
   class Int32#6 {
     connected method toString#7(radix?: Int32): String;
   }
   class String#8 {
-    connected method toInt32#9(radix?: Int32): Int32 throws Bubble;
+    connected method toInt32#9(radix?: Int32): Int32 throws ParseError#15;
   }
   interface Console#10 {
     connected method log#11(message: String): Void;
@@ -228,11 +330,45 @@ uses `temper-core`#5 0.1.0 {
 module bubbles#0 {
   let ~console#13: Console#10;
 
-  fn parse#1(text#2: String): Int32 throws Bubble {
+  fn parse#1(text#2: String): Int32 throws ParseError#15 {
     return text#2.toInt32#9(omitted)^;
   }
 
-  fn half#3(text#4: String): Int32 throws Bubble {
+  fn half#3(text#4: String): Int32 throws ParseError#15 {
+    return %Int32.div(parse#1(text#4)^, 2);
+  }
+
+  init {
+    init ~console#13 = getConsole#12(omitted);
+    ~console#13.log#11(half#3("42")^.toString#7(omitted));
+  }
+}
+--- canonical
+tmpl 1 model 1 library bubbles 0.1.0
+
+uses `temper-core`#5 0.1.0 {
+  class Int32#6 {
+    connected method toString#7(radix?: Int32): String;
+  }
+  class String#8 {
+    connected method toInt32#9(radix?: Int32): Int32 throws ParseError#15;
+  }
+  interface Console#10 {
+    connected method log#11(message: String): Void;
+  }
+  connected fn getConsole#12(name?: String): Console#10;
+  interface Error#14 {}
+  class ParseError#15 extends Error#14 {}
+}
+
+module bubbles#0 {
+  let ~console#13: Console#10;
+
+  fn parse#1(text#2: String): Int32 throws ParseError#15 {
+    return text#2.toInt32#9(omitted)^;
+  }
+
+  fn half#3(text#4: String): Int32 throws ParseError#15 {
     return %Int32.div(parse#1(text#4)^, 2);
   }
 

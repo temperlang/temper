@@ -1,6 +1,5 @@
 from count_failures import parse_count as _parse_count
 from temper_core import (
-    Bubble as _Bubble,
     Failure as _Failure,
     LoggingConsole as _LoggingConsole,
     failure_cause as _failure_cause,
@@ -81,9 +80,21 @@ def _reading(key: str, count: str, /) -> int:
         raise _Unreadable(key) from failure
 
 
+class _Problem(_Failure, Exception):
+    __slots__ = ()
+
+
+class _Zero(_Problem):
+    __slots__ = ()
+
+    @property
+    def message(self, /) -> str:
+        return 'zero'
+
+
 def _nonzero(n: int, /) -> int:
     if n == 0:
-        raise _Bubble()
+        raise _Zero()
     else:
         return n
 
@@ -92,7 +103,7 @@ def _ratio(key: str, count: str, /) -> int:
     try:
         return _int_div(host_lookup(key), _nonzero(_parse_count(count)))
     except Exception as t_0:
-        if not isinstance(t_0, (_Bubble, _Failure)):
+        if not isinstance(t_0, _Failure):
             raise t_0
         return -9
 

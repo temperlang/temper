@@ -6,7 +6,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import temper.core.BrokenPromise;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Generator;
 import temper.core.Generator.DoneResult;
@@ -17,7 +16,7 @@ import temper.std.testing.Test;
 
 public final class TestAsyncTest {
     static {
-        Bubble.keepStackTraces();
+        Core.keepStackTraces();
     }
 
     @org.junit.jupiter.api.Test

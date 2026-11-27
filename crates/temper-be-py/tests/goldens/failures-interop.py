@@ -1,6 +1,5 @@
 from collections.abc import Sequence as _Sequence
 from temper_core import (
-    Bubble as _Bubble,
     Failure as _Failure,
     LoggingConsole as _LoggingConsole,
     failure_cause as _failure_cause,
@@ -178,17 +177,10 @@ def sign_name(e: SignError, /) -> str:
         raise BaseException('panic')
 
 
-def _nonzero(n: int, /) -> int:
-    if n == 0:
-        raise _Bubble()
-    else:
-        return n
-
-
-def mixed(key: str, n: int, /) -> int:
+def mixed(key: str, text: str, /) -> int:
     try:
-        return _int_add(lookup(key), _int_div(10, _nonzero(n)))
-    except (_Bubble, NotFound):
+        return _int_add(lookup(key), _int_div(10, sign(text)))
+    except FailuresInteropError:
         return -1
 
 
@@ -243,7 +235,7 @@ def first_missing(keys: _Sequence[str], /) -> str:
 
 _console: _LoggingConsole = _LoggingConsole(__name__)
 _console.log(f"{lookup('a')} {sign('-')} {setting('a')}")
-_console.log(f"{mixed('a', 0)} {mixed('z', 1)} {mixed('a', 5)}")
+_console.log(f"{mixed('a', '')} {mixed('z', '+')} {mixed('a', '-')}")
 _console.log(f"{explained('port')}; {explained('a')}; {sign_message('x')}")
 _console.log(f"{early_cause('soon')}; {first_missing(('a', 'b', 'c'))} {first_missing(('a',))}")
 _console.log(f"{first_sign(('', '+'))} {first_sign(('', '?'))} {first_sign(())}")

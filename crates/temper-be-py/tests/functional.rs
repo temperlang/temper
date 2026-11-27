@@ -5,7 +5,7 @@
 //! `string-order`, which every backend runs; `modules`,
 //! `imports-library`, and `testing`, for modules, imports, and tests;
 //! for classes and interfaces, `classes` and the testkit's class tests
-//! (`CLASSES`); and for nullable types, `orelse`, `bubble()`, and
+//! (`CLASSES`); and for nullable types, `orelse`, `throw`, and
 //! `panic()`, `nullables` and the testkit's `NULLABLES`; and for
 //! generics and core's lists and maps, `generics` and the testkit's
 //! `GENERICS`; for function values, `functions` and the testkit's

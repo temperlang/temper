@@ -227,25 +227,15 @@ local function signName(e)
   end
 end
 
----@param n integer
----@return integer
-local function nonzero(n)
-  if n == 0 then
-    return temper.bubble()
-  else
-    return n
-  end
-end
-
 ---@param key string
----@param n integer
+---@param text string
 ---@return integer
-local function mixed(key, n)
+local function mixed(key, text)
   ---@type integer
   local t_1
   if not temper.catch(function()
-    t_1 = temper.int32_add(lookup(key), temper.int32_div(10, nonzero(n)))
-  end, temper.Bubble, NotFound) then
+    t_1 = temper.int32_add(lookup(key), temper.int32_div(10, sign(text)))
+  end, FailuresInteropError) then
     t_1 = -1
   end
   return t_1
@@ -324,7 +314,7 @@ local function firstMissing(keys)
 end
 
 print(lookup("a") .. " " .. sign("-") .. " " .. setting("a"))
-print(mixed("a", 0) .. " " .. mixed("z", 1) .. " " .. mixed("a", 5))
+print(mixed("a", "") .. " " .. mixed("z", "+") .. " " .. mixed("a", "-"))
 print(explained("port") .. "; " .. explained("a") .. "; " .. signMessage("x"))
 print(earlyCause("soon") .. "; " .. firstMissing({ "a", "b", "c" }) .. " " .. firstMissing({ "a" }))
 print(firstSign({ "", "+" }) .. " " .. firstSign({ "", "?" }) .. " " .. firstSign({}))

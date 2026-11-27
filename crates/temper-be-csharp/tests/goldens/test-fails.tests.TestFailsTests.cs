@@ -16,7 +16,7 @@ public class TestFailsTests
         {
             f();
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (Oops)
         {
             finished = false;
         }

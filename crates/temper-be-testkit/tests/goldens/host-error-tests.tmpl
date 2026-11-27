@@ -1,56 +1,65 @@
 tmpl 1 model 1 library `host-error-tests` 0.0.0
 
-uses std#4 0.0.0-alpha.0.0 {
-  module testing#5 {
-    class Test#6 {
-      connected method assertPanics#11(block: fn (): Void throws Error#8, message?: String?): Void;
-      connected method assert#14(success: Boolean, message: fn (): String): Void;
-    }
-  }
+uses `temper-core`#3 0.0.0-alpha.0.0 {
+  interface Error#4 {}
 }
 
-uses `temper-core`#7 0.0.0-alpha.0.0 {
-  interface Error#8 {}
+uses std#10 0.0.0-alpha.0.0 {
+  module testing#11 {
+    class Test#12 {
+      connected method assertPanics#15(block: fn (): Void throws Error#4, message?: String?): Void;
+      connected method assert#18(success: Boolean, message: fn (): String): Void;
+    }
+  }
 }
 
 module `host-error-tests`#0 {
-  connected export fn hostFails#1(n#3: Int32): Int32 throws Bubble {
-    if (%Int32.gt(n#3, 0)) {
-      (panic()): Void;
+  export interface OopsError#1 extends Error#4 {}
+
+  export class Oops#2 extends OopsError#1 {
+    constructor constructor#5(): Oops#2 {}
+    get message#8(): String {
+      return "oops";
     }
-    (bubble()^): Void;
   }
 
-  connected export fn hostFailsTest#2(): Void {
+  connected export fn hostFails#6(n#9: Int32): Int32 throws Oops#2 {
+    if (%Int32.gt(n#9, 0)) {
+      (panic()): Void;
+    }
+    (throw(new constructor#5())^): Void;
+  }
+
+  connected export fn hostFailsTest#7(): Void {
     (panic()): Void;
   }
 
   init {}
 
-  test "host errors are panics" ~test#9(test#10: Test#6): Void throws Error#8 {
-    test#10.assertPanics#11((fn ~fn#12(): Void throws Error#8 [test#10] {
-      let r#13: Int32 = (orelse(hostFails#1(1)^, %Int32.neg(1))): Int32;
-      test#10.assert#14(%Boolean.not(%Int32.eq(r#13, %Int32.neg(1))), (fn ~fn#15(): String {
+  test "host errors are panics" ~test#13(test#14: Test#12): Void throws Error#4 {
+    test#14.assertPanics#15((fn ~fn#16(): Void throws Error#4 [test#14] {
+      let r#17: Int32 = (orelse(hostFails#6(1)^, %Int32.neg(1))): Int32;
+      test#14.assert#18(%Boolean.not(%Int32.eq(r#17, %Int32.neg(1))), (fn ~fn#19(): String {
         return "expected r != -1";
       }): fn (): String);
-    }): fn (): Void throws Error#8, (asNullable("host error 1")): String?);
-    test#10.assertPanics#11((fn ~fn#16(): Void throws Error#8 [test#10] {
-      let r#17: Int32 = (orelse(hostFails#1(2)^, %Int32.neg(1))): Int32;
-      test#10.assert#14(%Boolean.not(%Int32.eq(r#17, %Int32.neg(1))), (fn ~fn#18(): String {
+    }): fn (): Void throws Error#4, (asNullable("host error 1")): String?);
+    test#14.assertPanics#15((fn ~fn#20(): Void throws Error#4 [test#14] {
+      let r#21: Int32 = (orelse(hostFails#6(2)^, %Int32.neg(1))): Int32;
+      test#14.assert#18(%Boolean.not(%Int32.eq(r#21, %Int32.neg(1))), (fn ~fn#22(): String {
         return "expected r != -1";
       }): fn (): String);
-    }): fn (): Void throws Error#8, (asNullable("host error 2")): String?);
-    test#10.assertPanics#11((fn ~fn#19(): Void throws Error#8 [test#10] {
-      let r#20: Int32 = (orelse(hostFails#1(3)^, %Int32.neg(1))): Int32;
-      test#10.assert#14(%Boolean.not(%Int32.eq(r#20, %Int32.neg(1))), (fn ~fn#21(): String {
+    }): fn (): Void throws Error#4, (asNullable("host error 2")): String?);
+    test#14.assertPanics#15((fn ~fn#23(): Void throws Error#4 [test#14] {
+      let r#24: Int32 = (orelse(hostFails#6(3)^, %Int32.neg(1))): Int32;
+      test#14.assert#18(%Boolean.not(%Int32.eq(r#24, %Int32.neg(1))), (fn ~fn#25(): String {
         return "expected r != -1";
       }): fn (): String);
-    }): fn (): Void throws Error#8, (asNullable("host error 3")): String?);
+    }): fn (): Void throws Error#4, (asNullable("host error 3")): String?);
   }
 
-  test "host test failure is no panic" ~test#22(test#23: Test#6): Void throws Error#8 {
-    test#23.assertPanics#11((fn ~fn#24(): Void throws Error#8 {
-      hostFailsTest#2();
-    }): fn (): Void throws Error#8, omitted);
+  test "host test failure is no panic" ~test#26(test#27: Test#12): Void throws Error#4 {
+    test#27.assertPanics#15((fn ~fn#28(): Void throws Error#4 {
+      hostFailsTest#7();
+    }): fn (): Void throws Error#4, omitted);
   }
 }

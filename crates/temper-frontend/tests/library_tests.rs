@@ -267,8 +267,8 @@ fn gitignore_files_skip_what_they_list() {
     assert!(passed);
 }
 
-/// A test may throw any error, unhandled, as a call's declared failure or
-/// a bubble: the test fails, saying the error's message.
+/// A test may throw any error, unhandled, as a call's declared failure:
+/// the test fails, saying the error's message.
 #[test]
 fn tests_may_throw_any_error() {
     let tree = write_tree(
@@ -279,10 +279,8 @@ fn tests_may_throw_any_error() {
                 "a.temper",
                 "let { Date } = import(\"std/temporal\");\n\
                  let parse(s: String): Int throws ParseError { s.toInt32() }\n\
-                 let bubbly(): Int throws Bubble { bubble() }\n\
                  test(\"parses\") { assert(parse(\"12\") + new Date(2024, 3, 5).year == 2036) }\n\
                  test(\"throws\") { assert(false) { \"soft\" }; assert(parse(\"x\") == 0) }\n\
-                 test(\"bubbles\") { bubbly(); }\n\
                  test(\"block throws\") { test => test.assertPanics { parse(\"x\"); } }\n",
             ),
         ],
@@ -296,9 +294,8 @@ fn tests_may_throw_any_error() {
             "Testing {root}\n  \
              ok      parses\n  \
              failed  throws - soft, parse error (input: x, reason: not an Int32)\n  \
-             failed  bubbles - bubble\n  \
              failed  block throws - expected a panic, but it threw\n\
-             Tests passed: 1 of 4\n"
+             Tests passed: 1 of 3\n"
         )
     );
     assert!(!passed);
@@ -325,7 +322,7 @@ fn tests_not_run_and_errors() {
     assert_eq!(
         out,
         format!(
-            "Testing {root}\nstarting\n  Failed: y has not been declared\nTests passed: 0 of 1 (1 not run)\n"
+            "Testing {root}\nstarting\n  Panicked: y has not been declared\nTests passed: 0 of 1 (1 not run)\n"
         )
     );
     assert!(!passed);

@@ -1,10 +1,8 @@
 import * as _connected from "./_connected.js";
 import {
-  bubble,
   divIntInt,
   failureBase,
   failureCause,
-  isBubble,
   isFailure,
   withCause,
 } from "@temperlang/core";
@@ -52,10 +50,11 @@ export function reading(key, count) {
 /**
  * @param {number} n
  * @returns {number}
+ * @throws {Zero}
  */
 export function nonzero(n) {
   if (n === 0) {
-    bubble();
+    throw new Zero();
   } else {
     return n;
   }
@@ -70,7 +69,7 @@ export function ratio(key, count) {
   try {
     return divIntInt(hostLookup(key), nonzero(parseCount(count)));
   } catch (e$) {
-    if (!(isBubble(e$) || isFailure(e$))) throw e$;
+    if (!isFailure(e$)) throw e$;
     return -9;
   }
 }
@@ -118,6 +117,17 @@ export class Unreadable extends HostFailuresError {
   /** @returns {string} */
   get message() {
     return `unreadable (key: ${this.#key})`;
+  }
+}
+
+export class Problem extends Error {}
+
+failureBase(Problem);
+
+export class Zero extends Problem {
+  /** @returns {string} */
+  get message() {
+    return "zero";
   }
 }
 

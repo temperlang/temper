@@ -221,7 +221,7 @@ pub const DUNDERS: &[&str] = &[
 /// [`KEYWORDS`] and [`DUNDERS`]: `self`, a method's receiver. The
 /// translator's imports make way for any declaration's name
 /// (`Translator::import`), so a parameter named for a runtime helper
-/// (`bubble`) keeps its name too.
+/// (`cast_by_type`) keeps its name too.
 pub const LOCAL_RESERVED: &[&str] = &["self"];
 
 /// The names the translator may import (from `temper_core`, `math`,
@@ -238,7 +238,6 @@ pub const IMPORTED: &[&str] = &[
     "bool_cmp",
     "boolean_to_string",
     "abstractmethod",
-    "bubble",
     "cast_by_type",
     "cast_none",
     "float_cmp",

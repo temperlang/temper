@@ -1,7 +1,6 @@
 package test_fails;
 
 import java.util.Objects;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Nullable;
 import temper.std.testing.Test;
@@ -11,7 +10,7 @@ public final class TestFailsTest {
         boolean finished = true;
         try {
             f.run();
-        } catch (Bubble ignored) {
+        } catch (Oops ignored) {
             finished = false;
         }
         return finished;
@@ -26,7 +25,7 @@ public final class TestFailsTest {
     }
 
     static {
-        Bubble.keepStackTraces();
+        Core.keepStackTraces();
     }
 
     @org.junit.jupiter.api.Test

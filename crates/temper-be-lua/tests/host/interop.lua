@@ -59,7 +59,9 @@ for _, n in turns.collatz(7) do
 end
 print("collatz " .. table.concat(steps, ","))
 
--- A Temper failure is an `error`, which `pcall` catches, as
--- notes/api-compat.md promises.
-ok = pcall(turns.halve, 3)
-print("halve " .. tostring(turns.halve(8)) .. (ok and " returned" or " caught"))
+-- A declared failure is an `error` of its own type, which `pcall`
+-- catches.
+local odd
+ok, odd = pcall(turns.halve, 3)
+local caught = not ok and temper.instance_of(odd, turns.Odd)
+print("halve " .. tostring(turns.halve(8)) .. (caught and " caught" or " returned"))

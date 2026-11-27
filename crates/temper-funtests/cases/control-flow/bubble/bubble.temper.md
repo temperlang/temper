@@ -1,21 +1,24 @@
-# Bubble control flow and typing
+# Error control flow and typing
 
-Verify we can handle bubble calls as return types. Try out immediate bubble
-return. Also use `Int` here for possibly value types in some backends, in case
-that makes things interesting.
+Verify we can handle calls that throw a declared error as return types. Try
+out an immediate throw. Also use `Int` here for possibly value types in some
+backends, in case that makes things interesting.
 
-    let more(x: Int?): Int throws Bubble { bubble() }
+    sealed interface Problem extends Error {}
+    class Missing() extends Problem {}
+
+    let more(x: Int?): Int throws Missing { throw new Missing() }
 
 And also conditional cases that are likely to be translated to assignments.
 
-    let something(x: String?): String throws Bubble {
+    let something(x: String?): String throws Missing {
 
 Code here is a bit silly, because `x as String` achieves the same effect, but
 this form exercises more constructs, unless we optimize it out at some point.
 
       when (x) {
         is String -> x;
-        else -> bubble();
+        else -> throw new Missing();
       }
     }
 
@@ -35,14 +38,14 @@ hi
 null
 ```
 
-## Bubble juggling
+## Error juggling
 
 We had some problems with Lua dropping code in this function. Also, we include
 logging to avoid inlining:
 
-    let calcRows(cols: Int, total: Int): Int throws Bubble {
+    let calcRows(cols: Int, total: Int): Int throws Missing {
       console.log("calcRows(${cols}, ${total})");
-      if (total % cols != 0) { bubble() }
+      if (total % cols != 0) { throw new Missing() }
       total / cols
     }
 
@@ -53,16 +56,16 @@ calcRows(3, 6)
 2
 ```
 
-## A loop whose condition bubbles
+## A loop whose condition throws
 
 The frontend evaluates a call with constant arguments while compiling. When a
-loop's condition bubbled during that evaluation, the interpreter unwound to
+loop's condition failed during that evaluation, the interpreter unwound to
 the `orelse` and then popped the loop a second time, from an empty stack, so
 the build crashed with an IndexOutOfBoundsException instead of using the
 `orelse`.
 
-    let parsed(s: String): Int throws Bubble { s.toInt32() orelse bubble() }
-    let countBelow(s: String): Int throws Bubble {
+    let parsed(s: String): Int throws ParseError { s.toInt32() }
+    let countBelow(s: String): Int throws ParseError {
       var i = 0;
       while (i < parsed(s)) { i += 1; }
       i
@@ -76,11 +79,11 @@ the build crashed with an IndexOutOfBoundsException instead of using the
 ## Folding through `orelse`
 
 Folding a call with constant arguments ran the callee in the interpreter, and
-an `orelse` there took its fallback for things that aren't bubbles: a `break`,
+an `orelse` there took its fallback for things that aren't failures: a `break`,
 `continue`, or `return` in a loop, before nested blocks are flattened, and an
 `==` not yet expanded. So the wrong value was baked into the output.
 
-    let firstOver(n: Int): Int throws Bubble {
+    let firstOver(n: Int): Int throws Missing {
       var i = 0;
       while (i < 9) {
         i += 1;
@@ -88,7 +91,7 @@ an `orelse` there took its fallback for things that aren't bubbles: a `break`,
       }
       i
     }
-    let sumSkipping(n: Int): Int throws Bubble {
+    let sumSkipping(n: Int): Int throws Missing {
       var sum = 0;
       for (var i = 0; i < 5; ++i) {
         if (i == n) { continue; }
@@ -96,11 +99,11 @@ an `orelse` there took its fallback for things that aren't bubbles: a `break`,
       }
       sum
     }
-    let tenTimes(n: Int): Int throws Bubble {
+    let tenTimes(n: Int): Int throws Missing {
       for (var i = 0; i < 9; ++i) {
         if (i == n) { return i * 10; }
       }
-      bubble()
+      throw new Missing()
     }
     let isNone(r: Int?): Boolean { r == null }
 
@@ -119,22 +122,22 @@ an `orelse` there took its fallback for things that aren't bubbles: a `break`,
 
 ## Helpers that never return
 
-A helper that only panics or bubbles may declare `Never<T>` as its
+A helper that only panics or throws may declare `Never<T>` as its
 result: it never returns, but stands for a `T` where it's called, and
 translates to `T` where a language has no bottom type. Here as a
 function, a generic one, a nullable `Never<String?>?`, which admits
-null, and a `Never<Void>` that bubbles, as std's `Test` has; the shared
+null, and a `Never<Void>` that throws, as std's `Test` has; the shared
 `classes` program has one as a method. A call of one ends its path, as
 `panic()` does, so a local assigned on the other paths is assigned after
 it, and a null check that leaves through one narrows.
 
     let unreachableInt(): Never<Int> { panic() }
-    let failAs<T>(fallback: T): Never<T> throws Bubble { bubble() }
-    let bail(): Never<Void> throws Bubble { bubble() }
+    let failAs<T>(fallback: T): Never<T> throws Missing { throw new Missing() }
+    let bail(): Never<Void> throws Missing { throw new Missing() }
     let noName(): Never<String?>? { null }
     let stop(): Never<Void> { panic() }
 
-    let half(n: Int): Int throws Bubble {
+    let half(n: Int): Int throws Missing {
       if (n % 2 != 0) { bail() }
       if (n < 0) { failAs(n) } else { n / 2 }
     }
@@ -169,7 +172,7 @@ chosen
 
 ## Match miscellany
 
-This code doesn't have anything to do with bubbling, but it failed in Lua, and
+This code doesn't have anything to do with errors, but it failed in Lua, and
 some code above uses `match`, so I'll just sneak this in here for now. Anyway,
 Lua was dropping match branches after the 2nd and before the `else` at the end.
 

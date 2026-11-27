@@ -143,11 +143,36 @@ function Counter.methods.bump(this, tag, times)
   print(tag .. " done n=" .. this.n)
 end
 
+---@class async-turns.HalveError: temper.Failure
+
+---@class async-turns.HalveError.type: temper.Type
+local HalveError = temper.type("async-turns.HalveError", temper.Failure)
+
+---@class async-turns.Odd: async-turns.HalveError
+---@field n integer
+---@field message string
+
+---@class async-turns.Odd.type: temper.Type
+---@operator call: async-turns.Odd
+local Odd = temper.type("async-turns.Odd", HalveError)
+
+---@param this async-turns.Odd
+---@param n integer
+function Odd.constructor(this, n)
+  this.n = n
+end
+
+---@param this async-turns.Odd
+---@return string
+function Odd.get.message(this)
+  return "odd (n: " .. this.n .. ")"
+end
+
 ---@param n integer
 ---@return integer
 local function halve(n)
   if temper.int32_mod(n, 2) ~= 0 then
-    return temper.bubble()
+    error(Odd(n))
   end
   return temper.int32_div(n, 2)
 end
@@ -208,5 +233,7 @@ return {
   ticks = ticks,
   fibonacci = fibonacci,
   collatz = collatz,
+  HalveError = HalveError,
+  Odd = Odd,
   halve = halve,
 }

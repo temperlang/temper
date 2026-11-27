@@ -62,11 +62,12 @@ public static class NullablesGlobal
         }
     }
 
+    /// <exception cref="Negative">Where it fails with Negative.</exception>
     internal static int Positive(int n)
     {
         if (n < 0)
         {
-            return Core.Bubble<int>();
+            throw new Negative(n);
         }
         return n;
     }
@@ -77,9 +78,9 @@ public static class NullablesGlobal
         {
             return Positive(n);
         }
-        catch (global::TemperLang.Core.Bubble bubble1)
+        catch (Negative failure1)
         {
-            throw Core.Panic("panic", bubble1);
+            throw Core.Panic("panic", failure1);
         }
     }
 
@@ -109,7 +110,7 @@ public static class NullablesGlobal
             Positive(n);
             return "ok";
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (Negative)
         {
             return why == null ? "fails" : why;
         }
@@ -150,7 +151,7 @@ public static class NullablesGlobal
         {
             Positive(-1);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (Negative)
         {
             console.Log("negative");
         }
@@ -159,7 +160,7 @@ public static class NullablesGlobal
         {
             fallback = Positive(-2);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (Negative)
         {
             fallback = 0;
         }

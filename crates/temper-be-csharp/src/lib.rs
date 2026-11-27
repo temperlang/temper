@@ -34,17 +34,15 @@
 //!
 //! It covers libraries of several modules, classes and interfaces (each in a file of its own, as
 //! Kotlin's: see [`translate`]), and nullable types (`T?`, `x.Value` or
-//! C#'s own narrowing), `orelse` (a `try` and `catch
-//! (global::TemperLang.Core.Bubble)`), `bubble()`, and `panic()` (the
-//! runtime's `Panic`), which, unlike Kotlin's, no `orelse` catches. Unlike Kotlin's catch-all, a
-//! handler catches only the runtime's `Bubble` (an `Exception`), which
-//! `as` (`Core.Cast<T>`) and every builtin that bubbles throw, the
-//! runtime turning host failures (`FormatException`,
-//! `KeyNotFoundException`, a broken promise's exception) into one; so
-//! anything else, a host exception from a builtin not declared to
-//! bubble or from a callback, passes every `orelse`, and a library's
-//! host code (its `.cs` files) bubbles only by throwing a `Bubble`
-//! (`Core.Bubble()`); declared failures (RFC 164) as exceptions, each
+//! C#'s own narrowing), `orelse` and `catch` (a `try` and a `catch` of
+//! the failure class above what the body may throw), and `panic()` (and
+//! code with an error) as the runtime's `Panic`, which, unlike Kotlin's,
+//! no handler catches. Unlike Kotlin's catch-all, a handler catches only
+//! declared failures, which builtins that may fail throw, the runtime
+//! turning host failures (`FormatException`, `KeyNotFoundException`, a
+//! broken promise's exception) into core's; so anything else, a host
+//! exception from a builtin not declared to fail or from a callback,
+//! passes every handler; declared failures (RFC 164) as exceptions, each
 //! library's failure types under its roots, `WherewithException :
 //! Exception, IFailure`, `throw` as C#'s, the cause as `InnerException`,
 //! and handlers that catch exactly what their bodies may fail with

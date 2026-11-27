@@ -276,10 +276,10 @@ impl Effects {
                     writes: true,
                     ..Effect::default()
                 },
-                Node::Error { .. } | Node::Bubble { .. } | Node::Throw { .. } => bubbles(true),
+                Node::Throw { .. } => bubbles(true),
                 // Stopping the program shows before or after anything
-                // else that shows.
-                Node::Panic {} => Effect {
+                // else that shows, as code with an error does.
+                Node::Panic {} | Node::Error { .. } => Effect {
                     writes: true,
                     ..Effect::default()
                 },

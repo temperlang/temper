@@ -1,12 +1,13 @@
-import { bubble, isBubble, panic } from "@temperlang/core";
+import { failureBase, panic } from "@temperlang/core";
 
 /**
  * @param {number} n
  * @returns {number}
+ * @throws {NotPositive}
  */
 function positive(n) {
   if (n <= 0) {
-    bubble();
+    throw new NotPositive(n);
   }
   return n;
 }
@@ -17,15 +18,40 @@ function positive(n) {
  */
 function checked(n) {
   try {
-    if (n === 0) {
+    const p = positive(n);
+    if (p === 1) {
       return 0;
     }
-    positive(n);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof NotPositive)) throw e$;
     panic("panic", e$);
   }
   return n;
+}
+
+class Problem extends Error {}
+
+failureBase(Problem);
+
+class NotPositive extends Problem {
+  /** @type {number} */
+  #n;
+
+  /** @param {number} n */
+  constructor(n) {
+    super();
+    this.#n = n;
+  }
+
+  /** @returns {number} */
+  get n() {
+    return this.#n;
+  }
+
+  /** @returns {string} */
+  get message() {
+    return `not positive (n: ${this.#n})`;
+  }
 }
 
 console.log("before");

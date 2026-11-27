@@ -33,8 +33,8 @@
 //!   any.
 //! - **Errors** don't stop a library: as Kotlin's `temper build` does, it
 //!   reports each, then translates and writes the library anyway, each
-//!   error failing where it runs, as `bubble()` does (tmpl's `Error`), so
-//!   its good parts work in every language. [`Built::errors`] counts
+//!   error panicking where it runs (tmpl's `Error`), so its good parts
+//!   work in every language. [`Built::errors`] counts
 //!   them, and `temper build` exits with 1 when there are any.
 //! - **What isn't covered yet** fails that library, with the first reason
 //!   on a line of its own (`LIBRARY: BACKEND: why`), and the build goes on

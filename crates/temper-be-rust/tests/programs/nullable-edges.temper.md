@@ -4,7 +4,7 @@ What's particular to Rust's `Option`s: a nullable string field that's
 `var`, with its setter; `Float64?` and `Int64?` compared; `as` from a
 nullable value (which panics on null, so only where it isn't); an
 `orelse` whose body has statements, also as a
-function's last value; an `orelse` whose fallback bubbles and whose
+function's last value; an `orelse` whose fallback throws and whose
 body takes lines, held in a local that a parameter's name mustn't
 clash with; and a nullable class value narrowed and called.
 The log is what the interpreter gives.
@@ -20,7 +20,11 @@ The log is what the interpreter gives.
     let sameLong(a: Int64?, b: Int64?): Boolean { a == b }
 
     let sure(s: String?): String { s as String }
-    let must(s: String?): String throws Bubble { s ?? bubble() }
+    sealed interface Problem extends Error {}
+    class Missing extends Problem {}
+    class NoCodeFound extends Problem {}
+
+    let must(s: String?): String throws Missing { s ?? throw new Missing() }
 
     let longer(s: String?): Int {
       let v: Int = do {
@@ -42,13 +46,13 @@ The log is what the interpreter gives.
     class Code(public text: String) extends Part {}
     class NoCode() extends Part {}
 
-    let codeOf(part: Part): Code throws Bubble {
-      if (part is Code) { part } else { bubble() }
+    let codeOf(part: Part): Code throws NoCodeFound {
+      if (part is Code) { part } else { throw new NoCodeFound() }
     }
-    let firstCode(attempt: Part): Int throws Bubble {
+    let firstCode(attempt: Part): Int throws NoCodeFound {
       codeOf(attempt).text[String.begin] orelse do {
         console.log("no code");
-        bubble()
+        throw new NoCodeFound()
       }
     }
 

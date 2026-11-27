@@ -145,9 +145,39 @@ pub(crate) fn reading(key: impl ToArcString, count: impl ToArcString) -> Result<
     .map_err(|failure| temper_core::with_cause(Unreadable::new(key.clone()), failure.clone()))
 }
 
-pub(crate) fn nonzero(n: i32) -> temper_core::Result<i32> {
+#[derive(Clone, Debug)]
+pub(crate) enum Problem {
+    Zero(Zero),
+}
+
+temper_core::impl_failure_enum!(Problem, Zero(Zero));
+
+struct ZeroStruct {
+    cause: temper_core::Cause,
+}
+
+#[derive(Clone)]
+pub(crate) struct Zero(Arc<ZeroStruct>);
+
+impl Zero {
+    pub fn new() -> Zero {
+        Zero(Arc::new(ZeroStruct {
+            cause: temper_core::Cause::new(),
+        }))
+    }
+
+    pub fn message(&self) -> Arc<String> {
+        Arc::new("zero".to_string())
+    }
+}
+
+temper_core::impl_failure!(Zero, message, cause);
+
+temper_core::impl_any_value_trait!(Zero, [Problem]);
+
+pub(crate) fn nonzero(n: i32) -> Result<i32, Zero> {
     if n == 0 {
-        Err(temper_core::Error::new())
+        Err(Zero::new())
     } else {
         Ok(n)
     }
@@ -157,7 +187,7 @@ pub(crate) fn ratio(key: impl ToArcString, count: impl ToArcString) -> i32 {
     let key = key.to_arc_string();
     let count = count.to_arc_string();
     (|| {
-        Ok::<_, temper_core::Error>(
+        Ok::<_, Arc<dyn temper_core::Failure>>(
             host_lookup(key.clone())?
                 .wrapping_div(nonzero(count_failures::parse_count(count.clone())?)?),
         )

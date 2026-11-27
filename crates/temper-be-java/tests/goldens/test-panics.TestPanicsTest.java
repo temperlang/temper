@@ -1,20 +1,19 @@
 package test_panics;
 
 import java.util.List;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.std.testing.Test;
 
 public final class TestPanicsTest {
-    static int at(List<Integer> ls, int i) {
+    static int at(List<Integer> ls, int i) throws Oops {
         if (i == 99) {
-            throw Core.bubble();
+            throw new Oops();
         }
         return Core.listGet(ls, i);
     }
 
     static {
-        Bubble.keepStackTraces();
+        Core.keepStackTraces();
     }
 
     @org.junit.jupiter.api.Test
@@ -43,7 +42,7 @@ public final class TestPanicsTest {
             int n;
             try {
                 n = at(List.of(1, 2), 5);
-            } catch (Bubble ignored) {
+            } catch (Oops ignored) {
                 n = -1;
             }
             {

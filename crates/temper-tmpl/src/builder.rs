@@ -3,7 +3,7 @@
 //! Children come first, so a child's id is always lower than its
 //! parent's. Each method gives its node the type the local rules say
 //! (a literal's, a name's declaration's, a call's signature's result) and
-//! marks calls that may bubble, so callers pass a type only where no rule
+//! marks calls that may fail, so callers pass a type only where no rule
 //! gives one. The builder never fails: whether the result makes sense
 //! (argument types, scopes, assignments, returns) is the validator's to
 //! say.
@@ -692,13 +692,13 @@ impl Builder {
         (self.p.types.pass(returns), flags)
     }
 
-    /// Calls a function, marked if it may bubble.
+    /// Calls a function, marked if it may fail.
     pub fn call(&mut self, callee: DeclId, args: &[NodeId]) -> NodeId {
         self.call_generic(callee, &[], args)
     }
 
     /// Calls a generic function with its type arguments, marked if it may
-    /// bubble.
+    /// fail.
     pub fn call_generic(
         &mut self,
         callee: DeclId,
@@ -710,13 +710,13 @@ impl Builder {
         self.raw(Kind::CallFunction, result, (callee.0, ta.0), flags, args)
     }
 
-    /// Calls a method or getter on a receiver, marked if it may bubble.
+    /// Calls a method or getter on a receiver, marked if it may fail.
     pub fn call_method(&mut self, method: DeclId, receiver: NodeId, args: &[NodeId]) -> NodeId {
         self.call_method_generic(method, &[], receiver, args)
     }
 
     /// Calls a method on a receiver with the method's own type arguments,
-    /// marked if it may bubble.
+    /// marked if it may fail.
     pub fn call_method_generic(
         &mut self,
         method: DeclId,
@@ -750,13 +750,13 @@ impl Builder {
         self.expr(Kind::GetStatic, ty, (target.0, 0), &[])
     }
 
-    /// Calls a constructor, marked if it may bubble.
+    /// Calls a constructor, marked if it may fail.
     pub fn new_object(&mut self, ctor: DeclId, args: &[NodeId]) -> NodeId {
         self.new_generic(ctor, &[], args)
     }
 
     /// Calls a generic class's constructor with the class's type
-    /// arguments, marked if it may bubble.
+    /// arguments, marked if it may fail.
     pub fn new_generic(&mut self, ctor: DeclId, type_args: &[TypeId], args: &[NodeId]) -> NodeId {
         let (result, flags) = self.call_type(ctor, None, type_args);
         let ta = self.p.types.type_args(type_args);
@@ -811,12 +811,12 @@ impl Builder {
         self.expr(Kind::FunctionRef, ty, (target.0, 0), &[])
     }
 
-    /// Calls a function value, marked if its signature may bubble.
+    /// Calls a function value, marked if its signature may fail.
     pub fn call_value(&mut self, callee: NodeId, args: &[NodeId]) -> NodeId {
         let ty = self.p.nodes.ty(callee);
         let (result, flags) = match self.fun_signature(ty) {
             Some(sig) => match self.p.types.signature(sig) {
-                Some(s) if s.bubbles() => (s.pass, Flags::MAY_BUBBLE),
+                Some(s) if s.fails() => (s.pass, Flags::MAY_BUBBLE),
                 Some(s) => (s.pass, Flags::NONE),
                 None => (TypeId::NONE, Flags::NONE),
             },
@@ -849,7 +849,7 @@ impl Builder {
         self.expr(Kind::Downcast, ty, (0, 0), &[value])
     }
 
-    /// `value as ty`, checked, bubbling if it fails.
+    /// `value as ty`, checked, panicking if it fails.
     pub fn as_cast(&mut self, ty: TypeId, value: NodeId) -> NodeId {
         self.raw(Kind::As, ty, (0, 0), Flags::NONE, &[value])
     }
@@ -869,14 +869,13 @@ impl Builder {
         self.expr(Kind::Omitted, ty, (0, 0), &[])
     }
 
-    /// Gives a node typed by its place (`Null`, `Bubble`, `Throw`, `Panic`,
+    /// Gives a node typed by its place (`Null`, `Throw`, `Panic`,
     /// `Error`, or a function literal or reference) its type, once the place is known; other nodes keep theirs.
     pub fn retype(&mut self, node: NodeId, ty: TypeId) {
         let kind = self.p.nodes.kind(node);
         if matches!(
             kind,
             Kind::Null
-                | Kind::Bubble
                 | Kind::Throw
                 | Kind::Panic
                 | Kind::Error
@@ -936,11 +935,6 @@ impl Builder {
         self.expr(Kind::OrElse, ty, (0, 0), &[body, fallback])
     }
 
-    /// `bubble()`, typed as its place wants.
-    pub fn bubble(&mut self, ty: TypeId) -> NodeId {
-        self.raw(Kind::Bubble, ty, (0, 0), Flags::MAY_BUBBLE, &[])
-    }
-
     /// `throw value`, with the failure being handled as its `cause` in a
     /// handler's fallback; typed as its place wants.
     pub fn throw(&mut self, ty: TypeId, value: NodeId, cause: Option<NodeId>) -> NodeId {
@@ -982,8 +976,8 @@ impl Builder {
         self.expr(Kind::BlockValue, ty, (0, 0), &kids)
     }
 
-    /// Waits for `promise`, a `Promise<T>`, typed `ty`, its `T`; it may
-    /// bubble, if the promise is broken.
+    /// Waits for `promise`, a `Promise<T>`, typed `ty`, its `T`; it fails
+    /// with core's `BrokenPromise` if the promise is broken.
     pub fn await_promise(&mut self, ty: TypeId, promise: NodeId) -> NodeId {
         self.raw(Kind::Await, ty, (0, 0), Flags::MAY_BUBBLE, &[promise])
     }

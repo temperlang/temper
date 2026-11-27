@@ -1,5 +1,5 @@
 from temper_core import (
-    Bubble as _Bubble,
+    Failure as _Failure,
     LoggingConsole as _LoggingConsole,
     ParseError as _ParseError,
     arith_int_mod as _arith_int_mod,
@@ -14,25 +14,37 @@ from typing import NoReturn as _NoReturn
 __all__ = ()
 
 
+class _Problem(_Failure, Exception):
+    __slots__ = ()
+
+
+class _Missing(_Problem):
+    __slots__ = ()
+
+    @property
+    def message(self, /) -> str:
+        return 'missing'
+
+
 def _more(x: int | None, /) -> int:
-    raise _Bubble()
+    raise _Missing()
 
 
 def _something(x: str | None, /) -> str:
     if x is not None:
         return x
     else:
-        raise _Bubble()
+        raise _Missing()
 
 
 def _report(x: str | None, /) -> None:
     try:
         message = _something(x)
-    except _Bubble:
+    except _Missing:
         message = 'null'
     try:
         suffix = str(_more(1 if x is not None else 0))
-    except _Bubble:
+    except _Missing:
         suffix = ''
     _console.log(message + suffix)
 
@@ -40,15 +52,12 @@ def _report(x: str | None, /) -> None:
 def _calc_rows(cols: int, total: int, /) -> int:
     _console.log(f'calcRows({cols}, {total})')
     if _arith_int_mod(total, cols) != 0:
-        raise _Bubble()
+        raise _Missing()
     return _int_div(total, cols)
 
 
 def _parsed(s: str, /) -> int:
-    try:
-        return _string_to_int32(s)
-    except _ParseError:
-        raise _Bubble()
+    return _string_to_int32(s)
 
 
 def _count_below(s: str, /) -> int:
@@ -85,7 +94,7 @@ def _ten_times(n: int, /) -> int:
         if i == n:
             return _int_mul(i, 10)
         i = _int_add(i, 1)
-    raise _Bubble()
+    raise _Missing()
 
 
 def _is_none(r: int | None, /) -> bool:
@@ -96,17 +105,17 @@ def _via_or_else(n: int, /) -> str:
     t_0: int
     try:
         t_0 = _first_over(n)
-    except _Bubble:
+    except _Missing:
         t_0 = -1
     t_1: int
     try:
         t_1 = _sum_skipping(n)
-    except _Bubble:
+    except _Missing:
         t_1 = -1
     t_2: int
     try:
         t_2 = _ten_times(n)
-    except _Bubble:
+    except _Missing:
         t_2 = -1
     return f'{t_0} {t_1} {t_2}'
 
@@ -116,11 +125,11 @@ def _unreachable_int() -> _NoReturn:
 
 
 def _fail_as(fallback: object, /) -> _NoReturn:
-    raise _Bubble()
+    raise _Missing()
 
 
 def _bail() -> _NoReturn:
-    raise _Bubble()
+    raise _Missing()
 
 
 def _no_name() -> str | None:
@@ -183,18 +192,18 @@ _console.log(str(_calc_rows(3, 6)))
 _t_0: int
 try:
     _t_0 = _count_below('abc')
-except _Bubble:
+except _ParseError:
     _t_0 = -1
 _console.log(str(_t_0))
 _t_1: int
 try:
     _t_1 = _first_over(1)
-except _Bubble:
+except _Missing:
     _t_1 = -1
 _t_2: int | None
 try:
     _t_2 = _first_over(1)
-except _Bubble:
+except _Missing:
     _t_2 = None
 _console.log(f'{_t_1} {_boolean_to_string(_is_none(_t_2))}')
 _console.log(_via_or_else(2))
@@ -203,17 +212,17 @@ _console.log(f"{_pick(True)} {'-' if (_subject := _named(True)) is None else _su
 _t_3: int
 try:
     _t_3 = _half(4)
-except _Bubble:
+except _Missing:
     _t_3 = -1
 _t_4: int
 try:
     _t_4 = _half(3)
-except _Bubble:
+except _Missing:
     _t_4 = -1
 _t_5: int
 try:
     _t_5 = _half(-2)
-except _Bubble:
+except _Missing:
     _t_5 = -1
 _console.log(f'{_t_3} {_t_4} {_t_5}')
 _console.log(f"{_chosen(True)} {_shout('hey')}")

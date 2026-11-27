@@ -1,5 +1,3 @@
-local temper = require("temper-core")
-
-temper.bubble()
+error("panic")
 
 return {}

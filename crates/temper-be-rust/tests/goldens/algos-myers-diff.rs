@@ -20,7 +20,7 @@ pub(crate) fn init() -> temper_core::Result<()> {
                     temper_core::string::split("Hello,\nWorld!", Arc::new("\n".to_string())),
                     temper_core::string::split("Hello,\nCosmos!", Arc::new("\n".to_string())),
                     Arc::new(move |a: Arc<String>, b: Arc<String>| a == b),
-                )?,)?
+                ))
             );
             Ok(())
         })
@@ -105,7 +105,7 @@ pub fn change_type_deletion() -> Arc<String> {
     crate::support::initialized(|| CHANGE_TYPE_DELETION.get()).clone()
 }
 
-pub fn format_patch(patch: Patch<Arc<String>>) -> temper_core::Result<Arc<String>> {
+pub fn format_patch(patch: Patch<Arc<String>>) -> Arc<String> {
     let mut formatted = Arc::new(String::new());
     let changes: temper_core::List<Change<Arc<String>>> = patch.0.changes.clone();
     let n = temper_core::ListedTrait::len(&changes);
@@ -134,7 +134,7 @@ pub fn format_patch(patch: Patch<Arc<String>>) -> temper_core::Result<Arc<String
             i = i.wrapping_add(1);
         }
     }
-    Ok(formatted.clone())
+    formatted.clone()
 }
 
 static CHANGE_TYPE_UNCHANGED: OnceLock<Arc<String>> = OnceLock::new();
@@ -176,7 +176,7 @@ pub fn diff<T: Clone + Send + Sync + 'static>(
     left: impl temper_core::ToList<T>,
     right: impl temper_core::ToList<T>,
     eq: Arc<dyn Fn(T, T) -> bool + Send + Sync>,
-) -> temper_core::Result<Patch<T>> {
+) -> Patch<T> {
     let left = left.to_list();
     let right = right.to_list();
     let left_length = temper_core::ListedTrait::len(&left);
@@ -275,7 +275,7 @@ pub fn diff<T: Clone + Send + Sync + 'static>(
                     i = end;
                 }
             }
-            return Ok(Patch::new(temper_core::ListedTrait::to_list(&changes)));
+            return Patch::new(temper_core::ListedTrait::to_list(&changes));
         }
         if left_index < left_length {
             if right_index < right_length {

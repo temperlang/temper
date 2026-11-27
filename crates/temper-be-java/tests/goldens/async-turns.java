@@ -219,9 +219,9 @@ public final class AsyncTurnsGlobal {
         return Core.listJoinInt(ints, " ", i -> Integer.toString(i));
     }
 
-    public static int halve(int n) {
+    public static int halve(int n) throws Odd {
         if (n % 2 != 0) {
-            throw Core.bubble();
+            throw new Odd(n);
         }
         return n / 2;
     }

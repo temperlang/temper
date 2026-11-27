@@ -1,6 +1,5 @@
 package values;
 
-import temper.core.Bubble;
 import temper.core.Core;
 
 public final class ValuesMain {
@@ -8,7 +7,7 @@ public final class ValuesMain {
 
     public static void main(String[] args) throws ClassNotFoundException {
         Core.initSimpleLogging();
-        Bubble.keepStackTraces();
+        Core.keepStackTraces();
         Core.beginTopLevel();
         try {
             Class.forName("values.exporter.ExporterGlobal");

@@ -1,6 +1,5 @@
 package reach;
 
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.std.testing.Test;
 
@@ -17,7 +16,7 @@ public final class ReachTest {
     }
 
     static {
-        Bubble.keepStackTraces();
+        Core.keepStackTraces();
         ReachGlobal.initStatics();
         testFactor = ReachGlobal.base * 2;
         testCount = 0;

@@ -5,7 +5,7 @@ from collections.abc import (
     Sequence as _Sequence,
 )
 from temper_core import (
-    Bubble as _Bubble,
+    Failure as _Failure,
     LoggingConsole as _LoggingConsole,
     ParseError as _ParseError,
     boolean_to_string as _boolean_to_string,
@@ -85,19 +85,12 @@ class Grid:
     def parse(s: str, /) -> 'Grid | None':
         try:
             return parse_grid(s)
-        except _Bubble:
+        except _ParseError:
             return None
 
 
 def parse_grid(s: str, /) -> Grid:
-    if s == '':
-        raise _Bubble()
-    t_0: float
-    try:
-        t_0 = _string_to_float64(s)
-    except _ParseError:
-        raise _Bubble()
-    return Grid(1, (t_0,))
+    return Grid(1, (_string_to_float64(s),))
 
 
 class Casing:
@@ -257,9 +250,21 @@ def _rows(values: _Sequence[float], ncols: int, /) -> int:
     return _int_div(len(values), ncols)
 
 
+class _Problem(_Failure, Exception):
+    __slots__ = ()
+
+
+class _NoColumns(_Problem):
+    __slots__ = ()
+
+    @property
+    def message(self, /) -> str:
+        return 'no columns'
+
+
 def _scaled(grid: Grid, /) -> Grid:
     if grid.ncols == 0:
-        raise _Bubble()
+        raise _NoColumns()
     return grid
 
 
@@ -267,7 +272,7 @@ def _cubes(grid: Grid, /) -> _Sequence[float]:
     try:
         more = _list_map(_scaled(grid).values, lambda x: x * x * x)
         return more
-    except _Bubble as t_0:
+    except _NoColumns as t_0:
         raise BaseException('panic') from t_0
 
 
@@ -297,10 +302,7 @@ def _cube(x: float, /) -> float:
 
 
 def _corner(grid: Grid, /) -> float:
-    try:
-        return grid.get(1, 1)
-    except _Bubble:
-        return -1.0
+    return grid.get(1, 1)
 
 
 def _maybe(n: int, /) -> Grid | None:
@@ -314,7 +316,7 @@ def _mapped(grid: Grid, /) -> _Sequence[float]:
     t_0: Grid
     try:
         t_0 = _scaled(grid)
-    except _Bubble as t_1:
+    except _NoColumns as t_1:
         raise BaseException('panic') from t_1
     t_2 = t_0.values
     def fn(x: float, /) -> float:
@@ -398,7 +400,7 @@ def _captured(s: str, /) -> str:
     found: Grid | None
     try:
         found = parse_grid(s)
-    except _Bubble:
+    except _ParseError:
         found = None
     return _list_join(_list_map((1, 2), lambda x: found is None), ',', lambda b: _boolean_to_string(b))
 

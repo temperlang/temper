@@ -1,15 +1,55 @@
 use std::sync::OnceLock;
 
+#[cfg(test)]
+use std::sync::Arc;
+
 pub(crate) fn init() -> temper_core::Result<()> {
     static INIT_ONCE: OnceLock<temper_core::Result<()>> = OnceLock::new();
     INIT_ONCE.get_or_init(|| Ok(())).clone()
 }
 
 #[cfg(test)]
-pub(crate) fn at(ls: impl temper_core::ToList<i32>, i: i32) -> temper_core::Result<i32> {
+#[derive(Clone, Debug)]
+pub(crate) enum Problem {
+    Oops(Oops),
+}
+
+#[cfg(test)]
+temper_core::impl_failure_enum!(Problem, Oops(Oops));
+
+#[cfg(test)]
+struct OopsStruct {
+    cause: temper_core::Cause,
+}
+
+#[cfg(test)]
+#[derive(Clone)]
+pub(crate) struct Oops(Arc<OopsStruct>);
+
+#[cfg(test)]
+impl Oops {
+    pub fn new() -> Oops {
+        Oops(Arc::new(OopsStruct {
+            cause: temper_core::Cause::new(),
+        }))
+    }
+
+    pub fn message(&self) -> Arc<String> {
+        Arc::new("oops".to_string())
+    }
+}
+
+#[cfg(test)]
+temper_core::impl_failure!(Oops, message, cause);
+
+#[cfg(test)]
+temper_core::impl_any_value_trait!(Oops, [Problem]);
+
+#[cfg(test)]
+pub(crate) fn at(ls: impl temper_core::ToList<i32>, i: i32) -> Result<i32, Oops> {
     let ls = ls.to_list();
     if i == 99 {
-        return Err(temper_core::Error::new());
+        return Err(Oops::new());
     }
     Ok(temper_core::ListedTrait::get(&ls, i))
 }

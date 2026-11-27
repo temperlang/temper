@@ -284,16 +284,13 @@ impl Grid {
         Grid(Arc::new(GridStruct { ncols, values }))
     }
 
-    pub fn get(&self, i: i32, j: i32) -> temper_core::Result<f64> {
-        Ok(temper_core::ListedTrait::get(
-            &self.0.values,
-            i.wrapping_mul(self.0.ncols).wrapping_add(j),
-        ))
+    pub fn get(&self, i: i32, j: i32) -> f64 {
+        temper_core::ListedTrait::get(&self.0.values, i.wrapping_mul(self.0.ncols).wrapping_add(j))
     }
 
     pub fn parse(s: impl ToArcString) -> Option<Grid> {
         let s = s.to_arc_string();
-        (|| Ok::<_, temper_core::Error>(Some(parse_grid(s.clone())?)))().unwrap_or(None)
+        (|| Ok::<_, temper_core::ParseError>(Some(parse_grid(s.clone())?)))().unwrap_or(None)
     }
 
     pub fn ncols(&self) -> i32 {
@@ -307,18 +304,11 @@ impl Grid {
 
 temper_core::impl_any_value_trait!(Grid, []);
 
-pub fn parse_grid(s: impl ToArcString) -> temper_core::Result<Grid> {
+pub fn parse_grid(s: impl ToArcString) -> Result<Grid, temper_core::ParseError> {
     let s = s.to_arc_string();
-    if s.as_str() == "" {
-        return Err(temper_core::Error::new());
-    }
     Ok(Grid::new(
         1,
-        Arc::new(vec![if let Ok(v) = temper_core::string::to_float64(&s) {
-            v
-        } else {
-            return Err(temper_core::Error::new());
-        }]),
+        Arc::new(vec![temper_core::string::to_float64(&s)?]),
     ))
 }
 
@@ -601,9 +591,39 @@ pub(crate) fn rows(values: impl temper_core::ToList<f64>, ncols: i32) -> i32 {
     temper_core::ListedTrait::len(&values).wrapping_div(ncols)
 }
 
-pub(crate) fn scaled(grid: Grid) -> temper_core::Result<Grid> {
+#[derive(Clone, Debug)]
+pub(crate) enum Problem {
+    NoColumns(NoColumns),
+}
+
+temper_core::impl_failure_enum!(Problem, NoColumns(NoColumns));
+
+struct NoColumnsStruct {
+    cause: temper_core::Cause,
+}
+
+#[derive(Clone)]
+pub(crate) struct NoColumns(Arc<NoColumnsStruct>);
+
+impl NoColumns {
+    pub fn new() -> NoColumns {
+        NoColumns(Arc::new(NoColumnsStruct {
+            cause: temper_core::Cause::new(),
+        }))
+    }
+
+    pub fn message(&self) -> Arc<String> {
+        Arc::new("no columns".to_string())
+    }
+}
+
+temper_core::impl_failure!(NoColumns, message, cause);
+
+temper_core::impl_any_value_trait!(NoColumns, [Problem]);
+
+pub(crate) fn scaled(grid: Grid) -> Result<Grid, NoColumns> {
     if grid.0.ncols == 0 {
-        return Err(temper_core::Error::new());
+        return Err(NoColumns::new());
     }
     Ok(grid.clone())
 }
@@ -612,7 +632,7 @@ pub(crate) fn cubes(grid: Grid) -> temper_core::List<f64> {
     (|| {
         let more: temper_core::List<f64> =
             temper_core::listed::map(&scaled(grid.clone())?.0.values, &(|x: f64| x * x * x));
-        Ok::<_, temper_core::Error>(more.clone())
+        Ok::<_, NoColumns>(more.clone())
     })()
     .unwrap_or_else(|e| panic!("panic\ncaused by: {e}"))
 }
@@ -648,7 +668,7 @@ pub(crate) fn cube(x: f64) -> f64 {
 }
 
 pub(crate) fn corner(grid: Grid) -> f64 {
-    grid.get(1, 1).unwrap_or(-1.0)
+    grid.get(1, 1)
 }
 
 pub(crate) fn maybe(n: i32) -> Option<Grid> {
@@ -787,7 +807,8 @@ pub(crate) fn casing(n: i32) -> Option<Casing> {
 
 pub(crate) fn captured(s: impl ToArcString) -> Arc<String> {
     let s = s.to_arc_string();
-    let found = (|| Ok::<_, temper_core::Error>(Some(parse_grid(s.clone())?)))().unwrap_or(None);
+    let found =
+        (|| Ok::<_, temper_core::ParseError>(Some(parse_grid(s.clone())?)))().unwrap_or(None);
     temper_core::listed::join(
         &temper_core::listed::map(&Arc::new(vec![1, 2]), &(|_x: i32| found.is_none())),
         Arc::new(",".to_string()),

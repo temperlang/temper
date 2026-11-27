@@ -6,45 +6,54 @@
 8:3 -> ../hoisting.temper.md:10:7  calls = (calls + 1) | 0; <- calls += 1;
 9:3 -> ../hoisting.temper.md:11:7  console.log(`noted ${n}`); <- console.log("noted ${n}");
 10:3 -> ../hoisting.temper.md:12:7  return n; <- n
-13:1 -> ../hoisting.temper.md:14:5  /** <- let failing(n: Int): Int thr
-17:1 -> ../hoisting.temper.md:14:5  function failing(n) { <- let failing(n: Int): Int thr
-17:10 -> ../hoisting.temper.md:14:9 (failing)  failing(n) { <- failing(n: Int): Int throws
-17:17 -> ../hoisting.temper.md:14:5  (n) { <- let failing(n: Int): Int thr
-18:3 -> ../hoisting.temper.md:15:7  if (n > 2) { <- if (n > 2) { bubble() }
-19:5 -> ../hoisting.temper.md:15:20  bubble(); <- bubble() }
-21:3 -> ../hoisting.temper.md:16:7  return n; <- n
-24:1 -> ../hoisting.temper.md:18:5  /** <- let pair(a: Int, b: Int): St
-29:1 -> ../hoisting.temper.md:18:5  function pair(a, b) { <- let pair(a: Int, b: Int): St
-29:10 -> ../hoisting.temper.md:18:9 (pair)  pair(a, b) { <- pair(a: Int, b: Int): String
-29:14 -> ../hoisting.temper.md:18:5  (a, b) { <- let pair(a: Int, b: Int): St
-30:3 -> ../hoisting.temper.md:18:40  return `${a},${b}`; <- "${a},${b}" }
-33:1 -> ../hoisting.temper.md:19:5  /** <- let sameFloat(a: Float64?, b
-38:1 -> ../hoisting.temper.md:19:5  function sameFloat(a, b) { <- let sameFloat(a: Float64?, b
-38:10 -> ../hoisting.temper.md:19:9 (sameFloat)  sameFloat(a, b) { <- sameFloat(a: Float64?, b: Fl
-38:19 -> ../hoisting.temper.md:19:5  (a, b) { <- let sameFloat(a: Float64?, b
-39:3 -> ../hoisting.temper.md:19:56  return a == null ? b == null <- a == b }
-42:1 -> ../hoisting.temper.md:8:5  let calls = 0; <- var calls = 0;
-43:1 -> ../hoisting.temper.md:21:5  const t$1 = noted(1); <- console.log(pair(noted(1), f
-44:1 -> ../hoisting.temper.md:21:5  /** @type {number} */ <- console.log(pair(noted(1), f
-45:1 -> ../hoisting.temper.md:21:5  let t$0; <- console.log(pair(noted(1), f
-46:1 -> ../hoisting.temper.md:21:5  try { <- console.log(pair(noted(1), f
-52:1 -> ../hoisting.temper.md:21:5  console.log(pair(t$1, t$0)); <- console.log(pair(noted(1), f
-53:1 -> ../hoisting.temper.md:22:5  const t = true; <- let t = true;
-54:1 -> ../hoisting.temper.md:23:5  const f = false; <- let f = false;
-55:1 -> ../hoisting.temper.md:24:5  let t$3 = f; <- console.log((f && (failing(5
-56:1 -> ../hoisting.temper.md:24:5  if (t$3) { <- console.log((f && (failing(5
-67:1 -> ../hoisting.temper.md:24:5  console.log(t$3.toString()); <- console.log((f && (failing(5
-68:1 -> ../hoisting.temper.md:25:5  let t$5 = t; <- console.log((t && (failing(1
-69:1 -> ../hoisting.temper.md:25:5  if (t$5) { <- console.log((t && (failing(1
-80:1 -> ../hoisting.temper.md:25:5  console.log(t$5.toString()); <- console.log((t && (failing(1
-81:1 -> ../hoisting.temper.md:26:5  console.log((t || noted(7) = <- console.log((t || (noted(7)
-82:1 -> ../hoisting.temper.md:27:5  /** @type {number} */ <- console.log((if (t) { failin
-83:1 -> ../hoisting.temper.md:27:5  let t$6; <- console.log((if (t) { failin
-84:1 -> ../hoisting.temper.md:27:5  if (t) { <- console.log((if (t) { failin
-94:1 -> ../hoisting.temper.md:27:5  console.log(t$6.toString()); <- console.log((if (t) { failin
-95:1 -> ../hoisting.temper.md:28:5  let i = 0; <- var i = 0;
-96:1 -> ../hoisting.temper.md:29:5  while (true) { <- while ((failing(i) orelse 10
-108:3 -> ../hoisting.temper.md:30:7  i = (i + 1) | 0; <- i += 1;
-110:1 -> ../hoisting.temper.md:32:5  console.log(i.toString()); <- console.log(i.toString());
-111:1 -> ../hoisting.temper.md:33:5  console.log(`${sameFloat(nul <- console.log("${sameFloat(nul
-112:1 -> ../hoisting.temper.md:34:5  console.log(calls.toString() <- console.log(calls.toString()
+13:1 -> ../hoisting.temper.md:16:5  /** <- let failing(n: Int): Int thr
+18:1 -> ../hoisting.temper.md:16:5  function failing(n) { <- let failing(n: Int): Int thr
+18:10 -> ../hoisting.temper.md:16:9 (failing)  failing(n) { <- failing(n: Int): Int throws
+18:17 -> ../hoisting.temper.md:16:5  (n) { <- let failing(n: Int): Int thr
+19:3 -> ../hoisting.temper.md:17:7  if (n > 2) { <- if (n > 2) { throw new TooBi
+20:5 -> ../hoisting.temper.md:17:20  throw new TooBig(); <- throw new TooBig() }
+22:3 -> ../hoisting.temper.md:18:7  return n; <- n
+25:1 -> ../hoisting.temper.md:20:5  /** <- let pair(a: Int, b: Int): St
+30:1 -> ../hoisting.temper.md:20:5  function pair(a, b) { <- let pair(a: Int, b: Int): St
+30:10 -> ../hoisting.temper.md:20:9 (pair)  pair(a, b) { <- pair(a: Int, b: Int): String
+30:14 -> ../hoisting.temper.md:20:5  (a, b) { <- let pair(a: Int, b: Int): St
+31:3 -> ../hoisting.temper.md:20:40  return `${a},${b}`; <- "${a},${b}" }
+34:1 -> ../hoisting.temper.md:21:5  /** <- let sameFloat(a: Float64?, b
+39:1 -> ../hoisting.temper.md:21:5  function sameFloat(a, b) { <- let sameFloat(a: Float64?, b
+39:10 -> ../hoisting.temper.md:21:9 (sameFloat)  sameFloat(a, b) { <- sameFloat(a: Float64?, b: Fl
+39:19 -> ../hoisting.temper.md:21:5  (a, b) { <- let sameFloat(a: Float64?, b
+40:3 -> ../hoisting.temper.md:21:56  return a == null ? b == null <- a == b }
+43:1 -> ../hoisting.temper.md:14:5  class Problem extends Error <- sealed interface Problem ext
+43:7 -> ../hoisting.temper.md:14:22 (Problem)  Problem extends Error {} <- Problem extends Error {}
+43:14 -> ../hoisting.temper.md:14:5   extends Error {} <- sealed interface Problem ext
+47:1 -> ../hoisting.temper.md:15:5  class TooBig extends Problem <- class TooBig extends Problem
+47:7 -> ../hoisting.temper.md:15:11 (TooBig)  TooBig extends Problem { <- TooBig extends Problem {}
+47:13 -> ../hoisting.temper.md:15:5   extends Problem { <- class TooBig extends Problem
+48:3 -> ../hoisting.temper.md:15:5  /** @returns {string} */ <- class TooBig extends Problem
+49:3 -> ../hoisting.temper.md:15:5  get message() { <- class TooBig extends Problem
+50:5 -> ../hoisting.temper.md:15:5  return "too big"; <- class TooBig extends Problem
+54:1 -> ../hoisting.temper.md:8:5  let calls = 0; <- var calls = 0;
+55:1 -> ../hoisting.temper.md:23:5  const t$1 = noted(1); <- console.log(pair(noted(1), f
+56:1 -> ../hoisting.temper.md:23:5  /** @type {number} */ <- console.log(pair(noted(1), f
+57:1 -> ../hoisting.temper.md:23:5  let t$0; <- console.log(pair(noted(1), f
+58:1 -> ../hoisting.temper.md:23:5  try { <- console.log(pair(noted(1), f
+64:1 -> ../hoisting.temper.md:23:5  console.log(pair(t$1, t$0)); <- console.log(pair(noted(1), f
+65:1 -> ../hoisting.temper.md:24:5  const t = true; <- let t = true;
+66:1 -> ../hoisting.temper.md:25:5  const f = false; <- let f = false;
+67:1 -> ../hoisting.temper.md:26:5  let t$3 = f; <- console.log((f && (failing(5
+68:1 -> ../hoisting.temper.md:26:5  if (t$3) { <- console.log((f && (failing(5
+79:1 -> ../hoisting.temper.md:26:5  console.log(t$3.toString()); <- console.log((f && (failing(5
+80:1 -> ../hoisting.temper.md:27:5  let t$5 = t; <- console.log((t && (failing(1
+81:1 -> ../hoisting.temper.md:27:5  if (t$5) { <- console.log((t && (failing(1
+92:1 -> ../hoisting.temper.md:27:5  console.log(t$5.toString()); <- console.log((t && (failing(1
+93:1 -> ../hoisting.temper.md:28:5  console.log((t || noted(7) = <- console.log((t || (noted(7)
+94:1 -> ../hoisting.temper.md:29:5  /** @type {number} */ <- console.log((if (t) { failin
+95:1 -> ../hoisting.temper.md:29:5  let t$6; <- console.log((if (t) { failin
+96:1 -> ../hoisting.temper.md:29:5  if (t) { <- console.log((if (t) { failin
+106:1 -> ../hoisting.temper.md:29:5  console.log(t$6.toString()); <- console.log((if (t) { failin
+107:1 -> ../hoisting.temper.md:30:5  let i = 0; <- var i = 0;
+108:1 -> ../hoisting.temper.md:31:5  while (true) { <- while ((failing(i) orelse 10
+120:3 -> ../hoisting.temper.md:32:7  i = (i + 1) | 0; <- i += 1;
+122:1 -> ../hoisting.temper.md:34:5  console.log(i.toString()); <- console.log(i.toString());
+123:1 -> ../hoisting.temper.md:35:5  console.log(`${sameFloat(nul <- console.log("${sameFloat(nul
+124:1 -> ../hoisting.temper.md:36:5  console.log(calls.toString() <- console.log(calls.toString()

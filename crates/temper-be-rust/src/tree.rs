@@ -1917,7 +1917,7 @@ pub fn if_value(name: &str, cond: &Expr, then: &Block, els: Option<&Block>) -> O
 }
 
 /// `if let Ok(v) = e { v } else { … }`: a `Result`'s value, or `els`,
-/// which jumps or bubbles; `None` if `e` doesn't fit on a line, which the
+/// which jumps or fails; `None` if `e` doesn't fit on a line, which the
 /// `let` needs.
 pub fn if_ok(e: &Expr, els: Block) -> Option<Expr> {
     flat(e)?;
@@ -1930,7 +1930,7 @@ pub fn if_ok(e: &Expr, els: Block) -> Option<Expr> {
 
 /// What a failure in an `orelse`'s body run in place does: break out of
 /// the labeled block `label` to the fallback, or, where the fallback is
-/// `panic()`, panic at once, the bubble its cause, in place of that
+/// `panic()`, panic at once, the failure its cause, in place of that
 /// block's `break`s ([`retarget_tries`]).
 #[derive(Clone, Copy)]
 pub enum Fail<'a> {
@@ -1939,7 +1939,7 @@ pub enum Fail<'a> {
 }
 
 /// `panic!("panic\ncaused by: …")`, `orelse panic()`'s panic, `cause`
-/// the bubble's message in a format string (`{e}`): Rust's panics have
+/// the failure's message in a format string (`{e}`): Rust's panics have
 /// no cause, so the message says it, as C++'s and Lua's do.
 pub fn panic_caused_by(cause: &str) -> Expr {
     Expr::Macro(
@@ -1981,7 +1981,7 @@ fn retarget_stmt(s: &mut Stmt, fail: Fail) -> bool {
         Stmt::Break(Some(l)) => {
             if let Fail::Panic(label) = fail {
                 if l == label {
-                    *s = Stmt::Expr(panic_caused_by("bubble"));
+                    *s = Stmt::Expr(panic_caused_by("failure"));
                 }
             }
             true
@@ -2016,11 +2016,11 @@ fn retarget_expr(e: &mut Expr, fail: Fail) -> bool {
             *e = made;
             true
         }
-        // `break 'orelse` as a value, where a bubble is one.
+        // `break 'orelse` as a value, where a `throw` is one.
         Expr::Path(p) => {
             if let Fail::Panic(label) = fail {
                 if p.strip_prefix("break ") == Some(label) {
-                    *e = panic_caused_by("bubble");
+                    *e = panic_caused_by("failure");
                 }
             }
             true

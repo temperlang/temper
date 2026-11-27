@@ -86,7 +86,7 @@ pub const CLASSES: [&str; 14] = [
     "interfaces/pure-virtual",
 ];
 
-/// The functional tests with nullable types, `orelse`, and `bubble()`
+/// The functional tests with nullable types, `orelse`, and `throw`
 /// that tmpl's translation covers (subset B's third step): each backend
 /// runs them as it covers nullables, with [`cases_with`].
 pub const NULLABLES: [&str; 4] = [
@@ -151,7 +151,7 @@ pub const CORE_TYPES: [&str; 9] = [
 pub const CONNECTED: [&str; 2] = ["functions/connected", "types/connected"];
 
 /// The functional tests that divide by a constant that can't fail them,
-/// tmpl's `divSafe` and `modSafe`, where nothing may bubble, and give a
+/// tmpl's `divSafe` and `modSafe`, which skip the zero check, and give a
 /// builtin generic type's constructor a list literal its type arguments
 /// type (`new Map<Int, Int>([])`). Each backend runs them, with
 /// [`cases_with`].
@@ -182,10 +182,11 @@ pub const TYPING: [&str; 1] = ["semantics/constness"];
 pub const ANY_VALUES: [&str; 2] = ["casts/as-expr", "types/list/operations"];
 
 /// The functional tests of a library with errors, which translate with
-/// tmpl's `Error`s, each failing where it runs: `semantics/broken`, whose
+/// tmpl's `Error`s, each panicking where it runs: `semantics/broken`, whose
 /// run fails ([`Case::fails`]), and `semantics/type-checked-locals`,
-/// whose errors each fail inside an `orelse`. Each backend runs them,
-/// with [`cases_with`].
+/// whose type-only errors run as written on dynamically typed backends
+/// and panic on statically typed ones, whose `stderr` block says the run
+/// fails there. Each backend runs them, with [`cases_with`].
 pub const ERRORS: [&str; 2] = ["semantics/broken", "semantics/type-checked-locals"];
 
 /// The functional tests with types as values (`Void` where a `Type` is
@@ -256,7 +257,7 @@ pub fn without_net(cases: &mut [Case]) {
 /// std's `testing` to run, so backends check only their form for now.
 /// `classes` has classes and interfaces, beyond what [`CLASSES`] covers.
 /// `nullables` has nullable types, null checks, `??`, and `orelse` with
-/// `bubble()` and `panic()`; `generics` generic functions, classes, and
+/// `throw` and `panic()`; `generics` generic functions, classes, and
 /// interfaces, and core's lists, pairs, and maps; `functions` function
 /// values: a closure that assigns what it captures, `@fun` interfaces
 /// passed and returned, references to functions and static methods,
@@ -269,8 +270,8 @@ pub fn without_net(cases: &mut [Case]) {
 /// `complete` that returns before its waiter resumes; `libraries` what
 /// real libraries use that the others don't; `errors` code with errors
 /// (type errors, undeclared names and types, misspelled members, a
-/// missing bracket), whose errors each fail where they run and whose
-/// good parts run as written; `triple` the architecture docs' running
+/// missing bracket), whose errors each panic where they run and whose
+/// good parts run as written, a run per section; `triple` the architecture docs' running
 /// example; `content-tags` tagged strings whose contexts are worked out
 /// at compile time, so their escapers are called directly, in branches
 /// and loops, and one left to run time; `reach` what only tests reach,
@@ -282,11 +283,11 @@ pub fn without_net(cases: &mut [Case]) {
 /// start, and `host-errors`, builtins whose docs say they panic (index
 /// errors) and a builtin's callback panicking on every backend, past
 /// `orelse`, a test each, failing saying why;
-/// `panics` `orelse` handling bubbles from everywhere but never a
+/// `panics` `orelse` handling failures from everywhere but never a
 /// panic, whose run fails ([`FAILING`]); `jump-values`
 /// `return`, `break`, and `continue` as values of type `Never`;
-/// `panic-causes` a panic keeping the bubble it replaces as its cause,
-/// and what an uncaught bubble or panic says, a run per section; and
+/// `panic-causes` a panic keeping the failure it replaces as its cause,
+/// and what an uncaught failure or panic says, a run per section; and
 /// `host-error-causes` a host's error passing `orelse panic()`, with
 /// host code ([`HOST_CODE`]), as has `host-error-tests`, whose host
 /// error passes `assertPanics` too, run as tests; and `sealed-whens`
@@ -344,12 +345,14 @@ pub const PROGRAMS: [&str; 36] = [
 ];
 
 /// The shared programs whose run fails, after logging what's expected
-/// ([`Case::fails`]): `panics`, whose panic no `orelse` stops, and
+/// ([`Case::fails`]): `errors`, whose errors panic, `panics`, whose
+/// panic no `orelse` stops, and
 /// `panic-causes` and `host-error-causes`, whose failures nothing
 /// handles; and `host-failures`, alike. A
 /// failing program with sections runs each on its own (`runs`), as a
 /// run fails only once.
-pub const FAILING: [&str; 4] = [
+pub const FAILING: [&str; 5] = [
+    "errors",
     "panics",
     "panic-causes",
     "host-error-causes",
@@ -704,6 +707,11 @@ pub fn functional_cases(backend: &str, tests: &[&str]) -> Vec<Case> {
         let host_files: Vec<(String, String)> = (test.host_files().into_iter())
             .map(|s| (s.path, s.text))
             .collect();
+        // A `stderr` block that applies says the run fails on this
+        // backend, as code with type-only errors panics only on
+        // statically typed ones.
+        let main = test.main_text();
+        let stderr = temper_funtests::fenced_lines(&main, "stderr", &[backend]);
         let case = Case {
             key: path.replace('/', "-"),
             library: if host_files.is_empty() {
@@ -721,9 +729,9 @@ pub fn functional_cases(backend: &str, tests: &[&str]) -> Vec<Case> {
             no_connected: false,
             tests: (test.runs_as_test()).then(|| test.expected_failures()),
             absent: Vec::new(),
-            fails: test.expects_run_failure(),
-            stderr: Vec::new(),
-            stderr_absent: Vec::new(),
+            fails: test.expects_run_failure() || !stderr.is_empty(),
+            stderr,
+            stderr_absent: temper_funtests::fenced_lines(&main, "stderr-absent", &[backend]),
         };
         if !case.host_files.is_empty() {
             cases.push(case.clone());

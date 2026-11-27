@@ -2,10 +2,20 @@
 # and what the validator's N1 and T4 rules say of them. The format is
 # described in tests/text.rs.
 
-=== nullables, orelse, bubble, and panic
+=== nullables, orelse, throw, and panic
 tmpl 1 model 1 library nulls 0.1.0
 
+uses `temper-core`#20 0.1.0 {
+  interface Error#21 {}
+}
+
 module nulls#0 {
+  interface NullsError#22 extends Error#21 {}
+
+  class Negative#23 extends NullsError#22 {
+    constructor constructor#24(): Negative#23 {}
+  }
+
   fn f#1(x#2: Int32?): Int32 {
     if (isNull(x#2)) {
       return 0;
@@ -17,9 +27,9 @@ module nulls#0 {
     return eqNullable(%String.eq, a#4, b#5);
   }
 
-  fn h#6(n#7: Int32): Int32 throws Bubble {
+  fn h#6(n#7: Int32): Int32 throws Negative#23 {
     if (%Int32.lt(n#7, 0)) {
-      (bubble()^): Void;
+      (throw(new constructor#24())^): Void;
     }
     return n#7;
   }
@@ -38,12 +48,22 @@ module nulls#0 {
 === nullable problems (N1, F3, F4)
 tmpl 1 model 1 library nulls 0.1.0
 
+uses `temper-core`#20 0.1.0 {
+  interface Error#21 {}
+}
+
 module nulls#0 {
+  interface NullsError#22 extends Error#21 {}
+
+  class Negative#23 extends NullsError#22 {
+    constructor constructor#24(): Negative#23 {}
+  }
+
   fn f#1(x#2: Int32): Int32 {
     let y#3: Int32 = (null): Int32;
     if (isNull(x#2)) {}
     let z#4: String = (nonNull(x#2)): Int32;
-    return (bubble()^): Int32;
+    return (throw(new constructor#24())^): Int32;
   }
 
   fn g#5(a#6: String?): Boolean {
@@ -53,13 +73,13 @@ module nulls#0 {
   init {}
 }
 --- problems
-N1 @4: null is Int32, not a nullable type
-N1 @7: the value checked is Int32, not a nullable type
-N1 @10: NonNull converts Int32 to Int32, which isn't between T? and T
-T3 @10: the initializer is Int32, but should be String
-F4 @13: bubble() bubbles, but f#1 can't
-T3 @19: a side of eqNullable is String?, but should be Int32?
-T3 @20: a side of eqNullable is String?, but should be Int32?
+N1 @8: null is Int32, not a nullable type
+N1 @11: the value checked is Int32, not a nullable type
+N1 @14: NonNull converts Int32 to Int32, which isn't between T? and T
+T3 @14: the initializer is Int32, but should be String
+F4 @17: throw fails with Negative#23, but f#1 can't
+T3 @24: a side of eqNullable is String?, but should be Int32?
+T3 @25: a side of eqNullable is String?, but should be Int32?
 
 === parameters' defaults and coalesce
 tmpl 1 model 1 library defaults 0.1.0

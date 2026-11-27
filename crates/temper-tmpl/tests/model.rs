@@ -220,7 +220,7 @@ fn structure_problems() {
             "S3 @2: Int32Lit can't go where Stmt goes",
             "S3 @4: Block can't go where Expr goes",
             "S1 @5: node 100 doesn't exist",
-            "S1 @6: Block can't be marked may-bubble",
+            "S1 @6: Block can't be marked may-fail",
         ]
     );
 }
@@ -343,29 +343,31 @@ fn external_declaration_and_method_problems() {
 #[test]
 fn results_are_signatures_results() {
     use temper_tmpl::TypeTable;
-    let (int, string, bubble) = (TypeId::INT32, TypeId::STRING, TypeId::BUBBLE);
+    let (int, string) = (TypeId::INT32, TypeId::STRING);
     let mut t = TypeTable::default();
-    let r = t.result(int, bubble);
-    assert_eq!(t.result(int, bubble), r);
-    assert_eq!((t.pass(r), t.fail(r)), (int, Some(bubble)));
+    // A failure class's type, by its declaration.
+    let fail = t.nominal(DeclId(9));
+    let r = t.result(int, fail);
+    assert_eq!(t.result(int, fail), r);
+    assert_eq!((t.pass(r), t.fail(r)), (int, Some(fail)));
     assert_eq!((t.pass(int), t.fail(int)), (int, None));
     assert!(t.signature(r).is_none());
     // A failure that can't happen goes.
-    let never = t.never(bubble);
+    let never = t.never(fail);
     assert_eq!(t.result(int, never), int);
 
     let f = t.function(&[string], r);
     let sig = t.signature(f).unwrap();
-    assert_eq!((sig.pass, sig.fail, sig.returns), (int, Some(bubble), r));
-    assert!(sig.bubbles());
-    assert_eq!(t.show(f), "fn (String): Int32 throws Bubble");
+    assert_eq!((sig.pass, sig.fail, sig.returns), (int, Some(fail), r));
+    assert!(sig.fails());
+    assert_eq!(t.show(f), "fn (String): Int32 throws #9");
     let plain = t.function(&[string], int);
     assert_ne!(plain, f);
-    assert!(!t.signature(plain).unwrap().bubbles());
+    assert!(!t.signature(plain).unwrap().fails());
 
     // Type parameters in either part.
     let (tp, ep) = (t.type_param(DeclId(3)), t.type_param(DeclId(4)));
-    let generic = t.result(tp, bubble);
+    let generic = t.result(tp, fail);
     let g = t.function(&[], generic);
     assert!(t.is_generic(g) && t.mentions(g, tp));
     let solved = t.function(&[], r);
@@ -373,13 +375,14 @@ fn results_are_signatures_results() {
     assert_eq!(t.substitute(g, &[tp], &[int]), solved);
     let fails_e = t.result(int, ep);
     assert!(t.mentions(fails_e, ep));
-    assert_eq!(t.substitute(fails_e, &[ep], &[bubble]), r);
+    assert_eq!(t.substitute(fails_e, &[ep], &[fail]), r);
     assert_eq!(t.substitute(fails_e, &[ep], &[never]), int);
 
     // Across tables, by what they are.
     let mut u = TypeTable::default();
     let other = u.function(&[string], int);
-    let u_r = u.result(int, bubble);
+    let u_fail = u.nominal(DeclId(9));
+    let u_r = u.result(int, u_fail);
     let u_f = u.function(&[string], u_r);
     assert!(t.same(f, &u, u_f) && !t.same(f, &u, other));
 }

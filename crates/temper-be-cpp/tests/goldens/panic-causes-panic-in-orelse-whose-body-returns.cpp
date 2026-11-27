@@ -10,6 +10,18 @@ namespace panic_causes_panic_in_orelse_whose_body_returns {
 // optional.
 void global_init_init();
 
+struct Problem;
+struct NotPositive;
+
+struct Problem : public virtual temper::core::Failure {};
+
+struct NotPositive : public virtual Problem {
+  int32_t n;
+  static std::shared_ptr<NotPositive> make(int32_t n);
+  temper::core::Str get_message() const override;
+  int32_t get_n() const;
+};
+
 }  // namespace panic_causes_panic_in_orelse_whose_body_returns
 
 // init.cpp
@@ -19,21 +31,36 @@ namespace panic_causes_panic_in_orelse_whose_body_returns {
 
 namespace core = temper::core;
 
-static int32_t positive(int32_t n) {
+std::shared_ptr<NotPositive> NotPositive::make(int32_t n) {
+  std::shared_ptr<NotPositive> self = std::make_shared<NotPositive>();
+  self->n = n;
+  return self;
+}
+
+core::Str NotPositive::get_message() const {
+  return "not positive (n: " + std::to_string(this->n) + ")";
+}
+
+int32_t NotPositive::get_n() const {
+  return this->n;
+}
+
+static core::Expected<int32_t, std::shared_ptr<NotPositive>> positive(int32_t n) {
   if (n <= 0) {
-    core::bubble();
+    return core::unexpected(NotPositive::make(n));
   }
   return n;
 }
 
 static int32_t checked(int32_t n) {
-  try {
-    if (n == 0) {
+  auto positiveResult = positive(n);
+  if (positiveResult.has_value()) {
+    int32_t p = *positiveResult;
+    if (p == 1) {
       return 0;
     }
-    positive(n);
-  } catch (core::TemperBubble const &) {
-    core::panic();
+  } else {
+    core::panic_caused_by(positiveResult.error());
   }
   return n;
 }

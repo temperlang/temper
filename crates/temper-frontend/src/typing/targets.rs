@@ -474,7 +474,7 @@ impl Settle {
     /// without a type takes the wanted function type's parameter in its
     /// place, or `AnyValue` past its last, and a function without a
     /// return type takes the wanted one's result, and whether it may
-    /// bubble, where a generic call leaves them to the literal's body, as
+    /// fail, where a generic call leaves them to the literal's body, as
     /// the call's solution has them ([`Settle::solved_literal_fn`]).
     pub(super) fn literal_type(&mut self, f: NodeId, forced: bool) -> Result<TypeId, Fact> {
         let t = self.fn_type(f);

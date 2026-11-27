@@ -3,8 +3,6 @@
  *
  * All `class` and `interface` types, including builtin types like [snippet/type/Int32],
  * are sub-types of this type.
- *
- * The special type [snippet/type/Bubble] is not.
  */
 export interface AnyValue {}
 
@@ -17,20 +15,6 @@ export sealed interface Equatable<EQ extends AnyValue> {
   @operator("==")
   eq(other: EQ): builtins.Boolean;
 }
-
-/**
- * *Bubble* is a type that represents failure to compute a value.
- *
- * A function declaration may declare it [*throws*][snippet/builtin/throws] *Bubble*
- * following its return type to indicate that it can fail.
- * When translating to backends that use exceptions, this indicates the function can throw.
- * On other backends, the translation function's return type might be a *Result* type or a
- * Go-lang [extra, error result](https://gobyexample.com/errors).
- *
- * See also [snippet/builtin/orelse].
- */
-// export class Bubble {
-// }
 
 /**
  * *Error* is the root of declared failure types: a function that declares
@@ -46,8 +30,8 @@ export sealed interface Equatable<EQ extends AnyValue> {
  * extends one failure type. *Error* itself isn't one a function may
  * throw.
  *
- * Unlike [snippet/type/Bubble], a failure is a value, whose fields
- * say what went wrong.
+ * A failure is a value, whose fields say what went wrong. A bug, which
+ * no caller should handle, is a [snippet/builtin/panic] instead.
  */
 export interface Error {
   /**
@@ -62,8 +46,7 @@ export interface Error {
   /**
    * The failure that was being handled where this one was thrown, by a
    * `throw` in a `catch` block or an [snippet/builtin/orelse] fallback,
-   * or [snippet/builtin/null]: none, or a [snippet/type/Bubble], which
-   * has no value. A failure thrown again keeps the cause it was first
+   * or [snippet/builtin/null]: none. A failure thrown again keeps the cause it was first
    * thrown with.
    */
   @connected
@@ -388,7 +371,7 @@ extends Generator<YIELD> {
   public get done(): builtins.Boolean { this._done }
 
   public close(): Void {
-    // TODO: trigger bubble at pause point in generatorFn
+    // TODO: stop generatorFn at its pause point
   }
 }
 
@@ -420,7 +403,7 @@ extends SafeGenerator<YIELD> {
   public get done(): builtins.Boolean { this._done }
 
   public close(): Void {
-    // TODO: trigger bubble at pause point in generatorFn
+    // TODO: stop generatorFn at its pause point
   }
 }
 

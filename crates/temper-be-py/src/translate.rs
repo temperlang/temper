@@ -427,7 +427,6 @@ impl<'a> Translator<'a> {
                     Scalar::String => "str",
                     Scalar::AnyValue => "object",
                     Scalar::Type => "type",
-                    Scalar::Bubble => return not_yet("Bubble as a value's type"),
                 }
                 .to_string(),
                 false,
@@ -1511,8 +1510,7 @@ impl<'a> Translator<'a> {
     }
 
     /// What a handler around `body` catches, the `except` clause's
-    /// classes: `Bubble`, imported from the runtime, if `body` may bubble,
-    /// and the failure class nearest above all its declared failures,
+    /// class: the failure class nearest above all its declared failures,
     /// never what else Python raises, so panics and hosts' errors pass.
     /// Where that's core's `Error`, the runtime's `Failure` marker, for
     /// failures of several libraries' roots, which isn't an exception,
@@ -1523,22 +1521,13 @@ impl<'a> Translator<'a> {
         let fails: Vec<TypeId> = (temper_tmpl::failures::failures_under(p, body).into_iter())
             .map(|(_, f)| f)
             .collect();
-        let mut classes = Vec::new();
-        if fails.contains(&TypeId::BUBBLE) {
-            classes.push(Expr::name(self.import("temper_core", "Bubble")));
-        }
-        let declared: Vec<TypeId> = fails.into_iter().filter(|&f| f != TypeId::BUBBLE).collect();
         let root = temper_tmpl::failures::root(p);
-        let join = temper_tmpl::failures::join(p, root, &declared);
+        let join = temper_tmpl::failures::join(p, root, &fails);
         let marker = join.is_some_and(|ty| nominal_decl(p, ty) == root);
-        if let Some(ty) = join {
-            classes.push(self.type_ref(ty)?);
-        }
-        let classes = match classes.len() {
-            // A body that can't fail, as one `to_tmpl` kept: `Bubble`'s.
-            0 => Expr::name(self.import("temper_core", "Bubble")),
-            1 => classes.pop().unwrap(),
-            _ => Expr::Tuple(classes),
+        let classes = match join {
+            Some(ty) => self.type_ref(ty)?,
+            // A body that can't fail, which backends drop first: nothing.
+            None => Expr::Tuple(Vec::new()),
         };
         Ok(match marker {
             true => (Expr::builtin("Exception"), Some(classes)),
@@ -1587,7 +1576,7 @@ impl<'a> Translator<'a> {
     }
 
     /// A value put where `sink` says, as statements: an `orelse` or a
-    /// `catch` as `try`, `bubble()`, `throw`, and `panic()` as `raise`,
+    /// `catch` as `try`, `throw` and `panic()` as `raise`,
     /// else the value's statements and then the value.
     fn value_into(&mut self, id: NodeId, sink: Sink, out: &mut Vec<Stmt>) -> R<()> {
         let saved = std::mem::take(&mut self.pre);
@@ -1657,11 +1646,7 @@ impl<'a> Translator<'a> {
                 self.flush(out);
                 out.push(raised);
             }
-            Node::Bubble { .. } | Node::Error { .. } => {
-                let bubble = self.import("temper_core", "Bubble");
-                out.push(Stmt::Raise(Expr::name(bubble).call(vec![])))
-            }
-            Node::Panic {} => out.push(panic()),
+            Node::Panic {} | Node::Error { .. } => out.push(panic()),
             _ => {
                 let value = self.expr(id)?;
                 self.flush(out);
@@ -2489,10 +2474,7 @@ impl<'a> Translator<'a> {
                 self.pre.append(&mut stmts);
                 Expr::name(t)
             }
-            Node::Bubble { .. } => {
-                Expr::name(self.import("temper_core", "bubble")).call(Vec::new())
-            }
-            Node::Panic {} => {
+            Node::Panic {} | Node::Error { .. } => {
                 self.pre.push(panic());
                 Expr::None
             }
@@ -2509,7 +2491,6 @@ impl<'a> Translator<'a> {
                 let call = Expr::name(awaiter.clone()).call(vec![promise]);
                 Expr::Yield(Some(Box::new(call)))
             }
-            Node::Error { .. } => Expr::name(self.import("temper_core", "bubble")).call(Vec::new()),
             Node::This {} => Expr::name("self"),
             Node::GetField { field, object } => {
                 let object = self.expr(object)?;
@@ -2797,9 +2778,9 @@ fn not(e: Expr) -> Expr {
     Expr::unary(tree::Unary::Not, e)
 }
 
-/// `panic()`: raised past any `orelse`, which catches only `Bubble`s.
-/// Kotlin's raises `RuntimeError`, as `bubble()` does, so an `orelse`
-/// caught it (notes/kotlin-differences.md).
+/// `panic()`, and code with an error: raised past any `orelse`, which
+/// catches only failures. Kotlin's raises `RuntimeError`, as its bubbles
+/// did, so an `orelse` caught it (notes/kotlin-differences.md).
 fn panic() -> Stmt {
     Stmt::Raise(panic_value())
 }

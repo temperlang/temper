@@ -6,7 +6,7 @@ from collections.abc import (
 from concurrent.futures import Future as _Future
 from temper_core import (
     BrokenPromise as _BrokenPromise,
-    Bubble as _Bubble,
+    Failure as _Failure,
     LoggingConsole as _LoggingConsole,
     TemperFuture as _TemperFuture,
     adapt_generator_factory as _adapt_generator_factory,
@@ -21,7 +21,15 @@ from temper_core import (
 )
 from typing import Any as _Any, Generator as _Generator, TypeVar as _TypeVar
 
-__all__ = ('later', 'ticks', 'fibonacci', 'collatz', 'halve')
+__all__ = (
+    'later',
+    'ticks',
+    'fibonacci',
+    'collatz',
+    'HalveError',
+    'Odd',
+    'halve',
+)
 
 _T = _TypeVar('_T')
 
@@ -124,9 +132,29 @@ class _Counter:
         _console.log(f'{tag} done n={self._n}')
 
 
+class HalveError(_Failure, Exception):
+    __slots__ = ()
+
+
+class Odd(HalveError):
+    __slots__ = ('_n',)
+    _n: int
+
+    def __init__(self, /, n: int) -> None:
+        self._n = n
+
+    @property
+    def n(self, /) -> int:
+        return self._n
+
+    @property
+    def message(self, /) -> str:
+        return f'odd (n: {self._n})'
+
+
 def halve(n: int, /) -> int:
     if _arith_int_mod(n, 2) != 0:
-        raise _Bubble()
+        raise Odd(n)
     return _int_div(n, 2)
 
 

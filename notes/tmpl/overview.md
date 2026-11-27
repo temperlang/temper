@@ -128,7 +128,7 @@ for every backend. Proposed meaning, item by item:
   than a shape: tmpl keeps nested expressions, and a pass hoists into
   temporaries only where a profile says the target doesn't guarantee
   the order (C++ arguments), and only for impure operands.
-- **Bubbling paths:** every call that may bubble is marked, and its
+- **Failing paths:** every call that may fail is marked, and its
   handler is the nearest enclosing `orelse` or the function's exit, so
   every lowering of failure reads the same facts.
 - **Operators are typed, and there is no generic `==`**
@@ -191,10 +191,10 @@ backends:
   in its body fails), and module state shared across threads.
 - **Bugs it let through, each with a test here:** types sorted before
   values; Boolean `==`; C++'s race on lazily set module `var`s; Rust's
-  indexing that panics where Temper bubbles; C++ templates declared
+  indexing that panicked where Temper then bubbled; C++ templates declared
   after their users.
 - **Kept:** qnames, in Kotlin's format, and connected keys as qnames;
-  operators as a closed set; `Error` nodes; bubble and coroutine
+  operators as a closed set; `Error` nodes; failure and coroutine
   strategies, as profile choices; a computed jump node for state machines; equality without a
   generic operator, as Kotlin's 2026-09 relational-operator rework
   began.

@@ -1,4 +1,4 @@
-import { bubble, isBubble } from "@temperlang/core";
+import { failureBase } from "@temperlang/core";
 
 function yay() {
   console.log("yay");
@@ -15,6 +15,7 @@ function boo() {
 /**
  * @param {number} x
  * @returns {number}
+ * @throws {Oops}
  */
 function f(x) {
   return x;
@@ -23,6 +24,7 @@ function f(x) {
 /**
  * @param {number} x
  * @returns {number}
+ * @throws {Oops}
  */
 function g(x) {
   return x;
@@ -31,9 +33,21 @@ function g(x) {
 /**
  * @param {number} x
  * @returns {number}
+ * @throws {Oops}
  */
 function i(x) {
   return x;
+}
+
+class Problem extends Error {}
+
+failureBase(Problem);
+
+class Oops extends Problem {
+  /** @returns {string} */
+  get message() {
+    return "oops";
+  }
 }
 
 console.log("Checkpoint 0");
@@ -41,9 +55,9 @@ try {
   /** @type {number} */
   let a;
   a = "1";
-  bubble();
+  throw new Oops();
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof Oops)) throw e$;
   yay();
 }
 console.log("Checkpoint 1");
@@ -60,10 +74,9 @@ console.log("Checkpoint 2");
   let a3 = 1;
   try {
     a3 = "2";
-    bubble();
-    boo();
+    throw new Oops();
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof Oops)) throw e$;
     meh();
   }
   if (a3 === 1) {
@@ -86,14 +99,14 @@ try {
   f(0);
   yay();
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof Oops)) throw e$;
   boo();
 }
 try {
   f("0");
   meh();
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof Oops)) throw e$;
   meh();
 }
 console.log("Checkpoint 5");
@@ -101,14 +114,14 @@ try {
   g(0);
   yay();
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof Oops)) throw e$;
   boo();
 }
 try {
   g("0");
   meh();
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof Oops)) throw e$;
   meh();
 }
 console.log("Checkpoint 6");
@@ -116,13 +129,13 @@ try {
   i(0);
   yay();
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof Oops)) throw e$;
   boo();
 }
 try {
   i("0");
   meh();
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof Oops)) throw e$;
   meh();
 }

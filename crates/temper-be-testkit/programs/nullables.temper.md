@@ -1,7 +1,7 @@
 # Nullables
 
 Nullable types, null checks that narrow, `??`, `==` with a side that may
-be null, and `orelse` with `bubble()` and `panic()`: nullable
+be null, and `orelse` with a thrown failure and `panic()`: nullable
 parameters, results, locals, and fields, a nullable class type, and a
 failure caught where it's a value and where it stands alone, and a
 fallback with `??` as a function's last value. The log is what
@@ -31,8 +31,11 @@ the interpreter gives.
     // The parse in the division may fail, which the `orelse` handles.
     let halved(s: String, d: Int): Int { s.toInt32() / d orelse -1 }
 
-    let positive(n: Int): Int throws Bubble {
-      if (n < 0) { bubble() }
+    sealed interface Problem extends Error {}
+    class Negative(public n: Int) extends Problem {}
+
+    let positive(n: Int): Int throws Negative {
+      if (n < 0) { throw new Negative(n) }
       n
     }
 

@@ -37,10 +37,10 @@ namespace TemperLang.Core
         /// <summary>
         /// Runs <paramref name="block"/>, giving whether it panicked, for
         /// std's <c>Test.assertPanics</c>: whether it threw anything but a
-        /// bubble or a test framework's failure (MSTest's, NUnit's, or
-        /// xUnit's), as on every backend, so a <see cref="Panic"/> or a
-        /// host's exception; a declared failure (an <see cref="IFailure"/>)
-        /// is a failure, not a panic. What isn't passes through.
+        /// declared failure (an <see cref="IFailure"/>) or a test
+        /// framework's failure (MSTest's, NUnit's, or xUnit's), as on every
+        /// backend, so a <see cref="Panic"/> or a host's exception. What
+        /// isn't passes through.
         /// </summary>
         public static bool BlockPanics(Action block)
         {
@@ -48,7 +48,7 @@ namespace TemperLang.Core
             {
                 block();
             }
-            catch (Exception e) when (!(e is TemperLang.Core.Bubble) && !(e is IFailure) && !IsTestFailure(e))
+            catch (Exception e) when (!(e is IFailure) && !IsTestFailure(e))
             {
                 return true;
             }
@@ -100,8 +100,6 @@ namespace TemperLang.Core
             bits[index] = value;
         }
 
-        public static void Bubble() => throw new Bubble();
-
         /// <summary>
         /// A Temper panic, as core's docs say an operation panics, and as
         /// generated code's <c>panic()</c> throws: callers <c>throw</c>
@@ -111,7 +109,7 @@ namespace TemperLang.Core
 
         /// <summary>
         /// A panic with <paramref name="cause"/> as its inner exception,
-        /// as <c>orelse panic()</c> throws in place of the bubble.
+        /// as <c>orelse panic()</c> throws in place of the failure.
         /// </summary>
         public static Exception Panic(string message, Exception cause) =>
             new Panic(message, cause);
@@ -121,7 +119,10 @@ namespace TemperLang.Core
                 $"index {index} out of bounds for length {length}"
             ));
 
-        public static T Bubble<T>() => throw new Bubble();
+        /// <summary>
+        /// A panic where C# needs a value, as code with an error throws.
+        /// </summary>
+        public static T ThrowPanic<T>(string message) => throw new Panic(message);
 
         /// <summary>Temper's <c>as</c>: panics if item isn't a T.</summary>
         public static T Cast<T>(object item) => item is T t ? t : throw new Panic("failed cast");

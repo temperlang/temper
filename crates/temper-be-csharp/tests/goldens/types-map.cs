@@ -101,9 +101,9 @@ public static class MapGlobal
         {
             was = Core.RemoveGet(builder2, "El Salvador");
         }
-        catch (MissingKey bubble1)
+        catch (MissingKey failure1)
         {
-            throw Core.Panic("panic", bubble1);
+            throw Core.Panic("panic", failure1);
         }
         console.Log("Was there: " + Listed.Join(was, ", ", (string it) => it));
         string t2;

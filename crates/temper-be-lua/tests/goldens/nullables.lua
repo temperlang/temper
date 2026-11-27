@@ -88,11 +88,36 @@ local function halved(s, d)
   return t
 end
 
+---@class nullables.Problem: temper.Failure
+
+---@class nullables.Problem.type: temper.Type
+local Problem = temper.type("nullables.Problem", temper.Failure)
+
+---@class nullables.Negative: nullables.Problem
+---@field n integer
+---@field message string
+
+---@class nullables.Negative.type: temper.Type
+---@operator call: nullables.Negative
+local Negative = temper.type("nullables.Negative", Problem)
+
+---@param this nullables.Negative
+---@param n integer
+function Negative.constructor(this, n)
+  this.n = n
+end
+
+---@param this nullables.Negative
+---@return string
+function Negative.get.message(this)
+  return "negative (n: " .. this.n .. ")"
+end
+
 ---@param n integer
 ---@return integer
 local function positive(n)
   if n < 0 then
-    return temper.bubble()
+    error(Negative(n))
   end
   return n
 end
@@ -102,9 +127,9 @@ end
 local function checked(n)
   ---@type integer
   local t
-  local t_1, t_2 = temper.pcall(function()
+  local t_1, t_2 = temper.catch(function()
     t = positive(n)
-  end)
+  end, Negative)
   if not t_1 then
     error("panic\ncaused by: " .. tostring(t_2))
   end
@@ -133,10 +158,10 @@ end
 local function reason(n, why)
   ---@type string
   local t
-  if not temper.pcall(function()
+  if not temper.catch(function()
     positive(n)
     t = "ok"
-  end) then
+  end, Negative) then
     t = temper.is_null(why) and "fails" or (why --[[@as string]])
   end
   return t
@@ -169,16 +194,16 @@ local tail = list.next
 if not temper.is_null(tail) then
   print(tostring((tail --[[@as nullables.Node]]).value))
 end
-if not temper.pcall(function()
+if not temper.catch(function()
   positive(-1)
-end) then
+end, Negative) then
   print("negative")
 end
 ---@type integer
 local fallback
-if not temper.pcall(function()
+if not temper.catch(function()
   fallback = positive(-2)
-end) then
+end, Negative) then
   fallback = 0
 end
 print(tostring(fallback))

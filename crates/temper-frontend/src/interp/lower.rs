@@ -125,7 +125,6 @@ pub(super) enum Op {
     /// Ends the call with a `break`, `continue` or `return` (popping its
     /// value) for a frame further out.
     Exit(Exit),
-    Fail(Option<Rc<str>>),
     /// `throw x`: pops the failure, `x`, and fails with it.
     Throw,
     Panic(Rc<str>),
@@ -159,8 +158,7 @@ pub(super) enum Source {
 /// or, where the fallback is just `panic()` (`panics`), panics there,
 /// saying the failure caused it, as backends chain it as the cause. The
 /// fallback is ops `to..fallback_end`; if it needs the failure, for a
-/// `catch (e)` binding or as a cause, it's kept in `slot`, a declared
-/// failure as its object and a bubble as null.
+/// `catch (e)` binding or as a cause, it's kept in `slot`.
 #[derive(Debug)]
 pub(super) struct Handler {
     pub start: u32,
@@ -462,7 +460,7 @@ fn needs_failure(s: &Settled, fallback: NodeId) -> bool {
     while let Some(node) = stack.pop() {
         let children = tree.children(node);
         match tree.kind(node) {
-            NodeKind::Fail if !children.is_empty() => return true,
+            NodeKind::Fail => return true,
             NodeKind::Call
                 if (children.first()).is_some_and(|&c| {
                     s.scopes.resolved_builtin(c) == Some(Builtin::Function(Function::Caught))
@@ -814,7 +812,7 @@ impl Lowering {
 
     /// The message of an error reported at a value, a name, a call (a
     /// member that isn't there, the wrong number of arguments), or an
-    /// `await` that may bubble where it can't, if there is one that isn't
+    /// `await` that may fail where it can't, if there is one that isn't
     /// type-only.
     fn error_at(&mut self, s: &Settled, node: NodeId) -> Option<Rc<str>> {
         let lib = &s.library;
@@ -840,7 +838,7 @@ impl Lowering {
     }
 
     fn fail(&mut self, message: impl Into<Rc<str>>) {
-        self.emit(Op::Fail(Some(message.into())));
+        self.emit(Op::Panic(message.into()));
     }
 
     /// Lowers an expression, leaving its value on the stack if `keep`.
@@ -853,11 +851,11 @@ impl Lowering {
         self.b.nesting += 1;
         let outer = std::mem::replace(&mut self.b.at, node);
         match self.error_at(s, node) {
-            // Code with an error fails there, as `bubble()` does, as each
-            // backend's does (tmpl's `Error`), rather than running on
-            // with a value of the wrong type or a member that isn't there.
+            // Code with an error panics there, as each backend's does
+            // (tmpl's `Error`), rather than running on with a value of
+            // the wrong type or a member that isn't there.
             Some(message) => {
-                self.emit(Op::Fail(Some(message)));
+                self.emit(Op::Panic(message));
                 self.dead(base, keep);
             }
             None if keep && s.library.constant_regexes.contains(&node) => {
@@ -1026,13 +1024,9 @@ impl Lowering {
                 return;
             }
             // `throw x`, a declared failure.
-            NodeKind::Fail if !children.is_empty() => {
+            NodeKind::Fail => {
                 self.expr(s, children[0], true);
                 self.emit(Op::Throw);
-                return self.dead(base, keep);
-            }
-            NodeKind::Fail => {
-                self.emit(Op::Fail(None));
                 return self.dead(base, keep);
             }
             NodeKind::Fn => self.make_fn(s, node),

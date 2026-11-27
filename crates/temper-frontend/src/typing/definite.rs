@@ -15,10 +15,10 @@
 //! entry, as nothing makes an assigned local unassigned. A `for … of`
 //! body may run any number of times, even none. An `orelse`'s fallback
 //! starts with what held where its body may fail: at each call that may
-//! bubble (as [`super::bubbles`] finds them), `bubble()`, `await`, or
-//! error, so `(x = i) orelse …` assigns `x` on every path, as in Kotlin.
-//! A path that returns, bubbles, panics, breaks, continues, or reaches
-//! an error needs nothing.
+//! fail (as [`super::bubbles`] finds them), `throw`, `await`, or error, so
+//! `(x = i) orelse …` assigns `x` on every path, as in Kotlin. A path
+//! that returns, throws, panics, breaks, continues, or reaches an error
+//! needs nothing.
 //!
 //! As in Kotlin, a function reads its enclosing function's locals
 //! unchecked, wherever it's called, though its own are checked; so are a
@@ -46,7 +46,7 @@ struct Cx {
     breaks: HashMap<NodeId, Pending>,
     /// What reaches each loop by `continue`.
     continues: HashMap<NodeId, Pending>,
-    /// The calls in `orelse` bodies that may bubble.
+    /// The calls in `orelse` bodies that may fail.
     bubbling: HashSet<NodeId>,
     /// For each `orelse` body being walked, innermost last, what reaches
     /// its fallback so far.
@@ -95,7 +95,7 @@ impl Settle {
         }
     }
 
-    /// The calls in `orelse` bodies that may bubble.
+    /// The calls in `orelse` bodies that may fail.
     fn bubbling_calls(&mut self) -> HashSet<NodeId> {
         let mut calls = Vec::new();
         let mut stack: Vec<(NodeId, bool)> = (self.round_roots().into_iter())
@@ -113,7 +113,7 @@ impl Settle {
             }
         }
         (calls.into_iter())
-            .filter(|&c| self.call_bubbles(c))
+            .filter(|&c| self.call_fails(c))
             .collect()
     }
 
@@ -317,7 +317,7 @@ impl Settle {
                 Some(now)
             }
             // A function's own locals, from its parameters' defaults on;
-            // what it bubbles, its caller's `orelse` catches.
+            // what it throws, its caller's `orelse` catches.
             NodeKind::Fn => {
                 let failures = std::mem::take(&mut cx.failures);
                 let (params, _, body) = core::fn_parts(tree, node);

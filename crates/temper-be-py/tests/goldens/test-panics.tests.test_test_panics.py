@@ -1,12 +1,24 @@
 from collections.abc import Sequence
-from temper_core import Bubble, end_test, int_add, list_get
+from temper_core import Failure, end_test, int_add, list_get
 from temper_std.testing import Test
 from unittest import TestCase
 
 
+class _Problem(Failure, Exception):
+    __slots__ = ()
+
+
+class _Oops(_Problem):
+    __slots__ = ()
+
+    @property
+    def message(self, /) -> str:
+        return 'oops'
+
+
 def _at(ls: Sequence[int], i: int, /) -> int:
     if i == 99:
-        raise Bubble()
+        raise _Oops()
     return list_get(ls, i)
 
 
@@ -25,7 +37,7 @@ class TestTestPanics(TestCase):
         with end_test(test):
             try:
                 n = _at((1, 2), 5)
-            except Bubble:
+            except _Oops:
                 n = -1
             actual = n
             expected = -1

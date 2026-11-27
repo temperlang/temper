@@ -84,12 +84,66 @@ pub(crate) fn sure(s: Option<impl ToArcString>) -> Arc<String> {
     s.clone().unwrap()
 }
 
-pub(crate) fn must(s: Option<impl ToArcString>) -> temper_core::Result<Arc<String>> {
+#[derive(Clone, Debug)]
+pub(crate) enum Problem {
+    Missing(Missing),
+    NoCodeFound(NoCodeFound),
+}
+
+temper_core::impl_failure_enum!(Problem, Missing(Missing), NoCodeFound(NoCodeFound));
+
+struct MissingStruct {
+    cause: temper_core::Cause,
+}
+
+#[derive(Clone)]
+pub(crate) struct Missing(Arc<MissingStruct>);
+
+impl Missing {
+    pub fn new() -> Missing {
+        Missing(Arc::new(MissingStruct {
+            cause: temper_core::Cause::new(),
+        }))
+    }
+
+    pub fn message(&self) -> Arc<String> {
+        Arc::new("missing".to_string())
+    }
+}
+
+temper_core::impl_failure!(Missing, message, cause);
+
+temper_core::impl_any_value_trait!(Missing, [Problem]);
+
+struct NoCodeFoundStruct {
+    cause: temper_core::Cause,
+}
+
+#[derive(Clone)]
+pub(crate) struct NoCodeFound(Arc<NoCodeFoundStruct>);
+
+impl NoCodeFound {
+    pub fn new() -> NoCodeFound {
+        NoCodeFound(Arc::new(NoCodeFoundStruct {
+            cause: temper_core::Cause::new(),
+        }))
+    }
+
+    pub fn message(&self) -> Arc<String> {
+        Arc::new("no code found".to_string())
+    }
+}
+
+temper_core::impl_failure!(NoCodeFound, message, cause);
+
+temper_core::impl_any_value_trait!(NoCodeFound, [Problem]);
+
+pub(crate) fn must(s: Option<impl ToArcString>) -> Result<Arc<String>, Missing> {
     let s = s.map(|x| x.to_arc_string());
     if let Some(s) = &s {
         Ok(s.clone())
     } else {
-        Err(temper_core::Error::new())
+        Err(Missing::new())
     }
 }
 
@@ -98,7 +152,7 @@ pub(crate) fn longer(s: Option<impl ToArcString>) -> i32 {
     (|| {
         let t = must(s.clone())?;
         let n = temper_core::string::to_int(&t, None)?;
-        Ok::<_, temper_core::Error>(n.wrapping_add(1))
+        Ok::<_, Arc<dyn temper_core::Failure>>(n.wrapping_add(1))
     })()
     .unwrap_or(0)
 }
@@ -185,27 +239,23 @@ impl PartTrait for NoCode {
 
 temper_core::impl_any_value_trait!(NoCode, [Part]);
 
-pub(crate) fn code_of(part: Part) -> temper_core::Result<Code> {
+pub(crate) fn code_of(part: Part) -> Result<Code, NoCodeFound> {
     if temper_core::is::<Code>(part.clone()) {
         Ok(temper_core::cast::<Code>(part.clone()).unwrap())
     } else {
-        Err(temper_core::Error::new())
+        Err(NoCodeFound::new())
     }
 }
 
-pub(crate) fn first_code(attempt: Part) -> temper_core::Result<i32> {
-    Ok({
-        let attempt2 = (|| {
-            Ok::<_, temper_core::Error>(temper_core::string::get(
-                &code_of(attempt.clone())?.0.text,
-                0usize,
-            ))
-        })();
-        if let Ok(v) = attempt2 {
-            v
-        } else {
-            println!("no code");
-            return Err(temper_core::Error::new());
-        }
+pub(crate) fn first_code(attempt: Part) -> Result<i32, NoCodeFound> {
+    (|| {
+        Ok::<_, NoCodeFound>(temper_core::string::get(
+            &code_of(attempt.clone())?.0.text,
+            0usize,
+        ))
+    })()
+    .map_err(|failure| {
+        println!("no code");
+        temper_core::with_cause(NoCodeFound::new(), failure.clone())
     })
 }

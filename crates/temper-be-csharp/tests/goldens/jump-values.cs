@@ -25,16 +25,10 @@ public static class JumpValuesGlobal
         return a * 10 + b;
     }
 
+    /// <exception cref="ParseError">Where it fails with ParseError.</exception>
     internal static int Parse(string s)
     {
-        try
-        {
-            return Core.ToInt(s);
-        }
-        catch (ParseError)
-        {
-            return Core.Bubble<int>();
-        }
+        return Core.ToInt(s);
     }
 
     internal static int? Next(int? y)
@@ -90,7 +84,7 @@ public static class JumpValuesGlobal
             {
                 held1 = Parse(global::TemperLang.Core.Listed.Get(words, i));
             }
-            catch (global::TemperLang.Core.Bubble)
+            catch (ParseError)
             {
             }
             if (held1 == null)
@@ -115,7 +109,7 @@ public static class JumpValuesGlobal
         {
             held = Parse(s);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
         }
         if (held == null)
@@ -523,7 +517,7 @@ public static class JumpValuesGlobal
                 {
                     held = Parse(global::TemperLang.Core.Listed.Get(words, i));
                 }
-                catch (global::TemperLang.Core.Bubble)
+                catch (ParseError)
                 {
                 }
                 if (held == null)

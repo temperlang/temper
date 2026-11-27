@@ -13,15 +13,17 @@ public static class PanicsGlobal
 {
     internal static readonly ILoggingConsole console;
 
+    /// <exception cref="Positive">Where it fails with Positive.</exception>
     internal static int Failing(int n)
     {
         if (n > 0)
         {
-            return Core.Bubble<int>();
+            throw new Positive(n);
         }
         return n;
     }
 
+    /// <exception cref="NotSquare">Where it fails with NotSquare.</exception>
     internal static Square Downcast(IShape s)
     {
         if (s is Square)
@@ -30,7 +32,7 @@ public static class PanicsGlobal
         }
         else
         {
-            return Core.Bubble<Square>();
+            throw new NotSquare();
         }
     }
 
@@ -40,7 +42,7 @@ public static class PanicsGlobal
         {
             return f();
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (Problem)
         {
             return -9;
         }
@@ -61,13 +63,14 @@ public static class PanicsGlobal
         return "parsed";
     }
 
+    /// <exception cref="Positive">Where it fails with Positive.</exception>
     internal static int Explode(int n)
     {
         if (n > 0)
         {
             throw Core.Panic("panic");
         }
-        return Core.Bubble<int>();
+        throw new Positive(n);
     }
 
     internal static int Noted(string name)
@@ -76,13 +79,14 @@ public static class PanicsGlobal
         return -2;
     }
 
+    /// <exception cref="Positive">Where it fails with Positive.</exception>
     internal static int Inner()
     {
         try
         {
             return Explode(1);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (Positive)
         {
             return Noted("inner");
         }
@@ -115,7 +119,7 @@ public static class PanicsGlobal
         {
             zero = Failing(0);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (Positive)
         {
             zero = -1;
         }
@@ -124,7 +128,7 @@ public static class PanicsGlobal
         {
             a = Failing(1);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (Positive)
         {
             a = -1;
         }
@@ -133,7 +137,7 @@ public static class PanicsGlobal
         {
             b = Downcast(new Circle()).Side;
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (NotSquare)
         {
             b = -2;
         }
@@ -294,7 +298,7 @@ public static class PanicsGlobal
         {
             p = Inner();
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (Positive)
         {
             p = -1;
         }

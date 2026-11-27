@@ -208,9 +208,7 @@ fn take_containers(value: &mut Val, work: &mut Vec<Val>) {
             if let Some(object) = Rc::get_mut(object) {
                 object.fields.get_mut().iter_mut().for_each(&mut take);
                 // A failure's cause, as a long chain of them may be.
-                if let Some(Cause::Failure(cause)) =
-                    object.thrown.get_mut().and_then(|t| t.cause.as_mut())
-                {
+                if let Some(Cause(cause)) = object.thrown.get_mut().and_then(|t| t.cause.as_mut()) {
                     take(cause);
                 }
             }
@@ -218,8 +216,7 @@ fn take_containers(value: &mut Val, work: &mut Vec<Val>) {
         Val::CoreFailure(failure) => {
             if let Some(failure) = Rc::get_mut(failure) {
                 failure.fields.iter_mut().for_each(|(_, v)| take(v));
-                if let Some(Cause::Failure(cause)) =
-                    failure.thrown.get_mut().and_then(|t| t.cause.as_mut())
+                if let Some(Cause(cause)) = failure.thrown.get_mut().and_then(|t| t.cause.as_mut())
                 {
                     take(cause);
                 }
@@ -322,7 +319,7 @@ impl CoreFailure {
     /// The failure being handled where it was first thrown, or null.
     fn cause(&self) -> Val {
         match self.thrown.get().and_then(|t| t.cause.as_ref()) {
-            Some(Cause::Failure(cause)) => cause.clone(),
+            Some(Cause(cause)) => cause.clone(),
             _ => Val::Null,
         }
     }
@@ -359,14 +356,9 @@ struct Thrown {
 }
 
 /// A failure's cause: a declared failure, its object, a value so that a
-/// long chain of causes drops without recursing, as values do; or a
-/// bubble, which has no value, so the `cause` getter gives null for it,
-/// though reports say it.
+/// long chain of causes drops without recursing, as values do.
 #[derive(Debug)]
-enum Cause {
-    Failure(Val),
-    Bubble,
-}
+struct Cause(Val);
 
 /// A generator, a `Generator` or `SafeGenerator`, with its body's frame.
 #[derive(Debug)]
@@ -391,8 +383,6 @@ enum Abrupt {
     Yield(Val),
     /// An `await` of a promise that isn't resolved yet.
     Await(Rc<Promise>),
-    /// A failure, as from `bubble()`, with a message for error nodes.
-    Fail(Option<String>),
     /// A declared failure, from `throw` (RFC 164), which handlers handle
     /// as they do a `Fail`: an object of a failure type, or a
     /// [`Val::CoreFailure`] from a builtin.
@@ -637,8 +627,6 @@ impl Interp<'_> {
 /// failure, which only [`Interp::describe`] can report.
 fn describe(abrupt: Abrupt) -> String {
     match abrupt {
-        Abrupt::Fail(None) => "Failed".to_string(),
-        Abrupt::Fail(Some(message)) => format!("Failed: {message}"),
         Abrupt::Throw(_) => "Failed with a declared failure".to_string(),
         Abrupt::Panic(message) => format!("Panicked: {message}"),
         Abrupt::TestFailed(messages) => messages,
@@ -761,8 +749,10 @@ struct Interp<'a> {
     inputs_failed: Vec<(usize, Abrupt)>,
 }
 
+/// The interpreter's own errors, as a value of the wrong kind, which
+/// typing rules out: panics.
 fn fail(message: impl Into<String>) -> Abrupt {
-    Abrupt::Fail(Some(message.into()))
+    Abrupt::Panic(message.into())
 }
 
 impl Interp<'_> {

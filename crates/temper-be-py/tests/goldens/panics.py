@@ -1,7 +1,7 @@
 from abc import ABCMeta as _ABCMeta
 from collections.abc import Callable as _Callable, Sequence as _Sequence
 from temper_core import (
-    Bubble as _Bubble,
+    Failure as _Failure,
     InvalidCodePoint as _InvalidCodePoint,
     LoggingConsole as _LoggingConsole,
     MissingKey as _MissingKey,
@@ -59,9 +59,37 @@ class _Circle(_Shape):
     __slots__ = ()
 
 
+class _Problem(_Failure, Exception):
+    __slots__ = ()
+
+
+class _Positive(_Problem):
+    __slots__ = ('_n',)
+    _n: int
+
+    def __init__(self, /, n: int) -> None:
+        self._n = n
+
+    @property
+    def n(self, /) -> int:
+        return self._n
+
+    @property
+    def message(self, /) -> str:
+        return f'positive (n: {self._n})'
+
+
+class _NotSquare(_Problem):
+    __slots__ = ()
+
+    @property
+    def message(self, /) -> str:
+        return 'not square'
+
+
 def _failing(n: int, /) -> int:
     if n > 0:
-        raise _Bubble()
+        raise _Positive(n)
     return n
 
 
@@ -69,13 +97,13 @@ def _downcast(s: _Shape, /) -> _Square:
     if isinstance(s, _Square):
         return s
     else:
-        raise _Bubble()
+        raise _NotSquare()
 
 
 def _calling(f: _Callable[[], int], /) -> int:
     try:
         return f()
-    except _Bubble:
+    except _Problem:
         return -9
 
 
@@ -93,7 +121,7 @@ def _parsing(text: str, /) -> str:
 def _explode(n: int, /) -> int:
     if n > 0:
         raise BaseException('panic')
-    raise _Bubble()
+    raise _Positive(n)
 
 
 def _noted(name: str, /) -> int:
@@ -104,7 +132,7 @@ def _noted(name: str, /) -> int:
 def _inner() -> int:
     try:
         return _explode(1)
-    except _Bubble:
+    except _Positive:
         return _noted('inner')
 
 
@@ -112,17 +140,17 @@ _console: _LoggingConsole = _LoggingConsole(__name__)
 _zero: int
 try:
     _zero = _failing(0)
-except _Bubble:
+except _Positive:
     _zero = -1
 _a: int
 try:
     _a = _failing(1)
-except _Bubble:
+except _Positive:
     _a = -1
 _b: int
 try:
     _b = _downcast(_Circle()).side
-except _Bubble:
+except _NotSquare:
     _b = -2
 _e: int
 try:
@@ -213,6 +241,6 @@ _console.log('panicking')
 _p: int
 try:
     _p = _inner()
-except _Bubble:
+except _Positive:
     _p = -1
 _console.log(f'after the panic {_p}')

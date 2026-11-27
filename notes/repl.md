@@ -189,8 +189,8 @@ interactive#7: 2.0
   standard input as one.
 - **Results.** Each input prints `interactive#N: value`, with N counting
   from 0. A trailing `;` gives `void`; a declaration gives `void`, a
-  class or interface its type (`Rectangle__0`); a failure (bubble,
-  panic, compile error) gives `fail`. Values print as Kotlin's
+  class or interface its type (`Rectangle__0`); a failure (an error,
+  a panic, or a compile error) gives `fail`. Values print as Kotlin's
   interpreter renders them: `"quoted"` strings with Temper escapes,
   lists as `[2,4,6]`, objects as `{class: C__0, a: 3}`, functions as
   `ƒ`. `console.log` output prints as it happens, before the result.

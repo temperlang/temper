@@ -1,40 +1,53 @@
 tmpl 1 model 1 library `panic-causes-panic-passing-orelse-panic` 0.0.0
 
 uses `temper-core`#3 0.0.0-alpha.0.0 {
-  class List#4<T#5> extends Listed#6<T#5> {
-    connected method get#15(index: Int32): T#5;
+  interface Error#4 {}
+  class List#9<T#10> extends Listed#11<T#10> {
+    connected method get#24(index: Int32): T#10;
   }
-  interface Listed#6<T#7> {}
-  interface Console#10 {
-    connected method log#11(message: String): Void;
-  }
+  interface Listed#11<T#12> {}
   class Int32#16 {
     connected method toString#17(radix?: Int32): String;
   }
-  connected fn getConsole#18(name?: String): Console#10;
+  interface Console#19 {
+    connected method log#20(message: String): Void;
+  }
+  connected fn getConsole#25(name?: String): Console#19;
 }
 
 module `panic-causes-panic-passing-orelse-panic`#0 {
-  let ~console#12: Console#10;
+  let ~console#21: Console#19;
 
-  fn positive#1(n#9: Int32): Int32 throws Bubble {
-    if (%Int32.le(n#9, 0)) {
-      (bubble()^): Void;
+  interface Problem#1 extends Error#4 {}
+
+  class NotPositive#2 extends Problem#1 {
+    let n#5: Int32;
+    constructor constructor#6(n#14: Int32): NotPositive#2 {
+      this.n#5 = n#14;
     }
-    return n#9;
+    get message#15(): String {
+      return %String.cat(%String.cat("not positive (n: ", this.n#5.toString#17(omitted)), ")");
+    }
   }
 
-  fn read#2(ls#13: List#4<Int32>, i#14: Int32): Int32 throws Bubble {
-    positive#1(%Int32.add(i#14, 1))^;
-    return ls#13.get#15(i#14);
+  fn positive#7(n#18: Int32): Int32 throws NotPositive#2 {
+    if (%Int32.le(n#18, 0)) {
+      (throw(new constructor#6(n#18))^): Void;
+    }
+    return n#18;
   }
 
-  let r#8: Int32;
+  fn read#8(ls#22: List#9<Int32>, i#23: Int32): Int32 throws NotPositive#2 {
+    positive#7(%Int32.add(i#23, 1))^;
+    return ls#22.get#24(i#23);
+  }
+
+  let r#13: Int32;
 
   init {
-    init ~console#12 = getConsole#18(omitted);
-    ~console#12.log#11("before");
-    init r#8 = (orelse(read#2((list(1, 2)): List#4<Int32>, 5)^, (panic()): Int32)): Int32;
-    ~console#12.log#11(%String.cat("after ", r#8.toString#17(omitted)));
+    init ~console#21 = getConsole#25(omitted);
+    ~console#21.log#20("before");
+    init r#13 = (orelse(read#8((list(1, 2)): List#9<Int32>, 5)^, (panic()): Int32)): Int32;
+    ~console#21.log#20(%String.cat("after ", r#13.toString#17(omitted)));
   }
 }

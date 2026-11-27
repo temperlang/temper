@@ -1,9 +1,7 @@
 import {
-  bubble,
   divIntInt,
   failureBase,
   failureCause,
-  isBubble,
   listedGet,
   panic,
   withCause,
@@ -162,27 +160,15 @@ export function signName(e) {
 }
 
 /**
- * @param {number} n
- * @returns {number}
- */
-function nonzero(n) {
-  if (n === 0) {
-    bubble();
-  } else {
-    return n;
-  }
-}
-
-/**
  * @param {string} key
- * @param {number} n
+ * @param {string} text
  * @returns {number}
  */
-export function mixed(key, n) {
+export function mixed(key, text) {
   try {
-    return (lookup(key) + divIntInt(10, nonzero(n))) | 0;
+    return (lookup(key) + divIntInt(10, sign(text))) | 0;
   } catch (e$) {
-    if (!(isBubble(e$) || e$ instanceof NotFound)) throw e$;
+    if (!(e$ instanceof FailuresInteropError)) throw e$;
     return -1;
   }
 }
@@ -339,7 +325,7 @@ export class LookupFailed extends FailuresInteropError {
 }
 
 console.log(`${lookup("a")} ${sign("-")} ${setting("a")}`);
-console.log(`${mixed("a", 0)} ${mixed("z", 1)} ${mixed("a", 5)}`);
+console.log(`${mixed("a", "")} ${mixed("z", "+")} ${mixed("a", "-")}`);
 console.log(`${explained("port")}; ${explained("a")}; ${signMessage("x")}`);
 console.log(`${earlyCause("soon")}; ${firstMissing(Object.freeze(["a", "b", "c"]))} ${firstMissing(Object.freeze(["a"]))}`);
 console.log(`${firstSign(Object.freeze(["", "+"]))} ${firstSign(Object.freeze(["", "?"]))} ${firstSign(Object.freeze([]))}`);

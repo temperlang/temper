@@ -5,6 +5,9 @@ mod support;
 
 pub use r#mod::*;
 
+/// The library's failure type, its one root.
+pub type Error = r#mod::OopsError;
+
 /// Initializes the library, once, with `config` or the default
 /// configuration, and gives the runner of its async tasks.
 pub fn init(config: Option<temper_core::Config>) -> temper_core::Result<temper_core::AsyncRunner> {

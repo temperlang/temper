@@ -100,8 +100,8 @@ namespace temper {
                 return;
             }
             async_loop_running() = true;
-            // Reset the running flag even if a task throws (Temper bubbles are C++
-            // exceptions); otherwise a bubble escaping the loop would permanently
+            // Reset the running flag even if a task throws (a panic in a test
+            // build, or a host's exception); otherwise one escaping the loop would permanently
             // wedge the async subsystem and strand any remaining queued tasks.
             struct ResetGuard {
                 ~ResetGuard() { async_loop_running() = false; }

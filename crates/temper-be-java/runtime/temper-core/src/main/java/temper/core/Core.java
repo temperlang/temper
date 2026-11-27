@@ -256,23 +256,21 @@ public final class Core {
         }
     }
 
-    /**
-     * <p>Obtain or create an exception that can be thrown for Temper bubbling.
-     * </p>
-     * <p>This must be `throw`n by the caller, to help the compiler with flow analysis.
-     * </p>
-     */
-    public static Bubble bubble() {
-        return new Bubble();
-    }
+    private static volatile boolean stackTraces = false;
 
     /**
-     * <p>Throws an exception for Temper bubbling.
-     * </p>
-     * @param <T> an arbitrary type; allows this expression to effectively return bottom
+     * Gives core's failures made from now on stack traces, at a cost to
+     * each, which handled failures don't need: a program's main method
+     * calls it, and so may code that wants to see where an uncaught
+     * failure came from.
      */
-    public static <T> T throwBubble() {
-        throw bubble();
+    public static void keepStackTraces() {
+        stackTraces = true;
+    }
+
+    /** Whether core's failures made now get stack traces. */
+    static boolean keepsStackTraces() {
+        return stackTraces;
     }
 
     /**
@@ -293,7 +291,7 @@ public final class Core {
      * becomes its own.
      * @param <T> the failure's type
      * @param failure the failure thrown
-     * @param cause the failure (or bubble) being handled
+     * @param cause the failure being handled
      * @return {@code failure}
      */
     public static <T extends Throwable> T withCause(T failure, Throwable cause) {
@@ -310,7 +308,7 @@ public final class Core {
     /**
      * A declared failure's cause, as Temper's {@code Error.cause} gives it:
      * the failure that was being handled where it was thrown, or null,
-     * also where that was something else, as a bubble.
+     * also where that was something else, as a host's exception.
      * @param failure the failure
      * @return its cause, if a declared failure, else null
      */
@@ -324,8 +322,8 @@ public final class Core {
 
     /**
      * Runs {@code block}, giving whether it panicked, for std's
-     * {@code Test.assertPanics}: whether it threw anything but a bubble,
-     * a test framework's failure (JUnit's, from {@code org.opentest4j}),
+     * {@code Test.assertPanics}: whether it threw anything but a declared
+     * failure, a test framework's failure (JUnit's, from {@code org.opentest4j}),
      * or a {@link VirtualMachineError}, as on every backend. Temper's own
      * panics are {@link AssertionError}s, and a host's exception is a
      * panic too; a declared failure (a {@link Failure}) is a failure, not
@@ -334,7 +332,7 @@ public final class Core {
     public static boolean blockPanics(Runnable block) {
         try {
             block.run();
-        } catch (Bubble | VirtualMachineError e) {
+        } catch (VirtualMachineError e) {
             throw e;
         } catch (Throwable e) {
             if (e instanceof Failure || isTestFailure(e)) {
@@ -2109,7 +2107,7 @@ public final class Core {
      * body's own failure wins, which its test then rethrows, and the async
      * work's wins over the soft failures; what fails besides is added to
      * the failure that wins as suppressed, which JUnit reports, or, where
-     * that keeps no suppressed exceptions (a bubble), written to stderr.
+     * that keeps no suppressed exceptions, written to stderr.
      *
      * @param failure what the test's body threw, if anything
      * @param softFailToHard the test's {@code softFailToHard}

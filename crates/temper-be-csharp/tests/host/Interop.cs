@@ -113,13 +113,12 @@ static class Interop
         }
         Console.WriteLine($"collatz {string.Join(",", path)}");
 
-        // A Temper failure is an Exception, as notes/api-compat.md
-        // promises.
+        // A declared failure is an exception of its own class.
         try
         {
             Console.WriteLine($"halve returned {AsyncTurnsGlobal.Halve(3)}");
         }
-        catch (Exception)
+        catch (Odd)
         {
             Console.WriteLine($"halve {AsyncTurnsGlobal.Halve(8)} caught");
         }

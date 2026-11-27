@@ -49,7 +49,7 @@ impl Translator<'_> {
         for &m in &group.members {
             let sig = temper_tmpl::analysis::fun_signature(p, p.decls.get(m).ty);
             let fail = sig.and_then(|s| p.types.signature(s)).and_then(|s| s.fail);
-            if fail.is_some_and(|f| f != TypeId::BUBBLE) {
+            if fail.is_some() {
                 return not_yet("local functions that use each other and declare failures");
             }
         }

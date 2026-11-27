@@ -35,9 +35,9 @@ interactive#1: "s"
 "a\u{110000}b"
 "\u{zz}"
 --- transcript
-Failed: Malformed code
+Panicked: Malformed code
 interactive#0: fail
-Failed: Malformed code
+Panicked: Malformed code
 interactive#1: fail
 
 === a panic in Temper code fails the input, and the session goes on
@@ -60,9 +60,9 @@ let w = z + 1
 --- transcript
 Panicked: division by zero
 interactive#0: fail
-Failed: z has no value: interactive#0 failed
+Panicked: z has no value: interactive#0 failed
 interactive#1: fail
-Failed: z has no value: interactive#0 failed
+Panicked: z has no value: interactive#0 failed
 interactive#2: fail
 
 === a function whose body has an error says why when called (Kotlin fails silently)
@@ -73,7 +73,7 @@ interactive#0:1:16: error: missing has not been declared
     let f(): Int { missing + 1 }
                    ^^^^^^^
 interactive#0: void
-Failed: missing has not been declared
+Panicked: missing has not been declared
 interactive#1: fail
 
 === reassigning a let from a later input names its own input (Kotlin names the wrong one)

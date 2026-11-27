@@ -1,5 +1,5 @@
-from host_error_tests.host_error_tests import host_fails, host_fails_test
-from temper_core import Bubble, end_test
+from host_error_tests.host_error_tests import Oops, host_fails, host_fails_test
+from temper_core import end_test
 from temper_std.testing import Test
 from unittest import TestCase
 
@@ -12,21 +12,21 @@ class TestHostErrorTests(TestCase):
             def fn() -> None:
                 try:
                     r = host_fails(1)
-                except Bubble:
+                except Oops:
                     r = -1
                 test.assert_(r != -1, lambda: 'expected r != -1')
             test.assert_panics(fn, 'host error 1')
             def fn3() -> None:
                 try:
                     r = host_fails(2)
-                except Bubble:
+                except Oops:
                     r = -1
                 test.assert_(r != -1, lambda: 'expected r != -1')
             test.assert_panics(fn3, 'host error 2')
             def fn5() -> None:
                 try:
                     r = host_fails(3)
-                except Bubble:
+                except Oops:
                     r = -1
                 test.assert_(r != -1, lambda: 'expected r != -1')
             test.assert_panics(fn5, 'host error 3')

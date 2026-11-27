@@ -15,9 +15,46 @@ pub(crate) fn init() -> temper_core::Result<()> {
 }
 
 #[cfg(test)]
-pub(crate) fn at(i: i32) -> temper_core::Result<i32> {
+#[derive(Clone, Debug)]
+pub(crate) enum Problem {
+    Oops(Oops),
+}
+
+#[cfg(test)]
+temper_core::impl_failure_enum!(Problem, Oops(Oops));
+
+#[cfg(test)]
+struct OopsStruct {
+    cause: temper_core::Cause,
+}
+
+#[cfg(test)]
+#[derive(Clone)]
+pub(crate) struct Oops(Arc<OopsStruct>);
+
+#[cfg(test)]
+impl Oops {
+    pub fn new() -> Oops {
+        Oops(Arc::new(OopsStruct {
+            cause: temper_core::Cause::new(),
+        }))
+    }
+
+    pub fn message(&self) -> Arc<String> {
+        Arc::new("oops".to_string())
+    }
+}
+
+#[cfg(test)]
+temper_core::impl_failure!(Oops, message, cause);
+
+#[cfg(test)]
+temper_core::impl_any_value_trait!(Oops, [Problem]);
+
+#[cfg(test)]
+pub(crate) fn at(i: i32) -> Result<i32, Oops> {
     if i == 99 {
-        return Err(temper_core::Error::new());
+        return Err(Oops::new());
     }
     Ok(i)
 }
@@ -30,37 +67,37 @@ pub(crate) fn built() -> temper_core::ListBuilder<i32> {
 }
 
 #[cfg(test)]
-pub(crate) fn read(ls: impl temper_core::ToListed<i32>, i: i32) -> temper_core::Result<i32> {
+pub(crate) fn read(ls: impl temper_core::ToListed<i32>, i: i32) -> Result<i32, Oops> {
     let ls = ls.to_listed();
     Ok(temper_core::ListedTrait::get(&*ls, at(i)?))
 }
 
 #[cfg(test)]
-pub(crate) fn write(lb: temper_core::ListBuilder<i32>, i: i32) -> temper_core::Result<i32> {
+pub(crate) fn write(lb: temper_core::ListBuilder<i32>, i: i32) -> Result<i32, Oops> {
     temper_core::listed::set(&lb, at(i)?, 3);
     Ok(temper_core::ListedTrait::len(&lb))
 }
 
 #[cfg(test)]
-pub(crate) fn insert(lb: temper_core::ListBuilder<i32>, i: i32) -> temper_core::Result<i32> {
+pub(crate) fn insert(lb: temper_core::ListBuilder<i32>, i: i32) -> Result<i32, Oops> {
     temper_core::listed::add(&lb, 2, Some(at(i)?));
     Ok(temper_core::ListedTrait::len(&lb))
 }
 
 #[cfg(test)]
-pub(crate) fn remove_last(lb: temper_core::ListBuilder<i32>, i: i32) -> temper_core::Result<i32> {
+pub(crate) fn remove_last(lb: temper_core::ListBuilder<i32>, i: i32) -> Result<i32, Oops> {
     at(i)?;
     Ok(temper_core::listed::remove_last(&lb))
 }
 
 #[cfg(test)]
-pub(crate) fn remove_first(d: temper_core::Deque<i32>, i: i32) -> temper_core::Result<i32> {
+pub(crate) fn remove_first(d: temper_core::Deque<i32>, i: i32) -> Result<i32, Oops> {
     at(i)?;
     Ok(temper_core::deque::remove_first(&d))
 }
 
 #[cfg(test)]
-pub(crate) fn sum(ls: impl temper_core::ToList<i32>, i: i32) -> temper_core::Result<i32> {
+pub(crate) fn sum(ls: impl temper_core::ToList<i32>, i: i32) -> Result<i32, Oops> {
     let ls = ls.to_list();
     at(i)?;
     Ok(temper_core::listed::reduce(
@@ -70,14 +107,14 @@ pub(crate) fn sum(ls: impl temper_core::ToList<i32>, i: i32) -> temper_core::Res
 }
 
 #[cfg(test)]
-pub(crate) fn code_at(s: impl ToArcString, i: i32) -> temper_core::Result<i32> {
+pub(crate) fn code_at(s: impl ToArcString, i: i32) -> Result<i32, Oops> {
     let s = s.to_arc_string();
     at(i)?;
     Ok(temper_core::string::get(&s, s.len()))
 }
 
 #[cfg(test)]
-pub(crate) fn replaced(i: i32) -> temper_core::Result<Arc<String>> {
+pub(crate) fn replaced(i: i32) -> Result<Arc<String>, Oops> {
     at(i)?;
     Ok(temper_core::into_ok(
         temper_std::regex::RegexNodeTrait::compiled(&temper_std::regex::CodePoints::new("b"))

@@ -229,9 +229,6 @@ pub enum Message {
     /// A generic call's type parameter, written with its bound, solved to
     /// a type that doesn't fit the bound.
     TypeFormalBound(String, String, String),
-    /// What may bubble, in a function whose return type doesn't say it
-    /// may. Kotlin's `ExpectedNoBubble`.
-    ExpectedNoBubble,
     /// What may fail, in a function literal whose place is a generic
     /// call's failure parameter, named, that its body can't give, as its
     /// parameters' types need it too.
@@ -240,8 +237,8 @@ pub enum Message {
     /// call's failure parameter that the call's type arguments give as a
     /// `Never`: the parameter and what's given.
     FailureGivenNever(String, String),
-    /// `throws T` for a `T` that isn't a failure type, `Bubble`, or a
-    /// failure parameter.
+    /// `throws T` for a `T` that isn't a failure type or a failure
+    /// parameter.
     NotAFailureType(String),
     /// `throws Error`, the failure root, which isn't one a function may
     /// throw.
@@ -255,14 +252,6 @@ pub enum Message {
     /// A declared failure, of the first type, in a function that throws
     /// the second, which it isn't one of.
     FailureMismatch(String, String),
-    /// A declared failure, of the type named, in a function that throws
-    /// `Bubble`.
-    FailureIntoBubble(String),
-    /// What may bubble, in a function that throws the declared failure
-    /// type named.
-    BubbleIntoFailure(String),
-    /// `catch (e)` where what it handles may bubble: the binding's name.
-    CatchBindsBubble(String),
     /// A failure class or interface, named, with type parameters.
     GenericFailureType(String),
     /// An interface, named, that extends the failure root but isn't
@@ -391,6 +380,12 @@ impl Message {
     pub fn text(&self) -> String {
         match self {
             Message::Syntax(m) => m.text(),
+            // Kotlin Temper 0.6 code's `Bubble` and `bubble()`.
+            Message::UndeclaredName(n) if n == "Bubble" || n == "bubble" => format!(
+                "{n} has not been declared; Bubble is gone: declare an error type and throw it \
+                 (sealed interface MyError extends {FAILURE_ROOT} {{}}; throws MyError; throw new \
+                 MyError()), return null, or panic() for a bug"
+            ),
             Message::UndeclaredName(n) => format!("{n} has not been declared"),
             Message::MalformedSpecial(n) => format!("Use of builtin {n} is malformed"),
             Message::MalformedDeclaration => "Declaration is malformed".into(),
@@ -537,9 +532,6 @@ impl Message {
             Message::NoCalleeMatches(inputs, among) => {
                 format!("No callee matches inputs [{inputs}] among [{among}]")
             }
-            Message::ExpectedNoBubble => {
-                "Cannot bubble from a function without Bubble in its return type".into()
-            }
             Message::FailureNotInferred(e) => format!(
                 "Cannot infer {e} from this function literal, as its parameters' types need \
                  it; declare its result type, with throws if it may fail"
@@ -550,7 +542,7 @@ impl Message {
             ),
             Message::NotAFailureType(t) => format!(
                 "{t} isn't a failure type; throws takes a class or sealed interface that \
-                 extends {FAILURE_ROOT}, or Bubble"
+                 extends {FAILURE_ROOT}"
             ),
             Message::ThrowsRoot => format!(
                 "{FAILURE_ROOT} is the root of failure types; throws takes a class or sealed \
@@ -568,18 +560,6 @@ impl Message {
                  there if need be",
                 with_article(allowed)
             ),
-            Message::FailureIntoBubble(t) => format!(
-                "Cannot throw {t} from a function that throws Bubble; catch it, and bubble() \
-                 there if need be"
-            ),
-            Message::BubbleIntoFailure(allowed) => format!(
-                "Cannot bubble from a function that throws {allowed}; handle it with orelse or \
-                 catch, and throw {} there if need be",
-                with_article(allowed)
-            ),
-            Message::CatchBindsBubble(name) => {
-                format!("A Bubble has no value to bind; catch it without ({name}), or with orelse")
-            }
             Message::GenericFailureType(name) => {
                 format!("Failure type {name} can't have type parameters")
             }

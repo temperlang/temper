@@ -11,7 +11,10 @@ test the same way, while soft `assert`s go on, collecting each message.
 The code under test here swallows any failure of what it runs, so a
 test that went on past a `fail` would fail with "swallowed" too:
 
-    let tries(f: fn (): Void throws Bubble): Boolean {
+    sealed interface Problem extends Error {}
+    class Oops extends Problem {}
+
+    let tries(f: fn (): Void throws Oops): Boolean {
       var finished = true;
       f() orelse do { finished = false };
       finished

@@ -1,4 +1,4 @@
-import { bubble, eqFloat64, isBubble } from "@temperlang/core";
+import { eqFloat64, failureBase } from "@temperlang/core";
 
 /**
  * @param {number} n
@@ -13,10 +13,11 @@ function noted(n) {
 /**
  * @param {number} n
  * @returns {number}
+ * @throws {TooBig}
  */
 function failing(n) {
   if (n > 2) {
-    bubble();
+    throw new TooBig();
   }
   return n;
 }
@@ -39,6 +40,17 @@ function sameFloat(a, b) {
   return a == null ? b == null : b != null && eqFloat64(a, b);
 }
 
+class Problem extends Error {}
+
+failureBase(Problem);
+
+class TooBig extends Problem {
+  /** @returns {string} */
+  get message() {
+    return "too big";
+  }
+}
+
 let calls = 0;
 const t$1 = noted(1);
 /** @type {number} */
@@ -46,7 +58,7 @@ let t$0;
 try {
   t$0 = failing(3);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof TooBig)) throw e$;
   t$0 = 9;
 }
 console.log(pair(t$1, t$0));
@@ -59,7 +71,7 @@ if (t$3) {
   try {
     t$2 = failing(5);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof TooBig)) throw e$;
     t$2 = 1;
   }
   t$3 = t$2 === 1;
@@ -72,7 +84,7 @@ if (t$5) {
   try {
     t$4 = failing(1);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof TooBig)) throw e$;
     t$4 = 2;
   }
   t$5 = t$4 === 1;
@@ -85,7 +97,7 @@ if (t) {
   try {
     t$6 = failing(4);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof TooBig)) throw e$;
     t$6 = 4;
   }
 } else {
@@ -99,7 +111,7 @@ while (true) {
   try {
     t$7 = failing(i);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof TooBig)) throw e$;
     t$7 = 100;
   }
   if (t$7 >= 3) {

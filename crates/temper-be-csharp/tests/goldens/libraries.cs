@@ -15,22 +15,10 @@ public static class LibrariesGlobal
     internal static readonly IReadOnlyList<int> extras;
     private static readonly object moduleLock = new();
 
+    /// <exception cref="ParseError">Where it fails with ParseError.</exception>
     public static Grid ParseGrid(string s)
     {
-        if (s == "")
-        {
-            return Core.Bubble<Grid>();
-        }
-        double t1;
-        try
-        {
-            t1 = ParseFloat64(s);
-        }
-        catch (ParseError)
-        {
-            t1 = Core.Bubble<double>();
-        }
-        return new Grid(1, Listed.CreateReadOnlyList<double>(t1));
+        return new Grid(1, Listed.CreateReadOnlyList<double>(ParseFloat64(s)));
     }
 
     internal static global::Libraries.Tagged Tagged(string? label = null)
@@ -86,11 +74,12 @@ public static class LibrariesGlobal
         return Core.Div(values.Count, ncols);
     }
 
+    /// <exception cref="NoColumns">Where it fails with NoColumns.</exception>
     internal static Grid Scaled(Grid grid)
     {
         if (grid.Ncols == 0)
         {
-            return Core.Bubble<Grid>();
+            throw new NoColumns();
         }
         return grid;
     }
@@ -102,9 +91,9 @@ public static class LibrariesGlobal
             IReadOnlyList<double> more = Listed.ToReadOnlyList(Enumerable.Select(Scaled(grid).Values, (double x) => x * x * x));
             return more;
         }
-        catch (global::TemperLang.Core.Bubble bubble1)
+        catch (NoColumns failure1)
         {
-            throw Core.Panic("panic", bubble1);
+            throw Core.Panic("panic", failure1);
         }
     }
 
@@ -144,14 +133,7 @@ public static class LibrariesGlobal
 
     internal static double Corner(Grid grid)
     {
-        try
-        {
-            return grid.Get(1, 1);
-        }
-        catch (global::TemperLang.Core.Bubble)
-        {
-            return -1.0;
-        }
+        return grid.Get(1, 1);
     }
 
     internal static Grid? Maybe(int n)
@@ -168,14 +150,14 @@ public static class LibrariesGlobal
 
     internal static IReadOnlyList<double> Mapped(Grid grid)
     {
-        Grid t2;
+        Grid t1;
         try
         {
-            t2 = Scaled(grid);
+            t1 = Scaled(grid);
         }
-        catch (global::TemperLang.Core.Bubble bubble2)
+        catch (NoColumns failure2)
         {
-            throw Core.Panic("panic", bubble2);
+            throw Core.Panic("panic", failure2);
         }
         double fn(double x)
         {
@@ -188,7 +170,7 @@ public static class LibrariesGlobal
                 return x;
             }
         }
-        return Listed.ToReadOnlyList(Enumerable.Select(t2.Values, (Func<double, double>)fn));
+        return Listed.ToReadOnlyList(Enumerable.Select(t1.Values, (Func<double, double>)fn));
     }
 
     internal static int ByteAt(IReadOnlyList<int> digits, bool @short, int c)
@@ -304,7 +286,7 @@ public static class LibrariesGlobal
         {
             found = ParseGrid(s);
         }
-        catch (global::TemperLang.Core.Bubble)
+        catch (ParseError)
         {
             found = null;
         }

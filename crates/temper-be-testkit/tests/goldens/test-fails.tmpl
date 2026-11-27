@@ -1,32 +1,41 @@
 tmpl 1 model 1 library `test-fails` 0.0.0
 
-uses std#6 0.0.0-alpha.0.0 {
-  module testing#7 {
-    class Test#8 {
-      connected method assert#13(success: Boolean, message: fn (): String): Void;
-      connected method fail#24(message: String): Never<Void>;
-      connected method assertHard#46(success: Boolean, message: fn (): String): Void;
-      connected method softFailToHard#52(): Void;
+uses `temper-core`#3 0.0.0-alpha.0.0 {
+  interface Error#4 {}
+  class Int32#22 {
+    connected method toString#23(radix?: Int32): String;
+  }
+}
+
+uses std#12 0.0.0-alpha.0.0 {
+  module testing#13 {
+    class Test#14 {
+      connected method assert#17(success: Boolean, message: fn (): String): Void;
+      connected method fail#28(message: String): Never<Void>;
+      connected method assertHard#50(success: Boolean, message: fn (): String): Void;
+      connected method softFailToHard#56(): Void;
     }
   }
 }
 
-uses `temper-core`#9 0.0.0-alpha.0.0 {
-  interface Error#10 {}
-  class Int32#18 {
-    connected method toString#19(radix?: Int32): String;
-  }
-}
-
 module `test-fails`#0 {
-  fn tries#1(f#3: fn (): Void throws Bubble): Boolean {
-    var finished#4: Boolean = true;
-    (orelse(f#3()^, (value { finished#4 = false; void }): Void)): Void;
-    return finished#4;
+  interface Problem#1 extends Error#4 {}
+
+  class Oops#2 extends Problem#1 {
+    constructor constructor#5(): Oops#2 {}
+    get message#8(): String {
+      return "oops";
+    }
   }
 
-  fn find#2(key#5: String): Int32? {
-    if (%String.eq(key#5, "one")) {
+  fn tries#6(f#9: fn (): Void throws Oops#2): Boolean {
+    var finished#10: Boolean = true;
+    (orelse(f#9()^, (value { finished#10 = false; void }): Void)): Void;
+    return finished#10;
+  }
+
+  fn find#7(key#11: String): Int32? {
+    if (%String.eq(key#11, "one")) {
       return (asNullable(1)): Int32?;
     } else {
       return (null): Int32?;
@@ -35,95 +44,95 @@ module `test-fails`#0 {
 
   init {}
 
-  test "passes before" ~test#11(test#12: Test#8): Void throws Error#10 {
-    test#12.assert#13(tries#1((fn ~fn#14(): Void throws Bubble [test#12] {
+  test "passes before" ~test#15(test#16: Test#14): Void throws Error#4 {
+    test#16.assert#17(tries#6((fn ~fn#18(): Void throws Oops#2 [test#16] {
       {
-        let actual#15: Int32? = find#2("one");
-        let expected#16: Int32 = 1;
-        test#12.assert#13(eqNullable(%Int32.eq, actual#15, (asNullable(expected#16)): Int32?), (fn ~fn#17(): String [actual#15, expected#16] {
-          return %String.cat(%String.cat(%String.cat(%String.cat("expected find(\"one\") == (", expected#16.toString#19(omitted)), ") not ("), (if (isNull(actual#15)) "null" else ((nonNull(actual#15)): Int32).toString#19(omitted)): String), ")");
+        let actual#19: Int32? = find#7("one");
+        let expected#20: Int32 = 1;
+        test#16.assert#17(eqNullable(%Int32.eq, actual#19, (asNullable(expected#20)): Int32?), (fn ~fn#21(): String [actual#19, expected#20] {
+          return %String.cat(%String.cat(%String.cat(%String.cat("expected find(\"one\") == (", expected#20.toString#23(omitted)), ") not ("), (if (isNull(actual#19)) "null" else ((nonNull(actual#19)): Int32).toString#23(omitted)): String), ")");
         }): fn (): String);
       }
-    }): fn (): Void throws Bubble), (fn ~fn#20(): String {
+    }): fn (): Void throws Oops#2), (fn ~fn#24(): String {
       return "expected tries { assert(find(\"one\") == 1); }";
     }): fn (): String);
   }
 
-  test "fails past an orelse" ~test#21(test#22: Test#8): Void throws Error#10 {
-    tries#1((fn ~fn#23(): Void throws Bubble [test#22] {
-      test#22.fail#24("failed on purpose");
-    }): fn (): Void throws Bubble);
-    test#22.fail#24("swallowed");
+  test "fails past an orelse" ~test#25(test#26: Test#14): Void throws Error#4 {
+    tries#6((fn ~fn#27(): Void throws Oops#2 [test#26] {
+      test#26.fail#28("failed on purpose");
+    }): fn (): Void throws Oops#2);
+    test#26.fail#28("swallowed");
   }
 
-  test "narrows after fail" ~test#25(test#26: Test#8): Void throws Error#10 {
-    let n#27: Int32? = find#2("one");
-    if (isNull(n#27)) {
-      test#26.fail#24("one not found");
+  test "narrows after fail" ~test#29(test#30: Test#14): Void throws Error#4 {
+    let n#31: Int32? = find#7("one");
+    if (isNull(n#31)) {
+      test#30.fail#28("one not found");
     }
     {
-      let actual#28: Int32 = %Int32.add((nonNull(n#27)): Int32, 1);
-      let expected#29: Int32 = 2;
-      test#26.assert#13(%Int32.eq(actual#28, expected#29), (fn ~fn#30(): String [actual#28, expected#29] {
-        return %String.cat(%String.cat(%String.cat(%String.cat("expected n + 1 == (", expected#29.toString#19(omitted)), ") not ("), actual#28.toString#19(omitted)), ")");
+      let actual#32: Int32 = %Int32.add((nonNull(n#31)): Int32, 1);
+      let expected#33: Int32 = 2;
+      test#30.assert#17(%Int32.eq(actual#32, expected#33), (fn ~fn#34(): String [actual#32, expected#33] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected n + 1 == (", expected#33.toString#23(omitted)), ") not ("), actual#32.toString#23(omitted)), ")");
       }): fn (): String);
     }
   }
 
-  test "fails before narrowing" ~test#31(test#32: Test#8): Void throws Error#10 {
-    let n#33: Int32? = find#2("two");
-    if (isNull(n#33)) {
-      test#32.fail#24("two not found");
+  test "fails before narrowing" ~test#35(test#36: Test#14): Void throws Error#4 {
+    let n#37: Int32? = find#7("two");
+    if (isNull(n#37)) {
+      test#36.fail#28("two not found");
     }
-    test#32.assert#13(%Int32.eq(%Int32.add((nonNull(n#33)): Int32, 1), 3), (fn ~fn#34(): String {
+    test#36.assert#17(%Int32.eq(%Int32.add((nonNull(n#37)): Int32, 1), 3), (fn ~fn#38(): String {
       return "went on";
     }): fn (): String);
   }
 
-  test "collects soft failures" ~test#35(test#36: Test#8): Void throws Error#10 {
-    test#36.assert#13(%Int32.eq(%Int32.add(1, 1), 3), (fn ~fn#37(): String {
+  test "collects soft failures" ~test#39(test#40: Test#14): Void throws Error#4 {
+    test#40.assert#17(%Int32.eq(%Int32.add(1, 1), 3), (fn ~fn#41(): String {
       return "first";
     }): fn (): String);
-    test#36.assert#13(true, (fn ~fn#38(): String {
+    test#40.assert#17(true, (fn ~fn#42(): String {
       return "not shown";
     }): fn (): String);
-    test#36.assert#13(%Int32.eq(%Int32.add(2, 2), 5), (fn ~fn#39(): String {
+    test#40.assert#17(%Int32.eq(%Int32.add(2, 2), 5), (fn ~fn#43(): String {
       return "second";
     }): fn (): String);
   }
 
-  test "fails hard after soft failures" ~test#40(test#41: Test#8): Void throws Error#10 {
-    test#41.assert#13(false, (fn ~fn#42(): String {
+  test "fails hard after soft failures" ~test#44(test#45: Test#14): Void throws Error#4 {
+    test#45.assert#17(false, (fn ~fn#46(): String {
       return "soft before";
     }): fn (): String);
-    test#41.fail#24("then hard");
+    test#45.fail#28("then hard");
   }
 
-  test "fails a hard assertion past an orelse" ~test#43(test#44: Test#8): Void throws Error#10 {
-    tries#1((fn ~fn#45(): Void throws Bubble [test#44] {
-      test#44.assertHard#46(%Int32.eq(%Int32.add(1, 1), 3), (fn ~fn#47(): String {
+  test "fails a hard assertion past an orelse" ~test#47(test#48: Test#14): Void throws Error#4 {
+    tries#6((fn ~fn#49(): Void throws Oops#2 [test#48] {
+      test#48.assertHard#50(%Int32.eq(%Int32.add(1, 1), 3), (fn ~fn#51(): String {
         return "hard assertion";
       }): fn (): String);
-    }): fn (): Void throws Bubble);
-    test#44.fail#24("swallowed");
+    }): fn (): Void throws Oops#2);
+    test#48.fail#28("swallowed");
   }
 
-  test "hardens soft failures past an orelse" ~test#48(test#49: Test#8): Void throws Error#10 {
-    test#49.assert#13(false, (fn ~fn#50(): String {
+  test "hardens soft failures past an orelse" ~test#52(test#53: Test#14): Void throws Error#4 {
+    test#53.assert#17(false, (fn ~fn#54(): String {
       return "soft only";
     }): fn (): String);
-    tries#1((fn ~fn#51(): Void throws Bubble [test#49] {
-      test#49.softFailToHard#52();
-    }): fn (): Void throws Bubble);
-    test#49.fail#24("swallowed");
+    tries#6((fn ~fn#55(): Void throws Oops#2 [test#53] {
+      test#53.softFailToHard#56();
+    }): fn (): Void throws Oops#2);
+    test#53.fail#28("swallowed");
   }
 
-  test "passes after" ~test#53(test#54: Test#8): Void throws Error#10 {
+  test "passes after" ~test#57(test#58: Test#14): Void throws Error#4 {
     {
-      let actual#55: Int32? = find#2("one");
-      let expected#56: Int32 = 1;
-      test#54.assert#13(eqNullable(%Int32.eq, actual#55, (asNullable(expected#56)): Int32?), (fn ~fn#57(): String [actual#55, expected#56] {
-        return %String.cat(%String.cat(%String.cat(%String.cat("expected find(\"one\") == (", expected#56.toString#19(omitted)), ") not ("), (if (isNull(actual#55)) "null" else ((nonNull(actual#55)): Int32).toString#19(omitted)): String), ")");
+      let actual#59: Int32? = find#7("one");
+      let expected#60: Int32 = 1;
+      test#58.assert#17(eqNullable(%Int32.eq, actual#59, (asNullable(expected#60)): Int32?), (fn ~fn#61(): String [actual#59, expected#60] {
+        return %String.cat(%String.cat(%String.cat(%String.cat("expected find(\"one\") == (", expected#60.toString#23(omitted)), ") not ("), (if (isNull(actual#59)) "null" else ((nonNull(actual#59)): Int32).toString#23(omitted)): String), ")");
       }): fn (): String);
     }
   }

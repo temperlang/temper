@@ -286,7 +286,6 @@ fn translate(
         this_class: None,
         type_params: HashMap::new(),
         gaps: gaps.is_some().then(Vec::new),
-        catching: Vec::new(),
         always_jumps: RefCell::new(HashMap::new()),
         handling: Vec::new(),
         adopted: HashSet::new(),
@@ -434,10 +433,6 @@ struct Translator<'a> {
     /// What isn't covered yet, when finding every gap ([`gaps`]), rather
     /// than failing at the first.
     gaps: Option<Vec<NotYet>>,
-    /// The functions (or modules, in their init blocks) inside whose
-    /// `orelse` bodies the translation is, where what may bubble is
-    /// caught, so a division that may fail is fine in one that can't.
-    catching: Vec<DeclId>,
     /// Whether each node asked about always jumps
     /// ([`Self::always_jumps`]), kept, as it's asked of each statement
     /// and so again of each part of each.
@@ -738,7 +733,6 @@ impl Translator<'_> {
                 ft::FLOAT64,
                 ft::STRING,
                 ft::ANY_VALUE,
-                ft::BUBBLE,
             ];
             if !scalar.contains(&t) {
                 if let Some(d) = self.core_decl(crate::builtins::TYPES[i as usize]) {
@@ -756,8 +750,6 @@ impl Translator<'_> {
             ft::FLOAT64 => TypeId::FLOAT64,
             ft::STRING => TypeId::STRING,
             ft::ANY_VALUE => TypeId::ANY_VALUE,
-            // Only ever a result's failure type, above.
-            ft::BUBBLE => TypeId::BUBBLE,
             // A type an error left unknown, as an undeclared type's name:
             // any value, so what has it still translates, and the code
             // that has the error fails where it runs.
@@ -1278,7 +1270,6 @@ impl Translator<'_> {
             self.owner = module;
             self.result = TypeId::NONE;
             self.this_class = None;
-            self.catching.clear();
             // Classes declared in functions first, at the module's level.
             for &(class, top) in &local_classes {
                 if top == node {
@@ -1529,12 +1520,6 @@ impl Translator<'_> {
         let Some(args) = self.s.typing.type_args(call) else {
             return self.not_yet(call, "a generic call's type arguments");
         };
-        // A failure parameter (RFC 164) that a bubble solves: handlers in
-        // generic code catch failures, which a bubble isn't, until Bubble
-        // goes.
-        if args.contains(&ft::BUBBLE) {
-            return self.not_yet(call, "a failure parameter that a bubble gives");
-        }
         if args.len() != wanted {
             return self.not_yet(call, "a generic call's type arguments");
         }
@@ -2082,12 +2067,9 @@ impl Translator<'_> {
             return self.not_yet(node, "an orelse's form");
         };
         let ty = target.map_or(TypeId::VOID, |(_, ty)| ty);
-        self.catching.push(self.owner);
-        let value = self.block_value(body, ty);
-        self.catching.pop();
-        let value = value?;
+        let value = self.block_value(body, ty)?;
         // A body that can't fail is all there is to it.
-        if !self.may_bubble(value) {
+        if !self.may_fail(value) {
             let made = match target {
                 Some((local, ty)) => {
                     let value = self.fit(value, ty);
@@ -2346,7 +2328,7 @@ impl Translator<'_> {
     /// part that always jumps, which runs, as `f(a, return b)`; a block
     /// with a statement that does; or an `if` whose condition or both
     /// branches do. Not an `orelse`, whose fallback runs if a part before
-    /// the jump bubbles.
+    /// the jump fails.
     fn always_jumps(&self, node: FNode) -> bool {
         if let Some(&jumps) = self.always_jumps.borrow().get(&node) {
             return jumps;
@@ -2870,7 +2852,7 @@ impl Translator<'_> {
                     return Ok(());
                 }
             }
-            // `{ return x; }` (or `{ bubble(); }`) ends with a `void`
+            // `{ return x; }` (or `{ throw e; }`) ends with a `void`
             // that's never reached.
             let after_return = rest.last().is_some_and(|&r| self.never_completes(r));
             if after_return && matches!(self.s.library.value(last), Some(Value::Void)) {
@@ -2918,7 +2900,7 @@ impl Translator<'_> {
             | NodeKind::Return
             | NodeKind::Break
             | NodeKind::Continue => self.stmt(node, out),
-            // `bubble()` or `panic()`: nothing to return.
+            // `throw` or `panic()`: nothing to return.
             NodeKind::Fail | NodeKind::Call if self.never_completes(node) => self.stmt(node, out),
             // `f(a, return b)`: nothing to return either.
             _ if self.jumps_from_part(node) => self.jump_stmts(node, out),
@@ -3039,11 +3021,7 @@ impl Translator<'_> {
             NodeKind::Fn => self.literal(node),
             NodeKind::Await => self.await_expr(node),
             NodeKind::Orelse => self.or_else(node),
-            NodeKind::Fail if !self.children(node).is_empty() => self.throw(node),
-            NodeKind::Fail => {
-                let made = self.b.bubble(TypeId::NONE);
-                Ok(self.own(made, node))
-            }
+            NodeKind::Fail => self.throw(node),
             // `x = v` as a value, as `--i` in `for (…; --i >= 0;)`: the
             // assignment, then `x`.
             NodeKind::Assign => {
@@ -3931,13 +3909,10 @@ impl Translator<'_> {
             Some(t) if t != ft::NEVER && self.s.typing.types.is_known(t) => Some(self.ty(t, node)?),
             _ => None,
         };
-        self.catching.push(self.owner);
-        let body = self.block_value(body, typed.unwrap_or(TypeId::NONE));
-        self.catching.pop();
-        let body = body?;
+        let body = self.block_value(body, typed.unwrap_or(TypeId::NONE))?;
         // A body that can't fail, as `(x = 1)`'s or an upcast's, is all
         // there is to it.
-        if !self.may_bubble(body) {
+        if !self.may_fail(body) {
             let ty = typed.unwrap_or_else(|| self.b.program().nodes.ty(body));
             return Ok(if ty == TypeId::VOID || ty.is_none() {
                 self.fit_void(body)
@@ -4005,14 +3980,12 @@ impl Translator<'_> {
         Ok(local)
     }
 
-    /// Whether anything in a translated value may bubble.
-    fn may_bubble(&self, value: NodeId) -> bool {
+    /// Whether anything in a translated value may fail.
+    fn may_fail(&self, value: NodeId) -> bool {
         let p = self.b.program();
         let mut found = false;
         temper_tmpl::analysis::walk(p, value, &mut |n| {
-            // An error fails as `bubble()` does.
-            found |= p.nodes.flags(n).contains(temper_tmpl::Flags::MAY_BUBBLE)
-                || matches!(p.nodes.get(n), temper_tmpl::Node::Error { .. });
+            found |= p.nodes.flags(n).contains(temper_tmpl::Flags::MAY_BUBBLE);
         });
         found
     }

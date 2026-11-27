@@ -1,5 +1,5 @@
 import {
-    bubble, INT32_MAX, INT32_MIN, INT64_MAX, INT64_MIN, InvalidCodePoint, panic, parseBigInt,
+    INT32_MAX, INT32_MIN, INT64_MAX, INT64_MIN, InvalidCodePoint, panic, parseBigInt,
     ParseError
 } from "./core.js";
 
@@ -243,7 +243,7 @@ export const stringIndexNone = -1;
  */
 export const requireStringIndex = (i) => {
     if (i >= 0) { return i; }
-    bubble(`Expected StringIndex, not ${i}`);
+    panic(`Expected StringIndex, not ${i}`);
 };
 
 /**
@@ -253,7 +253,7 @@ export const requireStringIndex = (i) => {
  */
 export const requireNoStringIndex = (i) => {
     if (i < 0) { return i; }
-    bubble(`Expected NoStringIndex, not ${i}`);
+    panic(`Expected NoStringIndex, not ${i}`);
 };
 
 /**

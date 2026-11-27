@@ -1,7 +1,6 @@
 package bubble;
 
 import java.util.logging.Logger;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Nullable;
@@ -12,15 +11,15 @@ public final class BubbleGlobal {
 
     static final Console console;
 
-    static int more(@Nullable Integer x) {
-        throw Core.bubble();
+    static int more(@Nullable Integer x) throws Missing {
+        throw new Missing();
     }
 
-    static String something(@Nullable String x) {
+    static String something(@Nullable String x) throws Missing {
         if (x != null) {
             return x;
         } else {
-            throw Core.bubble();
+            throw new Missing();
         }
     }
 
@@ -28,35 +27,31 @@ public final class BubbleGlobal {
         String message;
         try {
             message = something(x);
-        } catch (Bubble ignored) {
+        } catch (Missing ignored) {
             message = "null";
         }
         String suffix;
         try {
             suffix = Integer.toString(more(x != null ? 1 : 0));
-        } catch (Bubble ignored2) {
+        } catch (Missing ignored2) {
             suffix = "";
         }
         console.log(message + suffix);
     }
 
-    static int calcRows(int cols, int total) {
+    static int calcRows(int cols, int total) throws Missing {
         console.log("calcRows(" + cols + ", " + total + ")");
         if (total % cols != 0) {
-            throw Core.bubble();
+            throw new Missing();
         }
         return total / cols;
     }
 
-    static int parsed(String s) {
-        try {
-            return Core.stringToInt(s);
-        } catch (ParseError ignored) {
-            throw Core.bubble();
-        }
+    static int parsed(String s) throws ParseError {
+        return Core.stringToInt(s);
     }
 
-    static int countBelow(String s) {
+    static int countBelow(String s) throws ParseError {
         int i = 0;
         while (i < parsed(s)) {
             i = i + 1;
@@ -64,7 +59,7 @@ public final class BubbleGlobal {
         return i;
     }
 
-    static int firstOver(int n) {
+    static int firstOver(int n) throws Missing {
         int i = 0;
         while (i < 9) {
             i = i + 1;
@@ -75,7 +70,7 @@ public final class BubbleGlobal {
         return i;
     }
 
-    static int sumSkipping(int n) {
+    static int sumSkipping(int n) throws Missing {
         int sum = 0;
         {
             int i = 0;
@@ -91,7 +86,7 @@ public final class BubbleGlobal {
         return sum;
     }
 
-    static int tenTimes(int n) {
+    static int tenTimes(int n) throws Missing {
         {
             int i = 0;
             while (i < 9) {
@@ -101,7 +96,7 @@ public final class BubbleGlobal {
                 i = i + 1;
             }
         }
-        throw Core.bubble();
+        throw new Missing();
     }
 
     static boolean isNone(@Nullable Integer r) {
@@ -112,21 +107,21 @@ public final class BubbleGlobal {
         int t;
         try {
             t = firstOver(n);
-        } catch (Bubble ignored) {
+        } catch (Missing ignored) {
             t = -1;
         }
         String t2 = t + " ";
         int t3;
         try {
             t3 = sumSkipping(n);
-        } catch (Bubble ignored2) {
+        } catch (Missing ignored2) {
             t3 = -1;
         }
         String t4 = t2 + t3 + " ";
         int t5;
         try {
             t5 = tenTimes(n);
-        } catch (Bubble ignored3) {
+        } catch (Missing ignored3) {
             t5 = -1;
         }
         return t4 + t5;
@@ -136,12 +131,12 @@ public final class BubbleGlobal {
         throw new AssertionError("panic");
     }
 
-    static <T> T failAs(T fallback) {
-        throw Core.bubble();
+    static <T> T failAs(T fallback) throws Missing {
+        throw new Missing();
     }
 
-    static void bail() {
-        throw Core.bubble();
+    static void bail() throws Missing {
+        throw new Missing();
     }
 
     static @Nullable String noName() {
@@ -152,7 +147,7 @@ public final class BubbleGlobal {
         throw new AssertionError("panic");
     }
 
-    static int half(int n) {
+    static int half(int n) throws Missing {
         if (n % 2 != 0) {
             bail();
             throw new AssertionError("panic");
@@ -214,21 +209,21 @@ public final class BubbleGlobal {
         int t;
         try {
             t = countBelow("abc");
-        } catch (Bubble ignored) {
+        } catch (ParseError ignored) {
             t = -1;
         }
         console.log(Integer.toString(t));
         int t2;
         try {
             t2 = firstOver(1);
-        } catch (Bubble ignored2) {
+        } catch (Missing ignored2) {
             t2 = -1;
         }
         String t3 = t2 + " ";
         @Nullable Integer t4;
         try {
             t4 = firstOver(1);
-        } catch (Bubble ignored3) {
+        } catch (Missing ignored3) {
             t4 = null;
         }
         console.log(t3 + isNone(t4));
@@ -242,21 +237,21 @@ public final class BubbleGlobal {
         int t7;
         try {
             t7 = half(4);
-        } catch (Bubble ignored4) {
+        } catch (Missing ignored4) {
             t7 = -1;
         }
         String t8 = t7 + " ";
         int t9;
         try {
             t9 = half(3);
-        } catch (Bubble ignored5) {
+        } catch (Missing ignored5) {
             t9 = -1;
         }
         String t10 = t8 + t9 + " ";
         int t11;
         try {
             t11 = half(-2);
-        } catch (Bubble ignored6) {
+        } catch (Missing ignored6) {
             t11 = -1;
         }
         console.log(t10 + t11);

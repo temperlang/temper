@@ -1,8 +1,7 @@
 import {
   ParseError,
-  bubble,
   divIntInt,
-  isBubble,
+  failureBase,
   modIntInt,
   panic,
   stringToInt32,
@@ -11,21 +10,23 @@ import {
 /**
  * @param {number | null} x
  * @returns {number}
+ * @throws {Missing}
  */
 function more(x) {
-  bubble();
+  throw new Missing();
 }
 
 /**
  * @param {string | null} x
  * @returns {string}
+ * @throws {Missing}
  */
 function something(x) {
   {
     if (x != null) {
       return x;
     } else {
-      bubble();
+      throw new Missing();
     }
   }
 }
@@ -37,7 +38,7 @@ function report(x) {
   try {
     message = something(x);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof Missing)) throw e$;
     message = "null";
   }
   /** @type {string} */
@@ -45,7 +46,7 @@ function report(x) {
   try {
     suffix = more(x != null ? 1 : 0).toString();
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof Missing)) throw e$;
     suffix = "";
   }
   console.log(message + suffix);
@@ -55,11 +56,12 @@ function report(x) {
  * @param {number} cols
  * @param {number} total
  * @returns {number}
+ * @throws {Missing}
  */
 function calcRows(cols, total) {
   console.log(`calcRows(${cols}, ${total})`);
   if (modIntInt(total, cols) !== 0) {
-    bubble();
+    throw new Missing();
   }
   return divIntInt(total, cols);
 }
@@ -67,19 +69,16 @@ function calcRows(cols, total) {
 /**
  * @param {string} s
  * @returns {number}
+ * @throws {ParseError}
  */
 function parsed(s) {
-  try {
-    return stringToInt32(s, null);
-  } catch (e$) {
-    if (!(e$ instanceof ParseError)) throw e$;
-    return bubble();
-  }
+  return stringToInt32(s, null);
 }
 
 /**
  * @param {string} s
  * @returns {number}
+ * @throws {ParseError}
  */
 function countBelow(s) {
   let i = 0;
@@ -92,6 +91,7 @@ function countBelow(s) {
 /**
  * @param {number} n
  * @returns {number}
+ * @throws {Missing}
  */
 function firstOver(n) {
   let i = 0;
@@ -107,6 +107,7 @@ function firstOver(n) {
 /**
  * @param {number} n
  * @returns {number}
+ * @throws {Missing}
  */
 function sumSkipping(n) {
   let sum = 0;
@@ -129,6 +130,7 @@ function sumSkipping(n) {
 /**
  * @param {number} n
  * @returns {number}
+ * @throws {Missing}
  */
 function tenTimes(n) {
   {
@@ -140,7 +142,7 @@ function tenTimes(n) {
       i = (i + 1) | 0;
     }
   }
-  bubble();
+  throw new Missing();
 }
 
 /**
@@ -161,7 +163,7 @@ function viaOrElse(n) {
   try {
     t$0 = firstOver(n);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof Missing)) throw e$;
     t$0 = -1;
   }
   /** @type {number} */
@@ -169,7 +171,7 @@ function viaOrElse(n) {
   try {
     t$1 = sumSkipping(n);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof Missing)) throw e$;
     t$1 = -1;
   }
   /** @type {number} */
@@ -177,7 +179,7 @@ function viaOrElse(n) {
   try {
     t$2 = tenTimes(n);
   } catch (e$) {
-    if (!isBubble(e$)) throw e$;
+    if (!(e$ instanceof Missing)) throw e$;
     t$2 = -1;
   }
   return `${t$0} ${t$1} ${t$2}`;
@@ -192,14 +194,18 @@ function unreachableInt() {
  * @template T
  * @param {T} fallback
  * @returns {never}
+ * @throws {Missing}
  */
 function failAs(fallback) {
-  bubble();
+  throw new Missing();
 }
 
-/** @returns {never} */
+/**
+ * @returns {never}
+ * @throws {Missing}
+ */
 function bail() {
-  bubble();
+  throw new Missing();
 }
 
 /** @returns {string | null} */
@@ -215,6 +221,7 @@ function stop() {
 /**
  * @param {number} n
  * @returns {number}
+ * @throws {Missing}
  */
 function half(n) {
   if (modIntInt(n, 2) !== 0) {
@@ -288,6 +295,17 @@ function branch(a, b) {
   console.log(`branch(${a}, ${b}) -> ${c}`);
 }
 
+class Problem extends Error {}
+
+failureBase(Problem);
+
+class Missing extends Problem {
+  /** @returns {string} */
+  get message() {
+    return "missing";
+  }
+}
+
 report("hi");
 report(null);
 console.log(calcRows(3, 6).toString());
@@ -296,7 +314,7 @@ let t$3;
 try {
   t$3 = countBelow("abc");
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof ParseError)) throw e$;
   t$3 = -1;
 }
 console.log(t$3.toString());
@@ -305,7 +323,7 @@ let t$4;
 try {
   t$4 = firstOver(1);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof Missing)) throw e$;
   t$4 = -1;
 }
 /** @type {number | null} */
@@ -313,7 +331,7 @@ let t$5;
 try {
   t$5 = firstOver(1);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof Missing)) throw e$;
   t$5 = null;
 }
 console.log(`${t$4} ${isNone(t$5)}`);
@@ -325,7 +343,7 @@ let t$6;
 try {
   t$6 = half(4);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof Missing)) throw e$;
   t$6 = -1;
 }
 /** @type {number} */
@@ -333,7 +351,7 @@ let t$7;
 try {
   t$7 = half(3);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof Missing)) throw e$;
   t$7 = -1;
 }
 /** @type {number} */
@@ -341,7 +359,7 @@ let t$8;
 try {
   t$8 = half(-2);
 } catch (e$) {
-  if (!isBubble(e$)) throw e$;
+  if (!(e$ instanceof Missing)) throw e$;
   t$8 = -1;
 }
 console.log(`${t$6} ${t$7} ${t$8}`);

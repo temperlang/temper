@@ -142,10 +142,6 @@ function temper.bool_cmp(a, b) end
 ---@return string
 function temper.int32_tostring(n, radix) end
 
----Raises Temper's bubble, as an error; it never returns.
----@return any
-function temper.bubble() end
-
 ---Null, as Temper's nullable types hold it: a value of its own, since
 ---Lua's `nil` can't be a table's value.
 ---@class temper.Null
@@ -158,24 +154,12 @@ temper.null = {}
 ---@return boolean
 function temper.is_null(a) end
 
----Runs a function, as Lua's `pcall`: whether it ran without an error,
----as `orelse` asks of its body, and what it returned: for a body that
----jumps out of itself, a jump's signal (`v, "return"` or `"break",
----"flow"`).
----@param f fun(): any?, string?
----@return boolean ok
----@return any value
----@return string? kind
-function temper.pcall(f) end
-
----What `temper.catch` catches besides failure types: bubbles.
----@type table
-temper.Bubble = {}
-
----Runs a function, as `temper.pcall`, but catching only what follows
----it, failure types, with their subtypes, or `temper.Bubble`, as
----declared failures' handlers do; raising anything else again. Gives what
----the function did, or false and what it caught.
+---Runs a function, as Lua's `pcall`, but catching only what follows
+---it, failure types, with their subtypes, as declared failures'
+---handlers (`orelse` and `catch`) do; raising anything else again. Gives
+---whether it ran without a failure, and what it returned: for a body
+---that jumps out of itself, a jump's signal (`v, "return"` or `"break",
+---"flow"`); or false and what it caught.
 ---@param f fun(): any?, string?
 ---@param ... temper.Type|table
 ---@return boolean ok
@@ -183,22 +167,22 @@ temper.Bubble = {}
 ---@return string? kind
 function temper.catch(f, ...) end
 
----The value, if it's a string; else it bubbles.
+---The value, if it's a string; else it panics.
 ---@param thing any
 ---@return string
 function temper.cast_to_string(thing) end
 
----The value, if it's an integer; else it bubbles.
+---The value, if it's an integer; else it panics.
 ---@param thing any
 ---@return integer
 function temper.cast_to_int(thing) end
 
----The value, if it's a number; else it bubbles.
+---The value, if it's a number; else it panics.
 ---@param thing any
 ---@return number
 function temper.cast_to_float64(thing) end
 
----The value, if it's a Boolean; else it bubbles.
+---The value, if it's a Boolean; else it panics.
 ---@param thing any
 ---@return boolean
 function temper.cast_to_boolean(thing) end
@@ -469,20 +453,20 @@ function temper.failure_report(err) end
 ---@return boolean
 function temper.instance_of(thing, ...) end
 
----The value, if it's an instance of the type; else it bubbles.
+---The value, if it's an instance of the type; else it panics.
 ---@param thing any
 ---@param type temper.Type
 ---@return any
 function temper.cast_to(thing, type) end
 
----A list's item; it bubbles out of bounds.
+---A list's item; it panics out of bounds.
 ---@generic T
 ---@param list T[]
 ---@param index integer
 ---@return T
 function temper.list_get(list, index) end
 
----A list's item; it bubbles out of bounds.
+---A list's item; it panics out of bounds.
 ---@generic T
 ---@param list T[]
 ---@param index integer
@@ -695,7 +679,8 @@ function temper.mapbuilder_constructor() end
 ---@param value V
 function temper.mapbuilder_set(builder, key, value) end
 
----Removes a key and gives its value; it bubbles if the key is missing.
+---Removes a key and gives its value; it raises a `MissingKey` if the key
+---is missing.
 ---@generic K, V
 ---@param builder table<K, V>
 ---@param key K
@@ -707,7 +692,7 @@ function temper.mapbuilder_remove(builder, key) end
 ---@param builder table<K, V>
 function temper.mapbuilder_clear(builder) end
 
----A key's value; it bubbles if the key is missing.
+---A key's value; it raises a `MissingKey` if the key is missing.
 ---@generic K, V
 ---@param mapped table<K, V>
 ---@param key K
@@ -792,7 +777,7 @@ function temper.pair_constructor(a, b) end
 ---@return integer
 function temper.string_end(s) end
 
----The code point at an index; it bubbles past the end.
+---The code point at an index; it panics past the end.
 ---@param s string
 ---@param i integer
 ---@return integer
@@ -858,12 +843,12 @@ function temper.string_fromcodepoint(code_point) end
 ---@return string
 function temper.string_fromcodepoints(code_points) end
 
----The index, if it's one; else it bubbles.
+---The index, if it's one; else it panics.
 ---@param i integer
 ---@return integer
 function temper.require_string_index(i) end
 
-----1, if it's no index; else it bubbles.
+----1, if it's no index; else it panics.
 ---@param i integer
 ---@return integer
 function temper.require_no_string_index(i) end
@@ -914,7 +899,7 @@ function temper.deque_add(d, item) end
 ---@return boolean
 function temper.deque_isempty(d) end
 
----The first item, removed; it bubbles if there's none.
+---The first item, removed; it panics if there's none.
 ---@param d temper.Deque
 ---@return any
 function temper.deque_removefirst(d) end
@@ -1063,7 +1048,8 @@ function temper.yield(...) end
 ---@class temper.Promise
 local Promise = {}
 
----Its value once it's settled; it bubbles if it's broken.
+---Its value once it's settled; it raises a `BrokenPromise` if it's
+---broken.
 ---@return any
 function Promise:await() end
 

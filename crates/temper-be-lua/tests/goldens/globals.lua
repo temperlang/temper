@@ -9,11 +9,33 @@ local function type_(next_, math_)
   return temper.int32_mul(next_, math_)
 end
 
+---@class globals.Problem: temper.Failure
+
+---@class globals.Problem.type: temper.Type
+local Problem = temper.type("globals.Problem", temper.Failure)
+
+---@class globals.Odd: globals.Problem
+---@field message string
+
+---@class globals.Odd.type: temper.Type
+---@operator call: globals.Odd
+local Odd = temper.type("globals.Odd", Problem)
+
+---@param this globals.Odd
+function Odd.constructor(this)
+end
+
+---@param this globals.Odd
+---@return string
+function Odd.get.message(this)
+  return "odd"
+end
+
 ---@param error_ integer
 ---@return integer
 local function half(error_)
   if temper.int32_mod(error_, 2) ~= 0 then
-    return temper.bubble()
+    error(Odd())
   end
   return temper.int32_div(error_, 2)
 end
@@ -24,9 +46,9 @@ end
 local function select_(error_, table_)
   ---@type integer
   local string_
-  local t, t_1 = temper.pcall(function()
+  local t, t_1 = temper.catch(function()
     string_ = half(error_)
-  end)
+  end, Odd)
   if not t then
     error("panic\ncaused by: " .. tostring(t_1))
   end

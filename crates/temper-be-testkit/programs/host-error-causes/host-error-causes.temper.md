@@ -1,15 +1,19 @@
 # Host error causes
 
-A host's own error, as host code throws, isn't a bubble, so it passes
+A host's own error, as host code throws, isn't a failure, so it passes
 every `orelse`, `orelse panic()` too, and ends the run saying what it
 said, not "panic". Here a connected function's host code throws one;
 the interpreter, which has no host, runs its Temper body, which panics,
-as passing every `orelse` is what a panic does too:
+as passing every `orelse` is what a panic does too. The function may
+throw `Oops`, so an `orelse` around it handles that alone:
+
+    export sealed interface OopsError extends Error {}
+    export class Oops extends OopsError {}
 
     @connected
-    export let hostFails(n: Int): Int throws Bubble {
+    export let hostFails(n: Int): Int throws Oops {
       if (n > 0) { panic() }
-      bubble()
+      throw new Oops()
     }
 
     console.log("before");
@@ -38,12 +42,10 @@ direct cause
 
 ```stderr-absent csharp
 Panic: panic
----> TemperLang.Core.Bubble
 ```
 
 ```stderr-absent java
 AssertionError: panic
-Caused by: temper.core.Bubble
 ```
 
 ```stderr-absent js

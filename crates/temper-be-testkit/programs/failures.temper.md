@@ -13,9 +13,8 @@ on every backend. The log is what the interpreter gives. It assumed:
 - `throw x`, `f() catch (e) { … }`, `f() catch { … }`, `do { … } catch
   (e) { … }`, and `orelse`, with parentheses wherever precedence might
   matter.
-- Nothing mixes declared failures with `Bubble`, whose part is open, nor
-  reads a failure's message or cause (`host-failures` shows those), nor
-  depends on how the compiler holds `T throws E`.
+- Nothing reads a failure's message or cause (`host-failures` shows
+  those), nor depends on how the compiler holds `T throws E`.
 - A `for … of` body passes failures through, as one would expect of a
   loop.
 

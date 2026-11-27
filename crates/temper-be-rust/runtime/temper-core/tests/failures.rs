@@ -1,7 +1,7 @@
 //! Declared failures as generated code writes them: failure classes with
 //! `impl_failure!`, a sealed interface's enum and a crate's `Error` with
 //! `impl_failure_enum!`, causes set once and never looping, `?` into the
-//! enums, into a bubble, and into core's `Error` (several roots' join),
+//! enums and into core's `Error` (several roots' join, and a module's init's),
 //! `is` and `cast` through an enum, and what an uncaught one says.
 
 use std::error::Error as _;
@@ -101,7 +101,7 @@ fn failures_display_their_messages_and_debug() {
 }
 
 #[test]
-fn question_marks_convert_into_enums_and_bubbles() {
+fn question_marks_convert_into_enums_and_core_error() {
     assert!(matches!(both(true), Err(Error::NotFound(_))));
     assert!(matches!(
         both(false),
@@ -109,14 +109,11 @@ fn question_marks_convert_into_enums_and_bubbles() {
     ));
     let deep: Error = BadSign::new().into();
     assert!(matches!(deep, Error::SignError(_)));
-    // Into a bubble, as a module's init takes it, saying its message.
-    let bubble = (|| -> temper_core::Result<i32> { Ok(lookup("b")?) })().unwrap_err();
-    assert_eq!(bubble.to_string(), "not found (key: b)");
-    assert!(bubble
-        .source()
-        .unwrap()
-        .downcast_ref::<NotFound>()
-        .is_some());
+    // Into core's `Error`, as a module's init takes it, saying its
+    // message.
+    let error = (|| -> temper_core::Result<i32> { Ok(lookup("b")?) })().unwrap_err();
+    assert_eq!(error.to_string(), "not found (key: b)");
+    assert!(temper_core::is::<NotFound>(error));
 }
 
 #[test]
@@ -136,9 +133,6 @@ fn question_marks_convert_into_core_error() {
     // Not its own cause through it either.
     let again = with_cause(caught.clone(), caught.clone());
     assert!(Failure::cause(&again).is_none());
-    // Into a bubble, where the body may bubble too.
-    let bubble = temper_core::Error::from(caught);
-    assert_eq!(bubble.to_string(), "not found (key: j)");
 }
 
 #[test]
@@ -182,7 +176,7 @@ fn is_and_cast_see_through_enums_and_causes() {
 #[test]
 fn an_uncaught_failure_says_its_causes() {
     let outer = with_cause(NotFound::new("outer"), NotFound::new("inner"));
-    let error = temper_core::Error::from(outer);
+    let error: temper_core::Error = outer.into();
     let said = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         temper_core::uncaught::<()>(error)
     }))
@@ -191,11 +185,5 @@ fn an_uncaught_failure_says_its_causes() {
     assert_eq!(
         said,
         "uncaught failure: not found (key: outer)\ncaused by: not found (key: inner)"
-    );
-    let said = std::panic::catch_unwind(|| temper_core::uncaught::<()>(temper_core::Error::new()))
-        .unwrap_err();
-    assert_eq!(
-        said.downcast_ref::<String>().unwrap(),
-        "uncaught bubble: bubble"
     );
 }

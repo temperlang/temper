@@ -139,7 +139,7 @@ elsewhere). The experimental Temper PRs #533 (Python), #534 (Java), #537
 - A contended wait walks a wait-for table, and a call that would close a
   cycle panics ("actor call cycle") instead of deadlocking. Uncontended
   calls never touch the table.
-- Bubbles and panics release the gate on the way out.
+- Failures and panics release the gate on the way out.
 
 Plain (non-actor) mutable objects stay unguarded: confined to one thread or
 actor by documentation, plus native markers where a language has them and an

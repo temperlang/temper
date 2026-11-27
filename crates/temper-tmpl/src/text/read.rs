@@ -9,7 +9,7 @@
 //! they're used. The reader checks what text alone decides: syntax, ids
 //! defined once, names matching their declarations, written types
 //! matching the local rules, and `^` marking exactly the calls that may
-//! bubble. Everything else is the validator's.
+//! fail. Everything else is the validator's.
 
 use super::{FORMAT_VERSION, MODEL_VERSION, writing_order};
 use crate::Program;
@@ -680,7 +680,7 @@ impl Reader {
         self.error("expected a type")
     }
 
-    /// `fn (A, _?: B): R`, maybe `throws Bubble`: a function type.
+    /// `fn (A, _?: B): R`, maybe `throws E`: a function type.
     fn function_type(&mut self) -> Read<TypeId> {
         self.next();
         self.expect("(")?;
@@ -1041,7 +1041,7 @@ impl Reader {
         Ok(())
     }
 
-    /// `: Result`, as `: Int32 throws Bubble` if it may bubble: a result
+    /// `: Result`, as `: Int32 throws E` if it may fail: a result
     /// type ([`TypeTable::result`]).
     fn result(&mut self) -> Read<TypeId> {
         self.expect(":")?;
@@ -1994,7 +1994,7 @@ impl Reader {
         Ok(args)
     }
 
-    /// Checks that `^` follows exactly the calls that may bubble.
+    /// Checks that `^` follows exactly the calls that may fail.
     fn caret(&mut self, call: NodeId) -> Read<()> {
         let marked = self.eat("^");
         let bubbles = self
@@ -2006,9 +2006,9 @@ impl Reader {
         match (marked, bubbles) {
             (true, false) => {
                 self.pos -= 1;
-                self.error("`^` marks a call that can't bubble")
+                self.error("`^` marks a call that can't fail")
             }
-            (false, true) => self.error("a call that may bubble needs `^`"),
+            (false, true) => self.error("a call that may fail needs `^`"),
             _ => Ok(()),
         }
     }
@@ -2139,26 +2139,13 @@ impl Reader {
             let ty = self.written_type()?;
             return Ok(self.b.null(ty));
         }
-        for word in ["bubble", "panic"] {
-            if !(self.is_word(word)
-                && *self.peek_at(1) == Tok::Punct("(")
-                && *self.peek_at(2) == Tok::Punct(")"))
-            {
-                continue;
-            }
+        if self.is_word("panic")
+            && *self.peek_at(1) == Tok::Punct("(")
+            && *self.peek_at(2) == Tok::Punct(")")
+        {
             self.pos += 3;
-            let flags = if self.eat("^") {
-                Flags::MAY_BUBBLE
-            } else {
-                Flags::NONE
-            };
             let ty = self.written_type()?;
-            let kind = if word == "bubble" {
-                Kind::Bubble
-            } else {
-                Kind::Panic
-            };
-            return Ok(self.b.raw(kind, ty, (0, 0), flags, &[]));
+            return Ok(self.b.raw(Kind::Panic, ty, (0, 0), Flags::NONE, &[]));
         }
         if self.is_word("coalesce") && *self.peek_at(1) == Tok::Punct("(") {
             self.pos += 2;

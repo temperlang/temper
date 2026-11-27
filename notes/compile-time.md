@@ -216,12 +216,12 @@ run time, path by path, and is always safe:
     its target and kind, and the walk joins them there: a labeled
     block's `break`s with what falls through its end, a loop's
     `continue`s with its body's end, and its `break`s as the state
-    after it. A jump, `return`, `bubble()`, or `panic()` never
+    after it. A jump, `return`, `throw`, or `panic()` never
     completes, so brings nothing to the join after it. A jump inside an
     appended value, as `${if (c) { break } else { x }}`, carries the
     state from before the append, since the value is worked out first.
   - **Leaving the string:** a path that leaves the region between
-    `let t` and `t.accumulated` (by `return`, `bubble()`, `panic()`, or
+    `let t` and `t.accumulated` (by `return`, `throw`, `panic()`, or
     a `break` or `continue` to a loop around the tagged string) is
     dropped rather than joined. That's safe: every read of the
     accumulator is an append's or the end's, and nothing else holds

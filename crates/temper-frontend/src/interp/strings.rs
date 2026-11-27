@@ -13,8 +13,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use temper_syntax::lex::is_kotlin_whitespace;
 
-fn bubble() -> Abrupt {
-    Abrupt::Fail(None)
+/// What typing rules out, or a radix out of range: a panic.
+fn bad(why: &str) -> Abrupt {
+    Abrupt::Panic(why.into())
 }
 
 /// An index as an offset into `text`: clamped to its end, and moved back
@@ -217,10 +218,10 @@ fn parse_int_or_none(text: &str, radix: i32, is_64: bool) -> Option<Val> {
 }
 
 /// `n.toString(radix)`: lowercase digits, with `-` for negatives, for
-/// radixes 2 through 36; others fail, as in Kotlin Temper.
+/// radixes 2 through 36; others panic.
 pub(super) fn int_to_string(n: i64, radix: i32) -> R {
     if !(2..=36).contains(&radix) {
-        return Err(bubble());
+        return Err(bad("radix not in 2 through 36"));
     }
     let mut magnitude = n.unsigned_abs();
     let mut digits = Vec::new();
@@ -261,7 +262,7 @@ pub(super) fn static_method(name: &str, args: &[Val]) -> Option<R> {
                 .iter()
                 .map(|item| match item {
                     Val::Int(code) => scalar(*code),
-                    _ => Err(bubble()),
+                    _ => Err(bad("not a code point")),
                 })
                 .collect::<Result<String, _>>()
                 .map(|text| Val::Str(text.into()))
@@ -271,19 +272,20 @@ pub(super) fn static_method(name: &str, args: &[Val]) -> Option<R> {
 }
 
 /// `char'a'`, called as a tag with its literal parts and interpolations:
-/// the one code point in it, escapes decoded, or failure.
+/// the one code point in it, escapes decoded, or a panic.
 pub(super) fn char_tag(args: &[Val]) -> R {
+    let not_one = || bad("char takes one code point");
     let [Val::List(parts), Val::List(_)] = args else {
-        return Err(bubble());
+        return Err(not_one());
     };
     let [Val::Str(raw)] = &parts[..] else {
-        return Err(bubble());
+        return Err(not_one());
     };
-    let text = temper_syntax::unpack::unpack_string(raw, false).ok_or_else(bubble)?;
+    let text = temper_syntax::unpack::unpack_string(raw, false).ok_or_else(not_one)?;
     let mut chars = text.chars();
     match (chars.next(), chars.next()) {
         (Some(c), None) => Ok(Val::Int(c as i32)),
-        _ => Err(bubble()),
+        _ => Err(not_one()),
     }
 }
 

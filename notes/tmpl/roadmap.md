@@ -36,7 +36,7 @@ needs every expression of a test typed:
 
 | Chunk | Milestone 4 | tmpl |
 |---|---|---|
-| 1 | `new Box()`, `[]`, `null`, `bubble()`, and `panic()` taking the type wanted; `Never<T>` | Crate skeleton, schema macro, type and declaration tables (done for subset A, with chunk 2's tmpl work) |
+| 1 | `new Box()`, `[]`, `null`, `bubble()` (since removed), and `panic()` taking the type wanted; `Never<T>` | Crate skeleton, schema macro, type and declaration tables (done for subset A, with chunk 2's tmpl work) |
 | 2 | Builtin interfaces' members inherited by users' classes; a literal's result binding a generic callee's type parameter | Text writer, reader, and round trip; structural validator (done for subset A) |
 | 3 | Slice 7 begins: count expressions of unknown type; resolve every `==` ([nodes.md, "Equality"](nodes.md#equality)) | Level 3 for subset A |
 | 4 | Slice 7 continues, driven by which functional tests still have unknown types | `to_tmpl` for subset A's tests (done, 2026-10-30: 7 of 69) |
@@ -115,8 +115,8 @@ later subsets will need, briefly (Proposed):
     `GetStatic`, `SetStatic`, `CallMethod` (virtual or not), `New`,
     `FunctionRef`, `CallValue`, and `FunctionLiteral` with captures;
     the conversions, `Is`, and `As`; `NullLit`, `IsNull`,
-    `EqNullable`, and `Identical`; `Labeled`, `OrElse`, `Bubble`,
-    `Panic`, `ForOf`, `When`, and `Omitted`, with parameter defaults.
+    `EqNullable`, and `Identical`; `Labeled`, `OrElse`, `Bubble`
+    (removed 2026-11-27), `Panic`, `ForOf`, `When`, and `Omitted`, with parameter defaults.
   - Types: `Nominal`, `TypeParam`, `Nullable`, `Never`, and subtyping
     through explicit conversions.
   - Modules: imports, tests, and `uses` sections with link keys for

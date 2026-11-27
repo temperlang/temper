@@ -96,10 +96,12 @@ fn main() {
     }
     println!("collatz {}", steps.join(","));
 
-    // A Temper failure is an `Err`, as notes/api-compat.md promises.
+    // A declared failure is an `Err` of its own type.
     match async_turns::halve(3) {
         Ok(n) => println!("halve returned {n}"),
-        Err(_) => println!("halve {} caught", async_turns::halve(8).unwrap()),
+        Err(async_turns::Odd { .. }) => {
+            println!("halve {} caught", async_turns::halve(8).unwrap())
+        }
     }
 
     // A generic class's builder, without its options and with them.

@@ -1,3 +1,3 @@
-pub(crate) fn host_fails(n: i32) -> temper_core::Result<i32> {
+pub(crate) fn host_fails(n: i32) -> Result<i32, crate::Oops> {
     panic!("host bug {n}")
 }

@@ -2,7 +2,6 @@ package java_nullables;
 
 import java.util.Objects;
 import java.util.logging.Logger;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Nullable;
@@ -41,9 +40,9 @@ public final class JavaNullablesGlobal {
         return n;
     }
 
-    static int half(int n) {
+    static int half(int n) throws Odd {
         if (n % 2 != 0) {
-            throw Core.bubble();
+            throw new Odd();
         }
         return n / 2;
     }
@@ -85,7 +84,7 @@ public final class JavaNullablesGlobal {
         int t2;
         try {
             t2 = half(noted(3));
-        } catch (Bubble ignored) {
+        } catch (Odd ignored) {
             t2 = noted(4);
         }
         console.log(Integer.toString(t + t2));
@@ -94,7 +93,7 @@ public final class JavaNullablesGlobal {
             int t4;
             try {
                 t4 = half(5);
-            } catch (Bubble ignored2) {
+            } catch (Odd ignored2) {
                 t4 = 0;
             }
             t3 = t4 == 0;
@@ -104,7 +103,7 @@ public final class JavaNullablesGlobal {
         if (calls > 3) {
             try {
                 t5 = half(8);
-            } catch (Bubble ignored3) {
+            } catch (Odd ignored3) {
                 t5 = 1;
             }
         } else {

@@ -391,12 +391,6 @@ impl Settle {
         }
     }
 
-    /// Whether a node is `T.key` for a builtin type `T`, a static member.
-    pub(super) fn names_builtin_static(&self, node: NodeId) -> bool {
-        self.dot_parts(node)
-            .is_some_and(|(object, _)| self.builtin_type_named(object).is_some())
-    }
-
     /// The type of `object.key` for a member of a builtin type, as core
     /// declares it ([`super::core_members`]): an instance's, or a static
     /// one's if `object` names the type, as `String.fromCodePoint`. A

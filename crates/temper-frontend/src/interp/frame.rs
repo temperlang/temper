@@ -271,7 +271,6 @@ impl Interp<'_> {
                 Op::Exit(Exit::Break(target)) => Err(Abrupt::Break(*target)),
                 Op::Exit(Exit::Continue(target)) => Err(Abrupt::Continue(*target)),
                 Op::Exit(Exit::Return(target)) => Err(Abrupt::Return(*target, frame.pop())),
-                Op::Fail(message) => Err(Abrupt::Fail(message.as_ref().map(|m| m.to_string()))),
                 Op::Throw => match frame.pop() {
                     failure @ (Val::Object(_) | Val::CoreFailure(_)) => {
                         mark_thrown(s, frame, at, &failure);
@@ -359,8 +358,7 @@ fn mark_thrown(s: &Settled, frame: &Frame, at: u32, failure: &Val) {
         return;
     };
     let cause = match handled(frame, at) {
-        Some(handled @ (Val::Object(_) | Val::CoreFailure(_))) => Some(Cause::Failure(handled)),
-        Some(Val::Null) => Some(Cause::Bubble),
+        Some(handled @ (Val::Object(_) | Val::CoreFailure(_))) => Some(Cause(handled)),
         _ => None,
     };
     let at = s.library.tree.span(frame.code.nodes[at as usize]).start;
@@ -397,29 +395,20 @@ impl Interp<'_> {
             mark_thrown(s, frame, at, failure);
         }
         match abrupt {
-            Abrupt::Fail(_) | Abrupt::Throw(_) => {
+            Abrupt::Throw(failure) => {
                 if let Some(h) = code.handlers.iter().find(|h| within(h.start, h.end)) {
                     if h.panics {
-                        let why = match abrupt {
-                            Abrupt::Fail(Some(message)) => format!("a bubble: {message}"),
-                            Abrupt::Throw(failure) => self.failure_report(s, &failure),
-                            _ => "a bubble".to_string(),
-                        };
+                        let why = self.failure_report(s, &failure);
                         return Err(Abrupt::Panic(format!("panic(), caused by {why}")));
                     }
                     frame.truncate(h.depth);
-                    // A bubble has no value, but where `Error`, any error,
-                    // takes one (tests' and std's), its handler may bind
-                    // it, as a `Bubble`, until `Bubble` goes.
                     if let Some(slot) = h.slot {
-                        frame.values[slot as usize] = match abrupt {
-                            Abrupt::Throw(failure) => failure,
-                            _ => super::CoreFailure::value("Bubble", Vec::new()),
-                        };
+                        frame.values[slot as usize] = failure;
                     }
                     frame.pc = h.to;
                     return Ok(None);
                 }
+                return Err(Abrupt::Throw(failure));
             }
             Abrupt::Break(target) | Abrupt::Continue(target) => {
                 let is_continue = matches!(abrupt, Abrupt::Continue(_));

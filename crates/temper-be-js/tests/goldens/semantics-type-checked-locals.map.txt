@@ -11,63 +11,69 @@
 11:10 -> ../type-checked-locals.temper.md:21:9 (boo)  boo() { <- boo(): Void { console.log("b
 11:13 -> ../type-checked-locals.temper.md:21:5  () { <- let boo(): Void { console.lo
 12:3 -> ../type-checked-locals.temper.md:21:23  console.log("boo"); <- console.log("boo") };
-15:1 -> ../type-checked-locals.temper.md:90:5  /** <- let f(x: Int): (Int throws B
-19:1 -> ../type-checked-locals.temper.md:90:5  function f(x) { <- let f(x: Int): (Int throws B
-19:10 -> ../type-checked-locals.temper.md:90:9 (f)  f(x) { <- f(x: Int): (Int throws Bubbl
-19:11 -> ../type-checked-locals.temper.md:90:5  (x) { <- let f(x: Int): (Int throws B
-20:3 -> ../type-checked-locals.temper.md:90:42  return x; <- x }
-23:1 -> ../type-checked-locals.temper.md:103:5  /** <- let g(x: Int): (Int throws B
-27:1 -> ../type-checked-locals.temper.md:103:5  function g(x) { <- let g(x: Int): (Int throws B
-27:10 -> ../type-checked-locals.temper.md:103:9 (g)  g(x) { <- g(x: Int): (Int throws Bubbl
-27:11 -> ../type-checked-locals.temper.md:103:5  (x) { <- let g(x: Int): (Int throws B
-28:3 -> ../type-checked-locals.temper.md:103:42  return x; <- return x }
-31:1 -> ../type-checked-locals.temper.md:116:5  /** <- let i(x: Int): Int throws Bu
-35:1 -> ../type-checked-locals.temper.md:116:5  function i(x) { <- let i(x: Int): Int throws Bu
-35:10 -> ../type-checked-locals.temper.md:116:9 (i)  i(x) { <- i(x: Int): Int throws Bubble
-35:11 -> ../type-checked-locals.temper.md:116:5  (x) { <- let i(x: Int): Int throws Bu
-36:3 -> ../type-checked-locals.temper.md:116:40  return x; <- x }
-39:1 -> ../type-checked-locals.temper.md:25:5  console.log("Checkpoint 0"); <- console.log("Checkpoint 0");
-40:1 -> ../type-checked-locals.temper.md:26:5  try { <- do {
-41:3 -> ../type-checked-locals.temper.md:27:7  /** @type {number} */ <- let a: Int;
-42:3 -> ../type-checked-locals.temper.md:27:7  let a; <- let a: Int;
-43:3 -> ../type-checked-locals.temper.md:28:7  a = "1"; <- a = "1"; // Static error, bu
-44:3 -> ../type-checked-locals.temper.md:29:7  bubble(); <- bubble();
-49:1 -> ../type-checked-locals.temper.md:39:5  console.log("Checkpoint 1"); <- console.log("Checkpoint 1");
-50:1 -> ../type-checked-locals.temper.md:40:5  /** @type {void} */ <- do {
-51:1 -> ../type-checked-locals.temper.md:40:5  let t$0; <- do {
-52:1 -> ../type-checked-locals.temper.md:40:5  { <- do {
-53:3 -> ../type-checked-locals.temper.md:41:7  const a2 = 1; <- let a: Int = 1;
-54:3 -> ../type-checked-locals.temper.md:42:7  yay(); <- yay();
-57:1 -> ../type-checked-locals.temper.md:40:5  t$0; <- do {
-58:1 -> ../type-checked-locals.temper.md:52:5  console.log("Checkpoint 2"); <- console.log("Checkpoint 2");
-59:1 -> ../type-checked-locals.temper.md:53:5  { <- do {
-60:3 -> ../type-checked-locals.temper.md:54:7  let a3 = 1; <- var a: Int = 1;
-61:3 -> ../type-checked-locals.temper.md:55:7  try { <- do {
-62:5 -> ../type-checked-locals.temper.md:56:9  a3 = "2"; <- a = "2"; // Static error, bu
-63:5 -> ../type-checked-locals.temper.md:57:9  bubble(); <- bubble();
-64:5 -> ../type-checked-locals.temper.md:58:9  boo(); <- boo();
-69:3 -> ../type-checked-locals.temper.md:60:7  if (a3 === 1) { <- if (a == 1) {
-70:5 -> ../type-checked-locals.temper.md:61:9  meh(); <- meh();
-72:5 -> ../type-checked-locals.temper.md:63:9  meh(); <- meh();
-75:1 -> ../type-checked-locals.temper.md:75:5  console.log("Checkpoint 3"); <- console.log("Checkpoint 3");
-76:1 -> ../type-checked-locals.temper.md:76:5  /** @type {void} */ <- do {
-77:1 -> ../type-checked-locals.temper.md:76:5  let t$1; <- do {
-78:1 -> ../type-checked-locals.temper.md:76:5  { <- do {
-79:3 -> ../type-checked-locals.temper.md:77:7  let a4 = 1; <- var a: Int = 1;
-80:3 -> ../type-checked-locals.temper.md:78:7  a4 = 2; <- a = 2;
-83:1 -> ../type-checked-locals.temper.md:76:5  t$1; <- do {
-84:1 -> ../type-checked-locals.temper.md:89:5  console.log("Checkpoint 4"); <- console.log("Checkpoint 4");
-85:1 -> ../type-checked-locals.temper.md:91:5  try { <- do { f(0); yay() } orelse bo
-86:3 -> ../type-checked-locals.temper.md:91:10  f(0); <- f(0); yay() } orelse boo();
-92:1 -> ../type-checked-locals.temper.md:92:5  try { <- do { f("0"); meh() } orelse
-93:3 -> ../type-checked-locals.temper.md:92:10  f("0"); <- f("0"); meh() } orelse meh()
-99:1 -> ../type-checked-locals.temper.md:102:5  console.log("Checkpoint 5"); <- console.log("Checkpoint 5");
-100:1 -> ../type-checked-locals.temper.md:104:5  try { <- do { g(0); yay() } orelse bo
-101:3 -> ../type-checked-locals.temper.md:104:10  g(0); <- g(0); yay() } orelse boo();
-107:1 -> ../type-checked-locals.temper.md:105:5  try { <- do { g("0"); meh() } orelse
-108:3 -> ../type-checked-locals.temper.md:105:10  g("0"); <- g("0"); meh() } orelse meh()
-114:1 -> ../type-checked-locals.temper.md:115:5  console.log("Checkpoint 6"); <- console.log("Checkpoint 6");
-115:1 -> ../type-checked-locals.temper.md:117:5  try { <- do { i(0); yay() } orelse bo
-116:3 -> ../type-checked-locals.temper.md:117:10  i(0); <- i(0); yay() } orelse boo();
-122:1 -> ../type-checked-locals.temper.md:118:5  try { <- do { i("0"); meh() } orelse
-123:3 -> ../type-checked-locals.temper.md:118:10  i("0"); <- i("0"); meh() } orelse meh()
+15:1 -> ../type-checked-locals.temper.md:103:5  /** <- let f(x: Int): (Int throws O
+20:1 -> ../type-checked-locals.temper.md:103:5  function f(x) { <- let f(x: Int): (Int throws O
+20:10 -> ../type-checked-locals.temper.md:103:9 (f)  f(x) { <- f(x: Int): (Int throws Oops)
+20:11 -> ../type-checked-locals.temper.md:103:5  (x) { <- let f(x: Int): (Int throws O
+21:3 -> ../type-checked-locals.temper.md:103:40  return x; <- x }
+24:1 -> ../type-checked-locals.temper.md:116:5  /** <- let g(x: Int): (Int throws O
+29:1 -> ../type-checked-locals.temper.md:116:5  function g(x) { <- let g(x: Int): (Int throws O
+29:10 -> ../type-checked-locals.temper.md:116:9 (g)  g(x) { <- g(x: Int): (Int throws Oops)
+29:11 -> ../type-checked-locals.temper.md:116:5  (x) { <- let g(x: Int): (Int throws O
+30:3 -> ../type-checked-locals.temper.md:116:40  return x; <- return x }
+33:1 -> ../type-checked-locals.temper.md:129:5  /** <- let i(x: Int): Int throws Oo
+38:1 -> ../type-checked-locals.temper.md:129:5  function i(x) { <- let i(x: Int): Int throws Oo
+38:10 -> ../type-checked-locals.temper.md:129:9 (i)  i(x) { <- i(x: Int): Int throws Oops {
+38:11 -> ../type-checked-locals.temper.md:129:5  (x) { <- let i(x: Int): Int throws Oo
+39:3 -> ../type-checked-locals.temper.md:129:38  return x; <- x }
+42:1 -> ../type-checked-locals.temper.md:22:5  class Problem extends Error <- sealed interface Problem ext
+42:7 -> ../type-checked-locals.temper.md:22:22 (Problem)  Problem extends Error {} <- Problem extends Error {}
+42:14 -> ../type-checked-locals.temper.md:22:5   extends Error {} <- sealed interface Problem ext
+46:1 -> ../type-checked-locals.temper.md:23:5  class Oops extends Problem { <- class Oops() extends Problem
+46:7 -> ../type-checked-locals.temper.md:23:11 (Oops)  Oops extends Problem { <- Oops() extends Problem {}
+46:11 -> ../type-checked-locals.temper.md:23:5   extends Problem { <- class Oops() extends Problem
+47:3 -> ../type-checked-locals.temper.md:23:5  /** @returns {string} */ <- class Oops() extends Problem
+48:3 -> ../type-checked-locals.temper.md:23:5  get message() { <- class Oops() extends Problem
+49:5 -> ../type-checked-locals.temper.md:23:5  return "oops"; <- class Oops() extends Problem
+53:1 -> ../type-checked-locals.temper.md:27:5  console.log("Checkpoint 0"); <- console.log("Checkpoint 0");
+54:1 -> ../type-checked-locals.temper.md:28:5  try { <- do {
+55:3 -> ../type-checked-locals.temper.md:29:7  /** @type {number} */ <- let a: Int;
+56:3 -> ../type-checked-locals.temper.md:29:7  let a; <- let a: Int;
+57:3 -> ../type-checked-locals.temper.md:30:7  a = "1"; <- a = "1"; // Static error, bu
+63:1 -> ../type-checked-locals.temper.md:52:5  console.log("Checkpoint 1"); <- console.log("Checkpoint 1");
+64:1 -> ../type-checked-locals.temper.md:53:5  /** @type {void} */ <- do {
+65:1 -> ../type-checked-locals.temper.md:53:5  let t$0; <- do {
+66:1 -> ../type-checked-locals.temper.md:53:5  { <- do {
+67:3 -> ../type-checked-locals.temper.md:54:7  const a2 = 1; <- let a: Int = 1;
+68:3 -> ../type-checked-locals.temper.md:55:7  yay(); <- yay();
+71:1 -> ../type-checked-locals.temper.md:53:5  t$0; <- do {
+72:1 -> ../type-checked-locals.temper.md:65:5  console.log("Checkpoint 2"); <- console.log("Checkpoint 2");
+73:1 -> ../type-checked-locals.temper.md:66:5  { <- do {
+74:3 -> ../type-checked-locals.temper.md:67:7  let a3 = 1; <- var a: Int = 1;
+75:3 -> ../type-checked-locals.temper.md:68:7  try { <- do {
+76:5 -> ../type-checked-locals.temper.md:69:9  a3 = "2"; <- a = "2"; // Static error, bu
+82:3 -> ../type-checked-locals.temper.md:73:7  if (a3 === 1) { <- if (a == 1) {
+83:5 -> ../type-checked-locals.temper.md:74:9  meh(); <- meh();
+85:5 -> ../type-checked-locals.temper.md:76:9  meh(); <- meh();
+88:1 -> ../type-checked-locals.temper.md:88:5  console.log("Checkpoint 3"); <- console.log("Checkpoint 3");
+89:1 -> ../type-checked-locals.temper.md:89:5  /** @type {void} */ <- do {
+90:1 -> ../type-checked-locals.temper.md:89:5  let t$1; <- do {
+91:1 -> ../type-checked-locals.temper.md:89:5  { <- do {
+92:3 -> ../type-checked-locals.temper.md:90:7  let a4 = 1; <- var a: Int = 1;
+93:3 -> ../type-checked-locals.temper.md:91:7  a4 = 2; <- a = 2;
+96:1 -> ../type-checked-locals.temper.md:89:5  t$1; <- do {
+97:1 -> ../type-checked-locals.temper.md:102:5  console.log("Checkpoint 4"); <- console.log("Checkpoint 4");
+98:1 -> ../type-checked-locals.temper.md:104:5  try { <- do { f(0); yay() } orelse bo
+99:3 -> ../type-checked-locals.temper.md:104:10  f(0); <- f(0); yay() } orelse boo();
+105:1 -> ../type-checked-locals.temper.md:105:5  try { <- do { f("0"); meh() } orelse
+106:3 -> ../type-checked-locals.temper.md:105:10  f("0"); <- f("0"); meh() } orelse meh()
+112:1 -> ../type-checked-locals.temper.md:115:5  console.log("Checkpoint 5"); <- console.log("Checkpoint 5");
+113:1 -> ../type-checked-locals.temper.md:117:5  try { <- do { g(0); yay() } orelse bo
+114:3 -> ../type-checked-locals.temper.md:117:10  g(0); <- g(0); yay() } orelse boo();
+120:1 -> ../type-checked-locals.temper.md:118:5  try { <- do { g("0"); meh() } orelse
+121:3 -> ../type-checked-locals.temper.md:118:10  g("0"); <- g("0"); meh() } orelse meh()
+127:1 -> ../type-checked-locals.temper.md:128:5  console.log("Checkpoint 6"); <- console.log("Checkpoint 6");
+128:1 -> ../type-checked-locals.temper.md:130:5  try { <- do { i(0); yay() } orelse bo
+129:3 -> ../type-checked-locals.temper.md:130:10  i(0); <- i(0); yay() } orelse boo();
+135:1 -> ../type-checked-locals.temper.md:131:5  try { <- do { i("0"); meh() } orelse
+136:3 -> ../type-checked-locals.temper.md:131:10  i("0"); <- i("0"); meh() } orelse meh()

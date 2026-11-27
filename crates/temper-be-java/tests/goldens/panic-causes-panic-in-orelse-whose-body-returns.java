@@ -1,28 +1,27 @@
 package panic_causes_panic_in_orelse_whose_body_returns;
 
 import java.util.logging.Logger;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 
 public final class PanicCausesPanicInOrelseWhoseBodyReturnsGlobal {
     private PanicCausesPanicInOrelseWhoseBodyReturnsGlobal() {}
 
-    static int positive(int n) {
+    static int positive(int n) throws NotPositive {
         if (n <= 0) {
-            throw Core.bubble();
+            throw new NotPositive(n);
         }
         return n;
     }
 
     static int checked(int n) {
         try {
-            if (n == 0) {
+            int p = positive(n);
+            if (p == 1) {
                 return 0;
             }
-            positive(n);
-        } catch (Bubble bubble) {
-            throw new AssertionError("panic", bubble);
+        } catch (NotPositive failure) {
+            throw new AssertionError("panic", failure);
         }
         return n;
     }

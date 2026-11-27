@@ -6,14 +6,14 @@
 15:3 -> ../operators.temper.md:15:48  return `${a === b} ${a !== b <- "${a == b} ${a != b} ${(a <=
 18:1 -> ../operators.temper.md:18:5  /** <- let quot(a: Int, b: Int): In
 23:1 -> ../operators.temper.md:18:5  function quot(a, b) { <- let quot(a: Int, b: Int): In
-23:10 -> ../operators.temper.md:18:9 (quot)  quot(a, b) { <- quot(a: Int, b: Int): Int th
+23:10 -> ../operators.temper.md:18:9 (quot)  quot(a, b) { <- quot(a: Int, b: Int): Int {
 23:14 -> ../operators.temper.md:18:5  (a, b) { <- let quot(a: Int, b: Int): In
-24:3 -> ../operators.temper.md:18:51  return divIntInt(a, b); <- a / b }
+24:3 -> ../operators.temper.md:18:37  return divIntInt(a, b); <- a / b }
 27:1 -> ../operators.temper.md:19:5  /** <- let rem(a: Int, b: Int): Int
 32:1 -> ../operators.temper.md:19:5  function rem(a, b) { <- let rem(a: Int, b: Int): Int
-32:10 -> ../operators.temper.md:19:9 (rem)  rem(a, b) { <- rem(a: Int, b: Int): Int thr
+32:10 -> ../operators.temper.md:19:9 (rem)  rem(a, b) { <- rem(a: Int, b: Int): Int { a
 32:13 -> ../operators.temper.md:19:5  (a, b) { <- let rem(a: Int, b: Int): Int
-33:3 -> ../operators.temper.md:19:50  return modIntInt(a, b); <- a % b }
+33:3 -> ../operators.temper.md:19:36  return modIntInt(a, b); <- a % b }
 36:1 -> ../operators.temper.md:22:5  /** <- let words(a: String, b: Stri
 41:1 -> ../operators.temper.md:22:5  function words(a, b) { <- let words(a: String, b: Stri
 41:10 -> ../operators.temper.md:22:9 (words)  words(a, b) { <- words(a: String, b: String):

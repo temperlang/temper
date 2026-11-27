@@ -12,6 +12,8 @@ void global_init_init();
 
 struct Tick;
 struct Counter;
+struct HalveError;
+struct Odd;
 
 struct Tick : public virtual temper::core::AnyValueBase {
   virtual void apply(int32_t i) const = 0;
@@ -24,11 +26,20 @@ struct Counter : public std::enable_shared_from_this<Counter> {
   int32_t get_n();
 };
 
+struct HalveError : public virtual temper::core::Failure {};
+
+struct Odd : public virtual HalveError {
+  int32_t n;
+  static std::shared_ptr<Odd> make(int32_t n);
+  temper::core::Str get_message() const override;
+  int32_t get_n();
+};
+
 std::shared_ptr<temper::core::Promise<int32_t>> later(int32_t n);
 std::shared_ptr<temper::core::SafeGenerator<std::shared_ptr<temper::core::Empty>>> ticks(int32_t n, std::function<void(int32_t)> const & each);
 std::shared_ptr<temper::core::SafeGenerator<int32_t>> fibonacci();
 std::shared_ptr<temper::core::SafeGenerator<int32_t>> collatz(int32_t start);
-int32_t halve(int32_t n);
+temper::core::Expected<int32_t, std::shared_ptr<Odd>> halve(int32_t n);
 
 }  // namespace async_turns
 
@@ -236,10 +247,25 @@ int32_t Counter::get_n() {
   return this->n;
 }
 
-int32_t halve(int32_t n) {
+std::shared_ptr<Odd> Odd::make(int32_t n) {
+  global_init_init();
+  std::shared_ptr<Odd> self = std::make_shared<Odd>();
+  self->n = n;
+  return self;
+}
+
+core::Str Odd::get_message() const {
+  return "odd (n: " + std::to_string(this->n) + ")";
+}
+
+int32_t Odd::get_n() {
+  return this->n;
+}
+
+core::Expected<int32_t, std::shared_ptr<Odd>> halve(int32_t n) {
   global_init_init();
   if (n % 2 != 0) {
-    core::bubble();
+    return core::unexpected(Odd::make(n));
   }
   return n / 2;
 }

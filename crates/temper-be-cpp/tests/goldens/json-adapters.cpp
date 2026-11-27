@@ -892,7 +892,7 @@ static void roundTrip(std::shared_ptr<temper_std::JsonAdapter<T>> const & adapte
   if (decodeResult.has_value()) {
     back = *decodeResult;
   } else {
-    core::panic();
+    core::panic_caused_by(decodeResult.error());
   }
   core::Str again = json_adapters::encode<T>(adapter, back);
   core::Console::log(temper_globals::console.value, again == text ? text : core::Str(text + " became " + again));
@@ -915,7 +915,7 @@ void global_init_init() {
     if (decodeResult.has_value()) {
       shape = *decodeResult;
     } else {
-      core::panic();
+      core::panic_caused_by(decodeResult.error());
     }
     {
       if (dynamic_cast<Rect const *>(shape.get()) != nullptr) {
@@ -929,7 +929,7 @@ void global_init_init() {
     if (decodeResult2.has_value()) {
       record = *decodeResult2;
     } else {
-      core::panic();
+      core::panic_caused_by(decodeResult2.error());
     }
     core::Str string = record->name + " " + core::Boolean::toString(record->active) + " ";
     core::NullableParam<core::Str> subject = record->nickname;

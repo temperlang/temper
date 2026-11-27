@@ -139,7 +139,7 @@ fn imports_across_modules() {
             (run.output, run.failure.as_deref()),
             (
                 vec!["lib".to_string(), "2 3".into()],
-                Some("Failed: ./lib does not export symbol hidden")
+                Some("Panicked: ./lib does not export symbol hidden")
             )
         );
     });
@@ -327,7 +327,8 @@ fn regex_literals() {
         let run = run(&settled, Some(1_000_000));
         let expected = "seq('a-', rep('b', 1, -1, false), ^, cap(n, 'c'))";
         let failure = Some(
-            "Failed: Invalid regex: at position 6: quantifier has min greater than max".to_string(),
+            "Panicked: Invalid regex: at position 6: quantifier has min greater than max"
+                .to_string(),
         );
         assert_eq!(
             (run.output, run.failure),
@@ -608,7 +609,10 @@ fn net_requests() {
             let echo = "201 text/plain true: POST /echo HTTP/1.1, application/json, []";
             (vec!["sent", echo], None)
         } else {
-            let why = "Panicked: panic(), caused by a bubble: web client not supported here";
+            // The web client's error breaks the promise, which `await`
+            // throws as a `BrokenPromise`, without the client's message.
+            let why =
+                "Panicked: panic(), caused by BrokenPromise: broken promise, at main.temper:6:9";
             (vec!["sent"], Some(why))
         };
         let output: Vec<String> = output.into_iter().map(String::from).collect();
@@ -658,7 +662,7 @@ fn echo_once(listener: std::net::TcpListener) {
 const SETTLE_PIECES: &[&str] = &[
     "let ", "var ", "let f(x: Int): Int { x }\n", "if (x) {", "} else {", "} else if (y) {", "while (",
     "for (var i = 0; i < 3; ++i) {", "break;", "continue;", "break outer;", "outer: ", "return ",
-    "x", "f(", "=", "+=", "++", "--", "fn (", "=>", "do {", "} orelse ", "bubble()", "${",
+    "x", "f(", "=", "+=", "++", "--", "fn (", "=>", "do {", "} orelse ", "panic()", "throw ", "${",
     "console.log(", "@var ", "&&", "||", ";", "{", "}", "(", ")", "\n", "yield ", " extends GeneratorFn",
     ".next()", "await ", "async { (): GeneratorResult<Empty> extends GeneratorFn => ", "new PromiseBuilder<Int>()", ".promise",
     ".complete(1)", ".breakPromise()", "@connected ",

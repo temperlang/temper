@@ -8,7 +8,7 @@ Proposed; Level 2, below, has the structure. Nominal types with arguments,
 invariant type parameters (typing.md), nullable types, `Void`,
 `Never<T>`, and function types that carry their `@fun` interface's name
 (Decided, language.md "Function types and fun interfaces"). A function
-that may fail has a result type, `T throws Bubble`, as its signature's
+that may fail has a result type, `T throws E`, as its signature's
 result only ([Results](#results)); no expression has one. Classes are
 final; only interfaces are extended, and they may carry method bodies.
 
@@ -56,7 +56,7 @@ pub struct TypeTable {
 }
 pub enum TypeData {
     Scalar(Scalar),               // ids 0 to 6, the same in every program
-    Function { params: TypeListId, result: TypeId, bubbles: bool },
+    Function { params: TypeListId, result: TypeId },
     // Subset B: Nominal, TypeParam, Nullable, Never; subset C: Result.
 }
 pub enum Scalar { Void, Boolean, Int32, Int64, Float64, String, AnyValue }
@@ -70,7 +70,7 @@ pub enum Scalar { Void, Boolean, Int32, Int64, Float64, String, AnyValue }
   ([question 26](open-questions.md)).
 - **Temper's `Int` is `Int32`,** in text and everywhere else.
 - **A function declaration's type is its signature,** a `Function`
-  entry: parameter types, result, and whether it may bubble. This
+  entry: parameter types and result, a result type where it may fail. This
   stays when bare function types go away, since it's only how
   signatures are stored.
 - **Subtyping in subset A is equality;** with no classes or nullable
@@ -190,23 +190,23 @@ its `typeof` or `type()` name, as `"undefined"` and `"nil"`, typed
 ## Results
 
 As built (2026-11-23, Proposed): **`Result { pass, fail }`** (text `Int32
-throws Bubble`), interned once per pair (`TypeTable::result`, which gives
+throws Oops#3`), interned once per pair (`TypeTable::result`, which gives
 `pass` back for a `Never` failure), is a signature's result where it may
 fail, as the frontend's result types are (typing.md, "Results").
-It fails with `Scalar::Bubble`, a failure type (a class or interface
-below core's `Error`), or a type parameter ([nodes.md](nodes.md),
+It fails with a failure type (a class or interface below core's
+`Error`) or a type parameter ([nodes.md](nodes.md),
 "Declared failures").
 
 - **Only a signature's result** (T5): no declaration, parameter, or node
-  has a result type or `Bubble`.
+  has a result type.
 - **Calls see the pass type:** `Signature` gives `pass` (a call node's
   type), `fail`, and `returns`, the whole result, so translators read
-  `sig.pass` and `sig.bubbles()` and never spell a result type.
+  `sig.pass` and `sig.fails()` and never spell a result type.
 - **Part by part** in substitution, `mentions`, `same`, and lowering
   (`nevers`), so a failure type parameter can be an ordinary one later.
-- `MAY_BUBBLE` on calls and an operator's `bubbles` stay flags; what a
-  node fails with is its callee's failure type, with type arguments put
-  in, or `Bubble` (`failures::node_failure`).
+- `MAY_BUBBLE` on calls stays a flag; what a node fails with is its
+  callee's failure type, with type arguments put in
+  (`failures::node_failure`).
 
 ## Never
 

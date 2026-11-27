@@ -152,7 +152,7 @@ As built with the Python backend (2026-10-30):
   `temper test -b js` and `temper run -b js` pass
   `--enable-source-maps`, and the CLI test
   `js_stack_traces_point_at_temper` checks that a test's panic and
-  failed assertion (in the JUnit results) and `run`'s uncaught bubble
+  failed assertion (in the JUnit results) and `run`'s uncaught failure
   and panic name the `.temper(.md)` lines.
 - **Java** (2026-10-30): the compiler is the checker. Without Maven,
   `javac` (or `JAVAC`) compiles the runtime, `temper-core`

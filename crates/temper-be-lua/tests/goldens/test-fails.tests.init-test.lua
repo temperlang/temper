@@ -3,13 +3,35 @@ local tested = require("test-fails")["$test"]
 local luaunit = require("luaunit")
 luaunit.FAILURE_PREFIX = temper.test_failure_prefix
 
+---@class test-fails.Problem: temper.Failure
+
+---@class test-fails.Problem.type: temper.Type
+local Problem = temper.type("test-fails.Problem", temper.Failure)
+
+---@class test-fails.Oops: test-fails.Problem
+---@field message string
+
+---@class test-fails.Oops.type: temper.Type
+---@operator call: test-fails.Oops
+local Oops = temper.type("test-fails.Oops", Problem)
+
+---@param this test-fails.Oops
+function Oops.constructor(this)
+end
+
+---@param this test-fails.Oops
+---@return string
+function Oops.get.message(this)
+  return "oops"
+end
+
 ---@param f fun()
 ---@return boolean
 local function tries(f)
   local finished = true
-  if not temper.pcall(function()
+  if not temper.catch(function()
     f()
-  end) then
+  end, Oops) then
     finished = false
   end
   return finished

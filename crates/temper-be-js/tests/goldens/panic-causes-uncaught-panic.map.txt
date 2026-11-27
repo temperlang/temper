@@ -1,11 +1,11 @@
 # generated line:column -> source:line:column, and the text at each
-3:1 -> ../panic-causes.temper.md:235:5  /** <- let boom(n: Int): Int {
-7:1 -> ../panic-causes.temper.md:235:5  function boom(n) { <- let boom(n: Int): Int {
-7:10 -> ../panic-causes.temper.md:235:9 (boom)  boom(n) { <- boom(n: Int): Int {
-7:14 -> ../panic-causes.temper.md:235:5  (n) { <- let boom(n: Int): Int {
-8:3 -> ../panic-causes.temper.md:236:7  if (n > 0) { <- if (n > 0) { panic() }
-9:5 -> ../panic-causes.temper.md:236:20  panic(); <- panic() }
-11:3 -> ../panic-causes.temper.md:237:7  return n; <- n
-14:1 -> ../panic-causes.temper.md:16:5  console.log("before"); <- console.log("before");
-15:1 -> ../panic-causes.temper.md:239:5  boom(1); <- boom(1);
-16:1 -> ../panic-causes.temper.md:240:5  console.log("after"); <- console.log("after");
+3:1 -> ../panic-causes.temper.md:244:5  /** <- let boom(n: Int): Int {
+7:1 -> ../panic-causes.temper.md:244:5  function boom(n) { <- let boom(n: Int): Int {
+7:10 -> ../panic-causes.temper.md:244:9 (boom)  boom(n) { <- boom(n: Int): Int {
+7:14 -> ../panic-causes.temper.md:244:5  (n) { <- let boom(n: Int): Int {
+8:3 -> ../panic-causes.temper.md:245:7  if (n > 0) { <- if (n > 0) { panic() }
+9:5 -> ../panic-causes.temper.md:245:20  panic(); <- panic() }
+11:3 -> ../panic-causes.temper.md:246:7  return n; <- n
+14:1 -> ../panic-causes.temper.md:19:5  console.log("before"); <- console.log("before");
+15:1 -> ../panic-causes.temper.md:248:5  boom(1); <- boom(1);
+16:1 -> ../panic-causes.temper.md:249:5  console.log("after"); <- console.log("after");

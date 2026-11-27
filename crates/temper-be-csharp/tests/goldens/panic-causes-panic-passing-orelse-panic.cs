@@ -6,15 +6,17 @@ namespace PanicCausesPanicPassingOrelsePanic;
 
 public static class PanicCausesPanicPassingOrelsePanicGlobal
 {
+    /// <exception cref="NotPositive">Where it fails with NotPositive.</exception>
     internal static int Positive(int n)
     {
         if (n <= 0)
         {
-            return Core.Bubble<int>();
+            throw new NotPositive(n);
         }
         return n;
     }
 
+    /// <exception cref="NotPositive">Where it fails with NotPositive.</exception>
     internal static int Read(IReadOnlyList<int> ls, int i)
     {
         Positive(i + 1);
@@ -30,9 +32,9 @@ public static class PanicCausesPanicPassingOrelsePanicGlobal
         {
             r = Read(Listed.CreateReadOnlyList<int>(1, 2), 5);
         }
-        catch (global::TemperLang.Core.Bubble bubble1)
+        catch (NotPositive failure1)
         {
-            throw Core.Panic("panic", bubble1);
+            throw Core.Panic("panic", failure1);
         }
         console.Log("after " + r.ToString(CultureInfo.InvariantCulture));
     }

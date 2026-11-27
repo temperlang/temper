@@ -24,10 +24,7 @@
 //!   (r.has_value()) { …the body, *r for the call… } else { …the
 //!   fallback… }`; otherwise the body is a lambda called at once, giving
 //!   a `core::Expected` of exactly what it may fail with, branched on the
-//!   same way. A body that may also bubble is in a `try`, whose `catch` of
-//!   `TemperBubble` runs the fallback, and its failure, bubbled there,
-//!   reaches it the same way (an exception on that failure path only).
-//!   Panics and host code's exceptions pass every handler.
+//!   same way. Panics and host code's exceptions pass every handler.
 //!
 //! The success path allocates nothing: a value is held in place in its
 //! `Expected`. A failure costs its object (`make_shared`) and a branch per
@@ -38,8 +35,7 @@ use super::*;
 use temper_tmpl::failures;
 
 impl Translator<'_> {
-    /// What a call may fail with, where that's a declared failure type,
-    /// not `Bubble`.
+    /// What a call may fail with, a declared failure type.
     pub(crate) fn declared(&self, id: NodeId) -> Option<TypeId> {
         let p = self.p;
         if !matches!(
@@ -51,13 +47,15 @@ impl Translator<'_> {
         ) {
             return None;
         }
-        failures::node_failure(p, id).filter(|&f| f != TypeId::BUBBLE)
+        failures::node_failure(p, id)
     }
 
     /// A signature's result in C++: `core::Expected<T, F>` where it fails
-    /// with a declared failure type, else its value's type.
+    /// with a declared failure type, or a failure parameter (RFC 164), a
+    /// template's type parameter, or `core::Never` for one given
+    /// `Never<…>`, "can't fail"; else its value's type.
     pub(crate) fn result_type(&self, pass: TypeId, fail: Option<TypeId>) -> R<String> {
-        match self.declared_fail(fail)? {
+        match fail {
             Some(fail) => Ok(format!(
                 "{CORE}::Expected<{}, {}>",
                 self.ty(pass)?,
@@ -65,13 +63,6 @@ impl Translator<'_> {
             )),
             None => self.ty(pass),
         }
-    }
-
-    /// A signature's failure type, where it's a declared one, or a
-    /// failure parameter (RFC 164), a template's type parameter, or
-    /// `core::Never` for one given `Never<…>`, "can't fail".
-    fn declared_fail(&self, fail: Option<TypeId>) -> R<Option<TypeId>> {
-        Ok(fail.filter(|&f| f != TypeId::BUBBLE))
     }
 
     /// A declaration's result in C++ ([`result_type`](Self::result_type)).
@@ -85,7 +76,7 @@ impl Translator<'_> {
     /// Where a failure goes from the body of a function of this value and
     /// failure type.
     pub(crate) fn fail_to_of(&self, pass: TypeId, fail: Option<TypeId>) -> R<FailTo> {
-        Ok(match self.declared_fail(fail)? {
+        Ok(match fail {
             Some(fail) => FailTo::Return(pass, fail),
             None => FailTo::Nowhere,
         })
@@ -97,7 +88,7 @@ impl Translator<'_> {
             FailTo::Return(..) => Ok(Stmt::Return(Some(
                 self.core("unexpected").call(vec![failure]),
             ))),
-            FailTo::Init => Ok(Stmt::Bubble(
+            FailTo::Init => Ok(Stmt::Never(
                 self.core("uncaught_failure").call(vec![failure]),
             )),
             FailTo::Nowhere => not_yet("a failure with nowhere to go"),
@@ -195,15 +186,7 @@ impl Translator<'_> {
             } => (body, fallback, Some(local)),
             _ => return not_yet("a handler that isn't one"),
         };
-        let under = failures::failures_under(p, body);
-        let bubbles = under.iter().any(|&(_, f)| f == TypeId::BUBBLE);
-        let declared: Vec<(NodeId, TypeId)> = under
-            .into_iter()
-            .filter(|&(_, f)| f != TypeId::BUBBLE)
-            .collect();
-        if bubbles && local.is_some() {
-            return not_yet("a catch binding a failure beside a bubble");
-        }
+        let declared = failures::failures_under(p, body);
         let fails: Vec<TypeId> = declared.iter().map(|&(_, f)| f).collect();
         let Some(join) = failures::join(p, failures::root(p), &fails) else {
             return not_yet("a handler of declared failures without one");
@@ -220,6 +203,7 @@ impl Translator<'_> {
             Some(call) => {
                 self.raw_call = Some(call);
                 let value = self.expr(call)?;
+                self.mark(call, &mut out);
                 out.append(&mut self.pending);
                 let name = self.result_name(call);
                 out.push(Stmt::Local {
@@ -265,19 +249,23 @@ impl Translator<'_> {
         };
         let result = Expr::name(name);
         let mut els = Vec::new();
-        if bubbles {
-            // To the `catch` below, with the bubbles.
-            els.push(Stmt::Bubble(self.core("bubble").call(Vec::new())));
+        if let Some(local) = local.filter(|&l| self.is_read(l)) {
+            let ty = self.ty(p.decls.get(local).ty)?;
+            let name = self.local_name(local);
+            els.push(Stmt::Local {
+                ty,
+                name,
+                value: Some(result.clone().method("error", Vec::new())),
+            });
+        }
+        if let Node::Panic {} = p.nodes.get(fallback) {
+            // `orelse panic()`: the failure is the panic's cause.
+            let failure = result.clone().method("error", Vec::new());
+            self.mark(fallback, &mut els);
+            els.push(Stmt::Never(
+                self.core("panic_caused_by").call(vec![failure]),
+            ));
         } else {
-            if let Some(local) = local.filter(|&l| self.is_read(l)) {
-                let ty = self.ty(p.decls.get(local).ty)?;
-                let name = self.local_name(local);
-                els.push(Stmt::Local {
-                    ty,
-                    name,
-                    value: Some(result.clone().method("error", Vec::new())),
-                });
-            }
             els.extend(self.deliver_marked(fallback, sink)?);
         }
         let has = result.method("has_value", Vec::new());
@@ -293,13 +281,6 @@ impl Translator<'_> {
                 els,
             },
         });
-        if bubbles {
-            let fallback = self.deliver_marked(fallback, sink)?;
-            return Ok(vec![Stmt::Try {
-                body: out,
-                fallback,
-            }]);
-        }
         Ok(out)
     }
 
@@ -377,10 +358,6 @@ pub(crate) fn expected_void(stmts: &mut Vec<Stmt>) {
                     for (_, body) in cases {
                         fix(body);
                     }
-                }
-                Stmt::Try { body, fallback } => {
-                    fix(body);
-                    fix(fallback);
                 }
                 _ => {}
             }

@@ -2,7 +2,6 @@ package jump_values;
 
 import java.util.List;
 import java.util.logging.Logger;
-import temper.core.Bubble;
 import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Nullable;
@@ -26,12 +25,8 @@ public final class JumpValuesGlobal {
         return a * 10 + b;
     }
 
-    static int parse(String s) {
-        try {
-            return Core.stringToInt(s);
-        } catch (ParseError ignored) {
-            throw Core.bubble();
-        }
+    static int parse(String s) throws ParseError {
+        return Core.stringToInt(s);
     }
 
     static @Nullable Integer next(@Nullable Integer y) {
@@ -74,7 +69,7 @@ public final class JumpValuesGlobal {
             @Nullable Integer held = null;
             try {
                 held = parse(Core.listGet(words, i));
-            } catch (Bubble ignored) {
+            } catch (ParseError ignored) {
             }
             if (held == null) {
                 break;
@@ -92,7 +87,7 @@ public final class JumpValuesGlobal {
         @Nullable Integer held = null;
         try {
             held = parse(s);
-        } catch (Bubble ignored) {
+        } catch (ParseError ignored) {
         }
         if (held == null) {
             return -1;
@@ -386,7 +381,7 @@ public final class JumpValuesGlobal {
                 @Nullable Integer held = null;
                 try {
                     held = parse(Core.listGet(words, i));
-                } catch (Bubble ignored) {
+                } catch (ParseError ignored) {
                 }
                 if (held == null) {
                     seen = seen + "!";

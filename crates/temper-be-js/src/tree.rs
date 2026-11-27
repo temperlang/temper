@@ -307,8 +307,7 @@ pub enum Stmt {
     Continue(Option<String>),
     /// `try { … } catch (var) { if (!caught) throw var; … }`, where
     /// `caught` says whether `var` is what a handler catches, as
-    /// `isBubble(e$)` for `orelse`'s bubble or `e instanceof NotFound` for
-    /// a declared failure: Temper's `orelse` and `catch`, which take only
+    /// `e instanceof NotFound` for a declared failure: Temper's `orelse` and `catch`, which take only
     /// what their bodies may fail with and rethrow anything else (a panic,
     /// a host error), which keeps what it said.
     Try {

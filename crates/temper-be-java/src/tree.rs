@@ -294,13 +294,12 @@ pub enum Stmt {
         catch_all: Option<(String, Vec<Stmt>)>,
         finally: Vec<Stmt>,
     },
-    /// `try { … } catch (Bubble var) { … }`: Temper's `orelse` or
-    /// `catch`, catching only what its body may fail with, the runtime's
-    /// `Bubble` and declared failures' classes (`classes`, a multi-catch
-    /// `catch (Bubble | NotFound var)` where several).
+    /// `try { … } catch (NotFound var) { … }`: Temper's `orelse` or
+    /// `catch`, catching only what its body may fail with, a failure
+    /// class.
     TryCatch {
         body: Vec<Stmt>,
-        classes: Vec<String>,
+        class: String,
         var: String,
         handler: Vec<Stmt>,
     },
@@ -909,13 +908,13 @@ fn stmt(out: &mut String, s: &Stmt, depth: usize) {
         }
         Stmt::TryCatch {
             body,
-            classes,
+            class,
             var,
             handler,
         } => {
             out.push_str("try ");
             block(out, body, depth);
-            let _ = write!(out, " catch ({} {var}) ", classes.join(" | "));
+            let _ = write!(out, " catch ({class} {var}) ");
             block(out, handler, depth);
             out.push('\n');
         }

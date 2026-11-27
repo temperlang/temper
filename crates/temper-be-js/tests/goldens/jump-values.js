@@ -1,7 +1,5 @@
 import {
   ParseError,
-  bubble,
-  isBubble,
   listedGet,
   stringSplit,
   stringToInt32,
@@ -29,14 +27,10 @@ function pair(a, b) {
 /**
  * @param {string} s
  * @returns {number}
+ * @throws {ParseError}
  */
 function parse(s) {
-  try {
-    return stringToInt32(s, null);
-  } catch (e$) {
-    if (!(e$ instanceof ParseError)) throw e$;
-    return bubble();
-  }
+  return stringToInt32(s, null);
 }
 
 /**
@@ -106,7 +100,7 @@ function sumUntilBad(words) {
       try {
         held = parse(listedGet(/** @type {string[]} */ (words), i));
       } catch (e$) {
-        if (!isBubble(e$)) throw e$;
+        if (!(e$ instanceof ParseError)) throw e$;
       }
       if (held == null) {
         break;
@@ -136,7 +130,7 @@ function parsedOr(s) {
     try {
       held = parse(s);
     } catch (e$) {
-      if (!isBubble(e$)) throw e$;
+      if (!(e$ instanceof ParseError)) throw e$;
     }
     if (held == null) {
       return -1;
@@ -580,7 +574,7 @@ function viaOrelse(words) {
       try {
         held = parse(listedGet(/** @type {string[]} */ (words), i));
       } catch (e$) {
-        if (!isBubble(e$)) throw e$;
+        if (!(e$ instanceof ParseError)) throw e$;
       }
       if (held == null) {
         seen = `${seen}!`;

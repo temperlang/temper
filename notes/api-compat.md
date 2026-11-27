@@ -21,15 +21,15 @@ the runtimes, and real output: Chromarite's `temper.out/`, built by Kotlin Tempe
 - **Builders or named-argument forms** exist only for a *public* constructor
   with 2 or more parameters (not counting `this`): JS `static new(props)`,
   Java and Rust `Builder`s. Python always allows keywords instead.
-- **Bubble (failure)** is an unchecked exception in JS, Python, Java, C# and
-  C++, `Result<T>` in Rust, and `error(...)` in Lua. It never appears in
-  JS/Python/Java/C# signatures. Each runtime raises a bubble type of its
-  own, which `orelse` catches alone, so panics and host exceptions pass
-  it (since 2026-11-18). Each subclasses what host code caught before,
-  which stays API: Python `temper_core.Bubble(RuntimeError)`, Java
-  `temper.core.Bubble extends RuntimeException`, C#
-  `TemperLang.Core.Bubble : Exception`, JS `Bubble extends Error`, and
-  C++ `TemperBubble` (unchanged). Lua's `pcall` catches it as any error.
+- **Failures are declared errors** (since 2026-11-27, when `Bubble` went;
+  each language's "Declared failures", below): an unchecked exception of
+  the failure's own class in JS, Python, Java, and C#, `Result<T, F>` in
+  Rust, `core::Expected<T, F>` in C++, and `error(x)` in Lua. Handlers
+  catch only those, so panics and host exceptions pass them. The
+  runtimes' `Bubble` types (Python `temper_core.Bubble`, Java
+  `temper.core.Bubble`, C# `TemperLang.Core.Bubble`, JS `Bubble`, C++
+  `TemperBubble`) are gone, so host code that caught them catches the
+  failure types instead.
 - **Panics aren't failures:** what core's docs say panics (an index out
   of bounds, `panic()`) is Python `BaseException`, Java `AssertionError`,
   C# `TemperLang.Core.Panic`, JS and Lua a plain error, Rust `panic!`, and
@@ -126,8 +126,8 @@ effects. File names keep Temper's directory names.
 - Statics: `static g()`, static properties as private static field plus
   `static get`, so assigning one throws. (Tempest stores the value in a
   module `let`, `Class$name`, which the init block outside the class sets.)
-- Generics only in JSDoc; nullable is `T | null`; failure throws `Bubble`,
-  an `Error`; promises are native; async uses the runtime's adapter.
+- Generics only in JSDoc; nullable is `T | null`; failures are `Error`
+  subclasses (below); promises are native; async uses the runtime's adapter.
 - Declared failures (RFC 164, in progress): each failure type is a class
   under one of the library's roots, sealed interfaces it declares
   (`WherewithError extends Error`, natively, not through `type()`), a
@@ -165,8 +165,8 @@ package `__init__.py` does `from .<root> import *` and imports every module.
   bases.
 - Statics: `@staticmethod`; static properties assigned after the class with
   `ClassVar` annotations.
-- Generics via module-level `TypeVar`s; nullable is `Union[T, None]`; failure
-  is `temper_core.Bubble`, a `RuntimeError`; promises are
+- Generics via module-level `TypeVar`s; nullable is `Union[T, None]`; failures
+  are exception classes (below); promises are
   `concurrent.futures.Future`s, annotated as `temper_core.TemperFuture`,
   its subclass that asyncio can `await`
   (Kotlin's annotate `Future`; a host passing its own plain `Future` as
@@ -207,8 +207,8 @@ initializer), one file per type, synthetic functional interfaces in
   `Builder` classes for 2+ parameters.
 - Generics `<T>`; nullable via `@temper.core.Nullable` with boxed types;
   function types use `java.util.function` where possible, else synthetic
-  interfaces; failure is `temper.core.Bubble`, an unchecked
-  `RuntimeException`; promises are `CompletableFuture`.
+  interfaces; failures are unchecked exceptions (below); promises are
+  `CompletableFuture`.
 - Declared failures (RFC 164, in progress): unchecked too. Each failure
   type is a class under one of the library's roots, sealed interfaces
   it declares, `public abstract class WherewithException extends
@@ -246,8 +246,8 @@ sub-namespace and subdirectory; one file per type; module top levels in
 - Optional parameters `int? i = null`; generic nullable via
   `TemperLang.Core.Optional<T>`.
 - Collections: `IReadOnlyList`, `IList`, `IReadOnlyDictionary`,
-  `IDictionary`; functions `Func`/`Action`; `Task<T>`; failure is
-  `TemperLang.Core.Bubble`, an `Exception`.
+  `IDictionary`; functions `Func`/`Action`; `Task<T>`; failures are
+  exception classes (below).
 - Exported `let`s are `public static` fields.
 - Declared failures (RFC 164, in progress): each failure type is a class
   under one of the library's roots, sealed interfaces it declares,
@@ -315,9 +315,10 @@ before anything else: statics are `OnceLock`s read with `unwrap()`.
   a failure the library doesn't export is a variant whose type
   host code can't name. A library with one exported root, and no `Error`
   of its own, also has it as the crate's `Error` (`pub type Error =
-  r#mod::WherewithError;`). A failure in a module's init is a
-  `temper_core::Error` with it as source; `uncaught` says "uncaught
-  failure" and each cause. Panics stay panics.
+  r#mod::WherewithError;`). A failure in a module's init or a test is a
+  `temper_core::Error`, now `Arc<dyn Failure>`, any failure, with
+  `temper_core::Result<T>` its alias; `uncaught` says "uncaught failure"
+  and each cause. Panics stay panics.
 
 **Naming.** Types keep their case; functions, methods and properties snake;
 statics `LOUD_SNAKE`; keywords `r#`. Public names are never numbered.
@@ -337,7 +338,8 @@ exports and `void global_init_<last segment>()`.
 `static make(...)`; properties are public fields plus `get_x()`/`set_x()`;
 interfaces are structs with pure virtual methods and virtual bases; templates
 for generics; optional parameters as overloads plus `NullableParam<T>`;
-failure throws `TemperBubble`; lists are `shared_ptr<vector<T>>`.
+failures are `core::Expected` results (below), never thrown; lists are
+`shared_ptr<vector<T>>`.
 
 - Declared failures (RFC 164, in progress): a function failing with one
   returns `temper::core::Expected<T, std::shared_ptr<F>>`, `std::expected`

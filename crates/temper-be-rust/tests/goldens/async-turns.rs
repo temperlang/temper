@@ -412,9 +412,46 @@ pub(crate) fn gate_b() -> temper_core::PromiseBuilder<i32> {
     crate::support::initialized(|| GATE_B.get()).clone()
 }
 
-pub fn halve(n: i32) -> temper_core::Result<i32> {
+#[derive(Clone, Debug)]
+#[non_exhaustive]
+pub enum HalveError {
+    Odd(Odd),
+}
+
+temper_core::impl_failure_enum!(HalveError, Odd(Odd));
+
+struct OddStruct {
+    n: i32,
+    cause: temper_core::Cause,
+}
+
+#[derive(Clone)]
+pub struct Odd(Arc<OddStruct>);
+
+impl Odd {
+    pub fn new(n: i32) -> Odd {
+        Odd(Arc::new(OddStruct {
+            n,
+            cause: temper_core::Cause::new(),
+        }))
+    }
+
+    pub fn message(&self) -> Arc<String> {
+        Arc::new(format!("odd (n: {})", self.0.n))
+    }
+
+    pub fn n(&self) -> i32 {
+        self.0.n
+    }
+}
+
+temper_core::impl_failure!(Odd, message, cause);
+
+temper_core::impl_any_value_trait!(Odd, [HalveError]);
+
+pub fn halve(n: i32) -> Result<i32, Odd> {
     if n.wrapping_rem(2) != 0 {
-        return Err(temper_core::Error::new());
+        return Err(Odd::new(n));
     }
     Ok(n.wrapping_div(2))
 }

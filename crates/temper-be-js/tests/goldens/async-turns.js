@@ -2,7 +2,7 @@ import {
   BrokenPromise,
   PromiseBuilder,
   adaptAwaiter,
-  bubble,
+  failureBase,
   listBuilderToList,
   listedJoin,
   modIntInt,
@@ -147,10 +147,11 @@ function shown(ints) {
 /**
  * @param {number} n
  * @returns {number}
+ * @throws {Odd}
  */
 export function halve(n) {
   if (modIntInt(n, 2) !== 0) {
-    bubble();
+    throw new Odd(n);
   }
   return (n / 2) | 0;
 }
@@ -189,6 +190,31 @@ class Counter extends type() {
       }
     }
     console.log(`${tag} done n=${this.#n}`);
+  }
+}
+
+export class HalveError extends Error {}
+
+failureBase(HalveError);
+
+export class Odd extends HalveError {
+  /** @type {number} */
+  #n;
+
+  /** @param {number} n */
+  constructor(n) {
+    super();
+    this.#n = n;
+  }
+
+  /** @returns {number} */
+  get n() {
+    return this.#n;
+  }
+
+  /** @returns {string} */
+  get message() {
+    return `odd (n: ${this.#n})`;
   }
 }
 

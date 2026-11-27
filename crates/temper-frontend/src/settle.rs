@@ -117,7 +117,7 @@ pub struct SettledModule {
     /// report, for [`crate::interp::run_tests`]; not run otherwise.
     pub tests: Option<NodeId>,
     /// Its tests' declarations, in source order: each a top-level `let
-    /// t# = new Pair(name, fn (test: Test): Void throws Bubble { … })`
+    /// t# = new Pair(name, fn (test: Test): Void throws Error { … })`
     /// ([`crate::testing`]).
     pub test_cases: Vec<NodeId>,
 }

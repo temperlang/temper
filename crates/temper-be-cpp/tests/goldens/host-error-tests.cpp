@@ -13,7 +13,17 @@ namespace host_error_tests {
 // optional.
 void global_init_init();
 
-int32_t hostFails(int32_t n);
+struct OopsError;
+struct Oops;
+
+struct OopsError : public virtual temper::core::Failure {};
+
+struct Oops : public virtual OopsError {
+  static std::shared_ptr<Oops> make();
+  temper::core::Str get_message() const override;
+};
+
+temper::core::Expected<int32_t, std::shared_ptr<Oops>> hostFails(int32_t n);
 void hostFailsTest();
 
 
@@ -34,7 +44,16 @@ namespace host_error_tests {
 
 namespace core = temper::core;
 
-int32_t hostFails(int32_t n) {
+std::shared_ptr<Oops> Oops::make() {
+  std::shared_ptr<Oops> self = std::make_shared<Oops>();
+  return self;
+}
+
+core::Str Oops::get_message() const {
+  return TEMPER_STR("oops");
+}
+
+core::Expected<int32_t, std::shared_ptr<Oops>> hostFails(int32_t n) {
   return _connected::hostFails(n);
 }
 
@@ -53,9 +72,10 @@ namespace host_error_tests {
 void hostErrorsArePanics(std::shared_ptr<temper_std::Test> const & test) {
   auto fn = [=]() -> core::Expected<void, std::shared_ptr<core::Failure>> {
     int32_t r;
-    try {
-      r = hostFails(1);
-    } catch (core::TemperBubble const &) {
+    auto hostFailsResult = hostFails(1);
+    if (hostFailsResult.has_value()) {
+      r = *hostFailsResult;
+    } else {
       r = -1;
     }
     test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("expected r != -1"); });
@@ -64,9 +84,10 @@ void hostErrorsArePanics(std::shared_ptr<temper_std::Test> const & test) {
   test->assertPanics(fn, TEMPER_STR("host error 1"));
   auto fn3 = [=]() -> core::Expected<void, std::shared_ptr<core::Failure>> {
     int32_t r;
-    try {
-      r = hostFails(2);
-    } catch (core::TemperBubble const &) {
+    auto hostFailsResult2 = hostFails(2);
+    if (hostFailsResult2.has_value()) {
+      r = *hostFailsResult2;
+    } else {
       r = -1;
     }
     test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("expected r != -1"); });
@@ -75,9 +96,10 @@ void hostErrorsArePanics(std::shared_ptr<temper_std::Test> const & test) {
   test->assertPanics(fn3, TEMPER_STR("host error 2"));
   auto fn4 = [=]() -> core::Expected<void, std::shared_ptr<core::Failure>> {
     int32_t r;
-    try {
-      r = hostFails(3);
-    } catch (core::TemperBubble const &) {
+    auto hostFailsResult3 = hostFails(3);
+    if (hostFailsResult3.has_value()) {
+      r = *hostFailsResult3;
+    } else {
       r = -1;
     }
     test->assert_(r != -1, []() -> core::Str { return TEMPER_STR("expected r != -1"); });

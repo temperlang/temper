@@ -12,7 +12,45 @@ pub(crate) fn init() -> temper_core::Result<()> {
 }
 
 #[cfg(test)]
-pub(crate) fn tries(f: Arc<dyn Fn() -> temper_core::Result<()> + Send + Sync>) -> bool {
+#[derive(Clone, Debug)]
+pub(crate) enum Problem {
+    Oops(Oops),
+}
+
+#[cfg(test)]
+temper_core::impl_failure_enum!(Problem, Oops(Oops));
+
+#[cfg(test)]
+struct OopsStruct {
+    cause: temper_core::Cause,
+}
+
+#[cfg(test)]
+#[derive(Clone)]
+pub(crate) struct Oops(Arc<OopsStruct>);
+
+#[cfg(test)]
+impl Oops {
+    #[allow(dead_code)]
+    pub fn new() -> Oops {
+        Oops(Arc::new(OopsStruct {
+            cause: temper_core::Cause::new(),
+        }))
+    }
+
+    pub fn message(&self) -> Arc<String> {
+        Arc::new("oops".to_string())
+    }
+}
+
+#[cfg(test)]
+temper_core::impl_failure!(Oops, message, cause);
+
+#[cfg(test)]
+temper_core::impl_any_value_trait!(Oops, [Problem]);
+
+#[cfg(test)]
+pub(crate) fn tries(f: Arc<dyn Fn() -> Result<(), Oops> + Send + Sync>) -> bool {
     let mut finished = true;
     if f().is_err() {
         {

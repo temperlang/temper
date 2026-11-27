@@ -18,9 +18,9 @@ program it came from; stored facts are rechecked by recomputing them.
   `let`s a function's body starts with, one per optional parameter, each
   the parameter coalesced with its default (rule N2), which backends
   print in place or as a local, and which their surfaces read.
-- **Purity:** whether an expression may have side effects or bubble,
+- **Purity:** whether an expression may have side effects or fail,
   for evaluation-order temporaries.
-- **Bubbling:** may-bubble calls and their handlers.
+- **Failing:** calls that may fail and their handlers.
 - **Call graph and reaches-module-state:** for init guards and init
   order.
 - **Definite assignment:** for `Let`s without initializers (Java, Rust,
@@ -49,7 +49,7 @@ program it came from; stored facts are rechecked by recomputing them.
     that may do something: any that sets no unit, and any that sets one
     with a value that isn't simple (anything but literals, names,
     function values, and list literals, conversions, operators that
-    can't bubble, and core's pure calls such as `getConsole()`, of
+    can't panic, and core's pure calls such as `getConsole()`, of
     those). The tests' are tests and `keepTest`s. Connected
     declarations aren't roots, as in Kotlin: host code uses only what's
     exported or kept.
@@ -139,8 +139,8 @@ needs these:
   module, gives an expression's `Effect`: whether it writes module
   state or calls something that may (a function that does, through
   calls, or a connected declaration not in `PURE_CORE`), reads a `var`
-  that functions write, or may bubble; two operands' order shows when
-  one writes and the other writes, reads, or bubbles
+  that functions write, or may fail; two operands' order shows when
+  one writes and the other writes, reads, or fails
   (`Effect::conflicts`). `analysis::calls_nothing` says whether an
   expression may run under a lock. Lua's first variant (2026-10-30)
   uses `Effect::any` the other way round: Lua keeps Temper's order, but
@@ -148,7 +148,7 @@ needs these:
   logic (`not a and b`) needs a right side without effects, and an `if`
   value spelled `(c and a) or (not c and b)` a condition without them,
   which it evaluates twice; otherwise it spells them another way.
-- **May-bubble:** which calls and functions may bubble, for F3 and F4
+- **May-fail:** which calls and functions may fail, for F3 and F4
   and for stored marks.
 - **Module state:** which module `let`s each function reads and
   writes, directly or through calls; for F5, [question 19](open-questions.md)'s warning,

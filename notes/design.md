@@ -318,7 +318,7 @@ A small, explicitly specified, fully settled IR:
   `return`, `throw`, `try`, labeled `break`/`continue`); expressions (calls,
   operators, member access, literals, lambdas, casts, null checks).
 - Types are tmpl's own: nominal types with arguments, function types,
-  nullable types, and "may fail" (Temper's bubble), never frontend objects.
+  nullable types, and "may fail" (a declared failure type), never frontend objects.
 - Names are tmpl's own (section 8).
 - It depends on nothing in the frontend, so backends build and test against
   tmpl alone, and a tmpl dump is a readable debugging format.

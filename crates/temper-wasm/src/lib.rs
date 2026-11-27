@@ -930,7 +930,7 @@ mod tests {
 
     /// The playground's case: an operator missing in `cents % 100` is one
     /// error, at `100`; `part` is still declared, so its later uses are
-    /// fine; the run fails where the error is; and the code is written.
+    /// fine; the run panics where the error is; and the code is written.
     #[test]
     fn compiles_with_a_missing_operator() {
         let source = "let cents = 1234;\n\
@@ -943,11 +943,11 @@ mod tests {
                         \"message\":\"Expected an operator or `;` before `100`\",\
                         \"file\":\"main.temper\",\"from\":36,\"to\":39,\"line\":2,\"column\":19}],\
                         \"run\":{\"output\":[],\
-                        \"failure\":\"Failed: Expected an operator or `;` before `100`\"},";
+                        \"failure\":\"Panicked: Expected an operator or `;` before `100`\"},";
         assert!(json.starts_with(expected), "{json}");
         if py != 0 {
             assert!(
-                json.contains("_cents: int = 1234\\nraise _Bubble()\\n"),
+                json.contains("_cents: int = 1234\\nraise BaseException('panic')\\n"),
                 "{json}"
             );
         }

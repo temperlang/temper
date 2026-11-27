@@ -112,8 +112,8 @@ class Core {
         while (matcher.find()) {
             sb.append(sourceText, prior, matcher.start());
             prior = matcher.end();
-            // The format function can't bubble, and what else it throws
-            // passes, as from any callback.
+            // What the format function throws passes, as from any
+            // callback.
             sb.append(replaceText.apply(converter.convertGroups(matcher)));
         }
         sb.append(sourceText, prior, sourceText.length());

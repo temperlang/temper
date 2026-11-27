@@ -4,8 +4,6 @@
 //!
 //! A failure type is a class or interface below core's `Error`, the root,
 //! which a program has as an external interface where it uses failures.
-//! `Bubble` stays apart: a scalar that's only ever a failure type, never
-//! a value's, and that no failure type is below.
 
 use crate::Program;
 use crate::analysis::{ancestors, bindings, nominal_decl, walk};
@@ -71,8 +69,7 @@ pub fn is_guarded_elsewhere(p: &Program, id: NodeId) -> bool {
 }
 
 /// Whether `ty` is core's `Error`, any error: a test's failure, and
-/// what std's `testing` takes, which may be a bubble too, until `Bubble`
-/// goes.
+/// what std's `testing` takes.
 pub fn is_root_type(p: &Program, ty: TypeId) -> bool {
     nominal_decl(p, ty).is_some_and(|d| is_root(p, d))
 }
@@ -136,7 +133,7 @@ fn is_nominal_failure(p: &Program, ty: TypeId) -> bool {
 
 /// The failure type a function or method declares, as targets document
 /// it (a `throws` clause, a doc comment): a failure class's or
-/// interface's, never `Bubble` or a failure parameter, which exceptions
+/// interface's, never a failure parameter, which exceptions
 /// leave unchecked.
 pub fn declared(p: &Program, decl: DeclId) -> Option<TypeId> {
     let fail = p.signature(decl)?.fail?;
@@ -168,9 +165,8 @@ pub fn unchecked_args(p: &Program, decl: DeclId, args: &[TypeId]) -> Vec<TypeId>
 /// What a node may fail with, if anything: a failing call's callee's
 /// failure type, with its type arguments put in, so nothing where a
 /// failure parameter is given `Never<…>` ([`declared_failure`]); a
-/// `throw`'s value's type; core's `BrokenPromise` for an `await`; and
-/// `Bubble` for `bubble()` and for `Error` nodes, which fail as
-/// `bubble()` does.
+/// `throw`'s value's type; and core's `BrokenPromise` for an `await`.
+/// `Error` nodes panic.
 pub fn node_failure(p: &Program, id: NodeId) -> Option<TypeId> {
     match p.nodes.get(id) {
         Node::CallFunction {
@@ -189,7 +185,6 @@ pub fn node_failure(p: &Program, id: NodeId) -> Option<TypeId> {
         Node::Await {
             may_bubble: true, ..
         } => broken_promise(p),
-        Node::Bubble { .. } | Node::Error { .. } => Some(TypeId::BUBBLE),
         _ => None,
     }
 }
@@ -312,14 +307,10 @@ fn find(p: &Program, id: NodeId, found: &mut Vec<(NodeId, TypeId)>) {
 }
 
 /// One type for what several places may fail with, as the frontend joins
-/// them: `Bubble` if any may bubble; else the closest failure type every
-/// one is (itself, or one of its supertypes, nearest first), or the root
+/// them: the closest failure type every one is (itself, or one of its supertypes, nearest first), or the root
 /// (`root`'s type) where there's none closer; `None` for none.
 pub fn join(p: &Program, root: Option<DeclId>, fails: &[TypeId]) -> Option<TypeId> {
     let (&first, rest) = fails.split_first()?;
-    if fails.contains(&TypeId::BUBBLE) {
-        return Some(TypeId::BUBBLE);
-    }
     if rest.iter().all(|&f| f == first) {
         return Some(first);
     }
@@ -479,7 +470,7 @@ pub fn not_yet(p: &Program) -> Result<(), String> {
 /// Where a program first uses declared failures, for a target that
 /// doesn't have them yet to say so: a failure type, a signature that
 /// fails with one, a `throw`, or a `catch`; `None` for a program that
-/// uses only `Bubble`.
+/// uses none.
 pub fn first_use(p: &Program) -> Option<String> {
     // Every failure type is below core's `Error`.
     let root = Some(root(p)?);
@@ -491,7 +482,7 @@ pub fn first_use(p: &Program) -> Option<String> {
             return Some(format!("the failure type {}", p.name(d)));
         }
         let fail = p.types.signature(decl.ty).and_then(|s| s.fail);
-        if let Some(fail) = fail.filter(|&f| f != TypeId::BUBBLE) {
+        if let Some(fail) = fail {
             return Some(format!(
                 "{} {}, which fails with {}",
                 decl.kind.name(),
@@ -555,8 +546,8 @@ module t#0 {
 ";
 
     /// A join is the nearest failure type above them all, the root where
-    /// there's none closer, and `Bubble` if any may bubble; failures under
-    /// a handler's body are its own, and only its fallback passes them on.
+    /// there's none closer; failures under a handler's body are its own,
+    /// and only its fallback passes them on.
     #[test]
     fn joins_and_failures_under() {
         let p = crate::text::read(PROGRAM).unwrap();
@@ -567,10 +558,6 @@ module t#0 {
         assert_eq!(join(&p, root, &[ty(3), ty(3)]), Some(ty(3)));
         assert_eq!(join(&p, root, &[ty(3), ty(4)]), Some(ty(2)));
         assert_eq!(join(&p, root, &[ty(3), ty(5)]), Some(ty(1)));
-        assert_eq!(
-            join(&p, root, &[ty(3), TypeId::BUBBLE]),
-            Some(TypeId::BUBBLE)
-        );
         assert!(is_failure_type(&p, root, ty(1)) && !is_failure_type(&p, root, TypeId::INT32));
         assert!(is_library_root(&p, root, DeclId(1)) && !is_library_root(&p, root, DeclId(2)));
         let module = &p.modules[0];

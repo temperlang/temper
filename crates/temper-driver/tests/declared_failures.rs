@@ -2,8 +2,8 @@
 //! translates the testkit's `failures` and `host-failures` programs (by
 //! their tmpl goldens), but for host code and imported libraries' names
 //! they're given elsewhere, as each runs them in its own functional
-//! tests; and a program with only
-//! `Bubble` isn't one that uses them.
+//! tests; and a program with only core's `Error` isn't one that uses
+//! them.
 
 use std::fs;
 use std::path::Path;
@@ -48,12 +48,12 @@ fn every_backend_translates_declared_failures() {
     }
 }
 
-/// A program with only `Bubble` isn't one that uses declared failures,
-/// as core's `Error` alone isn't either.
+/// A program with only core's `Error`, which it never throws, isn't one
+/// that uses declared failures.
 #[test]
-fn bubbles_are_not_declared_failures() {
+fn core_error_alone_is_not_declared_failures() {
     let p = text::read(
-        "tmpl 1 model 1 library bubbles 0.1.0
+        "tmpl 1 model 1 library plain 0.1.0
 
 uses `temper-core`#2 0.1.0 {
   interface Error#3 {
@@ -62,9 +62,9 @@ uses `temper-core`#2 0.1.0 {
   }
 }
 
-module bubbles#0 {
-  fn f#1(): Int32 throws Bubble {
-    return (orelse((bubble()^): Int32, (bubble()^): Int32)): Int32;
+module plain#0 {
+  fn f#1(): Int32 {
+    return 1;
   }
 
   init {}

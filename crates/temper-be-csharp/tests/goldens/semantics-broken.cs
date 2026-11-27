@@ -6,6 +6,6 @@ public static class BrokenGlobal
 {
     static BrokenGlobal()
     {
-        Core.Bubble();
+        throw Core.Panic("panic");
     }
 }

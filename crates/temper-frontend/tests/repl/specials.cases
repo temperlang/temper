@@ -31,9 +31,9 @@ let twice(n: Int): Int { n * 2 };
 // interactive#2
 twice(x) + 1;
 interactive#7: void
-Failed: describe: there's no input 9; they're 0 to 8
+Panicked: describe: there's no input 9; they're 0 to 8
 interactive#8: fail
-Failed: describe: the step is "parsed", "settled", "types", "module", or "tmpl"
+Panicked: describe: the step is "parsed", "settled", "types", "module", or "tmpl"
 interactive#9: fail
 
 === the module renames names declared again
@@ -88,11 +88,11 @@ help("x")
 let x = 5
 help("x")
 --- transcript
-Failed: help takes a name, as help("greet"), or a function or type, as help(greet), not an Int
+Panicked: help takes a name, as help("greet"), or a function or type, as help(greet), not an Int
 interactive#0: fail
-Failed: help: nothing named nope is declared; help() says what the REPL offers
+Panicked: help: nothing named nope is declared; help() says what the REPL offers
 interactive#1: fail
-Failed: help: nothing named x is declared; help() says what the REPL offers
+Panicked: help: nothing named x is declared; help() says what the REPL offers
 interactive#2: fail
 interactive#3: void
 x: Int32
@@ -352,5 +352,5 @@ let twice(n: Int): Int { n * 2 }
 runTests()
 --- transcript
 interactive#0: void
-Failed: runTests: input 0 declared no tests
+Panicked: runTests: input 0 declared no tests
 interactive#1: fail
