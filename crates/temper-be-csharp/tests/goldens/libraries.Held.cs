@@ -1,7 +1,7 @@
 namespace Libraries;
 
 public class Held<T>
-    where T : IShown
+    where T : class, IShown
 {
     private readonly T item;
     private readonly Held<T>? next;

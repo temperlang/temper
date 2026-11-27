@@ -42,8 +42,8 @@ gives.
       b.length + n
     }
     let relayed<S extends Scene, T>(x: T): T { tagged<S, T>(x) }
-    // Nothing at a call solves `B`, so it's `AnyValue`. (C# can't yet
-    // name a `B?` here, as `Pair<A, B?>`, at the call.)
+    // Nothing at a call solves `B`, so it's `AnyValue`. (`Pair<A, B?>`
+    // is not yet in C# for an unconstrained `B`: C#'s inline cases.)
     let halfPair<A, B>(a: A): Pair<A, List<B>> { new Pair<A, List<B>>(a, []) }
     // A `null` argument doesn't tell Rust `T`, so it's spelled out.
     let opt<T>(x: T?): T? { x }

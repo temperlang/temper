@@ -2485,6 +2485,27 @@ copied Kotlin's:
     plain `B?` result converts to a class's `shared_ptr` by throwing on
     null. `x as T` from a null `T?` bubbles for a class too.
     Test: temper-be-cpp/tests/functional.rs, `NULLABLE_TYPE_ARGS`.
+  - **C# `T?` for a type parameter bounded by a class or interface**
+    (not core's, connected, or `@fun`) is C#'s own `T?`, with `class`
+    added to an interface bound (`where B : class, IShown`), so a
+    generic call's `Pair<A, B?>` is the `KeyValuePair<int, Named?>` its
+    caller names. Kotlin's writes `Optional<B>` for every type
+    parameter, and its C# fails there (CS0029). Only core declares the
+    supertypes of what C# writes as value types (`int`, `bool`), so no
+    other library's bound admits one; core's (`MapKey`, `Equatable`)
+    keep `Optional<T>`. Any other `T?` inside a type argument or
+    function type, at a call or field that gives it another type
+    (`Pair<Int, AnyValue?>`, `List<Int?>`, `fn (Int?): Int`), is not
+    yet, naming the workaround (bound `T`, or change the shape), where
+    Kotlin's and tempest's C# failed in csc; declarations stay legal
+    (std's `OrNullJsonAdapter<T>`), and results C# never names (a
+    receiver's, a dropped one) pass. Not checked: an upcast to such a
+    type (`JsonAdapter<Int?>` from `OrNullJsonAdapter<Int>`), which
+    still fails in csc. `x as T` from an `Optional<T>` reads `.Value`,
+    which throws (bubbles) for none; it was `Core.CastToNonNull<T>(x)`,
+    which cast the boxed `Optional` (2026-11-27).
+    Test: temper-be-csharp/tests/functional.rs, `NULLABLE_TYPE_ARGS`
+    and `nested_nullable_type_args`.
   - **Not compared:** the Kotlin layout test (`kotlin_layout.rs`)
     doesn't cover the generics tests yet.
 - **Core's other types in the backends** (2026-11-02):

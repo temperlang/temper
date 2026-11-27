@@ -21,6 +21,7 @@
 - [Classes' `==`](#classes-)
 - [Lua: `Int64` on LuaJIT and Lua 5.1](#lua-int64-on-luajit-and-lua-51)
 - [C++: `Float64.toString` as on the JVM](#c-float64tostring-as-on-the-jvm)
+- [C#: a bounded type parameter's `T?` is `T?`](#c-a-bounded-type-parameters-t-is-t)
 - [`temper` and its `TEMPER_*` settings](#temper-and-its-temper_-settings)
 - [Fixes on Windows](#fixes-on-windows)
 
@@ -509,6 +510,19 @@ C++ writes a `Float64` as the interpreter and Java do: plain from 1e-3 up
 to 1e7 (`-1500.0`, not `-1.5e+03`), and otherwise with one digit before
 the point and an `e+N` or `e-N` exponent (`1.0e+7`), in the fewest
 digits that read back as the same number.
+
+## C#: a bounded type parameter's `T?` is `T?`
+
+Where a type parameter is bounded by a class or interface of your own
+(or std's), as in `T extends Shown`, C# now writes its `T?` as C#'s own
+`T?`, adding `class` to an interface's constraint (`where T : class,
+IShown`), instead of `TemperLang.Core.Optional<T>`. So a generic
+function's `Pair<A, B?>` result is the `KeyValuePair<int, Named?>` its
+caller names. Other type parameters' `T?` stays `Optional<T>`, since
+such a `T` may be a C# value type like `int`. Where that `T?` sits
+inside a type argument or function type (`Pair<A, B?>`, `List<T?>`)
+and a call gives it another type, the C# backend now says it's not yet
+supported, suggesting a bound, where C#'s compiler failed before.
 
 ## `temper` and its `TEMPER_*` settings
 

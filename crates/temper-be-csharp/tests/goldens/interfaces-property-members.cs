@@ -6,7 +6,7 @@ namespace PropertyMembers;
 public static class PropertyMembersGlobal
 {
     internal static IT LeastX<IT>(IT a, IT b)
-        where IT : II
+        where IT : class, II
     {
         if (StringUtil.CompareStringsByCodePoint(((II)a).X, ((II)b).X) < 0)
         {

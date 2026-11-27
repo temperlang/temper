@@ -10,7 +10,7 @@ public static class GenericsGlobal
     internal static readonly IDictionary<string, int> tally;
 
     internal static T Tagged<S, T>(T x)
-        where S : IScene
+        where S : class, IScene
     {
         return x;
     }
@@ -22,7 +22,7 @@ public static class GenericsGlobal
     }
 
     internal static T Relayed<S, T>(T x)
-        where S : IScene
+        where S : class, IScene
     {
         return Tagged<S, T>(x);
     }

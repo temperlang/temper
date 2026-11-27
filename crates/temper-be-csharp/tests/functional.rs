@@ -141,6 +141,43 @@ const DROPPED: &str = "# Dropped
     console.log(l.n.toString());
 ";
 
+/// A type parameter's `B?` where `B` is bounded by a Temper class or
+/// interface: plain `B?`, with `class` added to an interface's bound
+/// (`where B : class, IShown`), so a generic result's `B?` in a type
+/// argument (`KeyValuePair<int, Named?>`, `IReadOnlyList<Tag?>`) is the
+/// type the caller's local names; and `x as T` from a `T?`, which for an
+/// unconstrained `T` is `Optional<T>`, unwrapped, and from null bubbles.
+const NULLABLE_TYPE_ARGS: &str = "# Nullable type arguments
+
+    class Named(public name: String) {}
+    interface Shown { get shown(): String; }
+    class Tag(public tag: String) extends Shown {
+      public get shown(): String { tag }
+    }
+    let halfNamed<A, B extends Named>(a: A): Pair<A, B?> { new Pair<A, B?>(a, null) }
+    let halfShown<A, B extends Shown>(a: A, b: B?): Pair<A, B?> { new Pair<A, B?>(a, b) }
+    class Shelf<T extends Shown>(public var top: T?) {
+      public all(): List<T?> { [top, null] }
+    }
+    let shownOr<T extends Shown>(x: T?): String { if (x == null) { \"-\" } else { x.shown } }
+    let known<T>(x: T?): T throws Bubble { x as T }
+    let knownShown<T extends Shown>(x: T?): T throws Bubble { x as T }
+    let halfThree = halfNamed(3);
+    let halfTag: Pair<Int, Tag?> = halfShown(1, new Tag(\"t\"));
+    let shelf = new Shelf<Tag>(null);
+    let empty: List<Tag?> = shelf.all();
+    shelf.top = new Tag(\"u\");
+    let full: List<Tag?> = shelf.all();
+    console.log(\"${halfThree.key} ${halfThree.value == null} ${shownOr(halfTag.value)} ${shownOr(empty[0])} ${shownOr(full[0])} ${full.length}\");
+    let named: Named? = null;
+    let none: Int? = null;
+    let got = known(named) orelse new Named(\"bubbled\");
+    let tag: Tag? = null;
+    let missing = knownShown(tag) orelse new Tag(\"absent\");
+    let minus = known(none) orelse -1;
+    console.log(\"${known(new Named(\"n\")).name} ${got.name} ${known<Int>(2)} ${minus} ${knownShown(new Tag(\"k\")).shown} ${missing.shown}\");
+";
+
 /// The .NET analyzers' rules allowed in generated code, each with why;
 /// every other rule is an error (`AnalysisMode` `All`, as warnings, and
 /// warnings as errors), in the libraries' sources, Kotlin's `Logging.cs`
@@ -214,6 +251,12 @@ fn cases() -> Vec<Case> {
         "dropped.temper.md",
         DROPPED,
         vec!["13".into(), "-1".into(), "25".into()],
+    ));
+    cases.push(Case::inline(
+        "nullable-type-args",
+        "nullable-type-args.temper.md",
+        NULLABLE_TYPE_ARGS,
+        vec!["3 true t - u 2".into(), "n bubbled 2 -1 k absent".into()],
     ));
     cases
 }
@@ -375,6 +418,45 @@ fn missing_host_code() {
             let error = translate(&kit::program_for(&case, &CSHARP.rules), &CSHARP).unwrap_err();
             assert!(error.what.contains(file), "{key}: {error}");
         }
+    });
+}
+
+/// A type parameter's `T?` inside a type argument or a function type, `T`
+/// unconstrained, at a call that gives it something C# writes otherwise
+/// (`Pair<Int, AnyValue?>`, `List<Int?>`, `fn (Int?): Int`): not yet,
+/// naming the workaround, where C#'s compiler would fail, since the
+/// callee's `T?` is `Optional<T>` (notes/kotlin-differences.md). Still
+/// fine: a generic caller's own unconstrained `B?`, which is
+/// `Optional<B>` on both sides, and a result read at once, which C#
+/// never names.
+#[test]
+fn nested_nullable_type_args() {
+    let half = "let halfPair<A, B>(a: A): Pair<A, B?> { new Pair<A, B?>(a, null) }\n";
+    let bad = [
+        format!("{half}let half = halfPair<Int>(8);\nconsole.log(half.key.toString());\n"),
+        "class Named(public name: String) {}\n\
+         let listOf<T>(x: T?): List<T?> { [x] }\n\
+         let ls = listOf<Named>(null);\nconsole.log(ls.length.toString());\n"
+            .into(),
+        "let each<T>(x: T?, f: fn (T?): Int): Int { f(x) }\n\
+         let n = each<Int>(1, fn (y: Int?): Int { y ?? 0 });\nconsole.log(n.toString());\n"
+            .into(),
+    ];
+    let fine = format!(
+        "{half}export let relay<A, B>(a: A): Pair<A, B?> {{ halfPair<A, B>(a) }}\n\
+         console.log(halfPair<Int>(8).key.toString());\n"
+    );
+    kit::with_stack(move || {
+        for text in bad {
+            let case = Case::inline("nested", "nested.temper", &text, Vec::new());
+            let error = translate(&kit::program_for(&case, &CSHARP.rules), &CSHARP).unwrap_err();
+            assert!(
+                error.what.contains("bound it by a class or interface"),
+                "{text}: {error}"
+            );
+        }
+        let case = Case::inline("nested", "nested.temper", &fine, Vec::new());
+        translate(&kit::program_for(&case, &CSHARP.rules), &CSHARP).unwrap();
     });
 }
 

@@ -1,7 +1,7 @@
 namespace PropertyMembers;
 
 internal class SSub<T> : ISi<T>
-    where T : II
+    where T : class, II
 {
     private readonly T thing;
 
