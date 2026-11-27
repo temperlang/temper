@@ -121,8 +121,9 @@ fn cases() -> Vec<Case> {
 /// This crate's own programs, in `tests/programs/`: `py-builtin-params`,
 /// parameters named like Python's builtins, which keep their names
 /// (`host_interop` passes one by name), and names a function binds more
-/// than once, annotated once.
-const PY_PROGRAMS: [&str; 1] = ["py-builtin-params"];
+/// than once, annotated once; and `py-lone-type-vars`, type parameters
+/// that a signature names only once, in its result.
+const PY_PROGRAMS: [&str; 2] = ["py-builtin-params", "py-lone-type-vars"];
 
 /// The lines of a program's log blocks, in order.
 fn log_blocks(text: &str) -> Vec<String> {

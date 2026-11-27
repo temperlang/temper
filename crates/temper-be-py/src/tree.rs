@@ -333,6 +333,24 @@ pub enum Stmt {
     },
 }
 
+impl Stmt {
+    /// The statement under any comments.
+    pub fn uncommented(&self) -> &Stmt {
+        match self {
+            Stmt::Commented(s, _) => s.uncommented(),
+            s => s,
+        }
+    }
+
+    /// The statement under any comments, to change.
+    pub fn uncommented_mut(&mut self) -> &mut Stmt {
+        match self {
+            Stmt::Commented(s, _) => s.uncommented_mut(),
+            s => s,
+        }
+    }
+}
+
 /// One `.py` file.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Module {
@@ -564,7 +582,7 @@ pub fn mark_unused(body: &mut [Stmt]) {
         })
         .collect();
     for i in 0..body.len() {
-        let (name, rule) = match &body[i] {
+        let (name, rule) = match body[i].uncommented() {
             Stmt::Def { name, .. } => (name, "reportUnusedFunction"),
             Stmt::Class { name, .. } => (name, "reportUnusedClass"),
             _ => continue,
@@ -579,11 +597,38 @@ pub fn mark_unused(body: &mut [Stmt]) {
             .chain([own])
             .any(|t| names_in(t).any(|n| n == name));
         if !used {
-            let comment = format!("pyright: ignore[{rule}]");
             let s = std::mem::replace(&mut body[i], Stmt::Break);
-            body[i] = Stmt::Commented(Box::new(s), comment);
+            body[i] = commented(s, &format!("pyright: ignore[{rule}]"));
         }
     }
+}
+
+/// A statement with a checker's ignore comment, `pyright: ignore[…]` or
+/// `type: ignore[…]`, merged into one it has already, as each checker
+/// reads only a line's first comment: one list of rules, or `type:
+/// ignore`'s alone, which pyright also reads, for any rule.
+pub fn commented(s: Stmt, comment: &str) -> Stmt {
+    let Stmt::Commented(inner, had) = s else {
+        return Stmt::Commented(Box::new(s), comment.into());
+    };
+    let parts = |c: &str| {
+        let (kind, rest) = c.split_once(": ignore[")?;
+        Some((kind.to_string(), rest.strip_suffix(']')?.to_string()))
+    };
+    let merged = match (parts(&had), parts(comment)) {
+        (Some((a, rules)), Some((b, more))) if a == b => {
+            let mut all: Vec<&str> = rules.split(", ").collect();
+            all.extend(
+                more.split(", ")
+                    .filter(|r| !rules.split(", ").any(|h| h == *r)),
+            );
+            format!("{a}: ignore[{}]", all.join(", "))
+        }
+        (Some((a, _)), Some(_)) if a == "type" => had,
+        (Some(_), Some((b, _))) if b == "type" => comment.into(),
+        _ => format!("{had}  # {comment}"),
+    };
+    Stmt::Commented(inner, merged)
 }
 
 /// The identifiers in some code (and words in its strings).
@@ -645,10 +690,7 @@ pub fn module(m: &Module) -> String {
     }
     let mut previous_def = None;
     for (i, s) in m.body.iter().enumerate() {
-        let is_def = match s {
-            Stmt::Commented(s, _) => matches!(**s, Stmt::Def { .. } | Stmt::Class { .. }),
-            _ => matches!(s, Stmt::Def { .. } | Stmt::Class { .. }),
-        };
+        let is_def = matches!(s.uncommented(), Stmt::Def { .. } | Stmt::Class { .. });
         if i == 0 {
             if (!m.imports.is_empty() || !m.modules.is_empty() || m.exports.is_some())
                 && m.host.is_none()
@@ -1225,7 +1267,7 @@ fn stmt(out: &mut String, s: &Stmt, depth: usize) {
             }
             let mut previous_def = None;
             for s in body {
-                let is_def = matches!(s, Stmt::Def { .. });
+                let is_def = matches!(s.uncommented(), Stmt::Def { .. });
                 if previous_def.is_some_and(|p| p || is_def) {
                     out.push('\n');
                 }
@@ -1390,5 +1432,36 @@ mod tests {
         assert!(text.contains("    return _b.float('-inf')\n"), "{text}");
         let mut bare = vec![Stmt::Expr(len_of("xs"))];
         assert!(!qualify_builtins(&mut bare, &["len"], "_b"));
+    }
+
+    /// Ignore comments on one statement merge into one, as each checker
+    /// reads only a line's first: pyright's rules into one list, and
+    /// into `type: ignore`, which pyright reads for any rule.
+    #[test]
+    fn ignores_merged() {
+        let comment = |s: &Stmt| match s {
+            Stmt::Commented(inner, c) => {
+                assert_eq!(**inner, Stmt::Break);
+                c.clone()
+            }
+            _ => panic!("{s:?}"),
+        };
+        let a = "pyright: ignore[reportA]";
+        let once = commented(Stmt::Break, a);
+        assert_eq!(comment(&once), a);
+        let twice = commented(commented(once.clone(), "pyright: ignore[reportB]"), a);
+        assert_eq!(comment(&twice), "pyright: ignore[reportA, reportB]");
+        let typed = "type: ignore[override]";
+        assert_eq!(comment(&commented(once.clone(), typed)), typed);
+        let both = commented(commented(Stmt::Break, typed), "type: ignore[type-var]");
+        assert_eq!(comment(&both), "type: ignore[override, type-var]");
+        assert_eq!(
+            comment(&commented(both, a)),
+            "type: ignore[override, type-var]"
+        );
+        assert_eq!(
+            comment(&commented(once, "note")),
+            "pyright: ignore[reportA]  # note"
+        );
     }
 }

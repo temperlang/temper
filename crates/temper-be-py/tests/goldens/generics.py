@@ -144,7 +144,7 @@ def _relayed(x: _T, /) -> _T:
     return _tagged(x)
 
 
-def _half_pair(a: _A, /) -> _Pair[_A, _Sequence[_B]]:
+def _half_pair(a: _A, /) -> _Pair[_A, _Sequence[_B]]:  # pyright: ignore[reportInvalidTypeVarUse]
     return _Pair(a, ())
 
 

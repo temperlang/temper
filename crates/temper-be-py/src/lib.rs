@@ -30,6 +30,8 @@
 //! `panic()` as `raise BaseException('panic')`, which no `orelse`
 //! catches; and generics: module-level `TypeVar`s (invariant, as
 //! Temper's type parameters are, where Kotlin's makes some covariant),
+//! kept where a signature names one only in its result, with an ignore
+//! comment for the checkers, so a call's expected type solves it;
 //! `Generic[…]` bases, and core's lists and maps as Kotlin's runtime
 //! models them (`List` and `Listed` a `Sequence`, a literal a `tuple`,
 //! `ListBuilder` a `MutableSequence` made as `[]`, `Map` a

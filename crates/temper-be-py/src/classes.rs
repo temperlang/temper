@@ -22,7 +22,7 @@
 //! order, so the class names its pick (`a = C.a`).
 
 use crate::translate::{R, Translator, present};
-use crate::tree::{Bin, Expr, Stmt};
+use crate::tree::{self, Bin, Expr, Stmt};
 use std::collections::BTreeSet;
 use temper_tmpl::analysis::{ancestors, as_super, is_plain_to_string, nominal_decl};
 use temper_tmpl::qname::{is_external, library_of};
@@ -500,7 +500,7 @@ impl Translator<'_> {
                     let name = self.member_name(d);
                     let def = self.function(m, name, vec!["staticmethod".into()])?;
                     body.push(if self.static_clash(d) {
-                        Stmt::Commented(Box::new(def), STATIC_OVERRIDE.into())
+                        tree::commented(def, STATIC_OVERRIDE)
                     } else {
                         def
                     });
