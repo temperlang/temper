@@ -72,7 +72,7 @@
 //!   `data` class (`Facts::DATA`) is plain data, as C++ and Rust copy it
 //!   without its constructor: no getters or setters, and one constructor
 //!   that only stores each parameter, in order, in the field of its
-//!   name, an optional one's default `null`, with no other fields.
+//!   name, an optional one after its default, with no other fields.
 //! - **N1** (nullable types, subset B) `Null` typed nullable; `IsNull`
 //!   and `NonNull` only on nullable values; `NonNull` from `T?` to `T`
 //!   and `AsNullable` from `T` to `T?`, exactly; `EqNullable` an
@@ -2589,7 +2589,10 @@ fn body_lets(p: &Program, body: NodeId, out: &mut Vec<DeclId>) {
 /// C5: whether a `data` class's `members` are the plain data its fact
 /// promises: no getters or setters, and one constructor whose body only
 /// stores each parameter, in order, in the field of its name, after
-/// `let b2 = coalesce(b, null)` for an optional one, with no other fields.
+/// `let b2 = coalesce(b, d)` for an optional one, with no other fields.
+/// Its default `d` may be any expression: a copy passes a value of the
+/// field it came from, which the frontend checks its default gave only
+/// where it's null, so the default never runs for it.
 fn is_plain_data(p: &Program, members: Kids) -> bool {
     let (mut fields, mut ctors) = (Vec::new(), Vec::new());
     for &m in p.nodes.list(members) {
@@ -2613,7 +2616,7 @@ fn is_plain_data(p: &Program, members: Kids) -> bool {
         return false;
     };
     let (params, stmts) = (p.nodes.list(params), p.nodes.list(stmts));
-    // First, each optional parameter or its default, null, in a local.
+    // First, each optional parameter or its default, in a local.
     let lets = (stmts.iter())
         .take_while(|&&s| matches!(p.nodes.get(s), Node::Let { .. }))
         .count();
@@ -2626,11 +2629,10 @@ fn is_plain_data(p: &Program, members: Kids) -> bool {
         else {
             return false;
         };
-        let Node::Coalesce { left, right } = p.nodes.get(init) else {
+        let Node::Coalesce { left, .. } = p.nodes.get(init) else {
             return false;
         };
-        let (Node::Local { local: param }, Node::Null {}) = (p.nodes.get(left), p.nodes.get(right))
-        else {
+        let Node::Local { local: param } = p.nodes.get(left) else {
             return false;
         };
         held.insert(local, param);

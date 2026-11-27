@@ -1,256 +1,295 @@
 tmpl 1 model 1 library spreads 0.0.0
 
-uses `temper-core`#52 0.0.0-alpha.0.0 {
-  class PromiseBuilder#53<R#54> {
-    connected constructor constructor#126(): PromiseBuilder#53<R#54>;
-    connected get promise#156(): Promise#147<R#54>;
-    connected method complete#157(completion: R#54): Void;
+uses `temper-core`#65 0.0.0-alpha.0.0 {
+  class PromiseBuilder#66<R#67> {
+    connected constructor constructor#153(): PromiseBuilder#66<R#67>;
+    connected get promise#183(): Promise#174<R#67>;
+    connected method complete#184(completion: R#67): Void;
   }
-  class Int32#57 {
-    connected method toString#58(radix?: Int32): String;
+  class Int32#70 {
+    connected method toString#71(radix?: Int32): String;
   }
-  interface Console#68 {
-    connected method log#69(message: String): Void;
+  interface Console#81 {
+    connected method log#82(message: String): Void;
   }
-  class Boolean#74 {
-    connected method toString#75(): String;
+  class Boolean#87 {
+    connected method toString#88(): String;
   }
-  connected fn async#127(generatorFactory: fn (): SafeGenerator#128<Empty#132>): Void;
-  interface SafeGenerator#128<YIELD#129> extends Generator#130<YIELD#129> {}
-  interface Generator#130<YIELD#131> {}
-  class Empty#132 {}
-  class ValueResult#133<YIELD#134> extends GeneratorResult#135<YIELD#134> {
-    connected constructor constructor#137(value: YIELD#134): ValueResult#133<YIELD#134>;
+  connected fn async#154(generatorFactory: fn (): SafeGenerator#155<Empty#159>): Void;
+  interface SafeGenerator#155<YIELD#156> extends Generator#157<YIELD#156> {}
+  interface Generator#157<YIELD#158> {}
+  class Empty#159 {}
+  class ValueResult#160<YIELD#161> extends GeneratorResult#162<YIELD#161> {
+    connected constructor constructor#164(value: YIELD#161): ValueResult#160<YIELD#161>;
   }
-  interface GeneratorResult#135<YIELD#136> {}
-  connected fn doneResult#138<YIELD#139>(): DoneResult#140<YIELD#139>;
-  class DoneResult#140<YIELD#141> extends GeneratorResult#135<YIELD#141> {}
-  connected fn empty#142(): Empty#132;
-  connected fn safeAdaptGeneratorFn#143<YIELD#144>(step: fn (SafeGenerator#128<YIELD#144>): GeneratorResult#135<YIELD#144>): SafeGenerator#128<YIELD#144>;
-  connected fn awakeUpon#145<T#146>(promise: Promise#147<T#146>, generator: SafeGenerator#128<Empty#132>): Void;
-  class Promise#147<R#148> {}
-  connected fn getPromiseResultSync#149<T#150>(promise: Promise#147<T#150>): T#150 throws Bubble;
-  connected fn getConsole#158(name?: String): Console#68;
+  interface GeneratorResult#162<YIELD#163> {}
+  connected fn doneResult#165<YIELD#166>(): DoneResult#167<YIELD#166>;
+  class DoneResult#167<YIELD#168> extends GeneratorResult#162<YIELD#168> {}
+  connected fn empty#169(): Empty#159;
+  connected fn safeAdaptGeneratorFn#170<YIELD#171>(step: fn (SafeGenerator#155<YIELD#171>): GeneratorResult#162<YIELD#171>): SafeGenerator#155<YIELD#171>;
+  connected fn awakeUpon#172<T#173>(promise: Promise#174<T#173>, generator: SafeGenerator#155<Empty#159>): Void;
+  class Promise#174<R#175> {}
+  connected fn getPromiseResultSync#176<T#177>(promise: Promise#174<T#177>): T#177 throws Bubble;
+  connected fn getConsole#185(name?: String): Console#81;
 }
 
 module spreads#0 {
-  let ~console#70: Console#68;
+  let ~console#83: Console#81;
 
   interface Sized#1 {
-    abstract method area#9(): Int32;
+    abstract method area#11(): Int32;
   }
 
   data class Box#2 extends Sized#1 {
-    let w#10: Int32;
-    let h#11: Int32;
-    let label#12: String?;
-    constructor constructor#15(w#59: Int32, h#60: Int32, label#61?: String?): Box#2 {
-      let label#62: String? = (coalesce(label#61, (null): String?)): String?;
-      this.w#10 = w#59;
-      this.h#11 = h#60;
-      this.label#12 = label#62;
+    let w#12: Int32;
+    let h#13: Int32;
+    let label#14: String?;
+    constructor constructor#17(w#72: Int32, h#73: Int32, label#74?: String?): Box#2 {
+      let label#75: String? = (coalesce(label#74, (null): String?)): String?;
+      this.w#12 = w#72;
+      this.h#13 = h#73;
+      this.label#14 = label#75;
     }
-    method area#13(): Int32 {
-      return %Int32.mul(this.w#10, this.h#11);
+    method area#15(): Int32 {
+      return %Int32.mul(this.w#12, this.h#13);
     }
-    method toString#14(): String {
-      return %String.cat(%String.cat(%String.cat(%String.cat((value { let subject#56: String? = this.label#12; (if (isNull(subject#56)) "box" else (nonNull(subject#56)): String): String }): String, " "), this.w#10.toString#58(omitted)), "x"), this.h#11.toString#58(omitted));
-    }
-  }
-
-  data class Two#3<T#8> {
-    let first#16: T#8;
-    let second#17: T#8;
-    constructor constructor#18(first#63: T#8, second#64: T#8): Two#3<T#8> {
-      this.first#16 = first#63;
-      this.second#17 = second#64;
+    method toString#16(): String {
+      return %String.cat(%String.cat(%String.cat(%String.cat((value { let subject#69: String? = this.label#14; (if (isNull(subject#69)) "box" else (nonNull(subject#69)): String): String }): String, " "), this.w#12.toString#71(omitted)), "x"), this.h#13.toString#71(omitted));
     }
   }
 
-  fn grown#27(b#65: Box#2): Box#2 {
+  data class Two#3<T#10> {
+    let first#18: T#10;
+    let second#19: T#10;
+    constructor constructor#20(first#76: T#10, second#77: T#10): Two#3<T#10> {
+      this.first#18 = first#76;
+      this.second#19 = second#77;
+    }
+  }
+
+  fn grown#36(b#78: Box#2): Box#2 {
     {
-      let spread#66: Box#2 = b#65;
-      return new constructor#15(%Int32.add(b#65.w#10, 1), copy(spread#66.h#11), copy(spread#66.label#12));
+      let spread#79: Box#2 = b#78;
+      return new constructor#17(%Int32.add(b#78.w#12, 1), copy(spread#79.h#13), copy(spread#79.label#14));
     }
   }
 
-  fn areaOf#28(s#67: Sized#1): Int32 {
-    return s#67.area#9();
+  fn areaOf#37(s#80: Sized#1): Int32 {
+    return s#80.area#11();
   }
 
-  let a#29: Box#2;
+  let a#38: Box#2;
 
-  let b#30: Box#2;
+  let b#39: Box#2;
 
-  let wide#31: Boolean;
+  let wide#40: Boolean;
 
-  let p#32: Two#3<Int32>;
+  let p#41: Two#3<Int32>;
 
-  let q#33: Two#3<Int32>;
+  let q#42: Two#3<Int32>;
 
-  let nested#34: Box#2;
+  let nested#43: Box#2;
 
-  fn said#35(s#78: String, n#79: Int32): Int32 {
-    ~console#70.log#69(s#78);
-    return n#79;
+  fn said#44(s#91: String, n#92: Int32): Int32 {
+    ~console#83.log#82(s#91);
+    return n#92;
   }
 
-  fn both#36(x#80: Int32, b#81: Box#2): String {
-    return %String.cat(%String.cat(x#80.toString#58(omitted), " "), b#81.toString#14());
+  fn both#45(x#93: Int32, b#94: Box#2): String {
+    return %String.cat(%String.cat(x#93.toString#71(omitted), " "), b#94.toString#16());
   }
 
-  fn widths#37(b#84: Box#2, n#85: Int32): Int32 {
-    var t#86: Box#2 = b#84;
+  fn widths#46(b#97: Box#2, n#98: Int32): Int32 {
+    var t#99: Box#2 = b#97;
     {
-      var i#87: Int32 = 0;
-      ~loop#88: while (%Int32.lt(i#87, n#85)) {
-        t#86 = (value { let spread#89: Box#2 = t#86; new constructor#15(t#86.h#11, %Int32.add(t#86.w#10, 1), copy(spread#89.label#12)) }): Box#2;
-        i#87 = %Int32.add(i#87, 1);
+      var i#100: Int32 = 0;
+      ~loop#101: while (%Int32.lt(i#100, n#98)) {
+        t#99 = (value { let spread#102: Box#2 = t#99; new constructor#17(t#99.h#13, %Int32.add(t#99.w#12, 1), copy(spread#102.label#14)) }): Box#2;
+        i#100 = %Int32.add(i#100, 1);
       }
     }
-    ~loop#90: while (%Int32.lt(((value { let spread#91: Box#2 = t#86; new constructor#15(copy(spread#91.w#10), 1, copy(spread#91.label#12)) }): Box#2).area#13(), 9)) {
-      t#86 = (value { let spread#92: Box#2 = t#86; new constructor#15(%Int32.add(t#86.w#10, 1), copy(spread#92.h#11), copy(spread#92.label#12)) }): Box#2;
+    ~loop#103: while (%Int32.lt(((value { let spread#104: Box#2 = t#99; new constructor#17(copy(spread#104.w#12), 1, copy(spread#104.label#14)) }): Box#2).area#15(), 9)) {
+      t#99 = (value { let spread#105: Box#2 = t#99; new constructor#17(%Int32.add(t#99.w#12, 1), copy(spread#105.h#13), copy(spread#105.label#14)) }): Box#2;
     }
     {
-      var i#93: Int32 = 0;
-      ~loop#94: while (%Int32.lt(i#93, 2)) {
-        t#86 = (value { let spread#95: Box#2 = t#86; let arg#96: Int32 = said#35("h", t#86.w#10); let arg#97: Int32 = said#35("w", t#86.h#11); let arg#98: String? = spread#95.label#12; new constructor#15(arg#97, arg#96, arg#98) }): Box#2;
-        i#93 = %Int32.add(i#93, 1);
+      var i#106: Int32 = 0;
+      ~loop#107: while (%Int32.lt(i#106, 2)) {
+        t#99 = (value { let spread#108: Box#2 = t#99; let arg#109: Int32 = said#44("h", t#99.w#12); let arg#110: Int32 = said#44("w", t#99.h#13); let arg#111: String? = spread#108.label#14; new constructor#17(arg#110, arg#109, arg#111) }): Box#2;
+        i#106 = %Int32.add(i#106, 1);
       }
     }
-    if (%Int32.gt(t#86.w#10, 0)) {
-      let b#99: Box#2 = (value { let spread#100: Box#2 = b#84; new constructor#15(copy(spread#100.w#10), copy(spread#100.h#11), (asNullable("inner")): String?) }): Box#2;
-      ~console#70.log#69(b#99.toString#14());
+    if (%Int32.gt(t#99.w#12, 0)) {
+      let b#112: Box#2 = (value { let spread#113: Box#2 = b#97; new constructor#17(copy(spread#113.w#12), copy(spread#113.h#13), (asNullable("inner")): String?) }): Box#2;
+      ~console#83.log#82(b#112.toString#16());
     }
-    return t#86.w#10;
+    return t#99.w#12;
   }
 
   data class Step#4 {
-    let n#19: Int32;
-    let tag#20: String;
-    constructor constructor#22(n#102: Int32, tag#103: String): Step#4 {
-      this.n#19 = n#102;
-      this.tag#20 = tag#103;
+    let n#21: Int32;
+    let tag#22: String;
+    constructor constructor#24(n#115: Int32, tag#116: String): Step#4 {
+      this.n#21 = n#115;
+      this.tag#22 = tag#116;
     }
-    method next#21(): Step#4 {
+    method next#23(): Step#4 {
       {
-        let spread#101: Step#4 = this;
-        return new constructor#22(%Int32.add(this.n#19, 1), copy(spread#101.tag#20));
+        let spread#114: Step#4 = this;
+        return new constructor#24(%Int32.add(this.n#21, 1), copy(spread#114.tag#22));
       }
     }
   }
 
-  fn swapped#38<T#39>(t#104: Two#3<T#39>): Two#3<T#39> {
+  fn swapped#47<T#48>(t#117: Two#3<T#48>): Two#3<T#48> {
     {
-      let spread#105: Two#3<T#39> = t#104;
-      return new constructor#18<T#39>(t#104.second#17, t#104.first#16);
+      let spread#118: Two#3<T#48> = t#117;
+      return new constructor#20<T#48>(t#117.second#19, t#117.first#18);
     }
   }
 
-  let s#40: Step#4;
+  let s#49: Step#4;
 
-  let same#41: Two#3<Int32>;
+  let same#50: Two#3<Int32>;
 
-  let words#42: Two#3<String>;
+  let words#51: Two#3<String>;
 
-  let flipped#43: Two#3<String>;
+  let flipped#52: Two#3<String>;
 
   interface Shape#5 {}
 
   data class Circle#6 extends Shape#5 {
-    let r#23: Int32;
-    constructor constructor#24(r#107: Int32): Circle#6 {
-      this.r#23 = r#107;
+    let r#25: Int32;
+    constructor constructor#26(r#120: Int32): Circle#6 {
+      this.r#25 = r#120;
     }
   }
 
   data class Square#7 extends Shape#5 {
-    let side#25: Int32;
-    constructor constructor#26(side#108: Int32): Square#7 {
-      this.side#25 = side#108;
+    let side#27: Int32;
+    constructor constructor#28(side#121: Int32): Square#7 {
+      this.side#27 = side#121;
     }
   }
 
-  fn doubled#44(x#109: Shape#5): Shape#5 {
-    let made#110: Shape#5 = (if (is(x#109, Circle#6)) (value { let spread#111: Circle#6 = (downcast(x#109)): Circle#6; (upcast(new constructor#24(%Int32.mul(((downcast(x#109)): Circle#6).r#23, 2)))): Shape#5 }): Shape#5 else (upcast((if (is(x#109, Square#7)) (value { let spread#112: Square#7 = (downcast(x#109)): Square#7; new constructor#26(%Int32.mul(((downcast(x#109)): Square#7).side#25, 2)) }): Square#7 else (panic()): Square#7): Square#7)): Shape#5): Shape#5;
-    return made#110;
+  fn doubled#53(x#122: Shape#5): Shape#5 {
+    let made#123: Shape#5 = (if (is(x#122, Circle#6)) (value { let spread#124: Circle#6 = (downcast(x#122)): Circle#6; (upcast(new constructor#26(%Int32.mul(((downcast(x#122)): Circle#6).r#25, 2)))): Shape#5 }): Shape#5 else (upcast((if (is(x#122, Square#7)) (value { let spread#125: Square#7 = (downcast(x#122)): Square#7; new constructor#28(%Int32.mul(((downcast(x#122)): Square#7).side#27, 2)) }): Square#7 else (panic()): Square#7): Square#7)): Shape#5): Shape#5;
+    return made#123;
   }
 
-  fn size#45(x#113: Shape#5): Int32 {
-    let n#114: Int32 = (if (is(x#113, Circle#6)) ((downcast(x#113)): Circle#6).r#23 else (if (is(x#113, Square#7)) ((downcast(x#113)): Square#7).side#25 else (panic()): Int32): Int32): Int32;
-    return n#114;
+  fn size#54(x#126: Shape#5): Int32 {
+    let n#127: Int32 = (if (is(x#126, Circle#6)) ((downcast(x#126)): Circle#6).r#25 else (if (is(x#126, Square#7)) ((downcast(x#126)): Square#7).side#27 else (panic()): Int32): Int32): Int32;
+    return n#127;
   }
 
-  fn picked#46(c#115: Boolean): Box#2 {
-    if (c#115) {
+  fn picked#55(c#128: Boolean): Box#2 {
+    if (c#128) {
       {
-        let spread#116: Box#2 = a#29;
-        return new constructor#15(9, copy(spread#116.h#11), copy(spread#116.label#12));
+        let spread#129: Box#2 = a#38;
+        return new constructor#17(9, copy(spread#129.h#13), copy(spread#129.label#14));
       }
     } else {
-      return a#29;
+      return a#38;
     }
   }
 
-  fn applied#47(f#117: fn (Int32): Box#2): Box#2 {
-    return f#117(4);
+  fn applied#56(f#130: fn (Int32): Box#2): Box#2 {
+    return f#130(4);
   }
 
-  let made#48: Box#2;
+  let made#57: Box#2;
 
-  fn positive#49(n#121: Int32): Int32 throws Bubble {
-    if (%Int32.lt(n#121, 0)) {
+  data class Dial#8 {
+    var level#29: Int32;
+    let note#30: String?;
+    let twice#31: Int32;
+    constructor constructor#32(level#134?: Int32?, note#135?: String?, twice#136?: Int32?): Dial#8 {
+      let level#137: Int32 = (coalesce(level#134, 5)): Int32;
+      let note#138: String? = (coalesce(note#135, (asNullable("n")): String?)): String?;
+      let twice#139: Int32 = (coalesce(twice#136, %Int32.mul(level#137, 2))): Int32;
+      this.level#29 = level#137;
+      this.note#30 = note#138;
+      this.twice#31 = twice#139;
+    }
+  }
+
+  data class Mark#9 {
+    let note#33: String?;
+    let size#34: Int32;
+    constructor constructor#35(note#140?: String?, size#141?: Int32?): Mark#9 {
+      let note#142: String? = (coalesce(note#140, (asNullable("n")): String?)): String?;
+      let size#143: Int32 = (coalesce(size#141, 2)): Int32;
+      this.note#33 = note#142;
+      this.size#34 = size#143;
+    }
+  }
+
+  let dial#58: Dial#8;
+
+  let turned#59: Dial#8;
+
+  let mark#60: Mark#9;
+
+  let bigger#61: Mark#9;
+
+  fn positive#62(n#148: Int32): Int32 throws Bubble {
+    if (%Int32.lt(n#148, 0)) {
       (bubble()^): Void;
     }
-    return n#121;
+    return n#148;
   }
 
-  fn sized#50(b#122: Box#2, n#123: Int32): Box#2 throws Bubble {
+  fn sized#63(b#149: Box#2, n#150: Int32): Box#2 throws Bubble {
     {
-      let spread#124: Box#2 = b#122;
-      return new constructor#15(positive#49(n#123)^, copy(spread#124.h#11), copy(spread#124.label#12));
+      let spread#151: Box#2 = b#149;
+      return new constructor#17(positive#62(n#150)^, copy(spread#151.h#13), copy(spread#151.label#14));
     }
   }
 
-  let caught#51: Box#2;
+  let caught#64: Box#2;
 
-  let gate#55: PromiseBuilder#53<Int32>;
+  let gate#68: PromiseBuilder#66<Int32>;
 
   init {
-    init ~console#70 = getConsole#158(omitted);
-    init a#29 = new constructor#15(2, 3, omitted);
-    init b#30 = grown#27(a#29);
-    ~console#70.log#69(%String.cat(%String.cat(%String.cat(%String.cat(a#29.toString#14(), " "), b#30.toString#14()), " "), areaOf#28((upcast(b#30)): Sized#1).toString#58(omitted)));
-    ~console#70.log#69(((value { let spread#71: Box#2 = b#30; new constructor#15(copy(spread#71.w#10), copy(spread#71.h#11), (asNullable("named")): String?) }): Box#2).toString#14());
-    init wide#31 = %Int32.gt(a#29.w#10, 1) && %Int32.gt(((value { let spread#72: Box#2 = a#29; new constructor#15(10, copy(spread#72.h#11), copy(spread#72.label#12)) }): Box#2).area#13(), 20);
-    init p#32 = new constructor#18<Int32>(1, 2);
-    init q#33 = (value { let spread#73: Two#3<Int32> = p#32; new constructor#18<Int32>(copy(spread#73.first#16), 5) }): Two#3<Int32>;
-    ~console#70.log#69(%String.cat(%String.cat(%String.cat(%String.cat(wide#31.toString#75(), " "), q#33.first#16.toString#58(omitted)), " "), q#33.second#17.toString#58(omitted)));
-    init nested#34 = (value { let spread#76: Box#2 = (value { let spread#77: Box#2 = a#29; new constructor#15(7, copy(spread#77.h#11), copy(spread#77.label#12)) }): Box#2; new constructor#15(copy(spread#76.w#10), 8, copy(spread#76.label#12)) }): Box#2;
-    ~console#70.log#69(both#36(said#35("one", 1), (value { let spread#82: Box#2 = a#29; new constructor#15(copy(spread#82.w#10), said#35("two", 2), copy(spread#82.label#12)) }): Box#2));
-    ~console#70.log#69(%String.cat(%String.cat(nested#34.toString#14(), " "), (%Int32.gt(a#29.w#10, 5) || %Int32.eq(((value { let spread#83: Box#2 = a#29; new constructor#15(said#35("three", 3), copy(spread#83.h#11), copy(spread#83.label#12)) }): Box#2).w#10, 3)).toString#75()));
-    ~console#70.log#69(widths#37(a#29, 3).toString#58(omitted));
-    init s#40 = new constructor#22(1, "s").next#21().next#21();
-    init same#41 = (value { let spread#106: Two#3<Int32> = q#33; new constructor#18<Int32>(copy(spread#106.first#16), copy(spread#106.second#17)) }): Two#3<Int32>;
-    init words#42 = new constructor#18<String>("a", "b");
-    init flipped#43 = swapped#38<String>(words#42);
-    ~console#70.log#69(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(s#40.n#19.toString#58(omitted), " "), s#40.tag#20), " "), same#41.first#16.toString#58(omitted)), same#41.second#17.toString#58(omitted)), " "), flipped#43.first#16), flipped#43.second#17));
-    ~console#70.log#69(%String.cat(%String.cat(size#45(doubled#44((upcast(new constructor#24(3))): Shape#5)).toString#58(omitted), " "), size#45(doubled#44((upcast(new constructor#26(5))): Shape#5)).toString#58(omitted)));
-    init made#48 = applied#47((fn ~fn#118(n#119: Int32): Box#2 {
+    init ~console#83 = getConsole#185(omitted);
+    init a#38 = new constructor#17(2, 3, omitted);
+    init b#39 = grown#36(a#38);
+    ~console#83.log#82(%String.cat(%String.cat(%String.cat(%String.cat(a#38.toString#16(), " "), b#39.toString#16()), " "), areaOf#37((upcast(b#39)): Sized#1).toString#71(omitted)));
+    ~console#83.log#82(((value { let spread#84: Box#2 = b#39; new constructor#17(copy(spread#84.w#12), copy(spread#84.h#13), (asNullable("named")): String?) }): Box#2).toString#16());
+    init wide#40 = %Int32.gt(a#38.w#12, 1) && %Int32.gt(((value { let spread#85: Box#2 = a#38; new constructor#17(10, copy(spread#85.h#13), copy(spread#85.label#14)) }): Box#2).area#15(), 20);
+    init p#41 = new constructor#20<Int32>(1, 2);
+    init q#42 = (value { let spread#86: Two#3<Int32> = p#41; new constructor#20<Int32>(copy(spread#86.first#18), 5) }): Two#3<Int32>;
+    ~console#83.log#82(%String.cat(%String.cat(%String.cat(%String.cat(wide#40.toString#88(), " "), q#42.first#18.toString#71(omitted)), " "), q#42.second#19.toString#71(omitted)));
+    init nested#43 = (value { let spread#89: Box#2 = (value { let spread#90: Box#2 = a#38; new constructor#17(7, copy(spread#90.h#13), copy(spread#90.label#14)) }): Box#2; new constructor#17(copy(spread#89.w#12), 8, copy(spread#89.label#14)) }): Box#2;
+    ~console#83.log#82(both#45(said#44("one", 1), (value { let spread#95: Box#2 = a#38; new constructor#17(copy(spread#95.w#12), said#44("two", 2), copy(spread#95.label#14)) }): Box#2));
+    ~console#83.log#82(%String.cat(%String.cat(nested#43.toString#16(), " "), (%Int32.gt(a#38.w#12, 5) || %Int32.eq(((value { let spread#96: Box#2 = a#38; new constructor#17(said#44("three", 3), copy(spread#96.h#13), copy(spread#96.label#14)) }): Box#2).w#12, 3)).toString#88()));
+    ~console#83.log#82(widths#46(a#38, 3).toString#71(omitted));
+    init s#49 = new constructor#24(1, "s").next#23().next#23();
+    init same#50 = (value { let spread#119: Two#3<Int32> = q#42; new constructor#20<Int32>(copy(spread#119.first#18), copy(spread#119.second#19)) }): Two#3<Int32>;
+    init words#51 = new constructor#20<String>("a", "b");
+    init flipped#52 = swapped#47<String>(words#51);
+    ~console#83.log#82(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(s#49.n#21.toString#71(omitted), " "), s#49.tag#22), " "), same#50.first#18.toString#71(omitted)), same#50.second#19.toString#71(omitted)), " "), flipped#52.first#18), flipped#52.second#19));
+    ~console#83.log#82(%String.cat(%String.cat(size#54(doubled#53((upcast(new constructor#26(3))): Shape#5)).toString#71(omitted), " "), size#54(doubled#53((upcast(new constructor#28(5))): Shape#5)).toString#71(omitted)));
+    init made#57 = applied#56((fn ~fn#131(n#132: Int32): Box#2 {
       {
-        let spread#120: Box#2 = a#29;
-        return new constructor#15(copy(spread#120.w#10), n#119, copy(spread#120.label#12));
+        let spread#133: Box#2 = a#38;
+        return new constructor#17(copy(spread#133.w#12), n#132, copy(spread#133.label#14));
       }
     }): fn (Int32): Box#2);
-    ~console#70.log#69(%String.cat(%String.cat(%String.cat(%String.cat(picked#46(true).toString#14(), " "), picked#46(false).toString#14()), " "), made#48.toString#14()));
-    init caught#51 = (value { let spread#125: Box#2 = a#29; new constructor#15((orelse(positive#49(%Int32.neg(1))^, 0)): Int32, (orelse(positive#49(5)^, %Int32.neg(1))): Int32, copy(spread#125.label#12)) }): Box#2;
-    ~console#70.log#69(%String.cat(%String.cat(caught#51.toString#14(), " "), (orelse(sized#50(a#29, 4)^.toString#14(), "-")): String));
-    ~console#70.log#69((orelse((value { sized#50(a#29, %Int32.neg(1))^; "sized" }): String, "bubbled")): String);
-    init gate#55 = new constructor#126<Int32>();
-    async#127((fn generator ~fn#151(): SafeGenerator#128<Empty#132> {
-      let later#152: Box#2 = (value { let spread#153: Box#2 = a#29; let arg#154: Int32 = spread#153.w#10; let arg#155: Int32 = (orelse((await(gate#55.promise#156())^): Int32, %Int32.neg(1))): Int32; new constructor#15(arg#154, arg#155, (asNullable("later")): String?) }): Box#2;
-      ~console#70.log#69(later#152.toString#14());
-    }): fn (): SafeGenerator#128<Empty#132>);
-    gate#55.complete#157(6);
+    ~console#83.log#82(%String.cat(%String.cat(%String.cat(%String.cat(picked#55(true).toString#16(), " "), picked#55(false).toString#16()), " "), made#57.toString#16()));
+    init dial#58 = new constructor#32((asNullable(1)): Int32?, (null): String?, omitted);
+    dial#58.level#29 = 4;
+    init turned#59 = (value { let spread#144: Dial#8 = dial#58; new constructor#32((asNullable(copy(spread#144.level#29))): Int32?, (asNullable("m")): String?, (asNullable(copy(spread#144.twice#31))): Int32?) }): Dial#8;
+    init mark#60 = new constructor#35((null): String?, omitted);
+    init bigger#61 = (value { let spread#145: Mark#9 = mark#60; new constructor#35(copy(spread#145.note#33), (asNullable(3)): Int32?) }): Mark#9;
+    ~console#83.log#82(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(turned#59.level#29.toString#71(omitted), " "), (value { let subject#146: String? = turned#59.note#30; (if (isNull(subject#146)) "-" else (nonNull(subject#146)): String): String }): String), " "), turned#59.twice#31.toString#71(omitted)), " "), (value { let subject#147: String? = bigger#61.note#33; (if (isNull(subject#147)) "-" else (nonNull(subject#147)): String): String }): String), " "), bigger#61.size#34.toString#71(omitted)));
+    init caught#64 = (value { let spread#152: Box#2 = a#38; new constructor#17((orelse(positive#62(%Int32.neg(1))^, 0)): Int32, (orelse(positive#62(5)^, %Int32.neg(1))): Int32, copy(spread#152.label#14)) }): Box#2;
+    ~console#83.log#82(%String.cat(%String.cat(caught#64.toString#16(), " "), (orelse(sized#63(a#38, 4)^.toString#16(), "-")): String));
+    ~console#83.log#82((orelse((value { sized#63(a#38, %Int32.neg(1))^; "sized" }): String, "bubbled")): String);
+    init gate#68 = new constructor#153<Int32>();
+    async#154((fn generator ~fn#178(): SafeGenerator#155<Empty#159> {
+      let later#179: Box#2 = (value { let spread#180: Box#2 = a#38; let arg#181: Int32 = spread#180.w#12; let arg#182: Int32 = (orelse((await(gate#68.promise#183())^): Int32, %Int32.neg(1))): Int32; new constructor#17(arg#181, arg#182, (asNullable("later")): String?) }): Box#2;
+      ~console#83.log#82(later#179.toString#16());
+    }): fn (): SafeGenerator#155<Empty#159>);
+    gate#68.complete#184(6);
   }
 }

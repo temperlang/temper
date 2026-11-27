@@ -14,16 +14,53 @@
 
 use crate::builtins::{Builtin, Function};
 use crate::classes::Placed;
-use crate::core::{CLASS_DATA, CLASS_INTERFACE, class_parts, constructor_params};
-use crate::library::Message;
+use crate::core::{CLASS_DATA, CLASS_INTERFACE, LET_VAR, class_parts, constructor_params};
+use crate::library::{DataRule, Level, Message};
 use crate::scope::{ScopeId, ScopeKind, SymbolId};
 use crate::settle::{Fact, Settle};
-use crate::types::{TypeData, TypeId, UNKNOWN};
+use crate::types::{NULL, TypeData, TypeId, UNKNOWN};
 use temper_syntax::ast::Value;
 use temper_syntax::names::NameId;
 use temper_syntax::tree::{NodeId, NodeKind};
 
 impl Settle {
+    /// A `@data` class's defaults, once typed (notes/typing.md, "`@data`
+    /// classes"). A `@data` object round-trips: made again from its own
+    /// properties, it has the same values. Passing null gives a
+    /// parameter's default, so for a property that can hold null, any
+    /// default must be null: a `var` whose type may hold null (a type parameter may be
+    /// bound to a nullable type), or one whose default may give null.
+    pub(super) fn check_data_defaults(&mut self, class: NodeId) {
+        if self.lib.tree.data(class) & CLASS_DATA == 0 {
+            return;
+        }
+        for p in constructor_params(&self.lib.tree, class) {
+            let Some(default) = crate::core::let_parts(&self.lib.tree, p).2 else {
+                continue;
+            };
+            let (given, held) = (self.known_type(default), self.known_decl_type(p));
+            let var = self.lib.tree.data(p) & LET_VAR != 0;
+            let can_hold_null = self.may_be_null(held) && (var || self.may_be_null(given));
+            if given == NULL || !can_hold_null {
+                continue;
+            }
+            let rule = DataRule::NullDefault(self.member_text(p).to_string());
+            let class_name = self.member_text(class).to_string();
+            let span = self.lib.tree.span(self.lib.tree.children(p)[0]);
+            let message = Message::DataRule(class_name, rule);
+            self.lib.report(Level::Error, message, span);
+        }
+    }
+
+    /// Whether a value of a type may be null: a nullable type's, null's, or
+    /// a type parameter's, which may be bound to a nullable type.
+    fn may_be_null(&self, t: TypeId) -> bool {
+        matches!(
+            self.typing.types.get(t),
+            TypeData::Nullable(_) | TypeData::Null | TypeData::Param(_)
+        )
+    }
+
     /// Queues deciding each object literal's class, as typing starts.
     pub(super) fn queue_object_literals(&mut self) {
         let literals: Vec<(NodeId, ScopeId)> =

@@ -102,20 +102,20 @@
 191:10 -> ../spreads.temper.md:109:9 (applied)  applied(f) { <- applied(f: fn (Int): Box): B
 191:17 -> ../spreads.temper.md:109:5  (f) { <- let applied(f: fn (Int): Box
 192:3 -> ../spreads.temper.md:109:42  return f(4); <- f(4) }
-195:1 -> ../spreads.temper.md:122:5  /** <- let positive(n: Int): Int th
-199:1 -> ../spreads.temper.md:122:5  function positive(n) { <- let positive(n: Int): Int th
-199:10 -> ../spreads.temper.md:122:9 (positive)  positive(n) { <- positive(n: Int): Int throws
-199:18 -> ../spreads.temper.md:122:5  (n) { <- let positive(n: Int): Int th
-200:3 -> ../spreads.temper.md:123:7  if (n < 0) { <- if (n < 0) { bubble() }
-201:5 -> ../spreads.temper.md:123:20  bubble(); <- bubble() }
-203:3 -> ../spreads.temper.md:124:7  return n; <- n
-206:1 -> ../spreads.temper.md:126:5  /** <- let sized(b: Box, n: Int): B
-211:1 -> ../spreads.temper.md:126:5  function sized(b, n) { <- let sized(b: Box, n: Int): B
-211:10 -> ../spreads.temper.md:126:9 (sized)  sized(b, n) { <- sized(b: Box, n: Int): Box t
-211:15 -> ../spreads.temper.md:126:5  (b, n) { <- let sized(b: Box, n: Int): B
-212:3 -> ../spreads.temper.md:126:52  { <- { ...b, w: positive(n) } }
-213:5 -> ../spreads.temper.md:126:57  const spread = b; <- b, w: positive(n) } }
-214:5 -> ../spreads.temper.md:126:52  return new Box(positive(n), <- { ...b, w: positive(n) } }
+195:1 -> ../spreads.temper.md:141:5  /** <- let positive(n: Int): Int th
+199:1 -> ../spreads.temper.md:141:5  function positive(n) { <- let positive(n: Int): Int th
+199:10 -> ../spreads.temper.md:141:9 (positive)  positive(n) { <- positive(n: Int): Int throws
+199:18 -> ../spreads.temper.md:141:5  (n) { <- let positive(n: Int): Int th
+200:3 -> ../spreads.temper.md:142:7  if (n < 0) { <- if (n < 0) { bubble() }
+201:5 -> ../spreads.temper.md:142:20  bubble(); <- bubble() }
+203:3 -> ../spreads.temper.md:143:7  return n; <- n
+206:1 -> ../spreads.temper.md:145:5  /** <- let sized(b: Box, n: Int): B
+211:1 -> ../spreads.temper.md:145:5  function sized(b, n) { <- let sized(b: Box, n: Int): B
+211:10 -> ../spreads.temper.md:145:9 (sized)  sized(b, n) { <- sized(b: Box, n: Int): Box t
+211:15 -> ../spreads.temper.md:145:5  (b, n) { <- let sized(b: Box, n: Int): B
+212:3 -> ../spreads.temper.md:145:52  { <- { ...b, w: positive(n) } }
+213:5 -> ../spreads.temper.md:145:57  const spread = b; <- b, w: positive(n) } }
+214:5 -> ../spreads.temper.md:145:52  return new Box(positive(n), <- { ...b, w: positive(n) } }
 218:1 -> ../spreads.temper.md:13:5  class Sized extends type() { <- interface Sized { public are
 218:7 -> ../spreads.temper.md:13:15 (Sized)  Sized extends type() { <- Sized { public area(): Int;
 218:12 -> ../spreads.temper.md:13:5   extends type() { <- interface Sized { public are
@@ -215,96 +215,158 @@
 386:3 -> ../spreads.temper.md:92:24  /** @returns {number} */ <- side: Int) extends Shape {}
 387:3 -> ../spreads.temper.md:92:24  get side() { <- side: Int) extends Shape {}
 387:7 -> ../spreads.temper.md:92:24 (side)  side() { <- side: Int) extends Shape {}
-392:1 -> ../spreads.temper.md:23:5  const a = new Box(2, 3); <- let a: Box = { w: 2, h: 3 };
-393:1 -> ../spreads.temper.md:24:5  const b = grown(a); <- let b = grown(a);
-394:1 -> ../spreads.temper.md:25:5  console.log(`${a.toString()} <- console.log("${a} ${b} ${are
-395:1 -> ../spreads.temper.md:26:5  /** @type {Box} */ <- console.log({ ...b, label: "
-396:1 -> ../spreads.temper.md:26:5  let t$9; <- console.log({ ...b, label: "
-397:1 -> ../spreads.temper.md:26:5  { <- console.log({ ...b, label: "
-398:3 -> ../spreads.temper.md:26:22  const spread = b; <- b, label: "named" }.toString
-401:1 -> ../spreads.temper.md:26:5  console.log(t$9.toString()); <- console.log({ ...b, label: "
-402:1 -> ../spreads.temper.md:27:5  let t$11 = a.w > 1; <- let wide = a.w > 1 && { ...a
-403:1 -> ../spreads.temper.md:27:5  if (t$11) { <- let wide = a.w > 1 && { ...a
-407:5 -> ../spreads.temper.md:27:32  const spread2 = a; <- a, w: 10 }.area() > 20;
-412:1 -> ../spreads.temper.md:27:5  const wide = t$11; <- let wide = a.w > 1 && { ...a
-413:1 -> ../spreads.temper.md:28:5  /** @type {Two<number>} */ <- let p: Two<Int> = { first: 1
-414:1 -> ../spreads.temper.md:28:5  const p = new Two(1, 2); <- let p: Two<Int> = { first: 1
-415:1 -> ../spreads.temper.md:29:5  /** @type {Two<number>} */ <- let q = { ...p, second: 5 };
-416:1 -> ../spreads.temper.md:29:5  let t$12; <- let q = { ...p, second: 5 };
-417:1 -> ../spreads.temper.md:29:5  { <- let q = { ...p, second: 5 };
-418:3 -> ../spreads.temper.md:29:18  /** @type {Two<number>} */ <- p, second: 5 };
-419:3 -> ../spreads.temper.md:29:18  const spread3 = p; <- p, second: 5 };
-422:1 -> ../spreads.temper.md:29:5  /** @type {Two<number>} */ <- let q = { ...p, second: 5 };
-423:1 -> ../spreads.temper.md:29:5  const q = t$12; <- let q = { ...p, second: 5 };
-424:1 -> ../spreads.temper.md:30:5  console.log(`${wide} ${q.fir <- console.log("${wide.toString
-425:1 -> ../spreads.temper.md:31:5  /** @type {Box} */ <- let nested = { ...{ ...a, w:
-426:1 -> ../spreads.temper.md:31:5  let t$13; <- let nested = { ...{ ...a, w:
-427:1 -> ../spreads.temper.md:31:5  { <- let nested = { ...{ ...a, w:
-428:3 -> ../spreads.temper.md:31:23  /** @type {Box} */ <- { ...a, w: 7 }, h: 8 };
-429:3 -> ../spreads.temper.md:31:23  let t$14; <- { ...a, w: 7 }, h: 8 };
-430:3 -> ../spreads.temper.md:31:23  { <- { ...a, w: 7 }, h: 8 };
-431:5 -> ../spreads.temper.md:31:28  const spread5 = a; <- a, w: 7 }, h: 8 };
-434:3 -> ../spreads.temper.md:31:23  const spread4 = t$14; <- { ...a, w: 7 }, h: 8 };
-437:1 -> ../spreads.temper.md:31:5  const nested = t$13; <- let nested = { ...{ ...a, w:
-438:1 -> ../spreads.temper.md:34:5  const t$16 = said("one", 1); <- console.log(both(said("one",
-439:1 -> ../spreads.temper.md:34:5  /** @type {Box} */ <- console.log(both(said("one",
-440:1 -> ../spreads.temper.md:34:5  let t$15; <- console.log(both(said("one",
-441:1 -> ../spreads.temper.md:34:5  { <- console.log(both(said("one",
-442:3 -> ../spreads.temper.md:34:43  const spread6 = a; <- a, h: said("two", 2) }));
-445:1 -> ../spreads.temper.md:34:5  console.log(both(t$16, t$15) <- console.log(both(said("one",
-446:1 -> ../spreads.temper.md:35:5  let t$18 = a.w > 5; <- console.log("${nested} ${(a.
-447:1 -> ../spreads.temper.md:35:5  if (!t$18) { <- console.log("${nested} ${(a.
-451:5 -> ../spreads.temper.md:35:47  const spread7 = a; <- a, w: said("three", 3) }.w =
-456:1 -> ../spreads.temper.md:35:5  console.log(`${nested.toStri <- console.log("${nested} ${(a.
-457:1 -> ../spreads.temper.md:66:5  console.log(widths(a, 3).toS <- console.log(widths(a, 3).toS
-458:1 -> ../spreads.temper.md:85:5  const s = new Step(1, "s").n <- let s = new Step(1, "s").nex
-459:1 -> ../spreads.temper.md:86:5  /** @type {Two<number>} */ <- let same = { ...q };
-460:1 -> ../spreads.temper.md:86:5  let t$19; <- let same = { ...q };
-461:1 -> ../spreads.temper.md:86:5  { <- let same = { ...q };
-462:3 -> ../spreads.temper.md:86:21  /** @type {Two<number>} */ <- q };
-463:3 -> ../spreads.temper.md:86:21  const spread8 = q; <- q };
-466:1 -> ../spreads.temper.md:86:5  /** @type {Two<number>} */ <- let same = { ...q };
-467:1 -> ../spreads.temper.md:86:5  const same = t$19; <- let same = { ...q };
-468:1 -> ../spreads.temper.md:87:5  /** @type {Two<string>} */ <- let words: Two<String> = { f
-469:1 -> ../spreads.temper.md:87:5  const words = new Two("a", " <- let words: Two<String> = { f
-470:1 -> ../spreads.temper.md:88:5  /** @type {Two<string>} */ <- let flipped = swapped(words)
-471:1 -> ../spreads.temper.md:88:5  const flipped = swapped(word <- let flipped = swapped(words)
-472:1 -> ../spreads.temper.md:89:5  console.log(`${s.n} ${s.tag} <- console.log("${s.n} ${s.tag}
-473:1 -> ../spreads.temper.md:107:5  console.log(`${size(doubled( <- console.log("${size(doubled(
-475:1 -> ../spreads.temper.md:110:24  /** <- { (n: Int): Box => ({ ...a,
-479:1 -> ../spreads.temper.md:110:24  function fn(n) { <- { (n: Int): Box => ({ ...a,
-480:3 -> ../spreads.temper.md:110:44  { <- { ...a, h: n }) };
-481:5 -> ../spreads.temper.md:110:49  const spread = a; <- a, h: n }) };
-482:5 -> ../spreads.temper.md:110:44  return new Box(spread.w, n, <- { ...a, h: n }) };
-486:1 -> ../spreads.temper.md:110:5  const made = applied(fn); <- let made = applied { (n: Int
-487:1 -> ../spreads.temper.md:111:5  console.log(`${picked(true). <- console.log("${picked(true)}
-488:1 -> ../spreads.temper.md:127:5  /** @type {Box} */ <- let caught = { ...a, w: posi
-489:1 -> ../spreads.temper.md:127:5  let t$20; <- let caught = { ...a, w: posi
-490:1 -> ../spreads.temper.md:127:5  { <- let caught = { ...a, w: posi
-491:3 -> ../spreads.temper.md:127:23  const spread9 = a; <- a, w: positive(-1) orelse 0,
-509:1 -> ../spreads.temper.md:127:5  const caught = t$20; <- let caught = { ...a, w: posi
-510:1 -> ../spreads.temper.md:128:5  /** @type {string} */ <- console.log("${caught} ${siz
-511:1 -> ../spreads.temper.md:128:5  let t$24; <- console.log("${caught} ${siz
-512:1 -> ../spreads.temper.md:128:5  try { <- console.log("${caught} ${siz
-517:1 -> ../spreads.temper.md:128:5  console.log(`${caught.toStri <- console.log("${caught} ${siz
-518:1 -> ../spreads.temper.md:129:5  /** @type {string} */ <- console.log(do { sized(a, -1
-519:1 -> ../spreads.temper.md:129:5  let t$25; <- console.log(do { sized(a, -1
-520:1 -> ../spreads.temper.md:129:5  try { <- console.log(do { sized(a, -1
-521:3 -> ../spreads.temper.md:129:22  sized(a, -1); <- sized(a, -1); "sized" } orel
-526:1 -> ../spreads.temper.md:129:5  console.log(t$25); <- console.log(do { sized(a, -1
-527:1 -> ../spreads.temper.md:139:5  /** @type {import("@temperla <- let gate = new PromiseBuilde
-528:1 -> ../spreads.temper.md:139:5  const gate = new PromiseBuil <- let gate = new PromiseBuilde
-530:1 -> ../spreads.temper.md:140:11  /** <- { (): GeneratorResult<Empty>
-534:1 -> ../spreads.temper.md:140:11  function* fn2(doAwait) { <- { (): GeneratorResult<Empty>
-535:3 -> ../spreads.temper.md:141:7  /** @type {Box} */ <- let later = { ...a, label: "
-536:3 -> ../spreads.temper.md:141:7  let t$26; <- let later = { ...a, label: "
-537:3 -> ../spreads.temper.md:141:7  { <- let later = { ...a, label: "
-538:5 -> ../spreads.temper.md:141:24  const spread = a; <- a, label: "later", h: await
-539:5 -> ../spreads.temper.md:141:19  const arg = spread.w; <- { ...a, label: "later", h: a
-540:5 -> ../spreads.temper.md:141:46  /** @type {number} */ <- await gate.promise orelse -1
-541:5 -> ../spreads.temper.md:141:46  let arg2; <- await gate.promise orelse -1
-542:5 -> ../spreads.temper.md:141:46  try { <- await gate.promise orelse -1
-549:3 -> ../spreads.temper.md:141:7  const later = t$26; <- let later = { ...a, label: "
-550:3 -> ../spreads.temper.md:142:7  console.log(later.toString() <- console.log(later.toString()
-553:1 -> ../spreads.temper.md:140:5  runAsync(adaptAwaiter(fn2)); <- async { (): GeneratorResult<
-554:1 -> ../spreads.temper.md:144:5  gate.complete(6); <- gate.complete(6);
+392:1 -> ../spreads.temper.md:125:5  class Dial extends type() { <- @data class Dial(var level:
+392:7 -> ../spreads.temper.md:125:17 (Dial)  Dial extends type() { <- Dial(var level: Int = 5, not
+392:11 -> ../spreads.temper.md:125:5   extends type() { <- @data class Dial(var level:
+393:3 -> ../spreads.temper.md:125:25  /** @type {number} */ <-  level: Int = 5, note: Strin
+394:3 -> ../spreads.temper.md:125:25  #level; <-  level: Int = 5, note: Strin
+395:3 -> ../spreads.temper.md:125:42  /** @type {string | null} */ <- note: String? = "n", twice:
+396:3 -> ../spreads.temper.md:125:42  #note; <- note: String? = "n", twice:
+397:3 -> ../spreads.temper.md:125:63  /** @type {number} */ <- twice: Int = level * 2) {}
+398:3 -> ../spreads.temper.md:125:63  #twice; <- twice: Int = level * 2) {}
+408:3 -> ../spreads.temper.md:125:5  /** <- @data class Dial(var level:
+413:3 -> ../spreads.temper.md:125:5  constructor(level, note, twi <- @data class Dial(var level:
+415:5 -> ../spreads.temper.md:125:25  level ??= 5; <-  level: Int = 5, note: Strin
+416:5 -> ../spreads.temper.md:125:42  note ??= "n"; <- note: String? = "n", twice:
+417:5 -> ../spreads.temper.md:125:63  twice ??= Math.imul(level, 2 <- twice: Int = level * 2) {}
+418:5 -> ../spreads.temper.md:125:25  this.#level = level; <-  level: Int = 5, note: Strin
+419:5 -> ../spreads.temper.md:125:42  this.#note = note; <- note: String? = "n", twice:
+420:5 -> ../spreads.temper.md:125:63  this.#twice = twice; <- twice: Int = level * 2) {}
+423:3 -> ../spreads.temper.md:125:25  /** @returns {number} */ <-  level: Int = 5, note: Strin
+424:3 -> ../spreads.temper.md:125:25  get level() { <-  level: Int = 5, note: Strin
+424:7 -> ../spreads.temper.md:125:26 (level)  level() { <- level: Int = 5, note: String
+428:3 -> ../spreads.temper.md:125:25  /** @param {number} value */ <-  level: Int = 5, note: Strin
+429:3 -> ../spreads.temper.md:125:25  set level(value) { <-  level: Int = 5, note: Strin
+429:7 -> ../spreads.temper.md:125:26 (level)  level(value) { <- level: Int = 5, note: String
+433:3 -> ../spreads.temper.md:125:42  /** @returns {string | null} <- note: String? = "n", twice:
+434:3 -> ../spreads.temper.md:125:42  get note() { <- note: String? = "n", twice:
+434:7 -> ../spreads.temper.md:125:42 (note)  note() { <- note: String? = "n", twice:
+438:3 -> ../spreads.temper.md:125:63  /** @returns {number} */ <- twice: Int = level * 2) {}
+439:3 -> ../spreads.temper.md:125:63  get twice() { <- twice: Int = level * 2) {}
+439:7 -> ../spreads.temper.md:125:63 (twice)  twice() { <- twice: Int = level * 2) {}
+444:1 -> ../spreads.temper.md:126:5  class Mark extends type() { <- @data class Mark(note: Strin
+444:7 -> ../spreads.temper.md:126:17 (Mark)  Mark extends type() { <- Mark(note: String? = "n", si
+444:11 -> ../spreads.temper.md:126:5   extends type() { <- @data class Mark(note: Strin
+445:3 -> ../spreads.temper.md:126:22  /** @type {string | null} */ <- note: String? = "n", size: I
+446:3 -> ../spreads.temper.md:126:22  #note; <- note: String? = "n", size: I
+447:3 -> ../spreads.temper.md:126:43  /** @type {number} */ <- size: Int = 2) {}
+448:3 -> ../spreads.temper.md:126:43  #size; <- size: Int = 2) {}
+458:3 -> ../spreads.temper.md:126:5  /** <- @data class Mark(note: Strin
+462:3 -> ../spreads.temper.md:126:5  constructor(note, size) { <- @data class Mark(note: Strin
+464:5 -> ../spreads.temper.md:126:22  note ??= "n"; <- note: String? = "n", size: I
+465:5 -> ../spreads.temper.md:126:43  size ??= 2; <- size: Int = 2) {}
+466:5 -> ../spreads.temper.md:126:22  this.#note = note; <- note: String? = "n", size: I
+467:5 -> ../spreads.temper.md:126:43  this.#size = size; <- size: Int = 2) {}
+470:3 -> ../spreads.temper.md:126:22  /** @returns {string | null} <- note: String? = "n", size: I
+471:3 -> ../spreads.temper.md:126:22  get note() { <- note: String? = "n", size: I
+471:7 -> ../spreads.temper.md:126:22 (note)  note() { <- note: String? = "n", size: I
+475:3 -> ../spreads.temper.md:126:43  /** @returns {number} */ <- size: Int = 2) {}
+476:3 -> ../spreads.temper.md:126:43  get size() { <- size: Int = 2) {}
+476:7 -> ../spreads.temper.md:126:43 (size)  size() { <- size: Int = 2) {}
+481:1 -> ../spreads.temper.md:23:5  const a = new Box(2, 3); <- let a: Box = { w: 2, h: 3 };
+482:1 -> ../spreads.temper.md:24:5  const b = grown(a); <- let b = grown(a);
+483:1 -> ../spreads.temper.md:25:5  console.log(`${a.toString()} <- console.log("${a} ${b} ${are
+484:1 -> ../spreads.temper.md:26:5  /** @type {Box} */ <- console.log({ ...b, label: "
+485:1 -> ../spreads.temper.md:26:5  let t$9; <- console.log({ ...b, label: "
+486:1 -> ../spreads.temper.md:26:5  { <- console.log({ ...b, label: "
+487:3 -> ../spreads.temper.md:26:22  const spread = b; <- b, label: "named" }.toString
+490:1 -> ../spreads.temper.md:26:5  console.log(t$9.toString()); <- console.log({ ...b, label: "
+491:1 -> ../spreads.temper.md:27:5  let t$11 = a.w > 1; <- let wide = a.w > 1 && { ...a
+492:1 -> ../spreads.temper.md:27:5  if (t$11) { <- let wide = a.w > 1 && { ...a
+496:5 -> ../spreads.temper.md:27:32  const spread2 = a; <- a, w: 10 }.area() > 20;
+501:1 -> ../spreads.temper.md:27:5  const wide = t$11; <- let wide = a.w > 1 && { ...a
+502:1 -> ../spreads.temper.md:28:5  /** @type {Two<number>} */ <- let p: Two<Int> = { first: 1
+503:1 -> ../spreads.temper.md:28:5  const p = new Two(1, 2); <- let p: Two<Int> = { first: 1
+504:1 -> ../spreads.temper.md:29:5  /** @type {Two<number>} */ <- let q = { ...p, second: 5 };
+505:1 -> ../spreads.temper.md:29:5  let t$12; <- let q = { ...p, second: 5 };
+506:1 -> ../spreads.temper.md:29:5  { <- let q = { ...p, second: 5 };
+507:3 -> ../spreads.temper.md:29:18  /** @type {Two<number>} */ <- p, second: 5 };
+508:3 -> ../spreads.temper.md:29:18  const spread3 = p; <- p, second: 5 };
+511:1 -> ../spreads.temper.md:29:5  /** @type {Two<number>} */ <- let q = { ...p, second: 5 };
+512:1 -> ../spreads.temper.md:29:5  const q = t$12; <- let q = { ...p, second: 5 };
+513:1 -> ../spreads.temper.md:30:5  console.log(`${wide} ${q.fir <- console.log("${wide.toString
+514:1 -> ../spreads.temper.md:31:5  /** @type {Box} */ <- let nested = { ...{ ...a, w:
+515:1 -> ../spreads.temper.md:31:5  let t$13; <- let nested = { ...{ ...a, w:
+516:1 -> ../spreads.temper.md:31:5  { <- let nested = { ...{ ...a, w:
+517:3 -> ../spreads.temper.md:31:23  /** @type {Box} */ <- { ...a, w: 7 }, h: 8 };
+518:3 -> ../spreads.temper.md:31:23  let t$14; <- { ...a, w: 7 }, h: 8 };
+519:3 -> ../spreads.temper.md:31:23  { <- { ...a, w: 7 }, h: 8 };
+520:5 -> ../spreads.temper.md:31:28  const spread5 = a; <- a, w: 7 }, h: 8 };
+523:3 -> ../spreads.temper.md:31:23  const spread4 = t$14; <- { ...a, w: 7 }, h: 8 };
+526:1 -> ../spreads.temper.md:31:5  const nested = t$13; <- let nested = { ...{ ...a, w:
+527:1 -> ../spreads.temper.md:34:5  const t$16 = said("one", 1); <- console.log(both(said("one",
+528:1 -> ../spreads.temper.md:34:5  /** @type {Box} */ <- console.log(both(said("one",
+529:1 -> ../spreads.temper.md:34:5  let t$15; <- console.log(both(said("one",
+530:1 -> ../spreads.temper.md:34:5  { <- console.log(both(said("one",
+531:3 -> ../spreads.temper.md:34:43  const spread6 = a; <- a, h: said("two", 2) }));
+534:1 -> ../spreads.temper.md:34:5  console.log(both(t$16, t$15) <- console.log(both(said("one",
+535:1 -> ../spreads.temper.md:35:5  let t$18 = a.w > 5; <- console.log("${nested} ${(a.
+536:1 -> ../spreads.temper.md:35:5  if (!t$18) { <- console.log("${nested} ${(a.
+540:5 -> ../spreads.temper.md:35:47  const spread7 = a; <- a, w: said("three", 3) }.w =
+545:1 -> ../spreads.temper.md:35:5  console.log(`${nested.toStri <- console.log("${nested} ${(a.
+546:1 -> ../spreads.temper.md:66:5  console.log(widths(a, 3).toS <- console.log(widths(a, 3).toS
+547:1 -> ../spreads.temper.md:85:5  const s = new Step(1, "s").n <- let s = new Step(1, "s").nex
+548:1 -> ../spreads.temper.md:86:5  /** @type {Two<number>} */ <- let same = { ...q };
+549:1 -> ../spreads.temper.md:86:5  let t$19; <- let same = { ...q };
+550:1 -> ../spreads.temper.md:86:5  { <- let same = { ...q };
+551:3 -> ../spreads.temper.md:86:21  /** @type {Two<number>} */ <- q };
+552:3 -> ../spreads.temper.md:86:21  const spread8 = q; <- q };
+555:1 -> ../spreads.temper.md:86:5  /** @type {Two<number>} */ <- let same = { ...q };
+556:1 -> ../spreads.temper.md:86:5  const same = t$19; <- let same = { ...q };
+557:1 -> ../spreads.temper.md:87:5  /** @type {Two<string>} */ <- let words: Two<String> = { f
+558:1 -> ../spreads.temper.md:87:5  const words = new Two("a", " <- let words: Two<String> = { f
+559:1 -> ../spreads.temper.md:88:5  /** @type {Two<string>} */ <- let flipped = swapped(words)
+560:1 -> ../spreads.temper.md:88:5  const flipped = swapped(word <- let flipped = swapped(words)
+561:1 -> ../spreads.temper.md:89:5  console.log(`${s.n} ${s.tag} <- console.log("${s.n} ${s.tag}
+562:1 -> ../spreads.temper.md:107:5  console.log(`${size(doubled( <- console.log("${size(doubled(
+564:1 -> ../spreads.temper.md:110:24  /** <- { (n: Int): Box => ({ ...a,
+568:1 -> ../spreads.temper.md:110:24  function fn(n) { <- { (n: Int): Box => ({ ...a,
+569:3 -> ../spreads.temper.md:110:44  { <- { ...a, h: n }) };
+570:5 -> ../spreads.temper.md:110:49  const spread = a; <- a, h: n }) };
+571:5 -> ../spreads.temper.md:110:44  return new Box(spread.w, n, <- { ...a, h: n }) };
+575:1 -> ../spreads.temper.md:110:5  const made = applied(fn); <- let made = applied { (n: Int
+576:1 -> ../spreads.temper.md:111:5  console.log(`${picked(true). <- console.log("${picked(true)}
+577:1 -> ../spreads.temper.md:127:5  const dial = new Dial(1, nul <- let dial = new Dial(1, null)
+578:1 -> ../spreads.temper.md:128:5  dial.level = 4; <- dial.level = 4;
+579:1 -> ../spreads.temper.md:129:5  /** @type {Dial} */ <- let turned = { ...dial, note
+580:1 -> ../spreads.temper.md:129:5  let t$20; <- let turned = { ...dial, note
+581:1 -> ../spreads.temper.md:129:5  { <- let turned = { ...dial, note
+582:3 -> ../spreads.temper.md:129:23  const spread9 = dial; <- dial, note: "m" };
+585:1 -> ../spreads.temper.md:129:5  const turned = t$20; <- let turned = { ...dial, note
+586:1 -> ../spreads.temper.md:130:5  const mark = new Mark(null); <- let mark = new Mark(null);
+587:1 -> ../spreads.temper.md:131:5  /** @type {Mark} */ <- let bigger = { ...mark, size
+588:1 -> ../spreads.temper.md:131:5  let t$21; <- let bigger = { ...mark, size
+589:1 -> ../spreads.temper.md:131:5  { <- let bigger = { ...mark, size
+590:3 -> ../spreads.temper.md:131:23  const spread10 = mark; <- mark, size: 3 };
+593:1 -> ../spreads.temper.md:131:5  const bigger = t$21; <- let bigger = { ...mark, size
+594:1 -> ../spreads.temper.md:132:5  console.log(`${turned.level} <- console.log("${turned.level}
+595:1 -> ../spreads.temper.md:146:5  /** @type {Box} */ <- let caught = { ...a, w: posi
+596:1 -> ../spreads.temper.md:146:5  let t$22; <- let caught = { ...a, w: posi
+597:1 -> ../spreads.temper.md:146:5  { <- let caught = { ...a, w: posi
+598:3 -> ../spreads.temper.md:146:23  const spread11 = a; <- a, w: positive(-1) orelse 0,
+616:1 -> ../spreads.temper.md:146:5  const caught = t$22; <- let caught = { ...a, w: posi
+617:1 -> ../spreads.temper.md:147:5  /** @type {string} */ <- console.log("${caught} ${siz
+618:1 -> ../spreads.temper.md:147:5  let t$26; <- console.log("${caught} ${siz
+619:1 -> ../spreads.temper.md:147:5  try { <- console.log("${caught} ${siz
+624:1 -> ../spreads.temper.md:147:5  console.log(`${caught.toStri <- console.log("${caught} ${siz
+625:1 -> ../spreads.temper.md:148:5  /** @type {string} */ <- console.log(do { sized(a, -1
+626:1 -> ../spreads.temper.md:148:5  let t$27; <- console.log(do { sized(a, -1
+627:1 -> ../spreads.temper.md:148:5  try { <- console.log(do { sized(a, -1
+628:3 -> ../spreads.temper.md:148:22  sized(a, -1); <- sized(a, -1); "sized" } orel
+633:1 -> ../spreads.temper.md:148:5  console.log(t$27); <- console.log(do { sized(a, -1
+634:1 -> ../spreads.temper.md:158:5  /** @type {import("@temperla <- let gate = new PromiseBuilde
+635:1 -> ../spreads.temper.md:158:5  const gate = new PromiseBuil <- let gate = new PromiseBuilde
+637:1 -> ../spreads.temper.md:159:11  /** <- { (): GeneratorResult<Empty>
+641:1 -> ../spreads.temper.md:159:11  function* fn2(doAwait) { <- { (): GeneratorResult<Empty>
+642:3 -> ../spreads.temper.md:160:7  /** @type {Box} */ <- let later = { ...a, label: "
+643:3 -> ../spreads.temper.md:160:7  let t$28; <- let later = { ...a, label: "
+644:3 -> ../spreads.temper.md:160:7  { <- let later = { ...a, label: "
+645:5 -> ../spreads.temper.md:160:24  const spread = a; <- a, label: "later", h: await
+646:5 -> ../spreads.temper.md:160:19  const arg = spread.w; <- { ...a, label: "later", h: a
+647:5 -> ../spreads.temper.md:160:46  /** @type {number} */ <- await gate.promise orelse -1
+648:5 -> ../spreads.temper.md:160:46  let arg2; <- await gate.promise orelse -1
+649:5 -> ../spreads.temper.md:160:46  try { <- await gate.promise orelse -1
+656:3 -> ../spreads.temper.md:160:7  const later = t$28; <- let later = { ...a, label: "
+657:3 -> ../spreads.temper.md:161:7  console.log(later.toString() <- console.log(later.toString()
+660:1 -> ../spreads.temper.md:159:5  runAsync(adaptAwaiter(fn2)); <- async { (): GeneratorResult<
+661:1 -> ../spreads.temper.md:163:5  gate.complete(6); <- gate.complete(6);

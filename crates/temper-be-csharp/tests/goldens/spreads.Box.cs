@@ -46,7 +46,7 @@ internal class Box : ISized
 
     public override string ToString()
     {
-        string? subject = this.label;
-        return string.Create(CultureInfo.InvariantCulture, $"{(subject == null ? "box" : subject)} {this.w}x{this.h}");
+        string? subject1 = this.label;
+        return string.Create(CultureInfo.InvariantCulture, $"{(subject1 == null ? "box" : subject1)} {this.w}x{this.h}");
     }
 }

@@ -1272,6 +1272,7 @@ impl Settle {
                 self.check_overrides(node);
                 self.check_fun_interface(node);
                 self.check_connected_class(node);
+                self.check_data_defaults(node);
             }
             (NodeKind::If, Some(condition), _) => {
                 let mut t = self.known_type(condition);

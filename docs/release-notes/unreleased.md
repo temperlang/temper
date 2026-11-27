@@ -303,9 +303,12 @@ there's one spread, written first, of a `@data` class's value, building
 that same class.
 
 `@data` is new too: a checked promise that a class is plain data. Each
-constructor parameter is a public property with no default but `null`,
-and the class has no other properties and no constructor of its own
-(and no `var` properties if it's `@imu`); methods are fine. Its
+constructor parameter is a public property, and the class has no other
+properties and no constructor of its own (and no `var` properties if
+it's `@imu`); methods are fine. A `@data` object round-trips, built
+again from its own properties with the same values, so for a property
+that can hold null (a nullable `var`, or one whose default may give
+null), any default must be `null`. Its
 properties are public by default, as interface members are, so they
 need no `public`; its methods still need a visibility. Some
 backends may copy a `@data` object natively for a spread, as an

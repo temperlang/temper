@@ -2806,10 +2806,11 @@ Failed: Only one spread, written first, is supported in an object literal for no
 === @data classes keep to their rules
 // `@data` promises a class is plain data: each constructor parameter a
 // public property, no other property (field, getter, or setter, static
-// fields too), no constructor of its own, no default but null, no `var`
-// if it's also `@imu`, and not `@connected`. Methods, static methods,
-// supertypes, and `var`s are fine. Each rule broken is an error, and a
-// class that breaks one isn't `@data` to a spread.
+// fields too), no constructor of its own, no default but null where a
+// property can hold null (below), no `var` if it's also `@imu`, and not
+// `@connected`. Methods, static methods, supertypes, and `var`s are
+// fine. Each rule broken is an error, and a class that breaks one but
+// the default rule isn't `@data` to a spread.
 interface Named { public name(): String; }
 @data class Fine(public n: Int, public var m: Int, public note: String? = null) extends Named {
   public name(): String { "fine ${n} ${m} ${note ?? "-"}" }
@@ -2823,7 +2824,7 @@ interface Named { public name(): String; }
 @data class Setter(public var n: Int) { public set twice(x: Int) { n = x / 2; } }
 @data class Made { public n: Int; public constructor(n: Int) { this.n = n; } }
 @data class Hidden(private n: Int, protected m: Int) {}
-@data class Defaulted(public n: Int = 1, public s: String? = "s") {}
+@data class Defaulted(public var n: Int? = 1) {}
 @imu @data class Frozen(public var n: Int) {}
 @connected @data class Hosted(public n: Int) {}
 let fine = { ...Fine.make(), m: 5 };
@@ -2874,32 +2875,151 @@ let field = { ...new Field(1) };
       ^constructor:43
       (Fn (Let ^n:44 Int) (Block (Assign (Call . this#41 \n) n:44) #void))))
   (Class ^Hidden:9 (Param private ^n:46 Int) (Param ^m:47 Int))
-  (Class ^Defaulted:10 (Param ^n:49 Int 1) (Param ^s:50 (Call ? String) "s"))
-  (Class ^Frozen:11 (Param var ^n:52 Int))
-  (Class ^Hosted:12 (Param ^n:54 Int))
+  (Class ^Defaulted:10 (Param var ^n:49 (Call ? Int) 1))
+  (Class ^Frozen:11 (Param var ^n:51 Int))
+  (Class ^Hosted:12 (Param ^n:53 Int))
   (Let
     ^fine:13
     (Block
-      (Let ^spread#55 (Call (Call . Fine:1 \make)))
-      (Call new Fine:1 (Call . spread#55 \n) 5 (Call . spread#55 \note))))
+      (Let ^spread#54 (Call (Call . Fine:1 \make)))
+      (Call new Fine:1 (Call . spread#54 \n) 5 (Call . spread#54 \note))))
   (Let ^field:14 (Error))
   #void)
-error 677..681: @data applies only to classes, not interface Face
-error 715..716: @data class Input's constructor parameter n must be a property
-error 783..793: @data class Field may declare only its constructor's properties and methods, not property twice
-error 855..864: @data class Static may declare only its constructor's properties and methods, not static zero
-error 919..924: @data class Getter may declare only its constructor's properties and methods, not getter twice
-error 995..1000: @data class Setter may declare only its constructor's properties and methods, not setter twice
-error 1052..1053: @data class Made may declare only its constructor's properties and methods, not property n
-error 1067..1078: @data class Made may declare only its constructor's properties and methods, not a constructor
-error 1132..1133: @data class Hidden's property n must be public
-error 1150..1151: @data class Hidden's property m must be public
-error 1190..1191: @data class Defaulted's property n may default only to null
-error 1209..1210: @data class Defaulted's property s may default only to null
-error 1265..1266: @data class Frozen's property n can't be a var, as the class is @imu
-error 1299..1305: @data class Hosted can't be @connected
-error 1373..1392: Spreads need a @data class; Field isn't one
+error 740..744: @data applies only to classes, not interface Face
+error 778..779: @data class Input's constructor parameter n must be a property
+error 846..856: @data class Field may declare only its constructor's properties and methods, not property twice
+error 918..927: @data class Static may declare only its constructor's properties and methods, not static zero
+error 982..987: @data class Getter may declare only its constructor's properties and methods, not getter twice
+error 1058..1063: @data class Setter may declare only its constructor's properties and methods, not setter twice
+error 1115..1116: @data class Made may declare only its constructor's properties and methods, not property n
+error 1130..1141: @data class Made may declare only its constructor's properties and methods, not a constructor
+error 1195..1196: @data class Hidden's property n must be public
+error 1213..1214: @data class Hidden's property m must be public
+error 1308..1309: @data class Frozen's property n can't be a var, as the class is @imu
+error 1342..1348: @data class Hosted can't be @connected
+error 1416..1435: Spreads need a @data class; Field isn't one
+error 1257..1258: @data class Defaulted's property n can hold null, so any default must be null: rebuilding a Defaulted from its properties would turn its null into the default
 Failed: Spreads need a @data class; Field isn't one
+
+=== a @data property that can hold null has no default but null
+// A `@data` object round-trips: made again from its own properties, it
+// has the same values. Passing null gives a parameter's default, so for
+// a property that can hold null, any default must be null: a nullable `var`
+// (`Reset`, which may be set to null) or a `var` of a type parameter
+// (`Twin`), or a property whose default may give null (`Maybe`, and
+// `Pair`, as `T` may be bound to a nullable type). Each is an error, at
+// the property.
+@data class Reset(public var n: Int? = 5) {}
+@data class Maybe(public n: Int? = Maybe.pick()) {
+  public static pick(): Int? { null }
+}
+@data class Pair<T>(public a: T, public b: T = a) {}
+@data class Twin<T>(public var a: T? = null, public var b: T? = a) {}
+--- settled
+(Block
+  (Class ^Reset:0 (Param var ^n:5 (Call ? Int) 5))
+  (Class
+    ^Maybe:1
+    (Param ^n:7 (Call ? Int) (Call (Call . Maybe:1 \pick)))
+    (Method static ^pick:8 (Fn (Call ? Int) (Block null))))
+  (Class ^Pair:2 (TypeParam ^T:9) (Param ^a:11 T:9) (Param ^b:12 T:9 a:11))
+  (Class
+    ^Twin:3
+    (TypeParam ^T:13)
+    (Param var ^a:15 (Call ? T:13) null)
+    (Param var ^b:16 (Call ? T:13) a:15)))
+error 480..481: @data class Reset's property n can hold null, so any default must be null: rebuilding a Reset from its properties would turn its null into the default
+error 521..522: @data class Maybe's property n can hold null, so any default must be null: rebuilding a Maybe from its properties would turn its null into the default
+error 627..628: @data class Pair's property b can hold null, so any default must be null: rebuilding a Pair from its properties would turn its null into the default
+error 696..697: @data class Twin's property b can hold null, so any default must be null: rebuilding a Twin from its properties would turn its null into the default
+
+=== @data defaults that can't give null are fine
+// A property that can't hold null may default to anything: one that
+// isn't nullable (a `var` too, and one typed by its default), or one
+// that's nullable but not a `var`, with a default that can't give null.
+// A spread copies each as it is, not made again, as writing every
+// property out from `old` does.
+@data class Dial(
+  public var level: Int = 5,
+  public var count = 0,
+  public note: String? = "n",
+  public twice: Int = level * 2,
+  public var tag: String? = null,
+) {}
+let dial = new Dial(1, null);
+dial.level = 4;
+dial.count = 2;
+let turned = { ...dial };
+let named = { ...turned, level: 3, note: "m" };
+console.log("${turned.level} ${turned.count} ${turned.note ?? "-"} ${turned.twice}");
+console.log("${named.level} ${named.note ?? "-"} ${named.twice} ${named.tag ?? "-"}");
+--- settled
+(Block
+  (Class
+    ^Dial:0
+    (Param var ^level:5 Int 5)
+    (Param var ^count:6 0)
+    (Param ^note:7 (Call ? String) "n")
+    (Param ^twice:8 Int (Call * level:5 2))
+    (Param var ^tag:9 (Call ? String) null))
+  (Let ^dial:1 (Call new Dial:0 1 null))
+  (Assign (Call . dial:1 \level) 4)
+  (Assign (Call . dial:1 \count) 2)
+  (Let
+    ^turned:2
+    (Block
+      (Let ^spread#13 dial:1)
+      (Call
+        new
+        Dial:0
+        (Call . spread#13 \level)
+        (Call . spread#13 \count)
+        (Call . spread#13 \note)
+        (Call . spread#13 \twice)
+        (Call . spread#13 \tag))))
+  (Let
+    ^named:3
+    (Block
+      (Let ^spread#14 turned:2)
+      (Call
+        new
+        Dial:0
+        3
+        (Call . spread#14 \count)
+        "m"
+        (Call . spread#14 \twice)
+        (Call . spread#14 \tag))))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call . turned:2 \level)
+      " "
+      (Call . turned:2 \count)
+      " "
+      (Block
+        (Let ^subject#10 (Call . turned:2 \note))
+        (If (Call == subject#10 #null) "-" subject#10))
+      " "
+      (Call . turned:2 \twice)))
+  (Call
+    (Call . console \log)
+    (Call
+      cat
+      (Call . named:3 \level)
+      " "
+      (Block
+        (Let ^subject#11 (Call . named:3 \note))
+        (If (Call == subject#11 #null) "-" subject#11))
+      " "
+      (Call . named:3 \twice)
+      " "
+      (Block
+        (Let ^subject#12 (Call . named:3 \tag))
+        (If (Call == subject#12 #null) "-" subject#12))))
+  #void)
+log 4 2 n 2
+log 3 m 2 -
 
 === @data properties are public by default
 // A `@data` class's constructor parameters without a visibility are

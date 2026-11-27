@@ -93,12 +93,39 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 }))
             }));
             println!("{} {} {made}", picked(true), picked(false));
+            let dial = Dial::new(Some(1), None::<Arc<String>>, None);
+            *dial.0.level.write().unwrap() = 4;
+            let turned = {
+                let spread9 = dial.clone();
+                Dial::new(Some(spread9.level()), Some("m"), Some(spread9.0.twice))
+            };
+            let mark = Mark::new(None::<Arc<String>>, None);
+            let bigger = {
+                let spread10 = mark.clone();
+                Mark::new(spread10.0.note.clone(), Some(3))
+            };
+            println!(
+                "{} {} {} {} {}",
+                turned.level(),
+                {
+                    let subject = turned.0.note.clone();
+                    subject.clone().unwrap_or_else(|| Arc::new("-".to_string()))
+                },
+                turned.0.twice,
+                {
+                    let subject2 = bigger.0.note.clone();
+                    subject2
+                        .clone()
+                        .unwrap_or_else(|| Arc::new("-".to_string()))
+                },
+                bigger.0.size
+            );
             let caught = {
-                let spread9 = a();
+                let spread11 = a();
                 Box(Arc::new(BoxStruct {
                     w: positive(-1).unwrap_or(0),
                     h: positive(5).unwrap_or(-1),
-                    ..(*spread9.0).clone()
+                    ..(*spread11.0).clone()
                 }))
             };
             println!(
@@ -546,6 +573,54 @@ pub(crate) fn picked(c: bool) -> Box {
 pub(crate) fn applied(f: Arc<dyn Fn(i32) -> Box + Send + Sync>) -> Box {
     f(4)
 }
+
+struct DialStruct {
+    level: RwLock<i32>,
+    note: Option<Arc<String>>,
+    twice: i32,
+}
+
+#[derive(Clone)]
+pub(crate) struct Dial(Arc<DialStruct>);
+
+impl Dial {
+    pub fn new(level: Option<i32>, note: Option<impl ToArcString>, twice: Option<i32>) -> Dial {
+        let note = note.map(|x| x.to_arc_string());
+        let level = level.unwrap_or(5);
+        let note = note.or_else(|| Some(Arc::new("n".to_string())));
+        let twice = twice.unwrap_or_else(|| level.wrapping_mul(2));
+        Dial(Arc::new(DialStruct {
+            level: RwLock::new(level),
+            note,
+            twice,
+        }))
+    }
+
+    pub fn level(&self) -> i32 {
+        *self.0.level.read().unwrap()
+    }
+}
+
+temper_core::impl_any_value_trait!(Dial, []);
+
+struct MarkStruct {
+    note: Option<Arc<String>>,
+    size: i32,
+}
+
+#[derive(Clone)]
+pub(crate) struct Mark(Arc<MarkStruct>);
+
+impl Mark {
+    pub fn new(note: Option<impl ToArcString>, size: Option<i32>) -> Mark {
+        let note = note.map(|x| x.to_arc_string());
+        let note = note.or_else(|| Some(Arc::new("n".to_string())));
+        let size = size.unwrap_or(2);
+        Mark(Arc::new(MarkStruct { note, size }))
+    }
+}
+
+temper_core::impl_any_value_trait!(Mark, []);
 
 pub(crate) fn positive(n: i32) -> temper_core::Result<i32> {
     if n < 0 {

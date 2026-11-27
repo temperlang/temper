@@ -18,6 +18,8 @@ struct Step;
 struct Shape;
 struct Circle;
 struct Square;
+struct Dial;
+struct Mark;
 
 struct Sized : public virtual temper::core::AnyValueBase {
   virtual int32_t area() const = 0;
@@ -66,6 +68,29 @@ struct Square : public virtual Shape {
   int32_t side;
   static std::shared_ptr<Square> make(int32_t side);
   int32_t get_side() const;
+};
+
+struct Dial : public std::enable_shared_from_this<Dial> {
+  int32_t level;
+  temper::core::NullableParam<temper::core::Str> note;
+  int32_t twice;
+  static std::shared_ptr<Dial> make(temper::core::NullableParam<int32_t> level, temper::core::NullableParam<temper::core::Str> note, temper::core::NullableParam<int32_t> twice);
+  static std::shared_ptr<Dial> make(temper::core::NullableParam<int32_t> level, temper::core::NullableParam<temper::core::Str> note);
+  static std::shared_ptr<Dial> make(temper::core::NullableParam<int32_t> level);
+  static std::shared_ptr<Dial> make();
+  int32_t get_level();
+  temper::core::NullableParam<temper::core::Str> get_note() const;
+  int32_t get_twice() const;
+};
+
+struct Mark : public std::enable_shared_from_this<Mark> {
+  temper::core::NullableParam<temper::core::Str> note;
+  int32_t size;
+  static std::shared_ptr<Mark> make(temper::core::NullableParam<temper::core::Str> note, temper::core::NullableParam<int32_t> size);
+  static std::shared_ptr<Mark> make(temper::core::NullableParam<temper::core::Str> note);
+  static std::shared_ptr<Mark> make();
+  temper::core::NullableParam<temper::core::Str> get_note() const;
+  int32_t get_size() const;
 };
 
 template <class T>
@@ -163,8 +188,8 @@ static int32_t widths(std::shared_ptr<Box> const & b, int32_t n) {
   {
     int32_t i = 0;
     while (i < n) {
-      std::shared_ptr<Box> spread10 = t;
-      std::shared_ptr<Box> box = std::make_shared<Box>(*spread10);
+      std::shared_ptr<Box> spread12 = t;
+      std::shared_ptr<Box> box = std::make_shared<Box>(*spread12);
       box->w = t->h;
       box->h = core::Int::add(t->w, 1);
       t = box;
@@ -172,8 +197,8 @@ static int32_t widths(std::shared_ptr<Box> const & b, int32_t n) {
     }
   }
   while (true) {
-    std::shared_ptr<Box> spread11 = t;
-    std::shared_ptr<Box> box2 = std::make_shared<Box>(*spread11);
+    std::shared_ptr<Box> spread13 = t;
+    std::shared_ptr<Box> box2 = std::make_shared<Box>(*spread13);
     box2->h = 1;
     if (box2->area() >= 9) {
       break;
@@ -186,17 +211,17 @@ static int32_t widths(std::shared_ptr<Box> const & b, int32_t n) {
   {
     int32_t i = 0;
     while (i < 2) {
-      std::shared_ptr<Box> spread12 = t;
+      std::shared_ptr<Box> spread14 = t;
       int32_t arg = spreads::said(TEMPER_STR("h"), t->w);
       int32_t arg2 = spreads::said(TEMPER_STR("w"), t->h);
-      core::NullableParam<core::Str> arg3 = spread12->label;
+      core::NullableParam<core::Str> arg3 = spread14->label;
       t = Box::make(arg2, arg, arg3);
       i = core::Int::add(i, 1);
     }
   }
   if (t->w > 0) {
-    std::shared_ptr<Box> spread13 = b;
-    std::shared_ptr<Box> b2 = std::make_shared<Box>(*spread13);
+    std::shared_ptr<Box> spread15 = b;
+    std::shared_ptr<Box> b2 = std::make_shared<Box>(*spread15);
     b2->label = TEMPER_STR("inner");
     core::Console::log(temper_globals::console.value, b2->toString());
   }
@@ -259,12 +284,12 @@ int32_t Square::get_side() const {
 static std::shared_ptr<Shape> doubled(std::shared_ptr<Shape> const & x) {
   std::shared_ptr<Shape> shape;
   if (dynamic_cast<Circle const *>(x.get()) != nullptr) {
-    std::shared_ptr<Circle> spread10 = core::checked_cast<Circle>(x);
+    std::shared_ptr<Circle> spread12 = core::checked_cast<Circle>(x);
     shape = core::to_base<Shape>(Circle::make(core::Int::mul(core::checked_cast<Circle>(x)->r, 2)));
   } else {
     std::shared_ptr<Square> square;
     if (dynamic_cast<Square const *>(x.get()) != nullptr) {
-      std::shared_ptr<Square> spread11 = core::checked_cast<Square>(x);
+      std::shared_ptr<Square> spread13 = core::checked_cast<Square>(x);
       square = Square::make(core::Int::mul(core::checked_cast<Square>(x)->side, 2));
     } else {
       square = core::panic<std::shared_ptr<Square>>();
@@ -295,6 +320,66 @@ static std::shared_ptr<Box> picked(bool c) {
 
 static std::shared_ptr<Box> applied(std::function<std::shared_ptr<Box>(int32_t)> const & f) {
   return f(4);
+}
+
+std::shared_ptr<Dial> Dial::make(core::NullableParam<int32_t> level, core::NullableParam<core::Str> note, core::NullableParam<int32_t> twice) {
+  std::shared_ptr<Dial> self = std::make_shared<Dial>();
+  int32_t level2 = level == nullptr ? 5 : level.value;
+  core::NullableParam<core::Str> note2 = note == nullptr ? core::NullableParam<core::Str>(TEMPER_STR("n")) : note;
+  int32_t twice2 = twice == nullptr ? core::Int::mul(level2, 2) : twice.value;
+  self->level = level2;
+  self->note = note2;
+  self->twice = twice2;
+  return self;
+}
+
+std::shared_ptr<Dial> Dial::make(core::NullableParam<int32_t> level, core::NullableParam<core::Str> note) {
+  return make(level, note, nullptr);
+}
+
+std::shared_ptr<Dial> Dial::make(core::NullableParam<int32_t> level) {
+  return make(level, nullptr, nullptr);
+}
+
+std::shared_ptr<Dial> Dial::make() {
+  return make(nullptr, nullptr, nullptr);
+}
+
+int32_t Dial::get_level() {
+  return this->level;
+}
+
+core::NullableParam<core::Str> Dial::get_note() const {
+  return this->note;
+}
+
+int32_t Dial::get_twice() const {
+  return this->twice;
+}
+
+std::shared_ptr<Mark> Mark::make(core::NullableParam<core::Str> note, core::NullableParam<int32_t> size) {
+  std::shared_ptr<Mark> self = std::make_shared<Mark>();
+  core::NullableParam<core::Str> note2 = note == nullptr ? core::NullableParam<core::Str>(TEMPER_STR("n")) : note;
+  int32_t size2 = size == nullptr ? 2 : size.value;
+  self->note = note2;
+  self->size = size2;
+  return self;
+}
+
+std::shared_ptr<Mark> Mark::make(core::NullableParam<core::Str> note) {
+  return make(note, nullptr);
+}
+
+std::shared_ptr<Mark> Mark::make() {
+  return make(nullptr, nullptr);
+}
+
+core::NullableParam<core::Str> Mark::get_note() const {
+  return this->note;
+}
+
+int32_t Mark::get_size() const {
+  return this->size;
 }
 
 static int32_t positive(int32_t n) {
@@ -370,8 +455,20 @@ void global_init_init() {
     core::Console::log(temper_globals::console.value, std::to_string(value3) + " " + std::to_string(spreads::size(spreads::doubled(core::to_base<Shape>(Square::make(5))))));
     std::shared_ptr<Box> made = spreads::applied([](int32_t n) -> std::shared_ptr<Box> { { std::shared_ptr<Box> spread2 = temper_globals::a.value; std::shared_ptr<Box> box5 = std::make_shared<Box>(*spread2); box5->h = n; return box5; } });
     core::Console::log(temper_globals::console.value, picked(true)->toString() + " " + picked(false)->toString() + " " + made->toString());
-    std::shared_ptr<Box> spread9 = temper_globals::a.value;
-    std::shared_ptr<Box> caught = std::make_shared<Box>(*spread9);
+    std::shared_ptr<Dial> dial = Dial::make(1, nullptr);
+    dial->level = 4;
+    std::shared_ptr<Dial> spread9 = dial;
+    std::shared_ptr<Dial> turned = Dial::make(spread9->level, TEMPER_STR("m"), spread9->twice);
+    std::shared_ptr<Mark> mark = Mark::make(nullptr);
+    std::shared_ptr<Mark> spread10 = mark;
+    std::shared_ptr<Mark> bigger = std::make_shared<Mark>(*spread10);
+    bigger->size = 3;
+    core::Str string2 = std::to_string(turned->level) + " ";
+    core::NullableParam<core::Str> subject = turned->note;
+    core::NullableParam<core::Str> subject2 = bigger->note;
+    core::Console::log(temper_globals::console.value, string2 + (subject == nullptr ? TEMPER_STR("-") : subject.value) + " " + std::to_string(turned->twice) + " " + (subject2 == nullptr ? TEMPER_STR("-") : subject2.value) + " " + std::to_string(bigger->size));
+    std::shared_ptr<Box> spread11 = temper_globals::a.value;
+    std::shared_ptr<Box> caught = std::make_shared<Box>(*spread11);
     int32_t value4;
     try {
       value4 = positive(-1);
@@ -386,14 +483,14 @@ void global_init_init() {
       value5 = -1;
     }
     caught->h = value5;
-    core::Str string2 = caught->toString() + " ";
+    core::Str string3 = caught->toString() + " ";
     core::Str value6;
     try {
       value6 = spreads::sized(temper_globals::a.value, 4)->toString();
     } catch (core::TemperBubble const &) {
       value6 = TEMPER_STR("-");
     }
-    core::Console::log(temper_globals::console.value, string2 + value6);
+    core::Console::log(temper_globals::console.value, string3 + value6);
     core::Str value7;
     try {
       spreads::sized(temper_globals::a.value, -1);

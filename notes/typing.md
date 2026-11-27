@@ -685,7 +685,8 @@ constructor parameter, so it goes through the same constructor call:
 - **What it copies:** each constructor parameter not given, from
   `old`'s property of that name, which `@data` makes public. A null
   there, as for any null passed to a defaulted parameter, takes the
-  default, which `@data` allows only as null.
+  default, which `@data` allows only where the property can't hold
+  null (below), so the copy is the value read.
 - **What it becomes:** `do { let spread#1 = old; new C(spread#1.a, e) }`:
   `old` once, first, then the given values in the order written, the
   copies among them in the parameters' order, placed as for any object
@@ -706,7 +707,19 @@ compatible and tightening isn't:
   function it's "@data applies only to classes", reported once
   expansion settles, for any `@data` not used up by a class.
 - Each constructor parameter is a property (no `@noProperty`), public,
-  with no default but `null`, and not a `var` if the class is `@imu`.
+  and not a `var` if the class is `@imu`.
+- Defaults (2026-11-26; `object_literals.rs`, `check_data_defaults`,
+  once typed): a `@data` object round-trips, constructed from its own
+  properties with the same values, a promise of `@data`'s own that
+  spreads rely on. Passing null gives a parameter's default, so for a
+  property that can hold null, any default must be null ("@data class
+  C's property x can hold null, so any default must be null: rebuilding a C
+  from its properties would turn its null into the default", at the
+  property's name). A `var` can hold null if its type may (nullable,
+  `Null`, or a type parameter, which may be bound to a nullable type);
+  any other property, only if its default's type may. Other defaults,
+  even ones that read earlier parameters or call functions, never run
+  for a round trip.
   One without a visibility is public (2026-11-26), as interface
   members need none: `@data` marks it `MEMBER_PUBLIC` as the class is
   lowered, before the visibility check, which still needs one on
@@ -716,10 +729,11 @@ compatible and tightening isn't:
   parameters.
 - Methods, static or not, and supertypes are fine.
 
-It's checked as the class is made, by its members' syntax, a default by
-being the word `null`; a class that keeps to the rules is marked
-`CLASS_DATA`, and `data` in tmpl (`Facts::DATA`). One that breaks a rule
-isn't `@data` to a spread. `@imu` is read only for this check; tempest
+It's checked as the class is made, by its members' syntax, except for
+defaults, which typing checks; a class that keeps to the other rules is
+marked `CLASS_DATA`, and `data` in tmpl (`Facts::DATA`). One that breaks
+one of them isn't `@data` to a spread; a bad default is an error, but
+the class stays `@data`. `@imu` is read only for this check; tempest
 doesn't otherwise check it yet.
 
 ## Function types

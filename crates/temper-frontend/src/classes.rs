@@ -835,10 +835,10 @@ impl Settle {
     /// Whether a class marked `@data` keeps to its rules, reporting each
     /// one broken (notes/typing.md, "`@data` classes"): it's a class, not
     /// `@connected`; each constructor parameter is a property, public,
-    /// with no default but `null`, and no `var` if the class is `@imu`;
-    /// and it declares no other property (a field, getter, or setter,
-    /// static or not) and no constructor. Methods, static or not, are
-    /// fine.
+    /// and no `var` if the class is `@imu`; and it declares no other
+    /// property (a field, getter, or setter, static or not) and no
+    /// constructor. Methods, static or not, are fine. Its defaults need
+    /// types, so typing checks them ([`Settle::check_data_defaults`]).
     fn check_data(
         &mut self,
         call: NodeId,
@@ -858,15 +858,11 @@ impl Settle {
             let tree = &self.lib.tree;
             let data = tree.data(m);
             let member = self.member_text(m).to_string();
-            let default = let_parts(tree, m).2;
             let rule = match data & ROLE_MASK {
                 ROLE_METHOD => continue,
                 ROLE_PARAM if data & MEMBER_NO_PROPERTY != 0 => DataRule::NotProperty(member),
                 ROLE_PARAM if data & (MEMBER_PRIVATE | MEMBER_PROTECTED) != 0 => {
                     DataRule::NotPublic(member)
-                }
-                ROLE_PARAM if default.is_some_and(|d| !self.is_null_literal(d)) => {
-                    DataRule::Default(member)
                 }
                 ROLE_PARAM if imu && data & LET_VAR != 0 => DataRule::ImuVar(member),
                 ROLE_PARAM => continue,
@@ -899,13 +895,6 @@ impl Settle {
         for span in spans {
             self.lib.report(Level::Error, Message::DataNotClass, span);
         }
-    }
-
-    /// Whether a node, not yet resolved, is `null`, as JSON's literals are
-    /// read.
-    fn is_null_literal(&self, node: NodeId) -> bool {
-        self.lib.value(node) == Some(&Value::Null)
-            || (self.lib.name(node)).is_some_and(|n| self.lib.names.get(n) == "null")
     }
 
     /// A member's or class's name.

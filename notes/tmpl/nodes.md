@@ -441,8 +441,8 @@ Python's `dataclasses.replace`) may pass only the other arguments, where
 `analysis::copyable_classes` says the class allows it (2026-11-26): a
 `data` class (`Facts::DATA`, from `@data`, whose rules the frontend
 checks: its constructor only stores its parameters, all public fields,
-with no accessors and no default but null; notes/typing.md, "`@data`
-classes"; rule **C5** checks the tmpl, as C++ and Rust copy on its
+with no accessors, and defaults that a copy never runs; notes/typing.md,
+"`@data` classes"; rule **C5** checks the tmpl, as C++ and Rust copy on its
 word) with no `var` field and a field for each parameter, as a copy
 form reads the fields after the given values run, which then can't
 change them. Spreads need

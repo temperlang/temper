@@ -186,43 +186,55 @@ public final class SpreadsGlobal {
         console.log(size(doubled(new Circle(3))) + " " + size(doubled(new Square(5))));
         IntFunction<Box> fn = n -> {
             {
-                Box spread10 = a;
-                return new Box(spread10.w, n, spread10.label);
+                Box spread12 = a;
+                return new Box(spread12.w, n, spread12.label);
             }
         };
         Box made = applied(fn);
         console.log(picked(true).toString() + " " + picked(false).toString() + " " + made.toString());
-        Box spread9 = a;
-        int t5;
-        try {
-            t5 = positive(-1);
-        } catch (RuntimeException ignored) {
-            t5 = 0;
-        }
-        int t6 = t5;
+        Dial dial = new Dial(1, null);
+        dial.level = 4;
+        Dial spread9 = dial;
+        Dial turned = new Dial(spread9.level, "m", spread9.twice);
+        Mark mark = new Mark(null);
+        Mark spread10 = mark;
+        Mark bigger = new Mark(spread10.note, 3);
+        String t5 = turned.level + " ";
+        @Nullable String subject = turned.note;
+        String t6 = t5 + (subject == null ? "-" : subject) + " " + turned.twice + " ";
+        @Nullable String subject2 = bigger.note;
+        console.log(t6 + (subject2 == null ? "-" : subject2) + " " + bigger.size);
+        Box spread11 = a;
         int t7;
         try {
-            t7 = positive(5);
-        } catch (RuntimeException ignored2) {
-            t7 = -1;
+            t7 = positive(-1);
+        } catch (RuntimeException ignored) {
+            t7 = 0;
         }
-        Box caught = new Box(t6, t7, spread9.label);
-        String t8 = caught.toString() + " ";
-        String t9;
+        int t8 = t7;
+        int t9;
         try {
-            t9 = sized(a, 4).toString();
-        } catch (RuntimeException ignored3) {
-            t9 = "-";
+            t9 = positive(5);
+        } catch (RuntimeException ignored2) {
+            t9 = -1;
         }
-        console.log(t8 + t9);
-        String t10;
+        Box caught = new Box(t8, t9, spread11.label);
+        String t10 = caught.toString() + " ";
+        String t11;
+        try {
+            t11 = sized(a, 4).toString();
+        } catch (RuntimeException ignored3) {
+            t11 = "-";
+        }
+        console.log(t10 + t11);
+        String t12;
         try {
             sized(a, -1);
-            t10 = "sized";
+            t12 = "sized";
         } catch (RuntimeException ignored4) {
-            t10 = "bubbled";
+            t12 = "bubbled";
         }
-        console.log(t10);
+        console.log(t12);
         gate = new CompletableFuture<>();
         Supplier<Generator<Optional<? super Object>>> fn2 = () -> {
             class CaseIndexCell {
@@ -235,11 +247,11 @@ public final class SpreadsGlobal {
             }
             final LaterCell later = new LaterCell();
             later.value = null;
-            class Spread10Cell {
+            class Spread12Cell {
                 @Nullable Box value;
             }
-            final Spread10Cell spread10 = new Spread10Cell();
-            spread10.value = null;
+            final Spread12Cell spread12 = new Spread12Cell();
+            spread12.value = null;
             class ArgCell {
                 int value;
             }
@@ -261,8 +273,8 @@ public final class SpreadsGlobal {
                     caseIndex.value = -1;
                     switch (caseIndexLocal) {
                         case 0:
-                            spread10.value = a;
-                            arg.value = spread10.value.w;
+                            spread12.value = a;
+                            arg.value = spread12.value.w;
                             caseIndex.value = 3;
                             break;
                         case 1:

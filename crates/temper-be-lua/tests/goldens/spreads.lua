@@ -273,6 +273,59 @@ local function applied(f)
   return f(4)
 end
 
+---@class spreads.Dial
+---@field level integer
+---@field note string|temper.Null
+---@field twice integer
+
+---@class spreads.Dial.type: temper.Type
+---@operator call: spreads.Dial
+local Dial = temper.type("spreads.Dial")
+
+---@param this spreads.Dial
+---@param level? integer|temper.Null
+---@param note? string|temper.Null
+---@param twice? integer|temper.Null
+function Dial.constructor(this, level, note, twice)
+  if temper.is_null(level) then
+    level = 5
+  end
+  ---@cast level integer
+  if temper.is_null(note) then
+    note = "n"
+  end
+  if temper.is_null(twice) then
+    twice = temper.int32_mul(level, 2)
+  end
+  ---@cast twice integer
+  this.level = level
+  this.note = note
+  this.twice = twice
+end
+
+---@class spreads.Mark
+---@field note string|temper.Null
+---@field size integer
+
+---@class spreads.Mark.type: temper.Type
+---@operator call: spreads.Mark
+local Mark = temper.type("spreads.Mark")
+
+---@param this spreads.Mark
+---@param note? string|temper.Null
+---@param size? integer|temper.Null
+function Mark.constructor(this, note, size)
+  if temper.is_null(note) then
+    note = "n"
+  end
+  if temper.is_null(size) then
+    size = 2
+  end
+  ---@cast size integer
+  this.note = note
+  this.size = size
+end
+
 ---@param n integer
 ---@return integer
 local function positive(n)
@@ -340,7 +393,18 @@ end
 
 local made = applied(fn)
 print(picked(true):toString() .. " " .. picked(false):toString() .. " " .. made:toString())
-local spread9 = a
+local dial = Dial(1, temper.null)
+dial.level = 4
+local spread9 = dial
+local turned = Dial(spread9.level, "m", spread9.twice)
+local mark = Mark(temper.null)
+local spread10 = mark
+local bigger = Mark(spread10.note, 3)
+local string_2 = turned.level .. " "
+local subject = turned.note
+local subject2 = bigger.note
+print(string_2 .. (temper.is_null(subject) and "-" or (subject --[[@as string]])) .. " " .. turned.twice .. " " .. (temper.is_null(subject2) and "-" or (subject2 --[[@as string]])) .. " " .. bigger.size)
+local spread11 = a
 ---@type integer
 local t_1
 if not temper.pcall(function()
@@ -355,8 +419,8 @@ if not temper.pcall(function()
 end) then
   t_2 = -1
 end
-local caught = Box(t_1, t_2, spread9.label)
-local string_2 = caught:toString() .. " "
+local caught = Box(t_1, t_2, spread11.label)
+local string_3 = caught:toString() .. " "
 ---@type string
 local t_3
 if not temper.pcall(function()
@@ -364,7 +428,7 @@ if not temper.pcall(function()
 end) then
   t_3 = "-"
 end
-print(string_2 .. t_3)
+print(string_3 .. t_3)
 ---@type string
 local t_4
 if not temper.pcall(function()

@@ -343,8 +343,11 @@ pub enum DataRule {
     NotProperty(String),
     /// A property that's private or protected.
     NotPublic(String),
-    /// A property with a default other than `null`.
-    Default(String),
+    /// A property that can hold null, defaulting to other than null: a
+    /// `var` whose type may hold null, or one whose default may be null.
+    /// A `@data` object round-trips, made again from its properties, and
+    /// a null passed gives the default.
+    NullDefault(String),
     /// A `var` property of an `@imu` class.
     ImuVar(String),
     /// A member other than a constructor property or a method,
@@ -587,9 +590,11 @@ impl Message {
                 DataRule::NotPublic(p) => {
                     format!("@data class {name}'s property {p} must be public")
                 }
-                DataRule::Default(p) => {
-                    format!("@data class {name}'s property {p} may default only to null")
-                }
+                DataRule::NullDefault(p) => format!(
+                    "@data class {name}'s property {p} can hold null, so any default must \
+                     be null: rebuilding a {name} from its properties would turn its null into the \
+                     default"
+                ),
                 DataRule::ImuVar(p) => {
                     format!(
                         "@data class {name}'s property {p} can't be a var, as the class is @imu"

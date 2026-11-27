@@ -389,6 +389,95 @@ class Square extends type(Shape) {
   }
 }
 
+class Dial extends type() {
+  /** @type {number} */
+  #level;
+  /** @type {string | null} */
+  #note;
+  /** @type {number} */
+  #twice;
+
+  /**
+   * @param {{ level?: number | null, note?: string | null, twice?: number | null }} props
+   * @returns {Dial}
+   */
+  static new(props) {
+    return new Dial(props.level, props.note, props.twice);
+  }
+
+  /**
+   * @param {number | null} [level]
+   * @param {string | null} [note]
+   * @param {number | null} [twice]
+   */
+  constructor(level, note, twice) {
+    super();
+    level ??= 5;
+    note ??= "n";
+    twice ??= Math.imul(level, 2);
+    this.#level = level;
+    this.#note = note;
+    this.#twice = twice;
+  }
+
+  /** @returns {number} */
+  get level() {
+    return this.#level;
+  }
+
+  /** @param {number} value */
+  set level(value) {
+    this.#level = value;
+  }
+
+  /** @returns {string | null} */
+  get note() {
+    return this.#note;
+  }
+
+  /** @returns {number} */
+  get twice() {
+    return this.#twice;
+  }
+}
+
+class Mark extends type() {
+  /** @type {string | null} */
+  #note;
+  /** @type {number} */
+  #size;
+
+  /**
+   * @param {{ note?: string | null, size?: number | null }} props
+   * @returns {Mark}
+   */
+  static new(props) {
+    return new Mark(props.note, props.size);
+  }
+
+  /**
+   * @param {string | null} [note]
+   * @param {number | null} [size]
+   */
+  constructor(note, size) {
+    super();
+    note ??= "n";
+    size ??= 2;
+    this.#note = note;
+    this.#size = size;
+  }
+
+  /** @returns {string | null} */
+  get note() {
+    return this.#note;
+  }
+
+  /** @returns {number} */
+  get size() {
+    return this.#size;
+  }
+}
+
 const a = new Box(2, 3);
 const b = grown(a);
 console.log(`${a.toString()} ${b.toString()} ${areaOf(b)}`);
@@ -485,45 +574,63 @@ function fn(n) {
 
 const made = applied(fn);
 console.log(`${picked(true).toString()} ${picked(false).toString()} ${made.toString()}`);
-/** @type {Box} */
+const dial = new Dial(1, null);
+dial.level = 4;
+/** @type {Dial} */
 let t$20;
 {
-  const spread9 = a;
-  /** @type {number} */
-  let t$21;
-  try {
-    t$21 = positive(-1);
-  } catch {
-    t$21 = 0;
-  }
-  const t$23 = t$21;
-  /** @type {number} */
-  let t$22;
-  try {
-    t$22 = positive(5);
-  } catch {
-    t$22 = -1;
-  }
-  t$20 = new Box(t$23, t$22, spread9.label);
+  const spread9 = dial;
+  t$20 = new Dial(spread9.level, "m", spread9.twice);
 }
-const caught = t$20;
+const turned = t$20;
+const mark = new Mark(null);
+/** @type {Mark} */
+let t$21;
+{
+  const spread10 = mark;
+  t$21 = new Mark(spread10.note, 3);
+}
+const bigger = t$21;
+console.log(`${turned.level} ${turned.note ?? "-"} ${turned.twice} ${bigger.note ?? "-"} ${bigger.size}`);
+/** @type {Box} */
+let t$22;
+{
+  const spread11 = a;
+  /** @type {number} */
+  let t$23;
+  try {
+    t$23 = positive(-1);
+  } catch {
+    t$23 = 0;
+  }
+  const t$25 = t$23;
+  /** @type {number} */
+  let t$24;
+  try {
+    t$24 = positive(5);
+  } catch {
+    t$24 = -1;
+  }
+  t$22 = new Box(t$25, t$24, spread11.label);
+}
+const caught = t$22;
 /** @type {string} */
-let t$24;
+let t$26;
 try {
-  t$24 = sized(a, 4).toString();
+  t$26 = sized(a, 4).toString();
 } catch {
-  t$24 = "-";
+  t$26 = "-";
 }
-console.log(`${caught.toString()} ${t$24}`);
+console.log(`${caught.toString()} ${t$26}`);
 /** @type {string} */
-let t$25;
+let t$27;
 try {
   sized(a, -1);
-  t$25 = "sized";
+  t$27 = "sized";
 } catch {
-  t$25 = "bubbled";
+  t$27 = "bubbled";
 }
-console.log(t$25);
+console.log(t$27);
 /** @type {import("@temperlang/core/async.js").PromiseBuilder<number>} */
 const gate = new PromiseBuilder();
 
@@ -533,7 +640,7 @@ const gate = new PromiseBuilder();
  */
 function* fn2(doAwait) {
   /** @type {Box} */
-  let t$26;
+  let t$28;
   {
     const spread = a;
     const arg = spread.w;
@@ -544,9 +651,9 @@ function* fn2(doAwait) {
     } catch {
       arg2 = -1;
     }
-    t$26 = new Box(arg, arg2, "later");
+    t$28 = new Box(arg, arg2, "later");
   }
-  const later = t$26;
+  const later = t$28;
   console.log(later.toString());
 }
 

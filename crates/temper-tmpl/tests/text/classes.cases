@@ -508,7 +508,6 @@ module data#0 {
 C5 @24: a data class only stores its parameters, in fields of their names
 C5 @36: a data class only stores its parameters, in fields of their names
 C5 @46: a data class only stores its parameters, in fields of their names
-C5 @59: a data class only stores its parameters, in fields of their names
 C5 @71: a data class only stores its parameters, in fields of their names
 
 === reading: a copy that isn't a field read

@@ -185,8 +185,8 @@ public static class SpreadsGlobal
         a = new Box(2, 3);
         Box b = Grown(a);
         console.Log(a.ToString() + " " + b.ToString() + " " + AreaOf(b).ToString(CultureInfo.InvariantCulture));
-        Box spread10 = b;
-        console.Log(new Box(spread10.W, spread10.H, "named").ToString());
+        Box spread12 = b;
+        console.Log(new Box(spread12.W, spread12.H, "named").ToString());
         bool wide;
         bool boolean = a.W > 1;
         if (boolean)
@@ -234,8 +234,21 @@ public static class SpreadsGlobal
         }
         Box made = Applied(fn);
         console.Log(Picked(true).ToString() + " " + Picked(false).ToString() + " " + made.ToString());
+        Dial dial = new Dial(1, null);
+        dial.Level = 4;
+        Dial turned;
+        Dial spread9 = dial;
+        turned = new Dial(spread9.Level, "m", spread9.Twice);
+        Mark mark = new Mark(null);
+        Mark bigger;
+        Mark spread10 = mark;
+        bigger = new Mark(spread10.Note, 3);
+        string @string2 = turned.Level.ToString(CultureInfo.InvariantCulture) + " ";
+        string? subject3 = turned.Note;
+        string? subject2 = bigger.Note;
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{@string2}{(subject3 == null ? "-" : subject3)} {turned.Twice} {(subject2 == null ? "-" : subject2)} {bigger.Size}"));
         Box caught;
-        Box spread9 = a;
+        Box spread11 = a;
         int t1;
         try
         {
@@ -254,8 +267,8 @@ public static class SpreadsGlobal
         {
             t2 = -1;
         }
-        caught = new Box(t1, t2, spread9.Label);
-        string @string2 = caught.ToString() + " ";
+        caught = new Box(t1, t2, spread11.Label);
+        string @string3 = caught.ToString() + " ";
         string t3;
         try
         {
@@ -265,7 +278,7 @@ public static class SpreadsGlobal
         {
             t3 = "-";
         }
-        console.Log(@string2 + t3);
+        console.Log(@string3 + t3);
         string t4;
         try
         {

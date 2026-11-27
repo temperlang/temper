@@ -116,6 +116,25 @@ cast by `when`; an `if`'s value; and a function literal's body:
 box 9x3 box 2x3 box 2x4
 ```
 
+Defaults that aren't null, on properties that can't hold null, so the
+object still round-trips: a `var` that isn't nullable, and a nullable
+property that isn't a `var`, with a default that can't give null. A
+spread copies each as it is, not made again, natively where Rust and
+C++ can, for a class without a `var`:
+
+    @data class Dial(var level: Int = 5, note: String? = "n", twice: Int = level * 2) {}
+    @data class Mark(note: String? = "n", size: Int = 2) {}
+    let dial = new Dial(1, null);
+    dial.level = 4;
+    let turned = { ...dial, note: "m" };
+    let mark = new Mark(null);
+    let bigger = { ...mark, size: 3 };
+    console.log("${turned.level} ${turned.note ?? "-"} ${turned.twice} ${bigger.note ?? "-"} ${bigger.size}");
+
+```log
+4 m 2 n 3
+```
+
 Given values that may fail: caught by `orelse`, bare or in parentheses,
 and bubbling out of a function that `throws`, which leaves no object:
 

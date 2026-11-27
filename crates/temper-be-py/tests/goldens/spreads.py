@@ -228,6 +228,62 @@ def _applied(f: _Callable[[int], _Box], /) -> _Box:
     return f(4)
 
 
+class _Dial:
+    __slots__ = ('_level', '_note', '_twice')
+    _level: int
+    _note: str | None
+    _twice: int
+
+    def __init__(self, /, level: int | None = None, note: str | None = None, twice: int | None = None) -> None:
+        if level is None:
+            level = 5
+        if note is None:
+            note = 'n'
+        if twice is None:
+            twice = _int_mul(level, 2)
+        self._level = level
+        self._note = note
+        self._twice = twice
+
+    @property
+    def level(self, /) -> int:
+        return self._level
+
+    @level.setter
+    def level(self, value: int, /) -> None:
+        self._level = value
+
+    @property
+    def note(self, /) -> str | None:
+        return self._note
+
+    @property
+    def twice(self, /) -> int:
+        return self._twice
+
+
+class _Mark:
+    __slots__ = ('_note', '_size')
+    _note: str | None
+    _size: int
+
+    def __init__(self, /, note: str | None = None, size: int | None = None) -> None:
+        if note is None:
+            note = 'n'
+        if size is None:
+            size = 2
+        self._note = note
+        self._size = size
+
+    @property
+    def note(self, /) -> str | None:
+        return self._note
+
+    @property
+    def size(self, /) -> int:
+        return self._size
+
+
 def _positive(n: int, /) -> int:
     if n < 0:
         raise RuntimeError()
@@ -285,7 +341,15 @@ def _fn(n: int, /) -> _Box:
 
 _made: _Box = _applied(_fn)
 _console.log(f'{_picked(True).to_string()} {_picked(False).to_string()} {_made.to_string()}')
-_spread9 = _a
+_dial: _Dial = _Dial(1, None)
+_dial.level = 4
+_spread9 = _dial
+_turned: _Dial = _Dial(_spread9.level, 'm', _spread9.twice)
+_mark: _Mark = _Mark(None)
+_spread10 = _mark
+_bigger: _Mark = _Mark(_spread10.note, 3)
+_console.log(f"{_turned.level} {'-' if (_subject := _turned.note) is None else _subject} {_turned.twice} {'-' if (_subject2 := _bigger.note) is None else _subject2} {_bigger.size}")
+_spread11 = _a
 _t_4: int
 try:
     _t_4 = _positive(-1)
@@ -296,7 +360,7 @@ try:
     _t_5 = _positive(5)
 except Exception:
     _t_5 = -1
-_caught: _Box = _Box(_t_4, _t_5, _spread9.label)
+_caught: _Box = _Box(_t_4, _t_5, _spread11.label)
 _t_7 = _caught.to_string()
 _t_6: str
 try:

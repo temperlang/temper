@@ -2271,10 +2271,25 @@ Contrast `@const` with [`@var`](#var-decorator).
 
 ### `@data` decorator
 `@data` marks a class as plain data, a promise the compiler checks:
-each constructor parameter is a public property, with no default but
-`null`; the class has no other properties (fields, getters, or setters)
-and no constructor of its own; and if it's also [`@imu`](#imu-decorator),
-no `var` properties. Methods are fine.
+each constructor parameter is a public property; the class has no other
+properties (fields, getters, or setters) and no constructor of its own;
+and if it's also [`@imu`](#imu-decorator), no `var` properties. Methods
+are fine.
+
+A `@data` object round-trips: constructing it from its own properties
+gives the same values. Passing `null` to a parameter with a default
+gives the default, so for a property that can hold null, any default
+must be `null`. A `var` can hold null if its type may (nullable, or a type
+parameter); any other property, only if its default may give null.
+
+```temper
+@data class Dial(var level: Int = 5, note: String? = "n") {}
+let d = new Dial(1, null);
+d.level = 4;
+let e = { ...d };
+console.log("${e.level} ${e.note ?? "-"}"); //!outputs "4 n"
+// ✅
+```
 
 Its properties are public by default, as interface members are; its
 methods need an explicit visibility, as every class's do.
