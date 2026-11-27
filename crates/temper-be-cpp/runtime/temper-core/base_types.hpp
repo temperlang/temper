@@ -158,6 +158,9 @@ namespace temper {
 
         template<class T>
         T not_null(T value) {
+            if (is_null(value)) {
+                bubble<T>("not_null on null value");
+            }
             return value;
         }
 

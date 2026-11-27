@@ -143,6 +143,10 @@ def _half_pair(a: _A, /) -> _Pair[_A, _Sequence[_B]]:
     return _Pair(a, ())
 
 
+def _opt(x: _T | None, /) -> _T | None:
+    return x
+
+
 def _none_in(length: int, /) -> bool:
     return length == 0
 
@@ -263,6 +267,9 @@ _console.log(f"{_tagged(4)} {_tagged('t')} {_count_of(3)} {_relayed(5)} {_n}")
 _half: _Pair[int, _Sequence[object]] = _half_pair(8)
 _half_too: _Pair[str, _Sequence[object]] = _half_pair('h')
 _console.log(f'{_half.key} {len(_half.value)} {_half_too.key}')
+_opt_none: object | None = _opt(None)
+_opt_some: int | None = _opt(6)
+_console.log(f"{_boolean_to_string(_opt_none is None)} {0 if _opt_some is None else _opt_some} {'-' if (_subject3 := _opt(None)) is None else _subject3}")
 _builder: _MutableSequence[str] = []
 _builder.append('x')
 _builder.append('y')
@@ -285,13 +292,13 @@ _console.log(f"{_t_0} {_t_1} {_boolean_to_string(_mapped_has(_m, 'a'))} {len(_m)
 _mb: dict[str, int | None] = {}
 _map_builder_set(_mb, 'q', 5)
 _map_builder_set(_mb, 'n', None)
-_console.log(f"{-2 if (_subject3 := _mb.get('q', 0)) is None else _subject3} {-2 if (_subject4 := _mb.get('n', 0)) is None else _subject4} {_boolean_to_string(_mapped_has(_mb, 'n'))}")
+_console.log(f"{-2 if (_subject4 := _mb.get('q', 0)) is None else _subject4} {-2 if (_subject5 := _mb.get('n', 0)) is None else _subject5} {_boolean_to_string(_mapped_has(_mb, 'n'))}")
 _t_2: int | None
 try:
     _t_2 = _mb.pop('q')
 except Exception:
     _t_2 = 0
-_console.log('null' if (_subject5 := None if (_subject6 := _t_2) is None else str(_subject6)) is None else _subject5)
+_console.log('null' if (_subject6 := None if (_subject7 := _t_2) is None else str(_subject7)) is None else _subject6)
 _console.log(str(len(list(_mb.keys()))))
 _indexed()
 _both()

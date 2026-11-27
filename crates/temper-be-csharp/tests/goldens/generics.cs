@@ -32,6 +32,11 @@ public static class GenericsGlobal
         return new KeyValuePair<A, IReadOnlyList<B>>(a, Listed.CreateReadOnlyList<B>());
     }
 
+    internal static Optional<T> Opt<T>(Optional<T> x)
+    {
+        return x;
+    }
+
     internal static bool NoneIn(int length)
     {
         return length == 0;
@@ -185,6 +190,11 @@ public static class GenericsGlobal
         KeyValuePair<int, IReadOnlyList<object>> half = HalfPair<int, object>(8);
         KeyValuePair<string, IReadOnlyList<object>> halfToo = HalfPair<string, object>("h");
         console.Log(string.Create(CultureInfo.InvariantCulture, $"{half.Key} {half.Value.Count} {halfToo.Key}"));
+        object? optNone = Optional.OrNull<object>(Opt(Optional<object>.None));
+        int? optSome = Optional.ToNullable<int>(Opt(Optional.Of<int>(6)));
+        string @string = (optNone == null ? "true" : "false") + " " + (optSome == null ? 0 : optSome.Value).ToString(CultureInfo.InvariantCulture) + " ";
+        string? subject3 = Optional.OrNull<string>(Opt(Optional<string>.None));
+        console.Log(@string + (subject3 == null ? "-" : subject3));
         IList<string> builder = new List<string>();
         builder.Add("x");
         builder.Add("y");
@@ -215,21 +225,21 @@ public static class GenericsGlobal
         IDictionary<string, int?> mb = new TemperLang.Core.OrderedDictionary<string, int?>();
         mb["q"] = 5;
         mb["n"] = null;
-        int? subject3 = Mapped.GetOrDefault(mb, "q", 0);
-        int? subject4 = Mapped.GetOrDefault(mb, "n", 0);
-        console.Log(string.Create(CultureInfo.InvariantCulture, $"{(subject3 == null ? -2 : subject3.Value)} {(subject4 == null ? -2 : subject4.Value)} {(mb.ContainsKey("n") ? "true" : "false")}"));
-        string? subject5;
-        int? subject6;
+        int? subject4 = Mapped.GetOrDefault(mb, "q", 0);
+        int? subject5 = Mapped.GetOrDefault(mb, "n", 0);
+        console.Log(string.Create(CultureInfo.InvariantCulture, $"{(subject4 == null ? -2 : subject4.Value)} {(subject5 == null ? -2 : subject5.Value)} {(mb.ContainsKey("n") ? "true" : "false")}"));
+        string? subject6;
+        int? subject7;
         try
         {
-            subject6 = Core.RemoveGet(mb, "q");
+            subject7 = Core.RemoveGet(mb, "q");
         }
         catch
         {
-            subject6 = 0;
+            subject7 = 0;
         }
-        subject5 = subject6 == null ? null : subject6.Value.ToString(CultureInfo.InvariantCulture);
-        console.Log(subject5 == null ? "null" : subject5);
+        subject6 = subject7 == null ? null : subject7.Value.ToString(CultureInfo.InvariantCulture);
+        console.Log(subject6 == null ? "null" : subject6);
         console.Log(Mapped.Keys(mb).Count.ToString(CultureInfo.InvariantCulture));
         Indexed();
         Both();

@@ -7,7 +7,8 @@ and `MapBuilder`, with nullables mixed in; and generic functions and a
 method with a type parameter that no parameter's type mentions, which
 the frontend binds to its bound unless the call says, and which Rust,
 C#, and C++ then spell out, as it binds one that only a result's type
-mentions and nothing at the call solves; and an exported generic
+mentions and nothing at the call solves, and Rust where only a `null`
+argument would tell it; and an exported generic
 function that calls a private one. The log is what the interpreter
 gives.
 
@@ -41,8 +42,11 @@ gives.
       b.length + n
     }
     let relayed<S extends Scene, T>(x: T): T { tagged<S, T>(x) }
-    // Nothing at a call solves `B`, so it's `AnyValue`.
+    // Nothing at a call solves `B`, so it's `AnyValue`. (C# can't yet
+    // name a `B?` here, as `Pair<A, B?>`, at the call.)
     let halfPair<A, B>(a: A): Pair<A, List<B>> { new Pair<A, List<B>>(a, []) }
+    // A `null` argument doesn't tell Rust `T`, so it's spelled out.
+    let opt<T>(x: T?): T? { x }
 
     // A private function that an exported generic one calls, which C++
     // declares in the header that defines the generic one.
@@ -80,6 +84,9 @@ gives.
     let half = halfPair<Int>(8);
     let halfToo = halfPair("h");
     console.log("${half.key} ${half.value.length} ${halfToo.key}");
+    let optNone = opt(null);
+    let optSome = opt(6);
+    console.log("${optNone == null} ${optSome ?? 0} ${opt<String>(null) ?? "-"}");
     let builder = new ListBuilder<String>();
     builder.add("x");
     builder.add("y");
@@ -154,6 +161,7 @@ ann
 none
 4 t 3 5 7
 8 0 h
+true 6 -
 3 w y
 2 ? x
 2 -1 true 2

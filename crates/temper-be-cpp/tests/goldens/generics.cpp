@@ -191,6 +191,11 @@ static std::shared_ptr<core::Pair<A, std::shared_ptr<std::vector<B>>>> halfPair(
   return core::PairFactory::make<A, std::shared_ptr<std::vector<B>>>(a, core::List::make<B>());
 }
 
+template <class T>
+static core::Nullable<T> opt(core::Nullable<T> x) {
+  return x;
+}
+
 bool noneIn(int32_t length) {
   return length == 0;
 }
@@ -323,6 +328,11 @@ void global_init_init() {
     std::shared_ptr<core::Pair<int32_t, std::shared_ptr<std::vector<std::shared_ptr<core::AnyValueBase>>>>> half = halfPair<int32_t, std::shared_ptr<core::AnyValueBase>>(8);
     std::shared_ptr<core::Pair<core::Str, std::shared_ptr<std::vector<std::shared_ptr<core::AnyValueBase>>>>> halfToo = generics::halfPair<core::Str, std::shared_ptr<core::AnyValueBase>>(TEMPER_STR("h"));
     core::Console::log(temper_globals::console.value, std::to_string(half->key) + " " + std::to_string(core::List::length<std::shared_ptr<core::AnyValueBase>>(half->value)) + " " + halfToo->key);
+    std::shared_ptr<core::AnyValueBase> optNone = generics::opt<std::shared_ptr<core::AnyValueBase>>(nullptr);
+    core::NullableParam<int32_t> optSome = generics::opt<int32_t>(6);
+    core::Str string = core::Boolean::toString(optNone == nullptr) + " " + std::to_string(optSome == nullptr ? 0 : optSome.value) + " ";
+    core::NullableParam<core::Str> subject3 = generics::opt<core::Str>(nullptr);
+    core::Console::log(temper_globals::console.value, string + (subject3 == nullptr ? TEMPER_STR("-") : subject3.value));
     std::shared_ptr<std::vector<core::Str>> builder = core::ListBuilder::make<core::Str>();
     core::ListBuilder::add<core::Str>(builder, TEMPER_STR("x"));
     core::ListBuilder::add<core::Str>(builder, TEMPER_STR("y"));
@@ -332,63 +342,63 @@ void global_init_init() {
     core::Console::log(temper_globals::console.value, std::to_string(int32) + " " + get + " " + core::ListBuilder::removeLast<core::Str>(builder));
     std::shared_ptr<std::vector<core::Str>> built = core::List::toList<core::Str>(builder);
     int32_t value2 = core::List::length<core::Str>(built);
-    core::Str string = core::List::getOr<core::Str>(built, 5, TEMPER_STR("?"));
-    core::Console::log(temper_globals::console.value, std::to_string(value2) + " " + string + " " + core::List::get<core::Str>(core::List::slice<core::Str>(built, 1, 2), 0));
-    std::shared_ptr<core::Pair<core::Str, int32_t>> value3 = core::PairFactory::make<core::Str, int32_t>(TEMPER_STR("a"), 1);
-    std::shared_ptr<core::Mapped::Ordered<core::Str, int32_t>> m = core::Map::make<core::Str, int32_t>(core::List::make<std::shared_ptr<core::Pair<core::Str, int32_t>>>(value3, core::PairFactory::make<core::Str, int32_t>(TEMPER_STR("b"), 2)));
-    int32_t value4;
-    try {
-      value4 = core::Mapped::get<core::Str, int32_t>(m, TEMPER_STR("b"));
-    } catch (core::TemperBubble const &) {
-      value4 = -1;
-    }
+    core::Str value3 = core::List::getOr<core::Str>(built, 5, TEMPER_STR("?"));
+    core::Console::log(temper_globals::console.value, std::to_string(value2) + " " + value3 + " " + core::List::get<core::Str>(core::List::slice<core::Str>(built, 1, 2), 0));
+    std::shared_ptr<core::Pair<core::Str, int32_t>> value4 = core::PairFactory::make<core::Str, int32_t>(TEMPER_STR("a"), 1);
+    std::shared_ptr<core::Mapped::Ordered<core::Str, int32_t>> m = core::Map::make<core::Str, int32_t>(core::List::make<std::shared_ptr<core::Pair<core::Str, int32_t>>>(value4, core::PairFactory::make<core::Str, int32_t>(TEMPER_STR("b"), 2)));
     int32_t value5;
     try {
-      value5 = core::Mapped::get<core::Str, int32_t>(m, TEMPER_STR("c"));
+      value5 = core::Mapped::get<core::Str, int32_t>(m, TEMPER_STR("b"));
     } catch (core::TemperBubble const &) {
       value5 = -1;
     }
-    core::Console::log(temper_globals::console.value, std::to_string(value4) + " " + std::to_string(value5) + " " + core::Boolean::toString(core::Mapped::has<core::Str, int32_t>(m, TEMPER_STR("a"))) + " " + std::to_string(core::Mapped::length<core::Str, int32_t>(m)));
+    int32_t value6;
+    try {
+      value6 = core::Mapped::get<core::Str, int32_t>(m, TEMPER_STR("c"));
+    } catch (core::TemperBubble const &) {
+      value6 = -1;
+    }
+    core::Console::log(temper_globals::console.value, std::to_string(value5) + " " + std::to_string(value6) + " " + core::Boolean::toString(core::Mapped::has<core::Str, int32_t>(m, TEMPER_STR("a"))) + " " + std::to_string(core::Mapped::length<core::Str, int32_t>(m)));
     std::shared_ptr<core::Mapped::Ordered<core::Str, core::NullableParam<int32_t>>> mb = core::Map::make<core::Str, core::NullableParam<int32_t>>();
     core::MapBuilder::set<core::Str, core::NullableParam<int32_t>>(mb, TEMPER_STR("q"), 5);
     core::MapBuilder::set<core::Str, core::NullableParam<int32_t>>(mb, TEMPER_STR("n"), nullptr);
-    core::NullableParam<int32_t> subject3 = core::Mapped::getOr<core::Str, core::NullableParam<int32_t>>(mb, TEMPER_STR("q"), 0);
-    core::NullableParam<int32_t> subject4 = core::Mapped::getOr<core::Str, core::NullableParam<int32_t>>(mb, TEMPER_STR("n"), 0);
-    core::Console::log(temper_globals::console.value, std::to_string(subject3 == nullptr ? -2 : subject3.value) + " " + std::to_string(subject4 == nullptr ? -2 : subject4.value) + " " + core::Boolean::toString(core::Mapped::has<core::Str, core::NullableParam<int32_t>>(mb, TEMPER_STR("n"))));
-    core::NullableParam<int32_t> subject6;
+    core::NullableParam<int32_t> subject4 = core::Mapped::getOr<core::Str, core::NullableParam<int32_t>>(mb, TEMPER_STR("q"), 0);
+    core::NullableParam<int32_t> subject5 = core::Mapped::getOr<core::Str, core::NullableParam<int32_t>>(mb, TEMPER_STR("n"), 0);
+    core::Console::log(temper_globals::console.value, std::to_string(subject4 == nullptr ? -2 : subject4.value) + " " + std::to_string(subject5 == nullptr ? -2 : subject5.value) + " " + core::Boolean::toString(core::Mapped::has<core::Str, core::NullableParam<int32_t>>(mb, TEMPER_STR("n"))));
+    core::NullableParam<int32_t> subject7;
     try {
-      subject6 = core::MapBuilder::remove<core::Str, core::NullableParam<int32_t>>(mb, TEMPER_STR("q"));
+      subject7 = core::MapBuilder::remove<core::Str, core::NullableParam<int32_t>>(mb, TEMPER_STR("q"));
     } catch (core::TemperBubble const &) {
-      subject6 = 0;
+      subject7 = 0;
     }
-    core::NullableParam<core::Str> subject5 = subject6 == nullptr ? nullptr : core::NullableParam<core::Str>(std::to_string(subject6.value));
-    core::Console::log(temper_globals::console.value, subject5 == nullptr ? TEMPER_STR("null") : subject5.value);
+    core::NullableParam<core::Str> subject6 = subject7 == nullptr ? nullptr : core::NullableParam<core::Str>(std::to_string(subject7.value));
+    core::Console::log(temper_globals::console.value, subject6 == nullptr ? TEMPER_STR("null") : subject6.value);
     core::Console::log(temper_globals::console.value, std::to_string(core::List::length<core::Str>(core::Mapped::keys<core::Str, core::NullableParam<int32_t>>(mb))));
     indexed();
     both();
     temper_globals::tally.value = core::Map::make<core::Str, int32_t>();
     core::MapBuilder::set<core::Str, int32_t>(temper_globals::tally.value, TEMPER_STR("k"), 2);
-    int32_t value6;
+    int32_t value7;
     try {
-      value6 = generics::bump(TEMPER_STR("k"));
+      value7 = generics::bump(TEMPER_STR("k"));
     } catch (core::TemperBubble const &) {
-      value6 = -1;
+      value7 = -1;
     }
-    int32_t value7 = value6;
-    int32_t value8;
+    int32_t value8 = value7;
+    int32_t value9;
     try {
-      value8 = generics::bump(TEMPER_STR("z"));
+      value9 = generics::bump(TEMPER_STR("z"));
     } catch (core::TemperBubble const &) {
-      value8 = -1;
+      value9 = -1;
     }
-    int32_t value9 = value8;
-    int32_t value10;
+    int32_t value10 = value9;
+    int32_t value11;
     try {
-      value10 = core::Mapped::get<core::Str, int32_t>(temper_globals::tally.value, TEMPER_STR("k"));
+      value11 = core::Mapped::get<core::Str, int32_t>(temper_globals::tally.value, TEMPER_STR("k"));
     } catch (core::TemperBubble const &) {
-      value10 = -1;
+      value11 = -1;
     }
-    core::Console::log(temper_globals::console.value, std::to_string(value7) + " " + std::to_string(value9) + " " + std::to_string(value10));
+    core::Console::log(temper_globals::console.value, std::to_string(value8) + " " + std::to_string(value10) + " " + std::to_string(value11));
     core::Console::log(temper_globals::console.value, core::Boolean::toString(generics::firstSame(core::List::make<int32_t>(1000), core::List::make<int32_t>(1000))) + " " + core::Boolean::toString(generics::firstSame(core::List::make<int32_t>(1000), core::List::make<int32_t>(7))));
   });
 }

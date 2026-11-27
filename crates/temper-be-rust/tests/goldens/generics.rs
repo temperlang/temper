@@ -60,6 +60,23 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 temper_core::ListedTrait::len(&half.1),
                 half_too.0
             );
+            let opt_none = opt::<temper_core::AnyValue>(None);
+            let opt_some = opt(Some(6));
+            println!(
+                "{} {} {}",
+                opt_none.is_none(),
+                if opt_some.is_none() {
+                    0i32
+                } else {
+                    opt_some.unwrap()
+                },
+                {
+                    let subject3 = opt::<Arc<String>>(None);
+                    subject3
+                        .clone()
+                        .unwrap_or_else(|| Arc::new("-".to_string()))
+                }
+            );
             let builder: temper_core::ListBuilder<Arc<String>> = temper_core::listed::new_builder();
             temper_core::listed::add(&builder, Arc::new("x".to_string()), None);
             temper_core::listed::add(&builder, Arc::new("y".to_string()), None);
@@ -95,24 +112,24 @@ pub(crate) fn init() -> temper_core::Result<()> {
             println!(
                 "{} {} {}",
                 {
-                    let subject3 =
+                    let subject4 =
                         temper_core::MappedTrait::get_or(&mb, Arc::new("q".to_string()), Some(0));
-                    subject3.unwrap_or(-2)
+                    subject4.unwrap_or(-2)
                 },
                 {
-                    let subject4 =
+                    let subject5 =
                         temper_core::MappedTrait::get_or(&mb, Arc::new("n".to_string()), Some(0));
-                    subject4.unwrap_or(-2)
+                    subject5.unwrap_or(-2)
                 },
                 temper_core::MappedTrait::has(&mb, Arc::new("n".to_string()))
             );
             println!("{}", {
-                let subject5 = {
-                    let subject6 = temper_core::MapBuilder::remove(&mb, Arc::new("q".to_string()))
+                let subject6 = {
+                    let subject7 = temper_core::MapBuilder::remove(&mb, Arc::new("q".to_string()))
                         .unwrap_or(Some(0));
-                    subject6.map(|subject6| Arc::new(subject6.to_string()))
+                    subject7.map(|subject7| Arc::new(subject7.to_string()))
                 };
-                subject5
+                subject6
                     .clone()
                     .unwrap_or_else(|| Arc::new("null".to_string()))
             });
@@ -376,6 +393,10 @@ pub(crate) fn half_pair<A: Clone + Send + Sync + 'static, B: Clone + Send + Sync
     a: A,
 ) -> (A, temper_core::List<B>) {
     (a.clone(), Arc::new(vec![]))
+}
+
+pub(crate) fn opt<T: Clone + Send + Sync + 'static>(x: Option<T>) -> Option<T> {
+    x.clone()
 }
 
 pub(crate) fn none_in(length: i32) -> bool {

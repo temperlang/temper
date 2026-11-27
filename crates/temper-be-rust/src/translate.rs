@@ -396,11 +396,17 @@ impl<'a> Translator<'a> {
     }
 
     /// `::<A, B>`, a generic call's type arguments, all of them, where
-    /// Rust can't infer them from the arguments, as when a type parameter
-    /// appears in no parameter's type (`analysis::infers_type_args`);
-    /// otherwise nothing, leaving them to Rust.
-    fn turbofish(&mut self, callee: DeclId, type_args: temper_tmpl::TypeArgs) -> R<String> {
-        if temper_tmpl::analysis::infers_type_args(self.p, callee) {
+    /// Rust can't infer them from the arguments `args`, as when a type
+    /// parameter appears in no parameter's type, or only where the
+    /// argument is `None` (`analysis::infers_type_args_from`); otherwise
+    /// nothing, leaving them to Rust.
+    fn turbofish(
+        &mut self,
+        callee: DeclId,
+        type_args: temper_tmpl::TypeArgs,
+        args: &[NodeId],
+    ) -> R<String> {
+        if temper_tmpl::analysis::infers_type_args_from(self.p, callee, args) {
             return Ok(String::new());
         }
         let mut texts = Vec::new();
@@ -2067,12 +2073,12 @@ impl<'a> Translator<'a> {
                     {
                         self.connected(callee, args, want)?
                     } else {
+                        let fish = self.turbofish(callee, type_args, args)?;
                         let args = self.args(callee, args)?;
                         let path = match self.static_fn_path(callee)? {
                             Some(path) => path,
                             None => self.top_path(callee)?,
                         };
-                        let fish = self.turbofish(callee, type_args)?;
                         Expr::path(format!("{path}{fish}")).call(args)
                     };
                 if may_bubble { call.try_() } else { call }
@@ -2087,7 +2093,7 @@ impl<'a> Translator<'a> {
                 // Core's by the connection table; other libraries' as the
                 // library's own.
                 if !temper_tmpl::qname::by_connection(p, method, crate::connected::connects_std) {
-                    let fish = self.turbofish(method, type_args)?;
+                    let fish = self.turbofish(method, type_args, p.nodes.list(args))?;
                     let call = self.call_method(method, &fish, receiver, p.nodes.list(args))?;
                     return Ok(if may_bubble { call.try_() } else { call });
                 }

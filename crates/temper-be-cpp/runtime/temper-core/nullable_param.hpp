@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 #include <type_traits>
 #include "temper_bubble.hpp"
 
@@ -127,6 +128,38 @@ namespace temper {
         template<class T>
         bool operator!=(const T& a, const NullableParam<T>& b) {
             return b != a;
+        }
+
+        // `T?` for a type parameter `T`, as `X?` is where `X` is known: a
+        // class's `shared_ptr` as it is (it may be null itself), a
+        // nullable as it is, and else `NullableParam<T>`; so a generic
+        // function's `P<A, B?>` is the type its caller's `P<Int, Named?>`
+        // names.
+        template<class T>
+        struct nullable_of {
+            using type = NullableParam<T>;
+            static T const& value(type const& x) { return x.value; }
+        };
+
+        template<class T>
+        struct nullable_of<std::shared_ptr<T>> {
+            using type = std::shared_ptr<T>;
+            static type const& value(type const& x) { return x; }
+        };
+
+        template<class T>
+        struct nullable_of<NullableParam<T>> {
+            using type = NullableParam<T>;
+            static type const& value(type const& x) { return x; }
+        };
+
+        template<class T>
+        using Nullable = typename nullable_of<T>::type;
+
+        // A `Nullable<T>` known not to be null, as a `T`.
+        template<class T>
+        T const& value_of(Nullable<T> const& x) {
+            return nullable_of<T>::value(x);
         }
 
     }

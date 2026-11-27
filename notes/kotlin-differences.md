@@ -2471,6 +2471,20 @@ copied Kotlin's:
     backends failed on it).
     Test: programs/generics.temper.md (`tagged`, `countOf`, `tally`,
     `halfPair`) on every backend.
+    Rust can't infer one from a `null` argument either (`opt(None)` for
+    `opt<T>(x: T?): T?`, E0283), so it spells the call's there too
+    (`opt::<AnyValue>(None)`; `analysis::infers_type_args_from`); C#'s
+    `Optional<T>.None` says its type. 2026-11-27.
+    Test: programs/generics.temper.md (`opt`).
+  - **C++ `T?` for a type parameter** is the runtime's
+    `core::Nullable<T>`: a `shared_ptr` as it is, a nullable as it is,
+    else `NullableParam<T>`, so a generic call's `Pair<A, B?>` with `B` a
+    class is the `Pair<int32_t, std::shared_ptr<Named>>` its caller names.
+    Kotlin's (and tempest's before 2026-11-27) wrote `NullableParam<B>`,
+    a different type, which g++ rejects in a type argument, and which a
+    plain `B?` result converts to a class's `shared_ptr` by throwing on
+    null. `x as T` from a null `T?` bubbles for a class too.
+    Test: temper-be-cpp/tests/functional.rs, `NULLABLE_TYPE_ARGS`.
   - **Not compared:** the Kotlin layout test (`kotlin_layout.rs`)
     doesn't cover the generics tests yet.
 - **Core's other types in the backends** (2026-11-02):

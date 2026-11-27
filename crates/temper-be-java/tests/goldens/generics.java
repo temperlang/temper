@@ -34,6 +34,10 @@ public final class GenericsGlobal {
         return new SimpleImmutableEntry<>(a, Core.listOf());
     }
 
+    static <T> @Nullable T opt(@Nullable T x) {
+        return x;
+    }
+
     static boolean noneIn(int length) {
         return length == 0;
     }
@@ -167,6 +171,11 @@ public final class GenericsGlobal {
         Entry<Integer, List<Object>> half = halfPair(8);
         Entry<String, List<Object>> halfToo = halfPair("h");
         console.log(half.getKey() + " " + half.getValue().size() + " " + halfToo.getKey());
+        @Nullable Object optNone = opt(null);
+        @Nullable Integer optSome = opt(6);
+        String t = (optNone == null) + " " + (optSome == null ? 0 : optSome) + " ";
+        @Nullable String subject3 = opt(null);
+        console.log(t + (subject3 == null ? "-" : subject3));
         List<String> builder = new ArrayList<>();
         builder.add("x");
         builder.add("y");
@@ -175,61 +184,61 @@ public final class GenericsGlobal {
         List<String> built = List.copyOf(builder);
         console.log(built.size() + " " + Core.listGetOr(built, 5, "?") + " " + Core.listGet(Core.listSlice(built, 1, 2), 0));
         Map<String, Integer> m = Core.mapConstructor(List.of(new SimpleImmutableEntry<>("a", 1), new SimpleImmutableEntry<>("b", 2)));
-        int t;
+        int t2;
         try {
-            t = Core.mappedGet(m, "b");
+            t2 = Core.mappedGet(m, "b");
         } catch (RuntimeException ignored) {
-            t = -1;
+            t2 = -1;
         }
-        String t2 = t + " ";
-        int t3;
+        String t3 = t2 + " ";
+        int t4;
         try {
-            t3 = Core.mappedGet(m, "c");
+            t4 = Core.mappedGet(m, "c");
         } catch (RuntimeException ignored2) {
-            t3 = -1;
+            t4 = -1;
         }
-        console.log(t2 + t3 + " " + m.containsKey("a") + " " + m.size());
+        console.log(t3 + t4 + " " + m.containsKey("a") + " " + m.size());
         Map<String, @Nullable Integer> mb = new LinkedHashMap<>();
         mb.put("q", 5);
         mb.put("n", null);
-        @Nullable Integer subject3 = mb.getOrDefault("q", 0);
-        String t4 = (subject3 == null ? -2 : subject3) + " ";
-        @Nullable Integer subject4 = mb.getOrDefault("n", 0);
-        console.log(t4 + (subject4 == null ? -2 : subject4) + " " + mb.containsKey("n"));
-        @Nullable Integer subject6;
+        @Nullable Integer subject4 = mb.getOrDefault("q", 0);
+        String t5 = (subject4 == null ? -2 : subject4) + " ";
+        @Nullable Integer subject5 = mb.getOrDefault("n", 0);
+        console.log(t5 + (subject5 == null ? -2 : subject5) + " " + mb.containsKey("n"));
+        @Nullable Integer subject7;
         try {
-            subject6 = Core.mapBuilderRemove(mb, "q");
+            subject7 = Core.mapBuilderRemove(mb, "q");
         } catch (RuntimeException ignored3) {
-            subject6 = 0;
+            subject7 = 0;
         }
-        @Nullable String subject5 = subject6 == null ? null : Integer.toString(subject6);
-        console.log(subject5 == null ? "null" : subject5);
+        @Nullable String subject6 = subject7 == null ? null : Integer.toString(subject7);
+        console.log(subject6 == null ? "null" : subject6);
         console.log(Integer.toString(List.copyOf(mb.keySet()).size()));
         indexed();
         both();
         tally = new LinkedHashMap<>();
         tally.put("k", 2);
-        int t5;
+        int t6;
         try {
-            t5 = bump("k");
+            t6 = bump("k");
         } catch (RuntimeException ignored4) {
-            t5 = -1;
+            t6 = -1;
         }
-        String t6 = t5 + " ";
-        int t7;
+        String t7 = t6 + " ";
+        int t8;
         try {
-            t7 = bump("z");
+            t8 = bump("z");
         } catch (RuntimeException ignored5) {
-            t7 = -1;
+            t8 = -1;
         }
-        String t8 = t6 + t7 + " ";
-        int t9;
+        String t9 = t7 + t8 + " ";
+        int t10;
         try {
-            t9 = Core.mappedGet(tally, "k");
+            t10 = Core.mappedGet(tally, "k");
         } catch (RuntimeException ignored6) {
-            t9 = -1;
+            t10 = -1;
         }
-        console.log(t8 + t9);
+        console.log(t9 + t10);
         console.log(firstSame(List.of(1000), List.of(1000)) + " " + firstSame(List.of(1000), List.of(7)));
     }
 }

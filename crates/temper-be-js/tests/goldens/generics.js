@@ -55,6 +55,15 @@ function halfPair(a) {
 }
 
 /**
+ * @template T
+ * @param {T | null} x
+ * @returns {T | null}
+ */
+function opt(x) {
+  return x;
+}
+
+/**
  * @param {number} length
  * @returns {boolean}
  */
@@ -414,6 +423,9 @@ const half = halfPair(8);
 /** @type {import("@temperlang/core/pair.js").Pair<string, readonly unknown[]>} */
 const halfToo = halfPair("h");
 console.log(`${half.key} ${half.value.length} ${halfToo.key}`);
+const optNone = opt(null);
+const optSome = opt(6);
+console.log(`${optNone == null} ${optSome == null ? 0 : optSome} ${opt(null) ?? "-"}`);
 /** @type {string[]} */
 const builder = [];
 builder.push("x");
@@ -449,13 +461,13 @@ console.log(`${(mb.has("q") ? /** @type {number | null} */ (mb.get("q")) : 0) ??
 let t$21;
 {
   /** @type {number | null} */
-  let subject6;
+  let subject7;
   try {
-    subject6 = mapBuilderRemove(mb, "q");
+    subject7 = mapBuilderRemove(mb, "q");
   } catch {
-    subject6 = 0;
+    subject7 = 0;
   }
-  t$21 = subject6 == null ? null : subject6.toString();
+  t$21 = subject7 == null ? null : subject7.toString();
 }
 console.log(t$21 ?? "null");
 console.log(Object.freeze(Array.from(mb.keys())).length.toString());
