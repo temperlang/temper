@@ -2,137 +2,137 @@ tmpl 1 model 1 library std 0.7.0-alpha.0.0
 
 uses `temper-core`#70 0.7.0-alpha.0.0 {
   interface Error#71 {
-    connected get message#446(): String;
+    connected get message#448(): String;
   }
   class List#77<T#78> extends Listed#79<T#78> {
-    connected method toListBuilder#450(): ListBuilder#87<T#78>;
-    connected get length#476(): Int32;
-    connected method get#488(index: Int32): T#78;
+    connected method toListBuilder#452(): ListBuilder#87<T#78>;
+    connected get length#478(): Int32;
+    connected method get#490(index: Int32): T#78;
   }
   interface Listed#79<T#80> {
-    connected get isEmpty#427(): Boolean;
-    connected method join#428<E#429 extends Error#71>(separator: String, stringify: fn (T#80): String throws E#429): String throws E#429;
-    connected method map#434<O#435, E#436 extends Error#71>(transform: fn (T#80): O#435 throws E#436): List#77<O#435> throws E#436;
-    connected method reduceFrom#478<O#479, E#480 extends Error#71>(initial: O#479, accumulate: fn (O#479, T#80): O#479 throws E#480): O#479 throws E#480;
-    connected method getOr#771<R#772>(index: Int32, fallback: R#772): R#772;
-    connected method get#788(index: Int32): T#80;
+    connected get isEmpty#429(): Boolean;
+    connected method join#430<E#431 extends Error#71>(separator: String, stringify: fn (T#80): String throws E#431): String throws E#431;
+    connected method map#436<O#437, E#438 extends Error#71>(transform: fn (T#80): O#437 throws E#438): List#77<O#437> throws E#438;
+    connected method reduceFrom#480<O#481, E#482 extends Error#71>(initial: O#481, accumulate: fn (O#481, T#80): O#481 throws E#482): O#481 throws E#482;
+    connected method getOr#773<R#774>(index: Int32, fallback: R#774): R#774;
+    connected method get#790(index: Int32): T#80;
   }
   class ListBuilder#87<T#88> extends Listed#79<T#88> {
-    connected method add#415(newValue: T#88, at?: Int32): Void;
-    connected method toList#426(): List#77<T#88>;
-    connected constructor constructor#432(): ListBuilder#87<T#88>;
-    connected get length#773(): Int32;
-    connected method set#775(index: Int32, newValue: T#88): Void;
-    connected method removeLast#777(): T#88;
+    connected method add#417(newValue: T#88, at?: Int32): Void;
+    connected method toList#428(): List#77<T#88>;
+    connected constructor constructor#434(): ListBuilder#87<T#88>;
+    connected get length#775(): Int32;
+    connected method set#777(index: Int32, newValue: T#88): Void;
+    connected method removeLast#779(): T#88;
   }
   class StringIndex#156 extends StringIndexOption#157 {
-    connected static let none#849: NoStringIndex#850;
+    connected static let none#851: NoStringIndex#852;
   }
   interface StringIndexOption#157 {
-    connected operator("<=>") method compareTo#462(other: StringIndexOption#157): Int32;
-    connected operator("==") method eq#471(other: StringIndexOption#157): Boolean;
+    connected operator("<=>") method compareTo#464(other: StringIndexOption#157): Int32;
+    connected operator("==") method eq#473(other: StringIndexOption#157): Boolean;
   }
   class Map#162<K#163 extends MapKey#165<K#163>, V#164> extends Mapped#167<K#163, V#164> {
-    connected constructor constructor#569(entries: List#77<Pair#406<K#163, V#164>>): Map#162<K#163, V#164>;
+    connected constructor constructor#571(entries: List#77<Pair#408<K#163, V#164>>): Map#162<K#163, V#164>;
   }
   interface MapKey#165<EQ#166> {}
   interface Mapped#167<K#168 extends MapKey#165<K#168>, V#169> {
-    connected method getOr#706<R#707>(key: K#168, fallback: R#707): R#707;
-    connected method forEach#712<E#713 extends Error#71>(func: fn (K#168, V#169): Void throws E#713): Void throws E#713;
-    connected method has#804(key: K#168): Boolean;
-    connected method get#807(key: K#168): V#169 throws MissingKey#808;
-    connected method toMap#813(): Map#162<K#168, V#169>;
+    connected method getOr#708<R#709>(key: K#168, fallback: R#709): R#709;
+    connected method forEach#714<E#715 extends Error#71>(func: fn (K#168, V#169): Void throws E#715): Void throws E#715;
+    connected method has#806(key: K#168): Boolean;
+    connected method get#809(key: K#168): V#169 throws MissingKey#810;
+    connected method toMap#815(): Map#162<K#168, V#169>;
   }
   class StringBuilder#177 {
-    connected constructor constructor#454(): StringBuilder#177;
-    connected method appendBetween#469(source: String, begin: StringIndex#156, end: StringIndex#156): Void;
-    connected method append#470(substring: String): Void;
-    connected method toString#472(): String;
-    connected method appendCodePoint#864(cp: Int32): Void throws InvalidCodePoint#585;
+    connected constructor constructor#456(): StringBuilder#177;
+    connected method appendBetween#471(source: String, begin: StringIndex#156, end: StringIndex#156): Void;
+    connected method append#472(substring: String): Void;
+    connected method toString#474(): String;
+    connected method appendCodePoint#866(cp: Int32): Void throws InvalidCodePoint#587;
   }
-  class ParseError#270 extends CoreError#271 {}
-  interface CoreError#271 extends Error#71 {}
-  class Promise#394<R#395> {}
-  class Pair#406<K#407, V#408> {
-    let key#440: K#407;
-    let value#442: V#408;
-    connected constructor constructor#451(key: K#407, value: V#408): Pair#406<K#407, V#408>;
+  class ParseError#272 extends CoreError#273 {}
+  interface CoreError#273 extends Error#71 {}
+  class Promise#396<R#397> {}
+  class Pair#408<K#409, V#410> {
+    let key#442: K#409;
+    let value#444: V#410;
+    connected constructor constructor#453(key: K#409, value: V#410): Pair#408<K#409, V#410>;
   }
-  class String#456 {
-    connected get end#457(): StringIndex#156;
-    connected static let begin#459: StringIndex#156;
-    connected method get#464(index: StringIndex#156): Int32;
-    connected method next#466(index: StringIndex#156): StringIndex#156;
-    connected static fromCodePoint#584(codePoint: Int32): String throws InvalidCodePoint#585;
-    connected method hasIndex#594(index: StringIndex#156): Boolean;
-    connected get isEmpty#615(): Boolean;
-    connected method toInt32#751(radix?: Int32): Int32 throws ParseError#270;
-    connected method toFloat64#752(): Float64 throws ParseError#270;
-    connected method toInt64#753(radix?: Int32): Int64 throws ParseError#270;
-    connected method slice#832(begin: StringIndex#156, end: StringIndex#156): String;
-    connected method hasAtLeast#861(begin: StringIndex#156, end: StringIndex#156, minCount: Int32): Boolean;
-    connected method countBetween#1000(begin: StringIndex#156, end: StringIndex#156): Int32;
-    connected method prev#1015(index: StringIndex#156): StringIndex#156;
+  class String#458 {
+    connected get end#459(): StringIndex#156;
+    connected static let begin#461: StringIndex#156;
+    connected method get#466(index: StringIndex#156): Int32;
+    connected method next#468(index: StringIndex#156): StringIndex#156;
+    connected static fromCodePoint#586(codePoint: Int32): String throws InvalidCodePoint#587;
+    connected method hasIndex#596(index: StringIndex#156): Boolean;
+    connected get isEmpty#617(): Boolean;
+    connected method toInt32#753(radix?: Int32): Int32 throws ParseError#272;
+    connected method toFloat64#754(): Float64 throws ParseError#272;
+    connected method toInt64#755(radix?: Int32): Int64 throws ParseError#272;
+    connected method slice#834(begin: StringIndex#156, end: StringIndex#156): String;
+    connected method hasAtLeast#863(begin: StringIndex#156, end: StringIndex#156, minCount: Int32): Boolean;
+    connected method countBetween#1002(begin: StringIndex#156, end: StringIndex#156): Int32;
+    connected method prev#1017(index: StringIndex#156): StringIndex#156;
   }
-  class Int32#467 {
-    connected method toString#468(radix?: Int32): String;
-    connected method toInt64#735(): Int64;
-    connected method toFloat64#736(): Float64;
+  class Int32#469 {
+    connected method toString#470(radix?: Int32): String;
+    connected method toInt64#737(): Int64;
+    connected method toFloat64#738(): Float64;
   }
-  class InvalidCodePoint#585 extends CoreError#271 {}
-  class Int64#739 {
-    connected method toString#740(radix?: Int32): String;
-    connected method toInt32#741(): Int32 throws ParseError#270;
-    connected method toFloat64#742(): Float64 throws ParseError#270;
-    connected method toInt32Unsafe#925(): Int32;
+  class InvalidCodePoint#587 extends CoreError#273 {}
+  class Int64#741 {
+    connected method toString#742(radix?: Int32): String;
+    connected method toInt32#743(): Int32 throws ParseError#272;
+    connected method toFloat64#744(): Float64 throws ParseError#272;
+    connected method toInt32Unsafe#927(): Int32;
   }
-  class Float64#745 {
-    connected method toString#746(): String;
-    connected method toInt32#747(): Int32 throws ParseError#270;
-    connected method toInt64#748(): Int64 throws ParseError#270;
+  class Float64#747 {
+    connected method toString#748(): String;
+    connected method toInt32#749(): Int32 throws ParseError#272;
+    connected method toInt64#750(): Int64 throws ParseError#272;
   }
-  class MapBuilder#790<K#791 extends MapKey#165<K#791>, V#792> extends Mapped#167<K#791, V#792> {
-    connected constructor constructor#794(): MapBuilder#790<K#791, V#792>;
-    connected method set#806(key: K#791, newValue: V#792): Void;
+  class MapBuilder#792<K#793 extends MapKey#165<K#793>, V#794> extends Mapped#167<K#793, V#794> {
+    connected constructor constructor#796(): MapBuilder#792<K#793, V#794>;
+    connected method set#808(key: K#793, newValue: V#794): Void;
   }
-  class MissingKey#808 extends CoreError#271 {}
-  class NoStringIndex#850 extends StringIndexOption#157 {}
+  class MissingKey#810 extends CoreError#273 {}
+  class NoStringIndex#852 extends StringIndexOption#157 {}
 }
 
 module testing#0 in "testing" {
   export class Test#5 {
-    connected method assert#67(success#413: Boolean, message#414: fn (): String): Void {
-      if (%Boolean.not(success#413)) {
+    connected method assert#67(success#415: Boolean, message#416: fn (): String): Void {
+      if (%Boolean.not(success#415)) {
         this._passing#86 = false;
-        this._messages#89.add#415(message#414(), omitted);
+        this._messages#89.add#417(message#416(), omitted);
       }
     }
-    connected method fail#68(message#416: String): Never<Void> {
+    connected method fail#68(message#418: String): Never<Void> {
       this._passing#86 = false;
-      this._messages#89.add#415(message#416, omitted);
+      this._messages#89.add#417(message#418, omitted);
       this._failedOnAssert#85 = true;
       this.bail#75();
     }
-    connected method assertHard#69(success#417: Boolean, message#418: fn (): String): Void {
-      if (%Boolean.not(success#417)) {
-        this.fail#68(message#418());
+    connected method assertHard#69(success#419: Boolean, message#420: fn (): String): Void {
+      if (%Boolean.not(success#419)) {
+        this.fail#68(message#420());
       }
     }
-    connected method assertPanics#72(block#419: fn (): Void throws Error#71, message#420?: String?): Void {
-      let message#421: String = (coalesce(message#420, "expected a panic")): String;
-      var threw#422: Boolean = false;
-      let panicked#423: Boolean = this.panics#73((fn ~fn#424(): Void [block#419, threw#422] {
-        (orelse(block#419()^, (value { threw#422 = true; void }): Void)): Void;
+    connected method assertPanics#72(block#421: fn (): Void throws Error#71, message#422?: String?): Void {
+      let message#423: String = (coalesce(message#422, "expected a panic")): String;
+      var threw#424: Boolean = false;
+      let panicked#425: Boolean = this.panics#73((fn ~fn#426(): Void [block#421, threw#424] {
+        (orelse(block#421()^, (value { threw#424 = true; void }): Void)): Void;
       }): fn (): Void);
       if (this._failedOnAssert#85) {
         this.bail#75();
       }
-      if (%Boolean.not(panicked#423)) {
+      if (%Boolean.not(panicked#425)) {
         this._passing#86 = false;
-        this._messages#89.add#415((if (threw#422) %String.cat(message#421, ", but it threw") else message#421): String, omitted);
+        this._messages#89.add#417((if (threw#424) %String.cat(message#423, ", but it threw") else message#423): String, omitted);
       }
     }
-    connected private abstract method panics#73(block#425: fn (): Void): Boolean;
+    connected private abstract method panics#73(block#427: fn (): Void): Boolean;
     connected method softFailToHard#74(): Void {
       if (this.hasUnhandledFail#83()) {
         this._failedOnAssert#85 = true;
@@ -144,7 +144,7 @@ module testing#0 in "testing" {
       return this._passing#86;
     }
     connected method messages#81(): List#77<String> {
-      return this._messages#89.toList#426();
+      return this._messages#89.toList#428();
     }
     connected get failedOnAssert#82(): Boolean {
       return this._failedOnAssert#85;
@@ -153,11 +153,11 @@ module testing#0 in "testing" {
       return %Boolean.not(this._failedOnAssert#85 || this._passing#86);
     }
     method messagesCombined#84(): String? {
-      if (this._messages#89.isEmpty#427()) {
+      if (this._messages#89.isEmpty#429()) {
         return (null): String?;
       } else {
-        return (asNullable(this._messages#89.join#428<Never<Error#71>>(", ", (fn ~fn#430(it#431: String): String {
-          return it#431;
+        return (asNullable(this._messages#89.join#430<Never<Error#71>>(", ", (fn ~fn#432(it#433: String): String {
+          return it#433;
         }): fn (String): String))): String?;
       }
     }
@@ -167,118 +167,118 @@ module testing#0 in "testing" {
     constructor constructor#90(): Test#5 {
       this._failedOnAssert#85 = false;
       this._passing#86 = true;
-      this._messages#89 = new constructor#432<String>();
+      this._messages#89 = new constructor#434<String>();
     }
   }
 
-  fn finishAsyncWork#404(): Void {}
+  fn finishAsyncWork#406(): Void {}
 
-  export fn processTestCases#405(testCases#433: List#77<Pair#406<String, fn (Test#5): Void throws Error#71>>): List#77<Pair#406<String, List#77<String>>> {
-    return testCases#433.map#434<Pair#406<String, List#77<String>>, Never<Error#71>>((fn ~fn#437(testCase#438: Pair#406<String, fn (Test#5): Void throws Error#71>): Pair#406<String, List#77<String>> {
-      let key#439: String = testCase#438.key#440;
-      let fun#441: fn (Test#5): Void throws Error#71 = testCase#438.value#442;
-      let test#443: Test#5 = new constructor#90();
-      let thrown#444: String? = (catch((value { fun#441(test#443)^; (null): String? }): String?, e#445: Error#71, (asNullable(e#445.message#446())): String?)): String?;
-      finishAsyncWork#404();
-      let messages#447: List#77<String> = test#443.messages#81();
-      let failures#448: List#77<String> = (if (test#443.passing#76() && isNull(thrown#444)) (list()): List#77<String> else (if (%Boolean.not(isNull(thrown#444)) && %Boolean.not(test#443.failedOnAssert#82())) (value { let allMessages#449: ListBuilder#87<String> = messages#447.toListBuilder#450(); allMessages#449.add#415((nonNull(thrown#444)): String, omitted); allMessages#449.toList#426() }): List#77<String> else messages#447): List#77<String>): List#77<String>;
-      return new constructor#451<String, List#77<String>>(key#439, failures#448);
-    }): fn (Pair#406<String, fn (Test#5): Void throws Error#71>): Pair#406<String, List#77<String>>);
+  export fn processTestCases#407(testCases#435: List#77<Pair#408<String, fn (Test#5): Void throws Error#71>>): List#77<Pair#408<String, List#77<String>>> {
+    return testCases#435.map#436<Pair#408<String, List#77<String>>, Never<Error#71>>((fn ~fn#439(testCase#440: Pair#408<String, fn (Test#5): Void throws Error#71>): Pair#408<String, List#77<String>> {
+      let key#441: String = testCase#440.key#442;
+      let fun#443: fn (Test#5): Void throws Error#71 = testCase#440.value#444;
+      let test#445: Test#5 = new constructor#90();
+      let thrown#446: String? = (catch((value { fun#443(test#445)^; (null): String? }): String?, e#447: Error#71, (asNullable(e#447.message#448())): String?)): String?;
+      finishAsyncWork#406();
+      let messages#449: List#77<String> = test#445.messages#81();
+      let failures#450: List#77<String> = (if (test#445.passing#76() && isNull(thrown#446)) (list()): List#77<String> else (if (%Boolean.not(isNull(thrown#446)) && %Boolean.not(test#445.failedOnAssert#82())) (value { let allMessages#451: ListBuilder#87<String> = messages#449.toListBuilder#452(); allMessages#451.add#417((nonNull(thrown#446)): String, omitted); allMessages#451.toList#428() }): List#77<String> else messages#449): List#77<String>): List#77<String>;
+      return new constructor#453<String, List#77<String>>(key#441, failures#450);
+    }): fn (Pair#408<String, fn (Test#5): Void throws Error#71>): Pair#408<String, List#77<String>>);
   }
 
-  fn escapeXml#409(s#452: String): String {
-    let sb#453: StringBuilder#177 = new constructor#454();
-    let end#455: StringIndex#156 = s#452.end#457();
-    var emitted#458: StringIndex#156 = begin#459;
+  fn escapeXml#411(s#454: String): String {
+    let sb#455: StringBuilder#177 = new constructor#456();
+    let end#457: StringIndex#156 = s#454.end#459();
+    var emitted#460: StringIndex#156 = begin#461;
     {
-      var i#460: StringIndex#156 = begin#459;
-      ~loop#461: while (%Int32.lt(((upcast(i#460)): StringIndexOption#157).compareTo#462((upcast(end#455)): StringIndexOption#157), 0)) {
-        let c#463: Int32 = s#452.get#464(i#460);
-        var esc#465: String;
-        if (%Int32.eq(c#463, 38)) {
-          esc#465 = "&amp;";
-        } else if (%Int32.eq(c#463, 60)) {
-          esc#465 = "&lt;";
-        } else if (%Int32.eq(c#463, 62)) {
-          esc#465 = "&gt;";
-        } else if (%Int32.eq(c#463, 39)) {
-          esc#465 = "&#39;";
-        } else if (%Int32.eq(c#463, 34)) {
-          esc#465 = "&#34;";
-        } else if (%Int32.eq(c#463, 10) || (%Int32.eq(c#463, 13) || %Int32.eq(c#463, 9))) {
+      var i#462: StringIndex#156 = begin#461;
+      ~loop#463: while (%Int32.lt(((upcast(i#462)): StringIndexOption#157).compareTo#464((upcast(end#457)): StringIndexOption#157), 0)) {
+        let c#465: Int32 = s#454.get#466(i#462);
+        var esc#467: String;
+        if (%Int32.eq(c#465, 38)) {
+          esc#467 = "&amp;";
+        } else if (%Int32.eq(c#465, 60)) {
+          esc#467 = "&lt;";
+        } else if (%Int32.eq(c#465, 62)) {
+          esc#467 = "&gt;";
+        } else if (%Int32.eq(c#465, 39)) {
+          esc#467 = "&#39;";
+        } else if (%Int32.eq(c#465, 34)) {
+          esc#467 = "&#34;";
+        } else if (%Int32.eq(c#465, 10) || (%Int32.eq(c#465, 13) || %Int32.eq(c#465, 9))) {
           {
-            i#460 = s#452.next#466(i#460);
-            continue ~loop#461;
+            i#462 = s#454.next#468(i#462);
+            continue ~loop#463;
           }
-        } else if (%Int32.lt(c#463, 32) || (%Int32.eq(c#463, 65534) || %Int32.eq(c#463, 65535))) {
-          esc#465 = %String.cat(%String.cat("[0x", c#463.toString#468(16)), "]");
+        } else if (%Int32.lt(c#465, 32) || (%Int32.eq(c#465, 65534) || %Int32.eq(c#465, 65535))) {
+          esc#467 = %String.cat(%String.cat("[0x", c#465.toString#470(16)), "]");
         } else {
           {
-            i#460 = s#452.next#466(i#460);
-            continue ~loop#461;
+            i#462 = s#454.next#468(i#462);
+            continue ~loop#463;
           }
         }
-        sb#453.appendBetween#469(s#452, emitted#458, i#460);
-        sb#453.append#470(esc#465);
-        emitted#458 = s#452.next#466(i#460);
-        i#460 = s#452.next#466(i#460);
+        sb#455.appendBetween#471(s#454, emitted#460, i#462);
+        sb#455.append#472(esc#467);
+        emitted#460 = s#454.next#468(i#462);
+        i#462 = s#454.next#468(i#462);
       }
     }
-    if (((upcast(emitted#458)): StringIndexOption#157).eq#471((upcast(begin#459)): StringIndexOption#157)) {
-      return s#452;
+    if (((upcast(emitted#460)): StringIndexOption#157).eq#473((upcast(begin#461)): StringIndexOption#157)) {
+      return s#454;
     } else {
-      sb#453.appendBetween#469(s#452, emitted#458, end#455);
-      return sb#453.toString#472();
+      sb#455.appendBetween#471(s#454, emitted#460, end#457);
+      return sb#455.toString#474();
     }
   }
 
-  export fn reportTestResults#410(testResults#473: List#77<Pair#406<String, List#77<String>>>, writeLine#474: fn (String): Void): Void {
-    writeLine#474("<testsuites>");
-    let total#475: String = testResults#473.length#476().toString#468(omitted);
-    let fails#477: String = testResults#473.reduceFrom#478<Int32, Never<Error#71>>(0, (fn ~fn#481(fails#482: Int32, testResult#483: Pair#406<String, List#77<String>>): Int32 {
-      return %Int32.add(fails#482, (if (testResult#483.value#442.isEmpty#427()) 0 else 1): Int32);
-    }): fn (Int32, Pair#406<String, List#77<String>>): Int32).toString#468(omitted);
-    let totals#484: String = %String.cat(%String.cat(%String.cat(%String.cat("tests='", total#475), "' failures='"), fails#477), "'");
-    writeLine#474(%String.cat(%String.cat("  <testsuite name='suite' ", totals#484), " time='0.0'>"));
+  export fn reportTestResults#412(testResults#475: List#77<Pair#408<String, List#77<String>>>, writeLine#476: fn (String): Void): Void {
+    writeLine#476("<testsuites>");
+    let total#477: String = testResults#475.length#478().toString#470(omitted);
+    let fails#479: String = testResults#475.reduceFrom#480<Int32, Never<Error#71>>(0, (fn ~fn#483(fails#484: Int32, testResult#485: Pair#408<String, List#77<String>>): Int32 {
+      return %Int32.add(fails#484, (if (testResult#485.value#444.isEmpty#429()) 0 else 1): Int32);
+    }): fn (Int32, Pair#408<String, List#77<String>>): Int32).toString#470(omitted);
+    let totals#486: String = %String.cat(%String.cat(%String.cat(%String.cat("tests='", total#477), "' failures='"), fails#479), "'");
+    writeLine#476(%String.cat(%String.cat("  <testsuite name='suite' ", totals#486), " time='0.0'>"));
     {
-      var i#485: Int32 = 0;
-      ~loop#486: while (%Int32.lt(i#485, testResults#473.length#476())) {
-        let testResult#487: Pair#406<String, List#77<String>> = testResults#473.get#488(i#485);
-        let failureMessages#489: List#77<String> = testResult#487.value#442;
-        let name#490: String = escapeXml#409(testResult#487.key#440);
-        let basics#491: String = %String.cat(%String.cat(%String.cat(%String.cat("name='", name#490), "' classname='"), name#490), "' time='0.0'");
-        if (failureMessages#489.isEmpty#427()) {
-          writeLine#474(%String.cat(%String.cat("    <testcase ", basics#491), " />"));
+      var i#487: Int32 = 0;
+      ~loop#488: while (%Int32.lt(i#487, testResults#475.length#478())) {
+        let testResult#489: Pair#408<String, List#77<String>> = testResults#475.get#490(i#487);
+        let failureMessages#491: List#77<String> = testResult#489.value#444;
+        let name#492: String = escapeXml#411(testResult#489.key#442);
+        let basics#493: String = %String.cat(%String.cat(%String.cat(%String.cat("name='", name#492), "' classname='"), name#492), "' time='0.0'");
+        if (failureMessages#491.isEmpty#429()) {
+          writeLine#476(%String.cat(%String.cat("    <testcase ", basics#493), " />"));
         } else {
-          writeLine#474(%String.cat(%String.cat("    <testcase ", basics#491), ">"));
-          let message#492: String = escapeXml#409(failureMessages#489.join#428<Never<Error#71>>(", ", (fn ~fn#493(it#494: String): String {
-            return it#494;
+          writeLine#476(%String.cat(%String.cat("    <testcase ", basics#493), ">"));
+          let message#494: String = escapeXml#411(failureMessages#491.join#430<Never<Error#71>>(", ", (fn ~fn#495(it#496: String): String {
+            return it#496;
           }): fn (String): String));
-          writeLine#474(%String.cat(%String.cat("      <failure message='", message#492), "' />"));
-          writeLine#474("    </testcase>");
+          writeLine#476(%String.cat(%String.cat("      <failure message='", message#494), "' />"));
+          writeLine#476("    </testcase>");
         }
-        i#485 = %Int32.add(i#485, 1);
+        i#487 = %Int32.add(i#487, 1);
       }
     }
-    writeLine#474("  </testsuite>");
-    writeLine#474("</testsuites>");
+    writeLine#476("  </testsuite>");
+    writeLine#476("</testsuites>");
   }
 
-  export fn runTestCases#411(testCases#495: List#77<Pair#406<String, fn (Test#5): Void throws Error#71>>): String {
-    let report#496: StringBuilder#177 = new constructor#454();
-    reportTestResults#410(processTestCases#405(testCases#495), (fn ~fn#497(line#498: String): Void [report#496] {
-      report#496.append#470(line#498);
-      report#496.append#470("\n");
+  export fn runTestCases#413(testCases#497: List#77<Pair#408<String, fn (Test#5): Void throws Error#71>>): String {
+    let report#498: StringBuilder#177 = new constructor#456();
+    reportTestResults#412(processTestCases#407(testCases#497), (fn ~fn#499(line#500: String): Void [report#498] {
+      report#498.append#472(line#500);
+      report#498.append#472("\n");
     }): fn (String): Void);
-    return report#496.toString#472();
+    return report#498.toString#474();
   }
 
-  export fn runTest#412(testFun#499: fn (Test#5): Void throws Error#71): Void {
-    let test#500: Test#5 = new constructor#90();
-    (orelse(testFun#499(test#500)^, test#500.assert#67(false, (fn ~fn#501(): String {
+  export fn runTest#414(testFun#501: fn (Test#5): Void throws Error#71): Void {
+    let test#502: Test#5 = new constructor#90();
+    (orelse(testFun#501(test#502)^, test#502.assert#67(false, (fn ~fn#503(): String {
       return "error during test running";
     }): fn (): String))): Void;
-    test#500.softFailToHard#74();
+    test#502.softFailToHard#74();
   }
 
   init {}
@@ -288,14 +288,14 @@ module regex#1 in "regex" {
   export class Capture#6 extends RegexNode#22 {
     let name#91: String;
     let item#92: RegexNode#22;
-    constructor constructor#94(name#520: String, item#521: RegexNode#22): Capture#6 {
-      this.name#91 = name#520;
-      this.item#92 = item#521;
+    constructor constructor#94(name#522: String, item#523: RegexNode#22): Capture#6 {
+      this.name#91 = name#522;
+      this.item#92 = item#523;
     }
-    auto operator("==") method eq#93(other#519: RegexNode#22): Boolean {
-      if (is(other#519, Capture#6)) {
-        if (%String.eq(this.name#91, ((downcast(other#519)): Capture#6).name#91)) {
-          return this.item#92.eq#214(((downcast(other#519)): Capture#6).item#92);
+    auto operator("==") method eq#93(other#521: RegexNode#22): Boolean {
+      if (is(other#521, Capture#6)) {
+        if (%String.eq(this.name#91, ((downcast(other#521)): Capture#6).name#91)) {
+          return this.item#92.eq#216(((downcast(other#521)): Capture#6).item#92);
         } else {
           return false;
         }
@@ -309,12 +309,12 @@ module regex#1 in "regex" {
 
   export class CodePoints#8 extends CodePart#7 {
     let value#95: String;
-    constructor constructor#97(value#523: String): CodePoints#8 {
-      this.value#95 = value#523;
+    constructor constructor#97(value#525: String): CodePoints#8 {
+      this.value#95 = value#525;
     }
-    auto operator("==") method eq#96(other#522: RegexNode#22): Boolean {
-      if (is(other#522, CodePoints#8)) {
-        return %String.eq(this.value#95, ((downcast(other#522)): CodePoints#8).value#95);
+    auto operator("==") method eq#96(other#524: RegexNode#22): Boolean {
+      if (is(other#524, CodePoints#8)) {
+        return %String.eq(this.value#95, ((downcast(other#524)): CodePoints#8).value#95);
       } else {
         return false;
       }
@@ -324,14 +324,14 @@ module regex#1 in "regex" {
   export class CodeRange#9 extends CodePart#7 {
     let min#98: Int32;
     let max#99: Int32;
-    constructor constructor#101(min#525: Int32, max#526: Int32): CodeRange#9 {
-      this.min#98 = min#525;
-      this.max#99 = max#526;
+    constructor constructor#101(min#527: Int32, max#528: Int32): CodeRange#9 {
+      this.min#98 = min#527;
+      this.max#99 = max#528;
     }
-    auto operator("==") method eq#100(other#524: RegexNode#22): Boolean {
-      if (is(other#524, CodeRange#9)) {
-        if (%Int32.eq(this.min#98, ((downcast(other#524)): CodeRange#9).min#98)) {
-          return %Int32.eq(this.max#99, ((downcast(other#524)): CodeRange#9).max#99);
+    auto operator("==") method eq#100(other#526: RegexNode#22): Boolean {
+      if (is(other#526, CodeRange#9)) {
+        if (%Int32.eq(this.min#98, ((downcast(other#526)): CodeRange#9).min#98)) {
+          return %Int32.eq(this.max#99, ((downcast(other#526)): CodeRange#9).max#99);
         } else {
           return false;
         }
@@ -344,23 +344,23 @@ module regex#1 in "regex" {
   export class CodeSet#10 extends RegexNode#22 {
     let items#102: List#77<CodePart#7>;
     let negated#103: Boolean;
-    constructor constructor#105(items#530: List#77<CodePart#7>, negated#531?: Boolean?): CodeSet#10 {
-      let negated#532: Boolean = (coalesce(negated#531, false)): Boolean;
-      this.items#102 = items#530;
-      this.negated#103 = negated#532;
+    constructor constructor#105(items#532: List#77<CodePart#7>, negated#533?: Boolean?): CodeSet#10 {
+      let negated#534: Boolean = (coalesce(negated#533, false)): Boolean;
+      this.items#102 = items#532;
+      this.negated#103 = negated#534;
     }
-    operator("==") method eq#104(other#527: RegexNode#22): Boolean {
-      if (is(other#527, CodeSet#10)) {
-        if (%Boolean.not(%Int32.eq(this.items#102.length#476(), ((downcast(other#527)): CodeSet#10).items#102.length#476()))) {
+    operator("==") method eq#104(other#529: RegexNode#22): Boolean {
+      if (is(other#529, CodeSet#10)) {
+        if (%Boolean.not(%Int32.eq(this.items#102.length#478(), ((downcast(other#529)): CodeSet#10).items#102.length#478()))) {
           return false;
         }
         {
-          var i#528: Int32 = 0;
-          ~loop#529: while (%Int32.lt(i#528, this.items#102.length#476())) {
-            if (%Boolean.not(((upcast(this.items#102.get#488(i#528))): RegexNode#22).eq#214((upcast(((downcast(other#527)): CodeSet#10).items#102.get#488(i#528))): RegexNode#22))) {
+          var i#530: Int32 = 0;
+          ~loop#531: while (%Int32.lt(i#530, this.items#102.length#478())) {
+            if (%Boolean.not(((upcast(this.items#102.get#490(i#530))): RegexNode#22).eq#216((upcast(((downcast(other#529)): CodeSet#10).items#102.get#490(i#530))): RegexNode#22))) {
               return false;
             }
-            i#528 = %Int32.add(i#528, 1);
+            i#530 = %Int32.add(i#530, 1);
           }
         }
         return true;
@@ -370,17 +370,17 @@ module regex#1 in "regex" {
     }
   }
 
-  fn regexNodeListEq#502(a#533: List#77<RegexNode#22>, b#534: List#77<RegexNode#22>): Boolean {
-    if (%Boolean.not(%Int32.eq(a#533.length#476(), b#534.length#476()))) {
+  fn regexNodeListEq#504(a#535: List#77<RegexNode#22>, b#536: List#77<RegexNode#22>): Boolean {
+    if (%Boolean.not(%Int32.eq(a#535.length#478(), b#536.length#478()))) {
       return false;
     }
     {
-      var i#535: Int32 = 0;
-      ~loop#536: while (%Int32.lt(i#535, a#533.length#476())) {
-        if (%Boolean.not(a#533.get#488(i#535).eq#214(b#534.get#488(i#535)))) {
+      var i#537: Int32 = 0;
+      ~loop#538: while (%Int32.lt(i#537, a#535.length#478())) {
+        if (%Boolean.not(a#535.get#490(i#537).eq#216(b#536.get#490(i#537)))) {
           return false;
         }
-        i#535 = %Int32.add(i#535, 1);
+        i#537 = %Int32.add(i#537, 1);
       }
     }
     return true;
@@ -388,12 +388,12 @@ module regex#1 in "regex" {
 
   export class Or#11 extends RegexNode#22 {
     let items#106: List#77<RegexNode#22>;
-    constructor constructor#108(items#538: List#77<RegexNode#22>): Or#11 {
-      this.items#106 = items#538;
+    constructor constructor#108(items#540: List#77<RegexNode#22>): Or#11 {
+      this.items#106 = items#540;
     }
-    operator("==") method eq#107(other#537: RegexNode#22): Boolean {
-      if (is(other#537, Or#11)) {
-        return regexNodeListEq#502(this.items#106, ((downcast(other#537)): Or#11).items#106);
+    operator("==") method eq#107(other#539: RegexNode#22): Boolean {
+      if (is(other#539, Or#11)) {
+        return regexNodeListEq#504(this.items#106, ((downcast(other#539)): Or#11).items#106);
       } else {
         return false;
       }
@@ -405,19 +405,19 @@ module regex#1 in "regex" {
     let min#110: Int32;
     let max#111: Int32?;
     let reluctant#112: Boolean;
-    constructor constructor#114(item#540: RegexNode#22, min#541: Int32, max#542: Int32?, reluctant#543?: Boolean?): Repeat#12 {
-      let reluctant#544: Boolean = (coalesce(reluctant#543, false)): Boolean;
-      this.item#109 = item#540;
-      this.min#110 = min#541;
-      this.max#111 = max#542;
-      this.reluctant#112 = reluctant#544;
+    constructor constructor#114(item#542: RegexNode#22, min#543: Int32, max#544: Int32?, reluctant#545?: Boolean?): Repeat#12 {
+      let reluctant#546: Boolean = (coalesce(reluctant#545, false)): Boolean;
+      this.item#109 = item#542;
+      this.min#110 = min#543;
+      this.max#111 = max#544;
+      this.reluctant#112 = reluctant#546;
     }
-    auto operator("==") method eq#113(other#539: RegexNode#22): Boolean {
-      if (is(other#539, Repeat#12)) {
-        if (this.item#109.eq#214(((downcast(other#539)): Repeat#12).item#109)) {
-          if (%Int32.eq(this.min#110, ((downcast(other#539)): Repeat#12).min#110)) {
-            if (eqNullable(%Int32.eq, this.max#111, ((downcast(other#539)): Repeat#12).max#111)) {
-              return %Boolean.eq(this.reluctant#112, ((downcast(other#539)): Repeat#12).reluctant#112);
+    auto operator("==") method eq#113(other#541: RegexNode#22): Boolean {
+      if (is(other#541, Repeat#12)) {
+        if (this.item#109.eq#216(((downcast(other#541)): Repeat#12).item#109)) {
+          if (%Int32.eq(this.min#110, ((downcast(other#541)): Repeat#12).min#110)) {
+            if (eqNullable(%Int32.eq, this.max#111, ((downcast(other#541)): Repeat#12).max#111)) {
+              return %Boolean.eq(this.reluctant#112, ((downcast(other#541)): Repeat#12).reluctant#112);
             } else {
               return false;
             }
@@ -435,12 +435,12 @@ module regex#1 in "regex" {
 
   export class Sequence#13 extends RegexNode#22 {
     let items#115: List#77<RegexNode#22>;
-    constructor constructor#117(items#546: List#77<RegexNode#22>): Sequence#13 {
-      this.items#115 = items#546;
+    constructor constructor#117(items#548: List#77<RegexNode#22>): Sequence#13 {
+      this.items#115 = items#548;
     }
-    operator("==") method eq#116(other#545: RegexNode#22): Boolean {
-      if (is(other#545, Sequence#13)) {
-        return regexNodeListEq#502(this.items#115, ((downcast(other#545)): Sequence#13).items#115);
+    operator("==") method eq#116(other#547: RegexNode#22): Boolean {
+      if (is(other#547, Sequence#13)) {
+        return regexNodeListEq#504(this.items#115, ((downcast(other#547)): Sequence#13).items#115);
       } else {
         return false;
       }
@@ -450,69 +450,69 @@ module regex#1 in "regex" {
   export interface Special#14 extends RegexNode#22 {}
 
   class Begin#23 extends Special#14 {
-    constructor constructor#216(): Begin#23 {}
-    auto operator("==") method eq#215(other#547: RegexNode#22): Boolean {
-      return is(other#547, Begin#23);
+    constructor constructor#218(): Begin#23 {}
+    auto operator("==") method eq#217(other#549: RegexNode#22): Boolean {
+      return is(other#549, Begin#23);
     }
   }
 
-  export let Begin#503: Special#14;
+  export let Begin#505: Special#14;
 
   class Dot#24 extends Special#14 {
-    constructor constructor#218(): Dot#24 {}
-    auto operator("==") method eq#217(other#548: RegexNode#22): Boolean {
-      return is(other#548, Dot#24);
+    constructor constructor#220(): Dot#24 {}
+    auto operator("==") method eq#219(other#550: RegexNode#22): Boolean {
+      return is(other#550, Dot#24);
     }
   }
 
-  export let Dot#504: Special#14;
+  export let Dot#506: Special#14;
 
   class End#25 extends Special#14 {
-    constructor constructor#220(): End#25 {}
-    auto operator("==") method eq#219(other#549: RegexNode#22): Boolean {
-      return is(other#549, End#25);
+    constructor constructor#222(): End#25 {}
+    auto operator("==") method eq#221(other#551: RegexNode#22): Boolean {
+      return is(other#551, End#25);
     }
   }
 
-  export let End#505: Special#14;
+  export let End#507: Special#14;
 
   class WordBoundary#26 extends Special#14 {
-    constructor constructor#222(): WordBoundary#26 {}
-    auto operator("==") method eq#221(other#550: RegexNode#22): Boolean {
-      return is(other#550, WordBoundary#26);
+    constructor constructor#224(): WordBoundary#26 {}
+    auto operator("==") method eq#223(other#552: RegexNode#22): Boolean {
+      return is(other#552, WordBoundary#26);
     }
   }
 
-  export let WordBoundary#506: Special#14;
+  export let WordBoundary#508: Special#14;
 
   export interface SpecialSet#15 extends CodePart#7, Special#14 {}
 
   class Digit#27 extends SpecialSet#15 {
-    constructor constructor#224(): Digit#27 {}
-    auto operator("==") method eq#223(other#551: RegexNode#22): Boolean {
-      return is(other#551, Digit#27);
+    constructor constructor#226(): Digit#27 {}
+    auto operator("==") method eq#225(other#553: RegexNode#22): Boolean {
+      return is(other#553, Digit#27);
     }
   }
 
-  export let Digit#507: SpecialSet#15;
+  export let Digit#509: SpecialSet#15;
 
   class Space#28 extends SpecialSet#15 {
-    constructor constructor#226(): Space#28 {}
-    auto operator("==") method eq#225(other#552: RegexNode#22): Boolean {
-      return is(other#552, Space#28);
+    constructor constructor#228(): Space#28 {}
+    auto operator("==") method eq#227(other#554: RegexNode#22): Boolean {
+      return is(other#554, Space#28);
     }
   }
 
-  export let Space#508: SpecialSet#15;
+  export let Space#510: SpecialSet#15;
 
   class Word#29 extends SpecialSet#15 {
-    constructor constructor#228(): Word#29 {}
-    auto operator("==") method eq#227(other#553: RegexNode#22): Boolean {
-      return is(other#553, Word#29);
+    constructor constructor#230(): Word#29 {}
+    auto operator("==") method eq#229(other#555: RegexNode#22): Boolean {
+      return is(other#555, Word#29);
     }
   }
 
-  export let Word#509: SpecialSet#15;
+  export let Word#511: SpecialSet#15;
 
   class Codes#16 {
     constructor constructor#153(): Codes#16 {}
@@ -553,45 +553,45 @@ module regex#1 in "regex" {
     static let underscore#152: Int32;
   }
 
-  let needsNoEscape#510: Int32;
+  let needsNoEscape#512: Int32;
 
-  let needsSimpleEscape#511: Int32;
+  let needsSimpleEscape#513: Int32;
 
-  let needsNumericEscape#512: Int32;
+  let needsNumericEscape#514: Int32;
 
-  fn buildEscapeNeeds#513(): List#77<Int32> {
-    let escapeNeeds#554: ListBuilder#87<Int32> = new constructor#432<Int32>();
+  fn buildEscapeNeeds#515(): List#77<Int32> {
+    let escapeNeeds#556: ListBuilder#87<Int32> = new constructor#434<Int32>();
     {
-      var code#555: Int32 = 0;
-      ~loop#556: while (%Int32.le(code#555, 127)) {
-        escapeNeeds#554.add#415((if (%Int32.eq(code#555, dash#124) || (%Int32.eq(code#555, space#147) || (%Int32.eq(code#555, underscore#152) || (%Int32.le(digit0#128, code#555) && %Int32.le(code#555, digit9#129) || (%Int32.le(upperA#145, code#555) && %Int32.le(code#555, upperZ#146) || %Int32.le(lowerA#130, code#555) && %Int32.le(code#555, lowerZ#131)))))) needsNoEscape#510 else (if (%Int32.eq(code#555, ampersand#118) || (%Int32.eq(code#555, backslash#119) || (%Int32.eq(code#555, caret#120) || (%Int32.eq(code#555, curlyLeft#122) || (%Int32.eq(code#555, curlyRight#123) || (%Int32.eq(code#555, dot#125) || (%Int32.eq(code#555, peso#133) || (%Int32.eq(code#555, pipe#134) || (%Int32.eq(code#555, plus#135) || (%Int32.eq(code#555, question#136) || (%Int32.eq(code#555, roundLeft#137) || (%Int32.eq(code#555, roundRight#138) || (%Int32.eq(code#555, slash#139) || (%Int32.eq(code#555, squareLeft#140) || (%Int32.eq(code#555, squareRight#141) || (%Int32.eq(code#555, star#142) || %Int32.eq(code#555, tilde#144))))))))))))))))) needsSimpleEscape#511 else needsNumericEscape#512): Int32): Int32, omitted);
-        code#555 = %Int32.add(code#555, 1);
+      var code#557: Int32 = 0;
+      ~loop#558: while (%Int32.le(code#557, 127)) {
+        escapeNeeds#556.add#417((if (%Int32.eq(code#557, dash#124) || (%Int32.eq(code#557, space#147) || (%Int32.eq(code#557, underscore#152) || (%Int32.le(digit0#128, code#557) && %Int32.le(code#557, digit9#129) || (%Int32.le(upperA#145, code#557) && %Int32.le(code#557, upperZ#146) || %Int32.le(lowerA#130, code#557) && %Int32.le(code#557, lowerZ#131)))))) needsNoEscape#512 else (if (%Int32.eq(code#557, ampersand#118) || (%Int32.eq(code#557, backslash#119) || (%Int32.eq(code#557, caret#120) || (%Int32.eq(code#557, curlyLeft#122) || (%Int32.eq(code#557, curlyRight#123) || (%Int32.eq(code#557, dot#125) || (%Int32.eq(code#557, peso#133) || (%Int32.eq(code#557, pipe#134) || (%Int32.eq(code#557, plus#135) || (%Int32.eq(code#557, question#136) || (%Int32.eq(code#557, roundLeft#137) || (%Int32.eq(code#557, roundRight#138) || (%Int32.eq(code#557, slash#139) || (%Int32.eq(code#557, squareLeft#140) || (%Int32.eq(code#557, squareRight#141) || (%Int32.eq(code#557, star#142) || %Int32.eq(code#557, tilde#144))))))))))))))))) needsSimpleEscape#513 else needsNumericEscape#514): Int32): Int32, omitted);
+        code#557 = %Int32.add(code#557, 1);
       }
     }
-    return escapeNeeds#554.toList#426();
+    return escapeNeeds#556.toList#428();
   }
 
-  let escapeNeeds#514: List#77<Int32>;
+  let escapeNeeds#516: List#77<Int32>;
 
   export class Group#17 {
     let name#154: String;
     let value#155: String;
     let begin#158: StringIndex#156;
     let end#159: StringIndex#156;
-    constructor constructor#160(name#557: String, value#558: String, begin#559: StringIndex#156, end#560: StringIndex#156): Group#17 {
-      this.name#154 = name#557;
-      this.value#155 = value#558;
-      this.begin#158 = begin#559;
-      this.end#159 = end#560;
+    constructor constructor#160(name#559: String, value#560: String, begin#561: StringIndex#156, end#562: StringIndex#156): Group#17 {
+      this.name#154 = name#559;
+      this.value#155 = value#560;
+      this.begin#158 = begin#561;
+      this.end#159 = end#562;
     }
   }
 
   export class Match#18 {
     let full#161: Group#17;
     let groups#170: Map#162<String, Group#17>;
-    constructor constructor#171(full#561: Group#17, groups#562: Map#162<String, Group#17>): Match#18 {
-      this.full#161 = full#561;
-      this.groups#170 = groups#562;
+    constructor constructor#171(full#563: Group#17, groups#564: Map#162<String, Group#17>): Match#18 {
+      this.full#161 = full#563;
+      this.groups#170 = groups#564;
     }
   }
 
@@ -600,240 +600,240 @@ module regex#1 in "regex" {
     let group#173: Group#17;
     let match#174: Match#18;
     let orObject#175: Or#11;
-    constructor constructor#176(codePoints#563?: CodePoints#8?, group#564?: Group#17?, match#565?: Match#18?, orObject#566?: Or#11?): RegexRefs#19 {
-      let codePoints#567: CodePoints#8 = (coalesce(codePoints#563, new constructor#97(""))): CodePoints#8;
-      let group#568: Group#17 = (coalesce(group#564, new constructor#160("", "", begin#459, begin#459))): Group#17;
-      let match#570: Match#18 = (coalesce(match#565, new constructor#171(group#568, new constructor#569<String, Group#17>((list(new constructor#451<String, Group#17>("", group#568))): List#77<Pair#406<String, Group#17>>)))): Match#18;
-      let orObject#571: Or#11 = (coalesce(orObject#566, new constructor#108((list()): List#77<RegexNode#22>))): Or#11;
-      this.codePoints#172 = codePoints#567;
-      this.group#173 = group#568;
-      this.match#174 = match#570;
-      this.orObject#175 = orObject#571;
+    constructor constructor#176(codePoints#565?: CodePoints#8?, group#566?: Group#17?, match#567?: Match#18?, orObject#568?: Or#11?): RegexRefs#19 {
+      let codePoints#569: CodePoints#8 = (coalesce(codePoints#565, new constructor#97(""))): CodePoints#8;
+      let group#570: Group#17 = (coalesce(group#566, new constructor#160("", "", begin#461, begin#461))): Group#17;
+      let match#572: Match#18 = (coalesce(match#567, new constructor#171(group#570, new constructor#571<String, Group#17>((list(new constructor#453<String, Group#17>("", group#570))): List#77<Pair#408<String, Group#17>>)))): Match#18;
+      let orObject#573: Or#11 = (coalesce(orObject#568, new constructor#108((list()): List#77<RegexNode#22>))): Or#11;
+      this.codePoints#172 = codePoints#569;
+      this.group#173 = group#570;
+      this.match#174 = match#572;
+      this.orObject#175 = orObject#573;
     }
   }
 
-  let regexRefs#515: RegexRefs#19;
+  let regexRefs#517: RegexRefs#19;
 
   class RegexFormatter#20 {
     private let out#178: StringBuilder#177;
     constructor constructor#197(): RegexFormatter#20 {
-      this.out#178 = new constructor#454();
+      this.out#178 = new constructor#456();
     }
-    connected static fn regexCompileFormatted#179(data#572: RegexNode#22, formatted#573: String): AnyValue;
-    connected static fn regexFormat#180(data#574: RegexNode#22): String {
-      return new constructor#197().format#181(data#574);
+    connected static fn regexCompileFormatted#179(data#574: RegexNode#22, formatted#575: String): AnyValue;
+    connected static fn regexFormat#180(data#576: RegexNode#22): String {
+      return new constructor#197().format#181(data#576);
     }
-    method format#181(regex#575: RegexNode#22): String {
-      this.pushRegex#182(regex#575);
-      return this.out#178.toString#472();
+    method format#181(regex#577: RegexNode#22): String {
+      this.pushRegex#182(regex#577);
+      return this.out#178.toString#474();
     }
-    private method pushRegex#182(regex#576: RegexNode#22): Void {
+    private method pushRegex#182(regex#578: RegexNode#22): Void {
       {
-        if (is(regex#576, Capture#6)) {
-          this.pushCapture#183((downcast(regex#576)): Capture#6);
-        } else if (is(regex#576, CodePoints#8)) {
-          this.pushCodePoints#187((downcast(regex#576)): CodePoints#8, false);
-        } else if (is(regex#576, CodeRange#9)) {
-          this.pushCodeRange#188((downcast(regex#576)): CodeRange#9);
-        } else if (is(regex#576, CodeSet#10)) {
-          this.pushCodeSet#190((downcast(regex#576)): CodeSet#10);
-        } else if (is(regex#576, Or#11)) {
-          this.pushOr#193((downcast(regex#576)): Or#11);
-        } else if (is(regex#576, Repeat#12)) {
-          this.pushRepeat#194((downcast(regex#576)): Repeat#12);
-        } else if (is(regex#576, Sequence#13)) {
-          this.pushSequence#195((downcast(regex#576)): Sequence#13);
-        } else if (regex#576.eq#214((upcast(Begin#503)): RegexNode#22)) {
-          this.out#178.append#470("^");
-        } else if (regex#576.eq#214((upcast(Dot#504)): RegexNode#22)) {
-          this.out#178.append#470(".");
-        } else if (regex#576.eq#214((upcast(End#505)): RegexNode#22)) {
-          this.out#178.append#470("$");
-        } else if (regex#576.eq#214((upcast(WordBoundary#506)): RegexNode#22)) {
-          this.out#178.append#470(%String.cat("\\", "b"));
-        } else if (regex#576.eq#214((upcast(Digit#507)): RegexNode#22)) {
-          this.out#178.append#470(%String.cat("\\", "d"));
-        } else if (regex#576.eq#214((upcast(Space#508)): RegexNode#22)) {
-          this.out#178.append#470(%String.cat("\\", "s"));
-        } else if (regex#576.eq#214((upcast(Word#509)): RegexNode#22)) {
-          this.out#178.append#470(%String.cat("\\", "w"));
+        if (is(regex#578, Capture#6)) {
+          this.pushCapture#183((downcast(regex#578)): Capture#6);
+        } else if (is(regex#578, CodePoints#8)) {
+          this.pushCodePoints#187((downcast(regex#578)): CodePoints#8, false);
+        } else if (is(regex#578, CodeRange#9)) {
+          this.pushCodeRange#188((downcast(regex#578)): CodeRange#9);
+        } else if (is(regex#578, CodeSet#10)) {
+          this.pushCodeSet#190((downcast(regex#578)): CodeSet#10);
+        } else if (is(regex#578, Or#11)) {
+          this.pushOr#193((downcast(regex#578)): Or#11);
+        } else if (is(regex#578, Repeat#12)) {
+          this.pushRepeat#194((downcast(regex#578)): Repeat#12);
+        } else if (is(regex#578, Sequence#13)) {
+          this.pushSequence#195((downcast(regex#578)): Sequence#13);
+        } else if (regex#578.eq#216((upcast(Begin#505)): RegexNode#22)) {
+          this.out#178.append#472("^");
+        } else if (regex#578.eq#216((upcast(Dot#506)): RegexNode#22)) {
+          this.out#178.append#472(".");
+        } else if (regex#578.eq#216((upcast(End#507)): RegexNode#22)) {
+          this.out#178.append#472("$");
+        } else if (regex#578.eq#216((upcast(WordBoundary#508)): RegexNode#22)) {
+          this.out#178.append#472(%String.cat("\\", "b"));
+        } else if (regex#578.eq#216((upcast(Digit#509)): RegexNode#22)) {
+          this.out#178.append#472(%String.cat("\\", "d"));
+        } else if (regex#578.eq#216((upcast(Space#510)): RegexNode#22)) {
+          this.out#178.append#472(%String.cat("\\", "s"));
+        } else if (regex#578.eq#216((upcast(Word#511)): RegexNode#22)) {
+          this.out#178.append#472(%String.cat("\\", "w"));
         }
       }
     }
-    private method pushCapture#183(capture#577: Capture#6): Void {
-      this.out#178.append#470("(");
-      this.pushCaptureName#184(this.out#178, capture#577.name#91);
-      this.pushRegex#182(capture#577.item#92);
-      this.out#178.append#470(")");
+    private method pushCapture#183(capture#579: Capture#6): Void {
+      this.out#178.append#472("(");
+      this.pushCaptureName#184(this.out#178, capture#579.name#91);
+      this.pushRegex#182(capture#579.item#92);
+      this.out#178.append#472(")");
     }
-    connected private method pushCaptureName#184(out#578: StringBuilder#177, name#579: String): Void {
-      out#578.append#470(%String.cat(%String.cat("?<", name#579), ">"));
+    connected private method pushCaptureName#184(out#580: StringBuilder#177, name#581: String): Void {
+      out#580.append#472(%String.cat(%String.cat("?<", name#581), ">"));
     }
-    private method pushCode#185(code#580: Int32, insideCodeSet#581: Boolean): Void {
-      let specialEscape#582: String = (if (%Int32.eq(code#580, carriageReturn#121)) "r" else (if (%Int32.eq(code#580, newline#132)) "n" else (if (%Int32.eq(code#580, tab#143)) "t" else ""): String): String): String;
-      if (%Boolean.not(%String.eq(specialEscape#582, ""))) {
-        this.out#178.append#470("\\");
-        this.out#178.append#470(specialEscape#582);
+    private method pushCode#185(code#582: Int32, insideCodeSet#583: Boolean): Void {
+      let specialEscape#584: String = (if (%Int32.eq(code#582, carriageReturn#121)) "r" else (if (%Int32.eq(code#582, newline#132)) "n" else (if (%Int32.eq(code#582, tab#143)) "t" else ""): String): String): String;
+      if (%Boolean.not(%String.eq(specialEscape#584, ""))) {
+        this.out#178.append#472("\\");
+        this.out#178.append#472(specialEscape#584);
         return;
       }
-      if (%Int32.le(code#580, 127)) {
-        let escapeNeed#583: Int32 = escapeNeeds#514.get#488(code#580);
-        if (%Int32.eq(escapeNeed#583, needsSimpleEscape#511) || insideCodeSet#581 && %Int32.eq(code#580, dash#124)) {
-          this.out#178.append#470("\\");
-          this.out#178.append#470((orelse(fromCodePoint#584(code#580)^, (panic()): String)): String);
+      if (%Int32.le(code#582, 127)) {
+        let escapeNeed#585: Int32 = escapeNeeds#516.get#490(code#582);
+        if (%Int32.eq(escapeNeed#585, needsSimpleEscape#513) || insideCodeSet#583 && %Int32.eq(code#582, dash#124)) {
+          this.out#178.append#472("\\");
+          this.out#178.append#472((orelse(fromCodePoint#586(code#582)^, (panic()): String)): String);
           return;
-        } else if (%Int32.eq(escapeNeed#583, needsNoEscape#510)) {
-          this.out#178.append#470((orelse(fromCodePoint#584(code#580)^, (panic()): String)): String);
+        } else if (%Int32.eq(escapeNeed#585, needsNoEscape#512)) {
+          this.out#178.append#472((orelse(fromCodePoint#586(code#582)^, (panic()): String)): String);
           return;
         }
       }
-      if (%Int32.ge(code#580, supplementalMin#150) || %Int32.gt(code#580, highControlMax#127) && %Boolean.not(%Int32.le(surrogateMin#148, code#580) && %Int32.le(code#580, surrogateMax#149) || %Int32.eq(code#580, uint16Max#151))) {
-        this.out#178.append#470((orelse(fromCodePoint#584(code#580)^, (panic()): String)): String);
+      if (%Int32.ge(code#582, supplementalMin#150) || %Int32.gt(code#582, highControlMax#127) && %Boolean.not(%Int32.le(surrogateMin#148, code#582) && %Int32.le(code#582, surrogateMax#149) || %Int32.eq(code#582, uint16Max#151))) {
+        this.out#178.append#472((orelse(fromCodePoint#586(code#582)^, (panic()): String)): String);
       } else {
-        this.pushCodeTo#186(this.out#178, code#580, insideCodeSet#581);
+        this.pushCodeTo#186(this.out#178, code#582, insideCodeSet#583);
       }
     }
-    connected private abstract method pushCodeTo#186(out#586: StringBuilder#177, code#587: Int32, insideCodeSet#588: Boolean): Void;
-    private method pushCodePoints#187(codePoints#589: CodePoints#8, insideCodeSet#590: Boolean): Void {
-      let value#591: String = codePoints#589.value#95;
+    connected private abstract method pushCodeTo#186(out#588: StringBuilder#177, code#589: Int32, insideCodeSet#590: Boolean): Void;
+    private method pushCodePoints#187(codePoints#591: CodePoints#8, insideCodeSet#592: Boolean): Void {
+      let value#593: String = codePoints#591.value#95;
       {
-        var index#592: StringIndex#156 = begin#459;
-        ~loop#593: while (value#591.hasIndex#594(index#592)) {
-          this.pushCode#185(value#591.get#464(index#592), insideCodeSet#590);
-          index#592 = value#591.next#466(index#592);
+        var index#594: StringIndex#156 = begin#461;
+        ~loop#595: while (value#593.hasIndex#596(index#594)) {
+          this.pushCode#185(value#593.get#466(index#594), insideCodeSet#592);
+          index#594 = value#593.next#468(index#594);
         }
       }
     }
-    private method pushCodeRange#188(codeRange#595: CodeRange#9): Void {
-      this.out#178.append#470("[");
-      this.pushCodeRangeUnwrapped#189(codeRange#595);
-      this.out#178.append#470("]");
+    private method pushCodeRange#188(codeRange#597: CodeRange#9): Void {
+      this.out#178.append#472("[");
+      this.pushCodeRangeUnwrapped#189(codeRange#597);
+      this.out#178.append#472("]");
     }
-    private method pushCodeRangeUnwrapped#189(codeRange#596: CodeRange#9): Void {
-      this.pushCode#185(codeRange#596.min#98, true);
-      this.out#178.append#470("-");
-      this.pushCode#185(codeRange#596.max#99, true);
+    private method pushCodeRangeUnwrapped#189(codeRange#598: CodeRange#9): Void {
+      this.pushCode#185(codeRange#598.min#98, true);
+      this.out#178.append#472("-");
+      this.pushCode#185(codeRange#598.max#99, true);
     }
-    private method pushCodeSet#190(codeSet#597: CodeSet#10): Void {
-      let adjusted#598: RegexNode#22 = this.adjustCodeSet#191(codeSet#597, regexRefs#515);
+    private method pushCodeSet#190(codeSet#599: CodeSet#10): Void {
+      let adjusted#600: RegexNode#22 = this.adjustCodeSet#191(codeSet#599, regexRefs#517);
       {
-        if (is(adjusted#598, CodeSet#10)) {
-          if (((downcast(adjusted#598)): CodeSet#10).items#102.isEmpty#427()) {
-            if (((downcast(adjusted#598)): CodeSet#10).negated#103) {
-              this.out#178.append#470("[\\s\\S]");
+        if (is(adjusted#600, CodeSet#10)) {
+          if (((downcast(adjusted#600)): CodeSet#10).items#102.isEmpty#429()) {
+            if (((downcast(adjusted#600)): CodeSet#10).negated#103) {
+              this.out#178.append#472("[\\s\\S]");
             } else {
-              this.out#178.append#470("(?:$.)");
+              this.out#178.append#472("(?:$.)");
             }
           } else {
-            this.out#178.append#470("[");
-            if (((downcast(adjusted#598)): CodeSet#10).negated#103) {
-              this.out#178.append#470("^");
+            this.out#178.append#472("[");
+            if (((downcast(adjusted#600)): CodeSet#10).negated#103) {
+              this.out#178.append#472("^");
             }
             {
-              var i#599: Int32 = 0;
-              ~loop#600: while (%Int32.lt(i#599, ((downcast(adjusted#598)): CodeSet#10).items#102.length#476())) {
-                this.pushCodeSetItem#192(((downcast(adjusted#598)): CodeSet#10).items#102.get#488(i#599));
-                i#599 = %Int32.add(i#599, 1);
+              var i#601: Int32 = 0;
+              ~loop#602: while (%Int32.lt(i#601, ((downcast(adjusted#600)): CodeSet#10).items#102.length#478())) {
+                this.pushCodeSetItem#192(((downcast(adjusted#600)): CodeSet#10).items#102.get#490(i#601));
+                i#601 = %Int32.add(i#601, 1);
               }
             }
-            this.out#178.append#470("]");
+            this.out#178.append#472("]");
           }
         } else {
-          this.pushRegex#182(adjusted#598);
+          this.pushRegex#182(adjusted#600);
         }
       }
     }
-    connected private method adjustCodeSet#191(codeSet#601: CodeSet#10, regexRefs#602: RegexRefs#19): RegexNode#22 {
-      return (upcast(codeSet#601)): RegexNode#22;
+    connected private method adjustCodeSet#191(codeSet#603: CodeSet#10, regexRefs#604: RegexRefs#19): RegexNode#22 {
+      return (upcast(codeSet#603)): RegexNode#22;
     }
-    private method pushCodeSetItem#192(codePart#603: CodePart#7): Void {
+    private method pushCodeSetItem#192(codePart#605: CodePart#7): Void {
       {
-        if (is(codePart#603, CodePoints#8)) {
-          this.pushCodePoints#187((downcast(codePart#603)): CodePoints#8, true);
-        } else if (is(codePart#603, CodeRange#9)) {
-          this.pushCodeRangeUnwrapped#189((downcast(codePart#603)): CodeRange#9);
-        } else if (is(codePart#603, SpecialSet#15)) {
-          this.pushRegex#182((upcast((downcast(codePart#603)): SpecialSet#15)): RegexNode#22);
+        if (is(codePart#605, CodePoints#8)) {
+          this.pushCodePoints#187((downcast(codePart#605)): CodePoints#8, true);
+        } else if (is(codePart#605, CodeRange#9)) {
+          this.pushCodeRangeUnwrapped#189((downcast(codePart#605)): CodeRange#9);
+        } else if (is(codePart#605, SpecialSet#15)) {
+          this.pushRegex#182((upcast((downcast(codePart#605)): SpecialSet#15)): RegexNode#22);
         }
       }
     }
-    private method pushOr#193(or#604: Or#11): Void {
-      if (%Boolean.not(or#604.items#106.isEmpty#427())) {
-        this.out#178.append#470("(?:");
-        this.pushRegex#182(or#604.items#106.get#488(0));
+    private method pushOr#193(or#606: Or#11): Void {
+      if (%Boolean.not(or#606.items#106.isEmpty#429())) {
+        this.out#178.append#472("(?:");
+        this.pushRegex#182(or#606.items#106.get#490(0));
         {
-          var i#605: Int32 = 1;
-          ~loop#606: while (%Int32.lt(i#605, or#604.items#106.length#476())) {
-            this.out#178.append#470("|");
-            this.pushRegex#182(or#604.items#106.get#488(i#605));
-            i#605 = %Int32.add(i#605, 1);
+          var i#607: Int32 = 1;
+          ~loop#608: while (%Int32.lt(i#607, or#606.items#106.length#478())) {
+            this.out#178.append#472("|");
+            this.pushRegex#182(or#606.items#106.get#490(i#607));
+            i#607 = %Int32.add(i#607, 1);
           }
         }
-        this.out#178.append#470(")");
+        this.out#178.append#472(")");
       }
     }
-    private method pushRepeat#194(repeat#607: Repeat#12): Void {
-      this.out#178.append#470("(?:");
-      this.pushRegex#182(repeat#607.item#109);
-      this.out#178.append#470(")");
-      let min#608: Int32 = repeat#607.min#110;
-      let max#609: Int32? = repeat#607.max#111;
-      if (false) {} else if (%Int32.eq(min#608, 0) && eqNullable(%Int32.eq, max#609, (asNullable(1)): Int32?)) {
-        this.out#178.append#470("?");
-      } else if (%Int32.eq(min#608, 0) && isNull(max#609)) {
-        this.out#178.append#470("*");
-      } else if (%Int32.eq(min#608, 1) && isNull(max#609)) {
-        this.out#178.append#470("+");
+    private method pushRepeat#194(repeat#609: Repeat#12): Void {
+      this.out#178.append#472("(?:");
+      this.pushRegex#182(repeat#609.item#109);
+      this.out#178.append#472(")");
+      let min#610: Int32 = repeat#609.min#110;
+      let max#611: Int32? = repeat#609.max#111;
+      if (false) {} else if (%Int32.eq(min#610, 0) && eqNullable(%Int32.eq, max#611, (asNullable(1)): Int32?)) {
+        this.out#178.append#472("?");
+      } else if (%Int32.eq(min#610, 0) && isNull(max#611)) {
+        this.out#178.append#472("*");
+      } else if (%Int32.eq(min#610, 1) && isNull(max#611)) {
+        this.out#178.append#472("+");
       } else {
-        this.out#178.append#470(%String.cat("{", min#608.toString#468(omitted)));
-        if (%Boolean.not(eqNullable(%Int32.eq, (asNullable(min#608)): Int32?, max#609))) {
-          this.out#178.append#470(",");
-          if (%Boolean.not(isNull(max#609))) {
-            this.out#178.append#470(((nonNull(max#609)): Int32).toString#468(omitted));
+        this.out#178.append#472(%String.cat("{", min#610.toString#470(omitted)));
+        if (%Boolean.not(eqNullable(%Int32.eq, (asNullable(min#610)): Int32?, max#611))) {
+          this.out#178.append#472(",");
+          if (%Boolean.not(isNull(max#611))) {
+            this.out#178.append#472(((nonNull(max#611)): Int32).toString#470(omitted));
           }
         }
-        this.out#178.append#470("}");
+        this.out#178.append#472("}");
       }
-      if (repeat#607.reluctant#112) {
-        this.out#178.append#470("?");
+      if (repeat#609.reluctant#112) {
+        this.out#178.append#472("?");
       }
     }
-    private method pushSequence#195(sequence#610: Sequence#13): Void {
+    private method pushSequence#195(sequence#612: Sequence#13): Void {
       {
-        var i#611: Int32 = 0;
-        ~loop#612: while (%Int32.lt(i#611, sequence#610.items#115.length#476())) {
-          this.pushRegex#182(sequence#610.items#115.get#488(i#611));
-          i#611 = %Int32.add(i#611, 1);
+        var i#613: Int32 = 0;
+        ~loop#614: while (%Int32.lt(i#613, sequence#612.items#115.length#478())) {
+          this.pushRegex#182(sequence#612.items#115.get#490(i#613));
+          i#613 = %Int32.add(i#613, 1);
         }
       }
     }
-    method maxCode#196(codePart#613: CodePart#7): Int32? {
+    method maxCode#196(codePart#615: CodePart#7): Int32? {
       {
-        if (is(codePart#613, CodePoints#8)) {
-          let value#614: String = ((downcast(codePart#613)): CodePoints#8).value#95;
-          if (value#614.isEmpty#615()) {
+        if (is(codePart#615, CodePoints#8)) {
+          let value#616: String = ((downcast(codePart#615)): CodePoints#8).value#95;
+          if (value#616.isEmpty#617()) {
             return (null): Int32?;
           } else {
-            var max#616: Int32 = 0;
+            var max#618: Int32 = 0;
             {
-              var index#617: StringIndex#156 = begin#459;
-              ~loop#618: while (value#614.hasIndex#594(index#617)) {
-                let next#619: Int32 = value#614.get#464(index#617);
-                if (%Int32.gt(next#619, max#616)) {
-                  max#616 = next#619;
+              var index#619: StringIndex#156 = begin#461;
+              ~loop#620: while (value#616.hasIndex#596(index#619)) {
+                let next#621: Int32 = value#616.get#466(index#619);
+                if (%Int32.gt(next#621, max#618)) {
+                  max#618 = next#621;
                 }
-                index#617 = value#614.next#466(index#617);
+                index#619 = value#616.next#468(index#619);
               }
             }
-            return (asNullable(max#616)): Int32?;
+            return (asNullable(max#618)): Int32?;
           }
-        } else if (is(codePart#613, CodeRange#9)) {
-          return (asNullable(((downcast(codePart#613)): CodeRange#9).max#99)): Int32?;
-        } else if (((upcast(codePart#613)): RegexNode#22).eq#214((upcast(Digit#507)): RegexNode#22)) {
+        } else if (is(codePart#615, CodeRange#9)) {
+          return (asNullable(((downcast(codePart#615)): CodeRange#9).max#99)): Int32?;
+        } else if (((upcast(codePart#615)): RegexNode#22).eq#216((upcast(Digit#509)): RegexNode#22)) {
           return (asNullable(digit9#129)): Int32?;
-        } else if (((upcast(codePart#613)): RegexNode#22).eq#214((upcast(Space#508)): RegexNode#22)) {
+        } else if (((upcast(codePart#615)): RegexNode#22).eq#216((upcast(Space#510)): RegexNode#22)) {
           return (asNullable(space#147)): Int32?;
-        } else if (((upcast(codePart#613)): RegexNode#22).eq#214((upcast(Word#509)): RegexNode#22)) {
+        } else if (((upcast(codePart#615)): RegexNode#22).eq#216((upcast(Word#511)): RegexNode#22)) {
           return (asNullable(lowerZ#131)): Int32?;
         } else {
           return (null): Int32?;
@@ -844,72 +844,72 @@ module regex#1 in "regex" {
 
   export class Regex#21 {
     let data#198: RegexNode#22;
-    constructor constructor#208(data#620: RegexNode#22): Regex#21 {
-      this.data#198 = data#620;
-      let formatted#621: String = regexFormat#180(data#620);
-      this.compiled#203 = regexCompileFormatted#179(data#620, formatted#621);
+    constructor constructor#210(data#622: RegexNode#22): Regex#21 {
+      this.data#198 = data#622;
+      let formatted#623: String = regexFormat#180(data#622);
+      this.compiled#204 = regexCompileFormatted#179(data#622, formatted#623);
     }
-    method found#199(text#622: String): Boolean {
-      return this.compiledFound#204(this.compiled#203, text#622);
+    method found#199(text#624: String): Boolean {
+      return this.compiledFound#205(this.compiled#204, text#624);
     }
-    method find#200(text#623: String, begin#624?: StringIndex#156?): Match#18? {
-      let begin#625: StringIndex#156 = (coalesce(begin#624, begin#459)): StringIndex#156;
-      return this.compiledFind#205(this.compiled#203, text#623, begin#625, regexRefs#515);
+    method find#200(text#625: String, begin#626?: StringIndex#156?): Match#18? {
+      let begin#627: StringIndex#156 = (coalesce(begin#626, begin#461)): StringIndex#156;
+      return this.compiledFind#206(this.compiled#204, text#625, begin#627, regexRefs#517);
     }
-    method replace#201(text#626: String, format#627: fn (Match#18): String): String {
-      return this.compiledReplace#206(this.compiled#203, text#626, format#627, regexRefs#515);
+    method replace#201<E#202 extends Error#71>(text#628: String, format#629: fn (Match#18): String throws E#202): String throws E#202 {
+      return this.compiledReplace#207<E#202>(this.compiled#204, text#628, format#629, regexRefs#517)^;
     }
-    method split#202(text#628: String): List#77<String> {
-      return this.compiledSplit#207(this.compiled#203, text#628, regexRefs#515);
+    method split#203(text#630: String): List#77<String> {
+      return this.compiledSplit#209(this.compiled#204, text#630, regexRefs#517);
     }
-    private let compiled#203: AnyValue;
-    connected private abstract method compiledFound#204(compiled#629: AnyValue, text#630: String): Boolean;
-    connected private abstract method compiledFind#205(compiled#631: AnyValue, text#632: String, begin#633: StringIndex#156, regexRefs#634: RegexRefs#19): Match#18?;
-    connected private abstract method compiledReplace#206(compiled#635: AnyValue, text#636: String, format#637: fn (Match#18): String, regexRefs#638: RegexRefs#19): String;
-    connected private abstract method compiledSplit#207(compiled#639: AnyValue, text#640: String, regexRefs#641: RegexRefs#19): List#77<String>;
+    private let compiled#204: AnyValue;
+    connected private abstract method compiledFound#205(compiled#631: AnyValue, text#632: String): Boolean;
+    connected private abstract method compiledFind#206(compiled#633: AnyValue, text#634: String, begin#635: StringIndex#156, regexRefs#636: RegexRefs#19): Match#18?;
+    connected private abstract method compiledReplace#207<E#208 extends Error#71>(compiled#637: AnyValue, text#638: String, format#639: fn (Match#18): String throws E#208, regexRefs#640: RegexRefs#19): String throws E#208;
+    connected private abstract method compiledSplit#209(compiled#641: AnyValue, text#642: String, regexRefs#643: RegexRefs#19): List#77<String>;
   }
 
   export interface RegexNode#22 {
-    method compiled#209(): Regex#21 {
-      return new constructor#208(this);
+    method compiled#211(): Regex#21 {
+      return new constructor#210(this);
     }
-    method found#210(text#642: String): Boolean {
-      return this.compiled#209().found#199(text#642);
+    method found#212(text#644: String): Boolean {
+      return this.compiled#211().found#199(text#644);
     }
-    method find#211(text#643: String): Match#18? {
-      return this.compiled#209().find#200(text#643, omitted);
+    method find#213(text#645: String): Match#18? {
+      return this.compiled#211().find#200(text#645, omitted);
     }
-    method replace#212(text#644: String, format#645: fn (Match#18): String): String {
-      return this.compiled#209().replace#201(text#644, format#645);
+    method replace#214(text#646: String, format#647: fn (Match#18): String): String {
+      return this.compiled#211().replace#201<Never<Error#71>>(text#646, format#647);
     }
-    method split#213(text#646: String): List#77<String> {
-      return this.compiled#209().split#202(text#646);
+    method split#215(text#648: String): List#77<String> {
+      return this.compiled#211().split#203(text#648);
     }
-    auto operator("==") abstract method eq#214(other#647: RegexNode#22): Boolean;
+    auto operator("==") abstract method eq#216(other#649: RegexNode#22): Boolean;
   }
 
-  export fn entire#516(item#648: RegexNode#22): RegexNode#22 {
-    return (upcast(new constructor#117((list((upcast(Begin#503)): RegexNode#22, item#648, (upcast(End#505)): RegexNode#22)): List#77<RegexNode#22>))): RegexNode#22;
+  export fn entire#518(item#650: RegexNode#22): RegexNode#22 {
+    return (upcast(new constructor#117((list((upcast(Begin#505)): RegexNode#22, item#650, (upcast(End#507)): RegexNode#22)): List#77<RegexNode#22>))): RegexNode#22;
   }
 
-  export fn oneOrMore#517(item#649: RegexNode#22, reluctant#650?: Boolean?): Repeat#12 {
-    let reluctant#651: Boolean = (coalesce(reluctant#650, false)): Boolean;
-    return new constructor#114(item#649, 1, (null): Int32?, (asNullable(reluctant#651)): Boolean?);
+  export fn oneOrMore#519(item#651: RegexNode#22, reluctant#652?: Boolean?): Repeat#12 {
+    let reluctant#653: Boolean = (coalesce(reluctant#652, false)): Boolean;
+    return new constructor#114(item#651, 1, (null): Int32?, (asNullable(reluctant#653)): Boolean?);
   }
 
-  export fn optional#518(item#652: RegexNode#22, reluctant#653?: Boolean?): Repeat#12 {
-    let reluctant#654: Boolean = (coalesce(reluctant#653, false)): Boolean;
-    return new constructor#114(item#652, 0, (asNullable(1)): Int32?, (asNullable(reluctant#654)): Boolean?);
+  export fn optional#520(item#654: RegexNode#22, reluctant#655?: Boolean?): Repeat#12 {
+    let reluctant#656: Boolean = (coalesce(reluctant#655, false)): Boolean;
+    return new constructor#114(item#654, 0, (asNullable(1)): Int32?, (asNullable(reluctant#656)): Boolean?);
   }
 
   init {
-    init Begin#503 = (upcast(new constructor#216())): Special#14;
-    init Dot#504 = (upcast(new constructor#218())): Special#14;
-    init End#505 = (upcast(new constructor#220())): Special#14;
-    init WordBoundary#506 = (upcast(new constructor#222())): Special#14;
-    init Digit#507 = (upcast(new constructor#224())): SpecialSet#15;
-    init Space#508 = (upcast(new constructor#226())): SpecialSet#15;
-    init Word#509 = (upcast(new constructor#228())): SpecialSet#15;
+    init Begin#505 = (upcast(new constructor#218())): Special#14;
+    init Dot#506 = (upcast(new constructor#220())): Special#14;
+    init End#507 = (upcast(new constructor#222())): Special#14;
+    init WordBoundary#508 = (upcast(new constructor#224())): Special#14;
+    init Digit#509 = (upcast(new constructor#226())): SpecialSet#15;
+    init Space#510 = (upcast(new constructor#228())): SpecialSet#15;
+    init Word#511 = (upcast(new constructor#230())): SpecialSet#15;
     init ampersand#118 = 38;
     init backslash#119 = 92;
     init caret#120 = 94;
@@ -945,11 +945,11 @@ module regex#1 in "regex" {
     init supplementalMin#150 = 65536;
     init uint16Max#151 = 65535;
     init underscore#152 = 95;
-    init needsNoEscape#510 = 0;
-    init needsSimpleEscape#511 = 2;
-    init needsNumericEscape#512 = 1;
-    init escapeNeeds#514 = buildEscapeNeeds#513();
-    init regexRefs#515 = new constructor#176(omitted, omitted, omitted, omitted);
+    init needsNoEscape#512 = 0;
+    init needsSimpleEscape#513 = 2;
+    init needsNumericEscape#514 = 1;
+    init escapeNeeds#516 = buildEscapeNeeds#515();
+    init regexRefs#517 = new constructor#176(omitted, omitted, omitted, omitted);
   }
 }
 
@@ -957,1140 +957,1140 @@ module json#2 in "json" {
   export interface JsonError#30 extends Error#71 {}
 
   export class JsonSyntaxError#31 extends JsonError#30 {
-    let problem#229: String;
-    constructor constructor#230(problem#689: String): JsonSyntaxError#31 {
-      this.problem#229 = problem#689;
+    let problem#231: String;
+    constructor constructor#232(problem#691: String): JsonSyntaxError#31 {
+      this.problem#231 = problem#691;
     }
-    get message#690(): String {
-      return %String.cat(%String.cat("json syntax error (problem: ", this.problem#229), ")");
+    get message#692(): String {
+      return %String.cat(%String.cat("json syntax error (problem: ", this.problem#231), ")");
     }
   }
 
   export class JsonShapeError#32 extends JsonError#30 {
-    let problem#231: String;
-    constructor constructor#232(problem#691: String): JsonShapeError#32 {
-      this.problem#231 = problem#691;
+    let problem#233: String;
+    constructor constructor#234(problem#693: String): JsonShapeError#32 {
+      this.problem#233 = problem#693;
     }
-    get message#692(): String {
-      return %String.cat(%String.cat("json shape error (problem: ", this.problem#231), ")");
+    get message#694(): String {
+      return %String.cat(%String.cat("json shape error (problem: ", this.problem#233), ")");
     }
   }
 
   export interface InterchangeContext#33 {
-    abstract method getHeader#233(headerName#693: String): String?;
+    abstract method getHeader#235(headerName#695: String): String?;
   }
 
   export class NullInterchangeContext#34 extends InterchangeContext#33 {
-    constructor constructor#236(): NullInterchangeContext#34 {}
-    method getHeader#234(headerName#694: String): String? {
+    constructor constructor#238(): NullInterchangeContext#34 {}
+    method getHeader#236(headerName#696: String): String? {
       return (null): String?;
     }
-    static let instance#235: NullInterchangeContext#34;
+    static let instance#237: NullInterchangeContext#34;
   }
 
   export interface JsonParseErrorReceiver#35 {
-    abstract method explainJsonError#237(explanation#695: String): Void;
+    abstract method explainJsonError#239(explanation#697: String): Void;
   }
 
   export interface JsonProducer#36 {
-    abstract get interchangeContext#238(): InterchangeContext#33;
-    abstract method startObject#239(): Void;
-    abstract method endObject#240(): Void;
-    abstract method objectKey#241(key#696: String): Void;
-    abstract method startArray#242(): Void;
-    abstract method endArray#243(): Void;
-    abstract method nullValue#244(): Void;
-    abstract method booleanValue#245(x#697: Boolean): Void;
-    abstract method int32Value#246(x#698: Int32): Void;
-    abstract method int64Value#247(x#699: Int64): Void;
-    abstract method float64Value#248(x#700: Float64): Void;
-    abstract method numericTokenValue#249(x#701: String): Void;
-    abstract method stringValue#250(x#702: String): Void;
-    get parseErrorReceiver#251(): JsonParseErrorReceiver#35? {
+    abstract get interchangeContext#240(): InterchangeContext#33;
+    abstract method startObject#241(): Void;
+    abstract method endObject#242(): Void;
+    abstract method objectKey#243(key#698: String): Void;
+    abstract method startArray#244(): Void;
+    abstract method endArray#245(): Void;
+    abstract method nullValue#246(): Void;
+    abstract method booleanValue#247(x#699: Boolean): Void;
+    abstract method int32Value#248(x#700: Int32): Void;
+    abstract method int64Value#249(x#701: Int64): Void;
+    abstract method float64Value#250(x#702: Float64): Void;
+    abstract method numericTokenValue#251(x#703: String): Void;
+    abstract method stringValue#252(x#704: String): Void;
+    get parseErrorReceiver#253(): JsonParseErrorReceiver#35? {
       return (null): JsonParseErrorReceiver#35?;
     }
   }
 
   export interface JsonSyntaxTree#37 {
-    abstract method produce#252(p#703: JsonProducer#36): Void;
+    abstract method produce#254(p#705: JsonProducer#36): Void;
   }
 
   export class JsonObject#38 extends JsonSyntaxTree#37 {
-    let properties#253: Map#162<String, List#77<JsonSyntaxTree#37>>;
-    constructor constructor#257(properties#721: Map#162<String, List#77<JsonSyntaxTree#37>>): JsonObject#38 {
-      this.properties#253 = properties#721;
+    let properties#255: Map#162<String, List#77<JsonSyntaxTree#37>>;
+    constructor constructor#259(properties#723: Map#162<String, List#77<JsonSyntaxTree#37>>): JsonObject#38 {
+      this.properties#255 = properties#723;
     }
-    method propertyValueOrNull#254(propertyKey#704: String): JsonSyntaxTree#37? {
-      let treeList#705: List#77<JsonSyntaxTree#37> = this.properties#253.getOr#706<List#77<JsonSyntaxTree#37>>(propertyKey#704, (list()): List#77<JsonSyntaxTree#37>);
-      let lastIndex#708: Int32 = %Int32.sub(treeList#705.length#476(), 1);
-      if (%Int32.ge(lastIndex#708, 0)) {
-        return (asNullable(treeList#705.get#488(lastIndex#708))): JsonSyntaxTree#37?;
+    method propertyValueOrNull#256(propertyKey#706: String): JsonSyntaxTree#37? {
+      let treeList#707: List#77<JsonSyntaxTree#37> = this.properties#255.getOr#708<List#77<JsonSyntaxTree#37>>(propertyKey#706, (list()): List#77<JsonSyntaxTree#37>);
+      let lastIndex#710: Int32 = %Int32.sub(treeList#707.length#478(), 1);
+      if (%Int32.ge(lastIndex#710, 0)) {
+        return (asNullable(treeList#707.get#490(lastIndex#710))): JsonSyntaxTree#37?;
       } else {
         return (null): JsonSyntaxTree#37?;
       }
     }
-    method propertyValueOrBubble#255(propertyKey#709: String): JsonSyntaxTree#37 throws JsonShapeError#32 {
+    method propertyValueOrBubble#257(propertyKey#711: String): JsonSyntaxTree#37 throws JsonShapeError#32 {
       {
-        let subject#710: JsonSyntaxTree#37? = this.propertyValueOrNull#254(propertyKey#709);
-        if (isNull(subject#710)) {
-          (throw(new constructor#232(%String.cat("expected property ", propertyKey#709)))^): Void;
+        let subject#712: JsonSyntaxTree#37? = this.propertyValueOrNull#256(propertyKey#711);
+        if (isNull(subject#712)) {
+          (throw(new constructor#234(%String.cat("expected property ", propertyKey#711)))^): Void;
         } else {
-          return (nonNull(subject#710)): JsonSyntaxTree#37;
+          return (nonNull(subject#712)): JsonSyntaxTree#37;
         }
       }
     }
-    method produce#256(p#711: JsonProducer#36): Void {
-      p#711.startObject#239();
-      this.properties#253.forEach#712<Never<Error#71>>((fn ~fn#714(k#715: String, vs#716: List#77<JsonSyntaxTree#37>): Void [p#711] {
+    method produce#258(p#713: JsonProducer#36): Void {
+      p#713.startObject#241();
+      this.properties#255.forEach#714<Never<Error#71>>((fn ~fn#716(k#717: String, vs#718: List#77<JsonSyntaxTree#37>): Void [p#713] {
         {
-          let ~length#717: Int32 = vs#716.length#476();
-          var ~i#718: Int32 = 0;
-          ~loop#719: while (%Int32.lt(~i#718, ~length#717)) {
-            let v#720: JsonSyntaxTree#37 = vs#716.get#488(~i#718);
-            ~i#718 = %Int32.add(~i#718, 1);
-            p#711.objectKey#241(k#715);
-            v#720.produce#252(p#711);
+          let ~length#719: Int32 = vs#718.length#478();
+          var ~i#720: Int32 = 0;
+          ~loop#721: while (%Int32.lt(~i#720, ~length#719)) {
+            let v#722: JsonSyntaxTree#37 = vs#718.get#490(~i#720);
+            ~i#720 = %Int32.add(~i#720, 1);
+            p#713.objectKey#243(k#717);
+            v#722.produce#254(p#713);
           }
         }
       }): fn (String, List#77<JsonSyntaxTree#37>): Void);
-      p#711.endObject#240();
+      p#713.endObject#242();
     }
   }
 
   export class JsonArray#39 extends JsonSyntaxTree#37 {
-    let elements#258: List#77<JsonSyntaxTree#37>;
-    constructor constructor#260(elements#728: List#77<JsonSyntaxTree#37>): JsonArray#39 {
-      this.elements#258 = elements#728;
+    let elements#260: List#77<JsonSyntaxTree#37>;
+    constructor constructor#262(elements#730: List#77<JsonSyntaxTree#37>): JsonArray#39 {
+      this.elements#260 = elements#730;
     }
-    method produce#259(p#722: JsonProducer#36): Void {
-      p#722.startArray#242();
+    method produce#261(p#724: JsonProducer#36): Void {
+      p#724.startArray#244();
       {
-        let ~list#723: List#77<JsonSyntaxTree#37> = this.elements#258;
-        let ~length#724: Int32 = ~list#723.length#476();
-        var ~i#725: Int32 = 0;
-        ~loop#726: while (%Int32.lt(~i#725, ~length#724)) {
-          let v#727: JsonSyntaxTree#37 = ~list#723.get#488(~i#725);
-          ~i#725 = %Int32.add(~i#725, 1);
-          v#727.produce#252(p#722);
+        let ~list#725: List#77<JsonSyntaxTree#37> = this.elements#260;
+        let ~length#726: Int32 = ~list#725.length#478();
+        var ~i#727: Int32 = 0;
+        ~loop#728: while (%Int32.lt(~i#727, ~length#726)) {
+          let v#729: JsonSyntaxTree#37 = ~list#725.get#490(~i#727);
+          ~i#727 = %Int32.add(~i#727, 1);
+          v#729.produce#254(p#724);
         }
       }
-      p#722.endArray#243();
+      p#724.endArray#245();
     }
   }
 
   export class JsonBoolean#40 extends JsonSyntaxTree#37 {
-    let content#261: Boolean;
-    constructor constructor#263(content#730: Boolean): JsonBoolean#40 {
-      this.content#261 = content#730;
+    let content#263: Boolean;
+    constructor constructor#265(content#732: Boolean): JsonBoolean#40 {
+      this.content#263 = content#732;
     }
-    method produce#262(p#729: JsonProducer#36): Void {
-      p#729.booleanValue#245(this.content#261);
+    method produce#264(p#731: JsonProducer#36): Void {
+      p#731.booleanValue#247(this.content#263);
     }
   }
 
   export class JsonNull#41 extends JsonSyntaxTree#37 {
-    constructor constructor#265(): JsonNull#41 {}
-    method produce#264(p#731: JsonProducer#36): Void {
-      p#731.nullValue#244();
+    constructor constructor#267(): JsonNull#41 {}
+    method produce#266(p#733: JsonProducer#36): Void {
+      p#733.nullValue#246();
     }
   }
 
   export class JsonString#42 extends JsonSyntaxTree#37 {
-    let content#266: String;
-    constructor constructor#268(content#733: String): JsonString#42 {
-      this.content#266 = content#733;
+    let content#268: String;
+    constructor constructor#270(content#735: String): JsonString#42 {
+      this.content#268 = content#735;
     }
-    method produce#267(p#732: JsonProducer#36): Void {
-      p#732.stringValue#250(this.content#266);
+    method produce#269(p#734: JsonProducer#36): Void {
+      p#734.stringValue#252(this.content#268);
     }
   }
 
   export interface JsonNumeric#43 extends JsonSyntaxTree#37 {
-    abstract method asJsonNumericToken#269(): String;
-    abstract method asInt32#272(): Int32 throws ParseError#270;
-    abstract method asInt64#273(): Int64 throws ParseError#270;
-    abstract method asFloat64#274(): Float64 throws ParseError#270;
+    abstract method asJsonNumericToken#271(): String;
+    abstract method asInt32#274(): Int32 throws ParseError#272;
+    abstract method asInt64#275(): Int64 throws ParseError#272;
+    abstract method asFloat64#276(): Float64 throws ParseError#272;
   }
 
   export class JsonInt32#44 extends JsonNumeric#43 {
-    let content#275: Int32;
-    constructor constructor#284(content#737: Int32): JsonInt32#44 {
-      this.content#275 = content#737;
+    let content#277: Int32;
+    constructor constructor#286(content#739: Int32): JsonInt32#44 {
+      this.content#277 = content#739;
     }
-    method produce#276(p#734: JsonProducer#36): Void {
-      p#734.int32Value#246(this.content#275);
+    method produce#278(p#736: JsonProducer#36): Void {
+      p#736.int32Value#248(this.content#277);
     }
-    method asJsonNumericToken#277(): String {
-      return this.content#275.toString#468(omitted);
+    method asJsonNumericToken#279(): String {
+      return this.content#277.toString#470(omitted);
     }
-    method asInt32#278(): Int32 throws ParseError#270 {
-      return this.content#275;
+    method asInt32#280(): Int32 throws ParseError#272 {
+      return this.content#277;
     }
-    method asInt32Safe#279(): Int32 {
-      return this.content#275;
+    method asInt32Safe#281(): Int32 {
+      return this.content#277;
     }
-    method asInt64#280(): Int64 throws ParseError#270 {
-      return this.asInt64Safe#281();
+    method asInt64#282(): Int64 throws ParseError#272 {
+      return this.asInt64Safe#283();
     }
-    method asInt64Safe#281(): Int64 {
-      return this.content#275.toInt64#735();
+    method asInt64Safe#283(): Int64 {
+      return this.content#277.toInt64#737();
     }
-    method asFloat64#282(): Float64 throws ParseError#270 {
-      return this.asFloat64Safe#283();
+    method asFloat64#284(): Float64 throws ParseError#272 {
+      return this.asFloat64Safe#285();
     }
-    method asFloat64Safe#283(): Float64 {
-      return this.content#275.toFloat64#736();
+    method asFloat64Safe#285(): Float64 {
+      return this.content#277.toFloat64#738();
     }
   }
 
   export class JsonInt64#45 extends JsonNumeric#43 {
-    let content#285: Int64;
-    constructor constructor#292(content#743: Int64): JsonInt64#45 {
-      this.content#285 = content#743;
+    let content#287: Int64;
+    constructor constructor#294(content#745: Int64): JsonInt64#45 {
+      this.content#287 = content#745;
     }
-    method produce#286(p#738: JsonProducer#36): Void {
-      p#738.int64Value#247(this.content#285);
+    method produce#288(p#740: JsonProducer#36): Void {
+      p#740.int64Value#249(this.content#287);
     }
-    method asJsonNumericToken#287(): String {
-      return this.content#285.toString#740(omitted);
+    method asJsonNumericToken#289(): String {
+      return this.content#287.toString#742(omitted);
     }
-    method asInt32#288(): Int32 throws ParseError#270 {
-      return this.content#285.toInt32#741()^;
+    method asInt32#290(): Int32 throws ParseError#272 {
+      return this.content#287.toInt32#743()^;
     }
-    method asInt64#289(): Int64 throws ParseError#270 {
-      return this.content#285;
+    method asInt64#291(): Int64 throws ParseError#272 {
+      return this.content#287;
     }
-    method asInt64Safe#290(): Int64 {
-      return this.content#285;
+    method asInt64Safe#292(): Int64 {
+      return this.content#287;
     }
-    method asFloat64#291(): Float64 throws ParseError#270 {
-      return this.content#285.toFloat64#742()^;
+    method asFloat64#293(): Float64 throws ParseError#272 {
+      return this.content#287.toFloat64#744()^;
     }
   }
 
   export class JsonFloat64#46 extends JsonNumeric#43 {
-    let content#293: Float64;
-    constructor constructor#300(content#749: Float64): JsonFloat64#46 {
-      this.content#293 = content#749;
+    let content#295: Float64;
+    constructor constructor#302(content#751: Float64): JsonFloat64#46 {
+      this.content#295 = content#751;
     }
-    method produce#294(p#744: JsonProducer#36): Void {
-      p#744.float64Value#248(this.content#293);
+    method produce#296(p#746: JsonProducer#36): Void {
+      p#746.float64Value#250(this.content#295);
     }
-    method asJsonNumericToken#295(): String {
-      return this.content#293.toString#746();
+    method asJsonNumericToken#297(): String {
+      return this.content#295.toString#748();
     }
-    method asInt32#296(): Int32 throws ParseError#270 {
-      return this.content#293.toInt32#747()^;
+    method asInt32#298(): Int32 throws ParseError#272 {
+      return this.content#295.toInt32#749()^;
     }
-    method asInt64#297(): Int64 throws ParseError#270 {
-      return this.content#293.toInt64#748()^;
+    method asInt64#299(): Int64 throws ParseError#272 {
+      return this.content#295.toInt64#750()^;
     }
-    method asFloat64#298(): Float64 throws ParseError#270 {
-      return this.content#293;
+    method asFloat64#300(): Float64 throws ParseError#272 {
+      return this.content#295;
     }
-    method asFloat64Safe#299(): Float64 {
-      return this.content#293;
+    method asFloat64Safe#301(): Float64 {
+      return this.content#295;
     }
   }
 
   export class JsonNumericToken#47 extends JsonNumeric#43 {
-    let content#301: String;
-    constructor constructor#307(content#754: String): JsonNumericToken#47 {
-      this.content#301 = content#754;
+    let content#303: String;
+    constructor constructor#309(content#756: String): JsonNumericToken#47 {
+      this.content#303 = content#756;
     }
-    method produce#302(p#750: JsonProducer#36): Void {
-      p#750.numericTokenValue#249(this.content#301);
+    method produce#304(p#752: JsonProducer#36): Void {
+      p#752.numericTokenValue#251(this.content#303);
     }
-    method asJsonNumericToken#303(): String {
-      return this.content#301;
+    method asJsonNumericToken#305(): String {
+      return this.content#303;
     }
-    method asInt32#304(): Int32 throws ParseError#270 {
-      return (orelse(this.content#301.toInt32#751(omitted)^, this.content#301.toFloat64#752()^.toInt32#747()^)): Int32;
+    method asInt32#306(): Int32 throws ParseError#272 {
+      return (orelse(this.content#303.toInt32#753(omitted)^, this.content#303.toFloat64#754()^.toInt32#749()^)): Int32;
     }
-    method asInt64#305(): Int64 throws ParseError#270 {
-      return (orelse(this.content#301.toInt64#753(omitted)^, this.content#301.toFloat64#752()^.toInt64#748()^)): Int64;
+    method asInt64#307(): Int64 throws ParseError#272 {
+      return (orelse(this.content#303.toInt64#755(omitted)^, this.content#303.toFloat64#754()^.toInt64#750()^)): Int64;
     }
-    method asFloat64#306(): Float64 throws ParseError#270 {
-      return this.content#301.toFloat64#752()^;
+    method asFloat64#308(): Float64 throws ParseError#272 {
+      return this.content#303.toFloat64#754()^;
     }
   }
 
-  let JSON_STATE_OPEN_OBJECT#655: Int32;
+  let JSON_STATE_OPEN_OBJECT#657: Int32;
 
-  let JSON_STATE_AFTER_KEY#656: Int32;
+  let JSON_STATE_AFTER_KEY#658: Int32;
 
-  let JSON_STATE_AFTER_PROPERTY#657: Int32;
+  let JSON_STATE_AFTER_PROPERTY#659: Int32;
 
-  let JSON_STATE_OPEN_ARRAY#658: Int32;
+  let JSON_STATE_OPEN_ARRAY#660: Int32;
 
-  let JSON_STATE_AFTER_ELEMENT#659: Int32;
+  let JSON_STATE_AFTER_ELEMENT#661: Int32;
 
-  let JSON_STATE_NO_VALUE#660: Int32;
+  let JSON_STATE_NO_VALUE#662: Int32;
 
-  let JSON_STATE_ONE_VALUE#661: Int32;
+  let JSON_STATE_ONE_VALUE#663: Int32;
 
-  let hexDigits#662: List#77<String>;
+  let hexDigits#664: List#77<String>;
 
-  fn encodeHex4#663(cp#755: Int32, buffer#756: StringBuilder#177): Void {
-    let b0#757: Int32 = %Int32.bitAnd(%Int32.divSafe(cp#755, 4096), 15);
-    let b1#758: Int32 = %Int32.bitAnd(%Int32.divSafe(cp#755, 256), 15);
-    let b2#759: Int32 = %Int32.bitAnd(%Int32.divSafe(cp#755, 16), 15);
-    let b3#760: Int32 = %Int32.bitAnd(cp#755, 15);
-    buffer#756.append#470(hexDigits#662.get#488(b0#757));
-    buffer#756.append#470(hexDigits#662.get#488(b1#758));
-    buffer#756.append#470(hexDigits#662.get#488(b2#759));
-    buffer#756.append#470(hexDigits#662.get#488(b3#760));
+  fn encodeHex4#665(cp#757: Int32, buffer#758: StringBuilder#177): Void {
+    let b0#759: Int32 = %Int32.bitAnd(%Int32.divSafe(cp#757, 4096), 15);
+    let b1#760: Int32 = %Int32.bitAnd(%Int32.divSafe(cp#757, 256), 15);
+    let b2#761: Int32 = %Int32.bitAnd(%Int32.divSafe(cp#757, 16), 15);
+    let b3#762: Int32 = %Int32.bitAnd(cp#757, 15);
+    buffer#758.append#472(hexDigits#664.get#490(b0#759));
+    buffer#758.append#472(hexDigits#664.get#490(b1#760));
+    buffer#758.append#472(hexDigits#664.get#490(b2#761));
+    buffer#758.append#472(hexDigits#664.get#490(b3#762));
   }
 
-  fn encodeJsonString#664(x#761: String, buffer#762: StringBuilder#177): Void {
-    buffer#762.append#470("\"");
-    var i#763: StringIndex#156 = begin#459;
-    var emitted#764: StringIndex#156 = i#763;
-    ~loop#765: while (x#761.hasIndex#594(i#763)) {
-      let cp#766: Int32 = x#761.get#464(i#763);
-      let replacement#767: String = (if (%Int32.eq(cp#766, 8)) %String.cat("\\", "b") else (if (%Int32.eq(cp#766, 9)) %String.cat("\\", "t") else (if (%Int32.eq(cp#766, 10)) %String.cat("\\", "n") else (if (%Int32.eq(cp#766, 12)) %String.cat("\\", "f") else (if (%Int32.eq(cp#766, 13)) %String.cat("\\", "r") else (if (%Int32.eq(cp#766, 34)) %String.cat("\\", "\"") else (if (%Int32.eq(cp#766, 92)) %String.cat("\\", "\\") else (if (%Int32.lt(cp#766, 32) || %Int32.le(55296, cp#766) && %Int32.le(cp#766, 57343)) %String.cat("\\", "u") else ""): String): String): String): String): String): String): String): String;
-      let nextI#768: StringIndex#156 = x#761.next#466(i#763);
-      if (%Boolean.not(%String.eq(replacement#767, ""))) {
-        buffer#762.appendBetween#469(x#761, emitted#764, i#763);
-        buffer#762.append#470(replacement#767);
-        if (%String.eq(replacement#767, %String.cat("\\", "u"))) {
-          encodeHex4#663(cp#766, buffer#762);
+  fn encodeJsonString#666(x#763: String, buffer#764: StringBuilder#177): Void {
+    buffer#764.append#472("\"");
+    var i#765: StringIndex#156 = begin#461;
+    var emitted#766: StringIndex#156 = i#765;
+    ~loop#767: while (x#763.hasIndex#596(i#765)) {
+      let cp#768: Int32 = x#763.get#466(i#765);
+      let replacement#769: String = (if (%Int32.eq(cp#768, 8)) %String.cat("\\", "b") else (if (%Int32.eq(cp#768, 9)) %String.cat("\\", "t") else (if (%Int32.eq(cp#768, 10)) %String.cat("\\", "n") else (if (%Int32.eq(cp#768, 12)) %String.cat("\\", "f") else (if (%Int32.eq(cp#768, 13)) %String.cat("\\", "r") else (if (%Int32.eq(cp#768, 34)) %String.cat("\\", "\"") else (if (%Int32.eq(cp#768, 92)) %String.cat("\\", "\\") else (if (%Int32.lt(cp#768, 32) || %Int32.le(55296, cp#768) && %Int32.le(cp#768, 57343)) %String.cat("\\", "u") else ""): String): String): String): String): String): String): String): String;
+      let nextI#770: StringIndex#156 = x#763.next#468(i#765);
+      if (%Boolean.not(%String.eq(replacement#769, ""))) {
+        buffer#764.appendBetween#471(x#763, emitted#766, i#765);
+        buffer#764.append#472(replacement#769);
+        if (%String.eq(replacement#769, %String.cat("\\", "u"))) {
+          encodeHex4#665(cp#768, buffer#764);
         }
-        emitted#764 = nextI#768;
+        emitted#766 = nextI#770;
       }
-      i#763 = nextI#768;
+      i#765 = nextI#770;
     }
-    buffer#762.appendBetween#469(x#761, emitted#764, i#763);
-    buffer#762.append#470("\"");
+    buffer#764.appendBetween#471(x#763, emitted#766, i#765);
+    buffer#764.append#472("\"");
   }
 
   export class JsonTextProducer#48 extends JsonProducer#36 {
-    let interchangeContext#308: InterchangeContext#33;
-    private let buffer#309: StringBuilder#177;
-    private let stack#310: ListBuilder#87<Int32>;
-    private var wellFormed#311: Boolean;
-    constructor constructor#327(interchangeContext#769?: InterchangeContext#33?): JsonTextProducer#48 {
-      let interchangeContext#770: InterchangeContext#33 = (coalesce(interchangeContext#769, (upcast(instance#235)): InterchangeContext#33)): InterchangeContext#33;
-      this.interchangeContext#308 = interchangeContext#770;
-      this.buffer#309 = new constructor#454();
-      this.stack#310 = new constructor#432<Int32>();
-      this.stack#310.add#415(JSON_STATE_NO_VALUE#660, omitted);
-      this.wellFormed#311 = true;
+    let interchangeContext#310: InterchangeContext#33;
+    private let buffer#311: StringBuilder#177;
+    private let stack#312: ListBuilder#87<Int32>;
+    private var wellFormed#313: Boolean;
+    constructor constructor#329(interchangeContext#771?: InterchangeContext#33?): JsonTextProducer#48 {
+      let interchangeContext#772: InterchangeContext#33 = (coalesce(interchangeContext#771, (upcast(instance#237)): InterchangeContext#33)): InterchangeContext#33;
+      this.interchangeContext#310 = interchangeContext#772;
+      this.buffer#311 = new constructor#456();
+      this.stack#312 = new constructor#434<Int32>();
+      this.stack#312.add#417(JSON_STATE_NO_VALUE#662, omitted);
+      this.wellFormed#313 = true;
     }
-    private method state#312(): Int32 {
-      return this.stack#310.getOr#771<Int32>(%Int32.sub(this.stack#310.length#773(), 1), %Int32.neg(1));
+    private method state#314(): Int32 {
+      return this.stack#312.getOr#773<Int32>(%Int32.sub(this.stack#312.length#775(), 1), %Int32.neg(1));
     }
-    private method beforeValue#313(): Void {
-      let currentState#774: Int32 = this.state#312();
+    private method beforeValue#315(): Void {
+      let currentState#776: Int32 = this.state#314();
       {
-        if (%Int32.eq(currentState#774, JSON_STATE_OPEN_ARRAY#658)) {
-          this.stack#310.set#775(%Int32.sub(this.stack#310.length#773(), 1), JSON_STATE_AFTER_ELEMENT#659);
-        } else if (%Int32.eq(currentState#774, JSON_STATE_AFTER_ELEMENT#659)) {
-          this.buffer#309.append#470(",");
-        } else if (%Int32.eq(currentState#774, JSON_STATE_AFTER_KEY#656)) {
-          this.stack#310.set#775(%Int32.sub(this.stack#310.length#773(), 1), JSON_STATE_AFTER_PROPERTY#657);
-        } else if (%Int32.eq(currentState#774, JSON_STATE_NO_VALUE#660)) {
-          this.stack#310.set#775(%Int32.sub(this.stack#310.length#773(), 1), JSON_STATE_ONE_VALUE#661);
-        } else if (%Int32.eq(currentState#774, JSON_STATE_ONE_VALUE#661) || %Int32.eq(currentState#774, JSON_STATE_AFTER_PROPERTY#657)) {
-          this.wellFormed#311 = false;
+        if (%Int32.eq(currentState#776, JSON_STATE_OPEN_ARRAY#660)) {
+          this.stack#312.set#777(%Int32.sub(this.stack#312.length#775(), 1), JSON_STATE_AFTER_ELEMENT#661);
+        } else if (%Int32.eq(currentState#776, JSON_STATE_AFTER_ELEMENT#661)) {
+          this.buffer#311.append#472(",");
+        } else if (%Int32.eq(currentState#776, JSON_STATE_AFTER_KEY#658)) {
+          this.stack#312.set#777(%Int32.sub(this.stack#312.length#775(), 1), JSON_STATE_AFTER_PROPERTY#659);
+        } else if (%Int32.eq(currentState#776, JSON_STATE_NO_VALUE#662)) {
+          this.stack#312.set#777(%Int32.sub(this.stack#312.length#775(), 1), JSON_STATE_ONE_VALUE#663);
+        } else if (%Int32.eq(currentState#776, JSON_STATE_ONE_VALUE#663) || %Int32.eq(currentState#776, JSON_STATE_AFTER_PROPERTY#659)) {
+          this.wellFormed#313 = false;
         }
       }
     }
-    method startObject#314(): Void {
-      this.beforeValue#313();
-      this.buffer#309.append#470("{");
-      this.stack#310.add#415(JSON_STATE_OPEN_OBJECT#655, omitted);
+    method startObject#316(): Void {
+      this.beforeValue#315();
+      this.buffer#311.append#472("{");
+      this.stack#312.add#417(JSON_STATE_OPEN_OBJECT#657, omitted);
     }
-    method endObject#315(): Void {
-      this.buffer#309.append#470("}");
-      let currentState#776: Int32 = this.state#312();
-      if (%Int32.eq(JSON_STATE_OPEN_OBJECT#655, currentState#776) || %Int32.eq(JSON_STATE_AFTER_PROPERTY#657, currentState#776)) {
-        this.stack#310.removeLast#777();
+    method endObject#317(): Void {
+      this.buffer#311.append#472("}");
+      let currentState#778: Int32 = this.state#314();
+      if (%Int32.eq(JSON_STATE_OPEN_OBJECT#657, currentState#778) || %Int32.eq(JSON_STATE_AFTER_PROPERTY#659, currentState#778)) {
+        this.stack#312.removeLast#779();
       } else {
-        this.wellFormed#311 = false;
+        this.wellFormed#313 = false;
       }
     }
-    method objectKey#316(key#778: String): Void {
-      let currentState#779: Int32 = this.state#312();
+    method objectKey#318(key#780: String): Void {
+      let currentState#781: Int32 = this.state#314();
       {
-        if (%Int32.eq(currentState#779, JSON_STATE_OPEN_OBJECT#655)) {} else if (%Int32.eq(currentState#779, JSON_STATE_AFTER_PROPERTY#657)) {
-          this.buffer#309.append#470(",");
+        if (%Int32.eq(currentState#781, JSON_STATE_OPEN_OBJECT#657)) {} else if (%Int32.eq(currentState#781, JSON_STATE_AFTER_PROPERTY#659)) {
+          this.buffer#311.append#472(",");
         } else {
-          this.wellFormed#311 = false;
+          this.wellFormed#313 = false;
         }
       }
-      encodeJsonString#664(key#778, this.buffer#309);
-      this.buffer#309.append#470(":");
-      if (%Int32.ge(currentState#779, 0)) {
-        this.stack#310.set#775(%Int32.sub(this.stack#310.length#773(), 1), JSON_STATE_AFTER_KEY#656);
+      encodeJsonString#666(key#780, this.buffer#311);
+      this.buffer#311.append#472(":");
+      if (%Int32.ge(currentState#781, 0)) {
+        this.stack#312.set#777(%Int32.sub(this.stack#312.length#775(), 1), JSON_STATE_AFTER_KEY#658);
       }
     }
-    method startArray#317(): Void {
-      this.beforeValue#313();
-      this.buffer#309.append#470("[");
-      this.stack#310.add#415(JSON_STATE_OPEN_ARRAY#658, omitted);
+    method startArray#319(): Void {
+      this.beforeValue#315();
+      this.buffer#311.append#472("[");
+      this.stack#312.add#417(JSON_STATE_OPEN_ARRAY#660, omitted);
     }
-    method endArray#318(): Void {
-      this.buffer#309.append#470("]");
-      let currentState#780: Int32 = this.state#312();
-      if (%Int32.eq(JSON_STATE_OPEN_ARRAY#658, currentState#780) || %Int32.eq(JSON_STATE_AFTER_ELEMENT#659, currentState#780)) {
-        this.stack#310.removeLast#777();
+    method endArray#320(): Void {
+      this.buffer#311.append#472("]");
+      let currentState#782: Int32 = this.state#314();
+      if (%Int32.eq(JSON_STATE_OPEN_ARRAY#660, currentState#782) || %Int32.eq(JSON_STATE_AFTER_ELEMENT#661, currentState#782)) {
+        this.stack#312.removeLast#779();
       } else {
-        this.wellFormed#311 = false;
+        this.wellFormed#313 = false;
       }
     }
-    method nullValue#319(): Void {
-      this.beforeValue#313();
-      this.buffer#309.append#470("null");
+    method nullValue#321(): Void {
+      this.beforeValue#315();
+      this.buffer#311.append#472("null");
     }
-    method booleanValue#320(x#781: Boolean): Void {
-      this.beforeValue#313();
-      this.buffer#309.append#470((if (x#781) "true" else "false"): String);
+    method booleanValue#322(x#783: Boolean): Void {
+      this.beforeValue#315();
+      this.buffer#311.append#472((if (x#783) "true" else "false"): String);
     }
-    method int32Value#321(x#782: Int32): Void {
-      this.beforeValue#313();
-      this.buffer#309.append#470(x#782.toString#468(omitted));
+    method int32Value#323(x#784: Int32): Void {
+      this.beforeValue#315();
+      this.buffer#311.append#472(x#784.toString#470(omitted));
     }
-    method int64Value#322(x#783: Int64): Void {
-      this.beforeValue#313();
-      this.buffer#309.append#470(x#783.toString#740(omitted));
+    method int64Value#324(x#785: Int64): Void {
+      this.beforeValue#315();
+      this.buffer#311.append#472(x#785.toString#742(omitted));
     }
-    method float64Value#323(x#784: Float64): Void {
-      this.beforeValue#313();
-      this.buffer#309.append#470(x#784.toString#746());
+    method float64Value#325(x#786: Float64): Void {
+      this.beforeValue#315();
+      this.buffer#311.append#472(x#786.toString#748());
     }
-    method numericTokenValue#324(x#785: String): Void {
-      this.beforeValue#313();
-      this.buffer#309.append#470(x#785);
+    method numericTokenValue#326(x#787: String): Void {
+      this.beforeValue#315();
+      this.buffer#311.append#472(x#787);
     }
-    method stringValue#325(x#786: String): Void {
-      this.beforeValue#313();
-      encodeJsonString#664(x#786, this.buffer#309);
+    method stringValue#327(x#788: String): Void {
+      this.beforeValue#315();
+      encodeJsonString#666(x#788, this.buffer#311);
     }
-    method toJsonString#326(): String throws JsonSyntaxError#31 {
-      if (this.wellFormed#311 && (%Int32.eq(this.stack#310.length#773(), 1) && %Int32.eq(this.state#312(), JSON_STATE_ONE_VALUE#661))) {
-        return this.buffer#309.toString#472();
+    method toJsonString#328(): String throws JsonSyntaxError#31 {
+      if (this.wellFormed#313 && (%Int32.eq(this.stack#312.length#775(), 1) && %Int32.eq(this.state#314(), JSON_STATE_ONE_VALUE#663))) {
+        return this.buffer#311.toString#474();
       } else {
-        (throw(new constructor#230("expected one JSON value"))^): Void;
+        (throw(new constructor#232("expected one JSON value"))^): Void;
       }
     }
   }
 
   export class JsonSyntaxTreeProducer#49 extends JsonProducer#36, JsonParseErrorReceiver#35 {
-    private let stack#328: ListBuilder#87<ListBuilder#87<JsonSyntaxTree#37>>;
-    private var error#329: String?;
-    get interchangeContext#330(): InterchangeContext#33 {
-      return (upcast(instance#235)): InterchangeContext#33;
+    private let stack#330: ListBuilder#87<ListBuilder#87<JsonSyntaxTree#37>>;
+    private var error#331: String?;
+    get interchangeContext#332(): InterchangeContext#33 {
+      return (upcast(instance#237)): InterchangeContext#33;
     }
-    constructor constructor#349(): JsonSyntaxTreeProducer#49 {
-      this.stack#328 = new constructor#432<ListBuilder#87<JsonSyntaxTree#37>>();
-      this.stack#328.add#415(new constructor#432<JsonSyntaxTree#37>(), omitted);
-      this.error#329 = (null): String?;
+    constructor constructor#351(): JsonSyntaxTreeProducer#49 {
+      this.stack#330 = new constructor#434<ListBuilder#87<JsonSyntaxTree#37>>();
+      this.stack#330.add#417(new constructor#434<JsonSyntaxTree#37>(), omitted);
+      this.error#331 = (null): String?;
     }
-    private method storeValue#331(v#787: JsonSyntaxTree#37): Void {
-      if (%Boolean.not(this.stack#328.isEmpty#427())) {
-        this.stack#328.get#788(%Int32.sub(this.stack#328.length#773(), 1)).add#415(v#787, omitted);
+    private method storeValue#333(v#789: JsonSyntaxTree#37): Void {
+      if (%Boolean.not(this.stack#330.isEmpty#429())) {
+        this.stack#330.get#790(%Int32.sub(this.stack#330.length#775(), 1)).add#417(v#789, omitted);
       }
     }
-    method startObject#332(): Void {
-      this.stack#328.add#415(new constructor#432<JsonSyntaxTree#37>(), omitted);
+    method startObject#334(): Void {
+      this.stack#330.add#417(new constructor#434<JsonSyntaxTree#37>(), omitted);
     }
-    method endObject#333(): Void {
-      if (this.stack#328.isEmpty#427()) {
+    method endObject#335(): Void {
+      if (this.stack#330.isEmpty#429()) {
         return;
       }
-      let ls#789: ListBuilder#87<JsonSyntaxTree#37> = this.stack#328.removeLast#777();
-      let m#793: MapBuilder#790<String, List#77<JsonSyntaxTree#37>> = new constructor#794<String, List#77<JsonSyntaxTree#37>>();
-      var multis#795: MapBuilder#790<String, ListBuilder#87<JsonSyntaxTree#37>>? = (null): MapBuilder#790<String, ListBuilder#87<JsonSyntaxTree#37>>?;
+      let ls#791: ListBuilder#87<JsonSyntaxTree#37> = this.stack#330.removeLast#779();
+      let m#795: MapBuilder#792<String, List#77<JsonSyntaxTree#37>> = new constructor#796<String, List#77<JsonSyntaxTree#37>>();
+      var multis#797: MapBuilder#792<String, ListBuilder#87<JsonSyntaxTree#37>>? = (null): MapBuilder#792<String, ListBuilder#87<JsonSyntaxTree#37>>?;
       {
-        var i#796: Int32 = 0;
-        var n#797: Int32 = %Int32.bitAnd(ls#789.length#773(), %Int32.neg(2));
-        ~loop#798: while (%Int32.lt(i#796, n#797)) {
-          let keyTree#799: JsonSyntaxTree#37 = ls#789.get#788((value { let t#800: Int32 = i#796; i#796 = %Int32.add(t#800, 1); t#800 }): Int32);
-          if (%Boolean.not(is(keyTree#799, JsonString#42))) {
-            break ~loop#798;
+        var i#798: Int32 = 0;
+        var n#799: Int32 = %Int32.bitAnd(ls#791.length#775(), %Int32.neg(2));
+        ~loop#800: while (%Int32.lt(i#798, n#799)) {
+          let keyTree#801: JsonSyntaxTree#37 = ls#791.get#790((value { let t#802: Int32 = i#798; i#798 = %Int32.add(t#802, 1); t#802 }): Int32);
+          if (%Boolean.not(is(keyTree#801, JsonString#42))) {
+            break ~loop#800;
           }
-          let key#801: String = ((downcast(keyTree#799)): JsonString#42).content#266;
-          let value#802: JsonSyntaxTree#37 = ls#789.get#788((value { let t#803: Int32 = i#796; i#796 = %Int32.add(t#803, 1); t#803 }): Int32);
-          if (m#793.has#804(key#801)) {
-            if (isNull(multis#795)) {
-              multis#795 = (asNullable(new constructor#794<String, ListBuilder#87<JsonSyntaxTree#37>>())): MapBuilder#790<String, ListBuilder#87<JsonSyntaxTree#37>>?;
+          let key#803: String = ((downcast(keyTree#801)): JsonString#42).content#268;
+          let value#804: JsonSyntaxTree#37 = ls#791.get#790((value { let t#805: Int32 = i#798; i#798 = %Int32.add(t#805, 1); t#805 }): Int32);
+          if (m#795.has#806(key#803)) {
+            if (isNull(multis#797)) {
+              multis#797 = (asNullable(new constructor#796<String, ListBuilder#87<JsonSyntaxTree#37>>())): MapBuilder#792<String, ListBuilder#87<JsonSyntaxTree#37>>?;
             }
-            let mb#805: MapBuilder#790<String, ListBuilder#87<JsonSyntaxTree#37>> = (as(multis#795)): MapBuilder#790<String, ListBuilder#87<JsonSyntaxTree#37>>;
-            if (%Boolean.not(mb#805.has#804(key#801))) {
-              mb#805.set#806(key#801, ((orelse(m#793.get#807(key#801)^, (panic()): List#77<JsonSyntaxTree#37>)): List#77<JsonSyntaxTree#37>).toListBuilder#450());
+            let mb#807: MapBuilder#792<String, ListBuilder#87<JsonSyntaxTree#37>> = (as(multis#797)): MapBuilder#792<String, ListBuilder#87<JsonSyntaxTree#37>>;
+            if (%Boolean.not(mb#807.has#806(key#803))) {
+              mb#807.set#808(key#803, ((orelse(m#795.get#809(key#803)^, (panic()): List#77<JsonSyntaxTree#37>)): List#77<JsonSyntaxTree#37>).toListBuilder#452());
             }
-            ((orelse(mb#805.get#807(key#801)^, (panic()): ListBuilder#87<JsonSyntaxTree#37>)): ListBuilder#87<JsonSyntaxTree#37>).add#415(value#802, omitted);
+            ((orelse(mb#807.get#809(key#803)^, (panic()): ListBuilder#87<JsonSyntaxTree#37>)): ListBuilder#87<JsonSyntaxTree#37>).add#417(value#804, omitted);
           } else {
-            m#793.set#806(key#801, (list(value#802)): List#77<JsonSyntaxTree#37>);
+            m#795.set#808(key#803, (list(value#804)): List#77<JsonSyntaxTree#37>);
           }
         }
       }
-      let multis#809: MapBuilder#790<String, ListBuilder#87<JsonSyntaxTree#37>>? = multis#795;
-      if (%Boolean.not(isNull(multis#809))) {
-        ((nonNull(multis#809)): MapBuilder#790<String, ListBuilder#87<JsonSyntaxTree#37>>).forEach#712<Never<Error#71>>((fn ~fn#810(k#811: String, vs#812: ListBuilder#87<JsonSyntaxTree#37>): Void [m#793] {
-          m#793.set#806(k#811, vs#812.toList#426());
+      let multis#811: MapBuilder#792<String, ListBuilder#87<JsonSyntaxTree#37>>? = multis#797;
+      if (%Boolean.not(isNull(multis#811))) {
+        ((nonNull(multis#811)): MapBuilder#792<String, ListBuilder#87<JsonSyntaxTree#37>>).forEach#714<Never<Error#71>>((fn ~fn#812(k#813: String, vs#814: ListBuilder#87<JsonSyntaxTree#37>): Void [m#795] {
+          m#795.set#808(k#813, vs#814.toList#428());
         }): fn (String, ListBuilder#87<JsonSyntaxTree#37>): Void);
       }
-      this.storeValue#331((upcast(new constructor#257(m#793.toMap#813()))): JsonSyntaxTree#37);
+      this.storeValue#333((upcast(new constructor#259(m#795.toMap#815()))): JsonSyntaxTree#37);
     }
-    method objectKey#334(key#814: String): Void {
-      this.storeValue#331((upcast(new constructor#268(key#814))): JsonSyntaxTree#37);
+    method objectKey#336(key#816: String): Void {
+      this.storeValue#333((upcast(new constructor#270(key#816))): JsonSyntaxTree#37);
     }
-    method startArray#335(): Void {
-      this.stack#328.add#415(new constructor#432<JsonSyntaxTree#37>(), omitted);
+    method startArray#337(): Void {
+      this.stack#330.add#417(new constructor#434<JsonSyntaxTree#37>(), omitted);
     }
-    method endArray#336(): Void {
-      if (this.stack#328.isEmpty#427()) {
+    method endArray#338(): Void {
+      if (this.stack#330.isEmpty#429()) {
         return;
       }
-      let ls#815: ListBuilder#87<JsonSyntaxTree#37> = this.stack#328.removeLast#777();
-      this.storeValue#331((upcast(new constructor#260(ls#815.toList#426()))): JsonSyntaxTree#37);
+      let ls#817: ListBuilder#87<JsonSyntaxTree#37> = this.stack#330.removeLast#779();
+      this.storeValue#333((upcast(new constructor#262(ls#817.toList#428()))): JsonSyntaxTree#37);
     }
-    method nullValue#337(): Void {
-      this.storeValue#331((upcast(new constructor#265())): JsonSyntaxTree#37);
+    method nullValue#339(): Void {
+      this.storeValue#333((upcast(new constructor#267())): JsonSyntaxTree#37);
     }
-    method booleanValue#338(x#816: Boolean): Void {
-      this.storeValue#331((upcast(new constructor#263(x#816))): JsonSyntaxTree#37);
+    method booleanValue#340(x#818: Boolean): Void {
+      this.storeValue#333((upcast(new constructor#265(x#818))): JsonSyntaxTree#37);
     }
-    method int32Value#339(x#817: Int32): Void {
-      this.storeValue#331((upcast(new constructor#284(x#817))): JsonSyntaxTree#37);
+    method int32Value#341(x#819: Int32): Void {
+      this.storeValue#333((upcast(new constructor#286(x#819))): JsonSyntaxTree#37);
     }
-    method int64Value#340(x#818: Int64): Void {
-      this.storeValue#331((upcast(new constructor#292(x#818))): JsonSyntaxTree#37);
+    method int64Value#342(x#820: Int64): Void {
+      this.storeValue#333((upcast(new constructor#294(x#820))): JsonSyntaxTree#37);
     }
-    method float64Value#341(x#819: Float64): Void {
-      this.storeValue#331((upcast(new constructor#300(x#819))): JsonSyntaxTree#37);
+    method float64Value#343(x#821: Float64): Void {
+      this.storeValue#333((upcast(new constructor#302(x#821))): JsonSyntaxTree#37);
     }
-    method numericTokenValue#342(x#820: String): Void {
-      this.storeValue#331((upcast(new constructor#307(x#820))): JsonSyntaxTree#37);
+    method numericTokenValue#344(x#822: String): Void {
+      this.storeValue#333((upcast(new constructor#309(x#822))): JsonSyntaxTree#37);
     }
-    method stringValue#343(x#821: String): Void {
-      this.storeValue#331((upcast(new constructor#268(x#821))): JsonSyntaxTree#37);
+    method stringValue#345(x#823: String): Void {
+      this.storeValue#333((upcast(new constructor#270(x#823))): JsonSyntaxTree#37);
     }
-    method toJsonSyntaxTree#344(): JsonSyntaxTree#37 throws JsonSyntaxError#31 {
-      let error#822: String? = this.error#329;
-      if (%Boolean.not(isNull(error#822))) {
-        (throw(new constructor#230((nonNull(error#822)): String))^): Void;
+    method toJsonSyntaxTree#346(): JsonSyntaxTree#37 throws JsonSyntaxError#31 {
+      let error#824: String? = this.error#331;
+      if (%Boolean.not(isNull(error#824))) {
+        (throw(new constructor#232((nonNull(error#824)): String))^): Void;
       }
-      if (%Boolean.not(%Int32.eq(this.stack#328.length#773(), 1)) || %Boolean.not(%Int32.eq(this.stack#328.get#788(0).length#773(), 1))) {
-        (throw(new constructor#230("expected one JSON value"))^): Void;
+      if (%Boolean.not(%Int32.eq(this.stack#330.length#775(), 1)) || %Boolean.not(%Int32.eq(this.stack#330.get#790(0).length#775(), 1))) {
+        (throw(new constructor#232("expected one JSON value"))^): Void;
       }
-      return this.stack#328.get#788(0).get#788(0);
+      return this.stack#330.get#790(0).get#790(0);
     }
-    get jsonError#345(): String? {
-      return this.error#329;
+    get jsonError#347(): String? {
+      return this.error#331;
     }
-    get parseErrorReceiver#346(): JsonParseErrorReceiver#35? {
+    get parseErrorReceiver#348(): JsonParseErrorReceiver#35? {
       return (asNullable((upcast(this)): JsonParseErrorReceiver#35)): JsonParseErrorReceiver#35?;
     }
-    get parseErrorReceiverSafe#347(): JsonParseErrorReceiver#35 {
+    get parseErrorReceiverSafe#349(): JsonParseErrorReceiver#35 {
       return (upcast(this)): JsonParseErrorReceiver#35;
     }
-    method explainJsonError#348(error#823: String): Void {
-      this.error#329 = (asNullable(error#823)): String?;
+    method explainJsonError#350(error#825: String): Void {
+      this.error#331 = (asNullable(error#825)): String?;
     }
   }
 
-  fn storeJsonError#665(out#824: JsonProducer#36, explanation#825: String): Void {
+  fn storeJsonError#667(out#826: JsonProducer#36, explanation#827: String): Void {
     {
-      let subject#826: JsonParseErrorReceiver#35? = out#824.parseErrorReceiver#251();
-      if (isNull(subject#826)) {} else {
-        ((nonNull(subject#826)): JsonParseErrorReceiver#35).explainJsonError#237(explanation#825);
+      let subject#828: JsonParseErrorReceiver#35? = out#826.parseErrorReceiver#253();
+      if (isNull(subject#828)) {} else {
+        ((nonNull(subject#828)): JsonParseErrorReceiver#35).explainJsonError#239(explanation#827);
       }
     }
   }
 
-  fn expectedTokenError#666(sourceText#827: String, i#828: StringIndex#156, out#829: JsonProducer#36, shortExplanation#830: String): Void {
-    let gotten#831: String = (if (sourceText#827.hasIndex#594(i#828)) %String.cat(%String.cat("`", sourceText#827.slice#832(i#828, sourceText#827.end#457())), "`") else "end-of-file"): String;
-    storeJsonError#665(out#829, %String.cat(%String.cat(%String.cat("Expected ", shortExplanation#830), ", but got "), gotten#831));
+  fn expectedTokenError#668(sourceText#829: String, i#830: StringIndex#156, out#831: JsonProducer#36, shortExplanation#832: String): Void {
+    let gotten#833: String = (if (sourceText#829.hasIndex#596(i#830)) %String.cat(%String.cat("`", sourceText#829.slice#834(i#830, sourceText#829.end#459())), "`") else "end-of-file"): String;
+    storeJsonError#667(out#831, %String.cat(%String.cat(%String.cat("Expected ", shortExplanation#832), ", but got "), gotten#833));
   }
 
-  fn skipJsonSpaces#667(sourceText#833: String, var i#834: StringIndex#156): StringIndex#156 {
-    ~loop#835: while (sourceText#833.hasIndex#594(i#834)) {
+  fn skipJsonSpaces#669(sourceText#835: String, var i#836: StringIndex#156): StringIndex#156 {
+    ~loop#837: while (sourceText#835.hasIndex#596(i#836)) {
       {
-        let subject#836: Int32 = sourceText#833.get#464(i#834);
-        if (%Int32.eq(subject#836, 9) || (%Int32.eq(subject#836, 10) || (%Int32.eq(subject#836, 13) || %Int32.eq(subject#836, 32)))) {} else {
-          break ~loop#835;
+        let subject#838: Int32 = sourceText#835.get#466(i#836);
+        if (%Int32.eq(subject#838, 9) || (%Int32.eq(subject#838, 10) || (%Int32.eq(subject#838, 13) || %Int32.eq(subject#838, 32)))) {} else {
+          break ~loop#837;
         }
       }
-      i#834 = sourceText#833.next#466(i#834);
+      i#836 = sourceText#835.next#468(i#836);
     }
-    return i#834;
+    return i#836;
   }
 
-  fn decodeHexUnsigned#668(sourceText#837: String, start#838: StringIndex#156, limit#839: StringIndex#156): Int32 {
-    var n#840: Int32 = 0;
-    var i#841: StringIndex#156 = start#838;
-    ~loop#842: while (%Int32.lt(((upcast(i#841)): StringIndexOption#157).compareTo#462((upcast(limit#839)): StringIndexOption#157), 0)) {
-      let cp#843: Int32 = sourceText#837.get#464(i#841);
-      var digit#844: Int32;
-      if (%Int32.le(48, cp#843) && %Int32.le(cp#843, 57)) {
-        digit#844 = %Int32.sub(cp#843, 48);
-      } else if (%Int32.le(65, cp#843) && %Int32.le(cp#843, 70)) {
-        digit#844 = %Int32.add(%Int32.sub(cp#843, 65), 10);
-      } else if (%Int32.le(97, cp#843) && %Int32.le(cp#843, 102)) {
-        digit#844 = %Int32.add(%Int32.sub(cp#843, 97), 10);
+  fn decodeHexUnsigned#670(sourceText#839: String, start#840: StringIndex#156, limit#841: StringIndex#156): Int32 {
+    var n#842: Int32 = 0;
+    var i#843: StringIndex#156 = start#840;
+    ~loop#844: while (%Int32.lt(((upcast(i#843)): StringIndexOption#157).compareTo#464((upcast(limit#841)): StringIndexOption#157), 0)) {
+      let cp#845: Int32 = sourceText#839.get#466(i#843);
+      var digit#846: Int32;
+      if (%Int32.le(48, cp#845) && %Int32.le(cp#845, 57)) {
+        digit#846 = %Int32.sub(cp#845, 48);
+      } else if (%Int32.le(65, cp#845) && %Int32.le(cp#845, 70)) {
+        digit#846 = %Int32.add(%Int32.sub(cp#845, 65), 10);
+      } else if (%Int32.le(97, cp#845) && %Int32.le(cp#845, 102)) {
+        digit#846 = %Int32.add(%Int32.sub(cp#845, 97), 10);
       } else {
         return %Int32.neg(1);
       }
-      n#840 = %Int32.add(%Int32.mul(n#840, 16), digit#844);
-      i#841 = sourceText#837.next#466(i#841);
+      n#842 = %Int32.add(%Int32.mul(n#842, 16), digit#846);
+      i#843 = sourceText#839.next#468(i#843);
     }
-    return n#840;
+    return n#842;
   }
 
-  fn parseJsonStringTo#669(sourceText#845: String, var i#846: StringIndex#156, sb#847: StringBuilder#177, errOut#848: JsonProducer#36): StringIndexOption#157 {
-    if (%Boolean.not(sourceText#845.hasIndex#594(i#846)) || %Boolean.not(%Int32.eq(sourceText#845.get#464(i#846), 34))) {
-      expectedTokenError#666(sourceText#845, i#846, errOut#848, "\"");
-      return (upcast(none#849)): StringIndexOption#157;
+  fn parseJsonStringTo#671(sourceText#847: String, var i#848: StringIndex#156, sb#849: StringBuilder#177, errOut#850: JsonProducer#36): StringIndexOption#157 {
+    if (%Boolean.not(sourceText#847.hasIndex#596(i#848)) || %Boolean.not(%Int32.eq(sourceText#847.get#466(i#848), 34))) {
+      expectedTokenError#668(sourceText#847, i#848, errOut#850, "\"");
+      return (upcast(none#851)): StringIndexOption#157;
     }
-    i#846 = sourceText#845.next#466(i#846);
-    var leadSurrogate#851: Int32 = %Int32.neg(1);
-    var consumed#852: StringIndex#156 = i#846;
-    ~loop#853: while (sourceText#845.hasIndex#594(i#846)) {
-      let cp#854: Int32 = sourceText#845.get#464(i#846);
-      if (%Int32.eq(cp#854, 34)) {
-        break ~loop#853;
+    i#848 = sourceText#847.next#468(i#848);
+    var leadSurrogate#853: Int32 = %Int32.neg(1);
+    var consumed#854: StringIndex#156 = i#848;
+    ~loop#855: while (sourceText#847.hasIndex#596(i#848)) {
+      let cp#856: Int32 = sourceText#847.get#466(i#848);
+      if (%Int32.eq(cp#856, 34)) {
+        break ~loop#855;
       }
-      var iNext#855: StringIndex#156 = sourceText#845.next#466(i#846);
-      let end#856: StringIndex#156 = sourceText#845.end#457();
-      var needToFlush#857: Boolean = false;
-      var decodedCp#858: Int32;
-      if (%Boolean.not(%Int32.eq(cp#854, 92))) {
-        decodedCp#858 = cp#854;
+      var iNext#857: StringIndex#156 = sourceText#847.next#468(i#848);
+      let end#858: StringIndex#156 = sourceText#847.end#459();
+      var needToFlush#859: Boolean = false;
+      var decodedCp#860: Int32;
+      if (%Boolean.not(%Int32.eq(cp#856, 92))) {
+        decodedCp#860 = cp#856;
       } else {
-        needToFlush#857 = true;
-        if (%Boolean.not(sourceText#845.hasIndex#594(iNext#855))) {
-          expectedTokenError#666(sourceText#845, iNext#855, errOut#848, "escape sequence");
-          return (upcast(none#849)): StringIndexOption#157;
+        needToFlush#859 = true;
+        if (%Boolean.not(sourceText#847.hasIndex#596(iNext#857))) {
+          expectedTokenError#668(sourceText#847, iNext#857, errOut#850, "escape sequence");
+          return (upcast(none#851)): StringIndexOption#157;
         }
-        let esc0#859: Int32 = sourceText#845.get#464(iNext#855);
-        iNext#855 = sourceText#845.next#466(iNext#855);
-        if (%Int32.eq(esc0#859, 34) || (%Int32.eq(esc0#859, 92) || %Int32.eq(esc0#859, 47))) {
-          decodedCp#858 = esc0#859;
-        } else if (%Int32.eq(esc0#859, 98)) {
-          decodedCp#858 = 8;
-        } else if (%Int32.eq(esc0#859, 102)) {
-          decodedCp#858 = 12;
-        } else if (%Int32.eq(esc0#859, 110)) {
-          decodedCp#858 = 10;
-        } else if (%Int32.eq(esc0#859, 114)) {
-          decodedCp#858 = 13;
-        } else if (%Int32.eq(esc0#859, 116)) {
-          decodedCp#858 = 9;
-        } else if (%Int32.eq(esc0#859, 117)) {
-          let hex#860: Int32 = (if (sourceText#845.hasAtLeast#861(iNext#855, end#856, 4)) (value { let startHex#862: StringIndex#156 = iNext#855; iNext#855 = sourceText#845.next#466(iNext#855); iNext#855 = sourceText#845.next#466(iNext#855); iNext#855 = sourceText#845.next#466(iNext#855); iNext#855 = sourceText#845.next#466(iNext#855); decodeHexUnsigned#668(sourceText#845, startHex#862, iNext#855) }): Int32 else %Int32.neg(1)): Int32;
-          if (%Int32.lt(hex#860, 0)) {
-            expectedTokenError#666(sourceText#845, iNext#855, errOut#848, "four hex digits");
-            return (upcast(none#849)): StringIndexOption#157;
+        let esc0#861: Int32 = sourceText#847.get#466(iNext#857);
+        iNext#857 = sourceText#847.next#468(iNext#857);
+        if (%Int32.eq(esc0#861, 34) || (%Int32.eq(esc0#861, 92) || %Int32.eq(esc0#861, 47))) {
+          decodedCp#860 = esc0#861;
+        } else if (%Int32.eq(esc0#861, 98)) {
+          decodedCp#860 = 8;
+        } else if (%Int32.eq(esc0#861, 102)) {
+          decodedCp#860 = 12;
+        } else if (%Int32.eq(esc0#861, 110)) {
+          decodedCp#860 = 10;
+        } else if (%Int32.eq(esc0#861, 114)) {
+          decodedCp#860 = 13;
+        } else if (%Int32.eq(esc0#861, 116)) {
+          decodedCp#860 = 9;
+        } else if (%Int32.eq(esc0#861, 117)) {
+          let hex#862: Int32 = (if (sourceText#847.hasAtLeast#863(iNext#857, end#858, 4)) (value { let startHex#864: StringIndex#156 = iNext#857; iNext#857 = sourceText#847.next#468(iNext#857); iNext#857 = sourceText#847.next#468(iNext#857); iNext#857 = sourceText#847.next#468(iNext#857); iNext#857 = sourceText#847.next#468(iNext#857); decodeHexUnsigned#670(sourceText#847, startHex#864, iNext#857) }): Int32 else %Int32.neg(1)): Int32;
+          if (%Int32.lt(hex#862, 0)) {
+            expectedTokenError#668(sourceText#847, iNext#857, errOut#850, "four hex digits");
+            return (upcast(none#851)): StringIndexOption#157;
           }
-          decodedCp#858 = hex#860;
+          decodedCp#860 = hex#862;
         } else {
-          expectedTokenError#666(sourceText#845, iNext#855, errOut#848, "escape sequence");
-          return (upcast(none#849)): StringIndexOption#157;
+          expectedTokenError#668(sourceText#847, iNext#857, errOut#850, "escape sequence");
+          return (upcast(none#851)): StringIndexOption#157;
         }
       }
-      if (%Int32.ge(leadSurrogate#851, 0)) {
-        needToFlush#857 = true;
-        let lead#863: Int32 = leadSurrogate#851;
-        if (%Int32.le(56320, decodedCp#858) && %Int32.le(decodedCp#858, 57343)) {
-          leadSurrogate#851 = %Int32.neg(1);
-          decodedCp#858 = %Int32.add(65536, %Int32.bitOr(%Int32.mul(%Int32.sub(lead#863, 55296), 1024), %Int32.sub(decodedCp#858, 56320)));
+      if (%Int32.ge(leadSurrogate#853, 0)) {
+        needToFlush#859 = true;
+        let lead#865: Int32 = leadSurrogate#853;
+        if (%Int32.le(56320, decodedCp#860) && %Int32.le(decodedCp#860, 57343)) {
+          leadSurrogate#853 = %Int32.neg(1);
+          decodedCp#860 = %Int32.add(65536, %Int32.bitOr(%Int32.mul(%Int32.sub(lead#865, 55296), 1024), %Int32.sub(decodedCp#860, 56320)));
         }
-      } else if (%Int32.le(55296, decodedCp#858) && %Int32.le(decodedCp#858, 56319)) {
-        needToFlush#857 = true;
+      } else if (%Int32.le(55296, decodedCp#860) && %Int32.le(decodedCp#860, 56319)) {
+        needToFlush#859 = true;
       }
-      if (needToFlush#857) {
-        sb#847.appendBetween#469(sourceText#845, consumed#852, i#846);
-        if (%Int32.ge(leadSurrogate#851, 0)) {
-          (orelse(sb#847.appendCodePoint#864(leadSurrogate#851)^, (panic()): Void)): Void;
+      if (needToFlush#859) {
+        sb#849.appendBetween#471(sourceText#847, consumed#854, i#848);
+        if (%Int32.ge(leadSurrogate#853, 0)) {
+          (orelse(sb#849.appendCodePoint#866(leadSurrogate#853)^, (panic()): Void)): Void;
         }
-        if (%Int32.le(55296, decodedCp#858) && %Int32.le(decodedCp#858, 56319)) {
-          leadSurrogate#851 = decodedCp#858;
+        if (%Int32.le(55296, decodedCp#860) && %Int32.le(decodedCp#860, 56319)) {
+          leadSurrogate#853 = decodedCp#860;
         } else {
-          leadSurrogate#851 = %Int32.neg(1);
-          (orelse(sb#847.appendCodePoint#864(decodedCp#858)^, (panic()): Void)): Void;
+          leadSurrogate#853 = %Int32.neg(1);
+          (orelse(sb#849.appendCodePoint#866(decodedCp#860)^, (panic()): Void)): Void;
         }
-        consumed#852 = iNext#855;
+        consumed#854 = iNext#857;
       }
-      i#846 = iNext#855;
+      i#848 = iNext#857;
     }
-    if (%Boolean.not(sourceText#845.hasIndex#594(i#846)) || %Boolean.not(%Int32.eq(sourceText#845.get#464(i#846), 34))) {
-      expectedTokenError#666(sourceText#845, i#846, errOut#848, "\"");
-      return (upcast(none#849)): StringIndexOption#157;
+    if (%Boolean.not(sourceText#847.hasIndex#596(i#848)) || %Boolean.not(%Int32.eq(sourceText#847.get#466(i#848), 34))) {
+      expectedTokenError#668(sourceText#847, i#848, errOut#850, "\"");
+      return (upcast(none#851)): StringIndexOption#157;
     } else {
-      if (%Int32.ge(leadSurrogate#851, 0)) {
-        (orelse(sb#847.appendCodePoint#864(leadSurrogate#851)^, (panic()): Void)): Void;
+      if (%Int32.ge(leadSurrogate#853, 0)) {
+        (orelse(sb#849.appendCodePoint#866(leadSurrogate#853)^, (panic()): Void)): Void;
       } else {
-        sb#847.appendBetween#469(sourceText#845, consumed#852, i#846);
+        sb#849.appendBetween#471(sourceText#847, consumed#854, i#848);
       }
-      i#846 = sourceText#845.next#466(i#846);
-      return (upcast(i#846)): StringIndexOption#157;
+      i#848 = sourceText#847.next#468(i#848);
+      return (upcast(i#848)): StringIndexOption#157;
     }
   }
 
-  fn parseJsonObject#670(sourceText#865: String, var i#866: StringIndex#156, out#867: JsonProducer#36): StringIndexOption#157 {
-    (value { if (%Boolean.not(sourceText#865.hasIndex#594(i#866)) || %Boolean.not(%Int32.eq(sourceText#865.get#464(i#866), 123))) { expectedTokenError#666(sourceText#865, i#866, out#867, "'{'"); return (upcast(none#849)): StringIndexOption#157; } out#867.startObject#239(); i#866 = skipJsonSpaces#667(sourceText#865, sourceText#865.next#466(i#866)); if (sourceText#865.hasIndex#594(i#866) && %Boolean.not(%Int32.eq(sourceText#865.get#464(i#866), 125))) { ~loop#868: while (true) { let keyBuffer#869: StringBuilder#177 = new constructor#454(); let afterKey#870: StringIndexOption#157 = parseJsonStringTo#669(sourceText#865, i#866, keyBuffer#869, out#867); if (%Boolean.not(is(afterKey#870, StringIndex#156))) { return (upcast(none#849)): StringIndexOption#157; } out#867.objectKey#241(keyBuffer#869.toString#472()); i#866 = skipJsonSpaces#667(sourceText#865, (as(afterKey#870)): StringIndex#156); if (sourceText#865.hasIndex#594(i#866) && %Int32.eq(sourceText#865.get#464(i#866), 58)) { i#866 = sourceText#865.next#466(i#866); let afterPropertyValue#871: StringIndexOption#157 = parseJsonValue#678(sourceText#865, i#866, out#867); if (%Boolean.not(is(afterPropertyValue#871, StringIndex#156))) { return (upcast(none#849)): StringIndexOption#157; } i#866 = (as(afterPropertyValue#871)): StringIndex#156; } else { expectedTokenError#666(sourceText#865, i#866, out#867, "':'"); return (upcast(none#849)): StringIndexOption#157; } i#866 = skipJsonSpaces#667(sourceText#865, i#866); if (sourceText#865.hasIndex#594(i#866) && %Int32.eq(sourceText#865.get#464(i#866), 44)) { i#866 = skipJsonSpaces#667(sourceText#865, sourceText#865.next#466(i#866)); continue ~loop#868; } else { break ~loop#868; } } } if (sourceText#865.hasIndex#594(i#866) && %Int32.eq(sourceText#865.get#464(i#866), 125)) { out#867.endObject#240(); return (upcast(sourceText#865.next#466(i#866))): StringIndexOption#157; } else { expectedTokenError#666(sourceText#865, i#866, out#867, "'}'"); return (upcast(none#849)): StringIndexOption#157; } void }): Void;
+  fn parseJsonObject#672(sourceText#867: String, var i#868: StringIndex#156, out#869: JsonProducer#36): StringIndexOption#157 {
+    (value { if (%Boolean.not(sourceText#867.hasIndex#596(i#868)) || %Boolean.not(%Int32.eq(sourceText#867.get#466(i#868), 123))) { expectedTokenError#668(sourceText#867, i#868, out#869, "'{'"); return (upcast(none#851)): StringIndexOption#157; } out#869.startObject#241(); i#868 = skipJsonSpaces#669(sourceText#867, sourceText#867.next#468(i#868)); if (sourceText#867.hasIndex#596(i#868) && %Boolean.not(%Int32.eq(sourceText#867.get#466(i#868), 125))) { ~loop#870: while (true) { let keyBuffer#871: StringBuilder#177 = new constructor#456(); let afterKey#872: StringIndexOption#157 = parseJsonStringTo#671(sourceText#867, i#868, keyBuffer#871, out#869); if (%Boolean.not(is(afterKey#872, StringIndex#156))) { return (upcast(none#851)): StringIndexOption#157; } out#869.objectKey#243(keyBuffer#871.toString#474()); i#868 = skipJsonSpaces#669(sourceText#867, (as(afterKey#872)): StringIndex#156); if (sourceText#867.hasIndex#596(i#868) && %Int32.eq(sourceText#867.get#466(i#868), 58)) { i#868 = sourceText#867.next#468(i#868); let afterPropertyValue#873: StringIndexOption#157 = parseJsonValue#680(sourceText#867, i#868, out#869); if (%Boolean.not(is(afterPropertyValue#873, StringIndex#156))) { return (upcast(none#851)): StringIndexOption#157; } i#868 = (as(afterPropertyValue#873)): StringIndex#156; } else { expectedTokenError#668(sourceText#867, i#868, out#869, "':'"); return (upcast(none#851)): StringIndexOption#157; } i#868 = skipJsonSpaces#669(sourceText#867, i#868); if (sourceText#867.hasIndex#596(i#868) && %Int32.eq(sourceText#867.get#466(i#868), 44)) { i#868 = skipJsonSpaces#669(sourceText#867, sourceText#867.next#468(i#868)); continue ~loop#870; } else { break ~loop#870; } } } if (sourceText#867.hasIndex#596(i#868) && %Int32.eq(sourceText#867.get#466(i#868), 125)) { out#869.endObject#242(); return (upcast(sourceText#867.next#468(i#868))): StringIndexOption#157; } else { expectedTokenError#668(sourceText#867, i#868, out#869, "'}'"); return (upcast(none#851)): StringIndexOption#157; } void }): Void;
   }
 
-  fn parseJsonArray#671(sourceText#872: String, var i#873: StringIndex#156, out#874: JsonProducer#36): StringIndexOption#157 {
-    (value { if (%Boolean.not(sourceText#872.hasIndex#594(i#873)) || %Boolean.not(%Int32.eq(sourceText#872.get#464(i#873), 91))) { expectedTokenError#666(sourceText#872, i#873, out#874, "'['"); return (upcast(none#849)): StringIndexOption#157; } out#874.startArray#242(); i#873 = skipJsonSpaces#667(sourceText#872, sourceText#872.next#466(i#873)); if (sourceText#872.hasIndex#594(i#873) && %Boolean.not(%Int32.eq(sourceText#872.get#464(i#873), 93))) { ~loop#875: while (true) { let afterElementValue#876: StringIndexOption#157 = parseJsonValue#678(sourceText#872, i#873, out#874); if (%Boolean.not(is(afterElementValue#876, StringIndex#156))) { return (upcast(none#849)): StringIndexOption#157; } i#873 = (as(afterElementValue#876)): StringIndex#156; i#873 = skipJsonSpaces#667(sourceText#872, i#873); if (sourceText#872.hasIndex#594(i#873) && %Int32.eq(sourceText#872.get#464(i#873), 44)) { i#873 = skipJsonSpaces#667(sourceText#872, sourceText#872.next#466(i#873)); continue ~loop#875; } else { break ~loop#875; } } } if (sourceText#872.hasIndex#594(i#873) && %Int32.eq(sourceText#872.get#464(i#873), 93)) { out#874.endArray#243(); return (upcast(sourceText#872.next#466(i#873))): StringIndexOption#157; } else { expectedTokenError#666(sourceText#872, i#873, out#874, "']'"); return (upcast(none#849)): StringIndexOption#157; } void }): Void;
+  fn parseJsonArray#673(sourceText#874: String, var i#875: StringIndex#156, out#876: JsonProducer#36): StringIndexOption#157 {
+    (value { if (%Boolean.not(sourceText#874.hasIndex#596(i#875)) || %Boolean.not(%Int32.eq(sourceText#874.get#466(i#875), 91))) { expectedTokenError#668(sourceText#874, i#875, out#876, "'['"); return (upcast(none#851)): StringIndexOption#157; } out#876.startArray#244(); i#875 = skipJsonSpaces#669(sourceText#874, sourceText#874.next#468(i#875)); if (sourceText#874.hasIndex#596(i#875) && %Boolean.not(%Int32.eq(sourceText#874.get#466(i#875), 93))) { ~loop#877: while (true) { let afterElementValue#878: StringIndexOption#157 = parseJsonValue#680(sourceText#874, i#875, out#876); if (%Boolean.not(is(afterElementValue#878, StringIndex#156))) { return (upcast(none#851)): StringIndexOption#157; } i#875 = (as(afterElementValue#878)): StringIndex#156; i#875 = skipJsonSpaces#669(sourceText#874, i#875); if (sourceText#874.hasIndex#596(i#875) && %Int32.eq(sourceText#874.get#466(i#875), 44)) { i#875 = skipJsonSpaces#669(sourceText#874, sourceText#874.next#468(i#875)); continue ~loop#877; } else { break ~loop#877; } } } if (sourceText#874.hasIndex#596(i#875) && %Int32.eq(sourceText#874.get#466(i#875), 93)) { out#876.endArray#245(); return (upcast(sourceText#874.next#468(i#875))): StringIndexOption#157; } else { expectedTokenError#668(sourceText#874, i#875, out#876, "']'"); return (upcast(none#851)): StringIndexOption#157; } void }): Void;
   }
 
-  fn parseJsonString#672(sourceText#877: String, var i#878: StringIndex#156, out#879: JsonProducer#36): StringIndexOption#157 {
-    let sb#880: StringBuilder#177 = new constructor#454();
-    let after#881: StringIndexOption#157 = parseJsonStringTo#669(sourceText#877, i#878, sb#880, out#879);
-    if (is(after#881, StringIndex#156)) {
-      out#879.stringValue#250(sb#880.toString#472());
+  fn parseJsonString#674(sourceText#879: String, var i#880: StringIndex#156, out#881: JsonProducer#36): StringIndexOption#157 {
+    let sb#882: StringBuilder#177 = new constructor#456();
+    let after#883: StringIndexOption#157 = parseJsonStringTo#671(sourceText#879, i#880, sb#882, out#881);
+    if (is(after#883, StringIndex#156)) {
+      out#881.stringValue#252(sb#882.toString#474());
     }
-    return after#881;
+    return after#883;
   }
 
-  fn afterSubstring#673(string#882: String, inString#883: StringIndex#156, substring#884: String): StringIndexOption#157 {
-    var i#885: StringIndex#156 = inString#883;
-    var j#886: StringIndex#156 = begin#459;
-    ~loop#887: while (substring#884.hasIndex#594(j#886)) {
-      if (%Boolean.not(string#882.hasIndex#594(i#885))) {
-        return (upcast(none#849)): StringIndexOption#157;
+  fn afterSubstring#675(string#884: String, inString#885: StringIndex#156, substring#886: String): StringIndexOption#157 {
+    var i#887: StringIndex#156 = inString#885;
+    var j#888: StringIndex#156 = begin#461;
+    ~loop#889: while (substring#886.hasIndex#596(j#888)) {
+      if (%Boolean.not(string#884.hasIndex#596(i#887))) {
+        return (upcast(none#851)): StringIndexOption#157;
       }
-      if (%Boolean.not(%Int32.eq(string#882.get#464(i#885), substring#884.get#464(j#886)))) {
-        return (upcast(none#849)): StringIndexOption#157;
+      if (%Boolean.not(%Int32.eq(string#884.get#466(i#887), substring#886.get#466(j#888)))) {
+        return (upcast(none#851)): StringIndexOption#157;
       }
-      i#885 = string#882.next#466(i#885);
-      j#886 = substring#884.next#466(j#886);
+      i#887 = string#884.next#468(i#887);
+      j#888 = substring#886.next#468(j#888);
     }
-    return (upcast(i#885)): StringIndexOption#157;
+    return (upcast(i#887)): StringIndexOption#157;
   }
 
-  fn parseJsonBoolean#674(sourceText#888: String, var i#889: StringIndex#156, out#890: JsonProducer#36): StringIndexOption#157 {
-    let ch0#891: Int32 = (if (sourceText#888.hasIndex#594(i#889)) sourceText#888.get#464(i#889) else 0): Int32;
-    let end#892: StringIndex#156 = sourceText#888.end#457();
-    let keyword#893: String?;
-    let n#894: Int32;
+  fn parseJsonBoolean#676(sourceText#890: String, var i#891: StringIndex#156, out#892: JsonProducer#36): StringIndexOption#157 {
+    let ch0#893: Int32 = (if (sourceText#890.hasIndex#596(i#891)) sourceText#890.get#466(i#891) else 0): Int32;
+    let end#894: StringIndex#156 = sourceText#890.end#459();
+    let keyword#895: String?;
+    let n#896: Int32;
     {
-      if (%Int32.eq(ch0#891, 102)) {
-        keyword#893 = (asNullable("false")): String?;
-        n#894 = 5;
-      } else if (%Int32.eq(ch0#891, 116)) {
-        keyword#893 = (asNullable("true")): String?;
-        n#894 = 4;
+      if (%Int32.eq(ch0#893, 102)) {
+        keyword#895 = (asNullable("false")): String?;
+        n#896 = 5;
+      } else if (%Int32.eq(ch0#893, 116)) {
+        keyword#895 = (asNullable("true")): String?;
+        n#896 = 4;
       } else {
-        keyword#893 = (null): String?;
-        n#894 = 0;
+        keyword#895 = (null): String?;
+        n#896 = 0;
       }
     }
-    if (%Boolean.not(isNull(keyword#893))) {
-      if (sourceText#888.hasAtLeast#861(i#889, end#892, n#894)) {
-        let after#895: StringIndexOption#157 = afterSubstring#673(sourceText#888, i#889, (nonNull(keyword#893)): String);
-        if (is(after#895, StringIndex#156)) {
-          out#890.booleanValue#245(%Int32.eq(n#894, 4));
-          return after#895;
+    if (%Boolean.not(isNull(keyword#895))) {
+      if (sourceText#890.hasAtLeast#863(i#891, end#894, n#896)) {
+        let after#897: StringIndexOption#157 = afterSubstring#675(sourceText#890, i#891, (nonNull(keyword#895)): String);
+        if (is(after#897, StringIndex#156)) {
+          out#892.booleanValue#247(%Int32.eq(n#896, 4));
+          return after#897;
         }
       }
     }
-    expectedTokenError#666(sourceText#888, i#889, out#890, "`false` or `true`");
-    return (upcast(none#849)): StringIndexOption#157;
+    expectedTokenError#668(sourceText#890, i#891, out#892, "`false` or `true`");
+    return (upcast(none#851)): StringIndexOption#157;
   }
 
-  fn parseJsonNull#675(sourceText#896: String, i#897: StringIndex#156, out#898: JsonProducer#36): StringIndexOption#157 {
-    let after#899: StringIndexOption#157 = afterSubstring#673(sourceText#896, i#897, "null");
-    if (is(after#899, StringIndex#156)) {
-      out#898.nullValue#244();
-      return after#899;
+  fn parseJsonNull#677(sourceText#898: String, i#899: StringIndex#156, out#900: JsonProducer#36): StringIndexOption#157 {
+    let after#901: StringIndexOption#157 = afterSubstring#675(sourceText#898, i#899, "null");
+    if (is(after#901, StringIndex#156)) {
+      out#900.nullValue#246();
+      return after#901;
     }
-    expectedTokenError#666(sourceText#896, i#897, out#898, "`null`");
-    return (upcast(none#849)): StringIndexOption#157;
+    expectedTokenError#668(sourceText#898, i#899, out#900, "`null`");
+    return (upcast(none#851)): StringIndexOption#157;
   }
 
-  let minInt64#676: Int64;
+  let minInt64#678: Int64;
 
-  fn parseJsonNumber#677(sourceText#900: String, var i#901: StringIndex#156, out#902: JsonProducer#36): StringIndexOption#157 {
-    (orelse((value { var isNegative#903: Boolean = false; let startOfNumber#904: StringIndex#156 = i#901; if (sourceText#900.hasIndex#594(i#901) && %Int32.eq(sourceText#900.get#464(i#901), 45)) { isNegative#903 = true; i#901 = sourceText#900.next#466(i#901); } let digit0#905: Int32 = (if (sourceText#900.hasIndex#594(i#901)) sourceText#900.get#464(i#901) else %Int32.neg(1)): Int32; if (%Int32.lt(digit0#905, 48) || %Int32.lt(57, digit0#905)) { let error#906: String = (if (%Boolean.not(isNegative#903) && %Boolean.not(%Int32.eq(digit0#905, 46))) "JSON value" else "digit"): String; expectedTokenError#666(sourceText#900, i#901, out#902, error#906); return (upcast(none#849)): StringIndexOption#157; } i#901 = sourceText#900.next#466(i#901); var nDigits#907: Int32 = 1; var tentativeFloat64#908: Float64 = %Int32.sub(digit0#905, 48).toFloat64#736(); var tentativeInt64#909: Int64 = %Int32.sub(digit0#905, 48).toInt64#735(); var overflowInt64#910: Boolean = false; if (%Boolean.not(%Int32.eq(48, digit0#905))) { ~loop#911: while (sourceText#900.hasIndex#594(i#901)) { let possibleDigit#912: Int32 = sourceText#900.get#464(i#901); if (%Int32.le(48, possibleDigit#912) && %Int32.le(possibleDigit#912, 57)) { i#901 = sourceText#900.next#466(i#901); nDigits#907 = %Int32.add(nDigits#907, 1); let nextDigit#913: Int32 = %Int32.sub(possibleDigit#912, 48); tentativeFloat64#908 = %Float64.add(%Float64.mul(tentativeFloat64#908, 10.0), nextDigit#913.toFloat64#736()); let oldInt64#914: Int64 = tentativeInt64#909; tentativeInt64#909 = %Int64.add(%Int64.mul(tentativeInt64#909, 10i64), nextDigit#913.toInt64#735()); if (%Int64.lt(tentativeInt64#909, oldInt64#914)) { if (%Int64.eq(%Int64.sub(minInt64#676, oldInt64#914), %Int64.neg(nextDigit#913.toInt64#735())) && (isNegative#903 && %Int64.gt(oldInt64#914, 0i64))) {} else { overflowInt64#910 = true; } } } else { break ~loop#911; } } } var nDigitsAfterPoint#915: Int32 = 0; if (sourceText#900.hasIndex#594(i#901) && %Int32.eq(46, sourceText#900.get#464(i#901))) { i#901 = sourceText#900.next#466(i#901); let afterPoint#916: StringIndex#156 = i#901; ~loop#917: while (sourceText#900.hasIndex#594(i#901)) { let possibleDigit#918: Int32 = sourceText#900.get#464(i#901); if (%Int32.le(48, possibleDigit#918) && %Int32.le(possibleDigit#918, 57)) { i#901 = sourceText#900.next#466(i#901); nDigits#907 = %Int32.add(nDigits#907, 1); nDigitsAfterPoint#915 = %Int32.add(nDigitsAfterPoint#915, 1); tentativeFloat64#908 = %Float64.add(%Float64.mul(tentativeFloat64#908, 10.0), %Int32.sub(possibleDigit#918, 48).toFloat64#736()); } else { break ~loop#917; } } if (((upcast(i#901)): StringIndexOption#157).eq#471((upcast(afterPoint#916)): StringIndexOption#157)) { expectedTokenError#666(sourceText#900, i#901, out#902, "digit"); return (upcast(none#849)): StringIndexOption#157; } } var nExponentDigits#919: Int32 = 0; if (sourceText#900.hasIndex#594(i#901) && %Int32.eq(101, %Int32.bitOr(sourceText#900.get#464(i#901), 32))) { i#901 = sourceText#900.next#466(i#901); if (%Boolean.not(sourceText#900.hasIndex#594(i#901))) { expectedTokenError#666(sourceText#900, i#901, out#902, "sign or digit"); return (upcast(none#849)): StringIndexOption#157; } let afterE#920: Int32 = sourceText#900.get#464(i#901); if (%Int32.eq(afterE#920, 43) || %Int32.eq(afterE#920, 45)) { i#901 = sourceText#900.next#466(i#901); } ~loop#921: while (sourceText#900.hasIndex#594(i#901)) { let possibleDigit#922: Int32 = sourceText#900.get#464(i#901); if (%Int32.le(48, possibleDigit#922) && %Int32.le(possibleDigit#922, 57)) { i#901 = sourceText#900.next#466(i#901); nExponentDigits#919 = %Int32.add(nExponentDigits#919, 1); } else { break ~loop#921; } } if (%Int32.eq(nExponentDigits#919, 0)) { expectedTokenError#666(sourceText#900, i#901, out#902, "exponent digit"); return (upcast(none#849)): StringIndexOption#157; } } let afterExponent#923: StringIndex#156 = i#901; if (%Int32.eq(nExponentDigits#919, 0) && (%Int32.eq(nDigitsAfterPoint#915, 0) && %Boolean.not(overflowInt64#910))) { let value#924: Int64 = (if (isNegative#903) %Int64.neg(tentativeInt64#909) else tentativeInt64#909): Int64; if (%Int64.le(%Int64.neg(2147483648i64), value#924) && %Int64.le(value#924, 2147483647i64)) { out#902.int32Value#246(value#924.toInt32Unsafe#925()); } else { out#902.int64Value#247(value#924); } return (upcast(i#901)): StringIndexOption#157; } let numericTokenString#926: String = sourceText#900.slice#832(startOfNumber#904, i#901); var doubleValue#927: Float64 = nan; if (%Boolean.not(%Int32.eq(nExponentDigits#919, 0)) || %Boolean.not(%Int32.eq(nDigitsAfterPoint#915, 0))) { doubleValue#927 = (orelse(numericTokenString#926.toFloat64#752()^, nan)): Float64; } if (%Boolean.not(%Float64.eq(doubleValue#927, %Float64.neg(inf))) && (%Boolean.not(%Float64.eq(doubleValue#927, inf)) && %Boolean.not(%Float64.eq(doubleValue#927, nan)))) { out#902.float64Value#248(doubleValue#927); } else { out#902.numericTokenValue#249(numericTokenString#926); } return (upcast(i#901)): StringIndexOption#157; void }): Void, (panic()): Void)): Void;
+  fn parseJsonNumber#679(sourceText#902: String, var i#903: StringIndex#156, out#904: JsonProducer#36): StringIndexOption#157 {
+    (orelse((value { var isNegative#905: Boolean = false; let startOfNumber#906: StringIndex#156 = i#903; if (sourceText#902.hasIndex#596(i#903) && %Int32.eq(sourceText#902.get#466(i#903), 45)) { isNegative#905 = true; i#903 = sourceText#902.next#468(i#903); } let digit0#907: Int32 = (if (sourceText#902.hasIndex#596(i#903)) sourceText#902.get#466(i#903) else %Int32.neg(1)): Int32; if (%Int32.lt(digit0#907, 48) || %Int32.lt(57, digit0#907)) { let error#908: String = (if (%Boolean.not(isNegative#905) && %Boolean.not(%Int32.eq(digit0#907, 46))) "JSON value" else "digit"): String; expectedTokenError#668(sourceText#902, i#903, out#904, error#908); return (upcast(none#851)): StringIndexOption#157; } i#903 = sourceText#902.next#468(i#903); var nDigits#909: Int32 = 1; var tentativeFloat64#910: Float64 = %Int32.sub(digit0#907, 48).toFloat64#738(); var tentativeInt64#911: Int64 = %Int32.sub(digit0#907, 48).toInt64#737(); var overflowInt64#912: Boolean = false; if (%Boolean.not(%Int32.eq(48, digit0#907))) { ~loop#913: while (sourceText#902.hasIndex#596(i#903)) { let possibleDigit#914: Int32 = sourceText#902.get#466(i#903); if (%Int32.le(48, possibleDigit#914) && %Int32.le(possibleDigit#914, 57)) { i#903 = sourceText#902.next#468(i#903); nDigits#909 = %Int32.add(nDigits#909, 1); let nextDigit#915: Int32 = %Int32.sub(possibleDigit#914, 48); tentativeFloat64#910 = %Float64.add(%Float64.mul(tentativeFloat64#910, 10.0), nextDigit#915.toFloat64#738()); let oldInt64#916: Int64 = tentativeInt64#911; tentativeInt64#911 = %Int64.add(%Int64.mul(tentativeInt64#911, 10i64), nextDigit#915.toInt64#737()); if (%Int64.lt(tentativeInt64#911, oldInt64#916)) { if (%Int64.eq(%Int64.sub(minInt64#678, oldInt64#916), %Int64.neg(nextDigit#915.toInt64#737())) && (isNegative#905 && %Int64.gt(oldInt64#916, 0i64))) {} else { overflowInt64#912 = true; } } } else { break ~loop#913; } } } var nDigitsAfterPoint#917: Int32 = 0; if (sourceText#902.hasIndex#596(i#903) && %Int32.eq(46, sourceText#902.get#466(i#903))) { i#903 = sourceText#902.next#468(i#903); let afterPoint#918: StringIndex#156 = i#903; ~loop#919: while (sourceText#902.hasIndex#596(i#903)) { let possibleDigit#920: Int32 = sourceText#902.get#466(i#903); if (%Int32.le(48, possibleDigit#920) && %Int32.le(possibleDigit#920, 57)) { i#903 = sourceText#902.next#468(i#903); nDigits#909 = %Int32.add(nDigits#909, 1); nDigitsAfterPoint#917 = %Int32.add(nDigitsAfterPoint#917, 1); tentativeFloat64#910 = %Float64.add(%Float64.mul(tentativeFloat64#910, 10.0), %Int32.sub(possibleDigit#920, 48).toFloat64#738()); } else { break ~loop#919; } } if (((upcast(i#903)): StringIndexOption#157).eq#473((upcast(afterPoint#918)): StringIndexOption#157)) { expectedTokenError#668(sourceText#902, i#903, out#904, "digit"); return (upcast(none#851)): StringIndexOption#157; } } var nExponentDigits#921: Int32 = 0; if (sourceText#902.hasIndex#596(i#903) && %Int32.eq(101, %Int32.bitOr(sourceText#902.get#466(i#903), 32))) { i#903 = sourceText#902.next#468(i#903); if (%Boolean.not(sourceText#902.hasIndex#596(i#903))) { expectedTokenError#668(sourceText#902, i#903, out#904, "sign or digit"); return (upcast(none#851)): StringIndexOption#157; } let afterE#922: Int32 = sourceText#902.get#466(i#903); if (%Int32.eq(afterE#922, 43) || %Int32.eq(afterE#922, 45)) { i#903 = sourceText#902.next#468(i#903); } ~loop#923: while (sourceText#902.hasIndex#596(i#903)) { let possibleDigit#924: Int32 = sourceText#902.get#466(i#903); if (%Int32.le(48, possibleDigit#924) && %Int32.le(possibleDigit#924, 57)) { i#903 = sourceText#902.next#468(i#903); nExponentDigits#921 = %Int32.add(nExponentDigits#921, 1); } else { break ~loop#923; } } if (%Int32.eq(nExponentDigits#921, 0)) { expectedTokenError#668(sourceText#902, i#903, out#904, "exponent digit"); return (upcast(none#851)): StringIndexOption#157; } } let afterExponent#925: StringIndex#156 = i#903; if (%Int32.eq(nExponentDigits#921, 0) && (%Int32.eq(nDigitsAfterPoint#917, 0) && %Boolean.not(overflowInt64#912))) { let value#926: Int64 = (if (isNegative#905) %Int64.neg(tentativeInt64#911) else tentativeInt64#911): Int64; if (%Int64.le(%Int64.neg(2147483648i64), value#926) && %Int64.le(value#926, 2147483647i64)) { out#904.int32Value#248(value#926.toInt32Unsafe#927()); } else { out#904.int64Value#249(value#926); } return (upcast(i#903)): StringIndexOption#157; } let numericTokenString#928: String = sourceText#902.slice#834(startOfNumber#906, i#903); var doubleValue#929: Float64 = nan; if (%Boolean.not(%Int32.eq(nExponentDigits#921, 0)) || %Boolean.not(%Int32.eq(nDigitsAfterPoint#917, 0))) { doubleValue#929 = (orelse(numericTokenString#928.toFloat64#754()^, nan)): Float64; } if (%Boolean.not(%Float64.eq(doubleValue#929, %Float64.neg(inf))) && (%Boolean.not(%Float64.eq(doubleValue#929, inf)) && %Boolean.not(%Float64.eq(doubleValue#929, nan)))) { out#904.float64Value#250(doubleValue#929); } else { out#904.numericTokenValue#251(numericTokenString#928); } return (upcast(i#903)): StringIndexOption#157; void }): Void, (panic()): Void)): Void;
   }
 
-  fn parseJsonValue#678(sourceText#928: String, var i#929: StringIndex#156, out#930: JsonProducer#36): StringIndexOption#157 {
-    i#929 = skipJsonSpaces#667(sourceText#928, i#929);
-    if (%Boolean.not(sourceText#928.hasIndex#594(i#929))) {
-      expectedTokenError#666(sourceText#928, i#929, out#930, "JSON value");
-      return (upcast(none#849)): StringIndexOption#157;
+  fn parseJsonValue#680(sourceText#930: String, var i#931: StringIndex#156, out#932: JsonProducer#36): StringIndexOption#157 {
+    i#931 = skipJsonSpaces#669(sourceText#930, i#931);
+    if (%Boolean.not(sourceText#930.hasIndex#596(i#931))) {
+      expectedTokenError#668(sourceText#930, i#931, out#932, "JSON value");
+      return (upcast(none#851)): StringIndexOption#157;
     }
     {
-      let subject#931: Int32 = sourceText#928.get#464(i#929);
-      if (%Int32.eq(subject#931, 123)) {
-        return parseJsonObject#670(sourceText#928, i#929, out#930);
-      } else if (%Int32.eq(subject#931, 91)) {
-        return parseJsonArray#671(sourceText#928, i#929, out#930);
-      } else if (%Int32.eq(subject#931, 34)) {
-        return parseJsonString#672(sourceText#928, i#929, out#930);
-      } else if (%Int32.eq(subject#931, 116) || %Int32.eq(subject#931, 102)) {
-        return parseJsonBoolean#674(sourceText#928, i#929, out#930);
-      } else if (%Int32.eq(subject#931, 110)) {
-        return parseJsonNull#675(sourceText#928, i#929, out#930);
+      let subject#933: Int32 = sourceText#930.get#466(i#931);
+      if (%Int32.eq(subject#933, 123)) {
+        return parseJsonObject#672(sourceText#930, i#931, out#932);
+      } else if (%Int32.eq(subject#933, 91)) {
+        return parseJsonArray#673(sourceText#930, i#931, out#932);
+      } else if (%Int32.eq(subject#933, 34)) {
+        return parseJsonString#674(sourceText#930, i#931, out#932);
+      } else if (%Int32.eq(subject#933, 116) || %Int32.eq(subject#933, 102)) {
+        return parseJsonBoolean#676(sourceText#930, i#931, out#932);
+      } else if (%Int32.eq(subject#933, 110)) {
+        return parseJsonNull#677(sourceText#930, i#931, out#932);
       } else {
-        return parseJsonNumber#677(sourceText#928, i#929, out#930);
+        return parseJsonNumber#679(sourceText#930, i#931, out#932);
       }
     }
   }
 
-  export fn parseJsonToProducer#679(sourceText#932: String, out#933: JsonProducer#36): Void {
-    var i#934: StringIndex#156 = begin#459;
-    let afterValue#935: StringIndexOption#157 = parseJsonValue#678(sourceText#932, i#934, out#933);
-    if (is(afterValue#935, StringIndex#156)) {
-      i#934 = skipJsonSpaces#667(sourceText#932, (downcast(afterValue#935)): StringIndex#156);
-      if (sourceText#932.hasIndex#594(i#934) && %Boolean.not(isNull(out#933.parseErrorReceiver#251()))) {
-        storeJsonError#665(out#933, %String.cat(%String.cat("Extraneous JSON `", sourceText#932.slice#832(i#934, sourceText#932.end#457())), "`"));
+  export fn parseJsonToProducer#681(sourceText#934: String, out#935: JsonProducer#36): Void {
+    var i#936: StringIndex#156 = begin#461;
+    let afterValue#937: StringIndexOption#157 = parseJsonValue#680(sourceText#934, i#936, out#935);
+    if (is(afterValue#937, StringIndex#156)) {
+      i#936 = skipJsonSpaces#669(sourceText#934, (downcast(afterValue#937)): StringIndex#156);
+      if (sourceText#934.hasIndex#596(i#936) && %Boolean.not(isNull(out#935.parseErrorReceiver#253()))) {
+        storeJsonError#667(out#935, %String.cat(%String.cat("Extraneous JSON `", sourceText#934.slice#834(i#936, sourceText#934.end#459())), "`"));
       }
     }
   }
 
-  export fn parseJson#680(sourceText#936: String): JsonSyntaxTree#37 throws JsonSyntaxError#31 {
-    let p#937: JsonSyntaxTreeProducer#49 = new constructor#349();
-    parseJsonToProducer#679(sourceText#936, (upcast(p#937)): JsonProducer#36);
-    return p#937.toJsonSyntaxTree#344()^;
+  export fn parseJson#682(sourceText#938: String): JsonSyntaxTree#37 throws JsonSyntaxError#31 {
+    let p#939: JsonSyntaxTreeProducer#49 = new constructor#351();
+    parseJsonToProducer#681(sourceText#938, (upcast(p#939)): JsonProducer#36);
+    return p#939.toJsonSyntaxTree#346()^;
   }
 
   export interface JsonAdapter#50<T#58> {
-    abstract method encodeToJson#350(x#938: T#58, p#939: JsonProducer#36): Void;
-    abstract method decodeFromJson#351(t#940: JsonSyntaxTree#37, ic#941: InterchangeContext#33): T#58 throws JsonError#30;
+    abstract method encodeToJson#352(x#940: T#58, p#941: JsonProducer#36): Void;
+    abstract method decodeFromJson#353(t#942: JsonSyntaxTree#37, ic#943: InterchangeContext#33): T#58 throws JsonError#30;
   }
 
-  fn shapeError#681(wanted#942: String): JsonShapeError#32 {
-    return new constructor#232(%String.cat("expected ", wanted#942));
+  fn shapeError#683(wanted#944: String): JsonShapeError#32 {
+    return new constructor#234(%String.cat("expected ", wanted#944));
   }
 
   class BooleanJsonAdapter#51 extends JsonAdapter#50<Boolean> {
-    constructor constructor#354(): BooleanJsonAdapter#51 {}
-    method encodeToJson#352(x#943: Boolean, p#944: JsonProducer#36): Void {
-      p#944.booleanValue#245(x#943);
+    constructor constructor#356(): BooleanJsonAdapter#51 {}
+    method encodeToJson#354(x#945: Boolean, p#946: JsonProducer#36): Void {
+      p#946.booleanValue#247(x#945);
     }
-    method decodeFromJson#353(t#945: JsonSyntaxTree#37, ic#946: InterchangeContext#33): Boolean throws JsonError#30 {
-      if (is(t#945, JsonBoolean#40)) {
-        return ((downcast(t#945)): JsonBoolean#40).content#261;
+    method decodeFromJson#355(t#947: JsonSyntaxTree#37, ic#948: InterchangeContext#33): Boolean throws JsonError#30 {
+      if (is(t#947, JsonBoolean#40)) {
+        return ((downcast(t#947)): JsonBoolean#40).content#263;
       } else {
-        (throw(shapeError#681("Boolean"))^): Void;
+        (throw(shapeError#683("Boolean"))^): Void;
       }
     }
   }
 
-  export fn booleanJsonAdapter#682(): JsonAdapter#50<Boolean> {
-    return (upcast(new constructor#354())): JsonAdapter#50<Boolean>;
+  export fn booleanJsonAdapter#684(): JsonAdapter#50<Boolean> {
+    return (upcast(new constructor#356())): JsonAdapter#50<Boolean>;
   }
 
   class Float64JsonAdapter#52 extends JsonAdapter#50<Float64> {
-    constructor constructor#357(): Float64JsonAdapter#52 {}
-    method encodeToJson#355(x#947: Float64, p#948: JsonProducer#36): Void {
-      p#948.float64Value#248(x#947);
+    constructor constructor#359(): Float64JsonAdapter#52 {}
+    method encodeToJson#357(x#949: Float64, p#950: JsonProducer#36): Void {
+      p#950.float64Value#250(x#949);
     }
-    method decodeFromJson#356(t#949: JsonSyntaxTree#37, ic#950: InterchangeContext#33): Float64 throws JsonError#30 {
-      if (is(t#949, JsonNumeric#43)) {
-        return (catch(((downcast(t#949)): JsonNumeric#43).asFloat64#274()^, ~failure#951: ParseError#270, (throw(shapeError#681("Float64"), ~failure#951)^): Float64)): Float64;
+    method decodeFromJson#358(t#951: JsonSyntaxTree#37, ic#952: InterchangeContext#33): Float64 throws JsonError#30 {
+      if (is(t#951, JsonNumeric#43)) {
+        return (catch(((downcast(t#951)): JsonNumeric#43).asFloat64#276()^, ~failure#953: ParseError#272, (throw(shapeError#683("Float64"), ~failure#953)^): Float64)): Float64;
       } else {
-        (throw(shapeError#681("Float64"))^): Void;
+        (throw(shapeError#683("Float64"))^): Void;
       }
     }
   }
 
-  export fn float64JsonAdapter#683(): JsonAdapter#50<Float64> {
-    return (upcast(new constructor#357())): JsonAdapter#50<Float64>;
+  export fn float64JsonAdapter#685(): JsonAdapter#50<Float64> {
+    return (upcast(new constructor#359())): JsonAdapter#50<Float64>;
   }
 
   class Int32JsonAdapter#53 extends JsonAdapter#50<Int32> {
-    constructor constructor#360(): Int32JsonAdapter#53 {}
-    method encodeToJson#358(x#952: Int32, p#953: JsonProducer#36): Void {
-      p#953.int32Value#246(x#952);
+    constructor constructor#362(): Int32JsonAdapter#53 {}
+    method encodeToJson#360(x#954: Int32, p#955: JsonProducer#36): Void {
+      p#955.int32Value#248(x#954);
     }
-    method decodeFromJson#359(t#954: JsonSyntaxTree#37, ic#955: InterchangeContext#33): Int32 throws JsonError#30 {
-      if (is(t#954, JsonNumeric#43)) {
-        return (catch(((downcast(t#954)): JsonNumeric#43).asInt32#272()^, ~failure#956: ParseError#270, (throw(shapeError#681("Int"), ~failure#956)^): Int32)): Int32;
+    method decodeFromJson#361(t#956: JsonSyntaxTree#37, ic#957: InterchangeContext#33): Int32 throws JsonError#30 {
+      if (is(t#956, JsonNumeric#43)) {
+        return (catch(((downcast(t#956)): JsonNumeric#43).asInt32#274()^, ~failure#958: ParseError#272, (throw(shapeError#683("Int"), ~failure#958)^): Int32)): Int32;
       } else {
-        (throw(shapeError#681("Int"))^): Void;
+        (throw(shapeError#683("Int"))^): Void;
       }
     }
   }
 
-  export fn int32JsonAdapter#684(): JsonAdapter#50<Int32> {
-    return (upcast(new constructor#360())): JsonAdapter#50<Int32>;
+  export fn int32JsonAdapter#686(): JsonAdapter#50<Int32> {
+    return (upcast(new constructor#362())): JsonAdapter#50<Int32>;
   }
 
   class Int64JsonAdapter#54 extends JsonAdapter#50<Int64> {
-    constructor constructor#363(): Int64JsonAdapter#54 {}
-    method encodeToJson#361(x#957: Int64, p#958: JsonProducer#36): Void {
-      p#958.int64Value#247(x#957);
+    constructor constructor#365(): Int64JsonAdapter#54 {}
+    method encodeToJson#363(x#959: Int64, p#960: JsonProducer#36): Void {
+      p#960.int64Value#249(x#959);
     }
-    method decodeFromJson#362(t#959: JsonSyntaxTree#37, ic#960: InterchangeContext#33): Int64 throws JsonError#30 {
-      if (is(t#959, JsonNumeric#43)) {
-        return (catch(((downcast(t#959)): JsonNumeric#43).asInt64#273()^, ~failure#961: ParseError#270, (throw(shapeError#681("Int64"), ~failure#961)^): Int64)): Int64;
+    method decodeFromJson#364(t#961: JsonSyntaxTree#37, ic#962: InterchangeContext#33): Int64 throws JsonError#30 {
+      if (is(t#961, JsonNumeric#43)) {
+        return (catch(((downcast(t#961)): JsonNumeric#43).asInt64#275()^, ~failure#963: ParseError#272, (throw(shapeError#683("Int64"), ~failure#963)^): Int64)): Int64;
       } else {
-        (throw(shapeError#681("Int64"))^): Void;
+        (throw(shapeError#683("Int64"))^): Void;
       }
     }
   }
 
-  export fn int64JsonAdapter#685(): JsonAdapter#50<Int64> {
-    return (upcast(new constructor#363())): JsonAdapter#50<Int64>;
+  export fn int64JsonAdapter#687(): JsonAdapter#50<Int64> {
+    return (upcast(new constructor#365())): JsonAdapter#50<Int64>;
   }
 
   class StringJsonAdapter#55 extends JsonAdapter#50<String> {
-    constructor constructor#366(): StringJsonAdapter#55 {}
-    method encodeToJson#364(x#962: String, p#963: JsonProducer#36): Void {
-      p#963.stringValue#250(x#962);
+    constructor constructor#368(): StringJsonAdapter#55 {}
+    method encodeToJson#366(x#964: String, p#965: JsonProducer#36): Void {
+      p#965.stringValue#252(x#964);
     }
-    method decodeFromJson#365(t#964: JsonSyntaxTree#37, ic#965: InterchangeContext#33): String throws JsonError#30 {
-      if (is(t#964, JsonString#42)) {
-        return ((downcast(t#964)): JsonString#42).content#266;
+    method decodeFromJson#367(t#966: JsonSyntaxTree#37, ic#967: InterchangeContext#33): String throws JsonError#30 {
+      if (is(t#966, JsonString#42)) {
+        return ((downcast(t#966)): JsonString#42).content#268;
       } else {
-        (throw(shapeError#681("String"))^): Void;
+        (throw(shapeError#683("String"))^): Void;
       }
     }
   }
 
-  export fn stringJsonAdapter#686(): JsonAdapter#50<String> {
-    return (upcast(new constructor#366())): JsonAdapter#50<String>;
+  export fn stringJsonAdapter#688(): JsonAdapter#50<String> {
+    return (upcast(new constructor#368())): JsonAdapter#50<String>;
   }
 
   class ListJsonAdapter#56<T#59> extends JsonAdapter#50<List#77<T#59>> {
-    private let adapterForT#367: JsonAdapter#50<T#59>;
-    constructor constructor#370(adapterForT#980: JsonAdapter#50<T#59>): ListJsonAdapter#56<T#59> {
-      this.adapterForT#367 = adapterForT#980;
+    private let adapterForT#369: JsonAdapter#50<T#59>;
+    constructor constructor#372(adapterForT#982: JsonAdapter#50<T#59>): ListJsonAdapter#56<T#59> {
+      this.adapterForT#369 = adapterForT#982;
     }
-    method encodeToJson#368(x#966: List#77<T#59>, p#967: JsonProducer#36): Void {
-      p#967.startArray#242();
+    method encodeToJson#370(x#968: List#77<T#59>, p#969: JsonProducer#36): Void {
+      p#969.startArray#244();
       {
-        let ~length#968: Int32 = x#966.length#476();
-        var ~i#969: Int32 = 0;
-        ~loop#970: while (%Int32.lt(~i#969, ~length#968)) {
-          let el#971: T#59 = x#966.get#488(~i#969);
-          ~i#969 = %Int32.add(~i#969, 1);
-          this.adapterForT#367.encodeToJson#350(el#971, p#967);
+        let ~length#970: Int32 = x#968.length#478();
+        var ~i#971: Int32 = 0;
+        ~loop#972: while (%Int32.lt(~i#971, ~length#970)) {
+          let el#973: T#59 = x#968.get#490(~i#971);
+          ~i#971 = %Int32.add(~i#971, 1);
+          this.adapterForT#369.encodeToJson#352(el#973, p#969);
         }
       }
-      p#967.endArray#243();
+      p#969.endArray#245();
     }
-    method decodeFromJson#369(t#972: JsonSyntaxTree#37, ic#973: InterchangeContext#33): List#77<T#59> throws JsonError#30 {
-      let b#974: ListBuilder#87<T#59> = new constructor#432<T#59>();
-      let elements#975: List#77<JsonSyntaxTree#37> = (if (is(t#972, JsonArray#39)) ((downcast(t#972)): JsonArray#39).elements#258 else (throw(shapeError#681("List"))^): List#77<JsonSyntaxTree#37>): List#77<JsonSyntaxTree#37>;
-      let n#976: Int32 = elements#975.length#476();
-      var i#977: Int32 = 0;
-      ~loop#978: while (%Int32.lt(i#977, n#976)) {
-        let el#979: JsonSyntaxTree#37 = elements#975.get#488(i#977);
-        i#977 = %Int32.add(i#977, 1);
-        b#974.add#415(this.adapterForT#367.decodeFromJson#351(el#979, ic#973)^, omitted);
+    method decodeFromJson#371(t#974: JsonSyntaxTree#37, ic#975: InterchangeContext#33): List#77<T#59> throws JsonError#30 {
+      let b#976: ListBuilder#87<T#59> = new constructor#434<T#59>();
+      let elements#977: List#77<JsonSyntaxTree#37> = (if (is(t#974, JsonArray#39)) ((downcast(t#974)): JsonArray#39).elements#260 else (throw(shapeError#683("List"))^): List#77<JsonSyntaxTree#37>): List#77<JsonSyntaxTree#37>;
+      let n#978: Int32 = elements#977.length#478();
+      var i#979: Int32 = 0;
+      ~loop#980: while (%Int32.lt(i#979, n#978)) {
+        let el#981: JsonSyntaxTree#37 = elements#977.get#490(i#979);
+        i#979 = %Int32.add(i#979, 1);
+        b#976.add#417(this.adapterForT#369.decodeFromJson#353(el#981, ic#975)^, omitted);
       }
-      return b#974.toList#426();
+      return b#976.toList#428();
     }
   }
 
-  export fn listJsonAdapter#687<T#688>(adapterForT#981: JsonAdapter#50<T#688>): JsonAdapter#50<List#77<T#688>> {
-    return (upcast(new constructor#370<T#688>(adapterForT#981))): JsonAdapter#50<List#77<T#688>>;
+  export fn listJsonAdapter#689<T#690>(adapterForT#983: JsonAdapter#50<T#690>): JsonAdapter#50<List#77<T#690>> {
+    return (upcast(new constructor#372<T#690>(adapterForT#983))): JsonAdapter#50<List#77<T#690>>;
   }
 
   export class OrNullJsonAdapter#57<T#60> extends JsonAdapter#50<T#60?> {
-    private let adapterForT#371: JsonAdapter#50<T#60>;
-    constructor constructor#374(adapterForT#986: JsonAdapter#50<T#60>): OrNullJsonAdapter#57<T#60> {
-      this.adapterForT#371 = adapterForT#986;
+    private let adapterForT#373: JsonAdapter#50<T#60>;
+    constructor constructor#376(adapterForT#988: JsonAdapter#50<T#60>): OrNullJsonAdapter#57<T#60> {
+      this.adapterForT#373 = adapterForT#988;
     }
-    method encodeToJson#372(x#982: T#60?, p#983: JsonProducer#36): Void {
-      if (isNull(x#982)) {
-        p#983.nullValue#244();
+    method encodeToJson#374(x#984: T#60?, p#985: JsonProducer#36): Void {
+      if (isNull(x#984)) {
+        p#985.nullValue#246();
       } else {
-        this.adapterForT#371.encodeToJson#350((nonNull(x#982)): T#60, p#983);
+        this.adapterForT#373.encodeToJson#352((nonNull(x#984)): T#60, p#985);
       }
     }
-    method decodeFromJson#373(t#984: JsonSyntaxTree#37, ic#985: InterchangeContext#33): T#60? throws JsonError#30 {
-      if (is(t#984, JsonNull#41)) {
+    method decodeFromJson#375(t#986: JsonSyntaxTree#37, ic#987: InterchangeContext#33): T#60? throws JsonError#30 {
+      if (is(t#986, JsonNull#41)) {
         return (null): T#60?;
       } else {
-        return (asNullable(this.adapterForT#371.decodeFromJson#351(t#984, ic#985)^)): T#60?;
+        return (asNullable(this.adapterForT#373.decodeFromJson#353(t#986, ic#987)^)): T#60?;
       }
     }
   }
 
   init {
-    init instance#235 = new constructor#236();
-    init JSON_STATE_OPEN_OBJECT#655 = 0;
-    init JSON_STATE_AFTER_KEY#656 = 1;
-    init JSON_STATE_AFTER_PROPERTY#657 = 2;
-    init JSON_STATE_OPEN_ARRAY#658 = 3;
-    init JSON_STATE_AFTER_ELEMENT#659 = 4;
-    init JSON_STATE_NO_VALUE#660 = 5;
-    init JSON_STATE_ONE_VALUE#661 = 6;
-    init hexDigits#662 = (list("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f")): List#77<String>;
-    init minInt64#676 = %Int64.neg(-9223372036854775808i64);
+    init instance#237 = new constructor#238();
+    init JSON_STATE_OPEN_OBJECT#657 = 0;
+    init JSON_STATE_AFTER_KEY#658 = 1;
+    init JSON_STATE_AFTER_PROPERTY#659 = 2;
+    init JSON_STATE_OPEN_ARRAY#660 = 3;
+    init JSON_STATE_AFTER_ELEMENT#661 = 4;
+    init JSON_STATE_NO_VALUE#662 = 5;
+    init JSON_STATE_ONE_VALUE#663 = 6;
+    init hexDigits#664 = (list("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f")): List#77<String>;
+    init minInt64#678 = %Int64.neg(-9223372036854775808i64);
   }
 }
 
 module temporal#3 in "temporal" {
-  let daysInMonth#987: List#77<Int32>;
+  let daysInMonth#989: List#77<Int32>;
 
-  fn isLeapYear#988(year#992: Int32): Boolean {
-    if (%Int32.eq(%Int32.modSafe(year#992, 4), 0)) {
-      if (%Boolean.not(%Int32.eq(%Int32.modSafe(year#992, 100), 0))) {
+  fn isLeapYear#990(year#994: Int32): Boolean {
+    if (%Int32.eq(%Int32.modSafe(year#994, 4), 0)) {
+      if (%Boolean.not(%Int32.eq(%Int32.modSafe(year#994, 100), 0))) {
         return true;
       } else {
-        return %Int32.eq(%Int32.modSafe(year#992, 400), 0);
+        return %Int32.eq(%Int32.modSafe(year#994, 400), 0);
       }
     } else {
       return false;
     }
   }
 
-  fn padTo#989(minWidth#993: Int32, num#994: Int32, sb#995: StringBuilder#177): Void {
-    let decimal#996: String = num#994.toString#468(10);
-    var decimalIndex#997: StringIndex#156 = begin#459;
-    let decimalEnd#998: StringIndex#156 = decimal#996.end#457();
-    if (%Int32.lt(((upcast(decimalIndex#997)): StringIndexOption#157).compareTo#462((upcast(decimalEnd#998)): StringIndexOption#157), 0) && %Int32.eq(decimal#996.get#464(decimalIndex#997), 45)) {
-      sb#995.append#470("-");
-      decimalIndex#997 = decimal#996.next#466(decimalIndex#997);
+  fn padTo#991(minWidth#995: Int32, num#996: Int32, sb#997: StringBuilder#177): Void {
+    let decimal#998: String = num#996.toString#470(10);
+    var decimalIndex#999: StringIndex#156 = begin#461;
+    let decimalEnd#1000: StringIndex#156 = decimal#998.end#459();
+    if (%Int32.lt(((upcast(decimalIndex#999)): StringIndexOption#157).compareTo#464((upcast(decimalEnd#1000)): StringIndexOption#157), 0) && %Int32.eq(decimal#998.get#466(decimalIndex#999), 45)) {
+      sb#997.append#472("-");
+      decimalIndex#999 = decimal#998.next#468(decimalIndex#999);
     }
-    var nNeeded#999: Int32 = %Int32.sub(minWidth#993, decimal#996.countBetween#1000(decimalIndex#997, decimalEnd#998));
-    ~loop#1001: while (%Int32.gt(nNeeded#999, 0)) {
-      sb#995.append#470("0");
-      nNeeded#999 = %Int32.sub(nNeeded#999, 1);
+    var nNeeded#1001: Int32 = %Int32.sub(minWidth#995, decimal#998.countBetween#1002(decimalIndex#999, decimalEnd#1000));
+    ~loop#1003: while (%Int32.gt(nNeeded#1001, 0)) {
+      sb#997.append#472("0");
+      nNeeded#1001 = %Int32.sub(nNeeded#1001, 1);
     }
-    sb#995.appendBetween#469(decimal#996, decimalIndex#997, decimalEnd#998);
+    sb#997.appendBetween#471(decimal#998, decimalIndex#999, decimalEnd#1000);
   }
 
-  let dayOfWeekLookupTableLeapy#990: List#77<Int32>;
+  let dayOfWeekLookupTableLeapy#992: List#77<Int32>;
 
-  let dayOfWeekLookupTableNotLeapy#991: List#77<Int32>;
+  let dayOfWeekLookupTableNotLeapy#993: List#77<Int32>;
 
   export interface TemporalError#61 extends Error#71 {}
 
   export class InvalidDate#62 extends TemporalError#61 {
-    let year#375: Int32;
-    let month#376: Int32;
-    let day#377: Int32;
-    constructor constructor#378(year#1002: Int32, month#1003: Int32, day#1004: Int32): InvalidDate#62 {
-      this.year#375 = year#1002;
-      this.month#376 = month#1003;
-      this.day#377 = day#1004;
+    let year#377: Int32;
+    let month#378: Int32;
+    let day#379: Int32;
+    constructor constructor#380(year#1004: Int32, month#1005: Int32, day#1006: Int32): InvalidDate#62 {
+      this.year#377 = year#1004;
+      this.month#378 = month#1005;
+      this.day#379 = day#1006;
     }
-    get message#1005(): String {
-      return %String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("invalid date (year: ", this.year#375.toString#468(omitted)), ", month: "), this.month#376.toString#468(omitted)), ", day: "), this.day#377.toString#468(omitted)), ")");
+    get message#1007(): String {
+      return %String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("invalid date (year: ", this.year#377.toString#470(omitted)), ", month: "), this.month#378.toString#470(omitted)), ", day: "), this.day#379.toString#470(omitted)), ")");
     }
   }
 
   export class InvalidIsoDate#63 extends TemporalError#61 {
-    let text#379: String;
-    constructor constructor#380(text#1006: String): InvalidIsoDate#63 {
-      this.text#379 = text#1006;
+    let text#381: String;
+    constructor constructor#382(text#1008: String): InvalidIsoDate#63 {
+      this.text#381 = text#1008;
     }
-    get message#1007(): String {
-      return %String.cat(%String.cat("invalid iso date (text: ", this.text#379), ")");
+    get message#1009(): String {
+      return %String.cat(%String.cat("invalid iso date (text: ", this.text#381), ")");
     }
   }
 
   connected export class Date#64 {
-    connected let year#381: Int32;
-    connected let month#382: Int32;
-    connected let day#383: Int32;
-    connected constructor constructor#391(year#1008: Int32, month#1009: Int32, day#1010: Int32): Date#64 throws TemporalError#61 {
-      if (%Int32.le(1, month#1009) && (%Int32.le(month#1009, 12) && (%Int32.le(1, day#1010) && (if (%Boolean.not(%Int32.eq(month#1009, 2)) || %Boolean.not(%Int32.eq(day#1010, 29))) %Int32.le(day#1010, daysInMonth#987.get#488(month#1009)) else isLeapYear#988(year#1008)): Boolean))) {
-        this.year#381 = year#1008;
-        this.month#382 = month#1009;
-        this.day#383 = day#1010;
+    connected let year#383: Int32;
+    connected let month#384: Int32;
+    connected let day#385: Int32;
+    connected constructor constructor#393(year#1010: Int32, month#1011: Int32, day#1012: Int32): Date#64 throws TemporalError#61 {
+      if (%Int32.le(1, month#1011) && (%Int32.le(month#1011, 12) && (%Int32.le(1, day#1012) && (if (%Boolean.not(%Int32.eq(month#1011, 2)) || %Boolean.not(%Int32.eq(day#1012, 29))) %Int32.le(day#1012, daysInMonth#989.get#490(month#1011)) else isLeapYear#990(year#1010)): Boolean))) {
+        this.year#383 = year#1010;
+        this.month#384 = month#1011;
+        this.day#385 = day#1012;
       } else {
-        (throw(new constructor#378(year#1008, month#1009, day#1010))^): Void;
+        (throw(new constructor#380(year#1010, month#1011, day#1012))^): Void;
       }
     }
-    connected method toString#384(): String {
-      let sb#1011: StringBuilder#177 = new constructor#454();
-      padTo#989(4, this.year#381, sb#1011);
-      sb#1011.append#470("-");
-      padTo#989(2, this.month#382, sb#1011);
-      sb#1011.append#470("-");
-      padTo#989(2, this.day#383, sb#1011);
-      return sb#1011.toString#472();
+    connected method toString#386(): String {
+      let sb#1013: StringBuilder#177 = new constructor#456();
+      padTo#991(4, this.year#383, sb#1013);
+      sb#1013.append#472("-");
+      padTo#991(2, this.month#384, sb#1013);
+      sb#1013.append#472("-");
+      padTo#991(2, this.day#385, sb#1013);
+      return sb#1013.toString#474();
     }
-    connected static fn fromIsoString#385(isoString#1012: String): Date#64 throws TemporalError#61 {
-      let end#1013: StringIndex#156 = isoString#1012.end#457();
-      var strIndex#1014: StringIndex#156 = isoString#1012.prev#1015(isoString#1012.prev#1015(end#1013));
-      let beforeDay#1016: StringIndex#156 = strIndex#1014;
-      strIndex#1014 = isoString#1012.prev#1015(strIndex#1014);
-      let afterMonth#1017: StringIndex#156 = strIndex#1014;
-      if (%Boolean.not(isoString#1012.hasIndex#594(afterMonth#1017)) || %Boolean.not(%Int32.eq(isoString#1012.get#464(strIndex#1014), 45))) {
-        (throw(new constructor#380(isoString#1012))^): Void;
+    connected static fn fromIsoString#387(isoString#1014: String): Date#64 throws TemporalError#61 {
+      let end#1015: StringIndex#156 = isoString#1014.end#459();
+      var strIndex#1016: StringIndex#156 = isoString#1014.prev#1017(isoString#1014.prev#1017(end#1015));
+      let beforeDay#1018: StringIndex#156 = strIndex#1016;
+      strIndex#1016 = isoString#1014.prev#1017(strIndex#1016);
+      let afterMonth#1019: StringIndex#156 = strIndex#1016;
+      if (%Boolean.not(isoString#1014.hasIndex#596(afterMonth#1019)) || %Boolean.not(%Int32.eq(isoString#1014.get#466(strIndex#1016), 45))) {
+        (throw(new constructor#382(isoString#1014))^): Void;
       }
-      strIndex#1014 = isoString#1012.prev#1015(isoString#1012.prev#1015(strIndex#1014));
-      let beforeMonth#1018: StringIndex#156 = strIndex#1014;
-      strIndex#1014 = isoString#1012.prev#1015(strIndex#1014);
-      if (%Boolean.not(%Int32.eq(isoString#1012.get#464(strIndex#1014), 45)) || %Boolean.not(isoString#1012.hasAtLeast#861(begin#459, strIndex#1014, 4))) {
-        (throw(new constructor#380(isoString#1012))^): Void;
+      strIndex#1016 = isoString#1014.prev#1017(isoString#1014.prev#1017(strIndex#1016));
+      let beforeMonth#1020: StringIndex#156 = strIndex#1016;
+      strIndex#1016 = isoString#1014.prev#1017(strIndex#1016);
+      if (%Boolean.not(%Int32.eq(isoString#1014.get#466(strIndex#1016), 45)) || %Boolean.not(isoString#1014.hasAtLeast#863(begin#461, strIndex#1016, 4))) {
+        (throw(new constructor#382(isoString#1014))^): Void;
       }
-      let day#1019: Int32 = (catch(isoString#1012.slice#832(beforeDay#1016, end#1013).toInt32#751(10)^, ~failure#1020: ParseError#270, (throw(new constructor#380(isoString#1012), ~failure#1020)^): Int32)): Int32;
-      let month#1021: Int32 = (catch(isoString#1012.slice#832(beforeMonth#1018, afterMonth#1017).toInt32#751(10)^, ~failure#1022: ParseError#270, (throw(new constructor#380(isoString#1012), ~failure#1022)^): Int32)): Int32;
-      let year#1023: Int32 = (catch(isoString#1012.slice#832(begin#459, strIndex#1014).toInt32#751(10)^, ~failure#1024: ParseError#270, (throw(new constructor#380(isoString#1012), ~failure#1024)^): Int32)): Int32;
-      return (catch(new constructor#391(year#1023, month#1021, day#1019)^, ~failure#1025: TemporalError#61, (throw(new constructor#380(isoString#1012), ~failure#1025)^): Date#64)): Date#64;
+      let day#1021: Int32 = (catch(isoString#1014.slice#834(beforeDay#1018, end#1015).toInt32#753(10)^, ~failure#1022: ParseError#272, (throw(new constructor#382(isoString#1014), ~failure#1022)^): Int32)): Int32;
+      let month#1023: Int32 = (catch(isoString#1014.slice#834(beforeMonth#1020, afterMonth#1019).toInt32#753(10)^, ~failure#1024: ParseError#272, (throw(new constructor#382(isoString#1014), ~failure#1024)^): Int32)): Int32;
+      let year#1025: Int32 = (catch(isoString#1014.slice#834(begin#461, strIndex#1016).toInt32#753(10)^, ~failure#1026: ParseError#272, (throw(new constructor#382(isoString#1014), ~failure#1026)^): Int32)): Int32;
+      return (catch(new constructor#393(year#1025, month#1023, day#1021)^, ~failure#1027: TemporalError#61, (throw(new constructor#382(isoString#1014), ~failure#1027)^): Date#64)): Date#64;
     }
-    connected static fn yearsBetween#386(start#1026: Date#64, end#1027: Date#64): Int32 {
-      let yearDelta#1028: Int32 = %Int32.sub(end#1027.year#381, start#1026.year#381);
-      let monthDelta#1029: Int32 = %Int32.sub(end#1027.month#382, start#1026.month#382);
-      return %Int32.sub(yearDelta#1028, (if (%Int32.lt(monthDelta#1029, 0) || %Int32.eq(monthDelta#1029, 0) && %Int32.lt(end#1027.day#383, start#1026.day#383)) 1 else 0): Int32);
+    connected static fn yearsBetween#388(start#1028: Date#64, end#1029: Date#64): Int32 {
+      let yearDelta#1030: Int32 = %Int32.sub(end#1029.year#383, start#1028.year#383);
+      let monthDelta#1031: Int32 = %Int32.sub(end#1029.month#384, start#1028.month#384);
+      return %Int32.sub(yearDelta#1030, (if (%Int32.lt(monthDelta#1031, 0) || %Int32.eq(monthDelta#1031, 0) && %Int32.lt(end#1029.day#385, start#1028.day#385)) 1 else 0): Int32);
     }
-    connected static fn today#387(): Date#64;
-    connected get dayOfWeek#388(): Int32 {
-      let y#1030: Int32 = this.year#381;
-      let before#1031: Int32 = %Int32.sub(y#1030, 1);
-      let mod4#1032: Int32 = %Int32.modSafe(%Int32.add(%Int32.modSafe(before#1031, 4), 4), 4);
-      let mod100#1033: Int32 = %Int32.modSafe(%Int32.add(%Int32.modSafe(before#1031, 100), 100), 100);
-      let mod400#1034: Int32 = %Int32.modSafe(%Int32.add(%Int32.modSafe(before#1031, 400), 400), 400);
-      let janFirst#1035: Int32 = %Int32.modSafe(%Int32.add(%Int32.add(%Int32.add(1, %Int32.mul(5, mod4#1032)), %Int32.mul(4, mod100#1033)), %Int32.mul(6, mod400#1034)), 7);
-      let table#1036: List#77<Int32> = (if (isLeapYear#988(y#1030)) dayOfWeekLookupTableLeapy#990 else dayOfWeekLookupTableNotLeapy#991): List#77<Int32>;
-      let monthOffset#1037: Int32 = table#1036.get#488(this.month#382);
-      let gaussWeekday#1038: Int32 = %Int32.modSafe(%Int32.add(%Int32.add(janFirst#1035, %Int32.add(this.day#383, 6)), monthOffset#1037), 7);
-      if (%Int32.eq(gaussWeekday#1038, 0)) {
+    connected static fn today#389(): Date#64;
+    connected get dayOfWeek#390(): Int32 {
+      let y#1032: Int32 = this.year#383;
+      let before#1033: Int32 = %Int32.sub(y#1032, 1);
+      let mod4#1034: Int32 = %Int32.modSafe(%Int32.add(%Int32.modSafe(before#1033, 4), 4), 4);
+      let mod100#1035: Int32 = %Int32.modSafe(%Int32.add(%Int32.modSafe(before#1033, 100), 100), 100);
+      let mod400#1036: Int32 = %Int32.modSafe(%Int32.add(%Int32.modSafe(before#1033, 400), 400), 400);
+      let janFirst#1037: Int32 = %Int32.modSafe(%Int32.add(%Int32.add(%Int32.add(1, %Int32.mul(5, mod4#1034)), %Int32.mul(4, mod100#1035)), %Int32.mul(6, mod400#1036)), 7);
+      let table#1038: List#77<Int32> = (if (isLeapYear#990(y#1032)) dayOfWeekLookupTableLeapy#992 else dayOfWeekLookupTableNotLeapy#993): List#77<Int32>;
+      let monthOffset#1039: Int32 = table#1038.get#490(this.month#384);
+      let gaussWeekday#1040: Int32 = %Int32.modSafe(%Int32.add(%Int32.add(janFirst#1037, %Int32.add(this.day#385, 6)), monthOffset#1039), 7);
+      if (%Int32.eq(gaussWeekday#1040, 0)) {
         return 7;
       } else {
-        return gaussWeekday#1038;
+        return gaussWeekday#1040;
       }
     }
-    method encodeToJson#389(p#1039: JsonProducer#36): Void {
-      p#1039.stringValue#250(this.toString#384());
+    method encodeToJson#391(p#1041: JsonProducer#36): Void {
+      p#1041.stringValue#252(this.toString#386());
     }
-    static fn decodeFromJson#390(t#1040: JsonSyntaxTree#37, ic#1041: InterchangeContext#33): Date#64 throws JsonError#30 {
-      if (is(t#1040, JsonString#42)) {
-        return (catch(fromIsoString#385(((downcast(t#1040)): JsonString#42).content#266)^, ~failure#1042: TemporalError#61, (throw(new constructor#232("expected Date"), ~failure#1042)^): Date#64)): Date#64;
+    static fn decodeFromJson#392(t#1042: JsonSyntaxTree#37, ic#1043: InterchangeContext#33): Date#64 throws JsonError#30 {
+      if (is(t#1042, JsonString#42)) {
+        return (catch(fromIsoString#387(((downcast(t#1042)): JsonString#42).content#268)^, ~failure#1044: TemporalError#61, (throw(new constructor#234("expected Date"), ~failure#1044)^): Date#64)): Date#64;
       } else {
-        (throw(new constructor#232("expected Date"))^): Void;
+        (throw(new constructor#234("expected Date"))^): Void;
       }
     }
   }
 
   init {
-    init daysInMonth#987 = (list(0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)): List#77<Int32>;
-    init dayOfWeekLookupTableLeapy#990 = (list(0, 0, 3, 4, 0, 2, 5, 0, 3, 6, 1, 4, 6)): List#77<Int32>;
-    init dayOfWeekLookupTableNotLeapy#991 = (list(0, 0, 3, 3, 6, 1, 4, 6, 2, 5, 0, 3, 5)): List#77<Int32>;
+    init daysInMonth#989 = (list(0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)): List#77<Int32>;
+    init dayOfWeekLookupTableLeapy#992 = (list(0, 0, 3, 4, 0, 2, 5, 0, 3, 6, 1, 4, 6)): List#77<Int32>;
+    init dayOfWeekLookupTableNotLeapy#993 = (list(0, 0, 3, 3, 6, 1, 4, 6, 2, 5, 0, 3, 5)): List#77<Int32>;
   }
 }
 
 module net#4 in "net" {
   connected export interface NetResponse#65 {
-    connected abstract get status#392(): Int32;
-    connected abstract get contentType#393(): String?;
-    connected abstract get bodyContent#396(): Promise#394<String?>;
+    connected abstract get status#394(): Int32;
+    connected abstract get contentType#395(): String?;
+    connected abstract get bodyContent#398(): Promise#396<String?>;
   }
 
-  connected fn sendRequest#1043(url#1044: String, method#1045: String, bodyContent#1046: String?, bodyMimeType#1047: String?): Promise#394<NetResponse#65>;
+  connected fn sendRequest#1045(url#1046: String, method#1047: String, bodyContent#1048: String?, bodyMimeType#1049: String?): Promise#396<NetResponse#65>;
 
   export class NetRequest#66 {
-    private let url#397: String;
-    private var method#398: String;
-    private var bodyContent#399: String?;
-    private var bodyMimeType#400: String?;
-    constructor constructor#403(url#1050: String): NetRequest#66 {
-      this.url#397 = url#1050;
-      this.method#398 = "GET";
-      this.bodyContent#399 = (null): String?;
-      this.bodyMimeType#400 = (null): String?;
+    private let url#399: String;
+    private var method#400: String;
+    private var bodyContent#401: String?;
+    private var bodyMimeType#402: String?;
+    constructor constructor#405(url#1052: String): NetRequest#66 {
+      this.url#399 = url#1052;
+      this.method#400 = "GET";
+      this.bodyContent#401 = (null): String?;
+      this.bodyMimeType#402 = (null): String?;
     }
-    method post#401(content#1048: String, mimeType#1049: String): Void {
-      this.method#398 = "POST";
-      this.bodyContent#399 = (asNullable(content#1048)): String?;
-      this.bodyMimeType#400 = (asNullable(mimeType#1049)): String?;
+    method post#403(content#1050: String, mimeType#1051: String): Void {
+      this.method#400 = "POST";
+      this.bodyContent#401 = (asNullable(content#1050)): String?;
+      this.bodyMimeType#402 = (asNullable(mimeType#1051)): String?;
     }
-    method send#402(): Promise#394<NetResponse#65> {
-      return sendRequest#1043(this.url#397, this.method#398, this.bodyContent#399, this.bodyMimeType#400);
+    method send#404(): Promise#396<NetResponse#65> {
+      return sendRequest#1045(this.url#399, this.method#400, this.bodyContent#401, this.bodyMimeType#402);
     }
   }
 

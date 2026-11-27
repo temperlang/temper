@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using TemperLang.Core;
+using TemperLang.Std.Regex;
 
 namespace FailureParams;
 
 public static class FailureParamsGlobal
 {
+    internal static readonly ILoggingConsole console;
+
     /// <exception cref="Missing">Where it fails with Missing.</exception>
     internal static int Find(string key)
     {
@@ -213,9 +216,25 @@ public static class FailureParamsGlobal
         return n + 1;
     }
 
+    /// <exception cref="Missing">Where it fails with Missing.</exception>
+    internal static string Keyed(string text)
+    {
+        string fn(Match m)
+        {
+            console.Log("seen " + m.Full.Value);
+            return Find(m.Full.Value).ToString(CultureInfo.InvariantCulture);
+        }
+        return ((IRegexNode)new Repeat(new CodeSet(Listed.CreateReadOnlyList<ICodePart>(new CodeRange(97, 122)), false), 1, null, false)).Compiled().Replace(text, fn);
+    }
+
+    internal static string Bracketed(Match m)
+    {
+        return "<" + m.Full.Value + ">";
+    }
+
     static FailureParamsGlobal()
     {
-        ILoggingConsole console = Support.Logging.LoggingConsoleFactory.CreateConsole("FailureParams");
+        console = Support.Logging.LoggingConsoleFactory.CreateConsole("FailureParams");
         IReadOnlyList<int> doubled = MapAll(Listed.CreateReadOnlyList<int>(1, 2, 3), (int n) => n * 2);
         Func<int, int> safe = (int n) => n + 1;
         console.Log(Listed.Join(doubled, ",", (int n) => n.ToString(CultureInfo.InvariantCulture)) + " " + safe(1).ToString(CultureInfo.InvariantCulture));
@@ -317,5 +336,25 @@ public static class FailureParamsGlobal
             failed = Listed.CreateReadOnlyList<int>();
         }
         console.Log(Listed.Join(bumped, ",", (int n) => n.ToString(CultureInfo.InvariantCulture)) + " " + Listed.Join(twice, ",", (int n) => n.ToString(CultureInfo.InvariantCulture)) + " " + failed.Count.ToString(CultureInfo.InvariantCulture));
+        string allKeyed;
+        try
+        {
+            allKeyed = Keyed("one+two");
+        }
+        catch (Missing)
+        {
+            allKeyed = "?";
+        }
+        string noneKeyed;
+        try
+        {
+            noneKeyed = Keyed("one+six+ten");
+        }
+        catch (Missing e5)
+        {
+            noneKeyed = "missing " + e5.Key;
+        }
+        string plain = ((IRegexNode)new CodePoints("o")).Compiled().Replace("two", (Match m) => "0");
+        console.Log(allKeyed + " " + noneKeyed + " " + plain + " " + ((IRegexNode)new CodePoints("w")).Compiled().Replace("two", Bracketed));
     }
 }

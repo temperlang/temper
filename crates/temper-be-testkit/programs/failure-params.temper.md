@@ -210,3 +210,33 @@ core's:
 missing 3
 2,3 3,4 0
 ```
+
+## std's regex replace
+
+std's `Regex.replace` fails as its callback does: the first failure
+passes out, with no result, and the callback isn't called again. One
+whose callback can't fail, a literal or a function by name, needs no
+handler:
+
+    let { Match } = import("std/regex");
+
+    let keyed(text: String): String throws Missing {
+      /[a-z]+/.replace(text) { m =>
+        console.log("seen ${m.full.value}");
+        find(m.full.value).toString()
+      }
+    }
+
+    let allKeyed = keyed("one+two") orelse "?";
+    let noneKeyed = keyed("one+six+ten") catch (e) { "missing ${e.key}" };
+    let bracketed(m: Match): String { "<${m.full.value}>" }
+    let plain = /o/.replace("two") { m => "0" };
+    console.log("${allKeyed} ${noneKeyed} ${plain} ${/w/.replace("two", bracketed)}");
+
+```log
+seen one
+seen two
+seen one
+seen six
+1+2 missing six tw0 t<w>o
+```

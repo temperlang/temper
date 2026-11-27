@@ -133,11 +133,16 @@ fn runtime_functions_are_the_runtimes() {
 
 /// Each of core's connected members that a callback's failure parameter
 /// makes fail (RFC 164) has a runtime function for calls whose callback
-/// returns an `Expected` ([`connected::TRY`]), and only those.
+/// returns an `Expected` ([`connected::TRY`]), and only those, beside
+/// std's members this backend connects.
 #[test]
 fn members_with_failure_parameters_have_try_forms() {
-    let keys: Vec<&str> = connected::TRY.iter().map(|(k, _)| *k).collect();
-    sorted_and_unique(&keys);
+    let all: Vec<&str> = connected::TRY.iter().map(|(k, _)| *k).collect();
+    sorted_and_unique(&all);
+    let (std, keys): (Vec<&str>, Vec<&str>) = all.into_iter().partition(|k| k.starts_with("std/"));
+    for key in std {
+        assert!(connected::connects_std(key), "{key} isn't in STD");
+    }
     let p = core();
     let qnames = QNames::derive(&p);
     let mut generic: Vec<String> = (p.decls.ids())

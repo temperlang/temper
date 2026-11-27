@@ -1,6 +1,5 @@
 use super::*;
 use std::{
-    borrow::Cow,
     fmt::Write,
     sync::{Arc, RwLock},
 };
@@ -72,24 +71,34 @@ mod with_regex {
         cast::<Compiled>(compiled).unwrap().0.is_match(&text)
     }
 
-    pub(crate) fn compiled_replace(
+    /// Each match replaced by what `format` gives, as `replace_all`
+    /// would, but stopping at `format`'s first failure, which it returns
+    /// (RFC 164's failure parameter `E`, `Infallible` where it can't).
+    pub(crate) fn compiled_replace<E>(
         _regex: &Regex,
         compiled: AnyValue,
         text: Arc<String>,
-        format: &dyn Fn(Match) -> Arc<String>,
+        format: &dyn Fn(Match) -> Result<Arc<String>, E>,
         _regex_refs: RegexRefs,
-    ) -> Arc<String> {
+    ) -> Result<Arc<String>, E> {
         let compiled = cast::<Compiled>(compiled).unwrap().0;
-        let result = compiled.replace_all(&text, |captures: &Captures| {
-            let formatted = format(captures_to_match(&compiled, captures));
-            // Common case of only one ref means we can avoid clone here.
-            Arc::try_unwrap(formatted).unwrap_or_else(|formatted| (*formatted).clone())
-        });
-        match result {
-            // No changes here means we can avoid new allocation.
-            Cow::Borrowed(_) => text,
-            Cow::Owned(_) => Arc::new(result.into_owned()),
+        let mut result: Option<String> = None;
+        let mut last = 0;
+        for captures in compiled.captures_iter(&text) {
+            let full = captures.get(0).unwrap();
+            let out = result.get_or_insert_with(|| String::with_capacity(text.len()));
+            out.push_str(&text[last..full.start()]);
+            out.push_str(&format(captures_to_match(&compiled, &captures))?);
+            last = full.end();
         }
+        Ok(match result {
+            Some(mut out) => {
+                out.push_str(&text[last..]);
+                Arc::new(out)
+            }
+            // No match means we can avoid new allocation.
+            None => text,
+        })
     }
 
     pub(crate) fn compiled_split(
@@ -145,13 +154,13 @@ mod without_regex {
         panic!()
     }
 
-    pub(crate) fn compiled_replace(
+    pub(crate) fn compiled_replace<E>(
         _regex: &Regex,
         compiled: AnyValue,
         text: Arc<String>,
-        format: &dyn Fn(Match) -> Arc<String>,
+        format: &dyn Fn(Match) -> Result<Arc<String>, E>,
         _regex_refs: RegexRefs,
-    ) -> Arc<String> {
+    ) -> Result<Arc<String>, E> {
         panic!()
     }
 

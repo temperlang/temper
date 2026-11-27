@@ -3,7 +3,7 @@ tmpl 1 model 1 library `zero-advance` 0.0.0
 uses std#1 0.0.0-alpha.0.0 {
   module regex#2 {
     class Regex#3 {
-      method replace#36(text: String, format: fn (Match#35): String): String;
+      method replace#35<E#36 extends Error#37>(text: String, format: fn (Match#38): String throws E#36): String throws E#36;
     }
     interface RegexNode#6 {
       method compiled#7(): Regex#3;
@@ -32,42 +32,43 @@ uses std#1 0.0.0-alpha.0.0 {
     }
     interface SpecialSet#31 extends CodePart#22, Special#19 {}
     let Space#32: SpecialSet#31;
-    class Match#35 {}
+    class Match#38 {}
   }
 }
 
 uses `temper-core`#9 0.0.0-alpha.0.0 {
   class List#10<T#11> extends Listed#12<T#11> {}
   interface Listed#12<T#13> {}
-  class String#39 {
-    connected method slice#40(begin: StringIndex#41, end: StringIndex#41): String;
-    connected method next#43(index: StringIndex#41): StringIndex#41;
-    connected static let begin#44: StringIndex#41;
-    connected get end#45(): StringIndex#41;
+  interface Error#37 {}
+  class String#41 {
+    connected method slice#42(begin: StringIndex#43, end: StringIndex#43): String;
+    connected method next#45(index: StringIndex#43): StringIndex#43;
+    connected static let begin#46: StringIndex#43;
+    connected get end#47(): StringIndex#43;
   }
-  class StringIndex#41 extends StringIndexOption#42 {}
-  interface StringIndexOption#42 {}
-  interface Console#46 {
-    connected method log#47(message: String): Void;
+  class StringIndex#43 extends StringIndexOption#44 {}
+  interface StringIndexOption#44 {}
+  interface Console#48 {
+    connected method log#49(message: String): Void;
   }
-  connected fn getConsole#49(name?: String): Console#46;
+  connected fn getConsole#51(name?: String): Console#48;
 }
 
 module `zero-advance`#0 {
-  let ~console#48: Console#46;
+  let ~console#50: Console#48;
 
   let commaItemStartRegex#4: Regex#3;
 
   export fn bulletizeList#5(text#33: String): String {
-    let replaced#34: String = commaItemStartRegex#4.replace#36(text#33, (fn ~fn#37(match#38: Match#35): String {
+    let replaced#34: String = commaItemStartRegex#4.replace#35<Never<Error#37>>(text#33, (fn ~fn#39(match#40: Match#38): String {
       return %String.cat("\n", "- ");
-    }): fn (Match#35): String);
-    return replaced#34.slice#40(replaced#34.next#43(begin#44), replaced#34.end#45());
+    }): fn (Match#38): String);
+    return replaced#34.slice#42(replaced#34.next#45(begin#46), replaced#34.end#47());
   }
 
   init {
-    init ~console#48 = getConsole#49(omitted);
+    init ~console#50 = getConsole#51(omitted);
     init commaItemStartRegex#4 = ((upcast(new constructor#15((list((upcast(new constructor#18((list((upcast(Begin#20)): RegexNode#6, (upcast(new constructor#24(","))): RegexNode#6)): List#10<RegexNode#6>))): RegexNode#6, (upcast(new constructor#30((upcast(Space#32)): RegexNode#6, 0, (null): Int32?, (asNullable(false)): Boolean?))): RegexNode#6)): List#10<RegexNode#6>))): RegexNode#6).compiled#7();
-    ~console#48.log#47(bulletizeList#5("apples, bananas, cherries"));
+    ~console#50.log#49(bulletizeList#5("apples, bananas, cherries"));
   }
 }

@@ -10,9 +10,16 @@ import temper.core.Core;
 import temper.core.Core.Console;
 import temper.core.Failure;
 import temper.core.Nullable;
+import temper.std.regex.CodePoints;
+import temper.std.regex.CodeRange;
+import temper.std.regex.CodeSet;
+import temper.std.regex.Match;
+import temper.std.regex.Repeat;
 
 public final class FailureParamsGlobal {
     private FailureParamsGlobal() {}
+
+    static final Console console;
 
     static int find(String key) throws Missing {
         if (key.equals("one")) {
@@ -161,8 +168,20 @@ public final class FailureParamsGlobal {
         return n + 1;
     }
 
+    static String keyed(String text) throws Missing {
+        Function<Match, String> fn = m -> {
+            console.log("seen " + m.full.value);
+            return Integer.toString(find(m.full.value));
+        };
+        return new Repeat(new CodeSet(List.of(new CodeRange(97, 122)), false), 1, null, false).compiled().replace(text, fn);
+    }
+
+    static String bracketed(Match m) {
+        return "<" + m.full.value + ">";
+    }
+
     static {
-        Console console = Core.getConsole(Logger.getLogger("failure_params"));
+        console = Core.getConsole(Logger.getLogger("failure_params"));
         List<Integer> doubled = mapAll(List.of(1, 2, 3), n -> n * 2);
         IntUnaryOperator safe = n -> n + 1;
         console.log(Core.listJoinInt(doubled, ",", n -> Integer.toString(n)) + " " + safe.applyAsInt(1));
@@ -237,5 +256,19 @@ public final class FailureParamsGlobal {
             failed = List.of();
         }
         console.log(Core.listJoinInt(bumped, ",", n -> Integer.toString(n)) + " " + Core.listJoinInt(twice, ",", n -> Integer.toString(n)) + " " + failed.size());
+        String allKeyed;
+        try {
+            allKeyed = keyed("one+two");
+        } catch (Missing ignored6) {
+            allKeyed = "?";
+        }
+        String noneKeyed;
+        try {
+            noneKeyed = keyed("one+six+ten");
+        } catch (Missing e5) {
+            noneKeyed = "missing " + e5.key;
+        }
+        String plain = new CodePoints("o").compiled().replace("two", m -> "0");
+        console.log(allKeyed + " " + noneKeyed + " " + plain + " " + new CodePoints("w").compiled().replace("two", FailureParamsGlobal::bracketed));
     }
 }

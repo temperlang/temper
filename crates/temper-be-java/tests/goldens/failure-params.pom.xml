@@ -17,6 +17,13 @@
       <type>jar</type>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>dev.temperlang</groupId>
+      <artifactId>temper-std</artifactId>
+      <version>0.0.0-alpha.0.0</version>
+      <type>jar</type>
+      <scope>compile</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>

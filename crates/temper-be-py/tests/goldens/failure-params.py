@@ -16,6 +16,13 @@ from temper_core import (
     listed_reduce_from as _listed_reduce_from,
     listed_sorted as _listed_sorted,
 )
+from temper_std.regex import (
+    CodePoints as _CodePoints,
+    CodeRange as _CodeRange,
+    CodeSet as _CodeSet,
+    Match as _Match,
+    Repeat as _Repeat,
+)
 from typing import TypeVar as _TypeVar
 
 __all__ = ()
@@ -195,6 +202,18 @@ def _up_to_two(n: int, /) -> int:
     return _int_add(n, 1)
 
 
+def _keyed(text: str, /) -> str:
+    t_0 = _Repeat(_CodeSet((_CodeRange(97, 122),), False), 1, None, False).compiled()
+    def fn(m: _Match, /) -> str:
+        _console.log(f'seen {m.full.value}')
+        return str(_find(m.full.value))
+    return t_0.replace(text, fn)
+
+
+def _bracketed(m: _Match, /) -> str:
+    return f'<{m.full.value}>'
+
+
 _console: _LoggingConsole = _LoggingConsole(__name__)
 _doubled: _Sequence[int] = _map_all((1, 2, 3), lambda n: _int_mul(n, 2))
 _safe: _Callable[[int], int] = lambda n: _int_add(n, 1)
@@ -261,3 +280,15 @@ except _Missing as _e4:
     _console.log(f'missing {_e4.key}')
     _failed = ()
 _console.log(f"{_list_join(_bumped, ',', lambda n: str(n))} {_list_join(_twice, ',', lambda n: str(n))} {len(_failed)}")
+_all_keyed: str
+try:
+    _all_keyed = _keyed('one+two')
+except _Missing:
+    _all_keyed = '?'
+_none_keyed: str
+try:
+    _none_keyed = _keyed('one+six+ten')
+except _Missing as _e5:
+    _none_keyed = f'missing {_e5.key}'
+_plain: str = _CodePoints('o').compiled().replace('two', lambda m: '0')
+_console.log(f"{_all_keyed} {_none_keyed} {_plain} {_CodePoints('w').compiled().replace('two', _bracketed)}")

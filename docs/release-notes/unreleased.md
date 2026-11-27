@@ -710,9 +710,11 @@ callbacks of one `E` give their closest common failure type. A `@fun
 interface` may take an `E` too. Core's `Listed.map`, `filter`, `reduce`,
 `reduceFrom`, `join`, and `sorted`, `List.forEach`, `String.forEach`,
 `ListBuilder.sort`, and `Mapped.forEach`, `toListWith`, and
-`toListBuilderWith` are generic so, so a callback may now fail with a
-declared failure there: `keys.filter { k => m[k] > 0 }` throws
-`MissingKey`. Python, Java, JS, C#, and Lua translate these: exceptions
+`toListBuilderWith` are generic so, and so is std's `Regex.replace`, so
+a callback may now fail with a declared failure there: `keys.filter { k
+=> m[k] > 0 }` throws `MissingKey`, and `replace` passes on its
+callback's first failure, with no result (`RegexNode.replace` takes
+only callbacks that can't fail). Python, Java, JS, C#, and Lua translate these: exceptions
 are unchecked there, so `E` appears in no host signature (Java's
 `mapAll` is `<T, R> List<R> mapAll(List<T> xs, Function<T, R> f)`), a
 callback's failure passes through unchanged, and a handler in generic
@@ -722,7 +724,12 @@ Result<List<R>, E>` and a template's `core::Expected<…, E>`, with
 "can't fail" as `std::convert::Infallible` and `core::Never`, whose
 results are their values (`temper_core::into_ok`, `*`); core's members
 there have forms for failing callbacks (`try_map`, `List::tryMap`), and
-calls whose callbacks can't fail are as before. A bubbling callback is
+calls whose callbacks can't fail are as before, but for
+`Regex.replace`, std's own generic method, which they call as
+`into_ok(r.replace::<Infallible>(…))` and `*r->replace<core::Never>(…)`.
+Also on Rust, a plain function value that can't fail, passed where a
+generic function's parameter `fn (…): R throws E` gets `E` as "can't
+fail", now returns `Ok`s; such calls didn't build before. A bubbling callback is
 still not yet supported. Also fixed: a module's
 `let` of a `@fun` interface, `let inc: Mapper<Int, Int> = fn …`, and
 `let xs = f() orelse []`, which failed on every backend.

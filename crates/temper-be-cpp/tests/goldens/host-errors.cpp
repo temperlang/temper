@@ -91,7 +91,7 @@ static int32_t codeAt(core::Str const & s, int32_t i) {
 
 static core::Str replaced(int32_t i) {
   at(i);
-  return temper_std::CodePoints::make(TEMPER_STR("b"))->compiled()->replace(TEMPER_STR("abc"), [=](std::shared_ptr<temper_std::Match>) -> core::Str { return core::List::get<core::Str>(core::List::make<core::Str>(TEMPER_STR("x")), i); });
+  return *temper_std::CodePoints::make(TEMPER_STR("b"))->compiled()->replace<core::Never>(TEMPER_STR("abc"), [=](std::shared_ptr<temper_std::Match>) -> core::Str { return core::List::get<core::Str>(core::List::make<core::Str>(TEMPER_STR("x")), i); });
 }
 #endif  // TEMPER_TESTS
 

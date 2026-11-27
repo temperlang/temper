@@ -117,9 +117,9 @@ void global_init_init() {
       int32_t begin2 = core::String::countBetween(temper_globals::moreText.value, core::String::begin(), match2->full->begin);
       return "-" + option1_2 + alphaOption2 + std::to_string(begin2) + "-";
     };
-    core::Str replaced = catcher->replace(temper_globals::moreText.value, fn);
+    core::Str replaced = *catcher->replace<core::Never>(temper_globals::moreText.value, fn);
     core::Console::log(temper_globals::console.value, "replaced: " + replaced);
-    core::Str notReplaced = catcher->replace(TEMPER_STR("nope"), [](std::shared_ptr<temper_std::Match>) -> core::Str { return TEMPER_STR("hi"); });
+    core::Str notReplaced = *catcher->replace<core::Never>(TEMPER_STR("nope"), [](std::shared_ptr<temper_std::Match>) -> core::Str { return TEMPER_STR("hi"); });
     core::Console::log(temper_globals::console.value, "not replaced: " + notReplaced);
     std::shared_ptr<temper_std::Match> subject6 = catcher->find(TEMPER_STR("not here"));
     std::shared_ptr<temper_std::Group> subject5 = subject6 == nullptr ? nullptr : subject6->full;

@@ -191,9 +191,9 @@ impl Translator<'_> {
         };
         // A literal that can't fail, where its type's failure parameter
         // is given `Never<…>`, returns `Ok`s of `Infallible` (`fn_type`).
-        let fails = sig
-            .fail
-            .or_else(|| temper_tmpl::failures::value_failure(p, p.nodes.ty(id)));
+        let fails = (sig.fail)
+            .or_else(|| temper_tmpl::failures::value_failure(p, p.nodes.ty(id)))
+            .or_else(|| self.ok_results.get(&id).copied());
         let (void, result) = (sig.pass == TypeId::VOID, sig.pass);
         // The function around it, which its body's own state replaces.
         let saved = (
@@ -233,8 +233,9 @@ impl Translator<'_> {
     /// which a closure gives concrete types, or where it can't fail and
     /// `ty` returns a result that can't (`fn_type`): `Arc::new(|a0: i32|
     /// Ok(f(a0)))`.
-    pub(crate) fn function_ref(&mut self, target: DeclId, ty: TypeId) -> R<Expr> {
-        let fails = temper_tmpl::failures::value_failure(self.p, ty).is_some();
+    pub(crate) fn function_ref(&mut self, id: NodeId, target: DeclId, ty: TypeId) -> R<Expr> {
+        let fails = temper_tmpl::failures::value_failure(self.p, ty).is_some()
+            || self.ok_results.contains_key(&id);
         let f = self.function_value(target, fails)?;
         Ok(self.arc(f))
     }
@@ -276,6 +277,71 @@ impl Translator<'_> {
             call
         };
         Ok(Expr::Closure(names, Block::of(call)))
+    }
+
+    /// The failure, `Never<…>`, that makes a parameter of type `param`
+    /// of a call of `callee` given `type_args` return a result, where
+    /// argument `a` can't fail: the parameter's function type fails with
+    /// a failure parameter (RFC 164), given `Never<…>`, as only an
+    /// argument that can't fail gives it. A `@fun` value given `Never`
+    /// returns a result already (`failures::value_failure`).
+    pub(crate) fn result_wanted(
+        &self,
+        callee: DeclId,
+        type_args: temper_tmpl::TypeArgs,
+        param: TypeId,
+        a: NodeId,
+    ) -> Option<TypeId> {
+        let p = self.p;
+        if temper_tmpl::failures::value_failure(p, p.nodes.ty(a)).is_some() {
+            return None;
+        }
+        let fail = temper_tmpl::failures::value_failure(p, param)?;
+        let from = temper_tmpl::analysis::type_param_types(p, callee);
+        let fail = p
+            .types
+            .substituted(fail, &from, p.types.args_of(type_args))?;
+        p.types.is_never(fail).then_some(fail)
+    }
+
+    /// A function value that can't fail where one returning a result of
+    /// `fail` is wanted ([`Self::result_wanted`]): a literal or a
+    /// function by name returning `Ok`s, another value called by a
+    /// closure that does, `{ let f = f.clone(); Arc::new(move |a0: A|
+    /// Ok(f(a0))) }`.
+    pub(crate) fn ok_fn_arg(&mut self, a: NodeId, fail: TypeId) -> R<Expr> {
+        let p = self.p;
+        if matches!(
+            p.nodes.get(a),
+            Node::FunctionLiteral { .. } | Node::FunctionRef { .. }
+        ) {
+            self.ok_results.insert(a, fail);
+            return self.expr(a, Want::Owned);
+        }
+        let Some(sig) = self
+            .fun_sig(p.nodes.ty(a))
+            .and_then(|t| p.types.signature(t))
+        else {
+            return not_yet("a function value without a signature");
+        };
+        let params = sig.params.to_vec();
+        let mut names = Vec::new();
+        let mut args = Vec::new();
+        for (i, &t) in params.iter().enumerate() {
+            let name = format!("a{i}");
+            names.push(format!("{name}: {}", self.ty(t)?));
+            args.push(Expr::path(name));
+        }
+        let f = self.expr(a, Want::Owned)?;
+        let call = Expr::path("Ok").call(vec![Expr::path("f").call(args)]);
+        let closure = self.arc(Expr::Move(Box::new(Expr::Closure(names, Block::of(call)))));
+        let bind = Stmt::Let {
+            name: "f".into(),
+            mutable: false,
+            ty: None,
+            value: Some(f),
+        };
+        Ok(Expr::Block(Block::new(vec![bind], Some(closure))))
     }
 
     /// A function value where core's member takes a `&dyn Fn`: a literal

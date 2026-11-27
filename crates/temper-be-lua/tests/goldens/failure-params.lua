@@ -1,4 +1,11 @@
 local temper = require("temper-core")
+local Match = require("std/regex").Match
+local RegexNode = require("std/regex").RegexNode
+local Repeat = require("std/regex").Repeat
+local CodeSet = require("std/regex").CodeSet
+local CodePart = require("std/regex").CodePart
+local CodeRange = require("std/regex").CodeRange
+local CodePoints = require("std/regex").CodePoints
 
 ---@class failure-params.FailureParamsError: temper.Failure
 
@@ -240,6 +247,24 @@ local function upToTwo(n)
   return temper.int32_add(n, 1)
 end
 
+---@param text string
+---@return string
+local function keyed(text)
+  ---@param m std.regex.Match
+  ---@return string
+  local function fn(m)
+    print("seen " .. m.full.value)
+    return tostring(find(m.full.value))
+  end
+  return Repeat(CodeSet({ CodeRange(97, 122) }, false), 1, temper.null, false):compiled():replace(text, fn)
+end
+
+---@param m std.regex.Match
+---@return string
+local function bracketed(m)
+  return "<" .. m.full.value .. ">"
+end
+
 local doubled = mapAll({ 1, 2, 3 }, function(n) return temper.int32_mul(n, 2) end)
 local safe = function(n) return temper.int32_add(n, 1) end
 print(temper.listed_join(doubled, ",", function(n) return tostring(n) end) .. " " .. safe(1))
@@ -327,5 +352,22 @@ if not t_5 then
   failed = {}
 end
 print(temper.listed_join(bumped, ",", function(n) return tostring(n) end) .. " " .. temper.listed_join(twice, ",", function(n) return tostring(n) end) .. " " .. temper.list_length(failed))
+---@type string
+local allKeyed
+if not temper.catch(function()
+  allKeyed = keyed("one+two")
+end, Missing) then
+  allKeyed = "?"
+end
+---@type string
+local noneKeyed
+local t_6, e5 = temper.catch(function()
+  noneKeyed = keyed("one+six+ten")
+end, Missing)
+if not t_6 then
+  noneKeyed = "missing " .. e5.key
+end
+local plain = CodePoints("o"):compiled():replace("two", function(m) return "0" end)
+print(allKeyed .. " " .. noneKeyed .. " " .. plain .. " " .. CodePoints("w"):compiled():replace("two", bracketed))
 
 return {}

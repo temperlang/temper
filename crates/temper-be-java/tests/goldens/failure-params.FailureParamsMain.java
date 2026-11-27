@@ -11,6 +11,7 @@ public final class FailureParamsMain {
         Bubble.keepStackTraces();
         Core.beginTopLevel();
         try {
+            Class.forName("temper.std.regex.RegexGlobal");
             Class.forName("failure_params.FailureParamsGlobal");
         } finally {
             Core.endTopLevel();

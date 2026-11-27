@@ -135,9 +135,12 @@ const UNUSED_KEYS: [&str; 5] = [
 /// of a call whose lone argument is a generic call, which rustfmt breaks
 /// after the `=`, and `Some(f::<E>(…)?)`, whose comma after the `?`
 /// rustfmt leaves out here, though it keeps it elsewhere, as
-/// `failure-generators`' `Ok(Some(f(…)?))` too.
-const LAYOUT_GAPS: [&str; 11] = [
+/// `failure-generators`' `Ok(Some(f(…)?))` too; and `host-errors`'
+/// `Ok(into_ok(…))` of a chain broken before its `.replace::<…>(`,
+/// whose arguments rustfmt indents a level less than the call.
+const LAYOUT_GAPS: [&str; 12] = [
     "functions",
+    "host-errors",
     "regex-match",
     "regex-zero-advance",
     "control-flow-async",

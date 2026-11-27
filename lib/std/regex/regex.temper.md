@@ -72,7 +72,8 @@ capture groups, statically checked where possible.
 ```
 
 Replace and split functions are also available. Both apply to all matches in
-the string, replacing all or splitting at all.
+the string, replacing all or splitting at all. A regex node's `replace` takes a
+callback that can't fail; a compiled `Regex`'s `replace` takes one that may.
 
 ```
   public replace(text: String, format: fn (Match): String): String {
@@ -416,7 +417,9 @@ needed for composition or other purposes.
 ```
 
 A compiled regex exposes many of the same capabilities as `RegexNode`, but they
-are more efficient to use repeatedly.
+are more efficient to use repeatedly. Its `replace` fails as its callback does:
+the first failure passes out, with no result, and the callback isn't called
+again. Where the callback can't fail, neither can `replace`.
 
 ```
   public found(text: String): Boolean {
@@ -427,7 +430,7 @@ are more efficient to use repeatedly.
     compiledFind(compiled, text, begin, regexRefs)
   }
 
-  public replace(text: String, format: fn (Match): String): String {
+  public replace<E>(text: String, format: fn (Match): String throws E): String throws E {
     compiledReplace(compiled, text, format, regexRefs)
   }
 
@@ -454,12 +457,12 @@ TODO(tjp, regex): Any static checking for stable frontend regex values?
   ): Match?;
 
   @connected
-  private compiledReplace(
+  private compiledReplace<E>(
     compiled: AnyValue,
     text: String,
-    format: fn (Match): String,
+    format: fn (Match): String throws E,
     regexRefs: RegexRefs,
-  ): String;
+  ): String throws E;
 
   @connected
   private compiledSplit(

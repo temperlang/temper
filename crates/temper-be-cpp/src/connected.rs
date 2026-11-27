@@ -639,7 +639,8 @@ pub fn lookup(qname: &str) -> Option<Connection> {
 /// a runtime function, relative to `temper::core`, called as
 /// [`Connection::Call`] is, that stops at the first failure and returns
 /// it, else what the member's own connection gives, in an `Expected` of
-/// the callback's failure type. Sorted by qname.
+/// the callback's failure type. std's `compiledReplace`, which only std's
+/// generic `Regex.replace` calls, is that form alone. Sorted by qname.
 pub const TRY: &[(&str, &str)] = &[
     ("core.type ListBuilder.sort()", "ListBuilder::trySort"),
     ("core.type Listed.filter()", "List::tryFilter"),
@@ -650,6 +651,10 @@ pub const TRY: &[(&str, &str)] = &[
     ("core.type Listed.sorted()", "List::trySorted"),
     ("core.type Mapped.forEach()", "Mapped::tryForEach"),
     ("core.type Mapped.toListWith()", "Mapped::tryToListWith"),
+    (
+        "std/regex.type Regex.compiledReplace()",
+        "Regex::compiledReplace",
+    ),
 ];
 
 /// The runtime function for a call of core's `qname` whose callback

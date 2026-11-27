@@ -1,3 +1,4 @@
+use std::convert::Infallible;
 use std::sync::{Arc, OnceLock};
 
 pub(crate) fn init() -> temper_core::Result<()> {
@@ -123,40 +124,47 @@ pub(crate) fn init() -> temper_core::Result<()> {
             MORE_TEXT
                 .set(Arc::new("🌍aaabbcee🌎abcd🌏".to_string()))
                 .unwrap_or_else(|_| panic!());
-            let replaced = catcher.replace(
-                more_text(),
-                Arc::new(move |r#match: temper_std::regex::Match| {
-                    let groups: temper_core::Map<Arc<String>, temper_std::regex::Group> =
-                        r#match.groups();
-                    let option1 = (|| {
-                        Ok::<_, temper_core::MissingKey>(
-                            temper_core::MappedTrait::get(&groups, Arc::new("option1".to_string()))?
+            let replaced = temper_core::into_ok(
+                catcher.replace::<Infallible>(
+                    more_text(),
+                    Arc::new(move |r#match: temper_std::regex::Match| {
+                        let groups: temper_core::Map<Arc<String>, temper_std::regex::Group> =
+                            r#match.groups();
+                        let option1 = (|| {
+                            Ok::<_, temper_core::MissingKey>(
+                                temper_core::MappedTrait::get(
+                                    &groups,
+                                    Arc::new("option1".to_string()),
+                                )?
                                 .value(),
-                        )
-                    })()
-                    .unwrap_or_else(|_| Arc::new(String::new()));
-                    let alpha_option2 = (|| {
-                        Ok::<_, temper_core::MissingKey>(
-                            temper_core::MappedTrait::get(
-                                &groups,
-                                Arc::new("alphaOption2".to_string()),
-                            )?
-                            .value(),
-                        )
-                    })()
-                    .unwrap_or_else(|_| Arc::new(String::new()));
-                    let begin = temper_core::string::count_between(
-                        more_text(),
-                        0usize,
-                        r#match.full().begin(),
-                    );
-                    Arc::new(format!("-{option1}{alpha_option2}{begin}-"))
-                }),
+                            )
+                        })()
+                        .unwrap_or_else(|_| Arc::new(String::new()));
+                        let alpha_option2 = (|| {
+                            Ok::<_, temper_core::MissingKey>(
+                                temper_core::MappedTrait::get(
+                                    &groups,
+                                    Arc::new("alphaOption2".to_string()),
+                                )?
+                                .value(),
+                            )
+                        })()
+                        .unwrap_or_else(|_| Arc::new(String::new()));
+                        let begin = temper_core::string::count_between(
+                            more_text(),
+                            0usize,
+                            r#match.full().begin(),
+                        );
+                        Ok(Arc::new(format!("-{option1}{alpha_option2}{begin}-")))
+                    }),
+                ),
             );
             println!("replaced: {replaced}");
-            let not_replaced = catcher.replace(
-                "nope",
-                Arc::new(move |_match: temper_std::regex::Match| Arc::new("hi".to_string())),
+            let not_replaced = temper_core::into_ok(
+                catcher.replace::<Infallible>(
+                    "nope",
+                    Arc::new(move |_match: temper_std::regex::Match| Ok(Arc::new("hi".to_string()))),
+                ),
             );
             println!("not replaced: {not_replaced}");
             let no_match = {

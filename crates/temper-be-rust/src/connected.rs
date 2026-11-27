@@ -576,8 +576,9 @@ pub fn lookup(qname: &str) -> Option<Connection> {
 /// parameters are the receiver's, then the member's, so a call names its
 /// failure type (`try_filter::<_, Missing>`), which rustc can't infer
 /// from a closure that `?`s, and which stops at the first failure. A
-/// call whose callbacks can't fail is the member's own connection.
-/// Sorted by qname.
+/// call whose callbacks can't fail is the member's own connection. std's
+/// `compiledReplace`, which only std's generic `Regex.replace` calls, is
+/// its support function either way. Sorted by qname.
 pub const TRY: &[(&str, &str)] = &[
     (
         "core.type ListBuilder.sort()",
@@ -609,6 +610,7 @@ pub const TRY: &[(&str, &str)] = &[
         "core.type Mapped.toListWith()",
         "temper_core::mapped_try_to_list_with",
     ),
+    ("std/regex.type Regex.compiledReplace()", "compiled_replace"),
 ];
 
 /// The runtime function for a call of core's `qname` whose callback may

@@ -10,6 +10,7 @@ static class Program
         global::TemperLang.Core.Async.BeginTopLevel();
         try
         {
+            RuntimeHelpers.RunClassConstructor(typeof(TemperLang.Std.Regex.RegexGlobal).TypeHandle);
             RuntimeHelpers.RunClassConstructor(typeof(FailureParams.FailureParamsGlobal).TypeHandle);
         }
         finally

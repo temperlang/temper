@@ -1866,6 +1866,7 @@ impl<'a> Translator<'a> {
         &mut self,
         method: DeclId,
         fish: &str,
+        type_args: temper_tmpl::TypeArgs,
         receiver: NodeId,
         args: &[NodeId],
     ) -> R<Expr> {
@@ -1887,7 +1888,7 @@ impl<'a> Translator<'a> {
                 }
             }
             let recv = self.expr(receiver, Want::Borrowed)?;
-            let args = self.args(method, args)?;
+            let args = self.args(method, Some(type_args), args)?;
             return Ok(recv.method(rust, args));
         }
         let iface = p.decls.get(method).owner;

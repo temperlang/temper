@@ -17,3 +17,51 @@ console.log(word.find("abc").full.value);
 --- settled
 error 33..54: No member full in Match?
 Failed: No member full in Match?
+
+=== replace passes on what its callback throws, and can't fail where its callback can't
+// RFC 164: `Regex.replace` is generic over its callback's failure type,
+// as core's `map` is: the first failure passes out, with no result.
+sealed interface AppError extends Error {}
+class Missing(public key: String) extends AppError {}
+let find(key: String): Int throws Missing {
+  if (key == "one") { return 1; }
+  if (key == "two") { return 2; }
+  throw new Missing(key);
+}
+let keyed(text: String): String throws Missing {
+  /[a-z]+/.replace(text) { m =>
+    console.log("seen ${m.full.value}");
+    find(m.full.value).toString()
+  }
+}
+let all = keyed("one+two") orelse "?";
+let none = keyed("one+six+ten") catch (e) { "missing ${e.key}" };
+let plain = /o/.replace("two") { m => "0" };
+console.log("${all} ${none} ${plain}");
+--- settled
+log seen one
+log seen two
+log seen one
+log seen six
+log 1+2 missing six tw0
+
+=== a replace whose callback may fail needs handling
+sealed interface AppError extends Error {}
+class Missing(public key: String) extends AppError {}
+let find(key: String): Int throws Missing { throw new Missing(key); }
+let keyed(text: String): String { /[a-z]+/.replace(text) { m => find(m.full.value).toString() } }
+--- settled
+error 201..262: Cannot throw Missing from a function without Missing in its return type
+
+=== a regex node's replace takes only a callback that can't fail
+// `RegexNode.replace` is an interface's method, which can't be generic
+// (Rust's traits), so its callback can't fail; `compiled()` gives a
+// `Regex`, whose `replace` takes one that may.
+sealed interface AppError extends Error {}
+class Missing(public key: String) extends AppError {}
+let find(key: String): Int throws Missing { throw new Missing(key); }
+let keyed(text: String): String throws Missing {
+  /[a-z]+/.data.replace(text) { m => find(m.full.value).toString() }
+}
+--- settled
+error 442..460: Cannot throw Missing from a function without Missing in its return type

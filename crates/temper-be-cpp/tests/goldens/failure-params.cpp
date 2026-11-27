@@ -2,6 +2,7 @@
 #pragma once
 
 #include <temper-core/core.hpp>
+#include <std/regex.hpp>
 
 namespace failure_params {
 
@@ -45,6 +46,12 @@ struct Unknown : public virtual FailureParamsError {
 namespace failure_params {
 
 namespace core = temper::core;
+
+namespace temper_globals {
+
+static core::GlobalSlot<std::shared_ptr<core::Console::Type>> console;
+
+}  // namespace temper_globals
 
 std::shared_ptr<Missing> Missing::make(core::Str const & key) {
   std::shared_ptr<Missing> self = std::make_shared<Missing>();
@@ -294,13 +301,32 @@ static core::Expected<int32_t, std::shared_ptr<Missing>> upToTwo(int32_t n) {
   return core::Int::add(n, 1);
 }
 
+static core::Expected<core::Str, std::shared_ptr<Missing>> keyed(core::Str const & text) {
+  std::shared_ptr<temper_std::Regex> regex = temper_std::Repeat::make(core::to_base<temper_std::RegexNode>(temper_std::CodeSet::make(core::List::make<std::shared_ptr<temper_std::CodePart>>(core::to_base<temper_std::CodePart>(temper_std::CodeRange::make(97, 122))), false)), 1, nullptr, false)->compiled();
+  auto fn = [](std::shared_ptr<temper_std::Match> m) -> core::Expected<core::Str, std::shared_ptr<Missing>> {
+    core::Console::log(temper_globals::console.value, "seen " + m->full->value);
+    auto findResult = failure_params::find(m->full->value);
+    if (!findResult.has_value()) {
+      return core::unexpected(findResult.error());
+    }
+    return std::to_string(*findResult);
+  };
+  return regex->replace<std::shared_ptr<Missing>>(text, fn);
+}
+
+static core::Str bracketed(std::shared_ptr<temper_std::Match> const & m) {
+  return "<" + m->full->value + ">";
+}
+
 void global_init_init() {
   core::init_once([] {
-    std::shared_ptr<core::Console::Type> console = core::Console::get_console();
+    temper_globals::console.construct();
+    temper_std::global_init_regex();
+    temper_globals::console.value = core::Console::get_console();
     std::shared_ptr<std::vector<int32_t>> doubled = *failure_params::mapAll<int32_t, int32_t, core::Never>(core::List::make<int32_t>(1, 2, 3), [](int32_t n) -> core::Expected<int32_t, core::Never> { return core::Int::mul(n, 2); });
     std::function<core::Expected<int32_t, core::Never>(int32_t)> safe = [](int32_t n) -> core::Expected<int32_t, core::Never> { return core::Int::add(n, 1); };
     core::Str join = core::List::join(doubled, TEMPER_STR(","), [](int32_t n) -> core::Str { return std::to_string(n); });
-    core::Console::log(console, join + " " + std::to_string(*safe(1)));
+    core::Console::log(temper_globals::console.value, join + " " + std::to_string(*safe(1)));
     std::shared_ptr<std::vector<int32_t>> named;
     auto mapAllResult = failure_params::mapAll<core::Str, int32_t, std::shared_ptr<Missing>>(core::List::make<core::Str>(TEMPER_STR("two"), TEMPER_STR("one")), find);
     if (mapAllResult.has_value()) {
@@ -309,8 +335,8 @@ void global_init_init() {
       named = core::List::make<int32_t>();
     }
     core::Str string = failure_params::shown(core::List::make<core::Str>(TEMPER_STR("one"), TEMPER_STR("two")));
-    core::Str value = failure_params::shown(core::List::make<core::Str>(TEMPER_STR("one"), TEMPER_STR("six"), TEMPER_STR("ten")));
-    core::Console::log(console, string + " " + value + " " + std::to_string(core::List::length<int32_t>(named)));
+    core::Str value2 = failure_params::shown(core::List::make<core::Str>(TEMPER_STR("one"), TEMPER_STR("six"), TEMPER_STR("ten")));
+    core::Console::log(temper_globals::console.value, string + " " + value2 + " " + std::to_string(core::List::length<int32_t>(named)));
     int32_t six;
     auto appliedResult = failure_params::applied([](int32_t n) -> core::Expected<int32_t, std::shared_ptr<Missing>> { return core::Int::mul(n, 3); }, 2);
     if (appliedResult.has_value()) {
@@ -318,10 +344,10 @@ void global_init_init() {
     } else {
       six = -1;
     }
-    core::Console::log(console, std::to_string(six));
+    core::Console::log(temper_globals::console.value, std::to_string(six));
     int32_t some = failure_params::failures<core::Str, int32_t, std::shared_ptr<Missing>>(core::List::make<core::Str>(TEMPER_STR("one"), TEMPER_STR("six"), TEMPER_STR("two"), TEMPER_STR("ten")), find);
     int32_t none = failure_params::failures<int32_t, int32_t, core::Never>(core::List::make<int32_t>(1, 2), [](int32_t n) -> core::Expected<int32_t, core::Never> { return n; });
-    core::Console::log(console, std::to_string(some) + " " + std::to_string(none));
+    core::Console::log(temper_globals::console.value, std::to_string(some) + " " + std::to_string(none));
     int32_t summed;
     auto sumAllResult = failure_params::sumAll<core::Str, std::shared_ptr<Missing>>(core::List::make<core::Str>(TEMPER_STR("one"), TEMPER_STR("two")), find);
     if (sumAllResult.has_value()) {
@@ -335,10 +361,10 @@ void global_init_init() {
       unsummed = *sumAllResult2;
     } else {
       std::shared_ptr<Missing> e = sumAllResult2.error();
-      core::Console::log(console, "first missing " + e->key);
+      core::Console::log(temper_globals::console.value, "first missing " + e->key);
       unsummed = -1;
     }
-    core::Console::log(console, std::to_string(summed) + " " + std::to_string(unsummed) + " " + std::to_string(*failure_params::sumAll<int32_t, core::Never>(core::List::make<int32_t>(1, 2), safe)));
+    core::Console::log(temper_globals::console.value, std::to_string(summed) + " " + std::to_string(unsummed) + " " + std::to_string(*failure_params::sumAll<int32_t, core::Never>(core::List::make<int32_t>(1, 2), safe)));
     int32_t twelve;
     auto bothResult = failure_params::both<std::shared_ptr<Missing>>(find, [](core::Str) -> core::Expected<int32_t, std::shared_ptr<Missing>> { return 10; }, TEMPER_STR("two"));
     if (bothResult.has_value()) {
@@ -352,30 +378,30 @@ void global_init_init() {
       lost = *bothResult2;
     } else {
       std::shared_ptr<Missing> e2 = bothResult2.error();
-      core::Console::log(console, "lost " + e2->key);
+      core::Console::log(temper_globals::console.value, "lost " + e2->key);
       lost = -1;
     }
-    core::Console::log(console, std::to_string(twelve) + " " + std::to_string(lost));
-    core::Str value2 = failure_params::either(TEMPER_STR("one"));
-    core::Console::log(console, value2 + " " + failure_params::either(TEMPER_STR("ten")));
-    core::Str value3;
+    core::Console::log(temper_globals::console.value, std::to_string(twelve) + " " + std::to_string(lost));
+    core::Str value3 = failure_params::either(TEMPER_STR("one"));
+    core::Console::log(temper_globals::console.value, value3 + " " + failure_params::either(TEMPER_STR("ten")));
+    core::Str value4;
     auto partsResult = failure_params::parts(core::List::make<core::Str>(TEMPER_STR("one"), TEMPER_STR("two")));
     if (partsResult.has_value()) {
-      value3 = *partsResult;
+      value4 = *partsResult;
     } else {
-      value3 = TEMPER_STR("?");
+      value4 = TEMPER_STR("?");
     }
-    core::Console::log(console, value3);
-    core::Str value4;
+    core::Console::log(temper_globals::console.value, value4);
+    core::Str value5;
     auto partsResult2 = failure_params::parts(core::List::make<core::Str>(TEMPER_STR("one"), TEMPER_STR("six")));
     if (partsResult2.has_value()) {
-      value4 = *partsResult2;
+      value5 = *partsResult2;
     } else {
       std::shared_ptr<Missing> e3 = partsResult2.error();
-      value4 = "missing " + e3->key;
+      value5 = "missing " + e3->key;
     }
-    core::Console::log(console, value4);
-    core::Console::log(console, core::List::join(core::List::sorted(core::List::make<int32_t>(3, 1, 2), [](int32_t a, int32_t b) -> int32_t { return core::Int::sub(a, b); }), TEMPER_STR(","), [](int32_t n) -> core::Str { return std::to_string(n); }));
+    core::Console::log(temper_globals::console.value, value5);
+    core::Console::log(temper_globals::console.value, core::List::join(core::List::sorted(core::List::make<int32_t>(3, 1, 2), [](int32_t a, int32_t b) -> int32_t { return core::Int::sub(a, b); }), TEMPER_STR(","), [](int32_t n) -> core::Str { return std::to_string(n); }));
     std::shared_ptr<std::vector<int32_t>> bumped = *core::List::tryMap(core::List::make<int32_t>(1, 2), safe);
     std::shared_ptr<std::vector<int32_t>> twice = *failure_params::mapTwice<int32_t, core::Never>(core::List::make<int32_t>(1, 2), safe);
     std::shared_ptr<std::vector<int32_t>> failed;
@@ -384,12 +410,29 @@ void global_init_init() {
       failed = *mapTwiceResult;
     } else {
       std::shared_ptr<Missing> e4 = mapTwiceResult.error();
-      core::Console::log(console, "missing " + e4->key);
+      core::Console::log(temper_globals::console.value, "missing " + e4->key);
       failed = core::List::make<int32_t>();
     }
-    core::Str value5 = core::List::join(bumped, TEMPER_STR(","), [](int32_t n) -> core::Str { return std::to_string(n); });
-    core::Str value6 = core::List::join(twice, TEMPER_STR(","), [](int32_t n) -> core::Str { return std::to_string(n); });
-    core::Console::log(console, value5 + " " + value6 + " " + std::to_string(core::List::length<int32_t>(failed)));
+    core::Str value6 = core::List::join(bumped, TEMPER_STR(","), [](int32_t n) -> core::Str { return std::to_string(n); });
+    core::Str value7 = core::List::join(twice, TEMPER_STR(","), [](int32_t n) -> core::Str { return std::to_string(n); });
+    core::Console::log(temper_globals::console.value, value6 + " " + value7 + " " + std::to_string(core::List::length<int32_t>(failed)));
+    core::Str allKeyed;
+    auto keyedResult = failure_params::keyed(TEMPER_STR("one+two"));
+    if (keyedResult.has_value()) {
+      allKeyed = *keyedResult;
+    } else {
+      allKeyed = TEMPER_STR("?");
+    }
+    core::Str noneKeyed;
+    auto keyedResult2 = failure_params::keyed(TEMPER_STR("one+six+ten"));
+    if (keyedResult2.has_value()) {
+      noneKeyed = *keyedResult2;
+    } else {
+      std::shared_ptr<Missing> e5 = keyedResult2.error();
+      noneKeyed = "missing " + e5->key;
+    }
+    core::Str plain = *temper_std::CodePoints::make(TEMPER_STR("o"))->compiled()->replace<core::Never>(TEMPER_STR("two"), [](std::shared_ptr<temper_std::Match>) -> core::Str { return TEMPER_STR("0"); });
+    core::Console::log(temper_globals::console.value, allKeyed + " " + noneKeyed + " " + plain + " " + *temper_std::CodePoints::make(TEMPER_STR("w"))->compiled()->replace<core::Never>(TEMPER_STR("two"), bracketed));
   });
 }
 

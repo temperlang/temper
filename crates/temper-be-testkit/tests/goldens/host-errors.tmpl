@@ -14,11 +14,11 @@ uses `temper-core`#3 0.0.0-alpha.0.0 {
   }
   class Deque#13<T#14> {
     connected method removeFirst#38(): T#14;
-    connected constructor constructor#116(): Deque#13<T#14>;
+    connected constructor constructor#117(): Deque#13<T#14>;
   }
   class List#16<T#17> extends Listed#6<T#17> {
-    connected method get#68(index: Int32): T#17;
-    connected get length#80(): Int32;
+    connected method get#69(index: Int32): T#17;
+    connected get length#81(): Int32;
   }
   interface Error#43 {}
   class String#49 {
@@ -32,21 +32,21 @@ uses `temper-core`#3 0.0.0-alpha.0.0 {
 uses std#55 0.0.0-alpha.0.0 {
   module regex#56 {
     class Regex#57 {
-      method replace#59(text: String, format: fn (Match#58): String): String;
+      method replace#58<E#59 extends Error#43>(text: String, format: fn (Match#60): String throws E#59): String throws E#59;
     }
-    class Match#58 {}
-    interface RegexNode#60 {
-      method compiled#61(): Regex#57;
+    class Match#60 {}
+    interface RegexNode#61 {
+      method compiled#62(): Regex#57;
     }
-    class CodePoints#62 extends CodePart#63 {
-      let value#64: String;
-      constructor constructor#65(value: String): CodePoints#62;
+    class CodePoints#63 extends CodePart#64 {
+      let value#65: String;
+      constructor constructor#66(value: String): CodePoints#63;
     }
-    interface CodePart#63 extends RegexNode#60 {}
+    interface CodePart#64 extends RegexNode#61 {}
   }
-  module testing#69 {
-    class Test#70 {
-      connected method assert#74(success: Boolean, message: fn (): String): Void;
+  module testing#70 {
+    class Test#71 {
+      connected method assert#75(success: Boolean, message: fn (): String): Void;
     }
   }
 }
@@ -103,104 +103,104 @@ module `host-errors`#0 {
 
   fn replaced#19(i#54: Int32): String throws Bubble {
     at#1(i#54)^;
-    return ((upcast(new constructor#65("b"))): RegexNode#60).compiled#61().replace#59("abc", (fn ~fn#66(match#67: Match#58): String [i#54] {
-      return ((list("x")): List#16<String>).get#68(i#54);
-    }): fn (Match#58): String);
+    return ((upcast(new constructor#66("b"))): RegexNode#61).compiled#62().replace#58<Never<Error#43>>("abc", (fn ~fn#67(match#68: Match#60): String [i#54] {
+      return ((list("x")): List#16<String>).get#69(i#54);
+    }): fn (Match#60): String);
   }
 
   init {}
 
-  test "list read" ~test#71(test#72: Test#70): Void throws Error#43 {
-    let r#73: Int32 = (orelse(read#8((upcast((list(1, 2)): List#16<Int32>)): Listed#6<Int32>, 5)^, %Int32.neg(1))): Int32;
-    test#72.assert#74(%Boolean.not(%Int32.eq(r#73, %Int32.neg(1))), (fn ~fn#75(): String {
+  test "list read" ~test#72(test#73: Test#71): Void throws Error#43 {
+    let r#74: Int32 = (orelse(read#8((upcast((list(1, 2)): List#16<Int32>)): Listed#6<Int32>, 5)^, %Int32.neg(1))): Int32;
+    test#73.assert#75(%Boolean.not(%Int32.eq(r#74, %Int32.neg(1))), (fn ~fn#76(): String {
       return "caught";
     }): fn (): String);
   }
 
-  test "list read at the end" ~test#76(test#77: Test#70): Void throws Error#43 {
-    let ls#78: List#16<Int32> = (list(1, 2)): List#16<Int32>;
-    let r#79: Int32 = (orelse(read#8((upcast(ls#78)): Listed#6<Int32>, ls#78.length#80())^, %Int32.neg(1))): Int32;
-    test#77.assert#74(%Boolean.not(%Int32.eq(r#79, %Int32.neg(1))), (fn ~fn#81(): String {
+  test "list read at the end" ~test#77(test#78: Test#71): Void throws Error#43 {
+    let ls#79: List#16<Int32> = (list(1, 2)): List#16<Int32>;
+    let r#80: Int32 = (orelse(read#8((upcast(ls#79)): Listed#6<Int32>, ls#79.length#81())^, %Int32.neg(1))): Int32;
+    test#78.assert#75(%Boolean.not(%Int32.eq(r#80, %Int32.neg(1))), (fn ~fn#82(): String {
       return "caught";
     }): fn (): String);
   }
 
-  test "negative index" ~test#82(test#83: Test#70): Void throws Error#43 {
-    let r#84: Int32 = (orelse(read#8((upcast(built#2())): Listed#6<Int32>, %Int32.neg(1))^, %Int32.neg(1))): Int32;
-    test#83.assert#74(%Boolean.not(%Int32.eq(r#84, %Int32.neg(1))), (fn ~fn#85(): String {
+  test "negative index" ~test#83(test#84: Test#71): Void throws Error#43 {
+    let r#85: Int32 = (orelse(read#8((upcast(built#2())): Listed#6<Int32>, %Int32.neg(1))^, %Int32.neg(1))): Int32;
+    test#84.assert#75(%Boolean.not(%Int32.eq(r#85, %Int32.neg(1))), (fn ~fn#86(): String {
       return "caught";
     }): fn (): String);
   }
 
-  test "set" ~test#86(test#87: Test#70): Void throws Error#43 {
-    let r#88: Int32 = (orelse(write#9(built#2(), 5)^, %Int32.neg(1))): Int32;
-    test#87.assert#74(%Boolean.not(%Int32.eq(r#88, %Int32.neg(1))), (fn ~fn#89(): String {
+  test "set" ~test#87(test#88: Test#71): Void throws Error#43 {
+    let r#89: Int32 = (orelse(write#9(built#2(), 5)^, %Int32.neg(1))): Int32;
+    test#88.assert#75(%Boolean.not(%Int32.eq(r#89, %Int32.neg(1))), (fn ~fn#90(): String {
       return "caught";
     }): fn (): String);
   }
 
-  test "set at the end" ~test#90(test#91: Test#70): Void throws Error#43 {
-    let lb#92: ListBuilder#4<Int32> = built#2();
-    let r#93: Int32 = (orelse(write#9(lb#92, lb#92.length#30())^, %Int32.neg(1))): Int32;
-    test#91.assert#74(%Boolean.not(%Int32.eq(r#93, %Int32.neg(1))), (fn ~fn#94(): String {
+  test "set at the end" ~test#91(test#92: Test#71): Void throws Error#43 {
+    let lb#93: ListBuilder#4<Int32> = built#2();
+    let r#94: Int32 = (orelse(write#9(lb#93, lb#93.length#30())^, %Int32.neg(1))): Int32;
+    test#92.assert#75(%Boolean.not(%Int32.eq(r#94, %Int32.neg(1))), (fn ~fn#95(): String {
       return "caught";
     }): fn (): String);
   }
 
-  test "insert" ~test#95(test#96: Test#70): Void throws Error#43 {
-    let r#97: Int32 = (orelse(insert#10(built#2(), 5)^, %Int32.neg(1))): Int32;
-    test#96.assert#74(%Boolean.not(%Int32.eq(r#97, %Int32.neg(1))), (fn ~fn#98(): String {
+  test "insert" ~test#96(test#97: Test#71): Void throws Error#43 {
+    let r#98: Int32 = (orelse(insert#10(built#2(), 5)^, %Int32.neg(1))): Int32;
+    test#97.assert#75(%Boolean.not(%Int32.eq(r#98, %Int32.neg(1))), (fn ~fn#99(): String {
       return "caught";
     }): fn (): String);
   }
 
-  test "insert past the end" ~test#99(test#100: Test#70): Void throws Error#43 {
-    let lb#101: ListBuilder#4<Int32> = built#2();
-    let r#102: Int32 = (orelse(insert#10(lb#101, %Int32.add(lb#101.length#30(), 1))^, %Int32.neg(1))): Int32;
-    test#100.assert#74(%Boolean.not(%Int32.eq(r#102, %Int32.neg(1))), (fn ~fn#103(): String {
+  test "insert past the end" ~test#100(test#101: Test#71): Void throws Error#43 {
+    let lb#102: ListBuilder#4<Int32> = built#2();
+    let r#103: Int32 = (orelse(insert#10(lb#102, %Int32.add(lb#102.length#30(), 1))^, %Int32.neg(1))): Int32;
+    test#101.assert#75(%Boolean.not(%Int32.eq(r#103, %Int32.neg(1))), (fn ~fn#104(): String {
       return "caught";
     }): fn (): String);
   }
 
-  test "insert at the end appends" ~test#104(test#105: Test#70): Void throws Error#43 {
-    let lb#106: ListBuilder#4<Int32> = built#2();
-    let n#107: Int32 = (orelse(insert#10(lb#106, lb#106.length#30())^, %Int32.neg(1))): Int32;
-    test#105.assert#74(%Int32.eq(n#107, 2) && %Int32.eq(lb#106.get#26(1), 2), (fn ~fn#108(): String {
+  test "insert at the end appends" ~test#105(test#106: Test#71): Void throws Error#43 {
+    let lb#107: ListBuilder#4<Int32> = built#2();
+    let n#108: Int32 = (orelse(insert#10(lb#107, lb#107.length#30())^, %Int32.neg(1))): Int32;
+    test#106.assert#75(%Int32.eq(n#108, 2) && %Int32.eq(lb#107.get#26(1), 2), (fn ~fn#109(): String {
       return "didn't append";
     }): fn (): String);
   }
 
-  test "remove last" ~test#109(test#110: Test#70): Void throws Error#43 {
-    let r#111: Int32 = (orelse(removeLast#11(new constructor#22<Int32>(), 0)^, %Int32.neg(1))): Int32;
-    test#110.assert#74(%Boolean.not(%Int32.eq(r#111, %Int32.neg(1))), (fn ~fn#112(): String {
+  test "remove last" ~test#110(test#111: Test#71): Void throws Error#43 {
+    let r#112: Int32 = (orelse(removeLast#11(new constructor#22<Int32>(), 0)^, %Int32.neg(1))): Int32;
+    test#111.assert#75(%Boolean.not(%Int32.eq(r#112, %Int32.neg(1))), (fn ~fn#113(): String {
       return "caught";
     }): fn (): String);
   }
 
-  test "remove first" ~test#113(test#114: Test#70): Void throws Error#43 {
-    let r#115: Int32 = (orelse(removeFirst#12(new constructor#116<Int32>(), 0)^, %Int32.neg(1))): Int32;
-    test#114.assert#74(%Boolean.not(%Int32.eq(r#115, %Int32.neg(1))), (fn ~fn#117(): String {
+  test "remove first" ~test#114(test#115: Test#71): Void throws Error#43 {
+    let r#116: Int32 = (orelse(removeFirst#12(new constructor#117<Int32>(), 0)^, %Int32.neg(1))): Int32;
+    test#115.assert#75(%Boolean.not(%Int32.eq(r#116, %Int32.neg(1))), (fn ~fn#118(): String {
       return "caught";
     }): fn (): String);
   }
 
-  test "reduce" ~test#118(test#119: Test#70): Void throws Error#43 {
-    let r#120: Int32 = (orelse(sum#15((list()): List#16<Int32>, 0)^, %Int32.neg(1))): Int32;
-    test#119.assert#74(%Boolean.not(%Int32.eq(r#120, %Int32.neg(1))), (fn ~fn#121(): String {
+  test "reduce" ~test#119(test#120: Test#71): Void throws Error#43 {
+    let r#121: Int32 = (orelse(sum#15((list()): List#16<Int32>, 0)^, %Int32.neg(1))): Int32;
+    test#120.assert#75(%Boolean.not(%Int32.eq(r#121, %Int32.neg(1))), (fn ~fn#122(): String {
       return "caught";
     }): fn (): String);
   }
 
-  test "string read" ~test#122(test#123: Test#70): Void throws Error#43 {
-    let r#124: Int32 = (orelse(codeAt#18("ab", 0)^, %Int32.neg(1))): Int32;
-    test#123.assert#74(%Boolean.not(%Int32.eq(r#124, %Int32.neg(1))), (fn ~fn#125(): String {
+  test "string read" ~test#123(test#124: Test#71): Void throws Error#43 {
+    let r#125: Int32 = (orelse(codeAt#18("ab", 0)^, %Int32.neg(1))): Int32;
+    test#124.assert#75(%Boolean.not(%Int32.eq(r#125, %Int32.neg(1))), (fn ~fn#126(): String {
       return "caught";
     }): fn (): String);
   }
 
-  test "replace callback" ~test#126(test#127: Test#70): Void throws Error#43 {
-    let r#128: String = (orelse(replaced#19(3)^, "")): String;
-    test#127.assert#74(%Boolean.not(%String.eq(r#128, "")), (fn ~fn#129(): String {
+  test "replace callback" ~test#127(test#128: Test#71): Void throws Error#43 {
+    let r#129: String = (orelse(replaced#19(3)^, "")): String;
+    test#128.assert#75(%Boolean.not(%String.eq(r#129, "")), (fn ~fn#130(): String {
       return "caught";
     }): fn (): String);
   }

@@ -1,3 +1,4 @@
+use std::convert::Infallible;
 use std::sync::{Arc, OnceLock};
 use temper_core::ToArcString;
 
@@ -37,9 +38,11 @@ pub(crate) fn comma_item_start_regex() -> temper_std::regex::Regex {
 
 pub fn bulletize_list(text: impl ToArcString) -> Arc<String> {
     let text = text.to_arc_string();
-    let replaced = comma_item_start_regex().replace(
-        text.clone(),
-        Arc::new(move |_match: temper_std::regex::Match| Arc::new("\n- ".to_string())),
+    let replaced = temper_core::into_ok(
+        comma_item_start_regex().replace::<Infallible>(
+            text.clone(),
+            Arc::new(move |_match: temper_std::regex::Match| Ok(Arc::new("\n- ".to_string()))),
+        ),
     );
     temper_core::string::slice(
         &replaced,

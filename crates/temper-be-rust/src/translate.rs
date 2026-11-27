@@ -188,6 +188,11 @@ pub struct Translator<'a> {
     /// Locals that function literals capture and that are assigned,
     /// which are cells ([`functions`]).
     cells: HashSet<DeclId>,
+    /// Function literals and references that can't fail, passed where a
+    /// failure parameter given `Never<…>` makes the parameter's function
+    /// type return a result (RFC 164), with that failure: each returns
+    /// `Ok`s ([`functions`]).
+    ok_results: HashMap<NodeId, TypeId>,
     /// Whether it runs `async` blocks, whose runner the crate's support
     /// module gives (`run_async`).
     pub(crate) runs_async: bool,
@@ -248,6 +253,7 @@ impl<'a> Translator<'a> {
             narrowed: HashMap::new(),
             subst: HashMap::new(),
             cells: temper_tmpl::analysis::assigned_captures(p),
+            ok_results: HashMap::new(),
             runs_async: false,
             runs_async_in_tests: false,
             awaits: false,
@@ -456,6 +462,15 @@ impl<'a> Translator<'a> {
         }
     }
 
+    /// A receiver borrowed ([`Self::handle_ref`]), but `self`, which is a
+    /// borrow already.
+    fn receiver_ref(&mut self, receiver: NodeId) -> R<Expr> {
+        Ok(match self.handle_ref(receiver)? {
+            Expr::Unary(Unary::Ref, e) if *e == Expr::path("self") => *e,
+            e => e,
+        })
+    }
+
     /// A call of core's member whose callback returns a result
     /// (`failures::passes_results`), as [`connected::TRY`] connects it,
     /// its failure type named: `temper_core::listed::try_map::<_, _,
@@ -488,7 +503,7 @@ impl<'a> Translator<'a> {
                 false => "_".into(),
             });
         }
-        let mut fargs = vec![self.handle_ref(receiver)?];
+        let mut fargs = vec![self.receiver_ref(receiver)?];
         self.connected_args(decl, rest, &mut fargs)?;
         Ok(Expr::path(format!("{path}::<{}>", texts.join(", "))).call(fargs))
     }
@@ -2074,7 +2089,12 @@ impl<'a> Translator<'a> {
     }
 
     /// Arguments of a call of the program's own function.
-    fn args(&mut self, callee: DeclId, args: &[NodeId]) -> R<Vec<Expr>> {
+    fn args(
+        &mut self,
+        callee: DeclId,
+        type_args: Option<temper_tmpl::TypeArgs>,
+        args: &[NodeId],
+    ) -> R<Vec<Expr>> {
         let params: Vec<TypeId> = self
             .p
             .signature(callee)
@@ -2092,6 +2112,12 @@ impl<'a> Translator<'a> {
             }
             if concrete {
                 out.push(self.expr(a, Want::Owned)?);
+                continue;
+            }
+            let wanted = (params.get(i).zip(type_args))
+                .and_then(|(&t, args)| self.result_wanted(callee, args, t, a));
+            if let Some(fail) = wanted {
+                out.push(self.ok_fn_arg(a, fail)?);
                 continue;
             }
             if params.get(i).is_some_and(|&t| self.is_nullable_string(t)) {
@@ -2245,11 +2271,7 @@ impl<'a> Translator<'a> {
                         let e = self.expr(first, Want::Borrowed)?;
                         Expr::unary(Unary::Ref, Expr::unary(Unary::Deref, e))
                     }
-                    // `self` is a borrow already.
-                    false => match self.handle_ref(first)? {
-                        Expr::Unary(Unary::Ref, e) if *e == Expr::path("self") => *e,
-                        e => e,
-                    },
+                    false => self.receiver_ref(first)?,
                 };
                 let mut fargs = vec![first];
                 self.connected_args(decl, rest, &mut fargs)?;
@@ -2402,7 +2424,7 @@ impl<'a> Translator<'a> {
                     let call = self.connected(callee, args, want)?;
                     return Ok(if may_bubble { call.try_() } else { call });
                 }
-                let args = self.args(callee, args)?;
+                let args = self.args(callee, Some(type_args), args)?;
                 let path = match self.static_fn_path(callee)? {
                     Some(path) => path,
                     None => self.top_path(callee)?,
@@ -2422,7 +2444,8 @@ impl<'a> Translator<'a> {
                 // library's own.
                 if !temper_tmpl::qname::by_connection(p, method, crate::connected::connects_std) {
                     let fish = self.turbofish(method, type_args)?;
-                    let call = self.call_method(method, &fish, receiver, p.nodes.list(args))?;
+                    let call =
+                        self.call_method(method, &fish, type_args, receiver, p.nodes.list(args))?;
                     return Ok(self.settled(id, call, may_bubble));
                 }
                 let mut all = vec![receiver];
@@ -2552,7 +2575,7 @@ impl<'a> Translator<'a> {
                 let call = if is_external(p, ctor) && library_of(p, ctor) == "core" {
                     self.connected(ctor, p.nodes.list(args), want)?
                 } else {
-                    let args = self.args(ctor, p.nodes.list(args))?;
+                    let args = self.args(ctor, None, p.nodes.list(args))?;
                     Expr::path(format!("{}::new", self.top_path(class)?)).call(args)
                 };
                 self.settled(id, call, may_bubble)
@@ -2629,7 +2652,7 @@ impl<'a> Translator<'a> {
                 self.arc(Expr::Macro("vec".into(), xs))
             }
             Node::FunctionLiteral { decl, params, body } => self.literal(id, decl, params, body)?,
-            Node::FunctionRef { target } => self.function_ref(target, ty)?,
+            Node::FunctionRef { target } => self.function_ref(id, target, ty)?,
             Node::CallValue {
                 may_bubble,
                 callee,

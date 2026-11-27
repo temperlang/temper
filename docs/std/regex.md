@@ -31,7 +31,7 @@ through the dialect and the data model. A named group is `(?name=…)`.
 |---|---|
 | `found(text)` | Whether the pattern matches anywhere in `text` |
 | `find(text, begin)` | The first `Match` from `begin`, or `null` if none |
-| `replace(text, format)` | Replaces each match with `format(match)` |
+| `replace(text, format)` | Replaces each match with `format(match)`; fails as `format` does |
 | `split(text)` | The parts between matches |
 | `Match.full`, `Match.groups` | The whole match, and named groups, each a `Group` |
 | `Group.name`, `value`, `begin`, `end` | A group's name, text, and where it is |
@@ -42,5 +42,12 @@ To build patterns as data, `RegexNode` has the kinds of node:
 specials `Begin`, `End`, `Dot`, `WordBoundary`, `Digit`, `Space`, and
 `Word`. Any of them `compiled()` is a `Regex`. Character classes and
 Unicode properties aren't supported yet.
+
+`replace` is generic over what its callback fails with, as core's `map`
+is: the first failure passes out, with no result, and `format` isn't
+called again; where the callback can't fail, neither can `replace`. A
+`RegexNode`'s own `replace` takes only a callback that can't fail (an
+interface's method can't be generic); `compiled()` gives the `Regex`
+whose `replace` takes one that may.
 
 Source: [regex.temper.md](../../lib/std/regex/regex.temper.md).

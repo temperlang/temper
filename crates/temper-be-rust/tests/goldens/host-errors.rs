@@ -1,6 +1,9 @@
 use std::sync::OnceLock;
 
 #[cfg(test)]
+use std::convert::Infallible;
+
+#[cfg(test)]
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -76,15 +79,18 @@ pub(crate) fn code_at(s: impl ToArcString, i: i32) -> temper_core::Result<i32> {
 #[cfg(test)]
 pub(crate) fn replaced(i: i32) -> temper_core::Result<Arc<String>> {
     at(i)?;
-    Ok(
+    Ok(temper_core::into_ok(
         temper_std::regex::RegexNodeTrait::compiled(&temper_std::regex::CodePoints::new("b"))
-            .replace(
+            .replace::<Infallible>(
                 "abc",
                 Arc::new(move |_match: temper_std::regex::Match| {
-                    temper_core::ListedTrait::get(&Arc::new(vec![Arc::new("x".to_string())]), i)
+                    Ok(temper_core::ListedTrait::get(
+                        &Arc::new(vec![Arc::new("x".to_string())]),
+                        i,
+                    ))
                 }),
             ),
-    )
+    ))
 }
 
 #[cfg(test)]

@@ -152,6 +152,30 @@ pub(crate) fn init() -> temper_core::Result<()> {
                 ),
                 temper_core::ListedTrait::len(&failed)
             );
+            let all_keyed = keyed("one+two").unwrap_or_else(|_| Arc::new("?".to_string()));
+            let none_keyed =
+                keyed("one+six+ten").unwrap_or_else(|e5| Arc::new(format!("missing {}", e5.0.key)));
+            let plain = temper_core::into_ok(
+                temper_std::regex::RegexNodeTrait::compiled(
+                    &temper_std::regex::CodePoints::new("o"),
+                )
+                .replace::<Infallible>(
+                    "two",
+                    Arc::new(move |_m: temper_std::regex::Match| Ok(Arc::new("0".to_string()))),
+                ),
+            );
+            println!(
+                "{all_keyed} {none_keyed} {plain} {}",
+                temper_core::into_ok(
+                    temper_std::regex::RegexNodeTrait::compiled(&temper_std::regex::CodePoints::new(
+                        "w",
+                    ))
+                    .replace::<Infallible>(
+                        "two",
+                        Arc::new(|a0: temper_std::regex::Match| Ok(bracketed(a0))),
+                    ),
+                )
+            );
             Ok(())
         })
         .clone()
@@ -451,4 +475,31 @@ pub(crate) fn up_to_two(n: i32) -> Result<i32, Missing> {
         return Err(Missing::new(Arc::new(n.to_string())));
     }
     Ok(n.wrapping_add(1))
+}
+
+pub(crate) fn keyed(text: impl ToArcString) -> Result<Arc<String>, Missing> {
+    let text = text.to_arc_string();
+    temper_std::regex::RegexNodeTrait::compiled(&temper_std::regex::Repeat::new(
+        temper_std::regex::RegexNode::new(temper_std::regex::CodeSet::new(
+            Arc::new(vec![temper_std::regex::CodePart::new(temper_std::regex::CodeRange::new(
+                97,
+                122,
+            ))]),
+            Some(false),
+        )),
+        1,
+        None,
+        Some(false),
+    ))
+    .replace::<Missing>(
+        text.clone(),
+        Arc::new(move |m: temper_std::regex::Match| {
+            println!("seen {}", m.full().value());
+            Ok(Arc::new(find(m.full().value())?.to_string()))
+        }),
+    )
+}
+
+pub(crate) fn bracketed(m: temper_std::regex::Match) -> Arc<String> {
+    Arc::new(format!("<{}>", m.full().value()))
 }

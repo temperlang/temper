@@ -30,7 +30,7 @@ static core::GlobalSlot<std::shared_ptr<temper_std::Regex>> commaItemStartRegex;
 
 core::Str bulletizeList(core::Str const & text) {
   global_init_init();
-  core::Str replaced = temper_globals::commaItemStartRegex.value->replace(text, [](std::shared_ptr<temper_std::Match>) -> core::Str { return TEMPER_STR("\n- "); });
+  core::Str replaced = *temper_globals::commaItemStartRegex.value->replace<core::Never>(text, [](std::shared_ptr<temper_std::Match>) -> core::Str { return TEMPER_STR("\n- "); });
   return core::String::slice(replaced, core::String::next(replaced, core::String::begin()), core::String::end(replaced));
 }
 

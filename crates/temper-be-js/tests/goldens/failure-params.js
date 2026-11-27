@@ -10,6 +10,15 @@ import {
   listedSorted,
   panic,
 } from "@temperlang/core";
+import {
+  CodePart,
+  CodePoints,
+  CodeRange,
+  CodeSet,
+  Match,
+  RegexNode,
+  Repeat,
+} from "@temperlang/std/regex";
 
 /**
  * @param {string} key
@@ -236,6 +245,32 @@ function upToTwo(n) {
   return (n + 1) | 0;
 }
 
+/**
+ * @param {string} text
+ * @returns {string}
+ * @throws {Missing}
+ */
+function keyed(text) {
+  /**
+   * @param {Match} m
+   * @returns {string}
+   * @throws {Missing}
+   */
+  function fn(m) {
+    console.log(`seen ${m.full.value}`);
+    return find(m.full.value).toString();
+  }
+  return /** @type {RegexNode} */ (/** @type {unknown} */ (new Repeat(/** @type {RegexNode} */ (/** @type {unknown} */ (new CodeSet(Object.freeze([/** @type {CodePart} */ (/** @type {unknown} */ (new CodeRange(97, 122)))]), false))), 1, null, false))).compiled().replace(text, fn);
+}
+
+/**
+ * @param {Match} m
+ * @returns {string}
+ */
+function bracketed(m) {
+  return `<${m.full.value}>`;
+}
+
 class FailureParamsError extends Error {}
 
 failureBase(FailureParamsError);
@@ -378,3 +413,21 @@ try {
   failed = Object.freeze([]);
 }
 console.log(`${listedJoin(/** @type {number[]} */ (bumped), ",", (n) => n.toString())} ${listedJoin(/** @type {number[]} */ (twice), ",", (n) => n.toString())} ${failed.length}`);
+/** @type {string} */
+let allKeyed;
+try {
+  allKeyed = keyed("one+two");
+} catch (e$) {
+  if (!(e$ instanceof Missing)) throw e$;
+  allKeyed = "?";
+}
+/** @type {string} */
+let noneKeyed;
+try {
+  noneKeyed = keyed("one+six+ten");
+} catch (e5) {
+  if (!(e5 instanceof Missing)) throw e5;
+  noneKeyed = `missing ${e5.key}`;
+}
+const plain = /** @type {RegexNode} */ (/** @type {unknown} */ (new CodePoints("o"))).compiled().replace("two", (m) => "0");
+console.log(`${allKeyed} ${noneKeyed} ${plain} ${/** @type {RegexNode} */ (/** @type {unknown} */ (new CodePoints("w"))).compiled().replace("two", bracketed)}`);

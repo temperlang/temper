@@ -498,14 +498,17 @@ namespace temper {
                 return result.second;
             }
 
+            // Each match replaced by what `formatFn` gives, which returns an
+            // `Expected` (RFC 164's failure parameter, `Never` where it can't
+            // fail): its first failure stops the loop and is returned.
             template<class T, class FormatFn, class RegexRefsT>
-            Str compiledReplace(
+            auto compiledReplace(
             std::shared_ptr<T> self,
             std::shared_ptr<AnyValueBase> compiled,
             const Str& text,
             FormatFn formatFn,
             std::shared_ptr<RegexRefsT> regexRefs
-            ) {
+            ) -> Expected<Str, List::FailureOf<FormatFn, decltype(regexRefs->get_match())>> {
                 std::shared_ptr<CompiledRegex> cr = std::dynamic_pointer_cast<CompiledRegex>(compiled);
                 if (cr == nullptr) {
                     return text;
@@ -530,8 +533,11 @@ namespace temper {
                     int32_t mBegin = fullGroup->get_begin();
                     int32_t mEnd = fullGroup->get_end();
                     result.append(text.data() + keepBegin, static_cast<size_t>(mBegin - keepBegin));
-                    Str replacement = formatFn(match);
-                    result.append(replacement.data(), replacement.size());
+                    auto replacement = formatFn(match);
+                    if (!replacement.has_value()) {
+                        return unexpected(replacement.error());
+                    }
+                    result.append(replacement->data(), replacement->size());
                     keepBegin = mEnd;
                     if (mEnd > begin_pos) {
                         begin_pos = mEnd;
