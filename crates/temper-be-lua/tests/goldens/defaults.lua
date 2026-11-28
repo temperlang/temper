@@ -47,6 +47,7 @@ local function named(name)
   if temper.is_null(name) then
     name = "nobody"
   end
+  ---@cast name string|temper.Null
   if temper.is_null(name) then
     return "null"
   else

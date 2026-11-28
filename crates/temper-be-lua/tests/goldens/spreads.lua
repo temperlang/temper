@@ -294,6 +294,7 @@ function Dial.constructor(this, level, note, twice)
   if temper.is_null(note) then
     note = "n"
   end
+  ---@cast note string|temper.Null
   if temper.is_null(twice) then
     twice = temper.int32_mul(level, 2)
   end
@@ -318,6 +319,7 @@ function Mark.constructor(this, note, size)
   if temper.is_null(note) then
     note = "n"
   end
+  ---@cast note string|temper.Null
   if temper.is_null(size) then
     size = 2
   end

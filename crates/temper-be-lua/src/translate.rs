@@ -1789,13 +1789,14 @@ impl<'a> Translator<'a> {
                         then,
                         els: Vec::new(),
                     });
+                    // Always cast, nullable types too: LuaLS doesn't see
+                    // `is_null` narrow, so the optional parameter (`?`)
+                    // would still read as possibly nil.
                     let ty = p.decls.get(local).ty;
-                    if !p.types.is_nullable(ty) {
-                        out.push(Stmt::Cast {
-                            name: self.name(param),
-                            ty: self.ty(ty)?,
-                        });
-                    }
+                    out.push(Stmt::Cast {
+                        name: self.name(param),
+                        ty: self.ty(ty)?,
+                    });
                 }
             }
             Node::Let { local, init } => {
