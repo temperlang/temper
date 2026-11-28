@@ -91,8 +91,8 @@ pub const RULES: NamingRules = NamingRules {
     fields_apart: true,
     types_apart: false,
     modules_share_names: false,
-    failure_suffix: None,
-    failure_member_reserved: &[],
+    error_suffix: None,
+    error_member_reserved: &[],
 };
 
 /// The crate name cargo gives a package: dashes become underscores, as

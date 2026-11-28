@@ -80,8 +80,8 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Deque.removeFirst()",
         Connection::Helper("deque_removefirst"),
     ),
-    // A declared failure's cause, the runtime's `failure_cause`, where
-    // it's a declared failure; its message, the `message` every failure
+    // A declared error's cause, the runtime's `failure_cause`, where
+    // it's a declared error; its message, the `message` every error
     // class has, as a getter.
     (
         "core.type Error.get cause()",
@@ -89,7 +89,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "core.type Error.get message()",
-        Connection::Translate(failure_message),
+        Connection::Translate(error_message),
     ),
     ("core.type Float64.abs()", Connection::Math("abs")),
     ("core.type Float64.acos()", Connection::Math("acos")),
@@ -603,8 +603,8 @@ fn boolean_to_string(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, No
     Ok(Expr::name("tostring").call(vec![t.expr(b)?]))
 }
 
-/// `Error.message`: the failure's `message`, its class's getter.
-fn failure_message(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+/// `Error.message`: the error's `message`, its class's getter.
+fn error_message(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let [failure] = args else {
         return Err(NotYet {
             what: "`Error.message` without its receiver".into(),

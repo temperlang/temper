@@ -24,12 +24,12 @@
 //! the shared programs (`crates/temper-be-testkit/programs/`), which
 //! cover operators, jumps, module state, string order, classes, and
 //! nullables beyond those tests, the testkit's programs of declared
-//! failures, `failures`, `host-failures`, and `failures-interop` (with
-//! host code that catches its failures, `tests/host/failures.lua`), and
-//! the specifications `failure-jumps` and `failure-params` ([`SPECS`]),
+//! errors, `declared-errors`, `host-declared-errors`, and `errors-interop` (with
+//! host code that catches its errors, `tests/host/errors.lua`), and
+//! the specifications `error-jumps` and `error-params` ([`SPECS`]),
 //! and on
 //! programs of Lua's own ([`HIDING`], [`HOISTING`], [`MEMBERS`],
-//! [`REPEATS`], [`locals`], and [`FAILURE_IMPORTS`]).
+//! [`REPEATS`], [`locals`], and [`ERROR_IMPORTS`]).
 //!
 //! - `goldens`: each program's generated library, laid out as Kotlin's,
 //!   with its `init.lua` matching the golden in `tests/goldens/`, named
@@ -476,26 +476,26 @@ fn cases() -> Vec<Case> {
     ));
     let (text, expected) = locals();
     cases.push(Case::inline("locals", "locals.temper.md", text, expected));
-    let (path, text) = FAILURE_IMPORTS[0];
-    let mut imports = Case::inline("failure-imports", path, text, vec!["-1".into()]);
-    let (path, text) = FAILURE_IMPORTS[1];
+    let (path, text) = ERROR_IMPORTS[0];
+    let mut imports = Case::inline("error-imports", path, text, vec!["-1".into()]);
+    let (path, text) = ERROR_IMPORTS[1];
     imports.sources.push((path.into(), text.into()));
     cases.push(imports);
     cases
 }
 
 /// The testkit's specifications (`kit::SPECS`) Lua runs, which other
-/// backends don't all yet: `failure-jumps`, `failure-params`, and
-/// `failure-generators`.
-const SPECS: [&str; 3] = ["failure-jumps", "failure-params", "failure-generators"];
+/// backends don't all yet: `error-jumps`, `error-params`, and
+/// `error-generators`.
+const SPECS: [&str; 3] = ["error-jumps", "error-params", "error-generators"];
 
-/// A library whose root module handles failures of a type only its
+/// A library whose root module handles errors of a type only its
 /// module `a` names, which the root then requires for `temper.catch` to
 /// check against, as it requires a type it casts to.
-const FAILURE_IMPORTS: [(&str, &str); 2] = [
+const ERROR_IMPORTS: [(&str, &str); 2] = [
     (
-        "failure-imports.temper.md",
-        "# Failure imports\n\n    let { lookup } = import(\"./a\");\n    \
+        "error-imports.temper.md",
+        "# Error imports\n\n    let { lookup } = import(\"./a\");\n    \
          let n = lookup(\"x\") orelse -1;\n    console.log(n.toString());\n",
     ),
     (
@@ -615,7 +615,7 @@ const LUA_PATH: &str = "?.lua;?/init.lua";
 
 /// Requires each library named on the command line in turn, after a line
 /// naming it, so one process runs them all; an error is a line too.
-/// An uncaught declared failure is the line of the runtime's report,
+/// An uncaught declared error is the line of the runtime's report,
 /// which says its causes too (`temper.failure_report`), as `temper run`'s.
 const RUNNER: &str = r#"local function report(err)
   local t = package.loaded["temper-core"]
@@ -703,7 +703,7 @@ fn luarc(libraries: &[&Path]) -> String {
 /// (`types/float/ops`).
 /// The runtime's regex engine needs Lua 5.3's `utf8` too (`regex/match`
 /// and `regex/zero-advance`, and the shared `panics`, `host-errors`, and
-/// `failure-params`).
+/// `error-params`).
 const NEEDS_LUA53: [&str; 7] = [
     "types-float-ops",
     "types-string-read",
@@ -711,7 +711,7 @@ const NEEDS_LUA53: [&str; 7] = [
     "regex-zero-advance",
     "panics",
     "host-errors",
-    "failure-params",
+    "error-params",
 ];
 
 /// Whether a library imports std's modules, which it then runs beside
@@ -1033,9 +1033,9 @@ fn runs() {
         if let Some(case) = cases.iter().find(|c| c.key == "async-turns") {
             host_interop(&lua, &dir, &case.expected, &mut failures);
         }
-        // Host code that catches `failures-interop`'s failures, likewise.
-        if let Some(case) = cases.iter().find(|c| c.key == "failures-interop") {
-            failures_interop(&lua, &dir, &case.expected, &mut failures);
+        // Host code that catches `errors-interop`'s errors, likewise.
+        if let Some(case) = cases.iter().find(|c| c.key == "errors-interop") {
+            errors_interop(&lua, &dir, &case.expected, &mut failures);
         }
         // Host code that plugs its own client into std `net`.
         let nets: Vec<&(&Case, PathBuf)> = apart.iter().filter(|(c, _)| is_net(c)).collect();
@@ -1190,15 +1190,15 @@ fn host_interop(lua: &str, dir: &Path, logged: &[String], failures: &mut Vec<Str
     kit::check_log(failures, "host interop", &run, &expected);
 }
 
-/// `tests/host/failures.lua`, host code that catches `failures-interop`'s
-/// declared failures with `pcall`, tells them apart with
+/// `tests/host/errors.lua`, host code that catches `errors-interop`'s
+/// declared errors with `pcall`, tells them apart with
 /// `temper.instance_of` by their own types, the library's base, a sealed
 /// interface's, and `temper.Failure`, reads their fields, messages, and
 /// causes, raises one of its own, and sees a panic is none of them,
 /// copied into `dir`, beside it.
-fn failures_interop(lua: &str, dir: &Path, logged: &[String], failures: &mut Vec<String>) {
+fn errors_interop(lua: &str, dir: &Path, logged: &[String], failures: &mut Vec<String>) {
     let script = dir.join("failures.lua");
-    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/failures.lua");
+    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/errors.lua");
     fs::copy(source, &script).unwrap();
     let run = Command::new(lua)
         .arg(&script)
@@ -1224,7 +1224,7 @@ fn failures_interop(lua: &str, dir: &Path, logged: &[String], failures: &mut Vec
             .map(String::from),
         )
         .collect();
-    kit::check_log(failures, "failures interop", &run, &expected);
+    kit::check_log(failures, "errors interop", &run, &expected);
 }
 
 /// Checks the generated libraries in `dir` with LuaLS, against the

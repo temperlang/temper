@@ -129,18 +129,18 @@ pub struct NamingRules {
     /// `class Engine` of one doesn't redefine another's exported
     /// `Engine`, and only exports can clash.
     pub modules_share_names: bool,
-    /// For failure types' names (classes and interfaces below core's
+    /// For error types' names (classes and interfaces below core's
     /// `Error`, the library's roots among them), a suffix and what takes
     /// its place: `("Error", "Exception")` in Java and C#, whose
     /// convention it is, so `ConfigError` is `ConfigException` there
     /// (RFC 164's naming rule, open for the team). `None` elsewhere.
-    pub failure_suffix: Option<(&'static str, &'static str)>,
-    /// Names a failure type's members may not take, beside
+    pub error_suffix: Option<(&'static str, &'static str)>,
+    /// Names an error type's members may not take, beside
     /// [`member_reserved`](Self::member_reserved)'s: the target's own
     /// exception's properties that mean something else there, as JS's
-    /// `Error` has `name` (the type's name), `stack`, and `cause`, so a
-    /// failure's field `name` is `name_` in JS. Empty elsewhere.
-    pub failure_member_reserved: &'static [&'static str],
+    /// `Error` has `name` (the type's name), `stack`, and `cause`, so an
+    /// error's field `name` is `name_` in JS. Empty elsewhere.
+    pub error_member_reserved: &'static [&'static str],
 }
 
 /// Output names, by [`DeclId`].
@@ -748,9 +748,9 @@ fn candidates(p: &Program, rules: &NamingRules, decl: DeclId, module_level: bool
     let exported = d.facts.contains(Facts::EXPORTED) || is_external(p, decl);
     let mut raw: Vec<&str> = vec![p.name(decl)];
     raw.extend(p.decls.alts(decl).iter().map(|&s| p.strings.get(s)));
-    let failure_suffix = rules.failure_suffix.filter(|_| {
+    let error_suffix = rules.error_suffix.filter(|_| {
         matches!(d.kind, DeclKind::Class | DeclKind::Interface)
-            && crate::failures::is_below_root(p, decl)
+            && crate::declared_errors::is_below_root(p, decl)
     });
     raw.into_iter()
         .filter(|r| !r.is_empty())
@@ -760,7 +760,7 @@ fn candidates(p: &Program, rules: &NamingRules, decl: DeclId, module_level: bool
                 Case::Snake => snake_case(r),
                 Case::Pascal => pascal_case(r),
             };
-            if let Some((from, to)) = failure_suffix {
+            if let Some((from, to)) = error_suffix {
                 if let Some(stem) = styled.strip_suffix(from) {
                     styled = format!("{stem}{to}");
                 }
@@ -995,15 +995,15 @@ fn name_module(
                 name_function(p, rules, reserved, item, &HashSet::new(), map)
             }
             Node::Class { decl, members } | Node::Interface { decl, members } => {
-                // A failure type's, also not as its target's exception's.
-                let failure = !rules.failure_member_reserved.is_empty()
-                    && crate::failures::is_below_root(p, decl);
-                let mut failure_reserved;
+                // An error type's, also not as its target's exception's.
+                let failure = !rules.error_member_reserved.is_empty()
+                    && crate::declared_errors::is_below_root(p, decl);
+                let mut error_reserved;
                 let member_reserved = match failure {
                     true => {
-                        failure_reserved = member_reserved.clone();
-                        failure_reserved.extend(rules.failure_member_reserved.iter().copied());
-                        &failure_reserved
+                        error_reserved = member_reserved.clone();
+                        error_reserved.extend(rules.error_member_reserved.iter().copied());
+                        &error_reserved
                     }
                     false => member_reserved,
                 };

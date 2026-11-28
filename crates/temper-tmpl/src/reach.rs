@@ -412,12 +412,12 @@ fn is_simple(p: &Program, pure: &HashSet<DeclId>, value: NodeId) -> bool {
         }
         Node::CallFunction {
             callee: d,
-            may_bubble: false,
+            may_fail: false,
             ..
         }
         | Node::CallMethod {
             method: d,
-            may_bubble: false,
+            may_fail: false,
             ..
         } => pure.contains(&d) && p.nodes.kids(value).iter().all(simple),
         _ => false,

@@ -26,17 +26,17 @@
 //! `T|temper.Null` for LuaLS. `orelse` and `catch` are the runtime's
 //! `temper.catch` of a function, which an `if` then follows with the
 //! fallback (and redoes a jump out of the body, which returns a signal
-//! saying which); it catches only declared failures, raising anything
+//! saying which); it catches only declared errors, raising anything
 //! else again, so a panic (`error("panic")`, as code with an error
 //! raises too) or a host error passes every handler.
-//! Declared failures (RFC 164) are instances of the runtime's types too,
+//! Declared errors (RFC 164) are instances of the runtime's types too,
 //! under each library's roots, `temper.type("lib.LibError",
 //! temper.Failure)`, `__tostring` giving their `message`, and `cause` a
 //! field; `throw` is Lua's `error(x)`, with `temper.with_cause(x, e)` in a
 //! handler, and a handler of them `temper.catch(function() … end,
 //! NotFound)`, which catches only what follows its function, by
 //! `temper.instance_of`, raising anything else again (notes/tmpl/nodes.md,
-//! "Declared failures").
+//! "Declared errors").
 //! What Lua can't write inline (`orelse`,
 //! statements before a value, as `??` makes, and `if` values that Lua's
 //! `and` and `or` can't choose) goes before its statement
@@ -185,17 +185,17 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);
     let p = settled.as_ref().unwrap_or(p);
-    // Failure parameters as their bounds in code: exceptions are
-    // unchecked (`temper_tmpl::failures::erase_params`).
-    let erased = temper_tmpl::failures::erase_params(p).map_err(|what| NotYet { what })?;
+    // Error parameters as their bounds in code: exceptions are
+    // unchecked (`temper_tmpl::declared_errors::erase_params`).
+    let erased = temper_tmpl::declared_errors::erase_params(p).map_err(|what| NotYet { what })?;
     let p = erased.as_ref().unwrap_or(p);
     // `Never<T>` as `T`, but where the profile keeps it
     // (`temper_tmpl::nevers`).
     let nevered = temper_tmpl::nevers::lower(p, &variant.profile);
     let p = nevered.as_ref().unwrap_or(p);
     // Handlers whose bodies can't fail as their bodies alone
-    // (`temper_tmpl::failures`).
-    let alive = temper_tmpl::failures::drop_dead_handlers(p);
+    // (`temper_tmpl::declared_errors`).
+    let alive = temper_tmpl::declared_errors::drop_dead_handlers(p);
     let p = alive.as_ref().unwrap_or(p);
     // Operands that run before an `orelse` or a block's value, which Lua
     // writes as statements before, held first (`temper_tmpl::spill`).

@@ -121,8 +121,8 @@ pub const FILES: &[(&str, &str)] = &[
         include_str!("../runtime/temper-core/string_builder.hpp"),
     ),
     (
-        "temper_bubble.hpp",
-        include_str!("../runtime/temper-core/temper_bubble.hpp"),
+        "temper_panic.hpp",
+        include_str!("../runtime/temper-core/temper_panic.hpp"),
     ),
     (
         "test_main.hpp",

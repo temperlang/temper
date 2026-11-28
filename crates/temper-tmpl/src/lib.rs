@@ -38,9 +38,9 @@ pub mod cells;
 #[cfg(any(unix, windows))]
 mod children;
 pub mod coroutines;
+pub mod declared_errors;
 mod decls;
 pub mod errors;
-pub mod failures;
 pub mod host;
 mod ids;
 pub mod line_directives;

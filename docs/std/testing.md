@@ -26,7 +26,7 @@ test("lookup") { test =>
 ```
 
 A test may throw any error, unhandled, as a call that throws a declared
-failure does (`s.toInt32()`, `new Date(y, m, d)`): the error fails the
+error does (`s.toInt32()`, `new Date(y, m, d)`): the error fails the
 test, saying its message.
 
 To check that something panics, put it in an `assertPanics` block,

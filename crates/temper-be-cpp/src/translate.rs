@@ -11,7 +11,7 @@
 //! (`core::not_null`, or `checked_cast` for a class).
 //!
 //! **Handlers**, `orelse` and `catch`, branch on their body's result
-//! ([`failures`]), each side giving its value where the handler's goes
+//! ([`declared_errors`]), each side giving its value where the handler's goes
 //! (returned, assigned, or dropped). An `orelse` or a `BlockValue` (`??`)
 //! inside an expression puts its
 //! statements before the statement it's in, those before it that do
@@ -113,7 +113,7 @@
 //! it does nothing.
 
 mod classes;
-mod failures;
+mod declared_errors;
 mod functions;
 mod groups;
 
@@ -315,24 +315,24 @@ pub struct Translator<'a> {
     /// Locals that lambdas capture and that are assigned, which are
     /// cells ([`functions`]).
     cells: HashSet<DeclId>,
-    /// Where a declared failure goes from the code being translated
-    /// ([`failures`]).
+    /// Where a declared error goes from the code being translated
+    /// ([`declared_errors`]).
     fail_to: FailTo,
     /// A failing call already computed, and its value, `*lookupResult`,
-    /// which a handler's body reads in its place ([`failures`]).
+    /// which a handler's body reads in its place ([`declared_errors`]).
     substitute: Option<(NodeId, Expr)>,
     /// The failing call being translated as it is, not propagated.
     raw_call: Option<NodeId>,
 }
 
-/// Where a declared failure goes from the code being translated, as
-/// [`failures`] says.
+/// Where a declared error goes from the code being translated, as
+/// [`declared_errors`] says.
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) enum FailTo {
     /// Nowhere: the code can't fail.
     Nowhere,
     /// Returned, `return core::unexpected(e);`, from a function or lambda
-    /// giving a `core::Expected` of these, its value and failure types.
+    /// giving a `core::Expected` of these, its value and error types.
     Return(TypeId, TypeId),
     /// Out of the module's init, or a test, `core::uncaught_failure(e);`.
     Init,
@@ -590,7 +590,7 @@ impl<'a> Translator<'a> {
     fn ty(&self, ty: TypeId) -> R<String> {
         Ok(match self.p.types.get(ty) {
             // `temper_tmpl::nevers` made each `Never<T>` the `T` it stands
-            // for, as this profile has no bottom type, but a failure
+            // for, as this profile has no bottom type, but an error
             // parameter's argument, "can't fail" (RFC 164), an empty
             // struct that's never made.
             TypeData::Never(_) => "core::Never".into(),
@@ -1056,7 +1056,7 @@ impl<'a> Translator<'a> {
         for import in &imports {
             init.push(init_call(p, import.from));
         }
-        // A failure nothing handles there ends the init.
+        // An error nothing handles there ends the init.
         self.fail_to = FailTo::Init;
         self.init_stmts(module.init, &mut init)?;
         // Then, where the tests are, what only they reach: the modules
@@ -1513,7 +1513,7 @@ impl<'a> Translator<'a> {
         // A `return` without a value that ends a function says nothing,
         // but where it gives a `core::Expected<void, F>`.
         if result == TypeId::VOID && expected {
-            failures::expected_void(&mut stmts);
+            declared_errors::expected_void(&mut stmts);
         } else if result == TypeId::VOID && stmts.last() == Some(&Stmt::Return(None)) {
             stmts.pop();
         }
@@ -2469,12 +2469,12 @@ impl<'a> Translator<'a> {
         Ok(self.core(f).call(values))
     }
 
-    /// A call that can't fail only because a failure parameter (RFC 164)
+    /// A call that can't fail only because an error parameter (RFC 164)
     /// is given `Never<…>`, as its result's value, `*f(…)`, which always
-    /// holds one (`failures::declared_failure`); else the call itself.
+    /// holds one (`declared_errors::declared_error`); else the call itself.
     fn settled(&self, id: NodeId, call: Expr) -> Expr {
         let p = self.p;
-        let fail = temper_tmpl::failures::declared_failure(p, id);
+        let fail = temper_tmpl::declared_errors::declared_error(p, id);
         match fail.is_some_and(|f| p.types.is_never(f)) {
             true => Expr::unary(Unary::Deref, call),
             false => call,
@@ -2946,7 +2946,7 @@ impl<'a> Translator<'a> {
                     let mut all = vec![receiver];
                     all.extend_from_slice(args);
                     self.call = id;
-                    if temper_tmpl::failures::passes_results(p, args) {
+                    if temper_tmpl::declared_errors::passes_results(p, args) {
                         let Some(f) = connected::lookup_try(&self.qname(method)) else {
                             let qname = self.qname(method);
                             return not_yet(format!("{qname} with a callback that may fail"));

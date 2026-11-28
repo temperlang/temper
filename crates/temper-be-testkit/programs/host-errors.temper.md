@@ -1,9 +1,9 @@
 # Host errors
 
-`orelse` handles only the failures Temper declares. A builtin that
+`orelse` handles only the errors Temper declares. A builtin that
 doesn't declare one but whose docs say it panics, as reading past a
 list's end or a string's does, panics on every backend, whatever its
-host does there: never a failure that `orelse` would handle, nor a
+host does there: never an error that `orelse` would handle, nor a
 host's own error. So does a callback a builtin runs, as a regex's
 `replace` does. Each test here panics past an `orelse`, even inside a
 function that may throw for other reasons, so it fails saying why;

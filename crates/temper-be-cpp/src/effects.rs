@@ -209,8 +209,8 @@ impl Effects {
     fn node_in(&self, p: &Program, id: NodeId, names: &NameMap, ctor: bool) -> Effect {
         let mut effect = Effect::default();
         let this = |object: NodeId| ctor && matches!(p.nodes.get(object), Node::This {});
-        let bubbles = |b: bool| Effect {
-            bubbles: b,
+        let fails = |b: bool| Effect {
+            fails: b,
             ..Effect::default()
         };
         // A function literal's body runs where it's called, not here.
@@ -222,12 +222,12 @@ impl Effects {
             let here = match p.nodes.get(n) {
                 // A function value may do anything, its captures' writes
                 // among them.
-                Node::CallValue { may_bubble, .. } => Effect {
+                Node::CallValue { may_fail, .. } => Effect {
                     reads: true,
                     writes: true,
                     ..Effect::default()
                 }
-                .and(bubbles(may_bubble)),
+                .and(fails(may_fail)),
                 Node::Local { local } if self.cells.contains(&local) => Effect {
                     reads: true,
                     ..Effect::default()
@@ -253,19 +253,17 @@ impl Effects {
                 },
                 Node::CallFunction {
                     callee: d,
-                    may_bubble,
+                    may_fail,
                     ..
                 }
                 | Node::CallMethod {
                     method: d,
-                    may_bubble,
+                    may_fail,
                     ..
                 }
                 | Node::New {
-                    ctor: d,
-                    may_bubble,
-                    ..
-                } => self.called(p, d, names).and(bubbles(may_bubble)),
+                    ctor: d, may_fail, ..
+                } => self.called(p, d, names).and(fails(may_fail)),
                 // An integer division panics for a zero divisor, and a
                 // cast where it fails, as `panic()` does.
                 Node::Op { op, .. } => Effect {
@@ -276,7 +274,7 @@ impl Effects {
                     writes: true,
                     ..Effect::default()
                 },
-                Node::Throw { .. } => bubbles(true),
+                Node::Throw { .. } => fails(true),
                 // Stopping the program shows before or after anything
                 // else that shows, as code with an error does.
                 Node::Panic {} | Node::Error { .. } => Effect {

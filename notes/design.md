@@ -305,7 +305,7 @@ split out someday, but for now it ships with the compiler.
 - An unresolvable node becomes an **error node**. Its type is unknown,
   which never causes an error itself, so surrounding code keeps checking
   without a cascade of follow-on errors.
-- Backends translate an error node into a runtime failure carrying the
+- Backends translate an error node into a runtime error carrying the
   message (`throw`, `panic!`, `raise`, …). The rest of the library still
   works, matching Temper's philosophy.
 
@@ -318,14 +318,14 @@ A small, explicitly specified, fully settled IR:
   `return`, `throw`, `try`, labeled `break`/`continue`); expressions (calls,
   operators, member access, literals, lambdas, casts, null checks).
 - Types are tmpl's own: nominal types with arguments, function types,
-  nullable types, and "may fail" (a declared failure type), never frontend objects.
+  nullable types, and "may fail" (a declared error type), never frontend objects.
 - Names are tmpl's own (section 8).
 - It depends on nothing in the frontend, so backends build and test against
   tmpl alone, and a tmpl dump is a readable debugging format.
 
 Shared lowerings run on tmpl before the backends, chosen per backend:
 
-- **Failure handling:** exceptions, result values, or error codes.
+- **Error handling:** exceptions, result values, or error codes.
 - **Coroutines:** native async/generators, or state machines.
 - **Control flow:** labeled breaks for languages without them, expressions
   that must become statements, and so on.

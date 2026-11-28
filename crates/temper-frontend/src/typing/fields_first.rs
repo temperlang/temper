@@ -315,7 +315,7 @@ impl Settle {
                 }
                 None
             }
-            // The fallback may follow a failure anywhere in the body.
+            // The fallback may follow an error anywhere in the body.
             NodeKind::Orelse if children.len() == 2 => {
                 let body = self.fields_flow(cx, children[0], set.clone());
                 let fallback = self.fields_flow(cx, children[1], set);

@@ -13,8 +13,8 @@
 //! resolved, or until the body ends.
 
 use crate::analysis::walk;
+use crate::declared_errors;
 use crate::decls::{DeclKind, Facts};
-use crate::failures;
 use crate::ids::{DeclId, NodeId, Span, TypeId};
 use crate::nodes::Flags;
 use crate::schema::{Kind, Node};
@@ -42,7 +42,7 @@ pub enum CoroutineStrategy {
     /// next step reads the result by `getPromiseResultSync(promise)`,
     /// which throws core's `BrokenPromise` if the promise is broken. A
     /// state in an `orelse` or a `catch` is in one too, whose fallback
-    /// goes to the handler's state, keeping a `catch`'s failure.
+    /// goes to the handler's state, keeping a `catch`'s error.
     TranslateToRegularFunction,
 }
 
@@ -143,7 +143,7 @@ impl Helpers {
     }
 }
 
-/// One state: its statements, and what handles a failure in them, if
+/// One state: its statements, and what handles an error in them, if
 /// anything.
 struct State {
     stmts: Vec<NodeId>,
@@ -152,7 +152,7 @@ struct State {
     done: bool,
 }
 
-/// What handles a failure: an `orelse`'s or a `catch`'s fallback, which
+/// What handles an error: an `orelse`'s or a `catch`'s fallback, which
 /// starts at `state`; for a `catch`, `caught` is its local, made a
 /// nullable local of the factory's, which the fallback reads.
 #[derive(Clone, Copy)]
@@ -221,7 +221,7 @@ fn walk_own(p: &Program, id: NodeId, visit: &mut impl FnMut(NodeId)) {
 
 /// Whether any of `stmts` may fail.
 fn may_fail(p: &Program, stmts: &[NodeId]) -> bool {
-    stmts.iter().any(|&s| failures::may_fail(p, s))
+    stmts.iter().any(|&s| declared_errors::may_fail(p, s))
 }
 
 /// A local's first value where it's declared before it's set: its type's
@@ -252,7 +252,7 @@ fn to_state_machine(b: &mut Builder, h: &Helpers, literal: NodeId) -> R<()> {
         return Err("a generator whose result isn't Generator<Y> or SafeGenerator<Y>".into());
     };
     // A step fails as the body may, and so does the generator's `next()`.
-    let fail = failures::generator_failure(p, decl);
+    let fail = declared_errors::generator_error(p, decl);
     let gen_result = b.applied(h.generator_result, &[yields]);
     let adapt = match fail {
         Some(_) => {
@@ -871,8 +871,8 @@ impl Machine<'_> {
         Ok(None)
     }
 
-    /// `body`, its failures handled by `fallback`, in states of their
-    /// own, which `caught`, a `catch`'s local, tells the failure.
+    /// `body`, its errors handled by `fallback`, in states of their
+    /// own, which `caught`, a `catch`'s local, tells the error.
     fn handled_into(
         &mut self,
         body: NodeId,
@@ -948,7 +948,7 @@ impl Machine<'_> {
         self.emit(stored);
         // Its pause, which can't fail, in a state of its own outside a
         // `catch` where this one may fail, so a `catch`'s states that fail
-        // never return, which targets that bind the failure can't handle
+        // never return, which targets that bind the error can't handle
         // in place.
         let here = &self.states[self.current];
         if here.handler.is_some_and(|h| h.caught.is_some()) && may_fail(self.p(), &here.stmts) {
@@ -1047,7 +1047,7 @@ impl Machine<'_> {
                 let set = self.set_state(handler.state);
                 let void = self.b.void();
                 let tried = match handler.caught {
-                    // The failure, in the step's own local, kept in the
+                    // The error, in the step's own local, kept in the
                     // `catch`'s for its fallback.
                     Some(caught) => {
                         let ty = self.p().decls.get(caught).ty;

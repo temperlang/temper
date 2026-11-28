@@ -267,7 +267,7 @@ fn gitignore_files_skip_what_they_list() {
     assert!(passed);
 }
 
-/// A test may throw any error, unhandled, as a call's declared failure:
+/// A test may throw any error, unhandled, as a call's declared error:
 /// the test fails, saying the error's message.
 #[test]
 fn tests_may_throw_any_error() {
@@ -494,10 +494,10 @@ fn libraries_import_each_other() {
     assert!(passed);
 }
 
-/// A failure type is under a root of its own library: another
-/// library's root, or a failure type under one, is sealed to it.
+/// An error type is under a root of its own library: another
+/// library's root, or an error type under one, is sealed to it.
 #[test]
-fn failure_roots_belong_to_their_library() {
+fn error_roots_belong_to_their_library() {
     let tree = write_tree(
         "failure-roots",
         &[
@@ -528,8 +528,8 @@ fn failure_roots_belong_to_their_library() {
     assert_eq!(
         err,
         format!(
-            "{root}/app/a.temper:2:7: error: UtilError is another library's failure type; \
-             a failure type is under a root of its own library\n"
+            "{root}/app/a.temper:2:7: error: UtilError is another library's error type; \
+             an error type is under a root of its own library\n"
         )
     );
     assert!(!passed);

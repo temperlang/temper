@@ -16,7 +16,7 @@
 //! parameters' bounds are read the same way, as `MapKey<K>` for `K` in
 //! `Map<K extends MapKey<K>, V>`.
 
-use crate::builtins::{FAILURE_ROOT, TYPES};
+use crate::builtins::{ERROR_ROOT, TYPES};
 use std::sync::OnceLock;
 use temper_syntax::ast::{Ast, Builtin as AstBuiltin, Value, build};
 use temper_syntax::lex::SourceKind;
@@ -54,7 +54,7 @@ const READ_TYPES: [&str; 32] = [
     "StringIndexOption",
     "NoStringIndex",
     "DenseBitVector",
-    FAILURE_ROOT,
+    ERROR_ROOT,
     "CoreError",
     "MissingKey",
     "ParseError",
@@ -833,7 +833,7 @@ mod tests {
             }
         );
         // A method's own type parameters, which may shadow the type's,
-        // one a failure parameter (`E`, RFC 164).
+        // one an error parameter (`E`, RFC 164).
         let (o, e) = (CoreType::Own(0), CoreType::Own(1));
         let list = |x: &CoreType| match builtin("List") {
             CoreType::Builtin(b) => CoreType::Applied(b, vec![x.clone()]),

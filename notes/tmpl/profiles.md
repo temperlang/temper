@@ -144,7 +144,7 @@ variant's connection table names, Proposed 2026-10-29,
 [names.md](names.md#level-3-connected-declarations)); named function types; properties to methods;
 generators and `async` to state machines (they add labels and
 switches); `ForOf` (only for targets without loops over iterables);
-failure; `EqNullable`; `Switch` to `if`; labeled jumps; statements out
+error; `EqNullable`; `Switch` to `if`; labeled jumps; statements out
 of expressions; evaluation-order temporaries; cells; module `var`
 synchronization; module init; `Void` values. Each declares what it
 needs and what it may add, and the validator checks both.
@@ -176,7 +176,7 @@ As built (2026-10-30, in `crates/temper-be-py`): a variant is a
 lowered) and Python's `NamingRules`. `lower` and the hoisting pass
 aren't built yet: none of the 7 translated tests needs one, and a
 program that does is reported as not yet. The either-or choices
-(failure, module init, and the rest) wait for the passes that read
+(error, module init, and the rest) wait for the passes that read
 them.
 
 ### As built: Rust
@@ -189,9 +189,9 @@ so subset A needs no lowering. Its choices, as Level 2's table has
 them, are made by the translator for now, since no pass reads them yet:
 
 - **Failure: results,** without a pass. A function that may fail
-  returns `Result<T, F>` for its failure type `F`
-  ([nodes.md](nodes.md), "Declared failures"; `temper_core::Result<T>`
-  for any failure), each call that may fail takes `?`, and an `Error`
+  returns `Result<T, F>` for its error type `F`
+  ([nodes.md](nodes.md), "Declared errors"; `temper_core::Result<T>`
+  for any error), each call that may fail takes `?`, and an `Error`
   node is `panic!()`. The results pass waits for `orelse` (subset B and
   C).
 - **Module init: once, on `init` or first use,** as Kotlin's since
@@ -235,8 +235,8 @@ JS keeps natively everything else subset A has: labeled `break` and
 Its choices, made by the translator for now, as Level 2's table has
 them:
 
-- **Failure: exceptions.** A failure is a thrown `Error` subclass, its
-  own class ([nodes.md](nodes.md), "Declared failures"). An `Error`
+- **Failure: exceptions.** An error is a thrown `Error` subclass, its
+  own class ([nodes.md](nodes.md), "Declared errors"). An `Error`
   node is the runtime's `panic()`, as are `divIntInt` and `modIntInt`
   for a zero divisor.
 - **Module init: eager,** as Kotlin's: a module's code runs once, when
@@ -281,8 +281,8 @@ labeled `break` and `continue`, `do … while` with `continue`, and `?:`
 for `IfValue`. Its choices, made by the translator for now, as Level 2's
 table has them:
 
-- **Failure: exceptions.** A failure is an unchecked exception of its
-  own class ([nodes.md](nodes.md), "Declared failures"). An `Error`
+- **Failure: exceptions.** An error is an unchecked exception of its
+  own class ([nodes.md](nodes.md), "Declared errors"). An `Error`
   node throws an `AssertionError`, as `panic()` does; division is
   Java's own, whose `ArithmeticException` for a zero divisor is the
   panic.
@@ -337,8 +337,8 @@ innermost is a `goto` to a label after the loop (`outerEnd: ;`) or at
 the end of its body (`outerNext: ;`), as Level 2's table has it. Its
 choices, made by the translator for now:
 
-- **Failure: exceptions.** A failure is an exception of its own class
-  ([nodes.md](nodes.md), "Declared failures"). An `Error` node is
+- **Failure: exceptions.** An error is an exception of its own class
+  ([nodes.md](nodes.md), "Declared errors"). An `Error` node is
   `throw Core.Panic(…)`, and `Core.ThrowPanic<T>(…)` in an expression;
   division is C#'s own, whose `DivideByZeroException` is the panic.
 - **Module init: class init,** as Kotlin's: a module is a static class,
@@ -409,7 +409,7 @@ choices, made by the translator for now:
 
 - **Failure: values.** A function that may fail returns
   `core::Expected<T, F>`, never throwing ([nodes.md](nodes.md),
-  "Declared failures"). An `Error` node is `core::panic()`.
+  "Declared errors"). An `Error` node is `core::panic()`.
   `Int::div_wrap` and `Int::mod_wrap` panic on a zero divisor; a
   literal divisor other than 0 and -1 takes C++'s own `/` and `%`.
 - **Module init: on first use,** as Kotlin's since #636:
@@ -517,9 +517,9 @@ to a label ending the loop's body, which a `repeat`'s condition follows
 from an inner loop to a label named for the outer one. Its choices,
 made by the translator for now:
 
-- **Failure: errors.** A failure is raised with `error(x)`, a value of
+- **Failure: errors.** An error is raised with `error(x)`, a value of
   its type under `temper.Failure`, and handled by `temper.catch`
-  ([nodes.md](nodes.md), "Declared failures"). An `Error` node is
+  ([nodes.md](nodes.md), "Declared errors"). An `Error` node is
   `error("panic")`, as `panic()` is; `temper.int32_div` and `int32_mod`
   panic on a zero divisor.
 - **Module init: eager,** as Kotlin's: a module's chunk runs once, at

@@ -95,7 +95,7 @@ impl Sources {
         for (source, start) in self.layers_for(path) {
             match source.read(&path[start..]) {
                 Ok(text) => return Ok(text),
-                // A layer's own failure says more than another's absence.
+                // A layer's own error says more than another's absence.
                 Err(e) if error.as_ref().is_none_or(|old| old.kind() == NotFound) => {
                     error = Some(e)
                 }

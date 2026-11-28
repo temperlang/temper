@@ -32,13 +32,13 @@
 //! tmpl form, and `===` or a null-safe helper call for `==` with a side
 //! that may be null), `orelse` as `try { … } catch { … }` and `panic()`
 //! (and code with an error) as the runtime's `panic()`, as Kotlin's, but
-//! catching only declared failures, so anything else (a panic, a plain
+//! catching only declared errors, so anything else (a panic, a plain
 //! `Error`; a host error) passes, and `orelse panic()` panics with the
-//! failure as its `cause`; declared failures (RFC 164) as classes extending JS's `Error`
+//! error as its `cause`; declared errors (RFC 164) as classes extending JS's `Error`
 //! under each library's roots, `throw` as JS's, with the standard `cause`
 //! in a handler, and handlers that rethrow all but what their bodies may
 //! fail with, by `instanceof` (`translate::classes` and
-//! notes/tmpl/nodes.md, "Declared failures", say how); and generics, with JSDoc's `@template`
+//! notes/tmpl/nodes.md, "Declared errors", say how); and generics, with JSDoc's `@template`
 //! (`{Named} T` for a bound), and core's lists as arrays (a `List` or
 //! `Listed` frozen and `readonly T[]` for TypeScript, cast to `T[]` for
 //! the runtime's helpers, where Kotlin's types don't check), maps as
@@ -192,17 +192,17 @@ fn generate(p: &Program, variant: &Variant, maps: Option<&str>) -> Result<Vec<Ou
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);
     let p = settled.as_ref().unwrap_or(p);
-    // Failure parameters as their bounds in code: exceptions are
-    // unchecked (`temper_tmpl::failures::erase_params`).
-    let erased = temper_tmpl::failures::erase_params(p).map_err(|what| NotYet { what })?;
+    // Error parameters as their bounds in code: exceptions are
+    // unchecked (`temper_tmpl::declared_errors::erase_params`).
+    let erased = temper_tmpl::declared_errors::erase_params(p).map_err(|what| NotYet { what })?;
     let p = erased.as_ref().unwrap_or(p);
     // `Never<T>` as `T`, but where the profile keeps it
     // (`temper_tmpl::nevers`).
     let nevered = temper_tmpl::nevers::lower(p, &variant.profile);
     let p = nevered.as_ref().unwrap_or(p);
     // Handlers whose bodies can't fail as their bodies alone
-    // (`temper_tmpl::failures`).
-    let alive = temper_tmpl::failures::drop_dead_handlers(p);
+    // (`temper_tmpl::declared_errors`).
+    let alive = temper_tmpl::declared_errors::drop_dead_handlers(p);
     let p = alive.as_ref().unwrap_or(p);
     // `Switch` as `if`s (`temper_tmpl::switches`); none comes here yet.
     let chained = (!variant.profile.native.contains(Features::SWITCH))
@@ -329,7 +329,7 @@ fn generate(p: &Program, variant: &Variant, maps: Option<&str>) -> Result<Vec<Ou
     // sets no time limit; Kotlin's runs Mocha. A glob, which Node 21 and
     // later expand, since a directory isn't one: tests files only, the
     // `.test.js` files Bun and Deno find too, not host code under `test/`.
-    // With source maps on, so failures point at Temper lines; Bun and
+    // With source maps on, so errors point at Temper lines; Bun and
     // Deno running the script as `node` take the flag too.
     let tests = if tested {
         r#"

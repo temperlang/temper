@@ -23,7 +23,7 @@
 //! that, as an ordinary class, as Kotlin Temper's interpreter does.
 
 pub mod compile_time;
-pub(crate) mod failures;
+pub(crate) mod declared_errors;
 mod frame;
 mod lower;
 mod maps;
@@ -83,8 +83,8 @@ pub enum Val {
     /// A class or interface, as its name's value, for `new`, `as` and `is`.
     Class(Rc<Class>),
     Object(Rc<Object>),
-    /// A value of one of core's failure types, as `MissingKey`.
-    CoreFailure(Rc<CoreFailure>),
+    /// A value of one of core's error types, as `MissingKey`.
+    CoreDeclaredError(Rc<CoreDeclaredError>),
     Console,
     /// A type name used as a value; types aren't run yet.
     Type,
@@ -160,7 +160,7 @@ impl Val {
                 | Val::NullableType(_)
                 | Val::ValueResult(_)
                 | Val::Object(_)
-                | Val::CoreFailure(_)
+                | Val::CoreDeclaredError(_)
                 | Val::Fn(_)
                 | Val::Class(_)
         )
@@ -207,13 +207,13 @@ fn take_containers(value: &mut Val, work: &mut Vec<Val>) {
         Val::Object(object) => {
             if let Some(object) = Rc::get_mut(object) {
                 object.fields.get_mut().iter_mut().for_each(&mut take);
-                // A failure's cause, as a long chain of them may be.
+                // An error's cause, as a long chain of them may be.
                 if let Some(Cause(cause)) = object.thrown.get_mut().and_then(|t| t.cause.as_mut()) {
                     take(cause);
                 }
             }
         }
-        Val::CoreFailure(failure) => {
+        Val::CoreDeclaredError(failure) => {
             if let Some(failure) = Rc::get_mut(failure) {
                 failure.fields.iter_mut().for_each(|(_, v)| take(v));
                 if let Some(Cause(cause)) = failure.thrown.get_mut().and_then(|t| t.cause.as_mut())
@@ -269,24 +269,24 @@ pub struct Class {
 pub struct Object {
     class: Rc<Class>,
     fields: RefCell<Vec<Val>>,
-    /// A failure's, once thrown ([`Thrown`]).
+    /// An error's, once thrown ([`Thrown`]).
     thrown: OnceCell<Box<Thrown>>,
 }
 
-/// A value of one of core's failure types, which the interpreter makes
+/// A value of one of core's error types, which the interpreter makes
 /// itself where a builtin fails: its type's name, as `MissingKey`, its
 /// public fields' names and values, and where it was first thrown.
 #[derive(Debug)]
-pub struct CoreFailure {
+pub struct CoreDeclaredError {
     type_name: &'static str,
     fields: Vec<(&'static str, Val)>,
     thrown: OnceCell<Box<Thrown>>,
 }
 
-impl CoreFailure {
+impl CoreDeclaredError {
     /// A value of `type_name` with `fields`.
     fn value(type_name: &'static str, fields: Vec<(&'static str, Val)>) -> Val {
-        Val::CoreFailure(Rc::new(CoreFailure {
+        Val::CoreDeclaredError(Rc::new(CoreDeclaredError {
             type_name,
             fields,
             thrown: OnceCell::new(),
@@ -305,7 +305,7 @@ impl CoreFailure {
             at,
             cause: Some(Cause(cause)),
         }));
-        Val::CoreFailure(Rc::new(CoreFailure {
+        Val::CoreDeclaredError(Rc::new(CoreDeclaredError {
             type_name,
             fields: Vec::new(),
             thrown,
@@ -319,13 +319,13 @@ impl CoreFailure {
             ("input", Val::Str(input.into())),
             ("reason", Val::Str(reason.into())),
         ];
-        Abrupt::Throw(CoreFailure::value("ParseError", fields))
+        Abrupt::Throw(CoreDeclaredError::value("ParseError", fields))
     }
 
-    /// Its message, as a declared failure's default one says it: `missing
+    /// Its message, as a declared error's default one says it: `missing
     /// key (key: a)`.
     fn message(&self) -> String {
-        let mut out = failures::words(self.type_name);
+        let mut out = declared_errors::words(self.type_name);
         let shown: Vec<String> = (self.fields.iter())
             .map(|(name, value)| format!("{name}: {}", to_string(value)))
             .collect();
@@ -335,7 +335,7 @@ impl CoreFailure {
         out
     }
 
-    /// The failure being handled where it was first thrown, or null.
+    /// The error being handled where it was first thrown, or null.
     fn cause(&self) -> Val {
         match self.thrown.get().and_then(|t| t.cause.as_ref()) {
             Some(Cause(cause)) => cause.clone(),
@@ -344,12 +344,12 @@ impl CoreFailure {
     }
 }
 
-/// Where a failure, an object or a core failure, was first thrown, once
+/// Where an error, an object or a core error, was first thrown, once
 /// it's thrown.
 fn thrown_cell(failure: &Val) -> Option<&OnceCell<Box<Thrown>>> {
     match failure {
         Val::Object(object) => Some(&object.thrown),
-        Val::CoreFailure(failure) => Some(&failure.thrown),
+        Val::CoreDeclaredError(failure) => Some(&failure.thrown),
         _ => None,
     }
 }
@@ -364,17 +364,17 @@ impl Object {
     }
 }
 
-/// What a declared failure keeps from the first time it's thrown (RFC
+/// What a declared error keeps from the first time it's thrown (RFC
 /// 164), which a report of it says: where, as a library-wide position,
-/// and its cause, the failure being handled there, if any. Thrown again,
-/// it keeps these, so no failure's causes loop back to it.
+/// and its cause, the error being handled there, if any. Thrown again,
+/// it keeps these, so no error's causes loop back to it.
 #[derive(Debug)]
 struct Thrown {
     at: u32,
     cause: Option<Cause>,
 }
 
-/// A failure's cause: a declared failure, its object, a value so that a
+/// An error's cause: a declared error, its object, a value so that a
 /// long chain of causes drops without recursing, as values do.
 #[derive(Debug)]
 struct Cause(Val);
@@ -389,7 +389,7 @@ pub struct Generator {
     kind: GeneratorKind,
 }
 
-/// How running stopped early: a failure or panic, a jump out of a `for …
+/// How running stopped early: an error or panic, a jump out of a `for …
 /// of` body's call to the frame around it, or a generator's body pausing,
 /// at a `yield` or an `await`.
 #[derive(Debug)]
@@ -402,9 +402,9 @@ enum Abrupt {
     Yield(Val),
     /// An `await` of a promise that isn't resolved yet.
     Await(Rc<Promise>),
-    /// A declared failure, from `throw` (RFC 164), which handlers handle
-    /// as they do a `Fail`: an object of a failure type, or a
-    /// [`Val::CoreFailure`] from a builtin.
+    /// A declared error, from `throw` (RFC 164), which handlers handle
+    /// as they do a `Fail`: an object of an error type, or a
+    /// [`Val::CoreDeclaredError`] from a builtin.
     Throw(Val),
     /// Something `orelse` can't catch: a panic, or the interpreter's limits.
     Panic(String),
@@ -643,10 +643,10 @@ impl Interp<'_> {
 }
 
 /// How a run that ended abruptly failed, for people, but a declared
-/// failure, which only [`Interp::describe`] can report.
+/// error, which only [`Interp::describe`] can report.
 fn describe(abrupt: Abrupt) -> String {
     match abrupt {
-        Abrupt::Throw(_) => "Failed with a declared failure".to_string(),
+        Abrupt::Throw(_) => "Failed with a declared error".to_string(),
         Abrupt::Panic(message) => format!("Panicked: {message}"),
         Abrupt::TestFailed(messages) => messages,
         Abrupt::Return(..)
@@ -762,7 +762,7 @@ struct Interp<'a> {
     host: Option<repl::Host>,
     /// `async` blocks that are REPL inputs paused at a top-level `await`,
     /// each with its input's number, and how those that failed once
-    /// resumed failed, by number: their own failures, not the failure of
+    /// resumed failed, by number: their own errors, not the error of
     /// whatever ran the queue ([`repl`]).
     inputs_parked: Vec<(Rc<Generator>, usize)>,
     inputs_failed: Vec<(usize, Abrupt)>,
@@ -776,7 +776,7 @@ fn fail(message: impl Into<String>) -> Abrupt {
 
 impl Interp<'_> {
     /// Runs top-level code, then the `async` blocks it started, even if it
-    /// failed, as Kotlin Temper does. The first failure is the result.
+    /// failed, as Kotlin Temper does. The first error is the result.
     fn run_top(&mut self, s: &Settled, code: Rc<Code>) -> R {
         let result = self.run_code(s, code, Rc::from([]), Vec::new());
         let tasks = self.run_tasks(s);
@@ -824,7 +824,7 @@ impl Interp<'_> {
 
     /// Runs a generator's body on from where it paused, until it pauses
     /// again, at a `yield` or an `await`, keeping its frame, or ends, as
-    /// it already has if it's done. A failure in the body ends it too.
+    /// it already has if it's done. An error in the body ends it too.
     fn step(&mut self, s: &Settled, generator: &Generator) -> R {
         if self.depth >= MAX_DEPTH {
             return Err(Abrupt::Panic(TOO_DEEP.into()));
@@ -843,7 +843,7 @@ impl Interp<'_> {
 
     /// `next()`, or `nextSafe()`: runs a generator's body on to its next
     /// `yield`, giving a `ValueResult`, or to its end, giving a
-    /// `DoneResult`, as do later calls. A failure in the body comes out of
+    /// `DoneResult`, as do later calls. An error in the body comes out of
     /// `next()` as a `BrokenGenerator`'s cause. Only the run queue resumes
     /// a body paused at an `await`, so one that pauses there under
     /// `next()` panics.
@@ -857,9 +857,10 @@ impl Interp<'_> {
                 ))
             }
             Ok(_) => Ok(Val::DoneResult),
-            Err(Abrupt::Throw(cause)) => {
-                Err(Abrupt::Throw(CoreFailure::caused("BrokenGenerator", cause)))
-            }
+            Err(Abrupt::Throw(cause)) => Err(Abrupt::Throw(CoreDeclaredError::caused(
+                "BrokenGenerator",
+                cause,
+            ))),
             Err(abrupt) => Err(abrupt),
         }
     }
@@ -939,24 +940,24 @@ impl Interp<'_> {
                     Ok(Val::PromiseBuilder(Rc::default()))
                 }
                 Some((Val::BuiltinType(t), [])) if TYPES[*t as usize] == "BrokenPromise" => {
-                    Ok(CoreFailure::value("BrokenPromise", Vec::new()))
+                    Ok(CoreDeclaredError::value("BrokenPromise", Vec::new()))
                 }
                 Some((Val::BuiltinType(t), [])) if TYPES[*t as usize] == "BrokenGenerator" => {
-                    Ok(CoreFailure::value("BrokenGenerator", Vec::new()))
+                    Ok(CoreDeclaredError::value("BrokenGenerator", Vec::new()))
                 }
-                Some((Val::BuiltinType(t), [key])) if TYPES[*t as usize] == "MissingKey" => {
-                    Ok(CoreFailure::value("MissingKey", vec![("key", key.clone())]))
-                }
+                Some((Val::BuiltinType(t), [key])) if TYPES[*t as usize] == "MissingKey" => Ok(
+                    CoreDeclaredError::value("MissingKey", vec![("key", key.clone())]),
+                ),
                 Some((Val::BuiltinType(t), [input, reason]))
                     if TYPES[*t as usize] == "ParseError" =>
                 {
                     let fields = vec![("input", input.clone()), ("reason", reason.clone())];
-                    Ok(CoreFailure::value("ParseError", fields))
+                    Ok(CoreDeclaredError::value("ParseError", fields))
                 }
                 Some((Val::BuiltinType(t), [code_point]))
                     if TYPES[*t as usize] == "InvalidCodePoint" =>
                 {
-                    Ok(CoreFailure::value(
+                    Ok(CoreDeclaredError::value(
                         "InvalidCodePoint",
                         vec![("codePoint", code_point.clone())],
                     ))
@@ -1383,9 +1384,9 @@ fn is_builtin_type(value: &Val, ty: &str) -> bool {
         "DoneResult" => matches!(value, Val::DoneResult),
         "Promise" => matches!(value, Val::Promise(_)),
         "PromiseBuilder" => matches!(value, Val::PromiseBuilder(_)),
-        "CoreError" => matches!(value, Val::CoreFailure(_)),
+        "CoreError" => matches!(value, Val::CoreDeclaredError(_)),
         "MissingKey" | "ParseError" | "InvalidCodePoint" | "BrokenPromise" | "BrokenGenerator" => {
-            matches!(value, Val::CoreFailure(f) if f.type_name == ty)
+            matches!(value, Val::CoreDeclaredError(f) if f.type_name == ty)
         }
         "AnyValue" => !matches!(value, Val::Null),
         "Void" => matches!(value, Val::Void),
@@ -2198,9 +2199,9 @@ fn property(object: Val, name: NameId, text: &str) -> R {
         (Val::Pair(pair), "key") => Ok(pair.0.clone()),
         (Val::Pair(pair), "value") => Ok(pair.1.clone()),
         (Val::ValueResult(value), "value") => Ok((**value).clone()),
-        (Val::CoreFailure(failure), "message") => Ok(Val::Str(failure.message().into())),
-        (Val::CoreFailure(failure), "cause") => Ok(failure.cause()),
-        (Val::CoreFailure(failure), _) => (failure.fields.iter())
+        (Val::CoreDeclaredError(failure), "message") => Ok(Val::Str(failure.message().into())),
+        (Val::CoreDeclaredError(failure), "cause") => Ok(failure.cause()),
+        (Val::CoreDeclaredError(failure), _) => (failure.fields.iter())
             .find(|(field, _)| *field == text)
             .map(|(_, value)| value.clone())
             .ok_or_else(|| fail(format!("No member {text}"))),
@@ -2293,7 +2294,7 @@ fn equal(a: &Val, b: &Val) -> bool {
         (Val::StringBuilder(a), Val::StringBuilder(b)) => Rc::ptr_eq(a, b),
         (Val::Fn(a), Val::Fn(b)) => Rc::ptr_eq(a, b),
         (Val::Object(a), Val::Object(b)) => Rc::ptr_eq(a, b),
-        (Val::CoreFailure(a), Val::CoreFailure(b)) => Rc::ptr_eq(a, b),
+        (Val::CoreDeclaredError(a), Val::CoreDeclaredError(b)) => Rc::ptr_eq(a, b),
         (Val::ListBuilder(a), Val::ListBuilder(b)) => Rc::ptr_eq(a, b),
         (Val::Deque(a), Val::Deque(b)) => Rc::ptr_eq(a, b),
         (Val::Bits(a), Val::Bits(b)) => Rc::ptr_eq(a, b),
@@ -2360,7 +2361,7 @@ fn type_name(value: &Val) -> &'static str {
         Val::Console => "Console",
         Val::Class(_) => "Class",
         Val::Object(_) => "Object",
-        Val::CoreFailure(failure) => failure.type_name,
+        Val::CoreDeclaredError(failure) => failure.type_name,
         Val::Type | Val::BuiltinType(_) | Val::NullableType(_) => "Type",
         Val::Empty => "Empty",
         Val::Regex(_) => "Regex",

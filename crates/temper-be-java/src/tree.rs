@@ -295,7 +295,7 @@ pub enum Stmt {
         finally: Vec<Stmt>,
     },
     /// `try { … } catch (NotFound var) { … }`: Temper's `orelse` or
-    /// `catch`, catching only what its body may fail with, a failure
+    /// `catch`, catching only what its body may fail with, an error
     /// class.
     TryCatch {
         body: Vec<Stmt>,
@@ -325,7 +325,7 @@ pub struct Method {
     /// Each parameter's type and name.
     pub params: Vec<(String, String)>,
     /// Checked exceptions it may throw, after `throws`, and the
-    /// unchecked declared failures it may.
+    /// unchecked declared errors it may.
     pub throws: Vec<String>,
     pub body: Vec<Stmt>,
 }
@@ -350,7 +350,7 @@ pub struct Class {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Vis {
     Public,
-    /// An abstract failure class's constructor's, for its subclasses in
+    /// An abstract error class's constructor's, for its subclasses in
     /// the library's other packages.
     Protected,
     Package,
@@ -403,14 +403,14 @@ pub struct Member {
     pub result: String,
     pub name: String,
     pub params: Vec<(String, String)>,
-    /// The declared failures it may throw, after `throws`, unchecked.
+    /// The declared errors it may throw, after `throws`, unchecked.
     pub throws: Vec<String>,
     pub body: Vec<Stmt>,
 }
 
 /// One `.java` file of a class or interface: a final class (classes are
 /// final in Temper), an interface, or an abstract class (a declared
-/// failure's base or sealed interface), `public` if exported, else its
+/// error's base or sealed interface), `public` if exported, else its
 /// package's.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TypeDecl {
@@ -439,7 +439,7 @@ pub struct TypeDecl {
 pub enum TypeKind {
     Interface,
     FinalClass,
-    /// A declared failure's base, or sealed failure interface, which
+    /// A declared error's base, or sealed error interface, which
     /// classes extend.
     AbstractClass,
 }

@@ -149,8 +149,8 @@ impl Runner {
     /// promise not resolved yet, it runs the queue, then goes on if that
     /// resolved it; if not, the input is parked, as an `async` block
     /// awaiting it, and goes on once a later input resolves it; if it
-    /// fails then, that's its own failure, input `number`'s
-    /// ([`Runner::resumed_failures`]).
+    /// fails then, that's its own error, input `number`'s
+    /// ([`Runner::resumed_errors`]).
     pub(crate) fn run_input(
         &mut self,
         s: &Settled,
@@ -231,7 +231,7 @@ impl Runner {
     /// The inputs parked at a top-level `await` that failed when a later
     /// run resumed them, each by its number, with why, as [`describe`]
     /// says it.
-    pub(crate) fn resumed_failures(&mut self, s: &Settled) -> Vec<(usize, String)> {
+    pub(crate) fn resumed_errors(&mut self, s: &Settled) -> Vec<(usize, String)> {
         let failed: Vec<_> = self.interp.inputs_failed.drain(..).collect();
         (failed.into_iter())
             .map(|(input, abrupt)| (input, self.interp.describe(s, abrupt)))

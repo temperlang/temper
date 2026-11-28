@@ -59,7 +59,7 @@ for _, n in turns.collatz(7) do
 end
 print("collatz " .. table.concat(steps, ","))
 
--- A declared failure is an `error` of its own type, which `pcall`
+-- A declared error is an `error` of its own type, which `pcall`
 -- catches.
 local odd
 ok, odd = pcall(turns.halve, 3)

@@ -25,10 +25,10 @@
 - [Fixes on Windows](#fixes-on-windows)
 - [🚨Breaking change: `try` and `catch` are reserved](#breaking-change-try-and-catch-are-reserved)
 - [🚨Breaking change: division by zero and failed casts panic](#breaking-change-division-by-zero-and-failed-casts-panic)
-- [🚨Breaking change: core and std throw declared failures](#breaking-change-core-and-std-throw-declared-failures)
+- [🚨Breaking change: core and std throw declared errors](#breaking-change-core-and-std-throw-declared-errors)
 - [🚨Breaking change: std regex `find` gives null; tests may throw any error](#breaking-change-std-regex-find-gives-null-tests-may-throw-any-error)
 - [🚨Breaking change: `await` of a broken promise throws `BrokenPromise`](#breaking-change-await-of-a-broken-promise-throws-brokenpromise)
-- [Functions generic over their callbacks' failures](#functions-generic-over-their-callbacks-failures)
+- [Functions generic over their callbacks' errors](#functions-generic-over-their-callbacks-errors)
 - [🚨Breaking change: generators throw errors, not bubbles](#breaking-change-generators-throw-errors-not-bubbles)
 - [🚨Breaking change: `Bubble` and `bubble()` are gone](#breaking-change-bubble-and-bubble-are-gone)
 
@@ -346,7 +346,7 @@ with no dev dependencies on `mocha` or `mocha-junit-reporter`, so
 `temper test -b js` runs them the same way and no longer needs Mocha or
 `MOCHA`. A test may take as long as it needs, as on the other backends,
 where Mocha failed one after 2 seconds. A tests file that fails as it
-loads is reported as one failure saying why. The tests use only
+loads is reported as one error saying why. The tests use only
 `node:test`'s `it`, which Bun and Deno also implement, so
 `bun test --timeout 0` and `deno test -A --no-check` run them too, in
 the package's directory. Node 22 is the oldest Node supported for
@@ -522,16 +522,16 @@ them need the new ones.
 ## 🚨Breaking change: `try` and `catch` are reserved
 
 `try` and `catch` are now operators, as `throw` already was, for the
-declared failures RFC 164 proposes, so they can't name a variable,
+declared errors RFC 164 proposes, so they can't name a variable,
 function, parameter, or member, though a name after a `.`, as in
 `promise.catch`, still reads as one. The syntax parses, is type
 checked, and runs on the interpreter (`temper run -b interp`) and on
-every backend, and `error case` is reported as not supported yet. A
-failure type is under one of its library's roots, sealed interfaces
+every backend, and `error case` is reported as not supported yet. An
+error type is under one of its library's roots, sealed interfaces
 that extend core's `Error` (`export sealed interface WherewithError
 extends Error {}`), which each backend makes the host's own exception
 type; classes extend a root, never `Error` itself. In Python, a
-library's failure types are exception classes under its roots, as
+library's error types are exception classes under its roots, as
 `WherewithError(Failure)`, where `temper_core`'s `Failure`, core's
 `Error`, is an `Exception`; host code catches them by those types,
 never a `temper_core` one; `str(e)` is the message, and the
@@ -541,48 +541,48 @@ roots, as `WherewithException extends RuntimeException`
 `temper.core.Failure` marker; `getMessage()` is the message,
 `getCause()` the cause, and functions list what they may throw in a
 `throws` clause. In Rust, a function that fails returns `Result<T, F>`;
-each failure class is a struct implementing `Display` (the message) and
-`std::error::Error` (the cause as `source()`), each sealed failure
+each error class is a struct implementing `Display` (the message) and
+`std::error::Error` (the cause as `source()`), each sealed error
 interface, the roots among them, an `enum` of the types under it, which
 `?` converts any of them into, and a library's one root its crate's
 `Error` too; a panic stays a panic. In C++, a function that fails returns
 `temper::core::Expected<T, std::shared_ptr<F>>` (`std::expected` from
-C++23, the runtime's C++14 shim before), and each failure class is a
+C++23, the runtime's C++14 shim before), and each error class is a
 struct below a root, as `WherewithError`, which is the
 runtime's `temper::core::Failure`, a `std::exception` whose `what()` is
-the message, with `get_cause()`; failures are values, never thrown. In
+the message, with `get_cause()`; errors are values, never thrown. In
 JS, they're classes under the roots, as `WherewithError extends
 Error`, so host code catches them with `instanceof`, by their
 own types or as any `Error`; `message` is the message, `name` the
-type's name (a failure's own member named `name`, `stack`, or `cause`
+type's name (an error's own member named `name`, `stack`, or `cause`
 is `name_`, and so on, in JS), the cause the standard `cause`, and
 functions say what they may throw with JSDoc's `@throws`. In C#,
 they're exception classes under the roots, as `WherewithException :
 Exception` (`…Error` names say `…Exception`, as
-in Java), sealed failure interfaces abstract classes between and the
+in Java), sealed error interfaces abstract classes between and the
 rest `sealed`; `Message` is the message, `InnerException` the cause,
-set where a failure is made by a `throw` in a handler (one made before
+set where an error is made by a `throw` in a handler (one made before
 keeps its cause for Temper's `cause` alone, as C# can't set
 `InnerException` later), and doc comments say what a function may
 throw with `<exception cref="…">`. In Lua, they're the runtime's types
 under the roots, as `temper.type("wherewith.WherewithError",
 temper.Failure)`, raised with `error(x)`, so host code catches them with
 `pcall` and tells them apart with `temper.instance_of`; `tostring(e)`
-and `message` are the message, `cause` the cause (a failure's own member
+and `message` are the message, `cause` the cause (an error's own member
 named `cause` is `cause_` in Lua), and `temper run` reports one nothing
-handles with its causes. A failure's `message` is its type's own getter's, or else its
-type's name and public fields, as `not found (key: y)`; a failure thrown
+handles with its causes. An error's `message` is its type's own getter's, or else its
+type's name and public fields, as `not found (key: y)`; an error thrown
 while handling another has that one as its `cause`; and one nothing
 handles ends the run saying its message, where it was thrown, and its
 causes.
 
-Core gains an `Error` interface, the root of declared failure types. A
+Core gains an `Error` interface, the root of declared error types. A
 library's own type named `Error` still takes its place there. Each
 library should declare its own roots and throw its own types for its
 own conditions, not core's: core's errors (`CoreError`'s) are for
 core's own operations, and how a backend maps core's types to the
 host's is that backend's own, which may change.
-`throws X` for an `X` that isn't a failure type or a type parameter,
+`throws X` for an `X` that isn't an error type or a type parameter,
 which Temper 0.6.0 took as `throws Bubble`, is an error.
 
 ## 🚨Breaking change: division by zero and failed casts panic
@@ -606,9 +606,9 @@ and std's adapters check a tree's shape with `is`, so decoding JSON of
 another shape still fails as before. This was a first step toward
 [removing `Bubble`](#breaking-change-bubble-and-bubble-are-gone).
 
-## 🚨Breaking change: core and std throw declared failures
+## 🚨Breaking change: core and std throw declared errors
 
-Core's and std's APIs that bubbled now throw declared failures, which
+Core's and std's APIs that bubbled now throw declared errors, which
 say what went wrong:
 
 - Conversions, `String.toInt32`, `toInt64`, and `toFloat64`,
@@ -643,7 +643,7 @@ let port(s: String): Int throws ParseError { s.toInt32() }
 let portOrNull(s: String): Int? { s.toInt32() orelse null }
 ```
 
-`catch (e)` reads the failure: `e.message`, `e.input`, `e.key`,
+`catch (e)` reads the error: `e.message`, `e.input`, `e.key`,
 `e.codePoint`. A custom `decodeFromJson` declares `throws JsonError`.
 A bad radix to `toInt32` or `toInt64`, outside 2 through 36, throws
 `ParseError` on every backend (JavaScript read 0 as 10). Each backend's runtime has these classes (Python
@@ -666,7 +666,7 @@ let m = r.find(text) ?? panic(); // where a match is certain
 ```
 
 A test may now throw any error, unhandled: a call that throws a
-declared failure, as `s.toInt32()` or `new Date(y, m, d)`, needs no
+declared error, as `s.toInt32()` or `new Date(y, m, d)`, needs no
 `orelse panic()` in a test, and the error fails the test, saying its
 message. `test.assertPanics { … }` fails, saying "expected a panic, but
 it threw", where its block throws an error (it said "but it bubbled").
@@ -692,7 +692,7 @@ its own `BrokenPromise` (Python `temper_core.BrokenPromise`, Java
 `temper.core.BrokenPromise`, and so on), and a `catch` around an
 `await` works on every backend.
 
-## Functions generic over their callbacks' failures
+## Functions generic over their callbacks' errors
 
 A function may pass on what its callbacks fail with, by a type parameter
 after `throws`, which is bound by `Error` without saying so:
@@ -709,19 +709,19 @@ let lengths = mapAll(texts) { t => t.countBetween(String.begin, t.end) };
 
 Each call solves `E` from its arguments, a function literal's body too,
 so `ports` may fail with `ParseError` and `lengths` can't fail; two
-callbacks of one `E` give their closest common failure type. A `@fun
+callbacks of one `E` give their closest common error type. A `@fun
 interface` may take an `E` too. Core's `Listed.map`, `filter`, `reduce`,
 `reduceFrom`, `join`, and `sorted`, `List.forEach`, `String.forEach`,
 `ListBuilder.sort`, and `Mapped.forEach`, `toListWith`, and
 `toListBuilderWith` are generic so, and so is std's `Regex.replace`, so
-a callback may now fail with a declared failure there: `keys.filter { k
+a callback may now fail with a declared error there: `keys.filter { k
 => m[k] > 0 }` throws `MissingKey`, and `replace` passes on its
-callback's first failure, with no result (`RegexNode.replace` takes
+callback's first error, with no result (`RegexNode.replace` takes
 only callbacks that can't fail). Python, Java, JS, C#, and Lua translate these: exceptions
 are unchecked there, so `E` appears in no host signature (Java's
 `mapAll` is `<T, R> List<R> mapAll(List<T> xs, Function<T, R> f)`), a
-callback's failure passes through unchanged, and a handler in generic
-code catches failures, never panics or the host's own errors. Rust and
+callback's error passes through unchanged, and a handler in generic
+code catches errors, never panics or the host's own errors. Rust and
 C++ keep `E` generic: `fn map_all<T, R, E: temper_core::Failure>(…) ->
 Result<List<R>, E>` and a template's `core::Expected<…, E>`, with
 "can't fail" as `std::convert::Infallible` and `core::Never`, whose
@@ -738,7 +738,7 @@ fail", now returns `Ok`s; such calls didn't build before. Also fixed: a module's
 
 ## 🚨Breaking change: generators throw errors, not bubbles
 
-A generator body may throw what it declares, any failure type, and its
+A generator body may throw what it declares, any error type, and its
 factory then makes a `Generator<Y>`, whose `next()` throws core's new
 `BrokenGenerator`, under `CoreError`, instead of bubbling: its `cause` is
 the error the body threw, and the generator is done after. A body that
@@ -777,7 +777,7 @@ error (Python `temper_core.generator_next`, JavaScript
 
 Temper has one error mechanism now: declared errors. `bubble()`,
 `throws Bubble`, and `Bubble` are undeclared names, each reported with
-how to migrate. Pick by what the failure means:
+how to migrate. Pick by what the error means:
 
 - A reason matters: declare an error type and throw it.
 - There's simply no value: return `null` (`?? return null` passes one
@@ -802,7 +802,7 @@ let parseOrPanic(s: String): Int { s.toInt32() orelse panic() }
 `orelse` and `catch (e)` stay, handling any error. `catch` without a
 binding, `f() catch { 0 }`, is gone, an error saying to write `f()
 orelse 0`, which is the same. With no bubbles, there
-are no rules about mixing them with declared failures, and a call that
+are no rules about mixing them with declared errors, and a call that
 may fail where nothing handles it is reported wherever it is: Temper
 0.6.0 folded a call of constants first and reported it only if the
 folded call failed.
@@ -815,20 +815,20 @@ errors, but C++, C#, Java, and Rust stop at the first one where a type
 error alone used to run on; the interpreter, JavaScript, Lua, and
 Python run such code as written.
 
-Each backend's runtime has one error mechanism, the failures' own
+Each backend's runtime has one error mechanism, the errors' own
 types, and loses its bubble:
 
 - Python: `temper_core.Bubble` and `bubble()`; handlers are `except`
-  of the failure classes.
+  of the error classes.
 - JavaScript: `Bubble`, `isBubble`, and `bubble`; handlers check with
   `instanceof`.
 - Java: `temper.core.Bubble`, `Core.bubble()`, and `Core.throwBubble()`;
   `Bubble.keepStackTraces()` is now `Core.keepStackTraces()`.
 - C#: `TemperLang.Core.Bubble` and `Core.Bubble()`.
 - Lua: handlers use `temper.catch` alone.
-- Rust: `temper_core::Error` is now `Arc<dyn Failure>`, any failure,
+- Rust: `temper_core::Error` is now `Arc<dyn Failure>`, any error,
   and `temper_core::Result<T>` its alias, which module init and tests
   fail with; `keep_bubble_traces` is gone.
-- C++: `temper::core::TemperBubble` and `bubble<T>()`; handlers branch
+- C++: `temper::core::TemperPanic` and `bubble<T>()`; handlers branch
   on `Expected` alone, and runtime errors that bubbled now panic. An
-  `orelse panic()` reports the failure it replaces as its cause.
+  `orelse panic()` reports the error it replaces as its cause.

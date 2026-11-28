@@ -69,7 +69,7 @@ Language and frontend:
   fits, a follow-on error tempest doesn't report.
   Test: settle/types.cases, "list literals typed from the type wanted",
   "function literals typed from the type wanted", "function literals'
-  results and failures inferred from their bodies", and "object literals
+  results and errors inferred from their bodies", and "object literals
   take their class from the type wanted".
 - **Named `@fun` interfaces are nominal** (decided 2026-10-29, done;
   [typing.md](typing.md), "Fun interfaces"): a `Pred` isn't a `Check`,
@@ -231,7 +231,7 @@ Language and frontend:
   a speed choice only. Test: settle/run.cases, "integer division by zero
   panics; Float64's gives IEEE 754's results"; testkit
   test-assert-panics, "passes when division by zero or a cast panics".
-- **Core's and std's failing APIs throw declared failures, not
+- **Core's and std's failing APIs throw declared errors, not
   `Bubble`** (2026-11-25, stage 2 of replacing `Bubble`): conversions
   (`String.toInt32/toInt64/toFloat64`, `Float64.toInt32/toInt64`,
   `Int64.toInt32/toFloat64`) throw core's `ParseError` (input, reason);
@@ -250,13 +250,13 @@ Language and frontend:
   function that passes one on declares it (`throws ParseError`), where
   Kotlin's said `throws Bubble`. Test: settle/run.cases, "conversions
   throw ParseError, …", "a missing key throws MissingKey, …", "invalid
-  code points throw InvalidCodePoint"; settle/failures.cases, "core's
-  failure types: …"; testkit programs/panics.temper.md; funtests
+  code points throw InvalidCodePoint"; settle/errors.cases, "core's
+  error types: …"; testkit programs/panics.temper.md; funtests
   types/string/read (bad radix too), types/string/build, types/map.
 - **std regex's `find` gives `Match?`, and tests may throw any error**
   (2026-11-26, stage 3 of replacing `Bubble`): `find` gives `null` where
   Kotlin's bubbled. A test's function is `Void throws Error` (Kotlin's
-  `throws Bubble`), so a declared failure in a test needs no handler and
+  `throws Bubble`), so a declared error in a test needs no handler and
   fails it with its message; `assertPanics`'s block is `throws Error`
   too ("but it threw", Kotlin's "but it bubbled"). Only the compiler (a
   test's result) and std may write `throws Error`. Test: settle-std regex.cases and
@@ -264,7 +264,7 @@ Language and frontend:
   test-assert-panics; funtests regex/match, regex/code-sets.
 - **`await` of a broken promise throws core's `BrokenPromise`**
   (2026-11-26), a fieldless `CoreError`, where Kotlin's bubbles; host
-  failures that break a promise (std `net`'s) give it too. An `async`
+  errors that break a promise (std `net`'s) give it too. An `async`
   block handles it where it awaits, and a generator handles it or
   declares it; a `catch` around an `await` works on every backend, state
   machines (Rust, C++, Java) too. Test:
@@ -272,7 +272,7 @@ Language and frontend:
   "BrokenPromise is a CoreError …", "an await that nothing handles";
   funtests control-flow/async, types/netresponse-not-found.
 - **Generators throw errors, not bubbles** (2026-11-26): a generator
-  body may declare `throws E`, any failure type, and its factory makes a
+  body may declare `throws E`, any error type, and its factory makes a
   `Generator<Y>`, whose `next()` throws `Error` (Kotlin's `throws
   Bubble`, any declared type standing for `Bubble`); a body that
   declares nothing makes a `SafeGenerator<Y>` (Kotlin's too), whose
@@ -280,9 +280,9 @@ Language and frontend:
   fail; a throwing body's factory doesn't fit a `SafeGenerator` place.
   A generator body may declare `throws Error`, which user code can't
   elsewhere, to pass any error on, as Kotlin's bodies pass bubbles.
-  Every backend translates them. Test: settle/failures.cases, "a
+  Every backend translates them. Test: settle/errors.cases, "a
   generator may throw any error, …" and "a generator that may throw is
-  no SafeGenerator, …"; testkit spec failure-generators on every
+  no SafeGenerator, …"; testkit spec error-generators on every
   backend.
 - **`Bubble` and `bubble()` are gone** (2026-11-27, stage 4 of replacing
   `Bubble`): one error mechanism, declared errors. Kotlin Temper 0.6
@@ -291,13 +291,13 @@ Language and frontend:
   error type and throw it (sealed interface MyError extends Error {};
   throws MyError; throw new MyError()), return null, or panic() for a
   bug" (or "bubble has …"), and nothing else is reported for that
-  function's failures. No never-mix rules remain, and a call that may
+  function's errors. No never-mix rules remain, and a call that may
   fail where it can't is reported wherever it is (no folding of calls
   of constants first, as Kotlin's). `orelse` and `catch` stay. Each
-  backend has one error mechanism: Python `except` of failure classes,
+  backend has one error mechanism: Python `except` of error classes,
   JS `instanceof`, Lua `temper.catch`, Java and C# a `catch` of the
-  failure's class, Rust `temper_core::Error` as `Arc<dyn Failure>`, C++
-  `Expected` alone. Test: settle/failures.cases, "Bubble and bubble()
+  error's class, Rust `temper_core::Error` as `Arc<dyn Failure>`, C++
+  `Expected` alone. Test: settle/errors.cases, "Bubble and bubble()
   are gone, with a message on how to migrate".
 - **Code with errors panics where it runs** (2026-11-27), in the
   interpreter (`Panicked: …`) and on every backend, so `orelse` doesn't
@@ -611,7 +611,7 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
 - **Bubbling in operators' arguments** depends on how they fit: Kotlin
   doesn't report a call that may bubble in an argument that doesn't fit
   the operator's signature (`1 == mk(n)`), unless the first argument
-  fits no variant (`k == mk(n)`, `"a" - mi(n)`). Tempest, whose failures
+  fits no variant (`k == mk(n)`, `"a" - mi(n)`). Tempest, whose errors
   are declared, reports a call that may fail either way.
   Test: settle/builtins.cases, "what may fail in operators' arguments".
 - **Bubbling calls of constants:** Kotlin folds a call of a function
@@ -696,7 +696,7 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
 - **`m is MapBuilder`** for `m: Map<Int32, String>`, a check that can
   never succeed, is "Could not infer type actuals for (AnyValue?, Type)
   -> Boolean given [Map<Int32, String>, Type] in context unknown", a
-  solver's failure, and fails to translate. Tempest says "Runtime type
+  solver's error, and fails to translate. Tempest says "Runtime type
   check from Map<Int32, String> to MapBuilder can never succeed", at the
   same span.
   Test: settle/run.cases, "Map, MapBuilder and Pair".
@@ -909,7 +909,7 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   Test: settle/types.cases, "Never<T> stands for its T" and "Never<T>
   results in overrides, and Never alone"; settle/flow.cases, "calls that
   never return end their paths, as panic() does"; temper-tmpl's
-  tests/nevers.rs; the funtest control-flow/bubble ("Helpers that never
+  tests/nevers.rs; the funtest control-flow/errors ("Helpers that never
   return") and programs/classes ("Methods that never return"), on every
   backend.
 - **An `await` that may fail where it can't** (2026-11-18), as in an
@@ -961,7 +961,7 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   String.get's docs say".
 - **`Int.toString(radix)`** fails outside 2 to 36, but core declares no
   `throws Bubble`. Tempest panics there (the interpreter, and the
-  runtimes' helpers), as core declares no failure (since stage 4 of
+  runtimes' helpers), as core declares no error (since stage 4 of
   replacing Bubble, 2026-11-27).
 - **Deep recursion overflows the JVM's stack** in the interpreter:
   `temper test -b interp` dies with a `StackOverflowError` between 150
@@ -974,7 +974,7 @@ so Python and Lua skip 32-bit wrapping helpers ([typing.md](typing.md),
   recursion stops".
 - **A failing `async` block is silent** in the interpreter
   (`interpretAndWaitForAsyncTasksToSettle` checks the wrong result).
-  Tempest reports the first failure.
+  Tempest reports the first error.
   Test: settle/run.cases, "a failing async block doesn't stop the
   others".
 - **temper-regex-parser drops the code before a trailing dash** in a set:
@@ -1146,8 +1146,8 @@ to report those inputs as expected.
   `continue` as values type as `Never`, fitting any type; Kotlin has no
   type for them, weaving them into its control flow before typing, which
   comes to the same where it translates them.
-- **Declared failures' syntax** (`failures`, RFC 164, ours,
-  2026-11-24; `tests/parse/failures.cases`, `tests/ast/failures.cases`):
+- **Declared errors' syntax** (`failures`, RFC 164, ours,
+  2026-11-24; `tests/parse/errors.cases`, `tests/ast/errors.cases`):
   `try` is a prefix operator (just above `orelse`) and `catch` an infix
   one (`orelse`'s neighbor, left-associative), so neither is a call
   joining word any more: Kotlin's own cases `tryWithValue`,
@@ -1156,18 +1156,18 @@ to report those inputs as expected.
   (`throw` couldn't in Kotlin either). `x catch (e) { … }` becomes
   `catch(x, ^e, fn { … })` and `error case N(…)` `#errorCase \word ^N
   …`, which Kotlin can't parse. The frontend types them (chunk 4,
-  `tests/settle/failures.cases`), with core's `Error` root, which
+  `tests/settle/errors.cases`), with core's `Error` root, which
   Kotlin's core lacks, and reports `throws X` for a non-failure `X`,
   which Kotlin takes as `throws Bubble`; the interpreter runs them, and
   every backend translates them. `deviations.py` excuses fuzzed inputs whose
   differences start at one of these words.
-- **Failure parameters** (RFC 164, ours, 2026-11-26; chunk 14,
-  `tests/settle/failures.cases`): a type parameter after `throws` is
+- **Error parameters** (RFC 164, ours, 2026-11-26; chunk 14,
+  `tests/settle/errors.cases`): a type parameter after `throws` is
   bound by `Error` and solved per call, the join where arguments differ,
   and core's `Listed.map`, `filter`, `reduce`, `reduceFrom`, `join`,
   `sorted`, `List.forEach`, `String.forEach`, `ListBuilder.sort`, and
   `Mapped`'s `forEach`, `toListWith`, and `toListBuilderWith` are
-  generic on their callbacks' failures, where Kotlin's take callbacks that can't fail (or
+  generic on their callbacks' errors, where Kotlin's take callbacks that can't fail (or
   `throws Bubble` for all). So a callback of the wrong type to `filter`
   is reported as a generic call's mismatched arguments ("Actual
   arguments do not match signature: <E extends Error>…"), as `map`'s
@@ -1537,7 +1537,7 @@ Other differences we won't copy:
     temper-frontend/tests/library_tests.rs, `runaway_tests_fail_alone`
     and `runaway_top_level_is_cut_short`.
   - **Panics exit with 101**, saying it's a bug in tempest, so a script
-    can tell one from a failure; Kotlin's internal errors print a stack
+    can tell one from an error; Kotlin's internal errors print a stack
     trace and fail as anything else does. The language server
     survives one, as an "internal error" diagnostic or error response.
     Test: temper-lsp/tests/lsp.rs, `panics_become_internal_errors`.
@@ -1592,7 +1592,7 @@ Other differences we won't copy:
     errors.cases, "an unclosed \" ends with its line (Kotlin's read on)".
   - **Defaults:** the work root around the current directory is loaded
     without `-w` (Kotlin loads only std then); no prompt when standard
-    input isn't a terminal (Kotlin's `--prompt hide`); a failure says
+    input isn't a terminal (Kotlin's `--prompt hide`); an error says
     why, where Kotlin's bare bubble prints only `fail`.
     Test: tempest/tests/repl.rs, `imports_from_the_work_root` and
     `prompts`.
@@ -2221,7 +2221,7 @@ copied Kotlin's:
   nor a rooted library's other modules';
   it now runs every `tests/*-test.lua` in turn, as Kotlin's does. A
   file that gives no results, as one whose module fails as it loads,
-  counts as one failure named by its file, as Python's unittest reports
+  counts as one error named by its file, as Python's unittest reports
   a module that won't import, and the other files' results still count
   (fixed 2026-11-10).
   Test: tempest/tests/cli.rs, `library_without_root_module_lua`.
@@ -2483,13 +2483,13 @@ copied Kotlin's:
     C++ the runtime's `panic()`, and Rust `panic!()`, none of which
     `orelse` catches. JS and Lua, whose `orelse` catches anything,
     marked a bubble instead (2026-11-18; since 2026-11-27 their handlers
-    catch only declared failures, JS by `instanceof` and Lua by
+    catch only declared errors, JS by `instanceof` and Lua by
     `temper.catch`), and a JS panic is a plain `Error("panic")` (Lua's
     `error("panic")`, a string). So a panic or a host error (a
     `TypeError` in a callback, Lua's "attempt to index a nil value")
     passes every `orelse`, as in the other backends. Builtins that
     failed by a host error bubbled then (now each throws a declared
-    failure or panics, as the 2026-11-25 entries above say): JS's
+    error or panics, as the 2026-11-25 entries above say): JS's
     `Int64` `/` and `%` by zero (`divInt64` and `modInt64`, where
     Kotlin's `clampInt64(a / b)` throws BigInt's `RangeError`), a code
     point out of range or a surrogate (Kotlin's `RangeError`), a
@@ -2518,7 +2518,7 @@ copied Kotlin's:
     declares: from 2026-11-18 a bubble type of the runtime's own (Java
     `temper.core.Bubble`, C# `TemperLang.Core.Bubble`, Python
     `temper_core.Bubble`), and since 2026-11-27, with Bubble gone, only
-    the declared failures' classes. Everything declared to bubble then
+    the declared errors' classes. Everything declared to bubble then
     raised it: `as` (Java `Core.cast(C.class, x)`,
     `Core.requireNonNull(x)`, or `(C<A>) Core.check(C.class, x)`
     where Kotlin's casts or calls `Objects.requireNonNull`; C#
@@ -2540,11 +2540,11 @@ copied Kotlin's:
     a nonzero literal stays `/`), and an awaited promise broken by
     anything (Java's `ExecutionException` wrapped in a
     `RuntimeException`, C#'s and Python's the breaker's own). A builtin
-    not declared to fail passes its host failure through every
+    not declared to fail passes its host error through every
     `orelse`, as a panic (and index errors are panics, below). Java's regex `replace` no longer
     swallows a format callback's exceptions, and Python's
     `mapDropping` dropped only elements whose callback bubbled. Host code
-    fails by raising a declared failure's class; anything else passes.
+    fails by raising a declared error's class; anything else passes.
     A top-level `panic()` that ends a Java module's static initializer
     calls `Core.throwAssertionError`, which javac takes, where a `throw`
     there fails to compile ("initializer must be able to complete
@@ -2593,7 +2593,7 @@ copied Kotlin's:
     and C#'s `Environment.FailFast` ended the test process, in Kotlin
     too. Now C++'s `panic()` calls a hook first, `panic_hook()`, which
     a test build's `run_tests` sets to throw `TemperPanic` (which no
-    handler catches, as failures are `Expected` values) and catches test by
+    handler catches, as errors are `Expected` values) and catches test by
     test, reporting `Panicked: MESSAGE`; outside tests it still prints
     its message and terminates. C#'s `panic()` and the runtime's index
     errors always throw `TemperLang.Core.Panic`, as Java,
@@ -2609,15 +2609,15 @@ copied Kotlin's:
     Test: programs/test-panics.temper.md on every backend and the
     interpreter (each test's failure and that all five ran);
     repl/specials.cases, "a test that panics fails alone".
-  - **A test's own failure wins** (2026-11-23): Kotlin's generated
+  - **A test's own error wins** (2026-11-23): Kotlin's generated
     tests end `finally { softFailToHard() }`, so a test that panicked
     after a failed soft `assert` reported the assertion, not the panic.
-    Tempest's keep the body's failure and still end the test after it:
+    Tempest's keep the body's error and still end the test after it:
     JS, Java, and C# keep it and call the runtime's `endTest(test,
     failure)` in `finally`, Python runs the body in `with
     end_test(test):`, each finishing the test's async work, then
     `softFailToHard`, each even if the other failed, and attaching what
-    else failed to the failure that wins (Java suppressed, Python
+    else failed to the error that wins (Java suppressed, Python
     notes, JS `suppressed`, else stderr); Lua's `temper.test` says the
     soft failures after the panic; Rust still runs the work of a body
     that failed. JS tests' rounds use `setImmediate`, not `setTimeout`,
@@ -2661,22 +2661,22 @@ copied Kotlin's:
     again). The trailing block goes to `block`, so
     `test.assertPanics("why") { … }` gives the message. Its body calls
     a bodiless `panics(block): Boolean`, each backend catching, in
-    process, any failure but a declared one or a test framework's
+    process, any error but a declared one or a test framework's
     (2026-11-23, one rule everywhere, so a host's error counts): Java
-    all but `Failure`s, opentest4j's failures, and
+    all but `Failure`s, opentest4j's errors, and
     `VirtualMachineError`; C# all but `Failure`s and MSTest's, NUnit's,
-    and xUnit's failures; Python all but `Failure`s, `AssertionError`,
+    and xUnit's errors; Python all but `Failure`s, `AssertionError`,
     and the `BaseException`s that are exits (`KeyboardInterrupt`,
-    `SystemExit`, pytest's outcomes); JS all but declared failures and
+    `SystemExit`, pytest's outcomes); JS all but declared errors and
     `AssertionError`s; C++ test builds all but `TemperTestFailure`; Rust `catch_unwind` (with the panic hook quiet
     for caught panics, so a runner reading the first panic message
     still sees the test's own), where a failed assertion is a panic
     too; and the interpreter its program's panics but not its limits
     (steps, depth, interrupts). Lua's `Test` is the runtime's, so
     `temper.test_assertpanics` does it all with `pcall`: any error but
-    a declared failure or a test failure, Temper's or LuaUnit's, counts as a
+    a declared error or a test failure, Temper's or LuaUnit's, counts as a
     panic. Test: programs/host-error-tests.temper.md (host errors of
-    three kinds and a host test framework's failure per backend). C# also writes a
+    three kinds and a host test framework's error per backend). C# also writes a
     function literal whose body is just `panic()` as a local function,
     where it said "not yet: a Panic expression".
     Test: programs/test-assert-panics.temper.md on every backend and

@@ -434,7 +434,7 @@ Add an *onlyPasses* entry to the [functional test status expectations](https://g
 That provides the column values.  Since getting functional tests passing is an
 involved process, we don't reject builds of the compiler because some backends
 don't pass.  We focus on avoiding regressions.  Mature backends have empty
-failure expectations except where a language feature is still under development.
+error expectations except where a language feature is still under development.
 
 ## Get the "Hello, World!" functional test running by any means necessary
 
@@ -534,7 +534,7 @@ new tests have been inserted into this list based on estimated fit.
 1. ClassesCallOverrideFromSubtype, ClassesDirectGetter,
    ClassesInheritedGetter, InterfacesPureVirtual
 1. ControlFlowIfReturn, ControlFlowLoopReenterable, ControlFlowLoops
-1. ControlFlowBubble
+1. ControlFlowErrors
 1. CastsAsExpr
 1. FunctionsSimpleLocals, SemanticsMutuallyReferencingTypes
 1. SemanticsTypeCheckedLocals (typically unsupported for static typing)

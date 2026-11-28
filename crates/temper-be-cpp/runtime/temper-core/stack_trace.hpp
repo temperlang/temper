@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 #include "failure.hpp"
-#include "temper_bubble.hpp"
+#include "temper_panic.hpp"
 
 #if !defined(TEMPER_STD_STACKTRACE) && defined(__has_include)
 #if __has_include(<execinfo.h>) && __has_include(<dlfcn.h>) && __has_include(<cxxabi.h>)

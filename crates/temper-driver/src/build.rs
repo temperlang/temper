@@ -135,7 +135,7 @@ impl Built {
 
 /// Builds the libraries under a work root for the backends given,
 /// writing to `ROOT/temper.out` (or `options.out_dir`), and diagnostics
-/// and failures to `err`, and with `verbose`, what was written to `out`.
+/// and errors to `err`, and with `verbose`, what was written to `out`.
 /// `None` if there's no library, or two share a name.
 pub fn build(
     sources: &Sources,

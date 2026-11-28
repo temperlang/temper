@@ -283,7 +283,7 @@ match Kotlin's by default ("Cannot assign to String from Int32"), and
 fix only clearly bad ones, each listed in
 notes/kotlin-differences.md. Topic checks live in their own files:
 [`check_overrides`](../../../crates/temper-frontend/src/typing/overrides.rs),
-[`check_no_failures`](../../../crates/temper-frontend/src/typing/bubbles.rs),
+[`check_no_errors`](../../../crates/temper-frontend/src/typing/failing.rs),
 [`check_rtti`](../../../crates/temper-frontend/src/typing/rtti.rs),
 [`check_fun_interface`](../../../crates/temper-frontend/src/typing/fun_interfaces.rs),
 and [`check_connected_class`](../../../crates/temper-frontend/src/typing/connected.rs).

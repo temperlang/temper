@@ -91,7 +91,7 @@ values in [`Types`](../../crates/temper-frontend/src/types.rs).
 | `generic_calls.rs` | Generic calls, solved per call site |
 | `targets.rs`, `object_literals.rs`, `fun_interfaces.rs` | The type a place wants: list literals, object literals, and `@fun` interfaces |
 | `initializers.rs` | Locals typed from their first assignments |
-| `bubbles.rs` | What may fail where it can't, and constant folding for divisions |
+| `failing.rs` | What may fail where it can't, and constant folding for divisions |
 | `sealed.rs`, `rtti.rs` | Sealed types and `when`, and run-time type checks |
 | `exprs.rs`, `resolve.rs` | Recording every expression's type and every call's target |
 

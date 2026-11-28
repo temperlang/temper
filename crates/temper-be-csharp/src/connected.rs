@@ -73,17 +73,17 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Deque.removeFirst()",
         Connection::Static("Listed", "RemoveFirst"),
     ),
-    // A declared failure's cause is its `InnerException`, where that's a
-    // declared failure (`IFailure`), or one it took after it was made
+    // A declared error's cause is its `InnerException`, where that's a
+    // declared error (`IFailure`), or one it took after it was made
     // (the runtime's `Core.WithCause`); its message, `Message`, which every
-    // failure class overrides.
+    // error class overrides.
     (
         "core.type Error.get cause()",
         Connection::Static("Core", "FailureCause"),
     ),
     (
         "core.type Error.get message()",
-        Connection::Translate(failure_message),
+        Connection::Translate(error_message),
     ),
     ("core.type Float64.abs()", Connection::Static("Math", "Abs")),
     (
@@ -700,7 +700,7 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
             namespace: "TemperLang.Core",
         },
     ),
-    // Core's own failures, the runtime's classes.
+    // Core's own errors, the runtime's classes.
     (
         "core.type CoreError",
         TypeConnection {
@@ -736,8 +736,8 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
             namespace: "System",
         },
     ),
-    // Core's root of declared failures, the runtime's marker, which each
-    // library's failure roots implement.
+    // Core's root of declared errors, the runtime's marker, which each
+    // library's error roots implement.
     (
         "core.type Error",
         TypeConnection {
@@ -932,7 +932,7 @@ fn test_bail(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
 }
 
 /// `Core.BlockPanics(block)`, which catches a panic, anything but a
-/// declared failure or a test's failure, for std's `Test.assertPanics`.
+/// declared error or a test's failure, for std's `Test.assertPanics`.
 fn test_panics(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let [_, block] = args else {
         return Err(NotYet {
@@ -1125,8 +1125,8 @@ fn count(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     Ok(one(t, args, "length")?.member("Count"))
 }
 
-/// `e.Message`, a declared failure's.
-fn failure_message(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+/// `e.Message`, a declared error's.
+fn error_message(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     Ok(one(t, args, "message")?.member("Message"))
 }
 

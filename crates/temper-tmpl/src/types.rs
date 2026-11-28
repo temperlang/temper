@@ -82,7 +82,7 @@ pub enum TypeData {
     /// type of the call's node, when it doesn't. Only ever a
     /// [`TypeData::Function`]'s result, never a value's or a node's type.
     /// Made by [`TypeTable::result`], so `pass` isn't a result and `fail`
-    /// isn't a `Never`; `fail` is a failure type or a type parameter ([`crate::failures`]).
+    /// isn't a `Never`; `fail` is an error type or a type parameter ([`crate::declared_errors`]).
     Result {
         pass: TypeId,
         fail: TypeId,

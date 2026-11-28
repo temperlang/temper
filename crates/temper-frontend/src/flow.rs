@@ -153,7 +153,7 @@ impl Settle {
                 }
                 env
             }
-            // The fallback may follow a failure anywhere in the body.
+            // The fallback may follow an error anywhere in the body.
             NodeKind::Orelse if children.len() == 2 => {
                 let body = self.flow(children[0], env.clone(), walk);
                 let fallback = self.flow(children[1], env, walk);

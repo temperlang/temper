@@ -670,7 +670,7 @@ impl Builder {
     }
 
     /// A call's result and flags, from its callee's signature, with the
-    /// type parameters it binds put in, so a failure parameter given
+    /// type parameters it binds put in, so an error parameter given
     /// `Never<…>` can't fail.
     fn call_type(
         &mut self,
@@ -686,7 +686,7 @@ impl Builder {
         let (from, to) = crate::analysis::bindings(&self.p, callee, receiver, type_args);
         let returns = self.p.types.substitute(returns, &from, &to);
         let flags = match self.p.types.fail(returns) {
-            Some(_) => Flags::MAY_BUBBLE,
+            Some(_) => Flags::MAY_FAIL,
             None => Flags::NONE,
         };
         (self.p.types.pass(returns), flags)
@@ -816,7 +816,7 @@ impl Builder {
         let ty = self.p.nodes.ty(callee);
         let (result, flags) = match self.fun_signature(ty) {
             Some(sig) => match self.p.types.signature(sig) {
-                Some(s) if s.fails() => (s.pass, Flags::MAY_BUBBLE),
+                Some(s) if s.fails() => (s.pass, Flags::MAY_FAIL),
                 Some(s) => (s.pass, Flags::NONE),
                 None => (TypeId::NONE, Flags::NONE),
             },
@@ -935,15 +935,15 @@ impl Builder {
         self.expr(Kind::OrElse, ty, (0, 0), &[body, fallback])
     }
 
-    /// `throw value`, with the failure being handled as its `cause` in a
+    /// `throw value`, with the error being handled as its `cause` in a
     /// handler's fallback; typed as its place wants.
     pub fn throw(&mut self, ty: TypeId, value: NodeId, cause: Option<NodeId>) -> NodeId {
         let kids: Vec<NodeId> = [value].into_iter().chain(cause).collect();
-        self.raw(Kind::Throw, ty, (0, 0), Flags::MAY_BUBBLE, &kids)
+        self.raw(Kind::Throw, ty, (0, 0), Flags::MAY_FAIL, &kids)
     }
 
     /// `catch (local)`: `body`'s value, or `fallback`'s with `local`
-    /// holding the failure.
+    /// holding the error.
     pub fn catch(&mut self, ty: TypeId, local: DeclId, body: NodeId, fallback: NodeId) -> NodeId {
         self.expr(Kind::Catch, ty, (local.0, 0), &[body, fallback])
     }
@@ -979,7 +979,7 @@ impl Builder {
     /// Waits for `promise`, a `Promise<T>`, typed `ty`, its `T`; it fails
     /// with core's `BrokenPromise` if the promise is broken.
     pub fn await_promise(&mut self, ty: TypeId, promise: NodeId) -> NodeId {
-        self.raw(Kind::Await, ty, (0, 0), Flags::MAY_BUBBLE, &[promise])
+        self.raw(Kind::Await, ty, (0, 0), Flags::MAY_FAIL, &[promise])
     }
 
     /// Pauses a generator, with what it yields, if not `Empty`.

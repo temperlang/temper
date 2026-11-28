@@ -68,7 +68,7 @@ const CLASSES: [&str; 14] = [
 /// The functional tests with nullable types, `orelse`, `throw`, and
 /// `panic()` that translate, as the backends' testkit lists them.
 const NULLABLES: [&str; 4] = [
-    "control-flow/bubble",
+    "control-flow/errors",
     "semantics/mutually-referencing-types",
     "types/float/basics",
     "types/int/limits",
@@ -1308,12 +1308,12 @@ fn empty_list_fallbacks_take_the_operands_type() {
     });
 }
 
-/// Failure parameters (RFC 164) in tmpl: a function generic on its
-/// callback's failure keeps `throws E`, and its calls, of core's (`map`)
+/// Error parameters (RFC 164) in tmpl: a function generic on its
+/// callback's error keeps `throws E`, and its calls, of core's (`map`)
 /// or the library's, give `E` as a type argument, what the callback may
 /// fail with, or `Never<Error>` where it can't, as the validator checks.
 #[test]
-fn failure_parameters_in_tmpl() {
+fn error_parameters_in_tmpl() {
     with_stack(|| {
         let outcome = |body: &str| -> String {
             let source = format!(

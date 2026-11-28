@@ -23,7 +23,7 @@ page doesn't repeat those.
 | [I9](#i9-the-command-line) | guide, tools | `temper` commands not available yet | CLI parity |
 | [I10](#i10-examples-that-dont-run-as-marked) | builtins, types | 9 examples | Fix the compiler, one by one |
 | [I11](#i11-playground-addresses) | terms, previous README | Old playground addresses | Links done here; terms left |
-| [I12](#i12-the-functional-test-matrix) | `functional-test-matrix.md` | Failures this compiler doesn't have | Regenerate, or retire |
+| [I12](#i12-the-functional-test-matrix) | `functional-test-matrix.md` | Errors this compiler doesn't have | Regenerate, or retire |
 | [I13](#i13-lua-versions) | target languages | "Lua 5.1" | State what's tested |
 | [I14](#i14-python-named-arguments) | target languages | Named arguments | Done here |
 | [I15](#i15-contributor-toolchains) | CONTRIBUTING | Toolchain versions | Keep one list per repository |
@@ -171,7 +171,7 @@ page doesn't repeat those.
 ### I12: The functional test matrix
 
 - **Docs:** the previous compiler's `functional-test-matrix.md`,
-  generated, shows failures on `cpp`, `cppv`, `lua`, and others.
+  generated, shows errors on `cpp`, `cppv`, `lua`, and others.
 - **This compiler:** all 72 functional tests pass on the interpreter and on
   every backend.
 - **Suggested:** not imported here; regenerate it there, or retire it

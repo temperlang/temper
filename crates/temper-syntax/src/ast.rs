@@ -143,7 +143,7 @@ pub enum Builtin {
     DocComment,
     /// A comment between statements.
     EmbeddedComment,
-    /// Ours: `error case Name(…)`, a failure class (RFC 164), as
+    /// Ours: `error case Name(…)`, an error class (RFC 164), as
     /// `#errorCase \word ^Name …`.
     ErrorCase,
 }

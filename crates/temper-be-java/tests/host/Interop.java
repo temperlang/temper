@@ -88,7 +88,7 @@ public final class Interop {
         }
         System.out.println("collatz " + String.join(",", steps));
 
-        // A declared failure is an exception of its own class.
+        // A declared error is an exception of its own class.
         try {
             System.out.println("halve returned " + AsyncTurnsGlobal.halve(3));
         } catch (Odd e) {

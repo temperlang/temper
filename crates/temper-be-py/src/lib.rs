@@ -26,12 +26,12 @@
 //! getters and setters, statics, default and abstract members, `is`,
 //! `as`, `==` and `toString` protocols), and nullable types (`T | None`,
 //! `is None` checks, `??` as a `:=` test), `orelse` and `catch` as `try`
-//! and `except` of the failure class nearest above what the body may
+//! and `except` of the error class nearest above what the body may
 //! throw, `throw` as `raise`, and `panic()` (and code with an error) as
 //! `raise BaseException('panic')`, which no handler catches. Unlike
 //! Kotlin's `except Exception`, a handler catches only the declared
-//! failures, which builtins that may fail raise (the runtime turning host
-//! failures, as `ValueError` or `KeyError`, into core's `ParseError` or
+//! errors, which builtins that may fail raise (the runtime turning host
+//! errors, as `ValueError` or `KeyError`, into core's `ParseError` or
 //! `MissingKey`); so anything else, a host error from a builtin not
 //! declared to fail or from a callback, passes every handler; and
 //! generics: module-level `TypeVar`s (invariant, as
@@ -199,17 +199,17 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);
     let p = settled.as_ref().unwrap_or(p);
-    // Failure parameters as their bounds in code: exceptions are
-    // unchecked (`temper_tmpl::failures::erase_params`).
-    let erased = temper_tmpl::failures::erase_params(p).map_err(|what| NotYet { what })?;
+    // Error parameters as their bounds in code: exceptions are
+    // unchecked (`temper_tmpl::declared_errors::erase_params`).
+    let erased = temper_tmpl::declared_errors::erase_params(p).map_err(|what| NotYet { what })?;
     let p = erased.as_ref().unwrap_or(p);
     // `Never<T>` as `T`, but where the profile keeps it
     // (`temper_tmpl::nevers`).
     let nevered = temper_tmpl::nevers::lower(p, &variant.profile);
     let p = nevered.as_ref().unwrap_or(p);
     // Handlers whose bodies can't fail as their bodies alone
-    // (`temper_tmpl::failures`).
-    let alive = temper_tmpl::failures::drop_dead_handlers(p);
+    // (`temper_tmpl::declared_errors`).
+    let alive = temper_tmpl::declared_errors::drop_dead_handlers(p);
     let p = alive.as_ref().unwrap_or(p);
     // `Switch` as `if`s (`temper_tmpl::switches`); none comes here yet.
     let chained = (!variant.profile.native.contains(Features::SWITCH))

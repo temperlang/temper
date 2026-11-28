@@ -1,7 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <memory>
-#include "temper_bubble.hpp"
+#include "temper_panic.hpp"
 #include "base_types.hpp"
 #include "mapped.hpp"
 

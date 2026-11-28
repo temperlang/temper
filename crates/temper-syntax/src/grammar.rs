@@ -1099,7 +1099,7 @@ impl Grammar {
     /// ErrorCaseCallee := Leaf y ( y "error".revalue(errorCase) y "case" y wordSymbol y
     ///   leftName(unreservedWordMatcher) y )
     ///
-    /// Ours (RFC 164): `error case Name`, a failure class declaration, as
+    /// Ours (RFC 164): `error case Name`, an error class declaration, as
     /// `class Name` is a class's. `error` and `case` stay words elsewhere.
     fn error_case_callee(&mut self, p: usize) -> R {
         let p = self.open_op(p, O::Leaf)?;

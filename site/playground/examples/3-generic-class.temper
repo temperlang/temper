@@ -12,7 +12,7 @@ export class Stack<T> {
 
   public push(item: T): Void { items.add(item); }
 
-  /** The newest item, removed; an `EmptyStack` failure if there's none. */
+  /** The newest item, removed; an `EmptyStack` error if there's none. */
   public pop(): T throws EmptyStack {
     if (items.length == 0) { throw new EmptyStack() }
     items.removeLast()

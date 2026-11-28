@@ -573,7 +573,7 @@ pub struct Effect {
     /// call.
     pub reads: bool,
     /// May bubble.
-    pub bubbles: bool,
+    pub fails: bool,
 }
 
 impl Effect {
@@ -582,7 +582,7 @@ impl Effect {
         Effect {
             writes: self.writes || other.writes,
             reads: self.reads || other.reads,
-            bubbles: self.bubbles || other.bubbles,
+            fails: self.fails || other.fails,
         }
     }
 
@@ -590,13 +590,13 @@ impl Effect {
     /// too, reads what may be written, or bubbles, which would skip the
     /// write or not.
     pub fn conflicts(self, other: Effect) -> bool {
-        (self.writes && (other.writes || other.reads || other.bubbles))
-            || (other.writes && (self.reads || self.bubbles))
+        (self.writes && (other.writes || other.reads || other.fails))
+            || (other.writes && (self.reads || self.fails))
     }
 
     /// Whether it does anything at all that order could show.
     pub fn any(self) -> bool {
-        self.writes || self.reads || self.bubbles
+        self.writes || self.reads || self.fails
     }
 }
 
@@ -659,12 +659,12 @@ impl Effects {
                 },
                 Node::CallFunction {
                     callee: d,
-                    may_bubble,
+                    may_fail,
                     ..
                 }
                 | Node::CallMethod {
                     method: d,
-                    may_bubble,
+                    may_fail,
                     ..
                 } => {
                     let called = if is_external(p, d) {
@@ -676,7 +676,7 @@ impl Effects {
                         self.functions.get(&d).copied().unwrap_or_default()
                     };
                     called.and(Effect {
-                        bubbles: may_bubble,
+                        fails: may_fail,
                         ..Effect::default()
                     })
                 }
@@ -685,7 +685,7 @@ impl Effects {
                     ..Effect::default()
                 },
                 Node::Error { .. } => Effect {
-                    bubbles: true,
+                    fails: true,
                     ..Effect::default()
                 },
                 _ => Effect::default(),

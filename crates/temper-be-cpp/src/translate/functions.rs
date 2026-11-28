@@ -20,9 +20,9 @@ use temper_tmpl::analysis::walk;
 impl Translator<'_> {
     /// A function value's type, a function type's or a `@fun`
     /// interface's, as a `std::function`: `std::function<int32_t(int32_t)>`,
-    /// or where a failure parameter of its interface is given `Never<…>`,
+    /// or where an error parameter of its interface is given `Never<…>`,
     /// one returning `core::Expected<int32_t, core::Never>`, as generic
-    /// code calling it expects (`failures::value_failure`).
+    /// code calling it expects (`declared_errors::value_error`).
     pub(crate) fn function_type(&self, ty: TypeId) -> R<String> {
         let Some(sig) = temper_tmpl::analysis::fun_signature(self.p, ty) else {
             return not_yet("a std::function for another type");
@@ -37,7 +37,7 @@ impl Translator<'_> {
         for &t in s.params {
             texts.push(self.ty(t)?);
         }
-        let fail = temper_tmpl::failures::value_failure(self.p, ty);
+        let fail = temper_tmpl::declared_errors::value_error(self.p, ty);
         Ok(format!(
             "std::function<{}({})>",
             self.result_type(s.pass, fail)?,
@@ -114,7 +114,7 @@ impl Translator<'_> {
 
     /// A function literal's parameters (an unused one unnamed), result
     /// type, and body, as a value of type `ty`: a literal that can't fail
-    /// returns an `Expected` of `core::Never` where `ty`'s failure
+    /// returns an `Expected` of `core::Never` where `ty`'s error
     /// parameter is given `Never<…>` ([`function_type`](Self::function_type)).
     #[allow(clippy::type_complexity)]
     pub(crate) fn literal_parts(
@@ -130,7 +130,7 @@ impl Translator<'_> {
         };
         let fail = sig
             .fail
-            .or_else(|| temper_tmpl::failures::value_failure(p, ty));
+            .or_else(|| temper_tmpl::declared_errors::value_error(p, ty));
         let result = self.result_type(sig.pass, fail)?;
         let fail_to = self.fail_to_of(sig.pass, fail)?;
         // What the body reads; a parameter it doesn't is unnamed.
@@ -172,7 +172,7 @@ impl Translator<'_> {
         self.fail_to = outer;
         let mut stmts = stmts?;
         if sig.pass == TypeId::VOID && fail_to != FailTo::Nowhere {
-            super::failures::expected_void(&mut stmts);
+            super::declared_errors::expected_void(&mut stmts);
         } else if sig.pass == TypeId::VOID && stmts.last() == Some(&Stmt::Return(None)) {
             stmts.pop();
         }

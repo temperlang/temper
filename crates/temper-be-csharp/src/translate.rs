@@ -52,7 +52,7 @@
 //! A nullable type is C#'s `T?`: `Nullable<T>` for `int`, `long`,
 //! `double`, and `bool`, whose value is `x.Value`, and a nullable
 //! reference otherwise, which C# narrows by itself after a null check of
-//! a local, as Temper does (`x!` elsewhere). A failure is an exception, so
+//! a local, as Temper does (`x!` elsewhere). An error is an exception, so
 //! `orelse` is a `try` and `catch`: where it's a statement, or gives a
 //! `let`, an assignment, or a `return`, it's written so, each part given
 //! to the same place ([`Translator::sink`]); inside an expression, it
@@ -62,9 +62,9 @@
 //! no `orelse` catches, though a test framework does, test by test;
 //! Kotlin's throws what an `orelse` catches.
 //!
-//! Declared failures (RFC 164) are exceptions under each library's roots,
+//! Declared errors (RFC 164) are exceptions under each library's roots,
 //! as `WherewithException`, an `orelse` or `catch` catching exactly what its
-//! body may fail with ([`failures`] says how).
+//! body may fail with ([`declared_errors`] says how).
 //!
 //! A static field is a static property (`Rect.Unit`), Kotlin's a field:
 //! its value is in a `readonly` field of the module's class, which the
@@ -72,7 +72,7 @@
 //! the property reads, which runs the module's init first, as Kotlin's
 //! field initializers, run whenever .NET first uses the class, don't.
 
-mod failures;
+mod declared_errors;
 mod functions;
 mod host;
 
@@ -526,14 +526,17 @@ impl<'a> Translator<'a> {
     }
 
     /// A class's or interface's simple name: an interface's with `I`
-    /// before it, as Kotlin's (`IShape`), but a declared failure's, which
-    /// is a class ([`failures`]).
+    /// before it, as Kotlin's (`IShape`), but a declared error's, which
+    /// is a class ([`declared_errors`]).
     fn simple_type_name(&self, decl: DeclId) -> String {
         let name = self.name(decl);
         let p = self.p;
-        // Another library's failure types are classes too.
-        let failure =
-            temper_tmpl::failures::is_failure_decl(p, temper_tmpl::failures::root(p), decl);
+        // Another library's error types are classes too.
+        let failure = temper_tmpl::declared_errors::is_error_decl(
+            p,
+            temper_tmpl::declared_errors::root(p),
+            decl,
+        );
         if p.decls.get(decl).kind == DeclKind::Interface && !failure {
             format!("I{name}")
         } else {
@@ -668,7 +671,7 @@ impl<'a> Translator<'a> {
                 let qname = self.qname(decl);
                 let mut texts = Vec::new();
                 let args = self.p.types.list(args);
-                for a in temper_tmpl::failures::unchecked_args(self.p, decl, args) {
+                for a in temper_tmpl::declared_errors::unchecked_args(self.p, decl, args) {
                     texts.push(self.ty(a)?);
                 }
                 let name = match connected::lookup_type(&qname) {
@@ -719,7 +722,7 @@ impl<'a> Translator<'a> {
     /// `IHolder<T>` for `interface Holder<T>`.
     fn own_type(&mut self, decl: DeclId) -> R<String> {
         let name = self.simple_type_name(decl);
-        let params = temper_tmpl::failures::unchecked_type_params(self.p, decl);
+        let params = temper_tmpl::declared_errors::unchecked_type_params(self.p, decl);
         if params.is_empty() {
             return Ok(name);
         }
@@ -739,7 +742,7 @@ impl<'a> Translator<'a> {
             return not_yet("a generic interface's member on another type");
         };
         let mut texts = Vec::new();
-        for a in temper_tmpl::failures::unchecked_args(self.p, owner, &args) {
+        for a in temper_tmpl::declared_errors::unchecked_args(self.p, owner, &args) {
             texts.push(self.ty(a)?);
         }
         Ok(format!("{name}<{}>", texts.join(", ")))
@@ -757,10 +760,10 @@ impl<'a> Translator<'a> {
 
     /// A generic declaration's type parameters, `<T>`, and their
     /// constraints, `where T : Named` (but `MapKey`, which C#'s maps need
-    /// nothing for). Not failure parameters: exceptions are unchecked.
+    /// nothing for). Not error parameters: exceptions are unchecked.
     fn type_params(&mut self, decl: DeclId) -> R<(String, Vec<String>)> {
         let p = self.p;
-        let params = temper_tmpl::failures::unchecked_type_params(p, decl);
+        let params = temper_tmpl::declared_errors::unchecked_type_params(p, decl);
         if params.is_empty() {
             return Ok((String::new(), Vec::new()));
         }
@@ -1230,9 +1233,9 @@ impl<'a> Translator<'a> {
         else {
             return not_yet("a type that isn't a class or interface");
         };
-        // A declared failure type is a class, a sealed failure interface
-        // an abstract one ([`failures`]).
-        let failure = failures::failure_class(p, decl);
+        // A declared error type is a class, a sealed error interface
+        // an abstract one ([`declared_errors`]).
+        let failure = declared_errors::error_class(p, decl);
         let declared_interface = p.decls.get(decl).kind == DeclKind::Interface;
         let interface = declared_interface && !failure;
         let modifiers = match (failure, declared_interface) {
@@ -1247,12 +1250,12 @@ impl<'a> Translator<'a> {
         self.in_type = Some(decl);
         let mut translated = self.type_members(decl, p.nodes.list(members), interface);
         if let (true, Ok(members)) = (failure, &mut translated) {
-            if let Err(e) = self.failure_members(item, decl, declared_interface, members) {
+            if let Err(e) = self.error_members(item, decl, declared_interface, members) {
                 translated = Err(e);
             }
         }
         let bases = match failure {
-            true => self.failure_bases(decl),
+            true => self.error_bases(decl),
             false => (p.decls.supers(decl).iter())
                 .map(|&s| self.ty(s))
                 .collect::<R<Vec<_>>>(),
@@ -1870,8 +1873,8 @@ impl<'a> Translator<'a> {
     /// std's `Test`, runs the body, and then, even if the body threw,
     /// ends the test (`Async.EndTest`): waits for the async work it
     /// started, throwing what failed there, and fails if the `Test` has
-    /// failures (`SoftFailToHard`), as Kotlin's do, the body's own
-    /// failure winning. They see the library's `internal` members (`InternalsVisibleTo`
+    /// errors (`SoftFailToHard`), as Kotlin's do, the body's own
+    /// error winning. They see the library's `internal` members (`InternalsVisibleTo`
     /// in its project). A test's update of the library's module `var`
     /// doesn't take its lock, which is private to its class. `None`
     /// without test parts or tests.
@@ -1918,7 +1921,7 @@ impl<'a> Translator<'a> {
             let var = self.name(param);
             self.begin(test);
             let stmts = self.stmts(body)?;
-            // The body's failure, kept for `Async.EndTest`, which then
+            // The body's error, kept for `Async.EndTest`, which then
             // finishes its async work and `SoftFailToHard`.
             let failure = self.temporary("failure");
             let e = self.temporary("e");
@@ -2184,7 +2187,7 @@ impl<'a> Translator<'a> {
             // Core's that only read.
             Node::CallMethod {
                 method,
-                may_bubble: false,
+                may_fail: false,
                 ..
             } if is_external(p, method) && library_of(p, method) == "core" => {
                 let q = self.qname(method);
@@ -2271,7 +2274,7 @@ impl<'a> Translator<'a> {
                     out.push(self.try_around_yields(class, bound, tried, caught)?);
                     return Ok(());
                 }
-                // `orelse panic()` panics with the failure as its inner
+                // `orelse panic()` panics with the error as its inner
                 // exception.
                 let mut var = local;
                 if matches!(p.nodes.get(fallback), Node::Panic {}) {
@@ -2491,7 +2494,7 @@ impl<'a> Translator<'a> {
     }
 
     /// `panic()`, and code with an error: throws the runtime's `Panic`,
-    /// which no handler catches, as it's no failure; Kotlin's threw what
+    /// which no handler catches, as it's no error; Kotlin's threw what
     /// an `orelse` caught.
     fn panic(&mut self) -> Vec<Stmt> {
         let message = Expr::Str("panic".into());
@@ -2814,7 +2817,7 @@ impl<'a> Translator<'a> {
             return self.connected(field, &[object]);
         }
         let object = self.expr(object)?;
-        // A pair's, a `KeyValuePair`'s; core's failures' properties, in
+        // A pair's, a `KeyValuePair`'s; core's errors' properties, in
         // Pascal case, as `ParseError.Reason`.
         if by_connection(self.p, field, crate::connected::connects_std) {
             let owner = self.qname(self.p.decls.get(field).owner);
@@ -2899,7 +2902,7 @@ impl<'a> Translator<'a> {
         }
         let mut texts = Vec::new();
         let args = self.p.types.args_of(type_args);
-        for a in temper_tmpl::failures::unchecked_args(self.p, callee, args) {
+        for a in temper_tmpl::declared_errors::unchecked_args(self.p, callee, args) {
             texts.push(self.ty(a)?);
         }
         if texts.is_empty() {
@@ -3308,7 +3311,7 @@ impl<'a> Translator<'a> {
                 if self.is_value_type(p.nodes.ty(id)) || self.is_optional(p.nodes.ty(value)) {
                     e.member("Value")
                 } else if matches!(p.nodes.get(value), Node::Local { .. })
-                    && !failures::is_kept_failure(p, value)
+                    && !declared_errors::is_kept_error(p, value)
                     || matches!(p.nodes.get(value),
                         Node::GetModuleLet { target } if !self.statics.contains(&target))
                 {
@@ -3744,7 +3747,7 @@ pub(crate) fn completes(s: &Stmt) -> bool {
         // A label is reached by a `goto` from before it.
         Stmt::Block(body) if body.iter().any(|s| matches!(s, Stmt::Label(_))) => true,
         Stmt::Block(body) | Stmt::Lock { body, .. } => body.iter().all(completes),
-        // A catch that keeps the failure rethrows it, never completing.
+        // A catch that keeps the error rethrows it, never completing.
         Stmt::Try { body, finally, .. } => {
             body.iter().all(completes) && finally.iter().all(completes)
         }

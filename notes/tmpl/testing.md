@@ -121,7 +121,7 @@ As built with the Python backend (2026-10-30):
   `@temperlang/std` in the same `node_modules`, so tests need no npm
   package and have no per-test time limit (Mocha's 2 s was the only
   one among the backends). One process, as Mocha's was, so a tests file
-  that fails as it loads is a failure saying why (with a process per
+  that fails as it loads is an error saying why (with a process per
   file, Node's JUnit report says only "test failed"). Tests files
   import `it` from `node:test` (a module-level name `it` takes a `_`);
   `package.json` runs `node --enable-source-maps --test
@@ -152,7 +152,7 @@ As built with the Python backend (2026-10-30):
   `temper test -b js` and `temper run -b js` pass
   `--enable-source-maps`, and the CLI test
   `js_stack_traces_point_at_temper` checks that a test's panic and
-  failed assertion (in the JUnit results) and `run`'s uncaught failure
+  failed assertion (in the JUnit results) and `run`'s uncaught error
   and panic name the `.temper(.md)` lines.
 - **Java** (2026-10-30): the compiler is the checker. Without Maven,
   `javac` (or `JAVAC`) compiles the runtime, `temper-core`
@@ -331,7 +331,7 @@ As built with the Python backend (2026-10-30):
   program in one directory, then a library with tests again with
   `-DTEMPER_TESTS` and its `test.cpp` against a stand-in
   `std/testing.hpp` (since 2026-11-03, std's own, its JUnit XML compared
-  with `expectedFailures`), whose JUnit XML must show no failures; Lua runs an
+  with `expectedFailures`), whose JUnit XML must show no errors; Lua runs an
   importing library in a process of its own, and `testing`'s tests
   under a LuaUnit stand-in, with luac and LuaLS on the tests files.
 - **Parameters' defaults** (2026-11-01): the testkit's `DEFAULTS`
@@ -373,7 +373,7 @@ format's bytes shows in review, and its version must be raised:
 
 - **Kept small:** a handful of cases covering every section, not every
   text golden.
-- **Readable failures:** a mismatch shows a diff of a structured dump
+- **Readable errors:** a mismatch shows a diff of a structured dump
   (`tmpl dump`: each section with its offset and length, then its
   decoded records) of expected against actual, plus the first byte that
   differs, never raw bytes alone. The dump is also checked in beside

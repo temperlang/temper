@@ -97,8 +97,8 @@ pub struct Translator<'a> {
     /// The `do_await` parameters of the generators being translated,
     /// innermost last, which an `await` yields a call of.
     awaiters: Vec<String>,
-    /// Nullable locals a `catch` keeps its failure in, for a fallback that
-    /// jumps (notes/tmpl/nodes.md, "Declared failures"), which checkers
+    /// Nullable locals a `catch` keeps its error in, for a fallback that
+    /// jumps (notes/tmpl/nodes.md, "Declared errors"), which checkers
     /// can't tell are set where they're read as not null.
     carriers: BTreeSet<DeclId>,
     /// How the function being translated, or the module's init, binds
@@ -435,7 +435,7 @@ impl<'a> Translator<'a> {
             TypeData::Result { .. } => return not_yet("a result type as a value's"),
             TypeData::Nominal { decl, args } => {
                 let args = self.p.types.list(args);
-                let args = temper_tmpl::failures::unchecked_args(self.p, decl, args);
+                let args = temper_tmpl::declared_errors::unchecked_args(self.p, decl, args);
                 let mut quote = false;
                 let mut texts = Vec::new();
                 for a in args {
@@ -577,8 +577,8 @@ impl<'a> Translator<'a> {
                     .collect()
             };
             for decl in decls {
-                // Not failure parameters: exceptions are unchecked.
-                for tp in temper_tmpl::failures::unchecked_type_params(p, decl) {
+                // Not error parameters: exceptions are unchecked.
+                for tp in temper_tmpl::declared_errors::unchecked_type_params(p, decl) {
                     let source = p.name(tp).to_string();
                     let bound = match p.decls.supers(tp) {
                         [] => None,
@@ -1005,7 +1005,7 @@ impl<'a> Translator<'a> {
         let Some(sig) = p.signature(decl) else {
             return Vec::new();
         };
-        (temper_tmpl::failures::unchecked_type_params(p, decl).iter())
+        (temper_tmpl::declared_errors::unchecked_type_params(p, decl).iter())
             .filter(|&&tp| {
                 let f = p.decls.get(tp).ty;
                 !p.types.mentions(sig.pass, f)
@@ -1355,8 +1355,8 @@ impl<'a> Translator<'a> {
     /// test's name. Each makes std's `Test` and runs the test's body in
     /// `with end_test(test):`, the runtime's, which then, even if the body
     /// raised, waits for the async work it started, raising what failed
-    /// there, and fails if the `Test` has failures (`softFailToHard`), as
-    /// Kotlin's do, the body's own failure winning. What they use of the module,
+    /// there, and fails if the `Test` has errors (`softFailToHard`), as
+    /// Kotlin's do, the body's own error winning. What they use of the module,
     /// its private names too, is imported from it, as Kotlin's do. `None`
     /// if the module has no tests.
     pub fn tests(&mut self, module: &Module, class: &str) -> R<Option<tree::Module>> {
@@ -1510,24 +1510,24 @@ impl<'a> Translator<'a> {
     }
 
     /// What a handler around `body` catches, the `except` clause's
-    /// class: the failure class nearest above all its declared failures
-    /// (the runtime's `Failure` for core's `Error`, failures of several
+    /// class: the error class nearest above all its declared errors
+    /// (the runtime's `Failure` for core's `Error`, errors of several
     /// libraries), never what else Python raises, so panics and hosts'
     /// errors pass.
     fn handled(&mut self, body: NodeId) -> R<Expr> {
         let p = self.p;
-        let fails: Vec<TypeId> = (temper_tmpl::failures::failures_under(p, body).into_iter())
+        let fails: Vec<TypeId> = (temper_tmpl::declared_errors::errors_under(p, body).into_iter())
             .map(|(_, f)| f)
             .collect();
-        let root = temper_tmpl::failures::root(p);
-        Ok(match temper_tmpl::failures::join(p, root, &fails) {
+        let root = temper_tmpl::declared_errors::root(p);
+        Ok(match temper_tmpl::declared_errors::join(p, root, &fails) {
             Some(ty) => self.type_ref(ty)?,
             // A body that can't fail, which backends drop first: nothing.
             None => Expr::Tuple(Vec::new()),
         })
     }
 
-    /// Notes the locals a `catch`'s fallback keeps its failure, `local`,
+    /// Notes the locals a `catch`'s fallback keeps its error, `local`,
     /// in ([`Translator::carriers`]).
     fn find_carriers(&mut self, local: DeclId, fallback: NodeId) {
         let p = self.p;
@@ -1548,7 +1548,7 @@ impl<'a> Translator<'a> {
         matches!(self.p.nodes.get(value), Node::Local { local } if self.carriers.contains(&local))
     }
 
-    /// `throw value`, as `raise`: with its cause, the failure a handler
+    /// `throw value`, as `raise`: with its cause, the error a handler
     /// handles, `from` it, where it's made there; else through the
     /// runtime's `with_cause`, which keeps a cause it has already.
     fn throw(&mut self, value: NodeId, cause: Option<NodeId>) -> R<Stmt> {
@@ -1609,7 +1609,7 @@ impl<'a> Translator<'a> {
                 self.value_into(body, sink, &mut tried)?;
                 let class = self.handled(body)?;
                 let mut bound = local.map(|l| self.name(l));
-                // `orelse panic()` panics with the failure as its cause.
+                // `orelse panic()` panics with the error as its cause.
                 match self.p.nodes.get(fallback) {
                     Node::Panic {} => {
                         let cause = bound.get_or_insert_with(|| self.temp()).clone();
@@ -2410,7 +2410,7 @@ impl<'a> Translator<'a> {
                 }
                 Expr::bin(Bin::Is, self.expr(value)?, Expr::None)
             }
-            // A failure a `catch` kept, not null where it's read, asserted
+            // An error a `catch` kept, not null where it's read, asserted
             // so for checkers, as they can't tell.
             Node::NonNull { value } if self.is_carrier(value) => {
                 let kept = self.expr(value)?;
@@ -2761,7 +2761,7 @@ fn not(e: Expr) -> Expr {
 }
 
 /// `panic()`, and code with an error: raised past any `orelse`, which
-/// catches only failures. Kotlin's raises `RuntimeError`, as its bubbles
+/// catches only errors. Kotlin's raises `RuntimeError`, as its bubbles
 /// did, so an `orelse` caught it (notes/kotlin-differences.md).
 fn panic() -> Stmt {
     Stmt::Raise(panic_value())
@@ -2884,10 +2884,10 @@ pub(crate) fn core_type(qname: &str) -> Option<(&'static str, &'static str)> {
         "core.type StringBuilder" => ("builtins", "list[str]"),
         "core.type Deque" => ("collections", "deque"),
         "core.type DenseBitVector" => ("temper_core", "DenseBitVector"),
-        // Core's root of declared failures, which each library's
-        // failure roots extend.
+        // Core's root of declared errors, which each library's
+        // error roots extend.
         "core.type Error" => ("temper_core", "Failure"),
-        // Core's own failures, the runtime's classes.
+        // Core's own errors, the runtime's classes.
         "core.type CoreError" => ("temper_core", "CoreError"),
         "core.type MissingKey" => ("temper_core", "MissingKey"),
         "core.type ParseError" => ("temper_core", "ParseError"),

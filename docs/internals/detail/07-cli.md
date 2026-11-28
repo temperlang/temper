@@ -147,7 +147,7 @@ met for the commands this compiler has ([parity](#parity-with-kotlins-temper)).
 
 ### Exit codes
 
-**Chosen:** 0 for success, 1 for failure (errors in the code, a failed
+**Chosen:** 0 for success, 1 for error (errors in the code, a failed
 or unrun test, a library that didn't build), 2 for a usage error, and 3
 for what isn't available yet ([below](#not-available-yet-said-plainly)).
 A backend name that exists but wasn't built in is 1, with "built
@@ -185,7 +185,7 @@ DIR` does their work.
 --port` serving stdio anyway, which would leave a client that expects a
 socket waiting.
 
-**Pros:** a script can tell "not yet" from a failure or a typo, and a
+**Pros:** a script can tell "not yet" from an error or a typo, and a
 person learns what to do.
 
 **Status:** this compiler's choice (2026-11-09).
@@ -631,7 +631,7 @@ with [`parse_junit`](../../../crates/temper-frontend/src/library_tests.rs)
 into a [`LibraryTests`](../../../crates/temper-frontend/src/library_tests.rs).
 Diagnostics not yet reported print first
 ([`Reported`](../../../crates/temper-frontend/src/library_tests.rs)).
-Only failures print, unless `-v`, which adds every test with the steps
+Only errors print, unless `-v`, which adds every test with the steps
 it took (`ok      name (1234 steps)`), then Kotlin's summary,
 `Tests passed: N of M`, with "not run" and "unexpected" counts
 ([`Tally::summary`](../../../crates/temper-frontend/src/library_tests.rs)).
@@ -745,7 +745,7 @@ What has to change first, found while writing this:
 - **The descriptor.** `Registry` holds `&'static Backend` with `fn`
   pointers; a backend found at run time needs an owned descriptor and a
   way to call it.
-- **Tools.** The `Tools` contract (results as names and failures) fits a
+- **Tools.** The `Tools` contract (results as names and errors) fits a
   process well; it would be the `test` message.
 
 ## Parity with Kotlin's temper

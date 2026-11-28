@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <RootNamespace>Errors</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ErrorsTest"/>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../temper-core/TemperLang.Core.csproj"/>
+  </ItemGroup>
+</Project>

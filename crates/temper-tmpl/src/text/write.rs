@@ -754,7 +754,7 @@ impl Writer {
                 self.out.push_str("(as(");
                 self.expr(p, value);
                 self.out.push(')');
-                if p.nodes.flags(id).contains(Flags::MAY_BUBBLE) {
+                if p.nodes.flags(id).contains(Flags::MAY_FAIL) {
                     self.out.push('^');
                 }
                 self.written_type(p, id);
@@ -896,7 +896,7 @@ impl Writer {
                     self.expr(p, cause);
                 }
                 self.out.push(')');
-                if p.nodes.flags(id).contains(Flags::MAY_BUBBLE) {
+                if p.nodes.flags(id).contains(Flags::MAY_FAIL) {
                     self.out.push('^');
                 }
                 self.written_type(p, id);
@@ -905,14 +905,11 @@ impl Writer {
                 self.out.push_str("(panic()");
                 self.written_type(p, id);
             }
-            Node::Await {
-                may_bubble,
-                promise,
-            } => {
+            Node::Await { may_fail, promise } => {
                 self.out.push_str("(await(");
                 self.expr(p, promise);
                 self.out.push(')');
-                if may_bubble {
+                if may_fail {
                     self.out.push('^');
                 }
                 self.written_type(p, id);
@@ -1027,7 +1024,7 @@ impl Writer {
             self.expr(p, arg);
         }
         self.out.push(')');
-        if p.nodes.flags(call).contains(Flags::MAY_BUBBLE) {
+        if p.nodes.flags(call).contains(Flags::MAY_FAIL) {
             self.out.push('^');
         }
     }

@@ -80,4 +80,4 @@ log expected a panic, but it threw / expected a panic
 === a function may throw Error only in std and tests
 let f(): Void throws Error {}
 --- settled
-error 21..26: Error is the root of failure types; throws takes a class or sealed interface that extends it
+error 21..26: Error is the root of error types; throws takes a class or sealed interface that extends it

@@ -32,8 +32,8 @@ Each idea has a status: **done** in tempest, **planned**, or an **idea**.
    CommonMark spec). Most of these are indexes and lengths, which value
    ranges can show can't overflow ([typing.md](typing.md), "What flow
    facts are used for"). **Planned.**
-3. **No exceptions for failures handled on the spot.** Where bubbling is
-   an exception (Python, Java, JavaScript, C#), a failure that's common
+3. **No exceptions for errors handled on the spot.** Where bubbling is
+   an exception (Python, Java, JavaScript, C#), an error that's common
    and handled right where it happens, like `orelse` after a search that
    finds nothing, can be a null check instead of a throw. **Idea.**
 4. **Native string indexing everywhere.** Core already iterates code

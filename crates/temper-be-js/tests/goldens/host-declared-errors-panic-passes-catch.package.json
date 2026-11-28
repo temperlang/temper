@@ -1,0 +1,11 @@
+{
+    "name": "host-declared-errors-panic-passes-catch",
+    "type": "module",
+    "exports": {
+        "./host_declared_errors_panic_passes_catch": "./host_declared_errors_panic_passes_catch.js",
+        ".": "./index.js"
+    },
+    "dependencies": {
+        "@temperlang/core": "0.0.0-alpha.0.0"
+    }
+}

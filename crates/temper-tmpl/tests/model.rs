@@ -211,7 +211,7 @@ fn structure_problems() {
             Flags::NONE,
             &[later],
         );
-        let flagged = b.raw(Kind::Block, TypeId::NONE, (0, 0), Flags::MAY_BUBBLE, &[]);
+        let flagged = b.raw(Kind::Block, TypeId::NONE, (0, 0), Flags::MAY_FAIL, &[]);
         vec![one, bad, after, flagged]
     });
     assert_eq!(
@@ -345,14 +345,14 @@ fn results_are_signatures_results() {
     use temper_tmpl::TypeTable;
     let (int, string) = (TypeId::INT32, TypeId::STRING);
     let mut t = TypeTable::default();
-    // A failure class's type, by its declaration.
+    // An error class's type, by its declaration.
     let fail = t.nominal(DeclId(9));
     let r = t.result(int, fail);
     assert_eq!(t.result(int, fail), r);
     assert_eq!((t.pass(r), t.fail(r)), (int, Some(fail)));
     assert_eq!((t.pass(int), t.fail(int)), (int, None));
     assert!(t.signature(r).is_none());
-    // A failure that can't happen goes.
+    // An error that can't happen goes.
     let never = t.never(fail);
     assert_eq!(t.result(int, never), int);
 

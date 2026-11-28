@@ -1,7 +1,7 @@
 //! Number methods, conversions and formatting, matching Kotlin Temper's
 //! (`FloatFns.kt`, `StandardLibraryHelpers.kt`, `FormatDouble.kt`).
 
-use super::{CoreFailure, R, Val, to_string};
+use super::{CoreDeclaredError, R, Val, to_string};
 use std::cmp::Ordering;
 
 /// Largest magnitude of an `Int64` that converts to and from `Float64`
@@ -125,7 +125,7 @@ pub(super) fn parse_float(text: &str) -> Option<f64> {
 /// A `ParseError` for a number another type can't hold, its `input` the
 /// number as `toString` gives it.
 fn out_of_range(n: Val, reason: &str) -> super::Abrupt {
-    CoreFailure::parse_error(to_string(&n), reason)
+    CoreDeclaredError::parse_error(to_string(&n), reason)
 }
 
 /// A float method, or `None` if there's no such method.

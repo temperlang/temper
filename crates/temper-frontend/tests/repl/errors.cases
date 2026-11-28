@@ -1,4 +1,4 @@
-# REPL sessions: errors, failures, and Kotlin's REPL bugs, fixed.
+# REPL sessions: errors, errors, and Kotlin's REPL bugs, fixed.
 === bad code reports, and the session goes on
 let = 3
 1 +

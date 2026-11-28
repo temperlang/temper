@@ -35,7 +35,7 @@ everywhere. Still open from Level 1:
 3. **Ownership facts** for Rust, Swift, and C (clones, last uses):
    stored or computed? Recommend computed ([analyses.md](analyses.md)) until a backend proves
    otherwise.
-4. **Bubbling payloads:** reserve a value on failure now? Recommend
+4. **Bubbling payloads:** reserve a value on error now? Recommend
    reserving the field, unused until Temper decides.
 5. **Builtin keys:** one namespace for builtins, operators, and
    connected members, listed in the crate so backends' tables are
@@ -225,22 +225,22 @@ New with that round, all Proposed:
     yes, as one chunk, before `to_tmpl`, so `to_tmpl` never emits the
     48 keys.
     Built as recommended (2026-10-29).
-44. **Failure kinds beyond `Bubble`** (raised by the user, 2026-10-29,
+44. **Error kinds beyond `Bubble`** (raised by the user, 2026-10-29,
     as team brainstorming): Temper may get custom exception types, but
     can't guarantee their payload (a message at best, delivered on a
     best-effort basis to each backend's world) or any particular
     hierarchy. Recommend leaving room without depending on it: the
     bubble effect and `Bubble`-raising nodes may later carry an
-    optional failure kind (a nominal declaration, by qname) and an
+    optional error kind (a nominal declaration, by qname) and an
     optional message, absent by default and never relied on by passes
     or by what Temper code can observe portably; backends map a kind
     to a native exception class or error variant where they can, and
     ignore it where they can't. Until the language decides, `Bubble`
-    stays the only failure, and nothing in subset A's layout should
+    stays the only error, and nothing in subset A's layout should
     rule this out. **In progress (2026-11-24):** RFC 164's declared
-    failures reach tmpl as failure types, `Throw`, and `Catch`
-    ([nodes.md](nodes.md), "Declared failures"), and since 2026-11-27
-    they're the only failures: `Bubble` is gone.
+    errors reach tmpl as error types, `Throw`, and `Catch`
+    ([nodes.md](nodes.md), "Declared errors"), and since 2026-11-27
+    they're the only errors: `Bubble` is gone.
 45. **Where `x++` as a statement simplifies:** the frontend's macro
     expands `x++` to `do { let t = x; x = t + 1; t }`, since expansion
     can't know whether the value is used; `to_tmpl` drops the

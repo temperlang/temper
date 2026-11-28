@@ -29,11 +29,11 @@
 //! to a type with members the value's type doesn't declare is cast
 //! through `unknown`.
 //!
-//! A declared failure type (RFC 164) extends the one failure type above
+//! A declared error type (RFC 164) extends the one error type above
 //! it natively instead, each of the library's roots JS's `Error`, so
 //! hosts' `instanceof`, `stack`, `name`, and `message` work: `class
 //! WherewithError extends Error {}`, then `failureBase(WherewithError)`,
-//! the runtime's marker and `name`; a root, or another sealed failure
+//! the runtime's marker and `name`; a root, or another sealed error
 //! interface, is a class that's never made itself; and `message` is a
 //! getter over `Error`'s, read when asked.
 
@@ -80,10 +80,10 @@ impl Translator<'_> {
             let class = self.class(item);
             body.append(&mut self.static_lets);
             body.push(class?);
-            // A library's root failure class gets the runtime's marker and
+            // A library's root error class gets the runtime's marker and
             // its `name`.
-            let root = temper_tmpl::failures::root(p);
-            if temper_tmpl::failures::is_library_root(p, root, decl) {
+            let root = temper_tmpl::declared_errors::root(p);
+            if temper_tmpl::declared_errors::is_library_root(p, root, decl) {
                 self.imports.insert("failureBase");
                 let call = Expr::name("failureBase").call(vec![self.class_ref(decl)]);
                 body.push(Stmt::Expr(call));
@@ -92,41 +92,45 @@ impl Translator<'_> {
         Ok(())
     }
 
-    /// Whether a class or interface is a declared failure type of the
-    /// program's own (`temper_tmpl::failures`): a JS class extending the one
-    /// failure type above it, natively, each of the library's roots
+    /// Whether a class or interface is a declared error type of the
+    /// program's own (`temper_tmpl::declared_errors`): a JS class extending the one
+    /// error type above it, natively, each of the library's roots
     /// extending JS's `Error`, so `instanceof`, `stack`, `name`, and
     /// `message` work as hosts expect; an interface (a root, or another
     /// sealed one) is a class that's never made itself, as other
     /// interfaces are.
-    pub(super) fn is_failure_type(&self, decl: DeclId) -> bool {
+    pub(super) fn is_error_type(&self, decl: DeclId) -> bool {
         let p = self.p;
         matches!(
             p.decls.get(decl).kind,
             DeclKind::Class | DeclKind::Interface
         ) && !is_external(p, decl)
-            && temper_tmpl::failures::is_failure_decl(p, temper_tmpl::failures::root(p), decl)
+            && temper_tmpl::declared_errors::is_error_decl(
+                p,
+                temper_tmpl::declared_errors::root(p),
+                decl,
+            )
     }
 
-    /// What a failure type extends: the one failure type above it, or
+    /// What an error type extends: the one error type above it, or
     /// JS's `Error` for a root, which core's `Error` is. Not
     /// yet for other supertypes, which JS's single inheritance can't give
-    /// it beside that one, nor for a failure interface's abstract members,
+    /// it beside that one, nor for an error interface's abstract members,
     /// which, declared as fields for TypeScript, would hide its classes'.
-    fn failure_extends(&mut self, decl: DeclId, members: temper_tmpl::Kids) -> R<Expr> {
+    fn error_extends(&mut self, decl: DeclId, members: temper_tmpl::Kids) -> R<Expr> {
         let p = self.p;
-        let root = temper_tmpl::failures::root(p);
+        let root = temper_tmpl::declared_errors::root(p);
         let supers = p.decls.supers(decl);
         let [up] = supers else {
-            return not_yet("a failure type with other supertypes");
+            return not_yet("an error type with other supertypes");
         };
         let Some(up) = nominal_decl(p, *up) else {
-            return not_yet("a failure type's supertype");
+            return not_yet("an error type's supertype");
         };
         let abstract_member = (p.nodes.list(members).iter())
             .any(|&m| matches!(p.nodes.get(m), Node::AbstractMethod { .. }));
         if abstract_member {
-            return not_yet("a failure interface with abstract members");
+            return not_yet("an error interface with abstract members");
         }
         Ok(match Some(up) == root {
             true => Expr::name("Error"),
@@ -144,7 +148,7 @@ impl Translator<'_> {
     /// A class or interface, by its name, imported if it's another
     /// module's.
     pub(super) fn class_ref(&mut self, decl: DeclId) -> Expr {
-        if let Some(name) = self.core_failure(decl) {
+        if let Some(name) = self.core_error(decl) {
             self.import(name);
             return Expr::name(name);
         }
@@ -154,9 +158,9 @@ impl Translator<'_> {
         }
     }
 
-    /// The runtime's class for one of core's own failure types, as
+    /// The runtime's class for one of core's own error types, as
     /// `MissingKey`.
-    pub(super) fn core_failure(&self, decl: DeclId) -> Option<&'static str> {
+    pub(super) fn core_error(&self, decl: DeclId) -> Option<&'static str> {
         let p = self.p;
         if !temper_tmpl::qname::is_external(p, decl)
             || temper_tmpl::qname::library_of(p, decl) != "core"
@@ -316,8 +320,8 @@ impl Translator<'_> {
             return Ok(e);
         }
         let ty = self.ty(to)?;
-        // Failure classes extend each other natively, which TypeScript sees.
-        let failure = |t: TypeId| nominal_decl(self.p, t).is_some_and(|c| self.is_failure_type(c));
+        // Error classes extend each other natively, which TypeScript sees.
+        let failure = |t: TypeId| nominal_decl(self.p, t).is_some_and(|c| self.is_error_type(c));
         if failure(from) && failure(to) {
             return Ok(Expr::Cast(ty, Box::new(e)));
         }
@@ -343,8 +347,8 @@ impl Translator<'_> {
         let (Some(from), Some(to)) = (nominal_decl(p, from), nominal_decl(p, to)) else {
             return false;
         };
-        // A failure type is a JS `Error`, core's `Error`.
-        if Some(to) == temper_tmpl::failures::root(p) && self.is_failure_type(from) {
+        // An error type is a JS `Error`, core's `Error`.
+        if Some(to) == temper_tmpl::declared_errors::root(p) && self.is_error_type(from) {
             return true;
         }
         // Core's lists as arrays, and maps as maps.
@@ -561,8 +565,8 @@ impl Translator<'_> {
         self.class = outer;
         self.type_args.clear();
         let members = body?;
-        let extends = match self.is_failure_type(decl) {
-            true => self.failure_extends(decl, members_kids)?,
+        let extends = match self.is_error_type(decl) {
+            true => self.error_extends(decl, members_kids)?,
             false => {
                 self.imports.insert("type");
                 let supers: Vec<Expr> = (p.decls.supers(decl).iter())
@@ -587,10 +591,10 @@ impl Translator<'_> {
 
     fn class_body(&mut self, class: DeclId, members: temper_tmpl::Kids) -> R<Vec<Member>> {
         let p = self.p;
-        // A failure interface's classes extend it natively, so they need
+        // An error interface's classes extend it natively, so they need
         // nothing declared again for TypeScript.
         let interface =
-            p.decls.get(class).kind == DeclKind::Interface && !self.is_failure_type(class);
+            p.decls.get(class).kind == DeclKind::Interface && !self.is_error_type(class);
         let (mut fields, mut constructor, mut accessors, mut methods) =
             (Vec::new(), Vec::new(), Vec::new(), Vec::new());
         // An interface's abstract properties, declared once for a getter
@@ -755,12 +759,12 @@ impl Translator<'_> {
                         && params.is_empty()
                         && body.len() == 1
                         && !self.hidden(decl);
-                    // Nor is a failure class's default `message`'s, made
+                    // Nor is an error class's default `message`'s, made
                     // where the class is.
                     let made = kind == MethodKind::Constructor
                         || d.facts.contains(Facts::AUTO)
                         || d.facts.contains(Facts::COMPILER_MADE)
-                        || (self.is_failure_type(class)
+                        || (self.is_error_type(class)
                             && d.name_span == p.decls.get(class).name_span);
                     let member = Member::Method {
                         span,
@@ -853,9 +857,10 @@ impl Translator<'_> {
         let mut ps: Vec<(String, String)> = (self.templates(class)?.into_iter())
             .map(|t| ("@template".to_string(), t))
             .collect();
-        let uses: Vec<String> = (temper_tmpl::failures::unchecked_type_params(p, class).iter())
-            .map(|&t| p.name(t).to_string())
-            .collect();
+        let uses: Vec<String> = (temper_tmpl::declared_errors::unchecked_type_params(p, class)
+            .iter())
+        .map(|&t| p.name(t).to_string())
+        .collect();
         let result = match uses.as_slice() {
             [] => name.clone(),
             _ => format!("{name}<{}>", uses.join(", ")),

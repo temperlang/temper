@@ -521,10 +521,10 @@ impl Settle {
                 let types = &self.typing.types;
                 match (types.get(types.base(t)), types.get(ERROR)) {
                     (&TypeData::Builtin(i), _) => (i, types.args(t).to_vec(), Some(t)),
-                    // What a failure type doesn't declare is the root's,
+                    // What an error type doesn't declare is the root's,
                     // `message` and `cause`.
                     (&TypeData::Class(symbol), &TypeData::Builtin(i))
-                        if types.is_failure_class(symbol) =>
+                        if types.is_error_class(symbol) =>
                     {
                         (i, Vec::new(), Some(ERROR))
                     }
@@ -608,7 +608,7 @@ impl Settle {
         let types = &mut self.typing.types;
         let own: Vec<TypeId> = formals.iter().map(|&f| types.param(f)).collect();
         let sig = core_signature(types, &found.member.kind, &found.args, &own);
-        // Bound by `AnyValue`, or `Error` for a failure parameter, one the
+        // Bound by `AnyValue`, or `Error` for an error parameter, one the
         // method fails with, as `E` in `map`'s `fn (T): O throws E`
         // ([`Settle::unwritten_bound`]).
         for (k, &formal) in formals.iter().enumerate().filter(|_| fresh) {

@@ -1,0 +1,12 @@
+{
+    "name": "host-declared-errors-panic-passes-several-libraries-handler",
+    "type": "module",
+    "exports": {
+        "./host_declared_errors_panic_passes_several_libraries_handler": "./host_declared_errors_panic_passes_several_libraries_handler.js",
+        ".": "./index.js"
+    },
+    "dependencies": {
+        "@temperlang/core": "0.0.0-alpha.0.0",
+        "count-errors": "*"
+    }
+}

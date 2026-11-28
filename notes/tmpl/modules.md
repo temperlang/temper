@@ -168,5 +168,5 @@ pub struct Module {
   returning `Void`, which may fail with any error (rule M2), named in reports by its
   `name`, a constant string. Backends run each after the module's init
   with a fresh `Test`, and fail it if it fails or if the `Test` has
-  failures when it ends (Kotlin's `softFailToHard`). The frontend's
+  errors when it ends (Kotlin's `softFailToHard`). The frontend's
   runner expression and its import of `runTestCases` aren't translated.

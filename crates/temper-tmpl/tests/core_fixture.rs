@@ -21,7 +21,7 @@ struct Member {
     kind: &'static str,
     params: Vec<(String, String, bool)>,
     result: String,
-    bubbles: bool,
+    fails: bool,
     connected: bool,
 }
 
@@ -183,7 +183,7 @@ fn core_members() -> HashMap<String, Member> {
         };
         let rest = rest.trim_start_matches(':');
         let rest = rest.split(['{', ';']).next().unwrap();
-        let (result, bubbles) = match rest.split_once(" throws ") {
+        let (result, fails) = match rest.split_once(" throws ") {
             Some((result, _)) => (result, true),
             None => (rest, false),
         };
@@ -198,7 +198,7 @@ fn core_members() -> HashMap<String, Member> {
                 kind,
                 params,
                 result: type_name(result),
-                bubbles,
+                fails,
                 connected,
             },
         );
@@ -261,7 +261,7 @@ fn fixture_members(p: &Program) -> HashMap<String, Member> {
                 kind,
                 params,
                 result: unnumbered(&result),
-                bubbles: sig.fails(),
+                fails: sig.fails(),
                 connected: d.facts.contains(Facts::CONNECTED),
             },
         );
@@ -302,7 +302,7 @@ fn the_fixture_matches_core_temper() {
     // members without function types (subset B), those with them
     // (function values), and the core types and members that the
     // functional tests use next (core's fixture gaps), coroutines', and
-    // the failure root's `message` and `cause` (declared failures).
+    // the error root's `message` and `cause` (declared errors).
     assert_eq!(fixture.len(), 132);
     let core = core_members();
     let mut names: Vec<&String> = fixture.keys().collect();

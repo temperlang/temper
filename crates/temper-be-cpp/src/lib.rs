@@ -49,8 +49,8 @@
 //! conversions, `is`, and identity; nullable types (`NullableParam`, or a
 //! null `shared_ptr`), null checks, `??`, and `panic()` (`core::panic()`,
 //! as code with an error panics too); declared
-//! failures (RFC 164) as values in `core::Expected` results, never thrown
-//! (`translate`'s failures); and
+//! errors (RFC 164) as values in `core::Expected` results, never thrown
+//! (`translate`'s errors); and
 //! generics, as templates, defined in the header where others may
 //! instantiate them, called with their type arguments, which C++ can't
 //! always deduce (`first<core::Str>(…, TEMPER_STR("z"))`), and core's lists, maps,
@@ -235,8 +235,8 @@ pub fn translate_with_lines(
     let nevered = temper_tmpl::nevers::lower(p, &variant.profile);
     let p = nevered.as_ref().unwrap_or(p);
     // Handlers whose bodies can't fail as their bodies alone
-    // (`temper_tmpl::failures`).
-    let alive = temper_tmpl::failures::drop_dead_handlers(p);
+    // (`temper_tmpl::declared_errors`).
+    let alive = temper_tmpl::declared_errors::drop_dead_handlers(p);
     let p = alive.as_ref().unwrap_or(p);
     // Generators as state machines (`temper_tmpl::coroutines`).
     let lowered = temper_tmpl::coroutines::lower(p, variant.profile.coroutines)
@@ -253,9 +253,9 @@ pub fn translate_with_lines(
         let names = assign(p, &variant.rules);
         let effects = effects::Effects::of(p, &names);
         let marked = effects::needing_temporaries(p, &effects, &names);
-        // A call that may fail with a declared failure type, or a `throw`,
+        // A call that may fail with a declared error type, or a `throw`,
         // puts its check before the statement it's in.
-        let failing = |n: NodeId| temper_tmpl::failures::node_failure(p, n).is_some();
+        let failing = |n: NodeId| temper_tmpl::declared_errors::node_error(p, n).is_some();
         temper_tmpl::spill::spill_with(p, &|n| marked.contains(&n) || failing(n))
     };
     let p = spilled.as_ref().unwrap_or(p);
@@ -800,7 +800,7 @@ fn header(namespace: &str, t: &translate::Translated, init: &str) -> String {
 
 /// The program: runs every module's init, in order, as Kotlin's
 /// `main.cpp` does, first installing the runtime's stack traces, so a
-/// panic or an uncaught failure says where it happened, which only a
+/// panic or an uncaught error says where it happened, which only a
 /// program does, never a library (`stack_trace.hpp`).
 fn main(p: &Program, namespace: &str) -> String {
     let library = &p.library.name;

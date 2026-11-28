@@ -682,7 +682,7 @@ KiB to wasm (2 KiB gzipped), against `9f65728` built the same way (1118,
 
 Builtin operators' and `console.log`'s signatures, and what may bubble
 (history/milestone-4.md; ~400 lines in `typing/signatures.rs` and
-`typing/bubbles.rs`, and ~40 more in `typing.rs` and `types.rs`), then
+`typing/failing.rs`, and ~40 more in `typing.rs` and `types.rs`), then
 added 12 KiB natively without `net` (1981 KiB release, 19 KiB more), 8
 KiB to `net`'s small binary, and 10 KiB to wasm (3 KiB gzipped), against
 `e128e4c` built the same way (1127, 2343 and 841 KiB). Alternated with

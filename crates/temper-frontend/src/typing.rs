@@ -59,12 +59,12 @@ const FULL_TYPES: [&str; 10] = [
     "String",
 ];
 
-mod bubbles;
 mod connected;
 mod core_members;
 mod definite;
 mod exports;
 mod exprs;
+mod failing;
 mod fields_first;
 mod fun_interfaces;
 mod generic_calls;
@@ -80,11 +80,11 @@ mod sealed;
 mod signatures;
 mod targets;
 
-pub(crate) use bubbles::{fold_float, fold_int};
 pub use core_members::{
     BuiltinMember, builtin_members, core_declaration, core_member_declarations,
 };
 pub use exprs::{FileCoverage, coverage};
+pub(crate) use failing::{fold_float, fold_int};
 pub use resolve::Resolved;
 
 /// What typing found: declarations' and expressions' types.
@@ -140,11 +140,11 @@ pub struct Typing {
     /// own, or for a constructor, its class's, unknown where unsolved,
     /// as the call's type needs them.
     type_args: HashMap<NodeId, Vec<TypeId>>,
-    /// What each generic call of a function with failure parameters (RFC
+    /// What each generic call of a function with error parameters (RFC
     /// 164) binds them to, by their places among its type parameters,
     /// solved in full when it's checked, from its function literals'
     /// bodies too: `Never<Error>` where the call can't fail by one.
-    failure_args: HashMap<NodeId, Vec<(usize, TypeId)>>,
+    error_args: HashMap<NodeId, Vec<(usize, TypeId)>>,
     /// The empty blocks standing for missing `else`s that are never
     /// reached, as `is` checks before them cover a sealed type
     /// ([`sealed`]): `Never`, and a panic in tmpl, as Kotlin's.
@@ -158,7 +158,7 @@ pub struct Typing {
     /// bodies, by the literal, once worked out ([`generic_calls`]).
     literal_passes: HashMap<NodeId, TypeId>,
     /// What such literals' bodies may fail with, if anything.
-    literal_failures: HashMap<NodeId, Option<TypeId>>,
+    literal_errors: HashMap<NodeId, Option<TypeId>>,
 }
 
 const UNSET: TypeId = TypeId(u32::MAX);
@@ -175,10 +175,10 @@ impl Typing {
 
     /// What a generic call binds its callee's type parameters to (a
     /// constructor's, its class's), if typing solved it.
-    /// Failure parameters among them as solved in full.
+    /// Error parameters among them as solved in full.
     pub fn type_args(&self, call: NodeId) -> Option<Vec<TypeId>> {
         let mut args = self.type_args.get(&call)?.clone();
-        for &(k, t) in self.failure_args.get(&call).into_iter().flatten() {
+        for &(k, t) in self.error_args.get(&call).into_iter().flatten() {
             if let Some(arg) = args.get_mut(k) {
                 *arg = t;
             }
@@ -518,7 +518,7 @@ impl Settle {
     }
 
     /// Whether a statement jumps away from the block it's in: `return`,
-    /// `continue`, a failure, or `break`, unless to that block's end.
+    /// `continue`, an error, or `break`, unless to that block's end.
     fn jumps_from(&self, statement: NodeId, block: NodeId) -> bool {
         let tree = &self.lib.tree;
         match tree.kind(statement) {
@@ -794,8 +794,8 @@ impl Settle {
 
     /// A function's result, from its declared return type: `T throws E`
     /// for a type parameter `E` is the result `T throws E`
-    /// ([`Types::result`]), with a failure parameter (RFC 164), as for a
-    /// failure type, and `T throws X` for any other `X` fails with what's
+    /// ([`Types::result`]), with an error parameter (RFC 164), as for an
+    /// error type, and `T throws X` for any other `X` fails with what's
     /// unknown, as it's reported ([`Settle::check_throws`]); any other
     /// type as [`Settle::eval_type`] gives it.
     fn eval_result(&mut self, node: NodeId) -> TypeId {
@@ -810,13 +810,13 @@ impl Settle {
         let types = &self.typing.types;
         let fail = match types.get(fail) {
             TypeData::Param(_) | TypeData::NeverOf(_) => fail,
-            _ if fail == ERROR || types.is_failure(fail) => fail,
+            _ if fail == ERROR || types.is_error(fail) => fail,
             _ => UNKNOWN,
         };
         self.typing.types.result(pass, fail)
     }
 
-    /// Reports `T throws E` where `E` isn't a declared failure type, a failure parameter, or a `Never`, or is the root itself,
+    /// Reports `T throws E` where `E` isn't a declared error type, an error parameter, or a `Never`, or is the root itself,
     /// where it may not be ([`Settle::may_throw_root`]).
     fn check_throws(&mut self, node: NodeId) {
         let Some(&fail) = self.lib.tree.children(node).get(2) else {
@@ -827,10 +827,10 @@ impl Settle {
         let types = &self.typing.types;
         let message = match types.get(t) {
             TypeData::Unknown | TypeData::Param(_) | TypeData::NeverOf(_) => return,
-            _ if types.is_failure(t) => return,
+            _ if types.is_error(t) => return,
             _ if t == ERROR && may_throw_root => return,
             _ if t == ERROR => Message::ThrowsRoot,
-            _ => Message::NotAFailureType(self.show(t)),
+            _ => Message::NotAnErrorType(self.show(t)),
         };
         let span = self.lib.tree.span(fail);
         self.lib.report(Level::Error, message, span);
@@ -972,8 +972,8 @@ impl Settle {
         t
     }
 
-    /// The bound of a type parameter declared without one: `Error` for a
-    /// failure parameter, one its declaration (a function, interface, or
+    /// The bound of a type parameter declared without one: `Error` for an
+    /// error parameter, one its declaration (a function, interface, or
     /// class) uses after `throws`, as `E` in `fn (T): R throws E`, so
     /// generic code may throw it and read its message (RFC 164); else
     /// `AnyValue`.
@@ -1388,7 +1388,7 @@ impl Settle {
                     }
                 }
                 self.check_literal_result(node);
-                self.check_failures(node);
+                self.check_errors(node);
             }
             (NodeKind::Fail, Some(value), _) => self.check_value(ERROR, value, Site::Arg),
             (NodeKind::Call, Some(callee), _) if self.is_builtin(callee, Function::Throws) => {
@@ -1410,7 +1410,7 @@ impl Settle {
             }
             (NodeKind::Class, ..) => {
                 self.check_overrides(node);
-                self.check_failure_class(node);
+                self.check_error_class(node);
                 self.check_fun_interface(node);
                 self.check_connected_class(node);
             }
@@ -1476,7 +1476,7 @@ impl Settle {
             // These return `Void` without saying so.
             let is_void = role == core::ROLE_CONSTRUCTOR || role == core::ROLE_SETTER;
             if is_void && is_fn && core::fn_parts(&self.lib.tree, init).1.is_none() {
-                self.check_no_failures(init);
+                self.check_no_errors(init);
             }
         }
     }

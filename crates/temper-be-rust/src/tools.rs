@@ -106,7 +106,7 @@ mod tests {
 
     /// A Rust test's failure, from what `cargo test` prints.
     #[test]
-    fn reads_rust_failures() {
+    fn reads_rust_errors() {
         let out = "test r#mod::tests::b ... FAILED\n\nfailures:\n\n\
                    ---- r#mod::tests::b stdout ----\n\
                    Error: Error(Some(MessageError(\"expected 1 + 1 == (3) not (2)\")))\n\n";

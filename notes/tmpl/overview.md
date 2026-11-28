@@ -130,7 +130,7 @@ for every backend. Proposed meaning, item by item:
   the order (C++ arguments), and only for impure operands.
 - **Failing paths:** every call that may fail is marked, and its
   handler is the nearest enclosing `orelse` or the function's exit, so
-  every lowering of failure reads the same facts.
+  every lowering of error reads the same facts.
 - **Operators are typed, and there is no generic `==`**
   (Decided 2026-10-29). Each builtin type's operators are its own
   `Op`s (`Boolean.eq`, `Int32.add`), never a
@@ -194,7 +194,7 @@ backends:
   indexing that panicked where Temper then bubbled; C++ templates declared
   after their users.
 - **Kept:** qnames, in Kotlin's format, and connected keys as qnames;
-  operators as a closed set; `Error` nodes; failure and coroutine
+  operators as a closed set; `Error` nodes; error and coroutine
   strategies, as profile choices; a computed jump node for state machines; equality without a
   generic operator, as Kotlin's 2026-09 relational-operator rework
   began.

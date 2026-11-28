@@ -1,0 +1,44 @@
+# generated line:column -> source:line:column, and the text at each
+4:1 -> ../host-declared-errors.temper.md:31:5  /** <- @connected
+9:1 -> ../host-declared-errors.temper.md:31:5  export function hostLookup(k <- @connected
+9:17 -> ../host-declared-errors.temper.md:32:16 (hostLookup)  hostLookup(key) { <- hostLookup(key: String): Int
+9:27 -> ../host-declared-errors.temper.md:31:5  (key) { <- @connected
+13:1 -> ../host-declared-errors.temper.md:87:5  /** <- let setting(name: String): I
+18:1 -> ../host-declared-errors.temper.md:87:5  export function setting(name <- let setting(name: String): I
+18:17 -> ../host-declared-errors.temper.md:87:9 (setting)  setting(name) { <- setting(name: String): Int t
+18:24 -> ../host-declared-errors.temper.md:87:5  (name) { <- let setting(name: String): I
+19:3 -> ../host-declared-errors.temper.md:88:7  try { <- hostLookup(name) orelse thro
+27:1 -> ../host-declared-errors.temper.md:28:5  export class HostDeclaredErr <- export sealed interface Host
+27:14 -> ../host-declared-errors.temper.md:28:29 (HostDeclaredErrorsError)  HostDeclaredErrorsError exte <- HostDeclaredErrorsError exte
+27:37 -> ../host-declared-errors.temper.md:28:5   extends Error {} <- export sealed interface Host
+31:1 -> ../host-declared-errors.temper.md:29:5  export class NotFound extend <- export class NotFound(public
+31:14 -> ../host-declared-errors.temper.md:29:18 (NotFound)  NotFound extends HostDeclare <- NotFound(public key: String)
+31:22 -> ../host-declared-errors.temper.md:29:5   extends HostDeclaredErrorsE <- export class NotFound(public
+32:3 -> ../host-declared-errors.temper.md:29:34  /** @type {string} */ <- key: String) extends HostDec
+33:3 -> ../host-declared-errors.temper.md:29:34  #key; <- key: String) extends HostDec
+35:3 -> ../host-declared-errors.temper.md:29:5  /** @param {string} key */ <- export class NotFound(public
+36:3 -> ../host-declared-errors.temper.md:29:5  constructor(key) { <- export class NotFound(public
+38:5 -> ../host-declared-errors.temper.md:29:34  this.#key = key; <- key: String) extends HostDec
+41:3 -> ../host-declared-errors.temper.md:29:34  /** @returns {string} */ <- key: String) extends HostDec
+42:3 -> ../host-declared-errors.temper.md:29:34  get key() { <- key: String) extends HostDec
+42:7 -> ../host-declared-errors.temper.md:29:34 (key)  key() { <- key: String) extends HostDec
+46:3 -> ../host-declared-errors.temper.md:29:5  /** @returns {string} */ <- export class NotFound(public
+47:3 -> ../host-declared-errors.temper.md:29:5  get message() { <- export class NotFound(public
+48:5 -> ../host-declared-errors.temper.md:29:5  return `not found (key: ${th <- export class NotFound(public
+52:1 -> ../host-declared-errors.temper.md:85:5  export class LookupFailed ex <- class LookupFailed(public na
+52:14 -> ../host-declared-errors.temper.md:85:11 (LookupFailed)  LookupFailed extends HostDec <- LookupFailed(public name: St
+52:26 -> ../host-declared-errors.temper.md:85:5   extends HostDeclaredErrorsE <- class LookupFailed(public na
+53:3 -> ../host-declared-errors.temper.md:85:31  /** @type {string} */ <- name: String) extends HostDe
+54:3 -> ../host-declared-errors.temper.md:85:31  #name_; <- name: String) extends HostDe
+56:3 -> ../host-declared-errors.temper.md:85:5  /** @param {string} name */ <- class LookupFailed(public na
+57:3 -> ../host-declared-errors.temper.md:85:5  constructor(name) { <- class LookupFailed(public na
+59:5 -> ../host-declared-errors.temper.md:85:31  this.#name_ = name; <- name: String) extends HostDe
+62:3 -> ../host-declared-errors.temper.md:85:31  /** @returns {string} */ <- name: String) extends HostDe
+63:3 -> ../host-declared-errors.temper.md:85:31  get name_() { <- name: String) extends HostDe
+63:7 -> ../host-declared-errors.temper.md:85:31 (name)  name_() { <- name: String) extends HostDe
+67:3 -> ../host-declared-errors.temper.md:85:5  /** @returns {string} */ <- class LookupFailed(public na
+68:3 -> ../host-declared-errors.temper.md:85:5  get message() { <- class LookupFailed(public na
+69:5 -> ../host-declared-errors.temper.md:85:5  return `lookup failed (name: <- class LookupFailed(public na
+73:1 -> ../host-declared-errors.temper.md:38:5  console.log("before"); <- console.log("before");
+74:1 -> ../host-declared-errors.temper.md:91:5  setting("port"); <- try setting("port");
+75:1 -> ../host-declared-errors.temper.md:92:5  console.log("after"); <- console.log("after");

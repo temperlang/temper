@@ -84,7 +84,7 @@ open questions it ended with are at the end, with their answers.
 - **Left for chunk 3:** done there, but `translate` in panes, which
   waits.
 - **Tests in input 0** (2026-11-11): they run once, after it,
-  reporting each failure and `tempest test`'s summary; the tab shows
+  reporting each error and `tempest test`'s summary; the tab shows
   input 0's block when it says more than logs, once per editor code.
   The session keeps their source for `runTests()` (chunk 3).
   Tests in later inputs are still refused. The smoke test checks
@@ -107,7 +107,7 @@ open questions it ended with are at the end, with their answers.
 - **`runTests()`**, a REPL function in the CLI and the page:
   input 0's tests settled again as a hidden round after the latest
   input, once the calling input ends, so names mean the newest
-  declarations; same failure lines and summary. A changed signature
+  declarations; same error lines and summary. A changed signature
   gives type errors, located in input 0; old instances keep old
   classes. Named `runTests`, not `test`, as std's `test("name") {}`
   declares tests.

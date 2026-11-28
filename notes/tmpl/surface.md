@@ -46,7 +46,7 @@ and profile:
   defaults ([Level 1, above](#object-literals-builders-and-no-named-arguments)).
 - **Property form:** native property, getter and setter methods, or a
   field (api-compat.md's per-backend rules).
-- **Failure in signatures:** exceptions or `Result`, even where a body
+- **Error in signatures:** exceptions or `Result`, even where a body
   was lowered differently.
 - **Iteration:** a generator presented as the host's iterator
   (`Iterator`, `IEnumerable`, Python generators, Rust `Iterator`).

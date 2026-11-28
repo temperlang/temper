@@ -843,7 +843,7 @@ log 10
 log a|b
 Panicked: Not supported yet: statements in strings with a function tag
 
-=== declared failures' syntax isn't supported yet, each an error where it is
+=== declared errors' syntax isn't supported yet, each an error where it is
 console.log("runs");
 let f(): Int { 1 }
 let a = try f();
@@ -860,7 +860,7 @@ let g(): Int { throw 1 }
   (Let ^c:3 (Orelse (Block (Call f:0)) 0))
   (Error)
   (Let ^g:4 (Fn Int (Block (Fail 1)))))
-error 115..134: Not supported yet: `error case`, part of declared failures
+error 115..134: Not supported yet: `error case`, part of declared errors
 error 157..158: Expected subtype of Error, but got Int32
 log runs
-Panicked: Not supported yet: `error case`, part of declared failures
+Panicked: Not supported yet: `error case`, part of declared errors

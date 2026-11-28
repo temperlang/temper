@@ -5,7 +5,7 @@
 #include "base_types.hpp"
 #include "expected.hpp"
 #include "failure.hpp"
-#include "temper_bubble.hpp"
+#include "temper_panic.hpp"
 
 namespace temper {
     namespace core {

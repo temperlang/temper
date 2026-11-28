@@ -21,9 +21,9 @@ use temper_tmpl::{DeclId, DeclKind, Kids, Node, NodeId, TypeData, TypeId};
 impl Translator<'_> {
     /// A function value's type, a function type's or a `@fun`
     /// interface's, `Arc<dyn Fn(A, B) -> R + Send + Sync>`: `R` a
-    /// `Result` if it may fail, or if a failure parameter of its
+    /// `Result` if it may fail, or if an error parameter of its
     /// interface is given `Never<…>`, `Result<R, Infallible>`, as generic
-    /// code calling it expects (`failures::value_failure`), and left out
+    /// code calling it expects (`declared_errors::value_error`), and left out
     /// if `Void` and it can't.
     pub(crate) fn fn_type(&mut self, ty: TypeId) -> R<String> {
         let s = self.fun_sig(ty).and_then(|sig| self.p.types.signature(sig));
@@ -34,7 +34,7 @@ impl Translator<'_> {
             return not_yet("a function type with optional parameters");
         }
         let (params, result) = (s.params.to_vec(), s.pass);
-        let fail = temper_tmpl::failures::value_failure(self.p, ty);
+        let fail = temper_tmpl::declared_errors::value_error(self.p, ty);
         let mut texts = Vec::new();
         for t in params {
             texts.push(self.ty(t)?);
@@ -189,10 +189,10 @@ impl Translator<'_> {
         let Some(sig) = p.signature(decl) else {
             return not_yet("a function literal without a signature");
         };
-        // A literal that can't fail, where its type's failure parameter
+        // A literal that can't fail, where its type's error parameter
         // is given `Never<…>`, returns `Ok`s of `Infallible` (`fn_type`).
         let fails = (sig.fail)
-            .or_else(|| temper_tmpl::failures::value_failure(p, p.nodes.ty(id)))
+            .or_else(|| temper_tmpl::declared_errors::value_error(p, p.nodes.ty(id)))
             .or_else(|| self.ok_results.get(&id).copied());
         let (void, result) = (sig.pass == TypeId::VOID, sig.pass);
         // The function around it, which its body's own state replaces.
@@ -234,7 +234,7 @@ impl Translator<'_> {
     /// `ty` returns a result that can't (`fn_type`): `Arc::new(|a0: i32|
     /// Ok(f(a0)))`.
     pub(crate) fn function_ref(&mut self, id: NodeId, target: DeclId, ty: TypeId) -> R<Expr> {
-        let fails = temper_tmpl::failures::value_failure(self.p, ty).is_some()
+        let fails = temper_tmpl::declared_errors::value_error(self.p, ty).is_some()
             || self.ok_results.contains_key(&id);
         let f = self.function_value(target, fails)?;
         Ok(self.arc(f))
@@ -279,12 +279,12 @@ impl Translator<'_> {
         Ok(Expr::Closure(names, Block::of(call)))
     }
 
-    /// The failure, `Never<…>`, that makes a parameter of type `param`
+    /// The error, `Never<…>`, that makes a parameter of type `param`
     /// of a call of `callee` given `type_args` return a result, where
     /// argument `a` can't fail: the parameter's function type fails with
-    /// a failure parameter (RFC 164), given `Never<…>`, as only an
+    /// an error parameter (RFC 164), given `Never<…>`, as only an
     /// argument that can't fail gives it. A `@fun` value given `Never`
-    /// returns a result already (`failures::value_failure`).
+    /// returns a result already (`declared_errors::value_error`).
     pub(crate) fn result_wanted(
         &self,
         callee: DeclId,
@@ -293,10 +293,10 @@ impl Translator<'_> {
         a: NodeId,
     ) -> Option<TypeId> {
         let p = self.p;
-        if temper_tmpl::failures::value_failure(p, p.nodes.ty(a)).is_some() {
+        if temper_tmpl::declared_errors::value_error(p, p.nodes.ty(a)).is_some() {
             return None;
         }
-        let fail = temper_tmpl::failures::value_failure(p, param)?;
+        let fail = temper_tmpl::declared_errors::value_error(p, param)?;
         let from = temper_tmpl::analysis::type_param_types(p, callee);
         let fail = p
             .types

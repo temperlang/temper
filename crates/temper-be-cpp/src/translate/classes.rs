@@ -373,10 +373,10 @@ impl Translator<'_> {
             }
         }
         let key = |d: DeclId| (self.names.get(d).to_string(), p.decls.get(d).kind);
-        // A failure type's `message` getter overrides `core::Failure`'s,
+        // An error type's `message` getter overrides `core::Failure`'s,
         // whether or not core's `Error` keeps its own, which goes where
         // nothing reads it.
-        let failure = lineage.iter().any(|&a| self.is_failure_root(a));
+        let failure = lineage.iter().any(|&a| self.is_error_root(a));
         let overrides = |name: &str, kind: DeclKind| {
             (inherited.iter()).any(|&(_, d, _)| key(d) == (name.to_string(), kind))
                 || (failure && kind == DeclKind::Getter && name == "message")
@@ -437,7 +437,7 @@ impl Translator<'_> {
                     false => format!("<{}>", texts.join(", ")),
                 };
                 // Core's `Error`, the runtime's `Failure`.
-                let name = match self.is_failure_root(d) {
+                let name = match self.is_error_root(d) {
                     true => "temper::core::Failure".to_string(),
                     false => self.top_name(d),
                 };

@@ -23,7 +23,7 @@
 //! It covers functions, modules, classes and interfaces
 //! (`translate::classes` says how they're written), nullable types,
 //! `orelse`, `catch`, and `panic()` (`translate::nullables`),
-//! declared failures (RFC 164) as Rust errors returned in `Result`s
+//! declared errors (RFC 164) as Rust errors returned in `Result`s
 //! (`translate::classes` and `temper_core::failure` say how), and
 //! generics: type parameters bounded `Clone + Send + Sync + 'static` as
 //! Kotlin's, an interface bound as its trait, a class bound as `Into`
@@ -217,18 +217,18 @@ pub const BACKEND: temper_tmpl::Backend = temper_tmpl::Backend {
 /// the names cargo forbids a binary ([`bin_name`]). Kotlin also copies
 /// `temper-core` beside the package; `temper build` does too ([`runtime`]).
 /// `pub type Error = r#mod::WherewithError;`, the crate's `Error`, as
-/// `serde_json::Error`: its one failure root, exported, where it has one
+/// `serde_json::Error`: its one error root, exported, where it has one
 /// and no `Error` of its own; else nothing.
 fn error_alias(
     p: &temper_tmpl::Program,
     translator: &translate::Translator,
     names: &temper_tmpl::naming::NameMap,
 ) -> String {
-    let root = temper_tmpl::failures::root(p);
+    let root = temper_tmpl::declared_errors::root(p);
     let own =
         |d: &temper_tmpl::DeclId| p.decls.contains(*d) && !temper_tmpl::qname::is_external(p, *d);
     let roots: Vec<temper_tmpl::DeclId> = (p.decls.ids().filter(own))
-        .filter(|&d| temper_tmpl::failures::is_library_root(p, root, d))
+        .filter(|&d| temper_tmpl::declared_errors::is_library_root(p, root, d))
         .collect();
     let named_error = p.decls.ids().filter(own).any(|d| p.name(d) == "Error");
     let [root] = roots[..] else {
@@ -240,7 +240,7 @@ fn error_alias(
             let path = module.trim_start_matches("crate::");
             let name = names.get(root);
             format!(
-                "\n/// The library's failure type, its one root.\npub type Error = {path}::{name};\n"
+                "\n/// The library's error type, its one root.\npub type Error = {path}::{name};\n"
             )
         }
         _ => String::new(),
@@ -301,8 +301,8 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     let nevered = temper_tmpl::nevers::lower(p, &variant.profile);
     let p = nevered.as_ref().unwrap_or(p);
     // Handlers whose bodies can't fail as their bodies alone
-    // (`temper_tmpl::failures`).
-    let alive = temper_tmpl::failures::drop_dead_handlers(p);
+    // (`temper_tmpl::declared_errors`).
+    let alive = temper_tmpl::declared_errors::drop_dead_handlers(p);
     let p = alive.as_ref().unwrap_or(p);
     // Generators as state machines (`temper_tmpl::coroutines`).
     let lowered =
@@ -597,7 +597,7 @@ pub fn init(config: Option<temper_core::Config>) -> temper_core::Result<temper_c
 }}
 {first_use}"#
     );
-    // A failure out of init panics, saying so, and its causes.
+    // An error out of init panics, saying so, and its causes.
     let run = tree::Expr::path(format!("{krate}::init"))
         .call(vec![tree::Expr::path("None")])
         .method(

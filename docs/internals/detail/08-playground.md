@@ -202,7 +202,7 @@ The library cache would fix both.
 
 - **Fuel:** a run stops after
   [`FUEL`](../../../crates/temper-frontend/src/interp.rs), 50 million
-  steps, as that run's failure; with tests, the top level and each test
+  steps, as that run's error; with tests, the top level and each test
   get that many, and a test that runs out fails alone. What a run logs
   is kept up to 64 KiB, then cut with a note.
 - **A stale timer:** if a compile is still busy `STALE_MS` (1.5 s) after

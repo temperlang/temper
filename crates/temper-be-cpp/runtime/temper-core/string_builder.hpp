@@ -2,7 +2,7 @@
 #include <memory>
 #include <sstream>
 #include <string>
-#include "temper_bubble.hpp"
+#include "temper_panic.hpp"
 #include "base_types.hpp"
 #include "string.hpp"
 

@@ -235,10 +235,10 @@ impl Translator<'_> {
                 .resolved(name)
                 .and_then(|s| self.class_node(s));
             let Some(node) = node else {
-                // A failure root extends core's `Error`.
-                let root = crate::builtins::Builtin::named(crate::builtins::FAILURE_ROOT);
+                // An error root extends core's `Error`.
+                let root = crate::builtins::Builtin::named(crate::builtins::ERROR_ROOT);
                 if Some(self.s.scopes.resolved_builtin(name)) == Some(root) {
-                    let Some(error) = self.core_decl(crate::builtins::FAILURE_ROOT) else {
+                    let Some(error) = self.core_decl(crate::builtins::ERROR_ROOT) else {
                         return self.not_yet(sup, "core's Error");
                     };
                     types.push(self.b.nominal(error));
@@ -825,7 +825,7 @@ impl Translator<'_> {
     /// that may fail more widely, as `find`, which throws `Missing`, where
     /// `Mapper<String, Int, AppError>` is (RFC 164; typing checked that
     /// it fits): a literal of the type wanted that calls it, `fn (x) {
-    /// find(x) }`, so every backend widens the failure as a `throw` would;
+    /// find(x) }`, so every backend widens the error as a `throw` would;
     /// `None` for anything else.
     fn wider_failing_ref(
         &mut self,

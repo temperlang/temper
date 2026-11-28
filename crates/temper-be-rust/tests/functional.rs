@@ -21,9 +21,9 @@
 //! jumps, string order, modules and imports (`modules`, and
 //! `imports-library`, which imports it), and tests (`testing`), and on
 //! this crate's own (`tests/programs/`), which cover what's particular
-//! to Rust ([`OWN`]), and the testkit's programs of declared failures
-//! (`failures`, `host-failures`, whose host code returns its failures in
-//! `Err`s, and `failures-interop`), and its specification `failure-params`
+//! to Rust ([`OWN`]), and the testkit's programs of declared errors
+//! (`declared-errors`, `host-declared-errors`, whose host code returns its failures in
+//! `Err`s, and `errors-interop`), and its specification `error-params`
 //! ([`SPECS`]).
 //! - `goldens`: each program's generated crate, laid out as Kotlin's,
 //!   with its `src/mod.rs` matching the golden in `tests/goldens/`, named
@@ -88,7 +88,7 @@ const ALLOWED_LINTS: [&str; 8] = [
 /// The tests that declare what they never use, on purpose: a default
 /// method that every class overrides (`call-override-from-subtype`'s),
 /// a field (`mutually-referencing-types`'), or parameters
-/// (`bubble`'s, and `json-adapters`' decoders, which read their `ic` only
+/// (`control-flow/errors`'s, and `json-adapters`' decoders, which read their `ic` only
 /// to pass it to another adapter, as Kotlin's `@json` writes them), so
 /// rustc's `dead_code` and `unused_variables` are allowed in them; and
 /// code with errors (`errors`, a run per section, and
@@ -101,7 +101,7 @@ const ALLOWED_LINTS: [&str; 8] = [
 const UNUSED: [&str; 8] = [
     "call-override-from-subtype",
     "mutually-referencing-types",
-    "bubble",
+    "errors",
     "errors-type-only-errors",
     "errors-undeclared-name",
     "errors-missing-operator",
@@ -112,16 +112,16 @@ const UNUSED: [&str; 8] = [
 /// Tests, by key, that store what they never read: `functions/connected`'s
 /// `Hider(@noProperty i: Int)`, which tempest's frontend makes a private
 /// field, read only by the constructor, where Kotlin's makes none; and
-/// `host-failures`' runs with failure classes it doesn't export, whose
+/// `host-declared-errors`' runs with error classes it doesn't export, whose
 /// fields get getters for host code, as any class's do where a library
 /// has host code, which no code calls. Their packages are linted as
 /// [`UNUSED`]'s are.
 const UNUSED_KEYS: [&str; 5] = [
     "functions-connected",
     "functions-connected-no-connected",
-    "host-failures-cause",
-    "host-failures-own-message",
-    "host-failures-several-libraries",
+    "host-declared-errors-cause",
+    "host-declared-errors-own-message",
+    "host-declared-errors-several-libraries",
 ];
 
 /// Tests, by key, whose root module's layout differs from rustfmt's, and
@@ -137,11 +137,11 @@ const UNUSED_KEYS: [&str; 5] = [
 /// and `test-panics`' and `test-fails`' assertion message closures, a
 /// call's last argument left on one line that's 100 wide before the `,`
 /// after the call, which the printer doesn't count there; and
-/// `test-async`'s `async` blocks in tests; and `failure-params`' `let`
+/// `test-async`'s `async` blocks in tests; and `error-params`' `let`
 /// of a call whose lone argument is a generic call, which rustfmt breaks
 /// after the `=`, and `Some(f::<E>(…)?)`, whose comma after the `?`
 /// rustfmt leaves out here, though it keeps it elsewhere, as
-/// `failure-generators`' `Ok(Some(f(…)?))` too; and `host-errors`'
+/// `error-generators`' `Ok(Some(f(…)?))` too; and `host-errors`'
 /// `Ok(into_ok(…))` of a chain broken before its `.replace::<…>(`,
 /// whose arguments rustfmt indents a level less than the call.
 const LAYOUT_GAPS: [&str; 12] = [
@@ -155,8 +155,8 @@ const LAYOUT_GAPS: [&str; 12] = [
     "test-panics",
     "test-fails",
     "test-async",
-    "failure-params",
-    "failure-generators",
+    "error-params",
+    "error-generators",
 ];
 
 /// This crate's own programs, in `tests/programs/`, which test what's
@@ -164,8 +164,8 @@ const LAYOUT_GAPS: [&str; 12] = [
 const OWN: [&str; 2] = ["class-edges", "nullable-edges"];
 
 /// The testkit's specifications (`kit::SPECS`) this backend runs, which
-/// others don't all yet: `failure-params` and `failure-generators`.
-const SPECS: [&str; 2] = ["failure-params", "failure-generators"];
+/// others don't all yet: `error-params` and `error-generators`.
+const SPECS: [&str; 2] = ["error-params", "error-generators"];
 
 fn cases() -> Vec<Case> {
     let tests = [
@@ -514,15 +514,15 @@ class-edges = { path = \"../class-edges\" }
 temper-core = { path = \"../temper-core\" }
 ";
 
-/// The crate of `tests/host/failures.rs`, host code that uses
-/// `failures-interop`'s declared failures.
-const FAILURES_HOST: &str = "[package]
+/// The crate of `tests/host/errors.rs`, host code that uses
+/// `errors-interop`'s declared errors.
+const ERRORS_HOST: &str = "[package]
 name = \"failures-host\"
 version = \"0.0.0\"
 edition = \"2021\"
 
 [dependencies]
-failures-interop = { path = \"../failures-interop\" }
+errors-interop = { path = \"../errors-interop\" }
 ";
 
 const FIRST_USE_MAIN: &str = "fn main() {
@@ -610,10 +610,10 @@ fn runs_and_lints() {
             include_str!("host/interop.rs"),
         );
         members.push("host-interop".into());
-        kit::write_if_changed(&root.join("failures-host/Cargo.toml"), FAILURES_HOST);
+        kit::write_if_changed(&root.join("failures-host/Cargo.toml"), ERRORS_HOST);
         kit::write_if_changed(
             &root.join("failures-host/src/main.rs"),
-            include_str!("host/failures.rs"),
+            include_str!("host/errors.rs"),
         );
         members.push("failures-host".into());
         let list: Vec<String> = members.iter().map(|m| format!("\"{m}\"")).collect();
@@ -705,11 +705,11 @@ fn runs_and_lints() {
                 .collect();
             run("host-interop", &expected);
         }
-        // `tests/host/failures.rs`, host code that matches
-        // `failures-interop`'s declared failures by their own types, a sealed
+        // `tests/host/errors.rs`, host code that matches
+        // `errors-interop`'s declared errors by their own types, a sealed
         // interface's enum, and the crate's `Error`, `?`s them, reads
         // their messages and `source()` chains, and sees a panic stay one.
-        if let Some(case) = cases.iter().find(|c| c.key == "failures-interop") {
+        if let Some(case) = cases.iter().find(|c| c.key == "errors-interop") {
             let expected: Vec<String> = (case.expected.iter().cloned())
                 .chain(
                     [

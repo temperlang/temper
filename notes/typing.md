@@ -20,7 +20,7 @@ interpreter runs the result.
 ## Flow facts without a CFG
 
 Temper's settled tree has structured control flow: blocks, `if`, loops,
-labeled `break`/`continue`, `return`, and failure (`throw` with `orelse`).
+labeled `break`/`continue`, `return`, and error (`throw` with `orelse`).
 So a pass can walk a function body in evaluation order and carry an
 *environment* of facts, merging at the points where control flow merges,
 instead of first building a graph.
@@ -54,7 +54,7 @@ How each construct is handled:
   (an interval that keeps growing becomes unknown in that direction).
 - **`break` and `continue`:** carry their environment to the loop or label
   they target; that target merges everything that arrives.
-- **`return` and failure:** carry their environment to the function exit,
+- **`return` and error:** carry their environment to the function exit,
   or to the nearest `orelse`, which merges whatever can fail inside it.
 - **Closures:** a local that a closure might assign loses its narrowed facts
   wherever the closure might run. Locals no closure assigns keep them.
@@ -617,7 +617,7 @@ milestone 4's target typing slice; status in
   function type, but got Function" elsewhere
   ([kotlin-differences.md](kotlin-differences.md#language-and-types)).
 - **Failing in a literal** without a declared return type: where its
-  place is a generic call's failure parameter, the literal fails as its
+  place is a generic call's error parameter, the literal fails as its
   body does, and so does the call ("Function literals' results from
   their bodies", below). Elsewhere, where the function type wanted
   doesn't `throw` what its body may, that's "Cannot throw Oops from a
@@ -638,8 +638,8 @@ gives the callee's type parameters what its body gives:
 
 - **What it gives:** its result type, its body's value joined with what
   each `return` from it gives (`literal_pass`), and what it may fail
-  with, as "What may fail" finds it (`literal_failure`): the join of its
-  declared failures ("Declared failures", below). So `ls.map { x =>
+  with, as "What may fail" finds it (`literal_error`): the join of its
+  declared errors ("Declared errors", below). So `ls.map { x =>
   s.toInt32() }` solves `O` to `Int32` and `E` to `ParseError`, and the
   call fails, so it
   must be handled where it's called; `ls.map { x => x + 1 }` leaves `E`
@@ -672,7 +672,7 @@ gives the callee's type parameters what its body gives:
   ([kotlin-differences.md](kotlin-differences.md#changes-we-recommend-to-temper)).
 - **When it can't decide:** a result whose type can't be named, as an
   `if` with an `Int32` and a `String`, or null, takes the bound, as
-  Kotlin does. A failure parameter the literal's parameters need too, as
+  Kotlin does. An error parameter the literal's parameters need too, as
   `E` for `retry { again => … }` and `retry<E>(f: fn (Thunk<E>): Int
   throws E)`, is `Never<…>`, and a literal that may fail there is
   "Cannot infer E from this function literal, as its parameters' types
@@ -682,11 +682,11 @@ gives the callee's type parameters what its body gives:
   from them, as a non-generic call does from its parameters (t993,
   2026-11-24): `apply<Int, String, Never<Oops>>(n) { x => x + 1 }`
   types `x` as an `Int32` and wants a `String` result ("Expected subtype
-  of String, but got Int32"). Where it gives a failure parameter as a
+  of String, but got Int32"). Where it gives an error parameter as a
   `Never`, a literal whose body may fail is an error at the literal:
   `apply<Int, Int, Never<Oops>>(n) { x => d(10, x) }` is "This function
-  literal may fail, but its call gives E as Never<Oops>; give E a
-  failure type, or handle the failure in the literal". Its list and
+  literal may fail, but its call gives E as Never<Oops>; give E an
+  error type, or handle the error in the literal". Its list and
   object literal arguments take their types from them too, so
   `count<Int>([])` passes a `List<Int32>`. The wrong number of type
   arguments solves nothing, so its literals' types are unknown.
@@ -1143,8 +1143,8 @@ arity doesn't count `this`. `Int.m` is `Int32.m`, as core's `Int` is
 
 As built (2026-11-23): a function that may fail has a result type, `T
 throws E` (`TypeData::Result { pass, fail }` in `types.rs`), as its
-function type's result; `E` is a declared failure type
-("Declared failures", below) or a type parameter (a failure parameter,
+function type's result; `E` is a declared error type
+("Declared errors", below) or a type parameter (an error parameter,
 below). Results
 are internal (RFC 164's "results can't be held"):
 
@@ -1154,12 +1154,12 @@ are internal (RFC 164's "results can't be held"):
   X` is `T` anywhere but a declared result (`eval_result`).
 - **Readers unwrap it:** a call's type is the result's pass type
   (`Types::pass`, `Types::call_pass`), so every expression has one type.
-- **Made by `Types::result`,** which drops a failure type that's a
+- **Made by `Types::result`,** which drops an error type that's a
   `Never`, so `T throws Never<Error>` will be `T`, and a function that
   can't fail has a plain result.
 - **Generic machinery sees both parts:** substitution, `mentions`,
   `is_known`, and unification part by part, where a result never solves a
-  type parameter but its pass type does. So a failure type parameter can
+  type parameter but its pass type does. So an error type parameter can
   be an ordinary type parameter, for callbacks, `Promise<T, E>`, and
   `Generator<Y, E>`.
 - **One assignability rule:** what fits `T` fits `T throws E`; a result
@@ -1205,19 +1205,19 @@ frontend tests and the Python and JS goldens, but it saved nothing:
 So the own variant stays: its special cases are the semantic rules, which
 either design needs.
 
-**Generic failure parameters on both (spike 2026-11-23).** `List.map`
+**Generic error parameters on both (spike 2026-11-23).** `List.map`
 made generic on `E` worked the same on both, with the same code (8 settle
 expectations and 3 interpreter runs, identical). Only one function's
 arm differs (`fails_with`), and on the hidden class it must come before
 the generic-type arm, by hand. Generic `E` didn't decide between them:
 substitution, unification, and normalizing `Never` were already there
-in both. Nor did inferring literals' results and failures (2026-11-24):
+in both. Nor did inferring literals' results and errors (2026-11-24):
 the same code passed the same tests on both, as it reads results only
 through `Types::result`, `pass`, `fail`, and unification.
 
-### Failure parameters
+### Error parameters
 
-A type parameter used after `throws` is a failure parameter, `E` in
+A type parameter used after `throws` is an error parameter, `E` in
 core's `Listed.map<O, E>(transform: fn (T): O throws E): List<O> throws
 E` (RFC 164; `Types::fails_with`). It's solved per call as any type
 parameter is, from what the arguments declare: a callback `fn (Int): Int
@@ -1225,73 +1225,73 @@ throws Oops` makes it `Oops`, so the call may fail; a function literal
 without a declared result, from its body, so `ls.map { x => s.toInt32()
 }` fails at the call ("Function literals' results from their
 bodies", above). One that nothing solves is `Never<Error>`
-(`Types::no_failure`), which `Types::result` drops, so the call can't
+(`Types::no_error`), which `Types::result` drops, so the call can't
 fail; a `Never<Error>` argument solves nothing either. Whether a call
-fails comes from its solved signature (`bubbles.rs`). As built
+fails comes from its solved signature (`failing.rs`). As built
 (2026-11-26, chunk 14):
 
 - **Bound:** one declared without a bound is bound by `Error`, so
   generic code may `throw` it, read its `message`, and check it with
   `is` (`Settle::unwritten_bound`, for core's methods from their
   signatures); writing `E extends Error` is allowed too. Anything that
-  isn't a failure is "Type formal <E extends Error> cannot bind to
+  isn't an error is "Type formal <E extends Error> cannot bind to
   String …".
 - **Joins:** arguments that solve it two ways give their join
-  (`Types::join_failures`, in `solve_call`): `both(find, check)` for
+  (`Types::join_errors`, in `solve_call`): `both(find, check)` for
   callbacks failing with `Missing` and `Bad` under `AppError` fails with
   `AppError`; under different roots, with `Error`, which only a handler
-  takes ("Cannot throw Error, failures under different roots, from a
+  takes ("Cannot throw Error, errors under different roots, from a
   function; handle them with orelse or catch").
 - **Core:** `Listed`'s `map`, `filter`, `reduce`, `reduceFrom`,
   `reduceFromIndex`, `join`, and `sorted`, `List.forEach`,
   `String.forEach`, `ListBuilder.sort`, and `Mapped`'s `forEach`,
   `toListWith`, and `toListBuilderWith` are generic on their callbacks'
-  failures. A `for
-  … of` body solves nothing (`infers_result`): its failures are its
+  errors. A `for
+  … of` body solves nothing (`infers_result`): its errors are its
   function's, as before.
-- **tmpl** (chunk 15): a call's type arguments give its failure
+- **tmpl** (chunk 15): a call's type arguments give its error
   parameters (`Typing::type_args`) as solved in full when the call is
-  checked, from its literals' bodies too (`Typing::failure_args`, by
+  checked, from its literals' bodies too (`Typing::error_args`, by
   their places), `Never<Error>` where it can't fail by one
-  ([tmpl/nodes.md](tmpl/nodes.md), "Declared failures").
+  ([tmpl/nodes.md](tmpl/nodes.md), "Declared errors").
 
-## Declared failures
+## Declared errors
 
 In progress (RFC 164, chunks 4 to 13 and decision 17's rework of
 notes/error-custom-kinds-plan.md, 2026-11-25): typed in the frontend,
 run on the interpreter, and translated to tmpl
-([tmpl/nodes.md](tmpl/nodes.md), "Declared failures") and to every
-backend, failure parameters ("Failure parameters", above) too, and
+([tmpl/nodes.md](tmpl/nodes.md), "Declared errors") and to every
+backend, error parameters ("Failure parameters", above) too, and
 `error case` is
-still an error. The user-visible names, the root's (`FAILURE_ROOT` in
+still an error. The user-visible names, the root's (`ERROR_ROOT` in
 `builtins.rs`, and core's `interface Error`), the messages' wording,
-and the default message and reports (`interp/failures.rs`), are kept in
+and the default message and reports (`interp/declared_errors.rs`), are kept in
 one place each, as they may change.
 
-- **Failure types** (`Types::is_failure`): a class, or sealed
+- **Error types** (`Types::is_error`): a class, or sealed
   interface, that extends core's root `Error` (`types::ERROR`), directly or
-  through another failure type. Each is under one of its library's
+  through another error type. Each is under one of its library's
   **roots** (decision 17, 2026-11-25): a sealed interface extending
   `Error` itself, as `sealed interface WherewithError extends Error {}`,
   which backends make the host's exception type; a library may have
-  several, and a root may have members. Each failure type is checked
-  (`check_failure_class`): no type parameters ("Failure type Box can't
+  several, and a root may have members. Each error type is checked
+  (`check_error_class`): no type parameters ("Failure type Box can't
   have type parameters"); an interface is sealed ("Interface Loose
   extends Error, so it must be sealed"), so every one between a class
-  and its root is; one failure type, or `Error`, among what it extends
-  ("Both extends two failure types, A1 and A2; a failure type extends
+  and its root is; one error type, or `Error`, among what it extends
+  ("Both extends two error types, A1 and A2; an error type extends
   one", which counts `Error` too); a class never extends `Error` itself
   ("Class Direct can't extend Error itself; declare a root to extend, …");
   and what it extends is of its own library (`Library::library_root_at`;
-  "UtilError is another library's failure type; a failure type is under
+  "UtilError is another library's error type; an error type is under
   a root of its own library"), so roots stay sealed. Core's `Error` is
   the one open interface. The root is an `AnyValue`, and what extends it
-  is an `Error`; joins of two failure types with no closer common type
+  is an `Error`; joins of two error types with no closer common type
   (two roots' types) are `Error`.
-- **`throws E`** (`eval_result`, `check_throws`): `E` is a failure type,
-  a type parameter, or a `Never`. Anything else is "String isn't a
-  failure type; …", and the root, "Error is the root of failure types;
-  …"; the function's failure is then unknown, so nothing more is
+- **`throws E`** (`eval_result`, `check_throws`): `E` is an error type,
+  a type parameter, or a `Never`. Anything else is "String isn't an
+  error type; …", and the root, "Error is the root of error types;
+  …"; the function's error is then unknown, so nothing more is
   reported for it. Kotlin Temper 0.6 code's `Bubble` and `bubble()` are
   undeclared names, each saying how to migrate (`Library`'s message for
   `UndeclaredName`): "Bubble has not been declared; Bubble is gone:
@@ -1301,68 +1301,68 @@ one place each, as they may change.
 - **`throw x`** is a `Fail` node with `x`, of
   type `Never`; `x` must be an `Error` ("Expected subtype of Error, but
   got Int32").
-- **Core's failure types** are builtin types (`types.rs`,
+- **Core's error types** are builtin types (`types.rs`,
   `BUILTIN_SUPERTYPES`): `CoreError`, a sealed root under `Error`, and
   `MissingKey` (`Mapped.get`, `MapBuilder.remove`), `ParseError`
   (conversions), `InvalidCodePoint` (code points), `BrokenPromise`
   (`await`), and `BrokenGenerator` (`Generator.next()`) under it,
-  failure types as a library's are (`Types::is_failure`), and checkable
-  with `is` from any failure type (`typing/rtti.rs`). The interpreter
-  holds their values as `Val::CoreFailure`.
-- **`try x`** is `x` for now (RFC 164's option B): failures propagate
+  error types as a library's are (`Types::is_error`), and checkable
+  with `is` from any error type (`typing/rtti.rs`). The interpreter
+  holds their values as `Val::CoreDeclaredError`.
+- **`try x`** is `x` for now (RFC 164's option B): errors propagate
   with or without it. Requiring it is a later chunk.
 - **`x catch (e) { b }`** is `Orelse(x, { let e = caught(); b })`
   (`x orelse b` without a binding; a bare `catch { b }` is a syntax
   error pointing to `orelse`), where
   the hidden builtin `caught()` has the type of what `x` may fail with
-  (`caught_type`), the join of its failures (`join_failures`), so a
+  (`caught_type`), the join of its errors (`join_errors`), so a
   `when (e)` over a sealed type needs no `else`. `catch (e) { … }` with
   nothing before it is malformed.
-- **What a function may fail with** (`allowed_failure`) is its declared
-  result's failure type, or a function literal's, as before. Each
-  failing place in it ("What may fail", below) has a failure type:
+- **What a function may fail with** (`allowed_error`) is its declared
+  result's error type, or a function literal's, as before. Each
+  failing place in it ("What may fail", below) has an error type:
   core's `BrokenPromise` for `await`; the
   value's type for `throw`; and a call's callee's result's, solved
-  (`call_failure`). A place passes if its type is the function's or a
-  subtype (`check_failures`). Otherwise, where the function can't fail,
+  (`call_error`). A place passes if its type is the function's or a
+  subtype (`check_errors`). Otherwise, where the function can't fail,
   "Cannot throw NotFound from a function without NotFound in its return
   type"; and where it may, but not with that: "Cannot throw NotFound
   from a function that throws Other; catch it, and throw an Other there
   if need be". Conversion is only explicit, by `throw` in a handler.
 - **Exports** fail only with exported types (Tom, 2026-11-24): an
-  exported function's or public method's failure type is part of its
+  exported function's or public method's error type is part of its
   result type expression, so the check against exported signatures
   naming unexported types (`typing/exports.rs`) covers it, with the same
   "Export depends publicly on non-exported symbol Hidden". Private
   functions may fail with unexported types, and an exported sealed
-  failure type may have unexported classes under it.
+  error type may have unexported classes under it.
 - **No folding first:** a call that may fail is always a failing
   place, where Kotlin folds a bubbling call of constants and reports it
   only if the folded call bubbles.
-- **Messages and causes:** core's `Error` has two getters, which a
-  failure type's values have unless it declares its own
-  (`core_member_found` looks there for a failure class's): `message:
+- **Messages and causes:** core's `Error` has two getters, which an
+  error type's values have unless it declares its own
+  (`core_member_found` looks there for an error class's): `message:
   String`, by default its type's name in lowercase words, then its
-  public fields, `not found (key: y)`; and `cause: Error?`, the failure
+  public fields, `not found (key: y)`; and `cause: Error?`, the error
   being handled where it was first thrown, by a `throw` in a `catch`
   block or `orelse` fallback (or a `for … of` body in one, but not
-  another function), or null. A failure thrown again keeps its first cause and place, so causes
+  another function), or null. An error thrown again keeps its first cause and place, so causes
   never loop. A report of one nothing handles says its type, message,
   and place, then each cause's: `Failed with LookupFailed: lookup failed
   (name: port), at a.temper:5:24`, `caused by NotFound: …`. A panic of
   `orelse panic()` names it as its cause the same way. Panics pass every
   handler, as before.
 - **`await p`** throws core's `BrokenPromise` (2026-11-26), whatever
-  `p`'s `Promise<T>`: the failure is fixed, not read from the promise's
+  `p`'s `Promise<T>`: the error is fixed, not read from the promise's
   type. That keeps it compatible with a later `Promise<T, E>`, whose
   `await` throws its `E`: a one-argument `Promise<T>` will be
   `Promise<T, BrokenPromise>`, so code written now keeps its meaning.
-  Typing (`find_failures`), tmpl (`failures::node_failure`, by core's
+  Typing (`find_errors`), tmpl (`declared_errors::node_error`, by core's
   `BrokenPromise` declaration), and the state machines'
   `getPromiseResultSync` all name it in one place each, which `E` will
   replace.
 - **Generators** (2026-11-26; t1211 2026-11-27): a generator body that
-  declares `throws E` (any failure type) makes a `Generator<Y>`, whose
+  declares `throws E` (any error type) makes a `Generator<Y>`, whose
   `next()` throws core's `BrokenGenerator` (under `CoreError`), whose
   `cause` is the error the body threw; one that declares nothing makes
   a `SafeGenerator<Y>`, which can't fail, so "Expected subtype of fn:
@@ -1375,21 +1375,21 @@ one place each, as they may change.
   BrokenGenerator`, as any other: generator bodies have no `throws
   Error` exception (only tests and std, `Settle::may_throw_root`). No
   `Generator<Y, E>`: that needs default type arguments, a language
-  change of its own. A failure ends the generator.
-- **Not yet:** `error case`, promises with `E`, and checks that a
-  failure type's own `message` or `cause` fits the root's.
+  change of its own. An error ends the generator.
+- **Not yet:** `error case`, promises with `E`, and checks that an
+  error type's own `message` or `cause` fits the root's.
 
 ## What may fail
 
 A function fails only with what its declared result `throws`
-(`typing/bubbles.rs`; "Declared failures", above). In its body and
+(`typing/failing.rs`; "Declared errors", above). In its body and
 parameters' defaults, each of these is a failing place, reported where
 the function can't fail with it ("Cannot throw Oops from a function
 without Oops in its return type"):
 
 - `throw x`.
 - A call of a function value whose type `throws`: a parameter, local,
-  function, or method, with its failure parameters as the call solves
+  function, or method, with its error parameters as the call solves
   them. Core's methods that fail throw `ParseError` (conversions),
   `MissingKey` (`Mapped.get`, `MapBuilder.remove`), and
   `InvalidCodePoint` (code points). A call with the wrong number of

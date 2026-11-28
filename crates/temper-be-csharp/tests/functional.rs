@@ -13,9 +13,9 @@
 //! `cases/`, and on the shared programs
 //! (`crates/temper-be-testkit/programs/`), which cover operators,
 //! jumps, module state, string order, several modules, imports, tests,
-//! classes, and nullables beyond those tests; and declared failures, the
-//! testkit's `failures`, `host-failures`, and `failures-interop`, and its
-//! specifications `failure-causes` and `failure-params` ([`SPECS`]).
+//! classes, and nullables beyond those tests; and declared errors, the
+//! testkit's `declared-errors`, `host-declared-errors`, and `errors-interop`, and its
+//! specifications `error-causes` and `error-params` ([`SPECS`]).
 //!
 //! - `goldens`: each program's generated library, laid out as Kotlin's,
 //!   with its `ROOTGlobal.cs` matching the golden in `tests/goldens/`,
@@ -228,15 +228,15 @@ fn cases() -> Vec<Case> {
 }
 
 /// The testkit's specifications (`kit::SPECS`) C# runs, which other
-/// backends don't all yet: `failure-causes`, whose failures
-/// `tests/host/FailuresHost.cs` reads too, `failure-params`, and
-/// `failure-generators`.
-const SPECS: [&str; 3] = ["failure-causes", "failure-params", "failure-generators"];
+/// backends don't all yet: `error-causes`, whose errors
+/// `tests/host/ErrorsHost.cs` reads too, `error-params`, and
+/// `error-generators`.
+const SPECS: [&str; 3] = ["error-causes", "error-params", "error-generators"];
 
-/// A run of a program in sections (`host-failures-cause`, of
-/// `host-failures`), a library of its own, with the program's host code
-/// renamed for it: its namespace and class (`HostFailuresCause`,
-/// `HostFailuresCauseConnected`) and file.
+/// A run of a program in sections (`host-declared-errors-cause`, of
+/// `host-declared-errors`), a library of its own, with the program's host code
+/// renamed for it: its namespace and class (`HostDeclaredErrorsCause`,
+/// `HostDeclaredErrorsCauseConnected`) and file.
 fn rename_host_code(case: &mut Case) {
     let Some(program) = case.dir.file_name().and_then(|f| f.to_str()) else {
         return;
@@ -984,7 +984,7 @@ fn runs() {
         // standard way: it `await`s generated promises, resuming outside
         // any turn, also with a runner of its own, blocks on one inside a
         // turn, which fails clearly, loops over a generated generator with
-        // `foreach`, which a failed step leaves done, and catches a failure
+        // `foreach`, which a failed step leaves done, and catches an error
         // as an `Exception`.
         if let Some(case) = cases.iter().find(|c| c.key == "async-turns") {
             let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/Interop.cs");
@@ -1021,17 +1021,16 @@ fn runs() {
                 .collect();
             run("host interop", &interop, &[], &expected);
         }
-        // `tests/host/FailuresHost.cs`, host code that catches
-        // `failures-interop`'s and `failure-causes`' declared failures by
+        // `tests/host/ErrorsHost.cs`, host code that catches
+        // `errors-interop`'s and `error-causes`' declared errors by
         // their own types, the library's base, and a sealed interface's
         // abstract class, reads their messages, inner exceptions, and stack
-        // traces, and lets a panic pass a handler of the library's failures.
-        let interop = cases.iter().find(|c| c.key == "failures-interop");
-        let causes = cases.iter().find(|c| c.key == "failure-causes");
+        // traces, and lets a panic pass a handler of the library's errors.
+        let interop = cases.iter().find(|c| c.key == "errors-interop");
+        let causes = cases.iter().find(|c| c.key == "error-causes");
         if let (Some(case), Some(causes)) = (interop, causes) {
-            let source =
-                PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/FailuresHost.cs");
-            let interop = bin.join("FailuresHost.dll");
+            let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/ErrorsHost.cs");
+            let interop = bin.join("ErrorsHost.dll");
             let options = [
                 "-target:exe".to_string(),
                 "-nullable:enable".into(),
@@ -1042,10 +1041,10 @@ fn runs() {
             let build = dotnet.csc(&options, &references, &[source]);
             assert!(
                 build.status.success(),
-                "csc, tests/host/FailuresHost.cs:\n{}",
+                "csc, tests/host/ErrorsHost.cs:\n{}",
                 String::from_utf8_lossy(&build.stdout)
             );
-            fs::write(bin.join("FailuresHost.runtimeconfig.json"), RUNTIME_CONFIG).unwrap();
+            fs::write(bin.join("ErrorsHost.runtimeconfig.json"), RUNTIME_CONFIG).unwrap();
             let expected: Vec<String> = (case.expected.iter().cloned())
                 .chain(causes.expected.iter().cloned())
                 .chain(
@@ -1059,13 +1058,13 @@ fn runs() {
                         "retry r 2, inner not found (key: r); made by host 1 none",
                         "made before lookup failed (name: early), inner none",
                         "thrown again lookup failed (name: first), inner not found (key: first)",
-                        "trace at FailuresInterop.FailuresInteropGlobal.Lookup",
-                        "panic passes, a failure False, Panic",
+                        "trace at ErrorsInterop.ErrorsInteropGlobal.Lookup",
+                        "panic passes, an error False, Panic",
                     ]
                     .map(String::from),
                 )
                 .collect();
-            run("failures interop", &interop, &[], &expected);
+            run("errors interop", &interop, &[], &expected);
         }
         // Each library with host code, strictly, host code and all, with the
         // generated assembly where it imports a shared library, and its
@@ -1142,7 +1141,7 @@ fn mstest(dotnet: &Dotnet) -> Option<PathBuf> {
 
 /// Runs a library's MSTest methods by reflection, printing what
 /// `kit::runner_results` reads: each `[TestClass]`'s `[TestMethod]`s, in
-/// order, a failure being the exception a method throws, a panic's too,
+/// order, an error being the exception a method throws, a panic's too,
 /// as MSTest reports it (Kotlin's `RunCSharp` reads `dotnet test`'s JUnit logger).
 const RUN_TESTS: &str = r#"using System;
 using System.Linq;

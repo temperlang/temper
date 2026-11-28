@@ -1,6 +1,6 @@
 #pragma once
 #include <type_traits>
-#include "temper_bubble.hpp"
+#include "temper_panic.hpp"
 
 namespace temper {
     namespace core {

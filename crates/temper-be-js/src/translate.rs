@@ -360,12 +360,12 @@ impl<'a> Translator<'a> {
 
     /// A declaration's type parameters, as JSDoc's `@template` takes them:
     /// `T`, or `{Named} T` with a bound (but `MapKey`, which JS's maps
-    /// need nothing for); not failure parameters, as exceptions are
+    /// need nothing for); not error parameters, as exceptions are
     /// unchecked.
     pub(crate) fn templates(&mut self, decl: DeclId) -> R<Vec<String>> {
         let p = self.p;
         let mut out = Vec::new();
-        for t in temper_tmpl::failures::unchecked_type_params(p, decl) {
+        for t in temper_tmpl::declared_errors::unchecked_type_params(p, decl) {
             let name = p.name(t).to_string();
             let mut bounds = Vec::new();
             for &b in p.decls.supers(t) {
@@ -402,7 +402,7 @@ impl<'a> Translator<'a> {
             TypeData::Nominal { decl, args } => {
                 let mut texts = Vec::new();
                 let args = self.p.types.list(args);
-                for a in temper_tmpl::failures::unchecked_args(self.p, decl, args) {
+                for a in temper_tmpl::declared_errors::unchecked_args(self.p, decl, args) {
                     texts.push(self.ty(a)?);
                 }
                 let applied = |name: String| {
@@ -459,17 +459,17 @@ impl<'a> Translator<'a> {
                     }
                     // `empty()`'s, as the runtime declares it.
                     "core.type Empty" => "{}".to_string(),
-                    // Core's root of declared failures, which each
-                    // library's failure roots extend.
+                    // Core's root of declared errors, which each
+                    // library's error roots extend.
                     "core.type Error" => "Error".to_string(),
-                    // Core's own failures, the runtime's classes.
+                    // Core's own errors, the runtime's classes.
                     "core.type CoreError"
                     | "core.type MissingKey"
                     | "core.type ParseError"
                     | "core.type InvalidCodePoint"
                     | "core.type BrokenPromise"
                     | "core.type BrokenGenerator" => {
-                        let name = self.core_failure(decl).unwrap_or("Error");
+                        let name = self.core_error(decl).unwrap_or("Error");
                         self.import(name);
                         applied(name.to_string())
                     }
@@ -883,7 +883,7 @@ impl<'a> Translator<'a> {
             }
             // Each test ends by awaiting the async work it started.
             self.imports.insert("endTest");
-            // Where the body's failure is kept, a name no local has.
+            // Where the body's error is kept, a name no local has.
             let failure = self.fresh("failure");
             body.push(
                 Stmt::Test {
@@ -926,11 +926,11 @@ impl<'a> Translator<'a> {
         .spanned(p.nodes.span(item)))
     }
 
-    /// The declared failure type a function or method fails with, for
+    /// The declared error type a function or method fails with, for
     /// JSDoc's `@throws`, as a parameter named `@throws` the printer takes
     /// for one; nothing for one that fails with a type parameter.
     fn throws(&mut self, decl: DeclId) -> R<Option<(String, String)>> {
-        match temper_tmpl::failures::declared(self.p, decl) {
+        match temper_tmpl::declared_errors::declared(self.p, decl) {
             Some(fail) => Ok(Some(("@throws".to_string(), self.ty(fail)?))),
             None => Ok(None),
         }
@@ -1551,10 +1551,10 @@ impl<'a> Translator<'a> {
     }
 
     /// A handler's `try` ([`Stmt::Try`]), an `orelse`'s or a `catch`'s,
-    /// catching exactly what its body may fail with: the failure class
-    /// nearest above its failures, by `instanceof` (a `catch`'s binding,
+    /// catching exactly what its body may fail with: the error class
+    /// nearest above its errors, by `instanceof` (a `catch`'s binding,
     /// narrowed so for TypeScript), or where that's core's `Error`, for
-    /// failures of several libraries' roots, by the runtime's
+    /// errors of several libraries' roots, by the runtime's
     /// `isFailure(e$)`. Anything else, a panic or a host's error, passes
     /// it, even where the fallback only panics, whose panic then has what
     /// it caught as its `cause`, `panic("panic", e$)`.
@@ -1565,18 +1565,19 @@ impl<'a> Translator<'a> {
             Some(local) => self.name(local),
             None => "e$".to_string(),
         };
-        let fails: Vec<TypeId> = (temper_tmpl::failures::failures_under(p, body_node).into_iter())
-            .map(|(_, f)| f)
-            .collect();
-        let root = temper_tmpl::failures::root(p);
-        let caught = match temper_tmpl::failures::join(p, root, &fails) {
+        let fails: Vec<TypeId> = (temper_tmpl::declared_errors::errors_under(p, body_node)
+            .into_iter())
+        .map(|(_, f)| f)
+        .collect();
+        let root = temper_tmpl::declared_errors::root(p);
+        let caught = match temper_tmpl::declared_errors::join(p, root, &fails) {
             Some(ty) if nominal_decl(p, ty) == root => {
                 self.imports.insert("isFailure");
                 Expr::name("isFailure").call(vec![Expr::name(var.clone())])
             }
             Some(ty) => {
                 let Some(class) = nominal_decl(p, ty) else {
-                    return not_yet("a handler of a failure that isn't a class's");
+                    return not_yet("a handler of an error that isn't a class's");
                 };
                 let class = self.class_ref(class);
                 Expr::bin(Bin::InstanceOf, Expr::name(var.clone()), class)
@@ -1975,7 +1976,7 @@ impl<'a> Translator<'a> {
                 self.pre.push(made);
                 Expr::name(t)
             }
-            // A declared failure's `throw`, with its cause, the failure a
+            // A declared error's `throw`, with its cause, the error a
             // handler around it handles, where it's thrown there: through
             // the runtime's `withCause`, which keeps a cause it has.
             Node::Throw { value, cause, .. } => {
@@ -1989,10 +1990,10 @@ impl<'a> Translator<'a> {
             }
             Node::Null {} => Expr::Null,
             Node::IsNull { value } => Expr::bin(Bin::LooseEq, self.expr(value)?, Expr::Null),
-            // The failure a `catch` whose fallback jumps keeps, read where
+            // The error a `catch` whose fallback jumps keeps, read where
             // it's set, which TypeScript can't tell (notes/tmpl/nodes.md,
-            // "Declared failures"): cast to its type.
-            Node::NonNull { value } if self.is_kept_failure(value) => {
+            // "Declared errors"): cast to its type.
+            Node::NonNull { value } if self.is_kept_error(value) => {
                 let ty = self.type_of(id)?;
                 Expr::Cast(ty, Box::new(self.expr(value)?))
             }
@@ -2241,18 +2242,18 @@ impl<'a> Translator<'a> {
 /// Whether an expression is a literal, which may be evaluated at any time.
 /// An array's item type as `T[]` takes it: parenthesized if a union.
 impl Translator<'_> {
-    /// Whether a node reads a compiler-made local holding a failure or
+    /// Whether a node reads a compiler-made local holding an error or
     /// null: a `catch`'s `~caught`, or another local tsc can't narrow
-    /// (`failures::is_guarded_elsewhere`).
-    fn is_kept_failure(&self, id: NodeId) -> bool {
+    /// (`declared_errors::is_guarded_elsewhere`).
+    fn is_kept_error(&self, id: NodeId) -> bool {
         let p = self.p;
         let Node::Local { local } = p.nodes.get(id) else {
             return false;
         };
         let d = p.decls.get(local);
         d.facts.contains(Facts::COMPILER_MADE)
-            && nominal_decl(p, p.types.non_null(d.ty)).is_some_and(|c| self.is_failure_type(c))
-            || temper_tmpl::failures::is_guarded_elsewhere(p, id)
+            && nominal_decl(p, p.types.non_null(d.ty)).is_some_and(|c| self.is_error_type(c))
+            || temper_tmpl::declared_errors::is_guarded_elsewhere(p, id)
     }
 }
 

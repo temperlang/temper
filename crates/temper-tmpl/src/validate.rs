@@ -6,7 +6,7 @@
 //! sorted by writing order, each with its rule's code. Subset A's rules:
 //!
 //! - **S1** children fit the kind's fields, come before their parent, and
-//!   only calls carry `MAY_BUBBLE`; **S2** one parent per node; **S3**
+//!   only calls carry `MAY_FAIL`; **S2** one parent per node; **S3**
 //!   statements, expressions, blocks, parameters, and module items in
 //!   their places, `InitLet` only in an init block, and `Omitted` only as
 //!   a call's argument; **S4** the
@@ -17,11 +17,11 @@
 //!   **T4** (generics, subset B) a generic call's type arguments, as
 //!   many as its callee has type parameters (a constructor's class's),
 //!   each within its type parameter's bounds (but a builtin type's,
-//!   unless it's a failure parameter's, and `Never<T>` as `T`), with
+//!   unless it's an error parameter's, and `Never<T>` as `T`), with
 //!   each argument's and the result's type put in;
 //!   **T5** types well formed, a result type (`T throws E`) only as
-//!   a signature's result, failing with a failure type or a
-//!   failure parameter (a type parameter bound by one), `Never<T>` only as a result or a value's
+//!   a signature's result, failing with an error type or an
+//!   error parameter (a type parameter bound by one), `Never<T>` only as a result or a value's
 //!   type, and only where the profile has
 //!   [`Features::NEVER`](crate::Features::NEVER). `Error` nodes are
 //!   exempt from T2 and T3, and a `Never<T>` child fits where its `T`
@@ -36,8 +36,8 @@
 //!   after a `return`, jump, `throw`, `panic()`, or a `Never<T>`
 //!   value runs); **F2**
 //!   `return` has a value exactly when the result isn't `Void`; **F3**
-//!   `MAY_BUBBLE` exactly on calls that may fail, and on `Throw` and
-//!   `Await`; **F4** what may fail with a failure type only where that
+//!   `MAY_FAIL` exactly on calls that may fail, and on `Throw` and
+//!   `Await`; **F4** what may fail with an error type only where that
 //!   type (or one above it) may: an `OrElse`'s body, a `Catch`'s of its
 //!   local's type, a function failing with it, or an init block, where it
 //!   fails the module's initialization; **F5** no reading a module `let`
@@ -47,12 +47,12 @@
 //!   with any error (F4), not a `SafeGenerator<Y>`; **F7** a
 //!   `Switch`'s scrutinee an `Int32` or `Int64`, its labels literals of
 //!   that type, all different, and its default, if any, one and last;
-//!   **F8** (declared failures) a `Throw`'s value and cause are failure
+//!   **F8** (declared errors) a `Throw`'s value and cause are error
 //!   types, and a `Catch` binds one.
 //! - **D1** compiler-made declarations have a hint; **D2** owners form a
 //!   tree rooted at modules, or for external declarations at their `uses`
-//!   section's library; **D6** (declared failures) the program's failure
-//!   types aren't generic and have one failure type above them, and one
+//!   section's library; **D6** (declared errors) the program's error
+//!   types aren't generic and have one error type above them, and one
 //!   right under core's `Error`, a root, is an interface.
 //! - **Q1** qnames unique in the library; **Q2** every declaration but
 //!   compiler-made ones, labels, modules, and libraries has one; **Q3** a
@@ -213,7 +213,7 @@ pub fn validate(p: &Program, profile: &Profile) -> Vec<Problem> {
         defined: vec![false; p.decls.len()],
         slot: vec![u32::MAX; p.decls.len()],
         module: (DeclId::NONE, 0),
-        root: crate::failures::root(p),
+        root: crate::declared_errors::root(p),
     };
     for module in &p.modules {
         v.structure_module(p, module, profile);
@@ -222,7 +222,7 @@ pub fn validate(p: &Program, profile: &Profile) -> Vec<Problem> {
         v.bottom_types(p, profile);
         v.results(p);
         v.declarations(p);
-        v.failure_types(p);
+        v.error_types(p);
         for (i, module) in p.modules.iter().enumerate() {
             v.module = (module.decl, i);
             v.module(p, module);
@@ -271,11 +271,11 @@ enum Fails {
     /// Nothing: a function that can't fail.
     #[default]
     Nothing,
-    /// Anything: an `orelse`'s body, or an init block, where a failure
+    /// Anything: an `orelse`'s body, or an init block, where an error
     /// fails the module's initialization.
     Any,
-    /// Only `fail`, or for a failure type, any below it: a function's
-    /// failure type, or what a `catch` binds, in its body.
+    /// Only `fail`, or for an error type, any below it: a function's
+    /// error type, or what a `catch` binds, in its body.
     Only { fail: TypeId, catch: bool },
 }
 
@@ -366,7 +366,7 @@ struct Validator {
     /// The module whose bodies are being checked, and its place in
     /// `Program::modules`.
     module: (DeclId, usize),
-    /// Core's `Error`, the root of failure types, if the program has it.
+    /// Core's `Error`, the root of error types, if the program has it.
     root: Option<DeclId>,
 }
 
@@ -537,7 +537,7 @@ impl Validator {
             self.node_problem(Rule::S4, id, message);
         }
         let has_flag = kind.fields().iter().any(|f| f.slot == Slot::Flag);
-        if p.nodes.flags(id).contains(Flags::MAY_BUBBLE) && !has_flag {
+        if p.nodes.flags(id).contains(Flags::MAY_FAIL) && !has_flag {
             let message = format!("{} can't be marked may-fail", kind.name());
             self.node_problem(Rule::S1, id, message);
         }
@@ -779,7 +779,7 @@ impl Validator {
     }
 
     /// T5: a result type only as a signature's result, so no value,
-    /// declaration, or parameter has one, and its failure type a failure
+    /// declaration, or parameter has one, and its error type an error
     /// type (notes/tmpl/types.md, "Results").
     fn results(&mut self, p: &Program) {
         let failing =
@@ -794,14 +794,14 @@ impl Validator {
                 continue;
             };
             if sig.params.iter().chain([&sig.pass]).any(|&t| failing(t)) {
-                let message = format!("{} has a failure where a value goes", p.show_type(ty));
+                let message = format!("{} has an error where a value goes", p.show_type(ty));
                 self.decl_problem(Rule::T5, decl, message);
             }
-            // A failure type, or a failure parameter.
-            let failure = |f: TypeId| crate::failures::is_failure_type(p, self.root, f);
+            // An error type, or an error parameter.
+            let failure = |f: TypeId| crate::declared_errors::is_error_type(p, self.root, f);
             if let Some(fail) = sig.fail.filter(|&f| !failure(f)) {
                 let message = format!(
-                    "{} fails with {}, not a failure type",
+                    "{} fails with {}, not an error type",
                     p.show_type(ty),
                     p.show_type(fail)
                 );
@@ -817,35 +817,35 @@ impl Validator {
         }
     }
 
-    /// D6: the program's own failure types, the classes and interfaces
-    /// below core's `Error`, aren't generic and have one failure type
+    /// D6: the program's own error types, the classes and interfaces
+    /// below core's `Error`, aren't generic and have one error type
     /// among their supertypes; where that's `Error` itself, the type is
     /// one of the library's roots, an interface (a sealed one in the
     /// source), never a class.
-    fn failure_types(&mut self, p: &Program) {
+    fn error_types(&mut self, p: &Program) {
         for decl in p.decls.ids().filter(|&d| p.decls.contains(d)) {
             let d = p.decls.get(decl);
             let types = [DeclKind::Class, DeclKind::Interface];
             if !types.contains(&d.kind) || is_external(p, decl) {
                 continue;
             }
-            if !crate::failures::is_failure_decl(p, self.root, decl) {
+            if !crate::declared_errors::is_error_decl(p, self.root, decl) {
                 continue;
             }
             let root = self.root.map(|r| p.decls.get(r).ty);
             let parents: Vec<TypeId> = (p.decls.supers(decl).iter().copied())
-                .filter(|&s| crate::failures::is_failure_type(p, self.root, s))
+                .filter(|&s| crate::declared_errors::is_error_type(p, self.root, s))
                 .collect();
             if !p.decls.type_params(decl).is_empty() {
-                let message = "a failure type can't be generic".into();
+                let message = "an error type can't be generic".into();
                 self.decl_problem(Rule::D6, decl, message);
             }
             if parents.len() > 1 {
-                let message = "a failure type has more than one failure type above it".into();
+                let message = "an error type has more than one error type above it".into();
                 self.decl_problem(Rule::D6, decl, message);
             }
             if d.kind == DeclKind::Class && parents.iter().any(|&t| Some(t) == root) {
-                let message = "a failure class extends a root, not Error itself".into();
+                let message = "an error class extends a root, not Error itself".into();
                 self.decl_problem(Rule::D6, decl, message);
             }
         }
@@ -1026,7 +1026,7 @@ impl Validator {
             && sig.pass == TypeId::VOID
             && sig
                 .fail
-                .is_some_and(|f| crate::failures::is_root_type(p, f));
+                .is_some_and(|f| crate::declared_errors::is_root_type(p, f));
         if !fits {
             let message =
                 "a test's signature is fn (Test): Void throws Error, with std's Test".into();
@@ -1724,7 +1724,7 @@ impl Validator {
             p.decls.get(d).facts.contains(Facts::CONNECTED)
                 || (is_external(p, d)
                     && library_of(p, d) == "core"
-                    && Some(d) != crate::failures::root(p))
+                    && Some(d) != crate::declared_errors::root(p))
         });
         let null_check = have != target && p.types.non_null(have) == target;
         let message = if decl.is_none() && !null_check {
@@ -1892,7 +1892,7 @@ impl Validator {
             Node::CallFunction {
                 callee,
                 type_args,
-                may_bubble,
+                may_fail,
                 args,
             } => {
                 for &arg in p.nodes.list(args) {
@@ -1906,13 +1906,13 @@ impl Validator {
                 if let Some(sig) = p.signature(callee) {
                     let what = show(p, callee);
                     let binds = crate::analysis::bindings(p, callee, None, &type_args);
-                    self.call(p, id, &what, Callee::of(sig), (may_bubble, args), &binds);
+                    self.call(p, id, &what, Callee::of(sig), (may_fail, args), &binds);
                 }
             }
             Node::CallMethod {
                 method,
                 type_args,
-                may_bubble,
+                may_fail,
                 receiver,
                 args,
             } => {
@@ -1934,7 +1934,7 @@ impl Validator {
                     let what = show(p, method);
                     let have = Some(p.nodes.ty(receiver));
                     let binds = crate::analysis::bindings(p, method, have, &type_args);
-                    self.call(p, id, &what, Callee::of(sig), (may_bubble, args), &binds);
+                    self.call(p, id, &what, Callee::of(sig), (may_fail, args), &binds);
                 }
             }
             Node::Op { op, args } => {
@@ -2095,15 +2095,15 @@ impl Validator {
                     self.fits(p, body, ty, "the body");
                 }
                 // The fallback runs after any part of the body, with the
-                // failure in `local`, in scope only there.
+                // error in `local`, in scope only there.
                 let mut other = before;
                 let mark = self.body.in_scope.len();
                 if self.define(p, id, local, DeclKind::Local) {
                     self.check_owner(p, id, local, self.body.owner);
                     let fail = p.decls.get(local).ty;
-                    if !crate::failures::is_failure_type(p, self.root, fail) {
+                    if !crate::declared_errors::is_error_type(p, self.root, fail) {
                         let message =
-                            format!("a catch binds {}, not a failure type", p.show_type(fail));
+                            format!("a catch binds {}, not an error type", p.show_type(fail));
                         self.node_problem(Rule::F8, id, message);
                     }
                     self.enter_scope(local);
@@ -2116,7 +2116,7 @@ impl Validator {
                 flow.join(&other);
             }
             Node::Throw {
-                may_bubble,
+                may_fail,
                 value,
                 cause,
             } => {
@@ -2128,15 +2128,14 @@ impl Validator {
                 for (part, what) in [(Some(value), "throw's value"), (cause, "throw's cause")] {
                     let Some(part) = part else { continue };
                     let have = p.nodes.ty(part);
-                    let fits = crate::failures::is_failure_type(p, self.root, have)
+                    let fits = crate::declared_errors::is_error_type(p, self.root, have)
                         || p.nodes.kind(part) == Kind::Error;
                     if !fits {
-                        let message =
-                            format!("{what} is {}, not a failure type", p.show_type(have));
+                        let message = format!("{what} is {}, not an error type", p.show_type(have));
                         self.node_problem(Rule::F8, part, message);
                     }
                 }
-                if !may_bubble {
+                if !may_fail {
                     let message = "throw fails, but isn't marked".into();
                     self.node_problem(Rule::F3, id, message);
                 } else {
@@ -2147,17 +2146,14 @@ impl Validator {
                 flow.live = false;
             }
             Node::Panic {} => flow.live = false,
-            Node::Await {
-                may_bubble,
-                promise,
-            } => {
+            Node::Await { may_fail, promise } => {
                 self.expr(p, promise, flow);
                 if !self.body.generator {
                     let message = "an await outside a generator's own body".into();
                     self.node_problem(Rule::F6, id, message);
                 }
-                match crate::failures::broken_promise(p) {
-                    _ if !may_bubble => {
+                match crate::declared_errors::broken_promise(p) {
+                    _ if !may_fail => {
                         let message = "an await may fail, but isn't marked".into();
                         self.node_problem(Rule::F3, id, message);
                     }
@@ -2224,7 +2220,7 @@ impl Validator {
             Node::New {
                 ctor,
                 type_args,
-                may_bubble,
+                may_fail,
                 args,
             } => {
                 for &arg in p.nodes.list(args) {
@@ -2239,7 +2235,7 @@ impl Validator {
                 if let Some(sig) = p.signature(ctor) {
                     let what = show(p, ctor);
                     let binds = crate::analysis::bindings(p, ctor, None, &type_args);
-                    self.call(p, id, &what, Callee::of(sig), (may_bubble, args), &binds);
+                    self.call(p, id, &what, Callee::of(sig), (may_fail, args), &binds);
                 }
             }
             Node::Upcast { value } | Node::Downcast { value } => {
@@ -2297,7 +2293,7 @@ impl Validator {
                 self.fun_typed(p, id, p.decls.get(target).ty);
             }
             Node::CallValue {
-                may_bubble,
+                may_fail,
                 callee,
                 args,
             } => {
@@ -2319,7 +2315,7 @@ impl Validator {
                     id,
                     &what,
                     Callee::of(sig),
-                    (may_bubble, args),
+                    (may_fail, args),
                     &(Vec::new(), Vec::new()),
                 );
             }
@@ -2417,7 +2413,7 @@ impl Validator {
         // and it fails as the generator's `next()` does.
         let generator = p.decls.get(decl).facts.contains(Facts::GENERATOR);
         let fails = match generator {
-            true => Fails::of(crate::failures::generator_failure(p, decl)),
+            true => Fails::of(crate::declared_errors::generator_error(p, decl)),
             false => Fails::of(fail),
         };
         let yields = match generator {
@@ -2561,9 +2557,9 @@ impl Validator {
         }
         // Each within its type parameter's bounds, the others put in; a
         // builtin type's only as far as tmpl knows its supertypes, so not
-        // checked (`String` for `T extends MapKey`), but a failure
+        // checked (`String` for `T extends MapKey`), but an error
         // parameter's (RFC 164), which no builtin type fits; `Never<T>` as the `T` it stands for, as
-        // `Never<Error>` for a failure parameter that can't fail.
+        // `Never<Error>` for an error parameter that can't fail.
         let generic = match p.decls.contains(generic).then(|| p.decls.get(generic).kind) {
             Some(DeclKind::Constructor) => p.decls.get(generic).owner,
             Some(_) => generic,
@@ -2574,7 +2570,7 @@ impl Validator {
             return args;
         }
         for (&tp, &a) in p.decls.type_params(generic).iter().zip(&args) {
-            let failure = crate::failures::is_failure_param(p, tp);
+            let failure = crate::declared_errors::is_error_param(p, tp);
             if matches!(p.types.get(a), TypeData::Scalar(_)) && !failure {
                 continue;
             }
@@ -2622,7 +2618,7 @@ impl Validator {
         }
     }
 
-    /// A call's arguments and failure, against its callee's signature,
+    /// A call's arguments and error, against its callee's signature,
     /// with the type parameters it binds put in.
     fn call(
         &mut self,
@@ -2634,7 +2630,7 @@ impl Validator {
         (from, to): &(Vec<TypeId>, Vec<TypeId>),
     ) {
         let params = sig.params;
-        // A failure parameter given `Never<…>` can't fail.
+        // An error parameter given `Never<…>` can't fail.
         let fail = (sig.fail)
             .map(|f| p.types.substituted(f, from, to).unwrap_or(f))
             .filter(|&f| !p.types.is_never(f));
@@ -2685,7 +2681,7 @@ impl Validator {
                 catch,
             } => {
                 let fits = fail == allowed
-                    || crate::failures::is_root_type(p, allowed)
+                    || crate::declared_errors::is_root_type(p, allowed)
                     || crate::analysis::is_subtype(p, fail, allowed);
                 if fits {
                     return;

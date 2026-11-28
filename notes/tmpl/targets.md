@@ -49,5 +49,5 @@ which C++ and Rust would also export (`extern "C"`) so native code can
 back faster Python and Lua packages. The ABI is the contract, and the
 C99 backend its plainest implementation: ownership and reference counts
 across the boundary, strings with explicit encoding and length,
-failure as status codes and out-parameters, generics monomorphized or
+error as status codes and out-parameters, generics monomorphized or
 erased, and explicit, thread-safe module initialization.

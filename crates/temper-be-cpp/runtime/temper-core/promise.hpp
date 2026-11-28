@@ -7,7 +7,7 @@
 #include <mutex>
 #include <utility>
 #include <vector>
-#include "temper_bubble.hpp"
+#include "temper_panic.hpp"
 #include "failure.hpp"
 #include "generator.hpp"
 #if defined(__cpp_impl_coroutine)

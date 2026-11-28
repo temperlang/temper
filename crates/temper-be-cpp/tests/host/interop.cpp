@@ -85,7 +85,7 @@ int main() {
     }
     std::printf("collatz %s\n", steps.c_str());
 
-    // A declared failure is an `Expected`'s error, of its own type.
+    // A declared error is an `Expected`'s error, of its own type.
     auto odd = async_turns::halve(3);
     if (odd.has_value()) {
         std::printf("halve returned %d\n", *odd);

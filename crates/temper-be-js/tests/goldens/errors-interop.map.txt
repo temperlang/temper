@@ -1,0 +1,189 @@
+# generated line:column -> source:line:column, and the text at each
+10:1 -> ../errors-interop.temper.md:29:5  /** <- export let lookup(key: Strin
+15:1 -> ../errors-interop.temper.md:29:5  export function lookup(key) <- export let lookup(key: Strin
+15:17 -> ../errors-interop.temper.md:29:16 (lookup)  lookup(key) { <- lookup(key: String): Int thr
+15:23 -> ../errors-interop.temper.md:29:5  (key) { <- export let lookup(key: Strin
+16:3 -> ../errors-interop.temper.md:30:7  if (key === "a") { <- if (key == "a") { return 1;
+17:5 -> ../errors-interop.temper.md:30:25  return 1; <- return 1; }
+19:3 -> ../errors-interop.temper.md:31:7  throw new NotFound(key); <- throw new NotFound(key);
+22:1 -> ../errors-interop.temper.md:34:5  /** <- export let sign(text: String
+27:1 -> ../errors-interop.temper.md:34:5  export function sign(text) { <- export let sign(text: String
+27:17 -> ../errors-interop.temper.md:34:16 (sign)  sign(text) { <- sign(text: String): Int thro
+27:21 -> ../errors-interop.temper.md:34:5  (text) { <- export let sign(text: String
+28:3 -> ../errors-interop.temper.md:35:7  { <- when (text) {
+29:5 -> ../errors-interop.temper.md:36:16  if (text === "+") { <- 1;
+30:7 -> ../errors-interop.temper.md:36:16  return 1; <- 1;
+31:12 -> ../errors-interop.temper.md:37:16  if (text === "-") { <- -1;
+32:7 -> ../errors-interop.temper.md:37:16  return -1; <- -1;
+33:12 -> ../errors-interop.temper.md:38:15  if (text === "") { <- throw new EmptyText();
+34:7 -> ../errors-interop.temper.md:38:15  throw new EmptyText(); <- throw new EmptyText();
+36:7 -> ../errors-interop.temper.md:39:17  throw new BadSign(text); <- throw new BadSign(text);
+41:1 -> ../errors-interop.temper.md:43:5  /** <- export let setting(name: Str
+46:1 -> ../errors-interop.temper.md:43:5  export function setting(name <- export let setting(name: Str
+46:17 -> ../errors-interop.temper.md:43:16 (setting)  setting(name) { <- setting(name: String): Int t
+46:24 -> ../errors-interop.temper.md:43:5  (name) { <- export let setting(name: Str
+47:3 -> ../errors-interop.temper.md:44:7  try { <- lookup(name) orelse throw ne
+55:1 -> ../errors-interop.temper.md:52:5  /** <- export let madeBefore(name:
+60:1 -> ../errors-interop.temper.md:52:5  export function madeBefore(n <- export let madeBefore(name:
+60:17 -> ../errors-interop.temper.md:52:16 (madeBefore)  madeBefore(name) { <- madeBefore(name: String): In
+60:27 -> ../errors-interop.temper.md:52:5  (name) { <- export let madeBefore(name:
+61:3 -> ../errors-interop.temper.md:53:7  const failure = new LookupFa <- let failure = new LookupFail
+62:3 -> ../errors-interop.temper.md:54:7  try { <- lookup(name) orelse throw fa
+70:1 -> ../errors-interop.temper.md:57:5  /** <- export let thrownAgain(name:
+75:1 -> ../errors-interop.temper.md:57:5  export function thrownAgain( <- export let thrownAgain(name:
+75:17 -> ../errors-interop.temper.md:57:16 (thrownAgain)  thrownAgain(name) { <- thrownAgain(name: String): I
+75:28 -> ../errors-interop.temper.md:57:5  (name) { <- export let thrownAgain(name:
+76:3 -> ../errors-interop.temper.md:58:7  try { <- setting(name) catch (e) { lo
+92:1 -> ../errors-interop.temper.md:63:5  /** <- export let risky(n: Int): In
+97:1 -> ../errors-interop.temper.md:63:5  export function risky(n) { <- export let risky(n: Int): In
+97:17 -> ../errors-interop.temper.md:63:16 (risky)  risky(n) { <- risky(n: Int): Int throws No
+97:22 -> ../errors-interop.temper.md:63:5  (n) { <- export let risky(n: Int): In
+98:3 -> ../errors-interop.temper.md:64:7  if (n > 1) { <- if (n > 1) { panic() }
+99:5 -> ../errors-interop.temper.md:64:20  panic(); <- panic() }
+101:3 -> ../errors-interop.temper.md:65:7  return lookup("a"); <- lookup("a")
+104:1 -> ../errors-interop.temper.md:71:5  /** <- export let explained(name: S
+108:1 -> ../errors-interop.temper.md:71:5  export function explained(na <- export let explained(name: S
+108:17 -> ../errors-interop.temper.md:71:16 (explained)  explained(name) { <- explained(name: String): Str
+108:26 -> ../errors-interop.temper.md:71:5  (name) { <- export let explained(name: S
+109:3 -> ../errors-interop.temper.md:72:7  try { <- setting(name).toString() cat
+113:5 -> ../errors-interop.temper.md:73:9  const cause = failureCause(e <- let cause = e.cause;
+114:5 -> ../errors-interop.temper.md:74:9  const why = cause != null ? <- let why = if (cause != null)
+119:1 -> ../errors-interop.temper.md:79:5  /** <- export let signMessage(text:
+123:1 -> ../errors-interop.temper.md:79:5  export function signMessage( <- export let signMessage(text:
+123:17 -> ../errors-interop.temper.md:79:16 (signMessage)  signMessage(text) { <- signMessage(text: String): S
+123:28 -> ../errors-interop.temper.md:79:5  (text) { <- export let signMessage(text:
+124:3 -> ../errors-interop.temper.md:80:7  try { <- sign(text).toString() catch
+132:1 -> ../errors-interop.temper.md:83:5  /** <- export let earlyCause(name:
+136:1 -> ../errors-interop.temper.md:83:5  export function earlyCause(n <- export let earlyCause(name:
+136:17 -> ../errors-interop.temper.md:83:16 (earlyCause)  earlyCause(name) { <- earlyCause(name: String): St
+136:27 -> ../errors-interop.temper.md:83:5  (name) { <- export let earlyCause(name:
+137:3 -> ../errors-interop.temper.md:84:7  try { <- madeBefore(name).toString()
+141:5 -> ../errors-interop.temper.md:85:9  const cause = failureCause(e <- let cause = e.cause;
+146:1 -> ../errors-interop.temper.md:93:5  /** <- export let signName(e: SignE
+150:1 -> ../errors-interop.temper.md:93:5  export function signName(e) <- export let signName(e: SignE
+150:17 -> ../errors-interop.temper.md:93:16 (signName)  signName(e) { <- signName(e: SignError): Stri
+150:25 -> ../errors-interop.temper.md:93:5  (e) { <- export let signName(e: SignE
+151:3 -> ../errors-interop.temper.md:94:7  { <- when (e) {
+152:5 -> ../errors-interop.temper.md:95:23  if (e instanceof BadSign) { <- "bad sign";
+153:7 -> ../errors-interop.temper.md:95:23  return "bad sign"; <- "bad sign";
+154:12 -> ../errors-interop.temper.md:96:25  if (e instanceof EmptyText) <- "empty text";
+155:7 -> ../errors-interop.temper.md:96:25  return "empty text"; <- "empty text";
+157:7 -> ../errors-interop.temper.md:97:8  panic(); <- 
+162:1 -> ../errors-interop.temper.md:106:5  /** <- export let mixed(key: String
+167:1 -> ../errors-interop.temper.md:106:5  export function mixed(key, t <- export let mixed(key: String
+167:17 -> ../errors-interop.temper.md:106:16 (mixed)  mixed(key, text) { <- mixed(key: String, text: Str
+167:22 -> ../errors-interop.temper.md:106:5  (key, text) { <- export let mixed(key: String
+168:3 -> ../errors-interop.temper.md:107:7  try { <- (lookup(key) + 10 / sign(tex
+176:1 -> ../errors-interop.temper.md:110:5  /** <- export let firstSign(texts:
+180:1 -> ../errors-interop.temper.md:110:5  export function firstSign(te <- export let firstSign(texts:
+180:17 -> ../errors-interop.temper.md:110:16 (firstSign)  firstSign(texts) { <- firstSign(texts: List<String
+180:26 -> ../errors-interop.temper.md:110:5  (texts) { <- export let firstSign(texts:
+181:3 -> ../errors-interop.temper.md:111:7  { <- for (let t of texts) {
+182:5 -> ../errors-interop.temper.md:111:7  const length = texts.length; <- for (let t of texts) {
+183:5 -> ../errors-interop.temper.md:111:7  let i = 0; <- for (let t of texts) {
+184:5 -> ../errors-interop.temper.md:111:7  while (i < length) { <- for (let t of texts) {
+185:7 -> ../errors-interop.temper.md:111:7  const t = listedGet(/** @typ <- for (let t of texts) {
+186:7 -> ../errors-interop.temper.md:111:7  i = (i + 1) | 0; <- for (let t of texts) {
+187:7 -> ../errors-interop.temper.md:112:9  /** @type {number} */ <- let s = sign(t) catch (e) {
+188:7 -> ../errors-interop.temper.md:112:9  let s; <- let s = sign(t) catch (e) {
+189:7 -> ../errors-interop.temper.md:112:17  /** @type {SignError | null} <- sign(t) catch (e) {
+190:7 -> ../errors-interop.temper.md:112:17  let caught = null; <- sign(t) catch (e) {
+191:7 -> ../errors-interop.temper.md:112:17  /** @type {number | null} */ <- sign(t) catch (e) {
+192:7 -> ../errors-interop.temper.md:112:17  let held = null; <- sign(t) catch (e) {
+193:7 -> ../errors-interop.temper.md:112:17  try { <- sign(t) catch (e) {
+194:9 -> ../errors-interop.temper.md:112:17  held = sign(t); <- sign(t) catch (e) {
+197:9 -> ../errors-interop.temper.md:112:17  caught = failure; <- sign(t) catch (e) {
+199:7 -> ../errors-interop.temper.md:112:17  if (held == null) { <- sign(t) catch (e) {
+200:9 -> ../errors-interop.temper.md:112:32  const e = /** @type {SignErr <- e) {
+201:9 -> ../errors-interop.temper.md:113:11  if (e instanceof BadSign) { <- if (e is BadSign) { return "
+202:11 -> ../errors-interop.temper.md:113:31  return `bad ${/** @type {Bad <- return "bad ${e.text}"; }
+204:9 -> ../errors-interop.temper.md:114:11  continue; <- continue;
+206:9 -> ../errors-interop.temper.md:112:17  s = held; <- sign(t) catch (e) {
+208:7 -> ../errors-interop.temper.md:116:9  return s.toString(); <- return s.toString();
+211:3 -> ../errors-interop.temper.md:118:7  return "none"; <- "none"
+214:1 -> ../errors-interop.temper.md:121:5  /** <- export let firstMissing(keys
+218:1 -> ../errors-interop.temper.md:121:5  export function firstMissing <- export let firstMissing(keys
+218:17 -> ../errors-interop.temper.md:121:16 (firstMissing)  firstMissing(keys) { <- firstMissing(keys: List<Stri
+218:29 -> ../errors-interop.temper.md:121:5  (keys) { <- export let firstMissing(keys
+219:3 -> ../errors-interop.temper.md:122:7  { <- for (let k of keys) {
+220:5 -> ../errors-interop.temper.md:122:7  const length = keys.length; <- for (let k of keys) {
+221:5 -> ../errors-interop.temper.md:122:7  let i = 0; <- for (let k of keys) {
+222:5 -> ../errors-interop.temper.md:122:7  while (i < length) { <- for (let k of keys) {
+223:7 -> ../errors-interop.temper.md:122:7  const k = listedGet(/** @typ <- for (let k of keys) {
+224:7 -> ../errors-interop.temper.md:122:7  i = (i + 1) | 0; <- for (let k of keys) {
+225:7 -> ../errors-interop.temper.md:123:9  /** @type {number} */ <- let n = lookup(k) catch (e)
+226:7 -> ../errors-interop.temper.md:123:9  let n; <- let n = lookup(k) catch (e)
+227:7 -> ../errors-interop.temper.md:123:17  /** @type {NotFound | null} <- lookup(k) catch (e) { return
+228:7 -> ../errors-interop.temper.md:123:17  let caught = null; <- lookup(k) catch (e) { return
+229:7 -> ../errors-interop.temper.md:123:17  /** @type {number | null} */ <- lookup(k) catch (e) { return
+230:7 -> ../errors-interop.temper.md:123:17  let held = null; <- lookup(k) catch (e) { return
+231:7 -> ../errors-interop.temper.md:123:17  try { <- lookup(k) catch (e) { return
+232:9 -> ../errors-interop.temper.md:123:17  held = lookup(k); <- lookup(k) catch (e) { return
+235:9 -> ../errors-interop.temper.md:123:17  caught = failure; <- lookup(k) catch (e) { return
+237:7 -> ../errors-interop.temper.md:123:17  if (held == null) { <- lookup(k) catch (e) { return
+238:9 -> ../errors-interop.temper.md:123:34  const e = /** @type {NotFoun <- e) { return e.key; };
+239:9 -> ../errors-interop.temper.md:123:39  return e.key; <- return e.key; };
+241:9 -> ../errors-interop.temper.md:123:17  n = held; <- lookup(k) catch (e) { return
+243:7 -> ../errors-interop.temper.md:124:9  if (n < 0) { <- if (n < 0) { break; }
+244:9 -> ../errors-interop.temper.md:124:22  break; <- break; }
+248:3 -> ../errors-interop.temper.md:126:7  return "none"; <- "none"
+251:1 -> ../errors-interop.temper.md:17:5  export class ErrorsInteropEr <- export sealed interface Erro
+251:14 -> ../errors-interop.temper.md:17:29 (ErrorsInteropError)  ErrorsInteropError extends E <- ErrorsInteropError extends E
+251:32 -> ../errors-interop.temper.md:17:5   extends Error {} <- export sealed interface Erro
+255:1 -> ../errors-interop.temper.md:19:5  export class NotFound extend <- export class NotFound(public
+255:14 -> ../errors-interop.temper.md:19:18 (NotFound)  NotFound extends ErrorsInter <- NotFound(public key: String)
+255:22 -> ../errors-interop.temper.md:19:5   extends ErrorsInteropError <- export class NotFound(public
+256:3 -> ../errors-interop.temper.md:19:34  /** @type {string} */ <- key: String) extends ErrorsI
+257:3 -> ../errors-interop.temper.md:19:34  #key; <- key: String) extends ErrorsI
+259:3 -> ../errors-interop.temper.md:19:5  /** @param {string} key */ <- export class NotFound(public
+260:3 -> ../errors-interop.temper.md:19:5  constructor(key) { <- export class NotFound(public
+262:5 -> ../errors-interop.temper.md:19:34  this.#key = key; <- key: String) extends ErrorsI
+265:3 -> ../errors-interop.temper.md:19:34  /** @returns {string} */ <- key: String) extends ErrorsI
+266:3 -> ../errors-interop.temper.md:19:34  get key() { <- key: String) extends ErrorsI
+266:7 -> ../errors-interop.temper.md:19:34 (key)  key() { <- key: String) extends ErrorsI
+270:3 -> ../errors-interop.temper.md:19:5  /** @returns {string} */ <- export class NotFound(public
+271:3 -> ../errors-interop.temper.md:19:5  get message() { <- export class NotFound(public
+272:5 -> ../errors-interop.temper.md:19:5  return `not found (key: ${th <- export class NotFound(public
+276:1 -> ../errors-interop.temper.md:21:5  export class SignError exten <- export sealed interface Sign
+276:14 -> ../errors-interop.temper.md:21:29 (SignError)  SignError extends ErrorsInte <- SignError extends ErrorsInte
+276:23 -> ../errors-interop.temper.md:21:5   extends ErrorsInteropError <- export sealed interface Sign
+278:1 -> ../errors-interop.temper.md:22:5  export class BadSign extends <- export class BadSign(public
+278:14 -> ../errors-interop.temper.md:22:18 (BadSign)  BadSign extends SignError { <- BadSign(public text: String)
+278:21 -> ../errors-interop.temper.md:22:5   extends SignError { <- export class BadSign(public
+279:3 -> ../errors-interop.temper.md:22:33  /** @type {string} */ <- text: String) extends SignEr
+280:3 -> ../errors-interop.temper.md:22:33  #text; <- text: String) extends SignEr
+282:3 -> ../errors-interop.temper.md:22:5  /** @param {string} text */ <- export class BadSign(public
+283:3 -> ../errors-interop.temper.md:22:5  constructor(text) { <- export class BadSign(public
+285:5 -> ../errors-interop.temper.md:22:33  this.#text = text; <- text: String) extends SignEr
+288:3 -> ../errors-interop.temper.md:22:33  /** @returns {string} */ <- text: String) extends SignEr
+289:3 -> ../errors-interop.temper.md:22:33  get text() { <- text: String) extends SignEr
+289:7 -> ../errors-interop.temper.md:22:33 (text)  text() { <- text: String) extends SignEr
+293:3 -> ../errors-interop.temper.md:22:5  /** @returns {string} */ <- export class BadSign(public
+294:3 -> ../errors-interop.temper.md:22:5  get message() { <- export class BadSign(public
+295:5 -> ../errors-interop.temper.md:22:5  return `bad sign (text: ${th <- export class BadSign(public
+299:1 -> ../errors-interop.temper.md:23:5  export class EmptyText exten <- export class EmptyText exten
+299:14 -> ../errors-interop.temper.md:23:18 (EmptyText)  EmptyText extends SignError <- EmptyText extends SignError
+299:23 -> ../errors-interop.temper.md:23:5   extends SignError { <- export class EmptyText exten
+300:3 -> ../errors-interop.temper.md:24:14  /** @returns {string} */ <- get message(): String { "no
+301:3 -> ../errors-interop.temper.md:24:14  get message() { <- get message(): String { "no
+301:7 -> ../errors-interop.temper.md:24:18 (message)  message() { <- message(): String { "no text
+302:5 -> ../errors-interop.temper.md:24:38  return "no text"; <- "no text" }
+306:1 -> ../errors-interop.temper.md:27:5  export class LookupFailed ex <- export class LookupFailed(pu
+306:14 -> ../errors-interop.temper.md:27:18 (LookupFailed)  LookupFailed extends ErrorsI <- LookupFailed(public name: St
+306:26 -> ../errors-interop.temper.md:27:5   extends ErrorsInteropError <- export class LookupFailed(pu
+307:3 -> ../errors-interop.temper.md:27:38  /** @type {string} */ <- name: String) extends Errors
+308:3 -> ../errors-interop.temper.md:27:38  #name_; <- name: String) extends Errors
+310:3 -> ../errors-interop.temper.md:27:5  /** @param {string} name */ <- export class LookupFailed(pu
+311:3 -> ../errors-interop.temper.md:27:5  constructor(name) { <- export class LookupFailed(pu
+313:5 -> ../errors-interop.temper.md:27:38  this.#name_ = name; <- name: String) extends Errors
+316:3 -> ../errors-interop.temper.md:27:38  /** @returns {string} */ <- name: String) extends Errors
+317:3 -> ../errors-interop.temper.md:27:38  get name_() { <- name: String) extends Errors
+317:7 -> ../errors-interop.temper.md:27:38 (name)  name_() { <- name: String) extends Errors
+321:3 -> ../errors-interop.temper.md:27:5  /** @returns {string} */ <- export class LookupFailed(pu
+322:3 -> ../errors-interop.temper.md:27:5  get message() { <- export class LookupFailed(pu
+323:5 -> ../errors-interop.temper.md:27:5  return `lookup failed (name: <- export class LookupFailed(pu
+327:1 -> ../errors-interop.temper.md:129:5  console.log(`${lookup("a")} <- console.log("${lookup("a")}
+328:1 -> ../errors-interop.temper.md:130:5  console.log(`${mixed("a", "" <- console.log("${mixed("a", ""
+329:1 -> ../errors-interop.temper.md:131:5  console.log(`${explained("po <- console.log("${explained("po
+330:1 -> ../errors-interop.temper.md:132:5  console.log(`${earlyCause("s <- console.log("${earlyCause("s
+331:1 -> ../errors-interop.temper.md:133:5  console.log(`${firstSign(Obj <- console.log("${firstSign([""

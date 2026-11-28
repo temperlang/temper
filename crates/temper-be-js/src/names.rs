@@ -232,10 +232,10 @@ pub const RULES: NamingRules = NamingRules {
     fields_apart: false,
     types_apart: false,
     modules_share_names: false,
-    failure_suffix: None,
-    // `Error`'s own properties, which mean something else there: a
-    // failure's field `name` is `name_`, as `name` is its type's name.
-    failure_member_reserved: &["cause", "name", "stack"],
+    error_suffix: None,
+    // `Error`'s own properties, which mean something else there: an
+    // error's field `name` is `name_`, as `name` is its type's name.
+    error_member_reserved: &["cause", "name", "stack"],
 };
 
 /// A module's file name, without `.js`: the library's name with `_` for

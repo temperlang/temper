@@ -1,0 +1,210 @@
+tmpl 1 model 1 library errors 0.0.0
+
+uses `temper-core`#3 0.0.0-alpha.0.0 {
+  interface Error#4 {}
+  class ParseError#11 extends CoreError#12 {}
+  interface CoreError#12 extends Error#4 {}
+  class Int32#37 {
+    connected method toString#38(radix?: Int32): String;
+  }
+  interface Console#39 {
+    connected method log#40(message: String): Void;
+  }
+  class String#45 {
+    connected method toInt32#46(radix?: Int32): Int32 throws ParseError#11;
+  }
+  class Boolean#61 {
+    connected method toString#62(): String;
+  }
+  connected fn getConsole#77(name?: String): Console#39;
+}
+
+module errors#0 {
+  let ~console#41: Console#39;
+
+  interface Problem#1 extends Error#4 {}
+
+  class Missing#2 extends Problem#1 {
+    constructor constructor#5(): Missing#2 {}
+    get message#31(): String {
+      return "missing";
+    }
+  }
+
+  fn more#6(x#32: Int32?): Int32 throws Missing#2 {
+    (throw(new constructor#5())^): Void;
+  }
+
+  fn something#7(x#33: String?): String throws Missing#2 {
+    {
+      if (%Boolean.not(isNull(x#33))) {
+        return (nonNull(x#33)): String;
+      } else {
+        (throw(new constructor#5())^): Void;
+      }
+    }
+  }
+
+  fn report#8(x#34: String?): Void {
+    let message#35: String = (orelse(something#7(x#34)^, "null")): String;
+    let suffix#36: String = (orelse(more#6((asNullable((if (%Boolean.not(isNull(x#34))) 1 else 0): Int32)): Int32?)^.toString#38(omitted), "")): String;
+    ~console#41.log#40(%String.cat(message#35, suffix#36));
+  }
+
+  fn calcRows#9(cols#42: Int32, total#43: Int32): Int32 throws Missing#2 {
+    ~console#41.log#40(%String.cat(%String.cat(%String.cat(%String.cat("calcRows(", cols#42.toString#38(omitted)), ", "), total#43.toString#38(omitted)), ")"));
+    if (%Boolean.not(%Int32.eq(%Int32.mod(total#43, cols#42), 0))) {
+      (throw(new constructor#5())^): Void;
+    }
+    return %Int32.div(total#43, cols#42);
+  }
+
+  fn parsed#10(s#44: String): Int32 throws ParseError#11 {
+    return s#44.toInt32#46(omitted)^;
+  }
+
+  fn countBelow#13(s#47: String): Int32 throws ParseError#11 {
+    var i#48: Int32 = 0;
+    ~loop#49: while (%Int32.lt(i#48, parsed#10(s#47)^)) {
+      i#48 = %Int32.add(i#48, 1);
+    }
+    return i#48;
+  }
+
+  fn firstOver#14(n#50: Int32): Int32 throws Missing#2 {
+    var i#51: Int32 = 0;
+    ~loop#52: while (%Int32.lt(i#51, 9)) {
+      i#51 = %Int32.add(i#51, 1);
+      if (%Int32.gt(i#51, n#50)) {
+        break ~loop#52;
+      }
+    }
+    return i#51;
+  }
+
+  fn sumSkipping#15(n#53: Int32): Int32 throws Missing#2 {
+    var sum#54: Int32 = 0;
+    {
+      var i#55: Int32 = 0;
+      ~loop#56: while (%Int32.lt(i#55, 5)) {
+        if (%Int32.eq(i#55, n#53)) {
+          {
+            i#55 = %Int32.add(i#55, 1);
+            continue ~loop#56;
+          }
+        }
+        sum#54 = %Int32.add(sum#54, i#55);
+        i#55 = %Int32.add(i#55, 1);
+      }
+    }
+    return sum#54;
+  }
+
+  fn tenTimes#16(n#57: Int32): Int32 throws Missing#2 {
+    {
+      var i#58: Int32 = 0;
+      ~loop#59: while (%Int32.lt(i#58, 9)) {
+        if (%Int32.eq(i#58, n#57)) {
+          return %Int32.mul(i#58, 10);
+        }
+        i#58 = %Int32.add(i#58, 1);
+      }
+    }
+    (throw(new constructor#5())^): Void;
+  }
+
+  fn isNone#17(r#60: Int32?): Boolean {
+    return isNull(r#60);
+  }
+
+  fn viaOrElse#18(n#63: Int32): String {
+    return %String.cat(%String.cat(%String.cat(%String.cat(((orelse(firstOver#14(n#63)^, %Int32.neg(1))): Int32).toString#38(omitted), " "), ((orelse(sumSkipping#15(n#63)^, %Int32.neg(1))): Int32).toString#38(omitted)), " "), ((orelse(tenTimes#16(n#63)^, %Int32.neg(1))): Int32).toString#38(omitted));
+  }
+
+  fn unreachableInt#19(): Never<Int32> {
+    (panic()): Void;
+  }
+
+  fn failAs#20<T#21>(fallback#64: T#21): Never<T#21> throws Missing#2 {
+    (throw(new constructor#5())^): Void;
+  }
+
+  fn bail#22(): Never<Void> throws Missing#2 {
+    (throw(new constructor#5())^): Void;
+  }
+
+  fn noName#23(): String? {
+    return (null): String?;
+  }
+
+  fn stop#24(): Never<Void> {
+    (panic()): Void;
+  }
+
+  fn half#25(n#65: Int32): Int32 throws Missing#2 {
+    if (%Boolean.not(%Int32.eq(%Int32.modSafe(n#65, 2), 0))) {
+      bail#22()^;
+    }
+    if (%Int32.lt(n#65, 0)) {
+      return failAs#20<Int32>(n#65)^;
+    } else {
+      return %Int32.divSafe(n#65, 2);
+    }
+  }
+
+  fn pick#26(b#66: Boolean): Int32 {
+    if (b#66) {
+      return 1;
+    } else {
+      return unreachableInt#19();
+    }
+  }
+
+  fn named#27(b#67: Boolean): String? {
+    if (b#67) {
+      return (asNullable("named")): String?;
+    } else {
+      return noName#23();
+    }
+  }
+
+  fn chosen#28(b#68: Boolean): Int32 {
+    let x#69: Int32;
+    if (b#68) {
+      x#69 = 3;
+      ~console#41.log#40("chosen");
+    } else {
+      unreachableInt#19();
+    }
+    return x#69;
+  }
+
+  fn shout#29(s#70: String?): String {
+    if (isNull(s#70)) {
+      stop#24();
+    }
+    let t#71: String = (nonNull(s#70)): String;
+    return %String.cat(t#71, "!");
+  }
+
+  fn branch#30(a#74: Int32, b#75: Int32): Void {
+    let c#76: String = (if (%Int32.eq(a#74, 0)) (if (%Int32.eq(b#75, 0)) "00" else (if (%Int32.eq(b#75, 1)) "01" else (if (%Int32.eq(b#75, 2)) "02" else "0x"): String): String): String else (if (%Int32.eq(a#74, 1)) "1x" else (if (%Int32.eq(a#74, 2)) "2x" else (if (%Int32.eq(a#74, 3)) "3x" else "xx"): String): String): String): String;
+    ~console#41.log#40(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat("branch(", a#74.toString#38(omitted)), ", "), b#75.toString#38(omitted)), ") -> "), c#76));
+  }
+
+  init {
+    init ~console#41 = getConsole#77(omitted);
+    report#8((asNullable("hi")): String?);
+    report#8((null): String?);
+    ~console#41.log#40(calcRows#9(3, 6)^.toString#38(omitted));
+    ~console#41.log#40(((orelse(countBelow#13("abc")^, %Int32.neg(1))): Int32).toString#38(omitted));
+    ~console#41.log#40(%String.cat(%String.cat(((orelse(firstOver#14(1)^, %Int32.neg(1))): Int32).toString#38(omitted), " "), isNone#17((orelse((asNullable(firstOver#14(1)^)): Int32?, (null): Int32?)): Int32?).toString#62()));
+    ~console#41.log#40(viaOrElse#18(2));
+    ~console#41.log#40(viaOrElse#18(12));
+    ~console#41.log#40(%String.cat(%String.cat(%String.cat(%String.cat(pick#26(true).toString#38(omitted), " "), (value { let subject#72: String? = named#27(true); (if (isNull(subject#72)) "-" else (nonNull(subject#72)): String): String }): String), " "), (value { let subject#73: String? = named#27(false); (if (isNull(subject#73)) "null" else (nonNull(subject#73)): String): String }): String));
+    ~console#41.log#40(%String.cat(%String.cat(%String.cat(%String.cat(((orelse(half#25(4)^, %Int32.neg(1))): Int32).toString#38(omitted), " "), ((orelse(half#25(3)^, %Int32.neg(1))): Int32).toString#38(omitted)), " "), ((orelse(half#25(%Int32.neg(2))^, %Int32.neg(1))): Int32).toString#38(omitted)));
+    ~console#41.log#40(%String.cat(%String.cat(chosen#28(true).toString#38(omitted), " "), shout#29((asNullable("hey")): String?)));
+    branch#30(0, 2);
+    branch#30(2, 0);
+  }
+}

@@ -6,7 +6,7 @@
 //! tests is its backend's ([`Backend::tools`], each crate's `tools`
 //! module); this runs them for any backend that has them.
 //!
-//! Each library's results are its tests' names and failures, as the
+//! Each library's results are its tests' names and errors, as the
 //! tools report them; a run with no results fails the library, with the
 //! tool's output.
 
@@ -23,7 +23,7 @@ pub use temper_tmpl::Tested;
 /// the backend, as `build` does, saying what each needs that isn't
 /// covered yet, then runs the tests of those that built (or only
 /// `options.library`'s) with the language's own tools ([`run`]),
-/// writing failures (or with `verbose`, every result) to `out` as the
+/// writing errors (or with `verbose`, every result) to `out` as the
 /// interpreter's run does (in JSON, records to `err`). Whether all
 /// passed, without errors, and the tally, whose summary the caller
 /// writes; or `None`, having said why, if nothing could be built or

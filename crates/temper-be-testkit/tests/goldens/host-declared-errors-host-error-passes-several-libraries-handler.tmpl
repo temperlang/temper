@@ -1,0 +1,57 @@
+tmpl 1 model 1 library `host-declared-errors-host-error-passes-several-libraries-handler` 0.0.0
+
+uses `temper-core`#3 0.0.0-alpha.0.0 {
+  interface Error#4 {
+    connected get message#21(): String;
+  }
+  interface Console#12 {
+    connected method log#13(message: String): Void;
+  }
+  class Int32#22 {
+    connected method toString#23(radix?: Int32): String;
+  }
+  connected fn getConsole#24(name?: String): Console#12;
+}
+
+uses `count-errors`#15 0.0.0 {
+  module ``#16 {
+    class BadCount#17 extends CountError#18 {}
+    interface CountError#18 extends Error#4 {}
+    fn parseCount#19(text: String): Int32 throws BadCount#17;
+  }
+}
+
+module `host-declared-errors-host-error-passes-several-libraries-handler`#0 {
+  let ~console#14: Console#12;
+
+  export interface HostDeclaredErrorsError#1 extends Error#4 {}
+
+  export class NotFound#2 extends HostDeclaredErrorsError#1 {
+    let key#5: String;
+    constructor constructor#6(key#9: String): NotFound#2 {
+      this.key#5 = key#9;
+    }
+    get message#10(): String {
+      return %String.cat(%String.cat("not found (key: ", this.key#5), ")");
+    }
+  }
+
+  connected export fn hostLookup#7(key#11: String): Int32 throws NotFound#2 {
+    if (%String.eq(key#11, "bug")) {
+      (panic()): Void;
+    }
+    if (%String.eq(key#11, "a")) {
+      return 1;
+    }
+    (throw(new constructor#6(key#11))^): Void;
+  }
+
+  let h#8: Int32;
+
+  init {
+    init ~console#14 = getConsole#24(omitted);
+    ~console#14.log#13("before");
+    init h#8 = (catch(%Int32.add(parseCount#19("two")^, hostLookup#7("bug")^), e#20: Error#4, (value { ~console#14.log#13(%String.cat("caught ", e#20.message#21())); %Int32.neg(1) }): Int32)): Int32;
+    ~console#14.log#13(%String.cat("after ", h#8.toString#23(omitted)));
+  }
+}

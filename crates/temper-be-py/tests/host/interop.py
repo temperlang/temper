@@ -89,7 +89,7 @@ for n in fibonacci():
 print("fibonacci", fib)
 print("collatz", list(collatz(7)))
 
-# A declared failure is an exception of its own class.
+# A declared error is an exception of its own class.
 from async_turns import Odd, halve  # noqa: E402
 
 try:
@@ -104,11 +104,11 @@ from py_builtin_params import Option  # noqa: E402
 option = Option(help="how", min=1, max=9, type="flag")
 print("by name", option.describe(), option.clamp(12))
 
-# Declared failures are exceptions under the library's root, caught by
+# Declared errors are exceptions under the library's root, caught by
 # their own types, the root, or a sealed interface's.
-from failures_interop import (  # noqa: E402
+from errors_interop import (  # noqa: E402
     BadSign,
-    FailuresInteropError,
+    ErrorsInteropError,
     LookupFailed,
     NotFound,
     SignError,
@@ -136,7 +136,7 @@ def raised(call: Callable[[], object]) -> BaseException | None:
 
 
 failed = raised(lambda: lookup("y"))
-print(f"base {isinstance(failed, FailuresInteropError)}, Exception {isinstance(failed, Exception)}")
+print(f"base {isinstance(failed, ErrorsInteropError)}, Exception {isinstance(failed, Exception)}")
 
 for text in ["x", ""]:
     try:

@@ -1,0 +1,12 @@
+{
+    "name": "host-declared-errors-host-error-passes-several-libraries-handler",
+    "type": "module",
+    "exports": {
+        "./host_declared_errors_host_error_passes_several_libraries_handler": "./host_declared_errors_host_error_passes_several_libraries_handler.js",
+        ".": "./index.js"
+    },
+    "dependencies": {
+        "@temperlang/core": "0.0.0-alpha.0.0",
+        "count-errors": "*"
+    }
+}

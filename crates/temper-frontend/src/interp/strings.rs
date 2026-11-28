@@ -8,7 +8,7 @@
 //! inside a character here; such an index counts as the start of that
 //! character (Kotlin's would point at a trailing surrogate instead).
 
-use super::{Abrupt, CoreFailure, R, Val};
+use super::{Abrupt, CoreDeclaredError, R, Val};
 use std::cell::RefCell;
 use std::rc::Rc;
 use temper_syntax::lex::is_kotlin_whitespace;
@@ -135,7 +135,10 @@ pub(super) fn string_method(text: &str, name: &str, args: &[Val]) -> Option<R> {
         ("toFloat64", []) => {
             return Some(match super::numbers::parse_float(text) {
                 Some(f) => Ok(Val::Float(f)),
-                None => Err(CoreFailure::parse_error(text.to_string(), "not a Float64")),
+                None => Err(CoreDeclaredError::parse_error(
+                    text.to_string(),
+                    "not a Float64",
+                )),
             });
         }
         // Splitting by "" gives each code point.
@@ -187,7 +190,7 @@ fn parse_int(text: &str, radix: i32, is_64: bool) -> R {
         "not an Int32"
     };
     parse_int_or_none(text, radix, is_64)
-        .ok_or_else(|| CoreFailure::parse_error(text.to_string(), reason))
+        .ok_or_else(|| CoreDeclaredError::parse_error(text.to_string(), reason))
 }
 
 fn parse_int_or_none(text: &str, radix: i32, is_64: bool) -> Option<Val> {
@@ -244,7 +247,7 @@ pub(super) fn int_to_string(n: i64, radix: i32) -> R {
 /// negatives, surrogates, and past `0x10FFFF`.
 fn scalar(code: i32) -> Result<char, Abrupt> {
     (u32::try_from(code).ok().and_then(char::from_u32)).ok_or_else(|| {
-        Abrupt::Throw(CoreFailure::value(
+        Abrupt::Throw(CoreDeclaredError::value(
             "InvalidCodePoint",
             vec![("codePoint", Val::Int(code))],
         ))

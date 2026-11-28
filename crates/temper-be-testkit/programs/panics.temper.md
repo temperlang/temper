@@ -1,7 +1,7 @@
 # Panics
 
-`orelse` handles a failure, wherever it comes from, and never a panic.
-Failures here come from `throw`, from builtins (a failed number
+`orelse` handles an error, wherever it comes from, and never a panic.
+Errors here come from `throw`, from builtins (a failed number
 parse throws a `ParseError`, and a code point out of range an
 `InvalidCodePoint`), and from inside a function value an `orelse` calls.
 Each `orelse` gives its fallback, and `??` gives one for a regex that
@@ -42,7 +42,7 @@ finds nothing, as `find` gives null:
 The other builtins and std functions that fail, each where a host
 library fails for it on some backend: other number parses and
 conversions, code points out of range, a missing key, an invalid date,
-and malformed or partial JSON throw declared failures, which `orelse`
+and malformed or partial JSON throw declared errors, which `orelse`
 handles as it does any other, and `catch` binds:
 
     let appending(codePoint: Int): String throws InvalidCodePoint {

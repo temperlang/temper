@@ -1,0 +1,85 @@
+tmpl 1 model 1 library `error-causes` 0.0.0
+
+uses `temper-core`#5 0.0.0-alpha.0.0 {
+  interface Error#6 {
+    connected get cause#41(): Error#6?;
+    connected get message#44(): String;
+  }
+  class Int32#32 {
+    connected method toString#33(radix?: Int32): String;
+  }
+  interface Console#51 {
+    connected method log#52(message: String): Void;
+  }
+  connected fn getConsole#54(name?: String): Console#51;
+}
+
+module `error-causes`#0 {
+  let ~console#53: Console#51;
+
+  export interface ErrorCausesError#1 extends Error#6 {}
+
+  export class NotFound#2 extends ErrorCausesError#1 {
+    let key#7: String;
+    constructor constructor#8(key#20: String): NotFound#2 {
+      this.key#7 = key#20;
+    }
+    get message#21(): String {
+      return %String.cat(%String.cat("not found (key: ", this.key#7), ")");
+    }
+  }
+
+  export fn lookup#15(key#22: String): Int32 throws NotFound#2 {
+    if (%String.eq(key#22, "a")) {
+      return 1;
+    }
+    (throw(new constructor#8(key#22))^): Void;
+  }
+
+  export class Wrapped#3 extends ErrorCausesError#1 {
+    let label#9: String;
+    let first#10: Wrapped#3?;
+    constructor constructor#11(label#23: String, first#24: Wrapped#3?): Wrapped#3 {
+      this.label#9 = label#23;
+      this.first#10 = first#24;
+    }
+    get message#25(): String {
+      return %String.cat(%String.cat(%String.cat(%String.cat("wrapped (label: ", this.label#9), ", first: "), (if (isNull(this.first#10)) "null" else "Wrapped"): String), ")");
+    }
+  }
+
+  export fn wrapLookup#16(name#26: String): Int32 throws Wrapped#3 {
+    return (catch(lookup#15(name#26)^, ~failure#27: NotFound#2, (throw(new constructor#11("outer", (asNullable(new constructor#11("inner", (null): Wrapped#3?))): Wrapped#3?), ~failure#27)^): Int32)): Int32;
+  }
+
+  export class Retry#4 extends ErrorCausesError#1 {
+    let reason#12: String;
+    let tries#13: Int32;
+    constructor constructor#14(cause#28: String, tries#29?: Int32?): Retry#4 {
+      let tries#30: Int32 = (coalesce(tries#29, 1)): Int32;
+      this.reason#12 = %String.cat("retry ", cause#28);
+      this.tries#13 = tries#30;
+    }
+    get message#31(): String {
+      return %String.cat(%String.cat(%String.cat(%String.cat("retry (reason: ", this.reason#12), ", tries: "), this.tries#13.toString#33(omitted)), ")");
+    }
+  }
+
+  export fn retried#17(name#34: String, n#35: Int32): Int32 throws Retry#4 {
+    return (catch(lookup#15(name#34)^, ~failure#36: NotFound#2, (value { if (%Int32.gt(n#35, 1)) { (throw(new constructor#14(name#34, (asNullable(n#35)): Int32?), ~failure#36)^): Void; } (throw(new constructor#14(name#34, omitted), ~failure#36)^): Int32 }): Int32)): Int32;
+  }
+
+  fn firstCause#18(name#37: String): String {
+    return (catch(wrapLookup#16(name#37)^.toString#33(omitted), e#38: Wrapped#3, (value { let first#39: Wrapped#3? = e#38.first#10; let inner#40: String = (if (%Boolean.not(isNull(first#39)) && isNull(((upcast((nonNull(first#39)): Wrapped#3)): Error#6).cause#41())) "none" else "some"): String; %String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(e#38.label#9, " "), (value { let subject#42: String? = (value { let subject#43: Error#6? = ((upcast(e#38)): Error#6).cause#41(); (if (isNull(subject#43)) (null): String? else (asNullable(((nonNull(subject#43)): Error#6).message#44())): String?): String? }): String?; (if (isNull(subject#42)) "none" else (nonNull(subject#42)): String): String }): String), ", "), (value { let subject#45: String? = (if (isNull(first#39)) (null): String? else (asNullable(((nonNull(first#39)): Wrapped#3).label#9)): String?): String?; (if (isNull(subject#45)) "-" else (nonNull(subject#45)): String): String }): String), " "), inner#40) }): String)): String;
+  }
+
+  fn retryCause#19(name#46: String, n#47: Int32): String {
+    return (catch(retried#17(name#46, n#47)^.toString#33(omitted), e#48: Retry#4, %String.cat(%String.cat(%String.cat(%String.cat(e#48.reason#12, " "), e#48.tries#13.toString#33(omitted)), " "), (value { let subject#49: String? = (value { let subject#50: Error#6? = ((upcast(e#48)): Error#6).cause#41(); (if (isNull(subject#50)) (null): String? else (asNullable(((nonNull(subject#50)): Error#6).message#44())): String?): String? }): String?; (if (isNull(subject#49)) "none" else (nonNull(subject#49)): String): String }): String))): String;
+  }
+
+  init {
+    init ~console#53 = getConsole#54(omitted);
+    ~console#53.log#52(firstCause#18("x"));
+    ~console#53.log#52(%String.cat(%String.cat(retryCause#19("y", 1), "; "), retryCause#19("z", 3)));
+  }
+}

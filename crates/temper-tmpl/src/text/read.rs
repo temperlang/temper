@@ -1997,13 +1997,8 @@ impl Reader {
     /// Checks that `^` follows exactly the calls that may fail.
     fn caret(&mut self, call: NodeId) -> Read<()> {
         let marked = self.eat("^");
-        let bubbles = self
-            .b
-            .program()
-            .nodes
-            .flags(call)
-            .contains(Flags::MAY_BUBBLE);
-        match (marked, bubbles) {
+        let fails = self.b.program().nodes.flags(call).contains(Flags::MAY_FAIL);
+        match (marked, fails) {
             (true, false) => {
                 self.pos -= 1;
                 self.error("`^` marks a call that can't fail")
@@ -2089,7 +2084,7 @@ impl Reader {
             let promise = self.expr()?;
             self.expect(")")?;
             let flags = if self.eat("^") {
-                Flags::MAY_BUBBLE
+                Flags::MAY_FAIL
             } else {
                 Flags::NONE
             };
@@ -2182,7 +2177,7 @@ impl Reader {
             };
             self.expect(")")?;
             let flags = if self.eat("^") {
-                Flags::MAY_BUBBLE
+                Flags::MAY_FAIL
             } else {
                 Flags::NONE
             };
@@ -2223,7 +2218,7 @@ impl Reader {
             let value = self.expr()?;
             self.expect(")")?;
             let flags = if word == "as" && self.eat("^") {
-                Flags::MAY_BUBBLE
+                Flags::MAY_FAIL
             } else {
                 Flags::NONE
             };

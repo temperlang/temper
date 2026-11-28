@@ -119,8 +119,8 @@ std's `sendRequest` on C++ and Lua (patches 0018 and 0019).
 ## Deterministic simulation testing
 
 Turns plus injected effects let a whole Temper client or server run in the
-interpreter (or any backend) under a fake clock and network, replaying a
-failure exactly, as FoundationDB and TigerBeetle test. Server logic tested
+interpreter (or any backend) under a fake clock and network, replaying an
+error exactly, as FoundationDB and TigerBeetle test. Server logic tested
 by simulation, then shipped in seven languages, would be a strong showcase.
 
 ## Isolation when host code calls in
@@ -139,7 +139,7 @@ elsewhere). The experimental Temper PRs #533 (Python), #534 (Java), #537
 - A contended wait walks a wait-for table, and a call that would close a
   cycle panics ("actor call cycle") instead of deadlocking. Uncontended
   calls never touch the table.
-- Failures and panics release the gate on the way out.
+- Errors and panics release the gate on the way out.
 
 Plain (non-actor) mutable objects stay unguarded: confined to one thread or
 actor by documentation, plus native markers where a language has them and an

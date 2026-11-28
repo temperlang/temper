@@ -49,7 +49,7 @@ pub enum Macro {
     Yield,
     /// `await(p)` or `await p`, in an `async` block's body.
     Await,
-    /// `throw x`, `try x`, and `x catch (e) { … }`: declared failures'
+    /// `throw x`, `try x`, and `x catch (e) { … }`: declared errors'
     /// syntax (RFC 164).
     Throw,
     Try,
@@ -128,7 +128,7 @@ pub enum Function {
     /// `rgx(list(parts), list(values))`, a regex literal, `/a+/` or
     /// `rgx"a${b}"`, which settling rewrites (`regex`).
     Rgx,
-    /// `caught()`, the failure a `catch (e)` binds: the one the `Orelse`
+    /// `caught()`, the error a `catch (e)` binds: the one the `Orelse`
     /// whose fallback starts `let e = caught();` handles. Hidden.
     Caught,
 }
@@ -148,10 +148,10 @@ pub enum Constant {
     TestServerPort(i32),
 }
 
-/// The root of declared failure types (RFC 164), which every failure
-/// class and sealed failure interface extends: its one spelling, so a
+/// The root of declared error types (RFC 164), which every error
+/// class and sealed error interface extends: its one spelling, so a
 /// later rename (`Exception`?) is one line here and core's declaration.
-pub const FAILURE_ROOT: &str = "Error";
+pub const ERROR_ROOT: &str = "Error";
 
 /// Type names, resolved but not checked yet.
 pub const TYPES: &[&str] = &[
@@ -164,7 +164,7 @@ pub const TYPES: &[&str] = &[
     "Deque",
     "DoneResult",
     "Empty",
-    FAILURE_ROOT,
+    ERROR_ROOT,
     "Float64",
     "Generator",
     "GeneratorFn",

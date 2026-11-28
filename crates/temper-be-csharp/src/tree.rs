@@ -317,7 +317,7 @@ pub enum Stmt {
     /// Lines of code as written, each indented in place: a helper's body.
     Raw(String),
     /// `try { … } catch (NotFound) { … }`: Temper's `orelse` or `catch`,
-    /// catching only what its body may fail with, a declared failure's
+    /// catching only what its body may fail with, a declared error's
     /// class (`class`, as the translator names it), `catch (NotFound
     /// name)` where `var` names it, and `catch (Exception name) when
     /// (filter)` for any error, core's `Error`.
@@ -368,8 +368,8 @@ pub enum Access {
     Internal,
     Protected,
     /// `private protected`: its class's and those below it in its
-    /// assembly, as a declared failure's abstract class's constructor,
-    /// so only its library's failure types extend it.
+    /// assembly, as a declared error's abstract class's constructor,
+    /// so only its library's error types extend it.
     PrivateProtected,
     Private,
 }
@@ -850,7 +850,7 @@ pub struct TypeDecl {
     pub access: Access,
     pub interface: bool,
     /// A class's own modifiers, after its access: `abstract ` or
-    /// `sealed ` for a declared failure's (RFC 164), else none.
+    /// `sealed ` for a declared error's (RFC 164), else none.
     pub modifiers: &'static str,
     pub name: String,
     /// Its type parameters, `<T>`, or empty.
@@ -872,7 +872,7 @@ pub enum Member {
         ty: String,
         name: String,
     },
-    /// A constructor: `public`, but a declared failure's internal one
+    /// A constructor: `public`, but a declared error's internal one
     /// that takes its cause and its abstract class's, with `init`, a call
     /// of another constructor, as `this(key, null)` or `base(cause)`,
     /// where it has one.

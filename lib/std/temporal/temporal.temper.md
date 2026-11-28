@@ -85,7 +85,7 @@ Some facts about the Gregorian calendar.
       0, 3, 3, 6, 1, 4, 6, 2, 5, 0, 3, 5,
     ];
 
-Temporal's failures are under one root. A year, month, and day that
+Temporal's errors are under one root. A year, month, and day that
 name no day of the calendar, as February 30th, are an *InvalidDate*,
 and text that isn't an ISO 8601 date is an *InvalidIsoDate*.
 

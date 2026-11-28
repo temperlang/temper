@@ -1,7 +1,7 @@
 #pragma once
 #include <deque>
 #include <memory>
-#include "temper_bubble.hpp"
+#include "temper_panic.hpp"
 #include "base_types.hpp"
 
 namespace temper {

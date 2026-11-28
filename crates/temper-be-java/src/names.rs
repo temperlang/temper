@@ -128,9 +128,9 @@ pub const RULES: NamingRules = NamingRules {
     fields_apart: false,
     types_apart: true,
     modules_share_names: false,
-    // Failure types say `Exception` for `Error` (RFC 164).
-    failure_suffix: Some(("Error", "Exception")),
-    failure_member_reserved: &[],
+    // Error types say `Exception` for `Error` (RFC 164).
+    error_suffix: Some(("Error", "Exception")),
+    error_member_reserved: &[],
 };
 
 /// A library's package, as Kotlin's `safeIdentifier` makes it from the

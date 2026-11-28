@@ -8,7 +8,7 @@
 //! it came from, also shifted, so the files' parse results stay usable for
 //! formatting and the language server.
 
-use crate::builtins::FAILURE_ROOT;
+use crate::builtins::ERROR_ROOT;
 use crate::stdlib;
 use temper_syntax::ast::{self, Value};
 use temper_syntax::lex::SourceKind;
@@ -230,40 +230,40 @@ pub enum Message {
     /// a type that doesn't fit the bound.
     TypeFormalBound(String, String, String),
     /// What may fail, in a function literal whose place is a generic
-    /// call's failure parameter, named, that its body can't give, as its
+    /// call's error parameter, named, that its body can't give, as its
     /// parameters' types need it too.
-    FailureNotInferred(String),
+    ErrorNotInferred(String),
     /// What may fail, in a function literal whose place is a generic
-    /// call's failure parameter that the call's type arguments give as a
+    /// call's error parameter that the call's type arguments give as a
     /// `Never`: the parameter and what's given.
-    FailureGivenNever(String, String),
-    /// `throws T` for a `T` that isn't a failure type or a failure
+    ErrorGivenNever(String, String),
+    /// `throws T` for a `T` that isn't an error type or an error
     /// parameter.
-    NotAFailureType(String),
-    /// `throws Error`, the failure root, which isn't one a function may
+    NotAnErrorType(String),
+    /// `throws Error`, the error root, which isn't one a function may
     /// throw.
     ThrowsRoot,
-    /// A declared failure, of the type named, in a function that can't
+    /// A declared error, of the type named, in a function that can't
     /// fail.
-    UndeclaredFailure(String),
-    /// Failures under different roots, whose join is the root, `Error`,
+    UndeclaredError(String),
+    /// Errors under different roots, whose join is the root, `Error`,
     /// which no function but a test may throw, in one that can't fail.
-    UnhandledRootFailure,
-    /// A declared failure, of the first type, in a function that throws
+    UnhandledRootError,
+    /// A declared error, of the first type, in a function that throws
     /// the second, which it isn't one of.
-    FailureMismatch(String, String),
-    /// A failure class or interface, named, with type parameters.
-    GenericFailureType(String),
-    /// An interface, named, that extends the failure root but isn't
+    ErrorMismatch(String, String),
+    /// An error class or interface, named, with type parameters.
+    GenericErrorType(String),
+    /// An interface, named, that extends the error root but isn't
     /// sealed.
-    UnsealedFailureInterface(String),
-    /// A class or interface, named, that extends two failure types, the
+    UnsealedErrorInterface(String),
+    /// A class or interface, named, that extends two error types, the
     /// two named.
-    TwoFailureParents(String, String, String),
-    /// A failure class, named, that extends the failure root itself.
-    FailureClassExtendsRoot(String),
-    /// A failure type that extends another library's, as written.
-    ForeignFailureParent(String),
+    TwoErrorParents(String, String, String),
+    /// An error class, named, that extends the error root itself.
+    ErrorClassExtendsRoot(String),
+    /// An error type that extends another library's, as written.
+    ForeignErrorParent(String),
     /// `x is T` or `x as T` that can never succeed: `x`'s type, not
     /// null, and `T`. Kotlin's `ImpossibleRttiCheck`.
     ImpossibleRttiCheck(String, String),
@@ -383,7 +383,7 @@ impl Message {
             // Kotlin Temper 0.6 code's `Bubble` and `bubble()`.
             Message::UndeclaredName(n) if n == "Bubble" || n == "bubble" => format!(
                 "{n} has not been declared; Bubble is gone: declare an error type and throw it \
-                 (sealed interface MyError extends {FAILURE_ROOT} {{}}; throws MyError; throw new \
+                 (sealed interface MyError extends {ERROR_ROOT} {{}}; throws MyError; throw new \
                  MyError()), return null, or panic() for a bug"
             ),
             Message::UndeclaredName(n) => format!("{n} has not been declared"),
@@ -532,49 +532,49 @@ impl Message {
             Message::NoCalleeMatches(inputs, among) => {
                 format!("No callee matches inputs [{inputs}] among [{among}]")
             }
-            Message::FailureNotInferred(e) => format!(
+            Message::ErrorNotInferred(e) => format!(
                 "Cannot infer {e} from this function literal, as its parameters' types need \
                  it; declare its result type, with throws if it may fail"
             ),
-            Message::FailureGivenNever(e, given) => format!(
-                "This function literal may fail, but its call gives {e} as {given}; give {e} a \
-                 failure type, or handle the failure in the literal"
+            Message::ErrorGivenNever(e, given) => format!(
+                "This function literal may fail, but its call gives {e} as {given}; give {e} an \
+                 error type, or handle the error in the literal"
             ),
-            Message::NotAFailureType(t) => format!(
-                "{t} isn't a failure type; throws takes a class or sealed interface that \
-                 extends {FAILURE_ROOT}"
+            Message::NotAnErrorType(t) => format!(
+                "{t} isn't an error type; throws takes a class or sealed interface that \
+                 extends {ERROR_ROOT}"
             ),
             Message::ThrowsRoot => format!(
-                "{FAILURE_ROOT} is the root of failure types; throws takes a class or sealed \
+                "{ERROR_ROOT} is the root of error types; throws takes a class or sealed \
                  interface that extends it"
             ),
-            Message::UndeclaredFailure(t) => {
+            Message::UndeclaredError(t) => {
                 format!("Cannot throw {t} from a function without {t} in its return type")
             }
-            Message::UnhandledRootFailure => format!(
-                "Cannot throw {FAILURE_ROOT}, failures under different roots, from a function; \
+            Message::UnhandledRootError => format!(
+                "Cannot throw {ERROR_ROOT}, errors under different roots, from a function; \
                  handle them with orelse or catch"
             ),
-            Message::FailureMismatch(t, allowed) => format!(
+            Message::ErrorMismatch(t, allowed) => format!(
                 "Cannot throw {t} from a function that throws {allowed}; catch it, and throw {} \
                  there if need be",
                 with_article(allowed)
             ),
-            Message::GenericFailureType(name) => {
-                format!("Failure type {name} can't have type parameters")
+            Message::GenericErrorType(name) => {
+                format!("Error type {name} can't have type parameters")
             }
-            Message::UnsealedFailureInterface(name) => {
-                format!("Interface {name} extends {FAILURE_ROOT}, so it must be sealed")
+            Message::UnsealedErrorInterface(name) => {
+                format!("Interface {name} extends {ERROR_ROOT}, so it must be sealed")
             }
-            Message::TwoFailureParents(name, a, b) => {
-                format!("{name} extends two failure types, {a} and {b}; a failure type extends one")
+            Message::TwoErrorParents(name, a, b) => {
+                format!("{name} extends two error types, {a} and {b}; an error type extends one")
             }
-            Message::FailureClassExtendsRoot(name) => format!(
-                "Class {name} can't extend {FAILURE_ROOT} itself; declare a root to extend, a \
-                 sealed interface that does, as `sealed interface MyError extends {FAILURE_ROOT} {{}}`"
+            Message::ErrorClassExtendsRoot(name) => format!(
+                "Class {name} can't extend {ERROR_ROOT} itself; declare a root to extend, a \
+                 sealed interface that does, as `sealed interface MyError extends {ERROR_ROOT} {{}}`"
             ),
-            Message::ForeignFailureParent(sup) => format!(
-                "{sup} is another library's failure type; a failure type is under a root of its \
+            Message::ForeignErrorParent(sup) => format!(
+                "{sup} is another library's error type; an error type is under a root of its \
                  own library"
             ),
             Message::ImpossibleRttiCheck(from, to) => {

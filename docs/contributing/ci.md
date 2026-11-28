@@ -33,7 +33,7 @@ tags (`fetch-depth: 0`), as binaries.yml and pages.yml do, so the
 so they check out only the commit.
 
 Each check is a step of its own that runs even when an earlier one
-fails, so a failure names its check, and one doesn't hide another
+fails, so an error names its check, and one doesn't hide another
 (unless it needs a build that failed). Each job sets up only the
 toolchains its tests use, through one local action,
 [.github/actions/toolchains](../../.github/actions/toolchains/action.yml),
@@ -78,7 +78,7 @@ public repositories, so the job count is about time, not cost.
 and `platforms-quick` every night (03:41 UTC), `platforms` every
 Sunday (05:17 UTC), and all of them whenever it's run by hand: on
 GitHub, **Actions → Nightly → Run workflow**, picking a branch (or `gh
-workflow run nightly.yml --ref BRANCH`). Its failures block nothing;
+workflow run nightly.yml --ref BRANCH`). Its errors block nothing;
 they're the cue to fix a platform before release.
 
 A scheduled run skips what an earlier one already tested on the same
@@ -286,8 +286,8 @@ New checker releases often find new things to say about generated
 code. The `latest-checkers` jobs in
 [nightly.yml](../../.github/workflows/nightly.yml) run the backends'
 tests with one checker at a time at its latest release (TypeScript,
-pyright, mypy, or LuaLS), the rest at their pins. They block nothing: a
-failure, named for its checker and with the versions in its summary,
+pyright, mypy, or LuaLS), the rest at their pins. They block nothing: an
+error, named for its checker and with the versions in its summary,
 is the cue to fix the backend or the tests before bumping that pin.
 
 ## Real libraries' Python types, nightly

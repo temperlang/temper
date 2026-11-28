@@ -1,0 +1,100 @@
+tmpl 1 model 1 library `host-declared-errors-several-libraries` 0.0.0
+
+uses `temper-core`#6 0.0.0-alpha.0.0 {
+  interface Error#7 {
+    connected get message#33(): String;
+    connected get cause#44(): Error#7?;
+  }
+  interface Console#22 {
+    connected method log#23(message: String): Void;
+  }
+  class Int32#34 {
+    connected method toString#35(radix?: Int32): String;
+  }
+  connected fn getConsole#49(name?: String): Console#22;
+}
+
+uses `count-errors`#27 0.0.0 {
+  module ``#28 {
+    class BadCount#29 extends CountError#30 {}
+    interface CountError#30 extends Error#7 {}
+    fn parseCount#31(text: String): Int32 throws BadCount#29;
+  }
+}
+
+module `host-declared-errors-several-libraries`#0 {
+  let ~console#24: Console#22;
+
+  export interface HostDeclaredErrorsError#1 extends Error#7 {}
+
+  export class NotFound#2 extends HostDeclaredErrorsError#1 {
+    let key#8: String;
+    constructor constructor#9(key#19: String): NotFound#2 {
+      this.key#8 = key#19;
+    }
+    get message#20(): String {
+      return %String.cat(%String.cat("not found (key: ", this.key#8), ")");
+    }
+  }
+
+  connected export fn hostLookup#13(key#21: String): Int32 throws NotFound#2 {
+    if (%String.eq(key#21, "bug")) {
+      (panic()): Void;
+    }
+    if (%String.eq(key#21, "a")) {
+      return 1;
+    }
+    (throw(new constructor#9(key#21))^): Void;
+  }
+
+  fn total#14(key#25: String, count#26: String): Int32 {
+    return (catch(%Int32.add(hostLookup#13(key#25)^, parseCount#31(count#26)^), e#32: Error#7, (value { ~console#24.log#23(%String.cat("caught ", e#32.message#33())); (if (is(e#32, NotFound#2)) %Int32.neg(1) else %Int32.neg(2)): Int32 }): Int32)): Int32;
+  }
+
+  class Unreadable#3 extends HostDeclaredErrorsError#1 {
+    let key#10: String;
+    constructor constructor#11(key#36: String): Unreadable#3 {
+      this.key#10 = key#36;
+    }
+    get message#37(): String {
+      return %String.cat(%String.cat("unreadable (key: ", this.key#10), ")");
+    }
+  }
+
+  fn reading#15(key#38: String, count#39: String): Int32 throws Unreadable#3 {
+    return (catch(%Int32.add(hostLookup#13(key#38)^, parseCount#31(count#39)^), ~failure#40: Error#7, (throw(new constructor#11(key#38), ~failure#40)^): Int32)): Int32;
+  }
+
+  let r#16: Int32;
+
+  interface Problem#4 extends Error#7 {}
+
+  class Zero#5 extends Problem#4 {
+    constructor constructor#12(): Zero#5 {}
+    get message#45(): String {
+      return "zero";
+    }
+  }
+
+  fn nonzero#17(n#46: Int32): Int32 throws Zero#5 {
+    if (%Int32.eq(n#46, 0)) {
+      (throw(new constructor#12())^): Void;
+    } else {
+      return n#46;
+    }
+  }
+
+  fn ratio#18(key#47: String, count#48: String): Int32 {
+    return (orelse(%Int32.div(hostLookup#13(key#47)^, nonzero#17(parseCount#31(count#48)^)^), %Int32.neg(9))): Int32;
+  }
+
+  init {
+    init ~console#24 = getConsole#49(omitted);
+    ~console#24.log#23("before");
+    ~console#24.log#23(%String.cat(%String.cat(%String.cat(%String.cat(total#14("a", "two").toString#35(omitted), " "), total#14("z", "two").toString#35(omitted)), " "), total#14("a", "x").toString#35(omitted)));
+    init r#16 = (catch(reading#15("a", "x")^, e#41: Unreadable#3, (value { ~console#24.log#23(%String.cat(%String.cat(((upcast(e#41)): Error#7).message#33(), ", caused by "), (value { let subject#42: String? = (value { let subject#43: Error#7? = ((upcast(e#41)): Error#7).cause#44(); (if (isNull(subject#43)) (null): String? else (asNullable(((nonNull(subject#43)): Error#7).message#33())): String?): String? }): String?; (if (isNull(subject#42)) "nothing" else (nonNull(subject#42)): String): String }): String)); 0 }): Int32)): Int32;
+    ~console#24.log#23(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(%String.cat(r#16.toString#35(omitted), " "), ratio#18("a", "two").toString#35(omitted)), " "), ratio#18("a", "zero").toString#35(omitted)), " "), ratio#18("a", "x").toString#35(omitted)), " "), ratio#18("z", "two").toString#35(omitted)));
+    parseCount#31("x")^;
+    ~console#24.log#23("after");
+  }
+}

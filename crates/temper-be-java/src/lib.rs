@@ -25,16 +25,16 @@
 //! and interfaces, each a file of its own as Kotlin's
 //! (`translate::classes` says how); and nullable types, as Kotlin's,
 //! `@Nullable` and boxed (`@Nullable Integer`), with `orelse` and `catch`
-//! as a `try` and a `catch` of the failure class above what the body may
+//! as a `try` and a `catch` of the error class above what the body may
 //! throw, and `panic()` (and code with an error) as an `AssertionError`,
 //! which no handler catches; unlike Kotlin's, `catch (RuntimeException
-//! …)`, a handler catches only declared failures, which builtins that
-//! may fail throw, the runtime turning host failures
+//! …)`, a handler catches only declared errors, which builtins that
+//! may fail throw, the runtime turning host errors
 //! (`NumberFormatException`, `DateTimeException`, a broken promise's
 //! `ExecutionException`) into core's; so anything else, a host exception
 //! from a builtin not declared to fail or from a callback, passes every
-//! handler; and declared failures (RFC 164) as unchecked exceptions, each library's
-//! failure types under its roots, `WherewithException extends
+//! handler; and declared errors (RFC 164) as unchecked exceptions, each library's
+//! error types under its roots, `WherewithException extends
 //! RuntimeException implements temper.core.Failure`, `throw` as Java's,
 //! and handlers that catch exactly what their bodies may fail with
 //! (`translate` says how); and generics, with boxed type arguments (`List<Integer>`) and explicit
@@ -184,17 +184,17 @@ pub fn translate(p: &Program, variant: &Variant) -> Result<Vec<OutFile>, NotYet>
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);
     let p = settled.as_ref().unwrap_or(p);
-    // Failure parameters as their bounds in code: exceptions are
-    // unchecked (`temper_tmpl::failures::erase_params`).
-    let erased = temper_tmpl::failures::erase_params(p).map_err(|what| NotYet { what })?;
+    // Error parameters as their bounds in code: exceptions are
+    // unchecked (`temper_tmpl::declared_errors::erase_params`).
+    let erased = temper_tmpl::declared_errors::erase_params(p).map_err(|what| NotYet { what })?;
     let p = erased.as_ref().unwrap_or(p);
     // `Never<T>` as `T`, but where the profile keeps it
     // (`temper_tmpl::nevers`).
     let nevered = temper_tmpl::nevers::lower(p, &variant.profile);
     let p = nevered.as_ref().unwrap_or(p);
     // Handlers whose bodies can't fail as their bodies alone
-    // (`temper_tmpl::failures`).
-    let alive = temper_tmpl::failures::drop_dead_handlers(p);
+    // (`temper_tmpl::declared_errors`).
+    let alive = temper_tmpl::declared_errors::drop_dead_handlers(p);
     let p = alive.as_ref().unwrap_or(p);
     // Generators as state machines (`temper_tmpl::coroutines`).
     let lowered = temper_tmpl::coroutines::lower(p, variant.profile.coroutines)
@@ -345,7 +345,7 @@ fn loads(p: &Program, module: &temper_tmpl::Module) -> Vec<String> {
     external.into_iter().chain(order).map(class).collect()
 }
 
-/// The entry point, as Kotlin's: logging to stdout, core's failures with
+/// The entry point, as Kotlin's: logging to stdout, core's errors with
 /// stack traces (so one that escapes says where), then the module's
 /// class loaded, after those of the modules it imports
 /// ([`loads`]), which runs their static initializers, in a top-level turn,

@@ -129,8 +129,8 @@ pub const RULES: NamingRules = NamingRules {
     fields_apart: false,
     types_apart: false,
     modules_share_names: false,
-    failure_suffix: None,
-    // A failure's cause is its key `cause`, so a failure type's own
+    error_suffix: None,
+    // An error's cause is its key `cause`, so an error type's own
     // member named so is `cause_`.
-    failure_member_reserved: &["cause"],
+    error_member_reserved: &["cause"],
 };

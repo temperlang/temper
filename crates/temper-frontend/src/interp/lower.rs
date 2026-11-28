@@ -15,11 +15,11 @@
 //!
 //! `break`, `continue` and `return` are jumps, except where they leave a
 //! `for … of` body: then they end its call as an [`Abrupt`], and the frame
-//! they reach jumps to a landing. A failure jumps to the handler of the
+//! they reach jumps to a landing. An error jumps to the handler of the
 //! innermost `orelse` around the op that failed, found in a table by
 //! position, so the ordinary path pays nothing for it. A handler whose
-//! fallback needs the failure it handles, for a `catch (e)` binding or
-//! as the cause of a failure thrown there (RFC 164), keeps it in a slot
+//! fallback needs the error it handles, for a `catch (e)` binding or
+//! as the cause of an error thrown there (RFC 164), keeps it in a slot
 //! of its own; a `for … of` body made there captures it after its
 //! variables, as it may throw too.
 //!
@@ -93,7 +93,7 @@ pub(super) enum Op {
     MakeFn {
         node: NodeId,
         sources: Box<[Source]>,
-        /// A `for … of` body, which also captures the failure being
+        /// A `for … of` body, which also captures the error being
         /// handled where it's made, if any, for what it throws.
         loop_body: bool,
     },
@@ -125,7 +125,7 @@ pub(super) enum Op {
     /// Ends the call with a `break`, `continue` or `return` (popping its
     /// value) for a frame further out.
     Exit(Exit),
-    /// `throw x`: pops the failure, `x`, and fails with it.
+    /// `throw x`: pops the error, `x`, and fails with it.
     Throw,
     Panic(Rc<str>),
     /// A parameter without a default, whose argument must be there.
@@ -154,10 +154,10 @@ pub(super) enum Source {
     Capture(u32),
 }
 
-/// A failure in ops `start..end` goes to `to`, with the stack at `depth`;
+/// An error in ops `start..end` goes to `to`, with the stack at `depth`;
 /// or, where the fallback is just `panic()` (`panics`), panics there,
-/// saying the failure caused it, as backends chain it as the cause. The
-/// fallback is ops `to..fallback_end`; if it needs the failure, for a
+/// saying the error caused it, as backends chain it as the cause. The
+/// fallback is ops `to..fallback_end`; if it needs the error, for a
 /// `catch (e)` binding or as a cause, it's kept in `slot`.
 #[derive(Debug)]
 pub(super) struct Handler {
@@ -185,7 +185,7 @@ pub(super) struct Landing {
 /// What calling a `Fn` that `extends GeneratorFn` makes: a
 /// `SafeGenerator` if it declares a return type that doesn't fail, as
 /// Kotlin Temper's `AdaptGeneratorFn` chooses, or else a `Generator`, whose
-/// `next()` passes on a failure from the body.
+/// `next()` passes on an error from the body.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) enum GeneratorKind {
     Failing,
@@ -397,7 +397,7 @@ fn generator_kind(s: &Settled, f: NodeId) -> Option<GeneratorKind> {
     if !core::fn_supers(tree, f).iter().any(|&t| is_generator_fn(t)) {
         return None;
     }
-    // `T throws E`, any failure type.
+    // `T throws E`, any error type.
     let fails = |t: NodeId| {
         let callee = tree
             .children(t)
@@ -450,11 +450,11 @@ fn is_method(s: &Settled, member: NodeId) -> bool {
         )
 }
 
-/// Whether an `orelse`'s or `catch`'s fallback needs the failure it
+/// Whether an `orelse`'s or `catch`'s fallback needs the error it
 /// handles: for a `catch (e)` binding, `caught()`, or as the cause of a
 /// `throw` in it, or in a `for … of` body in it, but not in another
 /// function, which may be called anywhere.
-fn needs_failure(s: &Settled, fallback: NodeId) -> bool {
+fn needs_error(s: &Settled, fallback: NodeId) -> bool {
     let tree = &s.library.tree;
     let mut stack = vec![fallback];
     while let Some(node) = stack.pop() {
@@ -549,10 +549,10 @@ struct Builder {
     nesting: u32,
     /// The node ops come from.
     at: NodeId,
-    /// Slots past the layout's, for handlers' failures.
+    /// Slots past the layout's, for handlers' errors.
     extra_slots: u32,
     /// The handlers whose fallbacks are being lowered, innermost last,
-    /// each with the slot keeping its failure, if it needs one.
+    /// each with the slot keeping its error, if it needs one.
     handling: Vec<Option<u32>>,
 }
 
@@ -803,7 +803,7 @@ impl Lowering {
         }
     }
 
-    /// After code that doesn't go on (a jump or a failure), the depth that
+    /// After code that doesn't go on (a jump or an error), the depth that
     /// code after it would have had.
     fn dead(&mut self, base: u32, keep: bool) {
         self.b.depth = base + keep as u32;
@@ -993,7 +993,7 @@ impl Lowering {
             }
             NodeKind::Orelse => {
                 let fallback = children[1];
-                let slot = needs_failure(s, fallback).then(|| {
+                let slot = needs_error(s, fallback).then(|| {
                     self.b.extra_slots += 1;
                     self.layout_here().slots + self.b.extra_slots - 1
                 });
@@ -1023,7 +1023,7 @@ impl Lowering {
                 });
                 return;
             }
-            // `throw x`, a declared failure.
+            // `throw x`, a declared error.
             NodeKind::Fail => {
                 self.expr(s, children[0], true);
                 self.emit(Op::Throw);
@@ -1218,7 +1218,7 @@ impl Lowering {
             self.fail("Malformed call");
             return self.dead(base, keep);
         };
-        // A `catch (e)` binding, the failure being handled.
+        // A `catch (e)` binding, the error being handled.
         if s.scopes.resolved_builtin(callee) == Some(Builtin::Function(Function::Caught)) {
             match self.b.handling.last() {
                 Some(&Some(slot)) if keep => _ = self.emit(Op::Local(slot)),

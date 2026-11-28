@@ -4,7 +4,7 @@
 //! (`MapKey`; Kotlin's core has a TODO about `Int64`). A missing key fails
 //! `get` and `remove`, so `orelse` can catch it.
 
-use super::{Abrupt, CoreFailure, Interp, R, Val, fail};
+use super::{Abrupt, CoreDeclaredError, Interp, R, Val, fail};
 use crate::settle::Settled;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -91,8 +91,12 @@ impl Entries {
 
 /// `map[key]`, throwing core's `MissingKey` if the key is missing.
 pub(super) fn get(map: &Val, k: &Val) -> R {
-    with_entries(map, |e| e.get(k))?
-        .ok_or_else(|| Abrupt::Throw(CoreFailure::value("MissingKey", vec![("key", k.clone())])))
+    with_entries(map, |e| e.get(k))?.ok_or_else(|| {
+        Abrupt::Throw(CoreDeclaredError::value(
+            "MissingKey",
+            vec![("key", k.clone())],
+        ))
+    })
 }
 
 /// Runs `f` on a `Map`'s or `MapBuilder`'s entries.
@@ -180,7 +184,10 @@ fn builder_method(this: &Val, name: &str, args: &[Val]) -> Option<R> {
             .map(|()| Val::Void),
         ("remove", [k]) => builder.borrow_mut().remove(k).and_then(|v| {
             v.ok_or_else(|| {
-                Abrupt::Throw(CoreFailure::value("MissingKey", vec![("key", k.clone())]))
+                Abrupt::Throw(CoreDeclaredError::value(
+                    "MissingKey",
+                    vec![("key", k.clone())],
+                ))
             })
         }),
         ("clear", []) => {

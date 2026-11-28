@@ -6,7 +6,7 @@
 //!
 //! - `a` or `b`: a payload slot, holding an id or a literal's bits;
 //!   `ab`: both, for 64-bit literals;
-//! - `flag`: the node's [`Flags::MAY_BUBBLE`] bit;
+//! - `flag`: the node's [`Flags::MAY_FAIL`] bit;
 //! - `one`, `opt`, or `many`, then a [`Place`]: children, in order. A kind
 //!   has at most one `opt` or `many` field, which takes the children that
 //!   the `one` fields leave.
@@ -17,7 +17,7 @@
 //! fields, statics, `new`, conversions, `is`, and identity; and function
 //! values: literals with their captures, references, calls of values, and
 //! the conversions between `@fun` interfaces and function types;
-//! `Coalesce`, for parameters' defaults; and declared failures' `Throw`
+//! `Coalesce`, for parameters' defaults; and declared errors' `Throw`
 //! and `Catch`.
 
 use crate::ids::{DeclId, NodeId, StrId, TypeId};
@@ -227,7 +227,7 @@ macro_rules! decode {
         FieldValue::from_slots($nodes.slots($id).0, $nodes.slots($id).1)
     };
     ($nodes:ident, $id:ident, $parts:ident, flag) => {
-        $nodes.flags($id).contains(Flags::MAY_BUBBLE)
+        $nodes.flags($id).contains(Flags::MAY_FAIL)
     };
     ($nodes:ident, $id:ident, $parts:ident, $arity:ident) => {
         FieldValue::from_kids($nodes, $parts.next().expect("malformed node"))
@@ -340,7 +340,7 @@ schema! {
     /// A test: a function, named by `decl` (compiler-made), that takes a
     /// fresh `Test` of std's `testing` module and may throw any error
     /// (core's `Error`), run after the module's init, and
-    /// passing if it throws none and its `Test` has no failures when it
+    /// passing if it throws none and its `Test` has no errors when it
     /// ends. `name` is how it's reported.
     Test(Decl, Untyped) {
         decl: DeclId = a,
@@ -458,7 +458,7 @@ schema! {
     CallFunction(Expr, Callee) {
         callee: DeclId = a,
         type_args: TypeArgs = b,
-        may_bubble: bool = flag,
+        may_fail: bool = flag,
         args: Kids = many Expr,
     }
     /// An operator or member of a builtin type.
@@ -472,7 +472,7 @@ schema! {
     CallMethod(Expr, Callee) {
         method: DeclId = a,
         type_args: TypeArgs = b,
-        may_bubble: bool = flag,
+        may_fail: bool = flag,
         receiver: NodeId = one Expr,
         args: Kids = many Expr,
     }
@@ -489,7 +489,7 @@ schema! {
     New(Expr, Callee) {
         ctor: DeclId = a,
         type_args: TypeArgs = b,
-        may_bubble: bool = flag,
+        may_fail: bool = flag,
         args: Kids = many Expr,
     }
     /// A value as one of its supertypes: a class's instance as an
@@ -538,22 +538,22 @@ schema! {
     /// typed `Void` drops its parts' values, whatever their types, as
     /// where it stands alone.
     OrElse(Expr, Written) { body: NodeId = one Expr, fallback: NodeId = one Expr }
-    /// `throw value`: fails with `value`, an object of a failure type (a
+    /// `throw value`: fails with `value`, an object of an error type (a
     /// class below core's `Error`), to the nearest handler or the
     /// function's caller, which must take its type; typed as its place
     /// wants, since it never completes. `cause`, in a handler's fallback,
-    /// is the failure being handled, which becomes the thrown one's cause
+    /// is the error being handled, which becomes the thrown one's cause
     /// unless it has one already (notes/tmpl/nodes.md, "Declared
-    /// failures").
+    /// errors").
     Throw(Expr, Written) {
-        may_bubble: bool = flag,
+        may_fail: bool = flag,
         value: NodeId = one Expr,
         cause: Option<NodeId> = opt Expr,
     }
     /// `catch (e)`: `body`'s value, or if it fails, `fallback`'s, with
     /// `local`, declared here and in scope only in `fallback`, holding the
-    /// failure. Everything `body` may fail with is of `local`'s type, a
-    /// failure type. Typed as `OrElse` is.
+    /// error. Everything `body` may fail with is of `local`'s type, an
+    /// error type. Typed as `OrElse` is.
     Catch(Expr, Written) {
         local: DeclId = a,
         body: NodeId = one Expr,
@@ -589,7 +589,7 @@ schema! {
     /// Calls a function value: a function type's, or a `@fun`
     /// interface's, as its `apply`.
     CallValue(Expr, TypeRule::ValueCall) {
-        may_bubble: bool = flag,
+        may_fail: bool = flag,
         callee: NodeId = one Expr,
         args: Kids = many Expr,
     }
@@ -606,7 +606,7 @@ schema! {
     /// until the promise resolves: its value, or it throws core's
     /// `BrokenPromise` if the promise is broken. Typed as the promise's
     /// value.
-    Await(Expr, Written) { may_bubble: bool = flag, promise: NodeId = one Expr }
+    Await(Expr, Written) { may_fail: bool = flag, promise: NodeId = one Expr }
     /// Code the frontend couldn't settle; panics when run. Valid anywhere,
     /// with any type. Code that's only ill-typed, as a value that doesn't
     /// fit its place, keeps its value as written, of its own type, which

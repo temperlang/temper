@@ -72,7 +72,7 @@ impl SourceLinks<'_> {
 
 /// How a backend runs the tests of libraries built in
 /// `temper.out/BACKEND` (`dir`, absolute) with its language's tools,
-/// each test's name and its failure if it failed, or why there are no
+/// each test's name and its error if it failed, or why there are no
 /// results. `all` is every library built there, which tests may import.
 pub struct Tools {
     /// Readies `dir` once, before any library's tests run.
@@ -102,7 +102,7 @@ pub struct Tested {
     pub metadata: crate::Metadata,
 }
 
-/// Each test's name and its failure, if it failed; or why there are no
+/// Each test's name and its error, if it failed; or why there are no
 /// results.
 pub type TestResults = Result<Vec<(String, Option<String>)>, String>;
 

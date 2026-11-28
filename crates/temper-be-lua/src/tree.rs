@@ -304,7 +304,7 @@ pub enum Stmt {
     /// before (`local`, or a table's field, `module.name`).
     /// A test, as LuaUnit runs it: `function METHOD()`, running
     /// `temper.test(name, function(test) … end)`, which fails it if it
-    /// errs or its `test` has failures.
+    /// errs or its `test` has errors.
     Test {
         method: String,
         name: String,

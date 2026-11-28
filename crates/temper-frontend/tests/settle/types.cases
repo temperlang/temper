@@ -2359,7 +2359,7 @@ new C().m(1) { x => "a" };
 error 481..484: Expected subtype of Int32, but got String
 error 508..511: Expected subtype of Int32, but got String
 
-=== returns and failures in function literals, as Kotlin Temper reports them
+=== returns and errors in function literals, as Kotlin Temper reports them
 // A function literal without a return type takes its result, and whether
 // it may fail, from the function type its place wants. A value it
 // returns that isn't that result is reported, at the value, each return
@@ -2370,7 +2370,7 @@ error 508..511: Expected subtype of Int32, but got String
 // input was also built with Kotlin Temper: every error matches but for
 // those positions and a2's, and Kotlin's "but got Top" for a literal
 // whose result never returns (a7, b1, b5, b6), which tempest doesn't
-// report. Core's `filter` is generic over its callback's failure (RFC
+// report. Core's `filter` is generic over its callback's error (RFC
 // 164), so b6 fails at its call, as the literal's body may.
 sealed interface Problem extends Error {}
 class Oops() extends Problem {}
@@ -2420,7 +2420,7 @@ let f(ls: List<Int>): Void {
       (Block
         (Let
           ^a1:12
-          (Call apply:2 (Fn (Let ^x:26) (Block (Return @1117 "a") #void))))
+          (Call apply:2 (Fn (Let ^x:26) (Block (Return @1115 "a") #void))))
         (Let
           ^a2:13
           (Call
@@ -2428,33 +2428,33 @@ let f(ls: List<Int>): Void {
             (Fn
               (Let ^x:27)
               (Block
-                (If (Call > x:27 0) (Block (Return @1159 x:27) #void) (Block))
-                (Return @1159 null)
+                (If (Call > x:27 0) (Block (Return @1157 x:27) #void) (Block))
+                (Return @1157 null)
                 #void))))
         (Let
           ^a3:14
-          (Call apply:2 (Fn (Let ^x:28) (Block (Return @1237 #void) #void))))
-        (Call eat:4 (Fn (Let ^x:29) (Block (Return @1264 x:29) #void)))
+          (Call apply:2 (Fn (Let ^x:28) (Block (Return @1235 #void) #void))))
+        (Call eat:4 (Fn (Let ^x:29) (Block (Return @1262 x:29) #void)))
         (Let
           ^a4:15
           (Call
             apply:2
-            (Fn (Let ^x:30) (Block (Return @1304 (Call + x:30 1)) #void))))
+            (Fn (Let ^x:30) (Block (Return @1302 (Call + x:30 1)) #void))))
         (Let
           ^a5:16
           (Call FnType Int Int)
-          (Fn (Let ^x:31) (Block (Return @1357 "b") #void)))
+          (Fn (Let ^x:31) (Block (Return @1355 "b") #void)))
         (Let
           ^a6:17
           (Call <> List String)
           (Call
             (Call . ls:11 \map)
-            (Fn (Let ^x:32) (Block (Return @1413 x:32) #void))))
+            (Fn (Let ^x:32) (Block (Return @1411 x:32) #void))))
         (Let
           ^a7:18
           (Call
             apply:2
-            (Fn (Let ^x:33) (Block (Return @1453 (Call panic)) #void))))
+            (Fn (Let ^x:33) (Block (Return @1451 (Call panic)) #void))))
         (Let
           ^b1:19
           (Call apply:2 (Fn (Let ^x:34) (Block (Fail (Call new Oops:1))))))
@@ -2488,16 +2488,16 @@ let f(ls: List<Int>): Void {
           (Call FnType Int Int)
           (Fn (Let ^x:41) (Block (Call / x:41 0))))
         #void))))
-error 1133..1136: Expected subtype of Int32, but got String
-error 1208..1212: Expected subtype of Int32, but got Int32?
-error 1246..1252: Expected subtype of Int32, but got Void
-error 1280..1281: Expected subtype of Void, but got Int32
-error 1373..1376: Expected subtype of Int32, but got String
-error 1429..1430: Expected subtype of String, but got Int32
-error 1506..1522: Cannot throw Oops from a function without Oops in its return type
-error 1571..1587: Cannot throw Oops from a function without Oops in its return type
-error 1789..1805: Cannot throw Oops from a function without Oops in its return type
-error 1739..1774: Cannot throw Oops from a function without Oops in its return type
+error 1131..1134: Expected subtype of Int32, but got String
+error 1206..1210: Expected subtype of Int32, but got Int32?
+error 1244..1250: Expected subtype of Int32, but got Void
+error 1278..1279: Expected subtype of Void, but got Int32
+error 1371..1374: Expected subtype of Int32, but got String
+error 1427..1428: Expected subtype of String, but got Int32
+error 1504..1520: Cannot throw Oops from a function without Oops in its return type
+error 1569..1585: Cannot throw Oops from a function without Oops in its return type
+error 1787..1803: Cannot throw Oops from a function without Oops in its return type
+error 1737..1772: Cannot throw Oops from a function without Oops in its return type
 
 === @fun interfaces as the function types they stand for, as Kotlin Temper reports them
 // A `@fun` interface's type stands for its `apply`'s signature: a
@@ -3747,9 +3747,9 @@ error 939..944: Never needs the type it stands for, as Never<Int> or Never<Void>
 error 974..979: Never needs the type it stands for, as Never<Int> or Never<Void>
 log 1
 
-=== failure parameters solved per call
-// RFC 164's generic failure parameters: a function generic over its
-// callback's failure type, `throws E`, fails as the callback does. `E`
+=== error parameters solved per call
+// RFC 164's generic error parameters: a function generic over its
+// callback's error type, `throws E`, fails as the callback does. `E`
 // is solved per call from what the arguments declare, as other type
 // parameters are; one they leave unsolved is `Never<…>`, so the call
 // can't fail. A function literal without a declared result gives it from
@@ -3843,7 +3843,7 @@ console.log("${show(f1([1, 2]))} ${show(f2([0]))} ${show(f2([5]))} ${k1(2)} ${k2
               (Fn
                 (Let ^x:51)
                 (Block (Call (Call . out:50 \add) (Call f:49 x:51)) #void)))
-            (Break @876)))
+            (Break @872)))
         (Call (Call . out:50 \toList)))))
   (Let
     ^both:6
@@ -4166,19 +4166,19 @@ console.log("${show(f1([1, 2]))} ${show(f2([0]))} ${show(f2([5]))} ${k1(2)} ${k2
       " "
       (Call k2:26 5)))
   #void)
-error 1167..1217: Cannot throw Oops from a function without Oops in its return type
-error 1242..1268: Cannot throw Oops from a function without Oops in its return type
-error 1535..1598: Cannot throw Oops from a function without Oops in its return type
-error 1792..1816: Cannot throw Oops from a function without Oops in its return type
-error 2124..2167: Cannot throw Oops from a function without Oops in its return type
-error 2389..2442: Cannot throw Oops from a function without Oops in its return type
-error 2656..2730: Cannot throw Oops from a function without Oops in its return type
-error 2768..2799: Cannot throw Oops from a function without Oops in its return type
+error 1163..1213: Cannot throw Oops from a function without Oops in its return type
+error 1238..1264: Cannot throw Oops from a function without Oops in its return type
+error 1531..1594: Cannot throw Oops from a function without Oops in its return type
+error 1788..1812: Cannot throw Oops from a function without Oops in its return type
+error 2120..2163: Cannot throw Oops from a function without Oops in its return type
+error 2385..2438: Cannot throw Oops from a function without Oops in its return type
+error 2652..2726: Cannot throw Oops from a function without Oops in its return type
+error 2764..2795: Cannot throw Oops from a function without Oops in its return type
 log 2 3 -1 2 -2 7 0
 log 2,3 10,5 -1  2,4
 log 3,6  2 4 -1 7
 
-=== function literals' results and failures inferred from their bodies
+=== function literals' results and errors inferred from their bodies
 // A function literal argument without a declared result gives a generic
 // callee's type parameters what its body gives: its result type (O in
 // `map`) and whether it fails (E). Expected errors: i2, n3, g4, k2 at the
@@ -4678,7 +4678,7 @@ log 5 -1 2,4 4,4 -1 7 3 2 2
 
 === explicit type arguments type a call's function literals
 // A call with type arguments types its function literal arguments from
-// them: their parameters, and their results and failures checked against
+// them: their parameters, and their results and errors checked against
 // what's given (t993). Expected errors: x1 at the literal (E is given as
 // Never<Oops>, but its body may fail); x4 at the literal's result
 // (an Int32 where a String is given); x5 at `t - 1` (t is a String); x8
@@ -4980,7 +4980,7 @@ console.log("${x10(1)} ${x11(0)} ${x11(5)} ${x12(1)} ${x15([1, 2]).join(",") { s
           \typeArg
           (Call <> Never Oops:1)
           n:78
-          (Fn (Let ^x:79) (Block (Return @2138 "a") #void))))))
+          (Fn (Let ^x:79) (Block (Return @2136 "a") #void))))))
   (Let
     ^x14:22
     (Fn
@@ -5058,12 +5058,12 @@ console.log("${x10(1)} ${x11(0)} ${x11(5)} ${x12(1)} ${x15([1, 2]).join(",") { s
       " "
       (Call x16:24 2)))
   #void)
-error 1174..1191: This function literal may fail, but its call gives E as Never<Oops>; give E a failure type, or handle the failure in the literal
-error 1411..1416: Expected subtype of String, but got Int32
-error 1488..1489: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [String, Int32]
-error 1727..1746: This function literal may fail, but its call gives E as Never<Oops>; give E a failure type, or handle the failure in the literal
-error 1807..1842: This function literal may fail, but its call gives E as Never<Oops>; give E a failure type, or handle the failure in the literal
-error 2154..2157: Expected subtype of Int32, but got String
-error 2225..2242: This function literal may fail, but its call gives E as Never<Oops>; give E a failure type, or handle the failure in the literal
+error 1172..1189: This function literal may fail, but its call gives E as Never<Oops>; give E an error type, or handle the error in the literal
+error 1409..1414: Expected subtype of String, but got Int32
+error 1486..1487: Actual arguments do not match signature: (Int32, Int32) -> Int32 expected [Int32, Int32], but got [String, Int32]
+error 1725..1744: This function literal may fail, but its call gives E as Never<Oops>; give E an error type, or handle the error in the literal
+error 1805..1840: This function literal may fail, but its call gives E as Never<Oops>; give E an error type, or handle the error in the literal
+error 2152..2155: Expected subtype of Int32, but got String
+error 2223..2240: This function literal may fail, but its call gives E as Never<Oops>; give E an error type, or handle the error in the literal
 log 2 -1 2 6 2 -1
 log 2 -1 3 2 1,2 3 6

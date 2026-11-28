@@ -23,7 +23,7 @@ means, see the [language reference](../../language/README.md).
   - [Flat ops, lowered late, per function](#flat-ops-lowered-late-per-function)
   - [Calls on the Rust stack; generators own their frame](#calls-on-the-rust-stack-generators-own-their-frame)
   - [Cells for captured locals, fresh per block](#cells-for-captured-locals-fresh-per-block)
-  - [Failures as values, caught by table](#failures-as-values-caught-by-table)
+  - [Errors as values, caught by table](#errors-as-values-caught-by-table)
   - [Dynamic values, and errors that fail where they run](#dynamic-values-and-errors-that-fail-where-they-run)
   - [Limits: fuel, call depth, and nesting](#limits-fuel-call-depth-and-nesting)
   - [Builtins and connected code](#builtins-and-connected-code)
@@ -194,25 +194,25 @@ shares one variable across loop passes (its issue #264); this compiler's
 interpreter and backends keep one per pass, with tests
 ([kotlin-differences.md](../../../notes/kotlin-differences.md)).
 
-### Failures as values, caught by table
+### Errors as values, caught by table
 
 **Chosen:** an op that can't go on returns an
-[`Abrupt`](../../../crates/temper-frontend/src/interp.rs): a failure, a
+[`Abrupt`](../../../crates/temper-frontend/src/interp.rs): an error, a
 panic, a `yield`, a pending `await`, or a jump out of a `for … of`
 body's call. [`land`](../../../crates/temper-frontend/src/interp/frame.rs)
-looks up where it goes: a failure goes to the innermost `orelse` around
+looks up where it goes: an error goes to the innermost `orelse` around
 the failing op, found in the code's
 [`Handler`](../../../crates/temper-frontend/src/interp/lower.rs) table
 by position; a jump from a `for … of` body goes to a
 [`Landing`](../../../crates/temper-frontend/src/interp/lower.rs).
 Anything else returns to the caller.
 
-A failure, always a declared one (RFC 164), is an `Abrupt::Throw` with
-its object: one of a failure type, or a core failure from a builtin. A handler whose fallback needs the failure, for
+An error, always a declared one (RFC 164), is an `Abrupt::Throw` with
+its object: one of an error type, or a core error from a builtin. A handler whose fallback needs the error, for
 a `catch (e)` binding or as the cause of a `throw` there, keeps it in a
 slot of its own; a `for … of` body made there captures it after its
-variables. A failure keeps where it was first thrown and its cause, for
-reports ([`failures.rs`](../../../crates/temper-frontend/src/interp/failures.rs)).
+variables. An error keeps where it was first thrown and its cause, for
+reports ([`declared_errors.rs`](../../../crates/temper-frontend/src/interp/declared_errors.rs)).
 
 ```mermaid
 flowchart TD
@@ -418,7 +418,7 @@ its own field of `Run` would be cleaner.
   [`run_tests`](../../../crates/temper-frontend/src/interp.rs), both
   through [`run_with`](../../../crates/temper-frontend/src/interp.rs),
   give a [`Run`](../../../crates/temper-frontend/src/interp.rs): output
-  lines, a failure, if any, and each test's steps. Module declarations
+  lines, an error, if any, and each test's steps. Module declarations
   are globals, numbered module by module. [`run_streaming`](../../../crates/temper-frontend/src/interp.rs)
   gives the output to a sink instead.
 - [`Interp`](../../../crates/temper-frontend/src/interp.rs): the run's

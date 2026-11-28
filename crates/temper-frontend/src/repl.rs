@@ -407,7 +407,7 @@ impl ReplSession {
         let (runner, segments, sink) = (&mut self.runner, &self.segments, &self.sink);
         let emit = |event: ReplEvent| (*sink.borrow_mut())(&event);
         let resumed = |runner: &mut Runner, s: &Settled| {
-            for (input, why) in runner.resumed_failures(s) {
+            for (input, why) in runner.resumed_errors(s) {
                 let scope = (segments.iter())
                     .find(|&(_, &i)| i == input)
                     .map(|(&scope, _)| scope);

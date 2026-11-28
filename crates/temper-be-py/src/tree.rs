@@ -304,7 +304,7 @@ pub enum Stmt {
     /// ignore[…]`, where a checker's rule doesn't fit the code.
     Commented(Box<Stmt>, String),
     /// `try: …`, then `except Name: …` if `except` gives the class to
-    /// catch (a failure class, `Failure` for failures under several
+    /// catch (an error class, `Failure` for errors under several
     /// roots, or a tuple), with `as name` if it names what's
     /// caught, then `finally: …` if it isn't empty.
     Try {
@@ -315,7 +315,7 @@ pub enum Stmt {
     /// `raise value`.
     Raise(Expr),
     /// `raise value from cause`: an exception with what it replaces, or
-    /// the failure being handled, as its cause.
+    /// the error being handled, as its cause.
     RaiseFrom(Expr, Expr),
     /// `assert cond, message`, or without the message.
     Assert(Expr, Option<Expr>),

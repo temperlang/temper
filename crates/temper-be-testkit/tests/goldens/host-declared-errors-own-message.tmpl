@@ -1,0 +1,62 @@
+tmpl 1 model 1 library `host-declared-errors-own-message` 0.0.0
+
+uses `temper-core`#4 0.0.0-alpha.0.0 {
+  interface Error#5 {}
+  interface Console#16 {
+    connected method log#17(message: String): Void;
+  }
+  class Int32#19 {
+    connected method toString#20(radix?: Int32): String;
+  }
+  connected fn getConsole#23(name?: String): Console#16;
+}
+
+module `host-declared-errors-own-message`#0 {
+  let ~console#18: Console#16;
+
+  export interface HostDeclaredErrorsError#1 extends Error#5 {}
+
+  export class NotFound#2 extends HostDeclaredErrorsError#1 {
+    let key#6: String;
+    constructor constructor#7(key#13: String): NotFound#2 {
+      this.key#6 = key#13;
+    }
+    get message#14(): String {
+      return %String.cat(%String.cat("not found (key: ", this.key#6), ")");
+    }
+  }
+
+  connected export fn hostLookup#11(key#15: String): Int32 throws NotFound#2 {
+    if (%String.eq(key#15, "bug")) {
+      (panic()): Void;
+    }
+    if (%String.eq(key#15, "a")) {
+      return 1;
+    }
+    (throw(new constructor#7(key#15))^): Void;
+  }
+
+  class Expired#3 extends HostDeclaredErrorsError#1 {
+    let days#8: Int32;
+    constructor constructor#10(days#21: Int32): Expired#3 {
+      this.days#8 = days#21;
+    }
+    get message#9(): String {
+      return %String.cat(%String.cat("expired ", this.days#8.toString#20(omitted)), " days ago");
+    }
+  }
+
+  fn check#12(days#22: Int32): Void throws Expired#3 {
+    if (%Int32.gt(days#22, 0)) {
+      (throw(new constructor#10(days#22))^): Void;
+    }
+  }
+
+  init {
+    init ~console#18 = getConsole#23(omitted);
+    ~console#18.log#17("before");
+    check#12(0)^;
+    check#12(3)^;
+    ~console#18.log#17("after");
+  }
+}

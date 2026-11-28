@@ -1,0 +1,59 @@
+tmpl 1 model 1 library `error-jumps` 0.0.0
+
+uses `temper-core`#3 0.0.0-alpha.0.0 {
+  interface Error#4 {}
+  class List#9<T#10> extends Listed#11<T#10> {
+    connected get length#18(): Int32;
+    connected method get#19(index: Int32): T#10;
+  }
+  interface Listed#11<T#12> {}
+  class Int32#24 {
+    connected method toString#25(radix?: Int32): String;
+  }
+  interface Console#27 {
+    connected method log#28(message: String): Void;
+  }
+  connected fn getConsole#30(name?: String): Console#27;
+}
+
+module `error-jumps`#0 {
+  let ~console#29: Console#27;
+
+  export interface ErrorJumpsError#1 extends Error#4 {}
+
+  export class NotFound#2 extends ErrorJumpsError#1 {
+    let key#5: String;
+    constructor constructor#6(key#13: String): NotFound#2 {
+      this.key#5 = key#13;
+    }
+    get message#14(): String {
+      return %String.cat(%String.cat("not found (key: ", this.key#5), ")");
+    }
+  }
+
+  export fn lookup#7(key#15: String): Int32 throws NotFound#2 {
+    if (%String.eq(key#15, "a")) {
+      return 1;
+    }
+    (throw(new constructor#6(key#15))^): Void;
+  }
+
+  export fn scan#8(keys#16: List#9<String>): String {
+    var out#17: String = "";
+    {
+      let ~length#20: Int32 = keys#16.length#18();
+      var ~i#21: Int32 = 0;
+      ~loop#22: while (%Int32.lt(~i#21, ~length#20)) {
+        let k#23: String = keys#16.get#19(~i#21);
+        ~i#21 = %Int32.add(~i#21, 1);
+        (catch((value { if (%String.eq(k#23, "stop")) { break ~loop#22; } out#17 = %String.cat(out#17, lookup#7(k#23)^.toString#25(omitted)); void }): Void, e#26: NotFound#2, (value { out#17 = %String.cat(%String.cat(out#17, "!"), e#26.key#5); void }): Void)): Void;
+      }
+    }
+    return out#17;
+  }
+
+  init {
+    init ~console#29 = getConsole#30(omitted);
+    ~console#29.log#28(scan#8((list("a", "x", "stop", "a")): List#9<String>));
+  }
+}

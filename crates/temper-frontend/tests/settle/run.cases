@@ -2802,7 +2802,7 @@ log after
 log outer orelse
 log r2 false done true
 
-=== a failure in a generator comes out of next and ends it
+=== an error in a generator comes out of next and ends it
 sealed interface Problem extends Error {}
 class Oops() extends Problem {}
 let make(body: fn (): Generator<Int>): Generator<Int> { body() }
@@ -3294,8 +3294,8 @@ async { (): GeneratorResult<Empty> extends GeneratorFn =>
   console.log(await p.promise catch (e) { caught(e) });
 }
 let caught(e: BrokenPromise): String {
-  let failure: Error = e;
-  "caught ${e.message}, a CoreError: ${(failure is CoreError).toString()}"
+  let error: Error = e;
+  "caught ${e.message}, a CoreError: ${(error is CoreError).toString()}"
 }
 async { (): GeneratorResult<Empty> extends GeneratorFn =>
   q.breakPromise();
@@ -3310,13 +3310,13 @@ async { (): GeneratorResult<Empty> extends GeneratorFn =>
       (Let ^e:4 BrokenPromise)
       String
       (Block
-        (Let ^failure:5 Error e:4)
+        (Let ^error:5 Error e:4)
         (Call
           cat
           "caught "
           (Call . e:4 \message)
           ", a CoreError: "
-          (Call (Call . (Call is failure:5 CoreError) \toString))))))
+          (Call (Call . (Call is error:5 CoreError) \toString))))))
   (Call
     async
     (Fn

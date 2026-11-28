@@ -279,7 +279,7 @@ There's one other important form of control flow in Temper that we should
 discuss, and that's Temper's variation on error handling. Temper needs
 to support languages whose standard idioms use either return values or exception
 handling. To support this, a function declares the errors it may throw, and
-its callers handle them. When nothing handles a failure, or a program panics,
+its callers handle them. When nothing handles an error, or a program panics,
 the REPL shows a simple `fail` message:
 
 ```temper
@@ -297,7 +297,7 @@ indices causes a panic that can't be recovered in Temper, as a bug shouldn't
 be. Backend languages might be able to recover, depending on the idiomatic
 representation of panic in each.
 
-However, Temper does have a way to handle failures that a program can't
+However, Temper does have a way to handle errors that a program can't
 easily or efficiently check in advance, as text that isn't a number, or a
 map's missing key. Those throw declared errors, `ParseError` and
 `MissingKey`, which `orelse` handles:

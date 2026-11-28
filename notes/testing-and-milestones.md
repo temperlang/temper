@@ -73,7 +73,7 @@ Part of the [rewrite plan](README.md).
 - **Library tests:** `tempest test` (crate `tempest`, logic in
   temper-frontend's `project` and `library_tests`) runs a library's
   `test` blocks on the interpreter, finding libraries as Kotlin's `temper
-  test` does and printing, as it does, only failures and its summary
+  test` does and printing, as it does, only errors and its summary
   line (`--verbose` lists every test). Chromarite passes 56 of 56
   and Ordable 29 of 29, as with Kotlin's `temper test -b cpp`
   (2026-10-27), and CI runs both from fresh checkouts. That needed two

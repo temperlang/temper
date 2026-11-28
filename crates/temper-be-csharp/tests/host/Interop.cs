@@ -113,7 +113,7 @@ static class Interop
         }
         Console.WriteLine($"collatz {string.Join(",", path)}");
 
-        // A declared failure is an exception of its own class.
+        // A declared error is an exception of its own class.
         try
         {
             Console.WriteLine($"halve returned {AsyncTurnsGlobal.Halve(3)}");

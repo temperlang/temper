@@ -35,7 +35,7 @@ LuaRocks. `temper build` writes both beside the library, in
 [release](https://github.com/temperlang/tempest/releases) carries
 them, packed as each registry takes them, for installing by hand.
 
-How each backend is built, and what it chooses for failure, null,
+How each backend is built, and what it chooses for error, null,
 naming, and order of evaluation, is in
 [how the compiler works: backends](../internals/06-backends.md) and its
 [per-backend table](../internals/detail/06-backends.md#per-backend-choices).
@@ -59,13 +59,13 @@ TSan. C++ leaves the order of evaluation of arguments open, so the
 backend keeps Temper's left-to-right order wherever it would show.
 C++20 code can `co_await` a Temper promise. A function that may fail
 returns `temper::core::Expected<T, std::shared_ptr<F>>`
-(`std::expected` from C++23), its failure a `temper::core::Failure`, a
-`std::exception`; failures are values, never thrown.
+(`std::expected` from C++23), its error a `temper::core::Failure`, a
+`std::exception`; errors are values, never thrown.
 
-When a program built by `temper run -b cpp` panics or lets a failure
+When a program built by `temper run -b cpp` panics or lets an error
 reach its top level, it prints a stack trace of the generated
 functions, from where it happened out to the top level, and a test that
-panics under `temper test -b cpp` has one in its failure:
+panics under `temper test -b cpp` has one in its error:
 
 ```
 panic
@@ -135,7 +135,7 @@ subnamespace. Each type defined in Temper gets its own C# file, and a
 module's top level goes in a static `…Global` class. Parameter names
 are part of a C# API, so they're never renamed.
 
-A Temper failure throws its own exception class, under its library's
+A Temper error throws its own exception class, under its library's
 root, an `Exception`, and an `orelse` catches only what it handles, so
 other exceptions, and panics (`TemperLang.Core.Panic`), pass it.
 
@@ -198,7 +198,7 @@ support code gets `#line default`. `temper build` writes no `#line`s.
 Translates Temper to Java 17 source, and a Maven project
 ([Java 17]). A module's top level goes in a `…Global` class, with a
 `…Main` class to run it, and each type gets its own file. Classes also
-get a `Builder`, since Java has no named arguments. A Temper failure
+get a `Builder`, since Java has no named arguments. A Temper error
 throws its own exception class, under its library's root, an unchecked
 `RuntimeException`, and an `orelse` catches only what it handles; a
 panic is an `AssertionError`.
@@ -225,7 +225,7 @@ that implement Temper interfaces.
 `temper.out/js` has a [source map] for each generated file, so a
 JavaScript debugger shows the Temper code it came from.
 
-A Temper failure throws its own class, under its library's root, an
+A Temper error throws its own class, under its library's root, an
 `Error`, and an `orelse` catches only what it handles (by
 `instanceof`); a panic is a plain `Error`.
 
@@ -281,7 +281,7 @@ published package.
 Translates Temper to Lua: an `init.lua` per library, a rockspec, and
 LuaCATS type annotations, checked with LuaLS. Generated code is
 declared for Lua 5.1 and later; it's tested on Lua 5.4 and LuaJIT.
-A Temper failure is an `error`, which `pcall` catches.
+A Temper error is an `error`, which `pcall` catches.
 
 > **Note:** a few features need Lua 5.3 or later, such as some string
 > and integer operations; Lua 5.1 itself isn't tested
@@ -301,7 +301,7 @@ returning Python's `None`.
 Temper default expressions are evaluated as needed, so they don't
 suffer the [singly evaluated default expression pitfall][default-pitfall].
 
-A Temper failure raises its own exception class, under its library's
+A Temper error raises its own exception class, under its library's
 root, an `Exception`, and an `orelse` catches only what it handles, so
 other exceptions pass it. A panic raises
 a plain `BaseException`, which `except Exception` doesn't catch.
@@ -329,6 +329,6 @@ mode (`PYTHONUTF8=1`), which `temper run` and `temper test` set.
 
 Translates Temper to a Rust crate (edition 2021, `rust-version`
 1.71.1). Classes are reference-counted handles (`Arc`), strings are
-`Arc<String>`, failure is a `Result`, and module state is safe across
+`Arc<String>`, error is a `Result`, and module state is safe across
 threads. Generated code passes clippy.
 

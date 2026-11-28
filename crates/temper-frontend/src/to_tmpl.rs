@@ -77,10 +77,10 @@ type Tx<T> = Result<T, NotYet>;
 
 #[path = "to_tmpl_classes.rs"]
 mod classes;
+#[path = "to_tmpl_declared_errors.rs"]
+mod declared_errors;
 #[path = "to_tmpl_defaults.rs"]
 mod defaults;
-#[path = "to_tmpl_failures.rs"]
-mod failures;
 #[path = "to_tmpl_functions.rs"]
 mod functions;
 use classes::{Assigned, Member};
@@ -438,8 +438,8 @@ struct Translator<'a> {
     /// and so again of each part of each.
     always_jumps: RefCell<HashMap<FNode, bool>>,
     /// The handlers' fallbacks being translated, innermost last
-    /// ([`failures::Handling`]).
-    handling: Vec<failures::Handling>,
+    /// ([`declared_errors::Handling`]).
+    handling: Vec<declared_errors::Handling>,
     /// The `let e = caught()`s whose `catch`es declare `e` themselves,
     /// which then translate to nothing.
     adopted: HashSet<FNode>,
@@ -2111,10 +2111,10 @@ impl Translator<'_> {
             }
             false => None,
         };
-        // A fallback that needs the failure, from a body that fails with a
-        // failure type: a `catch` binds it, and keeps it in a nullable
+        // A fallback that needs the error, from a body that fails with an
+        // error type: a `catch` binds it, and keeps it in a nullable
         // local for the fallback, which runs after.
-        let bound = match self.needs_failure(fallback) {
+        let bound = match self.needs_error(fallback) {
             true => self.handled_type(value),
             false => None,
         };
@@ -2181,9 +2181,9 @@ impl Translator<'_> {
         let made = self.made(made, node);
         let made = self.b.expr_statement(made);
         out.push(self.made(made, node));
-        self.handling.push(failures::Handling {
+        self.handling.push(declared_errors::Handling {
             owner: self.owner,
-            caught: caught_held.map(|(_, held)| failures::Caught::Held(held)),
+            caught: caught_held.map(|(_, held)| declared_errors::Caught::Held(held)),
         });
         let translated = self.jumping_fallback(fallback, target, held, node);
         self.handling.pop();
@@ -3257,7 +3257,7 @@ impl Translator<'_> {
         Ok(self.own(made, node))
     }
 
-    /// Whether a node is a `throw` of a declared failure.
+    /// Whether a node is a `throw` of a declared error.
     fn is_throw(&self, node: FNode) -> bool {
         self.kind(node) == NodeKind::Fail && !self.children(node).is_empty()
     }
@@ -3660,7 +3660,7 @@ impl Translator<'_> {
             (DeclKind::Getter, false) => {
                 let receiver = self.expr(object)?;
                 // As its owner, where that's a supertype, as core's
-                // `Error` is a failure type's; not a generic one's.
+                // `Error` is an error type's; not a generic one's.
                 let owner = self.b.program().decls.get(member).owner;
                 let receiver = match self.b.program().decls.type_params(owner).is_empty() {
                     true => {
@@ -3920,9 +3920,9 @@ impl Translator<'_> {
                 self.fit(body, ty)
             });
         }
-        // A fallback that needs the failure, from a body that fails with
-        // a failure type, binds it, in a `catch`.
-        let bound = match self.needs_failure(fallback) {
+        // A fallback that needs the error, from a body that fails with
+        // an error type, binds it, in a `catch`.
+        let bound = match self.needs_error(fallback) {
             true => self.handled_type(body),
             false => None,
         };
@@ -3936,9 +3936,9 @@ impl Translator<'_> {
                 None
             }
         };
-        self.handling.push(failures::Handling {
+        self.handling.push(declared_errors::Handling {
             owner: self.owner,
-            caught: local.map(failures::Caught::Bound),
+            caught: local.map(declared_errors::Caught::Bound),
         });
         let fallback = self.block_value(fallback, typed.unwrap_or(TypeId::NONE));
         self.handling.pop();
@@ -3985,7 +3985,7 @@ impl Translator<'_> {
         let p = self.b.program();
         let mut found = false;
         temper_tmpl::analysis::walk(p, value, &mut |n| {
-            found |= p.nodes.flags(n).contains(temper_tmpl::Flags::MAY_BUBBLE);
+            found |= p.nodes.flags(n).contains(temper_tmpl::Flags::MAY_FAIL);
         });
         found
     }

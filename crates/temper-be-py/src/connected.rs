@@ -77,8 +77,8 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Deque.removeFirst()",
         Connection::Runtime("deque_remove_first"),
     ),
-    // A declared failure's cause is Python's own `__cause__`, as a
-    // `temper_core.Failure`; its message, the property every failure
+    // A declared error's cause is Python's own `__cause__`, as a
+    // `temper_core.Failure`; its message, the property every error
     // class has, which `str()` gives too.
     (
         "core.type Error.get cause()",
@@ -609,7 +609,7 @@ fn boolean_to_string(mut args: Vec<Option<Expr>>, im: Import) -> Translated {
 }
 
 /// `block_panics(block)`, the runtime's, which catches a panic, anything
-/// but a declared failure or a test's failure, for std's `Test.assertPanics` (not named
+/// but a declared error or a test's failure, for std's `Test.assertPanics` (not named
 /// `test_…`, which pytest would take for a test).
 fn test_panics(mut args: Vec<Option<Expr>>, im: Import) -> Translated {
     let block = arg(&mut args, 1).unwrap_or(Expr::None);

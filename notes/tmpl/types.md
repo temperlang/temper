@@ -191,11 +191,11 @@ its `typeof` or `type()` name, as `"undefined"` and `"nil"`, typed
 
 As built (2026-11-23, Proposed): **`Result { pass, fail }`** (text `Int32
 throws Oops#3`), interned once per pair (`TypeTable::result`, which gives
-`pass` back for a `Never` failure), is a signature's result where it may
+`pass` back for a `Never` error), is a signature's result where it may
 fail, as the frontend's result types are (typing.md, "Results").
-It fails with a failure type (a class or interface below core's
+It fails with an error type (a class or interface below core's
 `Error`) or a type parameter ([nodes.md](nodes.md),
-"Declared failures").
+"Declared errors").
 
 - **Only a signature's result** (T5): no declaration, parameter, or node
   has a result type.
@@ -203,10 +203,10 @@ It fails with a failure type (a class or interface below core's
   type), `fail`, and `returns`, the whole result, so translators read
   `sig.pass` and `sig.fails()` and never spell a result type.
 - **Part by part** in substitution, `mentions`, `same`, and lowering
-  (`nevers`), so a failure type parameter can be an ordinary one later.
-- `MAY_BUBBLE` on calls stays a flag; what a node fails with is its
-  callee's failure type, with type arguments put in
-  (`failures::node_failure`).
+  (`nevers`), so an error type parameter can be an ordinary one later.
+- `MAY_FAIL` on calls stays a flag; what a node fails with is its
+  callee's error type, with type arguments put in
+  (`declared_errors::node_error`).
 
 ## Never
 

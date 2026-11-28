@@ -290,7 +290,7 @@ impl Session {
     }
 
     /// A class's static member, if it has one, as [`Session::get`], but
-    /// a missing one isn't a failure.
+    /// a missing one isn't an error.
     pub(crate) fn get_if_any(&mut self, s: &Settled, this: &Val, name: NameId) -> Option<Val> {
         let failed = self.failed;
         let value = self.get(s, this, name).ok();

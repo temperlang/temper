@@ -96,7 +96,7 @@ fn main() {
     }
     println!("collatz {}", steps.join(","));
 
-    // A declared failure is an `Err` of its own type.
+    // A declared error is an `Err` of its own type.
     match async_turns::halve(3) {
         Ok(n) => println!("halve returned {n}"),
         Err(async_turns::Odd { .. }) => {

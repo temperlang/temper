@@ -90,7 +90,7 @@ pub const CLASSES: [&str; 14] = [
 /// that tmpl's translation covers (subset B's third step): each backend
 /// runs them as it covers nullables, with [`cases_with`].
 pub const NULLABLES: [&str; 4] = [
-    "control-flow/bubble",
+    "control-flow/errors",
     "semantics/mutually-referencing-types",
     "types/float/basics",
     "types/int/limits",
@@ -283,24 +283,24 @@ pub fn without_net(cases: &mut [Case]) {
 /// start, and `host-errors`, builtins whose docs say they panic (index
 /// errors) and a builtin's callback panicking on every backend, past
 /// `orelse`, a test each, failing saying why;
-/// `panics` `orelse` handling failures from everywhere but never a
+/// `panics` `orelse` handling errors from everywhere but never a
 /// panic, whose run fails ([`FAILING`]); `jump-values`
 /// `return`, `break`, and `continue` as values of type `Never`;
-/// `panic-causes` a panic keeping the failure it replaces as its cause,
-/// and what an uncaught failure or panic says, a run per section; and
+/// `panic-causes` a panic keeping the error it replaces as its cause,
+/// and what an uncaught error or panic says, a run per section; and
 /// `host-error-causes` a host's error passing `orelse panic()`, with
 /// host code ([`HOST_CODE`]), as has `host-error-tests`, whose host
 /// error passes `assertPanics` too, run as tests; and `sealed-whens`
 /// `when`s that cover a sealed interface without `else`, as values
-/// wherever one is wanted; and `count-failures` a library with a failure
-/// root of its own, which `host-failures` imports. Declared failures,
+/// wherever one is wanted; and `count-errors` a library with an error
+/// root of its own, which `host-declared-errors` imports. Declared errors,
 /// written ahead of them as specifications ([`SPECS`]) until every
-/// backend ran them: `failures` has them thrown, caught, propagated,
+/// backend ran them: `declared-errors` has them thrown, caught, propagated,
 /// grouped by a sealed type, kept as values, and converted;
-/// `host-failures` host code's failures and errors, one handler of two
-/// libraries' failures (its own and `count-failures`'), and what a report
-/// says of a failure nothing handles, a run per section, with host code
-/// ([`HOST_CODE`]); and `failures-interop` them as each backend's host
+/// `host-declared-errors` host code's declared errors and host errors, one handler of two
+/// libraries' errors (its own and `count-errors`'), and what a report
+/// says of an error nothing handles, a run per section, with host code
+/// ([`HOST_CODE`]); and `errors-interop` them as each backend's host
 /// code sees them, each backend running host code of its own beside it
 /// (its crate's `tests/host/`), what's particular to one language
 /// included; and `dead-handlers`, tmpl of a `catch` and an `orelse`
@@ -337,18 +337,18 @@ pub const PROGRAMS: [&str; 36] = [
     "host-error-causes",
     "host-error-tests",
     "sealed-whens",
-    "count-failures",
-    "failures",
-    "host-failures",
-    "failures-interop",
+    "count-errors",
+    "declared-errors",
+    "host-declared-errors",
+    "errors-interop",
     "dead-handlers.tmpl",
 ];
 
 /// The shared programs whose run fails, after logging what's expected
 /// ([`Case::fails`]): `errors`, whose errors panic, `panics`, whose
 /// panic no `orelse` stops, and
-/// `panic-causes` and `host-error-causes`, whose failures nothing
-/// handles; and `host-failures`, alike. A
+/// `panic-causes` and `host-error-causes`, whose errors nothing
+/// handles; and `host-declared-errors`, alike. A
 /// failing program with sections runs each on its own (`runs`), as a
 /// run fails only once.
 pub const FAILING: [&str; 5] = [
@@ -356,59 +356,63 @@ pub const FAILING: [&str; 5] = [
     "panics",
     "panic-causes",
     "host-error-causes",
-    "host-failures",
+    "host-declared-errors",
 ];
 
 /// The shared programs with host code, in a directory of their own
 /// beside their host files, each backend's as a functional test's
 /// ([`CONNECTED`]), which name their library as the program.
-pub const HOST_CODE: [&str; 3] = ["host-error-causes", "host-error-tests", "host-failures"];
+pub const HOST_CODE: [&str; 3] = [
+    "host-error-causes",
+    "host-error-tests",
+    "host-declared-errors",
+];
 
 /// The specifications in `programs/`: shared programs of behavior not
 /// built yet everywhere, written ahead with the logs they should give,
-/// which only backends that have it run: `failure-params` functions
-/// generic over their callbacks' failure types, which every backend
-/// runs, to join [`PROGRAMS`] in a change of its own; `failure-async`
+/// which only backends that have it run: `error-params` functions
+/// generic over their callbacks' error types, which every backend
+/// runs, to join [`PROGRAMS`] in a change of its own; `error-async`
 /// promises
-/// broken with failures; `failure-jumps` a `catch` whose body jumps out
+/// broken with errors; `error-jumps` a `catch` whose body jumps out
 /// of its loop, which Lua runs, while Rust and C++ say not yet; and
-/// `failure-causes` failures made among a thrown one's arguments, and a
+/// `error-causes` errors made among a thrown one's arguments, and a
 /// constructor's parameter named `cause`, which C# runs (its
-/// `failures-interop` host code reads them too), while Rust's output
-/// doesn't build yet; and `failure-generators` generators whose bodies
+/// `errors-interop` host code reads them too), while Rust's output
+/// doesn't build yet; and `error-generators` generators whose bodies
 /// throw, which every backend runs. Each
 /// says what it assumes of what's still open. Once the interpreter
 /// runs one, it joins [`INTERP_SPECS`]; once tmpl does, [`TMPL_SPECS`];
 /// a backend that runs one lists it with its shared programs ([`cases`]
 /// takes either); and once every backend does, it joins [`PROGRAMS`], as
-/// `failures` and `host-failures` have. One with host code is laid out
+/// `declared-errors` and `host-declared-errors` have. One with host code is laid out
 /// as [`HOST_CODE`]'s.
 pub const SPECS: [&str; 5] = [
-    "failure-params",
-    "failure-async",
-    "failure-jumps",
-    "failure-causes",
-    "failure-generators",
+    "error-params",
+    "error-async",
+    "error-jumps",
+    "error-causes",
+    "error-generators",
 ];
 
 /// The specifications ([`SPECS`]) the interpreter runs already, whose
 /// logs are checked there, as [`PROGRAMS`]' are, while tmpl doesn't
 /// translate them yet ([`spec_cases`]).
 pub const INTERP_SPECS: [&str; 4] = [
-    "failure-params",
-    "failure-jumps",
-    "failure-causes",
-    "failure-generators",
+    "error-params",
+    "error-jumps",
+    "error-causes",
+    "error-generators",
 ];
 
 /// The specifications ([`INTERP_SPECS`]) that translate to tmpl already,
 /// whose tmpl is checked against goldens, as [`PROGRAMS`]' is, while
 /// not every backend runs them yet.
 pub const TMPL_SPECS: [&str; 4] = [
-    "failure-params",
-    "failure-jumps",
-    "failure-causes",
-    "failure-generators",
+    "error-params",
+    "error-jumps",
+    "error-causes",
+    "error-generators",
 ];
 
 /// A specification's path and text: `NAME.temper.md`, or in a directory
@@ -468,7 +472,7 @@ pub fn spec_errors(name: &str) -> Vec<String> {
 /// `runAsTest = true` does: their tests check what a log can't, as the
 /// library's state their init set, or how a runner reports tests that
 /// fail. Those expected to fail are in `failures` blocks, a line each,
-/// a test's name and text its failure's cause contains, after `: `;
+/// a test's name and text its error's cause contains, after `: `;
 /// text a test's failure mustn't contain is in `absent` blocks, alike.
 pub const AS_TESTS: [&str; 7] = [
     "reach",
@@ -548,15 +552,15 @@ pub fn check_test_parts_apart<'a>(
 
 /// The shared programs that are libraries of several modules, or that
 /// import such libraries or are imported, in directories of their own:
-/// what [`Case::libraries`] lists. `host-failures` imports
-/// `count-failures`.
+/// what [`Case::libraries`] lists. `host-declared-errors` imports
+/// `count-errors`.
 pub const LIBRARIES: [&str; 6] = [
     "modules",
     "imports-library",
     "defaults",
     "renamed",
-    "count-failures",
-    "host-failures",
+    "count-errors",
+    "host-declared-errors",
 ];
 
 /// The shared programs' directory.
@@ -586,7 +590,7 @@ pub struct Case {
     pub no_connected: bool,
     /// Whether it runs as tests (`runAsTest = true`), not as a program:
     /// then the tests it expects to fail, each its name and text its
-    /// failure's cause contains ([`check_tests`]).
+    /// error's cause contains ([`check_tests`]).
     pub tests: Option<Vec<(String, String)>>,
     /// Text a test's failure, if it fails, mustn't contain, each with the
     /// test's name: what it would say if it went on past where it
@@ -1395,7 +1399,7 @@ pub fn wrongly_said(case: &Case, said: &str) -> Option<String> {
 }
 
 /// A run as tests: each test that ran, its name as its runner gives it,
-/// and its failure's cause, if it failed, as Kotlin's
+/// and its error's cause, if it failed, as Kotlin's
 /// `parseJunitResults` takes it: an `<error>`'s text (after its message
 /// and type, which Kotlin leaves out), or a `<failure>`'s
 /// `message`, else its `type`, else its text (Node's JUnit reporter's
@@ -1482,14 +1486,13 @@ pub fn check_tests(
     let mut want: Vec<String> = expected.iter().map(|(n, _)| n.to_lowercase()).collect();
     want.sort();
     // Each test's own failure, by its name as the program spells it.
-    let failure_of = |test: &str| {
+    let error_of = |test: &str| {
         (failed.iter())
             .find(|(n, _)| name(n).to_lowercase() == test.to_lowercase())
             .map(|&(_, cause)| cause)
     };
-    let causes_found = (expected.iter()).all(|(n, c)| failure_of(n).is_some_and(|f| f.contains(c)));
-    let none_absent =
-        (case.absent.iter()).all(|(n, c)| failure_of(n).is_none_or(|f| !f.contains(c)));
+    let causes_found = (expected.iter()).all(|(n, c)| error_of(n).is_some_and(|f| f.contains(c)));
+    let none_absent = (case.absent.iter()).all(|(n, c)| error_of(n).is_none_or(|f| !f.contains(c)));
     let declared = (case.sources.iter())
         .flat_map(|(_, text)| text.lines())
         .filter(|l| l.trim_start().starts_with("test(\""))

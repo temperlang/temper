@@ -67,7 +67,7 @@ namespace {
         return core::unexpected(std::make_shared<Missing>(key));
     }
 
-    // A subtype's failure into a supertype's result, as a `throw` does.
+    // A subtype's error into a supertype's result, as a `throw` does.
     core::Expected<long, std::shared_ptr<Base>> wider(const std::string& key) {
         core::Expected<int, std::shared_ptr<Missing>> found = find(key);
         if (!found.has_value()) {
@@ -154,7 +154,7 @@ namespace {
         std::cout << "what " << as_std.what() << "\n";
         std::shared_ptr<Missing> made = core::with_cause(second, first);
         std::cout << "cause " << (made == second) << " " << second->get_cause()->what() << "\n";
-        // Set once: a failure thrown again keeps its first cause.
+        // Set once: an error thrown again keeps its first cause.
         core::with_cause(second, third);
         std::cout << "kept " << second->get_cause()->what() << "\n";
         // Never itself, nor a loop.
@@ -175,8 +175,8 @@ namespace {
 
 
     // Core's members' `try` forms, with callbacks that return an
-    // `Expected` (RFC 164's failure parameters): what the plain forms
-    // give where nothing fails, else the first failure, with no call
+    // `Expected` (RFC 164's error parameters): what the plain forms
+    // give where nothing fails, else the first error, with no call
     // after it; and `Never`, "can't fail".
     void try_forms() {
         using Ints = std::shared_ptr<std::vector<int>>;

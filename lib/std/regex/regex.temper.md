@@ -418,7 +418,7 @@ needed for composition or other purposes.
 
 A compiled regex exposes many of the same capabilities as `RegexNode`, but they
 are more efficient to use repeatedly. Its `replace` fails as its callback does:
-the first failure passes out, with no result, and the callback isn't called
+the first error passes out, with no result, and the callback isn't called
 again. Where the callback can't fail, neither can `replace`.
 
 ```

@@ -21,16 +21,16 @@ the runtimes, and real output: Chromarite's `temper.out/`, built by Kotlin Tempe
 - **Builders or named-argument forms** exist only for a *public* constructor
   with 2 or more parameters (not counting `this`): JS `static new(props)`,
   Java and Rust `Builder`s. Python always allows keywords instead.
-- **Failures are declared errors** (since 2026-11-27, when `Bubble` went;
-  each language's "Declared failures", below): an unchecked exception of
-  the failure's own class in JS, Python, Java, and C#, `Result<T, F>` in
+- **Errors are declared errors** (since 2026-11-27, when `Bubble` went;
+  each language's "Declared errors", below): an unchecked exception of
+  the error's own class in JS, Python, Java, and C#, `Result<T, F>` in
   Rust, `core::Expected<T, F>` in C++, and `error(x)` in Lua. Handlers
   catch only those, so panics and host exceptions pass them. The
   runtimes' `Bubble` types (Python `temper_core.Bubble`, Java
   `temper.core.Bubble`, C# `TemperLang.Core.Bubble`, JS `Bubble`, C++
-  `TemperBubble`) are gone, so host code that caught them catches the
-  failure types instead.
-- **Panics aren't failures:** what core's docs say panics (an index out
+  `TemperPanic`) are gone, so host code that caught them catches the
+  error types instead.
+- **Panics aren't errors:** what core's docs say panics (an index out
   of bounds, `panic()`) is Python `BaseException`, Java `AssertionError`,
   C# `TemperLang.Core.Panic`, JS and Lua a plain error, Rust `panic!`, and
   C++ the end of the process (outside test builds). Before 2026-11-18
@@ -126,16 +126,16 @@ effects. File names keep Temper's directory names.
 - Statics: `static g()`, static properties as private static field plus
   `static get`, so assigning one throws. (Tempest stores the value in a
   module `let`, `Class$name`, which the init block outside the class sets.)
-- Generics only in JSDoc; nullable is `T | null`; failures are `Error`
+- Generics only in JSDoc; nullable is `T | null`; errors are `Error`
   subclasses (below); promises are native; async uses the runtime's adapter.
-- Declared failures (RFC 164, in progress): each failure type is a class
+- Declared errors (RFC 164, in progress): each error type is a class
   under one of the library's roots, sealed interfaces it declares
   (`WherewithError extends Error`, natively, not through `type()`), a
   sealed one abstract between, so host code catches
   them with `instanceof`; `message` is a getter, `name` the class's name
   (set by the runtime's `failureBase`, beside an invisible marker
   symbol), the cause the standard `cause`, and a function failing with
-  one says so with JSDoc's `@throws`. A failure type's own member named
+  one says so with JSDoc's `@throws`. An error type's own member named
   `name`, `stack`, or `cause` takes a `_` (`name_`).
 
 **Naming.** Public names unchanged (camelCase). Reserved words get `_`,
@@ -165,13 +165,13 @@ package `__init__.py` does `from .<root> import *` and imports every module.
   bases.
 - Statics: `@staticmethod`; static properties assigned after the class with
   `ClassVar` annotations.
-- Generics via module-level `TypeVar`s; nullable is `Union[T, None]`; failures
+- Generics via module-level `TypeVar`s; nullable is `Union[T, None]`; errors
   are exception classes (below); promises are
   `concurrent.futures.Future`s, annotated as `temper_core.TemperFuture`,
   its subclass that asyncio can `await`
   (Kotlin's annotate `Future`; a host passing its own plain `Future` as
   a promise argument now needs a cast for strict checkers).
-- Declared failures (RFC 164, in progress): each failure type is an
+- Declared errors (RFC 164, in progress): each error type is an
   exception class under one of the library's roots, sealed interfaces it
   declares, `WherewithError(Failure)`, where `temper_core.Failure`, core's `Error`, is an
   `Exception`; `str(e)` is its message, its cause `__cause__`.
@@ -207,23 +207,23 @@ initializer), one file per type, synthetic functional interfaces in
   `Builder` classes for 2+ parameters.
 - Generics `<T>`; nullable via `@temper.core.Nullable` with boxed types;
   function types use `java.util.function` where possible, else synthetic
-  interfaces; failures are unchecked exceptions (below); promises are
+  interfaces; errors are unchecked exceptions (below); promises are
   `CompletableFuture`.
-- Declared failures (RFC 164, in progress): unchecked too. Each failure
+- Declared errors (RFC 164, in progress): unchecked too. Each error
   type is a class under one of the library's roots, sealed interfaces
   it declares, `public abstract class WherewithException extends
-  RuntimeException implements temper.core.Failure` (`Failure` only a marker); a sealed failure
+  RuntimeException implements temper.core.Failure` (`Failure` only a marker); a sealed error
   interface is an abstract class between, with a `protected`
   constructor; a type named `…Error` is `…Exception`. `getMessage()` is
   its message, `getCause()` its cause; stack traces kept. Functions list
-  the failure they may throw in a `throws` clause, as documentation.
+  the error they may throw in a `throws` clause, as documentation.
 
 **Naming.** camelCase kept, types PascalCase. Reserved words *and* contextual
 keywords get `_` (that's why Prismora, now Chromarite, had `to_`). Invalid characters become
 `$xx`.
 
 **Keep:** packages, class and member names, getters/setters, overloads,
-builders, nullability annotations, `CompletableFuture`, failure as a
+builders, nullability annotations, `CompletableFuture`, error as a
 `RuntimeException`.
 **Free:** private names; parameter names, though they show in Javadoc and IDE
 hints, so make them pretty; type-parameter names (see Proposed changes).
@@ -246,30 +246,30 @@ sub-namespace and subdirectory; one file per type; module top levels in
 - Optional parameters `int? i = null`; generic nullable via
   `TemperLang.Core.Optional<T>`.
 - Collections: `IReadOnlyList`, `IList`, `IReadOnlyDictionary`,
-  `IDictionary`; functions `Func`/`Action`; `Task<T>`; failures are
+  `IDictionary`; functions `Func`/`Action`; `Task<T>`; errors are
   exception classes (below).
 - Exported `let`s are `public static` fields.
-- Declared failures (RFC 164, in progress): each failure type is a class
+- Declared errors (RFC 164, in progress): each error type is a class
   under one of the library's roots, sealed interfaces it declares,
   `public abstract class WherewithException : Exception, IFailure` (the
-  runtime's marker), a sealed failure interface
+  runtime's marker), a sealed error interface
   an abstract class between (no `I`), the rest `sealed`; abstract ones'
   constructors are `private protected`, so only the library extends
   them. `…Error` names say `…Exception`, as in Java. `Message` is
   overridden; the cause is `InnerException`, passed by constructor as
-  hand-written C# does: each failure class's public constructor calls an
+  hand-written C# does: each error class's public constructor calls an
   `internal` one that also takes the cause (`: this(key, null)`), which
-  a `throw` in a handler calls (`new LookupFailed(name, e)`); a failure
+  a `throw` in a handler calls (`new LookupFailed(name, e)`); an error
   made before, or another library's (its internal constructor out of
   reach), keeps its cause for Temper's `cause` alone. Functions failing with one say so in a doc comment, `///
-  <exception cref="NotFound">`. A failure's member named as another of
+  <exception cref="NotFound">`. An error's member named as another of
   `Exception`'s (`Source`, `Data`, …) is "not yet".
 
 **Naming.** Types PascalCase with `I` on interfaces; members PascalCase;
 keywords escaped with `@`; a member named like its type gets `_`.
 
 **Keep:** namespaces, type and member names, `I` prefixes, collection and task
-types, init entry points, failure as an `Exception`.
+types, init entry points, error as an `Exception`.
 **Parameter names are API in C#** (callers can use named arguments), and so are
 type-parameter names in practice. Today they're numbered (`Fib(int i__0)`,
 `T__0`); see Proposed changes.
@@ -300,24 +300,24 @@ before anything else: statics are `OnceLock`s read with `unwrap()`.
 - Types: `i32`, `i64`, `f64`, `Arc<String>` (params `impl ToArcString`),
   `List<T> = Arc<Vec<T>>` (params `impl ToList<T>`), `Option<T>`,
   `Arc<dyn Fn>`, `temper_core::Result<T>`, `Promise<T>`.
-- Declared failures (RFC 164, in progress): a function failing with one
-  returns `Result<T, F>`. A failure class is a class as above, with a
+- Declared errors (RFC 164, in progress): a function failing with one
+  returns `Result<T, F>`. An error class is a class as above, with a
   `temper_core::Cause` field, implementing `Display` (its message),
   `Debug` (`NotFound { message: "…" }`), `std::error::Error` (its cause
   as `source()`), and `temper_core::Failure` (core's `Error`, also
-  `Arc<dyn Failure>`), by `temper_core::impl_failure!`. A sealed failure
+  `Arc<dyn Failure>`), by `temper_core::impl_failure!`. A sealed error
   interface is an `enum` of the types right under it, a library's root
   (`#[non_exhaustive]` where exported) among them, each `From` every type
   below it (`impl_failure_enum!`, `impl_failure_from!`), so host `?`
-  converts; every failure type and enum also converts into
+  converts; every error type and enum also converts into
   `Arc<dyn temper_core::Failure>`, itself a `Failure`, so `?` gathers
-  several libraries' failures there, as generated handlers of them do;
-  a failure the library doesn't export is a variant whose type
+  several libraries' errors there, as generated handlers of them do;
+  an error the library doesn't export is a variant whose type
   host code can't name. A library with one exported root, and no `Error`
   of its own, also has it as the crate's `Error` (`pub type Error =
-  r#mod::WherewithError;`). A failure in a module's init or a test is a
-  `temper_core::Error`, now `Arc<dyn Failure>`, any failure, with
-  `temper_core::Result<T>` its alias; `uncaught` says "uncaught failure"
+  r#mod::WherewithError;`). An error in a module's init or a test is a
+  `temper_core::Error`, now `Arc<dyn Failure>`, any error, with
+  `temper_core::Result<T>` its alias; `uncaught` says "uncaught error"
   and each cause. Panics stay panics.
 
 **Naming.** Types keep their case; functions, methods and properties snake;
@@ -338,22 +338,22 @@ exports and `void global_init_<last segment>()`.
 `static make(...)`; properties are public fields plus `get_x()`/`set_x()`;
 interfaces are structs with pure virtual methods and virtual bases; templates
 for generics; optional parameters as overloads plus `NullableParam<T>`;
-failures are `core::Expected` results (below), never thrown; lists are
+errors are `core::Expected` results (below), never thrown; lists are
 `shared_ptr<vector<T>>`.
 
-- Declared failures (RFC 164, in progress): a function failing with one
+- Declared errors (RFC 164, in progress): a function failing with one
   returns `temper::core::Expected<T, std::shared_ptr<F>>`, `std::expected`
   where the standard library has it (C++23), else the runtime's C++14 shim
   with the same API for what it has (`expected.hpp`); host code branches
-  on `has_value()` and reads `error()`, and returns failures as
-  `temper::core::unexpected(NotFound::make(key))`. A failure class is a
+  on `has_value()` and reads `error()`, and returns errors as
+  `temper::core::unexpected(NotFound::make(key))`. An error class is a
   class as above, below one of the library's roots, sealed interfaces it
   declares, `struct WherewithError : virtual temper::core::Failure` (core's `Error`, a `std::exception`: `what()` is
-  its message, `get_message()` too, and `get_cause()` the failure it was
-  thrown while handling); a sealed failure interface is an abstract struct
-  between. Failures are never thrown, but one a module's top level
+  its message, `get_message()` too, and `get_cause()` the error it was
+  thrown while handling); a sealed error interface is an abstract struct
+  between. Errors are never thrown, but one a module's top level
   doesn't handle leaves its init as a `temper::core::UncaughtFailure`
-  exception, which the stack-trace handler reports as "uncaught failure".
+  exception, which the stack-trace handler reports as "uncaught error".
   Panics and host exceptions pass every handler.
 
 **Naming.** Temper names unchanged; keywords get a trailing `_`; collisions get
@@ -396,23 +396,23 @@ unexported names.
 **Mapping.** `temper.type('Hi', SuperA, ...)` classes with `constructor`,
 `get`/`set` accessor tables, `methods`, and statics; construction is
 `Hi(args)` with positional arguments; `obj.prop` and `obj:m()`; null is the
-`temper.null` sentinel, which is returned to callers; failure is `error(...)`.
+`temper.null` sentinel, which is returned to callers; error is `error(...)`.
 
-- Declared failures (RFC 164, in progress): each failure type is a
+- Declared errors (RFC 164, in progress): each error type is a
   `temper.type` under one of the library's roots, sealed interfaces it
   declares, `temper.type("lib.LibError", temper.Failure)`, raised with
   `error(x)`; host code catches them with `pcall` and tells them apart
   with `temper.instance_of(e, lib.NotFound)` (by own type, a root, a
   sealed interface's, or `temper.Failure`).
-  `tostring(e)` and `e.message` give the message, `e.cause` the failure
-  being handled where it was thrown, or `nil`; a failure type's member
+  `tostring(e)` and `e.message` give the message, `e.cause` the error
+  being handled where it was thrown, or `nil`; an error type's member
   named `cause` is `cause_`. A panic stays a string.
 
 **Naming.** Temper names unchanged; keywords get `_`; non-ASCII names are
 hex-mangled. No public numbered names.
 
 **Keep:** module paths, names, the class protocol, `temper.null` (see
-Proposed changes), `temper.Failure` and failures' `message` and `cause`.
+Proposed changes), `temper.Failure` and errors' `message` and `cause`.
 
 ## Proposed changes
 

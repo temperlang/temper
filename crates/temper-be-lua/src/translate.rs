@@ -78,7 +78,7 @@
 //! `orelse`'s body is a function of its own, so a `return`, `break`, or
 //! `continue` out of it returns a signal that an `if` after the
 //! `temper.catch` redoes, as Kotlin's ([`TryBody`]). `orelse panic()`
-//! keeps the failure `temper.catch` caught, and panics saying `caused
+//! keeps the error `temper.catch` caught, and panics saying `caused
 //! by:` it.
 //!
 //! **Order of evaluation:** Lua evaluates operands and arguments left to
@@ -524,7 +524,7 @@ impl<'a> Translator<'a> {
             TypeData::Nominal { decl, args } => {
                 let mut texts = Vec::new();
                 let args = self.p.types.list(args);
-                for a in temper_tmpl::failures::unchecked_args(self.p, decl, args) {
+                for a in temper_tmpl::declared_errors::unchecked_args(self.p, decl, args) {
                     texts.push(self.ty(a)?);
                 }
                 match (self.qname(decl).as_str(), texts.as_slice()) {
@@ -558,7 +558,7 @@ impl<'a> Translator<'a> {
                     // (`connected::next_safe`).
                     ("core.type GeneratorResult" | "core.type ValueResult", [_])
                     | ("core.type DoneResult", [_]) => "table".to_string(),
-                    // Core's failure types, the runtime's.
+                    // Core's error types, the runtime's.
                     ("core.type Error", []) => "temper.Failure".to_string(),
                     ("core.type CoreError", []) => "temper.CoreError".to_string(),
                     ("core.type MissingKey", []) => "temper.MissingKey".to_string(),
@@ -1358,8 +1358,8 @@ impl<'a> Translator<'a> {
             if generics.is_empty() {
                 self.function_type_params(p.decls.get(decl).ty, &mut generics);
             }
-            // Not failure parameters: exceptions are unchecked.
-            generics.retain(|&t| !temper_tmpl::failures::is_failure_param(p, t));
+            // Not error parameters: exceptions are unchecked.
+            generics.retain(|&t| !temper_tmpl::declared_errors::is_error_param(p, t));
             for t in generics {
                 // With its bound, `IT: lib.I`, so LuaLS knows its members.
                 let mut bounds = Vec::new();
@@ -1905,7 +1905,7 @@ impl<'a> Translator<'a> {
                 None | Some((_, Node::VoidLit {})) => out.push(self.return_stmt(None)),
                 // `error("panic")` alone, which LuaLS knows doesn't return,
                 // where `return error(…)` returns its `nil` to it; a
-                // declared failure's `error(x)` likewise.
+                // declared error's `error(x)` likewise.
                 Some((v, Node::Panic {} | Node::Error { .. } | Node::Throw { .. })) => {
                     let e = self.expr(v)?;
                     out.push(Stmt::Expr(e));
@@ -2394,8 +2394,8 @@ impl<'a> Translator<'a> {
             Node::Panic {} | Node::Error { .. } => {
                 Expr::name("error").call(vec![Expr::Str("panic".into())])
             }
-            // A declared failure's `throw`, Lua's `error(x)`, with its
-            // cause, the failure a handler around it handles, where it's
+            // A declared error's `throw`, Lua's `error(x)`, with its
+            // cause, the error a handler around it handles, where it's
             // thrown there: through the runtime's `with_cause`, which
             // keeps a cause it has.
             Node::Throw { value, cause, .. } => {
@@ -2706,7 +2706,7 @@ impl<'a> Translator<'a> {
         let jumps = self.tries.pop().map(|t| t.jumps).unwrap_or_default();
         self.returns = returns;
         let body = body?;
-        // `orelse panic()` panics saying what it replaces, the failure,
+        // `orelse panic()` panics saying what it replaces, the error,
         // `temper.catch`'s second result, as Lua's errors have no cause.
         let caused = matches!(self.p.nodes.get(fallback), Node::Panic {});
         let fallback = match target {
@@ -2722,7 +2722,7 @@ impl<'a> Translator<'a> {
             }]);
         }
         let ok = self.temp();
-        // A `catch`'s binding, where the second result is only the failure.
+        // A `catch`'s binding, where the second result is only the error.
         let bound = local.filter(|_| jumps.is_empty() && !caused);
         let names = match (bound, jumps.is_empty()) {
             (Some(local), _) => vec![ok, self.name(local)],
@@ -2804,8 +2804,8 @@ impl<'a> Translator<'a> {
         ])
     }
 
-    /// What a handler catches, as `temper.catch`'s argument: the failure
-    /// type nearest above its body's failures, `temper.Failure` for
+    /// What a handler catches, as `temper.catch`'s argument: the error
+    /// type nearest above its body's errors, `temper.Failure` for
     /// several libraries'; nothing for a body that can't fail, which
     /// backends drop first.
     fn caught(&mut self, handler: NodeId) -> R<Option<Expr>> {

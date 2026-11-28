@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <limits>
 #include <string>
-#include "temper_bubble.hpp"
+#include "temper_panic.hpp"
 #include "base_types.hpp"
 
 namespace temper {

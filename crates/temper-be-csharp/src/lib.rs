@@ -35,18 +35,18 @@
 //! It covers libraries of several modules, classes and interfaces (each in a file of its own, as
 //! Kotlin's: see [`translate`]), and nullable types (`T?`, `x.Value` or
 //! C#'s own narrowing), `orelse` and `catch` (a `try` and a `catch` of
-//! the failure class above what the body may throw), and `panic()` (and
+//! the error class above what the body may throw), and `panic()` (and
 //! code with an error) as the runtime's `Panic`, which, unlike Kotlin's,
 //! no handler catches. Unlike Kotlin's catch-all, a handler catches only
-//! declared failures, which builtins that may fail throw, the runtime
-//! turning host failures (`FormatException`, `KeyNotFoundException`, a
+//! declared errors, which builtins that may fail throw, the runtime
+//! turning host errors (`FormatException`, `KeyNotFoundException`, a
 //! broken promise's exception) into core's; so anything else, a host
 //! exception from a builtin not declared to fail or from a callback,
-//! passes every handler; declared failures (RFC 164) as exceptions, each
-//! library's failure types under its roots, `WherewithException :
+//! passes every handler; declared errors (RFC 164) as exceptions, each
+//! library's error types under its roots, `WherewithException :
 //! Exception, IFailure`, `throw` as C#'s, the cause as `InnerException`,
 //! and handlers that catch exactly what their bodies may fail with
-//! (`translate`'s `failures` module says how); and generics
+//! (`translate`'s `declared_errors` module says how); and generics
 //! (`First<T>`, `class Shelf<T> where T : Named`, and explicit type
 //! arguments on `new`), with core's lists as `IReadOnlyList` and `IList`,
 //! maps as `IReadOnlyDictionary` and `IDictionary` (the runtime's
@@ -210,17 +210,17 @@ pub fn translate_with_lines(
     // (`temper_tmpl::errors`), by the profile.
     let settled = temper_tmpl::errors::settle(p, &variant.profile);
     let p = settled.as_ref().unwrap_or(p);
-    // Failure parameters as their bounds in code: exceptions are
-    // unchecked (`temper_tmpl::failures::erase_params`).
-    let erased = temper_tmpl::failures::erase_params(p).map_err(|what| NotYet { what })?;
+    // Error parameters as their bounds in code: exceptions are
+    // unchecked (`temper_tmpl::declared_errors::erase_params`).
+    let erased = temper_tmpl::declared_errors::erase_params(p).map_err(|what| NotYet { what })?;
     let p = erased.as_ref().unwrap_or(p);
     // `Never<T>` as `T`, but where the profile keeps it
     // (`temper_tmpl::nevers`).
     let nevered = temper_tmpl::nevers::lower(p, &variant.profile);
     let p = nevered.as_ref().unwrap_or(p);
     // Handlers whose bodies can't fail as their bodies alone
-    // (`temper_tmpl::failures`).
-    let alive = temper_tmpl::failures::drop_dead_handlers(p);
+    // (`temper_tmpl::declared_errors`).
+    let alive = temper_tmpl::declared_errors::drop_dead_handlers(p);
     let p = alive.as_ref().unwrap_or(p);
     // `Switch` as `if`s (`temper_tmpl::switches`); none comes here yet.
     let chained = (!variant.profile.native.contains(Features::SWITCH))

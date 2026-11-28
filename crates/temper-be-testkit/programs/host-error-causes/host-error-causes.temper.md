@@ -1,6 +1,6 @@
 # Host error causes
 
-A host's own error, as host code throws, isn't a failure, so it passes
+A host's own error, as host code throws, isn't a declared error, so it passes
 every `orelse`, `orelse panic()` too, and ends the run saying what it
 said, not "panic". Here a connected function's host code throws one;
 the interpreter, which has no host, runs its Temper body, which panics,

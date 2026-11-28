@@ -138,12 +138,12 @@ pub struct Translator<'a> {
     pub first_use: bool,
     pub first_use_in_tests: bool,
     /// What the code being translated returns a `Result` failing with, a
-    /// declared failure type, `Result<T, F>` (core's `Error` for a test
+    /// declared error type, `Result<T, F>` (core's `Error` for a test
     /// or a module's init, `temper_core::Result`); `None` where it
     /// returns no `Result`.
     fails: Option<TypeId>,
     /// The labels of the `orelse`s whose bodies run in place, in labeled
-    /// blocks, innermost last, which a failure breaks out of
+    /// blocks, innermost last, which an error breaks out of
     /// (`or_else_in_place`).
     orelse: Vec<String>,
     /// The enclosing loops, innermost last.
@@ -167,9 +167,9 @@ pub struct Translator<'a> {
     ctor_fields: HashMap<DeclId, String>,
     /// Every class and interface, by declaration.
     classes: HashMap<DeclId, NodeId>,
-    /// Core's `Error`, the root of declared failure types, where the
-    /// program has it (`temper_tmpl::failures::root`).
-    pub(crate) failure_root: Option<DeclId>,
+    /// Core's `Error`, the root of declared error types, where the
+    /// program has it (`temper_tmpl::declared_errors::root`).
+    pub(crate) error_root: Option<DeclId>,
     /// The fields whose getters and setters the module defines.
     getters: HashSet<DeclId>,
     setters: HashSet<DeclId>,
@@ -189,9 +189,9 @@ pub struct Translator<'a> {
     /// Locals that function literals capture and that are assigned,
     /// which are cells ([`functions`]).
     cells: HashSet<DeclId>,
-    /// Function literals and references that can't fail, passed where a
-    /// failure parameter given `Never<…>` makes the parameter's function
-    /// type return a result (RFC 164), with that failure: each returns
+    /// Function literals and references that can't fail, passed where an
+    /// error parameter given `Never<…>` makes the parameter's function
+    /// type return a result (RFC 164), with that error: each returns
     /// `Ok`s ([`functions`]).
     ok_results: HashMap<NodeId, TypeId>,
     /// Whether it runs `async` blocks, whose runner the crate's support
@@ -244,7 +244,7 @@ impl<'a> Translator<'a> {
             this: This::None,
             ctor_fields: HashMap::new(),
             classes: classes::index(p),
-            failure_root: temper_tmpl::failures::root(p),
+            error_root: temper_tmpl::declared_errors::root(p),
             getters: HashSet::new(),
             setters: HashSet::new(),
             builders: Vec::new(),
@@ -326,10 +326,10 @@ impl<'a> Translator<'a> {
     }
 
     /// A node's type.
-    /// Whether a type is core's `Error`, the root of failure types.
-    pub(crate) fn is_failure_root(&self, ty: TypeId) -> bool {
+    /// Whether a type is core's `Error`, the root of error types.
+    pub(crate) fn is_error_root(&self, ty: TypeId) -> bool {
         let decl = temper_tmpl::analysis::nominal_decl(self.p, ty);
-        decl.is_some() && decl == self.failure_root
+        decl.is_some() && decl == self.error_root
     }
 
     pub(crate) fn p_ty(&self, id: NodeId) -> TypeId {
@@ -426,13 +426,13 @@ impl<'a> Translator<'a> {
     /// `::<A, B>`, a generic call's type arguments, all of them, where
     /// Rust can't infer them from the arguments, as when a type parameter
     /// appears in no parameter's type (`analysis::infers_type_args`); its
-    /// failure parameters' (RFC 164) where it has any, `::<_, _, Missing>`,
+    /// error parameters' (RFC 164) where it has any, `::<_, _, Missing>`,
     /// as rustc can't infer one from a closure that `?`s; otherwise
     /// nothing, leaving them to Rust.
     fn turbofish(&mut self, callee: DeclId, type_args: temper_tmpl::TypeArgs) -> R<String> {
         let p = self.p;
         let params = p.decls.type_params(callee).to_vec();
-        let failure = |t: DeclId| temper_tmpl::failures::is_failure_param(p, t);
+        let failure = |t: DeclId| temper_tmpl::declared_errors::is_error_param(p, t);
         let infers = temper_tmpl::analysis::infers_type_args(p, callee);
         if infers && !params.iter().any(|&t| failure(t)) {
             return Ok(String::new());
@@ -449,14 +449,14 @@ impl<'a> Translator<'a> {
     }
 
     /// A call as its place takes it: `call?` where it may fail; where it
-    /// can't only because a failure parameter (RFC 164) is given
+    /// can't only because an error parameter (RFC 164) is given
     /// `Never<…>`, its result's value, `temper_core::into_ok(call)`
-    /// (`failures::declared_failure`); else the call itself.
-    fn settled(&self, id: NodeId, call: Expr, may_bubble: bool) -> Expr {
+    /// (`declared_errors::declared_error`); else the call itself.
+    fn settled(&self, id: NodeId, call: Expr, may_fail: bool) -> Expr {
         let p = self.p;
-        let never =
-            temper_tmpl::failures::declared_failure(p, id).is_some_and(|f| p.types.is_never(f));
-        match (may_bubble, never) {
+        let never = temper_tmpl::declared_errors::declared_error(p, id)
+            .is_some_and(|f| p.types.is_never(f));
+        match (may_fail, never) {
             (true, _) => call.try_(),
             (false, true) => Expr::path("temper_core::into_ok").call(vec![call]),
             (false, false) => call,
@@ -473,8 +473,8 @@ impl<'a> Translator<'a> {
     }
 
     /// A call of core's member whose callback returns a result
-    /// (`failures::passes_results`), as [`connected::TRY`] connects it,
-    /// its failure type named: `temper_core::listed::try_map::<_, _,
+    /// (`declared_errors::passes_results`), as [`connected::TRY`] connects it,
+    /// its error type named: `temper_core::listed::try_map::<_, _,
     /// Missing>(&xs, &(|x| …))`.
     fn connected_try(
         &mut self,
@@ -499,7 +499,7 @@ impl<'a> Translator<'a> {
             .iter()
             .zip(p.types.args_of(type_args))
         {
-            texts.push(match temper_tmpl::failures::is_failure_param(p, t) {
+            texts.push(match temper_tmpl::declared_errors::is_error_param(p, t) {
                 true => self.ty(a)?,
                 false => "_".into(),
             });
@@ -513,7 +513,7 @@ impl<'a> Translator<'a> {
     fn ty(&mut self, ty: TypeId) -> R<String> {
         Ok(match self.p.types.get(ty) {
             // `temper_tmpl::nevers` made each `Never<T>` the `T` it stands
-            // for, as this profile has no bottom type, but a failure
+            // for, as this profile has no bottom type, but an error
             // parameter's argument, "can't fail" (RFC 164).
             TypeData::Never(_) => {
                 self.uses.insert("std::convert::Infallible");
@@ -580,15 +580,15 @@ impl<'a> Translator<'a> {
                         "core.type ValueResult" => return Ok(texts.join(", ")),
                         "core.type DoneResult" => return Ok("()".into()),
                         "core.type DenseBitVector" => "temper_core::DenseBitVector".into(),
-                        // Core's own failures, the runtime's.
+                        // Core's own errors, the runtime's.
                         "core.type CoreError" => "temper_core::CoreError".into(),
                         "core.type MissingKey" => "temper_core::MissingKey".into(),
                         "core.type ParseError" => "temper_core::ParseError".into(),
                         "core.type InvalidCodePoint" => "temper_core::InvalidCodePoint".into(),
                         "core.type BrokenPromise" => "temper_core::BrokenPromise".into(),
                         "core.type BrokenGenerator" => "temper_core::BrokenGenerator".into(),
-                        // Core's root of declared failures, any library's
-                        // failure, as a failure's cause is.
+                        // Core's root of declared errors, any library's
+                        // error, as an error's cause is.
                         "core.type Error" => {
                             self.uses.insert("std::sync::Arc");
                             return Ok("Arc<dyn temper_core::Failure>".into());
@@ -649,7 +649,7 @@ impl<'a> Translator<'a> {
                     bounds.push("std::hash::Hash".into());
                     continue;
                 }
-                // A failure parameter's (RFC 164): any failure.
+                // An error parameter's (RFC 164): any error.
                 if self.qname(bd) == "core.type Error" {
                     bounds.insert(0, "temper_core::Failure".into());
                     continue;
@@ -886,10 +886,10 @@ impl<'a> Translator<'a> {
     /// A module's tests, as Kotlin's: each a `#[test]` function that
     /// initializes the library and std, makes std's `Test`, starts the
     /// test's async work on the library's runner (`TestWork::begin`),
-    /// runs the test's body, which may fail, its failure winning while
+    /// runs the test's body, which may fail, its error winning while
     /// its work still runs, finishes the async work it started, panicking with what
     /// failed there, and ends with `soft_fail_to_hard`, which fails it if
-    /// the `Test` has failures, then `Ok(())`, unless the body never
+    /// the `Test` has errors, then `Ok(())`, unless the body never
     /// finishes. Named for the test, in
     /// snake case, ASCII letters, digits, and `_` only.
     fn tests(&mut self, module: &Module) -> R<Option<Item>> {
@@ -1196,32 +1196,32 @@ impl<'a> Translator<'a> {
     }
 
     /// A `Result` of `pass` (`()` for none) failing with `fail`,
-    /// `Result<T, F>`, with the declared failure type's own type (RFC
+    /// `Result<T, F>`, with the declared error type's own type (RFC
     /// 164).
     pub(crate) fn result_of(&mut self, pass: Option<String>, fail: TypeId) -> R<String> {
         let pass = pass.unwrap_or_else(|| "()".into());
-        Ok(format!("Result<{pass}, {}>", self.failure_ty(fail)?))
+        Ok(format!("Result<{pass}, {}>", self.error_ty(fail)?))
     }
 
     /// Core's `Error`, what a test and a module's init may fail with, as
     /// `temper_core::Result` does; `None` in a program without it, where
     /// nothing fails.
     fn core_error(&self) -> Option<TypeId> {
-        self.failure_root.map(|d| self.p.decls.get(d).ty)
+        self.error_root.map(|d| self.p.decls.get(d).ty)
     }
 
-    /// A declared failure type, as a `Result`'s error: a failure class's
-    /// struct or a sealed failure interface's enum, the library's roots
+    /// A declared error type, as a `Result`'s error: an error class's
+    /// struct or a sealed error interface's enum, the library's roots
     /// among them, or core's `Error`, `Arc<dyn temper_core::Failure>`, for
     /// a handler's body failing with several libraries' (only a handler's,
-    /// as a signature can't fail with `Error`), which each failure type
-    /// converts into by `From`; a failure parameter (RFC 164), and
+    /// as a signature can't fail with `Error`), which each error type
+    /// converts into by `From`; an error parameter (RFC 164), and
     /// `Infallible` for one given `Never<…>`, "can't fail".
-    pub(crate) fn failure_ty(&mut self, fail: TypeId) -> R<String> {
+    pub(crate) fn error_ty(&mut self, fail: TypeId) -> R<String> {
         let p = self.p;
-        let root = temper_tmpl::failures::root(p);
-        if !temper_tmpl::failures::is_failure_type(p, root, fail) && !p.types.is_never(fail) {
-            return not_yet(format!("{} as a failure type", p.show_type(fail)));
+        let root = temper_tmpl::declared_errors::root(p);
+        if !temper_tmpl::declared_errors::is_error_type(p, root, fail) && !p.types.is_never(fail) {
+            return not_yet(format!("{} as an error type", p.show_type(fail)));
         }
         self.ty(fail)
     }
@@ -1695,7 +1695,7 @@ impl<'a> Translator<'a> {
         b
     }
 
-    /// The failure a `throw` throws: `value`, with `cause`, the failure
+    /// The error a `throw` throws: `value`, with `cause`, the error
     /// being handled, where it's thrown in a handler, as its cause unless
     /// it has one (`temper_core::with_cause`).
     pub(crate) fn thrown(&mut self, value: NodeId, cause: Option<NodeId>) -> R<Expr> {
@@ -1708,7 +1708,7 @@ impl<'a> Translator<'a> {
     }
 
     /// `throw value` as what the code returns: `Err(value)`, converted
-    /// `into` the code's failure type where it's another, one above it
+    /// `into` the code's error type where it's another, one above it
     /// (an enum's variant) or core's `Error`.
     fn throw(&mut self, value: NodeId, cause: Option<NodeId>) -> R<Expr> {
         let Some(fail) = self.fails else {
@@ -1722,19 +1722,19 @@ impl<'a> Translator<'a> {
     }
 
     /// What `id`'s Rust value's last `?` fails with, where it ends in
-    /// one: a failing call's callee's failure, a `throw`'s, or for a
+    /// one: a failing call's callee's error, a `throw`'s, or for a
     /// `catch`, its fallback's (`map_err(…)?`, `or_else(…)?`).
-    fn top_failure(&self, id: NodeId) -> Option<TypeId> {
+    fn top_error(&self, id: NodeId) -> Option<TypeId> {
         let p = self.p;
         match p.nodes.get(id) {
             Node::Catch { fallback, .. } => {
-                let fails: Vec<TypeId> = (temper_tmpl::failures::failures_under(p, fallback))
+                let fails: Vec<TypeId> = (temper_tmpl::declared_errors::errors_under(p, fallback))
                     .into_iter()
                     .map(|(_, f)| f)
                     .collect();
-                temper_tmpl::failures::join(p, self.failure_root, &fails)
+                temper_tmpl::declared_errors::join(p, self.error_root, &fails)
             }
-            _ => temper_tmpl::failures::node_failure(p, id),
+            _ => temper_tmpl::declared_errors::node_error(p, id),
         }
     }
 
@@ -1742,7 +1742,7 @@ impl<'a> Translator<'a> {
     /// its `?` fails with is what the code does; not where `?` converts
     /// it (`From`).
     pub(crate) fn try_strips(&self, id: NodeId) -> bool {
-        self.top_failure(id)
+        self.top_error(id)
             .is_some_and(|fail| self.fails == Some(fail))
     }
 
@@ -2408,13 +2408,13 @@ impl<'a> Translator<'a> {
             Node::CallFunction {
                 callee,
                 type_args,
-                may_bubble,
+                may_fail,
                 args,
             } => {
                 let args = p.nodes.list(args);
                 if temper_tmpl::qname::by_connection(p, callee, crate::connected::connects_std) {
                     let call = self.connected(callee, args, want)?;
-                    return Ok(if may_bubble { call.try_() } else { call });
+                    return Ok(if may_fail { call.try_() } else { call });
                 }
                 let args = self.args(callee, Some(type_args), args)?;
                 let path = match self.static_fn_path(callee)? {
@@ -2423,12 +2423,12 @@ impl<'a> Translator<'a> {
                 };
                 let fish = self.turbofish(callee, type_args)?;
                 let call = Expr::path(format!("{path}{fish}")).call(args);
-                self.settled(id, call, may_bubble)
+                self.settled(id, call, may_fail)
             }
             Node::CallMethod {
                 method,
                 type_args,
-                may_bubble,
+                may_fail,
                 receiver,
                 args,
             } => {
@@ -2438,18 +2438,18 @@ impl<'a> Translator<'a> {
                     let fish = self.turbofish(method, type_args)?;
                     let call =
                         self.call_method(method, &fish, type_args, receiver, p.nodes.list(args))?;
-                    return Ok(self.settled(id, call, may_bubble));
+                    return Ok(self.settled(id, call, may_fail));
                 }
                 let mut all = vec![receiver];
                 all.extend_from_slice(p.nodes.list(args));
-                if temper_tmpl::failures::passes_results(p, p.nodes.list(args)) {
+                if temper_tmpl::declared_errors::passes_results(p, p.nodes.list(args)) {
                     let call = self.connected_try(method, type_args, &all)?;
-                    return Ok(self.settled(id, call, may_bubble));
+                    return Ok(self.settled(id, call, may_fail));
                 }
                 let call = self.connected(method, &all, want)?;
                 // A connection that returns (`Test.bail()`) fails itself.
                 let returns = matches!(call, Expr::Return(_));
-                if may_bubble && !returns {
+                if may_fail && !returns {
                     call.try_()
                 } else {
                     call
@@ -2548,7 +2548,7 @@ impl<'a> Translator<'a> {
             Node::GetStatic { target } => self.get_static(target)?,
             Node::New {
                 ctor,
-                may_bubble,
+                may_fail,
                 args,
                 ..
             } => {
@@ -2559,7 +2559,7 @@ impl<'a> Translator<'a> {
                     let args = self.args(ctor, None, p.nodes.list(args))?;
                     Expr::path(format!("{}::new", self.top_path(class)?)).call(args)
                 };
-                self.settled(id, call, may_bubble)
+                self.settled(id, call, may_fail)
             }
             Node::Upcast { value } => self.upcast(id, value)?,
             Node::Downcast { value } if matches!(p.nodes.get(value), Node::Local { local } if self.narrowed.contains_key(&local)) =>
@@ -2630,12 +2630,12 @@ impl<'a> Translator<'a> {
             Node::FunctionLiteral { decl, params, body } => self.literal(id, decl, params, body)?,
             Node::FunctionRef { target } => self.function_ref(id, target, ty)?,
             Node::CallValue {
-                may_bubble,
+                may_fail,
                 callee,
                 args,
             } => {
                 let call = self.call_value(callee, args)?;
-                self.settled(id, call, may_bubble)
+                self.settled(id, call, may_fail)
             }
             Node::ToFun { value } | Node::FromFun { value } => self.expr(value, want)?,
             other => return not_yet(format!("a {} expression", other.kind().name())),
@@ -2792,7 +2792,7 @@ impl<'a> Translator<'a> {
                 let shown = match p.nodes.get(id) {
                     Node::CallMethod {
                         method,
-                        may_bubble: false,
+                        may_fail: false,
                         receiver,
                         ..
                     } if self.display_hook(method) => receiver,

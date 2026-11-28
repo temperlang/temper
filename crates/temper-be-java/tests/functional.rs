@@ -17,8 +17,8 @@
 //! classes declared in functions (`temper_be_testkit::LOOPS_AND_CLASSES`),
 //! generators, `async`, and `await`, as state machines
 //! (`temper_be_testkit::ASYNC`), and tests run as tests with std (`temper_be_testkit::TESTS`);
-//! and declared failures, the testkit's `failures`, `host-failures`, and
-//! `failures-interop`, and its specification `failure-params` ([`SPECS`]);
+//! and declared errors, the testkit's `declared-errors`, `host-declared-errors`, and
+//! `errors-interop`, and its specification `error-params` ([`SPECS`]);
 //! and on this crate's own programs, in `tests/programs/` ([`OWN`]).
 //!
 //! - `goldens`: each program's generated package, laid out as Kotlin's,
@@ -83,8 +83,8 @@ const RUNTIME_OPTIONS: &[&str] = &[
 ];
 
 /// The testkit's specifications (`kit::SPECS`) this backend runs, which
-/// others don't all yet: `failure-params` and `failure-generators`.
-const SPECS: [&str; 2] = ["failure-params", "failure-generators"];
+/// others don't all yet: `error-params` and `error-generators`.
+const SPECS: [&str; 2] = ["error-params", "error-generators"];
 
 fn cases() -> Vec<Case> {
     let tests = [
@@ -124,9 +124,9 @@ fn cases() -> Vec<Case> {
     cases
 }
 
-/// A run of a program in sections (`host-failures-cause`, of
-/// `host-failures`), a library of its own, with the program's host code
-/// renamed for it: its class (`HostFailuresCauseConnected`) and package.
+/// A run of a program in sections (`host-declared-errors-cause`, of
+/// `host-declared-errors`), a library of its own, with the program's host code
+/// renamed for it: its class (`HostDeclaredErrorsCauseConnected`) and package.
 fn rename_host_code(case: &mut Case) {
     let Some(program) = case.dir.file_name().and_then(|f| f.to_str()) else {
         return;
@@ -442,7 +442,7 @@ fn runs() {
         let mut batches: Vec<(Vec<String>, Vec<PathBuf>)> = Vec::new();
         let mut mains = Vec::new();
         let mut interop = None;
-        let mut failures_interop = None;
+        let mut errors_interop = None;
         // std's main sources, for each batch with a case that imports
         // std's modules.
         let mut std_sources = Vec::new();
@@ -486,15 +486,15 @@ fn runs() {
                 batches[at].1.push(host);
                 interop = Some((case, at));
             }
-            // Host code that catches `failures-interop`'s failures.
-            if case.key == "failures-interop" {
-                let host = out.join("src/interop/FailuresInterop.java");
+            // Host code that catches `errors-interop`'s failures.
+            if case.key == "errors-interop" {
+                let host = out.join("src/interop/ErrorsInterop.java");
                 fs::create_dir_all(host.parent().unwrap()).unwrap();
-                let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                    .join("tests/host/FailuresInterop.java");
+                let source =
+                    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/ErrorsInterop.java");
                 fs::copy(source, &host).unwrap();
                 batches[at].1.push(host);
-                failures_interop = Some((case, at));
+                errors_interop = Some((case, at));
             }
         }
         let threads = out.join("src/threads/ModuleStateThreads.java");
@@ -536,7 +536,7 @@ fn runs() {
         // standard way: it joins generated promises, also after
         // `thenApply`, blocks on one inside a turn, which fails clearly,
         // loops over a generated generator with for-each, which a failed
-        // step leaves done, and catches a failure as a `RuntimeException`.
+        // step leaves done, and catches an error as a `RuntimeException`.
         if let Some((case, at)) = interop {
             let expected: Vec<String> = (case.expected.iter().cloned())
                 .chain(
@@ -556,12 +556,12 @@ fn runs() {
                 .collect();
             run("host interop", at, "interop.Interop", &expected);
         }
-        // `tests/host/FailuresInterop.java`, host code that catches
-        // `failures-interop`'s declared failures by their own types, the
+        // `tests/host/ErrorsInterop.java`, host code that catches
+        // `errors-interop`'s declared errors by their own types, the
         // library's base, and a sealed interface's, reads their messages,
         // causes, and stack traces, and lets a panic pass `catch
         // (RuntimeException e)`.
-        if let Some((case, at)) = failures_interop {
+        if let Some((case, at)) = errors_interop {
             let expected: Vec<String> = (case.expected.iter().cloned())
                 .chain(
                     [
@@ -572,13 +572,13 @@ fn runs() {
                         "LookupFailed lookup failed (name: port), caused by NotFound not found (key: port)",
                         "made before lookup failed (name: early), caused by not found (key: early)",
                         "thrown again lookup failed (name: first), caused by not found (key: first)",
-                        "trace failures_interop.FailuresInteropGlobal.lookup",
+                        "trace errors_interop.ErrorsInteropGlobal.lookup",
                         "panic passes",
                     ]
                     .map(String::from),
                 )
                 .collect();
-            run("failures interop", at, "interop.FailuresInterop", &expected);
+            run("errors interop", at, "interop.ErrorsInterop", &expected);
         }
         // Init logs as `module-state` does, then the threads tick.
         run(

@@ -1,13 +1,13 @@
 # Panic causes
 
 When something goes wrong, the report says what, and why where it
-knows: a panic that replaces a failure keeps the failure as its cause,
+knows: a panic that replaces an error keeps the error as its cause,
 in each language's own way where it has one (a Java or JavaScript
 cause, Python's `raise … from`, a C# inner exception) and in the
-message where it hasn't (C++, Lua, and Rust say `caused by: …`). A
-failure that nothing handles, or a panic, ends the run saying what it
+message where it hasn't (C++, Lua, and Rust say `caused by: …`). An
+error that nothing handles, or a panic, ends the run saying what it
 was, with a stack trace where the language gives one. Each section
-here is a run of its own, as each ends at its failure:
+here is a run of its own, as each ends at its error:
 
     sealed interface Problem extends Error {}
     class NotPositive(public n: Int) extends Problem {}
@@ -20,7 +20,7 @@ here is a run of its own, as each ends at its failure:
 
 ## Panic in orelse
 
-`orelse panic()` panics in place of the failure, which stays its cause:
+`orelse panic()` panics in place of the error, which stays its cause:
 
     let p = positive(-1) orelse panic();
     console.log("after ${p}");
@@ -38,7 +38,7 @@ panic
 caused by: not positive (n: -1)
 ```
 
-The failure it replaced isn't reported as uncaught too:
+The error it replaced isn't reported as uncaught too:
 
 ```stderr-absent cpp
 uncaught
@@ -124,7 +124,7 @@ BaseException: panic
 
 ## Panic in orelse whose body returns
 
-A body that may `return` runs in place, where it can, and its failure
+A body that may `return` runs in place, where it can, and its error
 stays the panic's cause there too. Its call comes first, as C++ can't
 yet run a body that jumps out of itself otherwise:
 
@@ -186,9 +186,9 @@ panic
 caused by: not positive (n: -1)
 ```
 
-## Uncaught failure
+## Uncaught error
 
-A failure that top-level code passes on with `try` ends the run, saying
+An error that top-level code passes on with `try` ends the run, saying
 what it was:
 
     try positive(-1);

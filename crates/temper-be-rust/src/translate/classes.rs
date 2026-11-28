@@ -476,7 +476,7 @@ impl<'a> Translator<'a> {
         let mut accessors = Vec::new();
         let mut eq_hook = None;
         let mut display = false;
-        let failure = self.is_failure(class);
+        let failure = self.is_error(class);
         for &m in self.member_nodes(class) {
             // A std member this backend connects isn't declared, as
             // Kotlin's: its uses are the connection's.
@@ -564,7 +564,7 @@ impl<'a> Translator<'a> {
                     self.builder(class, decl)?;
                 }
                 Node::Method { decl, .. } => {
-                    // A failure's `Display` is its message.
+                    // An error's `Display` is its message.
                     if is_plain_to_string(p, decl) && !self.fails_decl(decl) && !failure {
                         display = true;
                     }
@@ -649,18 +649,14 @@ impl<'a> Translator<'a> {
                 }],
             });
         }
-        // Failure types above it are enums, which take it by `From`, and
+        // Error types above it are enums, which take it by `From`, and
         // core's `Error`, which it is by `impl_failure!`, not traits.
         let ups = ancestors(p, class);
-        let traits: Vec<DeclId> = ups
-            .iter()
-            .copied()
-            .filter(|&i| !self.is_failure(i))
-            .collect();
+        let traits: Vec<DeclId> = ups.iter().copied().filter(|&i| !self.is_error(i)).collect();
         for iface in traits {
             items.push(self.class_trait_impl(class, iface)?);
         }
-        let root = self.failure_root;
+        let root = self.error_root;
         let mut targets = Vec::new();
         for iface in ups.into_iter().filter(|&i| Some(i) != root) {
             let (t, _, saved) = self.super_type(class, iface)?;
@@ -680,17 +676,17 @@ impl<'a> Translator<'a> {
         Ok(items)
     }
 
-    /// Whether a class or interface is a declared failure type (RFC 164),
+    /// Whether a class or interface is a declared error type (RFC 164),
     /// core's `Error` among them.
-    pub(crate) fn is_failure(&self, decl: DeclId) -> bool {
-        temper_tmpl::failures::is_failure_decl(self.p, self.failure_root, decl)
+    pub(crate) fn is_error(&self, decl: DeclId) -> bool {
+        temper_tmpl::declared_errors::is_error_decl(self.p, self.error_root, decl)
     }
 
-    /// A failure class's field holding its cause, a `temper_core::Cause`:
+    /// An error class's field holding its cause, a `temper_core::Cause`:
     /// `cause`, or with a `_` after it where a field of its own has that
     /// name; `None` for another class.
     fn cause_field(&self, class: DeclId) -> Option<String> {
-        if !self.is_failure(class) {
+        if !self.is_error(class) {
             return None;
         }
         let fields: Vec<String> = (self.member_nodes(class).iter())
@@ -706,7 +702,7 @@ impl<'a> Translator<'a> {
         Some(name)
     }
 
-    /// `temper_core::impl_failure!(NotFound, message, cause);`: a failure
+    /// `temper_core::impl_failure!(NotFound, message, cause);`: an error
     /// class's `Display` (its `message` getter, its own or the one
     /// `to_tmpl` makes), `Debug`, `std::error::Error` (its cause as
     /// `source()`), and `temper_core::Failure`.
@@ -720,10 +716,10 @@ impl<'a> Translator<'a> {
             _ => None,
         });
         let Some(message) = message else {
-            return not_yet("a failure class without a message getter");
+            return not_yet("an error class without a message getter");
         };
         if self.fails_decl(message) {
-            return not_yet("a failure's message that may fail");
+            return not_yet("an error's message that may fail");
         }
         let cause = self.cause_field(class).unwrap_or_default();
         Ok(Item::Macro(Expr::Macro(
@@ -736,15 +732,15 @@ impl<'a> Translator<'a> {
         )))
     }
 
-    /// A sealed failure interface, the library's roots among them: an enum
-    /// of the failure types right under it, each a variant of its name,
+    /// A sealed error interface, the library's roots among them: an enum
+    /// of the error types right under it, each a variant of its name,
     /// `From` each type below it, with `impl_failure_enum!`'s traits, each
     /// the variant's; an exported root's `#[non_exhaustive]`, as a library
-    /// may add failure types.
-    fn failure_enum(&mut self, iface: DeclId) -> R<Vec<Item>> {
+    /// may add error types.
+    fn error_enum(&mut self, iface: DeclId) -> R<Vec<Item>> {
         let p = self.p;
         if !self.member_nodes(iface).is_empty() {
-            return not_yet("a failure interface with members");
+            return not_yet("an error interface with members");
         }
         let mut variants = Vec::new();
         let mut private = false;
@@ -757,17 +753,17 @@ impl<'a> Translator<'a> {
                 continue;
             }
             // The type right under `iface` that it's below, or itself,
-            // through the one failure type above each.
-            let failure_up = |t: &Self, d: DeclId| {
+            // through the one error type above each.
+            let error_up = |t: &Self, d: DeclId| {
                 (p.decls.supers(d).iter())
                     .filter_map(|&s| nominal_decl(p, s))
-                    .find(|&s| t.is_failure(s))
+                    .find(|&s| t.is_error(s))
             };
             let mut via = d;
-            let mut above = failure_up(self, d);
+            let mut above = error_up(self, d);
             while let Some(a) = above.filter(|&a| a != iface) {
                 via = a;
-                above = failure_up(self, a);
+                above = error_up(self, a);
             }
             let path = self.top_path(d)?;
             if via == d {
@@ -784,10 +780,10 @@ impl<'a> Translator<'a> {
         let name = self.name(iface);
         let mut attrs = vec!["#[derive(Clone, Debug)]".to_string()];
         let exported = self.facts(iface).contains(Facts::EXPORTED);
-        if exported && temper_tmpl::failures::is_library_root(p, self.failure_root, iface) {
+        if exported && temper_tmpl::declared_errors::is_library_root(p, self.error_root, iface) {
             attrs.push("#[non_exhaustive]".into());
         }
-        // A failure type the library doesn't export, which host code
+        // An error type the library doesn't export, which host code
         // sees only as the variant's value (`Display`, `source()`), not
         // by its type's name.
         if private && exported {
@@ -899,7 +895,7 @@ impl<'a> Translator<'a> {
 
     /// A generic class's type parameters that no field's type has, each
     /// a `PhantomData` field's name and type, as Kotlin's, since Rust
-    /// needs each in a field; and a failure class's cause, a
+    /// needs each in a field; and an error class's cause, a
     /// `temper_core::Cause` ([`Self::cause_field`]).
     fn phantoms(&mut self, class: DeclId) -> R<Vec<(String, String)>> {
         let p = self.p;
@@ -919,15 +915,15 @@ impl<'a> Translator<'a> {
                 out.push((field, format!("std::marker::PhantomData<{t}>")));
             }
         }
-        // A failure's cause, set where it's first thrown in a handler.
+        // An error's cause, set where it's first thrown in a handler.
         if let Some(cause) = self.cause_field(class) {
             out.push((cause, "temper_core::Cause".into()));
         }
         Ok(out)
     }
 
-    /// The struct literal's fields that [`Self::phantoms`] adds, a
-    /// failure's cause among them.
+    /// The struct literal's fields that [`Self::phantoms`] adds, an
+    /// error's cause among them.
     fn phantom_lits(&mut self, class: DeclId) -> R<Vec<(String, Option<Expr>)>> {
         let cause = self.cause_field(class);
         Ok((self.phantoms(class)?.into_iter())
@@ -1064,8 +1060,8 @@ impl<'a> Translator<'a> {
         let Node::Interface { decl: iface, .. } = p.nodes.get(node) else {
             return not_yet("an interface that isn't one");
         };
-        if self.is_failure(iface) {
-            return self.failure_enum(iface);
+        if self.is_error(iface) {
+            return self.error_enum(iface);
         }
         let bare = self.name(iface);
         let vis = self.vis(iface);
@@ -1766,7 +1762,7 @@ impl<'a> Translator<'a> {
             }
         }
         let obj = self.expr(object, Want::Borrowed)?;
-        // Core's failures' fields, by their accessors' own names, in
+        // Core's errors' fields, by their accessors' own names, in
         // snake case, as `code_point()`.
         if is_external(p, field) && library_of(p, field) == "core" {
             let name = temper_tmpl::naming::snake_case(p.name(field));
@@ -2021,8 +2017,8 @@ impl<'a> Translator<'a> {
             let v = self.expr(value, Want::Owned)?;
             return Ok(Expr::path(format!("Into::<{ty}>::into")).call(vec![v]));
         }
-        // Core's `Error`, any library's failure: `Arc<dyn Failure>`.
-        if self.is_failure_root(to) {
+        // Core's `Error`, any library's error: `Arc<dyn Failure>`.
+        if self.is_error_root(to) {
             let v = self.expr(value, Want::Owned)?;
             return Ok(Expr::path("temper_core::failure::failure").call(vec![v]));
         }

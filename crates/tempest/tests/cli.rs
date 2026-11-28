@@ -931,7 +931,7 @@ fn test_a_library_on_each_backend() {
             assert!(failed, "{backend}:\n{out}{err}");
             let failed = out.to_lowercase().contains(CLASS_ASSERT_FAILED);
             assert!(failed, "{backend}:\n{out}{err}");
-            // The panic and the async failure, each failing its test alone,
+            // The panic and the async error, each failing its test alone,
             // saying why.
             let lower = out.to_lowercase();
             let says = |test: &str, why: &str| {
@@ -1472,7 +1472,7 @@ fn run_a_library() {
 /// panics in a library function, or whose assertion fails, has a stack
 /// trace in its JUnit results naming the `.temper.md` file and the line
 /// of the panic, the call, and the assertion; and `run`'s uncaught
-/// failure or panic names the `.temper` lines where it was raised and
+/// error or panic names the `.temper` lines where it was raised and
 /// called from. Skipped without Node, unless `TEMPER_REQUIRE_CHECKERS`
 /// is set.
 #[test]
@@ -1539,7 +1539,7 @@ fn js_stack_traces_point_at_temper() {
 /// in the C++ backend): a test that panics in a library function has
 /// the trace in its JUnit results, from the panic up to the test, and
 /// `run`'s uncaught panic prints one from where it was raised up to the
-/// top level, none starting in the runtime (an uncaught failure, from
+/// top level, none starting in the runtime (an uncaught error, from
 /// where it reached the top level). Only those
 /// programs install the handler; the libraries never do. With
 /// `std::stacktrace`, the frames name the Temper files and lines, by
@@ -1617,7 +1617,7 @@ fn cpp_stack_traces() {
             assert_eq!(source("a", &panics[boom]), (a.clone(), "4".into()), "{xml}");
             assert_eq!(source("a", &panics[test]), (a, "9".into()), "{xml}");
         }
-        // An uncaught failure, a value that keeps no trace of where it was
+        // An uncaught error, a value that keeps no trace of where it was
         // thrown, says what it was, from where it reached the top level.
         let (code, out, err) = tempest(&["run", "-w", dir, "--library", "b", "-b", "cpp"]);
         assert_eq!((code, out.trim_end()), (1, "b"), "{err}");
@@ -1763,7 +1763,7 @@ fn assert_relative_lines(path: &Path, text: &str) {
     }
 }
 
-/// What sets a process-wide handler for failures, which only the
+/// What sets a process-wide handler for errors, which only the
 /// programs and tests Temper generates may, as a library's user's
 /// process is theirs: Java's `Core.keepStackTraces`, Rust's panic hook
 /// (`set_hook`, which `catch_quietly`, `block_panics`, and `TestWork`
@@ -1772,7 +1772,7 @@ fn assert_relative_lines(path: &Path, text: &str) {
 /// file names any of them, but Rust's tests module, under
 /// `#[cfg(test)]`; only the harnesses do (`main`s, tests).
 #[test]
-fn failure_handlers_only_in_harnesses() {
+fn error_handlers_only_in_harnesses() {
     let files = [(
         "a.temper",
         "export let f(n: Int): Int throws Negative {\n  if (n < 0) { throw new Negative() }\n  n\n}\n\
@@ -1842,7 +1842,7 @@ const ORELSE_PANICS: &str = "let positive(n: Int): Int throws NotPositive {\n  i
     console.log(\"d\");\nlet p = positive(checked(-1)) orelse panic();\nconsole.log(\"after ${p}\");\n\
     sealed interface Problem extends Error {}\nclass NotPositive extends Problem {}\n";
 
-/// On Lua, `run`'s uncaught failure, an error that isn't a string, shows
+/// On Lua, `run`'s uncaught error, an error that isn't a string, shows
 /// a stack trace, as an uncaught panic's does, which `lua`'s own handler
 /// gives only strings. A panic that passed an `orelse`, which raises it
 /// again, shows the trace from where it was first raised. Skipped
@@ -1901,14 +1901,14 @@ fn lua_stack_traces() {
     });
 }
 
-/// On Rust, `run`'s uncaught failure panics saying so, with its causes,
-/// and no trace of where it was thrown, which a failure, a value, doesn't
+/// On Rust, `run`'s uncaught error panics saying so, with its causes,
+/// and no trace of where it was thrown, which an error, a value, doesn't
 /// keep; with `RUST_BACKTRACE` unset, Rust's note says how to get the
 /// panic's own. Skipped without cargo, unless `TEMPER_REQUIRE_CHECKERS`
 /// is set.
 #[test]
 #[cfg(feature = "rust")]
-fn rust_uncaught_failures() {
+fn rust_uncaught_errors() {
     let files = [
         ("b/config.temper.md", "    export let name = \"b\";\n"),
         (

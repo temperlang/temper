@@ -21,7 +21,7 @@
 //!   `r#([t#test, …])`, a JUnit XML report ([`crate::settle::SettledModule::tests`]),
 //!   which [`crate::interp::run_tests`] evaluates after the program runs.
 
-use crate::builtins::{Builtin, FAILURE_ROOT, Function};
+use crate::builtins::{Builtin, ERROR_ROOT, Function};
 use crate::core::{self, FN_OUT_TYPE, LET_INIT, LET_TYPE};
 use crate::library::{Message, ModuleId};
 use crate::scope::{ScopeId, ScopeKind, SymbolId};
@@ -132,7 +132,7 @@ impl Settle {
         };
         let throws = name(Builtin::Function(Function::Throws));
         let void = name(Builtin::named("Void").unwrap());
-        let error = name(Builtin::named(FAILURE_ROOT).unwrap());
+        let error = name(Builtin::named(ERROR_ROOT).unwrap());
         self.root_throws.insert(error);
         (self.lib).add(NodeKind::Call, span, 0, &[throws, void, error], like)
     }

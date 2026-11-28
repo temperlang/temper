@@ -13,7 +13,7 @@
 //! [`UNKNOWN`] stands for a type not worked out, and never causes an error
 //! either.
 
-use crate::builtins::{FAILURE_ROOT, TYPES};
+use crate::builtins::{ERROR_ROOT, TYPES};
 use crate::scope::SymbolId;
 use std::collections::HashMap;
 
@@ -77,21 +77,14 @@ pub const INT64: TypeId = TypeId(6);
 pub const FLOAT64: TypeId = TypeId(7);
 pub const STRING: TypeId = TypeId(8);
 pub const ANY_VALUE: TypeId = TypeId(9);
-/// Core's root of declared failure types ([`FAILURE_ROOT`], `Error`),
-/// which failure classes and sealed failure interfaces extend
-/// (notes/typing.md, "Declared failures").
+/// Core's root of declared error types ([`ERROR_ROOT`], `Error`),
+/// which error classes and sealed error interfaces extend
+/// (notes/typing.md, "Declared errors").
 pub const ERROR: TypeId = TypeId(10);
 
 /// The builtin types with fixed ids, from [`VOID`] to [`ERROR`].
 const WELL_KNOWN: [&str; 8] = [
-    "Void",
-    "Boolean",
-    "Int32",
-    "Int64",
-    "Float64",
-    "String",
-    "AnyValue",
-    FAILURE_ROOT,
+    "Void", "Boolean", "Int32", "Int64", "Float64", "String", "AnyValue", ERROR_ROOT,
 ];
 
 /// What subtyping needs to know of a class or interface.
@@ -125,7 +118,7 @@ pub struct Types {
 /// same type arguments, as `class List<T> extends Listed<T>` in core; and
 /// the final types that are `MapKey`s of themselves, as `class String
 /// extends MapKey<String>`; and `StringIndex` and `NoStringIndex`, which
-/// extend `StringIndexOption`; and core's failure types, `CoreError` under
+/// extend `StringIndexOption`; and core's error types, `CoreError` under
 /// the root and `MissingKey`, `ParseError`, `InvalidCodePoint`,
 /// `BrokenPromise`, and `BrokenGenerator` under it. Core's `Equatable`
 /// isn't a builtin type yet.
@@ -141,7 +134,7 @@ const BUILTIN_SUPERTYPES: [(&str, &str); 17] = [
     ("String", "MapKey"),
     ("StringIndex", "StringIndexOption"),
     ("NoStringIndex", "StringIndexOption"),
-    ("CoreError", FAILURE_ROOT),
+    ("CoreError", ERROR_ROOT),
     ("MissingKey", "CoreError"),
     ("ParseError", "CoreError"),
     ("InvalidCodePoint", "CoreError"),
@@ -425,13 +418,13 @@ impl Types {
         use TypeData::*;
         match (self.get(pattern).clone(), self.get(actual).clone()) {
             (NeverOf(p), NeverOf(a)) => self.unify(p, a, formals, actuals, conflicts),
-            // A failure parameter's "can't fail" ([`Types::no_failure`])
+            // An error parameter's "can't fail" ([`Types::no_error`])
             // solves nothing, as one left unsolved is that anyway.
             (_, NeverOf(ERROR)) => {}
             (_, NeverOf(a)) => self.unify(pattern, a, formals, actuals, conflicts),
             // Results solve part by part; only a result's pass type solves
-            // a pattern that isn't one, so no type parameter but a failure
-            // type's stands for a result or its failure.
+            // a pattern that isn't one, so no type parameter but an error
+            // type's stands for a result or its error.
             (Result { pass: p, fail: e }, Result { pass: a, fail: f }) => {
                 self.unify(p, a, formals, actuals, conflicts);
                 self.unify(e, f, formals, actuals, conflicts);
@@ -701,7 +694,7 @@ impl Types {
     /// One type for what two places may fail with: unknown if either is,
     /// else their join, or the root, `Error`, where they have no closer
     /// common type.
-    pub fn join_failures(&mut self, a: TypeId, b: TypeId) -> TypeId {
+    pub fn join_errors(&mut self, a: TypeId, b: TypeId) -> TypeId {
         match (a, b) {
             (UNKNOWN, _) | (_, UNKNOWN) => UNKNOWN,
             _ => match self.join(a, b) {
@@ -711,35 +704,35 @@ impl Types {
         }
     }
 
-    /// What a failure parameter is where nothing it's solved from may
+    /// What an error parameter is where nothing it's solved from may
     /// fail: `Never<Error>`, which [`Types::result`] drops.
-    pub fn no_failure(&mut self) -> TypeId {
+    pub fn no_error(&mut self) -> TypeId {
         self.never_of(ERROR)
     }
 
-    /// Whether class or interface `symbol` extends the failure root
-    /// ([`ERROR`]), itself or through what it extends: a failure class or
-    /// failure interface (notes/typing.md, "Declared failures").
-    pub fn is_failure_class(&self, symbol: SymbolId) -> bool {
+    /// Whether class or interface `symbol` extends the error root
+    /// ([`ERROR`]), itself or through what it extends: an error class or
+    /// error interface (notes/typing.md, "Declared errors").
+    pub fn is_error_class(&self, symbol: SymbolId) -> bool {
         let extends_root =
             |s: &SymbolId| (self.classes.get(s)).is_some_and(|i| i.supers.contains(&ERROR));
         extends_root(&symbol)
             || (self.classes.get(&symbol)).is_some_and(|i| i.ancestors.iter().any(extends_root))
     }
 
-    /// Whether `t` is a declared failure type, one a function may throw:
+    /// Whether `t` is a declared error type, one a function may throw:
     /// a non-generic class's or interface's that extends the root, not
     /// the root itself.
-    pub fn is_failure(&self, t: TypeId) -> bool {
+    pub fn is_error(&self, t: TypeId) -> bool {
         match *self.get(t) {
-            TypeData::Class(symbol) => self.is_failure_class(symbol),
-            TypeData::Builtin(i) => builtin_ancestors(TYPES[i as usize]).any(|a| a == FAILURE_ROOT),
+            TypeData::Class(symbol) => self.is_error_class(symbol),
+            TypeData::Builtin(i) => builtin_ancestors(TYPES[i as usize]).any(|a| a == ERROR_ROOT),
             _ => false,
         }
     }
 
     /// Whether one of the type parameters `formals` is what something in
-    /// `t` may fail with, a failure parameter, as `E` in `fn (T): R throws
+    /// `t` may fail with, an error parameter, as `E` in `fn (T): R throws
     /// E`, or in a `@fun` interface's type that stands for one.
     pub fn fails_with(&mut self, t: TypeId, formals: &[SymbolId]) -> bool {
         match self.get(t).clone() {
@@ -859,7 +852,7 @@ impl Types {
                         out.push(id);
                     }
                 }
-                if self.is_failure_class(*symbol) {
+                if self.is_error_class(*symbol) {
                     out.push(ERROR);
                 }
             }
@@ -970,7 +963,7 @@ impl Types {
             _ if t == ANY_VALUE => (s != VOID
                 && (self.is_definite(s) || self.is_class_like(s) || s == ERROR))
                 .then_some(true),
-            // The failure root is what extends it, and no builtin type,
+            // The error root is what extends it, and no builtin type,
             // nor anything but `AnyValue` the root itself.
             _ if t == ERROR => match (self.supertype_as(s, ERROR), self.get(s).clone()) {
                 (Some(_), _) => Some(true),
@@ -1286,10 +1279,10 @@ mod tests {
         types.intern(TypeData::Class(SymbolId(symbol)))
     }
 
-    /// Declared failure types: what extends the root is a failure, a
+    /// Declared error types: what extends the root is an error, a
     /// subtype of it, and joins under it; nothing else is.
     #[test]
-    fn failure_root() {
+    fn error_root() {
         let mut types = Types::new();
         let sealed = |types: &mut Types, symbol: u32, supers: Vec<TypeId>| {
             let info = ClassInfo {
@@ -1312,10 +1305,10 @@ mod tests {
         let found = sealed(&mut types, 3, vec![ERROR]);
         let plain = sealed(&mut types, 4, vec![]);
         for t in [sign, bad, found] {
-            assert!(types.is_failure(t));
+            assert!(types.is_error(t));
             assert_eq!(types.is_subtype(t, ERROR), Some(true));
         }
-        assert!(!types.is_failure(plain) && !types.is_failure(ERROR));
+        assert!(!types.is_error(plain) && !types.is_error(ERROR));
         assert_eq!(types.is_subtype(plain, ERROR), Some(false));
         assert_eq!(types.is_subtype(STRING, ERROR), Some(false));
         assert_eq!(types.is_subtype(NULL, ERROR), Some(false));
@@ -1323,7 +1316,7 @@ mod tests {
         assert_eq!(types.is_subtype(ERROR, ANY_VALUE), Some(true));
         assert_eq!(types.join(bad, sign), sign);
         assert_eq!(types.join(bad, found), ERROR);
-        let none = types.no_failure();
+        let none = types.no_error();
         assert_eq!(types.result(INT32, none), INT32);
     }
 
@@ -1461,7 +1454,7 @@ mod tests {
             types.display(int_throws, &|_| String::new()),
             "Int32 throws Error"
         );
-        // A failure that can't happen goes: `T throws Never<Error>` is `T`.
+        // An error that can't happen goes: `T throws Never<Error>` is `T`.
         assert_eq!(types.result(INT32, NEVER), INT32);
         let never_error = types.never_of(ERROR);
         assert_eq!(types.result(INT32, never_error), INT32);

@@ -7,7 +7,7 @@
 //! connected function's work, such as `sendRequest`'s, can be queued too,
 //! as a job that resolves its promise when the queue reaches it.
 
-use super::{Abrupt, CoreFailure, Generator, Interp, R, Val, fail, type_name};
+use super::{Abrupt, CoreDeclaredError, Generator, Interp, R, Val, fail, type_name};
 use crate::settle::Settled;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -64,7 +64,7 @@ impl Promise {
         match &*self.state.borrow() {
             State::Pending(_) => None,
             State::Complete(value) => Some(Ok(value.clone())),
-            State::Broken => Some(Err(Abrupt::Throw(CoreFailure::value(
+            State::Broken => Some(Err(Abrupt::Throw(CoreDeclaredError::value(
                 "BrokenPromise",
                 Vec::new(),
             )))),
@@ -106,7 +106,7 @@ impl Interp<'_> {
     }
 
     /// Runs queued tasks until none are ready. A block that fails doesn't
-    /// stop the others; the first failure is the result. A `yield` pauses
+    /// stop the others; the first error is the result. A `yield` pauses
     /// a block for good, as Kotlin Temper's stepper ignores what `next()`
     /// gives.
     pub(super) fn run_tasks(&mut self, s: &Settled) -> Result<(), Abrupt> {
@@ -133,7 +133,7 @@ impl Interp<'_> {
                 }
                 done => done,
             };
-            // A REPL input resumed: its failure is its own.
+            // A REPL input resumed: its error is its own.
             let parked = (self.inputs_parked.iter()).position(|(g, _)| Rc::ptr_eq(g, &task));
             let input = parked.map(|i| self.inputs_parked.swap_remove(i).1);
             match (done, input) {

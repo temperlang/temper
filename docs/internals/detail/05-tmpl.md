@@ -216,7 +216,7 @@ would be checked at compile time.
 where it runs. When the error is only about a value's type, the `Error`
 keeps the value as written. [`errors::settle`](../../../crates/temper-tmpl/src/errors.rs)
 then decides per backend: a profile with `RUNS_TYPE_ERRORS` (JS, Lua,
-Python) runs the value; the others turn it into a plain failure and
+Python) runs the value; the others turn it into a plain error and
 drop what can't run after it.
 
 **Pros:** a library with one mistake still gets every backend's code,
@@ -382,7 +382,7 @@ already have errors).
 | Lowering | What it does | Why it's shared | Called by |
 |---|---|---|---|
 | [`errors::settle`](../../../crates/temper-tmpl/src/errors.rs) | Type-only errors run as written or fail there, by profile | One rule for "what runs after an error" | all seven |
-| [`drop_dead_handlers`](../../../crates/temper-tmpl/src/failures.rs) | An `orelse` or `catch` whose body can't fail is its body alone, as `to_tmpl` writes one | No translator handles a dead handler | all seven |
+| [`drop_dead_handlers`](../../../crates/temper-tmpl/src/declared_errors.rs) | An `orelse` or `catch` whose body can't fail is its body alone, as `to_tmpl` writes one | No translator handles a dead handler | all seven |
 | [`coroutines::lower`](../../../crates/temper-tmpl/src/coroutines.rs) | Generator literals as state machines: a factory whose step function is a `Switch` on the state, folded so no unreachable states remain | Kotlin's `CoroutineStrategy`, done once | C++, Java, Rust |
 | [`copy_captured_params`](../../../crates/temper-tmpl/src/cells.rs) | A parameter a closure captures and reassigns becomes a local, so it can be a cell | Targets whose closures copy captures | C++, Java, Rust |
 | [`to_if_chains`](../../../crates/temper-tmpl/src/switches.rs) and [`to_if_chains_where`](../../../crates/temper-tmpl/src/switches.rs) | A `Switch` as `if`s, its scrutinee held once | Targets without `switch`, or Java's without `long` | C#, JS, Lua, Python; Java for `Int64` |

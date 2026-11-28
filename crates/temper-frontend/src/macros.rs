@@ -160,7 +160,7 @@ impl Settle {
                 }
                 _ => false,
             },
-            // `throw x` is a `Fail` with the failure.
+            // `throw x` is a `Fail` with the error.
             Macro::Throw => match *args {
                 [x] => {
                     self.rewrite(call, NodeKind::Fail, 0, &[x]);
@@ -168,7 +168,7 @@ impl Settle {
                 }
                 _ => false,
             },
-            // Optional for now (RFC 164's option B): failures propagate
+            // Optional for now (RFC 164's option B): errors propagate
             // with it or without it.
             Macro::Try => match *args {
                 [x] => {
@@ -188,7 +188,7 @@ impl Settle {
     }
 
     /// `x catch (e) { … }` is `Orelse(x, { let e = caught(); … })`,
-    /// where the hidden `caught()` is the failure the `Orelse` handles.
+    /// where the hidden `caught()` is the error the `Orelse` handles.
     /// The block is the handler's, not a function's, so `return`,
     /// `break`, and `continue` in it leave what's around it. Without a
     /// name it's malformed (the grammar says to use `orelse`), so is a
@@ -228,10 +228,10 @@ impl Settle {
         true
     }
 
-    /// Declared failures' syntax (RFC 164), which parses but isn't typed or
+    /// Declared errors' syntax (RFC 164), which parses but isn't typed or
     /// run yet: an error in place of the construct.
-    fn failures_not_yet(&mut self, call: NodeId, what: &str) {
-        let message = format!("`{what}`, part of declared failures");
+    fn errors_not_yet(&mut self, call: NodeId, what: &str) {
+        let message = format!("`{what}`, part of declared errors");
         self.error(call, Message::Unsupported(message));
     }
 
@@ -275,7 +275,7 @@ impl Settle {
                 self.become_node(call, void);
             }
             (SyntaxBuiltin::DocComment, [target, ..]) => self.become_node(call, *target),
-            (SyntaxBuiltin::ErrorCase, _) => self.failures_not_yet(call, "error case"),
+            (SyntaxBuiltin::ErrorCase, _) => self.errors_not_yet(call, "error case"),
             _ => self.error(
                 call,
                 Message::Unsupported(format!("builtin {}", builtin.name())),

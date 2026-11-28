@@ -112,7 +112,7 @@ R5 @20: a#3 may be read before it's assigned
 R6 @23: b#4 isn't a var, but may be assigned twice
 R6 @29: c#5 isn't a var, but may be assigned twice
 
-=== returns and failures (F1, F2, F4)
+=== returns and errors (F1, F2, F4)
 tmpl 1 model 1 library flow 0.1.0
 
 uses `temper-core`#90 0.1.0 {
@@ -411,4 +411,4 @@ module results#0 {
   init {}
 }
 --- problems
-T5 #3: fn (Int32): Int32 throws Int32 fails with Int32, not a failure type
+T5 #3: fn (Int32): Int32 throws Int32 fails with Int32, not an error type

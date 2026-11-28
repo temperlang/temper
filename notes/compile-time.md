@@ -190,7 +190,7 @@ run time, path by path, and is always safe:
   steps, the session starts again (`Session::renew`), so half-updated
   module state can't reach the next use: its module state is dropped
   first, then the top levels run again, keeping the code lowered so
-  far, which comes from the tree alone. So a failure costs only the
+  far, which comes from the tree alone. So an error costs only the
   top-level runs, and never holds two sessions at once. Only what the allowlist below permits
   runs. A `Val::Callout` collects what the library reports. Values
   come back as owned data (`Construction`): constants,

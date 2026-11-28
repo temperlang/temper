@@ -20,7 +20,7 @@ we can make it, without losing that reliability.
    and per-package build setup. It's the local default.
 
 A check that the two agree keeps the fast path honest: the same passes
-and failures on the functional tests and library tests, in CI at least,
+and errors on the functional tests and library tests, in CI at least,
 maybe nightly. Where they can't agree (dependency resolution, native
 libraries), that library falls back to the package path.
 

@@ -149,7 +149,7 @@ impl Translator<'_> {
     /// its property.
     pub(crate) fn field(&mut self, object: Expr, field: DeclId) -> Expr {
         let owner = self.p.decls.get(field).owner;
-        // Core's by its own name, in snake case, as a failure's
+        // Core's by its own name, in snake case, as an error's
         // `code_point`; another library's by its naming's.
         if temper_tmpl::qname::by_connection(self.p, field, crate::connected::connects_std) {
             let name = self.p.name(field);
@@ -285,7 +285,7 @@ impl Translator<'_> {
 
     /// A call of a std method this backend connects as a statement:
     /// `Test.bail()` as `raise AssertionError(str(test.messages_combined()))`,
-    /// so unittest reports the test's messages as its failure; and
+    /// so unittest reports the test's messages as its error; and
     /// a generator's step, whose result isn't needed.
     pub(crate) fn std_statement(&mut self, expr: NodeId) -> Option<R<Stmt>> {
         let Node::CallMethod {
@@ -389,10 +389,10 @@ impl Translator<'_> {
             }
             // Another library's is imported as its other names are; core's
             // types aren't classes to extend, but for `Error`, which only
-            // a library's failure roots extend: the runtime's `Failure`,
+            // a library's error roots extend: the runtime's `Failure`,
             // an `Exception`.
             if is_external(p, s) && temper_tmpl::qname::library_of(p, s) == "core" {
-                if temper_tmpl::failures::root(p) != Some(s) {
+                if temper_tmpl::declared_errors::root(p) != Some(s) {
                     return not_yet("a class extending a core type");
                 }
                 bases.push(self.import("temper_core", "Failure"));
@@ -402,7 +402,7 @@ impl Translator<'_> {
             bases.push(self.ann(ty)?);
         }
         // A generic class names its type parameters, in order.
-        let params = temper_tmpl::failures::unchecked_type_params(p, decl);
+        let params = temper_tmpl::declared_errors::unchecked_type_params(p, decl);
         if !params.is_empty() {
             let mut names = Vec::new();
             for t in params {

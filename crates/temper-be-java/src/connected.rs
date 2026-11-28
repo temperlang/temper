@@ -83,9 +83,9 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Deque.removeFirst()",
         Connection::Static("Core", "dequeRemoveFirst"),
     ),
-    // A declared failure's cause is Java's own `getCause()`, where that's
-    // a declared failure (`temper.core.Failure`); its message,
-    // `getMessage()`, which every failure class overrides.
+    // A declared error's cause is Java's own `getCause()`, where that's
+    // a declared error (`temper.core.Failure`); its message,
+    // `getMessage()`, which every error class overrides.
     (
         "core.type Error.get cause()",
         Connection::Static("Core", "failureCause"),
@@ -615,7 +615,7 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
             import: "temper.core.Core.Console",
         },
     ),
-    // Core's own failures, the runtime's classes.
+    // Core's own errors, the runtime's classes.
     (
         "core.type CoreError",
         TypeConnection {
@@ -651,8 +651,8 @@ pub const TYPES: &[(&str, TypeConnection)] = &[
             import: "java.util.Optional",
         },
     ),
-    // Core's root of declared failures, the runtime's marker, which each
-    // library's failure roots implement.
+    // Core's root of declared errors, the runtime's marker, which each
+    // library's error roots implement.
     (
         "core.type Error",
         TypeConnection {
@@ -847,7 +847,7 @@ fn test_bail(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
 }
 
 /// `Core.blockPanics(block)`, which catches a panic, anything but a
-/// declared failure or a test's failure, for std's `Test.assertPanics`.
+/// declared error or a test's failure, for std's `Test.assertPanics`.
 fn test_panics(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let [_, block] = args else {
         return Err(NotYet {
@@ -1233,7 +1233,7 @@ fn new_value_result(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, Not
 }
 
 /// `Core.safeAdaptGeneratorFn(step::apply)`, a step function a generator,
-/// for `adaptGeneratorFn` too: Java's failures are unchecked, so a step
+/// for `adaptGeneratorFn` too: Java's errors are unchecked, so a step
 /// that throws passes it out of `get()` as a `BrokenGenerator`'s cause,
 /// leaving the generator done.
 fn safe_adapt_generator_fn(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {

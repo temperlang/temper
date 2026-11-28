@@ -195,7 +195,7 @@ pub enum Expr {
     Assign(&'static str, Box<Expr>, Box<Expr>),
     /// `yield value`, or a bare `yield`: in a `function*`.
     Yield(Option<Box<Expr>>),
-    /// `throw value`, a declared failure's: a `throw` statement as an
+    /// `throw value`, a declared error's: a `throw` statement as an
     /// expression statement's, an assignment's value, or a `return`'s
     /// (code after it, which JS never reaches, left out), and elsewhere,
     /// where JS has no `throw` expression, an arrow function called at
@@ -307,7 +307,7 @@ pub enum Stmt {
     Continue(Option<String>),
     /// `try { … } catch (var) { if (!caught) throw var; … }`, where
     /// `caught` says whether `var` is what a handler catches, as
-    /// `e instanceof NotFound` for a declared failure: Temper's `orelse` and `catch`, which take only
+    /// `e instanceof NotFound` for a declared error: Temper's `orelse` and `catch`, which take only
     /// what their bodies may fail with and rethrow anything else (a panic,
     /// a host error), which keeps what it said.
     Try {
@@ -349,7 +349,7 @@ pub enum Stmt {
     /// `test`, a new `class`, and running `body`, keeping what it threw
     /// in `failure`, then, even if it threw, `await endTest(test,
     /// failure)`, which finishes the async work it started and
-    /// `test.softFailToHard()`, the body's failure winning.
+    /// `test.softFailToHard()`, the body's error winning.
     Test {
         name: String,
         test: String,
@@ -720,7 +720,7 @@ fn stmt_at(out: &mut MappedText, s: &Stmt, depth: usize, span: Option<Span>) {
             out.mark(*span);
             stmt_at(out, s, depth, Some(*span));
         }
-        // A declared failure's `throw`, where code after it is never run.
+        // A declared error's `throw`, where code after it is never run.
         Stmt::Expr(Expr::Throw(e))
         | Stmt::Assign {
             value: Expr::Throw(e),
@@ -988,7 +988,7 @@ fn jsdoc(
     span: Option<Span>,
 ) {
     // A type parameter is a parameter named `@template`, first, and the
-    // declared failure it throws one named `@throws`, last.
+    // declared error it throws one named `@throws`, last.
     let mut tags: Vec<String> = params
         .iter()
         .filter(|(n, _)| n != "@throws")

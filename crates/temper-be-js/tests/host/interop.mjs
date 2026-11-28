@@ -45,7 +45,7 @@ for (const n of fibonacci()) {
 console.log(`fibonacci ${fib.join(",")}`);
 console.log(`collatz ${[...collatz(7)].join(",")}`);
 
-// A declared failure is an `Error` of its own class.
+// A declared error is an `Error` of its own class.
 try {
   console.log(`halve returned ${halve(3)}`);
 } catch (e) {

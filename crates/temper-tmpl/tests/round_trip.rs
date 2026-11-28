@@ -65,7 +65,7 @@ struct Callee {
     /// A method's receiver type; `None` for a function.
     receiver: Option<TypeId>,
     result: TypeId,
-    bubbles: bool,
+    fails: bool,
     params: Vec<TypeId>,
     optional: Vec<bool>,
 }
@@ -137,7 +137,7 @@ struct Gen {
     /// Enclosing loops' labels.
     loops: Vec<DeclId>,
     owner: DeclId,
-    may_bubble: bool,
+    may_fail: bool,
     /// std's `testing` module's `Test`, once a test needs it.
     test_type: Option<TypeId>,
     /// The module's classes and interfaces.
@@ -179,7 +179,7 @@ impl Gen {
     fn core(&mut self) {
         let b = &mut self.b;
         let core = b.uses("temper-core", "0.1.0");
-        // Core's `Error`, and a failure class below it, `ParseError`.
+        // Core's `Error`, and an error class below it, `ParseError`.
         let error = b.declare_type(DeclKind::Interface, "Error", core);
         let error = b.program().decls.get(error).ty;
         let core_error = b.declare_type(DeclKind::Interface, "CoreError", core);
@@ -197,10 +197,10 @@ impl Gen {
                       owner: DeclId,
                       params: &[(&str, TypeId, bool)],
                       result: TypeId,
-                      bubbles: bool| {
+                      fails: bool| {
             let types: Vec<TypeId> = params.iter().map(|p| p.1).collect();
             let optional: Vec<bool> = params.iter().map(|p| p.2).collect();
-            let returns = match bubbles {
+            let returns = match fails {
                 true => b.result(result, fail),
                 false => result,
             };
@@ -214,7 +214,7 @@ impl Gen {
                 decl,
                 receiver,
                 result,
-                bubbles,
+                fails,
                 params: types,
                 optional,
             }
@@ -396,7 +396,7 @@ impl Gen {
         }
         // Init: each module `let` initialized in order, then statements.
         self.owner = module;
-        self.may_bubble = true;
+        self.may_fail = true;
         self.scope.clear();
         let name = if self.rng.chance(50) {
             self.b.omitted(TypeId::STRING)
@@ -454,7 +454,7 @@ impl Gen {
             .declare_made(DeclKind::Param, &["test"], decl, test_type);
         let param = self.b.param(param);
         self.owner = decl;
-        self.may_bubble = true;
+        self.may_fail = true;
         self.scope = lets.to_vec();
         let stmts: Vec<NodeId> = (0..self.rng.below(3)).map(|_| self.stmt(2)).collect();
         let body = self.b.block(&stmts);
@@ -507,8 +507,8 @@ impl Gen {
         } else {
             self.rng.pick(&TYPES)
         };
-        let bubbles = self.rng.chance(30);
-        let returns = match bubbles {
+        let fails = self.rng.chance(30);
+        let returns = match fails {
             true => {
                 let fail = self.core.as_ref().unwrap().fail;
                 self.b.result(result, fail)
@@ -531,12 +531,12 @@ impl Gen {
             decl,
             receiver: None,
             result,
-            bubbles,
+            fails,
             params: params.clone(),
             optional: optional.clone(),
         });
         self.owner = decl;
-        self.may_bubble = bubbles;
+        self.may_fail = fails;
         self.scope = lets.to_vec();
         let mut param_nodes = Vec::new();
         let mut defaulted = Vec::new();
@@ -745,7 +745,7 @@ impl Gen {
     fn called_literal(&mut self, ty: TypeId, depth: usize) -> NodeId {
         let refs: Vec<Callee> = (self.functions.iter())
             .filter(|f| f.receiver.is_none() && f.result == ty && !f.optional.contains(&true))
-            .filter(|f| !f.bubbles || self.may_bubble)
+            .filter(|f| !f.fails || self.may_fail)
             .cloned()
             .collect();
         if !refs.is_empty() && self.rng.chance(40) {
@@ -761,7 +761,7 @@ impl Gen {
             .declare_made(DeclKind::Lambda, &["fn"], self.owner, sig);
         let param = self.declare(DeclKind::Param, decl, TypeId::INT32);
         let owner = std::mem::replace(&mut self.owner, decl);
-        let may_bubble = std::mem::replace(&mut self.may_bubble, false);
+        let may_fail = std::mem::replace(&mut self.may_fail, false);
         let loops = std::mem::take(&mut self.loops);
         let mark = self.scope.len();
         self.scope.push(Value {
@@ -780,7 +780,7 @@ impl Gen {
         let body = self.b.block(&stmts);
         self.scope.truncate(mark);
         self.owner = owner;
-        self.may_bubble = may_bubble;
+        self.may_fail = may_fail;
         self.loops = loops;
         let param = self.b.param(param);
         let literal = self.b.function_literal(sig, decl, &[param], body);
@@ -833,13 +833,13 @@ impl Gen {
                 self.b.block_value(ty, &[init], pick)
             }
             12 => {
-                let may_bubble = std::mem::replace(&mut self.may_bubble, true);
+                let may_fail = std::mem::replace(&mut self.may_fail, true);
                 let body = if self.rng.chance(20) {
                     self.throw(ty)
                 } else {
                     self.expr(ty, depth - 1)
                 };
-                self.may_bubble = may_bubble;
+                self.may_fail = may_fail;
                 let fallback = if self.rng.chance(20) {
                     self.b.panic(ty)
                 } else {
@@ -847,7 +847,7 @@ impl Gen {
                 };
                 self.b.or_else(ty, body, fallback)
             }
-            13 if self.may_bubble && self.rng.chance(30) => self.throw(ty),
+            13 if self.may_fail && self.rng.chance(30) => self.throw(ty),
             13 if self.rng.chance(30) => {
                 // A list's literal, its value dropped.
                 let item = self.rng.pick(&[TypeId::INT32, TypeId::STRING]);
@@ -914,11 +914,11 @@ impl Gen {
                 self.b.op(op, &args)
             }
             4 => {
-                let may_bubble = self.may_bubble;
+                let may_fail = self.may_fail;
                 let callees: Vec<Callee> = self
                     .functions
                     .iter()
-                    .filter(|f| f.result == ty && (may_bubble || !f.bubbles))
+                    .filter(|f| f.result == ty && (may_fail || !f.fails))
                     .cloned()
                     .collect();
                 if callees.is_empty() {
@@ -1009,7 +1009,7 @@ impl Gen {
         }
         if class.other.is_some() && depth > 0 {
             choices.push(4);
-            if self.may_bubble {
+            if self.may_fail {
                 choices.push(5);
             }
         }
@@ -1155,7 +1155,7 @@ impl Gen {
                     decl: getter,
                     receiver: Some(class.ty),
                     result: field.ty,
-                    bubbles: false,
+                    fails: false,
                     params: Vec::new(),
                     optional: Vec::new(),
                 });
@@ -1190,7 +1190,7 @@ impl Gen {
                     decl: eq,
                     receiver: Some(class.ty),
                     result: TypeId::BOOLEAN,
-                    bubbles: false,
+                    fails: false,
                     params: vec![class.ty],
                     optional: vec![false],
                 });
@@ -1219,7 +1219,7 @@ impl Gen {
             decl: method,
             receiver: Some(class.ty),
             result,
-            bubbles: false,
+            fails: false,
             params: params.iter().map(|p| p.1).collect(),
             optional: vec![false; params.len()],
         });
@@ -1231,7 +1231,7 @@ impl Gen {
     fn member(&mut self, c: usize, body: Body, lets: &[Value]) -> NodeId {
         let class = self.classes[c].clone();
         self.scope = lets.to_vec();
-        self.may_bubble = false;
+        self.may_fail = false;
         self.this = Some(c);
         let node = match body {
             Body::Constructor(ctor, params) => {
@@ -1399,7 +1399,7 @@ fn random_programs_validate_and_round_trip() {
             loops: Vec::new(),
             owner: DeclId::NONE,
             test_type: None,
-            may_bubble: false,
+            may_fail: false,
             classes: Vec::new(),
             this: None,
             statics_ready: true,

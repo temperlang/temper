@@ -19,8 +19,8 @@ error 33..54: No member full in Match?
 Panicked: No member full in Match?
 
 === replace passes on what its callback throws, and can't fail where its callback can't
-// RFC 164: `Regex.replace` is generic over its callback's failure type,
-// as core's `map` is: the first failure passes out, with no result.
+// RFC 164: `Regex.replace` is generic over its callback's error type,
+// as core's `map` is: the first error passes out, with no result.
 sealed interface AppError extends Error {}
 class Missing(public key: String) extends AppError {}
 let find(key: String): Int throws Missing {

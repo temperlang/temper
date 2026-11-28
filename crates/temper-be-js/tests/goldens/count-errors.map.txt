@@ -1,0 +1,28 @@
+# generated line:column -> source:line:column, and the text at each
+3:1 -> ../count-errors.temper.md:10:5  /** <- export let parseCount(text:
+8:1 -> ../count-errors.temper.md:10:5  export function parseCount(t <- export let parseCount(text:
+8:17 -> ../count-errors.temper.md:10:16 (parseCount)  parseCount(text) { <- parseCount(text: String): In
+8:27 -> ../count-errors.temper.md:10:5  (text) { <- export let parseCount(text:
+9:3 -> ../count-errors.temper.md:11:7  { <- when (text) {
+10:5 -> ../count-errors.temper.md:12:19  if (text === "zero") { <- 0;
+11:7 -> ../count-errors.temper.md:12:19  return 0; <- 0;
+12:12 -> ../count-errors.temper.md:13:18  if (text === "two") { <- 2;
+13:7 -> ../count-errors.temper.md:13:18  return 2; <- 2;
+15:7 -> ../count-errors.temper.md:14:17  throw new BadCount(text); <- throw new BadCount(text);
+20:1 -> ../count-errors.temper.md:7:5  export class CountError exte <- export sealed interface Coun
+20:14 -> ../count-errors.temper.md:7:29 (CountError)  CountError extends Error {} <- CountError extends Error {}
+20:24 -> ../count-errors.temper.md:7:5   extends Error {} <- export sealed interface Coun
+24:1 -> ../count-errors.temper.md:8:5  export class BadCount extend <- export class BadCount(public
+24:14 -> ../count-errors.temper.md:8:18 (BadCount)  BadCount extends CountError <- BadCount(public text: String
+24:22 -> ../count-errors.temper.md:8:5   extends CountError { <- export class BadCount(public
+25:3 -> ../count-errors.temper.md:8:34  /** @type {string} */ <- text: String) extends CountE
+26:3 -> ../count-errors.temper.md:8:34  #text; <- text: String) extends CountE
+28:3 -> ../count-errors.temper.md:8:5  /** @param {string} text */ <- export class BadCount(public
+29:3 -> ../count-errors.temper.md:8:5  constructor(text) { <- export class BadCount(public
+31:5 -> ../count-errors.temper.md:8:34  this.#text = text; <- text: String) extends CountE
+34:3 -> ../count-errors.temper.md:8:34  /** @returns {string} */ <- text: String) extends CountE
+35:3 -> ../count-errors.temper.md:8:34  get text() { <- text: String) extends CountE
+35:7 -> ../count-errors.temper.md:8:34 (text)  text() { <- text: String) extends CountE
+39:3 -> ../count-errors.temper.md:8:5  /** @returns {string} */ <- export class BadCount(public
+40:3 -> ../count-errors.temper.md:8:5  get message() { <- export class BadCount(public
+41:5 -> ../count-errors.temper.md:8:5  return `bad count (text: ${t <- export class BadCount(public

@@ -39,15 +39,15 @@
 //! - A class's plain `toString()` overrides `Object`'s, by its name
 //!   alone; an `@operator` method is a method; `<=>`'s calls compare
 //!   with 0 as tmpl has them.
-//! - A declared failure type (RFC 164) is an unchecked exception: each of
+//! - A declared error type (RFC 164) is an unchecked exception: each of
 //!   the library's roots, `public abstract class WherewithException extends
 //!   RuntimeException implements Failure` (the runtime's marker, for
-//!   core's `Error`), a sealed failure interface an abstract class under
-//!   it, and a failure class a final class under the one failure type
+//!   core's `Error`), a sealed error interface an abstract class under
+//!   it, and an error class a final class under the one error type
 //!   above it (not `sealed`: a library's modules are packages of their
 //!   own), each `@SuppressWarnings("serial")`. Its `message` getter is
 //!   `getMessage()`, overriding `Throwable`'s, and its cause is
-//!   `Throwable`'s own ([`failure_class`]).
+//!   `Throwable`'s own ([`error_class`]).
 //! - A user's connected class that host code defines (per
 //!   `temper_tmpl::host::uses_host`) isn't generated: the library's own
 //!   `NAME.java` beside the module is copied in its place.
@@ -242,7 +242,7 @@ fn reaching(p: &Program, ty: DeclId, method: DeclId, key: Key<'_>) -> Option<Dec
 
 const PRIMITIVES: &[&str] = &["boolean", "int", "long", "double"];
 
-/// `Throwable`'s methods that a failure type's own members mustn't
+/// `Throwable`'s methods that an error type's own members mustn't
 /// override, as they'd change what Java's exceptions do (`getCause()`,
 /// stack traces) or their types clash: all but `getMessage()` and
 /// `toString()`.
@@ -258,15 +258,19 @@ const THROWABLE_METHODS: &[&str] = &[
     "setStackTrace",
 ];
 
-/// Whether a declaration is a declared failure type of the program's own
-/// (`temper_tmpl::failures`): a class, under `RuntimeException`, or an
+/// Whether a declaration is a declared error type of the program's own
+/// (`temper_tmpl::declared_errors`): a class, under `RuntimeException`, or an
 /// interface (a root, or another sealed one), as an abstract class,
-/// since Java's exceptions are classes. Each has one failure type above
+/// since Java's exceptions are classes. Each has one error type above
 /// it (the frontend's rule), which it extends.
-pub(super) fn failure_class(p: &Program, decl: DeclId) -> bool {
+pub(super) fn error_class(p: &Program, decl: DeclId) -> bool {
     is_type(p, decl)
         && !is_external(p, decl)
-        && temper_tmpl::failures::is_failure_decl(p, temper_tmpl::failures::root(p), decl)
+        && temper_tmpl::declared_errors::is_error_decl(
+            p,
+            temper_tmpl::declared_errors::root(p),
+            decl,
+        )
 }
 
 /// A method's parameters' declarations.
@@ -550,9 +554,9 @@ impl Translator<'_> {
 
     fn type_decl(&mut self, decl: DeclId) -> R<tree::TypeDecl> {
         let p = self.p;
-        // A declared failure type is a class under `RuntimeException`, a
-        // sealed interface of them an abstract one ([`failure_class`]).
-        let failure = failure_class(p, decl);
+        // A declared error type is a class under `RuntimeException`, a
+        // sealed interface of them an abstract one ([`error_class`]).
+        let failure = error_class(p, decl);
         let kind = match (p.decls.get(decl).kind, failure) {
             (DeclKind::Interface, false) => TypeKind::Interface,
             (DeclKind::Interface, true) => TypeKind::AbstractClass,
@@ -637,7 +641,7 @@ impl Translator<'_> {
                         // parameters: `Builder<T>`, building `Change<T>`.
                         let generics = self.type_params(decl)?.trim_end().to_string();
                         let uses: Vec<String> =
-                            (temper_tmpl::failures::unchecked_type_params(p, decl).iter())
+                            (temper_tmpl::declared_errors::unchecked_type_params(p, decl).iter())
                                 .map(|&t| p.name(t).to_string())
                                 .collect();
                         let uses = match uses.as_slice() {
@@ -804,7 +808,7 @@ impl Translator<'_> {
         let generics = self.type_params(decl)?.trim_end().to_string();
         let mut annotations = Vec::new();
         if failure {
-            self.failure_members(kind, &name, &mut members)?;
+            self.error_members(kind, &name, &mut members)?;
             // Not meant for Java's serialization, whose lints would ask for
             // a `serialVersionUID` and fields of serializable types.
             annotations.push("@SuppressWarnings(\"serial\")".to_string());
@@ -826,25 +830,25 @@ impl Translator<'_> {
     }
 
     /// The class a type extends, if any, and what else it implements (or
-    /// for an interface, extends): a declared failure type
-    /// ([`failure_class`]) extends the one failure type above it, a root
+    /// for an interface, extends): a declared error type
+    /// ([`error_class`]) extends the one error type above it, a root
     /// `RuntimeException`, implementing the runtime's
     /// marker, `Failure`, core's `Error`.
     fn supers(&mut self, decl: DeclId, failure: bool) -> R<(Option<String>, Vec<String>)> {
         let p = self.p;
-        let root = temper_tmpl::failures::root(p);
+        let root = temper_tmpl::declared_errors::root(p);
         let mut extends = None;
         let mut supers = Vec::new();
         for &s in p.decls.supers(decl) {
             let up = nominal_decl(p, s);
             let parent = failure
-                && up.is_some_and(|u| u == root.unwrap_or(DeclId::NONE) || failure_class(p, u));
+                && up.is_some_and(|u| u == root.unwrap_or(DeclId::NONE) || error_class(p, u));
             if !parent {
                 supers.push(self.ty(s)?);
                 continue;
             }
             if extends.is_some() {
-                return not_yet("a failure type with two failure types above it");
+                return not_yet("an error type with two error types above it");
             }
             if up == root {
                 extends = Some("RuntimeException".to_string());
@@ -856,15 +860,15 @@ impl Translator<'_> {
         Ok((extends, supers))
     }
 
-    /// A failure type's members as Java has them: an abstract one's
+    /// An error type's members as Java has them: an abstract one's
     /// constructor, `protected` for its subclasses in the library's other
     /// packages, and its methods with bodies a class's; and none named as
-    /// `Throwable`'s methods but `getMessage()`, which a failure's
+    /// `Throwable`'s methods but `getMessage()`, which an error's
     /// `message` overrides.
-    fn failure_members(&self, kind: TypeKind, name: &str, members: &mut Vec<Member>) -> R<()> {
+    fn error_members(&self, kind: TypeKind, name: &str, members: &mut Vec<Member>) -> R<()> {
         for m in members.iter_mut() {
             if THROWABLE_METHODS.contains(&m.name.as_str()) {
-                return not_yet(format!("a failure type's member named {}", m.name));
+                return not_yet(format!("an error type's member named {}", m.name));
             }
             if m.kind == MemberKind::Default {
                 m.kind = MemberKind::Instance;
@@ -955,8 +959,8 @@ impl Translator<'_> {
             },
         };
         let (result, result_ty) = self.result(method)?;
-        // A failure class's, which is a class, its own `super`.
-        let through = match failure_class(p, through) {
+        // An error class's, which is a class, its own `super`.
+        let through = match error_class(p, through) {
             true => "super".to_string(),
             false => format!("{}.super", self.class_name(through)),
         };

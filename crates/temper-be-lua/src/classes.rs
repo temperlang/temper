@@ -221,19 +221,19 @@ impl Types {
 
 impl Translator<'_> {
     /// A type's table, as code refers to it.
-    /// Core's failure types are the runtime's: `Error`, the root of
-    /// declared failures, its `temper.Failure`, and `MissingKey` its
+    /// Core's error types are the runtime's: `Error`, the root of
+    /// declared errors, its `temper.Failure`, and `MissingKey` its
     /// `temper.MissingKey`.
     pub(crate) fn type_ref(&self, ty: DeclId) -> Expr {
-        if let Some(name) = self.core_failure(ty) {
+        if let Some(name) = self.core_error(ty) {
             return ops::temper().member(name);
         }
         self.access(ty)
     }
 
-    /// The runtime's name for one of core's failure types: `Failure` for
+    /// The runtime's name for one of core's error types: `Failure` for
     /// `Error`, the root, and the type's own for the others.
-    pub(crate) fn core_failure(&self, ty: DeclId) -> Option<&'static str> {
+    pub(crate) fn core_error(&self, ty: DeclId) -> Option<&'static str> {
         if !is_external(self.p, ty) {
             return None;
         }
@@ -250,10 +250,10 @@ impl Translator<'_> {
     }
 
     /// A type's name, for the runtime and for LuaLS: its module's path,
-    /// with `.` for `/`, and its name; for core's failure types, the
+    /// with `.` for `/`, and its name; for core's error types, the
     /// runtime's, as `temper.Failure`.
     pub(crate) fn lua_type(&self, ty: DeclId) -> String {
-        if let Some(name) = self.core_failure(ty) {
+        if let Some(name) = self.core_error(ty) {
             return format!("temper.{name}");
         }
         let module = home(self.p, ty).unwrap_or(ty);
@@ -340,8 +340,8 @@ impl Translator<'_> {
         let supers: Vec<DeclId> = (p.decls.supers(decl).iter())
             .filter_map(|&s| nominal_decl(p, s))
             .collect();
-        // A declared failure type, whose `message` is its `__tostring`.
-        let failure = temper_tmpl::failures::is_below_root(p, decl);
+        // A declared error type, whose `message` is its `__tostring`.
+        let failure = temper_tmpl::declared_errors::is_below_root(p, decl);
 
         // The instance's LuaCATS class.
         let mut doc = vec![match supers.is_empty() {
@@ -815,23 +815,23 @@ pub fn classy(p: &Program, id: NodeId, classy: &HashSet<DeclId>) -> bool {
     found
 }
 
-/// The failure type a handler (`orelse` or `catch`) catches by its table,
+/// The error type a handler (`orelse` or `catch`) catches by its table,
 /// as `temper.catch`'s argument: the one nearest above the declared
-/// failures its body may fail with, if any (core's `Error` for several
+/// errors its body may fail with, if any (core's `Error` for several
 /// libraries').
 pub fn caught_type(p: &Program, handler: NodeId) -> Option<DeclId> {
     let (Node::OrElse { body, .. } | Node::Catch { body, .. }) = p.nodes.get(handler) else {
         return None;
     };
-    let fails: Vec<TypeId> = (temper_tmpl::failures::failures_under(p, body).into_iter())
+    let fails: Vec<TypeId> = (temper_tmpl::declared_errors::errors_under(p, body).into_iter())
         .map(|(_, f)| f)
         .collect();
-    let root = temper_tmpl::failures::root(p);
-    nominal_decl(p, temper_tmpl::failures::join(p, root, &fails)?)
+    let root = temper_tmpl::declared_errors::root(p);
+    nominal_decl(p, temper_tmpl::declared_errors::join(p, root, &fails)?)
 }
 
 /// What `roots` import ([`temper_tmpl::analysis::imports`]), with the
-/// types they cast to with `as`, or whose failures a handler catches,
+/// types they cast to with `as`, or whose errors a handler catches,
 /// which need the type's table, though tmpl's imports don't list them.
 pub fn with_casts(
     p: &Program,

@@ -30,7 +30,7 @@ use super::{R, Translator, Want, not_yet};
 use crate::ops::{self, Spelling};
 use crate::tree::{Bin, Block, Expr, Fail, Stmt, Unary, panic_caused_by};
 use temper_tmpl::analysis::walk;
-use temper_tmpl::failures::{failures_under, join};
+use temper_tmpl::declared_errors::{errors_under, join};
 use temper_tmpl::{DeclId, Flags, Node, NodeId, TypeId};
 
 impl Translator<'_> {
@@ -185,12 +185,12 @@ impl Translator<'_> {
     }
 
     /// Whether anything under `id`, not `id` itself, may fail, or
-    /// returns, but in a function literal, whose failures and returns are
+    /// returns, but in a function literal, whose errors and returns are
     /// its own.
     fn fails_below(&self, id: NodeId) -> bool {
         let p = self.p;
         let fails = |n: NodeId| {
-            p.nodes.flags(n).contains(Flags::MAY_BUBBLE)
+            p.nodes.flags(n).contains(Flags::MAY_FAIL)
                 || matches!(p.nodes.get(n), Node::Return { .. })
         };
         (p.nodes.kids(id).iter()).any(|&k| match p.nodes.get(k) {
@@ -203,7 +203,7 @@ impl Translator<'_> {
     /// it fails, outside an `orelse` of its own and function literals.
     fn may_fail(&self, id: NodeId) -> bool {
         let p = self.p;
-        if p.nodes.flags(id).contains(Flags::MAY_BUBBLE) {
+        if p.nodes.flags(id).contains(Flags::MAY_FAIL) {
             return true;
         }
         match p.nodes.get(id) {
@@ -219,7 +219,7 @@ impl Translator<'_> {
         let p = self.p;
         let mut found = false;
         walk(p, id, &mut |n| {
-            found |= p.nodes.flags(n).contains(Flags::MAY_BUBBLE)
+            found |= p.nodes.flags(n).contains(Flags::MAY_FAIL)
                 || matches!(
                     p.nodes.get(n),
                     Node::Return { .. } | Node::Break { .. } | Node::Continue { .. }
@@ -229,15 +229,15 @@ impl Translator<'_> {
     }
 
     /// What a handler around `body` handles, its body's `Result`'s
-    /// failure: the failure type nearest above all its failures
-    /// (`temper_tmpl::failures::join`), so a handler catches exactly
+    /// error: the error type nearest above all its errors
+    /// (`temper_tmpl::declared_errors::join`), so a handler catches exactly
     /// those, never a panic.
     pub(crate) fn handled(&self, body: NodeId) -> R<TypeId> {
         let p = self.p;
-        let fails: Vec<TypeId> = (failures_under(p, body).into_iter())
+        let fails: Vec<TypeId> = (errors_under(p, body).into_iter())
             .map(|(_, f)| f)
             .collect();
-        match join(p, self.failure_root, &fails) {
+        match join(p, self.error_root, &fails) {
             Some(fail) => Ok(fail),
             // Backends drop handlers whose bodies can't fail first.
             None => not_yet("a handler whose body can't fail"),
@@ -299,12 +299,12 @@ impl Translator<'_> {
     }
 
     /// A statement `orelse` whose body jumps, as Kotlin's: the body in
-    /// place, in a labeled block that a failure breaks out of to the
+    /// place, in a labeled block that an error breaks out of to the
     /// fallback, and that a body run to its end skips the fallback from:
     /// `'ok: { 'orelse: { …; break 'ok; } fallback; }`. A `?` in the body
     /// (outside its closures) is `if let Ok(v) = e { v } else { break
-    /// 'orelse; }`. With `orelse panic()`, the body alone, whose failures
-    /// panic in place, saying their failure ([`Fail::Panic`]).
+    /// 'orelse; }`. With `orelse panic()`, the body alone, whose errors
+    /// panic in place, saying their error ([`Fail::Panic`]).
     fn or_else_in_place(&mut self, body: NodeId, fallback: NodeId, out: &mut Vec<Stmt>) -> R<()> {
         let (orelse, ok) = match self.orelse.len() {
             0 => ("'orelse".to_string(), "'ok".to_string()),
@@ -312,7 +312,7 @@ impl Translator<'_> {
         };
         if !self.may_fail(body) {
             // Its fallback never runs: std's `parseJsonNumber`'s `do { … }
-            // orelse panic()`, whose one failure has an `orelse` of its own.
+            // orelse panic()`, whose one error has an `orelse` of its own.
             return self.body_stmts(body, out);
         }
         self.orelse.push(orelse.clone());
@@ -320,7 +320,7 @@ impl Translator<'_> {
         let result = self.body_stmts(body, &mut stmts);
         self.orelse.pop();
         result?;
-        // `orelse panic()` panics where the body fails, its failure the
+        // `orelse panic()` panics where the body fails, its error the
         // cause, so the body needs no block to break out of.
         if matches!(self.p.nodes.get(fallback), Node::Panic {}) {
             crate::tree::retarget_tries(&mut stmts, Fail::Panic(&orelse));
@@ -328,7 +328,7 @@ impl Translator<'_> {
             return Ok(());
         }
         if !crate::tree::retarget_tries(&mut stmts, Fail::Break(&orelse)) {
-            return not_yet("a failure too long for a line in an orelse's body that jumps");
+            return not_yet("an error too long for a line in an orelse's body that jumps");
         }
         // A body that ends in a `return` on every path (std's
         // `parseJsonObject`) needs no `break` past the fallback, nor the
@@ -356,7 +356,7 @@ impl Translator<'_> {
 
     fn attempt_inner(&mut self, body: NodeId) -> R<Expr> {
         let p = self.p;
-        if p.nodes.flags(body).contains(Flags::MAY_BUBBLE)
+        if p.nodes.flags(body).contains(Flags::MAY_FAIL)
             && !self.fails_below(body)
             && self.try_strips(body)
         {
@@ -375,7 +375,7 @@ impl Translator<'_> {
             Node::BlockValue { stmts: kids, value } => {
                 for &s in p.nodes.list(kids) {
                     walk(p, s, &mut |n| {
-                        stmts_fail |= p.nodes.flags(n).contains(Flags::MAY_BUBBLE);
+                        stmts_fail |= p.nodes.flags(n).contains(Flags::MAY_FAIL);
                     });
                     self.stmt(s, &mut stmts)?;
                 }
@@ -420,7 +420,7 @@ impl Translator<'_> {
                 let Some(fail) = self.fails else {
                     return not_yet("an orelse's body that can't fail");
                 };
-                Expr::path(format!("Ok::<_, {}>", self.failure_ty(fail)?)).call(vec![v])
+                Expr::path(format!("Ok::<_, {}>", self.error_ty(fail)?)).call(vec![v])
             }
         };
         let closure = Expr::Closure(Vec::new(), Block::new(stmts, Some(tail)));
@@ -498,7 +498,7 @@ impl Translator<'_> {
         if let Expr::Call(f, args) = &attempt {
             if let (Expr::Closure(params, block), true) = (&**f, args.is_empty()) {
                 let fail = self.handled(body)?;
-                let error = self.failure_ty(fail)?;
+                let error = self.error_ty(fail)?;
                 let unit = Expr::path(format!("Ok::<_, {error}>")).call(vec![Expr::path("()")]);
                 if params.is_empty()
                     && block.tail.as_deref() == Some(&unit)
@@ -553,7 +553,7 @@ impl Translator<'_> {
     /// `body catch (local) { fallback }` as a value: `attempt
     /// .unwrap_or_else(|e| fallback)`; where the fallback throws,
     /// `attempt.map_err(|e| thrown)?`; and where it may fail otherwise,
-    /// `attempt.or_else(|e| fallback's attempt)?`, its failures the code's
+    /// `attempt.or_else(|e| fallback's attempt)?`, its errors the code's
     /// own. A fallback that jumps (`return`, `break`, `continue`) is
     /// never a value: `to_tmpl` makes it a statement ([`Self::catch_stmt`]).
     pub(crate) fn catch(
@@ -590,7 +590,7 @@ impl Translator<'_> {
                 }
             }
             // A handler that always throws, after statements or not, maps
-            // the failure (clippy's `bind_instead_of_map`).
+            // the error (clippy's `bind_instead_of_map`).
             let thrown = |tail: &Expr| match tail {
                 Expr::Call(f, args) if **f == Expr::path("Err") && args.len() == 1 => {
                     Some(args[0].clone())
@@ -616,7 +616,7 @@ impl Translator<'_> {
 
     /// `body catch (local) { fallback }` standing alone: `if let Err(e) =
     /// body { fallback }`, where the fallback may jump too, as `to_tmpl`
-    /// makes one whose fallback keeps the failure for code after it.
+    /// makes one whose fallback keeps the error for code after it.
     pub(crate) fn catch_stmt(
         &mut self,
         local: DeclId,

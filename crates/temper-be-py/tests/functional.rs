@@ -21,8 +21,8 @@
 //! other modules, the testkit's `WITH_STD`, and `net`'s, `NET`, against
 //! the testkit's test server; and for generators, `async`,
 //! and `await`, as Python's generators, the testkit's `ASYNC`; and for
-//! declared failures, the testkit's `failures`, `host-failures`, and
-//! `failures-interop`, and its specification `failure-params`.
+//! declared errors, the testkit's `declared-errors`, `host-declared-errors`, and
+//! `errors-interop`, and its specification `error-params`.
 //!
 //! - `goldens`: each test's generated Python, laid out as Kotlin's, with
 //!   its root module matching the golden in `tests/goldens/`, named for
@@ -63,7 +63,7 @@ use temper_be_py::{OutFile, PY, translate};
 use temper_be_testkit::{self as kit, Case, Goldens};
 
 /// The shared programs that Python's translation covers so far, and the
-/// testkit's specifications `failure-params` and `failure-generators`
+/// testkit's specifications `error-params` and `error-generators`
 /// (`kit::SPECS`).
 const PROGRAMS: [&str; 33] = [
     "classes",
@@ -93,12 +93,12 @@ const PROGRAMS: [&str; 33] = [
     "host-error-causes",
     "host-error-tests",
     "sealed-whens",
-    "failures",
-    "host-failures",
-    "failures-interop",
+    "declared-errors",
+    "host-declared-errors",
+    "errors-interop",
     "dead-handlers.tmpl",
-    "failure-params",
-    "failure-generators",
+    "error-params",
+    "error-generators",
 ];
 
 fn cases() -> Vec<Case> {
@@ -147,8 +147,8 @@ const PY_PROGRAMS: [&str; 1] = ["py-builtin-params"];
 
 /// The programs whose libraries `host_interop` imports after
 /// `async-turns`, in order: `py-builtin-params`, and the shared
-/// `failures-interop`, whose declared failures it catches.
-const INTEROP: [&str; 2] = ["py-builtin-params", "failures-interop"];
+/// `errors-interop`, whose declared errors it catches.
+const INTEROP: [&str; 2] = ["py-builtin-params", "errors-interop"];
 
 /// The lines of a program's log blocks, in order.
 fn log_blocks(text: &str) -> Vec<String> {
@@ -944,10 +944,10 @@ fn runs() {
 /// standard way: it awaits a generated promise with `.result()`, with
 /// asyncio, and with asyncio as the runner; blocks on one inside a turn,
 /// which fails clearly; loops over a generated generator, which a
-/// failed step leaves done; catches a failure as `RuntimeError`; and,
+/// failed step leaves done; catches an error as `RuntimeError`; and,
 /// once `py-builtin-params`'s import has logged `then`, passes its constructor its parameters by name
-/// (`help=`), as they keep their names; and once `failures-interop`'s import
-/// has logged `failing`, catches its declared failures by their own
+/// (`help=`), as they keep their names; and once `errors-interop`'s import
+/// has logged `failing`, catches its declared errors by their own
 /// types, its base, and a sealed interface's, with their messages and
 /// causes, while a panic passes `except Exception`. mypy and pyright check it,
 /// strict, as they do generated code, so a bare `await` of a generated

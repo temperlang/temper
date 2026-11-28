@@ -8,7 +8,7 @@
 //! that overrides nothing, so its signature needn't match another's, and
 //! that isn't read as a value. Everywhere else, and everywhere for a target
 //! without one, `Never<T>` becomes the `T` it stands for, as core's docs
-//! say, but a failure parameter's `Never<T>` argument, which says "can't
+//! say, but an error parameter's `Never<T>` argument, which says "can't
 //! fail" (RFC 164), not a value's type. A call that ends its block as a statement then loses what told
 //! the target that control doesn't go on, so a `panic()` follows it, as
 //! the target's compiler may need for a local assigned only on the other
@@ -239,7 +239,7 @@ fn keep_result(types: &mut crate::TypeTable, ty: TypeId, done: &mut Lowered<'_>)
 fn payload_types(b: &mut Builder, id: NodeId, done: &mut Lowered<'_>) -> (u32, u32) {
     let kind: Kind = b.program().nodes.kind(id);
     let (mut a, mut c) = b.program().nodes.slots(id);
-    let generic = crate::failures::call_generic(done.p, id).map(|(g, _)| g);
+    let generic = crate::declared_errors::call_generic(done.p, id).map(|(g, _)| g);
     for field in kind.fields() {
         let types = &mut b.program_mut().types;
         match field.slot {
@@ -270,11 +270,11 @@ fn lowered_args(
     types.type_args(&list)
 }
 
-/// Type arguments for `generic`'s type parameters, lowered, but a
-/// failure parameter's `Never<T>`, kept as "can't fail" (RFC 164), which
-/// no value has: targets with generic failures write it as an
+/// Type arguments for `generic`'s type parameters, lowered, but an
+/// error parameter's `Never<T>`, kept as "can't fail" (RFC 164), which
+/// no value has: targets with generic errors write it as an
 /// uninhabited type (Rust's `Infallible`, C++'s `Never`), and the others
-/// leave failure parameters out (`failures::erase_params`).
+/// leave error parameters out (`declared_errors::erase_params`).
 fn lowered_list(
     types: &mut crate::TypeTable,
     generic: DeclId,
@@ -283,10 +283,11 @@ fn lowered_list(
 ) -> Vec<TypeId> {
     let p = done.p;
     let params = p.decls.type_params(generic);
-    let is_failure =
-        |i: usize| params.len() == args.len() && crate::failures::is_failure_param(p, params[i]);
+    let is_error = |i: usize| {
+        params.len() == args.len() && crate::declared_errors::is_error_param(p, params[i])
+    };
     (args.iter().enumerate())
-        .map(|(i, &t)| match is_failure(i) && types.is_never(t) {
+        .map(|(i, &t)| match is_error(i) && types.is_never(t) {
             true => t,
             false => fallback(types, t, done),
         })

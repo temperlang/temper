@@ -211,8 +211,8 @@ impl Interp<'_> {
                     loop_body,
                 } => {
                     let mut captures = capture(frame, sources);
-                    // A `for … of` body made in a handler may throw a
-                    // failure caused by the one handled.
+                    // A `for … of` body made in a handler may throw an
+                    // error caused by the one handled.
                     if let Some(handled) = loop_body.then(|| handled(frame, at)).flatten() {
                         let cell = Rc::new(RefCell::new(handled));
                         captures = captures.iter().cloned().chain([cell]).collect();
@@ -272,12 +272,12 @@ impl Interp<'_> {
                 Op::Exit(Exit::Continue(target)) => Err(Abrupt::Continue(*target)),
                 Op::Exit(Exit::Return(target)) => Err(Abrupt::Return(*target, frame.pop())),
                 Op::Throw => match frame.pop() {
-                    failure @ (Val::Object(_) | Val::CoreFailure(_)) => {
+                    failure @ (Val::Object(_) | Val::CoreDeclaredError(_)) => {
                         mark_thrown(s, frame, at, &failure);
                         Err(Abrupt::Throw(failure))
                     }
                     other => Err(fail(format!(
-                        "Expected a failure, not {}",
+                        "Expected an error, not {}",
                         super::type_name(&other)
                     ))),
                 },
@@ -347,18 +347,18 @@ fn capture(frame: &Frame, sources: &[Source]) -> Rc<[Cell]> {
     sources.iter().map(source).collect()
 }
 
-/// The failure being handled where the op at `at` runs, if the code
+/// The error being handled where the op at `at` runs, if the code
 /// there needs it ([`super::lower::Handler`]): the innermost handler's
 /// whose fallback it's in, or, in a `for … of` body made in one, the
 /// one it captured after its variables.
-/// Notes where a failure is first thrown, by `throw` or by a builtin the
+/// Notes where an error is first thrown, by `throw` or by a builtin the
 /// op at `at` calls, as core's `Mapped.get`, and what's handled there.
 fn mark_thrown(s: &Settled, frame: &Frame, at: u32, failure: &Val) {
     let Some(cell) = thrown_cell(failure).filter(|c| c.get().is_none()) else {
         return;
     };
     let cause = match handled(frame, at) {
-        Some(handled @ (Val::Object(_) | Val::CoreFailure(_))) => Some(Cause(handled)),
+        Some(handled @ (Val::Object(_) | Val::CoreDeclaredError(_))) => Some(Cause(handled)),
         _ => None,
     };
     let at = s.library.tree.span(frame.code.nodes[at as usize]).start;
@@ -378,7 +378,7 @@ fn handled(frame: &Frame, at: u32) -> Option<Val> {
 
 impl Interp<'_> {
     /// Where an abrupt end of an op at `at` goes: an `orelse`'s handler
-    /// for a failure, which keeps it if its fallback needs it, a landing
+    /// for an error, which keeps it if its fallback needs it, a landing
     /// for a jump from a `for … of` body's call, or this frame's end
     /// (`Some`) for its own `return` or `continue`. Anything else goes on
     /// to the caller.
@@ -391,7 +391,7 @@ impl Interp<'_> {
     ) -> Result<Option<Val>, Abrupt> {
         let code = frame.code.clone();
         let within = |start: u32, end: u32| start <= at && at < end;
-        if let Abrupt::Throw(failure @ Val::CoreFailure(_)) = &abrupt {
+        if let Abrupt::Throw(failure @ Val::CoreDeclaredError(_)) = &abrupt {
             mark_thrown(s, frame, at, failure);
         }
         match abrupt {

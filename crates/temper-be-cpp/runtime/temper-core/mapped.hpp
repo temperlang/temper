@@ -4,7 +4,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
-#include "temper_bubble.hpp"
+#include "temper_panic.hpp"
 #include "base_types.hpp"
 #include "expected.hpp"
 #include "failure.hpp"

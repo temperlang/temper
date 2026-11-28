@@ -213,7 +213,7 @@ impl Test {
     }
 
     /// The tests a run as tests expects to fail, each its name and text
-    /// its failure's cause contains, from its metadata's
+    /// its error's cause contains, from its metadata's
     /// `expectedFailures = mapOf("name" to """cause""", …)`.
     pub fn expected_failures(&self) -> Vec<(String, String)> {
         expected_failures(&self.main_text())

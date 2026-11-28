@@ -15,8 +15,8 @@
 //! of labeled loops' jumps and classes declared in functions
 //! (`temper_be_testkit::LOOPS_AND_CLASSES`), and of generators, `async`,
 //! and `await`, as `function*`s (`temper_be_testkit::ASYNC`), and
-//! declared failures, the testkit's `failures`, `host-failures`, and
-//! `failures-interop`, and its specification `failure-params` ([`SPECS`]),
+//! declared errors, the testkit's `declared-errors`, `host-declared-errors`, and
+//! `errors-interop`, and its specification `error-params` ([`SPECS`]),
 //! and this crate's own programs (`tests/programs/`,
 //! [`OWN`]).
 //!
@@ -64,8 +64,8 @@ use temper_be_testkit::{self as kit, Case, Goldens};
 use temper_tmpl::source_map::{Segment, decode_mappings};
 
 /// The testkit's specifications (`kit::SPECS`) this backend runs, which
-/// others don't all yet: `failure-params` and `failure-generators`.
-const SPECS: [&str; 2] = ["failure-params", "failure-generators"];
+/// others don't all yet: `error-params` and `error-generators`.
+const SPECS: [&str; 2] = ["error-params", "error-generators"];
 
 fn cases() -> Vec<Case> {
     let tests = [
@@ -121,9 +121,9 @@ fn cases() -> Vec<Case> {
 /// JS writes as statements before the expression they're in.
 const OWN: [&str; 1] = ["hoisting"];
 
-/// A run of a program in sections (`host-failures-cause`, of
-/// `host-failures`), a library of its own, with the program's host code
-/// importing from that library's module (`./host_failures_cause.js`).
+/// A run of a program in sections (`host-declared-errors-cause`, of
+/// `host-declared-errors`), a library of its own, with the program's host code
+/// importing from that library's module (`./host_declared_errors_cause.js`).
 fn rename_host_code(case: &mut Case) {
     let Some(program) = case.dir.file_name().and_then(|f| f.to_str()) else {
         return;
@@ -827,19 +827,19 @@ fn host_interop(node: &str, root: &Path, logged: &[String], failures: &mut Vec<S
     script
 }
 
-/// `tests/host/failures.mjs`, host code that catches `failures-interop`'s
-/// declared failures by their own types, the library's base, a sealed
+/// `tests/host/errors.mjs`, host code that catches `errors-interop`'s
+/// declared errors by their own types, the library's base, a sealed
 /// interface's, and `Error`, reads their fields, messages, names, stacks,
 /// and causes, and lets a panic pass a `catch` that checks the type,
 /// beside its package in `root`. Gives its path, for tsc to check.
-fn failures_interop(
+fn errors_interop(
     node: &str,
     root: &Path,
     logged: &[String],
     failures: &mut Vec<String>,
 ) -> PathBuf {
     let script = root.join("failures.mjs");
-    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/failures.mjs");
+    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/errors.mjs");
     fs::copy(source, &script).unwrap();
     let run = Command::new(node).arg(&script).output().unwrap();
     let expected: Vec<String> = (logged.iter().cloned())
@@ -860,7 +860,7 @@ fn failures_interop(
             .map(String::from),
         )
         .collect();
-    kit::check_log(failures, "failures interop", &run, &expected);
+    kit::check_log(failures, "errors interop", &run, &expected);
     script
 }
 
@@ -995,13 +995,8 @@ fn runs() {
             if case.key == "async-turns" {
                 checked.push(host_interop(&node, &root, &case.expected, &mut failures));
             }
-            if case.key == "failures-interop" {
-                checked.push(failures_interop(
-                    &node,
-                    &root,
-                    &case.expected,
-                    &mut failures,
-                ));
+            if case.key == "errors-interop" {
+                checked.push(errors_interop(&node, &root, &case.expected, &mut failures));
             }
         }
         failures.extend(stack_trace(&node, &out));

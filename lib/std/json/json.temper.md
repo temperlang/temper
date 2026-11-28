@@ -14,7 +14,7 @@ For the purposes of this document, "JSON" is defined by [ECMA-404],
 
 ## Errors
 
-JSON's failures are under one root. Text that isn't JSON is a
+JSON's errors are under one root. Text that isn't JSON is a
 *JsonSyntaxError*, and JSON that doesn't fit the type being decoded is a
 *JsonShapeError*, each saying what's wrong.
 

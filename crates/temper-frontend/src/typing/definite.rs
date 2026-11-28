@@ -15,7 +15,7 @@
 //! entry, as nothing makes an assigned local unassigned. A `for … of`
 //! body may run any number of times, even none. An `orelse`'s fallback
 //! starts with what held where its body may fail: at each call that may
-//! fail (as [`super::bubbles`] finds them), `throw`, `await`, or error, so
+//! fail (as [`super::failing`] finds them), `throw`, `await`, or error, so
 //! `(x = i) orelse …` assigns `x` on every path, as in Kotlin. A path
 //! that returns, throws, panics, breaks, continues, or reaches an error
 //! needs nothing.
@@ -47,7 +47,7 @@ struct Cx {
     /// What reaches each loop by `continue`.
     continues: HashMap<NodeId, Pending>,
     /// The calls in `orelse` bodies that may fail.
-    bubbling: HashSet<NodeId>,
+    failing: HashSet<NodeId>,
     /// For each `orelse` body being walked, innermost last, what reaches
     /// its fallback so far.
     failures: Vec<Pending>,
@@ -68,7 +68,7 @@ impl Settle {
     /// Reports locals read before they're assigned on some path.
     pub(super) fn check_definite_assignment(&mut self) {
         let mut cx = Cx {
-            bubbling: self.bubbling_calls(),
+            failing: self.failing_calls(),
             ..Cx::default()
         };
         // Each module's top levels as they'll run.
@@ -96,7 +96,7 @@ impl Settle {
     }
 
     /// The calls in `orelse` bodies that may fail.
-    fn bubbling_calls(&mut self) -> HashSet<NodeId> {
+    fn failing_calls(&mut self) -> HashSet<NodeId> {
         let mut calls = Vec::new();
         let mut stack: Vec<(NodeId, bool)> = (self.round_roots().into_iter())
             .map(|r| (r, false))
@@ -301,7 +301,7 @@ impl Settle {
                 self.may_fail(cx, &pending);
                 pending
             }
-            // The fallback follows each failure in the body.
+            // The fallback follows each error in the body.
             NodeKind::Orelse if children.len() == 2 => {
                 cx.failures.push(None);
                 let body = self.assigned_flow(cx, children[0], Some(now));
@@ -346,7 +346,7 @@ impl Settle {
                 for &child in children {
                     pending = self.assigned_flow(cx, child, pending);
                 }
-                if cx.bubbling.contains(&node) {
+                if cx.failing.contains(&node) {
                     self.may_fail(cx, &pending);
                 }
                 if self.never_returns(node) {

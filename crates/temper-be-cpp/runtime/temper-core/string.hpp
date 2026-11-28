@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "temper_bubble.hpp"
+#include "temper_panic.hpp"
 #include "failure.hpp"
 #include "base_types.hpp"
 

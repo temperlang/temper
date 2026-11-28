@@ -40,20 +40,20 @@
 //! `String converted; try { converted = …; } catch (ParseError ignored) {
 //! converted = "failed"; }`. `panic()`, and code with an error, throw an
 //! `AssertionError`, which no handler catches, where Kotlin's threw a
-//! bubble; `orelse panic()`'s has the failure as its cause.
+//! bubble; `orelse panic()`'s has the error as its cause.
 //!
-//! Declared failures (RFC 164; notes/tmpl/nodes.md, "Declared failures")
-//! are unchecked exceptions, each library's failure types classes under
+//! Declared errors (RFC 164; notes/tmpl/nodes.md, "Declared errors")
+//! are unchecked exceptions, each library's error types classes under
 //! its roots, `WherewithException extends RuntimeException implements
 //! Failure` ([`classes`] says how), so callbacks and generic code need
 //! nothing of them. `throw` is Java's, its cause, in a handler, set by
 //! `Core.withCause`; an `orelse` or `catch` catches exactly what its body
-//! may fail with, the failure class above its failures
+//! may fail with, the error class above its errors
 //! ([`Translator::handled`]); and a
-//! function that fails with a failure type says so in a `throws` clause,
-//! which Java doesn't check, for its readers. Failures keep their stack
+//! function that fails with an error type says so in a `throws` clause,
+//! which Java doesn't check, for its readers. Errors keep their stack
 //! traces, which Java fills where one is constructed: a cost on the
-//! failure path only (core's `BrokenPromise` has none unless
+//! error path only (core's `BrokenPromise` has none unless
 //! `Core.keepStackTraces()` was called).
 
 mod classes;
@@ -299,7 +299,7 @@ impl<'a> Translator<'a> {
                 let qname = self.qname(decl);
                 let mut texts = Vec::new();
                 let args = self.p.types.list(args);
-                for a in temper_tmpl::failures::unchecked_args(self.p, decl, args) {
+                for a in temper_tmpl::declared_errors::unchecked_args(self.p, decl, args) {
                     texts.push(self.type_arg(a)?);
                 }
                 // `Empty` in a generator's or its result's arguments is
@@ -369,11 +369,11 @@ impl<'a> Translator<'a> {
 
     /// A generic declaration's type parameters, `<T>` or `<T extends
     /// Named>`, with a space after, or nothing. `MapKey`, which Java's
-    /// maps need nothing for, isn't a bound. Not failure parameters:
+    /// maps need nothing for, isn't a bound. Not error parameters:
     /// exceptions are unchecked, so no `throws E` needs one.
     pub(crate) fn type_params(&mut self, decl: DeclId) -> R<String> {
         let p = self.p;
-        let params = temper_tmpl::failures::unchecked_type_params(p, decl);
+        let params = temper_tmpl::declared_errors::unchecked_type_params(p, decl);
         if params.is_empty() {
             return Ok(String::new());
         }
@@ -605,7 +605,7 @@ impl<'a> Translator<'a> {
             }
             // A static initializer must be able to complete normally, by
             // javac's rules, so what it runs from the first statement that
-            // can't, a failure or a panic, however nested
+            // can't, an error or a panic, however nested
             // (`semantics/broken`), goes in `if (true) { … }`, which javac
             // takes as completing, and its `static final`s as assigned
             // where they are in the block.
@@ -684,32 +684,32 @@ impl<'a> Translator<'a> {
         })
     }
 
-    /// What a function or method says it throws: the declared failure
+    /// What a function or method says it throws: the declared error
     /// type its signature fails with, unchecked, so a `throws` clause that
     /// documents it, as Java's own APIs list `IllegalArgumentException`;
     /// nothing for one that fails with a type parameter.
     pub(crate) fn throws_of(&mut self, decl: DeclId) -> R<Vec<String>> {
-        match temper_tmpl::failures::declared(self.p, decl) {
+        match temper_tmpl::declared_errors::declared(self.p, decl) {
             Some(fail) => Ok(vec![self.ty(fail)?]),
             None => Ok(Vec::new()),
         }
     }
 
     /// What a handler around `body` catches, its `catch` clause's class:
-    /// the failure class nearest above all its failures, never what else
+    /// the error class nearest above all its errors, never what else
     /// Java throws, so panics (`AssertionError`s) and hosts' exceptions
     /// pass. Where that's core's `Error`, the runtime's `Failure` marker,
-    /// for failures of several libraries' roots, which isn't an
+    /// for errors of several libraries' roots, which isn't an
     /// exception, the clause catches `RuntimeException`, what every root
     /// extends, and the marker comes second, for the handler to throw
     /// again what isn't one.
     fn handled(&mut self, body: NodeId) -> R<(String, Option<String>)> {
         let p = self.p;
-        let fails: Vec<TypeId> = (temper_tmpl::failures::failures_under(p, body).into_iter())
+        let fails: Vec<TypeId> = (temper_tmpl::declared_errors::errors_under(p, body).into_iter())
             .map(|(_, f)| f)
             .collect();
-        let root = temper_tmpl::failures::root(p);
-        let Some(join) = temper_tmpl::failures::join(p, root, &fails) else {
+        let root = temper_tmpl::declared_errors::root(p);
+        let Some(join) = temper_tmpl::declared_errors::join(p, root, &fails) else {
             // Backends drop handlers whose bodies can't fail first.
             return not_yet("a handler whose body can't fail");
         };
@@ -720,12 +720,12 @@ impl<'a> Translator<'a> {
         })
     }
 
-    /// A failure as a `Throwable`, where it's core's `Error`, the
+    /// An error as a `Throwable`, where it's core's `Error`, the
     /// runtime's `Failure` marker, which isn't one: cast to the
-    /// `RuntimeException` every failure is.
+    /// `RuntimeException` every error is.
     fn throwable(&mut self, failure: NodeId) -> R<Expr> {
         let p = self.p;
-        let root = temper_tmpl::failures::root(p);
+        let root = temper_tmpl::declared_errors::root(p);
         let value = self.expr(failure)?;
         Ok(
             match analysis::nominal_decl(p, p.nodes.ty(failure)) == root {
@@ -735,7 +735,7 @@ impl<'a> Translator<'a> {
         )
     }
 
-    /// `throw value`, as Java's, with its cause, the failure a handler
+    /// `throw value`, as Java's, with its cause, the error a handler
     /// handles, where it's thrown there: `Core.withCause(value, cause)`,
     /// which keeps a cause it has already.
     fn thrown(&mut self, value: NodeId, cause: Option<NodeId>) -> R<Expr> {
@@ -1228,8 +1228,8 @@ impl<'a> Translator<'a> {
                 };
                 let caught = Expr::name(var.clone());
                 let mut handler = Vec::new();
-                // Of all it catches, only failures, throwing the rest
-                // again, then the binding as the failure it is.
+                // Of all it catches, only errors, throwing the rest
+                // again, then the binding as the error it is.
                 if let Some(only) = only {
                     let test = Expr::InstanceOf(Box::new(caught.clone()), only);
                     handler.push(Stmt::If {
@@ -1246,7 +1246,7 @@ impl<'a> Translator<'a> {
                         });
                     }
                 }
-                // `orelse panic()` panics with the failure as its cause.
+                // `orelse panic()` panics with the error as its cause.
                 match p.nodes.get(fallback) {
                     Node::Panic {} => handler.push(Stmt::Throw(Expr::New(
                         "AssertionError".into(),
@@ -1462,14 +1462,14 @@ impl<'a> Translator<'a> {
     /// A module's test class, `NAMETest`, in its package, under
     /// `src/test/java`: what only its tests reach, as statics
     /// ([`Translator::statics_class`]) whose initializer runs the module
-    /// class's first, after keeping core's failures' stack traces
+    /// class's first, after keeping core's errors' stack traces
     /// (`Core.keepStackTraces()`), then continues it, and its tests, as JUnit 5 tests:
     /// each a method named for it in camel case (`twice10` for "twice
     /// ${base}" made "twice 10"), which makes std's `Test`, runs the body,
     /// and then, even if the body threw, ends the test (`Core.endTest`):
     /// waits for the async work it started, throwing what failed there,
     /// and fails if the `Test` has failures (`softFailToHard`), as
-    /// Kotlin's do, the body's own failure winning. Being in the module's package,
+    /// Kotlin's do, the body's own error winning. Being in the module's package,
     /// they see its classes and statics that aren't exported. `None`
     /// without test parts or tests.
     pub fn tests(&mut self, module: &Module) -> R<Option<tree::TestClass>> {
@@ -1500,7 +1500,7 @@ impl<'a> Translator<'a> {
         }
         let mut statics =
             self.statics_class(module, &module.test_items, module.test_init, &outside)?;
-        // Tests' core failures keep stack traces, as a program's do, so
+        // Tests' core errors keep stack traces, as a program's do, so
         // one that fails a test says where it came from.
         if !module.tests.is_empty() {
             self.import("temper.core.Core");
@@ -1527,7 +1527,7 @@ impl<'a> Translator<'a> {
             let var = self.name(param);
             self.begin(test);
             let stmts = self.stmts(body)?;
-            // The body's failure, kept for `Core.endTest`, which then
+            // The body's error, kept for `Core.endTest`, which then
             // finishes its async work and `softFailToHard`.
             let failure = self.fresh("failure");
             let e = self.fresh("e");
@@ -1775,7 +1775,7 @@ impl<'a> Translator<'a> {
             {
                 self.expr(object)?.member("value")
             }
-            // A pair's, an `Entry`'s; core's failures' are public fields.
+            // A pair's, an `Entry`'s; core's errors' are public fields.
             Node::GetField { field, object }
                 if by_connection(p, field, crate::connected::connects_std)
                     && self.qname(p.decls.get(field).owner) == "core.type Pair" =>
@@ -1786,7 +1786,7 @@ impl<'a> Translator<'a> {
                 };
                 self.expr(object)?.method(getter, Vec::new())
             }
-            // Core's failures' public fields, by their own names.
+            // Core's errors' public fields, by their own names.
             Node::GetField { field, object } if is_external(p, field) => {
                 self.expr(object)?.member(p.name(field))
             }

@@ -86,7 +86,7 @@ fn effects_of_calls_and_reads() {
     let writes = Effect {
         writes: true,
         reads: true,
-        bubbles: false,
+        fails: false,
     };
     assert_eq!(of("bump"), writes);
     assert_eq!(of("twice"), Effect::default());
@@ -113,7 +113,7 @@ fn effects_of_calls_and_reads() {
     assert!(writes.conflicts(read) && read.conflicts(writes));
     assert!(!read.conflicts(read));
     assert!(writes.conflicts(Effect {
-        bubbles: true,
+        fails: true,
         ..Effect::default()
     }));
 }

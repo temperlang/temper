@@ -82,8 +82,8 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Deque.removeFirst()",
         Connection::Helper("dequeRemoveFirst"),
     ),
-    // A declared failure's cause is the standard `cause`, where that's a
-    // declared failure; its message, the `message` every failure class
+    // A declared error's cause is the standard `cause`, where that's a
+    // declared error; its message, the `message` every error class
     // has, as a getter over `Error`'s.
     (
         "core.type Error.get cause()",
@@ -91,7 +91,7 @@ pub const TABLE: &[(&str, Connection)] = &[
     ),
     (
         "core.type Error.get message()",
-        Connection::Translate(failure_message),
+        Connection::Translate(error_message),
     ),
     ("core.type Float64.abs()", Connection::Math("abs")),
     ("core.type Float64.acos()", Connection::Math("acos")),
@@ -659,7 +659,7 @@ fn test_bail(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
 }
 
 /// `blockPanics(block)`, core's, which catches a panic, anything but a
-/// declared failure or a test's failure, for std's `Test.assertPanics`.
+/// declared error or a test's failure, for std's `Test.assertPanics`.
 fn test_panics(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let [_, block] = args else {
         return Err(NotYet {
@@ -687,8 +687,8 @@ fn console_log(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> 
     Ok(Expr::name("console").method("log", vec![message]))
 }
 
-/// `Error.message`: the failure's `message`, its class's getter.
-fn failure_message(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+/// `Error.message`: the error's `message`, its class's getter.
+fn error_message(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let [failure] = args else {
         return Err(NotYet {
             what: "`Error.message` without its receiver".into(),

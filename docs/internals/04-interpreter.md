@@ -30,7 +30,7 @@ flowchart LR
 - **Closures get cells.** A local that a nested function uses lives in
   a shared cell, made fresh each time its block is entered, so each pass
   of a loop has its own.
-- **Failures cost nothing until they happen.** A failure jumps to the
+- **Errors cost nothing until they happen.** An error jumps to the
   innermost `orelse` around it, found in a table by position, so the
   ordinary path pays nothing.
 - **Generators pause.** A generator owns its body's frame, which returns

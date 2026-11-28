@@ -196,7 +196,7 @@ pub struct Nodes {
     kids: Vec<(u32, u32)>,    // start and length in `kid_list`
     a: Vec<u32>,              // payload slots; the schema names each
     b: Vec<u32>,              //   kind's use of them
-    flags: Vec<Flags>,        // u8: MAY_BUBBLE, VAR, …
+    flags: Vec<Flags>,        // u8: MAY_FAIL, VAR, …
     kid_list: Vec<NodeId>,
 }
 ```
@@ -207,7 +207,7 @@ always lower than its parent's. Payloads are ids (`DeclId`, `StrId`,
 
 As built (2026-10-29, Proposed): `var` is a fact on the declaration
 only, not a node flag, so the `VAR` flags in the tables below are the
-declaration's; a node's flags are `MAY_BUBBLE` and `DERIVED` (its
+declaration's; a node's flags are `MAY_FAIL` and `DERIVED` (its
 span's bit). Type arguments in `b` wait for subset B's generics. The
 schema's table is `crates/temper-tmpl/src/schema.rs`.
 
@@ -250,9 +250,9 @@ Expressions, with where their type comes from (the local rules are
 | `VoidLit` | none | | `Void` |
 | `Local` | none | `a`: a local or parameter | its declaration's |
 | `GetModuleLet` | none | `a`: a module `let` | its declaration's |
-| `CallFunction` | arguments | `a`: the function; `b`: type arguments; `MAY_BUBBLE` | its signature's result |
-| `Op` | operands | `a`: the operator; `MAY_BUBBLE` | its operator's result |
-| `CallMethod` | receiver, then arguments | `a`: a method or getter; `MAY_BUBBLE` | its signature's result |
+| `CallFunction` | arguments | `a`: the function; `b`: type arguments; `MAY_FAIL` | its signature's result |
+| `Op` | operands | `a`: the operator; `MAY_FAIL` | its operator's result |
+| `CallMethod` | receiver, then arguments | `a`: a method or getter; `MAY_FAIL` | its signature's result |
 | `Omitted` | none | | its parameter's |
 | `And`, `Or` | left, right | | `Boolean` |
 | `IfValue` | condition, then, else | | written |
@@ -285,7 +285,7 @@ Invariants, per kind (the validator's rule codes are below):
 - **Calls** have one argument per parameter, each of exactly the
   parameter's type after substituting the type arguments (subset A has
   no conversions, since it has no subtypes), or `Omitted` for an
-  optional one. `MAY_BUBBLE` is set exactly when the callee may fail
+  optional one. `MAY_FAIL` is set exactly when the callee may fail
   (no operator does: integer division by zero panics).
 - **Failing:** in subset A, a call that may fail has no handler
   (`orelse` comes with B), so its function must fail with its type.
@@ -378,7 +378,7 @@ block). Expressions:
 | `This` | none | | written: the member's class or interface |
 | `GetField` | the object | `a`: a field | its declaration's |
 | `GetStatic` | none | `a`: a static field | its declaration's |
-| `New` | arguments | `a`: a constructor; `MAY_BUBBLE` | its signature's result, the class |
+| `New` | arguments | `a`: a constructor; `MAY_FAIL` | its signature's result, the class |
 | `Upcast`, `Downcast` | the value | | written: a proper supertype, or (after an `is` check, unchecked) subtype |
 | `As` | the value | | written: checked when run, by `Is`'s rule (C3), panicking where it fails, or the value's type without null |
 | `Is` | the value, not null | `a`: a class's or interface's type | `Boolean` |
@@ -502,7 +502,7 @@ values, and the conversions between `@fun` interfaces and function types
 |---|---|---|---|
 | `FunctionLiteral` | its parameters, then its body | `a`: its declaration, a `Lambda` | written: a `@fun` interface or function type whose signature is its declaration's |
 | `FunctionRef` | | `a`: a top-level or static function, not generic | written: as `FunctionLiteral`'s |
-| `CallValue` | the callee, then the arguments | `MAY_BUBBLE` if its signature may | its callee's signature's result (`TypeRule::ValueCall`) |
+| `CallValue` | the callee, then the arguments | `MAY_FAIL` if its signature may | its callee's signature's result (`TypeRule::ValueCall`) |
 | `ToFun` | a function type's value | | written: a `@fun` interface of that signature |
 | `FromFun` | a `@fun` interface's value | | written: its function type |
 
@@ -645,7 +645,7 @@ Generators and `async`, as Kotlin's `CoroutineStrategy` has them:
   declaration has the fact `GENERATOR` (text: `fn generator ~fn#8()`).
   Its value is a factory, typed `fn (T): SafeGenerator<Y>`, whose body
   can't fail, or `fn (T): Generator<Y>`, whose body may fail with any
-  error (F4, F6; `failures::generator_failure`; 2026-11-26), and whose
+  error (F4, F6; `declared_errors::generator_error`; 2026-11-26), and whose
   `next()` throws core's `BrokenGenerator` with that error as its cause:
   each backend's runtime wraps it at the generator's boundary (its
   `next`, or the host generator's step; t1211). A `SafeGenerator`'s
@@ -655,7 +655,7 @@ Generators and `async`, as Kotlin's `CoroutineStrategy` has them:
   body's `return`s have no value. In its own body (not a literal's in
   it, rule F6), `Await` (`(await(p)^): T`) waits for a `Promise<T>` and
   throws core's `BrokenPromise`, if the promise is broken
-  (`failures::node_failure`, which finds the program's declaration of
+  (`declared_errors::node_error`, which finds the program's declaration of
   it), and `Yield` pauses, giving its
   value, a `Y` (`yield x;`), or for `Empty`, none (`yield;`).
   `async { … }` calls core's `async` with the factory.
@@ -671,7 +671,7 @@ Generators and `async`, as Kotlin's `CoroutineStrategy` has them:
   done (for a `Generator<Y>`, `adaptGeneratorFn(step)`, whose step
   fails with core's `Error`), each state's code that may fail in the `orelse` or `catch` it's
   in, whose fallback sets the handler's state; a `catch`'s keeps the
-  failure in its local, made the factory's and nullable, which the
+  error in its local, made the factory's and nullable, which the
   handler's states read through `nonNull`, and an `await` in one, after
   code that may fail, pauses from a state of its own, so a `catch`'s
   states that may fail never return (2026-11-26). A branch on a literal (`while (true)`'s) goes
@@ -718,24 +718,24 @@ for a `finally` holding jumps, should bring that as a shared helper
 (it was briefly `temper_tmpl::exits`, a copying stub, removed until
 then).
 
-### Declared failures (As built, 2026-11-25, Proposed)
+### Declared errors (As built, 2026-11-25, Proposed)
 
-RFC 164's failure types, tmpl's one kind of failure since `Bubble` went
+RFC 164's error types, tmpl's one kind of error since `Bubble` went
 (2026-11-27; [types.md](types.md#results); typing.md, "Declared
-failures"). Every backend has them (below); a backend without them
-would say "not yet in the … backend: declared failures: …" for a
-program that uses them (`temper_tmpl::failures::not_yet`).
+errors"). Every backend has them (below); a backend without them
+would say "not yet in the … backend: declared errors: …" for a
+program that uses them (`temper_tmpl::declared_errors::not_yet`).
 
 | Kind | Children | Payload and flags | Type |
 |---|---|---|---|
-| `Throw` | the failure, then its cause if any | `MAY_BUBBLE`, always | written: as its place wants |
-| `Catch` | the body, then the fallback | `a`: its local, holding the failure | written: as `OrElse`'s |
+| `Throw` | the error, then its cause if any | `MAY_FAIL`, always | written: as its place wants |
+| `Catch` | the body, then the fallback | `a`: its local, holding the error | written: as `OrElse`'s |
 
-- **Failure types** are the classes and interfaces below core's
+- **Error types** are the classes and interfaces below core's
   `Error`, an external interface with connected getters `message` and
-  `cause` (`failures::root`). A signature fails with a failure type or
-  a failure parameter (below); failures are ordinary values.
-- **Core's own failure types,** external like `Error`: the root
+  `cause` (`declared_errors::root`). A signature fails with an error type or
+  an error parameter (below); errors are ordinary values.
+- **Core's own error types,** external like `Error`: the root
   `CoreError` and its classes `MissingKey` (`key`, an `AnyValue`; what
   `Mapped.get` and `MapBuilder.remove` fail with), `ParseError` (`input`
   and `reason`; what conversions fail with), and `InvalidCodePoint`
@@ -744,48 +744,48 @@ program that uses them (`temper_tmpl::failures::not_yet`).
   own exception types, and its connection tables name them; `to_tmpl`
   makes a `catch (e)` whose `e` nothing reads an `OrElse`.
 - **The library's roots:** the interfaces right under `Error`
-  (`failures::is_library_root`), sealed interfaces the library declares
+  (`declared_errors::is_library_root`), sealed interfaces the library declares
   (decision 17; the frontend checks the rules, notes/typing.md), each
-  failure type under one. Targets write each over their own exception
+  error type under one. Targets write each over their own exception
   type, so host code never catches a Temper type (RFC 164, "host
   presentation"); a library may have several.
-- **Messages:** a failure class without a member named `message` gets a
+- **Messages:** an error class without a member named `message` gets a
   `message` getter giving the interpreter's default message, `not found
-  (key: y)` (`interp::failures`). `cause` stays core's, which targets
+  (key: y)` (`interp::declared_errors`). `cause` stays core's, which targets
   map to their own (`getCause()`, `__cause__`, `{ cause }`).
-- **`Throw`'s cause** is the failure the innermost handler's fallback
+- **`Throw`'s cause** is the error the innermost handler's fallback
   around it handles, in its own function (a `for … of` body inlined
-  there counts), where that handler binds it; the thrown failure takes
+  there counts), where that handler binds it; the thrown error takes
   it unless it already has a cause, so a rethrow keeps its first.
 - **`Catch`** is `OrElse` with a binding, its local, declared by it and
   in scope only in the fallback: `catch (e)`'s `e`, or a compiler-made
   `~failure` where a fallback only throws. `to_tmpl` makes one only
-  where the fallback needs the failure and the body fails with a
-  failure type; else it's an `OrElse`. Where the fallback jumps
+  where the fallback needs the error and the body fails with an
+  error type; else it's an `OrElse`. Where the fallback jumps
   (`return`, `break`, `continue`) and so runs after it, the `catch`
-  keeps the failure in a nullable `~caught` local the fallback reads.
-- **`when` over failure types** needs nothing new: `Is` and `Downcast`.
+  keeps the error in a nullable `~caught` local the fallback reads.
+- **`when` over error types** needs nothing new: `Is` and `Downcast`.
 - **Several roots in one handler:** where a handler's body may fail
-  with failure types under different roots, of one library or several,
+  with error types under different roots, of one library or several,
   their join is core's `Error`, which a `catch` binds (signatures can't
   fail with `Error`, so only handlers have it). Each target catches only
-  failures there, by its runtime's marker, and lets panics and hosts'
+  errors there, by its runtime's marker, and lets panics and hosts'
   errors pass, as below (Lua's already did).
 - **Naming:** Java's and C#'s rules say `Exception` for `Error` at the
-  end of a failure type's name (`NamingRules::failure_suffix`), so
+  end of an error type's name (`NamingRules::error_suffix`), so
   `ConfigError` is `ConfigException` there, the roots too.
 - **Text:** `(throw(new NotFound#1(k#2))^): Void`, `(throw(x#3,
   e#4)^): Int32`, `(catch(f#5()^, e#6: NotFound#1, 0)): Int32`, and
-  `interface FailuresError#7 extends Error#8 {}`.
+  `interface DeclaredErrorsError#7 extends Error#8 {}`.
 
 **In Python** (chunk 7; t1169): core's `Error` is `temper_core.Failure`,
 an `Exception` giving `__str__` from `message`; a
-root is `class FailuresError(Failure)`, the failure types
+root is `class DeclaredErrorsError(Failure)`, the error types
 classes under it (a sealed interface abstract, by `Failure`'s
 `ABCMeta`). `Throw` is `raise`, `raise X(…) from cause` where it makes
-the failure, else `raise with_cause(x, cause)`, which keeps a cause it
+the error, else `raise with_cause(x, cause)`, which keeps a cause it
 has. `OrElse` and `Catch` are `try`/`except` of exactly what the body
-may fail with: the join of its failures (`failures::failures_under`,
+may fail with: the join of its errors (`declared_errors::errors_under`,
 `join`), so panics and hosts' errors pass; where the join is core's
 `Error`, `except Failure as e:`. `cause` is `failure_cause(e)`, `__cause__` where it's a
 `Failure`; `~caught` read after a jumping fallback is asserted not
@@ -793,11 +793,11 @@ null for checkers.
 
 **In Java** (chunk 8): unchecked exceptions. Core's `Error` is
 `temper.core.Failure`, a marker interface (`getMessage()`,
-`getCause()`); a root is `public abstract class FailuresException
-extends RuntimeException implements Failure`, a sealed failure
+`getCause()`); a root is `public abstract class DeclaredErrorsException
+extends RuntimeException implements Failure`, a sealed error
 interface an abstract class under it (Java 8's runtime has no
 `sealed`, and a library's modules are packages of their own), each with
-a `protected` constructor, and failure classes `final` under those;
+a `protected` constructor, and error classes `final` under those;
 all `@SuppressWarnings("serial")`. `message` is `getMessage()`; `cause`
 `Core.failureCause(e)`, `getCause()` where it's a `Failure`; a member
 named as another of `Throwable`'s methods is "not yet". `Throw` is
@@ -809,17 +809,17 @@ it has), `Core.throwFailure(x)` where Java needs a value. `OrElse` and
 then `if (!(caught instanceof Failure)) { throw caught; }`, and a
 `catch` binding `Failure e = (Failure)
 caught;`; an `Error` thrown or taken as a cause is cast back to
-`RuntimeException`. A function failing with a failure type lists it in
-a `throws` clause. Stack traces are kept (made where the failure is
+`RuntimeException`. A function failing with an error type lists it in
+a `throws` clause. Stack traces are kept (made where the error is
 constructed), unlike core's `BrokenPromise`'s, which has one only after
 `Core.keepStackTraces()`, as a program's generated main calls.
 
 **In Rust** (chunk 9): values, not unwinding. A signature failing with
-a failure type returns `Result<T, F>`; a failure class is a class handle with a
+an error type returns `Result<T, F>`; an error class is a class handle with a
 `temper_core::Cause` field and `impl_failure!` (`Display` its message,
 `Debug`, `std::error::Error` with `source()` its cause, and
 `temper_core::Failure`, which core's `Error` is, `Arc<dyn Failure>`); a
-sealed failure interface, the roots among them, is an `enum` of the
+sealed error interface, the roots among them, is an `enum` of the
 types right under it, `From` each below (`impl_failure_enum!`,
 `impl_failure_from!`), an exported root's `#[non_exhaustive]`, and the
 crate's `Error` the one root, `pub type Error = r#mod::WherewithError;`
@@ -829,7 +829,7 @@ see through it (`AnyValueTrait` by the variant). `Throw` is `return
 Err(x)`, `.into()` where the code fails with a type above, through
 `temper_core::with_cause(x, cause)` in a handler. `OrElse` and `Catch`
 run the body as a `Result` of exactly what it may fail with, the join;
-a join that's core's `Error` is `Arc<dyn Failure>` (`temper_core::Error`), which each failure
+a join that's core's `Error` is `Arc<dyn Failure>` (`temper_core::Error`), which each error
 type and enum converts into by `From` (in `impl_failure!` and
 `impl_failure_enum!`, so `?` does) and which is a `Failure` itself, so a
 `throw` there takes it as a cause;
@@ -837,55 +837,55 @@ type and enum converts into by `From` (in `impl_failure!` and
 throwing fallback, `or_else(|e| …)?` for another failing one, and as a
 statement `if let Err(e) = …`. `?` converts by `From`; `Ok(e?)` is `e`
 only where the types match. A module's init and a test fail with
-`temper_core::Result<T>`, any failure as `temper_core::Error`;
-`uncaught` names it a failure and lists causes. No `catch_unwind`: a
+`temper_core::Result<T>`, any error as `temper_core::Error`;
+`uncaught` names it an error and lists causes. No `catch_unwind`: a
 panic passes every handler. Not yet: a `catch` whose body jumps;
-failure interfaces with members.
+error interfaces with members.
 
-**In C++** (chunk 10): values, never thrown. A signature failing with a
-failure type returns `core::Expected<T, F>`, `F` the failure's
+**In C++** (chunk 10): values, never thrown. A signature failing with an
+error type returns `core::Expected<T, F>`, `F` the error's
 `shared_ptr`: C++23's `std::expected` where `__cpp_lib_expected` says
 it's there, else the runtime's C++14 shim with the same API for what it
 has (`expected.hpp`, with its own tests on both). Core's `Error` is the runtime's `core::Failure`, a
 `std::exception` (`what()` its message, made once when first asked)
 with `get_message()`, pure virtual, and a cause set once
 (`get_cause()`, `set_cause`, never itself or a loop); a root is
-`struct FailuresError : virtual core::Failure`, sealed failure
-interfaces abstract structs under it, failure classes structs under
+`struct DeclaredErrorsError : virtual core::Failure`, sealed error
+interfaces abstract structs under it, error classes structs under
 those, their `message` getters `override`. A failing call is computed
 first, `auto lookupResult = lookup(key); if
 (!lookupResult.has_value()) { return core::unexpected(lookupResult.error()); }`,
-then `*lookupResult` where it was; one whose value and failure types
+then `*lookupResult` where it was; one whose value and error types
 are the function's is returned as it is; `spill` makes choices' parts
 and loops' conditions holding one statements. `Throw` is `return
 core::unexpected(x)`, `core::with_cause(x, cause)` in a handler; in a
-module's init, an unhandled failure is `core::uncaught_failure(x)`,
+module's init, an unhandled error is `core::uncaught_failure(x)`,
 which throws `core::UncaughtFailure` out of the init. `OrElse` and
 `Catch` branch on the result: where the body's one failing call runs
 first in it, `if (r.has_value()) { …body with *r… } else { …fallback… }`;
 else the body is a lambda called at once giving `core::Expected` of the
 join, `std::shared_ptr<core::Failure>` where that's core's `Error`
-(each library's failure's `shared_ptr` converts into it, as its root is
+(each library's error's `shared_ptr` converts into it, as its root is
 a `core::Failure`). Handlers branch on `Expected` alone; runtime
 errors that bubbled now panic. Panics and host exceptions pass every
-handler. `orelse panic()` names the failure as the panic's cause
+handler. `orelse panic()` names the error as the panic's cause
 (`core::panic_caused_by`). Not yet: a lambda body that jumps out, a
 failing call where nothing can go before it, and local function groups
 that fail.
 
 **In JS** (chunk 11): classes extending JS's `Error`, natively rather
 than through the runtime's `type()` mixin, so `instanceof`, `stack`,
-`name`, and `message` work for hosts: a root is `class FailuresError
-extends Error {}` followed by `failureBase(FailuresError)`, which gives
+`name`, and `message` work for hosts: a root is `class DeclaredErrorsError
+extends Error {}` followed by `failureBase(DeclaredErrorsError)`, which gives
 its instances the runtime's marker symbol (`isFailure`) and `name`, the
-class's own; a sealed failure interface is a class under it, never made
-itself, and failure classes extend the one failure type above them
-(other supertypes, and a failure interface's abstract members, are not
+class's own; a sealed error interface is a class under it, never made
+itself, and error classes extend the one error type above them
+(other supertypes, and an error interface's abstract members, are not
 yet). `message` is a getter, the class's own or the generated one,
-over `Error`'s, so it's read when asked, after the fields are set; a
-failure type's members named `name`, `stack`, or `cause` are escaped
-(`name_`, by `NamingRules::failure_member_reserved`). `cause` is
-`failureCause(e)`, the standard `cause` where it's a failure. `Throw`
+over `Error`'s, so it's read when asked, after the fields are set; an
+error type's members named `name`, `stack`, or `cause` are escaped
+(`name_`, by `NamingRules::error_member_reserved`). `cause` is
+`failureCause(e)`, the standard `cause` where it's an error. `Throw`
 is `throw`, `throw withCause(x, cause)` in a handler (keeps a cause it
 has, never itself or a loop; the `{ cause }` option can't go through a
 generated constructor), and where JS needs a value, `(() => { throw x;
@@ -894,26 +894,26 @@ the body may fail with: `if (!(e$ instanceof NotFound)) throw e$;`, a
 `catch`'s binding the variable, so TypeScript narrows it; where the join is core's
 `Error`, the runtime's `isFailure(e$)`, a type predicate (`e is
 Error`). A `~caught` read after a
-jumping fallback is cast to its failure type. A function failing with
-a failure type says so with JSDoc's `@throws`.
+jumping fallback is cast to its error type. A function failing with
+an error type says so with JSDoc's `@throws`.
 
 **In C#** (chunk 12): exception classes. Core's `Error` is
 `TemperLang.Core.IFailure`, a marker interface (`Message`,
 `InnerException`, both `Exception`'s); a root is `public abstract
-class FailuresException : Exception, IFailure`, a sealed failure
-interface an abstract class under it (no `I`), failure classes
+class DeclaredErrorsException : Exception, IFailure`, a sealed error
+interface an abstract class under it (no `I`), error classes
 `sealed`; abstract ones' constructors are `private protected` (C# can't
-seal a hierarchy across files). A failure's `message` getter is
+seal a hierarchy across files). An error's `message` getter is
 `public override string Message`; a member named as another of
 `Exception`'s is "not yet". The cause is `InnerException`, which C#
 sets only by constructor, so passed as hand-written C# does: each
-failure class's public constructor calls an `internal` one that takes
+error class's public constructor calls an `internal` one that takes
 the cause too and has the body, `: this(key, null)` (its parameter
 `cause`, numbered past the class's own names), passing it to the
-base's, `private protected`, and on to `Exception`'s; the `Throw` of a
-failure made in a handler calls it, `throw new LookupFailed(name, e)`,
-every argument given, so a failure made among its arguments takes none.
-A failure made before and thrown in a handler, or another library's
+base's, `private protected`, and on to `Exception`'s; the `Throw` of an
+error made in a handler calls it, `throw new LookupFailed(name, e)`,
+every argument given, so an error made among its arguments takes none.
+An error made before and thrown in a handler, or another library's
 (whose internal constructor is out of reach), is `Core.WithCause(x,
 e)`, keeping the cause beside it (a `ConditionalWeakTable`) for
 Temper's `cause` (`Core.FailureCause`) alone, unless it has one. `Throw` is `throw`,
@@ -923,18 +923,18 @@ exceptions pass; where the join is core's `Error`, `catch
 (Exception caught) when (caught is IFailure)`, and a `catch` binding
 `IFailure e = (IFailure)caught;`; an `Error` thrown or taken as a cause
 is cast back to `Exception`. A `~caught` read takes `!`. A function
-failing with a failure type says so in an XML doc comment, `///
+failing with an error type says so in an XML doc comment, `///
 <exception cref="NotFound">`.
 
 **In Lua** (chunk 13): the runtime's types, as other classes are.
 Core's `Error` is `temper.Failure`, a type whose instances, and those
 of every type under it, have a metatable of their own: `__tostring`
-gives the failure's `message`, and `cause` reads as `nil` where there's
-none. A root is `temper.type("failures.FailuresError",
-temper.Failure)`, failure types under it as other types are, LuaCATS
-classes under `temper.Failure`; a failure type's member named `cause` is
+gives the error's `message`, and `cause` reads as `nil` where there's
+none. A root is `temper.type("failures.DeclaredErrorsError",
+temper.Failure)`, error types under it as other types are, LuaCATS
+classes under `temper.Failure`; an error type's member named `cause` is
 `cause_`. `message` is the getter; `cause` is `temper.failure_cause(e)`,
-the key `cause` where it's a failure. `Throw` is `error(x)`,
+the key `cause` where it's an error. `Throw` is `error(x)`,
 `error(temper.with_cause(x, cause))` in a handler (keeps a cause it
 has). `OrElse` and `Catch` are `temper.catch(function() … end,
 NotFound)`, catching exactly the join, by `temper.instance_of`
@@ -942,15 +942,15 @@ NotFound)`, catching exactly the join, by `temper.instance_of`
 again unchanged. A
 `catch`'s binding is its second result, `local ok, e =
 temper.catch(…)`, or where the body jumps, a local of the fallback.
-`orelse panic()` names a failure as its cause by its message. A failure
+`orelse panic()` names an error as its cause by its message. An error
 nothing handles: `temper run` and the tests' runner report it as
 `uncaught failure: LookupFailed: lookup failed (name: port)`, then
 `caused by: …` lines (`temper.failure_report`).
 
-**Failure parameters** (chunk 15; typing.md, "Failure parameters"): a
-type parameter bound by a failure type, `E extends Error`, which the
-frontend gives one a signature fails with (`failures::is_failure_param`),
-counts as a failure type, so generic code may `throw` one, a `catch` bind
+**Error parameters** (chunk 15; typing.md, "Failure parameters"): a
+type parameter bound by an error type, `E extends Error`, which the
+frontend gives one a signature fails with (`declared_errors::is_error_param`),
+counts as an error type, so generic code may `throw` one, a `catch` bind
 one, and a function or `@fun` interface fail with one: `fn
 mapAll#16<T#17, R#18, E#19 extends Error#9>(xs#48: List#20<T#17>, f#49:
 Mapper#3<T#17, R#18, E#19>): List#20<R#18> throws E#19`. A call gives it
@@ -959,61 +959,61 @@ where it can't fail by one, which isn't marked then (the builder's flags
 come from the substituted result): `mapAll#16<String, Int32,
 Missing#2>(…)^`, `ns#79.join#69<Never<Error#9>>(…)`. Core's generic
 methods (`map`, `filter`, `join`, …) are as core declares them. Where a
-function that fails more narrowly is passed where a wider failure is
+function that fails more narrowly is passed where a wider error is
 wanted (`find`, throwing `Missing`, as `Mapper<String, Int32,
-FailureParamsError>`), `to_tmpl` passes a literal calling it, so every
+ErrorParamsError>`), `to_tmpl` passes a literal calling it, so every
 target widens it as a `throw` would.
 
-Targets whose failures are unchecked exceptions (Python, Java, JS, C#,
-Lua) erase them (`failures::erase_params`): in code, each is its bound,
+Targets whose errors are unchecked exceptions (Python, Java, JS, C#,
+Lua) erase them (`declared_errors::erase_params`): in code, each is its bound,
 so a handler in generic code is one over core's `Error`, catching by the
 runtime's marker (Python's `Failure`, Java's `temper.core.Failure`, C#'s
 `IFailure`, JS's `isFailure`, Lua's `temper.Failure`), never a panic or
-host error, and a callback's failure passes through unchanged. Signatures
+host error, and a callback's error passes through unchanged. Signatures
 keep them, so calls outside still fail with what they give, and handlers
 there catch exactly that. No host signature names one
-(`failures::unchecked_type_params`, `unchecked_args`): Java's `<T, R>
+(`declared_errors::unchecked_type_params`, `unchecked_args`): Java's `<T, R>
 List<R> mapAll(List<T> xs, Function<T, R> f)` has no `throws` clause for
 `E`, as Java's checked-exception idiom (`<E extends Exception> … throws
 E`) would only mislead for unchecked ones; docs (`throws`, `@throws`,
-`<exception>`) name only declared failure types (`failures::declared`).
-A signature naming one other than as a failure, as `e: E`, is not yet
+`<exception>`) name only declared error types (`declared_errors::declared`).
+A signature naming one other than as an error, as `e: E`, is not yet
 there.
 
 Rust and C++ keep them generic (chunk 16): a template's or generic
 function's type parameter, `E: temper_core::Failure` in Rust, standing
-for the whole failure type (`Missing`, `std::shared_ptr<Missing>`), so
+for the whole error type (`Missing`, `std::shared_ptr<Missing>`), so
 `Result<List<R>, E>` and `core::Expected<…, E>`. "Can't fail",
 `Never<Error>`, is an uninhabited type, Rust's `std::convert::Infallible`
 (which the runtime makes a `Failure`) and C++'s `core::Never`, so
-`nevers` keeps a failure parameter's `Never<T>` argument
-(`lowered_list`). A function type normalizes a `Never` failure away, but
+`nevers` keeps an error parameter's `Never<T>` argument
+(`lowered_list`). A function type normalizes a `Never` error away, but
 a `@fun` interface's value given one still returns a result,
 `Result<i32, Infallible>`, as generic code calling it expects
-(`failures::value_failure`): a literal or function reference there
+(`declared_errors::value_error`): a literal or function reference there
 returns `Ok`s, and a call that can't fail only by `Never` is its value,
-`temper_core::into_ok(…)` and `*f(…)` (`failures::declared_failure`).
-Rust names failure parameters' arguments, `map_all::<_, _, Missing>(…)`,
+`temper_core::into_ok(…)` and `*f(…)` (`declared_errors::declared_error`).
+Rust names error parameters' arguments, `map_all::<_, _, Missing>(…)`,
 as rustc can't infer one from a closure that `?`s. Core's members that
 take callbacks have runtime forms for callbacks that return results
 (`TRY` in each backend's connections: `try_map`, `List::tryMap`, …), taken
-where a call passes one (`failures::passes_results`); each stops at the
-first failure, and the sorts merge-sort, since std's sorts misbehave
+where a call passes one (`declared_errors::passes_results`); each stops at the
+first error, and the sorts merge-sort, since std's sorts misbehave
 where comparisons stop being consistent. No dyn-dispatched method is
 generic over `E`: `Mapped.forEach` and `toListWith` are free functions in
 Rust's runtime, over `to_list()`, and Listed's members were already.
 
-Validator rules: T4 checks a failure parameter's type argument against
-its bound, `Never<T>` as `T`, and builtin types (`String`) fail it; T5 lets a signature fail with a failure type or a failure
-parameter; F3 marks every `Throw`; F4 checks the failure's type where it
+Validator rules: T4 checks an error parameter's type argument against
+its bound, `Never<T>` as `T`, and builtin types (`String`) fail it; T5 lets a signature fail with an error type or an error
+parameter; F3 marks every `Throw`; F4 checks the error's type where it
 goes: anything in an `OrElse`'s body or an init block, only what the
 `Catch` binds (or below it) in its body, and elsewhere only the
-function's failure type or below; F8: a `Throw`'s value and cause are failure types, and a
-`Catch` binds one; D6: failure types aren't generic and have one
-failure type above them, and one that's `Error` itself, a root, is an
+function's error type or below; F8: a `Throw`'s value and cause are error types, and a
+`Catch` binds one; D6: error types aren't generic and have one
+error type above them, and one that's `Error` itself, a root, is an
 interface, never a class.
 
-Not yet: checking a failure type's own
+Not yet: checking an error type's own
 `message` against the root's, and a field named `message`, which gets
 no getter.
 
@@ -1087,7 +1087,7 @@ many times. Golden tests list problems as `RULE @node: message`.
   before each read. R6: only `VAR` declarations are assigned twice.
 - **F, flow.** F1: a function whose result isn't `Void` never falls
   off its end. F2: a `Return` has a value exactly when the result
-  isn't `Void`. F3: `MAY_BUBBLE` is set exactly when the callee may
+  isn't `Void`. F3: `MAY_FAIL` is set exactly when the callee may
   fail. F4: a call that may fail has a handler, or its function fails
   with a type that fits (F8 for `Throw` and `Catch`). F5: an initializer doesn't read a module `let` that's
   initialized later (through a call, it's a warning, [question 19](open-questions.md)).
@@ -1096,8 +1096,8 @@ many times. Golden tests list problems as `RULE @node: message`.
   modules. D3: every type an export mentions is exported or external.
   D4: `@imu` and `@partialImu` marks hold (subset B,
   [mutability.md](mutability.md)). D5: stored facts (may-fail marks,
-  and from subset B captures) match their recomputation. D6: failure
-  types and the library's base are well formed ("Declared failures").
+  and from subset B captures) match their recomputation. D6: error
+  types and the library's base are well formed ("Declared errors").
 - **Q, qnames and connected** (Proposed 2026-10-29, built;
   [names.md](names.md#level-3-qnames)). Q1: qnames are unique within a
   library. Q2: every declaration but compiler-made ones has one. Q3: a
@@ -1148,8 +1148,8 @@ As built (2026-10-29, Proposed), with core's declarations:
 - **Virtual isn't stored:** a `CallMethod` is virtual exactly when its
   method's owner is an interface (`Program::is_virtual`), so there's no
   `VIRTUAL` flag to keep in step.
-- **Room for failure kinds** ([question 44](open-questions.md)): a
+- **Room for error kinds** ([question 44](open-questions.md)): a
   signature's result says what it fails with, a result type
-  ([types.md](types.md#results)), and a node's `MAY_BUBBLE` stays a
-  flag, its failure's type found from the node
-  (`failures::node_failure`), as declared failures have it.
+  ([types.md](types.md#results)), and a node's `MAY_FAIL` stays a
+  flag, its error's type found from the node
+  (`declared_errors::node_error`), as declared errors have it.

@@ -1,9 +1,9 @@
 # Nullables
 
 Nullable types, null checks that narrow, `??`, `==` with a side that may
-be null, and `orelse` with a thrown failure and `panic()`: nullable
-parameters, results, locals, and fields, a nullable class type, and a
-failure caught where it's a value and where it stands alone, and a
+be null, and `orelse` with a thrown error and `panic()`: nullable
+parameters, results, locals, and fields, a nullable class type, and an
+error caught where it's a value and where it stands alone, and a
 fallback with `??` as a function's last value. The log is what
 the interpreter gives.
 

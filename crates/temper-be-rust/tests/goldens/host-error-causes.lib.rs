@@ -5,7 +5,7 @@ mod support;
 
 pub use r#mod::*;
 
-/// The library's failure type, its one root.
+/// The library's error type, its one root.
 pub type Error = r#mod::OopsError;
 
 /// Initializes the library, once, with `config` or the default

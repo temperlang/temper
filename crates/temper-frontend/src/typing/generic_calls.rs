@@ -161,7 +161,7 @@ impl Settle {
                     NodeKind::Fn => self.fn_type(arg),
                     _ => self.expr_type(arg, forced)?,
                 };
-                // A failure parameter is the join of what each argument
+                // An error parameter is the join of what each argument
                 // gives it (RFC 164), as `E` is `AppError` for `both(find,
                 // check)` whose callbacks fail with `Missing` and `Bad`.
                 let types = &mut self.typing.types;
@@ -173,7 +173,7 @@ impl Settle {
                 for k in (0..formals.len()).filter(|&k| failing[k]) {
                     actuals[k] = match (before[k], actuals[k]) {
                         (UNKNOWN, given) | (given, UNKNOWN) => given,
-                        (so_far, given) => types.join_failures(so_far, given),
+                        (so_far, given) => types.join_errors(so_far, given),
                     };
                 }
             }
@@ -193,32 +193,32 @@ impl Settle {
             this,
             has_type_args: !type_args.is_empty(),
         };
-        // A failure parameter the arguments leave unsolved is `Never<…>`,
+        // An error parameter the arguments leave unsolved is `Never<…>`,
         // so nothing passed may fail (RFC 164), unless a function literal's
         // body may solve it ([`Settle::solve_fully`]).
         if !solved.has_type_args {
             let inferred = self.literal_formals(&solved);
-            self.no_failure_where(&mut solved, &inferred, false);
+            self.no_error_where(&mut solved, &inferred, false);
         }
         Ok(Some(solved))
     }
 
-    /// Makes each failure parameter of a solved call that's still unknown
-    /// `Never<…>` ([`crate::types::Types::no_failure`]), so the call can't
+    /// Makes each error parameter of a solved call that's still unknown
+    /// `Never<…>` ([`crate::types::Types::no_error`]), so the call can't
     /// fail by it; with `inferred` (by index) only where it's `inferred`.
-    fn no_failure_where(&mut self, solved: &mut Solved, inferred: &[bool], only: bool) {
+    fn no_error_where(&mut self, solved: &mut Solved, inferred: &[bool], only: bool) {
         let types = &mut self.typing.types;
         for (k, actual) in solved.actuals.iter_mut().enumerate() {
             let unsolved = *actual == UNKNOWN && !solved.ambiguous[k] && inferred[k] == only;
             if unsolved && types.fails_with(solved.sig, &solved.formals[k..=k]) {
-                *actual = types.no_failure();
+                *actual = types.no_error();
             }
         }
     }
 
     /// A call solved in full, for what its function literals are and
     /// whether it fails: as for its type ([`Settle::solved_type`]), then
-    /// each failure parameter from what its function literals' bodies may
+    /// each error parameter from what its function literals' bodies may
     /// fail with ([`Settle::infer_literals`]), or `Never<…>`, so a call
     /// can't fail where none of them may.
     pub(super) fn solve_fully(
@@ -235,7 +235,7 @@ impl Settle {
             self.infer_literals(&mut solved, forced, true)?;
             self.literal_results_as_bounds(&mut solved, false);
             let inferred = self.literal_formals(&solved);
-            self.no_failure_where(&mut solved, &inferred, true);
+            self.no_error_where(&mut solved, &inferred, true);
         }
         Ok(Some(solved))
     }
@@ -264,7 +264,7 @@ impl Settle {
     /// Whether a node is a function literal whose result comes from its
     /// body where its place doesn't say it: one without a declared result
     /// type that isn't a generator's, nor a `for … of` body, whose
-    /// failures are its function's, not its loop's `forEach` call's.
+    /// errors are its function's, not its loop's `forEach` call's.
     pub(super) fn infers_result(&self, f: NodeId) -> bool {
         let tree = &self.lib.tree;
         tree.kind(f) == NodeKind::Fn
@@ -306,7 +306,7 @@ impl Settle {
     /// function literals give ([`Settle::literal_formals`]) from their
     /// bodies, one literal at a time, in order: what each gives as its
     /// result ([`Settle::literal_pass`]) and, with `failures`, what it may
-    /// fail with ([`Settle::literal_failure`]). A solution outside its
+    /// fail with ([`Settle::literal_error`]). A solution outside its
     /// type parameter's bound isn't taken, so the literal is checked
     /// against the bound, as before.
     fn infer_literals(
@@ -339,7 +339,7 @@ impl Settle {
                 false => UNKNOWN,
             };
             let given = match wants_fail {
-                true => match self.literal_failure(arg, forced)? {
+                true => match self.literal_error(arg, forced)? {
                     Some(fail) => self.typing.types.result(pass, fail),
                     None => pass,
                 },
@@ -357,16 +357,16 @@ impl Settle {
         Ok(())
     }
 
-    /// Why a function literal's place, a generic call's failure
+    /// Why a function literal's place, a generic call's error
     /// parameter, can't fail, so a literal whose body may fail is an
     /// error there, at the literal: the call's type arguments give it as
-    /// a `Never` ([`Message::FailureGivenNever`]), as `E` in
+    /// a `Never` ([`Message::ErrorGivenNever`]), as `E` in
     /// `apply<Int, Int, Never<Oops>>(n) { x => f(x) }`; or else its body
     /// can't give it, as the literal's parameters' types need it too
     /// ([`Settle::literal_formals`]), as `E` for `retry { again => … }`
     /// and `retry<E>(f: fn (Thunk<E>): Int throws E)`, so it's `Never<…>`
     /// unless the call's other arguments give it
-    /// ([`Message::FailureNotInferred`]).
+    /// ([`Message::ErrorNotInferred`]).
     pub(super) fn unfailing_place(&mut self, f: NodeId) -> Option<Message> {
         let call = self.typing.parent(f)?;
         if !self.infers_result(f) || self.lib.tree.kind(call) != NodeKind::Call {
@@ -379,7 +379,7 @@ impl Settle {
             return None;
         };
         let fail = self.typing.types.fail(result)?;
-        let no_failure = self.typing.types.no_failure();
+        let no_error = self.typing.types.no_error();
         let k = (0..solved.formals.len()).find(|&k| {
             let types = &self.typing.types;
             let never = match solved.has_type_args {
@@ -387,15 +387,15 @@ impl Settle {
                     types.get(solved.actuals[k]),
                     TypeData::Never | TypeData::NeverOf(_)
                 ),
-                false => !inferred[k] && solved.actuals[k] == no_failure,
+                false => !inferred[k] && solved.actuals[k] == no_error,
             };
             never && types.mentions(fail, &solved.formals[k..=k])
         })?;
         let param = self.typing.types.param(solved.formals[k]);
         let param = self.show(param);
         Some(match solved.has_type_args {
-            true => Message::FailureGivenNever(param, self.show(solved.actuals[k])),
-            false => Message::FailureNotInferred(param),
+            true => Message::ErrorGivenNever(param, self.show(solved.actuals[k])),
+            false => Message::ErrorNotInferred(param),
         })
     }
 
@@ -545,8 +545,8 @@ impl Settle {
     /// body doesn't give it ([`Settle::infer_literals`]): `ls.map { x => if
     /// (x > 0) { 1 } else { "a" } }`, with nothing wanted, is a
     /// `List<AnyValue>`, and the literal a `fn (Int32): AnyValue`
-    /// (notes/typing.md, "Function literals and target typing"). Not a
-    /// failure parameter, and with `open`, not one the literal's body may
+    /// (notes/typing.md, "Function literals and target typing"). Not an
+    /// error parameter, and with `open`, not one the literal's body may
     /// still give ([`Settle::literal_formals`]).
     fn literal_results_as_bounds(&mut self, solved: &mut Solved, open: bool) {
         if solved.has_type_args {
@@ -620,16 +620,16 @@ impl Settle {
             return true;
         }
         self.check_generic_args(&solved);
-        self.note_failure_args(&solved);
+        self.note_error_args(&solved);
         true
     }
 
-    /// Notes a solved call's failure parameters, solved in full
+    /// Notes a solved call's error parameters, solved in full
     /// ([`Settle::solve_fully`]), if its function has any: what its
     /// function literals' bodies may fail with counts there, which the
     /// call's type doesn't need
     /// ([`Typing::type_args`](super::Typing::type_args)).
-    fn note_failure_args(&mut self, solved: &Solved) {
+    fn note_error_args(&mut self, solved: &Solved) {
         let types = &mut self.typing.types;
         let failing: Vec<usize> = (0..solved.formals.len())
             .filter(|&k| types.fails_with(solved.sig, &solved.formals[k..=k]))
@@ -641,7 +641,7 @@ impl Settle {
             return;
         };
         let args = failing.into_iter().map(|k| (k, full.actuals[k])).collect();
-        self.typing.failure_args.insert(solved.call, args);
+        self.typing.error_args.insert(solved.call, args);
     }
 
     /// Reports a generic call's arguments that don't fit what the type
@@ -911,8 +911,8 @@ impl Settle {
     /// call can bind it (`CONTEXT` in `combine<CONTEXT extends Context,
     /// T>(x: T): T`), its bound, or `AnyValue` if it has none, as Kotlin
     /// Temper's solver binds it, with the other type parameters put in.
-    /// Others still unknown stay so, as failure parameters may until the
-    /// call is checked ([`Settle::note_failure_args`]).
+    /// Others still unknown stay so, as error parameters may until the
+    /// call is checked ([`Settle::note_error_args`]).
     pub(super) fn settled_type_args(&mut self, solved: &Solved) -> Vec<TypeId> {
         let TypeData::Fn { params, result } = self.typing.types.get(solved.sig).clone() else {
             return solved.actuals.clone();

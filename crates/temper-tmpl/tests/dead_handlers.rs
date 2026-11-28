@@ -1,10 +1,10 @@
 //! Handlers whose bodies can't fail as their bodies alone
-//! ([`temper_tmpl::failures::drop_dead_handlers`]), as `to_tmpl` writes
+//! ([`temper_tmpl::declared_errors::drop_dead_handlers`]), as `to_tmpl` writes
 //! them, for every backend: a `catch` and an `orelse`, nested, and in a
 //! `Void` one's place, which drops its body's value; one whose body may
 //! fail stays. The result validates.
 
-use temper_tmpl::failures::drop_dead_handlers;
+use temper_tmpl::declared_errors::drop_dead_handlers;
 use temper_tmpl::{Profile, text, validate};
 
 const PROGRAM: &str = "tmpl 1 model 1 library dead 0.1.0

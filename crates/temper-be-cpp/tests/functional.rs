@@ -16,9 +16,9 @@
 //! ([`HIDING`]), a nullable result discarded ([`DISCARDED`]),
 //! `Float64.toString` across its range ([`FLOAT_FORMAT`]), and objects
 //! a call frees while it runs ([`LIFETIMES`]); and the testkit's programs
-//! of declared failures (`failures`, `host-failures`, whose host code
-//! returns its failures in `Expected`s, and `failures-interop`), and its specification
-//! `failure-params` ([`SPECS`]).
+//! of declared errors (`declared-errors`, `host-declared-errors`, whose host code
+//! returns its failures in `Expected`s, and `errors-interop`), and its specification
+//! `error-params` ([`SPECS`]).
 //!
 //! - `goldens`: each program's generated library, laid out as Kotlin's,
 //!   with its `init.cpp` matching the golden in `tests/goldens/`, named
@@ -86,8 +86,8 @@
 //!   `Failure`, built as C++14 (the shim) and as C++23 (`std::expected`,
 //!   and the shim again), strictly and under the sanitizers, each
 //!   printing the same lines.
-//! - `failures_interop`: `host/failures.cpp`, host code using the
-//!   testkit's `failures-interop` program's declared failures, built with
+//! - `errors_interop`: `host/errors.cpp`, host code using the
+//!   testkit's `errors-interop` program's declared errors, built with
 //!   its generated library as C++14 and as C++23, under the sanitizers.
 
 use std::fmt::Write;
@@ -345,8 +345,8 @@ const STRICT: &[&str] = &[
 const RUNTIME_WARNINGS: usize = STRICT.len() - 4;
 
 /// The testkit's specifications (`kit::SPECS`) this backend runs, which
-/// others don't all yet: `failure-params` and `failure-generators`.
-const SPECS: [&str; 2] = ["failure-params", "failure-generators"];
+/// others don't all yet: `error-params` and `error-generators`.
+const SPECS: [&str; 2] = ["error-params", "error-generators"];
 
 fn cases() -> Vec<Case> {
     let tests = [
@@ -466,9 +466,9 @@ fn cases() -> Vec<Case> {
     cases
 }
 
-/// A run of a program in sections (`host-failures-cause`, of
-/// `host-failures`), a library of its own, with the program's host code
-/// in its namespace (`host_failures_cause`).
+/// A run of a program in sections (`host-declared-errors-cause`, of
+/// `host-declared-errors`), a library of its own, with the program's host code
+/// in its namespace (`host_declared_errors_cause`).
 fn rename_host_code(case: &mut Case) {
     let Some(program) = case.dir.file_name().and_then(|f| f.to_str()) else {
         return;
@@ -1149,7 +1149,7 @@ fn first_use_expected(cases: &[Case], run: &FirstUse) -> Vec<String> {
 /// a [`FIRST_USE`] run; or, for `threads`, `module-state`'s `tick` and
 /// `report` from 8 threads, 1,000 times each, the first calls of which
 /// run its init, once. It installs stack traces, as a generated
-/// `main.cpp` does, so an uncaught failure says what it was.
+/// `main.cpp` does, so an uncaught error says what it was.
 fn runner(cases: &[Case], first_use: &[FirstUse]) -> String {
     let mut includes = String::new();
     let mut branches = String::new();
@@ -1981,7 +1981,7 @@ const EXPECTED_LINES: &[&str] = &[
     "never 4",
 ];
 
-/// The standards [`expected_shim`] and [`failures_interop`] build with,
+/// The standards [`expected_shim`] and [`errors_interop`] build with,
 /// each with what it adds to [`STRICT`], and whether it's the shim: C++14,
 /// and C++23 where `g++` has `std::expected`, alone and with the shim
 /// forced (`TEMPER_EXPECTED_SHIM`).
@@ -2049,13 +2049,13 @@ fn expected_shim() {
     let _ = fs::remove_dir_all(&out);
 }
 
-/// `tests/host/failures.cpp`, host code using the testkit's
-/// `failures-interop` program's declared failures, built with its generated library, all
+/// `tests/host/errors.cpp`, host code using the testkit's
+/// `errors-interop` program's declared errors, built with its generated library, all
 /// strictly, under the sanitizers, as C++14 (the runtime's shim) and
 /// C++23 (`std::expected`): it logs what the library's top level does,
 /// then a line per check.
 #[test]
-fn failures_interop() {
+fn errors_interop() {
     let Some((gxx, _)) = find_gxx() else {
         kit::missing("no g++ (on PATH, or named by CXX)");
         return;
@@ -2064,7 +2064,7 @@ fn failures_interop() {
         let out = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("be-cpp-failures");
         let _ = fs::remove_dir_all(&out);
         let case = (cases().into_iter())
-            .find(|c| c.key == "failures-interop")
+            .find(|c| c.key == "errors-interop")
             .unwrap();
         let src = out.join("src");
         let mut sources = Vec::new();
@@ -2076,7 +2076,7 @@ fn failures_interop() {
                 sources.push(path);
             }
         }
-        sources.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/failures.cpp"));
+        sources.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/host/errors.cpp"));
         let expected: Vec<String> = (case.expected.iter().cloned())
             .chain(
                 [
@@ -2113,8 +2113,8 @@ fn failures_interop() {
                 .args(&sources)
                 .arg("-o")
                 .arg(&exe);
-            check(&format!("g++ ({name}), host/failures.cpp"), command);
-            let label = format!("failures interop ({name}, asan, ubsan)");
+            check(&format!("g++ ({name}), host/errors.cpp"), command);
+            let label = format!("errors interop ({name}, asan, ubsan)");
             run(&mut failures, &label, &exe, &[], &expected);
         }
         kit::assert_none(&failures);

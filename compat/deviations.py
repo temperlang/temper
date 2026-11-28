@@ -83,7 +83,7 @@ KNOWN = {
     "edge-cases.cases: a comma after a return, throw, or yield's operand ends it, an error": "jump-comma",
     "edge-cases.cases: a comma after a return or throw's operand: an error, and the rest still parses": "jump-comma",
     "edge-cases.cases: return's operand runs to the end of its statement or bracket, or to a comma, as before": "jump-operand",
-    "failures.cases: *": "failures",
+    "errors.cases: *": "failures",
     "kotlin-parse-tests.cases: tryWithValue": "failures",
     "kotlin-parse-tests.cases: tryWithCatchAndFinally": "failures",
     "kotlin-parse-tests.cases: colonsAroundTry": "failures",
@@ -140,7 +140,7 @@ def classify(text: str, markdown: bool, kotlin: list[str], rust: list[str]) -> s
         return "spans"
     first, last = first_difference(text, kotlin, rust)
     overlaps = lambda regions: any(start <= last and first <= end for start, end in regions)
-    if overlaps(failure_words(text)):
+    if overlaps(error_words(text)):
         return "failures"
     for a, b in zip(kotlin, kotlin[1:]):
         if re.match(r"(T\t\d+\t)?Error\t", a) and a.endswith("\t$") and "{" in b.split("\t")[-1]:
@@ -154,7 +154,7 @@ def classify(text: str, markdown: bool, kotlin: list[str], rust: list[str]) -> s
     return None
 
 
-def failure_words(text: str) -> list[tuple[int, int]]:
+def error_words(text: str) -> list[tuple[int, int]]:
     """Byte ranges of the words RFC 164's syntax adds: `try`, `catch`, and
     `error case`."""
     data = text.encode("utf-8")

@@ -17,26 +17,26 @@ export sealed interface Equatable<EQ extends AnyValue> {
 }
 
 /**
- * *Error* is the root of declared failure types: a function that declares
- * [*throws*][snippet/builtin/throws] a failure type may `throw` a value of
+ * *Error* is the root of declared error types: a function that declares
+ * [*throws*][snippet/builtin/throws] an error type may `throw` a value of
  * it, and its callers handle it with `catch` or [snippet/builtin/orelse],
  * or pass it on.
  *
- * Each failure type is under one root: a sealed interface of its own
+ * Each error type is under one root: a sealed interface of its own
  * library that extends *Error* itself, as `sealed interface LookupError
  * extends Error {}`. A library may declare several. Classes extend a
  * root, or a sealed interface under one, whose classes are its variants,
- * never *Error* itself. A failure type has no type parameters, and
- * extends one failure type. *Error* itself isn't one a function may
+ * never *Error* itself. An error type has no type parameters, and
+ * extends one error type. *Error* itself isn't one a function may
  * throw.
  *
- * A failure is a value, whose fields say what went wrong. A bug, which
+ * An error is a value, whose fields say what went wrong. A bug, which
  * no caller should handle, is a [snippet/builtin/panic] instead.
  */
 export interface Error {
   /**
-   * What went wrong, for people, as a report of a failure nothing
-   * handles shows it. A failure type may declare its own getter;
+   * What went wrong, for people, as a report of an error nothing
+   * handles shows it. An error type may declare its own getter;
    * otherwise it's the type's name in lowercase words, then its public
    * fields' names and values, as `not found (key: y)` for
    * `class NotFound(public key: String) extends LookupError {}`.
@@ -44,9 +44,9 @@ export interface Error {
   @connected
   public get message(): String;
   /**
-   * The failure that was being handled where this one was thrown, by a
+   * The error that was being handled where this one was thrown, by a
    * `throw` in a `catch` block or an [snippet/builtin/orelse] fallback,
-   * or [snippet/builtin/null]: none. A failure thrown again keeps the cause it was first
+   * or [snippet/builtin/null]: none. An error thrown again keeps the cause it was first
    * thrown with.
    */
   @connected
@@ -54,7 +54,7 @@ export interface Error {
 }
 
 /**
- * *CoreError* is the root of core's own failure types,
+ * *CoreError* is the root of core's own error types,
  * [snippet/type/MissingKey], [snippet/type/ParseError],
  * [snippet/type/InvalidCodePoint], [snippet/type/BrokenPromise], and
  * [snippet/type/BrokenGenerator]. They're for core's own operations: a

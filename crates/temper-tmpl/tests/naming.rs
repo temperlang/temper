@@ -77,8 +77,8 @@ const RULES: NamingRules = NamingRules {
     fields_apart: false,
     types_apart: false,
     modules_share_names: false,
-    failure_suffix: None,
-    failure_member_reserved: &[],
+    error_suffix: None,
+    error_member_reserved: &[],
 };
 
 const PROGRAM: &str = "tmpl 1 model 1 library t 0.0.0
@@ -465,18 +465,18 @@ module t#0 {
     assert_eq!((name(4), name(3)), ("_baz_qux", "_baz_qux2"));
 }
 
-/// Under `failure_suffix`, as Java's and C#'s rules have it, failure
+/// Under `error_suffix`, as Java's and C#'s rules have it, error
 /// types (below core's `Error`, the library's roots among them) that end
-/// in `Error` end in `Exception`; other names, and failure types that
+/// in `Error` end in `Exception`; other names, and error types that
 /// don't end so, keep theirs; and a `catch`'s local is named as a local.
 #[test]
-fn failure_types_take_their_suffix() {
+fn error_types_take_their_suffix() {
     let keep = NamingRules {
         case: |_, _| Case::Keep,
         ..RULES
     };
     let rules = NamingRules {
-        failure_suffix: Some(("Error", "Exception")),
+        error_suffix: Some(("Error", "Exception")),
         ..keep
     };
     let p = text::read(
@@ -533,14 +533,14 @@ module t#0 {
     );
 }
 
-/// Under `failure_member_reserved`, as JS's rules have it, a failure
+/// Under `error_member_reserved`, as JS's rules have it, an error
 /// type's member named as one of the target's exception's own properties
 /// is escaped, as `name_`, and another class's member of that name isn't.
 #[test]
-fn failure_members_avoid_the_exceptions_own() {
+fn error_members_avoid_the_exceptions_own() {
     let rules = NamingRules {
         case: |_, _| Case::Keep,
-        failure_member_reserved: &["name"],
+        error_member_reserved: &["name"],
         ..RULES
     };
     let p = text::read(

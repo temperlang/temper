@@ -100,14 +100,14 @@ pub const TABLE: &[(&str, Connection)] = &[
         "core.type Deque.removeFirst()",
         Connection::Templated("Deque::removeFirst"),
     ),
-    // A declared failure's cause and message, `core::Failure`'s.
+    // A declared error's cause and message, `core::Failure`'s.
     (
         "core.type Error.get cause()",
         Connection::Translate(failure_cause),
     ),
     (
         "core.type Error.get message()",
-        Connection::Translate(failure_message),
+        Connection::Translate(error_message),
     ),
     ("core.type Float64.abs()", Connection::Call("Float64::abs")),
     (
@@ -642,12 +642,12 @@ pub fn lookup(qname: &str) -> Option<Connection> {
         .map(|i| TABLE[i].1)
 }
 
-/// Core's members that take a callback that may fail (RFC 164's failure
+/// Core's members that take a callback that may fail (RFC 164's error
 /// parameters), where a call passes one that returns an `Expected`: each
 /// a runtime function, relative to `temper::core`, called as
-/// [`Connection::Call`] is, that stops at the first failure and returns
+/// [`Connection::Call`] is, that stops at the first error and returns
 /// it, else what the member's own connection gives, in an `Expected` of
-/// the callback's failure type. std's `compiledReplace`, which only std's
+/// the callback's error type. std's `compiledReplace`, which only std's
 /// generic `Regex.replace` calls, is that form alone. Sorted by qname.
 pub const TRY: &[(&str, &str)] = &[
     ("core.type ListBuilder.sort()", "ListBuilder::trySort"),
@@ -696,13 +696,13 @@ fn get_console(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> 
     Ok(t.core("Console::get_console").call(Vec::new()))
 }
 
-/// A failure's receiver, as its own type, not upcast to core's `Error`:
+/// An error's receiver, as its own type, not upcast to core's `Error`:
 /// `e->get_message()` calls its own getter, which overrides
 /// `core::Failure`'s.
-fn failure_receiver(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+fn error_receiver(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
     let &[mut receiver] = args else {
         return Err(NotYet {
-            what: "a failure's getter without its receiver".into(),
+            what: "an error's getter without its receiver".into(),
         });
     };
     while let Node::Upcast { value } = t.node(receiver) {
@@ -712,17 +712,15 @@ fn failure_receiver(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, Not
 }
 
 /// `e->get_message()`.
-fn failure_message(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
-    Ok(failure_receiver(t, args)?
+fn error_message(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
+    Ok(error_receiver(t, args)?
         .arrow("get_message")
         .call(Vec::new()))
 }
 
 /// `e->get_cause()`, a `std::shared_ptr<core::Failure>`, null for none.
 fn failure_cause(t: &mut Translator<'_>, args: &[NodeId]) -> Result<Expr, NotYet> {
-    Ok(failure_receiver(t, args)?
-        .arrow("get_cause")
-        .call(Vec::new()))
+    Ok(error_receiver(t, args)?.arrow("get_cause").call(Vec::new()))
 }
 
 /// `s.empty()`, where Kotlin's is `core::String::isEmpty(s)`.

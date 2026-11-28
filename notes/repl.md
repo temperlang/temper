@@ -55,7 +55,7 @@ The user's answers to the open questions at the end:
   and `test`.
 - `repl::ReplSession` (temper-frontend, so the playground and the
   language server can use it): `feed(text)` settles and runs an input,
-  giving `ReplEvent`s (diagnostics, logs as they're logged, failures,
+  giving `ReplEvent`s (diagnostics, logs as they're logged, errors,
   the result) to a sink, in order, each with the text the CLI prints;
   `Chunker` splits lines into inputs by the lexer. A panic is caught
   per input, the round abandoned (`Incremental::abandon_round`).
@@ -189,7 +189,7 @@ interactive#7: 2.0
   standard input as one.
 - **Results.** Each input prints `interactive#N: value`, with N counting
   from 0. A trailing `;` gives `void`; a declaration gives `void`, a
-  class or interface its type (`Rectangle__0`); a failure (an error,
+  class or interface its type (`Rectangle__0`); an error (an error,
   a panic, or a compile error) gives `fail`. Values print as Kotlin's
   interpreter renders them: `"quoted"` strings with Temper escapes,
   lists as `[2,4,6]`, objects as `{class: C__0, a: 3}`, functions as
@@ -558,7 +558,7 @@ output, and result. Each front end is thin:
   inputs.
 - **`tempest run -b interp`:** a session with one input, the library, and
   no REPL. Sharing the code path keeps `run` and the REPL agreeing about
-  output and failures.
+  output and errors.
 - **Tests:** a `repl.cases` file in the settle tests' style, one
   transcript per case, run against a session without a terminal.
 

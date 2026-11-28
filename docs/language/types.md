@@ -1703,12 +1703,12 @@ This method is more likely to change or be removed before Temper 1.0 than most
 
 `sealed interface CoreError extends Error`
 
-The root of core's own failure types, [*MissingKey*](#class-missingkey),
+The root of core's own error types, [*MissingKey*](#class-missingkey),
 [*ParseError*](#class-parseerror),
 [*InvalidCodePoint*](#class-invalidcodepoint),
 [*BrokenPromise*](#class-brokenpromise), and
 [*BrokenGenerator*](#class-brokengenerator), as a library's roots are its
-failures'. They're for core's own operations: a library declares its
+errors'. They're for core's own operations: a library declares its
 own roots for its own conditions and throws those, not core's (how each
 backend maps core's types to the host's is the backend's own).
 
@@ -2276,12 +2276,12 @@ Temper *Never* types can translate to bottom types in languages that support tha
 
 ### *interface Error*
 
-*Error* is the root of declared failure types, Temper's errors: what
+*Error* is the root of declared error types, Temper's errors: what
 `throws` declares, `throw` throws, and `orelse` and `catch` handle
-([failures](syntax.md#failures)). A failure that's a bug, not a case to
+([errors](syntax.md#errors)). An error that's a bug, not a case to
 handle, is a [`panic()`](builtins.md#panic) instead, which nothing
 handles.
-Each failure type is under one of its library's roots, sealed interfaces
+Each error type is under one of its library's roots, sealed interfaces
 that extend *Error* itself, as `sealed interface LookupError extends
 Error {}`; classes extend a root, or a sealed interface under one, never
 *Error* itself. *Error* itself isn't one a function may throw. Each
@@ -2298,8 +2298,8 @@ is its own).
 
 `:` [*String*](#class-string)
 
-What went wrong, for people, as a report of a failure nothing handles
-shows it. A failure type may declare its own getter; otherwise it's the
+What went wrong, for people, as a report of an error nothing handles
+shows it. An error type may declare its own getter; otherwise it's the
 type's name in lowercase words, then its public fields' names and
 values, as `not found (key: y)` for `class NotFound(public key: String)
 extends LookupError {}`.
@@ -2308,9 +2308,9 @@ extends LookupError {}`.
 
 `:` [*Error*](#interface-error)?
 
-The failure that was being handled where this one was thrown, by a
+The error that was being handled where this one was thrown, by a
 `throw` in a `catch` block or an [*orelse*](builtins.md#orelse) fallback,
-or [*null*](builtins.md#null). A failure thrown again keeps the cause it was first
+or [*null*](builtins.md#null). An error thrown again keeps the cause it was first
 thrown with.
 
 ### *Top*

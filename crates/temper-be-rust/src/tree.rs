@@ -622,7 +622,7 @@ fn item_at(item: &Item, indent: usize) -> String {
             variants,
         } => {
             let mut out = attrs_text(attrs, &pad);
-            // No variants, as a failure root nothing implements: `{}`.
+            // No variants, as an error root nothing implements: `{}`.
             if variants.is_empty() {
                 out.push_str(&format!("{pad}{}enum {name} {{}}\n", vis_text(vis)));
                 return out;
@@ -1928,9 +1928,9 @@ pub fn if_ok(e: &Expr, els: Block) -> Option<Expr> {
     ))
 }
 
-/// What a failure in an `orelse`'s body run in place does: break out of
+/// What an error in an `orelse`'s body run in place does: break out of
 /// the labeled block `label` to the fallback, or, where the fallback is
-/// `panic()`, panic at once, the failure its cause, in place of that
+/// `panic()`, panic at once, the error its cause, in place of that
 /// block's `break`s ([`retarget_tries`]).
 #[derive(Clone, Copy)]
 pub enum Fail<'a> {
@@ -1939,7 +1939,7 @@ pub enum Fail<'a> {
 }
 
 /// `panic!("panic\ncaused by: …")`, `orelse panic()`'s panic, `cause`
-/// the failure's message in a format string (`{e}`): Rust's panics have
+/// the error's message in a format string (`{e}`): Rust's panics have
 /// no cause, so the message says it, as C++'s and Lua's do.
 pub fn panic_caused_by(cause: &str) -> Expr {
     Expr::Macro(
@@ -1948,7 +1948,7 @@ pub fn panic_caused_by(cause: &str) -> Expr {
     )
 }
 
-/// Each `?` in `stmts`, outside their closures, as a failure `fail`
+/// Each `?` in `stmts`, outside their closures, as an error `fail`
 /// says: a break out of the labeled block where it fails, `if let Ok(v)
 /// = e { v } else { break 'orelse; }`, for an `orelse`'s body run in
 /// place, or a panic, `e.unwrap_or_else(|e| panic!(…))`, which a

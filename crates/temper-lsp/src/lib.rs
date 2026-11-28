@@ -213,7 +213,7 @@ fn internal_error(what: &str, message: &str) -> String {
     format!("internal error (a bug in Temper) {what}: {message}")
 }
 
-/// A request's failure: a JSON-RPC error code and message.
+/// A request's error: a JSON-RPC error code and message.
 type Failure = (i32, String);
 
 /// A request's params as LSP's type for them.

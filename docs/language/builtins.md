@@ -296,12 +296,12 @@ error (input: x, reason: not an Int32)`.
 
 ### `throw`
 `throw x` fails with `x`, an [error](types.md#interface-error): a value
-of a declared failure type, a class under a sealed interface that
+of a declared error type, a class under a sealed interface that
 extends *Error*. The function says what it may throw with
 [`throws`](#type-operator-throws), and the closest enclosing
 [`orelse`](#orelse) or `catch` handles it.
 
-#### Failure
+#### Error
 An expression either evaluates to a value or fails, in one of two ways:
 
 - An error, which a function declares and its callers handle: a reason
@@ -1147,7 +1147,7 @@ The name `Listed` refers to the builtin type, [*Listed*](types.md#interface-list
 
 ### *Problem*
 The name `Problem` refers to the builtin type, [*Problem*](types.md#class-problem),
-an abstraction that allows running some tests despite failures during
+an abstraction that allows running some tests despite errors during
 compilation.
 
 TODO: StageRange

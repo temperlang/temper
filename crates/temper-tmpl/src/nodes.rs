@@ -14,7 +14,7 @@ pub struct Flags(pub u8);
 impl Flags {
     pub const NONE: Flags = Flags(0);
     /// A call that may fail, written `^` in text.
-    pub const MAY_BUBBLE: Flags = Flags(1);
+    pub const MAY_FAIL: Flags = Flags(1);
     /// The span points at what caused the node, not at its own source.
     pub const DERIVED: Flags = Flags(2);
 

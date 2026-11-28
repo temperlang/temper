@@ -157,7 +157,7 @@ orelse 7; // one statement: `do { f() } orelse 7`
 ```
 
 So a `catch` on the line after a `do` block's `}` handles that block's
-failures, as `do { … } catch (e) { … }` on one line does.
+errors, as `do { … } catch (e) { … }` on one line does.
 
 Anything else starts a new statement: a word, as `else`, so `else` on
 its own line after an `if`'s `}` is an error; or a token that may be
@@ -371,23 +371,23 @@ in an argument list a `return` that isn't last needs parentheses:
 `f((y ?? return 0), 1)`. Without them, `f(y ?? return 0, 1)` is an
 error at the comma. The same goes for `throw` and `yield`.
 
-### Failures
+### Errors
 
-Declared failures (RFC 164, still a proposal) are in progress: they're
+Declared errors (RFC 164, still a proposal) are in progress: they're
 parsed, type checked, and run on the interpreter and in C++, C#, Java,
 JavaScript, Lua, Python, and Rust, and `error case` is still an
 error.
 
-- `throw x` throws a failure, and is a value like `return x`.
-- `try` marks failures propagating from all of the expression to its
+- `throw x` throws an error, and is a value like `return x`.
+- `try` marks errors propagating from all of the expression to its
   right, as Swift's does: `let c = try lookup(s).column();`. It binds
   looser than any binary operator but `orelse`, `catch`, and assignment,
   so a comma, `orelse`, or `catch` ends it: `f(try a(), try b())`, and
   `try f() orelse 0` is `(try f()) orelse 0`.
-- `catch (e)` handles failures of the expression on its left with a
-  block, binding the failure as `e`. `do { … } catch (e)` is `catch`
+- `catch (e)` handles errors of the expression on its left with a
+  block, binding the error as `e`. `do { … } catch (e)` is `catch`
   after a `do` block. Without a binding, use `orelse`: `f() orelse 0`.
-- `error case Name(…)` declares a failure type. `error` and `case` stay
+- `error case Name(…)` declares an error type. `error` and `case` stay
   names everywhere else.
 
 ```temper
@@ -419,24 +419,24 @@ member's.
 
 How they're typed, for now:
 
-- A failure type is under one root, a sealed interface its library
+- An error type is under one root, a sealed interface its library
   declares that extends core's [*Error*](types.md#interface-error)
   itself, as `sealed interface LookupError extends Error {}`; a library
   may have several. Classes extend a root, or a sealed interface under
-  one, whose classes are its variants, never *Error* itself. A failure
-  type has no type parameters and extends one failure type. `throws E`
+  one, whose classes are its variants, never *Error* itself. An error
+  type has no type parameters and extends one error type. `throws E`
   takes one or a type parameter; `throw` takes a value of one. A
   library throws its own types for its own conditions, not core's,
   which are for core's operations (how a backend maps core's types to
   the host's is its own).
-- A function passes on a failure of its own failure type, or of one of
-  its variants, with `try` or, for now, without it. Any other failure
+- A function passes on an error of its own error type, or of one of
+  its variants, with `try` or, for now, without it. Any other error
   must be handled there, and converting one is explicit: `f() catch (e)
   { throw new Mine(e.key) }`.
 - `catch (e)` binds what its left side may fail with, the closest type
-  of all of it, so a `when (e)` over a sealed failure type needs no
-  `else`. `orelse` handles any failure.
-- Failures are for what a caller may handle, as text that doesn't
+  of all of it, so a `when (e)` over a sealed error type needs no
+  `else`. `orelse` handles any error.
+- Errors are for what a caller may handle, as text that doesn't
   parse; a bug is a [`panic()`](builtins.md#panic), which no handler
   catches. Temper 0.6's `bubble()` and `throws Bubble` are gone: declare
   an error type instead, or return `null` where there's simply no value.
@@ -445,9 +445,9 @@ How they're typed, for now:
   `let mapAll<T, R, E>(xs: List<T>, f: fn (T): R throws E): List<R>
   throws E`. Each call solves `E` from its arguments, a function
   literal's body too, so it fails as its callback does: `mapAll(keys) {
-  k => lookup(k) }` may fail with `lookup`'s failure type, and
+  k => lookup(k) }` may fail with `lookup`'s error type, and
   `mapAll(keys) { k => k.length }` can't fail. Two callbacks of one `E`
-  give their failures' closest common type. Core's functions that take
+  give their errors' closest common type. Core's functions that take
   callbacks, as `map`, `filter`, `join`, `sorted`, and `forEach`, are
   generic so.
 

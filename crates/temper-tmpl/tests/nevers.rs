@@ -227,12 +227,12 @@ fn never_takes_one_plain_type() {
     }
 }
 
-/// A failure parameter's `Never<…>` argument says "can't fail" (RFC 164),
+/// An error parameter's `Never<…>` argument says "can't fail" (RFC 164),
 /// which no value has, so it stays, in a call's type arguments and in a
 /// generic type's, for targets that write it (Rust's `Infallible`), while
 /// a value's `Never<T>` still lowers.
 #[test]
-fn failure_parameters_never_stays() {
+fn error_parameters_never_stays() {
     let source = r#"tmpl 1 model 1 library n 0.0.0
 
 uses `temper-core`#1 0.0.0 {

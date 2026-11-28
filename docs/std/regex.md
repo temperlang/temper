@@ -44,7 +44,7 @@ specials `Begin`, `End`, `Dot`, `WordBoundary`, `Digit`, `Space`, and
 Unicode properties aren't supported yet.
 
 `replace` is generic over what its callback fails with, as core's `map`
-is: the first failure passes out, with no result, and `format` isn't
+is: the first error passes out, with no result, and `format` isn't
 called again; where the callback can't fail, neither can `replace`. A
 `RegexNode`'s own `replace` takes only a callback that can't fail (an
 interface's method can't be generic); `compiled()` gives the `Regex`

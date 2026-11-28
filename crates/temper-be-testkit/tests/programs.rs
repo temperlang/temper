@@ -43,7 +43,7 @@ fn logs_as_expected(cases: Vec<kit::Case>) {
             continue;
         }
         let (failure, output) = kit::interpret(&case);
-        // A run that fails (`panics`) panics, or ends at a failure nothing
+        // A run that fails (`panics`) panics, or ends at an error nothing
         // handles, saying what its `stderr` blocks for the
         // interpreter say, else that it panicked.
         let mut says = temper_funtests::fenced_lines(text, "stderr", &["interp"]);
